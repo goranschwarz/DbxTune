@@ -164,12 +164,12 @@ implements GTable.ITableTooltip, ToolTipHyperlinkResolver
 				for (String col : cols)
 				{
 					Object val = _cm.getValue(whatData, modelRow, col, true);
-					sb.append("<tr><td><b>").append(col).append("</b>&nbsp;</td> <td>").append(val).append("</td></tr>");
+					sb.append("<tr><td><b>").append(col).append("</b>&nbsp;</td> <td><pre>").append(val).append("</pre></td></tr>");
 				}
 			}
 			else
 			{
-				sb.append("<tr><td><b>").append(colName).append("</b>&nbsp;</td> <td>").append(cellValue).append("</td></tr>");
+				sb.append("<tr><td><b>").append(colName).append("</b>&nbsp;</td> <td><pre>").append(cellValue).append("</pre></td></tr>");
 			}
 			sb.append("<tr><td colspan='2'><hr></td></tr>"); // --------------- Horizontal ruler
 			

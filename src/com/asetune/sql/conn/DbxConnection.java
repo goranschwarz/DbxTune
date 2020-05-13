@@ -245,11 +245,14 @@ implements Connection
 
 			Properties props  = new Properties();
 		//	Properties props2 = new Properties(); // NOTE declared at the TOP: only used when displaying what properties we connect with
+			
+			// Do this first... otherwise we might write over the below user/password
+			if (urlOptions != null)
+				props.putAll(urlOptions);
+
 			props.put("user", user);
 			props.put("password", passwd);
 
-			if (urlOptions != null)
-				props.putAll(urlOptions);
 
 //			if (StringUtil.hasValue(urlOptions))
 //			{
@@ -329,6 +332,9 @@ implements Connection
 					_logger.warn(msg, new Exception(msg));
 				}
 
+				if (System.getProperty("DbxConnection.connect.nogui.print", "false").equalsIgnoreCase("true"))
+					System.out.println("#### DEBUG ####: no-gui: DbxConnection.connect(): url='" + url + "', props[" + StringUtil.toCommaStr(props) + "], connProp=[" + connProp + "].");
+				
 				conn = DriverManager.getConnection(url, props);
 			}
 			else

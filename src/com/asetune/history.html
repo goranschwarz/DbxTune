@@ -34,17 +34,25 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>Now java 1.8 is needed</b></LI>
 		<LI>Alarms
 			<UL>
-				<LI>New: AlarmWriterToSlack                -- Send messages to Slack</LI>
-				<LI>new: AlarmEventConfigResourceIsLow     -- When DBMS is low on configured resources</LI>
-				<LI>new: AlarmEventConfigResourceIsUsedUp  -- When DBMS is out off configured resources</LI>
-				<LI>new: AlarmEventErrorLogEntry           -- When some defined error messages is written to the DBMS Error log</LI>
-				<LI>new: AlarmEventOldTranLogBackup        -- OldBackup previously hold both DB and LOG. Now they are separated.</LI>
-				<LI>new: AlarmEventConfigChanges           -- Fires when a configuration changes is detected from the error log</LI>
-				<LI>new: AlarmEventProcessInfected         -- Fires if we find 'Process Infected' is found in the error log, this so we can easily see the stack trace.</LI>
-				<LI>new: AlarmEventLowOsDiskFreeSpace      -- For SQL-Server, when we starting to run out of disk in the volumes where we store data/log files.</LI>
-				<LI>new: AlarmEventAseLicensExpiration     -- For Sybase ASE; If the server is in Grace Period, send alarm.</LI>
-				<LI>new: AlarmEventMissingMandatoryContent -- which is used to check that some users or applications are logged in to the DBMS </LI>
-				<LI>new: AlarmEventOsDiskUtilPct           -- if OS Disk has been busy for for a long time (something strange is happening, like write cache has been disabled due to low voltage on battery)</LI>
+				<LI>New: AlarmWriterToSlack                 -- Send messages to Slack</LI>
+				<LI>new: AlarmEventConfigResourceIsLow      -- When DBMS is low on configured resources</LI>
+				<LI>new: AlarmEventConfigResourceIsUsedUp   -- When DBMS is out off configured resources</LI>
+				<LI>new: AlarmEventErrorLogEntry            -- When some defined error messages is written to the DBMS Error log</LI>
+				<LI>new: AlarmEventOldTranLogBackup         -- OldBackup previously hold both DB and LOG. Now they are separated.</LI>
+				<LI>new: AlarmEventConfigChanges            -- Fires when a configuration changes is detected from the error log</LI>
+				<LI>new: AlarmEventProcessInfected          -- Fires if we find 'Process Infected' is found in the error log, this so we can easily see the stack trace.</LI>
+				<LI>new: AlarmEventLowOsDiskFreeSpace       -- For SQL-Server, when we starting to run out of disk in the volumes where we store data/log files.</LI>
+				<LI>new: AlarmEventAseLicensExpiration      -- For Sybase ASE; If the server is in Grace Period, send alarm.</LI>
+				<LI>new: AlarmEventMissingMandatoryContent  -- which is used to check that some users or applications are logged in to the DBMS </LI>
+				<LI>new: AlarmEventOsDiskUtilPct            -- if OS Disk has been busy for for a long time (something strange is happening, like write cache has been disabled due to low voltage on battery)</LI>
+				<LI>new: AlarmEventDatabaseState            -- used for SQL-Server AlwaysOn</LI>
+				<LI>new: AlarmEventAgLogSendQueueSize       -- used for SQL-Server AlwaysOn</LI>
+				<LI>new: AlarmEventAgRoleChange             -- used for SQL-Server AlwaysOn</LI>
+				<LI>new: AlarmEventAgSecondaryCommitTimeLag -- used for SQL-Server AlwaysOn</LI>
+				<LI>new: AlarmEventAgSplitBrain             -- used for SQL-Server AlwaysOn</LI>
+				<LI>new: AlarmEventAgUnexpectedState        -- used for SQL-Server AlwaysOn</LI>
+				<LI>new: AlarmEventBagRolePercentSkewed     -- used for SQL-Server AlwaysOn</LI>
+				<LI>Added Category: HADR and RPO (Recovery Point Objective)</LI>
 				<LI>Possible to send dummy alarm <b>from</b> the Template editor while editing the templates, to test any writer with the message template</LI>
 				<LI>possible to use <code>${activeAlarmCount}</code> in writer templates</LI>
 				<LI>possible to use <code>${dbxCentralUrl}</code> in writer templates</LI>
@@ -110,6 +118,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<li>remove file produced by '-XX:HeapDumpPath=path' after 7 days, not to fill up disk space.</li>
 		<li>NoGui: Changing configuration files will be automatically picked up (objects must read from the Configuration object to see the new values)</li>
 		<li>collector 'CmOsIostat' which is part of all DbxTune collectors: send alarm 'AlarmEventOsDiskUtilPct' -- if OS Disk has been busy for for a long time (something strange is happening, like write cache has been disabled due to low voltage on battery)</li>
+		<li>Trend Graph Panel - In the properties dialog, double click on a row, and it will move to the selected graph in the panel and "blink" it for 5 seconds, so it's easy to find graphs</li>
+		<li>Host monitoring: iostat, now supports version 11.5.7, which intruduced/changed some columns</li>
+		<li>Right click context menu: had some problems if the columns was re-ordered</li>
 		<LI>
 			<b>Upgraded some of the third party libraries/jars</b><br>
 			<ul>
@@ -171,6 +182,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Servers Overview; Daily Report Section: Added links to view "latest" daily report for each on the servers</LI>
 		<li>PCS central: Changed "CentralH2Defrag" to check once a day at 04:00 instead of every 4 hour</li>
 		<li>The Remember "Alarm Window Max Size" and "Solid Background" between sessions (which is visible if there are Active Alarms)</li>
+		<li>Changed ALARM_ACTIVE and ALARM_HISTORY: data type for columns 'data' and 'lastData' from varchar(160) to varchar(512)</li>
  	</UL>
 
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -220,9 +232,27 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
-		<b>CmDataCahces</b><br>
+		<b>CmDataCahces - Caches</b><br>
 		<ul>
-			<li>send AlarmEventConfigResourceIsLow if 'default data cache' is < 10mb (8mb is the typical default configuration)</li>
+			<li>send AlarmEventConfigResourceIsLow if 'default data cache' is &lt; 10mb (8mb is the typical default configuration)</li>
+			<li>Added column 'RealPhysicalReads'... Actual or Real Physical Reads<br>   Formula: PhysicalReads + APFReads</li>
+			<li>Bugfix: 'CacheHitRate' which was faulty calculated. It now uses 'RealPhysicalReads' instead of 'PhysicalReads' to calculate the Hit Rate</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmCahePools - tab:Pools</b><br>
+		<ul>
+			<li>Added column 'RealPhysicalReads'... Actual or Real Physical Reads<br>Formula: PhysicalReads + APFReads</li>
+			<li>Added column 'RealPagesRead'...     Actual or Real Number of Pages read into the pool.<br>
+			                                        For a 1 Page Pool, this is the same value as PagesRead.<br>
+			                                        But for a 2, 4 or 8 Page Pool, the PagesRead is a bit misleading, yes it number of pages, but not Physical IO's read.<br>
+			                                        To get Physical IO's read you need to divide by number of PagesPerIO in the Pool. (since we are reading X pages with One IO Operation)<br>
+			                                        Formula: PagesRead / PagesPerIO
+			                                        </li>
+			<li>Bug at 'CacheHitRate' which was faulty calculated for MultiPagePools. It now uses 'RealPagesRead' instead of 'PagesRead' to calculate the Hit Rate</li>
+			<li>Added Graph: Cache Pools Real Physical Reads (Physical+APF)</li>
 		</ul>
 		</LI>
 
@@ -383,6 +413,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>Sum Wait Time Over SQL Response Time</li>
 			<li>Sum Rows Affected Over SQL Response Time</li>
 			<li>Error Count</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmProcElc - Engine Local Proc Cache</b><br>
+		<ul>
+			<li>A new monitor table 'monProcELC' in ASE 16 SP3 PL8</li>
 		</ul>
 		</LI>
 

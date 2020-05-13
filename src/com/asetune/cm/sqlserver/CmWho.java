@@ -223,6 +223,7 @@ extends CountersModel
 			"	physical_io, \n" +
 			"	memusage, \n" +
 			"	login_time, \n" +
+			"	login_time_ss = CASE WHEN datediff(day, login_time, getdate()) >= 24 THEN -1 ELSE  datediff(ss, login_time, getdate()) END, \n" +
 			"	last_batch, \n" +
 //			"	last_batch_ss = datediff(ss, last_batch, getdate()), \n" +
 			"	last_batch_ss = CASE WHEN datediff(day, last_batch, getdate()) >= 24 THEN -1 ELSE  datediff(ss, last_batch, getdate()) END, \n" +

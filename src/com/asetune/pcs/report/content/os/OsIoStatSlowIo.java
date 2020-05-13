@@ -44,6 +44,27 @@ public class OsIoStatSlowIo extends ReportEntryAbstract
 	}
 
 	@Override
+	public boolean isEnabled()
+	{
+		// If super is DISABLED, no need to continue
+		boolean isEnabled = super.isEnabled();
+		if ( ! isEnabled )
+			return isEnabled;
+
+		// NOT For Windows
+		String dbmsVerStr = getReportingInstance().getDbmsVersionStr();
+		if (StringUtil.hasValue(dbmsVerStr))
+		{
+			if (dbmsVerStr.indexOf("Windows") != -1)
+			{
+				setDisabledReason("This DBMS is running on Windows, wich is not supported by this report.");
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	@Override
 	public String getMessageText()
 	{
 		StringBuilder sb = new StringBuilder();

@@ -163,7 +163,7 @@ implements FileTail.TraceListener
 
 	/** called from GetCounters.initCounters() */
 	@Override
-	public void init(Connection conn)
+	public void init(DbxConnection conn)
 	throws Exception
 	{
 		localInit();

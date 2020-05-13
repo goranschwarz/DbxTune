@@ -24,7 +24,6 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.util.LinkedHashMap;
@@ -416,7 +415,7 @@ extends TabularCntrPanel
 					if (dataEntry == null)
 					{
 						dataEntry = new DiskOsEntry(dataOsName, DataOsDiskFreeMb.doubleValue(), DataOsDiskUsedPct.doubleValue());
-						diskMap.put(logOsName, dataEntry);
+						diskMap.put(dataOsName, dataEntry);
 					}
 				}
 				

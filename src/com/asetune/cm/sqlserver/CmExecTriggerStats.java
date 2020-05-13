@@ -84,6 +84,10 @@ extends CountersModel
 //		"last_elapsed_time",
 //		"min_elapsed_time",
 //		"max_elapsed_time",
+		"total_spills",
+		"total_num_physical_reads",
+		"total_page_server_reads",
+		"total_num_page_server_reads",
 		"_last_column_name_only_used_as_a_place_holder_here_"
 		};
 

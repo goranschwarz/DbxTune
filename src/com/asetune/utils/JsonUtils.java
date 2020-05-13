@@ -78,9 +78,7 @@ public class JsonUtils
 			// If we have found Bracket Quote and Colon
 			if (posBracket >= 0 && posQuote >= 0 && posColon >= 0)
 			{
-				return posBracket < posQuote 
-					&& posBracket < posQuote
-					&& posQuote   < posColon;
+				return posBracket < posQuote && posQuote < posColon;
 			}
 		}
 		return false;
@@ -107,12 +105,16 @@ public class JsonUtils
 		}
 	}
 
+	public static String format(String jsonStr)
+	{
+		return format(jsonStr, false);
+	}
 	/**
 	 * Let a JSON Parser to the job of Pretty Print the JSON content
 	 * @param jsonStr
 	 * @return The Pretty printed JSON String
 	 */
-	public static String format(String jsonStr)
+	public static String format(String jsonStr, boolean asHtml)
 	{
 		JsonParser parser = new JsonParser();
 //		JsonObject jsonObj = parser.parse(jsonStr).getAsJsonObject();
@@ -122,6 +124,9 @@ public class JsonUtils
 		Gson gsonTmp = new GsonBuilder().setPrettyPrinting().create();
 		String prettyJson = gsonTmp.toJson(jsonObj);
 
-		return prettyJson;
+		if (asHtml)
+			return "<html><pre>\n" + prettyJson + "\n</pre></html>"; // possibly use <xmp> instead of <pre>
+		else
+			return prettyJson;
 	}
 }

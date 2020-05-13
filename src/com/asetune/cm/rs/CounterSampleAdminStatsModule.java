@@ -88,7 +88,7 @@ extends CounterSample
 		// Finally add the rows
 		for (List<Object> row : rows)
 		{
-			addRow(row);
+			addRow(cm, row);
 		}
 		
 		return true;

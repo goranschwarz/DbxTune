@@ -40,6 +40,7 @@ import com.asetune.ui.autocomplete.completions.SqlDbCompletion;
 import com.asetune.ui.autocomplete.completions.SqlProcedureCompletion;
 import com.asetune.ui.autocomplete.completions.SqlSchemaCompletion;
 import com.asetune.ui.autocomplete.completions.SqlTableCompletion;
+import com.asetune.ui.tooltip.suppliers.ToolTipSupplierCompletion;
 import com.asetune.utils.SwingUtils;
 
 public class SqlCellRenderer
@@ -74,6 +75,8 @@ extends DefaultListCellRenderer
 	public final static ImageIcon ICON_FUNCTION         = SwingUtils.readImageIcon(Version.class, "images/cc_function.png");
 	public final static ImageIcon ICON_PROCEDURE        = SwingUtils.readImageIcon(Version.class, "images/cc_procedure.png");
 	public final static ImageIcon ICON_SYSTEM_PROCEDURE = SwingUtils.readImageIcon(Version.class, "images/cc_system_procedure.png");
+	public final static ImageIcon ICON_CODE_COMPLETION  = SwingUtils.readImageIcon(Version.class, "images/cc_code_completion.png");
+
 
 	
 	@Override
@@ -149,6 +152,10 @@ extends DefaultListCellRenderer
 			else if (info.getType().equalsIgnoreCase("SYSTEM PROCEDURE")) return ICON_SYSTEM_PROCEDURE;
 			else return ICON_UNKNOWN_TYPE;
 
+		}
+		else if (completion instanceof ToolTipSupplierCompletion)
+		{
+			return ICON_CODE_COMPLETION;
 		}
 		else if (completion instanceof SqlColumnCompletion)
 		{

@@ -22,10 +22,14 @@ package com.asetune.cm.sqlserver.gui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
 
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.CmExecQueryStats;
@@ -33,6 +37,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
@@ -156,6 +161,8 @@ extends TabularCntrPanel
 	}
 
 	private JCheckBox        _sampleLastXminutes_chk;
+	private JTextField       _sampleLastXminutes_txt;
+	private JLabel           _sampleLastXminutes_lbl;
 	private JCheckBox        _sampleAfterPrevSample_chk;
 	private RSyntaxTextAreaX _sampleExtraWhereClause_txt;
 	private JButton          _sampleExtraWhereClause_but;
@@ -176,13 +183,18 @@ extends TabularCntrPanel
 
 		Configuration conf = Configuration.getCombinedConfiguration();
 
-		_sampleLastXminutes_chk     = new JCheckBox("Show only SQL executed last 10 minutes",         conf == null ? CmExecQueryStats.DEFAULT_sample_lastXminutes    : conf.getBooleanProperty(CmExecQueryStats.PROPKEY_sample_lastXminutes,    CmExecQueryStats.DEFAULT_sample_lastXminutes));
-		_sampleAfterPrevSample_chk  = new JCheckBox("Show only SQL executed since last sample time",  conf == null ? CmExecQueryStats.DEFAULT_sample_afterPrevSample : conf.getBooleanProperty(CmExecQueryStats.PROPKEY_sample_afterPrevSample, CmExecQueryStats.DEFAULT_sample_afterPrevSample));
+//		_sampleLastXminutes_chk     = new JCheckBox("Show only SQL executed last 10 minutes",         conf == null ? CmExecQueryStats.DEFAULT_sample_lastXminutes    : conf.getBooleanProperty(CmExecQueryStats.PROPKEY_sample_lastXminutes,     CmExecQueryStats.DEFAULT_sample_lastXminutes));
+		_sampleLastXminutes_chk     = new JCheckBox("Show only SQL executed last",                    conf == null ? CmExecQueryStats.DEFAULT_sample_lastXminutes    : conf.getBooleanProperty(CmExecQueryStats.PROPKEY_sample_lastXminutes,     CmExecQueryStats.DEFAULT_sample_lastXminutes));
+		_sampleLastXminutes_txt     = new JTextField(""+                                             (conf == null ? CmExecQueryStats.DEFAULT_sample_lastXminutesTime: conf.getIntProperty    (CmExecQueryStats.PROPKEY_sample_lastXminutesTime, CmExecQueryStats.DEFAULT_sample_lastXminutesTime)), 3);
+		_sampleLastXminutes_lbl     = new JLabel("minutes");
+		_sampleAfterPrevSample_chk  = new JCheckBox("Show only SQL executed since last sample time",  conf == null ? CmExecQueryStats.DEFAULT_sample_afterPrevSample : conf.getBooleanProperty(CmExecQueryStats.PROPKEY_sample_afterPrevSample,  CmExecQueryStats.DEFAULT_sample_afterPrevSample));
 		_sampleExtraWhereClause_txt = new RSyntaxTextAreaX();
 		_sampleExtraWhereClause_but = new JButton("Apply Extra Where Clause");
 		_sampleExtraWhereToDef_but  = new JButton("To Default");
 
 		_sampleLastXminutes_chk    .setToolTipText(TOOLTIP_sample_lastXminutes);
+		_sampleLastXminutes_txt    .setToolTipText(TOOLTIP_sample_lastXminutes);
+		_sampleLastXminutes_lbl    .setToolTipText(TOOLTIP_sample_lastXminutes);
 		_sampleAfterPrevSample_chk .setToolTipText(TOOLTIP_sample_afterPrevSample);
 		_sampleExtraWhereClause_but.setToolTipText(TOOLTIP_sample_extraWhereClause);
 		_sampleExtraWhereClause_txt.setToolTipText(TOOLTIP_sample_extraWhereClause);
@@ -195,7 +207,10 @@ extends TabularCntrPanel
 		_sampleExtraWhereClause_txt.setHighlightCurrentLine(false);
 		_sampleExtraWhereClause_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
 
-		panel.add(_sampleLastXminutes_chk,     "wrap");
+		panel.add(_sampleLastXminutes_chk,     "split");
+		panel.add(_sampleLastXminutes_txt,     "");
+		panel.add(_sampleLastXminutes_lbl,     "wrap");
+
 		panel.add(_sampleAfterPrevSample_chk,  "wrap");
 
 		panel.add(_sampleExtraWhereClause_txt, "grow, push, wrap");
@@ -212,6 +227,61 @@ extends TabularCntrPanel
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
 				conf.setProperty(CmExecQueryStats.PROPKEY_sample_lastXminutes, ((JCheckBox)e.getSource()).isSelected());
+				conf.save();
+				
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+		_sampleLastXminutes_txt.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+
+				String sampleTimeStr = _sampleLastXminutes_txt.getText();
+				int    sampleTimeInt = StringUtil.parseInt(sampleTimeStr, -1);
+				if (sampleTimeInt < 0)
+				{
+					SwingUtils.showErrorMessage(CmExecQueryStatsPanel.this, "Not a Number", "This must be specified as an integer value, and it was '"+sampleTimeStr+"'.", null);
+					_sampleLastXminutes_txt.setText(CmExecQueryStats.DEFAULT_sample_lastXminutesTime + "");
+					return;
+				}
+				conf.setProperty(CmExecQueryStats.PROPKEY_sample_lastXminutesTime, _sampleLastXminutes_txt.getText());
+				conf.save();
+				
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+		_sampleLastXminutes_txt.addFocusListener(new FocusListener()
+		{
+			@Override
+			public void focusGained(FocusEvent e)
+			{
+			}
+
+			@Override
+			public void focusLost(FocusEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+
+				String sampleTimeStr = _sampleLastXminutes_txt.getText();
+				int    sampleTimeInt = StringUtil.parseInt(sampleTimeStr, -1);
+				if (sampleTimeInt < 0)
+				{
+					SwingUtils.showErrorMessage(CmExecQueryStatsPanel.this, "Not a Number", "This must be specified as an integer value, and it was '"+sampleTimeStr+"'.", null);
+					_sampleLastXminutes_txt.setText(CmExecQueryStats.DEFAULT_sample_lastXminutesTime + "");
+					return;
+				}
+				conf.setProperty(CmExecQueryStats.PROPKEY_sample_lastXminutesTime, _sampleLastXminutes_txt.getText());
 				conf.save();
 				
 				// ReInitialize the SQL

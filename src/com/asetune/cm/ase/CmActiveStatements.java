@@ -998,7 +998,11 @@ extends CountersModel
 						dbccSqlText = "Not Available";
 
 					if (getProcCallStack)
-						procCallStack  = AseConnectionUtils.monProcCallStack(getCounterController().getMonConnection(), spid, true);
+					{
+						// No need to get call stack if it's a Statement Cache or Dynamic SQL entry... because they do not call other procs...
+						if (o_procname != null && !o_procname.equals("") && !((String)o_procname).startsWith("*s"))
+							procCallStack  = AseConnectionUtils.monProcCallStack(getCounterController().getMonConnection(), spid, true);
+					}
 					else
 						procCallStack = "This was disabled";
 					if (procCallStack == null)

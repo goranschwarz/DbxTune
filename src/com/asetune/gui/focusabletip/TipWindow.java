@@ -283,7 +283,8 @@ class TipWindow extends JWindow implements ActionListener, HyperlinkListener {
 		boolean focusable = getFocusableWindowState();
 		if (focusable) 
 		{
-			panel.add(createNavigationPanel(), BorderLayout.LINE_START);
+//			panel.add(createNavigationPanel(), BorderLayout.LINE_START);
+			panel.add(createNavigationPanel(), BorderLayout.CENTER);
 
 			SizeGrip sg = new SizeGrip();
 			sg.applyComponentOrientation(sg.getComponentOrientation()); // Workaround
@@ -784,8 +785,8 @@ class TipWindow extends JWindow implements ActionListener, HyperlinkListener {
     private JButton    backButton    = new JButton("<");
     private JButton    forwardButton = new JButton(">");
     private JButton    openInBrowser = new JButton();
-	private JTextField locationText  = new JTextField(40);
-//	private JTextField locationText  = new JTextField();
+//	private JTextField locationText  = new JTextField(60);
+	private JTextField locationText  = new JTextField();
 
 	/** creates the navigation panel at the end */
 	private JPanel createNavigationPanel()
@@ -870,8 +871,8 @@ class TipWindow extends JWindow implements ActionListener, HyperlinkListener {
 		locationText.setBackground(panel.getBackground());
 		locationText.setBorder(null);
 		gbc.gridx = 3;
-//		gbc.weighty = 1.0;
 		gbc.fill = GridBagConstraints.HORIZONTAL;
+		gbc.weightx = 1.0;
 		panel.add(locationText, gbc);
 		
 		return panel;

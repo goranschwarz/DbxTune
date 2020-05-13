@@ -34,4 +34,9 @@ public interface AsetuneSyntaxConstants extends SyntaxConstants
 	 */
 	public static final String SYNTAX_STYLE_SYBASE_TSQL			= "text/sybase-tsql";
 
+	/**
+	 * Style for highlighting SQL.
+	 */
+	public static final String SYNTAX_STYLE_MSSQL_TSQL			= "text/mssql-tsql";
+
 }

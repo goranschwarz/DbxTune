@@ -12,6 +12,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.Properties;
 import java.util.Set;
 
 import javax.swing.JMenu;
@@ -202,6 +203,19 @@ public class TablePopupFactory
 		{
 			_logger.debug("createDataTablePopupMenu(): found prefix '"+prefixStr+"'.");
 
+			// Create a Properties with all "Sub keys", and trim of the prefix... keeping just the "sub key"
+			Properties entryProps = new Properties();
+			for (String key : conf.getKeys(prefixStr))
+			{
+				String val = conf.getProperty(key);
+
+				// Take away the prefix
+				String shortKey = key.replaceFirst(prefixStr+".", "");
+
+				// Stuff it in the Properties 
+				entryProps.put(shortKey, val);
+			}
+			
 			// Read menu name
 			String menuItemName = conf.getPropertyRaw(prefixStr+".name");
 
@@ -266,7 +280,9 @@ public class TablePopupFactory
 
 			// Create the executor class
 			TablePopupAction action = new TablePopupAction(menuItemName, 
-					connName, classname, params, config, null, /*menuProp*/null, 
+					connName, classname, params, config, 
+					null, /*menuProp*/
+					entryProps, /*allProp*/
 					table, connFactory, true, owner);
 
 			JMenuItem menuItem = new JMenuItem(menuItemName);
@@ -381,11 +397,11 @@ public class TablePopupFactory
 										continue;
 									}
 
-									// Loop all colums in the table
+									// Loop all columns in the table
 									for (int x=0; x<tab.getColumnCount(); x++)
 									{
 										String colName = tab.getColumnName(x);
-										if ( colName.equalsIgnoreCase(param) )
+										if ( colName != null && colName.equalsIgnoreCase(param) )
 										{
 											foundParam = true;
 											foundColumns++;

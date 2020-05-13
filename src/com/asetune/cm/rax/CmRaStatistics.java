@@ -974,7 +974,7 @@ extends CountersModel
 		row.add(strValue);
 		row.add(numValue);
 		row.add(desc);
-		newSample.addRow(row);
+		newSample.addRow(this, row);
 //		System.out.println("addRow(): compKey='"+compKey+"', statKey='"+statKey+"', strValue='"+strValue+"', numValue='"+numValue+"', desc='"+desc+"'.");
 	}
 

@@ -163,13 +163,34 @@ public class ConnectionProp
 		}
 	}
 	
+	private int _onConnectErrorAutoCloseDialogDelayMs = 0;
+	/**
+	 * If A Connection GUI is visible and we FAIL to connect, normally we will stay in the dialog waiting...<br> 
+	 * This can "auto close" the delay after X milliseconds!
+	 * @param delayInMs   0 (or less than 0 which is the DEFAULT) means: Wait in the dialog forever... 
+	 */
+	public void setOnConnectErrorAutoCloseDialogDelayMs(int delayInMs)
+	{
+		_onConnectErrorAutoCloseDialogDelayMs = delayInMs;
+	}
+
+	/**
+	 * If A Connection GUI is visible and we FAIL to connect, normally we will stay in the dialog waiting...<br> 
+	 * This can "auto close" the delay after X milliseconds!
+	 * @return  0 (or less) means: Wait in the dialog forever..., above 0 closes the dialog automatically after X ms 
+	 */
+	public int getOnConnectErrorAutoCloseDialogDelayMs()
+	{
+		return _onConnectErrorAutoCloseDialogDelayMs;
+	}
+
 	@Override
 	public String toString()
 	{
 		StringBuilder sb = new StringBuilder();
 		sb.append("_username")     .append("=").append(_username)     .append(", ");
 
-		if (_logger.isDebugEnabled())
+		if (_logger.isDebugEnabled() || System.getProperty("DbxConnection.connect.nogui.print", "false").equalsIgnoreCase("true"))
 			sb.append("_password") .append("=").append(_password)     .append(", ");
 		else
 			sb.append("_password") .append("=").append("*secret*")    .append(", ");
@@ -187,4 +208,5 @@ public class ConnectionProp
 
 		return super.toString() + ": " + sb.toString();
 	}
+
 }

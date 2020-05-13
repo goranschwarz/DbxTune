@@ -45,6 +45,7 @@ import org.fife.ui.rtextarea.RTextAreaEditorKit;
 import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
 import org.fife.ui.rtextarea.SearchResult;
+import org.fife.ui.rtextarea.ToolTipSupplier;
 
 import com.asetune.gui.focusabletip.FocusableTip;
 import com.asetune.gui.focusabletip.ToolTipHyperlinkResolver;
@@ -391,6 +392,14 @@ extends RSyntaxTextArea
 //		return superToolTip;
 //	}
 
+	@Override
+	public void setToolTipSupplier(ToolTipSupplier supplier)
+	{
+		super.setToolTipSupplier(supplier);
+		if (supplier instanceof ToolTipHyperlinkResolver)
+			setToolTipHyperlinkResolver((ToolTipHyperlinkResolver)supplier);
+	}
+	
 	private ToolTipHyperlinkResolver _hyperlinkResolver = null;
 	/**
 	 * Sets the ToolTipHyperlinkResolver where you can decide what to do when a link is pressed within the ToolTip window

@@ -151,7 +151,7 @@ implements ActionListener
 			LinkedHashSet<String> paramSet = _params.get(p);
 			String paramUsed = null;
 			boolean isOptional = false;
-			int colPos = -1;
+			int viewColPos = -1;
 			for (String param : paramSet)
 			{
 				if (param.equalsIgnoreCase(TablePopupFactory.OPTIONAL_PARAM))
@@ -167,21 +167,25 @@ implements ActionListener
 					if ( colName.equalsIgnoreCase(param) )
 					{
 						paramUsed = param;
-						colPos = c;
+						viewColPos = c;
 						break; // break the column loop
 					}
 				}
-				if (colPos > 0)
+				if (viewColPos >= 0)
 					break;
 			}
 
 
-			_logger.debug("PopupMenuAction: column name '"+paramSet+"' has table index "+colPos+".");
+			_logger.debug("PopupMenuAction: column name '"+paramSet+"' has table index "+viewColPos+".");
 
 			TableModel model = _table.getModel();
-			if (colPos >= 0)
+			if (viewColPos >= 0)
 			{
-				Object obj = model.getValueAt(row, colPos);
+				int modelColPos = ((JXTable)_table).convertColumnIndexToModel(viewColPos);
+				if (modelColPos == -1)
+					throw new RuntimeException("Can't find/convert column from view to model. viewColPos=" + viewColPos + ", modelCol="+modelColPos);
+
+				Object obj = model.getValueAt(row, modelColPos);
 				String val = "";
 				if (obj != null)
 				{

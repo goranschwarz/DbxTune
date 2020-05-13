@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -44,7 +46,7 @@ extends CounterTableModel
     public static final String PK_STR_DELIMITER = "|"; 
     
 	private   boolean            _negativeDiffCountersToZero = true;
-	protected String             _name           = null; // Used for debuging
+	protected String             _name           = null; // Used for debugging
 	private   String[]           _diffColNames   = null; // if we need to do PK merging...
 	protected CounterSample      _prevSample     = null; // used to calculate sample interval etc
 	private   List<String>       _colNames       = null;
@@ -182,19 +184,31 @@ extends CounterTableModel
 		return _colNames.get(colid);
 	}
 
-	@Override
+	/**
+	 * Index starting at 0
+	 */
+	@Override 
 	public Class<?> getColumnClass(int colid)
 	{
 		if (getRowCount() == 0)
 			return Object.class;
 
 		Object o = getValueAt(0, colid);
-		Class<?> clazz = o!=null ? o.getClass() : Object.class;
-		if (o instanceof Timestamp)
-			return Object.class;
+		if (o == null)
+		{
+			int jdbcType = _colSqlType.get(colid);
+			return ResultSetTableModel.getJavaClassFromJdbcType(jdbcType);
+		}
 		else
+		{
+			// return class from the underlying data
+			
+			Class<?> clazz = o!=null ? o.getClass() : Object.class;
+			if (o instanceof Timestamp)
+				return Object.class;
+
 			return clazz;
-//		return o!=null ? o.getClass() : Object.class;
+		}
 	}
 
 	@Override
@@ -1421,7 +1435,10 @@ extends CounterTableModel
 					}
 					if (pkDuplicateAction == 0)
 					{
-						_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+getName()+"', pk='"+pkList+"', a row with the key values '"+key+"' already exists. CurrentRow='"+curRow+"'. NewRow='"+row+"'.");
+						// Possibly change this in the future to check for DuplicateKey action in the CM
+						// meaning instead of just returning true|false ... move this up a bit in the logic to also check for "pkDuplicateAction" etc... 
+						if (cm.actionForSampleDuplicateKey(this, keyStr, curRow, row))
+							_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+getName()+"', pk='"+pkList+"', a row with the key values '"+key+"' already exists. CurrentRow='"+curRow+"'. NewRow='"+row+"'.");
 
 						// Read next row
 						continue;
@@ -1553,7 +1570,7 @@ extends CounterTableModel
 	 * @param row
 	 * @return
 	 */
-	public boolean addRow(List<Object> row)
+	public boolean addRow(CountersModel cm, List<Object> row)
 	{
 		if (row == null)
 			return false;
@@ -1606,7 +1623,10 @@ extends CounterTableModel
 				//if (allowRowMerge)
 				//	doRowMerge(curRow, row);
 
-				_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+getName()+"', pk='"+getPkCols(_colIsPk)+"', a row with the key values '"+key+"' already exists. CurrentRow='"+curRow+"'. NewRow='"+row+"'.");
+				// Possibly change this in the future to check for DuplicateKey action in the CM
+				// meaning instead of just returning true|false ... move this up a bit in the logic to also check for "pkDuplicateAction" etc... 
+				if (cm.actionForSampleDuplicateKey(this, keyStr, curRow, row))
+					_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+getName()+"', pk='"+getPkCols(_colIsPk)+"', a row with the key values '"+key+"' already exists. CurrentRow='"+curRow+"'. NewRow='"+row+"'.");
 				return false;
 				//throw new DuplicateKeyException(key, curRow, row);
 			}
@@ -2313,6 +2333,314 @@ extends CounterTableModel
 		return sb.toString();
 	}
 
+//	public Object getValueAsObject (int    rowId, int    colPos)                          { Object o = getValue     (rowId, colPos);  return o; }
+//	public Object getValueAsObject (int    rowId, String colname)                         { return getValue         (rowId, colname, true); }
+//	public Object getValueAsObject (int    rowId, String colname, boolean cs)             { return getValue         (rowId, colname,   cs); }
+//	public Object getValueAsObject (String pkStr, String colname)                         { return getValue         (pkStr, colname, true); }
+//	public Object getValueAsObject (String pkStr, String colname, boolean cs)             { return getValue         (pkStr, colname,   cs); }
+
+//	public String getValueAsString (int    rowId, int    colPos)                          { Object o = getValueAsObject     (rowId, colPos);  return (o==null)?"":o.toString(); }
+//	public String getValueAsString (int    rowId, String colname)                         { Object o = getValueAsObject     (rowId, colname, true); return (o==null)?"":o.toString(); }
+//	public String getValueAsString (int    rowId, String colname, boolean cs)             { Object o = getValueAsObject     (rowId, colname,   cs); return (o==null)?"":o.toString(); }
+//	public String getValueAsString (String pkStr, String colname)                         { Object o = getValueAsObject     (pkStr, colname, true); return (o==null)?"":o.toString(); }
+//	public String getValueAsString (String pkStr, String colname, boolean cs)             { Object o = getValueAsObject     (pkStr, colname,   cs); return (o==null)?"":o.toString(); }
+	
+//	public Double getValueAsDouble (int    rowId, int    colPos)                          { return getValueAsDouble (DATA_RATE, rowId, colPos);             }
+//	public Double getValueAsDouble (int    rowId, int    colPos, Double def)              { return getValueAsDouble (DATA_RATE, rowId, colPos, def);        }
+//	public Double getValueAsDouble (int    rowId, String colname)                         { return getValueAsDouble (DATA_RATE, rowId, colname, true);      }
+//	public Double getValueAsDouble (int    rowId, String colname, boolean cs)             { return getValueAsDouble (DATA_RATE, rowId, colname,   cs);      }
+//	public Double getValueAsDouble (int    rowId, String colname, Double def)             { return getValueAsDouble (DATA_RATE, rowId, colname, true, def); }
+//	public Double getValueAsDouble (int    rowId, String colname, boolean cs, Double def) { return getValueAsDouble (DATA_RATE, rowId, colname,   cs, def); }
+//	public Double getValueAsDouble (String pkStr, String colname)                         { return getValueAsDouble (DATA_RATE, pkStr, colname, true);      }
+//	public Double getValueAsDouble (String pkStr, String colname, boolean cs)             { return getValueAsDouble (DATA_RATE, pkStr, colname,   cs);      }
+//	public Double getValueAsDouble (String pkStr, String colname, Double def)             { return getValueAsDouble (DATA_RATE, pkStr, colname, true, def); }
+//	public Double getValueAsDouble (String pkStr, String colname, boolean cs, Double def) { return getValueAsDouble (DATA_RATE, pkStr, colname,   cs, def); }
+//	
+//	public String getRatePkValue       (int    rowId)                                         { return getPkValue       (DATA_RATE, rowId  ); }
+//    
+//	public int[]         getRateRowIdsWhere(String colname, String colval)                        { return getRowIdsWhere   (DATA_RATE, colname, true, colval); }
+//	public int[]         getRateRowIdsWhere(String colname, boolean cs, String colval)            { return getRowIdsWhere   (DATA_RATE, colname,   cs, colval); }
+//
+//	public List<Integer> getRateRowIdsWhere(Map<String, Object> nameValue, boolean caseSensitive) { return getRowIdsWhere(DATA_RATE, nameValue, caseSensitive); }
+//	public List<Integer> getRateRowIdsWhere(Map<String, Object> nameValue)                        { return getRowIdsWhere(DATA_RATE, nameValue, true); }
+
+	
+
+	//----------------------------------------------------------------------------------
+	//-- getValueAsString
+	//----------------------------------------------------------------------------------
+	public String getValueAsString (int    rowId, int    colPos)                          { Object o = getValueAsObject     (rowId, colPos);  return (o==null)?"":o.toString(); }
+	public String getValueAsString (int    rowId, String colname)                         { Object o = getValueAsObject     (rowId, colname, true); return (o==null)?"":o.toString(); }
+	public String getValueAsString (int    rowId, String colname, boolean cs)             { Object o = getValueAsObject     (rowId, colname,   cs); return (o==null)?"":o.toString(); }
+	public String getValueAsString (String pkStr, String colname)                         { Object o = getValueAsObject     (pkStr, colname, true); return (o==null)?"":o.toString(); }
+	public String getValueAsString (String pkStr, String colname, boolean cs)             { Object o = getValueAsObject     (pkStr, colname,   cs); return (o==null)?"":o.toString(); }
+
+
+	//----------------------------------------------------------------------------------
+	//-- getValueAsObject
+	//----------------------------------------------------------------------------------
+	// Return the value of a cell by ROWID (rowId, ColumnName)
+	public Object getValueAsObject(int rowId, int colId)
+	{
+		return getValueAsObject(rowId, colId, null);
+	}
+
+	// Return the value of a cell by ROWID (rowId, ColumnName)
+	public Object getValueAsObject(int rowId, int colId, Object def)
+	{
+		if (colId < 0 || colId > getColumnCount())
+		{
+			if (_logger.isDebugEnabled()) 
+				_logger.debug("getValue: column id " + colId + " is out of range. column Count is " + getColumnCount());
+			return null;
+		}
+		if (getRowCount() <= rowId)
+			return null;
+
+		return getValueAt(rowId, colId);
+	}
+
+	// Return the value of a cell by ROWID (rowId, ColumnName)
+	public Object getValueAsObject(int rowId, String colname, boolean caseSensitive)
+	{
+		return getValueAsObject(rowId, colname, caseSensitive, null);
+	}
+
+	// Return the value of a cell by ROWID (rowId, ColumnName)
+	public Object getValueAsObject(int rowId, String colname, boolean caseSensitive, Object def)
+	{
+		int idCol = findColumn(colname, caseSensitive);
+		if (idCol == -1)
+		{
+			if (_logger.isDebugEnabled()) 
+				_logger.debug("getValue: Can't find the column '" + colname + "'.");
+			return null;
+		}
+		if (getRowCount() <= rowId)
+			return null;
+
+		return getValueAt(rowId, idCol);
+	}
+
+	// 
+	public Object getValueAsObject(String pkStr, String colname, boolean caseSensitive)
+	{
+		return getValueAsObject(pkStr, colname, caseSensitive, null);
+	}
+
+	/**
+	 *  Return the value of a cell by ROWID (rowId, colId)
+	 *  rowId starts at 0
+	 *  colId starts at 
+	 *  NOTE: note tested (2007-07-13)
+	 */
+	// Return the value of a cell by keyVal, (keyVal, ColumnName)
+	public Object getValueAsObject(String pkStr, String colname, boolean caseSensitive, Object def)
+	{
+		// Get the rowId, if not found, return null
+		int rowId = getRowNumberForPkValue(pkStr);
+		if (rowId < 0)
+		{
+			if (_logger.isDebugEnabled())
+				_logger.debug(getName()+".getValue(pkStr='"+pkStr+"', colname='"+colname+"'): rowId="+rowId+": rowId < 0; return null");
+			return def;
+		}
+
+		// Got object for the RowID and column name
+		Object o = getValueAsObject(rowId, colname, caseSensitive);
+		if (o == null)
+		{
+			if (_logger.isDebugEnabled()) 
+				_logger.debug(getName()+".getValue(pkStr='"+pkStr+"', colname='"+colname+"'): rowId="+rowId+": o==null; return null");
+			return def;
+		}
+
+		return o;
+	}
+
+
+
+
+	//----------------------------------------------------------------------------------
+	//-- getValueAsDouble
+	//----------------------------------------------------------------------------------
+	
+	// 
+	public Double getValueAsDouble(int rowId, int colPos)
+	{
+		return getValueAsDouble(rowId, colPos, null);
+	}
+
+	// 
+	public Double getValueAsDouble(int rowId, int colPos, Double def)
+	{
+		Object o = getValueAsObject(rowId, colPos);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return new Double(((Number) o).doubleValue());
+		else
+			return new Double(Double.parseDouble(o.toString()));
+	}
+
+	// 
+	public Double getValueAsDouble(int rowId, String colname, boolean caseSensitive)
+	{
+		return getValueAsDouble(rowId, colname, caseSensitive, null);
+	}
+
+	// 
+	public Double getValueAsDouble(int rowId, String colname, boolean caseSensitive, Double def)
+	{
+		Object o = getValueAsObject(rowId, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return new Double(((Number) o).doubleValue());
+		else
+			return new Double(Double.parseDouble(o.toString()));
+	}
+
+	// 
+	public Double getValueAsDouble(String pkStr, String colname, boolean caseSensitive)
+	{
+		return getValueAsDouble(pkStr, colname, caseSensitive, null);
+	}
+
+	// 
+	public Double getValueAsDouble(String pkStr, String colname, boolean caseSensitive, Double def)
+	{
+		Object o = getValueAsObject(pkStr, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return new Double(((Number) o).doubleValue());
+		else
+			return new Double(Double.parseDouble(o.toString()));
+	}
+
+
+	//----------------------------------------------------------------------------------
+	//-- getValueAsInt
+	//----------------------------------------------------------------------------------
+	
+	//----------------------------------------------------------------------------------
+	//-- getValueAsLong
+	//----------------------------------------------------------------------------------
+
+	//----------------------------------------------------------------------------------
+	//-- getValueAsTimestamp
+	//----------------------------------------------------------------------------------
+	
+	//----------------------------------------------------------------------------------
+	//-- getValueAsXXX
+	//----------------------------------------------------------------------------------
+	
+	
+	
+	//----------------------------------------------------------------------------------
+	//-- getRowIdsWhere
+	//----------------------------------------------------------------------------------
+
+	public List<Integer> getRowIdsWhere(String colname, String colvalue)
+	{
+		return getRowIdsWhere(colname, true, colvalue);
+	}
+
+	/**
+	 * Get a int array of rows where colValue matches values in the column name
+	 * 
+	 * @param whatData DATA_ABS or DATA_DIFF or DATA_RATE
+	 * @param colname Name of the column to search in
+	 * @param colvalue Value to search for in the above column name
+	 * @return int[] an array of integers where rows meets above search criteria, if nothing was found return null
+	 */
+	public List<Integer> getRowIdsWhere(String colname, boolean caseSensitive, String colvalue)
+	{
+		int idCol = findColumn(colname, caseSensitive);
+		if (idCol == -1)
+		{
+			_logger.info("getRowIdsWhere: Can't find the column '" + colname + "'.");
+			return null;
+		}
+		if (getRowCount() == 0)
+			return null;
+
+		ArrayList<Integer> rowsList = new ArrayList<Integer>();
+		for (int i = 0; i < getRowCount(); i++)
+		{
+			Object o = getValueAt(i, idCol);
+			if (o == null)
+				continue;
+
+			if (o.equals(colvalue))
+				rowsList.add(i);
+		}
+//		if (rowsList.isEmpty())
+//			return null;
+//
+//		// Convert the list into a array
+//		int ia[] = new int[rowsList.size()];
+//		for (int i=0; i<rowsList.size(); i++)
+//			ia[i] = rowsList.get(i);
+//
+//		return ia;
+		
+		return rowsList;
+	}
+
+	public List<Integer> getRowIdsWhere(Map<String, Object> nameValue) 
+	{ 
+		return getRowIdsWhere(nameValue, true); 
+	}
+
+	/**
+	 * Get all values that matches
+	 * 
+	 * @param nameValue   a map of column names/values that we are searching for
+	 * @return            List of row numbers.   empty if no rows was found.
+	 * @throws RuntimeException if any of the column names you searched for was not found
+	 */
+	public List<Integer> getRowIdsWhere(Map<String, Object> nameValue, boolean caseSensitive)
+	{
+		List<Integer> foundRows = new ArrayList<Integer>();
+		
+		int rowc = getRowCount();
+		for (int r=0; r<rowc; r++)
+		{
+			int matchColCount = 0;
+			for (Entry<String, Object> e : nameValue.entrySet())
+			{
+				String whereColName = e.getKey();
+				Object whereColVal  = e.getValue();
+				
+				int colId = findColumn(whereColName, caseSensitive);
+				if (colId == -1)
+					throw new RuntimeException("Can't find column '"+whereColName+"' in TableModel named '"+getName()+"'.");
+
+				Object rowColVal = getValueAt(r, colId);
+				
+//				if (whereColVal == null && rowColVal == NULL_REPLACE)
+				if (whereColVal == null && rowColVal == null)
+				{
+					matchColCount++;
+				}
+				else if (whereColVal != null && whereColVal.equals(rowColVal))
+				{
+					matchColCount++;
+				}
+			}
+			
+			if (matchColCount == nameValue.size())
+				foundRows.add(r);
+		}
+		
+		return foundRows;
+	}
+	
 	
 	
 	

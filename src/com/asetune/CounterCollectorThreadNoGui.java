@@ -340,7 +340,7 @@ implements Memory.MemoryListener
 		// if we started in background... stdin is not available
 		if (_dbmsPassword == null)
 		{
-			throw new MandatoryPropertyException("No Password for the DBMS could be retrived.");
+			throw new MandatoryPropertyException("No Password for the DBMS could be retrived for: Server '"+_dbmsServer+"' at '"+_dbmsHostPortStr+"' with the user name '"+_dbmsUsername+"'.");
 		}
 		// treat "null" password, and set it to blank
 		if (_dbmsPassword.equalsIgnoreCase("null"))

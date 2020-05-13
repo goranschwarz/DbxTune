@@ -337,7 +337,7 @@ extends CounterSample
 					row.add( c == null ? null : c.getStatusDesc());
 					row.add( c == null ? null : c._description);
 
-					addRow(row);
+					addRow(cm, row);
 				}
 
 				for (Monitor monitor : i._monitorMap.values())
@@ -361,7 +361,7 @@ extends CounterSample
 					row.add( c == null ? null : c.getStatusDesc());
 					row.add( c == null ? null : c._description);
 
-					addRow(row);
+					addRow(cm, row);
 				}
 
 				for (Observer observer : i._observerMap.values())
@@ -385,7 +385,7 @@ extends CounterSample
 					row.add( c == null ? null : c.getStatusDesc());
 					row.add( c == null ? null : c._description);
 
-					addRow(row);
+					addRow(cm, row);
 				}
 			}
 

@@ -158,18 +158,22 @@ extends MainFrame
 	{
 		Connection conn = CounterController.getInstance().getMonConnection();
 
-		// Add: SET DEADLOCK_PRIORITY LOW
-		// see: https://msdn.microsoft.com/en-us/library/ms186736.aspx
-		String sql = "SET DEADLOCK_PRIORITY LOW";
-		try
+		//------------------------------------------------
+		// Set some options
+		//   -- set deadlock priority LOW or similar... (SET DEADLOCK_PRIORITY LOW)
+		//      if SqlServerTune is involved in a DEADLOCK, then the "other" SPID will have a higher chance to "win"
+		//      SET DEADLOCK_PRIORITY { LOW | NORMAL | HIGH | <numeric-priority> | @deadlock_var | @deadlock_intvar }  
+		//          <numeric-priority> ::= { -10 | -9 | -8 | ... | 0 | ... | 8 | 9 | 10 }
+		//          LOW=-5, NORMAL=9, HIGH=5
+		// see: https://docs.microsoft.com/en-us/sql/t-sql/statements/set-deadlock-priority-transact-sql?view=sql-server-ver15
+		String sql = "SET DEADLOCK_PRIORITY LOW"; // should we go for -7 or -8 to be even more submissive
+		try (Statement stmnt = conn.createStatement() )
 		{
-			Statement stmnt = conn.createStatement();
 			stmnt.executeUpdate(sql);
-			stmnt.close();
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems in connectMonitorHookin(): when executing '"+sql+"'. Continuing... Caught: MsgNum="+ex.getErrorCode()+": "+ex);
+			_logger.warn("Problems in connectMonitorHookin(): When Initializing DBMS SET Properties, using sql='" + sql + "'. Continuing... Caught: MsgNum=" + ex.getErrorCode() + ": " + ex);
 		}
 	}
 

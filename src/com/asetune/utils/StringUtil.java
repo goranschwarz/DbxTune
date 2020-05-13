@@ -199,6 +199,9 @@ public class StringUtil
 	 */
 	public static String toCommaStrQuoted(char startQuoteChar, char endQuoteChar, Collection<String> collection)
 	{
+		if (collection        == null) return "";
+		if (collection.size() ==    0) return "";
+		
 		StringBuilder sb = new StringBuilder();
 
 		for (String name : collection)
@@ -276,6 +279,9 @@ public class StringUtil
 	 */
 	public static String toCommaStrQuoted(char startQuoteChar, char endQuoteChar, String...names)
 	{
+		if (names        == null) return "";
+		if (names.length ==    0) return "";
+		
 		StringBuilder sb = new StringBuilder();
 
 		for (String name : names)
@@ -339,6 +345,9 @@ public class StringUtil
 	 */
 	public static String toCommaStrQuoted(String startQuoteChar, String endQuoteChar, Collection<String> collection)
 	{
+		if (collection        == null) return "";
+		if (collection.size() ==    0) return "";
+		
 		StringBuilder sb = new StringBuilder();
 
 		for (String name : collection)

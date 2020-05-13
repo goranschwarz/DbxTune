@@ -75,15 +75,24 @@
       50% { opacity: 0.0; }
       100% { opacity: 1.0; }
     }
+
     #active-alarms {
       position: fixed;
       bottom: 0;
       max-height: 30%;
       width: 100%;
-      overflow: scroll;
+      overflow: auto;
       /* background-color: rgb(255, 195, 83); */
       background-color: rgba(255, 195, 83, 0.5);
     }
+
+	#active-alarms-ctl {
+      position: -webkit-sticky; /* Safari */
+      position: sticky;
+      top: 0;
+      left: 0;
+	}
+
 	.dbx-topHr {
 		border-top: 1px solid black;
 		margin-bottom:6px;

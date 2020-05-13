@@ -49,6 +49,8 @@ public class ColumnHeaderPropsEntry
 //	public static final SortOrder UNSORTED = new SortOrder("unsorted");
 //}
 
+	public static final int AS_LAST_VIEW_COLUMN = Integer.MAX_VALUE;
+
 	private static Logger _logger = Logger.getLogger(ColumnHeaderPropsEntry.class);
 
 	protected String    _colName      = null;

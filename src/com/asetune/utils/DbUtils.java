@@ -479,10 +479,31 @@ public class DbUtils
 			sql = "SHOW VARIABLES LIKE 'log_error'";
 			colPos = 2;
 		}
-//		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_POSTGRES))
-//		{
-//			sql = "show log_filename"; // this just takes the filename not the full path
-//		}
+		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_POSTGRES))
+		{
+			//sql = "show log_filename"; // this just takes the filename not the full path
+			
+			// This seems to a bit hard... but lets guess...
+			// if we get 'stderr' from: show log_destination
+			// Then lets try: show data_directory + show log_directory + (show log_filename and resolve variables example: 'postgresql-%y-%m-%d.log') 
+			sql = ""
+				    + "select CASE \n"
+				    + "    WHEN (select setting from pg_catalog.pg_settings where name = 'log_destination') = 'stderr' \n"
+				    + "    THEN \n"
+				    + "                (select setting from pg_catalog.pg_settings where name = 'data_directory') \n"
+				    + "      || '/' || (select setting from pg_catalog.pg_settings where name = 'log_directory') \n"
+				    + "      || '/' || (select setting from pg_catalog.pg_settings where name = 'log_filename') \n"
+				    
+				    + "    WHEN (select setting from pg_catalog.pg_settings where name = 'log_destination') = 'syslog' \n"
+				    + "    THEN 'syslog' \n"
+
+//				    + "    WHEN (select setting from pg_catalog.pg_settings where name = 'log_destination') = 'csvlog' \n"
+//				    + "    THEN 'csvlog' \n"
+
+				    + "    ELSE (select setting from pg_catalog.pg_settings where name = 'log_destination') \n"
+				    + "END AS logName \n"
+				    + "";
+		}
 //		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_APACHE_HIVE))
 //		{
 //		}
@@ -504,7 +525,7 @@ public class DbUtils
 		}
 		else
 		{
-			return "unsupported product name '"+dbProduct+"'.";
+			return "unsupported product name '"+dbProduct+"'.";			
 		}
 
 		String retStr = "";
@@ -534,6 +555,12 @@ public class DbUtils
 					retStr = retStr.substring(2).replace('\\', '/');
 				}
 			}
+		}
+		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_POSTGRES))
+		{
+			// Postgres normally has C-Style strftime like: 'postgresql-%y-%m-%d.log' should be 
+			// translated to 'postgresql-20-04-06.log' if the data was: 6 April 2020  
+			retStr = TimeUtils.strftime(retStr);
 		}
 
 		return retStr;

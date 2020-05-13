@@ -68,6 +68,7 @@ import com.asetune.cm.ase.CmPCacheMemoryUsage;
 import com.asetune.cm.ase.CmPCacheModuleUsage;
 import com.asetune.cm.ase.CmProcCacheLoad;
 import com.asetune.cm.ase.CmProcCallStack;
+import com.asetune.cm.ase.CmProcElc;
 import com.asetune.cm.ase.CmProcessActivity;
 import com.asetune.cm.ase.CmQpMetrics;
 import com.asetune.cm.ase.CmRaLogActivity;
@@ -395,6 +396,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 		// tab: Cache
 		CmDataCaches       .create(counterController, guiController);
 		CmCachePools       .create(counterController, guiController);
+		CmProcElc          .create(counterController, guiController);
 		CmCachedProcs      .create(counterController, guiController);
 		CmCachedProcsSum   .create(counterController, guiController);
 		CmProcCacheLoad    .create(counterController, guiController);

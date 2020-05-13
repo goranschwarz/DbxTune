@@ -39,8 +39,10 @@ public class AsetuneTokenMaker
 
 		String pkg = "com.asetune.ui.rsyntaxtextarea.modes.";
 
-		atmf.putMapping(com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_RCL,  pkg + "SybaseRclTokenMaker");
+		atmf.putMapping(com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_RCL , pkg + "SybaseRclTokenMaker");
 		atmf.putMapping(com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL, pkg + "SybaseTSqlTokenMaker");
+
+		atmf.putMapping(com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants.SYNTAX_STYLE_MSSQL_TSQL , pkg + "MicrosoftTSqlTokenMaker");
 	}
 
 

@@ -66,4 +66,31 @@ extends AlarmEvent
 		// Set the description 
 		setDescription("Num="+errorNumber+", Severity="+errorSeverity+", Text=" + errorMessage.trim()+ ", ExtraInfo=[AlarmEventSeverity="+alarmSeverity+", "+PROPKEY_alarm_timeToLiveInSeconds+"="+ttlSec+", severityThreshold="+severityThreshold+"]");
 	}
+
+	/**
+	 * Various error messages the can be of interest
+	 * 
+	 * @param cmErrorLog
+	 * @param severity
+	 * @param errorTxt
+	 */
+	public AlarmEventErrorLogEntry(CountersModel cm, Severity alarmSeverity, String searchFor, String errorTxt)
+	{
+		super(
+				Version.getAppName(), // serviceType
+				cm.getServerName(),   // serviceName
+				cm.getName(),         // serviceInfo
+				searchFor,            // extraInfo
+				AlarmEvent.Category.OTHER,
+				alarmSeverity, 
+				AlarmEvent.ServiceState.UP, 
+				errorTxt,
+				null
+				);
+
+		// Set: FIXED Time To Live
+		// Errorlog entries are a "one time shot" (it's only seen once)... so how long should that entry be "active"
+		int ttlSec = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_timeToLiveInSeconds, DEFAULT_alarm_timeToLiveInSeconds);
+		setTimeToLive( ttlSec * 1000 );
+	}
 }

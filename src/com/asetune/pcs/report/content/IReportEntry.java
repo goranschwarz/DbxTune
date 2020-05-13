@@ -70,6 +70,18 @@ public interface IReportEntry
 	 */
 	boolean canBeDisabled();
 
+	/**
+	 * If it's disabled, print the reason for it.<br>
+	 * It can for example be:
+	 * <ul>
+	 *   <li>This report is only supported if DBMS is running on Linux</li>
+	 *   <li>This report is only supported if DBMS is running on Windows</li>
+	 *   <li>This report is only supported in DBMS Version x.y or above.</li>
+	 * </ul>
+	 * @return (can be null). The reason Why this entry is disabled.
+	 */
+	String getDisabledReason();
+
 	
 	/**
 	 * in what order should the ReportEntries be reported in<br>

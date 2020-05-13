@@ -4,13 +4,16 @@
 package com.asetune.gui;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
+import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.NumberFormat;
@@ -22,6 +25,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.regex.Pattern;
 
@@ -1354,6 +1358,93 @@ public class ResultSetTableModel
 		}
 	}
 
+	/** Transforms a JDBC Type to a java class */
+	public static Class<?> getJavaClassFromJdbcType(int jdbcType)
+	{
+		switch (jdbcType)
+		{
+		case java.sql.Types.BIT:           return Boolean.class;
+		case java.sql.Types.TINYINT:       return Integer.class;
+		case java.sql.Types.SMALLINT:      return Integer.class;
+		case java.sql.Types.INTEGER:       return Integer.class;
+		case java.sql.Types.BIGINT:        return Long.class;
+		case java.sql.Types.FLOAT:         return Double.class;
+		case java.sql.Types.REAL:          return Float.class;
+		case java.sql.Types.DOUBLE:        return Double.class;
+		case java.sql.Types.NUMERIC:       return BigDecimal.class;
+		case java.sql.Types.DECIMAL:       return BigDecimal.class;
+		case java.sql.Types.CHAR:          return String.class;
+		case java.sql.Types.VARCHAR:       return String.class;
+		case java.sql.Types.LONGVARCHAR:   return String.class;
+		case java.sql.Types.DATE:          return Date.class;
+		case java.sql.Types.TIME:          return Time.class;
+		case java.sql.Types.TIMESTAMP:     return Timestamp.class;
+		case java.sql.Types.BINARY:        return byte[].class;
+		case java.sql.Types.VARBINARY:     return byte[].class;
+		case java.sql.Types.LONGVARBINARY: return byte[].class;
+		case java.sql.Types.NULL:          return Object.class;
+		case java.sql.Types.OTHER:         return Object.class;
+		case java.sql.Types.JAVA_OBJECT:   return byte[].class;
+		case java.sql.Types.DISTINCT:      return Object.class;
+		case java.sql.Types.STRUCT:        return Object.class;
+		case java.sql.Types.ARRAY:         return Object.class;
+		case java.sql.Types.BLOB:          return byte[].class;
+		case java.sql.Types.CLOB:          return String.class;
+		case java.sql.Types.REF:           return Object.class;
+		case java.sql.Types.DATALINK:      return Object.class;
+		case java.sql.Types.BOOLEAN:       return Boolean.class;
+
+		//------------------------- JDBC 4.0 (java 1.6) -----------------------------------
+		case java.sql.Types.ROWID:         return Object.class;
+		case java.sql.Types.NCHAR:         return String.class;
+		case java.sql.Types.NVARCHAR:      return String.class;
+		case java.sql.Types.LONGNVARCHAR:  return String.class;
+		case java.sql.Types.NCLOB:         return String.class;
+		case java.sql.Types.SQLXML:        return String.class;
+
+		//------------------------- JDBC 4.2 (java 1.8) -----------------------------------
+//		case java.sql.Types.REF_CURSOR:              return false;
+//		case java.sql.Types.TIME_WITH_TIMEZONE:      return false;
+//		case java.sql.Types.TIMESTAMP_WITH_TIMEZONE: return false;
+		case 2012:                                   return Object.class;
+		case 2013:                                   return Object.class;
+		case 2014:                                   return Object.class;
+		
+
+		//------------------------- VENDOR SPECIFIC TYPES --------------------------- (grabbed from ojdbc7.jar)
+		case -100:                         return Object.class; // "oracle.jdbc.OracleTypes.TIMESTAMPNS";
+		case -101:                         return Object.class; // "oracle.jdbc.OracleTypes.TIMESTAMPTZ";
+		case -102:                         return Object.class; // "oracle.jdbc.OracleTypes.TIMESTAMPLTZ";
+		case -103:                         return Object.class; // "oracle.jdbc.OracleTypes.INTERVALYM";
+		case -104:                         return Object.class; // "oracle.jdbc.OracleTypes.INTERVALDS";
+		case  -10:                         return Object.class; // "oracle.jdbc.OracleTypes.CURSOR";
+		case  -13:                         return Object.class; // "oracle.jdbc.OracleTypes.BFILE";
+		case 2007:                         return Object.class; // "oracle.jdbc.OracleTypes.OPAQUE";
+		case 2008:                         return Object.class; // "oracle.jdbc.OracleTypes.JAVA_STRUCT";
+		case  -14:                         return Object.class; // "oracle.jdbc.OracleTypes.PLSQL_INDEX_TABLE";
+		case  100:                         return Object.class; // "oracle.jdbc.OracleTypes.BINARY_FLOAT";
+		case  101:                         return Object.class; // "oracle.jdbc.OracleTypes.BINARY_DOUBLE";
+//		case    2:                         return false; // "oracle.jdbc.OracleTypes.NUMBER";             // same as: java.sql.Types.NUMERIC
+//		case   -2:                         return false; // "oracle.jdbc.OracleTypes.RAW";                // same as: java.sql.Types.BINARY
+		case  999:                         return Object.class;  // "oracle.jdbc.OracleTypes.FIXED_CHAR";
+
+	    case -155:                         return Object.class; //  "microsoft.sql.DATETIMEOFFSET";
+	    case -153:                         return Object.class; //  "microsoft.sql.STRUCTURED";
+	    case -151:                         return Timestamp.class; //  "microsoft.sql.DATETIME";
+	    case -150:                         return Timestamp.class; //  "microsoft.sql.SMALLDATETIME";
+	    case -148:                         return BigDecimal.class; //  "microsoft.sql.MONEY";
+	    case -146:                         return BigDecimal.class; //  "microsoft.sql.SMALLMONEY";
+	    case -145:                         return Object.class; //  "microsoft.sql.GUID";
+	    case -156:                         return Object.class; //  "microsoft.sql.SQL_VARIANT";
+	    case -157:                         return Object.class; //  "microsoft.sql.GEOMETRY";
+	    case -158:                         return Object.class; //  "microsoft.sql.GEOGRAPHY";
+
+	    //------------------------- UNHANDLED TYPES  ---------------------------
+		default:
+			return Object.class;
+		}
+	}
+	
 
 //	public List<SQLWarning> getSQLWarningList()
 //	{
@@ -2242,7 +2333,7 @@ public class ResultSetTableModel
 					}
 				}
 			}
-			
+
 			sb.append("<tr").append(stripeTag).append(">");
 			sb.append("<td nowrap><b>").append(getColumnName(c)).append("</b>&nbsp;</td>");
 			sb.append("<td nowrap>")   .append(strVal)          .append("</td>");
@@ -2985,6 +3076,83 @@ public class ResultSetTableModel
 	//-- END: getValueAsXXXXX using column name
 	//------------------------------------------------------------
 
+	/**
+	 * Get all values that matches
+	 * 
+	 * @param nameValue   a map of column names/values that we are searching for
+	 * @return            List of row numbers.   empty if no rows was found.
+	 * @throws NoColumnNameWasFound if any of the column names you searched for was not part of the ResultSet
+	 */
+	public List<Integer> getRowIdsWhere(Map<String, Object> nameValue)
+	{
+		boolean nocase = false;
+
+		List<Integer> foundRows = new ArrayList<Integer>();
+		
+		int rowc = getRowCount();
+		for (int r=0; r<rowc; r++)
+		{
+			int matchColCount = 0;
+			for (Entry<String, Object> e : nameValue.entrySet())
+			{
+				String whereColName = e.getKey();
+				Object whereColVal  = e.getValue();
+				
+				int colId = nocase ? findColumnNoCase(whereColName) : findColumn(whereColName);
+				if (colId == -1)
+					throw new RuntimeException("Can't find column '"+whereColName+"' in TableModel named '"+getName()+"'.");
+
+				Object rowColVal = getValueAt(r, colId);
+				
+				if (whereColVal == null && rowColVal == NULL_REPLACE)
+				{
+					matchColCount++;
+				}
+				else if (whereColVal != null && whereColVal.equals(rowColVal))
+				{
+					matchColCount++;
+				}
+			}
+			
+			if (matchColCount == nameValue.size())
+				foundRows.add(r);
+		}
+		
+		return foundRows;
+	}
+	
+	public List<Object> getRowList(int rowId)
+	{
+		return _rows.get(rowId);
+	}
+
+//	/**
+//	 *
+//	 */
+//	public static class NoColumnNameWasFound
+//	extends Exception
+//	{
+//		private static final long serialVersionUID = 1L;
+//
+//		public NoColumnNameWasFound(String colname)
+//		{
+//			super("The column name '" + colname + "' was found.");
+//		}
+//	}
+//
+//	/**
+//	 *
+//	 */
+//	public static class MoreThanOneRowWasFound
+//	extends Exception
+//	{
+//		private static final long serialVersionUID = 1L;
+//
+//		public MoreThanOneRowWasFound(int numberOfFoundRows, Map<String, Object> nameValue)
+//		{
+//			super("Expected to find one row, but " + numberOfFoundRows + "rows was found that matched: " + nameValue);
+//		}
+//	}
 	
 	//------------------------------------------------------------
 	//-- BEGIN: description

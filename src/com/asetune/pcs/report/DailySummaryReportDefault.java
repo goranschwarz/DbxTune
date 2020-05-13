@@ -444,9 +444,20 @@ extends DailySummaryReportAbstract
 			}
 			else
 			{
-				// Entry is DISABLED
-				sb.append("This entry is <b>disabled</b>, to enable it; put the following in the configuration file. ");
-				sb.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code><br>");
+				String reason = entry.getDisabledReason();
+				if (StringUtil.hasValue(reason))
+				{
+					// Entry is DISABLED
+					sb.append("This entry is <b>disabled</b>, reason:<br>");
+					sb.append(reason);
+					sb.append("<br>");
+				}
+				else
+				{
+					// Entry is DISABLED
+					sb.append("This entry is <b>disabled</b>, to enable it; put the following in the configuration file. ");
+					sb.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code><br>");
+				}
 			}
 		}
 		sb.append("\n<br>");

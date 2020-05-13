@@ -67,6 +67,8 @@ extends CountersModel
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		 "cpu_time"
+		,"total_scheduled_time"
+		,"total_elapsed_time"
 		,"memory_usage"
 		,"reads"
 		,"writes"
@@ -206,8 +208,18 @@ extends CountersModel
 		if (isAzure)
 			dm_exec_sessions = "dm_pdw_nodes_exec_sessions";
 
+		// datediff(ms, last_request_start_time, last_request_end_time)
 		
-		String sql = "select * from sys." + dm_exec_sessions;
+		String sql = ""
+				+ "select "
+				+ "     last_request_ms = datediff(ms, last_request_start_time, last_request_end_time) \n"
+				+ "     login_time_ss   = CASE WHEN datediff(day, login_time, getdate()) >= 24 THEN -1 ELSE  datediff(ss, login_time, getdate()) END, \n"
+				+ "    ,* \n"
+//				+ "    ,dbname                = db_name(database_id) \n"                 // Applies to: SQL Server 2012 (11.x) and later.
+//				+ "    ,authenticating_dbname = db_name(authenticating_database_id) \n"  // Applies to: SQL Server 2012 (11.x) and later.
+				+ "from sys." + dm_exec_sessions + " \n"
+//				+ "where is_user_process = 1 \n"
+				+ "";
 
 		return sql;
 	}

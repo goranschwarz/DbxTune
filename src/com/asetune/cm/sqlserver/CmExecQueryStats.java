@@ -35,6 +35,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.gui.CmExecQueryStatsPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.gui.swing.ColumnHeaderPropsEntry;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
@@ -106,6 +107,9 @@ extends CountersModel
 		"total_columnstore_segment_reads",
 		"total_columnstore_segment_skips",
 		"total_spills",
+		"total_num_physical_reads",
+		"total_page_server_reads",
+		"total_num_page_server_reads",
 		"_last_column_name_only_used_as_a_place_holder_here_"
 		};
 
@@ -212,7 +216,7 @@ extends CountersModel
 	public static final boolean DEFAULT_sample_lastXminutes       = true;
 
 	public static final String  PROPKEY_sample_lastXminutesTime   = PROP_PREFIX + ".sample.lastXminutes.time";
-	public static final int     DEFAULT_sample_lastXminutesTime   = 10;
+	public static final int     DEFAULT_sample_lastXminutesTime   = 30;
 
 
 	@Override
@@ -277,6 +281,14 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
+		int c = 0;
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("plan_handle",            c++));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("SqlText",                c++));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("sql_handle",             ColumnHeaderPropsEntry.AS_LAST_VIEW_COLUMN));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("statement_start_offset", ColumnHeaderPropsEntry.AS_LAST_VIEW_COLUMN));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("statement_end_offset",   ColumnHeaderPropsEntry.AS_LAST_VIEW_COLUMN));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("plan_generation_num",    ColumnHeaderPropsEntry.AS_LAST_VIEW_COLUMN));
+
 		String dm_exec_query_stats = "dm_exec_query_stats";
 		
 		if (isAzure)
@@ -298,10 +310,11 @@ extends CountersModel
 			sql_sample_lastXminutes = "  AND last_execution_time > dateadd(mi, -"+sample_lastXminutesTime+", getdate())\n";
 
 		String sql = 
-				"SELECT qs.* \n" +
-//				"    ,db_name(txt.dbid) as DBName \n" +
-//				"    ,object_name(txt.objectid, txt.dbid) as ObjectName \n" +
-				"    ,SUBSTRING(txt.text, (qs.statement_start_offset/2)+1, ((CASE WHEN qs.statement_end_offset = -1 THEN DATALENGTH(txt.text) ELSE qs.statement_end_offset END - qs.statement_start_offset)/2) + 1) AS [SqlText] \n" +
+				"SELECT \n" +
+				"     SUBSTRING(txt.text, (qs.statement_start_offset/2)+1, ((CASE WHEN qs.statement_end_offset = -1 THEN DATALENGTH(txt.text) ELSE qs.statement_end_offset END - qs.statement_start_offset)/2) + 1) AS [SqlText] \n" +
+//				"    ,db_name(txt.dbid) AS dbname \n" + // NOTE: dm_exec_sql_text.dbid is NULL in many cases, so using dm_exec_plan_attributes.dbid seems a lot better
+				"    ,(select isnull(db_name(CONVERT(int, value)),CONVERT(nvarchar(10), value)) from sys.dm_exec_plan_attributes(qs.plan_handle) where attribute = N'dbid') AS dbname \n" +
+				"    ,qs.* \n" +
 				"FROM sys." + dm_exec_query_stats + " qs \n" +
 				"CROSS APPLY sys.dm_exec_sql_text(qs.sql_handle) txt \n" +
 				"WHERE 1 = 1 -- to make extra where clauses easier \n" +

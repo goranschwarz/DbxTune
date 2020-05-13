@@ -29,6 +29,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -759,6 +760,7 @@ implements Cloneable, ITableTooltip
 
 		CounterTableModel data = getCounterData();
 		if (data == null) return Object.class;
+//System.out.println("Cm="+getName()+", colIndex="+columnIndex+", class="+data.getColumnClass(columnIndex)+", colname="+getColumnName(columnIndex));
 		return data.getColumnClass(columnIndex);
 	}
 
@@ -2922,7 +2924,7 @@ implements Cloneable, ITableTooltip
 	 * polled since those monTables doesn't exist. And the GUI Table for this should
 	 * not be VISABLE... call setActive(false) in those cases.
 	 */
-	public void init(Connection conn)
+	public void init(DbxConnection conn)
 	throws Exception // I think it's OK to do this here
 	{
 		if (checkDependsOnVersion())
@@ -3217,7 +3219,7 @@ implements Cloneable, ITableTooltip
 
 	}
 	/**  */
-	public boolean checkDependsOnRole(Connection conn)
+	public boolean checkDependsOnRole(DbxConnection conn)
 	{
 		String[] dependsOnRole = getDependsOnRole();
 
@@ -5154,7 +5156,7 @@ implements Cloneable, ITableTooltip
 				// This looks ugly: should really be done using the same logic as below... But this is really never used...
 				diffRow.add(new Integer(((Integer) (newRow.get(i))).intValue() - ((Integer) (oldRow.get(i))).intValue()));
 			}
-			diffCnt.addRow(diffRow);
+			diffCnt.addRow(this, diffRow);
 			return diffCnt;
 		}
 
@@ -5246,7 +5248,7 @@ implements Cloneable, ITableTooltip
 				setNewDeltaOrRateRow(newRowId, true);
 			}
 
-			diffCnt.addRow(diffRow);
+			diffCnt.addRow(this, diffRow);
 
 		} // end: row loop
 		
@@ -5472,7 +5474,7 @@ implements Cloneable, ITableTooltip
 
 			} // end: row loop
 
-			rate.addRow(newRow);
+			rate.addRow(this, newRow);
 
 		} // end: all rows loop
 		
@@ -7104,6 +7106,24 @@ implements Cloneable, ITableTooltip
 		return data.getPkValue(rowId);
 	}
 
+	/** Return the rowId for the Primary Key */
+	private synchronized int getRowIdForPkValue(int whatData, String pkStr)
+	{
+		CounterTableModel data = null;
+
+		if      (whatData == DATA_ABS)  data = getCounterDataAbs();
+		else if (whatData == DATA_DIFF) data = getCounterDataDiff();
+		else if (whatData == DATA_RATE) data = getCounterDataRate();
+		else
+			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
+
+		if (data == null)
+			return -1;
+
+		// Get the rowId, if not found, return -1
+		return data.getRowNumberForPkValue(pkStr);
+	}
+
 	//--------------------------------------------------------------
 	// Wrapper functions to read ABSOLUTE values
 	//--------------------------------------------------------------
@@ -7151,7 +7171,8 @@ implements Cloneable, ITableTooltip
 	public Double getAbsValueSum      (String colname, boolean cs)                           { return getSumValue      (DATA_ABS, null,  colname,   cs); }
 	
 	public String getAbsPkValue       (int    rowId)                                         { return getPkValue       (DATA_ABS, rowId  ); }
-                                                                                 
+	public int    getAbsRowIdForPkValue(String pkStr)                                        { return getRowIdForPkValue(DATA_ABS, pkStr); }
+	
 	public int[]  getAbsRowIdsWhere   (String colname, String colval)                        { return getRowIdsWhere   (DATA_ABS, colname, true, colval); }
 	public int[]  getAbsRowIdsWhere   (String colname, boolean cs, String colval)            { return getRowIdsWhere   (DATA_ABS, colname,   cs, colval); }
 	
@@ -7218,6 +7239,7 @@ implements Cloneable, ITableTooltip
 	public Double getDiffValueSum      (String colname, boolean cs)                           { return getSumValue      (DATA_DIFF, null,  colname,   cs); }
 	
 	public String getDiffPkValue       (int    rowId)                                         { return getPkValue       (DATA_DIFF, rowId  ); }
+	public int    getDiffRowIdForPkValue(String pkStr)                                        { return getRowIdForPkValue(DATA_DIFF, pkStr); }
                                                                                   
 	public int[]  getDiffRowIdsWhere   (String colname, String colval)                        { return getRowIdsWhere   (DATA_DIFF, colname, true, colval); }
 	public int[]  getDiffRowIdsWhere   (String colname, boolean cs, String colval)            { return getRowIdsWhere   (DATA_DIFF, colname,   cs, colval); }
@@ -7285,6 +7307,7 @@ implements Cloneable, ITableTooltip
 	public Double getRateValueSum      (String colname, boolean cs)                           { return getSumValue      (DATA_RATE, null,  colname,   cs); }
 	
 	public String getRatePkValue       (int    rowId)                                         { return getPkValue       (DATA_RATE, rowId  ); }
+	public int    getRateRowIdForPkValue(String pkStr)                                        { return getRowIdForPkValue(DATA_RATE, pkStr); }
                                                                                   
 	public int[]  getRateRowIdsWhere   (String colname, String colval)                        { return getRowIdsWhere   (DATA_RATE, colname, true, colval); }
 	public int[]  getRateRowIdsWhere   (String colname, boolean cs, String colval)            { return getRowIdsWhere   (DATA_RATE, colname,   cs, colval); }
@@ -7305,6 +7328,85 @@ implements Cloneable, ITableTooltip
 	public Double getRateValueSum      (int[] rowIds, String colname, boolean cs)             { return getSumValue      (DATA_RATE, rowIds,  colname,   cs); }
 
 	
+	public List<Integer> getAbsRowIdsWhere (Map<String, Object> nameValue, boolean caseSensitive) { return getRowIdsWhere(DATA_ABS , nameValue, caseSensitive); }
+	public List<Integer> getAbsRowIdsWhere (Map<String, Object> nameValue)                        { return getRowIdsWhere(DATA_ABS , nameValue, true); }
+
+	public List<Integer> getDiffRowIdsWhere(Map<String, Object> nameValue, boolean caseSensitive) { return getRowIdsWhere(DATA_DIFF, nameValue, caseSensitive); }
+	public List<Integer> getDiffRowIdsWhere(Map<String, Object> nameValue)                        { return getRowIdsWhere(DATA_DIFF, nameValue, true); }
+
+	public List<Integer> getRateRowIdsWhere(Map<String, Object> nameValue, boolean caseSensitive) { return getRowIdsWhere(DATA_RATE, nameValue, caseSensitive); }
+	public List<Integer> getRateRowIdsWhere(Map<String, Object> nameValue)                        { return getRowIdsWhere(DATA_RATE, nameValue, true); }
+
+	/**
+	 * Get all values that matches
+	 * 
+	 * @param nameValue   a map of column names/values that we are searching for
+	 * @return            List of row numbers.   empty if no rows was found.
+	 * @throws RuntimeException if any of the column names you searched for was not found
+	 */
+//	private int[] getRowIdsWhere(int whatData, String colname, boolean caseSensitive, String colvalue)
+	private List<Integer> getRowIdsWhere(int whatData, Map<String, Object> nameValue, boolean caseSensitive)
+	{
+		List<Integer> foundRows = new ArrayList<Integer>();
+		
+		CounterTableModel data = null;
+
+		if      (whatData == DATA_ABS)  data = getCounterDataAbs();
+		else if (whatData == DATA_DIFF) data = getCounterDataDiff();
+		else if (whatData == DATA_RATE) data = getCounterDataRate();
+		else
+			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
+
+		if (data == null)
+			return foundRows;
+
+		int rowc = getRowCount();
+		for (int r=0; r<rowc; r++)
+		{
+			int matchColCount = 0;
+			for (Entry<String, Object> e : nameValue.entrySet())
+			{
+				String whereColName = e.getKey();
+				Object whereColVal  = e.getValue();
+				
+				int colId = data.findColumn(whereColName, caseSensitive);
+				if (colId == -1)
+					throw new RuntimeException("Can't find column '"+whereColName+"' in TableModel named '"+getName()+"'.");
+
+				Object rowColVal = data.getValueAt(r, colId);
+				
+//				if (whereColVal == null && rowColVal == NULL_REPLACE)
+				if (whereColVal == null && rowColVal == null)
+				{
+					matchColCount++;
+				}
+				else if (whereColVal != null && whereColVal.equals(rowColVal))
+				{
+					matchColCount++;
+				}
+			}
+			
+			if (matchColCount == nameValue.size())
+				foundRows.add(r);
+		}
+		
+		return foundRows;
+	}
+
+	/**
+	 * This is called from CounterSample when we see a "Duplicate Key"
+	 * 
+	 * @param counterSample   The CounterSample which this happened on
+	 * @param keyStr          The PK
+	 * @param curRow          Existing row
+	 * @param newRow          New row (that causes the duplicate)
+	 * 
+	 * @return true for print WARNINGS, false to NOT printing any Warning message
+	 */
+	public boolean actionForSampleDuplicateKey(CounterSample counterSample, String keyStr, List<Object> curRow, List<Object> newRow)
+	{
+		return true;
+	}
 
 	public void setDataInitialized(boolean b)
 	{

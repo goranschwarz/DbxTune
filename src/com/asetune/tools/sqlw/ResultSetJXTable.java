@@ -46,6 +46,7 @@ import java.text.SimpleDateFormat;
 import java.util.List;
 
 import javax.swing.ImageIcon;
+import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.JSeparator;
@@ -62,6 +63,7 @@ import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.renderer.DefaultTableRenderer;
+import org.jdesktop.swingx.renderer.LabelProvider;
 import org.jdesktop.swingx.renderer.StringValue;
 import org.jdesktop.swingx.renderer.StringValues;
 import org.jdesktop.swingx.table.TableColumnExt;
@@ -297,9 +299,12 @@ implements ToolTipHyperlinkResolver
 				}
 			}
 		};
-		setDefaultRenderer(BigDecimal.class, new DefaultTableRenderer(svInExactNumber));
-		setDefaultRenderer(Double    .class, new DefaultTableRenderer(svInExactNumber));
-		setDefaultRenderer(Float     .class, new DefaultTableRenderer(svInExactNumber));
+//		DefaultTableRenderer InExactNumberRenderer = new DefaultTableRenderer(svInExactNumber);
+		DefaultTableRenderer InExactNumberRenderer = new DefaultTableRenderer( new LabelProvider(svInExactNumber, JLabel.TRAILING) );
+		
+		setDefaultRenderer(BigDecimal.class, InExactNumberRenderer);
+		setDefaultRenderer(Double    .class, InExactNumberRenderer);
+		setDefaultRenderer(Float     .class, InExactNumberRenderer);
 
 		// NULL Values: SET BACKGROUND COLOR
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()

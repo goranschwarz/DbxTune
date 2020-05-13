@@ -55,7 +55,7 @@ extends CountersModel
 	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"dm_db_index_operational_stats"};
-	public static final String[] NEED_ROLES       = new String[] {};//{"VIEW SERVER STATE"};
+	public static final String[] NEED_ROLES       = new String[] {"VIEW SERVER STATE", "CONNECT ANY DATABASE"};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
@@ -244,6 +244,7 @@ extends CountersModel
 
 		int c = 0;
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("dbname",               c++));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("schemaName",           c++));
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("objectName",           c++));
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("index_id",             c++));
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("row_lock_count",       c++));
@@ -259,9 +260,10 @@ extends CountersModel
 			dm_db_index_operational_stats = "dm_db_index_operational_stats";   // IS THIS THE SAME NAME IN AZURE ?????
 
 		String sql = "select \n"
-				+ "    dbname=db_name(database_id), \n"
-				+ "    objectName=object_name(object_id, database_id), \n"
-				+ "    *\n"
+				+ "    dbname     = db_name(database_id), \n"
+				+ "    schemaName = object_schema_name(object_id, database_id), \n"
+				+ "    objectName = object_name(object_id, database_id), \n"
+				+ "    * \n"
 				+ "from sys." + dm_db_index_operational_stats + "(DEFAULT, DEFAULT, DEFAULT, DEFAULT) \n"
 				+ "where object_id > 100";
 
@@ -301,12 +303,12 @@ extends CountersModel
 	}
 
 	/** 
-	 * Get Column names to where DBName and ObjectName is called, this must always return at least a array with 2 strings. 
+	 * Get Column names to where DBName and ObjectName is called, this must always return at least a array with 3 strings. 
 	 */
 	@Override
 	public String[] getDdlDetailsColNames()
 	{
-		String[] sa = {"dbname", "objectName"};
+		String[] sa = {"dbname", "schemaName", "objectName"};
 		return sa;
 	}
 	/**

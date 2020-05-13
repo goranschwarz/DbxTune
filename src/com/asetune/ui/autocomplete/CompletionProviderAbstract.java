@@ -55,6 +55,7 @@ import com.asetune.ui.autocomplete.completions.AbstractCompletionX;
 import com.asetune.ui.autocomplete.completions.CompletionTemplate;
 import com.asetune.ui.autocomplete.completions.SavedCacheCompletionWarning;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
+import com.asetune.ui.tooltip.suppliers.ToolTipSupplierAbstract;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 
@@ -844,5 +845,22 @@ extends DefaultCompletionProvider
 	public List<JMenu> createEditorPopupMenuExtention(RTextArea textarea)
 	{
 		return null;
+	}
+
+	/**
+	 * If we have a ToolTipSupplier installed, we might get some information in that.<br>
+	 * For example it might contain Syntax definitions of:
+	 *   - Commands
+	 *   - functions
+	 *   - etc... 
+	 */
+	private ToolTipSupplierAbstract _toolTipSupplierAbstract;
+	public void setToolTipSupplier(ToolTipSupplierAbstract toolTipSupplier)
+	{
+		_toolTipSupplierAbstract = toolTipSupplier;
+	}
+	public ToolTipSupplierAbstract getToolTipSupplier()
+	{
+		return _toolTipSupplierAbstract;
 	}
 }

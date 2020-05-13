@@ -30,6 +30,7 @@ import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
 import com.asetune.utils.Configuration;
+import com.asetune.utils.OpenSslAesUtil;
 import com.asetune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
@@ -37,6 +38,12 @@ import net.miginfocom.swing.MigLayout;
 public class PromptForPassword
 {
 
+	public enum SaveType
+	{
+		TO_CONFIG_USER_TEMP,
+		TO_HOME_DOT_PASSWD_ENC
+	};
+	
 	/**
 	 * Simply opens up a dialog to enter password
 	 * 
@@ -47,7 +54,7 @@ public class PromptForPassword
 	 * 
 	 * @return The password, or null if "Cancel" was pressed
 	 */
-	public static String show(Component parent, String msg, String hostname, String user)
+	public static String show(Component parent, String msg, String hostname, String user, SaveType saveType, String encKey)
 	{
 		JPanel panel = new JPanel(new MigLayout());
 
@@ -105,24 +112,40 @@ public class PromptForPassword
 		{
 			String password = new String(passwd_txt.getPassword());
 
-			// Save the password / or remove it...
-			Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
-			if (conf != null)
+			if (SaveType.TO_CONFIG_USER_TEMP.equals(saveType))
 			{
-				String key = "PromptForPassword.saved."+hostname+"."+user;
-    			if (savePasswd_chk.isSelected())
-    			{
-    				// Save the password ENCRYPTED
-					conf.setProperty(key, password, true);
-    			}
-    			else
-    			{
-    				// If we dont want to save it, lets remove any password previously saved on this key
-    				conf.remove(key);
-    			}
+				// Save the password / or remove it...
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf != null)
+				{
+					String key = "PromptForPassword.saved."+hostname+"."+user;
+	    			if (savePasswd_chk.isSelected())
+	    			{
+	    				// Save the password ENCRYPTED
+						conf.setProperty(key, password, true);
+	    			}
+	    			else
+	    			{
+	    				// If we dont want to save it, lets remove any password previously saved on this key
+	    				conf.remove(key);
+	    			}
 
-    			conf.save();
+	    			conf.save();
+				}
 			}
+			if (SaveType.TO_HOME_DOT_PASSWD_ENC.equals(saveType))
+			{
+				try
+				{
+					OpenSslAesUtil.createPasswordFilenameIfNotExists(null);
+					OpenSslAesUtil.writePasswdToFile(password, user_txt.getText(), host_txt.getText(), null, encKey);
+				}
+				catch (Exception ex)
+				{
+					SwingUtils.showErrorMessage(parent, "Error Saving Password.", "Sorry the Password cound not be saved to file '" + OpenSslAesUtil.getPasswordFilename() + "'.", ex);
+				}
+			}
+
 			return password;
 		}
 		return null;

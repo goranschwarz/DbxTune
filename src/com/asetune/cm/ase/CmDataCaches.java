@@ -76,7 +76,7 @@ extends CountersModel
 	public static final String[] PCT_COLUMNS      = new String[] {"CacheHitRate", "CASContention"};
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"CacheHitRate", "CacheSearches", 
-		"PhysicalReads", "LogicalReads", "PhysicalWrites", "Stalls", "APFReads",
+		"RealPhysicalReads", "PhysicalReads", "LogicalReads", "PhysicalWrites", "Stalls", "APFReads",
 		"CASGrabs", "CASSpins", "CASWaits"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
@@ -147,7 +147,7 @@ extends CountersModel
 			"Data Caches Activity", 	               // Menu CheckBox text
 			"Activity for All Data Caches per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
-			new String[] { "Logical Reads", "Physical Reads", "Writes" }, 
+			new String[] { "Logical Reads", "Real Physical Reads", "Writes" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
 			false, // is Percent Graph
@@ -294,10 +294,15 @@ extends CountersModel
 			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addColumn("monDataCache",  "Stalls",       "Number of times I/O operations were delayed because no clean buffers were available in the wash area");
 
+			mtd.addColumn("monDataCache",  "RealPhysicalReads", "<html>"
+			                                                      + "Actual or Real Physical Reads <br>"
+			                                                      + "<b>Formula</b>: PhysicalReads + APFReads <br>"
+			                                                      + "</html>");
+			
 			mtd.addColumn("monDataCache",  "CacheHitRate", "<html>" +
 			                                                   "Percent calculation of how many pages was fetched from the cache.<br>" +
 			                                                   "<b>Note</b>: APF reads could already be in memory, counted as a 'cache hit', check also 'devices' and APFReads.<br>" +
-			                                                   "<b>Formula</b>: 100 - (PhysicalReads/CacheSearches) * 100.0" +
+			                                                   "<b>Formula</b>: 100 - (RealPhysicalReads/CacheSearches) * 100.0" +
 			                                               "</html>");
 //			mtd.addColumn("monDataCache",  "Misses",       "fixme");
 //			mtd.addColumn("monDataCache",  "Volatility",   "fixme");
@@ -347,6 +352,9 @@ extends CountersModel
 		String APFReads            = "";
 		String Overhead            = "";
 
+		String RealPhysicalReads   = "PhysicalReads, ";
+		String calcPhysicalReads   = "PhysicalReads";
+
 		// ASE 16.0 SP2
 		String CASGrabs            = "";
 		String CASSpins            = "";
@@ -363,6 +371,9 @@ extends CountersModel
 			ReplacementStrategy = "ReplacementStrategy, ";
 			APFReads            = "APFReads, ";
 			Overhead            = "Overhead, ";
+
+			RealPhysicalReads   = "RealPhysicalReads = PhysicalReads + APFReads, \n";
+			calcPhysicalReads = "(PhysicalReads+APFReads)";
 		}
 
 		if (srvVersion >= Ver.ver(16,0,0, 2))
@@ -392,12 +403,12 @@ extends CountersModel
 		cols1 += "CacheName, CacheID, " +
 		         Status + Type + CacheSize + ReplacementStrategy + "\n" +
 		         "RelaxedReplacement, CachePartitions, BufferPools, \n" +
-		         "CacheSearches, PhysicalReads, LogicalReads, PhysicalWrites, Stalls, \n" +
+		         "CacheSearches, "+RealPhysicalReads+" PhysicalReads, LogicalReads, PhysicalWrites, Stalls, \n" +
 		         APFReads + Overhead +
 		         CASGrabs + CASSpins + CASWaits + nl_160_sp2 +
 		         CASContention + nl_160_sp2 +
 		         CASSpinsPerWait + nl_160_sp2 +
-		         "CacheHitRate = convert(numeric(10,1), 100 - (PhysicalReads*1.0/(CacheSearches+1)) * 100.0)" +
+		         "CacheHitRate = convert(numeric(10,1), 100 - ("+calcPhysicalReads+"*1.0/(CacheSearches+1)) * 100.0)" +
 //		         ", HitRate    = convert(numeric(10,1), (CacheSearches * 1.0 / LogicalReads) * 100)" +
 //		         ", Misses     = convert(numeric(10,1), (CacheSearches * 1.0 / PhysicalReads) * 1)" +
 //		         ", Volatility = convert(numeric(10,1), PhysicalWrites * 1.0 / (PhysicalReads + LogicalReads)* 1)"
@@ -419,9 +430,9 @@ extends CountersModel
 			Double[] arr = new Double[3];
 
 			arr[0] = this.getRateValueSum("LogicalReads");
-			arr[1] = this.getRateValueSum("PhysicalReads");
+			arr[1] = this.getRateValueSum("RealPhysicalReads");
 			arr[2] = this.getRateValueSum("PhysicalWrites");
-			_logger.debug("updateGraphData(CacheGraph): LogicalReads='"+arr[0]+"', PhysicalReads='"+arr[1]+"', PhysicalWrites='"+arr[2]+"'.");
+			_logger.debug("updateGraphData(CacheGraph): LogicalReads='"+arr[0]+"', RealPhysicalReads='"+arr[1]+"', PhysicalWrites='"+arr[2]+"'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -450,7 +461,7 @@ extends CountersModel
 			for (int i = 0; i < dArray.length; i++)
 			{
 				lArray[i] = this.getRateString       (i, "CacheName");
-				dArray[i] = this.getRateValueAsDouble(i, "PhysicalReads");
+				dArray[i] = this.getRateValueAsDouble(i, "RealPhysicalReads");
 			}
 
 			// Set the values
@@ -498,8 +509,8 @@ extends CountersModel
 //
 //		int CacheHitRateId = -1, MissesId = -1, VolatilityId = -1;
 	
-		int CacheSearches,        PhysicalReads;
-		int CacheSearchesId = -1, PhysicalReadsId = -1;
+		int CacheSearches,        PhysicalReads,        RealPhysicalReads;
+		int CacheSearchesId = -1, PhysicalReadsId = -1, RealPhysicalReadsId = -1;
 
 		int CacheHitRateId = -1;
 
@@ -510,32 +521,34 @@ extends CountersModel
 		for (int colId=0; colId < colNames.size(); colId++) 
 		{
 			String colName = colNames.get(colId);
-			if      (colName.equals("CacheSearches"))  CacheSearchesId   = colId;
-//			else if (colName.equals("LogicalReads"))   LogicalReadsId    = colId;
-			else if (colName.equals("PhysicalReads"))  PhysicalReadsId   = colId;
-//			else if (colName.equals("PhysicalWrites")) PhysicalWritesId  = colId;
+			if      (colName.equals("CacheSearches"))      CacheSearchesId     = colId;
+//			else if (colName.equals("LogicalReads"))       LogicalReadsId      = colId;
+			else if (colName.equals("PhysicalReads"))      PhysicalReadsId     = colId;
+			else if (colName.equals("RealPhysicalReads"))  RealPhysicalReadsId = colId;
+//			else if (colName.equals("PhysicalWrites"))     PhysicalWritesId    = colId;
 
-			else if (colName.equals("CacheHitRate"))   CacheHitRateId    = colId;
-//			else if (colName.equals("Misses"))         MissesId          = colId;
-//			else if (colName.equals("Volatility"))     VolatilityId      = colId;
+			else if (colName.equals("CacheHitRate"))       CacheHitRateId      = colId;
+//			else if (colName.equals("Misses"))             MissesId            = colId;
+//			else if (colName.equals("Volatility"))         VolatilityId        = colId;
 		}
 	
 		// Loop on all diffData rows
 		for (int rowId=0; rowId < diffData.getRowCount(); rowId++) 
 		{
-			CacheSearches  = ((Number)diffData.getValueAt(rowId, CacheSearchesId )).intValue();
-//			LogicalReads   = ((Number)diffData.getValueAt(rowId, LogicalReadsId  )).intValue();
-			PhysicalReads  = ((Number)diffData.getValueAt(rowId, PhysicalReadsId )).intValue();
-//			PhysicalWrites = ((Number)diffData.getValueAt(rowId, PhysicalWritesId)).intValue();
-
-//			CacheHitRate   = ((Number)diffData.getValueAt(rowId, CacheHitRateId  )).intValue();
-//			Misses         = ((Number)diffData.getValueAt(rowId, MissesId        )).intValue();
-//			Volatility     = ((Number)diffData.getValueAt(rowId, VolatilityId    )).intValue();
+			CacheSearches      = ((Number)diffData.getValueAt(rowId, CacheSearchesId     )).intValue();
+//			LogicalReads       = ((Number)diffData.getValueAt(rowId, LogicalReadsId      )).intValue();
+			PhysicalReads      = ((Number)diffData.getValueAt(rowId, PhysicalReadsId     )).intValue();
+			RealPhysicalReads  = ((Number)diffData.getValueAt(rowId, RealPhysicalReadsId )).intValue();
+//			PhysicalWrites     = ((Number)diffData.getValueAt(rowId, PhysicalWritesId    )).intValue();
+                                                                                         
+//			CacheHitRate       = ((Number)diffData.getValueAt(rowId, CacheHitRateId      )).intValue();
+//			Misses             = ((Number)diffData.getValueAt(rowId, MissesId            )).intValue();
+//			Volatility         = ((Number)diffData.getValueAt(rowId, VolatilityId        )).intValue();
 
 //			if (_logger.isDebugEnabled())
 //				_logger.debug("----CacheSearches = "+CacheSearches+", LogicalReads = "+LogicalReads+", PhysicalReads = "+PhysicalReads+", PhysicalWrites = "+PhysicalWrites);
 			if (_logger.isDebugEnabled())
-				_logger.debug("----CacheSearches = "+CacheSearches+", PhysicalReads = "+PhysicalReads);
+				_logger.debug("----CacheSearches = "+CacheSearches+", PhysicalReads = "+PhysicalReads+", RealPhysicalReads = "+RealPhysicalReads);
 
 			// Handle divided by 0... (this happens if a engine goes offline
 			BigDecimal calcCacheHitRate = null;
@@ -550,7 +563,7 @@ extends CountersModel
 			if (CacheSearches == 0)
 				calcCacheHitRate    = new BigDecimal( 0 );
 			else
-				calcCacheHitRate    = new BigDecimal( 100.0 - (PhysicalReads*1.0/CacheSearches) * 100.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				calcCacheHitRate    = new BigDecimal( 100.0 - (RealPhysicalReads*1.0/CacheSearches) * 100.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 //				calcCacheHitRate    = new BigDecimal( ((1.0 * CacheSearches) / LogicalReads) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 			
 //			if (PhysicalReads == 0)

@@ -45,6 +45,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.gui.swing.PromptForPassword;
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.gui.swing.PromptForPassword.SaveType;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.VersionShort;
@@ -437,7 +438,7 @@ public class SshConnection
 				if (PROMPT_FOR_PASSWORD.equals(_password))
 				{
 					// Prompt for password
-					String promptPasswd = PromptForPassword.show(null, "Please specify the Password for SSH connection to '"+_hostname+"'.", _hostname, _username);
+					String promptPasswd = PromptForPassword.show(null, "Please specify the Password for SSH connection to '"+_hostname+"'.", _hostname, _username, SaveType.TO_CONFIG_USER_TEMP, "unused");
 
 					// Authenticate
 					res = _conn.authenticateWithPassword(_username, promptPasswd);

@@ -52,6 +52,7 @@ import java.util.List;
 
 import javax.swing.AbstractAction;
 import javax.swing.ImageIcon;
+import javax.swing.InputMap;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -60,6 +61,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
@@ -94,6 +96,7 @@ import com.asetune.gui.swing.GTable;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
+import com.asetune.ui.rsyntaxtextarea.TextEditorPaneX;
 import com.asetune.utils.AseSqlScriptReader;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
@@ -164,6 +167,8 @@ implements ActionListener, FocusListener //, ChangeListener
 	private JTextField           _favoriteDesc_txt       = new JTextField();
 	private JLabel               _favoriteIcon_lbl       = new JLabel("Icon");
 	private JTextField           _favoriteIcon_txt       = new JTextField();
+	private JLabel               _favoriteKey_lbl        = new JLabel("Key");
+	private JTextField           _favoriteKey_txt        = new JTextField();
 
 	private JButton              _execCmd_but            = new JButton("Execute");
 	private JButton              _addCmd_but             = new JButton("Add");
@@ -172,6 +177,8 @@ implements ActionListener, FocusListener //, ChangeListener
 	private JButton              _removeCmd_but          = new JButton("Remove");
 	private JButton              _moveUp_but             = new JButton("Up");
 	private JButton              _moveDown_but           = new JButton("Down");
+
+	private InputMap             _editorsInputMap;
 
 	private FavoriteTableModel   _tm                     = null;
 //	private JXTable              _table                  = null;
@@ -341,6 +348,7 @@ implements ActionListener, FocusListener //, ChangeListener
 						if (mIndex == FavoriteTableModel.TAB_POS_NAME)    toolTip = "<html>Name of this Favorite Command.</html>";
 						if (mIndex == FavoriteTableModel.TAB_POS_DESC)    toolTip = "<html>Description of this Favorite Command.</html>";
 						if (mIndex == FavoriteTableModel.TAB_POS_ICON)    toolTip = "<html>Filename of any Icon, representing the Statement.</html>";
+						if (mIndex == FavoriteTableModel.TAB_POS_KEY)     toolTip = "<html>Key shortcut to execute this command.</html>";
 						if (mIndex == FavoriteTableModel.TAB_POS_COMMAND) toolTip = "<html>The command that will be executed.</html>";
 						return toolTip;
 					}
@@ -376,6 +384,7 @@ implements ActionListener, FocusListener //, ChangeListener
 						String name   = ctm.getValueAt(mrow, FavoriteTableModel.TAB_POS_NAME) + "";
 						String desc   = ctm.getValueAt(mrow, FavoriteTableModel.TAB_POS_DESC) + "";
 						String icon   = ctm.getValueAt(mrow, FavoriteTableModel.TAB_POS_ICON) + "";
+						String key    = ctm.getValueAt(mrow, FavoriteTableModel.TAB_POS_KEY)  + "";
 						String cmd    = ctm.getCommand(mrow);
 //						private static final String[] TAB_HEADER = {"Row", "Time", "Server", "User", "Db", "Source", "#", "Command"};
 
@@ -385,6 +394,7 @@ implements ActionListener, FocusListener //, ChangeListener
 						        "<tr> <td><b>Name:        </b></td> <td>" + name + "</td> </tr>" +
 						        "<tr> <td><b>Description: </b></td> <td>" + desc + "</td> </tr>" +
 						        "<tr> <td><b>Icon:        </b></td> <td>" + icon + "</td> </tr>" +
+						        "<tr> <td><b>Key:         </b></td> <td>" + key  + "</td> </tr>" +
 						      "</table>" +
 						      "<hr>" +
 						      "<pre>"+cmd+"</pre>" +
@@ -443,6 +453,7 @@ implements ActionListener, FocusListener //, ChangeListener
 					String name = tm.getValueAt(mrow, FavoriteTableModel.TAB_POS_NAME)    + "";
 					String desc = tm.getValueAt(mrow, FavoriteTableModel.TAB_POS_DESC)    + "";
 					String icon = tm.getValueAt(mrow, FavoriteTableModel.TAB_POS_ICON)    + "";
+					String key  = tm.getValueAt(mrow, FavoriteTableModel.TAB_POS_KEY)     + "";
 					String cmd  = tm.getValueAt(mrow, FavoriteTableModel.TAB_POS_COMMAND) + "";
 					if (tm instanceof FavoriteTableModel)
 					{
@@ -454,8 +465,9 @@ implements ActionListener, FocusListener //, ChangeListener
 					_favoriteName_txt.setText(name);
 					_favoriteDesc_txt.setText(desc);
 					_favoriteIcon_txt.setText(icon);
+					_favoriteKey_txt .setText(key);
 					
-					setBasicInfo(_preview2_lbl, name, desc, icon, cmd);
+					setBasicInfo(_preview2_lbl, name, desc, icon, key, cmd);
 
 					_cmd_txt.setText(cmd);
 					_cmd_txt.setCaretPosition(0);
@@ -574,6 +586,7 @@ implements ActionListener, FocusListener //, ChangeListener
 		_favoriteName_txt.setEnabled(false);
 		_favoriteDesc_txt.setEnabled(false);
 		_favoriteIcon_txt.setEnabled(false);
+		_favoriteKey_txt .setEnabled(false);
 
 		panel.add(_favoriteType_lbl,  "");
 		panel.add(_favoriteType_txt,  "pushx, growx, wrap");
@@ -586,6 +599,9 @@ implements ActionListener, FocusListener //, ChangeListener
 		
 		panel.add(_favoriteIcon_lbl,  "");
 		panel.add(_favoriteIcon_txt,  "pushx, growx, wrap");
+		
+		panel.add(_favoriteKey_lbl,   "");
+		panel.add(_favoriteKey_txt,   "pushx, growx, wrap");
 		
 		panel.add(_preview1_lbl,      "");
 		panel.add(_preview2_lbl,      "pushx, growx, wrap 15");
@@ -1058,6 +1074,11 @@ implements ActionListener, FocusListener //, ChangeListener
 		_table.packAll();
 	}
 
+	public void setEditorsInputMap(InputMap editorsInputMap)
+	{
+		_editorsInputMap = editorsInputMap;
+	}
+
 	/**
 	 * Get all Favorite Commands
 	 * @return a list of entries
@@ -1069,9 +1090,9 @@ implements ActionListener, FocusListener //, ChangeListener
 	/**
 	 * Add entry 
 	 */
-	public void addEntry(VendorType type, String name, String description, String icon, String cmd)
+	public void addEntry(VendorType type, String name, String description, String icon, String key, String cmd)
 	{
-		addEntry(-1, new FavoriteCommandEntry(type, name, description, icon, cmd));
+		addEntry(-1, new FavoriteCommandEntry(type, name, description, icon, key, cmd));
 	}
 
 	/**
@@ -1231,6 +1252,10 @@ implements ActionListener, FocusListener //, ChangeListener
 	private static final String XML_BEGIN_SUBTAG_ICON                = "<"  + XML_SUBTAG_ICON + ">";
 	private static final String XML_END___SUBTAG_ICON                = "</" + XML_SUBTAG_ICON + ">";
 
+	private static final String       XML_SUBTAG_KEY                 = "Key";
+	private static final String XML_BEGIN_SUBTAG_KEY                 = "<"  + XML_SUBTAG_KEY + ">";
+	private static final String XML_END___SUBTAG_KEY                 = "</" + XML_SUBTAG_KEY + ">";
+
 	private static final String       XML_SUBTAG_COMMAND             = "Command";
 	private static final String XML_BEGIN_SUBTAG_COMMAND             = "<"  + XML_SUBTAG_COMMAND + ">";
 	private static final String XML_END___SUBTAG_COMMAND             = "</" + XML_SUBTAG_COMMAND + ">";
@@ -1354,6 +1379,7 @@ implements ActionListener, FocusListener //, ChangeListener
 				else if (XML_SUBTAG_NAME       .equals(qName)) _lastEntry.setName       (_xmlTagBuffer.toString().trim());
 				else if (XML_SUBTAG_DESCRIPTION.equals(qName)) _lastEntry.setDescription(_xmlTagBuffer.toString().trim());
 				else if (XML_SUBTAG_ICON       .equals(qName)) _lastEntry.setIcon       (_xmlTagBuffer.toString().trim());
+				else if (XML_SUBTAG_KEY        .equals(qName)) _lastEntry.setKey        (_xmlTagBuffer.toString().trim());
 			}
 			_xmlTagBuffer.setLength(0);
 		}
@@ -1753,9 +1779,9 @@ implements ActionListener, FocusListener //, ChangeListener
 	{
 		if (entry == null)
 			return null;
-		return setBasicInfo(comp, entry.getName(), entry.getDescription(), entry.getIcon(), entry.getOriginCommand());
+		return setBasicInfo(comp, entry.getName(), entry.getDescription(), entry.getIcon(), entry.getKey(), entry.getOriginCommand());
 	}
-	public static String setBasicInfo(JComponent comp, String name, String desc, String icon, String cmd)
+	public static String setBasicInfo(JComponent comp, String name, String desc, String icon, String key, String cmd)
 	{
 		String xName = (StringUtil.isNullOrBlank(name)) ? cmd  : name;
 		String xDesc = (StringUtil.isNullOrBlank(desc)) ? ""   : " - <i><font color=\"green\">"+desc+"</font></i>";
@@ -1778,6 +1804,18 @@ implements ActionListener, FocusListener //, ChangeListener
 				c.setText(xText);
 				c.setActionCommand(cmd);
 				c.setToolTipText(xTTip);
+				
+				if (StringUtil.hasValue(key))
+				{
+					KeyStroke keyStroke = KeyStroke.getKeyStroke(key);
+					if (keyStroke == null)
+					{
+						_logger.info("Problems mapping the key '" + key + "' to a KeyStroke.");
+					}
+					else
+						c.setAccelerator(keyStroke);
+				}
+
 		
 				if (icon != null)
 					c.setIcon(SwingUtils.readImageIcon(Version.class, icon));
@@ -1803,12 +1841,34 @@ implements ActionListener, FocusListener //, ChangeListener
 	//-------------------------------------------------------------------
 	// Local private classes
 	//-------------------------------------------------------------------
+//	public static class FavoriteCommandAction
+//	extends AbstractAction
+//	{
+//		private String _command;
+//		
+//		public void setCommand(String command)
+//		{
+//			_command = command;
+//		}
+//		public String getCommand()
+//		{
+//			return _command;
+//		}
+//
+//		get
+//		@Override
+//		public void actionPerformed(ActionEvent e)
+//		{
+//		}
+//	}
+
 	public static class FavoriteCommandEntry
 	{
 		private VendorType _type        = null;
 		private String     _name        = null;
 		private String     _description = null;
 		private String     _icon        = null;
+		private String     _key         = null;
 		private String     _originCmd   = null;
 		private String     _formatedCmd = null;
 
@@ -1822,18 +1882,19 @@ implements ActionListener, FocusListener //, ChangeListener
 			setDescription(description);
 			setCommand(cmd);
 		}
-		public FavoriteCommandEntry(VendorType type, String name, String description, String icon, String cmd)
+		public FavoriteCommandEntry(VendorType type, String name, String description, String icon, String key, String cmd)
 		{
 			setType(type);
 			setName(name);
 			setDescription(description);
 			setIcon(icon);
+			setKey(key);
 			setCommand(cmd);
 		}
 
 		public static FavoriteCommandEntry addSeparator()
 		{
-			return new FavoriteCommandEntry(VendorType.GENERIC, SEPARATOR, SEPARATOR, null, SEPARATOR);
+			return new FavoriteCommandEntry(VendorType.GENERIC, SEPARATOR, SEPARATOR, null, null, SEPARATOR);
 		}
 
 		public boolean isSeparator()
@@ -1845,6 +1906,7 @@ implements ActionListener, FocusListener //, ChangeListener
 		public String     getName()            { return _name        == null ? ""                 : _name;        }
 		public String     getDescription()     { return _description == null ? ""                 : _description; }
 		public String     getIcon()            { return _icon        == null ? ""                 : _icon;        }
+		public String     getKey()             { return _key         == null ? ""                 : _key;         }
 		public String     getFormatedCommand() { return _formatedCmd == null ? ""                 : _formatedCmd; }
 		public String     getOriginCommand()   { return _originCmd   == null ? ""                 : _originCmd;   }
 
@@ -1886,6 +1948,13 @@ implements ActionListener, FocusListener //, ChangeListener
 			_icon = icon;
 		}
 
+		public void setKey(String key)
+		{
+			if (key == null)
+				key = "";
+			_key = key;
+		}
+
 		public void setCommand(String command)
 		{
 			if (command == null)
@@ -1905,6 +1974,7 @@ implements ActionListener, FocusListener //, ChangeListener
 			sb.append("        ").append(XML_BEGIN_SUBTAG_NAME)       .append(StringUtil.xmlSafe(getName()            )).append(XML_END___SUBTAG_NAME)       .append("\n");
 			sb.append("        ").append(XML_BEGIN_SUBTAG_DESCRIPTION).append(StringUtil.xmlSafe(getDescription()     )).append(XML_END___SUBTAG_DESCRIPTION).append("\n");
 			sb.append("        ").append(XML_BEGIN_SUBTAG_ICON)       .append(StringUtil.xmlSafe(getIcon()            )).append(XML_END___SUBTAG_ICON)       .append("\n");
+			sb.append("        ").append(XML_BEGIN_SUBTAG_KEY)        .append(StringUtil.xmlSafe(getKey()             )).append(XML_END___SUBTAG_KEY)        .append("\n");
 			sb.append("        ").append(XML_BEGIN_SUBTAG_COMMAND)    .append(StringUtil.xmlSafe(getOriginCommand()   )).append(XML_END___SUBTAG_COMMAND)    .append("\n");
 			sb.append("    ").append(XML_END___TAG_FAVORITE_COMMAND_ENTRY).append("\n");
 
@@ -1917,13 +1987,14 @@ implements ActionListener, FocusListener //, ChangeListener
 	{
 		private static final long serialVersionUID = 1L;
 
-		private static final String[] TAB_HEADER = {"Pos", "Type", "Name", "Description", "Icon", "Command"};
+		private static final String[] TAB_HEADER = {"Pos", "Type", "Name", "Description", "Icon", "Key", "Command"};
 		private static final int TAB_POS_POS     = 0;
 		private static final int TAB_POS_TYPE    = 1;
 		private static final int TAB_POS_NAME    = 2;
 		private static final int TAB_POS_DESC    = 3;
 		private static final int TAB_POS_ICON    = 4;
-		private static final int TAB_POS_COMMAND = 5;
+		private static final int TAB_POS_KEY     = 5;
+		private static final int TAB_POS_COMMAND = 6;
 
 		private ArrayList<FavoriteCommandEntry> _rows = new ArrayList<FavoriteCommandEntry>();
 		private boolean _hasChanged = false;
@@ -2073,6 +2144,7 @@ implements ActionListener, FocusListener //, ChangeListener
 			case TAB_POS_NAME:    return TAB_HEADER[TAB_POS_NAME];
 			case TAB_POS_DESC:    return TAB_HEADER[TAB_POS_DESC];
 			case TAB_POS_ICON:    return TAB_HEADER[TAB_POS_ICON];
+			case TAB_POS_KEY:     return TAB_HEADER[TAB_POS_KEY];
 			case TAB_POS_COMMAND: return TAB_HEADER[TAB_POS_COMMAND];
 			}
 			return null;
@@ -2095,6 +2167,7 @@ implements ActionListener, FocusListener //, ChangeListener
 			case TAB_POS_NAME:    return entry.getName();
 			case TAB_POS_DESC:    return entry.getDescription();
 			case TAB_POS_ICON:    return entry.getIcon();
+			case TAB_POS_KEY:     return entry.getKey();
 			case TAB_POS_COMMAND: return entry.getFormatedCommand();
 			}
 			return null;
@@ -2133,10 +2206,12 @@ implements ActionListener, FocusListener //, ChangeListener
 	*/
 	private static class AddOrChangeEntryDialog
 	extends JDialog
-	implements ActionListener, KeyListener
+	implements ActionListener, KeyListener, FocusListener
 	{
 		private static final long serialVersionUID = 1L;
 
+		private JDialog _owner;
+		
 		public        int  _dialogType     = -1;
 		public static int  ADD_DIALOG      = 1;
 		public static int  CHANGE_DIALOG   = 2;
@@ -2149,6 +2224,7 @@ implements ActionListener, FocusListener //, ChangeListener
 		
 		private JLabel               _preview1_lbl     = new JLabel("Preview");
 		private JLabel               _preview2_lbl     = new JLabel("<html><i>How the item will look like</i></html>");
+		private JLabel               _note1_lbl        = new JLabel("Note: You can use ${selectedText} if you want to use the selected text in the editor.");
 
 		private JLabel               _command_lbl      = new JLabel("Command");
 		private RSyntaxTextAreaX     _command_txt      = new RSyntaxTextAreaX(15, 80);
@@ -2166,10 +2242,15 @@ implements ActionListener, FocusListener //, ChangeListener
 		private JLabel               _favoriteIcon_lbl = new JLabel("Icon");
 		private JTextField           _favoriteIcon_txt = new JTextField();
 
+		private JLabel               _favoriteKey_lbl  = new JLabel("Key");
+		private JTextField           _favoriteKey_txt  = new JTextField();
+//		private JComboBox            _favoriteKey_cbx  = new JComboBox(KeyStroke.);
+		
 		private AddOrChangeEntryDialog(JDialog owner, FavoriteCommandEntry entry)
 		{
 			super(owner, "", true);
 
+			_owner        = owner;
 			_dialogType   = entry == null ? ADD_DIALOG : CHANGE_DIALOG;
 			_entry        = entry;
 			if (_entry == null)
@@ -2186,7 +2267,7 @@ implements ActionListener, FocusListener //, ChangeListener
 			dialog.setFocus();
 			dialog.setVisible(true);
 			dialog.dispose();
-
+			
 			return dialog._return;
 		}
 
@@ -2213,6 +2294,8 @@ implements ActionListener, FocusListener //, ChangeListener
 			_favoriteDesc_txt.setToolTipText(_favoriteDesc_lbl.getToolTipText());
 			_favoriteIcon_lbl.setToolTipText("<html><i><b>Optional</b></i> Name of a file, which holds a Graphical Icon that will be displayed before the <i>menu text</i><br><br>Tip: The preview field below indicates how the <i>menu text</i> will be displayed.</html>");
 			_favoriteIcon_txt.setToolTipText(_favoriteIcon_lbl.getToolTipText());
+			_favoriteKey_lbl .setToolTipText("<html><i><b>Optional</b></i> Keaboard Shortcut Key.</html>");
+			_favoriteKey_txt .setToolTipText(_favoriteKey_lbl.getToolTipText());
 			_preview1_lbl    .setToolTipText("<html>A Preview of what the <i>menu text</i> will look like.</html>");
 			_preview2_lbl    .setToolTipText(_preview2_lbl.getToolTipText());
 
@@ -2229,10 +2312,15 @@ implements ActionListener, FocusListener //, ChangeListener
 			
 			panel.add(_favoriteIcon_lbl,  "");
 			panel.add(_favoriteIcon_txt,  "pushx, growx, wrap");
-			
+
+			panel.add(_favoriteKey_lbl,   "");
+			panel.add(_favoriteKey_txt,   "pushx, growx, wrap");
+
 			panel.add(_preview1_lbl,      "");
 			panel.add(_preview2_lbl,      "pushx, growx, wrap 15");
-			
+
+			panel.add(_note1_lbl,         "span, wrap");
+
 //			panel.add(_command_lbl,       "wrap");
 			panel.add(_command_scroll,    "span, push, grow, wrap");
 			
@@ -2249,24 +2337,64 @@ implements ActionListener, FocusListener //, ChangeListener
 			_favoriteName_txt.setText(_entry.getName());
 			_favoriteDesc_txt.setText(_entry.getDescription());
 			_favoriteIcon_txt.setText(_entry.getIcon());
+			_favoriteKey_txt .setText(_entry.getKey());
 			_command_txt     .setText(_entry.getOriginCommand());
 			
 			// ADD KEY listeners
 			_favoriteName_txt.addKeyListener(this);
 			_favoriteDesc_txt.addKeyListener(this);
 			_favoriteIcon_txt.addKeyListener(this);
+			_favoriteKey_txt .addKeyListener(this);
 			_command_txt     .addKeyListener(this);
-			
+
+			_favoriteKey_txt .addFocusListener(this);
+
 			// ADD ACTIONS TO COMPONENTS
 			_ok           .addActionListener(this);
 			_cancel       .addActionListener(this);
 		}
 
-		@Override public void keyPressed (KeyEvent e) {}
+		@Override public void keyPressed (KeyEvent e) 
+		{
+			if (e.getSource() == _favoriteKey_txt)
+			{
+				//if (e.isActionKey() || e.isAltDown() || e.isAltGraphDown() || e.isControlDown()  || e.isMetaDown() || e.isShiftDown() )
+				if (e.isAltDown() || e.isAltGraphDown() || e.isControlDown()  || e.isShiftDown() )
+				{
+					KeyStroke keyStroke = KeyStroke.getKeyStrokeForEvent(e);
+
+					InputMap editorsInputMap = null;
+					if (_owner instanceof FavoriteCommandDialog)
+					{
+						editorsInputMap = ((FavoriteCommandDialog)_owner)._editorsInputMap;
+					}
+					
+					if (editorsInputMap != null)
+					{
+						Object currentMapping = editorsInputMap.get(keyStroke);
+						if (currentMapping != null && !_favoriteName_txt.getText().equals(currentMapping))
+						{
+							String msg = "<html>Sorry: The KeyStroke '" + keyStroke + "' is already assigned to '" + currentMapping + "'."
+									+ "<br>"
+									+ "Do you still want to use this key, overriding current mapping.</html>";
+//							SwingUtils.showInfoMessage(_owner, "Keystroke is already taken.", msg);
+							int dialogResult = JOptionPane.showConfirmDialog(_owner, msg, "Key Mapping", JOptionPane.YES_NO_OPTION);
+							if(dialogResult == JOptionPane.NO_OPTION)
+							{
+								_favoriteKey_txt.setText("");
+								return;
+							}
+						}
+					}
+					
+					_favoriteKey_txt.setText(keyStroke+"");
+				}
+			}
+		}
 		@Override public void keyTyped   (KeyEvent e) {}
 		@Override public void keyReleased(KeyEvent e)
 		{
-			setBasicInfo( _preview2_lbl, _favoriteName_txt.getText(), _favoriteDesc_txt.getText(), _favoriteIcon_txt.getText(), _command_txt.getText() );
+			setBasicInfo( _preview2_lbl, _favoriteName_txt.getText(), _favoriteDesc_txt.getText(), _favoriteIcon_txt.getText(), _favoriteKey_txt.getText(), _command_txt.getText() );
 		}
 
 		@Override
@@ -2281,6 +2409,7 @@ implements ActionListener, FocusListener //, ChangeListener
 				_entry.setName       (_favoriteName_txt.getText());
 				_entry.setDescription(_favoriteDesc_txt.getText());
 				_entry.setIcon       (_favoriteIcon_txt.getText());
+				_entry.setKey        (_favoriteKey_txt .getText());
 				_entry.setCommand    (_command_txt     .getText());
 
 				_return = _entry;
@@ -2293,6 +2422,29 @@ implements ActionListener, FocusListener //, ChangeListener
 			{
 				_return = null;
 				setVisible(false);
+			}
+		}
+
+		@Override
+		public void focusGained(FocusEvent e)
+		{
+		}
+
+		@Override
+		public void focusLost(FocusEvent e)
+		{
+			if (e.getSource() == _favoriteKey_txt)
+			{
+				String key = _favoriteKey_txt.getText();
+				if (StringUtil.hasValue(key))
+				{
+					KeyStroke keyStroke = KeyStroke.getKeyStroke(key);
+					if (keyStroke == null)
+					{
+						SwingUtils.showWarnMessage(_owner, "Unknown KeyStroke", "The KeyStroke '" + key + "' is not valid.", null);
+						_favoriteKey_txt.setText("");
+					}
+				}
 			}
 		}
 

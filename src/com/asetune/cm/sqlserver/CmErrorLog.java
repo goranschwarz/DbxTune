@@ -21,6 +21,9 @@
 package com.asetune.cm.sqlserver;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +35,9 @@ import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventConfigChanges;
+import com.asetune.alarm.events.AlarmEventConfigResourceIsUsedUp;
 import com.asetune.alarm.events.AlarmEventErrorLogEntry;
+import com.asetune.alarm.events.AlarmEventFullTranLog;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -41,6 +46,7 @@ import com.asetune.cm.CountersModelAppend;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TabularCntrPanelAppend;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
@@ -137,6 +143,70 @@ extends CountersModelAppend
 	{
 		return "exec master.dbo.xp_readerrorlog 0, 1, NULL, NULL, ${prevSampleTs}, NULL"; 
 	}
+
+	/**
+	 * Override the normal depends on role, and check that we can execute: xp_readerrorlog
+	 * <br>
+	 * If issues: inactuvate this CM and set message: grant exec on xp_readerrorlog to <current-login>
+	 *  
+	 */
+	@Override
+	public boolean checkDependsOnRole(DbxConnection conn)
+	{
+		String sql = "exec xp_readerrorlog 0, 1, null, null, '20500101'"; // a long time in the future
+		try (Statement stmnt = conn.createStatement())
+		{
+			boolean hasRs = stmnt.execute(sql);
+			if (hasRs)
+			{
+				ResultSet rs = stmnt.getResultSet();
+				while(rs.next())
+				{
+					// do nothing, just read out all the rows (which should be zero)
+				}
+				rs.close();
+			}
+			return true;
+		}
+		catch (SQLException ex)
+		{
+			// Msg 229, Level 14, State 5:
+			// Server 'prod-2a-mssql', Procedure 'xp_readerrorlog', Line 1 (Called from script row 15823)
+			// The EXECUTE permission was denied on the object 'xp_readerrorlog', database 'mssqlsystemresource', schema 'sys'.
+			if (ex.getErrorCode() == 229)
+			{
+				String username = "<currentUserName>";
+				if (conn.getConnPropOrDefault() != null)
+					username = conn.getConnPropOrDefault().getUsername();
+
+				setActive(false, 
+						"You currently do not have execution permissions on 'xp_readerrorlog'\n" +
+						"Fix: grant exec on xp_readerrorlog to " + username); 
+
+				TabularCntrPanel tcp = getTabPanel();
+				if (tcp != null)
+				{
+					tcp.setToolTipText(
+							"<html>You currently do not have execution permissions on 'xp_readerrorlog'.<br>" +
+							"Fix: <code>grant exec on xp_readerrorlog to " + username + "</code></html>");
+				}
+			}
+			else
+			{
+				_logger.error("checkDependsOnRole() - executing '"+sql+"'", ex);
+
+				setActive(false, ex.getMessage()); 
+
+				TabularCntrPanel tcp = getTabPanel();
+				if (tcp != null)
+				{
+					tcp.setToolTipText(ex.getMessage());
+				}
+			}
+			return false;
+		}
+	}
+
 	@Override
 	public String getSql()
 	{
@@ -148,9 +218,9 @@ extends CountersModelAppend
 		// 5 - Search from start time
 		// 6 - Search to end time
 		// 7 - Sort order for results: N'asc' = ascending, N'desc' = descending
-		
+
 		String sqlText = super.getSql();
-		
+
 		// Sample only records we have not seen previously...
 		Timestamp prevSample = getPreviousSampleTime();
 		if (prevSample == null)
@@ -220,7 +290,7 @@ extends CountersModelAppend
 //		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
 
 		List<String> errorNumberSkipList = null; // initiated later
-		
+
 		for (int r=0; r<lastRefreshRows.size(); r++)
 		{
 			List<Object> row = lastRefreshRows.get(r);
@@ -266,17 +336,107 @@ extends CountersModelAppend
 				}
 			}
 
-			// If no error message or severity... continue with next row
+			if (_logger.isDebugEnabled())
+				_logger.debug("errorNum=" + errorNum + ", severity=" + severity + ", errorTxt=" + errorTxt);
+
+			
+			// Handle errors with NO ERROR numbers
 			if (errorNum == -1 && severity == -1)
+			{
+				//-------------------------------------------------------
+				// ConfigChanges
+				//-------------------------------------------------------
+				if (isSystemAlarmsForColumnEnabledAndInTimeRange("ConfigChanges"))
+				{
+					// Configuration option 'allow updates' changed from 0 to 1. Run the RECONFIGURE statement to install.
+					// Configuration option 'show advanced options' changed from 0 to 1. Run the RECONFIGURE statement to install.
+					if (errorTxt.indexOf("Configuration option '") >= 0 && errorTxt.indexOf("' changed from ") >= 0)
+					{
+						String configName = "unknown";
+						String extendedDescText = errorTxt;
+						String extendedDescHtml = errorTxt;
+
+						// Get the configuration name
+						int startPos = errorTxt.indexOf("'");
+						if (startPos != -1)
+						{
+							startPos++;
+							int endPos = errorTxt.indexOf("'", startPos);
+							if (endPos != -1)
+								configName = errorTxt.substring(startPos, endPos);
+						}
+						
+						AlarmEvent ae = new AlarmEventConfigChanges(this, configName, errorTxt);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							
+						alarmHandler.addAlarm( ae );
+					}
+				}
+				
+				//-------------------------------------------------------
+				// LongIoRequests
+				//-------------------------------------------------------
+				if (isSystemAlarmsForColumnEnabledAndInTimeRange("LongIoRequests"))
+				{
+					// SQL Server has encountered x occurrence(s) of I/O requests taking longer than 15 seconds to complete on file [Drive:\MSSQL\MSSQL.1\MSSQL\Data\xyz.mdf] in database [database].  The OS file handle is 0x00000000.  The offset of the latest long I/O is: 0x00000000000000
+					String searchFor = " requests taking longer than ";
+					if (errorTxt.indexOf(searchFor) >= 0)
+					{
+						String extendedDescText = errorTxt;
+						String extendedDescHtml = errorTxt;
+
+						AlarmEvent ae = new AlarmEventErrorLogEntry(this, AlarmEvent.Severity.WARNING, searchFor, errorTxt);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							
+						alarmHandler.addAlarm( ae );
+					}
+				}
+				
+				// No need to continue, since we do NOT have error NUMBERS
 				continue;
+
+			} // end: Text only messages
 
 
 			
 			//-------------------------------------------------------
-			// 
+			// Full transaction log
+			// Not 100% sure if they will be visible in the error log... but lets add it anyway...
 			//-------------------------------------------------------
-//			if (isSystemAlarmsForColumnEnabledAndInTimeRange("PageErrorReadRetry"))
-//			{
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("TransactionLogFull"))
+			{
+				// Error: 9002, Severity: 17, State: 2
+				// The log file for database '%.*ls' is full.  (...possibly more info...)
+				if (errorNum == 9002)
+				{
+					String extendedDescText = errorTxt;
+					String extendedDescHtml = errorTxt;
+
+					// Get the configuration name
+					String dbname = "-unknown-";
+					int startPos = errorTxt.indexOf("'");
+					if (startPos != -1)
+					{
+						startPos++;
+						int endPos = errorTxt.indexOf("'", startPos);
+						if (endPos != -1)
+							dbname = errorTxt.substring(startPos, endPos);
+					}
+					
+					AlarmEvent ae = new AlarmEventFullTranLog(this, 0, dbname);
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+					alarmHandler.addAlarm( ae );
+				}
+			}
+
+			//-------------------------------------------------------
+			// PageErrorReadRetry
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("PageErrorReadRetry"))
+			{
+				// ErrorNumber=825, Severity=10, ErrorMessage=A read of the file '%ls' at offset %#016I64x succeeded after failing %d time(s) with error: %ls. Additional messages in the SQL Server error log and operating system error log may provide more detail. This error condition threatens database integrity and must be corrected. Complete a full database consistency check (DBCC CHECKDB). This error can be caused by many factors; for more information, see SQL Server Books Online.
+				// Note that this is "only" severity 10... HENCE: We are **UPPGRADING** it to a more severe error
 				if (errorNum == 825)
 				{
 					String extendedDescText = errorTxt;
@@ -289,26 +449,28 @@ extends CountersModelAppend
 
 					alarmHandler.addAlarm( ae );
 				}
-//			}
+			}
 
 
 			//-------------------------------------------------------
 			// Out of 'user connections' --- or that we can't login dues to similar issues
+			// Not 100% sure if they will be visible in the error log since it's only of Severity 16
 			//-------------------------------------------------------
-//			if (isSystemAlarmsForColumnEnabledAndInTimeRange("UserConnections"))
-//			{
-//				// ErrorNumber=1601, Severity=17, ErrorMessage=There are not enough 'user connections' available to start a new process...
-//				if (errorNumber == 1601 || ErrorMessage.indexOf("There are not enough 'user connections' available to start a new process") >= 0)
-//				{
-//					String extendedDescText = ErrorMessage;
-//					String extendedDescHtml = ErrorMessage;
-//
-//					AlarmEvent ae = new AlarmEventConfigResourceIsUsedUp(this, "number of user connections", 1601, ErrorMessage);
-//					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-//
-//					alarmHandler.addAlarm( ae );
-//				}
-//			}
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("UserConnections"))
+			{
+				// ErrorNumber=17300, Severity=16, ErrorMessage=SQL Server was unable to run a new system task, either because there is insufficient memory or the number of configured sessions exceeds the maximum allowed in the server. Verify that the server has adequate memory. Use sp_configure with option 'user connections' to check the maximum number of user connections allowed. Use sys.dm_exec_sessions to check the current number of sessions, including user processes.
+				// ErrorNumber=17809, Severity=16, ErrorMessage=Could not connect because the maximum number of '%ld' user connections has already been reached. The system administrator can use sp_configure to increase the maximum value. The connection has been closed.%.*ls
+				if (errorNum == 17300 || errorNum == 17809) // errorTxt.indexOf("user connections") >= 0)
+				{
+					String extendedDescText = errorTxt;
+					String extendedDescHtml = errorTxt;
+
+					AlarmEvent ae = new AlarmEventConfigResourceIsUsedUp(this, "user connections", errorNum, errorTxt);
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					alarmHandler.addAlarm( ae );
+				}
+			}
 
 			
 			//-------------------------------------------------------
@@ -380,44 +542,19 @@ extends CountersModelAppend
 						alarmHandler.addAlarm( ae );
 					}
 				}
-			}
+			} // end: severity
 
-			//-------------------------------------------------------
-			// ConfigChanges
-			//-------------------------------------------------------
-			if (isSystemAlarmsForColumnEnabledAndInTimeRange("ConfigChanges"))
-			{
-				// Configuration option 'show advanced options' changed from 0 to 1. Run the RECONFIGURE statement to install.
-				if (errorTxt.indexOf("Configuration option '") >= 0 && errorTxt.indexOf("' changed from ") >= 0)
-				{
-					String configName = "unknown";
-					String extendedDescText = errorTxt;
-					String extendedDescHtml = errorTxt;
-
-					// Get the configuration name
-					int startPos = errorTxt.indexOf("'");
-					if (startPos != -1)
-					{
-						startPos++;
-						int endPos = errorTxt.indexOf("'", startPos);
-						if (endPos != -1)
-							configName = errorTxt.substring(startPos, endPos);
-					}
-					
-					AlarmEvent ae = new AlarmEventConfigChanges(this, configName, errorTxt);
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-						
-					alarmHandler.addAlarm( ae );
-				}
-			}
-		}
+		} // end: rows loop
 	}
 
-//	public static final String  PROPKEY_alarm_UserConnections       = CM_NAME + ".alarm.system.on.UserConnections";
-//	public static final boolean DEFAULT_alarm_UserConnections       = true;
+	public static final String  PROPKEY_alarm_PageErrorReadRetry    = CM_NAME + ".alarm.system.on.PageErrorReadRetry";
+	public static final boolean DEFAULT_alarm_PageErrorReadRetry    = true;
 
-//	public static final String  PROPKEY_alarm_TransactionLogFull    = CM_NAME + ".alarm.system.on.TransactionLogFull";
-//	public static final boolean DEFAULT_alarm_TransactionLogFull    = true;
+	public static final String  PROPKEY_alarm_UserConnections       = CM_NAME + ".alarm.system.on.UserConnections";
+	public static final boolean DEFAULT_alarm_UserConnections       = true;
+
+	public static final String  PROPKEY_alarm_TransactionLogFull    = CM_NAME + ".alarm.system.on.TransactionLogFull";
+	public static final boolean DEFAULT_alarm_TransactionLogFull    = true;
 
 	public static final String  PROPKEY_alarm_Severity              = CM_NAME + ".alarm.system.if.Severity.gt";
 	public static final int     DEFAULT_alarm_Severity              = 16;
@@ -427,6 +564,9 @@ extends CountersModelAppend
 
 	public static final String  PROPKEY_alarm_ConfigChanges         = CM_NAME + ".alarm.system.on.ConfigChanges";
 	public static final boolean DEFAULT_alarm_ConfigChanges         = true;
+
+	public static final String  PROPKEY_alarm_LongIoRequests        = CM_NAME + ".alarm.system.on.LongIoRequests";
+	public static final boolean DEFAULT_alarm_LongIoRequests        = true;
 
 //	public static final String  PROPKEY_alarm_ProcessInfected       = CM_NAME + ".alarm.system.on.ProcessInfected";
 //	public static final boolean DEFAULT_alarm_ProcessInfected       = true;
@@ -438,10 +578,12 @@ extends CountersModelAppend
 		List<CmSettingsHelper> list = new ArrayList<>();
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
-		
-//		list.add(new CmSettingsHelper("UserConnections"        , isAlarmSwitch, PROPKEY_alarm_UserConnections    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_UserConnections    , DEFAULT_alarm_UserConnections    ), DEFAULT_alarm_UserConnections    , "On Error 1601, send 'AlarmEventConfigResourceIsUsedUp'." ));
-//		list.add(new CmSettingsHelper("TransactionLogFull"     , isAlarmSwitch, PROPKEY_alarm_TransactionLogFull , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_TransactionLogFull , DEFAULT_alarm_TransactionLogFull ), DEFAULT_alarm_TransactionLogFull , "On Error 7413, send 'AlarmEventFullTranLog'." ));
+
+		list.add(new CmSettingsHelper("PageErrorReadRetry"     , isAlarmSwitch, PROPKEY_alarm_PageErrorReadRetry , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_PageErrorReadRetry , DEFAULT_alarm_PageErrorReadRetry ), DEFAULT_alarm_PageErrorReadRetry , "On Error 825, send 'AlarmEventErrorLogEntry'. Note that this is 'only' severity 10... Hence: We are *UPPGRADING* it to a more severe error" ));
+		list.add(new CmSettingsHelper("UserConnections"        , isAlarmSwitch, PROPKEY_alarm_UserConnections    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_UserConnections    , DEFAULT_alarm_UserConnections    ), DEFAULT_alarm_UserConnections    , "On Error 17300 or 17809, send 'AlarmEventConfigResourceIsUsedUp'." ));
+		list.add(new CmSettingsHelper("TransactionLogFull"     , isAlarmSwitch, PROPKEY_alarm_TransactionLogFull , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_TransactionLogFull , DEFAULT_alarm_TransactionLogFull ), DEFAULT_alarm_TransactionLogFull , "On Error 9002, send 'AlarmEventFullTranLog'." ));
 		list.add(new CmSettingsHelper("ConfigChanges"          , isAlarmSwitch, PROPKEY_alarm_ConfigChanges      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ConfigChanges      , DEFAULT_alarm_ConfigChanges      ), DEFAULT_alarm_ConfigChanges      , "On error log message 'The configuration option '.*' has been changed', send 'AlarmEventConfigChanges'." ));
+		list.add(new CmSettingsHelper("LongIoRequests"         , isAlarmSwitch, PROPKEY_alarm_LongIoRequests     , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_LongIoRequests     , DEFAULT_alarm_LongIoRequests     ), DEFAULT_alarm_LongIoRequests     , "On error log message 'I/O requests taking longer than 15 seconds to complete', send 'AlarmEventErrorLogEntry'." ));
 //		list.add(new CmSettingsHelper("ProcessInfected"        , isAlarmSwitch, PROPKEY_alarm_ProcessInfected    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessInfected    , DEFAULT_alarm_ProcessInfected    ), DEFAULT_alarm_ProcessInfected    , "On error log message 'Current process .* infected with signal', send 'AlarmEventProcessInfected'." ));
 
 		list.add(new CmSettingsHelper("Severity"               , isAlarmSwitch, PROPKEY_alarm_Severity           , Integer.class, conf.getIntProperty    (PROPKEY_alarm_Severity           , DEFAULT_alarm_Severity           ), DEFAULT_alarm_Severity           , "If 'Severity' is greater than ## then send 'AlarmEventErrorLogEntry'." ));
@@ -453,7 +595,7 @@ extends CountersModelAppend
 	
 //------------------------------
 // The below was copied from Sybase ASE... and in SQL-Server all the details like error number are not in columns
-//                                         so we would parse/look-for specififc strings in the log...
+//                                         so we would parse/look-for specific strings in the log...
 //                                         if we want to send alarms... but lets keep the below comment for "a while"
 //------------------------------
 

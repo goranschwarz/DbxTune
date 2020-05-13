@@ -514,7 +514,7 @@ public class TimeUtils
 	}
 
 	/**
-	 * Parse the string into a Tiemstamp<br>
+	 * Parse the string into a Timestamp<br>
 	 * 
 	 * @param str      The time String
 	 * @param format   The format you want to use (according to: https://docs.oracle.com/javase/7/docs/api/java/text/SimpleDateFormat.html)
@@ -525,6 +525,25 @@ public class TimeUtils
 	throws ParseException
 	{
 		SimpleDateFormat dateFormat = new SimpleDateFormat(format);
+		Date date = dateFormat.parse(str);
+		Timestamp ts = new Timestamp(date.getTime());
+		return ts;
+	}
+
+	/**
+	 * Parse the string into a UTC Timestamp<br>
+	 * 
+	 * @param str      The time String
+	 * @param format   The format you want to use (according to: https://docs.oracle.com/javase/7/docs/api/java/text/SimpleDateFormat.html)
+	 * @return         A Timestamp (note: a toString() will still print it as Local Time depending on what TimeZone you are at)
+	 * @throws ParseException    if the string cannot be parsed.
+	 */
+	public static Timestamp parseToUtcTimestamp(String str, String format) 
+	throws ParseException
+	{
+		SimpleDateFormat dateFormat = new SimpleDateFormat(format);
+		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+
 		Date date = dateFormat.parse(str);
 		Timestamp ts = new Timestamp(date.getTime());
 		return ts;
@@ -669,7 +688,21 @@ public class TimeUtils
 	{
 		return getCurrentTimeForFileNameHM( System.currentTimeMillis() );
 	}
+
 	
+	
+	/**
+	 * Format the input as "old C style" using strftime formating.
+	 * 
+	 * @param inputStr    The string with strftime parameters
+	 * @return
+	 */
+	public static String strftime(String string)
+	{
+		Strftime strftime = new Strftime(string);
+		return strftime.format(new Date());
+	}
+
 	/*
 	 * *********************************************************************
 	 * ******* SUB CLASSES ******** SUB CLASSES ******** SUB CLASSES *******

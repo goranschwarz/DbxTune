@@ -47,6 +47,8 @@ import org.bouncycastle.crypto.paddings.BlockCipherPadding;
 import org.bouncycastle.crypto.paddings.PKCS7Padding;
 import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
 
+import com.asetune.Version;
+
 public class OpenSslAesUtil
 {
 	private static final int AES_NIVBITS = 128; // CBC Initialization Vector (same as cipher block size) [16 bytes]
@@ -222,6 +224,18 @@ public class OpenSslAesUtil
 		return cp;
 	}
 
+	private static String getDefaultPassPhrase()
+	{
+		String passPhrase = Configuration.getCombinedConfiguration().getProperty("OpenSslAesUtil.readPasswdFromFile.encyption.password");
+
+		if (passPhrase == null && "SqlServerTune".equals(Version.getAppName())) 
+			passPhrase = "mssql";
+
+		if (passPhrase == null)
+			passPhrase = "sybase";
+			
+		return passPhrase;
+	}
 	
 	public static String readPasswdFromFile(String user)
 	throws IOException, DecryptionException
@@ -269,9 +283,9 @@ public class OpenSslAesUtil
 	throws IOException, DecryptionException
 	{
 
-		// If no password was passed: use "sybase" or get from property
+		// If no password was passed: get from property, or use the user name
 		if (encPasswd == null)
-			encPasswd = Configuration.getCombinedConfiguration().getProperty("OpenSslAesUtil.readPasswdFromFile.encyption.password", "sybase");
+			encPasswd = getDefaultPassPhrase();
 
 		// If no filename was passed: use "~/.passwd.enc" or get from property
 		if (filename == null)
@@ -480,7 +494,7 @@ public class OpenSslAesUtil
 	{
 		// If no password was passed: use "sybase" or get from property
 		if (encPasswd == null)
-			encPasswd = Configuration.getCombinedConfiguration().getProperty("OpenSslAesUtil.readPasswdFromFile.encyption.password", "sybase");
+			encPasswd = getDefaultPassPhrase();
 
 		// If no filename was passed: use "~/.passwd.enc" or get from property
 		if (filename == null)
@@ -624,6 +638,25 @@ public class OpenSslAesUtil
 		}
 	}
 
+	/**
+	 * Create the passwd file if it doesn't already exists
+	 * 
+	 * @param filename      null = use the default file ~/.passwd.enc
+	 * @return true if the named file does not exist and was successfully created; false if the named file already exists
+	 * @throws IOException         If an I/O error occurred
+	 * @throws SecurityException   If a security manager exists and its SecurityManager.checkWrite(java.lang.String) method denies write access to the file
+	 */
+	public static boolean createPasswordFilenameIfNotExists(String filename) 
+	throws IOException
+	{
+		if (filename == null)
+			filename = getPasswordFilename();
+
+		// 
+		File f = new File(filename);
+		return f.createNewFile();
+	}
+	
 	public static String getPasswordFilename()
 	{
 		String homeDir = System.getProperty("user.home");

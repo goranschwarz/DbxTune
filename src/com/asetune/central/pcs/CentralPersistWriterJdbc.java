@@ -1801,6 +1801,27 @@ extends CentralPersistWriterBase
 			}
 		}
 
+		if (fromDbVersion <= 10)
+		{
+			// Change column 'data', 'lastData' from 160 to 512 in table 'DbxAlarmActive', 'DbxAlarmHistory'
+			step = 12;
+
+			// Get schemas
+			Set<String> schemaSet = new LinkedHashSet<>();
+			ResultSet schemaRs = conn.getMetaData().getSchemas();
+			while (schemaRs.next())
+				schemaSet.add(schemaRs.getString(1));
+			schemaRs.close();
+
+			// Loop schemas: if table exists in schema, make the alter
+			//               in some schemas, the table simply do not exists (H2 INFORMATION for example)
+			for (String schemaName : schemaSet)
+			{
+				internalDbUpgradeAlarmActiveHistory_step12(conn, step, schemaName, Table.ALARM_ACTIVE);
+				internalDbUpgradeAlarmActiveHistory_step12(conn, step, schemaName, Table.ALARM_HISTORY);
+			}
+		}
+
 		_logger.info("End - Internal Upgrade of Dbx Central database tables from version '"+fromDbVersion+"' to version '"+toDbVersion+"'.");
 		return toDbVersion;
 	}
@@ -1865,6 +1886,44 @@ extends CentralPersistWriterBase
 
 			// Column 'lastData'
 			sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + dbmsSpecificSyntax_beforeColName + lq+"lastData"+rq + " varchar(180)";
+			internalDbUpgradeDdlExec(conn, step, sql);
+		}
+	}
+
+	// Same code as 'internalDbUpgradeAlarmActiveHistory_step10', except the 'varchar(512)'
+	private void internalDbUpgradeAlarmActiveHistory_step12(DbxConnection conn, int step, String schemaName, Table table) 
+	throws SQLException
+	{
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
+		// H2, Postgres, SqlServer:  ALTER TABLE tabname ALTER COLUMN colname DATATYPE
+		// ASE, MySql, Oracle:       ALTER TABLE tabname MODIFY       colname DATATYPE
+		String dbmsSpecificSyntax_beforeColName = " alter column ";
+		if (DbUtils.isProductName(conn.getDatabaseProductName(), DbUtils.DB_PROD_NAME_SYBASE_ASE, DbUtils.DB_PROD_NAME_MYSQL, DbUtils.DB_PROD_NAME_ORACLE))
+			dbmsSpecificSyntax_beforeColName = " modify ";
+
+		// get table name
+		String onlyTabName = getTableName(conn, null, table, null, false);
+
+		// get all columns, this to check if TABLE EXISTS
+		Set<String> colNames = new LinkedHashSet<>();
+		ResultSet colRs = conn.getMetaData().getColumns(null, schemaName, onlyTabName, "%");
+		while (colRs.next())
+			colNames.add(colRs.getString("COLUMN_NAME").toLowerCase()); // to lowercase in case the DBMS stores them in-another-way
+		colRs.close();
+
+		// IF the table exists & column 'category' do NOT exists, add it
+		if ( colNames.size() > 0 )
+		{
+			String sql;
+			
+			// Column 'data'
+			sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + dbmsSpecificSyntax_beforeColName + lq+"data"+rq + " varchar(512)";
+			internalDbUpgradeDdlExec(conn, step, sql);
+
+			// Column 'lastData'
+			sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + dbmsSpecificSyntax_beforeColName + lq+"lastData"+rq + " varchar(512)";
 			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 	}

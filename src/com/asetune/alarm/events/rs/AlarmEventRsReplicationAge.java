@@ -44,7 +44,7 @@ extends AlarmEvent
 				logicalName,          // serviceName
 				cm.getName(),         // serviceInfo
 				colName,              // extraInfo
-				AlarmEvent.Category.OTHER,
+				AlarmEvent.Category.RPO,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.AFFECTED, 
 				"Replication Age in Server '" + cm.getServerName() + "' for Logical Connection '" + logicalName + "', colName='"+colName+"', age="+age+". (threshold="+threshold+")",

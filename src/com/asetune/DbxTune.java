@@ -907,12 +907,12 @@ public abstract class DbxTune
 			// If no password, try to grab a password from the file '~/.passwd.enc'
 			if ( ! storeConfigProps.hasProperty("conn.dbmsPassword") )
 			{
+//				String aseUser   = cmd.getOptionValue('U', "sa");
+				String aseUser   = storeConfigProps.getProperty("conn.dbmsUsername", "sa");
+				String aseServer = plainAseServerName ? cmd.getOptionValue('S', null) : dbmsCmdLineSwitchHostname;
+
 				try 
 				{
-//					String aseUser   = cmd.getOptionValue('U', "sa");
-					String aseUser   = storeConfigProps.getProperty("conn.dbmsUsername", "sa");
-					String aseServer = plainAseServerName ? cmd.getOptionValue('S', null) : dbmsCmdLineSwitchHostname;
-
 					// Note: generate a passwd in linux: echo 'thePasswd' | openssl enc -aes-128-cbc -a -salt -pass:sybase
 					String asePasswd = OpenSslAesUtil.readPasswdFromFile(aseUser, aseServer);
 					
@@ -933,7 +933,7 @@ public abstract class DbxTune
 				}
 				catch(DecryptionException ex)
 				{
-					_logger.info("Problems decrypting the password, probably a bad passphrase for the encrypted passwd. Caught: "+ex);
+					_logger.info("Problems decrypting the password, for user '"+aseUser+"', DBMS Server '"+aseServer+"'. Probably a bad passphrase for the encrypted passwd. Caught: "+ex);
 				}
 				catch(FileNotFoundException ex)
 				{
@@ -1512,7 +1512,19 @@ public abstract class DbxTune
 					String instName = "";
 					if (evt.getSource() instanceof Configuration)
 						instName = ((Configuration)evt.getSource()).getConfName();
-					_logger.info("COMBINED CONFIG CHANGE["+instName+"]: propName='"+evt.getPropertyName()+"', type="+evt.getPropagationId()+", newValue='"+evt.getNewValue()+"', oldValue='"+evt.getOldValue()+"'.");
+
+					String propName = evt.getPropertyName();
+					Object type     = evt.getPropagationId();
+					Object newValue = evt.getNewValue();
+					Object oldValue = evt.getOldValue();
+					
+					// If "Password", don't print the passwords
+					if (propName != null && propName.indexOf("assword") >= 0)
+					{
+						newValue = "*secret*";
+						oldValue = "*secret*";
+					}
+					_logger.info("COMBINED CONFIG CHANGE[" + instName + "]: propName='" + propName + "', type=" + type + ", newValue='" + newValue + "', oldValue='" + oldValue + "'.");
 				}
 			});
 
@@ -1663,7 +1675,19 @@ public abstract class DbxTune
 								String instName = "";
 								if (evt.getSource() instanceof Configuration)
 									instName = ((Configuration)evt.getSource()).getConfName();
-								_logger.info("COMBINED CONFIG CHANGE["+instName+"]: propName='"+evt.getPropertyName()+"', type="+evt.getPropagationId()+", newValue='"+evt.getNewValue()+"', oldValue='"+evt.getOldValue()+"'.");
+
+								String propName = evt.getPropertyName();
+								Object type     = evt.getPropagationId();
+								Object newValue = evt.getNewValue();
+								Object oldValue = evt.getOldValue();
+								
+								// If "Password", don't print the passwords
+								if (propName != null && propName.indexOf("assword") >= 0)
+								{
+									newValue = "*secret*";
+									oldValue = "*secret*";
+								}
+								_logger.info("COMBINED CONFIG CHANGE[" + instName + "]: propName='" + propName + "', type=" + type + ", newValue='" + newValue + "', oldValue='" + oldValue + "'.");
 							}
 						});
 					}

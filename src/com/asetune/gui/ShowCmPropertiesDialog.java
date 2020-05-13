@@ -553,6 +553,11 @@ extends JDialog implements ActionListener, ChangeListener
 //		boolean isCeEnabled = _testVersionIsCe_chk.isSelected();
 //
 //		loadFieldsUsingVersion(ver, isCeEnabled);
+
+		if (_versionPanel != null)
+		{
+			_versionPanel.stateChanged(e);
+		}
 	}
 
 //	private void parseVersionString(String versionStr)

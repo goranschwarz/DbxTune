@@ -114,14 +114,20 @@ extends Throwable
 		/** Some part is down */
 		DOWN, 
 
-		/** SPACE Utilazation */
+		/** SPACE Utilization */
 		SPACE, 
 
 		/** Server Configuration */
 		SRV_CONFIG, 
 
 		/** LOCK */
-		LOCK
+		LOCK,
+
+		/** HADR */
+		HADR,
+
+		/** RPO - Recovery Point Objective */
+		RPO,
 	};
 
 	private static SimpleDateFormat _dateFormater = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
@@ -168,9 +174,9 @@ extends Throwable
 	
 	/**
 	 * If Writer/Sender should <b>always</b> send this alarm<br>
-	 * The the "filter" functionality will be disarded/short-circuited 
+	 * The the "filter" functionality will be discarded/short-circuited 
 	 * 
-	 * @return true if we should always send, false if we shoudl look at the "filter" settings.
+	 * @return true if we should always send, false if we should look at the "filter" settings.
 	 */
 	public boolean alwaysSend()
 	{

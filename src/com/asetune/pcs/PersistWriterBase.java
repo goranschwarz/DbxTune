@@ -513,9 +513,20 @@ public abstract class PersistWriterBase
 	{
 		if (isDeltaOrPct)
 		{
+			int originJdbcType = rsmd.getColumnType(col);
+
+			// Default data type, lets asume INT: max: 2 147 483 647
 			int type  = Types.NUMERIC;
 			int prec  = 10;
 			int scale = 1;
+
+			// Override for some "bigger" source data types
+			if (originJdbcType == Types.BIGINT) // max: 9 223 372 036 854 775 807
+			{
+				type  = Types.NUMERIC;
+				prec  = 19;
+				scale = 1;
+			}
 
 			return getDatatype(conn, type, prec, scale);
 		}
@@ -1009,8 +1020,8 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(lq+"cancelTime"                 +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"timeToLive"                 +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"threshold"                  +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   15),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"data"                       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  160),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"lastData"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  160),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(lq+"data"                       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(lq+"lastData"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"description"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"lastDescription"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"extendedDescription"        +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
@@ -1071,8 +1082,8 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(lq+"cancelTime"                 +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"timeToLive"                 +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"threshold"                  +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   15),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"data"                       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  160),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"lastData"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  160),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(lq+"data"                       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(lq+"lastData"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"description"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"lastDescription"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"extendedDescription"        +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");

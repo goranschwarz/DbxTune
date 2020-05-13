@@ -630,7 +630,7 @@ System.out.println("AFTER: startRowc="+rowc+", endRowc="+newSample.getRowCount()
 		row.add(intValue);
 		row.add(unit);
 		row.add(desc);
-		newSample.addRow(row);
+		newSample.addRow(this, row);
 	}
 
 

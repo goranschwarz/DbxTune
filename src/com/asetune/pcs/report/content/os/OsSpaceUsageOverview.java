@@ -26,6 +26,7 @@ import com.asetune.pcs.report.content.ReportChartObject;
 import com.asetune.pcs.report.content.ase.AseAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 
 public class OsSpaceUsageOverview extends AseAbstract
 {
@@ -36,6 +37,27 @@ public class OsSpaceUsageOverview extends AseAbstract
 		super(reportingInstance);
 	}
 
+	@Override
+	public boolean isEnabled()
+	{
+		// If super is DISABLED, no need to continue
+		boolean isEnabled = super.isEnabled();
+		if ( ! isEnabled )
+			return isEnabled;
+
+		// NOT For Windows
+		String dbmsVerStr = getReportingInstance().getDbmsVersionStr();
+		if (StringUtil.hasValue(dbmsVerStr))
+		{
+			if (dbmsVerStr.indexOf("Windows") >= 0)
+			{
+				setDisabledReason("This DBMS is running on Windows, wich is not supported by this report.");
+				return false;
+			}
+		}
+		return true;
+	}
+	
 	@Override
 	public String getMessageText()
 	{

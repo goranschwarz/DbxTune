@@ -142,7 +142,7 @@ extends CountersModel
 //	public static final String  DEFAULT_sqlSkipFilterWaitTypes       = null;
 
 	public static final String  PROPKEY_sqlSkipFilterEnabled         = CM_NAME + ".sql.skip.filter.enabled";
-	public static final boolean DEFAULT_sqlSkipFilterEnabled         = false;
+	public static final boolean DEFAULT_sqlSkipFilterEnabled         = true;
 
 	
 	@Override

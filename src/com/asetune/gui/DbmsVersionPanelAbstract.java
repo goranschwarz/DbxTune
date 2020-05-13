@@ -121,7 +121,7 @@ implements ActionListener, ChangeListener
 
 		_versionShort_lbl .setToolTipText("<html>Here you can specify a Version string, which will be parsed into a number.</html>");
 		_versionShort_txt .setToolTipText("<html>Here you can specify a Version string, which will be parsed into a number.</html>");
-		_versionInt_txt   .setToolTipText("<html>Internal INTEGER used as version number.</html>");
+		_versionInt_txt   .setToolTipText("<html>Internal NUMBER used as version number.</html>");
 
 		_versionInt_txt.setEditable(false);
 	}

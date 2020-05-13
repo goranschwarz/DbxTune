@@ -99,6 +99,308 @@ extends MonTablesDictionaryDefault
 		//////////////////////////////////////////////////////////////////////////////////////////
 
 
+		// ---------------------------------------------------------------------------------------
+		// availability_databases_cluster
+		// ---------------------------------------------------------------------------------------
+		try
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+
+			// Table name and description
+			mtd.addTable("availability_databases_cluster",  "<p>Contains one row for each availability database on the instance of SQL Server that is hosting an availability replica for any Always On availability group in the Windows Server Failover Clustering (WSFC) cluster, regardless of whether the local copy database has been joined to the availability group yet.</p>");
+
+			// Column names and description
+			mtd.addColumn("availability_databases_cluster", "group_id"           , "<html><p>Unique identifier of the availability group in which the availability group, if any, in which the database is participating.<br><br>NULL = database is not part of an availability replica of in availability group.</p></html>");
+			mtd.addColumn("availability_databases_cluster", "group_database_id"  , "<html><p>Unique identifier of the database within the availability group, if any, in which the database is participating. <b>group_database_id</b> is the same for this database on the primary replica and on every secondary replica on which the database has been joined to the availability group.<br><br>NULL = database is not part of an availability replica in any availability group.</p></html>");
+			mtd.addColumn("availability_databases_cluster", "database_name"      , "<html><p>Name of the database that was added to the availability group.</p></html>");
+		}
+		catch (NameNotFoundException e)
+		{
+			_logger.warn("Problems adding 'availability_databases_cluster' to MonTablesDictionary. Caught: " + e, e);
+		}
+
+
+
+		// ---------------------------------------------------------------------------------------
+		// availability_group_listener_ip_addresses
+		// ---------------------------------------------------------------------------------------
+		try
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+
+			// Table name and description
+			mtd.addTable("availability_group_listener_ip_addresses",  "<p>Returns a row for every IP address that is associated with any Always On availability group listener in the Windows Server Failover Clustering (WSFC) cluster.</p>");
+
+			// Column names and description
+			mtd.addColumn("availability_group_listener_ip_addresses", "listener_id"                   , "<html><p>Resource GUID from Windows Server Failover Clustering (WSFC) cluster.</p></html>");
+			mtd.addColumn("availability_group_listener_ip_addresses", "ip_address"                    , "<html><p>Configured virtual IP address of the availability group listener. Returns a single IPv4 or IPv6 address.</p></html>");
+			mtd.addColumn("availability_group_listener_ip_addresses", "ip_subnet_mask"                , "<html><p>Configured IP subnet mask for the IPv4 address, if any, that is configured for the availability group listener.<br><br>NULL = IPv6 subnet</p></html>");
+			mtd.addColumn("availability_group_listener_ip_addresses", "is_dhcp"                       , "<html><p>Whether the IP address is configured by DHCP, one of:"
+			                                                                                             + "<ul>"
+			                                                                                             + "  <li>0 = IP address is not configured by DHCP.</li>"
+			                                                                                             + "  <li>1 = IP address is configured by DHCP</li>"
+			                                                                                             + "</ul>"
+			                                                                                             +"</p></html>");
+			mtd.addColumn("availability_group_listener_ip_addresses", "network_subnet_ip"             , "<html><p>Network subnet IP address that specifies the subnet to which the IP address belongs.</p></html>");
+			mtd.addColumn("availability_group_listener_ip_addresses", "network_subnet_prefix_length"  , "<html><p>Network subnet prefix length of the subnet to which the IP address belongs.</p></html>");
+			mtd.addColumn("availability_group_listener_ip_addresses", "network_subnet_ipv4_mask"      , "<html><p>Network subnet mask of the subnet to which the IP address belongs. <b>network_subnet_ipv4_mask</b> to specify the DHCP <network_subnet_option> options in a WITH DHCP clause of the CREATE AVAILABILITY GROUP or ALTER AVAILABILITY GROUPTransact-SQL statement.<br><br>NULL = IPv6 subnet</p></html>");
+			mtd.addColumn("availability_group_listener_ip_addresses", "state"                         , "<html><p>IP resource ONLINE/OFFLINE state from the WSFC cluster, one of:"
+			                                                                                             + "<ul>"
+			                                                                                             + "  <li>1 = Online. IP resource is online.</li>"
+			                                                                                             + "  <li>0 = Offline. IP resource is offline.</li>"
+			                                                                                             + "  <li>2 = Online Pending. IP resource is offline but is being brought online.</li>"
+			                                                                                             + "  <li>3 = Failed. IP resource was being brought online but failed.</li>"
+			                                                                                             + "</ul>"
+			                                                                                             + "</p></html>");
+			mtd.addColumn("availability_group_listener_ip_addresses", "state_desc"                    , "<html><p>Description of <b>state</b>, one of:"
+			                                                                                             + "<ul>"
+			                                                                                             + "  <li>ONLINE</li>"
+			                                                                                             + "  <li>OFFLINE</li>"
+			                                                                                             + "  <li>ONLINE_PENDING</li>"
+			                                                                                             + "  <li>FAILED</li>"
+			                                                                                             + "</ul>"
+			                                                                                             + "</p></html>");
+		}
+		catch (NameNotFoundException e)
+		{
+			_logger.warn("Problems adding 'availability_group_listener_ip_addresses' to MonTablesDictionary. Caught: " + e, e);
+		}
+
+
+
+		// ---------------------------------------------------------------------------------------
+		// availability_group_listeners
+		// ---------------------------------------------------------------------------------------
+		try
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+
+			// Table name and description
+			mtd.addTable("availability_group_listeners",  "<p>For each Always On availability group, returns either zero rows indicating that no network name is associated with the availability group, or returns a row for each availability-group listener configuration in the Windows Server Failover Clustering (WSFC) cluster. This view displays the real-time configuration gathered from cluster.</p>");
+
+			// Column names and description
+			mtd.addColumn("availability_group_listeners", "group_id"                                  , "<html><p>Availability group ID (group_id) from sys.availability_groups.</p></html>");
+			mtd.addColumn("availability_group_listeners", "listener_id"                               , "<html><p>GUID from the cluster resource ID.</p></html>");
+			mtd.addColumn("availability_group_listeners", "dns_name"                                  , "<html><p>Configured network name (hostname) of the availability group listener.</p></html>");
+			mtd.addColumn("availability_group_listeners", "port"                                      , "<html><p>The TCP port number configured for the availability group listener.<br><br>NULL = Listener was configured outside SQL Server and its port number has not been added to the availability group. To add the port, pleaseuse the MODIFY LISTENER option of the ALTER AVAILABILITY GROUPTransact-SQL statement.</p></html>");
+			mtd.addColumn("availability_group_listeners", "is_conformant"                             , "<html><p>Whether this IP configuration is conformant, one of:<br>"
+			                                                                                              + "1 = Listener is conformant. Only 'OR' relations exist among its Internet Protocol (IP) addresses. Conformant encompasses every an IP configuration that was created by the CREATE AVAILABILITY GROUPTransact-SQL statement. In addition, if an IP configuration that was created outside of SQL Server, for example by using the WSFC Failover Cluster Manager, but can be modified by the ALTER AVAILABILITY GROUP tsql statement, the IP configuration qualifies as conformant.<br>"
+			                                                                                              + "0 = Listener is nonconformant. Typically, this indicates an IP address that could not be configured by using SQL Server commands and, instead, was defined directly in the WSFC cluster.<br>"
+			                                                                                              + "</p></html>");
+			mtd.addColumn("availability_group_listeners", "ip_configuration_string_from_cluster"      , "<html><p>Cluster IP configuration strings, if any, for this listener. <br>NULL = Listener has no virtual IP addresses.</p></html>");
+		}
+		catch (NameNotFoundException e)
+		{
+			_logger.warn("Problems adding 'availability_group_listeners' to MonTablesDictionary. Caught: " + e, e);
+		}
+
+
+
+		// ---------------------------------------------------------------------------------------
+		// availability_groups
+		// ---------------------------------------------------------------------------------------
+		try
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+
+			// Table name and description
+			mtd.addTable("availability_groups",  "<p>Returns a row for each availability group for which the local instance of SQL Server hosts an availability replica. Each row contains a cached copy of the availability group metadata.</p>");
+
+			// Column names and description
+			mtd.addColumn("availability_groups", "group_id"                         , "<html><p>Unique identifier (GUID) of the availability group.</p></html>");
+			mtd.addColumn("availability_groups", "name"                             , "<html><p>Name of the availability group. This is a user-specified name that must be unique within the Windows Server Failover Cluster (WSFC).</p></html>");
+			mtd.addColumn("availability_groups", "resource_id"                      , "<html><p>Resource ID for the WSFC cluster resource.</p></html>");
+			mtd.addColumn("availability_groups", "resource_group_id"                , "<html><p>Resource Group ID for the WSFC cluster resource group of the availability group.</p></html>");
+			mtd.addColumn("availability_groups", "failure_condition_level"          , "<html><p>User-defined failure condition level under which an automatic failover must be triggered, one of the integer values shown in the table immediately below this table.<br><br>The failure-condition levels (1-5) range from the least restrictive, level 1, to the most restrictive, level 5. A given condition level encompasses all of the less restrictive levels. Thus, the strictest condition level, 5, includes the four less restrictive condition levels (1-4), level 4 includes levels 1-3, and so forth.<br><br>To change this value, use the FAILURE_CONDITION_LEVEL option of the ALTER AVAILABILITY GROUPTransact-SQL statement.</p></html>");
+			mtd.addColumn("availability_groups", "health_check_timeout"             , "<html><p>Wait time (in milliseconds) for the sp_server_diagnostics system stored procedure to return server-health information, before the server instance is assumed to be slow or not responding. The default value is 30000 milliseconds (30 seconds).<br><br>To change this value, use the HEALTH_CHECK_TIMEOUT option of the ALTER AVAILABILITY GROUPTransact-SQL statement.</p></html>");
+			mtd.addColumn("availability_groups", "automated_backup_preference"      , "<html><p>Preferred location for performing backups on the availability databases in this availability group. The following are the possible values and their descriptions.<br><br>"
+			                                                                            + "0 : Primary. Backups should always occur on the primary replica.<br>"
+			                                                                            + "1 : Secondary only. Performing backups on a secondary replica is preferable.<br>"
+			                                                                            + "2 : Prefer Secondary. Performing backups on a secondary replica preferable, but performing backups on the primary replica is acceptable if no secondary replica is available for backup operations. This is the default behavior.<br>"
+			                                                                            + "3 : Any Replica. No preference about whether backups are performed on the primary replica or on a secondary replica.<br><br>"
+			                                                                            + "For more information, see Active Secondaries: Backup on Secondary Replicas (Always On Availability Groups)."
+			                                                                            + "</p></html>");
+			mtd.addColumn("availability_groups", "automated_backup_preference_desc" , "<html><p>Description of automated_backup_preference, one of:<br>"
+			                                                                            + "PRIMARY<br>"
+			                                                                            + "SECONDARY_ONLY<br>"
+			                                                                            + "SECONDARY<br>"
+			                                                                            + "NONE<br>"
+			                                                                            + "</p></html>");
+			mtd.addColumn("availability_groups", "version"                          , "<html><p>The version of the availability group metadata stored in the Windows Failover Cluster. This version number is incremented when new features are added.</p></html>");
+			mtd.addColumn("availability_groups", "basic_features"                   , "<html><p>Specifies whether this is a Basic availability group. For more information, see Basic Availability Groups (Always On Availability Groups).</p></html>");
+			mtd.addColumn("availability_groups", "dtc_support"                      , "<html><p>Specifies whether DTC support has been enabled for this availability group. The DTC_SUPPORT option of CREATE AVAILABILITY GROUP controls this setting.</p></html>");
+			mtd.addColumn("availability_groups", "db_failover"                      , "<html><p>Specifies whether the availability group supports failover for database health conditions. The DB_FAILOVER option of CREATE AVAILABILITY GROUP controls this setting.</p></html>");
+			mtd.addColumn("availability_groups", "is_distributed"                   , "<html><p>Specifies whether this is a distributed availability group. For more information, see Distributed Availability Groups (Always On Availability Groups).</p></html>");
+		}
+		catch (NameNotFoundException e)
+		{
+			_logger.warn("Problems adding 'availability_groups' to MonTablesDictionary. Caught: " + e, e);
+		}
+
+
+
+		// ---------------------------------------------------------------------------------------
+		// availability_groups_cluster
+		// ---------------------------------------------------------------------------------------
+		try
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+
+			// Table name and description
+			mtd.addTable("availability_groups_cluster",  "<p>Returns a row for each Always On availability group in the Windows Server Failover Clustering (WSFC) . Each row contains the availability group metadata from the WSFC cluster.</p>");
+
+			// Column names and description
+			mtd.addColumn("availability_groups_cluster", "group_id"                         , "<html><p>Unique identifier (GUID) of the availability group.</p></html>");
+			mtd.addColumn("availability_groups_cluster", "name"                             , "<html><p>Name of the availability group. This is a user-specified name that must be unique within the Windows Server Failover Cluster (WSFC).</p></html>");
+			mtd.addColumn("availability_groups_cluster", "resource_id"                      , "<html><p>Resource ID for the WSFC cluster resource.</p></html>");
+			mtd.addColumn("availability_groups_cluster", "resource_group_id"                , "<html><p>Resource Group ID for the WSFC cluster resource group of the availability group.</p></html>");
+			mtd.addColumn("availability_groups_cluster", "failure_condition_level"          , "<html><p>User-defined failure condition level under which an automatic failover must be triggered, one of the following integer values:<br><br>"
+			                                                                                    + "1: Specifies that an automatic failover should be initiated when any of the following occurs:<br>"
+			                                                                                    + "- The SQL Server service is down.<br>"
+			                                                                                    + "- The lease of the availability group for connecting to the WSFC failover cluster expires because no ACK is received from the server instance. For more information, see How It Works: SQL Server Always On Lease Timeout.<br>"
+			                                                                                    + "<br>"
+			                                                                                    + "2: Specifies that an automatic failover should be initiated when any of the following occurs:<br>"
+			                                                                                    + "- The instance of SQL Server does not connect to cluster, and the user-specified health_check_timeout threshold of the availability group is exceeded.<br>"
+			                                                                                    + "- The availability replica is in failed state.<br>"
+			                                                                                    + "<br>"
+			                                                                                    + "3: Specifies that an automatic failover should be initiated on critical SQL Server internal errors, such as orphaned spinlocks, serious write-access violations, or too much dumping. This is the default value.<br>"
+			                                                                                    + "<br>"
+			                                                                                    + "4: Specifies that an automatic failover should be initiated on moderate SQL Server internal errors, such as a persistent out-of-memory condition in the SQL Server internal resource pool.<br>"
+			                                                                                    + "<br>"
+			                                                                                    + "5: Specifies that an automatic failover should be initiated on any qualified failure conditions, including:<br>"
+			                                                                                    + "- Exhaustion of SQL Engine worker-threads.<br>"
+			                                                                                    + "- Detection of an unsolvable deadlock."
+			                                                                                    + "<br>"
+			                                                                                    + "The failure-condition levels (1-5) range from the least restrictive, level 1, to the most restrictive, level 5. A given condition level encompasses all of the less restrictive levels. Thus, the strictest condition level, 5, includes the four less restrictive condition levels (1-4), level 4 includes levels 1-3, and so forth.<br>"
+			                                                                                    + "To change this value, use the FAILURE_CONDITION_LEVEL option of the ALTER AVAILABILITY GROUPTransact-SQL statement."
+			                                                                                    + "</p></html>");
+			mtd.addColumn("availability_groups_cluster", "health_check_timeout"             , "<html><p>Wait time (in milliseconds) for the sp_server_diagnostics system stored procedure to return server-health information, before the server instance is assumed to be slow or not responding. The default value is 30000 milliseconds (30 seconds).<br><br>To change this value, use the HEALTH_CHECK_TIMEOUT option of ALTER AVAILABILITY GROUPTransact-SQL statement.</p></html>");
+			mtd.addColumn("availability_groups_cluster", "automated_backup_preference"      , "<html><p>Preferred location for performing backups on the availability databases in this availability group. One of the following values:<br>br>"
+			                                                                                    + "0: Primary. Backups should always occur on the primary replica.<br>"
+			                                                                                    + "1: Secondary only. Performing backups on a secondary replica is preferable.<br>"
+			                                                                                    + "2: Prefer Secondary. Performing backups on a secondary replica preferable, but performing backups on the primary replica is acceptable if no secondary replica is available for backup operations. This is the default behavior.<br>"
+			                                                                                    + "3: Any Replica. No preference about whether backups are performed on the primary replica or on a secondary replica.<br>"
+			                                                                                    + "<br>"
+			                                                                                    + "For more information, see Active Secondaries: Backup on Secondary Replicas (Always On Availability Groups)."
+			                                                                                    + "</p></html>");
+			mtd.addColumn("availability_groups_cluster", "automated_backup_preference_desc" , "<html><p>Description of automated_backup_preference, one of:<br><br>"
+			                                                                                    + "PRIMARY<br>"
+			                                                                                    + "SECONDARY_ONLY<br>"
+			                                                                                    + "SECONDARY<br>"
+			                                                                                    + "NONE<br>"
+			                                                                                    + "</p></html>");
+		}
+		catch (NameNotFoundException e)
+		{
+			_logger.warn("Problems adding 'availability_groups_cluster' to MonTablesDictionary. Caught: " + e, e);
+		}
+
+
+
+		// ---------------------------------------------------------------------------------------
+		// availability_read_only_routing_lists
+		// ---------------------------------------------------------------------------------------
+		try
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+
+			// Table name and description
+			mtd.addTable("availability_read_only_routing_lists",  "<p>Returns a row for the read only routing list of each availability replica in an Always On availability group in the WSFC failover cluster.</p>");
+
+			// Column names and description
+			mtd.addColumn("availability_read_only_routing_lists", "replica_id"            , "<html><p>Unique ID of the availability replica that owns the routing list.</p></html>");
+			mtd.addColumn("availability_read_only_routing_lists", "routing_priority"      , "<html><p>Priority order for routing (1 is first, 2 is second, and so forth).</p></html>");
+			mtd.addColumn("availability_read_only_routing_lists", "read_only_replica_id"  , "<html><p>Unique ID of the availability replica to which a read-only workload will be routed.</p></html>");
+		}
+		catch (NameNotFoundException e)
+		{
+			_logger.warn("Problems adding 'availability_read_only_routing_lists' to MonTablesDictionary. Caught: " + e, e);
+		}
+
+
+
+		// ---------------------------------------------------------------------------------------
+		// availability_replicas
+		// ---------------------------------------------------------------------------------------
+		try
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+
+			// Table name and description
+			mtd.addTable("availability_replicas",  "<p>Returns a row for each of the availability replicas that belong to any Always On availability group in the WSFC failover cluster.<br><br>If the local server instance is unable to talk to the WSFC failover cluster, for example because the cluster is down or quorum has been lost, only rows for local availability replicas are returned. These rows will contain only the columns of data that are cached locally in metadata.</p>");
+
+			// Column names and description
+			mtd.addColumn("availability_replicas", "replica_id"                            , "<html><p>Unique ID of the replica.</p></html>");
+			mtd.addColumn("availability_replicas", "group_id"                              , "<html><p>Unique ID of the availability group to which the replica belongs.</p></html>");
+			mtd.addColumn("availability_replicas", "replica_metadata_id"                   , "<html><p>ID for the local metadata object for availability replicas in the Database Engine.</p></html>");
+			mtd.addColumn("availability_replicas", "replica_server_name"                   , "<html><p>Server name of the instance of SQL Server that is hosting this replica and, for a non-default instance, its instance name.</p></html>");
+			mtd.addColumn("availability_replicas", "owner_sid"                             , "<html><p>Security identifier (SID) registered to this server instance for the external owner of this availability replica.<br><br>NULL for non-local availability replicas.</p></html>");
+			mtd.addColumn("availability_replicas", "endpoint_url"                          , "<html><p>String representation of the user-specified database mirroring endpoint that is used by connections between primary and secondary replicas for data synchronization. For information about the syntax of endpoint URLs, see Specify the Endpoint URL When Adding or Modifying an Availability Replica (SQL Server).<br><br>NULL = Unable to talk to the WSFC failover cluster.<br><br>To change this endpoint, use the ENDPOINT_URL option of ALTER AVAILABILITY GROUPTransact-SQL statement.</p></html>");
+			mtd.addColumn("availability_replicas", "availability_mode"                     , "<html><p>The availability mode of the replica, one of:<br><br>"
+			                                                                                   + "0 | Asynchronous commit. The primary replica can commit transactions without waiting for the secondary to write the log to disk.<br>"
+			                                                                                   + "1 | Synchronous commit. The primary replica waits to commit a given transaction until the secondary replica has written the transaction to disk.<br>"
+			                                                                                   + "4 | Configuration only. The primary replica sends availability group configuration metadata to the replica synchronously. User data is not transmitted to the replica. Available in SQL Server 2017 CU1 and later.<br>"
+			                                                                                   + "<br>"
+			                                                                                   + "For more information, see Availability Modes (Always On Availability Groups)."
+			                                                                                   + "</p></html>");
+			mtd.addColumn("availability_replicas", "availability_mode_desc"                , "<html><p>Description of availability_mode, one of:<br><br>"
+			                                                                                   + "ASYNCHRONOUS_COMMIT<br>"
+			                                                                                   + "SYNCHRONOUS_COMMIT<br>"
+			                                                                                   + "CONFIGURATION_ONLY<br>"
+			                                                                                   + "<br>"
+			                                                                                   + "To change this the availability mode of an availability replica, use the AVAILABILITY_MODE option of ALTER AVAILABILITY GROUPTransact-SQL statement.<br>"
+			                                                                                   + "You cannot change the availability mode of a replica to CONFIGURATION_ONLY. You cannot change a CONFIGURATION_ONLY replica to a secondary or primary replica."
+			                                                                                   + "</p></html>");
+			mtd.addColumn("availability_replicas", "failover_mode"                         , "<html><p>The failover mode of the availability replica, one of:<br><br>"
+			                                                                                   + "0 | Automatic failover. The replica is a potential target for automatic failovers. Automatic failover is supported only if the availability mode is set to synchronous commit (availability_mode = 1) and the availability replica is currently synchronized.<br>"
+			                                                                                   + "1 | Manual failover. A failover to a secondary replica set to manual failover must be manually initiated by the database administrator. The type of failover that is performed will depend on whether the secondary replica is synchronized, as follows:<br>"
+			                                                                                   + "If the availability replica is not synchronizing or is still synchronizing, only forced failover (with possible data loss) can occur.<br>"
+			                                                                                   + "If the availability mode is set to synchronous commit (availability_mode = 1) and the availability replica is currently synchronized, manual failover without data loss can occur.<br>"
+			                                                                                   + "To view a rollup of the database synchronization health of every availability database in an availability replica, use the synchronization_health and synchronization_health_desc columns of the sys.dm_hadr_availability_replica_states dynamic management view. The rollup considers the synchronization state of every availability database and the availability mode of its availability replica.<br>"
+			                                                                                   + "<br>"
+			                                                                                   + "Note: To view the synchronization health of a given availability database, query the synchronization_state and synchronization_health columns of the sys.dm_hadr_database_replica_states dynamic management view."
+			                                                                                   + "</p></html>");
+			mtd.addColumn("availability_replicas", "failover_mode_desc"                    , "<html><p>Description of failover_mode, one of:<br><br>"
+			                                                                                   + "MANUAL<br>"
+			                                                                                   + "AUTOMATIC<br>"
+			                                                                                   + "<br>"
+			                                                                                   + "To change the failover mode, use the FAILOVER_MODE option of ALTER AVAILABILITY GROUPTransact-SQL statement."
+			                                                                                   + "</p></html>");
+			mtd.addColumn("availability_replicas", "session_timeout"                       , "<html><p>The time-out period, in seconds. The time-out period is the maximum time that the replica waits to receive a message from another replica before considering connection between the primary and secondary replica have failed. Session timeout detects whether secondaries are connected the primary replica.<br><br>"
+			                                                                                   + "On detecting a failed connection with a secondary replica, the primary replica considers the secondary replica to be NOT_SYNCHRONIZED. On detecting a failed connection with the primary replica, a secondary replica simply attempts to reconnect.<br><br>"
+			                                                                                   + "<b>Note</b>: Session timeouts do not cause automatic failovers.<br><br>"
+			                                                                                   + "To change this value, use the SESSION_TIMEOUT option of ALTER AVAILABILITY GROUPTransact-SQL statement."
+			                                                                                   + "</p></html>");
+			mtd.addColumn("availability_replicas", "primary_role_allow_connections"        , "<html><p>Whether the availability allows all connections or only read-write connections, one of:<br><br>"
+			                                                                                   + "2 = All (default)<br>"
+			                                                                                   + "3 = Read write<br>"
+			                                                                                   + "</p></html>");
+			mtd.addColumn("availability_replicas", "primary_role_allow_connections_desc"   , "<html><p>Description of primary_role_allow_connections, one of:<br><br>"
+			                                                                                   + "ALL<br>"
+			                                                                                   + "READ_WRITE<br>"
+			                                                                                   + "</p></html>");
+			mtd.addColumn("availability_replicas", "secondary_role_allow_connections"      , "<html><p>Whether an availability replica that is performing the secondary role (that is, a secondary replica) can accept connections from clients, one of:<br><br>"
+			                                                                                   + "0 = No. No connections are allowed to the databases in the secondary replica, and the databases are not available for read access. This is the default setting.<br><br>"
+			                                                                                   + "1 = Read only. Only read-only connections are allowed to the databases in the secondary replica. All database(s) in the replica are available for read access.<br><br>"
+			                                                                                   + "2 = All. All connections are allowed to the databases in the secondary replica for read-only access.<br><br>"
+			                                                                                   + "For more information, see Active Secondaries: Readable Secondary Replicas (Always On Availability Groups)."
+			                                                                                   + "</p></html>");
+			mtd.addColumn("availability_replicas", "secondary_role_allow_connections_desc" , "<html><p>Description of secondary_role_allow_connections, one of:<br><br>"
+			                                                                                   + "NO<br>"
+			                                                                                   + "READ_ONLY<br>"
+			                                                                                   + "ALL<br>"
+			                                                                                   + "</p></html>");
+			mtd.addColumn("availability_replicas", "create_date"                           , "<html><p>Date that the replica was created.<br><br>NULL = Replica not on this server instance.</p></html>");
+			mtd.addColumn("availability_replicas", "modify_date"                           , "<html><p>Date that the replica was last modified.<br><br>NULL = Replica not on this server instance.</p></html>");
+			mtd.addColumn("availability_replicas", "backup_priority"                       , "<html><p>Represents the user-specified priority for performing backups on this replica relative to the other replicas in the same availability group. The value is an integer in the range of 0..100.<br><br>For more information, see Active Secondaries: Backup on Secondary Replicas (Always On Availability Groups).</p></html>");
+			mtd.addColumn("availability_replicas", "read_only_routing_url"                 , "<html><p>Connectivity endpoint (URL) of the read only availability replica. For more information, see Configure Read-Only Routing for an Availability Group (SQL Server).</p></html>");
+		}
+		catch (NameNotFoundException e)
+		{
+			_logger.warn("Problems adding 'availability_replicas' to MonTablesDictionary. Caught: " + e, e);
+		}
+
+
 
 		// ---------------------------------------------------------------------------------------
 		// dm_hadr_auto_page_repair
@@ -296,7 +598,6 @@ extends MonTablesDictionaryDefault
 			mtd.addColumn("dm_hadr_cluster_networks", "member_name"                 , "<html><p>A computer name of a node in the WSFC cluster. </p></html>");
 			mtd.addColumn("dm_hadr_cluster_networks", "network_subnet_ip"           , "<html><p>Network IP address of the subnet to which the computer belongs. This can be an IPv4 or IPv6 address.</p></html>");
 			mtd.addColumn("dm_hadr_cluster_networks", "network_subnet_ipv4_mask"    , "<html><p>Network subnet mask that specifies the subnet to which the IP address belongs. <strong>network_subnet_ipv4_mask</strong> to specify the DHCP &lt;network_subnet_option&gt; options in a WITH DHCP clause of the <a href=\"https://msdn.microsoft.com/en-us/library/ff878399.aspx\">CREATE AVAILABILITY GROUP</a> or <a href=\"https://msdn.microsoft.com/en-us/library/ff878601.aspx\">ALTER AVAILABILITY GROUP</a>?Transact-SQL statement.</p><p>NULL = IPv6 subnet.</p></html>");
-			mtd.addColumn("dm_hadr_cluster_networks", ""                            , "<html></html>");
 			mtd.addColumn("dm_hadr_cluster_networks", "network_subnet_prefix_length", "<html><p>Network IP prefix length that specifies the subnet to which the computer belongs. ?</p><p></p></html>");
 			mtd.addColumn("dm_hadr_cluster_networks", "is_public"                   , "<html><p>Whether the network is private or public on the WSFC cluster, one of:</p><p>0 = Private</p><p>1 = Public</p></html>");
 			mtd.addColumn("dm_hadr_cluster_networks", "is_ipv4"                     , "<html><p>Type of the subnet, one of:</p><p>1 = IPv4</p><p>0 = IPv6</p></html>");
@@ -381,6 +682,7 @@ extends MonTablesDictionaryDefault
 			mtd.addColumn("dm_hadr_database_replica_states", "last_commit_lsn"            , "<html><p>Actual log sequence number corresponding to the last commit record in the transaction log. </p><p>On the primary database, this corresponds to the last commit record processed. Rows for secondary databases show the log sequence number that the secondary replica has sent to the primary replica.</p><p>On the secondary replica, this is the last commit record that was redone.</p></html>");
 			mtd.addColumn("dm_hadr_database_replica_states", "last_commit_time"           , "<html><p>Time corresponding to the last commit record. </p><p>On the secondary database, this time is the same as on the primary database. </p><p>On the primary replica, each secondary database row displays the time that the secondary replica that hosts that secondary database has reported back to the primary replica. The difference in time between the primary-database row and a given secondary-database row represents approximately the recovery time objective (RPO), assuming that the redo process is caught up and that the progress has been reported back to the primary replica by the secondary replica.</p></html>");
 			mtd.addColumn("dm_hadr_database_replica_states", "low_water_mark_for_ghosts"  , "<html><p>A monotonically increasing number for the database indicating a low water mark used by ghost cleanup on the primary database. If this number is not increasing over time, it implies that ghost cleanup might not happen. To decide which ghost rows to clean up, the primary replica uses the minimum value of this column for this database across all availability replicas (including the primary replica).</p></html>");
+			mtd.addColumn("dm_hadr_database_replica_states", "secondary_lag_seconds"      , "<html><p>The number of seconds that the secondary replica is behind the primary replica during synchronization.<br>Applies to: SQL Server 2016 (13.x) and later.</p></html>");
 		}
 		catch (NameNotFoundException e)
 		{
@@ -707,6 +1009,60 @@ extends MonTablesDictionaryDefault
 		catch (NameNotFoundException e)
 		{
 			_logger.warn("Problems adding 'dm_clr_tasks' to MonTablesDictionary. Caught: " + e, e);
+		}
+
+
+
+		// ---------------------------------------------------------------------------------------
+		// dm_db_log_stats 
+		// ---------------------------------------------------------------------------------------
+		try
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+
+			// Table name and description
+			mtd.addTable("dm_db_log_stats ",  "<p>Returns summary level attributes and information on transaction log files of databases. Use this information for monitoring and diagnostics of transaction log health. Since: SQL Server 2016 SP 2 and later </p>");
+
+			// Column names and description
+			mtd.addColumn("dm_db_log_stats ", "database_id"                 , "<html><p> Database ID </p></html>");
+			mtd.addColumn("dm_db_log_stats ", "recovery_model"              , "<html><p> Recovery model of the database. Possible values include:<br>SIMPLE<br>BULK_LOGGED<br>FULL<br> </p></html>");
+			mtd.addColumn("dm_db_log_stats ", "log_min_lsn"                 , "<html><p> Current start log sequence number (LSN) in the transaction log. </p></html>");
+			mtd.addColumn("dm_db_log_stats ", "log_end_lsn"                 , "<html><p> log sequence number (LSN) of the last log record in the transaction log. </p></html>");
+			mtd.addColumn("dm_db_log_stats ", "current_vlf_sequence_number" , "<html><p> Current virtual log file (VLF) sequence number at the time of execution. </p></html>");
+			mtd.addColumn("dm_db_log_stats ", "current_vlf_size_mb"         , "<html><p> Current virtual log file (VLF) size in MB. </p></html>");
+			mtd.addColumn("dm_db_log_stats ", "total_vlf_count"             , "<html><p> Total number of virtual log files (VLFs) in the transaction log. </p></html>");
+			mtd.addColumn("dm_db_log_stats ", "total_log_size_mb"           , "<html><p> Total transaction log size in MB. </p></html>");
+			mtd.addColumn("dm_db_log_stats ", "active_vlf_count"            , "<html><p> Total number of active virtual log files (VLFs) in the transaction log. </p></html>");
+			mtd.addColumn("dm_db_log_stats ", "active_log_size_mb"          , "<html><p> Total active transaction log size in MB. </p></html>");
+			mtd.addColumn("dm_db_log_stats ", "log_truncation_holdup_reason", "<html><p> Log truncation holdup reason. The value is same as log_reuse_wait_desc column of sys.databases. (For more detailed explanations of these values, see The Transaction Log).<br>"
+			                                                                                + "Possible values include: <br>"
+			                                                                                + " - NOTHING <br>"
+			                                                                                + " - CHECKPOINT <br>"
+			                                                                                + " - LOG_BACKUP <br>"
+			                                                                                + " - ACTIVE_BACKUP_OR_RESTORE <br>"
+			                                                                                + " - ACTIVE_TRANSACTION <br>"
+			                                                                                + " - DATABASE_MIRRORING <br>"
+			                                                                                + " - REPLICATION <br>"
+			                                                                                + " - DATABASE_SNAPSHOT_CREATION <br>"
+			                                                                                + " - LOG_SCAN <br>"
+			                                                                                + " - AVAILABILITY_REPLICA <br>"
+			                                                                                + " - OLDEST_PAGE <br>"
+			                                                                                + " - XTP_CHECKPOINT <br>"
+			                                                                                + " - OTHER TRANSIENT  <br>"
+			                                                                                + "</p></html>");
+			mtd.addColumn("dm_db_log_stats ", "log_backup_time"             , "<html><p> Last transaction log backup time. </p></html>");
+			mtd.addColumn("dm_db_log_stats ", "log_backup_lsn"              , "<html><p> Last transaction log backup log sequence number (LSN). </p></html>");
+			mtd.addColumn("dm_db_log_stats ", "log_since_last_log_backup_mb", "<html><p> Log size in MB since last transaction log backup log sequence number (LSN). </p></html>");
+			mtd.addColumn("dm_db_log_stats ", "log_checkpoint_lsn"          , "<html><p> Last checkpoint log sequence number (LSN). </p></html>");
+			mtd.addColumn("dm_db_log_stats ", "log_since_last_checkpoint_mb", "<html><p> Log size in MB since last checkpoint log sequence number (LSN). </p></html>");
+			mtd.addColumn("dm_db_log_stats ", "log_recovery_lsn"            , "<html><p> Recovery log sequence number (LSN) of the database. If log_recovery_lsn occurs before the checkpoint LSN, log_recovery_lsn is the oldest active transaction LSN, otherwise log_recovery_lsn is the checkpoint LSN. </p></html>");
+			mtd.addColumn("dm_db_log_stats ", "log_recovery_size_mb"        , "<html><p> Log size in MB since log recovery log sequence number (LSN). </p></html>");
+			mtd.addColumn("dm_db_log_stats ", "recovery_vlf_count"          , "<html><p> Total number of virtual log files (VLFs) to be recovered, if there was failover or server restart. </p></html>");
+			mtd.addColumn("dm_db_log_stats ", "log_state"                   , "<html><p> SQL-Server 2019 </p></html>");
+		}
+		catch (NameNotFoundException e)
+		{
+			_logger.warn("Problems adding 'dm_db_log_stats ' to MonTablesDictionary. Caught: " + e, e);
 		}
 
 

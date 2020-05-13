@@ -24,18 +24,25 @@ import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
+import java.net.MalformedURLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
+import javax.swing.event.HyperlinkEvent;
 import javax.swing.text.BadLocationException;
 
 import org.apache.log4j.Logger;
+import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.ToolTipSupplier;
 
+import com.asetune.cm.CmToolTipSupplierDefault;
+import com.asetune.gui.focusabletip.ResolverReturn;
+import com.asetune.gui.focusabletip.ToolTipHyperlinkResolver;
 import com.asetune.parser.ParserProperties;
 import com.asetune.tools.sqlw.msg.JAseMessage;
 import com.asetune.ui.autocomplete.CompletionProviderAbstract;
@@ -48,7 +55,7 @@ import com.asetune.utils.SwingUtils;
 import net.miginfocom.swing.MigLayout;
 
 public abstract class ToolTipSupplierAbstract
-implements ToolTipSupplier
+implements ToolTipSupplier, ToolTipHyperlinkResolver
 {
 	private static Logger _logger = Logger.getLogger(ToolTipSupplierAbstract.class);
 
@@ -70,6 +77,11 @@ implements ToolTipSupplier
 		_compleationProvider = compleationProvider;
 		_connectionProvider  = connectionProvider;
 
+		if (_compleationProvider != null)
+		{
+			_compleationProvider.setToolTipSupplier(this);
+		}
+		
 		try
 		{
 			_logger.info("Installing ToolTip Provider for '"+getName()+"'.");
@@ -115,6 +127,54 @@ implements ToolTipSupplier
 	public String getFooter()
 	{
 		return null;
+	}
+
+	@Override
+	public ResolverReturn hyperlinkResolv(HyperlinkEvent event)
+	{
+		String desc = event.getDescription();
+		if (_logger.isDebugEnabled())
+		{
+			_logger.debug("");
+			_logger.debug("##################################################################################");
+			_logger.debug("hyperlinkResolv(): event.getDescription()  ="+event.getDescription());
+			_logger.debug("hyperlinkResolv(): event.getURL()          ="+event.getURL());
+			_logger.debug("hyperlinkResolv(): event.getEventType()    ="+event.getEventType());
+			_logger.debug("hyperlinkResolv(): event.getSourceElement()="+event.getSourceElement());
+			_logger.debug("hyperlinkResolv(): event.getSource()       ="+event.getSource());
+			_logger.debug("hyperlinkResolv(): event.toString()        ="+event.toString());
+		}
+//System.out.println("");
+//System.out.println("##################################################################################");
+//System.out.println("hyperlinkResolv(): event.getDescription()  ="+event.getDescription());
+//System.out.println("hyperlinkResolv(): event.getURL()          ="+event.getURL());
+//System.out.println("hyperlinkResolv(): event.getEventType()    ="+event.getEventType());
+//System.out.println("hyperlinkResolv(): event.getSourceElement()="+event.getSourceElement());
+//System.out.println("hyperlinkResolv(): event.getSource()       ="+event.getSource());
+//System.out.println("hyperlinkResolv(): event.toString()        ="+event.toString());
+
+		boolean openInExternal = false;
+		if (desc.startsWith(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER)) openInExternal = true;
+		if (desc.startsWith("http://"))  openInExternal = true;
+		if (desc.startsWith("https://")) openInExternal = true;
+
+		if (openInExternal)
+		{
+			String urlStr = desc;
+			if (desc.startsWith(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER))
+				urlStr = desc.substring(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER.length());
+
+			try
+			{
+				return ResolverReturn.createOpenInExternalBrowser(event, urlStr);
+			}
+			catch (MalformedURLException e)
+			{
+				_logger.warn("Problems open URL='"+urlStr+"', in external Browser.", e);
+			}
+		}
+
+		return ResolverReturn.createOpenInCurrentTooltipWindow(event);
 	}
 
 	@Override
@@ -350,5 +410,51 @@ implements ToolTipSupplier
 	public boolean getShowTableInformation()
 	{
 		return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_SHOW_TABLE_INFO, DEFAULT_SHOW_TABLE_INFO);
+	}
+
+	/**
+	 * Called from any CompletionProvider to get help on "stuff" that might be located in any ToolTip Supplier
+	 * @param enteredText
+	 * @return
+	 */
+	public List<Completion> getCompletionsFor(String enteredText)
+	{
+		// Exit early...
+		List<TtpEntry> entryList = getEntryList();
+		if (entryList == null)   return null;
+		if (entryList.isEmpty()) return null;
+		if (StringUtil.isNullOrBlank(enteredText)) return null;
+
+//		for (TtpEntry ttpEntry : entryList)
+//		{
+//			String cmdName = ttpEntry.getCmdName();
+//			if (cmdName != null && cmdName.startsWith(enteredText))
+//				xxx
+//		}
+//		return null;
+		try
+		{
+		    Pattern pattern = Pattern.compile(enteredText+".*", Pattern.CASE_INSENSITIVE);
+			if (enteredText.indexOf("*") >= 0) // if input has '*' change it to '.*' and add '.*' at the end. 
+				pattern = Pattern.compile(enteredText.replace("*", ".*")+".*", Pattern.CASE_INSENSITIVE);
+
+			List<Completion> retList = new ArrayList<>();
+
+			for (TtpEntry e : entryList)
+			{
+				// use regexp search
+				if ( pattern.matcher( e.getCmdName()).matches() )
+				{
+					retList.add(e.getCompletion(_compleationProvider));
+				}
+			}
+			
+			return retList;
+		}
+		catch (PatternSyntaxException ex) 
+		{
+			_logger.debug("PatternSyntaxException for word '"+enteredText+"'", ex);
+		}
+		return null;
 	}
 }

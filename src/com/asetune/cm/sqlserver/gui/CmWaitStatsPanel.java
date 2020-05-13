@@ -612,7 +612,7 @@ extends TabularCntrPanel
 		{
 			private static final long serialVersionUID = 1L;
 			@Override
-			public String getToolTipText(MouseEvent event)
+			public String getToolTipText()
 			{
 //				List<String> list = StringUtil.commaStrToList(Configuration.getCombinedConfiguration().getProperty( CmWaitStats.PROPKEY_LocalGraphsSkipSet, CmWaitStats.DEFAULT_LocalGraphsSkipSet));
 				List<String> list = StringUtil.commaStrToList(CmWaitStats.DEFAULT_LocalGraphsSkipSet);
@@ -639,7 +639,7 @@ extends TabularCntrPanel
 		{
 			private static final long serialVersionUID = 1L;
 			@Override
-			public String getToolTipText(MouseEvent event)
+			public String getToolTipText()
 			{
 //				List<String> list = StringUtil.commaStrToList(Configuration.getCombinedConfiguration().getProperty( CmWaitStats.PROPKEY_TrendGraphsSkipSet, CmWaitStats.DEFAULT_TrendGraphsSkipSet));
 				List<String> list = StringUtil.commaStrToList(CmWaitStats.DEFAULT_TrendGraphsSkipSet);

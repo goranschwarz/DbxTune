@@ -54,7 +54,7 @@ extends CountersModel
 	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"dm_db_index_usage_stats"};
-	public static final String[] NEED_ROLES       = new String[] {};//{"VIEW SERVER STATE"};
+	public static final String[] NEED_ROLES       = new String[] {"VIEW SERVER STATE", "CONNECT ANY DATABASE"};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
@@ -193,7 +193,12 @@ extends CountersModel
 			dm_db_index_usage_stats = "dm_pdw_nodes_db_index_usage_stats";
 
 		
-		String sql = "select dbname=db_name(database_id), objectName=object_name(object_id, database_id), * from sys." + dm_db_index_usage_stats;
+		String sql = "select \n"
+				+ "    dbname     = db_name(database_id), \n"
+				+ "    schemaName = object_schema_name(object_id, database_id), \n"
+				+ "    objectName = object_name(object_id, database_id), \n"
+				+ "    * \n"
+				+ "from sys." + dm_db_index_usage_stats;
 
 		// NOTE: object_name() function is not the best in SQL-Server it may block...
 		//       so the below might be helpfull
@@ -235,7 +240,7 @@ extends CountersModel
 	@Override
 	public String[] getDdlDetailsColNames()
 	{
-		String[] sa = {"dbname", "objectName"};
+		String[] sa = {"dbname", "schemaName", "objectName"};
 		return sa;
 	}
 	/**

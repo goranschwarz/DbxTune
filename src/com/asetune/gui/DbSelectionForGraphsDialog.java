@@ -1043,6 +1043,8 @@ implements ActionListener, TableModelListener
 				
 			if (keepDb)
 				dbMap.put(dbname, r);
+//System.out.println("getDbsInGraphList(cm='"+cm.getName()+"'): size="+cm.size()+", dbname='"+dbname+"', dbSizeInMb="+dbSizeInMb+", logSizeUsedPct="+logSizeUsedPct+". <<<<<< keepDb="+keepDb);
+//System.out.println("getDbsInGraphList(cm='"+cm.getName()+"', keepDbsInGraphs="+StringUtil.toCommaStr(keepDbsInGraphs)+", skipDbsInGraphs="+StringUtil.toCommaStr(skipDbsInGraphs)+", skipDbsWithSizeLtInGraphs="+skipDbsWithSizeLtInGraphs+", keepDbsWithPctUsageGtInGraphs="+keepDbsWithPctUsageGtInGraphs+"): dbname='"+dbname+"', dbSizeInMb="+dbSizeInMb+", logSizeUsedPct="+logSizeUsedPct+". <<<<<< keepDb="+keepDb);
 		}
 
 		return dbMap;

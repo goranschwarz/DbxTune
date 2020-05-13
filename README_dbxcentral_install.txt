@@ -320,6 +320,17 @@ cd ${HOME}/.dbxtune/dbxc/bin
 web-browser(on your pc): http://<dbxtune-host>:8080/
 for example: http://dbxtune.acme.com:8080/
 
+##
+## Note: if you want DbxCentral to respond on port 80 instead of 8080
+## look at -- https://www.eclipse.org/jetty/documentation/9.2.22.v20170531/setting-port80-access.html
+##
+## or in short, redirect port 80 to 8080, as root do: 
+## /sbin/iptables -t nat -I PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+##
+## The above is NOT persisted, and is cleared on machine reboot.    
+## Possibly look at: https://www.systutorials.com/how-to-make-iptables-ip6tables-configurations-permanent-across-reboot-on-centos-7-linux/       
+## or similar pages...
+##
 
 
 

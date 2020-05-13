@@ -1579,7 +1579,7 @@ finally
 
 						setFinalStatus(ConnectionProgressCallback.FINAL_STATUS_SUCCEEDED);
 
-						// close the vindow
+						// close the window
 						setVisible(false);
 					}
 					else if (output instanceof Exception)
@@ -1589,6 +1589,39 @@ finally
 						_exception = ex;
 
 						setFinalStatus(ConnectionProgressCallback.FINAL_STATUS_FAILED, ex);
+
+						// AUTO Close Dialog...
+						final int onErrorAutoCloseDelayMs = _connProp == null ? 0 : _connProp.getOnConnectErrorAutoCloseDialogDelayMs();
+						if (onErrorAutoCloseDelayMs > 0)
+						{
+							final String buttonOriginTxt = _hide_but.getText();
+							
+							final Timer timer = new Timer(0, null);
+							timer.setDelay(1000);
+							timer.setRepeats(true);
+							timer.addActionListener(new ActionListener()
+							{
+								int _ticks = onErrorAutoCloseDelayMs / 1000;
+								@Override
+								public void actionPerformed(ActionEvent e)
+								{
+									if ( _ticks > 0 ) 
+									{
+										_hide_but.setText( buttonOriginTxt + " (" + _ticks + ")" );
+										//_hide_but.setEnabled(false);
+									}
+									else 
+									{
+										_hide_but.setText( buttonOriginTxt );
+										//_hide_but.setEnabled(true);
+										timer.stop();
+										_hide_but.doClick();
+									}
+									_ticks--;
+								}
+							});
+							timer.start();
+						}
 					}
 					else
 					{

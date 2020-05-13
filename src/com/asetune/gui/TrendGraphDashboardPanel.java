@@ -20,9 +20,11 @@
  ******************************************************************************/
 package com.asetune.gui;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.Insets;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.net.URI;
@@ -41,6 +43,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
+import javax.swing.Timer;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -641,6 +644,57 @@ extends JPanel
 //				}
 //			}
 //		});
+	}
+
+	public void scrollToGraph(String name)
+	{
+		TrendGraph tg = _graphCurrentOrderMap.get(name);
+
+		if (tg != null)
+			scrollToGraph(tg);
+	}
+	public void scrollToGraph(TrendGraph tg)
+	{
+		final JPanel     panel      = tg.getPanel();
+//		final ChartPanel chartPanel = tg.getChartPanel();
+		
+		Rectangle rect = panel.getBounds();
+		rect.height = rect.height + (rect.height / 2); // hopefully it will "center" the graph a bit better, or at least a "bit up" from the bottom
+		_graphPanel.scrollRectToVisible(rect);
+		
+		// Also try to "flash/blink" the graph to easier find it
+		// Maybe set background for 1 second
+//		final Color originColor = chartPanel.getBackground();
+//		panel.setBackground(Color.MAGENTA);
+//		chartPanel.setForeground(Color.MAGENTA);
+
+		final Color ORIGIN_COLOR = panel.getBackground();
+		final Color BLINK_COLOR  = Color.RED;
+		final int   TIMER_DELAY  = 250;
+		Timer blinkTimer = new Timer(TIMER_DELAY, new ActionListener()
+		{
+			private int     _count   = 0;
+			private int     _maxTime = 5000;
+			private boolean _on      = false;
+
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				if ( _count * TIMER_DELAY >= _maxTime )
+				{
+					panel.setBackground(ORIGIN_COLOR);
+					((Timer) e.getSource()).stop();
+				}
+				else
+				{
+					panel.setBackground(_on ? BLINK_COLOR : ORIGIN_COLOR);
+					_on = !_on;
+					_count++;
+				}
+			}
+		});
+		blinkTimer.start();
+		
 	}
 
 	/**

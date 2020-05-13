@@ -4,6 +4,7 @@
 package com.asetune.xmenu;
 
 import java.util.HashMap;
+import java.util.Properties;
 
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.tools.WindowType;
@@ -114,9 +115,24 @@ extends XmenuActionBase
 		{
 			boolean closeConnOnExit = true;
 			DbxConnection newConn = getConnectionProvider().getNewConnection("QueryWindow");
-//			QueryWindow qf = new QueryWindow(conn, sql, null, isCloseConnOnExit(), WindowType.JFRAME, getConfiguration());
-			QueryWindow qf = new QueryWindow(newConn, sql, null, closeConnOnExit, WindowType.JFRAME, getConfiguration());
+
+			boolean noExec = false; // Do not execute ... just show the SQL in the windows...
+			boolean goPsql = true;  // Print SQL on output
+			Properties props = getAllProperties();
+			if (props != null)
+			{
+				noExec = props.getProperty("noexec",  noExec +"").equalsIgnoreCase("true");
+				goPsql = props.getProperty("go.psql", goPsql +"").equalsIgnoreCase("true");
+			}
+			
+			QueryWindow qf = new QueryWindow(newConn, sql, false, null, closeConnOnExit, WindowType.JFRAME, getConfiguration());
+
+			qf.setOption(QueryWindow.OptionType.SHOW_SENT_SQL      , goPsql);
+			qf.setOption(QueryWindow.OptionType.PRINT_CLIENT_TIMING, true);
 			qf.openTheWindow();
+			
+			if ( ! noExec )
+				qf.displayQueryResults(sql, 0, false);
 			
 		}
 //		else if (connProvider instanceof MainFrame)

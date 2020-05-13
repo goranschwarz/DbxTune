@@ -96,6 +96,7 @@ import com.asetune.ui.autocomplete.completions.SqlTableCompletion;
 import com.asetune.ui.autocomplete.completions.TableColumnInfo;
 import com.asetune.ui.autocomplete.completions.TableInfo;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
+import com.asetune.ui.tooltip.suppliers.ToolTipSupplierAbstract;
 import com.asetune.utils.CollectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
@@ -280,7 +281,7 @@ extends CompletionProviderAbstract
 		{
 			if (_localConn == null)
 			{
-				_localConn = _connectionProvider.getNewConnection(Version.getAppName() + "-Completion");
+				_localConn = _connectionProvider.getNewConnection(Version.getAppName() + "-Compl"); // '-Completion' was a bit to long, it may truncate the version part at the end 
 				
 				try { _logger.info("Compleation Provider created a new connection to URL: "+_localConn.getMetaData().getURL()); }
 				catch(SQLException ignore) {}
@@ -1774,7 +1775,16 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 		if (colCompl != null && !colCompl.isEmpty())
 			return colCompl;
 
-		
+		//-----------------------------------------------------------
+		// get completions from: ToolTipSupplier
+		ToolTipSupplierAbstract tts = getToolTipSupplier();
+		if (tts != null)
+		{
+			List<Completion> ttsCompletions = tts.getCompletionsFor(enteredText);
+			if (ttsCompletions != null && !ttsCompletions.isEmpty())
+				return ttsCompletions;
+		}
+
 		// IF WE GET HERE, I could not figure out
 		// what to deliver as Completion text so
 		// LETS return "everything" that has been added as the BASE COMPLETION (catalogs, schemas, tables/views, staticCompletion), but NOT storedProcedures
@@ -2179,10 +2189,16 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 	 */
 	private List<Completion> getColumnCompletionForTablesInSql(JTextComponent comp)
 	{
-		boolean dummy = true;
-		if (dummy)
+		boolean exitEarly = true;  // method: -not-yet-implemented-
+//		        exitEarly = false; // uncomment: -in-test-development-
+		if (exitEarly)
 			return null;
 
+		System.out.println();
+		System.out.println("################################################################");
+		System.out.println("## getColumnCompletionForTablesInSql");
+		System.out.println("################################################################");
+		
 		if ( ! (comp instanceof RSyntaxTextArea) )
 		{
 			System.out.println("getColumnCompletionForTablesInSql(): NOT A RSyntaxTextArea");
@@ -2196,15 +2212,32 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		// loop max 1000 times (just so we dont end up in an infinite loop
 		int maxCount = 1000;
 
-		// Get previous token and loop backwards
+		// Get previous token and loop BACKWARDS
 		Token t = RSyntaxUtilities.getPreviousImportantTokenFromOffs(doc, startOffset);
 		char foundOp = '-';
 		int  foundAtOffset = -1;
+		int  parenthesesCount = 0; // increment / decrement every time we see a ( and ) so we can "skip" sub selects etc... 
 		while(true)
 		{
-			System.out.println("BACK: "+t);
 			String word = t.getLexeme().toLowerCase();
-			if ("select".equals(word) || "insert".equals(word) || "update".equals(word) || "delete".equals(word))
+
+			// Increment and decrement when we see parentheses 
+			// NOTE: we are scanning *backwards* here
+			if (t.isSingleChar(')')) parenthesesCount++; 
+			if (t.isSingleChar('(')) parenthesesCount--;
+			System.out.println("BACK[parenthesesCount="+parenthesesCount+"]: "+t);
+			
+			if ("go".equals(word) || word.equals(";"))
+			{
+				System.out.println("BACKWARD SEARCH -- END SEARCH -- found 'go' or ';': "+t);
+				break;
+			}
+			
+//			if (t.getType() == TokenTypes.RESERVED_WORD)
+			if (t.is(TokenTypes.RESERVED_WORD, "select")) System.out.println("-------------- found 'select'"); // it's case SENSITIVE
+			if (t.is(TokenTypes.RESERVED_WORD, "SELECT")) System.out.println("-------------- found 'SELECT'"); // it's case SENSITIVE
+			
+			if (parenthesesCount == 0 && ("select".equals(word) || "insert".equals(word) || "update".equals(word) || "delete".equals(word)))
 			{
 				if      ("select".equals(word)) foundOp = 'S';
 				else if ("insert".equals(word)) foundOp = 'I';
@@ -2224,11 +2257,13 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		}
 		if (foundOp != '-')
 		{
+			parenthesesCount = 0;
+			
 			System.out.println("YES OP Was found: "+foundOp);
 			if (foundOp == 'S')
 			{
 				System.out.println("YES OP is: S");
-				// Loop forward to find 'from' also grab tables at 'join'
+				// Loop FORWARD to find 'from' also grab tables at 'join'
 //				for(maxCount=1000; t!=null; t=t.getNextToken())
 				try
 				{
@@ -2240,7 +2275,18 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 						System.out.println("                      at line: "+ta.getLineOfOffset(t.getOffset()));
 
 						String word = t.getLexeme().toLowerCase();
-						if ("from".equals(word))
+						if ("go".equals(word) || word.equals(";"))
+						{
+							System.out.println("SSSSSSSSS -- END SEARCH -- Passed 'go' or ';': "+t);
+							break;
+						}
+
+						// Increment and decrement when we see parentheses 
+						// NOTE: we are scanning *forward* here
+						if (t.isSingleChar('(')) parenthesesCount++; 
+						if (t.isSingleChar(')')) parenthesesCount--;
+
+						if ( parenthesesCount == 0 && ("from".equals(word) || "join".equals(word)) )
 						{
 							while(true)
 							{
@@ -2278,7 +2324,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 				System.out.println("YES OP is: D");
 				// Loop forward to find 'delete'
 			}
-		}
+		} // end: fond Operator S, I, U, D
 
 //		for (Token t = ta.getTokenListForLine(line); t!=null; t.getNextToken())
 //			System.out.println("token="+t);
@@ -3379,6 +3425,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		if (bulkGetColumns)
 		{
 			final String stateMsg = "Getting Column information for ALL functions.";
+//new Exception("GET_CALLBACK").printStackTrace();
 			waitDialog.setState(stateMsg);
 
 			String prevFuncName = "";
@@ -3953,8 +4000,11 @@ if (_guiOwner == null)
 							_logger.debug("---------------- Refresh Completion: TAB-1 Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
 							if (isLookupTableColumns())
 							{
-								refreshCompletionForTableColumns(conn, getWaitDialog(), _tableInfoList, true);
-								_logger.debug("---------------- Refresh Completion: TAB-2 Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
+								if (_tableInfoList.size() < 25)
+									refreshCompletionForTableColumns(conn, getWaitDialog(), _tableInfoList, false);
+
+//								refreshCompletionForTableColumns(conn, getWaitDialog(), _tableInfoList, true);
+//								_logger.debug("---------------- Refresh Completion: TAB-2 Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
 							}
 		
 							// Create completion list
@@ -4008,8 +4058,11 @@ if (_guiOwner == null)
 							_logger.debug("---------------- Refresh Completion: FUNC-1 Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
 							if (isLookupFunctionColumns())
 							{
-								refreshCompletionForFunctionColumns(conn, getWaitDialog(), _functionInfoList, true);
-								_logger.debug("---------------- Refresh Completion: FUNC-2 Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
+								if (_functionInfoList.size() < 25)
+									refreshCompletionForFunctionColumns(conn, getWaitDialog(), _functionInfoList, false);
+								
+//								refreshCompletionForFunctionColumns(conn, getWaitDialog(), _functionInfoList, true);
+//								_logger.debug("---------------- Refresh Completion: FUNC-2 Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
 							}
 		
 							// Create completion list

@@ -84,7 +84,7 @@ extends CountersModel
 	public static final String[] PCT_COLUMNS      = new String[] {"PhysicalReadsPct", "APFReadsPct", "CacheUtilization", "CacheEfficiency", "CacheEfficiencySlide", "CacheReplacementPct", "CacheReplacementSlidePct", "CacheHitRate"};
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"PagesTouchedDiff", "UsedSizeInMbDiff", "UnUsedSizeInMbDiff", 
-		"PagesRead", "PhysicalReads", "Stalls", "BuffersToMRU", "BuffersToLRU", 
+		"RealPagesRead", "PagesRead", "RealPhysicalReads", "PhysicalReads", "Stalls", "BuffersToMRU", "BuffersToLRU", 
 		"LogicalReads", "PhysicalWrites", "APFReads"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
@@ -141,17 +141,18 @@ extends CountersModel
 	public static final String  PROPKEY_CacheHitRateTo100PctOnZeroReads = PROP_PREFIX + ".CacheHitRateTo100PctOnZeroReads";
 	public static final boolean DEFAULT_CacheHitRateTo100PctOnZeroReads = true;
 
-	public static final String GRAPH_NAME_POOL_HIT_RATE      = "PoolHitRate";
-	public static final String GRAPH_NAME_POOL_UTIL          = "PoolUtil";
-	public static final String GRAPH_NAME_POOL_USED_MB       = "PoolUsedMb";
-	public static final String GRAPH_NAME_POOL_FREE_MB       = "PoolFreeMb";
-	public static final String GRAPH_NAME_POOL_TO_MRU        = "PoolToMru";
-	public static final String GRAPH_NAME_POOL_TO_LRU        = "PoolToLru";
-	public static final String GRAPH_NAME_POOL_LOGICAL_READ  = "PoolLogicalRead";
-	public static final String GRAPH_NAME_POOL_PHYSICAL_READ = "PoolPhysicalRead";
-	public static final String GRAPH_NAME_POOL_APF_READ      = "PoolApfRead";
-	public static final String GRAPH_NAME_POOL_APF_PCT       = "PoolApfPct";
-	public static final String GRAPH_NAME_POOL_REPLACE_SLIDE = "PoolReplaceSlide";
+	public static final String GRAPH_NAME_POOL_HIT_RATE           = "PoolHitRate";
+	public static final String GRAPH_NAME_POOL_UTIL               = "PoolUtil";
+	public static final String GRAPH_NAME_POOL_USED_MB            = "PoolUsedMb";
+	public static final String GRAPH_NAME_POOL_FREE_MB            = "PoolFreeMb";
+	public static final String GRAPH_NAME_POOL_TO_MRU             = "PoolToMru";
+	public static final String GRAPH_NAME_POOL_TO_LRU             = "PoolToLru";
+	public static final String GRAPH_NAME_POOL_LOGICAL_READ       = "PoolLogicalRead";
+	public static final String GRAPH_NAME_POOL_REAL_PHYSICAL_READ = "PoolRealPhysicalRead";
+	public static final String GRAPH_NAME_POOL_PHYSICAL_READ      = "PoolPhysicalRead";
+	public static final String GRAPH_NAME_POOL_APF_READ           = "PoolApfRead";
+	public static final String GRAPH_NAME_POOL_APF_PCT            = "PoolApfPct";
+	public static final String GRAPH_NAME_POOL_REPLACE_SLIDE      = "PoolReplaceSlide";
 
 	private void addTrendGraphs()
 	{
@@ -260,6 +261,19 @@ extends CountersModel
 			-1);  // minimum height
 
 		// GRAPH
+		addTrendGraph(GRAPH_NAME_POOL_REAL_PHYSICAL_READ,
+			"Cache Pools Real Physical Reads (Physical+APF)", 	               // Menu CheckBox text
+			"Cache Pools Real Physical Reads (Physical+APF) per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			false,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
+
+		// GRAPH
 		addTrendGraph(GRAPH_NAME_POOL_PHYSICAL_READ,
 			"Cache Pools Physical Reads", 	               // Menu CheckBox text
 			"Cache Pools Physical Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
@@ -311,143 +325,6 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);  // minimum height
 
-		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			TrendGraph tg = null;
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_POOL_HIT_RATE,
-//				"Cache Pools Hit Rate", 	               // Menu CheckBox text
-//				"Cache Pools Hit Rate Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				true, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_POOL_UTIL,
-//				"Cache Pools Utilization", 	               // Menu CheckBox text
-//				"Cache Pools Utilization Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				true, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_POOL_USED_MB,
-//				"Cache Pools Used MB", 	               // Menu CheckBox text
-//				"Cache Pools Used MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_POOL_FREE_MB,
-//				"Cache Pools Free MB", 	               // Menu CheckBox text
-//				"Cache Pools Free MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_POOL_TO_MRU,
-//				"Cache Pools MRU Replacement", 	               // Menu CheckBox text
-//				"Cache Pools MRU Replacement per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_POOL_TO_LRU,
-//				"Cache Pools LRU fetch-and-discard Placement", 	               // Menu CheckBox text
-//				"Cache Pools LRU fetch-and-discard Placement per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_POOL_LOGICAL_READ,
-//				"Cache Pools Logical Reads", 	               // Menu CheckBox text
-//				"Cache Pools Logical Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_POOL_PHYSICAL_READ,
-//				"Cache Pools Physical Reads", 	               // Menu CheckBox text
-//				"Cache Pools Physical Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_POOL_APF_READ,
-//				"Cache Pools APF Reads", 	               // Menu CheckBox text
-//				"Cache Pools APF Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_POOL_APF_PCT,
-//				"Cache Pools APF Reads Percent", 	               // Menu CheckBox text
-//				"Cache Pools APF Reads Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				true, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_POOL_REPLACE_SLIDE,
-//				"Cache Pools Replacement Slide", 	               // Menu CheckBox text
-//				"Cache Pools Replacement Slide Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph (this can be more than 100%)
-//				this, 
-//				false,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 	private String getLabel(int row)
@@ -559,6 +436,21 @@ extends CountersModel
 			{
 				lArray[i] = getLabel(i);
 				dArray[i] = this.getRateValueAsDouble(i, "LogicalReads");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_POOL_REAL_PHYSICAL_READ.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every pool
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = getLabel(i);
+				dArray[i] = this.getRateValueAsDouble(i, "RealPhysicalReads");
 			}
 
 			// Set the values
@@ -697,6 +589,19 @@ extends CountersModel
 			                                                       "<b>Formula</b>: PhysicalReads / PagesRead * 100<br>" +
 			                                                 "</html>");
 
+			mtd.addColumn("monCachePool",  "RealPhysicalReads", "<html>"
+			                                                      + "Actual or Real Physical Reads <br>"
+			                                                      + "<b>Formula</b>: PhysicalReads + APFReads <br>"
+			                                                      + "</html>");
+
+			mtd.addColumn("monCachePool",  "RealPagesRead", "<html>"
+			                                                      + "Actual or Real Number of Pages read into the pool. <br>"
+			                                                      + "For a 1 Page Pool, this is the same value as PagesRead. <br>"
+			                                                      + "But for a 2, 4 or 8 Page Pool, the PagesRead is a bit missleading, yes it number of pages, but not Physical IO's read.<br>"
+			                                                      + "To get Physical IO's read you need to divide by number of PagesPerIO in the Pool. (since we are reading X pages with One IO Operation) <br>"
+			                                                      + "<b>Formula</b>: PagesRead / PagesPerIO <br>"
+			                                                      + "</html>");
+
 			mtd.addColumn("monCachePool",  "AllocatedMb",    "<html>" +
 			                                                       "Same as AlllocatedKB but as MB instead.<br>" +
 			                                                       "<b>Formula</b>: AllocatedKB / 1024 <br>" +
@@ -733,6 +638,7 @@ extends CountersModel
 
 			mtd.addColumn("monCachePool",  "CacheUtilization", "<html>" +
 			                                                       "If not 100% the cache has to much memory allocated to it.<br>" +
+			                                                       "Or if it's a <i>fetch-and-discard</i> (BuffersToLRU) where all pages is <i>inserted</i> at the <i>wash marker</i> (WashSize), which means that it's probably a Table Scan...<br>" +
 			                                                       "<b>Formula</b>: abs.PagesTouched / abs.AllocatedPages * 100<br>" +
 			                                                   "</html>");
 			
@@ -777,7 +683,7 @@ extends CountersModel
 			                                                   "</html>");
 			mtd.addColumn("monCachePool",  "CacheHitRate",     "<html>" +
 			                                                       "Percent calculation of how many pages was fetched from the cache pool.<br>" +
-			                                                       "<b>Formula</b>: 100 - (PagesRead/LogicalReads) * 100.0" +
+			                                                       "<b>Formula</b>: 100 - (RealPagesRead/LogicalReads) * 100.0" +
 			                                                   "</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
@@ -813,30 +719,39 @@ extends CountersModel
 		}
 
 		// ASE 15.7
-		String LogicalReads     = "";
-		String PhysicalReadsPct = "";
-		String PhysicalWrites   = "";
-		String APFReads         = "";
-		String APFReadsPct      = "";
-		String APFPercentage    = "";
-		String WashSize         = "";
-		String CacheHitRate     = "";
+		String LogicalReads      = "";
+		String PhysicalReadsPct  = "";
+		String PhysicalWrites    = "";
+		String RealPhysicalReads = "";
+		String APFReads          = "";
+		String APFReadsPct       = "";
+		String APFPercentage     = "";
+		String WashSize          = "";
+		String CacheHitRate      = "";
 
+		String calcAllocatedPages = "(AllocatedKB*(1024.0/@@maxpagesize))";
+		String calcDivPgsToMb     = "(1024*1024/@@maxpagesize)";                   // for 2K=512, 4K=256, 8K=128, 16K=64 
+		String calcPagesPerIO     = "(IOBufferSize/@@maxpagesize)";
+		String calcPagesRead      = "(PagesRead/"+calcPagesPerIO+")";
+		String calcPhysicalReads  = "PhysicalReads";
 
 //		if (srvVersion >= 15700)
 //		if (srvVersion >= 1570000)
 		if (srvVersion >= Ver.ver(15,7))
 		{
-			LogicalReads     = "LogicalReads, \n";
-			PhysicalWrites   = "PhysicalWrites, \n";
-			PhysicalReadsPct = "PhysicalReadsPct = CASE WHEN (PagesRead > 0) THEN (((1.0*PhysicalReads*(IOBufferSize/@@maxpagesize))/(1.0*PagesRead)) * 100.0) ELSE 0.0 END,\n";
-			APFReads         = "APFReads, \n";
-			APFReadsPct      = "APFReadsPct = CASE WHEN (PagesRead > 0) THEN (((1.0*APFReads*(IOBufferSize/@@maxpagesize))/(1.0*PagesRead)) * 100.0) ELSE 0.0 END,\n";
-			APFPercentage    = "APFPercentage, \n";
-			WashSize         = "WashSize, \n";
-			CacheHitRate     = "CacheHitRate = convert(numeric(10,1), 100 - (PagesRead*1.0/(LogicalReads+1)) * 100.0), \n";
-		}
+			calcPhysicalReads = "(PhysicalReads+APFReads)";
 
+			LogicalReads      = "LogicalReads, \n";
+			PhysicalWrites    = "PhysicalWrites, \n";
+			RealPhysicalReads = "RealPhysicalReads = PhysicalReads + APFReads, \n";
+			PhysicalReadsPct  = "PhysicalReadsPct = CASE WHEN (PagesRead > 0) THEN (((1.0*PhysicalReads*"+calcPagesPerIO+")/(1.0*PagesRead)) * 100.0) ELSE 0.0 END,\n";
+			APFReads          = "APFReads, \n";
+			APFReadsPct       = "APFReadsPct = CASE WHEN (PagesRead > 0) THEN (((1.0*APFReads*"+calcPagesPerIO+")/(1.0*PagesRead)) * 100.0) ELSE 0.0 END,\n";
+			APFPercentage     = "APFPercentage, \n";
+			WashSize          = "WashSize, \n";
+			CacheHitRate      = "CacheHitRate = convert(numeric(10,1), 100 - ("+calcPagesRead+"*1.0/(LogicalReads+1)) * 100.0), \n";
+		}
+		
 		cols1 += "CacheName, \n" +
 		         "CacheID, \n" +
 		         "SrvPageSize        = @@maxpagesize, \n" +
@@ -846,32 +761,34 @@ extends CountersModel
 		         "PagesPerIO         = IOBufferSize/@@maxpagesize, \n" +
 		         "AllocatedMb        = AllocatedKB / 1024, \n" +
 		         "AllocatedKB, \n" +
-		         "AllocatedPages     = convert(int,AllocatedKB*(1024.0/@@maxpagesize)), \n" +
+		         "AllocatedPages     = convert(int,"+calcAllocatedPages+"), \n" +
 		         "PagesTouchedDiff   = PagesTouched, \n" +
-		         "UsedSizeInMbDiff   = convert(int, PagesTouched / (1024*1024/@@maxpagesize) ), \n" +
-		         "UnUsedSizeInMbDiff = convert(int, ((AllocatedKB*(1024.0/@@maxpagesize)) - PagesTouched) / (1024*1024/@@maxpagesize) ), \n" +
+		         "UsedSizeInMbDiff   = convert(int, PagesTouched / "+calcDivPgsToMb+" ), \n" +
+		         "UnUsedSizeInMbDiff = convert(int, ("+calcAllocatedPages+" - PagesTouched) / "+calcDivPgsToMb+" ), \n" +
 		         "PagesTouched, \n" +
-		         "UsedSizeInMb       = convert(int, PagesTouched / (1024*1024/@@maxpagesize) ), \n" +
-		         "UnUsedSizeInMb     = convert(int, ((AllocatedKB*(1024.0/@@maxpagesize)) - PagesTouched) / (1024*1024/@@maxpagesize) ), \n" +
-		         "CacheUtilization   = convert(numeric(12,1), PagesTouched / (AllocatedKB*(1024.0/@@maxpagesize)) * 100.0), \n" +
+		         "UsedSizeInMb       = convert(int, PagesTouched / "+calcDivPgsToMb+" ), \n" +
+		         "UnUsedSizeInMb     = convert(int, ("+calcAllocatedPages+" - PagesTouched) / "+calcDivPgsToMb+" ), \n" +
+		         "CacheUtilization   = convert(numeric(12,1), PagesTouched / "+calcAllocatedPages+" * 100.0), \n" +
 		         LogicalReads + 
+		         "RealPagesRead      = "+calcPagesRead+", \n" +
 		         "PagesRead, \n" +
 		         CacheHitRate +
 		         APFReads +
 		         APFReadsPct +
+		         RealPhysicalReads +
 		         "PhysicalReads, \n" +
 		         PhysicalReadsPct + 
 		         PhysicalWrites +
 		         "Stalls, \n" +
 		         "BuffersToMRU, \n" +
 		         "BuffersToLRU, \n" +
-		         "CacheReplacementPct        = convert(numeric(12,1), 1.0*PagesRead / (AllocatedKB*(1024.0/@@maxpagesize))), \n" +
+		         "CacheReplacementPct        = convert(numeric(12,1), 1.0*PagesRead / "+calcAllocatedPages+"), \n" +
 		         "CacheReplacementSlidePct   = convert(numeric(12,1), 0), \n" +
 		         "CacheSlideTime             = convert(varchar(30), 'not-for-absolute-values'), \n" +
 		         "PagesReadInSlide           = convert(int, 0), \n" +
 		         "CacheEfficiency  = CASE \n" +
 		         "                      WHEN PagesRead > 0 \n" +
-		         "                      THEN convert(numeric(12,1), (AllocatedKB*(1024.0/@@maxpagesize)) / PagesRead * 100.0) \n" +
+		         "                      THEN convert(numeric(12,1), "+calcAllocatedPages+" / PagesRead * 100.0) \n" +
 		         "                      ELSE 0.0 \n" +
 		         "                   END, \n" +
 		         "CacheEfficiencySlide      = convert(numeric(5,1), 0) \n" +
@@ -891,8 +808,8 @@ extends CountersModel
 	@Override
 	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
-		int AllocatedKB,        PagesTouched,        PagesRead,        SrvPageSize;
-		int AllocatedKBId = -1, PagesTouchedId = -1, PagesReadId = -1, SrvPageSizeId = -1;
+		int AllocatedKB,        PagesTouched,        RealPagesRead,        PagesRead,        SrvPageSize;
+		int AllocatedKBId = -1, PagesTouchedId = -1, RealPagesReadId = -1, PagesReadId = -1, SrvPageSizeId = -1;
 
 		int PhysicalReadsId = -1, APFReadsId = -1, PhysicalReadsPctId = -1, APFReadsPctId = -1;
 		int PagesPerIOId = -1;
@@ -913,6 +830,7 @@ extends CountersModel
 			String colName = colNames.get(colId);
 			if      (colName.equals("AllocatedKB"))               AllocatedKBId               = colId;
 			else if (colName.equals("PagesTouched"))              PagesTouchedId              = colId;
+			else if (colName.equals("RealPagesRead"))             RealPagesReadId             = colId;
 			else if (colName.equals("PagesRead"))                 PagesReadId                 = colId;
 			else if (colName.equals("SrvPageSize"))               SrvPageSizeId               = colId;
 			else if (colName.equals("PhysicalReads"))             PhysicalReadsId             = colId;
@@ -934,10 +852,13 @@ extends CountersModel
 		// Loop on all diffData rows
 		for (int rowId=0; rowId < diffData.getRowCount(); rowId++) 
 		{
-			AllocatedKB  = ((Number)newSample.getValueAt(rowId, AllocatedKBId )).intValue();
-			PagesTouched = ((Number)newSample.getValueAt(rowId, PagesTouchedId)).intValue();
-			PagesRead    = ((Number)diffData .getValueAt(rowId, PagesReadId   )).intValue();
-			SrvPageSize  = ((Number)newSample.getValueAt(rowId, SrvPageSizeId )).intValue();
+			AllocatedKB   = ((Number)newSample.getValueAt(rowId, AllocatedKBId  )).intValue();
+			PagesTouched  = ((Number)newSample.getValueAt(rowId, PagesTouchedId )).intValue();
+			RealPagesRead = ((Number)diffData .getValueAt(rowId, RealPagesReadId)).intValue();
+			PagesRead     = ((Number)diffData .getValueAt(rowId, PagesReadId    )).intValue();
+			SrvPageSize   = ((Number)newSample.getValueAt(rowId, SrvPageSizeId  )).intValue();
+			
+			double allocatedPages = AllocatedKB*(1024.0/SrvPageSize);
 
 			if (_logger.isDebugEnabled())
 				_logger.debug("----AllocatedKB = "+AllocatedKB+", PagesTouched = "+PagesTouched+", PagesRead = "+PagesRead+", SrvPageSize = "+SrvPageSize);
@@ -956,8 +877,8 @@ extends CountersModel
 			}
 			else
 			{
-				double dCacheUtilization = PagesTouched / (AllocatedKB*(1024.0/SrvPageSize)) * 100.0;
-				double dCacheEfficiency  = (AllocatedKB*(1024.0/SrvPageSize))    / PagesRead * 100.0;
+				double dCacheUtilization = PagesTouched   / allocatedPages * 100.0;
+				double dCacheEfficiency  = allocatedPages / PagesRead      * 100.0;
 
 				if ( dCacheEfficiency > 100.0 )
 					dCacheEfficiency = 100.0;
@@ -998,7 +919,8 @@ extends CountersModel
 			{
 				//SQL: "CacheReplacementPct        = convert(numeric(12,1), 1.0*PagesRead / (AllocatedKB*(1024.0/@@maxpagesize))), \n" +
 				
-				BigDecimal bdVal = new BigDecimal( 1.0*PagesRead / (AllocatedKB*(1024.0/SrvPageSize)) * 100.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				// PagesRead/AllocatedPages
+				BigDecimal bdVal = new BigDecimal( 1.0*PagesRead / allocatedPages * 100.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 				diffData.setValueAt(bdVal, rowId, CacheReplacementPctId);
 			}
 
@@ -1023,8 +945,8 @@ extends CountersModel
 				int slideSumPagesRead = sumCacheSlideEntries(list, newSample.getSampleTime());
 				String timeStr        = getTimeSpanCacheSlideEntries(list, newSample.getSampleTime());
 
-				BigDecimal cReplaceSlidePct  = new BigDecimal(                              slideSumPagesRead / (AllocatedKB*(1024.0/SrvPageSize)) * 100.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				BigDecimal cEfficentSlidePct = new BigDecimal( slideSumPagesRead <= 0 ? 0 : (AllocatedKB*(1024.0/SrvPageSize)) / slideSumPagesRead * 100.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal cReplaceSlidePct  = new BigDecimal(                              slideSumPagesRead / allocatedPages * 100.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal cEfficentSlidePct = new BigDecimal( slideSumPagesRead <= 0 ? 0 : allocatedPages / slideSumPagesRead * 100.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 
 				if ( cEfficentSlidePct.doubleValue() > 100.0 )
 					cEfficentSlidePct = new BigDecimal(100.0);
@@ -1045,7 +967,7 @@ extends CountersModel
 				if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CacheHitRateTo100PctOnZeroReads, DEFAULT_CacheHitRateTo100PctOnZeroReads))
 					usePctValueOnZeroReads = 100;
 				
-				BigDecimal calc_CacheHitRate = new BigDecimal( LogicalReads <= 0 ? usePctValueOnZeroReads : (100.0 - (PagesRead*1.0/LogicalReads) * 100.0) ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal calc_CacheHitRate = new BigDecimal( LogicalReads <= 0 ? usePctValueOnZeroReads : (100.0 - (RealPagesRead*1.0/LogicalReads) * 100.0) ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 
 				diffData.setValueAt(calc_CacheHitRate, rowId, CacheHitRateId );
 			}

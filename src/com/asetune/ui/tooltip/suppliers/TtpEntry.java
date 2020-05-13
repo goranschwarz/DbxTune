@@ -20,6 +20,10 @@
  ******************************************************************************/
 package com.asetune.ui.tooltip.suppliers;
 
+import org.apache.commons.lang3.StringUtils;
+import org.fife.ui.autocomplete.Completion;
+
+import com.asetune.ui.autocomplete.CompletionProviderAbstract;
 import com.asetune.utils.StringUtil;
 
 /*
@@ -217,6 +221,8 @@ public class TtpEntry
 		sb.append("<b>Description: </b>").append(getDescription()).append("<br>");
 
 		// Syntax needs to be HTML formated
+		sb.append("<br>");
+		sb.append("<b>Syntax: </b><br>");
 		sb.append(getSyntax()).append("<br>");
 
 		if ( hasParameters() )
@@ -290,5 +296,38 @@ public class TtpEntry
 		sb.append("    ").append(XML_END___TAG_ENTRY).append("\n");
 
 		return sb.toString();
+	}
+
+	/**
+	 * Create a Completion for this entry
+	 * @param compleationProvider
+	 * @return
+	 */
+	public Completion getCompletion(CompletionProviderAbstract compleationProvider)
+	{
+		String replacementText = stripPre(getSyntax());
+		String shortDesc       = getDescription();
+		String summary         = toHtml(true, null);
+		
+		Completion compl = new ToolTipSupplierCompletion(compleationProvider, replacementText, shortDesc, summary);
+		return compl;
+	}
+
+	/** remove any start/ending &lt;pre&gt; html strings. */
+	private String stripPre(String str)
+	{
+		if (StringUtil.isNullOrBlank(str))
+			return "";
+
+		String startStr = str.substring(0, Math.min(20, str.length())).trim();
+		if (StringUtils.startsWithIgnoreCase(startStr, "<pre>"))
+		{
+			int startPos = str.indexOf('>');
+			int endPos   = str.lastIndexOf('<');
+			if (startPos >= 0 && endPos >= 0)
+				str = str.substring(startPos+1, endPos).trim();
+		}
+		
+		return str;
 	}
 }

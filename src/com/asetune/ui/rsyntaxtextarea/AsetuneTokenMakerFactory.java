@@ -53,7 +53,9 @@ class AsetuneTokenMakerFactory extends AbstractTokenMakerFactory
 		String pkg = "com.asetune.ui.rsyntaxtextarea.modes.";
 
 		putMapping(com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL, pkg + "SybaseTSqlTokenMaker");
-		putMapping(com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_RCL,  pkg + "SybaseRclTokenMaker");
+		putMapping(com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_RCL , pkg + "SybaseRclTokenMaker");
+
+		putMapping(com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants.SYNTAX_STYLE_MSSQL_TSQL , pkg + "MicrosoftTSqlTokenMaker");
 
 		pkg = "org.fife.ui.rsyntaxtextarea.modes.";
 

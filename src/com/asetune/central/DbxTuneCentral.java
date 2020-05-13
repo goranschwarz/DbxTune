@@ -458,7 +458,19 @@ public class DbxTuneCentral
 				String instName = "";
 				if (evt.getSource() instanceof Configuration)
 					instName = ((Configuration)evt.getSource()).getConfName();
-				_logger.info("COMBINED CONFIG CHANGE["+instName+"]: propName='"+evt.getPropertyName()+"', type="+evt.getPropagationId()+", newValue='"+evt.getNewValue()+"', oldValue='"+evt.getOldValue()+"'.");
+
+				String propName = evt.getPropertyName();
+				Object type     = evt.getPropagationId();
+				Object newValue = evt.getNewValue();
+				Object oldValue = evt.getOldValue();
+				
+				// If "Password", don't print the passwords
+				if (propName != null && propName.indexOf("assword") >= 0)
+				{
+					newValue = "*secret*";
+					oldValue = "*secret*";
+				}
+				_logger.info("COMBINED CONFIG CHANGE[" + instName + "]: propName='" + propName + "', type=" + type + ", newValue='" + newValue + "', oldValue='" + oldValue + "'.");
 			}
 		});
 

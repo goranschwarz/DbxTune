@@ -599,7 +599,7 @@ extends CountersModel
 						row.add(PerfInd);
 						row.add(x_extraInfo);
 
-						addRow(row);
+						addRow(CmRsSrcToDest.this, row);
 					}
 					else if (rsDbInfo.isRsi2Db())
 					{

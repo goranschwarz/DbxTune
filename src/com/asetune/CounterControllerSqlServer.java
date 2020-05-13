@@ -38,6 +38,7 @@ import com.asetune.cm.os.CmOsNwInfo;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
 import com.asetune.cm.sqlserver.CmActiveStatements;
+import com.asetune.cm.sqlserver.CmAlwaysOn;
 import com.asetune.cm.sqlserver.CmDatabases;
 import com.asetune.cm.sqlserver.CmDbIo;
 import com.asetune.cm.sqlserver.CmDeviceIo;
@@ -50,6 +51,7 @@ import com.asetune.cm.sqlserver.CmExecRequests;
 import com.asetune.cm.sqlserver.CmExecSessions;
 import com.asetune.cm.sqlserver.CmExecTriggerStats;
 import com.asetune.cm.sqlserver.CmIndexOpStat;
+import com.asetune.cm.sqlserver.CmIndexPhysical;
 import com.asetune.cm.sqlserver.CmIndexUsage;
 import com.asetune.cm.sqlserver.CmOpenTransactions;
 import com.asetune.cm.sqlserver.CmOptimizer;
@@ -129,6 +131,7 @@ extends CounterControllerAbstract
 		CmErrorLog          .create(counterController, guiController);
 		CmOsLatchStats      .create(counterController, guiController);
 		CmPerfCounters      .create(counterController, guiController);
+		CmAlwaysOn          .create(counterController, guiController);
 		CmOptimizer         .create(counterController, guiController);
 		CmSpinlocks         .create(counterController, guiController);
                             
@@ -136,6 +139,7 @@ extends CounterControllerAbstract
 		CmOpenTransactions  .create(counterController, guiController);
 		CmIndexUsage        .create(counterController, guiController);
 		CmIndexOpStat       .create(counterController, guiController);
+		CmIndexPhysical     .create(counterController, guiController);
 		CmExecQueryStats    .create(counterController, guiController);
 		CmExecProcedureStats.create(counterController, guiController);
 		CmExecFunctionStats .create(counterController, guiController);
@@ -241,6 +245,8 @@ extends CounterControllerAbstract
 
 	private void initializeDbmsProperties(DbxConnection conn)
 	{
+		//------------------------------------------------
+		// Get server EDITION
 		String sql = "select ServerProperty('Edition')";
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
 		{
@@ -251,9 +257,11 @@ extends CounterControllerAbstract
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems Initializing DBMS Properties, using sql='"+sql+"'. Caught: "+ex);
+			_logger.warn("Problems geting SQL-Server 'Edition', using sql='"+sql+"'. Caught: "+ex);
 		}
 
+		//------------------------------------------------
+		// Get VERSION
 		sql = "select @@version";
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
 		{
@@ -264,7 +272,7 @@ extends CounterControllerAbstract
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems Initializing DBMS Properties, using sql='"+sql+"'. Caught: "+ex);
+			_logger.warn("Problems getting @@version, using sql='"+sql+"'. Caught: "+ex);
 		}
 	}
 	

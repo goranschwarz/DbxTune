@@ -172,7 +172,7 @@ extends CmToolTipSupplierDefault
 						sb.append("<html>\n");
 						sb.append("<pre>\n");
 						sb.append(sqlText);
-						sb.append("<pre>\n");
+						sb.append("</pre>\n");
 						sb.append("</html>\n");
 						
 						return sb.toString();

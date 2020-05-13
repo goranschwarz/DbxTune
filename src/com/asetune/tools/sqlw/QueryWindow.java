@@ -71,10 +71,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 
 import javax.swing.AbstractAction;
+import javax.swing.ActionMap;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.ImageIcon;
+import javax.swing.InputMap;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JCheckBoxMenuItem;
@@ -257,10 +259,12 @@ import com.asetune.ui.autocomplete.CompletionProviderAse;
 import com.asetune.ui.autocomplete.CompletionProviderJdbc;
 import com.asetune.ui.autocomplete.CompletionProviderRax;
 import com.asetune.ui.autocomplete.CompletionProviderRepServer;
+import com.asetune.ui.autocomplete.CompletionProviderSqlServer;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.AsetuneTokenMaker;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
+import com.asetune.ui.rsyntaxtextarea.TextEditorPaneX;
 import com.asetune.ui.tooltip.suppliers.ToolTipSupplierAbstract;
 import com.asetune.ui.tooltip.suppliers.ToolTipSupplierAsa;
 import com.asetune.ui.tooltip.suppliers.ToolTipSupplierAse;
@@ -515,7 +519,7 @@ public class QueryWindow
 
 //	private JTextArea	      _query_txt                  = new JTextArea();           // A field to enter a query in
 //	private RSyntaxTextArea	  _query_txt                  = new RSyntaxTextArea();     // A field to enter a query in
-	private TextEditorPane	  _query_txt                  = new TextEditorPane();    // A field to enter a query in
+	private TextEditorPaneX	  _query_txt                  = new TextEditorPaneX();    // A field to enter a query in
 	private RTextScrollPane   _queryScroll                = new RTextScrollPane(_query_txt, true);
 	private ErrorStrip        _queryErrStrip              = new ErrorStrip(_query_txt);
 	private RSyntaxTextAreaX  _result_txt                 = null;
@@ -1100,22 +1104,26 @@ public class QueryWindow
 //	{
 	public QueryWindow(DbxConnection conn, WindowType winType)
 	{
-		this(conn, null, null, true, winType, null);
+		this(conn, null, false, null, true, winType, null);
 	}
 	public QueryWindow(DbxConnection conn, boolean closeConnOnExit, WindowType winType)
 	{
-		this(conn, null, null, closeConnOnExit, winType, null);
+		this(conn, null, false, null, closeConnOnExit, winType, null);
 	}
 	public QueryWindow(DbxConnection conn, String sql, WindowType winType)
 	{
-		this(conn, sql, null, true, winType, null);
+		this(conn, sql, true, null, true, winType, null);
 	}
 	public QueryWindow(DbxConnection conn, String sql, String inputFile, boolean closeConnOnExit, WindowType winType, Configuration conf)
 	{
-		init(conn, sql, inputFile, closeConnOnExit, winType, conf);
+		init(conn, sql, true, inputFile, closeConnOnExit, winType, conf);
+	}
+	public QueryWindow(DbxConnection conn, String sql, boolean doExecSql, String inputFile, boolean closeConnOnExit, WindowType winType, Configuration conf)
+	{
+		init(conn, sql, doExecSql, inputFile, closeConnOnExit, winType, conf);
 	}
 
-	private void init(DbxConnection conn, final String sql, String inputFile, boolean closeConnOnExit, WindowType winType, Configuration conf)
+	private void init(DbxConnection conn, final String sql, boolean doExecSql, String inputFile, boolean closeConnOnExit, WindowType winType, Configuration conf)
 	{
 		_windowType = winType;
 
@@ -2256,22 +2264,25 @@ public class QueryWindow
 		else
 		{
 			_query_txt.setText(sql);
-			if (_conn != null)
+			if (doExecSql)
 			{
-				if (SwingUtils.isEventQueueThread())
+				if (_conn != null)
 				{
-					displayQueryResults(sql, 0, false);
-				}
-				else
-				{
-					SwingUtilities.invokeLater(new Runnable()
+					if (SwingUtils.isEventQueueThread())
 					{
-						@Override
-						public void run()
+						displayQueryResults(sql, 0, false);
+					}
+					else
+					{
+						SwingUtilities.invokeLater(new Runnable()
 						{
-							displayQueryResults(sql, 0, false);
-						}
-					});
+							@Override
+							public void run()
+							{
+								displayQueryResults(sql, 0, false);
+							}
+						});
+					}
 				}
 			}
 		}
@@ -2833,6 +2844,15 @@ public class QueryWindow
 			_splitPane.setDividerLocation(50);
 		else
 			_splitPane.setDividerLocation(divLoc);
+	}
+
+	/**
+	 * Bring the window "to front"
+	 */
+	public void toFront()
+	{
+		_window.toFront();
+		_window.repaint();
 	}
 
 	/**
@@ -4067,7 +4087,7 @@ public class QueryWindow
 			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_MSSQL))
 			{
 				// Code Completion 
-				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+				_compleationProviderAbstract = CompletionProviderSqlServer.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
 				//_compleationProviderAbstract.setCreateLocalConnection(true); // POSSIBLE: true: since the original connection can have "showplan on" etc... and this will case issues with messages printing, slow lookup... etc...
 
 				// Sortorder & charset
@@ -11593,7 +11613,50 @@ checkPanelSize(_resPanel, comp);
 	}
 
 	
+
+	public enum OptionType
+	{
+		AS_PLAIN_TEXT,
+		APPEND_RESULTS,
+		SHOW_ROW_COUNT,
+		LIMIT_RS_TO_X_ROWS,
+		SHOW_SENT_SQL,
+		PRINT_RS_INFO,
+		TRIM_STRING_VALUES,
+		SHOW_ROW_NUMBER,
+		PRINT_CLIENT_TIMING,
+		USE_SEMICOLON_TO_SEND,
+		ENABLE_DBMS_OUTPUT,
+		SHOW_RS_IN_TAB,
+		SHOW_PROC_TEXT_ON_ERROR,
+		SEND_EMTY_SQL_BATCHES,
+		REPLACE_FAKE_QUOTED_IDENTIFIERS,
+		USE_TOOLTIP_ON_CELLS
+	};
 	
+	public void setOption(OptionType option, boolean b)
+	{
+		switch (option)
+		{
+    		case AS_PLAIN_TEXT                      : _asPlainText_chk           .setSelected(b);  break;
+    		case APPEND_RESULTS                     : _appendResults_chk         .setSelected(b);  break;
+    		case SHOW_ROW_COUNT                     : _showRowCount_chk          .setSelected(b);  break;
+    		case LIMIT_RS_TO_X_ROWS                 : _limitRsRowsRead_chk       .setSelected(b);  break;
+    		case SHOW_SENT_SQL                      : _showSentSql_chk           .setSelected(b);  break;
+    		case PRINT_RS_INFO                      : _printRsInfo_chk           .setSelected(b);  break;
+    		case TRIM_STRING_VALUES                 : _rsTrimStrings_chk         .setSelected(b);  break;
+    		case SHOW_ROW_NUMBER                    : _rsShowRowNumber_chk       .setSelected(b);  break;
+    		case PRINT_CLIENT_TIMING                : _clientTiming_chk          .setSelected(b);  break;
+    		case USE_SEMICOLON_TO_SEND              : _useSemicolonHack_chk      .setSelected(b);  break;
+    		case ENABLE_DBMS_OUTPUT                 : _enableDbmsOutput_chk      .setSelected(b);  break;
+    		case SHOW_RS_IN_TAB                     : _rsInTabs_chk              .setSelected(b);  break;
+    		case SHOW_PROC_TEXT_ON_ERROR            : _getObjectTextOnError_chk  .setSelected(b);  break;
+    		case SEND_EMTY_SQL_BATCHES              : _sendCommentsOnly_chk      .setSelected(b);  break;
+    		case REPLACE_FAKE_QUOTED_IDENTIFIERS    : _replaceFakeQuotedId_chk   .setSelected(b);  break;
+    		case USE_TOOLTIP_ON_CELLS               : _tableTooltipOnCells_chk   .setSelected(b);  break;
+		}
+	}
+
 	/*----------------------------------------------------------------------
 	** BEGIN: set Application Option Button
 	**----------------------------------------------------------------------*/ 
@@ -12343,7 +12406,7 @@ checkPanelSize(_resPanel, comp);
 			{
 				if (_favoriteCmdManagerSql == null)
 					_favoriteCmdManagerSql = new FavoriteCommandManagerSql(udMenu);
-				_favoriteCmdManagerSql.open();
+				_favoriteCmdManagerSql.open(_query_txt.getInputMap());
 			}
 		});
 		popupMenu.add(openDialog);
@@ -12469,7 +12532,7 @@ checkPanelSize(_resPanel, comp);
 			{
 				if (_favoriteCmdManagerRcl == null)
 					_favoriteCmdManagerRcl = new FavoriteCommandManagerRcl(udMenu);
-				_favoriteCmdManagerRcl.open();
+				_favoriteCmdManagerRcl.open(_query_txt.getInputMap());
 			}
 		});
 		popupMenu.add(openDialog);
@@ -12497,13 +12560,14 @@ checkPanelSize(_resPanel, comp);
 			_udMenu = udMenu;
 		}
 
-		public void open()
+		public void open(InputMap inputMap)
 		{
 			_favDialog.reload();
+			_favDialog.setEditorsInputMap(inputMap);
 			_favDialog.setVisible(true);
 		}
 
-		/** implemets FavoriteCommandDialog.FavoriteOwner */
+		/** implements FavoriteCommandDialog.FavoriteOwner */
 		@Override
 		public void rebuild()
 		{
@@ -12511,7 +12575,7 @@ checkPanelSize(_resPanel, comp);
 			createUserDefinedMenu(_udMenu, entries);
 		}
 
-		/** implemets FavoriteCommandDialog.FavoriteOwner */
+		/** implements FavoriteCommandDialog.FavoriteOwner */
 		@Override
 		public void saveFavoriteFilename(String filename)
 		{
@@ -12519,14 +12583,14 @@ checkPanelSize(_resPanel, comp);
 			saveProps();
 		}
 
-		/** implemets FavoriteCommandDialog.FavoriteOwner */
+		/** implements FavoriteCommandDialog.FavoriteOwner */
 		@Override
 		public String getFavoriteFilename()
 		{
 			return _favoriteCmdFilenameSql;
 		}
 		
-		/** implemets FavoriteCommandDialog.doExecute */
+		/** implements FavoriteCommandDialog.doExecute */
 		@Override
 		public void doExecute(String statement)
 		{
@@ -12544,9 +12608,10 @@ checkPanelSize(_resPanel, comp);
 			_udMenu = udMenu;
 		}
 
-		public void open()
+		public void open(InputMap inputMap)
 		{
 			_favDialog.reload();
+			_favDialog.setEditorsInputMap(inputMap);
 			_favDialog.setVisible(true);
 		}
 
@@ -12617,17 +12682,15 @@ checkPanelSize(_resPanel, comp);
 			}
 
 			// Add entry
-			JMenuItem mi = new JMenuItem();
+			final JMenuItem mi = new JMenuItem();
 			FavoriteCommandDialog.setBasicInfo(mi, entry);
 			mi.putClientProperty(FavoriteCommandDialog.PROPKEY_VENDOR_TYPE, entry.getType());
 
-			mi.addActionListener(new ActionListener()
+			final ActionListener action = new ActionListener()
 			{
 				@Override
 				public void actionPerformed(ActionEvent e)
 				{
-					JMenuItem mi = (JMenuItem) e.getSource();
-
 					String cmd = mi.getActionCommand();
 					if (cmd.startsWith("RSSD: "))
 					{
@@ -12643,10 +12706,62 @@ checkPanelSize(_resPanel, comp);
 					if (cmd != null)
 						displayQueryResults(cmd, 0, false);
 				}
-			});
+			};
+
+			mi.addActionListener(action);
 			menu.add(mi);
-		}
+
+			// Add any shortcuts to the editor as well
+			String actionName = entry.getName();
+			String actionKey  = entry.getKey();
+			if (StringUtil.hasValue(actionKey))
+			{
+				KeyStroke keyStroke = KeyStroke.getKeyStroke(actionKey);
+				if (keyStroke == null)
+				{
+					SwingUtils.showWarnMessage(_window, "Unknown KeyStroke", "<html>Problem setting keyboard shortcut for '" + actionName + "'. <br>The KeyStroke '" + actionKey + "' is not valid, skipping this setting.</html>", null);
+				}
+				else
+				{
+					InputMap  inputMap  = _query_txt.getInputMap();
+					ActionMap actionMap = _query_txt.getActionMap();
+
+					boolean add = true;
+
+					Object currentMapping = inputMap.get(keyStroke);
+					if (currentMapping != null && !actionName.equals(currentMapping))
+					{
+						String msg = "<html><b>User Defined SQL Commands - Issue.</b> <br>"
+								+ "<br>"
+								+ "Problem setting keyboard shortcut for '" + actionName + "'. <br>"
+								+ "The KeyStroke '" + actionKey + "' is already assigned to '" + currentMapping + "'.<br>"
+								+ "<br>"
+								+ "Do you still want to assign '" + actionName + "' to the key '" + actionKey +"'</html>";
+
+						int dialogResult = JOptionPane.showConfirmDialog(_window, msg, "Key Mapping", JOptionPane.YES_NO_OPTION);
+						if(dialogResult == JOptionPane.NO_OPTION)
+							add = false;
+					}
+
+					if (add)
+					{
+						inputMap .put(keyStroke, actionName);
+						actionMap.put(actionName, new AbstractAction(actionName) 
+						{
+							private static final long serialVersionUID = 1L;
+
+							@Override
+							public void actionPerformed(ActionEvent e)
+							{
+								action.actionPerformed(e);
+							}
+						});
+					}
+				}
+			}
+		} // end: FavoriteCommandEntriy loop
 	}
+
 	/** 
 	 * replace <code>${selectedText}</code> with a proper command <br>
 	 * If the result command has a newline, a confirm question will be asked.

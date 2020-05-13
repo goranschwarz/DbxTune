@@ -61,6 +61,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JSeparator;
 import javax.swing.JTable;
+import javax.swing.RowFilter;
 import javax.swing.RowSorter.SortKey;
 import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
@@ -179,7 +180,14 @@ extends JXTable
 		setNullValueDisplayBgColor(null);
 		init();
 	}
-	
+
+	@Override
+	public <R extends TableModel> void setRowFilter(RowFilter<? super R, ? super Integer> filter)
+	{
+//		new Exception("DUMMY-EXCEPTION-to-track-orgin-of-setRowFilter(): filter="+filter).printStackTrace();
+		super.setRowFilter(filter);
+	}
+
 	@Override
 	public void packAll()
 	{
@@ -1113,7 +1121,17 @@ extends JXTable
 					// If we have hidden columns, we might throw: java.lang.ArrayIndexOutOfBoundsException: 56 >= 56
 					try 
 					{ 
-						tcmx.moveColumn(colViewPos, propViewPos); 
+						if (propViewPos == ColumnHeaderPropsEntry.AS_LAST_VIEW_COLUMN)
+						{
+							// if it's the LAST position it looks like it "squizes" in "before last"
+							//tcmx.moveColumn(colViewPos, tcmx.getColumnCount()-1); 
+							tcmx.removeColumn(tcx); 
+							tcmx.addColumn(tcx); 
+						}
+						else
+						{
+							tcmx.moveColumn(colViewPos, propViewPos); 
+						}
 					}
 					catch (Throwable t) 
 					{
@@ -1589,7 +1607,6 @@ extends JXTable
 			{
 				ITableTooltip tt = (ITableTooltip) model;
 				tip = tt.getToolTipTextOnTableCell(e, colName, cellValue, row, col);
-
 				// Do we want to use "focusable" tips?
 				if (tip != null) 
 				{

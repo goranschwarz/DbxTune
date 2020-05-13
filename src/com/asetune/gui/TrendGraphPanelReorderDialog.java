@@ -22,8 +22,11 @@ package com.asetune.gui;
 
 import java.awt.Dimension;
 import java.awt.Frame;
+import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -38,6 +41,8 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
@@ -83,6 +88,7 @@ public class TrendGraphPanelReorderDialog
 	private List<String>             _orderAtStart    = new ArrayList<String>();  // what the order was when this dialog was called
 	private DefaultTableModel        _tableModelAtStart = null; // this is used in method checkForChanges()
 
+	private JButton                  _fokus_blink     = new JButton("Focus & Blink");
 	private JButton                  _ok              = new JButton("OK");
 	private JButton                  _cancel          = new JButton("Cancel");
 	private JButton                  _apply           = new JButton("Apply");
@@ -161,11 +167,12 @@ public class TrendGraphPanelReorderDialog
 		panel.add(_toOriginOrder,  "tag left");
 		panel.add(_rmOrderAndVis,  "tag right, wrap push");
 		
-		panel.add(createOkPanel(), "gap top 20, right");
+		panel.add(createOkPanel(), "gap top 20, right, pushx, growx");
 
 		// Initial state for buttons
 		_apply.setEnabled(false);
-		
+		_fokus_blink.setEnabled(false);
+
 		setContentPane(panel);
 
 		// ADD ACTIONS TO COMPONENTS
@@ -198,16 +205,28 @@ public class TrendGraphPanelReorderDialog
 
 	JPanel createOkPanel()
 	{
+		_fokus_blink.setToolTipText("<html>"
+				+ "If a Graph/Row is selected and visible in the Summary Panel. <br>"
+				+ "<ul>"
+				+ "  <li>Close this dialog.</li>"
+				+ "  <li>Scroll to Graph and make it <b>blink</b>'... So it's easy to locate!</li>"
+				+ "</ul>"
+				+ "Note: Double click a row, does the same thing.<br>"
+				+ "</html>");
+		
 		// ADD the OK, Cancel, Apply buttons
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout("insets 0 0","",""));
-		panel.add(_ok,     "tag ok");
-		panel.add(_cancel, "tag cancel");
-		panel.add(_apply,  "tag apply");
+		panel.add(_fokus_blink, "");
+		panel.add(new JPanel(), "pushx, growx");
+		panel.add(_ok,          "tag ok");
+		panel.add(_cancel,      "tag cancel");
+		panel.add(_apply,       "tag apply");
 		
-		_ok    .addActionListener(this);
-		_cancel.addActionListener(this);
-		_apply .addActionListener(this);
+		_fokus_blink.addActionListener(this);
+		_ok         .addActionListener(this);
+		_cancel     .addActionListener(this);
+		_apply      .addActionListener(this);
 
 		return panel;
 	}
@@ -329,6 +348,21 @@ public class TrendGraphPanelReorderDialog
 		if (_apply.equals(source))
 		{
 			apply();
+		}
+		
+		// --- BUTTON: APPLY ---
+		if (_fokus_blink.equals(source))
+		{
+			int vrow = _table.getSelectedRow();
+			if (vrow != -1) 
+			{
+				String graphName = (String) _table.getValueAt(vrow, TabPos.GraphName.ordinal());
+				_trendGraphPanel.scrollToGraph(graphName);
+				
+				// Close the popup
+				_dialogReturnSt = JOptionPane.CANCEL_OPTION;
+				setVisible(false);
+	        }
 		}
 	}
 
@@ -457,6 +491,29 @@ public class TrendGraphPanelReorderDialog
 //			tcx.setVisible(false);
 
 		SwingUtils.calcColumnWidths(table);
+		
+		table.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent mouseEvent) 
+			{
+				if (mouseEvent.getClickCount() == 2 && _table.getSelectedRow() != -1) 
+				{
+					_fokus_blink.doClick();
+		        }
+			}
+		});
+		
+		table.getSelectionModel().addListSelectionListener(new ListSelectionListener()
+		{
+			@Override
+			public void valueChanged(ListSelectionEvent e)
+			{
+				_fokus_blink.setEnabled(_table.getSelectedRow() != -1);
+			}
+		});
+				
+		
 
 		return table;
 	}

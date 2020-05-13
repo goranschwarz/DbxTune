@@ -579,6 +579,15 @@ extends DbmsConfigAbstract
 		map.put("remote data archive",                0);
 		map.put("allow polybase export",              0);
 
+		map.put("column encryption enclave type",     0);
+		map.put("tempdb metadata memory-optimized",   0);
+		map.put("ADR cleaner retry timeout (min)",    0);
+		map.put("ADR Preallocation Factor",           0);
+		map.put("version high part of SQL Server",    0);
+		map.put("version low part of SQL Server",     0);
+		map.put("allow filesystem enumeration",       1);
+		map.put("polybase enabled",                   0);
+
 		return map;
 	}
 //	-- Server Configuration (find any non-standard settings)
@@ -774,6 +783,16 @@ extends DbmsConfigAbstract
 		map.put("remote data archive",                SECTION_UNSPECIFIED);
 		map.put("allow polybase export",              SECTION_UNSPECIFIED);
 
+		// SQL-Server 2019 (probably earlier as well)
+		map.put("column encryption enclave type",     SECTION_UNSPECIFIED);
+		map.put("tempdb metadata memory-optimized",   SECTION_UNSPECIFIED);
+		map.put("ADR cleaner retry timeout (min)",    SECTION_UNSPECIFIED);
+		map.put("ADR Preallocation Factor",           SECTION_UNSPECIFIED);
+		map.put("version high part of SQL Server",    SECTION_UNSPECIFIED);
+		map.put("version low part of SQL Server",     SECTION_UNSPECIFIED);
+		map.put("allow filesystem enumeration",       SECTION_UNSPECIFIED);
+		map.put("polybase enabled",                   SECTION_UNSPECIFIED);
+		
 		return map;
 	}
 	public static final String  SECTION_UNSPECIFIED          = "Unspecified";
@@ -887,6 +906,16 @@ extends DbmsConfigAbstract
 		map.put("remote data archive",                NO_COMMENT);
 		map.put("allow polybase export",              NO_COMMENT);
 
+		// SQL-Server 2019 (probably earlier as well)
+		map.put("column encryption enclave type",     NO_COMMENT);
+		map.put("tempdb metadata memory-optimized",   NO_COMMENT);
+		map.put("ADR cleaner retry timeout (min)",    NO_COMMENT);
+		map.put("ADR Preallocation Factor",           NO_COMMENT);
+		map.put("version high part of SQL Server",    NO_COMMENT);
+		map.put("version low part of SQL Server",     NO_COMMENT);
+		map.put("allow filesystem enumeration",       NO_COMMENT);
+		map.put("polybase enabled",                   NO_COMMENT);
+		
 		return map;
 	}
 	public static final String  NO_COMMENT = "";

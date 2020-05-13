@@ -43,8 +43,9 @@ implements IReportEntry
 {
 	private static Logger _logger = Logger.getLogger(ReportEntryAbstract.class);
 
-	private Exception _problem;
+	private   Exception _problem;
 	protected DailySummaryReportAbstract _reportingInstance;
+	private   String _disabledReason; 
 
 	public ReportEntryAbstract(DailySummaryReportAbstract reportingInstance)
 	{
@@ -82,6 +83,16 @@ implements IReportEntry
 	public boolean canBeDisabled()
 	{
 		return true;
+	}
+	
+	@Override
+	public String getDisabledReason()
+	{
+		return _disabledReason;
+	}
+	public void setDisabledReason(String reason)
+	{
+		_disabledReason = reason;
 	}
 
 

@@ -60,9 +60,10 @@ implements ICentralPersistWriter
 	 *   <li> 8  - Add    column 'GraphCategory'                                to table 'DbxGraphProperties' </li>
 	 *   <li> 9  - Change column 'data', 'lastData' from varchar(80) -> 160     in tables *schema*.'DbxAlarmActive', *schema*.'DbxAlarmHistory' </li>
 	 *   <li> 10 - Add    column 'GraphProps'                                   to table 'DbxGraphProperties' </li>
+	 *   <li> 11 - Change column 'data', 'lastData' from varchar(160) -> 512    in tables *schema*.'DbxAlarmActive', *schema*.'DbxAlarmHistory' </li>
 	 * </ul> 
 	 */
-	public static int DBX_CENTRAL_DB_VERSION = 10;
+	public static int DBX_CENTRAL_DB_VERSION = 11;
 	
 	
 	public enum Table
@@ -721,8 +722,8 @@ implements ICentralPersistWriter
 				sbSql.append("   ,"+fill(lq+"cancelTime"                 +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"timeToLive"                 +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"threshold"                  +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   15),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"data"                       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  160),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"lastData"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  160),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(lq+"data"                       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(lq+"lastData"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"description"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"lastDescription"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"extendedDescription"        +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
@@ -783,8 +784,8 @@ implements ICentralPersistWriter
 				sbSql.append("   ,"+fill(lq+"cancelTime"                 +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"timeToLive"                 +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"threshold"                  +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   15),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"data"                       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  160),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"lastData"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  160),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(lq+"data"                       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(lq+"lastData"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"description"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"lastDescription"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"extendedDescription"        +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");

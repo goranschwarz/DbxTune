@@ -184,8 +184,13 @@ extends CountersModel
 	public static final String GRAPH_NAME_LATCH_WAITS               = "LatchWaits";
 	public static final String GRAPH_NAME_LATCH_WAIT_TIME           = "LatchWaitTime";
 
-//	public static final String GRAPH_NAME_FREE_LIST_STALLS          = "FreeListStalls";
-//	public static final String GRAPH_NAME_MEMORY_GRANTS_PENDING     = "MemoryGrantsPending";
+	public static final String GRAPH_NAME_FREE_LIST_STALLS          = "FreeListStalls";
+	public static final String GRAPH_NAME_MEMORY_GRANTS_PENDING     = "MemoryGrantsPending";
+
+	public static final String GRAPH_NAME_PLAN_CACHE_HIT_RATE       = "PlanCacheHitRate";
+	public static final String GRAPH_NAME_PLAN_CACHE_MB             = "PlanCacheMb";
+	public static final String GRAPH_NAME_PLAN_CACHE_OBJ_CNT        = "PlanCacheObjCnt";
+	public static final String GRAPH_NAME_PLAN_CACHE_OBJ_USE        = "PlanCacheObjUse";
 
 	private void addTrendGraphs()
 	{
@@ -646,315 +651,85 @@ extends CountersModel
 			-1);   // minimum height
 
 // BEGIN --- FIX NAMES ON THE BELOW
-//		//-----
-//		addTrendGraph(GRAPH_NAME_FREE_LIST_STALLS,
-//			"Buffer Cache - Waiting for free pages per Sec", // Menu CheckBox text
-//			"Buffer Cache - Waiting for free pages per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
-//			new String[] { "Free list stalls/sec" }, 
-//			LabelType.Static,
-//			TrendGraphDataPoint.Category.CACHE,
-//			false, // is Percent Graph
-//			true,  // visible at start
-//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//			-1);   // minimum height
-//
-//		//-----
-//		addTrendGraph(GRAPH_NAME_MEMORY_GRANTS_PENDING,
-//			"'Memory Grants Pending' per Sec", // Menu CheckBox text
-//			"'Memory Grants Pending' per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
-//			new String[] { "Memory Grants Pending" }, 
-//			LabelType.Static,
-//			TrendGraphDataPoint.Category.MEMORY,
-//			false, // is Percent Graph
-//			true,  // visible at start
-//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//			-1);   // minimum height
+		//-----
+		addTrendGraph(GRAPH_NAME_FREE_LIST_STALLS,
+			"Buffer Cache - Waiting for free pages per Sec", // Menu CheckBox text
+			"Buffer Cache - Waiting for free pages per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			new String[] { "Free list stalls/sec" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			false,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_MEMORY_GRANTS_PENDING,
+			"'Memory Grants Pending' per Sec", // Menu CheckBox text
+			"'Memory Grants Pending' per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			new String[] { "Memory Grants Pending" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.MEMORY,
+			false, // is Percent Graph
+			false,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 // END --- FIX NAMES ON THE BELOW
 
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_CPU_PCT,
-//				"CPU Usage in Percent", // Menu CheckBox text
-//				"CPU Usage in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_cpuPct, 
-//				true, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_CPU_EFFECTIVE_PCT,
-//				"CPU Usage Effective in Percent", // Menu CheckBox text
-//				"CPU Usage Effective in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_cpuEffectivePct, 
-//				true, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_SQL_BATCHES_SEC,
-//				"SQL Batches Received per Sec", // Menu CheckBox text
-//				"SQL Batches Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_sqlBatch, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_SQL_BATCHES_TIME_SPAN,
-//				"SQL Batches In Time Span Received per Sec", // Menu CheckBox text
-//				"SQL Batches In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_sqlBatchTimeSpan, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_CACHE_HIT_RATE,
-//				"Buffer Cache Hit Rate", // Menu CheckBox text
-//				"Buffer Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_cacheHitRate, 
-//				true, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_CACHE_PLE,
-//				"Page Life Expectancy", // Menu CheckBox text
-//				"Page Life Expectancy ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_cachePle, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_CACHE_READS,
-//				"Buffer Cache Reads", // Menu CheckBox text
-//				"Buffer Cache Reads per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_cacheReads, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_CACHE_PHY_READS,
-//				"Buffer Cache Physical Reads", // Menu CheckBox text
-//				"Buffer Cache Physical Reads per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_cachePhyReads, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_CACHE_WRITES,
-//				"Buffer Cache Writes", // Menu CheckBox text
-//				"Buffer Cache Writes per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_cacheWrites, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_TEMP_STAT,
-//				"Temp Table Stats", // Menu CheckBox text
-//				"Temp Table Stats ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_tempStat, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_LOG_CACHE_HIT_RATE,
-//				"Log Cache Hit Rate", // Menu CheckBox text
-//				"Log Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_dynamic, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_LOG_CACHE_READS,
-//				"Log Cache Reads", // Menu CheckBox text
-//				"Log Cache Reads per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_dynamic, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_LOG_POOL_REQUESTS,
-//				"Log Pool Requets", // Menu CheckBox text
-//				"Log Pool Requets per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_dynamic, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_TRANS_SEC,
-//				"Transactions", // Menu CheckBox text
-//				"Transactions per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_dynamic, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_TRANS_ACTIVE,
-//				"Active Transactions", // Menu CheckBox text
-//				"Active Transactions ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_dynamic, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_COMPILE,
-//				"SQL Compilations", // Menu CheckBox text
-//				"SQL Compilations per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_compile, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_RECOMPILE,
-//				"SQL Re-Compilations", // Menu CheckBox text
-//				"SQL Re-Compilations per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_reCompile, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_BLOCKED_PROCESSES,
-//				"Blocked Processes", // Menu CheckBox text
-//				"Blocked Processes ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_blockedProcs, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_PAGE_SPLITS,
-//				"Page Splits", // Menu CheckBox text
-//				"Page Splits per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_pageSplits, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_FWD_RIDS,
-//				"Forwarded Records", // Menu CheckBox text
-//				"Forwarded Records per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_fwdRids, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_ACCESS_METHODS,
-//				"Access Methods", // Menu CheckBox text
-//				"Access Methods per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_accessMethods, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_LATCH_WAITS,
-//				"Latch Waits", // Menu CheckBox text
-//				"Latch Waits per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_accessMethods, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_LATCH_WAIT_TIME,
-//				"Average Latch Wait Time", // Menu CheckBox text
-//				"Average Latch Wait Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_accessMethods, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
+		
+		addTrendGraph(GRAPH_NAME_PLAN_CACHE_HIT_RATE,
+			"Plan Cache Hit Rate", // Menu CheckBox text
+			"Plan Cache Hit Rate ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			new String[] { "SQL Plans", "Object Plans(sp/tr/func)", "Temporary Tables & Table Variables", "Bound Trees", "Extended Stored Procedures" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CACHE,
+			true, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_PLAN_CACHE_MB,
+			"Plan Cache Size in MB", // Menu CheckBox text
+			"Plan Cache Size in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			new String[] { "SQL Plans", "Object Plans", "Temporary Tables & Table Variables", "Bound Trees", "Extended Stored Procedures" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_PLAN_CACHE_OBJ_CNT,
+			"Plan Cache Object Count", // Menu CheckBox text
+			"Plan Cache Object Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			new String[] { "SQL Plans", "Object Plans", "Temporary Tables & Table Variables", "Bound Trees", "Extended Stored Procedures" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_PLAN_CACHE_OBJ_USE,
+			"Plan Cache Objects In Use", // Menu CheckBox text
+			"Plan Cache Objects In Use ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			new String[] { "SQL Plans", "Object Plans", "Temporary Tables & Table Variables", "Bound Trees", "Extended Stored Procedures" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
 	}
 
 	@Override
@@ -1931,55 +1706,204 @@ extends CountersModel
 			}
 		}
 
-//		// -----------------------------------------------------------------------------------------
-//		if (GRAPH_NAME_FREE_LIST_STALLS.equals(tgdp.getName()))
-//		{
-//			Double[] arr = new Double[1];
-//			
-//			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
-//			String pk     = createPkStr(":Buffer Manager", "Free list stalls/sec", "");
-//			
-//			Double val = this.getAbsValueAsDouble(pk, "calculated_value");
-//			
-//			if (val != null)
-//			{
-//				arr[0 ] = val;
-//
-//				// Set the values
-//				tgdp.setDataPoint(this.getTimestamp(), arr);
-//			}
-//			else
-//			{
-//				TrendGraph tg = getTrendGraph(tgdp.getName());
-//				if (tg != null)
-//					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
-//			}
-//		}
-//
-//		// -----------------------------------------------------------------------------------------
-//		if (GRAPH_NAME_MEMORY_GRANTS_PENDING.equals(tgdp.getName()))
-//		{
-//			Double[] arr = new Double[1];
-//			
-//			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
-//			String pk     = createPkStr(":Memory Manager", "Memory Grants Pending", "");
-//			
-//			Double val = this.getAbsValueAsDouble(pk, "calculated_value");
-//			
-//			if (val != null)
-//			{
-//				arr[0 ] = val;
-//
-//				// Set the values
-//				tgdp.setDataPoint(this.getTimestamp(), arr);
-//			}
-//			else
-//			{
-//				TrendGraph tg = getTrendGraph(tgdp.getName());
-//				if (tg != null)
-//					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
-//			}
-//		}
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_FREE_LIST_STALLS.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[1];
+			
+			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+			String pk     = createPkStr(":Buffer Manager", "Free list stalls/sec", "");
+			
+			Double val = this.getAbsValueAsDouble(pk, "calculated_value");
+			
+			if (val != null)
+			{
+				arr[0 ] = val;
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				TrendGraph tg = getTrendGraph(tgdp.getName());
+				if (tg != null)
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
+			}
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_MEMORY_GRANTS_PENDING.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[1];
+			
+			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+			String pk     = createPkStr(":Memory Manager", "Memory Grants Pending", "");
+			
+			Double val = this.getAbsValueAsDouble(pk, "calculated_value");
+			
+			if (val != null)
+			{
+				arr[0 ] = val;
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				TrendGraph tg = getTrendGraph(tgdp.getName());
+				if (tg != null)
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
+			}
+		}
+		
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_PLAN_CACHE_HIT_RATE.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[5];
+			
+			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+			String pk1 = createPkStr(":Plan Cache", "Cache Hit Ratio", "SQL Plans");
+			String pk2 = createPkStr(":Plan Cache", "Cache Hit Ratio", "Object Plans");
+			String pk3 = createPkStr(":Plan Cache", "Cache Hit Ratio", "Temporary Tables & Table Variables");
+			String pk4 = createPkStr(":Plan Cache", "Cache Hit Ratio", "Bound Trees");
+			String pk5 = createPkStr(":Plan Cache", "Cache Hit Ratio", "Extended Stored Procedures");
+			
+			Double val1 = this.getAbsValueAsDouble(pk1, "calculated_value");
+			Double val2 = this.getAbsValueAsDouble(pk2, "calculated_value");
+			Double val3 = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val4 = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val5 = this.getAbsValueAsDouble(pk3, "calculated_value");
+			
+			if (val1 != null && val2 != null && val3 != null && val4 != null && val5 != null)
+			{
+				arr[0] = val1;
+				arr[1] = val2;
+				arr[2] = val3;
+				arr[3] = val4;
+				arr[4] = val5;
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				TrendGraph tg = getTrendGraph(tgdp.getName());
+				if (tg != null)
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"', '"+pk5+"'='"+val5+"'.");
+			}
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_PLAN_CACHE_MB.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[5];
+			
+			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+			String pk1 = createPkStr(":Plan Cache", "Cache Pages", "SQL Plans");
+			String pk2 = createPkStr(":Plan Cache", "Cache Pages", "Object Plans");
+			String pk3 = createPkStr(":Plan Cache", "Cache Pages", "Temporary Tables & Table Variables");
+			String pk4 = createPkStr(":Plan Cache", "Cache Pages", "Bound Trees");
+			String pk5 = createPkStr(":Plan Cache", "Cache Pages", "Extended Stored Procedures");
+			
+			Double val1 = this.getAbsValueAsDouble(pk1, "calculated_value");
+			Double val2 = this.getAbsValueAsDouble(pk2, "calculated_value");
+			Double val3 = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val4 = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val5 = this.getAbsValueAsDouble(pk3, "calculated_value");
+			
+			if (val1 != null && val2 != null && val3 != null && val4 != null && val5 != null)
+			{
+				arr[0] = val1 / 128; // divide by 128 to get MB from 8K Pages (512 = 1024*1024/8192)
+				arr[1] = val2 / 128;
+				arr[2] = val3 / 128;
+				arr[3] = val4 / 128;
+				arr[4] = val5 / 128;
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				TrendGraph tg = getTrendGraph(tgdp.getName());
+				if (tg != null)
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"', '"+pk5+"'='"+val5+"'.");
+			}
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_PLAN_CACHE_OBJ_CNT.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[5];
+			
+			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+			String pk1 = createPkStr(":Plan Cache", "Cache Object Counts", "SQL Plans");
+			String pk2 = createPkStr(":Plan Cache", "Cache Object Counts", "Object Plans");
+			String pk3 = createPkStr(":Plan Cache", "Cache Object Counts", "Temporary Tables & Table Variables");
+			String pk4 = createPkStr(":Plan Cache", "Cache Object Counts", "Bound Trees");
+			String pk5 = createPkStr(":Plan Cache", "Cache Object Counts", "Extended Stored Procedures");
+			
+			Double val1 = this.getAbsValueAsDouble(pk1, "calculated_value");
+			Double val2 = this.getAbsValueAsDouble(pk2, "calculated_value");
+			Double val3 = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val4 = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val5 = this.getAbsValueAsDouble(pk3, "calculated_value");
+			
+			if (val1 != null && val2 != null && val3 != null && val4 != null && val5 != null)
+			{
+				arr[0] = val1;
+				arr[1] = val2;
+				arr[2] = val3;
+				arr[3] = val4;
+				arr[4] = val5;
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				TrendGraph tg = getTrendGraph(tgdp.getName());
+				if (tg != null)
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"', '"+pk5+"'='"+val5+"'.");
+			}
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_PLAN_CACHE_OBJ_USE.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[5];
+			
+			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+			String pk1 = createPkStr(":Plan Cache", "Cache Objects in use", "SQL Plans");
+			String pk2 = createPkStr(":Plan Cache", "Cache Objects in use", "Object Plans");
+			String pk3 = createPkStr(":Plan Cache", "Cache Objects in use", "Temporary Tables & Table Variables");
+			String pk4 = createPkStr(":Plan Cache", "Cache Objects in use", "Bound Trees");
+			String pk5 = createPkStr(":Plan Cache", "Cache Objects in use", "Extended Stored Procedures");
+			
+			Double val1 = this.getAbsValueAsDouble(pk1, "calculated_value");
+			Double val2 = this.getAbsValueAsDouble(pk2, "calculated_value");
+			Double val3 = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val4 = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val5 = this.getAbsValueAsDouble(pk3, "calculated_value");
+			
+			if (val1 != null && val2 != null && val3 != null && val4 != null && val5 != null)
+			{
+				arr[0] = val1;
+				arr[1] = val2;
+				arr[2] = val3;
+				arr[3] = val4;
+				arr[4] = val5;
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				TrendGraph tg = getTrendGraph(tgdp.getName());
+				if (tg != null)
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"', '"+pk5+"'='"+val5+"'.");
+			}
+		}
+
 	}
 
 	

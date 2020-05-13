@@ -192,6 +192,25 @@ extends CountersModel
 		return sql;
 	}
 
+	/**
+	 * This is called from CounterSample when we see a "Duplicate Key"
+	 * 
+	 * @param counterSample   The CounterSample which this happened on
+	 * @param keyStr          The PK
+	 * @param curRow          Existing row
+	 * @param newRow          New row (that causes the duplicate)
+	 * 
+	 * @return true for print WARNINGS, false to NOT printing any Warning message
+	 */
+	@Override
+	public boolean actionForSampleDuplicateKey(CounterSample counterSample, String keyStr, List<Object> curRow, List<Object> newRow)
+	{
+		// Do not warn on this... it looks like a bug in 2019 cu4 (or earlier)
+		if ("SBS_UCS_DISPATCH|".equals(keyStr))
+			return false;
+		
+		return true;
+	}
 
 
 	@Override

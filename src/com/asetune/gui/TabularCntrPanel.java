@@ -178,8 +178,7 @@ implements
 	private List<RowFilter<TableModel,Integer>>	_tableRowFilterList	         = new ArrayList<RowFilter<TableModel,Integer>>();
 	private RowFilterValueAndOp                 _tableRowFilterValAndOp      = null;
 	private RowFilterDiffCounterIsZero          _tableRowFilterDiffCntIsZero = null;
-
-	private GTableFilter                        _tableFreetextFilter         = null;
+	private GTableFilter                        _tableRowFilterFreeText      = null;
 
 	// COUNTER Panel
 	private JPanel					_counterPanel;
@@ -331,13 +330,15 @@ implements
 		_tableRowFilterValAndOp      = new RowFilterValueAndOp(_dataTable);
 		_tableRowFilterDiffCntIsZero = new RowFilterDiffCounterIsZero(_dataTable);
 
+		// Install "free-text" filter
+		_tableRowFilterFreeText = new GTableFilter(_dataTable, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true);
+
 		_tableRowFilterList.add(_tableRowFilterValAndOp);
 		_tableRowFilterList.add(_tableRowFilterDiffCntIsZero);
+//		_tableRowFilterList.add(_tableRowFilterFreeText);
+		
 		_tableRowFilter = RowFilter.andFilter(_tableRowFilterList);
 		
-		// Install "free-text" filter
-		_tableFreetextFilter = new GTableFilter(_dataTable, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true);
-
 		initComponents();
 
 		// check what look and feel we are using, then decide where the
@@ -385,6 +386,34 @@ implements
 	 **---------------------------------------------------
 	 */
 
+	/** 
+	 * Add a filter on the table<br>
+	 */
+	public void addRowFilter(final RowFilter<TableModel, Integer> rowFilter)
+	{
+		_tableRowFilterList.add(rowFilter);
+		_tableRowFilter = RowFilter.andFilter(_tableRowFilterList);
+//		_dataTable.setRowFilter(_tableRowFilter);
+		_tableRowFilterFreeText.setExternalFilter(_tableRowFilter);
+	}
+
+	/** 
+	 * Remove a filter on the table<br>
+	 */
+	public void removeRowFilter(final RowFilter<TableModel, Integer> rowFilter)
+	{
+		_tableRowFilterList.remove(rowFilter);
+		_tableRowFilter = RowFilter.andFilter(_tableRowFilterList);
+//		_dataTable.setRowFilter(_tableRowFilter);
+		_tableRowFilterFreeText.setExternalFilter(_tableRowFilter);
+	}
+
+	public List<RowFilter<TableModel, Integer>> getRowFilters()
+	{
+		return _tableRowFilterList;
+	}
+	
+	
 	protected GTable getDataTable()
 	{
 		return _dataTable;
@@ -860,12 +889,12 @@ implements
 
 	public GTableFilter getFilterFreeText()
 	{
-		return _tableFreetextFilter;
+		return _tableRowFilterFreeText;
 	}
 
 	public void refreshFilterColumns(TableModel tm)
 	{
-		_tableFreetextFilter.refreshCompletion();
+		_tableRowFilterFreeText.refreshCompletion();
 
 		if (tm != null)
 		{
@@ -1143,8 +1172,8 @@ implements
 		if (_localOptionsPanel != null)
 			panel.add(_localOptionsPanel, "top, growx");
 
-		panel.add(_tabDockUndockButton, "top, right, push, wrap");
-		panel.add(_tableFreetextFilter, "gapleft 10, dock south"); // gap left [right] [top] [bottom]
+		panel.add(_tabDockUndockButton,    "top, right, push, wrap");
+		panel.add(_tableRowFilterFreeText, "gapleft 10, dock south"); // gap left [right] [top] [bottom]
 
 		return panel;
 	}
@@ -3141,7 +3170,8 @@ implements
 					{
 						_tableRowFilterIsSet = true;
 						_logger.debug("No table filter was priviously set, so lets set it now.");
-						_dataTable.setRowFilter(_tableRowFilter);
+//						_dataTable.setRowFilter(_tableRowFilter);
+						_tableRowFilterFreeText.setExternalFilter(_tableRowFilter);
 					}
 					_tableRowFilterDiffCntIsZero.setFilter(_dataTable, cm.getDiffColumns(), cm.getDiffDissColumns());
 				}
@@ -3183,7 +3213,8 @@ implements
 				{
 					_tableRowFilterIsSet = true;
 					_logger.debug("No table filter was priviously set, so lets set it now.");
-					_dataTable.setRowFilter(_tableRowFilter);
+//					_dataTable.setRowFilter(_tableRowFilter);
+					_tableRowFilterFreeText.setExternalFilter(_tableRowFilter);
 				}
 				_tableRowFilterValAndOp.setFilter(opIndex, col, text);
 			}
@@ -3379,8 +3410,8 @@ implements
 				tmpConf.remove(keyPrefix+"mainSplitPane.dividerLocation");
 		}
 
-		tmpConf.setProperty(keyPrefix+"freeTextFilter.value",    _tableFreetextFilter.getText());
-		tmpConf.setProperty(keyPrefix+"freeTextFilter.selected", _tableFreetextFilter.isFilterChkboxSelected());
+		tmpConf.setProperty(keyPrefix+"freeTextFilter.value",    _tableRowFilterFreeText.getText());
+		tmpConf.setProperty(keyPrefix+"freeTextFilter.selected", _tableRowFilterFreeText.isFilterChkboxSelected());
 
 		tmpConf.save();
 	}
@@ -3407,8 +3438,8 @@ implements
 			_mainSplitPane.setDividerLocation(dividerLocation);
 		}
 
-		_tableFreetextFilter.setText(                 conf.getProperty(       keyPrefix+"freeTextFilter.value",    "")   );
-		_tableFreetextFilter.setFilterChkboxSelected( conf.getBooleanProperty(keyPrefix+"freeTextFilter.selected", true) );
+		_tableRowFilterFreeText.setText(                 conf.getProperty(       keyPrefix+"freeTextFilter.value",    "")   );
+		_tableRowFilterFreeText.setFilterChkboxSelected( conf.getBooleanProperty(keyPrefix+"freeTextFilter.selected", true) );
 	}
 
 	/**  */
@@ -3458,7 +3489,7 @@ implements
 		}
 
 		// Free text filter
-		_tableFreetextFilter.applyFilter();
+		_tableRowFilterFreeText.applyFilter();
 		
 		
 		String keyPrefix = cmName + ".filter.";
@@ -4748,7 +4779,7 @@ implements
 		// FIXME: maybe do this somewhere else as well
 		// set how many rows we have in the table
 		_counterRows_lbl.setText(_dataTable.getModel().getRowCount() + " / " + _dataTable.getRowCount());
-		_tableFreetextFilter.updateRowCount();
+		_tableRowFilterFreeText.updateRowCount();
 	}
 
 //	private class Watermark extends AbstractComponentDecorator

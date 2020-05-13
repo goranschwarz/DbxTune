@@ -29,6 +29,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.log4j.Logger;
@@ -38,6 +40,7 @@ import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEventDatabaseState;
 import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
 import com.asetune.alarm.events.AlarmEventLowDbFreeSpace;
 import com.asetune.alarm.events.AlarmEventLowLogFreeSpace;
@@ -58,6 +61,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -93,8 +97,19 @@ extends CountersModel
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
 
-	public static final String[] MON_TABLES       = new String[] {"CmDatabases"};
-	public static final String[] NEED_ROLES       = new String[] {};
+	public static final String[] MON_TABLES       = new String[] {
+			"CmDatabases", 
+			"databases", 
+			"dm_db_file_space_usage", 
+			"dm_db_log_space_usage", 
+			"dm_exec_sessions", 
+			"dm_exec_connections", 
+			"dm_tran_active_transactions", 
+			"dm_exec_sql_text", 
+			"dm_exec_query_plan", 
+			"dm_os_volume_stats", 
+			"backupset"};
+	public static final String[] NEED_ROLES       = new String[] {"VIEW SERVER STATE", "CONNECT ANY DATABASE"};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] {
@@ -723,13 +738,27 @@ extends CountersModel
 			databases                   = "sys.databases";                           // same as Normal SQL-Server
 			backupset                   = "msdb.dbo.backupset";                      // same as Normal SQL-Server
 		}
+
+		String availabilityGroupName          = "";
+		String availabilityGroupRole          = "";
+		String availabilityGroupPrimaryServer = "";
+		String whereAvailabilityGroup         = "";
+		
+		if (srvVersion >= Ver.ver(2012) || isAzure)
+		{
+			availabilityGroupName          = "    ,ag_name                  = (SELECT ag.name             FROM sys.availability_replicas ar JOIN sys.availability_groups                ag ON ar.group_id = ag.group_id  WHERE ar.replica_id  = d.replica_id) \n"; 
+			availabilityGroupRole          = "    ,ag_role                  = (SELECT ars.role_desc       FROM sys.dm_hadr_availability_replica_states ars                                                               WHERE ars.replica_id = d.replica_id) \n";
+			availabilityGroupPrimaryServer = "    ,ag_primary_server        = (SELECT ags.primary_replica FROM sys.availability_replicas ar JOIN sys.dm_hadr_availability_group_states ags ON ar.group_id = ags.group_id WHERE ar.replica_id  = d.replica_id) \n";
+			whereAvailabilityGroup         = "  OR d.replica_id is not null";
+		}
+
 		
 		String sql = ""
 			    + " \n"
 			    + "--------------------------- \n"
 			    + "-- DATA SIZE MB \n"
 			    + "--------------------------- \n"
-			    + "DECLARE @dataSizeMb table (database_id int, fileGroupCount int, totalDataSizeMb numeric(12,1), usedDataMb numeric(12,1), freeDataMb numeric(12,1), usedDataPct numeric(5,1), freeDataPct numeric(5,1)) \n"
+			    + "DECLARE @dataSizeMb TABLE (database_id int, fileGroupCount int, totalDataSizeMb numeric(12,1), usedDataMb numeric(12,1), freeDataMb numeric(12,1), usedDataPct numeric(5,1), freeDataPct numeric(5,1)) \n"
 			    + "INSERT INTO @dataSizeMb \n"
 			    + "EXEC sp_MSforeachdb ' \n"
 			    + "SELECT \n"
@@ -745,7 +774,7 @@ extends CountersModel
 			    + "--------------------------- \n"
 			    + "-- LOG SIZE MB \n"
 			    + "--------------------------- \n"
-			    + "DECLARE @logSizeMb table (database_id int, totalLogSizeMb int, usedLogSpaceInMb int, usedLogSpaceInPct numeric(5,1), logSpaceInMbSinceLastBackup int) \n"
+			    + "DECLARE @logSizeMb TABLE (database_id int, totalLogSizeMb int, usedLogSpaceInMb int, usedLogSpaceInPct numeric(5,1), logSpaceInMbSinceLastBackup int) \n"
 			    + "INSERT INTO @logSizeMb \n"
 			    + "EXEC sp_MSforeachdb ' \n"
 			    + "SELECT \n"
@@ -759,7 +788,7 @@ extends CountersModel
 			    + "--------------------------- \n"
 			    + "-- Backup Info \n"
 			    + "--------------------------- \n"
-			    + "DECLARE @backupInfo table (database_name nvarchar(128), type char(2), last_backup_finish_date datetime) \n"
+			    + "DECLARE @backupInfo TABLE (database_name nvarchar(128), type char(2), last_backup_finish_date datetime) \n"
 			    + "INSERT INTO @backupInfo \n"
 			    + "    SELECT \n"
 			    + "         bus.database_name \n"
@@ -895,8 +924,12 @@ extends CountersModel
 			    + "     DBName                   = d.Name \n"
 			    + "    ,d.database_id \n"
 			    + "    ,compatibility_level      = convert(int, d.compatibility_level) \n"
+			    + "    ,d.user_access_desc \n"
 			    + "    ,d.state_desc \n"
 			    + "    ,d.recovery_model_desc \n"
+			    + availabilityGroupName
+			    + availabilityGroupRole
+			    + availabilityGroupPrimaryServer
 			    + "    ,DataFileGroupCount       = data.fileGroupCount \n"
 			    + "    ,DBOwner                  = suser_name(d.owner_sid) \n"
 			    + "    ,d.log_reuse_wait \n"
@@ -919,6 +952,7 @@ extends CountersModel
 			    + "    ,LogOsDiskUsedPct         = osvLog.osUsedPct \n"
 			    + "    ,LogOsDiskFreePct         = osvLog.osFreePct \n"
 			    + "    ,LogOsFileName            = osvLog.physical_name \n"
+			    + "    ,LogFileName              = osvLog.name \n"
 			    + "    ,logFileId                = osvLog.file_id \n"
 			    + "    ,LogOsDiskUsedMb          = osvLog.osUsedMb \n"
 			    + "    ,LogOsDiskFreeMb          = osvLog.osFreeMb \n"
@@ -933,6 +967,7 @@ extends CountersModel
 			    + "    ,DataOsDiskUsedPct        = osvData.osUsedPct \n"
 			    + "    ,DataOsDiskFreePct        = osvData.osFreePct \n"
 			    + "    ,DataOsFileName           = osvData.physical_name \n"
+			    + "    ,DataFileName             = osvData.name \n"
 			    + "    ,DataFileId               = osvData.file_id \n"
 			    + "    ,DataOsDiskUsedMb         = osvData.osUsedMb \n"
 			    + "    ,DataOsDiskFreeMb         = osvData.osFreeMb \n"
@@ -972,6 +1007,7 @@ extends CountersModel
 			    + "LEFT OUTER JOIN osvData          ON d.database_id = osvData.database_id and osvData.row_num = 1 \n"
 			    + "LEFT OUTER JOIN osvLog           ON d.database_id = osvLog .database_id and osvLog .row_num = 1 \n"
 			    + "WHERE has_dbaccess(d.name) != 0 \n"
+			    + whereAvailabilityGroup
 			    + " \n"
 			    + "";
 
@@ -1641,7 +1677,6 @@ extends CountersModel
 			}
 
 			
-			
 			//-------------------------------------------------------
 			// LowOsDiskFreeSpaceInMb  -- MB
 			// 
@@ -1672,12 +1707,12 @@ extends CountersModel
 						String osFileName = "";
 						if (freeMb == logFreeMb)
 						{
-							osVolume    = cm.getAbsString(r, "LogOsVolume");
+							osVolume    = cm.getAbsString(r, "LogOsDisk");
 							osFileName  = cm.getAbsString(r, "LogOsFileName");
 						}
 						if (freeMb == dataFreeMb)
 						{
-							osVolume    = cm.getAbsString(r, "DataOsVolume");
+							osVolume    = cm.getAbsString(r, "DataOsDisk");
 							osFileName  = cm.getAbsString(r, "DataOsFileName");
 						}
 
@@ -1730,12 +1765,12 @@ extends CountersModel
 						String osFileName = "";
 						if (usedPct == logUsedPct)
 						{
-							osVolume    = cm.getAbsString(r, "LogOsVolume");
+							osVolume    = cm.getAbsString(r, "LogOsDisk");
 							osFileName  = cm.getAbsString(r, "LogOsFileName");
 						}
 						if (usedPct == dataUsedPct)
 						{
-							osVolume    = cm.getAbsString(r, "DataOsVolume");
+							osVolume    = cm.getAbsString(r, "DataOsDisk");
 							osFileName  = cm.getAbsString(r, "DataOsFileName");
 						}
 
@@ -1757,8 +1792,44 @@ extends CountersModel
 					}
 				}
 			}
+
 			
-		} // end: loop dbnames
+			//-------------------------------------------------------
+			// DbState, check: user_access_desc & state_desc
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("DbState"))
+			{
+				String user_access_desc = cm.getAbsString(r, "user_access_desc");
+				String state_desc       = cm.getAbsString(r, "state_desc");
+
+				if (user_access_desc != null && state_desc != null)
+				{
+					String alarm = "";
+
+					// This will ALWAYS return a Pattern
+					Pattern p = getDbStatePattern(dbname, _map_alarm_DbState);
+
+					// check: 'user_access_desc'
+					if (user_access_desc != null && !p.matcher(user_access_desc).matches())
+						alarm += "user_access='" + user_access_desc + "'";
+
+					// check: 'state_desc'
+					if (state_desc != null && !p.matcher(state_desc).matches())
+						alarm += (StringUtil.isNullOrBlank(alarm) ? "" : ", ") + "state='" + state_desc + "'";
+
+					if (StringUtil.hasValue(alarm))
+					{
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						AlarmEvent ae = new AlarmEventDatabaseState(cm, dbname, alarm, p.pattern());
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
+					}
+				}
+			}
+
+		} // end: loop dbname(s)
 	}
 
 	/**
@@ -1799,6 +1870,44 @@ extends CountersModel
     }
 
 
+	/**
+	 * Helper method to get the Compiled Regexp for a specific DB, using direct access to map or by check all key values in map with regexp...
+	 * 
+	 * @param dbname
+	 * @param map
+	 * @return
+	 */
+    private Pattern getDbStatePattern(String dbname, Map<String, Pattern> map)
+    {
+    	if (map == null)
+    	{
+    		_logger.warn("getDbStatePattern(dbname=|"+dbname+"|, map=|"+map+"|). map is NULL, which wasn't expected... some initialization must have failed.");
+			return Pattern.compile(DEFAULT_alarm_DbState);
+    	}
+
+		if (map.isEmpty())
+			return Pattern.compile(DEFAULT_alarm_DbState);
+
+    	if (StringUtil.isNullOrBlank(dbname))
+			return Pattern.compile(DEFAULT_alarm_DbState);
+
+    	// Lookup the map for DIRECT match
+    	Pattern p = map.get(dbname);
+    	if (p != null)
+    		return p;
+
+    	// Check all key in the match and check if they match the REGEXP in the key of the map
+    	for (String key : map.keySet())
+		{
+			if (dbname.matches(key))
+				return map.get(key);
+		}
+    	
+    	// no match
+		return Pattern.compile(DEFAULT_alarm_DbState);
+    }
+
+
 //	private Map<String, Number> _map_alarm_LowDbFreeSpaceInMb   = new HashMap<>();
 //	private Map<String, Number> _map_alarm_LowLogFreeSpaceInMb  = new HashMap<>();
 //	private Map<String, Number> _map_alarm_LowDbFreeSpaceInPct  = new HashMap<>();
@@ -1810,6 +1919,9 @@ extends CountersModel
 	
 	private Map<String, Number> _map_alarm_LowOsDiskFreeSpaceInMb;  // Note: do NOT initialize this here... since the initAlarms() is done in super, if initialized it will be overwritten here...
 	private Map<String, Number> _map_alarm_LowOsDiskFreeSpaceInPct; // Note: do NOT initialize this here... since the initAlarms() is done in super, if initialized it will be overwritten here...
+
+	private Map<String, Pattern> _map_alarm_DbState;
+
 
 	/**
 	 * Initialize stuff that has to do with alarms
@@ -1827,6 +1939,8 @@ extends CountersModel
 
 		_map_alarm_LowOsDiskFreeSpaceInMb  = new HashMap<>();
 		_map_alarm_LowOsDiskFreeSpaceInPct = new HashMap<>();
+
+		_map_alarm_DbState = new HashMap<>();
 
 		String prefix = "       ";
 		
@@ -1993,7 +2107,37 @@ extends CountersModel
 				}
 			}
 		}
+
 		
+		//--------------------------------------
+		// DbState
+		cfgVal = conf.getProperty(PROPKEY_alarm_DbState, DEFAULT_alarm_DbState);
+		if (StringUtil.hasValue(cfgVal))
+		{
+			Map<String, String> map = StringUtil.parseCommaStrToMap(cfgVal);
+			if (_logger.isDebugEnabled())
+				_logger.debug(prefix + "Initializing alarm 'DbState'. After parseCommaStrToMap, map looks like: "+map);
+			
+			for (String key : map.keySet())
+			{
+				String val = map.get(key);
+				
+				try
+				{
+					Pattern pattern = Pattern.compile(val);
+					_map_alarm_DbState.put(key, pattern);
+
+					_logger.info(prefix + "Initializing alarm. Using 'DbState', dbname='"+key+"', val="+val);
+				}
+				catch (PatternSyntaxException ex)
+				{
+					_logger.info(prefix + "Initializing alarm. Skipping 'DbState' enty dbname='"+key+"', val='"+val+"'. The value is not a Regexp. Instead the default '" + DEFAULT_alarm_DbState + "' will be used. Caught: " + ex);
+
+					Pattern pattern = Pattern.compile(DEFAULT_alarm_DbState);
+					_map_alarm_DbState.put(key, pattern);
+				}
+			}
+		}
 	}
 
 	public static final String  PROPKEY_alarm_OldestTranInSeconds             = CM_NAME + ".alarm.system.if.OldestTranInSeconds.gt";
@@ -2056,6 +2200,9 @@ extends CountersModel
 //	public static final String  PROPKEY_alarm_MandatoryDatabaseList           = CM_NAME + ".alarm.system.MandatoryDatabaseList";
 //	public static final String  DEFAULT_alarm_MandatoryDatabaseList           = "";
 	
+	public static final String  PROPKEY_alarm_DbState                         = CM_NAME + ".alarm.system.if.state.not.in";
+	public static final String  DEFAULT_alarm_DbState                         = ".*=(MULTI_USER|ONLINE)";
+	
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
@@ -2092,6 +2239,8 @@ extends CountersModel
 
 //		list.add(new CmSettingsHelper("MandatoryDatabaseList",                           PROPKEY_alarm_MandatoryDatabaseList           , String.class, conf.getProperty    (PROPKEY_alarm_MandatoryDatabaseList           , DEFAULT_alarm_MandatoryDatabaseList          ), DEFAULT_alarm_MandatoryDatabaseList          , "A list of databases that needs to be present. This is a comma separated list of databases (each name can contain regex)" ));
 		
+		list.add(new CmSettingsHelper("DbState",                          isAlarmSwitch, PROPKEY_alarm_DbState                         , String.class, conf.getProperty    (PROPKEY_alarm_DbState                         , DEFAULT_alarm_DbState                        ), DEFAULT_alarm_DbState                        , "If 'user_access_desc' or 'state_desc' do NOT match the regexp then send 'AlarmEventDatabaseState'. format: db1=(MULTI_USER|RESTRICTED_USER|ONLINE|OFFLINE ), db2=(MULTI_USER|ONLINE|RESTORING)  (Note: the 'dbname' can aslo be a regexp)" , new RegExpInputValidator()));
+
 		return list;
 	}
 	
