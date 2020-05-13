@@ -556,12 +556,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		    <li>Tooltip on 'wait_types' now also has a HTML link to descriptions made by 'Paul S. Randal'</li>
 		  </ul>
 		</LI>
+		<LI>Collector: 'ExecQueryStat' -- Added a property to choose how many minutes we want to look back</LI>
 		<LI>Tooltip: All Collectors that has 'session_id': Execute select * from sysprocesses and 'last know executed SQL Statement'.</LI>
 		<LI>Tooltip: All Collectors that has 'query_plan': Option to click in the tooltip to: Open XML Showplan in external Browser</LI>
 		<LI>New Collector: CmSpidWait          - What wait types are SPID's waiting on... also 3 graphs on this.</LI>
 		<LI>New Collector: CmDatabase          - Database Sizes and usage, on both OS and SQL-Server level</LI>
 		<LI>New Collector: CmOpenTransaction   - List open transactions and there last SQL Statements, and Execution Plan (if still executing)</LI>
 		<LI>New Collector: CmErrorLog          - Sniff the SQL Server error log</LI>
+		<LI>New Collector: CmAlwaysOn    - AlwaysOn or Availability Groups</LI>
+		<LI>New Collector: CmIndexPhysical</LI>
 		<LI>Tooltip on a xml showplan, 'open in SqlSentry Plan Explorer'</LI>
 		<LI>Configuration, store: select * from sys.dm_server_registry</LI>
 		<LI>CmActiveStatements: added columns 'ImBlockingOthersMaxTimeInSec' -- Max Time in Seconds this session_id has been Blocking other session_id's from executing, because this session_id hold lock(s), that some other session_id wants to grab.</LI>
@@ -576,6 +579,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Dbms Config: Add DbmsConfigIssue Warning for databases that has a lower compatibility_level than the servers default value</LI>
 		<LI>Dbms Config: SysDatabases - also print Database Scoped Configurations</LI>
 		<LI>Daily Report: if 'LogSizeInMb' is larger than 'DataSizeInMb' and 'recovery_model_desc' is FULL, then mark the cell in RED</LI>
+		<LI>Collector: 'PerfCounters': added some new graphs: FreeListStalls, MemoryGrantsPending, PlanCacheHitRate, PlanCacheMb, PlanCacheObjCnt, PlanCacheObjUse</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -676,6 +680,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>new menu: File -&gt; View -&gt; Preferences -&gt; ResultSet Table Properties...  to set various Preferences for how the ResultSet Table will display data</LI>
 		<LI>new Code Completion ':r' -- Code Completion Refresh</LI>
 		<LI>ResultSet Tables: Show in-exact number a bit better (in the settings dialog you can choose how many decimals you want to show)</LI>
+		<LI>Added keyboard shortcut for the User Defined Favorite Commands</LI>
+		<LI>Code Completion now also picks up entries from the ToolTipProvider (which you can add entries to in the files under ${HOME}/resources/DBMSTYPE_tooltip_provider.xml)</LI>
+		<LI>Better handling of decimal numbers (number of decimals)</LI>
+		<LI>Editor: TSQL (Microsoft flavor) Syntax highlight</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
