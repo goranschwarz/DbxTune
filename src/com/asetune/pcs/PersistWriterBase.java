@@ -1200,7 +1200,8 @@ public abstract class PersistWriterBase
 //			String nullable= getNullable(c, rsmd, isDeltaOrPct);
 			String colName = fill(lq + rsmd.getColumnLabel(c) + rq,         40);
 			String dtName  = fill(getDatatype(conn, c, rsmd, isDeltaOrPct), 20);
-			String nullable= getNullable(conn, c, rsmd, isDeltaOrPct);
+//			String nullable= getNullable(conn, c, rsmd, isDeltaOrPct);
+			String nullable= getNullable(true); // on alter, it should always be "nullable"
 
 			list.add("alter table " + lq+tabName+rq + " add  " + colName + " " + dtName + " " + nullable);
 		}

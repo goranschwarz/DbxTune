@@ -898,7 +898,8 @@ implements ICentralPersistWriter
 //			String dtName  = fill(getDatatype(c, rsmd, isDeltaOrPct),   20);
 //			String nullable= getNullable(c, rsmd, isDeltaOrPct);
 			String dtName  = fill(getDatatype(conn, c, rsmd, isDeltaOrPct),   20);
-			String nullable= getNullable(conn, c, rsmd, isDeltaOrPct);
+//			String nullable= getNullable(conn, c, rsmd, isDeltaOrPct);
+			String nullable= getNullable(true); // on alter, it should always be "nullable"
 
 			list.add("alter table " + lq+tabName+rq + " add  " + colName + " " + dtName + " " + nullable);
 		}

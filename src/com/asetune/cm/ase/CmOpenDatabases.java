@@ -1915,7 +1915,8 @@ extends CountersModel
 						{
 							val = new Double(hoursSinceAseRestart);
 
-							_logger.info("It looks like no DB Backups has been taken yet (maybe ASE was recently restarted). 'LastDbBackupAgeInHours' was null or -1. hoursSinceAseRestart=" + hoursSinceAseRestart + ", setting LastDbBackupAgeInHours=" + val + " for database '" + dbname + "'.");
+							// Not ethe extra space >>>>>>>>>_<<<<< here: this so it lines up with below 'LOG' which will probably also be printed in the log.
+							_logger.info("It looks like no DB  Backups has been taken yet (maybe ASE was recently restarted). 'LastDbBackupAgeInHours' was null or -1. hoursSinceAseRestart=" + hoursSinceAseRestart + ", setting LastDbBackupAgeInHours=" + val + " for database '" + dbname + "'.");
 						}
 					}
 					catch(Exception e) 

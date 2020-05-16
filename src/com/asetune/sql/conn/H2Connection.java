@@ -210,7 +210,19 @@ public class H2Connection extends DbxConnection
 		return rowCount;
 	}
 
-//	/**
+	/** 
+	 * Drop a schema 
+	 * @param schemaName
+	 * @throws SQLException 
+	 */
+	@Override
+	public void dropSchema(String schemaName) throws SQLException
+	{
+//		String qic = getMetaData().getIdentifierQuoteString();
+		dbExec("drop schema " + getLeftQuote() + schemaName + getRightQuote() + " CASCADE "); // Cascade to drop all object...
+	}
+
+	//	/**
 //	 * Create a schema if not already exists
 //	 * @param schemaName
 //	 * @throws SQLException 

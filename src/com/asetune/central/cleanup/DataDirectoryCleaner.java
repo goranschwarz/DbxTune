@@ -77,7 +77,8 @@ extends Task
 //	public static final String  DEFAULT_cron = "* * * * *";
 
 	public static final String  PROPKEY_multiplyFactor = "DataDirectoryCleaner.multiply.factor";
-	public static final double  DEFAULT_multiplyFactor = 2.0;
+//	public static final double  DEFAULT_multiplyFactor = 2.0;
+	public static final double  DEFAULT_multiplyFactor = 1.5;
 
 	public static final String  PROPKEY_printSpaceInfo = "DataDirectoryCleaner.print.space.info";
 	public static final boolean DEFAULT_printSpaceInfo = true;

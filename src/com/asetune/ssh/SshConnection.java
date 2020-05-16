@@ -23,6 +23,7 @@ package com.asetune.ssh;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.GraphicsEnvironment;
+import java.awt.HeadlessException;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.BufferedReader;
@@ -31,6 +32,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 
 import javax.swing.BoxLayout;
 import javax.swing.JDialog;
@@ -41,6 +43,7 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.swing.PromptForPassword;
@@ -328,18 +331,19 @@ public class SshConnection
 				
 				if (enableDSA)
 				{
-					File key = new File(_idDSAPath);
+					File privKey = new File(_idDSAPath);
+					File pubKey  = new File(_idDSAPath + ".pub");
 
-					if (key.exists())
+					if (privKey.exists())
 					{
-						logInfoMsg("SSH Authentication method 'publickey': Trying DSA using key file '"+key+"'.");
+						logInfoMsg("SSH Authentication method 'publickey': Trying DSA using key file '"+privKey+"'.");
 						
 //						EnterSomethingDialog esd = new EnterSomethingDialog(null, "DSA Authentication",
 //								new String[] { lastError, "Enter DSA private key password:" }, true);
 //						esd.setVisible(true);
 
 //						boolean res = _conn.authenticateWithPublicKey(_username, key, esd.answer);
-						boolean res = _conn.authenticateWithPublicKey(_username, key, _password);
+						boolean res = _conn.authenticateWithPublicKey(_username, privKey, _password);
 
 						if (res == true)
 						{
@@ -348,30 +352,43 @@ public class SshConnection
 						}
 
 						lastError = "DSA authentication failed.";
-
 						logInfoMsg("SSH Authentication method 'publickey': "+lastError);
+
+						// Print help message how to implement PUBLIC KEY Authentication
+						try {
+							if (pubKey.exists())
+							{
+								String keyType    = "DSA";
+    							String keyContent = FileUtils.readFileToString(pubKey, Charset.defaultCharset()).trim();
+    							String addKeyMethodHelpText = "To use the " + keyType + " Public Key, add the following '" + keyContent + "' as a new row in file '~" + _username + "/.ssh/authorized_keys' at server '" + _hostname + "'. Note: the 'authorized_keys' file needs ta have '-rw-------' (chmod 600 ~/.ssh/authorized_keys) authorization.";
+    
+    							logInfoMsg(addKeyMethodHelpText);
+							}
+						}
+						catch (IOException ignore) {}
 					}
 					else
 					{
-						logInfoMsg("Skipping: SSH Authentication method 'publickey': DSA Key File '"+key+"' not found.");
+						logInfoMsg("Skipping: SSH Authentication method 'publickey': DSA Key File '"+privKey+"' not found.");
 					}
 					enableDSA = false; // do not try again
 				}
 
 				if (enableRSA)
 				{
-					File key = new File(_idRSAPath);
+					File privKey = new File(_idRSAPath);
+					File pubKey  = new File(_idRSAPath + ".pub");
 
-					if (key.exists())
+					if (privKey.exists())
 					{
-						logInfoMsg("SSH Authentication method 'publickey': Trying RSA using key file '"+key+"'.");
+						logInfoMsg("SSH Authentication method 'publickey': Trying RSA using key file '"+privKey+"'.");
 						
 //						EnterSomethingDialog esd = new EnterSomethingDialog(null, "RSA Authentication",
 //								new String[] { lastError, "Enter RSA private key password:" }, true);
 //						esd.setVisible(true);
 
 //						boolean res = _conn.authenticateWithPublicKey(_username, key, esd.answer);
-						boolean res = _conn.authenticateWithPublicKey(_username, key, _password);
+						boolean res = _conn.authenticateWithPublicKey(_username, privKey, _password);
 
 						if (res == true)
 						{
@@ -380,12 +397,24 @@ public class SshConnection
 						}
 
 						lastError = "RSA authentication failed.";
-
 						logInfoMsg("SSH Authentication method 'publickey': "+lastError);
+
+						// Print help message how to implement PUBLIC KEY Authentication
+						try {
+							if (pubKey.exists())
+							{
+								String keyType    = "RSA";
+    							String keyContent = FileUtils.readFileToString(pubKey, Charset.defaultCharset()).trim();
+    							String addKeyMethodHelpText = "To use the " + keyType + " Public Key, add the following '" + keyContent + "' as a new row in file '~" + _username + "/.ssh/authorized_keys' at server '" + _hostname + "'. Note: the 'authorized_keys' file needs ta have '-rw-------' (chmod 600 ~/.ssh/authorized_keys) authorization.";
+    
+    							logInfoMsg(addKeyMethodHelpText);
+							}
+						}
+						catch (IOException ignore) {}
 					}
 					else
 					{
-						logInfoMsg("Skipping: SSH Authentication method 'publickey': RSA Key File '"+key+"' not found.");
+						logInfoMsg("Skipping: SSH Authentication method 'publickey': RSA Key File '"+privKey+"' not found.");
 					}
 					enableRSA = false; // do not try again
 				}
@@ -437,14 +466,21 @@ public class SshConnection
 				boolean res = false;
 				if (PROMPT_FOR_PASSWORD.equals(_password))
 				{
-					// Prompt for password
-					String promptPasswd = PromptForPassword.show(null, "Please specify the Password for SSH connection to '"+_hostname+"'.", _hostname, _username, SaveType.TO_CONFIG_USER_TEMP, "unused");
+					try
+					{
+						// Prompt for password
+						String promptPasswd = PromptForPassword.show(null, "Please specify the Password for SSH connection to '"+_hostname+"'.", _hostname, _username, SaveType.TO_CONFIG_USER_TEMP, "unused");
 
-					// Authenticate
-					res = _conn.authenticateWithPassword(_username, promptPasswd);
-					
-					if (res)
-						_password = promptPasswd;
+						// Authenticate
+						res = _conn.authenticateWithPassword(_username, promptPasswd);
+						
+						if (res)
+							_password = promptPasswd;
+					}
+					catch (HeadlessException ex) 
+					{
+						throw new IOException("No password was supplied or '<PROMPT_FOR_PASSWORD>' was specified for user '" + _username + "', also check that the user exists at the remote host '" + _hostname + "'. And we are in NO-GUI mode... So I can not prompt for password.", ex);
+					}
 				}
 				else
 				{

@@ -3254,6 +3254,7 @@ public class CentralPersistReader
 			String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
 			String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 
+			// CENTRAL_SESSIONS
 			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_SESSIONS, null, true);
 
 			String sql = "delete from " + tabName + " where " + lq + "ServerName" + rq + " = '" + name + "'";

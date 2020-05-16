@@ -733,20 +733,20 @@ extends CountersModel
 		String calcDivPgsToMb     = "(1024*1024/@@maxpagesize)";                   // for 2K=512, 4K=256, 8K=128, 16K=64 
 		String calcPagesPerIO     = "(IOBufferSize/@@maxpagesize)";
 		String calcPagesRead      = "(PagesRead/"+calcPagesPerIO+")";
-		String calcPhysicalReads  = "PhysicalReads";
+//		String calcPhysicalReads  = "PhysicalReads";
 
 //		if (srvVersion >= 15700)
 //		if (srvVersion >= 1570000)
 		if (srvVersion >= Ver.ver(15,7))
 		{
-			calcPhysicalReads = "(PhysicalReads+APFReads)";
+//			calcPhysicalReads = "(PhysicalReads+APFReads)";
 
 			LogicalReads      = "LogicalReads, \n";
 			PhysicalWrites    = "PhysicalWrites, \n";
-			RealPhysicalReads = "RealPhysicalReads = PhysicalReads + APFReads, \n";
-			PhysicalReadsPct  = "PhysicalReadsPct = CASE WHEN (PagesRead > 0) THEN (((1.0*PhysicalReads*"+calcPagesPerIO+")/(1.0*PagesRead)) * 100.0) ELSE 0.0 END,\n";
+			RealPhysicalReads = "RealPhysicalReads = convert(bigint, PhysicalReads) + convert(bigint, APFReads), \n";
+			PhysicalReadsPct  = "PhysicalReadsPct = CASE WHEN (PagesRead > 0) THEN convert(numeric(10,1), (((1.0*PhysicalReads*"+calcPagesPerIO+")/(1.0*PagesRead)) * 100.0)) ELSE 0.0 END,\n";
 			APFReads          = "APFReads, \n";
-			APFReadsPct       = "APFReadsPct = CASE WHEN (PagesRead > 0) THEN (((1.0*APFReads*"+calcPagesPerIO+")/(1.0*PagesRead)) * 100.0) ELSE 0.0 END,\n";
+			APFReadsPct       = "APFReadsPct = CASE WHEN (PagesRead > 0) THEN convert(numeric(10,1), (((1.0*APFReads*"+calcPagesPerIO+")/(1.0*PagesRead)) * 100.0)) ELSE 0.0 END,\n";
 			APFPercentage     = "APFPercentage, \n";
 			WashSize          = "WashSize, \n";
 			CacheHitRate      = "CacheHitRate = convert(numeric(10,1), 100 - ("+calcPagesRead+"*1.0/(LogicalReads+1)) * 100.0), \n";
