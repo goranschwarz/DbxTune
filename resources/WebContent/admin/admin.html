@@ -181,9 +181,16 @@
     -->
           </div>
 
+          <b>Change</b> any User Defined Profiles
+          <div id="dbx-change-udp-div">
+            <div id="dbx-change-udp-list">
+              <button type="button" class="btn btn-sm btn-primary">Loading User Defined Profile list <i class='fa fa-spinner fa-spin '></i></button>
+            </div>
+          </div>
+
           <b>Remove</b> any User Defined Profiles (<b>Warning: NO Confirm dialog!</b>)
-          <div id="dbx-removeUdp-div">
-            <div id="dbx-removeUdp-list">
+          <div id="dbx-remove-udp-div">
+            <div id="dbx-remove-udp-list">
               <button type="button" class="btn btn-sm btn-primary">Loading User Defined Profile list <i class='fa fa-spinner fa-spin '></i></button>
             </div>
           </div>
@@ -308,6 +315,50 @@
   </div>  
 
 
+  <!-- Modal Dialog: Change User Defined Profiles for Graphs -->
+  <div class="modal fade" id="dbx-change-udp-dialog" tabindex="-1" role="dialog" aria-labelledby="dbx-change-udp-dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="dbx-change-udp-dialog-title">Changing Graph Profile for '<b class="title"></b>'</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          Things you can do in this dialog
+          <ul>
+            <li><b>Add a graph</b> - Click the 'Add...' button, or select the input field, then type what you search for...</li>
+            <li><b>Remove a graph</b> - Simply press the 'x' on the Graph Item</li>
+            <li><b>Reorder graph display order</b> - Do <i>drag & drop</i></li>
+            <li><b>Reset this profile</b> - Remove all entries and press 'Save'</li>
+          </ul>
+          <input type="text" id="dbx-change-udp-input" class="demo-default" placeholder="Type to Search...">
+          <span id="dbx-change-udp-dialog-select-cnt">X</span> Graphs selected, <span id="dbx-change-udp-dialog-available-cnt">Y</span> available Graphs
+          <span><button type="button" class="btn btn-default btn-sm btn-add">Add...</button></span>
+		  <br>
+          <div class="form-group row mt-1 mb-0">
+            <label for="dbx-change-udp-desc" class="col-sm-2 col-form-label">Profile Desc</label>
+            <div class="col-sm-10">
+              <input type="text" class="form-control form-control-sm" id="dbx-change-udp-desc" placeholder="Describe the profile, shows up in tooltip">
+            </div>
+          </div>
+          <div class="form-group row mb-0">
+            <label for="dbx-change-udp-urlOpt" class="col-sm-2 col-form-label">URL Options</label>
+            <div class="col-sm-10">
+              <input type="text" class="form-control form-control-sm" id="dbx-change-udp-urlOpt" placeholder="Other properties passed to the graph.html page, example: gcols=3">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary btn-ok">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>  
+
+
 <script>
   // Global variables
   var _graphDesc = [];
@@ -335,6 +386,11 @@
   });
 
   
+  /**
+   * ---------------------------------------------------------------------------
+   * -- System Supplied Profile
+   * ---------------------------------------------------------------------------
+   */
 	$('#dbx-change-ssp-dialog').on('click', '.btn-add', function(e) {
 		var selectize = $('#dbx-change-ssp-input').selectize()[0].selectize;
 		selectize.open();
@@ -410,7 +466,7 @@
 		// Get all 'tableName' entries from SSP System Selected Profile
 		let sspEntries = ssp._SSP_.map(a => a.tableName);
 
-//		console.log("#dbx-change-ssp-dialog: preSelectedEntries: "+sspEntries, sspEntries);
+		console.log("#dbx-change-ssp-dialog: preSelectedEntries: "+sspEntries, sspEntries);
 //		console.log("#dbx-change-ssp-dialog: ALL.length: "+ssp._ALL_.length);
 
 //		var selectize = $('#dbx-change-ssp-input').selectize()[0].selectize;
@@ -439,11 +495,11 @@
 			items:   sspEntries,
 			onItemAdd: function(value, item) {
 				//console.log("onItemAdd()", value, item);
-				setGraphCountSelection();
+				setGraphCountSelectionSsp();
 			},
 			onItemRemove: function(value) {
 				//console.log("onItemRemove()", value);
-				setGraphCountSelection();
+				setGraphCountSelectionSsp();
 			},
 			render: {
 				item: function(item, escape) {
@@ -470,7 +526,7 @@
 //		$('#dbx-change-ssp-input').selectize()[0].selectize.refreshOptions();
 //		$('#dbx-change-ssp-input').selectize()[0].selectize.refreshItems();
 	  
-		setGraphCountSelection();
+		setGraphCountSelectionSsp();
 
 	  $('.title', this).text(dbxProduct);
       $('.btn-ok', this).data('recordId', dbxProduct);
@@ -479,7 +535,7 @@
   /**
    * set "#dbx-change-ssp-dialog-select-cnt" and "#dbx-change-ssp-dialog-available-cnt"
    */
-  function setGraphCountSelection() 
+  function setGraphCountSelectionSsp() 
   {
 	let selectedItems   = $('#dbx-change-ssp-input').selectize()[0].selectize.items.length;
 	let availableItems  = $('#dbx-change-ssp-input').selectize()[0].selectize.order;
@@ -490,6 +546,251 @@
 //	$("#dbx-change-ssp-dialog-unselected-cnt").text( unSelectedItems );
   }
   
+  
+  
+  
+  
+  /**
+   * ---------------------------------------------------------------------------
+   * -- User Defined Profile
+   * ---------------------------------------------------------------------------
+   */
+	$('#dbx-change-udp-dialog').on('click', '.btn-add', function(e) {
+		var selectize = $('#dbx-change-udp-input').selectize()[0].selectize;
+		selectize.open();
+	});
+	// -------------- OK ---------------------
+	$('#dbx-change-udp-dialog').on('click', '.btn-ok', function(e) {
+		var modalDiv = $(e.delegateTarget);
+		var profileName = $(this).data('recordId');
+		console.log("#dbx-change-udp-dialog: profileName: "+profileName);
+		modalDiv.addClass('working');
+		
+		var profileDescription = document.getElementById("dbx-change-udp-desc"  ).value;
+		var profileUrlOptions  = document.getElementById("dbx-change-udp-urlOpt").value;
+
+		var selectize = $('#dbx-change-udp-input').selectize()[0].selectize;
+		var selectedItems = $.map(selectize.items, function(value) {
+			return selectize.options[value];
+		});
+		console.log("#dbx-change-udp-dialog: selectedItems: "+selectedItems, selectedItems);
+		console.log("#dbx-change-udp-dialog: selectize.items: "+selectize.items, selectize.items);
+
+		// construct JSON TO Send: [ {graph:"fullGraphName1"}, {graph:"fullGraphName2"}, {graph:"fullGraphName3"}... ]
+		var selectedJson = $.map(selectize.items, function(value) {
+			var srvGraphArr = value.split("|");
+			return { srv: srvGraphArr[0], graph: srvGraphArr[1] };
+		});
+		console.log("#dbx-change-udp-dialog: selectedJson: "+selectedJson, selectedJson);
+		
+		var sendData = {
+			productString:      '',
+			userName:           '',
+			profileType:        'USER_SELECTED',
+			profileName:        profileName,
+			profileDescription: profileDescription,
+			profileValue:       selectedJson,
+			profileUrlOptions:  profileUrlOptions
+		};
+
+		console.log("SAVE Send JSON: ", sendData);
+		
+		// send the update request
+		$.ajax({
+			url: '/api/graph/profiles?dbxProduct='+profileName,   // Note: the dbxProduct is not really used...
+			type: 'post',
+			dataType: 'json',
+			contentType: 'application/json',
+			data: JSON.stringify(sendData),
+			success: function(data, status) {
+				console.log("success.status: " + status);
+				console.log("success.data: " + data);
+				
+				setTimeout(function() {
+					refreshGraphDescriptions();
+					modalDiv.modal('hide').removeClass('working');
+				}, 10);
+			},
+			error: function(xhr, desc, err) 
+			{
+				console.log(xhr);
+				console.log("Details: " + desc + "\nError: " + err);
+			}
+		});
+	});
+	// -------------- OPEN DIALOG ---------------------
+	$('#dbx-change-udp-dialog').on('show.bs.modal', function(e) {
+		var data = $(e.relatedTarget).data();
+		var profileName = data.recordId;
+
+		console.log("#dbx-change-udp-dialog: profileName: "+profileName);
+		var graphDesc1 = [];
+		var selectedGraphs = [];
+		var profileDescription = '';
+		var profileUrlOptions  = '';
+		
+		$.ajax(
+		{
+			url: "/api/graph/description",
+			type: 'get',
+			async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+
+			success: function(data, status) 
+			{
+				// console.log("RECEIVED DATA: "+data);
+				graphDesc1 = JSON.parse(data);
+				//console.log("ajax.success(): new values for graphDesc1.", graphDesc1);
+			},
+			error: function(xhr, desc, err) 
+			{
+				console.log(xhr);
+				console.log("Details: " + desc + "\nError: " + err);
+			}
+		}); // end: ajax call
+		//console.log("AFTER: ajax.success(): new values for graphDesc1.", graphDesc1);
+
+		$.ajax(
+		{
+//			url: "/api/graph/profiles?name="+profileName,
+			url: "/api/graph/profiles",
+			type: 'get',
+			async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+
+			success: function(data, status) 
+			{
+				// console.log("RECEIVED DATA: "+data);
+//				selectedGraphs = JSON.parse(data);
+				var tmp = JSON.parse(data);
+				for (var i=0; i < tmp.length; i++) 
+				{
+					if ( tmp[i].profileName === profileName && tmp[i].profileType === 'USER_SELECTED' && tmp[i].userName === '' )
+					{
+						profileDescription = tmp[i].profileDescription;
+						profileUrlOptions  = tmp[i].profileUrlOptions;
+						selectedGraphs     = tmp[i].profileValue;
+						break;
+					}
+				}
+				//console.log("ajax.success(): new values for selectedGraphs.", selectedGraphs);
+			},
+			error: function(xhr, desc, err) 
+			{
+				console.log(xhr);
+				console.log("Details: " + desc + "\nError: " + err);
+			}
+		}); // end: ajax call
+		//console.log("AFTER: ajax.success(): new values for selectedGraphs.", selectedGraphs);
+
+		// Transform JSON from: REST object to what we want to display in the POPUP
+		var graphDesc2 = [];
+		Object.keys(graphDesc1).forEach(function(dbxProdKey) {
+			var srvEntry = graphDesc1[dbxProdKey];
+			//console.log("dbxProdKey='"+dbxProdKey+"', srvEntry='"+srvEntry+"'.");
+
+			Object.keys(srvEntry).forEach(function(srvKey) {
+				if ( ! srvKey.startsWith("_") )
+				{
+					var gda = srvEntry[srvKey]; // gda = GraphDescriptionArray
+					//console.log("srvKey='"+srvKey+"', gda='"+gda+"'.");
+
+					Object.keys(gda).forEach(function(i) {
+						var gd = gda[i]; // gd = GraphDescription
+						gd.srvName = srvKey;
+						gd.srvGraph = { srv: srvKey, graph: gd.tableName };
+						gd.srvGraphStr = srvKey + "|" + gd.tableName;
+						//console.log("i='"+i+"'.", gd);
+
+						graphDesc2.push(gd);
+					});
+				}
+			});
+		});
+		//console.log("AFTER: transform: graphDesc2.", graphDesc2);
+
+		// Put "pre selected" values into selectedEntries.
+		// The PK: is field: srvGraphStr, which is "NameOfTheServer|NameOfTheFullGraphName"
+		var selectedEntries = [];
+		for (var i=0; i < selectedGraphs.length; i++) 
+		{
+			for (var j=0; j < graphDesc2.length; j++) 
+			{
+				if (graphDesc2[j].srvName === selectedGraphs[i].srv && graphDesc2[j].tableName === selectedGraphs[i].graph) 
+					selectedEntries.push( graphDesc2[j].srvGraphStr );
+			}
+		}
+		console.log("selectedEntries: ", selectedEntries);
+		
+
+		$('#dbx-change-udp-input').selectize()[0].selectize.destroy();
+		$('#dbx-change-udp-input').selectize({
+			plugins: ['drag_drop', 'remove_button'],
+			create: false, // do not allow new entries
+			persist: false,
+			maxItems: null,
+			valueField: 'srvGraphStr',
+			searchField: ['srvName', 'dbxProduct', 'cmName', 'graphName', 'graphLabel', 'graphCategory'],
+			options: graphDesc2,
+			items:   selectedEntries,
+			onItemAdd: function(value, item) {
+				//console.log("onItemAdd()", value, item);
+				setGraphCountSelectionUdp();
+			},
+			onItemRemove: function(value) {
+				//console.log("onItemRemove()", value);
+				setGraphCountSelectionUdp();
+			},
+			render: {
+				item: function(item, escape) {
+					//console.log("render.item()", item);
+					return '<div>' +
+						'<span>' + escape(item.srvName) + '@<i>'+escape(item.dbxProduct)+'</i></span>' +
+						' - <span>' + escape(item.cmName) + '</span>' +
+						' - <span>' + escape(item.graphName) + '</span>' +
+						' - <span><i>' + escape(item.graphCategory) + '</span></i>' +
+						'<br><span><b>' + escape(item.graphLabel) + '</b></span>' +
+					'</div>';
+				},
+				option: function(item, escape) {
+					//console.log("render.option()", item);
+					return '<div class="dbx-topHr">' +
+						'<span>' + escape(item.srvName) + '@<i>'+escape(item.dbxProduct)+'</i></span>' +
+						' - <span>' + escape(item.cmName) + '</span>' +
+						' - <span>' + escape(item.graphName) + '</span>' +
+						' - <span><i>' + escape(item.graphCategory) + '</i></span>' +
+						'<br><span><b>' + escape(item.graphLabel) + '</b></span>' +
+					'</div>';
+				}
+			}
+		});
+//		$('#dbx-change-udp-input').selectize()[0].selectize.setValue(sspEntries);
+//		$('#dbx-change-udp-input').selectize()[0].selectize.refreshOptions();
+//		$('#dbx-change-udp-input').selectize()[0].selectize.refreshItems();
+
+		setGraphCountSelectionUdp();
+
+		document.getElementById("dbx-change-udp-desc"  ).value = profileDescription;
+		document.getElementById("dbx-change-udp-urlOpt").value = profileUrlOptions;
+
+
+		$('.title', this).text(profileName);
+		$('.btn-ok', this).data('recordId', profileName);
+	});
+  
+  /**
+   * set "#dbx-change-udp-dialog-select-cnt" and "#dbx-change-udp-dialog-available-cnt"
+   */
+  function setGraphCountSelectionUdp() 
+  {
+	let selectedItems   = $('#dbx-change-udp-input').selectize()[0].selectize.items.length;
+	let availableItems  = $('#dbx-change-udp-input').selectize()[0].selectize.order;
+	let unSelectedItems = availableItems - selectedItems;
+	
+	$("#dbx-change-udp-dialog-select-cnt")   .text( selectedItems );
+	$("#dbx-change-udp-dialog-available-cnt").text( availableItems );
+//	$("#dbx-change-udp-dialog-unselected-cnt").text( unSelectedItems );
+  }
+  
+
   /**
    * Restart server
    */
@@ -828,18 +1129,25 @@
 			// console.log("RECEIVED DATA: "+data);
 			var jsonResp = JSON.parse(data);
 
-			var html = "";
+			var html_1 = "";
+			var html_2 = "";
 			for (var i=0; i<jsonResp.length; i++) {
 				var entry = jsonResp[i];
 
 				if (entry.profileName === "")
 					continue;
-//				html += '<a class="btn btn-sm btn-danger mb-2 mr-2" href="/api/FIXME?profileName='+entry.profileName+'" role="button">'+entry.profileName+'</a>';
-				html += '<button type="button" class="btn btn-sm btn-danger mb-2 mr-2" onclick=\'removeUserDefinedProfile("'+entry.profileName+'")\'>'+entry.profileName+'</button>';
+//				html_1 += '<a class="btn btn-sm btn-danger mb-2 mr-2" href="/api/FIXME?profileName='+entry.profileName+'" role="button">'+entry.profileName+'</a>';
+				html_1 += '<button type="button" class="btn btn-sm btn-danger  mb-2 mr-2" onclick=\'removeUserDefinedProfile("'+entry.profileName+'")\'>'+entry.profileName+'</button>';
+//				html_2 += '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2" onclick=\'changeUserDefinedProfile("'+entry.profileName+'")\'>'+entry.profileName+'</button>';
+				html_2 += '<span><button type="button" class="btn btn-sm btn-primary mb-2 mr-2" data-record-id="'+entry.profileName+'" data-record-title="'+entry.profileName+'" data-toggle="modal" data-backdrop="static" data-target="#dbx-change-udp-dialog">'+entry.profileName+'</button></span>';
 			}
-			if (html === "") 
-				html = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No User Defined Profiles was Found</button>';
-			$('#dbx-removeUdp-list').html(html);
+			if (html_1 === "") 
+				html_1 = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No User Defined Profiles was Found</button>';
+			if (html_2 === "") 
+				html_2 = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No User Defined Profiles was Found</button>';
+
+			$('#dbx-remove-udp-list').html(html_1);
+			$('#dbx-change-udp-list').html(html_2);
 		},
 		error: function(xhr, desc, err) 
 		{
