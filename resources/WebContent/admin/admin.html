@@ -447,13 +447,6 @@
 				console.log("Details: " + desc + "\nError: " + err);
 			}
 		});
-		
-		// removeServer(dbxProduct, modalDiv);
-		// $.ajax({url: '/api/record/' + id, type: 'DELETE'})
-		// $.post('/api/record/' + id).then()
-		// setTimeout(function() {
-		//     modalDiv.modal('hide').removeClass('working');
-		// }, 1000)
 	});
 	$('#dbx-change-ssp-dialog').on('show.bs.modal', function(e) {
 		var data = $(e.relatedTarget).data();
@@ -721,6 +714,8 @@
 		console.log("selectedEntries: ", selectedEntries);
 		
 
+		$('#dbx-change-udp-input').selectize()[0].selectize.clearOptions();
+		$('#dbx-change-udp-input').selectize()[0].selectize.clear(false);
 		$('#dbx-change-udp-input').selectize()[0].selectize.destroy();
 		$('#dbx-change-udp-input').selectize({
 			plugins: ['drag_drop', 'remove_button'],
