@@ -362,7 +362,7 @@ extends CountersModel
 	@Override
 	public String[] getDdlDetailsColNames()
 	{
-		String[] sa = {"sql_handle", "plan_handle"};
+		String[] sa = {"dbname", "plan_handle"};
 		return sa;
 	}
 	/**

@@ -522,6 +522,35 @@ public class CentralPersistReader
 	}
 
 	/**
+	 * Clear All Active Alarms
+	 * @param servername name of server
+	 * @return
+	 */
+	public int clearAlarmsAllActive(String servername)
+	throws SQLException
+	{
+		if (StringUtil.isNullOrBlank(servername))
+			throw new RuntimeException("clearAlarmsAllActive(): mandatory parameter 'servername' was null or blank.");
+
+		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
+		try // block with: finally at end to return the connection to the ConnectionPool
+		{
+			String fullTabName = CentralPersistWriterBase.getTableName(conn, servername, Table.ALARM_ACTIVE, null, true);
+
+			String sql = "delete from " + fullTabName;
+			
+			try (Statement stmnt = conn.createStatement())
+			{
+				return stmnt.executeUpdate(sql);
+			}
+		}
+		finally
+		{
+			releaseConnection(conn);
+		}
+	}
+	
+	/**
 	 * Get a list of historical Alarms
 	 * @param servername Name of the server (or if '' null, then all servers, with the below restrictions) 
 	 * @param category  DISK, CPU, etc...

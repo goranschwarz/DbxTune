@@ -20,7 +20,6 @@
  ******************************************************************************/
 package com.asetune.pcs.inspection;
 
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -111,6 +110,40 @@ extends ObjectLookupInspectorAbstract
 			{
 				String xmlPlan = SqlServerUtils.getXmlQueryPlan(conn, objectName);
 				entry.setObjectText( xmlPlan );
+				
+				// Look for specific texts in the XML plan and setExtraInfoText() if found! 
+				if (xmlPlan != null)
+				{
+					int cnt = 0;
+
+					boolean hasMissingIndexes = false;
+					if (xmlPlan.indexOf("<MissingIndexes>") >= 0)
+					{
+						cnt++;
+						hasMissingIndexes = true;
+					}
+
+					// Others we might want to look for: 
+					//  -- Queries_with_Index_Scans_Due_to_Implicit_Conversions
+					//  -- Memory Grants... spill to disk...
+					
+					if ( cnt > 0 )
+					{
+						// Build a JSON String withe the info, it might be easier to parse if we add many different options here.
+						StringBuilder sb = new StringBuilder();
+						// BEGIN JSON
+						sb.append("{");
+
+						if (hasMissingIndexes)
+							sb.append("\"hasMissingIndexes\": true");
+
+						// END JSON
+						sb.append("}");
+
+						// Set the JSON to ExtraInfoText
+						entry.setExtraInfoText(sb.toString());
+					}
+				}
 			}
 			catch(SQLException e)
 			{

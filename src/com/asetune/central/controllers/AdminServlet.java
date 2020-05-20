@@ -190,6 +190,22 @@ public class AdminServlet extends HttpServlet
 			out.close();
 			return;
 		}
+		else if ("clearActiveAlarms".equals(inputOp))
+		{
+			if (StringUtil.isNullOrBlank(inputName))
+				throw new ServletException("No input parameter named 'name'.");
+
+			ActionObject ao = clearActiveAlarmsForServer(inputName);
+
+			ObjectMapper om = Helper.createObjectMapper();
+			String payload = om.writeValueAsString(ao);
+			
+			out.println(payload);
+			
+			out.flush();
+			out.close();
+			return;
+		}
 		else 
 		{
 			printHelp(out, "No operation named '"+inputOp+"'.");
@@ -401,6 +417,33 @@ public class AdminServlet extends HttpServlet
 			{
 				ao.add("ENABLE", new ActionType(ActionStatus.FAIL, "Problems Enabling server '"+name+"'. Caught: "+e));
 			}
+		}
+
+		return ao;
+	}
+	
+	
+	
+	/**
+	 * Clear Active Alarms for a Specific Server in DbxCentral<br>
+	 * @param name
+	 * 
+	 * @return A ActionObject that can be converted to a JSON object with what we have done
+	 */
+	private ActionObject clearActiveAlarmsForServer(String name)
+	{
+		ActionObject ao = new ActionObject();
+
+		CentralPersistReader reader = CentralPersistReader.getInstance();
+
+		try
+		{
+			int rowsDeleted = reader.clearAlarmsAllActive(name);
+			ao.add("REMOVE-ACTIVE-ALARMS", new ActionType(ActionStatus.SUCCESS, "Removed " + rowsDeleted + " Active Alarm(s) for server '"+name+"'."));
+		} 
+		catch (SQLException e) 
+		{
+			ao.add("REMOVE-ACTIVE-ALARMS", new ActionType(ActionStatus.FAIL, "Problems removing Active Alarm(s) for server '"+name+"'. Caught: "+e));
 		}
 
 		return ao;

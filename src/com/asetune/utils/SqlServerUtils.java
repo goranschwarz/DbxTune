@@ -76,11 +76,11 @@ public class SqlServerUtils
 
 		// RS> Col# Label      JDBC Type Name              Guessed DBMS type Source Table
 		// RS> ---- ---------- --------------------------- ----------------- ------------
-		// RS> 1    dbid       java.sql.Types.SMALLINT     smallint          -none-      
-		// RS> 2    objectid   java.sql.Types.INTEGER      int               -none-      
-		// RS> 3    number     java.sql.Types.SMALLINT     smallint          -none-      
-		// RS> 4    encrypted  java.sql.Types.BIT          bit               -none-      
-		// RS> 5    query_plan java.sql.Types.LONGNVARCHAR xml               -none-      
+		// RS> 1    dbid       java.sql.Types.SMALLINT     smallint          -none-       // ID of the context database that was in effect when the Transact-SQL statement corresponding to this plan was compiled. For ad hoc and prepared SQL statements, the ID of the database where the statements were compiled. Column is nullable.
+		// RS> 2    objectid   java.sql.Types.INTEGER      int               -none-       // ID of the object (for example, stored procedure or user-defined function) for this query plan. For ad hoc and prepared batches, this column is null. Column is nullable.
+		// RS> 3    number     java.sql.Types.SMALLINT     smallint          -none-       // Numbered stored procedure integer. For example, a group of procedures for the orders application may be named orderproc;1, orderproc;2, and so on. For ad hoc and prepared batches, this column is null. Column is nullable.
+		// RS> 4    encrypted  java.sql.Types.BIT          bit               -none-       // Indicates whether the corresponding stored procedure is encrypted. 0 = not encrypted, 1 = encrypted.   Column is not nullable.
+		// RS> 5    query_plan java.sql.Types.LONGNVARCHAR xml               -none-       // Contains the compile-time Showplan representation of the query execution plan that is specified with plan_handle. The Showplan is in XML format. One plan is generated for each batch that contains, for example ad hoc Transact-SQL statements, stored procedure calls, and user-defined function calls. Column is nullable.
 
 		String str = null;
 		try ( PreparedStatement stmnt = conn.prepareStatement(sql) )

@@ -40,6 +40,7 @@ import com.asetune.central.pcs.ICentralPersistWriter;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
@@ -252,6 +253,13 @@ extends Task
 		// Iterate over Graph Tables and remove records
 		for (String name : graphTables)
 		{
+			// check if the table exists... If not just continue...
+			if ( ! DbUtils.checkIfTableExistsNoThrow(conn, null, schema, name) )
+			{
+				_logger.info(_prefix + "Skipping, table do not exist: schema '"+schema+"' table '"+name+"'.");
+				continue;
+			}
+			
 			// TODO: delete TOP #### from ... in a loop so we do not use up to much transaction log for some databases
 			
 			sql = "delete from "+lq+schema+rq+"."+lq+name+rq+" where "+lq+"SessionSampleTime"+rq+" < ?";

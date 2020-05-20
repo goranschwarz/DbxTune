@@ -203,6 +203,21 @@
       </div>  <!-- end: card -->
 
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <!-- DBMS Alarm Admin -->
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <div id='alarm-admin' class='card border-dark mb-3'>
+        <h5 class='card-header'>Alarm Administration (at DbxCentral)</h5>
+        <div class='card-body'>
+
+          <b>Clear</b> Active alarm(s) in DbxCentral for any off the below servers...
+          <div id="dbx-alarm-clear-server-list">
+              <button type="button" class="btn btn-sm btn-primary">Loading server list <i class='fa fa-spinner fa-spin '></i></button>
+          </div>
+    
+        </div>  <!-- end: card-body -->
+      </div>  <!-- end: card -->
+
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
       <!-- DBX Central Admin -->
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
       <div id='dbxc-admin' class='card border-dark mb-3'>
@@ -963,7 +978,40 @@
       }
     }); // end: ajax call
   }
-  
+
+  /**
+   * remove Server
+   */
+  function clearActiveAlarms(serverName)
+  {
+    console.log("clearActiveAlarms() serverName: "+serverName);
+    $.ajax(
+    {
+      url: "/admin?op=clearActiveAlarms&name="+serverName,
+      type: 'get',
+      //async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+      
+      success: function(data, status) 
+      {
+        var jsonResp = JSON.parse(data);
+        var actions = jsonResp.actions;
+        console.log("actions: "+actions, actions);
+
+		alert(actions["REMOVE-ACTIVE-ALARMS"].message);
+//		BootstrapDialog.show({
+//			title: jsonResp.REMOVE-ACTIVE-ALARMS.status,
+//            message: jsonResp.REMOVE-ACTIVE-ALARMS.message
+//        });
+      },
+      error: function(xhr, desc, err) 
+      {
+        console.log(xhr);
+        console.log("Details: " + desc + "\nError: " + err);
+      }
+    }); // end: ajax call
+  }
+
+
   /**
    * logout from basic authentication...
    * simply make a "dummy" call with a not existing user
@@ -1041,6 +1089,7 @@
 			var htmlRemove  = "";
 			var htmlEnable  = "";
 			var htmlDisable = "";
+			var htmlClearAlarm = "";
 			for (var i=0; i<jsonResp.length; i++) 
 			{
 				var entry = jsonResp[i];
@@ -1074,7 +1123,9 @@
 				if ((parseInt(entry.status) & 1) === 1) // 1=DISABLED
 					htmlEnable  += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'setServerStatus("enable",  "'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
 				else
-					htmlDisable += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'setServerStatus("disable", "'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';          
+					htmlDisable += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'setServerStatus("disable", "'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
+
+				htmlClearAlarm  += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'clearActiveAlarms("'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
 			}
 			if (htmlRemove  === "") htmlRemove  = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
 			if (htmlDisable === "") htmlDisable = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No Servers Found</button>';
@@ -1083,6 +1134,8 @@
 			$('#dbx-remove-server-list').html(htmlRemove);
 			$('#dbx-disable-server-list').html(htmlDisable);
 			$('#dbx-enable-server-list').html(htmlEnable);
+
+			$('#dbx-alarm-clear-server-list').html(htmlClearAlarm);
 
 			// Enable bootstrap tooltip...
 			$('[data-toggle="tooltip"]').tooltip();

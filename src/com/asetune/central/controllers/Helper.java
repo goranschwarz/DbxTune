@@ -23,6 +23,7 @@ package com.asetune.central.controllers;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -132,6 +133,12 @@ public class Helper
 			}
 		}
 		return false;
+	}
+
+	public static boolean hasParameter(HttpServletRequest req, String paramName)
+	{
+		Map<String, String[]> map = req.getParameterMap();
+		return map.containsKey(paramName);
 	}
 	
 }
