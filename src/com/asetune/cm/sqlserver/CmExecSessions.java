@@ -41,7 +41,7 @@ extends CountersModel
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmExecSessions.class.getSimpleName();
-	public static final String   SHORT_NAME       = "Sessions";
+	public static final String   SHORT_NAME       = "Exec Sessions";
 	public static final String   HTML_DESC        = 
 		"<html>"
 		+ "<p>"
@@ -211,9 +211,9 @@ extends CountersModel
 		// datediff(ms, last_request_start_time, last_request_end_time)
 		
 		String sql = ""
-				+ "select "
+				+ "select \n"
 				+ "     last_request_ms = datediff(ms, last_request_start_time, last_request_end_time) \n"
-				+ "     login_time_ss   = CASE WHEN datediff(day, login_time, getdate()) >= 24 THEN -1 ELSE  datediff(ss, login_time, getdate()) END, \n"
+				+ "    ,login_time_ss   = CASE WHEN datediff(day, login_time, getdate()) >= 24 THEN -1 ELSE  datediff(ss, login_time, getdate()) END \n"
 				+ "    ,* \n"
 //				+ "    ,dbname                = db_name(database_id) \n"                 // Applies to: SQL Server 2012 (11.x) and later.
 //				+ "    ,authenticating_dbname = db_name(authenticating_database_id) \n"  // Applies to: SQL Server 2012 (11.x) and later.

@@ -47,8 +47,6 @@ import com.asetune.cm.sqlserver.CmExecCursors;
 import com.asetune.cm.sqlserver.CmExecFunctionStats;
 import com.asetune.cm.sqlserver.CmExecProcedureStats;
 import com.asetune.cm.sqlserver.CmExecQueryStats;
-import com.asetune.cm.sqlserver.CmExecRequests;
-import com.asetune.cm.sqlserver.CmExecSessions;
 import com.asetune.cm.sqlserver.CmExecTriggerStats;
 import com.asetune.cm.sqlserver.CmIndexOpStat;
 import com.asetune.cm.sqlserver.CmIndexPhysical;
@@ -58,7 +56,9 @@ import com.asetune.cm.sqlserver.CmOptimizer;
 import com.asetune.cm.sqlserver.CmOsLatchStats;
 import com.asetune.cm.sqlserver.CmPerfCounters;
 import com.asetune.cm.sqlserver.CmProcedureStats;
+import com.asetune.cm.sqlserver.CmQueryTransformStat;
 import com.asetune.cm.sqlserver.CmSchedulers;
+import com.asetune.cm.sqlserver.CmSessions;
 import com.asetune.cm.sqlserver.CmSpidWait;
 import com.asetune.cm.sqlserver.CmSpinlocks;
 import com.asetune.cm.sqlserver.CmSummary;
@@ -66,7 +66,7 @@ import com.asetune.cm.sqlserver.CmTempdbSpidUsage;
 import com.asetune.cm.sqlserver.CmTempdbUsage;
 import com.asetune.cm.sqlserver.CmWaitStats;
 import com.asetune.cm.sqlserver.CmWaitingTasks;
-import com.asetune.cm.sqlserver.CmWho;
+import com.asetune.cm.sqlserver.CmWorkers;
 import com.asetune.cm.sqlserver.ToolTipSupplierSqlServer;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.swing.GTable.ITableTooltip;
@@ -114,52 +114,55 @@ extends CounterControllerAbstract
 		_logger.info("Creating ALL CM Objects.");
 
 		ICounterController counterController = this;
-		MainFrame          guiController     = hasGui ? MainFrame.getInstance() : null;
+		MainFrame guiController = hasGui ? MainFrame.getInstance() : null;
 
-		CmSummary           .create(counterController, guiController);
-                            
-		CmWho               .create(counterController, guiController);
-		CmSpidWait          .create(counterController, guiController);
-		CmExecSessions      .create(counterController, guiController);
-		CmExecRequests      .create(counterController, guiController);
-		CmDatabases         .create(counterController, guiController);
-		CmTempdbUsage       .create(counterController, guiController);
-		CmTempdbSpidUsage   .create(counterController, guiController);
-		CmSchedulers        .create(counterController, guiController);
-		CmWaitStats         .create(counterController, guiController);
-		CmWaitingTasks      .create(counterController, guiController);
-		CmErrorLog          .create(counterController, guiController);
-		CmOsLatchStats      .create(counterController, guiController);
-		CmPerfCounters      .create(counterController, guiController);
-		CmAlwaysOn          .create(counterController, guiController);
-		CmOptimizer         .create(counterController, guiController);
-		CmSpinlocks         .create(counterController, guiController);
-                            
-		CmActiveStatements  .create(counterController, guiController);
-		CmOpenTransactions  .create(counterController, guiController);
-		CmIndexUsage        .create(counterController, guiController);
-		CmIndexOpStat       .create(counterController, guiController);
-		CmIndexPhysical     .create(counterController, guiController);
-		CmExecQueryStats    .create(counterController, guiController);
-		CmExecProcedureStats.create(counterController, guiController);
-		CmExecFunctionStats .create(counterController, guiController);
-		CmExecTriggerStats  .create(counterController, guiController);
-		CmExecCursors       .create(counterController, guiController);
-
-		CmProcedureStats    .create(counterController, guiController);
-
-		CmDeviceIo          .create(counterController, guiController);
-		CmDbIo              .create(counterController, guiController);
+		CmSummary            .create(counterController, guiController);
+                             
+		CmSessions           .create(counterController, guiController);
+//		CmWho                .create(counterController, guiController);
+		CmSpidWait           .create(counterController, guiController);
+//		CmExecSessions       .create(counterController, guiController);
+//		CmExecRequests       .create(counterController, guiController);
+		CmDatabases          .create(counterController, guiController);
+		CmTempdbUsage        .create(counterController, guiController);
+		CmTempdbSpidUsage    .create(counterController, guiController);
+		CmSchedulers         .create(counterController, guiController);
+		CmWaitStats          .create(counterController, guiController);
+		CmWaitingTasks       .create(counterController, guiController);
+		CmErrorLog           .create(counterController, guiController);
+		CmOsLatchStats       .create(counterController, guiController);
+		CmPerfCounters       .create(counterController, guiController);
+		CmWorkers            .create(counterController, guiController);
+		CmAlwaysOn           .create(counterController, guiController);
+		CmOptimizer          .create(counterController, guiController);
+		CmQueryTransformStat .create(counterController, guiController);
+		CmSpinlocks          .create(counterController, guiController);
+                             
+		CmActiveStatements   .create(counterController, guiController);
+		CmOpenTransactions   .create(counterController, guiController);
+		CmIndexUsage         .create(counterController, guiController);
+		CmIndexOpStat        .create(counterController, guiController);
+		CmIndexPhysical      .create(counterController, guiController);
+		CmExecQueryStats     .create(counterController, guiController);
+		CmExecProcedureStats .create(counterController, guiController);
+		CmExecFunctionStats  .create(counterController, guiController);
+		CmExecTriggerStats   .create(counterController, guiController);
+		CmExecCursors        .create(counterController, guiController);
+                             
+		CmProcedureStats     .create(counterController, guiController);
+                             
+		CmDeviceIo           .create(counterController, guiController);
+		CmDbIo               .create(counterController, guiController);
 
 
 		// OS HOST Monitoring
-		CmOsIostat          .create(counterController, guiController);
-		CmOsVmstat          .create(counterController, guiController);
-		CmOsMpstat          .create(counterController, guiController);
-		CmOsUptime          .create(counterController, guiController);
-		CmOsMeminfo         .create(counterController, guiController);
-		CmOsNwInfo          .create(counterController, guiController);
-		CmOsDiskSpace       .create(counterController, guiController);
+		CmOsIostat           .create(counterController, guiController);
+		CmOsVmstat           .create(counterController, guiController);
+		CmOsMpstat           .create(counterController, guiController);
+		CmOsUptime           .create(counterController, guiController);
+		CmOsMeminfo          .create(counterController, guiController);
+		CmOsNwInfo           .create(counterController, guiController);
+		CmOsDiskSpace        .create(counterController, guiController);
 
 		// USER DEFINED COUNTERS
 		createUserDefinedCounterModels(counterController, guiController);

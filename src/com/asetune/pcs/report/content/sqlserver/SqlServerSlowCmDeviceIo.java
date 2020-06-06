@@ -29,7 +29,8 @@ import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
-public class SqlServerSlowCmDeviceIo extends AseAbstract
+public class SqlServerSlowCmDeviceIo 
+extends SqlServerAbstract
 {
 //	private static Logger _logger = Logger.getLogger(SqlServerSlowCmDeviceIo.class);
 

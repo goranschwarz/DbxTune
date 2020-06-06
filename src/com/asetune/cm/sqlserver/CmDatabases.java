@@ -32,6 +32,8 @@ import java.util.Map.Entry;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+import javax.naming.NameNotFoundException;
+
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.log4j.Logger;
 
@@ -54,6 +56,8 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.gui.CmDatabasesPanel;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.DbSelectionForGraphsDialog;
@@ -683,6 +687,91 @@ extends CountersModel
 //	}
 
 	@Override
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	{
+		try 
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+
+			String cmName = this.getName();
+			mtd.addTable(cmName, HTML_DESC);
+
+			mtd.addColumn(cmName, "DBName"                  ,"<html>Name of the database</html>");
+			mtd.addColumn(cmName, "database_id"             ,"<html>ID of the database</html>");
+			mtd.addColumn(cmName, "compatibility_level"     ,"<html>Integer corresponding to the version of SQL Server for which behavior is compatible. (same as sys.database.compatibility_level)</html>");
+			mtd.addColumn(cmName, "user_access_desc"        ,"<html>User-access setting, MULTI_USER, SINGLE_USER , RESTRICTED_USER. (same as sys.database.compatibility_level)</html>");
+			mtd.addColumn(cmName, "state_desc"              ,"<html>Description of the database state: ONLINE, RESTORING, RECOVERING, RECOVERY_PENDING, SUSPECT, EMERGENCY, OFFLINE, COPYING, OFFLINE_SECONDARY (same as sys.database.state_desc)</html>");
+			mtd.addColumn(cmName, "recovery_model_desc"     ,"<html>Description of recovery model selected: FULL, BULK_LOGGED, SIMPLE. (same as sys.database.recovery_model_desc)</html>");
+			mtd.addColumn(cmName, "ag_name"                 ,"<html>Availability Group Name</html>");
+			mtd.addColumn(cmName, "ag_role"                 ,"<html>Availability Group Role</html>");
+			mtd.addColumn(cmName, "ag_primary_server"       ,"<html>Primary Server of the Availability Group (null if none)</html>");
+			mtd.addColumn(cmName, "DataFileGroupCount"      ,"<html>How many DATA <i>OS files</i> does the database consist of. Typically just ONE...</html>");
+			mtd.addColumn(cmName, "DBOwner"                 ,"<html>Username that ownes the database</html>");
+			mtd.addColumn(cmName, "log_reuse_wait"          ,"<html>Reuse of transaction log space depends on <i>this</i>, see 'log_reuse_wait_desc' for a text value (same as sys.database.log_reuse_wait)</html>");
+			mtd.addColumn(cmName, "log_reuse_wait_desc"     ,"<html>Reuse of transaction log space depends on <i>this</i>, for example if 'LOG_BACKUP' = We need do a 'backup tran' before the tran log space can be truncated or re-used. (same as sys.database.log_reuse_wait_desc)</html>");
+
+			mtd.addColumn(cmName, "DbSizeInMb"              ,"<html>Total Allocated Size in MB of the database (both data and log). Note: there are probably free space within the total size. (see: 'DataSizeUsedPct/DataSizeUsedInMb/DataSizeFreeInMb' and 'LogSizeUsedPct/LogSizeUsedInMb/LogSizeFreeInMb')</html>");
+			mtd.addColumn(cmName, "LogSizeInMb"             ,"<html>Total Allocated Size of the transaction log.</html>");                                                         //  = log.totalLogSizeMb 
+			mtd.addColumn(cmName, "DataSizeInMb"            ,"<html>Total Allocated Size of the <i>data</i> part.</html>");                                                        //   = data.totalDataSizeMb 
+			mtd.addColumn(cmName, "LogSizeUsedPct"          ,"<html>How much of the allocated LOG space is actually used.</html>");                                                //   = log.usedLogSpaceInPct 
+			mtd.addColumn(cmName, "DataSizeUsedPct"         ,"<html>How much of the allocated DATA space is actually used.</html>");                                               //   = data.usedDataPct 
+			mtd.addColumn(cmName, "LogOsDiskUsedPct"        ,"<html>On the Operating System, where the LOG file(s) are located. How much space is <b>used</b>.</html>");           //   = osvLog.osUsedPct 
+			mtd.addColumn(cmName, "DataOsDiskUsedPct"       ,"<html>On the Operating System, where the DATA file(s) are located. How much space is <b>used</b>.</html>");          //   = osvData.osUsedPct 
+
+			mtd.addColumn(cmName, "LogSizeUsedInMb"         ,"<html>How much of the allocated LOG space is actually used.</html>");                                                //   = log.usedLogSpaceInMb 
+			mtd.addColumn(cmName, "LogSizeFreeInMb"         ,"<html>How much of the allocated LOG space is NOT used.</html>");                                                     //   = log.totalLogSizeMb - log.usedLogSpaceInMb 
+			mtd.addColumn(cmName, "LogSizeUsedInMbDiff"     ,"<html>Same as 'LogSizeUsedInMb', but this column is diff calculated to see how fast it grows/shrinks.</html>");      //   = log.usedLogSpaceInMb 
+			mtd.addColumn(cmName, "LogSizeFreeInMbDiff"     ,"<html>Same as 'LogSizeFreeInMb', but this column is diff calculated to see how fast it grows/shrinks.</html>");      //   = log.totalLogSizeMb - log.usedLogSpaceInMb 
+
+			mtd.addColumn(cmName, "LogOsDisk"               ,"<html>Drive or <i>mount point</i> where the LOG files are located</html>");                                          //   = osvLog.volume_mount_point 
+			mtd.addColumn(cmName, "LogOsDiskUsedPct"        ,"<html>How much of the Operating System <i>disk/mount point</i> are USED in Percent</html>");                         //   = osvLog.osUsedPct 
+			mtd.addColumn(cmName, "LogOsDiskFreePct"        ,"<html>How much of the Operating System <i>disk/mount point</i> are FREE in Percent</html>");                         //   = osvLog.osFreePct 
+			mtd.addColumn(cmName, "LogOsFileName"           ,"<html>Physical name on Operating System. <br>NOTE: Only the <b>first</b> file is visible here.</html>");             //   = osvLog.physical_name 
+			mtd.addColumn(cmName, "LogFileName"             ,"<html>SQL-Servers internal name if the <i>file</i>. <br>NOTE: Only the <b>first</b> file is visible here.</html>");  //   = osvLog.name 
+			mtd.addColumn(cmName, "logFileId"               ,"<html>SQL-Servers internal ID if the <i>file</i>. <br>NOTE: Only the <b>first</b> file is visible here.</html>");    //   = osvLog.file_id 
+			mtd.addColumn(cmName, "LogOsDiskUsedMb"         ,"<html>How much of the Operating System <i>disk/mount point</i> are USED in MB</html>");                              //   = osvLog.osUsedMb 
+			mtd.addColumn(cmName, "LogOsDiskFreeMb"         ,"<html>How much of the Operating System <i>disk/mount point</i> are FREE in MB</html>");                              //   = osvLog.osFreeMb 
+			mtd.addColumn(cmName, "LogNextGrowthSizeMb"     ,"<html>Next time the database needs to grow the LOG file on the Operating System, how many MB will we grow.</html>"); //   = osvLog.nextGrowSizeMb 
+
+			mtd.addColumn(cmName, "DataSizeUsedInMb"        ,"<html>How much of the allocated DATA space is actually used.</html>");                                               //   = data.usedDataMb 
+			mtd.addColumn(cmName, "DataSizeFreeInMb"        ,"<html>How much of the allocated DATA space is NOT used.</html>");                                                    //   = data.freeDataMb 
+			mtd.addColumn(cmName, "DataSizeUsedInMbDiff"    ,"<html>Same as 'DataSizeUsedInMb', but this column is diff calculated to see how fast it grows/shrinks.</html>");     //   = data.usedDataMb 
+			mtd.addColumn(cmName, "DataSizeFreeInMbDiff"    ,"<html>Same as 'DataSizeFreeInMb', but this column is diff calculated to see how fast it grows/shrinks.</html>");     //   = data.freeDataMb 
+
+			mtd.addColumn(cmName, "DataOsDisk"              ,"<html>Drive or <i>mount point</i> where the DATA files are located</html>");                                         //   = osvData.volume_mount_point 
+			mtd.addColumn(cmName, "DataOsDiskUsedPct"       ,"<html>How much of the Operating System <i>disk/mount point</i> are USED in Percent</html>");                         //   = osvData.osUsedPct 
+			mtd.addColumn(cmName, "DataOsDiskFreePct"       ,"<html>How much of the Operating System <i>disk/mount point</i> are FREE in Percent</html>");                         //   = osvData.osFreePct 
+			mtd.addColumn(cmName, "DataOsFileName"          ,"<html>Physical name on Operating System. <br>NOTE: Only the <b>first</b> file is visible here.</html>");             //   = osvData.physical_name 
+			mtd.addColumn(cmName, "DataFileName"            ,"<html>SQL-Servers internal name if the <i>file</i>. <br>NOTE: Only the <b>first</b> file is visible here.</html>");  //   = osvData.name 
+			mtd.addColumn(cmName, "DataFileId"              ,"<html>SQL-Servers internal ID if the <i>file</i>. <br>NOTE: Only the <b>first</b> file is visible here.</html>");    //   = osvData.file_id 
+			mtd.addColumn(cmName, "DataOsDiskUsedMb"        ,"<html>How much of the Operating System <i>disk/mount point</i> are USED in MB</html>");                              //   = osvData.osUsedMb 
+			mtd.addColumn(cmName, "DataOsDiskFreeMb"        ,"<html>How much of the Operating System <i>disk/mount point</i> are FREE in MB</html>");                              //   = osvData.osFreeMb 
+			mtd.addColumn(cmName, "DataNextGrowthSizeMb"    ,"<html>Next time the database needs to grow the DATA file on the Operating System, how many MB will we grow.</html>");//   = osvData.nextGrowSizeMb 
+
+			mtd.addColumn(cmName, "OldestTranStartTime"     ,"<html>Start time of the oldest transaction in this database.</html>");                                               //   = oti.last_request_start_time 
+			mtd.addColumn(cmName, "OldestTranWaitType"      ,"<html>What are the oldest transaction waiting for?</html>");                                                         //   = oti.wait_type 
+			mtd.addColumn(cmName, "OldestTranECT"           ,"<html>Estimated Completion Time of the oldest transaction.</html>");                                                 //   = oti.estimated_completion_time 
+			mtd.addColumn(cmName, "OldestTranInSeconds"     ,"<html>Seconds since the oldest transaction started.</html>");                                                        //   = datediff(second, oti.last_request_start_time, getdate()) 
+			mtd.addColumn(cmName, "OldestTranName"          ,"<html>Name of the oldest transaction</html>");                                                                       //   = -1 
+			mtd.addColumn(cmName, "OldestTranSpid"          ,"<html>What SPID is responsible or started the oldest transaction</html>");                                           //   = oti.session_id 
+			mtd.addColumn(cmName, "OldestTranProg"          ,"<html>What <i>program name</i> is responsible or started the oldest transaction</html>");                            //   = oti.program_name 
+			mtd.addColumn(cmName, "OldestTranUser"          ,"<html>Name of the <i>user</i> that is responsible or started the oldest transaction</html>");                        //   = oti.login_name 
+			mtd.addColumn(cmName, "OldestTranHost"          ,"<html>Name of the <i>host</i> that is responsible or started the oldest transaction</html>");                        //   = oti.host_name 
+			mtd.addColumn(cmName, "OldestTranHasSqlText"    ,"<html>SQL Text of the oldest open transaction</html>");                                                              //   = CASE WHEN oti.most_recent_sql_text is not null THEN convert(bit,1) ELSE convert(bit,0) END 
+			mtd.addColumn(cmName, "OldestTranHasShowPlan"   ,"<html>Showplan Text of the oldest open transaction</html>");                                                         //   = CASE WHEN oti.plan_text            is not null THEN convert(bit,1) ELSE convert(bit,0) END 
+
+			mtd.addColumn(cmName, "LastDbBackupTime"        ,"<html>Last Date/time a backup was done.</html>");                                                                    //   =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D') 
+			mtd.addColumn(cmName, "LastDbBackupAgeInHours"  ,"<html>How many hours ago was the last backup taken.</html>");                                                        //   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) 
+			mtd.addColumn(cmName, "LastLogBackupTime"       ,"<html>Last Date/time a LOG backup was done.</html>");                                                                //   =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L') 
+			mtd.addColumn(cmName, "LastLogBackupAgeInHours" ,"<html>How many hours ago was the last LOG backup taken.</html>");                                                    //   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L'), -1) 
+
+			mtd.addColumn(cmName, "OldestTranSqlText"       ,"<html>SQL Text of the oldest open transaction</html>");                                                              //   = oti.most_recent_sql_text 
+			mtd.addColumn(cmName, "OldestTranShowPlanText"  ,"<html>Showplan Text of the oldest open transaction</html>");                                                         //   = oti.plan_text 
+		}
+		catch (NameNotFoundException e) {/*ignore*/}
+	}
+
+	@Override
 	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
@@ -749,17 +838,278 @@ extends CountersModel
 			availabilityGroupName          = "    ,ag_name                  = (SELECT ag.name             FROM sys.availability_replicas ar JOIN sys.availability_groups                ag ON ar.group_id = ag.group_id  WHERE ar.replica_id  = d.replica_id) \n"; 
 			availabilityGroupRole          = "    ,ag_role                  = (SELECT ars.role_desc       FROM sys.dm_hadr_availability_replica_states ars                                                               WHERE ars.replica_id = d.replica_id) \n";
 			availabilityGroupPrimaryServer = "    ,ag_primary_server        = (SELECT ags.primary_replica FROM sys.availability_replicas ar JOIN sys.dm_hadr_availability_group_states ags ON ar.group_id = ags.group_id WHERE ar.replica_id  = d.replica_id) \n";
-			whereAvailabilityGroup         = "  OR d.replica_id is not null";
+			whereAvailabilityGroup         = "  OR d.replica_id is not null \n";
 		}
 
-		
+//		String sql = ""
+//			    + " \n"
+//			    + "--------------------------- \n"
+//			    + "-- DATA SIZE MB \n"
+//			    + "--------------------------- \n"
+//			    + "DECLARE @dataSizeMb TABLE (database_id int, fileGroupCount int, totalDataSizeMb numeric(12,1), usedDataMb numeric(12,1), freeDataMb numeric(12,1), usedDataPct numeric(5,1), freeDataPct numeric(5,1)) \n"
+//			    + "INSERT INTO @dataSizeMb \n"
+//			    + "EXEC sp_MSforeachdb ' \n"
+//			    + "SELECT \n"
+//			    + "     database_id \n"
+//			    + "    ,fileGroupCount = count(*) \n"
+//			    + "    ,totalMb        = sum(total_page_count) / 128.0 \n"
+//			    + "    ,allocatedMb    = sum(allocated_extent_page_count) / 128.0 \n"
+//			    + "    ,unallocatedMb  = sum(unallocated_extent_page_count) / 128.0 \n"
+//			    + "    ,usedPct        = (sum(allocated_extent_page_count)  *1.0) / (sum(total_page_count)*1.0) * 100.0 \n"
+//			    + "    ,freePct        = (sum(unallocated_extent_page_count)*1.0) / (sum(total_page_count)*1.0) * 100.0 \n"
+//			    + "FROM ?." + dm_db_file_space_usage + " GROUP BY database_id' \n"
+//			    + " \n"
+//			    + "--------------------------- \n"
+//			    + "-- LOG SIZE MB \n"
+//			    + "--------------------------- \n"
+//			    + "DECLARE @logSizeMb TABLE (database_id int, totalLogSizeMb int, usedLogSpaceInMb int, usedLogSpaceInPct numeric(5,1), logSpaceInMbSinceLastBackup int) \n"
+//			    + "INSERT INTO @logSizeMb \n"
+//			    + "EXEC sp_MSforeachdb ' \n"
+//			    + "SELECT \n"
+//			    + "     database_id \n"
+//			    + "    ,total_log_size_in_bytes/1024/1024 \n"
+//			    + "    ,used_log_space_in_bytes/1024/1024 \n"
+//			    + "    ,used_log_space_in_percent \n"
+//			    + "    ,log_space_in_bytes_since_last_backup/1024/1024 \n"
+//			    + "FROM ?." + dm_db_log_space_usage + "' \n"
+//			    + " \n"
+//			    + "--------------------------- \n"
+//			    + "-- Backup Info \n"
+//			    + "--------------------------- \n"
+//			    + "DECLARE @backupInfo TABLE (database_name nvarchar(128), type char(2), last_backup_finish_date datetime) \n"
+//			    + "INSERT INTO @backupInfo \n"
+//			    + "    SELECT \n"
+//			    + "         bus.database_name \n"
+//			    + "        ,bus.type \n"
+//			    + "        ,last_backup_finish_date = MAX(bus.backup_finish_date) \n"
+//			    + "    FROM msdb.dbo.backupset bus \n"
+//			    + "    GROUP BY bus.database_name, bus.type \n"
+//			    + "; --- we need a ';' here for SQL-Server to use the Table Variables in the below Statement \n"
+//			    + " \n"
+//			    + " \n"
+//			    + "WITH \n"
+////			    + "--------------------------- \n"
+////			    + "-- Backup Info \n"
+////			    + "--------------------------- \n"
+////			    + "bi AS ( \n"
+////			    + "    SELECT \n"
+////			    + "         bus.database_name \n"
+////			    + "        ,bus.type \n"
+////			    + "        ,last_backup_finish_date = MAX(bus.backup_finish_date) \n"
+////			    + "    FROM " + backupset + " bus \n"
+////			    + "    GROUP BY bus.database_name, bus.type \n"
+////			    + "), \n"
+//			    + "--------------------------- \n"
+//			    + "-- Open Transaction Info \n"
+//			    + "--------------------------- \n"
+//			    + "oti AS ( \n"
+//			    + "    SELECT --top 1 \n"
+//			    + "         es.session_id \n"
+//			    + "        ,es.database_id \n"
+//			    + "        ,es.status \n"
+//			    + "        ,es.program_name \n"
+//			    + "        ,es.login_name \n"
+//			    + "        ,es.host_name \n"
+//			    + "        ,es.open_transaction_count \n"
+//			    + "        ,es.last_request_start_time \n"
+//			    + "        ,es.last_request_end_time \n"
+//			    + "        ,er.statement_start_offset \n"
+//			    + "        ,er.statement_end_offset \n"
+//			    + "        ,er.wait_type \n"
+//			    + "        ,er.estimated_completion_time \n"
+////			    + ",at.transaction_id \n"           // possibly to get active transaction, needs to be tested/investigated
+////			    + ",at.name AS tran_name \n"        // possibly to get active transaction, needs to be tested/investigated
+////			    + ",at.transaction_begin_time \n"   // possibly to get active transaction, needs to be tested/investigated
+//				+ "        ,SUBSTRING(sql_text.text, er.statement_start_offset / 2,  \n"
+//				+ "             ( CASE WHEN er.statement_end_offset = -1  \n"
+//				+ "                    THEN DATALENGTH(sql_text.text)  \n"
+//				+ "                    ELSE er.statement_end_offset  \n"
+//				+ "               END - er.statement_start_offset ) / 2) AS most_recent_sql_text \n"
+//			    + "        ,plan_text.query_plan as plan_text \n"
+//			    + "        ,ROW_NUMBER() OVER (PARTITION BY es.database_id ORDER BY es.last_request_start_time) AS row_num \n"
+//			    + "    FROM " + dm_exec_sessions + " es \n"
+//			    + "    JOIN " + dm_exec_connections + " ec            ON es.session_id = ec.session_id \n"
+//			    + "    LEFT OUTER JOIN " + dm_exec_requests + " er    ON er.session_id = es.session_id \n"
+////			    + "LEFT OUTER JOIN " + dm_tran_active_transactions + " at ON er.transaction_id = at.transaction_id \n"  // possibly to get active transaction, needs to be tested/investigated
+//			    + "    OUTER APPLY " + dm_exec_sql_text + " (ec.most_recent_sql_handle) AS sql_text \n"
+//			    + "    OUTER APPLY " + dm_exec_query_plan + " (er.plan_handle)          AS plan_text \n"
+//			    + "    WHERE es.open_transaction_count > 0 \n"
+//			    + "    --AND es.status = 'sleeping' \n"
+//			    + "      AND es.is_user_process = 1 \n"
+//			    + "), \n"
+//			    + "--------------------------- \n"
+//			    + "-- Operating System Volume DATA \n"
+//			    + "--------------------------- \n"
+//			    + "osvData as ( \n"
+//			    + "    SELECT \n"
+//			    + "         mf.database_id \n"
+//			    + "        ,mf.file_id \n"
+//			    + "        ,mf.size  as sizePg \n"
+//			    + "        ,mf.size / 128 as sizeMb \n"
+//			    + "        ,mf.max_size \n"
+//			    + "        ,mf.growth \n"
+//			    + "        ,mf.is_percent_growth \n"
+//			    + "        , CASE WHEN mf.max_size = -1 AND mf.is_percent_growth = 1 THEN mf.size * (mf.growth / 100.0) / 128 --'PCT_GROW' \n"
+//			    + "               WHEN mf.max_size = -1 AND mf.is_percent_growth = 0 THEN mf.growth / 128                     --'FIXED_GROW' \n"
+//			    + "               WHEN mf.max_size > 0  AND mf.size < mf.max_size AND mf.is_percent_growth = 1 THEN mf.size * (mf.growth / 100.0) / 128 --'PCT_GROW   OK for MAX_SIZE' \n"
+//			    + "               WHEN mf.max_size > 0  AND mf.size < mf.max_size AND mf.is_percent_growth = 0 THEN mf.growth / 128                     --'FIXED_GROW OK for MAX_SIZE' \n"
+//			    + "               ELSE 0 \n"
+//			    + "          END AS nextGrowSizeMb \n"
+//			    + "        ,mf.type \n"
+//			    + "        ,mf.type_desc \n"
+//			    + "        ,mf.name \n"
+//			    + "        ,mf.physical_name \n"
+//			    + "        ,osv.volume_mount_point \n"
+//			    + "        ,osv.logical_volume_name \n"
+//			    + "        ,osv.total_bytes / 1024 / 1024                         AS osTotalMb \n"
+//			    + "        ,osv.available_bytes / 1024 / 1024                     AS osFreeMb \n"
+//			    + "        ,(osv.total_bytes - osv.available_bytes) / 1024 / 1024 AS osUsedMb \n" 
+//			    + "        ,convert(numeric(5,1), (osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)           AS osFreePct \n"
+//			    + "        ,convert(numeric(5,1), 100.0 - ((osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)) AS osUsedPct \n" 
+//			    + "        ,ROW_NUMBER() OVER (PARTITION BY mf.database_id ORDER BY osv.available_bytes)               AS row_num \n"
+//			    + "    FROM " + master_files + " AS mf \n"
+//			    + "    CROSS APPLY " + dm_os_volume_stats + " (mf.database_id, mf.file_id) AS osv \n"
+//			    + "    WHERE mf.type IN (0) /*0=ROWS, 0=LOG*/ \n"
+//			    + "), \n"
+//			    + "--------------------------- \n"
+//			    + "-- Operating System Volume LOG \n"
+//			    + "--------------------------- \n"
+//			    + "osvLog as ( \n"
+//			    + "    SELECT \n"
+//			    + "         mf.database_id \n"
+//			    + "        ,mf.file_id \n"
+//			    + "        ,mf.size  as sizePg \n"
+//			    + "        ,mf.size / 128 as sizeMb \n"
+//			    + "        ,mf.max_size \n"
+//			    + "        ,mf.growth \n"
+//			    + "        ,mf.is_percent_growth \n"
+//			    + "        , CASE WHEN mf.max_size = -1 AND mf.is_percent_growth = 1 THEN mf.size * (mf.growth / 100.0) / 128 --'PCT_GROW' \n"
+//			    + "               WHEN mf.max_size = -1 AND mf.is_percent_growth = 0 THEN mf.growth / 128                     --'FIXED_GROW' \n"
+//			    + "               WHEN mf.max_size > 0  AND mf.size < mf.max_size AND mf.is_percent_growth = 1 THEN mf.size * (mf.growth / 100.0) / 128 --'PCT_GROW   OK for MAX_SIZE' \n"
+//			    + "               WHEN mf.max_size > 0  AND mf.size < mf.max_size AND mf.is_percent_growth = 0 THEN mf.growth / 128                     --'FIXED_GROW OK for MAX_SIZE' \n"
+//			    + "               ELSE 0 \n"
+//			    + "          END AS nextGrowSizeMb \n"
+//			    + "        ,mf.type \n"
+//			    + "        ,mf.type_desc \n"
+//			    + "        ,mf.name \n"
+//			    + "        ,mf.physical_name \n"
+//			    + "        ,osv.volume_mount_point \n"
+//			    + "        ,osv.logical_volume_name \n"
+//			    + "        ,osv.total_bytes / 1024 / 1024                         AS osTotalMb \n"
+//			    + "        ,osv.available_bytes / 1024 / 1024                     AS osFreeMb \n"
+//			    + "        ,(osv.total_bytes - osv.available_bytes) / 1024 / 1024 AS osUsedMb \n" 
+//			    + "        ,convert(numeric(5,1), (osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)           AS osFreePct \n"
+//			    + "        ,convert(numeric(5,1), 100.0 - ((osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)) AS osUsedPct \n" 
+//			    + "        ,ROW_NUMBER() OVER (PARTITION BY mf.database_id ORDER BY osv.available_bytes)               AS row_num \n"
+//			    + "    FROM " + master_files + " AS mf \n"
+//			    + "    CROSS APPLY " + dm_os_volume_stats + " (mf.database_id, mf.file_id) AS osv \n"
+//			    + "    WHERE mf.type IN (1) /*0=ROWS, 0=LOG*/ \n"
+//			    + ") \n"
+//			    + "------------------------------- \n"
+//			    + "-- The final select statement   \n"
+//			    + "------------------------------- \n"
+//			    + "SELECT \n"
+//			    + "     DBName                   = d.Name \n"
+//			    + "    ,d.database_id \n"
+//			    + "    ,compatibility_level      = convert(int, d.compatibility_level) \n"
+//			    + "    ,d.user_access_desc \n"
+//			    + "    ,d.state_desc \n"
+//			    + "    ,d.recovery_model_desc \n"
+//			    + availabilityGroupName
+//			    + availabilityGroupRole
+//			    + availabilityGroupPrimaryServer
+//			    + "    ,DataFileGroupCount       = data.fileGroupCount \n"
+//			    + "    ,DBOwner                  = suser_name(d.owner_sid) \n"
+//			    + "    ,d.log_reuse_wait \n"
+//			    + "    ,d.log_reuse_wait_desc \n"
+//			    + " \n"
+//			    + "    ,DbSizeInMb               = data.totalDataSizeMb + log.totalLogSizeMb \n"
+//			    + "    ,LogSizeInMb              = log.totalLogSizeMb \n"
+//			    + "    ,DataSizeInMb             = data.totalDataSizeMb \n"
+//			    + "    ,LogSizeUsedPct           = log.usedLogSpaceInPct \n"
+//			    + "    ,DataSizeUsedPct          = data.usedDataPct \n"
+////			    + "    ,LogOsDiskUsedPct         = osvLog.osUsedPct \n"
+////			    + "    ,DataOsDiskUsedPct        = osvData.osUsedPct \n"
+//			    + " \n"
+//			    + "    ,LogSizeUsedInMb          = log.usedLogSpaceInMb \n"
+//			    + "    ,LogSizeFreeInMb          = log.totalLogSizeMb - log.usedLogSpaceInMb \n"
+//			    + "    ,LogSizeUsedInMbDiff      = log.usedLogSpaceInMb \n"
+//			    + "    ,LogSizeFreeInMbDiff      = log.totalLogSizeMb - log.usedLogSpaceInMb \n"
+//			    + " \n"
+//			    + "    ,LogOsDisk                = osvLog.volume_mount_point \n"
+//			    + "    ,LogOsDiskUsedPct         = osvLog.osUsedPct \n"
+//			    + "    ,LogOsDiskFreePct         = osvLog.osFreePct \n"
+//			    + "    ,LogOsFileName            = osvLog.physical_name \n"
+//			    + "    ,LogFileName              = osvLog.name \n"
+//			    + "    ,logFileId                = osvLog.file_id \n"
+//			    + "    ,LogOsDiskUsedMb          = osvLog.osUsedMb \n"
+//			    + "    ,LogOsDiskFreeMb          = osvLog.osFreeMb \n"
+//			    + "    ,LogNextGrowthSizeMb      = osvLog.nextGrowSizeMb \n"
+//			    + " \n"
+//			    + "    ,DataSizeUsedInMb         = data.usedDataMb \n"
+//			    + "    ,DataSizeFreeInMb         = data.freeDataMb \n"
+//			    + "    ,DataSizeUsedInMbDiff     = data.usedDataMb \n"
+//			    + "    ,DataSizeFreeInMbDiff     = data.freeDataMb \n"
+//			    + " \n"
+//			    + "    ,DataOsDisk               = osvData.volume_mount_point \n"
+//			    + "    ,DataOsDiskUsedPct        = osvData.osUsedPct \n"
+//			    + "    ,DataOsDiskFreePct        = osvData.osFreePct \n"
+//			    + "    ,DataOsFileName           = osvData.physical_name \n"
+//			    + "    ,DataFileName             = osvData.name \n"
+//			    + "    ,DataFileId               = osvData.file_id \n"
+//			    + "    ,DataOsDiskUsedMb         = osvData.osUsedMb \n"
+//			    + "    ,DataOsDiskFreeMb         = osvData.osFreeMb \n"
+//			    + "    ,DataNextGrowthSizeMb     = osvData.nextGrowSizeMb \n"
+//			    + " \n"
+////			    + "--	,TransactionLogFull = -1 \n"
+////			    + " \n"
+//			    + "    ,OldestTranStartTime      = oti.last_request_start_time \n"
+//			    + "    ,OldestTranWaitType       = oti.wait_type \n"
+//			    + "    ,OldestTranECT            = oti.estimated_completion_time \n"
+//			    + "    ,OldestTranInSeconds      = datediff(second, oti.last_request_start_time, getdate()) \n"
+//			    + "    ,OldestTranName           = -1 \n"
+//			    + "    ,OldestTranSpid           = oti.session_id \n"
+//			    + "    ,OldestTranProg           = oti.program_name \n"
+//			    + "    ,OldestTranUser           = oti.login_name \n"
+//			    + "    ,OldestTranHost           = oti.host_name \n"
+////			    + "--  ,OldestTranPage           = -1 \n"
+////			    + "--  ,OldestTranProcName       = -1 \n"
+//			    + "    ,OldestTranHasSqlText     = CASE WHEN oti.most_recent_sql_text is not null THEN convert(bit,1) ELSE convert(bit,0) END \n"
+//			    + "    ,OldestTranHasShowPlan    = CASE WHEN oti.plan_text            is not null THEN convert(bit,1) ELSE convert(bit,0) END \n"
+//			    + " \n"
+//				+ "    ,LastDbBackupTime         =         (SELECT bi.last_backup_finish_date                            FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D') \n"
+//				+ "    ,LastDbBackupAgeInHours   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) \n"
+//				+ "    ,LastLogBackupTime        =         (SELECT bi.last_backup_finish_date                            FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L') \n"
+//				+ "    ,LastLogBackupAgeInHours  = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L'), -1) \n"
+//			    + " \n"
+//			    + "    ,OldestTranSqlText        = oti.most_recent_sql_text \n"
+//			    + "    ,OldestTranShowPlanText   = oti.plan_text \n"
+//			    + "FROM " + databases + " d \n"
+//			    + "LEFT OUTER JOIN oti              ON d.database_id = oti    .database_id and oti.row_num = 1 \n"
+//			    + "LEFT OUTER JOIN @dataSizeMb data ON d.database_id = data   .database_id \n"
+//			    + "LEFT OUTER JOIN @logSizeMb   log ON d.database_id = log    .database_id \n"
+//			    + "LEFT OUTER JOIN osvData          ON d.database_id = osvData.database_id and osvData.row_num = 1 \n"
+//			    + "LEFT OUTER JOIN osvLog           ON d.database_id = osvLog .database_id and osvLog .row_num = 1 \n"
+//			    + "WHERE has_dbaccess(d.name) != 0 \n"
+//			    + whereAvailabilityGroup
+//			    + " \n"
+//			    + "";
+
 		String sql = ""
+			    + "-- Drop any of the old temporary tables if they still exists \n" 
+			    + "if (object_id('tempdb..#dataSizeMb') is not null) drop table #dataSizeMb \n" 
+			    + "if (object_id('tempdb..#logSizeMb')  is not null) drop table #logSizeMb  \n"
+			    + "if (object_id('tempdb..#backupInfo') is not null) drop table #backupInfo  \n"
+			    + "if (object_id('tempdb..#oti')        is not null) drop table #oti  \n"
+			    + "if (object_id('tempdb..#osvData')    is not null) drop table #osvData  \n"
+			    + "if (object_id('tempdb..#osvLog')     is not null) drop table #osvLog  \n"
+			    + "go \n"
 			    + " \n"
 			    + "--------------------------- \n"
 			    + "-- DATA SIZE MB \n"
 			    + "--------------------------- \n"
-			    + "DECLARE @dataSizeMb TABLE (database_id int, fileGroupCount int, totalDataSizeMb numeric(12,1), usedDataMb numeric(12,1), freeDataMb numeric(12,1), usedDataPct numeric(5,1), freeDataPct numeric(5,1)) \n"
-			    + "INSERT INTO @dataSizeMb \n"
+			    + "CREATE TABLE #dataSizeMb (database_id int, fileGroupCount int, totalDataSizeMb numeric(12,1), usedDataMb numeric(12,1), freeDataMb numeric(12,1), usedDataPct numeric(5,1), freeDataPct numeric(5,1)) \n"
+			    + "INSERT INTO #dataSizeMb \n"
 			    + "EXEC sp_MSforeachdb ' \n"
 			    + "SELECT \n"
 			    + "     database_id \n"
@@ -774,8 +1124,8 @@ extends CountersModel
 			    + "--------------------------- \n"
 			    + "-- LOG SIZE MB \n"
 			    + "--------------------------- \n"
-			    + "DECLARE @logSizeMb TABLE (database_id int, totalLogSizeMb int, usedLogSpaceInMb int, usedLogSpaceInPct numeric(5,1), logSpaceInMbSinceLastBackup int) \n"
-			    + "INSERT INTO @logSizeMb \n"
+			    + "CREATE TABLE #logSizeMb (database_id int, totalLogSizeMb int, usedLogSpaceInMb int, usedLogSpaceInPct numeric(5,1), logSpaceInMbSinceLastBackup int) \n"
+			    + "INSERT INTO #logSizeMb \n"
 			    + "EXEC sp_MSforeachdb ' \n"
 			    + "SELECT \n"
 			    + "     database_id \n"
@@ -788,33 +1138,18 @@ extends CountersModel
 			    + "--------------------------- \n"
 			    + "-- Backup Info \n"
 			    + "--------------------------- \n"
-			    + "DECLARE @backupInfo TABLE (database_name nvarchar(128), type char(2), last_backup_finish_date datetime) \n"
-			    + "INSERT INTO @backupInfo \n"
 			    + "    SELECT \n"
 			    + "         bus.database_name \n"
 			    + "        ,bus.type \n"
 			    + "        ,last_backup_finish_date = MAX(bus.backup_finish_date) \n"
-			    + "    FROM msdb.dbo.backupset bus \n"
+			    + "    INTO #backupInfo \n"
+			    + "    FROM " + backupset + " bus \n"
 			    + "    GROUP BY bus.database_name, bus.type \n"
-			    + "; --- we need a ';' here for SQL-Server to use the Table Variables in the below Statement \n"
 			    + " \n"
 			    + " \n"
-			    + "WITH \n"
-//			    + "--------------------------- \n"
-//			    + "-- Backup Info \n"
-//			    + "--------------------------- \n"
-//			    + "bi AS ( \n"
-//			    + "    SELECT \n"
-//			    + "         bus.database_name \n"
-//			    + "        ,bus.type \n"
-//			    + "        ,last_backup_finish_date = MAX(bus.backup_finish_date) \n"
-//			    + "    FROM " + backupset + " bus \n"
-//			    + "    GROUP BY bus.database_name, bus.type \n"
-//			    + "), \n"
 			    + "--------------------------- \n"
 			    + "-- Open Transaction Info \n"
 			    + "--------------------------- \n"
-			    + "oti AS ( \n"
 			    + "    SELECT --top 1 \n"
 			    + "         es.session_id \n"
 			    + "        ,es.database_id \n"
@@ -839,6 +1174,7 @@ extends CountersModel
 				+ "               END - er.statement_start_offset ) / 2) AS most_recent_sql_text \n"
 			    + "        ,plan_text.query_plan as plan_text \n"
 			    + "        ,ROW_NUMBER() OVER (PARTITION BY es.database_id ORDER BY es.last_request_start_time) AS row_num \n"
+			    + "    INTO #oti \n"
 			    + "    FROM " + dm_exec_sessions + " es \n"
 			    + "    JOIN " + dm_exec_connections + " ec            ON es.session_id = ec.session_id \n"
 			    + "    LEFT OUTER JOIN " + dm_exec_requests + " er    ON er.session_id = es.session_id \n"
@@ -848,11 +1184,11 @@ extends CountersModel
 			    + "    WHERE es.open_transaction_count > 0 \n"
 			    + "    --AND es.status = 'sleeping' \n"
 			    + "      AND es.is_user_process = 1 \n"
-			    + "), \n"
+			    + "      AND es.session_id != @@spid \n"
+			    + "\n"
 			    + "--------------------------- \n"
 			    + "-- Operating System Volume DATA \n"
 			    + "--------------------------- \n"
-			    + "osvData as ( \n"
 			    + "    SELECT \n"
 			    + "         mf.database_id \n"
 			    + "        ,mf.file_id \n"
@@ -879,14 +1215,14 @@ extends CountersModel
 			    + "        ,convert(numeric(5,1), (osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)           AS osFreePct \n"
 			    + "        ,convert(numeric(5,1), 100.0 - ((osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)) AS osUsedPct \n" 
 			    + "        ,ROW_NUMBER() OVER (PARTITION BY mf.database_id ORDER BY osv.available_bytes)               AS row_num \n"
+			    + "    INTO #osvData \n"
 			    + "    FROM " + master_files + " AS mf \n"
 			    + "    CROSS APPLY " + dm_os_volume_stats + " (mf.database_id, mf.file_id) AS osv \n"
 			    + "    WHERE mf.type IN (0) /*0=ROWS, 0=LOG*/ \n"
-			    + "), \n"
+			    + "\n"
 			    + "--------------------------- \n"
 			    + "-- Operating System Volume LOG \n"
 			    + "--------------------------- \n"
-			    + "osvLog as ( \n"
 			    + "    SELECT \n"
 			    + "         mf.database_id \n"
 			    + "        ,mf.file_id \n"
@@ -913,10 +1249,12 @@ extends CountersModel
 			    + "        ,convert(numeric(5,1), (osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)           AS osFreePct \n"
 			    + "        ,convert(numeric(5,1), 100.0 - ((osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)) AS osUsedPct \n" 
 			    + "        ,ROW_NUMBER() OVER (PARTITION BY mf.database_id ORDER BY osv.available_bytes)               AS row_num \n"
+			    + "    INTO #osvLog \n"
 			    + "    FROM " + master_files + " AS mf \n"
 			    + "    CROSS APPLY " + dm_os_volume_stats + " (mf.database_id, mf.file_id) AS osv \n"
 			    + "    WHERE mf.type IN (1) /*0=ROWS, 0=LOG*/ \n"
-			    + ") \n"
+			    + "go\n"
+			    + "\n"
 			    + "------------------------------- \n"
 			    + "-- The final select statement   \n"
 			    + "------------------------------- \n"
@@ -989,26 +1327,31 @@ extends CountersModel
 			    + "    ,OldestTranHasSqlText     = CASE WHEN oti.most_recent_sql_text is not null THEN convert(bit,1) ELSE convert(bit,0) END \n"
 			    + "    ,OldestTranHasShowPlan    = CASE WHEN oti.plan_text            is not null THEN convert(bit,1) ELSE convert(bit,0) END \n"
 			    + " \n"
-//			    + "    ,LastDbBackupTime         = (SELECT MAX(backup_finish_date)                                       FROM " + backupset + " bus WHERE d.name = bus.database_name AND bus.type = 'D') \n"
-//			    + "    ,LastDbBackupAgeInHours   = (SELECT isnull(datediff(hour, MAX(backup_finish_date), getdate()),-1) FROM " + backupset + " bus WHERE d.name = bus.database_name AND bus.type = 'D') \n"
-//			    + "    ,LastLogBackupTime        = (SELECT MAX(backup_finish_date)                                       FROM " + backupset + " bus WHERE d.name = bus.database_name AND bus.type = 'L') \n"
-//			    + "    ,LastLogBackupAgeInHours  = (SELECT isnull(datediff(hour, MAX(backup_finish_date), getdate()),-1) FROM " + backupset + " bus WHERE d.name = bus.database_name AND bus.type = 'L') \n"
-				+ "    ,LastDbBackupTime         =         (SELECT bi.last_backup_finish_date                            FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D') \n"
-				+ "    ,LastDbBackupAgeInHours   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) \n"
-				+ "    ,LastLogBackupTime        =         (SELECT bi.last_backup_finish_date                            FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L') \n"
-				+ "    ,LastLogBackupAgeInHours  = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L'), -1) \n"
+				+ "    ,LastDbBackupTime         =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D') \n"
+				+ "    ,LastDbBackupAgeInHours   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) \n"
+				+ "    ,LastLogBackupTime        =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L') \n"
+				+ "    ,LastLogBackupAgeInHours  = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L'), -1) \n"
 			    + " \n"
 			    + "    ,OldestTranSqlText        = oti.most_recent_sql_text \n"
 			    + "    ,OldestTranShowPlanText   = oti.plan_text \n"
 			    + "FROM " + databases + " d \n"
-			    + "LEFT OUTER JOIN oti              ON d.database_id = oti    .database_id and oti.row_num = 1 \n"
-			    + "LEFT OUTER JOIN @dataSizeMb data ON d.database_id = data   .database_id \n"
-			    + "LEFT OUTER JOIN @logSizeMb   log ON d.database_id = log    .database_id \n"
-			    + "LEFT OUTER JOIN osvData          ON d.database_id = osvData.database_id and osvData.row_num = 1 \n"
-			    + "LEFT OUTER JOIN osvLog           ON d.database_id = osvLog .database_id and osvLog .row_num = 1 \n"
+			    + "LEFT OUTER JOIN #oti            oti ON d.database_id = oti    .database_id and oti.row_num = 1 \n"
+			    + "LEFT OUTER JOIN #dataSizeMb    data ON d.database_id = data   .database_id \n"
+			    + "LEFT OUTER JOIN #logSizeMb      log ON d.database_id = log    .database_id \n"
+			    + "LEFT OUTER JOIN #osvData    osvData ON d.database_id = osvData.database_id and osvData.row_num = 1 \n"
+			    + "LEFT OUTER JOIN #osvLog      osvLog ON d.database_id = osvLog .database_id and osvLog .row_num = 1 \n"
 			    + "WHERE has_dbaccess(d.name) != 0 \n"
 			    + whereAvailabilityGroup
+			    + "go \n"
 			    + " \n"
+			    + "-- Drop temporary tables \n" 
+			    + "drop table #dataSizeMb \n" 
+			    + "drop table #logSizeMb  \n"
+			    + "drop table #backupInfo  \n"
+			    + "drop table #oti  \n"
+			    + "drop table #osvData  \n"
+			    + "drop table #osvLog  \n"
+			    + "go \n"
 			    + "";
 
 		return sql;

@@ -115,10 +115,6 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] activeThreadsLabels = new String[] { "ThreadsActive", "ParallelQueries" };
-//		
-//		addTrendGraphData(GRAPH_NAME_ACTIVE_THREADS, new TrendGraphDataPoint(GRAPH_NAME_ACTIVE_THREADS, activeThreadsLabels, LabelType.Static));
-
 		addTrendGraph(GRAPH_NAME_ACTIVE_THREADS,
 			"Worker Threads in Use ", 	                                  // Menu CheckBox text
 			"Worker Threads in Use & Parallel Queries per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
@@ -130,23 +126,6 @@ extends CountersModel
 			false, // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
-
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//			tg = new TrendGraph(GRAPH_NAME_ACTIVE_THREADS,
-//				"Worker Threads in Use ", 	                                  // Menu CheckBox text
-//				"Worker Threads in Use & Parallel Queries per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				activeThreadsLabels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 //	@Override

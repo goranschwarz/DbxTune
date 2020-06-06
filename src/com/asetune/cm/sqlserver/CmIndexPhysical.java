@@ -105,7 +105,7 @@ extends CountersModel
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
-	public static final int      DEFAULT_POSTPONE_TIME          = 900; // 15 minutes
+	public static final int      DEFAULT_POSTPONE_TIME          = 14400; // 4 hour
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
@@ -198,6 +198,7 @@ extends CountersModel
 		pkCols.add("object_id");
 		pkCols.add("index_id");
 		pkCols.add("partition_number");
+		pkCols.add("alloc_unit_type_desc");
 
 		return pkCols;
 	}
@@ -220,7 +221,8 @@ extends CountersModel
 //		int minPageCount = 1;
 		int minPageCount = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_sample_minPageCount, DEFAULT_sample_minPageCount);
 		
-		String sql = "select \n"
+		String sql = "exec sys.sp_MSforeachdb '"
+				+ "select \n"
 				+ "     [dbname]         = db_name(database_id) \n"
 				+ "    ,[schemaName]     = object_schema_name(object_id, database_id) \n"
 				+ "    ,[objectName]     = object_name(object_id, database_id) \n"
@@ -230,8 +232,10 @@ extends CountersModel
 				+ "    ,[rowCountDiff]   = record_count \n"
 				+ "    ,[avgRowsPerPage] = CASE WHEN page_count = 0 THEN 0 ELSE convert(decimal(10,1), (record_count*1.0 / page_count)) END \n"
 				+ "    ,* \n"
-				+ "from sys." + dm_db_index_physical_stats + "(DEFAULT, DEFAULT, DEFAULT, DEFAULT, " + mode + ") \n"
-				+ "where page_count >= " + minPageCount + " \n";
+				+ "from sys." + dm_db_index_physical_stats + "(db_id(''?''), DEFAULT, DEFAULT, DEFAULT, " + mode.replace("'", "''") + ") \n"
+				+ "where page_count >= " + minPageCount + " \n"
+				+ "' \n"
+				+ "";
 
 		// NOTE: object_name() function is not the best in SQL-Server it may block...
 

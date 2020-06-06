@@ -35,6 +35,7 @@ import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEventLowOsDiskFreeSpace;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.MapNumberValidator;
+import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -276,6 +277,11 @@ extends CounterModelHostMonitor
 			return;
 
 		CountersModel cm = this;
+		Configuration conf = Configuration.getCombinedConfiguration();
+		
+		double sizeMbSkipThreshold = conf.getDoubleProperty(PROPKEY_alarm_SkipSizeBelowMb,    DEFAULT_alarm_SkipSizeBelowMb);
+		String skipRegExp          = conf.getProperty(      PROPKEY_alarm_SkipMountNameRegex, DEFAULT_alarm_SkipMountNameRegex);
+
 
 		//boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
 
@@ -283,6 +289,40 @@ extends CounterModelHostMonitor
 		{
 		//	String fsName     = cm.getAbsString(r, "Filesystem");
 			String mountPoint = cm.getAbsString(r, "MountedOn");
+
+			// SKIP: empty
+			if (StringUtil.isNullOrBlank(mountPoint))
+					continue;
+
+			// SKIP: Read Only mount points
+			//NOT-YET-IMPLEMENTED: on init get mount points that are in RO and add them to a "set", which we check here... 
+//			if (_roMountPoints != null && _roMountPoints.contains(mountPoint))
+//			{
+//				if (_logger.isDebugEnabled())
+//					_logger.debug("sendAlarmRequest(): skipping[ro-mount-pont]: mountPoint=" + mountPoint + ", _roMountPoints=" + _roMountPoints);
+//				continue;
+//			}
+
+			// SKIP: NFS mounts 
+			//NOT-YET-IMPLEMENTED: (should we do this or not) 
+			
+			
+			// SKIP: if in skipRegExp
+			if (StringUtil.hasValue(skipRegExp) && mountPoint.matches(skipRegExp))
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug("sendAlarmRequest(): skipping[skipRegExp]: mountPoint=" + mountPoint + ", " + PROPKEY_alarm_SkipMountNameRegex + "=" + skipRegExp);
+				continue;
+			}
+			
+			// SKIP: Should we skip any mount points with LESS than X MB
+			Double sizeMb = cm.getAbsValueAsDouble(r, "Size-MB");
+			if (sizeMb != null && sizeMb < sizeMbSkipThreshold)
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug("sendAlarmRequest(): skipping[sizeMb]: mountPoint=" + mountPoint + ", sizeMb=" + sizeMb + ", less than threshold=" + sizeMbSkipThreshold);
+				continue;
+			}
 
 			//-------------------------------------------------------
 			// LowFreeSpaceInMb
@@ -321,7 +361,7 @@ extends CounterModelHostMonitor
 	}
 
 	/**
-	 * Helper method to get the Threshold for a specific DB, using direct access to map or by check all key values in map with regexp...
+	 * Helper method to get the Threshold for a specific "mount point", using direct access to map or by check all key values in map with regexp...
 	 * 
 	 * @param dbname
 	 * @param map
@@ -363,6 +403,8 @@ extends CounterModelHostMonitor
 	private Map<String, Number> _map_alarm_LowFreeSpaceInMb; // Note: do NOT initialize this here... since the initAlarms() is done in super, if initialized it will be overwritten here...
 	private Map<String, Number> _map_alarm_LowFreeSpaceInPct;// Note: do NOT initialize this here... since the initAlarms() is done in super, if initialized it will be overwritten here...
 	
+//	private Set<String> _roMountPoints;// Note: do NOT initialize this here... since the initAlarms() is done in super, if initialized it will be overwritten here...
+
 	/**
 	 * Initialize stuff that has to do with alarms
 	 */
@@ -376,6 +418,44 @@ extends CounterModelHostMonitor
 		_map_alarm_LowFreeSpaceInPct  = new HashMap<>();
 		
 		String prefix = "       ";
+
+		//--------------------------------------
+		// TODO: get RO mount points
+		// maybe call OS and get mount points that are RO
+		//  * Linux: grep "[[:space:]]ro[[:space:],]" /proc/mounts | awk '{print $2}'
+// Not sure if actually are connected at this stage...
+// Implement this LATER
+//		if (CounterController.getInstance().isHostMonConnected())
+//		{
+//			if (isConnectedToVendor(OsVendor.Linux))
+//			{
+//				try
+//				{
+//					SshConnection sshConn = CounterController.getInstance().getHostMonConnection();
+//					String roMountPoints = sshConn.execCommandOutputAsStr("grep '[[:space:]]ro[[:space:],]' /proc/mounts | awk '{printf \"%s \", $2}'");
+//
+//					if (_roMountPoints == null)
+//						_roMountPoints = new HashSet<>();
+//
+//					if (StringUtil.hasValue(roMountPoints))
+//					{
+//						String[] sa = roMountPoints.split(" ");
+//						for (String str : sa)
+//						{
+//							if (StringUtil.hasValue(str))
+//								_roMountPoints.add(str);
+//						}
+//					}
+//				}
+//				catch (IOException e)
+//				{
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//			}
+//		}
+
+
 
 		//--------------------------------------
 		// LowFreeSpaceInMb
@@ -432,25 +512,34 @@ extends CounterModelHostMonitor
 		}
 	}
 
+	public static final String  PROPKEY_alarm_SkipMountNameRegex            = CM_NAME + ".alarm.system.skip.MountNameRegex";
+	public static final String  DEFAULT_alarm_SkipMountNameRegex            = "(/cdrom|/dummy)";
+
+	public static final String  PROPKEY_alarm_SkipSizeBelowMb               = CM_NAME + ".alarm.system.skip.SizeBelowMb";
+	public static final int     DEFAULT_alarm_SkipSizeBelowMb               = 512;
+
 	public static final String  PROPKEY_alarm_LowFreeSpaceInMb              = CM_NAME + ".alarm.system.if.Available-MB.lt";
 //	public static final String  DEFAULT_alarm_LowFreeSpaceInMb              = ".*=2, tempdb=100";
-	public static final String  DEFAULT_alarm_LowFreeSpaceInMb              = "";
-                                                                              
+	public static final String  DEFAULT_alarm_LowFreeSpaceInMb              = ".*=10";
+
 	public static final String  PROPKEY_alarm_LowFreeSpaceInPct             = CM_NAME + ".alarm.system.if.UsedPct.gt";
 //	public static final String  DEFAULT_alarm_LowFreeSpaceInPct             = "tempdb=80";
 //	public static final String  DEFAULT_alarm_LowFreeSpaceInPct             = ".*=99.1";
-	public static final String  DEFAULT_alarm_LowFreeSpaceInPct             = "";
-                                                                              
+	public static final String  DEFAULT_alarm_LowFreeSpaceInPct             = ".*=95.0";
+
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
-		
+
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
-		
-		list.add(new CmSettingsHelper("LowFreeSpaceInMb",  isAlarmSwitch, PROPKEY_alarm_LowFreeSpaceInMb , String.class, conf.getProperty(PROPKEY_alarm_LowFreeSpaceInMb , DEFAULT_alarm_LowFreeSpaceInMb ), DEFAULT_alarm_LowFreeSpaceInMb , "If 'Available-MB' is less than ## then send 'AlarmEventLowOsDiskFreeSpace'. format: mountPoint1=#, mountPoint2=#, mountPoint3=#  (Note: the 'mountPoint' can use regexp)",      new MapNumberValidator()));
-		list.add(new CmSettingsHelper("LowFreeSpaceInPct", isAlarmSwitch, PROPKEY_alarm_LowFreeSpaceInPct, String.class, conf.getProperty(PROPKEY_alarm_LowFreeSpaceInPct, DEFAULT_alarm_LowFreeSpaceInPct), DEFAULT_alarm_LowFreeSpaceInPct, "If 'UsedPct' is greater than ##.# Percent then send 'AlarmEventLowOsDiskFreeSpace'.format: mountPoint1=#, mountPoint2=#, mountPoint3=#  (Note: the 'mountPoint' can use regexp)", new MapNumberValidator()));
+
+		list.add(new CmSettingsHelper("SkipMountNameRegex",               PROPKEY_alarm_SkipMountNameRegex, String .class, conf.getProperty   (PROPKEY_alarm_SkipMountNameRegex, DEFAULT_alarm_SkipMountNameRegex), DEFAULT_alarm_SkipMountNameRegex, "Skip entries where 'MountedOn' mathing this regexp", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("SkipSizeBelowMb",                  PROPKEY_alarm_SkipSizeBelowMb   , Integer.class, conf.getIntProperty(PROPKEY_alarm_SkipSizeBelowMb   , DEFAULT_alarm_SkipSizeBelowMb   ), DEFAULT_alarm_SkipSizeBelowMb   , "Skip entries where 'Size-MB' is less than this value." ));
+
+		list.add(new CmSettingsHelper("LowFreeSpaceInMb",  isAlarmSwitch, PROPKEY_alarm_LowFreeSpaceInMb  , String.class,  conf.getProperty   (PROPKEY_alarm_LowFreeSpaceInMb  , DEFAULT_alarm_LowFreeSpaceInMb  ), DEFAULT_alarm_LowFreeSpaceInMb  , "If 'Available-MB' is less than ## then send 'AlarmEventLowOsDiskFreeSpace'. format: mountPoint1=#, mountPoint2=#, mountPoint3=#  (Note: the 'mountPoint' can use regexp)",      new MapNumberValidator()));
+		list.add(new CmSettingsHelper("LowFreeSpaceInPct", isAlarmSwitch, PROPKEY_alarm_LowFreeSpaceInPct , String.class,  conf.getProperty   (PROPKEY_alarm_LowFreeSpaceInPct , DEFAULT_alarm_LowFreeSpaceInPct ), DEFAULT_alarm_LowFreeSpaceInPct , "If 'UsedPct' is greater than ##.# Percent then send 'AlarmEventLowOsDiskFreeSpace'.format: mountPoint1=#, mountPoint2=#, mountPoint3=#  (Note: the 'mountPoint' can use regexp)", new MapNumberValidator()));
 
 		return list;
 	}

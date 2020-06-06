@@ -170,6 +170,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_LOG_POOL_REQUESTS         = "LogPoolReq";
                                                                     
 	public static final String GRAPH_NAME_TRANS_SEC                 = "TransSec";
+	public static final String GRAPH_NAME_TRANS_WRITE_SEC           = "TransWriteSec";
 	public static final String GRAPH_NAME_TRANS_ACTIVE              = "TransActive";
                                                                     
 	public static final String GRAPH_NAME_COMPILE                   = "Compile";
@@ -524,6 +525,19 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TRANS_SEC,
 			"Transactions", // Menu CheckBox text
 			"Transactions per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_TRANS_WRITE_SEC,
+			"Write Transactions", // Menu CheckBox text
+			"Write Transactions per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, 
 			LabelType.Dynamic,
@@ -1462,6 +1476,31 @@ extends CountersModel
 
 				// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
 				String pk = createPkStr(":Databases", "Transactions/sec", dbname);
+				Double val = this.getAbsValueAsDouble(pk, "calculated_value");
+
+				// Record not found
+				if (val == null)
+					val = 0.0;
+
+				larr[r] = dbname;
+				darr[r] = val;
+			}
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), larr, darr);
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_TRANS_WRITE_SEC.equals(tgdp.getName()))
+		{
+			String[] larr = new String[_dbnames.size()];
+			Double[] darr = new Double[_dbnames.size()];
+			
+			for (int r=0; r<darr.length; r++)
+			{
+				String dbname = _dbnames.get(r);
+
+				// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+				String pk = createPkStr(":Databases", "Write Transactions/sec", dbname);
 				Double val = this.getAbsValueAsDouble(pk, "calculated_value");
 
 				// Record not found

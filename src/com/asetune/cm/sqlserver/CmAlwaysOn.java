@@ -1008,14 +1008,17 @@ extends CountersModel
 			}
 
 			// wait "a while" for the records to be replicated...
-			long sleepTime = 1000;
-			if (sleepTime > 0)
+			if ( ! primaryDbs.isEmpty() )
 			{
-				if (getGuiController() != null)
-					getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "Wait a short while (" + sleepTime + " ms) for data to be replicated.");
+				long sleepTime = 1000;
+				if (sleepTime > 0)
+				{
+					if (getGuiController() != null)
+						getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "Wait a short while (" + sleepTime + " ms) for data to be replicated.");
 
-				try { Thread.sleep(sleepTime); }
-				catch (InterruptedException ignore) {}
+					try { Thread.sleep(sleepTime); }
+					catch (InterruptedException ignore) {}
+				}
 			}
 		}
 	}
@@ -1025,6 +1028,10 @@ extends CountersModel
 	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 //System.out.println("CmAlwaysOn: getSqlForVersion(): srvVersion="+srvVersion+", isAzure="+isAzure);
+//System.out.println("CmAlwaysOn: Ver.ver(2019)="+Ver.ver(2019));
+//CmAlwaysOn: getSqlForVersion(): srvVersion=2017000000000000, isAzure=false
+//CmAlwaysOn: getSqlForVersion(): srvVersion=2017 00 00 0000 0000, isAzure=false
+
 		if (_cpm == null)
 			_cpm = new DbxConnectionPoolMap();
 

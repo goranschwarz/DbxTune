@@ -42,6 +42,7 @@ public class AseCpuUsageOverview extends AseAbstract
 
 		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load.",
 				"CmSummary_aaCpuGraph",
+				"CmEngines_aaReadWriteGraph",
 				"CmEngines_cpuSum",
 				"CmEngines_cpuEng",
 				"CmSysLoad_EngineRunQLengthGraph",
@@ -52,6 +53,7 @@ public class AseCpuUsageOverview extends AseAbstract
 				));
 
 		sb.append(_CmSummary_aaCpuGraph           .getHtmlContent(null, "The above graph may contain <i>extra</i> CPU Usages, which will be CPU Used during I/O completaion checks."));
+		sb.append(_CmSummary_aaDiskGraph          .getHtmlContent(null, "How many disk I/Os was done... To be used in conjunction with '@@cpu_xxx' to decide if CPU is comming from disk or <i>other</i> DBMS load."));
 		sb.append(_CmEngines_cpuSum               .getHtmlContent(null, "The above graph Will only contain CPU Cyckles used to execute User Work."));
 		sb.append(_CmEngines_cpuEng               .getHtmlContent(null, "The above graph Will only contain CPU Cyckles used to execute User Work, but for each ASE Engine.<br>\n"
 		                                                              + "So here you can see if you have specififc Engines scheduling work."));
@@ -90,6 +92,7 @@ public class AseCpuUsageOverview extends AseAbstract
 	{
 		int maxValue = 100;
 		_CmSummary_aaCpuGraph            = createChart(conn, "CmSummary", "aaCpuGraph",            maxValue, null, "CPU Summary for all Engines (using @@cpu_busy, @@cpu_io) (Summary)");
+		_CmSummary_aaDiskGraph           = createChart(conn, "CmSummary", "aaReadWriteGraph",      -1,       null, "Disk read/write per second, using @@total_read, @@total_write (Summary)");
 		_CmEngines_cpuSum                = createChart(conn, "CmEngines", "cpuSum",                maxValue, null, "CPU Summary for all Engines (Server->Engines)");
 		_CmEngines_cpuEng                = createChart(conn, "CmEngines", "cpuEng",                maxValue, null, "CPU Usage per Engine (System + User) (Server->Engines)");
 		_CmSysLoad_EngineRunQLengthGraph = createChart(conn, "CmSysLoad", "EngineRunQLengthGraph", -1,       null, "Run Queue Length, Average over last minute, Per Engine (Server->System Load)");
@@ -107,6 +110,7 @@ public class AseCpuUsageOverview extends AseAbstract
 	}
 
 	private ReportChartObject _CmSummary_aaCpuGraph;
+	private ReportChartObject _CmSummary_aaDiskGraph;
 	private ReportChartObject _CmEngines_cpuSum;
 	private ReportChartObject _CmEngines_cpuEng;
 	private ReportChartObject _CmSysLoad_EngineRunQLengthGraph;

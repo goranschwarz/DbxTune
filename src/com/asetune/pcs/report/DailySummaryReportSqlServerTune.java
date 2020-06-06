@@ -26,6 +26,9 @@ import com.asetune.pcs.report.content.os.OsSpaceUsageOverview;
 import com.asetune.pcs.report.content.sqlserver.SqlServerCpuUsageOverview;
 import com.asetune.pcs.report.content.sqlserver.SqlServerDbSize;
 import com.asetune.pcs.report.content.sqlserver.SqlServerSlowCmDeviceIo;
+import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecQueryStats;
+import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmIndexPhysicalAvgPageUsedPct;
+import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmIndexPhysicalTabSize;
 
 public class DailySummaryReportSqlServerTune 
 extends DailySummaryReportDefault
@@ -41,6 +44,8 @@ extends DailySummaryReportDefault
 		addReportEntry( new OsCpuUsageOverview(this)          );
 
 		// SQL
+		addReportEntry( new SqlServerTopCmExecQueryStats(this)    );
+//		addReportEntry( new SqlServerTopCmExecProcedureStats(this));
 		//addReportEntry( new SqlServerTopSlowSql(this)           );
 		//addReportEntry( new SqlServerTopSlowProcCalls(this)     );
 
@@ -48,6 +53,12 @@ extends DailySummaryReportDefault
 		addReportEntry( new SqlServerSlowCmDeviceIo(this)     );
 		addReportEntry( new OsSpaceUsageOverview(this)        );
 		addReportEntry( new OsIoStatSlowIo(this)              );
+
+		// SQL: Accessed Tables
+//		addReportEntry( new SqlServerTopCmObjectActivity(this)    );
+//		addReportEntry( new SqlServerTopCmObjectActivityTabSize(this) );
+		addReportEntry( new SqlServerTopCmIndexPhysicalTabSize(this) );
+		addReportEntry( new SqlServerTopCmIndexPhysicalAvgPageUsedPct(this) );
 
 		// Database Size
 		addReportEntry( new SqlServerDbSize(this)             );

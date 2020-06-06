@@ -23,7 +23,6 @@ import com.asetune.cm.CountersModel;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.graph.TrendGraphDataPoint;
-import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -589,6 +588,32 @@ public abstract class PersistWriterBase
 			return getNullable(true);
 	}
 
+	/**
+	 * 
+	 * @param conn
+	 * @param cm
+	 * @param colName
+	 * @return
+	 */
+	public String getPcsColumnOption(DbxConnection conn, CountersModel cm, String colName)
+	{
+		// NOT YET IMPLEMENTED
+		return "";
+
+//		Map<String, PcsColumnOptions> map = cm.getPcsColumnOptions();
+//		if (map == null)
+//			return "";
+//		if (map.isEmpty())
+//			return "";
+//
+//		PcsColumnOptions colType = map.get(colName);
+//		if (colType == null)
+//			return "";
+//
+//		return conn.resolvColumnOption(colType);
+	}
+
+
 	/** Helper method to get a table name */
 	public static String getTableName(DbxConnection conn, int type, CountersModel cm, boolean addQuotedIdentifierChar)
 	{
@@ -1141,8 +1166,9 @@ public abstract class PersistWriterBase
 					String colName = fill( lq + rsmd.getColumnLabel(c) + rq,        40);
 					String dtName  = fill(getDatatype(conn, c, rsmd, isDeltaOrPct), 20);
 					String nullable= getNullable(conn, c, rsmd, isDeltaOrPct);
+					String colOpt  = getPcsColumnOption(conn, cm, colName); // Get DBMS specific column option(s)
 
-					sbSql.append("   ," +colName+ " " + dtName + " " + nullable + "\n");
+					sbSql.append("   ," + colName + " " + dtName + " " + colOpt + " " + nullable + "\n");
 				}
 				sbSql.append(") \n");
 			}

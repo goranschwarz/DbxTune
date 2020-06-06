@@ -71,6 +71,7 @@ import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTable;
 import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistReader.PcsSavedException;
+import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.conn.DbxConnection;
@@ -5499,6 +5500,7 @@ implements Cloneable, ITableTooltip
 	 */
 	public void sendDdlDetailsRequest(CounterSample absData, CounterSample diffData, CounterSample rateData)
 	{
+//System.out.println("sendDdlDetailsRequest(): cm="+getName()+", absData="+absData+", diffData="+diffData+", rateData="+rateData);
 		if ( ! PersistentCounterHandler.hasInstance() )
 			return;
 		if ( absData == null )
@@ -5518,6 +5520,7 @@ implements Cloneable, ITableTooltip
 		int DBName_pos     = absData.findColumn(colInfo[0]);
 		int ObjectName_pos = absData.findColumn(colInfo[1]);
 
+//System.out.println("sendDdlDetailsRequest(): cm="+getName()+", DBName_pos["+colInfo[0]+"]="+DBName_pos+", ObjectName_pos["+colInfo[1]+"]="+ObjectName_pos+".");
 		if (DBName_pos == -1 || ObjectName_pos == -1)
 			return;
 
@@ -5719,6 +5722,32 @@ implements Cloneable, ITableTooltip
 	}
 
 
+	/**
+	 * Get Options for how to store specific columns in the Persistence Counter Store 
+	 * <p>
+	 * In the returned Map we specify for example: If the column needs to be (dictionary) compressed... (if the back end DBMS support that)
+	 * 
+	 * @return a Map with ColumnNames and Options
+	 */
+	public Map<String, PcsColumnOptions> getPcsColumnOptions()
+	{
+		return null;
+	}
+
+//	/**
+//	 * Set Options for how to store specific columns in the Persistence Counter Store 
+//	 * <p>
+//	 * Here we specify for example: If the column needs to be (dictionary) compressed... (if the back end DBMS support that)
+//	 * 
+//	 * @return Any old mapping
+//	 */
+//	public Map<String, PcsColumnOptions> setPcsColumnOptions(Map<String, PcsColumnOptions> map)
+//	{
+//		return _pcsColumnOptions;
+//	}
+//
+//	/** used by: getPcsColumnOptions() and setPcsColumnOptions() */
+//	private Map<String, PcsColumnOptions> _pcsColumnOptions = null;
 
 
 	//----------------------------------------------------------------------------------------------------------

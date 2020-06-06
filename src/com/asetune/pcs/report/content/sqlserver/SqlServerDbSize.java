@@ -29,7 +29,8 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
-public class SqlServerDbSize extends AseAbstract
+public class SqlServerDbSize 
+extends SqlServerAbstract
 {
 //	private static Logger _logger = Logger.getLogger(AseCpuUsageOverview.class);
 

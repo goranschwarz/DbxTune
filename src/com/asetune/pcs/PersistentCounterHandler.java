@@ -635,6 +635,9 @@ implements Runnable
 	 *  It's called internally from any ObjectLookUpInspectors for dependent objects */
 	public void addDdl(String dbname, String objectName, String source, String dependParent, int dependLevel)
 	{
+		if (_logger.isDebugEnabled())
+			_logger.debug("addDdl(): dbname="+dbname+", objectName="+objectName+", source="+source+", dependParent="+dependParent+", dependLevel="+dependLevel+". EXTRA_INFO: _doDdlLookupAndStore="+_doDdlLookupAndStore+", _writerClasses.size()="+_writerClasses.size());
+
 		if ( ! _doDdlLookupAndStore )
 			return;
 
@@ -662,6 +665,8 @@ implements Runnable
 		if (_objectLookupInspector != null)
 		{
 			boolean allowLookup = _objectLookupInspector.allowInspection(entry);
+			if (_logger.isDebugEnabled())
+				_logger.debug("addDdl(): _objectLookupInspector.allowInspection(entry) retuned: "+allowLookup);
 			
 			// Inspector said: DISCARD, so we can exit early
 			if ( ! allowLookup )
@@ -678,6 +683,9 @@ implements Runnable
 				allowLookup = _ddlLookup_enabledForDatabaseObjects;
 			}
 			
+			if (_logger.isDebugEnabled())
+				_logger.debug("addDdl(): allowLookup-2="+allowLookup+", entry._dbname="+entry._dbname+", _ddlLookup_enabledForStatementCache="+_ddlLookup_enabledForStatementCache+", _ddlLookup_enabledForDatabaseObjects="+_ddlLookup_enabledForDatabaseObjects);
+
 			// exit if we do NOT allow lookup
 			if ( ! allowLookup )
 				return;
@@ -695,6 +703,7 @@ implements Runnable
 				break;
 			}
 		}
+
 		if ( ! doLookup )
 		{
 			// DEBUG

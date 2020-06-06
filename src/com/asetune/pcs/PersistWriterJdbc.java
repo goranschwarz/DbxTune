@@ -3101,6 +3101,32 @@ public class PersistWriterJdbc
 
 			try
 			{
+				// Check if record already exists in the History
+				//    PRIMARY KEY ("+lq+"eventTime"+rq+", "+lq+"action"+rq+", "+lq+"alarmClass"+rq+", "+lq+"serviceType"+rq+", "+lq+"serviceName"+rq+", "+lq+"serviceInfo"+rq+", "+lq+"extraInfo"+rq+")\n");
+				sql = "select count(*) \n"
+						+ "from " + getTableName(conn, ALARM_HISTORY, null, true) + "\n"
+						+ "where [eventTime]   = " + DbUtils.safeStr(aew.getAddDate()            ) + " \n"
+						+ "  and [action]      = " + DbUtils.safeStr(aew.getAction()             ) + " \n"
+						+ "  and [alarmClass]  = " + DbUtils.safeStr(ae.getAlarmClassAbriviated()) + " \n"
+						+ "  and [serviceType] = " + DbUtils.safeStr(ae.getServiceType()         ) + " \n"
+						+ "  and [serviceName] = " + DbUtils.safeStr(ae.getServiceName()         ) + " \n"
+						+ "  and [serviceInfo] = " + DbUtils.safeStr(ae.getServiceInfo()         ) + " \n"
+						+ "  and [extraInfo]   " + (ae.getExtraInfo()==null ? "is " : "= ") + DbUtils.safeStr(ae.getExtraInfo()) + " \n"
+						+ "";
+				sql = conn.quotifySqlString(sql);
+				
+				boolean exists = false;
+				try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+				{
+					while(rs.next())
+					{
+						exists = rs.getInt(1) > 0;
+					}
+				}
+				if (exists)
+					continue;
+				
+				
 				// Get the SQL statement
 				sql = getTableInsertStr(conn, ALARM_HISTORY, null, true);
 				PreparedStatement pst = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(conn, sql) : conn.prepareStatement(sql);

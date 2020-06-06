@@ -27,7 +27,8 @@ import com.asetune.pcs.report.content.ase.AseAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
-public class SqlServerCpuUsageOverview extends AseAbstract
+public class SqlServerCpuUsageOverview 
+extends SqlServerAbstract
 {
 //	private static Logger _logger = Logger.getLogger(SqlServerCpuUsageOverview.class);
 
@@ -43,13 +44,19 @@ public class SqlServerCpuUsageOverview extends AseAbstract
 
 		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load.",
 				"CmSummary_aaCpuGraph",
+				"CmPerfCounters_OsCpuEffective",
+				"CmPerfCounters_SqlBatch",
+				"CmPerfCounters_TransWriteSec",
 				"CmSchedulers_RunQLengthSum",
 				"CmSchedulers_RunQLengthEng"
 				));
 
-		sb.append(_CmSummary_aaCpuGraph      .getHtmlContent(null, null));
-		sb.append(_CmSchedulers_RunQLengthSum.getHtmlContent(null, null));
-		sb.append(_CmSchedulers_RunQLengthEng.getHtmlContent(null, null));
+		sb.append(_CmSummary_aaCpuGraph         .getHtmlContent(null, null));
+		sb.append(_CmPerfCounters_OsCpuEffective.getHtmlContent(null, null));
+		sb.append(_CmPerfCounters_SqlBatch      .getHtmlContent(null, null));
+		sb.append(_CmPerfCounters_TransWriteSec .getHtmlContent(null, null));
+		sb.append(_CmSchedulers_RunQLengthSum   .getHtmlContent(null, null));
+		sb.append(_CmSchedulers_RunQLengthEng   .getHtmlContent(null, null));
 
 		return sb.toString();
 	}
@@ -57,7 +64,7 @@ public class SqlServerCpuUsageOverview extends AseAbstract
 	@Override
 	public String getSubject()
 	{
-		return "CPU Usage graph of the full day (origin: CmSummary,CmSchedulers / @@cpu_xxx,dm_os_schedulers)";
+		return "CPU Usage graph of the full day (origin: CmSummary,CmPerfCounters,CmSchedulers / @@cpu_xxx,dm_os_schedulers)";
 	}
 
 	@Override
@@ -71,12 +78,18 @@ public class SqlServerCpuUsageOverview extends AseAbstract
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		int maxValue = 100;
-		_CmSummary_aaCpuGraph       = createChart(conn, "CmSummary",    "aaCpuGraph",    maxValue, null, "CPU Summary for all Schedulers (using @@cpu_busy, @@cpu_io) (Summary)");
-		_CmSchedulers_RunQLengthSum = createChart(conn, "CmSchedulers", "RunQLengthSum", -1,       null, "Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)");
-		_CmSchedulers_RunQLengthEng = createChart(conn, "CmSchedulers", "RunQLengthEng", -1,       null, "Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)");
+		_CmSummary_aaCpuGraph          = createChart(conn, "CmSummary",      "aaCpuGraph",     maxValue, null, "CPU Summary for all Schedulers (using @@cpu_busy, @@cpu_io) (Summary)");
+		_CmPerfCounters_OsCpuEffective = createChart(conn, "CmPerfCounters", "OsCpuEffective", maxValue, null, "CPU Usage Effective in Percent (Perf Counters)");
+		_CmPerfCounters_SqlBatch       = createChart(conn, "CmPerfCounters", "SqlBatch",       -1,       null, "SQL Batches Received per Sec (Perf Counters)");
+		_CmPerfCounters_TransWriteSec  = createChart(conn, "CmPerfCounters", "TransWriteSec",  -1,       null, "Write Transactions per Sec (Perf Counters)");
+		_CmSchedulers_RunQLengthSum    = createChart(conn, "CmSchedulers",   "RunQLengthSum",  -1,       null, "Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)");
+		_CmSchedulers_RunQLengthEng    = createChart(conn, "CmSchedulers",   "RunQLengthEng",  -1,       null, "Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)");
 	}
 
 	private ReportChartObject _CmSummary_aaCpuGraph;
+	private ReportChartObject _CmPerfCounters_OsCpuEffective;
+	private ReportChartObject _CmPerfCounters_SqlBatch;
+	private ReportChartObject _CmPerfCounters_TransWriteSec;
 	private ReportChartObject _CmSchedulers_RunQLengthSum;
 	private ReportChartObject _CmSchedulers_RunQLengthEng;
 }

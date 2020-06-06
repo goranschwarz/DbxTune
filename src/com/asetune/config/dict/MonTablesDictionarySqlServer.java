@@ -2201,12 +2201,37 @@ extends MonTablesDictionaryDefault
 			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 
 			// Table name and description
-			mtd.addTable("dm_exec_query_optimizer_info",  "<p>Returns detailed statistics about the operation of the SQL Server query optimizer. You can use this view when tuning a workload to identify query optimization problems or improvements. For example, you can use the total number of optimizations, the elapsed time value, and the final cost value to compare the query optimizations of the current workload and any changes observed during?the tuning process.?Some counters provide data that?is relevant only?for?SQL Server internal diagnostic use. These counters are marked as \"Internal only.\"</p>");
+			mtd.addTable("dm_exec_query_optimizer_info",  "<p></p>");
 
 			// Column names and description
-			mtd.addColumn("dm_exec_query_optimizer_info", "counter"   , "<html><p>Name of optimizer statistics event.</p></html>");
-			mtd.addColumn("dm_exec_query_optimizer_info", "occurrence", "<html><p>Number of occurrences of optimization event for this counter.</p></html>");
-			mtd.addColumn("dm_exec_query_optimizer_info", "value"     , "<html><p>Average property value per event occurrence. </p></html>");
+			mtd.addColumn("dm_exec_query_optimizer_info", "name"            , "<html><p>column contains the internal name for the rule. An example is JNtoSM — an implementation rule to transform a logical inner join to a physical sort-merge join operator.</p></html>");
+			mtd.addColumn("dm_exec_query_optimizer_info", "promised"        , "<html><p>The promised column shows how many times the rule has been asked to provide a promise value to the optimizer.</p></html>");
+			mtd.addColumn("dm_exec_query_optimizer_info", "promise_total"   , "<html><p>The promise_total column is the sum of all the promise values returned.</p></html>");
+			mtd.addColumn("dm_exec_query_optimizer_info", "promise_avg"     , "<html><p>The promise_avg column is promise_total divided by promised.</p></html>");
+			mtd.addColumn("dm_exec_query_optimizer_info", "built_substitute", "<html><p>The built_substitute column tracks how many times the rule has produced an alternative implementation for a logical group.</p></html>");
+			mtd.addColumn("dm_exec_query_optimizer_info", "succeeded"       , "<html><p>The succeeded column tracks the number of times that a rule generated a transformation that was successfully added to the space of valid alternative strategies.</p></html>");
+		}
+		catch (NameNotFoundException e)
+		{
+			_logger.warn("Problems adding 'dm_exec_query_optimizer_info' to MonTablesDictionary. Caught: " + e, e);
+		}
+
+
+
+		// ---------------------------------------------------------------------------------------
+		// dm_exec_query_transformation_stats
+		// ---------------------------------------------------------------------------------------
+		try
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+
+			// Table name and description
+			mtd.addTable("dm_exec_query_transformation_stats",  "<p>Returns detailed statistics about the operation of the SQL Server query optimizer. You can use this view when tuning a workload to identify query optimization problems or improvements. For example, you can use the total number of optimizations, the elapsed time value, and the final cost value to compare the query optimizations of the current workload and any changes observed during?the tuning process.?Some counters provide data that?is relevant only?for?SQL Server internal diagnostic use. These counters are marked as \"Internal only.\"</p>");
+
+			// Column names and description
+			mtd.addColumn("dm_exec_query_transformation_stats", "counter"   , "<html><p>Name of optimizer statistics event.</p></html>");
+			mtd.addColumn("dm_exec_query_transformation_stats", "occurrence", "<html><p>Number of occurrences of optimization event for this counter.</p></html>");
+			mtd.addColumn("dm_exec_query_transformation_stats", "value"     , "<html><p>Average property value per event occurrence. </p></html>");
 		}
 		catch (NameNotFoundException e)
 		{

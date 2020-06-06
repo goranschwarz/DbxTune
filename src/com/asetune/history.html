@@ -87,6 +87,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		   </LI>
 		<LI>Host Monitoring: Negative Diff Counters did not work as expected</LI>
 		<LI>CmOsDiskSpace: Now has 3 graphs (Space Used MB/Pct, Space Available MB) so we can follow space usage on a longer term basis (if sent to DbxCentral)</LI>
+		<LI>CmOsDiskSpace: Better alarm handling (now all mount points are automatically checked, for PercentUsage=95% & LessThanMbLeft=10)</LI>
 		<LI>ConnectionDialog changes
 			<ul>
 				<LI>Remember SSH Key for OS Monitoring</LI>
@@ -582,6 +583,23 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Dbms Config: SysDatabases - also print Database Scoped Configurations</LI>
 		<LI>Daily Report: if 'LogSizeInMb' is larger than 'DataSizeInMb' and 'recovery_model_desc' is FULL, then mark the cell in RED</LI>
 		<LI>Collector: 'PerfCounters': added some new graphs: FreeListStalls, MemoryGrantsPending, PlanCacheHitRate, PlanCacheMb, PlanCacheObjCnt, PlanCacheObjUse</LI>
+		<LI>Removed CM: CmWho           (replaced by: CmSessions)</LI>
+		<LI>Removed CM: CmExecSessions  (replaced by: CmSessions)</LI>
+		<LI>Removed CM: CmExecRequests  (replaced by: CmSessions)</LI>
+		<LI>Added CM: CmQueryTransformStat -- Query optimization, what rules are used can be checked here</LI>
+		<LI>Added CM: CmSessions           -- Raplacing: CmWho, CmExecSessions & CmExecRequests</LI>
+		<LI>Added CM: CmWorkers            -- See how workers are used and Degree of Paralell</LI>
+		<LI>CmDatabases -- Rewrote the SQL to use #temp tables, and hopefully that will use less CPU</LI>
+		<LI>CmIndexPhysical
+		    <ul>
+		       <li>Added pk with 'alloc_unit_type_desc'</li>
+			   <li>Postpone time was set to every 4 hour (yes capture, but not that often)</li>
+			   <li>use sp_MSforeachdb to not check databases where we don't have access</li>
+			</ul>
+		<LI>CmPerfCounters -- Added Graph 'TransWriteSec'</LI>
+		<LI>PCS: some work on 'storing XML Execution Plans'</LI>
+		<LI>Daily Summary Reports (added sections: Query Stats, TopTableSize, AvgPageUsedPct, and Graphs: OsCpuEffective, SqlBatch, TransWriteSec)</LI>
+		
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

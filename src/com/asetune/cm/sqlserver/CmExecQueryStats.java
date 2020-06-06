@@ -23,8 +23,10 @@ package com.asetune.cm.sqlserver;
 import java.sql.Connection;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
@@ -36,6 +38,8 @@ import com.asetune.cm.sqlserver.gui.CmExecQueryStatsPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.swing.ColumnHeaderPropsEntry;
+import com.asetune.pcs.PcsColumnOptions;
+import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
@@ -278,6 +282,19 @@ extends CountersModel
 		return pkCols;
 	}
 
+	@Override
+	public Map<String, PcsColumnOptions> getPcsColumnOptions()
+	{
+		if (_pcsColumnOptions == null)
+		{
+			_pcsColumnOptions = new HashMap<>();
+			_pcsColumnOptions.put("SqlText", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+		}
+		return _pcsColumnOptions;
+	}
+	private Map<String, PcsColumnOptions> _pcsColumnOptions = null;
+	
+	
 	@Override
 	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{

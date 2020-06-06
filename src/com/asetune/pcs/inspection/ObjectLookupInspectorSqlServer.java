@@ -56,7 +56,8 @@ extends ObjectLookupInspectorAbstract
 		
 		// Change the first parameter, which is probably the sql_handle, to some static value, so we can look it up...
 		// meaning if it has already been stored or not...
-		if (entry._dbname.startsWith("0x") && entry._objectName.startsWith("0x"))
+//		if (entry._dbname.startsWith("0x") && entry._objectName.startsWith("0x"))
+		if (entry._objectName.startsWith("0x"))
 		{
 			entry._dbname = PersistentCounterHandler.STATEMENT_CACHE_NAME;
 		}
@@ -102,14 +103,16 @@ extends ObjectLookupInspectorAbstract
 			entry.setCrdate( new Timestamp(System.currentTimeMillis()) );
 			entry.setSource( source );
 			entry.setDependLevel( dependLevel );
-			entry.setOwner("ssql");
+//			entry.setOwner("ssql");
+			entry.setOwner(qe._dbname);
 			entry.setType("SS");
 			entry.setSampleTime( new Timestamp(System.currentTimeMillis()) );
 
 			try
 			{
 				String xmlPlan = SqlServerUtils.getXmlQueryPlan(conn, objectName);
-				entry.setObjectText( xmlPlan );
+//				entry.setObjectText( xmlPlan );
+				entry.setExtraInfoText( xmlPlan ); // AseTune uses setExtraInfoText(), so lets stick with that
 				
 				// Look for specific texts in the XML plan and setExtraInfoText() if found! 
 				if (xmlPlan != null)
@@ -141,7 +144,8 @@ extends ObjectLookupInspectorAbstract
 						sb.append("}");
 
 						// Set the JSON to ExtraInfoText
-						entry.setExtraInfoText(sb.toString());
+						//entry.setExtraInfoText(sb.toString()); // AseTune uses setExtraInfoText(), so: use some of the other fields: objectText, dependsText, optdiagText
+						entry.setObjectText(sb.toString());
 					}
 				}
 			}
@@ -152,6 +156,7 @@ extends ObjectLookupInspectorAbstract
 //				entry.setExtraInfoText( msg );
 				entry.setObjectText( msg );
 			}
+//System.out.println("ObjectLookupInspectorSqlServer.doObjectInfoLookup(): <<<--- " + entry.toStringDebug());
 			return entry;
 			
 ////			String sql = "select * from sys.dm_exec_query_plan("+objectName+") \n";
