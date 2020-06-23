@@ -83,7 +83,7 @@ public class WizardOffline
 				WizardOfflinePage11.class,  // Daily Report 
 				WizardOfflinePage12.class   // Save this to filename
 				};
-		Wizard wiz = WizardPage.createWizard("Create an offline sample session.", wca, new WizardOffllinePageSummary());
+		Wizard wiz = WizardPage.createWizard("Create: Offline Sample Session.", wca, new WizardOffllinePageSummary());
 		
 		@SuppressWarnings({ "unchecked", "rawtypes" })
 		Map<String,String> gatheredSettings = (Map) WizardDisplayer.showWizard(wiz);

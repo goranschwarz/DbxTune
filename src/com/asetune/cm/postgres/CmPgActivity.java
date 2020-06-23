@@ -26,8 +26,10 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
@@ -39,6 +41,8 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.postgres.gui.CmPgActivityPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.pcs.PcsColumnOptions;
+import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.ResultSetMetaDataCached.Entry;
 import com.asetune.utils.StringUtil;
@@ -137,6 +141,24 @@ extends CountersModel
 	protected TabularCntrPanel createGui()
 	{
 		return new CmPgActivityPanel(this);
+	}
+	
+	@Override
+	public Map<String, PcsColumnOptions> getPcsColumnOptions()
+	{
+		Map<String, PcsColumnOptions> map = super.getPcsColumnOptions();
+
+		// No settings in the super, create one, and set it at super
+		if (map == null)
+		{
+			map = new HashMap<>();
+			map.put("query", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+
+			// Set the map in the super
+			setPcsColumnOptions(map);
+		}
+
+		return map;
 	}
 	
 	@Override

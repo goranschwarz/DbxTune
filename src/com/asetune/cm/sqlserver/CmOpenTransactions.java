@@ -21,8 +21,10 @@
 package com.asetune.cm.sqlserver;
 
 import java.sql.Connection;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
@@ -32,6 +34,8 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.gui.CmOpenTransactionsPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.pcs.PcsColumnOptions;
+import com.asetune.pcs.PcsColumnOptions.ColumnType;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -132,6 +136,25 @@ extends CountersModel
 	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
+	}
+
+	@Override
+	public Map<String, PcsColumnOptions> getPcsColumnOptions()
+	{
+		Map<String, PcsColumnOptions> map = super.getPcsColumnOptions();
+
+		// No settings in the super, create one, and set it at super
+		if (map == null)
+		{
+			map = new HashMap<>();
+			map.put("LastSqlText", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("LastPlan"   , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+
+			// Set the map in the super
+			setPcsColumnOptions(map);
+		}
+
+		return map;
 	}
 
 	@Override

@@ -21,7 +21,9 @@
 package com.asetune.cm.sqlserver;
 
 import java.sql.Connection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
@@ -31,6 +33,8 @@ import com.asetune.cm.CountersModel;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
+import com.asetune.pcs.PcsColumnOptions;
+import com.asetune.pcs.PcsColumnOptions.ColumnType;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -141,11 +145,32 @@ extends CountersModel
 	}
 
 	@Override
+	public Map<String, PcsColumnOptions> getPcsColumnOptions()
+	{
+		Map<String, PcsColumnOptions> map = super.getPcsColumnOptions();
+
+		// No settings in the super, create one, and set it at super
+		if (map == null)
+		{
+			map = new HashMap<>();
+			map.put("currentSqlText"  , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("fullSqlBatchText", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("query_plan"      , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+
+			// Set the map in the super
+			setPcsColumnOptions(map);
+		}
+
+		return map;
+	}
+
+	@Override
 	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 //		List <String> pkCols = new LinkedList<String>();
 //
 //		pkCols.add("session_id");
+//		pkCols.add("exec_context_id");
 //
 //		return pkCols;
 
@@ -229,9 +254,9 @@ extends CountersModel
 			    + "    [eqp].[query_plan], \n"
 			    + "    [er].[cpu_time] \n"
 			    + "FROM sys." + dm_os_waiting_tasks + " [owt] \n"
-			    + "INNER JOIN sys." + dm_os_tasks + " [ot]      ON [owt].[waiting_task_address] = [ot].[task_address] \n"
-			    + "INNER JOIN sys." + dm_exec_sessions + " [es] ON [owt].[session_id] = [es].[session_id] \n"
-			    + "INNER JOIN sys." + dm_exec_requests + " [er] ON [es].[session_id] = [er].[session_id] \n"
+			    + "INNER JOIN  sys." + dm_os_tasks + "      [ot] ON [owt].[waiting_task_address] = [ot].[task_address] \n"
+			    + "INNER JOIN  sys." + dm_exec_sessions + " [es] ON [owt].[session_id] = [es].[session_id] \n"
+			    + "INNER JOIN  sys." + dm_exec_requests + " [er] ON [es].[session_id] = [er].[session_id] \n"
 			    + "OUTER APPLY sys." + dm_exec_sql_text + " ([er].[sql_handle]) [est] \n"
 			    + "OUTER APPLY sys." + dm_exec_query_plan + " ([er].[plan_handle]) [eqp] \n"
 			    + "WHERE \n"

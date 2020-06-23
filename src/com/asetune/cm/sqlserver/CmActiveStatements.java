@@ -24,9 +24,11 @@ import java.awt.event.MouseEvent;
 import java.sql.Connection;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -46,6 +48,8 @@ import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.pcs.PcsColumnOptions;
+import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
@@ -77,13 +81,17 @@ extends CountersModel
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
-		"cpu_time",
-		"reads",
-		"logical_reads",
-		"writes"
+		"exec_cpu_time",
+		"exec_reads",
+		"exec_logical_reads",
+		"exec_writes",
+		"sess_cpu_time",
+		"sess_reads",
+		"sess_logical_reads",
+		"sess_writes"
 		};
 
-	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
+	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;
@@ -183,6 +191,25 @@ extends CountersModel
 	}
 
 	@Override
+	public Map<String, PcsColumnOptions> getPcsColumnOptions()
+	{
+		Map<String, PcsColumnOptions> map = super.getPcsColumnOptions();
+
+		// No settings in the super, create one, and set it at super
+		if (map == null)
+		{
+			map = new HashMap<>();
+			map.put("lastKnownSql", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("query_plan"  , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+
+			// Set the map in the super
+			setPcsColumnOptions(map);
+		}
+
+		return map;
+	}
+
+	@Override
 	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
@@ -211,51 +238,67 @@ extends CountersModel
 			dm_exec_query_plan  = "dm_exec_query_plan";            // SAME NAME IN AZURE ????
 		}
 
+		String LiveQueryPlanActive  = "";
+		String LiveQueryPlanBlocked = "";
+//		String LiveQueryPlanActive  = "    ,LiveQueryPlan = convert(varchar(max), null) \n";
+//		String LiveQueryPlanBlocked = "    ,LiveQueryPlan = convert(varchar(max), null) \n";
+//		
+//		if (srvVersion >= Ver.ver(2016,0,0, 1)) // 2016 SP1
+//		{
+//			LiveQueryPlanActive  = "    ,LiveQueryPlan = (select lqp.query_plan from sys.dm_exec_query_statistics_xml(des.session_id) lqp) \n";
+//			LiveQueryPlanBlocked = "    ,LiveQueryPlan = (select lqp.query_plan from sys.dm_exec_query_statistics_xml(p1.spid) lqp) \n";
+//		}
+//      NOTE: The above seems to "stack-trace" the SQL-Server... maybe "defer" it into a post step, like we do in AseTune
 
 		String sql1 =
 			"SELECT  \n" +
-			"    monSource    = convert(varchar(10), 'ACTIVE'), \n" +
-			"    multiSampled = convert(varchar(10), ''), \n" +
-			"    des.login_name, \n" +
-			"    des.session_id, \n" +
-			"    ImBlockedBySessionId = der.blocking_session_id, \n" +
-			"    ImBlockingOtherSessionIds = convert(varchar(512), ''), \n" +
-			"    ImBlockingOthersMaxTimeInSec = convert(int, 0), " +
-			"    des.status, \n" +
-			"    der.command, \n" +
-			"    des.[HOST_NAME], \n" +
-			"    HasSqlText   = convert(bit,0), \n" +
-			"    HasQueryplan = convert(bit,0), \n" +
-//			"    DB_NAME(der.database_id) AS database_name, \n" +
-			"    (select db.name from sys.databases db where db.database_id = der.database_id) AS database_name, \n" +
-			"    des.cpu_time, \n" +
-			"    des.reads, \n" +
-			"    des.logical_reads, \n" +
-			"    des.writes, \n" +
-//			"    dec.last_write , \n" +
-			"    der.start_time, \n" +
-			"    ExecTimeInMs    = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE  datediff(ms, der.start_time, getdate()) END, \n" +               // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
-			"    UsefullExecTime = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE (datediff(ms, der.start_time, getdate()) - der.wait_time) END, \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
-			"    des.[program_name], \n" +
-			"    der.wait_type, \n" +
-			"    der.wait_time, \n" +
-			"    der.last_wait_type, \n" +
-			"    der.wait_resource, \n" +
-			"    CASE des.transaction_isolation_level \n" +
+			"     monSource    = convert(varchar(10), 'ACTIVE') \n" +
+			"    ,multiSampled = convert(varchar(10), '') \n" +
+			"    ,des.login_name \n" +
+			"    ,des.session_id \n" +
+			"    ,ImBlockedBySessionId = der.blocking_session_id \n" +
+			"    ,ImBlockingOtherSessionIds = convert(varchar(512), '') \n" +
+			"    ,ImBlockingOthersMaxTimeInSec = convert(int, 0) \n" +
+			"    ,des.status \n" +
+			"    ,der.command \n" +
+			"    ,des.[HOST_NAME] \n" +
+			"    ,HasSqlText   = convert(bit,0) \n" +
+			"    ,HasQueryplan = convert(bit,0) \n" +
+//			"    ,DB_NAME(der.database_id) AS database_name \n" +
+			"    ,(select db.name from sys.databases db where db.database_id = der.database_id) AS database_name \n" +
+			"    ,exec_cpu_time      = der.cpu_time \n" +
+			"    ,exec_reads         = der.reads \n" +
+			"    ,exec_logical_reads = der.logical_reads \n" +
+			"    ,exec_writes        = der.writes \n" +
+			"    ,sess_cpu_time      = des.cpu_time \n" +
+			"    ,sess_reads         = des.reads \n" +
+			"    ,sess_logical_reads = des.logical_reads \n" +
+			"    ,sess_writes        = des.writes \n" +
+//			"    ,dec.last_write \n" +
+			"    ,der.start_time \n" +
+			"    ,ExecTimeInMs    = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE  datediff(ms, der.start_time, getdate()) END \n" +               // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+			"    ,UsefullExecTime = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE (datediff(ms, der.start_time, getdate()) - der.wait_time) END \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+			"    ,des.[program_name] \n" +
+			"    ,der.wait_type \n" +
+			"    ,der.wait_time \n" +
+			"    ,der.last_wait_type \n" +
+			"    ,der.wait_resource \n" +
+			"    ,CASE des.transaction_isolation_level \n" +
 			"        WHEN 0 THEN 'Unspecified' \n" +
 			"        WHEN 1 THEN 'ReadUncommitted' \n" +
 			"        WHEN 2 THEN 'ReadCommitted' \n" +
 			"        WHEN 3 THEN 'Repeatable' \n" +
 			"        WHEN 4 THEN 'Serializable' \n" +
 			"        WHEN 5 THEN 'Snapshot' \n" +
-			"    END AS transaction_isolation_level, \n" +
-//			"    OBJECT_NAME(dest.objectid, der.database_id) AS OBJECT_NAME, \n" +
-			"    SUBSTRING(dest.text, der.statement_start_offset / 2,  \n" +
+			"    END AS transaction_isolation_level \n" +
+//			"    ,OBJECT_NAME(dest.objectid, der.database_id) AS OBJECT_NAME \n" +
+			"    ,SUBSTRING(dest.text, der.statement_start_offset / 2,  \n" +
 			"        ( CASE WHEN der.statement_end_offset = -1  \n" +
 			"               THEN DATALENGTH(dest.text)  \n" +
 			"               ELSE der.statement_end_offset  \n" +
-			"          END - der.statement_start_offset ) / 2) AS [lastKnownSql], \n" +
-			"    deqp.query_plan \n" +
+			"          END - der.statement_start_offset ) / 2) AS [lastKnownSql] \n" +
+			"    ,deqp.query_plan \n" +
+			LiveQueryPlanActive +
 			"FROM sys." + dm_exec_sessions + " des \n" +
 			"LEFT JOIN sys." + dm_exec_requests + " der ON des.session_id = der.session_id \n" +
 //			"LEFT JOIN sys." + dm_exec_connections + " dec ON des.session_id = dec.session_id \n" +
@@ -265,33 +308,37 @@ extends CountersModel
 
 		String sql2 = 
 			"SELECT  \n" +
-			"    monSource    = convert(varchar(10), 'BLOCKER'),  \n" +
-			"    multiSampled = convert(varchar(10), ''),  \n" +
-			"    p1.loginame, --des.login_name \n" +
-			"    p1.spid, --des.session_id, \n" +
-			"    ImBlockedBySessionId = p1.blocked, --der.blocking_session_id, \n" +
-			"    ImBlockingOtherSessionIds = convert(varchar(512), ''),  \n" +
-			"    ImBlockingOthersMaxTimeInSec = convert(int, 0), " +
-			"    p1.status, --des.status, \n" +
-			"    p1.cmd, --der.command, \n" +
-			"    p1.hostname, --des.[HOST_NAME] \n" +
-			"    HasSqlText   = convert(bit,0),  \n" +
-			"    HasQueryplan = convert(bit,0),  \n" +
-//			"    DB_NAME(p1.dbid) AS database_name,  \n" +
-			"    (select db.name from sys.databases db where db.database_id = p1.dbid) AS database_name, \n" +
-			"    p1.cpu, --des.cpu_time, \n" +
-			"    999999, --des.reads ,  \n" +
-			"    999999, --des.logical_reads ,  \n" +
-			"    999999, --des.writes ,  \n" +
-			"    p1.last_batch, --der.start_time,  \n" +
-			"    ExecTimeInMs    = CASE WHEN datediff(day, p1.last_batch, getdate()) >= 24 THEN -1 ELSE  datediff(ms, p1.last_batch, getdate()) END,  \n" +
-			"    UsefullExecTime = CASE WHEN datediff(day, p1.last_batch, getdate()) >= 24 THEN -1 ELSE (datediff(ms, p1.last_batch, getdate()) - p1.waittime) END,  \n" +
-			"    p1.program_name, --des.[program_name] ,  \n" +
-			"    p1.waittype, --der.wait_type ,  \n" +
-			"    p1.waittime, --der.wait_time ,  \n" +
-			"    p1.waittype, --der.last_wait_type ,  \n" +
-			"    p1.waitresource, --der.wait_resource ,  \n" +
-			"    'unknown', \n" +
+			"     monSource    = convert(varchar(10), 'BLOCKER')  \n" +
+			"    ,multiSampled = convert(varchar(10), '')  \n" +
+			"    ,p1.loginame                                  --des.login_name \n" +
+			"    ,p1.spid                                      --des.session_id \n" +
+			"    ,ImBlockedBySessionId = p1.blocked            --der.blocking_session_id \n" +
+			"    ,ImBlockingOtherSessionIds    = convert(varchar(512), '')  \n" +
+			"    ,ImBlockingOthersMaxTimeInSec = convert(int, 0) " +
+			"    ,p1.status                                    --des.status \n" +
+			"    ,p1.cmd                                       --der.command \n" +
+			"    ,p1.hostname                                  --des.[HOST_NAME] \n" +
+			"    ,HasSqlText   = convert(bit,0)  \n" +
+			"    ,HasQueryplan = convert(bit,0)  \n" +
+//			"    ,DB_NAME(p1.dbid) AS database_name  \n" +
+			"    ,(select db.name from sys.databases db where db.database_id = p1.dbid) AS database_name \n" +
+			"    ,p1.cpu                                       --der.cpu_time \n" +
+			"    ,999999                                       --der.reads   \n" +
+			"    ,999999                                       --der.logical_reads   \n" +
+			"    ,999999                                       --der.writes   \n" +
+			"    ,999999                                       --des.cpu_time \n" +
+			"    ,999999                                       --des.reads   \n" +
+			"    ,999999                                       --des.logical_reads   \n" +
+			"    ,999999                                       --des.writes   \n" +
+			"    ,p1.last_batch                                --der.start_time  \n" +
+			"    ,ExecTimeInMs    = CASE WHEN datediff(day, p1.last_batch, getdate()) >= 24 THEN -1 ELSE  datediff(ms, p1.last_batch, getdate()) END  \n" +
+			"    ,UsefullExecTime = CASE WHEN datediff(day, p1.last_batch, getdate()) >= 24 THEN -1 ELSE (datediff(ms, p1.last_batch, getdate()) - p1.waittime) END  \n" +
+			"    ,p1.program_name                              --des.[program_name] \n" +
+			"    ,p1.waittype                                  --der.wait_type \n" +
+			"    ,p1.waittime                                  --der.wait_time \n" +
+			"    ,p1.waittype                                  --der.last_wait_type \n" +
+			"    ,p1.waitresource                              --der.wait_resource \n" +
+			"    ,'unknown' \n" +
 			"--    CASE des.transaction_isolation_level  \n" +
 			"--        WHEN 0 THEN 'Unspecified'  \n" +
 			"--        WHEN 1 THEN 'ReadUncommitted'  \n" +
@@ -299,15 +346,16 @@ extends CountersModel
 			"--        WHEN 3 THEN 'Repeatable'  \n" +
 			"--        WHEN 4 THEN 'Serializable'  \n" +
 			"--        WHEN 5 THEN 'Snapshot'  \n" +
-			"--    END AS transaction_isolation_level ,  \n" +
-//			"    'unknown', --OBJECT_NAME(dest.objectid, der.database_id) AS OBJECT_NAME ,  \n" +
-			"--    SUBSTRING(dest.text, der.statement_start_offset / 2,   \n" +
+			"--    END AS transaction_isolation_level  \n" +
+//			"    ,'unknown', --OBJECT_NAME(dest.objectid, der.database_id) AS OBJECT_NAME \n" +
+			"--  , SUBSTRING(dest.text, der.statement_start_offset / 2,   \n" +
 			"--        ( CASE WHEN der.statement_end_offset = -1   \n" +
 			"--               THEN DATALENGTH(dest.text)   \n" +
 			"--               ELSE der.statement_end_offset   \n" +
-			"--          END - der.statement_start_offset ) / 2) AS [lastKnownSql] ,  \n" +
-			"    dest.text, \n" +
-			"    '' --deqp.query_plan  \n" +
+			"--          END - der.statement_start_offset ) / 2) AS [lastKnownSql] \n" +
+			"    ,dest.text \n" +
+			"    ,''                                           --deqp.query_plan  \n" +
+			LiveQueryPlanBlocked +
 			"FROM sys.sysprocesses p1 \n" +
 			"CROSS APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
 			"WHERE p1.spid in (select p2.blocked from sys.sysprocesses p2 where p2.blocked > 0) \n" + 

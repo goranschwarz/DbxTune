@@ -19,10 +19,12 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -196,8 +198,18 @@ extends CounterTableModel
 		Object o = getValueAt(0, colid);
 		if (o == null)
 		{
-			int jdbcType = _colSqlType.get(colid);
-			return ResultSetTableModel.getJavaClassFromJdbcType(jdbcType);
+			if (_colSqlType == null)
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug("getColumnClass(colid="+colid+"): _colSqlType is null... returning Object.class intead");
+
+				return Object.class;
+			}
+			else
+			{
+				int jdbcType = _colSqlType.get(colid);
+				return ResultSetTableModel.getJavaClassFromJdbcType(jdbcType);
+			}
 		}
 		else
 		{
@@ -215,7 +227,7 @@ extends CounterTableModel
 	public boolean isCellEditable(int i, int j)
 	{
 		return false;
-    }
+	}
 
 	@Override
 	public Object getValueAt(int row, int col)
@@ -1162,6 +1174,17 @@ extends CounterTableModel
 					{
 						_logger.warn(getName()+": found column '"+SPECIAL_COLUMN_sampleTimeInMs+"', but it's not a INTEGER, so it will be treated as a normal column.");
 					}
+				}
+			}
+
+			// Double check for "duplicate" column names in the ResultSet
+			// If we have that: Simply write a WARNING message, because if we try to save it in PCS it wont work (a table acn't have 2 columns with the same name) 
+			Set<String> dupColumnCheck = new HashSet<>(colCount);
+			for (String tmpColName : _colNames)
+			{
+				if ( dupColumnCheck.add(tmpColName) == false )
+				{
+					_logger.warn("When reading ResultSet for '" + getName() + "' the column '" + tmpColName + "' has been specified more that once in the ResultSet. This will cause any PCS, Persistent Counter Stores that saves the data into a DBMS to fail. A Table must have unique column names.");
 				}
 			}
 
@@ -2201,25 +2224,25 @@ extends CounterTableModel
 	}
 	
 	
-	public static boolean isDiffAllowedForDatatype(String datatype)
-	{
-		boolean enabled = false;
-		if      ("tinyint"          .equalsIgnoreCase(datatype)) enabled = true;
-		else if ("unsigned smallint".equalsIgnoreCase(datatype)) enabled = true;
-		else if ("smallint"         .equalsIgnoreCase(datatype)) enabled = true;
-		else if ("unsigned int"     .equalsIgnoreCase(datatype)) enabled = true;
-		else if ("int"              .equalsIgnoreCase(datatype)) enabled = true;
-		else if ("integer"          .equalsIgnoreCase(datatype)) enabled = true;
-		else if ("unsigned bigint"  .equalsIgnoreCase(datatype)) enabled = true;
-		else if ("bigint"           .equalsIgnoreCase(datatype)) enabled = true;
-		else if ("decimal"          .equalsIgnoreCase(datatype)) enabled = true;
-		else if ("numeric"          .equalsIgnoreCase(datatype)) enabled = true;
-		else if ("float"            .equalsIgnoreCase(datatype)) enabled = true;
-		else if ("real"             .equalsIgnoreCase(datatype)) enabled = true;
-		else if ("double precision" .equalsIgnoreCase(datatype)) enabled = true;
-
-		return enabled;
-	}
+//	public static boolean isDiffAllowedForDatatype(String datatype)
+//	{
+//		boolean enabled = false;
+//		if      ("tinyint"          .equalsIgnoreCase(datatype)) enabled = true;
+//		else if ("unsigned smallint".equalsIgnoreCase(datatype)) enabled = true;
+//		else if ("smallint"         .equalsIgnoreCase(datatype)) enabled = true;
+//		else if ("unsigned int"     .equalsIgnoreCase(datatype)) enabled = true;
+//		else if ("int"              .equalsIgnoreCase(datatype)) enabled = true;
+//		else if ("integer"          .equalsIgnoreCase(datatype)) enabled = true;
+//		else if ("unsigned bigint"  .equalsIgnoreCase(datatype)) enabled = true;
+//		else if ("bigint"           .equalsIgnoreCase(datatype)) enabled = true;
+//		else if ("decimal"          .equalsIgnoreCase(datatype)) enabled = true;
+//		else if ("numeric"          .equalsIgnoreCase(datatype)) enabled = true;
+//		else if ("float"            .equalsIgnoreCase(datatype)) enabled = true;
+//		else if ("real"             .equalsIgnoreCase(datatype)) enabled = true;
+//		else if ("double precision" .equalsIgnoreCase(datatype)) enabled = true;
+//
+//		return enabled;
+//	}
 
 	public static boolean isDiffAllowedForDatatype(int jdbcType)
 	{

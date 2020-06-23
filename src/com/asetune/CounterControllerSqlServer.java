@@ -66,6 +66,7 @@ import com.asetune.cm.sqlserver.CmTempdbSpidUsage;
 import com.asetune.cm.sqlserver.CmTempdbUsage;
 import com.asetune.cm.sqlserver.CmWaitStats;
 import com.asetune.cm.sqlserver.CmWaitingTasks;
+import com.asetune.cm.sqlserver.CmWho;
 import com.asetune.cm.sqlserver.CmWorkers;
 import com.asetune.cm.sqlserver.ToolTipSupplierSqlServer;
 import com.asetune.gui.MainFrame;
@@ -118,8 +119,8 @@ extends CounterControllerAbstract
 
 		CmSummary            .create(counterController, guiController);
                              
+		CmWho                .create(counterController, guiController);
 		CmSessions           .create(counterController, guiController);
-//		CmWho                .create(counterController, guiController);
 		CmSpidWait           .create(counterController, guiController);
 //		CmExecSessions       .create(counterController, guiController);
 //		CmExecRequests       .create(counterController, guiController);

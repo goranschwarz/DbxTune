@@ -352,7 +352,7 @@ extends CountersModel
 		String APFReads            = "";
 		String Overhead            = "";
 
-		String RealPhysicalReads   = "PhysicalReads, ";
+		String RealPhysicalReads   = "RealPhysicalReads = PhysicalReads, ";
 		String calcPhysicalReads   = "PhysicalReads";
 
 		// ASE 16.0 SP2

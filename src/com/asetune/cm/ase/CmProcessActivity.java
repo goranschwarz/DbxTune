@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 
@@ -49,6 +50,8 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.pcs.PcsColumnOptions;
+import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -366,6 +369,24 @@ extends CountersModel
 	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
+	}
+
+	@Override
+	public Map<String, PcsColumnOptions> getPcsColumnOptions()
+	{
+		Map<String, PcsColumnOptions> map = super.getPcsColumnOptions();
+
+		// No settings in the super, create one, and set it at super
+		if (map == null)
+		{
+			map = new HashMap<>();
+			map.put("SqlText", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+
+			// Set the map in the super
+			setPcsColumnOptions(map);
+		}
+
+		return map;
 	}
 
 	@Override

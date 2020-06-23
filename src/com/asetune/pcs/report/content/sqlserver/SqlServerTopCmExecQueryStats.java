@@ -30,6 +30,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -205,6 +206,19 @@ extends SqlServerAbstract
 //		String orderByCol = "[samples__count]";
 //		if (dummyRstm.hasColumnNoCase("total_worker_time"))     { orderByCol = "[total_worker_time__sum]";     }
 
+		// Check if table "CmPgStatements_diff" has Dictionary Compressed Columns (any columns ends with "$dcc$")
+		boolean hasDictCompCols = false;
+		try {
+			hasDictCompCols = DictCompression.hasCompressedColumnNames(conn, null, "CmExecQueryStats_diff");
+		} catch (SQLException ex) {
+			_logger.error("Problems checking for Dictionary Compressed Columns in table 'CmExecQueryStats_diff'.", ex);
+		}
+		
+		String col_SqlText = "SqlText";
+		if (hasDictCompCols)
+			col_SqlText = "SqlText$dcc$";
+
+
 		String sql = getCmDiffColumnsAsSqlComment("CmActiveStatements")
 			    + "select top " + topRows + " \n"
 			    + "     [dbname] \n"
@@ -239,7 +253,8 @@ extends SqlServerAbstract
 			    + col_total_spills__sum                    + col_AvgSpills                  
 			    + col_total_page_server_reads__sum         + col_AvgPageServerReads         
 			    + "    \n"
-			    + "    ,max([SqlText])                         as [SqlText] \n"
+//			    + "    ,max([SqlText])                         as [SqlText] \n"
+			    + "    ,max([" + col_SqlText +"])                    as [SqlText] \n"
 				+ "from [CmExecQueryStats_diff] \n"
 				+ "where [CmNewDiffRateRow] = 0 -- only records that has been diff calculations (not first time seen, when it swaps in/out due to execution every x minute) \n"
 				+ "  and [execution_count] > 0 \n"
@@ -264,7 +279,13 @@ extends SqlServerAbstract
 			setDurationColumn(_shortRstm, "SessionSampleTime__min", "SessionSampleTime__max", "Duration");
 
 			calculateAvg(_shortRstm);
-		
+
+			// get Dictionary Compressed values for column: SqlText
+			if (hasDictCompCols)
+			{
+				updateDictionaryCompressedColumn(_shortRstm, conn, null, "CmExecQueryStats", "SqlText", null);
+			}
+
 			// Get Showplan for StatementCache entries, and SqlText from the above table
 			Set<String> planHandleObjects = getPlanHandleObjects(_shortRstm, "plan_handle");
 			if (planHandleObjects != null && ! planHandleObjects.isEmpty() )
@@ -282,7 +303,6 @@ extends SqlServerAbstract
 		}
 	}
 
-	
 	private void calculateAvg(ResultSetTableModel rstm)
 	{
 		for (int r=0; r<rstm.getRowCount(); r++)

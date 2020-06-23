@@ -351,17 +351,20 @@ extends CmToolTipSupplierDefault
 		// Write the content to a file!
 		//-------------------------------------
 		File htmlTmpFile = null;
-		File xmlTmpFile  = null;
+		File xmlTmpFile1  = null;
+		File xmlTmpFile2  = null;
 		try
 		{
 			// put content in a TEMP file
 //			tmpFile = createTempFile("ssTune_qp_tooltip_", ".xml", queryPlanText.getBytes()); // NOTE: A Browser is possibly better at reading the XML than any registered app???
 			htmlTmpFile = ShowplanHtmlView.createHtmlFile(Type.SQLSERVER, queryPlanText);
-			xmlTmpFile  = createTempFile("sqlSrvPlan_", ".xml", queryPlanText.getBytes()); // NOTE: A Browser is possibly better at reading the XML than any registered app???
+			xmlTmpFile1  = createTempFile("sqlSrvPlan_", ".xml",     queryPlanText.getBytes()); // NOTE: A Browser is possibly better at reading the XML than any registered app???
+			xmlTmpFile2  = createTempFile("sqlSrvPlan_", ".sqlplan", queryPlanText.getBytes()); // NOTE: A Browser is possibly better at reading the XML than any registered app???
 
 			// Compose ToolTip HTML (with content, & a LINK to be opened in "browser")
 			String htmlUrlStr = ("file:///"+htmlTmpFile);
-			String xmlUrlStr  = ("file:///"+xmlTmpFile);
+			String xmlUrlStr1 = ("file:///"+xmlTmpFile1);
+			String xmlUrlStr2 = ("file:///"+xmlTmpFile2);
 			try	
 			{
 				String propName_xmlInline    = Version.getAppName() + ".tooltip.xmlplan.show.inline";
@@ -378,10 +381,11 @@ extends CmToolTipSupplierDefault
 				sb.append("<h2>Tooltip for 'SQL-Server Query Plan'</h2>");
 				sb.append("<br>");
 				sb.append("Using temp file: <code>").append(htmlTmpFile).append("</code><br>");
-				sb.append("Using temp file: <code>").append(xmlTmpFile ).append("</code><br>");
+				sb.append("Using temp file: <code>").append(xmlTmpFile1).append("</code><br>");
 				sb.append("File Size: <code>").append(StringUtil.bytesToHuman(htmlTmpFile.length(), "#.#")).append("</code><br>");
-				sb.append("<a href='").append(OPEN_IN_EXTERNAL_BROWSER + htmlUrl          ).append("'>Open in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>");
-				sb.append("<a href='").append(OPEN_IN_SENTRY_ONE_PLAN_EXPLORER + xmlUrlStr).append("'>Open in 'SentryOne Plan Explorer'</a> (Note: This may take a few seconds to start)<br>");
+				sb.append("<a href='").append(OPEN_IN_EXTERNAL_BROWSER         + htmlUrl   ).append("'>Open in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>");
+				sb.append("<a href='").append(OPEN_IN_SENTRY_ONE_PLAN_EXPLORER + xmlUrlStr1).append("'>Open in 'SentryOne Plan Explorer'</a> (Note: This may take a few seconds to start)<br>");
+				sb.append("<a href='").append(OPEN_IN_EXTERNAL_BROWSER         + xmlUrlStr2).append("'>Open in 'SSMS' or other...</a> (registered application for file extention <b>'.sqlplan'</b> will be used, Note: This may take a few seconds to start)<br>");
 				sb.append("<br>");
 				sb.append("<a href='").append(SET_PROPERTY_TEMP + propName_autoExternal + "=" + (!showAutoExtern) ).append("'>"+(showAutoExtern ? "Disable" : "Enable")+"</a> - Automatically open in Extrnal Browser. (set property <code>"+propName_autoExternal+"="+(!showAutoExtern)+"</code>)<br>");
 				sb.append("<a href='").append(SET_PROPERTY_TEMP + propName_xmlInline    + "=" + (!showInline)     ).append("'>"+(showInline     ? "Disable" : "Enable")+"</a> - Show the XML Plan in here. (set property <code>"+propName_xmlInline+"="+(!showInline)+"</code>)<br>");

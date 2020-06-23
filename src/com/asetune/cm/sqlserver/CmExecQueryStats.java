@@ -285,16 +285,21 @@ extends CountersModel
 	@Override
 	public Map<String, PcsColumnOptions> getPcsColumnOptions()
 	{
-		if (_pcsColumnOptions == null)
+		Map<String, PcsColumnOptions> map = super.getPcsColumnOptions();
+
+		// No settings in the super, create one, and set it at super
+		if (map == null)
 		{
-			_pcsColumnOptions = new HashMap<>();
-			_pcsColumnOptions.put("SqlText", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map = new HashMap<>();
+			map.put("SqlText", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+
+			// Set the map in the super
+			setPcsColumnOptions(map);
 		}
-		return _pcsColumnOptions;
+
+		return map;
 	}
-	private Map<String, PcsColumnOptions> _pcsColumnOptions = null;
-	
-	
+
 	@Override
 	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{

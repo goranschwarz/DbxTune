@@ -49,6 +49,7 @@ public abstract class PersistWriterBase
 	public static final int SESSION_MON_TAB_COL_DICT = 7;
 	public static final int SESSION_DBMS_CONFIG      = 8;
 	public static final int SESSION_DBMS_CONFIG_TEXT = 9;
+//	public static final int RECORDING_OPTIONS        = 10;
 	public static final int DDL_STORAGE              = 50;
 	public static final int SQL_CAPTURE_SQLTEXT      = 60;
 	public static final int SQL_CAPTURE_STATEMENTS   = 61;
@@ -645,6 +646,7 @@ public abstract class PersistWriterBase
 		case SESSION_MON_TAB_COL_DICT: return lq + "MonSessionMonTabColumnsDict" + rq;
 		case SESSION_DBMS_CONFIG:      return lq + "MonSessionDbmsConfig"        + rq; // old name MonSessionAseConfig,     so AseTune needs to backward compatible
 		case SESSION_DBMS_CONFIG_TEXT: return lq + "MonSessionDbmsConfigText"    + rq; // old name MonSessionAseConfigText, so AseTune needs to backward compatible
+//		case RECORDING_OPTIONS:        return lq + "MonRecordingOptions"         + rq;
 		case DDL_STORAGE:              return lq + "MonDdlStorage"               + rq;
 		case SQL_CAPTURE_SQLTEXT:      return lq + "MonSqlCapSqlText"            + rq;
 		case SQL_CAPTURE_STATEMENTS:   return lq + "MonSqlCapStatements"         + rq;
@@ -687,10 +689,11 @@ public abstract class PersistWriterBase
 	}
 
 	/** Helper method to generate a DDL string, to get the 'create table' */
-	public String getTableDdlString(DbxConnection conn, int type, CountersModel cm)
+	public List<String> getTableDdlString(DbxConnection conn, int type, CountersModel cm)
 	throws SQLException
 	{
-		StringBuffer sbSql = new StringBuffer();
+//		StringBuffer sbSql = new StringBuffer();
+		List<String> ddlList = new ArrayList<>(); 
 
 		String tabName = getTableName(conn, type, cm, true);
 		
@@ -706,18 +709,8 @@ public abstract class PersistWriterBase
 		{
 			if (type == VERSION_INFO)
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"SessionStartTime"+rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"ProductString"   +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"VersionString"   +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"BuildString"     +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"SourceDate"      +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"SourceRev"       +rq,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(false)+"\n");
-////				sbSql.append("   ,"+fill(lq+"DbProductName"   +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("\n");
-//				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+")\n");
-//				sbSql.append(") \n");
+				StringBuffer sbSql = new StringBuffer();
+				
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"SessionStartTime"+rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP  ),20)+" "+getNullable(false)+"\n");
@@ -729,18 +722,13 @@ public abstract class PersistWriterBase
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+")\n");
 				sbSql.append(") \n");
+				
+				ddlList.add(sbSql.toString());
 			}
 			else if (type == SESSIONS)
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"SessionStartTime"+rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"ServerName"      +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"NumOfSamples"    +rq,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"LastSampleTime"  +rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("\n");
-//				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+")\n");
-//				sbSql.append(") \n");
+				StringBuffer sbSql = new StringBuffer();
+
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"SessionStartTime"+rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP  ),20)+" "+getNullable(false)+"\n");
@@ -750,21 +738,13 @@ public abstract class PersistWriterBase
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+")\n");
 				sbSql.append(") \n");
+
+				ddlList.add(sbSql.toString());
 			}
 			else if (type == SESSION_PARAMS)
 			{
-//				int len = SESSION_PARAMS_VAL_MAXLEN;
+				StringBuffer sbSql = new StringBuffer();
 
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"SessionStartTime"+rq,40)+" "+fill(getDatatype("datetime",-1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"Type"            +rq,40)+" "+fill(getDatatype("varchar", 20,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"ParamName"       +rq,40)+" "+fill(getDatatype("varchar", 255, -1,-1),20)+" "+getNullable(false)+"\n");
-////				sbSql.append("   ,"+fill(lq+"ParamValue"      +rq,40)+" "+fill(getDatatype("varchar", len, -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"ParamValue"      +rq,40)+" "+fill(getDatatype("text",    -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("\n");
-//				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+", "+lq+"Type"+rq+", "+lq+"ParamName"+rq+")\n");
-//				sbSql.append(") \n");
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"SessionStartTime"+rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP   ),20)+" "+getNullable(false)+"\n");
@@ -774,17 +754,13 @@ public abstract class PersistWriterBase
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+", "+lq+"Type"+rq+", "+lq+"ParamName"+rq+")\n");
 				sbSql.append(") \n");
+
+				ddlList.add(sbSql.toString());
 			}
 			else if (type == SESSION_SAMPLES)
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"SessionSampleTime"+rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("\n");
-////				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+", "+lq+"SessionSampleTime"+rq+")\n");
-//				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionSampleTime"+rq+", "+lq+"SessionStartTime"+rq+")\n");
-//				sbSql.append(") \n");
+				StringBuffer sbSql = new StringBuffer();
+
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
@@ -793,19 +769,13 @@ public abstract class PersistWriterBase
 //				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+", "+lq+"SessionSampleTime"+rq+")\n");
 				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionSampleTime"+rq+", "+lq+"SessionStartTime"+rq+")\n");
 				sbSql.append(") \n");
+
+				ddlList.add(sbSql.toString());
 			}
 			else if (type == SESSION_SAMPLE_SUM)
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"CmName"           +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"absSamples"       +rq,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"diffSamples"      +rq,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"rateSamples"      +rq,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("\n");
-//				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+", "+lq+"CmName"+rq+")\n");
-//				sbSql.append(") \n");
+				StringBuffer sbSql = new StringBuffer();
+
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP  ),20)+" "+getNullable(false)+"\n");
@@ -816,30 +786,13 @@ public abstract class PersistWriterBase
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+", "+lq+"CmName"+rq+")\n");
 				sbSql.append(") \n");
+
+				ddlList.add(sbSql.toString());
 			}
 			else if (type == SESSION_SAMPLE_DETAILES)
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"SessionStartTime"      +rq,40)+" "+fill(getDatatype("datetime",-1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"SessionSampleTime"     +rq,40)+" "+fill(getDatatype("datetime",-1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"CmName"                +rq,40)+" "+fill(getDatatype("varchar", 30,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"type"                  +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"graphCount"            +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"absRows"               +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"diffRows"              +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"rateRows"              +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"sqlRefreshTime"        +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"guiRefreshTime"        +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"lcRefreshTime"         +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"nonCfgMonHappened"     +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"nonCfgMonMissingParams"+rq,40)+" "+fill(getDatatype("varchar", 100, -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"nonCfgMonMessages"     +rq,40)+" "+fill(getDatatype("varchar", 1024,-1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"isCountersCleared"     +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"hasValidSampleData"    +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"exceptionMsg"          +rq,40)+" "+fill(getDatatype("varchar", 1024,-1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"exceptionFullText"     +rq,40)+" "+fill(getDatatype("text",    -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append(") \n");
+				StringBuffer sbSql = new StringBuffer();
+
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"SessionStartTime"      +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
@@ -861,20 +814,13 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(lq+"exceptionMsg"          +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 1024),20)+" "+getNullable(true)+"\n");
 				sbSql.append("   ,"+fill(lq+"exceptionFullText"     +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true)+"\n");
 				sbSql.append(") \n");
+
+				ddlList.add(sbSql.toString());
 			}
 			else if (type == SESSION_MON_TAB_DICT)
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype("datetime",-1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"TableID"          +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"Columns"          +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"Parameters"       +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"Indicators"       +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"Size"             +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"TableName"        +rq,40)+" "+fill(getDatatype("varchar", 255, -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"Description"      +rq,40)+" "+fill(getDatatype("varchar", 4000,-1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append(") \n");
+				StringBuffer sbSql = new StringBuffer();
+
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
@@ -886,24 +832,13 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(lq+"TableName"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255 ),20)+" "+getNullable(true)+"\n");
 				sbSql.append("   ,"+fill(lq+"Description"      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 4000),20)+" "+getNullable(true)+"\n");
 				sbSql.append(") \n");
+
+				ddlList.add(sbSql.toString());
 			}
 			else if (type == SESSION_MON_TAB_COL_DICT)
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype("datetime",-1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"TableID"          +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"ColumnID"         +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"TypeID"           +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"Precision"        +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"Scale"            +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"Length"           +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"Indicators"       +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"TableName"        +rq,40)+" "+fill(getDatatype("varchar", 255, -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"ColumnName"       +rq,40)+" "+fill(getDatatype("varchar", 255, -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"TypeName"         +rq,40)+" "+fill(getDatatype("varchar", 255, -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"Description"      +rq,40)+" "+fill(getDatatype("varchar", 4000,-1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append(") \n");
+				StringBuffer sbSql = new StringBuffer();
+
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
@@ -919,20 +854,18 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(lq+"TypeName"         +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255 ),20)+" "+getNullable(true)+"\n");
 				sbSql.append("   ,"+fill(lq+"Description"      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 4000),20)+" "+getNullable(true)+"\n");
 				sbSql.append(") \n");
+				
+				ddlList.add(sbSql.toString());
 			}
 			else if (type == SESSION_DBMS_CONFIG)
 			{
+				StringBuffer sbSql = new StringBuffer();
+
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 //				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
 
-//				// Get ALL other column names from the AseConfig dictionary
-//				IDbmsConfig aseCfg = AseConfig.getInstance();
-//				for (int i=0; i<aseCfg.getColumnCount(); i++)
-//				{
-//					sbSql.append("   ,"+fill(lq+aseCfg.getColumnName(i)+rq,40)+" "+fill(aseCfg.getSqlDataType(i),20)+" "+getNullable( aseCfg.getSqlDataType(i).equalsIgnoreCase("bit") ? false : true)+"\n");
-//				}
 				// Get ALL other column names from the DBMS Config dictionary
 				if (DbmsConfigManager.hasInstance())
 				{
@@ -945,43 +878,40 @@ public abstract class PersistWriterBase
     				}
 				}
 				sbSql.append(") \n");
+
+				ddlList.add(sbSql.toString());
 			}
 			else if (type == SESSION_DBMS_CONFIG_TEXT)
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"configName"       +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"configText"       +rq,40)+" "+fill(getDatatype("text",    -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append(") \n");
+				StringBuffer sbSql = new StringBuffer();
+
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP  ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"configName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"configText"       +rq,40)+" "+fill(getDatatype(conn, Types.CLOB       ),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"configText"       +rq,40)+" "+fill(getDatatype(conn, Types.CLOB       ),20)+" "+getNullable(true )+"\n");
 				sbSql.append(") \n");
+
+				ddlList.add(sbSql.toString());
 			}
-			else if (type == DDL_STORAGE)
-			{
+//			else if (type == RECORDING_OPTIONS)
+//			{
+//				StringBuffer sbSql = new StringBuffer();
+//
 //				sbSql.append("create table " + tabName + "\n");
 //				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"dbname"           +rq,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"owner"            +rq,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"objectName"       +rq,40)+" "+fill(getDatatype("varchar",  255,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"type"             +rq,40)+" "+fill(getDatatype("varchar",   20,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"crdate"           +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"sampleTime"       +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"source"           +rq,40)+" "+fill(getDatatype("varchar",  255,-1,-1),20)+" "+getNullable(true) +"\n");
-//				sbSql.append("   ,"+fill(lq+"dependParent"     +rq,40)+" "+fill(getDatatype("varchar",  255,-1,-1),20)+" "+getNullable(true) +"\n");
-//				sbSql.append("   ,"+fill(lq+"dependLevel"      +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"dependList"       +rq,40)+" "+fill(getDatatype("varchar", 1500,-1,-1),20)+" "+getNullable(true) +"\n");
-//				sbSql.append("   ,"+fill(lq+"objectText"       +rq,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true) +"\n");
-//				sbSql.append("   ,"+fill(lq+"dependsText"      +rq,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true) +"\n");
-//				sbSql.append("   ,"+fill(lq+"optdiagText"      +rq,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true) +"\n");
-//				sbSql.append("   ,"+fill(lq+"extraInfoText"    +rq,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true) +"\n");
+//				sbSql.append("    "+fill(lq+"optionName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30 ),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(lq+"optionText"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255),20)+" "+getNullable(false)+"\n");
 //				sbSql.append("\n");
-//				sbSql.append("   ,PRIMARY KEY ("+lq+"dbname"+rq+", "+lq+"owner"+rq+", "+lq+"objectName"+rq+")\n");
+//				sbSql.append("   ,PRIMARY KEY ("+lq+"optionName"+rq+")\n");
 //				sbSql.append(") \n");
+//
+//				ddlList.add(sbSql.toString());
+//			}
+			else if (type == DDL_STORAGE)
+			{
+				StringBuffer sbSql = new StringBuffer();
+
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"dbname"           +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   30),20)+" "+getNullable(false)+"\n");
@@ -1001,34 +931,13 @@ public abstract class PersistWriterBase
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY ("+lq+"dbname"+rq+", "+lq+"owner"+rq+", "+lq+"objectName"+rq+")\n");
 				sbSql.append(") \n");
+
+				ddlList.add(sbSql.toString());
 			}
 			else if (type == ALARM_ACTIVE)
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"alarmClass"                 +rq,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"serviceType"                +rq,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"serviceName"                +rq,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"serviceInfo"                +rq,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"extraInfo"                  +rq,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"category"                   +rq,40)+" "+fill(getDatatype("varchar",   20,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"severity"                   +rq,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"state"                      +rq,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"repeatCnt"                  +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"duration"                   +rq,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"createTime"                 +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"cancelTime"                 +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"timeToLive"                 +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"threshold"                  +rq,40)+" "+fill(getDatatype("varchar",   15,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"data"                       +rq,40)+" "+fill(getDatatype("varchar",  160,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"lastData"                   +rq,40)+" "+fill(getDatatype("varchar",  160,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"description"                +rq,40)+" "+fill(getDatatype("varchar",  512,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"lastDescription"            +rq,40)+" "+fill(getDatatype("varchar",  512,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"extendedDescription"        +rq,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"lastExtendedDescription"    +rq,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("\n");
-//				sbSql.append("   ,PRIMARY KEY ("+lq+"alarmClass"+rq+", "+lq+"serviceType"+rq+", "+lq+"serviceName"+rq+", "+lq+"serviceInfo"+rq+", "+lq+"extraInfo"+rq+")\n");
-//				sbSql.append(") \n");
+				StringBuffer sbSql = new StringBuffer();
+
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"alarmClass"                 +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
@@ -1054,39 +963,13 @@ public abstract class PersistWriterBase
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY ("+lq+"alarmClass"+rq+", "+lq+"serviceType"+rq+", "+lq+"serviceName"+rq+", "+lq+"serviceInfo"+rq+", "+lq+"extraInfo"+rq+")\n");
 				sbSql.append(") \n");
+
+				ddlList.add(sbSql.toString());
 			}
 			else if (type == ALARM_HISTORY)
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"SessionStartTime"           +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"SessionSampleTime"          +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"eventTime"                  +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"action"                     +rq,40)+" "+fill(getDatatype("varchar",   15,-1,-1),20)+" "+getNullable(false)+"\n");
-////				sbSql.append("   ,"+fill(lq+"isActive"                   +rq,40)+" "+fill(getDatatype("bit",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"alarmClass"                 +rq,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"serviceType"                +rq,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"serviceName"                +rq,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"serviceInfo"                +rq,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"extraInfo"                  +rq,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"category"                   +rq,40)+" "+fill(getDatatype("varchar",   20,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"severity"                   +rq,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"state"                      +rq,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"repeatCnt"                  +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"duration"                   +rq,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"createTime"                 +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"cancelTime"                 +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"timeToLive"                 +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"threshold"                  +rq,40)+" "+fill(getDatatype("varchar",   15,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"data"                       +rq,40)+" "+fill(getDatatype("varchar",  160,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"lastData"                   +rq,40)+" "+fill(getDatatype("varchar",  160,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"description"                +rq,40)+" "+fill(getDatatype("varchar",  512,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"lastDescription"            +rq,40)+" "+fill(getDatatype("varchar",  512,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"extendedDescription"        +rq,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"lastExtendedDescription"    +rq,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("\n");
-//				sbSql.append("   ,PRIMARY KEY ("+lq+"eventTime"+rq+", "+lq+"action"+rq+", "+lq+"alarmClass"+rq+", "+lq+"serviceType"+rq+", "+lq+"serviceName"+rq+", "+lq+"serviceInfo"+rq+", "+lq+"extraInfo"+rq+")\n");
-//				sbSql.append(") \n");
+				StringBuffer sbSql = new StringBuffer();
+
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"SessionStartTime"           +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
@@ -1116,17 +999,13 @@ public abstract class PersistWriterBase
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY ("+lq+"eventTime"+rq+", "+lq+"action"+rq+", "+lq+"alarmClass"+rq+", "+lq+"serviceType"+rq+", "+lq+"serviceName"+rq+", "+lq+"serviceInfo"+rq+", "+lq+"extraInfo"+rq+")\n");
 				sbSql.append(") \n");
+
+				ddlList.add(sbSql.toString());
 			}
 			else if (type == ABS || type == DIFF || type == RATE)
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"SessionSampleTime"+rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"CmSampleTime"     +rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"CmSampleMs"       +rq,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"CmNewDiffRateRow" +rq,40)+" "+fill(getDatatype("tinyint", -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("\n");
+				StringBuffer sbSql = new StringBuffer();
+
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
@@ -1159,18 +1038,52 @@ public abstract class PersistWriterBase
 							isDeltaOrPct = true;
 					}
 
+					// Get the Column name (without quoted identifiers)
+					String colName = rsmd.getColumnLabel(c);
 
-//					String colName = fill( lq + rsmd.getColumnLabel(c) + rq,    40);
-//					String dtName  = fill(getDatatype(c, rsmd, isDeltaOrPct),   20);
-//					String nullable= getNullable(c, rsmd, isDeltaOrPct);
-					String colName = fill( lq + rsmd.getColumnLabel(c) + rq,        40);
-					String dtName  = fill(getDatatype(conn, c, rsmd, isDeltaOrPct), 20);
-					String nullable= getNullable(conn, c, rsmd, isDeltaOrPct);
-					String colOpt  = getPcsColumnOption(conn, cm, colName); // Get DBMS specific column option(s)
+					// Check if it's a 'Dictionary Compressed Column'
+					if ( DictCompression.isEnabled() && cm.isDictionaryCompressedColumn(colName) &&  ! isDeltaOrPct )
+					{
+						DictCompression dcc = DictCompression.getInstance();
 
-					sbSql.append("   ," + colName + " " + dtName + " " + colOpt + " " + nullable + "\n");
+						String dccColName = dcc.getDigestSourceColumnName(colName);
+						int    dccJdbcDt  = dcc.getDigestJdbcType();
+						int    dccJdbcLen = dcc.getDigestLength();
+
+						int baseJdbcType   = rsmd.getColumnType(c);
+						int baseJdbcLength = Math.max(rsmd.getColumnDisplaySize(c), rsmd.getPrecision(c)); // Use this instead of the below switch for different data types
+
+						// This creates the "Normalization Table" with looks like tabName(hashId char(##), colVal CmColumnDataType)
+						// It will return the column data type to "stuff"/use in the baseTable, which is basically a char(##)
+						//String dccDigestDataType = dcc.createTable(conn, null, cm.getName(), colName, baseJdbcType, baseJdbcLength, true);
+						dcc.createTable(conn, null, cm.getName(), colName, baseJdbcType, baseJdbcLength, true);
+
+						// Dictionary Compressed Column
+						String qColName = fill( lq + dccColName + rq,        40);
+						String dtName   = fill(getDatatype(conn, dccJdbcDt, dccJdbcLen), 20);
+//						String dtName   = fill(dccDigestDataType, 20);
+						String nullable = getNullable(true);
+//						String colOpt   = getPcsColumnOption(conn, cm, colName); // Get DBMS specific column option(s)
+						String colOpt   = "";
+
+						sbSql.append("   ," + qColName + " " + dtName + " " + colOpt + " " + nullable + "\n");
+					}
+					else
+					{
+						// NORMAL Column
+						String qColName = fill( lq + colName + rq,        40);
+						String dtName   = fill(getDatatype(conn, c, rsmd, isDeltaOrPct), 20);
+						String nullable = getNullable(conn, c, rsmd, isDeltaOrPct);
+//						String colOpt   = getPcsColumnOption(conn, cm, colName); // Get DBMS specific column option(s)
+						String colOpt   = "";
+
+						sbSql.append("   ," + qColName + " " + dtName + " " + colOpt + " " + nullable + "\n");
+					}
+
 				}
 				sbSql.append(") \n");
+
+				ddlList.add(sbSql.toString());
 			}
 			else
 			{
@@ -1182,8 +1095,26 @@ public abstract class PersistWriterBase
 			_logger.warn("SQLException, Error generating DDL to Persistent Counter DB.", e);
 		}
 		
-		return sbSql.toString();
+		return ddlList;
 	}
+	
+//	public String getPcsColumnOption(DbxConnection conn, CountersModel cm, String colName)
+//	{
+//		// NOT YET IMPLEMENTED
+//		return "";
+//
+////		Map<String, PcsColumnOptions> map = cm.getPcsColumnOptions();
+////		if (map == null)
+////			return "";
+////		if (map.isEmpty())
+////			return "";
+////
+////		PcsColumnOptions colType = map.get(colName);
+////		if (colType == null)
+////			return "";
+////
+////		return conn.resolvColumnOption(colType);
+//	}
 
 	/** Helper method to generate 'alter table ... add missingColName datatype null|not null'*/
 	public List<String> getAlterTableDdlString(DbxConnection conn, String tabName, List<String> missingCols, int type, CountersModel cm)
@@ -1204,8 +1135,10 @@ public abstract class PersistWriterBase
 		int cols = rsmd.getColumnCount();
 		for (int c=1; c<=cols; c++) 
 		{
+			String plainColName = rsmd.getColumnLabel(c);
+
 			// If the current columns is NOT missing continue to next column
-			if ( ! missingCols.contains(rsmd.getColumnLabel(c)) )
+			if ( ! missingCols.contains(plainColName) )
 				continue;
 				
 			boolean isDeltaOrPct = false;
@@ -1220,14 +1153,23 @@ public abstract class PersistWriterBase
 				if ( cm.isDiffColumn(c-1) || cm.isPctColumn(c-1) )
 					isDeltaOrPct = true;
 			}
+			
+			String colName  = fill(lq + plainColName + rq,                   40);
+			String dtName   = fill(getDatatype(conn, c, rsmd, isDeltaOrPct), 20);
+			String nullable = getNullable(true); // on alter, it should always be "nullable"
 
-//			String colName = fill(lq + rsmd.getColumnLabel(c) + rq,     40);
-//			String dtName  = fill(getDatatype(c, rsmd, isDeltaOrPct),   20);
-//			String nullable= getNullable(c, rsmd, isDeltaOrPct);
-			String colName = fill(lq + rsmd.getColumnLabel(c) + rq,         40);
-			String dtName  = fill(getDatatype(conn, c, rsmd, isDeltaOrPct), 20);
-//			String nullable= getNullable(conn, c, rsmd, isDeltaOrPct);
-			String nullable= getNullable(true); // on alter, it should always be "nullable"
+			if (DictCompression.isEnabled() && cm.isDictionaryCompressedColumn(plainColName))
+			{
+				DictCompression dcc = DictCompression.getInstance();
+
+				String dccColName = dcc.getDigestSourceColumnName(plainColName);
+				int    dccJdbcDt  = dcc.getDigestJdbcType();
+				int    dccJdbcLen = dcc.getDigestLength();
+
+				colName  = fill(lq + dccColName + rq,                     40);
+				dtName   = fill(getDatatype(conn, dccJdbcDt, dccJdbcLen), 20);
+			}
+
 
 			list.add("alter table " + lq+tabName+rq + " add  " + colName + " " + dtName + " " + nullable);
 		}
@@ -1445,6 +1387,15 @@ public abstract class PersistWriterBase
 			if (addPrepStatementQuestionMarks)
 				sbSql.append("values(?, ?, ?) \n");
 		}
+//		else if (type == RECORDING_OPTIONS)
+//		{
+//			sbSql.append("insert into ").append(tabName).append(" (");
+//			sbSql.append(lq).append("optionName")      .append(rq).append(", ");
+//			sbSql.append(lq).append("optionText")      .append(rq).append("");
+//			sbSql.append(") \n");
+//			if (addPrepStatementQuestionMarks)
+//				sbSql.append("values(?, ?) \n");
+//		}
 		else if (type == DDL_STORAGE)
 		{
 			sbSql.append("insert into ").append(tabName).append(" (");
@@ -1551,7 +1502,18 @@ public abstract class PersistWriterBase
 //				sbSql.append(lq).append(cm.getColumnName(c)).append(rq).append(", ");
 			int cols = cmColumns.size();
 			for (int c=0; c<cols; c++) 
-				sbSql.append(lq).append(cmColumns.get(c)).append(rq).append(", ");
+			{
+				String colName = cmColumns.get(c);
+				if (DictCompression.isEnabled() && cm.isDictionaryCompressedColumn(colName))
+				{
+					colName = cm.resolvDictionaryCompressedColumn(colName);
+					sbSql.append(lq).append(colName).append(rq).append(", ");
+				}
+				else
+				{
+					sbSql.append(lq).append(colName).append(rq).append(", ");
+				}
+			}
 
 			// remove last ", "
 			sbSql.delete(sbSql.length()-2, sbSql.length());
@@ -1694,6 +1656,10 @@ public abstract class PersistWriterBase
 		{
 			return null;
 		}
+//		else if (type == RECORDING_OPTIONS)
+//		{
+//			return null;
+//		}
 		else if (type == DDL_STORAGE)
 		{
 			return null;

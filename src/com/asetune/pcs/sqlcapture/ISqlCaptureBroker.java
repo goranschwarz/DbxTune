@@ -23,6 +23,7 @@ package com.asetune.pcs.sqlcapture;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.conn.DbxConnection;
@@ -100,6 +101,21 @@ public interface ISqlCaptureBroker
 	public int doSqlCapture(DbxConnection conn, PersistentCounterHandler persistentCounterHandler);
 
 	public String getInsertStatement(DbxConnection conn, String tabName);
+
+	/**
+	 * Get what (if any) columns that are Dictionary Compressed.
+	 * <p>
+	 * The returned Map is
+	 * <ul>
+	 *   <li>key   = Position in the value list/array that is sent. it starts at 1... 0 is where the table name is stored.</li>
+	 *   <li>value = The column name </li>
+	 * </ul>
+	 * 
+	 * @param tabName  table name 
+	 * @return a Map(colPos, colName), null if no columns are Dictionary Compressed <br>
+	 *         The 'colPos' is a pointer to where in the value array/list we would find the column (position 0 is where the table name is stored)
+	 */
+	Map<Integer, String> getDictionaryCompressionColumnMap(String tabName);
 
 	/**
 	 * Initialize the Broker with the same configuartion as the PersistenceCounterHandler

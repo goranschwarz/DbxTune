@@ -153,6 +153,7 @@ extends CountersModel
 		List <String> pkCols = new LinkedList<String>();
 
 		pkCols.add("session_id");
+//		pkCols.add("ecid");
 
 		return pkCols;
 	}
@@ -172,6 +173,7 @@ extends CountersModel
 		String es__DBName                  = "";
 		String es__database_id             = "";
 		String es__AuthDbName              = "";
+		String es__open_transaction_count  = "";
 		String es__page_server_reads       = "";
 
 		String er__statement_sql_handle    = "";
@@ -186,6 +188,7 @@ extends CountersModel
 		if (srvVersion >= Ver.ver(2012)) es__DBName                  = "    ,DBName = db_name(es.database_id)  -- 2012 \n";                    
 		if (srvVersion >= Ver.ver(2012)) es__database_id             = "    ,es.database_id                    -- 2012 \n";                    
 		if (srvVersion >= Ver.ver(2012)) es__AuthDbName              = "    ,AuthDbName = es.authenticating_database_id     -- 2012  -- ID of the database authenticating the principal. For Logins, the value will be 0. For contained database users, the value will be the database ID of the contained database. \n";
+		if (srvVersion >= Ver.ver(2012)) es__open_transaction_count  = "    ,es.open_transaction_count         -- 2012 \n";
 		if (srvVersion >= Ver.ver(2019)) es__page_server_reads       = "    ,es.page_server_reads              -- Applies to: Azure SQL Database Hyperscale (but also available at 2019) \n";
 
 		if (srvVersion >= Ver.ver(2014)) er__statement_sql_handle    = "    ,er.statement_sql_handle            -- 2014 \n";
@@ -197,10 +200,18 @@ extends CountersModel
 		if (srvVersion >= Ver.ver(2014,0,0, 2) || (srvVersion < Ver.ver(2014) && srvVersion >= Ver.ver(2012,0,0, 3)) ) 
 				ssu__s_user_objects_deferred_dealloc_page_count = "    ,s_user_objects_deferred_dealloc_page_count = ssu.user_objects_deferred_dealloc_page_count  -- SP ?? in 2012 & 2014 \n";
 
-
+		//--------------------------------------------------------------------------
+		//---- NOTE ---- NOTE ---- NOTE ---- NOTE ---- NOTE ---- NOTE ---- NOTE ----
+		//--------------------------------------------------------------------------
+		// Lets be carefull down here...
+		// Some DMV's only contains session_id's (all Parallel Workers are summed up) 
+		// And Some DMV's contains session_id + execution_context_id/ecid (which are the actual Parallel Worker "threads")
+		// So do NOT join with tables that contains BOTH the session_id + execution_context_id, then you will have duplicates on 'session_id', which is the PK for this Performance Counter
+		//--------------------------------------------------------------------------
 		String sql = ""
 			    + "select \n"
 			    + "     ec.session_id \n"
+			    + "    ,worker_count = (select count(*) from sys.sysprocesses where spid = ec.session_id) - 1 \n"
 			    + "    ,ec.connect_time \n"
 			    + "    ,connect_time_sec = datediff(ss, ec.connect_time, getdate())  -- fix case... if seconds are to big \n"
 			    + "    ,ec.net_transport \n"
@@ -246,17 +257,17 @@ extends CountersModel
 			    + "    ,es.deadlock_priority \n"
 			    + "    ,total_row_count        = es.row_count                      -- DIFF \n"
 			    + "    ,es.prev_error \n"
-			    + "    ,es.last_unsuccessful_logon        -- 2008 \n"
-			    + "    ,es.unsuccessful_logons            -- 2008 \n"
-			    + "    ,DBName = db_name(es.database_id)  -- 2012 \n"
-			    + "    ,es.database_id                    -- 2012 \n"
-			    + "    ,AuthDbName = es.authenticating_database_id     -- 2012  -- ID of the database authenticating the principal. For Logins, the value will be 0. For contained database users, the value will be the database ID of the contained database. \n"
-			    + "    ,es.open_transaction_count         -- 2012 \n"
-			    + "    ,es.page_server_reads              -- Applies to: Azure SQL Database Hyperscale (but also available at 2019) \n"
+			    + es__last_unsuccessful_logon
+			    + es__unsuccessful_logons
+			    + es__DBName
+			    + es__database_id
+			    + es__AuthDbName
+			    + es__open_transaction_count
+			    + es__page_server_reads
 			    + " \n"
 			    + "    ,exec_start_time = er.start_time \n"
 			    + "    ,er.request_id \n"
-			    + "    ,er.status        --- can probably be found somewhere else -- Background, Running, Runnable, Sleeping, Suspended \n"
+			    + "    ,exec_status     = er.status        --- can probably be found somewhere else -- Background, Running, Runnable, Sleeping, Suspended \n"
 			    + "    ,er.command       -- \n"
 			    + "    ,er.sql_handle \n"
 			    + "    ,er.statement_start_offset \n"
@@ -268,7 +279,7 @@ extends CountersModel
 			    + "    ,er.wait_time \n"
 			    + "    ,er.last_wait_type \n"
 			    + "    ,er.wait_resource \n"
-			    + "    ,er.open_transaction_count \n"
+			    + "    ,exec_open_transaction_count    = er.open_transaction_count \n"
 			    + "    ,er.open_resultset_count \n"
 			    + "    ,er.transaction_id \n"
 			    + "    ,er.percent_complete \n"
@@ -284,12 +295,13 @@ extends CountersModel
 			    + "    ,er.executing_managed_code \n"
 			    + "    ,er.query_hash \n"
 			    + "    ,er.query_plan_hash \n"
-			    + "    ,er.statement_sql_handle            -- 2014 \n"
-			    + "    ,er.dop                             -- 2016 \n"
-			    + "    ,er.parallel_worker_count           -- 2016 \n"
-			    + "    ,er.page_resource                   -- 2019 \n"
+			    + er__statement_sql_handle
+			    + er__dop
+			    + er__parallel_worker_count
+			    + er__page_resource
 			    + " \n"
 			    + "	-- MOST OF THIS ARE PROBABLY DUPLICATES (physical_io might not be) \n"
+			    + "--    ,sp.ecid                     -- Execution Context ID, is the ID of any Parallel Worker(s) \n"
 			    + "--    ,sp.cpu \n"
 			    + "--    ,sp.physical_io \n"
 			    + "--    ,sp.memusage \n"
@@ -308,21 +320,21 @@ extends CountersModel
 			    + "    ,s_internal_objects_now_page_count      = ssu.internal_objects_alloc_page_count - ssu.internal_objects_dealloc_page_count \n"
 			    + "    ,s_internal_objects_alloc_page_count    = ssu.internal_objects_alloc_page_count \n"
 			    + "    ,s_internal_objects_dealloc_page_count  = ssu.internal_objects_dealloc_page_count \n"
-			    + "    ,s_user_objects_deferred_dealloc_page_count = ssu.user_objects_deferred_dealloc_page_count  -- SP ?? in 2012 & 2014 \n"
+			    + ssu__s_user_objects_deferred_dealloc_page_count
 			    + " \n"
-			    + "    ,t_user_objects_now_page_count          = tsu.user_objects_alloc_page_count - tsu.user_objects_dealloc_page_count \n"
-			    + "    ,t_user_objects_alloc_page_count        = tsu.user_objects_alloc_page_count \n"
-			    + "    ,t_user_objects_dealloc_page_count      = tsu.user_objects_dealloc_page_count \n"
-			    + "    ,t_internal_objects_now_page_count      = tsu.internal_objects_alloc_page_count - tsu.internal_objects_dealloc_page_count \n"
-			    + "    ,t_internal_objects_alloc_page_count    = tsu.internal_objects_alloc_page_count \n"
-			    + "    ,t_internal_objects_dealloc_page_count  = tsu.internal_objects_dealloc_page_count \n"
-			    + " \n"
+//			    + "    ,t_user_objects_now_page_count          = tsu.user_objects_alloc_page_count - tsu.user_objects_dealloc_page_count \n"
+//			    + "    ,t_user_objects_alloc_page_count        = tsu.user_objects_alloc_page_count \n"
+//			    + "    ,t_user_objects_dealloc_page_count      = tsu.user_objects_dealloc_page_count \n"
+//			    + "    ,t_internal_objects_now_page_count      = tsu.internal_objects_alloc_page_count - tsu.internal_objects_dealloc_page_count \n"
+//			    + "    ,t_internal_objects_alloc_page_count    = tsu.internal_objects_alloc_page_count \n"
+//			    + "    ,t_internal_objects_dealloc_page_count  = tsu.internal_objects_dealloc_page_count \n"
+//			    + " \n"
 			    + "from sys.dm_exec_connections ec \n"
 			    + "inner join sys.dm_exec_sessions es on ec.session_id = es.session_id \n"
-			    + "--inner join sys.sysprocesses     sp on ec.session_id = sp.spid \n"
+//			    + "inner join sys.sysprocesses     sp on ec.session_id = sp.spid \n"
 			    + "left outer join sys.dm_exec_requests er on ec.session_id = er.session_id \n"
 			    + "left outer join tempdb.sys.dm_db_session_space_usage ssu on ec.session_id = ssu.session_id \n"
-			    + "left outer join tempdb.sys.dm_db_task_space_usage    tsu on ec.session_id = tsu.session_id \n"
+//			    + "left outer join tempdb.sys.dm_db_task_space_usage    tsu on ec.session_id = tsu.session_id and tsu.execution_context_id = sp.ecid \n"
 			    + "";
 		
 		return sql;

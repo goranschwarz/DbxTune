@@ -964,7 +964,8 @@ implements ActionListener, TableModelListener
 	public final static String PROPERTY_keepDbsWithPctUsageGtInGraphs = "keepDbsWithPctUsageGtInGraphs";
 
 	public final static String DEFAULT_keepDbsInGraphs                = "";
-	public final static String DEFAULT_skipDbsInGraphs                = "master, model, pubs2, sybmgmtdb, sybpcidb, sybsecurity, sybsystemdb, sybsystemprocs";
+//	public final static String DEFAULT_skipDbsInGraphs                = "master, model, pubs2, sybmgmtdb, sybpcidb, sybsecurity, sybsystemdb, sybsystemprocs";
+	public final static String DEFAULT_skipDbsInGraphs                = "master, model, pubs2, sybmgmtdb, sybpcidb, sybsystemdb, sybsystemprocs"; // removed 'sybsecurity' if auditing is enabled, then this database is critical
 	public final static int    DEFAULT_skipDbsWithSizeLtInGraphs      = 300;
 	public final static int    DEFAULT_keepDbsWithPctUsageGtInGraphs  = 80;
 

@@ -122,6 +122,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<li>Trend Graph Panel - In the properties dialog, double click on a row, and it will move to the selected graph in the panel and "blink" it for 5 seconds, so it's easy to find graphs</li>
 		<li>Host monitoring: iostat, now supports version 11.5.7, which intruduced/changed some columns</li>
 		<li>Right click context menu: had some problems if the columns was re-ordered</li>
+		<li>Introduced Dictionary Compression functionality (which basically is a normilization, a key/value storage with a md5/sha1/sha256 key so that we only store "common" strings *once* in the PCS (for some columns)... (see each xxxTune application for more info)</li>
+		<li>Create 'User Defined Counter' Wizard: enhanced it to use JDBC dataypes for User Defined Graphs (for example in Postgres it wasn't possible to create User Defined graphs due to this)</li>
 		<LI>
 			<b>Upgraded some of the third party libraries/jars</b><br>
 			<ul>
@@ -193,6 +195,18 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
 		<li>Alarm on License grace period</li>
+		<li>When a database recording "rolls over" into a new date, then reset some things like if CmOpenObjects has had timeout's, which may have disables 'TabRowCount', 'NumUsedPages', 'RowsPerPage' (so lets re-enable it)</li>
+		<li>Dictionary Compression is introduced on the following Counter Collectors</li>
+		<UL>
+		   <li>CmActiveStatements, column 'MonSqlText', 'DbccSqlText', 'ProcCallStack', 'ShowPlanText', 'DbccStacktrace', 'CachedPlanInXml', 'SpidLocks'.</li>
+		   <li>CmOpenDatabases     column 'OldestTranSqlText', 'OldestTranShowPlanText', 'OldestTranLocks'.</li>
+		   <li>CmProcessActivity   column 'SqlText'.</li>
+		   <li>CmQpMetrics         column 'qtext'.</li>
+		   <li>CmSpidCpuWait       column 'MonSqlText', 'DbccSqlText', 'ProcCallStack', 'ShowPlanText', 'DbccStacktrace'.</li>
+		   <li>CmStmntCacheDetails column 'sqltext', 'xmlPlan', 'msgAsColValue'.</li>
+		   <li>SqlCaptureBrokerAse column 'SQLText', 'NormSQLText'</li>
+		</UL>
+		
 		
 		<!-- ~~~~~ CONFIGURATION ~~~~~ -->
 		<LI>
@@ -359,6 +373,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>changed alarm 'AlarmEventOldBackup': This alarm was fired after a ASE Restart, due to dependencies of columns 'LastDbBackupAgeInHours' and 'LastLogBackupAgeInHours' in memory values is NULL after restart.<br>
 			&emsp;&emsp; Now we try to discard those faulty alarms by using the ASE Start time as the "LastBackupTime"...</li>
 			<li>New option "Locks" - What locks does the 'OldestTranSpid' hold. (select "db,table,type,cnt" from syslocks where spid = ?)</li>
+			<li>removed 'sybsecurity' from the "skip list", so we can better se if that gets full or not.</li>
 		</ul>
 		</LI>
 
@@ -460,6 +475,16 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<code>PersistentCounterHandler.ddl.connCheckPeriod=300000</code><br>
 			<code>PersistentCounterHandler.sqlCapture.connCheckPeriod=300000</code><br>
 			</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Daily Report ~~~~~ -->
+		<LI>
+		<b>Daily Report</b><br>
+		<ul>
+			<li>AseConfiguration   - show all non-default configuration</li>
+			<li>AseSpMonitorConfig - Show last sampled: sp_monitorconfig 'all'</li>
+			<li>In Statement Cache: show how many 'Statement Cache' is configured.<br>
 		</ul>
 		</LI>
 
@@ -583,22 +608,38 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Dbms Config: SysDatabases - also print Database Scoped Configurations</LI>
 		<LI>Daily Report: if 'LogSizeInMb' is larger than 'DataSizeInMb' and 'recovery_model_desc' is FULL, then mark the cell in RED</LI>
 		<LI>Collector: 'PerfCounters': added some new graphs: FreeListStalls, MemoryGrantsPending, PlanCacheHitRate, PlanCacheMb, PlanCacheObjCnt, PlanCacheObjUse</LI>
-		<LI>Removed CM: CmWho           (replaced by: CmSessions)</LI>
 		<LI>Removed CM: CmExecSessions  (replaced by: CmSessions)</LI>
 		<LI>Removed CM: CmExecRequests  (replaced by: CmSessions)</LI>
 		<LI>Added CM: CmQueryTransformStat -- Query optimization, what rules are used can be checked here</LI>
-		<LI>Added CM: CmSessions           -- Raplacing: CmWho, CmExecSessions & CmExecRequests</LI>
+		<LI>Added CM: CmSessions           -- Raplacing: CmExecSessions & CmExecRequests</LI>
 		<LI>Added CM: CmWorkers            -- See how workers are used and Degree of Paralell</LI>
 		<LI>CmDatabases -- Rewrote the SQL to use #temp tables, and hopefully that will use less CPU</LI>
 		<LI>CmIndexPhysical
 		    <ul>
-		       <li>Added pk with 'alloc_unit_type_desc'</li>
+		       <li>Added pk with 'alloc_unit_type_desc', so we can track BLOB's</li>
 			   <li>Postpone time was set to every 4 hour (yes capture, but not that often)</li>
 			   <li>use sp_MSforeachdb to not check databases where we don't have access</li>
 			</ul>
 		<LI>CmPerfCounters -- Added Graph 'TransWriteSec'</LI>
 		<LI>PCS: some work on 'storing XML Execution Plans'</LI>
-		<LI>Daily Summary Reports (added sections: Query Stats, TopTableSize, AvgPageUsedPct, and Graphs: OsCpuEffective, SqlBatch, TransWriteSec)</LI>
+		<LI>Daily Summary Reports (added sections: Query Stats, TopTableSize, AvgPageUsedPct, and Graphs: OsCpuEffective, SqlBatch, TransWriteSec, SqlServerConfiguration)</LI>
+		<li>Changed to ToolTipProvider, it can now open a Execution Plan in SSMS</li>
+		<li>CmWho: Shows Worker Threads (ecid - Execution Context ID)</li>
+		<li>CmWho -- rearrenged column names a bit, also changed Primary Key to be 'spid', 'ecid'´. Worket threads(ecid!=0) are displayed in a Beige Color, also better at detecting "system spids"</li>
+		<li>CmSessions -- this still needs *more* work... but it is now *just* showing for session_id's and *not* for parallel workers... Still needs to reorder columns etc to make it *usable*</li>
+		<li>CmActiveStatements, duplicated 'cpu_time', 'reads', 'logical_reads', 'writes': into exec_* and sess_*<br>
+			where the exec_* columns represents entries from 'dm_exec_requests', which reflects what is executed *right* now<br>
+			where the sess_* columns represents entries from 'dm_exec_sessions', where those counters are omly updated *after* a statement execution has been completed<br>
+		    </li>
+		<li>Dictionary Compression is introduced on the following Counter Collectors</li>
+		<UL>
+			<li>CmActiveStatements   column 'lastKnownSql', 'query_plan'.</li>
+			<li>CmDatabases          column 'OldestTranSqlText', 'OldestTranShowPlanText'.</li>
+			<li>CmExecQueryStats     column 'SqlText'.</li>
+			<li>CmOpenTransactions   column 'LastSqlText', 'LastPlan'.</li>
+			<li>CmTempdbSpidUsage    column 'LastQueryText'.</li>
+			<li>CmWaitingTasks       column 'currentSqlText', 'fullSqlBatchText', 'query_plan'.</li>
+		</UL>
 		
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
@@ -620,6 +661,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added one "line" srv_cfg_max_connections, to the chart 'ConnectionsSum', so we can see how "close" we are to running out of connections</LI>
 		<LI>Added alarm 'ConfigResourceIsLow' if we only have less than 25 connections free. (canged with property: CmPgDatabase.alarm.system.if.free_connections.lt=##)</LI>
 		<LI>CmPgActivity - Check for mandatory 'application_name' and 'usename' - and send alarm 'MissingMandatoryContent' if so.</LI>
+		<li>Daily Reports, added: PostgresConfiguration   - show all non-default configuration</li>
+		<li>Dictionary Compression is introduced on the following Counter Collectors</li>
+		<UL>
+			<li>CmPgActivity   column 'query'.</li>
+			<li>CmPgStatements column 'query'.</li>
+		</UL>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -639,6 +686,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
 		<LI>bug fix: Connections to Linux was only possible (now "hopefully" accepting for more LUW platforms, all starting with "DB2/")</LI>
+		<li>Added: CmErrorLog</li>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -704,6 +752,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Code Completion now also picks up entries from the ToolTipProvider (which you can add entries to in the files under ${HOME}/resources/DBMSTYPE_tooltip_provider.xml)</LI>
 		<LI>Better handling of decimal numbers (number of decimals)</LI>
 		<LI>Editor: TSQL (Microsoft flavor) Syntax highlight</LI>
+		<LI>Code Compleation: added ':tt' so we can bring up *just* the tooltip, which are added in a static file.</LI>
+		<LI>The above tooltips are just showed in a normal code-compleation as a "last resort"</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

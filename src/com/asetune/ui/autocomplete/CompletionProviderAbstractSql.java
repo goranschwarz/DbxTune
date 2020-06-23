@@ -1192,6 +1192,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 			cList.add( new BasicCompletion(CompletionProviderAbstractSql.this, ":v",  "Show all user views") );
 			cList.add( new BasicCompletion(CompletionProviderAbstractSql.this, ":st", "Show all system tables") );
 			cList.add( new BasicCompletion(CompletionProviderAbstractSql.this, ":sv", "Show all system views") );
+			cList.add( new BasicCompletion(CompletionProviderAbstractSql.this, ":tt", "Show all ToolTip from the ToolTipSupplier from file: INSTALL_PATH\\resources\\VENDOR_tooltip_provider.xml") );
 			
 			return cList;
 		}
@@ -1240,6 +1241,23 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 //				return clist;
 		}
 
+
+		//-----------------------------------------------------------
+		// :tt = get completions from: ToolTipSupplier
+		if ( enteredText.startsWith(":tt") )
+		{
+			String name = enteredText.substring(":tt".length());
+			if (StringUtil.isNullOrBlank(name))
+				name = ".";
+
+			ToolTipSupplierAbstract tts = getToolTipSupplier();
+    		if (tts != null)
+    		{
+    			List<Completion> ttsCompletions = tts.getCompletionsFor(name);
+    			if (ttsCompletions != null && !ttsCompletions.isEmpty())
+    				return ttsCompletions;
+    		}
+		}
 
 		//-----------------------------------------------------------
 		// :s = show schemas in current database
@@ -1775,22 +1793,37 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 		if (colCompl != null && !colCompl.isEmpty())
 			return colCompl;
 
-		//-----------------------------------------------------------
-		// get completions from: ToolTipSupplier
-		ToolTipSupplierAbstract tts = getToolTipSupplier();
-		if (tts != null)
-		{
-			List<Completion> ttsCompletions = tts.getCompletionsFor(enteredText);
-			if (ttsCompletions != null && !ttsCompletions.isEmpty())
-				return ttsCompletions;
-		}
+//		//-----------------------------------------------------------
+//		// get completions from: ToolTipSupplier
+//		ToolTipSupplierAbstract tts = getToolTipSupplier();
+//		if (tts != null)
+//		{
+//			List<Completion> ttsCompletions = tts.getCompletionsFor(enteredText);
+//			if (ttsCompletions != null && !ttsCompletions.isEmpty())
+//				return ttsCompletions;
+//		}
 
 		// IF WE GET HERE, I could not figure out
 		// what to deliver as Completion text so
 		// LETS return "everything" that has been added as the BASE COMPLETION (catalogs, schemas, tables/views, staticCompletion), but NOT storedProcedures
 		
 		// completions is defined in org.fife.ui.autocomplete.AbstractCompletionProvider
-		return getCompletionsFrom(completions, enteredText);
+		List<Completion> providerCompl = getCompletionsFrom(completions, enteredText);
+		
+		if (providerCompl.isEmpty())
+		{
+			//-----------------------------------------------------------
+			// get completions from: ToolTipSupplier
+			ToolTipSupplierAbstract tts = getToolTipSupplier();
+			if (tts != null)
+			{
+				List<Completion> ttsCompletions = tts.getCompletionsFor(enteredText);
+				if (ttsCompletions != null && !ttsCompletions.isEmpty())
+					return ttsCompletions;
+			}
+		}
+		
+		return providerCompl;
 	}
 
 

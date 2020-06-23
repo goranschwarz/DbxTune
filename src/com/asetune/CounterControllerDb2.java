@@ -29,6 +29,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.db2.CmConnectionSummary;
+import com.asetune.cm.db2.CmErrorLog;
 import com.asetune.cm.db2.CmMonGetBufferPool;
 import com.asetune.cm.db2.CmMonGetConnection;
 import com.asetune.cm.db2.CmMonGetIndex;
@@ -98,6 +99,7 @@ extends CounterControllerAbstract
 		CmSystemResourses   .create(counterController, guiController);
 //		CmGlobalStatus      .create(counterController, guiController);
 //		CmUserStatus        .create(counterController, guiController);
+		CmErrorLog          .create(counterController, guiController);
 
 		// Object Access
 		CmMonGetTable       .create(counterController, guiController);

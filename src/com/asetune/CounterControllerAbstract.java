@@ -320,6 +320,7 @@ implements ICounterController
 	}
 
 	/** */
+	@Override
 	public int getDefaultSleepTimeInSec()
 	{
 		return _defaultSleepTimeInSec;
@@ -2386,4 +2387,14 @@ implements ICounterController
 	//==================================================================
 	// END: DBMS Properties
 	//==================================================================
+
+	@Override
+	public void prepareForPcsDatabaseRollover()
+	{
+		for (CountersModel cm : getCmList())
+		{
+			cm.prepareForPcsDatabaseRollover();
+		}
+	}
+
 }

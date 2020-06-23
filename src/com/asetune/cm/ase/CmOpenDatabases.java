@@ -65,6 +65,8 @@ import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.DbSelectionForGraphsDialog;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.pcs.PcsColumnOptions;
+import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -721,6 +723,26 @@ extends CountersModel
 
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
+	}
+
+	@Override
+	public Map<String, PcsColumnOptions> getPcsColumnOptions()
+	{
+		Map<String, PcsColumnOptions> map = super.getPcsColumnOptions();
+
+		// No settings in the super, create one, and set it at super
+		if (map == null)
+		{
+			map = new HashMap<>();
+			map.put("OldestTranSqlText"     , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("OldestTranShowPlanText", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("OldestTranLocks"       , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+
+			// Set the map in the super
+			setPcsColumnOptions(map);
+		}
+
+		return map;
 	}
 
 	@Override

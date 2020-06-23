@@ -975,6 +975,37 @@ extends CountersModel
 		}
 	}
 
+	/**
+	 * Lets reset some "timeout" options so that it will start from "scratch" again!
+	 */
+	@Override
+	public void prepareForPcsDatabaseRollover()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+		// If "disable" on timeout is enabled
+		if (conf.getBooleanProperty(PROPKEY_disable_tabRowCount_onTimeout, DEFAULT_disable_tabRowCount_onTimeout))
+		{
+			// Need TMP since we are going to save the configuration somewhere
+			Configuration tempConf = Configuration.getInstance(Configuration.USER_TEMP);
+			if (tempConf == null) 
+				return;
+
+			// check if the option is present, then remove it... This will cause it to use the value in the "base" configuration.
+			if (tempConf.hasProperty(PROPKEY_sample_tabRowCount) || tempConf.hasProperty(PROPKEY_disable_tabRowCount_timestamp))
+			{
+				tempConf.remove(PROPKEY_sample_tabRowCount);
+				tempConf.remove(PROPKEY_disable_tabRowCount_timestamp);
+				tempConf.save();
+				
+				// This will force the CM to re-initialize the SQL statement.
+				setSql(null);
+				
+				_logger.info("CM='"+getName()+"'. Re-enable the column 'TabRowCount', 'NumUsedPages', 'RowsPerPage', from method prepareForPcsDatabaseRollover(). This is done by removing properties '" + PROPKEY_sample_tabRowCount + "', '" + PROPKEY_disable_tabRowCount_timestamp + "' from Configuration 'USER_TEMP' with file: " + tempConf.getFilename() );
+			}
+		}
+	}
+
 	/** 
 	 * Compute the LockContPct for DIFF values
 	 */

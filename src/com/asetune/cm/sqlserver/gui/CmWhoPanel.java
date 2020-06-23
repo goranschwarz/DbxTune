@@ -28,6 +28,8 @@ import java.util.HashMap;
 
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
+import javax.swing.RowFilter;
+import javax.swing.table.TableModel;
 
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
@@ -51,6 +53,11 @@ extends TabularCntrPanel
 
 	public static final String  TOOLTIP_sample_systemThreads = "<html>Sample System SPID's that executes in the ASE Server.<br><b>Note</b>: This is not a filter, you will have to wait for next sample time for this option to take effect.</html>";
 
+	private static final Color WORKER_PARENT    = new Color(229, 194, 149); // DARK Beige 
+	private static final Color WORKER_PROCESSES = new Color(255, 245, 216); // Beige
+	
+	private JCheckBox l_sampleSystemThreads_chk;
+
 	public CmWhoPanel(CountersModel cm)
 	{
 		super(cm);
@@ -73,8 +80,11 @@ extends TabularCntrPanel
 			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
-				String sid = (String) adapter.getValue(adapter.getColumnIndex("sid"));
-				if ("0x0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000".equals(sid))
+//				String sid = (String) adapter.getValue(adapter.getColumnIndex("sid"));
+//				if ("0x0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000".equals(sid))
+//					return true;
+				Boolean isUserProcess = (Boolean) adapter.getValue(adapter.getColumnIndex("is_user_process"));
+				if ( isUserProcess == null || (isUserProcess != null && isUserProcess == false) )
 					return true;
 				return false;
 			}
@@ -147,6 +157,40 @@ extends TabularCntrPanel
 				return false;
 			}
 		}, SwingUtils.parseColor(colorStr, Color.RED), null));
+
+//		// DARK BEIGE = PARENT of WORKER processes
+//		if (conf != null) colorStr = conf.getProperty(getName()+".color.worker.parent");
+//		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+//		{
+//			@Override
+//			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+//			{
+//				Number FamilyID = (Number) adapter.getValue(adapter.getColumnIndex("FamilyID"));
+//				Number SPID     = (Number) adapter.getValue(adapter.getColumnIndex("SPID"));
+//				if (FamilyID != null && SPID != null && FamilyID.intValue() == SPID.intValue())
+//					return true;
+//				return false;
+//			}
+//		}, SwingUtils.parseColor(colorStr, WORKER_PARENT), null));
+
+		// BEIGE = WORKER process
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.worker");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+//				String cmd = (String) adapter.getValue(adapter.getColumnIndex("Command"));
+//				if ("WORKER PROCESS".equals(cmd))
+//					return true;
+//				return false;
+				Number ecid = (Number) adapter.getValue(adapter.getColumnIndex("ecid"));
+				if (ecid != null && ecid.intValue() > 0)
+					return true;
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, WORKER_PROCESSES), null));
+
 	}
 
 
@@ -157,25 +201,59 @@ extends TabularCntrPanel
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();
-		JCheckBox sampleSystemThreads_chk = new JCheckBox("Show system processes", conf == null ? CmWho.DEFAULT_sample_systemThreads : conf.getBooleanProperty(CmWho.PROPKEY_sample_systemThreads, CmWho.DEFAULT_sample_systemThreads));
+		l_sampleSystemThreads_chk = new JCheckBox("Show system processes", conf == null ? CmWho.DEFAULT_sample_systemThreads : conf.getBooleanProperty(CmWho.PROPKEY_sample_systemThreads, CmWho.DEFAULT_sample_systemThreads));
 
-		sampleSystemThreads_chk.setName(CmWho.PROPKEY_sample_systemThreads);
-		sampleSystemThreads_chk.setToolTipText(TOOLTIP_sample_systemThreads);
-		panel.add(sampleSystemThreads_chk, "wrap");
+		l_sampleSystemThreads_chk.setName(CmWho.PROPKEY_sample_systemThreads);
+		l_sampleSystemThreads_chk.setToolTipText(TOOLTIP_sample_systemThreads);
+		panel.add(l_sampleSystemThreads_chk, "wrap");
 
-		sampleSystemThreads_chk.addActionListener(new ActionListener()
+//		sampleSystemThreads_chk.addActionListener(new ActionListener()
+//		{
+//			@Override
+//			public void actionPerformed(ActionEvent e)
+//			{
+//				// Need TMP since we are going to save the configuration somewhere
+//				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+//				if (conf == null) return;
+//				conf.setProperty(CmWho.PROPKEY_sample_systemThreads, ((JCheckBox)e.getSource()).isSelected());
+//				conf.save();
+//				
+//				// ReInitialize the SQL
+//				getCm().setSql(null);
+//			}
+//		});
+
+		
+		l_sampleSystemThreads_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				// Need TMP since we are going to save the configuration somewhere
-				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
-				if (conf == null) return;
-				conf.setProperty(CmWho.PROPKEY_sample_systemThreads, ((JCheckBox)e.getSource()).isSelected());
-				conf.save();
-				
-				// ReInitialize the SQL
-				getCm().setSql(null);
+				// If the 'l_sampleSystemThreads_chk' the table needs to be updated... so that filters are applied
+				getCm().fireTableDataChanged();
+			}
+		});
+		
+		addRowFilter(new RowFilter<TableModel, Integer>()
+		{
+			@Override
+			public boolean include(Entry<? extends TableModel, ? extends Integer> entry)
+			{
+				if ( l_sampleSystemThreads_chk.isSelected() )
+				{
+					return true;
+				}
+				else
+				{
+					Boolean isUserProcess = (Boolean)entry.getValue(CmWho.COLPOS_is_user_process);
+					if (isUserProcess == null)
+						isUserProcess = false;
+
+					if (!isUserProcess && !l_sampleSystemThreads_chk.isSelected())
+						return false;
+
+					return true;
+				}
 			}
 		});
 		

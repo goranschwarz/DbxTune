@@ -71,6 +71,7 @@ import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTable;
 import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistReader.PcsSavedException;
+import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.ResultSetMetaDataCached;
@@ -1018,8 +1019,9 @@ implements Cloneable, ITableTooltip
 	/** 
 	 * Used to set off-line counter data<br>
 	 * Most likely has to be override to handle local offline data for subclasses
+	 * @param colSqlDataType 
 	 */
-	public void setOfflineColumnNames(int type, List<String> cols)
+	public void setOfflineColumnNames(int type, List<String> cols, List<Integer> sqlTypes)
 	{
 //new Exception(this+": DUMMY: CounterModel setOfflineColumnNames").printStackTrace();
 //System.out.println("++++++++++++++++++++++++++++++++"+this+"::setOfflineColumnNames(): type="+type+", cols='"+cols+"'.");
@@ -1032,6 +1034,7 @@ implements Cloneable, ITableTooltip
 			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
 
 		data.setColumnNames(cols);
+		data.setSqlType(sqlTypes);
 		initColumnStuff(data);
 	}
 
@@ -2830,6 +2833,7 @@ implements Cloneable, ITableTooltip
 		// Generate the SQL, for the specific ASE version
 		String sql = getSqlForVersion(conn, srvVersion, isClusterEnabled);
 		setSql(sql);
+//		setSql(getSqlPrefix() + sql);
 
 		// Generate the SQL INIT, for the specific ASE version
 		String sqlInit = getSqlInitForVersion(conn, srvVersion, isClusterEnabled);
@@ -2846,6 +2850,16 @@ implements Cloneable, ITableTooltip
 		// Set specific column descriptions
 		addMonTableDictForVersion(conn, srvVersion, isClusterEnabled);
 	}
+
+//	/** 
+//	 * If you want to use SQL Prefix in a query, this can be used to automatically create a prefix string
+//	 * <p>
+//	 * The default is to use: <code>&#47* APPNAME:CmName *&#47; \n</code> 
+//	 */
+//	public String getSqlPrefix()
+//	{
+//		return "/* " + Version.getAppName() + ":" + getName() + " */ \n";
+//	}
 
 	/**
 	 * Get the SQL Statement for getting the "current time" on the server.<br>
@@ -3020,7 +3034,6 @@ implements Cloneable, ITableTooltip
 		return "";
 	}
 
-	/** */
 	/** */
 	public String getSql()
 	{
@@ -5731,8 +5744,71 @@ implements Cloneable, ITableTooltip
 	 */
 	public Map<String, PcsColumnOptions> getPcsColumnOptions()
 	{
+		return _pcsColumnOptions;
+	}
+
+	private Map<String, PcsColumnOptions> _pcsColumnOptions = null;
+
+	/**
+	 * Set Options for how to store specific columns in the Persistence Counter Store 
+	 * 
+	 * @param map The new map of Column Options
+	 * @return The old Column Option Map
+	 */
+	public Map<String, PcsColumnOptions> setPcsColumnOptions(Map<String, PcsColumnOptions> map)
+	{
+		Map<String, PcsColumnOptions> curMap = _pcsColumnOptions;
+		
+		_pcsColumnOptions = map;
+
+		return curMap;
+	}
+	
+	/**
+	 * Check if a column is marked for Dictionary Compression
+	 * @param colName
+	 * @return
+	 */
+	public boolean isDictionaryCompressedColumn(String colName)
+	{
+		if ( ! DictCompression.isEnabled() )
+			return false;
+
+		Map<String, PcsColumnOptions> cmColOpt = getPcsColumnOptions();
+		if (cmColOpt == null)   return false;
+		if (cmColOpt.isEmpty()) return false;
+
+		PcsColumnOptions colType = cmColOpt.get(colName);
+		if (colType != null)
+		{
+			if (colType.isColumnType(PcsColumnOptions.ColumnType.DICTIONARY_COMPRESSION))
+				return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Resolve a column name to a dictionary compressed column
+	 * 
+	 * @param colName The Original name
+	 * @return null if not a dictionary compressed column, otherwise the "new" column name
+	 */
+	public String resolvDictionaryCompressedColumn(String colName)
+	{
+//		if ( ! DictCompression.hasInstance() )
+//			throw new RuntimeException("Column name '" + colName + "' in CM '" + getName() + "' has DICTIONARY_COMPRESSION enabled, but no instance of DictCompression could be found.");
+
+		if ( ! DictCompression.isEnabled() )
+			return null;
+
+		if (isDictionaryCompressedColumn(colName))
+		{
+			DictCompression dcc = DictCompression.getInstance();
+			return dcc.getDigestSourceColumnName(colName);
+		}
 		return null;
 	}
+	
 
 //	/**
 //	 * Set Options for how to store specific columns in the Persistence Counter Store 
@@ -6177,6 +6253,8 @@ implements Cloneable, ITableTooltip
 		{
 			_tabPanel.reset();
 		}
+		
+		_pcsColumnOptions = null;
 
 //		_refreshCounter = 0;
 
@@ -7510,6 +7588,17 @@ implements Cloneable, ITableTooltip
 	}
 
 
+	/**
+	 * This is called when a PCS Database is about to be rolled over into a new database (timestamp)
+	 * <p>
+	 * In here we might want to do various stuff...
+	 */
+	public void prepareForPcsDatabaseRollover()
+	{
+		// Nothing done... any CM Implementation can override this.
+	}
+
+
 	private boolean _inLoadProps = false;
 	protected void saveProps()
   	{
@@ -8382,5 +8471,4 @@ implements Cloneable, ITableTooltip
 //			}
 //		]
 //	}
-	
 }

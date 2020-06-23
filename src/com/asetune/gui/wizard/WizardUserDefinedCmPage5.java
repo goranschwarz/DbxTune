@@ -36,6 +36,7 @@ import com.asetune.CounterController;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionaryManager;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.StringUtil;
 
@@ -53,13 +54,15 @@ implements ActionListener, TableModelListener
 	private static final String WIZ_DESC = "Percentage Calculation Columns";
 	private static final String WIZ_HELP = "What Columns do you want to do Percentage calculation on.";
 	
-	private static final String[] TAB_HEADER = {"PK", "Diff", "Pct", "Column Name", "Data Type", "Column Num"};
-	private static final int TAB_POS_COL_PK     = 0; 
-	private static final int TAB_POS_COL_DIFF   = 1; 
-	private static final int TAB_POS_CHECK      = 2; 
-	private static final int TAB_POS_COL_NAME   = 3; 
-	private static final int TAB_POS_DATA_TYPE  = 4; 
-	private static final int TAB_POS_COL_NUM    = 5; 
+	private static final String[] TAB_HEADER = {"PK", "Diff", "Pct", "Column Name", "Data Type", "Column Num", "JDBC Type Desc", "Jdbc Type"};
+	private static final int TAB_POS_COL_PK            = 0; 
+	private static final int TAB_POS_COL_DIFF          = 1; 
+	private static final int TAB_POS_CHECK             = 2; 
+	private static final int TAB_POS_COL_NAME          = 3; 
+	private static final int TAB_POS_DATA_TYPE         = 4; 
+	private static final int TAB_POS_COL_NUM           = 5; 
+	private static final int TAB_POS_COL_JDBC_TYPE_STR = 6; 
+	private static final int TAB_POS_COL_JDBC_TYPE_INT = 7; 
 
 	private boolean    _firtsTimeRender = true;
 	private String[]   _toolTipMonTables = {};
@@ -70,6 +73,7 @@ implements ActionListener, TableModelListener
 	private JButton    _deSelectAll_but = new JButton("Deselect All");
 
 	public static String getDescription() { return WIZ_DESC; }
+	@Override
 	public Dimension getPreferredSize() { return WizardUserDefinedCm.preferredSize; }
 
 	public WizardUserDefinedCmPage5()
@@ -91,11 +95,14 @@ implements ActionListener, TableModelListener
 		tabHead.add(TAB_HEADER[TAB_POS_COL_NAME]);
 		tabHead.add(TAB_HEADER[TAB_POS_DATA_TYPE]);
 		tabHead.add(TAB_HEADER[TAB_POS_COL_NUM]);
+		tabHead.add(TAB_HEADER[TAB_POS_COL_JDBC_TYPE_STR]);
+		tabHead.add(TAB_HEADER[TAB_POS_COL_JDBC_TYPE_INT]);
 
 		Vector<Vector<Object>> tabData = new Vector<Vector<Object>>();
 
 		AbstractHighlighter disableSomeRows = new AbstractHighlighter()
 		{ 
+			@Override
 			protected Component doHighlight(Component comp, ComponentAdapter adapter) 
 			{
 				if (_data_chk.isSelected())
@@ -114,6 +121,7 @@ implements ActionListener, TableModelListener
 		{
             private static final long serialVersionUID = 1L;
 
+			@Override
 			public Class<?> getColumnClass(int column) 
 			{
 				if (column == TAB_POS_COL_PK)   return Boolean.class;
@@ -121,6 +129,7 @@ implements ActionListener, TableModelListener
 				if (column == TAB_POS_CHECK)    return Boolean.class;
 				return Object.class;
 			}
+			@Override
 			public boolean isCellEditable(int row, int column)
 			{
 				if (column == TAB_POS_CHECK)
@@ -130,9 +139,13 @@ implements ActionListener, TableModelListener
 					if (o instanceof Boolean && ((Boolean)o).booleanValue())
 						return false;
 
+//					// Datatype is NOT number, do NOT allow edit
+//					String datatype = (String) getValueAt(row, TAB_POS_DATA_TYPE);
+//					return CounterSample.isDiffAllowedForDatatype(datatype);
+
 					// Datatype is NOT number, do NOT allow edit
-					String datatype = (String) getValueAt(row, TAB_POS_DATA_TYPE);
-					return CounterSample.isDiffAllowedForDatatype(datatype);
+					Integer jdbcType = (Integer) getValueAt(row, TAB_POS_COL_JDBC_TYPE_INT);
+					return CounterSample.isDiffAllowedForDatatype(jdbcType);
 				}
 				
 				return false;
@@ -145,6 +158,7 @@ implements ActionListener, TableModelListener
 		{
 	        private static final long serialVersionUID = 0L;
 
+			@Override
 			public String getToolTipText(MouseEvent e) 
 			{
 				String tip = null;
@@ -237,7 +251,9 @@ implements ActionListener, TableModelListener
 					
 					if (col != null)
 					{
-						String datatype = sc.getColSqlTypeName(r-1);
+						String datatype    = sc.getColSqlTypeName(r-1);
+						int    jdbcType    = sc.getColSqlType(r-1);
+						String jdbcTypeStr = ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType);
 
 						row = new Vector<Object>();
 						row.add(new Boolean( false ));  // TAB_POS_COL_PK
@@ -246,6 +262,8 @@ implements ActionListener, TableModelListener
 						row.add(col);                   // TAB_POS_COL_NAME
 						row.add(datatype);              // TAB_POS_DATA_TYPE
 						row.add(new Integer( r ));      // TAB_POS_COL_NUM
+						row.add(jdbcTypeStr);           // TAB_POS_COL_JDBC_TYPE_STR
+						row.add(new Integer(jdbcType)); // TAB_POS_COL_JDBC_TYPE
 
 						tm.addRow(row);
 					}
@@ -345,6 +363,7 @@ implements ActionListener, TableModelListener
 		return null;
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent ae)
 	{
 		JComponent src = (JComponent) ae.getSource();
@@ -375,6 +394,7 @@ implements ActionListener, TableModelListener
 		}
 	}
 
+	@Override
 	public void tableChanged(TableModelEvent e)
 	{
 		// This wasnt kicked off for a table change...

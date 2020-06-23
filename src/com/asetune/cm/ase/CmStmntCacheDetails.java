@@ -23,8 +23,10 @@ package com.asetune.cm.ase;
 import java.awt.event.MouseEvent;
 import java.sql.Connection;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 
@@ -46,6 +48,8 @@ import com.asetune.config.dict.RemarkDictionary;
 import com.asetune.gui.AsePlanViewer;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.pcs.PcsColumnOptions;
+import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -229,6 +233,26 @@ extends CountersModel
 			mtd.addColumn("monCachedStatement",  "Remark",        "<html>Some tip of what's happening with this PerformanceCounter.<br><b>Tip</b>: \"Hover\" over the cell to get more information on the Tip.</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
+	}
+
+	@Override
+	public Map<String, PcsColumnOptions> getPcsColumnOptions()
+	{
+		Map<String, PcsColumnOptions> map = super.getPcsColumnOptions();
+
+		// No settings in the super, create one, and set it at super
+		if (map == null)
+		{
+			map = new HashMap<>();
+			map.put("sqltext"      , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("xmlPlan"      , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("msgAsColValue", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+
+			// Set the map in the super
+			setPcsColumnOptions(map);
+		}
+
+		return map;
 	}
 
 	@Override

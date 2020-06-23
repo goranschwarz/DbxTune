@@ -105,7 +105,7 @@ public class AseCpuUsageOverview extends AseAbstract
 		_CmExecutionTime_CpuUsagePct       = createChart(conn, "CmExecutionTime", "CpuUsagePct",        maxValue, null, "ASE SubSystem Operations - CPU Usage Percent (Server->Execution Time)");
 		_CmExecutionTime_TimeGraph         = createChart(conn, "CmExecutionTime", "TimeGraph",          -1,       skip, "ASE SubSystem Operations - Execution Time, in Micro Seconds (Server->Execution Time)");
 
-		_CmSqlStatement_SqlStmntSumLRead   = createChart(conn, "CmSqlStatement",  "SqlStmntSumLRead",   maxValue, null, "Sum Logical Reads per sec Over SQL Response Time (Object/Access->SQL Statements)");
+		_CmSqlStatement_SqlStmntSumLRead   = createChart(conn, "CmSqlStatement",  "SqlStmntSumLRead",   -1,       null, "Sum Logical Reads per sec Over SQL Response Time (Object/Access->SQL Statements)");
 		_CmSqlStatement_SqlStmntSumCpuTime = createChart(conn, "CmSqlStatement",  "SqlStmntSumCpuTime", -1,       skip, "Sum CPU Time per sec Over SQL Response Time (Object/Access->SQL Statements)");
 	}
 

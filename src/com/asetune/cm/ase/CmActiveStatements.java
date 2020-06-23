@@ -24,8 +24,10 @@ import java.awt.event.MouseEvent;
 import java.sql.Connection;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 
@@ -48,6 +50,8 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.AsePlanViewer;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.pcs.PcsColumnOptions;
+import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -223,6 +227,30 @@ extends CountersModel
 			return new String[] {"enable monitoring=1", "statement statistics active=1", "per object statistics active=1", "wait event timing=1"};
 
 		return NEED_CONFIG;
+	}
+
+	@Override
+	public Map<String, PcsColumnOptions> getPcsColumnOptions()
+	{
+		Map<String, PcsColumnOptions> map = super.getPcsColumnOptions();
+
+		// No settings in the super, create one, and set it at super
+		if (map == null)
+		{
+			map = new HashMap<>();
+			map.put("MonSqlText"     , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("DbccSqlText"    , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("ProcCallStack"  , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("ShowPlanText"   , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("DbccStacktrace" , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("CachedPlanInXml", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("SpidLocks"      , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+
+			// Set the map in the super
+			setPcsColumnOptions(map);
+		}
+
+		return map;
 	}
 
 	@Override

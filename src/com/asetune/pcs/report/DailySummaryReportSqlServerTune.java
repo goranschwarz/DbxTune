@@ -23,6 +23,7 @@ package com.asetune.pcs.report;
 import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
 import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
 import com.asetune.pcs.report.content.os.OsSpaceUsageOverview;
+import com.asetune.pcs.report.content.sqlserver.SqlServerConfiguration;
 import com.asetune.pcs.report.content.sqlserver.SqlServerCpuUsageOverview;
 import com.asetune.pcs.report.content.sqlserver.SqlServerDbSize;
 import com.asetune.pcs.report.content.sqlserver.SqlServerSlowCmDeviceIo;
@@ -62,5 +63,8 @@ extends DailySummaryReportDefault
 
 		// Database Size
 		addReportEntry( new SqlServerDbSize(this)             );
+
+		// Configuration
+		addReportEntry( new SqlServerConfiguration(this)      );
 	}
 }

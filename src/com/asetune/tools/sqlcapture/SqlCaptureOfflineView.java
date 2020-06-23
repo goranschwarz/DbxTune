@@ -39,6 +39,7 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Properties;
 
@@ -85,6 +86,7 @@ import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTable;
 import com.asetune.gui.swing.GTableFilter;
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.IPersistWriter;
 import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.PersistWriterBase;
@@ -980,10 +982,31 @@ implements ActionListener, ChangeListener//, MouseListener
 			Statement stmnt = conn.createStatement();
 			stmnt.setQueryTimeout( getQueryTimeoutSetting() );
 
+			//---------------------------------------------
 			// GET SQL TEXT
-			ta = _sqlText_txt;
+			//---------------------------------------------
 			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, true);
-			sql = conn.quotifySqlString("select [SQLText] from " + tabName + where);
+
+			// Resolve column name/sql text for Dictionary Compressed Columns.
+			String col_SQLText = "[SQLText]";
+			try
+			{
+				// Get all columns in a Map with <colName, resolvedColName>
+				LinkedHashMap<String, String> existingCols = DictCompression.getRewriteForColumnNames(conn, null, tabName);
+
+				if (existingCols.containsKey("SQLText" + DictCompression.DCC_MARKER))
+				{
+					// to: (select [colVal] from [tabName$dcc$SQLText] where [hashId] = [SQLText$dcc$]) AS [SQLText]
+					col_SQLText = existingCols.get("SQLText" + DictCompression.DCC_MARKER);
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.warn("Problems getting column names from table='"+tabName+"', columns 'SQLText' Lets try with origin Columns instead. Dictionary Compression Columns will NOT be resolved", ex);
+			}
+
+			ta = _sqlText_txt;
+			sql = conn.quotifySqlString("select " + col_SQLText + " from " + tabName + where);
 
 			rs = stmnt.executeQuery(sql);
 			ta.setText("");
@@ -1002,7 +1025,9 @@ implements ActionListener, ChangeListener//, MouseListener
 				_sqlTextFormat_but.doClick();
 			
 			
+			//---------------------------------------------
 			// GET SHOWPLAN TEXT
+			//---------------------------------------------
 			ta = _showplan_txt;
 			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_PLANS, null, true);
 			sql = conn.quotifySqlString("select [PlanText] from " + tabName + where);
@@ -1027,7 +1052,9 @@ implements ActionListener, ChangeListener//, MouseListener
 			_sqlTextCurProcName_lbl2.setText(procName);
 			_showplanSsName_txt     .setText("");
 			
+			//---------------------------------------------
 			// GET XML Plan...
+			//---------------------------------------------
 			if (procName != null && (procName.startsWith("*ss") || procName.startsWith("*sq")))
 			{
 				_showplanSsName_txt.setText(procName);
@@ -1347,16 +1374,51 @@ implements ActionListener, ChangeListener//, MouseListener
 		try {conn = getConnection();}
 		catch (RuntimeException ignore) {}
 
+		String tabNameStmnt   = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, true);
+		String tabNameSqlText = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT,    null, true);
+		
+		// Resolve column name/sql text for Dictionary Compressed Columns.
+		String col_SQLText1    = "t.[SQLText]";
+		String col_SQLText2    = "t.[SQLText]";
+		String col_NormSQLText = "t.[NormSQLText]";
+		if (conn != null)
+		{
+			try
+			{
+				// Get all columns in a Map with <colName, resolvedColName>
+				LinkedHashMap<String, String> existingCols = DictCompression.getRewriteForColumnNames(conn, null, tabNameSqlText);
+
+				if (existingCols.containsKey("SQLText" + DictCompression.DCC_MARKER))
+				{
+					col_SQLText1 = "t.[SQLText" + DictCompression.DCC_MARKER + "]";
+					
+					// to: (select [colVal] from [tabName$dcc$SQLText] where [hashId] = [SQLText$dcc$]) AS [SQLText]
+					col_SQLText2 = existingCols.get("SQLText" + DictCompression.DCC_MARKER);
+				}
+
+				if (existingCols.containsKey("NormSQLText" + DictCompression.DCC_MARKER))
+				{
+					// to: (select [colVal] from [tabName$dcc$NormSQLText] where [hashId] = [NormSQLText$dcc$]) AS [NormSQLText]
+					col_NormSQLText = existingCols.get("NormSQLText" + DictCompression.DCC_MARKER);
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.warn("Problems getting column names from table='"+tabNameSqlText+"', columns 'SQLText' or 'NormSQLText'. Lets try with origin Columns instead. Dictionary Compression Columns will NOT be resolved", ex);
+			}
+		}
+
+		
 		// Build where clause
 		String fromDate = _searchFrom_dtp.getText();
 		String toDate   = _searchTo_dtp.getText();
 		String where    = " where 1=1 \n";
-		String columns  = "  CASE WHEN t.[SQLText] is NULL THEN convert(0, bit) ELSE convert(1, bit) END as [hasSqlText], \n" +
+		String columns  = "  CASE WHEN " + col_SQLText1 + " is NULL THEN convert(0, bit) ELSE convert(1, bit) END as [hasSqlText], \n" +
 		                  "  s.[sampleTime], s.[StartTime], s.[EndTime], s.[Elapsed_ms], s.[SPID], s.[KPID], s.[BatchID], s.[LineNumber], s.[DBName], s.[ProcName], \n" + 
 		                  "  s.[CpuTime], s.[WaitTime], s.[MemUsageKB], s.[PhysicalReads], s.[LogicalReads], s.[RowsAffected], s.[ErrorStatus], s.[ProcNestLevel],  \n" + 
 		                  "  s.[StatementNumber], s.[QueryOptimizationTime], s.[PagesModified], s.[PacketsSent], s.[PacketsReceived], s.[NetworkPacketSize],  \n" + 
 		                  "  s.[PlansAltered], s.[ContextID], s.[HashKey], s.[SsqlId], s.[ObjOwnerID], s.[InstanceID], s.[DBID], s.[ProcedureID], s.[PlanID], \n" +
-		                  "  s.[NormJavaSqlHashCode], s.[JavaSqlHashCode], t.[SQLText], t.[NormSQLText] ";
+		                  "  s.[NormJavaSqlHashCode], s.[JavaSqlHashCode], " + col_SQLText2 + ", " + col_NormSQLText + " ";
 
 //		if (StringUtil.hasValue(fromDate))
 //			where += " and [sampleTime] >= '"+fromDate+"' \n";
@@ -1403,8 +1465,6 @@ implements ActionListener, ChangeListener//, MouseListener
 		}
 
 		// Build SELECT
-		String tabNameStmnt   = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, true);
-		String tabNameSqlText = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT,    null, true);
 		String sql = "SELECT " + columns + " \n"
 				+ "FROM " + tabNameStmnt + " s \n"
 				+ "LEFT OUTER JOIN "+tabNameSqlText+" t ON s.[SPID] = t.[SPID] AND s.[KPID] = t.[KPID] AND s.[BatchID] = t.[BatchID] \n"
@@ -1432,10 +1492,25 @@ implements ActionListener, ChangeListener//, MouseListener
 			where += " and [sampleTime] >= '"+fromDate+"' \n";
 		if (StringUtil.hasValue(toDate))
 			where += " and [sampleTime] <= '"+toDate+"' \n";
+
 		
-		// Build SELECT
+		// GET Table Name
 		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, true);
-		String sql = "select * \n"
+
+		// Build list of column to get (Dictionary Compressed columns ending with $dcc$ will be replaced with a in-line sub-select)
+		String sqlColList = "*";
+		try
+		{
+			sqlColList = DictCompression.getRewriteForSelectColumnList(conn, null, tabName);
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("Problems getting column names for table " + tabName + "'. Lets try with ALL Columns instead. Dictionary Compression Columns will NOT be resolved", ex);
+			sqlColList = "*";
+		}
+
+		// Build SELECT
+		String sql = "select " + sqlColList + " \n"
 				+ "from " + tabName + "\n"
 				+ where;
 
@@ -1585,21 +1660,70 @@ implements ActionListener, ChangeListener//, MouseListener
 				sqlLimit = "limit " + topRows + "\n";
 		}
 		
-		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, true);
-		String sql = ""
+		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, false);
+
+		String sql_plain = ""
 				+ "------------------------------------------------------------- \n"
 				+ "-- Get SQL Text that has been executed mostly \n"
 				+ "------------------------------------------------------------- \n"
 				+ "select " + sqlTop + " \n"
 				+ "    count(*) as [records] \n"
 				+ "   ,[SQLText] \n"
-				+ "from " + tabName + " \n"
+				+ "from [" + tabName + "] \n"
 				+ "where 1 = 1 \n"
 				+ oraRownum
 				+ "group by [SQLText] \n"
-//				+ "having count(*) > " + topRows + " \n"
 				+ "order by [records] desc \n"
 				+ sqlLimit
+				+ "";
+
+		String col_SQLText_dcc = "SQLText" + DictCompression.DCC_MARKER;
+		String sql_withDcc = ""
+				+ "------------------------------------------------------------- \n"
+				+ "-- Get SQL Text that has been executed mostly \n"
+				+ "------------------------------------------------------------- \n"
+				+ "with [tmp] as \n"
+				+ "( \n"
+				+ "    select " + sqlTop + " \n"
+				+ "        count(*) as [records] \n"
+				+ "       ,[" + col_SQLText_dcc + "] \n"
+				+ "    from [" + tabName + "] \n"
+				+ "    where 1 = 1 \n"
+				+      oraRownum
+				+ "    group by [" + col_SQLText_dcc + "] \n"
+				+ "    order by [records] desc \n"
+				+      sqlLimit
+				+ ") \n"
+				+ "select \n"
+				+ "    [records] \n"
+//				+ "    (select [colVal] from [" + tabName + "$dcc$SQLText] where [hashId] = [SQLText$dcc$]) AS [SQLText] \n"
+				+ "    " + DictCompression.getRewriteForColumnName(tabName, col_SQLText_dcc) + " \n"
+				+ "from [tmp] \n"
+				+ "order by [records] desc \n"
+				+ "";
+
+		// Decide if we should use SQL for: PLAIN or DCC (Data Dictionary Column) 
+		String sqlToUse = sql_plain;
+		if (conn != null)
+		{
+			try
+			{
+				// Get all columns in a Map with <colName, resolvedColName>
+				LinkedHashMap<String, String> existingCols = DictCompression.getRewriteForColumnNames(conn, null, tabName);
+
+				if (existingCols.containsKey(col_SQLText_dcc))
+				{
+					sqlToUse = sql_withDcc;
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.warn("Problems getting column names from table='"+tabName+"', columns '" + col_SQLText_dcc + "' Lets try with origin Columns instead. Dictionary Compression Columns will NOT be resolved", ex);
+			}
+		}
+		
+		String sql = 
+				sqlToUse
 				+ "\n"
 				+ "\n"
 				+ "/*----------------------------------------------------------- \n"
@@ -1608,11 +1732,10 @@ implements ActionListener, ChangeListener//, MouseListener
 				+ "select " + sqlTop + " \n"
 				+ "    [JavaSqlHashCode] \n"
 				+ "   ,count(*) as [records] \n"
-				+ "from " + tabName + " \n"
+				+ "from [" + tabName + "] \n"
 				+ "where 1 = 1 \n"
 				+ oraRownum
 				+ "group by [JavaSqlHashCode] \n"
-//				+ "having count(*) > " + topRows + " \n"
 				+ "order by [records] desc \n"
 				+ sqlLimit
 				+ "------------------------------------------------------------- */ \n"
@@ -1623,11 +1746,10 @@ implements ActionListener, ChangeListener//, MouseListener
 				+ "select " + sqlTop + " \n"
 				+ "    [NormJavaSqlHashCode] \n"
 				+ "   ,count(*) as [records] \n"
-				+ "from " + tabName + " \n"
+				+ "from [" + tabName + "] \n"
 				+ "where 1 = 1 \n"
 				+ oraRownum
 				+ "group by [NormJavaSqlHashCode] \n"
-//				+ "having count(*) > " + topRows + " \n"
 				+ "order by [records] desc \n"
 				+ sqlLimit
 				+ "------------------------------------------------------------- */ \n"

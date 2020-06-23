@@ -1171,14 +1171,28 @@ implements Runnable, ConnectionProvider
 			{
 				String tableName = rs.getString("TABLE_NAME");
 				String tableType = rs.getString("TABLE_TYPE");
-	
+
+				// discard tables that do NOT have a '_' in them, for example: MonDdlStorage, MonSessionDbmsConfig...
+				// CM Tables *always* have a '_' in them: CmName_abs, CmName_diff, CmName_rate, CmName_someGraphName
 				int sepPos = tableName.indexOf("_");
 				if (sepPos < 0)
+				{
+//System.out.println("PersistReader.getStoredCms(): Skipping table: " + tableName);
 					continue;
+				}
+
+//				// discard "Dictionary Compressed - normalization" tables, which looks like "cmName$dcc$colName"
+//				sepPos = tableName.indexOf(DictCompression.DCC_MARKER);
+//				if (sepPos < 0)
+//				{
+//					continue;
+//				}
+
 				String name = tableName.substring(0, sepPos);
 				String type = tableName.substring(sepPos+1);
 				if (_logger.isDebugEnabled())
 					_logger.debug("getStoredCms()-rs-row- TYPE='"+tableType+"', NAME='"+tableName+"'. name='"+name+"', type='"+type+"'");
+//System.out.println("getStoredCms()-rs-row- TYPE='"+tableType+"', NAME='"+tableName+"'. name='"+name+"', type='"+type+"'");
 				
 				name = getNameTranslateDbToCm(name);
 				type = getNameTranslateDbToCm(type, true); // type can be a graph name...
@@ -1757,9 +1771,9 @@ implements Runnable, ConnectionProvider
 		long fetchStartTime = System.currentTimeMillis();
 		setStatusText("Loading '"+typeStr+"' counters for '"+cmName+"'.");
 
-		//----------------------------------------
-		// TYPICAL look of a graph table
-		//----------------------------------------
+		//-----------------------------------------------------------------------------
+		// TYPICAL look of a CounterModel table
+		//-----------------------------------------------------------------------------
 		// CREATE TABLE "CMengineActivity_abs"  << abs|diff|rate
 		//     "SessionStartTime"  DATETIME NOT NULL,
 		//     "SessionSampleTime" DATETIME NOT NULL,
@@ -1768,10 +1782,34 @@ implements Runnable, ConnectionProvider
 		//     "col1"              datatype     null,
 		//     "col2"              datatype     null,
 		//     "...."              datatype     null,
-		//
-//		String sql  = "select * from ["+cmName+"_"+typeStr+"] where [SessionSampleTime] = ? ";
-		String sql2 = "select * from ["+cmName+"_"+typeStr+"] where [SessionSampleTime] = '"+sampleTs+"' ";
+		//-----------------------------------------------------------------------------
 
+		// When Dictionary Compression for columns was introduced... we need to rewrite the queries a bit
+		// Instead of doing 'select *' lets build a proper column specification with all column names in the table
+		//  - get all column names from a table
+		//  - columns with the name 'colName$dcc$' we need to translate into a sub query that gets the information from the normalized table
+		//    (select [colVal] from [cmName$dcc$colName] where [hashId] = [colName$dcc$]) AS colname
+
+		String sqlColList = "*";
+
+		try
+		{
+			sqlColList = DictCompression.getRewriteForSelectColumnList(_conn, null, cmName+"_"+typeStr);
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("Problems getting column names from cm='"+cmName+"', type='"+typeStr+"'. Lets try with ALL Columns instead. Dictionary Compression Columns will NOT be resolved", ex);
+
+			sqlColList = "*";
+		}
+
+		// If we want to FORCE: select * from ...
+		//sqlColList = "*";
+		
+		
+//		String sql  = "select " + sqlColList + " from ["+cmName+"_"+typeStr+"] where [SessionSampleTime] = ? ";
+		String sql2 = "select " + sqlColList + " from ["+cmName+"_"+typeStr+"] where [SessionSampleTime] = '"+sampleTs+"' ";
+		
 		if (cm instanceof CountersModelAppend)
 		{
 			if ( ((CountersModelAppend)cm).showAllRecords() )
@@ -1780,7 +1818,7 @@ implements Runnable, ConnectionProvider
 //				Timestamp sessionStartTime = summaryCm.getSampleTimeHead();
 //				Timestamp sessionStartTime = _lastKnowSessionStartTime;
 
-				sql2 = "select * from ["+cmName+"_"+typeStr+"] " +
+				sql2 = "select " + sqlColList + " from ["+cmName+"_"+typeStr+"] " +
 //				       "where [SessionStartTime] = '"+sessionStartTime+"' " +
 				       "where [SessionStartTime] = (select min([SessionStartTime]) from ["+cmName+"_"+typeStr+"] where [SessionSampleTime] = '"+sampleTs+"') " +
 				       "  and [SessionSampleTime] <= '"+sampleTs+"' ";
@@ -1800,6 +1838,7 @@ implements Runnable, ConnectionProvider
 			
 
 			_logger.debug("loadSessionCm(cmName='"+cmName+"', type='"+typeStr+"', sampleTs='"+sampleTs+"'): "+pstmnt);
+//System.out.println("PersistReader.loadSessionCm(cmName='"+cmName+"', type='"+typeStr+"', sampleTs='"+sampleTs+"'): sql2=" + sql2);
 
 //			ResultSet rs = pstmnt.executeQuery();
 			ResultSet rs = pstmnt.executeQuery(sql2);
@@ -1810,7 +1849,8 @@ implements Runnable, ConnectionProvider
 //			Object oa[] = new Object[cols-4]; // Object Array
 //			Object ha[] = new String[cols-4]; // Header Array  (Column Names)
 			int colSqlDataType[] = new int[cols];
-			List<String> colHead = new ArrayList<String>(cols);
+			List<String>  colHead  = new ArrayList<>(cols);
+			List<Integer> sqlTypes = new ArrayList<>(cols);
 
 			int     startColPos = 5;
 			boolean hasNewDiffRateRowCol = false;
@@ -1828,11 +1868,13 @@ implements Runnable, ConnectionProvider
 			// Get headers / colNames
 			for (int c=startColPos; c<=cols; c++)
 			{
-				colHead.add(rsmd.getColumnLabel(c));
 				colSqlDataType[c-1] = rsmd.getColumnType(c);
+
+				colHead .add(rsmd.getColumnLabel(c));
+				sqlTypes.add(colSqlDataType[c-1]);
 			}
 //System.out.println("RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR PersistReader: cm["+cm+"].setOfflineColumnNames(type="+type+", colHead="+colHead+")");
-			cm.setOfflineColumnNames(type, colHead);
+			cm.setOfflineColumnNames(type, colHead, sqlTypes);
 
 //System.out.println("RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR PersistReader: sql2="+sql2);
 //int r=0;

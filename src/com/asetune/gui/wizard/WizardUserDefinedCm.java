@@ -52,7 +52,7 @@ public class WizardUserDefinedCm
 				WizardUserDefinedCmPage6.class,   // Attach a Graph to this UDC
 				WizardUserDefinedCmPageSummary.class
 				};
-		Wizard wiz = WizardPage.createWizard("Create an User Defined Counter Model.", wca, new WizardUserDefinedCmResultProducer());
+		Wizard wiz = WizardPage.createWizard("Create: User Defined Counter Model.", wca, new WizardUserDefinedCmResultProducer());
 		
 		@SuppressWarnings({ "unchecked", "rawtypes" })
 		Map<String,String> gatheredSettings = (Map) WizardDisplayer.showWizard(wiz);

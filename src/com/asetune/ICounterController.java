@@ -252,4 +252,9 @@ public interface ICounterController
 	/** Get a DBMS property, This is DBMS Vendor Specific Settings... but NOT DBMS Configurations */
 	Configuration getDbmsProperty();
 
+	/**
+	 * This should call all Counter Models and prepare for a PCS Database Rollover
+	 */
+	void prepareForPcsDatabaseRollover();
+
 }

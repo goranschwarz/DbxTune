@@ -28,6 +28,7 @@ import org.apache.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.ReportEntryAbstract;
 import com.asetune.sql.conn.DbxConnection;
@@ -150,7 +151,18 @@ extends ReportEntryAbstract
 		// used to lookup queryid->sqlText (as a second step)
 //		List<Integer> queryIdList = new ArrayList<>();
 		
+		// Check if table "CmPgStatements_diff" has Dictionary Compressed Columns (any columns ends with "$dcc$")
+		boolean hasDictCompCols = false;
+		try {
+			hasDictCompCols = DictCompression.hasCompressedColumnNames(conn, null, "CmPgStatements_diff");
+		} catch (SQLException ex) {
+			_logger.error("Problems checking for Dictionary Compressed Columns in table 'CmPgStatements_diff'.", ex);
+		}
 		
+		String col_query = "query";
+		if (hasDictCompCols)
+			col_query = "query$dcc$";
+
 		// GET ALL INFO
 		String sql = getCmDiffColumnsAsSqlComment("CmPgStatements")
 			    + "select top " + topRows + " \n"
@@ -186,9 +198,10 @@ extends ReportEntryAbstract
 			    + "	,sum([blk_read_time])                                   as [blks_read_time_sum] \n"
 			    + "	,sum([blk_write_time])                                  as [blks_write_time_sum] \n"
 			    + " \n"                                                     
-			    + "	,min([query])                                           as [query] \n"
+			    + "	,min([" + col_query + "])                                      as [query] \n"
 			    + "from [CmPgStatements_diff] x \n"
 //			    + "where [usename] != 'postgres' \n"
+			    + "where [calls] > 0 \n"                          // do only get records that has been executed (even if presented in the "Statement cache")
 			    + "group by [datname], [usename], [queryid] \n"
 			    + "order by [total_time_sum] desc \n"
 			    + "";
@@ -230,7 +243,26 @@ extends ReportEntryAbstract
 					String  usename  = _shortRstm.getValueAsString (r, pos_usename);
 					Long    queryid  = _shortRstm.getValueAsLong   (r, pos_queryid);
 					String  query    = _shortRstm.getValueAsString (r, pos_query);
-					
+
+					// When using Dictionary Compression the "query" is just a hashId
+					// So get the real Query TEXT from the key/value lookup table
+					if (hasDictCompCols)
+					{
+						String hashId = _shortRstm.getValueAsString (r, pos_query);
+						try
+						{
+							query = DictCompression.getValueForHashId(conn, null, "CmPgStatements", "query", hashId);
+						} 
+						catch (SQLException ex) 
+						{
+							query = "Problems getting Dictionary Compressed column for tabName='CmPgStatements', colName='query', hashId='" + hashId + "'.";
+						}
+
+						// set QUERY text in the original ResultSet
+						_shortRstm.setValueAtWithOverride(query, r, pos_query);
+					}
+
+					// add record to SimpleResultSet
 					srs.addRow(datname, usename, queryid, "<xmp>" + query + "</xmp>");
 				}
 			}

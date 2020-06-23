@@ -3593,6 +3593,8 @@ public class AseConnectionUtils
 
 		List<LockRecord> lockList = new ArrayList<>();
 
+		// possibly add a SQLException -> SQLWarning using a message handler for:
+		// Error=8233, Msg='ALTER TABLE operation is in progress on the object 'xxxxx' in database 'yyyyyy'. Retry your query later.'.
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
 			while(rs.next())
@@ -3605,9 +3607,9 @@ public class AseConnectionUtils
 				lockList.add( new LockRecord(dbname, tableName, lockType, lockCount) );
 			}
 		}
-		catch (SQLException e)
+		catch (SQLException ex)
 		{
-			_logger.warn("Problems when executing sql: "+sql, e);
+			_logger.warn("Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "'.", ex);
 		}
 		
 		if (lockList.isEmpty())

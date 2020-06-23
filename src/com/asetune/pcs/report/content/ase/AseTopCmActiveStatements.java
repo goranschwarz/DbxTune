@@ -32,6 +32,7 @@ import org.apache.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -122,7 +123,7 @@ public class AseTopCmActiveStatements extends AseAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Top ACTIVE SQL Statements (order by: CpuTime_max, origin: CmActiveStatements_diff / monProcessStatement, monProcess)";
+		return "Top [sampled] ACTIVE SQL Statements (order by: CpuTime_max, origin: CmActiveStatements_diff / monProcessStatement, monProcess)";
 	}
 
 	@Override
@@ -143,6 +144,23 @@ public class AseTopCmActiveStatements extends AseAbstract
 
 		_messages.add("Skipping Command's with 'DUMP %' ");
 		_messages.add("Skipping Command's with 'UPDATE STATISTICS%' ");
+		
+		boolean hasDccCols      = false; 
+		String col_MonSqlText   = "MonSqlText";
+		String col_ShowPlanText = "ShowPlanText";
+		try
+		{
+    		if (DictCompression.hasCompressedColumnNames(conn, null, "CmActiveStatements_diff"))
+    		{
+    			hasDccCols       = true; 
+    			col_MonSqlText   = "MonSqlText$dcc$";
+    			col_ShowPlanText = "ShowPlanText$dcc$";
+    		}
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems checking for Dictionary Compressed Columns in table 'CmActiveStatements_diff'.");
+		}
 
 		String sql = getCmDiffColumnsAsSqlComment("CmActiveStatements")
 			    + "select top " + topRows + " \n"
@@ -150,7 +168,7 @@ public class AseTopCmActiveStatements extends AseAbstract
 			    + "    ,max([CmSampleTime])                                               as [CmSampleTime_max] \n"
 			    + "    ,cast('' as varchar(30))                                           as [Duration] \n"
 			    + "    ,[dbname]                                                          as [dbname] \n"
-			    + "    , CASE WHEN [procname] != '' THEN [procname] ELSE [MonSqlText] END as [ProcNameOrSqlText] \n"
+			    + "    , CASE WHEN [procname] != '' THEN [procname] ELSE [" + col_MonSqlText + "] END as [ProcNameOrSqlText] \n"
 			    + "    ,[linenum]                                                         as [linenum] \n"
 			    + "    ,count(*)                                                          as [samples_count] \n"
 			    + "    ,sum(CASE WHEN [multiSampled] = 'YES' THEN 1 ELSE 0 END)           as [multiSampled_count] \n"
@@ -174,14 +192,16 @@ public class AseTopCmActiveStatements extends AseAbstract
 			    + "    ,max([NetworkPacketSize])                                          as [NetworkPacketSize_max] \n"
 			    + "    ,sum(CASE WHEN [BlockingOtherSpids] != '' THEN 1 ELSE 0 END)       as [BlockingOtherSpids_count] \n"
 			    + "    ,max([SecondsWaiting])                                             as [SecondsWaiting_max] \n"
-			    + "    ,max([MonSqlText])                                                 as [MonSqlText_max] \n"
-			    + "    ,max([ShowPlanText])                                               as [ShowPlanText_max] \n"
+//			    + "    ,max([MonSqlText])                                                 as [MonSqlText_max] \n"
+//			    + "    ,max([ShowPlanText])                                               as [ShowPlanText_max] \n"
+			    + "    ,max([" + col_MonSqlText + "])                                         as [MonSqlText_max] \n"
+			    + "    ,max([" + col_ShowPlanText + "])                                       as [ShowPlanText_max] \n"
 			    + "from [CmActiveStatements_diff] x \n"
 			    + "where 1=1 \n"
 			    + skipDumpDbAndTran
 			    + skipUpdateStatistics
 			    + "  and [monSource] = 'ACTIVE' \n"
-			    + "group by [dbname], CASE WHEN [procname] != '' THEN [procname] ELSE [MonSqlText] END, [linenum] \n"
+			    + "group by [dbname], CASE WHEN [procname] != '' THEN [procname] ELSE [" + col_MonSqlText + "] END, [linenum] \n"
 			    + "having [CpuTime_max] > " + havingAbove + "\n"
 			    + "order by [CpuTime_max] desc \n"
 			    + "";
@@ -200,6 +220,12 @@ public class AseTopCmActiveStatements extends AseAbstract
 			// Calculate Duration
 			setDurationColumn(_shortRstm, "CmSampleTime_min", "CmSampleTime_max", "Duration");
 			
+			// get Dictionary Compressed values for column: MonSqlText, ShowPlanText  -- store them in MonSqlText_max, ShowPlanText_max
+			if (hasDccCols)
+			{
+				updateDictionaryCompressedColumn(_shortRstm, conn, null, "CmActiveStatements", "MonSqlText",   "MonSqlText_max");
+				updateDictionaryCompressedColumn(_shortRstm, conn, null, "CmActiveStatements", "ShowPlanText", "ShowPlanText_max");
+			}
 			
 			SimpleResultSet srs_sqlText = new SimpleResultSet();
 			srs_sqlText.addColumn("dbname",            Types.VARCHAR,       30, 0);

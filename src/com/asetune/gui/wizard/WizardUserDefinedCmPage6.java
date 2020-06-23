@@ -40,6 +40,7 @@ import com.asetune.CounterController;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionaryManager;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.StringUtil;
@@ -60,17 +61,19 @@ implements ActionListener, TableModelListener
 	private static final String WIZ_HELP2 = "The label that will be writen above the Graph.";
 	private static final String WIZ_HELP3 = "In the view menu you can enable disable the graph, this is the text for that menu.";
 
-	private static final String[] TAB_HEADER = {"PK", "Diff", "Pct", "Use", "Column Name", "Data Type", "Axis Label", "Method", "Column Num"};
-	private static final int TAB_POS_COL_PK     = 0; 
-	private static final int TAB_POS_COL_DIFF   = 1; 
-	private static final int TAB_POS_COL_PCT    = 2; 
-	private static final int TAB_POS_CHECK      = 3; 
-	private static final int TAB_POS_COL_NAME   = 4; 
-	private static final int TAB_POS_DATA_TYPE  = 5; 
-	private static final int TAB_POS_AXIS_LABEL = 6; 
-	private static final int TAB_POS_METHOD     = 7; 
-	private static final int TAB_POS_COL_NUM    = 8; 
-	
+	private static final String[] TAB_HEADER = {"PK", "Diff", "Pct", "Use", "Column Name", "Data Type", "Axis Label", "Method", "Column Num", "JDBC Type Desc", "Jdbc Type"};
+	private static final int TAB_POS_COL_PK            = 0; 
+	private static final int TAB_POS_COL_DIFF          = 1; 
+	private static final int TAB_POS_COL_PCT           = 2; 
+	private static final int TAB_POS_CHECK             = 3; 
+	private static final int TAB_POS_COL_NAME          = 4; 
+	private static final int TAB_POS_DATA_TYPE         = 5; 
+	private static final int TAB_POS_AXIS_LABEL        = 6; 
+	private static final int TAB_POS_METHOD            = 7; 
+	private static final int TAB_POS_COL_NUM           = 8; 
+	private static final int TAB_POS_COL_JDBC_TYPE_STR = 9; 
+	private static final int TAB_POS_COL_JDBC_TYPE_INT = 10; 
+
 	private static final String NO_METHOD = "<choose one>";
 
 	private static final String TOOLTIP_METHOD = "<html>" +
@@ -193,6 +196,8 @@ implements ActionListener, TableModelListener
 		tabHead.add(TAB_HEADER[TAB_POS_AXIS_LABEL]);
 		tabHead.add(TAB_HEADER[TAB_POS_METHOD]);
 		tabHead.add(TAB_HEADER[TAB_POS_COL_NUM]);
+		tabHead.add(TAB_HEADER[TAB_POS_COL_JDBC_TYPE_STR]);
+		tabHead.add(TAB_HEADER[TAB_POS_COL_JDBC_TYPE_INT]);
 
 		Vector<Vector<Object>> tabData = new Vector<Vector<Object>>();
 
@@ -236,9 +241,13 @@ implements ActionListener, TableModelListener
 					if (o instanceof Boolean && ((Boolean)o).booleanValue())
 						return false;
 
+//					// Datatype is NOT number, do NOT allow edit
+//					String datatype = (String) getValueAt(row, TAB_POS_DATA_TYPE);
+//					return CounterSample.isDiffAllowedForDatatype(datatype);
+
 					// Datatype is NOT number, do NOT allow edit
-					String datatype = (String) getValueAt(row, TAB_POS_DATA_TYPE);
-					return CounterSample.isDiffAllowedForDatatype(datatype);
+					Integer jdbcType = (Integer) getValueAt(row, TAB_POS_COL_JDBC_TYPE_INT);
+					return CounterSample.isDiffAllowedForDatatype(jdbcType);
 				}
 				// if NOT CHECKED, nothing should be editable
 				Object o = getValueAt(row, TAB_POS_CHECK);
@@ -368,7 +377,9 @@ implements ActionListener, TableModelListener
 					
 					if (col != null)
 					{
-						String datatype = sc.getColSqlTypeName(r-1);
+						String datatype    = sc.getColSqlTypeName(r-1);
+						int    jdbcType    = sc.getColSqlType(r-1);
+						String jdbcTypeStr = ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType);
 
 						row = new Vector<Object>();
 						row.add(new Boolean( false )); // TAB_POS_COL_PK
@@ -380,6 +391,8 @@ implements ActionListener, TableModelListener
 						row.add(label);                // TAB_POS_AXIS_LABEL
 						row.add(NO_METHOD);            // TAB_POS_METHOD
 						row.add(new Integer( r ));     // TAB_POS_COL_NUM
+						row.add(jdbcTypeStr);          // TAB_POS_COL_JDBC_TYPE_STR
+						row.add(new Integer(jdbcType));// TAB_POS_COL_JDBC_TYPE
 
 						tm.addRow(row);
 					}
@@ -597,7 +610,7 @@ implements ActionListener, TableModelListener
 				}
 			}
 	
-			return rows > 0 ? null : "Atleast one session needs to be checked.";
+			return rows > 0 ? null : "Atleast one row needs to be checked, in the 'Use' column.";
 		}
 
 		// GRAPH TYPE: BY ROW
@@ -622,7 +635,7 @@ implements ActionListener, TableModelListener
 				}
 			}
 	
-			return rows == 1 ? null : "One, and only one, must be selected.";
+			return rows == 1 ? null : "One, and only one row, must be selected.";
 		}
 		
 		return null;

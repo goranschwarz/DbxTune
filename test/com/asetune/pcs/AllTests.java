@@ -8,8 +8,7 @@
  * 
  * DbxTune is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * the Free Software Foundation, version 3 of the License.
  * 
  * DbxTune is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,46 +20,16 @@
  ******************************************************************************/
 package com.asetune.pcs;
 
-/**
- * Options for how to store specific columns in the Persistence Counter Store 
- * <p>
- * Here we specify for example: If the column needs to be (dictionary) compressed... (if the back end DBMS support that)
- * <p>
- * Set in any: CountersModel
- */
-public class PcsColumnOptions
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import org.junit.runners.Suite.SuiteClasses;
+
+@RunWith(Suite.class)
+@SuiteClasses({ 
+	com.asetune.pcs.report.senders.AllTests.class,
+	DictCompressionTest.class 
+})
+public class AllTests
 {
-	public enum ColumnType
-	{
-		NORMAL,
-		DICTIONARY_COMPRESSION
-	};
 
-	private ColumnType _colType = ColumnType.NORMAL;
-
-	public PcsColumnOptions()
-	{
-	}
-
-	public PcsColumnOptions(ColumnType colType)
-	{
-		_colType = colType;
-	}
-	
-	
-	public void setColumnType(ColumnType colType)
-	{
-		_colType = colType;
-	}
-	
-	
-	public ColumnType getColumnType()
-	{
-		return _colType;
-	}
-
-	public boolean isColumnType(ColumnType type)
-	{
-		return _colType.equals(type);
-	}
 }

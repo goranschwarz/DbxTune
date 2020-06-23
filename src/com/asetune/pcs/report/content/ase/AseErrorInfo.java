@@ -35,6 +35,7 @@ import org.apache.log4j.Logger;
 import com.asetune.config.dict.AseErrorMessageDictionary;
 import com.asetune.gui.ModelMissmatchException;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -203,6 +204,14 @@ public class AseErrorInfo extends AseAbstract
 				}
 			}
 
+			// Check if table "MonSqlCapSqlText" has Dictionary Compressed Columns (any columns ends with "$dcc$")
+			boolean hasDictCompCols = false;
+			try {
+				hasDictCompCols = DictCompression.hasCompressedColumnNames(conn, null, "MonSqlCapSqlText");
+			} catch (SQLException ex) {
+				_logger.error("Problems checking for Dictionary Compressed Columns in table 'MonSqlCapSqlText'.", ex);
+			}
+			
 			// Get SQL Details for a specific error number
 			if (pos_ErrorStatus >= 0 && pos_ErrorCount >= 0 && pos_ErrorMessage >= 0)
 			{
@@ -212,7 +221,12 @@ public class AseErrorInfo extends AseAbstract
 					int ErrorCount  = _shortRstm.getValueAsInteger(r, pos_ErrorCount);
 
 					if (ErrorCount < skipErrorCountAbove)
-						getErrorSqlText(conn, ErrorStatus);
+					{
+						if (hasDictCompCols)
+							getErrorSqlTextDcc(conn, ErrorStatus);
+						else
+							getErrorSqlText(conn, ErrorStatus);
+					}
 				}
 			}
 		}
@@ -239,6 +253,50 @@ public class AseErrorInfo extends AseAbstract
 			try ( ResultSet rs = stmnt.executeQuery(sql) )
 			{
 				ResultSetTableModel rstm = createResultSetTableModel(rs, "SqlErrorText", sql);
+				
+				if (_sqlTextRstm == null)
+					_sqlTextRstm = rstm;
+				else
+					_sqlTextRstm.add(rstm);
+			}
+		}
+		catch(SQLException ex)
+		{
+			setProblem(ex);
+
+			_logger.warn("Problems getting ErrorSqlText for ErrorStatus = "+errorNumber+": " + ex);
+		} 
+		catch(ModelMissmatchException ex)
+		{
+			setProblem(ex);
+
+			_logger.warn("Problems (merging into previous ResultSetTableModel) when getting ErrorSqlText for ErrorStatus = "+errorNumber+": " + ex);
+		} 
+	}
+	private void getErrorSqlTextDcc(DbxConnection conn, int errorNumber)
+	{
+		String sql = ""
+			    + "select s.[ErrorStatus], count(t.*) as [ErrorCount], t.[ServerLogin], s.[ProcName], s.[LineNumber], t.[JavaSqlHashCode], min(t.[SQLText$dcc$]) as [SQLText] \n"
+			    + "from [MonSqlCapStatements] s \n"
+			    + "INNER JOIN [MonSqlCapSqlText] t ON s.[SPID] = t.[SPID] and s.[KPID] = t.[KPID] and s.[BatchID] = t.[BatchID] \n"
+			    + "where s.[ErrorStatus] != 0 \n"
+//			    + "and s.[JavaSqlHashCode] != -1 \n"
+			    + "and s.[ErrorStatus] = " + errorNumber + " \n"
+			    + "group by s.[ErrorStatus], t.[ServerLogin], s.[ProcName], s.[LineNumber], t.[JavaSqlHashCode] \n"
+			    + "order by s.[ErrorStatus], [ErrorCount] desc \n"
+			    + "";
+
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				ResultSetTableModel rstm = createResultSetTableModel(rs, "SqlErrorText", sql);
+				
+				// Get the Dictionary Compressed Column TEXT VALUE, for column: SQLText  -- store them in SQLText
+				updateDictionaryCompressedColumn(rstm, conn, null, "MonSqlCapSqlText", "SQLText", "SQLText");
 				
 				if (_sqlTextRstm == null)
 					_sqlTextRstm = rstm;

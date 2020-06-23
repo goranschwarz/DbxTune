@@ -26,9 +26,9 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
-import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -186,6 +186,9 @@ public class PersistWriterJdbc
 	/** used is serviceStart/Stop to check if we already has done stop */
 	private String _servicesStoppedByThread = null;
 
+//	/** Only valid in startSession() method, and used to check if this is a NEW Database that was created */
+//	private boolean _looksLikeNewDatabase = false;
+	
 	/*---------------------------------------------------
 	** Constructors
 	**---------------------------------------------------
@@ -1064,6 +1067,12 @@ public class PersistWriterJdbc
 		// Set _h2DbDateParseFormat, _h2NewDbOnDateChange if the URL has variable ${DATE:format=someFormat;roll=true|false}
 		urlSubstitution(null, _jdbcUrl);
 
+		// Create an instance for: Dictionary Compression 
+// This is done later in: checkAndCreateTable()
+//		DictCompression dcc = new DictCompression(DictCompression.DigestType.MD5);
+//		DictCompression dcc = new DictCompression();
+//		DictCompression.setInstance(dcc);
+
 //		_logger.info("Configuration for PersistentCounterHandler.WriterClass component named '"+_name+"': "+configStr);
 		_logger.info ("Configuration for PersistentCounterHandler.WriterClass component named '"+_name+"'.");
 		_logger.info ("                  "+propPrefix+"jdbcDriver           = " + _jdbcDriver);
@@ -1140,6 +1149,20 @@ public class PersistWriterJdbc
 
 			// Shutdown and stop any of the (H2) services
 			stopServices_private(5000, dueToDatabaseRollover, dailyReportServerName);
+			
+			// Special stuff to do in case of a database roll-over
+			if (dueToDatabaseRollover)
+			{
+				// Notify all the Counter Models that this is happening if they want to do "something"
+				CounterController.getInstance().prepareForPcsDatabaseRollover();
+				
+				// Clear the Dictionary Compression Cache
+				if (DictCompression.isEnabled())
+				{
+					_logger.info("Clearing digest set/values for all Dictionary Compression Cache(s)");
+					DictCompression.getInstance().clear();
+				}
+			}
 		}
 	}
 
@@ -1493,7 +1516,7 @@ public class PersistWriterJdbc
 			}
 
 			// IF H2, add hard coded stuff to URL
-			if ( _jdbcDriver.equals("org.h2.Driver") )
+			if ( _jdbcDriver.equals("org.h2.Driver") )  //FIXME: changeToUrl: if ( _jdbcUrl.startsWith("jdbc:h2:"))
 			{
 				H2UrlHelper urlHelper = new H2UrlHelper(localJdbcUrl);
 				Map<String, String> urlMap = urlHelper.getUrlOptionsMap();
@@ -2260,6 +2283,20 @@ public class PersistWriterJdbc
 		return true;
 	}
 	
+	private boolean dbDdlExec(DbxConnection conn, List<String> ddlList)
+	throws SQLException
+	{
+		if (ddlList == null)   return false;
+		if (ddlList.isEmpty()) return false;
+		
+		boolean ret = true;
+		for (String ddl : ddlList)
+		{
+			if ( ! dbDdlExec(conn, ddl) )
+				ret = false;
+		}
+		return ret;
+	}
 	private boolean dbDdlExec(DbxConnection conn, String sql)
 	throws SQLException
 	{
@@ -2326,32 +2363,114 @@ public class PersistWriterJdbc
 			// Obtain a DatabaseMetaData object from our current connection        
 			DatabaseMetaData dbmd = conn.getMetaData();
 	
-			ResultSet rs = dbmd.getColumns(null, null, tabName, "%");
-			boolean tabExists = rs.next();
-			rs.close();
-	
+//			ResultSet rs = dbmd.getColumns(null, null, tabName, "%");
+//			boolean tabExists = rs.next();
+//			rs.close();
+			Set<String> colNames = DbUtils.getColumnNames(conn, null, tabName);
+			boolean tabExists = !colNames.isEmpty();
+
 			if( tabExists )
 			{
 				// Check some various things.
 				if (tabId == VERSION_INFO)
 				{
+//					_looksLikeNewDatabase = false;
+					
 					// FIXME: check if "VersionString" is the same as Version.getVersionStr()
 					//        if not, just throw a WARNING message to the log
+
+					// Test if Dictionary Compression should be enabled or not.
+					Set<String> compTabNames = DictCompression.getCompressedTableNames(conn, null, false);
+					if ( ! compTabNames.isEmpty() )
+					{
+						_logger.info("On Startup: Found table(s) with Dictionary Compression Enabled, so it will be ENABLED for this recording. Already Dictionary Compressed Tables: " + compTabNames);
+						DictCompression.setEnabled(true);
+					}
+					else
+					{
+//						boolean enableDictComp = DictCompression.isEnabledInConfiguration();
+//						_logger.info("On Startup: No table(s) with Dictionary Compression Enabled was found, Setting it to '" + enableDictComp + "' based on Configuration File, using key '" + DictCompression.PROPKEY_enabled + "'.");
+//						DictCompression.setEnabled(enableDictComp);
+						_logger.info("On Startup: No table(s) with Dictionary Compression was found in current PCS database, so it will be DISABLED for this recording.");
+						DictCompression.setEnabled(false);
+					}
 				}
+//				else if (tabId == RECORDING_OPTIONS)
+//				{
+//					// Are the Dictionary Compression enabled in an existing database or not
+//					Map<String, String> recordingOptions = getRecordingOptions(conn);
+//					
+//					String foundConfigIn   = "unknown";
+//					boolean enableDictComp = false;
+//					String entry = recordingOptions.get(DictCompression.PROPKEY_enabled);
+//					if (entry == null)
+//					{
+//						foundConfigIn  = "Configuration File, using property '" + DictCompression.PROPKEY_enabled + "'.";
+//						enableDictComp = DictCompression.isEnabledInConfiguration();
+//					}
+//					else
+//					{
+//						foundConfigIn  = "Current Database Recording using option '" + DictCompression.PROPKEY_enabled + "', which was '" + entry + "'.";
+//						enableDictComp = entry.equalsIgnoreCase("true");
+//					}
+//
+//					_logger.info("On Startup: Reading '" + tabName + "' and setting Dictionary Compression to " + enableDictComp + " which was found in: " + foundConfigIn);
+//					DictCompression.setEnabled(enableDictComp);
+//
+//					// Write the info to the database 
+//					setRecordingOption(conn, DictCompression.PROPKEY_enabled, enableDictComp+"");
+//				}
 			}
-			else
+			else // Table do NOT exist (Possibly a NEW DATABASE)
 			{
 				_logger.info("Creating table '" + tabName + "'.");
 				getStatistics().incCreateTables();
 				
-				String sql = getTableDdlString(conn, tabId, null);
-				dbDdlExec(conn, sql);
+				List<String> ddlList = getTableDdlString(conn, tabId, null);
+				dbDdlExec(conn, ddlList);
 
-				sql = getIndexDdlString(conn, tabId, null);
+				String sql = getIndexDdlString(conn, tabId, null);
 				if (sql != null)
 				{
 					dbDdlExec(conn, sql);
-				}				
+				}
+
+				// Take some extra actions for some tables
+				if (tabId == VERSION_INFO)
+				{
+//					_looksLikeNewDatabase = true;
+					
+					// FIXME: check if "VersionString" is the same as Version.getVersionStr()
+					//        if not, just throw a WARNING message to the log
+
+					
+					// Test if Dictionary Compression should be enabled or not.
+					boolean enableDictComp = DictCompression.isEnabledInConfiguration();
+					_logger.info("On Startup: It looks like it's a new PCS Database. Setting Dictionary Compression to '" + enableDictComp + "' based on Configuration File, using key '" + DictCompression.PROPKEY_enabled + "'.");
+					DictCompression.setEnabled(enableDictComp);
+				}
+//				else if (tabId == RECORDING_OPTIONS)
+//				{
+//					String foundConfigIn   = "unknown";
+//					boolean enableDictComp = false;
+//					if (_looksLikeNewDatabase)
+//					{
+//						foundConfigIn  = "Configuration File, using property '" + DictCompression.PROPKEY_enabled + "'.";
+//						enableDictComp = DictCompression.isEnabledInConfiguration();
+//					}
+//					else
+//					{
+//						foundConfigIn  = "This looks like an Older database recording, where Dictionary Compression wasn't introduced.";
+//						enableDictComp = false;
+//					}
+//						
+//					// If the table didn't exists... It's either a NEW Database or an OLD database recording (older version) where Dictionary Compression wasn't introduced
+//					_logger.info("On Startup: The table '" + tabName + "' did NOT exist. Setting Dictionary Compression to " + enableDictComp + " which was found in: " + foundConfigIn);
+//					DictCompression.setEnabled(enableDictComp);
+//
+//					// Write the info to the database 
+//					setRecordingOption(conn, DictCompression.PROPKEY_enabled, enableDictComp+"");
+//				}
 			}
 			
 			markDdlAsCreated(tabName);
@@ -2449,6 +2568,10 @@ public class PersistWriterJdbc
 //		if (val != null && val.length() >= SESSION_PARAMS_VAL_MAXLEN)
 //			val = val.substring(0, SESSION_PARAMS_VAL_MAXLEN - 1);
 
+		if (type != null) type = type.trim();
+		if (key  != null) key  = key .trim();
+		if (val  != null) val  = val .trim();
+
 		try
 		{
 			// Get the SQL statement
@@ -2474,6 +2597,84 @@ public class PersistWriterJdbc
 				throw e;
 		}
 	}
+
+//	/**
+//	 * Get all records from table 'MonRecordingOptions'
+//	 * 
+//	 * @param conn         The Connection to use
+//	 * @return a Map with key, value
+//	 * @throws SQLException
+//	 */
+//	private Map<String, String> getRecordingOptions(DbxConnection conn)
+//	throws SQLException
+//	{
+//		Map<String, String> map = new HashMap<>();
+//		
+//		String tabName = getTableName(conn, RECORDING_OPTIONS, null, false);
+//
+//		String sql = conn.quotifySqlString("select [optionName], [optionText] from [" + tabName + "]");
+//
+//		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+//		{
+//			while(rs.next())
+//			{
+//				String key = StringUtil.trim(rs.getString(1));
+//				String val = StringUtil.trim(rs.getString(2));
+//				
+//				map.put(key, val);
+//			}
+//		}
+//		
+//		return map;
+//	}
+//
+//	/**
+//	 * Update/insert a record into table 'MonRecordingOptions'
+//	 * <p>
+//	 * Note: This is <b>not</b> thread secure, since it first does a select, then a insert or update (no exclusive lock is held between fetch and store)
+//	 * 
+//	 * @param conn         The Connection to use
+//	 * @param key          key value (column name 'optionName')
+//	 * @param val          value     (column name 'optionText')
+//	 * @return The previous/existing value, NULL if a new row was inserted. 
+//	 * 
+//	 * @throws SQLException
+//	 */
+//	private String setRecordingOption(DbxConnection conn, String key, String val)
+//	throws SQLException
+//	{
+//		String prevValue = null;
+//		
+//		String tabName = getTableName(conn, RECORDING_OPTIONS, null, false);
+//
+//		String sql = conn.quotifySqlString("SELECT [optionText] FROM [" + tabName + "] WHERE [optionName] = '" + key + "'");
+//
+//		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+//		{
+//			while(rs.next())
+//			{
+//				prevValue = StringUtil.trim(rs.getString(1));
+//			}
+//		}
+//
+//		// INSERT
+//		if (prevValue == null)
+//		{
+//			sql = conn.quotifySqlString("INSERT INTO [" + tabName + "]([optionName], [optionText]) VALUES('" + key + "', '" + val + "')");
+//		}
+//		else // UPDATE
+//		{
+//			sql = conn.quotifySqlString("UPDATE [" + tabName + "] SET [optionText] = '" + val + "' WHERE [optionName] = '" + key + "'");
+//		}
+//
+//		try (Statement stmnt = conn.createStatement())
+//		{
+//			stmnt.executeUpdate(sql);
+//		}
+//		
+//		return prevValue;
+//	}
+
 
 	/**
 	 * Called from the {@link PersistentCounterHandler#consume} to start a session if it's needed.
@@ -2507,6 +2708,8 @@ public class PersistWriterJdbc
 			//
 			// FIRST CHECK IF THE TABLE EXISTS, IF NOT CREATE IT
 			//
+//			_looksLikeNewDatabase = false; // Only valid in startSession() method
+			
 			checkAndCreateTable(conn, VERSION_INFO);
 			checkAndCreateTable(conn, SESSIONS);
 			checkAndCreateTable(conn, SESSION_PARAMS);
@@ -2517,6 +2720,7 @@ public class PersistWriterJdbc
 			checkAndCreateTable(conn, SESSION_MON_TAB_COL_DICT);
 			checkAndCreateTable(conn, SESSION_DBMS_CONFIG);
 			checkAndCreateTable(conn, SESSION_DBMS_CONFIG_TEXT);
+//			checkAndCreateTable(conn, RECORDING_OPTIONS);
 			checkAndCreateTable(conn, DDL_STORAGE);
 //			checkAndCreateTable(conn, SQL_CAPTURE_SQLTEXT);
 //			checkAndCreateTable(conn, SQL_CAPTURE_STATEMENTS);
@@ -2700,6 +2904,10 @@ public class PersistWriterJdbc
 			_logger.warn("Error when startSession() writing to Persistent Counter Store.", e);
 			isSevereProblem(conn, e);
 		}
+//		finally 
+//		{
+//			_looksLikeNewDatabase = false;
+//		}
 		
 		// Close connection to db
 		close();
@@ -3326,6 +3534,24 @@ public class PersistWriterJdbc
 			for (int c=1; c<=cols; c++) 
 			{
 				String colName = rsmd.getColumnLabel(c);
+
+				if (DictCompression.isEnabled() && cm.isDictionaryCompressedColumn(colName))
+				{
+					DictCompression dcc = DictCompression.getInstance();
+
+					// Populate the in-memory cache if the table exists (but only for ABS, since the DIFF & RATE will use the same table)
+					if (type == ABS)
+					{
+    					if (dcc.populateCacheForTable(conn, null, cm.getName(), colName) == -1)
+    					{
+    						// The table did NOT exist... should we create it...
+    						// Well... it should be created earlier...
+    					}
+					}
+
+					colName = dcc.getDigestSourceColumnName(colName);
+				}
+
 				if ( ! existingCols.contains(colName) )
 					missingCols.add(colName);
 			}
@@ -3351,12 +3577,15 @@ public class PersistWriterJdbc
 		{
 			_logger.info("Persistent Counter DB: Creating table "+StringUtil.left("'"+tabName+"'", 37, true)+" for CounterModel '" + cm.getName() + "'.");
 
-			String sqlTable = getTableDdlString(conn, type, cm);
-			String sqlIndex = getIndexDdlString(conn, type, cm);
-
-			dbDdlExec(conn, sqlTable);
-			dbDdlExec(conn, sqlIndex);
+//			String sqlTable = getTableDdlString(conn, type, cm);
+//			String sqlIndex = getIndexDdlString(conn, type, cm);
+//
+//			dbDdlExec(conn, sqlTable);
+//			dbDdlExec(conn, sqlIndex);
 			
+			dbDdlExec(conn, getTableDdlString(conn, type, cm));
+			dbDdlExec(conn, getIndexDdlString(conn, type, cm));
+
 			getStatistics().incCreateTables();
 		}
 		
@@ -3684,6 +3913,7 @@ public class PersistWriterJdbc
 //		catch (SQLException ignore) { /*ignore*/ }
 
 		String sql = "";
+		DictCompression dcc = null;
 		try
 		{
 			sql = getTableInsertStr(conn, whatData, cm, true, cols);
@@ -3761,6 +3991,19 @@ public class PersistWriterJdbc
 						// if str length is longer than column length, truncate the value...
 						if (rsmd != null)
 						{
+							// Check if the column is a: Dictionary Compression Column
+							//String colName = rsmd.getColumnLabel(c + 1);
+							String colName = cols.get(c);
+							if ( DictCompression.isEnabled() && cm.isDictionaryCompressedColumn(colName))
+							{
+								if (dcc == null)
+									dcc = DictCompression.getInstance();
+								
+								// translate the "long" string into a "digest" (hex number), which will be inserted instead of the Real Long Value
+								// At the end we need to save the DCC into the data store
+								str = dcc.addToBatch(conn, cm.getName(), colName, str);
+							}
+
 							// Should we check for storage type as well???, lets skip this for now...
 //							String typeDatatype = rsmd.getColumnTypeName( c + 1 );
 //							if ( type.equals("char") || type.equals("varchar") )
@@ -3783,7 +4026,7 @@ public class PersistWriterJdbc
 							if ( allowedLength > 0  &&  str != null  &&  str.length() > allowedLength )
 							{
 								int dataLength = str.length();
-								String colName = cols.get(c);
+//								String colName = cols.get(c);
 
 								// Add '...' at the end if it's a long string, or simply "chop it of" if it's a very short string.
 								String truncStr = "";
@@ -3817,6 +4060,12 @@ public class PersistWriterJdbc
 
 			pstmt.executeBatch();
 			pstmt.close();
+
+			
+			// Add any Dictionary Compressed Column VALUES to the data store 
+			if (dcc != null)
+				dcc.storeBatch(conn);
+
 
 			return rowsCount;
 		}
@@ -4392,6 +4641,12 @@ public class PersistWriterJdbc
 			return;
 		}
 
+		DictCompression dictComp = null;
+		if (DictCompression.isEnabled())
+		{
+			dictComp = DictCompression.getInstance();
+		}
+
 		try
 		{
 			// START a transaction
@@ -4435,8 +4690,42 @@ public class PersistWriterJdbc
 				// Loop all columns, and SET it at the Prepared Statement
 				for (int c=1; c<row.size(); c++) // Skip entry 0, where the table name is stored
 				{
-					Object colObj =  row.get(c);
+					Object colObj = row.get(c);
 //System.out.println("saveSqlCaptureDetails(): tabName=|"+tabName+"|, setObject(parameterIndex="+c+", val='"+colObj+"')");
+					
+					if (dictComp != null && colObj != null)
+					{
+						Map<Integer, String> dictColCompMap = sqlCaptureBroker.getDictionaryCompressionColumnMap(tabName);
+						if (dictColCompMap != null)
+						{
+							String colName = dictColCompMap.get(c);
+							if (colName != null)
+							{
+								// A bit of error checking here
+								if (colObj instanceof String)
+								{
+									// Skip compression of empty strings
+									if (StringUtil.hasValue((String)colObj))
+									{
+										// This returns the Digest of the Dictionary Compressed String
+										// The value is added internally in the DictCompression and later stored by calling 'dictComp.storeBatch(conn)'
+										String hashId = dictComp.addToBatch(conn, tabName, colName, (String)colObj);
+
+//System.out.println("saveSqlCaptureDetails(): DictionaryCompression for table='" + tabName + "', column='" + colName + "'. received: hashId='" + hashId + "', dataValue=|" + colObj + "|.");
+										if (_logger.isDebugEnabled())
+											_logger.debug("saveSqlCaptureDetails(): DictionaryCompression for table='" + tabName + "', column='" + colName + "'. received: hashId='" + hashId + "', dataValue=|" + colObj + "|.");
+										
+										colObj = hashId;
+									}
+								}
+								else
+								{
+									_logger.error("DictCompression: columnPos=" + c + ", colName='" + colName + "', is NOT a String, it is of class='" + colObj.getClass().getName() + "', value=" + colObj + ", row.size()=" + row.size() + ", rowContent=" + row + ", SQL='" + sql + "'");
+								}
+							}
+						}
+					} // end: null check
+					
 					pstmt.setObject(c, colObj);
 				} // end: loop cols
 		
@@ -4457,6 +4746,10 @@ public class PersistWriterJdbc
 				pstmt.close();
 			}
 
+			// If the Dictionary Compression has anything to save
+			if (dictComp != null)
+				dictComp.storeBatch(conn);
+			
 			// CLOSE the transaction
 			conn.commit();
 

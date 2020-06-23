@@ -1597,6 +1597,10 @@ implements Memory.MemoryListener
 										_logger.info("Deleting old HPROF file, wich is older than 7 days (lastMod='" + (new Timestamp(path.toFile().lastModified())) + "'). filename: " + path);
 										path.toFile().delete();
 									}
+									else
+									{
+										_logger.info("DEBUG: HPROF file was found, but not yet older than 7 days, this can be manually removed if you like. (lastMod='" + (new Timestamp(path.toFile().lastModified())) + "'). filename: " + path);
+									}
 								}
 							}
 						}

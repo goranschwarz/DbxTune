@@ -20,10 +20,12 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import com.asetune.pcs.report.content.ase.AseConfiguration;
 import com.asetune.pcs.report.content.ase.AseCpuUsageOverview;
 import com.asetune.pcs.report.content.ase.AseDbSize;
 import com.asetune.pcs.report.content.ase.AseErrorInfo;
 import com.asetune.pcs.report.content.ase.AseSlowCmDeviceIo;
+import com.asetune.pcs.report.content.ase.AseSpMonitorConfig;
 import com.asetune.pcs.report.content.ase.AseStatementCacheUsageOverview;
 import com.asetune.pcs.report.content.ase.AseTopCmActiveStatements;
 import com.asetune.pcs.report.content.ase.AseTopCmCachedProcs;
@@ -72,5 +74,9 @@ extends DailySummaryReportDefault
 
 		// Database Size
 		addReportEntry( new AseDbSize(this)                 );
+
+		// ASE Configuration
+		addReportEntry( new AseConfiguration(this)          );
+		addReportEntry( new AseSpMonitorConfig(this)        );
 	}
 }

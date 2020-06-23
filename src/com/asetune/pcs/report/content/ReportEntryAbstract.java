@@ -31,6 +31,7 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.DailySummaryReportFactory;
 import com.asetune.sql.conn.DbxConnection;
@@ -548,4 +549,52 @@ implements IReportEntry
 	{
 		return new ReportChartObject(this, conn, cmName, graphName, maxValue, skipNames, graphTitle);
 	}
+	
+	
+	/**
+	 * 
+	 * @param rstm             The ResultSetTableModel that we want to fix
+	 * @param conn             Connection to the Storage
+	 * @param schemaName       Schema name where the Dictionary Compression tables are located (can be null)
+	 * @param tabName          Base Name of the table (which in most cases are 'CmName')
+	 * @param colName          Name of the column, that we want to change from 'hashId' to 'Dictionary-Compressed-Text'
+	 * @return number of records that was updated...
+	 */
+	public int updateDictionaryCompressedColumn(ResultSetTableModel rstm, DbxConnection conn, String schemaName, String tabName, String colName, String rstmColName)
+	{
+		if (rstm == null)
+			return 0;
+
+		if (StringUtil.isNullOrBlank(rstmColName))
+			rstmColName = colName;
+		
+		int rowsChanged = 0;
+		// get SqlText
+		int pos_colName = rstm.findColumn(rstmColName);
+		if (pos_colName >= 0)
+		{
+			for (int r=0; r<rstm.getRowCount(); r++)
+			{
+				String  hashId   = rstm.getValueAsString (r, pos_colName);
+				
+				String query = "";
+				try 
+				{
+					query = DictCompression.getValueForHashId(conn, schemaName, tabName, colName, hashId);
+					rowsChanged++;
+				} 
+				catch (SQLException ex) 
+				{
+					query = "Problems getting Dictionary Compressed column for tabName='" +tabName + "', colName='" + colName + "', hashId='" + hashId + "'.";
+				}
+
+				// set QUERY text in the original ResultSet
+				rstm.setValueAtWithOverride(query, r, pos_colName);
+			}
+		}
+		
+		return rowsChanged;
+	}
+	
+	
 }

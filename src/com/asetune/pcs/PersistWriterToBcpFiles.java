@@ -217,6 +217,21 @@ public class PersistWriterToBcpFiles
 		}
 	}
 
+	private String ddlListToGoStr(List<String> ddlList)
+	{
+		String sql = "";
+		
+		for (String ddl : ddlList)
+		{
+			sql += ddl;
+			sql += "\n";
+			sql += "go";
+			sql += "\n";
+		}
+
+		return sql;
+	}
+	
 	@Override
 	public void saveSample(PersistContainer cont)
 	{
@@ -232,11 +247,8 @@ public class PersistWriterToBcpFiles
 
 			if ( ! isDdlCreated(tabName) )
 			{
-				String sql = getTableDdlString(null, SESSIONS, null);
-				sql += "\n";
-				sql += "go";
-				sql += "\n";
-
+				String sql = ddlListToGoStr(getTableDdlString(null, SESSIONS, null));
+				
 				// Save the DDL String to a file
 				//TODO
 
@@ -346,9 +358,7 @@ public class PersistWriterToBcpFiles
 			//-------------
 			// ABS
 			//-------------
-			ddlTabWriter.write(getTableDdlString(null, ABS, cm));
-			ddlTabWriter.write("go\n");
-			ddlTabWriter.write("\n");
+			ddlTabWriter.write(ddlListToGoStr(getTableDdlString(null, ABS, cm)));
 			ddlTabWriter.write(getIndexDdlString(null, ABS, cm));
 			ddlTabWriter.write("go\n");
 			ddlTabWriter.write("\n");
@@ -357,9 +367,7 @@ public class PersistWriterToBcpFiles
 			//-------------
 			// DIFF
 			//-------------
-			ddlTabWriter.write(getTableDdlString(null, DIFF, cm));
-			ddlTabWriter.write("go\n");
-			ddlTabWriter.write("\n");
+			ddlTabWriter.write(ddlListToGoStr(getTableDdlString(null, DIFF, cm)));
 			ddlTabWriter.write(getIndexDdlString(null, DIFF, cm));
 			ddlTabWriter.write("go\n");
 			ddlTabWriter.write("\n");
@@ -368,9 +376,7 @@ public class PersistWriterToBcpFiles
 			//-------------
 			// RATE
 			//-------------
-			ddlTabWriter.write(getTableDdlString(null, RATE, cm));
-			ddlTabWriter.write("go\n");
-			ddlTabWriter.write("\n");
+			ddlTabWriter.write(ddlListToGoStr(getTableDdlString(null, RATE, cm)));
 			ddlTabWriter.write(getIndexDdlString(null, RATE, cm));
 			ddlTabWriter.write("go\n");
 			ddlTabWriter.write("\n");

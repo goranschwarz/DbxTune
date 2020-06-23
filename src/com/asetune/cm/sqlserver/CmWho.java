@@ -84,6 +84,7 @@ extends CountersModel
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"cpu",
 		"physical_io",
+		"logical_reads",
 		"memusage"
 		};
 
@@ -138,7 +139,9 @@ extends CountersModel
 	private static final String  PROP_PREFIX                       = CM_NAME;
 
 	public static final String  PROPKEY_sample_systemThreads       = PROP_PREFIX + ".sample.systemThreads";
-	public static final boolean DEFAULT_sample_systemThreads       = true;
+	public static final boolean DEFAULT_sample_systemThreads       = false;
+
+	public static final int     COLPOS_is_user_process             = 0;
 
 	private HashMap<Number,Object> _blockingSpids = new HashMap<Number,Object>(); // <(SPID)Integer> <null> indicator that the SPID is BLOCKING some other SPID
 
@@ -185,7 +188,7 @@ extends CountersModel
 		List <String> pkCols = new LinkedList<String>();
 
 		pkCols.add("spid");
-		pkCols.add("kpid");
+		pkCols.add("ecid");
 
 		return pkCols;
 	}
@@ -200,50 +203,56 @@ extends CountersModel
 //		String sql_sample_systemThreads = "--and sid != 0x01 -- Property: "+PROPKEY_sample_systemThreads+" is "+sample_systemThreads+". \n";
 //		if ( ! sample_systemThreads )
 //			sql_sample_systemThreads = "  and sid != 0x01 -- Property: "+PROPKEY_sample_systemThreads+" is "+sample_systemThreads+". \n";
-		String sql_sample_systemThreads = "--and net_address != '' -- Property: "+PROPKEY_sample_systemThreads+" is "+sample_systemThreads+". \n";
-		if ( ! sample_systemThreads )
-			sql_sample_systemThreads = "  and net_address != '' -- Property: "+PROPKEY_sample_systemThreads+" is "+sample_systemThreads+". \n";
+
+//		String sql_sample_systemThreads = "--and isnull(es.is_user_process, 0) = 0 -- Property: "+PROPKEY_sample_systemThreads+" is "+sample_systemThreads+". \n";
+//		if ( ! sample_systemThreads )
+//			sql_sample_systemThreads = "  and isnull(es.is_user_process, 0) = 0 -- Property: "+PROPKEY_sample_systemThreads+" is "+sample_systemThreads+". \n";
 
 		String sql = 
 			"select  \n" +
-			"	spid, \n" +
-			"	kpid, \n" +
-			"	loginame, \n" +
-			"	cmd, \n" +
-			"	status, \n" +
-			"	blocked, \n" +
-			"	open_tran, \n" +
-			"	waittype, \n" +
-			"	waittime, \n" +
-			"	lastwaittype, \n" +
-			"	waitresource, \n" +
-			"	dbname = db_name(dbid), \n" +
-			"	uid, \n" +
-			"	cpu, \n" +
-			"	physical_io, \n" +
-			"	memusage, \n" +
-			"	login_time, \n" +
-			"	login_time_ss = CASE WHEN datediff(day, login_time, getdate()) >= 24 THEN -1 ELSE  datediff(ss, login_time, getdate()) END, \n" +
-			"	last_batch, \n" +
-//			"	last_batch_ss = datediff(ss, last_batch, getdate()), \n" +
-			"	last_batch_ss = CASE WHEN datediff(day, last_batch, getdate()) >= 24 THEN -1 ELSE  datediff(ss, last_batch, getdate()) END, \n" +
-			"	hostname, \n" +
-			"	program_name, \n" +
-			"	hostprocess, \n" +
-			"	nt_domain, \n" +
-			"	nt_username, \n" +
-			"	net_address, \n" +
-			"	net_library, \n" +
-			"	stmt_start, \n" +
-			"	stmt_end, \n" +
-			"	request_id, \n" +
-			"	ecid, \n" +
-			"	sql_handle, \n" +
-			"	sid, \n" +
-			"	context_info \n" +
-			"from sys.sysprocesses \n" +
+			"    is_user_process = isnull(es.is_user_process, 0), \n" +
+			"    sp.spid, \n" +
+			"    sp.ecid, \n" +
+			"    sp.kpid, \n" +
+			"    sp.loginame, \n" +
+			"    sp.cmd, \n" +
+			"    sp.status, \n" +
+			"    sp.blocked, \n" +
+			"    sp.open_tran, \n" +
+			"    sp.waittype, \n" +
+			"    sp.waittime, \n" +
+			"    sp.lastwaittype, \n" +
+			"    sp.waitresource, \n" +
+			"    dbname = db_name(dbid), \n" +
+			"    authenticating_dbname = db_name(es.authenticating_database_id), \n" +
+			"    sp.uid, \n" +
+			"    sp.cpu, \n" +
+			"    sp.physical_io, \n" +
+			"    es.logical_reads, \n" +
+			"    sp.memusage, \n" +
+			"    sp.login_time, \n" +
+			"    login_time_ss = CASE WHEN datediff(day, sp.login_time, getdate()) >= 24 THEN -1 ELSE  datediff(ss, sp.login_time, getdate()) END, \n" +
+			"    sp.last_batch, \n" +
+//			"    last_batch_ss = datediff(ss, last_batch, getdate()), \n" +
+			"    last_batch_ss = CASE WHEN datediff(day, sp.last_batch, getdate()) >= 24 THEN -1 ELSE  datediff(ss, sp.last_batch, getdate()) END, \n" +
+			"    sp.hostname, \n" +
+			"    sp.program_name, \n" +
+			"    sp.hostprocess, \n" +
+			"    sp.nt_domain, \n" +
+			"    sp.nt_username, \n" +
+			"    sp.net_address, \n" +
+			"    sp.net_library, \n" +
+			"    sp.stmt_start, \n" +
+			"    sp.stmt_end, \n" +
+			"    sp.request_id, \n" +
+			"    sp.sql_handle, \n" +
+			"    sp.sid, \n" +
+			"    sp.context_info \n" +
+			"from sys.sysprocesses sp \n" +
+			"left outer join sys.dm_exec_sessions es on sp.spid = es.session_id \n" +
 			"where 1 = 1 \n" +
-			sql_sample_systemThreads;
+//			sql_sample_systemThreads + 
+			"";
 
 		return sql;
 	}

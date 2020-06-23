@@ -31,6 +31,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.gui.ModelMissmatchException;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -80,7 +81,7 @@ public class AseTopSlowSql extends AseAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Top SLOW SQL Statements (order by: sumCpuTime, origin: monSysStatement) [with gt: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"]";
+		return "Top [SQL Captured] SLOW SQL Statements (order by: sumCpuTime, origin: monSysStatement) [with gt: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"]";
 	}
 
 	@Override
@@ -99,7 +100,7 @@ public class AseTopSlowSql extends AseAbstract
 		
 		// Section description
 		rstm.setDescription(
-				"Top Slow SQL Statements are presented here (ordered by: sumCpuTime) <br>" +
+				"Top [SQL Captured] Slow SQL Statements are presented here (ordered by: sumCpuTime) <br>" +
 				"<br>" +
 				"Thresholds: with GreaterThan: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"<br>" +
 				"Thresholds: having sumCpuTime &gt;= 1000<br>" +
@@ -229,6 +230,14 @@ public class AseTopSlowSql extends AseAbstract
 				}
 			}
 
+			// Check if table "MonSqlCapSqlText" has Dictionary Compressed Columns (any columns ends with "$dcc$")
+			boolean hasDictCompCols = false;
+			try {
+				hasDictCompCols = DictCompression.hasCompressedColumnNames(conn, null, "MonSqlCapSqlText");
+			} catch (SQLException ex) {
+				_logger.error("Problems checking for Dictionary Compressed Columns in table 'MonSqlCapSqlText'.", ex);
+			}
+
 			// Get SQL Text
 			if (_shortRstm.getRowCount() > 0)
 			{
@@ -242,8 +251,12 @@ public class AseTopSlowSql extends AseAbstract
 						
 						if (JavaSqlHashCode != -1)
 						{
+							String col_SQLText = "[SQLText]";
+							if (hasDictCompCols)
+								col_SQLText = DictCompression.getRewriteForColumnName("MonSqlCapSqlText", "SQLText$dcc$").replace(" AS [SQLText]", "");
+
 							sql = ""
-								    + "select distinct [JavaSqlHashCode], [ServerLogin], '<xmp>'||[SQLText]||'</xmp>' as [SQLText] \n"
+								    + "select distinct [JavaSqlHashCode], [ServerLogin], '<xmp>'||" + col_SQLText + "||'</xmp>' as [SQLText] \n"
 								    + "from [MonSqlCapSqlText] \n"
 								    + "where [JavaSqlHashCode] = " + JavaSqlHashCode + " \n"
 								    + "";

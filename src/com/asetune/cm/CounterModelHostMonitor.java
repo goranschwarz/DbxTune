@@ -408,7 +408,7 @@ extends CountersModel
 	 *       So if we want to make MORE PERMANENT setting we need to do it on the Cm grabbed from the CounterController cm Map
 	 */
 	@Override
-	public void setOfflineColumnNames(int type, List<String> cols)
+	public void setOfflineColumnNames(int type, List<String> cols, List<Integer> sqlTypes)
 	{
 //System.out.println(this+"::setColumnNames(): ----------------------------------------------------------------------");
 //System.out.println(this+"::setColumnNames(): type="+type+", cols='"+cols+"'.");
@@ -477,6 +477,7 @@ extends CountersModel
 			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
 
 		data.setColumnNames(cols);
+		data.setSqlType(sqlTypes);
 	}
 
 	public boolean isOfflineMode()

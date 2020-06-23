@@ -778,7 +778,7 @@ public class DbxTuneSample
 	}
 
 	/**
-	 * create an Object based ofn what type the desiered field is of
+	 * create a Object based on what type the desired field is of
 	 * @param node               The node
 	 */
 	private static Object createObjectFromNodeType(JsonNode node)

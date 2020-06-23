@@ -189,15 +189,17 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 //		String whereClause = "where [UseCount] > 100 or [AvgLIO] > 100000\n"; // this is only used if we havn't got "TotalLioDiff" or "TotalCpuTimeDiff"
 		String whereClause = "";
 		String orderByCol = "[samples_count]";
-		if (dummyRstm.hasColumnNoCase("UseCountDiff"))     { orderByCol = "[UseCountDiff_sum]";     }
+		if (dummyRstm.hasColumnNoCase("UseCountDiff"))     { orderByCol = "[UseCountDiff_sum]";     whereClause = "where [UseCountDiff] > 0 \n"; }
 		if (dummyRstm.hasColumnNoCase("AvgCpuTime"))       { orderByCol = "[AvgCpuTime_est_max]";   }
-		if (dummyRstm.hasColumnNoCase("TotalLioDiff"))     { orderByCol = "[TotalLioDiff_sum]";     whereClause = ""; }
-		if (dummyRstm.hasColumnNoCase("TotalCpuTimeDiff")) { orderByCol = "[TotalCpuTimeDiff_sum]"; whereClause = ""; }
+		if (dummyRstm.hasColumnNoCase("TotalLioDiff"))     { orderByCol = "[TotalLioDiff_sum]";     }
+		if (dummyRstm.hasColumnNoCase("TotalCpuTimeDiff")) { orderByCol = "[TotalCpuTimeDiff_sum]"; }
 
 		String sql = getCmDiffColumnsAsSqlComment("CmStmntCacheDetails")
 			    + "select top " + topRows + " \n"
 			    + "  [DBName] \n"
-			    + " ,[ObjectName] \n"
+			    + " ,[Hashkey] \n"
+//			    + " ,[ObjectName] \n"
+			    + " ,min([ObjectName])           as [ObjectName] \n"
 			    + " ,count(*)                    as [samples_count] \n"
 			    + " ,min([SessionSampleTime])    as [SessionSampleTime_min] \n"
 			    + " ,max([SessionSampleTime])    as [SessionSampleTime_max] \n"
@@ -232,7 +234,10 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 			    + " \n"
 			    + "from [CmStmntCacheDetails_diff] \n"
 			    + whereClause
-			    + "group by [DBName], [ObjectName] \n"
+//maybe we can use SqlHash here instead... note: we need to change at the top of the select statement as well [ObjectName] ->> [Hashkey]
+//			    + "group by [DBName], [ObjectName] \n"
+			    + "group by [DBName], [Hashkey] \n"
+//also in all/some reports, do not trust count(*), it has to be where changes has happened (I think I did something like that in SQL Server SqlServerTopCmExecQueryStats)
 			    + " \n"
 			    + "order by " + orderByCol + " desc \n"
 			    + "";

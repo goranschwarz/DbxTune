@@ -27,8 +27,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Scanner;
+import java.util.Set;
 
 import javax.swing.JOptionPane;
 
@@ -806,6 +809,50 @@ public class DbUtils
 		catch (SQLException ex) 
 		{ 
 			return false; 
+		}
+	}
+
+	/**
+	 * Get all column names from a [schema] table<br>
+	 * This will use: {@code conn.getMetaData().getColumns(null, schemaName, tableName, "%");}
+	 * 
+	 * @param conn        The connection
+	 * @param schemaName  Schema name (can be null)
+	 * @param tableName   Table name
+	 * @return a Set with column names
+	 * 
+	 * @throws SQLException
+	 */
+	public static Set<String> getColumnNames(Connection conn, String schemaName, String tableName)
+	throws SQLException
+	{
+		Set<String> colNames = new LinkedHashSet<>();
+		ResultSet rs = conn.getMetaData().getColumns(null, schemaName, tableName, "%");
+		while (rs.next())
+			colNames.add(rs.getString("COLUMN_NAME"));
+		rs.close();
+		
+		return colNames;
+	}
+	
+	/**
+	 * Get all column names from a [schema] table<br>
+	 * This will use: {@link #getColumnNames(Connection, String, String)}
+	 * 
+	 * @param conn        The connection
+	 * @param schemaName  Schema name (can be null)
+	 * @param tableName   Table name
+	 * @return a Set with column names, in case of SQLException it will simply return an empty Set
+	 */
+	public static Set<String> getColumnNamesNoThrow(Connection conn, String schemaName, String tableName)
+	{
+		try 
+		{ 
+			return getColumnNames(conn, schemaName, tableName); 
+		}
+		catch (SQLException ex) 
+		{ 
+			return Collections.<String>emptySet();
 		}
 	}
 
