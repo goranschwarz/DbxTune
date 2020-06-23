@@ -120,7 +120,7 @@ extends CountersModel
 	 * 
 
         Object (State)  Memory_Consumed  Memory_Consumed_Mb  Max_Memory_Consumed_Mb 
-        末末末末末末・  末末末末末末末-  末末末末末末末末・  末末末末末末末末末末・
+        末末末末末末--  末末末末末末末-  末末末末末末末末--  末末末末末末末末末末--
         Misc (Norm)     17370307         16                  16
         CI   (Norm)     0                0                   0
         EXEC (Norm)     27392            0                   0
@@ -133,7 +133,7 @@ extends CountersModel
         Total(Norm)     21112979         20                  20
                             
         Avg_Memory_Consumed_Mb  Memory_Threshold_Mb  Memory_Ctrl_Time(s)
-        末末末末末末末末末末・  末末末末末末末末末-  末末末末末末末末・-
+        末末末末末末末末末末--  末末末末末末末末末-  末末末末末末末末---
         16                      99                   0
         0                       299                  0
         0                       99                   0

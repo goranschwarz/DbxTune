@@ -3935,6 +3935,11 @@ public class PersistWriterJdbc
 
 		String sql = "";
 		DictCompression dcc = null;
+		if (DictCompression.isEnabled())
+		{
+			dcc = DictCompression.getInstance();
+		}
+
 		try
 		{
 			sql = getTableInsertStr(conn, whatData, cm, true, cols);
@@ -4015,11 +4020,8 @@ public class PersistWriterJdbc
 							// Check if the column is a: Dictionary Compression Column
 							//String colName = rsmd.getColumnLabel(c + 1);
 							String colName = cols.get(c);
-							if ( DictCompression.isEnabled() && cm.isDictionaryCompressedColumn(colName))
+							if ( dcc != null && cm.isDictionaryCompressedColumn(colName))
 							{
-								if (dcc == null)
-									dcc = DictCompression.getInstance();
-								
 								// translate the "long" string into a "digest" (hex number), which will be inserted instead of the Real Long Value
 								// At the end we need to save the DCC into the data store
 								str = dcc.addToBatch(conn, cm.getName(), colName, str);
