@@ -1,5 +1,5 @@
 /*******************************************************************************
-DbmsDdlResolverRsDaDbmsDdlResolverRaxDbmsDdlResolverDerbyDbmsDdlResolverDb2 * Copyright (C) 2010-2019 Goran Schwarz
+DbmsDdlResolverRsDaDbmsDdlResolverRaxDbmsDdlResolverDerbyDbmsDdlResolverDb2 * Copyright (C) 2010-2020 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx

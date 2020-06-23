@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2020 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -120,7 +120,7 @@ extends CountersModel
 	 * 
 
         Object (State)  Memory_Consumed  Memory_Consumed_Mb  Max_Memory_Consumed_Mb 
-        ñññññññññññññ-  ññññññññññññññ-  ñññññññññññññññññ-  ñññññññññññññññññññññ-
+        ññññññññññññÅE  ññññññññññññññ-  ññññññññññññññññÅE  ññññññññññññññññññññÅE
         Misc (Norm)     17370307         16                  16
         CI   (Norm)     0                0                   0
         EXEC (Norm)     27392            0                   0
@@ -133,7 +133,7 @@ extends CountersModel
         Total(Norm)     21112979         20                  20
                             
         Avg_Memory_Consumed_Mb  Memory_Threshold_Mb  Memory_Ctrl_Time(s)
-        ñññññññññññññññññññññ-  ññññññññññññññññññ-  ñññññññññññññññññ--
+        ññññññññññññññññññññÅE  ññññññññññññññññññ-  ññññññññññññññññÅE-
         16                      99                   0
         0                       299                  0
         0                       99                   0
