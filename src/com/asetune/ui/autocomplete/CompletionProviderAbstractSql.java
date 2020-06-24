@@ -1192,7 +1192,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 			cList.add( new BasicCompletion(CompletionProviderAbstractSql.this, ":v",  "Show all user views") );
 			cList.add( new BasicCompletion(CompletionProviderAbstractSql.this, ":st", "Show all system tables") );
 			cList.add( new BasicCompletion(CompletionProviderAbstractSql.this, ":sv", "Show all system views") );
-			cList.add( new BasicCompletion(CompletionProviderAbstractSql.this, ":tt", "Show all ToolTip from the ToolTipSupplier from file: INSTALL_PATH\\resources\\VENDOR_tooltip_provider.xml") );
+			cList.add( new BasicCompletion(CompletionProviderAbstractSql.this, ":TT", "Show all ToolTip from the ToolTipSupplier from file: INSTALL_PATH\\resources\\VENDOR_tooltip_provider.xml") );
 			
 			return cList;
 		}
@@ -1243,10 +1243,10 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 
 
 		//-----------------------------------------------------------
-		// :tt = get completions from: ToolTipSupplier
-		if ( enteredText.startsWith(":tt") )
+		// :TT = get completions from: ToolTipSupplier
+		if ( enteredText.startsWith(":TT") )
 		{
-			String name = enteredText.substring(":tt".length());
+			String name = enteredText.substring(":TT".length());
 			if (StringUtil.isNullOrBlank(name))
 				name = ".";
 
