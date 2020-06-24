@@ -3615,6 +3615,28 @@ public class QueryWindow
 			else
 				_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: "+ex);
 		}
+		
+
+		if (_logger.isDebugEnabled())
+		{
+			_logger.debug("getDbmsProductInfoAfterConnect(): conn                        = " + conn);
+			_logger.debug("getDbmsProductInfoAfterConnect(): _connectedToServerName      = " + _connectedToServerName      );
+			_logger.debug("getDbmsProductInfoAfterConnect(): _connectedToProductName     = " + _connectedToProductName     );
+			_logger.debug("getDbmsProductInfoAfterConnect(): _connectedToProductVersion  = " + _connectedToProductVersion  );
+			_logger.debug("getDbmsProductInfoAfterConnect(): _connectedToServerName      = " + _connectedToServerName      );
+			_logger.debug("getDbmsProductInfoAfterConnect(): _connectedInitialCatalog    = " + _connectedInitialCatalog    );
+			_logger.debug("getDbmsProductInfoAfterConnect(): _connectedAsUser            = " + _connectedAsUser            );
+			_logger.debug("getDbmsProductInfoAfterConnect(): _connectedWithUrl           = " + _connectedWithUrl           );
+			_logger.debug("getDbmsProductInfoAfterConnect(): _connectedToSysListeners    = " + _connectedToSysListeners    );
+			_logger.debug("getDbmsProductInfoAfterConnect(): _connectedSrvPageSizeInKb   = " + _connectedSrvPageSizeInKb   );
+			_logger.debug("getDbmsProductInfoAfterConnect(): _connectedSrvCharset        = " + _connectedSrvCharset        );
+			_logger.debug("getDbmsProductInfoAfterConnect(): _connectedSrvSortorder      = " + _connectedSrvSortorder      );
+			_logger.debug("getDbmsProductInfoAfterConnect(): _connectedClientCharsetId   = " + _connectedClientCharsetId   );
+			_logger.debug("getDbmsProductInfoAfterConnect(): _connectedClientCharsetName = " + _connectedClientCharsetName );
+			_logger.debug("getDbmsProductInfoAfterConnect(): _connectedClientCharsetDesc = " + _connectedClientCharsetDesc );
+			_logger.debug("getDbmsProductInfoAfterConnect(): _connectedExtraInfo         = " + _connectedExtraInfo         );
+		}
+		
 	}
 
 	private boolean isNull(String str)

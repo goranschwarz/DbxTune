@@ -487,7 +487,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 			productName = conn.getMetaData().getDatabaseProductName();
 			_logger.debug("createDbxConnection(conn).getDatabaseProductName() returns: '"+productName+"'.");
 
-			// The Postgres Wire Protocoll is used by some uther DBMS's as well: CockroachDB, H2... 
+			// The Postgres Wire Protocol is used by some other DBMS's as well: CockroachDB, H2... 
 			if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_POSTGRES))
 			{
 				String sql = "select version()";
@@ -497,6 +497,13 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 					// CockroachDB: 'CockroachDB CCL v19.2.2 (x86_64-unknown-linux-gnu, built 2019/12/11 01:33:43, go1.12.12)'
 					while(rs.next())
 						productName = rs.getString(1);
+					
+					if (StringUtil.hasValue(productName))
+					{
+						if      (productName.indexOf(" H2 ") >= 0)       productName = DbUtils.DB_PROD_NAME_H2;
+						else if (productName.startsWith("CockroachDB ")) productName = DbUtils.DB_PROD_NAME_COCKROACHDB;
+						else                                             productName = DbUtils.DB_PROD_NAME_POSTGRES;
+					}
 				}
 				catch(SQLException ex)
 				{
@@ -507,7 +514,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		catch (SQLException e)
 		{
 			// If NO metadata installed, check if it's a Sybase Replication Server.
-			// JZ0SJ: Metadata accessor information was not found on this database. Please install the required tables as mentioned in the jConnect documentation.
+			// JZ0SJ: Metadata accessory information was not found on this database. Please install the required tables as mentioned in the jConnect documentation.
 			if ( "JZ0SJ".equals(e.getSQLState()) )
 			{
 				// Check for Replication Server
@@ -642,7 +649,11 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_POSTGRES))     return new PostgresConnection(conn);
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_APACHE_HIVE))  return new ApacheHiveConnection(conn);
 //		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_COCKROACHDB))  return new CockroachDbConnection(conn);
-		else return new UnknownConnection(conn);
+		else
+		{
+			_logger.info("Creating a DbxConnection of 'UnknownConnection' for product '" + productName + "'.");
+			return new UnknownConnection(conn);
+		}
 	}
 
 
