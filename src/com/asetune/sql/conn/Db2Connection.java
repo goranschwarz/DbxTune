@@ -155,7 +155,7 @@ extends DbxConnection
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problem getting Postgres DBMS Server Name, setting this to 'unknown'. SQL='"+sql+"', caught: "+ex);
+			_logger.warn("Problem getting DB2 DBMS Server Name, setting this to 'unknown'. SQL='"+sql+"', caught: "+ex);
 			serverName = "unknown";
 		}
 
