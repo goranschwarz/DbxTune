@@ -36,6 +36,8 @@ import com.asetune.cm.db2.CmMonGetIndex;
 import com.asetune.cm.db2.CmMonGetTable;
 import com.asetune.cm.db2.CmSummary;
 import com.asetune.cm.db2.CmSystemResourses;
+import com.asetune.cm.db2.CmTableSpace;
+import com.asetune.cm.db2.CmTableSpaceAll;
 import com.asetune.cm.os.CmOsDiskSpace;
 import com.asetune.cm.os.CmOsIostat;
 import com.asetune.cm.os.CmOsMeminfo;
@@ -99,6 +101,8 @@ extends CounterControllerAbstract
 		CmSystemResourses   .create(counterController, guiController);
 //		CmGlobalStatus      .create(counterController, guiController);
 //		CmUserStatus        .create(counterController, guiController);
+		CmTableSpace        .create(counterController, guiController);
+		CmTableSpaceAll     .create(counterController, guiController);
 		CmErrorLog          .create(counterController, guiController);
 
 		// Object Access

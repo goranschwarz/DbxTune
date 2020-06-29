@@ -186,7 +186,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
 			"Blocking Locks", 	                                     // Menu CheckBox text
-			"Number of Concurrently Blocking Locks (from XXXXXXXX)", // Label 
+			"Number of Concurrently Blocking Locks (from sysprocesses)", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] { "Blocking Locks" }, 
 			LabelType.Static,

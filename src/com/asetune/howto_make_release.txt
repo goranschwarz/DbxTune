@@ -7,6 +7,9 @@ Version.java
 - versin str: BUILD_STRING
 - is dev ver: IS_DEVELOPMENT_VERSION
 - valid date: DEV_VERSION_EXPIRE_STR
+-             GIT_DATE_STRING           to a proper value
+-             GIT_REVISION_STR          to a higher value (used CheckForUpdates, emulates Subversion "Revision:" tag)
+
 
 -----------------------------------------------------------
 history.html
@@ -17,14 +20,14 @@ in Eclipse: (get rid of unnecessary import)
 - Organize Import: at the asetune level: Ctrl+Shift+o
 
 -----------------------------------------------------------
-Check that all files are ADDED to SVN:
+Check that all files are ADDED to GIT:
 c:
 cd C:\projects\asetune
-svn st
+git status
 
 -----------------------------------------------------------
 ANT BUILD
-set JAVA_HOME=c:\Program Files\Java\jdk1.7.0_79
+set JAVA_HOME=c:\Program Files\Java\jdk1.8.0_241
 ant
 cd dist
 asetune.bat
@@ -42,17 +45,20 @@ C:\projects\asetune\asetune.properties
 ## Checkin last code
 ###########################################################
 CHECKIN
-- use turtoiseAVN in the explorer, or svn:
+- use turtoiseGIT in the explorer, or git:
 	c:
 	cd C:\projects\asetune
 	svn commit 
+	svn push 
 
 
 ###########################################################
 ## Subversion TAG the release
 ###########################################################
-svn copy https://svn.gorans.org/projects/asetune/trunk \
- https://svn.gorans.org/projects/asetune/tags/YYYY-MM-DD -m "Tagging the release."
+#svn copy https://svn.gorans.org/projects/asetune/trunk \
+# https://svn.gorans.org/projects/asetune/tags/YYYY-MM-DD -m "Tagging the release."
+git tag -a 'YYYY-MM-DD' -m 'Tagging the release.'
+##Do we need to push the above???
 
 
 ###########################################################
@@ -64,10 +70,10 @@ cd c:\tmpsvn
 
 c:
 cd c:\tmpsvn
-svn co https://svn.gorans.org/projects/asetune/tags/YYYY-MM-DD release
+git clone https://github.com/goranschwarz/DbxTune release
 cd release
 
-set JAVA_HOME=c:\Program Files\Java\jdk1.7.0_79
+set JAVA_HOME=c:\Program Files\Java\jdk1.8.0_241
 ant
 cd dist
 asetune.bat

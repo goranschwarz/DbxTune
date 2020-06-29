@@ -120,15 +120,23 @@ extends ObjectLookupInspectorAbstract
 					int cnt = 0;
 
 					boolean hasMissingIndexes = false;
+					boolean hasWarnings       = false;
 					if (xmlPlan.indexOf("<MissingIndexes>") >= 0)
 					{
 						cnt++;
 						hasMissingIndexes = true;
 					}
+					if (xmlPlan.indexOf("<Warnings>") >= 0)
+					{
+						cnt++;
+						hasWarnings = true;
+					}
 
 					// Others we might want to look for: 
 					//  -- Queries_with_Index_Scans_Due_to_Implicit_Conversions
 					//  -- Memory Grants... spill to disk...
+					// <Warnings><SpillToTempDb SpillLevel="1"></Warnings>
+					// <WaitStats>this should also hopefully be part of a QueryPlan</WaitStats>
 					
 					if ( cnt > 0 )
 					{
@@ -139,6 +147,9 @@ extends ObjectLookupInspectorAbstract
 
 						if (hasMissingIndexes)
 							sb.append("\"hasMissingIndexes\": true");
+
+						if (hasWarnings)
+							sb.append("\"hasWarnings\": true");
 
 						// END JSON
 						sb.append("}");

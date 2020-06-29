@@ -249,6 +249,8 @@ extends CountersModel
 //			LiveQueryPlanBlocked = "    ,LiveQueryPlan = (select lqp.query_plan from sys.dm_exec_query_statistics_xml(p1.spid) lqp) \n";
 //		}
 //      NOTE: The above seems to "stack-trace" the SQL-Server... maybe "defer" it into a post step, like we do in AseTune
+// possibly use: dm_exec_query_profiles 
+// possibly use: dm_exec_query_plan_stats instead... at least it will give the ACTUAL plan... https://blog.matesic.info/post/Last-Actual-Plan-with-sysdm_exec_query_plan_stats
 
 		String sql1 =
 			"SELECT  \n" +

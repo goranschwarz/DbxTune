@@ -44,7 +44,8 @@ extends SqlServerAbstract
 
 		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load.",
 				"CmSummary_aaCpuGraph",
-				"CmPerfCounters_OsCpuEffective",
+				"CmSummary_aaReadWriteGraph",
+//				"CmPerfCounters_OsCpuEffective",
 				"CmPerfCounters_SqlBatch",
 				"CmPerfCounters_TransWriteSec",
 				"CmSchedulers_RunQLengthSum",
@@ -52,7 +53,8 @@ extends SqlServerAbstract
 				));
 
 		sb.append(_CmSummary_aaCpuGraph         .getHtmlContent(null, null));
-		sb.append(_CmPerfCounters_OsCpuEffective.getHtmlContent(null, null));
+		sb.append(_CmSummary_aaReadWriteGraph   .getHtmlContent(null, null));
+//		sb.append(_CmPerfCounters_OsCpuEffective.getHtmlContent(null, null));
 		sb.append(_CmPerfCounters_SqlBatch      .getHtmlContent(null, null));
 		sb.append(_CmPerfCounters_TransWriteSec .getHtmlContent(null, null));
 		sb.append(_CmSchedulers_RunQLengthSum   .getHtmlContent(null, null));
@@ -78,16 +80,18 @@ extends SqlServerAbstract
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		int maxValue = 100;
-		_CmSummary_aaCpuGraph          = createChart(conn, "CmSummary",      "aaCpuGraph",     maxValue, null, "CPU Summary for all Schedulers (using @@cpu_busy, @@cpu_io) (Summary)");
-		_CmPerfCounters_OsCpuEffective = createChart(conn, "CmPerfCounters", "OsCpuEffective", maxValue, null, "CPU Usage Effective in Percent (Perf Counters)");
-		_CmPerfCounters_SqlBatch       = createChart(conn, "CmPerfCounters", "SqlBatch",       -1,       null, "SQL Batches Received per Sec (Perf Counters)");
-		_CmPerfCounters_TransWriteSec  = createChart(conn, "CmPerfCounters", "TransWriteSec",  -1,       null, "Write Transactions per Sec (Perf Counters)");
-		_CmSchedulers_RunQLengthSum    = createChart(conn, "CmSchedulers",   "RunQLengthSum",  -1,       null, "Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)");
-		_CmSchedulers_RunQLengthEng    = createChart(conn, "CmSchedulers",   "RunQLengthEng",  -1,       null, "Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)");
+		_CmSummary_aaCpuGraph          = createChart(conn, "CmSummary",      "aaCpuGraph",       maxValue, null, "CPU Summary for all Schedulers (using @@cpu_busy, @@cpu_io) (Summary)");
+		_CmSummary_aaReadWriteGraph    = createChart(conn, "CmSummary",      "aaReadWriteGraph", -1,       null, "Disk read/write per second, using @@total_read, @@total_write");
+//		_CmPerfCounters_OsCpuEffective = createChart(conn, "CmPerfCounters", "OsCpuEffective",   maxValue, null, "CPU Usage Effective in Percent (Perf Counters)");
+		_CmPerfCounters_SqlBatch       = createChart(conn, "CmPerfCounters", "SqlBatch",         -1,       null, "SQL Batches Received per Sec (Perf Counters)");
+		_CmPerfCounters_TransWriteSec  = createChart(conn, "CmPerfCounters", "TransWriteSec",    -1,       null, "Write Transactions per Sec (Perf Counters)");
+		_CmSchedulers_RunQLengthSum    = createChart(conn, "CmSchedulers",   "RunQLengthSum",    -1,       null, "Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)");
+		_CmSchedulers_RunQLengthEng    = createChart(conn, "CmSchedulers",   "RunQLengthEng",    -1,       null, "Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)");
 	}
 
 	private ReportChartObject _CmSummary_aaCpuGraph;
-	private ReportChartObject _CmPerfCounters_OsCpuEffective;
+	private ReportChartObject _CmSummary_aaReadWriteGraph;
+//	private ReportChartObject _CmPerfCounters_OsCpuEffective;
 	private ReportChartObject _CmPerfCounters_SqlBatch;
 	private ReportChartObject _CmPerfCounters_TransWriteSec;
 	private ReportChartObject _CmSchedulers_RunQLengthSum;
