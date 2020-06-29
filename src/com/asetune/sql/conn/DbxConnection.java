@@ -56,6 +56,7 @@ import org.apache.log4j.Logger;
 import com.asetune.gui.ConnectionProfileManager;
 import com.asetune.gui.ConnectionProgressDialog;
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.sql.JdbcUrlParser;
 import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.ddl.DbmsDdlResolverAnsiSql;
@@ -1612,10 +1613,16 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 			serverName = AseConnectionUtils.getAseServername(_conn);
 		}
 		// Postgres == overridden in PostgresConnection
-		// MySQL == overridden in MySqlConnection
+		// MySQL    == overridden in MySqlConnection
+		// DB2      == overridden in Db2Connection
 		// UNKNOWN
 		else
 		{
+			// Should we use the URL from the Jdbc Connection...
+			String jdbcUrl = _conn.getMetaData().getURL();
+			JdbcUrlParser urlParser = JdbcUrlParser.parse(jdbcUrl);
+			
+			_databaseServerName = urlParser.getHostPortStr();
 		}
 
 		_databaseServerName = serverName;

@@ -25,6 +25,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
 import com.asetune.utils.StringUtil;
@@ -33,6 +35,7 @@ import com.asetune.utils.Ver;
 public class Db2Connection
 extends DbxConnection
 {
+	private static Logger _logger = Logger.getLogger(Db2Connection.class);
 
 	public Db2Connection(Connection conn)
 	{
@@ -104,4 +107,59 @@ extends DbxConnection
 		return rowCount;
 	}
 
+	/**
+	 * Get the connected database server/instance name.
+	 * @return null if not connected else: Retrieves the name of this database server/instance name.
+	 * @see java.sql.DatabaseMetaData.getDatabaseProductName
+	 */
+	@Override
+	public String getDbmsServerName() 
+	throws SQLException
+	{
+		if (_databaseServerName != null)
+			return _databaseServerName;
+		
+		if (_conn == null)
+			return null;
+		
+		String serverName = "";
+
+		String sql = "";
+
+		
+		sql = "SELECT HOST_NAME FROM SYSIBMADM.ENV_SYS_INFO";
+		String db2HostName = "";
+		try (Statement stmt = _conn.createStatement(); ResultSet rs = stmt.executeQuery(sql))
+		{
+			while (rs.next())
+			{
+				db2HostName = rs.getString(1).trim();
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problem getting DB2 DBMS Server Name, setting this to 'unknownHostName'. SQL='"+sql+"', caught: "+ex);
+			db2HostName = "unknownHostName";
+		}
+
+		sql = "SELECT INST_NAME as srvName, current server as dbname FROM SYSIBMADM.ENV_INST_INFO";
+		try (Statement stmt = _conn.createStatement(); ResultSet rs = stmt.executeQuery(sql))
+		{
+			while (rs.next())
+			{
+				String srvName = rs.getString(1).trim();
+				String dbname  = rs.getString(2).trim();
+
+				serverName = srvName + "/" + dbname + "@" + db2HostName;
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problem getting Postgres DBMS Server Name, setting this to 'unknown'. SQL='"+sql+"', caught: "+ex);
+			serverName = "unknown";
+		}
+
+		_databaseServerName = serverName;
+		return serverName;
+	}
 }
