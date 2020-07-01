@@ -71,6 +71,9 @@ implements ActionListener //, FocusListener
 	private JLabel             _r_time_lbl                 = new JLabel("Time");
 	private JTextField         _r_time_txt                 = new JTextField("");
 
+	private JLabel             _r_maxWidth_lbl             = new JLabel("Max Visible Width");
+	private JTextField         _r_maxWidth_txt             = new JTextField("");
+
 	private JLabel             _r_minNumberDecimal_lbl   = new JLabel("Min Decimals on Numbers");
 	private JTextField         _r_minNumberDecimal_txt   = new JTextField("");
 
@@ -128,6 +131,7 @@ implements ActionListener //, FocusListener
 		_r_time_txt            .setText(     conf.getProperty   (ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_TIME               , ResultSetJXTable.DEFAULT_TABLE_CELL_RENDERER_TIME               ));
 		_r_minNumberDecimal_txt.setText("" + conf.getIntProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_MIN_NUMBER_DECIMALS, ResultSetJXTable.DEFAULT_TABLE_CELL_RENDERER_MIN_NUMBER_DECIMALS));
 		_r_maxNumberDecimal_txt.setText("" + conf.getIntProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_MAX_NUMBER_DECIMALS, ResultSetJXTable.DEFAULT_TABLE_CELL_RENDERER_MAX_NUMBER_DECIMALS));
+		_r_maxWidth_txt        .setText("" + conf.getIntProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_MAX_PREFERRED_WIDTH         , ResultSetJXTable.DEFAULT_TABLE_CELL_MAX_PREFERRED_WIDTH         ));
 	}
 
 	private void init()
@@ -243,11 +247,15 @@ implements ActionListener //, FocusListener
 		_r_time_lbl.setToolTipText("How should a java.sql.Time be presented. See SimpleDateFormat");
 		_r_time_txt.setToolTipText(_r_time_lbl.getToolTipText());
 		
+		_r_maxWidth_lbl.setToolTipText("The preferred Max Width (in Pixels) this cell be in");
+		_r_maxWidth_txt.setToolTipText(_r_maxWidth_lbl.getToolTipText());
+		
 		new GInputValidator(_r_minNumberDecimal_txt, _vg, new GInputValidator.IntegerInputValidator());
 		new GInputValidator(_r_maxNumberDecimal_txt, _vg, new GInputValidator.IntegerInputValidator());
 		new GInputValidator(_r_timestamp_txt       , _vg, new GInputValidator.SimpleDateFormatInputValidator());
 		new GInputValidator(_r_date_txt            , _vg, new GInputValidator.SimpleDateFormatInputValidator());
 		new GInputValidator(_r_time_txt            , _vg, new GInputValidator.SimpleDateFormatInputValidator());
+		new GInputValidator(_r_maxWidth_txt        , _vg, new GInputValidator.IntegerInputValidator());
 
 		panel.add(_r_minNumberDecimal_lbl, "");
 		panel.add(_r_minNumberDecimal_txt, "pushx, growx, wrap");
@@ -263,6 +271,9 @@ implements ActionListener //, FocusListener
                                         
 		panel.add(_r_time_lbl,             "");
 		panel.add(_r_time_txt,             "pushx, growx, wrap");
+
+		panel.add(_r_maxWidth_lbl,         "");
+		panel.add(_r_maxWidth_txt,         "pushx, growx, wrap");
 
 		
 //		_r_numberDecimal_txt.addFocusListener(this);
@@ -350,6 +361,7 @@ implements ActionListener //, FocusListener
 		conf.setProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_TIME,                _r_date_txt            .getText());
 		conf.setProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_MIN_NUMBER_DECIMALS, _r_minNumberDecimal_txt.getText());
 		conf.setProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_MAX_NUMBER_DECIMALS, _r_maxNumberDecimal_txt.getText());
+		conf.setProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_MAX_PREFERRED_WIDTH,          _r_maxWidth_txt        .getText());
 
 		conf.save();
 	}

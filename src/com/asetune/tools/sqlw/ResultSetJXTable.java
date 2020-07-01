@@ -26,6 +26,7 @@ import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.Point;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
@@ -48,6 +49,7 @@ import java.util.List;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JSeparator;
 import javax.swing.event.HyperlinkEvent;
@@ -121,6 +123,9 @@ implements ToolTipHyperlinkResolver
 	public static final String  PROPKEY_TABLE_CELL_RENDERER_MAX_NUMBER_DECIMALS = "ResultSetJXTable.cellRenderer.format.max.Number.decimals";
 	public static final int     DEFAULT_TABLE_CELL_RENDERER_MAX_NUMBER_DECIMALS = 128;
 //	public static final int     DEFAULT_TABLE_CELL_RENDERER_NUMBER_DECIMALS = 9;
+
+	public static final String  PROPKEY_TABLE_CELL_MAX_PREFERRED_WIDTH       = "ResultSetJXTable.cellRenderer.preferred.maxWidth";
+	public static final int     DEFAULT_TABLE_CELL_MAX_PREFERRED_WIDTH       = 1000;
 
 
 	private Point _lastMouseClick = null;
@@ -378,19 +383,32 @@ implements ToolTipHyperlinkResolver
 		popup.add(new JSeparator());
 
 		// ADJUST COLUMN WIDTH
-		mi = new JMenuItem("Adjust Column Width, both shrink and grow."); // Resizes all columns to fit their content
+		mi = new JMenuItem("Adjust Column Width, both shrink and grow (to 100% width).");
 		popup.add(mi);
 		mi.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				ResultSetJXTable.this.packAll();
+				ResultSetJXTable.super.packAll();
+//				ResultSetJXTable.this.packAll();
 			}
 		});
 
 		// ADJUST COLUMN WIDTH
-		mi = new JMenuItem("Adjust Column Width, grow only."); // Resizes all columns to fit their content
+		mi = new JMenuItem("Adjust Column Width, both shrink and grow (to visible max preferred width)");
+		popup.add(mi);
+		mi.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				ResultSetJXTable.this.packAllGrowAndShrink();
+			}
+		});
+
+		// ADJUST COLUMN WIDTH
+		mi = new JMenuItem("Adjust Column Width, grow only");
 		popup.add(mi);
 		mi.addActionListener(new ActionListener()
 		{
@@ -401,19 +419,47 @@ implements ToolTipHyperlinkResolver
 			}
 		});
 
+		// ResultSet Table Properties
+		mi = new JMenuItem("ResultSet Table Properties...");
+		popup.add(mi);
+		mi.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Window win =SwingUtils.getParentWindow(ResultSetJXTable.this);
+				Frame owner = null;
+				if (win instanceof Frame)
+					owner = (Frame) win;
+
+				// get the file, if not found... give it a default...
+				int ret = ResultSetJXTable.showSettingsDialog(owner);
+				if (ret == JOptionPane.OK_OPTION)
+				{
+				}
+			}
+		});
+
 		return popup;
 	}
 
-//	@Override
-//	public void packAll()
-//	{
-////		super.packAll();
-//		packAllGrowOnly();
-//	}
+	@Override
+	public void packAll()
+	{
+//		super.packAll();
+		packAllGrowOnly();
+	}
 	
-	private int _packMaxColWidth = SwingUtils.hiDpiScale(1000);
-	public int getPackMaxColWidth() { return _packMaxColWidth; }
+//	private int _packMaxColWidth = SwingUtils.hiDpiScale(1000);
+	private int _packMaxColWidth = -1;
 	public void setPackMaxColWidth(int maxWidth) { _packMaxColWidth = maxWidth; }
+	public int getPackMaxColWidth() 
+	{ 
+		if (_packMaxColWidth != -1 )
+			return _packMaxColWidth;
+		
+		return SwingUtils.hiDpiScale(Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_TABLE_CELL_MAX_PREFERRED_WIDTH, DEFAULT_TABLE_CELL_MAX_PREFERRED_WIDTH)); 
+	}
 
 	public void packAllGrowOnly()
 	{
@@ -440,6 +486,18 @@ implements ToolTipHyperlinkResolver
 				if (maxWidth != -1 && afterPackWidth > maxWidth)
 					ce.setPreferredWidth(maxWidth);
 			}
+		}
+	}
+
+	public void packAllGrowAndShrink()
+	{
+		int margin = -1;
+
+		for (int c = 0; c < getColumnCount(); c++)
+		{
+			int maxWidth = getPackMaxColWidth();
+			
+			packColumn(c, margin, maxWidth);
 		}
 	}
 

@@ -439,21 +439,22 @@
 	if ( $doAction == "cleanup" )
 	{
 		doCleanup($dbconn, "delete from asemon_usage where user_name = 'rlarsson'");
+		doCleanup($dbconn, "delete from asemon_usage where user_name = 'goran'");
 		doCleanup($dbconn, "delete from asemon_usage where user_name = 'gorans'");
 		doCleanup($dbconn, "delete from asemon_usage where user_name = ''");
 
-		doCleanup($dbconn, "delete from asemon_usage              where user_name in('gorans', 'i063783') ");
-		doCleanup($dbconn, "delete from asemon_connect_info       where userName  in('gorans', 'i063783') ");
-		doCleanup($dbconn, "delete from asemon_mda_info           where userName  in('gorans', 'i063783') AND verified IS NULL");
-		doCleanup($dbconn, "delete from asemon_udc_info           where userName  in('gorans', 'i063783') ");
-		doCleanup($dbconn, "delete from asemon_counter_usage_info where userName  in('gorans', 'i063783') ");
-		doCleanup($dbconn, "delete from asemon_error_info         where userName  in('gorans', 'i063783') ");
-		doCleanup($dbconn, "delete from asemon_error_info2        where userName  in('gorans', 'i063783') ");
-		doCleanup($dbconn, "delete from sqlw_usage                where user_name in('gorans', 'i063783') ");
-		doCleanup($dbconn, "delete from sqlw_connect_info         where userName  in('gorans', 'i063783') ");
-		doCleanup($dbconn, "delete from sqlw_usage_info           where userName  in('gorans', 'i063783') ");
-		doCleanup($dbconn, "delete from dbxc_store_info           where userName  in('gorans', 'i063783') ");
-		doCleanup($dbconn, "delete from dbxc_store_srv_info       where userName  in('gorans', 'i063783') ");
+		doCleanup($dbconn, "delete from asemon_usage              where user_name in('goran', 'gorans', 'i063783') ");
+		doCleanup($dbconn, "delete from asemon_connect_info       where userName  in('goran', 'gorans', 'i063783') ");
+		doCleanup($dbconn, "delete from asemon_mda_info           where userName  in('goran', 'gorans', 'i063783') AND verified IS NULL");
+		doCleanup($dbconn, "delete from asemon_udc_info           where userName  in('goran', 'gorans', 'i063783') ");
+		doCleanup($dbconn, "delete from asemon_counter_usage_info where userName  in('goran', 'gorans', 'i063783') ");
+		doCleanup($dbconn, "delete from asemon_error_info         where userName  in('goran', 'gorans', 'i063783') ");
+		doCleanup($dbconn, "delete from asemon_error_info2        where userName  in('goran', 'gorans', 'i063783') ");
+		doCleanup($dbconn, "delete from sqlw_usage                where user_name in('goran', 'gorans', 'i063783') ");
+		doCleanup($dbconn, "delete from sqlw_connect_info         where userName  in('goran', 'gorans', 'i063783') ");
+		doCleanup($dbconn, "delete from sqlw_usage_info           where userName  in('goran', 'gorans', 'i063783') ");
+		doCleanup($dbconn, "delete from dbxc_store_info           where userName  in('goran', 'gorans', 'i063783') ");
+		doCleanup($dbconn, "delete from dbxc_store_srv_info       where userName  in('goran', 'gorans', 'i063783') ");
 
 		// based on HOSTNAME
 		doCleanup($dbconn, "delete from asemon_connect_info       where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub2')) ");

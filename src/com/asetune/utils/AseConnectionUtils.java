@@ -3616,6 +3616,7 @@ public class AseConnectionUtils
 
 		// possibly add a SQLException -> SQLWarning using a message handler for:
 		// Error=8233, Msg='ALTER TABLE operation is in progress on the object 'xxxxx' in database 'yyyyyy'. Retry your query later.'.
+		// The above is done in the SybMessageHandler at CmSybMessageHandler, which is installed by the CounterModel
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
 			while(rs.next())

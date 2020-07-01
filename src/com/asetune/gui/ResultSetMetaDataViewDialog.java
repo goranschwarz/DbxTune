@@ -299,8 +299,12 @@ implements ActionListener
 			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
-				Entry entry = tm.getEntryForRow(_source_tab.convertRowIndexToModel(adapter.row));
-				int   mcol  = _source_tab.convertColumnIndexToModel(adapter.column);
+				int mrow = _source_tab.convertRowIndexToModel(   adapter.row);
+				int mcol = _source_tab.convertColumnIndexToModel(adapter.column);
+				if (mrow == -1 || mcol == -1 )
+					return false;
+
+				Entry entry = tm.getEntryForRow(mrow + 1); // getEntryForRow is 1 based (1 is first entry)
 				int   bmap  = (int) ResultSetMetaDataTableModel.COLUMN_HEADERS[mcol][ResultSetMetaDataTableModel.COL_CHANGE_BIT];
 				if ( entry.wasChanged(bmap) )
 					return true;
@@ -733,6 +737,7 @@ implements ActionListener
 		
 		public Entry getEntryForRow(int row)
 		{
+//System.out.println("XXXXXXXXXX:getEntryForRow: row="+row+", _rsmdc.getColumnCount="+_rsmdc.getColumnCount());
 			return _rsmdc.getEntry(row);
 		}
 		

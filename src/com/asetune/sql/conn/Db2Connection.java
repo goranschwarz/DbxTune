@@ -126,7 +126,7 @@ extends DbxConnection
 
 		String sql = "";
 
-		
+		// Get the hostname
 		sql = "SELECT HOST_NAME FROM SYSIBMADM.ENV_SYS_INFO";
 		String db2HostName = "";
 		try (Statement stmt = _conn.createStatement(); ResultSet rs = stmt.executeQuery(sql))
@@ -142,6 +142,8 @@ extends DbxConnection
 			db2HostName = "unknownHostName";
 		}
 
+		// Get the instanceName and databaseName
+		// serverName -->> 'srvName/dbname@hostname'
 		sql = "SELECT INST_NAME as srvName, current server as dbname FROM SYSIBMADM.ENV_INST_INFO";
 		try (Statement stmt = _conn.createStatement(); ResultSet rs = stmt.executeQuery(sql))
 		{

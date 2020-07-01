@@ -47,6 +47,9 @@ implements SybMessageHandler
 	private boolean       _discardMsgLoadDb = true; // discard messages that has with 'in load db', etc...
 	private boolean       _discardMsgLoadDbPrintInfo = false; 
 
+	private boolean       _discardMsgAlterTab = true; // discard: Msg=8233, message text: ALTER TABLE operation is in progress on the object '%s' in database '%s'. Retry your query later.
+	private boolean       _discardMsgAlterTabPrintInfo = true; 
+
 //	private boolean       _downgradeSqlException = false;
 
 	static
@@ -75,6 +78,9 @@ implements SybMessageHandler
 		_discardMsgLoadDb          = conf.getBooleanProperty(cmName+".discardMsgLoadDb",          _discardMsgLoadDb);
 		_discardMsgLoadDbPrintInfo = conf.getBooleanProperty(cmName+".discardMsgLoadDbPrintInfo", _discardMsgLoadDbPrintInfo);
 		
+		_discardMsgAlterTab          = conf.getBooleanProperty(cmName+".discardMsgAlterTab",          _discardMsgAlterTab);
+		_discardMsgAlterTabPrintInfo = conf.getBooleanProperty(cmName+".discardMsgAlterTabPrintInfo", _discardMsgAlterTabPrintInfo);
+
 		if (_logger.isDebugEnabled())
 			_logger.debug("CmSybMessageHandler: Config for CM '"+cmName+"': discardMsgLoadDb="+_discardMsgLoadDb+", discardMsgLoadDbPrintInfo="+_discardMsgLoadDbPrintInfo);
 
@@ -102,7 +108,6 @@ implements SybMessageHandler
 		
 		// Msg=10226, message text: The specified spid value '428' is out of range. It must be positive and not exceed the maximum number of user connections.
 		addDiscardMsgNum(10226);
-		
 		
 		// Cluster wide monitor command succeeded.
 		addDiscardMsgStr("Cluster wide monitor command succeeded.");
@@ -386,6 +391,19 @@ implements SybMessageHandler
 		if ( _discardMsgLoadDb && AseConnectionUtils.isInLoadDbException(sqle))
 		{
 			if (_discardMsgLoadDbPrintInfo)
+			{
+				String msg = sqle.getMessage();
+				if (msg != null && msg.endsWith("\n"))
+					msg = msg.substring(0, msg.length()-1);
+				_logger.info(getLogPrefix() + "Discarding Msg "+code+", Str '"+msg+"'.");
+			}
+			return null;
+		}
+		
+		// discard: Msg=8233, message text: ALTER TABLE operation is in progress on the object '%s' in database '%s'. Retry your query later.
+		if ( code == 8233 && _discardMsgAlterTab )
+		{
+			if (_discardMsgAlterTabPrintInfo)
 			{
 				String msg = sqle.getMessage();
 				if (msg != null && msg.endsWith("\n"))
