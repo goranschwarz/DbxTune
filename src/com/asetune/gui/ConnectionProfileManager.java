@@ -81,7 +81,6 @@ import com.asetune.gui.ConnectionProfile.JdbcEntry;
 import com.asetune.gui.ConnectionProfile.OfflineEntry;
 import com.asetune.gui.ConnectionProfile.SrvType;
 import com.asetune.gui.ConnectionProfile.TdsEntry;
-import com.asetune.gui.ConnectionProfile.Type;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;

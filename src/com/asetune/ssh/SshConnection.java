@@ -47,8 +47,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.swing.PromptForPassword;
-import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.PromptForPassword.SaveType;
+import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.VersionShort;

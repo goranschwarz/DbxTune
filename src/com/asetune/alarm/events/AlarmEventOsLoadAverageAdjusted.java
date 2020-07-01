@@ -21,7 +21,6 @@
 package com.asetune.alarm.events;
 
 import com.asetune.Version;
-import com.asetune.cm.CountersModel;
 
 public class AlarmEventOsLoadAverageAdjusted
 extends AlarmEvent 

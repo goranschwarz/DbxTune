@@ -22,14 +22,14 @@ in Eclipse: (get rid of unnecessary import)
 -----------------------------------------------------------
 Check that all files are ADDED to GIT:
 c:
-cd C:\projects\asetune
+cd C:\projects\dbxtune
 git status
 
 -----------------------------------------------------------
 ANT BUILD
 set JAVA_HOME=c:\Program Files\Java\jdk1.8.0_241
 ant
-cd dist
+cd dist\bin
 asetune.bat
 -- Check if everything is working
 cd ..
@@ -47,9 +47,9 @@ C:\projects\asetune\asetune.properties
 CHECKIN
 - use turtoiseGIT in the explorer, or git:
 	c:
-	cd C:\projects\asetune
-	svn commit 
-	svn push 
+	cd C:\projects\dbxtune
+	git commit -m "preparation for release"
+	git push 
 
 
 ###########################################################

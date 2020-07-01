@@ -21,7 +21,6 @@
 package com.asetune.sql.pipe;
 
 import com.asetune.sql.SqlProgressDialog;
-import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.tools.sqlw.msg.MessageAwareAbstract;
 import com.asetune.utils.ConnectionProvider;
 

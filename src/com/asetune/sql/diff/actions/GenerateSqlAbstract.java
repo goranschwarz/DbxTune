@@ -30,10 +30,10 @@ import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.SqlObjectName;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.diff.DiffContext;
-import com.asetune.sql.diff.DiffSink;
-import com.asetune.sql.diff.DiffTable;
 import com.asetune.sql.diff.DiffContext.DiffSide;
+import com.asetune.sql.diff.DiffSink;
 import com.asetune.sql.diff.DiffSink.DiffColumnValues;
+import com.asetune.sql.diff.DiffTable;
 import com.asetune.utils.StringUtil;
 
 public abstract class GenerateSqlAbstract

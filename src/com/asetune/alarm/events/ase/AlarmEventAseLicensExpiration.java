@@ -21,13 +21,8 @@
  ******************************************************************************/
 package com.asetune.alarm.events.ase;
 
-import java.sql.Timestamp;
-import java.util.concurrent.TimeUnit;
-
 import com.asetune.Version;
 import com.asetune.alarm.events.AlarmEvent;
-import com.asetune.cm.CountersModel;
-import com.asetune.sql.conn.DbxConnection;
 
 public class AlarmEventAseLicensExpiration
 extends AlarmEvent 

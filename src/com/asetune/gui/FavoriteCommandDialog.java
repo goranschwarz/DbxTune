@@ -96,7 +96,6 @@ import com.asetune.gui.swing.GTable;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
-import com.asetune.ui.rsyntaxtextarea.TextEditorPaneX;
 import com.asetune.utils.AseSqlScriptReader;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;

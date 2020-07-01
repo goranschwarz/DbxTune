@@ -37,7 +37,6 @@ import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.ReportEntryAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.DbUtils;
-import com.asetune.utils.StringUtil;
 
 public abstract class SqlServerAbstract
 extends ReportEntryAbstract

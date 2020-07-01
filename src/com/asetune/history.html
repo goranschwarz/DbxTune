@@ -24,7 +24,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
-<H2>2019-MM-DD</H2>
+<H2>2020-07-01</H2>
 <UL>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<H3>Generic - Changes that affects all DbxTune tools</H3>
@@ -59,7 +59,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>possible to use DbxTune <code>${Version}</code> information for example <code>${Version.getAppName()}</code></LI>
 				<LI>possible to use Java <code>${System}</code> information for example <code>${System.getProperty("some.prop.name")}</code></LI>
 			</UL>
-			Alarm Filter: new property '<AlarmWriterName>.filter.alwaysSendAlarmOnErrorsThatAffectsUpTime=*true*|false' with the description: Always Send Alarm On Errors That Affects UpTime. which is if the AlarmEvent has: Severity=ERROR and ServiceState=AFFECTED
+			Alarm Filter: new property '&lt;AlarmWriterName&gt;.filter.alwaysSendAlarmOnErrorsThatAffectsUpTime=*true*|false' with the description: Always Send Alarm On Errors That Affects UpTime. which is if the AlarmEvent has: Severity=ERROR and ServiceState=AFFECTED
 		</LI>
 		<LI>DBMS Config: now you can do 'difference check', with a UI where you can see any difference (You can check with another-dbms-instance or a saved-recording)<br>
 		    This is a really nice feature to check for new config parameters in different releases, and also to check if someone has changed config since "any recording YYYY-MM-DD"<br>
@@ -87,7 +87,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		   </LI>
 		<LI>Host Monitoring: Negative Diff Counters did not work as expected</LI>
 		<LI>CmOsDiskSpace: Now has 3 graphs (Space Used MB/Pct, Space Available MB) so we can follow space usage on a longer term basis (if sent to DbxCentral)</LI>
-		<LI>CmOsDiskSpace: Better alarm handling (now all mount points are automatically checked, for PercentUsage=95% & LessThanMbLeft=10)</LI>
+		<LI>CmOsDiskSpace: Better alarm handling (now all mount points are automatically checked, for PercentUsage=95% &amp; LessThanMbLeft=10)</LI>
 		<LI>ConnectionDialog changes
 			<ul>
 				<LI>Remember SSH Key for OS Monitoring</LI>
@@ -114,7 +114,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		</li>
 		<li>Graph properties, for DbxCentral Web interface... so we can individually decide Graphs Label Sizes, yAxisScaleLabels (KB MB, GB, Seconds, etc...)<br>
 		    This is described as a JSON object, example: {"yAxisScaleLabels":{"name":"mb","s0":" MB", "s1":" GB", "s2":" TB", "s3":" PB", "s4":" EB"}}</li>
-		<LI>CmIoStat: added chart 'iostat: Read & Write Operations(readsPerSec+writesPerSec) per Device & sec', which has 'readsPerSec' and 'writesPerSec' combined.</LI>
+		<LI>CmIoStat: added chart 'iostat: Read &amp; Write Operations(readsPerSec+writesPerSec) per Device &amp; sec', which has 'readsPerSec' and 'writesPerSec' combined.</LI>
 		<li>All DbxTools does now have a Version Sensitive Information in the Counter Controller Property Dialog</li>
 		<li>remove file produced by '-XX:HeapDumpPath=path' after 7 days, not to fill up disk space.</li>
 		<li>NoGui: Changing configuration files will be automatically picked up (objects must read from the Configuration object to see the new values)</li>
@@ -169,7 +169,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Viewing log files:<br>
 			- add title, so it's easier to see what file we are viewing<br>
 			- tail: Scroll to bottom when new rows is received did not work on Safari
-			- tail: on enter in the fields '# rows' & 'filter text', automatically press 'reload' button 
+			- tail: on enter in the fields '# rows' &amp; 'filter text', automatically press 'reload' button 
 			</LI>
 		<LI>Changed url to 'load offline session' in *tune applications (added IFEXISTS=TRUE;DB_CLOSE_ON_EXIT=FALSE)</LI>
 		<LI>Changes in shutdown sequence. (wait for current entry to be saved before shutdown)</LI>
@@ -611,7 +611,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Removed CM: CmExecSessions  (replaced by: CmSessions)</LI>
 		<LI>Removed CM: CmExecRequests  (replaced by: CmSessions)</LI>
 		<LI>Added CM: CmQueryTransformStat -- Query optimization, what rules are used can be checked here</LI>
-		<LI>Added CM: CmSessions           -- Raplacing: CmExecSessions & CmExecRequests</LI>
+		<LI>Added CM: CmSessions           -- Raplacing: CmExecSessions &amp; CmExecRequests</LI>
 		<LI>Added CM: CmWorkers            -- See how workers are used and Degree of Paralell</LI>
 		<LI>CmDatabases -- Rewrote the SQL to use #temp tables, and hopefully that will use less CPU</LI>
 		<LI>CmIndexPhysical
@@ -731,7 +731,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		    <li>\disconnect: Simply disconnect from current DBMS</li>
 		    <li>\connect 'profile name': Connect to any Connection Profile, without having to Open the Connection Dialog (works with code completion)<br>For the moment you need to execute this command as a separate <i>SQL batch</i> (so you can't have it in the middle of a SQL Batch, sorry...)</li>
 		    <li>\ccr: Code Completion Refresh</li>
-		    <li>\utf8len: Check UTF-8 Actual Length, check the actual UTF-8 length and compare it with the max length (ASE & SQL-Server has a max length of BYTES instead of chars)</li>
+		    <li>\utf8len: Check UTF-8 Actual Length, check the actual UTF-8 length and compare it with the max length (ASE &amp; SQL-Server has a max length of BYTES instead of chars)</li>
 		  </ul>
 		</LI>
 		<LI>SQL Server: On errors Print information about Line Number, serverName, ProcName etc.</LI>
@@ -864,11 +864,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>See a preview of this at <a href="http://gorans.org:8080">http://gorans.org:8080</a><br>
 		    Please be gentle with the environment, it's only trying to give you a preview...<br>
 		    The preview environment is currently having:<br>
-		    &nbsp;&nbsp;&nbsp;&nbsp; 4 - different versions of ASE (12.5.4, 15.5, 15.7 & 16.0)<br>
+		    &nbsp;&nbsp;&nbsp;&nbsp; 4 - different versions of ASE (12.5.4, 15.5, 15.7 &amp; 16.0)<br>
 			&nbsp;&nbsp;&nbsp;&nbsp; 1 - SQL-Server 2017 (Running on Linux)<br>
 			&nbsp;&nbsp;&nbsp;&nbsp; 1 - Postgres, Version 9.5<br>
 			&nbsp;&nbsp;&nbsp;&nbsp; 1 - MySQL, Version 5.7<br>
-			&nbsp;&nbsp;&nbsp;&nbsp; Missing pieces are: RepServer,RAX, IQ, Oracle, DB2 & HANA<br>
+			&nbsp;&nbsp;&nbsp;&nbsp; Missing pieces are: RepServer,RAX, IQ, Oracle, DB2 &amp; HANA<br>
 			Note 1: The ASE 15.5 version currently has a alarm/warning active to illustrate how alarms is displayed.<br>
 			Note 2: Nothing is really happening on any of the DBMS instances, so do not expect any fancy graph activity... It's just NO-GUI collectors sampling idle DBMS Instances
 		   </LI>
@@ -1022,7 +1022,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<ul>
 			<li>Show SQL Statement and QueryPlan for oldest open transaction</li>
 			<li>A better job trying to distinguage Data/UserDefined segments and Log segments</li>
-			<li>in ASE 15.7 SP136 & SP64 or above; use Function spaceusage(dbid) to track a bunch of new columns, which is good to track especially LOB (text/image) column growth<br>
+			<li>in ASE 15.7 SP136 &amp; SP64 or above; use Function spaceusage(dbid) to track a bunch of new columns, which is good to track especially LOB (text/image) column growth<br>
 				RawSpaceUsage, ReservedMb, UsedMb, UnUsedMb, DataMb, DataMbReal, IndexMb, IndexMbReal, LobMb, ReservedPages, UsedPages, UnUsedPages, DataPages, DataPagesReal, IndexPages, IndexPagesReal, LobPages, Tables, RowCountSum, OamPages, AllocationUnits
 				</li>
 			<li>new graph: TempdbUsedMbGraph - TempDB Space used in MB</li>
@@ -1163,10 +1163,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<li>iostat: Service Time(svctm) per Device</li>
 				<li>iostat: Avg Queue Length(avgqu-sz) per Device</li>
 				<li>iostat: Busy Percent(utilPct) per Device</li>
-				<li>iostat: Read Operations(readsPerSec) per Device & sec</li>
-				<li>iostat: Write Operations(writesPerSec) per Device & sec</li>
-				<li>iostat: Read KB(kbReadPerSec) per Device & sec</li>
-				<li>iostat: Write KB(kbWritePerSec) per Device & sec</li>
+				<li>iostat: Read Operations(readsPerSec) per Device &amp; sec</li>
+				<li>iostat: Write Operations(writesPerSec) per Device &amp; sec</li>
+				<li>iostat: Read KB(kbReadPerSec) per Device &amp; sec</li>
+				<li>iostat: Write KB(kbWritePerSec) per Device &amp; sec</li>
 				<li>iostat: Avg Read KB/IO(avgReadKbPerIo) per Device</li>
 				<li>iostat: Avg Write KB/IO(avgWriteKbPerIo) per Device</li>
 			</ul></li>
@@ -1281,7 +1281,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>OracleTune - Oracle Database</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>Capture DBMS Configuration (from v$parameter & v$nls_parameters)</LI>
+		<LI>Capture DBMS Configuration (from v$parameter &amp; v$nls_parameters)</LI>
 		<LI>Enhanced some generic DbxTune code to always close the ResultSet's</LI>
 		<LI>Added some Oracle specific datatypes</LI>
 	</UL>
@@ -1359,7 +1359,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>new collector: CmPgIndexesIo - One row for each index in the current database, showing statistics about accesses to that specific index.</LI>
 		<LI>new collector: CmPgFunctions - One row for each tracked function, showing statistics about executions of that function.</LI>
 		<LI>new collector: CmPgSequencesIo - One row for each index in the current database, showing statistics about accesses to that specific sequence.</LI>
-		<LI>new collector: CmPgTableSize - Show how large tables are (rows, total, data, index & toast).</LI>
+		<LI>new collector: CmPgTableSize - Show how large tables are (rows, total, data, index &amp; toast).</LI>
 
 		<!-- ~~~~~ Graphs ~~~~~ -->
 		<LI>
@@ -1506,7 +1506,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Record a session: DDL Capture was changed to be more generic (internal changes)</LI>
 		<LI>Record a session: SQL Capture was introduced when recording a session (but no GUI to look at them, use SQL Window to do direct select from the tables MonSqlCapSqlText, MonSqlCapStatements, MonSqlCapPlans)</LI>
 		<LI>first refresh after a connect is made with shorter sleep times, just to get "something" going</LI>
-		<LI>When you have 'Blocking locks'. Performance counters 'Active Statements' & 'Blocking' are automatically enabled while we are in that state.</LI>
+		<LI>When you have 'Blocking locks'. Performance counters 'Active Statements' &amp; 'Blocking' are automatically enabled while we are in that state.</LI>
 		<LI>When you have 'Long running transactions' and 'Full logs'. Performance counters 'Databases' are automatically enabled while we are in that state.</LI>
 		<LI>XML Showplan viewer will popup if you "hovering" over ObjectName and some other columns and the content starts with '*ss' or '*sq'</LI>
 		<LI>XML Showplan has a Cache so we wont get the XML Plan from the ASE all the times</LI>
@@ -1740,7 +1740,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<UL>
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
-		<b>Monitor & Counters -&gt; RS Counters - CmAdminStats</b><br>
+		<b>Monitor &amp; Counters -&gt; RS Counters - CmAdminStats</b><br>
 		<ul>
 			<li>Added 'InstanceId' to PK</li>
 		</ul>
@@ -1788,7 +1788,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
-		<b>Object & Access -&gt; Active Statements  - CmActiveStatements</b><br>
+		<b>Object &amp; Access -&gt; Active Statements  - CmActiveStatements</b><br>
 		<ul>
 			<li>Now also include records which holds blocking locks (same as for ASE)</li>
 			<li>Columns 'monSource' indicate if the record comes from 'ACTIVE' or 'BLOCKER' section of the information.</li>
@@ -1799,7 +1799,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
-		<b>Object & Access -&gt; Cursors  - CmExecCursors</b><br>
+		<b>Object &amp; Access -&gt; Cursors  - CmExecCursors</b><br>
 		<ul>
 			<li>New - Show details from dm_exec_cursors</li>
 		</ul>
@@ -1807,7 +1807,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
-		<b>Object & Access -&gt; Procedures  - CmExecProcedureStats</b><br>
+		<b>Object &amp; Access -&gt; Procedures  - CmExecProcedureStats</b><br>
 		<ul>
 			<li>New - Show details from dm_exec_requests</li>
 		</ul>
@@ -1823,7 +1823,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
-		<b>Object & Access -&gt; Triggers  - CmExecTriggerStats</b><br>
+		<b>Object &amp; Access -&gt; Triggers  - CmExecTriggerStats</b><br>
 		<ul>
 			<li>New - Show details from dm_exec_sessions</li>
 		</ul>
@@ -1915,7 +1915,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		    The filter value can be a regexp on any column OR use an SQL Like where clause, ex: where id in(1,2,3) or (name like 'syso%' and type='S')
 		</LI>
 		<LI>new command \ddlgen [options] for SYbase, which uses DDLGen.jar to reverse engineer various information</LI>
-		<LI>Shipping some more jdbc drivers (SQL-Server, Postgres, Oracle), previously Sybase jConnect, SAP HANA & jTds</LI>
+		<LI>Shipping some more jdbc drivers (SQL-Server, Postgres, Oracle), previously Sybase jConnect, SAP HANA &amp; jTds</LI>
 		<LI>HADR Information is displayed, also a popup is available which shows HADR members.</LI>
 		<LI>Change ASE MDA (monitor table) configuration(s)</LI>
 		<LI>For SQL-Server, in the connection dialog: show 'use Windows Authentication'</LI>
@@ -3920,7 +3920,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 	<LI>
 	<b>bug fix: Tab Summary, Databases: Timeout when creating new databases.</b><br>
-	Added 'readpast' to sub selects on sysdatabases & sysusages, this will hopefully just
+	Added 'readpast' to sub selects on sysdatabases &amp; sysusages, this will hopefully just
 	skipping reading this row from the ASE Version where locking schema 'datarows' has been
 	used for System tables. If I remember correctly this is ASE 15.x<br>
 	</LI>

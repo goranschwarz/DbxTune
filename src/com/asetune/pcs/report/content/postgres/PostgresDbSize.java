@@ -22,10 +22,6 @@
 package com.asetune.pcs.report.content.postgres;
 
 import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-
-import org.apache.commons.lang3.text.StrBuilder;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;

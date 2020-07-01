@@ -32,10 +32,10 @@ import com.asetune.pcs.report.content.ase.AseTopCmCachedProcs;
 import com.asetune.pcs.report.content.ase.AseTopCmObjectActivity;
 import com.asetune.pcs.report.content.ase.AseTopCmObjectActivityTabSize;
 import com.asetune.pcs.report.content.ase.AseTopCmStmntCacheDetails;
+import com.asetune.pcs.report.content.ase.AseTopSlowProcCalls;
 import com.asetune.pcs.report.content.ase.AseTopSlowSql;
 import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
 import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
-import com.asetune.pcs.report.content.ase.AseTopSlowProcCalls;
 
 public class DailySummaryReportAseTune 
 extends DailySummaryReportDefault
