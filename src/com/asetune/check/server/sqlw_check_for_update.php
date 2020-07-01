@@ -59,9 +59,9 @@
 	//------------------------------------------
 	// DEFINE latest version information
 	//-------
-	$SQLW_LATEST_VERSION_SRC = 471;
-	$SQLW_LATEST_VERSION_STR = "4.0.0";
-	$SQLW_LATEST_VERSION_STR = "2018-11-05";
+	$SQLW_LATEST_VERSION_SRC = 500;
+	$SQLW_LATEST_VERSION_STR = "4.1.0";
+	$SQLW_LATEST_VERSION_STR = "2020-07-01";
 	$DOWNLOAD_URL            = "sourceforge.net/projects/asetune/files/";
 	$WHATSNEW_URL            = "www.dbxtune.com/history.html";
 	$SEND_OPTIONS            = "sendConnectInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=false, sendLogInfoError=false, sendLogInfoThreshold=100";
@@ -182,6 +182,11 @@
 //	mysql_select_db("dbxtune_com", $db) or die("ERROR: " . mysql_error());
 
 	$dbconn=mysqli_connect("localhost", "dbxtune_com", "L8MucH4c", "dbxtune_com") or die("ERROR: " . mysqli_connect_error());
+
+	//------------------------------------------
+	// SQL_MODE option for this connection/session
+	mysqli_query($dbconn, "SET SESSION sql_mode = 'ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION'");
+
 
 	$sql = "insert into sqlw_usage
 	(

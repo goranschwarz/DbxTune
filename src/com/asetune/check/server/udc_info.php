@@ -71,6 +71,11 @@
 
 	$dbconn=mysqli_connect("localhost", "dbxtune_com", "L8MucH4c", "dbxtune_com") or die("ERROR: " . mysqli_connect_error());
 
+	//------------------------------------------
+	// SQL_MODE option for this connection/session
+	mysqli_query($dbconn, "SET SESSION sql_mode = 'ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION'");
+
+
 // Delete the records for this user, so we can refresh the UDC=User Defined Counter
 //$sql = "delete from asemon_udc_info where userName = '$userName' and serverAddTime <where older than 7 days>";
 //$sql = "delete from asemon_udc_info where userName = '$userName'";

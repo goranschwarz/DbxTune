@@ -57,25 +57,25 @@ CHECKIN
 ###########################################################
 #svn copy https://svn.gorans.org/projects/asetune/trunk \
 # https://svn.gorans.org/projects/asetune/tags/YYYY-MM-DD -m "Tagging the release."
-git tag -a 'YYYY-MM-DD' -m 'Tagging the release.'
-##Do we need to push the above???
+git tag -a "YYYY-MM-DD" -m "Tagging the release."
+git push --follow-tags
 
 
 ###########################################################
 ## MAKE DISTRIBUTION
 ###########################################################
 c:
-cd c:\tmpsvn
+cd c:\tmpgit
 - remove old release directory, if it's still there
 
 c:
-cd c:\tmpsvn
+cd c:\tmpgit
 git clone https://github.com/goranschwarz/DbxTune release
 cd release
 
 set JAVA_HOME=c:\Program Files\Java\jdk1.8.0_241
 ant
-cd dist
+cd dist\bin
 asetune.bat
 -- Check if everything is working
 cd ..
@@ -90,8 +90,8 @@ cd ..
 -----------------------------------------------------------
 Sourceforge
 
-- ftp history.html           (from: cd c:\tmpsvn\release\src\com\asetune)
-- ftp asetune_YYYY-MM-DD.zip (from: cd c:\tmpsvn\release)
+- ftp history.html           (from: cd c:\tmpgit\release\src\com\asetune)
+- ftp asetune_YYYY-MM-DD.zip (from: cd c:\tmpgit\release)
 
 Also to 'gorans.org' just in case...
 - gorans.org/www/asetune/asetune_YYYY-MM-DD.zip
@@ -107,7 +107,7 @@ update: download.html
 - set the new asetune_YYYY-MM-DD.zip in 2 places 
 
 update: check_for_update.php
-- source version string/id (notepad c:\tmpsvn\release\src\com\asetune\Version.java :SOURCE_REV_STRING)
+- source version string/id (notepad c:\tmpgit\release\src\com\asetune\Version.java :SOURCE_REV_STRING)
 	$ASETUNE_LATEST_VERSION_SRC = nnn;
 	$ASETUNE_LATEST_VERSION_STR = "x.y.z";
 	$ASETUNE_LATEST_VERSION_STR = "YYYY-MM-DD";
@@ -124,7 +124,7 @@ update: wsql_check_for_update.php
 ## CLEANUP
 ###########################################################
 c:
-cd c:\tmpsvn
+cd c:\tmpgit
 - copy asetune_YYYY-MM-DD.zip to _prev_releases, and unzip it
 - start previous release and check that the "New Upgrade is Available" pop-up is displayed
 - remove the release and other created directories
