@@ -20,31 +20,47 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.central.DbxTuneCentral;
+import com.asetune.central.pcs.objects.DsrSkipEntry;
 import com.asetune.pcs.MonRecordingInfo;
+import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.report.content.DailySummaryReportContent;
 import com.asetune.pcs.report.content.RecordingInfo;
+import com.asetune.pcs.report.content.ReportEntryAbstract;
 import com.asetune.pcs.report.senders.IReportSender;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.FileUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public abstract class DailySummaryReportAbstract
 implements IDailySummaryReport
@@ -56,6 +72,7 @@ implements IDailySummaryReport
 	private String        _serverName = null;
 	
 	private DailySummaryReportContent _reportContent = null; 
+	private IProgressReporter _progressReporter = null;
 
 	@Override
 	public void          setConnection(DbxConnection conn) { _conn = conn; }
@@ -67,6 +84,25 @@ implements IDailySummaryReport
 
 	@Override public void                      setReportContent(DailySummaryReportContent content) { _reportContent = content; }
 	@Override public DailySummaryReportContent getReportContent()                                  { return _reportContent; }
+
+	@Override
+	public void close()
+	{
+		if (_conn != null)
+			_conn.closeNoThrow();
+	}
+
+	@Override
+	public void setProgressReporter(IProgressReporter progressReporter)
+	{
+		_progressReporter = progressReporter;
+	}
+
+	@Override
+	public IProgressReporter getProgressReporter()
+	{
+		return _progressReporter;
+	}
 
 	@Override
 	public void setReportSender(IReportSender reportSender)
@@ -82,7 +118,10 @@ implements IDailySummaryReport
 			throw new RuntimeException("Can't send Daily Summary Report. The sender class is null.");
 
 		_sender.init();
-		_sender.printConfig();		
+		_sender.printConfig();
+
+		addReportEntries();
+		_logger.info("Initiated Daily Summary Report with " + getReportEntries().size() + " report entries.");
 	}
 
 	@Override
@@ -115,7 +154,7 @@ implements IDailySummaryReport
 
 		// --------------------------------------------
 		// Compose a file name to save to
-		String ts = TimeUtils.getCurrentTimeForFileNameHM();
+		String ts = TimeUtils.getCurrentTimeForFileNameYmdHm();
 
 		// Get server name and remove inappropriate characters so the file save do not fail.
 		String srvName = content.getServerName();
@@ -129,14 +168,15 @@ implements IDailySummaryReport
 		File   saveToFile = new File(saveToFileName);
 
 		// Produce the content
-		String htmlReport = content.getReportAsHtml();
+//		String htmlReport = content.getReportAsHtml();
 
 		// Write the file
 		try
 		{
 			_logger.info("Saving of DailyReport to file '" + saveToFile.getAbsolutePath() + "'.");
 			
-			org.apache.commons.io.FileUtils.write(saveToFile, htmlReport, StandardCharsets.UTF_8.name());
+//			org.apache.commons.io.FileUtils.write(saveToFile, htmlReport, StandardCharsets.UTF_8.name());
+			content.saveReportAsFile(saveToFile);
 		}
 		catch (IOException ex)
 		{
@@ -290,6 +330,9 @@ implements IDailySummaryReport
 		DbxConnection conn = getConnection();
 
 		_recordingInfo = new MonRecordingInfo(conn, null);
+		
+		// set _recording* variables
+		refreshRecordingStartEndTime(conn);
 	}
 
 //	private boolean   _initialized       = false;
@@ -548,7 +591,353 @@ implements IDailySummaryReport
 		return null;
 	}
 
+	//---------------------------------------------------------------
+	// Skip entries (in DSR reports) 
+	//---------------------------------------------------------------
+	private List<DsrSkipEntry> _dsrSkipEntriesForServerName = null;
+//	private List<DsrSkipEntry> _dbxCentral_dsrSkipEntriesForServerName = null;
+//	private List<DsrSkipEntry> _local_dsrSkipEntriesForServerName = null;
+
+	public List<DsrSkipEntry> getDsrSkipEntries(String srvName)
+	{
+		if (_dsrSkipEntriesForServerName != null)
+			return _dsrSkipEntriesForServerName;
+		
+		String dbxCentralBaseUrl = getDbxCentralBaseUrl();
+		String dbxCentralUrlSkip = dbxCentralBaseUrl + "/api/dsr/skip?srvName="+srvName;
+//		String dbxCentralUrlSkip = dbxCentralBaseUrl + "/api/dsr/skip;
+
+		_logger.info("Refreshing Daily Summary Report SKIP Entries for srvName '" + srvName + "' from DbxCentral, calling: " + dbxCentralUrlSkip);
+		
+		try
+		{
+			URL getRequest = new URL(dbxCentralUrlSkip);
+			HttpURLConnection conection = (HttpURLConnection) getRequest.openConnection();
+			conection.setRequestMethod("GET");
+//			conection.setRequestProperty("srvName", srvName); // set userId its a sample here
+			int    responseCode = conection.getResponseCode();
+			String responseMsg  = conection.getResponseMessage();
+
+			if(responseCode == HttpURLConnection.HTTP_OK) 
+			{
+				String readLine = null;
+				BufferedReader in = new BufferedReader(new InputStreamReader(conection.getInputStream()));
+				StringBuilder response = new StringBuilder();
+				while ((readLine = in .readLine()) != null) 
+				{
+					response.append(readLine);
+				}
+				in .close();
+
+				// print result
+				if (_logger.isDebugEnabled())
+					_logger.debug("JSON String Result " + response.toString());
+				
+				ObjectMapper mapper = new ObjectMapper();
+				List<DsrSkipEntry> entries = mapper.readValue(response.toString(), new TypeReference<List<DsrSkipEntry>>(){});
+
+				_dsrSkipEntriesForServerName = entries;
+			} 
+			else 
+			{
+				_logger.error("Problems getting Daily Summary Report SKIP entries, received responseCode=" + responseCode + ", Message='" + responseMsg + "', from URL: " + dbxCentralUrlSkip);
+				//return null;
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.error("Problems getting Daily Summary Report SKIP Entries from DbxCentral using URL: " + dbxCentralUrlSkip);
+		}
+
+		File f = new File(DbxTuneCentral.getAppConfDir() + "/DsrSkipEntry.local.json");
+		try
+		{
+			// Lets open local entries (from a file)
+			if (f.exists())
+			{
+				ObjectMapper mapper = new ObjectMapper();
+				List<DsrSkipEntry> entries = mapper.readValue(f, new TypeReference<List<DsrSkipEntry>>(){});
+
+				if ( ! entries.isEmpty() )
+				{
+					_logger.info("Also Adding " + entries.size() + " Daily Summary Report SKIP Entries for srvName '" + srvName + "' from local file '" + f.getAbsolutePath() + "'.");
+					if (_dsrSkipEntriesForServerName == null)
+						_dsrSkipEntriesForServerName.addAll(entries);
+					else
+						_dsrSkipEntriesForServerName = entries;
+				}
+			}
+			else
+			{
+				_logger.info("No 'local' Daily Summary Report SKIP file was found. The file '" + f.getAbsolutePath() + "' did not exist, skipping loading of that file.");
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.error("Problems getting Daily Summary Report SKIP Entries from Local File '" + f.getAbsolutePath() + "'.");
+		}
+
+		return _dsrSkipEntriesForServerName != null ? _dsrSkipEntriesForServerName : Collections.emptyList();
+	}
+
+	/**
+	 * Get all StringVal in a Set 
+	 * @param srvName
+	 * @param className
+	 * @param entryType
+	 * @return Empty Set if nothing was found 
+	 * @throws Exception
+	 */
+	public Set<String> getDsrSkipEntry(String srvName, String className, String entryType)
+	{
+		List<DsrSkipEntry> list = getDsrSkipEntries(srvName);
+		
+		Set<String> set = new HashSet<>();
+
+		for (DsrSkipEntry entry : list)
+		{
+			if (entry.getSrvName().equals(srvName) && entry.getClassName().equals(className) && entry.getEntryType().equals(entryType))
+				set.add(entry.getStringVal());
+		}
+		return set;
+	}
+
+	/**
+	 * Get a Map of all entries for this server and className: key='entryType', val='Set of StringVal' 
+	 * @param srvName
+	 * @param className
+	 * @return a Map of entries (never null, if none was found an empty Map is returned)
+	 * @throws Exception
+	 */
+	public Map<String, Set<String>> getDsrSkipEntries(String srvName, String className)
+	{
+		List<DsrSkipEntry> list = getDsrSkipEntries(srvName);
+
+		Map<String, Set<String>> map = new HashMap<>();
+		
+		for (DsrSkipEntry entry : list)
+		{
+			if (entry.getSrvName().equals(srvName) && entry.getClassName().equals(className))
+			{
+				Set<String> set = map.get(entry.getEntryType());
+				if (set == null)
+				{
+					set = new HashSet<>();
+					map.put(entry.getEntryType(), set);
+				}
+
+				set.add(entry.getStringVal());
+			}
+		}
+		return map;
+	}
+
+	public String getDsrSkipEntriesAsHtmlTable(String srvName, String className)
+	{
+		List<DsrSkipEntry> list = getDsrSkipEntries(srvName);
+		
+		StringBuilder sb = new StringBuilder();
+		int addCount = 0;
+
+		sb.append("<table class='sortable'> \n");
+		sb.append("  <thead> \n");
+		sb.append("    <tr>  \n");
+//		sb.append("      <th>SrvName</th>  \n");
+//		sb.append("      <th>ClassName</th>  \n");
+		sb.append("      <th>EntryType</th>  \n");
+		sb.append("      <th>StringVal</th>  \n");
+		sb.append("      <th>Description</th>  \n");
+		sb.append("      <th>SqlTextExample</th>  \n");
+		sb.append("    </tr>  \n");
+		sb.append("  </thead>  \n");
+		sb.append("  <tbody>  \n");
+
+		
+		for (DsrSkipEntry entry : list)
+		{
+			if (entry.getSrvName().equals(srvName) && entry.getClassName().equals(className))
+			{
+				addCount++;
+				
+				sb.append("    <tr> \n");
+//				sb.append("      <td>" + entry.getSrvName()        + "</td>  \n");
+//				sb.append("      <td>" + entry.getClassName()      + "</td>  \n");
+				sb.append("      <td>" + entry.getEntryType()      + "</td>  \n");
+				sb.append("      <td>" + entry.getStringVal()      + "</td>  \n");
+				sb.append("      <td>" + entry.getDescription()    + "</td>  \n");
+				sb.append("      <td>" + entry.getSqlTextExample() + "</td>  \n");
+				sb.append("    </tr> \n");
+			}
+		}
+
+		sb.append("  </tbody> \n");
+		sb.append("</table> \n");
+
+		return addCount == 0 ? "" : sb.toString();
+	}
+	
+	//---------------------------------------------------------------
+	// Reporting Period 
+	//---------------------------------------------------------------
+	private int _reportPeriodBeginTimeHour   = -1;
+	private int _reportPeriodBeginTimeMinute = -1;
+
+	private int _reportPeriodEndTimeHour     = -1;
+	private int _reportPeriodEndTimeMinute   = -1;
+
+	private Timestamp _reportPeriodBeginTime = null;
+	private Timestamp _reportPeriodEndTime   = null;
+	private String    _reportPeriodDuration  = null;
 	@Override
-	public abstract void create();
+	public void setReportPeriodBeginTime(int hour, int minute)
+	{
+		_reportPeriodBeginTimeHour   = hour;
+		_reportPeriodBeginTimeMinute = minute;
+	}
+	
+	@Override
+	public void setReportPeriodEndTime(int hour, int minute)
+	{
+		_reportPeriodEndTimeHour   = hour;
+		_reportPeriodEndTimeMinute = minute;
+	}
+	
+	@Override
+	public boolean hasReportPeriod()
+	{
+		if (_reportPeriodBeginTimeHour >= 0 && _reportPeriodBeginTimeMinute >= 0) return true;
+		if (_reportPeriodEndTimeHour   >= 0 && _reportPeriodEndTimeMinute   >= 0) return true;
+
+		return false;
+	}
+	
+	public Timestamp getReportPeriodBeginTime() { return _reportPeriodBeginTime; }
+	public Timestamp getReportPeriodEndTime()   { return _reportPeriodEndTime; }
+	public String    getReportPeriodDuration()  { return _reportPeriodDuration; }
+
+	/** 
+	 * Get the Actual Reporting BEGIN Time
+	 * <p>
+	 * If it has been set by setReportPeriodBegin/EndTime() that will be reflected<br>
+	 * If it'a the full day, the Recording Start/End time will be reflected<br>
+	 */
+	@Override
+	public Timestamp getReportBeginTime()
+	{
+//		return hasReportPeriod() 
+//				? getReportPeriodBeginTime()
+//				: getRecordingStartTime();
+		return getReportPeriodBeginTime() != null 
+				? getReportPeriodBeginTime()
+				: getRecordingStartTime();
+	}
+	
+	/** 
+	 * Get the Actual Reporting END Time
+	 * <p>
+	 * If it has been set by setReportPeriodBegin/EndTime() that will be reflected<br>
+	 * If it'a the full day, the Recording Start/End time will be reflected<br>
+	 */
+	@Override
+	public Timestamp getReportEndTime()
+	{
+//		return hasReportPeriod() 
+//				? getReportPeriodEndTime()
+//				: getRecordingEndTime();
+		return getReportPeriodEndTime() != null
+				? getReportPeriodEndTime()
+				: getRecordingEndTime();
+	}
+
+	
+	//---------------------------------------------------------------
+	// Recording Information
+	//---------------------------------------------------------------
+	private Timestamp _recordingStartTime  = null;
+	private Timestamp _recordingEndTime    = null;
+	private int       _recordingSampleTime = -1;
+	private String    _recordingDuration   = null;
+
+	public Timestamp getRecordingStartTime()  { return _recordingStartTime ; }
+	public Timestamp getRecordingEndTime()    { return _recordingEndTime   ; }
+	public int       getRecordingSampleTime() { return _recordingSampleTime; }
+	public String    getRecordingDuration()   { return _recordingDuration  ; }
+	
+	public void refreshRecordingStartEndTime(DbxConnection conn)
+	{
+		_recordingSampleTime = ReportEntryAbstract.getRecordingSampleTime(conn);
+
+		
+		// Start/end time for the recording
+		String sql = ""
+			+ "select min([SessionSampleTime]), max([SessionSampleTime]) \n"
+			+ "from ["+PersistWriterBase.getTableName(conn, PersistWriterBase.SESSION_SAMPLES, null, false) + "] \n"
+			+ "";
+
+		sql = conn.quotifySqlString(sql);
+
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while (rs.next())
+				{
+					Timestamp startTime = rs.getTimestamp(1);
+					Timestamp endTime   = rs.getTimestamp(2);
+					
+					if (startTime != null && endTime != null)
+					{
+						_recordingStartTime = startTime;
+						_recordingEndTime   = endTime;
+						_recordingDuration  = TimeUtils.msToTimeStr("%HH:%MM:%SS", endTime.getTime() - startTime.getTime() );
+
+						// Set Reporting Period
+						if (_reportPeriodBeginTimeHour >= 0 && _reportPeriodBeginTimeMinute >= 0)
+						{
+							Calendar c = Calendar.getInstance();
+							c.setTime(_recordingStartTime);
+							c.set(Calendar.HOUR_OF_DAY, _reportPeriodBeginTimeHour);
+							c.set(Calendar.MINUTE,      _reportPeriodBeginTimeMinute);
+							c.set(Calendar.SECOND,      0);
+							c.set(Calendar.MILLISECOND, 0);
+							
+							_reportPeriodBeginTime = new Timestamp(c.getTimeInMillis());
+						}
+						if (_reportPeriodEndTimeHour >= 0 && _reportPeriodEndTimeMinute >= 0)
+						{
+							Calendar c = Calendar.getInstance();
+							c.setTime(_recordingEndTime);
+							c.set(Calendar.HOUR_OF_DAY, _reportPeriodEndTimeHour);
+							c.set(Calendar.MINUTE,      _reportPeriodEndTimeMinute);
+							if (_reportPeriodEndTimeMinute == 59)
+							{
+								c.set(Calendar.SECOND,      59);
+								c.set(Calendar.MILLISECOND, 999);
+							}
+							else
+							{
+								c.set(Calendar.SECOND,      0);
+								c.set(Calendar.MILLISECOND, 0);
+							}
+							
+							_reportPeriodEndTime = new Timestamp(c.getTimeInMillis());
+						}
+
+						_reportPeriodDuration = TimeUtils.msToTimeStr("%HH:%MM:%SS.%ms", getReportEndTime().getTime() - getReportBeginTime().getTime() ) + "   (HH:MM:SS.millisec)";
+					}
+				}
+			}
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems getting 'Recording start/end time', Caught: " + ex);
+		}
+	}
+
+	@Override
+	public abstract void create() throws InterruptedException, IOException;
 
 }

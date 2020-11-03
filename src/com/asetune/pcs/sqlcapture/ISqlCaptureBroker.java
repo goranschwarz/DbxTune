@@ -128,4 +128,26 @@ public interface ISqlCaptureBroker
 	public boolean       getBooleanProperty(String propName, boolean defaultValue);
 	public int           getIntProperty    (String propName, int     defaultValue);
 	public long          getLongProperty   (String propName, long    defaultValue);
+
+	/** 
+	 * If you want to use SQL Prefix in a query, this can be used to automatically create a prefix string
+	 * <p>
+	 * The default is to use: <code>&#47* APPNAME:SqlCapture *&#47; \n</code> 
+	 */
+	String getSqlPrefix();
+
+	/**
+	 * Checks if we should add any SQL Prefix<br>
+	 * First check property: <code>cm.sqlPrefix.use</code><br>
+	 * Second check property: <code>cm.sqlCapture.sqlPrefix.use</code><br>
+	 * 
+	 * @return true if we should call method: getSqlPrefix
+	 */
+	boolean useSqlPrefix();
+	
+	/**
+	 * If we are getting low on memory we might want to clear a few things
+	 */
+	void lowOnMemoryHandler();
+	void outOfMemoryHandler();
 }

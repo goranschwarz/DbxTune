@@ -79,6 +79,33 @@ public class HtmlQueryString
 		// replace all '\', with '/', which makes some fields more readable.
 		value = value.replace('\\', '/');
 
+//		// The below translates ' ' -->> '+' -->> '%20'
+//		try
+//		{
+//			_query.append(URLEncoder.encode(name, StandardCharsets.UTF_8.toString()).replace("+", "%20"));
+//			_query.append('=');
+//			_query.append(URLEncoder.encode(value, StandardCharsets.UTF_8.toString()).replace("+", "%20"));
+//		}
+//		catch (UnsupportedEncodingException ex)
+//		{
+//			throw new RuntimeException("Broken VM does not support UTF-8");
+//		}
+
+		// The below translates ' ' -->> '+'
+//		try
+//		{
+//			URLCodec urlCodec = new URLCodec("UTF-8");
+//			
+//			_query.append(urlCodec.encode(name));
+//			_query.append('=');
+//			_query.append(urlCodec.encode(value));
+//		}
+//		catch (EncoderException ex)
+//		{
+//			throw new RuntimeException("Problems encoding URL parameters as UTF-8", ex);
+//		}
+		
+		// The below translates ' ' -->> '+'
 		try
 		{
 			_query.append(URLEncoder.encode(name, "UTF-8"));

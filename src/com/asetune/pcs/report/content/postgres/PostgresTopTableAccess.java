@@ -21,6 +21,10 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.postgres;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
+
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.ase.AseAbstract;
@@ -40,10 +44,9 @@ public class PostgresTopTableAccess extends AseAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		//------------------------------------------
 		// IO and Cache
 		if (_rstm_IoCache.getRowCount() == 0)
@@ -55,8 +58,8 @@ public class PostgresTopTableAccess extends AseAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_rstm_IoCache, true));
 
-			sb.append("Row Count: ").append(_rstm_IoCache.getRowCount()).append("<br>\n");
-			sb.append(_rstm_IoCache.toHtmlTableString("sortable"));
+			sb.append("Row Count: " + _rstm_IoCache.getRowCount() + "<br>\n");
+			sb.append(toHtmlTable(_rstm_IoCache));
 		}
 
 		//------------------------------------------
@@ -70,12 +73,50 @@ public class PostgresTopTableAccess extends AseAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_rstm_access, true));
 
-			sb.append("Row Count: ").append(_rstm_access.getRowCount()).append("<br>\n");
-			sb.append(_rstm_access.toHtmlTableString("sortable"));
+			sb.append("Row Count: " + _rstm_access.getRowCount() + "<br>\n");
+			sb.append(toHtmlTable(_rstm_access));
 		}
-
-		return sb.toString();
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		//------------------------------------------
+//		// IO and Cache
+//		if (_rstm_IoCache.getRowCount() == 0)
+//		{
+//			sb.append("No rows found for 'Table/Index IO and Cache Information' <br>\n");
+//		}
+//		else
+//		{
+//			// Get a description of this section, and column names
+//			sb.append(getSectionDescriptionHtml(_rstm_IoCache, true));
+//
+//			sb.append("Row Count: ").append(_rstm_IoCache.getRowCount()).append("<br>\n");
+////			sb.append(_rstm_IoCache.toHtmlTableString("sortable"));
+//			sb.append(toHtmlTable(_rstm_IoCache));
+//		}
+//
+//		//------------------------------------------
+//		// Access
+//		if (_rstm_access.getRowCount() == 0)
+//		{
+//			sb.append("No rows found for 'Table/Index Access Activity' <br>\n");
+//		}
+//		else
+//		{
+//			// Get a description of this section, and column names
+//			sb.append(getSectionDescriptionHtml(_rstm_access, true));
+//
+//			sb.append("Row Count: ").append(_rstm_access.getRowCount()).append("<br>\n");
+////			sb.append(_rstm_access.toHtmlTableString("sortable"));
+//			sb.append(toHtmlTable(_rstm_access));
+//		}
+//
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -89,6 +130,12 @@ public class PostgresTopTableAccess extends AseAbstract
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
 	}
 
+
+	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { "CmPgTablesIo_diff" };
+	}
 
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
@@ -128,6 +175,8 @@ public class PostgresTopTableAccess extends AseAbstract
 			    + "    ,sum([tidx_blks_read])         as [tidx_blks_read_SUM] \n"
 			    + "    ,sum([tidx_blks_hit])          as [tidx_blks_hit_SUM] \n"
 			    + "from [CmPgTablesIo_diff] \n"
+			    + "where 1 = 1 \n"
+				+ getReportPeriodSqlWhere()
 			    + "group by [dbname], [schemaname], [relname] \n"
 			    + "order by sum([heap_blks_hit]) + sum([idx_blks_hit]) + sum([toast_blks_hit]) + sum([tidx_blks_hit]) desc \n"
 			    + "";
@@ -175,9 +224,16 @@ public class PostgresTopTableAccess extends AseAbstract
 		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
 
 		 // just to get Column names
-//		String dummySql = "select * from [CmPgTables_diff] where 1 = 2";
-//		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, true, "metadata");
+		String dummySql = "select * from [CmPgTables_diff] where 1 = 2";
+		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, true, "metadata");
 
+		// n_mod_since_analyze - added in 9.3
+		String n_mod_since_analyze_SUM = dummyRstm.findColumnNoCase("n_mod_since_analyze") == -1 ? "" : "    ,sum([n_mod_since_analyze])                                 as [n_mod_since_analyze_SUM] \n";
+
+		// n_ins_since_vacuum - added in 13
+		String n_ins_since_vacuum_SUM = dummyRstm.findColumnNoCase("n_ins_since_vacuum")   == -1 ? "" : "    ,sum([n_ins_since_vacuum])                                  as [n_ins_since_vacuum_SUM] \n";
+
+		
 		String sql = getCmDiffColumnsAsSqlComment("CmPgTables")
 			    + "select top " + topRows + " \n"
 			    + "     min([CmSampleTime])                                        as [CmSampleTime_MIN] \n"
@@ -207,7 +263,8 @@ public class PostgresTopTableAccess extends AseAbstract
 			    + "    ,sum([n_tup_hot_upd])                                       as [n_tup_hot_upd_SUM] \n"
 			    + "    ,sum([n_live_tup])                                          as [n_live_tup_SUM] \n"
 			    + "    ,sum([n_dead_tup])                                          as [n_dead_tup_SUM] \n"
-			    + "    ,sum([n_mod_since_analyze])                                 as [n_mod_since_analyze_SUM] \n"
+			    + n_mod_since_analyze_SUM
+			    + n_ins_since_vacuum_SUM
 			    + "    ,max([last_vacuum])                                         as [last_vacuum_MAX] \n"
 			    + "    ,max([last_autovacuum])                                     as [last_autovacuum_MAX] \n"
 			    + "    ,max([last_analyze])                                        as [last_analyze_MAX] \n"

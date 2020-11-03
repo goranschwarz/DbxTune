@@ -37,6 +37,8 @@ public class TableExtraInfo
 	public static final String IndexExtraInfo            = "IndexExtraInfo";
 	public static final String IndexExtraInfoDescription = "IndexExtraInfoDescription";
 
+	public static final String IndexIncludeColumns       = "IndexIncludeColumns";
+
 	private String _name     = "";
 	private String _descName = "";
 

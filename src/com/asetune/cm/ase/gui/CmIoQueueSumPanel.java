@@ -49,12 +49,12 @@ import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.renderer.category.StackedBarRenderer;
 import org.jfree.chart.title.LegendTitle;
 import org.jfree.chart.title.TextTitle;
+import org.jfree.chart.ui.RectangleEdge;
+import org.jfree.chart.ui.RectangleInsets;
+import org.jfree.chart.ui.TextAnchor;
+import org.jfree.chart.util.TableOrder;
 import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
-import org.jfree.ui.RectangleEdge;
-import org.jfree.ui.RectangleInsets;
-import org.jfree.ui.TextAnchor;
-import org.jfree.util.TableOrder;
 
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmIoQueueSum;
@@ -282,7 +282,7 @@ extends TabularCntrPanel
 			StackedBarRenderer renderer = (StackedBarRenderer) plot.getRenderer();
 			renderer.setRenderAsPercentages(true);
 			renderer.setDrawBarOutline(false);
-			renderer.setBaseItemLabelsVisible(true);
+			renderer.setDefaultItemLabelsVisible(true);
 
 		    ItemLabelPosition ilp = new ItemLabelPosition(ItemLabelAnchor.CENTER, TextAnchor.CENTER, TextAnchor.CENTER, 0.0D);
 		    renderer.setPositiveItemLabelPositionFallback(ilp);
@@ -291,9 +291,9 @@ extends TabularCntrPanel
 		    // set label to be: pct, label, value   
 		    // 3=pct, 0=dataLabel, 2=dataValue
 		    StandardCategoryItemLabelGenerator scilg = new StandardCategoryItemLabelGenerator("{3}, {0}, {2}", NumberFormat.getInstance());
-		    renderer.setBaseItemLabelGenerator(scilg);
-		    renderer.setBaseItemLabelsVisible(true);
-		    renderer.setBaseItemLabelFont(defaultLabelFont);
+		    renderer.setDefaultItemLabelGenerator(scilg);
+		    renderer.setDefaultItemLabelsVisible(true);
+		    renderer.setDefaultItemLabelFont(defaultLabelFont);
 
 			return chart;
 		}

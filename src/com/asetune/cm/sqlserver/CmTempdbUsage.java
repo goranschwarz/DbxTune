@@ -30,8 +30,11 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.gui.CmTempdbSpidUsagePanel;
+import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.gui.TrendGraph;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -134,9 +137,80 @@ extends CountersModel
 	//------------------------------------------------------------
 	private static final String  PROP_PREFIX                       = CM_NAME;
 
+	public static final String GRAPH_NAME_TEMPDB_USAGE_SUM_FULL    = "TempdbUsageFull";
+	public static final String GRAPH_NAME_TEMPDB_USAGE_SUM_SMALL   = "TempdbUsageSmall";
+
 	private void addTrendGraphs()
 	{
+		//-----
+		addTrendGraph(GRAPH_NAME_TEMPDB_USAGE_SUM_FULL,
+			"Tempdb Usage by Object Type, in MB, All", // Menu CheckBox text
+			"Tempdb Usage by Object Type, in MB, All ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			new String[] { "Version Store", "Internal Objects", "User Objects", "Mixed Extents", "Allocated Space", "Free Space", "Total Space" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.SPACE,
+			false,  // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_TEMPDB_USAGE_SUM_SMALL,
+			"Tempdb Usage by Object Type, in MB, Subset", // Menu CheckBox text
+			"Tempdb Usage by Object Type, in MB, Subset ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			new String[] { "Version Store", "Internal Objects", "User Objects", "Mixed Extents", "Allocated Space" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.SPACE,
+			false,  // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 	}
+
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_TEMPDB_USAGE_SUM_FULL.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[7];
+
+			arr[0] = this.findColumn("version_store_reserved_page_count")   == -1 ? 0.0d : round1(this.getAbsValueSum("version_store_reserved_page_count")  / 128.0d);
+			arr[1] = this.findColumn("internal_object_reserved_page_count") == -1 ? 0.0d : round1(this.getAbsValueSum("internal_object_reserved_page_count")/ 128.0d);
+			arr[2] = this.findColumn("user_object_reserved_page_count")     == -1 ? 0.0d : round1(this.getAbsValueSum("user_object_reserved_page_count")    / 128.0d);
+			arr[3] = this.findColumn("mixed_extent_page_count")             == -1 ? 0.0d : round1(this.getAbsValueSum("mixed_extent_page_count")            / 128.0d);
+//			arr[?] = this.findColumn("modified_extent_page_count")          == -1 ? 0.0d : round1(this.getAbsValueSum("modified_extent_page_count")         / 128.0d);
+
+			arr[4] = this.findColumn("allocated_extent_page_count")         == -1 ? 0.0d : round1(this.getAbsValueSum("allocated_extent_page_count")        / 128.0d);
+			arr[5] = this.findColumn("unallocated_extent_page_count")       == -1 ? 0.0d : round1(this.getAbsValueSum("unallocated_extent_page_count")      / 128.0d);
+			arr[6] = this.findColumn("total_page_count")                    == -1 ? 0.0d : round1(this.getAbsValueSum("total_page_count")                   / 128.0d);
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_TEMPDB_USAGE_SUM_SMALL.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[5];
+
+			arr[0] = this.findColumn("version_store_reserved_page_count")   == -1 ? 0.0d : round1(this.getAbsValueSum("version_store_reserved_page_count")  / 128.0d);
+			arr[1] = this.findColumn("internal_object_reserved_page_count") == -1 ? 0.0d : round1(this.getAbsValueSum("internal_object_reserved_page_count")/ 128.0d);
+			arr[2] = this.findColumn("user_object_reserved_page_count")     == -1 ? 0.0d : round1(this.getAbsValueSum("user_object_reserved_page_count")    / 128.0d);
+			arr[3] = this.findColumn("mixed_extent_page_count")             == -1 ? 0.0d : round1(this.getAbsValueSum("mixed_extent_page_count")            / 128.0d);
+//			arr[?] = this.findColumn("modified_extent_page_count")          == -1 ? 0.0d : round1(this.getAbsValueSum("modified_extent_page_count")         / 128.0d);
+
+			arr[4] = this.findColumn("allocated_extent_page_count")         == -1 ? 0.0d : round1(this.getAbsValueSum("allocated_extent_page_count")        / 128.0d);
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+	}
+
+
 
 	@Override
 	protected TabularCntrPanel createGui()

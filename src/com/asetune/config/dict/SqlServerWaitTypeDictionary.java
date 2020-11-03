@@ -20,7 +20,9 @@
  ******************************************************************************/
 package com.asetune.config.dict;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 import com.asetune.cm.CmToolTipSupplierDefault;
 import com.asetune.utils.StringUtil;
@@ -521,4 +523,217 @@ public class SqlServerWaitTypeDictionary
 		add("XTPPROC_CACHE_ACCESS",                             "<html><P>Occurs when for accessing all natively compiled stored procedure cache objects.</P><TABLE><TBODY><TR><TD><P><STRONG>Applies to</STRONG>: SQL Server 2014 through SQL Server 2016.</P></TD></TR></TBODY></TABLE></html>");
 		add("XTPPROC_PARTITIONED_STACK_CREATE",                 "<html><P>Occurs when allocating per-NUMA node natively compiled stored procedure cache structures (must be done single threaded) for a given procedure.</P><TABLE><TBODY><TR><TD><P><STRONG>Applies to</STRONG>: SQL Server 2014 through SQL Server 2016.</P></TD></TR></TBODY></TABLE></html>");
 	}
+	
+	
+	public String getWaitClassForWaitType(String waitName)
+	{
+//		WaitTypeRecord rec = _waitTypes.get(waitName);
+//		if (rec != null)
+//			return rec._className;
+
+        //--------------------------------------------------------------------
+        //  https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15		
+        //--------------------------------------------------------------------
+        //		Wait categories mapping table
+        //		"%" is used as a wildcard
+        //--------------------------------------------------------------------
+        
+        // +---------------+-------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+        // | Integer value |   Wait category   | Wait types include in the category                                                                                                                                                                                                                              |
+        // +---------------+-------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+        // |             0 | Unknown           | Unknown                                                                                                                                                                                                                                                         |
+        // |             1 | CPU               | SOS_SCHEDULER_YIELD                                                                                                                                                                                                                                             |
+        // |             2 | Worker Thread     | THREADPOOL                                                                                                                                                                                                                                                      |
+        // |             3 | Lock              | LCK_M_%                                                                                                                                                                                                                                                         |
+        // |             4 | Latch             | LATCH_%                                                                                                                                                                                                                                                         |
+        // |             5 | Buffer Latch      | PAGELATCH_%                                                                                                                                                                                                                                                     |
+        // |             6 | Buffer IO         | PAGEIOLATCH_%                                                                                                                                                                                                                                                   |
+        // |             7 | Compilation*      | RESOURCE_SEMAPHORE_QUERY_COMPILE                                                                                                                                                                                                                                |
+        // |             8 | SQL CLR           | CLR%, SQLCLR%                                                                                                                                                                                                                                                   |
+        // |             9 | Mirroring         | DBMIRROR%                                                                                                                                                                                                                                                       |
+        // |            10 | Transaction       | XACT%, DTC%, TRAN_MARKLATCH_%, MSQL_XACT_%, TRANSACTION_MUTEX                                                                                                                                                                                                   |
+        // |            11 | Idle              | SLEEP_%, LAZYWRITER_SLEEP, SQLTRACE_BUFFER_FLUSH, SQLTRACE_INCREMENTAL_FLUSH_SLEEP, SQLTRACE_WAIT_ENTRIES, FT_IFTS_SCHEDULER_IDLE_WAIT, XE_DISPATCHER_WAIT, REQUEST_FOR_DEADLOCK_SEARCH, LOGMGR_QUEUE, ONDEMAND_TASK_QUEUE, CHECKPOINT_QUEUE, XE_TIMER_EVENT    |
+        // |            12 | Preemptive        | PREEMPTIVE_%                                                                                                                                                                                                                                                    |
+        // |            13 | Service Broker    | BROKER_% (but not BROKER_RECEIVE_WAITFOR)                                                                                                                                                                                                                       |
+        // |            14 | Tran Log IO       | LOGMGR, LOGBUFFER, LOGMGR_RESERVE_APPEND, LOGMGR_FLUSH, LOGMGR_PMM_LOG, CHKPT, WRITELOG                                                                                                                                                                         |
+        // |            15 | Network IO        | ASYNC_NETWORK_IO, NET_WAITFOR_PACKET, PROXY_NETWORK_IO, EXTERNAL_SCRIPT_NETWORK_IOF                                                                                                                                                                             |
+        // |            16 | Parallelism       | CXPACKET, EXCHANGE, HT%, BMP%, BP%                                                                                                                                                                                                                              |
+        // |            17 | Memory            | RESOURCE_SEMAPHORE, CMEMTHREAD, CMEMPARTITIONED, EE_PMOLOCK, MEMORY_ALLOCATION_EXT, RESERVED_MEMORY_ALLOCATION_EXT, MEMORY_GRANT_UPDATE                                                                                                                         |
+        // |            18 | User Wait         | WAITFOR, WAIT_FOR_RESULTS, BROKER_RECEIVE_WAITFOR                                                                                                                                                                                                               |
+        // |            19 | Tracing           | TRACEWRITE, SQLTRACE_LOCK, SQLTRACE_FILE_BUFFER, SQLTRACE_FILE_WRITE_IO_COMPLETION, SQLTRACE_FILE_READ_IO_COMPLETION, SQLTRACE_PENDING_BUFFER_WRITERS, SQLTRACE_SHUTDOWN, QUERY_TRACEOUT, TRACE_EVTNOTIFF                                                       |
+        // |            20 | Full Text Search  | FT_RESTART_CRAWL, FULLTEXT GATHERER, MSSEARCH, FT_METADATA_MUTEX, FT_IFTSHC_MUTEX, FT_IFTSISM_MUTEX, FT_IFTS_RWLOCK, FT_COMPROWSET_RWLOCK, FT_MASTER_MERGE, FT_PROPERTYLIST_CACHE, FT_MASTER_MERGE_COORDINATOR, PWAIT_RESOURCE_SEMAPHORE_FT_PARALLEL_QUERY_SYNC |
+        // |            21 | Other Disk IO     | ASYNC_IO_COMPLETION, IO_COMPLETION, BACKUPIO, WRITE_COMPLETION, IO_QUEUE_LIMIT, IO_RETRY                                                                                                                                                                        |
+        // |            22 | Replication       | SE_REPL_%, REPL_%, HADR_% (but not HADR_THROTTLE_LOG_RATE_GOVERNOR), PWAIT_HADR_%, REPLICA_WRITES, FCB_REPLICA_WRITE, FCB_REPLICA_READ, PWAIT_HADRSIM                                                                                                           |
+        // |            23 | Log Rate Governor | LOG_RATE_GOVERNOR, POOL_LOG_RATE_GOVERNOR, HADR_THROTTLE_LOG_RATE_GOVERNOR, INSTANCE_LOG_RATE_GOVERNOR                                                                                                                                                          |
+        // +---------------+-------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+        // * Compilation wait category is currently not supported.
+
+		if (   waitName.equals    ("SOS_SCHEDULER_YIELD"))                  return WAIT_CLASS_CPU;
+		if (   waitName.equals    ("THREADPOOL"))                           return WAIT_CLASS_Worker_Thread;
+		if (   waitName.startsWith("LCK_M_"))                               return WAIT_CLASS_Lock;
+		if (   waitName.startsWith("LATCH_"))                               return WAIT_CLASS_Latch;
+		if (   waitName.startsWith("PAGELATCH_"))                           return WAIT_CLASS_Buffer_Latch;
+		if (   waitName.startsWith("PAGEIOLATCH_"))                         return WAIT_CLASS_Buffer_IO;
+		if (   waitName.equals    ("RESOURCE_SEMAPHORE_QUERY_COMPILE"))     return WAIT_CLASS_Compilation;
+		if (   waitName.startsWith("CLR") 
+		    || waitName.startsWith("SQLCLR")
+		   )                                                                return WAIT_CLASS_SQL_CLR;
+		if (   waitName.startsWith("DBMIRROR"))                             return WAIT_CLASS_Mirroring;
+		if (   waitName.startsWith("XACT") 
+		    || waitName.startsWith("DTC")
+		    || waitName.startsWith("TRAN_MARKLATCH_")
+		    || waitName.startsWith("MSQL_XACT_")
+		    || waitName.equals    ("TRANSACTION_MUTEX")
+		   )                                                                return WAIT_CLASS_Transaction;
+		if (   waitName.startsWith("SLEEP_") 
+		    || waitName.equals    ("LAZYWRITER_SLEEP")
+		    || waitName.equals    ("SQLTRACE_BUFFER_FLUSH")
+		    || waitName.equals    ("SQLTRACE_INCREMENTAL_FLUSH_SLEEP")
+		    || waitName.equals    ("SQLTRACE_WAIT_ENTRIES")
+		    || waitName.equals    ("FT_IFTS_SCHEDULER_IDLE_WAIT")
+		    || waitName.equals    ("XE_DISPATCHER_WAIT")
+		    || waitName.equals    ("REQUEST_FOR_DEADLOCK_SEARCH")
+		    || waitName.equals    ("LOGMGR_QUEUE")
+		    || waitName.equals    ("ONDEMAND_TASK_QUEUE")
+		    || waitName.equals    ("CHECKPOINT_QUEUE")
+		    || waitName.equals    ("XE_TIMER_EVENT")
+		   )                                                                return WAIT_CLASS_Idle;
+		if (   waitName.startsWith("PREEMPTIVE_"))                          return WAIT_CLASS_Preemptive;
+		if (   waitName.startsWith("BROKER_") 
+		     && !waitName.equals("BROKER_RECEIVE_WAITFOR")
+		   )                                                                return WAIT_CLASS_Service_Broker;
+		if (   waitName.equals    ("LOGMGR")
+		    || waitName.equals    ("LOGBUFFER")
+		    || waitName.equals    ("LOGMGR_RESERVE_APPEND")
+		    || waitName.equals    ("LOGMGR_FLUSH")
+		    || waitName.equals    ("LOGMGR_PMM_LOG")
+		    || waitName.equals    ("CHKPT")
+		    || waitName.equals    ("WRITELOG")
+		   )                                                                return WAIT_CLASS_Tran_Log_IO;
+		if (   waitName.equals    ("ASYNC_NETWORK_IO")
+		    || waitName.equals    ("NET_WAITFOR_PACKET")
+		    || waitName.equals    ("PROXY_NETWORK_IO")
+		    || waitName.equals    ("EXTERNAL_SCRIPT_NETWORK_IOF")
+		   )                                                                return WAIT_CLASS_Network_IO;
+		if (   waitName.equals    ("CXPACKET") 
+		    || waitName.equals    ("EXCHANGE")
+		    || waitName.startsWith("HT")
+		    || waitName.startsWith("BMP")
+		    || waitName.startsWith("BP")
+		   )                                                                return WAIT_CLASS_Parallelism;
+		if (   waitName.equals    ("RESOURCE_SEMAPHORE")
+		    || waitName.equals    ("CMEMTHREAD")
+		    || waitName.equals    ("CMEMPARTITIONED")
+		    || waitName.equals    ("EE_PMOLOCK")
+		    || waitName.equals    ("MEMORY_ALLOCATION_EXT")
+		    || waitName.equals    ("RESERVED_MEMORY_ALLOCATION_EXT")
+		    || waitName.equals    ("MEMORY_GRANT_UPDATE")
+		   )                                                                return WAIT_CLASS_Memory;
+		if (   waitName.equals    ("WAITFOR")
+		    || waitName.equals    ("WAIT_FOR_RESULTS")
+		    || waitName.equals    ("BROKER_RECEIVE_WAITFOR")
+		   )                                                                return WAIT_CLASS_User_Wait;
+		if (   waitName.equals    ("TRACEWRITE")
+		    || waitName.equals    ("SQLTRACE_LOCK")
+		    || waitName.equals    ("SQLTRACE_FILE_BUFFER")
+		    || waitName.equals    ("SQLTRACE_FILE_WRITE_IO_COMPLETION")
+		    || waitName.equals    ("SQLTRACE_FILE_READ_IO_COMPLETION")
+		    || waitName.equals    ("SQLTRACE_PENDING_BUFFER_WRITERS")
+		    || waitName.equals    ("SQLTRACE_SHUTDOWN")
+		    || waitName.equals    ("QUERY_TRACEOUT")
+		    || waitName.equals    ("TRACE_EVTNOTIFF")
+		   )                                                                return WAIT_CLASS_Tracing;
+		if (   waitName.equals    ("FT_RESTART_CRAWL")
+		    || waitName.equals    ("FULLTEXT GATHERER")
+		    || waitName.equals    ("MSSEARCH")
+		    || waitName.equals    ("FT_METADATA_MUTEX")
+		    || waitName.equals    ("FT_IFTSHC_MUTEX")
+		    || waitName.equals    ("FT_IFTSISM_MUTEX")
+		    || waitName.equals    ("FT_IFTS_RWLOCK")
+		    || waitName.equals    ("FT_COMPROWSET_RWLOCK")
+		    || waitName.equals    ("FT_MASTER_MERGE")
+		    || waitName.equals    ("FT_PROPERTYLIST_CACHE")
+		    || waitName.equals    ("FT_MASTER_MERGE_COORDINATOR")
+		    || waitName.equals    ("PWAIT_RESOURCE_SEMAPHORE_FT_PARALLEL_QUERY_SYNC")
+		   )                                                                return WAIT_CLASS_Full_Text_Search;
+		if (   waitName.equals    ("ASYNC_IO_COMPLETION")
+		    || waitName.equals    ("IO_COMPLETION")
+		    || waitName.equals    ("BACKUPIO")
+		    || waitName.equals    ("WRITE_COMPLETION")
+		    || waitName.equals    ("IO_QUEUE_LIMIT")
+		    || waitName.equals    ("IO_RETRY")
+		   )                                                                return WAIT_CLASS_Other_Disk_IO;
+		if (   waitName.startsWith("SE_REPL_")
+		    || waitName.startsWith("REPL_")
+		    ||(waitName.startsWith("HADR_") && !waitName.equals("HADR_THROTTLE_LOG_RATE_GOVERNOR"))
+		    || waitName.startsWith("PWAIT_HADR_")
+		    || waitName.equals    ("REPLICA_WRITES")
+		    || waitName.equals    ("FCB_REPLICA_WRITE")
+		    || waitName.equals    ("FCB_REPLICA_READ")
+		    || waitName.equals    ("PWAIT_HADRSIM")
+		   )                                                                return WAIT_CLASS_Replication;
+		if (   waitName.equals    ("LOG_RATE_GOVERNOR")
+		    || waitName.equals    ("POOL_LOG_RATE_GOVERNOR")
+		    || waitName.equals    ("HADR_THROTTLE_LOG_RATE_GOVERNOR")
+		    || waitName.equals    ("INSTANCE_LOG_RATE_GOVERNOR")
+		   )                                                                return WAIT_CLASS_Log_Rate_Governor;
+
+		return WAIT_CLASS_Unknown;
+	}
+	
+
+	public static String WAIT_CLASS_Unknown           = "Unknown";
+	public static String WAIT_CLASS_CPU               = "CPU";
+	public static String WAIT_CLASS_Worker_Thread     = "Worker Thread";
+	public static String WAIT_CLASS_Lock              = "Lock";
+	public static String WAIT_CLASS_Latch             = "Latch";
+	public static String WAIT_CLASS_Buffer_Latch      = "Buffer Latch";
+	public static String WAIT_CLASS_Buffer_IO         = "Buffer IO";
+	public static String WAIT_CLASS_Compilation       = "Compilation";
+	public static String WAIT_CLASS_SQL_CLR           = "SQL CLR";
+	public static String WAIT_CLASS_Mirroring         = "Mirroring";
+	public static String WAIT_CLASS_Transaction       = "Transaction";
+	public static String WAIT_CLASS_Idle              = "Idle";
+	public static String WAIT_CLASS_Preemptive        = "Preemptive";
+	public static String WAIT_CLASS_Service_Broker    = "Service Broker";
+	public static String WAIT_CLASS_Tran_Log_IO       = "Tran Log IO";
+	public static String WAIT_CLASS_Network_IO        = "Network IO";
+	public static String WAIT_CLASS_Parallelism       = "Parallelism";
+	public static String WAIT_CLASS_Memory            = "Memory";
+	public static String WAIT_CLASS_User_Wait         = "User Wait";
+	public static String WAIT_CLASS_Tracing           = "Tracing";
+	public static String WAIT_CLASS_Full_Text_Search  = "Full Text Search";
+	public static String WAIT_CLASS_Other_Disk_IO     = "Other Disk IO";
+	public static String WAIT_CLASS_Replication       = "Replication";
+	public static String WAIT_CLASS_Log_Rate_Governor = "Log Rate Governor";
+
+	public static String[] WAIT_CLASS_ALL_ARRAY       = new String[] 
+	{
+		 WAIT_CLASS_Unknown          
+		,WAIT_CLASS_CPU              
+		,WAIT_CLASS_Worker_Thread    
+		,WAIT_CLASS_Lock             
+		,WAIT_CLASS_Latch            
+		,WAIT_CLASS_Buffer_Latch     
+		,WAIT_CLASS_Buffer_IO        
+		,WAIT_CLASS_Compilation      
+		,WAIT_CLASS_SQL_CLR          
+		,WAIT_CLASS_Mirroring        
+		,WAIT_CLASS_Transaction      
+		,WAIT_CLASS_Idle             
+		,WAIT_CLASS_Preemptive       
+		,WAIT_CLASS_Service_Broker   
+		,WAIT_CLASS_Tran_Log_IO      
+		,WAIT_CLASS_Network_IO       
+		,WAIT_CLASS_Parallelism      
+		,WAIT_CLASS_Memory           
+		,WAIT_CLASS_User_Wait        
+		,WAIT_CLASS_Tracing          
+		,WAIT_CLASS_Full_Text_Search 
+		,WAIT_CLASS_Other_Disk_IO    
+		,WAIT_CLASS_Replication      
+		,WAIT_CLASS_Log_Rate_Governor
+	};
+
+	public static List<String> WAIT_CLASS_ALL_LIST = Arrays.asList(WAIT_CLASS_ALL_ARRAY);
 }

@@ -76,7 +76,7 @@ public class DailySummaryReportTest
 			return;
 		}
 		
-		IDailySummaryReport report = DailySummaryReportFactory.createDailySummaryReport(srvName);
+		IDailySummaryReport report = DailySummaryReportFactory.createDailySummaryReport();
 		if (report == null)
 		{
 			System.out.println("Daily Summary Report: create did not pass a valid report instance, skipping report creation.");

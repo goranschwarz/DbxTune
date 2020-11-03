@@ -140,8 +140,12 @@ extends HttpServlet
 		{
 			sample = DbxTuneSample.parseJson(payload);
 		}
-		catch(JsonProcessingException ex) { ex.printStackTrace(); }
-		catch(IOException ex) { ex.printStackTrace(); }
+//		catch(JsonProcessingException ex) { ex.printStackTrace(); }
+//		catch(IOException ex) { ex.printStackTrace(); }
+		catch(IOException ex) 
+		{
+			_logger.error("Problem parsing incoming JSON message for DbxTuneSample", ex); 
+		}
 		
 		// FIXME: send some error
 		// sample can be null, if serverName is "unknown"

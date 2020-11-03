@@ -3601,11 +3601,9 @@ public class AseConnectionUtils
 	 * 
 	 * @param conn           The connection to use 
 	 * @param spid           The SPID we want to get locks for
-	 * @param asHtml         Produce a HTML table (if false a ASCII table will be produced)
-	 * @param htmlBeginEnd   (if asHtml=true) should we wrap the HTML with begin/end tags
-	 * @return
+	 * @return List&lt;LockRecord&gt; never null
 	 */
-	public static String getLockSummaryForSpid(DbxConnection conn, int spid, boolean asHtml, boolean htmlBeginEnd)
+	public static List<LockRecord> getLockSummaryForSpid(DbxConnection conn, int spid)
 	{
 		String sql = "select dbname=db_name(dbid), table_name=object_name(id, dbid), lock_type=type, lock_count=count(*) "
 				+ " from master.dbo.syslocks "
@@ -3634,6 +3632,20 @@ public class AseConnectionUtils
 			_logger.warn("Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "'.", ex);
 		}
 		
+		return lockList;
+	}
+
+	/**
+	 * Get a lock summary for a SPID
+	 * 
+	 * @param conn           The connection to use 
+	 * @param lockList       The lockList produced by: getLockSummaryForSpid(DbxConnection conn, int spid)
+	 * @param asHtml         Produce a HTML table (if false a ASCII table will be produced)
+	 * @param htmlBeginEnd   (if asHtml=true) should we wrap the HTML with begin/end tags
+	 * @return
+	 */
+	public static String getLockSummaryForSpid(List<LockRecord> lockList, boolean asHtml, boolean htmlBeginEnd)
+	{
 		if (lockList.isEmpty())
 			return null;
 	
@@ -3647,6 +3659,22 @@ public class AseConnectionUtils
 		}
 		else
 			return DbxConnectionStateInfoAse.getLockListTableAsAsciiTable(lockList);
+	}
+
+	/**
+	 * Get a lock summary for a SPID
+	 * 
+	 * @param conn           The connection to use 
+	 * @param spid           The SPID we want to get locks for
+	 * @param asHtml         Produce a HTML table (if false a ASCII table will be produced)
+	 * @param htmlBeginEnd   (if asHtml=true) should we wrap the HTML with begin/end tags
+	 * @return
+	 */
+	public static String getLockSummaryForSpid(DbxConnection conn, int spid, boolean asHtml, boolean htmlBeginEnd)
+	{
+		List<LockRecord> lockList = getLockSummaryForSpid(conn, spid);
+
+		return getLockSummaryForSpid(lockList, asHtml, htmlBeginEnd);
 	}
 
 	/**

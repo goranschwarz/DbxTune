@@ -21,17 +21,19 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.ase;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
@@ -54,10 +56,9 @@ public class AseTopCmActiveStatements extends AseAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		if (_messages.size() > 0)
 		{
 			sb.append("<b>Messages:</b> \n");
@@ -76,13 +77,31 @@ public class AseTopCmActiveStatements extends AseAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
-			Map<String, String> colNameValueTagMap = new HashMap<>();
-			colNameValueTagMap.put("MonSqlText_max",   "xmp");
-			colNameValueTagMap.put("ShowPlanText_max", "xmp");
+			// Create a default renderer
+			TableStringRenderer tableRender = new ResultSetTableModel.TableStringRenderer()
+			{
+				@Override
+				public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+				{
+					if ("MonSqlText_max".equals(colName))
+					{
+						strVal = strVal.replace("<html><pre>",   "");
+						strVal = strVal.replace("</pre></html>", "");
 
-			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-			sb.append(_shortRstm.toHtmlTableString("sortable", colNameValueTagMap));
+						return "<xmp>" + strVal + "</xmp>";
+					}
+					if ("ShowPlanText_max".equals(colName))
+					{
+						strVal = strVal.replace("<html><pre>",   "");
+						strVal = strVal.replace("</pre></html>", "");
+
+						return "<xmp>" + strVal + "</xmp>";
+					}
+					return strVal;
+				}
+			};
+			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+
 
 			if (_sqTextRstm != null)
 			{
@@ -94,10 +113,6 @@ public class AseTopCmActiveStatements extends AseAbstract
 
 				// Compose special condition for Microsoft Outlook
 				sb.append(msOutlookAlternateText(showHideDiv, "ActiveSqlText", null));
-
-//				sb.append("<br>\n");
-//				sb.append("SQL Text by 'dbname, ProcNameOrSqlText, linenum', Row Count: ").append(_sqTextRstm.getRowCount()).append(" (This is the same SQL Text as the in the above table, but without all counter details).<br>\n");
-//				sb.append(_sqTextRstm.toHtmlTableString("sortable"));
 			}
 
 			if (_showplanRstm != null)
@@ -110,15 +125,102 @@ public class AseTopCmActiveStatements extends AseAbstract
 
 				// Compose special condition for Microsoft Outlook
 				sb.append(msOutlookAlternateText(showHideDiv, "ActiveSqlShowplan", null));
-
-//				sb.append("<br>\n");
-//				sb.append("Showplan (sp_showplan) by 'dbname, ProcNameOrSqlText, linenum', Row Count: ").append(_showplanRstm.getRowCount()).append(" (This is the same SHOWPLAN as the in the above table, but without all counter details).<br>\n");
-//				sb.append(_showplanRstm.toHtmlTableString("sortable"));
 			}
 		}
-
-		return sb.toString();
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		if (_messages.size() > 0)
+//		{
+//			sb.append("<b>Messages:</b> \n");
+//			sb.append("<ul> \n");
+//			for (String msg : _messages)
+//				sb.append("  <li>").append(msg).append("</li> \n");
+//			sb.append("</ul> \n");
+//		}
+//
+//		if (_shortRstm.getRowCount() == 0)
+//		{
+//			sb.append("No rows found <br>\n");
+//		}
+//		else
+//		{
+//			// Get a description of this section, and column names
+//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+//
+////			// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
+////			Map<String, String> colNameValueTagMap = new HashMap<>();
+////			colNameValueTagMap.put("MonSqlText_max",   "xmp");
+////			colNameValueTagMap.put("ShowPlanText_max", "xmp");
+////
+////			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
+////			sb.append(toHtmlTable(_shortRstm, colNameValueTagMap));
+//
+//			// Create a default renderer
+//			TableStringRenderer tableRender = new ResultSetTableModel.TableStringRenderer()
+//			{
+//				@Override
+//				public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+//				{
+//					if ("MonSqlText_max".equals(colName))
+//					{
+//						strVal = strVal.replace("<html><pre>",   "");
+//						strVal = strVal.replace("</pre></html>", "");
+//
+//						return "<xmp>" + strVal + "</xmp>";
+//					}
+//					if ("ShowPlanText_max".equals(colName))
+//					{
+//						strVal = strVal.replace("<html><pre>",   "");
+//						strVal = strVal.replace("</pre></html>", "");
+//
+//						return "<xmp>" + strVal + "</xmp>";
+//					}
+//					return strVal;
+//				}
+//			};
+//			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+//
+//
+//			if (_sqTextRstm != null)
+//			{
+//				String  divId       = "ActiveSqlText";
+//				boolean showAtStart = false;
+//				String  htmlContent = _sqTextRstm.toHtmlTableString("sortable");
+//				
+//				String showHideDiv = createShowHideDiv(divId, showAtStart, "SQL Text by 'dbname, ProcNameOrSqlText, linenum', Row Count: " + _sqTextRstm.getRowCount() + " (This is the same SQL Text as the in the above table, but without all counter details)", htmlContent);
+//
+//				// Compose special condition for Microsoft Outlook
+//				sb.append(msOutlookAlternateText(showHideDiv, "ActiveSqlText", null));
+//
+////				sb.append("<br>\n");
+////				sb.append("SQL Text by 'dbname, ProcNameOrSqlText, linenum', Row Count: ").append(_sqTextRstm.getRowCount()).append(" (This is the same SQL Text as the in the above table, but without all counter details).<br>\n");
+////				sb.append(_sqTextRstm.toHtmlTableString("sortable"));
+//			}
+//
+//			if (_showplanRstm != null)
+//			{
+//				String  divId       = "ActiveSqlShowplan";
+//				boolean showAtStart = false;
+//				String  htmlContent = _showplanRstm.toHtmlTableString("sortable");
+//				
+//				String showHideDiv = createShowHideDiv(divId, showAtStart, "Showplan (sp_showplan) by 'dbname, ProcNameOrSqlText, linenum', Row Count: " + _showplanRstm.getRowCount() + " (This is the same SHOWPLAN as the in the above table, but without all counter details)", htmlContent);
+//
+//				// Compose special condition for Microsoft Outlook
+//				sb.append(msOutlookAlternateText(showHideDiv, "ActiveSqlShowplan", null));
+//
+////				sb.append("<br>\n");
+////				sb.append("Showplan (sp_showplan) by 'dbname, ProcNameOrSqlText, linenum', Row Count: ").append(_showplanRstm.getRowCount()).append(" (This is the same SHOWPLAN as the in the above table, but without all counter details).<br>\n");
+////				sb.append(_showplanRstm.toHtmlTableString("sortable"));
+//			}
+//		}
+//
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -132,6 +234,12 @@ public class AseTopCmActiveStatements extends AseAbstract
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
 	}
 
+
+	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { "CmActiveStatements_diff" };
+	}
 
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
@@ -162,6 +270,14 @@ public class AseTopCmActiveStatements extends AseAbstract
 			_logger.warn("Problems checking for Dictionary Compressed Columns in table 'CmActiveStatements_diff'.");
 		}
 
+		 // just to get Column names
+		String dummySql = "select * from [CmActiveStatements_diff] where 1 = 2";
+		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, true, "metadata");
+
+		// Create Column selects, but only if the column exists in the PCS Table
+		String HostName_max           = !dummyRstm.hasColumnNoCase("HostName"          ) ? "" : "    ,max([HostName])                                                   as [HostName_max] \n";
+
+		
 		String sql = getCmDiffColumnsAsSqlComment("CmActiveStatements")
 			    + "select top " + topRows + " \n"
 			    + "     min([CmSampleTime])                                               as [CmSampleTime_min] \n"
@@ -175,7 +291,7 @@ public class AseTopCmActiveStatements extends AseAbstract
 			    
 			    + "    ,max([Command])                                                    as [Command_max] \n"
 			    + "    ,max([Application])                                                as [Application_max] \n"
-			    + "    ,max([HostName])                                                   as [HostName_max] \n"
+			    + HostName_max
 			    
 			    + "    ,max([ExecTimeInMs])                                               as [ExecTimeInMs_max] \n"
 			    + "    ,max([UsefullExecTime])                                            as [UsefullExecTime_max] \n"
@@ -200,6 +316,7 @@ public class AseTopCmActiveStatements extends AseAbstract
 			    + "where 1=1 \n"
 			    + skipDumpDbAndTran
 			    + skipUpdateStatistics
+				+ getReportPeriodSqlWhere()
 			    + "  and [monSource] = 'ACTIVE' \n"
 			    + "group by [dbname], CASE WHEN [procname] != '' THEN [procname] ELSE [" + col_MonSqlText + "] END, [linenum] \n"
 			    + "having [CpuTime_max] > " + havingAbove + "\n"
@@ -291,7 +408,7 @@ public class AseTopCmActiveStatements extends AseAbstract
 			}
 			catch (SQLException ex)
 			{
-				setProblem(ex);
+				setProblemException(ex);
 	
 				_sqTextRstm = ResultSetTableModel.createEmpty("Top SQL TEXT");
 				_logger.warn("Problems getting Top SQL TEXT: " + ex);
@@ -306,7 +423,7 @@ public class AseTopCmActiveStatements extends AseAbstract
 			}
 			catch (SQLException ex)
 			{
-				setProblem(ex);
+				setProblemException(ex);
 	
 				_showplanRstm = ResultSetTableModel.createEmpty("Top SHOWPLAN TEXT");
 				_logger.warn("Problems getting Top SHOWPLAN TEXT: " + ex);

@@ -21,9 +21,13 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.sqlserver;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
+
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.ReportChartObject;
+import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -31,7 +35,7 @@ import com.asetune.utils.StringUtil;
 public class SqlServerDbSize 
 extends SqlServerAbstract
 {
-//	private static Logger _logger = Logger.getLogger(AseCpuUsageOverview.class);
+//	private static Logger _logger = Logger.getLogger(SqlServerDbSize.class);
 
 	private ResultSetTableModel _shortRstm;
 
@@ -41,15 +45,14 @@ extends SqlServerAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		// Get a description of this section, and column names
 		sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
 		// Last sample Database Size info
-		sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
+		sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
 		sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, new ResultSetTableModel.TableStringRenderer()
 		{
 			@Override
@@ -133,28 +136,142 @@ extends SqlServerAbstract
 				));
 
 		sb.append("<h4>DB Size</h4> \n");
-		sb.append(_CmDatabases_DbSizeMb              .getHtmlContent(null, null));
+		_CmDatabases_DbSizeMb              .writeHtmlContent(sb, null, null);
 
 		sb.append("<h4>DB Data Space Usage</h4> \n");
-		sb.append(_CmDatabases_DbDataSizeUsedPctGraph.getHtmlContent(null, null));
-		sb.append(_CmDatabases_DbDataSizeLeftMbGraph .getHtmlContent(null, null));
-		sb.append(_CmDatabases_DbDataSizeUsedMbGraph .getHtmlContent(null, null));
+		_CmDatabases_DbDataSizeUsedPctGraph.writeHtmlContent(sb, null, null);
+		_CmDatabases_DbDataSizeLeftMbGraph .writeHtmlContent(sb, null, null);
+		_CmDatabases_DbDataSizeUsedMbGraph .writeHtmlContent(sb, null, null);
 		
 		sb.append("<h4>DB Transaction Log Space Usage</h4> \n");
-		sb.append(_CmDatabases_DbLogSizeUsedPctGraph .getHtmlContent(null, null));
-		sb.append(_CmDatabases_DbLogSizeLeftMbGraph  .getHtmlContent(null, null));
-		sb.append(_CmDatabases_DbLogSizeUsedMbGraph  .getHtmlContent(null, null));
+		_CmDatabases_DbLogSizeUsedPctGraph .writeHtmlContent(sb, null, null);
+		_CmDatabases_DbLogSizeLeftMbGraph  .writeHtmlContent(sb, null, null);
+		_CmDatabases_DbLogSizeUsedMbGraph  .writeHtmlContent(sb, null, null);
 
 		sb.append("<h4>Tempdb Space Usage</h4> \n");
-		sb.append(_CmDatabases_TempdbUsedMbGraph     .getHtmlContent(null, null));
+		_CmDatabases_TempdbUsedMbGraph     .writeHtmlContent(sb, null, null);
 		
 		sb.append("<h4>DB OS Disk Space Usage (if we get near full here, we are in trouble)</h4> \n");
-		sb.append(_CmDatabases_OsDiskUsedPct         .getHtmlContent(null, null));
-		sb.append(_CmDatabases_OsDiskFreeMb          .getHtmlContent(null, null));
-		sb.append(_CmDatabases_OsDiskUsedMb          .getHtmlContent(null, null));
-		
-		return sb.toString();
+		_CmDatabases_OsDiskUsedPct         .writeHtmlContent(sb, null, null);
+		_CmDatabases_OsDiskFreeMb          .writeHtmlContent(sb, null, null);
+		_CmDatabases_OsDiskUsedMb          .writeHtmlContent(sb, null, null);
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		// Get a description of this section, and column names
+//		sb.append(getSectionDescriptionHtml(_shortRstm, true));
+//
+//		// Last sample Database Size info
+//		sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
+//		sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, new ResultSetTableModel.TableStringRenderer()
+//		{
+//			@Override
+//			public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+//			{
+//				/**
+//				 * If compatibility_level is below "tempdb", then mark the cell as RED
+//				 */
+//				if ("compatibility_level".equals(colName))
+//				{
+//					int compatLevel_tempdb = -1;
+//					for (int r=0; r<rstm.getRowCount(); r++)
+//					{
+//						String dbname = rstm.getValueAsString(r, "DBName");
+//						if ("tempdb".equals(dbname))
+//						{
+//							compatLevel_tempdb = rstm.getValueAsInteger(r, "compatibility_level", true, -1);
+//							break;
+//						}
+//					}
+//					int compatLevel_curDb = StringUtil.parseInt(strVal, -1);
+//					if (compatLevel_curDb < compatLevel_tempdb)
+//					{
+//						String tooltip = "Column 'compatibility_level' is less than the 'server level'.\nYou may not take advantage of new functionality, which is available at this SQL-Server version... Server compatibility_level is: "+compatLevel_tempdb;
+//						strVal = "<div title=\""+tooltip+"\"> <font color='red'>" + strVal + "</font><div>";
+//					}
+//				}
+//				/**
+//				 * If 'LogSizeInMb' is *high*, then mark the cell as RED
+//				 * Larger than 'DataSizeInMb'
+//				 */
+//				if ("LogSizeInMb".equals(colName))
+//				{
+//					int    DataSizeInMb  = rstm.getValueAsInteger(row, "DataSizeInMb", true, -1);
+//					int    LogSizeInMb   = rstm.getValueAsInteger(row, "LogSizeInMb",  true, -1);
+//					String recoveryModel = rstm.getValueAsString (row, "recovery_model_desc");
+//
+//					// Only check FULL recovery model
+//					if ( ! "FULL".equalsIgnoreCase(recoveryModel) )
+//						return strVal;
+//
+//					// log size needs to bee above some value: 256 MB 
+//					if (LogSizeInMb < 256) 
+//						return strVal;
+//					
+//					// When LOG-SIZE is above DATA-SIZE  (take away 100 MB from the log, if it's "close" to DataSize)
+//					if ((LogSizeInMb - 100) > DataSizeInMb)
+//					{
+//						String tooltip = "Column 'LogSizeInMb' is high. You need to 'backup' or 'truncate' the transaction log every now and then.";
+//						strVal = "<div title=\""+tooltip+"\"> <font color='red'>" + strVal + "</font><div>";
+//					}
+//				}
+//				return strVal;
+//			}
+//		}));
+//		
+//
+//		// link to DbxCentral graphs
+//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Transaction Log and Data Size Usage of each Database during the day<br>\n"
+//		                                                  + "FIXME: Presented as: \n"
+//		                                                  + "<ul> \n"
+//		                                                  + "  <li>FIXME: <b> Space Used in Percent   </b> - When this gets <b>high</b> we could be in trouble. But the below 'Space Left to use' is a better indicator.</li> \n"
+//		                                                  + "  <li>FIXME: <b> Space Left to use in MB </b> - When This gets <b>low</b> we could be in trouble. No space = No more modifications. </li> \n"
+//		                                                  + "  <li>FIXME: <b> Space used in MB        </b> - Just an indicator of how much MB we are actually using for the different databases.</li> \n"
+//		                                                  + "</ul> \n",
+//				"CmDatabases_DbSizeMb",
+//
+//				"CmDatabases_DbDataSizeUsedPctGraph",
+//				"CmDatabases_DbDataSizeLeftMbGraph",
+//				"CmDatabases_DbDataSizeUsedMbGraph",
+//
+//				"CmDatabases_DbLogSizeUsedPctGraph",
+//				"CmDatabases_DbLogSizeLeftMbGraph",
+//				"CmDatabases_DbLogSizeUsedMbGraph",
+//
+//				"CmDatabases_TempdbUsedMbGraph",
+//		
+//				"CmDatabases_OsDiskUsedPct",
+//				"CmDatabases_OsDiskFreeMb",
+//				"CmDatabases_OsDiskUsedMb"
+//				));
+//
+//		sb.append("<h4>DB Size</h4> \n");
+//		sb.append(_CmDatabases_DbSizeMb              .getHtmlContent(null, null));
+//
+//		sb.append("<h4>DB Data Space Usage</h4> \n");
+//		sb.append(_CmDatabases_DbDataSizeUsedPctGraph.getHtmlContent(null, null));
+//		sb.append(_CmDatabases_DbDataSizeLeftMbGraph .getHtmlContent(null, null));
+//		sb.append(_CmDatabases_DbDataSizeUsedMbGraph .getHtmlContent(null, null));
+//		
+//		sb.append("<h4>DB Transaction Log Space Usage</h4> \n");
+//		sb.append(_CmDatabases_DbLogSizeUsedPctGraph .getHtmlContent(null, null));
+//		sb.append(_CmDatabases_DbLogSizeLeftMbGraph  .getHtmlContent(null, null));
+//		sb.append(_CmDatabases_DbLogSizeUsedMbGraph  .getHtmlContent(null, null));
+//
+//		sb.append("<h4>Tempdb Space Usage</h4> \n");
+//		sb.append(_CmDatabases_TempdbUsedMbGraph     .getHtmlContent(null, null));
+//		
+//		sb.append("<h4>DB OS Disk Space Usage (if we get near full here, we are in trouble)</h4> \n");
+//		sb.append(_CmDatabases_OsDiskUsedPct         .getHtmlContent(null, null));
+//		sb.append(_CmDatabases_OsDiskFreeMb          .getHtmlContent(null, null));
+//		sb.append(_CmDatabases_OsDiskUsedMb          .getHtmlContent(null, null));
+//		
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -168,6 +285,12 @@ extends SqlServerAbstract
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
 	}
 
+
+	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { "CmDatabases_abs" };
+	}
 
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
@@ -221,38 +344,38 @@ extends SqlServerAbstract
 		// Describe the table
 		setSectionDescription(_shortRstm);
 		
-		_CmDatabases_DbSizeMb               = createChart(conn, "CmDatabases", "DbSizeMb"              , -1,  null, "Database Size in MB (Server->Databases)");
+		_CmDatabases_DbSizeMb               = createTsLineChart(conn, "CmDatabases", "DbSizeMb"              , -1,  null, "Database Size in MB (Server->Databases)");
 
-		_CmDatabases_DbDataSizeUsedPctGraph = createChart(conn, "CmDatabases", "DbDataSizeUsedPctGraph", 100, null, "DB Data Space used in Percent (Server->Databases)");
-		_CmDatabases_DbDataSizeLeftMbGraph  = createChart(conn, "CmDatabases", "DbDataSizeLeftMbGraph" , -1,  null, "DB Data Space left to use in MB (Server->Databases)");
-		_CmDatabases_DbDataSizeUsedMbGraph  = createChart(conn, "CmDatabases", "DbDataSizeUsedMbGraph" , -1,  null, "DB Data Space used in MB (Server->Databases)");
+		_CmDatabases_DbDataSizeUsedPctGraph = createTsLineChart(conn, "CmDatabases", "DbDataSizeUsedPctGraph", 100, null, "DB Data Space used in Percent (Server->Databases)");
+		_CmDatabases_DbDataSizeLeftMbGraph  = createTsLineChart(conn, "CmDatabases", "DbDataSizeLeftMbGraph" , -1,  null, "DB Data Space left to use in MB (Server->Databases)");
+		_CmDatabases_DbDataSizeUsedMbGraph  = createTsLineChart(conn, "CmDatabases", "DbDataSizeUsedMbGraph" , -1,  null, "DB Data Space used in MB (Server->Databases)");
 
-		_CmDatabases_DbLogSizeUsedPctGraph  = createChart(conn, "CmDatabases", "DbLogSizeUsedPctGraph" , 100, null, "DB Transaction Log Space used in Percent (Server->Databases)");
-		_CmDatabases_DbLogSizeLeftMbGraph   = createChart(conn, "CmDatabases", "DbLogSizeLeftMbGraph"  , -1,  null, "DB Transaction Log Space left to use in MB (Server->Databases)");
-		_CmDatabases_DbLogSizeUsedMbGraph   = createChart(conn, "CmDatabases", "DbLogSizeUsedMbGraph"  , -1,  null, "DB Transaction Log Space used in MB (Server->Databases)");
+		_CmDatabases_DbLogSizeUsedPctGraph  = createTsLineChart(conn, "CmDatabases", "DbLogSizeUsedPctGraph" , 100, null, "DB Transaction Log Space used in Percent (Server->Databases)");
+		_CmDatabases_DbLogSizeLeftMbGraph   = createTsLineChart(conn, "CmDatabases", "DbLogSizeLeftMbGraph"  , -1,  null, "DB Transaction Log Space left to use in MB (Server->Databases)");
+		_CmDatabases_DbLogSizeUsedMbGraph   = createTsLineChart(conn, "CmDatabases", "DbLogSizeUsedMbGraph"  , -1,  null, "DB Transaction Log Space used in MB (Server->Databases)");
 
-		_CmDatabases_TempdbUsedMbGraph      = createChart(conn, "CmDatabases", "TempdbUsedMbGraph"     , -1,  null, "TempDB Space used in MB (Server->Databases)");
+		_CmDatabases_TempdbUsedMbGraph      = createTsLineChart(conn, "CmDatabases", "TempdbUsedMbGraph"     , -1,  null, "TempDB Space used in MB (Server->Databases)");
 
-		_CmDatabases_OsDiskUsedPct          = createChart(conn, "CmDatabases", "OsDiskUsedPct"         , 100, null, "DB OS Disk Space used in Percent (Server->Databases)");
-		_CmDatabases_OsDiskFreeMb           = createChart(conn, "CmDatabases", "OsDiskFreeMb"          , -1,  null, "DB OS Disk Space free/left in MB (Server->Databases)");
-		_CmDatabases_OsDiskUsedMb           = createChart(conn, "CmDatabases", "OsDiskUsedMb"          , -1,  null, "DB OS Disk Space used in MB (Server->Databases)");
+		_CmDatabases_OsDiskUsedPct          = createTsLineChart(conn, "CmDatabases", "OsDiskUsedPct"         , 100, null, "DB OS Disk Space used in Percent (Server->Databases)");
+		_CmDatabases_OsDiskFreeMb           = createTsLineChart(conn, "CmDatabases", "OsDiskFreeMb"          , -1,  null, "DB OS Disk Space free/left in MB (Server->Databases)");
+		_CmDatabases_OsDiskUsedMb           = createTsLineChart(conn, "CmDatabases", "OsDiskUsedMb"          , -1,  null, "DB OS Disk Space used in MB (Server->Databases)");
 	}
 
-	private ReportChartObject _CmDatabases_DbSizeMb;
+	private IReportChart _CmDatabases_DbSizeMb;
 
-	private ReportChartObject _CmDatabases_DbDataSizeUsedPctGraph;
-	private ReportChartObject _CmDatabases_DbDataSizeLeftMbGraph;
-	private ReportChartObject _CmDatabases_DbDataSizeUsedMbGraph;
+	private IReportChart _CmDatabases_DbDataSizeUsedPctGraph;
+	private IReportChart _CmDatabases_DbDataSizeLeftMbGraph;
+	private IReportChart _CmDatabases_DbDataSizeUsedMbGraph;
 
-	private ReportChartObject _CmDatabases_DbLogSizeUsedPctGraph;
-	private ReportChartObject _CmDatabases_DbLogSizeLeftMbGraph;
-	private ReportChartObject _CmDatabases_DbLogSizeUsedMbGraph;
+	private IReportChart _CmDatabases_DbLogSizeUsedPctGraph;
+	private IReportChart _CmDatabases_DbLogSizeLeftMbGraph;
+	private IReportChart _CmDatabases_DbLogSizeUsedMbGraph;
 	
-	private ReportChartObject _CmDatabases_TempdbUsedMbGraph;
+	private IReportChart _CmDatabases_TempdbUsedMbGraph;
 
-	private ReportChartObject _CmDatabases_OsDiskUsedPct;
-	private ReportChartObject _CmDatabases_OsDiskFreeMb;
-	private ReportChartObject _CmDatabases_OsDiskUsedMb;
+	private IReportChart _CmDatabases_OsDiskUsedPct;
+	private IReportChart _CmDatabases_OsDiskFreeMb;
+	private IReportChart _CmDatabases_OsDiskUsedMb;
 
 
 	/**

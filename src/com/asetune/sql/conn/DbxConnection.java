@@ -91,7 +91,7 @@ import com.asetune.utils.VersionShort;
 import com.sybase.jdbcx.SybConnection;
 
 public abstract class DbxConnection
-implements Connection
+implements Connection, AutoCloseable
 {
 	private static Logger _logger = Logger.getLogger(DbxConnection.class);
 

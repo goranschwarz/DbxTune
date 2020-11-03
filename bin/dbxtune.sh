@@ -158,6 +158,14 @@ case "${toolset}" in
 		javaSplashScreen=""
 		;;
 
+	dsr)
+		shortAppName="dsr"
+		longAppName="DailySummaryReport"
+		javaMainClass="com.asetune.pcs.report.DailySummaryReport"
+		javaMainParams=""
+		javaSplashScreen=""
+		;;
+
 	h2fix)
 		shortAppName="h2fix"
 		longAppName="H2CentralDbCopy"
@@ -325,12 +333,12 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/autocomplete.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/rstaui.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/language_support.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jcommon-1.0.21.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jfreechart-1.0.17.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jfreechart-1.5.0.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/antlr-4.0-complete.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/juniversalchardet-2.3.0.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/DDLGen.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/simplemagic-1.14.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jsqlparser-1.1.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jsqlparser-3.2.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/bcprov-jdk15on-157.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-compiler-3.0.7.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/janino-3.0.7.jar

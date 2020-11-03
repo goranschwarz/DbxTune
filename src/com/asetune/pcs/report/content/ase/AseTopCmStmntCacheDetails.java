@@ -21,10 +21,17 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.ase;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Set;
+
+import org.apache.log4j.Logger;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
@@ -33,7 +40,7 @@ import com.asetune.utils.Configuration;
 
 public class AseTopCmStmntCacheDetails extends AseAbstract
 {
-//	private static Logger _logger = Logger.getLogger(AseTopCmStmntCacheDetails.class);
+	private static Logger _logger = Logger.getLogger(AseTopCmStmntCacheDetails.class);
 
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _ssqlRstm;
@@ -45,10 +52,9 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		if (_shortRstm.getRowCount() == 0)
 		{
 			sb.append("No rows found <br>\n");
@@ -58,19 +64,46 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-			sb.append(_shortRstm.toHtmlTableString("sortable"));
+			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+			sb.append(toHtmlTable(_shortRstm));
 
 			if (_ssqlRstm != null)
 			{
-				sb.append("Statement Cache Entries Count: ").append(_ssqlRstm.getRowCount()).append("<br>\n");
-//				sb.append(_ssqlRstm.toHtmlTablesVerticalString("sortable"));
-				sb.append(_ssqlRstm.toHtmlTableString("sortable"));
+				sb.append("Statement Cache Entries Count: " + _ssqlRstm.getRowCount() + "<br>\n");
+				sb.append(toHtmlTable(_ssqlRstm));
 			}
 		}
-
-		return sb.toString();
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		if (_shortRstm.getRowCount() == 0)
+//		{
+//			sb.append("No rows found <br>\n");
+//		}
+//		else
+//		{
+//			// Get a description of this section, and column names
+//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+//
+//			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
+////			sb.append(_shortRstm.toHtmlTableString("sortable"));
+//			sb.append(toHtmlTable(_shortRstm));
+//
+//			if (_ssqlRstm != null)
+//			{
+//				sb.append("Statement Cache Entries Count: ").append(_ssqlRstm.getRowCount()).append("<br>\n");
+////				sb.append(_ssqlRstm.toHtmlTablesVerticalString("sortable"));
+////				sb.append(_ssqlRstm.toHtmlTableString("sortable"));
+//				sb.append(toHtmlTable(_ssqlRstm));
+//			}
+//		}
+//
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -111,6 +144,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 		rstm.setColumnDescription("samples_count"            , "Number of entries for this 'ObjectName' in the report period");
 		rstm.setColumnDescription("SessionSampleTime_min"    , "First entry was sampled at this time");
 		rstm.setColumnDescription("SessionSampleTime_max"    , "Last entry was sampled at this time");
+		rstm.setColumnDescription("newDiffRow_sum"        , "Number of Diff Records that was seen for the first time.");
 		rstm.setColumnDescription("CmSampleMs_sum"           , "Number of milliseconds this object has been available for sampling");
 
 		rstm.setColumnDescription("UseCountDiff_sum"         , "How many times this object was Uased");
@@ -147,10 +181,60 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 //}
 
 	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] {"CmStmntCacheDetails_diff"};
+	}
+
+	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
 
+		// in some versions (ASE 16.0 SP2 I have observed this in) seems to (in some cases) keep the old counter values even if we compile a new PlanID
+		// So DO NOT TRUST NEWLY created PlanID's 
+		// Although this can create statistical problems:
+		//   - if a procedure is *constantly* recompiled (due to "whatever" reason), those procedures will be discarded from below report
+		boolean skipNewDiffRateRows    = localConf.getBooleanProperty(this.getClass().getSimpleName()+".skipNewDiffRateRows", false);
+		boolean hasSkipNewDiffRateRows = localConf.hasProperty(this.getClass().getSimpleName()+".skipNewDiffRateRows");
+
+		// try to figure out if we have *new* diff values that exceeds (using column 'ExecutionCount')
+		if ( ! hasSkipNewDiffRateRows )
+		{
+			int useCountThreshold = 10000;
+			String sql = ""
+				    + "select count(*) \n"
+				    + "from [CmStmntCacheDetails_diff] \n"
+				    + "where [CmNewDiffRateRow] = 1 \n"
+				    + "  and [UseCount] > " + useCountThreshold + " \n"
+					+ getReportPeriodSqlWhere()
+				    + "";
+			sql = conn.quotifySqlString(sql);
+			
+			int foundCount = 0;
+			try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while (rs.next())
+					foundCount = rs.getInt(1);
+			}
+			catch(SQLException ex)
+			{
+				_logger.warn("Problems trying to identify if we have any newDiffRate records that seems 'strange'... executed SQL='" + sql + "'.");
+			}
+			
+			if (foundCount > 0)
+			{
+				skipNewDiffRateRows = true;
+				_logger.warn("Found " + foundCount + " records in 'CmStmntCacheDetails_diff' which had 'CmNewDiffRateRow=1' and 'UseCount>" + useCountThreshold + "'. This means I will EXCLUDE records with 'CmNewDiffRateRow=1'.");
+				
+				addWarningMessage("Found " + foundCount + " records in 'CmStmntCacheDetails_diff' which had 'CmNewDiffRateRow=1' and 'UseCount>" + useCountThreshold + "'. This means I will EXCLUDE records with 'CmNewDiffRateRow=1'.");
+			}
+		}
+		if (skipNewDiffRateRows)
+			addWarningMessage("Records with the flag 'CmNewDiffRateRow=1' will NOT be part of the Report. This means that the first time a StatementCache is executed (or recompiled and executed), the first execution counter will NOT be part of the statistics.");
+		
+
+		
 		String dummySql = "select * from [CmStmntCacheDetails_diff] where 1 = 2"; // just to get Column names
 		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, true, "metadata");
 		
@@ -186,10 +270,10 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 		String col_SortCountDiff_sum        = !dummyRstm.hasColumnNoCase("SortCountDiff"         ) ? "" : " ,max([SortCountDiff])          as [SortCountDiff_sum] \n"; 
 		String col_TotalSortTimeDiff_sum    = !dummyRstm.hasColumnNoCase("TotalSortTimeDiff"     ) ? "" : " ,max([TotalSortTimeDiff])      as [TotalSortTimeDiff_sum] \n"; 
 
-//		String whereClause = "where [UseCount] > 100 or [AvgLIO] > 100000\n"; // this is only used if we havn't got "TotalLioDiff" or "TotalCpuTimeDiff"
-		String whereClause = "";
+//		String extraWhereClause = "where [UseCount] > 100 or [AvgLIO] > 100000\n"; // this is only used if we havn't got "TotalLioDiff" or "TotalCpuTimeDiff"
+		String extraWhereClause = "";
 		String orderByCol = "[samples_count]";
-		if (dummyRstm.hasColumnNoCase("UseCountDiff"))     { orderByCol = "[UseCountDiff_sum]";     whereClause = "where [UseCountDiff] > 0 \n"; }
+		if (dummyRstm.hasColumnNoCase("UseCountDiff"))     { orderByCol = "[UseCountDiff_sum]";     extraWhereClause = "  and [UseCountDiff] > 0 \n"; }
 		if (dummyRstm.hasColumnNoCase("AvgCpuTime"))       { orderByCol = "[AvgCpuTime_est_max]";   }
 		if (dummyRstm.hasColumnNoCase("TotalLioDiff"))     { orderByCol = "[TotalLioDiff_sum]";     }
 		if (dummyRstm.hasColumnNoCase("TotalCpuTimeDiff")) { orderByCol = "[TotalCpuTimeDiff_sum]"; }
@@ -204,6 +288,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 			    + " ,min([SessionSampleTime])    as [SessionSampleTime_min] \n"
 			    + " ,max([SessionSampleTime])    as [SessionSampleTime_max] \n"
 			    + " ,cast('' as varchar(30))     as [Duration] \n"
+			    + " ,sum([CmNewDiffRateRow])     as [newDiffRow_sum] \n"
 			    + " ,sum([CmSampleMs])           as [CmSampleMs_sum] \n"
 			    + " \n"
 			    + col_UseCount_max
@@ -233,7 +318,9 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 			    + col_AvgQualifyingWriteRows
 			    + " \n"
 			    + "from [CmStmntCacheDetails_diff] \n"
-			    + whereClause
+			    + "where 1 = 1 \n"
+				+ getReportPeriodSqlWhere()
+			    + extraWhereClause
 //maybe we can use SqlHash here instead... note: we need to change at the top of the select statement as well [ObjectName] ->> [Hashkey]
 //			    + "group by [DBName], [ObjectName] \n"
 			    + "group by [DBName], [Hashkey] \n"
@@ -319,7 +406,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 				}
 				catch (SQLException ex)
 				{
-					setProblem(ex);
+					setProblemException(ex);
 				}
 			}
 		}

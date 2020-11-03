@@ -62,11 +62,12 @@ extends CountersModel
 			"<br><br>" +
 			"Table Background colors:" +
 			"<ul>" +
-			"    <li>YELLOW - SPID is a System Processes</li>" +
-			"    <li>GREEN  - SPID is Executing(running) or are in the Run Queue Awaiting a time slot to Execute (runnable)</li>" +
-			"    <li>PINK   - SPID is Blocked by some other SPID that holds a Lock on a database object Table, Page or Row. This is the Lock Victim.</li>" +
-			"    <li>ORANGE - SPID has an open transaction.</li>" +
-			"    <li>RED    - SPID is Blocking other SPID's from running, this SPID is Responsible or the Root Cause of a Blocking Lock.</li>" +
+			"    <li>YELLOW      - SPID is a System Processes</li>" +
+			"    <li>GREEN       - SPID is Executing(running) or are in the Run Queue Awaiting a time slot to Execute (runnable)</li>" +
+			"    <li>LIGHT_GREEN - SPID is Suspended waiting for something, soon it will probably go into running or runnable or finish.</li>" +
+			"    <li>PINK        - SPID is Blocked by some other SPID that holds a Lock on a database object Table, Page or Row. This is the Lock Victim.</li>" +
+			"    <li>ORANGE      - SPID has an open transaction.</li>" +
+			"    <li>RED         - SPID is Blocking other SPID's from running, this SPID is Responsible or the Root Cause of a Blocking Lock.</li>" +
 			"</ul>" +
 		"</html>";
 
@@ -218,6 +219,7 @@ extends CountersModel
 			"    sp.cmd, \n" +
 			"    sp.status, \n" +
 			"    sp.blocked, \n" +
+			"    BlockingOtherSpids = convert(varchar(512),''), \n" +
 			"    sp.open_tran, \n" +
 			"    sp.waittype, \n" +
 			"    sp.waittime, \n" +
@@ -258,60 +260,109 @@ extends CountersModel
 	}
 
 
-	/** 
-	 * Maintain the _blockingSpids Map, which is accessed from the Panel
-	 */
+//	/** 
+//	 * Maintain the _blockingSpids Map, which is accessed from the Panel
+//	 */
+//	@Override
+//	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
+//	{
+//		// Where are various columns located in the Vector 
+//		int pos_BlockingSPID = -1;
+//		CounterSample counters = diffData;
+//	
+//		if (counters == null)
+//			return;
+//
+//		// Reset the blockingSpids Map
+//		_blockingSpids.clear();
+//		
+//		// put the pointer to the Map in the Client Property of the JTable, which should be visible for various places
+//		if (getTabPanel() != null)
+//			getTabPanel().putTableClientProperty("blockingSpidMap", _blockingSpids);
+//
+//		// Find column Id's
+//		List<String> colNames = counters.getColNames();
+//		if (colNames==null) 
+//			return;
+//
+//		for (int colId=0; colId < colNames.size(); colId++) 
+//		{
+//			String colName = colNames.get(colId);
+//			if (colName.equals("blocked"))  pos_BlockingSPID  = colId;
+//
+//			// Noo need to continue, we got all our columns
+//			if (pos_BlockingSPID >= 0)
+//				break;
+//		}
+//
+//		if (pos_BlockingSPID < 0)
+//		{
+//			_logger.debug("Can't find the position for columns ('blocked'="+pos_BlockingSPID+")");
+//			return;
+//		}
+//		
+//		// Loop on all diffData rows
+//		for (int rowId=0; rowId < counters.getRowCount(); rowId++) 
+//		{
+//			Object o_blockingSpid = counters.getValueAt(rowId, pos_BlockingSPID);
+//
+//			// Add any blocking SPIDs to the MAP
+//			// TODO: for offline recordings it's better to do it in the same way as for 'CmActiveStatements'
+//			if (o_blockingSpid instanceof Number)
+//			{
+//				if (o_blockingSpid != null && ((Number)o_blockingSpid).intValue() != 0 )
+//					_blockingSpids.put((Number)o_blockingSpid, null);
+//			}
+//		}
+//	}
 	@Override
-	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
+	public void localCalculation(CounterSample newSample)
 	{
-		// Where are various columns located in the Vector 
-		int pos_BlockingSPID = -1;
-		CounterSample counters = diffData;
-	
-		if (counters == null)
-			return;
-
-		// Reset the blockingSpids Map
-		_blockingSpids.clear();
-		
-		// put the pointer to the Map in the Client Property of the JTable, which should be visible for various places
-		if (getTabPanel() != null)
-			getTabPanel().putTableClientProperty("blockingSpidMap", _blockingSpids);
-
-		// Find column Id's
-		List<String> colNames = counters.getColNames();
-		if (colNames==null) 
-			return;
-
-		for (int colId=0; colId < colNames.size(); colId++) 
-		{
-			String colName = colNames.get(colId);
-			if (colName.equals("blocked"))  pos_BlockingSPID  = colId;
-
-			// Noo need to continue, we got all our columns
-			if (pos_BlockingSPID >= 0)
-				break;
-		}
-
-		if (pos_BlockingSPID < 0)
-		{
-			_logger.debug("Can't find the position for columns ('blocked'="+pos_BlockingSPID+")");
-			return;
-		}
+		int pos_SPID               = newSample.findColumn("spid");
+		int pos_BlockingSPID       = newSample.findColumn("blocked");
+		int pos_BlockingOtherSpids = newSample.findColumn("BlockingOtherSpids");
 		
 		// Loop on all diffData rows
-		for (int rowId=0; rowId < counters.getRowCount(); rowId++) 
+		for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
 		{
-			Object o_blockingSpid = counters.getValueAt(rowId, pos_BlockingSPID);
-
-			// Add any blocking SPIDs to the MAP
-			// TODO: for offline recordings it's better to do it in the same way as for 'CmActiveStatements'
-			if (o_blockingSpid instanceof Number)
+			Object o_SPID        = newSample.getValueAt(rowId, pos_SPID);
+			
+			if (o_SPID instanceof Number)
 			{
-				if (o_blockingSpid != null && ((Number)o_blockingSpid).intValue() != 0 )
-					_blockingSpids.put((Number)o_blockingSpid, null);
+				int spid = ((Number)o_SPID).intValue();
+
+				// Get LIST of SPID's that I'm blocking
+				String blockingList = getBlockingListStrForSpid(newSample, spid, pos_BlockingSPID, pos_SPID);
+
+				newSample.setValueAt(blockingList, rowId, pos_BlockingOtherSpids);
+			}
+
+		}
+	}
+
+	private String getBlockingListStrForSpid(CounterSample counters, int spid, int pos_BlockingSPID, int pos_SPID)
+	{
+		StringBuilder sb = new StringBuilder();
+
+		// Loop on all diffData rows
+		int rows = counters.getRowCount();
+		for (int rowId=0; rowId < rows; rowId++)
+		{
+			Object o_BlockingSPID = counters.getValueAt(rowId, pos_BlockingSPID);
+			if (o_BlockingSPID instanceof Number)
+			{
+				Number BlockingSPID = (Number)o_BlockingSPID;
+				if (BlockingSPID.intValue() == spid)
+				{
+					Object o_SPID = counters.getValueAt(rowId, pos_SPID);
+					if (sb.length() == 0)
+						sb.append(o_SPID);
+					else
+						sb.append(", ").append(o_SPID);
+				}
 			}
 		}
+		return sb.toString();
 	}
 
 	

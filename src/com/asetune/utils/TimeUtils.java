@@ -262,7 +262,7 @@ public class TimeUtils
 		return format;
 	}
 
-	/** seconds as a string in format %?DD[d ]HH:MM:SS */
+	/** seconds as a string in format %?DD[d ]%HH:%MM:%SS */
 	public static String secToTimeStrLong(long execTimeInSec)
 	{
 		return msToTimeStr("%?DD[d ]%HH:%MM:%SS", execTimeInSec * 1000);
@@ -274,7 +274,13 @@ public class TimeUtils
 	}
 
 
-	/** seconds as a string in format %?DD[d ]%?HH[:]%MM:%SS.%ms */
+	/** ms as a string in format %?DD[d ]%HH:%MM:%SS.%ms */
+	public static String msToTimeStrLong(long execTimeInMs)
+	{
+		return msToTimeStr("%?DD[d ]%HH:%MM:%SS.%ms", execTimeInMs);
+	}
+
+	/** ms as a string in format %?DD[d ]%?HH[:]%MM:%SS.%ms */
 	public static String msToTimeStrShort(long execTimeInMs)
 	{
 		return msToTimeStr("%?DD[d ]%?HH[:]%MM:%SS.%ms", execTimeInMs);
@@ -391,6 +397,24 @@ public class TimeUtils
 			res = String.format("%02d:%02d:%02d.%03d", hours, minutes, seconds, millis);
 		else
 			res = String.format("%dd %02d:%02d:%02d.%03d", days, hours, minutes, seconds, millis);
+
+		return res;
+	}
+
+	public static String msToTimeStrDHMS(long duration)
+	{
+		String res = ""; // java.util.concurrent.TimeUnit;
+		
+		long days    = TimeUnit.MILLISECONDS.toDays(duration);
+		long hours   = TimeUnit.MILLISECONDS.toHours(duration)   - TimeUnit.DAYS   .toHours(  TimeUnit.MILLISECONDS.toDays(duration));
+		long minutes = TimeUnit.MILLISECONDS.toMinutes(duration) - TimeUnit.HOURS  .toMinutes(TimeUnit.MILLISECONDS.toHours(duration));
+		long seconds = TimeUnit.MILLISECONDS.toSeconds(duration) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(duration));
+//		long millis  = TimeUnit.MILLISECONDS.toMillis(duration)  - TimeUnit.SECONDS.toMillis( TimeUnit.MILLISECONDS.toSeconds(duration));
+
+		if ( days == 0 )
+			res = String.format("%02d:%02d:%02d", hours, minutes, seconds);
+		else
+			res = String.format("%dd %02d:%02d:%02d", days, hours, minutes, seconds);
 
 		return res;
 	}
@@ -666,13 +690,14 @@ public class TimeUtils
 	}
 
 
+	//--------------------------------------------------------------------------------
 	/**
 	 * in format 'yyyy-MM-dd_HHmmss'
 	 * 
 	 * @param time  time in ms like System.currentTimeMillis()
 	 * @return string 'yyyy-MM-dd_HHmmss'
 	 */
-	public static String getCurrentTimeForFileNameHMS(long ts)
+	public static String getCurrentTimeForFileNameYmdHms(long ts)
 	{
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HHmmss");
 		return sdf.format( new Date(ts) );
@@ -683,18 +708,22 @@ public class TimeUtils
 	 * 
 	 * @return string 'yyyy-MM-dd_HHmmss'
 	 */
-	public static String getCurrentTimeForFileNameHMS()
+	public static String getCurrentTimeForFileNameYmdHms()
 	{
-		return getCurrentTimeForFileNameHMS( System.currentTimeMillis() );
+		return getCurrentTimeForFileNameYmdHms( System.currentTimeMillis() );
 	}
 	
+
+	
+	
+	//--------------------------------------------------------------------------------
 	/**
 	 * in format 'yyyy-MM-dd_HHmm'
 	 * 
 	 * @param time  time in ms like System.currentTimeMillis()
 	 * @return string 'yyyy-MM-dd_HHmm'
 	 */
-	public static String getCurrentTimeForFileNameHM(long ts)
+	public static String getCurrentTimeForFileNameYmdHm(long ts)
 	{
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HHmm");
 		return sdf.format( new Date(ts) );
@@ -705,13 +734,91 @@ public class TimeUtils
 	 * 
 	 * @return string 'yyyy-MM-dd_HHmm'
 	 */
-	public static String getCurrentTimeForFileNameHM()
+	public static String getCurrentTimeForFileNameYmdHm()
 	{
-		return getCurrentTimeForFileNameHM( System.currentTimeMillis() );
+		return getCurrentTimeForFileNameYmdHm( System.currentTimeMillis() );
 	}
 
 	
 	
+	//--------------------------------------------------------------------------------
+	/**
+	 * in format 'yyyy-MM-dd'
+	 * 
+	 * @param time  time in ms like System.currentTimeMillis()
+	 * @return string 'yyyy-MM-dd'
+	 */
+	public static String getCurrentTimeForFileNameYmd(long ts)
+	{
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		return sdf.format( new Date(ts) );
+	}
+
+	/**
+	 * in format 'yyyy-MM-dd'
+	 * 
+	 * @return string 'yyyy-MM-dd'
+	 */
+	public static String getCurrentTimeForFileNameYmd()
+	{
+		return getCurrentTimeForFileNameYmdHms( System.currentTimeMillis() );
+	}
+
+	
+	
+	//--------------------------------------------------------------------------------
+	/**
+	 * in format 'HHmmss'
+	 * 
+	 * @param time  time in ms like System.currentTimeMillis()
+	 * @return string 'HHmmss'
+	 */
+	public static String getCurrentTimeForFileNameHms(long ts)
+	{
+		SimpleDateFormat sdf = new SimpleDateFormat("HHmmss");
+		return sdf.format( new Date(ts) );
+	}
+
+	/**
+	 * in format 'HHmmss'
+	 * 
+	 * @return string 'HHmmss'
+	 */
+	public static String getCurrentTimeForFileNameHms()
+	{
+		return getCurrentTimeForFileNameYmdHms( System.currentTimeMillis() );
+	}
+
+	
+	
+	//--------------------------------------------------------------------------------
+	/**
+	 * in format 'HHmm'
+	 * 
+	 * @param time  time in ms like System.currentTimeMillis()
+	 * @return string 'HHmm'
+	 */
+	public static String getCurrentTimeForFileNameHm(long ts)
+	{
+		SimpleDateFormat sdf = new SimpleDateFormat("HHmm");
+		return sdf.format( new Date(ts) );
+	}
+
+	/**
+	 * in format 'HHmm'
+	 * 
+	 * @return string 'HHmm'
+	 */
+	public static String getCurrentTimeForFileNameHm()
+	{
+		return getCurrentTimeForFileNameYmdHm( System.currentTimeMillis() );
+	}
+	
+
+	
+	
+	
+	//--------------------------------------------------------------------------------
 	/**
 	 * Format the input as "old C style" using strftime formating.
 	 * 

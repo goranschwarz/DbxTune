@@ -462,7 +462,8 @@ extends PipeCommandAbstract
 		sb.append("  -D,--dbname <dbname>        Destination Database name in server. \n");
 		sb.append("  -u,--url <dest_db_url>      Destination DB URL, if it's not an ASE as destination.\n");
 		sb.append("  -b,--batchSize <num>        Batch size. \n");
-		sb.append("  -s,--slowBcp                Do not set ENABLE_BULK_LOAD when connecting to ASE.\n");
+		sb.append("  -s,--slowBcp                Sybase ASE: Do not set ENABLE_BULK_LOAD when connecting\n");
+		sb.append("                              SQL-Server: Do not set useBulkCopyForBatchInsert when connecting\n");
 		sb.append("  -d,--dropTable              Drop table before... if --crTable is also enabled, it will be re-created\n");
 		sb.append("  -c,--crTable                If table doesn't exist, create a new (based on the ResultSet).\n");
 		sb.append("  -I,--crIndex                If --crTable and there is only 1 source table, try to grab indexes from source table and create them at destination table.\n");
@@ -471,7 +472,7 @@ extends PipeCommandAbstract
 		sb.append("  -q,--quoteDestTable         Use Quoted Identifier on the Destination Table.\n");
 		sb.append("  -8,--utf8Dest <check|trunc> Do UTF-8 Length Check/Truncate when applying data on destination Table data (for char, varchar columns.\n");
 //		sb.append("  -X,--dryRun                 Dry Run -- Do not make any changes, just print what you are about to do.\n");
-		sb.append("  -e,--exec                   Turn Dry Run mode off and execute...\n");
+		sb.append("  -e,--exec                   Turn Dry Run mode OFF and execute...\n");
 		sb.append("  -x,--debug                  Debug mode.\n");
 		sb.append("  \n");
 		sb.append("  Note 1: -D,--dbname and -s,--slowBcp is only used if you connects to ASE via the -S,--server switch\n");
@@ -528,21 +529,38 @@ extends PipeCommandAbstract
     			
     			if (_cmdParams._slowBcp )
     			{
-    				boolean slowBcpDoDynamicPrepare = Configuration.getCombinedConfiguration().getBooleanProperty("PipeCommandBcp.slowBcp.DYNAMIC_PREPARE", true);
-    				if (slowBcpDoDynamicPrepare)
+    				// Sybase ASE
+    				if (true)
     				{
-    					String msg = "Slow BCP has been enabled. Instead of jConnect URL option 'ENABLE_BULK_LOAD=true', lets use 'DYNAMIC_PREPARE=true' (note this can be disabled with property 'PipeCommandBcp.slowBcp.DYNAMIC_PREPARE=false')";
-    					_logger.info(msg);
-   						addInfoMessage(msg);
-    					props.setProperty("DYNAMIC_PREPARE", "true");
+        				boolean slowBcpDoDynamicPrepare = Configuration.getCombinedConfiguration().getBooleanProperty("PipeCommandBcp.slowBcp.DYNAMIC_PREPARE", true);
+        				if (slowBcpDoDynamicPrepare)
+        				{
+        					String msg = "Slow BCP has been enabled. Instead of jConnect URL option 'ENABLE_BULK_LOAD=true', lets use 'DYNAMIC_PREPARE=true' (note this can be disabled with property 'PipeCommandBcp.slowBcp.DYNAMIC_PREPARE=false')";
+        					_logger.info(msg);
+       						addInfoMessage(msg);
+        					props.setProperty("DYNAMIC_PREPARE", "true");
+        				}
     				}
     			}
     			else
     			{
-					String msg = "Enable jConnection connection property 'ENABLE_BULK_LOAD' when connecting.";
-					_logger.info(msg);
-					addInfoMessage(msg);
-    				props.setProperty("ENABLE_BULK_LOAD", "true");
+    				// Sybase ASE
+    				if (true)
+    				{
+    					String msg = "Enable jConnection connection property 'ENABLE_BULK_LOAD' when connecting.";
+    					_logger.info(msg);
+    					addInfoMessage(msg);
+    					props.setProperty("ENABLE_BULK_LOAD", "true");
+    				}
+    				
+    				// Microsoft SQL-Server
+//    				if (false)
+//    				{
+//    					String msg = "Enable SQL-Server JDBC connection property 'useBulkCopyForBatchInsert' when connecting.";
+//    					_logger.info(msg);
+//    					addInfoMessage(msg);
+//        				props.setProperty("useBulkCopyForBatchInsert", "true");
+//    				}
     			}
 
     			String hostPortStr = null;
@@ -574,6 +592,18 @@ extends PipeCommandAbstract
 				Properties props = new Properties();
 				props.put("user", _cmdParams._user);
 				props.put("password", _cmdParams._passwd);
+
+				// Special options for: Microsoft SQL-Server
+				if (StringUtil.hasValue(_cmdParams._url) && _cmdParams._url.startsWith("jdbc:sqlserver:"))
+				{
+	    			if ( ! _cmdParams._slowBcp )
+	    			{
+    					String msg = "Enable SQL-Server JDBC connection property 'useBulkCopyForBatchInsert' when connecting.";
+    					_logger.info(msg);
+    					addInfoMessage(msg);
+        				props.setProperty("useBulkCopyForBatchInsert", "true");
+	    			}
+				}
 
 				String msg = "Try getConnection to driver='"+_cmdParams._driver+"', url='"+_cmdParams._url+"', user='"+_cmdParams._user+"'.";
 				if (_cmdParams._debug)

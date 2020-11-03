@@ -116,14 +116,14 @@ set classpath=%classpath%;%TAILW_HOME%\lib\rsyntaxtextarea.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\autocomplete.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\rstaui.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\jcommon-1.0.21.jar
-set classpath=%classpath%;%TAILW_HOME%\lib\jfreechart-1.0.17.jar
+set classpath=%classpath%;%TAILW_HOME%\lib\jfreechart-1.5.0.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\juniversalchardet-2.3.0.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\DDLGen.jar
 
 rem set classpath=%classpath%;%TAILW_HOME%\lib\SybaseParser_0.5.1.121_alpha.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\ngdbc.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\gsp.jar
-set classpath=%classpath%;%TAILW_HOME%\lib\jsqlparser-1.1.jar
+set classpath=%classpath%;%TAILW_HOME%\lib\jsqlparser-3.2.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\antlr-4.0-complete.jar
 
 set classpath=%classpath%;%USERPROFILE%\.asetune\jdbc_drivers\*

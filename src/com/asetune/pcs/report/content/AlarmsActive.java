@@ -21,6 +21,8 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content;
 
+import java.io.IOException;
+import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -46,10 +48,9 @@ extends ReportEntryAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		if (_shortRstm.getRowCount() == 0)
 		{
 			sb.append("No Active Alarms <br>\n");
@@ -59,8 +60,8 @@ extends ReportEntryAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 			
-			sb.append("Active Alarm Count: ").append(_fullRstm.getRowCount()).append("<br>\n");
-			sb.append(_shortRstm.toHtmlTableString("sortable"));
+			sb.append("Active Alarm Count: " + _fullRstm.getRowCount() + "<br>\n");
+			sb.append(toHtmlTable(_shortRstm));
 
 			if (_fullRstm != null)
 			{
@@ -77,12 +78,49 @@ extends ReportEntryAbstract
 				String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Active Alarm Details...", htmlContent);
 
 				sb.append( msOutlookAlternateText(showHideDiv, "Active Alarm Details", null) );
-//				sb.append( showHideDiv );
 			}
 		}
-
-		return sb.toString();
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		if (_shortRstm.getRowCount() == 0)
+//		{
+//			sb.append("No Active Alarms <br>\n");
+//		}
+//		else
+//		{
+//			// Get a description of this section, and column names
+//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+//			
+//			sb.append("Active Alarm Count: ").append(_fullRstm.getRowCount()).append("<br>\n");
+////			sb.append(_shortRstm.toHtmlTableString("sortable"));
+//			sb.append(toHtmlTable(_shortRstm));
+//
+//			if (_fullRstm != null)
+//			{
+//				// Make output more readable, in a 2 column table
+//				// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
+//				Map<String, String> colNameValueTagMap = new HashMap<>();
+//				colNameValueTagMap.put("extendedDescription",     "xmp");
+//				colNameValueTagMap.put("lastExtendedDescription", "xmp");
+//
+//				String  divId       = "alarmActiveDetails";
+//				boolean showAtStart = false;
+//				String  htmlContent = _fullRstm.toHtmlTablesVerticalString("sortable", colNameValueTagMap);
+//
+//				String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Active Alarm Details...", htmlContent);
+//
+//				sb.append( msOutlookAlternateText(showHideDiv, "Active Alarm Details", null) );
+////				sb.append( showHideDiv );
+//			}
+//		}
+//
+//		return sb.toString();
+//	}
 
 	@Override
 	public boolean canBeDisabled()
@@ -100,6 +138,12 @@ extends ReportEntryAbstract
 	public boolean hasIssueToReport()
 	{
 		return _fullRstm.getRowCount() > 0;
+	}
+
+	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { PersistWriterBase.getTableName(null, PersistWriterBase.ALARM_ACTIVE, null, false) };
 	}
 
 	@Override
@@ -140,7 +184,7 @@ extends ReportEntryAbstract
 
 		// Get Alarms
 		sql = "select [createTime], [alarmClass], [serviceInfo], [extraInfo], [severity], [state], [description] \n" +
-		      "from ["+PersistWriterBase.getTableName(conn, PersistWriterBase.ALARM_ACTIVE, null, false) + "] \n" +
+		      "from [" + PersistWriterBase.getTableName(conn, PersistWriterBase.ALARM_ACTIVE, null, false) + "] \n" +
 		      "order by [createTime]";
 
 		_shortRstm = executeQuery(conn, sql, true, "Active Alarms Short");
@@ -174,7 +218,9 @@ extends ReportEntryAbstract
 		      "     [lastDescription],        \n" +
 		      "     [extendedDescription],    \n" +
 		      "     [lastExtendedDescription] \n" +
-		      "from ["+PersistWriterBase.getTableName(conn, PersistWriterBase.ALARM_ACTIVE, null, false) + "]\n" +
+		      "from [" + PersistWriterBase.getTableName(conn, PersistWriterBase.ALARM_ACTIVE, null, false) + "]\n" +
+		      "where 1 = 1 \n" +
+		      getReportPeriodSqlWhere("createTime") +
 		      "order by [createTime]";
 		
 		_fullRstm = executeQuery(conn, sql, true, "Active Alarms Full");

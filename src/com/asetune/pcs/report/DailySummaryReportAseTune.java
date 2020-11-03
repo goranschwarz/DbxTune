@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import com.asetune.pcs.report.content.ase.AseCmSqlStatement;
 import com.asetune.pcs.report.content.ase.AseConfiguration;
 import com.asetune.pcs.report.content.ase.AseCpuUsageOverview;
 import com.asetune.pcs.report.content.ase.AseDbSize;
@@ -32,8 +33,11 @@ import com.asetune.pcs.report.content.ase.AseTopCmCachedProcs;
 import com.asetune.pcs.report.content.ase.AseTopCmObjectActivity;
 import com.asetune.pcs.report.content.ase.AseTopCmObjectActivityTabSize;
 import com.asetune.pcs.report.content.ase.AseTopCmStmntCacheDetails;
+import com.asetune.pcs.report.content.ase.AseTopSlowDynAndStmnt;
+import com.asetune.pcs.report.content.ase.AseTopSlowNormalizedSql;
 import com.asetune.pcs.report.content.ase.AseTopSlowProcCalls;
 import com.asetune.pcs.report.content.ase.AseTopSlowSql;
+import com.asetune.pcs.report.content.ase.AseWaitStats;
 import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
 import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
 
@@ -52,11 +56,15 @@ extends DailySummaryReportDefault
 
 		// CPU, just an overview
 		addReportEntry( new AseCpuUsageOverview(this)       );
+		addReportEntry( new AseWaitStats(this)              );
 		addReportEntry( new OsCpuUsageOverview(this)        );
 		
 		// SQL: from mon SysStatements...
+		addReportEntry( new AseCmSqlStatement(this)         );
+		addReportEntry( new AseTopSlowNormalizedSql(this)   );
 		addReportEntry( new AseTopSlowSql(this)             );
 		addReportEntry( new AseTopSlowProcCalls(this)       );
+		addReportEntry( new AseTopSlowDynAndStmnt(this)     );
 
 		// SQL: from Cm's
 		addReportEntry( new AseTopCmCachedProcs(this)       );

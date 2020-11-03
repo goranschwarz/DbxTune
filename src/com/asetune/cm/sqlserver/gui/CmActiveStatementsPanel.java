@@ -106,9 +106,10 @@ extends TabularCntrPanel
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				String listOfBlockedSpids = adapter.getString(adapter.getColumnIndex("ImBlockingOtherSessionIds"));
+				String blockedBySessionId = adapter.getString(adapter.getColumnIndex("ImBlockedBySessionId"));
 				if (listOfBlockedSpids != null)
 					listOfBlockedSpids = listOfBlockedSpids.trim();
-				if ( ! "".equals(listOfBlockedSpids))
+				if ( ! "".equals(listOfBlockedSpids) && "0".equals(blockedBySessionId))
 					return true;
 				return false;
 			}

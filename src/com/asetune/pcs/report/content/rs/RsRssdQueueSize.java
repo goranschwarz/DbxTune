@@ -21,8 +21,12 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.rs;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
+
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.ReportChartObject;
+import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.pcs.report.content.ase.AseAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -37,18 +41,29 @@ public class RsRssdQueueSize extends AseAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Queue Sizes on the Stable Device.",
 				"CmDbQueueSizeInRssd_RssdQueueSize"
 				));
 
-		sb.append(_CmDbQueueSizeInRssd_RssdQueueSize.getHtmlContent(null, null));
-		
-		return sb.toString();
+		_CmDbQueueSizeInRssd_RssdQueueSize.writeHtmlContent(sb, null, null);
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Queue Sizes on the Stable Device.",
+//				"CmDbQueueSizeInRssd_RssdQueueSize"
+//				));
+//
+//		sb.append(_CmDbQueueSizeInRssd_RssdQueueSize.getHtmlContent(null, null));
+//		
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -66,8 +81,8 @@ public class RsRssdQueueSize extends AseAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		_CmDbQueueSizeInRssd_RssdQueueSize = createChart(conn, "CmDbQueueSizeInRssd", "RssdQueueSize", -1, null, "Queue Size from the RSSD (col 'size', Absolute Value)");
+		_CmDbQueueSizeInRssd_RssdQueueSize = createTsLineChart(conn, "CmDbQueueSizeInRssd", "RssdQueueSize", -1, null, "Queue Size from the RSSD (col 'size', Absolute Value)");
 	}
 
-	private ReportChartObject _CmDbQueueSizeInRssd_RssdQueueSize;
+	private IReportChart _CmDbQueueSizeInRssd_RssdQueueSize;
 }

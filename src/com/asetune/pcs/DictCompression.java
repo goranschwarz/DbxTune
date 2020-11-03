@@ -390,15 +390,15 @@ public class DictCompression
 	 * @param colName
 	 * @return
 	 */
-	public static String getRewriteForColumnName(String cmName, String colName)
+	public static String getRewriteForColumnName(String tabName, String colName)
 	{
-		if (cmName  == null) return null;
+		if (tabName == null) return null;
 		if (colName == null) return null;
 		
 		if (colName.endsWith(DictCompression.DCC_MARKER))
 		{
 			String strippedColName = colName.substring(0, colName.length() - DictCompression.DCC_MARKER.length());
-			colName = "(select [colVal] from [" + cmName + DCC_MARKER + strippedColName + "] where [hashId] = [" + colName + "]) AS [" + strippedColName + "]";
+			colName = "(select [colVal] from [" + tabName + DCC_MARKER + strippedColName + "] where [hashId] = [" + colName + "]) AS [" + strippedColName + "]";
 		}
 		else
 		{
@@ -412,14 +412,15 @@ public class DictCompression
 	 * Get column names from DatabaseMetaData, put the column names in a <code>LinkedHashMap&lt;originColName, rewriteColName&gt;</code><br>
 	 * The Rewritten column names are done via method: {@link #getRewriteForColumnName(String, String)}
 	 * 
-	 * @param conn         The connection used to get DatabaseMetaData
-	 * @param schemaName   Tables Schema name (can be null, of schema name isn't used)
-	 * @param tabName      Table name to get all columns from
+	 * @param conn                The connection used to get DatabaseMetaData
+	 * @param schemaName          Tables Schema name (can be null, of schema name isn't used)
+	 * @param tabName             Table name to get all columns from
+	 * @param replacementTabName  The "base" table name to get Compressed columns from. (if null/blank this is the same as tabName) 
 	 * @return The map described above
 	 * 
 	 * @throws SQLException In case of issues when calling <code>DatabaseMetaData dbmd.getColumns(null, schemaName, tabName, "%");</code>
 	 */
-	public static LinkedHashMap<String, String> getRewriteForColumnNames(DbxConnection conn, String schemaName, String tabName)
+	public static LinkedHashMap<String, String> getRewriteForColumnNames(DbxConnection conn, String schemaName, String tabName, String replacementTabName)
 	throws SQLException
 	{
 		LinkedHashMap<String, String> map = new LinkedHashMap<>();
@@ -430,9 +431,12 @@ public class DictCompression
 		while(rsmd.next())
 		{
 			String originColName  = rsmd.getString("COLUMN_NAME");
-			String rewriteColName = getRewriteForColumnName(tabName, originColName);
+			String rewriteColName = getRewriteForColumnName(StringUtil.hasValue(replacementTabName) ? replacementTabName : tabName, originColName);
 
 			map.put(originColName, rewriteColName);
+
+			if (_logger.isDebugEnabled())
+				_logger.debug("getRewriteForColumnNames(schemaName='" + schemaName + "', tabName='" + tabName + "', replacementTabName='" + replacementTabName + "') --- map.put(originColName='" + originColName + "', rewriteColName='" + rewriteColName + "')");
 		}
 		rsmd.close();
 		
@@ -442,19 +446,20 @@ public class DictCompression
 	/**
 	 * Get a "column list" for a select statement with rewritten column names as done with getRewriteForColumnName(tabName, colName)
 	 * 
-	 * @param conn         The connection used to get DatabaseMetaData
-	 * @param schemaName   Tables Schema name (can be null, of schema name isn't used)
-	 * @param tabName      Table name to get all columns from
+	 * @param conn                The connection used to get DatabaseMetaData
+	 * @param schemaName          Tables Schema name (can be null, of schema name isn't used)
+	 * @param tabName             Table name to get all columns from
+	 * @param replacementTabName  The "base" table name to get Compressed columns from. (if null/blank this is the same as tabName) 
 	 * @return The "column list" described above
 	 * 
 	 * @throws SQLException In case of issues when calling <code>DatabaseMetaData dbmd.getColumns(null, schemaName, tabName, "%");</code>
 	 */
-	public static String getRewriteForSelectColumnList(DbxConnection conn, String schemaName, String tabName)
+	public static String getRewriteForSelectColumnList(DbxConnection conn, String schemaName, String tabName, String replacementTabName)
 	throws SQLException
 	{
 		StringBuilder sb = new StringBuilder();
 
-		LinkedHashMap<String, String> map = DictCompression.getRewriteForColumnNames(conn, schemaName, tabName);
+		LinkedHashMap<String, String> map = DictCompression.getRewriteForColumnNames(conn, schemaName, tabName, replacementTabName);
 		for (String colStr : map.values())
 		{
 			if (sb.length() > 0)
@@ -825,13 +830,13 @@ public class DictCompression
 				}
 				catch (SQLException ex)
 				{
-					_logger.error("Problems adding values to Dictionary Compressed table " + tabName + ". Clearing this batch and continuing with next table. Cleared size=" + hashIdMap.size() + ", Entries=" + hashIdMap);
+					_logger.error("Problems adding values to Dictionary Compressed table " + tabName + ". Caught: " + ex + ". Clearing this batch and continuing with next table. Cleared size=" + hashIdMap.size() + ", Entries=" + hashIdMap);
 					hashIdMap.clear();
 				}
 			}
 		}
 		
-		// Clear the old structure, a new one will be allocated bu add(...)
+		// Clear the old structure, a new one will be allocated by add(...)
 		_batchQueue = null;
 
 		return rows;

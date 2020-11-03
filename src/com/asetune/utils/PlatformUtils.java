@@ -45,6 +45,13 @@ public class PlatformUtils
 	public final static int Browser_IE       = 20;
 	public final static int Browser_FIREFOX  = 21;
 	
+
+	public static boolean isWindows() { return getCurrentPlattform() == Platform_WIN; }
+	public static boolean isLinux()   { return getCurrentPlattform() == Platform_LINUX; }
+	public static boolean isMacOsx()  { return getCurrentPlattform() == Platform_MAC_OS; }
+	public static boolean isSolaris() { return getCurrentPlattform() == Platform_SOLARIS; }
+	
+
 	/*************************************************************************
 	 * Gets the platform we are currently running on.
 	 * @return a platform code.
@@ -155,7 +162,6 @@ public class PlatformUtils
 	{
 		return System.getenv("KDE_SESSION_VERSION") != null;
 	}
-	
 
 //	import sun.jvmstat.monitor.*;
 	/**

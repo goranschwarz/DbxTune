@@ -178,44 +178,49 @@ extends CountersModel
 		if (isAzure)
 			dm_exec_procedure_stats = "dm_pdw_nodes_exec_procedure_stats";
 
-		String sql = 
-			"select  \n" +
-			"  DBName     = convert(varchar(30), isnull(db_name(database_id), database_id) ), \n" +
-			"  ObjectName = convert(varchar(30), isnull(object_name(object_id,database_id), object_id) ),  \n" +
-			"  type, \n" +
-			"  type_desc, \n" +
-			"  cached_time, \n" +
-//			"  cached_time_ss         = datediff(ss, cached_time, getdate()), \n" +
-			"  cached_time_ss         = CASE WHEN datediff(day, cached_time, getdate()) >= 24 THEN -1 ELSE  datediff(ss, cached_time, getdate()) END, \n" +
-			"  last_execution_time, \n" +
-//			"  last_execution_time_ss = datediff(ss, last_execution_time, getdate()), \n" +
-			"  last_execution_time_ss = CASE WHEN datediff(day, last_execution_time, getdate()) >= 24 THEN -1 ELSE  datediff(ss, last_execution_time, getdate()) END, \n" +
-			"  execution_count, \n" +
-			"  total_worker_time, \n" +
-			"  last_worker_time, \n" +
-			"  min_worker_time, \n" +
-			"  max_worker_time, \n" +
-			"  total_physical_reads, \n" +
-			"  last_physical_reads, \n" +
-			"  min_physical_reads, \n" +
-			"  max_physical_reads, \n" +
-			"  total_logical_writes, \n" +
-			"  last_logical_writes, \n" +
-			"  min_logical_writes, \n" +
-			"  max_logical_writes, \n" +
-			"  total_logical_reads, \n" +
-			"  last_logical_reads, \n" +
-			"  min_logical_reads, \n" +
-			"  max_logical_reads, \n" +
-			"  total_elapsed_time, \n" +
-			"  last_elapsed_time, \n" +
-			"  min_elapsed_time, \n" +
-			"  max_elapsed_time, \n" +
-			"  sql_handle, \n" +
-			"  plan_handle, \n" +
-			"  database_id, \n" +
-			"  object_id \n" +
-			"from sys." + dm_exec_procedure_stats + "\n";
+		String sql = ""
+		    + "-- Note: Below SQL Statement is executed in every database that is 'online', more or less like: sp_msforeachdb \n"
+		    + "-- Note: object_schema_name() and object_name() can NOT be used for 'dirty-reads', they may block... hence the 'ugly' fullname sub-selects in the select column list \n"
+		    + "select \n"
+		    + "    DbName     = db_name(database_id), \n"
+		    + "    SchemaName = (select sys.schemas.name from sys.objects inner join sys.schemas ON sys.schemas.schema_id = sys.objects.schema_id where sys.objects.object_id = BASE.object_id), \n"
+		    + "    ObjectName = (select sys.objects.name from sys.objects where sys.objects.object_id = BASE.object_id), \n"
+			+ "    type, \n"
+			+ "    type_desc, \n"
+			+ "    cached_time, \n"
+//			+ "    cached_time_ss         = datediff(ss, cached_time, getdate()), \n"
+			+ "    cached_time_ss         = CASE WHEN datediff(day, cached_time, getdate()) >= 24 THEN -1 ELSE  datediff(ss, cached_time, getdate()) END, \n"
+			+ "    last_execution_time, \n"
+//			+ "    last_execution_time_ss = datediff(ss, last_execution_time, getdate()), \n"
+			+ "    last_execution_time_ss = CASE WHEN datediff(day, last_execution_time, getdate()) >= 24 THEN -1 ELSE  datediff(ss, last_execution_time, getdate()) END, \n"
+			+ "    execution_count, \n"
+			+ "    total_worker_time, \n"
+			+ "    last_worker_time, \n"
+			+ "    min_worker_time, \n"
+			+ "    max_worker_time, \n"
+			+ "    total_physical_reads, \n"
+			+ "    last_physical_reads, \n"
+			+ "    min_physical_reads, \n"
+			+ "    max_physical_reads, \n"
+			+ "    total_logical_writes, \n"
+			+ "    last_logical_writes, \n"
+			+ "    min_logical_writes, \n"
+			+ "    max_logical_writes, \n"
+			+ "    total_logical_reads, \n"
+			+ "    last_logical_reads, \n"
+			+ "    min_logical_reads, \n"
+			+ "    max_logical_reads, \n"
+			+ "    total_elapsed_time, \n"
+			+ "    last_elapsed_time, \n"
+			+ "    min_elapsed_time, \n"
+			+ "    max_elapsed_time, \n"
+			+ "    sql_handle, \n"
+			+ "    plan_handle, \n"
+			+ "    database_id, \n"
+			+ "    object_id \n"
+			+ "from sys." + dm_exec_procedure_stats + " BASE \n"
+		    + "where BASE.database_id = db_id() \n"
+			+ "";
 
 		return sql;
 	}

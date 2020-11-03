@@ -44,6 +44,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -228,22 +229,29 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
+		// 'queryid' was introduced in 9.4 so lets simulate a query id in earlier versions
+		String queryid = "";
+		if (srvVersion < Ver.ver(9,4))
+		{
+//			queryid = "    ,md5(query) as queryid \n";
+			queryid = "    ,('x'||substr(md5(query),1,16))::bit(64)::bigint as queryid \n";
+		}
+			
 		// TODO: calculate the per_xxx for diff values... localCalculation()...
 		return  "select \n" +
-				"    CASE WHEN s.calls > 0 THEN s.total_time      / s.calls ELSE 0 END as avg_time_per_call, \n" +
-				"    CASE WHEN s.calls > 0 THEN s.rows            / s.calls ELSE 0 END as avg_rows_per_call, \n" +
-				"    CASE WHEN s.rows  > 0 THEN s.shared_blks_hit / s.rows  ELSE 0 END as shared_blks_hit_per_row, \n" +
-				"    d.datname, \n" +
-				"    u.usename, \n" +
-				"    s.* \n" +
+				"     CASE WHEN s.calls > 0 THEN s.total_time      / s.calls ELSE 0 END as avg_time_per_call \n" +
+				"    ,CASE WHEN s.calls > 0 THEN s.rows            / s.calls ELSE 0 END as avg_rows_per_call \n" +
+				"    ,CASE WHEN s.rows  > 0 THEN s.shared_blks_hit / s.rows  ELSE 0 END as shared_blks_hit_per_row \n" +
+				"    ,d.datname \n" +
+				"    ,u.usename \n" +
+				queryid +
+				"    ,s.* \n" +
+				"    ,cast(0 as integer) AS \"dupMergeCount\" \n" +
 				"from pg_stat_statements s \n" +
 				"left outer join pg_catalog.pg_database d ON s.dbid   = d.oid      \n" +
 				"left outer join pg_catalog.pg_user     u ON s.userid = u.usesysid \n" +
 				"where s.calls > 1 \n" +
 				"";
-
-// If PostgreSQL version earlier than 9.4, try to emulate the queryid using md5() or something similar
-//		select cast(md5(query) as varchar(30)) as ID, char_length(query) as query_length, * from public.pg_stat_statements
 	}
 
 	@Override
@@ -281,12 +289,25 @@ extends CountersModel
 		{
 			_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' The table 'pg_stat_statements' do not exists. This is an optional component. Caught: "+ex);
 
-			setActive(false, "The table 'pg_stat_statements' do not exists.\nTo enable this see: https://www.postgresql.org/docs/current/static/pgstatstatements.html\n\n"+ex.getMessage());
+			setActive(false, 
+					"The table 'pg_stat_statements' do not exists.\n"
+					+ "To enable this see: https://www.postgresql.org/docs/current/static/pgstatstatements.html\n"
+					+ "\n"
+					+ "Or possibly issue: CREATE EXTENSION pg_stat_statements \n"
+					+ "\n"
+					+ ex.getMessage());
 
 			TabularCntrPanel tcp = getTabPanel();
 			if (tcp != null)
 			{
-				tcp.setToolTipText("<html>The table 'pg_stat_statements' do not exists.<br>To enable this see: https://www.postgresql.org/docs/current/static/pgstatstatements.html<br><br>"+ex.getMessage()+"</html>");
+				tcp.setUseFocusableTips(true);
+				tcp.setToolTipText("<html>"
+						+ "The table 'pg_stat_statements' do not exists.<br>"
+						+ "To enable this see: https://www.postgresql.org/docs/current/static/pgstatstatements.html<br>"
+						+ "<br>"
+						+ "Or possibly issue: CREATE EXTENSION pg_stat_statements <br>"
+						+ "<br>"
+						+ ex.getMessage()+"</html>");
 			}
 			return false;
 			

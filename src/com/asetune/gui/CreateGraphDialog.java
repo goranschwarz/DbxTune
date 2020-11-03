@@ -33,7 +33,9 @@ import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -85,6 +87,7 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 
 	private static final String DIALOG_TITLE = "Create Graph or Chart";
 	
+	private static String[] SDF_EXAMPLES = new String[] {"", "HH:mm", "yyyy-MM-dd", "yyyy-MM-dd HH:mm", "yyyy-MM-dd HH:mm:ss.SSSZ"};
 	@SuppressWarnings("unused")
 	private Window                  _owner           = null;
 
@@ -124,6 +127,14 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 //	private JCheckBox                _rotateCatLab_chk   = new JCheckBox("Rotate Category Labels", false);
 	private JTextField               _rotateCatLab_txt   = new JTextField("");
 
+	private JLabel                   _keySdf_swl         = new JLabel("--keySimpleDateFormat");
+	private JLabel                   _keySdf_lbl         = new JLabel("Format key date with SimpleDateFormat");
+//	private JTextField               _keySdf_txt         = new JTextField("");
+	private JComboBox<String>        _keySdf_cbx         = new JComboBox<>(SDF_EXAMPLES);
+
+	private JLabel                   _groupByKeySdf_swl  = new JLabel("--groupByKeySdf");
+	private JCheckBox                _groupByKeySdf_chk  = new JCheckBox("Group values by the --keySimpleDateFormat.", false);
+
 	private JLabel                   _str2num_swl        = new JLabel("--str2num");
 	private JCheckBox                _str2num_chk        = new JCheckBox("Try to Convert 'string' Columns to Numbers (use --removeRegEx to remove some chars)", false);
 
@@ -157,6 +168,9 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 
 	private JLabel                   _tableKey_swl       = new JLabel("--keyCols");
 	private JLabel                   _tableKey_lbl       = new JLabel("Select Key Columns from the below Table");
+	
+	private JLabel                   _tableGrp_swl       = new JLabel("--groupCols");
+	private JLabel                   _tableGrp_lbl       = new JLabel("Select Group Columns from the below Table");
 	
 	private JLabel                   _tableVal_swl       = new JLabel("--valCols");
 	private JLabel                   _tableVal_lbl       = new JLabel("Select Data/Value Columns from the below Table");
@@ -293,6 +307,8 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		_labelCategory_swl .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 		_labelValue_swl    .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 		_rotateCatLab_swl  .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
+		_keySdf_swl        .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
+		_groupByKeySdf_swl .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 		_str2num_swl       .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 		_removeRegEx_swl   .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 		_layoutWidth_swl   .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
@@ -302,6 +318,7 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		_inWindow_swl      .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 		_debug_swl         .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 		_tableKey_swl      .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
+		_tableGrp_swl      .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 		_tableVal_swl      .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 		
 		_feedback_lbl      .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
@@ -336,6 +353,14 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		panel.add(_rotateCatLab_lbl  , "");
 		panel.add(_rotateCatLab_txt  , "growx, wrap");
 		
+		panel.add(_keySdf_swl        , "");
+		panel.add(_keySdf_lbl        , "");
+//		panel.add(_keySdf_txt        , "growx, wrap");
+		panel.add(_keySdf_cbx        , "growx, wrap");
+		
+		panel.add(_groupByKeySdf_swl , "");
+		panel.add(_groupByKeySdf_chk , "skip 1, wrap");
+
 		panel.add(_str2num_swl       , "");
 		panel.add(_str2num_chk       , "skip 1, wrap");
 		
@@ -366,6 +391,9 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		panel.add(_tableKey_swl      , "");
 		panel.add(_tableKey_lbl      , "span, wrap");
 
+		panel.add(_tableGrp_swl      , "");
+		panel.add(_tableGrp_lbl      , "span, wrap");
+
 		panel.add(_tableVal_swl      , "");
 		panel.add(_tableVal_lbl      , "span, wrap");
 		
@@ -377,7 +405,16 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 
 		_graphType_cbx.setMaximumRowCount(50);
 
+		_keySdf_cbx        .setEditable(true);
+
+		_keySdf_swl        .setToolTipText("The format is used to display time at the label (at the bottom)");
+		_keySdf_lbl        .setToolTipText(_keySdf_swl.getToolTipText());
+		_keySdf_cbx        .setToolTipText(_keySdf_swl.getToolTipText());
 		
+		_groupByKeySdf_swl .setToolTipText("Use if you have many values in same day/hour/minute which you want to be summarized...");
+		_groupByKeySdf_chk .setToolTipText(_groupByKeySdf_swl.getToolTipText());
+		
+
 		_graphType_cbx     .addActionListener(this);
 		
 		_data_chk          .addActionListener(this);
@@ -400,6 +437,15 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		_rotateCatLab_txt  .addActionListener(this);
 		_rotateCatLab_txt  .addFocusListener(this);
 		_rotateCatLab_txt  .addKeyListener(this);
+
+//		_keySdf_txt        .addActionListener(this);
+//		_keySdf_txt        .addFocusListener(this);
+//		_keySdf_txt        .addKeyListener(this);
+		_keySdf_cbx        .addActionListener(this);
+		_keySdf_cbx        .addFocusListener(this);
+		_keySdf_cbx        .addKeyListener(this);
+
+		_groupByKeySdf_chk .addActionListener(this);
 
 		_str2num_chk       .addActionListener(this);
 		_removeRegEx_txt   .addActionListener(this);
@@ -491,6 +537,11 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 //			previewConfig();
 //		}
 
+		if (_keySdf_cbx.equals(source))
+		{
+			checkSdfFormat();
+		}
+
 		// --- BUTTON: CANCEL ---
 		if (_cancel.equals(source))
 		{
@@ -545,6 +596,16 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 			if ( ! isRegExOk( (JTextField)e.getSource() ) )
 				return;
 		
+		// --- Field -- KeySdf -- validate the Simple Date Format
+//		if (_keySdf_txt.equals(e.getSource()))
+//		{
+//			checkSdfFormat();
+//		}
+		if (_keySdf_cbx.equals(e.getSource()))
+		{
+			checkSdfFormat();
+		}
+		
 		buildFeedback();
 	}
 	
@@ -561,6 +622,49 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 	**---------------------------------------------------
 	*/
 
+	private void checkSdfFormat()
+	{
+//		if (StringUtil.hasValue(_keySdf_txt.getText()))
+//		{
+//			try
+//			{
+//				new SimpleDateFormat(_keySdf_txt.getText()).format(new Date());
+//			}
+//			catch(IllegalArgumentException ex)
+//			{
+//				// make the txtx field a editable combobox, with some examples
+//				// use the error tooltip, used in Alarm add dialog
+//				SwingUtils.showTimedBalloonTip(_keySdf_txt, 10*1000, true, 
+//						"<html>"
+//						+ "Validation error: <b>Value will be discarded</b><br><pre>"+ex.getMessage()+"</pre>"
+//						+ "<br>"
+//						+ "See: https://docs.oracle.com/javase/8/docs/api/java/text/SimpleDateFormat.html"
+//						+ "</html>");
+//			}
+//		}
+		
+		String format = _keySdf_cbx.getSelectedItem() == null ? "" : _keySdf_cbx.getSelectedItem().toString();
+		
+		if (StringUtil.hasValue(format))
+		{
+			try
+			{
+				new SimpleDateFormat(format).format(new Date());
+			}
+			catch(IllegalArgumentException ex)
+			{
+				// make the txtx field a editable combobox, with some examples
+				// use the error tooltip, used in Alarm add dialog
+				SwingUtils.showTimedBalloonTip(_keySdf_cbx, 10*1000, true, 
+						"<html>"
+						+ "Validation error: <b>Value will be discarded</b><br><pre>"+ex.getMessage()+"</pre>"
+						+ "<br>"
+						+ "See: https://docs.oracle.com/javase/8/docs/api/java/text/SimpleDateFormat.html"
+						+ "</html>");
+			}
+		}
+	}
+	
 	private String buildFeedback()
 	{
 		String sqlCmd = "graph ";
@@ -614,6 +718,17 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 				_rotateCatLab_txt.setText("1");
 			}
 		}
+
+		// -- keySimpleDateFormat
+		String sdfFormat = _keySdf_cbx.getSelectedItem() == null ? "" : _keySdf_cbx.getSelectedItem().toString();
+//		if (StringUtil.hasValue(sdfFormat))
+//			sqlCmd += "--keySimpleDateFormat '"+sdfFormat+"' ";
+		if (StringUtil.hasValue(sdfFormat))
+			sqlCmd += "--keySimpleDateFormat '"+sdfFormat+"' ";
+
+		// --groupByKeySdf
+		if (_groupByKeySdf_chk.isSelected())
+			sqlCmd += "--groupByKeySdf ";
 			
 		// --str2num
 		if (_str2num_chk.isSelected())
@@ -651,6 +766,11 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		String keyCols = _tm.getKeyColumns();
 		if (StringUtil.hasValue(keyCols))
 			sqlCmd += "--keyCols '"+keyCols+"' ";
+		
+		// --groupCols
+		String groupCols = _tm.getGroupColumns();
+		if (StringUtil.hasValue(groupCols))
+			sqlCmd += "--groupCols '"+groupCols+"' ";
 		
 		// --keyCols
 		String valCols = _tm.getValueColumns();
@@ -816,6 +936,7 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 	private class RowEntry
 	{
 		private boolean _isKey        = false;
+		private boolean _isGrp        = false;
 		private boolean _isVal        = false;
 		private String  _colName      = "";
 		private int     _jdbcType     = -99;
@@ -833,6 +954,7 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		}
 		
 		public boolean isKey()           { return _isKey; }
+		public boolean isGrp()           { return _isGrp; }
 		public boolean isVal()           { return _isVal; }
 		public String  getName()         { return _colName; }
 		public int     getJdbcType()     { return _jdbcType; }
@@ -856,14 +978,15 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		private List<RowEntry> _rows = new ArrayList<>();
 
 //		protected        final String[] TAB_HEADER = {"Key Column", "Value Column", "Column Name", "Considdered", "JDBC Datatype", "JDBC Datatype String", "Guessed DBMS Datatype"};
-		protected        final String[] TAB_HEADER = {"Key Column", "Value Column", "Column Name", "JDBC Datatype", "JDBC Datatype String", "Guessed DBMS Datatype"};
+		protected        final String[] TAB_HEADER = {"Key Column", "Group Column", "Value Column", "Column Name", "JDBC Datatype", "JDBC Datatype String", "Guessed DBMS Datatype"};
 		protected static final int TAB_POS_KEY_COL           = 0;
-		protected static final int TAB_POS_VAL_COL           = 1;
-		protected static final int TAB_POS_COL_NAME          = 2;
-//		protected static final int TAB_POS_CONSIDDERED       = 3;
-		protected static final int TAB_POS_COL_DATATYPE      = 3;
-		protected static final int TAB_POS_COL_DATATYPE_STR  = 4;
-		protected static final int TAB_POS_COL_GUESS_DBMS_DT = 5;
+		protected static final int TAB_POS_GRP_COL           = 1;
+		protected static final int TAB_POS_VAL_COL           = 2;
+		protected static final int TAB_POS_COL_NAME          = 3;
+//		protected static final int TAB_POS_CONSIDDERED       = 4;
+		protected static final int TAB_POS_COL_DATATYPE      = 4;
+		protected static final int TAB_POS_COL_DATATYPE_STR  = 5;
+		protected static final int TAB_POS_COL_GUESS_DBMS_DT = 6;
 
 		LocalTableModel(ResultSetTableModel rstm)
 		{
@@ -895,6 +1018,21 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 			return retStr;
 		}
 
+		public String getGroupColumns()
+		{
+			String retStr = "";
+			for (RowEntry entry : _rows)
+			{
+				if (entry.isGrp())
+					retStr += entry.getName() + ",";
+			}
+
+			if (StringUtil.hasValue(retStr))
+				retStr = StringUtil.removeLastComma(retStr);
+
+			return retStr;
+		}
+
 		public String getValueColumns()
 		{
 			String retStr = "";
@@ -915,6 +1053,7 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 			switch(col)
 			{
 			case TAB_POS_KEY_COL:           return "Select if this should be a KEY Column";
+			case TAB_POS_GRP_COL:           return "Select if this should be a GROUP Column, this is if we want to group the data in some way (probably most interesting for STACKED BAR/AREA";
 			case TAB_POS_VAL_COL:           return "Select if this should be a VALUE Column. If the background is grey, then this column will be considdered as a 'selectable data source'.";
 			case TAB_POS_COL_NAME:          return "ResultSet column name";
 //			case TAB_POS_CONSIDDERED:       return "Can this column be used as a Data Value (based on the datatype)";
@@ -950,6 +1089,7 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 			switch (col)
 			{
 			case TAB_POS_KEY_COL:           return e.isKey();
+			case TAB_POS_GRP_COL:           return e.isGrp();
 			case TAB_POS_VAL_COL:           return e.isVal();
 			case TAB_POS_COL_NAME:          return e.getName();
 //			case TAB_POS_CONSIDDERED:       return e.isConsiddered();
@@ -971,6 +1111,7 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 			
 			// Set the value
 			if (col == TAB_POS_KEY_COL) e._isKey = newVal.toString().equalsIgnoreCase("true");
+			if (col == TAB_POS_GRP_COL) e._isGrp = newVal.toString().equalsIgnoreCase("true");
 			if (col == TAB_POS_VAL_COL) e._isVal = newVal.toString().equalsIgnoreCase("true");
 			
 //			Object oldVal = getValueAt(row, col);
@@ -994,6 +1135,7 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		public Class<?> getColumnClass(int col)
 		{
 			if (col == TAB_POS_KEY_COL)       return Boolean.class;
+			if (col == TAB_POS_GRP_COL)       return Boolean.class;
 			if (col == TAB_POS_VAL_COL)       return Boolean.class;
 //			if (col == TAB_POS_CONSIDDERED)   return Boolean.class;
 
@@ -1004,6 +1146,7 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		public boolean isCellEditable(int row, int col)
 		{
 			if (col == TAB_POS_KEY_COL)        return true;
+			if (col == TAB_POS_GRP_COL)        return true;
 			if (col == TAB_POS_VAL_COL)        return true;
 
 			return false;

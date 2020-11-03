@@ -21,6 +21,9 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.sqlserver;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
@@ -49,15 +52,14 @@ extends SqlServerAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		// Get a description of this section, and column names
 		sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-		sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-		sb.append(_shortRstm.toHtmlTableString("sortable"));
+		sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+		sb.append(toHtmlTable(_shortRstm));
 
 		if (_planMap != null && !_planMap.isEmpty())
 		{
@@ -113,25 +115,93 @@ extends SqlServerAbstract
 				sb.append("\n</script>\n");
 			}
 		}
-
-//		if (_CmDeviceIo_IoRW != null)
-//		{
-//			sb.append(getDbxCentralLinkWithDescForGraphs(true, "Below are Graphs/Charts with various information that can help you decide how the IO Subsystem is handling the load.",
-//					"CmDeviceIo_IoRW",
-//					"CmDeviceIo_SvcTimeRW",
-//					"CmDeviceIo_SvcTimeR",
-//					"CmDeviceIo_SvcTimeW"
-//					));
-//
-//			sb.append(_CmDeviceIo_IoRW             .getHtmlContent(null, null));
-//			sb.append(_CmDeviceIo_SvcTimeRW_noLimit.getHtmlContent(null, null));
-//			sb.append(_CmDeviceIo_SvcTimeRW        .getHtmlContent(null, null));
-//			sb.append(_CmDeviceIo_SvcTimeR         .getHtmlContent(null, null));
-//			sb.append(_CmDeviceIo_SvcTimeW         .getHtmlContent(null, null));
-//		}
-
-		return sb.toString();
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		// Get a description of this section, and column names
+//		sb.append(getSectionDescriptionHtml(_shortRstm, true));
+//
+//		sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
+////		sb.append(_shortRstm.toHtmlTableString("sortable"));
+//		sb.append(toHtmlTable(_shortRstm));
+//
+//		if (_planMap != null && !_planMap.isEmpty())
+//		{
+//			sb.append("\n");
+//			sb.append("<!-- read Javascript and CSS for Showplan --> \n");
+//			sb.append("<link rel='stylesheet' type='text/css' href='http://www.dbxtune.com/sqlserver_showplan/css/qp.css'> \n");
+//			sb.append("<script src='http://www.dbxtune.com/sqlserver_showplan/dist/qp.js' type='text/javascript'></script> \n");
+//			sb.append("\n");
+//			
+//			sb.append("<br> \n");
+//			sb.append("<div id='showplan-list'> \n");
+//			sb.append("<b>Display the execution plan for any of the following <code>plan_handle</code>: </b> \n");
+//			sb.append("<ul> \n");
+//			for (String planHandle : _planMap.keySet())
+//			{
+//				sb.append("    <li> <a href='#showplan-list' title='Copy plan to clipboard and show in browser' onclick='showplanForId(\"").append(planHandle).append("\"); return true;'><code>").append(planHandle).append("</code></a> </li> \n");
+//			}
+//			sb.append("</ul> \n");
+//			sb.append("</div> \n");
+//			sb.append(" \n");
+//			
+//			sb.append("<div id='showplan-head'></div> \n");
+//			sb.append("<div id='showplan-container'></div> \n");
+//			sb.append("<script type='text/javascript'> \n");
+//			sb.append("    function showplanForId(id) \n");
+//			sb.append("    { \n");
+//			sb.append("        var showplanText = document.getElementById('plan_'+id).innerHTML \n");
+//			sb.append("        QP.showPlan(document.getElementById('showplan-container'), showplanText); \n");
+//			sb.append("        document.getElementById('showplan-head').innerHTML = 'Below is Execution plan for <code>plan_handle: ' + id + \"</code> <br>Note: You can also view your plan at <a href='http://www.supratimas.com' target='_blank'>http://www.supratimas.com</a>, or any other <i>plan-view</i> application by pasting (Ctrl-V) the clipboard content. <br>SentryOne Plan Explorer can be downloaded here: <a href='https://www.sentryone.com/plan-explorer' target='_blank'>https://www.sentryone.com/plan-explorer</a>\"; \n");
+//			sb.append("        copyStringToClipboard(showplanText); \n");
+//			sb.append("    } \n");
+//			sb.append("\n");
+//			sb.append("    function copyStringToClipboard (string)                                   \n");
+//			sb.append("    {                                                                         \n");
+//			sb.append("        function handler (event)                                              \n");
+//			sb.append("        {                                                                     \n");
+//			sb.append("            event.clipboardData.setData('text/plain', string);                \n");
+//			sb.append("            event.preventDefault();                                           \n");
+//			sb.append("            document.removeEventListener('copy', handler, true);              \n");
+//			sb.append("        }                                                                     \n");
+//			sb.append("                                                                              \n");
+//			sb.append("        document.addEventListener('copy', handler, true);                     \n");
+//			sb.append("        document.execCommand('copy');                                         \n");
+//			sb.append("    }                                                                         \n");
+//			sb.append("</script> \n");
+//
+//			for (String planHandle : _planMap.keySet())
+//			{
+//				String xmlPlan = _planMap.get(planHandle);
+//
+//				sb.append("\n<script id='plan_").append(planHandle).append("' type='text/xmldata'>\n");
+//				sb.append(xmlPlan);
+//				sb.append("\n</script>\n");
+//			}
+//		}
+//
+////		if (_CmDeviceIo_IoRW != null)
+////		{
+////			sb.append(getDbxCentralLinkWithDescForGraphs(true, "Below are Graphs/Charts with various information that can help you decide how the IO Subsystem is handling the load.",
+////					"CmDeviceIo_IoRW",
+////					"CmDeviceIo_SvcTimeRW",
+////					"CmDeviceIo_SvcTimeR",
+////					"CmDeviceIo_SvcTimeW"
+////					));
+////
+////			sb.append(_CmDeviceIo_IoRW             .getHtmlContent(null, null));
+////			sb.append(_CmDeviceIo_SvcTimeRW_noLimit.getHtmlContent(null, null));
+////			sb.append(_CmDeviceIo_SvcTimeRW        .getHtmlContent(null, null));
+////			sb.append(_CmDeviceIo_SvcTimeR         .getHtmlContent(null, null));
+////			sb.append(_CmDeviceIo_SvcTimeW         .getHtmlContent(null, null));
+////		}
+//
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -147,6 +217,12 @@ extends SqlServerAbstract
 
 
 	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { "CmExecQueryStats_diff" };
+	}
+
+	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		 // just to get Column names
@@ -157,7 +233,7 @@ extends SqlServerAbstract
 			String msg = "Table 'CmExecQueryStats_rate' did not exist. So Performance Counters for this hasn't been sampled during this period.";
 
 			//addMessage(msg);
-			setProblem(new Exception(msg));
+			setProblemException(new Exception(msg));
 
 			_shortRstm = ResultSetTableModel.createEmpty("TopCmExecQueryStats");
 			return;
@@ -260,6 +336,7 @@ extends SqlServerAbstract
 				+ "  and [execution_count] > 0 \n"
 //				+ "  and [AvgServ_ms] > " + _aboveServiceTime + " \n"
 //				+ "  and [TotalIOs]   > " + _aboveTotalIos    + " \n"
+				+ getReportPeriodSqlWhere()
 				+ "group by [plan_handle] \n"
 				+ "order by " + orderByCol + " desc \n"
 			    + "";
@@ -297,7 +374,7 @@ extends SqlServerAbstract
 				}
 				catch (SQLException ex)
 				{
-					setProblem(ex);
+					setProblemException(ex);
 				}
 			}
 		}

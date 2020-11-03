@@ -36,7 +36,7 @@ extends AlarmEvent
 	 * @param warningText      Text provided by the caller
 	 * @param threshold
 	 */
-	public AlarmEventConfigResourceIsLow(CountersModel cm, String cfgName, double cfgVal, String warningText, Number threshold)
+	public AlarmEventConfigResourceIsLow(CountersModel cm, String cfgName, double cfgVal, String warningText, Number threshold, int raiseDelayInSec)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -49,6 +49,8 @@ extends AlarmEvent
 				warningText,
 				null);
 
+		setRaiseDelayInSec(raiseDelayInSec);
+		
 		setData("cfgVal="+cfgVal);
 
 		// Set: Time To Live if postpone is enabled

@@ -38,6 +38,7 @@ import org.jdesktop.swingx.decorator.HighlightPredicate;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.CmWho;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.utils.ColorUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 
@@ -104,6 +105,22 @@ extends TabularCntrPanel
 			}
 		}, SwingUtils.parseColor(colorStr, Color.GREEN), null));
 
+		// LIGHT_GREEN = suspended process
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.suspended");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				String status = (String) adapter.getValue(adapter.getColumnIndex("status"));
+				if ( status != null && status.startsWith("suspended") )
+					return true;
+				return false;
+			}
+//		}, SwingUtils.parseColor(colorStr, ColorUtils.VERY_LIGHT_GREEN), null));
+		}, SwingUtils.parseColor(colorStr, new Color(212, 255, 163)), null));
+		
+
 		// PINK = spid is BLOCKED by some other user
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocked");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
@@ -137,23 +154,14 @@ extends TabularCntrPanel
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
-			@SuppressWarnings("unchecked")
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
-				boolean isBlocking                     = false;
-				Number  thisSpid                       = (Number)                 adapter.getValue(adapter.getColumnIndex("spid"));
-				HashMap<Number,Object> blockingSpidMap = (HashMap<Number,Object>) adapter.getComponent().getClientProperty("blockingSpidMap");
-
-				if (blockingSpidMap != null && thisSpid != null)
-					isBlocking = blockingSpidMap.containsKey(thisSpid);
-
-				if (isBlocking)
-				{
-					// Check that the SPID is not the victim of another blocked SPID
-					Number blockingSpid = (Number) adapter.getValue(adapter.getColumnIndex("blocked"));
-					if ( blockingSpid != null && blockingSpid.intValue() == 0 )
-						return true;
-				}
+				String listOfBlockedSpids = adapter.getString(adapter.getColumnIndex("BlockingOtherSpids"));
+				String blocked            = adapter.getString(adapter.getColumnIndex("blocked"));
+				if (listOfBlockedSpids != null)
+					listOfBlockedSpids = listOfBlockedSpids.trim();
+				if ( ! "".equals(listOfBlockedSpids) && "0".equals(blocked))
+					return true;
 				return false;
 			}
 		}, SwingUtils.parseColor(colorStr, Color.RED), null));

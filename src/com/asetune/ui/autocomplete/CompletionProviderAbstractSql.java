@@ -1789,7 +1789,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 		// with completions as tabname.colname
 		//
 		//----- FIXME: implement the above
-		List<Completion> colCompl = getColumnCompletionForTablesInSql(comp);
+		List<Completion> colCompl = getColumnCompletionForTablesInSql(comp, enteredText);
 		if (colCompl != null && !colCompl.isEmpty())
 			return colCompl;
 
@@ -2218,23 +2218,24 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 	/**
 	 * FIXME: describe me
 	 * @param comp
+	 * @param enteredText 
 	 * @return
 	 */
-	private List<Completion> getColumnCompletionForTablesInSql(JTextComponent comp)
+	private List<Completion> getColumnCompletionForTablesInSql(JTextComponent comp, String enteredText)
 	{
 		boolean exitEarly = true;  // method: -not-yet-implemented-
-//		        exitEarly = false; // uncomment: -in-test-development-
+		        exitEarly = false; // uncomment: -in-test-development-
 		if (exitEarly)
 			return null;
 
-		System.out.println();
-		System.out.println("################################################################");
-		System.out.println("## getColumnCompletionForTablesInSql");
-		System.out.println("################################################################");
+//		System.out.println();
+//		System.out.println("################################################################");
+//		System.out.println("## getColumnCompletionForTablesInSql");
+//		System.out.println("################################################################");
 		
 		if ( ! (comp instanceof RSyntaxTextArea) )
 		{
-			System.out.println("getColumnCompletionForTablesInSql(): NOT A RSyntaxTextArea");
+//			System.out.println("getColumnCompletionForTablesInSql(): NOT A RSyntaxTextArea");
 			return null;
 		}
 		RSyntaxTextArea ta  = (RSyntaxTextArea) comp;
@@ -2249,29 +2250,29 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		Token t = RSyntaxUtilities.getPreviousImportantTokenFromOffs(doc, startOffset);
 		char foundOp = '-';
 		int  foundAtOffset = -1;
-		int  parenthesesCount = 0; // increment / decrement every time we see a ( and ) so we can "skip" sub selects etc... 
+//		int  parenthesesCount = 0; // increment / decrement every time we see a ( and ) so we can "skip" sub selects etc... 
 		while(true)
 		{
 			String word = t.getLexeme().toLowerCase();
 
 			// Increment and decrement when we see parentheses 
 			// NOTE: we are scanning *backwards* here
-			if (t.isSingleChar(')')) parenthesesCount++; 
-			if (t.isSingleChar('(')) parenthesesCount--;
-			System.out.println("BACK[parenthesesCount="+parenthesesCount+"]: "+t);
+//			if (t.isSingleChar(')')) parenthesesCount++; 
+//			if (t.isSingleChar('(')) parenthesesCount--;
+//			System.out.println("BACK[parenthesesCount="+parenthesesCount+"]: "+t);
 			
 			if ("go".equals(word) || word.equals(";"))
 			{
-				System.out.println("BACKWARD SEARCH -- END SEARCH -- found 'go' or ';': "+t);
+//				System.out.println("BACKWARD SEARCH -- END SEARCH -- found 'go' or ';': "+t);
 				break;
 			}
 			
 //			if (t.getType() == TokenTypes.RESERVED_WORD)
-			if (t.is(TokenTypes.RESERVED_WORD, "select")) System.out.println("-------------- found 'select'"); // it's case SENSITIVE
-			if (t.is(TokenTypes.RESERVED_WORD, "SELECT")) System.out.println("-------------- found 'SELECT'"); // it's case SENSITIVE
+//			if (t.is(TokenTypes.RESERVED_WORD, "select")) System.out.println("-------------- found 'select'"); // it's case SENSITIVE
+//			if (t.is(TokenTypes.RESERVED_WORD, "SELECT")) System.out.println("-------------- found 'SELECT'"); // it's case SENSITIVE
 			
-			if (parenthesesCount == 0 && ("select".equals(word) || "insert".equals(word) || "update".equals(word) || "delete".equals(word)))
-			{
+//			if (parenthesesCount == 0 && ("select".equals(word) || "insert".equals(word) || "update".equals(word) || "delete".equals(word)))
+//			{
 				if      ("select".equals(word)) foundOp = 'S';
 				else if ("insert".equals(word)) foundOp = 'I';
 				else if ("update".equals(word)) foundOp = 'U';
@@ -2279,10 +2280,13 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 				
 				foundAtOffset = t.getOffset();
 //				t = t.getNextToken(); // Move on to next token, just to position off from the one just found
-				
-				System.out.println("FOUND SELECT/UPDATE/INSERT/DELETE: foundOp='"+foundOp+"', foundAtOffset="+foundAtOffset);
-				break;
-			}
+
+				if (foundOp != '-')
+				{
+//					System.out.println("FOUND SELECT/UPDATE/INSERT/DELETE: foundOp='"+foundOp+"', foundAtOffset="+foundAtOffset);
+					break;
+				}
+//			}
 			t = RSyntaxUtilities.getPreviousImportantTokenFromOffs(doc, t.getOffset());
 			maxCount--;
 			if (maxCount < 0)
@@ -2290,84 +2294,150 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		}
 		if (foundOp != '-')
 		{
-			parenthesesCount = 0;
-			
-			System.out.println("YES OP Was found: "+foundOp);
-			if (foundOp == 'S')
+//			System.out.println("YES OP Was found: "+foundOp);
+
+			// Loop forward to find the table name after select/insert/update/delete
+			String fullTableName = getTableNameForSelInsUpdDel(foundOp, ta, t);
+
+			// If we found a table name, lookup it's columns
+			if (StringUtil.hasValue(fullTableName))
 			{
-				System.out.println("YES OP is: S");
-				// Loop FORWARD to find 'from' also grab tables at 'join'
-//				for(maxCount=1000; t!=null; t=t.getNextToken())
-				try
+				SqlObjectName tabNameObj = new SqlObjectName(fullTableName, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, _dbSupportsSchema, false);
+
+//				System.out.println("LOOKUP for "+foundOp+" -- fullTableName ='" + fullTableName + "', enteredText='" + enteredText + "', tabNameObj="+tabNameObj);
+
+				// Columns to show, will end up in here
+				ArrayList<Completion> colList = new ArrayList<Completion>();
+
+				// tablename has no Catalog specification, then do local/cached lookup 
+				if ( ! tabNameObj.hasCatalogName() )
 				{
-					for(maxCount=1000; t!=null; t=RSyntaxUtilities.getNextImportantToken(t.getNextToken(), ta, ta.getLineOfOffset(t.getOffset())))
+					if (_logger.isDebugEnabled())
+						_logger.debug("XXXX NOT-IN LOCAL SCHEMA: -- CACHED LOOKUP ---");
+
+					// Search the cached table information.
+					TableInfo ti = getTableInfo(null, null, tabNameObj.getObjectName(), true);
+//					System.out.println("LOOKUP for SELECT -- ti=" + ti);
+					if (ti != null)
 					{
-						if (maxCount-- < 0 || t.getType() == TokenTypes.NULL)
-							break;
-						System.out.println("T="+t);
-						System.out.println("                      at line: "+ta.getLineOfOffset(t.getOffset()));
-
-						String word = t.getLexeme().toLowerCase();
-						if ("go".equals(word) || word.equals(";"))
+						for (TableColumnInfo tci : ti._columns)
 						{
-							System.out.println("SSSSSSSSS -- END SEARCH -- Passed 'go' or ';': "+t);
-							break;
+							if (startsWithIgnoreCaseOrRegExp(tci._colName, enteredText))
+								colList.add( new SqlColumnCompletion(CompletionProviderAbstractSql.this, "", tci._colName, ti, _quoteColumnNames));
 						}
-
-						// Increment and decrement when we see parentheses 
-						// NOTE: we are scanning *forward* here
-						if (t.isSingleChar('(')) parenthesesCount++; 
-						if (t.isSingleChar(')')) parenthesesCount--;
-
-						if ( parenthesesCount == 0 && ("from".equals(word) || "join".equals(word)) )
+					}
+					// Search the cached function information.
+					FunctionInfo fi = getFunctionInfo(null, null, tabNameObj.getObjectName(), true);
+//					System.out.println("LOOKUP for SELECT -- fi=" + fi);
+					if (fi != null)
+					{
+						for (FunctionColumnInfo fci : fi._columns)
 						{
-							while(true)
-							{
-//								t = t.getNextToken();
-								t = RSyntaxUtilities.getNextImportantToken(t.getNextToken(), ta, ta.getLineOfOffset(t.getOffset()));
-								if (maxCount-- < 0 || t.getType() == TokenTypes.NULL)
-									break;
-								word = t.getLexeme().toLowerCase();
-								if ("where".equals(word) || "group".equals(word) || "order".equals(word) || "having".equals(word))
-									break;
-								else if (! (t.isCommentOrWhitespace()))
-									System.out.println("SSSSSSSSS ADD: "+t);
-							}
+							if (startsWithIgnoreCaseOrRegExp(fci._colName, enteredText))
+								colList.add( new SqlColumnCompletion(CompletionProviderAbstractSql.this, "", fci._colName, ti, _quoteColumnNames));
 						}
 					}
 				}
-				catch (BadLocationException e)
+
+				if (_logger.isDebugEnabled())
+					_logger.debug("LOOKUP for SELECT -- colList.size=" + colList.size());
+
+				if ( ! colList.isEmpty() )
+					return colList;
+			}
+		
+		} // end: find Operator S, I, U, D
+
+		// Nothing was found
+		return null;
+	}
+	
+	private String getTableNameForSelInsUpdDel(char foundOp, RSyntaxTextArea ta, Token t)
+	{
+		int maxCount;
+		int  parenthesesCount = 0; // increment / decrement every time we see a ( and ) so we can "skip" sub selects etc... 
+		String fullTableName = "";
+		int appendCount = 0;
+
+		try
+		{
+			for(maxCount=1000; t!=null; t=RSyntaxUtilities.getNextImportantToken(t.getNextToken(), ta, ta.getLineOfOffset(t.getOffset())))
+			{
+				if (maxCount-- < 0 || t.getType() == TokenTypes.NULL)
+					break;
+//				System.out.println("T="+t);
+//				System.out.println("                      at line: "+ta.getLineOfOffset(t.getOffset()));
+
+				String word = t.getLexeme().toLowerCase();
+				if ("go".equals(word) || word.equals(";"))
 				{
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+//					System.out.println("SSSSSSSSS -- END SEARCH -- Passed 'go' or ';': "+t);
+					break;
+				}
+
+				// Increment and decrement when we see parentheses 
+				// NOTE: we are scanning *forward* here
+				if (t.isSingleChar('(')) parenthesesCount++; 
+				if (t.isSingleChar(')')) parenthesesCount--;
+
+				if ( parenthesesCount == 0 )
+				{
+					if (foundOp == 'S' && ! ("from".equals(word) || "join".equals(word)))
+						continue;
+					
+					if (foundOp == 'I' && ! "into".equals(word))
+						continue;
+
+					// UPDATE tablename <<<--- is next word
+//					if (foundOp == 'U' && ! ("from".equals(word) || "join".equals(word)))
+//						continue;
+					
+					if (foundOp == 'D' && ! "from".equals(word))
+						continue;
+					
+					while(true)
+					{
+//						t = t.getNextToken();
+						t = RSyntaxUtilities.getNextImportantToken(t.getNextToken(), ta, ta.getLineOfOffset(t.getOffset()));
+
+						if (maxCount-- < 0 || t.getType() == TokenTypes.NULL)
+							break;
+
+						if ( t.getType() == TokenTypes.RESERVED_WORD )
+						{
+//							System.out.println("   <<<<< this is RESERVED_WORD... BREAK loop: " + t);
+							break;
+						}
+
+						// STOP 
+						word = t.getLexeme().toLowerCase();
+						if (foundOp == 'S' && ("where".equals(word) || "group".equals(word) || "order".equals(word) || "having".equals(word))) break;
+						if (foundOp == 'I' && ("(".equals(word) || "values".equals(word) || "select".equals(word))) break;
+						if (foundOp == 'U' && ("set".equals(word))) break;
+						if (foundOp == 'D' && ("where".equals(word) || "from".equals(word))) break;
+						
+//						System.out.println("   ++++++++++++ APPEND-fullTableName: "+t);
+						fullTableName += t.getLexeme();
+						appendCount++;
+
+						// dbname.schema.tabname   <<<--- this is 5 tokens...
+						if (appendCount >= 5)
+							break;
+					}
+					
+					if (appendCount > 0)
+						break;
 				}
 			}
-			if (foundOp == 'I')
-			{
-				System.out.println("YES OP is: I");
-				// Loop forward to find 'insert' or 'into'
-			}
-			if (foundOp == 'U')
-			{
-				System.out.println("YES OP is: U");
-				// Loop forward to find 'update'
-			}
-			if (foundOp == 'D')
-			{
-				System.out.println("YES OP is: D");
-				// Loop forward to find 'delete'
-			}
-		} // end: fond Operator S, I, U, D
+		}
+		catch (BadLocationException ex)
+		{
+			if (_logger.isDebugEnabled())
+				_logger.debug("Problems in getTableNameForSelInsUpdDel(RSyntaxTextArea ta, Token t).", ex);
+		}
 
-//		for (Token t = ta.getTokenListForLine(line); t!=null; t.getNextToken())
-//			System.out.println("token="+t);
-
-//		Iterator<Token> ti = ((RSyntaxDocument)ta.getDocument()).iterator();
-//		while(ti.hasNext())
-//		{
-//			Token t = ti.next();
-//			System.out.println("token="+t);
-//		}
+		if (StringUtil.hasValue(fullTableName))
+			return fullTableName;
 		
 		return null;
 	}
@@ -2493,7 +2563,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 
 			// if 'DATABASE_TO_UPPER' is true, then table names must be quoted
 		//	String sql = "select VALUE from INFORMATION_SCHEMA.SETTINGS where NAME = 'DATABASE_TO_UPPER'";
-			String sql = "select NAME, VALUE from INFORMATION_SCHEMA.SETTINGS";
+			String sql = "select #NAME#, #VALUE# from #INFORMATION_SCHEMA#.#SETTINGS#".replace('#', '"');
 			try
 			{
 				Statement stmnt = conn.createStatement();

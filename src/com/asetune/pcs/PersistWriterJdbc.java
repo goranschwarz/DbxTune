@@ -4710,6 +4710,7 @@ public class PersistWriterJdbc
 
 //if (tabName.equals("MonSqlCapSqlText") || tabName.equals("MonSqlCapPlans"))
 //	System.out.println("saveSqlCaptureDetails(): tabName=|"+tabName+"|, TEXT=|"+row.get(row.size()-1)+"|)");
+//System.out.println("\n++++++++++ tabName='"+tabName+"', SQL="+sql);
 				// Loop all columns, and SET it at the Prepared Statement
 				for (int c=1; c<row.size(); c++) // Skip entry 0, where the table name is stored
 				{
@@ -4826,7 +4827,7 @@ public class PersistWriterJdbc
 			return;
 		}
 
-		IDailySummaryReport report = DailySummaryReportFactory.createDailySummaryReport(serverName);
+		IDailySummaryReport report = DailySummaryReportFactory.createDailySummaryReport();
 		if (report == null)
 		{
 			_logger.info("Daily Summary Report: create did not pass a valid report instance, skipping report creation.");

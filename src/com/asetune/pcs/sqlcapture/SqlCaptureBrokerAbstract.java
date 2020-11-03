@@ -132,4 +132,26 @@ public abstract class SqlCaptureBrokerAbstract implements ISqlCaptureBroker
 		try {                 return conf.getLongMandatoryProperty(propName); }
 		catch(Exception ex) { return Configuration.getCombinedConfiguration().getLongProperty(propName, defaultValue); }
 	}
+
+	@Override
+	public String getSqlPrefix()
+	{
+		return "/* " + Version.getAppName() + ":SqlCapture */ \n";
+	}
+
+	@Override
+	public boolean useSqlPrefix()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		
+		boolean useSqlPrefix = conf.getBooleanProperty("cm.sqlPrefix.use", true);
+		if (useSqlPrefix)
+		{
+			if (conf.hasProperty("cm.sqlCapture.sqlPrefix.use"))
+			{
+				useSqlPrefix = conf.getBooleanProperty("cm.sqlCapture.sqlPrefix.use", true);
+			}
+		}
+		return useSqlPrefix;
+	}
 }

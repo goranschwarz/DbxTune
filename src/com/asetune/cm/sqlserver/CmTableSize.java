@@ -1,0 +1,360 @@
+/*******************************************************************************
+ * Copyright (C) 2010-2019 Goran Schwarz
+ * 
+ * This file is part of DbxTune
+ * DbxTune is a family of sub-products *Tune, hence the Dbx
+ * Here are some of the tools: AseTune, IqTune, RsTune, RaxTune, HanaTune, 
+ *          SqlServerTune, PostgresTune, MySqlTune, MariaDbTune, Db2Tune, ...
+ * 
+ * DbxTune is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * DbxTune is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with DbxTune.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
+package com.asetune.cm.sqlserver;
+
+import java.sql.Connection;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+
+import com.asetune.ICounterController;
+import com.asetune.IGuiController;
+import com.asetune.cm.CounterSample;
+import com.asetune.cm.CounterSampleCatalogIteratorSqlServer;
+import com.asetune.cm.CounterSetTemplates;
+import com.asetune.cm.CountersModel;
+import com.asetune.cm.SortOptions;
+import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.cm.SortOptions.ColumnNameSensitivity;
+import com.asetune.cm.SortOptions.DataSortSensitivity;
+import com.asetune.cm.SortOptions.SortOrder;
+import com.asetune.gui.MainFrame;
+
+public class CmTableSize
+extends CountersModel
+{
+//	private static Logger        _logger          = Logger.getLogger(CmTableSize.class);
+	private static final long    serialVersionUID = 1L;
+
+	public static final String   CM_NAME          = CmTableSize.class.getSimpleName();
+	public static final String   SHORT_NAME       = "Table Size";
+	public static final String   HTML_DESC        = 
+		"<html>" +
+		"<p>Size of tables in all databases (using statistics, so data might not be 100 percent accurate</p>" +
+		"</html>";
+
+	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
+	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
+
+	public static final String[] MON_TABLES       = new String[] {"dm_db_partition_stats"};
+	public static final String[] NEED_ROLES       = new String[] {"VIEW SERVER STATE", "CONNECT ANY DATABASE"};
+	public static final String[] NEED_CONFIG      = new String[] {};
+
+	public static final String[] PCT_COLUMNS      = new String[] {
+			 "DataVsIndexPct"
+			,"TotalUnUsedPct"
+			,"DataUnUsedPct"
+			,"LobUnUsedPct"
+			,"LobTableContentPct"
+			,"IndexUnUsedPct"
+	};
+
+	public static final String[] DIFF_COLUMNS     = new String[] {
+			 "RowCountDiff"
+			
+			,"d_reserved_page_count"
+			,"d_used_page_count"
+			,"d_unused_page_count"
+			,"d_in_row_data_page_count"
+			,"d_in_row_used_page_count"
+			,"d_in_row_reserved_page_count"
+			,"d_lob_used_page_count"
+			,"d_lob_reserved_page_count"
+			,"d_row_overflow_used_page_count"
+			,"d_row_overflow_reserved_page_count"
+			
+			,"i_reserved_page_count"
+			,"i_used_page_count"
+			,"i_unused_page_count"
+			,"i_in_row_data_page_count"
+			,"i_in_row_used_page_count"
+			,"i_in_row_reserved_page_count"
+			,"i_lob_used_page_count"
+			,"i_lob_reserved_page_count"
+			,"i_row_overflow_used_page_count"
+			,"i_row_overflow_reserved_page_count"
+		};
+
+
+	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
+	public static final boolean  IS_SYSTEM_CM                   = true;
+	public static final int      DEFAULT_POSTPONE_TIME          = 3600; // 1 hour
+	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;
+
+	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
+	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
+	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
+	@Override public Type    getTemplateLevel()                       { return Type.ALL; }
+
+	/**
+	 * FACTORY  method to create the object
+	 */
+	public static CountersModel create(ICounterController counterController, IGuiController guiController)
+	{
+		if (guiController != null && guiController.hasGUI())
+			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+
+		return new CmTableSize(counterController, guiController);
+	}
+
+	public CmTableSize(ICounterController counterController, IGuiController guiController)
+	{
+		super(counterController,
+				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
+				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
+				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
+				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
+
+		setDisplayName(SHORT_NAME);
+		setDescription(HTML_DESC);
+
+		setIconFile(GUI_ICON_FILE);
+
+		setShowClearTime(false);
+
+		setCounterController(counterController);
+		setGuiController(guiController);
+		
+		addTrendGraphs();
+		
+		CounterSetTemplates.register(this);
+	}
+
+
+	//------------------------------------------------------------
+	// Implementation
+	//------------------------------------------------------------
+//	private static final String  PROP_PREFIX                     = CM_NAME;
+
+	private void addTrendGraphs()
+	{
+	}
+
+//	@Override
+//	protected TabularCntrPanel createGui()
+//	{
+//		return new CmTableSizePanel(this);
+//	}
+
+	@Override
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
+	{
+		return NEED_CONFIG;
+	}
+
+	@Override
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
+	{
+		List <String> pkCols = new LinkedList<String>();
+
+		pkCols.add("DbName");
+		pkCols.add("SchemaName");
+		pkCols.add("TableName");
+
+//		pkCols.add("database_id");
+//		pkCols.add("object_id");
+		
+		return pkCols;
+	}
+
+	private List<SortOptions> _localSortOptions = null;
+
+	@Override
+	public List<SortOptions> getLocalSortOptions()
+	{
+		// Allocate the sorting specification only first time.
+		if (_localSortOptions == null)
+		{
+			_localSortOptions = new ArrayList<>();
+			
+			_localSortOptions.add(new SortOptions("TotalReservedSizeMB", ColumnNameSensitivity.IN_SENSITIVE, SortOrder.DESCENDING, DataSortSensitivity.IN_SENSITIVE));
+		}
+		return _localSortOptions;
+	}
+	
+	/**
+	 * Create a special CounterSample, that will iterate over all databases that we will interrogate
+	 */
+	@Override
+	public CounterSample createCounterSample(String name, boolean negativeDiffCountersToZero, String[] diffColumns, CounterSample prevSample)
+	{
+		// Using DEFAULT_SKIP_DB_LIST: 'master', 'model', 'tempdb', 'msdb', 'SSISDB', 'ReportServer', 'ReportServerTempDB'
+		return new CounterSampleCatalogIteratorSqlServer(name, negativeDiffCountersToZero, diffColumns, prevSample);
+	}
+
+	@Override
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
+	{
+		String dm_db_partition_stats   = "sys.dm_db_partition_stats";
+		
+		if (isAzure)
+		{
+			dm_db_partition_stats   = "sys.dm_pdw_nodes_db_partition_stats";
+		}
+
+		String sql = ""
+			    + "-- Note: Below SQL Statement is executed in every database that is 'online', more or less like: sp_msforeachdb \n"
+			    + "-- Note: object_schema_name() and object_name() can be used for 'dirty-reads', they may block... hence the 'ugly' fullname sub-selects in the select column list \n"
+			    + " \n"
+			    + "-- Drop temp tables (if they already exists \n"
+			    + "if (object_id('tempdb..#dstat')   is not null) drop table #dstat \n"
+			    + "if (object_id('tempdb..#ncistat') is not null) drop table #ncistat \n"
+			    + " \n"
+			    + "-- temptable: #dstat -- DATA STAT \n"
+			    + "    select \n"
+			    + "         object_id \n"
+			    + "        ,StatsUpdated                     = nullif( max(isnull(stats_date(object_id, index_id), '2000-01-01')), '2000-01-01') -- this to get rid of: Warning: Null value is eliminated by an aggregate or other SET operation. \n"
+			    + "        ,HasClusteredIndex                = convert(bit, case when sum(index_id) = 1 then 1 else 0 end) \n"
+			    + "        ,PartitionCount                   = count(partition_number) \n"
+			    + "        ,row_count                        = sum(row_count) \n"
+			    + "        ,RowsPerPage                      = convert(decimal(12,1), sum(row_count)*1.0 / case when sum(used_page_count) = 0 THEN 1 else sum(used_page_count) end) \n"
+			    + " \n"
+			    + "        ,ReservedSizeMB                   = convert(decimal(12,1), sum(reserved_page_count) / 128.0) \n"
+			    + "        ,UsedSizeMB                       = convert(decimal(12,1), sum(used_page_count)     / 128.0) \n"
+			    + "        ,UnUsedSizeMB                     = convert(decimal(12,1), (sum(reserved_page_count) - sum(used_page_count)) / 128.0) \n"
+			    + " \n"
+			    + "        ,LobReservedSizeMB                   = convert(decimal(12,1), sum(lob_reserved_page_count) / 128.0) \n"
+			    + "        ,LobUsedSizeMB                       = convert(decimal(12,1), sum(lob_used_page_count)     / 128.0) \n"
+			    + "        ,LobUnUsedSizeMB                     = convert(decimal(12,1), (sum(lob_reserved_page_count) - sum(lob_used_page_count)) / 128.0) \n"
+			    + " \n"
+			    + "        ,reserved_page_count              = sum(reserved_page_count) \n"
+			    + "        ,used_page_count                  = sum(used_page_count) \n"
+			    + "        ,unused_page_count                = sum(reserved_page_count) - sum(used_page_count) \n"
+			    + " \n"
+			    + "        ,in_row_data_page_count           = sum(in_row_data_page_count) \n"
+			    + "        ,in_row_used_page_count           = sum(in_row_used_page_count) \n"
+			    + "        ,in_row_reserved_page_count       = sum(in_row_reserved_page_count) \n"
+			    + "        ,lob_used_page_count              = sum(lob_used_page_count) \n"
+			    + "        ,lob_reserved_page_count          = sum(lob_reserved_page_count) \n"
+			    + "        ,row_overflow_used_page_count     = sum(row_overflow_used_page_count) \n"
+			    + "        ,row_overflow_reserved_page_count = sum(row_overflow_reserved_page_count) \n"
+			    + "    into #dstat \n"
+			    + "    from sys.dm_db_partition_stats \n"
+			    + "    where index_id in (0,1) \n"
+			    + "      and OBJECTPROPERTY(object_id, 'IsUserTable') = 1 \n"
+			    + "      and row_count > 0 \n"
+			    + "    group by object_id \n"
+			    + " \n"
+			    + "-- temptable: #ncistat -- NONCLUSTERED INDEX STAT \n"
+			    + "    select \n"
+			    + "         object_id \n"
+			    + "        ,StatsUpdated                     = nullif( max(isnull(stats_date(object_id, index_id), '2000-01-01')), '2000-01-01') -- this to get rid of: Warning: Null value is eliminated by an aggregate or other SET operation. \n"
+			    + "        ,NcIndexCount                     = count(*) \n"
+			    + "        ,ReservedSizeMB                   = convert(decimal(12,1), sum(reserved_page_count) / 128.0) \n"
+			    + "        ,UsedSizeMB                       = convert(decimal(12,1), sum(used_page_count)     / 128.0) \n"
+			    + "        ,UnUsedSizeMB                     = convert(decimal(12,1), (sum(reserved_page_count) - sum(used_page_count)) / 128.0) \n"
+			    + " \n"
+			    + "        ,reserved_page_count              = sum(reserved_page_count) \n"
+			    + "        ,used_page_count                  = sum(used_page_count) \n"
+			    + "        ,unused_page_count                = sum(reserved_page_count) - sum(used_page_count) \n"
+			    + " \n"
+			    + "        ,in_row_data_page_count           = sum(in_row_data_page_count) \n"
+			    + "        ,in_row_used_page_count           = sum(in_row_used_page_count) \n"
+			    + "        ,in_row_reserved_page_count       = sum(in_row_reserved_page_count) \n"
+			    + "        ,lob_used_page_count              = sum(lob_used_page_count) \n"
+			    + "        ,lob_reserved_page_count          = sum(lob_reserved_page_count) \n"
+			    + "        ,row_overflow_used_page_count     = sum(row_overflow_used_page_count) \n"
+			    + "        ,row_overflow_reserved_page_count = sum(row_overflow_reserved_page_count) \n"
+			    + "    into #ncistat \n"
+			    + "    from sys.dm_db_partition_stats \n"
+			    + "    where index_id >= 2 \n"
+			    + "      and OBJECTPROPERTY(object_id, 'IsUserTable') = 1 \n"
+			    + "      and row_count > 0 \n"
+			    + "    group by object_id \n"
+			    + " \n"
+			    + "-- Joint the two temp tables \n"
+			    + "select \n"
+			    + "--      DbName              = db_name() \n"
+			    + "--    , SchemaName          = object_schema_name(dstat.object_id) \n"
+			    + "--    , TableName           = object_name(dstat.object_id) \n"
+			    + "      DbName              = db_name() \n"
+			    + "    , SchemaName          = (select sys.schemas.name from sys.objects inner join sys.schemas ON sys.schemas.schema_id = sys.objects.schema_id where sys.objects.object_id = dstat.object_id) \n"
+			    + "    , TableName           = (select sys.objects.name from sys.objects where sys.objects.object_id = dstat.object_id) \n"
+			    + "    , dstat.HasClusteredIndex \n"
+			    + "    , NcIndexCount        = isnull(ncistat.NcIndexCount, 0) \n"
+			    + "    , dstat.PartitionCount \n"
+			    + "    , RowCountAbs         = dstat.row_count \n"
+			    + "    , RowCountDiff        = dstat.row_count \n"
+			    + "    , DataRowsPerPage     = dstat.RowsPerPage \n"
+			    + "    , DataVsIndexPct      = convert(decimal(12,1), case when dstat.UsedSizeMB = 0 then null else (ncistat.UsedSizeMB / dstat.UsedSizeMB) * 100.0 end) \n"
+			    + " \n"
+			    + "    , TotalReservedSizeMB = dstat.ReservedSizeMB + isnull(ncistat.ReservedSizeMB, 0.0) \n"
+			    + "    , TotalUsedSizeMB     = dstat.UsedSizeMB     + isnull(ncistat.UsedSizeMB    , 0.0) \n"
+			    + "    , TotalUnUsedSizeMB   = dstat.UnUsedSizeMB   + isnull(ncistat.UnUsedSizeMB  , 0.0) \n"
+			    + "    -- pct = TotalUnUsedSizeMB/TotalReservedSizeMB \n"
+			    + "    , TotalUnUsedPct      = convert(decimal(12,1),  case when dstat.ReservedSizeMB + isnull(ncistat.ReservedSizeMB, 0.0) = 0 then null else (dstat.UnUsedSizeMB + isnull(ncistat.UnUsedSizeMB  , 0.0))/(dstat.ReservedSizeMB + isnull(ncistat.ReservedSizeMB, 0.0)) * 100.0 end) \n"
+			    + " \n"
+			    + "    , HasLobData          = convert(bit, case when dstat.lob_reserved_page_count > 0 then 1 else 0 end) \n"
+			    + " \n"
+			    + "    , DataReservedSizeMB  = dstat.ReservedSizeMB \n"
+			    + "    , DataUsedSizeMB      = dstat.UsedSizeMB \n"
+			    + "    , DataUnUsedSizeMB    = dstat.UnUsedSizeMB \n"
+			    + "    , DataUnUsedPct       = convert(decimal(12,1),  case when dstat.ReservedSizeMB = 0 then null else (dstat.UnUsedSizeMB/dstat.ReservedSizeMB) * 100.0 end) \n"
+			    + " \n"
+			    + "    , IndexReservedSizeMB = ncistat.ReservedSizeMB \n"
+			    + "    , IndexUsedSizeMB     = ncistat.UsedSizeMB \n"
+			    + "    , IndexUnUsedSizeMB   = ncistat.UnUsedSizeMB \n"
+			    + "    , IndexUnUsedPct      = convert(decimal(12,1),  case when ncistat.ReservedSizeMB = 0 then null else (ncistat.UnUsedSizeMB/ncistat.ReservedSizeMB) * 100.0 end) \n"
+			    + " \n"
+			    + "    , LobReservedSizeMB   = dstat.LobReservedSizeMB \n"
+			    + "    , LobUsedSizeMB       = dstat.LobUsedSizeMB \n"
+			    + "    , LobUnUsedSizeMB     = dstat.LobUnUsedSizeMB \n"
+			    + "    , LobUnUsedPct        = convert(decimal(12,1),  case when dstat.LobReservedSizeMB = 0 then null else (dstat.LobUnUsedSizeMB/dstat.LobReservedSizeMB) * 100.0 end) \n"
+			    + "    , LobTableContentPct  = convert(decimal(12,1),  case when dstat.LobReservedSizeMB = 0 then null when dstat.ReservedSizeMB = 0 then 0 else (dstat.LobReservedSizeMB / dstat.ReservedSizeMB) * 100.0 end) \n"
+			    + " \n"
+			    + "    , DataStatsUpdated    = dstat.StatsUpdated \n"
+			    + "    , NcIndexStatsUpdated = ncistat.StatsUpdated \n"
+			    + " \n"
+			    + "    , d_in_row_data_page_count           = dstat.in_row_data_page_count \n"
+			    + "    , d_in_row_used_page_count           = dstat.in_row_used_page_count \n"
+			    + "    , d_in_row_reserved_page_count       = dstat.in_row_reserved_page_count \n"
+			    + "    , d_lob_used_page_count              = dstat.lob_used_page_count \n"
+			    + "    , d_lob_reserved_page_count          = dstat.lob_reserved_page_count \n"
+			    + "    , d_row_overflow_used_page_count     = dstat.row_overflow_used_page_count \n"
+			    + "    , d_row_overflow_reserved_page_count = dstat.row_overflow_reserved_page_count \n"
+			    + " \n"
+			    + "    , i_in_row_data_page_count           = ncistat.in_row_data_page_count \n"
+			    + "    , i_in_row_used_page_count           = ncistat.in_row_used_page_count \n"
+			    + "    , i_in_row_reserved_page_count       = ncistat.in_row_reserved_page_count \n"
+			    + "    , i_lob_used_page_count              = ncistat.lob_used_page_count \n"
+			    + "    , i_lob_reserved_page_count          = ncistat.lob_reserved_page_count \n"
+			    + "    , i_row_overflow_used_page_count     = ncistat.row_overflow_used_page_count \n"
+			    + "    , i_row_overflow_reserved_page_count = ncistat.row_overflow_reserved_page_count \n"
+			    + " \n"
+			    + "    , database_id = db_id() \n"
+			    + "    , dstat.object_id \n"
+			    + " \n"
+			    + "from #dstat dstat \n"
+			    + "left outer join #ncistat ncistat on dstat.object_id = ncistat.object_id \n"
+			    + " \n"
+			    + "-- Drop temp tables \n"
+			    + "drop table #dstat \n"
+			    + "drop table #ncistat \n"
+			    + "";
+
+
+		return sql;
+	}
+}

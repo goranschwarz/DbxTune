@@ -21,8 +21,12 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.os;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
+
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.ReportChartObject;
+import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.pcs.report.content.ase.AseAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -59,22 +63,37 @@ public class OsCpuUsageOverview extends AseAbstract
 	}
 	
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load on the Operating System Level.",
 				"CmOsMpstat_MpSum",
 				"CmOsMpstat_MpCpu",
 				"CmOsUptime_AdjLoadAverage"
 				));
 
-		sb.append(_CmOsMpstat_MpSum         .getHtmlContent(null, null));
-		sb.append(_CmOsMpstat_MpCpu         .getHtmlContent(null, null));
-		sb.append(_CmOsUptime_AdjLoadAverage.getHtmlContent(null, null));
-		
-		return sb.toString();
+		_CmOsMpstat_MpSum         .writeHtmlContent(sb, null, null);
+		_CmOsMpstat_MpCpu         .writeHtmlContent(sb, null, null);
+		_CmOsUptime_AdjLoadAverage.writeHtmlContent(sb, null, null);
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load on the Operating System Level.",
+//				"CmOsMpstat_MpSum",
+//				"CmOsMpstat_MpCpu",
+//				"CmOsUptime_AdjLoadAverage"
+//				));
+//
+//		sb.append(_CmOsMpstat_MpSum         .getHtmlContent(null, null));
+//		sb.append(_CmOsMpstat_MpCpu         .getHtmlContent(null, null));
+//		sb.append(_CmOsUptime_AdjLoadAverage.getHtmlContent(null, null));
+//		
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -93,12 +112,12 @@ public class OsCpuUsageOverview extends AseAbstract
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		int maxValue = 100;
-		_CmOsMpstat_MpSum          = createChart(conn, "CmOsMpstat", "MpSum",          maxValue, null, "mpstat: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
-		_CmOsMpstat_MpCpu          = createChart(conn, "CmOsMpstat", "MpCpu",          maxValue, null, "mpstat: CPU usage per core (usr+sys+iowait) (Host Monitor->OS CPU(mpstat))");
-		_CmOsUptime_AdjLoadAverage = createChart(conn, "CmOsUptime", "AdjLoadAverage", -1,       null, "uptime: Adjusted Load Average (Host Monitor->OS Load Average(uptime))");
+		_CmOsMpstat_MpSum          = createTsLineChart(conn, "CmOsMpstat", "MpSum",          maxValue, null, "mpstat: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
+		_CmOsMpstat_MpCpu          = createTsLineChart(conn, "CmOsMpstat", "MpCpu",          maxValue, null, "mpstat: CPU usage per core (usr+sys+iowait) (Host Monitor->OS CPU(mpstat))");
+		_CmOsUptime_AdjLoadAverage = createTsLineChart(conn, "CmOsUptime", "AdjLoadAverage", -1,       null, "uptime: Adjusted Load Average (Host Monitor->OS Load Average(uptime))");
 	}
 
-	private ReportChartObject _CmOsMpstat_MpSum;
-	private ReportChartObject _CmOsMpstat_MpCpu;
-	private ReportChartObject _CmOsUptime_AdjLoadAverage;
+	private IReportChart _CmOsMpstat_MpSum;
+	private IReportChart _CmOsMpstat_MpCpu;
+	private IReportChart _CmOsUptime_AdjLoadAverage;
 }

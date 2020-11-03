@@ -21,12 +21,22 @@
 package com.asetune.central.controllers;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.StringTokenizer;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.codec.binary.Base64;
+import org.apache.log4j.Logger;
+import org.eclipse.jetty.security.LoginService;
+import org.eclipse.jetty.security.SecurityHandler;
+import org.eclipse.jetty.server.UserIdentity;
 
 import com.asetune.utils.StringUtil;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -38,6 +48,8 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 
 public class Helper
 {
+	private static final Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
+	
 //	public static final SimpleDateFormat ISO8601_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
 	public static ObjectMapper createObjectMapper()
 	{
@@ -107,6 +119,12 @@ public class Helper
 		return value;
 	}
 
+	public static void sendError(HttpServletResponse resp, String msg) 
+	throws IOException 
+	{
+		resp.sendError(HttpServletResponse.SC_BAD_REQUEST, msg);
+	}
+	
 	/** 
 	 * Check for unknown input parameters<br>
 	 * If any parameter is <i>unknown</i>, then: 
@@ -140,5 +158,91 @@ public class Helper
 		Map<String, String[]> map = req.getParameterMap();
 		return map.containsKey(paramName);
 	}
+
+	public static Map<String, String> getParameterMap(HttpServletRequest req)
+	{
+		Map<String, String> map = new LinkedHashMap<>();
+		
+		for (String name : req.getParameterMap().keySet() )
+		{
+			map.put(name, req.getParameter(name));
+		}
+		
+		return map;
+	}
 	
+	/**
+	 * Check if we are logged in!
+	 * <p>
+	 * If we are NOT logged in this will send a 401 error to client
+	 * 
+	 * @param request
+	 * @param response
+	 * @return
+	 * @throws IOException
+	 */
+	public static boolean isAuthorized(HttpServletRequest request, HttpServletResponse response) 
+	throws IOException
+	{
+		String username = request.getRemoteUser();
+		if (StringUtil.isNullOrBlank(username))
+		{
+			// In here can we check for Basic Authentication as well??
+			if ( ! checkForBasicAuthentication(request) )
+			{
+				// Send: 401
+				response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Not logged in!");
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	public static boolean checkForBasicAuthentication(HttpServletRequest request)
+	{
+		String authHeader = request.getHeader("Authorization");
+		if (authHeader != null) 
+		{
+			StringTokenizer st = new StringTokenizer(authHeader);
+			if (st.hasMoreTokens()) 
+			{
+				String basic = st.nextToken();
+
+				if (basic.equalsIgnoreCase("Basic")) 
+				{
+					try 
+					{
+						String credentials = new String(Base64.decodeBase64(st.nextToken()), "UTF-8");
+						_logger.debug("Credentials: " + credentials);
+						int p = credentials.indexOf(":");
+						if (p != -1) 
+						{
+							String login    = credentials.substring(0, p).trim();
+							String password = credentials.substring(p + 1).trim();
+
+							SecurityHandler security = SecurityHandler.getCurrentSecurityHandler();
+							if (security != null)
+							{
+								LoginService loginService = security.getLoginService();
+								if (loginService != null)
+								{
+									UserIdentity userIdentity = loginService.login(login, password);
+									return userIdentity != null; // true of success
+								}
+							}
+						} else {
+							_logger.error("Invalid authentication token");
+						}
+					} 
+					catch (UnsupportedEncodingException e) 
+					{
+						_logger.warn("Couldn't retrieve authentication", e);
+					}
+				}
+			}
+		}
+
+		return false;
+	}
+
 }

@@ -21,9 +21,13 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.ase;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
+
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.ReportChartObject;
+import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
@@ -39,10 +43,9 @@ public class AseStatementCacheUsageOverview extends AseAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are some Graphs/Charts regarding the Statement Cache.",
 				"CmStatementCache_HitRatePctGraph",
 				"CmStatementCache_RequestPerSecGraph",
@@ -52,12 +55,31 @@ public class AseStatementCacheUsageOverview extends AseAbstract
 		if (_cfg != null && _cfg.getRowCount() > 0)
 			sb.append(_cfg.toHtmlTableString("sortable"));
 
-		sb.append(_CmStatementCache_HitRatePctGraph   .getHtmlContent(null, null));
-		sb.append(_CmStatementCache_RequestPerSecGraph.getHtmlContent(null, null));
-		sb.append(_CmSqlStatement_SqlStmnt            .getHtmlContent(null, "The above graph is a bit more than just from the Statement Cache, and the origin is from monSysStatement"));
-
-		return sb.toString();
+		_CmStatementCache_HitRatePctGraph   .writeHtmlContent(sb, null, null);
+		_CmStatementCache_RequestPerSecGraph.writeHtmlContent(sb, null, null);
+		_CmSqlStatement_SqlStmnt            .writeHtmlContent(sb, null, "The above graph is a bit more than just from the Statement Cache, and the origin is from monSysStatement");
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are some Graphs/Charts regarding the Statement Cache.",
+//				"CmStatementCache_HitRatePctGraph",
+//				"CmStatementCache_RequestPerSecGraph",
+//				"CmSqlStatement_SqlStmnt"
+//				));
+//
+//		if (_cfg != null && _cfg.getRowCount() > 0)
+//			sb.append(_cfg.toHtmlTableString("sortable"));
+//
+//		sb.append(_CmStatementCache_HitRatePctGraph   .getHtmlContent(null, null));
+//		sb.append(_CmStatementCache_RequestPerSecGraph.getHtmlContent(null, null));
+//		sb.append(_CmSqlStatement_SqlStmnt            .getHtmlContent(null, "The above graph is a bit more than just from the Statement Cache, and the origin is from monSysStatement"));
+//
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -73,25 +95,34 @@ public class AseStatementCacheUsageOverview extends AseAbstract
 
 
 	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { "MonSessionDbmsConfig" };
+	}
+
+	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		// Get 'statement cache size' from saved configuration 
 		String sql = "select [ConfigName], [ConfigValue], [UsedMemory] \n"
 				+ "from [MonSessionDbmsConfig] \n"
 				+ "where [SessionStartTime] = (select max([SessionStartTime]) from [MonSessionDbmsConfig]) \n"
-				+ "  and [ConfigName] = 'statement cache size' \n";
+				+ "  and [ConfigName] = 'statement cache size' \n"
+//				+ getReportPeriodSqlWhere("SessionStartTime")
+				+ "";
+
 		_cfg = 	executeQuery(conn, sql, false, "StatementCacheSize");
 
 		
 		int maxValue = 100;
-		_CmStatementCache_HitRatePctGraph    = createChart(conn, "CmStatementCache", "HitRatePctGraph",    maxValue, null, "Statement Cache Hit Rate, in Percent (Cache->Statement Cache)");
-		_CmStatementCache_RequestPerSecGraph = createChart(conn, "CmStatementCache", "RequestPerSecGraph",       -1, null, "Number of Requests from the Statement Cache, per Second (Cache->Statement Cache)");
+		_CmStatementCache_HitRatePctGraph    = createTsLineChart(conn, "CmStatementCache", "HitRatePctGraph",    maxValue, null, "Statement Cache Hit Rate, in Percent (Cache->Statement Cache)");
+		_CmStatementCache_RequestPerSecGraph = createTsLineChart(conn, "CmStatementCache", "RequestPerSecGraph",       -1, null, "Number of Requests from the Statement Cache, per Second (Cache->Statement Cache)");
 
-		_CmSqlStatement_SqlStmnt             = createChart(conn, "CmSqlStatement",   "SqlStmnt",                 -1, null, "SQL Statements Executed per Sec (Object/Access->SQL Statements)");
+		_CmSqlStatement_SqlStmnt             = createTsLineChart(conn, "CmSqlStatement",   "SqlStmnt",                 -1, null, "SQL Statements Executed per Sec (Object/Access->SQL Statements)");
 	}
 
-	private ReportChartObject _CmStatementCache_HitRatePctGraph;
-	private ReportChartObject _CmStatementCache_RequestPerSecGraph;
+	private IReportChart _CmStatementCache_HitRatePctGraph;
+	private IReportChart _CmStatementCache_RequestPerSecGraph;
 
-	private ReportChartObject _CmSqlStatement_SqlStmnt;
+	private IReportChart _CmSqlStatement_SqlStmnt;
 }

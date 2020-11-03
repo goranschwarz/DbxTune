@@ -75,7 +75,13 @@
 		height: 100% !important;
 	}
 
-
+	/* extra small button */
+	.btn-group-xs > .btn, .btn-xs {
+		padding: .4rem .4rem;
+		font-size: .875rem;
+		line-height: .5;
+		border-radius: .2rem;
+	}
   </style>
 
 </head>
@@ -260,6 +266,25 @@
         </div>  <!-- end: card-body -->
       </div>  <!-- end: card -->
 	  
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <!-- Daily Summary Report - SKIP Entries -->
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <div id='dbx-dsr-skip' class='card border-dark mb-3'>
+        <h5 class='card-header'>Daily Summary Report - SKIP Entries (or exclude some SQL Statements from reports)</h5>
+        <div class='card-body'>
+
+<!--        <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" onclick="addDsrSkipEntry()">Add Entry</button> -->
+            <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#dbx-dsr-skip-dialog">Add Entry</button>
+            &emsp;&emsp;&emsp; <span id='dbx-dsr-skip-count'>0</span> Entries in the below table 
+            <br>
+
+            <br>
+            <div id='dsr-skip-table'>
+            </div>
+
+        </div>  <!-- end: card-body -->
+      </div>  <!-- end: card -->
+	  
     </div>
   </main>
 
@@ -373,6 +398,63 @@
     </div>
   </div>  
 
+
+	<!-- Modal: DSR Daily Summary Report - SKIP Set dialog -->
+	<div class='modal fade' id='dbx-dsr-skip-dialog' tabindex='-1' role='dialog' aria-labelledby='dbx-dsr-skip-dialog' aria-hidden='true'>
+		<div class='modal-dialog modal-dialog-centered modal-lg' role='document'>
+		<div class='modal-content'>
+			<div class='modal-header'>
+			<h5 class='modal-title' id='dbx-dsr-skip-dialog-title'>Add Daily Summary Report SKIP Entry</h5>
+			<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
+				<span aria-hidden='true'>&times;</span>
+			</button>
+			</div>
+			<div class='modal-body'>
+				<form id='dbx-dsr-skip-form' class="needs-validation" novalidate>
+					<div class='form-group'>
+						<label for='dbx-dsr-skip-srvName'>Server Name</label>
+						<input  id='dbx-dsr-skip-srvName' name='srvName' type='text' class='form-control is-invalid' placeholder='Server Name' required>
+					</div>
+
+					<div class='form-group'>
+						<label for='dbx-dsr-skip-className'>Report Class Name (this is the short name of the Java Class)</label>
+						<input  id='dbx-dsr-skip-className' name='className' type='text' class='form-control is-invalid' placeholder='Report Class Name, example: AseTopSlowSql' required>
+					</div>
+
+					<div class='form-group'>
+						<label for='dbx-dsr-skip-entryType'>Column name that we want to <i>filter</i> out records</label>
+						<input  id='dbx-dsr-skip-entryType' name='entryType' type='text' class='form-control is-invalid' placeholder='Column Name' required>
+					</div>
+
+					<div class='form-group'>
+						<label for='dbx-dsr-skip-stringVal'>Value that we want to <i>filter</i> out records in above Column Name</label>
+						<input  id='dbx-dsr-skip-stringVal' name='stringVal' type='text' class='form-control is-invalid' placeholder='Filter Value' required>
+					</div>
+
+					<div class='form-group'>
+						<label for='dbx-dsr-skip-description'>Describe why we want to do this</label>
+						<input  id='dbx-dsr-skip-description' name='description' type='text' class='form-control' placeholder='Description'>
+					</div>
+
+					<div class='form-group'>
+						<label for='dbx-dsr-skip-sqlTextExample'>SQL Text Example</label>
+						<textarea id='dbx-dsr-skip-sqlTextExample' name='sqlTextExample' rows='10' class='form-control' placeholder='Example of how the SQL Text might look like'></textarea>
+					</div>
+					<br>
+					
+					<div id='dbx-dsr-skip-error' style='display:none;' class='alert alert-danger' role='alert'></div>
+					
+					<div class='modal-footer'>
+						<button type='button' class='btn btn-default' data-dismiss='modal'>Close</button>
+<!--  					<button type='submit' class="btn btn-primary btn-ok">Save</button>-->
+						<input id='dbx-dsr-skip-save' class="btn btn-success" value="Save" type="submit" disabled></input>
+					</div>
+				</form>
+			</div>
+		</div>
+		</div>
+	</div>
+	<!-- END: DSR Daily Summary Report - SKIP Set dialog -->
 
 <script>
   // Global variables
@@ -1251,6 +1333,255 @@
 		}); // end: ajax call
 	}
    
+
+	/**
+	 * ---------------------------------------------------------------------------
+	 * -- Daily Summary Report -- SKIP 
+	 * ---------------------------------------------------------------------------
+	 */
+	$.ajax(
+	{
+		url: "/api/dsr/skip",
+		type: 'get',
+		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+
+		success: function(data, status) 
+		{
+			// console.log("RECEIVED DATA: "+data);
+			var jsonResp = JSON.parse(data);
+
+//			let dsrSkipTableDiv = document.getElementById("dsr-skip-table");
+
+//			let tab = jsonToTable(jsonResp, false);
+//			dsrSkipTableDiv.innerHTML = "Found following SKIP Entries:<br>";
+//			dsrSkipTableDiv.appendChild(tab);
+//			dsrSkipTableDiv.appendChild(document.createElement("br"));
+
+			var html_tab  = "<table class='table table-bordered table-hover table-sm data-sortable'> ";
+			    html_tab += "  <thead> ";
+			    html_tab += "    <tr>  ";
+			    html_tab += "      <th>SrvName</th> ";
+			    html_tab += "      <th>ClassName</th> ";
+			    html_tab += "      <th>EntryType</th> ";
+			    html_tab += "      <th>StringVal</th> ";
+			    html_tab += "      <th>Action</th> ";
+			    html_tab += "      <th>Description</th> ";
+			    html_tab += "      <th>SqlTextExample</th> ";
+			    html_tab += "    </tr> ";
+			    html_tab += "  </thead> ";
+			    html_tab += "  <tbody> ";
+
+			for (var i=0; i<jsonResp.length; i++) {
+				var entry = jsonResp[i];
+
+//				var actionLink = "<a href=\"javascript:removeDsrEntry('" + entry.srvName + "', '" + entry.className + "', '" + entry.entryType + "', '" + entry.stringVal + "'); \")>delete</a>";
+				var actionLink = "<button type='button' class='btn btn-danger btn-xs' onclick=\"removeDsrEntry('" + entry.srvName + "', '" + entry.className + "', '" + entry.entryType + "', '" + entry.stringVal + "');\">Delete</button>";
+
+				// Build table
+				html_tab += "    <tr>";
+				html_tab += "      <td>" + entry.srvName        + "</td> ";
+				html_tab += "      <td>" + entry.className      + "</td> ";
+				html_tab += "      <td>" + entry.entryType      + "</td> ";
+				html_tab += "      <td>" + entry.stringVal      + "</td> ";
+				html_tab += "      <td>" + actionLink           + "</td> ";
+				html_tab += "      <td>" + entry.description    + "</td> ";
+				html_tab += "      <td><div style='width:600px; max-height:150px; overflow:auto'><xmp>" + entry.sqlTextExample + "</xmp></div></td> ";
+				html_tab += "    </tr>";				
+			}
+			html_tab += "  </tbody>";
+			html_tab += "</table>";
+
+			// set the table to div: dsr-skip-table
+			let dsrSkipTableDiv = document.getElementById("dsr-skip-table");
+			dsrSkipTableDiv.innerHTML = html_tab;
+			
+			// setting count
+			document.getElementById("dbx-dsr-skip-count").innerHTML = jsonResp.length;
+		},
+		error: function(xhr, desc, err) 
+		{
+			console.log(xhr);
+			console.log("Details: " + desc + "\nError: " + err);
+		}
+	}); // end: ajax call
+	
+	function removeDsrEntry(srvName, className, entryType, stringVal)
+	{
+		console.log("DELETE: srvName='" + srvName + "', className='" + className + "', entryType='" + entryType + "', stringVal='" + stringVal + "'.");		
+
+		$.ajax(
+		{
+			url: "/api/dsr/skip?srvName=" + srvName + "&className=" + className + "&entryType=" + entryType + "&stringVal=" + stringVal,
+			type: 'delete',
+			// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+
+			success: function(data, status) 
+			{
+				console.log("removeDsrEntry-RESPONSE:", data, status);
+				window.location = window.location.pathname;
+				//location.reload();
+				//window.location = window.location.pathname + window.location.hash;
+				//window.location.reload();
+				//location.href = window.location.pathname + '#dbxc-dsr-skip'; 
+				//location.reload(true);
+			},
+			error: function(xhr, desc, err) 
+			{
+				console.log(xhr);
+				console.log("Details: " + desc + "\nError: " + err);
+			}
+		}); // end: ajax call
+	}
+	
+	// -------------- SAVE ---------------------
+//	$('#dbx-dsr-skip-dialog').on('click', '.btn-ok', function(e)
+	$("#dbx-dsr-skip-form").submit(function(e)
+	{
+//		var modalDiv = $(e.delegateTarget);
+//		modalDiv.addClass('working');
+		
+		e.preventDefault(); // avoid to execute the actual submit of the form.
+
+		var srvName        = document.getElementById("dbx-dsr-skip-srvName"       ).value;
+		var className      = document.getElementById("dbx-dsr-skip-className"     ).value;
+		var entryType      = document.getElementById("dbx-dsr-skip-entryType"     ).value;
+		var stringVal      = document.getElementById("dbx-dsr-skip-stringVal"     ).value;
+		var description    = document.getElementById("dbx-dsr-skip-description"   ).value;
+		var sqlTextExample = document.getElementById("dbx-dsr-skip-sqlTextExample").value;
+
+		var sendData = {
+			srvName:         srvName,
+			className:       className,
+			entryType:       entryType,
+			stringVal:       stringVal,
+			description:     description,
+			sqlTextExample:  sqlTextExample
+		};
+
+		console.log("SAVE Send JSON: ", sendData);
+		document.getElementById("dbx-dsr-skip-error").innerHTML = "";
+
+		// adding the below to the ajax request causes: error: Unexpected end of json input
+		//dataType: 'json',
+		//contentType: 'application/json',
+
+		// send the update request
+		$.ajax(
+		{
+			url: '/api/dsr/skip',
+			type: 'post',
+			data: JSON.stringify(sendData),
+			success: function(data, status) 
+			{
+				console.log("success.status: " + status);
+				console.log("success.data: " + data);
+				
+				window.location = window.location.pathname;
+				//location.reload();
+				//window.location = window.location.pathname + window.location.hash;
+				//window.location.reload();
+				//location.href = window.location.pathname + '#dbxc-dsr-skip'; 
+				//location.reload(true);
+			},
+			error: function(xhr, desc, err) 
+			{
+				console.log("send error, xhr:", xhr);
+				console.log("Details: " + desc + "\nError: " + err);
+
+				var errorDiv = document.getElementById("dbx-dsr-skip-error");
+				errorDiv.style.display = 'block';
+				errorDiv.innerHTML = "Details: " + desc + "<br>Error: " + err;
+			}
+		});
+	});
+	
+	// -------------- enable/disable "save" button ---------------------
+	// https://stackoverflow.com/questions/58753515/bootstrap-4-validation-disable-submit-button-until-form-validated
+	window.addEventListener('load', function() 
+	{
+		let formVar = document.getElementById('dbx-dsr-skip-form');
+		// Validate on input:
+		formVar.querySelectorAll('.form-control').forEach((input, index) => 
+		{
+			input.addEventListener(('input'), () => 
+			{
+				console.log("Field ID='" + input.id + "', isValid=" + input.checkValidity());
+
+				if (input.checkValidity()) {
+					input.classList.remove('is-invalid')
+					input.classList.add('is-valid');
+				} else {
+					input.classList.remove('is-valid')
+					input.classList.add('is-invalid');
+				}
+
+				var inValidFieldsCount  = $('.form-control.is-invalid').length
+				var isFormValid = (inValidFieldsCount === 0);
+
+				$("#dbx-dsr-skip-save").attr("disabled", !isFormValid);
+            
+				console.log("FORM: 'dbx-dsr-skip-save': isFormValid=" + isFormValid + "[inValidFieldsCount=" + inValidFieldsCount + "]");
+			});
+		});
+
+		// Validate on submit:
+		formVar.addEventListener('submit', function(event) 
+		{
+			if (formVar.checkValidity() === false) 
+			{
+				event.preventDefault();
+				event.stopPropagation();
+			}
+			formVar.classList.add('was-validated');
+		}, false);
+	});
+
+	// -------------- OPEN DIALOG ---------------------
+	$('#dbx-dsr-skip-dialog').on('show.bs.modal', function(e) {
+
+		console.log("#dbx-dsr-skip-dialog: OPEN ");
+		
+		setTimeout(function() {
+			console.log("Try to kick of field validation... by dispatchEvent: and a dummy input event");
+			document.getElementById('dbx-dsr-skip-srvName')       .dispatchEvent(new Event('input',{bubbles: true, cancelable: true}));
+			document.getElementById('dbx-dsr-skip-className')     .dispatchEvent(new Event('input',{bubbles: true, cancelable: true}));
+			document.getElementById('dbx-dsr-skip-entryType')     .dispatchEvent(new Event('input',{bubbles: true, cancelable: true}));
+			document.getElementById('dbx-dsr-skip-stringVal')     .dispatchEvent(new Event('input',{bubbles: true, cancelable: true}));
+			document.getElementById('dbx-dsr-skip-description')   .dispatchEvent(new Event('input',{bubbles: true, cancelable: true}));
+			document.getElementById('dbx-dsr-skip-sqlTextExample').dispatchEvent(new Event('input',{bubbles: true, cancelable: true}));
+		}, 250);
+	});
+
+	// -------------- Check for input parameters ---------------------
+	// if: op='openAddSkipEntry' --> open "skip" modal dialog
+	// http://localhost:8080/admin/admin.html?op=openDsrSkipDialog=openAddSkipEntry&srvName=xxx&className=yyy&entryType=zzz&stringVal=aaa&description=bbb&sqlTextExample=ccc
+	const param_op             = getParameter("op", '');
+	console.log("Input Parameters: 'op' = |" + param_op + "|")
+	if (param_op === 'openDsrSkipDialog')
+	{
+		const param_srvName        = getParameter("srvName",         '');
+		const param_className      = getParameter("className",       '');
+		const param_entryType      = getParameter("entryType",       '');
+		const param_stringVal      = getParameter("stringVal",       '');
+		const param_description    = getParameter("description",     '');
+		const param_sqlTextExample = getParameter("sqlTextExample",  '');
+
+		console.log("Input Parameters: 'param_srvName'        = |" + param_srvName        + "|")
+		console.log("Input Parameters: 'param_className'      = |" + param_className      + "|")
+		console.log("Input Parameters: 'param_entryType'      = |" + param_entryType      + "|")
+		console.log("Input Parameters: 'param_stringVal'      = |" + param_stringVal      + "|")
+		console.log("Input Parameters: 'param_description'    = |" + param_description    + "|")
+		console.log("Input Parameters: 'param_sqlTextExample' = |" + param_sqlTextExample + "|")
+		
+		document.getElementById('dbx-dsr-skip-srvName')       .value = param_srvName;
+		document.getElementById('dbx-dsr-skip-className')     .value = param_className;
+		document.getElementById('dbx-dsr-skip-entryType')     .value = param_entryType;
+		document.getElementById('dbx-dsr-skip-stringVal')     .value = param_stringVal;
+		document.getElementById('dbx-dsr-skip-description')   .value = param_description;
+		document.getElementById('dbx-dsr-skip-sqlTextExample').value = param_sqlTextExample;
+
+		$('#dbx-dsr-skip-dialog').modal('show');
+	}
 
 	//-----------------------------------------------------------
 	// Check for login and set props

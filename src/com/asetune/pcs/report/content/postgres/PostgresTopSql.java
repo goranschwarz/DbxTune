@@ -21,6 +21,9 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.postgres;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.sql.SQLException;
 import java.sql.Types;
 
@@ -49,10 +52,9 @@ extends ReportEntryAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		if (_shortRstm.getRowCount() == 0)
 		{
 			sb.append("No rows found <br>\n");
@@ -62,19 +64,47 @@ extends ReportEntryAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-			sb.append(_shortRstm.toHtmlTableString("sortable"));
+			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+			sb.append(toHtmlTable(_shortRstm));
 
 			if (_sqTextRstm != null)
 			{
 				sb.append("<br>\n");
-				sb.append("SQL Text by queryid, Row Count: ").append(_sqTextRstm.getRowCount()).append(" (This is the same SQL Text as the in the above table, but without all counter details).<br>\n");
-				sb.append(_sqTextRstm.toHtmlTableString("sortable"));
+				sb.append("SQL Text by queryid, Row Count: " + _sqTextRstm.getRowCount() + " (This is the same SQL Text as the in the above table, but without all counter details).<br>\n");
+				sb.append(toHtmlTable(_sqTextRstm));
 			}
 		}
-
-		return sb.toString();
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		if (_shortRstm.getRowCount() == 0)
+//		{
+//			sb.append("No rows found <br>\n");
+//		}
+//		else
+//		{
+//			// Get a description of this section, and column names
+//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+//
+//			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
+////			sb.append(_shortRstm.toHtmlTableString("sortable"));
+//			sb.append(toHtmlTable(_shortRstm));
+//
+//			if (_sqTextRstm != null)
+//			{
+//				sb.append("<br>\n");
+//				sb.append("SQL Text by queryid, Row Count: ").append(_sqTextRstm.getRowCount()).append(" (This is the same SQL Text as the in the above table, but without all counter details).<br>\n");
+////				sb.append(_sqTextRstm.toHtmlTableString("sortable"));
+//				sb.append(toHtmlTable(_sqTextRstm));
+//			}
+//		}
+//
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -144,6 +174,12 @@ extends ReportEntryAbstract
 	}
 
 	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { "CmPgStatements_diff" };
+	}
+
+	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
@@ -202,6 +238,7 @@ extends ReportEntryAbstract
 			    + "from [CmPgStatements_diff] x \n"
 //			    + "where [usename] != 'postgres' \n"
 			    + "where [calls] > 0 \n"                          // do only get records that has been executed (even if presented in the "Statement cache")
+				+ getReportPeriodSqlWhere()
 			    + "group by [datname], [usename], [queryid] \n"
 			    + "order by [total_time_sum] desc \n"
 			    + "";
@@ -276,7 +313,7 @@ extends ReportEntryAbstract
 			}
 			catch (SQLException ex)
 			{
-				setProblem(ex);
+				setProblemException(ex);
 	
 				_sqTextRstm = ResultSetTableModel.createEmpty("Top SQL TEXT");
 				_logger.warn("Problems getting Top SQL TEXT: " + ex);

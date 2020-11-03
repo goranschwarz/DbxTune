@@ -50,6 +50,15 @@
 		<servlet-class>com.asetune.central.controllers.DbxTuneReportsServlet</servlet-class>
 	</servlet>
 
+	<servlet>
+		<servlet-name>DailySummartReportServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.DailySummartReportServlet</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>DsrSkipEntriesController</servlet-name>
+		<servlet-class>com.asetune.central.controllers.DsrSkipEntriesController</servlet-class>
+	</servlet>
 
 	<servlet>
 		<servlet-name>DownloadServlet</servlet-name>
@@ -96,7 +105,14 @@
 		<servlet-class>com.asetune.central.controllers.ChartBroadcastServlet</servlet-class>
 		<async-supported>true</async-supported>
 	</servlet>
-	
+
+<!--
+	<servlet>
+		<servlet-name>ChartTimelineServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.ChartTimelineServlet</servlet-class>
+	</servlet>
+-->
+
 	<servlet>
 		<servlet-name>SessionsController</servlet-name>
 		<servlet-class>com.asetune.central.controllers.SessionsController</servlet-class>
@@ -146,7 +162,10 @@
 		<url-pattern>/h2ws</url-pattern>
 	</servlet-mapping>
 
-
+	<servlet>
+		<servlet-name>UserDefinedContentServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.UserDefinedContentServlet</servlet-class>
+	</servlet>
 
 
 
@@ -182,6 +201,16 @@
 	<servlet-mapping>
 		<servlet-name>DbxTuneReportsServlet</servlet-name>
 		<url-pattern>/report</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>DailySummartReportServlet</servlet-name>
+		<url-pattern>/api/dsr</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>DsrSkipEntriesController</servlet-name>
+		<url-pattern>/api/dsr/skip</url-pattern>
 	</servlet-mapping>
 
 	<servlet-mapping>
@@ -229,6 +258,13 @@
 		<url-pattern>/api/chart/broadcast-sse</url-pattern>
 	</servlet-mapping>
  
+ <!--
+	<servlet-mapping>
+		<servlet-name>ChartTimelineServlet</servlet-name>
+		<url-pattern>/api/chart/timeline</url-pattern>
+	</servlet-mapping>
+ -->
+ 
 	<servlet-mapping>
 		<servlet-name>SessionsController</servlet-name>
 		<url-pattern>/api/sessions</url-pattern>
@@ -269,7 +305,12 @@
 		<url-pattern>/api/alarm/history</url-pattern>
 	</servlet-mapping>
 
- 
+	<servlet-mapping>
+		<servlet-name>UserDefinedContentServlet</servlet-name>
+		<url-pattern>/api/udc</url-pattern>
+	</servlet-mapping>
+
+
  <!-- 
     <servlet id="jsp">
         <servlet-name>jsp</servlet-name>
@@ -334,6 +375,9 @@
 
 <!--
 	<login-config>
+        // https://github.com/eclipse/jetty.project/issues/5442
+		<auth-method>BASIC?silent=true,FORM</auth-method>
+		
 		<auth-method>BASIC</auth-method>
 		<realm-name>DbxTuneCentralRealm</realm-name>
 	</login-config> 

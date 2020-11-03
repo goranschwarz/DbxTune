@@ -1582,34 +1582,57 @@ implements Memory.MemoryListener
 				long timeSinceLastCheck = System.currentTimeMillis() - heapDumpPathLastCheck;
 				if (timeSinceLastCheck > TimeUnit.HOURS.toMillis(1)) // Only check this once an hour
 				{
+					_logger.info("Checking for Java HPROF file(s) at directory '" + heapDumpPath + "'. heapDumpPath.exists=" + heapDumpPath.exists());
+
 					if (heapDumpPath.exists())
 					{
 						try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(heapDumpPath.toPath(), "*.hprof"))
 						{
+							int fileCount             = 0;
+							int fileMatchCount        = 0;
+							int fileNoMatchCount      = 0;
+							int fileDeleteCount       = 0;
+							int fileNotOldEnoughCount = 0;
+							
 							for (Path path : directoryStream)
 							{
-								if (path.getFileName().endsWith(".hprof")) // Just to be "safe" since we are about to delete files
+								fileCount++;
+								_logger.debug("HPROF file was found. now checking filename='" + path.getFileName() + "', fullFilename='" + path + "'.");
+								
+								// Note: Use toString() here otherwise we will use Path.endsWith(), which is NOT the same as we want to do...
+								if (path.getFileName().toString().toLowerCase().endsWith(".hprof")) // Just to be "safe" since we are about to delete files
 								{
+									fileMatchCount++;
+
 									long ageInMs = System.currentTimeMillis() - path.toFile().lastModified();
 									if (ageInMs > TimeUnit.DAYS.toMillis(7))
 									{
-										_logger.info("Deleting old HPROF file, wich is older than 7 days (lastMod='" + (new Timestamp(path.toFile().lastModified())) + "'). filename: " + path);
+										fileDeleteCount++;
+										_logger.info("Deleting old HPROF file, wich is older than 7 days (lastMod='" + (new Timestamp(path.toFile().lastModified())) + "', sizeInMb=" + (path.toFile().length()/1024/1024) + ", filename='" + path + "').");
 										path.toFile().delete();
 									}
 									else
 									{
-										_logger.info("DEBUG: HPROF file was found, but not yet older than 7 days, this can be manually removed if you like. (lastMod='" + (new Timestamp(path.toFile().lastModified())) + "'). filename: " + path);
+										fileNotOldEnoughCount++;
+										_logger.info("DEBUG: HPROF file was found, but not yet older than 7 days, this can be manually removed if you like. (lastMod='" + (new Timestamp(path.toFile().lastModified())) + "', sizeInMb=" + (path.toFile().length()/1024/1024) + ", filename='" + path + "').");
 									}
 								}
+								else
+								{
+									fileNoMatchCount++;
+									_logger.debug("this is NOT a HPROF file, skipping this file. filename='" + path.getFileName() + "', fullFilename='" + path + "'.");
+								}
+
+								_logger.info("Checking for Java HPROF file(s) is complete. fileCount=" + fileCount + ", matchCount=" + fileMatchCount + ", noMatchCount=" + fileNoMatchCount + ", deleteCount=" + fileDeleteCount + ", notOldEnoughCount=" + fileNotOldEnoughCount + ".");
 							}
 						}
 						catch (IOException ex)
 						{
-							_logger.error("Problems reading HeapDumpPath '" + heapDumpPath + "' when checking/cleaning-up older '*.hprof' files.", ex);
+							_logger.error("Problems reading HPROF HeapDumpPath '" + heapDumpPath + "' when checking/cleaning-up older '*.hprof' files.", ex);
 						}
 					}
 					
-					timeSinceLastCheck = System.currentTimeMillis();
+					heapDumpPathLastCheck = System.currentTimeMillis();
 				}
 			}
 			

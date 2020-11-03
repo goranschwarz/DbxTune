@@ -20,11 +20,17 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import java.io.IOException;
+import java.sql.Timestamp;
+import java.util.List;
+
 import com.asetune.pcs.report.content.DailySummaryReportContent;
+import com.asetune.pcs.report.content.IReportEntry;
 import com.asetune.pcs.report.senders.IReportSender;
 import com.asetune.sql.conn.DbxConnection;
 
 public interface IDailySummaryReport
+extends AutoCloseable
 {
 
 	/**
@@ -46,9 +52,21 @@ public interface IDailySummaryReport
 	void init() throws Exception;
 
 	/**
-	 * Create the report
+	 * Get a list of Report Entries
+	 * @return
 	 */
-	void create();
+	List<IReportEntry> getReportEntries();
+
+	/**
+	 * Default method which adds Report Entries by any implementations (called from init) 
+	 */
+	void addReportEntries();
+
+	/**
+	 * Create the report
+	 * @throws InterruptedException 
+	 */
+	void create() throws InterruptedException, IOException;
 
 	/**
 	 * Send the report to "whatever"
@@ -85,5 +103,62 @@ public interface IDailySummaryReport
 	 * @param content
 	 */
 	DailySummaryReportContent getReportContent();
+
+
+	
+	/**
+	 * Set progress report, so we can track/print what we are doing when creating a Daily Summary Report.
+	 */
+	void setProgressReporter(IProgressReporter progressReporter);
+
+	/**
+	 * Get progress report, so we can track/print what we are doing when creating a Daily Summary Report.
+	 */
+	IProgressReporter getProgressReporter();
+
+	
+
+	/**
+	 * If we want to restrict the begin time of the report (applying a WHERE clause in the reports)
+	 * 
+	 * @param hour    what minute. (-1 = unrestricted)
+	 * @param minute  what minute. (-1 = unrestricted)
+	 */
+	void setReportPeriodBeginTime(int hour, int minute);
+
+	/**
+	 * If we want to restrict the begin time of the report (applying a WHERE clause in the reports)
+	 * 
+	 * @param hour    what minute. (-1 = unrestricted)
+	 * @param minute  what minute. (-1 = unrestricted)
+	 */
+	void setReportPeriodEndTime(int hour, int minute);
+
+	/**
+	 * Check if we have any begin/end time for the reporting period
+	 * @return true or false
+	 */
+	boolean hasReportPeriod();
+
+	/** 
+	 * Get the Actual Reporting BEGIN Time
+	 * <p>
+	 * If it has been set by setReportPeriodBegin/EndTime() that will be reflected<br>
+	 * If it'a the full day, the Recording Start/End time will be reflected<br>
+	 */
+	Timestamp getReportBeginTime();
+
+	/** 
+	 * Get the Actual Reporting END Time
+	 * <p>
+	 * If it has been set by setReportPeriodBegin/EndTime() that will be reflected<br>
+	 * If it'a the full day, the Recording Start/End time will be reflected<br>
+	 */
+	Timestamp getReportEndTime();
+
+	/**
+	 * Close any internal objects, like the DBMS Connection
+	 */
+	void close();
 
 }

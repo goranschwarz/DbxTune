@@ -60,10 +60,12 @@ import com.asetune.central.pcs.objects.DbxCentralUser;
 import com.asetune.central.pcs.objects.DbxGraphData;
 import com.asetune.central.pcs.objects.DbxGraphDescription;
 import com.asetune.central.pcs.objects.DbxGraphProperties;
+import com.asetune.central.pcs.objects.DsrSkipEntry;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.DbxConnectionPool;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -2169,6 +2171,167 @@ public class CentralPersistReader
 
 
 
+	public List<DsrSkipEntry> getDsrSkipEntries(String srvName, String className, String entryType)
+	throws SQLException
+	{
+		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
+		try // block with: finally at end to return the connection to the ConnectionPool
+		{
+			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.DSR_SKIP_ENTRIES, null, false);
+
+			String andSrvName   = StringUtil.isNullOrBlank(srvName)   ? "" : "   and [SrvName]   = " + DbUtils.safeStr(srvName  ) + " \n";
+			String andClassName = StringUtil.isNullOrBlank(className) ? "" : "   and [ClassName] = " + DbUtils.safeStr(className) + " \n";
+			String andEntryType = StringUtil.isNullOrBlank(entryType) ? "" : "   and [EntryType] = " + DbUtils.safeStr(entryType) + " \n";
+
+			// Build SQL
+			String sql = 
+					  "select \n"
+					+ "  [SrvName] \n"       
+					+ " ,[ClassName] \n"     
+					+ " ,[EntryType] \n"     
+					+ " ,[StringVal] \n"     
+					+ " ,[Description] \n"     
+					+ " ,[SqlTextExample] \n"
+					+" from [" + tabName + "] \n"
+					+" where 1 = 1 \n"
+					+andSrvName
+					+andClassName
+					+andEntryType
+					+ "order by [SrvName], [ClassName], [EntryType], [StringVal]"
+					;
+			
+			sql = conn.quotifySqlString(sql);
+			
+			if (_logger.isDebugEnabled())
+				_logger.debug("getDsrSkipEntries(srvName='" + srvName + "', className='" + className + "', entryType='" + entryType + "'): SQL=" + sql);
+
+			List<DsrSkipEntry> list = new ArrayList<>();
+			
+			// autoclose: stmnt, rs
+			try (Statement stmnt = conn.createStatement())
+			{
+				// set TIMEOUT
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+				// Execute and read result
+				try (ResultSet rs = stmnt.executeQuery(sql))
+				{
+					while (rs.next())
+					{
+						DsrSkipEntry entry = new DsrSkipEntry(
+								rs.getString   (1), // SrvName
+								rs.getString   (2), // ClassName
+								rs.getString   (3), // EntryType
+								rs.getString   (4), // StringVal
+								rs.getString   (5), // Description
+								rs.getString   (6)  // SqlTextExample
+								);
+						
+						list.add(entry);
+					}
+				}
+			}
+			
+			return list;
+		}
+		finally
+		{
+			releaseConnection(conn);
+		}
+	}
+
+	public void addDsrSkipEntry(DsrSkipEntry entry) 
+	throws SQLException
+	{
+		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
+		try // block with: finally at end to return the connection to the ConnectionPool
+		{
+			// Get a writer (from which we get the INSERT SQL Statement)
+			CentralPersistWriterBase writer = null;
+			for (ICentralPersistWriter pw : CentralPcsWriterHandler.getInstance().getWriters())
+			{
+				if (pw instanceof CentralPersistWriterBase)
+				{
+					writer = (CentralPersistWriterBase) pw;
+				}
+			}
+			if (writer == null)
+				throw new SQLException("No CentralPersistWriter was found.");
+
+			// Get the INSERT Statement
+			String sql = writer.getTableInsertStr(conn, null, Table.DSR_SKIP_ENTRIES, null, true);
+			
+			// autoclose: pstmnt
+			try (PreparedStatement pstmnt = conn.prepareStatement(sql))
+			{
+				// set TIMEOUT
+				pstmnt.setQueryTimeout(_defaultQueryTimeout);
+
+				pstmnt.setString(1, entry.getSrvName());
+				pstmnt.setString(2, entry.getClassName());
+				pstmnt.setString(3, entry.getEntryType());
+				pstmnt.setString(4, entry.getStringVal());
+				pstmnt.setString(5, entry.getDescription());
+				pstmnt.setString(6, entry.getSqlTextExample());
+
+				pstmnt.execute();
+			}
+		}
+		finally
+		{
+			releaseConnection(conn);
+		}
+	}
+
+	public int removeDsrSkipEntry(String srvName, String className, String entryType, String stringVal)
+	throws SQLException
+	{
+		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
+		try // block with: finally at end to return the connection to the ConnectionPool
+		{
+			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.DSR_SKIP_ENTRIES, null, false);
+
+			// Build SQL
+			String sql = "delete \n"
+					+" from [" + tabName + "] \n"
+					+" where 1 = 1 \n"
+					+"   and [SrvName]   = " + DbUtils.safeStr( srvName   ) + " \n"
+					+"   and [ClassName] = " + DbUtils.safeStr( className ) + " \n"
+					+"   and [EntryType] = " + DbUtils.safeStr( entryType ) + " \n"
+					+"   and [StringVal] = " + DbUtils.safeStr( stringVal ) + " \n"
+					;
+			
+			sql = conn.quotifySqlString(sql);
+
+			// autoclose: stmnt, rs
+			try (Statement stmnt = conn.createStatement())
+			{
+				// set TIMEOUT
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+				stmnt.executeUpdate(sql);
+				
+				return stmnt.getUpdateCount();
+			}
+		}
+		finally
+		{
+			releaseConnection(conn);
+		}
+	}
+
+
+	public int removeDsrSkipEntry(DsrSkipEntry entry) 
+	throws SQLException
+	{
+		return removeDsrSkipEntry(entry.getSrvName(), entry.getClassName(), entry.getEntryType(), entry.getStringVal());
+	}
+
+
+
+
+
+
 	/**
 	 * Get graph data
 	 * 
@@ -3543,6 +3706,10 @@ public class CentralPersistReader
 			ReceiverAlarmCheck.getInstance().refresh();
 		}
 	}
+
+
+
+
 
 
 

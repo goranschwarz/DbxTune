@@ -110,6 +110,7 @@ extends CountersModel
 			"dm_db_log_space_usage", 
 			"dm_exec_sessions", 
 			"dm_exec_connections", 
+			"dm_tran_session_transactions", 
 			"dm_tran_active_transactions", 
 			"dm_exec_sql_text", 
 			"dm_exec_query_plan", 
@@ -820,33 +821,35 @@ extends CountersModel
 	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		// Table names are probably different in Normal SQL-Server and Azure SQL-Server
-		String dm_db_file_space_usage      = "sys.dm_db_file_space_usage";
-		String dm_db_log_space_usage       = "sys.dm_db_log_space_usage";
-		String dm_exec_sessions            = "sys.dm_exec_sessions";
-		String dm_exec_connections         = "sys.dm_exec_connections";
-		String dm_exec_requests            = "sys.dm_exec_requests";
-		String dm_tran_active_transactions = "sys.dm_tran_active_transactions";  // NOTE: not yet used
-		String dm_exec_sql_text            = "sys.dm_exec_sql_text";
-		String dm_exec_query_plan          = "sys.dm_exec_query_plan";
-		String master_files                = "sys.master_files";
-		String dm_os_volume_stats          = "sys.dm_os_volume_stats";
-		String databases                   = "sys.databases";
-		String backupset                   = "msdb.dbo.backupset";
+		String dm_db_file_space_usage       = "sys.dm_db_file_space_usage";
+		String dm_db_log_space_usage        = "sys.dm_db_log_space_usage";
+		String dm_exec_sessions             = "sys.dm_exec_sessions";
+		String dm_exec_connections          = "sys.dm_exec_connections";
+		String dm_exec_requests             = "sys.dm_exec_requests";
+		String dm_tran_session_transactions = "sys.dm_tran_session_transactions";
+		String dm_tran_active_transactions  = "sys.dm_tran_active_transactions";
+		String dm_exec_sql_text             = "sys.dm_exec_sql_text";
+		String dm_exec_query_plan           = "sys.dm_exec_query_plan";
+		String master_files                 = "sys.master_files";
+		String dm_os_volume_stats           = "sys.dm_os_volume_stats";
+		String databases                    = "sys.databases";
+		String backupset                    = "msdb.dbo.backupset";
 
 		if (isAzure)
 		{
-			dm_db_file_space_usage      = "sys.dm_pdw_nodes_db_file_space_usage";
-			dm_db_log_space_usage       = "sys.dm_db_log_space_usage";               // same as Normal SQL-Server
-			dm_exec_sessions            = "sys.dm_pdw_nodes_exec_sessions";
-			dm_exec_connections         = "sys.dm_pdw_exec_connections";
-			dm_exec_requests            = "sys.dm_exec_requests";                    // same as Normal SQL-Server
-			dm_tran_active_transactions = "sys.dm_pdw_nodes_tran_active_transactions";
-			dm_exec_sql_text            = "sys.dm_exec_sql_text";                    // same as Normal SQL-Server
-			dm_exec_query_plan          = "sys.dm_exec_query_plan";                  // same as Normal SQL-Server
-			master_files                = "sys.master_files";                        // same as Normal SQL-Server
-			dm_os_volume_stats          = "sys.dm_os_volume_stats";                  // same as Normal SQL-Server
-			databases                   = "sys.databases";                           // same as Normal SQL-Server
-			backupset                   = "msdb.dbo.backupset";                      // same as Normal SQL-Server
+			dm_db_file_space_usage       = "sys.dm_pdw_nodes_db_file_space_usage";
+			dm_db_log_space_usage        = "sys.dm_db_log_space_usage";               // same as Normal SQL-Server
+			dm_exec_sessions             = "sys.dm_pdw_nodes_exec_sessions";
+			dm_exec_connections          = "sys.dm_pdw_exec_connections";
+			dm_exec_requests             = "sys.dm_exec_requests";                    // same as Normal SQL-Server
+			dm_tran_session_transactions = "sys.dm_pdw_nodes_tran_session_transactions";
+			dm_tran_active_transactions  = "sys.dm_pdw_nodes_tran_active_transactions";
+			dm_exec_sql_text             = "sys.dm_exec_sql_text";                    // same as Normal SQL-Server
+			dm_exec_query_plan           = "sys.dm_exec_query_plan";                  // same as Normal SQL-Server
+			master_files                 = "sys.master_files";                        // same as Normal SQL-Server
+			dm_os_volume_stats           = "sys.dm_os_volume_stats";                  // same as Normal SQL-Server
+			databases                    = "sys.databases";                           // same as Normal SQL-Server
+			backupset                    = "msdb.dbo.backupset";                      // same as Normal SQL-Server
 		}
 
 		String availabilityGroupName          = "";
@@ -1179,27 +1182,30 @@ extends CountersModel
 			    + "        ,es.login_name \n"
 			    + "        ,es.host_name \n"
 			    + "        ,es.open_transaction_count \n"
+			    
+			    + "        ,tat.transaction_id \n"
+			    + "        ,tat.name AS transaction_name  \n"
+			    + "        ,tat.transaction_begin_time \n"
+
 			    + "        ,es.last_request_start_time \n"
 			    + "        ,es.last_request_end_time \n"
 			    + "        ,er.statement_start_offset \n"
 			    + "        ,er.statement_end_offset \n"
 			    + "        ,er.wait_type \n"
 			    + "        ,er.estimated_completion_time \n"
-//			    + ",at.transaction_id \n"           // possibly to get active transaction, needs to be tested/investigated
-//			    + ",at.name AS tran_name \n"        // possibly to get active transaction, needs to be tested/investigated
-//			    + ",at.transaction_begin_time \n"   // possibly to get active transaction, needs to be tested/investigated
 				+ "        ,SUBSTRING(sql_text.text, er.statement_start_offset / 2,  \n"
 				+ "             ( CASE WHEN er.statement_end_offset = -1  \n"
 				+ "                    THEN DATALENGTH(sql_text.text)  \n"
 				+ "                    ELSE er.statement_end_offset  \n"
-				+ "               END - er.statement_start_offset ) / 2) AS most_recent_sql_text \n"
+				+ "               END - er.statement_start_offset ) / 2 +2) AS most_recent_sql_text \n"
 			    + "        ,plan_text.query_plan as plan_text \n"
 			    + "        ,ROW_NUMBER() OVER (PARTITION BY es.database_id ORDER BY es.last_request_start_time) AS row_num \n"
 			    + "    INTO #oti \n"
 			    + "    FROM " + dm_exec_sessions + " es \n"
 			    + "    JOIN " + dm_exec_connections + " ec            ON es.session_id = ec.session_id \n"
 			    + "    LEFT OUTER JOIN " + dm_exec_requests + " er    ON er.session_id = es.session_id \n"
-//			    + "LEFT OUTER JOIN " + dm_tran_active_transactions + " at ON er.transaction_id = at.transaction_id \n"  // possibly to get active transaction, needs to be tested/investigated
+			    + "    LEFT OUTER JOIN " + dm_tran_session_transactions + " tst ON es.session_id = tst.session_id \n"
+			    + "    LEFT OUTER JOIN " + dm_tran_active_transactions  + " tat ON tst.transaction_id = tat.transaction_id \n"
 			    + "    OUTER APPLY " + dm_exec_sql_text + " (ec.most_recent_sql_handle) AS sql_text \n"
 			    + "    OUTER APPLY " + dm_exec_query_plan + " (er.plan_handle)          AS plan_text \n"
 			    + "    WHERE es.open_transaction_count > 0 \n"
@@ -1338,7 +1344,8 @@ extends CountersModel
 			    + "    ,OldestTranWaitType       = oti.wait_type \n"
 			    + "    ,OldestTranECT            = oti.estimated_completion_time \n"
 			    + "    ,OldestTranInSeconds      = datediff(second, oti.last_request_start_time, getdate()) \n"
-			    + "    ,OldestTranName           = -1 \n"
+			    + "    ,OldestTranName           = oti.transaction_name \n"
+			    + "    ,OldestTranId             = oti.transaction_id \n"
 			    + "    ,OldestTranSpid           = oti.session_id \n"
 			    + "    ,OldestTranProg           = oti.program_name \n"
 			    + "    ,OldestTranUser           = oti.login_name \n"

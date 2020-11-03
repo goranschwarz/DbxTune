@@ -21,6 +21,8 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content;
 
+import java.io.IOException;
+import java.io.Writer;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -40,11 +42,13 @@ extends ReportEntryAbstract
 {
 	private static Logger _logger = Logger.getLogger(RecordingInfo.class);
 
-	private String    _startTime = null;
-	private String    _endTime   = null;
-	private String    _duration  = null;
+	private Timestamp _startTimeTs = null;
+	private Timestamp _endTimeTs   = null;
+	private String    _startTime   = null;
+	private String    _endTime     = null;
+	private String    _duration    = null;
 
-	private Exception _problem   = null;
+	private Exception _problem     = null;
 
 	private String _dbmsVersionString;
 	private String _dbmsServerName;
@@ -61,42 +65,142 @@ extends ReportEntryAbstract
 		super(reportingInstance);
 	}
 
-	public String getStartTime()           { return _startTime; } 
-	public String getEndTime()             { return _endTime; } 
-	public String getDuration()            { return _duration; } 
-	public String getDbmsVersionString()   { return _dbmsVersionString; } 
-	public String getDbmsServerName()      { return _dbmsServerName; } 
+	public Timestamp getStartTimeTs()         { return _startTimeTs; } 
+	public Timestamp getEndTimeTs()           { return _endTimeTs; } 
+	public String    getStartTime()           { return _startTime; } 
+	public String    getEndTime()             { return _endTime; } 
+	public String    getDuration()            { return _duration; } 
+	public String    getDbmsVersionString()   { return _dbmsVersionString; } 
+	public String    getDbmsServerName()      { return _dbmsServerName; } 
 	
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
+		String blankTableRow = "  <tr> <td>&nbsp;</td> <td>&nbsp;</td> <td>&nbsp;</td> </tr>\n";
+		String tdBullet      = "<td>&emsp;&bull;&nbsp;</td>";    // Bull
+//		String tdBullet      = "<td>&emsp;&rArr;&nbsp;</td>";    // rightwards double arrow
+//		String tdBullet      = "<td>&emsp;&#9679;&nbsp;</td>";   // BLACK CIRCLE
+//		String tdBullet      = "<td>&emsp;&#10063;&nbsp;</td>";  // LOWER RIGHT DROP-SHADOWED WHITE SQUARE
+		
 		if (_startTime == null)
 		{
 			sb.append("Can't get start/end time <br>\n");
 		}
 		else
-		{			
-			sb.append("<ul>\n");
-			sb.append("  <li><b>Recording was Made Using:   </b>" + _recordingVersion      + "</li>\n");
-			sb.append("  <li><b>The Report is Produced by : </b>" + _reportVersion         + "</li>\n");
-			sb.append("<br>\n");
-			sb.append("  <li><b>Recording Start Date:       </b>" + _startTime              + "</li>\n");
-			sb.append("  <li><b>Recording End  Date:        </b>" + _endTime                + "</li>\n");
-			sb.append("  <li><b>Recording Duration:         </b>" + _duration               + "</li>\n");
-			sb.append("  <li><b>Recording Sample Time:      </b>" + _recordingSampleTime    + "</li>\n");
-			sb.append("<br>\n");
-			sb.append("  <li><b>DBMS Server Name:           </b>" + _dbmsServerName         + "</li>\n");
-			sb.append("  <li><b>DBMS Version String:        </b>" + _dbmsVersionString      + "</li>\n");
-   			sb.append("<br>\n");
-   			sb.append("  <li><b>DBMS Last Restart at Time:  </b>" + _dbmsStartTimeStr       + "</li>\n");
-			sb.append("  <li><b>DBMS Last Restart in Days:  </b>" + _dbmsStartTimeInDaysStr + "</li>\n");
-			sb.append("</ul>\n");
-		}
+		{
+			sb.append("<style type='text/css'>         \n");
+			sb.append("    table.recording-info td     \n");
+			sb.append("    {                           \n");
+			sb.append("         border-width: 0px;     \n");
+			sb.append("         padding: 1px;          \n");
+			sb.append("    }                           \n");
+			sb.append("    table.recording-info tr:nth-child(even) \n");
+			sb.append("    {                           \n");
+//			sb.append("         background-color: white !important; \n");
+			sb.append("         background-color: transparent; \n");
+			sb.append("    }                           \n");
+			sb.append("</style> \n");
 
-		return sb.toString();
+			sb.append("<br>\n");
+
+			sb.append("<table class='recording-info'>\n");
+			sb.append("  <tr> " + tdBullet +" <td><b>Recording was Made Using:   </b></td> <td>" + _recordingVersion      + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet +" <td><b>The Report is Produced by : </b></td> <td>" + _reportVersion         + "</td> </tr>\n");
+			if (getReportingInstance().hasReportPeriod())
+			{
+				sb.append(blankTableRow);
+				sb.append("  <tr> " + tdBullet +" <td><b>Report Period Begin Time: </b></td> <td>" + getReportingInstance().getReportPeriodBeginTime() + "</td> </tr>\n");
+				sb.append("  <tr> " + tdBullet +" <td><b>Report Period End Time    </b></td> <td>" + getReportingInstance().getReportPeriodEndTime()   + "</td> </tr>\n");
+				sb.append("  <tr> " + tdBullet +" <td><b>Report Period Duration:   </b></td> <td>" + getReportingInstance().getReportPeriodDuration()  + "</td> </tr>\n");
+			}
+			else
+			{
+				sb.append(blankTableRow);
+				sb.append("  <tr> " + tdBullet +" <td><b>Report Period: </b></td> <td> Full day</td> </tr>\n");
+			}
+			sb.append(blankTableRow);
+			sb.append("  <tr> " + tdBullet +" <td><b>Recording Start Date:       </b></td> <td>" + _startTime              + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet +" <td><b>Recording End  Date:        </b></td> <td>" + _endTime                + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet +" <td><b>Recording Duration:         </b></td> <td>" + _duration               + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet +" <td><b>Recording Sample Time:      </b></td> <td>" + _recordingSampleTime    + "</td> </tr>\n");
+
+			sb.append(blankTableRow);
+			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Server Name:           </b></td> <td>" + _dbmsServerName         + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Version String:        </b></td> <td>" + _dbmsVersionString      + "</td> </tr>\n");
+
+			sb.append(blankTableRow);
+   			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Last Restart at Time:  </b></td> <td>" + _dbmsStartTimeStr       + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Last Restart in Days:  </b></td> <td>" + _dbmsStartTimeInDaysStr + "</td> </tr>\n");
+			sb.append("</table>\n");
+		}
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		String blankTableRow = "  <tr> <td>&nbsp;</td> <td>&nbsp;</td> <td>&nbsp;</td> </tr>\n";
+//		String tdBullet      = "<td>&emsp;&bull;&nbsp;</td>";    // Bull
+////		String tdBullet      = "<td>&emsp;&rArr;&nbsp;</td>";    // rightwards double arrow
+////		String tdBullet      = "<td>&emsp;&#9679;&nbsp;</td>";   // BLACK CIRCLE
+////		String tdBullet      = "<td>&emsp;&#10063;&nbsp;</td>";  // LOWER RIGHT DROP-SHADOWED WHITE SQUARE
+//		
+//		if (_startTime == null)
+//		{
+//			sb.append("Can't get start/end time <br>\n");
+//		}
+//		else
+//		{
+//			sb.append("<style type='text/css'>         \n");
+//			sb.append("    table.recording-info td     \n");
+//			sb.append("    {                           \n");
+//			sb.append("         border-width: 0px;     \n");
+//			sb.append("         padding: 1px;          \n");
+//			sb.append("    }                           \n");
+//			sb.append("    table.recording-info tr:nth-child(even) \n");
+//			sb.append("    {                           \n");
+////			sb.append("         background-color: white !important; \n");
+//			sb.append("         background-color: transparent; \n");
+//			sb.append("    }                           \n");
+//			sb.append("</style> \n");
+//
+//			sb.append("<br>\n");
+//
+//			sb.append("<table class='recording-info'>\n");
+//			sb.append("  <tr> " + tdBullet +" <td><b>Recording was Made Using:   </b></td> <td>" + _recordingVersion      + "</td> </tr>\n");
+//			sb.append("  <tr> " + tdBullet +" <td><b>The Report is Produced by : </b></td> <td>" + _reportVersion         + "</td> </tr>\n");
+//			if (getReportingInstance().hasReportPeriod())
+//			{
+//				sb.append(blankTableRow);
+//				sb.append("  <tr> " + tdBullet +" <td><b>Report Period Begin Time: </b></td> <td>" + getReportingInstance().getReportPeriodBeginTime() + "</td> </tr>\n");
+//				sb.append("  <tr> " + tdBullet +" <td><b>Report Period End Time    </b></td> <td>" + getReportingInstance().getReportPeriodEndTime()   + "</td> </tr>\n");
+//				sb.append("  <tr> " + tdBullet +" <td><b>Report Period Duration:   </b></td> <td>" + getReportingInstance().getReportPeriodDuration()  + "</td> </tr>\n");
+//			}
+//			else
+//			{
+//				sb.append(blankTableRow);
+//				sb.append("  <tr> " + tdBullet +" <td><b>Report Period: </b></td> <td> Full day</td> </tr>\n");
+//			}
+//			sb.append(blankTableRow);
+//			sb.append("  <tr> " + tdBullet +" <td><b>Recording Start Date:       </b></td> <td>" + _startTime              + "</td> </tr>\n");
+//			sb.append("  <tr> " + tdBullet +" <td><b>Recording End  Date:        </b></td> <td>" + _endTime                + "</td> </tr>\n");
+//			sb.append("  <tr> " + tdBullet +" <td><b>Recording Duration:         </b></td> <td>" + _duration               + "</td> </tr>\n");
+//			sb.append("  <tr> " + tdBullet +" <td><b>Recording Sample Time:      </b></td> <td>" + _recordingSampleTime    + "</td> </tr>\n");
+//
+//			sb.append(blankTableRow);
+//			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Server Name:           </b></td> <td>" + _dbmsServerName         + "</td> </tr>\n");
+//			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Version String:        </b></td> <td>" + _dbmsVersionString      + "</td> </tr>\n");
+//
+//			sb.append(blankTableRow);
+//   			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Last Restart at Time:  </b></td> <td>" + _dbmsStartTimeStr       + "</td> </tr>\n");
+//			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Last Restart in Days:  </b></td> <td>" + _dbmsStartTimeInDaysStr + "</td> </tr>\n");
+//			sb.append("</table>\n");
+//		}
+//
+//		return sb.toString();
+//	}
 
 	@Override
 	public boolean canBeDisabled()
@@ -117,6 +221,12 @@ extends ReportEntryAbstract
 	}
 
 	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { PersistWriterBase.getTableName(null, PersistWriterBase.SESSION_SAMPLES, null, false) };
+	}
+
+	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		if (hasReportingInstance())
@@ -134,7 +244,7 @@ extends ReportEntryAbstract
 		
 		String sql;
 
-		// Get Alarms
+		// Start/end time for the recording
 		sql = "select min([SessionSampleTime]), max([SessionSampleTime]) \n" +
 		      "from ["+PersistWriterBase.getTableName(conn, PersistWriterBase.SESSION_SAMPLES, null, false) + "] \n";
 
@@ -150,6 +260,9 @@ extends ReportEntryAbstract
 					Timestamp startTime = rs.getTimestamp(1);
 					Timestamp endTime   = rs.getTimestamp(2);
 					
+					_startTimeTs = startTime;
+					_endTimeTs   = endTime;
+
 					if (startTime != null && endTime != null)
 					{
 						_startTime = startTime + "";

@@ -21,6 +21,9 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.ase;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -56,10 +59,9 @@ public class AseErrorInfo extends AseAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		if (_messages.size() > 0)
 		{
 			sb.append("<b>Messages:</b> \n");
@@ -78,8 +80,8 @@ public class AseErrorInfo extends AseAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			sb.append("Error Information Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-			sb.append(_shortRstm.toHtmlTableString("sortable"));
+			sb.append("Error Information Count: " + _shortRstm.getRowCount() + "<br>\n");
+			sb.append(toHtmlTable(_shortRstm));
 
 			if (_sqlTextRstm != null)
 			{
@@ -97,9 +99,54 @@ public class AseErrorInfo extends AseAbstract
 				sb.append(msOutlookAlternateText(showHideDiv, "Error Text", null));
 			}
 		}
-
-		return sb.toString();
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		if (_messages.size() > 0)
+//		{
+//			sb.append("<b>Messages:</b> \n");
+//			sb.append("<ul> \n");
+//			for (String msg : _messages)
+//				sb.append("  <li>").append(msg).append("</li> \n");
+//			sb.append("</ul> \n");
+//		}
+//
+//		if (_shortRstm.getRowCount() == 0)
+//		{
+//			sb.append("No Error Information <br>\n");
+//		}
+//		else
+//		{
+//			// Get a description of this section, and column names
+//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+//
+//			sb.append("Error Information Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
+////			sb.append(_shortRstm.toHtmlTableString("sortable"));
+//			sb.append(toHtmlTable(_shortRstm));
+//
+//			if (_sqlTextRstm != null)
+//			{
+//				// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
+//				Map<String, String> colNameValueTagMap = new HashMap<>();
+//				colNameValueTagMap.put("SQLText", "xmp");
+//
+//				String  divId       = "errorSqlText";
+//				boolean showAtStart = false;
+//				String  htmlContent = _sqlTextRstm.toHtmlTableString("sortable", colNameValueTagMap);
+//				
+//				String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Error SQL Text, for above errors (all text's may not be available)...", htmlContent);
+//
+//				// Compose special condition for Microsoft Outlook
+//				sb.append(msOutlookAlternateText(showHideDiv, "Error Text", null));
+//			}
+//		}
+//
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -141,6 +188,12 @@ public class AseErrorInfo extends AseAbstract
 	}
 
 	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { "MonSqlCapStatements" };
+	}
+
+	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		Set<String> skipErrorNumbers = StringUtil.parseCommaStrToSet( localConf.getProperty("AseErrorInfo.skip.errors", "") );
@@ -170,6 +223,7 @@ public class AseErrorInfo extends AseAbstract
 			    + "from [MonSqlCapStatements] \n"
 			    + "where [ErrorStatus] > 0 \n"
 			    + skipErrorsWhereClause
+				+ getReportPeriodSqlWhere("StartTime")
 			    + "group by [ErrorStatus] \n"
 			    + "order by [ErrorCount] desc \n"
 			    + "";
@@ -262,13 +316,13 @@ public class AseErrorInfo extends AseAbstract
 		}
 		catch(SQLException ex)
 		{
-			setProblem(ex);
+			setProblemException(ex);
 
 			_logger.warn("Problems getting ErrorSqlText for ErrorStatus = "+errorNumber+": " + ex);
 		} 
 		catch(ModelMissmatchException ex)
 		{
-			setProblem(ex);
+			setProblemException(ex);
 
 			_logger.warn("Problems (merging into previous ResultSetTableModel) when getting ErrorSqlText for ErrorStatus = "+errorNumber+": " + ex);
 		} 
@@ -306,13 +360,13 @@ public class AseErrorInfo extends AseAbstract
 		}
 		catch(SQLException ex)
 		{
-			setProblem(ex);
+			setProblemException(ex);
 
 			_logger.warn("Problems getting ErrorSqlText for ErrorStatus = "+errorNumber+": " + ex);
 		} 
 		catch(ModelMissmatchException ex)
 		{
-			setProblem(ex);
+			setProblemException(ex);
 
 			_logger.warn("Problems (merging into previous ResultSetTableModel) when getting ErrorSqlText for ErrorStatus = "+errorNumber+": " + ex);
 		} 

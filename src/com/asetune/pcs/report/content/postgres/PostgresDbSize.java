@@ -21,11 +21,14 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.postgres;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.LinkedHashMap;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.ReportChartObject;
+import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.pcs.report.content.ase.AseAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -43,20 +46,16 @@ public class PostgresDbSize extends AseAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		// Get a description of this section, and column names
 		sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
 		// Last sample Database Size info
-		sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-		sb.append(_shortRstm.toHtmlTableString("sortable"));
+		sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+		sb.append(toHtmlTable(_shortRstm));
 		
-//		int sumNumBackends = _shortRstm.getSumValueAsInteger("numbackends");
-//		int sumDbSizeMb    = _shortRstm.getSumValueAsInteger("dbsize_mb");
-
 		int sumDbSizeMb    = 0;
 		int sumNumBackends = 0;
 		for (int r=0; r<_shortRstm.getRowCount(); r++)
@@ -64,10 +63,7 @@ public class PostgresDbSize extends AseAbstract
 			sumDbSizeMb    += _shortRstm.getValueAsInteger(r, "dbsize_mb");
 			sumNumBackends += _shortRstm.getValueAsInteger(r, "numbackends");
 		}
-//		sb.append("<br>\n");
-//		sb.append("<b>Total Size in MB:  </b>").append(sumDbSizeMb).append("<br>\n");
-//		sb.append("<b>Total numbackends: </b>").append(sumNumBackends).append("<br>\n");
-//		sb.append("<br>\n");
+
 		LinkedHashMap<String, Object> summaryMap = new LinkedHashMap<>();
 		summaryMap.put("Total Size in MB",  sumDbSizeMb);
 		summaryMap.put("Total numbackends", sumNumBackends);
@@ -81,10 +77,53 @@ public class PostgresDbSize extends AseAbstract
 				"CmPgDatabase_DbSizeMb"
 				));
 
-		sb.append(_CmPgDatabase_DbSizeMb.getHtmlContent(null, null));
-
-		return sb.toString();
+		_CmPgDatabase_DbSizeMb.writeHtmlContent(sb, null, null);
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		// Get a description of this section, and column names
+//		sb.append(getSectionDescriptionHtml(_shortRstm, true));
+//
+//		// Last sample Database Size info
+//		sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
+////		sb.append(_shortRstm.toHtmlTableString("sortable"));
+//		sb.append(toHtmlTable(_shortRstm));
+//		
+////		int sumNumBackends = _shortRstm.getSumValueAsInteger("numbackends");
+////		int sumDbSizeMb    = _shortRstm.getSumValueAsInteger("dbsize_mb");
+//
+//		int sumDbSizeMb    = 0;
+//		int sumNumBackends = 0;
+//		for (int r=0; r<_shortRstm.getRowCount(); r++)
+//		{
+//			sumDbSizeMb    += _shortRstm.getValueAsInteger(r, "dbsize_mb");
+//			sumNumBackends += _shortRstm.getValueAsInteger(r, "numbackends");
+//		}
+////		sb.append("<br>\n");
+////		sb.append("<b>Total Size in MB:  </b>").append(sumDbSizeMb).append("<br>\n");
+////		sb.append("<b>Total numbackends: </b>").append(sumNumBackends).append("<br>\n");
+////		sb.append("<br>\n");
+//		LinkedHashMap<String, Object> summaryMap = new LinkedHashMap<>();
+//		summaryMap.put("Total Size in MB",  sumDbSizeMb);
+//		summaryMap.put("Total numbackends", sumNumBackends);
+//		
+//		sb.append("<br>\n");
+//		sb.append(StringUtil.toHtmlTable(summaryMap));
+//		sb.append("<br>\n");
+//
+//		
+//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Size of each Database during the day.",
+//				"CmPgDatabase_DbSizeMb"
+//				));
+//
+//		sb.append(_CmPgDatabase_DbSizeMb.getHtmlContent(null, null));
+//
+//		return sb.toString();
+//	}
 	
 	@Override
 	public String getSubject()
@@ -98,6 +137,12 @@ public class PostgresDbSize extends AseAbstract
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
 	}
 
+
+	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { "CmPgDatabase_abs" };
+	}
 
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
@@ -119,10 +164,10 @@ public class PostgresDbSize extends AseAbstract
 		// Describe the table
 		setSectionDescription(_shortRstm);
 		
-		_CmPgDatabase_DbSizeMb = createChart(conn, "CmPgDatabase", "DbSizeMb", -1, null, "DB Size in MB (Databases)");
+		_CmPgDatabase_DbSizeMb = createTsLineChart(conn, "CmPgDatabase", "DbSizeMb", -1, null, "DB Size in MB (Databases)");
 	}
 
-	private ReportChartObject _CmPgDatabase_DbSizeMb;
+	private IReportChart _CmPgDatabase_DbSizeMb;
 
 	/**
 	 * Set descriptions for the table, and the columns

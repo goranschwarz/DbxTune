@@ -21,9 +21,13 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.ase;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
+
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.ReportChartObject;
+import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
@@ -39,16 +43,15 @@ public class AseDbSize extends AseAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		// Get a description of this section, and column names
 		sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
 		// Last sample Database Size info
-		sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-		sb.append(_shortRstm.toHtmlTableString("sortable"));
+		sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+		sb.append(toHtmlTable(_shortRstm));
 		
 
 		// link to DbxCentral graphs
@@ -71,20 +74,67 @@ public class AseDbSize extends AseAbstract
 				));
 
 		sb.append("<h4>DB Data Space Usage</h4> \n");
-		sb.append(_CmOpenDatabases_DbDataSizeUsedPctGraph.getHtmlContent(null, null));
-		sb.append(_CmOpenDatabases_DbDataSizeLeftMbGraph .getHtmlContent(null, null));
-		sb.append(_CmOpenDatabases_DbDataSizeUsedMbGraph .getHtmlContent(null, null));
+		_CmOpenDatabases_DbDataSizeUsedPctGraph.writeHtmlContent(sb, null, null);
+		_CmOpenDatabases_DbDataSizeLeftMbGraph .writeHtmlContent(sb, null, null);
+		_CmOpenDatabases_DbDataSizeUsedMbGraph .writeHtmlContent(sb, null, null);
 		
 		sb.append("<h4>DB Transaction Log Space Usage</h4> \n");
-		sb.append(_CmOpenDatabases_DbLogSizeUsedPctGraph .getHtmlContent(null, null));
-		sb.append(_CmOpenDatabases_DbLogSizeLeftMbGraph  .getHtmlContent(null, null));
-		sb.append(_CmOpenDatabases_DbLogSizeUsedMbGraph  .getHtmlContent(null, null));
+		_CmOpenDatabases_DbLogSizeUsedPctGraph .writeHtmlContent(sb, null, null);
+		_CmOpenDatabases_DbLogSizeLeftMbGraph  .writeHtmlContent(sb, null, null);
+		_CmOpenDatabases_DbLogSizeUsedMbGraph  .writeHtmlContent(sb, null, null);
 
 		sb.append("<h4>Tempdb Space Usage</h4> \n");
-		sb.append(_CmOpenDatabases_TempdbUsedMbGraph     .getHtmlContent(null, null));
-		
-		return sb.toString();
+		_CmOpenDatabases_TempdbUsedMbGraph     .writeHtmlContent(sb, null, null);
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		// Get a description of this section, and column names
+//		sb.append(getSectionDescriptionHtml(_shortRstm, true));
+//
+//		// Last sample Database Size info
+//		sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
+////		sb.append(_shortRstm.toHtmlTableString("sortable"));
+//		sb.append(toHtmlTable(_shortRstm));
+//		
+//
+//		// link to DbxCentral graphs
+//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Transaction Log and Data Size Usage of each Database during the day<br>\n"
+//		                                                  + "Presented as: \n"
+//		                                                  + "<ul> \n"
+//		                                                  + "  <li><b> Space Used in Percent   </b> - When this gets <b>high</b> we could be in trouble. But the below 'Space Left to use' is a better indicator.</li> \n"
+//		                                                  + "  <li><b> Space Left to use in MB </b> - When This gets <b>low</b> we could be in trouble. No space = No more modifications. </li> \n"
+//		                                                  + "  <li><b> Space used in MB        </b> - Just an indicator of how much MB we are actually using for the different databases.</li> \n"
+//		                                                  + "</ul> \n",
+//				"CmOpenDatabases_DbDataSizeUsedPctGraph",
+//				"CmOpenDatabases_DbDataSizeLeftMbGraph",
+//				"CmOpenDatabases_DbDataSizeUsedMbGraph",
+//				
+//				"CmOpenDatabases_DbLogSizeUsedPctGraph",
+//				"CmOpenDatabases_DbLogSizeLeftMbGraph",
+//				"CmOpenDatabases_DbLogSizeUsedMbGraph",
+//
+//				"CmOpenDatabases_TempdbUsedMbGraph"
+//				));
+//
+//		sb.append("<h4>DB Data Space Usage</h4> \n");
+//		sb.append(_CmOpenDatabases_DbDataSizeUsedPctGraph.getHtmlContent(null, null));
+//		sb.append(_CmOpenDatabases_DbDataSizeLeftMbGraph .getHtmlContent(null, null));
+//		sb.append(_CmOpenDatabases_DbDataSizeUsedMbGraph .getHtmlContent(null, null));
+//		
+//		sb.append("<h4>DB Transaction Log Space Usage</h4> \n");
+//		sb.append(_CmOpenDatabases_DbLogSizeUsedPctGraph .getHtmlContent(null, null));
+//		sb.append(_CmOpenDatabases_DbLogSizeLeftMbGraph  .getHtmlContent(null, null));
+//		sb.append(_CmOpenDatabases_DbLogSizeUsedMbGraph  .getHtmlContent(null, null));
+//
+//		sb.append("<h4>Tempdb Space Usage</h4> \n");
+//		sb.append(_CmOpenDatabases_TempdbUsedMbGraph     .getHtmlContent(null, null));
+//		
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -98,6 +148,12 @@ public class AseDbSize extends AseAbstract
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
 	}
 
+
+	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { "CmOpenDatabases_abs" };
+	}
 
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
@@ -138,26 +194,26 @@ public class AseDbSize extends AseAbstract
 		// Describe the table
 		setSectionDescription(_shortRstm);
 		
-		_CmOpenDatabases_DbDataSizeUsedPctGraph = createChart(conn, "CmOpenDatabases", "DbDataSizeUsedPctGraph", 100, null, "DB Data Space used in Percent (Server->Databases)");
-		_CmOpenDatabases_DbDataSizeLeftMbGraph  = createChart(conn, "CmOpenDatabases", "DbDataSizeLeftMbGraph" , -1,  null, "DB Data Space left to use in MB (Server->Databases)");
-		_CmOpenDatabases_DbDataSizeUsedMbGraph  = createChart(conn, "CmOpenDatabases", "DbDataSizeUsedMbGraph" , -1,  null, "DB Data Space used in MB (Server->Databases)");
+		_CmOpenDatabases_DbDataSizeUsedPctGraph = createTsLineChart(conn, "CmOpenDatabases", "DbDataSizeUsedPctGraph", 100, null, "DB Data Space used in Percent (Server->Databases)");
+		_CmOpenDatabases_DbDataSizeLeftMbGraph  = createTsLineChart(conn, "CmOpenDatabases", "DbDataSizeLeftMbGraph" , -1,  null, "DB Data Space left to use in MB (Server->Databases)");
+		_CmOpenDatabases_DbDataSizeUsedMbGraph  = createTsLineChart(conn, "CmOpenDatabases", "DbDataSizeUsedMbGraph" , -1,  null, "DB Data Space used in MB (Server->Databases)");
 
-		_CmOpenDatabases_DbLogSizeUsedPctGraph  = createChart(conn, "CmOpenDatabases", "DbLogSizeUsedPctGraph" , 100, null, "DB Transaction Log Space used in Percent (Server->Databases)");
-		_CmOpenDatabases_DbLogSizeLeftMbGraph   = createChart(conn, "CmOpenDatabases", "DbLogSizeLeftMbGraph"  , -1,  null, "DB Transaction Log Space left to use in MB (Server->Databases)");
-		_CmOpenDatabases_DbLogSizeUsedMbGraph   = createChart(conn, "CmOpenDatabases", "DbLogSizeUsedMbGraph"  , -1,  null, "DB Transaction Log Space used in MB (Server->Databases)");
+		_CmOpenDatabases_DbLogSizeUsedPctGraph  = createTsLineChart(conn, "CmOpenDatabases", "DbLogSizeUsedPctGraph" , 100, null, "DB Transaction Log Space used in Percent (Server->Databases)");
+		_CmOpenDatabases_DbLogSizeLeftMbGraph   = createTsLineChart(conn, "CmOpenDatabases", "DbLogSizeLeftMbGraph"  , -1,  null, "DB Transaction Log Space left to use in MB (Server->Databases)");
+		_CmOpenDatabases_DbLogSizeUsedMbGraph   = createTsLineChart(conn, "CmOpenDatabases", "DbLogSizeUsedMbGraph"  , -1,  null, "DB Transaction Log Space used in MB (Server->Databases)");
 
-		_CmOpenDatabases_TempdbUsedMbGraph      = createChart(conn, "CmOpenDatabases", "TempdbUsedMbGraph"     , -1,  null, "TempDB Space used in MB (Server->Databases)");
+		_CmOpenDatabases_TempdbUsedMbGraph      = createTsLineChart(conn, "CmOpenDatabases", "TempdbUsedMbGraph"     , -1,  null, "TempDB Space used in MB (Server->Databases)");
 	}
 
-	private ReportChartObject _CmOpenDatabases_DbLogSizeUsedPctGraph;
-	private ReportChartObject _CmOpenDatabases_DbLogSizeLeftMbGraph;
-	private ReportChartObject _CmOpenDatabases_DbLogSizeUsedMbGraph;
+	private IReportChart _CmOpenDatabases_DbLogSizeUsedPctGraph;
+	private IReportChart _CmOpenDatabases_DbLogSizeLeftMbGraph;
+	private IReportChart _CmOpenDatabases_DbLogSizeUsedMbGraph;
 	
-	private ReportChartObject _CmOpenDatabases_DbDataSizeUsedPctGraph;
-	private ReportChartObject _CmOpenDatabases_DbDataSizeLeftMbGraph;
-	private ReportChartObject _CmOpenDatabases_DbDataSizeUsedMbGraph;
+	private IReportChart _CmOpenDatabases_DbDataSizeUsedPctGraph;
+	private IReportChart _CmOpenDatabases_DbDataSizeLeftMbGraph;
+	private IReportChart _CmOpenDatabases_DbDataSizeUsedMbGraph;
 
-	private ReportChartObject _CmOpenDatabases_TempdbUsedMbGraph;
+	private IReportChart _CmOpenDatabases_TempdbUsedMbGraph;
 
 	/**
 	 * Set descriptions for the table, and the columns

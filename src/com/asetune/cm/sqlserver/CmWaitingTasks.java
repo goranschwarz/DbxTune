@@ -187,6 +187,14 @@ extends CountersModel
 //			"where session_id is not null \n" +
 //			"";
 
+//		String nolock = "";
+//		if (Configuration.getCombinedConfiguration().getBooleanProperty("sqlserver.use.nolock", false))
+//		{
+//			nolock = " WITH (NOLOCK) ";
+//		//	nolock = " WITH (READUNCOMMITTED) ";
+//		}
+		// the above is done in 'CounterControllerSqlServer.setInRefresh(true): then it does: SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED  -- at the connection level'
+
 		String dm_os_waiting_tasks = "dm_os_waiting_tasks";
 		String dm_os_tasks         = "dm_os_tasks";
 		String dm_exec_sessions    = "dm_exec_sessions";
@@ -199,9 +207,9 @@ extends CountersModel
 			dm_os_waiting_tasks = "dm_pdw_nodes_os_waiting_tasks";
 			dm_os_tasks         = "dm_pdw_nodes_os_tasks";
 			dm_exec_sessions    = "dm_pdw_nodes_exec_sessions";
-			dm_exec_requests    = "dm_exec_requests";            // SAME NAME IN AZURE ????
-			dm_exec_sql_text    = "dm_exec_sql_text";            // SAME NAME IN AZURE ????
-			dm_exec_query_plan  = "dm_exec_query_plan";          // SAME NAME IN AZURE ????
+			dm_exec_requests    = "dm_exec_requests";   // SAME NAME IN AZURE ????
+			dm_exec_sql_text    = "dm_exec_sql_text";   // SAME NAME IN AZURE ????
+			dm_exec_query_plan  = "dm_exec_query_plan"; // SAME NAME IN AZURE ????
 		}
 
 		
@@ -248,7 +256,7 @@ extends CountersModel
 				+ "        ( CASE WHEN [er].statement_end_offset = -1  \n"
 				+ "               THEN DATALENGTH([est].text)  \n"
 				+ "               ELSE [er].statement_end_offset  \n"
-				+ "          END - [er].statement_start_offset ) / 2) AS [currentSqlText], \n"
+				+ "          END - [er].statement_start_offset ) / 2 +2) AS [currentSqlText], \n"
 			    + "    [est].text as [fullSqlBatchText], \n"
 			    + "    [er].[database_id], \n"
 			    + "    [eqp].[query_plan], \n"

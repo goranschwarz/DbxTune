@@ -22,9 +22,13 @@ package com.asetune.pcs.sqlcapture;
 
 import java.sql.ResultSet;
 import java.sql.Types;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.h2.tools.SimpleResultSet;
+
+import com.google.gson.Gson;
 
 /**
  * Holds Statement Statistics, which is used by a CM to report exeution times within known spans. 
@@ -72,13 +76,37 @@ public class SqlCaptureStatementStatisticsSample
 	
 	private LinkedHashMap<String, StatCounter> _execTimeMap = new LinkedHashMap<>();
 	
+	/** When did we call addStatementStats() */
+	private long  _lastUpdateTime = -1;
+
+	
+	/** When was the last time we update counters in this structure */
+	public long getLastUpdateTime()
+	{
+		return _lastUpdateTime;
+	}
+
+	/** When was the last time we update counters in this structure */
+	public void setLastUpdateTime()
+	{
+		_lastUpdateTime = System.currentTimeMillis();
+	}
+
+//	/** Get the row counters Map */
+//	public LinkedHashMap<String, StatCounter> getStatCounterMap()
+//	{
+//		return _execTimeMap;
+//	}
+	
 	public static class StatCounter
 	{
-		public StatCounter(String name)
+		public StatCounter(int statId, String name)
 		{
+			this.statId            = statId;
 			this.name              = name;
 			this.count             = 0;
 			this.errorCount        = 0;
+			this.errorCountMap     = null;
 			this.sqlBatchCount     = 0;
 			this.inProcCount       = 0;
 			this.inStmntCacheCount = 0;
@@ -108,11 +136,14 @@ public class SqlCaptureStatementStatisticsSample
 			this.maxRowsAffected   = 0;
 		}
 		
+		public int    statId;
 		public String name;
 		public long   count;
 		public long   sqlBatchCount;
 		public long   errorCount;
+		public Map<Integer, Long>   errorCountMap;
 		public long   inProcCount;
+		public long   inProcNullCount;
 		public long   inStmntCacheCount;
 		public long   dynamicStmntCount;
 
@@ -146,24 +177,24 @@ public class SqlCaptureStatementStatisticsSample
 		{
 			_execTimeMap = new LinkedHashMap<>();
 
-			_execTimeMap.put(EXEC_SPAN_0ms_0lr_0pr   , new StatCounter(EXEC_SPAN_0ms_0lr_0pr   ));
-			_execTimeMap.put(EXEC_SPAN_0_to_1_ms     , new StatCounter(EXEC_SPAN_0_to_1_ms     ));
-			_execTimeMap.put(EXEC_SPAN_1_to_2_ms     , new StatCounter(EXEC_SPAN_1_to_2_ms     ));
-			_execTimeMap.put(EXEC_SPAN_2_to_5_ms     , new StatCounter(EXEC_SPAN_2_to_5_ms     ));
-			_execTimeMap.put(EXEC_SPAN_5_to_10_ms    , new StatCounter(EXEC_SPAN_5_to_10_ms    ));
-			_execTimeMap.put(EXEC_SPAN_10_to_20_ms   , new StatCounter(EXEC_SPAN_10_to_20_ms   ));
-			_execTimeMap.put(EXEC_SPAN_20_to_50_ms   , new StatCounter(EXEC_SPAN_20_to_50_ms   ));
-			_execTimeMap.put(EXEC_SPAN_50_to_100_ms  , new StatCounter(EXEC_SPAN_50_to_100_ms  ));
-			_execTimeMap.put(EXEC_SPAN_100_to_200_ms , new StatCounter(EXEC_SPAN_100_to_200_ms ));
-			_execTimeMap.put(EXEC_SPAN_200_to_500_ms , new StatCounter(EXEC_SPAN_200_to_500_ms ));
-			_execTimeMap.put(EXEC_SPAN_500_to_1000_ms, new StatCounter(EXEC_SPAN_500_to_1000_ms));
-			_execTimeMap.put(EXEC_SPAN_1_to_2_sec    , new StatCounter(EXEC_SPAN_1_to_2_sec    ));
-			_execTimeMap.put(EXEC_SPAN_2_to_5_sec    , new StatCounter(EXEC_SPAN_2_to_5_sec    ));
-			_execTimeMap.put(EXEC_SPAN_5_to_10_sec   , new StatCounter(EXEC_SPAN_5_to_10_sec   ));
-			_execTimeMap.put(EXEC_SPAN_10_to_20_sec  , new StatCounter(EXEC_SPAN_10_to_20_sec  ));
-			_execTimeMap.put(EXEC_SPAN_20_to_50_sec  , new StatCounter(EXEC_SPAN_20_to_50_sec  ));
-			_execTimeMap.put(EXEC_SPAN_50_to_100_sec , new StatCounter(EXEC_SPAN_50_to_100_sec ));
-			_execTimeMap.put(EXEC_SPAN_ABOVE_100_sec , new StatCounter(EXEC_SPAN_ABOVE_100_sec ));
+			_execTimeMap.put(EXEC_SPAN_0ms_0lr_0pr   , new StatCounter(1,  EXEC_SPAN_0ms_0lr_0pr   ));
+			_execTimeMap.put(EXEC_SPAN_0_to_1_ms     , new StatCounter(2,  EXEC_SPAN_0_to_1_ms     ));
+			_execTimeMap.put(EXEC_SPAN_1_to_2_ms     , new StatCounter(3,  EXEC_SPAN_1_to_2_ms     ));
+			_execTimeMap.put(EXEC_SPAN_2_to_5_ms     , new StatCounter(4,  EXEC_SPAN_2_to_5_ms     ));
+			_execTimeMap.put(EXEC_SPAN_5_to_10_ms    , new StatCounter(5,  EXEC_SPAN_5_to_10_ms    ));
+			_execTimeMap.put(EXEC_SPAN_10_to_20_ms   , new StatCounter(6,  EXEC_SPAN_10_to_20_ms   ));
+			_execTimeMap.put(EXEC_SPAN_20_to_50_ms   , new StatCounter(7,  EXEC_SPAN_20_to_50_ms   ));
+			_execTimeMap.put(EXEC_SPAN_50_to_100_ms  , new StatCounter(8,  EXEC_SPAN_50_to_100_ms  ));
+			_execTimeMap.put(EXEC_SPAN_100_to_200_ms , new StatCounter(9,  EXEC_SPAN_100_to_200_ms ));
+			_execTimeMap.put(EXEC_SPAN_200_to_500_ms , new StatCounter(10, EXEC_SPAN_200_to_500_ms ));
+			_execTimeMap.put(EXEC_SPAN_500_to_1000_ms, new StatCounter(11, EXEC_SPAN_500_to_1000_ms));
+			_execTimeMap.put(EXEC_SPAN_1_to_2_sec    , new StatCounter(12, EXEC_SPAN_1_to_2_sec    ));
+			_execTimeMap.put(EXEC_SPAN_2_to_5_sec    , new StatCounter(13, EXEC_SPAN_2_to_5_sec    ));
+			_execTimeMap.put(EXEC_SPAN_5_to_10_sec   , new StatCounter(14, EXEC_SPAN_5_to_10_sec   ));
+			_execTimeMap.put(EXEC_SPAN_10_to_20_sec  , new StatCounter(15, EXEC_SPAN_10_to_20_sec  ));
+			_execTimeMap.put(EXEC_SPAN_20_to_50_sec  , new StatCounter(16, EXEC_SPAN_20_to_50_sec  ));
+			_execTimeMap.put(EXEC_SPAN_50_to_100_sec , new StatCounter(17, EXEC_SPAN_50_to_100_sec ));
+			_execTimeMap.put(EXEC_SPAN_ABOVE_100_sec , new StatCounter(18, EXEC_SPAN_ABOVE_100_sec ));
 			
 			// Summary will always be updated (but this record needs to be discarded by graphs that does SUM over all records in the table)
 			// SKIP THIS FOR NOW
@@ -172,7 +203,7 @@ public class SqlCaptureStatementStatisticsSample
 		}
 	}
 	
-	private void addExecTimeInternal(String key, int execTimeMs, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, String procName, int lineNumber)
+	private void addExecTimeInternal(String key, int execTimeMs, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, int procedureId, String procName, int lineNumber)
 	{
 		// if something seems to be from the statement cache, and the LineNumber is 0, then discard the entry
 		// it looks like there are always 2 rows in monSysStatement when there are (*ss or *sq) objects
@@ -205,29 +236,53 @@ public class SqlCaptureStatementStatisticsSample
 //		if (waitTime      > 0) st.cntWaitTime++;
 //		if (rowsAffected  > 0) st.cntRowsAffected++;
 		
-		if (procName == null)
+//		if (procName == null)
+		if (procedureId == 0)
 		{
 			st.sqlBatchCount++;
 		}
 		else
 		{
-			if (procName.startsWith("*ss"))
+			if (procName == null)
 			{
-				st.inStmntCacheCount++;
-			}
-			else if (procName.startsWith("*sq"))
-			{
-				st.dynamicStmntCount++;
+				st.inProcNullCount++;
 			}
 			else
 			{
-				st.inProcCount++;
+				if (procName.startsWith("*ss"))
+				{
+					st.inStmntCacheCount++;
+				}
+				else if (procName.startsWith("*sq"))
+				{
+					st.dynamicStmntCount++;
+				}
+				else if (procName.startsWith("*##")) // if it's a StatementCahe(we had SsqlId & HashKey) entry (but object_name() returned NULL), see: com.asetune.pcs.sqlcapture.SqlCaptureBrokerAse ... ProcName = "..."
+				{
+					st.inStmntCacheCount++;
+				}
+				else
+				{
+					st.inProcCount++;
+				}
 			}
 		}
 
 		if (errorStatus > 0)
 		{
 			st.errorCount++;
+			
+			// Add details in Map
+			if (st.errorCountMap == null)
+				st.errorCountMap = new HashMap<>();
+
+			// Each error number will have it's own counter
+			// Get it and increment the count, and set it back in the map
+			Long errorNumberCounter = st.errorCountMap.get(errorStatus);
+			if (errorNumberCounter == null)
+				errorNumberCounter = 0L;
+			errorNumberCounter++;
+			st.errorCountMap.put(errorStatus, errorNumberCounter);
 		}
 
 //		if (procedureId > 0)
@@ -238,27 +293,27 @@ public class SqlCaptureStatementStatisticsSample
 //				st.inProcCount++;
 //		}
 	}
-	
-	public void addExecTime(int ms, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, String procName, int lineNumber)
+
+	public void addExecTime(int ms, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, int procedureId, String procName, int lineNumber)
 	{
-		if      (ms == 0 && logicalReads == 0) addExecTimeInternal(EXEC_SPAN_0ms_0lr_0pr   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
-		else if (ms >= 0     && ms <= 1)       addExecTimeInternal(EXEC_SPAN_0_to_1_ms     , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
-		else if (ms >= 1     && ms <= 2)       addExecTimeInternal(EXEC_SPAN_1_to_2_ms     , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
-		else if (ms >= 2     && ms <= 5)       addExecTimeInternal(EXEC_SPAN_2_to_5_ms     , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
-		else if (ms >= 5     && ms <= 10)      addExecTimeInternal(EXEC_SPAN_5_to_10_ms    , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
-		else if (ms >= 10    && ms <= 20)      addExecTimeInternal(EXEC_SPAN_10_to_20_ms   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
-		else if (ms >= 20    && ms <= 50)      addExecTimeInternal(EXEC_SPAN_20_to_50_ms   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
-		else if (ms >= 50    && ms <= 100)     addExecTimeInternal(EXEC_SPAN_50_to_100_ms  , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
-		else if (ms >= 100   && ms <= 200)     addExecTimeInternal(EXEC_SPAN_100_to_200_ms , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
-		else if (ms >= 200   && ms <= 500)     addExecTimeInternal(EXEC_SPAN_200_to_500_ms , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
-		else if (ms >= 500   && ms <= 1000)    addExecTimeInternal(EXEC_SPAN_500_to_1000_ms, ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
-		else if (ms >= 1000  && ms <= 2000)    addExecTimeInternal(EXEC_SPAN_1_to_2_sec    , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
-		else if (ms >= 2000  && ms <= 5000)    addExecTimeInternal(EXEC_SPAN_2_to_5_sec    , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
-		else if (ms >= 5000  && ms <= 10000)   addExecTimeInternal(EXEC_SPAN_5_to_10_sec   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
-		else if (ms >= 10000 && ms <= 20000)   addExecTimeInternal(EXEC_SPAN_10_to_20_sec  , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
-		else if (ms >= 20000 && ms <= 50000)   addExecTimeInternal(EXEC_SPAN_20_to_50_sec  , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
-		else if (ms >= 50000 && ms <= 100000)  addExecTimeInternal(EXEC_SPAN_50_to_100_sec , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
-		else if (ms >= 100000)                 addExecTimeInternal(EXEC_SPAN_ABOVE_100_sec , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
+		if      (ms == 0 && logicalReads == 0) addExecTimeInternal(EXEC_SPAN_0ms_0lr_0pr   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber); 
+		else if (ms >= 0     && ms <= 1)       addExecTimeInternal(EXEC_SPAN_0_to_1_ms     , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber); 
+		else if (ms >= 1     && ms <= 2)       addExecTimeInternal(EXEC_SPAN_1_to_2_ms     , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber); 
+		else if (ms >= 2     && ms <= 5)       addExecTimeInternal(EXEC_SPAN_2_to_5_ms     , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber); 
+		else if (ms >= 5     && ms <= 10)      addExecTimeInternal(EXEC_SPAN_5_to_10_ms    , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber); 
+		else if (ms >= 10    && ms <= 20)      addExecTimeInternal(EXEC_SPAN_10_to_20_ms   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber); 
+		else if (ms >= 20    && ms <= 50)      addExecTimeInternal(EXEC_SPAN_20_to_50_ms   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber); 
+		else if (ms >= 50    && ms <= 100)     addExecTimeInternal(EXEC_SPAN_50_to_100_ms  , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber); 
+		else if (ms >= 100   && ms <= 200)     addExecTimeInternal(EXEC_SPAN_100_to_200_ms , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber); 
+		else if (ms >= 200   && ms <= 500)     addExecTimeInternal(EXEC_SPAN_200_to_500_ms , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber); 
+		else if (ms >= 500   && ms <= 1000)    addExecTimeInternal(EXEC_SPAN_500_to_1000_ms, ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber); 
+		else if (ms >= 1000  && ms <= 2000)    addExecTimeInternal(EXEC_SPAN_1_to_2_sec    , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber); 
+		else if (ms >= 2000  && ms <= 5000)    addExecTimeInternal(EXEC_SPAN_2_to_5_sec    , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber); 
+		else if (ms >= 5000  && ms <= 10000)   addExecTimeInternal(EXEC_SPAN_5_to_10_sec   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber); 
+		else if (ms >= 10000 && ms <= 20000)   addExecTimeInternal(EXEC_SPAN_10_to_20_sec  , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber); 
+		else if (ms >= 20000 && ms <= 50000)   addExecTimeInternal(EXEC_SPAN_20_to_50_sec  , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber); 
+		else if (ms >= 50000 && ms <= 100000)  addExecTimeInternal(EXEC_SPAN_50_to_100_sec , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber); 
+		else if (ms >= 100000)                 addExecTimeInternal(EXEC_SPAN_ABOVE_100_sec , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber); 
 		else
 			System.out.println("addExecTime(ms="+ms+", logicalReads="+logicalReads+", physicalReads="+physicalReads);
 
@@ -277,7 +332,7 @@ public class SqlCaptureStatementStatisticsSample
 
 	private static final int DISCARD_OUT_OF_BOUNDS__MAX_PHYSICAL_READS = Integer.MAX_VALUE - 10;
 	
-	public void addStatementStats(int execTimeMs, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, String procName, int lineNumber)
+	public void addStatementStats(int execTimeMs, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, int procedureId, String procName, int lineNumber)
 	{
 		if (physicalReads >= DISCARD_OUT_OF_BOUNDS__MAX_PHYSICAL_READS)
 		{
@@ -285,7 +340,7 @@ public class SqlCaptureStatementStatisticsSample
 			physicalReads = 0;
 		}
 
-		addExecTime(execTimeMs, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber);
+		addExecTime(execTimeMs, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber);
 //		addLogicalReads(logicalReads);
 //		addPhysicalReads(physicalReads);
 	}
@@ -294,50 +349,58 @@ public class SqlCaptureStatementStatisticsSample
 	public ResultSet toResultSet()
 	{
 		SimpleResultSet rs = new SimpleResultSet();
-		rs.addColumn("name",                 Types.VARCHAR, 30, 0);
+		rs.addColumn("name",                   Types.VARCHAR, 30, 0);
+		                                       
+		rs.addColumn("totalCount",             Types.BIGINT,   0, 0);
+		rs.addColumn("sqlBatchCount",          Types.BIGINT,   0, 0);
+		rs.addColumn("errorCount",             Types.BIGINT,   0, 0);
+		rs.addColumn("inStmntCacheCount",      Types.BIGINT,   0, 0);
+		rs.addColumn("dynamicStmntCount",      Types.BIGINT,   0, 0);
+		rs.addColumn("inProcedureCount",       Types.BIGINT,   0, 0);
+		rs.addColumn("inProcNameNullCount",    Types.BIGINT,   0, 0);
+                                               
+		rs.addColumn("totalCountAbs",          Types.BIGINT,   0, 0);
+		rs.addColumn("sqlBatchCountAbs",       Types.BIGINT,   0, 0);
+		rs.addColumn("inStmntCacheCountAbs",   Types.BIGINT,   0, 0);
+		rs.addColumn("dynamicStmntCountAbs",   Types.BIGINT,   0, 0);
+		rs.addColumn("inProcedureCountAbs",    Types.BIGINT,   0, 0);
+		rs.addColumn("inProcNameNullCountAbs", Types.BIGINT,   0, 0);
 		                                   
-		rs.addColumn("totalCount",           Types.BIGINT,   0, 0);
-		rs.addColumn("sqlBatchCount",        Types.BIGINT,   0, 0);
-		rs.addColumn("errorCount",           Types.BIGINT,   0, 0);
-		rs.addColumn("inStmntCacheCount",    Types.BIGINT,   0, 0);
-		rs.addColumn("dynamicStmntCount",    Types.BIGINT,   0, 0);
-		rs.addColumn("inProcedureCount",     Types.BIGINT,   0, 0);
+		rs.addColumn("sumExecTimeMs",          Types.BIGINT,   0, 0);
+		rs.addColumn("sumExecTimeMsAbs",       Types.BIGINT,   0, 0);
+		rs.addColumn("avgExecTimeMs",          Types.INTEGER,  0, 0);
+		rs.addColumn("maxExecTimeMs",          Types.INTEGER,  0, 0);
+                                               
+		rs.addColumn("sumLogicalReads",        Types.BIGINT,   0, 0);
+		rs.addColumn("sumLogicalReadsAbs",     Types.BIGINT,   0, 0);
+		rs.addColumn("avgLogicalReads",        Types.INTEGER,  0, 0);
+		rs.addColumn("maxLogicalReads",        Types.INTEGER,  0, 0);
+                                               
+		rs.addColumn("sumPhysicalReads",       Types.BIGINT,   0, 0);
+		rs.addColumn("sumPhysicalReadsAbs",    Types.BIGINT,   0, 0);
+		rs.addColumn("avgPhysicalReads",       Types.INTEGER,  0, 0);
+		rs.addColumn("maxPhysicalReads",       Types.INTEGER,  0, 0);
+                                               
+		rs.addColumn("sumCpuTime",             Types.BIGINT,   0, 0);
+		rs.addColumn("sumCpuTimeAbs",          Types.BIGINT,   0, 0);
+		rs.addColumn("avgCpuTime",             Types.INTEGER,  0, 0);
+		rs.addColumn("maxCpuTime",             Types.INTEGER,  0, 0);
+                                               
+		rs.addColumn("sumWaitTime",            Types.BIGINT,   0, 0);
+		rs.addColumn("sumWaitTimeAbs",         Types.BIGINT,   0, 0);
+		rs.addColumn("avgWaitTime",            Types.INTEGER,  0, 0);
+		rs.addColumn("maxWaitTime",            Types.INTEGER,  0, 0);
+                                               
+		rs.addColumn("sumRowsAffected",        Types.BIGINT,   0, 0);
+		rs.addColumn("sumRowsAffectedAbs",     Types.BIGINT,   0, 0);
+		rs.addColumn("avgRowsAffected",        Types.INTEGER,  0, 0);
+		rs.addColumn("maxRowsAffected",        Types.INTEGER,  0, 0);
+                                               
+		rs.addColumn("errorMsgCountMap",       Types.VARCHAR, 512, 0);
 
-		rs.addColumn("totalCountAbs",        Types.BIGINT,   0, 0);
-		rs.addColumn("sqlBatchCountAbs",     Types.BIGINT,   0, 0);
-		rs.addColumn("inStmntCacheCountAbs", Types.BIGINT,   0, 0);
-		rs.addColumn("dynamicStmntCountAbs", Types.BIGINT,   0, 0);
-		rs.addColumn("inProcedureCountAbs",  Types.BIGINT,   0, 0);
-		                                   
-		rs.addColumn("sumExecTimeMs",        Types.BIGINT,   0, 0);
-		rs.addColumn("sumExecTimeMsAbs",     Types.BIGINT,   0, 0);
-		rs.addColumn("avgExecTimeMs",        Types.INTEGER,  0, 0);
-		rs.addColumn("maxExecTimeMs",        Types.INTEGER,  0, 0);
-                                             
-		rs.addColumn("sumLogicalReads",      Types.BIGINT,   0, 0);
-		rs.addColumn("sumLogicalReadsAbs",   Types.BIGINT,   0, 0);
-		rs.addColumn("avgLogicalReads",      Types.INTEGER,  0, 0);
-		rs.addColumn("maxLogicalReads",      Types.INTEGER,  0, 0);
-                                             
-		rs.addColumn("sumPhysicalReads",     Types.BIGINT,   0, 0);
-		rs.addColumn("sumPhysicalReadsAbs",  Types.BIGINT,   0, 0);
-		rs.addColumn("avgPhysicalReads",     Types.INTEGER,  0, 0);
-		rs.addColumn("maxPhysicalReads",     Types.INTEGER,  0, 0);
-                                             
-		rs.addColumn("sumCpuTime",           Types.BIGINT,   0, 0);
-		rs.addColumn("sumCpuTimeAbs",        Types.BIGINT,   0, 0);
-		rs.addColumn("avgCpuTime",           Types.INTEGER,  0, 0);
-		rs.addColumn("maxCpuTime",           Types.INTEGER,  0, 0);
-                                             
-		rs.addColumn("sumWaitTime",          Types.BIGINT,   0, 0);
-		rs.addColumn("sumWaitTimeAbs",       Types.BIGINT,   0, 0);
-		rs.addColumn("avgWaitTime",          Types.INTEGER,  0, 0);
-		rs.addColumn("maxWaitTime",          Types.INTEGER,  0, 0);
-                                             
-		rs.addColumn("sumRowsAffected",      Types.BIGINT,   0, 0);
-		rs.addColumn("sumRowsAffectedAbs",   Types.BIGINT,   0, 0);
-		rs.addColumn("avgRowsAffected",      Types.INTEGER,  0, 0);
-		rs.addColumn("maxRowsAffected",      Types.INTEGER,  0, 0);
+		rs.addColumn("statId",                 Types.INTEGER,  0, 0);
+
+		Gson gson = new Gson(); 
 
 		for (StatCounter sc : _execTimeMap.values())
 		{
@@ -351,6 +414,7 @@ public class SqlCaptureStatementStatisticsSample
 				sc.inStmntCacheCount,                                                         // inStmntCacheCount
 				sc.dynamicStmntCount,                                                         // dynamicStmntCount
 				sc.inProcCount,                                                               // inProcedureCount
+				sc.inProcNullCount,                                                           // inProcNameNullCount
 
 				sc.count,                                                                     // totalCount        - ABS
 //				sc.count - (sc.inStmntCacheCount + sc.dynamicStmntCount + sc.inProcCount),    // inSqlBatchCount   - ABS
@@ -358,6 +422,7 @@ public class SqlCaptureStatementStatisticsSample
 				sc.inStmntCacheCount,                                                         // inStmntCacheCount - ABS
 				sc.dynamicStmntCount,                                                         // dynamicStmntCount - ABS
 				sc.inProcCount,                                                               // inProcedureCount  - ABS
+				sc.inProcNullCount,                                                           // inProcNameNullCount - ABS
 
 				sc.sumExecTimeMs, 
 				sc.sumExecTimeMs,                                      // ABS
@@ -387,7 +452,11 @@ public class SqlCaptureStatementStatisticsSample
 				sc.sumRowsAffected,
 				sc.sumRowsAffected,                                    // ABS
 				sc.count == 0 ? 0 : sc.sumRowsAffected / sc.count,     // AVG
-				sc.maxRowsAffected
+				sc.maxRowsAffected,
+
+				sc.errorCountMap == null ? null : gson.toJson(sc.errorCountMap),
+
+				sc.statId
 			);
 		}
 

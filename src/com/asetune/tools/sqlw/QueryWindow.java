@@ -566,6 +566,7 @@ public class QueryWindow
 	private JCheckBoxMenuItem _useSemicolonHack_chk       = new JCheckBoxMenuItem("Use Semicolon as Alternative SQL Send", DEFAULT_useSemicolonHack);
 	private JCheckBoxMenuItem _enableDbmsOutput_chk       = new JCheckBoxMenuItem("Oracle/DB2 Enable DBMS Output", DEFAULT_enableDbmsOutput);
 	private JCheckBoxMenuItem _appendResults_chk          = new JCheckBoxMenuItem("Append Results", DEFAULT_appendResults);
+	private JCheckBoxMenuItem _rsRtrimStrings_chk         = new JCheckBoxMenuItem("Right Trim String values", ResultSetTableModel.DEFAULT_StringRtrim);
 	private JCheckBoxMenuItem _rsTrimStrings_chk          = new JCheckBoxMenuItem("Trim String values", ResultSetTableModel.DEFAULT_StringTrim);
 	private JCheckBoxMenuItem _rsShowRowNumber_chk        = new JCheckBoxMenuItem("Show Row Number", ResultSetTableModel.DEFAULT_ShowRowNumber);
 	private boolean           _appendResults_scriptReader = false;
@@ -1944,6 +1945,10 @@ public class QueryWindow
 				"<html>" +
 				"Open a dialog where you can change the string used to send a SQL Batch to the server." +
 				"</html>");
+		_rsRtrimStrings_chk.setToolTipText(
+				"<html>" +
+				"Do you want to remove trailing blanks from datatypes that is treated as a string." +
+				"</html>");
 		_rsTrimStrings_chk.setToolTipText(
 				"<html>" +
 				"Do you want to remove leading/trailing blanks from datatypes that is treated as a string." +
@@ -2672,6 +2677,7 @@ public class QueryWindow
 		_limitRsRowsRead_chk        .setSelected( conf.getBooleanProperty(PROPKEY_limitRsRowsRead,                                 DEFAULT_limitRsRowsRead) );
 		_showSentSql_chk            .setSelected( conf.getBooleanProperty(PROPKEY_showSentSql,                                     DEFAULT_showSentSql) );
 		_printRsInfo_chk            .setSelected( conf.getBooleanProperty(PROPKEY_printRsInfo,                                     DEFAULT_printRsInfo) );
+		_rsRtrimStrings_chk         .setSelected( conf.getBooleanProperty(ResultSetTableModel.PROPKEY_StringRtrim,                 ResultSetTableModel.DEFAULT_StringRtrim) );
 		_rsTrimStrings_chk          .setSelected( conf.getBooleanProperty(ResultSetTableModel.PROPKEY_StringTrim,                  ResultSetTableModel.DEFAULT_StringTrim) );
 		_rsShowRowNumber_chk        .setSelected( conf.getBooleanProperty(ResultSetTableModel.PROPKEY_ShowRowNumber,               ResultSetTableModel.DEFAULT_ShowRowNumber) );
 		_clientTiming_chk           .setSelected( conf.getBooleanProperty(PROPKEY_clientTiming,                                    DEFAULT_clientTiming) );
@@ -2723,6 +2729,7 @@ public class QueryWindow
 		conf.setProperty(PROPKEY_limitRsRowsRead,                                 _limitRsRowsRead_chk        .isSelected());	
 		conf.setProperty(PROPKEY_showSentSql,                                     _showSentSql_chk            .isSelected());
 		conf.setProperty(PROPKEY_printRsInfo,                                     _printRsInfo_chk            .isSelected());
+		conf.setProperty(ResultSetTableModel.PROPKEY_StringRtrim,                 _rsRtrimStrings_chk         .isSelected());
 		conf.setProperty(ResultSetTableModel.PROPKEY_StringTrim,                  _rsTrimStrings_chk          .isSelected());
 		conf.setProperty(ResultSetTableModel.PROPKEY_ShowRowNumber,               _rsShowRowNumber_chk        .isSelected());
 		conf.setProperty(PROPKEY_clientTiming,                                    _clientTiming_chk           .isSelected());
@@ -4312,6 +4319,7 @@ public class QueryWindow
 			_limitRsRowsReadDialog_mi  .setEnabled(false);
 			_showSentSql_chk           .setEnabled(false);
 			_printRsInfo_chk           .setEnabled(false);
+			_rsRtrimStrings_chk        .setEnabled(false);
 			_rsTrimStrings_chk         .setEnabled(false);
 			_rsShowRowNumber_chk       .setEnabled(false);
 			_clientTiming_chk          .setEnabled(false);
@@ -4371,6 +4379,7 @@ public class QueryWindow
 				_limitRsRowsReadDialog_mi  .setEnabled(true);
 				_showSentSql_chk           .setEnabled(true);
 				_printRsInfo_chk           .setEnabled(true);
+				_rsRtrimStrings_chk        .setEnabled(true);
 				_rsTrimStrings_chk         .setEnabled(true);
 				_rsShowRowNumber_chk       .setEnabled(true);
 				_clientTiming_chk          .setEnabled(true);
@@ -4409,6 +4418,7 @@ public class QueryWindow
 				_limitRsRowsReadDialog_mi  .setEnabled(true);
 				_showSentSql_chk           .setEnabled(true);
 				_printRsInfo_chk           .setEnabled(true);
+				_rsRtrimStrings_chk        .setEnabled(true);
 				_rsTrimStrings_chk         .setEnabled(true);
 				_rsShowRowNumber_chk       .setEnabled(true);
 				_clientTiming_chk          .setEnabled(true);
@@ -4444,6 +4454,7 @@ public class QueryWindow
 				_limitRsRowsReadDialog_mi  .setEnabled(true);
 				_showSentSql_chk           .setEnabled(true);
 				_printRsInfo_chk           .setEnabled(true);
+				_rsRtrimStrings_chk        .setEnabled(true);
 				_rsTrimStrings_chk         .setEnabled(true);
 				_rsShowRowNumber_chk       .setEnabled(true);
 				_clientTiming_chk          .setEnabled(true);
@@ -4479,6 +4490,7 @@ public class QueryWindow
 			_limitRsRowsReadDialog_mi  .setEnabled(true);
 			_showSentSql_chk           .setEnabled(true);
 			_printRsInfo_chk           .setEnabled(true);
+			_rsRtrimStrings_chk        .setEnabled(true);
 			_rsTrimStrings_chk         .setEnabled(true);
 			_rsShowRowNumber_chk       .setEnabled(true);
 			_clientTiming_chk          .setEnabled(true);
@@ -4514,6 +4526,7 @@ public class QueryWindow
 			_limitRsRowsReadDialog_mi  .setEnabled(true);
 			_showSentSql_chk           .setEnabled(true);
 			_printRsInfo_chk           .setEnabled(true);
+			_rsRtrimStrings_chk        .setEnabled(true);
 			_rsTrimStrings_chk         .setEnabled(true);
 			_rsShowRowNumber_chk       .setEnabled(true);
 			_clientTiming_chk          .setEnabled(true);
@@ -4643,6 +4656,7 @@ public class QueryWindow
 				_limitRsRowsReadDialog_mi  .setEnabled(false);
 				_showSentSql_chk           .setEnabled(false);
 				_printRsInfo_chk           .setEnabled(false);
+				_rsRtrimStrings_chk        .setEnabled(false);
 				_rsTrimStrings_chk         .setEnabled(false);
 				_rsShowRowNumber_chk       .setEnabled(false);
 				_clientTiming_chk          .setEnabled(false);
@@ -8844,13 +8858,13 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 						// 
 						// Once a connection is put in a transaction, either through a call to Connection.setAutoCommit(false) followed by some DDL or DML, or through execution of a BEGIN TRANSACTION statement, everything done on that connection should happen within that transaction until it is committed or rolled back.  
 						// SQL Server forces drivers like the JDBC driver to honor that contract by passing a transaction ID back to the driver when the transaction is started and requiring the driver to pass that ID back to the server when executing subsequent statements.  
-						// If the driver continues to use a transaction ID after the transaction has been committed or rolled back, that’s when you get the “failed to resume the transaction” error.
+						// If the driver continues to use a transaction ID after the transaction has been committed or rolled back, thatï¿½s when you get the ï¿½failed to resume the transactionï¿½ error.
 						// 
 						// So how does the driver end up using a transaction ID for a transaction that is no longer active?  
-						// SQL Server sends “transaction started” and “transaction rolled back/committed” messages to the driver “in band” with a query’s execution results (update counts, result sets, errors).  
-						// The driver can’t “see” the messages until the results that precede them have been processed.  
-						// So once a transaction has been started, if a statement’s execution causes a commit or rollback, the driver will think the transaction is still active until the statement’s results have been processed.  
-						// Now that you understand what’s going on and why, the next question is: who should be processing those results?  You guessed it: the app.
+						// SQL Server sends ï¿½transaction startedï¿½ and ï¿½transaction rolled back/committedï¿½ messages to the driver ï¿½in bandï¿½ with a queryï¿½s execution results (update counts, result sets, errors).  
+						// The driver canï¿½t ï¿½seeï¿½ the messages until the results that precede them have been processed.  
+						// So once a transaction has been started, if a statementï¿½s execution causes a commit or rollback, the driver will think the transaction is still active until the statementï¿½s results have been processed.  
+						// Now that you understand whatï¿½s going on and why, the next question is: who should be processing those results?  You guessed it: the app.
 						if (stmnt != null)
 							stmnt.close();
 
@@ -11664,6 +11678,7 @@ checkPanelSize(_resPanel, comp);
 		LIMIT_RS_TO_X_ROWS,
 		SHOW_SENT_SQL,
 		PRINT_RS_INFO,
+		RTRIM_STRING_VALUES,
 		TRIM_STRING_VALUES,
 		SHOW_ROW_NUMBER,
 		PRINT_CLIENT_TIMING,
@@ -11686,6 +11701,7 @@ checkPanelSize(_resPanel, comp);
     		case LIMIT_RS_TO_X_ROWS                 : _limitRsRowsRead_chk       .setSelected(b);  break;
     		case SHOW_SENT_SQL                      : _showSentSql_chk           .setSelected(b);  break;
     		case PRINT_RS_INFO                      : _printRsInfo_chk           .setSelected(b);  break;
+    		case RTRIM_STRING_VALUES                : _rsRtrimStrings_chk        .setSelected(b);  break;
     		case TRIM_STRING_VALUES                 : _rsTrimStrings_chk         .setSelected(b);  break;
     		case SHOW_ROW_NUMBER                    : _rsShowRowNumber_chk       .setSelected(b);  break;
     		case PRINT_CLIENT_TIMING                : _clientTiming_chk          .setSelected(b);  break;
@@ -11725,6 +11741,7 @@ checkPanelSize(_resPanel, comp);
 		_limitRsRowsReadDialog_mi  .setText("<html><b>Limit ResultSet, settings...</b>   - <i><font color='green'>Open a dialog to change settings for limiting rows</font></i></html>");
 		_showSentSql_chk           .setText("<html><b>Print Sent SQL Statement</b>       - <i><font color='green'>Print the Executed SQL Statement in the output.</font></i> 'go psql'</html>");
 		_printRsInfo_chk           .setText("<html><b>Print ResultSet Info</b>           - <i><font color='green'>Print Info about the ResultSet in the output.</font></i> 'go prsi'</html>");
+		_rsRtrimStrings_chk        .setText("<html><b>Rtrim String values</b>            - <i><font color='green'>Do you want to remove trailing blanks from \"strings\"</html>");
 		_rsTrimStrings_chk         .setText("<html><b>Trim String values</b>             - <i><font color='green'>Do you want to remove leading/trailing blanks from \"strings\"</html>");
 		_rsShowRowNumber_chk       .setText("<html><b>Show Row Number</b>                - <i><font color='green'>Add a Row Number as first column '"+ResultSetTableModel.ROW_NUMBER_COLNAME+"' when displaying data</html>");
 		_clientTiming_chk          .setText("<html><b>Client Timing</b>                  - <i><font color='green'>How long does a SQL Statement takes from the clients perspective.</font></i> 'go time'</html>");
@@ -11749,6 +11766,7 @@ checkPanelSize(_resPanel, comp);
 		popupMenu.add(_limitRsRowsReadDialog_mi);
 		popupMenu.add(_showSentSql_chk);
 		popupMenu.add(_printRsInfo_chk);
+		popupMenu.add(_rsRtrimStrings_chk);
 		popupMenu.add(_rsTrimStrings_chk);
 		popupMenu.add(_rsShowRowNumber_chk);
 		popupMenu.add(_clientTiming_chk);
@@ -11815,6 +11833,16 @@ checkPanelSize(_resPanel, comp);
 
 					saveProps();
 				}
+			}
+		});
+		
+		// Action CheckBox: _rsRtrimStrings_chk
+		_rsRtrimStrings_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				saveProps();
 			}
 		});
 		

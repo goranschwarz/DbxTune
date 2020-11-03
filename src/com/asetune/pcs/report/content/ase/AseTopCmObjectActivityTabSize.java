@@ -21,6 +21,10 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.ase;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
+
 import com.asetune.cm.ase.CmObjectActivity;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
@@ -41,36 +45,57 @@ public class AseTopCmObjectActivityTabSize extends AseAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
+		if (_shortRstm.getRowCount() == 0)
+		{
+			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+			
+			sb.append("No rows found <br>\n");
+		}
+		else
+		{
+			// Get a description of this section, and column names
+			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-//		if (_isTableSizeConfigured)
-//		{
-//			sb.append("Table/Index Size: Data collection for Table size was NOT enabled<br>");
-//			sb.append("<br>");
-//			sb.append("Enable it with: <code>" + CmObjectActivity.PROPKEY_sample_tabRowCount + " = true </code><br>");
-//		}
-//		else
-//		{
-			if (_shortRstm.getRowCount() == 0)
-			{
-				sb.append(getSectionDescriptionHtml(_shortRstm, true));
-				
-				sb.append("No rows found <br>\n");
-			}
-			else
-			{
-				// Get a description of this section, and column names
-				sb.append(getSectionDescriptionHtml(_shortRstm, true));
-
-				sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-				sb.append(_shortRstm.toHtmlTableString("sortable"));
-			}
-//		}
-
-		return sb.toString();
+			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+			sb.append(toHtmlTable(_shortRstm));
+		}
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+////		if (_isTableSizeConfigured)
+////		{
+////			sb.append("Table/Index Size: Data collection for Table size was NOT enabled<br>");
+////			sb.append("<br>");
+////			sb.append("Enable it with: <code>" + CmObjectActivity.PROPKEY_sample_tabRowCount + " = true </code><br>");
+////		}
+////		else
+////		{
+//			if (_shortRstm.getRowCount() == 0)
+//			{
+//				sb.append(getSectionDescriptionHtml(_shortRstm, true));
+//				
+//				sb.append("No rows found <br>\n");
+//			}
+//			else
+//			{
+//				// Get a description of this section, and column names
+//				sb.append(getSectionDescriptionHtml(_shortRstm, true));
+//
+//				sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
+////				sb.append(_shortRstm.toHtmlTableString("sortable"));
+//				sb.append(toHtmlTable(_shortRstm));
+//			}
+////		}
+//
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -84,6 +109,12 @@ public class AseTopCmObjectActivityTabSize extends AseAbstract
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
 	}
 
+
+	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { "CmObjectActivity_diff" };
+	}
 
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
@@ -104,11 +135,22 @@ public class AseTopCmObjectActivityTabSize extends AseAbstract
 		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, true, "metadata");
 
 		// Create Column selects, but only if the column exists in the PCS Table
-		String Inserts_sum             = !dummyRstm.hasColumnNoCase("Inserts"            ) ? "" : "    ,sum([Inserts])                                        as [Inserts_sum] -- 16.0 \n"; 
-		String Updates_sum             = !dummyRstm.hasColumnNoCase("Updates"            ) ? "" : "    ,sum([Updates])                                        as [Updates_sum] -- 16.0 \n"; 
-		String Deletes_sum             = !dummyRstm.hasColumnNoCase("Deletes"            ) ? "" : "    ,sum([Deletes])                                        as [Deletes_sum] -- 16.0 \n"; 
-		String Scans_sum               = !dummyRstm.hasColumnNoCase("Scans"              ) ? "" : "    ,sum([Scans])                                          as [Scans_sum]   -- 16.0 \n"; 
+		String IOSize1Page_sum           = !dummyRstm.hasColumnNoCase("IOSize1Page"          ) ? "" : "    ,sum([IOSize1Page])                                    as [IOSize1Page_sum]           -- 15.7.0 esd#2 \n";
+		String IOSize2Pages_sum          = !dummyRstm.hasColumnNoCase("IOSize2Pages"         ) ? "" : "    ,sum([IOSize2Pages])                                   as [IOSize2Pages_sum]          -- 15.7.0 esd#2 \n";
+		String IOSize4Pages_sum          = !dummyRstm.hasColumnNoCase("IOSize4Pages"         ) ? "" : "    ,sum([IOSize4Pages])                                   as [IOSize4Pages_sum]          -- 15.7.0 esd#2 \n";
+		String IOSize8Pages_sum          = !dummyRstm.hasColumnNoCase("IOSize8Pages"         ) ? "" : "    ,sum([IOSize8Pages])                                   as [IOSize8Pages_sum]          -- 15.7.0 esd#2 \n";
+                                                                                             
+		String Inserts_sum               = !dummyRstm.hasColumnNoCase("Inserts"              ) ? "" : "    ,sum([Inserts])                                        as [Inserts_sum]               -- 16.0 \n"; 
+		String Updates_sum               = !dummyRstm.hasColumnNoCase("Updates"              ) ? "" : "    ,sum([Updates])                                        as [Updates_sum]               -- 16.0 \n"; 
+		String Deletes_sum               = !dummyRstm.hasColumnNoCase("Deletes"              ) ? "" : "    ,sum([Deletes])                                        as [Deletes_sum]               -- 16.0 \n"; 
+		String Scans_sum                 = !dummyRstm.hasColumnNoCase("Scans"                ) ? "" : "    ,sum([Scans])                                          as [Scans_sum]                 -- 16.0 \n"; 
 		
+		String SharedLockWaitTime_sum    = !dummyRstm.hasColumnNoCase("SharedLockWaitTime"   ) ? "" : "    ,sum([SharedLockWaitTime])                             as [SharedLockWaitTime_sum]    -- 15.7 \n"; 
+		String ExclusiveLockWaitTime_sum = !dummyRstm.hasColumnNoCase("ExclusiveLockWaitTime") ? "" : "    ,sum([ExclusiveLockWaitTime])                          as [ExclusiveLockWaitTime_sum] -- 15.7 \n"; 
+		String UpdateLockWaitTime_sum    = !dummyRstm.hasColumnNoCase("UpdateLockWaitTime"   ) ? "" : "    ,sum([UpdateLockWaitTime])                             as [UpdateLockWaitTime_sum]    -- 15.7 \n"; 
+		
+		String ObjectCacheDate_max       = !dummyRstm.hasColumnNoCase("ObjectCacheDate"      ) ? "" : "    ,max([ObjectCacheDate])                                as [ObjectCacheDate_max] \n"; 
+
 
 		String sql = getCmDiffColumnsAsSqlComment("CmObjectActivity")
 			    + "select top " + topRows + " \n"
@@ -131,10 +173,10 @@ public class AseTopCmObjectActivityTabSize extends AseAbstract
 			    + "    ,sum([PhysicalReads])                                  as [PhysicalReads_sum] \n"
 			    + "    ,sum([APFReads])                                       as [APFReads_sum] \n"
 			    + "    ,sum([PagesRead])                                      as [PagesRead_sum] \n"
-			    + "    ,sum([IOSize1Page])                                    as [IOSize1Page_sum]     -- 15.7.0 esd#2 \n"
-			    + "    ,sum([IOSize2Pages])                                   as [IOSize2Pages_sum]    -- 15.7.0 esd#2 \n"
-			    + "    ,sum([IOSize4Pages])                                   as [IOSize4Pages_sum]    -- 15.7.0 esd#2 \n"
-			    + "    ,sum([IOSize8Pages])                                   as [IOSize8Pages_sum]    -- 15.7.0 esd#2 \n"
+			    + IOSize1Page_sum 
+			    + IOSize2Pages_sum
+			    + IOSize4Pages_sum
+			    + IOSize8Pages_sum
 			    + "    ,sum([PhysicalWrites])                                 as [PhysicalWrites_sum] \n"
 			    + "    ,sum([PagesWritten])                                   as [PagesWritten_sum] \n"
 			    + "    ,sum([Operations])                                     as [Operations_sum] \n"
@@ -149,15 +191,16 @@ public class AseTopCmObjectActivityTabSize extends AseAbstract
 			    + "    ,sum([LockRequests])                                   as [LockRequests_sum] \n"
 			    + "    ,sum([LockWaits])                                      as [LockWaits_sum] \n"
 			    + "    ,max([LockContPct])                                    as [LockContPct_max] \n"
-			    + "    ,sum([SharedLockWaitTime])                             as [SharedLockWaitTime_sum]    -- 15.7 \n"
-			    + "    ,sum([ExclusiveLockWaitTime])                          as [ExclusiveLockWaitTime_sum] -- 15.7 \n"
-			    + "    ,sum([UpdateLockWaitTime])                             as [UpdateLockWaitTime_sum]    -- 15.7 \n"
+			    + SharedLockWaitTime_sum   
+			    + ExclusiveLockWaitTime_sum
+			    + UpdateLockWaitTime_sum   
 			    + "    ,sum([OptSelectCount])                                 as [OptSelectCount_sum] \n"
-			    + "    ,max([ObjectCacheDate])                                as [ObjectCacheDate_max] \n"
+			    + ObjectCacheDate_max
 			    + "    ,max([LastOptSelectDate])                              as [LastOptSelectDate_max] \n"
 			    + "    ,max([LastUsedDate])                                   as [LastUsedDate_max] \n"
 			    + "from [CmObjectActivity_diff] x \n"
 			    + "where x.[UsageInMb] > 0 \n"
+				+ getReportPeriodSqlWhere()
 			    + "group by [DBName], [ObjectName], [IndexName] \n"
 			    + "having [UsageInMb_max] > " + havingAbove + "\n"
 			    + "order by [UsageInMb_max] desc \n"

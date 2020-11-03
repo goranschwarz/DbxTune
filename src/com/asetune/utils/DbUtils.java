@@ -24,6 +24,7 @@ import java.awt.Component;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -769,6 +770,8 @@ public class DbUtils
 //	}
 
 	/**
+	 * This checks table if the table name in following order: MixedCase, then UPPER or lower (depending on the metadata)
+	 * <p>
 	 * Simply calls DatabaseMetaData.getMetaData().getTables(cat, schema, tableName) to check if the table exists.
 	 * 
 	 * @param conn
@@ -778,20 +781,66 @@ public class DbUtils
 	 * @return true if table exists
 	 * @throws SQLException
 	 */
+//	public static boolean checkIfTableExists(Connection conn, String cat, String schema, String tableName)
+//	throws SQLException
+//	{
+//		if (conn == null)
+//			throw new SQLException("Connection is NULL.");
+//		
+//		DatabaseMetaData dbmd = conn.getMetaData();
+//		ResultSet rs = dbmd.getTables(cat, schema, tableName, new String[] {"TABLE"});
+//		boolean tabExists = rs.next();
+//		rs.close();
+//
+//		return tabExists;
+//	}
 	public static boolean checkIfTableExists(Connection conn, String cat, String schema, String tableName)
 	throws SQLException
 	{
 		if (conn == null)
 			throw new SQLException("Connection is NULL.");
-		
+
+		boolean tabExists = false;
+
+		// First try with *original* name
 		DatabaseMetaData dbmd = conn.getMetaData();
-		ResultSet rs = dbmd.getTables(cat, schema, tableName, new String[] {"TABLE"});
-		boolean tabExists = rs.next();
-		rs.close();
+		try ( ResultSet rs = dbmd.getTables(cat, schema, tableName, new String[] {"TABLE"}) )
+		{
+			while(rs.next())
+				tabExists = true;
+		}
+
+		// Second try: UPPER case
+		if ( !tabExists && dbmd.storesUpperCaseIdentifiers() )
+		{
+			try ( ResultSet rs = dbmd.getTables(cat       == null ? null : cat      .toUpperCase(), 
+			                                    schema    == null ? null : schema   .toUpperCase(), 
+			                                    tableName == null ? null : tableName.toUpperCase(), 
+			                                    new String[] {"TABLE"}) )
+			{
+				while(rs.next())
+					tabExists = true;
+			}
+		}
+		
+		// Third try: lower case
+		if ( !tabExists && dbmd.storesLowerCaseIdentifiers() )
+		{
+			try ( ResultSet rs = dbmd.getTables(cat       == null ? null : cat      .toLowerCase(), 
+			                                    schema    == null ? null : schema   .toLowerCase(), 
+			                                    tableName == null ? null : tableName.toLowerCase(), 
+			                                    new String[] {"TABLE"}) )
+			{
+				while(rs.next())
+					tabExists = true;
+			}
+		}
 
 		return tabExists;
 	}
 	/**
+	 * This checks table if the table name in following order: MixedCase, then UPPER or lower (depending on the metadata)
+	 * <p>
 	 * Simply calls DatabaseMetaData.getMetaData().getTables(cat, schema, tableName) to check if the table exists.
 	 * 
 	 * @param conn
@@ -854,6 +903,25 @@ public class DbUtils
 		{ 
 			return Collections.<String>emptySet();
 		}
+	}
+
+
+	/**
+	 * Get all column labels(names) from a ResultSets<br>
+	 * @return List of column names. (index starts at 0)
+	 */
+	public static List<String> getColumnNames(ResultSetMetaData rsmd)
+	throws SQLException
+	{
+		List<String> colNames = new ArrayList<>();
+		
+		int colCount = rsmd.getColumnCount();
+		for (int c=1; c<=colCount; c++)
+		{
+			colNames.add(rsmd.getColumnLabel(c));
+		}
+		
+		return colNames;
 	}
 
 	/**

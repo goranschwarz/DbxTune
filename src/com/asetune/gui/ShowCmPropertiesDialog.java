@@ -614,6 +614,13 @@ extends JDialog implements ActionListener, ChangeListener
 		String dependsOnCm      = StringUtil.toCommaStr(_cm.getDependsOnCm());
 		String toolTipMonTables = StringUtil.toCommaStr(_cm.getMonTablesInQuery());
 
+		// If we use SQL Prefix add that to the _sqlExec
+		if (_cm.useSqlPrefix())
+		{
+			String sqlPrefix = _cm.getSqlPrefix(); 
+			sqlExec = sqlPrefix + sqlExec;
+		}
+
 		_sqlInit .setText(sqlInit);
 		_sqlExec .setText(sqlExec);
 		_sqlWhere.setText(sqlWhere);

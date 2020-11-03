@@ -21,6 +21,10 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.ase;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
+
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
@@ -38,10 +42,9 @@ public class AseSpMonitorConfig extends AseAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		if (_shortRstm.getRowCount() == 0)
 		{
 			sb.append("No rows found <br>\n");
@@ -51,12 +54,32 @@ public class AseSpMonitorConfig extends AseAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-			sb.append(_shortRstm.toHtmlTableString("sortable"));
+			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+			sb.append(toHtmlTable(_shortRstm));
 		}
-
-		return sb.toString();
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		if (_shortRstm.getRowCount() == 0)
+//		{
+//			sb.append("No rows found <br>\n");
+//		}
+//		else
+//		{
+//			// Get a description of this section, and column names
+//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+//
+//			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
+////			sb.append(_shortRstm.toHtmlTableString("sortable"));
+//			sb.append(toHtmlTable(_shortRstm));
+//		}
+//
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -72,12 +95,19 @@ public class AseSpMonitorConfig extends AseAbstract
 
 
 	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { "CmSpMonitorConfig_abs" };
+	}
+
+	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		// SessionStartTime	SessionSampleTime	CmSampleTime	CmSampleMs	CmNewDiffRateRow	Name	Num_free	Num_active	Pct_act	Max_Used	Reuse_cnt	Instance_Name
 		String sql = "select [SessionSampleTime], [Name], [Num_free], [Num_active], [Pct_act], [Max_Used], [Reuse_cnt], [Instance_Name] \n"
 				   + "from [CmSpMonitorConfig_abs] \n"
 				   + "where [SessionSampleTime] = (select max([SessionSampleTime]) from [CmSpMonitorConfig_abs])";
+
 		_shortRstm = executeQuery(conn, sql, false, "SpMonitorConfig");
 
 		if (_shortRstm == null)

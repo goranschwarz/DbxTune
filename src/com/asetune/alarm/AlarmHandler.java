@@ -714,7 +714,7 @@ implements Runnable
 		// get all alarms from the "saved/history" which is NOT part of ThisScan  
 		List<AlarmEvent> cancelList = _delayedAlarmsActive.getCancelList(_delayedAlarmsThisScan);
 
-		// remove cancelations from the _delayedAlarmsActive
+		// remove cancellations from the _delayedAlarmsActive
 		for (AlarmEvent alarmEvent : cancelList)
 		{
 			long timeToExpireMs = (alarmEvent.getRaiseDelayInSec()*1000) - alarmEvent.getCrAgeInMs();
@@ -1152,7 +1152,7 @@ implements Runnable
 		if (useQueueImpl)
 		{
 			AlarmHandler.getInstance().addAlarmToQueue(ae);
-			// sleep a *short* whíle to let the Queue Thread consume the entry
+			// sleep a *short* whï¿½le to let the Queue Thread consume the entry
 			try { Thread.sleep(20); }
 			catch (InterruptedException ignore) { ignore.printStackTrace(); }
 		}
@@ -1166,7 +1166,7 @@ implements Runnable
 		if (useQueueImpl)
 		{
 			AlarmHandler.getInstance().addEndOfScanToQueue();
-			// sleep a *short* whíle to let the Queue Thread consume the entry
+			// sleep a *short* whï¿½le to let the Queue Thread consume the entry
 			try { Thread.sleep(20); }
 			catch (InterruptedException ignore) { ignore.printStackTrace(); }
 		}

@@ -28,6 +28,8 @@ import java.util.List;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CmSettingsHelper;
+import com.asetune.cm.CounterSample;
+import com.asetune.cm.CounterSampleCatalogIteratorSqlServer;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -105,8 +107,9 @@ extends CountersModel
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
-	public static final int      DEFAULT_POSTPONE_TIME          = 14400; // 4 hour
-	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;
+	public static final int      DEFAULT_POSTPONE_TIME          = 3600 * 8; // 8 hour
+//	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
+	public static final int      DEFAULT_QUERY_TIMEOUT          = 15 * 60; // 15 minutes
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
@@ -203,6 +206,16 @@ extends CountersModel
 		return pkCols;
 	}
 
+	/**
+	 * Create a special CounterSample, that will iterate over all databases that we will interrogate
+	 */
+	@Override
+	public CounterSample createCounterSample(String name, boolean negativeDiffCountersToZero, String[] diffColumns, CounterSample prevSample)
+	{
+		// Using DEFAULT_SKIP_DB_LIST: 'master', 'model', 'tempdb', 'msdb', 'SSISDB', 'ReportServer', 'ReportServerTempDB'
+		return new CounterSampleCatalogIteratorSqlServer(name, negativeDiffCountersToZero, diffColumns, prevSample);
+	}
+
 	@Override
 	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
@@ -221,20 +234,37 @@ extends CountersModel
 //		int minPageCount = 1;
 		int minPageCount = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_sample_minPageCount, DEFAULT_sample_minPageCount);
 		
-		String sql = "exec sys.sp_MSforeachdb '"
-				+ "select \n"
-				+ "     [dbname]         = db_name(database_id) \n"
-				+ "    ,[schemaName]     = object_schema_name(object_id, database_id) \n"
-				+ "    ,[objectName]     = object_name(object_id, database_id) \n"
-				+ "    ,[SizeInMb]       = convert(decimal(12,1), page_count / 128.0) \n"
-				+ "    ,[pageCountDiff]  = page_count \n"
-				+ "    ,[rowCount]       = record_count \n"
-				+ "    ,[rowCountDiff]   = record_count \n"
-				+ "    ,[avgRowsPerPage] = CASE WHEN page_count = 0 THEN 0 ELSE convert(decimal(10,1), (record_count*1.0 / page_count)) END \n"
+//		String sql = "exec sys.sp_MSforeachdb '"
+//				+ "select \n"
+//				+ "     [dbname]         = db_name(database_id) \n"
+//				+ "    ,[schemaName]     = object_schema_name(object_id, database_id) \n"
+//				+ "    ,[objectName]     = object_name(object_id, database_id) \n"
+//				+ "    ,[SizeInMb]       = convert(decimal(12,1), page_count / 128.0) \n"
+//				+ "    ,[pageCountDiff]  = page_count \n"
+//				+ "    ,[rowCount]       = record_count \n"
+//				+ "    ,[rowCountDiff]   = record_count \n"
+//				+ "    ,[avgRowsPerPage] = CASE WHEN page_count = 0 THEN 0 ELSE convert(decimal(10,1), (record_count*1.0 / page_count)) END \n"
+//				+ "    ,* \n"
+//				+ "from sys." + dm_db_index_physical_stats + "(db_id(''?''), DEFAULT, DEFAULT, DEFAULT, " + mode.replace("'", "''") + ") \n"
+//				+ "where page_count >= " + minPageCount + " \n"
+//				+ "' \n"
+//				+ "";
+
+		String sql = ""
+			    + "-- Note: Below SQL Statement is executed in every database that is 'online', more or less like: sp_msforeachdb \n"
+			    + "-- Note: object_schema_name() and object_name() can NOT be used for 'dirty-reads', they may block... hence the 'ugly' fullname sub-selects in the select column list \n"
+			    + "select \n"
+			    + "      [DbName]         = db_name(database_id) \n"
+			    + "    , [SchemaName]     = (select sys.schemas.name from sys.objects inner join sys.schemas ON sys.schemas.schema_id = sys.objects.schema_id where sys.objects.object_id = BASE.object_id) \n"
+			    + "    , [TableName]      = (select sys.objects.name from sys.objects where sys.objects.object_id = BASE.object_id) \n"
+				+ "    , [SizeInMb]       = convert(decimal(12,1), page_count / 128.0) \n"
+				+ "    , [pageCountDiff]  = page_count \n"
+				+ "    , [rowCount]       = record_count \n"
+				+ "    , [rowCountDiff]   = record_count \n"
+				+ "    , [avgRowsPerPage] = CASE WHEN page_count = 0 THEN 0 ELSE convert(decimal(10,1), (record_count*1.0 / page_count)) END \n"
 				+ "    ,* \n"
-				+ "from sys." + dm_db_index_physical_stats + "(db_id(''?''), DEFAULT, DEFAULT, DEFAULT, " + mode.replace("'", "''") + ") \n"
+				+ "from sys." + dm_db_index_physical_stats + "(db_id(), DEFAULT, DEFAULT, DEFAULT, " + mode + ") BASE \n"
 				+ "where page_count >= " + minPageCount + " \n"
-				+ "' \n"
 				+ "";
 
 		// NOTE: object_name() function is not the best in SQL-Server it may block...

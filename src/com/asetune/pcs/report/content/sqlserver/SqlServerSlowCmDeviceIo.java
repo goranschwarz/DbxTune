@@ -21,9 +21,13 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.sqlserver;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
+
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.ReportChartObject;
+import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -41,22 +45,13 @@ extends SqlServerAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
+		sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-//		if (_shortRstm.getRowCount() == 0)
-//		{
-//			sb.append("No rows found <br>\n");
-//		}
-//		else
-//		{
-			// Get a description of this section, and column names
-			sb.append(getSectionDescriptionHtml(_shortRstm, true));
-
-			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-			sb.append(_shortRstm.toHtmlTableString("sortable"));
-//		}
+		sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+		sb.append(toHtmlTable(_shortRstm));
 
 		if (_CmDeviceIo_IoRW != null)
 		{
@@ -67,15 +62,51 @@ extends SqlServerAbstract
 					"CmDeviceIo_SvcTimeW"
 					));
 
-			sb.append(_CmDeviceIo_IoRW             .getHtmlContent(null, null));
-			sb.append(_CmDeviceIo_SvcTimeRW_noLimit.getHtmlContent(null, null));
-			sb.append(_CmDeviceIo_SvcTimeRW        .getHtmlContent(null, null));
-			sb.append(_CmDeviceIo_SvcTimeR         .getHtmlContent(null, null));
-			sb.append(_CmDeviceIo_SvcTimeW         .getHtmlContent(null, null));
+			_CmDeviceIo_IoRW             .writeHtmlContent(sb, null, null);
+			_CmDeviceIo_SvcTimeRW_noLimit.writeHtmlContent(sb, null, null);
+			_CmDeviceIo_SvcTimeRW        .writeHtmlContent(sb, null, null);
+			_CmDeviceIo_SvcTimeR         .writeHtmlContent(sb, null, null);
+			_CmDeviceIo_SvcTimeW         .writeHtmlContent(sb, null, null);
 		}
-
-		return sb.toString();
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+////		if (_shortRstm.getRowCount() == 0)
+////		{
+////			sb.append("No rows found <br>\n");
+////		}
+////		else
+////		{
+//			// Get a description of this section, and column names
+//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+//
+//			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
+////			sb.append(_shortRstm.toHtmlTableString("sortable"));
+//			sb.append(toHtmlTable(_shortRstm));
+////		}
+//
+//		if (_CmDeviceIo_IoRW != null)
+//		{
+//			sb.append(getDbxCentralLinkWithDescForGraphs(true, "Below are Graphs/Charts with various information that can help you decide how the IO Subsystem is handling the load.",
+//					"CmDeviceIo_IoRW",
+//					"CmDeviceIo_SvcTimeRW",
+//					"CmDeviceIo_SvcTimeR",
+//					"CmDeviceIo_SvcTimeW"
+//					));
+//
+//			sb.append(_CmDeviceIo_IoRW             .getHtmlContent(null, null));
+//			sb.append(_CmDeviceIo_SvcTimeRW_noLimit.getHtmlContent(null, null));
+//			sb.append(_CmDeviceIo_SvcTimeRW        .getHtmlContent(null, null));
+//			sb.append(_CmDeviceIo_SvcTimeR         .getHtmlContent(null, null));
+//			sb.append(_CmDeviceIo_SvcTimeW         .getHtmlContent(null, null));
+//		}
+//
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -100,6 +131,12 @@ extends SqlServerAbstract
 	int _aboveServiceTime = DEFAULT_ABOVE_SERVICE_TIME;
 
 	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { "CmDeviceIo_rate" };
+	}
+
+	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		_aboveTotalIos    = localConf.getIntProperty(PROPKEY_ABOVE_TOTAL_IOS,    DEFAULT_ABOVE_TOTAL_IOS);
@@ -113,7 +150,7 @@ extends SqlServerAbstract
 			String msg = "Table 'CmDeviceIo_rate' did not exist. So Performance Counters for this hasn't been sampled during this period.";
 
 			//addMessage(msg);
-			setProblem(new Exception(msg));
+			setProblemException(new Exception(msg));
 
 			_shortRstm = ResultSetTableModel.createEmpty("slow_CmDeviceIo");
 			return;
@@ -123,6 +160,7 @@ extends SqlServerAbstract
 				+ "from [CmDeviceIo_rate] \n"
 				+ "where [AvgServ_ms] > " + _aboveServiceTime + " \n"
 				+ "  and [TotalIOs]   > " + _aboveTotalIos    + " \n"
+				+ getReportPeriodSqlWhere()
 			    + "";
 		
 		_shortRstm = executeQuery(conn, sql, false, "slow_CmDeviceIo");
@@ -144,18 +182,18 @@ extends SqlServerAbstract
 
 			
 			int maxValue = 10;
-			_CmDeviceIo_IoRW              = createChart(conn, "CmDeviceIo", "IoRW",      -1,       null, "Number of Disk Operations (Read+Write), per Second and Device (Disk->Devices)");
-			_CmDeviceIo_SvcTimeRW_noLimit = createChart(conn, "CmDeviceIo", "SvcTimeRW", -1,       null, "Device IO Service Time (Read+Write) in Milliseconds, per Device (Disk->Devices) [with NO max value]");
-			_CmDeviceIo_SvcTimeRW         = createChart(conn, "CmDeviceIo", "SvcTimeRW", maxValue, null, "Device IO Service Time (Read+Write) in Milliseconds, per Device (Disk->Devices) [with max value=" + maxValue + "]");
-			_CmDeviceIo_SvcTimeR          = createChart(conn, "CmDeviceIo", "SvcTimeR",  maxValue, null, "Device IO Service Time (Read) in Milliseconds, per Device (Disk->Devices) [with max value=" + maxValue + "]");
-			_CmDeviceIo_SvcTimeW          = createChart(conn, "CmDeviceIo", "SvcTimeW",  maxValue, null, "Device IO Service Time (Write) in Milliseconds, per Device (Disk->Devices) [with max value=" + maxValue + "]");
+			_CmDeviceIo_IoRW              = createTsLineChart(conn, "CmDeviceIo", "IoRW",      -1,       null, "Number of Disk Operations (Read+Write), per Second and Device (Disk->Devices)");
+			_CmDeviceIo_SvcTimeRW_noLimit = createTsLineChart(conn, "CmDeviceIo", "SvcTimeRW", -1,       null, "Device IO Service Time (Read+Write) in Milliseconds, per Device (Disk->Devices) [with NO max value]");
+			_CmDeviceIo_SvcTimeRW         = createTsLineChart(conn, "CmDeviceIo", "SvcTimeRW", maxValue, null, "Device IO Service Time (Read+Write) in Milliseconds, per Device (Disk->Devices) [with max value=" + maxValue + "]");
+			_CmDeviceIo_SvcTimeR          = createTsLineChart(conn, "CmDeviceIo", "SvcTimeR",  maxValue, null, "Device IO Service Time (Read) in Milliseconds, per Device (Disk->Devices) [with max value=" + maxValue + "]");
+			_CmDeviceIo_SvcTimeW          = createTsLineChart(conn, "CmDeviceIo", "SvcTimeW",  maxValue, null, "Device IO Service Time (Write) in Milliseconds, per Device (Disk->Devices) [with max value=" + maxValue + "]");
 		}
 	}
-	private ReportChartObject _CmDeviceIo_IoRW;
-	private ReportChartObject _CmDeviceIo_SvcTimeRW_noLimit;
-	private ReportChartObject _CmDeviceIo_SvcTimeRW;
-	private ReportChartObject _CmDeviceIo_SvcTimeR;
-	private ReportChartObject _CmDeviceIo_SvcTimeW;
+	private IReportChart _CmDeviceIo_IoRW;
+	private IReportChart _CmDeviceIo_SvcTimeRW_noLimit;
+	private IReportChart _CmDeviceIo_SvcTimeRW;
+	private IReportChart _CmDeviceIo_SvcTimeR;
+	private IReportChart _CmDeviceIo_SvcTimeW;
 
 	
 	/**

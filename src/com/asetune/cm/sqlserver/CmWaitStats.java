@@ -395,6 +395,7 @@ extends CountersModel
 	{
 		// Where are various columns located in the Vector 
 		int pos_wait_type = -1, pos_Description = -1;
+		int pos_WaitClass = -1;
 	
 		SqlServerWaitTypeDictionary wd = SqlServerWaitTypeDictionary.getInstance();
 		if (wd == null)
@@ -413,20 +414,27 @@ extends CountersModel
 			String colName = colNames.get(colId);
 
 			if      (colName.equals("wait_type"))   pos_wait_type   = colId;
+			else if (colName.equals("WaitClass"))   pos_WaitClass   = colId;
 			else if (colName.equals("Description")) pos_Description = colId;
 		}
 
 		// Loop on all counter rows
-		for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
+		for (int rowId=0; rowId < newSample.getRowCount(); rowId++)
 		{
 			Object o_wait_type  = newSample.getValueAt(rowId, pos_wait_type);
 
 			if (o_wait_type instanceof String)
 			{
-				String desc = wd.getDescriptionPlain( (String)o_wait_type );
+				String wait_type = (String)o_wait_type;
+
+				String desc      = wd.getDescriptionPlain    ( wait_type );
+				String className = wd.getWaitClassForWaitType( wait_type );
 
 				if (desc != null)
 					newSample.setValueAt(desc, rowId, pos_Description);
+
+				if (className != null)
+					newSample.setValueAt(className, rowId, pos_WaitClass);
 
 				// Set configuration: LocalGraphsSkipSet & TrendGraphsSkipSet
 				boolean SkipInLocalGraphs = _inLocalGraphsSkipSet.contains(o_wait_type);
@@ -601,15 +609,35 @@ extends CountersModel
 		list.add("PARALLEL_REDO_TRAN_LIST");
 		list.add("PARALLEL_REDO_WORKER_SYNC");
 		list.add("PARALLEL_REDO_WORKER_WAIT_WORK");
-		list.add("PREEMPTIVE_OS_FLUSHFILEBUFFERS");
+		list.add("PREEMPTIVE_OS_FLUSHFILEBUFFERS");       // maybe removed in SQL-Server 2019
+		list.add("PREEMPTIVE_HADR_LEASE_MECHANISM");
+		list.add("PREEMPTIVE_SP_SERVER_DIAGNOSTICS");
+		list.add("PREEMPTIVE_OS_LIBRARYOPS");
+		list.add("PREEMPTIVE_OS_COMOPS");
+		list.add("PREEMPTIVE_OS_CRYPTOPS");
+		list.add("PREEMPTIVE_OS_PIPEOPS");
+		list.add("PREEMPTIVE_OS_AUTHENTICATIONOPS");
+		list.add("PREEMPTIVE_OS_GENERICOPS");
+		list.add("PREEMPTIVE_OS_VERIFYTRUST");
+		list.add("PREEMPTIVE_OS_FILEOPS");
+		list.add("PREEMPTIVE_OS_DEVICEOPS");
+		list.add("PREEMPTIVE_OS_QUERYREGISTRY");
+		list.add("PREEMPTIVE_OS_WRITEFILE");
+		list.add("PREEMPTIVE_OS_WRITEFILEGATHER");
+		list.add("PREEMPTIVE_XE_CALLBACKEXECUTE");
+		list.add("PREEMPTIVE_XE_DISPATCHER");
 		list.add("PREEMPTIVE_XE_GETTARGETSTATE");
+		list.add("PREEMPTIVE_XE_SESSIONCOMMIT");
+		list.add("PREEMPTIVE_XE_TARGETINIT");
+		list.add("PREEMPTIVE_XE_TARGETFINALIZE");
 		list.add("PWAIT_ALL_COMPONENTS_INITIALIZED");
 		list.add("PWAIT_DIRECTLOGCONSUMER_GETNEXT");
+		list.add("PWAIT_EXTENSIBILITY_CLEANUP_TASK");     // SQL-Server 2019
 		list.add("QDS_PERSIST_TASK_MAIN_LOOP_SLEEP");
 		list.add("QDS_ASYNC_QUEUE");
 		list.add("QDS_CLEANUP_STALE_QUERIES_TASK_MAIN_LOOP_SLEEP");
-		list.add("QDS_SHUTDOWN_QUEUE");
-		list.add("REDO_THREAD_PENDING_WORK");
+		list.add("QDS_SHUTDOWN_QUEUE");                   // maybe removed in SQL-Server 2019
+		list.add("REDO_THREAD_PENDING_WORK");             // maybe removed in SQL-Server 2019
 		list.add("REQUEST_FOR_DEADLOCK_SEARCH");
 		list.add("RESOURCE_QUEUE");
 		list.add("SERVER_IDLE_CHECK");
@@ -629,17 +657,24 @@ extends CountersModel
 		list.add("SQLTRACE_BUFFER_FLUSH");
 		list.add("SQLTRACE_INCREMENTAL_FLUSH_SLEEP");
 		list.add("SQLTRACE_WAIT_ENTRIES");
-		list.add("VDI_CLIENT_OTHER");
+		list.add("STARTUP_DEPENDENCY_MANAGER");
+		list.add("VDI_CLIENT_OTHER");                     // maybe removed in SQL-Server 2019
 		list.add("WAIT_FOR_RESULTS");
 		list.add("WAITFOR");
 		list.add("WAITFOR_TASKSHUTDOWN");
-		list.add("WAIT_XTP_RECOVERY");
 		list.add("WAIT_XTP_HOST_WAIT");
 		list.add("WAIT_XTP_OFFLINE_CKPT_NEW_LOG");
 		list.add("WAIT_XTP_CKPT_CLOSE");
+		list.add("WAIT_XTP_RECOVERY");
+		list.add("XE_BUFFERMGR_ALLPROCESSED_EVENT");
 		list.add("XE_DISPATCHER_JOIN");
 		list.add("XE_DISPATCHER_WAIT");
+		list.add("XE_LIVE_TARGET_TVF");
 		list.add("XE_TIMER_EVENT");
+
+		// The above list was grabbed from: Glenn Berry - SQL Server 2019 Diagnostic Information Queries
+		// https://www.sqlskills.com/blogs/glenn/
+		// https://www.dropbox.com/s/p1urkrq5v01cuw3/SQL%20Server%202019%20Diagnostic%20Information%20Queries.sql?dl=0
 
 		list.sort(String.CASE_INSENSITIVE_ORDER);
 

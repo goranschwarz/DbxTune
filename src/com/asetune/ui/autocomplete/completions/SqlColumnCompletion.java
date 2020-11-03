@@ -23,6 +23,7 @@ package com.asetune.ui.autocomplete.completions;
 import org.fife.ui.autocomplete.CompletionProvider;
 
 import com.asetune.ui.autocomplete.CompletionProviderAbstractSql;
+import com.asetune.utils.StringUtil;
 
 /**
  * Our own Completion class, which overrides toString() to make it HTML aware
@@ -43,7 +44,7 @@ extends SqlCompletion
 
 		String finalColName = quoteNames ? q+colname+q : provider.fixStrangeNames(colname);
 		
-		if (tabAliasName == null)
+		if (StringUtil.isNullOrBlank(tabAliasName))
 			return finalColName;
 		else
 			return tabAliasName + "." + finalColName;

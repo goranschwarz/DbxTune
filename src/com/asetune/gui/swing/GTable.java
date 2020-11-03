@@ -62,6 +62,7 @@ import javax.swing.JPopupMenu;
 import javax.swing.JSeparator;
 import javax.swing.JTable;
 import javax.swing.RowFilter;
+import javax.swing.RowSorter;
 import javax.swing.RowSorter.SortKey;
 import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
@@ -272,6 +273,17 @@ extends JXTable
 	{
 		setModelInternal(newModel, 0);
 	}
+
+	/**
+	 * workaround to handle "(NULL)" values on Timestamps and other issues, fallback is to compare them as strings in case of **Failures**
+	 */
+	@Override
+	protected RowSorter<? extends TableModel> createDefaultRowSorter()
+	{
+//		return super.createDefaultRowSorter();
+		return new GTableSortController<TableModel>(getModel());
+	}
+
 
 	/** just wrap the super setModel() */
 	private void setModelInternal(TableModel newModel, int neastLevel)

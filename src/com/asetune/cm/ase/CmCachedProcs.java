@@ -159,6 +159,19 @@ extends CountersModel
 		try 
 		{
 			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+			mtd.addColumn("monCachedProcedures",  "SSQLID",              "<html>" +
+			                                                                     "SSQLID in case this is a StatementCache/DynamicSQL entry <br>" +
+			                                                                     "<b>Formula</b>: split '*ssXXXXXXXXXX_YYYYYYYYYYss*' and use the XXX part.<br>" +
+			                                                             "</html>");
+			mtd.addColumn("monCachedProcedures",  "Hashkey",             "<html>" +
+			                                                                     "Hashkey in case this is a StatementCache/DynamicSQL entry <br>" +
+			                                                                     "<b>Formula</b>: split '*ssXXXXXXXXXX_YYYYYYYYYYss*' and use the YYY part.<br>" +
+			                                                             "</html>");
+			mtd.addColumn("monCachedProcedures",  "Hashkey2",            "<html>" +
+			                                                                     "Hashkey in case this is a StatementCache/DynamicSQL entry, otherwise the inverse of the ObjectID. <br>" +
+			                                                                     "This can be used later on to group multiple samples into one, for example in Daily Summary Report <br>" +
+			                                                                     "<b>Formula</b>: split '*ssXXXXXXXXXX_YYYYYYYYYYss*' and use the YYY part.<br>" +
+			                                                             "</html>");
 			mtd.addColumn("monCachedProcedures",  "CompileAgeInSec",     "<html>" +
 			                                                                     "How many seconds where this plan compiled<br>" +
 			                                                                     "<b>Formula</b>: datediff(ss, CompileDate, getdate())<br>" +
@@ -228,8 +241,9 @@ extends CountersModel
 		String InstanceID = "";
 
 		// Split ObjectName *ssXXXXXXXXXX_YYYYYYYYYYss* into SSqlId=X and Hashkey=Y  only after 15.0, since bigint was introduced in 15.0
-		String SSQLID  = "";
-		String Hashkey = "";
+		String SSQLID   = "";
+		String Hashkey  = "";
+		String Hashkey2 = "";
 		
 		// ASE 15.5 or (15.0.3 in cluster edition) 
 		String RequestCnt         = "";
@@ -285,8 +299,9 @@ extends CountersModel
 		if (srvVersion > Ver.ver(15,0))
 		{
 			// Split ObjectName *s{s|q}XXXXXXXXXX_YYYYYYYYYYss* into SSqlId=X and Hashkey=Y  only after 15.0, since bigint was introduced in 15.0
-			SSQLID  = "CASE WHEN ObjectName like '*s%' THEN convert(bigint, substring(ObjectName,  4, 10)) ELSE -1 END as SSQLID, \n";
-			Hashkey = "CASE WHEN ObjectName like '*s%' THEN convert(bigint, substring(ObjectName, 15, 10)) ELSE -1 END as Hashkey, \n";
+			SSQLID   = "CASE WHEN ObjectName like '*s%' THEN convert(bigint, substring(ObjectName,  4, 10)) ELSE -1 END as SSQLID, \n";
+			Hashkey  = "CASE WHEN ObjectName like '*s%' THEN convert(bigint, substring(ObjectName, 15, 10)) ELSE -1 END as Hashkey, \n";
+			Hashkey2 = "CASE WHEN ObjectName like '*s%' THEN convert(bigint, substring(ObjectName, 15, 10)) ELSE -ObjectID END as Hashkey2, \n"; // -ObjectID == make ObjectID negative
 		}
 
 		if (srvVersion >= Ver.ver(15,5) || (srvVersion >= Ver.ver(15,0,3) && isClusterEnabled) )
@@ -360,6 +375,7 @@ extends CountersModel
 			AvgSnapJITTime +
 			AvgSnapExecutionTime + 
 			SnapCodegenTime + SnapJITTime + SnapExecutionTime +
+			Hashkey2 +
 			"";
 
 		// remove last comma

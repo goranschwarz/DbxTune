@@ -52,6 +52,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JSeparator;
+import javax.swing.RowSorter;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableModel;
@@ -78,6 +79,7 @@ import com.asetune.gui.focusabletip.FocusableTip;
 import com.asetune.gui.focusabletip.ResolverReturn;
 import com.asetune.gui.focusabletip.ToolTipHyperlinkResolver;
 import com.asetune.gui.swing.DeferredMouseMotionListener;
+import com.asetune.gui.swing.GTableSortController;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.JavaVersion;
 import com.asetune.utils.JsonUtils;
@@ -85,7 +87,6 @@ import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.j256.simplemagic.ContentInfo;
 import com.j256.simplemagic.ContentInfoUtil;
-//import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 
 public class ResultSetJXTable
 extends JXTable
@@ -338,6 +339,18 @@ implements ToolTipHyperlinkResolver
 		// Set columnHeader popup menu
 		getTableHeader().setComponentPopupMenu(createTableHeaderPopupMenu());
 	}
+
+
+	/**
+	 * workaround to handle "(NULL)" values on Timestamps and other issues, fallback is to compare them as strings in case of **Failures**
+	 */
+	@Override
+	protected RowSorter<? extends TableModel> createDefaultRowSorter()
+	{
+//		return super.createDefaultRowSorter();
+		return new GTableSortController<TableModel>(getModel());
+	}
+
 
 	/**
 	 * Creates the JMenu on the Component, this can be overrided by a subclass.

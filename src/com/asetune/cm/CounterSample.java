@@ -39,6 +39,7 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -2684,7 +2685,206 @@ extends CounterTableModel
 		
 		return foundRows;
 	}
+
 	
+	
+	/**
+	 * Sort on Many columns 
+	 * 
+	 * @param a List of sortOptions 
+	 * 
+	 * @return false if column(s) was NOT found. true if we did a sort
+	 */
+	public void sort(List<SortOptions> sortOptions)
+	{
+		Collections.sort(_rows, new ResultSetTableComparator(sortOptions, this, this.getName()));
+		
+		// Since we changed the underlying '_rows' List, then we need to adjust all "pointers" in: _rowidToKey and _keysToRowid
+		newRowIds();
+	}
+
+//	/**
+//	 * Sort on one column only. TODO: Many columns 
+//	 * 
+//	 * @param colName
+//	 * @return false if column was NOT found. true if we did a sort
+//	 */
+//	public boolean sort(SortOptions sortOptions)
+//	{
+//		final String  colName                  = sortOptions.getColumnName();
+//		final boolean isColNameCaseInSensitive = sortOptions.isColumnNameCaseInSensitive();
+//
+//		final boolean isAscending              = sortOptions.isAscending();
+//		final boolean isCaseInSensitive        = sortOptions.isCaseInSensitive();
+//		
+//		final int colPos = findColumn(colName, isColNameCaseInSensitive);
+//		if (colPos == -1)
+//			return false;
+//				
+//		Comparator<List<Object>> comparator = new Comparator<List<Object>>()
+//		{
+//			@SuppressWarnings({ "rawtypes", "unchecked" })
+//			@Override
+//			public int compare(List<Object> leftList, List<Object> rightList)
+//			{
+//				Object left  = leftList .get(colPos);
+//				Object right = rightList.get(colPos);
+//				
+//				if (left == right)
+//					return sortType( 0 );
+//
+//				if (left == null)
+//					return sortType( -1 );
+//
+//				if (right == null)
+//					return sortType( 1 );
+//
+//				if ( isCaseInSensitive )
+//				{
+//					if (left instanceof String && right instanceof String)
+//						return sortType( String.CASE_INSENSITIVE_ORDER.compare( (String) left, (String) right ) );
+//				}
+//				
+//				// COMPARABLE, which would be the normal thing
+//				if (left instanceof Comparable)
+//					return sortType( ((Comparable)left).compareTo(right) );
+//				
+//				if ( left instanceof byte[] && right instanceof byte[] )
+//					return sortType( byteCompare((byte[])left, (byte[])right) );
+//
+//				// End of line...
+//				throw new RuntimeException("Comparator on object, colName='"+colName+"', problem: Left do not implement 'Comparable' and is not equal to right. Left.obj=|"+left.getClass().getCanonicalName()+"|, Right.obj=|"+right.getClass().getCanonicalName()+"|, Left.toString=|"+left+"|, Right.toString=|"+right+"|.");
+//			}
+//
+//			private int byteCompare(byte[] left, byte[] right)
+//			{
+//				for (int i = 0, j = 0; i < left.length && j < right.length; i++, j++)
+//				{
+//					int a = (left[i] & 0xff);
+//					int b = (right[j] & 0xff);
+//					if ( a != b )
+//					{
+//						return a - b;
+//					}
+//				}
+//				return left.length - right.length;
+//			}
+//			
+//			private int sortType(int order)
+//			{
+//				if (isAscending)
+//					return order;
+//				
+//				// Negate the number
+//				// * negative number to positive
+//				// * positive numbers negative
+//				// * leave 0 as 0
+//				return order *= -1;
+//			}
+//		};
+//		
+//		Collections.sort(_rows, comparator);
+//		return true;
+//	}
+
+
+//	/**
+//	 * Sort on Many columns 
+//	 * 
+//	 * @param a List of sortOptions 
+//	 * 
+//	 * @return false if column(s) was NOT found. true if we did a sort
+//	 */
+//	public boolean sort(final List<SortOptions> sortOptions)
+//	{
+//		Comparator<List<Object>> comparator = new Comparator<List<Object>>()
+//		{
+//			@Override
+//			public int compare(List<Object> leftList, List<Object> rightList)
+//			{
+//				int result = 0;
+//
+//				for (SortOptions so : sortOptions)
+//				{
+//					String  colName                  = so.getColumnName();
+//					boolean isColNameCaseInSensitive = so.isColumnNameCaseInSensitive();
+//
+//					boolean isAscending              = so.isAscending();
+//					boolean isCaseInSensitive        = so.isCaseInSensitive();
+//					
+//					int colPos = findColumn(colName, isColNameCaseInSensitive);
+//					if (colPos == -1)
+//						throw new RuntimeException("Sorting CounterSample '" + getName() + "', cant find column name '" + colName + "'.");
+//
+//					result = compare(colName, colPos, isAscending, isCaseInSensitive, leftList, rightList);
+//					if (result != 0)
+//						return result;
+//				}
+//				return result;
+//			}
+//
+//			@SuppressWarnings({ "rawtypes", "unchecked" })
+//			private int compare(String colName, int colPos, boolean isAscending, boolean isCaseInSensitive, List<Object> leftList, List<Object> rightList)
+//			{
+//				Object left  = leftList .get(colPos);
+//				Object right = rightList.get(colPos);
+//				
+//				if (left == right)
+//					return sortType( 0, isAscending );
+//
+//				if (left == null)
+//					return sortType( -1, isAscending );
+//
+//				if (right == null)
+//					return sortType( 1, isAscending );
+//
+//				if ( isCaseInSensitive )
+//				{
+//					if (left instanceof String && right instanceof String)
+//						return sortType( String.CASE_INSENSITIVE_ORDER.compare( (String) left, (String) right ), isAscending );
+//				}
+//				
+//				// COMPARABLE, which would be the normal thing
+//				if (left instanceof Comparable)
+//					return sortType( ((Comparable)left).compareTo(right), isAscending );
+//				
+//				if ( left instanceof byte[] && right instanceof byte[] )
+//					return sortType( byteCompare((byte[])left, (byte[])right), isAscending );
+//
+//				// End of line...
+//				throw new RuntimeException("Comparator on object, colName='"+colName+"', problem: Left do not implement 'Comparable' and is not equal to right. Left.obj=|"+left.getClass().getCanonicalName()+"|, Right.obj=|"+right.getClass().getCanonicalName()+"|, Left.toString=|"+left+"|, Right.toString=|"+right+"|.");
+//			}
+//
+//			private int byteCompare(byte[] left, byte[] right)
+//			{
+//				for (int i = 0, j = 0; i < left.length && j < right.length; i++, j++)
+//				{
+//					int a = (left[i] & 0xff);
+//					int b = (right[j] & 0xff);
+//					if ( a != b )
+//					{
+//						return a - b;
+//					}
+//				}
+//				return left.length - right.length;
+//			}
+//			
+//			private int sortType(int order, boolean isAscending)
+//			{
+//				if (isAscending)
+//					return order;
+//				
+//				// Negate the number
+//				// * negative number to positive
+//				// * positive numbers negative
+//				// * leave 0 as 0
+//				return order *= -1;
+//			}
+//		};
+//		
+//		Collections.sort(_rows, comparator);
+//		return true;
+//	}
 	
 	
 	

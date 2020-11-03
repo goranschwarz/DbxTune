@@ -23,6 +23,22 @@ package com.asetune.central.controllers;
 public class HtmlStatic
 {
 
+	public static String getUserDefinedContentHead()
+	{
+		return getOverviewHead();
+	}
+
+	public static String getUserDefinedContentNavbar()
+	{
+		return getOverviewNavbar();
+	}
+
+	public static String getUserDefinedContentJavaScriptAtEnd()
+	{
+		return getJavaScriptAtEnd(true);
+	}
+
+
 	public static String getOverviewHead()
 	{
 		return

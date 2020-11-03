@@ -33,6 +33,7 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventConfigResourceIsLow;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
@@ -691,7 +692,7 @@ extends CountersModel
 					{
 						String msg = "The 'default data cache' is configured at the factory setting... 8 MB or similar... This is WAY TO LOW. fix this using: exec sp_cacheconfig 'default data cache', '#G'";
 						AlarmHandler.getInstance().addAlarm(
-							new AlarmEventConfigResourceIsLow(cm, "default data cache", cacheSize, msg, threshold) );
+							new AlarmEventConfigResourceIsLow(cm, "default data cache", cacheSize, msg, threshold, AlarmEvent.DEFAULT_raiseDelay) );
 					}
 				}
 			}

@@ -72,6 +72,7 @@ implements ICentralPersistWriter
 		CENTRAL_SESSIONS,
 		CENTRAL_GRAPH_PROFILES,
 		CENTRAL_USERS,
+		DSR_SKIP_ENTRIES,
 		SESSION_SAMPLES,
 		SESSION_SAMPLE_SUM,
 		SESSION_SAMPLE_DETAILS,
@@ -376,6 +377,7 @@ implements ICentralPersistWriter
 		case CENTRAL_SESSIONS:         return          lq + "DbxCentralSessions"          + rq;
 		case CENTRAL_GRAPH_PROFILES:   return          lq + "DbxCentralGraphProfiles"     + rq;
 		case CENTRAL_USERS:            return          lq + "DbxCentralUsers"             + rq;
+		case DSR_SKIP_ENTRIES:         return          lq + "DbxDsrSkipEntries"           + rq;
 		case SESSION_SAMPLES:          return prefix + lq + "DbxSessionSamples"           + rq;
 		case SESSION_SAMPLE_SUM:       return prefix + lq + "DbxSessionSampleSum"         + rq;
 		case SESSION_SAMPLE_DETAILS:   return prefix + lq + "DbxSessionSampleDetailes"    + rq;
@@ -540,6 +542,21 @@ implements ICentralPersistWriter
 				sbSql.append("   ,"+fill(lq+"Roles"              +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 120),20)+" "+getNullable(false)+"\n");
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY ("+lq+"UserName"+rq+")\n");
+				sbSql.append(") \n");
+			}
+			else if (Table.DSR_SKIP_ENTRIES.equals(type))
+			{
+				sbSql.append("create table " + tabName + "\n");
+				sbSql.append("( \n");
+				sbSql.append("    "+fill(lq+"SrvName"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  60),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"ClassName"          +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  60),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"EntryType"          +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  60),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(lq+"NumberVal"          +rq,40)+" "+fill(getDatatype(conn, Types.BIGINT      ),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"StringVal"          +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 256),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"Description"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 512),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"SqlTextExample"     +rq,40)+" "+fill(getDatatype(conn, Types.CLOB        ),20)+" "+getNullable(false)+"\n");
+				sbSql.append("\n");
+				sbSql.append("   ,PRIMARY KEY ("+lq+"SrvName"+rq+", "+lq+"ClassName"+rq+", "+lq+"EntryType"+rq+", "+lq+"StringVal"+rq+")\n");
 				sbSql.append(") \n");
 			}
 			else if (Table.SESSION_SAMPLES.equals(type))
@@ -1001,6 +1018,20 @@ implements ICentralPersistWriter
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
 				sbSql.append("values(?, ?, ?, ?) \n");
+		}
+		else if (type.equals(Table.DSR_SKIP_ENTRIES))
+		{
+			sbSql.append("insert into ").append(tabName)  .append(" (");
+			sbSql.append(lq).append("SrvName")       .append(rq).append(", ");
+			sbSql.append(lq).append("ClassName")     .append(rq).append(", ");
+			sbSql.append(lq).append("EntryType")     .append(rq).append(", ");
+//			sbSql.append(lq).append("NumberVal")     .append(rq).append(", ");
+			sbSql.append(lq).append("StringVal")     .append(rq).append(", ");
+			sbSql.append(lq).append("Description")   .append(rq).append(", ");
+			sbSql.append(lq).append("SqlTextExample").append(rq).append("");
+			sbSql.append(") ");
+			if (addPrepStatementQuestionMarks)
+				sbSql.append("values(?, ?, ?, ?, ?, ?) \n");
 		}
 		else if (type.equals(Table.SESSION_SAMPLES))
 		{

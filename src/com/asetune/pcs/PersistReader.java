@@ -1815,7 +1815,7 @@ implements Runnable, ConnectionProvider
 
 		try
 		{
-			sqlColList = DictCompression.getRewriteForSelectColumnList(_conn, null, cmName+"_"+typeStr);
+			sqlColList = DictCompression.getRewriteForSelectColumnList(_conn, null, cmName+"_"+typeStr, cmName);
 		}
 		catch (SQLException ex)
 		{

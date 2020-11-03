@@ -21,10 +21,11 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.ase;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.sql.SQLException;
-import java.util.Set;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
@@ -36,7 +37,7 @@ public class AseTopSlowProcCalls extends AseAbstract
 //	private static Logger _logger = Logger.getLogger(AseTopSlowProcCalls.class);
 
 	private ResultSetTableModel _shortRstm;
-	private ResultSetTableModel _ssqlRstm;
+//	private ResultSetTableModel _ssqlRstm;
 //	private Exception           _problem = null;
 
 	public AseTopSlowProcCalls(DailySummaryReportAbstract reportingInstance)
@@ -45,10 +46,9 @@ public class AseTopSlowProcCalls extends AseAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		if (_shortRstm.getRowCount() == 0)
 		{
 			sb.append("No rows found <br>\n");
@@ -58,19 +58,38 @@ public class AseTopSlowProcCalls extends AseAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-			sb.append(_shortRstm.toHtmlTableString("sortable"));
-			
-			if (_ssqlRstm != null)
-			{
-				sb.append("Statement Cache Entries Count: ").append(_ssqlRstm.getRowCount()).append("<br>\n");
-//				sb.append(_ssqlRstm.toHtmlTablesVerticalString("sortable"));
-				sb.append(_ssqlRstm.toHtmlTableString("sortable"));
-			}
+			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+			sb.append(toHtmlTable(_shortRstm));
 		}
-
-		return sb.toString();
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		if (_shortRstm.getRowCount() == 0)
+//		{
+//			sb.append("No rows found <br>\n");
+//		}
+//		else
+//		{
+//			// Get a description of this section, and column names
+//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+//
+//			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
+////			sb.append(_shortRstm.toHtmlTableString("sortable"));
+//			sb.append(toHtmlTable(_shortRstm));
+//			
+////			if (_ssqlRstm != null)
+////			{
+////				sb.append("Statement Cache Entries Count: ").append(_ssqlRstm.getRowCount()).append("<br>\n");
+////				sb.append(toHtmlTable(_ssqlRstm));
+////			}
+//		}
+//
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -84,6 +103,12 @@ public class AseTopSlowProcCalls extends AseAbstract
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
 	}
 
+
+	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { "MonSqlCapStatements" };
+	}
 
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
@@ -188,7 +213,12 @@ public class AseTopSlowProcCalls extends AseAbstract
 				+ "   ,-9999999.0 as [LogicalReadsPerRowsAffected] \n"
 				
 			    + "from [MonSqlCapStatements] \n"
-			    + "where [ProcName] is NOT NULL \n"
+//			    + "where [ProcName] is NOT NULL \n"
+//			    + "  and [SsqlId] = 0 \n"
+				+ "where [ProcedureID] != 0 \n"
+				+ "  and [ProcName] not like '*%' \n"
+//				+ "  and [SsqlId] = 0 \n"
+				+ getReportPeriodSqlWhere("StartTime")
 			    + "group by [ProcName], [LineNumber] \n"
 			    + "having [sumCpuTime] >= " + havingSumCpuTime + " \n"
 //			    + "order by [records] desc \n"
@@ -232,25 +262,25 @@ public class AseTopSlowProcCalls extends AseAbstract
 				}
 			}
 			
-			//--------------------------------------------------------------------------------------
-			// For StatementCache entries... get the SQL Text (or actually the XML Plan and try to get SQL Text from that)
-			//--------------------------------------------------------------------------------------
-			if (_shortRstm.getRowCount() > 0)
-			{
-				Set<String> stmntCacheObjects = getStatementCacheObjects(_shortRstm, "ProcName");
-
-				if (stmntCacheObjects != null && ! stmntCacheObjects.isEmpty() )
-				{
-					try 
-					{
-						_ssqlRstm = getSqlStatementsFromMonDdlStorage(conn, stmntCacheObjects);
-					}
-					catch (SQLException ex)
-					{
-						setProblem(ex);
-					}
-				}
-			}
+//			//--------------------------------------------------------------------------------------
+//			// For StatementCache entries... get the SQL Text (or actually the XML Plan and try to get SQL Text from that)
+//			//--------------------------------------------------------------------------------------
+//			if (_shortRstm.getRowCount() > 0)
+//			{
+//				Set<String> stmntCacheObjects = getStatementCacheObjects(_shortRstm, "ProcName");
+//
+//				if (stmntCacheObjects != null && ! stmntCacheObjects.isEmpty() )
+//				{
+//					try 
+//					{
+//						_ssqlRstm = getSqlStatementsFromMonDdlStorage(conn, stmntCacheObjects);
+//					}
+//					catch (SQLException ex)
+//					{
+//						setProblemException(ex);
+//					}
+//				}
+//			}
 		}
 	}
 }

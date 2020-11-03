@@ -22,26 +22,27 @@ package com.asetune.pcs.sqlcapture;
 
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
+import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.DbxTune;
 import com.asetune.Version;
 import com.asetune.cache.XmlPlanCache;
+import com.asetune.config.dict.AseErrorMessageDictionary;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistentCounterHandler;
@@ -50,10 +51,13 @@ import com.asetune.sql.conn.AseConnection;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
 import com.sybase.jdbcx.SybMessageHandler;
+
+import net.sf.jsqlparser.JSQLParserException;
 
 public class SqlCaptureBrokerAse 
 extends SqlCaptureBrokerAbstract
@@ -112,27 +116,24 @@ extends SqlCaptureBrokerAbstract
 
 	private long _nonConfiguredMonitoringCount = 0;
 
-	/** 
-	 * Keep X number of SQL/Plan-Text generations, before we send text for storage. 
-	 * This so we can remove SQL/Plan Text associated with "short" Statement executions, 
-	 * that typically can span over 2 or several calls to doSqlCapture() 
-	 */
-//	protected Queue<DeferredSqlAndPlanTextQueueEntry> _deferredQueueFor_sqlTextAndPlan = new LinkedList<>();
-	protected DeferredSqlAndPlanTextQueue _deferredQueueFor_sqlTextAndPlan = new DeferredSqlAndPlanTextQueue();
-
 	/** Keep SQLText & PlanText in memory for X seconds before flushing them to storage, so thay can be removed if the statement is not within the filter, for example execution time */
 	protected int _deferredStorageThresholdFor_sqlTextAndPlan = DEFAULT_sqlCap_ase_sqlTextAndPlan_deferredQueueAge;
 
-	private boolean _removeStaticSqlText = DEFAULT_sqlCap_ase_sqlTextAndPlan_removeStaticSqlText;
-	private Map<String, Integer> _removeStaticSqlText_stat = new HashMap<>(); 
-	private long _removeStaticSqlText_stat_printThreshold = DEFAULT_sqlCap_ase_sqlTextAndPlan_removeStaticSqlText_printMsgTimeThreshold; 
-	private long _removeStaticSqlText_stat_printLastTime  = -1; // System.currentTimeMillis();
+	/** used to determine if we should call removeUnusedSlots() */
+	private long _lastCallTo_removeUnusedSlots = System.currentTimeMillis();
+	private long _removeUnusedSlotsThresholdInSeconds = DEFAULT_sqlCap_ase_sqlTextAndPlan_removeUnusedSlotsThresholdInSeconds;
+
+	
+//	private boolean _removeStaticSqlText = DEFAULT_sqlCap_ase_sqlTextAndPlan_removeStaticSqlText;
+//	private Map<String, Integer> _removeStaticSqlText_stat = new HashMap<>(); 
+//	private long _removeStaticSqlText_stat_printThreshold = DEFAULT_sqlCap_ase_sqlTextAndPlan_removeStaticSqlText_printMsgTimeThreshold; 
+//	private long _removeStaticSqlText_stat_printLastTime  = -1; // System.currentTimeMillis();
 
 	private Map<Integer, String> _monSqlTextDictCompColMap;
 
-	private static int _stmnt_SPID_pos    = 2 + 1; // 2 = ListPos + 1 is for that the row starts with a string that contains the DestinationTablename
-	private static int _stmnt_KPID_pos    = 3 + 1; // 3 = ListPos + 1 is for that the row starts with a string that contains the DestinationTablename
-	private static int _stmnt_BatchID_pos = 7 + 1; // 7 = ListPos + 1 is for that the row starts with a string that contains the DestinationTablename
+//	private static int _stmnt_SPID_pos    = 2 + 1; // 2 = ListPos + 1 is for that the row starts with a string that contains the DestinationTablename
+//	private static int _stmnt_KPID_pos    = 3 + 1; // 3 = ListPos + 1 is for that the row starts with a string that contains the DestinationTablename
+//	private static int _stmnt_BatchID_pos = 7 + 1; // 7 = ListPos + 1 is for that the row starts with a string that contains the DestinationTablename
 
 //	private SqlCaptureDetails _sqlCaptureDetails = new SqlCaptureDetails();
 
@@ -150,11 +151,33 @@ extends SqlCaptureBrokerAbstract
 //	public static final int     DEFAULT_sqlCap_ase_sqlTextAndPlan_removeStaticSqlText_printMsgTimeThreshold = 5 * 60 * 1000; // Write Message: Every 5 minute
 
 	public static final String  PROPKEY_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlText     = "PersistentCounterHandler.sqlCapture.ase.sqlTextAndPlan.storeNormalizedSqlText";
-	public static final boolean DEFAULT_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlText     = false;
+//	public static final boolean DEFAULT_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlText     = false;
+	public static final boolean DEFAULT_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlText     = true;
 
 	public static final String  PROPKEY_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlTextHash = "PersistentCounterHandler.sqlCapture.ase.sqlTextAndPlan.storeNormalizedSqlTextHash";
 	public static final boolean DEFAULT_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlTextHash = false;
 
+	public static final String  PROPKEY_sqlCap_ase_sqlTextAndPlan_removeUnusedSlotsThresholdInSeconds = "PersistentCounterHandler.sqlCapture.ase.sqlTextAndPlan.removeUnusedSlotsThresholdInSeconds";
+	public static final long    DEFAULT_sqlCap_ase_sqlTextAndPlan_removeUnusedSlotsThresholdInSeconds = 60 * 5;
+
+	public static final String  PROPKEY_sqlCap_ase_statisticsReportEveryXSecond = "PersistentCounterHandler.sqlCapture.ase.statisticsReportEveryXSecond";
+	public static final long    DEFAULT_sqlCap_ase_statisticsReportEveryXSecond = 60 * 10; // 10 minutes
+
+	public static final String  PROPKEY_sqlCap_ase_sqlTextAndPlan_batchIdEntry_keepCount = "PersistentCounterHandler.sqlCapture.ase.batchIdEntry.keepCount";
+//	public static final int     DEFAULT_sqlCap_ase_sqlTextAndPlan_batchIdEntry_keepCount = 2;
+	public static final int     DEFAULT_sqlCap_ase_sqlTextAndPlan_batchIdEntry_keepCount = 10; // 10 should be WAY to much, it's just for testing...
+	//NOTE: if we have a keep count higher than 1 or 2, then we should do LOW ON MEMORY to first remove all with a keep-count > 1 or similar...
+
+	public static final String  PROPKEY_sqlCap_ase_sqlTextAndPlan_sqlText_shortLength = "PersistentCounterHandler.sqlCapture.ase.sqlText.shortLength";
+	public static final int     DEFAULT_sqlCap_ase_sqlTextAndPlan_sqlText_shortLength = 256 *3; // 1024
+
+
+	public int _sqlText_shortLength = DEFAULT_sqlCap_ase_sqlTextAndPlan_sqlText_shortLength;
+
+	// static so we can reach it from any private static sub classes
+	private static int _default_batchIdEntry_keepCount = DEFAULT_sqlCap_ase_sqlTextAndPlan_batchIdEntry_keepCount;
+	
+	
 	@Override
 	public void init(Configuration conf)
 	{
@@ -165,8 +188,13 @@ extends SqlCaptureBrokerAbstract
 		_isNonConfiguredMonitoringAllowed           = getBooleanProperty(PersistentCounterHandler.PROPKEY_sqlCap_isNonConfiguredMonitoringAllowed,    PersistentCounterHandler.DEFAULT_sqlCap_isNonConfiguredMonitoringAllowed);
 		_deferredStorageThresholdFor_sqlTextAndPlan = getIntProperty    (PROPKEY_sqlCap_ase_sqlTextAndPlan_deferredQueueAge,                          DEFAULT_sqlCap_ase_sqlTextAndPlan_deferredQueueAge);
 		_lastConfigOverflowMsgTimeThreshold         = getIntProperty    (PROPKEY_sqlCap_ase_sqlTextAndPlan_overflowMsgTimeThreshold,                  DEFAULT_sqlCap_ase_sqlTextAndPlan_overflowMsgTimeThreshold);
-		_removeStaticSqlText                        = getBooleanProperty(PROPKEY_sqlCap_ase_sqlTextAndPlan_removeStaticSqlText,                       DEFAULT_sqlCap_ase_sqlTextAndPlan_removeStaticSqlText);
-		_removeStaticSqlText_stat_printThreshold    = getIntProperty    (PROPKEY_sqlCap_ase_sqlTextAndPlan_removeStaticSqlText_printMsgTimeThreshold, DEFAULT_sqlCap_ase_sqlTextAndPlan_removeStaticSqlText_printMsgTimeThreshold);
+//		_removeStaticSqlText                        = getBooleanProperty(PROPKEY_sqlCap_ase_sqlTextAndPlan_removeStaticSqlText,                       DEFAULT_sqlCap_ase_sqlTextAndPlan_removeStaticSqlText);
+//		_removeStaticSqlText_stat_printThreshold    = getIntProperty    (PROPKEY_sqlCap_ase_sqlTextAndPlan_removeStaticSqlText_printMsgTimeThreshold, DEFAULT_sqlCap_ase_sqlTextAndPlan_removeStaticSqlText_printMsgTimeThreshold);
+		_removeUnusedSlotsThresholdInSeconds        = getLongProperty   (PROPKEY_sqlCap_ase_sqlTextAndPlan_removeUnusedSlotsThresholdInSeconds,       DEFAULT_sqlCap_ase_sqlTextAndPlan_removeUnusedSlotsThresholdInSeconds);
+
+		_statReportAfterSec                         = getLongProperty   (PROPKEY_sqlCap_ase_statisticsReportEveryXSecond,                             DEFAULT_sqlCap_ase_statisticsReportEveryXSecond);
+		_default_batchIdEntry_keepCount             = getIntProperty    (PROPKEY_sqlCap_ase_sqlTextAndPlan_batchIdEntry_keepCount,                    DEFAULT_sqlCap_ase_sqlTextAndPlan_batchIdEntry_keepCount);
+		_sqlText_shortLength                        = getIntProperty    (PROPKEY_sqlCap_ase_sqlTextAndPlan_sqlText_shortLength,                       DEFAULT_sqlCap_ase_sqlTextAndPlan_sqlText_shortLength);
 	}
 
 	@Override
@@ -270,6 +298,12 @@ extends SqlCaptureBrokerAbstract
 			if ( ! colNames.contains("NormJavaSqlHashCode") )
 				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"NormJavaSqlHashCode"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
 
+			if ( ! colNames.contains("JavaSqlLengthShort") )
+				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"JavaSqlLengthShort"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+
+			if ( ! colNames.contains("JavaSqlHashCodeShort") )
+				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"JavaSqlHashCodeShort"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+
 			return list;
 		}
 
@@ -281,6 +315,9 @@ extends SqlCaptureBrokerAbstract
 
 			if ( ! colNames.contains("NormJavaSqlHashCode") )
 				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"NormJavaSqlHashCode"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n");
+
+			if ( ! colNames.contains("JavaSqlHashCodeShort") )
+				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"JavaSqlHashCodeShort"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
 
 			// SQLText / SQLText$dcc$
 			if ( DictCompression.isEnabled() )
@@ -343,8 +380,8 @@ extends SqlCaptureBrokerAbstract
 			if (_monSqlTextDictCompColMap == null)
 			{
 				_monSqlTextDictCompColMap = new HashMap<>();
-				_monSqlTextDictCompColMap.put(10 , "SQLText");    // Note: This is 1 based (this is a pointer to where in the value array/list we would find the column) 
-				_monSqlTextDictCompColMap.put(12, "NormSQLText"); // Note: This is 1 based
+				_monSqlTextDictCompColMap.put(MonSqlText.pos_SQLText    , "SQLText");     // Note: This is 1 based (this is a pointer to where in the value array/list we would find the column) 
+				_monSqlTextDictCompColMap.put(MonSqlText.pos_NormSQLText, "NormSQLText"); // Note: This is 1 based
 			}
 			return _monSqlTextDictCompColMap;
 		}
@@ -404,7 +441,9 @@ extends SqlCaptureBrokerAbstract
 			sbSql.append("   ,"+fill(lq+"ServerLogin"         +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30                                ),20)+" "+getNullable(false)+"\n");
 			sbSql.append("   ,"+fill(lq+"AddMethod"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
 			sbSql.append("   ,"+fill(lq+"JavaSqlLength"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"JavaSqlLengthShort"  +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
 			sbSql.append("   ,"+fill(lq+"JavaSqlHashCode"     +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"JavaSqlHashCodeShort"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
 //			sbSql.append("   ,"+fill(lq+"SQLText"             +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 65536                             ),20)+" "+getNullable(true) +"\n");
 			sbSql.append("   ,"+fill(lq+col_SQLText_name      +rq,40)+" "+fill(getDatatype(conn, col_SQLText_jdbcType,     col_SQLText_jdbcLen    ),20)+" "+getNullable(true) +"\n");
 			sbSql.append("   ,"+fill(lq+"NormJavaSqlHashCode" +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(true) +"\n");
@@ -455,6 +494,7 @@ extends SqlCaptureBrokerAbstract
 			sbSql.append("   ,"+fill(lq+"StartTime"            +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
 			sbSql.append("   ,"+fill(lq+"EndTime"              +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
 			sbSql.append("   ,"+fill(lq+"JavaSqlHashCode"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"JavaSqlHashCodeShort" +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
 			sbSql.append("   ,"+fill(lq+"NormJavaSqlHashCode"  +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
 			sbSql.append(") \n");
 
@@ -485,6 +525,453 @@ extends SqlCaptureBrokerAbstract
 		}
 
 		return null;
+	}
+
+	private static class MonSqlText
+	{
+		Timestamp  sampleTime           ; // Types.TIMESTAMP                                  ),20)+" "+getNullable(false)+"\n");
+		int        InstanceID           ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+		int        SPID                 ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+		int        KPID                 ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+		int        BatchID              ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+		String     ServerLogin          ; // Types.VARCHAR, 30                                ),20)+" "+getNullable(false)+"\n");
+		int        AddMethod            ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+		int        JavaSqlLength        ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+		int        JavaSqlLengthShort   ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+		int        JavaSqlHashCode      ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+		int        JavaSqlHashCodeShort ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+		String     SQLText              ; // col_SQLText_jdbcType,     col_SQLText_jdbcLen    ),20)+" "+getNullable(true) +"\n");
+		int        NormJavaSqlHashCode  ; // Types.INTEGER                                    ),20)+" "+getNullable(true) +"\n");
+		String     NormSQLText          ; // col_NormSQLText_jdbcType, col_NormSQLText_jdbcLen),20)+" "+getNullable(true) +"\n");
+
+//		// Below is used to "not have to lookup COLNAME->pos" every time
+//		private static boolean _isColNamesToPosResolved = false;
+		// Below is used to create the List size for every row
+		private static int     _numberOfCol             = 15;
+
+//		private static int pos_sampleTime           = -1;
+//		private static int pos_InstanceID           = -1;
+//		private static int pos_SPID                 = -1;
+//		private static int pos_KPID                 = -1;
+//		private static int pos_BatchID              = -1;
+//		private static int pos_ServerLogin          = -1;
+//		private static int pos_AddMethod            = -1;
+//		private static int pos_JavaSqlLength        = -1;
+//		private static int pos_JavaSqlLengthShort   = -1;
+//		private static int pos_JavaSqlHashCode      = -1;
+//		private static int pos_JavaSqlHashCodeShort = -1;
+//		private static int pos_SQLText              = -1;
+		private static int pos_SQLText              = 12; // NOTE: this is used in method: getDictionaryCompressionColumnMap() and must be maintained if position is changed
+//		private static int pos_NormJavaSqlHashCode  = -1;
+//		private static int pos_NormSQLText          = -1;
+		private static int pos_NormSQLText          = 14; // NOTE: this is used in method: getDictionaryCompressionColumnMap() and must be maintained if position is changed
+//
+//		private static void resolveColNamesToPos(ResultSet rs)
+//		throws SQLException
+//		{
+//			List<String> colNames = DbUtils.getColumnNames(rs.getMetaData());
+//
+//			pos_sampleTime           = findInListToJdbcPos(colNames, "sampleTime"          );
+//			pos_InstanceID           = findInListToJdbcPos(colNames, "InstanceID"          );
+//			pos_SPID                 = findInListToJdbcPos(colNames, "SPID"                );
+//			pos_KPID                 = findInListToJdbcPos(colNames, "KPID"                );
+//			pos_BatchID              = findInListToJdbcPos(colNames, "BatchID"             );
+//			pos_ServerLogin          = findInListToJdbcPos(colNames, "ServerLogin"         );
+//			pos_AddMethod            = findInListToJdbcPos(colNames, "AddMethod"           );
+//			pos_JavaSqlLength        = findInListToJdbcPos(colNames, "JavaSqlLength"       );
+//			pos_JavaSqlLengthShort   = findInListToJdbcPos(colNames, "JavaSqlLengthShort"  );
+//			pos_JavaSqlHashCode      = findInListToJdbcPos(colNames, "JavaSqlHashCode"     );
+//			pos_JavaSqlHashCodeShort = findInListToJdbcPos(colNames, "JavaSqlHashCodeShort");
+//			pos_SQLText              = findInListToJdbcPos(colNames, "SQLText"             );
+//			pos_NormJavaSqlHashCode  = findInListToJdbcPos(colNames, "NormJavaSqlHashCode" );
+//			pos_NormSQLText          = findInListToJdbcPos(colNames, "NormSQLText"         );
+//			
+//			_numberOfCol = rs.getMetaData().getColumnCount();
+//			_isColNamesToPosResolved = true;
+//		}
+//
+//		public MonSqlText(ResultSet rs)
+//		throws SQLException
+//		{
+//			if ( ! _isColNamesToPosResolved )
+//			{
+//				resolveColNamesToPos(rs);
+//			}
+//				
+//			sampleTime            = rs.getTimestamp(pos_sampleTime          );
+//			InstanceID            = rs.getInt      (pos_InstanceID          );
+//			SPID                  = rs.getInt      (pos_SPID                );
+//			KPID                  = rs.getInt      (pos_KPID                );
+//			BatchID               = rs.getInt      (pos_BatchID             );
+//			ServerLogin           = rs.getString   (pos_ServerLogin         );
+//			AddMethod             = rs.getInt      (pos_AddMethod           );
+//			JavaSqlLength         = rs.getInt      (pos_JavaSqlLength       );	
+//			JavaSqlLengthShort    = rs.getInt      (pos_JavaSqlLengthShort  );	
+//			JavaSqlHashCode       = rs.getInt      (pos_JavaSqlHashCode     );	
+//			JavaSqlHashCodeShort  = rs.getInt      (pos_JavaSqlHashCodeShort);	
+//			SQLText               = rs.getString   (pos_SQLText             );	
+//			NormJavaSqlHashCode   = rs.getInt      (pos_NormJavaSqlHashCode );	
+//			NormSQLText           = rs.getString   (pos_NormSQLText         );	
+//		}
+		
+		public List<Object> getPcsRow()
+		{
+			List<Object> row = new ArrayList<>(_numberOfCol);
+
+			row.add(MON_SQL_TEXT);
+			row.add(sampleTime          );
+			row.add(InstanceID          );
+			row.add(SPID                );
+			row.add(KPID                );
+			row.add(BatchID             );
+			row.add(ServerLogin         );
+			row.add(AddMethod           );
+			row.add(JavaSqlLength       );
+			row.add(JavaSqlLengthShort  );
+			row.add(JavaSqlHashCode     );
+			row.add(JavaSqlHashCodeShort);
+			row.add(SQLText             );
+			row.add(NormJavaSqlHashCode );
+			row.add(NormSQLText         );
+			
+			return row;
+		}
+	}
+
+	private static class MonSqlPlan
+	{
+		Timestamp  sampleTime           ; // Types.TIMESTAMP     ),20)+" "+getNullable(false)+"\n");
+		int        InstanceID           ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+		int        SPID                 ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+		int        KPID                 ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+		int        PlanID               ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+		int        BatchID              ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+		int        ContextID            ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+		int        DBID                 ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+		String     DBName               ; // Types.VARCHAR, 30   ),20)+" "+getNullable(false)+"\n");
+		int        ProcedureID          ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+		int        AddMethod            ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+		String     PlanText             ; // Types.VARCHAR, 65536),20)+" "+getNullable(true) +"\n");
+
+		// Below is used to "not have to lookup COLNAME->pos" every time
+//		private static boolean _isColNamesToPosResolved = false;
+		// Below is used to create the List size for every row
+		private static int     _numberOfCol             = 13;
+
+//		private static int pos_sampleTime  = -1;
+//		private static int pos_InstanceID  = -1;
+//		private static int pos_SPID        = -1;
+//		private static int pos_KPID        = -1;
+//		private static int pos_PlanID      = -1;
+//		private static int pos_BatchID     = -1;
+//		private static int pos_ContextID   = -1;
+//		private static int pos_DBID        = -1;
+//		private static int pos_DBName      = -1;
+//		private static int pos_ProcedureID = -1;
+//		private static int pos_AddMethod   = -1;
+//		private static int pos_PlanText    = -1;
+//
+//		private static void resolveColNamesToPos(ResultSet rs)
+//		throws SQLException
+//		{
+//			List<String> colNames = DbUtils.getColumnNames(rs.getMetaData());
+//
+//			pos_sampleTime  = findInListToJdbcPos(colNames, "sampleTime" );
+//			pos_InstanceID  = findInListToJdbcPos(colNames, "InstanceID" );
+//			pos_SPID        = findInListToJdbcPos(colNames, "SPID"       );
+//			pos_KPID        = findInListToJdbcPos(colNames, "KPID"       );
+//			pos_PlanID      = findInListToJdbcPos(colNames, "PlanID"     );
+//			pos_BatchID     = findInListToJdbcPos(colNames, "BatchID"    );
+//			pos_ContextID   = findInListToJdbcPos(colNames, "ContextID"  );
+//			pos_DBID        = findInListToJdbcPos(colNames, "DBID"       );
+//			pos_DBName      = findInListToJdbcPos(colNames, "DBName"     );
+//			pos_ProcedureID = findInListToJdbcPos(colNames, "ProcedureID");
+//			pos_AddMethod   = findInListToJdbcPos(colNames, "AddMethod"  );
+//			pos_PlanText    = findInListToJdbcPos(colNames, "PlanText"   );
+//			
+//			_numberOfCol = rs.getMetaData().getColumnCount();
+//			_isColNamesToPosResolved = true;
+//		}
+//
+//		public MonSqlPlan(ResultSet rs)
+//		throws SQLException
+//		{
+//			if ( ! _isColNamesToPosResolved )
+//			{
+//				resolveColNamesToPos(rs);
+//			}
+//				
+//			sampleTime  = rs.getTimestamp(pos_sampleTime );
+//			InstanceID  = rs.getInt      (pos_InstanceID );
+//			SPID        = rs.getInt      (pos_SPID       );
+//			KPID        = rs.getInt      (pos_KPID       );
+//			PlanID      = rs.getInt      (pos_PlanID     );
+//			BatchID     = rs.getInt      (pos_BatchID    );
+//			ContextID   = rs.getInt      (pos_ContextID  );
+//			DBID        = rs.getInt      (pos_DBID       );	
+//			DBName      = rs.getString   (pos_DBName     );	
+//			ProcedureID = rs.getInt      (pos_ProcedureID);	
+//			AddMethod   = rs.getInt      (pos_AddMethod  );	
+//			PlanText    = rs.getString   (pos_PlanText   );	
+//		}
+		
+		public List<Object> getPcsRow()
+		{
+			List<Object> row = new ArrayList<>(_numberOfCol);
+
+			row.add(MON_SQL_PLAN);
+			row.add(sampleTime );
+			row.add(InstanceID );
+			row.add(SPID       );
+			row.add(KPID       );
+			row.add(PlanID     );
+			row.add(BatchID    );
+			row.add(ContextID  );
+			row.add(DBID       );
+			row.add(DBName     );
+			row.add(ProcedureID);
+			row.add(AddMethod  );
+			row.add(PlanText   );
+			
+			return row;
+		}
+	}
+
+	private static class MonSqlStatement
+	{
+		Timestamp  sampleTime           ; // Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
+		int        InstanceID           ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        SPID                 ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_SPID_pos
+		int        KPID                 ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_KPID_pos
+		int        DBID                 ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        ProcedureID          ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        PlanID               ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        BatchID              ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_BatchID_pos
+		int        ContextID            ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        LineNumber           ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        ObjOwnerID           ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		String     DBName               ; // Types.VARCHAR,   30),20)+" "+getNullable(false)+"\n");
+		int        HashKey              ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        SsqlId               ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		String     ProcName             ; // Types.VARCHAR,  255),20)+" "+getNullable(true)+"\n"); // NULLABLE
+		int        Elapsed_ms           ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        CpuTime              ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        WaitTime             ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        MemUsageKB           ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        PhysicalReads        ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        LogicalReads         ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        RowsAffected         ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        ErrorStatus          ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        ProcNestLevel        ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        StatementNumber      ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        QueryOptimizationTime; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        PagesModified        ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        PacketsSent          ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        PacketsReceived      ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        NetworkPacketSize    ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        PlansAltered         ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		Timestamp  StartTime            ; // Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
+		Timestamp  EndTime              ; // Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
+		int        JavaSqlHashCode      ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        JavaSqlHashCodeShort ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        NormJavaSqlHashCode  ; // Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+
+		// Below is used to "not have to lookup COLNAME->pos" every time
+		private static boolean _isColNamesToPosResolved = false;
+		// Below is used to create the List size for every row
+		private static int     _numberOfCol             = -1;
+
+		private static int pos_sampleTime            = -1;
+		private static int pos_InstanceID            = -1;
+		private static int pos_SPID                  = -1;
+		private static int pos_KPID                  = -1;
+		private static int pos_DBID                  = -1;
+		private static int pos_ProcedureID           = -1;
+		private static int pos_PlanID                = -1;
+		private static int pos_BatchID               = -1;
+		private static int pos_ContextID             = -1;
+		private static int pos_LineNumber            = -1;
+		private static int pos_ObjOwnerID            = -1;
+		private static int pos_DBName                = -1;
+		private static int pos_HashKey               = -1;
+		private static int pos_SsqlId                = -1;
+		private static int pos_ProcName              = -1;
+		private static int pos_Elapsed_ms            = -1;
+		private static int pos_CpuTime               = -1;
+		private static int pos_WaitTime              = -1;
+		private static int pos_MemUsageKB            = -1;
+		private static int pos_PhysicalReads         = -1;
+		private static int pos_LogicalReads          = -1;
+		private static int pos_RowsAffected          = -1;
+		private static int pos_ErrorStatus           = -1;
+		private static int pos_ProcNestLevel         = -1;
+		private static int pos_StatementNumber       = -1;
+		private static int pos_QueryOptimizationTime = -1;
+		private static int pos_PagesModified         = -1;
+		private static int pos_PacketsSent           = -1;
+		private static int pos_PacketsReceived       = -1;
+		private static int pos_NetworkPacketSize     = -1;
+		private static int pos_PlansAltered          = -1;
+		private static int pos_StartTime             = -1;
+		private static int pos_EndTime               = -1;
+		private static int pos_JavaSqlHashCode       = -1;
+		private static int pos_JavaSqlHashCodeShort  = -1;
+		private static int pos_NormJavaSqlHashCode   = -1;
+		
+		private static void resolveColNamesToPos(ResultSet rs)
+		throws SQLException
+		{
+			List<String> colNames = DbUtils.getColumnNames(rs.getMetaData());
+
+			pos_sampleTime            = findInListToJdbcPos(colNames, "sampleTime"); 
+			pos_InstanceID            = findInListToJdbcPos(colNames, "InstanceID");
+			pos_SPID                  = findInListToJdbcPos(colNames, "SPID");
+			pos_KPID                  = findInListToJdbcPos(colNames, "KPID");
+			pos_DBID                  = findInListToJdbcPos(colNames, "DBID");
+			pos_ProcedureID           = findInListToJdbcPos(colNames, "ProcedureID");
+			pos_PlanID                = findInListToJdbcPos(colNames, "PlanID");
+			pos_BatchID               = findInListToJdbcPos(colNames, "BatchID");
+			pos_ContextID             = findInListToJdbcPos(colNames, "ContextID");
+			pos_LineNumber            = findInListToJdbcPos(colNames, "LineNumber");
+			pos_ObjOwnerID            = findInListToJdbcPos(colNames, "ObjOwnerID");
+			pos_DBName                = findInListToJdbcPos(colNames, "DBName");
+			pos_HashKey               = findInListToJdbcPos(colNames, "HashKey");
+			pos_SsqlId                = findInListToJdbcPos(colNames, "SsqlId");
+			pos_ProcName              = findInListToJdbcPos(colNames, "ProcName");
+			pos_Elapsed_ms            = findInListToJdbcPos(colNames, "Elapsed_ms");
+			pos_CpuTime               = findInListToJdbcPos(colNames, "CpuTime");
+			pos_WaitTime              = findInListToJdbcPos(colNames, "WaitTime");
+			pos_MemUsageKB            = findInListToJdbcPos(colNames, "MemUsageKB");
+			pos_PhysicalReads         = findInListToJdbcPos(colNames, "PhysicalReads");
+			pos_LogicalReads          = findInListToJdbcPos(colNames, "LogicalReads");
+			pos_RowsAffected          = findInListToJdbcPos(colNames, "RowsAffected");
+			pos_ErrorStatus           = findInListToJdbcPos(colNames, "ErrorStatus");
+			pos_ProcNestLevel         = findInListToJdbcPos(colNames, "ProcNestLevel");
+			pos_StatementNumber       = findInListToJdbcPos(colNames, "StatementNumber");
+			pos_QueryOptimizationTime = findInListToJdbcPos(colNames, "QueryOptimizationTime");
+			pos_PagesModified         = findInListToJdbcPos(colNames, "PagesModified");
+			pos_PacketsSent           = findInListToJdbcPos(colNames, "PacketsSent");
+			pos_PacketsReceived       = findInListToJdbcPos(colNames, "PacketsReceived");
+			pos_NetworkPacketSize     = findInListToJdbcPos(colNames, "NetworkPacketSize");
+			pos_PlansAltered          = findInListToJdbcPos(colNames, "PlansAltered");
+			pos_StartTime             = findInListToJdbcPos(colNames, "StartTime");
+			pos_EndTime               = findInListToJdbcPos(colNames, "EndTime");
+			pos_JavaSqlHashCode       = findInListToJdbcPos(colNames, "JavaSqlHashCode");
+			pos_JavaSqlHashCodeShort  = findInListToJdbcPos(colNames, "JavaSqlHashCodeShort");
+			pos_NormJavaSqlHashCode   = findInListToJdbcPos(colNames, "NormJavaSqlHashCode");			
+			
+			_numberOfCol = rs.getMetaData().getColumnCount();
+			_isColNamesToPosResolved = true;
+		}
+
+		public MonSqlStatement(ResultSet rs)
+		throws SQLException
+		{
+			if ( ! _isColNamesToPosResolved )
+			{
+				resolveColNamesToPos(rs);
+			}
+				
+			sampleTime            = rs.getTimestamp(pos_sampleTime           );
+			InstanceID            = rs.getInt      (pos_InstanceID           );
+			SPID                  = rs.getInt      (pos_SPID                 );
+			KPID                  = rs.getInt      (pos_KPID                 );
+			DBID                  = rs.getInt      (pos_DBID                 );
+			ProcedureID           = rs.getInt      (pos_ProcedureID          );
+			PlanID                = rs.getInt      (pos_PlanID               );
+			BatchID               = rs.getInt      (pos_BatchID              );
+			ContextID             = rs.getInt      (pos_ContextID            );
+			LineNumber            = rs.getInt      (pos_LineNumber           );
+			ObjOwnerID            = rs.getInt      (pos_ObjOwnerID           );
+			DBName                = rs.getString   (pos_DBName               );
+			HashKey               = rs.getInt      (pos_HashKey              );
+			SsqlId                = rs.getInt      (pos_SsqlId               );
+			ProcName              = rs.getString   (pos_ProcName             );
+			Elapsed_ms            = rs.getInt      (pos_Elapsed_ms           );
+			CpuTime               = rs.getInt      (pos_CpuTime              );
+			WaitTime              = rs.getInt      (pos_WaitTime             );
+			MemUsageKB            = rs.getInt      (pos_MemUsageKB           );
+			PhysicalReads         = rs.getInt      (pos_PhysicalReads        );
+			LogicalReads          = rs.getInt      (pos_LogicalReads         );
+			RowsAffected          = rs.getInt      (pos_RowsAffected         );
+			ErrorStatus           = rs.getInt      (pos_ErrorStatus          );
+			ProcNestLevel         = rs.getInt      (pos_ProcNestLevel        );
+			StatementNumber       = rs.getInt      (pos_StatementNumber      );
+			QueryOptimizationTime = rs.getInt      (pos_QueryOptimizationTime);
+			PagesModified         = rs.getInt      (pos_PagesModified        );
+			PacketsSent           = rs.getInt      (pos_PacketsSent          );
+			PacketsReceived       = rs.getInt      (pos_PacketsReceived      );
+			NetworkPacketSize     = rs.getInt      (pos_NetworkPacketSize    );
+			PlansAltered          = rs.getInt      (pos_PlansAltered         );
+			StartTime             = rs.getTimestamp(pos_StartTime            );
+			EndTime               = rs.getTimestamp(pos_EndTime              );
+			JavaSqlHashCode       = rs.getInt      (pos_JavaSqlHashCode      );
+			JavaSqlHashCodeShort  = rs.getInt      (pos_JavaSqlHashCodeShort );
+			NormJavaSqlHashCode   = rs.getInt      (pos_NormJavaSqlHashCode  );	
+		}
+		
+		public List<Object> getPcsRow()
+		{
+			List<Object> row = new ArrayList<>(_numberOfCol);
+
+			row.add(MON_SQL_STATEMENT);
+			row.add(sampleTime           );
+			row.add(InstanceID           );
+			row.add(SPID                 );
+			row.add(KPID                 );
+			row.add(DBID                 );
+			row.add(ProcedureID          );
+			row.add(PlanID               );
+			row.add(BatchID              );
+			row.add(ContextID            );
+			row.add(LineNumber           );
+			row.add(ObjOwnerID           );
+			row.add(DBName               );
+			row.add(HashKey              );
+			row.add(SsqlId               );
+			row.add(ProcName             );
+			row.add(Elapsed_ms           );
+			row.add(CpuTime              );
+			row.add(WaitTime             );
+			row.add(MemUsageKB           );
+			row.add(PhysicalReads        );
+			row.add(LogicalReads         );
+			row.add(RowsAffected         );
+			row.add(ErrorStatus          );
+			row.add(ProcNestLevel        );
+			row.add(StatementNumber      );
+			row.add(QueryOptimizationTime);
+			row.add(PagesModified        );
+			row.add(PacketsSent          );
+			row.add(PacketsReceived      );
+			row.add(NetworkPacketSize    );
+			row.add(PlansAltered         );
+			row.add(StartTime            );
+			row.add(EndTime              );
+			row.add(JavaSqlHashCode      );
+			row.add(JavaSqlHashCodeShort );
+			row.add(NormJavaSqlHashCode  );
+
+			return row;
+		}
+	}
+
+	/** 
+	 * Convert 
+	 * @param colNames
+	 * @param colName
+	 * @return -1 if Column wasn't found. otherwise the List index + 1 (to adjust for JDBC pos)
+	 */
+	private static int findInListToJdbcPos(List<String> colNames, String colName)
+	{
+		int pos = colNames.indexOf(colName);
+		if (pos == -1)
+		{
+			_logger.error("Trying to find column '" + colName + "', but it did NOT exist. returning -1. colNames=" + colNames);
+			return pos;
+		}
+
+		return pos + 1;
 	}
 
 	@Override
@@ -536,21 +1023,23 @@ extends SqlCaptureBrokerAbstract
 
 			sbSql.append("insert into ").append(tabName);
 			sbSql.append("(");
-			sbSql.append(" ").append(lq).append("sampleTime"         ).append(rq); // 1
-			sbSql.append(",").append(lq).append("InstanceID"         ).append(rq); // 2
-			sbSql.append(",").append(lq).append("SPID"               ).append(rq); // 3
-			sbSql.append(",").append(lq).append("KPID"               ).append(rq); // 4
-			sbSql.append(",").append(lq).append("BatchID"            ).append(rq); // 5
-			sbSql.append(",").append(lq).append("ServerLogin"        ).append(rq); // 6
-			sbSql.append(",").append(lq).append("AddMethod"          ).append(rq); // 7
-			sbSql.append(",").append(lq).append("JavaSqlLength"      ).append(rq); // 8
-			sbSql.append(",").append(lq).append("JavaSqlHashCode"    ).append(rq); // 9
-			sbSql.append(",").append(lq).append(col_SQLText_name     ).append(rq); // 10
-			sbSql.append(",").append(lq).append("NormJavaSqlHashCode").append(rq); // 11
-			sbSql.append(",").append(lq).append(col_NormSQLText_name ).append(rq); // 12
+			sbSql.append(" ").append(lq).append("sampleTime"          ).append(rq); // 1
+			sbSql.append(",").append(lq).append("InstanceID"          ).append(rq); // 2
+			sbSql.append(",").append(lq).append("SPID"                ).append(rq); // 3
+			sbSql.append(",").append(lq).append("KPID"                ).append(rq); // 4
+			sbSql.append(",").append(lq).append("BatchID"             ).append(rq); // 5
+			sbSql.append(",").append(lq).append("ServerLogin"         ).append(rq); // 6
+			sbSql.append(",").append(lq).append("AddMethod"           ).append(rq); // 7
+			sbSql.append(",").append(lq).append("JavaSqlLength"       ).append(rq); // 8
+			sbSql.append(",").append(lq).append("JavaSqlLengthShort"  ).append(rq); // 9
+			sbSql.append(",").append(lq).append("JavaSqlHashCode"     ).append(rq); // 10
+			sbSql.append(",").append(lq).append("JavaSqlHashCodeShort").append(rq); // 11
+			sbSql.append(",").append(lq).append(col_SQLText_name      ).append(rq); // 12
+			sbSql.append(",").append(lq).append("NormJavaSqlHashCode" ).append(rq); // 13
+			sbSql.append(",").append(lq).append(col_NormSQLText_name  ).append(rq); // 14
 			sbSql.append(") \n");
-			sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n"); // 10 question marks
-			//                   1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12
+			sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n"); // 14 question marks
+			//                   1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14
 
 			return sbSql.toString();
 		}
@@ -595,10 +1084,11 @@ extends SqlCaptureBrokerAbstract
 			sbSql.append(",").append(lq).append("StartTime"            ).append(rq);  // 32
 			sbSql.append(",").append(lq).append("EndTime"              ).append(rq);  // 33
 			sbSql.append(",").append(lq).append("JavaSqlHashCode"      ).append(rq);  // 34
-			sbSql.append(",").append(lq).append("NormJavaSqlHashCode"  ).append(rq);  // 35
+			sbSql.append(",").append(lq).append("JavaSqlHashCodeShort" ).append(rq);  // 35
+			sbSql.append(",").append(lq).append("NormJavaSqlHashCode"  ).append(rq);  // 36
 			sbSql.append(") \n");
-			sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n"); // 32 question marks
-			//                   1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35
+			sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n"); // 36 question marks
+			//                   1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36
 
 			return sbSql.toString();
 		}
@@ -863,8 +1353,14 @@ extends SqlCaptureBrokerAbstract
 		{
 			HashKey         = "HashKey, ";
 			SsqlId          = "SsqlId, ";
-//			ProcName        = "ProcName = CASE WHEN SsqlId > 0 THEN object_name(SsqlId,2) ELSE isnull(object_name(ProcedureID,DBID), object_name(ProcedureID,db_id('sybsystemprocs'))) END, \n";
-			ProcName        = "ProcName = CASE WHEN SsqlId > 0 THEN object_name(SsqlId,2) ELSE isnull(isnull(object_name(ProcedureID,DBID),object_name(ProcedureID,2)),object_name(ProcedureID,db_id('sybsystemprocs'))) END, \n"; // *sq dynamic SQL (ct_dynamic/prepared_stmnt) does NOT set the SsqlId column
+
+			// *sq dynamic SQL (ct_dynamic/prepared_stmnt) does NOT set the SsqlId column
+//			ProcName        =     "ProcName = CASE WHEN SsqlId > 0 THEN object_name(SsqlId,2) \n" +
+//			                  "                    ELSE isnull(isnull(object_name(ProcedureID,DBID),object_name(ProcedureID,2)),object_name(ProcedureID,db_id('sybsystemprocs'))) \n" + 
+//			                  "               END, ";
+			ProcName        =     "ProcName = CASE WHEN SsqlId > 0 THEN isnull(object_name(SsqlId,2), '*##'+right('0000000000'+convert(varchar(10),SsqlId),10)+'_'+right('0000000000'+convert(varchar(10),HashKey),10)+'##*') \n" +
+			                  "                    ELSE coalesce(object_name(ProcedureID,DBID), object_name(ProcedureID,2), object_name(ProcedureID,db_id('sybsystemprocs'))) \n " +
+			                  "               END, ";
 		}
 		if (srvVersion >= Ver.ver(15,0,2,3))
 		{
@@ -894,8 +1390,16 @@ extends SqlCaptureBrokerAbstract
 			ProcName        = "'dummy' as ProcName, \n";
 		}
 		
+		// Set any SQL-Prefix if desirable
+		String sqlPrefix = ""; 
+		if (useSqlPrefix())
+		{
+			sqlPrefix = getSqlPrefix(); 
+		}
+
 		_sql_sqlText 
-			= "select getdate() as sampleTime, \n"
+			= sqlPrefix
+			+ "select getdate() as sampleTime, \n"
 			+ "    "+InstanceID+"\n"
 			+ "    SPID, \n"
 			+ "    KPID, \n"
@@ -904,7 +1408,9 @@ extends SqlCaptureBrokerAbstract
 			+ "    "+ServerLogin+"\n"
 			+ "    convert(int, -1) as AddMethod,\n"
 			+ "    convert(int, -1) as JavaSqlLength,\n"
+			+ "    convert(int, -1) as JavaSqlLengthShort,\n"
 			+ "    convert(int, -1) as JavaSqlHashCode,\n"
+			+ "    convert(int, -1) as JavaSqlHashCodeShort,\n"
 			+ "    SQLText \n"
 			+ "from master.dbo.monSysSQLText \n"
 			+ "where 1 = 1 \n"
@@ -913,8 +1419,9 @@ extends SqlCaptureBrokerAbstract
 //			+ "order by SPID, KPID, BatchID, SequenceInBatch \n" // TODO: make this sort internal/after the rows has been fetched for less server side impact
 			+ "";
 
-		_sql_sqlStatements 
-			= "select \n"
+		_sql_sqlStatements
+			= sqlPrefix
+			+ "select \n"
 			+ "    getdate() as sampleTime, \n"
 			+ "    "+InstanceID+"\n"
 			+ "    SPID, \n"
@@ -948,16 +1455,19 @@ extends SqlCaptureBrokerAbstract
 			+ "    PlansAltered, \n"
 			+ "    StartTime, \n"
 			+ "    EndTime, \n"
-			+ "    convert(int, -1) as JavaSqlHashCode\n"
+			+ "    convert(int, -1) as JavaSqlHashCode, \n"
+			+ "    convert(int, -1) as JavaSqlHashCodeShort, \n"
+			+ "    convert(int, -1) as NormJavaSqlHashCode \n"
 			+ "from master.dbo.monSysStatement \n"
 			+ "where 1 = 1 \n"
 			+ "  and SPID != @@spid \n"
-			+ "  and SPID not in (select spid from master.dbo.sysprocesses where program_name like '" + Version.getAppName() + "%') "
+			+ "  and SPID not in (select spid from master.dbo.sysprocesses where program_name like '" + Version.getAppName() + "%') \n"
 			+ "  and " + statementWhereClause
 			+ "";
 		
 		_sql_sqlPlanText 
-			= "select getdate() as sampleTime, \n"
+			= sqlPrefix
+			+ "select getdate() as sampleTime, \n"
 			+ "    "+InstanceID+"\n"
 			+ "    SPID, \n"
 			+ "    KPID, \n"
@@ -990,75 +1500,75 @@ extends SqlCaptureBrokerAbstract
 		}
 	}
 
-	/**
-	 * Primary Key for SqlText, Statements, PlanText
-	 * @author gorans
-	 */
-	protected class PK
-	{
-		int SPID;
-		int KPID;
-		int BatchID;
-		
-		public PK(int SPID, int KPID, int BatchID)
-		{
-			this.SPID    = SPID;
-			this.KPID    = KPID;
-			this.BatchID = BatchID;
-		}
-
-		// Genereated from Eclipse
-		@Override
-		public int hashCode()
-		{
-			final int prime = 31;
-			int result = 1;
-//			result = prime * result + getOuterType().hashCode();
-			result = prime * result + BatchID;
-			result = prime * result + KPID;
-			result = prime * result + SPID;
-			return result;
-		}
-
-		// Genereated from Eclipse
-		@Override
-		public boolean equals(Object obj)
-		{
-			if ( this == obj )
-				return true;
-			if ( obj == null )
-				return false;
-			if ( getClass() != obj.getClass() )
-				return false;
-			PK other = (PK) obj;
-//			if ( !getOuterType().equals(other.getOuterType()) )
-//				return false;
-//			if ( BatchID != other.BatchID )
-//				return false;
-//			if ( SPID != other.SPID )
-//				return false;
-//			return true;
-			
-			return SPID == other.SPID && KPID == other.KPID && BatchID == other.BatchID; 
-		}
-
-//		// Genereated from Eclipse
-//		private SqlCaptureBrokerAse getOuterType()
+//	/**
+//	 * Primary Key for SqlText, Statements, PlanText
+//	 * @author gorans
+//	 */
+//	protected class PK
+//	{
+//		int SPID;
+//		int KPID;
+//		int BatchID;
+//		
+//		public PK(int SPID, int KPID, int BatchID)
 //		{
-//			return SqlCaptureBrokerAse.this;
+//			this.SPID    = SPID;
+//			this.KPID    = KPID;
+//			this.BatchID = BatchID;
 //		}
-		
-		@Override
-		public String toString()
-		{
-			return "PK [SPID=" + SPID + ", KPID=" + KPID +", BatchID=" + BatchID + "]" + "@" + Integer.toHexString(hashCode());
-		}
-
-		public boolean equals(int spid, int kpid, int batchId)
-		{
-			return this.SPID == spid && this.KPID == kpid && this.BatchID == batchId;
-		}
-	}
+//
+//		// Genereated from Eclipse
+//		@Override
+//		public int hashCode()
+//		{
+//			final int prime = 31;
+//			int result = 1;
+////			result = prime * result + getOuterType().hashCode();
+//			result = prime * result + BatchID;
+//			result = prime * result + KPID;
+//			result = prime * result + SPID;
+//			return result;
+//		}
+//
+//		// Genereated from Eclipse
+//		@Override
+//		public boolean equals(Object obj)
+//		{
+//			if ( this == obj )
+//				return true;
+//			if ( obj == null )
+//				return false;
+//			if ( getClass() != obj.getClass() )
+//				return false;
+//			PK other = (PK) obj;
+////			if ( !getOuterType().equals(other.getOuterType()) )
+////				return false;
+////			if ( BatchID != other.BatchID )
+////				return false;
+////			if ( SPID != other.SPID )
+////				return false;
+////			return true;
+//			
+//			return SPID == other.SPID && KPID == other.KPID && BatchID == other.BatchID; 
+//		}
+//
+////		// Genereated from Eclipse
+////		private SqlCaptureBrokerAse getOuterType()
+////		{
+////			return SqlCaptureBrokerAse.this;
+////		}
+//		
+//		@Override
+//		public String toString()
+//		{
+//			return "PK [SPID=" + SPID + ", KPID=" + KPID +", BatchID=" + BatchID + "]" + "@" + Integer.toHexString(hashCode());
+//		}
+//
+//		public boolean equals(int spid, int kpid, int batchId)
+//		{
+//			return this.SPID == spid && this.KPID == kpid && this.BatchID == batchId;
+//		}
+//	}
 
 	/**
 	 * Save detailed information about executed SQL.
@@ -1090,20 +1600,20 @@ extends SqlCaptureBrokerAbstract
 	 * that has been discarded by the Statement filter logic above (meaning: if the Statement was below ExecutionTime 
 	 * or below LogicalReads etc, then <b>do not store</b> the SQL-Text or SQL-Plan.<br>
 	 * In the "post" phase we will also save the SQL-Text information for X number of calls to doSqlCapture(), this is kept in a "Deferred SQL Queue".<br>
-	 * This is also an attempt to <b>not</b> sent to may extra SQL-Text records
-	 * 
-	 * Below are what's happening in the "post" phase
-	 * <ul>
-	 *   <li>Remove SQL Text and Plans that the Statement collector has filtered out (due to execTime or *Reads)</li>
-	 *   <li>Remove some static SQL Text(s) that ASE has inserted without an associated Statement record<br>
-	 *       Those SQL Texts are normally associated with 'set someOption' or dynamic SQL using 
-	 *       Lightweight procedures (ct_dynamic or JDBC: PreparedStatements)</li>
-	 * </ul>
-	 * 
+	 * The "Deferred Queue" is now the SpidSqlTextAndPlanManager where "last" SqlText and SqlPlan are kept (and removed in the post phase)<br>
+	 * <br>
 	 * Then we will enter the "post" phase where the records are sent to the PCS - Persistent Counter Storage
 	 * <ul>
+	 *   <li>For Statements that are above thresholds: Get SqlText & PlanText stored in SpidSqlTextAndPlanManager</li>
 	 *   <li>Send info to the PCS</li>
-	 *   <li>Remove any SQL information in the <i>Deferred SQL Queue</i> </li>
+	 *   <li>Remove any SqlText & PlanText information in the <i>Deferred SQL Queue</i>, call "endOfScan()" which does the following
+	 *       <ul>
+	 *           <li>Loop all SPID's in the SpidSqlTextAndPlanManager</li>  
+	 *           <li>If the SPID has a new KPID, then reset this entry (it's a new KPID, hence a new login which reused the SPID number)... or if this is done in the "add" step...</li>
+	 *           <li>Remove all SqlText & SqlPlan entries with a lower BatchId than the "maxBatchId" - Meaning: keep only the <b>last</b> entries.</li>  
+	 *       </ul>  
+	 *   </li>
+	 *   <li>Every 5 minute (configurable), get all SPID's from ASE, remove SPID's from SpidSqlTextAndPlanManager that are no longer present in ASE (they have logged out).</li>
 	 * </ul>
 	 * 
 	 */
@@ -1130,21 +1640,27 @@ extends SqlCaptureBrokerAbstract
 //		int statementDiscardCount = 0;
 		
 		// 
-		Map<PK, List<Object>> sqlTextPkMap   = new HashMap<>();
-//		List<List<Object>>    sqlTextRecords = new ArrayList<>();  // TODO: can we get rid of this and only use, the above MAP
+//		Map<PK, List<Object>> sqlTextPkMap   = new HashMap<>();
+////		List<List<Object>>    sqlTextRecords = new ArrayList<>();  // TODO: can we get rid of this and only use, the above MAP
+//
+//		Map<PK, List<Object>> planTextPkMap   = new HashMap<>();
+////		List<List<Object>>    planTextRecords = new ArrayList<>();  // TODO: can we get rid of this and only use, the above MAP
 
-		Map<PK, List<Object>> planTextPkMap   = new HashMap<>();
-//		List<List<Object>>    planTextRecords = new ArrayList<>();  // TODO: can we get rid of this and only use, the above MAP
-
-		List<List<Object>> statementRecords = new ArrayList<>();
-		Set<PK> statementPkAdded            = new HashSet<>();
-		Set<PK> statementPkDiscarded        = new HashSet<>();
+//		List<List<Object>> statementRecords = new ArrayList<>();
+		List<MonSqlStatement> statementRecords = new ArrayList<>();
+//		Set<PK> statementPkAdded            = new HashSet<>();
+//		Set<PK> statementPkDiscarded        = new HashSet<>();
 
 		
 		// If SQL queries are NOT initialized, do it now
 		if (_sql_sqlText == null)
 			setSql(conn);
 
+		// Just a "timestamp" so we know *when* we last updated this
+		// if the "Capture thread" dies we can probably use this value to detect the "problem"
+		if (_statementStatistics != null)
+			_statementStatistics.setLastUpdateTime();
+				
 		//------------------------------------------------
 		// SQL STATEMENTS
 		// - is available in the table monSysStatement *after* the statement has been executed
@@ -1165,39 +1681,65 @@ extends SqlCaptureBrokerAbstract
 
 //			long srvVersion = conn.getDbmsVersionNumber();
 			
+			long captureStartTime = System.currentTimeMillis();
 			try
 			{
-				Statement stmnt = conn.createStatement();
-				ResultSet rs = stmnt.executeQuery(_sql_sqlStatements);
-				int colCount = rs.getMetaData().getColumnCount();
-				int rowCount = 0;
+				Statement    stmnt    = conn.createStatement();
+				ResultSet    rs       = stmnt.executeQuery(_sql_sqlStatements);
+				List<String> colNames = DbUtils.getColumnNames(rs.getMetaData());
+				int          rowCount = 0;
+				
+				// used for DynamicSQL (where ProcName like '*sq%' and HashKey is 0)
+//				int pos_ProcedureID = colNames.indexOf("ProcedureID");
+//				int pos_SsqlId      = colNames.indexOf("SsqlId");
+//				int pos_HashKey     = colNames.indexOf("HashKey");
+//				if (pos_SsqlId  != -1) pos_SsqlId++;  // +1 to adjust for 'TableName' in the output storage array  
+//				if (pos_HashKey != -1) pos_HashKey++; // +1 to adjust for 'TableName' in the output storage array
+
+				int pos_SPID          = findInListToJdbcPos(colNames, "SPID");
+//				int pos_KPID          = findInListToJdbcPos(colNames, "KPID");
+//				int pos_BatchID       = findInListToJdbcPos(colNames, "BatchID");
+				int pos_Elapsed_ms    = findInListToJdbcPos(colNames, "Elapsed_ms");
+				int pos_LogicalReads  = findInListToJdbcPos(colNames, "LogicalReads");
+				int pos_PhysicalReads = findInListToJdbcPos(colNames, "PhysicalReads");
+				int pos_ErrorStatus   = findInListToJdbcPos(colNames, "ErrorStatus");
+				int pos_CpuTime       = findInListToJdbcPos(colNames, "CpuTime");
+				int pos_WaitTime      = findInListToJdbcPos(colNames, "WaitTime");
+				int pos_RowsAffected  = findInListToJdbcPos(colNames, "RowsAffected");
+				int pos_ProcedureID   = findInListToJdbcPos(colNames, "ProcedureID");
+//				int pos_SsqlId        = findInListToJdbcPos(colNames, "SsqlId");
+//				int pos_ContextID     = findInListToJdbcPos(colNames, "ContextID");
+				int pos_ProcName      = findInListToJdbcPos(colNames, "ProcName");
+				int pos_LineNumber    = findInListToJdbcPos(colNames, "LineNumber");
+				int pos_DBName        = findInListToJdbcPos(colNames, "DBName");
+				
 				while(rs.next())
 				{
 					rowCount++;
 //					statementReadCount++;
 
-					int SPID          = rs.getInt("SPID");
-					int KPID          = rs.getInt("KPID");
-					int BatchID       = rs.getInt("BatchID");
-					int execTime      = rs.getInt("Elapsed_ms");
-					int logicalReads  = rs.getInt("LogicalReads");
-					int physicalReads = rs.getInt("PhysicalReads");
-					int errorStatus   = rs.getInt("ErrorStatus");
+					int SPID          = rs.getInt(pos_SPID);
+//					int KPID          = rs.getInt(pos_KPID);
+//					int BatchID       = rs.getInt(pos_BatchID);
+					int execTime      = rs.getInt(pos_Elapsed_ms);
+					int logicalReads  = rs.getInt(pos_LogicalReads);
+					int physicalReads = rs.getInt(pos_PhysicalReads);
+					int errorStatus   = rs.getInt(pos_ErrorStatus);
 
-					int cpuTime       = rs.getInt("CpuTime");
-					int waitTime      = rs.getInt("WaitTime");
-					int rowsAffected  = rs.getInt("RowsAffected"); // RowsAffected was introduced in ASE 12.5.4 (but before that we genereate -1) 
+					int cpuTime       = rs.getInt(pos_CpuTime);
+					int waitTime      = rs.getInt(pos_WaitTime);
+					int rowsAffected  = rs.getInt(pos_RowsAffected); // RowsAffected was introduced in ASE 12.5.4 (but before that we genereate -1) 
 
-//					int procedureId   = rs.getInt("ProcedureID");
-//					int ssqlId        = rs.getInt("SsqlId");
-//					int ContextID     = rs.getInt("ContextID");
+					int procedureId   = rs.getInt(pos_ProcedureID);
+//					int ssqlId        = rs.getInt(pos_SsqlId);
+//					int ContextID     = rs.getInt(pos_ContextID);
 
-					String procName   = rs.getString("ProcName");
-					int    lineNumber = rs.getInt("LineNumber");
+					String procName   = rs.getString(pos_ProcName);
+					int    lineNumber = rs.getInt   (pos_LineNumber);
 
 
 					// To be used by keep/discard Set
-					PK pk = new PK(SPID, KPID, BatchID);
+//					PK pk = new PK(SPID, KPID, BatchID);
 
 					// add information to the StatementStatistics subsystem
 					// which is used by a CM to check how Statement Execution within ranges
@@ -1216,7 +1758,7 @@ extends SqlCaptureBrokerAbstract
 					//     20-30 sec
 					//     above 30 sec
 					if (_statementStatistics != null)
-						updateStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber);
+						updateStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber);
 
 					
 					//System.out.println("Statement CHECK if above THRESHOLD: SPID="+SPID+",KPID="+KPID+",BatchID="+BatchID+": execTime="+execTime+", logicalReads="+logicalReads+", physicalReads="+physicalReads+".   SAVE="+(execTime > saveStatement_gt_execTime && logicalReads > saveStatement_gt_logicalReads && physicalReads > saveStatement_gt_physicalReads));
@@ -1230,12 +1772,10 @@ extends SqlCaptureBrokerAbstract
 					{
 						if (sendDdlForLookup)
 						{
-							String ProcName = rs.getString("ProcName");
-
 							// send ProcName or StatementCacheEntry to the DDL Capture
-							if (StringUtil.hasValue(ProcName))
+							if (StringUtil.hasValue(procName))
 							{
-								String DBName        = rs.getString("DBName");
+								String DBName = rs.getString(pos_DBName);
 
 								// Only send if it's above the defined limits
 								if (    execTime      > sendDdlForLookup_gt_execTime
@@ -1244,47 +1784,71 @@ extends SqlCaptureBrokerAbstract
 								   )
 								{
 									// if it's a statement cache entry, populate it into the cache so that the DDL Lookup wont have to sleep 
-									if (ProcName.startsWith("*ss") || ProcName.startsWith("*sq") ) // *sq in ASE 15.7 esd#2, DynamicSQL can/will end up in statement cache
+									if (procName.startsWith("*ss") || procName.startsWith("*sq") ) // *sq in ASE 15.7 esd#2, DynamicSQL can/will end up in statement cache
 									{
 										if (XmlPlanCache.hasInstance())
 										{
 											XmlPlanCache xmlPlanCache = XmlPlanCache.getInstance();
-											if ( ! xmlPlanCache.isPlanCached(ProcName) )
+											if ( ! xmlPlanCache.isPlanCached(procName) )
 											{
-												xmlPlanCache.getPlan(ProcName);
+												xmlPlanCache.getPlan(procName);
 											}
 										}
 										else
 										{
-											_logger.info("XmlPlanCache do not have an instance. Skipping XML Plan lookup for name '"+ProcName+"'.");
+											_logger.info("XmlPlanCache do not have an instance. Skipping XML Plan lookup for name '"+procName+"'.");
 										}
 									}
 									
 									// Now add the ProcName/StatementCacheEntryName to the DDL Lookup handler
 									if (pch != null)
-										pch.addDdl(DBName, ProcName, "SqlCapture");
+										pch.addDdl(DBName, procName, "SqlCapture");
 								}
 							}
 						} //end: sendDdlForLookup
 
-						List<Object> row = new ArrayList<Object>();
-						row.add(MON_SQL_STATEMENT); // NOTE: the first object in the list should be the TableName where to store the data
-						for (int c=1; c<=colCount; c++)
-							row.add(rs.getObject(c));
+						// Create a object from the ResultSet 
+						// The entry will be added to the List: statementRecords
+						MonSqlStatement row = new MonSqlStatement(rs);
 
+						// if it's a DynamicSQL (from CT-Lib) the SSQLID and HashKey are not set... 
+						// so we can set those from the object name '*sqXXXXXXXXXX_YYYYYYYYYYss*' where XXX=SSQLID and YYY=HashKey
+						//                                           0123456789|123456789|123456
+						if (StringUtil.hasValue(procName) && procName.startsWith("*"))
+						{
+							int SsqlId  = row.SsqlId; 
+							int HashKey = row.HashKey;
+							
+							if (SsqlId == 0 || HashKey == 0)
+							{
+								String str_SsqlId  = procName.substring(3,  13);
+								String str_HashKey = procName.substring(14, 24);;
+
+								try
+								{
+									row.SsqlId  = new Integer(str_SsqlId);
+									row.HashKey = new Integer(str_HashKey);
+
+//System.out.println("Found a row with 'ProcName' that starts with '*' (a DynamicSQL or Statement Cache Entry) which had a zero in 'SsqlId' or 'HashKey'. ProcName='" + procName + "', SsqlId=" + SsqlId + ", HashKey=" + HashKey + ". New=[SsqlId=" + row.SsqlId + ", HashKey=" + row.HashKey + "], Prev=[SsqlId=" + SsqlId + ", HashKey=" + HashKey + "].");
+									if (_logger.isDebugEnabled())
+										_logger.debug("Found a row with 'ProcName' that starts with '*' (a DynamicSQL or Statement Cache Entry) which had a zero in 'SsqlId' or 'HashKey'. ProcName='" + procName + "', SsqlId=" + SsqlId + ", HashKey=" + HashKey + ". New=[SsqlId=" + row.SsqlId + ", HashKey=" + row.HashKey + "], Prev=[SsqlId=" + SsqlId + ", HashKey=" + HashKey + "].");
+								}
+								catch (NumberFormatException nfe)
+								{
+									_logger.warn("Problems parsing 'ProcName' content into 'SsqlId' and 'HashKey'. Found a row with ProcName='" + procName + "'. str_SsqlId=" + str_SsqlId + ", str_SsqlId=" + str_HashKey + ". Caught: " + nfe);
+								}
+							}
+						}
+
+						// Add the row to the statements list
 						statementRecords.add(row);
-						
-						// Keep track of what PK's we have added (procs can have many statements, so it can be in both add and skipp Set)
-						statementPkAdded.add(pk);
-					}
-					else // save DISCARDED records in a "skip" list so we can remove the SqlText and PlanText at the end
-					{
-						// Keep track of what PK's we have discarded (procs can have many statements, so it can be in both add and skipp Set)
-						statementPkDiscarded.add(pk);
 					}
 				}
 				rs.close();
 				stmnt.close();
+
+				_statStatementCaptureRows     += rowCount;
+				_statStatementCaptureRowsDiff += rowCount;
 				
 				int    configVal  = _statementPipeMaxMessages;
 				String configName = CFGNAME_aseConfig_statement_pipe_max_messages;
@@ -1316,8 +1880,12 @@ extends SqlCaptureBrokerAbstract
 				if (ex.getErrorCode() == 12052)
 					_sampleStatements = false;
 				
-				_logger.error("SQL Capture problems when capturing 'SQL Statements' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+_sql_sqlStatements);
+				_logger.error("SQL Capture problems when capturing 'SQL Statements' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+_sql_sqlStatements, ex);
 			}
+			
+			long captureTime = TimeUtils.msDiffNow(captureStartTime);
+			_statStatementCaptureTime     += captureTime;
+			_statStatementCaptureTimeDiff += captureTime;
 		}
 
 		//------------------------------------------------
@@ -1327,6 +1895,8 @@ extends SqlCaptureBrokerAbstract
 		//------------------------------------------------
 		if (_sampleSqlText)
 		{
+			long captureStartTime = System.currentTimeMillis();
+
 			try ( Statement stmnt = conn.createStatement();
 			      ResultSet rs = stmnt.executeQuery(_sql_sqlText); )
 			{
@@ -1337,81 +1907,39 @@ extends SqlCaptureBrokerAbstract
 				//   If the entry not exists (add "all" columns to a List)
 				//   If the entry do exists  (append SQLText, which is kept as the LAST entry in the List)
 				//----------------------------------------------------------------------------------------
-				ResultSetMetaData rsmd = rs.getMetaData();
-				int colCount = rsmd.getColumnCount();
-				int SPID_pos            = -1;
-				int KPID_pos            = -1;
-				int BatchID_pos         = -1;
-				int SequenceInBatch_pos = -1;
-				int SQLText_pos         = -1;
+				List<String> colNames = DbUtils.getColumnNames(rs.getMetaData());
 
-				// Get columns positions...
-				for (int c=1; c<=colCount; c++)
-				{
-					String colName = rsmd.getColumnLabel(c);
+				int pos_SPID            = findInListToJdbcPos(colNames, "SPID");
+				int pos_KPID            = findInListToJdbcPos(colNames, "KPID");
+				int pos_BatchID         = findInListToJdbcPos(colNames, "BatchID");
+				int pos_SequenceInBatch = findInListToJdbcPos(colNames, "SequenceInBatch");
+				int pos_SQLText         = findInListToJdbcPos(colNames, "SQLText");
+				int pos_ServerLogin     = findInListToJdbcPos(colNames, "ServerLogin");
 
-					if      ("SPID"           .equals(colName)) SPID_pos            = c;
-					else if ("KPID"           .equals(colName)) KPID_pos            = c;
-					else if ("BatchID"        .equals(colName)) BatchID_pos         = c;
-					else if ("SequenceInBatch".equals(colName)) SequenceInBatch_pos = c;
-					else if ("SQLText"        .equals(colName)) SQLText_pos         = c;
-				}
-
-				PK pk = new PK(-99, -99, -99); // create a dummy, just so we have a object
 				int rowCount = 0;
 				while(rs.next())
 				{
 					rowCount++;
 
-					int SPID    = rs.getInt(SPID_pos);
-					int KPID    = rs.getInt(KPID_pos);
-					int BatchID = rs.getInt(BatchID_pos);
+					int SPID            = rs.getInt   (pos_SPID);
+					int KPID            = rs.getInt   (pos_KPID);
+					int BatchID         = rs.getInt   (pos_BatchID);
+					int SequenceInBatch = rs.getInt   (pos_SequenceInBatch);
+					String sqlText      = rs.getString(pos_SQLText);
+					String ServerLogin  = rs.getString(pos_ServerLogin);
 					
 					// This is where we can update for example:
 					//   - How many "dynamic SQL Prepare" ---> 'create proc dyn###'
 					//   - etc, etc..
 					if (_sqlTextStatistics != null)
 					{
-						int SequenceInBatch = rs.getInt   (SequenceInBatch_pos);
-						String sqlText      = rs.getString(SQLText_pos);
-
 						updateSqlTextStats(SPID, KPID, BatchID, SequenceInBatch, sqlText);
 					}
 
-
-					// If not same PK as previous row, create a new PK Object
-					if ( ! pk.equals(SPID, KPID, BatchID) )
-						pk = new PK(SPID, KPID, BatchID);
-
-					// Get PK from MAP
-					List<Object> row = sqlTextPkMap.get(pk);
-
-					// Is it a new row, or did we already have an entry
-					if (row == null)
-					{
-						// Create NEW record
-						row = new ArrayList<Object>();
-						row.add(MON_SQL_TEXT); // NOTE: the first object in the list should be the TableName where to store the data
-
-						for (int c=1; c<=colCount; c++)
-						{
-							// the "SequenceInBatch" column should NOT be part of the result
-							if (c != SequenceInBatch_pos)
-								row.add(rs.getObject(c));
-						}
-						
-						// set the record in MAP
-						sqlTextPkMap.put(pk, row);
-					}
-					else
-					{
-						// Append SQLText to current entry
-						Object sqlTextObj = row.get(row.size()-1); // SQLText is LAST pos in List
-						String sqlTextRs  = rs.getString(SQLText_pos);
-						
-						row.set(row.size()-1, sqlTextObj + sqlTextRs);
-					}
+					_spidSqlTextAndPlanManager.addSqlText(SPID, KPID, BatchID, SequenceInBatch, sqlText, ServerLogin);
 				}
+				_statSqlTextCaptureRows       += rowCount;
+				_statSqlTextCaptureRowsDiff   += rowCount;
 
 				int    configVal  = _sqlTextPipeMaxMessages;
 				String configName = CFGNAME_aseConfig_sql_text_pipe_max_messages;
@@ -1443,8 +1971,12 @@ extends SqlCaptureBrokerAbstract
 				if (ex.getErrorCode() == 12052)
 					_sampleSqlText = false;
 				
-				_logger.error("SQL Capture problems when capturing 'SQL Text' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+_sql_sqlText);
+				_logger.error("SQL Capture problems when capturing 'SQL Text' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+_sql_sqlText, ex);
 			}
+
+			long captureTime = TimeUtils.msDiffNow(captureStartTime);
+			_statSqlTextCaptureTime     += captureTime;
+			_statSqlTextCaptureTimeDiff += captureTime;
 		}
 
 		//------------------------------------------------
@@ -1454,6 +1986,8 @@ extends SqlCaptureBrokerAbstract
 		//------------------------------------------------
 		if (_samplePlan)
 		{
+			long captureStartTime = System.currentTimeMillis();
+
 			try ( Statement stmnt = conn.createStatement();
 			      ResultSet rs = stmnt.executeQuery(_sql_sqlPlanText); )
 			{
@@ -1465,69 +1999,29 @@ extends SqlCaptureBrokerAbstract
 				// * when a "new" row is found, we will set the StringBuffer content to replace the "first row" PlanText
 				// * At the END we will need to "post" the information from the last "group"
 				//----------------------------------------------------------------------------------------
-				ResultSetMetaData rsmd = rs.getMetaData();
+				List<String> colNames = DbUtils.getColumnNames(rs.getMetaData());
 
-				int colCount = rsmd.getColumnCount();
-				int SPID_pos           = -1;
-				int KPID_pos           = -1;
-				int BatchID_pos        = -1;
-				int SequenceNumber_pos = -1;
-				int PlanText_pos       = -1;
+				int pos_SPID           = findInListToJdbcPos(colNames, "SPID");
+				int pos_KPID           = findInListToJdbcPos(colNames, "KPID");
+				int pos_BatchID        = findInListToJdbcPos(colNames, "BatchID");
+				int pos_SequenceNumber = findInListToJdbcPos(colNames, "SequenceNumber");
+				int pos_PlanText       = findInListToJdbcPos(colNames, "PlanText");
 
-				for (int c=1; c<=colCount; c++)
-				{
-					String colName = rsmd.getColumnLabel(c);
-
-					if      ("SPID"          .equals(colName)) SPID_pos           = c;
-					else if ("KPID"          .equals(colName)) KPID_pos           = c;
-					else if ("BatchID"       .equals(colName)) BatchID_pos        = c;
-					else if ("SequenceNumber".equals(colName)) SequenceNumber_pos = c;
-					else if ("PlanText"      .equals(colName)) PlanText_pos       = c;
-				}
-
-				PK pk = new PK(-99, -99, -99); // create a dummy, just so we have a object
 				int rowCount = 0;
 				while(rs.next())
 				{
 					rowCount++;
 
-					int SPID    = rs.getInt(SPID_pos);
-					int KPID    = rs.getInt(KPID_pos);
-					int BatchID = rs.getInt(BatchID_pos);
+					int SPID           = rs.getInt   (pos_SPID);
+					int KPID           = rs.getInt   (pos_KPID);
+					int BatchID        = rs.getInt   (pos_BatchID);
+					int SequenceNumber = rs.getInt   (pos_SequenceNumber);
+					String planText    = rs.getString(pos_PlanText);
 
-					// If not same PK as previous row, create a new PK Object
-					if ( ! pk.equals(SPID, KPID, BatchID) )
-						pk = new PK(SPID, KPID, BatchID);
-
-					// Get PK from MAP
-					List<Object> row = planTextPkMap.get(pk);
-
-					// Is it a new row, or did we already have an entry
-					if (row == null)
-					{
-						// Create NEW record
-						row = new ArrayList<Object>();
-						row.add(MON_SQL_PLAN); // NOTE: the first object in the list should be the TableName where to store the data
-
-						for (int c=1; c<=colCount; c++)
-						{
-							// the "SequenceNumber" column should NOT be part of the result
-							if (c != SequenceNumber_pos)
-								row.add(rs.getObject(c));
-						}
-						
-						// set the record in MAP
-						planTextPkMap.put(pk, row);
-					}
-					else
-					{
-						// Append SQLText to current entry
-						Object planTextObj = row.get(row.size()-1); // SQLText is LAST pos in List
-						String planTextRs  = rs.getString(PlanText_pos);
-						
-						row.set(row.size()-1, planTextObj + planTextRs);
-					}
+					_spidSqlTextAndPlanManager.addPlanText(SPID, KPID, BatchID, SequenceNumber, planText);
 				}
+				_statPlanTextCaptureRows      += rowCount;
+				_statPlanTextCaptureRowsDiff  += rowCount;
 
 				int    configVal  = _planTextPipeMaxMessages;
 				String configName = CFGNAME_aseConfig_plan_text_pipe_max_messages;
@@ -1563,67 +2057,669 @@ extends SqlCaptureBrokerAbstract
 				if (ex.getErrorCode() == 12052)
 					_samplePlan = false;
 				
-				_logger.error("SQL Capture problems when capturing 'SQL Plan Text' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+_sql_sqlPlanText);
+				_logger.error("SQL Capture problems when capturing 'SQL Plan Text' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+_sql_sqlPlanText, ex);
 			}
+
+			long captureTime = TimeUtils.msDiffNow(captureStartTime);
+			_statPlanTextCaptureTime     += captureTime;
+			_statPlanTextCaptureTimeDiff += captureTime;
 		}
 		
 		//------------------------------------------------
 		// Post processing
 		//------------------------------------------------
-//System.out.println("CREATE 'current' deffered entry...");
-//System.out.println("statementPkAdded     = "+statementPkAdded.size()); 
-//System.out.println("statementPkDiscarded = "+statementPkDiscarded.size()); 
-//System.out.println("statementRecords     = "+statementRecords.size()); 
-//System.out.println("sqlTextPkMap         = "+sqlTextPkMap.size()); 
-//System.out.println("sqlTextRecords       = "+sqlTextRecords.size()); 
-//System.out.println("planTextPkMap        = "+planTextPkMap.size()); 
-//System.out.println("planTextRecords      = "+planTextRecords.size()); 
 
-//System.out.format("SAMPLE: statementPkAdded = %-5d, statementPkDiscarded = %-5d, statementRecords = %-5d, sqlTextPkMap = %-5d, sqlTextRecords = %-5d, planTextPkMap = %-5d, planTextRecords = %-5d \n",
-//	statementPkAdded.size(),
-//	statementPkDiscarded.size(),
-//	statementRecords.size(),
-//	sqlTextPkMap.size(),
-//	sqlTextRecords.size(),
-//	planTextPkMap.size(),
-//	planTextRecords.size()); 
-
-//for (List<Object> row : statementRecords)
-//	System.out.println("ST---ROW: ------- "+row);
-//
-//for (List<Object> row : sqlTextRecords)
-//	System.out.println("SQL--ROW: ------- "+row);
-//
-//for (List<Object> row : planTextRecords)
-//	System.out.println("PLAN-ROW: ------- "+row);
-
-		DeferredSqlAndPlanTextQueueEntry qe = new DeferredSqlAndPlanTextQueueEntry(
-				statementPkAdded, statementPkDiscarded, statementRecords, //--->>// TODO: Why are we stuffing this in here???
-				sqlTextPkMap, planTextPkMap);
-//				sqlTextPkMap, sqlTextRecords,
-//				planTextPkMap, planTextRecords);
-
-		// Add info to the Deferred Queue, which we cleanup in toPcs() when we have passed threshold to do it...
-		_deferredQueueFor_sqlTextAndPlan.add(qe);
-
-		// Remove SQLText and PlanText that is not within filters (for example: execution time is lower than X)  
-		doPostProcessing(qe);
-		
 		// Send counters for storage
-		int count = toPcs(pch, qe);
+		int count = toPcs(pch, statementRecords);
+		
+		// Cleanup the structure that holds SQL-Text and SQL-ShowPlan information!
+		// This will remove SQL and PLAN text's that are "below" the last sent entry for every SPID, KPID, BatchID
+		// The "last known TEXT" entries will always be present/saved
+		_spidSqlTextAndPlanManager.endOfScan();
+		
+		// Possibly every now and then (every 10 minute or so)
+		// get SPID, KPID, BatchID from monProcess and remove all SqlText/PlanText that no longer has a SPID/KPID connected 
+		if (TimeUtils.msDiffNow(_lastCallTo_removeUnusedSlots) > (_removeUnusedSlotsThresholdInSeconds * 1000))
+		{
+			// set this even if we have problems with below
+			_lastCallTo_removeUnusedSlots = System.currentTimeMillis();
+
+			_spidSqlTextAndPlanManager.removeUnusedSlots(conn);
+		}
+
+//System.out.println("### doSqlCapture(): -end- toPcsCount=" + count + ", getSpidSize()=" + _spidSqlTextAndPlanManager.getSpidSize() + ", getBatchIdSize()=" + _spidSqlTextAndPlanManager.getBatchIdSize());
+		
+		// Write some statistics
+		if (TimeUtils.msDiffNow(_statReportLastTime) > (_statReportAfterSec * 1000))
+		{
+			_statReportLastTime = System.currentTimeMillis();
+
+			_logger.info("STAT [SqlCaptureBrokerAse]: "
+					+ "SqlTextAddCount="         + _statSqlTextAddCount 
+					+ ", SqlTextNoSqlCount="     + _statSqlTextNoSqlCount 
+					+ ", NormalizeSuccessCount=" + _statNormalizeSuccessCount 
+					+ ", NormalizeSkipCount="    + _statNormalizeSkipCount 
+					+ ", NormalizeErrorCount="   + _statNormalizeErrorCount
+
+					+ ", StatementCaptureTimeDiff=" + TimeUtils.msToTimeStr(_statStatementCaptureTimeDiff)
+					+ ", SqlTextCaptureTimeDiff="   + TimeUtils.msToTimeStr(_statSqlTextCaptureTimeDiff)
+					+ ", PlanTextCaptureTimeDiff="  + TimeUtils.msToTimeStr(_statPlanTextCaptureTimeDiff)
+
+					+ ", StatementCaptureTime="     + TimeUtils.msToTimeStr(_statStatementCaptureTime)
+					+ ", SqlTextCaptureTime="       + TimeUtils.msToTimeStr(_statSqlTextCaptureTime)
+					+ ", PlanTextCaptureTime="      + TimeUtils.msToTimeStr(_statPlanTextCaptureTime)
+
+					+ ", StatementCaptureRowsDiff=" + _statStatementCaptureRowsDiff
+					+ ", SqlTextCaptureRowsDiff="   + _statSqlTextCaptureRowsDiff
+					+ ", PlanTextCaptureRowsDiff="  + _statPlanTextCaptureRowsDiff
+
+					+ ", StatementCaptureRows="     + _statStatementCaptureRows
+					+ ", SqlTextCaptureRows="       + _statSqlTextCaptureRows
+					+ ", PlanTextCaptureRows="      + _statPlanTextCaptureRows
+
+					);
+
+			// Reset DIFF Counters
+			_statStatementCaptureTimeDiff = 0;
+			_statSqlTextCaptureTimeDiff   = 0;
+			_statPlanTextCaptureTimeDiff  = 0;
+
+			_statStatementCaptureRowsDiff = 0;
+			_statSqlTextCaptureRowsDiff   = 0;
+			_statPlanTextCaptureRowsDiff  = 0;
+		}
+
 		return count;
 	}
+	
+	//-------------------------------------------------------------------------
+	// BEGIN: declare some STATISTICS Fields
+	//-------------------------------------------------------------------------
+	private long _statSqlTextAddCount   = 0;
+	private long _statSqlTextNoSqlCount = 0;
 
-	//-------------------------------------------------------------------------------------
-	// and alternative to the above (which *might* work better or possibly simpler)
-	// because the above might send "to many" SQL-Text objects for storage
-	//-------------------------------------------------------------------------------------
-	// * have a global SQL-Text cache (which can be cleared on OutOfMemory)
-	//   * entries are removed when monSysStatements exceeds the 100ms threshold.
-	//   * entries are removed when monSysStatements (which is added *after* monSysSqlText) entries have a higher SPID,KPID,*BatchID* than the saved one
-	//   * after X minutes of no-new-records: go and check if the SPID,KPID still exists in sysprocesses (or last CmProcessActivity) (maybe also check the current BatchID)
-	//   * (side note: should create proc DynamicSql ... still be kept and saved in the PCS, even if it do not exceed the 100ms threshold ???)
-	//-------------------------------------------------------------------------------------
+	private long _statNormalizeSuccessCount = 0;
+	private long _statNormalizeSkipCount    = 0;
+	private long _statNormalizeErrorCount   = 0;
+
+	private long _statSqlTextCaptureTime   = 0;
+	private long _statPlanTextCaptureTime  = 0;
+	private long _statStatementCaptureTime = 0;
+
+	private long _statSqlTextCaptureTimeDiff   = 0;
+	private long _statPlanTextCaptureTimeDiff  = 0;
+	private long _statStatementCaptureTimeDiff = 0;
+
+	private long _statSqlTextCaptureRows   = 0;
+	private long _statPlanTextCaptureRows  = 0;
+	private long _statStatementCaptureRows = 0;
+
+	private long _statSqlTextCaptureRowsDiff   = 0;
+	private long _statPlanTextCaptureRowsDiff  = 0;
+	private long _statStatementCaptureRowsDiff = 0;
+
+	private long _statReportLastTime = System.currentTimeMillis();
+	private long _statReportAfterSec = DEFAULT_sqlCap_ase_statisticsReportEveryXSecond;
+	//-------------------------------------------------------------------------
+	// END: declare some STATISTICS Fields
+	//-------------------------------------------------------------------------
+
+	/**
+	 * FIXME: do documentation
+	 * 
+	 * @param pch
+	 * @param statementRecords
+	 * @return
+	 */
+	protected int toPcs(PersistentCounterHandler pch, List<MonSqlStatement> statementRecords)
+	{
+		// Container object used to send data to PCS
+		SqlCaptureDetails capDet = new SqlCaptureDetails();
+
+		// default values for: 
+		//    - storeNormalizedSqlTextHash = true
+		//    - storeNormalizedSqlText     = false  --->>> instead of storing it, in the offline view, we can read the 'SQLText' and normalize it "on the fly", which hopefully saves us some MB at-the-end-of-the-day... the storeNormalizedSqlTextHash is still stored so we can aggregate stuff via group by... but that just takes an INT value
+//		boolean storeNormalizedSqlTextHash = getConfiguration().getBooleanProperty(PROPKEY_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlTextHash, DEFAULT_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlTextHash);
+		boolean storeNormalizedSqlText     = getConfiguration().getBooleanProperty(PROPKEY_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlText,     DEFAULT_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlText);
+		
+		// Used to anonymize or remove-constants in where clauses etc...
+		StatementNormalizer stmntNorm = storeNormalizedSqlText ? new StatementNormalizer() : null;
+
+		for (MonSqlStatement stRec : statementRecords) 
+		{
+			// Get SQL-Text for the statement
+			BatchIdEntry batchIdEntry = _spidSqlTextAndPlanManager.getBatchIdEntry(stRec.SPID, stRec.KPID, stRec.BatchID);
+
+			String sqlText  = batchIdEntry.getSqlText();
+			String planText = batchIdEntry.getPlanText();
+			String srvLogin = batchIdEntry.getServerLogin();
+
+			// Normalize the SQL Statement
+			String normalizedSqlText             = null;
+			int    normalizedSqlTextJavaHashCode = -1; 
+			if (stmntNorm != null)
+			{
+//				normalizedSqlText = stmntNorm.normalizeStatementNoThrow(sqlText, true);
+				try
+				{
+					// Do not try to parse if the statement is in the "not-yet-supported-by-the-parser" section
+					if (StatementNormalizer.isNotYetSupportedByParser(sqlText))
+					{
+						_statNormalizeSkipCount++;
+					}
+					else
+					{
+						// Parse and normalize
+						normalizedSqlText = stmntNorm.normalizeStatement(sqlText);
+						
+						if (StringUtil.hasValue(normalizedSqlText))
+						{
+							normalizedSqlTextJavaHashCode = normalizedSqlText.hashCode();
+							_statNormalizeSuccessCount++;
+						}
+					}
+				}
+				catch(JSQLParserException ex)
+				{
+					_statNormalizeErrorCount++;
+					//_logger.info("Problems normalizing SQL=|"+sql+"|", ex);
+				}
+			}
+
+			if (StringUtil.hasValue(sqlText))
+			{
+				// Copy first ### chart so we can make a "short" hash-code 
+				String sqlTextShort = sqlText.substring(0, Math.min(_sqlText_shortLength, sqlText.length()));
+
+				// Set some fields in the MonSqlStatement, with regards to SqlText
+				stRec.JavaSqlHashCode      = sqlText     .hashCode();
+				stRec.JavaSqlHashCodeShort = sqlTextShort.hashCode();
+				stRec.NormJavaSqlHashCode  = normalizedSqlTextJavaHashCode;
+
+				MonSqlText monSqlText = new MonSqlText();
+
+				monSqlText.sampleTime           = stRec.sampleTime; 
+				monSqlText.InstanceID           = stRec.InstanceID; 
+				monSqlText.SPID                 = stRec.SPID; 
+				monSqlText.KPID                 = stRec.KPID; 
+				monSqlText.BatchID              = stRec.BatchID; 
+				monSqlText.ServerLogin          = srvLogin; 
+				monSqlText.AddMethod            = 1; // 1=Direct
+				monSqlText.JavaSqlLength        = sqlText     .length(); 
+				monSqlText.JavaSqlLengthShort   = sqlTextShort.length(); 
+				monSqlText.JavaSqlHashCode      = sqlText     .hashCode(); 
+				monSqlText.JavaSqlHashCodeShort = sqlTextShort.hashCode(); 
+				monSqlText.SQLText              = sqlText; 
+				monSqlText.NormSQLText          = normalizedSqlText;
+				monSqlText.NormJavaSqlHashCode  = normalizedSqlTextJavaHashCode;
+
+//System.out.println("  >> pcs >> SQL-TEXT:  ms=" + stRec.Elapsed_ms + ", spid=" + stRec.SPID + ", kpid=" + stRec.KPID + ", batchId=" + stRec.BatchID + ", sql="+sqlText);
+				// Add the SQL-Text entry
+				capDet.add(monSqlText.getPcsRow());
+			}
+
+			if (StringUtil.hasValue(planText))
+			{
+				MonSqlPlan monSqlPlan = new MonSqlPlan();
+
+				monSqlPlan.sampleTime  = stRec.sampleTime;
+				monSqlPlan.InstanceID  = stRec.InstanceID;
+				monSqlPlan.SPID        = stRec.SPID;
+				monSqlPlan.KPID        = stRec.KPID;
+				monSqlPlan.PlanID      = stRec.PlanID;
+				monSqlPlan.BatchID     = stRec.BatchID;
+				monSqlPlan.ContextID   = stRec.ContextID;
+				monSqlPlan.DBID        = stRec.DBID;
+				monSqlPlan.DBName      = stRec.DBName;
+				monSqlPlan.ProcedureID = stRec.ProcedureID;
+				monSqlPlan.AddMethod   = 1; // 1=Direct
+				monSqlPlan.PlanText    = planText;
+
+				// Add the PLAN entry
+				capDet.add(monSqlPlan.getPcsRow());
+			}
+
+			// DEBUG Print
+			boolean printPcsAdd = false;
+printPcsAdd = true;
+			if (printPcsAdd || _logger.isDebugEnabled())
+			{
+				_logger.info("  >> pcs >> [addCnt=" + _statSqlTextAddCount + ",noSqlCnt=" + _statSqlTextNoSqlCount + "] STATEMENT: ms=" + stRec.Elapsed_ms + ", rowc=" + stRec.RowsAffected + ", error=" + stRec.ErrorStatus + ", spid=" + stRec.SPID + ", kpid=" + stRec.KPID + ", batchId=" + stRec.BatchID + ", sql=|" + StringUtils.normalizeSpace(sqlText) + "|, normalizedSqlTextJavaHashCode=" + normalizedSqlTextJavaHashCode + (stRec.ErrorStatus == 0 ? "" : ", MsgText="+AseErrorMessageDictionary.getInstance().getDescription(stRec.ErrorStatus)) );
+				if (StringUtil.isNullOrBlank(sqlText))
+				{
+					_logger.error("            *************** NO-SQL-TEXT **************** spid=" + stRec.SPID + ", kpid=" + stRec.KPID + ", batchId=" + stRec.BatchID + ", sql="+sqlText);
+				}
+			}
+
+			// Add the STATEMENT entry
+			capDet.add(stRec.getPcsRow());
+
+			// Increment some statistics
+			if (StringUtil.isNullOrBlank(sqlText))
+			{
+				_statSqlTextNoSqlCount++;
+			}
+			_statSqlTextAddCount++;
+		}
+
+		// Post the information to the PersistentCounterHandler, which will save the information to it's writers...
+		addToPcs(pch, capDet);
+		
+		return capDet.size();
+	}
+
+	/** 
+	 * Post it to PCS, in it's own method to make testing easier...<br>
+	 * Meaning we can subclass and override this method when testing...
+	 */
+	protected void addToPcs(PersistentCounterHandler pch, SqlCaptureDetails sqlCaptureDetails)
+	{
+		pch.addSqlCapture(sqlCaptureDetails);
+	}
+
+	
+
+	@Override
+	public void lowOnMemoryHandler()
+	{
+		_logger.warn("Persistant Counter Handler, lowOnMemoryHandler() was called. Emtying the SPID SQL-Text and SQL-Plan structure, which has " + _spidSqlTextAndPlanManager.getSpidSize() + " SPID entries and " + _spidSqlTextAndPlanManager.getBatchIdSize() + " BatchId entries.");
+		_spidSqlTextAndPlanManager.clear();
+	}
+	@Override
+	public void outOfMemoryHandler()
+	{
+		_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. Emtying the SPID SQL-Text and SQL-Plan structure, which has " + _spidSqlTextAndPlanManager.getSpidSize() + " SPID entries and " + _spidSqlTextAndPlanManager.getBatchIdSize() + " BatchId entries.");
+		_spidSqlTextAndPlanManager.clear();
+	}
+
+	//--------------------------------------------------------------------------
+	// BEGIN: SPID - SqlText and SqlPlan - manager 
+	//--------------------------------------------------------------------------
+	
+	private SpidSqlTextAndPlanManager _spidSqlTextAndPlanManager = new SpidSqlTextAndPlanManager();
+
+	//----------------------------------------------------------------------------------------
+	private static class SpidSqlTextAndPlanManager
+	{
+		private HashMap<Integer, SpidEntry> _spidMap = new HashMap<>();
+		
+		private SpidEntry getSpidEntry(int spid, int kpid)
+		{
+			SpidEntry spidEntry = _spidMap.get(spid);
+			if (spidEntry == null)
+			{
+				//System.out.println("  +++ Adding a new SPID entry: spid="+spid+", kpid="+kpid);
+				spidEntry = new SpidEntry(spid, kpid);
+				_spidMap.put(spid, spidEntry);
+			}
+			return spidEntry;
+		}
+
+		public int getBatchIdSize()
+		{
+			int size = 0;
+			for (SpidEntry spidEntry : _spidMap.values())
+			{
+				size += spidEntry._batchIdMap.size();
+			}
+			return size;
+		}
+		public int getSpidSize()
+		{
+			return _spidMap.size();
+		}
+		
+		
+		public BatchIdEntry getBatchIdEntry(int spid, int kpid, int batchId)
+		{
+			return getSpidEntry(spid, kpid).getBatchIdEntry(spid, kpid, batchId);
+		}
+		
+		public void addSqlText(int spid, int kpid, int batchId, int sequenceNum, String sqlText, String serverLogin)
+		{
+			getSpidEntry(spid, kpid).addSqlText(spid, kpid, batchId, sequenceNum, sqlText, serverLogin);
+		}
+//		public String getSqlText(int spid, int kpid, int batchId)
+//		{
+//			return getSpidEntry(spid, kpid).getSqlText(spid, kpid, batchId);
+//		}
+
+		
+//		public String getServerLogin(int spid, int kpid, int batchId)
+//		{
+//			return getSpidEntry(spid, kpid).getServerLogin(spid, kpid, batchId);
+//		}
+		
+
+		public void addPlanText(int spid, int kpid, int batchId, int sequenceNum, String planText)
+		{
+			getSpidEntry(spid, kpid).addPlanText(spid, kpid, batchId, sequenceNum, planText);
+		}
+//		public String getPlanText(int spid, int kpid, int batchId)
+//		{
+//			return getSpidEntry(spid, kpid).getPlanText(spid, kpid, batchId);
+//		}
+
+		/**
+		 * Get all active SPID's in ASE <br>
+		 * Remove all SPID's from '_spidSqlTextAndPlanManager' that no longer exists in ASE
+		 * 
+		 * @param conn
+		 */
+		public void removeUnusedSlots(DbxConnection conn)
+		{
+//			String sql = "select SPID, KPID, BatchID from master.dbo.monProcess";
+			String sql = "select spid from master.dbo.sysprocesses";
+
+			try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
+			{
+				Set<Integer> dbmsSpidSet = new HashSet<>();
+				while(rs.next())
+				{
+					int spid    = rs.getInt(1);
+//					int kpid    = rs.getInt(2);
+//					int BatchId = rs.getInt(3);
+
+					dbmsSpidSet.add(spid);
+				}
+
+				// 1: Take a copy of SPID MAP
+				// 2: Remove all spid's that exists in ASE 
+				// 2: Remove all entries that is NOT active in ASE  
+				Set<Integer> spidsToBeRemoved = new HashSet<>(_spidMap.keySet());
+				spidsToBeRemoved.removeAll(dbmsSpidSet);
+				// now remove the entries
+				_spidMap.keySet().removeAll(spidsToBeRemoved);
+
+				if ( ! spidsToBeRemoved.isEmpty() )
+					_logger.info("Removed the following SPIDs from the SqlText/PlanText structure, which was no longer present in ASE. size=" + spidsToBeRemoved.size() + ", removeSet=" + spidsToBeRemoved);
+			}
+			catch(Exception ex)
+			{
+				_logger.error("Problem cleaning up unused SPID/KPID/BatchID SqlTest/PlanText slots, using SQL='" + sql + "'. Caught: " + ex);
+			}
+		}
+
+		/** Remove any SqlText and PlanText that is no longer used (save only last BatchId) */
+		public void endOfScan()
+		{
+			for (SpidEntry spidEntry : _spidMap.values())
+			{
+				spidEntry.endOfScan();
+			}
+		}
+
+//		public int getBatchIdCountAndReset()
+//		{
+//			int count = 0;
+//			for (SpidEntry spidEntry : _spidMap.values())
+//			{
+//				count += spidEntry.getBatchIdCountAndReset();
+//			}
+//			return count;
+//		}
+		
+
+		/** Clear the structure, can for example be used if we starting to get LOW on memory */
+		public void clear()
+		{
+			_spidMap.clear();
+//			_spidMap = new HashMap<>();
+		}
+	}
+
+	//----------------------------------------------------------------------------------------
+	private static class SpidEntry
+	{
+		private int _spid;
+		private int _kpid;
+		private int _maxBatchId;
+//		private int _batchIdCount;
+		
+		private HashMap<Integer, BatchIdEntry> _batchIdMap = new HashMap<>();
+
+		public SpidEntry(int spid, int kpid)
+		{
+			_spid = spid;
+			_kpid = kpid;
+		}
+
+		/** Remove all BatchId entries that is no longer used */ 
+		public void endOfScan()
+		{
+			if (_batchIdMap.size() <= 1)
+				return;
+
+			BatchIdEntry maxBatchIdEntry = _batchIdMap.get(_maxBatchId);
+			//System.out.println("    EOS -- _batchIdMap.size="+_batchIdMap.size()+", maxBatchIdEntry=[spid="+maxBatchIdEntry._spid+", batchId="+maxBatchIdEntry._batchId+"] -- DynamicName='"+maxBatchIdEntry._dynamicSqlName+"', DynamicSqlText=|"+maxBatchIdEntry._dynamicSqlText+"|.");//, sqlText="+maxBatchIdEntry._sqlText);
+
+			// Loop all entries... and remove the ones that we no longer need
+			for(Iterator<Entry<Integer, BatchIdEntry>> it = _batchIdMap.entrySet().iterator(); it.hasNext(); ) 
+			{
+				// Get Key/value from the iterator
+				Entry<Integer, BatchIdEntry> entry = it.next();
+				int          batchId = entry.getKey();
+				BatchIdEntry be      = entry.getValue();
+
+				if(batchId < _maxBatchId) 
+				{
+					boolean remove = true;
+
+					// if "last/max" entry has same "Dynamic SQL Name" as the entry we are looking at... 
+					// then KEEP the entry (since we need "all/previous" batchId to get SqlText) 
+					if (maxBatchIdEntry.isDynamicSql())
+					{
+						if (maxBatchIdEntry._dynamicSqlName.equals(be._dynamicSqlName) && be._isDynamicSqlPrepare)
+						{
+							//System.out.println("    <-- KEEP-DYNAMIC-SQL: SpidEntry[spid="+_spid+", kpid="+_kpid+", batchId="+be._batchId+"] -- DynamicName='"+be._dynamicSqlName+"', DynamicSqlText=|"+be._dynamicSqlText+"|, sqlText="+be._sqlText);
+							remove = false;
+						}
+					}
+					
+					// if we want to keep a BatchId's (and it's content) for more than one -END-OF-SCAN- the "keepCounter" can be used.
+					// Note: The initial value for the keepCounter is set in BatchIdEntry class
+					if (be._keepCounter > 0)
+					{
+						be._keepCounter--;
+						remove = false;
+					}
+					
+					if (remove)
+					{
+						//System.out.println("    <-- SpidEntry[spid="+_spid+", kpid="+_kpid+", maxBatchId="+_maxBatchId+"] -- removing: batchId=" + entry.getValue()._batchId + ", sqlText="+entry.getValue().getSqlText());
+						it.remove();
+					}
+				}
+			}
+		}
+
+		private BatchIdEntry getBatchIdEntry(int spid, int kpid, int batchId)
+		{
+			// If it's a NEW kpid... then clear the batchId Map
+			if (kpid != _kpid)
+			{
+				//System.out.println("  --- Found NEW KPID for SPID clearing old batchMap: spid="+spid+", new-kpid="+kpid+", current-kpid="+_kpid);
+				_batchIdMap.clear();
+				_maxBatchId = 0;
+				_kpid = kpid;
+			}
+			
+			// Remember the highest batch id (used by endOfScan() to cleanup)
+			_maxBatchId = Math.max(batchId, _maxBatchId);
+//			if (batchId > _maxBatchId)
+//			{
+//				_batchIdCount += batchId - _maxBatchId;
+//				_maxBatchId = batchId;
+//			}
+
+			// Find the BatchId (or create a new one)
+			BatchIdEntry batchIdEntry = _batchIdMap.get(batchId);
+			if (batchIdEntry == null)
+			{
+				batchIdEntry = new BatchIdEntry(this, spid, kpid, batchId);
+				_batchIdMap.put(batchId, batchIdEntry);
+			}
+
+			return batchIdEntry;
+		}
+		
+//		public int getBatchIdCountAndReset()
+//		{
+//			int count = _batchIdCount;
+//			_batchIdCount = 0;
+//			return count;
+//		}
+
+		public void addSqlText(int spid, int kpid, int batchId, int sequenceNum, String sqlText, String serverLogin)
+		{
+			getBatchIdEntry(spid, kpid, batchId).addSqlText(sequenceNum, sqlText, serverLogin);
+		}
+//		public String getSqlText(int spid, int kpid, int batchId)
+//		{
+//			return getBatchIdEntry(spid, kpid, batchId).getSqlText();
+//		}
+
+//		public String getServerLogin(int spid, int kpid, int batchId)
+//		{
+//			return getBatchIdEntry(spid, kpid, batchId).getServerLogin();
+//		}
+
+		public void addPlanText(int spid, int kpid, int batchId, int sequenceNum, String planText)
+		{
+			getBatchIdEntry(spid, kpid, batchId).addPlanText(sequenceNum, planText);
+		}
+//		public String getPlanText(int spid, int kpid, int batchId)
+//		{
+//			return getBatchIdEntry(spid, kpid, batchId).getPlanText();
+//		}
+	}
+
+	//----------------------------------------------------------------------------------------
+	private static class BatchIdEntry
+	{
+		private SpidEntry _parent;
+		private int _spid;
+		private int _kpid;
+		private int _batchId;
+
+		// if we want to keep a BatchId's (and it's content) for more than one -END-OF-SCAN- the "keepCounter" can be used.
+		// This is decremented in SpidEntry.endOfScan(), and when it reaches 0 it is removed.
+		public int _keepCounter = 0; 
+
+		private String  _dynamicSqlName;
+		private String  _dynamicSqlText;
+		private boolean _isDynamicSqlPrepare = false;
+//		private BatchIdEntry _dynamicSqlPrepareDirectLink; // if we have already have back-traced the origin BatchIdEntry which holds the "create proc text" lets remember it...
+
+		private StringBuilder _sqlText  = new StringBuilder();
+		private StringBuilder _planText = new StringBuilder();
+		private String        _srvLogin = "";
+
+		public BatchIdEntry(SpidEntry spidEntry, int spid, int kpid, int batchId)
+		{
+			_parent  = spidEntry;
+			_spid    = spid;
+			_kpid    = kpid;
+			_batchId = batchId;
+			
+			_keepCounter = _default_batchIdEntry_keepCount;
+		}
+
+		public boolean isDynamicSql()
+		{
+			return _dynamicSqlName != null;
+		}
+
+		/**
+		 * Append SQL Text to the buffer (called for every row we get from monSysSQLText)
+		 * @param sequenceNum
+		 * @param sqlText
+		 * @param serverLogin
+		 */
+		public void addSqlText(int sequenceNum, String sqlText, String serverLogin)
+		{
+			if (sqlText == null)
+				return;
+
+			// Figure out if this is a "Dynamic SQL" entry (probably from CT-Lib)
+			if (sqlText.startsWith("DYNAMIC_SQL "))
+			{
+				_dynamicSqlName = sqlText;
+				//System.out.println("    --> DYNAMIC_SQL [spid="+_spid+", batchId="+_batchId+"] :: _dynamicSqlName="+_dynamicSqlName);
+			}
+			if (_dynamicSqlName != null && StringUtils.startsWithIgnoreCase(sqlText, "create proc "))
+			{
+				_isDynamicSqlPrepare = true;
+				//System.out.println("    --> DYNAMIC_SQL [spid="+_spid+", batchId="+_batchId+"]     -- IS-PREPARE :: _dynamicSqlName="+_dynamicSqlName+"");
+				int startPos = StringUtils.indexOfIgnoreCase(sqlText, " as ");
+				if (startPos != -1)
+				{
+					startPos += " as ".length();
+					_dynamicSqlText = sqlText.substring(startPos);
+					//System.out.println("    --> DYNAMIC_SQL [spid="+_spid+", batchId="+_batchId+"]     -- IS-PREPARE :: _dynamicSqlName="+_dynamicSqlName+", _dynamicSqlText=|"+_dynamicSqlText+"|.");
+				}
+			}
+			if (_isDynamicSqlPrepare && sequenceNum > 1)
+			{
+				if (_dynamicSqlText == null)
+					_dynamicSqlText = sqlText;
+				else
+					_dynamicSqlText += sqlText;
+				//System.out.println("    --> DYNAMIC_SQL [spid="+_spid+", batchId="+_batchId+"]     -- APPEND :: _dynamicSqlName="+_dynamicSqlName+", _dynamicSqlText=|"+_dynamicSqlText+"|.");
+			}
+
+			_sqlText.append(sqlText);
+			_srvLogin = serverLogin;
+		}
+		
+		/**
+		 * Get SQL Text for this BatchID. <br>
+		 * If current BatchID is a "Dynamic SQL", the SQL Text is probably NOT located in this BatchID (the execution batchId)...
+		 * The "declare" part ("create proc ... as ..." part, which holds the SQL Text) is done in a earlier BatchID, so search the parent BatchID map) 
+		 * 
+		 * @return
+		 */
+		public String getSqlText()
+		{
+			// If the entry is a Dynamic SQL, then the SQLText is NOT stored in the same BatchID as the "execution" part of the Dynamic SQL (prepare, execute..., close)
+			// So go and grab any "previous" BatchID where the "full" SqlText are stored.
+			if (_dynamicSqlName != null && !_isDynamicSqlPrepare)
+			{
+				//System.out.println("    ??? getSqlText(): IS-DYNAMIC-SQL: SpidEntry[spid="+_spid+", kpid="+_kpid+", batchId="+_batchId+"] -- DynamicName='"+_dynamicSqlName+"', DynamicSqlText=|"+_dynamicSqlText+"|.");
+				for (BatchIdEntry be : _parent._batchIdMap.values())
+				{
+					if (be._isDynamicSqlPrepare && _dynamicSqlName.equals(be._dynamicSqlName))
+					{
+						if (be._dynamicSqlText != null)
+							return "/* DYNAMIC-SQL: */ " + be._dynamicSqlText;
+						return "/* DYNAMIC-SQL: */ " + be._sqlText.toString();
+					}
+				}
+			}
+			return _sqlText.toString();
+		}
+
+		public String getServerLogin()
+		{
+			return _srvLogin;
+		}
+
+		public void addPlanText(int sequenceNum, String planText)
+		{
+			_planText.append(planText);
+		}
+		public String getPlanText()
+		{
+			return _planText.toString();
+		}
+	}
+
+	//--------------------------------------------------------------------------
+	// END: SPID - SqlText and SqlPlan - manager 
+	//--------------------------------------------------------------------------
+
+
+
 
 	//--------------------------------------------------------------------------
 	// BEGIN: Statement Statistics
@@ -1653,16 +2749,17 @@ extends SqlCaptureBrokerAbstract
 	 * @param physicalReads
 	 * @param waitTime 
 	 * @param cpuTime 
+	 * @param procedureId 
 	 * @param procName 
 	 * @param lineNumber 
 	 * @param contextID 
 	 */
-	private void updateStatementStats(int execTime, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, String procName, int lineNumber)
+	private void updateStatementStats(int execTime, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, int procedureId, String procName, int lineNumber)
 	{
 		if (_statementStatistics == null)
 			return;
 		
-		_statementStatistics.addStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber);
+		_statementStatistics.addStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber);
 	}
 
 	public void closeStatementStats()
@@ -1752,1037 +2849,13 @@ extends SqlCaptureBrokerAbstract
 		}
 	}
 
-	/** This will be NULL untill we call getSqlTextStats() for the first time. */
+	/** This will be NULL until we call getSqlTextStats() for the first time. */
 	private SqlCaptureSqlTextStatisticsSample _sqlTextStatistics = null;
 
 	//--------------------------------------------------------------------------
 	// END: SQL Text Statistics
 	//--------------------------------------------------------------------------
 
-
-
-	/**
-	 * 
-	 */
-	protected static class DeferredSqlAndPlanTextQueueEntry
-	{
-		long                  _crTime;
-		Set<PK>               _statementPkAdded;
-		Set<PK>               _statementPkDiscarded;
-		List<List<Object>>    _statementRecords;
-		Map<PK, List<Object>> _sqlTextPkMap;
-//		List<List<Object>>    _sqlTextRecords;
-		Map<PK, List<Object>> _planTextPkMap;
-//		List<List<Object>>    _planTextRecords;
-		
-//		public DeferredSqlAndPlanTextQueueEntry(Set<PK> statementPkAdded, Set<PK> statementPkDiscarded, List<List<Object>> statementRecords, Map<PK, List<Object>> sqlTextPkMap, List<List<Object>> sqlTextRecords, Map<PK, List<Object>> planTextPkMap, List<List<Object>> planTextRecords)
-		public DeferredSqlAndPlanTextQueueEntry(Set<PK> statementPkAdded, Set<PK> statementPkDiscarded, List<List<Object>> statementRecords, Map<PK, List<Object>> sqlTextPkMap, Map<PK, List<Object>> planTextPkMap)
-		{
-			_crTime               = System.currentTimeMillis();
-			
-			_statementPkAdded     = statementPkAdded;
-			_statementPkDiscarded = statementPkDiscarded;
-			_statementRecords     = statementRecords;
-			_sqlTextPkMap         = sqlTextPkMap;
-//			_sqlTextRecords       = sqlTextRecords;
-			_planTextPkMap        = planTextPkMap;
-//			_planTextRecords      = planTextRecords;
-		}
-
-		/** Remove any PK entries in the "defered queue" */
-		public void removeStatementEntry(PK pk)
-		{
-			// Statements
-			_statementPkAdded    .remove(pk);
-			_statementPkDiscarded.remove(pk);
-			
-			// But how do we remove '_statementRecords' ???
-			for (Iterator<List<Object>> iterator = _statementRecords.iterator(); iterator.hasNext();) 
-			{
-				List<Object> record = iterator.next();
-
-				int SPID    = (Integer) record.get(_stmnt_SPID_pos);
-				int KPID    = (Integer) record.get(_stmnt_KPID_pos);
-				int BatchID = (Integer) record.get(_stmnt_BatchID_pos);
-				
-				if (pk.equals(SPID, KPID, BatchID))
-			    	iterator.remove();
-			}
-		}
-
-		/** Remove any PK entries in the "defered queue" */
-		public void removeSqlEntry(PK pk)
-		{
-			List<Object> list = _sqlTextPkMap.get(pk);
-			if (list != null)
-			{
-				_sqlTextPkMap.remove(pk);
-//				_sqlTextRecords.remove(list);
-			}
-		}
-
-		/** Remove any PK entries in the "defered queue" */
-		public void removePlanEntry(PK pk)
-		{
-			List<Object> list = _planTextPkMap.get(pk);
-			if (list != null)
-			{
-				_planTextPkMap.remove(pk);
-//				_planTextRecords.remove(list);
-			}
-		}
-		
-		public boolean isEmpty()
-		{
-//System.out.println("isEmpty(): _statementPkAdded    .size() == " + _statementPkAdded    .size());
-//System.out.println("isEmpty(): _statementPkDiscarded.size() == " + _statementPkDiscarded.size());
-//System.out.println("isEmpty(): _statementRecords    .size() == " + _statementRecords    .size());
-//System.out.println("isEmpty(): _sqlTextPkMap        .size() == " + _sqlTextPkMap        .size());
-//System.out.println("isEmpty(): _sqlTextRecords      .size() == " + _sqlTextRecords      .size());
-//System.out.println("isEmpty(): _planTextPkMap       .size() == " + _planTextPkMap       .size());
-//System.out.println("isEmpty(): _planTextRecords     .size() == " + _planTextRecords     .size());
-
-//			return     _statementPkAdded    .size() == 0
-//				    && _statementPkDiscarded.size() == 0
-//				    && _statementRecords    .size() == 0
-//
-//				    && _sqlTextPkMap        .size() == 0
-//				    && _sqlTextRecords      .size() == 0
-//
-//				    && _planTextPkMap       .size() == 0
-//				    && _planTextRecords     .size() == 0
-//				    ;
-			return true
-					&& _sqlTextPkMap        .size() == 0
-//					&& _sqlTextRecords      .size() == 0
-
-					&& _planTextPkMap       .size() == 0
-//					&& _planTextRecords     .size() == 0
-					;
-		}
-	}
-
-	/**
-	 * Keep "old" SQL Text/Plan in a deferred queue so we can remove/retrive them later<br>
-	 * The idea is to hold SQL Text/Plan for a while (over some spans/iterations over doSqlCapture())
-	 * so we dont insert unneccecary SQL text/plans to PCS.
-	 * When a "threshold" of X seconds has passed we will pass them to the PCS<br>
-	 * But hopefully before that they can be discarded (due to that we find a Statement that has ended and 
-	 * was filtered out due to a low executionTime or logical/physical IO
-	 */
-	protected static class DeferredSqlAndPlanTextQueue
-	implements Iterable<DeferredSqlAndPlanTextQueueEntry>
-	{
-		protected Queue<DeferredSqlAndPlanTextQueueEntry> _queue = new LinkedList<>();
-
-		public void add(DeferredSqlAndPlanTextQueueEntry qe)
-		{
-			_queue.add(qe);
-		}
-
-		public int size()
-		{
-			return _queue.size();
-		}
-
-		@Override
-		public Iterator<DeferredSqlAndPlanTextQueueEntry> iterator()
-		{
-			return _queue.iterator();
-		}
-
-		/** Get SQL Text ENTRY stored in any of the "defered queue" entries */
-		public List<Object> getSqlEntry(PK pk)
-		{
-			for (DeferredSqlAndPlanTextQueueEntry entry : _queue)
-			{
-				List<Object> sqlTextRecord = entry._sqlTextPkMap.get(pk);
-				if (sqlTextRecord != null)
-				{
-					return sqlTextRecord;
-				}
-			}
-			return null;
-		}
-
-		/** Get SQL Text stored in any of the "defered queue" entries */
-		public String getSqlText(PK pk)
-		{
-			for (DeferredSqlAndPlanTextQueueEntry entry : _queue)
-			{
-				List<Object> sqlTextRecord = entry._sqlTextPkMap.get(pk);
-				if (sqlTextRecord != null)
-				{
-					String sqlText = (String) sqlTextRecord.get(sqlTextRecord.size()-1); // SQLText = Last record
-					return sqlText;
-				}
-			}
-			return null;
-		}
-
-		/** Get Plan Text ENTRY stored in any of the "defered queue" entries */
-		public List<Object> getPlanEntry(PK pk)
-		{
-			for (DeferredSqlAndPlanTextQueueEntry entry : _queue)
-			{
-				List<Object> planTextRecord = entry._planTextPkMap.get(pk);
-				if (planTextRecord != null)
-				{
-					return planTextRecord;
-				}
-			}
-			return null;
-		}
-
-		/** Get Plan Text stored in any of the "defered queue" entries */
-		public String getPlanText(PK pk)
-		{
-			for (DeferredSqlAndPlanTextQueueEntry entry : _queue)
-			{
-				List<Object> planTextRecord = entry._planTextPkMap.get(pk);
-				if (planTextRecord != null)
-				{
-					String planText = (String) planTextRecord.get(planTextRecord.size()-1); // PlanText = Last record
-					return planText;
-				}
-			}
-			return null;
-		}
-
-		/** Remove any PK entries in the "defered queue" */
-		public void remove(PK pk)
-		{
-			removeStatementEntry(pk);
-			removeSqlEntry(pk);
-			removePlanEntry(pk);
-		}
-
-		/** Remove any PK entries in the "defered queue" */
-		public void removeStatementEntry(PK pk)
-		{
-			for (DeferredSqlAndPlanTextQueueEntry entry : _queue)
-				entry.removeStatementEntry(pk);
-		}
-
-		/** Remove any PK entries in the "defered queue" */
-		public void removeSqlEntry(PK pk)
-		{
-			for (DeferredSqlAndPlanTextQueueEntry entry : _queue)
-				entry.removeSqlEntry(pk);
-		}
-
-		/** Remove any PK entries in the "defered queue" */
-		public void removePlanEntry(PK pk)
-		{
-			for (DeferredSqlAndPlanTextQueueEntry entry : _queue)
-				entry.removePlanEntry(pk);
-		}
-		
-		public void removeEmptyQueuEntries()
-		{
-			for (Iterator<DeferredSqlAndPlanTextQueueEntry> iterator = _queue.iterator(); iterator.hasNext();) 
-			{
-				DeferredSqlAndPlanTextQueueEntry entry = iterator.next();
-
-				if ( entry.isEmpty() )
-					iterator.remove();
-			}
-		}
-	}
-
-	/** 
-	 * Remove all SqlText/PlanText records that should be filtered out due to little ExecTime or LogicalReads/PhysicalReads <br>
-	 * The remove is done on the DEFERRED Queue (SQL Text/Plans that arrived before execution of statement was finnished)
-	 * <p>
-	 * Also remove some Static SQL/Plan text from the current sample
-	 * 
-	 * @param currentEntry
-	 */
-	protected void doPostProcessing(DeferredSqlAndPlanTextQueueEntry currentEntry)
-	{
-		// Remove all SqlText/PlanText records that should be filtered out due to little ExecTime or LogicalReads/PhysicalReads
-		// The remove is done on the DEFERRED Queue (SQL Text/Plans that arrived before execution of statement was finnished)
-		for (PK pk : currentEntry._statementPkDiscarded)
-		{
-			// If a statement has been added to the DISCARD set and also added to the ADD set, then it's probably a Stored Proc with both keep/skip set
-			// And if any statement in the proc is in the "add" set, then DO NOT REMOVE IT
-			if (currentEntry._statementPkAdded.contains(pk))
-				continue;
-
-			// Remove discarded entry from OLDER SQL Text/Plans in the deferred queue
-//			_deferredQueueFor_sqlTextAndPlan.remove(pk);
-			_deferredQueueFor_sqlTextAndPlan.removeSqlEntry(pk);
-			_deferredQueueFor_sqlTextAndPlan.removePlanEntry(pk);
-		}
-		
-		// Remove static SQL Text's (from current entry) that ASE inserted without have adding a Statement record (so they couldn't be identified and discarded by the Statement filter)
-		// This is done in 2 steps
-		//  1: get PK for SQL texts that we should delete
-		//  2: Delete the records for SQL-Text and Plan-Text
-		if (_removeStaticSqlText)
-		{
-			Set<PK> removeSet = new HashSet<>();
-			for (PK pk : currentEntry._sqlTextPkMap.keySet())
-			{
-				// If a statement has been added to the KEEP set (The statement existed, and NOT filtered out) then DO NOT REMOVE IT
-				if (currentEntry._statementPkAdded.contains(pk))
-					continue;
-
-				// Get SQL Text and check if we should keep it
-				List<Object> sqlTextRecord = currentEntry._sqlTextPkMap.get(pk);
-				if (sqlTextRecord != null)
-				{
-					String sqlText = (String) sqlTextRecord.get(sqlTextRecord.size()-1); // SQLText = Last record
-
-					if (isDiscardSqlText(sqlText))
-						removeSet.add(pk);
-				}
-			}
-			if ( ! removeSet.isEmpty() )
-			{
-				for (PK pk : removeSet)
-				{
-					// Remove the SQL Text & Plan record associated with the PK
-					currentEntry.removeSqlEntry(pk);
-					currentEntry.removePlanEntry(pk);
-				}
-
-				// Write info messages when we remove SQL (every hour or so)
-				if (_removeStaticSqlText_stat_printLastTime == -1 || TimeUtils.msDiffNow(_removeStaticSqlText_stat_printLastTime) > _removeStaticSqlText_stat_printThreshold)
-				{
-					int numOfRemovals = 0;
-					for (Integer num : _removeStaticSqlText_stat.values())
-						numOfRemovals += num;
-					
-					_logger.info("Information about ASE SQL Capture; Static SQL-Text removals. " 
-							+ "For the last '"+TimeUtils.msToTimeStr("%HH:%MM", _removeStaticSqlText_stat_printThreshold)+"' (HH:MM), "
-							+ "We have removed "+numOfRemovals+" SQL Text entries, for "+_removeStaticSqlText_stat.size()+" SQL slots. "
-							+ "Here is the SQL Text and remove-counters: "+_removeStaticSqlText_stat);
-
-					// TODO: Maybe add this information the the PCS ???
-					
-					// Reset the values, so we can print new message in X minutes/hours
-					_removeStaticSqlText_stat_printLastTime = System.currentTimeMillis();
-					_removeStaticSqlText_stat = new HashMap<>();
-				}
-			} // end: doRemove
-		} // end: if (_removeStaticSqlText)
-	} // end: method
-	
-	
-	/** Before sending SQL for normalization, we might want to remove some stuff */
-	public static String removeKnownPrefixes(String sqlText)
-	{
-		if (StringUtil.isNullOrBlank(sqlText))
-			return "";
-
-		// Remove some known "prefixes"
-		if (sqlText.matches("^DYNAMIC_SQL .*: .*"))
-		{
-			int firstColon = sqlText.indexOf(": ");
-			if (firstColon >= 0)
-				sqlText = sqlText.substring(firstColon+2);
-		}
-
-		return sqlText;
-	}
-
-	/** What SQL Text should we NOT send to PCS */
-	private boolean isDiscardSqlText(String sqlText)
-	{
-		if (sqlText == null)
-			return false;
-
-		boolean discard = false;
-		String statKey = sqlText;
-
-		// FIXME: we should probably have a configurage list of what to delete...
-
-		//---------------------------------------
-		// various 'create proc' (that has to do with DYNAMIC_SQL)
-		//---------------------------------------
-		if (!discard && sqlText.startsWith("create proc FetchMetaData as select * from "))
-		{
-			discard = true;
-			statKey = "create proc FetchMetaData as select * from ...";
-		}
-		
-		if (!discard && sqlText.startsWith("create proc dyn"))
-		{
-			discard = true;
-			statKey = "create proc dyn######: ";
-		}
-
-		if (!discard && sqlText.startsWith("create proc "))
-		{
-			discard = true;
-			statKey = "create proc ...";
-		}
-
-		//---------------------------------------
-		// various 'DYNAMIC_SQL'
-		//---------------------------------------
-		if (!discard && sqlText.startsWith("DYNAMIC_SQL FetchMetaData:"))
-		{
-			discard = true;
-//			statKey = sqlText;
-			statKey = "DYNAMIC_SQL FetchMetaData:";
-		}
-		
-		if (!discard && sqlText.startsWith("DYNAMIC_SQL dyn"))
-		{
-			discard = true;
-			statKey = "DYNAMIC_SQL dyn######: ";
-		}
-
-		if (!discard && sqlText.startsWith("DYNAMIC_SQL "))
-		{
-			discard = true;
-			statKey = "DYNAMIC_SQL ...: ";
-		}
-
-		//---------------------------------------
-		// various 'set fmtonly'
-		//---------------------------------------
-		if (!discard && (sqlText.startsWith("set fmtonly ") || sqlText.startsWith("SET FMTONLY "))) // example: "set string_rtruncation on" 
-		{
-			discard = true;
-			statKey = "set fmtonly ...";
-		}
-		
-		//---------------------------------------
-		// various 'set ...'
-		//---------------------------------------
-		if (!discard && (sqlText.startsWith("set ") || sqlText.startsWith("SET ")) && sqlText.length() < 40) // example: "set string_rtruncation on" 
-		{
-			discard = true;
-			statKey = sqlText;
-		}
-		
-		//---------------------------------------
-		// various 'use dbname'
-		//---------------------------------------
-		if (!discard && (sqlText.startsWith("use ") || sqlText.startsWith("USE "))) // example: "use tempdb" 
-		{
-			discard = true;
-			statKey = "use ...";
-		}
-		
-		//---------------------------------------
-		// select getdate()
-		//---------------------------------------
-		if (!discard && (sqlText.equalsIgnoreCase("SELECT getdate()"))) // example: "select getdate()" 
-		{
-			discard = true;
-			statKey = "use ...";
-		}
-		
-		// increment statistics
-		if (discard)
-		{
-			Integer cnt = _removeStaticSqlText_stat.get(statKey);
-			if (cnt == null)
-				cnt = 0;
-			_removeStaticSqlText_stat.put(statKey, cnt + 1);
-		}
-
-		return discard;
-	}
-
-	/**
-	 * Send records to the PCS
-	 * <p>
-	 * When statements in the current/last sample indicates that it's finnished and NOT filtered out...<br>
-	 * Get the SQL Text/Plan from the deferred queue
-	 * <p>
-	 * The Deferred Queue should only hold SQL Text/Plans for X seconds.<br>
-	 * After that time it's SENT to the PCS (and not discarded)<br>
-	 * (the idea here is that it's better to send to much SQL Text/Plans to PCS than caching everything, which will mean OutOfMemory.
-	 *  the deferred queue should be thought of as a strategy to -do-not-send-shorter-statements-text/plan-to-the-PCS-)
-	 * 
-	 * 
-	 * @param pch
-	 * @param currentEntry
-	 * @return
-	 */
-	protected int toPcs(PersistentCounterHandler pch, DeferredSqlAndPlanTextQueueEntry currentEntry)
-	{
-		// Container object used to send data to PCS
-		SqlCaptureDetails capDet = new SqlCaptureDetails();
-
-		// default values for: 
-		//    - storeNormalizedSqlTextHash = true
-		//    - storeNormalizedSqlText     = false  --->>> instead of storing it, in the offline view, we can read the 'SQLText' and normalize it "on the fly", which hopefully saves us some MB at-the-end-of-the-day... the storeNormalizedSqlTextHash is still stored so we can aggregate stuff via group by... but that just takes an INT value
-		boolean storeNormalizedSqlTextHash = getConfiguration().getBooleanProperty(PROPKEY_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlTextHash, DEFAULT_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlTextHash);
-		boolean storeNormalizedSqlText     = getConfiguration().getBooleanProperty(PROPKEY_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlText,     DEFAULT_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlText);
-		
-		// Used to anonymize or remove-constants in where clauses etc...
-		StatementNormalizer stmntNorm = new StatementNormalizer();
-		
-		// STATEMENTS (from the passed Entry, which is the current sample we just did)
-		if (currentEntry._statementRecords != null)
-		{
-			for (List<Object> record : currentEntry._statementRecords) 
-			{
-				int SPID    = (Integer) record.get(_stmnt_SPID_pos);
-				int KPID    = (Integer) record.get(_stmnt_KPID_pos);
-				int BatchID = (Integer) record.get(_stmnt_BatchID_pos);
-
-				PK pk = new PK(SPID, KPID, BatchID);
-				
-				// set JavaSqlHashCode in the statement record...
-				try
-				{
-					// Set 'JavaSqlHashCode' fields, if SQLText exists...
-					// NOTE: or maybe we can do this in the database:::: Maybe the following SQL could work:  update MonSqlCapStatements set JavaSqlHashCode = (select JavaSqlHashCode from MonSqlCapSqlText where SPID = ### and KPID = ### and BatchID = ###) where SPID = ### and KPID = ### and BatchID = ### 
-					String sqlText = _deferredQueueFor_sqlTextAndPlan.getSqlText(pk);
-					if (sqlText != null)
-					{
-						// Set 'JavaSqlHashCode' fields
-						int s = record.size();
-						record.set(s-1, sqlText.hashCode()); // JavaSqlHashCode  = Last record
-						
-						// Set 'NormJavaSqlHashCode' field
-						if (storeNormalizedSqlTextHash)
-						{
-							String normalizedSql = stmntNorm.normalizeStatementNoThrow(removeKnownPrefixes(sqlText));
-							record.add(normalizedSql.hashCode()); // append to end
-						}
-						else
-							record.add(0);
-					}
-					else
-						record.add(0);
-				}
-				catch (Throwable t)
-				{
-					_logger.error("Problem when setting 'JavaSqlHashCode' in statementRecords, skipping this and continuing. Caught: "+t);
-				}
-
-				//-----------------------------------------------
-				// Send Statement
-				capDet.add(record); 
-
-				//-----------------------------------------------
-				// Send SQL TEXT (kept in the deferred queue)
-				List<Object> sqlTextEntry  = _deferredQueueFor_sqlTextAndPlan.getSqlEntry(pk);
-				if (sqlTextEntry != null)
-				{
-					_deferredQueueFor_sqlTextAndPlan.removeSqlEntry(pk);
-
-					// Set AddMethod, JavaSqlLength and JavaSqlHashCode fields
-					int s = sqlTextEntry.size();
-					String sqlText = (String) sqlTextEntry.get(s-1); // SQLText = Last record
-
-					int addMethod = 1; // 1=Direct
-					sqlTextEntry.set(s-4, addMethod);          // AddMethod       = 3 recods before SQLText
-					sqlTextEntry.set(s-3, sqlText.length());   // JavaSqlLength   = 2 recods before SQLText
-					sqlTextEntry.set(s-2, sqlText.hashCode()); // JavaSqlHashCode = 1 recods before SQLText
-
-					// Add 'NormJavaSqlHashCode', 'NormSQLText' field
-					if (storeNormalizedSqlTextHash)
-					{
-						String normalizedSql = stmntNorm.normalizeStatementNoThrow(removeKnownPrefixes(sqlText));
-						sqlTextEntry.add(normalizedSql.hashCode()); // append to end
-						sqlTextEntry.add(storeNormalizedSqlText ? normalizedSql : ""); // append to end
-					}
-					else
-					{
-						sqlTextEntry.add(0); // append to end
-						sqlTextEntry.add(""); // append to end
-					}
-
-					capDet.add(sqlTextEntry);
-				}
-
-				// Send PLAN TEXT (kept in the deferred queue)
-				List<Object> planTextEntry = _deferredQueueFor_sqlTextAndPlan.getPlanEntry(pk);
-				if (planTextEntry != null)
-				{
-					_deferredQueueFor_sqlTextAndPlan.removePlanEntry(pk);
-
-					// Set AddMethod
-					int s = planTextEntry.size();
-					int addMethod = 1; // 1=Direct
-					planTextEntry.set(s-2, addMethod);  // AddMethod       = 1 recods before PlanText
-
-					capDet.add(planTextEntry); 
-				}
-			}
-		}
-		_deferredQueueFor_sqlTextAndPlan.removeEmptyQueuEntries();
-
-		// Send older SQL Text/Plans to PCS 
-		// (text/plans that has been in deferred cache for X second, hopefully long running sql that will complete "later")
-//		Iterator<DeferredSqlAndPlanTextQueueEntry> iter = _deferredQueueFor_sqlTextAndPlan.iterator();
-//		while (iter.hasNext())
-//		{
-//			DeferredSqlAndPlanTextQueueEntry entry = iter.next();
-//			
-//			// SEND records that are OLDER than the configured threshold
-//			// Hopefully it's a _long_running_statement_ that we need the SQL text for later on.
-//			// BUT: if we are unlucky... then it's just "crap" that we should have filtered out earlier
-//			if (TimeUtils.msDiffNow(entry._crTime) > _deferredStorageThresholdFor_sqlTextAndPlan*1000)
-//			{
-//				List<List<Object>> sqlTextRecords   = entry._sqlTextRecords;
-//				List<List<Object>> planTextRecords  = entry._planTextRecords;
-//
-//				if (sqlTextRecords != null)
-//				{
-//					for (List<Object> record : sqlTextRecords)
-//					{
-//						int s = record.size();
-//						String sqlText = (String) record.get(s-1); // SQLText = Last record
-//
-//						// This shouldn't have to be done here... it's already done in doPostProcessing() but only on last/current SQL-text 
-//						// But apperently (when testing in a *real* production env) it "slips" thrue... and I can't figgure out why...
-//						if (_removeStaticSqlText)
-//						{
-//							if (isDiscardSqlText(sqlText))
-//								continue;
-//						}
-//
-//						// Set JavaSqlLength and JavaSqlHashCode fields
-//						int addMethod = 2; // 2=Deferred
-//						record.set(s-4, addMethod);          // AddMethod       = 3 recods before SQLText
-//						record.set(s-3, sqlText.length());   // JavaSqlLength   = 2 recods before SQLText
-//						record.set(s-2, sqlText.hashCode()); // JavaSqlHashCode = 1 recods before SQLText
-//						
-//						capDet.add(record); 
-////						System.out.println("OLD-SQL: "+record);
-//					}
-//				}
-//				
-//				if (planTextRecords != null)
-//				{
-//					for (List<Object> record : planTextRecords)  
-//					{ 
-//						// Set AddMethod
-//						int s = record.size();
-//						int addMethod = 2; // 2=Deferred
-//						record.set(s-2, addMethod);         // AddMethod       = 1 recods before PlanText
-//
-//						capDet.add(record); 
-//					}
-//				}
-//
-//				// remove the entry from the queue
-//				iter.remove();
-//			}
-//		}
-		Iterator<DeferredSqlAndPlanTextQueueEntry> iter = _deferredQueueFor_sqlTextAndPlan.iterator();
-		while (iter.hasNext())
-		{
-			DeferredSqlAndPlanTextQueueEntry entry = iter.next();
-			
-			// SEND records that are OLDER than the configured threshold
-			// Hopefully it's a _long_running_statement_ that we need the SQL text for later on.
-			// BUT: if we are unlucky... then it's just "crap" that we should have filtered out earlier
-			if (TimeUtils.msDiffNow(entry._crTime) > _deferredStorageThresholdFor_sqlTextAndPlan*1000)
-			{
-				Map<PK, List<Object>> sqlTextPkMap   = entry._sqlTextPkMap;
-				Map<PK, List<Object>> planTextPkMap  = entry._planTextPkMap;
-
-				if (sqlTextPkMap != null)
-				{
-					for (List<Object> record : sqlTextPkMap.values())
-					{
-						int s = record.size();
-						String sqlText = (String) record.get(s-1); // SQLText = Last record
-
-						// This shouldn't have to be done here... it's already done in doPostProcessing() but only on last/current SQL-text 
-						// But apparently (when testing in a *real* production env) it "slips" thru... and I can't figure out why...
-						if (_removeStaticSqlText)
-						{
-							if (isDiscardSqlText(sqlText))
-								continue;
-						}
-
-						// Set JavaSqlLength and JavaSqlHashCode fields
-						int addMethod = 2; // 2=Deferred
-						record.set(s-4, addMethod);          // AddMethod       = 3 recods before SQLText
-						record.set(s-3, sqlText.length());   // JavaSqlLength   = 2 recods before SQLText
-						record.set(s-2, sqlText.hashCode()); // JavaSqlHashCode = 1 recods before SQLText
-						
-						// Add 'NormJavaSqlHashCode', 'NormSQLText' field
-						if (storeNormalizedSqlTextHash)
-						{
-							String normalizedSql = stmntNorm.normalizeStatementNoThrow(removeKnownPrefixes(sqlText));
-							record.add(normalizedSql.hashCode()); // append to end
-							record.add(storeNormalizedSqlText ? normalizedSql : ""); // append to end
-						}
-						else
-						{
-							record.add(0); // append to end
-							record.add(""); // append to end
-						}
-
-						capDet.add(record); 
-//						System.out.println("OLD-SQL: "+record);
-					}
-				}
-				
-				if (planTextPkMap != null)
-				{
-					for (List<Object> record : planTextPkMap.values())  
-					{ 
-						// Set AddMethod
-						int s = record.size();
-						int addMethod = 2; // 2=Deferred
-						record.set(s-2, addMethod);         // AddMethod       = 1 recods before PlanText
-
-						capDet.add(record); 
-					}
-				}
-
-				// remove the entry from the queue
-				iter.remove();
-			}
-		}
-
-
-		if (_logger.isDebugEnabled())
-		{
-			for (List<Object> record : capDet.getList())
-				_logger.debug("  +++ "+record);
-		}
-		
-//		if (true)
-//		{
-//			int stmntCount = 0;
-//			int textCount = 0;
-//			int planCount = 0;
-//			
-//			for (List<Object> record : capDet.getList())
-//			{
-//				String type = (String) record.get(0);
-//				if      (MON_SQL_STATEMENT.equals(type)) stmntCount++; 
-//				else if (MON_SQL_TEXT     .equals(type)) textCount++; 
-//				else if (MON_SQL_PLAN     .equals(type)) planCount++; 
-//			}
-//			System.out.format("TO_PCS:   statementCount = %-5d,                                 statementCount = %-5d,                            textCount = %-5d,                              planCount = %-5d \n", stmntCount, stmntCount, textCount, planCount);
-//
-//			for (List<Object> record : capDet.getList())
-//				System.out.println("----->>>> TO_PCS -record-: "+record);
-//		}
-		
-		// Post the information to the PersistentCounterHandler, which will save the information to it's writers...
-		// Do this in another method, because it would possibly make testing easier... /*pch.addSqlCapture(capDet);*/
-		addToPcs(pch, capDet);
-		
-		return capDet.size();
-	}
-	
-	/** 
-	 * Post it to PCS, in it's own method to makle testing easier...<br>
-	 * Meaning we can subclass and override this method when testing...
-	 */
-	protected void addToPcs(PersistentCounterHandler pch, SqlCaptureDetails sqlCaptureDetails)
-	{
-		pch.addSqlCapture(sqlCaptureDetails);
-	}
-
-	
-//	private void addToContainer(List<Object> row, PersistentCounterHandler pch)
-//	{
-//		_sqlCaptureDetails.add(row);
-//		
-//		// When the "send size" is reached, then send and create a new Container.
-//		if (_sqlCaptureDetails.size() >= _sendSizeThreshold)
-//		{
-//			pch.addSqlCapture(_sqlCaptureDetails);
-//			_sqlCaptureDetails = new SqlCaptureDetails();
-//		}
-//	}
-//	private void addToContainerFinal(PersistentCounterHandler pch)
-//	{
-//		pch.addSqlCapture(_sqlCaptureDetails);
-//		_sqlCaptureDetails = new SqlCaptureDetails();
-//	}
-//
-//	@Override
-//	public int doSqlCapture(DbxConnection conn, PersistentCounterHandler pch)
-//	{
-//		if (_firstPoll && _clearBeforeFirstPoll)
-//		{
-//			// If first time... discard everything in the transient monSysStatement table
-//			if (_sampleSqlText)    clearTable(conn, "monSysSQLText");
-//			if (_sampleStatements) clearTable(conn, "monSysStatement");
-//			if (_samplePlan)       clearTable(conn, "monSysPlanText");
-//
-//			_firstPoll = false;
-//		}
-//
-//
-//		int addCount = 0;
-//
-//
-//		// If SQL queries are NOT initialized, do it now
-//		if (_sql_sqlText == null)
-//			setSql(conn);
-//
-//		//------------------------------------------------
-//		// SQL TEXT
-//		//------------------------------------------------
-//		if (_sampleSqlText)
-//		{
-//			try
-//			{
-//				//----------------------------------------------------------------------------------------
-//				// This might look a bit odd / backwards, but look at the data example at the end of this file
-//				// SQLText can have several rows
-//				// * so when FIRST row (for every group) is discovered - Start a new "row" (which is a List: tableNameToStoreItIn, c1-data, c2-data, c3-data... SQLText-concatenated-data)
-//				// * on all "extra" rows that will just contain same c1-data, c2-data, c3-data but the SQLText will be read and appended to a StringBuilder
-//				// * when a "new" row is found, we will set the StringBuffer content to replace the "first row" SQLText
-//				// * At the END we will need to "post" the information from the last "group"
-//				//----------------------------------------------------------------------------------------
-//				Statement stmnt = conn.createStatement();
-//				ResultSet rs = stmnt.executeQuery(_sql_sqlText);
-//				ResultSetMetaData rsmd = rs.getMetaData();
-//				int           colCount = rsmd.getColumnCount();
-//				int           sequenceCol_pos = -1;
-//				int           sequenceCol_val = -1;
-//				int           seqTextCol_pos  = -1;
-//				StringBuilder seqTextCol_val  = new StringBuilder();
-//				for (int c=1; c<=colCount; c++)
-//				{
-//					if      ("SequenceInBatch".equals(rsmd.getColumnLabel(c))) sequenceCol_pos = c;
-//					else if ("SQLText"        .equals(rsmd.getColumnLabel(c))) seqTextCol_pos  = c;
-//				}
-//				List<Object> row = null;
-//				while(rs.next())
-//				{
-//					sequenceCol_val = rs.getInt(sequenceCol_pos);
-//					if (sequenceCol_val == 1)
-//					{
-//						if (row != null)
-//						{
-//							row.set(row.size()-1, seqTextCol_val.toString());
-//							seqTextCol_val.setLength(0);
-//
-//							addCount++;
-//							addToContainer(row, pch);
-//						}
-//
-//						row = new ArrayList<Object>();
-//						row.add(MON_SQL_TEXT); // NOTE: the first object in the list should be the TableName where to store the data
-//						for (int c=1; c<=colCount; c++)
-//						{
-//							// the sequence column should NOT be part of the result
-//							if (c != sequenceCol_pos)
-//								row.add(rs.getObject(c));
-//						}
-//						seqTextCol_val.append( rs.getString(seqTextCol_pos) );
-//					}
-//					else if (row != null)
-//					{
-//						seqTextCol_val.append( rs.getString(seqTextCol_pos) );
-//					}
-//				}
-//				// Finally add content from LAST row, since we do addCountainer() only on NEW sequenceCol_val == 1
-//				if (row != null)
-//				{
-//					row.set(row.size()-1, seqTextCol_val.toString());
-//					seqTextCol_val.setLength(0);
-//
-//					addCount++;
-//					addToContainer(row, pch);
-//				}
-//				
-//				rs.close();
-//				stmnt.close();
-//			}
-//			catch(SQLException ex)
-//			{
-//				// Not configured
-//				if (ex.getErrorCode() == 12052)
-//					_sampleSqlText = false;
-//				
-//				_logger.error("SQL Capture problems when capturing 'SQL Text' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+_sql_sqlText);
-//			}
-//		}
-//
-//		//------------------------------------------------
-//		// SQL STATEMENTS
-//		//------------------------------------------------
-//		if (_sampleStatements)
-//		{
-//			// Get some configuration
-//			int     saveStatement_gt_execTime         = getIntProperty    (PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_execTime,         PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_execTime);
-//			int     saveStatement_gt_logicalReads     = getIntProperty    (PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_logicalReads,     PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_logicalReads);
-//			int     saveStatement_gt_physicalReads    = getIntProperty    (PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_physicalReads,    PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_physicalReads);
-//
-//			boolean sendDdlForLookup                  = getBooleanProperty(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup,                  PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup);
-//			int     sendDdlForLookup_gt_execTime      = getIntProperty    (PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_execTime,      PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_execTime);
-//			int     sendDdlForLookup_gt_logicalReads  = getIntProperty    (PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads,  PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_logicalReads);
-//			int     sendDdlForLookup_gt_physicalReads = getIntProperty    (PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads, PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_physicalReads);
-//
-//			try
-//			{
-//				Statement stmnt = conn.createStatement();
-//				ResultSet rs = stmnt.executeQuery(_sql_sqlStatements);
-//				int colCount = rs.getMetaData().getColumnCount();
-//				while(rs.next())
-//				{
-//					int    execTime      = rs.getInt   ("Elapsed_ms");
-//					int    logicalReads  = rs.getInt   ("LogicalReads");
-//					int    physicalReads = rs.getInt   ("PhysicalReads");
-//
-//					// Add only rows that are above the limits
-//					if (    execTime      > saveStatement_gt_execTime
-//					     && logicalReads  > saveStatement_gt_logicalReads
-//					     && physicalReads > saveStatement_gt_physicalReads
-//					   )
-//					{
-//						if (sendDdlForLookup)
-//						{
-//							String ProcName = rs.getString("ProcName");
-//
-//							// send ProcName or StatementCacheEntry to the DDL Capture
-//							if (StringUtil.hasValue(ProcName))
-//							{
-//								String DBName        = rs.getString("DBName");
-////								int    execTime      = rs.getInt   ("Elapsed_ms");
-////								int    logicalReads  = rs.getInt   ("LogicalReads");
-////								int    physicalReads = rs.getInt   ("PhysicalReads");
-//
-//								// Only send if it's above the defined limits
-//								if (    execTime      > sendDdlForLookup_gt_execTime
-//								     && logicalReads  > sendDdlForLookup_gt_logicalReads
-//								     && physicalReads > sendDdlForLookup_gt_physicalReads
-//								   )
-//								{
-//	    							// if it's a statement cache entry, populate it into the cache so that the DDL Lookup wont have to sleep 
-//	    							if (ProcName.startsWith("*ss") || ProcName.startsWith("*sq") ) // *sq in ASE 15.7 esd#2, DynamicSQL can/will end up in statement cache
-//	    							{
-//	    								if (XmlPlanCache.hasInstance())
-//	    								{
-//	        								XmlPlanCache xmlPlanCache = XmlPlanCache.getInstance();
-//	        								if ( ! xmlPlanCache.isPlanCached(ProcName) )
-//	        								{
-//	        									xmlPlanCache.getPlan(ProcName);
-//	        								}
-//	    								}
-//	    								else
-//	    								{
-//	    									_logger.info("XmlPlanCache do not have an instance. Skipping XML Plan lookup for name '"+ProcName+"'.");
-//	    								}
-//	    							}
-//	    
-//	    							// Now add the ProcName/StatementCacheEntryName to the DDL Lookup handler
-//	    							pch.addDdl(DBName, ProcName, "SqlCapture");
-//								}
-//							}
-//						}
-//
-//						List<Object> row = new ArrayList<Object>();
-//						row.add(MON_SQL_STATEMENT); // NOTE: the first object in the list should be the TableName where to store the data
-//						for (int c=1; c<=colCount; c++)
-//							row.add(rs.getObject(c));
-//
-//						addCount++;
-//						addToContainer(row, pch);
-//					}
-//				}
-//				rs.close();
-//				stmnt.close();
-//			}
-//			catch(SQLException ex)
-//			{
-//				// Not configured
-//				if (ex.getErrorCode() == 12052)
-//					_sampleStatements = false;
-//				
-//				_logger.error("SQL Capture problems when capturing 'SQL Statements' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+_sql_sqlStatements);
-//			}
-//		}
-//
-//		//------------------------------------------------
-//		// SQL PLANS
-//		//------------------------------------------------
-//		if (_samplePlan)
-//		{
-//			try
-//			{
-//				//----------------------------------------------------------------------------------------
-//				// This might look a bit odd / backwards, but look at the data example at the end of this file
-//				// PlanText can have several rows
-//				// * so when FIRST row (for every group) is discovered - Start a new "row" (which is a List: tableNameToStoreItIn, c1-data, c2-data, c3-data... PlanText-concatenated-data)
-//				// * on all "extra" rows that will just contain same c1-data, c2-data, c3-data but the PlanText will be read and appended to a StringBuilder
-//				// * when a "new" row is found, we will set the StringBuffer content to replace the "first row" PlanText
-//				// * At the END we will need to "post" the information from the last "group"
-//				//----------------------------------------------------------------------------------------
-//				Statement stmnt = conn.createStatement();
-//				ResultSet rs = stmnt.executeQuery(_sql_sqlPlanText);
-//				ResultSetMetaData rsmd = rs.getMetaData();
-//				int           colCount = rsmd.getColumnCount();
-//				int           sequenceCol_pos = -1;
-//				int           sequenceCol     = -1;
-//				int           seqTextCol_pos  = -1;
-//				StringBuilder seqTextCol_val  = new StringBuilder();
-//				for (int c=1; c<=colCount; c++)
-//				{
-//					if      ("SequenceNumber".equals(rsmd.getColumnLabel(c))) sequenceCol_pos = c;
-//					else if ("PlanText"      .equals(rsmd.getColumnLabel(c))) seqTextCol_pos  = c;
-//				}
-//				List<Object> row = null;
-//				while(rs.next())
-//				{
-//					sequenceCol = rs.getInt(sequenceCol_pos);
-//					if (sequenceCol == 1)
-//					{
-//						if (row != null)
-//						{
-//							row.set(row.size()-1, seqTextCol_val.toString());
-//							seqTextCol_val.setLength(0);
-//
-//							addCount++;
-//							addToContainer(row, pch);
-//						}
-//
-//						row = new ArrayList<Object>();
-//						row.add(MON_SQL_PLAN); // NOTE: the first object in the list should be the TableName where to store the data
-//						for (int c=1; c<=colCount; c++)
-//						{
-//							// the sequence column should NOT be part of the result
-//							if (c != sequenceCol_pos)
-//								row.add(rs.getObject(c));
-//						}
-//						seqTextCol_val.append( rs.getString(seqTextCol_pos) );
-//					}
-//					else if (row != null)
-//					{
-//						seqTextCol_val.append( rs.getString(seqTextCol_pos) );
-//					}
-//				}
-//				// Finally add content from LAST row, since we do addCountainer() only on NEW sequenceCol_val == 1
-//				if (row != null)
-//				{
-//					row.set(row.size()-1, seqTextCol_val.toString());
-//					seqTextCol_val.setLength(0);
-//
-//					addCount++;
-//					addToContainer(row, pch);
-//				}
-//
-//				rs.close();
-//				stmnt.close();
-//			}
-//			catch(SQLException ex)
-//			{
-//				// Msg 12052, Level 17, State 1:
-//				// Server 'GORAN_UB2_DS', Line 1 (script row 862), Status 0, TranState 1:
-//				// Collection of monitoring data for table 'monSysPlanText' requires that the 'plan text pipe max messages', 'plan text pipe active' configuration option(s) be enabled. To set the necessary configuration, contact a user who has the System Administrator (SA) role.
-//				if (ex.getErrorCode() == 12052)
-//					_samplePlan = false;
-//				
-//				_logger.error("SQL Capture problems when capturing 'SQL Plan Text' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+_sql_sqlPlanText);
-//			}
-//		}
-//
-//		addToContainerFinal(pch);
-//		return addCount;
-//	}
 }
 
 /*------------------------------------------------------------------------

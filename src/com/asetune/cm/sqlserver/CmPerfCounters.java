@@ -35,6 +35,10 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.Version;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.sqlserver.AlarmEventPerfCounterWarning;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -48,6 +52,7 @@ import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
 /**
@@ -159,6 +164,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_CACHE_READS               = "CacheReads";
 	public static final String GRAPH_NAME_CACHE_PHY_READS           = "CachePhyReads";
 	public static final String GRAPH_NAME_CACHE_WRITES              = "CacheWrites";
+	public static final String GRAPH_NAME_CACHE_DATA_SIZE           = "CacheDataSize";
                                                                     
 	public static final String GRAPH_NAME_TEMP_STAT                 = "TempStat";
 	public static final String GRAPH_NAME_TEMPDB_FREE_SPACE         = "TempdbFreeSpace";
@@ -192,6 +198,10 @@ extends CountersModel
 	public static final String GRAPH_NAME_PLAN_CACHE_MB             = "PlanCacheMb";
 	public static final String GRAPH_NAME_PLAN_CACHE_OBJ_CNT        = "PlanCacheObjCnt";
 	public static final String GRAPH_NAME_PLAN_CACHE_OBJ_USE        = "PlanCacheObjUse";
+
+//	public static final String GRAPH_NAME_MEMORY_X1                 = "MemMgr"; xxx
+//	public static final String GRAPH_NAME_MEMORY_X2                 = "MemMgr"; xxx
+//	public static final String GRAPH_NAME_MEMORY_X3                 = "MemMgr"; xxx
 
 	private void addTrendGraphs()
 	{
@@ -425,6 +435,19 @@ extends CountersModel
 			new String[] { "Page writes", "Checkpoint pages", "Background writer pages", "Lazy writes" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_CACHE_DATA_SIZE,
+			"Buffer Cache Data Size in MB", // Menu CheckBox text
+			"Buffer Cache Data Size in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			new String[] { "Database pages" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CACHE,
 			false, // is Percent Graph
 			true,  // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
@@ -1233,6 +1256,32 @@ extends CountersModel
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
 					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"'.");
+			}
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_CACHE_DATA_SIZE.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[1];
+			
+			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+			String pk1 = createPkStr(":Buffer Manager", "Database pages", "");
+			
+			
+			Double val1 = this.getAbsValueAsDouble(pk1, "calculated_value");
+			
+			if (val1 != null)
+			{
+				arr[0] = new BigDecimal( val1 / 128.0 ).setScale(1, BigDecimal.ROUND_HALF_UP).doubleValue();
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				TrendGraph tg = getTrendGraph(tgdp.getName());
+				if (tg != null)
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"'.");
 			}
 		}
 
@@ -2317,5 +2366,59 @@ extends CountersModel
 		}
 
 		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
+	}
+	
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! hasDiffData() )
+			return;
+		
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		AlarmHandler alarmHandler = AlarmHandler.getInstance();
+		
+		CountersModel cm = this;
+
+//		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+
+
+		//-------------------------------------------------------
+		// Free list stalls/sec
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("FreeListStalls"))
+		{
+			String pk = createPkStr(":Buffer Manager", "Free list stalls/sec", "");
+			
+			Double freeListStalls = this.getAbsValueAsDouble(pk, "calculated_value");
+			
+			if (freeListStalls != null)
+			{
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_FreeListStalls, DEFAULT_alarm_FreeListStalls);
+				if (freeListStalls > threshold)
+				{
+					AlarmEvent ae = new AlarmEventPerfCounterWarning(cm, "Free list stalls/sec", freeListStalls, "Buffer Cache is probably to small... Waiting for memory to become available before a page can be added into the buffer pool.", threshold);
+					
+					alarmHandler.addAlarm( ae );
+				}
+			}
+		}
+	}
+
+	public static final String  PROPKEY_alarm_FreeListStalls = CM_NAME + ".alarm.system.if.FreeListStalls.gt";
+	public static final int     DEFAULT_alarm_FreeListStalls = 0;
+
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("FreeListStalls", isAlarmSwitch, PROPKEY_alarm_FreeListStalls, Integer.class, conf.getIntProperty(PROPKEY_alarm_FreeListStalls, DEFAULT_alarm_FreeListStalls), DEFAULT_alarm_FreeListStalls, "If 'Free list stalls/sec' is greater than 0 then send 'AlarmEventPerfCounterWarning'." ));
+
+		return list;
 	}
 }

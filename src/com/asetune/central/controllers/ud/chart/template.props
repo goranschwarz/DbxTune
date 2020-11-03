@@ -1,0 +1,106 @@
+## This is a template file to create a User Defined Chart
+
+##------------------------------------------------------------
+## 'name' is MANDATORY field
+## Note:
+##   - If 'name' has FROM_FILENAME, then get first part of the filename as the server name (example: xxx.dbms-name.db-name.ud.chart.props)
+##     in the example we will use 'xxx' as the name
+##------------------------------------------------------------
+name = FROM_FILENAME
+
+##------------------------------------------------------------
+## 'chartType' is MANDATORY field
+##------------------------------------------------------------
+chartType = TIMELINE
+
+##------------------------------------------------------------
+## 'description'
+##------------------------------------------------------------
+description = Say something in here
+
+##------------------------------------------------------------
+## 'refresh' - Auto refresh every ## seconds
+## Note: Comment this out if you do not want a default refresh time
+##------------------------------------------------------------
+refresh = 300
+
+##------------------------------------------------------------
+## 'dbms.sql' is MANDATORY field
+## SQL Statement that produces a TIMELINE ResultSet
+## Column DataType  Description 
+## ------ --------  ------------------------------------- 
+##      1 String    label     (Text on the left side of the graph)
+##      2 String    barText   (Text on the bar within the time-line chart)
+##      3 String    color     (any valid HTML color that the bar will have)
+##      4 Timestamp beginTime (Start time for this entry)
+##      5 Timestamp endTime   (End time for this entry)
+##
+## ${startTime} and ${endTime} is variables that will be replaced with ISO date time 'yyyy-MM-dd HH:mm:ss.SSS'
+##
+## Note: New Lines will have to be escaped by \ at the end of the rowe
+##------------------------------------------------------------
+dbms.sql = SELECT \
+     someLabelColumn, \
+     descriptionColumn, \
+     CASE WHEN statusCol = 'RUNNING' THEN 'green' \
+          WHEN statusCol = 'WARNING' THEN 'orange' \
+          WHEN statusCol = 'ERROR'   THEN 'red' \
+          WHEN statusCol = 'DONE'    THEN 'blue' \
+          ELSE 'yellow' \
+     END, \
+     someStartTimestampColumn, \
+     someEndTimestampColumn \
+FROM someJobStatusTable \
+WHERE someStartTimestampColumn BETWEEN ${startTime} AND ${endTime} \
+ORDER BY someStartTimestampColumn
+
+
+
+##------------------------------------------------------------
+## DBMS specification
+##------------------------------------------------------------
+
+##------------------------------------------------------------
+## User name, used to login to the DBMS
+## 'dbms.username' is MANDATORY field
+##------------------------------------------------------------
+dbms.username = sa
+
+##------------------------------------------------------------
+## Password
+## Note: 
+##  - if not specified: Try to get the password from the encrypted file '${HOME}/.passwd.enc'
+##    Also specify 'dbms.serverName' to search the above file for password that is for a specific server name
+##------------------------------------------------------------
+#dbms.password = password-in-plane-text 
+
+##------------------------------------------------------------
+## Used if password is not specified and we need to lookup the password from the encrypted file '${HOME}/.passwd.enc'
+## Note:
+##   - If 'dbms.servername' has FROM_FILENAME, then get second part of the filename as the server name (example: xxxx.dbms-name.db-name.ud.chart.props)
+##   - If 'dbms.dbname'     has FROM_FILENAME, then get third  part of the filename as the server name (example: xxxx.dbms-name.db-name.ud.chart.props)
+##------------------------------------------------------------
+dbms.servername = FROM_FILENAME
+dbms.dbname     = FROM_FILENAME
+
+##------------------------------------------------------------
+## The JDBC URL to the DBMS
+## Note:
+##   - If 'dbms.servername' is specified, the variables '${ifile-hostname}' and '${ifile-port}' will be replaced in 'dbms.url'
+##     the values is fetched from the ${SYBASE}/interfaces or ${SYBASE}/ini/sql.ini file
+##   - If 'dbms.servername' is specified, the variable '${srvName}' will be replaced in 'dbms.url'
+##   - If 'dbms.dbname'     is specified, the variable '${dbname}'  will be replaced in 'dbms.url'
+## 'dbms.url' is MANDATORY field
+##------------------------------------------------------------
+dbms.url = jdbc:sybase:Tds:${ifile-hostname}:${ifile-port}/${dbname}?ENCRYPT_PASSWORD=true
+
+##------------------------------------------------------------
+## Below are some JDBC URL Examples for: Sybase, Postgres, SQL-Server, Oracle, DB2, MySQL
+##------------------------------------------------------------
+#jdbc:sybase:Tds://192.168.0.110:1600/${dbname}
+#jdbc:postgresql://192.168.0.110:5432/${dbname}
+#jdbc:sqlserver://192.168.0.110:1433;databaseName=${dbname};integratedSecurity=true
+#jdbc:oracle:thin:@//192.168.0.110:1539/XEPDB1
+#jdbc:db2://192.168.255.130:50000/${dbname}
+#jdbc:mysql://192.168.0.110:3306//${dbname}
+##------------------------------------------------------------

@@ -60,12 +60,15 @@ extends PipeCommandAbstract
 		String    _labelValue      = null;
 
 		int       _rotateCategoryLabels = 0;
+		String    _keySdf          = null;
+		boolean   _groupByKeySdf   = false;
 		
 		boolean   _use3d           = false;
 
 //		List<Integer> _keyCols     = null;
 //		List<Integer> _valCols     = null;
 		List<String>  _keyCols     = null;
+		List<String>  _grpCols     = null;
 		List<String>  _valCols     = null;
 
 		boolean   _str2num         = false;
@@ -92,8 +95,11 @@ extends PipeCommandAbstract
 			sb.append(", ").append("labelCategory       ".trim()).append("=").append(StringUtil.quotify(_labelCategory       ));
 			sb.append(", ").append("labelValue          ".trim()).append("=").append(StringUtil.quotify(_labelValue          ));
 			sb.append(", ").append("rotateCategoryLabels".trim()).append("=").append(StringUtil.quotify(_rotateCategoryLabels));
+			sb.append(", ").append("keySdf              ".trim()).append("=").append(StringUtil.quotify(_keySdf              ));
+			sb.append(", ").append("groupByKeySdf       ".trim()).append("=").append(StringUtil.quotify(_groupByKeySdf       ));
 			sb.append(", ").append("use3d               ".trim()).append("=").append(StringUtil.quotify(_use3d               ));
 			sb.append(", ").append("keyCols             ".trim()).append("=").append(StringUtil.quotify(_keyCols             ));
+			sb.append(", ").append("groupCols           ".trim()).append("=").append(StringUtil.quotify(_grpCols             ));
 			sb.append(", ").append("valCols             ".trim()).append("=").append(StringUtil.quotify(_valCols             ));
 			sb.append(", ").append("str2num             ".trim()).append("=").append(StringUtil.quotify(_str2num             ));
 			sb.append(", ").append("removeRegEx         ".trim()).append("=").append(StringUtil.quotify(_removeRegEx         ));
@@ -120,10 +126,14 @@ extends PipeCommandAbstract
 	public String        getGraphTitle()           { return _params._titleName;            }
 	public String        getLabelCategory()        { return _params._labelCategory;        }
 	public String        getLabelValue()           { return _params._labelValue;           }
+	public int           getRotateCategoryLabels() { return _params._rotateCategoryLabels; }
+	public String        getKeySdf()               { return _params._keySdf;               }
+	public boolean       isGroupByKeySdf()         { return _params._groupByKeySdf;        }
 	public boolean       is3dEnabled()             { return _params._use3d;                }
 //	public List<Integer> getKeyCols()              { return _params._keyCols;              }
 //	public List<Integer> getValCols()              { return _params._valCols;              }
 	public List<String>  getKeyCols()              { return _params._keyCols;              }
+	public List<String>  getGroupCols()            { return _params._grpCols;              }
 	public List<String>  getValCols()              { return _params._valCols;              }
 	public boolean       isStr2NumEnabled()        { return _params._str2num;              }
 	public String        getRemoveRegEx()          { return _params._removeRegEx;          }
@@ -131,11 +141,19 @@ extends PipeCommandAbstract
 	public boolean       isShowShapes()            { return _params._showShapes;           }
 	public boolean       isWindowEnabled()         { return _params._window;               }
 	public boolean       isDebugEnabled()          { return _params._debug;                }
-	public int           getRotateCategoryLabels() { return _params._rotateCategoryLabels; }
 
 	public void setPivot(boolean b) { _params._pivot = b; }
 
 	
+	public int getWidthAsInt()
+	{
+		return StringUtil.parseInt(_params._widthMLC, -1);
+	}
+	public int getHeightAsInt()
+	{
+		return StringUtil.parseInt(_params._heightMLC, -1);
+	}
+
 	public String getMigLayoutConstrains()
 	{
 		String layout = "grow, push";
@@ -185,7 +203,10 @@ extends PipeCommandAbstract
 //		XY, 
 
 		/** TIMESERIES */
-		TS, TIMESERIES
+		TS, TIMESERIES,
+
+		/** GANTT */
+		GANTT
 		;
 
 		/** parse the value */
@@ -236,12 +257,15 @@ extends PipeCommandAbstract
 //			if (cmdLine.hasOption('k')) _params._keyCols              = parseCommaStrToIntArray(cmdLine.getOptionValue('k'));
 //			if (cmdLine.hasOption('v')) _params._valCols              = parseCommaStrToIntArray(cmdLine.getOptionValue('v'));
 			if (cmdLine.hasOption('k')) _params._keyCols              = StringUtil.commaStrToList(cmdLine.getOptionValue('k'));
+			if (cmdLine.hasOption('g')) _params._grpCols              = StringUtil.commaStrToList(cmdLine.getOptionValue('g'));
 			if (cmdLine.hasOption('v')) _params._valCols              = StringUtil.commaStrToList(cmdLine.getOptionValue('v'));
 			if (cmdLine.hasOption('c')) _params._str2num              = true;
 			if (cmdLine.hasOption('r')) _params._removeRegEx          = cmdLine.getOptionValue('r');
 			if (cmdLine.hasOption('l')) _params._labelCategory        = cmdLine.getOptionValue('l');
 			if (cmdLine.hasOption('L')) _params._labelValue           = cmdLine.getOptionValue('L');
 			if (cmdLine.hasOption('R')) _params._rotateCategoryLabels = StringUtil.parseInt(cmdLine.getOptionValue('R'), 0);
+			if (cmdLine.hasOption('f')) _params._keySdf               = cmdLine.getOptionValue('f');
+			if (cmdLine.hasOption('G')) _params._groupByKeySdf        = cmdLine.hasOption('G');
 			if (cmdLine.hasOption('w')) _params._widthMLC             = cmdLine.getOptionValue('w');
 			if (cmdLine.hasOption('h')) _params._heightMLC            = cmdLine.getOptionValue('h');
 			if (cmdLine.hasOption('D')) _params._showDataValues       = true;
@@ -286,12 +310,15 @@ extends PipeCommandAbstract
 		options.addOption( "n", "name",                  true,    "Name of the graph" );
 		options.addOption( "3", "3d",                    false,   "Use 3D graphs if possible" );
 		options.addOption( "k", "keyCols",               true,    "" );
+		options.addOption( "g", "groupCols",             true,    "" );
 		options.addOption( "v", "valCols",               true,    "" );
 		options.addOption( "c", "str2num",               false,   "Try to convert String columns to numbers." );
 		options.addOption( "r", "removeRegEx",           true,    "In combination with '-c', remove some strings using a RegEx" );
 		options.addOption( "l", "labelCategory",         true,    "" );
 		options.addOption( "L", "labelValue",            true,    "" );
 		options.addOption( "R", "rotateCategoryLabels",  true,    "" );
+		options.addOption( "f", "keySimpleDateFormat",   true,    "" );
+		options.addOption( "G", "groupByKeySdf",         false,   "" );
 		options.addOption( "w", "width",                 true,    "" );
 		options.addOption( "h", "height",                true,    "" );
 		options.addOption( "D", "showDataValues",        false,   "" );
@@ -369,11 +396,15 @@ extends PipeCommandAbstract
 		sb.append("  -p,--pivot                Turn the columns into rows or vice verse (based on graph type)\n");
 		sb.append("  -3,--3d                   If possible use 3D graphs/charts. \n");
 		sb.append("  -k,--keyCols              Comma separated list of KEY columns to use: ColNames or ColPos (pos starts at 0) \n");
+		sb.append("  -g,--groupCols            Comma separated list of GROUP columns to use: ColNames or ColPos (pos starts at 0) \n");
 		sb.append("  -v,--valCols              Comma separated list of VALUE columns to use ColNames or ColPos (pos starts at 0) \n");
 		sb.append("  -n,--name          name   Name of the graph. (printed on top) \n");
 		sb.append("  -l,--labelCategory name   Label for Categories \n");
 		sb.append("  -L,--labelValue    name   Label for Values \n");
 		sb.append("  -R,--rotateCategoryLabels Rotate Category Labels [1=45_UP, 2=UP_90, 3=DOWN_45, 4=DOWN_90, else=45_UP]\n");
+		sb.append("  -f,--keySimpleDateFormat  If 'key' is Timestamp, then specify a SimpleDateFormat\n");
+		sb.append("  -G,--groupByKeySdf        If 'key' is Timestamp, group values by the --keySimpleDateFormat.\n");
+		sb.append("                            Use if you have many values in same day/hour/minute which you want to be summarized...\n");
 		sb.append("  -c,--str2num              Try to convert String Columns to numbers. \n");
 		sb.append("  -r,--removeRegEx   str    In combination with '-c', remove some strings column content using a RegEx \n");
 		sb.append("                             - example to remove KB or KB from columns: go | graph -c -r '(KB|MB)'\n");

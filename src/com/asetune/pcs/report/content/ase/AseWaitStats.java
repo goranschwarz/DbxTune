@@ -1,0 +1,305 @@
+/*******************************************************************************
+ * Copyright (C) 2010-2020 Goran Schwarz
+ * 
+ * This file is part of DbxTune
+ * DbxTune is a family of sub-products *Tune, hence the Dbx
+ * Here are some of the tools: AseTune, IqTune, RsTune, RaxTune, HanaTune, 
+ *          SqlServerTune, PostgresTune, MySqlTune, MariaDbTune, Db2Tune, ...
+ * 
+ * DbxTune is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * DbxTune is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with DbxTune.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
+package com.asetune.pcs.report.content.ase;
+
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.text.NumberFormat;
+import java.util.Map.Entry;
+
+import org.apache.commons.lang3.StringUtils;
+
+import com.asetune.pcs.report.DailySummaryReportAbstract;
+import com.asetune.pcs.report.content.IReportChart;
+import com.asetune.pcs.report.content.ReportChartTimeSeriesStackedBar;
+import com.asetune.pcs.report.content.ReportChartTimeSeriesStackedBar.TopGroupCountReport;
+import com.asetune.pcs.report.content.ReportChartTimeSeriesStackedBar.TopGroupDataRecord;
+import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.Configuration;
+import com.asetune.utils.TimeUtils;
+
+public class AseWaitStats 
+extends AseAbstract
+{
+//	private static Logger _logger = Logger.getLogger(AseWaitStats.class);
+
+	public AseWaitStats(DailySummaryReportAbstract reportingInstance)
+	{
+		super(reportingInstance);
+	}
+
+	@Override
+	public void writeMessageText(Writer sb)
+	throws IOException
+	{
+		sb.append("Wait Statistics for the full day (origin: CmSysWaits / monSysWaits) <br>");
+		sb.append("<br>");
+		sb.append("Sample Period:<br>");
+		sb.append("&emsp;&bull; <code>" + PROPKEY_SamplePeriodInMinutes + " = " + Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_SamplePeriodInMinutes, DEFAULT_SamplePeriodInMinutes) + " </code><br>");
+		sb.append("<br>");
+//		sb.append("wait_type for the first chart:<br>");
+//		sb.append("&emsp;&bull; <code>" + PROPKEY_Selected + " = " + Configuration.getCombinedConfiguration().getProperty(PROPKEY_Selected, DEFAULT_Selected) + " </code><br>");
+//		sb.append("<br>");
+		sb.append("Top WaitEvents for last chart:<br>");
+		sb.append("&emsp;&bull; <code>" + PROPKEY_TopCount + " = " + Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_TopCount, DEFAULT_TopCount) + " </code><br>");
+		sb.append("<br>");
+		sb.append("ASE Source table is 'monSysWaits'. <br>");
+		sb.append("PCS Source table is 'CmSysWaits_diff'. (PCS = Persistent Counter Store) <br>");
+
+		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Wait Statistics on the Server level, what is the server waiting for.",
+				"CmSysWaits_byClass",
+				"CmSysWaits_byEvent"
+				));
+
+		_CmSysWaits_byClass .writeHtmlContent(sb, null, null);
+		_CmSysWaits_byEvent .writeHtmlContent(sb, null, null);
+	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		sb.append("Wait Statistics for the full day (origin: CmSysWaits / monSysWaits) <br>");
+//		sb.append("<br>");
+//		sb.append("Sample Period:<br>");
+//		sb.append("&emsp;&bull; <code>" + PROPKEY_SamplePeriodInMinutes + " = " + Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_SamplePeriodInMinutes, DEFAULT_SamplePeriodInMinutes) + " </code><br>");
+//		sb.append("<br>");
+////		sb.append("wait_type for the first chart:<br>");
+////		sb.append("&emsp;&bull; <code>" + PROPKEY_Selected + " = " + Configuration.getCombinedConfiguration().getProperty(PROPKEY_Selected, DEFAULT_Selected) + " </code><br>");
+////		sb.append("<br>");
+//		sb.append("Top WaitEvents for last chart:<br>");
+//		sb.append("&emsp;&bull; <code>" + PROPKEY_TopCount + " = " + Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_TopCount, DEFAULT_TopCount) + " </code><br>");
+//		sb.append("<br>");
+//		sb.append("ASE Source table is 'monSysWaits'. <br>");
+//		sb.append("PCS Source table is 'CmSysWaits_diff'. (PCS = Persistent Counter Store) <br>");
+//
+//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Wait Statistics on the Server level, what is the server waiting for.",
+//				"CmSysWaits_byClass",
+//				"CmSysWaits_byEvent"
+//				));
+//
+//		sb.append(_CmSysWaits_byClass .getHtmlContent(null, null));
+//		sb.append(_CmSysWaits_byEvent .getHtmlContent(null, null));
+//
+//		return sb.toString();
+//	}
+
+	@Override
+	public String getSubject()
+	{
+		return "Wait Statistics for the full day (origin: CmSysWaits / monSysWaits)";
+	}
+
+	@Override
+	public boolean hasIssueToReport()
+	{
+		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
+	}
+
+	public static final String PROPKEY_SamplePeriodInMinutes = "DailySummaryReport.AseWaitStats.samplePeriodInminutes";
+	public static final int    DEFAULT_SamplePeriodInMinutes = 10;
+
+	public static final String PROPKEY_TopCount              = "DailySummaryReport.AseWaitStats.top.count";
+	public static final int    DEFAULT_TopCount              = 20;
+
+//	public static final String PROPKEY_Selected              = "DailySummaryReport.AseWaitStats.selected.wait_types";
+//	public static final String DEFAULT_Selected              = "ASYNC_NETWORK_IO, LCK_M_IX, LCK_M_X, LATCH_SH, LATCH_EX, PAGEIOLATCH_SH, PAGEIOLATCH_EX, SOS_SCHEDULER_YIELD, ASYNC_IO_COMPLETION, WRITELOG, TDC, OLEDB";
+
+	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { "CmSysWaits_diff" };
+	}
+
+	@Override
+	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
+	{
+		int samplePeriod = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_SamplePeriodInMinutes, DEFAULT_SamplePeriodInMinutes);
+		int topCount     = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_TopCount             , DEFAULT_TopCount);
+
+		// Below "simple" creation wasn't possible due to: 
+		// - we want to have BOTH WaitEventID & WaitEventDesc in the "waitType"
+		// - we want to discard by BOTH WaitEventID & WaitClassDesc
+		// So we needed to create specialized SQL etc...
+//		_CmSysWaits_byClass     = createTsStackedBarChart(conn, "CmSysWaits", "WaitClassDesc", s, null, "WaitTime", null, null, "Wait Classes in seconds, grouped by 10 minutes intervall");
+//		_CmSysWaits_byEvent     = createTsStackedBarChart(conn, "CmSysWaits", "WaitEventDesc", s, null, "WaitTime", null, null, "Wait Events  in seconds, grouped by 10 minutes intervall");
+
+		//----------------------------------------
+		// High level -- CLASS
+		//----------------------------------------
+		_CmSysWaits_byClass = new ReportChartTimeSeriesStackedBar(this, conn, "CmSysWaits", "WaitClassDesc", samplePeriod, null, "WaitTime", null, null, null, "Wait Classes in Seconds, grouped by " + samplePeriod + " minutes intervall")
+		{
+			@Override
+			protected String getSql()
+			{
+				int samplePeriod = getSamplePeriodInMinutes();
+
+				String sql = ""
+					    + "select \n"
+					    + "     DATEADD(MINUTE, DATEDIFF(MINUTE, '2000-01-01', [SessionSampleTime]) / " + samplePeriod + " * " + samplePeriod + ", '2000-01-01') as [Period] \n"
+					    + "    ,[WaitClassDesc] \n"
+					    + "    ,sum([WaitTime]) as [WaitTimeInSec] \n"
+					    + "from [CmSysWaits_diff] \n"
+					    + "where 1=1 \n"
+						+ getReportPeriodSqlWhere()
+					    + "  and [WaitEventID] not in (178, 250) \n"
+					    + "  and [WaitClassDesc] not in ('waiting for internal system event') \n"
+					    + "  and [Waits] > 0 \n"
+					    + "group by DATEADD(MINUTE, DATEDIFF(MINUTE, '2000-01-01', [SessionSampleTime]) / " + samplePeriod + " * " + samplePeriod + ", '2000-01-01'), [WaitClassDesc] \n"
+					    + "order by 1, 2 \n"
+					    + "";
+				return sql;
+			}
+		};
+
+
+
+
+		//----------------------------------------
+		// Lower level -- EVENT ID (top report section)
+		//----------------------------------------
+		TopGroupCountReport tgcp = new TopGroupCountReport(topCount)
+		{
+			@Override
+			public String process()
+			{
+				String groupColName = getOwner().getGroupColumnName();
+				String valueColName = getOwner().getValueColumnName();
+				int    samplePeriod = getOwner().getSamplePeriodInMinutes();
+
+				StringBuilder sb = new StringBuilder();
+				sb.append("<br>Here are the top " + getTopCount() + " '" + groupColName + "' ordered by '" + valueColName +"' for the whole period (while the above chart is in " + samplePeriod + " minutes chunks).<br>\n");
+				sb.append("<table class='sortable'> \n");
+				sb.append("<tr> \n");
+				sb.append("  <th>Top #</th> \n");
+				sb.append("  <th>").append(groupColName).append("</th> \n");
+				sb.append("  <th>").append(valueColName).append("</th> \n");
+				sb.append("  <th>WaitTime as HH:MM:SS</th> \n");
+				sb.append("  <th>SAP Wiki</th> \n");
+				sb.append("</tr> \n");
+				int cnt = 1;
+				for (Entry<String, Double> entry : getTop().entrySet())
+				{
+					String waitEventId = StringUtils.substringBetween(entry.getKey(), "[", "]");
+
+					sb.append("<tr> \n");
+					sb.append("  <td>").append(cnt++           ).append("</td> \n");
+					sb.append("  <td>").append(entry.getKey()  ).append("</td> \n");
+					sb.append("  <td>").append(NumberFormat.getInstance().format(entry.getValue())).append("</td> \n");
+					sb.append("  <td>").append(TimeUtils.secToTimeStrLong(entry.getValue().intValue())).append("</td> \n");
+					sb.append("  <td> <a href='https://wiki.scn.sap.com/wiki/display/SYBASE/ASE+Wait+Event+" + waitEventId + "' target='_blank'>WaitEventID - " + waitEventId + "</a>").append("</td> \n");
+					sb.append("</tr> \n");
+				}
+				sb.append("</table> \n");
+				sb.append("<br> \n");
+				sb.append("All WaitEventID's from SAP Wiki, can be found <a href='https://wiki.scn.sap.com/wiki/display/SYBASE/ASE+Wait+Events+1+to+49' target='_blank'>here</a>\n");
+				sb.append("<br> \n");
+				sb.append("Or at <a href='https://help.sap.com/viewer/product/SAP_ASE?expandAll=true' target='_blank'>help.sap.com</a>, manual '<i>Performance and Tuning Series: Monitoring Tables</i>', section '<i>Wait Events</i>'... <a href='https://help.sap.com/viewer/9a57ec3c9937415eb6bf8c5abc91ca86/16.0.3.9/en-US/a8dc5707bc2b10149755d58b18eacb29.html' target='_blank'>here is a direct link</a>\n");
+				sb.append("<br> \n");
+					
+				return sb.toString();
+			}
+			
+			@Override
+			protected String getTopGroupsSql()
+			{
+				String sql = ""
+						+ "select top " + getTopCount() + " \n"
+					    + "     [WaitEventID] \n"
+					    + "    ,[WaitEventDesc] \n"
+					    + "    ,sum([WaitTime]) as [WaitTimeInSec] \n"
+					    + "from [CmSysWaits_diff] \n"
+					    + "where 1=1 \n"
+						+ getOwner().getReportEntry().getReportPeriodSqlWhere()
+						+ "  and [WaitTime] > 0 \n"
+					    + "  and [WaitEventID] not in (178, 250) \n"
+					    + "  and [WaitClassDesc] not in ('waiting for internal system event') \n"
+						+ "group by [WaitEventID], [WaitEventDesc] \n"
+						+ "order by 3 desc \n"
+						+ "";
+
+				return sql;
+			}
+
+			@Override
+			public TopGroupDataRecord createRecord(ResultSet rs)
+			throws SQLException
+			{
+				String WaitEventID   = rs.getString(1);
+				String WaitEventDesc = rs.getString(2);
+				double value         = rs.getDouble(3);
+
+				return new TopGroupDataRecord("[" + WaitEventID + "] " + WaitEventDesc, value);
+			}
+		};
+
+		//----------------------------------------
+		// Lower level -- EVENT ID
+		//----------------------------------------
+		_CmSysWaits_byEvent = new ReportChartTimeSeriesStackedBar(this, conn, "CmSysWaits", "WaitEventDesc", samplePeriod, tgcp, "WaitTime", null, null, null, "Wait Events (top-"+tgcp.getTopCount()+"-WaitEvents) in Seconds, grouped by 10 minutes intervall")
+		{
+			@Override
+			protected String getSql()
+			{
+				int samplePeriod = getSamplePeriodInMinutes();
+
+				String sql = ""
+					    + "select \n"
+					    + "     DATEADD(MINUTE, DATEDIFF(MINUTE, '2000-01-01', [SessionSampleTime]) / " + samplePeriod + " * " + samplePeriod + ", '2000-01-01') as [Period] \n"
+					    + "    ,[WaitEventID] \n"
+					    + "    ,[WaitEventDesc] \n"
+					    + "    ,sum([WaitTime]) as [WaitTimeInSec] \n"
+					    + "from [CmSysWaits_diff] \n"
+					    + "where 1=1 \n"
+						+ getReportEntry().getReportPeriodSqlWhere()
+// No need to restricts using below... if we use the above: TopGroupCountReport
+//					    + "  and [WaitEventID] not in (178, 250) \n"
+//					    + "  and [WaitClassDesc] not in ('waiting for internal system event') \n"
+					    + "  and [Waits] > 0 \n"
+					    + "group by DATEADD(MINUTE, DATEDIFF(MINUTE, '2000-01-01', [SessionSampleTime]) / " + samplePeriod + " * " + samplePeriod + ", '2000-01-01'), [WaitEventID], [WaitEventDesc] \n"
+					    + "order by 1, 2 \n"
+					    + "";
+				return sql;
+			}
+			
+			@Override
+			public DataRecord createRecord(ResultSet rs) throws SQLException
+			{
+				Timestamp ts            = rs.getTimestamp(1);
+				int       WaitEventID   = rs.getInt      (2);
+				String    WaitEventDesc = rs.getString   (3);
+				double    value         = rs.getDouble   (4);
+
+				return new DataRecord(ts, "[" + WaitEventID + "] " + WaitEventDesc, value);
+			}
+		};
+	}
+
+	private IReportChart _CmSysWaits_byClass;
+	private IReportChart _CmSysWaits_byEvent;
+
+}

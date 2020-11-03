@@ -21,8 +21,12 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.os;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
+
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.ReportChartObject;
+import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.pcs.report.content.ase.AseAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -59,22 +63,37 @@ public class OsSpaceUsageOverview extends AseAbstract
 	}
 	
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Disk Space Usage on the Operating System Level.",
 				"CmOsDiskSpace_FsUsedPct",
 				"CmOsDiskSpace_FsAvailableMb",
 				"CmOsDiskSpace_FsUsedMb"
 				));
 
-		sb.append(_CmOsDiskSpace_FsUsedPct    .getHtmlContent(null, null));
-		sb.append(_CmOsDiskSpace_FsAvailableMb.getHtmlContent(null, null));
-		sb.append(_CmOsDiskSpace_FsUsedMb     .getHtmlContent(null, null));
-		
-		return sb.toString();
+		_CmOsDiskSpace_FsUsedPct    .writeHtmlContent(sb, null, null);
+		_CmOsDiskSpace_FsAvailableMb.writeHtmlContent(sb, null, null);
+		_CmOsDiskSpace_FsUsedMb     .writeHtmlContent(sb, null, null);
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Disk Space Usage on the Operating System Level.",
+//				"CmOsDiskSpace_FsUsedPct",
+//				"CmOsDiskSpace_FsAvailableMb",
+//				"CmOsDiskSpace_FsUsedMb"
+//				));
+//
+//		sb.append(_CmOsDiskSpace_FsUsedPct    .getHtmlContent(null, null));
+//		sb.append(_CmOsDiskSpace_FsAvailableMb.getHtmlContent(null, null));
+//		sb.append(_CmOsDiskSpace_FsUsedMb     .getHtmlContent(null, null));
+//		
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -93,12 +112,12 @@ public class OsSpaceUsageOverview extends AseAbstract
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		int maxValue = 100;
-		_CmOsDiskSpace_FsUsedPct     = createChart(conn, "CmOsDiskSpace", "FsUsedPct",     maxValue, null, "df: Space Used in Percent, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
-		_CmOsDiskSpace_FsAvailableMb = createChart(conn, "CmOsDiskSpace", "FsAvailableMb", -1,       null, "df: Space Available in MB, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
-		_CmOsDiskSpace_FsUsedMb      = createChart(conn, "CmOsDiskSpace", "FsUsedMb",      -1,       null, "df: Space Used in MB, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
+		_CmOsDiskSpace_FsUsedPct     = createTsLineChart(conn, "CmOsDiskSpace", "FsUsedPct",     maxValue, null, "df: Space Used in Percent, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
+		_CmOsDiskSpace_FsAvailableMb = createTsLineChart(conn, "CmOsDiskSpace", "FsAvailableMb", -1,       null, "df: Space Available in MB, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
+		_CmOsDiskSpace_FsUsedMb      = createTsLineChart(conn, "CmOsDiskSpace", "FsUsedMb",      -1,       null, "df: Space Used in MB, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
 	}
 
-	private ReportChartObject _CmOsDiskSpace_FsUsedPct;
-	private ReportChartObject _CmOsDiskSpace_FsAvailableMb;
-	private ReportChartObject _CmOsDiskSpace_FsUsedMb;
+	private IReportChart _CmOsDiskSpace_FsUsedPct;
+	private IReportChart _CmOsDiskSpace_FsAvailableMb;
+	private IReportChart _CmOsDiskSpace_FsUsedMb;
 }

@@ -21,8 +21,12 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.rs;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
+
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.ReportChartObject;
+import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.pcs.report.content.ase.AseAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -37,18 +41,29 @@ public class RsWsRepLatency extends AseAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Database Tranfer <i>Latency</i> or Age of Data at the Standby.",
 				"CmWsRepLatency_DataAgeInSec"
 				));
 
-		sb.append(_CmWsRepLatency_DataAgeInSec.getHtmlContent(null, null));
-		
-		return sb.toString();
+		_CmWsRepLatency_DataAgeInSec.writeHtmlContent(sb, null, null);
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Database Tranfer <i>Latency</i> or Age of Data at the Standby.",
+//				"CmWsRepLatency_DataAgeInSec"
+//				));
+//
+//		sb.append(_CmWsRepLatency_DataAgeInSec.getHtmlContent(null, null));
+//		
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -66,8 +81,8 @@ public class RsWsRepLatency extends AseAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		_CmWsRepLatency_DataAgeInSec = createChart(conn, "CmWsRepLatency", "DataAgeInSec", -1, null, "Data Age In Seconds, from Active->Standby");
+		_CmWsRepLatency_DataAgeInSec = createTsLineChart(conn, "CmWsRepLatency", "DataAgeInSec", -1, null, "Data Age In Seconds, from Active->Standby");
 	}
 
-	private ReportChartObject _CmWsRepLatency_DataAgeInSec;
+	private IReportChart _CmWsRepLatency_DataAgeInSec;
 }

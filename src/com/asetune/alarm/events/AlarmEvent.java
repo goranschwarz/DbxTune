@@ -129,6 +129,8 @@ extends Throwable
 		/** RPO - Recovery Point Objective */
 		RPO,
 	};
+	
+	public static final int DEFAULT_raiseDelay = 0;
 
 	private static SimpleDateFormat _dateFormater = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 	
@@ -137,14 +139,14 @@ extends Throwable
 	protected String       _serviceInfo         = ""; 
 	protected Object       _extraInfo           = "";
 	protected Category     _category            = Category.OTHER;
-	protected Category     _categoryDefault     = Category.OTHER;
+//	protected Category     _categoryDefault     = Category.OTHER;
 	protected Severity     _severity            = Severity.INFO;
 	protected ServiceState _state               = ServiceState.UP;
 
 	//think more about how to implement this... and how it should be configurable (property AlarmEventName.raiseDelay=### or parameter to the AlarmEvent - then configurable for every creator of the AlarmEvent)
 //	protected int          _raiseDelayInSec     = 0; // Delay or Postpone a initial raise with X seconds... meaning that a cancel can within the timeframe = That the Alarm will be irrelevant/canceled/not-raised
-	protected int          _raiseDelayInSec     = 0; // wait with the raise event until X number of seconds has passed (usabe for CPU events or other "peak" things that happends, which we might want to filter out)  
-	protected int          _raiseDelayInSecDefault = 0;
+	protected int          _raiseDelayInSec     = DEFAULT_raiseDelay; // wait with the raise event until X number of seconds has passed (usabe for CPU events or other "peak" things that happends, which we might want to filter out)  
+//	protected int          _raiseDelayInSecDefault = 0;
 
 	protected String       _description             = "";
 	protected String       _reRaiseDesc             = "";
@@ -280,8 +282,8 @@ extends Throwable
 	public Object       getData()                           { return _data; }
 	public Object       getReRaiseData()                    { return _reRaiseData; }
 
-	public Category     getCategoryDefault()                { return _categoryDefault; }
-	public int          getRaiseDelayInSecDefault()         { return _raiseDelayInSecDefault; }
+//	public Category     getCategoryDefault()                { return _categoryDefault; }
+//	public int          getRaiseDelayInSecDefault()         { return _raiseDelayInSecDefault; }
 
 	public void         setDescription(String desc)                             { _description         = desc; }
 	public void         setReRaiseDescription(String desc)                      { _reRaiseDesc         = desc; }
@@ -356,36 +358,55 @@ extends Throwable
 		
 		_crossedThreshold = crossedThreshold;
 
-		_categoryDefault         = category; // Set default values so we can check for changes/overrides later on
-		_raiseDelayInSecDefault  = 0;        // Set default values so we can check for changes/overrides later on
+		_category     = category;
+//		_categoryDefault         = category; // Set default values so we can check for changes/overrides later on
+//		_raiseDelayInSecDefault  = 0;        // Set default values so we can check for changes/overrides later on
 		
 		// Get UserDefined: 'category' properties
+		_category = getDefaultProperty_category();
+
+		// Get UserDefined: 'raiseDelay' properties
+		_raiseDelayInSec = getDefaultProperty_raiseDelay();
+	}
+
+	/** get default property for 'category', override this to set any new default that is class specific, or use property 'className.category=CategoryEnumStr' */
+	protected Category getDefaultProperty_category()
+	{
 		Configuration conf = Configuration.getCombinedConfiguration();
+		
 		String udCategoryProp = this.getClass().getSimpleName()+".category";
 		String udCategory     = conf.getProperty(udCategoryProp, null);
 		if (StringUtil.hasValue(udCategory))
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug(getAlarmClassAbriviated() + ": Overriding/Reading default value of '"+_categoryDefault+"' for 'category' using property '"+udCategoryProp+"' with value '"+udCategory+"'. for: "+this.getMessage());
+				_logger.debug(getAlarmClassAbriviated() + ": Overriding/Reading default value of '"+_category+"' for 'category' using property '"+udCategoryProp+"' with value '"+udCategory+"'. for: "+this.getMessage());
 
 			try {
-				_category = Category.valueOf(udCategory);
+				return Category.valueOf(udCategory);
 			} catch (IllegalArgumentException e) {
 				_logger.error("Problems parsing Category Value '"+udCategory+"' for the property '"+udCategoryProp+"'. known values: "+StringUtil.toCommaStr(Category.values())+". Caught: "+e);
 			}
 		}
-		
-		// Get UserDefined: 'raiseDelay' properties
+		return _category;
+	}
+
+	/** get default property for 'raiseDelay', override this to set any new default that is class specific, or use property 'className.raise.delay=seconds' */
+	protected int getDefaultProperty_raiseDelay()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+
 		String udRaiseDelayInSecProp = this.getClass().getSimpleName()+".raise.delay";
 		int    udRaiseDelayInSec     = conf.getIntProperty(udRaiseDelayInSecProp, -1);
 		if (udRaiseDelayInSec != -1)
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug(getAlarmClassAbriviated() + ": Overriding/Reading default value of '"+_raiseDelayInSecDefault+"' for 'raiseDelayInSec' using property '"+udRaiseDelayInSecProp+"' with value '"+udRaiseDelayInSec+"'. for: "+this.getMessage());
-			_raiseDelayInSec = udRaiseDelayInSec;
-		}
-	}
+				_logger.debug(getAlarmClassAbriviated() + ": Overriding/Reading default value of '"+_raiseDelayInSec+"' for 'raiseDelayInSec' using property '"+udRaiseDelayInSecProp+"' with value '"+udRaiseDelayInSec+"'. for: "+this.getMessage());
 
+			return udRaiseDelayInSec;
+		}
+		return _raiseDelayInSec;
+	}
+	
 	/**
 	 * This could be good for Short TEXT Messages etc...<br>
 	 * <pre>

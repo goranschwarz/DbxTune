@@ -28,6 +28,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -273,7 +274,7 @@ extends JPanel
 						_logger.error("Can't find the resource for class='"+AlarmDetailUserDefinedPanel.class+"', filename='"+template+".txt'.");
 						return;
 					}
-					String fileContent = IOUtils.toString(url); 
+					String fileContent = IOUtils.toString(url, Charset.defaultCharset()); 
 					
 					// Replace the template names with "runtime values"
 					String replacePackage = "package com.asetune.alarm.ui.config.examples;";

@@ -29,6 +29,18 @@ extends AlarmEvent
 	private static final long serialVersionUID = 1L;
 
 	/**
+	 * <b>always</b> send this alarm<br>
+	 * The the "filter" functionality will be discarded/short-circuited 
+	 * 
+	 * @return true if we should always send, false if we should look at the "filter" settings.
+	 */
+	@Override
+	public boolean alwaysSend()
+	{
+		return true;
+	}
+
+	/**
 	 * Alarm for full transaction logs. Just the count of databases with a full tran log.
 	 * @param cm
 	 * @param val

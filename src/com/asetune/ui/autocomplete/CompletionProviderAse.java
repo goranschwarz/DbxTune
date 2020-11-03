@@ -490,6 +490,29 @@ extends CompletionProviderAbstractSql
 				"",
 				"Create stored procedure with a head."));
 
+//		list.add( new CompletionTemplate( "cursor",
+//				"declare @c_c1 varchar(255) \n" +
+//				"declare @c_c2 varchar(20) \n" +
+//				" \n" +
+//				"DECLARE <CURSOR_NAME> cursor for \n" +
+//				"	SELECT c1, c2 \n" +
+//				"	FROM tabname \n" +
+//				"	WHERE c3 = 'val' \n" +
+//				"FOR READ ONLY \n" +
+//				" \n" +
+//				"OPEN <CURSOR_NAME> \n" +
+//				"FETCH <CURSOR_NAME> into @c_c1, @c_c2 \n" +
+//				" \n" +
+//				"while (@@sqlstatus = 0)  \n" +
+//				"begin \n" +
+//				"	-- Do something... \n" +
+//				"	FETCH <CURSOR_NAME> into @c_c1, @c_c2 \n" +
+//				"end \n" +
+//				"CLOSE <CURSOR_NAME> \n" +
+//				"DEALLOCATE cursor <CURSOR_NAME> \n" +
+//				"",
+//				"Add cursor"));
+//				
 		list.add( new CompletionTemplate( "cursor",
 				"declare @c_c1 varchar(255) \n" +
 				"declare @c_c2 varchar(20) \n" +
@@ -501,12 +524,17 @@ extends CompletionProviderAbstractSql
 				"FOR READ ONLY \n" +
 				" \n" +
 				"OPEN <CURSOR_NAME> \n" +
-				"FETCH <CURSOR_NAME> into @c_c1, @c_c2 \n" +
 				" \n" +
-				"while (@@sqlstatus = 0)  \n" +
+				"while (1=1)  \n" +
 				"begin \n" +
-				"	-- Do something... \n" +
-				"	FETCH <CURSOR_NAME> into @c_c1, @c_c2 \n" +
+				"    -- get row into variables \n" +
+				"	 FETCH <CURSOR_NAME> into @c_c1, @c_c2 \n" +
+				" \n" +
+				"    -- get out of here if no more rows \n" +
+				"    if (@@sqlstatus != 0) \n" +
+				"        break \n" +
+				" \n" +
+				"	 -- Do something... \n" +
 				"end \n" +
 				"CLOSE <CURSOR_NAME> \n" +
 				"DEALLOCATE cursor <CURSOR_NAME> \n" +
@@ -1344,7 +1372,7 @@ extends CompletionProviderAbstractSql
 	 */
 	private static String getSpDescription(String name)
 	{
-		if (name.equals("sp_activeroles")) 			return "Displays all active roles granted to a user’s login.";
+		if (name.equals("sp_activeroles")) 			return "Displays all active roles granted to a userï¿½s login.";
 		if (name.equals("sp_add_qpgroup")) 			return "Adds an abstract plan group.";
 		if (name.equals("sp_add_resource_limit")) 	return "Creates a limit on the amount of server resources that a login or application can use to execute a query, query batch, or transaction.";
 		if (name.equals("sp_add_time_range")) 		return "Adds a named time range to Adaptive Server.";
@@ -1379,7 +1407,7 @@ extends CompletionProviderAbstractSql
 		if (name.equals("sp_cacheconfig")) 			return "Creates, configures, reconfigures, drops, and provides information about data caches.";
 		if (name.equals("sp_cachestrategy")) 		return "Enables or disables prefetching (large I/O) and MRU cache replacement strategy for a table, index, text object, or image object.";
 		if (name.equals("sp_changedbowner")) 		return "Changes the owner of a database. ";
-		if (name.equals("sp_changegroup")) 			return "Changes a user’s group.";
+		if (name.equals("sp_changegroup")) 			return "Changes a userï¿½s group.";
 		if (name.equals("sp_checknames")) 			return "Checks the current database for names that contain characters not in the 7-bit ASCII set.";
 		if (name.equals("sp_checkreswords")) 		return "Detects and displays identifiers that are Transact-SQL reserved words. Checks server names, device names, database names, segment names, user-defined datatypes, object names, column names, user names, login names, and remote login names.";
 		if (name.equals("sp_checksource")) 			return "Checks for the existence of the source text of the compiled object.";
@@ -1409,7 +1437,7 @@ extends CompletionProviderAbstractSql
 		if (name.equals("sp_dbrecovery_order")) 	return "Specifies the order in which user databases are recovered and lists the user-defined recovery order of a database or all databases.";
 		if (name.equals("sp_dbremap")) 				return "Forces Adaptive Server to recognize changes made by alter database. Run this procedure only when instructed to do so by an Adaptive Server message.";
 		if (name.equals("sp_defaultloc")) 			return "Component Integration Services only Defines a default storage location for objects in a local database.";
-		if (name.equals("sp_deletesmobj")) 			return "Tivoli Storage Manager license only Removes current server’s database backup objects from the IBM Tivoli Storage Manager.";
+		if (name.equals("sp_deletesmobj")) 			return "Tivoli Storage Manager license only Removes current serverï¿½s database backup objects from the IBM Tivoli Storage Manager.";
 		if (name.equals("sp_depends")) 				return "Displays information about database object dependencies the view(s), trigger(s), and procedure(s) that depend on a specified table or view, and the table(s) and view(s) that the specified view, trigger, or procedure depends on.";
 		if (name.equals("sp_deviceattr")) 			return "Changes the device parameter settings of an existing database device file.";
 		if (name.equals("sp_diskdefault")) 			return "Specifies whether or not a database device can be used for database storage if the user does not specify a database device or specifies default with the create database or alter database commands.";
@@ -1432,7 +1460,7 @@ extends CompletionProviderAbstractSql
 		if (name.equals("sp_dropgroup")) 			return "Drops a group from a database.";
 		if (name.equals("sp_dropkey")) 				return "Removes a key defined with sp_primarykey, sp_foreignkey, or sp_commonkey from the syskeys table.";
 		if (name.equals("sp_droplanguage")) 		return "Drops an alternate language from the server and removes its row from master.dbo.syslanguages.";
-		if (name.equals("sp_droplogin")) 			return "Drops an Adaptive Server user login by deleting the user’s entry in master.dbo.syslogins.";
+		if (name.equals("sp_droplogin")) 			return "Drops an Adaptive Server user login by deleting the userï¿½s entry in master.dbo.syslogins.";
 		if (name.equals("sp_dropmessage")) 			return "Drops user-defined messages from sysusermessages.";
 		if (name.equals("sp_dropobjectdef")) 		return "Component Integration Services only Deletes the external storage mapping provided for a local object";
 		if (name.equals("sp_dropremotelogin")) 		return "Drops a remote user login.";
@@ -1484,11 +1512,11 @@ extends CompletionProviderAbstractSql
 		if (name.equals("sp_helplanguage")) 		return "Reports information about a particular alternate language or about all languages.";
 		if (name.equals("sp_helplog")) 				return "Reports the name of the device that contains the first page of the transaction log.";
 		if (name.equals("sp_helpobjectdef")) 		return "Component Integration Services only Reports information about remote object definitions. Shows owners, objects, type, and definition.";
-		if (name.equals("sp_helpremotelogin")) 		return "Reports information about a particular remote server’s logins or about all remote servers’ logins.";
+		if (name.equals("sp_helpremotelogin")) 		return "Reports information about a particular remote serverï¿½s logins or about all remote serversï¿½ logins.";
 		if (name.equals("sp_helprotect")) 			return "Reports information about permissions for database objects, users, groups, or roles.";
 		if (name.equals("sp_helpsegment")) 			return "Reports information about a particular segment or about all segments in the current database.";
 		if (name.equals("sp_helpserver")) 			return "Reports information about a particular remote server or about all remote servers.";
-		if (name.equals("sp_helpsort")) 			return "Displays Adaptive Server’s default sort order and character set.";
+		if (name.equals("sp_helpsort")) 			return "Displays Adaptive Serverï¿½s default sort order and character set.";
 		if (name.equals("sp_helptext")) 			return "Prints the text of a system procedure, trigger, view, default, rule, or integrity check constraint, and adds the number parameter, which is an integer identifying an individual procedure, when objname represents a group of procedures. This parameter tells sp_helptext to display the source text for a specified procedure in the group.";
 		if (name.equals("sp_helpthreshold")) 		return "Reports the segment, free-space value, status, and stored procedure associated with all thresholds in the current database or all thresholds for a particular segment.";
 		if (name.equals("sp_helpuser")) 			return "Reports information about a particular user or about all users in the current database.";
@@ -1531,7 +1559,7 @@ extends CompletionProviderAbstractSql
 		if (name.equals("sp_primarykey")) 			return "Defines a primary key on a table or view.";
 		if (name.equals("sp_processmail")) 			return "Windows NT only Reads, processes, sends, and deletes messages in the Adaptive Server message inbox.";
 		if (name.equals("sp_procxmode")) 			return "Displays or changes the transaction modes associated with stored procedures.";
-		if (name.equals("sp_querysmobj")) 			return "Tivoli Storage Manager license only Queries the Tivoli Storage Manager for a list of the current server’s database backup objects.";
+		if (name.equals("sp_querysmobj")) 			return "Tivoli Storage Manager license only Queries the Tivoli Storage Manager for a list of the current serverï¿½s database backup objects.";
 		if (name.equals("sp_recompile")) 			return "Causes each stored procedure and trigger that uses the named table to be recompiled the next time it runs.";
 		if (name.equals("sp_refit_admin")) 			return "Cluster environment only Provides an interface to perform disk refit-related actions.";
 		if (name.equals("sp_remap")) 				return "Remaps a stored procedure, trigger, rule, default, or view from releases later than 4.8 and earlier than 10.0 to be compatible with releases 10.0 and later. Use sp_remap on pre-release 11.0 objects that the release 11.0 upgrade procedure failed to remap.";

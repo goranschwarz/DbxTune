@@ -85,6 +85,11 @@ IF "%APP_NAME%" == "ase" (
 	set JAVA_START_PARAMS=
 	set SPLASH=
 
+) ELSE IF "%APP_NAME%" == "dsr" (
+	set JAVA_START_CLASS=com.asetune.pcs.report.DailySummaryReport
+	set JAVA_START_PARAMS=
+	set SPLASH=
+
 ) ELSE IF "%APP_NAME%" == "h2fix" (
 	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy
 	set JAVA_START_PARAMS=
@@ -329,12 +334,12 @@ set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\autocomplete.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\rstaui.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\language_support.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jcommon-1.0.21.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jfreechart-1.0.17.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jfreechart-1.5.0.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\antlr-4.0-complete.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\juniversalchardet-2.3.0.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\DDLGen.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\simplemagic-1.14.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jsqlparser-1.1.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jsqlparser-3.2.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\gsp.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\bcprov-jdk15on-157.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-compiler-3.0.7.jar

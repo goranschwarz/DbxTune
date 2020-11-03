@@ -61,6 +61,8 @@ import com.asetune.alarm.writers.AlarmWriterToFile;
 import com.asetune.central.DbxTuneCentral;
 import com.asetune.central.cleanup.CentralH2Defrag;
 import com.asetune.central.cleanup.CentralH2Defrag.H2StorageInfo;
+import com.asetune.central.controllers.ud.chart.IUserDefinedChart;
+import com.asetune.central.controllers.ud.chart.UserDefinedChartManager;
 import com.asetune.central.cleanup.DataDirectoryCleaner;
 import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.central.pcs.objects.DbxCentralSessions;
@@ -194,16 +196,16 @@ public class OverviewServlet extends HttpServlet
 		return fileNames;
 	}
 	
-	private List<String> getFilesInConfDir()
+	public static List<File> getFilesInConfDir()
 	{
 		String directory = CONF_DIR;
 
-		List<String> fileNames = new ArrayList<>();
+		List<File> fileNames = new ArrayList<>();
 		try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(Paths.get(directory)))
 		{
 			for (Path path : directoryStream)
 			{
-				fileNames.add(path.toString());
+				fileNames.add(path.toFile());
 			}
 		}
 		catch (IOException ex)
@@ -490,6 +492,7 @@ public class OverviewServlet extends HttpServlet
 
 		out.println("<p>Sections");
 		out.println("<ul>");
+		out.println("  <li><a href='#ud-content'        >User Defined Content                          </a> </li>");
 		out.println("  <li><a href='#active'            >Active Recordings                             </a> </li>");
 		out.println("  <li><a href='#alarms'            >Active Alarms                                 </a> </li>");
 		out.println("  <li><a href='#logfiles'          >All file(s) in the LOG Directory              </a> </li>");
@@ -511,6 +514,15 @@ public class OverviewServlet extends HttpServlet
 		out.println("    setTimeout(updateLastUpdatedClock, 1000); ");
 		out.println("}                                                     ");
 		out.println("var lastUpdateTime = new Date();");
+		out.println("");		
+		out.println("function toggle_visibility(id) { ");
+		out.println("    var e = document.getElementById(id); ");
+		out.println("	 if (e.style.display == 'block') ");
+		out.println("	     e.style.display = 'none'; ");
+		out.println("	 else ");
+		out.println("	     e.style.display = 'block'; ");
+		out.println("	 } ");
+		out.println("");
 		out.println("</script>");
 		out.println("");
 		
@@ -581,6 +593,123 @@ public class OverviewServlet extends HttpServlet
 			out.println("Problems reading from PersistReader. Caught: "+ex);
 		}
 
+
+
+		//----------------------------------------------------
+		// User Defined Charts
+		//----------------------------------------------------
+		if (true)
+		{
+			out.println("<div id='ud-content' class='card border-dark mb-3'>");
+			out.println("<h5 class='card-header'>User Defined Charts and Reports</h5>");
+			out.println("<div class='card-body'>");
+			
+			// If no Chart was found, get instructions on HOW to create a User Defined Chart
+			String templateText = UserDefinedChartManager.getInstance().getTemplateText();
+
+			// -----------------------------------------------------------
+			// Loop and print values from the Manager
+			List<IUserDefinedChart> userDefinedCharts = UserDefinedChartManager.getInstance().getCharts();
+			if (userDefinedCharts.isEmpty())
+			{
+				out.println("Below is a template how to create a User Defined Chart ");
+				out.println("<a href='#' onclick=\"toggle_visibility('ud-chart-template');\">show/hide template</a> ");
+				out.println("<div id='ud-chart-template' style='display:none;'>");
+
+				out.println("<br><b>NO User Defined charts has been created.</b><br>");
+				out.println("Create a file with the below content in directory: <code>" + CONF_DIR + "</code><br>");
+				out.println("Name the file <code>someName.ud.content.props</code><br>");
+
+				out.println("<hr>");
+				out.println("<pre>");
+				out.println(templateText);
+				out.println("</pre>");
+				out.println("<hr>");
+
+				out.println("</div>");
+			}
+			else
+			{
+				out.println("<p>In here you can find various Chart(s), which is created by your organization!</p>");
+				out.println("Column description");
+				out.println("<ul>");
+				out.println("<li><b>Name                       </b> - Name of the chart</li>");
+				out.println("<li><b>Server                     </b> - Name of the server we are collecting data from</li>");
+				out.println("<li><b>Chart Type                 </b> - Type of chart. (timeline-gantt/line/bar)</li>");
+				out.println("<li><b>Description                </b> - Description, provided by your organization.</li>");
+				out.println("<li><b>URL                        </b> - Click here to view the chart.</li>");
+				out.println("<li><b>File Name                  </b> - Source file for the Chart.</li>");
+				out.println("</ul>");
+//				out.println("<br><hr>");
+//				out.println("<h3>Active Recordings</h3>");
+				out.println("<table>");
+				out.println("<thead>");
+				out.println("  <tr>");
+				out.println("    <th>Name</th>");
+				out.println("    <th>Server</th>");
+				out.println("    <th>Chart Type</th>");
+				out.println("    <th>Description</th>");
+				out.println("    <th>URL</th>");
+				out.println("    <th>File Name</th>");
+				out.println("  </tr>");
+				out.println("</thead>");
+				out.println("<tbody>");
+
+				for (IUserDefinedChart chart : UserDefinedChartManager.getInstance().getCharts())
+				{
+					String name        = chart.getName();
+					String srvName     = chart.getDbmsServerName();
+					String srvDesc     = chart.getDescription();
+					String chartType   = chart.getChartType().toString();
+					String url         = chart.getUrl(); // "/api/udc?name=" + name + "&srvName=" + srvName + "&startTime=-2");
+					String filename    = chart.getConfigFilename();
+
+					String td = chart.isValid() ? "<td>" : "<td style='color:red'>";
+
+					out.println("  <tr>");
+					out.println("    " + td + "<a href='" + url + "'>" + name + "</a></td>");
+					out.println("    " + td + srvName + "</td>");
+					out.println("    " + td + chartType + "</td>");
+					out.println("    " + td + srvDesc + "</td>");
+					out.println("    " + td + "<a href='" + url + "'><code>" + url + "</code></a></td>");
+					out.println("    " + td + filename + "</td>");
+					out.println("  </tr>");
+					
+//					String appName     = conf.getProperty("dbxtune.app.name", "-unknown-");
+//					String srvName     = f.getName().split("\\.")[0];
+//					String srvDesc     = getSrvDescription(srvName);
+//					String refreshRate = conf.getProperty("dbxtune.refresh.rate", "-unknown-");
+//					String url         = conf.getProperty("pcs.h2.jdbc.url");
+//					String dbxTuneUrl  = dbxTuneGuiUrl + url;
+	//
+//					srvConfigMap.put(srvName, conf);
+				}
+
+				out.println("</tbody>");
+				out.println("</table>");
+
+			
+				out.println("Below is a template how to create a User Defined Chart ");
+				out.println("<a href='#' onclick=\"toggle_visibility('ud-chart-template');\">show/hide template</a> ");
+				out.println("<div id='ud-chart-template' style='display:none;'>");
+
+				out.println("<br>");
+				out.println("Create a file with the below content in directory: <code>" + CONF_DIR + "</code><br>");
+				out.println("Name the file <code>someName.ud.content.props</code><br>");
+
+				out.println("<hr>");
+				out.println("<pre>");
+				out.println(templateText);
+				out.println("</pre>");
+				out.println("<hr>");
+
+				out.println("</div>");
+			}
+			
+
+			out.println("</div>"); // end: card-body
+			out.println("</div>"); // end: card
+		}
 
 
 		//----------------------------------------------------
@@ -732,6 +861,7 @@ public class OverviewServlet extends HttpServlet
 			out.println("</div>"); // end: card-body
 			out.println("</div>"); // end: card
 		}
+
 
 
 		//----------------------------------------------------
@@ -1082,9 +1212,8 @@ public class OverviewServlet extends HttpServlet
 			out.println("  </tr>");
 			out.println("</thead>");
 			out.println("<tbody>");
-			for (String file : getFilesInConfDir())
+			for (File f : getFilesInConfDir())
 			{
-				File f = new File(file);
 				if (f.isDirectory())
 					continue;
 
@@ -1477,6 +1606,7 @@ public class OverviewServlet extends HttpServlet
 	        out.println("<li><b>File Size MB     </b> - Current File size in MB</li>");
 	        out.println("<li><b>Shrink Size GB   </b> - Difference in SavedGB-CurrentGB, which is how much space is saved by doing 'shutdown defrag' when closing the db on 'rollover'.</li>");
 	        out.println("<li><b>URL              </b> - Click here to view the <b>detailed</b> recording. Note: You must have the Native DbxTune application started on your PC/Client machine.</li>");
+	        out.println("<li><b>DSR              </b> - Click here to create a <b>Daily Summary Report</b> from this recording. Note: You can choose detailes like begin and end time for the Reporting Period.</li>");
 	        out.println("</ul>");
 	        out.println("<p>Note: Offline databases with <b>todays</b> timestamp will be marked in <span style='background-color:rgb(204, 255, 204);'>light green</span>, which probably is the active recording.</p>");
 
@@ -1525,6 +1655,7 @@ public class OverviewServlet extends HttpServlet
 					+ "    <th>File Size GB</th>"
 					+ "    <th>File Size MB</th>"
 					+ "    <th>Shrink Size GB</th>"
+					+ "    <th>DSR (Daily Summary Report)</th>"
 					+ "    <th>Url (green row is active recording)</th>"
 					+ "  </tr>";
 			
@@ -1602,6 +1733,12 @@ public class OverviewServlet extends HttpServlet
 						dbxTuneUrl = dbxTuneGuiUrl.replace(":PORT/", ":"+DbxTune.getGuiWebPort(dbxTuneName)+"/") + url;
 					}
 				}
+				
+//				String dsrUrl = "/api/dsr?op=xxx&dbname="+dbName+"&onHost="+collectorHostname;
+//				String dsrJdbcUrl = dbName;
+				String dsrJdbcUrl = url.replace(";DB_CLOSE_ON_EXIT=FALSE", "");
+				String dsrUrl = "'javascript:void(0);' onclick='return dbxOpenDsrDialog(\""+dsrJdbcUrl+"\");'";
+				String dsrTxt = dbName;
 					
 				out.println("  <tr>");
 				out.println("    <td "+style+">" + dbName         + "</td>");
@@ -1610,6 +1747,7 @@ public class OverviewServlet extends HttpServlet
 				out.println("    <td "+style+">" + sizeInGB       + "</td>");
 				out.println("    <td "+style+">" + sizeInMB       + "</td>");
 				out.println("    <td "+style+">" + diffSizeInGB   + "</td>");
+				out.println("    <td "+style+"><a href=" + dsrUrl + "><code>" + dsrTxt + "</code></a></td>");
 				out.println("    <td "+style+"><div title='"+linkToolTip+"'><a href='" + dbxTuneUrl + "'><code>" + url + "</code></a></div></td>");
 				out.println("  </tr>");
 			}
@@ -1617,7 +1755,7 @@ public class OverviewServlet extends HttpServlet
 			out.println("</table>");
 			out.println("</div>"); // end: card-body
 			out.println("</div>"); // end: card
-		}
+		} // end: OFFLINE Databases 
 
 		
 		//----------------------------------------------------
@@ -1661,18 +1799,380 @@ public class OverviewServlet extends HttpServlet
 			out.println("</div>"); // end: card-body
 			out.println("</div>"); // end: card
 			out.println("<br><br>");
-		}
+		} // end: ACTIVE Recordings (file content)
 
 		
 		out.println("</div>");
 
+		// Write Daily Summary HTML & JavaScript
+		out.println(getHtmlForDailySummaryReportDialog());
+		
 		// Write some JavaScript code
 		out.println(HtmlStatic.getJavaScriptAtEnd(true));
-		
+
 		out.println("</body>");
 		out.println("</html>");
 		out.flush();
 		out.close();
-	}
 
+	} // end: doGet
+
+	
+	private static String getHtmlForDailySummaryReportDialog()
+	{
+//		return "FIXME";
+
+		StringBuilder sb = new StringBuilder(1024);
+		
+		sb.append("	<!-- Modal: DSR Daily Summary Report dialog -->																					\n");
+		sb.append("	<div class='modal fade' id='dbx-dsr-dialog' tabindex='-1' role='dialog' aria-labelledby='dbx-dsr-dialog' aria-hidden='true'>	\n");
+		sb.append("		<div class='modal-dialog modal-dialog-centered modal-lg' role='document'>													\n");
+		sb.append("		<div class='modal-content'>																									\n");
+		sb.append("			<div class='modal-header'>																								\n");
+		sb.append("			<h5 class='modal-title' id='dbx-dsr-dialog-title'>Create a Daily Summary Report - (With Time Bounderies)</h5>			\n");
+		sb.append("			<button type='button' class='close' data-dismiss='modal' aria-label='Close'>											\n");
+		sb.append("				<span aria-hidden='true'>&times;</span>																				\n");
+		sb.append("			</button>																												\n");
+		sb.append("			</div>																													\n");
+		sb.append("			<div class='modal-body'>																								\n");
+//		sb.append("				<ul>																												\n");
+//		sb.append("					<li>Action: Describe me 1</li>																					\n");
+//		sb.append("					<li>Action: Describe me 2</li>																					\n");
+//		sb.append("				</ul>																												\n");
+		sb.append("				<form>																													\n");
+		sb.append("					<div class='form-row'>																								\n");
+		sb.append("						<label for='dbx-dsr-dbname'>Recording DB Name (full URL or H2 DB name))</label>									\n");
+		sb.append("						<input  id='dbx-dsr-dbname' type='text' class='form-control is-valid' placeholder='dbname' required>			\n");
+		sb.append("					</div>																												\n");
+		sb.append("					<div class='form-row'>																								\n");
+		sb.append("						<div class='col-md-4 mb-3'>																						\n");
+//		sb.append("						<div class='col-auto'>																							\n");
+		sb.append("							<label for='dbx-dsr-username-txt'>DB User Name</label>														\n");
+		sb.append("							<input  id='dbx-dsr-username-txt' type='text' class='form-control is-valid' placeholder='Username, sa is default' />	\n");
+		sb.append("						</div>																											\n");
+		sb.append("						<div class='col-md-4 mb-3'>																						\n");
+//		sb.append("						<div class='col-auto'>																							\n");
+		sb.append("							<label for='dbx-dsr-password-txt'>DB Password</label>														\n");
+		sb.append("							<input  id='dbx-dsr-password-txt' type='password' class='form-control is-valid' placeholder='Password, blank is default' />	\n");
+		sb.append("						</div>																											\n");
+		sb.append("					</div>																											\n");
+		sb.append("					<div class='form-row'>																								\n");
+		sb.append("						<div class='col-md-4 mb-3'>																						\n");
+//		sb.append("						<div class='col-auto'>																							\n");
+		sb.append("							<label for='dbx-dsr-begin-time'>Report Begin Time</label>													\n");
+		sb.append("							<input  id='dbx-dsr-begin-time' type='text' class='form-control is-valid' placeholder='HH:mm (or blank)' pattern='^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$' title='Must be HH:MM, where HH=00-23 and MM=00-59'/>	\n");
+		sb.append("							<div class='invalid-feedback'>Must be HH:MM, where HH=00-23 and MM=00-59</div>								\n");
+		sb.append("						</div>																											\n");
+		sb.append("						<div class='col-md-4 mb-3'>																						\n");
+//		sb.append("						<div class='col-auto'>																							\n");
+		sb.append("							<label for='dbx-dsr-end-time'>Report End Time</label>														\n");
+		sb.append("							<input  id='dbx-dsr-end-time' type='text' class='form-control is-valid' placeholder='HH:mm (or blank)' pattern='^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$' title='Must be HH:MM, where HH=00-23 and MM=00-59' />	\n");
+		sb.append("							<div class='invalid-feedback'>Must be HH:MM, where HH=00-23 and MM=00-59</div>								\n");
+		sb.append("						</div>																											\n");
+		sb.append("					</div>																											\n");
+		sb.append("				</form>																												\n");
+		sb.append("				<div id='dbx-dsr-progress-div' class='progress'>																	\n");
+		sb.append("					<div id='dbx-dsr-progress-bar' class='progress-bar progress-bar-striped active' role='progressbar' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100' style='width:0%; min-width:25px'>	\n");
+		sb.append("					0%																												\n");
+		sb.append("					</div>																											\n");
+		sb.append("				</div>																												\n");
+		sb.append("				<div id='dbx-dsr-progress-txt'>																						\n");
+		sb.append("				</div>																												\n");
+//		sb.append("				<br>																												\n");
+//		sb.append("				<table id='dbx-dsr-filter-table'																					\n"); 
+//		sb.append("					class='table-responsive' 																						\n");
+//		sb.append("					data-show-columns='false' 																						\n");
+//		sb.append("					data-paging='false' 																							\n");
+//		sb.append("					data-filtering='true'																							\n"); 
+//		sb.append("					data-filter-control='true' 																						\n");
+//		sb.append("					data-click-to-select='false'																					\n");
+//		sb.append("					data-sorting='true'																								\n");
+//		sb.append("					data-checkbox-header='true'																						\n");
+//		sb.append("					data-maintain-selected='true'																					\n");
+//		sb.append("					data-ignore-click-to-select-on=scrollToDisableCheckRow()>														\n");
+//		sb.append("					<thead>																											\n");
+//		sb.append("						<tr>																										\n");
+//		sb.append("							<th data-field='visible'   data-checkbox='true'></th>													\n");
+//		sb.append("							<th data-field='cm'        data-filter-control='input'  data-sortable='true'>Counter Model</th>			\n");
+//		sb.append("							<th data-field='desc'      data-filter-control='input'  data-sortable='true'>Description</th>			\n");
+//		sb.append("						</tr>																										\n");
+//		sb.append("					</thead>																										\n");
+//		sb.append("					<tbody>																											\n");
+//		sb.append("						<tr> 																										\n");
+//		sb.append("							<td class='bs-checkbox '><input data-index='0' name='btSelectItem' type='checkbox'></td>				\n");
+//		sb.append("							<td>dummy-1</td> 																						\n");
+//		sb.append("							<td>dummy-2</td> 																						\n");
+//		sb.append("						</tr>																										\n");
+//		sb.append("					</tbody>          																								\n");      
+//		sb.append("				</table>																											\n");
+		sb.append("			</div>																													\n");
+		sb.append("			<div class='modal-footer'>																								\n");
+//		sb.append("			<button type='button' class='btn btn-primary' data-dismiss='modal' id='dbx-dsr-dialog-ok'>Create</button>				\n");
+		sb.append("			<button type='button' class='btn btn-primary' id='dbx-dsr-dialog-ok'>Create</button>				\n");
+		sb.append("			<button type='button' class='btn btn-default' data-dismiss='modal'>Close</button>										\n");
+		sb.append("			</div>																													\n");
+		sb.append("		</div>																														\n");
+		sb.append("		</div>																														\n");
+		sb.append("	</div>  																														\n");
+		sb.append("	<!-- -->																														\n");
+		sb.append("\n");
+		sb.append("\n");
+		sb.append("\n");
+
+
+
+//				<button id="dbx-filter"              class="btn btn-outline-light mx-2 my-0 my-sm-0" type="button">Filter</button>
+
+		sb.append("<script>																												\n");
+//		sb.append("	// Install functions for button: dbx-filter																			\n");
+//		sb.append("	$('#dbx-filter').click( function() 																					\n");
+//		sb.append("	{																													\n");
+//		sb.append("		dbxOpenDsrDialog();																								\n");
+//		sb.append("	});																													\n");
+		sb.append("																														\n");
+		sb.append("	$('#dbx-dsr-dialog').on('show.bs.modal', function () {																\n");
+		sb.append("		$(this).find('.modal-body').css({																				\n");
+		sb.append("			'max-height':'100%'																							\n");
+		sb.append("		});																												\n");
+		sb.append("	});																													\n");
+		
+//		sb.append("	// Example starter JavaScript for disabling form submissions if there are invalid fields							\n");
+//		sb.append("	(function() {																										\n");
+//		sb.append("	  'use strict';																										\n");
+//        sb.append("																														\n");
+//		sb.append("	  window.addEventListener('load', function() {																		\n");
+//		sb.append("	    var form = document.getElementById('needs-validation');															\n");
+//		sb.append("	    form.addEventListener('submit', function(event) {																\n");
+//		sb.append("	      if (form.checkValidity() === false) {																			\n");
+//		sb.append("	        event.preventDefault();																						\n");
+//		sb.append("	        event.stopPropagation();																					\n");
+//		sb.append("	      }																												\n");
+//		sb.append("	      form.classList.add('was-validated');																			\n");
+//		sb.append("	    }, false);																										\n");
+//		sb.append("	  }, false);																										\n");
+//		sb.append("	})();																												\n");
+		
+		sb.append("																														\n");
+		sb.append("	// What should happen when we click OK in the dialog																\n");
+		sb.append("	$('#dbx-dsr-dialog-ok').click( function() 																			\n");
+		sb.append("	{																													\n");
+		sb.append("		// Show progress field																							\n");
+		sb.append("		$('#dbx-dsr-progress-div').show();																				\n");
+		sb.append("		$('#dbx-dsr-progress-bar').css('width', '0%');																	\n");
+		sb.append("		$('#dbx-dsr-progress-bar').html('0%');																			\n");
+		sb.append("																														\n");
+		sb.append("		// build the URL params																							\n");
+		sb.append("		var dsrDbname    = $('#dbx-dsr-dbname').val();																	\n");
+		sb.append("		var dsrUsername  = $('#dbx-dsr-username-txt').val();															\n");
+		sb.append("		var dsrPassword  = $('#dbx-dsr-password-txt').val();															\n");
+		sb.append("		var dsrBeginTime = $('#dbx-dsr-begin-time').val();																\n");
+		sb.append("		var dsrEndTime   = $('#dbx-dsr-end-time').val();																\n");
+		sb.append("																														\n");
+//		sb.append("		console.log('dsrDbname    = |' + dsrDbname + '|');																\n");
+//		sb.append("		console.log('dsrUsername  = |' + dsrUsername + '|');															\n");
+//		sb.append("		console.log('dsrPassword  = |' + dsrPassword + '|');															\n");
+//		sb.append("		console.log('dsrBeginTime = |' + dsrBeginTime + '|');															\n");
+//		sb.append("		console.log('dsrEndTime   = |' + dsrEndTime + '|');																\n");
+//		sb.append("																														\n");
+		sb.append("		if (dsrDbname)    { dsrDbname    = '&dbname='    + dsrDbname;    }												\n");
+		sb.append("		if (dsrUsername)  { dsrUsername  = '&username='  + dsrUsername;  }												\n");
+		sb.append("		if (dsrPassword)  { dsrPassword  = '&password='  + dsrPassword;  }												\n");
+		sb.append("		if (dsrBeginTime) { dsrBeginTime = '&beginTime=' + dsrBeginTime; }												\n");
+		sb.append("		if (dsrEndTime)   { dsrEndTime   = '&endTime='   + dsrEndTime;   }												\n");
+		sb.append("																														\n");
+		sb.append("		// create the event source																						\n");
+		sb.append("		var fullUrl = encodeURI('/api/dsr?op=get' + dsrDbname + dsrUsername + dsrPassword + dsrBeginTime + dsrEndTime);	\n");
+		sb.append("		console.log('EventSource - FullURL: ' + fullUrl);																\n");
+		sb.append("		var sse = new EventSource(fullUrl);																				\n");
+		sb.append("																														\n");
+		sb.append("		// set initial progress text																					\n");
+		sb.append("		$('#dbx-dsr-progress-txt').text('Requested a DSR request. URL: ' + fullUrl);									\n");
+		sb.append("																														\n");
+		sb.append("		// ---------------------------------------------------------													\n");
+		sb.append("		// PROGRESS																										\n");
+		sb.append("		// ---------------------------------------------------------													\n");
+		sb.append("		sse.addEventListener('progress', function(event) 																\n");
+		sb.append("		{																												\n");
+		sb.append("			console.log('ON-PROGRESS: ' + event, event);																\n");
+		sb.append("																														\n");
+		sb.append("			// data expected to be in JSON-format, so parse 															\n");
+		sb.append("			var data = JSON.parse(event.data);																			\n");
+		sb.append("																														\n");
+		sb.append("			$('#dbx-dsr-progress-txt').css('color', 'black');															\n");
+		sb.append("			$('#dbx-dsr-progress-txt').text(data.progressText);															\n");
+		sb.append("																														\n");
+		sb.append("			var pct = data.percentDone;																					\n");
+		sb.append("			if (data.state === 'AFTER')																					\n");
+		sb.append("			{																											\n");
+		sb.append("				$('#dbx-dsr-progress-bar').css('width', pct+'%');														\n");
+		sb.append("				$('#dbx-dsr-progress-bar').html(pct+'%');																\n");
+		sb.append("			}																											\n");
+		sb.append("																														\n");
+		sb.append("			// update status								 															\n");
+		sb.append("			if (data.state === 'AFTER' && pct === 100)																	\n");
+		sb.append("			{																											\n");
+		sb.append("				$('#dbx-dsr-progress-txt').text('Report Content will now be transferred... This may take time, then a new tab will be opened!');	\n");
+		sb.append("			}																											\n");
+		sb.append("		});																												\n");
+		sb.append("																														\n");
+		sb.append("		// ---------------------------------------------------------													\n");
+		sb.append("		// COMPLETE																										\n");
+		sb.append("		// ---------------------------------------------------------													\n");
+		sb.append("		sse.addEventListener('complete', function(event) 																\n");
+		sb.append("		{																												\n");
+		sb.append("			console.log('ON-COMPLETE: ' + event, event);																\n");
+		sb.append("																														\n");
+		sb.append("			// data expected to be in JSON-format, so parse 															\n");
+		sb.append("			var data = JSON.parse(event.data);																			\n");
+		sb.append("																														\n");
+		sb.append("			// close the connection to server																			\n");
+		sb.append("			sse.close();																								\n");
+		sb.append("																														\n");
+		sb.append("			$('#dbx-dsr-progress-txt').css('color', 'black');															\n");
+		sb.append("			$('#dbx-dsr-progress-txt').text('Report is complete...');													\n");
+		sb.append("																														\n");
+		sb.append("			var newDsrTab = window.open('','_blank');																	\n");
+		sb.append("			newDsrTab.document.write(data.complete);																	\n");
+		sb.append("																														\n");
+		sb.append("			$('#dbx-dsr-progress-txt').text('A New tab with the Daily Summary Report has been opened.');				\n");
+		sb.append("			$('#dbx-dsr-progress-div').hide();																			\n");
+		sb.append("																														\n");
+//		sb.append("			// Hide the dialog																							\n");
+//		sb.append("			$('#dbx-dsr-dialog').modal('hide');																			\n");
+		sb.append("		});																												\n");
+		sb.append("																														\n");
+//		sb.append("		// handle incoming messages																						\n");
+//		sb.append("		sse.onmessage = function(event) 																				\n");
+//		sb.append("		{																												\n");
+//		sb.append("			console.log('ON-MESSAGE: ' + event, event);																	\n");
+//		sb.append("																														\n");
+//		sb.append("			$('#dbx-dsr-progress-txt').css('color', 'black');															\n");
+//		sb.append("																														\n");
+//		sb.append("			if (event.type == 'message') 																				\n");
+//		sb.append("			{																											\n");
+//		sb.append("				// data expected to be in JSON-format, so parse 														\n");
+//		sb.append("				var data = JSON.parse(event.data);																		\n");
+//		sb.append("																														\n");
+//		sb.append("				if (data.hasOwnProperty('complete'))																	\n");
+//		sb.append("				{																										\n");
+//		sb.append("					// close the connection so browser does not keep connecting											\n");
+//		sb.append("					sse.close();																						\n");
+//		sb.append("																														\n");
+//		sb.append("					$('#dbx-dsr-progress-txt').text('Report is complete...');											\n");
+//		sb.append("																														\n");
+//		sb.append("					var newDsrTab = window.open('','_blank');															\n");
+//		sb.append("					newDsrTab.document.write(data.complete);															\n");
+//		sb.append("																														\n");
+//		sb.append("					$('#dbx-dsr-progress-txt').text('A New tab with the Daily Summary Report has been opened.');		\n");
+//		sb.append("					$('#dbx-dsr-progress-div').hide();																	\n");
+//		sb.append("																														\n");
+////		sb.append("					// Hide the dialog																					\n");
+////		sb.append("					$('#dbx-dsr-dialog').modal('hide');																	\n");
+//		sb.append("				}																										\n");
+//		sb.append("				// otherwise, it's a progress update so just update progress bar										\n");
+//		sb.append("				else 																									\n");
+//		sb.append("				{																										\n");
+//		sb.append("					$('#dbx-dsr-progress-txt').text(data.progressText);													\n");
+//		sb.append("																														\n");
+//		sb.append("					var pct = data.percentDone;																			\n");
+//		sb.append("					if (data.state === 'AFTER')																			\n");
+//		sb.append("					{																									\n");
+//		sb.append("						$('#dbx-dsr-progress-bar').css('width', pct+'%');												\n");
+//		sb.append("						$('#dbx-dsr-progress-bar').html(pct+'%');														\n");
+//		sb.append("					}																									\n");
+//		sb.append("																														\n");
+//		sb.append("					// update status								 													\n");
+//		sb.append("					if (data.state === 'AFTER' && pct === 100)															\n");
+//		sb.append("					{																									\n");
+//		sb.append("						$('#dbx-dsr-progress-txt').text('Report Content will now be transferred... This may take time, then a new tab will be opened!');	\n");
+//		sb.append("					}																									\n");
+//		sb.append("				}																										\n");
+//		sb.append("			}																											\n");
+//		sb.append("			else						 																				\n");
+//		sb.append("			{																											\n");
+//		sb.append("				$('#dbx-dsr-progress-txt').text('Unhandled event type: ' + event.type);									\n");
+//		sb.append("				$('#dbx-dsr-progress-txt').css('color', 'red');															\n");
+//		sb.append("			}																											\n");
+//		sb.append("		};																												\n");
+		sb.append("		// ---------------------------------------------------------													\n");
+		sb.append("		// ERROR																										\n");
+		sb.append("		// ---------------------------------------------------------													\n");
+		sb.append("		sse.onerror = function(event) 																					\n");
+		sb.append("		{																												\n");
+		sb.append("			sse.close();																								\n");
+		sb.append("			console.log('SSE-ON-COMPLETE: ', event);																	\n");
+		sb.append("			$('#dbx-dsr-progress-txt').text('ERROR: ' + event.data);													\n");
+		sb.append("			$('#dbx-dsr-progress-txt').css('color', 'red');																\n");
+		sb.append("		};																												\n");
+
+//		sb.append("		var selectedRecords = $('#dbx-dsr-filter-table').bootstrapTable('getSelections');								\n");
+//		sb.append("																														\n");
+//		sb.append("		// hide ALL graphs																								\n");
+//		sb.append("		for(let i=0; i<_graphMap.length; i++)																			\n");
+//		sb.append("		{																												\n");
+//		sb.append("			const dbxGraph = _graphMap[i];																				\n");
+//		sb.append("			var x = document.getElementById(dbxGraph.getFullName());													\n");
+//		sb.append("			x.style.display = 'none';																					\n");
+//		sb.append("			// console.log('HIDE: x='+x, x);																			\n");
+//		sb.append("		}																												\n");
+//		sb.append("		// show marked ones ALL graphs																					\n");
+//		sb.append("		for (let i = 0; i < selectedRecords.length; i++)																\n"); 
+//		sb.append("		{																												\n");
+//		sb.append("			const record = selectedRecords[i];																			\n");
+//		sb.append("			var x = document.getElementById(record.fullName);															\n");
+//		sb.append("			x.style.display = 'block';																					\n");
+//		sb.append("			// console.log('SHOW: x='+x, x);																			\n");
+//		sb.append("		}																												\n");
+		sb.append("	});																													\n");
+
+		sb.append("\n");
+		sb.append("\n");
+		sb.append("\n");
+
+		sb.append("	function dbxOpenDsrDialog(dbname)																					\n");
+		sb.append("	{																													\n");
+		sb.append("		console.log('dbxOpenDsrDialog(dbname='+dbname+')');																\n");
+		sb.append("																														\n");
+//		sb.append("		// loop all available graphs and add it to the table in the dialog												\n");
+//		sb.append("		if (_filterDialogContentArr.length === 0)																		\n");
+//		sb.append("		{																												\n");
+//		sb.append("			for(let i=0; i<_graphMap.length; i++)																		\n");
+//		sb.append("			{																											\n");
+//		sb.append("				const dbxGraph = _graphMap[i];																			\n");
+//		sb.append("																														\n");
+//		sb.append("				var row = {																								\n");
+//		sb.append("					'visible'   : true,																					\n");
+//		sb.append("					'desc'      : dbxGraph.getGraphLabel(),																\n");
+//		sb.append("					'type'      : dbxGraph.getGraphCategory(),															\n");
+//		sb.append("					'cm'        : dbxGraph.getCmName(),																	\n");
+//		sb.append("					'graphName' : dbxGraph.getGraphName(),																\n");
+//		sb.append("					'fullName'  : dbxGraph.getFullName(),																\n");
+//		sb.append("				};																										\n");
+//		sb.append("				_filterDialogContentArr.push(row);																		\n");
+//		sb.append("			}																											\n");
+//		sb.append("																														\n");
+//		sb.append("			$('#dbx-dsr-filter-table').bootstrapTable({data: _filterDialogContentArr});									\n");
+//		sb.append("		}																												\n");
+		sb.append("																														\n");
+		sb.append("		// set some fields																								\n");
+		sb.append("		$('#dbx-dsr-dbname').val(dbname);																				\n");
+		sb.append("																														\n");
+		sb.append("		// Hide progress field																							\n");
+		sb.append("		$('#dbx-dsr-progress-div').hide();																				\n");
+		sb.append("		$('#dbx-dsr-progress-txt').text('');																			\n");
+		sb.append("																														\n");
+		sb.append("		// Show the dialog																								\n");
+		sb.append("		$('#dbx-dsr-dialog').modal('show');																				\n");
+		sb.append("																														\n");
+		sb.append("		return false;																									\n");
+		sb.append("	}																													\n");
+
+		sb.append("</script>																											\n");
+		
+		sb.append("\n");
+		sb.append("\n");
+		sb.append("\n");
+
+		return sb.toString();
+	}
 }

@@ -378,6 +378,54 @@ extends DbxConnection
 			}
 		}
 		
+		boolean getIndexInclude = true;
+		if (getIndexInclude)
+		{
+			String sql = ""
+				    + "SELECT i.name as IndexName, c.name as ColumnName \n"
+				    + "FROM       " + cat + "sys.indexes        i \n"
+				    + "INNER JOIN " + cat + "sys.index_columns ic ON ic.object_id = i .object_id AND ic.index_id  = i .index_id \n"
+				    + "INNER JOIN " + cat + "sys.columns        c ON c .object_id = ic.object_id AND c .column_id = ic.column_id \n"
+				    + "WHERE i.object_id = object_id('" + cat + schema + table + "') \n"
+				    + "  AND ic.is_included_column = 1 \n"
+				    + "ORDER BY ic.index_id, ic.index_column_id \n"
+				    + "";
+			try
+			{
+				List<ResultSetTableModel> rstmList = DbUtils.exec(_conn, sql, 2);
+				
+				if (rstmList.size() >= 1)
+				{
+					ResultSetTableModel indexInfo = rstmList.get(0);
+					
+					Map<String, String> extIndexInfo = new HashMap<>(); // <indexName, colName(s)>
+				//	Map<String, List<String>> extIndexInfo = new HashMap<>(); // <indexName, colName(s)> // Maybe we can have this as a List instead of a CSV String...
+					for (int r=0; r<indexInfo.getRowCount(); r++)
+					{
+						String indexName   = indexInfo.getValueAsString(r, "IndexName",  false, "");
+						String indexColumn = indexInfo.getValueAsString(r, "ColumnName", false, "");
+
+						String includeColumns = extIndexInfo.get(indexName);
+						if (includeColumns == null)
+							includeColumns = indexColumn;
+						else
+							includeColumns += ", " + indexColumn;
+
+						extIndexInfo.put(indexName, includeColumns);
+					}
+
+					// ADD INFO
+					extraInfo.put(TableExtraInfo.IndexIncludeColumns, new TableExtraInfo(TableExtraInfo.IndexIncludeColumns, "IndexIncludeColumns", extIndexInfo, "Index Include Columns", null));
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+				if (_logger.isDebugEnabled())
+					_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+			}
+		}
+		
 		boolean useSpSpaceused = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_getTableExtraInfo_useSpSpaceused, DEFAULT_getTableExtraInfo_useSpSpaceused);
 		if (useSpSpaceused)
 		{

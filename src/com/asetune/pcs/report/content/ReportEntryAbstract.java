@@ -21,21 +21,30 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content;
 
+import java.io.IOException;
+import java.io.StringWriter;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.DailySummaryReportFactory;
+import com.asetune.pcs.report.content.ReportChartTimeSeriesStackedBar.TopGroupCountReport;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.DbUtils;
+import com.asetune.utils.HtmlQueryString;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
@@ -44,9 +53,21 @@ implements IReportEntry
 {
 	private static Logger _logger = Logger.getLogger(ReportEntryAbstract.class);
 
-	private   Exception _problem;
+	private   Exception _problemEx;
+	private   String    _problemMsg;
+	private   List<String> _warningMsgList;
+	private   List<String> _infoMsgList;
 	protected DailySummaryReportAbstract _reportingInstance;
 	private   String _disabledReason; 
+
+//	private Timestamp _reportBeginTime = null;
+//	private Timestamp _reportEndTime   = null;
+//	
+//	public Timestamp getReportBeginTime() { return _reportBeginTime; }
+//	public Timestamp getReportEndTime()   { return _reportEndTime; }
+//
+//	public void setReportBeginTime(Timestamp ts) { _reportBeginTime = ts; }
+//	public void setReportEndTime  (Timestamp ts) { _reportEndTime   = ts; }
 
 	public ReportEntryAbstract(DailySummaryReportAbstract reportingInstance)
 	{
@@ -96,6 +117,47 @@ implements IReportEntry
 		_disabledReason = reason;
 	}
 
+
+	/**
+	 * More or less same as ResultSetTableModel.toHtmlTableString(...) but a default renderer that has column names like '*Time*', '*_ms*' or '*Ms*' a tool tip with the milliseconds transformed to HH:MM:SS.ms 
+	 * @param rstm   The ResultSet to create a HTML table for
+	 * @return a HTML Table 
+	 */
+	public String toHtmlTable(ResultSetTableModel rstm)
+	{
+		return toHtmlTable(rstm, null);
+	}
+	/**
+	 * More or less same as ResultSetTableModel.toHtmlTableString(...) but a default renderer that has column names like '*Time*', '*_ms*' or '*Ms*' a tool tip with the milliseconds transformed to HH:MM:SS.ms 
+	 * @param rstm                 The ResultSet to create a HTML table for
+	 * @param colNameValueTagMap   A Map with column names that should have special tags/values applied around the values
+	 * @return a HTML Table 
+	 */
+	public String toHtmlTable(ResultSetTableModel rstm, Map<String, String> colNameValueTagMap)
+	{
+		if (rstm == null)
+			return "";
+		
+		// Create a default renderer
+		TableStringRenderer tableRender = new ResultSetTableModel.TableStringRenderer()
+		{
+			@Override
+			public String cellToolTip(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+			{
+				if (objVal instanceof Number && objVal != null && colName != null)
+				{
+					if (colName.indexOf("Time") != -1 || colName.indexOf("_ms") != -1 || colName.indexOf("Ms") != -1 )
+					{
+//						return TimeUtils.msToTimeStrDHMSms(((Number)objVal).longValue());
+						return TimeUtils.msToTimeStrDHMS(((Number)objVal).longValue());
+					}
+				}
+				return null;
+			}
+		};
+		
+		return rstm.toHtmlTableString("sortable", true, true, colNameValueTagMap, tableRender);
+	}
 
 	public ResultSetTableModel createResultSetTableModel(ResultSet rs, String name, String sql)
 	throws SQLException
@@ -149,7 +211,7 @@ implements IReportEntry
 		}
 		catch(SQLException ex)
 		{
-			setProblem(ex);
+			setProblemException(ex);
 			
 			//_fullRstm = ResultSetTableModel.createEmpty(name);
 			_logger.warn("Problems getting '" + name + "': " + ex);
@@ -168,6 +230,95 @@ implements IReportEntry
 		
 	}
 
+	
+	@Override
+	public String getMessageText()
+	{
+		StringWriter writer = new StringWriter();
+		
+		// StringWriter do not throw exception, but the interface does, do not care about the Exception 
+		try { writeMessageText(writer); }
+		catch (IOException ignore) {}
+
+		return writer.toString();
+	}
+
+//	@Override
+//	public void writeMessageText(Writer sb)
+//	throws IOException
+//	{
+//	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		if (hasWarningMsg())
+//		{
+//			sb.append(getWarningMsg());
+//		}
+//
+//		if (hasInfogMsg())
+//		{
+//			sb.append(getInfoMsg());
+//		}
+//
+//		if (hasResultSetTables())
+//		{
+//			for (ResultSetTableModel rstm : getResultSetTables())
+//			{
+//				if (rstm.getRowCount() == 0)
+//				{
+//					sb.append("Row Count: ").append(rstm.getRowCount()).append("<br>\n");
+//				}
+//				else
+//				{
+//					// Get a description of this section, and column names
+//					sb.append(getSectionDescriptionHtml(rstm, true));
+//
+//					sb.append("Row Count: ").append(rstm.getRowCount()).append("<br>\n");
+//					sb.append(toHtmlTable(rstm));
+//				}
+//			}
+//		}
+//
+//		return sb.toString();
+//	}
+//
+//	//-------------------------------------------------------------------------
+//	// Result Set Tables
+//	//-------------------------------------------------------------------------
+//	private List<ResultSetTableModel> _resulSetTableList;
+//
+//	public void addResultSetTable(ResultSetTableModel rstm)
+//	{
+//		if (_resulSetTableList == null)
+//			_resulSetTableList = new ArrayList<>();
+//
+//		_resulSetTableList.add(rstm);
+//	}
+//	
+//	public List<ResultSetTableModel> getResultSetTables()
+//	{
+//		if (_resulSetTableList == null)
+//			_resulSetTableList = new ArrayList<>();
+//
+//		return _resulSetTableList;
+//	}
+//
+//	public boolean hasResultSetTables()
+//	{
+//		if (_resulSetTableList == null)
+//			return false;
+//
+//		return !_resulSetTableList.isEmpty();
+//	}
+	
+	
+	//-------------------------------------------------------------------------
+	// PROBLEM (error) messages
+	//-------------------------------------------------------------------------
 	@Override
 	public String getProblemText()
 	{
@@ -176,13 +327,21 @@ implements IReportEntry
 
 		StringBuilder sb = new StringBuilder();
 		
-		Exception ex = getProblem();
-		sb.append("<pre>").append(ex).append("</pre> \n");
-		
-		if (isPrintStacktraceEnabled())
+		if (getProblemException() != null)
 		{
-			sb.append("<b>Stacktrace:</b><br> \n");
-			sb.append("<pre>").append( StringUtil.exceptionToString(ex)).append("</pre> \n");
+    		Exception ex = getProblemException();
+    		sb.append("<pre>").append(ex).append("</pre> \n");
+    		
+    		if (isPrintStacktraceEnabled())
+    		{
+    			sb.append("<b>Stacktrace:</b><br> \n");
+    			sb.append("<pre>").append( StringUtil.exceptionToString(ex)).append("</pre> \n");
+    		}
+		}
+
+		if (getProblemMsg() != null)
+		{
+    		sb.append(getProblemMsg());
 		}
 		
 		return sb.toString();
@@ -193,19 +352,211 @@ implements IReportEntry
 		return true;
 	}
 
-	public void setProblem(Exception ex)
-	{
-		_problem = ex;
-	}
-	public Exception getProblem()
-	{
-		return _problem;
-	}
+	/**
+	 * Checks if there are any problems... indicated by: setProblemException() or setProblemStr()
+	 *  
+	 * @return
+	 */
+	@Override
 	public boolean hasProblem()
 	{
-		return _problem != null;
+		return getProblemException() != null || getProblemMsg() != null;
 	}
 
+
+	public void setProblemException(Exception ex)
+	{
+		_problemEx = ex;
+	}
+	public Exception getProblemException()
+	{
+		return _problemEx;
+	}
+
+
+	public void addProblemMessage(String text)
+	{
+		if (_problemMsg == null)
+			_problemMsg = "";
+
+		_problemMsg += text;
+	}
+	public void setProblemMsg(String text)
+	{
+		_problemMsg = text;
+	}
+	public String getProblemMsg()
+	{
+		return _problemMsg;
+	}
+
+
+	//-------------------------------------------------------------------------
+	// WARNING messages
+	//-------------------------------------------------------------------------
+	public void addWarningMessage(String text)
+	{
+		if (_warningMsgList == null)
+			_warningMsgList = new ArrayList<>();
+
+		_warningMsgList.add(text);
+	}
+	@Override
+	public String getWarningMsg()
+	{
+		if (_warningMsgList == null)
+			return "";
+		if (_warningMsgList.isEmpty())
+			return "";
+
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("<div class='dsr-warning-list'> \n");
+		sb.append("<font color='#ff9900'> \n");
+
+		sb.append("<h4>Warning Messages</h4> \n");
+		sb.append("<ul> \n");
+		for (String msg : _warningMsgList)
+		{
+			sb.append("<li>").append(msg).append("</li> \n");
+		}
+		sb.append("</ul> \n");
+		sb.append("</font> \n");
+		sb.append("</div> \n");
+		
+		return sb.toString();
+	}
+	@Override
+	public boolean hasWarningMsg()
+	{
+		if (_warningMsgList == null)
+			return false;
+
+		return !_warningMsgList.isEmpty();
+	}
+
+
+	//-------------------------------------------------------------------------
+	// INFO messages
+	//-------------------------------------------------------------------------
+	public void addInfoMessage(String text)
+	{
+		if (_infoMsgList == null)
+			_infoMsgList = new ArrayList<>();
+
+		_infoMsgList.add(text);
+	}
+	@Override
+	public String getInfoMsg()
+	{
+		if (_infoMsgList == null)
+			return "";
+		if (_infoMsgList.isEmpty())
+			return "";
+
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("<div class='dsr-info-list'> \n");
+
+		sb.append("<h4>Messages</h4> \n");
+		sb.append("<ul> \n");
+		for (String msg : _infoMsgList)
+		{
+			sb.append("<li>").append(msg).append("</li> \n");
+		}
+		sb.append("</ul> \n");
+		sb.append("</div> \n");
+		
+		return sb.toString();
+	}
+	@Override
+	public boolean hasInfogMsg()
+	{
+		if (_infoMsgList == null)
+			return false;
+
+		return !_infoMsgList.isEmpty();
+	}
+
+	
+	/**
+	 * Is called before method create() <br>
+	 * In here we can check for various stuff like if all tables exists etc
+	 * <p>
+	 * To indicate a problem; call setProblem()
+	 * 
+	 * @param conn
+	 * @return
+	 */
+	@Override
+	public void checkForIssuesBeforeCreate(DbxConnection conn)
+	{
+		String[] mandatoryTables = getMandatoryTables();
+		if (mandatoryTables != null)
+		{
+			for (int t=0; t<mandatoryTables.length; t++)
+			{
+				String tabEntry = mandatoryTables[t];
+				String[] sa = tabEntry.split("\\."); // escape the '.' since it's a regex for "any" char
+				
+				String catName = null;
+				String schName = null;
+				String tabName = null;
+				
+				if (sa.length == 1)
+				{
+					tabName = sa[0];
+				}
+				if (sa.length >= 2)
+				{
+					schName = sa[0];
+					tabName = sa[1];
+				}
+				if (sa.length >= 3)
+				{
+					catName = sa[0];
+					schName = sa[1];
+					tabName = sa[2];
+				}
+
+				// This checks table if the table name in following order: MixedCase, then UPPER or lower (depending on the metadata)
+				if ( ! DbUtils.checkIfTableExistsNoThrow(conn, catName, schName, tabName) )
+				{
+					catName = catName == null ? "" : catName + ".";
+					schName = schName == null ? "" : schName + ".";
+					String fullTabName = catName + schName + tabName;
+					
+					addProblemMessage("<br><font color='red'>ERROR: Creating Report Entry '" + this.getClass().getSimpleName() + "', the underlying table '" + fullTabName + "' did not exist, skipping this Report Entry.</font><br>\n");
+
+					_logger.info("In the Report Entry '" + this.getClass().getSimpleName() + "', the table '" + fullTabName + "' did not exist.");
+				}
+			}
+		} // end: checkTables != null
+	}
+
+	/**
+	 * Get tables that we depends on in this Report<br>
+	 * If we can't find them all, then this Report Entry wont be created.<br>
+	 * Instead a error message will be displayed that we are missing that table.
+	 * 
+	 * @return a Array of tables (null = no mandatory tables). One entry in the array should look like [SchemaName.]TableName
+	 */
+	@Override
+	public String[] getMandatoryTables()
+	{
+		return null;
+	}
+
+	public boolean doTableExist(DbxConnection conn, String schName, String tabName)
+	{
+		// Check 
+		boolean tabExists = DbUtils.checkIfTableExistsNoThrow(conn, null, schName, tabName);
+		if ( ! tabExists )
+		{
+			return false;
+		}
+		return true;
+	}
 
 	/**
 	 * Create a description of this report section<br>
@@ -331,6 +682,19 @@ implements IReportEntry
 //		return sb.toString();
 //	}
 
+	/**
+	 * Create a html DIV with
+	 * <ul>
+	 *     <li>A CheckBox, with a ID, that is provided in the method call</li>
+	 *     <li>And a CheckBox label, also a parameter</li>
+	 *     <li>and a embedded DIV with the content parameter</li>
+	 * </ul>
+	 * @param divId
+	 * @param visibleAtStart
+	 * @param label
+	 * @param content
+	 * @return
+	 */
 	public String createShowHideDiv(String divId, boolean visibleAtStart, String label, String content)
 	{
 		StringBuilder sb = new StringBuilder();
@@ -426,6 +790,52 @@ implements IReportEntry
 		}
 	}
 
+
+	/**
+	 * Create a link to DbxCentral where you can add any Skip entries
+	 * 
+	 * @param rstm
+	 * @param linkColumnName    The Column Name where we should insert the link
+	 * @param skipColumnName    Column Name we should get valueString to skip
+	 * @param sqlTextColumnName Column Name that contains SQL Text we want to skip (this can be null)
+	 */
+	public void setSkipEntriesUrl(ResultSetTableModel rstm, String linkColumnName, String skipColumnName, String sqlTextColumnName)
+	{
+		int pos_linkColumnName    = rstm.findColumn(linkColumnName);
+		int pos_skipColumnName    = rstm.findColumn(skipColumnName);
+		int pos_sqlTextColumnName = sqlTextColumnName == null ? -1 : rstm.findColumn(sqlTextColumnName);
+
+		if (pos_linkColumnName >= 0 && pos_skipColumnName >= 0)
+		{
+			String dbxCentral     = getReportingInstance().getDbxCentralBaseUrl();
+			String srvName        = getReportingInstance().getDbmsServerName();
+			String className      = this.getClass().getSimpleName();
+			String entryType      = skipColumnName;
+
+			for (int r=0; r<rstm.getRowCount(); r++)
+			{
+				String skipColmnValue = rstm.getValueAsString(r, pos_skipColumnName);
+				String description    = "";
+				String sqlTextExample = pos_sqlTextColumnName == -1 ? "" : rstm.getValueAsString(r, pos_sqlTextColumnName);
+				
+				if (skipColmnValue != null)
+				{
+					HtmlQueryString qs = new HtmlQueryString( dbxCentral + "/admin/admin.html" );
+					qs.add("op",             "openDsrSkipDialog");
+					qs.add("srvName",        srvName);
+					qs.add("className",      className);
+					qs.add("entryType",      entryType);
+					qs.add("stringVal",      skipColmnValue);
+					qs.add("description",    description);
+					qs.add("sqlTextExample", sqlTextExample);
+
+					String skipUrlStr = "<a href='" + qs + "' target='_blank'>Skip This</a>";
+
+					rstm.setValueAtWithOverride(skipUrlStr, r, pos_linkColumnName);
+				}
+			}
+		}
+	}
 	
 
 	/**
@@ -434,7 +844,7 @@ implements IReportEntry
 	 * @param conn
 	 * @return
 	 */
-	public int getRecordingSampleTime(DbxConnection conn)
+	public static int getRecordingSampleTime(DbxConnection conn)
 	{
 		String val = getRecordingSessionParameter(conn, null, "offline.sampleTime");
 		
@@ -450,7 +860,7 @@ implements IReportEntry
 	 * 
 	 * @return The value as a String, NULL if not found.
 	 */
-	public String getRecordingSessionParameter(DbxConnection conn, String type, String paramName)
+	public static String getRecordingSessionParameter(DbxConnection conn, String type, String paramName)
 	{
 		String whereType = "";
 		if (StringUtil.hasValue(type))
@@ -536,6 +946,7 @@ implements IReportEntry
 	
 	/**
 	 * Simple wrapper method to create a ReportChartObject
+	 * 
 	 * @param conn
 	 * @param cmName
 	 * @param graphName
@@ -545,13 +956,31 @@ implements IReportEntry
 	 * 
 	 * @return This will always returns a ReportChartObject object
 	 */
-	public ReportChartObject createChart(DbxConnection conn, String cmName, String graphName, int maxValue, String skipNames, String graphTitle)
+	public IReportChart createTsLineChart(DbxConnection conn, String cmName, String graphName, int maxValue, String skipNames, String graphTitle)
 	{
-		return new ReportChartObject(this, conn, cmName, graphName, maxValue, skipNames, graphTitle);
+		return new ReportChartTimeSeriesLine(this, conn, cmName, graphName, maxValue, skipNames, graphTitle);
+	}
+	
+	/**
+	 * Simple wrapper method to create a ReportChartObject
+	 * 
+	 * @param conn
+	 * @param cmName
+	 * @param graphName
+	 * @param maxValue
+	 * @param skipNames
+	 * @param graphTitle
+	 * 
+	 * @return This will always returns a ReportChartObject object
+	 */
+	public IReportChart createTsStackedBarChart(DbxConnection conn, String cmName, String dataGroupColumn, int dataGroupMinutes, TopGroupCountReport topGroupCountReport, String dataValueColumn, Double dataDivideByValue, String keepGroups, String skipGroups, String graphTitle)
+	{
+		return new ReportChartTimeSeriesStackedBar(this, conn, cmName, dataGroupColumn, dataGroupMinutes, topGroupCountReport, dataValueColumn, dataDivideByValue, keepGroups, skipGroups, graphTitle);
 	}
 	
 	
 	/**
+	 * FIXME
 	 * 
 	 * @param rstm             The ResultSetTableModel that we want to fix
 	 * @param conn             Connection to the Storage
@@ -595,6 +1024,86 @@ implements IReportEntry
 		
 		return rowsChanged;
 	}
-	
+
+	/**
+	 * If we have a begin/end period for this report, you want to add an extra criteria for the SQL Statement 
+	 * @return
+	 */
+	public String getReportPeriodSqlWhere()
+	{
+		return getReportPeriodSqlWhere("SessionSampleTime");
+	}
+
+//	/**
+//	 * If we have a begin/end period for this report, you want to add an extra criteria for the SQL Statement 
+//	 * @return
+//	 */
+//	public String getReportPeriodSqlWhere(String colname)
+//	{
+//		// Most common: exit early
+//		if (getReportBeginTime() == null && getReportEndTime() == null)
+//			return "";
+//
+//		// we have both BEGIN and END time
+//		if (getReportBeginTime() != null && getReportEndTime() != null)
+//		{
+//			return " and [" + colname + "] between '" + getReportBeginTime() + "' and '" + getReportEndTime() + "' \n";
+//		}
+//		// we only have BEGIN time
+//		else if (getReportBeginTime() != null)
+//		{
+//			return " and [" + colname + "] >= '" + getReportBeginTime() + "' \n";
+//		}
+//		// we only have END time
+//		else if (getReportEndTime() != null)
+//		{
+//			return " and [" + colname + "] <= '" + getReportEndTime() + "' \n";
+//		}
+//		else
+//		{
+//			return "";
+//		}
+//	}
+//	public boolean hasReportPeriod()
+//	{
+//		return (getReportBeginTime() != null || getReportEndTime() != null);
+//	}
+
+	/**
+	 * If we have a begin/end period for this report, you want to add an extra criteria for the SQL Statement 
+	 * @return
+	 */
+	public String getReportPeriodSqlWhere(String colname)
+	{
+		DailySummaryReportAbstract inst = getReportingInstance();
+		
+		// Most common: exit early
+		if (inst.getReportPeriodBeginTime() == null && inst.getReportPeriodEndTime() == null)
+			return "";
+
+		// we have both BEGIN and END time
+		if (inst.getReportPeriodBeginTime() != null && inst.getReportPeriodEndTime() != null)
+		{
+			return "  and [" + colname + "] between '" + inst.getReportPeriodBeginTime() + "' and '" + inst.getReportPeriodEndTime() + "' \n";
+		}
+		// we only have BEGIN time
+		else if (inst.getReportPeriodBeginTime() != null)
+		{
+			return "  and [" + colname + "] >= '" + inst.getReportPeriodBeginTime() + "' \n";
+		}
+		// we only have END time
+		else if (inst.getReportPeriodEndTime() != null)
+		{
+			return "  and [" + colname + "] <= '" + inst.getReportPeriodEndTime() + "' \n";
+		}
+		else
+		{
+			return "";
+		}
+	}
+	public boolean hasReportPeriod()
+	{
+		return (getReportingInstance().getReportPeriodBeginTime() != null || getReportingInstance().getReportPeriodEndTime() != null);
+	}
 	
 }

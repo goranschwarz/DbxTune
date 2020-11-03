@@ -21,6 +21,9 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content;
 
+import java.io.IOException;
+import java.io.Writer;
+
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -36,6 +39,12 @@ public interface IReportEntry
 	 * Get Report Message as a HTML String (do NOT surround with HTML start/end tags)
 	 */
 	String getMessageText();
+	
+	/**
+	 * Write Report Message as a HTML String (do NOT surround with HTML start/end tags)
+	 */
+	void writeMessageText(Writer writer) throws IOException;
+
 
 	/**
 	 * If the ReportEntry has a problem... then print that problem.  
@@ -125,6 +134,42 @@ public interface IReportEntry
 	{
 		return null;
 	}
+
+	/**
+	 * Is called before method create() <br>
+	 * In here we can check for various stuff like if all tables exists etc
+	 * <p>
+	 * To indicate a problem; call setProblem()
+	 * 
+	 * @param conn
+	 * @return
+	 */
+	void checkForIssuesBeforeCreate(DbxConnection conn);
+
+	
+	/**
+	 * Get tables that we depends on in this Report<br>
+	 * If we can't find them all, then this Report Entry wont be created.<br>
+	 * Instead a error message will be displayed that we are missing that table.
+	 * 
+	 * @return a Array of tables (null = no mandatory tables). One entry in the array should look like [SchemaName.]TableName
+	 */
+	String[] getMandatoryTables();
+
+	/**
+	 * Checks if there are any problems... indicated by: setProblemException() or setProblemStr()
+	 *  
+	 * @return
+	 */
+	boolean hasProblem();
+
+	boolean hasWarningMsg();
+	String getWarningMsg();
+
+	String getInfoMsg();
+	boolean hasInfogMsg();
+
+	
 
 //	/**
 //	 * Create Report entry with data from the database...

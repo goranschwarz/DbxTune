@@ -303,9 +303,9 @@ extends CountersModelAppend
 		{
 			List<Object> row = lastRefreshRows.get(r);
 
-			Object o_errorNumber  = (Integer) row.get(col_ErrorNumber_pos);
-			Object o_severity     = (Integer) row.get(col_Severity_pos);
-			Object o_ErrorMessage = (String)  row.get(col_ErrorMessage_pos);
+			Object o_errorNumber  = row.get(col_ErrorNumber_pos);
+			Object o_severity     = row.get(col_Severity_pos);
+			Object o_ErrorMessage = row.get(col_ErrorMessage_pos);
 
 			if (o_errorNumber == null || !(o_errorNumber instanceof Integer) )
 			{

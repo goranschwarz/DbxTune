@@ -144,6 +144,7 @@ import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.PersistWriterStatistics;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.pcs.report.DailySummaryReportDialog;
 import com.asetune.sql.JdbcUrlParser;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
@@ -304,6 +305,7 @@ public abstract class MainFrame
 	public static final String ACTION_OPEN_DDL_VIEW                     = "OPEN_DDL_VIEW";
 	public static final String ACTION_OPEN_SQL_QUERY_WIN                = "OPEN_SQL_QUERY_WIN";
 	public static final String ACTION_OPEN_LOCK_TOOL                    = "OPEN_LOCK_TOOL";
+	public static final String ACTION_CREATE_DAILY_SUMMARY_REPORT       = "CREATE_DAILY_SUMMARY_REPORT";
 	public static final String ACTION_OPEN_WIZARD_OFFLINE               = "OPEN_WIZARD_OFFLINE";
 	public static final String ACTION_OPEN_WIZARD_UDCM                  = "OPEN_WIZARD_UDCM";
 	public static final String ACTION_GARBAGE_COLLECT                   = "GARBAGE_COLLECT";
@@ -464,6 +466,7 @@ public abstract class MainFrame
 //	private JMenu               _preDefinedSql_m;
 	private JMenuItem           _sqlQuery_mi;
 //	private JMenuItem           _lockTool_mi;
+	private JMenuItem           _createDsr_mi;
 	private JMenuItem           _createOffline_mi;
 	private JMenuItem           _wizardCrUdCm_mi;
 	private JMenuItem           _doGc_mi;
@@ -1808,6 +1811,7 @@ public abstract class MainFrame
 //		_preDefinedSql_m               = createPredefinedSqlMenu(null, VendorType.ASE);
 		_sqlQuery_mi                   = new JMenuItem("SQL Query Window...");
 //		_lockTool_mi                   = new JMenuItem("Lock Tool (NOT YET IMPLEMENTED)");
+		_createDsr_mi                  = new JMenuItem("Create Daily Summary Report...");
 		_createOffline_mi              = new JMenuItem("Create 'Record Session - Template file' Wizard...");
 		_wizardCrUdCm_mi               = new JMenuItem("Create 'User Defined Counter' Wizard...");
 		_doGc_mi                       = new JMenuItem("Java Garbage Collection");
@@ -1820,6 +1824,7 @@ public abstract class MainFrame
 		_ddlView_mi                   .setIcon(SwingUtils.readImageIcon(Version.class, "images/ddl_view_tool.png"));
 		_sqlQuery_mi                  .setIcon(SwingUtils.readImageIcon(Version.class, "images/sql_query_window.png"));
 //		_lockTool_mi                  .setIcon(SwingUtils.readImageIcon(Version.class, "images/locktool16.gif"));
+		_createDsr_mi                 .setIcon(SwingUtils.readImageIcon(Version.class, "images/dsr_16.png"));
 		_createOffline_mi             .setIcon(SwingUtils.readImageIcon(Version.class, "images/pcs_write_16.png"));
 		_wizardCrUdCm_mi              .setIcon(SwingUtils.readImageIcon(Version.class, "images/ud_counter_activity.png"));
 		_doGc_mi                      .setIcon(SwingUtils.readImageIcon(Version.class, "images/gc_now.png"));
@@ -1832,6 +1837,7 @@ public abstract class MainFrame
 		_ddlView_mi                   .setActionCommand(ACTION_OPEN_DDL_VIEW);
 		_sqlQuery_mi                  .setActionCommand(ACTION_OPEN_SQL_QUERY_WIN);
 //		_lockTool_mi                  .setActionCommand(ACTION_OPEN_LOCK_TOOL);
+		_createDsr_mi                 .setActionCommand(ACTION_CREATE_DAILY_SUMMARY_REPORT);
 		_createOffline_mi             .setActionCommand(ACTION_OPEN_WIZARD_OFFLINE);
 		_wizardCrUdCm_mi              .setActionCommand(ACTION_OPEN_WIZARD_UDCM);
 		_doGc_mi                      .setActionCommand(ACTION_GARBAGE_COLLECT);
@@ -1844,6 +1850,7 @@ public abstract class MainFrame
 		_ddlView_mi                   .addActionListener(this);
 		_sqlQuery_mi                  .addActionListener(this);
 //		_lockTool_mi                  .addActionListener(this);
+		_createDsr_mi                 .addActionListener(this);
 		_createOffline_mi             .addActionListener(this);
 		_wizardCrUdCm_mi              .addActionListener(this);
 		_doGc_mi                      .addActionListener(this);
@@ -1860,6 +1867,7 @@ public abstract class MainFrame
 //		if (_preDefinedSql_m != null) menu.add(_preDefinedSql_m);
 		menu.add(_sqlQuery_mi);
 //		menu.add(_lockTool_mi);
+		menu.add(_createDsr_mi);
 		menu.add(_createOffline_mi);
 		menu.add(_wizardCrUdCm_mi);
 		menu.add(_doGc_mi);
@@ -2237,6 +2245,11 @@ public abstract class MainFrame
 			// TO BE IMPLEMENTED
 		}
 
+		if (ACTION_CREATE_DAILY_SUMMARY_REPORT.equals(actionCmd))
+		{
+			action_CreateDailySummaryReport(e);
+		}
+		
 		if (ACTION_OPEN_WIZARD_OFFLINE.equals(actionCmd))
 		{
 			new WizardOffline();
@@ -3942,6 +3955,34 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		}
 	}
 
+	public void action_CreateDailySummaryReport(ActionEvent e)
+	{
+//		SwingUtils.showInfoMessage(this, "Create Daily Summary Report", "<html>Sorry, NOT YET IMPLEMENTED!<html>");
+		
+		DailySummaryReportDialog.showDialog(this, this, isOfflineConnected());
+
+		if (CounterController.getInstance().isMonConnectedStatus())
+		{
+//			SwingUtils.showInfoMessage(this, "DDL Viewer", 
+//				"<html>" +
+//				    "Only supported in 'offline' mode<br>" +
+//				    "meaning: when you view a recorded session.<br>" +
+//				    "<br>" +
+//				    "<i>This functionality, will be implemented for 'online mode' in the future.</i><br>" +
+//				"<html>");
+		}
+		else if (isOfflineConnected())
+		{
+//			if (_ddlViewer == null)
+//				_ddlViewer = new DdlViewer();
+//
+//			if ( ! StringUtil.isNullOrBlank(objectname) )
+//				_ddlViewer.setViewEntry(dbname, objectname);
+//				
+//			_ddlViewer.setVisible(true);
+		}
+	}
+
 	public boolean isPauseSampling()
 	{
 		return _isSamplingPaused;
@@ -5022,6 +5063,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 //			mf._preDefinedSql_m              .setEnabled(true);
 			mf._sqlQuery_mi                  .setEnabled(true);
 //			mf._lockTool_mi                  .setEnabled();
+			mf._createDsr_mi                 .setEnabled(true);
 			mf._createOffline_mi             .setEnabled(true);
 			mf._wizardCrUdCm_mi              .setEnabled(true);
 			mf._doGc_mi                      .setEnabled(true); // always TRUE
@@ -5082,6 +5124,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 //			mf._preDefinedSql_m              .setEnabled(false);
 			mf._sqlQuery_mi                  .setEnabled(true);
 //			mf._lockTool_mi                  .setEnabled();
+			mf._createDsr_mi                 .setEnabled(true);
 			mf._createOffline_mi             .setEnabled(false);
 			mf._wizardCrUdCm_mi              .setEnabled(false);
 			mf._doGc_mi                      .setEnabled(true); // always TRUE
@@ -5143,6 +5186,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			mf._sqlQuery_mi                  .setEnabled(false);
 //			mf._lockTool_mi                  .setEnabled();
 //			mf._createOffline_mi             .setEnabled(false);
+			mf._createDsr_mi                 .setEnabled(true);
 			mf._createOffline_mi             .setEnabled(true);
 			mf._wizardCrUdCm_mi              .setEnabled(false);
 			mf._doGc_mi                      .setEnabled(true); // always TRUE

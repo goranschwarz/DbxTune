@@ -174,6 +174,13 @@ public class FocusableTip {
 				int y = p.y + Y_MARGIN;
 				if (y+tipWindow.getHeight()>=sb.y+sb.height) {
 					y = p.y - Y_MARGIN - tipWindow.getHeight();
+
+					// Ensure the top of the tool tip is always visible.
+					// The bottom of it may be off-screen if a tool tip is
+					// taller than the screen, but that is very unlikely
+					if (y < sb.y) {
+						y = sb.y + Y_MARGIN;
+					}
 				}
 
 				// Get x-coordinate of completions.  Try to align left edge

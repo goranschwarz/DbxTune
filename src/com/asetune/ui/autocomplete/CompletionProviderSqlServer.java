@@ -133,6 +133,37 @@ extends CompletionProviderAbstractSql
 	@Override
 	public List<CompletionTemplate> createCompletionTemplates()
 	{
-		return CompletionProviderStaticTemplates.createCompletionTemplates();
+		List<CompletionTemplate> list = CompletionProviderStaticTemplates.createCompletionTemplates();
+
+	
+		list.add( new CompletionTemplate( "cursor",
+				"declare @c_c1 varchar(255) \n" +
+				"declare @c_c2 varchar(20) \n" +
+				" \n" +
+				"DECLARE <CURSOR_NAME> cursor STATIC LOCAL for \n" +
+				"	SELECT c1, c2 \n" +
+				"	FROM tabname \n" +
+				"	WHERE c3 = 'val' \n" +
+				"	ORDER BY ... \n" +
+				" \n" +
+				"OPEN <CURSOR_NAME> \n" +
+				" \n" +
+				"while (1=1)  \n" +
+				"begin \n" +
+				"    -- get row into variables \n" +
+				"	 FETCH <CURSOR_NAME> into @c_c1, @c_c2 \n" +
+				" \n" +
+				"    -- get out of here if no more rows \n" +
+				"    if (@@fetch_status != 0) \n" +
+				"        break \n" +
+				" \n" +
+				"	 -- Do something... \n" +
+				"end \n" +
+				"CLOSE <CURSOR_NAME> \n" +
+				"DEALLOCATE cursor <CURSOR_NAME> \n" +
+				"",
+				"Add cursor"));
+
+		return list;
 	}
 }

@@ -21,16 +21,26 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.ase;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.ModelMissmatchException;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
@@ -43,17 +53,17 @@ public class AseTopSlowSql extends AseAbstract
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _longRstm;
 //	private Exception           _problem = null;
-
+	private ResultSetTableModel _skippedDsrRows;
+	
 	public AseTopSlowSql(DailySummaryReportAbstract reportingInstance)
 	{
 		super(reportingInstance);
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		if (_shortRstm.getRowCount() == 0)
 		{
 			sb.append("No rows found <br>\n");
@@ -63,25 +73,98 @@ public class AseTopSlowSql extends AseAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-			sb.append(_shortRstm.toHtmlTableString("sortable"));
+			sb.append(createSkippedEntriesReport(_skippedDsrRows));
+
+			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+//			sb.append(_shortRstm.toHtmlTableString("sortable"));
+			sb.append(toHtmlTable(_shortRstm));
 
 			if (_longRstm != null)
 			{
 				sb.append("<br>\n");
-				sb.append("SQL Text by JavaSqlHashCode: ").append(_longRstm.getRowCount()).append("<br>\n");
+				sb.append("SQL Text by JavaSqlHashCode: " + _longRstm.getRowCount() + "<br>\n");
+				sb.append("Tip: To format the SQL text below you can use any online formatting tool, like <a href='https://poorsql.com/'>Poor Man's T-SQL Formatter</a><br>\n");
 //				sb.append(_longRstm.toHtmlTablesVerticalString("sortable"));
-				sb.append(_longRstm.toHtmlTableString("sortable"));
+//				sb.append(_longRstm.toHtmlTableString("sortable"));
+
+				// Create a default renderer
+				TableStringRenderer tableRender = new ResultSetTableModel.TableStringRenderer()
+				{
+					@Override
+					public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+					{
+						if ("SQLText".equals(colName))
+						{
+						//	return "<xmp style='width:100%; max-height:400px; overflow:auto'>" + strVal + "</xmp>";
+							return "<xmp>" + strVal + "</xmp>";
+						}
+						return strVal;
+					}
+				};
+				sb.append(_longRstm.toHtmlTableString("sortable", true, true, null, tableRender));
 			}
 		}
-
-		return sb.toString();
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		if (_shortRstm.getRowCount() == 0)
+//		{
+//			sb.append("No rows found <br>\n");
+//		}
+//		else
+//		{
+//			// Get a description of this section, and column names
+//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+//
+//			sb.append(createSkippedEntriesReport(_skippedDsrRows));
+//
+//			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
+////			sb.append(_shortRstm.toHtmlTableString("sortable"));
+//			sb.append(toHtmlTable(_shortRstm));
+//
+//			if (_longRstm != null)
+//			{
+//				sb.append("<br>\n");
+//				sb.append("SQL Text by JavaSqlHashCode: ").append(_longRstm.getRowCount()).append("<br>\n");
+//				sb.append("Tip: To format the SQL text below you can use any online formatting tool, like <a href='https://poorsql.com/'>Poor Man's T-SQL Formatter</a><br>\n");
+////				sb.append(_longRstm.toHtmlTablesVerticalString("sortable"));
+////				sb.append(_longRstm.toHtmlTableString("sortable"));
+//
+//				// Create a default renderer
+//				TableStringRenderer tableRender = new ResultSetTableModel.TableStringRenderer()
+//				{
+//					@Override
+//					public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+//					{
+//						if ("SQLText".equals(colName))
+//						{
+//						//	return "<xmp style='width:100%; max-height:400px; overflow:auto'>" + strVal + "</xmp>";
+//							return "<xmp>" + strVal + "</xmp>";
+//						}
+//						return strVal;
+//					}
+//				};
+//				sb.append(_longRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+//				
+////				// Surround the column 'SQLText' content with '<xmp>' content '</xmp>'
+////				Map<String, String> colNameValueTagMap = new HashMap<>();
+////				colNameValueTagMap.put("SQLText",   "xmp");
+////
+////				sb.append(toHtmlTable(_longRstm, colNameValueTagMap));
+//			}
+//		}
+//
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
 	{
-		return "Top [SQL Captured] SLOW SQL Statements (order by: sumCpuTime, origin: monSysStatement) [with gt: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"]";
+		return "Top [SQL Captured] SLOW SQL Text/Language (order by: sumCpuTime, origin: monSysStatement) [with gt: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"]";
 	}
 
 	@Override
@@ -116,6 +199,7 @@ public class AseTopSlowSql extends AseAbstract
 		// Columns description
 		rstm.setColumnDescription("JavaSqlHashCode"            , "A Java calculation SQLText.hashCode() for the SQL Text (Note: this might not bee 100% accurate, but it's something... Note: -1 = Means that The SQLText couldn't be retrived/saved to the PCS.)");
 		rstm.setColumnDescription("records"                    , "Number of entries for this 'JavaSqlHashCode' in the report period");
+		rstm.setColumnDescription("SkipThis"                   , "Send a 'skip' request to DbxCentral, this means that in future reports this entry will be excluded.");
                                                               
 		rstm.setColumnDescription("StartTime_min"              , "First entry was sampled for this JavaSqlHashCode");
 		rstm.setColumnDescription("EndTime_max"                , "Last entry was sampled for this JavaSqlHashCode");
@@ -141,6 +225,121 @@ public class AseTopSlowSql extends AseAbstract
 	}
 
 	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { "MonSqlCapStatements" };
+	}
+
+
+
+///////////////////////////////////////////////////////////////////////////////////
+	protected String getDsrSkipEntriesAsHtmlTable()
+	{
+		String srvName   = getReportingInstance().getDbmsServerName();
+		String className = this.getClass().getSimpleName();
+		
+		return getReportingInstance().getDsrSkipEntriesAsHtmlTable(srvName, className);
+	}
+
+	protected Map<String, Set<String>> getDsrSkipEntries()
+	{
+		String srvName   = getReportingInstance().getDbmsServerName();
+		String className = this.getClass().getSimpleName();
+		
+		_skipEntries = getReportingInstance().getDsrSkipEntries(srvName, className);
+		return _skipEntries;
+	}
+	private Map<String, Set<String>> _skipEntries;
+
+	protected int getDsrSkipCount()
+	{
+		if (_skipEntries == null)
+			_skipEntries = getDsrSkipEntries();
+
+		int cnt = 0;
+
+		for (Set<String> entry : _skipEntries.values())
+		{
+			cnt += entry.size();
+		}
+		
+		return cnt;
+	}
+
+	protected ResultSetTableModel removeSkippedEntries(ResultSetTableModel rstm, int topRows, Map<String, Set<String>> dsrSkipEntries)
+	{
+		ResultSetTableModel allRemovedRows = new ResultSetTableModel(rstm, rstm.getName() + "_skippedRows", false);
+		
+		for (Entry<String, Set<String>> entry : dsrSkipEntries.entrySet())
+		{
+			String             colName = entry.getKey();
+			Collection<String> values  = entry.getValue();
+
+			List<ArrayList<Object>> removedRows = rstm.removeRows(colName, values);
+
+			//System.out.println("removeSkippedEntries(): removeCnt="+removedRows.size()+", colName='"+colName+"', values='"+values+"'.");
+			//if (!removedRows.isEmpty())
+			//	System.out.println("REMOVED-ROWS: "+removedRows);
+			
+			if ( ! removedRows.isEmpty() )
+				allRemovedRows.addRows(removedRows);
+		}
+		
+		// finally (make sure that we have no more rows than "TOP" was saying
+		// these rows should NOT be part of the returned 'allRemovedRows'
+		if (topRows > 0)
+		{
+			while(rstm.getRowCount() > topRows)
+			{
+				rstm.removeRow(rstm.getRowCount() - 1);
+			}
+		}
+		
+		return allRemovedRows;
+	}
+
+	protected String createSkippedEntriesReport(ResultSetTableModel skipRstm)
+	{
+		String dbxCentralAdminUrl = getReportingInstance().getDbxCentralBaseUrl() + "/admin/admin.html";
+
+		if (skipRstm == null)
+			return "--NO-SKIPPED-ROWS (null)--<br><br> \n";
+		
+		if (skipRstm.getRowCount() == 0)
+		{
+			return "No <i>Skip</i> records was found. Skip records can be defined in DbxCentral under <a href='" + dbxCentralAdminUrl + "' target='_blank'>" + dbxCentralAdminUrl + "</a> or in the report table by pressing <i>'Skip This'</i> links in the below tables.<br> \n";
+		}
+		
+		// Remove column 'SkipThis' or change the header and content to 'Remove This From The Skip Set'
+		if (true)
+		{
+			skipRstm.removeColumn("SkipThis");
+		}
+		
+		// add the content as a "hidden" section that user needs to expand to see
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("<b>Skip Values:</b> The Skip Set contained " + getDsrSkipCount() + " entries, Record that <b>was skipped</b> was: " + skipRstm.getRowCount() + "<br> \n");
+		sb.append("Note: Skip Values can be defined in DbxCentral under <a href='" + dbxCentralAdminUrl + "' target='_blank'>" + dbxCentralAdminUrl + "</a> or in the report table by pressing <i>'Skip This'</i> links in the below tables.<br> \n");
+
+		String skipEntriesHtmlTable    = "<b>Table of the Skip Set.</b> <br>" 
+		                               + getDsrSkipEntriesAsHtmlTable();
+
+		String removedRecordsHtmlTable = "<b>Here is a Table of the " + skipRstm.getRowCount() + " skipped records.</b> <br>" 
+		                               + skipRstm.toHtmlTableString("sortable");
+
+		String htmlText = skipEntriesHtmlTable + removedRecordsHtmlTable;
+		
+		String showHideDiv = createShowHideDiv("skip-section", false, "Show/Hide Skipped entries...", htmlText);
+		sb.append( msOutlookAlternateText(showHideDiv, "Skipped Entries", "") );
+		sb.append("<br>");
+
+		return sb.toString();
+	}
+///////////////////////////////////////////////////////////////////////////////////
+
+
+	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		// Set: _statement_gt_* variables
@@ -148,12 +347,15 @@ public class AseTopSlowSql extends AseAbstract
 		
 		int topRows          = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
 		int havingSumCpuTime = 1000; // 1 second
+
+		int skipCount = getDsrSkipCount();
 		
 		String sql = "-- source table: MonSqlCapStatements \n"
-			    + "select top " + topRows + " \n"
+			    + "select top " + (topRows + skipCount) + " \n"
 			    + "    [JavaSqlHashCode] \n"
 			    + "   ,count(*)                     as [records] \n"
 			    + " \n"
+			    + "   ,cast('' as varchar(512))     as [SkipThis] \n"
 			    + "	  ,min([StartTime])             as [StartTime_min] \n"
 			    + "	  ,max([EndTime])               as [EndTime_max] \n"
 			    + "	  ,cast('' as varchar(30))      as [Duration] \n"
@@ -186,7 +388,9 @@ public class AseTopSlowSql extends AseAbstract
 				+ "   ,-9999999.0 as [LogicalReadsPerRowsAffected] \n"
 				
 			    + "from [MonSqlCapStatements] \n"
-			    + "where [ProcName] is NULL \n"
+//			    + "where [ProcName] is NULL \n"
+			    + "where [ProcedureID] = 0 \n"
+				+ getReportPeriodSqlWhere("StartTime")
 			    + "group by [JavaSqlHashCode] \n"
 			    + "having [sumCpuTime] >= " + havingSumCpuTime + " \n"
 //			    + "order by [records] desc \n"
@@ -207,6 +411,9 @@ public class AseTopSlowSql extends AseAbstract
 
 			// set duration
 			setDurationColumn(_shortRstm, "StartTime_min", "EndTime_max", "Duration");
+
+			// Fill in a column with a "skip link" to DbxCentral
+			setSkipEntriesUrl(_shortRstm, "SkipThis", "JavaSqlHashCode", null);
 						
 			// Do some calculations (which was hard to do in a PORTABLE SQL Way)
 			int pos_sumLogicalReads             = _shortRstm.findColumn("sumLogicalReads");
@@ -229,6 +436,11 @@ public class AseTopSlowSql extends AseAbstract
 					_shortRstm.setValueAtWithOverride(calc, r, pos_LogicalReadsPerRowsAffected);
 				}
 			}
+
+
+			// Remove anything from the *SKIP* entries
+			_skippedDsrRows = removeSkippedEntries(_shortRstm, topRows, getDsrSkipEntries());
+
 
 			// Check if table "MonSqlCapSqlText" has Dictionary Compressed Columns (any columns ends with "$dcc$")
 			boolean hasDictCompCols = false;
@@ -255,8 +467,10 @@ public class AseTopSlowSql extends AseAbstract
 							if (hasDictCompCols)
 								col_SQLText = DictCompression.getRewriteForColumnName("MonSqlCapSqlText", "SQLText$dcc$").replace(" AS [SQLText]", "");
 
+							// TODO: remove the <xmp> and replace it wit a post processing step where it's inserted (ResultSetTableModel rendering function)
 							sql = ""
-								    + "select distinct [JavaSqlHashCode], [ServerLogin], '<xmp>'||" + col_SQLText + "||'</xmp>' as [SQLText] \n"
+//								    + "select distinct [JavaSqlHashCode], [ServerLogin], cast('' as varchar(512)) as [SkipThis], '<xmp>'||" + col_SQLText + "||'</xmp>' as [SQLText] \n"
+								    + "select distinct [JavaSqlHashCode], [ServerLogin], cast('' as varchar(512)) as [SkipThis], " + col_SQLText + " as [SQLText] \n"
 								    + "from [MonSqlCapSqlText] \n"
 								    + "where [JavaSqlHashCode] = " + JavaSqlHashCode + " \n"
 								    + "";
@@ -276,19 +490,22 @@ public class AseTopSlowSql extends AseAbstract
 									else
 										_longRstm.add(rstm);
 	
+									// Fill in a column with a "skip link" to DbxCentral
+									setSkipEntriesUrl(_longRstm, "SkipThis", "JavaSqlHashCode", "SQLText");
+									
 									if (_logger.isDebugEnabled())
 										_logger.debug("SqlDetails.getRowCount()="+ rstm.getRowCount());
 								}
 							}
 							catch(SQLException ex)
 							{
-								setProblem(ex);
+								setProblemException(ex);
 	
 								_logger.warn("Problems getting SQL by JavaSqlHashCode = "+JavaSqlHashCode+": " + ex);
 							} 
 							catch(ModelMissmatchException ex)
 							{
-								setProblem(ex);
+								setProblemException(ex);
 	
 								_logger.warn("Problems (merging into previous ResultSetTableModel) when getting SQL by JavaSqlHashCode = "+JavaSqlHashCode+": " + ex);
 							} 

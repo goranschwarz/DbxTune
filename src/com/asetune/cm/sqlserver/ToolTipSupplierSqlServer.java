@@ -98,21 +98,23 @@ extends CmToolTipSupplierDefault
 
 		String sql = null;
 		
-		// Get tip on sql_handle
-		if ("objectName".equalsIgnoreCase(colName))
+		// Get tip on: objectName or TableName
+		if ("objectName".equalsIgnoreCase(colName) || "TableName".equalsIgnoreCase(colName))
 		{
 			//Object cellVal = getValueAt(modelRow, modelCol);
 			if (cellValue != null && cellValue instanceof String)
 			{
 				String objectName = (String)cellValue;
 
-				if ("ObjectName".equalsIgnoreCase(colName))
+				if ("ObjectName".equalsIgnoreCase(colName) || "TableName".equalsIgnoreCase(colName))
 				{
 					DbxConnection conn = _complProvider.getConnectionProvider().getConnection();
 
 					String dbName       = _cm.getAbsString(modelRow, "dbname", false);
 //					String tabObjId     = _cm.getAbsString(modelRow, "object_id", false);
-					String tabOwnerName = getObjectSchema(conn, dbName, objectName);
+					String tabOwnerName = _cm.getAbsString(modelRow, "SchemaName", false);
+					if (StringUtil.isNullOrBlank(tabOwnerName))
+						tabOwnerName = getObjectSchema(conn, dbName, objectName);
 					
 					List<Completion> list = _complProvider.getTableListWithGuiProgress(conn, dbName, tabOwnerName, objectName);
 
@@ -129,6 +131,15 @@ extends CmToolTipSupplierDefault
 			}
 		}
 		
+		if (colName != null && colName.toLowerCase().matches(".*sql.*text.*"))
+		{
+			if (cellValue == null)
+				return null;
+
+		//	return "<html><xmp>" + cellValue + "</xmp></html>"; 
+			return "<html><pre>" + StringUtil.toHtmlStringExceptNl(cellValue) + "</pre></html>"; 
+		}
+
 		if ("query_plan".equalsIgnoreCase(colName) || "QueryPlan".equalsIgnoreCase(colName) || "LastPlan".equalsIgnoreCase(colName) || "showplan".equalsIgnoreCase(colName))
 		{
 			if (cellValue == null)

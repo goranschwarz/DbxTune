@@ -21,14 +21,21 @@
 package com.asetune.cm.sqlserver;
 
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CounterSample;
+import com.asetune.cm.CounterSampleCatalogIteratorSqlServer;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.cm.SortOptions.ColumnNameSensitivity;
+import com.asetune.cm.SortOptions.DataSortSensitivity;
+import com.asetune.cm.SortOptions.SortOrder;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.SortOptions;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.swing.ColumnHeaderPropsEntry;
 
@@ -232,6 +239,31 @@ extends CountersModel
 		return pkCols;
 	}
 
+	private List<SortOptions> _localSortOptions = null;
+
+	@Override
+	public List<SortOptions> getLocalSortOptions()
+	{
+		// Allocate the sorting specification only first time.
+		if (_localSortOptions == null)
+		{
+			_localSortOptions = new ArrayList<>();
+			
+			_localSortOptions.add(new SortOptions("row_lock_count", ColumnNameSensitivity.IN_SENSITIVE, SortOrder.DESCENDING, DataSortSensitivity.IN_SENSITIVE));
+		}
+		return _localSortOptions;
+	}
+
+	/**
+	 * Create a special CounterSample, that will iterate over all databases that we will interrogate
+	 */
+	@Override
+	public CounterSample createCounterSample(String name, boolean negativeDiffCountersToZero, String[] diffColumns, CounterSample prevSample)
+	{
+		// Using DEFAULT_SKIP_DB_LIST: 'master', 'model', 'tempdb', 'msdb', 'SSISDB', 'ReportServer', 'ReportServerTempDB'
+		return new CounterSampleCatalogIteratorSqlServer(name, negativeDiffCountersToZero, diffColumns, prevSample);
+	}
+
 	@Override
 	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
@@ -243,10 +275,10 @@ extends CountersModel
 //		RS> 34   page_lock_wait_in_ms               java.sql.Types.BIGINT   bigint           
 
 		int c = 0;
-		addPreferredColumnOrder(new ColumnHeaderPropsEntry("dbname",               c++));
-		addPreferredColumnOrder(new ColumnHeaderPropsEntry("schemaName",           c++));
-		addPreferredColumnOrder(new ColumnHeaderPropsEntry("objectName",           c++));
-		addPreferredColumnOrder(new ColumnHeaderPropsEntry("index_id",             c++));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("DbName",               c++));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("SchemaName",           c++));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("TableName",            c++));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("IndexName",            c++));
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("row_lock_count",       c++));
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("row_lock_wait_count",  c++));
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("row_lock_wait_in_ms",  c++));
@@ -259,13 +291,27 @@ extends CountersModel
 		if (isAzure)
 			dm_db_index_operational_stats = "dm_db_index_operational_stats";   // IS THIS THE SAME NAME IN AZURE ?????
 
-		String sql = "select \n"
-				+ "    dbname     = db_name(database_id), \n"
-				+ "    schemaName = object_schema_name(object_id, database_id), \n"
-				+ "    objectName = object_name(object_id, database_id), \n"
-				+ "    * \n"
-				+ "from sys." + dm_db_index_operational_stats + "(DEFAULT, DEFAULT, DEFAULT, DEFAULT) \n"
-				+ "where object_id > 100";
+//		String sql = "select \n"
+//				+ "    dbname     = db_name(database_id), \n"
+//				+ "    schemaName = object_schema_name(object_id, database_id), \n"
+//				+ "    objectName = object_name(object_id, database_id), \n"
+//				+ "    * \n"
+//				+ "from sys." + dm_db_index_operational_stats + "(DEFAULT, DEFAULT, DEFAULT, DEFAULT) \n"
+//				+ "where object_id > 100";
+
+		String sql = ""
+			    + "-- Note: Below SQL Statement is executed in every database that is 'online', more or less like: sp_msforeachdb \n"
+			    + "-- Note: object_schema_name() and object_name() can NOT be used for 'dirty-reads', they may block... hence the 'ugly' fullname sub-selects in the select column list \n"
+			    + "select \n"
+			    + "    DbName     = db_name(database_id), \n"
+			    + "    SchemaName = (select sys.schemas.name from sys.objects inner join sys.schemas ON sys.schemas.schema_id = sys.objects.schema_id where sys.objects.object_id = BASE.object_id), \n"
+			    + "    TableName  = (select sys.objects.name from sys.objects where sys.objects.object_id = BASE.object_id), \n"
+			    + "    IndexName  = (select case when sys.indexes.index_id = 0 then 'HEAP' else sys.indexes.name end from sys.indexes where sys.indexes.object_id = BASE.object_id and sys.indexes.index_id = BASE.index_id), \n"
+			    + "    * \n"
+			    + "from sys." + dm_db_index_operational_stats + "(DEFAULT, DEFAULT, DEFAULT, DEFAULT) BASE \n"
+			    + "where BASE.database_id = db_id() \n"
+				+ "  and BASE.object_id > 100"
+			    + "";
 
 		// NOTE: object_name() function is not the best in SQL-Server it may block...
 		//       so the below might be helpfull
@@ -308,7 +354,7 @@ extends CountersModel
 	@Override
 	public String[] getDdlDetailsColNames()
 	{
-		String[] sa = {"dbname", "schemaName", "objectName"};
+		String[] sa = {"DbName", "SchemaName", "TableName"};
 		return sa;
 	}
 	/**

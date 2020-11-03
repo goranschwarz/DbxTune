@@ -131,7 +131,8 @@ public class DailySummaryReportFactory
 	 * Creates a daily summary report using the class found in property 'DailySummaryReport.classname'
 	 * @return
 	 */
-	public static IDailySummaryReport createDailySummaryReport(String serverName)
+//	public static IDailySummaryReport createDailySummaryReport(String serverName)
+	public static IDailySummaryReport createDailySummaryReport()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 

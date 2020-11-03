@@ -976,7 +976,7 @@ implements ActionListener, ChangeListener//, MouseListener
 			ResultSet rs;
 			RSyntaxTextAreaX ta;
 
-			String where = " where [SPID] = "+spid+" and [KPID] = "+kpid+" and [BatchID] = "+batchId;
+			String where = "where [SPID] = "+spid+" and [KPID] = "+kpid+" and [BatchID] = "+batchId;
 			
 			DbxConnection conn = getConnection();
 			Statement stmnt = conn.createStatement();
@@ -985,14 +985,17 @@ implements ActionListener, ChangeListener//, MouseListener
 			//---------------------------------------------
 			// GET SQL TEXT
 			//---------------------------------------------
-			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, true);
+			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, false);
 
 			// Resolve column name/sql text for Dictionary Compressed Columns.
 			String col_SQLText = "[SQLText]";
 			try
 			{
 				// Get all columns in a Map with <colName, resolvedColName>
-				LinkedHashMap<String, String> existingCols = DictCompression.getRewriteForColumnNames(conn, null, tabName);
+				LinkedHashMap<String, String> existingCols = DictCompression.getRewriteForColumnNames(conn, null, tabName, null);
+
+				if (existingCols.isEmpty())
+					_logger.warn("Lookup of the table name '" + tabName + "' returned 0 column, which looks STRANGE...");
 
 				if (existingCols.containsKey("SQLText" + DictCompression.DCC_MARKER))
 				{
@@ -1006,7 +1009,7 @@ implements ActionListener, ChangeListener//, MouseListener
 			}
 
 			ta = _sqlText_txt;
-			sql = conn.quotifySqlString("select " + col_SQLText + " from " + tabName + where);
+			sql = conn.quotifySqlString("select " + col_SQLText + " from [" + tabName + "] " + where);
 
 			rs = stmnt.executeQuery(sql);
 			ta.setText("");
@@ -1029,8 +1032,8 @@ implements ActionListener, ChangeListener//, MouseListener
 			// GET SHOWPLAN TEXT
 			//---------------------------------------------
 			ta = _showplan_txt;
-			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_PLANS, null, true);
-			sql = conn.quotifySqlString("select [PlanText] from " + tabName + where);
+			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_PLANS, null, false);
+			sql = conn.quotifySqlString("select [PlanText] from [" + tabName + "] " + where);
 
 			rs = stmnt.executeQuery(sql);
 			ta.setText("");
@@ -1077,8 +1080,8 @@ implements ActionListener, ChangeListener//, MouseListener
 			// GET STATEMENTS for this batch (put it in the SQL TExt for now, later on a separate JTable)
 			if (loadStatements)
 			{
-				tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, true);
-				sql = conn.quotifySqlString("select * from " + tabName + where);
+				tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
+				sql = conn.quotifySqlString("select * from [" + tabName + "] " + where);
 				rs = stmnt.executeQuery(sql);
 				ResultSetTableModel rstm = new ResultSetTableModel(rs, "SQL_CAPTURE_STATEMENTS");
 				_sqlText_txt.append("\n");
@@ -1173,7 +1176,8 @@ implements ActionListener, ChangeListener//, MouseListener
 			String normSqlText = (String) rstm.getValueAt(r, NormSQLText_pos);
 			if (StringUtil.hasValue(sqlText) && StringUtil.isNullOrBlank(normSqlText))
 			{
-				normSqlText = stmntNorm.normalizeStatementNoThrow(SqlCaptureBrokerAse.removeKnownPrefixes(sqlText));
+//				normSqlText = stmntNorm.normalizeStatementNoThrow(SqlCaptureBrokerAse.removeKnownPrefixes(sqlText));
+				normSqlText = stmntNorm.normalizeStatementNoThrow(sqlText, true);
 				rstm.setValueAt(normSqlText, r, NormSQLText_pos);
 			}
 		}
@@ -1374,8 +1378,8 @@ implements ActionListener, ChangeListener//, MouseListener
 		try {conn = getConnection();}
 		catch (RuntimeException ignore) {}
 
-		String tabNameStmnt   = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, true);
-		String tabNameSqlText = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT,    null, true);
+		String tabNameStmnt   = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
+		String tabNameSqlText = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT,    null, false);
 		
 		// Resolve column name/sql text for Dictionary Compressed Columns.
 		String col_SQLText1    = "t.[SQLText]";
@@ -1386,7 +1390,10 @@ implements ActionListener, ChangeListener//, MouseListener
 			try
 			{
 				// Get all columns in a Map with <colName, resolvedColName>
-				LinkedHashMap<String, String> existingCols = DictCompression.getRewriteForColumnNames(conn, null, tabNameSqlText);
+				LinkedHashMap<String, String> existingCols = DictCompression.getRewriteForColumnNames(conn, null, tabNameSqlText, null);
+				
+				if (existingCols.isEmpty())
+					_logger.warn("Lookup of the table name '" + tabNameSqlText + "' returned 0 column, which looks STRANGE...");
 
 				if (existingCols.containsKey("SQLText" + DictCompression.DCC_MARKER))
 				{
@@ -1466,8 +1473,8 @@ implements ActionListener, ChangeListener//, MouseListener
 
 		// Build SELECT
 		String sql = "SELECT " + columns + " \n"
-				+ "FROM " + tabNameStmnt + " s \n"
-				+ "LEFT OUTER JOIN "+tabNameSqlText+" t ON s.[SPID] = t.[SPID] AND s.[KPID] = t.[KPID] AND s.[BatchID] = t.[BatchID] \n"
+				+ "FROM [" + tabNameStmnt + "] s \n"
+				+ "LEFT OUTER JOIN ["+tabNameSqlText+"] t ON s.[SPID] = t.[SPID] AND s.[KPID] = t.[KPID] AND s.[BatchID] = t.[BatchID] \n"
 				+ where;
 
 		if (conn != null)
@@ -1501,7 +1508,7 @@ implements ActionListener, ChangeListener//, MouseListener
 		String sqlColList = "*";
 		try
 		{
-			sqlColList = DictCompression.getRewriteForSelectColumnList(conn, null, tabName);
+			sqlColList = DictCompression.getRewriteForSelectColumnList(conn, null, tabName, null);
 		}
 		catch (SQLException ex)
 		{
@@ -1709,7 +1716,10 @@ implements ActionListener, ChangeListener//, MouseListener
 			try
 			{
 				// Get all columns in a Map with <colName, resolvedColName>
-				LinkedHashMap<String, String> existingCols = DictCompression.getRewriteForColumnNames(conn, null, tabName);
+				LinkedHashMap<String, String> existingCols = DictCompression.getRewriteForColumnNames(conn, null, tabName, null);
+
+				if (existingCols.isEmpty())
+					_logger.warn("Lookup of the table name '" + tabName + "' returned 0 column, which looks STRANGE...");
 
 				if (existingCols.containsKey(col_SQLText_dcc))
 				{

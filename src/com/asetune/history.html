@@ -24,6 +24,229 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
+<H2>YYYY-MM-DD</H2>
+<UL>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>Generic - Changes that affects all DbxTune tools</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>Improved removal of old HPROF files</LI>
+		<LI>Alarms
+			<UL>
+				<LI>New: AlarmEventClientErrorMsg           -- If the AseSqlCapture part sees an Error Number that is severe, then raise alarm.</LI>
+				<LI>new: AlarmEventClientErrorMsgRate       -- If we receive "bursts" of Client Error Messages (more than 10 per second), raise alarm.</LI>
+				<LI>new: AlarmEventSqlCaptureOldData        -- If SqlCapture has "died" for some reason (not updating a timestamp), then raise alarm.</LI>
+				<LI>new: AlarmEventPerfCounterWarning       -- (SQL-Server) - If a PerfCounter value is "out of whack"...</LI>
+
+				<LI>Changed: AlarmEventConfigResourceIsLow       -- added "raiseDelay", which is used by 'Statement Cache Hit Rate', and the default was set to 5 minutes below configured value before raising alarm.</LI>
+				<LI>Changed: AlarmEventFullTranLog               -- alwaysSend() is now set to true, so even if we do not "subscribe" for alarms on this server, we will still get message, just like SrvDown </LI>
+				<LI>Changed: AlarmEventProcedureCacheOutOfMemory -- alwaysSend() is now set to true, so even if we do not "subscribe" for alarms on this server, we will still get message, just like SrvDown </LI>
+			</UL>
+		</LI>
+		<LI>All CM's -- SqlPrefix -- Prefix SQL Statements issued by the CounterModel with /* DbxTuneAppName:CmName */ so we can see in the daily report that it's AseTune / PostgresTune etc that are responsible for the SQL Statements issued</LI>
+		<LI>new: Menu -> Tools -> 'Create Daily Summary Report...' Opens a dialog where you can produce a Daily Summary Report on any recording database.</LI>
+		<LI>Focusable Tooltip is now resizable in a better way (all edges can be used)</LI>
+		<LI>new cmdline interface 'dsr.bat' or 'dsr.sh' for Daily Summary Report</LI>
+		<LI>
+			<b>Upgraded some of the third party libraries/jars</b><br>
+			<ul>
+	 			<li>To version 1.5.0          Component: JfreeChart</li>
+	 			<li>To version 3.2            Component: jsqlparser</li>
+			</ul>
+		</LI>
+	</UL>
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>DbxCentral - The central WEB console to view Trend Graphs</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>admin page -- added Daily Summary Report - Skip entry: overview and dialog</LI>
+		<LI>Create a Daily Summary Report directly from the Web Interface (a link in the "offline" table + shows a dialog where you can specifiy a time range within that recording)</LI>
+		<LI>Daily Summary Report - Directly from the Report, click a link that will open "admin page" and fill in: Daily Summary Report - SKIP Entries (or exclude some SQL Statements from reports)</LI>
+		<LI>User Defined Content (http://dbxcentral:8080/overview#ud-content) - The ability to create a User Defined Chart or Report that connects to your bussines data and produce some output (initially made to draw a "gantt/timeline" of "work" that was done during the night jobs</LI>
+ 	</UL>
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>AseTune - Sybase/SAP Adaptive Server Enterprise</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<li>When recording a session: SQL Capture -- Rewritten;  now picks up SQL Text/Plan in a better way </li>
+		
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmActiveStatements - tab: Active Statements</b><br>
+		<ul>
+			<li>New column: 'SpidLockCount'       -- How Many Locks does this SPID hold</li>
+			<li>New column: 'BlockedSpidsInfo'    -- If This SPID blocks other spid's, then this column include information about the SPID's that we are blocking.</li>
+			<li>New column: 'HasBlockedSpidsInfo' -- true or false, based on the above column.</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmSqlStatement - tab: SQL Statements</b><br>
+		<ul>
+			<li>New column: 'errorMsgCountMap'       -- A JSON String, which contains {MsgNumber=count}</li>
+			<li>New column: 'inProcNameNullCount'    -- diff calculated: Estimated SQL Statements requests executed where ProcedureId was not 0, but the ProcedureName could NOT be found</li>
+			<li>New column: 'inProcNameNullCountAbs' -- absolute values: Estimated SQL Statements requests executed where ProcedureId was not 0, but the ProcedureName could NOT be found</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmStatementCache - tab: Statement Cache</b><br>
+		<ul>
+			<li>Bugfix for CacheHitPct which was based on Absolute values instead of DIFF values, this lead to no or incorrect alarm AlarmEventConfigResourceIsLow(..."statement cache size"...)</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Daily Report ~~~~~ -->
+		<LI>
+		<b>Daily Report</b><br>
+		<ul>
+			<li>new: AseWaitStats             -- Wait Statistics for the full day (origin: CmSysWaits / monSysWaits)</li>
+			<li>new: AseCmSqlStatement        -- SQL Statement Execution Statistics (origin: CmSqlStatement / monSysStatement)</li>
+			<li>new: AseTopSlowNormalizedSql  -- Top [SQL Captured] SLOW Normalized SQL Statements (order by: sumCpuTime, origin: monSysStatement)</li>
+			<li>new: AseTopSlowDynAndStmnt    -- Top [SQL Captured] SLOW DynamicSQL and StatementCache Calls (order by: sumCpuTime,  origin: monSysStatement)</li>
+		</ul>
+		</LI>
+
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>IqTune - Sybase/SAP IQ (The Column Storage Database) </H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>RsTune - Sybase/SAP Replication Server</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>RaxTune - Sybase/SAP Replication Agent X</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>HanaTune - SAP HANA</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>OracleTune - Oracle Database</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>SqlServerTune - Microsoft SQL-Server</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>Added CM: CmIndexMissing - Take information from 'dm_db_missing_index_*' and display them, in a prioritized way... NOTE: as always take the recommendations with 'a grain of salt'</LI>
+		<LI>Added CM: CmIndexUnused - Unused Indexes - ordered by 'user_updates desc' so the undex with most updates will be "first"</LI>
+		<LI>Added CM: CmTableSize - A cheaper version of 'CmIndexPhysical using dm_db_index_physical_stats', this one is using dm_db_partition_stats and is *much* cheaper...</LI>
+		<LI>All (hopefully) CM's now have a "DB-Iterator" which get's system information from sys.objects, sys.schemas, sys.indexes... instead of using the built-in functions object_name(), object_schema_name() etc... Because the BIF will be blocked on many instances</LI>
+		<LI>CmActiveStatements - For blocking locks (marked as red background) - only the root blocker(s) are marked. logic (ImBlockingOtherSessionIds!="" and ImBlockedBySessionId=0)</LI>
+		<LI>CmDatabases - Added 'OldestTranName' and 'OldestTranId' - Now shows the transaction name and id (watch out for OldestTranName 'implicit_transaction', which indicates that AotoCommit is FALSE, which introduces more blocking locks)</LI>
+		<LI>CmPerfCounters - new graph 'Buffer Cache Data Size in MB'</LI>
+		<LI>CmPerfCounters - new alarm: 'FreeListStalls' - Buffer Cache is probably to small... Waiting for memory to become available before a page can be added into the buffer pool.</LI>
+		<LI>CmSessions - Added column 'BlockingOtherSpids' - This holds information about what SPID(s) I'm currently blocking. Root blocker(s) are marked in red. logic (BlockingOtherSpids!="" and blocking_session_id=0)</LI>
+		<LI>CmSessions - Added column 'tat_transaction_id', 'transaction_type', 'transaction_name' , 'transaction_begin_time' (watch out for transaction_name 'implicit_transaction', which indicates that AotoCommit is FALSE, which introduces more blocking locks)</LI>
+		<LI>CmSpidWait - added column 'WaitClass', which tries to group 'wait_type' in groups ... this according to https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15</LI>
+		<LI>CmTempdbSpidUsage - Compleatly rewritten, hopefully this one will work better</LI>
+		<LI>CmTempdbUsage - added 2 new graphs 'Tempdb Usage by Object Type, in MB, {All|Subset}' -- Shows "Version Store", "Internal Objects", "User Objects", "Mixed Extents", "Allocated Space", "Free Space", "Total Space"</LI>
+		<LI>CmWaitStats - added column 'WaitClass', which tries to group 'wait_type' in groups ... this according to https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15</LI>
+		<LI>CmWaitStats - updated the list of 'wait_type' to skip (hopefully up to 2019)</LI>
+		<LI>CmWho - Added column 'BlockingOtherSpids' - This holds information about what SPID(s) I'm currently blocking. Root blocker(s) are marked in red. logic (BlockingOtherSpids!="" and blocked=0)</LI>
+
+		<!-- ~~~~~ Daily Report ~~~~~ -->
+		<LI>
+		<b>Daily Report</b><br>
+		<ul>
+			<li>new: SqlServerWaitStats       - Wait Statistics for the full day (origin: CmWaitStat / dm_os_wait_stats)</li>
+			<li>new: SqlServerTopCmTableSize  - Top TABLE Size (order by: SizeInMb, origin: CmTableSize/dm_db_partition_stats)</li>
+			<li>new: SqlServerMissingIndexes  - Top Missing Indexes (origin: CmIndexMissing)</li>
+			<li>new: SqlServerUnusedIndexes   - Top Unused Indexes (origin: CmIndexUnused)</li>
+		</ul>
+		</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>PostgresTune - PostgreSQL</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>CmPgStatements - Now works with Postgres 9.3 (and possibly versions below that), where I "fake" the 'queryid' by taking a md5 checksum (first 16 chars) and converting that to an bigint</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>MySqlTune - MySQL database</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>Added CM: CmInnoDbMetrics - InnoDB Metrics</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>Db2Tune - IBM DB2 LWU</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>SQL Window</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>Sorting on Timestamp columns which includes NULL now works.</LI>
+		<LI>The table filter now accepts negative values</LI>
+		<LI>for SQL Server: in index lookups, added the INCLUDE(column list)</LI>
+		<LI>bcp utility   - for SQL Server, enable 'useBulkCopyForBatchInsert'</LI>
+		<LI>chart utility - Added GANTT chart type in 'Create Graph Dialog', and also 'group by column' </LI>
+		<LI>Added option 'rtrim' - to Right trim String values, previously we only had "full trim", which trimmed both left and right side of the string.</LI>
+		<LI>AutoCompletion - Do not need a table alias for simple select, insert, update delete statements. Now you can simply do 'select &lt;ctrl-space&gt; from tabname where &lt;ctrl-space&gt;' to get columns that is part of the table...</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+	
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>Log Tail Tool</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+</UL>
+
+<!-- ========================================================================== -->
 <H2>2020-07-01</H2>
 <UL>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -625,7 +848,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Daily Summary Reports (added sections: Query Stats, TopTableSize, AvgPageUsedPct, and Graphs: OsCpuEffective, SqlBatch, TransWriteSec, SqlServerConfiguration)</LI>
 		<li>Changed to ToolTipProvider, it can now open a Execution Plan in SSMS</li>
 		<li>CmWho: Shows Worker Threads (ecid - Execution Context ID)</li>
-		<li>CmWho -- rearrenged column names a bit, also changed Primary Key to be 'spid', 'ecid'´. Worket threads(ecid!=0) are displayed in a Beige Color, also better at detecting "system spids"</li>
+		<li>CmWho -- rearrenged column names a bit, also changed Primary Key to be 'spid', 'ecid'ï¿½. Worket threads(ecid!=0) are displayed in a Beige Color, also better at detecting "system spids"</li>
 		<li>CmSessions -- this still needs *more* work... but it is now *just* showing for session_id's and *not* for parallel workers... Still needs to reorder columns etc to make it *usable*</li>
 		<li>CmActiveStatements, duplicated 'cpu_time', 'reads', 'logical_reads', 'writes': into exec_* and sess_*<br>
 			where the exec_* columns represents entries from 'dm_exec_requests', which reflects what is executed *right* now<br>
@@ -2399,7 +2622,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
            but there are still <b>more</b> to do with code completion, I would like to parse the SQL to figure out "where"
            we are located in the SQL Statement, and from there decide more about what to display... anyone that has a good parser for this...)</li>
        <li>Tooltip Supplier: Some support for ASE/HANA = "hover" over a function or other SQL Statement, if there
-           are help for it a tooltip will popup with some help (I need to do RepServer here, but it’s just
+           are help for it a tooltip will popup with some help (I need to do RepServer here, but itï¿½s just
            a XML file with textual description...<br>
            and also on the "todo" list is to display table/column help... hover over a tablename = get column descriptions for that table)</li>
        <li>Error hint: On any error messages, try to <b>mark</b> them with red underline + "red cross" on the
@@ -2414,7 +2637,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
        <li>In the status bar (bottom right corner) show what line and column the cursor is located at.</li>
        <li>Copy Results button: right click to choose format you want to copy it as (if you just press the button, last used method will be used)</li>
        <li>JTable: in the right click menu: "Execute content of selected rows" (hover of it = will show the SQL that will be executed):
-           good for generating SQL and execute it…. Ex: select "select tabName='"+name+"', rowc=count(*) from "+name from sysobjects where type = 'U'</li>
+           good for generating SQL and execute itï¿½. Ex: select "select tabName='"+name+"', rowc=count(*) from "+name from sysobjects where type = 'U'</li>
        <li>\call, \exec and \rpc now works a bit better (for ASE, IQ, SA, RS, MS-SQL) The return code is automatically fetched
            the CallableStament will be like '{?=call procname(params)}' for others it will be '{call procname(params)}'.<br>
            This makes it possible to receive output parameters for variables that vendors that does not have the return code.<br>
@@ -2455,10 +2678,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
        <ul>
            <li>Append results (just keep appending to the output, usable if you want to compare some results, from 2 different executions)</li>
            <li>Limit the ResultSet to # rows, or simply stop reading rows in a ResultSet after # rows. And a dialog to configure this.</li>
-           <li>Show sent SQL (more or less same as –e in isql)</li>
+           <li>Show sent SQL (more or less same as ï¿½e in isql)</li>
            <li>Print ResultSet info (print out what JDBC think it will receive, java.sql.Types.VARCHAR, varchar(30), makes it easier to verify some stuff)</li>
            <li>Client timing (how long did the query take from the client side, SQL Execution, Read ResultSet), tooltip will show the SQL that was executed.</li>
-           <li>Send using ‘;’ (good if you are used to Oracle, this is a bit limited, or not 100% compatible with sqlPlus)</li>
+           <li>Send using ï¿½;ï¿½ (good if you are used to Oracle, this is a bit limited, or not 100% compatible with sqlPlus)</li>
            <li>If connected to Oracle: enable/reads the dbms_output subsystem</li>
            <li>On errors within stored procedures, get the SP Text and mark the "error" row with red. The text is displayed in the tooltip of the error.</li>
            <li>Code Completion: Finer control of what to get/refresh</li>

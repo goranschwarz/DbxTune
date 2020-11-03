@@ -20,6 +20,8 @@
  ******************************************************************************/
 package com.asetune.pcs.report.senders;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,15 +64,36 @@ extends ReportSenderAbstract
 		
 		String msgSubject = _subjectTemplate.replace("${srvName}", serverName);
 //		String msgBodyText    = reportContent.getReportAsText();
-		String msgBodyHtml    = reportContent.getReportAsHtml();
+//		String msgBodyHtml    = reportContent.getReportAsHtml();
 
 //		int msgBodyTextSizeKb = msgBodyText == null ? 0 : msgBodyText.length() / 1024;
-		int msgBodyHtmlSizeKb = msgBodyHtml == null ? 0 : msgBodyHtml.length() / 1024;
+//		int msgBodyHtmlSizeKb = msgBodyHtml == null ? 0 : msgBodyHtml.length() / 1024;
 
+		String  msgBodyHtml = null;
+		File    msgFile     = null;
+		long    msgSizeKb   = -1;
+//		if (reportContent.hasReportFile())
+//		{
+			msgFile   = reportContent.getReportFile();
+			msgSizeKb = reportContent.getReportFile().length() / 1024;
+//		}
+//		else
+//		{
+			try 
+			{
+				msgBodyHtml = reportContent.getReportAsHtml();
+				msgSizeKb   = msgBodyHtml.length() / 1024;
+			} 
+			catch (IOException ex) 
+			{
+				_logger.error("Problems reading Report Content.", ex);
+			}
+//		}
+		
 		if (reportContent.hasNothingToReport())
 			msgSubject = _subjectNtrTemplate.replace("${srvName}", serverName);
 
-		String msgBody = msgBodyHtml;
+//		String msgBody = msgBodyHtml;
 //		String msgBody = msgBodyText;
 //		if (StringUtil.hasValue(msgBodyHtml))
 //			msgBody = msgBodyHtml;
@@ -125,44 +148,53 @@ extends ReportSenderAbstract
 			email.setSubject(msgSubject);
 
 			// CONTENT HTML or PLAIN
-//			if (StringUtils.startsWithIgnoreCase(msgBody.trim(), "<html>"))
-//				email.setHtmlMsg(msgBody);
+//			if (msgFile != null)
+//			{
+//				email.setHtmlMsg("This is a Daily Summary Report for Server '" + reportContent.getServerName() + "'.");
+//				email.embed(msgFile, "ReportContent");
+//			}
 //			else
-//				email.setTextMsg(msgBody);
+//			{
+//				email.setHtmlMsg(msgBodyHtml);
+//			}
 			email.setHtmlMsg(msgBodyHtml);
-//			email.setTextMsg(msgBodyText);
+
+			// Client do not have HTML support
+			email.setTextMsg("Your email client does not support HTML messages, see DbxCentral to read the report!");
 
 			// If the mail client is not so good at rendering HTML...
 			// Should we attach the content as a File, so it can be opened in a browser...  
-			if (_attachHtmlContent)
+//			if (_attachHtmlContent)
+//			{
+//				if (msgBodyHtml.length() < (_attachHtmlContentMaxSizeMb * 1024 * 1024))
+//				{
+//					_logger.info("Mail-Attach: -NOT-YET-IMPLEMENTED-");
+////					email.attach(...);
+//				}
+//				else
+//				{
+//					_logger.info("No-Mail-Attach: Mail message is to large to attach. '" + PROPKEY_attachHtmlContentMaxSizeMb + "' is " + _attachHtmlContentMaxSizeMb + ", content size = " + msgBodyHtml.length() + " (bytes).");
+//				}
+//			}
+			if (_attachHtmlContent && msgFile != null)
 			{
-				if (msgBodyHtml.length() < (_attachHtmlContentMaxSizeMb * 1024 * 1024))
-				{
-					_logger.info("Mail-Attach: -NOT-YET-IMPLEMENTED-");
-//					email.attach(...);
-				}
-				else
-				{
-					_logger.info("No-Mail-Attach: Mail message is to large to attach. '" + PROPKEY_attachHtmlContentMaxSizeMb + "' is " + _attachHtmlContentMaxSizeMb + ", content size = " + msgBodyHtml.length() + " (bytes).");
-				}
+				email.attach(msgFile);
 			}
 			
-//			System.out.println("About to send the following message: \n"+msgBody);
+//			System.out.println("About to send the following message: \n" + msgBodyHtml);
 			if (_logger.isDebugEnabled())
 			{
-				_logger.debug("About to send the following message: \n"+msgBody);
+				_logger.debug("About to send the following message: \n" + (msgFile == null ? msgBodyHtml : msgFile.getAbsolutePath()) );
 			}
 
 			// SEND
 			email.send();
 
-//			_logger.info("Sent mail message: htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"'.");
-			_logger.info("Sent mail message: htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', toList="+toList+", cc='"+_cc+"', subject='"+msgSubject+"'.");
+			_logger.info("Sent mail message: htmlSizeKb="+msgSizeKb+", host='"+_smtpHostname+"', toList="+toList+", cc='"+_cc+"', subject='"+msgSubject+"'.");
 		}
 		catch (Exception ex)
 		{
-//			_logger.error("Problems sending mail (htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"').", ex);
-			_logger.error("Problems sending mail (htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', toList="+toList+", cc='"+_cc+"', subject='"+msgSubject+"').", ex);
+			_logger.error("Problems sending mail (htmlSizeKb="+msgSizeKb+", host='"+_smtpHostname+"', toList="+toList+", cc='"+_cc+"', subject='"+msgSubject+"').", ex);
 		}
 	}
 
@@ -185,7 +217,7 @@ extends ReportSenderAbstract
 //		list.add( new CmSettingsHelper("Msg-Template-Use-HTML",            PROPKEY_msgBodyTemplateUseHtml,     Boolean.class, conf.getBooleanProperty(PROPKEY_msgBodyTemplateUseHtml    , DEFAULT_msgBodyTemplateUseHtml    ), DEFAULT_msgBodyTemplateUseHtml    , "If '"+PROPKEY_msgBodyTemplate+"' is not specified, then use a HTML Template as the default."));
 //		list.add( new CmSettingsHelper("Msg-Use-HTML",                     PROPKEY_msgBodyUseHtml,             Boolean.class, conf.getBooleanProperty(PROPKEY_msgBodyUseHtml            , DEFAULT_msgBodyUseHtml            ), DEFAULT_msgBodyUseHtml            , "Send HTML message."));
 		list.add( new CmSettingsHelper("Attach-HTML-content",              PROPKEY_attachHtmlContent,          Boolean.class, conf.getBooleanProperty(PROPKEY_attachHtmlContent         , DEFAULT_attachHtmlContent         ), DEFAULT_attachHtmlContent         , "Attach the content as a HTML file (might be easier to open/read)"));
-		list.add( new CmSettingsHelper("Attach-HTML-content-maxSizeKb",    PROPKEY_attachHtmlContentMaxSizeMb, Integer.class, conf.getIntProperty    (PROPKEY_attachHtmlContentMaxSizeMb, DEFAULT_attachHtmlContentMaxSizeMb), DEFAULT_attachHtmlContentMaxSizeMb, "Only attach if the message size is below this value in MB (some receivers do not allow large messages)"));
+//		list.add( new CmSettingsHelper("Attach-HTML-content-maxSizeKb",    PROPKEY_attachHtmlContentMaxSizeMb, Integer.class, conf.getIntProperty    (PROPKEY_attachHtmlContentMaxSizeMb, DEFAULT_attachHtmlContentMaxSizeMb), DEFAULT_attachHtmlContentMaxSizeMb, "Only attach if the message size is below this value in MB (some receivers do not allow large messages)"));
 
 		list.add( new CmSettingsHelper("username",                         PROPKEY_username,                   String .class, conf.getProperty       (PROPKEY_username                  , DEFAULT_username                  ), DEFAULT_username                  , "If the SMTP server reuires you to login (default: is not to logon)"));
 		list.add( new CmSettingsHelper("password",                         PROPKEY_password,                   String .class, conf.getProperty       (PROPKEY_password                  , DEFAULT_password                  ), DEFAULT_password                  , "If the SMTP server reuires you to login (default: is not to logon)"));
@@ -210,7 +242,7 @@ extends ReportSenderAbstract
 //	private boolean _msgBodyTemplateUseHtml     = DEFAULT_msgBodyTemplateUseHtml;
 //	private boolean _msgBodyUseHtml             = DEFAULT_msgBodyUseHtml;
 	private boolean _attachHtmlContent          = DEFAULT_attachHtmlContent;
-	private int     _attachHtmlContentMaxSizeMb = DEFAULT_attachHtmlContentMaxSizeMb;
+//	private int     _attachHtmlContentMaxSizeMb = DEFAULT_attachHtmlContentMaxSizeMb;
                                          
 	private String  _username                   = "";
 	private String  _password                   = "";
@@ -338,7 +370,7 @@ extends ReportSenderAbstract
 //		_msgBodyTemplateUseHtml     = conf.getBooleanProperty(PROPKEY_msgBodyTemplateUseHtml,     DEFAULT_msgBodyTemplateUseHtml);
 //		_msgBodyUseHtml             = conf.getBooleanProperty(PROPKEY_msgBodyUseHtml,             DEFAULT_msgBodyUseHtml);
 		_attachHtmlContent          = conf.getBooleanProperty(PROPKEY_attachHtmlContent,          DEFAULT_attachHtmlContent);
-		_attachHtmlContentMaxSizeMb = conf.getIntProperty    (PROPKEY_attachHtmlContentMaxSizeMb, DEFAULT_attachHtmlContentMaxSizeMb);
+//		_attachHtmlContentMaxSizeMb = conf.getIntProperty    (PROPKEY_attachHtmlContentMaxSizeMb, DEFAULT_attachHtmlContentMaxSizeMb);
                                                                                                   
 		_username                   = conf.getProperty       (PROPKEY_username,                   DEFAULT_username);
 		_password                   = conf.getProperty       (PROPKEY_password,                   DEFAULT_password);
@@ -385,7 +417,7 @@ extends ReportSenderAbstract
 //		_logger.info("    " + StringUtil.left(PROPKEY_msgBodyTemplateUseHtml    , spaces) + ": " + _msgBodyTemplateUseHtml);
 //		_logger.info("    " + StringUtil.left(PROPKEY_msgBodyUseHtml            , spaces) + ": " + _msgBodyUseHtml);
 		_logger.info("    " + StringUtil.left(PROPKEY_attachHtmlContent         , spaces) + ": " + _attachHtmlContent);
-		_logger.info("    " + StringUtil.left(PROPKEY_attachHtmlContentMaxSizeMb, spaces) + ": " + _attachHtmlContentMaxSizeMb);
+//		_logger.info("    " + StringUtil.left(PROPKEY_attachHtmlContentMaxSizeMb, spaces) + ": " + _attachHtmlContentMaxSizeMb);
 
 		_logger.info("    " + StringUtil.left(PROPKEY_username                  , spaces) + ": " + _username);
 		_logger.info("    " + StringUtil.left(PROPKEY_password                  , spaces) + ": " + (_logger.isDebugEnabled() ? _password : "*secret*") );
@@ -422,10 +454,10 @@ extends ReportSenderAbstract
 //	public static final boolean DEFAULT_msgBodyUseHtml             = true;
                                                                    
 	public static final String  PROPKEY_attachHtmlContent          = "ReportSenderToMail.attachHtmlContent";
-	public static final boolean DEFAULT_attachHtmlContent          = true;
+	public static final boolean DEFAULT_attachHtmlContent          = false;
 
-	public static final String  PROPKEY_attachHtmlContentMaxSizeMb = "ReportSenderToMail.attachHtmlContent.maxSizeMb";
-	public static final int     DEFAULT_attachHtmlContentMaxSizeMb = 5;
+//	public static final String  PROPKEY_attachHtmlContentMaxSizeMb = "ReportSenderToMail.attachHtmlContent.maxSizeMb";
+//	public static final int     DEFAULT_attachHtmlContentMaxSizeMb = 5;
 
 	
 	public static final String  PROPKEY_username                   = "ReportSenderToMail.smtp.username";

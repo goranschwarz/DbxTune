@@ -1907,6 +1907,27 @@ public class StringUtil
 	}
 
 	/**
+	 * Simply do Integer.parseInt(str), but if it fails (NumberFormatException or input is null), then return false
+	 * @param str           String to be converted
+	 * @return true if Integer number
+	 */
+	public static boolean isInteger(String str)
+	{
+		if (str == null)
+			return false;
+
+		try
+		{
+			Integer.parseInt(str.trim());
+			return true;
+		}
+		catch (NumberFormatException nfe)
+		{
+			return false;
+		}
+	}
+
+	/**
 	 * Simply do Integer.parseInt(str), but if it fails (NumberFormatException or input is null), then return the default value
 	 * @param str           String to be converted
 	 * @param defaultValue  if "str" can't be converted (NumberFormatException or input is null), then return this value

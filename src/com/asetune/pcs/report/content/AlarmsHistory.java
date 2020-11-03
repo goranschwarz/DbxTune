@@ -21,6 +21,8 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content;
 
+import java.io.IOException;
+import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -46,10 +48,9 @@ extends ReportEntryAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		if (_shortRstm.getRowCount() == 0)
 		{
 			sb.append("No Alarms has been reported <br> \n");
@@ -59,8 +60,8 @@ extends ReportEntryAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 			
-			sb.append("Alarm Count in period: ").append(_fullRstm.getRowCount()).append("<br>\n");
-			sb.append(_shortRstm.toHtmlTableString("sortable"));
+			sb.append("Alarm Count in period: " + _fullRstm.getRowCount() + "<br>\n");
+			sb.append(toHtmlTable(_shortRstm));
 			
 			if (_fullRstm != null)
 			{
@@ -77,12 +78,49 @@ extends ReportEntryAbstract
 				String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Alarm History Details...", htmlContent);
 
 				sb.append( msOutlookAlternateText(showHideDiv, "Alarm History Details", null) );
-//				sb.append( showHideDiv );
 			}
 		}
-
-		return sb.toString();
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		if (_shortRstm.getRowCount() == 0)
+//		{
+//			sb.append("No Alarms has been reported <br> \n");
+//		}
+//		else
+//		{
+//			// Get a description of this section, and column names
+//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+//			
+//			sb.append("Alarm Count in period: ").append(_fullRstm.getRowCount()).append("<br>\n");
+////			sb.append(_shortRstm.toHtmlTableString("sortable"));
+//			sb.append(toHtmlTable(_shortRstm));
+//			
+//			if (_fullRstm != null)
+//			{
+//				// Make output more readable, in a 2 column table
+//				// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
+//				Map<String, String> colNameValueTagMap = new HashMap<>();
+//				colNameValueTagMap.put("extendedDescription",     "xmp");
+//				colNameValueTagMap.put("lastExtendedDescription", "xmp");
+//
+//				String  divId       = "alarmHistoryDetails";
+//				boolean showAtStart = false;
+//				String  htmlContent = _fullRstm.toHtmlTablesVerticalString("sortable", colNameValueTagMap);
+//
+//				String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Alarm History Details...", htmlContent);
+//
+//				sb.append( msOutlookAlternateText(showHideDiv, "Alarm History Details", null) );
+////				sb.append( showHideDiv );
+//			}
+//		}
+//
+//		return sb.toString();
+//	}
 
 	@Override
 	public boolean canBeDisabled()
@@ -102,6 +140,12 @@ extends ReportEntryAbstract
 		return _fullRstm.getRowCount() > 0;
 	}
 
+
+	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { PersistWriterBase.getTableName(null, PersistWriterBase.ALARM_HISTORY, null, false) };
+	}
 
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
@@ -182,6 +226,7 @@ extends ReportEntryAbstract
 		      "     [lastExtendedDescription] \n" +
 		      "from ["+PersistWriterBase.getTableName(conn, PersistWriterBase.ALARM_HISTORY, null, false) + "]\n" +
 		      "where [action] not in('END-OF-SCAN', 'RE-RAISE') \n" +
+		      getReportPeriodSqlWhere() +
 		      "order by [eventTime]";
 		
 		// Note: Truncate any cells above 128K

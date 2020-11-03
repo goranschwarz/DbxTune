@@ -66,8 +66,10 @@ import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.AllComparisonExpression;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.AnyComparisonExpression;
+import net.sf.jsqlparser.expression.ArrayExpression;
 import net.sf.jsqlparser.expression.CaseExpression;
 import net.sf.jsqlparser.expression.CastExpression;
+import net.sf.jsqlparser.expression.CollateExpression;
 import net.sf.jsqlparser.expression.DateTimeLiteralExpression;
 import net.sf.jsqlparser.expression.DateValue;
 import net.sf.jsqlparser.expression.DoubleValue;
@@ -83,6 +85,7 @@ import net.sf.jsqlparser.expression.JsonExpression;
 import net.sf.jsqlparser.expression.KeepExpression;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.MySQLGroupConcat;
+import net.sf.jsqlparser.expression.NextValExpression;
 import net.sf.jsqlparser.expression.NotExpression;
 import net.sf.jsqlparser.expression.NullValue;
 import net.sf.jsqlparser.expression.NumericBind;
@@ -96,14 +99,18 @@ import net.sf.jsqlparser.expression.TimeKeyExpression;
 import net.sf.jsqlparser.expression.TimeValue;
 import net.sf.jsqlparser.expression.TimestampValue;
 import net.sf.jsqlparser.expression.UserVariable;
+import net.sf.jsqlparser.expression.ValueListExpression;
 import net.sf.jsqlparser.expression.WhenClause;
-import net.sf.jsqlparser.expression.WithinGroupExpression;
+//import net.sf.jsqlparser.expression.WithinGroupExpression;   // removed when we upgraded from 1.1 to 3.2
 import net.sf.jsqlparser.expression.operators.arithmetic.Addition;
 import net.sf.jsqlparser.expression.operators.arithmetic.BitwiseAnd;
+import net.sf.jsqlparser.expression.operators.arithmetic.BitwiseLeftShift;
 import net.sf.jsqlparser.expression.operators.arithmetic.BitwiseOr;
+import net.sf.jsqlparser.expression.operators.arithmetic.BitwiseRightShift;
 import net.sf.jsqlparser.expression.operators.arithmetic.BitwiseXor;
 import net.sf.jsqlparser.expression.operators.arithmetic.Concat;
 import net.sf.jsqlparser.expression.operators.arithmetic.Division;
+import net.sf.jsqlparser.expression.operators.arithmetic.IntegerDivision;
 import net.sf.jsqlparser.expression.operators.arithmetic.Modulo;
 import net.sf.jsqlparser.expression.operators.arithmetic.Multiplication;
 import net.sf.jsqlparser.expression.operators.arithmetic.Subtraction;
@@ -113,9 +120,11 @@ import net.sf.jsqlparser.expression.operators.relational.Between;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.ExistsExpression;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
+import net.sf.jsqlparser.expression.operators.relational.FullTextSearch;
 import net.sf.jsqlparser.expression.operators.relational.GreaterThan;
 import net.sf.jsqlparser.expression.operators.relational.GreaterThanEquals;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
+import net.sf.jsqlparser.expression.operators.relational.IsBooleanExpression;
 import net.sf.jsqlparser.expression.operators.relational.IsNullExpression;
 import net.sf.jsqlparser.expression.operators.relational.ItemsListVisitor;
 import net.sf.jsqlparser.expression.operators.relational.JsonOperator;
@@ -124,9 +133,11 @@ import net.sf.jsqlparser.expression.operators.relational.Matches;
 import net.sf.jsqlparser.expression.operators.relational.MinorThan;
 import net.sf.jsqlparser.expression.operators.relational.MinorThanEquals;
 import net.sf.jsqlparser.expression.operators.relational.MultiExpressionList;
+import net.sf.jsqlparser.expression.operators.relational.NamedExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.NotEqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.RegExpMatchOperator;
 import net.sf.jsqlparser.expression.operators.relational.RegExpMySQLOperator;
+import net.sf.jsqlparser.expression.operators.relational.SimilarToExpression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.select.SubSelect;
@@ -953,6 +964,12 @@ extends JPanel
 				{
 					throw new FilterParserException("Operation 'InExpression:SubSelect' not yet implemeted.");
 				}
+
+				@Override
+				public void visit(NamedExpressionList arg0)
+				{
+					throw new FilterParserException("Operation 'InExpression:NamedExpressionList' not yet implemeted.");
+				}
 			};
 			
 			
@@ -1103,6 +1120,34 @@ extends JPanel
 			_lastStrValue = expr.getValue()+"";
 //			_lastNumValue = expr.getValue();
 		}
+
+		//-------------------------------------------------------
+		// value: when a '+' or '-' is put in front of a statement
+		//-------------------------------------------------------
+		@Override public void visit(SignedExpression expr)
+		{
+			if (_logger.isDebugEnabled()) dp("SignedExpression-visitor: "+expr);
+			if (_logger.isDebugEnabled()) dp("   getSign:       "+expr.getSign());
+			if (_logger.isDebugEnabled()) dp("   getExpression: "+expr.getExpression());
+			
+			// NOTE: This is a clumsy way to solve this... but I don't understand how to fix it in a better way...
+			if ('+' == expr.getSign())
+			{
+				_lastStrValue = null;
+				_lastStrValue = expr.getExpression() + "";
+				
+			}
+			else if ('-' == expr.getSign())
+			{
+				_lastStrValue = null;
+				_lastStrValue = expr + "";
+			}
+			else
+			{
+				throw new FilterParserException("Operation 'SignedExpression': unsupported value type " + expr.getClass() + " with sign " + expr.getSign());				
+			}
+		}
+
 		
 		@Override public void visit(DateTimeLiteralExpression expr)    { throw new FilterParserException("Operation 'DateTimeLiteralExpression' not yet implemeted."); }
 		@Override public void visit(TimeKeyExpression expr)            { throw new FilterParserException("Operation 'TimeKeyExpression' not yet implemeted."); }
@@ -1118,7 +1163,7 @@ extends JPanel
 		@Override public void visit(OracleHierarchicalExpression expr) { throw new FilterParserException("Operation 'OracleHierarchicalExpression' not yet implemeted."); }
 		@Override public void visit(IntervalExpression expr)           { throw new FilterParserException("Operation 'IntervalExpression' not yet implemeted."); }
 		@Override public void visit(ExtractExpression expr)            { throw new FilterParserException("Operation 'ExtractExpression' not yet implemeted."); }
-		@Override public void visit(WithinGroupExpression expr)        { throw new FilterParserException("Operation 'WithinGroupExpression' not yet implemeted."); }
+//		@Override public void visit(WithinGroupExpression expr)        { throw new FilterParserException("Operation 'WithinGroupExpression' not yet implemeted."); }
 		@Override public void visit(AnalyticExpression expr)           { throw new FilterParserException("Operation 'AnalyticExpression' not yet implemeted."); }
 		@Override public void visit(Modulo expr)                       { throw new FilterParserException("Operation 'Modulo' not yet implemeted."); }
 		@Override public void visit(CastExpression expr)               { throw new FilterParserException("Operation 'CastExpression' not yet implemeted."); }
@@ -1160,11 +1205,23 @@ extends JPanel
 //		@Override public void visit(DoubleValue expr)                  { throw new FilterParserException("Operation 'DoubleValue' not yet implemeted."); }
 		@Override public void visit(JdbcNamedParameter expr)           { throw new FilterParserException("Operation 'JdbcNamedParameter' not yet implemeted."); }
 		@Override public void visit(JdbcParameter expr)                { throw new FilterParserException("Operation 'JdbcParameter' not yet implemeted."); }
-		@Override public void visit(SignedExpression expr)             { throw new FilterParserException("Operation 'SignedExpression' not yet implemeted."); }
+//		@Override public void visit(SignedExpression expr)             { throw new FilterParserException("Operation 'SignedExpression' not yet implemeted."); }
 		@Override public void visit(Function expr)                     { throw new FilterParserException("Operation 'Function' not yet implemeted."); }
 		@Override public void visit(NullValue expr)                    { throw new FilterParserException("Operation 'NullValue' not yet implemeted."); }
 		@Override public void visit(JsonOperator expr)                 { throw new FilterParserException("Operation 'JsonOperator' not yet implemeted."); }
 		@Override public void visit(NotExpression expr)                { throw new FilterParserException("Operation 'NotExpression' not yet implemeted."); }
+
+		// Going from version 1.1 to 3.2 we needed the below methods
+		@Override public void visit(BitwiseRightShift expr)            { throw new FilterParserException("Operation 'BitwiseRightShift' not yet implemeted."); }
+		@Override public void visit(BitwiseLeftShift expr)             { throw new FilterParserException("Operation 'BitwiseLeftShift' not yet implemeted."); }
+		@Override public void visit(IntegerDivision expr)              { throw new FilterParserException("Operation 'IntegerDivision' not yet implemeted."); }
+		@Override public void visit(FullTextSearch expr)               { throw new FilterParserException("Operation 'FullTextSearch' not yet implemeted."); }
+		@Override public void visit(IsBooleanExpression expr)          { throw new FilterParserException("Operation 'IsBooleanExpression' not yet implemeted."); }
+		@Override public void visit(ValueListExpression expr)          { throw new FilterParserException("Operation 'ValueListExpression' not yet implemeted."); }
+		@Override public void visit(NextValExpression expr)            { throw new FilterParserException("Operation 'NextValExpression' not yet implemeted."); }
+		@Override public void visit(CollateExpression expr)            { throw new FilterParserException("Operation 'CollateExpression' not yet implemeted."); }
+		@Override public void visit(SimilarToExpression expr)          { throw new FilterParserException("Operation 'SimilarToExpression' not yet implemeted."); }
+		@Override public void visit(ArrayExpression expr)              { throw new FilterParserException("Operation 'ArrayExpression' not yet implemeted."); }
 	};
 	
 	

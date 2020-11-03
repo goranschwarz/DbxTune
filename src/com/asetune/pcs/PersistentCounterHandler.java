@@ -543,6 +543,13 @@ implements Runnable
 			fire = true;
 		}
 
+		// SQL Capture Broker
+		if (_sqlCaptureBroker != null)
+		{
+			_sqlCaptureBroker.lowOnMemoryHandler();
+			fire = true;
+		}
+
 		if (fire)
 			fireQueueSizeChange();		
 	}
@@ -575,6 +582,13 @@ implements Runnable
 		{
 			_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. Emtying the SQL Capture Store/Write queue, which has "+_sqlCaptureStoreQueue.size()+" entries.");
 			_sqlCaptureStoreQueue.clear();
+			fire = true;
+		}
+
+		// SQL Capture Broker
+		if (_sqlCaptureBroker != null)
+		{
+			_sqlCaptureBroker.outOfMemoryHandler();
 			fire = true;
 		}
 

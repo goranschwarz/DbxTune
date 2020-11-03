@@ -33,6 +33,7 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventConfigResourceIsLow;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
@@ -229,8 +230,8 @@ extends CountersModel
 //			mtd.addColumn("monStatementCache",  "OveralAvgReusePct", "<html>" +
 //					"A good indication of overall average reuse for each statement. A 10:1 ratio obviously is much better than 2:1<br>" +
 //					"<b>Formula</b>: diff.HitCount / diff.NumStatements * 100 <br>" +
-//					"<b>Note</b>: The sampling interval plays a huge role in this metric – during a 1 second sample, not that many statements <br>" +
-//					"             may be executed as compared to a 10 minute sample – and could distort the ratio to be viewed as excessively low.<br></html>");
+//					"<b>Note</b>: The sampling interval plays a huge role in this metric ï¿½ during a 1 second sample, not that many statements <br>" +
+//					"             may be executed as compared to a 10 minute sample ï¿½ and could distort the ratio to be viewed as excessively low.<br></html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -424,7 +425,8 @@ extends CountersModel
 		//-------------------------------------------------------
 		if (isSystemAlarmsForColumnEnabledAndInTimeRange("CacheHitPct"))
 		{
-			Double CacheHitPct = cm.getAbsValueAsDouble (0, "CacheHitPct");
+//			Double CacheHitPct = cm.getAbsValueAsDouble (0, "CacheHitPct");
+			Double CacheHitPct = cm.getRateValueAsDouble (0, "CacheHitPct");
 			if (CacheHitPct != null)
 			{
 				if (debugPrint || _logger.isDebugEnabled())
@@ -450,8 +452,9 @@ extends CountersModel
 					String fixMsg  = "Fix this using: sp_configure 'statement cache size', 0, '###M'... or free unused memory with 'dbcc traceon(3604) dbcc proc_cache(free_unused)'.";
 					String msg     = warnMsg + fixMsg;
 
-					AlarmHandler.getInstance().addAlarm(
-						new AlarmEventConfigResourceIsLow(cm, "statement cache size", TotalSizeMB, msg, threshold) );
+					// 300 = Wait for 5 minutes before the alarm is *fired* (this can be overridden by property 'AlarmEventConfigResourceIsLow.raise.delay=seconds'
+					AlarmEvent alarm = new AlarmEventConfigResourceIsLow(cm, "statement cache size", TotalSizeMB, msg, threshold, 300); 
+					AlarmHandler.getInstance().addAlarm(alarm);
 				}
 			}
 		}

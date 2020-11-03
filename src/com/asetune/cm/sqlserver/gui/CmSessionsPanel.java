@@ -86,19 +86,19 @@ extends TabularCntrPanel
 			}
 		}, SwingUtils.parseColor(colorStr, Color.GREEN), null));
 
-		// PINK = spid is BLOCKED by some other user
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocked");
+		// LIGHT_GREEN = suspended process
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.suspended");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
-				Number blockingSpid = (Number) adapter.getValue(adapter.getColumnIndex("blocked"));
-				if ( blockingSpid != null && blockingSpid.intValue() != 0 )
+				String status = (String) adapter.getValue(adapter.getColumnIndex("exec_status"));
+				if ( status != null && status.startsWith("suspended"))
 					return true;
 				return false;
 			}
-		}, SwingUtils.parseColor(colorStr, Color.PINK), null));
+		}, SwingUtils.parseColor(colorStr, new Color(212, 255, 163)), null));
 
 		// ORANGE = spid has OpenTrans
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.opentran");
@@ -107,35 +107,41 @@ extends TabularCntrPanel
 			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
-				Number blockingSpid = (Number) adapter.getValue(adapter.getColumnIndex("open_tran"));
+				Number blockingSpid = (Number) adapter.getValue(adapter.getColumnIndex("open_transaction_count"));
 				if ( blockingSpid != null && blockingSpid.intValue() != 0 )
 					return true;
 				return false;
 			}
 		}, SwingUtils.parseColor(colorStr, Color.ORANGE), null));
 
+		// PINK = spid is BLOCKED by some other user
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocked");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				Number blockingSpid = (Number) adapter.getValue(adapter.getColumnIndex("blocking_session_id"));
+				if ( blockingSpid != null && blockingSpid.intValue() != 0 )
+					return true;
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, Color.PINK), null));
+
 		// RED = spid is BLOCKING other spids from running
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocking");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
-			@SuppressWarnings("unchecked")
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
-				boolean isBlocking                     = false;
-				Number  thisSpid                       = (Number)                 adapter.getValue(adapter.getColumnIndex("spid"));
-				HashMap<Number,Object> blockingSpidMap = (HashMap<Number,Object>) adapter.getComponent().getClientProperty("blockingSpidMap");
+				String listOfBlockedSpids  = adapter.getString(adapter.getColumnIndex("BlockingOtherSpids"));
+				String blocking_session_id = adapter.getString(adapter.getColumnIndex("blocking_session_id"));
 
-				if (blockingSpidMap != null && thisSpid != null)
-					isBlocking = blockingSpidMap.containsKey(thisSpid);
-
-				if (isBlocking)
-				{
-					// Check that the SPID is not the victim of another blocked SPID
-					Number blockingSpid = (Number) adapter.getValue(adapter.getColumnIndex("blocked"));
-					if ( blockingSpid != null && blockingSpid.intValue() == 0 )
-						return true;
-				}
+				if (listOfBlockedSpids != null)
+					listOfBlockedSpids = listOfBlockedSpids.trim();
+				if ( ! "".equals(listOfBlockedSpids) && "0".equals(blocking_session_id))
+					return true;
 				return false;
 			}
 		}, SwingUtils.parseColor(colorStr, Color.RED), null));

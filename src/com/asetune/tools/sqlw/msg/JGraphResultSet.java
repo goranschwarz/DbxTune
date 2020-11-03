@@ -25,7 +25,9 @@ import java.awt.Image;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +37,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 
 import org.apache.log4j.Logger;
@@ -45,31 +48,51 @@ import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.CategoryAxis;
 import org.jfree.chart.axis.CategoryLabelPositions;
+import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.labels.CategoryItemLabelGenerator;
+import org.jfree.chart.labels.CategoryToolTipGenerator;
+import org.jfree.chart.labels.ItemLabelAnchor;
+import org.jfree.chart.labels.ItemLabelPosition;
 import org.jfree.chart.labels.StandardCategoryItemLabelGenerator;
+import org.jfree.chart.labels.StandardCategoryToolTipGenerator;
 import org.jfree.chart.labels.StandardPieSectionLabelGenerator;
 import org.jfree.chart.labels.StandardXYItemLabelGenerator;
 import org.jfree.chart.labels.XYItemLabelGenerator;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PiePlot;
 import org.jfree.chart.plot.Plot;
+import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.category.AreaRenderer;
 import org.jfree.chart.renderer.category.BarRenderer;
-import org.jfree.chart.renderer.category.BarRenderer3D;
 import org.jfree.chart.renderer.category.CategoryItemRenderer;
+import org.jfree.chart.renderer.category.GanttRenderer;
+import org.jfree.chart.renderer.category.StackedAreaRenderer;
+import org.jfree.chart.renderer.category.StackedBarRenderer;
+import org.jfree.chart.renderer.category.StandardBarPainter;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
+import org.jfree.chart.ui.TextAnchor;
+import org.jfree.chart.urls.StandardCategoryURLGenerator;
+import org.jfree.chart.util.Args;
+import org.jfree.chart.util.TableOrder;
 import org.jfree.data.UnknownKeyException;
 import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
+import org.jfree.data.category.IntervalCategoryDataset;
+import org.jfree.data.gantt.Task;
+import org.jfree.data.gantt.TaskSeries;
+import org.jfree.data.gantt.TaskSeriesCollection;
 import org.jfree.data.general.DefaultPieDataset;
 import org.jfree.data.time.FixedMillisecond;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.data.xy.XYDataset;
-import org.jfree.util.TableOrder;
 
 import com.asetune.Version;
+import com.asetune.graph.CategoryAxisSparselyLabeled;
+import com.asetune.graph.CategoryPlotSparselyLabeled;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.pipe.PipeCommandGraph;
 import com.asetune.sql.pipe.PipeCommandGraph.GraphType;
@@ -92,7 +115,7 @@ extends JComponent
 	
 	/** Used by createColumnPosList */
 	private enum CreateColumnType {
-		KEY_COLS, VALUE_COLS
+		KEY_COLS, GROUP_COLS, VALUE_COLS, TS_VALUE_COLS
 	};
 
 	public static final String PROPKEY_BAR_ITEM_MARGIN = "GraphResultSet.bar.chart.item.margin";
@@ -154,11 +177,45 @@ extends JComponent
 		
 		JFreeChart chart = createChart();
 //		JFreeChart chart = getChart();
-		ChartPanel jfreeChartPanel = new ChartPanel(chart);
+//		ChartPanel jfreeChartPanel = new ChartPanel(chart);
+		
+		ChartPanel jfreeChartPanel = null;
+		int width  = _pipeCmd.getWidthAsInt();
+		int height = _pipeCmd.getHeightAsInt();
+		
+		if (GraphType.GANTT.equals(_pipeCmd.getGraphType()) && width == -1)
+		{
+			width =  ChartPanel.DEFAULT_WIDTH * 3;
+			_pipeCmd.addInfoMessage("--width was not set, setting this to value: " + width);
+		}
+
+		if (GraphType.GANTT.equals(_pipeCmd.getGraphType()) && height == -1)
+		{
+			height = 17 * _tm.getRowCount(); // 16 pixels per row + 1 extra for space
+			_pipeCmd.addInfoMessage("--height was not set, setting this to value: " + height + ", based on that we have " + _tm.getRowCount() + " tasks.");
+		}
+
+		if (width != -1 || height != -1)
+		{
+			if (width  == -1) width  = ChartPanel.DEFAULT_WIDTH;
+			if (height == -1) height = ChartPanel.DEFAULT_HEIGHT;
+
+			width  = Math.max(width,  ChartPanel.DEFAULT_WIDTH);
+			height = Math.max(height, ChartPanel.DEFAULT_HEIGHT);
+
+			jfreeChartPanel = new ChartPanel(chart, width, height, width, height, width, height, true, true, true, true, true, true, true);
+			chartPanel.add(new JScrollPane(jfreeChartPanel), "grow, push");
+		}
+		else
+		{
+			jfreeChartPanel = new ChartPanel(chart);
+			chartPanel.add(jfreeChartPanel, "grow, push");
+		}
+		
 
 //		chartPanel.add(infoPanel,       "growx, pushx");
-		chartPanel.add(jfreeChartPanel, "grow, push");
-		
+//		chartPanel.add(jfreeChartPanel, "grow, push");
+
 		//frame.setIconImages(icons);
 
 		// Add informational messages (created in createChart()) to the Information Panel 
@@ -183,6 +240,7 @@ extends JComponent
 		
 		frame.pack();
 		
+		SwingUtils.setSizeWithingScreenLimit(frame, 50);
 		frame.setVisible(true);
 		return frame;
 	}
@@ -216,10 +274,14 @@ extends JComponent
 			if (_pipeCmd.is3dEnabled())
 				_pipeCmd.addInfoMessage("The '3D' property is not possible for 'area', 'sarea' or 'stackedarea', skipping this option... ");
 
+//			if ( GraphType.SAREA.equals(graphType) || GraphType.STACKEDAREA.equals(graphType) )
+//				_chart = ChartFactory.createStackedAreaChart(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset); 
+//			else
+//				_chart = ChartFactory.createAreaChart(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset); 
 			if ( GraphType.SAREA.equals(graphType) || GraphType.STACKEDAREA.equals(graphType) )
-				_chart = ChartFactory.createStackedAreaChart(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset); 
+				_chart = createStackedAreaChart(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset); 
 			else
-				_chart = ChartFactory.createAreaChart(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset); 
+				_chart = createAreaChart(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset); 
 		}
 		//-----------------------------------------
 		// BAR or STACKED BAR
@@ -230,36 +292,36 @@ extends JComponent
 
 			CategoryDataset dataset = createCategoryDataset(graphType);
 			
-			if (_pipeCmd.is3dEnabled())
+//			if (_pipeCmd.is3dEnabled())
+//				if ( GraphType.SBAR.equals(graphType) || GraphType.STACKEDBAR.equals(graphType) )
+//					_chart = ChartFactory.createStackedBarChart3D(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset); 
+//				else
+//				{
+//					_chart = ChartFactory.createBarChart3D(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset); 
+//					BarRenderer3D renderer = (BarRenderer3D) _chart.getCategoryPlot().getRenderer();
+//					double margin = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_BAR_ITEM_MARGIN, DEFAULT_BAR_ITEM_MARGIN);
+//					renderer.setItemMargin(margin);
+//				}
+//			else
+//			{
 				if ( GraphType.SBAR.equals(graphType) || GraphType.STACKEDBAR.equals(graphType) )
-					_chart = ChartFactory.createStackedBarChart3D(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset); 
+					_chart = createStackedBarChart(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset); 
 				else
 				{
-					_chart = ChartFactory.createBarChart3D(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset); 
-					BarRenderer3D renderer = (BarRenderer3D) _chart.getCategoryPlot().getRenderer();
-					double margin = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_BAR_ITEM_MARGIN, DEFAULT_BAR_ITEM_MARGIN);
-					renderer.setItemMargin(margin);
-				}
-			else
-			{
-				if ( GraphType.SBAR.equals(graphType) || GraphType.STACKEDBAR.equals(graphType) )
-					_chart = ChartFactory.createStackedBarChart(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset); 
-				else
-				{
-					_chart = ChartFactory.createBarChart(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset); 
+					_chart = createBarChart(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset); 
 					BarRenderer renderer = (BarRenderer) _chart.getCategoryPlot().getRenderer();
 					double margin = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_BAR_ITEM_MARGIN, DEFAULT_BAR_ITEM_MARGIN);
 					renderer.setItemMargin(margin);
 				}
-			}
+//			}
 
 //			if (_pipeCmd.isShowDataValues())
 //			{
 //				CategoryItemRenderer renderer = _chart.getCategoryPlot().getRenderer();
 //				CategoryItemLabelGenerator generator = new StandardCategoryItemLabelGenerator("{2}", new DecimalFormat("#.#"));
-//				renderer.setBaseItemLabelGenerator(generator);
+//				renderer.setDefaultItemLabelGenerator(generator);
 //				
-//				renderer.setBaseItemLabelsVisible(true);
+//				renderer.setDefaultItemLabelsVisible(true);
 //			}
 		}
 		//-----------------------------------------
@@ -271,12 +333,12 @@ extends JComponent
 
 			CategoryDataset dataset = createCategoryDataset(graphType);
 			
-			if (_pipeCmd.is3dEnabled())
-				_chart = ChartFactory.createLineChart3D(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset); 
-			else
-			{
+//			if (_pipeCmd.is3dEnabled())
+//				_chart = ChartFactory.createLineChart3D(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset); 
+//			else
+//			{
 				_chart = ChartFactory.createLineChart(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset); 
-			}
+//			}
 		}
 		//-----------------------------------------
 		// PIE
@@ -337,6 +399,23 @@ extends JComponent
 
 			_chart = ChartFactory.createTimeSeriesChart(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset);
 		}
+		//-----------------------------------------
+		// GANTT
+		//-----------------------------------------
+		else if (GraphType.GANTT.equals(graphType))
+		{
+			_pipeCmd.addInfoMessage("creating 'Gantt' dataset for graph type '"+graphType+"'.");
+
+			IntervalCategoryDataset dataset = createGanttDataset(graphType);
+
+			if (_pipeCmd.is3dEnabled())
+				_pipeCmd.addInfoMessage("The '3D' property is not possible for 'Gantt', skipping this option... ");
+
+			if (_pipeCmd.isPivotEnabled())
+				_pipeCmd.addInfoMessage("The 'pivot' property is not possible for 'Gantt', skipping this option... ");
+
+			_chart = ChartFactory.createGanttChart(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset);
+		}
 
 
 		//
@@ -349,12 +428,82 @@ extends JComponent
 			{
 				CategoryPlot cplot = (CategoryPlot) plot;
 
-				CategoryItemRenderer renderer = cplot.getRenderer();
-//				CategoryItemLabelGenerator generator = new StandardCategoryItemLabelGenerator("{2}", new DecimalFormat("#.#"));
-				CategoryItemLabelGenerator generator = new StandardCategoryItemLabelGenerator("{2}", NumberFormat.getNumberInstance());
-				renderer.setBaseItemLabelGenerator(generator);
-				
-				renderer.setBaseItemLabelsVisible(true);
+				if (GraphType.GANTT.equals(graphType))
+				{
+//					CategoryItemRenderer renderer = cplot.getRenderer();
+					GanttRenderer renderer = (GanttRenderer) cplot.getRenderer();
+					
+					CategoryToolTipGenerator toolTipGenerator = new CategoryToolTipGenerator()
+					{
+						@Override
+						public String generateToolTip(CategoryDataset dataset, int row, int column)
+						{
+							String  startMsg         = "Row=" + row + ", column=" + column + "<hr>";
+							String  endMsg           = "";
+							boolean borders          = false;
+							boolean stripedRows      = true;
+							boolean addOuterHtmlTags = true;
+
+						//	return _tm.toHtmlTableString(row, startMsg, endMsg, borders, stripedRows, addOuterHtmlTags);
+							return _tm.toHtmlTableString(column, startMsg, endMsg, borders, stripedRows, addOuterHtmlTags);
+						}
+					};
+//					renderer.setLegendItemToolTipGenerator();
+//					renderer.setSeriesToolTipGenerator(0, toolTipGenerator);
+					renderer.setDefaultToolTipGenerator(toolTipGenerator);
+					
+					CategoryItemLabelGenerator generator = new CategoryItemLabelGenerator()
+					{
+						@Override
+						public String generateRowLabel(CategoryDataset dataset, int row)
+						{
+//							return "Your Row Text  " + row;
+					        return dataset.getRowKey(row).toString();
+						}
+						
+						@Override
+						public String generateColumnLabel(CategoryDataset dataset, int column)
+						{
+//							return "Your Column Text  " + column;
+					        return dataset.getColumnKey(column).toString();
+						}
+						
+						@Override
+						public String generateLabel(CategoryDataset dataset, int row, int column)
+						{
+//							Object val = dataset.getValue(row, column);
+//							Object ckey = dataset.getColumnKey(column);
+//							Object rkey = dataset.getRowKey(row);
+//							
+//							return "Your Label Text:  row=" + row + ", column=" + column + ". ckey=" + ckey + ", rkey=" + rkey;
+							
+//							int tableModelRow = row;
+							int tableModelRow = column;
+							int comment_pos = _tm.findColumnNoCase("comment");
+							if (comment_pos != -1)
+							{
+								return _tm.getValueAsString(tableModelRow, comment_pos);
+							}
+							return "";
+						}
+						
+					};
+					renderer.setDefaultItemLabelGenerator(generator);
+
+					renderer.setDefaultPositiveItemLabelPosition (new ItemLabelPosition(ItemLabelAnchor.OUTSIDE3, TextAnchor.CENTER_LEFT));
+					renderer.setPositiveItemLabelPositionFallback(new ItemLabelPosition(ItemLabelAnchor.INSIDE3, TextAnchor.CENTER_RIGHT));
+					
+					renderer.setDefaultItemLabelsVisible(true);
+				}
+				else
+				{
+					CategoryItemRenderer renderer = cplot.getRenderer();
+//					CategoryItemLabelGenerator generator = new StandardCategoryItemLabelGenerator("{2}", new DecimalFormat("#.#"));
+					CategoryItemLabelGenerator generator = new StandardCategoryItemLabelGenerator("{2}", NumberFormat.getNumberInstance());
+					renderer.setDefaultItemLabelGenerator(generator);
+					
+					renderer.setDefaultItemLabelsVisible(true);
+				}
 			}
 			else if (plot instanceof PiePlot)
 			{
@@ -375,14 +524,14 @@ extends JComponent
 				
 				XYItemRenderer renderer = xyPlot.getRenderer();
 				XYItemLabelGenerator generator = new StandardXYItemLabelGenerator("{2}");
-				renderer.setBaseItemLabelGenerator(generator);
+				renderer.setDefaultItemLabelGenerator(generator);
 
-				renderer.setBaseItemLabelsVisible(true);
+				renderer.setDefaultItemLabelsVisible(true);
 
 				if (renderer instanceof XYLineAndShapeRenderer)
 				{
 					XYLineAndShapeRenderer lsr = (XYLineAndShapeRenderer) renderer;
-					lsr.setBaseShapesVisible(true);
+					lsr.setDefaultShapesVisible(true);
 					lsr.setUseFillPaint(true);
 				}
 			}
@@ -409,7 +558,7 @@ extends JComponent
 				if (renderer instanceof XYLineAndShapeRenderer)
 				{
 					XYLineAndShapeRenderer lsr = (XYLineAndShapeRenderer) renderer;
-					lsr.setBaseShapesVisible(true);
+					lsr.setDefaultShapesVisible(true);
 					lsr.setUseFillPaint(true);
 
 					successShowShapes = true;
@@ -423,7 +572,7 @@ extends JComponent
 				if (renderer instanceof XYLineAndShapeRenderer)
 				{
 					XYLineAndShapeRenderer lsr = (XYLineAndShapeRenderer) renderer;
-					lsr.setBaseShapesVisible(true);
+					lsr.setDefaultShapesVisible(true);
 					lsr.setUseFillPaint(true);
 
 					successShowShapes = true;
@@ -457,7 +606,185 @@ extends JComponent
 
 		throw new RuntimeException("Unknown GRAPH TYPE (or possibly NOT-YET-IMPLEMETED): " + graphType);
 	}
-	
+
+
+	/** replacement for: ChartFactory.createStackedAreaChart(...) */
+	private JFreeChart createStackedAreaChart(String graphTitle, String labelCategory, String labelValue, CategoryDataset dataset)
+	{
+//		return ChartFactory.createStackedAreaChart(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset); 
+
+		boolean legend   = true;
+		boolean tooltips = true;
+		boolean urls     = false;
+		
+		PlotOrientation orientation = PlotOrientation.VERTICAL;
+
+		Args.nullNotPermitted(orientation, "orientation");
+//		CategoryAxis categoryAxis = new CategoryAxis(labelCategory);
+		CategoryAxisSparselyLabeled categoryAxis = new CategoryAxisSparselyLabeled(labelCategory);
+		categoryAxis.setCategoryMargin(0.0);
+
+		ValueAxis valueAxis = new NumberAxis(labelValue);
+
+		if (StringUtil.hasValue(_pipeCmd.getKeySdf()))
+			categoryAxis.setDateFormat(new SimpleDateFormat(_pipeCmd.getKeySdf()));
+
+		StackedAreaRenderer renderer = new StackedAreaRenderer();
+		if (tooltips)
+			renderer.setDefaultToolTipGenerator(new StandardCategoryToolTipGenerator());
+
+		if (urls)
+			renderer.setDefaultItemURLGenerator(new StandardCategoryURLGenerator());
+
+//		CategoryPlot plot = new CategoryPlot(dataset, categoryAxis, valueAxis, renderer);
+		CategoryPlot plot = new CategoryPlotSparselyLabeled(dataset, categoryAxis, valueAxis, renderer);
+		plot.setOrientation(orientation);
+
+		JFreeChart chart = new JFreeChart(graphTitle, JFreeChart.DEFAULT_TITLE_FONT, plot, legend);
+//		currentTheme.apply(chart);
+		return chart;
+	}
+
+
+	/** replacement for: ChartFactory.createAreaChart(...) */
+	private JFreeChart createAreaChart(String graphTitle, String labelCategory, String labelValue, CategoryDataset dataset)
+	{
+//		return ChartFactory.createAreaChart(_pipeCmd.getGraphTitle(), _pipeCmd.getLabelCategory(), _pipeCmd.getLabelValue(), dataset);
+
+		boolean legend   = true;
+		boolean tooltips = true;
+		boolean urls     = false;
+		
+		PlotOrientation orientation = PlotOrientation.VERTICAL;
+
+		Args.nullNotPermitted(orientation, "orientation");
+//		CategoryAxis categoryAxis = new CategoryAxis(labelCategory);
+		CategoryAxisSparselyLabeled categoryAxis = new CategoryAxisSparselyLabeled(labelCategory);
+		categoryAxis.setCategoryMargin(0.0);
+
+		if (StringUtil.hasValue(_pipeCmd.getKeySdf()))
+			categoryAxis.setDateFormat(new SimpleDateFormat(_pipeCmd.getKeySdf()));
+
+		ValueAxis valueAxis = new NumberAxis(labelValue);
+
+		AreaRenderer renderer = new AreaRenderer();
+		if (tooltips)
+			renderer.setDefaultToolTipGenerator(new StandardCategoryToolTipGenerator());
+
+		if (urls)
+			renderer.setDefaultItemURLGenerator(new StandardCategoryURLGenerator());
+
+//		CategoryPlot plot = new CategoryPlot(dataset, categoryAxis, valueAxis, renderer);
+		CategoryPlot plot = new CategoryPlotSparselyLabeled(dataset, categoryAxis, valueAxis, renderer);
+		plot.setOrientation(orientation);
+
+		JFreeChart chart = new JFreeChart(graphTitle, JFreeChart.DEFAULT_TITLE_FONT, plot, legend);
+//		currentTheme.apply(chart);
+		return chart;
+	}
+
+
+	/** replacement for: ChartFactory.createStackedBarChart(...) */
+	private JFreeChart createStackedBarChart(String graphTitle, String labelCategory, String labelValue, CategoryDataset dataset)
+	{
+//		return ChartFactory.createStackedBarChart(graphTitle, labelCategory, labelValue, dataset);
+		boolean legend   = true;
+		boolean tooltips = true;
+		boolean urls     = false;
+		
+		PlotOrientation orientation = PlotOrientation.VERTICAL;
+
+		Args.nullNotPermitted(orientation, "orientation");
+
+//		CategoryAxis categoryAxis = new CategoryAxis(labelCategory);
+		CategoryAxisSparselyLabeled categoryAxis = new CategoryAxisSparselyLabeled(labelCategory);
+		ValueAxis valueAxis = new NumberAxis(labelValue);
+
+		if (StringUtil.hasValue(_pipeCmd.getKeySdf()))
+			categoryAxis.setDateFormat(new SimpleDateFormat(_pipeCmd.getKeySdf()));
+
+		StackedBarRenderer renderer = new StackedBarRenderer();
+		if (tooltips)
+			renderer.setDefaultToolTipGenerator(new StandardCategoryToolTipGenerator());
+
+		if (urls) 
+			renderer.setDefaultItemURLGenerator(new StandardCategoryURLGenerator());
+
+//		CategoryPlot plot = new CategoryPlot(dataset, categoryAxis, valueAxis, renderer);
+		CategoryPlot plot = new CategoryPlotSparselyLabeled(dataset, categoryAxis, valueAxis, renderer);
+		plot.setOrientation(orientation);
+		
+		// if to many rows disable shadow and "fancy" looks
+		if (dataset.getColumnCount() > 20)
+		{
+			renderer.setShadowVisible(false);
+			renderer.setBarPainter(new StandardBarPainter());
+		}
+		plot.setDomainGridlinesVisible(true);
+		
+		JFreeChart chart = new JFreeChart(graphTitle, JFreeChart.DEFAULT_TITLE_FONT, plot, legend);
+//		currentTheme.apply(chart);
+		return chart;
+	}
+
+	/** replacement for: ChartFactory.createBarChart(...) */
+	private JFreeChart createBarChart(String graphTitle, String labelCategory, String labelValue, CategoryDataset dataset)
+	{
+//		return ChartFactory.createBarChart(graphTitle, labelCategory, labelValue, dataset);
+
+		boolean legend   = true;
+		boolean tooltips = true;
+		boolean urls     = false;
+		
+		PlotOrientation orientation = PlotOrientation.VERTICAL;
+
+		Args.nullNotPermitted(orientation, "orientation");
+
+//		CategoryAxis categoryAxis = new CategoryAxis(labelCategory);
+		CategoryAxisSparselyLabeled categoryAxis = new CategoryAxisSparselyLabeled(labelCategory);
+		ValueAxis valueAxis = new NumberAxis(labelValue);
+
+		if (StringUtil.hasValue(_pipeCmd.getKeySdf()))
+			categoryAxis.setDateFormat(new SimpleDateFormat(_pipeCmd.getKeySdf()));
+
+		BarRenderer renderer = new BarRenderer();
+		if (orientation == PlotOrientation.HORIZONTAL) 
+		{
+			ItemLabelPosition position1 = new ItemLabelPosition(ItemLabelAnchor.OUTSIDE3, TextAnchor.CENTER_LEFT);
+			renderer.setDefaultPositiveItemLabelPosition(position1);
+			ItemLabelPosition position2 = new ItemLabelPosition(ItemLabelAnchor.OUTSIDE9, TextAnchor.CENTER_RIGHT);
+			renderer.setDefaultNegativeItemLabelPosition(position2);
+		} 
+		else if (orientation == PlotOrientation.VERTICAL) 
+		{
+			ItemLabelPosition position1 = new ItemLabelPosition(ItemLabelAnchor.OUTSIDE12, TextAnchor.BOTTOM_CENTER);
+			renderer.setDefaultPositiveItemLabelPosition(position1);
+			ItemLabelPosition position2 = new ItemLabelPosition(ItemLabelAnchor.OUTSIDE6, TextAnchor.TOP_CENTER);
+			renderer.setDefaultNegativeItemLabelPosition(position2);
+		}
+		if (tooltips)
+			renderer.setDefaultToolTipGenerator(new StandardCategoryToolTipGenerator());
+
+		if (urls)
+			renderer.setDefaultItemURLGenerator(new StandardCategoryURLGenerator());
+
+//		CategoryPlot plot = new CategoryPlot(dataset, categoryAxis, valueAxis, renderer);
+		CategoryPlot plot = new CategoryPlotSparselyLabeled(dataset, categoryAxis, valueAxis, renderer);
+		plot.setOrientation(orientation);
+
+		// if to many rows disable shadow and "fancy" looks
+		if (dataset.getColumnCount() > 20)
+		{
+			renderer.setShadowVisible(false);
+			renderer.setBarPainter(new StandardBarPainter());
+		}
+		plot.setDomainGridlinesVisible(true);
+
+		JFreeChart chart = new JFreeChart(graphTitle, JFreeChart.DEFAULT_TITLE_FONT, plot, legend);
+//		currentTheme.apply(chart);
+		return chart;
+	}
+
 	/**
 	 * Try to guess the desired Graph Type 
 	 * 
@@ -607,8 +934,10 @@ extends JComponent
 		
 		if (_pipeCmd.isDebugEnabled())
 		{
-			if (CreateColumnType.KEY_COLS  .equals(type)) printColumnListInfo("Key Columns(s): ",  resList);
-			if (CreateColumnType.VALUE_COLS.equals(type)) printColumnListInfo("Value Column(s): ", resList);
+			if (CreateColumnType.KEY_COLS     .equals(type)) printColumnListInfo("Key Column(s): ",   resList);
+			if (CreateColumnType.GROUP_COLS   .equals(type)) printColumnListInfo("Group Column(s): ", resList);
+			if (CreateColumnType.VALUE_COLS   .equals(type)) printColumnListInfo("Value Column(s): ", resList);
+			if (CreateColumnType.TS_VALUE_COLS.equals(type)) printColumnListInfo("Value Column(s): ", resList);
 		}
 
 		return resList;
@@ -646,10 +975,32 @@ extends JComponent
 	 * @param keyList
 	 * @return
 	 */
-	private String getRowKey(int row, List<Integer> keyList)
+//	private String getRowKey(int row, List<Integer> keyList)
+//	{
+//		if (keyList.size() == 1)
+//			return _tm.getValueAt(row, keyList.get(0)) + "";
+//
+//		// Add all KEY Columns
+//		StringBuilder sb = new StringBuilder();
+//
+//		for (Integer col : keyList)
+//			sb.append( _tm.getValueAt(row, keyList.get(col)) ).append("|");
+//
+//		// Remove last '|'
+//		sb.delete(sb.length()-1, sb.length());
+//		
+//		return sb.toString();
+//	}
+	private Comparable getRowKey(int row, List<Integer> keyList)
 	{
 		if (keyList.size() == 1)
-			return _tm.getValueAt(row, keyList.get(0)) + "";
+		{
+			Object obj = _tm.getValueAt(row, keyList.get(0));
+			if (obj instanceof Comparable)
+				return (Comparable) _tm.getValueAt(row, keyList.get(0));
+			else
+				throw new RuntimeException("getRowKey(row="+row+", keyList.size()==1): The fetched object '"+obj.getClass().getName()+"' is not a instance of Comparable.");
+		}
 
 		// Add all KEY Columns
 		StringBuilder sb = new StringBuilder();
@@ -692,6 +1043,7 @@ extends JComponent
 		
 		// Get/Compose the KEY and Values Column List
 		List<Integer> keyPosList = createColumnPosList(CreateColumnType.KEY_COLS,   _pipeCmd.getKeyCols(), null);
+		List<Integer> grpPosList = createColumnPosList(CreateColumnType.GROUP_COLS, _pipeCmd.getGroupCols(), null);
 		List<Integer> valPosList = createColumnPosList(CreateColumnType.VALUE_COLS, _pipeCmd.getValCols(), keyPosList);
 
 		if (valPosList.size() > 1)
@@ -704,11 +1056,25 @@ extends JComponent
 		for (int row = 0; row < rowCount; row++)
 		{
 			// first column contains the row key...
-			String rowKey = getRowKey(row, keyPosList);
+//			String rowKey = getRowKey(row, keyPosList);
+			Comparable rowKey = getRowKey(row, keyPosList);
 
 			for (Integer col : valPosList)
 			{
 				String columnKey = _tm.getColumnName(col);
+				if (grpPosList != null && !grpPosList.isEmpty())
+				{
+					columnKey  = "";
+					String sep = "";
+
+					for (Integer pos : grpPosList)
+					{
+						columnKey += sep + _tm.getValueAsString(row, pos);
+
+						// Set separator to use between group names
+						sep = ", ";
+					}
+				}
 
 				try
 				{
@@ -757,19 +1123,28 @@ extends JComponent
 
 		return dataset;
 	}
-	private void setOrIncrementValue(DefaultCategoryDataset dataset, int row, int col, boolean pivot, Number value, String rowKey, String colKey)
+//	private void setOrIncrementValue(DefaultCategoryDataset dataset, int row, int col, boolean pivot, Number value, String rowKey, String colKey)
+	private void setOrIncrementValue(DefaultCategoryDataset dataset, int row, int col, boolean pivot, Number value, Comparable rowKey, Comparable colKey)
 	{
 		if (value == null)
 			return;
 
-		String rKey = rowKey;
-		String cKey = colKey;
+//		String rKey = rowKey;
+//		String cKey = colKey;
+		Comparable rKey = rowKey;
+		Comparable cKey = colKey;
 		if (pivot)
 		{
 			rKey = colKey;
 			cKey = rowKey;
 		}
-		
+
+		if (_pipeCmd.isGroupByKeySdf() && cKey instanceof Date && StringUtil.hasValue(_pipeCmd.getKeySdf()))
+		{
+			SimpleDateFormat sdf = new SimpleDateFormat(_pipeCmd.getKeySdf());
+			cKey = sdf.format((Date) cKey);
+		}
+
 		try
 		{
 			Number curValue = dataset.getValue(rKey, cKey);
@@ -981,7 +1356,8 @@ extends JComponent
 				// get column position for value 1 (index 0) 
 				int col = valPosList.get(0);
 
-				String rowKey = getRowKey(row, keyPosList);
+//				String rowKey = getRowKey(row, keyPosList);
+				Comparable rowKey = getRowKey(row, keyPosList);
 				Number rowVal = null;
 
 				// -----------------
@@ -1117,7 +1493,8 @@ extends JComponent
 				for (int row = 0; row < rowCount; row++)
 				{
 					// first column contains the row key...
-					String rowKey = getRowKey(row, keyPosList);
+					String rowKey = getRowKey(row, keyPosList) + "";
+//					Comparable rowKey = getRowKey(row, keyPosList);
 					Number value = null;
 
 					DefaultPieDataset pieDataset = pieMap.get(rowKey);
@@ -1455,6 +1832,124 @@ extends JComponent
 //	}
 
 	
+	//#########################################################################
+	//#########################################################################
+	// DATA SET for GANTT
+	//#########################################################################
+	//#########################################################################
+	// The following was used as an example: http://www.java2s.com/Code/Java/Chart/JFreeChartGanttDemo1.htm
+	
+	public IntervalCategoryDataset createGanttDataset(GraphType graphType)
+	{
+		int rowCount = _tm.getRowCount();
+		int colCount = _tm.getColumnCount();
+
+		if (_pipeCmd.isDebugEnabled())
+		{
+			_pipeCmd.addDebugMessage("createGanttDataset()");
+//			_pipeCmd.addDebugMessage("pivot="+pivot);
+			_pipeCmd.addDebugMessage("rowCount="+rowCount);
+			_pipeCmd.addDebugMessage("colCount="+colCount);
+		}
+
+		// Get/Compose the KEY and Values Column List
+		List<Integer> keyPosList = createColumnPosList(CreateColumnType.KEY_COLS,      _pipeCmd.getKeyCols()  , null);
+		List<Integer> grpPosList = createColumnPosList(CreateColumnType.GROUP_COLS,    _pipeCmd.getGroupCols(), null);
+		List<Integer> valPosList = createColumnPosList(CreateColumnType.TS_VALUE_COLS, _pipeCmd.getValCols()  , keyPosList);
+
+		if ( keyPosList.size() != 1)
+		{
+			String msg = "ERROR: Not enough KEY Columns: 1 columns must be specified, which acts as a 'task' name. keyPosList=" + keyPosList + ", getKeyCols()=" + _pipeCmd.getKeyCols();
+			_pipeCmd.addErrorMessage(msg);
+
+			throw new RuntimeException(msg);
+		}
+		
+		if ( valPosList.size() != 2)
+		{
+			String msg = "ERROR: Not enough Value Columns: 2 columns must be specified, with datatypes Timestamp. A start/end date. valPosList=" + valPosList + ", getValCols()=" + _pipeCmd.getValCols();
+			_pipeCmd.addErrorMessage(msg);
+
+			throw new RuntimeException(msg);
+		}
+		
+		int keyCol       = keyPosList.get(0);
+		int groupCol     = grpPosList.isEmpty() ? -1 : grpPosList.get(0);
+		int beginTimeCol = valPosList.get(0);
+		int endTimeCol   = valPosList.get(1);
+		
+		if ( ! (isTimeColumn(beginTimeCol) || isTimeColumn(endTimeCol)) )
+		{
+			String tsStartColName        = _tm.getColumnName(beginTimeCol);
+			int    tsStartJdbcColumnType = _tm.getSqlType(   beginTimeCol);
+			
+			String tsEndColName        = _tm.getColumnName(endTimeCol);
+			int    tsEndJdbcColumnType = _tm.getSqlType(   endTimeCol);
+			
+			String msg = "ERROR: Invalid SQL: \n"
+					+ " - First column must be of a time/date/timestamp. StartColName='"+tsStartColName+"', StartJdbcColumnType="+tsStartJdbcColumnType+", StartJdbcColumnTypeStr='"+ResultSetTableModel.getColumnJavaSqlTypeName(tsStartJdbcColumnType)+"'. \n"
+					+ " - Second column must be of a time/date/timestamp. EndColName='"+tsEndColName+"', EndJdbcColumnType="+tsEndJdbcColumnType+", EndJdbcColumnTypeStr='"+ResultSetTableModel.getColumnJavaSqlTypeName(tsEndJdbcColumnType)+"'. \n";
+			_pipeCmd.addErrorMessage(msg);
+
+			throw new RuntimeException(msg);
+		}
+
+//		Map<String, TimeSeries> tsMap = new LinkedHashMap<>();
+		//TimeSeries ts = new TimeSeries();
+
+		Map<String, TaskSeries> tsMap = new LinkedHashMap<>();
+
+		for (int r = 0; r < rowCount; r++)
+		{
+			for (int col : valPosList)
+			{
+//				Timestamp timestamp = _tm.getValueAsTimestamp(r, tsKeyCol);
+//				FixedMillisecond timestampMs = new FixedMillisecond(timestamp);
+				String taskName   = _tm.getValueAsString(r, keyCol);
+				String groupName  = groupCol == -1 ? "" : _tm.getValueAsString(r, groupCol);
+				
+				Timestamp beginTs = _tm.getValueAsTimestamp(r, beginTimeCol);
+				Timestamp endTs   = _tm.getValueAsTimestamp(r, endTimeCol);
+				
+				if (beginTs == null)
+				{
+					String msg = "BEGIN Timestamp Column is missing for: key='" + taskName + "', groupName='" + groupName + "', beginTimeCol='" + _tm.getColumnName(beginTimeCol) + "' is NULL, Skipping this row.";
+					_pipeCmd.addInfoMessage(msg);
+					continue;
+				}
+				
+				if (endTs == null)
+				{
+					String msg = "END Timestamp Column is missing for: key='" + taskName + "', groupName='" + groupName + "', beginTimeCol='" + _tm.getColumnName(beginTimeCol) + "' is NULL, Setting this to NOW.";
+					_pipeCmd.addInfoMessage(msg);
+
+					endTs = new Timestamp(System.currentTimeMillis());
+				}
+				
+				// Create a TASK, with a start/end date
+				Task task = new Task(taskName, beginTs, endTs);
+
+				// Add it to a series/group (the default group is '')
+				TaskSeries taskSerie = tsMap.get(groupName);
+				if (taskSerie == null)
+				{
+					taskSerie = new TaskSeries(groupName);
+					tsMap.put(groupName, taskSerie);
+				}
+				taskSerie.add(task);
+			}
+		}
+
+		// Add ALL Series to the dataset
+		TaskSeriesCollection dataset = new TaskSeriesCollection();
+		for (TaskSeries taskSerie : tsMap.values())
+		{
+			dataset.add(taskSerie);
+		}
+
+		return dataset;
+	}
+
 	/**
 	 * INTERNAl: Try to convert a String representation (using obj.toString()) to a Double 
 	 * 

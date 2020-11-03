@@ -40,8 +40,9 @@ import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +59,11 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.jdesktop.swingx.decorator.Highlighter;
 
+import com.asetune.cm.ResultSetTableComparator;
+import com.asetune.cm.SortOptions;
+import com.asetune.cm.SortOptions.ColumnNameSensitivity;
+import com.asetune.cm.SortOptions.DataSortSensitivity;
+import com.asetune.cm.SortOptions.SortOrder;
 import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.pipe.PipeCommand;
@@ -94,8 +100,11 @@ public class ResultSetTableModel
 	public static final String  PROPKEY_NULL_REPLACE = "ResultSetTableModel.replace.null.with";
 	public static final String  DEFAULT_NULL_REPLACE = "(NULL)";
 
+	public static final String  PROPKEY_StringRtrim = "ResultSetTableModel.string.rtrim";
+	public static final boolean DEFAULT_StringRtrim = true;
+
 	public static final String  PROPKEY_StringTrim = "ResultSetTableModel.string.trim";
-	public static final boolean DEFAULT_StringTrim = true;
+	public static final boolean DEFAULT_StringTrim = false;
 
 	public static final String  PROPKEY_ShowRowNumber = "ResultSetTableModel.show.rowNumber";
 	public static final boolean DEFAULT_ShowRowNumber = false;
@@ -148,6 +157,7 @@ public class ResultSetTableModel
 	private int                          _abortedAfterXRows     = -1;
 	private int                          _discardedXRows        = -1;
 
+	private boolean                      _stringRtrim           = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_StringRtrim,    DEFAULT_StringRtrim);
 	private boolean                      _stringTrim            = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_StringTrim,     DEFAULT_StringTrim);
 	private boolean                      _showRowNumber         = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_ShowRowNumber,  DEFAULT_ShowRowNumber);
 
@@ -285,6 +295,7 @@ public class ResultSetTableModel
 			_rsmdColumnTypeName   .add("int");
 			_rsmdColumnTypeNameStr.add("int");
 			_displaySize          .add(new Integer(10));
+			_rsmdRefTableName     .add("-none-");
 			_classType[0]         = Integer.class;
 		}
 
@@ -336,7 +347,6 @@ public class ResultSetTableModel
 				}
 			}
 
-			_rsmdRefTableName     .add(fullRefTableName);
 			_rsmdColumnLabel      .add(columnLabel);
 			_rsmdColumnName       .add(columnName);
 			_rsmdColumnType       .add(new Integer(columnType));
@@ -345,6 +355,7 @@ public class ResultSetTableModel
 			_rsmdColumnTypeName   .add(columnTypeNameRaw);
 			_rsmdColumnTypeNameStr.add(columnTypeNameGen);
 			_displaySize          .add(new Integer(columnDisplaySize));
+			_rsmdRefTableName     .add(fullRefTableName);
 			
 //			System.out.println("name='"+_cols.get(c-1)+"', getColumnClassName("+c+")='"+_type.get(c-1)+"', getColumnTypeName("+c+")='"+_sqlType.get(c-1)+"'.");
 		}
@@ -501,8 +512,13 @@ public class ResultSetTableModel
 //				}
 
 				// Do we want to remove leading/trailing blanks
-				if (o instanceof String && _stringTrim)
-					o = ((String)o).trim();
+				if (o instanceof String && (_stringTrim || _stringRtrim) )
+				{
+					if (_stringTrim)
+						o = ((String)o).trim();
+					else
+						o = StringUtil.rtrim((String)o);
+				}
 
 				// Should we try to convert "faulty" characters to... (if ISO chars has been saved faulty in the DB using UTF8 or similar)
 				boolean convertIsEnabled = true;
@@ -560,6 +576,48 @@ public class ResultSetTableModel
 			progress.setState(originProgressState + " Read done, rows "+_readCount + (_abortedAfterXRows<0 ? "" : ", then stopped, due to 'top' restriction.") );
 		
 		_readResultSetTime = (int) (System.currentTimeMillis() - startTime);
+	}
+
+	public ResultSetTableModel(ResultSetTableModel rstm, String name, boolean copyRows)
+	{
+		_rsmdRefTableName      = new ArrayList<String> (rstm._rsmdRefTableName     );  // rsmd.getXXX(c); 
+		_rsmdColumnName        = new ArrayList<String> (rstm._rsmdColumnName       );  // rsmd.getColumnName(c); 
+		_rsmdColumnLabel       = new ArrayList<String> (rstm._rsmdColumnLabel      );  // rsmd.getColumnLabel(c); 
+		_rsmdColumnType        = new ArrayList<Integer>(rstm._rsmdColumnType       ); // rsmd.getColumnType(c); 
+		_rsmdColumnTypeStr     = new ArrayList<String> (rstm._rsmdColumnTypeStr    );  // getColumnJavaSqlTypeName(_rsmdColumnType.get(index)) 
+		_rsmdColumnTypeName    = new ArrayList<String> (rstm._rsmdColumnTypeName   );  // rsmd.getColumnTypeName(c);
+		_rsmdColumnTypeNameStr = new ArrayList<String> (rstm._rsmdColumnTypeNameStr);  // kind of 'SQL' datatype: this.getColumnTypeName(rsmd, c);
+		_rsmdColumnClassName   = new ArrayList<String> (rstm._rsmdColumnClassName  );  // rsmd.getColumnClassName(c);
+		_displaySize           = new ArrayList<Integer>(rstm._displaySize          ); // Math.max(rsmd.getColumnDisplaySize(c), rsmd.getColumnLabel(c).length());
+		_classType             = rstm._classType; // first found class of value, which wasn't null
+		_rows                  = new ArrayList<ArrayList<Object>>();
+		_readCount             = 0;
+		_sqlWarning            = null;
+		_allowEdit             = rstm._allowEdit; 
+		_name                  = name;
+		_pipeCmd               = null;
+		_cancelled             = false;
+		_abortedAfterXRows     = -1;
+		_discardedXRows        = -1;
+
+		_stringRtrim           = rstm._stringRtrim;
+		_stringTrim            = rstm._stringTrim;
+		_showRowNumber         = rstm._showRowNumber;
+
+		_readResultSetTime     = -1;
+
+		_nullValuesAsEmptyInGetValueAsType = rstm._nullValuesAsEmptyInGetValueAsType;
+		
+		_toStringTimestampFormat = rstm._toStringTimestampFormat;
+		_toStringNumberFormat    = rstm._toStringNumberFormat;
+		
+		_originSqlText           = rstm._originSqlText;
+
+		_dbmsProductName         = rstm._dbmsProductName;
+		_rsmdCached              = rstm._rsmdCached;
+		
+		if (copyRows)
+			_rows.addAll(rstm._rows);
 	}
 
 	/**
@@ -1671,6 +1729,9 @@ public class ResultSetTableModel
 		if (_showRowNumber && index == 0)
 			return "<html>Column '<b><code>"+ROW_NUMBER_COLNAME+"</code></b>' is not part of the actual Result Set, it has been added when reading the data.</html>";
 
+//		if (_showRowNumber)
+//			index--;
+
 		StringBuilder sb = new StringBuilder();
 		sb.append("<HTML>");
 		
@@ -1802,17 +1863,20 @@ public class ResultSetTableModel
 			ArrayList<String> row = new ArrayList<String>();
 			rows.add(row);
 
+//			int pos = (_showRowNumber ? c-1 : c);
+			int pos = c;
+			
 			        row.add( "" + (_showRowNumber ? c : c+1) ); // _showRowNumber == skip first column... 
-			        row.add( "" + _rsmdColumnLabel      .get(c) );
-			if (ld) row.add( "" + _rsmdColumnName       .get(c)  );
-			        row.add( "" + _rsmdColumnTypeStr    .get(c) );
-			if (ld) row.add( "" + _rsmdColumnType       .get(c) );
-			if (ld) row.add( "" + _rsmdColumnClassName  .get(c) );
-			if (ld) row.add( "" + _rsmdColumnTypeName   .get(c) );
-			        row.add( "" + _rsmdColumnTypeNameStr.get(c) );
-//			        row.add( "" + getDbmsDdlDataTypeTargetResolved(c) );
-			        row.add( "" + _rsmdRefTableName     .get(c) );
-			if (ld) row.add( "" + getColumnClass(c) );
+			        row.add( "" + _rsmdColumnLabel      .get(pos) );
+			if (ld) row.add( "" + _rsmdColumnName       .get(pos)  );
+			        row.add( "" + _rsmdColumnTypeStr    .get(pos) );
+			if (ld) row.add( "" + _rsmdColumnType       .get(pos) );
+			if (ld) row.add( "" + _rsmdColumnClassName  .get(pos) );
+			if (ld) row.add( "" + _rsmdColumnTypeName   .get(pos) );
+			        row.add( "" + _rsmdColumnTypeNameStr.get(pos) );
+//			        row.add( "" + getDbmsDdlDataTypeTargetResolved(pos) );
+			        row.add( "" + _rsmdRefTableName     .get(pos) );
+			if (ld) row.add( "" + getColumnClass(pos) );
 		}
 
 		// Get max length for each column
@@ -2140,9 +2204,17 @@ public class ResultSetTableModel
 	/** renderer used in toHtmlTableString() */
 	public interface TableStringRenderer
 	{
-		/** returns a string that should be used as a value, this could be decorated with HTML tags to highlight various parts of the table cells 
-		 * @param objVal2 */
-		String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal);
+		/** returns a string that should be used as a value, this could be decorated with HTML tags to highlight various parts of the table cells */
+		default String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+		{
+			return strVal;
+		}
+
+		/** returns a string that should be used as a cell tool tip, for example translate milliseconds into a readable string */
+		default String cellToolTip(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+		{
+			return null;
+		}
 	}
 	
 	public String toHtmlTableString(String className)
@@ -2203,8 +2275,9 @@ public class ResultSetTableModel
 			sb.append("  <tr>\n");
 			for (int c=0; c<cols; c++)
 			{
-				Object objVal = getValueAt(r,c);
-				String strVal = toString(objVal, "&nbsp;", "&nbsp;");
+				Object objVal  = getValueAt(r,c);
+				String strVal  = toString(objVal, "&nbsp;", "&nbsp;");
+				String toolTip = null;
 //				String strVal = "";
 //				if (objVal != null)
 //				{
@@ -2235,11 +2308,15 @@ public class ResultSetTableModel
 				
 				if (tsRenderer != null)
 				{
-					strVal = tsRenderer.cellValue(this, r, c, colName, objVal, strVal);
+					strVal  = tsRenderer.cellValue  (this, r, c, colName, objVal, strVal);
+					toolTip = tsRenderer.cellToolTip(this, r, c, colName, objVal, strVal);
 				}
+				
+				// Set the tool tip value (if we have any)
+				toolTip = toolTip == null ? "" : " title='" + toolTip + "'";
 
 //				sb.append("<td").append(tBodyNoWrapStr).append(">").append(strVal).append("</td>");
-				sb.append("    <td").append(tBodyNoWrapStr).append(">").append(beginTag).append(strVal).append(endTag).append("</td>\n");
+				sb.append("    <td").append(tBodyNoWrapStr).append(toolTip).append(">").append(beginTag).append(strVal).append(endTag).append("</td>\n");
 			}
 			sb.append("  </tr>\n");
 			//sb.append("\n");
@@ -2643,71 +2720,156 @@ public class ResultSetTableModel
 		_rows.add(row);
 	}
 
+	public void addRows(List<ArrayList<Object>> rows)
+	{
+		ArrayList<Object> row = rows.get(0);
+
+		if (getColumnCount() != row.size())
+			throw new IllegalArgumentException("addRow(): Table and Row column count do not match. Table column is " + getColumnCount() + ". Columns in added row is " + row.size() + ".");
+
+		_rows.addAll(rows);
+	}
+
+	/**
+	 * Remove a single row
+	 * @param row Index of the row (starting at 0)
+	 * @return the row that was returned.
+	 */
+	public ArrayList<Object> removeRow(int row)
+	{
+		return _rows.remove(row);
+	}
+
 	/**
 	 * 
 	 * @param colName
-	 * @return false if column was NOT found. true if we did a sort
+	 * @param values   A collection of values that matches the column names (all values in the collection will be deleted, so basically a OR clause) 
+	 * 
+	 * @return The rows that was deleted (if 0 rows was deleted, a empty list will be returned)
+	 * @throws ColumnNameNotFound if the passed column name wasn't found
 	 */
-	public boolean sort(final String colName)
+	public List<ArrayList<Object>> removeRows(String colName, Collection<String> values)
 	{
-		final boolean isCaseInSensitive = false;
-
-		final int colPos = findColumnNoCase(colName);
-		if (colPos == -1)
-			return false;
-				
-		Comparator<List<Object>> comparator = new Comparator<List<Object>>()
-		{
-			@Override
-			public int compare(List<Object> leftList, List<Object> rightList)
-			{
-				Object left  = leftList .get(colPos);
-				Object right = rightList.get(colPos);
-				
-				if (left == right)
-					return 0;
-
-				if (left == null)
-					return -1;
-
-				if (right == null)
-					return 1;
-
-				if ( isCaseInSensitive )
-				{
-					if (left instanceof String && right instanceof String)
-						return String.CASE_INSENSITIVE_ORDER.compare( (String) left, (String) right );
-				}
-				
-				// COMPARABLE, which would be the normal thing
-				if (left instanceof Comparable)
-					return ((Comparable)left).compareTo(right);
-				
-				if ( left instanceof byte[] && right instanceof byte[] )
-					return byteCompare((byte[])left, (byte[])right);
-
-				// End of line...
-				throw new RuntimeException("Comparator on object, colName='"+colName+"', problem: Left do not implement 'Comparable' and is not equal to right. Left.obj=|"+left.getClass().getCanonicalName()+"|, Right.obj=|"+right.getClass().getCanonicalName()+"|, Left.toString=|"+left+"|, Right.toString=|"+right+"|.");
-			}
-
-			private int byteCompare(byte[] left, byte[] right)
-			{
-				for (int i = 0, j = 0; i < left.length && j < right.length; i++, j++)
-				{
-					int a = (left[i] & 0xff);
-					int b = (right[j] & 0xff);
-					if ( a != b )
-					{
-						return a - b;
-					}
-				}
-				return left.length - right.length;
-			}
-		};
+		List<ArrayList<Object>> removedRows = new ArrayList<>();
 		
-		Collections.sort(_rows, comparator);
-		return true;
+		int col_pos = findColumnNoCase(colName);
+		if (col_pos == -1)
+		{
+//			throw new ColumnNameNotFound("Column name '" + colName + "' not found in table '" + getName() +"'.");
+			_logger.error("Column name '" + colName + "' not found in table '" + getName() +"'. Not possible to remove any rows for this column.");
+			return removedRows;
+		}
+
+		for (Iterator<ArrayList<Object>> iter = _rows.iterator(); iter.hasNext();)
+		{
+			ArrayList<Object> row = iter.next();
+
+			Object val = row.get(col_pos);
+			if (val == null)
+				continue;
+			
+			String valStr = val.toString();
+			//System.out.println("  ?? values=|"+values+"|: contains valStr=|"+valStr+"|");
+			
+			if (values.contains(valStr))
+			{
+				//System.out.println("    >>>> REMOVING: row="+row);
+				removedRows.add(row);
+				iter.remove();
+			}
+		}
+
+		return removedRows;
 	}
+
+	/**
+	 * @param colName  (ColumnName is IN-SENSITIVE, Sorting data ASCENDING (in CASE-SENSITIVE order when it's a String) 
+	 */
+	public void sort(String colName)
+	{
+		List<SortOptions> sortOptions = new ArrayList<>();
+		
+		sortOptions.add(new SortOptions(colName, ColumnNameSensitivity.IN_SENSITIVE, SortOrder.ASCENDING, DataSortSensitivity.SENSITIVE));
+
+		sort(sortOptions);
+	}
+
+	/**
+	 * Sort by multiple columns
+	 * 
+	 * @param sortOptions  How you want 
+	 */
+	public void sort(List<SortOptions> sortOptions)
+	{
+		Collections.sort(_rows, new ResultSetTableComparator(sortOptions, this, getName()));
+	}
+
+
+//	/**
+//	 * 
+//	 * @param colName
+//	 * @return false if column was NOT found. true if we did a sort
+//	 */
+//	public boolean sort(final String colName)
+//	{
+//		final boolean isCaseInSensitive = false;
+//
+//		final int colPos = findColumnNoCase(colName);
+//		if (colPos == -1)
+//			return false;
+//				
+//		Comparator<List<Object>> comparator = new Comparator<List<Object>>()
+//		{
+//			@Override
+//			public int compare(List<Object> leftList, List<Object> rightList)
+//			{
+//				Object left  = leftList .get(colPos);
+//				Object right = rightList.get(colPos);
+//				
+//				if (left == right)
+//					return 0;
+//
+//				if (left == null)
+//					return -1;
+//
+//				if (right == null)
+//					return 1;
+//
+//				if ( isCaseInSensitive )
+//				{
+//					if (left instanceof String && right instanceof String)
+//						return String.CASE_INSENSITIVE_ORDER.compare( (String) left, (String) right );
+//				}
+//				
+//				// COMPARABLE, which would be the normal thing
+//				if (left instanceof Comparable)
+//					return ((Comparable)left).compareTo(right);
+//				
+//				if ( left instanceof byte[] && right instanceof byte[] )
+//					return byteCompare((byte[])left, (byte[])right);
+//
+//				// End of line...
+//				throw new RuntimeException("Comparator on object, colName='"+colName+"', problem: Left do not implement 'Comparable' and is not equal to right. Left.obj=|"+left.getClass().getCanonicalName()+"|, Right.obj=|"+right.getClass().getCanonicalName()+"|, Left.toString=|"+left+"|, Right.toString=|"+right+"|.");
+//			}
+//
+//			private int byteCompare(byte[] left, byte[] right)
+//			{
+//				for (int i = 0, j = 0; i < left.length && j < right.length; i++, j++)
+//				{
+//					int a = (left[i] & 0xff);
+//					int b = (right[j] & 0xff);
+//					if ( a != b )
+//					{
+//						return a - b;
+//					}
+//				}
+//				return left.length - right.length;
+//			}
+//		};
+//		
+//		Collections.sort(_rows, comparator);
+//		return true;
+//	}
 	//------------------------------------------------------------
 	//-- END: sort
 	//------------------------------------------------------------
@@ -3308,6 +3470,26 @@ public class ResultSetTableModel
 	}
 
 
+	
+	
+	
+	
+	/**
+	 * Column name not found
+	 */
+	public static class ColumnNameNotFound
+	extends RuntimeException
+	{
+		private static final long serialVersionUID = 1L;
+	
+		public ColumnNameNotFound(String msg)
+		{
+			super(msg);
+		}
+	}
+
+	
+	
 	
 	public static void main(String[] args)
 	{

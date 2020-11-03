@@ -29,6 +29,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.mysql.CmGlobalStatus;
+import com.asetune.cm.mysql.CmInnoDbMetrics;
 import com.asetune.cm.mysql.CmInnodbBpStats;
 import com.asetune.cm.mysql.CmSummary;
 import com.asetune.cm.mysql.CmSysDiskIo;
@@ -97,6 +98,7 @@ extends CounterControllerAbstract
 		CmSysSession        .create(counterController, guiController);
 		CmGlobalStatus      .create(counterController, guiController);
 		CmUserStatus        .create(counterController, guiController);
+		CmInnoDbMetrics     .create(counterController, guiController);
 
 		// Object Access
 		CmSysTableStats     .create(counterController, guiController);

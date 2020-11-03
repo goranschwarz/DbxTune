@@ -203,6 +203,8 @@ extends Thread
 				{
 					JdbcUrlParser urlParser = JdbcUrlParser.parse(jdbcUrl);
 					onHost = urlParser.getHost();
+
+					_logger.info("TRACE-INFO: in sendAlarmServerIsDown(), no old HeaderInfo so we need to create a new HeaderInfo(). Parsing JDBC URL '"+jdbcUrl+"', to get onHostname='" + onHost + "'.");
 				}
 				catch (Throwable ex)
 				{

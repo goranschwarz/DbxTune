@@ -22,7 +22,8 @@ function getParameter(key, defaultValue)
 	
 	//return vars.hasOwnProperty(key) ? vars[key] : defaultValue;
 	//return vars.hasOwnProperty(key) ? decodeURIComponent(vars[key]) : defaultValue;
-	var retValue = vars.hasOwnProperty(key) ? decodeURIComponent(vars[key]) : defaultValue;
+//	var retValue = vars.hasOwnProperty(key) ? decodeURIComponent(vars[key]) : defaultValue;
+	var retValue = vars.hasOwnProperty(key) ? decodeURIComponent(vars[key].replace(/\+/g, ' ')) : defaultValue;
 	//console.log("getParameter(key='"+key+"',default='"+defaultValue+"') <<--- '"+retValue+"'.");
 	return retValue;
 }

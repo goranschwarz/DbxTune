@@ -127,6 +127,15 @@ public class PersistContainer
 			_counterClearTime = counterClearTime;
 
 			_serverNameAlias  = null;
+			
+			if (true)
+			{
+				if (_onHostname == null)
+				{
+					Exception traceEx = new Exception("TRACE-INFO: Just created a HeaderInfo that had a NULL value for 'onHostname'. This may cause problems later...");
+					_logger.info(traceEx.getMessage(), traceEx);
+				}
+			}
 		}
 	}
 	
@@ -141,7 +150,7 @@ public class PersistContainer
 //		_serverName       = serverName;
 //		_onHostname       = onHostname;
 //	}
-	public PersistContainer(Timestamp mainSampleTime, String serverName, String onHostname, String serverNameAlias)
+	private PersistContainer(Timestamp mainSampleTime, String serverName, String onHostname, String serverNameAlias)
 	{
 		_sessionStartTime = null;
 		_mainSampleTime   = mainSampleTime;

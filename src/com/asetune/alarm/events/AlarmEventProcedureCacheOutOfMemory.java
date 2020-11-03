@@ -28,6 +28,18 @@ extends AlarmEvent
 {
 	private static final long serialVersionUID = 1L;
 
+	/**
+	 * <b>always</b> send this alarm<br>
+	 * The the "filter" functionality will be discarded/short-circuited 
+	 * 
+	 * @return true if we should always send, false if we should look at the "filter" settings.
+	 */
+	@Override
+	public boolean alwaysSend()
+	{
+		return true;
+	}
+
 	public AlarmEventProcedureCacheOutOfMemory(CountersModel cm)
 	{
 		super(

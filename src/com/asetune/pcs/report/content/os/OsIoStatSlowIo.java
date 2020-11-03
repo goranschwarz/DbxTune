@@ -21,12 +21,15 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.os;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.List;
 
 import com.asetune.cm.os.CmOsIostat;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.ReportChartObject;
+import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.pcs.report.content.ReportEntryAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -65,22 +68,14 @@ public class OsIoStatSlowIo extends ReportEntryAbstract
 	}
 	
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
+		// Get a description of this section, and column names
+		sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-//		if (_shortRstm.getRowCount() == 0)
-//		{
-//			sb.append("No rows found <br>\n");
-//		}
-//		else
-//		{
-			// Get a description of this section, and column names
-			sb.append(getSectionDescriptionHtml(_shortRstm, true));
-
-			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-			sb.append(_shortRstm.toHtmlTableString("sortable"));
-//		}
+		sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+		sb.append(toHtmlTable(_shortRstm));
 
 		// If table "CmOsIostat_abs" do not exists
 		// the below _CmOsIostat_xxxx objects will be null... early exit in create()
@@ -95,17 +90,59 @@ public class OsIoStatSlowIo extends ReportEntryAbstract
 					"CmOsIostat_IoWriteOp"
 					));
 
-			sb.append(_CmOsIostat_IoWait_noLimit.getHtmlContent(null, null));
-			sb.append(_CmOsIostat_IoWait        .getHtmlContent(null, null));
-			sb.append(_CmOsIostat_IoReadWait    .getHtmlContent(null, null));
-			sb.append(_CmOsIostat_IoWriteWait   .getHtmlContent(null, null));
-			sb.append(_CmOsIostat_IoServiceTime .getHtmlContent(null, null));
-			sb.append(_CmOsIostat_IoReadOp      .getHtmlContent(null, null));
-			sb.append(_CmOsIostat_IoWriteOp     .getHtmlContent(null, null));
+			_CmOsIostat_IoWait_noLimit.writeHtmlContent(sb, null, null);
+			_CmOsIostat_IoWait        .writeHtmlContent(sb, null, null);
+			_CmOsIostat_IoReadWait    .writeHtmlContent(sb, null, null);
+			_CmOsIostat_IoWriteWait   .writeHtmlContent(sb, null, null);
+			_CmOsIostat_IoServiceTime .writeHtmlContent(sb, null, null);
+			_CmOsIostat_IoReadOp      .writeHtmlContent(sb, null, null);
+			_CmOsIostat_IoWriteOp     .writeHtmlContent(sb, null, null);
 		}
-			
-		return sb.toString();
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+////		if (_shortRstm.getRowCount() == 0)
+////		{
+////			sb.append("No rows found <br>\n");
+////		}
+////		else
+////		{
+//			// Get a description of this section, and column names
+//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+//
+//			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
+////			sb.append(_shortRstm.toHtmlTableString("sortable"));
+//			sb.append(toHtmlTable(_shortRstm));
+////		}
+//
+//		// If table "CmOsIostat_abs" do not exists
+//		// the below _CmOsIostat_xxxx objects will be null... early exit in create()
+//		if (_CmOsIostat_IoWait_noLimit != null)
+//		{
+//			sb.append(getDbxCentralLinkWithDescForGraphs(true, "Below are Graphs/Charts with various information that can help you decide how the IO Subsystem is handling the load.",
+//					"CmOsIostat_IoWait",
+//					"CmOsIostat_IoReadWait",
+//					"CmOsIostat_IoWriteWait",
+//					"CmOsIostat_IoServiceTime",
+//					"CmOsIostat_IoReadOp",
+//					"CmOsIostat_IoWriteOp"
+//					));
+//
+//			sb.append(_CmOsIostat_IoWait_noLimit.getHtmlContent(null, null));
+//			sb.append(_CmOsIostat_IoWait        .getHtmlContent(null, null));
+//			sb.append(_CmOsIostat_IoReadWait    .getHtmlContent(null, null));
+//			sb.append(_CmOsIostat_IoWriteWait   .getHtmlContent(null, null));
+//			sb.append(_CmOsIostat_IoServiceTime .getHtmlContent(null, null));
+//			sb.append(_CmOsIostat_IoReadOp      .getHtmlContent(null, null));
+//			sb.append(_CmOsIostat_IoWriteOp     .getHtmlContent(null, null));
+//		}
+//			
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -135,6 +172,12 @@ public class OsIoStatSlowIo extends ReportEntryAbstract
 	private String _skipDeviceNames  = DEFAULT_SKIP_DEVICE_NAMES;
 
 	@Override
+	public String[] getMandatoryTables()
+	{
+		return new String[] { "CmOsIostat_abs" };
+	}
+
+	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		_aboveTotalIos    = localConf.getIntProperty(PROPKEY_ABOVE_TOTAL_IOS,    DEFAULT_ABOVE_TOTAL_IOS);
@@ -153,7 +196,7 @@ public class OsIoStatSlowIo extends ReportEntryAbstract
 			String msg = "Table 'CmOsIostat_abs' did not exist. So Performance Counters for this hasn't been sampled during this period.";
 
 			//addMessage(msg);
-			setProblem(new Exception(msg));
+			setProblemException(new Exception(msg));
 
 			_shortRstm = ResultSetTableModel.createEmpty("OsIoStat_slow");
 			return;
@@ -191,6 +234,7 @@ public class OsIoStatSlowIo extends ReportEntryAbstract
 				+ "from [CmOsIostat_abs] \n"
 				+ "where [await] > " + _aboveServiceTime + " \n"
 				+ "  and ([readsPerSec] > " + _aboveTotalIos + " or [writesPerSec] > " + _aboveTotalIos + ") \n"
+				+ getReportPeriodSqlWhere()
 				+ sql_skipDeviceNames
 			    + "";
 
@@ -253,27 +297,27 @@ public class OsIoStatSlowIo extends ReportEntryAbstract
 			setSectionDescription(_shortRstm);
 
 			int maxValue = 10;
-			_CmOsIostat_IoWait_noLimit = createChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WaitTime,      -1,       _skipDeviceNames, "iostat: Wait Time(await) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with NO max value]");
-			_CmOsIostat_IoWait         = createChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WaitTime,      maxValue, _skipDeviceNames, "iostat: Wait Time(await) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
-			_CmOsIostat_IoReadWait     = createChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ReadWaitTime,  maxValue, _skipDeviceNames, "iostat: Read wait Time(r_await) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
-			_CmOsIostat_IoWriteWait    = createChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WriteWaitTime, maxValue, _skipDeviceNames, "iostat: Write wait Time(w_await) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
+			_CmOsIostat_IoWait_noLimit = createTsLineChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WaitTime,      -1,       _skipDeviceNames, "iostat: Wait Time(await) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with NO max value]");
+			_CmOsIostat_IoWait         = createTsLineChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WaitTime,      maxValue, _skipDeviceNames, "iostat: Wait Time(await) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
+			_CmOsIostat_IoReadWait     = createTsLineChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ReadWaitTime,  maxValue, _skipDeviceNames, "iostat: Read wait Time(r_await) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
+			_CmOsIostat_IoWriteWait    = createTsLineChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WriteWaitTime, maxValue, _skipDeviceNames, "iostat: Write wait Time(w_await) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
 
-			_CmOsIostat_IoReadOp       = createChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ReadOp,       -1,        _skipDeviceNames, "iostat: Read Operations(readsPerSec) per Device & sec (Host Monitor->OS Disk Stat(iostat))");
-			_CmOsIostat_IoWriteOp      = createChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WriteOp,      -1,        _skipDeviceNames, "iostat: Write Operations(writesPerSec) per Device & sec (Host Monitor->OS Disk Stat(iostat))");
+			_CmOsIostat_IoReadOp       = createTsLineChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ReadOp,       -1,        _skipDeviceNames, "iostat: Read Operations(readsPerSec) per Device & sec (Host Monitor->OS Disk Stat(iostat))");
+			_CmOsIostat_IoWriteOp      = createTsLineChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WriteOp,      -1,        _skipDeviceNames, "iostat: Write Operations(writesPerSec) per Device & sec (Host Monitor->OS Disk Stat(iostat))");
 
-			_CmOsIostat_IoServiceTime  = createChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ServiceTime,   -1,       _skipDeviceNames, "iostat: Service Time(svctm) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with NO max value]");
-			_CmOsIostat_IoServiceTime  = createChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ServiceTime,   maxValue, _skipDeviceNames, "iostat: Service Time(svctm) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
+			_CmOsIostat_IoServiceTime  = createTsLineChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ServiceTime,   -1,       _skipDeviceNames, "iostat: Service Time(svctm) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with NO max value]");
+			_CmOsIostat_IoServiceTime  = createTsLineChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ServiceTime,   maxValue, _skipDeviceNames, "iostat: Service Time(svctm) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
 		}
 	}
 
-	private ReportChartObject _CmOsIostat_IoWait_noLimit;
-	private ReportChartObject _CmOsIostat_IoWait;
-	private ReportChartObject _CmOsIostat_IoReadWait;
-	private ReportChartObject _CmOsIostat_IoWriteWait;
-	private ReportChartObject _CmOsIostat_IoServiceTime;
+	private IReportChart _CmOsIostat_IoWait_noLimit;
+	private IReportChart _CmOsIostat_IoWait;
+	private IReportChart _CmOsIostat_IoReadWait;
+	private IReportChart _CmOsIostat_IoWriteWait;
+	private IReportChart _CmOsIostat_IoServiceTime;
 	
-	private ReportChartObject _CmOsIostat_IoReadOp;
-	private ReportChartObject _CmOsIostat_IoWriteOp;
+	private IReportChart _CmOsIostat_IoReadOp;
+	private IReportChart _CmOsIostat_IoWriteOp;
 	
 	/**
 	 * Set descriptions for the table, and the columns

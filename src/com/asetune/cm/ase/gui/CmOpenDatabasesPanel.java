@@ -53,9 +53,9 @@ import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.renderer.category.StackedBarRenderer;
 import org.jfree.chart.title.TextTitle;
+import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
-import org.jfree.ui.TextAnchor;
 
 import com.asetune.CounterController;
 import com.asetune.cm.CountersModel;
@@ -363,7 +363,7 @@ extends TabularCntrPanel
 		if (orientation.equals(PlotOrientation.VERTICAL))
 		{
 			ItemLabelPosition p1 = new ItemLabelPosition(ItemLabelAnchor.INSIDE12, TextAnchor.CENTER_RIGHT, TextAnchor.CENTER_RIGHT, -Math.PI / 2.0);
-			renderer.setBasePositiveItemLabelPosition(p1);
+			renderer.setDefaultPositiveItemLabelPosition(p1);
 			
 			ItemLabelPosition p2 = new ItemLabelPosition(ItemLabelAnchor.OUTSIDE12, TextAnchor.CENTER_LEFT, TextAnchor.CENTER_LEFT, -Math.PI / 2.0);
 			renderer.setPositiveItemLabelPositionFallback(p2);
@@ -376,7 +376,7 @@ extends TabularCntrPanel
 		else
 		{
 			ItemLabelPosition p1 = new ItemLabelPosition(ItemLabelAnchor.OUTSIDE3, TextAnchor.CENTER_RIGHT, TextAnchor.CENTER_RIGHT, 0);
-			renderer.setBasePositiveItemLabelPosition(p1);
+			renderer.setDefaultPositiveItemLabelPosition(p1);
 			
 			ItemLabelPosition p2 = new ItemLabelPosition(ItemLabelAnchor.INSIDE3, TextAnchor.CENTER_LEFT, TextAnchor.CENTER_LEFT, 0);
 			renderer.setPositiveItemLabelPositionFallback(p2);
@@ -384,9 +384,9 @@ extends TabularCntrPanel
 
 		
 		StandardCategoryItemLabelGenerator scilg = new StandardCategoryItemLabelGenerator("{0}", NumberFormat.getInstance());
-		renderer.setBaseItemLabelGenerator(scilg);
+		renderer.setDefaultItemLabelGenerator(scilg);
 		
-		renderer.setBaseItemLabelsVisible(true);
+		renderer.setDefaultItemLabelsVisible(true);
 
 		NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
 		rangeAxis.setUpperBound(100);

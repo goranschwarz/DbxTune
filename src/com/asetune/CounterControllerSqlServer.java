@@ -48,8 +48,10 @@ import com.asetune.cm.sqlserver.CmExecFunctionStats;
 import com.asetune.cm.sqlserver.CmExecProcedureStats;
 import com.asetune.cm.sqlserver.CmExecQueryStats;
 import com.asetune.cm.sqlserver.CmExecTriggerStats;
+import com.asetune.cm.sqlserver.CmIndexMissing;
 import com.asetune.cm.sqlserver.CmIndexOpStat;
 import com.asetune.cm.sqlserver.CmIndexPhysical;
+import com.asetune.cm.sqlserver.CmIndexUnused;
 import com.asetune.cm.sqlserver.CmIndexUsage;
 import com.asetune.cm.sqlserver.CmOpenTransactions;
 import com.asetune.cm.sqlserver.CmOptimizer;
@@ -62,6 +64,7 @@ import com.asetune.cm.sqlserver.CmSessions;
 import com.asetune.cm.sqlserver.CmSpidWait;
 import com.asetune.cm.sqlserver.CmSpinlocks;
 import com.asetune.cm.sqlserver.CmSummary;
+import com.asetune.cm.sqlserver.CmTableSize;
 import com.asetune.cm.sqlserver.CmTempdbSpidUsage;
 import com.asetune.cm.sqlserver.CmTempdbUsage;
 import com.asetune.cm.sqlserver.CmWaitStats;
@@ -75,6 +78,7 @@ import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.Ver;
 
 
@@ -85,6 +89,10 @@ extends CounterControllerAbstract
 
 	public static final int	   NUMBER_OF_PERFORMANCE_COUNTERS	= 54 + 10 + 20; 
 
+	public static final String  PROPKEY_onRefresh_setDirtyReads = "SqlServerTune.onRefresh.setDirtyReads";
+	public static final boolean DEFAULT_onRefresh_setDirtyReads = true;
+	
+	
 	/**
 	 * The default constructor
 	 * @param hasGui should we create a GUI or NoGUI collection thread
@@ -143,7 +151,10 @@ extends CounterControllerAbstract
 		CmOpenTransactions   .create(counterController, guiController);
 		CmIndexUsage         .create(counterController, guiController);
 		CmIndexOpStat        .create(counterController, guiController);
+		CmTableSize          .create(counterController, guiController);
 		CmIndexPhysical      .create(counterController, guiController);
+		CmIndexMissing       .create(counterController, guiController);
+		CmIndexUnused        .create(counterController, guiController);
 		CmExecQueryStats     .create(counterController, guiController);
 		CmExecProcedureStats .create(counterController, guiController);
 		CmExecFunctionStats  .create(counterController, guiController);
@@ -366,6 +377,60 @@ extends CounterControllerAbstract
 	protected String getIsClosedSql()
 	{
 		return "SELECT 'SqlServerTune-check:isClosed(conn)'";
+	}
+
+	@Override
+	public void setInRefresh(boolean enterRefreshMode)
+	{
+		if (enterRefreshMode)
+		{
+			// Check if we are configured to do: SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+			boolean onRefreshSetDirtyReads = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_onRefresh_setDirtyReads, DEFAULT_onRefresh_setDirtyReads);
+
+			// Many of the collectors will probably be helped if we are in "Dirty Read" mode (so that they are NOT blocked...)
+			// So lets set "Dirty Reads" at the session level
+			if (onRefreshSetDirtyReads)
+			{
+				String getSql = "select transaction_isolation_level from sys.dm_exec_sessions where session_id = @@SPID";
+				String setSql = "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED"; // DIRTY READS
+				String sql;
+
+				// get connection
+				DbxConnection dbxConn = getMonConnection();
+				
+				// Make a default value, that we are NOT in "dirty read"
+				boolean isDirtyReadsEnabled = false;
+
+				//------- GET/CHECK
+				sql = getSql;
+				try(Statement stmnt = dbxConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+				{
+					while(rs.next())
+						isDirtyReadsEnabled = rs.getInt(1) == 1; // 1==ReadUnCommited, 2=RaedCommitted, 3=RepeatableRead, 4=Serializable, 5=Snapshot 
+				}
+				catch(SQLException e)
+				{
+					_logger.error("Problem when CHECKING the SQL-Server isolation level before entering refresh mode. SQL="+sql);
+				}
+				
+				//------- SET DirtyReads
+				if ( ! isDirtyReadsEnabled )
+				{
+					sql = setSql;
+					try(Statement stmnt = dbxConn.createStatement())
+					{
+						_logger.info("SETTING 'isolation level' to 'dirty reads' before entering refresh mode. executing SQL="+sql);
+						stmnt.executeUpdate(sql);
+					}
+					catch(SQLException e)
+					{
+						_logger.error("Problem when SETTING the SQL-Server isolation level before entering refresh mode. SQL="+sql);
+					}
+				}
+			}
+		}	
+
+		super.setInRefresh(enterRefreshMode);
 	}
 
 	@Override

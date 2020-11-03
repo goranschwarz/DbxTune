@@ -45,6 +45,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CounterTableModel;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.gui.CmSpidWaitPanel;
+import com.asetune.config.dict.SqlServerWaitTypeDictionary;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
@@ -221,6 +222,7 @@ extends CountersModel
 				"select \n" +
 				"    session_id, \n" +
 				"    wait_type, \n" +
+				"    WaitClass = convert(varchar(30), null), \n" +
 				"    waiting_tasks_count, \n" +
 				"    wait_time_ms, \n" +
 				"    max_wait_time_ms, \n" +
@@ -256,6 +258,54 @@ extends CountersModel
 		return list;
 	}
 
+
+	/** 
+	 * Fill in the WaitClass column with data from
+	 * SqlServerWaitNameDictionary.. transforms a wait_type -> WaitClass
+	 */
+	@Override
+	public void localCalculation(CounterSample newSample)
+	{
+		// Where are various columns located in the Vector 
+		int pos_wait_type = -1;
+		int pos_WaitClass = -1;
+	
+		SqlServerWaitTypeDictionary wd = SqlServerWaitTypeDictionary.getInstance();
+		if (wd == null)
+			return;
+
+		if (newSample == null)
+			return;
+
+		// Find column Id's
+		List<String> colNames = newSample.getColNames();
+		if (colNames==null) 
+			return;
+
+		for (int colId=0; colId < colNames.size(); colId++) 
+		{
+			String colName = colNames.get(colId);
+
+			if      (colName.equals("wait_type"))   pos_wait_type   = colId;
+			else if (colName.equals("WaitClass"))   pos_WaitClass   = colId;
+		}
+
+		// Loop on all counter rows
+		for (int rowId=0; rowId < newSample.getRowCount(); rowId++)
+		{
+			Object o_wait_type  = newSample.getValueAt(rowId, pos_wait_type);
+
+			if (o_wait_type instanceof String)
+			{
+				String wait_type = (String)o_wait_type;
+
+				String className = wd.getWaitClassForWaitType( wait_type );
+
+				if (className != null)
+					newSample.setValueAt(className, rowId, pos_WaitClass);
+			}
+		}
+	}
 
 	/** 
 	 * Compute the WaitTimePerCount for diff values

@@ -25,8 +25,11 @@ import java.sql.Connection;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -38,17 +41,26 @@ import com.asetune.utils.Ver;
 public class CmSessions
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmExecProcedureStats.class);
+	private static Logger        _logger          = Logger.getLogger(CmSessions.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmSessions.class.getSimpleName();
 	public static final String   SHORT_NAME       = "Sessions";
 	public static final String   HTML_DESC        = 
-		"<html>"
-		+ "<p>"
-		+ "Shows one row per authenticated session (user connections), for internal tasks, see: XXX. <br>"
-		+ "</p>"
-		+ "</html>";
+		"<html>" +
+		"Shows one row per authenticated session (user connections), for internal tasks, see: XXX. <br>" +
+		"<br><br>" +
+		"Table Background colors:" +
+		"<ul>" +
+//		"    <li>YELLOW              - SPID is a System Processes</li>" +
+		"    <li>GREEN               - SPID is Executing(running) or are in the Run Queue Awaiting a time slot to Execute (runnable)</li>" +
+		"    <li>EXTREME_LIGHT_GREEN - SPID is currently (suspended) running a SQL Statement, Although it might be sleeping waiting for IO or something else.</li>" +
+//		"    <li>LIGHT_GREEN         - SPID is Sending Network packets to it's client, soon it will probably go into running or runnable or finish.</li>" +
+		"    <li>ORANGE              - SPID has an Open Transaction. Check column <code>transaction_name</code>, if it says <code>implicit_transaction</code>. The Client has autocommit = false, which bad and will <b>increase</b> chances of blocking locks.</li>" +
+		"    <li>PINK                - SPID is Blocked by some other SPID that holds a Lock on a database object Table, Page or Row. This is the Lock Victim.</li>" +
+		"    <li>RED                 - SPID is Blocking other SPID's from running, this SPID is Responsible or the Root Cause of a Blocking Lock.</li>" +
+		"</ul>" +
+		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
@@ -180,6 +192,7 @@ extends CountersModel
 		String er__page_resource           = "";
 		
 		String ssu__s_user_objects_deferred_dealloc_page_count = "";
+		String ssu__s_user_objects_deferred_dealloc_page_count_CALC = "";
 
 		if (srvVersion >= Ver.ver(2008)) es__last_unsuccessful_logon = "    ,es.last_unsuccessful_logon        -- 2008 \n";                    
 		if (srvVersion >= Ver.ver(2008)) es__unsuccessful_logons     = "    ,es.unsuccessful_logons            -- 2008 \n";                    
@@ -196,7 +209,10 @@ extends CountersModel
 
 		// Just guessing here 2014 SP2 and 2012 SP3
 		if (srvVersion >= Ver.ver(2014,0,0, 2) || (srvVersion < Ver.ver(2014) && srvVersion >= Ver.ver(2012,0,0, 3)) ) 
-				ssu__s_user_objects_deferred_dealloc_page_count = "    ,tmp_user_objects_deferred_dealloc_mb = convert(numeric(12,1), (ssu.user_objects_deferred_dealloc_page_count) / 128.0)  -- SP ?? in 2012 & 2014 \n";
+		{
+			ssu__s_user_objects_deferred_dealloc_page_count_CALC = " - ssu.user_objects_deferred_dealloc_page_count";
+			ssu__s_user_objects_deferred_dealloc_page_count = "    ,tmp_user_objects_deferred_dealloc_mb = convert(numeric(12,1), (ssu.user_objects_deferred_dealloc_page_count) / 128.0)  -- SP ?? in 2012 & 2014 \n";
+		}
 
 		//--------------------------------------------------------------------------
 		//---- NOTE ---- NOTE ---- NOTE ---- NOTE ---- NOTE ---- NOTE ---- NOTE ----
@@ -342,6 +358,7 @@ extends CountersModel
 			    + er__dop
 			    + er__parallel_worker_count
 			    + "    ,er.blocking_session_id --   -2 = The blocking resource is owned by an orphaned distributed transaction, -3 = The blocking resource is owned by a deferred recovery transaction, -4 = Session ID of the blocking latch owner could not be determined at this time because of internal latch state transitions. \n"
+			    + "    ,BlockingOtherSpids=convert(varchar(512),'') \n"
 			    + "    ,es.login_name \n"
 			    + "    ,ec.connect_time \n"
 			    + "    ,connect_time_sec = datediff(ss, ec.connect_time, getdate())  -- fix case... if seconds are to big \n"
@@ -353,6 +370,15 @@ extends CountersModel
 			    + es__DBName
 			    + es__AuthDbName
 			    + es__open_transaction_count
+			    + "    ,tat_transaction_id = tat.transaction_id \n"
+			    + "    ,transaction_type = CASE WHEN tat.transaction_type = 1 THEN 'Read/write transaction - 1' \n"
+			    + "                             WHEN tat.transaction_type = 2 THEN 'Read-only transaction - 2' \n"
+			    + "                             WHEN tat.transaction_type = 3 THEN 'System transaction - 3' \n"
+			    + "                             WHEN tat.transaction_type = 4 THEN 'Distributed transaction - 4' \n"
+			    + "                             ELSE 'UNKNOWN - ' + convert(varchar(10), tat.transaction_type) \n"
+			    + "                        END \n"
+			    + "    ,tat.name AS transaction_name \n"
+			    + "    ,tat.transaction_begin_time \n"
 
 			    + "    ,es.status  -- Running, Sleeping, Dormant, Preconnect \n"
 			    + "    ,exec_status     = er.status        --- can probably be found somewhere else -- Background, Running, Runnable, Sleeping, Suspended \n"
@@ -373,8 +399,10 @@ extends CountersModel
 			    
 			    + "    ,es.last_request_start_time \n"
 			    + "    ,es.last_request_end_time \n"
-			    + "    ,last_request_exec_time = datediff(ms, es.last_request_start_time, es.last_request_end_time) -- fix case... if ms are to big \n"
-			    + "    ,last_request_age_sec   = datediff(ms, es.last_request_end_time, getdate())                  -- fix case... if ms are to big \n"
+//CASE WHEN datediff(day, ST.StartTime, getdate()) >= 24 THEN -1 ELSE  datediff(ms, ST.StartTime, getdate()) END			    
+			    + "    ,last_request_exec_time = CASE WHEN datediff(day, es.last_request_start_time, es.last_request_end_time) >= 24 THEN -1 ELSE datediff(ms, es.last_request_start_time, es.last_request_end_time) END \n"
+//			    + "    ,last_request_exec_time = datediff(ms, es.last_request_start_time, es.last_request_end_time) -- fix case... if ms are to big \n"
+			    + "    ,last_request_age_sec   = datediff(ss, es.last_request_end_time, getdate())                  -- fix case... if sec are to big \n"
 
 			    + "    ,er.sql_handle \n"
 			    + "    ,er.statement_start_offset \n"
@@ -382,7 +410,7 @@ extends CountersModel
 			    + "    ,er.plan_handle \n"
 			    + "    ,exec_open_transaction_count    = er.open_transaction_count \n"
 			    + "    ,er.open_resultset_count \n"
-			    + "    ,er.transaction_id \n"
+			    + "    ,exec_transaction_id            = er.transaction_id \n"
 			    + "    ,er.percent_complete \n"
 			    + "    ,er.estimated_completion_time \n"
 			    + "    ,exec_cpu_time           = er.cpu_time                        -- DIFF (is that the same as xxxx) \n"
@@ -434,21 +462,133 @@ extends CountersModel
 			    + er__statement_sql_handle
 			    + er__page_resource
 			    + " \n"
-			    + "    ,tmp_user_objects_now_mb          = convert(numeric(12,1), (ssu.user_objects_alloc_page_count - ssu.user_objects_dealloc_page_count) / 128.0) \n"
-			    + "    ,tmp_user_objects_alloc_mb        = convert(numeric(12,1), (ssu.user_objects_alloc_page_count)       / 128.0) \n"
-			    + "    ,tmp_user_objects_dealloc_mb      = convert(numeric(12,1), (ssu.user_objects_dealloc_page_count)     / 128.0) \n"
+			    + "    ,tmp_total_used_mb                = convert(numeric(12,1), ((ssu.user_objects_alloc_page_count - ssu.user_objects_dealloc_page_count" + ssu__s_user_objects_deferred_dealloc_page_count_CALC + ") + (ssu.internal_objects_alloc_page_count - ssu.internal_objects_dealloc_page_count)) / 128.0) \n"
+			    + "    ,tmp_user_objects_now_mb          = convert(numeric(12,1),  (ssu.user_objects_alloc_page_count - ssu.user_objects_dealloc_page_count" + ssu__s_user_objects_deferred_dealloc_page_count_CALC + ") / 128.0) \n"
+			    + "    ,tmp_user_objects_alloc_mb        = convert(numeric(12,1),  (ssu.user_objects_alloc_page_count)       / 128.0) \n"
+			    + "    ,tmp_user_objects_dealloc_mb      = convert(numeric(12,1),  (ssu.user_objects_dealloc_page_count)     / 128.0) \n"
+			    + ssu__s_user_objects_deferred_dealloc_page_count
 			    + "    ,tmp_internal_objects_now_mb      = convert(numeric(12,1), (ssu.internal_objects_alloc_page_count - ssu.internal_objects_dealloc_page_count) / 128.0) \n"
 			    + "    ,tmp_internal_objects_alloc_mb    = convert(numeric(12,1), (ssu.internal_objects_alloc_page_count)   / 128.0) \n"
 			    + "    ,tmp_internal_objects_dealloc_mb  = convert(numeric(12,1), (ssu.internal_objects_dealloc_page_count) / 128.0) \n"
-			    + ssu__s_user_objects_deferred_dealloc_page_count
 //			    + " \n"
-			    + "from sys.dm_exec_connections ec \n"
-			    + "inner join sys.dm_exec_sessions es on ec.session_id = es.session_id \n"
-//			    + "inner join sys.sysprocesses     sp on ec.session_id = sp.spid \n"
-			    + "left outer join sys.dm_exec_requests er on ec.session_id = er.session_id \n"
-			    + "left outer join tempdb.sys.dm_db_session_space_usage ssu on ec.session_id = ssu.session_id \n"
+			    + "FROM sys.dm_exec_connections ec \n"
+			    + "INNER JOIN sys.dm_exec_sessions es ON ec.session_id = es.session_id \n"
+//			    + "INNER JOIN sys.sysprocesses     sp ON ec.session_id = sp.spid \n"
+			    + "LEFT OUTER join sys.dm_exec_requests                  er ON ec.session_id      = er.session_id \n"
+			    + "LEFT OUTER JOIN sys.dm_tran_session_transactions     tst ON es.session_id      = tst.session_id \n"
+			    + "LEFT OUTER JOIN sys.dm_tran_active_transactions      tat ON tst.transaction_id = tat.transaction_id \n"
+			    + "LEFT OUTER join tempdb.sys.dm_db_session_space_usage ssu ON ec.session_id      = ssu.session_id \n"
 			    + "";
 
 		return sql;
+	}
+
+	
+//	private HashMap<Number,Object> _blockingSpids = new HashMap<Number,Object>(); // <(SPID)Integer> <null> indicator that the SPID is BLOCKING some other SPID
+
+//	/** 
+//	 * Maintain the _blockingSpids Map, which is accessed from the Panel
+//	 */
+//	@Override
+//	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
+//	{
+//		// Where are various columns located in the Vector 
+//		int pos_BlockingSPID = -1;
+//		CounterSample counters = diffData;
+//	
+//		if (counters == null)
+//			return;
+//
+//		// Reset the blockingSpids Map
+//		_blockingSpids.clear();
+//		
+//		// put the pointer to the Map in the Client Property of the JTable, which should be visible for various places
+//		if (getTabPanel() != null)
+//			getTabPanel().putTableClientProperty("blockingSpidMap", _blockingSpids);
+//
+//		// Find column Id's
+//		List<String> colNames = counters.getColNames();
+//		if (colNames==null) 
+//			return;
+//
+//		for (int colId=0; colId < colNames.size(); colId++) 
+//		{
+//			String colName = colNames.get(colId);
+//			if (colName.equals("blocking_session_id"))  pos_BlockingSPID  = colId;
+//
+//			// Noo need to continue, we got all our columns
+//			if (pos_BlockingSPID >= 0)
+//				break;
+//		}
+//
+//		if (pos_BlockingSPID < 0)
+//		{
+//			_logger.debug("Can't find the position for columns ('blocking_session_id'="+pos_BlockingSPID+")");
+//			return;
+//		}
+//		
+//		// Loop on all diffData rows
+//		for (int rowId=0; rowId < counters.getRowCount(); rowId++) 
+//		{
+//			Object o_blockingSpid = counters.getValueAt(rowId, pos_BlockingSPID);
+//
+//			// Add any blocking SPIDs to the MAP
+//fix-->>			// TODO: for offline recordings it's better to do it in the same way as for 'CmActiveStatements'
+//			if (o_blockingSpid instanceof Number)
+//			{
+//				if (o_blockingSpid != null && ((Number)o_blockingSpid).intValue() != 0 )
+//					_blockingSpids.put((Number)o_blockingSpid, null);
+//			}
+//		}
+//	}
+	
+	@Override
+	public void localCalculation(CounterSample newSample)
+	{
+		int pos_SPID               = newSample.findColumn("session_id");
+		int pos_BlockingSPID       = newSample.findColumn("blocking_session_id");
+		int pos_BlockingOtherSpids = newSample.findColumn("BlockingOtherSpids");
+		
+		// Loop on all diffData rows
+		for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
+		{
+			Object o_SPID        = newSample.getValueAt(rowId, pos_SPID);
+			
+			if (o_SPID instanceof Number)
+			{
+				int spid = ((Number)o_SPID).intValue();
+
+				// Get LIST of SPID's that I'm blocking
+				String blockingList = getBlockingListStrForSpid(newSample, spid, pos_BlockingSPID, pos_SPID);
+
+				newSample.setValueAt(blockingList, rowId, pos_BlockingOtherSpids);
+			}
+
+		}
+	}
+
+	private String getBlockingListStrForSpid(CounterSample counters, int spid, int pos_BlockingSPID, int pos_SPID)
+	{
+		StringBuilder sb = new StringBuilder();
+
+		// Loop on all diffData rows
+		int rows = counters.getRowCount();
+		for (int rowId=0; rowId < rows; rowId++)
+		{
+			Object o_BlockingSPID = counters.getValueAt(rowId, pos_BlockingSPID);
+			if (o_BlockingSPID instanceof Number)
+			{
+				Number BlockingSPID = (Number)o_BlockingSPID;
+				if (BlockingSPID.intValue() == spid)
+				{
+					Object o_SPID = counters.getValueAt(rowId, pos_SPID);
+					if (sb.length() == 0)
+						sb.append(o_SPID);
+					else
+						sb.append(", ").append(o_SPID);
+				}
+			}
+		}
+		return sb.toString();
 	}
 }

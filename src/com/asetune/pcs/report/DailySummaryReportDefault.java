@@ -20,9 +20,12 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -33,6 +36,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.pcs.PersistWriterToHttpJson;
+import com.asetune.pcs.report.IProgressReporter.State;
 import com.asetune.pcs.report.content.AlarmsActive;
 import com.asetune.pcs.report.content.AlarmsHistory;
 import com.asetune.pcs.report.content.DailySummaryReportContent;
@@ -42,6 +46,7 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.HeartbeatMonitor;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
 
 public class DailySummaryReportDefault
 extends DailySummaryReportAbstract
@@ -51,6 +56,7 @@ extends DailySummaryReportAbstract
 
 	@Override
 	public void create()
+	throws InterruptedException, IOException
 	{
 		// Set output for TimeStamp format for Strings in ResultSetTableModel to: yyyy-MM-dd HH:mm:ss
 //		System.setProperty(ResultSetTableModel.PROPKEY_TimestampToStringFmt, ResultSetTableModel.DEFAULT_TimestampToStringFmt_YMD_HMS);
@@ -58,8 +64,9 @@ extends DailySummaryReportAbstract
 		DailySummaryReportContent content = new DailySummaryReportContent();
 		content.setServerName( getServerName() );
 
-		addReportEntries();
-		_logger.info("Initiated Daily Summary Report with " + _reportEntries.size() + " report entries.");
+// Moved to init()
+//		addReportEntries();
+//		_logger.info("Initiated Daily Summary Report with " + _reportEntries.size() + " report entries.");
 
 		// Get Configuration possibly from the DbxCentral
 //		Configuration pcsSavedConf = getConfigFromDbxCentral(getServerName());
@@ -67,12 +74,47 @@ extends DailySummaryReportAbstract
 		Configuration localConf    = Configuration.getCombinedConfiguration();
 		
 		// Iterate all entries and create the report
+		int entryCount = _reportEntries.size();
+		int count = 0;
+		IProgressReporter progressReporter = getProgressReporter();
 		for (IReportEntry entry : _reportEntries)
 		{
+			// First force a Garbage Collection
+			System.gc();
+//System.out.println("  ******* Used Memory " + Memory.getUsedMemoryInMB() + " MB ****** create(): BEFORE: "+ entry.getClass().getSimpleName());
+
+			count++;
+			int pctDone = (int) ( ((count*1.0) / (entryCount*1.0)) * 100.0 );
 			try
 			{
 				if (entry.isEnabled())
-					entry.create(getConnection(), getServerName(), pcsSavedConf, localConf);
+				{
+					// Report Progress 
+					if (progressReporter != null)
+					{
+						boolean doNextEntry = progressReporter.setProgress(State.BEFORE, entry, "Creating ReportEntry '" + entry.getClass().getSimpleName() + "', with Subject '" + entry.getSubject() + "'.", pctDone);
+						if ( doNextEntry == false )
+							throw new InterruptedException("Report Creation was aborted...");
+					}
+
+					// Check if tables etc exists
+					entry.checkForIssuesBeforeCreate(getConnection());
+					if ( ! entry.hasProblem() )
+					{
+						// Create the report, this may take time since it executes SQL Statements
+						_logger.info("Creating ReportEntry '" + entry.getClass().getSimpleName() + "', with Subject '" + entry.getSubject() + "'. Percent done: " + pctDone);
+						entry.create(getConnection(), getServerName(), pcsSavedConf, localConf);
+					}
+
+					// Report Progress 
+					if (progressReporter != null)
+					{
+						boolean doNextEntry = progressReporter.setProgress(State.AFTER, entry, "Creating ReportEntry '" + entry.getClass().getSimpleName() + "', with Subject '" + entry.getSubject() + "'.", pctDone);
+						if ( doNextEntry == false )
+							throw new InterruptedException("Report Creation was aborted...");
+					}
+
+				}
 			} 
 			catch (RuntimeException rte) 
 			{
@@ -82,11 +124,25 @@ extends DailySummaryReportAbstract
 			// If this is done from the Collectors thread... and each of the reports are taking a long time... 
 			// Then we might want to "ping" the collector supervisor, that we are still "alive"
 			HeartbeatMonitor.doHeartbeat();
+//System.out.println("  ******* Used Memory " + Memory.getUsedMemoryInMB() + " MB ****** create(): AFTER: "+ entry.getClass().getSimpleName());
 		}
 
 		
 		// Create and set TEXT/HTML Content
-		String htmlText = createHtml();
+//		String htmlText = createHtml();
+//		StringWriter writer = new StringWriter();
+		
+		// Create a temporary file (used to back the report content so we don't have to hold the string in memory
+		// it will be deleted when the JVM stops
+		File file = File.createTempFile("dsr_tmp_", ".html");
+		file.deleteOnExit();
+//		Writer writer = new FileWriter(file);
+		try (BufferedWriter writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) 
+		{
+			createHtml(writer);
+		}
+
+		
 		
 //		// When creating a Text Table, it may be large...
 //		// So if the HTML Output is Large... lets not create a Text Table. We will probably get an OutOfMemory Error
@@ -97,7 +153,8 @@ extends DailySummaryReportAbstract
 //		if (htmlText.length() < textSizeLimit)
 //			clearText = createText();
 
-		content.setReportAsHtml(htmlText);
+//		content.setReportAsHtml(htmlText);
+		content.setReportFile(file);
 //		content.setReportAsText(clearText);
 
 		boolean hasIssueToReport = hasIssueToReport();
@@ -122,11 +179,18 @@ extends DailySummaryReportAbstract
 		return null;
 	}
 
+	@Override
 	public void addReportEntries()
 	{
 		addReportEntry( new RecordingInfo(this) );
 		addReportEntry( new AlarmsActive(this)  );
 		addReportEntry( new AlarmsHistory(this) );
+	}
+
+	@Override
+	public List<IReportEntry> getReportEntries()
+	{
+		return _reportEntries;
 	}
 
 	/**
@@ -254,7 +318,8 @@ extends DailySummaryReportAbstract
 //		return sb.toString();
 //	}
 
-	public String createHtmlHead()
+	public void createHtmlHead(Writer writer)
+	throws IOException
 	{
 		// Have we got a "external file" for HTML Headers... where we can change CSS etc
 		String htmlHeadFile = Configuration.getCombinedConfiguration().getProperty(DailySummaryReportFactory.PROPKEY_reportHtml_headFile, DailySummaryReportFactory.DEFAULT_reportHtml_headFile);
@@ -268,7 +333,9 @@ extends DailySummaryReportAbstract
 				// replace variable(s) in content
 				htmlHeadContent = htmlHeadContent.replace("${DBMS_SERVER_NAME}", getServerName());
 					
-				return htmlHeadContent;
+				//return htmlHeadContent;
+				writer.append(htmlHeadContent);
+				return;
 			}
 			catch(IOException ex)
 			{
@@ -279,11 +346,26 @@ extends DailySummaryReportAbstract
 		//-------------------------------------------------------------------
 		// Normal logic: Default System provided HTML Header
 		//-------------------------------------------------------------------
-		StringBuilder sb = new StringBuilder();
+//		StringBuilder sb = new StringBuilder();
+		Writer sb = writer;
 		
+		String titleReportPeriod = "";
+//		if (hasReportPeriod())
+//		{
+//			if (getReportPeriodBeginTime() != null) titleReportPeriod +=         TimeUtils.getCurrentTimeForFileNameHm(getReportPeriodBeginTime().getTime());
+//			if (getReportPeriodEndTime()   != null)	titleReportPeriod += " - " + TimeUtils.getCurrentTimeForFileNameHm(getReportPeriodEndTime()  .getTime());
+//		}
+		String    reportBeginDateStr = TimeUtils.getCurrentTimeForFileNameYmd(getReportBeginTime().getTime());
+//		String    reportBeginTimeStr = TimeUtils.getCurrentTimeForFileNameHm (getReportBeginTime().getTime());
+//		String    reportEndDateStr   = TimeUtils.getCurrentTimeForFileNameYmd(getReportEndTime()  .getTime());
+//		String    reportEndTimeStr   = TimeUtils.getCurrentTimeForFileNameHm (getReportEndTime()  .getTime());
+
+		titleReportPeriod = " - " + reportBeginDateStr;
+
 		sb.append("\n");
 		sb.append("<head> \n");
-		sb.append("    <title>DSR: ").append(getServerName()).append("</title>\n");
+		sb.append("    <title>DSR: ").append(getServerName()).append(titleReportPeriod).append("</title>\n");
+		sb.append("    <link href='data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4QwQDwcpgoqRjwAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAABoklEQVQ4y72SP2haURTGv/veS8HFJWOGhgwNiNsli5uQISkIpkUi+GfJI1vALbg1cTFBBPeCkMHqkIzJG5QQxOlZQRqEdpA45Fk1BN7yNt+XyZTEPy2l9Gznu9/9nXPPucC/CsuyHnVdZzab5SJfv99vttvtaU+5XKaUklLKhYBgMEgpJWu1GgFAmxxEo1GRTqepqiq+/tz9BdkOAlfXz6njnAMAhBALyqyc8KJHtmwSusmWTV70SKyccjQabXY6necCszG6Of8Znzde3NHq9TpLpRJisRg0TcPt7TfoX+6B7z8AElAUwHUBIYD1d9PARCJBKSVDoRAN44oAsHdwSJJ8sB0aN00+2A5Jcu/gcKozJR6Pw+fzIZVKYWtrWwAAxy4AYNnrgfZmCcteDyZ6JnNM0zRZqVQ4GAyyM2fw/mOS3bseCEJVVIzdMQQE1lbf4vL8TEQiEXa7XQQCgfmLyOVycwdZKBQopWQ+n5/tGQ6H+8VikX/1pQ3DYDgcZrVa/SOA+lqwbfuTZVkgXTQajaPfAZTXQjKZhN/vx87OB/yXeAKvTsN3xZdB4gAAAABJRU5ErkJggg==' rel='icon' type='image/x-icon' /> \n");
 		sb.append("\n");
 		sb.append("    <meta charset='utf-8'/>\n");
 		sb.append("    <meta name='x-apple-disable-message-reformatting' />\n");
@@ -343,6 +425,22 @@ extends DailySummaryReportAbstract
 		sb.append("            display: block;\n");
 		sb.append("        }\n");
 		sb.append("\n");
+		sb.append("        dsr-warning-list {\n");
+		sb.append("            color: orange;\n");
+		sb.append("        }\n");
+		sb.append("        dsr-warning-list li {\n");
+		sb.append("            color: orange;\n");
+		sb.append("        }\n");
+		sb.append("\n");
+		sb.append("        xmp {                      \n");
+		sb.append("//            background: #C0C0C0;   \n");
+		sb.append("//            font-size: 0.3em;      \n");
+		sb.append("            white-space: pre-wrap; \n"); // wrap long rows
+		sb.append("            width: 100%;           \n");
+		sb.append("            max-height: 400px;     \n");
+		sb.append("            overflow: auto;        \n");
+		sb.append("        }                          \n");
+		sb.append("\n");
 		sb.append("    </style> \n");
 		sb.append("\n");
 		sb.append("    <SCRIPT src='http://www.dbxtune.com/sorttable.js'></SCRIPT> \n");
@@ -374,14 +472,165 @@ extends DailySummaryReportAbstract
 //		  thead { background: #fc9; } </STYLE>
 		sb.append("</head> \n");
 		sb.append("\n");
-
-		return sb.toString();
 	}
 
-	public String createHtmlBody()
-	{
-		StringBuilder sb = new StringBuilder();
+//	public String createHtmlHead()
+//	{
+//		// Have we got a "external file" for HTML Headers... where we can change CSS etc
+//		String htmlHeadFile = Configuration.getCombinedConfiguration().getProperty(DailySummaryReportFactory.PROPKEY_reportHtml_headFile, DailySummaryReportFactory.DEFAULT_reportHtml_headFile);
+//		if (StringUtil.hasValue(htmlHeadFile))
+//		{
+//			File f = new File(htmlHeadFile);
+//
+//			try
+//			{
+//				String htmlHeadContent = FileUtils.readFileToString(f, StandardCharsets.UTF_8);
+//				// replace variable(s) in content
+//				htmlHeadContent = htmlHeadContent.replace("${DBMS_SERVER_NAME}", getServerName());
+//					
+//				return htmlHeadContent;
+//			}
+//			catch(IOException ex)
+//			{
+//				_logger.error("Problems reading External HTML HEAD File '" + f.getAbsolutePath() + "', Skipping this and using System provided header. Caught: "+ex, ex);
+//			}
+//		}
+//
+//		//-------------------------------------------------------------------
+//		// Normal logic: Default System provided HTML Header
+//		//-------------------------------------------------------------------
+//		StringBuilder sb = new StringBuilder();
+//		
+//		String titleReportPeriod = "";
+////		if (hasReportPeriod())
+////		{
+////			if (getReportPeriodBeginTime() != null) titleReportPeriod +=         TimeUtils.getCurrentTimeForFileNameHm(getReportPeriodBeginTime().getTime());
+////			if (getReportPeriodEndTime()   != null)	titleReportPeriod += " - " + TimeUtils.getCurrentTimeForFileNameHm(getReportPeriodEndTime()  .getTime());
+////		}
+//		String    reportBeginDateStr = TimeUtils.getCurrentTimeForFileNameYmd(getReportBeginTime().getTime());
+////		String    reportBeginTimeStr = TimeUtils.getCurrentTimeForFileNameHm (getReportBeginTime().getTime());
+////		String    reportEndDateStr   = TimeUtils.getCurrentTimeForFileNameYmd(getReportEndTime()  .getTime());
+////		String    reportEndTimeStr   = TimeUtils.getCurrentTimeForFileNameHm (getReportEndTime()  .getTime());
+//
+//		titleReportPeriod = " - " + reportBeginDateStr;
+//
+//		sb.append("\n");
+//		sb.append("<head> \n");
+//		sb.append("    <title>DSR: ").append(getServerName()).append(titleReportPeriod).append("</title>\n");
+//		sb.append("    <link href='data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4QwQDwcpgoqRjwAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAABoklEQVQ4y72SP2haURTGv/veS8HFJWOGhgwNiNsli5uQISkIpkUi+GfJI1vALbg1cTFBBPeCkMHqkIzJG5QQxOlZQRqEdpA45Fk1BN7yNt+XyZTEPy2l9Gznu9/9nXPPucC/CsuyHnVdZzab5SJfv99vttvtaU+5XKaUklLKhYBgMEgpJWu1GgFAmxxEo1GRTqepqiq+/tz9BdkOAlfXz6njnAMAhBALyqyc8KJHtmwSusmWTV70SKyccjQabXY6necCszG6Of8Znzde3NHq9TpLpRJisRg0TcPt7TfoX+6B7z8AElAUwHUBIYD1d9PARCJBKSVDoRAN44oAsHdwSJJ8sB0aN00+2A5Jcu/gcKozJR6Pw+fzIZVKYWtrWwAAxy4AYNnrgfZmCcteDyZ6JnNM0zRZqVQ4GAyyM2fw/mOS3bseCEJVVIzdMQQE1lbf4vL8TEQiEXa7XQQCgfmLyOVycwdZKBQopWQ+n5/tGQ6H+8VikX/1pQ3DYDgcZrVa/SOA+lqwbfuTZVkgXTQajaPfAZTXQjKZhN/vx87OB/yXeAKvTsN3xZdB4gAAAABJRU5ErkJggg==' rel='icon' type='image/x-icon' /> \n");
+//		sb.append("\n");
+//		sb.append("    <meta charset='utf-8'/>\n");
+//		sb.append("    <meta name='x-apple-disable-message-reformatting' />\n");
+////		sb.append("    <meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1, minimal-ui'>\n");
+//		sb.append("\n");
+//		sb.append("    <style type='text/css'> \n");
+//		sb.append("        body {\n");
+//		sb.append("            -webkit-text-size-adjust: 100%;\n");
+//		sb.append("            -ms-text-size-adjust: 100%;\n");
+//		sb.append("            font-family: Arial, Helvetica, sans-serif;\n");
+//		sb.append("        }\n");
+//		sb.append("        pre {\n");
+//		sb.append("            font-size: 10px;\n");
+//		sb.append("            word-wrap: none;\n");
+//		sb.append("            white-space: no-wrap;\n");
+////		sb.append("            space: nowrap;\n");
+//		sb.append("        }\n");
+//		sb.append("        table {\n");
+//		sb.append("            mso-table-layout-alt: fixed;\n"); // not sure about this - https://gist.github.com/webtobesocial/ac9d052595b406d5a5c1
+//		sb.append("            mso-table-overlap: never;\n");    // not sure about this - https://gist.github.com/webtobesocial/ac9d052595b406d5a5c1
+//		sb.append("            mso-table-wrap: none;\n");        // not sure about this - https://gist.github.com/webtobesocial/ac9d052595b406d5a5c1
+//		sb.append("            border-collapse: collapse;\n");
+//		sb.append("        }\n");
+//		sb.append("        th {\n");
+//		sb.append("            border: 1px solid black;\n");
+//		sb.append("            text-align: left;\n");
+//		sb.append("            padding: 2px;\n");
+//		sb.append("            white-space: nowrap;\n");
+//		sb.append("            background-color: gray;\n");
+//		sb.append("            color: white;\n");
+//		sb.append("        }\n");
+//		sb.append("        td {\n");
+//		sb.append("            border: 1px solid black;\n");
+//		sb.append("            text-align: left;\n");
+//		sb.append("            padding: 2px;\n");
+//		sb.append("            white-space: nowrap;\n");
+//		sb.append("        }\n");
+//		sb.append("        tr:nth-child(even) {\n");
+//		sb.append("            background-color: #f2f2f2;\n");
+//		sb.append("        }\n");
+//		sb.append("        h2 {\n");
+//		sb.append("            border-bottom: 2px solid black;\n");
+//		sb.append("            border-top: 2px solid black;\n");
+//		sb.append("            margin-bottom: 3px;\n");
+//		sb.append("        }\n");
+//		sb.append("        h3 {\n");
+//		sb.append("            border-bottom: 1px solid black;\n");
+//		sb.append("            border-top: 1px solid black;\n");
+//		sb.append("            margin-bottom: 3px;\n");
+//		sb.append("        }\n");
+//		sb.append("\n");
+////		sb.append("        /* the below is to HIDE/SHOW content (in mail, which can not execute javascript) */ \n");
+//		sb.append("        .hide-show {\n");
+//		sb.append("            display: none;\n");
+//		sb.append("        }\n");
+//		sb.append("        input[type='checkbox']:checked ~ .hide-show {\n");
+//		sb.append("            display: block;\n");
+//		sb.append("        }\n");
+//		sb.append("\n");
+//		sb.append("        dsr-warning-list {\n");
+//		sb.append("            color: orange;\n");
+//		sb.append("        }\n");
+//		sb.append("        dsr-warning-list li {\n");
+//		sb.append("            color: orange;\n");
+//		sb.append("        }\n");
+//		sb.append("\n");
+//		sb.append("        xmp {                      \n");
+//		sb.append("//            background: #C0C0C0;   \n");
+//		sb.append("//            font-size: 0.3em;      \n");
+//		sb.append("            white-space: pre-wrap; \n"); // wrap long rows
+//		sb.append("            width: 100%;           \n");
+//		sb.append("            max-height: 400px;     \n");
+//		sb.append("            overflow: auto;        \n");
+//		sb.append("        }                          \n");
+//		sb.append("\n");
+//		sb.append("    </style> \n");
+//		sb.append("\n");
+//		sb.append("    <SCRIPT src='http://www.dbxtune.com/sorttable.js'></SCRIPT> \n");
+//		sb.append("\n");
+//		sb.append("    <script type='text/javascript'>  \n");
+//		sb.append("        function toggle_visibility(id) \n");
+//		sb.append("        { \n");
+//		sb.append("           var e = document.getElementById(id); \n");
+//		sb.append("           if(e.style.display == 'block') \n");
+//		sb.append("              e.style.display = 'none'; \n");
+//		sb.append("           else \n");
+//		sb.append("              e.style.display = 'block'; \n");
+//		sb.append("           return false; \n");
+//		sb.append("        } \n");
+//		sb.append("    </script> \n");
+//
+////		<STYLE type="text/css">
+////		  /* Sortable tables */
+////		  table.sortable thead {
+////		    background-color:#eee;
+////		    color:#666666;
+////		    font-weight: bold;
+////		    cursor: default;
+////		  }
+////		  body { font-size : 100%; font-family : Verdana,Helvetica,Arial,sans-serif; }
+////		  h1, h2, h3 { font-size : 150%; }
+////		  table { margin: 1em; border-collapse: collapse; font-size : 90%; }
+////		  td, th { padding: .1em; border: 1px #ccc solid; font-size : 90%; }
+////		  thead { background: #fc9; } </STYLE>
+//		sb.append("</head> \n");
+//		sb.append("\n");
+//
+//		return sb.toString();
+//	}
 
+	public void createHtmlBody(Writer sb)
+	throws IOException
+	{
 		sb.append("<body>\n");
 //		sb.append("<body style'min-width: 100%'>\n");
 //		sb.append("<body style'min-width: 2048px'>\n");
@@ -412,6 +661,7 @@ extends DailySummaryReportAbstract
 		}
 		sb.append("</ul> \n");
 		sb.append("\n<br>");
+//System.out.println("  ******* Used Memory " + Memory.getUsedMemoryInMB() + " MB ****** at createHtmlBody(): after TOC");
 
 		//--------------------------------------------------
 		// ALL REPORTS
@@ -425,11 +675,18 @@ extends DailySummaryReportAbstract
 
 			if (entry.isEnabled())
 			{
+				// Warning messages
+				if (entry.hasWarningMsg())
+					sb.append(entry.getWarningMsg());
+
 				// Get the message text
-				sb.append(entry.getMessageText());
+				if ( ! entry.hasProblem() )
+//					sb.append(entry.getMessageText());
+					entry.writeMessageText(sb);
 				
 				// If the entry indicates that it has a problem... then print that.
-				sb.append(entry.getProblemText());
+				if ( entry.hasProblem() )
+					sb.append(entry.getProblemText());
 				
 				// if we should append anything after an entry... Possibly '<br>\n'
 				sb.append(entry.getEndOfReportText());
@@ -459,6 +716,8 @@ extends DailySummaryReportAbstract
 					sb.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code><br>");
 				}
 			}
+//System.gc();
+//System.out.println("  ******* Used Memory " + Memory.getUsedMemoryInMB() + " MB ****** "+ entry.getClass().getSimpleName());
 		}
 		sb.append("\n<br>");
 
@@ -471,8 +730,117 @@ extends DailySummaryReportAbstract
 		sb.append("\n");
 		sb.append("</body>\n");
 
-		return sb.toString();
+		// Collect some garbage
+		System.gc();
 	}
+
+//	public String createHtmlBody()
+//	{
+//		// First force a Garbage Collection
+//		System.gc();
+//		
+//		StringBuilder sb = new StringBuilder(5*1024*1024); // start with 5MB
+//
+//		sb.append("<body>\n");
+////		sb.append("<body style'min-width: 100%'>\n");
+////		sb.append("<body style'min-width: 2048px'>\n");
+////		sb.append("<body style'min-width: 1024px'>\n");
+//		sb.append("\n");
+//
+//		sb.append("<h2>Daily Summary Report for Servername: ").append(getServerName()).append("</h2>\n");
+//		sb.append( createDbxCentralLink() );
+//
+//		//--------------------------------------------------
+//		// TOC
+//		sb.append("<br> \n");
+//		sb.append("Links to Report Sections. \n");
+//		sb.append("<ul> \n");
+//		for (IReportEntry entry : _reportEntries)
+//		{
+//			String tocSubject = entry.getSubject();
+//			String tocDiv     = StringUtil.stripAllNonAlphaNum(tocSubject);
+//
+//			// Strip off parts that may be details
+//			int firstLeftParentheses = tocSubject.indexOf("(");
+//			if (firstLeftParentheses != -1)
+//				tocSubject = tocSubject.substring(0, firstLeftParentheses - 1).trim();
+//
+//			String liContent = "<a href='#" + tocDiv + "'>" + tocSubject + "</a>";
+//			
+//			sb.append("<li>").append(liContent).append("</li> \n");
+//		}
+//		sb.append("</ul> \n");
+//		sb.append("\n<br>");
+//System.out.println("  ******* Used Memory " + Memory.getUsedMemoryInMB() + " MB ****** at createHtmlBody(): after TOC");
+//
+//		//--------------------------------------------------
+//		// ALL REPORTS
+//		for (IReportEntry entry : _reportEntries)
+//		{
+//			String tocSubject = entry.getSubject();
+//			String tocDiv     = StringUtil.stripAllNonAlphaNum(tocSubject);
+//
+//			// Add a section header
+//			sb.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
+//
+//			if (entry.isEnabled())
+//			{
+//				// Warning messages
+//				if (entry.hasWarningMsg())
+//					sb.append(entry.getWarningMsg());
+//
+//				// Get the message text
+//				if ( ! entry.hasProblem() )
+//					sb.append(entry.getMessageText());
+//				
+//				// If the entry indicates that it has a problem... then print that.
+//				if ( entry.hasProblem() )
+//					sb.append(entry.getProblemText());
+//				
+//				// if we should append anything after an entry... Possibly '<br>\n'
+//				sb.append(entry.getEndOfReportText());
+//
+//				// Notes for how to: Disable this entry
+//				if (entry.canBeDisabled())
+//				{
+//					sb.append("<br>");
+//					sb.append("<i>To disable this report entry, put the following in the configuration file. ");
+//					sb.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code></i><br>");
+//				}
+//			}
+//			else
+//			{
+//				String reason = entry.getDisabledReason();
+//				if (StringUtil.hasValue(reason))
+//				{
+//					// Entry is DISABLED
+//					sb.append("This entry is <b>disabled</b>, reason:<br>");
+//					sb.append(reason);
+//					sb.append("<br>");
+//				}
+//				else
+//				{
+//					// Entry is DISABLED
+//					sb.append("This entry is <b>disabled</b>, to enable it; put the following in the configuration file. ");
+//					sb.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code><br>");
+//				}
+//			}
+//System.out.println("  ******* Used Memory " + Memory.getUsedMemoryInMB() + " MB ****** "+ entry.getClass().getSimpleName());
+//		}
+//		sb.append("\n<br>");
+//
+//		//--------------------------------------------------
+//		// END
+//		sb.append("\n<br>");
+//		sb.append("\n<br>");
+//		sb.append("\n<code>--end-of-report--</code>\n");
+//
+//		sb.append("\n");
+//		sb.append("</body>\n");
+//
+//System.out.println("  ******* Used Memory " + Memory.getUsedMemoryInMB() + " MB ****** at createHtmlBody(): -end-");
+//		return sb.toString();
+//	}
 
 //	public String getDbxCentralBaseUrl()
 //	{
@@ -527,28 +895,53 @@ extends DailySummaryReportAbstract
 //			"";
 //	}
 //
-	public String createHtml()
+
+//	public String createHtml()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//		sb.append("<html>\n");
+//
+//		try
+//		{
+//			sb.append(createHtmlHead());
+//			sb.append(createHtmlBody());
+//		}
+//		catch (RuntimeException rte)
+//		{
+//			sb.append("<b>Problems creating HTML report</b>, Caught RuntimeException: ").append(rte.toString()).append("<br>\n");
+//			sb.append("<pre>\n");
+//			sb.append(StringUtil.exceptionToString(rte));
+//			sb.append("</pre>\n");
+//			
+//			_logger.warn("Problems creating HTML Daily Summary Report. Caught: "+rte, rte);
+//		}
+//
+//		sb.append("</html>\n");
+//
+//		return sb.toString();
+//	}
+
+	public void createHtml(Writer writer) 
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-		sb.append("<html>\n");
+		writer.append("<html>\n");
 
 		try
 		{
-			sb.append(createHtmlHead());
-			sb.append(createHtmlBody());
+			createHtmlHead(writer);
+			createHtmlBody(writer);
 		}
 		catch (RuntimeException rte)
 		{
-			sb.append("<b>Problems creating HTML report</b>, Caught RuntimeException: ").append(rte.toString()).append("<br>\n");
-			sb.append("<pre>\n");
-			sb.append(StringUtil.exceptionToString(rte));
-			sb.append("</pre>\n");
+			writer.append("<b>Problems creating HTML report</b>, Caught RuntimeException: ").append(rte.toString()).append("<br>\n");
+			writer.append("<pre>\n");
+			writer.append(StringUtil.exceptionToString(rte));
+			writer.append("</pre>\n");
 			
 			_logger.warn("Problems creating HTML Daily Summary Report. Caught: "+rte, rte);
 		}
 
-		sb.append("</html>\n");
-
-		return sb.toString();
+		writer.append("</html>\n");
+		writer.flush();
 	}
 }

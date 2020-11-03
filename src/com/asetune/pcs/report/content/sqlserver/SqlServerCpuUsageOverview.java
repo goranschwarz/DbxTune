@@ -21,8 +21,12 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.sqlserver;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
+
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.ReportChartObject;
+import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
@@ -37,13 +41,14 @@ extends SqlServerAbstract
 	}
 
 	@Override
-	public String getMessageText()
+	public void writeMessageText(Writer sb)
+	throws IOException
 	{
-		StringBuilder sb = new StringBuilder();
-
 		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load.",
 				"CmSummary_aaCpuGraph",
 				"CmSummary_aaReadWriteGraph",
+				"CmPerfCounters_CacheReads",
+				"CmPerfCounters_CacheHitRate",
 //				"CmPerfCounters_OsCpuEffective",
 				"CmPerfCounters_SqlBatch",
 				"CmPerfCounters_TransWriteSec",
@@ -51,16 +56,46 @@ extends SqlServerAbstract
 				"CmSchedulers_RunQLengthEng"
 				));
 
-		sb.append(_CmSummary_aaCpuGraph         .getHtmlContent(null, null));
-		sb.append(_CmSummary_aaReadWriteGraph   .getHtmlContent(null, null));
-//		sb.append(_CmPerfCounters_OsCpuEffective.getHtmlContent(null, null));
-		sb.append(_CmPerfCounters_SqlBatch      .getHtmlContent(null, null));
-		sb.append(_CmPerfCounters_TransWriteSec .getHtmlContent(null, null));
-		sb.append(_CmSchedulers_RunQLengthSum   .getHtmlContent(null, null));
-		sb.append(_CmSchedulers_RunQLengthEng   .getHtmlContent(null, null));
-
-		return sb.toString();
+		_CmSummary_aaCpuGraph         .writeHtmlContent(sb, null, null);
+		_CmSummary_aaReadWriteGraph   .writeHtmlContent(sb, null, null);
+		_CmPerfCounters_CacheReads    .writeHtmlContent(sb, null, null);
+		_CmPerfCounters_CacheHitRate  .writeHtmlContent(sb, null, null);
+//		_CmPerfCounters_OsCpuEffective.writeHtmlContent(sb, null, null);
+		_CmPerfCounters_SqlBatch      .writeHtmlContent(sb, null, null);
+		_CmPerfCounters_TransWriteSec .writeHtmlContent(sb, null, null);
+		_CmSchedulers_RunQLengthSum   .writeHtmlContent(sb, null, null);
+		_CmSchedulers_RunQLengthEng   .writeHtmlContent(sb, null, null);
 	}
+
+//	@Override
+//	public String getMessageText()
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load.",
+//				"CmSummary_aaCpuGraph",
+//				"CmSummary_aaReadWriteGraph",
+//				"CmPerfCounters_CacheReads",
+//				"CmPerfCounters_CacheHitRate",
+////				"CmPerfCounters_OsCpuEffective",
+//				"CmPerfCounters_SqlBatch",
+//				"CmPerfCounters_TransWriteSec",
+//				"CmSchedulers_RunQLengthSum",
+//				"CmSchedulers_RunQLengthEng"
+//				));
+//
+//		sb.append(_CmSummary_aaCpuGraph         .getHtmlContent(null, null));
+//		sb.append(_CmSummary_aaReadWriteGraph   .getHtmlContent(null, null));
+//		sb.append(_CmPerfCounters_CacheReads    .getHtmlContent(null, null));
+//		sb.append(_CmPerfCounters_CacheHitRate  .getHtmlContent(null, null));
+////		sb.append(_CmPerfCounters_OsCpuEffective.getHtmlContent(null, null));
+//		sb.append(_CmPerfCounters_SqlBatch      .getHtmlContent(null, null));
+//		sb.append(_CmPerfCounters_TransWriteSec .getHtmlContent(null, null));
+//		sb.append(_CmSchedulers_RunQLengthSum   .getHtmlContent(null, null));
+//		sb.append(_CmSchedulers_RunQLengthEng   .getHtmlContent(null, null));
+//
+//		return sb.toString();
+//	}
 
 	@Override
 	public String getSubject()
@@ -79,20 +114,24 @@ extends SqlServerAbstract
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		int maxValue = 100;
-		_CmSummary_aaCpuGraph          = createChart(conn, "CmSummary",      "aaCpuGraph",       maxValue, null, "CPU Summary for all Schedulers (using @@cpu_busy, @@cpu_io) (Summary)");
-		_CmSummary_aaReadWriteGraph    = createChart(conn, "CmSummary",      "aaReadWriteGraph", -1,       null, "Disk read/write per second, using @@total_read, @@total_write");
-//		_CmPerfCounters_OsCpuEffective = createChart(conn, "CmPerfCounters", "OsCpuEffective",   maxValue, null, "CPU Usage Effective in Percent (Perf Counters)");
-		_CmPerfCounters_SqlBatch       = createChart(conn, "CmPerfCounters", "SqlBatch",         -1,       null, "SQL Batches Received per Sec (Perf Counters)");
-		_CmPerfCounters_TransWriteSec  = createChart(conn, "CmPerfCounters", "TransWriteSec",    -1,       null, "Write Transactions per Sec (Perf Counters)");
-		_CmSchedulers_RunQLengthSum    = createChart(conn, "CmSchedulers",   "RunQLengthSum",    -1,       null, "Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)");
-		_CmSchedulers_RunQLengthEng    = createChart(conn, "CmSchedulers",   "RunQLengthEng",    -1,       null, "Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)");
+		_CmSummary_aaCpuGraph          = createTsLineChart(conn, "CmSummary",      "aaCpuGraph",       maxValue, null, "CPU Summary for all Schedulers (using @@cpu_busy, @@cpu_io) (Summary)");
+		_CmSummary_aaReadWriteGraph    = createTsLineChart(conn, "CmSummary",      "aaReadWriteGraph", -1,       null, "Disk read/write per second, using @@total_read, @@total_write");
+//		_CmPerfCounters_OsCpuEffective = createTsLineChart(conn, "CmPerfCounters", "OsCpuEffective",   maxValue, null, "CPU Usage Effective in Percent (Perf Counters)");
+		_CmPerfCounters_CacheReads     = createTsLineChart(conn, "CmPerfCounters", "CacheReads",       -1,       null, "Buffer Cache Reads per Sec (Server->Perf Counters)");
+		_CmPerfCounters_CacheHitRate   = createTsLineChart(conn, "CmPerfCounters", "CacheHitRate",     -1,       null, "Buffer Cache Hit Rate, in Percent (Server->Perf Counters)");
+		_CmPerfCounters_SqlBatch       = createTsLineChart(conn, "CmPerfCounters", "SqlBatch",         -1,       null, "SQL Batches Received per Sec (Perf Counters)");
+		_CmPerfCounters_TransWriteSec  = createTsLineChart(conn, "CmPerfCounters", "TransWriteSec",    -1,       null, "Write Transactions per Sec (Perf Counters)");
+		_CmSchedulers_RunQLengthSum    = createTsLineChart(conn, "CmSchedulers",   "RunQLengthSum",    -1,       null, "Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)");
+		_CmSchedulers_RunQLengthEng    = createTsLineChart(conn, "CmSchedulers",   "RunQLengthEng",    -1,       null, "Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)");
 	}
 
-	private ReportChartObject _CmSummary_aaCpuGraph;
-	private ReportChartObject _CmSummary_aaReadWriteGraph;
-//	private ReportChartObject _CmPerfCounters_OsCpuEffective;
-	private ReportChartObject _CmPerfCounters_SqlBatch;
-	private ReportChartObject _CmPerfCounters_TransWriteSec;
-	private ReportChartObject _CmSchedulers_RunQLengthSum;
-	private ReportChartObject _CmSchedulers_RunQLengthEng;
+	private IReportChart _CmSummary_aaCpuGraph;
+	private IReportChart _CmSummary_aaReadWriteGraph;
+	private IReportChart _CmPerfCounters_CacheReads;
+	private IReportChart _CmPerfCounters_CacheHitRate;
+//	private IReportChart _CmPerfCounters_OsCpuEffective;
+	private IReportChart _CmPerfCounters_SqlBatch;
+	private IReportChart _CmPerfCounters_TransWriteSec;
+	private IReportChart _CmSchedulers_RunQLengthSum;
+	private IReportChart _CmSchedulers_RunQLengthEng;
 }

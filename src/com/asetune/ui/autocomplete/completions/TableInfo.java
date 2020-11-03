@@ -413,10 +413,11 @@ implements Serializable
 		sb.append("<table BORDER=0 CELLSPACING=0 CELLPADDING=1>");
 		for (TableExtraInfo ei : _extraInfo.values())
 		{
-			if ( ! (TableExtraInfo.IndexExtraInfo.equals(ei.getName()) || TableExtraInfo.IndexExtraInfoDescription.equals(ei.getName())) )
-			{
-				sb.append("  <TR><TD nowrap>&nbsp;&nbsp;&nbsp;&nbsp;&bull;&nbsp;</TD><TD nowrap>").append("<B>").append(ei.getDescriptiveName()).append("</B> </TD> <TD nowrap>&nbsp;").append(ei.getStringValue()).append("&nbsp;</TD> <TD nowrap><FONT color='green'>").append(ei.getHtmlDescription()).append("</FONT></TD></TR>");
-			}
+			if (TableExtraInfo.IndexExtraInfo           .equals(ei.getName())) continue;
+			if (TableExtraInfo.IndexExtraInfoDescription.equals(ei.getName())) continue;
+			if (TableExtraInfo.IndexIncludeColumns      .equals(ei.getName())) continue;
+
+			sb.append("  <TR><TD nowrap>&nbsp;&nbsp;&nbsp;&nbsp;&bull;&nbsp;</TD><TD nowrap>").append("<B>").append(ei.getDescriptiveName()).append("</B> </TD> <TD nowrap>&nbsp;").append(ei.getStringValue()).append("&nbsp;</TD> <TD nowrap><FONT color='green'>").append(ei.getHtmlDescription()).append("</FONT></TD></TR>");
 		}
 		sb.append("</table>");
 
@@ -502,6 +503,7 @@ implements Serializable
 		{
 			boolean indexExtraInfoDescriptionHasClustered    = false;
 //			boolean indexExtraInfoDescriptionHasNonClustered = false;
+			String indexIncludeColumns = null;;
 			
 			// If we have some extra information on the index name, print that as well
 			StringBuilder comment = new StringBuilder();
@@ -561,6 +563,17 @@ implements Serializable
 
 						comment.append("</FONT>");
 					}
+
+					if ( TableExtraInfo.IndexIncludeColumns.equals(ei.getName()) )
+					{
+						@SuppressWarnings("unchecked")
+						Map<String, String> indexInfo = (Map<String, String>) ei.getValue();
+						String indexExtraInfo = indexInfo.get(_name);
+						if (indexExtraInfo != null)
+						{
+							indexIncludeColumns = indexExtraInfo;
+						}
+					}
 				}
 			}
 
@@ -577,6 +590,9 @@ implements Serializable
 			sb.append("(<FONT color='blue'>");
 			sb.append(StringUtil.toCommaStr(_columns));
 			sb.append("</FONT>)");
+			
+			if (StringUtil.hasValue(indexIncludeColumns))
+				sb.append(" include(<FONT color=#9900cc>").append(indexIncludeColumns).append("</FONT>)");
 
 			if (_type == DatabaseMetaData.tableIndexHashed)
 				sb.append(" -- hashed");

@@ -240,10 +240,13 @@ extends CountersModel
 
 		String LiveQueryPlanActive  = "";
 		String LiveQueryPlanBlocked = "";
-//		String LiveQueryPlanActive  = "    ,LiveQueryPlan = convert(varchar(max), null) \n";
-//		String LiveQueryPlanBlocked = "    ,LiveQueryPlan = convert(varchar(max), null) \n";
+
+//		String LiveQueryPlanActive  = "    ,LiveQueryPlan = convert(nvarchar(max), 'No live query plan available. Only in 2016 SP1 and above')";
+//		String LiveQueryPlanBlocked = "    ,LiveQueryPlan = convert(nvarchar(max), 'No live query plan available. Only in 2016 SP1 and above')";
+//		String LiveQueryPlanActive  = "    ,LiveQueryPlan = convert(nvarchar(max), null) \n";
+//		String LiveQueryPlanBlocked = "    ,LiveQueryPlan = convert(nvarchar(max), null) \n";
 //		
-//		if (srvVersion >= Ver.ver(2016,0,0, 1)) // 2016 SP1
+//		if (srvVersion >= Ver.ver(2016,0,0, 1)) // 2016 SP1 (or check if the table exists; select 1 from sys.all_tables where name = 'dm_exec_query_statistics_xml'
 //		{
 //			LiveQueryPlanActive  = "    ,LiveQueryPlan = (select lqp.query_plan from sys.dm_exec_query_statistics_xml(des.session_id) lqp) \n";
 //			LiveQueryPlanBlocked = "    ,LiveQueryPlan = (select lqp.query_plan from sys.dm_exec_query_statistics_xml(p1.spid) lqp) \n";
@@ -286,19 +289,20 @@ extends CountersModel
 			"    ,der.last_wait_type \n" +
 			"    ,der.wait_resource \n" +
 			"    ,CASE des.transaction_isolation_level \n" +
-			"        WHEN 0 THEN 'Unspecified' \n" +
-			"        WHEN 1 THEN 'ReadUncommitted' \n" +
-			"        WHEN 2 THEN 'ReadCommitted' \n" +
-			"        WHEN 3 THEN 'Repeatable' \n" +
-			"        WHEN 4 THEN 'Serializable' \n" +
-			"        WHEN 5 THEN 'Snapshot' \n" +
+			"        WHEN 0 THEN 'Unspecified[0]' \n" +
+			"        WHEN 1 THEN 'ReadUnCommitted[1]' \n" +
+			"        WHEN 2 THEN 'ReadCommitted[2]' \n" +
+			"        WHEN 3 THEN 'Repeatable[3]' \n" +
+			"        WHEN 4 THEN 'Serializable[4]' \n" +
+			"        WHEN 5 THEN 'Snapshot[5]' \n" +
+			"        ELSE        'Unknown' + convert(varchar(10), des.transaction_isolation_level) + ']' \n" +
 			"    END AS transaction_isolation_level \n" +
 //			"    ,OBJECT_NAME(dest.objectid, der.database_id) AS OBJECT_NAME \n" +
 			"    ,SUBSTRING(dest.text, der.statement_start_offset / 2,  \n" +
 			"        ( CASE WHEN der.statement_end_offset = -1  \n" +
 			"               THEN DATALENGTH(dest.text)  \n" +
 			"               ELSE der.statement_end_offset  \n" +
-			"          END - der.statement_start_offset ) / 2) AS [lastKnownSql] \n" +
+			"          END - der.statement_start_offset ) / 2 +2) AS [lastKnownSql] \n" +
 			"    ,deqp.query_plan \n" +
 			LiveQueryPlanActive +
 			"FROM sys." + dm_exec_sessions + " des \n" +
@@ -306,7 +310,8 @@ extends CountersModel
 //			"LEFT JOIN sys." + dm_exec_connections + " dec ON des.session_id = dec.session_id \n" +
 			"CROSS APPLY sys." + dm_exec_sql_text + "(der.sql_handle) dest \n" +
 			"CROSS APPLY sys." + dm_exec_query_plan + "(der.plan_handle) deqp \n" +
-			"WHERE des.session_id != @@spid";
+			"WHERE des.session_id != @@spid \n " +
+			"";
 
 		String sql2 = 
 			"SELECT  \n" +
@@ -341,20 +346,21 @@ extends CountersModel
 			"    ,p1.waittype                                  --der.last_wait_type \n" +
 			"    ,p1.waitresource                              --der.wait_resource \n" +
 			"    ,'unknown' \n" +
-			"--    CASE des.transaction_isolation_level  \n" +
-			"--        WHEN 0 THEN 'Unspecified'  \n" +
-			"--        WHEN 1 THEN 'ReadUncommitted'  \n" +
-			"--        WHEN 2 THEN 'ReadCommitted'  \n" +
-			"--        WHEN 3 THEN 'Repeatable'  \n" +
-			"--        WHEN 4 THEN 'Serializable'  \n" +
-			"--        WHEN 5 THEN 'Snapshot'  \n" +
-			"--    END AS transaction_isolation_level  \n" +
+			"--    ,CASE des.transaction_isolation_level \n" +
+			"--        WHEN 0 THEN 'Unspecified[0]' \n" +
+			"--        WHEN 1 THEN 'ReadUnCommitted[1]' \n" +
+			"--        WHEN 2 THEN 'ReadCommitted[2]' \n" +
+			"--        WHEN 3 THEN 'Repeatable[3]' \n" +
+			"--        WHEN 4 THEN 'Serializable[4]' \n" +
+			"--        WHEN 5 THEN 'Snapshot[5]' \n" +
+			"--        ELSE        'Unknown' + convert(varchar(10), des.transaction_isolation_level) + ']' \n" +
+			"--    END AS transaction_isolation_level \n" +
 //			"    ,'unknown', --OBJECT_NAME(dest.objectid, der.database_id) AS OBJECT_NAME \n" +
 			"--  , SUBSTRING(dest.text, der.statement_start_offset / 2,   \n" +
 			"--        ( CASE WHEN der.statement_end_offset = -1   \n" +
 			"--               THEN DATALENGTH(dest.text)   \n" +
 			"--               ELSE der.statement_end_offset   \n" +
-			"--          END - der.statement_start_offset ) / 2) AS [lastKnownSql] \n" +
+			"--          END - der.statement_start_offset ) / 2 +2) AS [lastKnownSql] \n" +
 			"    ,dest.text \n" +
 			"    ,''                                           --deqp.query_plan  \n" +
 			LiveQueryPlanBlocked +

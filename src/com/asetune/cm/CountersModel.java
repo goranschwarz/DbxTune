@@ -31,6 +31,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -2628,6 +2629,43 @@ implements Cloneable, ITableTooltip
 				_logger.debug("cm='"+StringUtil.left(this.getName(),25)+"', _trendGraphData="+tgdp);
 		}
 	}
+
+	/** Round a double value using # scale */
+	public double round(double val, int scale)
+	{
+		return new BigDecimal(val).setScale(scale, RoundingMode.HALF_UP).doubleValue();
+	}
+	/** Round a double value using 1 as scale */
+	public double round1(double val)
+	{
+		return round(val, 1);
+	}
+	/** Round a double value using 2 as scale */
+	public double round2(double val)
+	{
+		return round(val, 2);
+	}
+	/** Round a double value using 3 as scale */
+	public double round3(double val)
+	{
+		return round(val, 3);
+	}
+	/** Round a double value using 4 as scale */
+	public double round4(double val)
+	{
+		return round(val, 4);
+	}
+	/** Round a double value using 5 as scale */
+	public double round5(double val)
+	{
+		return round(val, 5);
+	}
+	/** Round a double value using 6 as scale */
+	public double round6(double val)
+	{
+		return round(val, 6);
+	}
+
 	
 	/**
 	 * Check if we have the DATA MODEL for any graph (this is true for nogui) 
@@ -2853,8 +2891,17 @@ implements Cloneable, ITableTooltip
 		
 		// Generate the SQL, for the specific ASE version
 		String sql = getSqlForVersion(conn, srvVersion, isClusterEnabled);
-		setSql(sql);
-//		setSql(getSqlPrefix() + sql);
+
+		// set the SQL to use
+		if (useSqlPrefix())
+		{
+			String sqlPrefix = getSqlPrefix(); 
+			setSql(sqlPrefix + sql);
+		}
+		else
+		{
+			setSql(sql);
+		}
 
 		// Generate the SQL INIT, for the specific ASE version
 		String sqlInit = getSqlInitForVersion(conn, srvVersion, isClusterEnabled);
@@ -2872,15 +2919,37 @@ implements Cloneable, ITableTooltip
 		addMonTableDictForVersion(conn, srvVersion, isClusterEnabled);
 	}
 
-//	/** 
-//	 * If you want to use SQL Prefix in a query, this can be used to automatically create a prefix string
-//	 * <p>
-//	 * The default is to use: <code>&#47* APPNAME:CmName *&#47; \n</code> 
-//	 */
-//	public String getSqlPrefix()
-//	{
-//		return "/* " + Version.getAppName() + ":" + getName() + " */ \n";
-//	}
+	/** 
+	 * If you want to use SQL Prefix in a query, this can be used to automatically create a prefix string
+	 * <p>
+	 * The default is to use: <code>&#47* APPNAME:CmName *&#47; \n</code> 
+	 */
+	public String getSqlPrefix()
+	{
+		return "/* " + Version.getAppName() + ":" + getName() + " */ \n";
+	}
+
+	/**
+	 * Checks if we should add any SQL Prefix<br>
+	 * First check property: <code>cm.sqlPrefix.use</code><br>
+	 * Second check property: <code>cm.<i>cmName</i>.sqlPrefix.use</code><br>
+	 * 
+	 * @return true if we should call method: getSqlPrefix
+	 */
+	public boolean useSqlPrefix()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		
+		boolean useSqlPrefix = conf.getBooleanProperty("cm.sqlPrefix.use", true);
+		if (useSqlPrefix)
+		{
+			if (conf.hasProperty("cm." + getName() + ".sqlPrefix.use"))
+			{
+				useSqlPrefix = conf.getBooleanProperty("cm." + getName() + ".sqlPrefix.use", true);
+			}
+		}
+		return useSqlPrefix;
+	}
 
 	/**
 	 * Get the SQL Statement for getting the "current time" on the server.<br>
@@ -4764,6 +4833,14 @@ implements Cloneable, ITableTooltip
 		// initialize Diss/Diff/Pct column bitmaps
 		initColumnStuff(tmpNewSample);
 
+
+		// Do local sorting of the New-Sample 
+		List<SortOptions> sortOptionsList = getLocalSortOptions();
+		if (sortOptionsList != null && !sortOptionsList.isEmpty())
+		{
+			tmpNewSample.sort(sortOptionsList);
+		}
+		
 		// if it's the first time sampling...
 		if (isFirstTimeSample())
 		{
@@ -5080,6 +5157,16 @@ implements Cloneable, ITableTooltip
 
 
 	/**
+	 * If you want the CounterSample to be locally sorted...
+	 * @return How a List of SortOptions you want it to be sorted... or null if no local sorting
+	 */
+	public List<SortOptions> getLocalSortOptions()
+	{
+		return null;
+	}
+
+
+	/**
 	 * This method is called <b>after</b> all CM's has been refreshed<br>
 	 * So in here you can get data from other collectors that has been refreshed during this sample
 	 * 
@@ -5222,7 +5309,7 @@ implements Cloneable, ITableTooltip
 				if (oldRowId >= 0 && oldRowId < oldSampleAccessArr.length)
 					oldSampleAccessArr[oldRowId] = true;
 				
-				// Old row found, compute the diffs
+				// Old row found, compute the diff's
 				oldRow = oldSample.getRow(oldRowId);
 				for (int i = 0; i < newSample.getColumnCount(); i++)
 				{

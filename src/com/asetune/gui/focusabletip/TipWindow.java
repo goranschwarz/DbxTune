@@ -74,6 +74,8 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.html.HTMLDocument;
 
 import com.asetune.utils.Configuration;
+import com.jidesoft.swing.Resizable;
+import com.jidesoft.swing.ResizablePanel;
 
 
 /**
@@ -113,12 +115,42 @@ class TipWindow extends JWindow implements ActionListener, HyperlinkListener {
 		this.text = msg;
 		tipListener = new TipListener();
 
-		JPanel cp = new JPanel(new BorderLayout());
-		cp.setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createLineBorder(Color.BLACK), 
-			BorderFactory.createEmptyBorder()));
-		cp.setBackground(TipUtil.getToolTipBackground());
+//		JPanel cp = new JPanel(new BorderLayout());
+		final ResizablePanel cp = new ResizablePanel(new BorderLayout())
+		{
+			private static final long serialVersionUID = 1L;
 
+			@Override
+			protected Resizable createResizable()
+			{
+				return new Resizable(this) 
+				{
+					@Override
+					public boolean isTopLevel()
+					{
+						// This is a TOP window, so X Y coordinates should be on screen instead of inside the component
+						return true;
+					}
+					
+					@Override
+					public void resizing(int resizeCorner, int newX, int newY, int newW, int newH) 
+					{
+						//System.out.println("ZZZ: resizing(resizeCorner="+resizeCorner+", newX="+newX+", newY="+newY+", newW="+newW+", newH="+newH+").");
+						TipWindow.this.setBounds(newX, newY, newW, newH);
+					}
+				};
+			}
+		};
+		
+//		cp.setBorder(BorderFactory.createCompoundBorder(
+//			BorderFactory.createLineBorder(Color.BLACK), 
+//			BorderFactory.createEmptyBorder()));
+		cp.setBorder(BorderFactory.createCompoundBorder(
+			BorderFactory.createEtchedBorder(Color.BLACK, Color.GRAY), 
+			BorderFactory.createLineBorder(cp.getBackground(), 2))); // EXTREME LIGHT GRAY
+//			BorderFactory.createLineBorder(new Color(237, 237, 237), 2))); // EXTREME LIGHT GRAY
+		cp.setBackground(TipUtil.getToolTipBackground());
+		
 		try
 		{
 			if ( ! PRIMARY_JEditorPane_class.trim().equals("") )
@@ -283,8 +315,9 @@ class TipWindow extends JWindow implements ActionListener, HyperlinkListener {
 		boolean focusable = getFocusableWindowState();
 		if (focusable) 
 		{
-//			panel.add(createNavigationPanel(), BorderLayout.LINE_START);
-			panel.add(createNavigationPanel(), BorderLayout.CENTER);
+			JPanel navPanel = createNavigationPanel();
+//			panel.add(navPanel, BorderLayout.LINE_START);
+			panel.add(navPanel, BorderLayout.CENTER);
 
 			SizeGrip sg = new SizeGrip();
 			sg.applyComponentOrientation(sg.getComponentOrientation()); // Workaround
@@ -318,6 +351,14 @@ class TipWindow extends JWindow implements ActionListener, HyperlinkListener {
 			};
 			panel.addMouseListener(adapter);
 			panel.addMouseMotionListener(adapter);
+
+			// Add the same mouse listener to the navPanel, and the underlying text field that occupies the filed as well
+			navPanel.addMouseListener(adapter);
+			navPanel.addMouseMotionListener(adapter);
+			
+			locationText.addMouseListener(adapter);
+			locationText.addMouseMotionListener(adapter);
+
 			// Don't add tipListener to the panel or SizeGrip
 		}
 		else 
