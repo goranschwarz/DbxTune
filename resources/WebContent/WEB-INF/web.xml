@@ -106,13 +106,6 @@
 		<async-supported>true</async-supported>
 	</servlet>
 
-<!--
-	<servlet>
-		<servlet-name>ChartTimelineServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.ChartTimelineServlet</servlet-class>
-	</servlet>
--->
-
 	<servlet>
 		<servlet-name>SessionsController</servlet-name>
 		<servlet-class>com.asetune.central.controllers.SessionsController</servlet-class>
@@ -257,13 +250,6 @@
 		<servlet-name>ChartBroadcastServlet</servlet-name>
 		<url-pattern>/api/chart/broadcast-sse</url-pattern>
 	</servlet-mapping>
- 
- <!--
-	<servlet-mapping>
-		<servlet-name>ChartTimelineServlet</servlet-name>
-		<url-pattern>/api/chart/timeline</url-pattern>
-	</servlet-mapping>
- -->
  
 	<servlet-mapping>
 		<servlet-name>SessionsController</servlet-name>
