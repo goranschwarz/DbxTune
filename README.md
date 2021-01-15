@@ -41,6 +41,7 @@ There are a couple of ways you can use the DbxTune tool set
    And also make sure to record the activity in the test/development environments so that the developers can **see** that changes they make in the system has a positive or a negative effect on CPU Usage and/or Disk IO usage!
 6. **Alarm(s)**: If you now have decide to recording performance data _all the time_, you can simply add 
    _thresholds_ to various metrics, and send an alarm when they are crossed!
+7. **Daily Summary Reports** See the top consuming SQL Statements or components from each of the DbxTune Collectors (sent by mail every midnight).
    
 
    
