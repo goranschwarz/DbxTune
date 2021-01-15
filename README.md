@@ -117,16 +117,17 @@ Here is a picture that tries to describe how Collectors, DbxCentral & Recording 
 ![](doc/dbxtune-central.png)
 
 In the above example/picture (every *square box* is a virtual or physical machine)
-- On top you have 6 different machines of different DBMS Vendors, which runs *untouched* (no DbxTune software is installed)
-- In Center; the whole DbxTune infrastructure is running on a Virtual Machine (for simplicity of upgrades and managability, which also makes it easy to remove the whole DbxTune infrastructure if you need/want to)
-  - The DbxCentral Server is at the bottom of the image with one database to store **trend graphs** for X days (12 months be default)
-  - And 6 different DbxTune Collectors, which stores **Detailed Recordings**, one database for each day (makes it simple to *purge* old recordings when we need space for never ones)
-  - Each of the DbxTune Collectors sends **trend graph** information to DbxCentral (which is stored for a longer time than all the details)
-  - Any of the DbxTune Collectors may send Alarms via (email, SMS, Slack or REST interface to *unknown*)
-  - Daily Summary Reports can also be enabled, so you can see the **top** consuming SQL Statements or components from each of the collectors.
+- On top you have 6 different machines, running different DBMS Vendors, which runs *un touched* (no DbxTune software is installed)
+- In Center; the whole DbxTune infrastructure is running on a Virtual Machine (for simplicity of upgrades and managability, which also makes it easy to remove the whole DbxTune infrastructure if you need or want to)
+  - The DbxCentral Server is at the bottom of the image; With one database to store **trend graphs** for X days (12 months be default)
+  - And 6 different DbxTune Collectors, which stores **Detailed Recordings**... One recording database for each day (makes it simple to *purge* old recordings when we need space for never ones)
+  - Each of the DbxTune Collectors also sends **trend graph** information (in JSON format) to DbxCentral (which is stored for a longer time than the above detailed recodings)
+  - The following can also be enabled:
+    - Any of the DbxTune Collectors may send Alarms via (email, SMS, Slack or REST interface to *unknown*)
+    - Daily Summary Reports can also be enabled, so you can see the **top** consuming SQL Statements or components from each of the collectors.
 - On the Right hand side, you have:
   - WEB Browsers connecting to DbxCentral to view various trend graph information, or checking **active alarms**
-  - DbxTune Native GUI Clients (running on your local machine with: Windows, Mac or Linux), which can:
+  - DbxTune Native GUI Clients (running on your local machine: Windows, Mac or Linux), which can:
     - Connect to older recordings stored on the DbxCentral host; to view **detailes** of any recording
 	- Or Connect to any DBMS system (on the top) to monitor *live* data (just as you have done previously without the DbxCentral and NO-GUI Collectors)
 
