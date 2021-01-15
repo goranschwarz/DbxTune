@@ -366,7 +366,7 @@ extends CountersModel
 			
 		CountersModel cm = this;
 		
-		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 //debugPrint = true;
 
 		// Get a array of rowId's where the column 'Name' has the value 'procedure cache size'
@@ -387,10 +387,11 @@ extends CountersModel
 					Double stmntCachePctUsed = activeMb / _statementCacheConfigSizeMb * 100.0;
 					Double procCachePctUsed  = activeMb / _procedureCacheConfigSizeMb * 100.0;
 					
-					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): _statementCacheConfigSizeMb="+_statementCacheConfigSizeMb+", activeMb="+activeMb+", stmntCachePctUsed="+stmntCachePctUsed+", procCachePctUsed="+procCachePctUsed+".");
-
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_StatementCacheUsagePct, DEFAULT_alarm_StatementCacheUsagePct);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", _statementCacheConfigSizeMb="+_statementCacheConfigSizeMb+", activeMb="+activeMb+", stmntCachePctUsed="+stmntCachePctUsed+", procCachePctUsed="+procCachePctUsed+".");
+
 					if (stmntCachePctUsed.intValue() > threshold)
 					{
 						AlarmHandler.getInstance().addAlarm( 

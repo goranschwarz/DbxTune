@@ -45,6 +45,9 @@ public class SqlCaptureDetails
 
 	public void add(List<Object> row)
 	{
+		if (row == null)
+			return;
+
 		_records.add(row);
 	}
 

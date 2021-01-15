@@ -32,6 +32,8 @@ public class ReportContent
 {
 	private String _serverName;
 //	private String _contentText = "";
+	private String _contentShortMessage; // used for Mail message or other "short messages"
+	private boolean _isShortMessageHtml = true;
 	private String _contentHtml;
 	private File   _contentFile;
 	private boolean _hasNothingToReport = false;
@@ -52,6 +54,50 @@ public class ReportContent
 	{
 		return _hasNothingToReport;
 	}
+
+	/**
+	 * Get any short message that can be used for email message and other shorter messages writers
+	 * <p>
+	 * NOTE: The full Report content can still be attached in emails etc...<br>
+	 * use <code>getReportFile()</code> to get a handle to the full report
+	 * 
+	 * @param message
+	 * @return never null, if short report is not available, then "" will be returned. 
+	 */
+	public String getShortMessage()
+	throws IOException
+	{
+		if (_contentShortMessage == null)
+			return "";
+
+		return _contentShortMessage;
+	}
+
+	/**
+	 * Set any short message that can be used for email message and other shorter messages writers
+	 * <p>
+	 * NOTE: The full Report content can still be attached in emails etc...
+	 * 
+	 * @param message
+	 */
+	public void setShortMessage(String message)
+	{
+		_contentShortMessage = message;
+	}
+
+	/** Does the short message (if we have any" is of HTML Content */
+	public boolean isShortMessageOfHtml()
+	{
+		return _isShortMessageHtml;
+	}
+
+	/** Indicate the the short message (if we have any" is of HTML Content */
+	public void setShortMessageOfHtml(boolean isShortMessageHtml)
+	{
+		_isShortMessageHtml = isShortMessageHtml;
+	}
+
+
 
 	public String getReportAsHtml()
 	throws IOException

@@ -28,9 +28,15 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
@@ -42,6 +48,8 @@ import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.DailySummaryReportFactory;
 import com.asetune.pcs.report.content.ReportChartTimeSeriesStackedBar.TopGroupCountReport;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.ddl.model.Index;
+import com.asetune.sql.ddl.model.Table;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.HtmlQueryString;
@@ -117,7 +125,40 @@ implements IReportEntry
 		_disabledReason = reason;
 	}
 
+//	@Override
+//	public boolean hasShortMessageText()
+//	{
+//		return false;
+//	}
+//
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	{
+//	}
 
+	public static class ReportEntryTableStringRenderer 
+	implements ResultSetTableModel.TableStringRenderer
+	{
+		@Override
+		public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+		{
+			return TableStringRenderer.super.cellValue(rstm, row, col, colName, objVal, strVal);
+		}
+
+		@Override
+		public String cellToolTip(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+		{
+			if (objVal instanceof Number && objVal != null && colName != null)
+			{
+				if (colName.indexOf("Time") != -1 || colName.indexOf("_ms") != -1 || colName.indexOf("Ms") != -1 )
+				{
+					return TimeUtils.msToTimeStrDHMS(((Number)objVal).longValue());
+				}
+			}
+			return null;
+		}
+	}
+	
 	/**
 	 * More or less same as ResultSetTableModel.toHtmlTableString(...) but a default renderer that has column names like '*Time*', '*_ms*' or '*Ms*' a tool tip with the milliseconds transformed to HH:MM:SS.ms 
 	 * @param rstm   The ResultSet to create a HTML table for
@@ -138,25 +179,8 @@ implements IReportEntry
 		if (rstm == null)
 			return "";
 		
-		// Create a default renderer
-		TableStringRenderer tableRender = new ResultSetTableModel.TableStringRenderer()
-		{
-			@Override
-			public String cellToolTip(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
-			{
-				if (objVal instanceof Number && objVal != null && colName != null)
-				{
-					if (colName.indexOf("Time") != -1 || colName.indexOf("_ms") != -1 || colName.indexOf("Ms") != -1 )
-					{
-//						return TimeUtils.msToTimeStrDHMSms(((Number)objVal).longValue());
-						return TimeUtils.msToTimeStrDHMS(((Number)objVal).longValue());
-					}
-				}
-				return null;
-			}
-		};
-		
-		return rstm.toHtmlTableString("sortable", true, true, colNameValueTagMap, tableRender);
+		// use a renderer ReportEntryTableStringRenderer
+		return rstm.toHtmlTableString("sortable", true, true, colNameValueTagMap, new ReportEntryTableStringRenderer());
 	}
 
 	public ResultSetTableModel createResultSetTableModel(ResultSet rs, String name, String sql)
@@ -186,6 +210,28 @@ implements IReportEntry
 	}
 
 
+	public ResultSetTableModel executeQuery(DbxConnection conn, String sql, String name)
+	throws SQLException
+	{
+		// transform all "[" and "]" to DBMS Vendor Quoted Identifier Chars 
+		sql = conn.quotifySqlString(sql);
+
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				ResultSetTableModel rstm = createResultSetTableModel(rs, name, sql, false);
+				
+				if (_logger.isDebugEnabled())
+					_logger.debug(name + "rstm.getRowCount()="+ rstm.getRowCount());
+				
+				return rstm;
+			}
+		}
+	}
+	
 	public ResultSetTableModel executeQuery(DbxConnection conn, String sql, boolean onErrorCreateEmptyRstm, String name)
 	{
 		return executeQuery(conn, sql, onErrorCreateEmptyRstm, name, true);
@@ -243,49 +289,6 @@ implements IReportEntry
 		return writer.toString();
 	}
 
-//	@Override
-//	public void writeMessageText(Writer sb)
-//	throws IOException
-//	{
-//	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		if (hasWarningMsg())
-//		{
-//			sb.append(getWarningMsg());
-//		}
-//
-//		if (hasInfogMsg())
-//		{
-//			sb.append(getInfoMsg());
-//		}
-//
-//		if (hasResultSetTables())
-//		{
-//			for (ResultSetTableModel rstm : getResultSetTables())
-//			{
-//				if (rstm.getRowCount() == 0)
-//				{
-//					sb.append("Row Count: ").append(rstm.getRowCount()).append("<br>\n");
-//				}
-//				else
-//				{
-//					// Get a description of this section, and column names
-//					sb.append(getSectionDescriptionHtml(rstm, true));
-//
-//					sb.append("Row Count: ").append(rstm.getRowCount()).append("<br>\n");
-//					sb.append(toHtmlTable(rstm));
-//				}
-//			}
-//		}
-//
-//		return sb.toString();
-//	}
-//
 //	//-------------------------------------------------------------------------
 //	// Result Set Tables
 //	//-------------------------------------------------------------------------
@@ -667,21 +670,6 @@ implements IReportEntry
 	}
 	
 
-//	public String createShowHideDiv(String divId, boolean visibleAtStart, String label, String content)
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		String visibilityCss = visibleAtStart ? "block" : "none";
-//		
-//		sb.append("<a href='javascript:;' onclick=\"toggle_visibility('").append(divId).append("');\">").append(label).append("</a> <br>\n");
-//		sb.append("<div id='").append(divId).append("' style='display: ").append(visibilityCss).append(";'>\n");
-//		sb.append(content);
-//		sb.append("</div>\n");
-//		sb.append("\n");
-//
-//		return sb.toString();
-//	}
-
 	/**
 	 * Create a html DIV with
 	 * <ul>
@@ -784,6 +772,33 @@ implements IReportEntry
 				{
 					long durationInMs = LastEntry.getTime() - FirstEntry.getTime();
 					String durationStr = TimeUtils.msToTimeStr("%HH:%MM:%SS", durationInMs);
+					rstm.setValueAtWithOverride(durationStr, r, pos_Duration);
+				}
+			}
+		}
+	}
+
+
+	/**
+	 * Calculate "Duration", and set that to a String column in the form "%HH:%MM:%SS"
+	 * @param rstm
+	 * @param timeInMsColName   Name of the column that holds Time in Milliseconds
+	 * @param durationColName   Name of the column we want to set
+	 */
+	public void setMsToHms(ResultSetTableModel rstm, String timeInMsColName, String durationColName)
+	{
+		int pos_timeInMs   = rstm.findColumn(timeInMsColName);
+		int pos_Duration   = rstm.findColumn(durationColName);
+
+		if (pos_timeInMs >= 0 && pos_Duration >= 0)
+		{
+			for (int r=0; r<rstm.getRowCount(); r++)
+			{
+				Long timeInMs = rstm.getValueAsLong(r, pos_timeInMs);
+
+				if (timeInMs != null)
+				{
+					String durationStr = TimeUtils.msToTimeStr("%HH:%MM:%SS", timeInMs);
 					rstm.setValueAtWithOverride(durationStr, r, pos_Duration);
 				}
 			}
@@ -1034,41 +1049,6 @@ implements IReportEntry
 		return getReportPeriodSqlWhere("SessionSampleTime");
 	}
 
-//	/**
-//	 * If we have a begin/end period for this report, you want to add an extra criteria for the SQL Statement 
-//	 * @return
-//	 */
-//	public String getReportPeriodSqlWhere(String colname)
-//	{
-//		// Most common: exit early
-//		if (getReportBeginTime() == null && getReportEndTime() == null)
-//			return "";
-//
-//		// we have both BEGIN and END time
-//		if (getReportBeginTime() != null && getReportEndTime() != null)
-//		{
-//			return " and [" + colname + "] between '" + getReportBeginTime() + "' and '" + getReportEndTime() + "' \n";
-//		}
-//		// we only have BEGIN time
-//		else if (getReportBeginTime() != null)
-//		{
-//			return " and [" + colname + "] >= '" + getReportBeginTime() + "' \n";
-//		}
-//		// we only have END time
-//		else if (getReportEndTime() != null)
-//		{
-//			return " and [" + colname + "] <= '" + getReportEndTime() + "' \n";
-//		}
-//		else
-//		{
-//			return "";
-//		}
-//	}
-//	public boolean hasReportPeriod()
-//	{
-//		return (getReportBeginTime() != null || getReportEndTime() != null);
-//	}
-
 	/**
 	 * If we have a begin/end period for this report, you want to add an extra criteria for the SQL Statement 
 	 * @return
@@ -1106,4 +1086,302 @@ implements IReportEntry
 		return (getReportingInstance().getReportPeriodBeginTime() != null || getReportingInstance().getReportPeriodEndTime() != null);
 	}
 	
+
+
+	//--------------------------------------------------------------------------------
+	// BEGIN: Top rows
+	//--------------------------------------------------------------------------------
+	public String getTopRowsPropertyName()
+	{
+		return getClass().getSimpleName()+".top";
+	}
+	public int getTopRowsDefault()
+	{
+		return 20;
+	}
+	public int getTopRows()
+	{
+//		Configuration conf = getReportingInstance().getLocalConfig();
+		Configuration conf = Configuration.getCombinedConfiguration();
+		int topRows = conf.getIntProperty(getTopRowsPropertyName(), getTopRowsDefault());
+		return topRows;
+	}
+	//--------------------------------------------------------------------------------
+	// END: Top rows
+	//--------------------------------------------------------------------------------
+
+	
+	//--------------------------------------------------------------------------------
+	// BEGIN: DSR - Daily Summary Report methods
+	//--------------------------------------------------------------------------------
+	protected String getDsrSkipEntriesAsHtmlTable()
+	{
+		String srvName   = getReportingInstance().getDbmsServerName();
+		String className = this.getClass().getSimpleName();
+		
+		return getReportingInstance().getDsrSkipEntriesAsHtmlTable(srvName, className);
+	}
+
+	protected Map<String, Set<String>> getDsrSkipEntries()
+	{
+		String srvName   = getReportingInstance().getDbmsServerName();
+		String className = this.getClass().getSimpleName();
+		
+		_skipEntries = getReportingInstance().getDsrSkipEntries(srvName, className);
+		return _skipEntries;
+	}
+	private Map<String, Set<String>> _skipEntries;
+
+	protected int getDsrSkipCount()
+	{
+		if (_skipEntries == null)
+			_skipEntries = getDsrSkipEntries();
+
+		int cnt = 0;
+
+		for (Set<String> entry : _skipEntries.values())
+		{
+			cnt += entry.size();
+		}
+		
+		return cnt;
+	}
+
+	protected ResultSetTableModel removeSkippedEntries(ResultSetTableModel rstm, int topRows, Map<String, Set<String>> dsrSkipEntries)
+	{
+		ResultSetTableModel allRemovedRows = new ResultSetTableModel(rstm, rstm.getName() + "_skippedRows", false);
+		
+		for (Entry<String, Set<String>> entry : dsrSkipEntries.entrySet())
+		{
+			String             colName = entry.getKey();
+			Collection<String> values  = entry.getValue();
+
+			List<ArrayList<Object>> removedRows = rstm.removeRows(colName, values);
+
+			//System.out.println("removeSkippedEntries(): removeCnt="+removedRows.size()+", colName='"+colName+"', values='"+values+"'.");
+			//if (!removedRows.isEmpty())
+			//	System.out.println("REMOVED-ROWS: "+removedRows);
+			
+			if ( ! removedRows.isEmpty() )
+				allRemovedRows.addRows(removedRows);
+		}
+		
+		// finally (make sure that we have no more rows than "TOP" was saying
+		// these rows should NOT be part of the returned 'allRemovedRows'
+		if (topRows > 0)
+		{
+			while(rstm.getRowCount() > topRows)
+			{
+				rstm.removeRow(rstm.getRowCount() - 1);
+			}
+		}
+		
+		return allRemovedRows;
+	}
+
+	protected String createSkippedEntriesReport(ResultSetTableModel skipRstm)
+	{
+		String dbxCentralAdminUrl = getReportingInstance().getDbxCentralBaseUrl() + "/admin/admin.html";
+
+		if (skipRstm == null)
+			return "--NO-SKIPPED-ROWS (null)--<br><br> \n";
+		
+		if (skipRstm.getRowCount() == 0)
+		{
+			return "No <i>Skip</i> records was found. Skip records can be defined in DbxCentral under <a href='" + dbxCentralAdminUrl + "' target='_blank'>" + dbxCentralAdminUrl + "</a> or in the report table by pressing <i>'Skip This'</i> links in the below tables.<br> \n";
+		}
+		
+		// Remove column 'SkipThis' or change the header and content to 'Remove This From The Skip Set'
+		if (true)
+		{
+			skipRstm.removeColumn("SkipThis");
+		}
+		
+		// add the content as a "hidden" section that user needs to expand to see
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("<b>Skip Values:</b> The Skip Set contained " + getDsrSkipCount() + " entries, Record that <b>was skipped</b> was: " + skipRstm.getRowCount() + "<br> \n");
+		sb.append("Note: Skip Values can be defined in DbxCentral under <a href='" + dbxCentralAdminUrl + "' target='_blank'>" + dbxCentralAdminUrl + "</a> or in the report table by pressing <i>'Skip This'</i> links in the below tables.<br> \n");
+
+		String skipEntriesHtmlTable    = "<b>Table of the Skip Set.</b> <br>" 
+		                               + getDsrSkipEntriesAsHtmlTable();
+
+		String removedRecordsHtmlTable = "<b>Here is a Table of the " + skipRstm.getRowCount() + " skipped records.</b> <br>" 
+		                               + skipRstm.toHtmlTableString("sortable");
+
+		String htmlText = skipEntriesHtmlTable + removedRecordsHtmlTable;
+		
+		String showHideDiv = createShowHideDiv("skip-section", false, "Show/Hide Skipped entries...", htmlText);
+		sb.append( msOutlookAlternateText(showHideDiv, "Skipped Entries", "") );
+		sb.append("<br>");
+
+		return sb.toString();
+	}
+	//--------------------------------------------------------------------------------
+	// END: DSR - Daily Summary Report methods
+	//--------------------------------------------------------------------------------
+	
+
+	@Override
+	public List<ReportingIndexEntry> getReportingIndexes()
+	{
+		return Collections.emptyList();
+	}
+
+	@Override
+	public void createReportingIndexes(DbxConnection conn)
+	{
+		List<ReportingIndexEntry> indexEntries = getReportingIndexes();
+
+		// Early exit
+		if (indexEntries == null)
+			return;
+		if (indexEntries.isEmpty())
+			return;
+
+		// Loop entries
+		for (ReportingIndexEntry ie : indexEntries)
+		{
+			// Check if the table exists
+			if ( ! DbUtils.checkIfTableExistsNoThrow(conn, null, null, ie.getTableName()) )
+				continue;
+
+			String indexDdl  = "";
+			try
+			{
+				String tableName = ie.getTableName();
+				String indexName = "ix_DSR_" + tableName;
+				String colNames  = "";
+				String ixPostFix = "";
+
+				// Check if index with SAME columns and order already exists
+				// Get a Table entry for this table (the Table entry also holds Index information)
+				boolean indexExists = false;
+				Table tab = Table.create(conn, null, null, tableName);
+				for (Index existingIndex : tab.getIndexes())
+				{
+					if (_logger.isDebugEnabled())
+						_logger.debug("createReportingIndexes(): CHECKING TABLE '" + tableName + "' INDEX '" + existingIndex.getIndexName() + ", with COLUMNS: " + existingIndex.getColumnNames() + ", for matching columns of: " + ie.getIndexColumns());
+					
+					if (existingIndex.getColumnNames().equals(ie.getIndexColumns()))
+					{
+						_logger.debug("An index for table '" + tableName + "' with columns " + ie.getIndexColumns() + " already exists, skipping the create index.");
+						indexExists = true;
+						break;
+					}
+				}
+				if (indexExists)
+					continue;
+
+				// Create index
+				// 1: start to compose DDL
+				String comma = "";
+				for (String colName : ie.getIndexColumns())
+				{
+					colNames += comma + "[" + colName + "]";
+					ixPostFix += "_" + colName.replaceAll("[^a-zA-Z0-9]", ""); // remove anything suspect chars keep only: a-z and numbers
+
+					comma = ", ";
+				}
+				// add "column names" as a "postfix" at the end of the index name (there might be more than one index)
+				indexName += ixPostFix;
+
+				// Create the index
+				if ( ! indexExists )
+				{
+					indexDdl = conn.quotifySqlString("create index [" + indexName + "] on [" + tableName + "] (" + colNames + ")");
+					
+					long startTime = System.currentTimeMillis();
+					try (Statement stmnt = conn.createStatement())
+					{
+						stmnt.executeUpdate(indexDdl);
+					}
+					_logger.info("ReportEntry '" + getClass().getSimpleName() + "'. Created helper index to support Daily Summary Report. SQL='" + indexDdl + "' ExecTime=" + TimeUtils.msDiffNowToTimeStr(startTime));
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("ReportEntry '" + getClass().getSimpleName() + "'. Problems creating a helper index, skipping the error and continuing... SQL=|" + indexDdl + "|.", ex);
+			}
+		}
+	}
+
+	public static class ReportingIndexEntry
+	{
+		private String _tableName;
+		private List<String> _indexColumns;
+
+		public ReportingIndexEntry(String tableName, String... columnNames)
+		{
+			_tableName    = tableName;
+			_indexColumns = Arrays.asList(columnNames);
+		}
+
+		public String getTableName()
+		{
+			return _tableName;
+		}
+
+		public List<String> getIndexColumns()
+		{
+			if (_indexColumns == null)
+				return Collections.emptyList();
+
+			return _indexColumns;
+		}
+	}
 }
+
+//// Create a helper index in the DBMS (if it doesnt already exists)
+//// The index will be called "ix_DSR_SL_" + "tableName"
+//// Columns will be: "all columns in the DBMS where clause" and the "SampleTime" column
+//String indexDdl = "";
+//try
+//{
+//	String tableName = params.getDbmsTableName();
+//	String indexName = "ix_DSR_" + tableName;
+//	String colNames  = "";
+//	String ixPostFix = "";
+//
+//	for (String colName : StringUtil.parseCommaStrToList(params.getDbmsWhereKeyColumnName()))
+//	{
+//		colNames += "[" + colName + "], ";
+//		ixPostFix += "_" + colName.replaceAll("[^a-zA-Z0-9]", ""); // remove anything suspect chars keep onle: a-z and numbers
+//	}
+//	colNames += "[" + params.getDbmsSampleTimeColumnName() + "]";
+//
+//	// add "column names" as a "postfix" at the end of the index name (there might be more than one index)
+//	indexName += ixPostFix;
+//
+//	// Check if index already exists
+//	boolean indexExists = false;
+//	try (ResultSet rs = conn.getMetaData().getIndexInfo(null, null, tableName, false, false))
+//	{
+//		while(rs.next())
+//		{
+//			String ixName = rs.getString("INDEX_NAME");
+//			if (indexName.equalsIgnoreCase(ixName))
+//			{
+//				indexExists = true;
+//				break;
+//			}
+//		}
+//	}
+//	
+//	// Create the index
+//	if ( ! indexExists )
+//	{
+//		indexDdl = conn.quotifySqlString("create index [" + indexName + "] on [" + tableName + "] (" + colNames + ")");
+//		
+//		long startTime = System.currentTimeMillis();
+//		try (Statement stmnt = conn.createStatement())
+//		{
+//			stmnt.executeUpdate(indexDdl);
+//		}
+//		_logger.info("ReportEntry '" + reportEntry.getClass().getSimpleName() + "'. Created helper index to support Daily Summary Report. SQL='" + indexDdl + "' ExecTime=" + TimeUtils.msDiffNowToTimeStr(startTime));
+//	}
+//}
+//catch (SQLException ex)
+//{
+//	_logger.error("ReportEntry '" + reportEntry.getClass().getSimpleName() + "'. Problems creating a helper index, skipping the error and continuing... SQL=|" + indexDdl + "|.", ex);
+//}

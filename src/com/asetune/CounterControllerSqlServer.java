@@ -53,6 +53,8 @@ import com.asetune.cm.sqlserver.CmIndexOpStat;
 import com.asetune.cm.sqlserver.CmIndexPhysical;
 import com.asetune.cm.sqlserver.CmIndexUnused;
 import com.asetune.cm.sqlserver.CmIndexUsage;
+import com.asetune.cm.sqlserver.CmMemoryClerks;
+import com.asetune.cm.sqlserver.CmMemoryGrants;
 import com.asetune.cm.sqlserver.CmOpenTransactions;
 import com.asetune.cm.sqlserver.CmOptimizer;
 import com.asetune.cm.sqlserver.CmOsLatchStats;
@@ -138,6 +140,8 @@ extends CounterControllerAbstract
 		CmSchedulers         .create(counterController, guiController);
 		CmWaitStats          .create(counterController, guiController);
 		CmWaitingTasks       .create(counterController, guiController);
+		CmMemoryClerks       .create(counterController, guiController);
+		CmMemoryGrants       .create(counterController, guiController);
 		CmErrorLog           .create(counterController, guiController);
 		CmOsLatchStats       .create(counterController, guiController);
 		CmPerfCounters       .create(counterController, guiController);

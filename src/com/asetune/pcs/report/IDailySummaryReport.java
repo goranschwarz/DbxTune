@@ -45,6 +45,13 @@ extends AutoCloseable
 	 */
 	void setServerName(String serverName);
 
+//	/**
+//	 * If the DRS needs a MonTable Dictionary this is the method you create it with
+//	 * @return
+//	 */
+//	MonTablesDictionary createMonTablesDictionary();
+	// NOTE: The above was not saving the WaitEvent Descriptions to the PCS... so this may be implemented in the future... right now, lets do it statically
+
 	/**
 	 * Initialize whatever
 	 * @throws Exception 

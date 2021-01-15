@@ -57,6 +57,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
+import java.sql.Timestamp;
+import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -1319,6 +1321,7 @@ public class SwingUtils
 				// Strip of '\n' at the end of Strings
 				if (obj != null && obj instanceof String)
 				{
+					
 					String str = (String) obj;
 					
 					// strip off HTML chars
@@ -1359,11 +1362,24 @@ public class SwingUtils
 					if (tm instanceof ResultSetTableModel)
 					{
 						ResultSetTableModel rstm = (ResultSetTableModel) tm;
-						obj = rstm.toString(obj, null);
+						
+						if (obj != null && obj instanceof Number && rstm.getToStringNumberFormat())
+						{
+							obj = rstm.toString(obj, null);
+						}
+						else if (obj != null && obj instanceof Timestamp && StringUtil.hasValue(rstm.getToStringTimestampFormat()))
+						{
+							obj = rstm.toString(obj, null);
+						}
+//						else
+//						{
+//							obj = rstm.toString(obj, null);
+//						}
 					}
 				}
 				
 				row.add(obj);
+				//System.out.println(" 111 [r="+r+",c="+c+"] "+(obj == null ? "-NULL-" : obj.getClass().getSimpleName())+": obj=|"+obj+"|.");
 			}
 			
 			tableData.add(row);
@@ -1374,6 +1390,8 @@ public class SwingUtils
 		if (doPrefix)
 			cols += prefixColName.length;
 
+		NumberFormat nf = NumberFormat.getInstance();
+		
 		//------------------------------------
 		// Get MAX column length and store in colLength[]
 		// Get MAX newLines/numberOfRows in each cell...
@@ -1396,6 +1414,9 @@ public class SwingUtils
 				Object cellObj = tableData.get(r).get(c);
 				String cellStr = cellObj == null ? "" : cellObj.toString();
 
+				if (cellObj != null && cellObj instanceof Number)
+					cellStr = nf.format(cellObj);
+					
 				// Set number of "rows" within the cell
 				rowColCellLineCount[r][c] = 0;
 				if (cellObj instanceof String[])
@@ -1479,7 +1500,19 @@ public class SwingUtils
 					Object cellObj = tableData.get(r).get(c);
 					String cellStr = cellObj == null ? "" : cellObj.toString();
 	
-					String data = StringUtil.fill(cellStr, colLength[c]);
+					String data;
+					if (cellObj != null && cellObj instanceof Number)
+					{
+						cellStr = nf.format(cellObj);
+						data = StringUtil.right(cellStr, colLength[c]);
+						//System.out.println(">>> [r="+r+",c="+c+"] isNumber: data=|"+data+"|.");
+					}
+					else
+					{
+						data = StringUtil.fill(cellStr, colLength[c]);
+						//System.out.println("  - [r="+r+",c="+c+"] "+(cellObj == null ? "-NULL-" : cellObj.getClass().getSimpleName())+": data=|"+data+"|.");
+					}
+
 					sb.append(colSepData).append(data);
 				}
 				sb.append(colSepData).append(newLine);

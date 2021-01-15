@@ -35,13 +35,9 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
 import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -63,19 +59,15 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.text.JTextComponent;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
-import com.asetune.NormalExitException;
 import com.asetune.Version;
-import com.asetune.gui.MainFrame;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.pcs.MonRecordingInfo;
 import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.report.content.DailySummaryReportContent;
 import com.asetune.pcs.report.content.IReportEntry;
-import com.asetune.pcs.report.content.RecordingInfo;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;

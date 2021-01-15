@@ -112,7 +112,8 @@ _Note:_ Please be gentle with the system :)
 
 ## Overview
 
-FIXME: ... add picture of how Collectors, DbxCentral & Recording databases fits together...
+Here is a picture that tries to describe how Collectors, DbxCentral & Recording databases fits together...
+![](doc/dbxtune-central.png)
 
 
 

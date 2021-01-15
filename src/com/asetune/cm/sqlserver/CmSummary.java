@@ -627,9 +627,12 @@ extends CountersModel
 		if ( ! hasDiffData() )
 			return;
 
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
 		CountersModel cm = this;
 
-		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
 		//-------------------------------------------------------
 		// Blocking Locks
@@ -639,15 +642,13 @@ extends CountersModel
 			Double LockWaits = cm.getAbsValueAsDouble (0, "LockWaits");
 			if (LockWaits != null)
 			{
-				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): LockWaits='"+LockWaits+"'.");
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LockWaits, DEFAULT_alarm_LockWaits);
 
-				if (AlarmHandler.hasInstance())
-				{
-					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LockWaits, DEFAULT_alarm_LockWaits);
-					if (LockWaits.intValue() > threshold)
-						AlarmHandler.getInstance().addAlarm( new AlarmEventBlockingLockAlarm(cm, threshold, LockWaits) );
-				}
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", LockWaits='"+LockWaits+"'.");
+
+				if (LockWaits.intValue() > threshold)
+					AlarmHandler.getInstance().addAlarm( new AlarmEventBlockingLockAlarm(cm, threshold, LockWaits) );
 			}
 		}
 
@@ -660,34 +661,32 @@ extends CountersModel
 			Double oldestOpenTranInSec = cm.getAbsValueAsDouble(0, "oldestOpenTranInSec");
 			if (oldestOpenTranInSec != null)
 			{
-				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): oldestOpenTranInSec='"+oldestOpenTranInSec+"'.");
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestOpenTranInSec, DEFAULT_alarm_oldestOpenTranInSec);
 
-				if (AlarmHandler.hasInstance())
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", oldestOpenTranInSec='"+oldestOpenTranInSec+"'.");
+
+				if (oldestOpenTranInSec.intValue() > threshold)
 				{
-					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestOpenTranInSec, DEFAULT_alarm_oldestOpenTranInSec);
-					if (oldestOpenTranInSec.intValue() > threshold)
-					{
-						// Get OldestTranName
-//						String OldestTranName   = cm.getAbsString(0, "oldestOpenTranName");
-//						String OldestTranDbName = cm.getAbsString(0, "oldestOpenTranDbName");
-//						
-//						// Get config 'skip some transaction names'
-//						String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_oldestOpenTranInSecSkipTranName, DEFAULT_alarm_oldestOpenTranInSecSkipTranName);
+					// Get OldestTranName
+//					String OldestTranName   = cm.getAbsString(0, "oldestOpenTranName");
+//					String OldestTranDbName = cm.getAbsString(0, "oldestOpenTranDbName");
+//					
+//					// Get config 'skip some transaction names'
+//					String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_oldestOpenTranInSecSkipTranName, DEFAULT_alarm_oldestOpenTranInSecSkipTranName);
 //
-//						// send alarm, if...
-//						if (StringUtil.hasValue(skipTranNameRegExp) && StringUtil.hasValue(OldestTranName))
-//						{
-//							if ( ! OldestTranName.matches(skipTranNameRegExp) )
-//								AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, OldestTranDbName, oldestOpenTranInSec, OldestTranName) );
-//						}
-//						else
-//						{
+//					// send alarm, if...
+//					if (StringUtil.hasValue(skipTranNameRegExp) && StringUtil.hasValue(OldestTranName))
+//					{
+//						if ( ! OldestTranName.matches(skipTranNameRegExp) )
 //							AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, OldestTranDbName, oldestOpenTranInSec, OldestTranName) );
-//						}
-						
-						AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, oldestOpenTranInSec) );
-					}
+//					}
+//					else
+//					{
+//						AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, OldestTranDbName, oldestOpenTranInSec, OldestTranName) );
+//					}
+					
+					AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, oldestOpenTranInSec) );
 				}
 			}
 		}
@@ -701,15 +700,13 @@ extends CountersModel
 //			Double fullTranslogCount = cm.getAbsValueAsDouble(0, "fullTranslogCount");
 //			if (fullTranslogCount != null)
 //			{
-//				if (debugPrint || _logger.isDebugEnabled())
-//					System.out.println("##### sendAlarmRequest("+cm.getName()+"): fullTranslogCount='"+fullTranslogCount+"'.");
+//				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_fullTranslogCount, DEFAULT_alarm_fullTranslogCount);
 //
-//				if (AlarmHandler.hasInstance())
-//				{
-//					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_fullTranslogCount, DEFAULT_alarm_fullTranslogCount);
-//					if (fullTranslogCount.intValue() > threshold)
-//						AlarmHandler.getInstance().addAlarm( new AlarmEventFullTranLog(cm, threshold, fullTranslogCount) );
-//				}
+//				if (debugPrint || _logger.isDebugEnabled())
+//					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", fullTranslogCount='"+fullTranslogCount+"'.");
+//
+//				if (fullTranslogCount.intValue() > threshold)
+//					AlarmHandler.getInstance().addAlarm( new AlarmEventFullTranLog(cm, threshold, fullTranslogCount) );
 //			}
 //		}
 	}

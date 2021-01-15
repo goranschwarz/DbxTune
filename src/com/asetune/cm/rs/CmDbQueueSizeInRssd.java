@@ -490,7 +490,7 @@ extends CountersModel
 
 		CountersModel cm = this;
 
-		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
 		for (int r=0; r<cm.getAbsRowCount(); r++)
 		{
@@ -506,10 +506,11 @@ extends CountersModel
 				
 				if (size != null)
 				{
-					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): name='"+name+"', type='"+type+"', size="+size+".");
-
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_size, DEFAULT_alarm_size);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", name='"+name+"', type='"+type+"', size="+size+".");
+
 					if (size.intValue() > threshold)
 					{
 						AlarmHandler.getInstance().addAlarm( new AlarmEventRsDbQueueSize(cm, threshold, name, type, size.intValue()) );

@@ -98,6 +98,19 @@ public interface ISqlCaptureBroker
 	 */
 	public List<String> checkTableDdl(DbxConnection conn, DatabaseMetaData dbmd, String tabName);
 
+	/**
+	 * Check if table columns are ok, or if we need to DROP table, return true and the table will be dropped, then created again in next step.
+	 * <p>
+	 * Use this during upgrade etc... that is if <code>checkTableDdl()</code> isnt enought, but you simply want to drop and create the table again.
+	 * 
+	 * @param conn
+	 * @param dbmd
+	 * @param tabName
+	 * 
+	 * @return true = drop the table, false = do nothing.
+	 */
+	public boolean checkForDropTableDdl(DbxConnection conn, DatabaseMetaData dbmd, String tabName);
+
 	public int doSqlCapture(DbxConnection conn, PersistentCounterHandler persistentCounterHandler);
 
 	public String getInsertStatement(DbxConnection conn, String tabName);

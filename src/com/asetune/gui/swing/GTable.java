@@ -401,34 +401,6 @@ extends JXTable
 		setDefaultRenderer(BigDecimal.class, new DefaultTableRenderer(sv, JLabel.RIGHT));
 	}
 
-	@Override
-	// NOTE: this is grabbed from "super" 
-	protected void createDefaultRenderers() 
-	{
-		// super.createDefaultRenderers();
-
-		defaultRenderersByColumnClass = new UIDefaults(8, 0.75f);
-
-		// configured default table renderer (internally LabelProvider)
-		setDefaultRenderer(Object.class, new DefaultTableRendererNullAware());
-		setDefaultRenderer(Number.class, new DefaultTableRendererNullAware(StringValues.NUMBER_TO_STRING, JLabel.RIGHT));
-		setDefaultRenderer(Date.class,   new DefaultTableRendererNullAware(StringValues.DATE_TO_STRING));
-
-		// use the same center aligned default for Image/Icon
-		TableCellRenderer renderer = new DefaultTableRendererNullAware(new MappedValue(StringValues.EMPTY, IconValues.ICON), JLabel.CENTER);
-		setDefaultRenderer(Icon.class, renderer);
-		setDefaultRenderer(ImageIcon.class, renderer);
-
-		// use a ButtonProvider for booleans
-		setDefaultRenderer(Boolean.class, new DefaultTableRendererNullAware(new CheckBoxProvider()));
-
-		try {
-			setDefaultRenderer(URI.class, new DefaultTableRendererNullAware(new HyperlinkProvider(new HyperlinkAction())) );
-		} catch (Exception e) {
-			// nothing to do - either headless or Desktop not supported
-		}
-	}
-
 	private class DefaultTableRendererNullAware extends DefaultTableRenderer
 	{
 		private static final long serialVersionUID = 1L;
@@ -464,13 +436,38 @@ extends JXTable
 		
 	}
 
-	private void init()
+	@Override
+	// NOTE: this is grabbed from "super" 
+	protected void createDefaultRenderers() 
 	{
-		// wait 1 seconds before column layout is saved, this simply means less config writes...
-		_columnLayoutTimer = new Timer(1000, new ColumnLayoutTimerAction(this));
-//		_thisTable = this;
+		// super.createDefaultRenderers();
 
-		
+		defaultRenderersByColumnClass = new UIDefaults(8, 0.75f);
+
+		// configured default table renderer (internally LabelProvider)
+		setDefaultRenderer(Object.class, new DefaultTableRendererNullAware());
+		setDefaultRenderer(Number.class, new DefaultTableRendererNullAware(StringValues.NUMBER_TO_STRING, JLabel.RIGHT));
+		setDefaultRenderer(Date.class,   new DefaultTableRendererNullAware(StringValues.DATE_TO_STRING));
+
+		// use the same center aligned default for Image/Icon
+		TableCellRenderer renderer = new DefaultTableRendererNullAware(new MappedValue(StringValues.EMPTY, IconValues.ICON), JLabel.CENTER);
+		setDefaultRenderer(Icon.class, renderer);
+		setDefaultRenderer(ImageIcon.class, renderer);
+
+		// use a ButtonProvider for booleans
+		setDefaultRenderer(Boolean.class, new DefaultTableRendererNullAware(new CheckBoxProvider()));
+
+		try {
+			setDefaultRenderer(URI.class, new DefaultTableRendererNullAware(new HyperlinkProvider(new HyperlinkAction())) );
+		} catch (Exception e) {
+			// nothing to do - either headless or Desktop not supported
+		}
+	}
+
+	public void setDefaultRenderers()
+	{
+		createDefaultRenderers();
+
 		//
 		// Cell renderer changes to "Rate" Counters
 		//
@@ -484,7 +481,9 @@ extends JXTable
 		// Below is Cell renderer for:  java.sql.Timestamp, java.sql.Date, java.sql.Time
 		// ---------------------------------------------------------------------------------------------
 
+		//-------------------------------------------
 		// java.sql.Timestamp format
+		//-------------------------------------------
 		@SuppressWarnings("serial")
 		StringValue svTimestamp = new StringValue() 
 		{
@@ -514,7 +513,9 @@ extends JXTable
 		};
 		setDefaultRenderer(java.sql.Timestamp.class, new DefaultTableRenderer(svTimestamp));
 
+		//-------------------------------------------
 		// java.sql.Date format
+		//-------------------------------------------
 		@SuppressWarnings("serial")
 		StringValue svDate = new StringValue() 
 		{
@@ -543,7 +544,9 @@ extends JXTable
 		};
 		setDefaultRenderer(java.sql.Date.class, new DefaultTableRenderer(svDate));
 
+		//-------------------------------------------
 		// java.sql.Time format
+		//-------------------------------------------
 		@SuppressWarnings("serial")
 		StringValue svTime = new StringValue() 
 		{
@@ -571,7 +574,19 @@ extends JXTable
 			}
 		};
 		setDefaultRenderer(java.sql.Time.class, new DefaultTableRenderer(svTime));
+	}
 
+
+	private void init()
+	{
+		// wait 1 seconds before column layout is saved, this simply means less config writes...
+		_columnLayoutTimer = new Timer(1000, new ColumnLayoutTimerAction(this));
+//		_thisTable = this;
+
+		
+		// Set various Cell renders 
+		setDefaultRenderers();
+		
 		//---------------------------------------------
 		// NULL Values: SET BACKGROUND COLOR
 		//---------------------------------------------
@@ -1578,10 +1593,34 @@ extends JXTable
 //					if ( _cm != null )
 //						toolTip = _cm.getToolTipTextOnTableColumn(colName);
 				}
+				
+				if (StringUtil.hasValue(toolTip))
+				{
+					boolean useFocusableToolTip = false;
+					
+					if (toolTip.length() > 300)
+						useFocusableToolTip = true;
+
+					if (toolTip.contains("\n") || toolTip.contains("<br>"))
+						useFocusableToolTip = true;
+
+					if (useFocusableToolTip)
+					{
+						if (_focusableTip == null) 
+							_focusableTip = new FocusableTip(this);
+						
+//						_focusableTip.setImageBase(imageBase);
+						_focusableTip.toolTipRequested(e, toolTip);
+						
+						return null;
+					}
+				}
+
 				return toolTip;
 			}
 		};
 	}
+
 	
 	public String getToolTipTextForColumn(String colname)
 	{
@@ -1648,7 +1687,7 @@ extends JXTable
 							if (ttSupplier != null && ttSupplier instanceof ToolTipHyperlinkResolver)
 								resolver = (ToolTipHyperlinkResolver) ttSupplier;
 						}
-
+						
 						_focusableTip = new FocusableTip(this, null, resolver);
 					}
 
@@ -2340,6 +2379,9 @@ extends JXTable
 			int xPos = (r.width - maxStrWidth) / 2;
 			int yPos = (int) (r.height - ((r.height - fm.getHeight()) / 2) * 1.3);
 
+			if (xPos < 0)
+				xPos = 25; // Near Left edge of the Component
+			
 			int spConfigureCount = 0;
 
 			// Print all the lines

@@ -22,7 +22,6 @@
 package com.asetune.pcs.report.content.rs;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 
 import com.asetune.pcs.report.DailySummaryReportAbstract;
@@ -41,6 +40,19 @@ public class RsRssdQueueSize extends AseAbstract
 	}
 
 	@Override
+	public boolean hasShortMessageText()
+	{
+		return true;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
+		writeMessageText(w);
+	}
+
+	@Override
 	public void writeMessageText(Writer sb)
 	throws IOException
 	{
@@ -50,20 +62,6 @@ public class RsRssdQueueSize extends AseAbstract
 
 		_CmDbQueueSizeInRssd_RssdQueueSize.writeHtmlContent(sb, null, null);
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Queue Sizes on the Stable Device.",
-//				"CmDbQueueSizeInRssd_RssdQueueSize"
-//				));
-//
-//		sb.append(_CmDbQueueSizeInRssd_RssdQueueSize.getHtmlContent(null, null));
-//		
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()

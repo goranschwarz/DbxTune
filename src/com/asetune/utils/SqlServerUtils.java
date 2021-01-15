@@ -174,4 +174,51 @@ public class SqlServerUtils
 		}
 		return ts;
 	}
+
+	/**
+	 * Get LIVE Query plan from SQL-Server
+	 * 
+	 * @param conn
+	 * @param spid
+	 * @return
+	 */
+	public static String getLiveQueryPlanNoThrow(DbxConnection conn, int spid)
+	{
+		try
+		{
+			return getLiveQueryPlan(conn, spid);
+		}
+		catch (Exception e)
+		{
+			_logger.info("Problems executing sql='select query_plan from sys.dm_exec_query_statistics_xml("+spid+")'. Caught: " + e);
+			return null;
+		}
+	}
+
+	/**
+	 * Get LIVE Query plan from SQL-Server
+	 * 
+	 * @param conn
+	 * @param spid
+	 * @return
+	 * @throws SQLException
+	 */
+	public static String getLiveQueryPlan(DbxConnection conn, int spid)
+	throws SQLException
+	{
+		String sql = "select query_plan from sys.dm_exec_query_statistics_xml(?)";
+		String str = "";
+		
+		try (PreparedStatement pstmnt = conn.prepareStatement(sql))
+		{
+			pstmnt.setInt(1, spid);
+			try (ResultSet rs = pstmnt.executeQuery())
+			{
+				while(rs.next())
+					str = str + rs.getString(1);
+			}
+		}
+		
+		return str;
+	}
 }

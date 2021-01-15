@@ -88,9 +88,14 @@ extends HostMonitor
 //			mon = new MonitorMeminfoHp();
 //			mon.setConnectedToVendor(OsVendor.Hp);
 //		}
+		else if (osname.startsWith("Windows-"))
+		{
+			mon = new MonitorMeminfoWindows();
+			mon.setConnectedToVendor(OsVendor.Windows);
+		}					
 		else
 		{
-			throw new Exception("The Unix system '"+osname+"', is not supported by the module 'MonitorMeminfo' for the moment.");
+			throw new Exception("The OS Name '"+osname+"', is not supported by the module 'MonitorMeminfo' for the moment.");
 		}
 
 		mon.setConnection(conn);

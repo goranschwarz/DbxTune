@@ -49,6 +49,13 @@ public abstract class ReportChartAbstract implements IReportChart
 //	public final static String SQL_WHERE_PREFIX = "SQL-WHERE:";
 	public final static String SKIP_COLNAME_WITH_VALUE_ABOVE = "SKIP_COLNAME_WITH_VALUE_ABOVE:";
 	
+//	public final static int CHART_HEIGHT = 300;  // 100%
+//	public final static int CHART_WIDTH  = 1900; // 100%
+	public final static int CHART_HEIGHT = 240;  // 80%
+	public final static int CHART_WIDTH  = 1500; // 80% 
+//	public final static int CHART_HEIGHT = 210;  // 70%
+//	public final static int CHART_WIDTH  = 1300; // 70%
+	
 	private JFreeChart _chart;
 	private Dataset    _dataset;
 
@@ -332,8 +339,8 @@ public abstract class ReportChartAbstract implements IReportChart
 
 			// writeChartAsPNG produces the same size with compression="default" (just using with, height), compression=0 and compression=9
 			// So no difference here... 
-			int     width       = 1900;
-			int     height      = 300;
+			int     width       = CHART_WIDTH;
+			int     height      = CHART_HEIGHT;
 			boolean encodeAlpha = false;
 			int     compression = 0;
 

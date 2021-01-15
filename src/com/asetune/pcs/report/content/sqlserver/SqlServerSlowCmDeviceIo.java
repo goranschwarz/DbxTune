@@ -22,7 +22,6 @@
 package com.asetune.pcs.report.content.sqlserver;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 
 import com.asetune.gui.ResultSetTableModel;
@@ -42,6 +41,18 @@ extends SqlServerAbstract
 	public SqlServerSlowCmDeviceIo(DailySummaryReportAbstract reportingInstance)
 	{
 		super(reportingInstance);
+	}
+
+	@Override
+	public boolean hasShortMessageText()
+	{
+		return false;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
 	}
 
 	@Override
@@ -69,44 +80,6 @@ extends SqlServerAbstract
 			_CmDeviceIo_SvcTimeW         .writeHtmlContent(sb, null, null);
 		}
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-////		if (_shortRstm.getRowCount() == 0)
-////		{
-////			sb.append("No rows found <br>\n");
-////		}
-////		else
-////		{
-//			// Get a description of this section, and column names
-//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//
-//			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-////			sb.append(_shortRstm.toHtmlTableString("sortable"));
-//			sb.append(toHtmlTable(_shortRstm));
-////		}
-//
-//		if (_CmDeviceIo_IoRW != null)
-//		{
-//			sb.append(getDbxCentralLinkWithDescForGraphs(true, "Below are Graphs/Charts with various information that can help you decide how the IO Subsystem is handling the load.",
-//					"CmDeviceIo_IoRW",
-//					"CmDeviceIo_SvcTimeRW",
-//					"CmDeviceIo_SvcTimeR",
-//					"CmDeviceIo_SvcTimeW"
-//					));
-//
-//			sb.append(_CmDeviceIo_IoRW             .getHtmlContent(null, null));
-//			sb.append(_CmDeviceIo_SvcTimeRW_noLimit.getHtmlContent(null, null));
-//			sb.append(_CmDeviceIo_SvcTimeRW        .getHtmlContent(null, null));
-//			sb.append(_CmDeviceIo_SvcTimeR         .getHtmlContent(null, null));
-//			sb.append(_CmDeviceIo_SvcTimeW         .getHtmlContent(null, null));
-//		}
-//
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()

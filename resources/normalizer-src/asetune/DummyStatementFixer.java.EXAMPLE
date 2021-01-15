@@ -1,0 +1,42 @@
+package asetune;
+
+import com.asetune.sql.norm.IStatementFixer;
+import com.asetune.sql.norm.IUserDefinedNormalizer;
+import com.asetune.utils.StringUtil;
+
+public class DummyStatementFixer
+implements IStatementFixer
+{
+	@Override
+	public String getName()
+	{
+		return "DummyStatementFixer";
+	}
+
+	@Override
+	public String getDescrition()
+	{
+		return "Some fancy description";
+	}
+
+	@Override
+	public String getComment()
+	{
+		return "Replaced: 'Some Text' with 'A Better text'";
+	}
+
+	@Override
+	public boolean isRewritable(String sqlText)
+	{
+		return sqlText.indexOf("Some text") != -1;
+	}
+
+	@Override
+	public String rewrite(String sqlText)
+	{
+		// FROM: .... "some constant string" ....
+		// TO:   .... 'some constant string' ....
+
+		return sqlText.replace("Some text", "A Better text");
+	}
+}

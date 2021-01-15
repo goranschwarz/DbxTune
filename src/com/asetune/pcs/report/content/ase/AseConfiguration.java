@@ -22,7 +22,6 @@
 package com.asetune.pcs.report.content.ase;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 
 import com.asetune.gui.ResultSetTableModel;
@@ -43,6 +42,18 @@ public class AseConfiguration extends AseAbstract
 	}
 
 	@Override
+	public boolean hasShortMessageText()
+	{
+		return false;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
+	}
+
+	@Override
 	public void writeMessageText(Writer sb)
 	throws IOException
 	{
@@ -58,7 +69,7 @@ public class AseConfiguration extends AseAbstract
 			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
 
 			// Create a default renderer
-			TableStringRenderer tableRender = new ResultSetTableModel.TableStringRenderer()
+			TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
 			{
 				@Override
 				public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
@@ -73,43 +84,6 @@ public class AseConfiguration extends AseAbstract
 			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, tableRender));
 		}
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		if (_shortRstm.getRowCount() == 0)
-//		{
-//			sb.append("No rows found <br>\n");
-//		}
-//		else
-//		{
-//			// Get a description of this section, and column names
-//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//
-//			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-////			sb.append(_shortRstm.toHtmlTableString("sortable"));
-////			sb.append(toHtmlTable(_shortRstm));
-//
-//			// Create a default renderer
-//			TableStringRenderer tableRender = new ResultSetTableModel.TableStringRenderer()
-//			{
-//				@Override
-//				public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
-//				{
-//					if ("Pending".equals(colName) && "true".equalsIgnoreCase(strVal))
-//					{
-//						return "<span style='background-color:red;'>" + strVal + "</span>";
-//					}
-//					return strVal;
-//				}
-//			};
-//			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, tableRender));
-//		}
-//
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()

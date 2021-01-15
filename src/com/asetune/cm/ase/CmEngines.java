@@ -704,9 +704,12 @@ extends CountersModel
 		if ( ! hasRateData() )
 			return;
 
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
 		CountersModel cm = this; // Do this only to make it easier to "copy" this code into a User Defined Interrogater
 
-		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
 		//-------------------------------------------------------
 		// CPU Usage
@@ -740,15 +743,13 @@ extends CountersModel
 
 			if (NonIdleCPUTimePct != null)
 			{
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_CPUTime, DEFAULT_alarm_CPUTime);
+				
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): NonIdleCPUTimePct='"+NonIdleCPUTimePct+"'.");
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", NonIdleCPUTimePct='"+NonIdleCPUTimePct+"'.");
 
-				if (AlarmHandler.hasInstance())
-				{
-					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_CPUTime, DEFAULT_alarm_CPUTime);
-					if (NonIdleCPUTimePct.intValue() > threshold)
-						AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, threshold, CpuType.TOTAL_CPU, NonIdleCPUTimePct, UserCPUTimePct, SystemCPUTimePct, IdleCPUTimePct) );
-				}
+				if (NonIdleCPUTimePct.intValue() > threshold)
+					AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, threshold, CpuType.TOTAL_CPU, NonIdleCPUTimePct, UserCPUTimePct, SystemCPUTimePct, IdleCPUTimePct) );
 			}
 		}
 	}

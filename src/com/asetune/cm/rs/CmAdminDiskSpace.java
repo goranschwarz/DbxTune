@@ -229,10 +229,10 @@ extends CountersModel
 			mtd.addColumn("disk_space", "Used Segs",     "<html>Number of <b>used</b> segments in MB<br>Note 1: 0 means it has never been used<br>Note 2: If it has ever been used it can not go below 1, even if it's empty.</html>");
 			mtd.addColumn("disk_space", "State",         "<html>In what <i>state</i> the Partition is in.<br>"
 					+ "<ul>"
-					+ "  <li>ON-LINE  – The device is normal</li>"
-					+ "  <li>OFF-LINE – The device cannot be found</li>"
-					+ "  <li>DROPPED  – The device has been dropped but has not disappeared (some queues are still using it)</li>"
-					+ "  <li>AUTO     – The device is automatically resizable. See Automatically Resizable Partitions in the Replication Server Administration Guide Volume 1.</li>"
+					+ "  <li>ON-LINE  ï¿½ The device is normal</li>"
+					+ "  <li>OFF-LINE ï¿½ The device cannot be found</li>"
+					+ "  <li>DROPPED  ï¿½ The device has been dropped but has not disappeared (some queues are still using it)</li>"
+					+ "  <li>AUTO     ï¿½ The device is automatically resizable. See Automatically Resizable Partitions in the Replication Server Administration Guide Volume 1.</li>"
 					+ "</ul>"
 					+ "</html>");
 		}
@@ -307,7 +307,7 @@ extends CountersModel
 
 		CountersModel cm = this;
 
-		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
 		//-------------------------------------------------------
 		// Space Used in Segs (MB)
@@ -324,10 +324,11 @@ extends CountersModel
 				int usedSpaceInMb = UsedSegs.intValue();
 				int freeSpaceInMb = TotalSegs.intValue() - UsedSegs.intValue();
 
-				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): usedSpaceInMb="+usedSpaceInMb+", freeSpaceInMb="+freeSpaceInMb+", usedPct="+usedPct+".");
-
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_SpaceUsedSegs, DEFAULT_alarm_SpaceUsedSegs);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", usedSpaceInMb="+usedSpaceInMb+", freeSpaceInMb="+freeSpaceInMb+", usedPct="+usedPct+".");
+
 				if (usedSpaceInMb > threshold)
 				{
 					AlarmHandler.getInstance().addAlarm( new AlarmEventRsSdUsage(cm, threshold, "USED_SEGS", usedSpaceInMb, freeSpaceInMb, usedPct.doubleValue()) );

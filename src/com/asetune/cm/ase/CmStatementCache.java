@@ -418,7 +418,7 @@ extends CountersModel
 
 		CountersModel cm = this;
 
-		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
 		//-------------------------------------------------------
 		// CacheHitPct
@@ -429,10 +429,11 @@ extends CountersModel
 			Double CacheHitPct = cm.getRateValueAsDouble (0, "CacheHitPct");
 			if (CacheHitPct != null)
 			{
-				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): CacheHitPct='"+CacheHitPct+"'.");
-
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_CacheHitPct, DEFAULT_alarm_CacheHitPct);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", CacheHitPct='"+CacheHitPct+"'.");
+
 				if (CacheHitPct.intValue() < threshold)
 				{
 					Double TotalSizeKB  = cm.getAbsValueAsDouble (0, "TotalSizeKB");

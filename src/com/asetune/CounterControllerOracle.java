@@ -28,9 +28,11 @@ import java.sql.Timestamp;
 import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.oracle.CmExecutionTime;
 import com.asetune.cm.oracle.CmIoStatFile;
 import com.asetune.cm.oracle.CmIoStatFunction;
 import com.asetune.cm.oracle.CmSessions;
+import com.asetune.cm.oracle.CmSqlStats;
 import com.asetune.cm.oracle.CmSummary;
 import com.asetune.cm.oracle.CmSysStat;
 import com.asetune.cm.oracle.CmSystemEvent;
@@ -93,6 +95,9 @@ extends CounterControllerAbstract
 		CmSessions          .create(counterController, guiController);
 		CmSystemEvent       .create(counterController, guiController);
 		CmSysStat           .create(counterController, guiController);
+		CmExecutionTime     .create(counterController, guiController);
+		CmSqlStats          .create(counterController, guiController);
+		
 		CmIoStatFunction    .create(counterController, guiController);
 		CmIoStatFile        .create(counterController, guiController);
 

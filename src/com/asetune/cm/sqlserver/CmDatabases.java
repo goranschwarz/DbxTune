@@ -65,6 +65,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
+import com.asetune.utils.CollectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
@@ -490,11 +491,11 @@ extends CountersModel
 //						"  <li><code>used pages</code>       - number of pages used by the object, which may include index pages if you selected index IDs based on the input parameters.<br>"
 //						                                    + "The value for used pages that spaceusage returns when you specify index_id = 1 (that is, for all-pages clustered indexes) is the used page count for the index layer of the clustered index. However, the value the used_pages function returns when you specify index_id = 1 includes the used page counts for the data and the index layers.</li>" +
 //						"  <li><code>data pages</code>       - number of data pages used by the object, which may include index pages if you selected index IDs based on the input parameters.</li>" +
-//						"  <li><code>index pages</code>      - index pages – number of index-only pages, if the input parameters specified processing indexes on the objects. To determine the number of pages used for only the index-level pages, subtract the number of large object (LOB) pages from the number of index pages.</li>" +
+//						"  <li><code>index pages</code>      - index pages ï¿½ number of index-only pages, if the input parameters specified processing indexes on the objects. To determine the number of pages used for only the index-level pages, subtract the number of large object (LOB) pages from the number of index pages.</li>" +
 //						"  <li><code>oam pages</code>        - number of OAM pages for all OAM chains, as selected by the input parameters.<br>"
 //						                                    + "For example, if you specify:<br>"
 //						                                    + "<code>spaceusage(database_id, object_id, index_id)</code><br>"
-//						                                    + "oam pages indicates the number of OAM pages found for this index and any of its local index partitions. If you run spaceusage against a specific object, oam pages returns the amount of overhead for the extra pages used for this object’s space management.<br>"
+//						                                    + "oam pages indicates the number of OAM pages found for this index and any of its local index partitions. If you run spaceusage against a specific object, oam pages returns the amount of overhead for the extra pages used for this objectï¿½s space management.<br>"
 //						                                    + "When you execute spaceusage for an <b>entire database</i>, oam pages returns the total overhead for the number of OAM pages needed to track space across all objects, and their off-row LOB columns.</li>" +
 //						"  <li><code>allocation units</code> - number of allocation units that hold one or more extents for the specified object, index, or partition. allocation units indicates how many allocation units (or pages) Adaptive Server must scan while accessing all the pages of that object, index, or partition.<br>"
 //						                                    + "When you run spaceusage against the <b>entire database</b>, allocation units returns the total number of allocation units reserving space for an object. However, because Adaptive Server can share allocation units across objects, this field might show a number greater than the total number of allocation units in the entire database.</li>" +
@@ -545,7 +546,7 @@ extends CountersModel
 //			mtd.addColumn("monOpenDatabases", "IndexMb",
 //					"<html>" +
 //						"This is 'index pages' represented as MB instead of Pages, output from the function <code>spaceusage(dbid)</code>.<br>" +
-//						"<code>index pages</code> - index pages – number of index-only pages, if the input parameters specified processing indexes on the objects. To determine the number of pages used for only the index-level pages, subtract the number of large object (LOB) pages from the number of index pages.<br>" +
+//						"<code>index pages</code> - index pages ï¿½ number of index-only pages, if the input parameters specified processing indexes on the objects. To determine the number of pages used for only the index-level pages, subtract the number of large object (LOB) pages from the number of index pages.<br>" +
 //						"<b>Formula</b>: function: spaceusage(dbid)<br>" +
 //					"</html>");
 //
@@ -605,7 +606,7 @@ extends CountersModel
 //			mtd.addColumn("monOpenDatabases", "IndexPages",
 //					"<html>" +
 //						"This is 'index pages' output from the function <code>spaceusage(dbid)</code>.<br>" +
-//						"<code>index pages</code> - index pages – number of index-only pages, if the input parameters specified processing indexes on the objects. To determine the number of pages used for only the index-level pages, subtract the number of large object (LOB) pages from the number of index pages.<br>" +
+//						"<code>index pages</code> - index pages ï¿½ number of index-only pages, if the input parameters specified processing indexes on the objects. To determine the number of pages used for only the index-level pages, subtract the number of large object (LOB) pages from the number of index pages.<br>" +
 //						"<b>Formula</b>: function: spaceusage(dbid)<br>" +
 ////						"<b>Note</b>: if 'Spaceusage in MB' is checked, this will be in MB, check column 'RawSpaceUsage' for the <i>raw</i> values.<br>" +
 //					"</html>");
@@ -648,7 +649,7 @@ extends CountersModel
 //						"<code>oam pages</code> - number of OAM pages for all OAM chains, as selected by the input parameters.<br>" +
 //						"For example, if you specify:<br>" +
 //						"<code>spaceusage(database_id, object_id, index_id)</code><br>" +
-//						"oam pages indicates the number of OAM pages found for this index and any of its local index partitions. If you run spaceusage against a specific object, oam pages returns the amount of overhead for the extra pages used for this object’s space management.<br>" +
+//						"oam pages indicates the number of OAM pages found for this index and any of its local index partitions. If you run spaceusage against a specific object, oam pages returns the amount of overhead for the extra pages used for this objectï¿½s space management.<br>" +
 //						"When you execute spaceusage for an <b>entire database</i>, oam pages returns the total overhead for the number of OAM pages needed to track space across all objects, and their off-row LOB columns.<br>" +
 //						"<b>Formula</b>: function: spaceusage(dbid)<br>" +
 ////						"<b>Note</b>: if 'Spaceusage in MB' is checked, this will be in MB, check column 'RawSpaceUsage' for the <i>raw</i> values.<br>" +
@@ -1774,10 +1775,11 @@ extends CountersModel
 				Double OldestTranInSeconds = cm.getAbsValueAsDouble(r, "OldestTranInSeconds");
 				if (OldestTranInSeconds != null)
 				{
-					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', OldestTranInSeconds='"+OldestTranInSeconds+"'.");
-
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_OldestTranInSeconds, DEFAULT_alarm_OldestTranInSeconds);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", dbname='"+dbname+"', OldestTranInSeconds='"+OldestTranInSeconds+"'.");
+
 					if (OldestTranInSeconds.intValue() > threshold)
 					{
 						// Get OldestTranName
@@ -1886,6 +1888,10 @@ extends CountersModel
 					val = -1.0;
 				
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastDbBackupAgeInHours, DEFAULT_alarm_LastDbBackupAgeInHours);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): LastDbBackupAgeInHours -- dbname='"+dbname+"', threshold="+threshold+", val='"+val+"'.");
+
 				if (val.intValue() > threshold || val.intValue() < 0)
 				{
 					// Get config 'skip some transaction names'
@@ -1926,6 +1932,10 @@ extends CountersModel
 					val = -1.0;
 				
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastLogBackupAgeInHours, DEFAULT_alarm_LastLogBackupAgeInHours);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): LastLogBackupAgeInHours -- dbname='"+dbname+"', threshold="+threshold+", val='"+val+"'.");
+
 				if (val.intValue() > threshold || val.intValue() < 0)
 				{
 					// Get config 'skip some transaction names'
@@ -1963,6 +1973,10 @@ extends CountersModel
 				Double freeMb     = cm.getAbsValueAsDouble(r, "DataSizeFreeInMb");
 				Double usedPct    = cm.getAbsValueAsDouble(r, "DataSizeUsedPct");
 				Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LowDbFreeSpaceInMb); // This uses dbname.matches(map:anyKey)
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): LowDbFreeSpaceInMb -- dbname='"+dbname+"', threshold="+threshold+", freeMb='"+freeMb+"', usedPct='"+usedPct+"'.");
+
 				if (freeMb != null && usedPct != null && threshold != null)
 				{
 					if (freeMb.intValue() < threshold.intValue())
@@ -1986,6 +2000,10 @@ extends CountersModel
 				Double freeMb     = cm.getAbsValueAsDouble(r, "LogSizeFreeInMb");
 				Double usedPct    = cm.getAbsValueAsDouble(r, "LogSizeUsedPct");
 				Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LowLogFreeSpaceInMb); // This uses dbname.matches(map:anyKey)
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): LowLogFreeSpaceInMb -- dbname='"+dbname+"', threshold="+threshold+", freeMb='"+freeMb+"', usedPct='"+usedPct+"'.");
+
 				if (freeMb != null && usedPct != null && threshold != null)
 				{
 					if (freeMb.intValue() < threshold.intValue())
@@ -2009,6 +2027,10 @@ extends CountersModel
 				Double freeMb     = cm.getAbsValueAsDouble(r, "DataSizeFreeInMb");
 				Double usedPct    = cm.getAbsValueAsDouble(r, "DataSizeUsedPct");
 				Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LowDbFreeSpaceInPct); // This uses dbname.matches(map:anyKey)
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): LowDbFreeSpaceInPct -- dbname='"+dbname+"', threshold="+threshold+", freeMb='"+freeMb+"', usedPct='"+usedPct+"'.");
+
 				if (freeMb != null && usedPct != null && threshold != null)
 				{
 					if (usedPct > threshold.doubleValue())
@@ -2032,6 +2054,10 @@ extends CountersModel
 				Double freeMb     = cm.getAbsValueAsDouble(r, "LogSizeFreeInMb");
 				Double usedPct    = cm.getAbsValueAsDouble(r, "LogSizeUsedPct");
 				Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LowLogFreeSpaceInPct); // This uses dbname.matches(map:anyKey)
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): LowLogFreeSpaceInPct -- dbname='"+dbname+"', threshold="+threshold+", freeMb='"+freeMb+"', usedPct='"+usedPct+"'.");
+
 				if (freeMb != null && usedPct != null && threshold != null)
 				{
 					if (usedPct > threshold.doubleValue())
@@ -2069,7 +2095,10 @@ extends CountersModel
 				if (dataUsedPct != null && logUsedPct != null) usedPct = Math.max(dataUsedPct, logUsedPct);
 				
 				Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LowOsDiskFreeSpaceInMb); // This uses dbname.matches(map:anyKey)
-	
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): LowOsDiskFreeSpaceInMb -- dbname='"+dbname+"', threshold="+threshold+", freeMb='"+freeMb+"', usedPct='"+usedPct+"'.");
+
 				if (freeMb != -99d && usedPct != -99d && threshold != null)
 				{
 					if (freeMb.intValue() < threshold.intValue()) // FREE-MB CHECK
@@ -2128,6 +2157,9 @@ extends CountersModel
 				
 				Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LowOsDiskFreeSpaceInPct); // This uses dbname.matches(map:anyKey)
 	
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): LowOsDiskFreeSpaceInPct -- dbname='"+dbname+"', threshold="+threshold+", freeMb='"+freeMb+"', usedPct='"+usedPct+"'.");
+
 				if (freeMb != -99d && usedPct != -99d && threshold != null)
 				{
 					if (usedPct > threshold.doubleValue()) // Percent CHECK
@@ -2229,13 +2261,32 @@ extends CountersModel
     	if (num != null)
     		return num;
 
+//    	// Check all key in the match and check if they match the REGEXP in the key of the map
+//    	for (String key : map.keySet())
+//		{
+//			if (dbname.matches(key))
+//				return map.get(key);
+//		}
+    	
     	// Check all key in the match and check if they match the REGEXP in the key of the map
     	for (String key : map.keySet())
 		{
 			if (dbname.matches(key))
-				return map.get(key);
+			{
+				Number val= map.get(key);
+				
+				if (_logger.isDebugEnabled())
+					_logger.debug("<<<--  <<-MATCH: getDbFreeSpaceThreshold() dbname='" + dbname + "', matches='" + key + "', returns: " + val);
+
+				return val;
+			}
+			else
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug("   --  NO-MATCH: getDbFreeSpaceThreshold() dbname='" + dbname + "', regex='" + key + "'.");
+			}
 		}
-    	
+
     	// no match
     	return null;
     }
@@ -2303,15 +2354,15 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String cfgVal;
 
-		_map_alarm_LowDbFreeSpaceInMb   = new HashMap<>();
-		_map_alarm_LowLogFreeSpaceInMb  = new HashMap<>();
-		_map_alarm_LowDbFreeSpaceInPct  = new HashMap<>();
-		_map_alarm_LowLogFreeSpaceInPct = new HashMap<>();
+		_map_alarm_LowDbFreeSpaceInMb   = new LinkedHashMap<>();
+		_map_alarm_LowLogFreeSpaceInMb  = new LinkedHashMap<>();
+		_map_alarm_LowDbFreeSpaceInPct  = new LinkedHashMap<>();
+		_map_alarm_LowLogFreeSpaceInPct = new LinkedHashMap<>();
 
-		_map_alarm_LowOsDiskFreeSpaceInMb  = new HashMap<>();
-		_map_alarm_LowOsDiskFreeSpaceInPct = new HashMap<>();
+		_map_alarm_LowOsDiskFreeSpaceInMb  = new LinkedHashMap<>();
+		_map_alarm_LowOsDiskFreeSpaceInPct = new LinkedHashMap<>();
 
-		_map_alarm_DbState = new HashMap<>();
+		_map_alarm_DbState = new LinkedHashMap<>();
 
 		String prefix = "       ";
 		
@@ -2340,6 +2391,22 @@ extends CountersModel
 					_logger.info(prefix + "Initializing alarm. Skipping 'LowDbFreeSpaceInMb' enty dbname='"+key+"', val='"+val+"'. The value is not a number.");
 				}
 			}
+			
+			// Sort the MAP by value in descending order (high number first)
+			_map_alarm_LowDbFreeSpaceInMb = CollectionUtils.sortByMapValueNumber(_map_alarm_LowDbFreeSpaceInMb, false);
+			
+			// Remove ".*" wild-card and add that to the *end*
+			if (_map_alarm_LowDbFreeSpaceInMb.containsKey(".*"))
+			{
+				Number num = _map_alarm_LowDbFreeSpaceInMb.get(".*");
+				_map_alarm_LowDbFreeSpaceInMb.put(".*", num);
+			}
+
+			_logger.info(prefix + "Evaluating alarm for 'LowDbFreeSpaceInMb' in the following order:");
+			for (Entry<String, Number> entry : _map_alarm_LowDbFreeSpaceInMb.entrySet())
+			{
+				_logger.info(prefix + "    dbname='" + entry.getKey() + "', mb=" + entry.getValue());
+			}
 		}
 		
 		//--------------------------------------
@@ -2366,6 +2433,22 @@ extends CountersModel
 				{
 					_logger.info(prefix + "Initializing alarm. Skipping 'LowLogFreeSpaceInMb' enty dbname='"+key+"', val='"+val+"'. The value is not a number.");
 				}
+			}
+			
+			// Sort the MAP by value in descending order (high number first)
+			_map_alarm_LowLogFreeSpaceInMb = CollectionUtils.sortByMapValueNumber(_map_alarm_LowLogFreeSpaceInMb, false);
+			
+			// Remove ".*" wild-card and add that to the *end*
+			if (_map_alarm_LowLogFreeSpaceInMb.containsKey(".*"))
+			{
+				Number num = _map_alarm_LowLogFreeSpaceInMb.get(".*");
+				_map_alarm_LowLogFreeSpaceInMb.put(".*", num);
+			}
+
+			_logger.info(prefix + "Evaluating alarm for 'LowLogFreeSpaceInMb' in the following order:");
+			for (Entry<String, Number> entry : _map_alarm_LowLogFreeSpaceInMb.entrySet())
+			{
+				_logger.info(prefix + "    dbname='" + entry.getKey() + "', mb=" + entry.getValue());
 			}
 		}
 		
@@ -2394,6 +2477,22 @@ extends CountersModel
 					_logger.info(prefix + "Initializing alarm. Skipping 'LowDbFreeSpaceInPct' enty dbname='"+key+"', val='"+val+"'. The value is not a number.");
 				}
 			}
+			
+			// Sort the MAP by value in ascending order (low number first)
+			_map_alarm_LowDbFreeSpaceInPct = CollectionUtils.sortByMapValueNumber(_map_alarm_LowDbFreeSpaceInPct, true);
+			
+			// Remove ".*" wild-card and add that to the *end*
+			if (_map_alarm_LowDbFreeSpaceInPct.containsKey(".*"))
+			{
+				Number num = _map_alarm_LowDbFreeSpaceInPct.get(".*");
+				_map_alarm_LowDbFreeSpaceInPct.put(".*", num);
+			}
+
+			_logger.info(prefix + "Evaluating alarm for 'LowDbFreeSpaceInPct' in the following order:");
+			for (Entry<String, Number> entry : _map_alarm_LowDbFreeSpaceInPct.entrySet())
+			{
+				_logger.info(prefix + "    dbname='" + entry.getKey() + "', mb=" + entry.getValue());
+			}
 		}
 		
 		//--------------------------------------
@@ -2412,7 +2511,7 @@ extends CountersModel
 				try
 				{
 					double pct = NumberUtils.createNumber(val).doubleValue();
-					_map_alarm_LowDbFreeSpaceInPct.put(key, pct);
+					_map_alarm_LowLogFreeSpaceInPct.put(key, pct);
 
 					_logger.info(prefix + "Initializing alarm. Using 'LowLogFreeSpaceInPct', dbname='"+key+"', pct="+pct);
 				}
@@ -2421,7 +2520,22 @@ extends CountersModel
 					_logger.info(prefix + "Initializing alarm. Skipping 'LowLogFreeSpaceInPct' enty dbname='"+key+"', val='"+val+"'. The value is not a number.");
 				}
 			}
-		}
+
+			// Sort the MAP by value in ascending order (low number first)
+			_map_alarm_LowLogFreeSpaceInPct = CollectionUtils.sortByMapValueNumber(_map_alarm_LowLogFreeSpaceInPct, true);
+			
+			// Remove ".*" wild-card and add that to the *end*
+			if (_map_alarm_LowLogFreeSpaceInPct.containsKey(".*"))
+			{
+				Number num = _map_alarm_LowLogFreeSpaceInPct.get(".*");
+				_map_alarm_LowLogFreeSpaceInPct.put(".*", num);
+			}
+
+			_logger.info(prefix + "Evaluating alarm for 'LowLogFreeSpaceInPct' in the following order:");
+			for (Entry<String, Number> entry : _map_alarm_LowLogFreeSpaceInPct.entrySet())
+			{
+				_logger.info(prefix + "    dbname='" + entry.getKey() + "', mb=" + entry.getValue());
+			}		}
 
 	
 	
@@ -2450,6 +2564,22 @@ extends CountersModel
 					_logger.info(prefix + "Initializing alarm. Skipping 'LowOsDiskFreeSpaceInMb' enty dbname='"+key+"', val='"+val+"'. The value is not a number.");
 				}
 			}
+
+			// Sort the MAP by value in descending order (high number first)
+			_map_alarm_LowOsDiskFreeSpaceInMb = CollectionUtils.sortByMapValueNumber(_map_alarm_LowOsDiskFreeSpaceInMb, false);
+			
+			// Remove ".*" wild-card and add that to the *end*
+			if (_map_alarm_LowOsDiskFreeSpaceInMb.containsKey(".*"))
+			{
+				Number num = _map_alarm_LowOsDiskFreeSpaceInMb.get(".*");
+				_map_alarm_LowOsDiskFreeSpaceInMb.put(".*", num);
+			}
+
+			_logger.info(prefix + "Evaluating alarm for 'LowOsDiskFreeSpaceInMb' in the following order:");
+			for (Entry<String, Number> entry : _map_alarm_LowOsDiskFreeSpaceInMb.entrySet())
+			{
+				_logger.info(prefix + "    dbname='" + entry.getKey() + "', mb=" + entry.getValue());
+			}
 		}
 		
 		//--------------------------------------
@@ -2476,6 +2606,22 @@ extends CountersModel
 				{
 					_logger.info(prefix + "Initializing alarm. Skipping 'LowOsDiskFreeSpaceInPct' enty dbname='"+key+"', val='"+val+"'. The value is not a number.");
 				}
+			}
+			
+			// Sort the MAP by value in ascending order (low number first)
+			_map_alarm_LowOsDiskFreeSpaceInPct = CollectionUtils.sortByMapValueNumber(_map_alarm_LowOsDiskFreeSpaceInPct, true);
+			
+			// Remove ".*" wild-card and add that to the *end*
+			if (_map_alarm_LowOsDiskFreeSpaceInPct.containsKey(".*"))
+			{
+				Number num = _map_alarm_LowOsDiskFreeSpaceInPct.get(".*");
+				_map_alarm_LowOsDiskFreeSpaceInPct.put(".*", num);
+			}
+
+			_logger.info(prefix + "Evaluating alarm for 'LowOsDiskFreeSpaceInPct' in the following order:");
+			for (Entry<String, Number> entry : _map_alarm_LowOsDiskFreeSpaceInPct.entrySet())
+			{
+				_logger.info(prefix + "    dbname='" + entry.getKey() + "', mb=" + entry.getValue());
 			}
 		}
 
@@ -2507,6 +2653,19 @@ extends CountersModel
 					Pattern pattern = Pattern.compile(DEFAULT_alarm_DbState);
 					_map_alarm_DbState.put(key, pattern);
 				}
+			}
+
+			// Remove ".*" wild-card and add that to the *end*
+			if (_map_alarm_DbState.containsKey(".*"))
+			{
+				Pattern pat = _map_alarm_DbState.get(".*");
+				_map_alarm_DbState.put(".*", pat);
+			}
+
+			_logger.info(prefix + "Evaluating alarm for 'DbState' in the following order:");
+			for (Entry<String, Pattern> entry : _map_alarm_DbState.entrySet())
+			{
+				_logger.info(prefix + "    dbname='" + entry.getKey() + "', pattern=" + entry.getValue());
 			}
 		}
 	}

@@ -22,15 +22,21 @@
 package com.asetune.pcs.report.content.ase;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
+import java.sql.Types;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
+import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
@@ -41,10 +47,26 @@ public class AseTopSlowDynAndStmnt extends AseAbstract
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _ssqlRstm;
 //	private Exception           _problem = null;
+	private ResultSetTableModel _skippedDsrRows;
+	private List<String>        _miniChartJsList = new ArrayList<>();
 
+	private Map<Map<String, Object>, SqlCapExecutedSqlEntries> _keyToExecutedSql;
+	
 	public AseTopSlowDynAndStmnt(DailySummaryReportAbstract reportingInstance)
 	{
 		super(reportingInstance);
+	}
+
+	@Override
+	public boolean hasShortMessageText()
+	{
+		return false;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
 	}
 
 	@Override
@@ -60,8 +82,40 @@ public class AseTopSlowDynAndStmnt extends AseAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
-			sb.append(toHtmlTable(_shortRstm));
+			sb.append(createSkippedEntriesReport(_skippedDsrRows));
+
+			sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
+//			sb.append(toHtmlTable(_shortRstm));
+
+			// Create a default renderer
+			TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
+			{
+				@Override
+				public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+				{
+					if ("txt".equals(colName))
+					{
+						// Get Actual Executed SQL Text for current 'HashKey'
+						int hashKey = rstm.getValueAsInteger(row, "HashKey");
+						
+						Map<String, Object> whereColValMap = new LinkedHashMap<>();
+						whereColValMap.put("HashKey"  , hashKey);
+
+						String executedSqlText = getSqlCapExecutedSqlTextAsString(_keyToExecutedSql, whereColValMap);
+
+						// Put the "Actual Executed SQL Text" as a "tooltip"
+						return "<div title='Click for Detailes' "
+								+ "data-toggle='modal' "
+								+ "data-target='#dbx-view-sqltext-dialog' "
+								+ "data-objectname='" + hashKey + "' "
+								+ "data-tooltip=\""   + executedSqlText     + "\" "
+								+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+					}
+
+					return strVal;
+				}
+			};
+			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, tableRender));
 			
 			if (_ssqlRstm != null)
 			{
@@ -69,41 +123,18 @@ public class AseTopSlowDynAndStmnt extends AseAbstract
 				sb.append(toHtmlTable(_ssqlRstm));
 			}
 		}
+		
+		// Write JavaScript code for CPU SparkLine
+		for (String str : _miniChartJsList)
+		{
+			sb.append(str);
+		}
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		if (_shortRstm.getRowCount() == 0)
-//		{
-//			sb.append("No rows found <br>\n");
-//		}
-//		else
-//		{
-//			// Get a description of this section, and column names
-//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//
-//			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-////			sb.append(_shortRstm.toHtmlTableString("sortable"));
-//			sb.append(toHtmlTable(_shortRstm));
-//			
-//			if (_ssqlRstm != null)
-//			{
-//				sb.append("Statement Cache Entries Count: ").append(_ssqlRstm.getRowCount()).append("<br>\n");
-////				sb.append(_ssqlRstm.toHtmlTableString("sortable"));
-//				sb.append(toHtmlTable(_ssqlRstm));
-//			}
-//		}
-//
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()
 	{
-		return "Top [SQL Captured] SLOW DynamicSQL and StatementCache Calls (order by: sumCpuTime,  origin: monSysStatement) [with gt: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"]";
+		return "Top [SQL Captured] SLOW DynamicSQL and StatementCache Calls (order by: CpuTime__sum,  origin: monSysStatement) [with gt: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"]";
 	}
 
 	@Override
@@ -138,10 +169,10 @@ public class AseTopSlowDynAndStmnt extends AseAbstract
 		
 		// Section description
 		rstm.setDescription(
-				"Top [SQL Captured] Slow DynamicSQL and StatementCache Entries are presented here (ordered by: sumCpuTime) <br>" +
+				"Top [SQL Captured] Slow DynamicSQL and StatementCache Entries are presented here (ordered by: CpuTime__sum) <br>" +
 				"<br>" +
 				"Thresholds: with GreaterThan: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"<br>" +
-				"Thresholds: having sumCpuTime &gt;= 1000<br>" +
+				"Thresholds: having CpuTime__sum &gt;= 1000<br>" +
 				"<br>" +
 				"ASE Source table is 'master.dbo.monSysStatement', which is a <i>ring buffer</i>, if the buffer is small, then we will be missing entries. <br>" +
 				"PCS Source table is 'MonSqlCapStatements'. (PCS = Persistent Counter Store) <br>" +
@@ -154,34 +185,35 @@ public class AseTopSlowDynAndStmnt extends AseAbstract
 		// Columns description
 		rstm.setColumnDescription("ProcName"                   , "Stored Procedure Name");
 		rstm.setColumnDescription("LineNumber"                 , "LineNumber within the Stored Procedure");
-		rstm.setColumnDescription("records"                    , "Number of entries for this 'JavaSqlHashCode' in the report period");
+		rstm.setColumnDescription("ExecCount"                  , "Number of entries for this 'JavaSqlHashCode' in the report period");
+		rstm.setColumnDescription("ExecCount__chart"           , "A Mini Chart of when the executions was happening (grouped in 10 minute spans)");
                                                               
 		rstm.setColumnDescription("StartTime_min"              , "First entry was sampled for this JavaSqlHashCode");
 		rstm.setColumnDescription("EndTime_max"                , "Last entry was sampled for this JavaSqlHashCode");
 		rstm.setColumnDescription("Duration"                   , "Start/end time presented as HH:MM:SS, so we can see if this JavaSqlHashCode is just for a short time or if it spans over a long period of time.");
                                                               
-		rstm.setColumnDescription("avgElapsed_ms"              , "Average Time it took to execute this Statement during the report period (sumElapsed_ms/records)   ");
-		rstm.setColumnDescription("avgCpuTime"                 , "Average CpuTime this Statement used            during the report period (sumCpuTime/records)      ");
-		rstm.setColumnDescription("avgWaitTime"                , "Average avgWaitTime this Statement waited      during the report period (sumWaitTime/records)     ");
-		rstm.setColumnDescription("avgMemUsageKB"              , "Average MemUsageKB this Statement used         during the report period (sumMemUsageKB/records)   ");
-		rstm.setColumnDescription("avgPhysicalReads"           , "Average PhysicalReads this Statement used      during the report period (sumPhysicalReads/records)");
-		rstm.setColumnDescription("avgLogicalReads"            , "Average LogicalReads this Statement used       during the report period (sumLogicalReads/records) ");
-		rstm.setColumnDescription("avgRowsAffected"            , "Average RowsAffected this Statement did        during the report period (sumRowsAffected/records) ");
+		rstm.setColumnDescription("Elapsed_ms__avg"            , "Average Time it took to execute this Statement during the report period (Elapsed_ms__sum/records)   ");
+		rstm.setColumnDescription("CpuTime__avg"               , "Average CpuTime this Statement used            during the report period (CpuTime__sum/records)      ");
+		rstm.setColumnDescription("WaitTime__avg"              , "Average avgWaitTime this Statement waited      during the report period (WaitTime__sum/records)     ");
+		rstm.setColumnDescription("MemUsageKB__avg"            , "Average MemUsageKB this Statement used         during the report period (MemUsageKB__sum/records)   ");
+		rstm.setColumnDescription("PhysicalReads__avg"         , "Average PhysicalReads this Statement used      during the report period (PhysicalReads__sum/records)");
+		rstm.setColumnDescription("LogicalReads__avg"          , "Average LogicalReads this Statement used       during the report period (LogicalReads__sum/records) ");
+		rstm.setColumnDescription("RowsAffected__avg"          , "Average RowsAffected this Statement did        during the report period (RowsAffected__sum/records) ");
                                                               
-		rstm.setColumnDescription("sumElapsed_ms"              , "How many milliseconds did we spend in execution during the report period");
-		rstm.setColumnDescription("sumCpuTime"                 , "How much CPUTime did we use during the report period");
-		rstm.setColumnDescription("sumWaitTime"                , "How much WaitTime did we use during the report period");
-		rstm.setColumnDescription("sumMemUsageKB"              , "How much MemUsageKB did we use during the report period");
-		rstm.setColumnDescription("sumPhysicalReads"           , "How much PhysicalReads did we use during the report period");
-		rstm.setColumnDescription("sumLogicalReads"            , "How much LogicalReads did we use during the report period");
-		rstm.setColumnDescription("sumRowsAffected"            , "How many RowsAffected did did this Statement do during the report period");
+		rstm.setColumnDescription("Elapsed_ms__sum"            , "How many milliseconds did we spend in execution during the report period");
+		rstm.setColumnDescription("CpuTime__sum"               , "How much CPUTime did we use during the report period");
+		rstm.setColumnDescription("WaitTime__sum"              , "How much WaitTime did we use during the report period");
+		rstm.setColumnDescription("MemUsageKB__sum"            , "How much MemUsageKB did we use during the report period");
+		rstm.setColumnDescription("PhysicalReads__sum"         , "How much PhysicalReads did we use during the report period");
+		rstm.setColumnDescription("LogicalReads__sum"          , "How much LogicalReads did we use during the report period");
+		rstm.setColumnDescription("RowsAffected__sum"          , "How many RowsAffected did did this Statement do during the report period");
 
 		rstm.setColumnDescription("LogicalReadsPerRowsAffected", "How Many LogicalReads per RowsAffected did this Statement do during the report period (Algorithm: sumLogicalReads/sumRowsAffected)");
 	}
 
 	private void createTopSlowSqlProcedureCalls(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		int topRows          = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+		int topRows          = getTopRows();
 		int havingSumCpuTime = 1000; // 1 second
 		
 			String sql = "-- source table: MonSqlCapStatements \n"
@@ -190,35 +222,52 @@ public class AseTopSlowDynAndStmnt extends AseAbstract
 			    + "   ,max([ProcName])              as [ProcName] \n"
 //			    + "    [ProcName] \n"
 //			    + "   ,[LineNumber] \n"
-			    + "   ,count(*)                     as [records] \n"
+				+ "   ,cast('' as varchar(10))      as [txt] \n"
+			    + "   ,count(*)                     as [ExecCount] \n"
+			    + "   ,cast('' as varchar(512))     as [ExecCount__chart] \n"
 			    + " \n"
+			    + "   ,cast('' as varchar(512))     as [SkipThis] \n"
 			    + "	  ,min([StartTime])             as [StartTime_min] \n"
 			    + "	  ,max([EndTime])               as [EndTime_max] \n"
 			    + "	  ,cast('' as varchar(30))      as [Duration] \n"
 			    + " \n"
-			    + "   ,avg([Elapsed_ms])            as [avgElapsed_ms] \n"
-			    + "   ,avg([CpuTime])               as [avgCpuTime] \n"
-			    + "   ,avg([WaitTime])              as [avgWaitTime] \n"
-			    + "   ,avg([MemUsageKB])            as [avgMemUsageKB] \n"
-			    + "   ,avg([PhysicalReads])         as [avgPhysicalReads] \n"
-			    + "   ,avg([LogicalReads])          as [avgLogicalReads] \n"
-			    + "   ,avg([RowsAffected])          as [avgRowsAffected] \n"
-//			    + "   ,avg([QueryOptimizationTime]) as [avgQueryOptimizationTime] \n"
-//			    + "   ,avg([PagesModified])         as [avgPagesModified] \n"
-//			    + "   ,avg([PacketsSent])           as [avgPacketsSent] \n"
-//			    + "   ,avg([PacketsReceived])       as [avgPacketsReceived] \n"
+			    + "   ,sum([Elapsed_ms])            as [Elapsed_ms__sum] \n"
+			    + "   ,avg([Elapsed_ms])            as [Elapsed_ms__avg] \n"
+			    
+			    + "   ,cast('' as varchar(512))     as [CpuTime__chart] \n"
+			    + "   ,sum([CpuTime])               as [CpuTime__sum] \n"
+			    + "   ,avg([CpuTime])               as [CpuTime__avg] \n"
+			    
+			    + "   ,cast('' as varchar(512))     as [WaitTime__chart] \n"
+			    + "   ,sum([WaitTime])              as [WaitTime__sum] \n"
+			    + "   ,avg([WaitTime])              as [WaitTime__avg] \n"
+			    
+			    + "   ,sum([MemUsageKB])            as [MemUsageKB__sum] \n"
+			    + "   ,avg([MemUsageKB])            as [MemUsageKB__avg] \n"
+			    
+			    + "   ,cast('' as varchar(512))     as [PhysicalReads__chart] \n"
+			    + "   ,sum([PhysicalReads])         as [PhysicalReads__sum] \n"
+			    + "   ,avg([PhysicalReads])         as [PhysicalReads__avg] \n"
+			    
+			    + "   ,cast('' as varchar(512))     as [LogicalReads__chart] \n"
+			    + "   ,sum([LogicalReads])          as [LogicalReads__sum] \n"
+			    + "   ,avg([LogicalReads])          as [LogicalReads__avg] \n"
+			    
+			    + "   ,sum([RowsAffected])          as [RowsAffected__sum] \n"
+			    + "   ,avg([RowsAffected])          as [RowsAffected__avg] \n"
+			    
+//			    + "   ,sum([QueryOptimizationTime]) as [QueryOptimizationTime__sum] \n"
+//			    + "   ,avg([QueryOptimizationTime]) as [QueryOptimizationTime__avg] \n"
+
+//			    + "   ,sum([PagesModified])         as [PagesModified__sum] \n"
+//			    + "   ,avg([PagesModified])         as [PagesModified__avg] \n"
+
+//			    + "   ,sum([PacketsSent])           as [PacketsSent__sum] \n"
+//			    + "   ,avg([PacketsSent])           as [PacketsSent__avg] \n"
+
+//			    + "   ,sum([PacketsReceived])       as [PacketsReceived__sum] \n"
+//			    + "   ,avg([PacketsReceived])       as [PacketsReceived__avg] \n"
 			    + " \n"
-			    + "   ,sum([Elapsed_ms])            as [sumElapsed_ms] \n"
-			    + "   ,sum([CpuTime])               as [sumCpuTime] \n"
-			    + "   ,sum([WaitTime])              as [sumWaitTime] \n"
-			    + "   ,sum([MemUsageKB])            as [sumMemUsageKB] \n"
-			    + "   ,sum([PhysicalReads])         as [sumPhysicalReads] \n"
-			    + "   ,sum([LogicalReads])          as [sumLogicalReads] \n"
-			    + "   ,sum([RowsAffected])          as [sumRowsAffected] \n"
-//			    + "   ,sum([QueryOptimizationTime]) as [sumQueryOptimizationTime] \n"
-//			    + "   ,sum([PagesModified])         as [sumPagesModified] \n"
-//			    + "   ,sum([PacketsSent])           as [sumPacketsSent] \n"
-//			    + "   ,sum([PacketsReceived])       as [sumPacketsReceived] \n"
 
 //				+ "   ,(sum([LogicalReads])*1.0) / (coalesce(sum([RowsAffected]),1)*1.0) as [LogicalReadsPerRowsAffected] \n"
 				+ "   ,-9999999.0 as [LogicalReadsPerRowsAffected] \n"
@@ -231,10 +280,10 @@ public class AseTopSlowDynAndStmnt extends AseAbstract
 				+ getReportPeriodSqlWhere("StartTime")
 			    + "group by [HashKey] \n"
 //			    + "group by [ProcName], [LineNumber] \n"
-			    + "having [sumCpuTime] >= " + havingSumCpuTime + " \n"
+			    + "having [CpuTime__sum] >= " + havingSumCpuTime + " \n"
 //			    + "order by [records] desc \n"
-//			    + "order by [sumLogicalReads] desc \n"
-			    + "order by [sumCpuTime] desc \n"
+//			    + "order by [LogicalReads__sum] desc \n"
+			    + "order by [CpuTime__sum] desc \n"
 			    + "";
 
 		_shortRstm = executeQuery(conn, sql, false, "TopSqlProcedureCalls");
@@ -251,9 +300,12 @@ public class AseTopSlowDynAndStmnt extends AseAbstract
 			// set duration
 			setDurationColumn(_shortRstm, "StartTime_min", "EndTime_max", "Duration");
 			
+			// Fill in a column with a "skip link" to DbxCentral
+			setSkipEntriesUrl(_shortRstm, "SkipThis", "HashKey", null);
+						
 			// Do some calculations (which was hard to do in a PORTABLE SQL Way)
-			int pos_sumLogicalReads             = _shortRstm.findColumn("sumLogicalReads");
-			int pos_sumRowsAffected             = _shortRstm.findColumn("sumRowsAffected");
+			int pos_sumLogicalReads             = _shortRstm.findColumn("LogicalReads__sum");
+			int pos_sumRowsAffected             = _shortRstm.findColumn("RowsAffected__sum");
 			int pos_LogicalReadsPerRowsAffected = _shortRstm.findColumn("LogicalReadsPerRowsAffected");
 
 			if (pos_sumLogicalReads >= 0 && pos_sumRowsAffected >= 0 && pos_LogicalReadsPerRowsAffected >= 0)
@@ -273,6 +325,92 @@ public class AseTopSlowDynAndStmnt extends AseAbstract
 				}
 			}
 			
+			// Remove anything from the *SKIP* entries
+			_skippedDsrRows = removeSkippedEntries(_shortRstm, topRows, getDsrSkipEntries());
+
+			// Mini Chart on "ExecCount"
+			// Get data for: SparkLine - small chart values ... this will do:
+			//  -- fill in the data cell with: <span class='aClassName' values='v1, v2, v2, v3...'>Mini Chart Here</span>
+			//  -- return JavaScript Code to initialize the Spark line
+			String whereKeyColumn = "HashKey"; 
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("ExecCount__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("MonSqlCapStatements")
+					.setDbmsSampleTimeColumnName ("StartTime")
+					.setDbmsDataValueColumnName  ("1") // not actually a column name, but will be used as: sum(1)   
+					.setDbmsDataValueColumnNameIsExpression(true) // do NOT quotify the 'dbmsDataValueColumnName' 
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Number of execution in below period")
+					.validate()));
+
+			// Mini Chart on "CPU Time"
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("CpuTime__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("MonSqlCapStatements")
+					.setDbmsSampleTimeColumnName ("StartTime")
+					.setDbmsDataValueColumnName  ("CpuTime")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("CPU Time in ms")
+					.validate()));
+
+			// Mini Chart on "Wait Time"
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("WaitTime__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("MonSqlCapStatements")
+					.setDbmsSampleTimeColumnName ("StartTime")
+					.setDbmsDataValueColumnName  ("WaitTime")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Wait Time in ms")
+					.validate()));
+
+			// Mini Chart on "Physical Reads"
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("PhysicalReads__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("MonSqlCapStatements")
+					.setDbmsSampleTimeColumnName ("StartTime")
+					.setDbmsDataValueColumnName  ("PhysicalReads")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Number of Physical Reads in below period")
+					.validate()));
+
+			// Mini Chart on "Physical Reads"
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("LogicalReads__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("MonSqlCapStatements")
+					.setDbmsSampleTimeColumnName ("StartTime")
+					.setDbmsDataValueColumnName  ("LogicalReads")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Number of Logical Reads in below period")
+					.validate()));
+
+
+			//--------------------------------------------------------------------------------------
+			// get Executed SQL Statements from the SQL Capture ...
+			//--------------------------------------------------------------------------------------
+			if (_shortRstm.getRowCount() > 0)
+			{
+				for (int r=0; r<_shortRstm.getRowCount(); r++)
+				{
+					// Get Actual Executed SQL Text for current 'hashKey'
+					Map<String, Object> whereColValMap = new LinkedHashMap<>();
+					whereColValMap.put("HashKey", _shortRstm.getValueAsInteger(r, "HashKey"));
+
+					_keyToExecutedSql = getSqlCapExecutedSqlText(_keyToExecutedSql, conn, true, whereColValMap);
+				}
+			}
+
+
 			//--------------------------------------------------------------------------------------
 			// For StatementCache entries... get the SQL Text (or actually the XML Plan and try to get SQL Text from that)
 			//--------------------------------------------------------------------------------------
@@ -285,6 +423,13 @@ public class AseTopSlowDynAndStmnt extends AseAbstract
 					try 
 					{
 						_ssqlRstm = getSqlStatementsFromMonDdlStorage(conn, stmntCacheObjects);
+
+						// Add CpuTime
+						_ssqlRstm.addColumn("CpuTime", 1, Types.VARCHAR, "varchar", "varchar(512)", 512, 0, "-", String.class);
+
+						// Mini Chart on "CPU Time"
+						// COPY Cell data from the "details" table
+						_ssqlRstm.copyCellContentFrom(_shortRstm, "ProcName", "CpuTime__chart",   "objectName", "CpuTime");
 					}
 					catch (SQLException ex)
 					{

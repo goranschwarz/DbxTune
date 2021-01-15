@@ -279,7 +279,8 @@ extends CounterControllerAbstract
 	@Override
 	public String getServerTimeCmd()
 	{
-		return "SELECT CURRENT_TIMESTAMP; \n";
+//		return "SELECT CURRENT_TIMESTAMP; \n";
+		return "select CLOCK_TIMESTAMP(); \n";
 	}
 
 	@Override

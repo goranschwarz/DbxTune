@@ -121,12 +121,12 @@ extends ObjectLookupInspectorAbstract
 
 					boolean hasMissingIndexes = false;
 					boolean hasWarnings       = false;
-					if (xmlPlan.indexOf("<MissingIndexes>") >= 0)
+					if (xmlPlan.contains("<MissingIndexes>"))
 					{
 						cnt++;
 						hasMissingIndexes = true;
 					}
-					if (xmlPlan.indexOf("<Warnings>") >= 0)
+					if (xmlPlan.contains("<Warnings>"))
 					{
 						cnt++;
 						hasWarnings = true;

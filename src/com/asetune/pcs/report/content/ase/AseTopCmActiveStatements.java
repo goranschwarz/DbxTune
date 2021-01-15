@@ -22,7 +22,6 @@
 package com.asetune.pcs.report.content.ase;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -56,6 +55,18 @@ public class AseTopCmActiveStatements extends AseAbstract
 	}
 
 	@Override
+	public boolean hasShortMessageText()
+	{
+		return false;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
+	}
+
+	@Override
 	public void writeMessageText(Writer sb)
 	throws IOException
 	{
@@ -78,7 +89,7 @@ public class AseTopCmActiveStatements extends AseAbstract
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
 			// Create a default renderer
-			TableStringRenderer tableRender = new ResultSetTableModel.TableStringRenderer()
+			TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
 			{
 				@Override
 				public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
@@ -100,6 +111,7 @@ public class AseTopCmActiveStatements extends AseAbstract
 					return strVal;
 				}
 			};
+			sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
 			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, tableRender));
 
 
@@ -129,99 +141,6 @@ public class AseTopCmActiveStatements extends AseAbstract
 		}
 	}
 
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		if (_messages.size() > 0)
-//		{
-//			sb.append("<b>Messages:</b> \n");
-//			sb.append("<ul> \n");
-//			for (String msg : _messages)
-//				sb.append("  <li>").append(msg).append("</li> \n");
-//			sb.append("</ul> \n");
-//		}
-//
-//		if (_shortRstm.getRowCount() == 0)
-//		{
-//			sb.append("No rows found <br>\n");
-//		}
-//		else
-//		{
-//			// Get a description of this section, and column names
-//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//
-////			// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
-////			Map<String, String> colNameValueTagMap = new HashMap<>();
-////			colNameValueTagMap.put("MonSqlText_max",   "xmp");
-////			colNameValueTagMap.put("ShowPlanText_max", "xmp");
-////
-////			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-////			sb.append(toHtmlTable(_shortRstm, colNameValueTagMap));
-//
-//			// Create a default renderer
-//			TableStringRenderer tableRender = new ResultSetTableModel.TableStringRenderer()
-//			{
-//				@Override
-//				public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
-//				{
-//					if ("MonSqlText_max".equals(colName))
-//					{
-//						strVal = strVal.replace("<html><pre>",   "");
-//						strVal = strVal.replace("</pre></html>", "");
-//
-//						return "<xmp>" + strVal + "</xmp>";
-//					}
-//					if ("ShowPlanText_max".equals(colName))
-//					{
-//						strVal = strVal.replace("<html><pre>",   "");
-//						strVal = strVal.replace("</pre></html>", "");
-//
-//						return "<xmp>" + strVal + "</xmp>";
-//					}
-//					return strVal;
-//				}
-//			};
-//			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, tableRender));
-//
-//
-//			if (_sqTextRstm != null)
-//			{
-//				String  divId       = "ActiveSqlText";
-//				boolean showAtStart = false;
-//				String  htmlContent = _sqTextRstm.toHtmlTableString("sortable");
-//				
-//				String showHideDiv = createShowHideDiv(divId, showAtStart, "SQL Text by 'dbname, ProcNameOrSqlText, linenum', Row Count: " + _sqTextRstm.getRowCount() + " (This is the same SQL Text as the in the above table, but without all counter details)", htmlContent);
-//
-//				// Compose special condition for Microsoft Outlook
-//				sb.append(msOutlookAlternateText(showHideDiv, "ActiveSqlText", null));
-//
-////				sb.append("<br>\n");
-////				sb.append("SQL Text by 'dbname, ProcNameOrSqlText, linenum', Row Count: ").append(_sqTextRstm.getRowCount()).append(" (This is the same SQL Text as the in the above table, but without all counter details).<br>\n");
-////				sb.append(_sqTextRstm.toHtmlTableString("sortable"));
-//			}
-//
-//			if (_showplanRstm != null)
-//			{
-//				String  divId       = "ActiveSqlShowplan";
-//				boolean showAtStart = false;
-//				String  htmlContent = _showplanRstm.toHtmlTableString("sortable");
-//				
-//				String showHideDiv = createShowHideDiv(divId, showAtStart, "Showplan (sp_showplan) by 'dbname, ProcNameOrSqlText, linenum', Row Count: " + _showplanRstm.getRowCount() + " (This is the same SHOWPLAN as the in the above table, but without all counter details)", htmlContent);
-//
-//				// Compose special condition for Microsoft Outlook
-//				sb.append(msOutlookAlternateText(showHideDiv, "ActiveSqlShowplan", null));
-//
-////				sb.append("<br>\n");
-////				sb.append("Showplan (sp_showplan) by 'dbname, ProcNameOrSqlText, linenum', Row Count: ").append(_showplanRstm.getRowCount()).append(" (This is the same SHOWPLAN as the in the above table, but without all counter details).<br>\n");
-////				sb.append(_showplanRstm.toHtmlTableString("sortable"));
-//			}
-//		}
-//
-//		return sb.toString();
-//	}
-
 	@Override
 	public String getSubject()
 	{
@@ -244,7 +163,8 @@ public class AseTopCmActiveStatements extends AseAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+//		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+		int topRows = getTopRows();
 		int havingAbove = 1000;
 
 		String skipDumpDbAndTran    = "  and [Command] not like 'DUMP %' \n";

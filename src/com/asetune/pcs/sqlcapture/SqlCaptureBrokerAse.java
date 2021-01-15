@@ -28,9 +28,11 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -43,12 +45,17 @@ import com.asetune.DbxTune;
 import com.asetune.Version;
 import com.asetune.cache.XmlPlanCache;
 import com.asetune.config.dict.AseErrorMessageDictionary;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistentCounterHandler;
-import com.asetune.sql.StatementNormalizer;
 import com.asetune.sql.conn.AseConnection;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.norm.NormalizerCompiler;
+import com.asetune.sql.norm.StatementFixerManager;
+import com.asetune.sql.norm.StatementNormalizer;
+import com.asetune.sql.norm.UserDefinedNormalizerManager;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
@@ -56,8 +63,6 @@ import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
 import com.sybase.jdbcx.SybMessageHandler;
-
-import net.sf.jsqlparser.JSQLParserException;
 
 public class SqlCaptureBrokerAse 
 extends SqlCaptureBrokerAbstract
@@ -73,11 +78,14 @@ extends SqlCaptureBrokerAbstract
 
 	private boolean _isNonConfiguredMonitoringAllowed = PersistentCounterHandler.DEFAULT_sqlCap_isNonConfiguredMonitoringAllowed;
 	
-	protected static final String MON_SQL_TEXT      = PersistWriterBase.getTableName(null, PersistWriterBase.SQL_CAPTURE_SQLTEXT,    null, false); // "MonSqlCapSqlText";
+//	protected static final String MON_SQL_TEXT      = PersistWriterBase.getTableName(null, PersistWriterBase.SQL_CAPTURE_SQLTEXT,    null, false); // "MonSqlCapSqlText";
 	protected static final String MON_SQL_STATEMENT = PersistWriterBase.getTableName(null, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false); // "MonSqlCapStatements";
-	protected static final String MON_SQL_PLAN      = PersistWriterBase.getTableName(null, PersistWriterBase.SQL_CAPTURE_PLANS,      null, false); // "MonSqlCapPlans";
+//	protected static final String MON_SQL_PLAN      = PersistWriterBase.getTableName(null, PersistWriterBase.SQL_CAPTURE_PLANS,      null, false); // "MonSqlCapPlans";
+	protected static final String MON_CAP_SPID_INFO = "MonSqlCapSpidInfo";//PersistWriterBase.getTableName(null, PersistWriterBase.SQL_CAPTURE_SPID_INFO,  null, false); // "MonSqlCapSpidInfo";
+	protected static final String MON_CAP_WAIT_INFO = "MonSqlCapWaitInfo";//PersistWriterBase.getTableName(null, PersistWriterBase.SQL_CAPTURE_WAIT_INFO,  null, false); // "MonSqlCapWaitInfo";
 
-	private static final List<String> _storegeTableNames = Arrays.asList(MON_SQL_TEXT, MON_SQL_STATEMENT, MON_SQL_PLAN);
+//	private static final List<String> _storegeTableNames = Arrays.asList(MON_SQL_TEXT, MON_SQL_STATEMENT, MON_SQL_PLAN);
+	private static final List<String> _storegeTableNames = Arrays.asList(MON_SQL_STATEMENT, MON_CAP_SPID_INFO, MON_CAP_WAIT_INFO);
 
 	private String _sql_sqlText       = null;
 	private String _sql_sqlStatements = null; 
@@ -129,7 +137,7 @@ extends SqlCaptureBrokerAbstract
 //	private long _removeStaticSqlText_stat_printThreshold = DEFAULT_sqlCap_ase_sqlTextAndPlan_removeStaticSqlText_printMsgTimeThreshold; 
 //	private long _removeStaticSqlText_stat_printLastTime  = -1; // System.currentTimeMillis();
 
-	private Map<Integer, String> _monSqlTextDictCompColMap;
+	private Map<Integer, String> _monSqlStatementDictCompColMap;
 
 //	private static int _stmnt_SPID_pos    = 2 + 1; // 2 = ListPos + 1 is for that the row starts with a string that contains the DestinationTablename
 //	private static int _stmnt_KPID_pos    = 3 + 1; // 3 = ListPos + 1 is for that the row starts with a string that contains the DestinationTablename
@@ -169,7 +177,16 @@ extends SqlCaptureBrokerAbstract
 	//NOTE: if we have a keep count higher than 1 or 2, then we should do LOW ON MEMORY to first remove all with a keep-count > 1 or similar...
 
 	public static final String  PROPKEY_sqlCap_ase_sqlTextAndPlan_sqlText_shortLength = "PersistentCounterHandler.sqlCapture.ase.sqlText.shortLength";
-	public static final int     DEFAULT_sqlCap_ase_sqlTextAndPlan_sqlText_shortLength = 256 *3; // 1024
+	public static final int     DEFAULT_sqlCap_ase_sqlTextAndPlan_sqlText_shortLength = 256 * 3; // 768
+
+	public static final String  PROPKEY_sqlCap_ase_sqlTextAndPlan_printPcsAdd = "PersistentCounterHandler.sqlCapture.ase.sqlTextAndPlan.printPcsAdd";
+	public static final boolean DEFAULT_sqlCap_ase_sqlTextAndPlan_printPcsAdd = false;
+
+	public static final String  PROPKEY_sqlCap_ase_spidInfo_sample     = "PersistentCounterHandler.sqlCapture.ase.spidInfo.sample";
+	public static final boolean DEFAULT_sqlCap_ase_spidInfo_sample     = true;
+
+	public static final String  PROPKEY_sqlCap_ase_spidWaitInfo_sample = "PersistentCounterHandler.sqlCapture.ase.spidWaitInfo.sample";
+	public static final boolean DEFAULT_sqlCap_ase_spidWaitInfo_sample = true;
 
 
 	public int _sqlText_shortLength = DEFAULT_sqlCap_ase_sqlTextAndPlan_sqlText_shortLength;
@@ -195,6 +212,16 @@ extends SqlCaptureBrokerAbstract
 		_statReportAfterSec                         = getLongProperty   (PROPKEY_sqlCap_ase_statisticsReportEveryXSecond,                             DEFAULT_sqlCap_ase_statisticsReportEveryXSecond);
 		_default_batchIdEntry_keepCount             = getIntProperty    (PROPKEY_sqlCap_ase_sqlTextAndPlan_batchIdEntry_keepCount,                    DEFAULT_sqlCap_ase_sqlTextAndPlan_batchIdEntry_keepCount);
 		_sqlText_shortLength                        = getIntProperty    (PROPKEY_sqlCap_ase_sqlTextAndPlan_sqlText_shortLength,                       DEFAULT_sqlCap_ase_sqlTextAndPlan_sqlText_shortLength);
+
+		boolean storeNormalizedSqlText              = getBooleanProperty(PROPKEY_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlText,     DEFAULT_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlText);
+
+		// Just to write some start messages... and see ERRORS if we have User Defined "resolvers", in Java code that needs to be compiled!
+		if (storeNormalizedSqlText)
+		{
+			NormalizerCompiler          .getInstance();
+			UserDefinedNormalizerManager.getInstance();
+			StatementFixerManager       .getInstance();
+		}
 	}
 
 	@Override
@@ -269,6 +296,44 @@ extends SqlCaptureBrokerAbstract
 	private String getNullable(boolean nullable)                                        { return PersistWriterBase.getNullable(nullable); }
 
 	@Override
+	public boolean checkForDropTableDdl(DbxConnection conn, DatabaseMetaData dbmd, String tabName)
+	{
+		Set<String> colNames = null;;
+		try
+		{
+			// Get column names
+			colNames = DbUtils.getColumnNames(conn, null, tabName);
+
+			// If no columns, then table DO NOT Exists... So no need to drop
+			if (colNames.isEmpty())
+				return false;
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems getting Column Names from table '" + tabName + "'.", ex);
+		}
+		
+		if (colNames == null)
+		{
+			_logger.warn("Problems getting Column Names from table '" + tabName + "'. colNames == null");
+			return false;
+		}
+
+		//-------------------------------------------------------------
+		if (MON_SQL_STATEMENT.equals(tabName))
+		{
+			// If the table no NOT contain 'ServerLogin', then it's a OLD table layout... DROP THE TABLE
+			// new layout is: ONE Table only that holds both Statement details AND SQLText & PlanText
+			// It's much simpler to simply drop the table and create a new one...
+			// NOTE: You will only loose X hours of data, since we create a new Recording Database Every 24 hour
+			if ( ! colNames.contains("ServerLogin") )
+				return true;
+		}
+
+		return false;
+	}
+	
+	@Override
 	public List<String> checkTableDdl(DbxConnection conn, DatabaseMetaData dbmd, String tabName)
 	{
 		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
@@ -295,77 +360,141 @@ extends SqlCaptureBrokerAbstract
 		//-------------------------------------------------------------
 		if (MON_SQL_STATEMENT.equals(tabName))
 		{
-			if ( ! colNames.contains("NormJavaSqlHashCode") )
-				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"NormJavaSqlHashCode"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			// Check The Dictionary Compressed Tables
+			// -- If they do not exists they will be created
+			// -- If they already exists, the in-memory-cache will be populated!
+			// Yes I know this looks strange ... getTableDdlString actually create The DictionaryCompressed table(s)... but it might be rewritten "in a while"
+			getTableDdlString(conn, dbmd, tabName);  
 
-			if ( ! colNames.contains("JavaSqlLengthShort") )
-				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"JavaSqlLengthShort"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-
-			if ( ! colNames.contains("JavaSqlHashCodeShort") )
-				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"JavaSqlHashCodeShort"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-
-			return list;
-		}
-
-		//-------------------------------------------------------------
-		if (MON_SQL_TEXT.equals(tabName))
-		{
-			if ( ! colNames.contains("AddMethod") )
-				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"AddMethod"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-
-			if ( ! colNames.contains("NormJavaSqlHashCode") )
-				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"NormJavaSqlHashCode"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n");
-
-			if ( ! colNames.contains("JavaSqlHashCodeShort") )
-				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"JavaSqlHashCodeShort"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-
-			// SQLText / SQLText$dcc$
+			// Now check for missing columns and add them
+			//------------------------------------------------------
+			
+			// BEGIN: Special for 'BlockedBySqlText'
+			String col_BlockedBySqlText_name     = "BlockedBySqlText";
+			int    col_BlockedBySqlText_jdbcType = Types.VARCHAR;
+			int    col_BlockedBySqlText_jdbcLen  = 65536;
+			
+			// When we want Dictionary Compression on 'SQLText' and 'NormSQLText'
 			if ( DictCompression.isEnabled() )
 			{
 				DictCompression dcc = DictCompression.getInstance();
 				
-				if ( ! colNames.contains("SQLText"+DictCompression.DCC_MARKER) )
-					list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"SQLText"+DictCompression.DCC_MARKER+rq,40)+" "+fill(getDatatype(conn, dcc.getDigestJdbcType(), dcc.getDigestLength()),20)+" "+getNullable(true)+"\n");
-				
-				// create table (if not exists), otherwise populate the cache 
-				try {
-					dcc.createTable(conn, null, tabName, "SQLText", Types.VARCHAR, 65536, true);
-				} catch (SQLException ex) {
-					_logger.error("Problems creating/refreshing Dictionary Compression table for table '" + tabName + "' column 'SQLText'.", ex);
-				}
+				//try
+				//{
+					// No need to do this here... it's done "somewhere else"
+					//dcc.createTable(conn, null, MON_SQL_STATEMENT, col_BlockedBySqlText_name, col_BlockedBySqlText_jdbcType, col_BlockedBySqlText_jdbcLen, true);
+					
+					col_BlockedBySqlText_name     = dcc.getDigestSourceColumnName(col_BlockedBySqlText_name);
+					col_BlockedBySqlText_jdbcType = dcc.getDigestJdbcType();
+					col_BlockedBySqlText_jdbcLen  = dcc.getDigestLength();
+				//}
+				//catch (SQLException ex)
+				//{
+				//	_logger.error("Problems creating Dictionary Compressed table for '" + MON_SQL_STATEMENT + "' colName '" + col_BlockedBySqlText_name + "'.", ex);
+				//}
 			}
+			if ( ! colNames.contains(col_BlockedBySqlText_name) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+col_BlockedBySqlText_name+rq,40)+" "+fill(getDatatype(conn, col_BlockedBySqlText_jdbcType, col_BlockedBySqlText_jdbcLen),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			// END: Special for 'BlockedBySqlText'
+			
+			// Now check for missing columns and add them
+			if ( ! colNames.contains("WaitTimeDetails"     ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"WaitTimeDetails"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 1024),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockedBySpid"       ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"BlockedBySpid"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockedByKpid"       ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByKpid"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockedByBatchId"    ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByBatchId"    +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockedByCommand"    ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByCommand"    +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30  ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockedByApplication") ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByApplication"+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30  ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockedByTranId"     ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByTranId"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255 ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
 
-			// NormSQLText / NormSQLText$dcc$
-			if ( DictCompression.isEnabled() )
-			{
-				DictCompression dcc = DictCompression.getInstance();
-				
-				if ( ! colNames.contains("NormSQLText"+DictCompression.DCC_MARKER) )
-					list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"NormSQLText"+DictCompression.DCC_MARKER+rq,40)+" "+fill(getDatatype(conn, dcc.getDigestJdbcType(), dcc.getDigestLength()),20)+" "+getNullable(true)+"\n");
-
-				// create table (if not exists), otherwise populate the cache 
-				try {
-					dcc.createTable(conn, null, tabName, "NormSQLText", Types.VARCHAR, 65536, true);
-				} catch (SQLException ex) {
-					_logger.error("Problems creating/refreshing Dictionary Compression table for table '" + tabName + "' column 'NormSQLText'.", ex);
-				}
-			}
-			else
-			{
-				if ( ! colNames.contains("NormSQLText") )
-					list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"NormSQLText"+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 65536),20)+" "+getNullable(true)+"\n");
-			}
-
-			return list;
+			return list;			
 		}
-		
-		//-------------------------------------------------------------
-		if (MON_SQL_PLAN.equals(tabName))
-		{
-			if ( ! colNames.contains("AddMethod") )
-				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"AddMethod"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
 
-			return list;
+//		//-------------------------------------------------------------
+//		if (MON_SQL_STATEMENT.equals(tabName))
+//		{
+//			if ( ! colNames.contains("NormJavaSqlHashCode") )
+//				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"NormJavaSqlHashCode"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+//
+//			if ( ! colNames.contains("JavaSqlLengthShort") )
+//				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"JavaSqlLengthShort"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+//
+//			if ( ! colNames.contains("JavaSqlHashCodeShort") )
+//				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"JavaSqlHashCodeShort"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+//
+//			return list;
+//		}
+
+//		//-------------------------------------------------------------
+//		if (MON_SQL_TEXT.equals(tabName))
+//		{
+//			if ( ! colNames.contains("AddMethod") )
+//				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"AddMethod"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+//
+//			if ( ! colNames.contains("NormJavaSqlHashCode") )
+//				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"NormJavaSqlHashCode"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n");
+//
+//			if ( ! colNames.contains("JavaSqlHashCodeShort") )
+//				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"JavaSqlHashCodeShort"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+//
+//			// SQLText / SQLText$dcc$
+//			if ( DictCompression.isEnabled() )
+//			{
+//				DictCompression dcc = DictCompression.getInstance();
+//				
+//				if ( ! colNames.contains("SQLText"+DictCompression.DCC_MARKER) )
+//					list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"SQLText"+DictCompression.DCC_MARKER+rq,40)+" "+fill(getDatatype(conn, dcc.getDigestJdbcType(), dcc.getDigestLength()),20)+" "+getNullable(true)+"\n");
+//				
+//				// create table (if not exists), otherwise populate the cache 
+//				try {
+//					dcc.createTable(conn, null, tabName, "SQLText", Types.VARCHAR, 65536, true);
+//				} catch (SQLException ex) {
+//					_logger.error("Problems creating/refreshing Dictionary Compression table for table '" + tabName + "' column 'SQLText'.", ex);
+//				}
+//			}
+//
+//			// NormSQLText / NormSQLText$dcc$
+//			if ( DictCompression.isEnabled() )
+//			{
+//				DictCompression dcc = DictCompression.getInstance();
+//				
+//				if ( ! colNames.contains("NormSQLText"+DictCompression.DCC_MARKER) )
+//					list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"NormSQLText"+DictCompression.DCC_MARKER+rq,40)+" "+fill(getDatatype(conn, dcc.getDigestJdbcType(), dcc.getDigestLength()),20)+" "+getNullable(true)+"\n");
+//
+//				// create table (if not exists), otherwise populate the cache 
+//				try {
+//					dcc.createTable(conn, null, tabName, "NormSQLText", Types.VARCHAR, 65536, true);
+//				} catch (SQLException ex) {
+//					_logger.error("Problems creating/refreshing Dictionary Compression table for table '" + tabName + "' column 'NormSQLText'.", ex);
+//				}
+//			}
+//			else
+//			{
+//				if ( ! colNames.contains("NormSQLText") )
+//					list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"NormSQLText"+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 65536),20)+" "+getNullable(true)+"\n");
+//			}
+//
+//			return list;
+//		}
+//		
+//		//-------------------------------------------------------------
+//		if (MON_SQL_PLAN.equals(tabName))
+//		{
+//			if ( ! colNames.contains("AddMethod") )
+//				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"AddMethod"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+//
+//			return list;
+//		}
+
+		//-------------------------------------------------------------
+		if (MON_CAP_SPID_INFO.equals(tabName))
+		{
+			if ( ! colNames.contains("SecondsConnected") ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"SecondsConnected"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                   ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("SqlText"         ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"SqlText"         +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, SpidInfoBatchIdEntry.SQL_TEXT_LEN),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockingSqlText" ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"BlockingSqlText" +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, SpidInfoBatchIdEntry.SQL_TEXT_LEN),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+		}
+
+		//-------------------------------------------------------------
+		if (MON_CAP_WAIT_INFO.equals(tabName))
+		{
 		}
 
 		return list;
@@ -374,16 +503,19 @@ extends SqlCaptureBrokerAbstract
 	@Override
 	public Map<Integer, String> getDictionaryCompressionColumnMap(String tabName)
 	{
-		if (MON_SQL_TEXT.equals(tabName))
+		if (MON_SQL_STATEMENT.equals(tabName))
 		{
 			// On first time call, create the map and initiate values
-			if (_monSqlTextDictCompColMap == null)
+			if (_monSqlStatementDictCompColMap == null)
 			{
-				_monSqlTextDictCompColMap = new HashMap<>();
-				_monSqlTextDictCompColMap.put(MonSqlText.pos_SQLText    , "SQLText");     // Note: This is 1 based (this is a pointer to where in the value array/list we would find the column) 
-				_monSqlTextDictCompColMap.put(MonSqlText.pos_NormSQLText, "NormSQLText"); // Note: This is 1 based
+				_monSqlStatementDictCompColMap = new HashMap<>();
+
+				_monSqlStatementDictCompColMap.put(MonSqlStatement.pos_SQLText         , "SQLText");          // Note: This is 1 based (this is a pointer to where in the value array/list we would find the column) 
+				_monSqlStatementDictCompColMap.put(MonSqlStatement.pos_NormSQLText     , "NormSQLText");      // Note: This is 1 based
+				_monSqlStatementDictCompColMap.put(MonSqlStatement.pos_PlanText        , "PlanText");         // Note: This is 1 based
+				_monSqlStatementDictCompColMap.put(MonSqlStatement.pos_BlockedBySqlText, "BlockedBySqlText"); // Note: This is 1 based
 			}
-			return _monSqlTextDictCompColMap;
+			return _monSqlStatementDictCompColMap;
 		}
 		return null;
 	}
@@ -395,130 +527,303 @@ extends SqlCaptureBrokerAbstract
 		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
 		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 		
-		if (MON_SQL_TEXT.equals(tabName))
+		if (MON_SQL_STATEMENT.equals(tabName))
 		{
 			StringBuilder sbSql = new StringBuilder();
 
-			String col_SQLText_name         = "SQLText";
-			int    col_SQLText_jdbcType     = Types.VARCHAR;
-			int    col_SQLText_jdbcLen      = 65536;
+			String col_SQLText_name              = "SQLText";
+			int    col_SQLText_jdbcType          = Types.VARCHAR;
+			int    col_SQLText_jdbcLen           = 65536;
+			                                     
+			String col_NormSQLText_name          = "NormSQLText";
+			int    col_NormSQLText_jdbcType      = Types.VARCHAR;
+			int    col_NormSQLText_jdbcLen       = 65536;
+			                                     
+			String col_PlanText_name             = "PlanText";
+			int    col_PlanText_jdbcType         = Types.VARCHAR;
+			int    col_PlanText_jdbcLen          = 65536;
 			
-			String col_NormSQLText_name     = "NormSQLText";
-			int    col_NormSQLText_jdbcType = Types.VARCHAR;
-			int    col_NormSQLText_jdbcLen  = 65536;
+			String col_BlockedBySqlText_name     = "BlockedBySqlText";
+			int    col_BlockedBySqlText_jdbcType = Types.VARCHAR;
+			int    col_BlockedBySqlText_jdbcLen  = 65536;
 			
-			// TODO: When we want Dictionary Compression on 'SQLText' and 'NormSQLText'
+			// When we want Dictionary Compression on 'SQLText' and 'NormSQLText'
 			if ( DictCompression.isEnabled() )
 			{
 				DictCompression dcc = DictCompression.getInstance();
 				
 				try
 				{
-					dcc.createTable(conn, null, MON_SQL_TEXT, col_SQLText_name    , col_SQLText_jdbcType    , col_SQLText_jdbcLen    , true);
-					dcc.createTable(conn, null, MON_SQL_TEXT, col_NormSQLText_name, col_NormSQLText_jdbcType, col_NormSQLText_jdbcLen, true);
+					dcc.createTable(conn, null, MON_SQL_STATEMENT, col_SQLText_name         , col_SQLText_jdbcType         , col_SQLText_jdbcLen         , true);
+					dcc.createTable(conn, null, MON_SQL_STATEMENT, col_NormSQLText_name     , col_NormSQLText_jdbcType     , col_NormSQLText_jdbcLen     , true);
+					dcc.createTable(conn, null, MON_SQL_STATEMENT, col_PlanText_name        , col_PlanText_jdbcType        , col_PlanText_jdbcLen        , true);
+					dcc.createTable(conn, null, MON_SQL_STATEMENT, col_BlockedBySqlText_name, col_BlockedBySqlText_jdbcType, col_BlockedBySqlText_jdbcLen, true);
 					
-					col_SQLText_name         = dcc.getDigestSourceColumnName(col_SQLText_name);
-					col_SQLText_jdbcType     = dcc.getDigestJdbcType();
-					col_SQLText_jdbcLen      = dcc.getDigestLength();
+					col_SQLText_name              = dcc.getDigestSourceColumnName(col_SQLText_name);
+					col_SQLText_jdbcType          = dcc.getDigestJdbcType();
+					col_SQLText_jdbcLen           = dcc.getDigestLength();
+                                                  
+					col_NormSQLText_name          = dcc.getDigestSourceColumnName(col_NormSQLText_name);
+					col_NormSQLText_jdbcType      = dcc.getDigestJdbcType();
+					col_NormSQLText_jdbcLen       = dcc.getDigestLength();
+                                                  
+					col_PlanText_name             = dcc.getDigestSourceColumnName(col_PlanText_name);
+					col_PlanText_jdbcType         = dcc.getDigestJdbcType();
+					col_PlanText_jdbcLen          = dcc.getDigestLength();
 
-					col_NormSQLText_name     = dcc.getDigestSourceColumnName(col_NormSQLText_name);
-					col_NormSQLText_jdbcType = dcc.getDigestJdbcType();
-					col_NormSQLText_jdbcLen  = dcc.getDigestLength();
+					col_BlockedBySqlText_name     = dcc.getDigestSourceColumnName(col_BlockedBySqlText_name);
+					col_BlockedBySqlText_jdbcType = dcc.getDigestJdbcType();
+					col_BlockedBySqlText_jdbcLen  = dcc.getDigestLength();
 				}
 				catch (SQLException ex)
 				{
-					_logger.error("Problems creating Dictionary Compressed table for '" + MON_SQL_TEXT + "' colName '" + col_SQLText_name + "' or '" + col_NormSQLText_name + "'.", ex);
+					_logger.error("Problems creating Dictionary Compressed table for '" + MON_SQL_STATEMENT + "' colName '" + col_SQLText_name + "', '" + col_NormSQLText_name + "' or '" + col_PlanText_name + "'.", ex);
 				}
 			}
 			
 			sbSql.append("create table " + tabName + "\n");
 			sbSql.append("( \n");
-			sbSql.append("    "+fill(lq+"sampleTime"          +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP                                  ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"InstanceID"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"SPID"                +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"KPID"                +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"BatchID"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"ServerLogin"         +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30                                ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"AddMethod"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"JavaSqlLength"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"JavaSqlLengthShort"  +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"JavaSqlHashCode"     +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"JavaSqlHashCodeShort"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
-//			sbSql.append("   ,"+fill(lq+"SQLText"             +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 65536                             ),20)+" "+getNullable(true) +"\n");
-			sbSql.append("   ,"+fill(lq+col_SQLText_name      +rq,40)+" "+fill(getDatatype(conn, col_SQLText_jdbcType,     col_SQLText_jdbcLen    ),20)+" "+getNullable(true) +"\n");
-			sbSql.append("   ,"+fill(lq+"NormJavaSqlHashCode" +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(true) +"\n");
-//			sbSql.append("   ,"+fill(lq+"NormSQLText"         +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 65536                             ),20)+" "+getNullable(true) +"\n");
-			sbSql.append("   ,"+fill(lq+col_NormSQLText_name  +rq,40)+" "+fill(getDatatype(conn, col_NormSQLText_jdbcType, col_NormSQLText_jdbcLen),20)+" "+getNullable(true) +"\n");
-			sbSql.append(") \n");
+			sbSql.append("    "+fill(lq+"sampleTime"             +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"InstanceID"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"SPID"                   +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_SPID_pos
+			sbSql.append("   ,"+fill(lq+"KPID"                   +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_KPID_pos
+			sbSql.append("   ,"+fill(lq+"DBID"                   +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"ProcedureID"            +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"PlanID"                 +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"BatchID"                +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_BatchID_pos
+			sbSql.append("   ,"+fill(lq+"ContextID"              +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"LineNumber"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"ObjOwnerID"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"DBName"                 +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   30),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"HashKey"                +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"SsqlId"                 +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"ProcName"               +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  255),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"Elapsed_ms"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"CpuTime"                +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"WaitTime"               +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"MemUsageKB"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"PhysicalReads"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"LogicalReads"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"RowsAffected"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"ErrorStatus"            +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"ProcNestLevel"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"StatementNumber"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"QueryOptimizationTime"  +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"PagesModified"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"PacketsSent"            +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"PacketsReceived"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"NetworkPacketSize"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"PlansAltered"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"StartTime"              +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"EndTime"                +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
 
+			sbSql.append("   ,"+fill(lq+"ServerLogin"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30  ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"AddStatus"              +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"JavaSqlLength"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"JavaSqlLengthShort"     +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"NormJavaSqlLength"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"JavaSqlHashCode"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"JavaSqlHashCodeShort"   +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"NormJavaSqlHashCode"    +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+
+			sbSql.append("   ,"+fill(lq+col_SQLText_name         +rq,40)+" "+fill(getDatatype(conn, col_SQLText_jdbcType,          col_SQLText_jdbcLen         ),20)+" "+getNullable(true) +"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+col_NormSQLText_name     +rq,40)+" "+fill(getDatatype(conn, col_NormSQLText_jdbcType,      col_NormSQLText_jdbcLen     ),20)+" "+getNullable(true) +"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+col_PlanText_name        +rq,40)+" "+fill(getDatatype(conn, col_PlanText_jdbcType,         col_PlanText_jdbcLen        ),20)+" "+getNullable(true) +"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+col_BlockedBySqlText_name+rq,40)+" "+fill(getDatatype(conn, col_BlockedBySqlText_jdbcType, col_BlockedBySqlText_jdbcLen),20)+" "+getNullable(true) +"\n"); // NULLABLE
+
+			sbSql.append("   ,"+fill(lq+"WaitTimeDetails"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 1024),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"BlockedBySpid"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"BlockedByKpid"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"BlockedByBatchId"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"BlockedByCommand"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30  ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"BlockedByApplication"   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30  ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"BlockedByTranId"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255 ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append(") \n");
+			
 			return sbSql.toString();
 		}
 
-		if (MON_SQL_STATEMENT.equals(tabName))
-		{
-			StringBuilder sbSql = new StringBuilder();
+//		if (MON_SQL_TEXT.equals(tabName))
+//		{
+//			StringBuilder sbSql = new StringBuilder();
+//
+//			String col_SQLText_name         = "SQLText";
+//			int    col_SQLText_jdbcType     = Types.VARCHAR;
+//			int    col_SQLText_jdbcLen      = 65536;
+//			
+//			String col_NormSQLText_name     = "NormSQLText";
+//			int    col_NormSQLText_jdbcType = Types.VARCHAR;
+//			int    col_NormSQLText_jdbcLen  = 65536;
+//			
+//			// TODO: When we want Dictionary Compression on 'SQLText' and 'NormSQLText'
+//			if ( DictCompression.isEnabled() )
+//			{
+//				DictCompression dcc = DictCompression.getInstance();
+//				
+//				try
+//				{
+//					dcc.createTable(conn, null, MON_SQL_TEXT, col_SQLText_name    , col_SQLText_jdbcType    , col_SQLText_jdbcLen    , true);
+//					dcc.createTable(conn, null, MON_SQL_TEXT, col_NormSQLText_name, col_NormSQLText_jdbcType, col_NormSQLText_jdbcLen, true);
+//					
+//					col_SQLText_name         = dcc.getDigestSourceColumnName(col_SQLText_name);
+//					col_SQLText_jdbcType     = dcc.getDigestJdbcType();
+//					col_SQLText_jdbcLen      = dcc.getDigestLength();
+//
+//					col_NormSQLText_name     = dcc.getDigestSourceColumnName(col_NormSQLText_name);
+//					col_NormSQLText_jdbcType = dcc.getDigestJdbcType();
+//					col_NormSQLText_jdbcLen  = dcc.getDigestLength();
+//				}
+//				catch (SQLException ex)
+//				{
+//					_logger.error("Problems creating Dictionary Compressed table for '" + MON_SQL_TEXT + "' colName '" + col_SQLText_name + "' or '" + col_NormSQLText_name + "'.", ex);
+//				}
+//			}
+//			
+//			sbSql.append("create table " + tabName + "\n");
+//			sbSql.append("( \n");
+//			sbSql.append("    "+fill(lq+"sampleTime"          +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP                                  ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"InstanceID"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"SPID"                +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"KPID"                +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"BatchID"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"ServerLogin"         +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30                                ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"AddMethod"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"JavaSqlLength"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"JavaSqlLengthShort"  +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"JavaSqlHashCode"     +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"JavaSqlHashCodeShort"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+////			sbSql.append("   ,"+fill(lq+"SQLText"             +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 65536                             ),20)+" "+getNullable(true) +"\n");
+//			sbSql.append("   ,"+fill(lq+col_SQLText_name      +rq,40)+" "+fill(getDatatype(conn, col_SQLText_jdbcType,     col_SQLText_jdbcLen    ),20)+" "+getNullable(true) +"\n");
+//			sbSql.append("   ,"+fill(lq+"NormJavaSqlHashCode" +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                    ),20)+" "+getNullable(true) +"\n");
+////			sbSql.append("   ,"+fill(lq+"NormSQLText"         +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 65536                             ),20)+" "+getNullable(true) +"\n");
+//			sbSql.append("   ,"+fill(lq+col_NormSQLText_name  +rq,40)+" "+fill(getDatatype(conn, col_NormSQLText_jdbcType, col_NormSQLText_jdbcLen),20)+" "+getNullable(true) +"\n");
+//			sbSql.append(") \n");
+//
+//			return sbSql.toString();
+//		}
 
-			sbSql.append("create table " + tabName + "\n");
-			sbSql.append("( \n");
-			sbSql.append("    "+fill(lq+"sampleTime"           +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"InstanceID"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"SPID"                 +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_SPID_pos
-			sbSql.append("   ,"+fill(lq+"KPID"                 +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_KPID_pos
-			sbSql.append("   ,"+fill(lq+"DBID"                 +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"ProcedureID"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"PlanID"               +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"BatchID"              +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_BatchID_pos
-			sbSql.append("   ,"+fill(lq+"ContextID"            +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"LineNumber"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"ObjOwnerID"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"DBName"               +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   30),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"HashKey"              +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"SsqlId"               +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"ProcName"             +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  255),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+"Elapsed_ms"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"CpuTime"              +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"WaitTime"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"MemUsageKB"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"PhysicalReads"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"LogicalReads"         +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"RowsAffected"         +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"ErrorStatus"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"ProcNestLevel"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"StatementNumber"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"QueryOptimizationTime"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"PagesModified"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"PacketsSent"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"PacketsReceived"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"NetworkPacketSize"    +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"PlansAltered"         +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"StartTime"            +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"EndTime"              +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"JavaSqlHashCode"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"JavaSqlHashCodeShort" +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"NormJavaSqlHashCode"  +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append(") \n");
+//		if (MON_SQL_STATEMENT.equals(tabName))
+//		{
+//			StringBuilder sbSql = new StringBuilder();
+//
+//			sbSql.append("create table " + tabName + "\n");
+//			sbSql.append("( \n");
+//			sbSql.append("    "+fill(lq+"sampleTime"           +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"InstanceID"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"SPID"                 +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_SPID_pos
+//			sbSql.append("   ,"+fill(lq+"KPID"                 +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_KPID_pos
+//			sbSql.append("   ,"+fill(lq+"DBID"                 +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"ProcedureID"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"PlanID"               +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"BatchID"              +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_BatchID_pos
+//			sbSql.append("   ,"+fill(lq+"ContextID"            +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"LineNumber"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"ObjOwnerID"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"DBName"               +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   30),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"HashKey"              +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"SsqlId"               +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"ProcName"             +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  255),20)+" "+getNullable(true)+"\n"); // NULLABLE
+//			sbSql.append("   ,"+fill(lq+"Elapsed_ms"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"CpuTime"              +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"WaitTime"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"MemUsageKB"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"PhysicalReads"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"LogicalReads"         +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"RowsAffected"         +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"ErrorStatus"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"ProcNestLevel"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"StatementNumber"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"QueryOptimizationTime"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"PagesModified"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"PacketsSent"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"PacketsReceived"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"NetworkPacketSize"    +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"PlansAltered"         +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"StartTime"            +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"EndTime"              +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"JavaSqlHashCode"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"JavaSqlHashCodeShort" +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"NormJavaSqlHashCode"  +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+//			sbSql.append(") \n");
+//
+//			return sbSql.toString();
+//		}
 
-			return sbSql.toString();
-		}
+//		if (MON_SQL_PLAN.equals(tabName))
+//		{
+//			StringBuilder sbSql = new StringBuilder();
+//			
+//			sbSql.append("create table " + tabName + "\n");
+//			sbSql.append("( \n");
+//			sbSql.append("    "+fill(lq+"sampleTime"       +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP     ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"InstanceID"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"SPID"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"KPID"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"PlanID"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"BatchID"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"ContextID"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"DBID"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"DBName"           +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30   ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"ProcedureID"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"AddMethod"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"PlanText"         +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 65536),20)+" "+getNullable(true) +"\n");
+//			sbSql.append(") \n");
+//
+//			return sbSql.toString();
+//		}
 
-		if (MON_SQL_PLAN.equals(tabName))
+		//-------------------------------------------------------------
+		if (MON_CAP_SPID_INFO.equals(tabName))
 		{
 			StringBuilder sbSql = new StringBuilder();
 			
 			sbSql.append("create table " + tabName + "\n");
 			sbSql.append("( \n");
-			sbSql.append("    "+fill(lq+"sampleTime"       +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP     ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"InstanceID"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"SPID"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"KPID"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"PlanID"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"BatchID"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"ContextID"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"DBID"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"DBName"           +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30   ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"ProcedureID"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"AddMethod"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"PlanText"         +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 65536),20)+" "+getNullable(true) +"\n");
+			sbSql.append("    "+fill(lq+"sampleTime"         +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP     ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"SPID"               +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"KPID"               +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"BatchID"            +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"ContextID"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"LineNumber"         +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"SecondsConnected"   +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"Command"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30   ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"SecondsWaiting"     +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"WaitEventID"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"BlockingSPID"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"BlockingKPID"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"BlockingBatchID"    +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"BlockingXLOID"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"NumChildren"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"Login"              +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30   ),20)+" "+getNullable(true )+"\n");
+			sbSql.append("   ,"+fill(lq+"DBName"             +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30   ),20)+" "+getNullable(true )+"\n");
+			sbSql.append("   ,"+fill(lq+"Application"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30   ),20)+" "+getNullable(true )+"\n");
+			sbSql.append("   ,"+fill(lq+"HostName"           +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30   ),20)+" "+getNullable(true )+"\n");
+			sbSql.append("   ,"+fill(lq+"MasterTransactionID"+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255  ),20)+" "+getNullable(true )+"\n");
+			sbSql.append("   ,"+fill(lq+"snapWaitTimeDetails"+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 1024 ),20)+" "+getNullable(true )+"\n");
+			sbSql.append("   ,"+fill(lq+"SqlText"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, SpidInfoBatchIdEntry.SQL_TEXT_LEN ),20)+" "+getNullable(true )+"\n");
+			sbSql.append("   ,"+fill(lq+"BlockingSqlText"    +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, SpidInfoBatchIdEntry.SQL_TEXT_LEN ),20)+" "+getNullable(true )+"\n");
+			sbSql.append(") \n");
+
+			return sbSql.toString();
+		}
+
+		//-------------------------------------------------------------
+		if (MON_CAP_WAIT_INFO.equals(tabName))
+		{
+			StringBuilder sbSql = new StringBuilder();
+			
+			sbSql.append("create table " + tabName + "\n");
+			sbSql.append("( \n");
+			sbSql.append("    "+fill(lq+"sampleTime"         +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP     ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"SPID"               +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"KPID"               +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"WaitEventID"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"WaitClassID"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"snapshotBatchID"    +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"Waits_abs"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"Waits_diff"         +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"WaitTime_abs"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"WaitTime_diff"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
 			sbSql.append(") \n");
 
 			return sbSql.toString();
@@ -527,215 +832,215 @@ extends SqlCaptureBrokerAbstract
 		return null;
 	}
 
-	private static class MonSqlText
-	{
-		Timestamp  sampleTime           ; // Types.TIMESTAMP                                  ),20)+" "+getNullable(false)+"\n");
-		int        InstanceID           ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
-		int        SPID                 ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
-		int        KPID                 ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
-		int        BatchID              ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
-		String     ServerLogin          ; // Types.VARCHAR, 30                                ),20)+" "+getNullable(false)+"\n");
-		int        AddMethod            ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
-		int        JavaSqlLength        ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
-		int        JavaSqlLengthShort   ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
-		int        JavaSqlHashCode      ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
-		int        JavaSqlHashCodeShort ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
-		String     SQLText              ; // col_SQLText_jdbcType,     col_SQLText_jdbcLen    ),20)+" "+getNullable(true) +"\n");
-		int        NormJavaSqlHashCode  ; // Types.INTEGER                                    ),20)+" "+getNullable(true) +"\n");
-		String     NormSQLText          ; // col_NormSQLText_jdbcType, col_NormSQLText_jdbcLen),20)+" "+getNullable(true) +"\n");
-
+//	private static class MonSqlText
+//	{
+//		Timestamp  sampleTime           ; // Types.TIMESTAMP                                  ),20)+" "+getNullable(false)+"\n");
+//		int        InstanceID           ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+//		int        SPID                 ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+//		int        KPID                 ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+//		int        BatchID              ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+//		String     ServerLogin          ; // Types.VARCHAR, 30                                ),20)+" "+getNullable(false)+"\n");
+//		int        AddMethod            ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+//		int        JavaSqlLength        ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+//		int        JavaSqlLengthShort   ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+//		int        JavaSqlHashCode      ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+//		int        JavaSqlHashCodeShort ; // Types.INTEGER                                    ),20)+" "+getNullable(false)+"\n");
+//		String     SQLText              ; // col_SQLText_jdbcType,     col_SQLText_jdbcLen    ),20)+" "+getNullable(true) +"\n");
+//		int        NormJavaSqlHashCode  ; // Types.INTEGER                                    ),20)+" "+getNullable(true) +"\n");
+//		String     NormSQLText          ; // col_NormSQLText_jdbcType, col_NormSQLText_jdbcLen),20)+" "+getNullable(true) +"\n");
+//
+////		// Below is used to "not have to lookup COLNAME->pos" every time
+////		private static boolean _isColNamesToPosResolved = false;
+//		// Below is used to create the List size for every row
+//		private static int     _numberOfCol             = 15;
+//
+////		private static int pos_sampleTime           = -1;
+////		private static int pos_InstanceID           = -1;
+////		private static int pos_SPID                 = -1;
+////		private static int pos_KPID                 = -1;
+////		private static int pos_BatchID              = -1;
+////		private static int pos_ServerLogin          = -1;
+////		private static int pos_AddMethod            = -1;
+////		private static int pos_JavaSqlLength        = -1;
+////		private static int pos_JavaSqlLengthShort   = -1;
+////		private static int pos_JavaSqlHashCode      = -1;
+////		private static int pos_JavaSqlHashCodeShort = -1;
+////		private static int pos_SQLText              = -1;
+//		private static int pos_SQLText              = 12; // NOTE: this is used in method: getDictionaryCompressionColumnMap() and must be maintained if position is changed
+////		private static int pos_NormJavaSqlHashCode  = -1;
+////		private static int pos_NormSQLText          = -1;
+//		private static int pos_NormSQLText          = 14; // NOTE: this is used in method: getDictionaryCompressionColumnMap() and must be maintained if position is changed
+////
+////		private static void resolveColNamesToPos(ResultSet rs)
+////		throws SQLException
+////		{
+////			List<String> colNames = DbUtils.getColumnNames(rs.getMetaData());
+////
+////			pos_sampleTime           = findInListToJdbcPos(colNames, "sampleTime"          );
+////			pos_InstanceID           = findInListToJdbcPos(colNames, "InstanceID"          );
+////			pos_SPID                 = findInListToJdbcPos(colNames, "SPID"                );
+////			pos_KPID                 = findInListToJdbcPos(colNames, "KPID"                );
+////			pos_BatchID              = findInListToJdbcPos(colNames, "BatchID"             );
+////			pos_ServerLogin          = findInListToJdbcPos(colNames, "ServerLogin"         );
+////			pos_AddMethod            = findInListToJdbcPos(colNames, "AddMethod"           );
+////			pos_JavaSqlLength        = findInListToJdbcPos(colNames, "JavaSqlLength"       );
+////			pos_JavaSqlLengthShort   = findInListToJdbcPos(colNames, "JavaSqlLengthShort"  );
+////			pos_JavaSqlHashCode      = findInListToJdbcPos(colNames, "JavaSqlHashCode"     );
+////			pos_JavaSqlHashCodeShort = findInListToJdbcPos(colNames, "JavaSqlHashCodeShort");
+////			pos_SQLText              = findInListToJdbcPos(colNames, "SQLText"             );
+////			pos_NormJavaSqlHashCode  = findInListToJdbcPos(colNames, "NormJavaSqlHashCode" );
+////			pos_NormSQLText          = findInListToJdbcPos(colNames, "NormSQLText"         );
+////			
+////			_numberOfCol = rs.getMetaData().getColumnCount();
+////			_isColNamesToPosResolved = true;
+////		}
+////
+////		public MonSqlText(ResultSet rs)
+////		throws SQLException
+////		{
+////			if ( ! _isColNamesToPosResolved )
+////			{
+////				resolveColNamesToPos(rs);
+////			}
+////				
+////			sampleTime            = rs.getTimestamp(pos_sampleTime          );
+////			InstanceID            = rs.getInt      (pos_InstanceID          );
+////			SPID                  = rs.getInt      (pos_SPID                );
+////			KPID                  = rs.getInt      (pos_KPID                );
+////			BatchID               = rs.getInt      (pos_BatchID             );
+////			ServerLogin           = rs.getString   (pos_ServerLogin         );
+////			AddMethod             = rs.getInt      (pos_AddMethod           );
+////			JavaSqlLength         = rs.getInt      (pos_JavaSqlLength       );	
+////			JavaSqlLengthShort    = rs.getInt      (pos_JavaSqlLengthShort  );	
+////			JavaSqlHashCode       = rs.getInt      (pos_JavaSqlHashCode     );	
+////			JavaSqlHashCodeShort  = rs.getInt      (pos_JavaSqlHashCodeShort);	
+////			SQLText               = rs.getString   (pos_SQLText             );	
+////			NormJavaSqlHashCode   = rs.getInt      (pos_NormJavaSqlHashCode );	
+////			NormSQLText           = rs.getString   (pos_NormSQLText         );	
+////		}
+//		
+//		public List<Object> getPcsRow()
+//		{
+//			List<Object> row = new ArrayList<>(_numberOfCol);
+//
+//			row.add(MON_SQL_TEXT);
+//			row.add(sampleTime          );
+//			row.add(InstanceID          );
+//			row.add(SPID                );
+//			row.add(KPID                );
+//			row.add(BatchID             );
+//			row.add(ServerLogin         );
+//			row.add(AddMethod           );
+//			row.add(JavaSqlLength       );
+//			row.add(JavaSqlLengthShort  );
+//			row.add(JavaSqlHashCode     );
+//			row.add(JavaSqlHashCodeShort);
+//			row.add(SQLText             );
+//			row.add(NormJavaSqlHashCode );
+//			row.add(NormSQLText         );
+//			
+//			return row;
+//		}
+//	}
+//
+//	private static class MonSqlPlan
+//	{
+//		Timestamp  sampleTime           ; // Types.TIMESTAMP     ),20)+" "+getNullable(false)+"\n");
+//		int        InstanceID           ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+//		int        SPID                 ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+//		int        KPID                 ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+//		int        PlanID               ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+//		int        BatchID              ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+//		int        ContextID            ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+//		int        DBID                 ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+//		String     DBName               ; // Types.VARCHAR, 30   ),20)+" "+getNullable(false)+"\n");
+//		int        ProcedureID          ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+//		int        AddMethod            ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+//		String     PlanText             ; // Types.VARCHAR, 65536),20)+" "+getNullable(true) +"\n");
+//
 //		// Below is used to "not have to lookup COLNAME->pos" every time
-//		private static boolean _isColNamesToPosResolved = false;
-		// Below is used to create the List size for every row
-		private static int     _numberOfCol             = 15;
-
-//		private static int pos_sampleTime           = -1;
-//		private static int pos_InstanceID           = -1;
-//		private static int pos_SPID                 = -1;
-//		private static int pos_KPID                 = -1;
-//		private static int pos_BatchID              = -1;
-//		private static int pos_ServerLogin          = -1;
-//		private static int pos_AddMethod            = -1;
-//		private static int pos_JavaSqlLength        = -1;
-//		private static int pos_JavaSqlLengthShort   = -1;
-//		private static int pos_JavaSqlHashCode      = -1;
-//		private static int pos_JavaSqlHashCodeShort = -1;
-//		private static int pos_SQLText              = -1;
-		private static int pos_SQLText              = 12; // NOTE: this is used in method: getDictionaryCompressionColumnMap() and must be maintained if position is changed
-//		private static int pos_NormJavaSqlHashCode  = -1;
-//		private static int pos_NormSQLText          = -1;
-		private static int pos_NormSQLText          = 14; // NOTE: this is used in method: getDictionaryCompressionColumnMap() and must be maintained if position is changed
+////		private static boolean _isColNamesToPosResolved = false;
+//		// Below is used to create the List size for every row
+//		private static int     _numberOfCol             = 13;
 //
-//		private static void resolveColNamesToPos(ResultSet rs)
-//		throws SQLException
+////		private static int pos_sampleTime  = -1;
+////		private static int pos_InstanceID  = -1;
+////		private static int pos_SPID        = -1;
+////		private static int pos_KPID        = -1;
+////		private static int pos_PlanID      = -1;
+////		private static int pos_BatchID     = -1;
+////		private static int pos_ContextID   = -1;
+////		private static int pos_DBID        = -1;
+////		private static int pos_DBName      = -1;
+////		private static int pos_ProcedureID = -1;
+////		private static int pos_AddMethod   = -1;
+////		private static int pos_PlanText    = -1;
+////
+////		private static void resolveColNamesToPos(ResultSet rs)
+////		throws SQLException
+////		{
+////			List<String> colNames = DbUtils.getColumnNames(rs.getMetaData());
+////
+////			pos_sampleTime  = findInListToJdbcPos(colNames, "sampleTime" );
+////			pos_InstanceID  = findInListToJdbcPos(colNames, "InstanceID" );
+////			pos_SPID        = findInListToJdbcPos(colNames, "SPID"       );
+////			pos_KPID        = findInListToJdbcPos(colNames, "KPID"       );
+////			pos_PlanID      = findInListToJdbcPos(colNames, "PlanID"     );
+////			pos_BatchID     = findInListToJdbcPos(colNames, "BatchID"    );
+////			pos_ContextID   = findInListToJdbcPos(colNames, "ContextID"  );
+////			pos_DBID        = findInListToJdbcPos(colNames, "DBID"       );
+////			pos_DBName      = findInListToJdbcPos(colNames, "DBName"     );
+////			pos_ProcedureID = findInListToJdbcPos(colNames, "ProcedureID");
+////			pos_AddMethod   = findInListToJdbcPos(colNames, "AddMethod"  );
+////			pos_PlanText    = findInListToJdbcPos(colNames, "PlanText"   );
+////			
+////			_numberOfCol = rs.getMetaData().getColumnCount();
+////			_isColNamesToPosResolved = true;
+////		}
+////
+////		public MonSqlPlan(ResultSet rs)
+////		throws SQLException
+////		{
+////			if ( ! _isColNamesToPosResolved )
+////			{
+////				resolveColNamesToPos(rs);
+////			}
+////				
+////			sampleTime  = rs.getTimestamp(pos_sampleTime );
+////			InstanceID  = rs.getInt      (pos_InstanceID );
+////			SPID        = rs.getInt      (pos_SPID       );
+////			KPID        = rs.getInt      (pos_KPID       );
+////			PlanID      = rs.getInt      (pos_PlanID     );
+////			BatchID     = rs.getInt      (pos_BatchID    );
+////			ContextID   = rs.getInt      (pos_ContextID  );
+////			DBID        = rs.getInt      (pos_DBID       );	
+////			DBName      = rs.getString   (pos_DBName     );	
+////			ProcedureID = rs.getInt      (pos_ProcedureID);	
+////			AddMethod   = rs.getInt      (pos_AddMethod  );	
+////			PlanText    = rs.getString   (pos_PlanText   );	
+////		}
+//		
+//		public List<Object> getPcsRow()
 //		{
-//			List<String> colNames = DbUtils.getColumnNames(rs.getMetaData());
+//			List<Object> row = new ArrayList<>(_numberOfCol);
 //
-//			pos_sampleTime           = findInListToJdbcPos(colNames, "sampleTime"          );
-//			pos_InstanceID           = findInListToJdbcPos(colNames, "InstanceID"          );
-//			pos_SPID                 = findInListToJdbcPos(colNames, "SPID"                );
-//			pos_KPID                 = findInListToJdbcPos(colNames, "KPID"                );
-//			pos_BatchID              = findInListToJdbcPos(colNames, "BatchID"             );
-//			pos_ServerLogin          = findInListToJdbcPos(colNames, "ServerLogin"         );
-//			pos_AddMethod            = findInListToJdbcPos(colNames, "AddMethod"           );
-//			pos_JavaSqlLength        = findInListToJdbcPos(colNames, "JavaSqlLength"       );
-//			pos_JavaSqlLengthShort   = findInListToJdbcPos(colNames, "JavaSqlLengthShort"  );
-//			pos_JavaSqlHashCode      = findInListToJdbcPos(colNames, "JavaSqlHashCode"     );
-//			pos_JavaSqlHashCodeShort = findInListToJdbcPos(colNames, "JavaSqlHashCodeShort");
-//			pos_SQLText              = findInListToJdbcPos(colNames, "SQLText"             );
-//			pos_NormJavaSqlHashCode  = findInListToJdbcPos(colNames, "NormJavaSqlHashCode" );
-//			pos_NormSQLText          = findInListToJdbcPos(colNames, "NormSQLText"         );
+//			row.add(MON_SQL_PLAN);
+//			row.add(sampleTime );
+//			row.add(InstanceID );
+//			row.add(SPID       );
+//			row.add(KPID       );
+//			row.add(PlanID     );
+//			row.add(BatchID    );
+//			row.add(ContextID  );
+//			row.add(DBID       );
+//			row.add(DBName     );
+//			row.add(ProcedureID);
+//			row.add(AddMethod  );
+//			row.add(PlanText   );
 //			
-//			_numberOfCol = rs.getMetaData().getColumnCount();
-//			_isColNamesToPosResolved = true;
+//			return row;
 //		}
-//
-//		public MonSqlText(ResultSet rs)
-//		throws SQLException
-//		{
-//			if ( ! _isColNamesToPosResolved )
-//			{
-//				resolveColNamesToPos(rs);
-//			}
-//				
-//			sampleTime            = rs.getTimestamp(pos_sampleTime          );
-//			InstanceID            = rs.getInt      (pos_InstanceID          );
-//			SPID                  = rs.getInt      (pos_SPID                );
-//			KPID                  = rs.getInt      (pos_KPID                );
-//			BatchID               = rs.getInt      (pos_BatchID             );
-//			ServerLogin           = rs.getString   (pos_ServerLogin         );
-//			AddMethod             = rs.getInt      (pos_AddMethod           );
-//			JavaSqlLength         = rs.getInt      (pos_JavaSqlLength       );	
-//			JavaSqlLengthShort    = rs.getInt      (pos_JavaSqlLengthShort  );	
-//			JavaSqlHashCode       = rs.getInt      (pos_JavaSqlHashCode     );	
-//			JavaSqlHashCodeShort  = rs.getInt      (pos_JavaSqlHashCodeShort);	
-//			SQLText               = rs.getString   (pos_SQLText             );	
-//			NormJavaSqlHashCode   = rs.getInt      (pos_NormJavaSqlHashCode );	
-//			NormSQLText           = rs.getString   (pos_NormSQLText         );	
-//		}
-		
-		public List<Object> getPcsRow()
-		{
-			List<Object> row = new ArrayList<>(_numberOfCol);
-
-			row.add(MON_SQL_TEXT);
-			row.add(sampleTime          );
-			row.add(InstanceID          );
-			row.add(SPID                );
-			row.add(KPID                );
-			row.add(BatchID             );
-			row.add(ServerLogin         );
-			row.add(AddMethod           );
-			row.add(JavaSqlLength       );
-			row.add(JavaSqlLengthShort  );
-			row.add(JavaSqlHashCode     );
-			row.add(JavaSqlHashCodeShort);
-			row.add(SQLText             );
-			row.add(NormJavaSqlHashCode );
-			row.add(NormSQLText         );
-			
-			return row;
-		}
-	}
-
-	private static class MonSqlPlan
-	{
-		Timestamp  sampleTime           ; // Types.TIMESTAMP     ),20)+" "+getNullable(false)+"\n");
-		int        InstanceID           ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-		int        SPID                 ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-		int        KPID                 ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-		int        PlanID               ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-		int        BatchID              ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-		int        ContextID            ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-		int        DBID                 ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-		String     DBName               ; // Types.VARCHAR, 30   ),20)+" "+getNullable(false)+"\n");
-		int        ProcedureID          ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-		int        AddMethod            ; // Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-		String     PlanText             ; // Types.VARCHAR, 65536),20)+" "+getNullable(true) +"\n");
-
-		// Below is used to "not have to lookup COLNAME->pos" every time
-//		private static boolean _isColNamesToPosResolved = false;
-		// Below is used to create the List size for every row
-		private static int     _numberOfCol             = 13;
-
-//		private static int pos_sampleTime  = -1;
-//		private static int pos_InstanceID  = -1;
-//		private static int pos_SPID        = -1;
-//		private static int pos_KPID        = -1;
-//		private static int pos_PlanID      = -1;
-//		private static int pos_BatchID     = -1;
-//		private static int pos_ContextID   = -1;
-//		private static int pos_DBID        = -1;
-//		private static int pos_DBName      = -1;
-//		private static int pos_ProcedureID = -1;
-//		private static int pos_AddMethod   = -1;
-//		private static int pos_PlanText    = -1;
-//
-//		private static void resolveColNamesToPos(ResultSet rs)
-//		throws SQLException
-//		{
-//			List<String> colNames = DbUtils.getColumnNames(rs.getMetaData());
-//
-//			pos_sampleTime  = findInListToJdbcPos(colNames, "sampleTime" );
-//			pos_InstanceID  = findInListToJdbcPos(colNames, "InstanceID" );
-//			pos_SPID        = findInListToJdbcPos(colNames, "SPID"       );
-//			pos_KPID        = findInListToJdbcPos(colNames, "KPID"       );
-//			pos_PlanID      = findInListToJdbcPos(colNames, "PlanID"     );
-//			pos_BatchID     = findInListToJdbcPos(colNames, "BatchID"    );
-//			pos_ContextID   = findInListToJdbcPos(colNames, "ContextID"  );
-//			pos_DBID        = findInListToJdbcPos(colNames, "DBID"       );
-//			pos_DBName      = findInListToJdbcPos(colNames, "DBName"     );
-//			pos_ProcedureID = findInListToJdbcPos(colNames, "ProcedureID");
-//			pos_AddMethod   = findInListToJdbcPos(colNames, "AddMethod"  );
-//			pos_PlanText    = findInListToJdbcPos(colNames, "PlanText"   );
-//			
-//			_numberOfCol = rs.getMetaData().getColumnCount();
-//			_isColNamesToPosResolved = true;
-//		}
-//
-//		public MonSqlPlan(ResultSet rs)
-//		throws SQLException
-//		{
-//			if ( ! _isColNamesToPosResolved )
-//			{
-//				resolveColNamesToPos(rs);
-//			}
-//				
-//			sampleTime  = rs.getTimestamp(pos_sampleTime );
-//			InstanceID  = rs.getInt      (pos_InstanceID );
-//			SPID        = rs.getInt      (pos_SPID       );
-//			KPID        = rs.getInt      (pos_KPID       );
-//			PlanID      = rs.getInt      (pos_PlanID     );
-//			BatchID     = rs.getInt      (pos_BatchID    );
-//			ContextID   = rs.getInt      (pos_ContextID  );
-//			DBID        = rs.getInt      (pos_DBID       );	
-//			DBName      = rs.getString   (pos_DBName     );	
-//			ProcedureID = rs.getInt      (pos_ProcedureID);	
-//			AddMethod   = rs.getInt      (pos_AddMethod  );	
-//			PlanText    = rs.getString   (pos_PlanText   );	
-//		}
-		
-		public List<Object> getPcsRow()
-		{
-			List<Object> row = new ArrayList<>(_numberOfCol);
-
-			row.add(MON_SQL_PLAN);
-			row.add(sampleTime );
-			row.add(InstanceID );
-			row.add(SPID       );
-			row.add(KPID       );
-			row.add(PlanID     );
-			row.add(BatchID    );
-			row.add(ContextID  );
-			row.add(DBID       );
-			row.add(DBName     );
-			row.add(ProcedureID);
-			row.add(AddMethod  );
-			row.add(PlanText   );
-			
-			return row;
-		}
-	}
+//	}
 
 	private static class MonSqlStatement
 	{
@@ -772,9 +1077,30 @@ extends SqlCaptureBrokerAbstract
 		int        PlansAltered         ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
 		Timestamp  StartTime            ; // Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
 		Timestamp  EndTime              ; // Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
+
+		String     ServerLogin          ; // Types.VARCHAR, 30  ),20)+" "+getNullable(false)+"\n");
+		int        AddStatus            ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        JavaSqlLength        ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        JavaSqlLengthShort   ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
+		int        NormJavaSqlLength    ; // Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
 		int        JavaSqlHashCode      ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
 		int        JavaSqlHashCodeShort ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
 		int        NormJavaSqlHashCode  ; // Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+
+		String     SQLText              ;
+		String     NormSQLText          ;
+		String     PlanText             ;
+		String     BlockedBySqlText     ;
+
+		// Extra information that is "filled in" if _sampleSpidInfo && _sampleWaitInfo is enabled
+		String     WaitTimeDetails      ;
+		int        BlockedBySpid        ;
+		int        BlockedByKpid        ;
+		int        BlockedByBatchId     ;
+		String     BlockedByCommand     ;
+		String     BlockedByApplication ;
+		String     BlockedByTranId      ;
+
 
 		// Below is used to "not have to lookup COLNAME->pos" every time
 		private static boolean _isColNamesToPosResolved = false;
@@ -814,10 +1140,21 @@ extends SqlCaptureBrokerAbstract
 		private static int pos_PlansAltered          = -1;
 		private static int pos_StartTime             = -1;
 		private static int pos_EndTime               = -1;
+		
+		private static int pos_ServerLogin           = -1;
+		private static int pos_AddStatus             = -1;
+		private static int pos_JavaSqlLength         = -1;
+		private static int pos_JavaSqlLengthShort    = -1;
+		private static int pos_NormJavaSqlLength     = -1;
 		private static int pos_JavaSqlHashCode       = -1;
 		private static int pos_JavaSqlHashCodeShort  = -1;
 		private static int pos_NormJavaSqlHashCode   = -1;
-		
+
+		private static int pos_SQLText               = -1;
+		private static int pos_NormSQLText           = -1;
+		private static int pos_PlanText              = -1;
+		private static int pos_BlockedBySqlText      = -1;
+
 		private static void resolveColNamesToPos(ResultSet rs)
 		throws SQLException
 		{
@@ -856,10 +1193,21 @@ extends SqlCaptureBrokerAbstract
 			pos_PlansAltered          = findInListToJdbcPos(colNames, "PlansAltered");
 			pos_StartTime             = findInListToJdbcPos(colNames, "StartTime");
 			pos_EndTime               = findInListToJdbcPos(colNames, "EndTime");
+			
+			pos_ServerLogin           = findInListToJdbcPos(colNames, "ServerLogin");
+			pos_AddStatus             = findInListToJdbcPos(colNames, "AddStatus");
+			pos_JavaSqlLength         = findInListToJdbcPos(colNames, "JavaSqlLength");
+			pos_JavaSqlLengthShort    = findInListToJdbcPos(colNames, "JavaSqlLengthShort");
+			pos_NormJavaSqlLength     = findInListToJdbcPos(colNames, "NormJavaSqlLength");
 			pos_JavaSqlHashCode       = findInListToJdbcPos(colNames, "JavaSqlHashCode");
 			pos_JavaSqlHashCodeShort  = findInListToJdbcPos(colNames, "JavaSqlHashCodeShort");
-			pos_NormJavaSqlHashCode   = findInListToJdbcPos(colNames, "NormJavaSqlHashCode");			
-			
+			pos_NormJavaSqlHashCode   = findInListToJdbcPos(colNames, "NormJavaSqlHashCode");
+
+			pos_SQLText               = findInListToJdbcPos(colNames, "SQLText");
+			pos_NormSQLText           = findInListToJdbcPos(colNames, "NormSQLText");
+			pos_PlanText              = findInListToJdbcPos(colNames, "PlanText");
+			pos_BlockedBySqlText      = findInListToJdbcPos(colNames, "BlockedBySqlText");
+
 			_numberOfCol = rs.getMetaData().getColumnCount();
 			_isColNamesToPosResolved = true;
 		}
@@ -905,9 +1253,20 @@ extends SqlCaptureBrokerAbstract
 			PlansAltered          = rs.getInt      (pos_PlansAltered         );
 			StartTime             = rs.getTimestamp(pos_StartTime            );
 			EndTime               = rs.getTimestamp(pos_EndTime              );
-			JavaSqlHashCode       = rs.getInt      (pos_JavaSqlHashCode      );
-			JavaSqlHashCodeShort  = rs.getInt      (pos_JavaSqlHashCodeShort );
-			NormJavaSqlHashCode   = rs.getInt      (pos_NormJavaSqlHashCode  );	
+
+			ServerLogin           = rs.getString   (pos_ServerLogin);
+			AddStatus             = rs.getInt      (pos_AddStatus);
+			JavaSqlLength         = rs.getInt      (pos_JavaSqlLength);
+			JavaSqlLengthShort    = rs.getInt      (pos_JavaSqlLengthShort);
+			NormJavaSqlLength     = rs.getInt      (pos_NormJavaSqlLength);
+			JavaSqlHashCode       = rs.getInt      (pos_JavaSqlHashCode);
+			JavaSqlHashCodeShort  = rs.getInt      (pos_JavaSqlHashCodeShort);
+			NormJavaSqlHashCode   = rs.getInt      (pos_NormJavaSqlHashCode);
+
+			SQLText               = rs.getString   (pos_SQLText);
+			NormSQLText           = rs.getString   (pos_NormSQLText);
+			PlanText              = rs.getString   (pos_PlanText);
+			BlockedBySqlText      = rs.getString   (pos_BlockedBySqlText);
 		}
 		
 		public List<Object> getPcsRow()
@@ -948,9 +1307,28 @@ extends SqlCaptureBrokerAbstract
 			row.add(PlansAltered         );
 			row.add(StartTime            );
 			row.add(EndTime              );
+
+			row.add(ServerLogin          );
+			row.add(AddStatus            );
+			row.add(JavaSqlLength        );
+			row.add(JavaSqlLengthShort   );
+			row.add(NormJavaSqlLength    );
 			row.add(JavaSqlHashCode      );
 			row.add(JavaSqlHashCodeShort );
 			row.add(NormJavaSqlHashCode  );
+
+			row.add(SQLText              );
+			row.add(NormSQLText          );
+			row.add(PlanText             );
+			row.add(BlockedBySqlText     );
+
+			row.add(WaitTimeDetails      );
+			row.add(BlockedBySpid        );
+			row.add(BlockedByKpid        );
+			row.add(BlockedByBatchId     );
+			row.add(BlockedByCommand     );
+			row.add(BlockedByApplication );
+			row.add(BlockedByTranId      );
 
 			return row;
 		}
@@ -980,20 +1358,30 @@ extends SqlCaptureBrokerAbstract
 		// Put indexes in this list that will be returned
 		List<String> list = new ArrayList<>();
 
-		if (MON_SQL_TEXT.equals(tabName))
-		{
-			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + conn.quotify(tabName) + "(" + conn.quotify("BatchID", "SPID", "KPID") + ")\n");
-		}
+//		if (MON_SQL_TEXT.equals(tabName))
+//		{
+//			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + conn.quotify(tabName) + "(" + conn.quotify("BatchID", "SPID", "KPID") + ")\n");
+//		}
 
 		if (MON_SQL_STATEMENT.equals(tabName))
 		{
-			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + conn.quotify(tabName) + "(" + conn.quotify("BatchID", "SPID", "KPID") + ")\n");
+//			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + conn.quotify(tabName) + "(" + conn.quotify("BatchID", "SPID", "KPID") + ")\n");
 			list.add("create index " + conn.quotify(tabName+"_ix2") + " on " + conn.quotify(tabName) + "(" + conn.quotify("StartTime", "EndTime")    + ")\n");
 		}
 
-		if (MON_SQL_PLAN.equals(tabName))
+//		if (MON_SQL_PLAN.equals(tabName))
+//		{
+//			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + conn.quotify(tabName) + "(" + conn.quotify("BatchID", "SPID", "KPID") + ")\n");
+//		}
+
+		if (MON_CAP_SPID_INFO.equals(tabName))
 		{
-			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + conn.quotify(tabName) + "(" + conn.quotify("BatchID", "SPID", "KPID") + ")\n");
+			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + conn.quotify(tabName) + "(" + conn.quotify("sampleTime", "SPID", "KPID") + ")\n");
+		}
+
+		if (MON_CAP_WAIT_INFO.equals(tabName))
+		{
+			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + conn.quotify(tabName) + "(" + conn.quotify("sampleTime", "SPID", "KPID", "WaitEventID") + ")\n");
 		}
 
 		return list;
@@ -1005,115 +1393,210 @@ extends SqlCaptureBrokerAbstract
 		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
 		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 		
-		if (MON_SQL_TEXT.equals(tabName))
+//		if (MON_SQL_TEXT.equals(tabName))
+//		{
+//			StringBuilder sbSql = new StringBuilder();
+//
+//			String col_SQLText_name         = "SQLText";
+//			String col_NormSQLText_name     = "NormSQLText";
+//			
+//			// TODO: When we want Dictionary Compression on 'SQLText' and 'NormSQLText'
+//			if ( DictCompression.isEnabled() )
+//			{
+//				DictCompression dcc = DictCompression.getInstance();
+//				
+//				col_SQLText_name         = dcc.getDigestSourceColumnName(col_SQLText_name);
+//				col_NormSQLText_name     = dcc.getDigestSourceColumnName(col_NormSQLText_name);
+//			}
+//
+//			sbSql.append("insert into ").append(tabName);
+//			sbSql.append("(");
+//			sbSql.append(" ").append(lq).append("sampleTime"          ).append(rq); // 1
+//			sbSql.append(",").append(lq).append("InstanceID"          ).append(rq); // 2
+//			sbSql.append(",").append(lq).append("SPID"                ).append(rq); // 3
+//			sbSql.append(",").append(lq).append("KPID"                ).append(rq); // 4
+//			sbSql.append(",").append(lq).append("BatchID"             ).append(rq); // 5
+//			sbSql.append(",").append(lq).append("ServerLogin"         ).append(rq); // 6
+//			sbSql.append(",").append(lq).append("AddMethod"           ).append(rq); // 7
+//			sbSql.append(",").append(lq).append("JavaSqlLength"       ).append(rq); // 8
+//			sbSql.append(",").append(lq).append("JavaSqlLengthShort"  ).append(rq); // 9
+//			sbSql.append(",").append(lq).append("JavaSqlHashCode"     ).append(rq); // 10
+//			sbSql.append(",").append(lq).append("JavaSqlHashCodeShort").append(rq); // 11
+//			sbSql.append(",").append(lq).append(col_SQLText_name      ).append(rq); // 12
+//			sbSql.append(",").append(lq).append("NormJavaSqlHashCode" ).append(rq); // 13
+//			sbSql.append(",").append(lq).append(col_NormSQLText_name  ).append(rq); // 14
+//			sbSql.append(") \n");
+//			sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n"); // 14 question marks
+//			//                   1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14
+//
+//			return sbSql.toString();
+//		}
+
+		if (MON_SQL_STATEMENT.equals(tabName))
 		{
 			StringBuilder sbSql = new StringBuilder();
 
-			String col_SQLText_name         = "SQLText";
-			String col_NormSQLText_name     = "NormSQLText";
+			String col_SQLText_name          = "SQLText";
+			String col_NormSQLText_name      = "NormSQLText";
+			String col_PlanText_name         = "PlanText";
+			String col_BlockedBySqlText_name = "BlockedBySqlText";
 			
 			// TODO: When we want Dictionary Compression on 'SQLText' and 'NormSQLText'
 			if ( DictCompression.isEnabled() )
 			{
 				DictCompression dcc = DictCompression.getInstance();
 				
-				col_SQLText_name         = dcc.getDigestSourceColumnName(col_SQLText_name);
-				col_NormSQLText_name     = dcc.getDigestSourceColumnName(col_NormSQLText_name);
+				col_SQLText_name          = dcc.getDigestSourceColumnName(col_SQLText_name);
+				col_NormSQLText_name      = dcc.getDigestSourceColumnName(col_NormSQLText_name);
+				col_PlanText_name         = dcc.getDigestSourceColumnName(col_PlanText_name);
+				col_BlockedBySqlText_name = dcc.getDigestSourceColumnName(col_BlockedBySqlText_name);
 			}
-
+			
 			sbSql.append("insert into ").append(tabName);
 			sbSql.append("(");
-			sbSql.append(" ").append(lq).append("sampleTime"          ).append(rq); // 1
-			sbSql.append(",").append(lq).append("InstanceID"          ).append(rq); // 2
-			sbSql.append(",").append(lq).append("SPID"                ).append(rq); // 3
-			sbSql.append(",").append(lq).append("KPID"                ).append(rq); // 4
-			sbSql.append(",").append(lq).append("BatchID"             ).append(rq); // 5
-			sbSql.append(",").append(lq).append("ServerLogin"         ).append(rq); // 6
-			sbSql.append(",").append(lq).append("AddMethod"           ).append(rq); // 7
-			sbSql.append(",").append(lq).append("JavaSqlLength"       ).append(rq); // 8
-			sbSql.append(",").append(lq).append("JavaSqlLengthShort"  ).append(rq); // 9
-			sbSql.append(",").append(lq).append("JavaSqlHashCode"     ).append(rq); // 10
-			sbSql.append(",").append(lq).append("JavaSqlHashCodeShort").append(rq); // 11
-			sbSql.append(",").append(lq).append(col_SQLText_name      ).append(rq); // 12
-			sbSql.append(",").append(lq).append("NormJavaSqlHashCode" ).append(rq); // 13
-			sbSql.append(",").append(lq).append(col_NormSQLText_name  ).append(rq); // 14
+			sbSql.append(" ").append(lq).append("sampleTime"             ).append(rq);  //  1
+			sbSql.append(",").append(lq).append("InstanceID"             ).append(rq);  //  2
+			sbSql.append(",").append(lq).append("SPID"                   ).append(rq);  //  3
+			sbSql.append(",").append(lq).append("KPID"                   ).append(rq);  //  4
+			sbSql.append(",").append(lq).append("DBID"                   ).append(rq);  //  5
+			sbSql.append(",").append(lq).append("ProcedureID"            ).append(rq);  //  6
+			sbSql.append(",").append(lq).append("PlanID"                 ).append(rq);  //  7
+			sbSql.append(",").append(lq).append("BatchID"                ).append(rq);  //  8
+			sbSql.append(",").append(lq).append("ContextID"              ).append(rq);  //  9
+			sbSql.append(",").append(lq).append("LineNumber"             ).append(rq);  // 10
+			sbSql.append(",").append(lq).append("ObjOwnerID"             ).append(rq);  // 11
+			sbSql.append(",").append(lq).append("DBName"                 ).append(rq);  // 12
+			sbSql.append(",").append(lq).append("HashKey"                ).append(rq);  // 13
+			sbSql.append(",").append(lq).append("SsqlId"                 ).append(rq);  // 14
+			sbSql.append(",").append(lq).append("ProcName"               ).append(rq);  // 15
+			sbSql.append(",").append(lq).append("Elapsed_ms"             ).append(rq);  // 16
+			sbSql.append(",").append(lq).append("CpuTime"                ).append(rq);  // 17
+			sbSql.append(",").append(lq).append("WaitTime"               ).append(rq);  // 18
+			sbSql.append(",").append(lq).append("MemUsageKB"             ).append(rq);  // 19
+			sbSql.append(",").append(lq).append("PhysicalReads"          ).append(rq);  // 20
+			sbSql.append(",").append(lq).append("LogicalReads"           ).append(rq);  // 21
+			sbSql.append(",").append(lq).append("RowsAffected"           ).append(rq);  // 22
+			sbSql.append(",").append(lq).append("ErrorStatus"            ).append(rq);  // 23
+			sbSql.append(",").append(lq).append("ProcNestLevel"          ).append(rq);  // 24
+			sbSql.append(",").append(lq).append("StatementNumber"        ).append(rq);  // 25
+			sbSql.append(",").append(lq).append("QueryOptimizationTime"  ).append(rq);  // 26
+			sbSql.append(",").append(lq).append("PagesModified"          ).append(rq);  // 27
+			sbSql.append(",").append(lq).append("PacketsSent"            ).append(rq);  // 28
+			sbSql.append(",").append(lq).append("PacketsReceived"        ).append(rq);  // 29
+			sbSql.append(",").append(lq).append("NetworkPacketSize"      ).append(rq);  // 30
+			sbSql.append(",").append(lq).append("PlansAltered"           ).append(rq);  // 31
+			sbSql.append(",").append(lq).append("StartTime"              ).append(rq);  // 32
+			sbSql.append(",").append(lq).append("EndTime"                ).append(rq);  // 33
+                                                                         
+			sbSql.append(",").append(lq).append("ServerLogin"            ).append(rq);  // 34;
+			sbSql.append(",").append(lq).append("AddStatus"              ).append(rq);  // 35;
+			sbSql.append(",").append(lq).append("JavaSqlLength"          ).append(rq);  // 36;
+			sbSql.append(",").append(lq).append("JavaSqlLengthShort"     ).append(rq);  // 37;
+			sbSql.append(",").append(lq).append("NormJavaSqlLength"      ).append(rq);  // 38;
+			sbSql.append(",").append(lq).append("JavaSqlHashCode"        ).append(rq);  // 39;
+			sbSql.append(",").append(lq).append("JavaSqlHashCodeShort"   ).append(rq);  // 40;
+			sbSql.append(",").append(lq).append("NormJavaSqlHashCode"    ).append(rq);  // 41;
+                                                                         
+			sbSql.append(",").append(lq).append(col_SQLText_name         ).append(rq);  // 42;
+			sbSql.append(",").append(lq).append(col_NormSQLText_name     ).append(rq);  // 43;
+			sbSql.append(",").append(lq).append(col_PlanText_name        ).append(rq);  // 44;
+			sbSql.append(",").append(lq).append(col_BlockedBySqlText_name).append(rq);  // 45;
+                                                                         
+			sbSql.append(",").append(lq).append("WaitTimeDetails"        ).append(rq);  // 46;
+			sbSql.append(",").append(lq).append("BlockedBySpid"          ).append(rq);  // 47;
+			sbSql.append(",").append(lq).append("BlockedByKpid"          ).append(rq);  // 48;
+			sbSql.append(",").append(lq).append("BlockedByBatchId"       ).append(rq);  // 49;
+			sbSql.append(",").append(lq).append("BlockedByCommand"       ).append(rq);  // 50;
+			sbSql.append(",").append(lq).append("BlockedByApplication"   ).append(rq);  // 51;
+			sbSql.append(",").append(lq).append("BlockedByTranId"        ).append(rq);  // 52;
+
 			sbSql.append(") \n");
-			sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n"); // 14 question marks
-			//                   1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14
+			sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n"); // 52 question marks
+			//                   1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52
 
 			return sbSql.toString();
 		}
 
-		if (MON_SQL_STATEMENT.equals(tabName))
+//		if (MON_SQL_PLAN.equals(tabName))
+//		{
+//			StringBuilder sbSql = new StringBuilder();
+//
+//			sbSql.append("insert into ").append(tabName);
+//			sbSql.append("(");
+//			sbSql.append(" ").append(lq).append("sampleTime" ).append(rq); // 1
+//			sbSql.append(",").append(lq).append("InstanceID" ).append(rq); // 2
+//			sbSql.append(",").append(lq).append("SPID"       ).append(rq); // 3
+//			sbSql.append(",").append(lq).append("KPID"       ).append(rq); // 4
+//			sbSql.append(",").append(lq).append("PlanID"     ).append(rq); // 5
+//			sbSql.append(",").append(lq).append("BatchID"    ).append(rq); // 6
+//			sbSql.append(",").append(lq).append("ContextID"  ).append(rq); // 7
+//			sbSql.append(",").append(lq).append("DBID"       ).append(rq); // 8
+//			sbSql.append(",").append(lq).append("DBName"     ).append(rq); // 9
+//			sbSql.append(",").append(lq).append("ProcedureID").append(rq); // 10
+//			sbSql.append(",").append(lq).append("AddMethod"  ).append(rq); // 11
+//			sbSql.append(",").append(lq).append("PlanText"   ).append(rq); // 12
+//			sbSql.append(") \n");
+//			sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n"); // 12 question marks
+//			//                   1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12
+//
+//			return sbSql.toString();
+//		}
+
+		if (MON_CAP_SPID_INFO.equals(tabName))
 		{
 			StringBuilder sbSql = new StringBuilder();
 
 			sbSql.append("insert into ").append(tabName);
 			sbSql.append("(");
-			sbSql.append(" ").append(lq).append("sampleTime"           ).append(rq);  //  1
-			sbSql.append(",").append(lq).append("InstanceID"           ).append(rq);  //  2
-			sbSql.append(",").append(lq).append("SPID"                 ).append(rq);  //  3
-			sbSql.append(",").append(lq).append("KPID"                 ).append(rq);  //  4
-			sbSql.append(",").append(lq).append("DBID"                 ).append(rq);  //  5
-			sbSql.append(",").append(lq).append("ProcedureID"          ).append(rq);  //  6
-			sbSql.append(",").append(lq).append("PlanID"               ).append(rq);  //  7
-			sbSql.append(",").append(lq).append("BatchID"              ).append(rq);  //  8
-			sbSql.append(",").append(lq).append("ContextID"            ).append(rq);  //  9
-			sbSql.append(",").append(lq).append("LineNumber"           ).append(rq);  // 10
-			sbSql.append(",").append(lq).append("ObjOwnerID"           ).append(rq);  // 11
-			sbSql.append(",").append(lq).append("DBName"               ).append(rq);  // 12
-			sbSql.append(",").append(lq).append("HashKey"              ).append(rq);  // 13
-			sbSql.append(",").append(lq).append("SsqlId"               ).append(rq);  // 14
-			sbSql.append(",").append(lq).append("ProcName"             ).append(rq);  // 15
-			sbSql.append(",").append(lq).append("Elapsed_ms"           ).append(rq);  // 16
-			sbSql.append(",").append(lq).append("CpuTime"              ).append(rq);  // 17
-			sbSql.append(",").append(lq).append("WaitTime"             ).append(rq);  // 18
-			sbSql.append(",").append(lq).append("MemUsageKB"           ).append(rq);  // 19
-			sbSql.append(",").append(lq).append("PhysicalReads"        ).append(rq);  // 20
-			sbSql.append(",").append(lq).append("LogicalReads"         ).append(rq);  // 21
-			sbSql.append(",").append(lq).append("RowsAffected"         ).append(rq);  // 22
-			sbSql.append(",").append(lq).append("ErrorStatus"          ).append(rq);  // 23
-			sbSql.append(",").append(lq).append("ProcNestLevel"        ).append(rq);  // 24
-			sbSql.append(",").append(lq).append("StatementNumber"      ).append(rq);  // 25
-			sbSql.append(",").append(lq).append("QueryOptimizationTime").append(rq);  // 26
-			sbSql.append(",").append(lq).append("PagesModified"        ).append(rq);  // 27
-			sbSql.append(",").append(lq).append("PacketsSent"          ).append(rq);  // 28
-			sbSql.append(",").append(lq).append("PacketsReceived"      ).append(rq);  // 29
-			sbSql.append(",").append(lq).append("NetworkPacketSize"    ).append(rq);  // 30
-			sbSql.append(",").append(lq).append("PlansAltered"         ).append(rq);  // 31
-			sbSql.append(",").append(lq).append("StartTime"            ).append(rq);  // 32
-			sbSql.append(",").append(lq).append("EndTime"              ).append(rq);  // 33
-			sbSql.append(",").append(lq).append("JavaSqlHashCode"      ).append(rq);  // 34
-			sbSql.append(",").append(lq).append("JavaSqlHashCodeShort" ).append(rq);  // 35
-			sbSql.append(",").append(lq).append("NormJavaSqlHashCode"  ).append(rq);  // 36
+			sbSql.append(" ").append(lq).append("sampleTime"         ).append(rq); // 1
+			sbSql.append(",").append(lq).append("SPID"               ).append(rq); // 2
+			sbSql.append(",").append(lq).append("KPID"               ).append(rq); // 3
+			sbSql.append(",").append(lq).append("BatchID"            ).append(rq); // 4
+			sbSql.append(",").append(lq).append("ContextID"          ).append(rq); // 5
+			sbSql.append(",").append(lq).append("LineNumber"         ).append(rq); // 6
+			sbSql.append(",").append(lq).append("SecondsConnected"   ).append(rq); // 7
+			sbSql.append(",").append(lq).append("Command"            ).append(rq); // 8
+			sbSql.append(",").append(lq).append("SecondsWaiting"     ).append(rq); // 9
+			sbSql.append(",").append(lq).append("WaitEventID"        ).append(rq); // 10
+			sbSql.append(",").append(lq).append("BlockingSPID"       ).append(rq); // 11
+			sbSql.append(",").append(lq).append("BlockingKPID"       ).append(rq); // 12
+			sbSql.append(",").append(lq).append("BlockingBatchID"    ).append(rq); // 13
+			sbSql.append(",").append(lq).append("BlockingXLOID"      ).append(rq); // 14
+			sbSql.append(",").append(lq).append("NumChildren"        ).append(rq); // 15
+			sbSql.append(",").append(lq).append("Login"              ).append(rq); // 16
+			sbSql.append(",").append(lq).append("DBName"             ).append(rq); // 17
+			sbSql.append(",").append(lq).append("Application"        ).append(rq); // 18
+			sbSql.append(",").append(lq).append("HostName"           ).append(rq); // 19
+			sbSql.append(",").append(lq).append("MasterTransactionID").append(rq); // 20
+			sbSql.append(",").append(lq).append("snapWaitTimeDetails").append(rq); // 21
+			sbSql.append(",").append(lq).append("SqlText"            ).append(rq); // 22
+			sbSql.append(",").append(lq).append("BlockingSqlText"    ).append(rq); // 23
 			sbSql.append(") \n");
-			sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n"); // 36 question marks
-			//                   1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36
+			sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n"); // 21 question marks
+			//                   1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20,21,22,23
 
 			return sbSql.toString();
 		}
 
-		if (MON_SQL_PLAN.equals(tabName))
+		if (MON_CAP_WAIT_INFO.equals(tabName))
 		{
 			StringBuilder sbSql = new StringBuilder();
 
 			sbSql.append("insert into ").append(tabName);
 			sbSql.append("(");
-			sbSql.append(" ").append(lq).append("sampleTime" ).append(rq); // 1
-			sbSql.append(",").append(lq).append("InstanceID" ).append(rq); // 2
-			sbSql.append(",").append(lq).append("SPID"       ).append(rq); // 3
-			sbSql.append(",").append(lq).append("KPID"       ).append(rq); // 4
-			sbSql.append(",").append(lq).append("PlanID"     ).append(rq); // 5
-			sbSql.append(",").append(lq).append("BatchID"    ).append(rq); // 6
-			sbSql.append(",").append(lq).append("ContextID"  ).append(rq); // 7
-			sbSql.append(",").append(lq).append("DBID"       ).append(rq); // 8
-			sbSql.append(",").append(lq).append("DBName"     ).append(rq); // 9
-			sbSql.append(",").append(lq).append("ProcedureID").append(rq); // 10
-			sbSql.append(",").append(lq).append("AddMethod"  ).append(rq); // 11
-			sbSql.append(",").append(lq).append("PlanText"   ).append(rq); // 12
+			sbSql.append(" ").append(lq).append("sampleTime"         ).append(rq); // 1
+			sbSql.append(",").append(lq).append("SPID"               ).append(rq); // 2
+			sbSql.append(",").append(lq).append("KPID"               ).append(rq); // 3
+			sbSql.append(",").append(lq).append("WaitEventID"        ).append(rq); // 4
+			sbSql.append(",").append(lq).append("WaitClassID"        ).append(rq); // 5
+			sbSql.append(",").append(lq).append("snapshotBatchID"    ).append(rq); // 6
+			sbSql.append(",").append(lq).append("Waits_abs"          ).append(rq); // 7
+			sbSql.append(",").append(lq).append("Waits_diff"         ).append(rq); // 8
+			sbSql.append(",").append(lq).append("WaitTime_abs"       ).append(rq); // 9
+			sbSql.append(",").append(lq).append("WaitTime_diff"      ).append(rq); // 10
 			sbSql.append(") \n");
-			sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n"); // 12 question marks
-			//                   1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12
+			sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n"); // 10 question marks
+			//                   1, 2, 3, 4, 5, 6, 7, 8, 9,10
 
 			return sbSql.toString();
 		}
@@ -1358,7 +1841,7 @@ extends SqlCaptureBrokerAbstract
 //			ProcName        =     "ProcName = CASE WHEN SsqlId > 0 THEN object_name(SsqlId,2) \n" +
 //			                  "                    ELSE isnull(isnull(object_name(ProcedureID,DBID),object_name(ProcedureID,2)),object_name(ProcedureID,db_id('sybsystemprocs'))) \n" + 
 //			                  "               END, ";
-			ProcName        =     "ProcName = CASE WHEN SsqlId > 0 THEN isnull(object_name(SsqlId,2), '*##'+right('0000000000'+convert(varchar(10),SsqlId),10)+'_'+right('0000000000'+convert(varchar(10),HashKey),10)+'##*') \n" +
+			ProcName        =     "ProcName = CASE WHEN SsqlId > 0 THEN isnull(object_name(SsqlId,2), '*##'+right('0000000000'+convert(varchar(20),SsqlId),10)+'_'+right('0000000000'+convert(varchar(20),HashKey),10)+'##*') \n" +
 			                  "                    ELSE coalesce(object_name(ProcedureID,DBID), object_name(ProcedureID,2), object_name(ProcedureID,db_id('sybsystemprocs'))) \n " +
 			                  "               END, ";
 		}
@@ -1406,11 +1889,11 @@ extends SqlCaptureBrokerAbstract
 			+ "    BatchID, \n"
 			+ "    SequenceInBatch, \n"
 			+ "    "+ServerLogin+"\n"
-			+ "    convert(int, -1) as AddMethod,\n"
-			+ "    convert(int, -1) as JavaSqlLength,\n"
-			+ "    convert(int, -1) as JavaSqlLengthShort,\n"
-			+ "    convert(int, -1) as JavaSqlHashCode,\n"
-			+ "    convert(int, -1) as JavaSqlHashCodeShort,\n"
+//			+ "    convert(int, -1) as AddMethod,\n"
+//			+ "    convert(int, -1) as JavaSqlLength,\n"
+//			+ "    convert(int, -1) as JavaSqlLengthShort,\n"
+//			+ "    convert(int, -1) as JavaSqlHashCode,\n"
+//			+ "    convert(int, -1) as JavaSqlHashCodeShort,\n"
 			+ "    SQLText \n"
 			+ "from master.dbo.monSysSQLText \n"
 			+ "where 1 = 1 \n"
@@ -1455,9 +1938,21 @@ extends SqlCaptureBrokerAbstract
 			+ "    PlansAltered, \n"
 			+ "    StartTime, \n"
 			+ "    EndTime, \n"
-			+ "    convert(int, -1) as JavaSqlHashCode, \n"
-			+ "    convert(int, -1) as JavaSqlHashCodeShort, \n"
-			+ "    convert(int, -1) as NormJavaSqlHashCode \n"
+
+			+ "    convert(varchar(10), NULL) as ServerLogin, \n"       // Length of the char is NOT important
+			+ "    convert(int,         -1  ) as AddStatus, \n"
+			+ "    convert(int,         -1  ) as JavaSqlLength, \n"
+			+ "    convert(int,         -1  ) as JavaSqlLengthShort, \n"
+			+ "    convert(int,         -1  ) as NormJavaSqlLength, \n"
+			+ "    convert(int,         -1  ) as JavaSqlHashCode, \n"
+			+ "    convert(int,         -1  ) as JavaSqlHashCodeShort, \n"
+			+ "    convert(int,         -1  ) as NormJavaSqlHashCode, \n"
+
+			+ "    convert(varchar(10), NULL) as SQLText, \n"           // Length of the char is NOT important
+			+ "    convert(varchar(10), NULL) as NormSQLText, \n"       // Length of the char is NOT important
+			+ "    convert(varchar(10), NULL) as PlanText, \n"           // Length of the char is NOT important
+			+ "    convert(varchar(10), NULL) as BlockedBySqlText \n"   // Length of the char is NOT important
+			
 			+ "from master.dbo.monSysStatement \n"
 			+ "where 1 = 1 \n"
 			+ "  and SPID != @@spid \n"
@@ -1478,7 +1973,7 @@ extends SqlCaptureBrokerAbstract
 			+ "    DBID, \n"
 			+ "    "+DBName+"\n"
 			+ "    ProcedureID, \n"
-			+ "    convert(int, -1) as AddMethod,\n"
+//			+ "    convert(int, -1) as AddMethod,\n"
 			+ "    PlanText \n"
 			+ "from master.dbo.monSysPlanText \n"
 			+ "where 1 = 1 \n"
@@ -1486,6 +1981,58 @@ extends SqlCaptureBrokerAbstract
 			+ "  and SPID not in (select spid from master.dbo.sysprocesses where program_name like '" + Version.getAppName() + "%') \n"
 //			+ "order by SPID, KPID, BatchID, SequenceNumber \n" // TODO: make this sort internal/after the rows has been fetched for less server side impact
 			+ "";
+
+		// get information about (excluding your own SPID and System SPID's)
+		// * All SPID's that are BLOCKED
+		// * Or NOT waiting for 'clients to send new data' (WaitEventID: 250 -> waiting for incoming network data)
+		String HostName = "    ,HostName='-not-available-'";
+		if (srvVersion >= Ver.ver(15,7))
+		{
+			HostName          = "    ,p.HostName \n";
+		}
+
+		_sql_spidInfo = ""
+			+ "select \n"
+			+ "     sampleTime=getdate() \n"
+			+ "    ,p.SPID \n"
+			+ "    ,p.KPID \n"
+			+ "    ,p.BatchID \n"
+			+ "    ,p.ContextID \n"
+			+ "    ,p.LineNumber \n"
+			+ "    ,p.SecondsConnected \n"
+			+ "    ,p.Command \n"
+			+ "    ,p.SecondsWaiting \n"
+			+ "    ,p.WaitEventID \n"
+			+ "    ,p.BlockingSPID \n"
+//			+ "    ,BlockingKPID    = i.KPID \n"
+//			+ "    ,BlockingBatchID = i.BatchID \n"
+			+ "    ,BlockingKPID    = null \n"
+			+ "    ,BlockingBatchID = null \n"
+			+ "    ,p.BlockingXLOID \n"
+			+ "    ,p.NumChildren \n"
+			+ "    ,p.Login \n"
+			+ "    ,p.DBName \n"
+			+ "    ,p.Application \n"
+			+      HostName
+			+ "    ,p.MasterTransactionID \n"
+			+ "from master.dbo.monProcess p \n"
+//			+ "left outer join master.dbo.monProcess i on p.BlockingSPID = i.SPID \n" // instead of the self join, do this locally (Map lookup)
+			+ "where 1=1 \n"
+			+ "  and p.SPID != @@spid \n"
+			+ "  and p.Login is not null \n"
+			+ "  and p.Login != 'probe' \n"
+			+ "  and (p.BlockingSPID is not null or p.WaitEventID != 250) \n"
+			+ "   or (p.WaitEventID = 250 and p.SPID in (select spid from master.dbo.syslocks)) \n"
+			+ "";
+
+		
+//		_sql_waitInfo = ""
+//		    + "select sampleTime=getdate(), SPID, KPID, WaitEventID, Waits, WaitTime \n"
+//		    + "from master.dbo.monProcessWaits w \n"
+//		    + "where 1=1 \n"
+////		    + "  and SPID = ${SPID} \n"
+////		    + "  and KPID = ${KPID} \n"
+//		    + "";
 		
 		if (_inTestCode)
 		{
@@ -1620,6 +2167,9 @@ extends SqlCaptureBrokerAbstract
 	@Override
 	public int doSqlCapture(DbxConnection conn, PersistentCounterHandler pch)
 	{
+		boolean sampleSpidInfo = getConfiguration().getBooleanProperty(PROPKEY_sqlCap_ase_spidInfo_sample,     DEFAULT_sqlCap_ase_spidInfo_sample);
+		boolean sampleWaitInfo = getConfiguration().getBooleanProperty(PROPKEY_sqlCap_ase_spidWaitInfo_sample, DEFAULT_sqlCap_ase_spidWaitInfo_sample);
+
 		if (_inTestCode)
 			_clearBeforeFirstPoll = false;
 			
@@ -1633,24 +2183,7 @@ extends SqlCaptureBrokerAbstract
 			_firstPoll = false;
 		}
 
-
-//		int addCount = 0;
-//		int statementReadCount = 0;
-//		int statementAddCount = 0;
-//		int statementDiscardCount = 0;
-		
-		// 
-//		Map<PK, List<Object>> sqlTextPkMap   = new HashMap<>();
-////		List<List<Object>>    sqlTextRecords = new ArrayList<>();  // TODO: can we get rid of this and only use, the above MAP
-//
-//		Map<PK, List<Object>> planTextPkMap   = new HashMap<>();
-////		List<List<Object>>    planTextRecords = new ArrayList<>();  // TODO: can we get rid of this and only use, the above MAP
-
-//		List<List<Object>> statementRecords = new ArrayList<>();
 		List<MonSqlStatement> statementRecords = new ArrayList<>();
-//		Set<PK> statementPkAdded            = new HashSet<>();
-//		Set<PK> statementPkDiscarded        = new HashSet<>();
-
 		
 		// If SQL queries are NOT initialized, do it now
 		if (_sql_sqlText == null)
@@ -1661,6 +2194,239 @@ extends SqlCaptureBrokerAbstract
 		if (_statementStatistics != null)
 			_statementStatistics.setLastUpdateTime();
 				
+		//------------------------------------------------
+		// SPID INFO
+		// - get SPID information on spids that are "doing something"
+		//------------------------------------------------
+		if (sampleSpidInfo)
+		{
+			Map<Integer, SpidInfoBatchIdEntry> spidInfoJustAddedEntries  = new HashMap<>();
+			List<WaitEventEntry> addedWaitEventEntries = new ArrayList<>();
+			
+			long captureStartTime = System.currentTimeMillis();
+			try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(_sql_spidInfo) )
+			{
+				// Only keep the last ACTIVE SPID's in a Map
+//				_spidInfo.clear();
+
+				while(rs.next())
+				{
+					SpidInfoBatchIdEntry entry = new SpidInfoBatchIdEntry();
+					int c = 1;
+
+					entry._sampleTime          = rs.getTimestamp(c++); // java.sql.Types.TIMESTAMP datetime          -none-               
+					entry._SPID                = rs.getInt      (c++); // java.sql.Types.INTEGER   int               master.dbo.monProcess
+					entry._KPID                = rs.getInt      (c++); // java.sql.Types.INTEGER   int               master.dbo.monProcess
+					entry._BatchID             = rs.getInt      (c++); // java.sql.Types.INTEGER   int               master.dbo.monProcess
+					entry._ContextID           = rs.getInt      (c++); // java.sql.Types.INTEGER   int               master.dbo.monProcess
+					entry._LineNumber          = rs.getInt      (c++); // java.sql.Types.INTEGER   int               master.dbo.monProcess
+					entry._SecondsConnected    = rs.getInt      (c++); // java.sql.Types.INTEGER   int               master.dbo.monProcess
+					entry._Command             = rs.getString   (c++); // java.sql.Types.VARCHAR   varchar(30)       master.dbo.monProcess
+					entry._SecondsWaiting      = rs.getInt      (c++); // java.sql.Types.INTEGER   int               master.dbo.monProcess
+					entry._WaitEventID         = rs.getInt      (c++); // java.sql.Types.SMALLINT  smallint          master.dbo.monProcess
+					entry._BlockingSPID        = rs.getInt      (c++); // java.sql.Types.INTEGER   int               master.dbo.monProcess
+					entry._BlockingKPID        = rs.getInt      (c++); // java.sql.Types.INTEGER   int
+					entry._BlockingBatchID     = rs.getInt      (c++); // java.sql.Types.INTEGER   int
+					entry._BlockingXLOID       = rs.getInt      (c++); // java.sql.Types.INTEGER   int               master.dbo.monProcess
+					entry._NumChildren         = rs.getInt      (c++); // java.sql.Types.INTEGER   int               master.dbo.monProcess
+					entry._Login               = rs.getString   (c++); // java.sql.Types.VARCHAR   varchar(30)       master.dbo.monProcess
+					entry._DBName              = rs.getString   (c++); // java.sql.Types.VARCHAR   varchar(30)       master.dbo.monProcess
+					entry._Application         = rs.getString   (c++); // java.sql.Types.VARCHAR   varchar(30)       master.dbo.monProcess
+					entry._HostName            = rs.getString   (c++); // java.sql.Types.VARCHAR   varchar(30)       master.dbo.monProcess
+					entry._MasterTransactionID = rs.getString   (c++); // java.sql.Types.VARCHAR   varchar(255)      master.dbo.monProcess		
+
+					spidInfoJustAddedEntries.put(entry._SPID, entry);
+
+					_spidInfoManager.addSpidInfoBatchIdEntry(entry);
+				}
+				
+				// Some statistics
+				long captureTime = TimeUtils.msDiffNow(captureStartTime);
+				_statSpidInfoCaptureTime     += captureTime;
+				_statSpidInfoCaptureTimeDiff += captureTime;
+
+				_statSpidInfoCaptureRows       += spidInfoJustAddedEntries.size();
+				_statSpidInfoCaptureRowsDiff   += spidInfoJustAddedEntries.size();
+			}
+			catch(SQLException ex)
+			{
+				_logger.error("SQL Capture problems when capturing 'SPID Information' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+_sql_spidInfo, ex);
+			}
+			//if (! justAddedEntries.isEmpty() )
+			//{
+			//	System.out.println();
+			//	for (SpidInfoBatchIdEntry entry : justAddedEntries.values())
+			//		System.out.println("                  just read: SpidInfoBatchIdEntry: " + entry);
+			//}
+			//_spidInfoManager.getBatchIdSize();
+
+			
+			// Get blocking SPID SqlText
+			if ( ! spidInfoJustAddedEntries.isEmpty() )
+			{
+				//String sql = "select SPID, KPID, BatchID, LineNumber, SequenceInLine, SQLText from master.dbo.monProcessSQLText where SPID != @@spid";					String sql = "select SPID, KPID, BatchID, LineNumber, SequenceInLine, SQLText from master.dbo.monProcessSQLText where SPID != @@spid";				
+				String sql = "select SPID, LineNumber, SQLText from master.dbo.monProcessSQLText where SPID != @@spid";				
+				try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
+				{
+					int lastSpid       = Integer.MIN_VALUE;
+					int lastLineNumber = 1;
+					String preStr      = "";
+					while(rs.next())
+					{
+						// NOTE 1: this do not work to 100% ... LineNumber, SequenceInLine probably need to be used to get correct NEW-LINE etc...
+						// NOTE 2: If a blocking lock SPID is "at client side" the blocking SQL Text wont be available
+						int    SPID       = rs.getInt   (1);
+						int    LineNumber = rs.getInt   (2);
+						String SQLText    = rs.getString(3);
+
+						if (lastSpid != SPID)
+							lastLineNumber = 1; // When a new SPID is seen... restart at line 1
+
+						preStr = "";
+						if (lastLineNumber != LineNumber)
+							preStr = "\n";
+
+						SpidInfoBatchIdEntry spidInfoBatchIdEntry = spidInfoJustAddedEntries.get(SPID);
+						if (spidInfoBatchIdEntry != null)
+						{
+							if (spidInfoBatchIdEntry._SqlText == null)
+								spidInfoBatchIdEntry._SqlText = "";
+
+							spidInfoBatchIdEntry._SqlText += preStr + SQLText;
+						}
+
+						lastLineNumber = LineNumber;
+						lastSpid       = SPID;
+					}
+				}
+				catch(SQLException ex)
+				{
+					_logger.error("SQL Capture problems when capturing 'SPID SqlText' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+sql, ex);
+				}
+
+				// Loop the record to update "BlockingKPID, BlockingBatchID, BlockingSqlText" (BlockingSPID is already known)
+				for (SpidInfoBatchIdEntry e : spidInfoJustAddedEntries.values())
+				{
+					if (e._BlockingSPID != 0)
+					{
+						SpidInfoBatchIdEntry blockingSpidEntry = spidInfoJustAddedEntries.get(e._BlockingSPID);
+
+						if (blockingSpidEntry != null)
+						{
+							e._BlockingSPID    = blockingSpidEntry._SPID;  // well this is already set... just for clarity
+							e._BlockingKPID    = blockingSpidEntry._KPID;
+							e._BlockingBatchID = blockingSpidEntry._BatchID;
+							e._BlockingSqlText = blockingSpidEntry._SqlText;
+						}
+					}
+				}
+//System.out.println();
+//System.out.println("##########################################################");
+//for (SpidInfoBatchIdEntry e : spidInfoJustAddedEntries.values())
+//	System.out.println("  >>> SQL-TEXT:          SPID="+e._SPID+", BlockingSPID="+e._BlockingSPID+", SqlText=|"+e._SqlText+"|.");
+//
+//for (SpidInfoBatchIdEntry e : spidInfoJustAddedEntries.values())
+//	System.out.println("  >>> BLOCKING-SQL-TEXT: SPID="+e._SPID+", BlockingSPID="+e._BlockingSPID+", BlockingSqlText=|"+e._BlockingSqlText+"|.");
+			}
+
+			//------------------------------------------------
+			// WAIT INFO
+			// - on the active SPID's get what they have been waiting for
+			//------------------------------------------------
+			if (sampleWaitInfo && !spidInfoJustAddedEntries.isEmpty())
+			{
+				StringBuilder sb = new StringBuilder(100 + spidInfoJustAddedEntries.size() * 10);
+
+				// Build SQL
+				sb.append("select sampleTime=getdate(), SPID, KPID, WaitEventID, Waits, WaitTime \n");
+				sb.append("from master.dbo.monProcessWaits w \n");
+				sb.append("where SPID in(");
+				// the in(...) list
+				String comma = "";
+				for (int spid : spidInfoJustAddedEntries.keySet())
+				{
+					sb.append(comma).append(spid);
+					comma = ", ";
+				}
+				sb.append(")");
+				String sql = sb.toString();
+
+				captureStartTime = System.currentTimeMillis();
+				// Execute SQL
+				try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
+				{
+					while(rs.next())
+					{
+						//WaitEventEntry entry = new WaitEventEntry();
+						int c = 1;
+
+						Timestamp sampleTime   = rs.getTimestamp(c++);   // RS> 1    sampleTime  java.sql.Types.TIMESTAMP datetime          -none-                    
+						int       spid         = rs.getInt      (c++);   // RS> 2    SPID        java.sql.Types.INTEGER   int               master.dbo.monProcessWaits
+						int       kpid         = rs.getInt      (c++);   // RS> 3    KPID        java.sql.Types.INTEGER   int               master.dbo.monProcessWaits
+						int       waitEventId  = rs.getInt      (c++);   // RS> 4    WaitEventID java.sql.Types.SMALLINT  smallint          master.dbo.monProcessWaits
+						int       waits_abs    = rs.getInt      (c++);   // RS> 5    Waits       java.sql.Types.INTEGER   int               master.dbo.monProcessWaits
+						int       waitTime_abs = rs.getInt      (c++);   // RS> 6    WaitTime    java.sql.Types.INTEGER   int               master.dbo.monProcessWaits
+						
+						int       snapshotBatchId  = spidInfoJustAddedEntries.get(spid)._BatchID;
+						int       secondsConnected = spidInfoJustAddedEntries.get(spid)._SecondsConnected;
+
+						// Create a WaitEvent
+						WaitEventEntry entry = new WaitEventEntry(sampleTime, spid, kpid, waitEventId, waits_abs, waitTime_abs, snapshotBatchId, secondsConnected);
+						
+						//System.out.println("ADD-WaitEventEntry: [intWaitEventId="+intWaitEventId+", shortWaitEventId="+shortWaitEventId+"]" + entry);
+						//System.out.println(">>>> ADD-WaitEventEntry: " + entry);
+						_waitInfo.addOrUpdate(entry);
+						
+						addedWaitEventEntries.add(entry);
+					}
+				}
+				catch(SQLException ex)
+				{
+					_logger.error("SQL Capture problems when capturing 'SPID WAIT Information' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+sql, ex);
+				}
+				
+				// if we want to persist the "active" SPID's then we might want to add "current known Wait Information" to that entry
+				for (SpidInfoBatchIdEntry e : spidInfoJustAddedEntries.values())
+				{
+					e._snapWaitTimeDetails = _waitInfo.getWaitTimeDetailsAsJson(false, e._SPID, e._KPID, e._BatchID);
+				}
+
+				// Some statistics
+				long captureTime = TimeUtils.msDiffNow(captureStartTime);
+				_statWaitInfoCaptureTime     += captureTime;
+				_statWaitInfoCaptureTimeDiff += captureTime;
+
+				_statWaitInfoCaptureRows       += addedWaitEventEntries.size();
+				_statWaitInfoCaptureRowsDiff   += addedWaitEventEntries.size();
+			}
+			
+
+			// Send the information for storage to PCS
+			if ( !spidInfoJustAddedEntries.isEmpty() || !addedWaitEventEntries.isEmpty() )
+			{
+				// Container object used to send data to PCS
+				SqlCaptureDetails capDet = new SqlCaptureDetails();
+
+				// add SPID INFO records
+				for (SpidInfoBatchIdEntry e : spidInfoJustAddedEntries.values())
+				{
+					capDet.add(e.getPcsRow());
+				}
+
+				// add WAIT EVENT records
+				for (WaitEventEntry e : addedWaitEventEntries)
+				{
+					// Get the record from _waitInfo, because the passed entry in '_waitInfo.addOrUpdate(entry)' *will* be updated
+					WaitEventEntry waitEventId = _waitInfo.getWaitEventId(e._SPID, e._KPID, e._WaitEventID);
+					if (waitEventId != null)
+						capDet.add(waitEventId.getPcsRow());
+				}
+
+				// add/send to PCS
+				addToPcs(pch, capDet);
+			}
+		}
+
 		//------------------------------------------------
 		// SQL STATEMENTS
 		// - is available in the table monSysStatement *after* the statement has been executed
@@ -1840,7 +2606,64 @@ extends SqlCaptureBrokerAbstract
 							}
 						}
 
-						// Add the row to the statements list
+						// Check if this SPID was blocked by anyone... when it was executing...
+						// In that case... fill in the blocking details.
+						SpidInfoBatchIdEntry spidInfoBatchEntry = _spidInfoManager.getSpidInfoBatchIdEntry(row.SPID, row.KPID, row.BatchID);
+						//if (spidInfoBatchEntry == null)
+						//	System.out.println("- @row: SPID INFO[spid="+row.SPID+", kpid="+row.KPID+", batchId="+row.BatchID+"]: --NOT-FOUND--");
+						if (spidInfoBatchEntry != null)
+						{
+							//System.out.println("- @row: SPID INFO: " + spidInfoBatchEntry);
+							
+							if (spidInfoBatchEntry._BlockingSPID != 0 && spidInfoBatchEntry._BlockingKPID != 0 && spidInfoBatchEntry._BatchID != 0)
+							{
+								// System.out.println("-@row:-- BLOCKING INFO[spid="+spidInfoBatchEntry._SPID+", kpid="+spidInfoBatchEntry._KPID+", batchid="+spidInfoBatchEntry._BatchID+"] has blocker: blkSPID="+spidInfoBatchEntry._BlockingSPID+", blkKPID="+spidInfoBatchEntry._BlockingKPID+", blkBatchID="+spidInfoBatchEntry._BlockingBatchID+".");
+								SpidInfoBatchIdEntry blockingInfoEntry = _spidInfoManager.getSpidInfoBatchIdEntry(spidInfoBatchEntry._BlockingSPID, spidInfoBatchEntry._BlockingKPID, spidInfoBatchEntry._BlockingBatchID);
+								// System.out.println("-@row:-- BLOCKING INFO Entry: " + blockingInfoEntry);
+
+								if (blockingInfoEntry != null)
+								{
+									row.BlockedBySpid        = blockingInfoEntry._SPID;
+									row.BlockedByKpid        = blockingInfoEntry._KPID;
+									row.BlockedByBatchId     = blockingInfoEntry._BatchID;
+									
+									row.BlockedByCommand     = blockingInfoEntry._Command;
+									row.BlockedByApplication = blockingInfoEntry._Application;
+									row.BlockedByTranId      = blockingInfoEntry._MasterTransactionID;
+
+									row.BlockedBySqlText     = blockingInfoEntry._SqlText;
+
+									// If the blocking SQL Text is not available from the "SpidInfoManager"
+									// Check if it's stored in the "history"
+									// NOTE: If it's a short lived SQL Statement AND the client has control (WaitEventID=250), then the SQL wont be available
+									if (StringUtil.isNullOrBlank(row.BlockedBySqlText))
+									{
+										// Get SQL-Text for the statement
+										BatchIdEntry batchIdEntry = _spidSqlTextAndPlanManager.getBatchIdEntryLazy(blockingInfoEntry._SPID, blockingInfoEntry._KPID, blockingInfoEntry._BatchID);
+										if (batchIdEntry != null)
+										{
+											row.BlockedBySqlText = batchIdEntry.getSqlText();
+										}
+									}
+								}
+								else
+								{
+									row.BlockedBySpid        = spidInfoBatchEntry._BlockingSPID;
+									row.BlockedByKpid        = spidInfoBatchEntry._BlockingKPID;
+									row.BlockedByBatchId     = spidInfoBatchEntry._BatchID;
+								}
+							}
+						}
+
+						// Possibly fill in "WiatTimeDetails", which is a JSON or CSV: WaitEventID#=val, WaitEventID#=val, WaitEventID#=val
+						if (sampleWaitInfo)
+						{
+							row.WaitTimeDetails  = _waitInfo.getWaitTimeDetailsAsJson(true, row.SPID, row.KPID, row.BatchID);
+							// System.out.println("-@row:-- WAIT INFO: spid="+row.SPID+", kpid="+row.KPID+", batchId="+row.BatchID+": " + row.WaitTimeDetails);
+						}
+
+						
+						// FINALLY: Add the row to the statements list
 						statementRecords.add(row);
 					}
 				}
@@ -2076,6 +2899,9 @@ extends SqlCaptureBrokerAbstract
 		// This will remove SQL and PLAN text's that are "below" the last sent entry for every SPID, KPID, BatchID
 		// The "last known TEXT" entries will always be present/saved
 		_spidSqlTextAndPlanManager.endOfScan();
+
+		_spidInfoManager.endOfScan(); // this "end-of-scan" only removes spid/kpid/batchId which do NOT exists in: _spidSqlTextAndPlanManager 
+//		_waitInfo.endOfScan();        // "end-of-scan" isn't needed in this, since we just add EventID entries... (cleanup is done with removeSpids() which is executed periodically, see next code block)
 		
 		// Possibly every now and then (every 10 minute or so)
 		// get SPID, KPID, BatchID from monProcess and remove all SqlText/PlanText that no longer has a SPID/KPID connected 
@@ -2084,7 +2910,13 @@ extends SqlCaptureBrokerAbstract
 			// set this even if we have problems with below
 			_lastCallTo_removeUnusedSlots = System.currentTimeMillis();
 
-			_spidSqlTextAndPlanManager.removeUnusedSlots(conn);
+			Set<Integer> removedSpids = _spidSqlTextAndPlanManager.removeUnusedSlots(conn);
+			
+			if (_spidInfoManager != null)
+				_spidInfoManager.removeSpids(removedSpids);
+
+			if (_waitInfo != null)
+				_waitInfo.removeSpids(removedSpids);
 		}
 
 //System.out.println("### doSqlCapture(): -end- toPcsCount=" + count + ", getSpidSize()=" + _spidSqlTextAndPlanManager.getSpidSize() + ", getBatchIdSize()=" + _spidSqlTextAndPlanManager.getBatchIdSize());
@@ -2095,35 +2927,51 @@ extends SqlCaptureBrokerAbstract
 			_statReportLastTime = System.currentTimeMillis();
 
 			_logger.info("STAT [SqlCaptureBrokerAse]: "
-					+ "SqlTextAddCount="         + _statSqlTextAddCount 
-					+ ", SqlTextNoSqlCount="     + _statSqlTextNoSqlCount 
-					+ ", NormalizeSuccessCount=" + _statNormalizeSuccessCount 
-					+ ", NormalizeSkipCount="    + _statNormalizeSkipCount 
-					+ ", NormalizeErrorCount="   + _statNormalizeErrorCount
+					+ "SqlTextAddCount="             + _statSqlTextAddCount 
+					+ ", SqlTextNoSqlCount="         + _statSqlTextNoSqlCount 
 
-					+ ", StatementCaptureTimeDiff=" + TimeUtils.msToTimeStr(_statStatementCaptureTimeDiff)
-					+ ", SqlTextCaptureTimeDiff="   + TimeUtils.msToTimeStr(_statSqlTextCaptureTimeDiff)
-					+ ", PlanTextCaptureTimeDiff="  + TimeUtils.msToTimeStr(_statPlanTextCaptureTimeDiff)
+					+ ", NormalizeSuccessCount="     + ( !StatementNormalizer.hasInstance() ? -1 : StatementNormalizer.getInstance()._statNormalizeSuccessCount )
+					+ ", NormalizeSkipCount="        + ( !StatementNormalizer.hasInstance() ? -1 : StatementNormalizer.getInstance()._statNormalizeSkipCount )
+					+ ", NormalizeErrorLevel1Count=" + ( !StatementNormalizer.hasInstance() ? -1 : StatementNormalizer.getInstance()._statNormalizeErrorLevel1Count )
+					+ ", NormalizeErrorLevel2Count=" + ( !StatementNormalizer.hasInstance() ? -1 : StatementNormalizer.getInstance()._statNormalizeErrorLevel2Count )
+					+ ", NormalizeUdCount="          + ( !StatementNormalizer.hasInstance() ? -1 : StatementNormalizer.getInstance()._statNormalizeUdCount )
+					+ ", NormalizeReWriteCount="     + ( !StatementNormalizer.hasInstance() ? -1 : StatementNormalizer.getInstance()._statNormalizeReWriteCount )
 
-					+ ", StatementCaptureTime="     + TimeUtils.msToTimeStr(_statStatementCaptureTime)
-					+ ", SqlTextCaptureTime="       + TimeUtils.msToTimeStr(_statSqlTextCaptureTime)
-					+ ", PlanTextCaptureTime="      + TimeUtils.msToTimeStr(_statPlanTextCaptureTime)
+					+ ", SpidInfoCaptureTimeDiff="   + TimeUtils.msToTimeStr(_statSpidInfoCaptureTimeDiff)
+					+ ", WaitInfoCaptureTimeDiff="   + TimeUtils.msToTimeStr(_statWaitInfoCaptureTimeDiff)
+					+ ", StatementCaptureTimeDiff="  + TimeUtils.msToTimeStr(_statStatementCaptureTimeDiff)
+					+ ", SqlTextCaptureTimeDiff="    + TimeUtils.msToTimeStr(_statSqlTextCaptureTimeDiff)
+					+ ", PlanTextCaptureTimeDiff="   + TimeUtils.msToTimeStr(_statPlanTextCaptureTimeDiff)
 
-					+ ", StatementCaptureRowsDiff=" + _statStatementCaptureRowsDiff
-					+ ", SqlTextCaptureRowsDiff="   + _statSqlTextCaptureRowsDiff
-					+ ", PlanTextCaptureRowsDiff="  + _statPlanTextCaptureRowsDiff
+					+ ", SpidInfoCaptureTime="       + TimeUtils.msToTimeStr(_statSpidInfoCaptureTime)
+					+ ", WaitInfoCaptureTime="       + TimeUtils.msToTimeStr(_statWaitInfoCaptureTime)
+					+ ", StatementCaptureTime="      + TimeUtils.msToTimeStr(_statStatementCaptureTime)
+					+ ", SqlTextCaptureTime="        + TimeUtils.msToTimeStr(_statSqlTextCaptureTime)
+					+ ", PlanTextCaptureTime="       + TimeUtils.msToTimeStr(_statPlanTextCaptureTime)
 
-					+ ", StatementCaptureRows="     + _statStatementCaptureRows
-					+ ", SqlTextCaptureRows="       + _statSqlTextCaptureRows
-					+ ", PlanTextCaptureRows="      + _statPlanTextCaptureRows
+					+ ", SpidInfoCaptureRowsDiff="   + _statSpidInfoCaptureRowsDiff
+					+ ", WaitInfoCaptureRowsDiff="   + _statWaitInfoCaptureRowsDiff
+					+ ", StatementCaptureRowsDiff="  + _statStatementCaptureRowsDiff
+					+ ", SqlTextCaptureRowsDiff="    + _statSqlTextCaptureRowsDiff
+					+ ", PlanTextCaptureRowsDiff="   + _statPlanTextCaptureRowsDiff
+
+					+ ", SpidInfoCaptureRows="       + _statSpidInfoCaptureRows
+					+ ", WaitInfoCaptureRows="       + _statWaitInfoCaptureRows
+					+ ", StatementCaptureRows="      + _statStatementCaptureRows
+					+ ", SqlTextCaptureRows="        + _statSqlTextCaptureRows
+					+ ", PlanTextCaptureRows="       + _statPlanTextCaptureRows
 
 					);
 
 			// Reset DIFF Counters
+			_statSpidInfoCaptureTimeDiff  = 0;
+			_statWaitInfoCaptureTimeDiff  = 0;
 			_statStatementCaptureTimeDiff = 0;
 			_statSqlTextCaptureTimeDiff   = 0;
 			_statPlanTextCaptureTimeDiff  = 0;
 
+			_statSpidInfoCaptureRowsDiff  = 0;
+			_statWaitInfoCaptureRowsDiff  = 0;
 			_statStatementCaptureRowsDiff = 0;
 			_statSqlTextCaptureRowsDiff   = 0;
 			_statPlanTextCaptureRowsDiff  = 0;
@@ -2138,22 +2986,30 @@ extends SqlCaptureBrokerAbstract
 	private long _statSqlTextAddCount   = 0;
 	private long _statSqlTextNoSqlCount = 0;
 
-	private long _statNormalizeSuccessCount = 0;
-	private long _statNormalizeSkipCount    = 0;
-	private long _statNormalizeErrorCount   = 0;
+//	private long _statNormalizeSuccessCount = 0;
+//	private long _statNormalizeSkipCount    = 0;
+//	private long _statNormalizeErrorCount   = 0;
 
+	private long _statSpidInfoCaptureTime  = 0;
+	private long _statWaitInfoCaptureTime  = 0;
 	private long _statSqlTextCaptureTime   = 0;
 	private long _statPlanTextCaptureTime  = 0;
 	private long _statStatementCaptureTime = 0;
 
+	private long _statSpidInfoCaptureTimeDiff  = 0;
+	private long _statWaitInfoCaptureTimeDiff  = 0;
 	private long _statSqlTextCaptureTimeDiff   = 0;
 	private long _statPlanTextCaptureTimeDiff  = 0;
 	private long _statStatementCaptureTimeDiff = 0;
 
+	private long _statSpidInfoCaptureRows  = 0;
+	private long _statWaitInfoCaptureRows  = 0;
 	private long _statSqlTextCaptureRows   = 0;
 	private long _statPlanTextCaptureRows  = 0;
 	private long _statStatementCaptureRows = 0;
 
+	private long _statSpidInfoCaptureRowsDiff  = 0;
+	private long _statWaitInfoCaptureRowsDiff  = 0;
 	private long _statSqlTextCaptureRowsDiff   = 0;
 	private long _statPlanTextCaptureRowsDiff  = 0;
 	private long _statStatementCaptureRowsDiff = 0;
@@ -2180,10 +3036,13 @@ extends SqlCaptureBrokerAbstract
 		//    - storeNormalizedSqlTextHash = true
 		//    - storeNormalizedSqlText     = false  --->>> instead of storing it, in the offline view, we can read the 'SQLText' and normalize it "on the fly", which hopefully saves us some MB at-the-end-of-the-day... the storeNormalizedSqlTextHash is still stored so we can aggregate stuff via group by... but that just takes an INT value
 //		boolean storeNormalizedSqlTextHash = getConfiguration().getBooleanProperty(PROPKEY_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlTextHash, DEFAULT_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlTextHash);
-		boolean storeNormalizedSqlText     = getConfiguration().getBooleanProperty(PROPKEY_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlText,     DEFAULT_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlText);
-		
+		boolean storeNormalizedSqlText     = getConfiguration().getBooleanProperty(PROPKEY_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlText, DEFAULT_sqlCap_ase_sqlTextAndPlan_storeNormalizedSqlText);
+
+		boolean printPcsAdd                = getConfiguration().getBooleanProperty(PROPKEY_sqlCap_ase_sqlTextAndPlan_printPcsAdd,            DEFAULT_sqlCap_ase_sqlTextAndPlan_printPcsAdd);
+
 		// Used to anonymize or remove-constants in where clauses etc...
-		StatementNormalizer stmntNorm = storeNormalizedSqlText ? new StatementNormalizer() : null;
+//		StatementNormalizer stmntNorm = storeNormalizedSqlText ? new StatementNormalizer() : null;
+		StatementNormalizer.NormalizeParameters normalizeParameters = null;
 
 		for (MonSqlStatement stRec : statementRecords) 
 		{
@@ -2194,100 +3053,97 @@ extends SqlCaptureBrokerAbstract
 			String planText = batchIdEntry.getPlanText();
 			String srvLogin = batchIdEntry.getServerLogin();
 
-			// Normalize the SQL Statement
-			String normalizedSqlText             = null;
-			int    normalizedSqlTextJavaHashCode = -1; 
-			if (stmntNorm != null)
-			{
-//				normalizedSqlText = stmntNorm.normalizeStatementNoThrow(sqlText, true);
-				try
-				{
-					// Do not try to parse if the statement is in the "not-yet-supported-by-the-parser" section
-					if (StatementNormalizer.isNotYetSupportedByParser(sqlText))
-					{
-						_statNormalizeSkipCount++;
-					}
-					else
-					{
-						// Parse and normalize
-						normalizedSqlText = stmntNorm.normalizeStatement(sqlText);
-						
-						if (StringUtil.hasValue(normalizedSqlText))
-						{
-							normalizedSqlTextJavaHashCode = normalizedSqlText.hashCode();
-							_statNormalizeSuccessCount++;
-						}
-					}
-				}
-				catch(JSQLParserException ex)
-				{
-					_statNormalizeErrorCount++;
-					//_logger.info("Problems normalizing SQL=|"+sql+"|", ex);
-				}
-			}
-
+			String normalizedSqlText = null;
 			if (StringUtil.hasValue(sqlText))
 			{
+				// Normalize the SQL Statement
+				if (storeNormalizedSqlText)
+				{
+					if (normalizeParameters == null)
+						normalizeParameters = new StatementNormalizer.NormalizeParameters();
+					
+					// The below will do the following, to make us able to group by SQL Text that are "similar":
+					// - Apply a Parser on the sqlText, to replace any constant values with question marks. IN(1,2,3,4) will be replaced with IN(...) 
+					// - If the parser fails (due to a "JSqlParser" do not handle "everything":
+					//   - We have X number of re-writes that can be applied
+					//   - if any re.writes has been applied, we try to parse it again...
+					//   - if we still have problems to parse: an null or empty string will be returned
+					// The re-writes & UserDefinedNormalizations are held in: StatementFixerManager & UserDefinedNormalizerManager 
+					normalizedSqlText = StatementNormalizer.getInstance().normalizeSqlText(sqlText, normalizeParameters);
+
+					stRec.AddStatus = normalizeParameters.addStatus.getIntValue();
+				}
+
 				// Copy first ### chart so we can make a "short" hash-code 
 				String sqlTextShort = sqlText.substring(0, Math.min(_sqlText_shortLength, sqlText.length()));
 
-				// Set some fields in the MonSqlStatement, with regards to SqlText
-				stRec.JavaSqlHashCode      = sqlText     .hashCode();
-				stRec.JavaSqlHashCodeShort = sqlTextShort.hashCode();
-				stRec.NormJavaSqlHashCode  = normalizedSqlTextJavaHashCode;
+				// Set some fields in the Statement Record Object
+				stRec.ServerLogin          = srvLogin;
+//				stRec.AddStatus            = 0; // Not used for the moment
+				stRec.JavaSqlLength        = sqlText           == null ? -1 : sqlText          .length();
+				stRec.JavaSqlLengthShort   = sqlTextShort      == null ? -1 : sqlTextShort     .length();
+				stRec.NormJavaSqlLength    = normalizedSqlText == null ? -1 : normalizedSqlText.length();
+				stRec.JavaSqlHashCode      = sqlText           == null ? -1 : sqlText          .hashCode();
+				stRec.JavaSqlHashCodeShort = sqlTextShort      == null ? -1 : sqlTextShort     .hashCode();
+				stRec.NormJavaSqlHashCode  = normalizedSqlText == null ? -1 : normalizedSqlText.hashCode();
 
-				MonSqlText monSqlText = new MonSqlText();
+				stRec.SQLText              = sqlText;
+				stRec.NormSQLText          = normalizedSqlText;
+				stRec.PlanText             = planText;
 
-				monSqlText.sampleTime           = stRec.sampleTime; 
-				monSqlText.InstanceID           = stRec.InstanceID; 
-				monSqlText.SPID                 = stRec.SPID; 
-				monSqlText.KPID                 = stRec.KPID; 
-				monSqlText.BatchID              = stRec.BatchID; 
-				monSqlText.ServerLogin          = srvLogin; 
-				monSqlText.AddMethod            = 1; // 1=Direct
-				monSqlText.JavaSqlLength        = sqlText     .length(); 
-				monSqlText.JavaSqlLengthShort   = sqlTextShort.length(); 
-				monSqlText.JavaSqlHashCode      = sqlText     .hashCode(); 
-				monSqlText.JavaSqlHashCodeShort = sqlTextShort.hashCode(); 
-				monSqlText.SQLText              = sqlText; 
-				monSqlText.NormSQLText          = normalizedSqlText;
-				monSqlText.NormJavaSqlHashCode  = normalizedSqlTextJavaHashCode;
-
-//System.out.println("  >> pcs >> SQL-TEXT:  ms=" + stRec.Elapsed_ms + ", spid=" + stRec.SPID + ", kpid=" + stRec.KPID + ", batchId=" + stRec.BatchID + ", sql="+sqlText);
-				// Add the SQL-Text entry
-				capDet.add(monSqlText.getPcsRow());
+//				MonSqlText monSqlText = new MonSqlText();
+//
+//				monSqlText.sampleTime           = stRec.sampleTime; 
+//				monSqlText.InstanceID           = stRec.InstanceID; 
+//				monSqlText.SPID                 = stRec.SPID; 
+//				monSqlText.KPID                 = stRec.KPID; 
+//				monSqlText.BatchID              = stRec.BatchID; 
+//				monSqlText.ServerLogin          = srvLogin; 
+//				monSqlText.AddMethod            = 1; // 1=Direct
+//				monSqlText.JavaSqlLength        = sqlText     .length(); 
+//				monSqlText.JavaSqlLengthShort   = sqlTextShort.length(); 
+//				monSqlText.JavaSqlHashCode      = sqlText     .hashCode(); 
+//				monSqlText.JavaSqlHashCodeShort = sqlTextShort.hashCode(); 
+//				monSqlText.SQLText              = sqlText; 
+//				monSqlText.NormSQLText          = normalizedSqlText;
+//				monSqlText.NormJavaSqlHashCode  = normalizedSqlTextJavaHashCode;
+//
+////System.out.println("  >> pcs >> SQL-TEXT:  ms=" + stRec.Elapsed_ms + ", spid=" + stRec.SPID + ", kpid=" + stRec.KPID + ", batchId=" + stRec.BatchID + ", sql="+sqlText);
+//				// Add the SQL-Text entry
+//				capDet.add(monSqlText.getPcsRow());
 			}
 
 			if (StringUtil.hasValue(planText))
 			{
-				MonSqlPlan monSqlPlan = new MonSqlPlan();
+				stRec.PlanText = planText;
 
-				monSqlPlan.sampleTime  = stRec.sampleTime;
-				monSqlPlan.InstanceID  = stRec.InstanceID;
-				monSqlPlan.SPID        = stRec.SPID;
-				monSqlPlan.KPID        = stRec.KPID;
-				monSqlPlan.PlanID      = stRec.PlanID;
-				monSqlPlan.BatchID     = stRec.BatchID;
-				monSqlPlan.ContextID   = stRec.ContextID;
-				monSqlPlan.DBID        = stRec.DBID;
-				monSqlPlan.DBName      = stRec.DBName;
-				monSqlPlan.ProcedureID = stRec.ProcedureID;
-				monSqlPlan.AddMethod   = 1; // 1=Direct
-				monSqlPlan.PlanText    = planText;
-
-				// Add the PLAN entry
-				capDet.add(monSqlPlan.getPcsRow());
+//				MonSqlPlan monSqlPlan = new MonSqlPlan();
+//
+//				monSqlPlan.sampleTime  = stRec.sampleTime;
+//				monSqlPlan.InstanceID  = stRec.InstanceID;
+//				monSqlPlan.SPID        = stRec.SPID;
+//				monSqlPlan.KPID        = stRec.KPID;
+//				monSqlPlan.PlanID      = stRec.PlanID;
+//				monSqlPlan.BatchID     = stRec.BatchID;
+//				monSqlPlan.ContextID   = stRec.ContextID;
+//				monSqlPlan.DBID        = stRec.DBID;
+//				monSqlPlan.DBName      = stRec.DBName;
+//				monSqlPlan.ProcedureID = stRec.ProcedureID;
+//				monSqlPlan.AddMethod   = 1; // 1=Direct
+//				monSqlPlan.PlanText    = planText;
+//
+//				// Add the PLAN entry
+//				capDet.add(monSqlPlan.getPcsRow());
 			}
 
 			// DEBUG Print
-			boolean printPcsAdd = false;
-printPcsAdd = true;
+//printPcsAdd = true;
 			if (printPcsAdd || _logger.isDebugEnabled())
 			{
-				_logger.info("  >> pcs >> [addCnt=" + _statSqlTextAddCount + ",noSqlCnt=" + _statSqlTextNoSqlCount + "] STATEMENT: ms=" + stRec.Elapsed_ms + ", rowc=" + stRec.RowsAffected + ", error=" + stRec.ErrorStatus + ", spid=" + stRec.SPID + ", kpid=" + stRec.KPID + ", batchId=" + stRec.BatchID + ", sql=|" + StringUtils.normalizeSpace(sqlText) + "|, normalizedSqlTextJavaHashCode=" + normalizedSqlTextJavaHashCode + (stRec.ErrorStatus == 0 ? "" : ", MsgText="+AseErrorMessageDictionary.getInstance().getDescription(stRec.ErrorStatus)) );
+				_logger.info("  >> pcs >> [addCnt=" + _statSqlTextAddCount + ",noSqlCnt=" + _statSqlTextNoSqlCount + "] STATEMENT: ms=" + stRec.Elapsed_ms + ", rowc=" + stRec.RowsAffected + ", error=" + stRec.ErrorStatus + ", spid=" + stRec.SPID + ", kpid=" + stRec.KPID + ", batchId=" + stRec.BatchID + ", addStatus=" + stRec.AddStatus + ", sql=|" + StringUtils.normalizeSpace(sqlText) + "|, normalizedSqlTextJavaHashCode=" + stRec.NormJavaSqlHashCode + (stRec.ErrorStatus == 0 ? "" : ", MsgText="+AseErrorMessageDictionary.getInstance().getDescription(stRec.ErrorStatus)) );
 				if (StringUtil.isNullOrBlank(sqlText))
 				{
-					_logger.error("            *************** NO-SQL-TEXT **************** spid=" + stRec.SPID + ", kpid=" + stRec.KPID + ", batchId=" + stRec.BatchID + ", sql="+sqlText);
+					_logger.error("            ************************* NO-SQL-TEXT ************************** spid=" + stRec.SPID + ", kpid=" + stRec.KPID + ", batchId=" + stRec.BatchID + ", addStatus=" + stRec.AddStatus + ", sql=|"+sqlText+"|.");
 				}
 			}
 
@@ -2314,28 +3170,34 @@ printPcsAdd = true;
 	 */
 	protected void addToPcs(PersistentCounterHandler pch, SqlCaptureDetails sqlCaptureDetails)
 	{
+//DEBUG	
+//for (List<Object> list : sqlCaptureDetails.getList())
+//	System.out.println("            ++pc++ " + list);
+		
 		pch.addSqlCapture(sqlCaptureDetails);
 	}
 
-	
 
 	@Override
 	public void lowOnMemoryHandler()
 	{
-		_logger.warn("Persistant Counter Handler, lowOnMemoryHandler() was called. Emtying the SPID SQL-Text and SQL-Plan structure, which has " + _spidSqlTextAndPlanManager.getSpidSize() + " SPID entries and " + _spidSqlTextAndPlanManager.getBatchIdSize() + " BatchId entries.");
+		_logger.warn("Persistant Counter Handler, lowOnMemoryHandler() was called. Emtying the SPID SQL-Text, SQL-Plan and SPID-Info structure, which has " + _spidSqlTextAndPlanManager.getSpidSize() + " SPID entries and " + _spidSqlTextAndPlanManager.getBatchIdSize() + " BatchId entries and SPID-Info " + _spidInfoManager.getSpidSize() + " entries.");
 		_spidSqlTextAndPlanManager.clear();
+		_spidInfoManager.clear();
 	}
 	@Override
 	public void outOfMemoryHandler()
 	{
-		_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. Emtying the SPID SQL-Text and SQL-Plan structure, which has " + _spidSqlTextAndPlanManager.getSpidSize() + " SPID entries and " + _spidSqlTextAndPlanManager.getBatchIdSize() + " BatchId entries.");
+		_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. Emtying the SPID SQL-Text, SQL-Plan and SPID-Info structure, which has " + _spidSqlTextAndPlanManager.getSpidSize() + " SPID entries and " + _spidSqlTextAndPlanManager.getBatchIdSize() + " BatchId entries and SPID-Info " + _spidInfoManager.getSpidSize() + " entries.");
 		_spidSqlTextAndPlanManager.clear();
+		_spidInfoManager.clear();
 	}
+
+
 
 	//--------------------------------------------------------------------------
 	// BEGIN: SPID - SqlText and SqlPlan - manager 
 	//--------------------------------------------------------------------------
-	
 	private SpidSqlTextAndPlanManager _spidSqlTextAndPlanManager = new SpidSqlTextAndPlanManager();
 
 	//----------------------------------------------------------------------------------------
@@ -2369,6 +3231,21 @@ printPcsAdd = true;
 			return _spidMap.size();
 		}
 		
+		/** Do not add any new SpidEntry or BatchIdEntry if they do NOT exists, just return null if no existance */
+		public BatchIdEntry getBatchIdEntryLazy(int spid, int kpid, int batchId)
+		{
+			SpidEntry spidEntry = _spidMap.get(spid);
+			if (spidEntry == null)
+				return null;
+
+			return spidEntry.getBatchIdEntryLazy(spid, kpid, batchId);
+		}
+
+		/** Check if a entry exists */
+		public boolean exists(int spid, int kpid, int batchId)
+		{
+			return getBatchIdEntryLazy(spid, kpid, batchId) != null;
+		}
 		
 		public BatchIdEntry getBatchIdEntry(int spid, int kpid, int batchId)
 		{
@@ -2405,8 +3282,9 @@ printPcsAdd = true;
 		 * Remove all SPID's from '_spidSqlTextAndPlanManager' that no longer exists in ASE
 		 * 
 		 * @param conn
+		 * @return a Set of SPID's that was removed... which can be used elsewhere, to do the same thing.
 		 */
-		public void removeUnusedSlots(DbxConnection conn)
+		public Set<Integer> removeUnusedSlots(DbxConnection conn)
 		{
 //			String sql = "select SPID, KPID, BatchID from master.dbo.monProcess";
 			String sql = "select spid from master.dbo.sysprocesses";
@@ -2432,12 +3310,19 @@ printPcsAdd = true;
 				_spidMap.keySet().removeAll(spidsToBeRemoved);
 
 				if ( ! spidsToBeRemoved.isEmpty() )
-					_logger.info("Removed the following SPIDs from the SqlText/PlanText structure, which was no longer present in ASE. size=" + spidsToBeRemoved.size() + ", removeSet=" + spidsToBeRemoved);
+					_logger.debug("Removed the following SPIDs from the SqlText/PlanText structure, which was no longer present in ASE. size=" + spidsToBeRemoved.size() + ", removeSet=" + spidsToBeRemoved);
+				
+//				if ( ! spidsToBeRemoved.isEmpty() )
+//					_logger.info("Removed the following SPIDs from the SqlText/PlanText structure, which was no longer present in ASE. size=" + spidsToBeRemoved.size() + ", removeSet=" + spidsToBeRemoved);
+
+				return spidsToBeRemoved;
 			}
 			catch(Exception ex)
 			{
 				_logger.error("Problem cleaning up unused SPID/KPID/BatchID SqlTest/PlanText slots, using SQL='" + sql + "'. Caught: " + ex);
 			}
+
+			return Collections.emptySet();
 		}
 
 		/** Remove any SqlText and PlanText that is no longer used (save only last BatchId) */
@@ -2494,7 +3379,7 @@ printPcsAdd = true;
 			//System.out.println("    EOS -- _batchIdMap.size="+_batchIdMap.size()+", maxBatchIdEntry=[spid="+maxBatchIdEntry._spid+", batchId="+maxBatchIdEntry._batchId+"] -- DynamicName='"+maxBatchIdEntry._dynamicSqlName+"', DynamicSqlText=|"+maxBatchIdEntry._dynamicSqlText+"|.");//, sqlText="+maxBatchIdEntry._sqlText);
 
 			// Loop all entries... and remove the ones that we no longer need
-			for(Iterator<Entry<Integer, BatchIdEntry>> it = _batchIdMap.entrySet().iterator(); it.hasNext(); ) 
+			for(Iterator<Entry<Integer, BatchIdEntry>> it = _batchIdMap.entrySet().iterator(); it.hasNext(); )
 			{
 				// Get Key/value from the iterator
 				Entry<Integer, BatchIdEntry> entry = it.next();
@@ -2528,9 +3413,23 @@ printPcsAdd = true;
 					{
 						//System.out.println("    <-- SpidEntry[spid="+_spid+", kpid="+_kpid+", maxBatchId="+_maxBatchId+"] -- removing: batchId=" + entry.getValue()._batchId + ", sqlText="+entry.getValue().getSqlText());
 						it.remove();
+						
+						// Should we remove entries for SpidInfo here since it wont be referenced anymore
+						// When entries from monSysStatements has "aged out"... they wont be needed anymore
+						//_spidInfoManager.remove(be._spid, be._kpid, be._batchId);
+						//_waitInfo       .remove(be._spid, be._kpid, be._batchId);
 					}
 				}
 			}
+		}
+
+		/** Do not add any new BatchIdEntry if they do NOT exists, just return null if no existence */
+		public BatchIdEntry getBatchIdEntryLazy(int spid, int kpid, int batchId)
+		{
+			if (kpid != _kpid)
+				return null;
+
+			return _batchIdMap.get(batchId);
 		}
 
 		private BatchIdEntry getBatchIdEntry(int spid, int kpid, int batchId)
@@ -2721,6 +3620,657 @@ printPcsAdd = true;
 
 
 
+	//--------------------------------------------------------------------------
+	// BEGIN: SPID - INFO/WAIT - manager 
+	//--------------------------------------------------------------------------
+
+	private SpidInfoManager _spidInfoManager = new SpidInfoManager();
+//	private SpidInfo _spidInfo = new SpidInfo();
+	private WaitInfo _waitInfo = new WaitInfo();
+
+	private String _sql_spidInfo      = null;
+//	private String _sql_waitInfo      = null;
+
+//	protected boolean _sampleSpidInfo   = true;
+//	protected boolean _sampleWaitInfo   = true;
+
+	private class SpidInfoManager
+	{
+		private HashMap<Integer, SpidInfoEntry> _spidInfoMap = new HashMap<>();
+		private long _lastCleanupTime = System.currentTimeMillis();
+		private long _cleanupThreshold = 30_000; // cleanup every 30 seconds
+		
+		private SpidInfoEntry getSpidInfoEntry(int spid, int kpid)
+		{
+			SpidInfoEntry spidInfoEntry = _spidInfoMap.get(spid);
+			if (spidInfoEntry == null)
+			{
+				//System.out.println("  +++ SpidInfoManager: Adding a new SPID entry: spid="+spid+", kpid="+kpid);
+
+				spidInfoEntry = new SpidInfoEntry(spid, kpid);
+				_spidInfoMap.put(spid, spidInfoEntry);
+			}
+			return spidInfoEntry;
+		}
+
+		public int getSpidSize()
+		{
+			return _spidInfoMap.size();
+		}
+		public int getBatchIdSize()
+		{
+			int size = 0;
+			for (SpidInfoEntry spidInfoEntry : _spidInfoMap.values())
+			{
+				size += spidInfoEntry._batchIdMap.size();
+				//System.out.println("           xxxxxx: spid=" + spidInfoEntry._spid + ", kpid=" + spidInfoEntry._kpid + ", batchCnt=" + spidInfoEntry._batchIdMap.size() + ", batchIds=" + spidInfoEntry._batchIdMap.keySet());
+			}
+			//System.out.println("           xxxxxx: getBatchIdSize: " + size);
+			return size;
+		}
+
+		public SpidInfoBatchIdEntry getSpidInfoBatchIdEntry(int spid, int kpid, int batchId)
+		{
+			return getSpidInfoEntry(spid, kpid).getSpidInfoBatchIdEntry(spid, kpid, batchId);
+		}
+		
+		public void addSpidInfoBatchIdEntry(SpidInfoBatchIdEntry entry)
+		{
+			getSpidInfoEntry(entry._SPID, entry._KPID).addSpidInfoBatchIdEntry(entry);
+		}
+
+//		public void addOrUpdateWaitInfo()
+//		{
+//			should we do this in here ???
+//		}
+		
+		public void removeSpids(Set<Integer> removedSpids)
+		{
+			_spidInfoMap.keySet().removeAll(removedSpids);
+		}
+
+		/** Remove any Entries that is no longer used */
+		public void endOfScan()
+		{
+			long msSinceCleanup = System.currentTimeMillis() - _lastCleanupTime;
+			if (msSinceCleanup < _cleanupThreshold) // Cleanup every 30 seconds
+				return;
+
+			// Mark it has Cleanup was done at
+			_lastCleanupTime = System.currentTimeMillis();
+
+			// Loop all the children... if cild are empty remove it.
+			for(Iterator<Entry<Integer, SpidInfoEntry>> it = _spidInfoMap.entrySet().iterator(); it.hasNext(); ) 
+			{
+				// Get Key/value from the iterator
+				Entry<Integer, SpidInfoEntry> entry = it.next();
+				SpidInfoEntry spidInfoEntry = entry.getValue();
+
+				spidInfoEntry.endOfScan();
+
+				// Remove it no batch entries
+				if (spidInfoEntry.isEmpty())
+					it.remove();
+			}
+		}
+
+		/** remove a specific SPID, KPID, BatchID... called from other cleanup places */
+		public void remove(int spid, int kpid, int batchId)
+		{
+			SpidInfoEntry spidInfoEntry = _spidInfoMap.get(spid);
+			if (spidInfoEntry != null)
+			{
+				if (spidInfoEntry._kpid == kpid)
+				{
+					spidInfoEntry._batchIdMap.remove(batchId);
+				}
+			}
+		}
+
+		/** Clear the structure, can for example be used if we starting to get LOW on memory */
+		public void clear()
+		{
+			_spidInfoMap.clear();
+		}
+	}
+
+	
+	private class SpidInfoEntry
+	{
+		private int _spid;
+		private int _kpid;
+		private int _maxBatchId;
+		
+		//      key=BatchID, SpidInfoBatchIdEntry
+		private LinkedHashMap<Integer, SpidInfoBatchIdEntry> _batchIdMap = new LinkedHashMap<>();
+
+		public SpidInfoEntry(int spid, int kpid)
+		{
+			_spid = spid;
+			_kpid = kpid;
+		}
+
+		public void addSpidInfoBatchIdEntry(SpidInfoBatchIdEntry entry)
+		{
+			// If it's a NEW kpid... then clear the batchId Map
+			if (entry._KPID != _kpid)
+			{
+				// System.out.println("  --- Found NEW KPID for SPID clearing old batchMap: spid="+_spid+", new-kpid="+entry._KPID+", current-kpid="+_kpid);
+
+				_batchIdMap.clear();
+				_maxBatchId = 0;
+				_kpid = entry._KPID;
+			}
+
+			// Remember the highest batch id (used by endOfScan() to cleanup)
+			_maxBatchId = Math.max(entry._BatchID, _maxBatchId);
+
+			// Find the BatchId (or create a new one -- in this scenario -->> SET SOME OPTIONS)
+			SpidInfoBatchIdEntry batchIdEntry = _batchIdMap.get(entry._BatchID);
+			if (batchIdEntry == null)
+			{
+				// System.out.println("  +++ add BatchId="+entry._BatchID+": spid="+_spid+", kpid="+_kpid);
+			//	entry._parent = this;
+			}
+			_batchIdMap.put(entry._BatchID, entry);
+		}
+
+		public SpidInfoBatchIdEntry getSpidInfoBatchIdEntry(int spid, int kpid, int batchId)
+		{
+			if (spid != _spid || kpid != _kpid) 
+			{
+				// throw new RuntimeException("in SpidInfoEntry when getSpidInfoBatchIdEntry(spid=" + spid + ", kpid=" + kpid + ", batchId=" + batchId + "), the entry found had _spid=" +_spid + ", _kpid" + _kpid + " This should NOT happen.");
+				//_logger.error("in SpidInfoEntry when getSpidInfoBatchIdEntry(spid=" + spid + ", kpid=" + kpid + ", batchId=" + batchId + "), the entry found had _spid=" +_spid + ", _kpid" + _kpid + " This should NOT happen.");
+				//FIXME; The above happens, so do a better job here... probably a short lived connection, where the SPID was reused, or a statement that wasn't long lived...
+				return null;
+			}
+
+			return _batchIdMap.get(batchId);
+		}
+
+		/** Remove all BatchId entries that is no longer used */ 
+		public void endOfScan()
+		{
+			// Cleanup entries that are older than X minutes
+			// but keep at least the last entry
+			for(Iterator<Entry<Integer, SpidInfoBatchIdEntry>> it = _batchIdMap.entrySet().iterator(); it.hasNext(); ) 
+			{
+				// Get Key/value from the iterator
+				Entry<Integer, SpidInfoBatchIdEntry> entry = it.next();
+				int                  batchId = entry.getKey();
+				SpidInfoBatchIdEntry be      = entry.getValue();
+
+				if(batchId < _maxBatchId) 
+				{
+					boolean remove = true;
+
+					// Check if entry still exists in "SQL Text" structure, if it exists it will probably be accessed
+					if (_spidSqlTextAndPlanManager.exists(be._SPID, be._KPID, be._BatchID))
+						remove =false;
+					
+//					if (be.getAgeInMs() < 30*60*1000) // keep for maximum 30 minutes  // NOTE: hard-coded
+//						remove = false;
+
+					// if we want to keep a BatchId's (and it's content) for more than one -END-OF-SCAN- the "keepCounter" can be used.
+					// Note: The initial value for the keepCounter is set in BatchIdEntry class
+//					if (be._keepCounter > 0)
+//					{
+//						be._keepCounter--;
+//						remove = false;
+//					}
+					
+					if (remove)
+					{
+						//System.out.println("    <-- EOS: SpidInfoEntry[spid="+_spid+", kpid="+_kpid+", maxBatchId="+_maxBatchId+"] -- AGE removing: batchId=" + entry.getValue()._BatchID + ", msAge=" + entry.getValue().getAgeInMs() + ", entry=" + entry.getValue());
+						it.remove();
+					}
+				}
+			}
+			
+			// if we have MORE that X batch entries... remove oldest
+			for(Iterator<Entry<Integer, SpidInfoBatchIdEntry>> it = _batchIdMap.entrySet().iterator(); it.hasNext(); ) 
+			{
+				Entry<Integer, SpidInfoBatchIdEntry> entry = it.next();
+
+				if (_batchIdMap.size() > 50) // NOTE: hard-coded
+				{
+					//System.out.println("    <-- EOS: SpidInfoEntry[spid="+_spid+", kpid="+_kpid+", maxBatchId="+_maxBatchId+"] -- SIZE [maxSize=30, currentSize=" + _batchIdMap.size() + "] removing: batchId=" + entry.getValue()._BatchID + ", msAge=" + entry.getValue().getAgeInMs() + ", entry="+entry.getValue());
+					it.remove();
+				}
+			}
+		} // end: end-of-scan
+
+//		public void clear()
+//		{
+//			_batchIdMap = new LinkedHashMap<>();
+//		}
+//
+//		public int size()
+//		{
+//			if (_batchIdMap == null)
+//				return 0;
+//
+//			return _batchIdMap.size();
+//		}
+
+		public boolean isEmpty()
+		{
+			if (_batchIdMap == null)
+				return false;
+			
+			return _batchIdMap.isEmpty();
+		}
+	}
+
+	//----------------------------------------------------------------------------------------
+	private static class SpidInfoBatchIdEntry
+	{
+//		SpidInfoEntry _parent;
+
+		// if we want to keep a BatchId's (and it's content) for more than one -END-OF-SCAN- the "keepCounter" can be used.
+		// This is decremented in SpidEntry.endOfScan(), and when it reaches 0 it is removed.
+//		int _keepCounter = _default_batchIdEntry_keepCount;
+
+		long _addTime = System.currentTimeMillis();
+
+		
+		Timestamp  _sampleTime         ; // java.sql.Types.TIMESTAMP datetime          -none-               
+		int        _SPID               ; // java.sql.Types.INTEGER   int               master.dbo.monProcess
+		int        _KPID               ; // java.sql.Types.INTEGER   int               master.dbo.monProcess
+		int        _BatchID            ; // java.sql.Types.INTEGER   int               master.dbo.monProcess
+		int        _ContextID          ; // java.sql.Types.INTEGER   int               master.dbo.monProcess
+		int        _LineNumber         ; // java.sql.Types.INTEGER   int               master.dbo.monProcess
+		int        _SecondsConnected   ; // java.sql.Types.INTEGER   int               master.dbo.monProcess
+		String     _Command            ; // java.sql.Types.VARCHAR   varchar(30)       master.dbo.monProcess
+		int        _SecondsWaiting     ; // java.sql.Types.INTEGER   int               master.dbo.monProcess
+		int        _WaitEventID        ; // java.sql.Types.SMALLINT  smallint          master.dbo.monProcess
+		int        _BlockingSPID       ; // java.sql.Types.INTEGER   int               master.dbo.monProcess
+		int        _BlockingKPID       ; 
+		int        _BlockingBatchID    ;
+		int        _BlockingXLOID      ; // java.sql.Types.INTEGER   int               master.dbo.monProcess
+		int        _NumChildren        ; // java.sql.Types.INTEGER   int               master.dbo.monProcess
+		String     _Login              ; // java.sql.Types.VARCHAR   varchar(30)       master.dbo.monProcess
+		String     _DBName             ; // java.sql.Types.VARCHAR   varchar(30)       master.dbo.monProcess
+		String     _Application        ; // java.sql.Types.VARCHAR   varchar(30)       master.dbo.monProcess
+		String     _HostName           ; // java.sql.Types.VARCHAR   varchar(30)       master.dbo.monProcess
+		String     _MasterTransactionID; // java.sql.Types.VARCHAR   varchar(255)      master.dbo.monProcess		
+
+		String     _SqlText;		
+		String     _BlockingSqlText;		
+
+		String     _snapWaitTimeDetails; // varchar(1024) -- If we want to stuff all the above in a Table it might be interesting to see the "approximate" Wait events that was consumed  
+
+
+//		public static String getKey(int spid, int kpid, int batchId)
+//		{
+//			return spid + "|" + kpid + "|" + batchId;
+//		}
+//		public String getKey()
+//		{
+//			//return _SPID + "|" + _KPID + "|" + _BatchID;
+//			return getKey(_SPID, _KPID, _BatchID);
+//		}
+		
+		@Override
+		public String toString()
+		{
+			return super.toString() 
+    			+ ": sampleTime         ".trim() + "='" + _sampleTime          + "'"
+    			+ ", SPID               ".trim() + "="  + _SPID               
+    			+ ", KPID               ".trim() + "="  + _KPID               
+    			+ ", BatchID            ".trim() + "="  + _BatchID            
+    			+ ", ContextID          ".trim() + "="  + _ContextID          
+    			+ ", LineNumber         ".trim() + "="  + _LineNumber         
+    			+ ", SecondsConnected   ".trim() + "="  + _SecondsConnected         
+    			+ ", Command            ".trim() + "='" + _Command             + "'"
+    			+ ", SecondsWaiting     ".trim() + "="  + _SecondsWaiting     
+    			+ ", WaitEventID        ".trim() + "="  + _WaitEventID        
+    			+ ", BlockingSPID       ".trim() + "="  + _BlockingSPID       
+    			+ ", BlockingKPID       ".trim() + "="  + _BlockingKPID       
+    			+ ", BlockingBatchID    ".trim() + "="  + _BlockingBatchID    
+    			+ ", BlockingXLOID      ".trim() + "="  + _BlockingXLOID      
+    			+ ", NumChildren        ".trim() + "="  + _NumChildren        
+    			+ ", Login              ".trim() + "='" + _Login               + "'"
+    			+ ", DBName             ".trim() + "='" + _DBName              + "'"
+    			+ ", Application        ".trim() + "='" + _Application         + "'"
+    			+ ", HostName           ".trim() + "='" + _HostName            + "'"
+    			+ ", MasterTransactionID".trim() + "='" + _MasterTransactionID + "'"
+    			+ ", SqlText            ".trim() + "='" + _SqlText             + "'"
+    			+ ", BlockingSqlText    ".trim() + "='" + _BlockingSqlText     + "'"
+    			+ "";
+		}
+
+		public long getAgeInMs()
+		{
+			return System.currentTimeMillis() - _addTime;
+		}
+
+
+		/** How many records is in the "getPcsRow()" ... which is used to allocate List size */ 
+		int _numberOfCol = 24;
+
+		public List<Object> getPcsRow()
+		{
+			List<Object> row = new ArrayList<>(_numberOfCol);
+
+			row.add(MON_CAP_SPID_INFO);
+			row.add(_sampleTime         );
+			row.add(_SPID               );
+			row.add(_KPID               );
+			row.add(_BatchID            );
+			row.add(_ContextID          );
+			row.add(_LineNumber         );
+			row.add(_SecondsConnected   );
+			row.add(_Command            );
+			row.add(_SecondsWaiting     );
+			row.add(_WaitEventID        );
+			row.add(_BlockingSPID       );
+			row.add(_BlockingKPID       );
+			row.add(_BlockingBatchID    );
+			row.add(_BlockingXLOID      );
+			row.add(_NumChildren        );
+			row.add(_Login              );
+			row.add(_DBName             );
+			row.add(_Application        );
+			row.add(_HostName           );
+			row.add(_MasterTransactionID);
+
+			row.add(_snapWaitTimeDetails);
+			row.add(StringUtil.truncate(_SqlText        , SQL_TEXT_LEN, true));
+			row.add(StringUtil.truncate(_BlockingSqlText, SQL_TEXT_LEN, true));
+
+			return row;
+		}
+		
+		public static final int SQL_TEXT_LEN = 4000;
+	}
+	
+
+
+
+
+	//----------------------------------------------------------------------------------------
+	private static class WaitInfo
+	{
+		private Map<Integer, WaitSpidEntry> _spidEntries = new HashMap<>();
+
+		/**
+		 * Add or update a WaitEventID
+		 * 
+		 * @param passedEntry
+		 */
+		public void addOrUpdate(WaitEventEntry passedEntry)
+		{
+			WaitSpidEntry spidEntry = _spidEntries.get(passedEntry._SPID);
+
+			if (spidEntry == null || (spidEntry != null && spidEntry._KPID != passedEntry._KPID) )
+			{
+				spidEntry = new WaitSpidEntry();
+				spidEntry._SPID = passedEntry._SPID;
+				spidEntry._KPID = passedEntry._KPID;
+
+				_spidEntries.put(spidEntry._SPID, spidEntry);
+			}
+
+			WaitEventEntry waitEventEntry = spidEntry._WaitEventID.get(passedEntry._WaitEventID);
+			if (waitEventEntry == null)
+			{
+//System.out.println("+++ NEW EventId was passed: SPID=" + passedEntry._SPID + ", KPID=" + passedEntry._KPID + ", WaitEventID=" + passedEntry._WaitEventID);
+
+				// Add and stop
+				spidEntry._WaitEventID.put(passedEntry._WaitEventID, passedEntry);
+
+				return;
+			}
+			else
+			{
+				// Diff Calc
+				waitEventEntry._Waits_diff    = passedEntry._Waits_abs   - waitEventEntry._Waits_abs;
+				waitEventEntry._WaitTime_diff = passedEntry._WaitTime_abs- waitEventEntry._WaitTime_abs;
+//System.out.println("~~~ UPD EventId was passed: SPID=" + passedEntry._SPID + ", KPID=" + passedEntry._KPID + ", WaitEventID=" + passedEntry._WaitEventID + ", pWaits=" + passedEntry._Waits_abs + ", eWaits=" + waitEventEntry._Waits_abs + " [" + waitEventEntry._Waits_diff + "], pMs=" + passedEntry._WaitTime_abs + ", eMs=" + waitEventEntry._WaitTime_abs + " [" + waitEventEntry._WaitTime_diff + "]. ");
+
+				// set new ABS
+				waitEventEntry._Waits_abs    = passedEntry._Waits_abs;
+				waitEventEntry._WaitTime_abs = passedEntry._WaitTime_abs;
+				
+				// Increment diff batchStart
+				waitEventEntry._Waits_diff_batchStart    += waitEventEntry._Waits_diff;
+				waitEventEntry._WaitTime_diff_batchStart += waitEventEntry._WaitTime_diff;
+
+				// when a NEW BatchId, fix some "batch start" values
+				if (waitEventEntry._snapshotBatchID != passedEntry._snapshotBatchID)
+				{
+					waitEventEntry._Waits_diff_batchStart    = waitEventEntry._Waits_diff;
+					waitEventEntry._WaitTime_diff_batchStart = waitEventEntry._WaitTime_diff;
+				}
+				
+				// When was this entry created/updated
+				waitEventEntry._updateTime = passedEntry._updateTime;
+				waitEventEntry._sampleTime = passedEntry._sampleTime;
+
+				// At what BatchID are we at
+				waitEventEntry._snapshotBatchID = passedEntry._snapshotBatchID;
+			}
+		}
+
+		/**
+		 * Get a wait event ID
+		 * @param sPID
+		 * @param kPID
+		 * @param waitEventID
+		 * @return
+		 */
+		public WaitEventEntry getWaitEventId(int spid, int kpid, int waitEventID)
+		{
+			WaitSpidEntry spidEntry = _spidEntries.get(spid);
+
+			if (spidEntry == null || (spidEntry != null && spidEntry._KPID != kpid) )
+				return null;
+
+			WaitEventEntry waitEventEntry = spidEntry._WaitEventID.get(waitEventID);
+			return waitEventEntry;
+		}
+
+		public void removeSpids(Set<Integer> removedSpids)
+		{
+			_spidEntries.keySet().removeAll(removedSpids);
+		}
+
+		/**
+		 * Get a JSON text with <code>[{"id":250,"w":##,"ms":##},{"id":251,"w":##,"ms":##}]</code>
+		 * <p>
+		 * Or as a CSV <code>250=#waits#:#ms#, 251=#waits#:#ms#</code>
+		 * <p>
+		 * 
+		 * @param spid
+		 * @param kpid
+		 * @param batchId
+		 * @return
+		 */
+		public String getWaitTimeDetailsAsJson(boolean byBatch, int spid, int kpid, int batchId)
+		{
+			WaitSpidEntry spidEntry = _spidEntries.get(spid);
+			if (spidEntry == null)
+				return null;
+
+			// Exit if it's not what we are looking for
+			if (kpid != spidEntry._KPID)
+				return null;
+			if (spidEntry._WaitEventID == null)
+				return null;
+			if (spidEntry._WaitEventID.isEmpty())
+				return null;
+			
+			StringBuilder sb = new StringBuilder(256);
+			sb.append("[");
+
+			String comma = "";
+			int addCount = 0;
+			for (WaitEventEntry e : spidEntry._WaitEventID.values())
+			{
+				int waitsDiff    = e._Waits_diff;
+				int waitTimeDiff = e._WaitTime_diff;
+				if (byBatch)
+				{
+					waitsDiff    = e._Waits_diff_batchStart;
+					waitTimeDiff = e._WaitTime_diff_batchStart;
+				}
+				
+				if (waitsDiff > 0 || waitTimeDiff > 0)
+				{
+					addCount++;
+
+					int batchBeforeOrAfter = batchId - e._snapshotBatchID;
+					long sampleAgeMs = System.currentTimeMillis() - e._updateTime;
+
+					sb.append(comma);
+					sb.append("{");
+					sb.append( "\"id\":") .append(e._WaitEventID);
+					sb.append(",\"cid\":").append(e._WaitClassID);
+					sb.append(",\"w\":")  .append(waitsDiff);
+					sb.append(",\"ms\":") .append(waitTimeDiff);
+					sb.append(",\"bs\":") .append(e._snapshotBatchID);
+					sb.append(",\"bd\":") .append(batchBeforeOrAfter);
+					sb.append(",\"sa\":") .append(sampleAgeMs);
+					sb.append("}");
+
+					comma = ",";
+				}
+			}
+			sb.append("]");
+
+			if (addCount == 0)
+			{
+				//return "WaitEventEntry.size()="+spidEntry._WaitEventID.size()+"--- BUT NO CHANGES ---";
+				return null;
+			}
+
+			return sb.toString();
+		}
+
+	}
+
+	//----------------------------------------------------------------------------------------
+	private static class WaitSpidEntry
+	{
+		int _SPID;
+		int _KPID;
+		
+		Map<Integer, WaitEventEntry> _WaitEventID = new HashMap<>();
+	}
+
+	//----------------------------------------------------------------------------------------
+	private static class WaitEventEntry
+	{
+		int _SPID;
+		int _KPID;
+		int _WaitEventID;
+		int _WaitClassID;
+
+		int _Waits_abs;
+		int _WaitTime_abs;
+
+		int _Waits_diff;    // diff since previous sample
+		int _WaitTime_diff; // diff since previous sample
+		
+		int _Waits_diff_batchStart;     // diff since batch started
+		int _WaitTime_diff_batchStart;  // diff since batch started
+
+		int  _snapshotBatchID;
+		Timestamp _sampleTime;
+		long      _updateTime; // internally updated when "diff" counters was updated (since _sampleTime "may" be in another time-zone)
+		
+
+		public WaitEventEntry(Timestamp sampleTime, int spid, int kpid, int waitEventId, int waits_abs, int waitTime_abs, int snapshotBatchId, int secondsConnected)
+		{
+			_updateTime      = System.currentTimeMillis();
+
+			_sampleTime      = sampleTime;
+			_SPID            = spid;
+			_KPID            = kpid;
+			_WaitEventID     = waitEventId;
+			_Waits_abs       = waits_abs;
+			_WaitTime_abs    = waitTime_abs;
+			_snapshotBatchID = snapshotBatchId;
+
+			_Waits_diff               = 0;
+			_WaitTime_diff            = 0;
+			_Waits_diff_batchStart    = 0;
+			_WaitTime_diff_batchStart = 0;
+
+			if (secondsConnected <= 1)
+			{
+				_Waits_diff               = waits_abs;
+				_WaitTime_diff            = waitTime_abs;
+				_Waits_diff_batchStart    = waits_abs;
+				_WaitTime_diff_batchStart = waitTime_abs;
+			}
+
+			// Get the WaitClassID
+			_WaitClassID = -1;
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+			if (mtd != null)
+			{
+				_WaitClassID = mtd.getWaitClassId(waitEventId);
+			}
+		}
+
+		@Override
+		public String toString()
+		{
+			return super.toString() 
+	    			+ ", SPID                    ".trim() + "="  + _SPID               
+	    			+ ", KPID                    ".trim() + "="  + _KPID               
+	    			+ ", WaitEventID             ".trim() + "="  + _WaitEventID        
+	    			+ ", WaitClassID             ".trim() + "="  + _WaitClassID        
+                                                
+	    			+ ", Waits_abs               ".trim() + "="  + _Waits_abs        
+	    			+ ", WaitTime_abs            ".trim() + "="  + _WaitTime_abs        
+
+	    			+ ", Waits_diff              ".trim() + "="  + _Waits_diff        
+	    			+ ", WaitTime_diff           ".trim() + "="  + _WaitTime_diff        
+
+	    			+ ", Waits_diff_batchStart   ".trim() + "="  + _Waits_diff_batchStart        
+	    			+ ", WaitTime_diff_batchStart".trim() + "="  + _WaitTime_diff_batchStart        
+
+	    			+ ", snapshotBatchID         ".trim() + "="  + _snapshotBatchID        
+	    			+ ", sampleTime              ".trim() + "='" + _sampleTime + "'"
+	    			+ "";
+		}
+
+		/** How many records is in the "getPcsRow()" ... which is used to allocate List size */ 
+		int _numberOfCol = 10;
+
+		public List<Object> getPcsRow()
+		{
+			if (_Waits_diff == 0 && _WaitTime_diff == 0)
+				return null;
+			
+			List<Object> row = new ArrayList<>(_numberOfCol);
+
+			row.add(MON_CAP_WAIT_INFO);
+			row.add(_sampleTime         );
+			row.add(_SPID               );
+			row.add(_KPID               );
+			row.add(_WaitEventID        );
+			row.add(_WaitClassID        );
+			
+			row.add(_snapshotBatchID    );
+			row.add(_Waits_abs          );
+			row.add(_Waits_diff         );
+			row.add(_WaitTime_abs       );
+			row.add(_WaitTime_diff      );
+
+			return row;
+		}
+	}
+	//--------------------------------------------------------------------------
+	// END: SPID - INFO/WAIT - manager 
+	//--------------------------------------------------------------------------
+
+	
+	
+	
 	//--------------------------------------------------------------------------
 	// BEGIN: Statement Statistics
 	//--------------------------------------------------------------------------

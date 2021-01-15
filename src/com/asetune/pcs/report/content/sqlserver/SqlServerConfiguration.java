@@ -22,7 +22,6 @@
 package com.asetune.pcs.report.content.sqlserver;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 
 import com.asetune.gui.ResultSetTableModel;
@@ -43,6 +42,18 @@ public class SqlServerConfiguration extends AseAbstract
 	}
 
 	@Override
+	public boolean hasShortMessageText()
+	{
+		return false;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
+	}
+
+	@Override
 	public void writeMessageText(Writer sb)
 	throws IOException
 	{
@@ -59,28 +70,6 @@ public class SqlServerConfiguration extends AseAbstract
 			sb.append(toHtmlTable(_shortRstm));
 		}
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		if (_shortRstm.getRowCount() == 0)
-//		{
-//			sb.append("No rows found <br>\n");
-//		}
-//		else
-//		{
-//			// Get a description of this section, and column names
-//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//
-//			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-////			sb.append(_shortRstm.toHtmlTableString("sortable"));
-//			sb.append(toHtmlTable(_shortRstm));
-//		}
-//
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()

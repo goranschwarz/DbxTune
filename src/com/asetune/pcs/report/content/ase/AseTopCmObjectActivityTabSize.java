@@ -22,7 +22,6 @@
 package com.asetune.pcs.report.content.ase;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 
 import com.asetune.cm.ase.CmObjectActivity;
@@ -45,6 +44,18 @@ public class AseTopCmObjectActivityTabSize extends AseAbstract
 	}
 
 	@Override
+	public boolean hasShortMessageText()
+	{
+		return false;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
+	}
+
+	@Override
 	public void writeMessageText(Writer sb)
 	throws IOException
 	{
@@ -59,43 +70,11 @@ public class AseTopCmObjectActivityTabSize extends AseAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+//			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+			sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
 			sb.append(toHtmlTable(_shortRstm));
 		}
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-////		if (_isTableSizeConfigured)
-////		{
-////			sb.append("Table/Index Size: Data collection for Table size was NOT enabled<br>");
-////			sb.append("<br>");
-////			sb.append("Enable it with: <code>" + CmObjectActivity.PROPKEY_sample_tabRowCount + " = true </code><br>");
-////		}
-////		else
-////		{
-//			if (_shortRstm.getRowCount() == 0)
-//			{
-//				sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//				
-//				sb.append("No rows found <br>\n");
-//			}
-//			else
-//			{
-//				// Get a description of this section, and column names
-//				sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//
-//				sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-////				sb.append(_shortRstm.toHtmlTableString("sortable"));
-//				sb.append(toHtmlTable(_shortRstm));
-//			}
-////		}
-//
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()
@@ -119,7 +98,8 @@ public class AseTopCmObjectActivityTabSize extends AseAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+//		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+		int topRows = getTopRows();
 		int havingAbove = 100;
 
 		_isTableSizeConfigured   = localConf.getBooleanProperty(CmObjectActivity.PROPKEY_sample_tabRowCount, CmObjectActivity.DEFAULT_sample_tabRowCount);
@@ -154,10 +134,7 @@ public class AseTopCmObjectActivityTabSize extends AseAbstract
 
 		String sql = getCmDiffColumnsAsSqlComment("CmObjectActivity")
 			    + "select top " + topRows + " \n"
-			    + "     min([CmSampleTime])                                   as [CmSampleTime_min] \n"
-			    + "    ,max([CmSampleTime])                                   as [CmSampleTime_max] \n"
-			    + "    ,cast('' as varchar(30))                               as [Duration] \n"
-			    + "    ,[DBName]                                              as [DBName] \n"
+			    + "     [DBName]                                              as [DBName] \n"
 			    + "    ,[ObjectName]                                          as [ObjectName] \n"
 			    + "    ,[IndexName]                                           as [IndexName] \n"
 			    + "    ,max([UsageInMb])                                      as [UsageInMb_max] \n"
@@ -198,6 +175,9 @@ public class AseTopCmObjectActivityTabSize extends AseAbstract
 			    + ObjectCacheDate_max
 			    + "    ,max([LastOptSelectDate])                              as [LastOptSelectDate_max] \n"
 			    + "    ,max([LastUsedDate])                                   as [LastUsedDate_max] \n"
+			    + "    ,min([CmSampleTime])                                   as [CmSampleTime_min] \n"
+			    + "    ,max([CmSampleTime])                                   as [CmSampleTime_max] \n"
+			    + "    ,cast('' as varchar(30))                               as [Duration] \n"
 			    + "from [CmObjectActivity_diff] x \n"
 			    + "where x.[UsageInMb] > 0 \n"
 				+ getReportPeriodSqlWhere()

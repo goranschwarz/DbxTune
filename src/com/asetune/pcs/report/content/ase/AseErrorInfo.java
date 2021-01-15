@@ -22,7 +22,6 @@
 package com.asetune.pcs.report.content.ase;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -38,8 +37,8 @@ import org.apache.log4j.Logger;
 import com.asetune.config.dict.AseErrorMessageDictionary;
 import com.asetune.gui.ModelMissmatchException;
 import com.asetune.gui.ResultSetTableModel;
-import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
+import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -52,10 +51,23 @@ public class AseErrorInfo extends AseAbstract
 	private ResultSetTableModel _sqlTextRstm;
 //	private Exception           _problem = null;
 	private List<String>        _messages = new ArrayList<>();
+	private List<String>        _miniChartJsList = new ArrayList<>();
 
 	public AseErrorInfo(DailySummaryReportAbstract reportingInstance)
 	{
 		super(reportingInstance);
+	}
+
+	@Override
+	public boolean hasShortMessageText()
+	{
+		return false;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
 	}
 
 	@Override
@@ -99,54 +111,13 @@ public class AseErrorInfo extends AseAbstract
 				sb.append(msOutlookAlternateText(showHideDiv, "Error Text", null));
 			}
 		}
+		
+		// Write JavaScript code for CPU SparkLine
+		for (String str : _miniChartJsList)
+		{
+			sb.append(str);
+		}
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		if (_messages.size() > 0)
-//		{
-//			sb.append("<b>Messages:</b> \n");
-//			sb.append("<ul> \n");
-//			for (String msg : _messages)
-//				sb.append("  <li>").append(msg).append("</li> \n");
-//			sb.append("</ul> \n");
-//		}
-//
-//		if (_shortRstm.getRowCount() == 0)
-//		{
-//			sb.append("No Error Information <br>\n");
-//		}
-//		else
-//		{
-//			// Get a description of this section, and column names
-//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//
-//			sb.append("Error Information Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-////			sb.append(_shortRstm.toHtmlTableString("sortable"));
-//			sb.append(toHtmlTable(_shortRstm));
-//
-//			if (_sqlTextRstm != null)
-//			{
-//				// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
-//				Map<String, String> colNameValueTagMap = new HashMap<>();
-//				colNameValueTagMap.put("SQLText", "xmp");
-//
-//				String  divId       = "errorSqlText";
-//				boolean showAtStart = false;
-//				String  htmlContent = _sqlTextRstm.toHtmlTableString("sortable", colNameValueTagMap);
-//				
-//				String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Error SQL Text, for above errors (all text's may not be available)...", htmlContent);
-//
-//				// Compose special condition for Microsoft Outlook
-//				sb.append(msOutlookAlternateText(showHideDiv, "Error Text", null));
-//			}
-//		}
-//
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()
@@ -208,18 +179,19 @@ public class AseErrorInfo extends AseAbstract
 			_logger.info("Skipping error numbers " + skipErrorNumbers + " for server '" + srvName + "'.");
 		}
 
-		int skipErrorCountAbove = localConf.getIntProperty("AseErrorInfo.skip.ErrorCountAbove", 2000);
-		_messages.add("Skipping SQL Errors: SQL Text, if 'ErrorCount' is above " + skipErrorCountAbove + ". This can be changed with property 'AseErrorInfo.skip.ErrorCountAbove = ####'");
+		int skipErrorCountAbove = localConf.getIntProperty("AseErrorInfo.skip.ErrorCountAbove", 100);
+		_messages.add("Skipping SQL Errors: SQL Text, if 'ErrorCount' is above " + skipErrorCountAbove + ". This can be changed with property <code>AseErrorInfo.skip.ErrorCountAbove = ####</code>");
 		
 		String sql = "-- source table: MonSqlCapStatements \n"
 			    + "select \n"
-			    + "  [ErrorStatus]            as [ErrorStatus] \n"
-			    + "	,count(*)                 as [ErrorCount] \n"
-			    + "	,count(distinct [SPID])   as [SpidCount] \n"
-			    + "	,min([StartTime])         as [FirstEntry] \n"
-			    + "	,max([StartTime])         as [LastEntry] \n"
-			    + "	,cast('' as varchar(30))  as [Duration] \n"
-			    + "	,cast('' as varchar(255)) as [ErrorMessage] \n"
+			    + "    [ErrorStatus]            as [ErrorStatus] \n"
+			    + "   ,cast('' as varchar(255)) as [ErrorCount__chart] \n"
+			    + "   ,count(*)                 as [ErrorCount] \n"
+			    + "   ,count(distinct [SPID])   as [SpidCount] \n"
+			    + "   ,min([StartTime])         as [FirstEntry] \n"
+			    + "   ,max([StartTime])         as [LastEntry] \n"
+			    + "   ,cast('' as varchar(30))  as [Duration] \n"
+			    + "   ,cast('' as varchar(255)) as [ErrorMessage] \n"
 			    + "from [MonSqlCapStatements] \n"
 			    + "where [ErrorStatus] > 0 \n"
 			    + skipErrorsWhereClause
@@ -258,14 +230,18 @@ public class AseErrorInfo extends AseAbstract
 				}
 			}
 
-			// Check if table "MonSqlCapSqlText" has Dictionary Compressed Columns (any columns ends with "$dcc$")
-			boolean hasDictCompCols = false;
-			try {
-				hasDictCompCols = DictCompression.hasCompressedColumnNames(conn, null, "MonSqlCapSqlText");
-			} catch (SQLException ex) {
-				_logger.error("Problems checking for Dictionary Compressed Columns in table 'MonSqlCapSqlText'.", ex);
-			}
-			
+//			String sqlTextTable = "MonSqlCapStatements";
+//			if (DbUtils.checkIfTableExistsNoThrow(conn, null, null, "MonSqlCapSqlText"))
+//				sqlTextTable = "MonSqlCapSqlText";
+//
+//			// Check if table "MonSqlCapStatements or MonSqlCapSqlText" has Dictionary Compressed Columns (any columns ends with "$dcc$")
+//			boolean hasDictCompCols = false;
+//			try {
+//				hasDictCompCols = DictCompression.hasCompressedColumnNames(conn, null, sqlTextTable);
+//			} catch (SQLException ex) {
+//				_logger.error("Problems checking for Dictionary Compressed Columns in table '" + sqlTextTable + "'.", ex);
+//			}
+
 			// Get SQL Details for a specific error number
 			if (pos_ErrorStatus >= 0 && pos_ErrorCount >= 0 && pos_ErrorMessage >= 0)
 			{
@@ -274,31 +250,49 @@ public class AseErrorInfo extends AseAbstract
 					int ErrorStatus = _shortRstm.getValueAsInteger(r, pos_ErrorStatus);
 					int ErrorCount  = _shortRstm.getValueAsInteger(r, pos_ErrorCount);
 
-					if (ErrorCount < skipErrorCountAbove)
-					{
-						if (hasDictCompCols)
-							getErrorSqlTextDcc(conn, ErrorStatus);
-						else
-							getErrorSqlText(conn, ErrorStatus);
-					}
+					if (ErrorCount > skipErrorCountAbove)
+						_messages.add("NOTE: For ErrorNumber " + ErrorStatus + " only the first " + skipErrorCountAbove + " SQL Text(s) will be included in the report!");
+
+					getErrorSqlText(conn, ErrorStatus, skipErrorCountAbove);
 				}
 			}
+			
+			// Mini Chart on "Physical Reads"
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("ErrorCount__chart")
+					.setHtmlWhereKeyColumnName   ("ErrorStatus")
+					.setDbmsTableName            ("MonSqlCapStatements")
+					.setDbmsSampleTimeColumnName ("StartTime")
+					.setDbmsDataValueColumnName  ("1").setDbmsDataValueColumnNameIsExpression(true)
+					.setDbmsWhereKeyColumnName   ("ErrorStatus")
+					.setSparklineTooltipPostfix  ("Number of Error Messages of #### in below period")
+					.validate()));
 		}
 	}
 
-	private void getErrorSqlText(DbxConnection conn, int errorNumber)
+	private void getErrorSqlText(DbxConnection conn, int errorNumber, int topRows)
 	{
 		String sql = ""
-			    + "select s.[ErrorStatus], count(t.*) as [ErrorCount], t.[ServerLogin], s.[ProcName], s.[LineNumber], t.[JavaSqlHashCode], min(t.[SQLText]) as [SQLText] \n"
-			    + "from [MonSqlCapStatements] s \n"
-			    + "INNER JOIN [MonSqlCapSqlText] t ON s.[SPID] = t.[SPID] and s.[KPID] = t.[KPID] and s.[BatchID] = t.[BatchID] \n"
-			    + "where s.[ErrorStatus] != 0 \n"
-//			    + "and s.[JavaSqlHashCode] != -1 \n"
-			    + "and s.[ErrorStatus] = " + errorNumber + " \n"
-			    + "group by s.[ErrorStatus], t.[ServerLogin], s.[ProcName], s.[LineNumber], t.[JavaSqlHashCode] \n"
-			    + "order by s.[ErrorStatus], [ErrorCount] desc \n"
+			    + "select top " + topRows + " \n"
+			    + "        [ErrorStatus] \n"
+			    + "       ,count(*) as [ErrorCount] \n"
+			    + "       ,[ServerLogin] \n"
+			    + "       ,[ProcName] \n"
+			    + "       ,[LineNumber] \n"
+			    + "       ,[JavaSqlHashCode] \n"
+			    + "       ,min([StartTime]) as [FirstEntry] \n"
+			    + "       ,max([StartTime]) as [LastEntry] \n"
+//			    + "       ,datediff(second, min([StartTime]), max([StartTime])) as [Duration_sec] \n"
+			    + "       ,cast('' as varchar(30)) as [Duration] \n"
+			    + "       ,(select [colVal] from [MonSqlCapStatements$dcc$SQLText] i where i.[hashId] = o.[SQLText$dcc$]) as [SQLText] \n"
+			    + "from [MonSqlCapStatements] o \n"
+			    + "where [ErrorStatus] != 0 \n"
+			    + "  and [ErrorStatus] = " + errorNumber + " \n"
+			    + "group by [ErrorStatus], [ServerLogin], [ProcName], [LineNumber], [JavaSqlHashCode] \n"
+			    + "order by [ErrorStatus], [ErrorCount] desc \n"
 			    + "";
-
+		
 		sql = conn.quotifySqlString(sql);
 		try ( Statement stmnt = conn.createStatement() )
 		{
@@ -313,50 +307,9 @@ public class AseErrorInfo extends AseAbstract
 				else
 					_sqlTextRstm.add(rstm);
 			}
-		}
-		catch(SQLException ex)
-		{
-			setProblemException(ex);
 
-			_logger.warn("Problems getting ErrorSqlText for ErrorStatus = "+errorNumber+": " + ex);
-		} 
-		catch(ModelMissmatchException ex)
-		{
-			setProblemException(ex);
-
-			_logger.warn("Problems (merging into previous ResultSetTableModel) when getting ErrorSqlText for ErrorStatus = "+errorNumber+": " + ex);
-		} 
-	}
-	private void getErrorSqlTextDcc(DbxConnection conn, int errorNumber)
-	{
-		String sql = ""
-			    + "select s.[ErrorStatus], count(t.*) as [ErrorCount], t.[ServerLogin], s.[ProcName], s.[LineNumber], t.[JavaSqlHashCode], min(t.[SQLText$dcc$]) as [SQLText] \n"
-			    + "from [MonSqlCapStatements] s \n"
-			    + "INNER JOIN [MonSqlCapSqlText] t ON s.[SPID] = t.[SPID] and s.[KPID] = t.[KPID] and s.[BatchID] = t.[BatchID] \n"
-			    + "where s.[ErrorStatus] != 0 \n"
-//			    + "and s.[JavaSqlHashCode] != -1 \n"
-			    + "and s.[ErrorStatus] = " + errorNumber + " \n"
-			    + "group by s.[ErrorStatus], t.[ServerLogin], s.[ProcName], s.[LineNumber], t.[JavaSqlHashCode] \n"
-			    + "order by s.[ErrorStatus], [ErrorCount] desc \n"
-			    + "";
-
-		sql = conn.quotifySqlString(sql);
-		try ( Statement stmnt = conn.createStatement() )
-		{
-			// Unlimited execution time
-			stmnt.setQueryTimeout(0);
-			try ( ResultSet rs = stmnt.executeQuery(sql) )
-			{
-				ResultSetTableModel rstm = createResultSetTableModel(rs, "SqlErrorText", sql);
-				
-				// Get the Dictionary Compressed Column TEXT VALUE, for column: SQLText  -- store them in SQLText
-				updateDictionaryCompressedColumn(rstm, conn, null, "MonSqlCapSqlText", "SQLText", "SQLText");
-				
-				if (_sqlTextRstm == null)
-					_sqlTextRstm = rstm;
-				else
-					_sqlTextRstm.add(rstm);
-			}
+			// Calculate Duration
+			setDurationColumn(_sqlTextRstm, "FirstEntry", "LastEntry", "Duration");
 		}
 		catch(SQLException ex)
 		{

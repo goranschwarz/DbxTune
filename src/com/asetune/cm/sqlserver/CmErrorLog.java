@@ -249,6 +249,8 @@ extends CountersModelAppend
 		if ( ! AlarmHandler.hasInstance() )
 			return;
 
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
+		
 		// ABS Data from LAST refresh only
 		List<List<Object>> lastRefreshRows = getDataCollectionForLastRefresh();
 
@@ -512,6 +514,9 @@ extends CountersModelAppend
 				 */
 
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_Severity, DEFAULT_alarm_Severity);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+getName()+"): threshold="+threshold+", severity='"+severity+"'.");
 
 				if (severity > threshold && severity < 99)
 				{

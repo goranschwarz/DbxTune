@@ -1,0 +1,32 @@
+package asetune;
+
+import com.asetune.sql.norm.IUserDefinedNormalizer;
+import com.asetune.utils.StringUtil;
+
+public class DummyNormalizer
+implements IUserDefinedNormalizer
+{
+	@Override
+	public String getName()
+	{
+		return "dummy-example";
+	}
+
+	@Override
+	public boolean isHandled(String sql)
+	{
+		return StringUtil.startsWithIgnoreBlankIgnoreCase(sql, "dummy string ");
+	}
+
+	@Override
+	public String getComment()
+	{
+		return "Removed: string";
+	}
+
+	@Override
+	public String normalize(String sql)
+	{
+		return getPrefix() + StringUtil.substringBeforeIgnoreCase(sql, " string ");
+	}
+}

@@ -40,6 +40,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoAse;
 
 public class DbUtils
@@ -856,7 +857,8 @@ public class DbUtils
 			return checkIfTableExists(conn, cat, schema, tableName); 
 		}
 		catch (SQLException ex) 
-		{ 
+		{
+			_logger.error("checkIfTableExistsNoThrow(cat='" + cat + "', schema='" + schema + "', tableName='" + tableName + "'): Caught: " + ex);
 			return false; 
 		}
 	}
@@ -1893,6 +1895,11 @@ public class DbUtils
 //	}
 
 
+	/** This simply calls: safeStr() */
+	public static String value(Object obj)
+	{
+		return safeStr(obj, -1);
+	}
 	/**
 	 * Make a string a bit more <i>safe</i>
 	 * <ul>
@@ -1944,9 +1951,97 @@ public class DbUtils
 			return sb.toString();
 		}
 	}
-	
-	
-	
+
+	public static String safeStrHexAsBinary(DbxConnection conn, Object obj)
+	{
+		return safeStrHexAsBinary(conn.getDatabaseProductNameNoThhrow(null), obj,-1);
+	}
+	public static String safeStrHexAsBinary(DbxConnection conn, Object obj, int maxStrLen)
+	{
+		return safeStrHexAsBinary(conn.getDatabaseProductNameNoThhrow(null), obj, maxStrLen);
+	}
+	public static String safeStrHexAsBinary(String dbmsVendor, Object obj, int maxStrLen)
+	{
+		if (obj == null)
+			return "NULL";
+
+		if (obj instanceof Number)
+		{
+			return obj.toString();
+		}
+		else
+		{
+			String str = obj.toString();
+			
+			// If it's a hex value, convert it to a "binary" literal, depending on what the Vendor name are
+			if (str.startsWith("0x"))
+			{
+				if (StringUtil.isNullOrBlank(dbmsVendor))
+					return str;
+				
+				// Keep the 0x
+				if (DbUtils.isProductName(dbmsVendor, 
+						DbUtils.DB_PROD_NAME_SYBASE_ASA, 
+						DbUtils.DB_PROD_NAME_SYBASE_ASE, 
+						DbUtils.DB_PROD_NAME_SYBASE_IQ, 
+						DbUtils.DB_PROD_NAME_SYBASE_RAX, 
+						DbUtils.DB_PROD_NAME_SYBASE_RS, 
+						DbUtils.DB_PROD_NAME_SYBASE_RSDA, 
+						DbUtils.DB_PROD_NAME_SYBASE_RSDRA, 
+						DbUtils.DB_PROD_NAME_MSSQL))
+				{
+					return str;
+				}
+
+				// postgres: '\x49FE'::bytea
+				if (DbUtils.isProductName(dbmsVendor, DbUtils.DB_PROD_NAME_POSTGRES))
+				{
+					return "'\\x" + str.substring("0x".length()) + "'";
+				}
+
+				// DB2: BX'49FE'
+				if (DbUtils.isProductName(dbmsVendor, DbUtils.DB_PROD_NAME_DB2_LUW))
+				{
+					return "BX'" + str.substring("0x".length()) + "'";
+				}
+
+				// ORACLE: hextoraw('49FE')
+				if (DbUtils.isProductName(dbmsVendor, DbUtils.DB_PROD_NAME_DB2_LUW))
+				{
+					return "hextoraw('" + str.substring("0x".length()) + "')";
+				}
+
+				// All others lets assume: 
+				// ANSI looks like X'49FE'
+				return "X'" + str.substring("0x".length()) + "'";
+			}
+
+			if ( maxStrLen > 0 && str.length() > maxStrLen )
+			{
+				// Put '...' at the end to mark the string as "truncated"
+				// Unless it's a "short" string, then just truncate to the maxLen
+				String truncStr;
+				if (maxStrLen >= 4)
+					truncStr = str.substring(0, maxStrLen-3) + "...";
+				else
+					truncStr = str.substring(0, maxStrLen);
+					
+				_logger.debug("DbUtils.safeStr(): MaxLen="+maxStrLen+". Truncating value |"+str+"|, into |"+truncStr+"|.");
+				str = truncStr;
+			}
+
+			StringBuilder sb = new StringBuilder();
+
+			// add ' around the string...
+			// and replace all ' into ''
+			sb.append("'");
+			sb.append(str.replace("'", "''"));
+			sb.append("'");
+			return sb.toString();
+		}
+	}
+
+
 	private static void test(int testCase, int expected, String str)
 	{
 		System.out.println();

@@ -94,8 +94,8 @@ import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.pcs.sqlcapture.SqlCaptureBrokerAse;
 import com.asetune.sql.SqlPickList;
-import com.asetune.sql.StatementNormalizer;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.norm.StatementNormalizer;
 import com.asetune.tools.WindowType;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
@@ -985,7 +985,8 @@ implements ActionListener, ChangeListener//, MouseListener
 			//---------------------------------------------
 			// GET SQL TEXT
 			//---------------------------------------------
-			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, false);
+//			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, false);
+			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
 
 			// Resolve column name/sql text for Dictionary Compressed Columns.
 			String col_SQLText = "[SQLText]";
@@ -1032,7 +1033,8 @@ implements ActionListener, ChangeListener//, MouseListener
 			// GET SHOWPLAN TEXT
 			//---------------------------------------------
 			ta = _showplan_txt;
-			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_PLANS, null, false);
+//			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_PLANS, null, false);
+			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
 			sql = conn.quotifySqlString("select [PlanText] from [" + tabName + "] " + where);
 
 			rs = stmnt.executeQuery(sql);
@@ -1150,6 +1152,40 @@ implements ActionListener, ChangeListener//, MouseListener
 		wait.execAndWait(doWork, 200); // 200ms in GraceTime before the GUI popup is raised
 	}
 	
+//	/** if NormSQLText is empty, and SQLText has Value... create the NormSQLText content "on the fly" */
+//	private ResultSetTableModel enrichRstm(ResultSetTableModel rstm)
+//	{
+//		boolean disabled = true;
+//		if (disabled)
+//			return rstm;
+//
+//		int SQLText_pos     = rstm.findColumn("SQLText");
+//		int NormSQLText_pos = rstm.findColumn("NormSQLText");
+//		
+//		if (SQLText_pos == -1 || NormSQLText_pos == -1)
+//		{
+//			_logger.info("Enriching Statements information was skipped due to: SQLText_pos="+SQLText_pos+", NormSQLText_pos="+NormSQLText_pos);
+//			return rstm;
+//		}
+//
+//		// Used to anonymize or remove-constants in where clauses etc...
+//		StatementNormalizer stmntNorm = new StatementNormalizer();
+//
+//		int rowCount = rstm.getRowCount();
+//		for (int r=0; r<rowCount; r++)
+//		{
+//			String sqlText     = (String) rstm.getValueAt(r, SQLText_pos);
+//			String normSqlText = (String) rstm.getValueAt(r, NormSQLText_pos);
+//			if (StringUtil.hasValue(sqlText) && StringUtil.isNullOrBlank(normSqlText))
+//			{
+////				normSqlText = stmntNorm.normalizeStatementNoThrow(SqlCaptureBrokerAse.removeKnownPrefixes(sqlText));
+//				normSqlText = stmntNorm.normalizeStatementNoThrow(sqlText, true);
+//				rstm.setValueAt(normSqlText, r, NormSQLText_pos);
+//			}
+//		}
+//
+//		return rstm;
+//	}
 	/** if NormSQLText is empty, and SQLText has Value... create the NormSQLText content "on the fly" */
 	private ResultSetTableModel enrichRstm(ResultSetTableModel rstm)
 	{
@@ -1167,7 +1203,7 @@ implements ActionListener, ChangeListener//, MouseListener
 		}
 
 		// Used to anonymize or remove-constants in where clauses etc...
-		StatementNormalizer stmntNorm = new StatementNormalizer();
+		StatementNormalizer stmntNorm = StatementNormalizer.getInstance();
 
 		int rowCount = rstm.getRowCount();
 		for (int r=0; r<rowCount; r++)
@@ -1177,7 +1213,7 @@ implements ActionListener, ChangeListener//, MouseListener
 			if (StringUtil.hasValue(sqlText) && StringUtil.isNullOrBlank(normSqlText))
 			{
 //				normSqlText = stmntNorm.normalizeStatementNoThrow(SqlCaptureBrokerAse.removeKnownPrefixes(sqlText));
-				normSqlText = stmntNorm.normalizeStatementNoThrow(sqlText, true);
+				normSqlText = stmntNorm.normalizeSqlText(sqlText, null);
 				rstm.setValueAt(normSqlText, r, NormSQLText_pos);
 			}
 		}
@@ -1379,7 +1415,8 @@ implements ActionListener, ChangeListener//, MouseListener
 		catch (RuntimeException ignore) {}
 
 		String tabNameStmnt   = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
-		String tabNameSqlText = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT,    null, false);
+//		String tabNameSqlText = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT,    null, false);
+		String tabNameSqlText = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
 		
 		// Resolve column name/sql text for Dictionary Compressed Columns.
 		String col_SQLText1    = "t.[SQLText]";
@@ -1502,7 +1539,8 @@ implements ActionListener, ChangeListener//, MouseListener
 
 		
 		// GET Table Name
-		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, true);
+//		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, true);
+		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, true);
 
 		// Build list of column to get (Dictionary Compressed columns ending with $dcc$ will be replaced with a in-line sub-select)
 		String sqlColList = "*";
@@ -1667,7 +1705,8 @@ implements ActionListener, ChangeListener//, MouseListener
 				sqlLimit = "limit " + topRows + "\n";
 		}
 		
-		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, false);
+//		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, false);
+		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
 
 		String sql_plain = ""
 				+ "------------------------------------------------------------- \n"

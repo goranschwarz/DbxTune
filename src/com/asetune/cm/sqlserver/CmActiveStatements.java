@@ -51,7 +51,9 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -139,6 +141,17 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	private static final String  PROP_PREFIX                      = CM_NAME;
+	
+	public static final String  PROPKEY_sample_showplan           = PROP_PREFIX + ".sample.showplan";
+	public static final boolean DEFAULT_sample_showplan           = true;
+
+	public static final String  PROPKEY_sample_monSqlText         = PROP_PREFIX + ".sample.monSqltext";
+	public static final boolean DEFAULT_sample_monSqlText         = true;
+
+	public static final String  PROPKEY_sample_liveQueryPlan      = PROP_PREFIX + ".sample.liveQueryPlan";
+	public static final boolean DEFAULT_sample_liveQueryPlan      = true;
+
 	
 	private void addTrendGraphs()
 	{
@@ -167,6 +180,7 @@ extends CountersModel
 		setLocalToolTipTextOnTableColumnHeader("ImBlockingOthersMaxTimeInSec", "Max Time in Seconds this session_id has been Blocking other session_id's from executing, because this session_id hold lock(s), that some other session_id wants to grab.");
 		setLocalToolTipTextOnTableColumnHeader("HasSqlText",                "<html>Checkbox to indicate that 'lastKnownSql' column has a value<br><b>Note:</b> Hower over this cell to see the SQL Statement.</html>");
 		setLocalToolTipTextOnTableColumnHeader("HasQueryplan",              "<html>Checkbox to indicate that 'query_plan' column has a value<br><b>Note:</b> Hower over this cell to see the Query plan.</html>");
+		setLocalToolTipTextOnTableColumnHeader("HasLiveQueryplan",          "<html>Checkbox to indicate that 'live_query_plan' column has a value<br><b>Note:</b> Hower over this cell to see the Query plan.</html>");
 		setLocalToolTipTextOnTableColumnHeader("ExecTimeInMs",              "<html>How many milliseconds has this session_id been executing the current SQL Statement</html>");
 		setLocalToolTipTextOnTableColumnHeader("UsefullExecTime",           "<html>More or less same thing as the column 'ExecTimeInMs' but it subtracts the 'wait_time'...<br>The idea is to display <i>time</i> used on something <i>usefull</i>, e.g. Not in sleep mode.</html>");
 		setLocalToolTipTextOnTableColumnHeader("lastKnownSql",              "<html>"
@@ -182,6 +196,7 @@ extends CountersModel
 		                                                                  + "  If the session_id is <b>only</b> displayed in the 'BLOCKER' section, it probably means that the client has started a transaction, but currently is at the client side code and doing <i>something</i>, meaning client side logic is in play.<br>"
 		                                                                  + "</html>");
 		setLocalToolTipTextOnTableColumnHeader("query_plan",                "<html>Query Plan for the SQL-Statement that is currently executing.<br><b>Note:</b> Only valid for the 'ACTIVE' sessions.</html>");
+		setLocalToolTipTextOnTableColumnHeader("LiveQueryPlan",             "<html>Query Plan for the SQL-Statement that is currently executing.<br><b>Note:</b> Only valid for the 'ACTIVE' sessions.</html>");
 	}
 
 	@Override
@@ -225,7 +240,7 @@ extends CountersModel
 	{
 		String dm_exec_sessions    = "dm_exec_sessions";
 		String dm_exec_requests    = "dm_exec_requests";
-		String dm_exec_connections = "dm_exec_connections";
+//		String dm_exec_connections = "dm_exec_connections";
 		String dm_exec_sql_text    = "dm_exec_sql_text";
 		String dm_exec_query_plan  = "dm_exec_query_plan";
 		
@@ -233,18 +248,18 @@ extends CountersModel
 		{
 			dm_exec_sessions    = "dm_pdw_nodes_exec_sessions";
 			dm_exec_requests    = "dm_exec_requests";            // SAME NAME IN AZURE ????
-			dm_exec_connections = "dm_pdw_exec_connections";
+//			dm_exec_connections = "dm_pdw_exec_connections";
 			dm_exec_sql_text    = "dm_exec_sql_text";            // SAME NAME IN AZURE ????
 			dm_exec_query_plan  = "dm_exec_query_plan";            // SAME NAME IN AZURE ????
 		}
 
-		String LiveQueryPlanActive  = "";
-		String LiveQueryPlanBlocked = "";
+//		String LiveQueryPlanActive  = "";
+//		String LiveQueryPlanBlocked = "";
 
 //		String LiveQueryPlanActive  = "    ,LiveQueryPlan = convert(nvarchar(max), 'No live query plan available. Only in 2016 SP1 and above')";
 //		String LiveQueryPlanBlocked = "    ,LiveQueryPlan = convert(nvarchar(max), 'No live query plan available. Only in 2016 SP1 and above')";
-//		String LiveQueryPlanActive  = "    ,LiveQueryPlan = convert(nvarchar(max), null) \n";
-//		String LiveQueryPlanBlocked = "    ,LiveQueryPlan = convert(nvarchar(max), null) \n";
+		String LiveQueryPlanActive  = "    ,LiveQueryPlan = convert(nvarchar(max), null) \n";
+		String LiveQueryPlanBlocked = "    ,LiveQueryPlan = convert(nvarchar(max), null) \n";
 //		
 //		if (srvVersion >= Ver.ver(2016,0,0, 1)) // 2016 SP1 (or check if the table exists; select 1 from sys.all_tables where name = 'dm_exec_query_statistics_xml'
 //		{
@@ -255,20 +270,30 @@ extends CountersModel
 // possibly use: dm_exec_query_profiles 
 // possibly use: dm_exec_query_plan_stats instead... at least it will give the ACTUAL plan... https://blog.matesic.info/post/Last-Actual-Plan-with-sysdm_exec_query_plan_stats
 
+		String dop_active = "";
+		String dop_locks  = "";
+		if (srvVersion >= Ver.ver(2016))
+		{
+			dop_active = "    ,der.dop \n";
+			dop_locks  = "    ,-1 as dop \n";
+		}
+		
 		String sql1 =
 			"SELECT  \n" +
 			"     monSource    = convert(varchar(10), 'ACTIVE') \n" +
 			"    ,multiSampled = convert(varchar(10), '') \n" +
 			"    ,des.login_name \n" +
 			"    ,des.session_id \n" +
+			dop_active +
 			"    ,ImBlockedBySessionId = der.blocking_session_id \n" +
 			"    ,ImBlockingOtherSessionIds = convert(varchar(512), '') \n" +
 			"    ,ImBlockingOthersMaxTimeInSec = convert(int, 0) \n" +
 			"    ,des.status \n" +
 			"    ,der.command \n" +
 			"    ,des.[HOST_NAME] \n" +
-			"    ,HasSqlText   = convert(bit,0) \n" +
-			"    ,HasQueryplan = convert(bit,0) \n" +
+			"    ,HasSqlText       = convert(bit,0) \n" +
+			"    ,HasQueryplan     = convert(bit,0) \n" +
+			"    ,HasLiveQueryplan = convert(bit,0) \n" +
 //			"    ,DB_NAME(der.database_id) AS database_name \n" +
 			"    ,(select db.name from sys.databases db where db.database_id = der.database_id) AS database_name \n" +
 			"    ,exec_cpu_time      = der.cpu_time \n" +
@@ -319,14 +344,16 @@ extends CountersModel
 			"    ,multiSampled = convert(varchar(10), '')  \n" +
 			"    ,p1.loginame                                  --des.login_name \n" +
 			"    ,p1.spid                                      --des.session_id \n" +
+			dop_locks +
 			"    ,ImBlockedBySessionId = p1.blocked            --der.blocking_session_id \n" +
 			"    ,ImBlockingOtherSessionIds    = convert(varchar(512), '')  \n" +
 			"    ,ImBlockingOthersMaxTimeInSec = convert(int, 0) " +
 			"    ,p1.status                                    --des.status \n" +
 			"    ,p1.cmd                                       --der.command \n" +
 			"    ,p1.hostname                                  --des.[HOST_NAME] \n" +
-			"    ,HasSqlText   = convert(bit,0)  \n" +
-			"    ,HasQueryplan = convert(bit,0)  \n" +
+			"    ,HasSqlText       = convert(bit,0)  \n" +
+			"    ,HasQueryplan     = convert(bit,0)  \n" +
+			"    ,HasLiveQueryplan = convert(bit,0) \n" +
 //			"    ,DB_NAME(p1.dbid) AS database_name  \n" +
 			"    ,(select db.name from sys.databases db where db.database_id = p1.dbid) AS database_name \n" +
 			"    ,p1.cpu                                       --der.cpu_time \n" +
@@ -422,6 +449,22 @@ extends CountersModel
 			}
 		}
 		
+		// 'HasLiveQueryplan' STUFF
+		if ("HasLiveQueryplan".equals(colName))
+		{
+			// Find 'ShowPlanText' column, is so get it and set it as the tool tip
+			int pos_LiveQueryPlanText = findColumn("LiveQueryPlan");
+			if (pos_LiveQueryPlanText > 0)
+			{
+				Object o_LiveQueryPlanText = getValueAt(modelRow, pos_LiveQueryPlanText);
+				if (o_LiveQueryPlanText instanceof String)
+				{
+					String xmlPlan = (String)o_LiveQueryPlanText;
+					return ToolTipSupplierSqlServer.createXmlPlanTooltip(xmlPlan);
+				}
+			}
+		}
+		
 		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
 	}
 	/** add HTML around the string, and translate line breaks into <br> */
@@ -448,8 +491,9 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("Get Query Plan", getName()+".sample.showplan"   , Boolean.class, conf.getBooleanProperty(getName()+".sample.showplan"   , true ), true, "Also get queryplan" ));
-		list.add(new CmSettingsHelper("Get SQL Text",   getName()+".sample.monSqltext" , Boolean.class, conf.getBooleanProperty(getName()+".sample.monSqltext" , true ), true, "Also get SQL Text"  ));
+		list.add(new CmSettingsHelper("Get Query Plan",      PROPKEY_sample_showplan     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_showplan     , DEFAULT_sample_showplan     ), true, "Also get queryplan" ));
+		list.add(new CmSettingsHelper("Get SQL Text",        PROPKEY_sample_monSqlText   , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_monSqlText   , DEFAULT_sample_monSqlText   ), true, "Also get SQL Text"  ));
+		list.add(new CmSettingsHelper("Get Live Query Plan", PROPKEY_sample_liveQueryPlan, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan, DEFAULT_sample_liveQueryPlan), true, "Also get LIVE queryplan" ));
 
 		return list;
 	}
@@ -461,8 +505,9 @@ extends CountersModel
 		// use CHECKBOX for some columns of type bit/Boolean
 		String colName = getColumnName(columnIndex);
 
-		if      ("HasSqlText"     .equals(colName)) return Boolean.class;
-		else if ("HasQueryplan"   .equals(colName)) return Boolean.class;
+		if      ("HasSqlText"      .equals(colName)) return Boolean.class;
+		else if ("HasQueryplan"    .equals(colName)) return Boolean.class;
+		else if ("HasLiveQueryplan".equals(colName)) return Boolean.class;
 		else return super.getColumnClass(columnIndex);
 	}
 
@@ -480,11 +525,12 @@ extends CountersModel
 //		long startTime = System.currentTimeMillis();
 
 		Configuration conf = Configuration.getCombinedConfiguration();
-		boolean getShowplan       = conf == null ? true : conf.getBooleanProperty(getName()+".sample.showplan",       true);
-		boolean getMonSqltext     = conf == null ? true : conf.getBooleanProperty(getName()+".sample.monSqltext",     true);
+		boolean getShowplan       = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_showplan,       DEFAULT_sample_showplan);
+		boolean getMonSqltext     = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_monSqlText,     DEFAULT_sample_monSqlText);
 //		boolean getDbccSqltext    = conf == null ? false: conf.getBooleanProperty(getName()+".sample.dbccSqltext",    false);
 //		boolean getProcCallStack  = conf == null ? true : conf.getBooleanProperty(getName()+".sample.procCallStack",  true);
 //		boolean getDbccStacktrace = conf == null ? false: conf.getBooleanProperty(getName()+".sample.dbccStacktrace", false);
+		boolean getLiveQueryPlan  = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan,  DEFAULT_sample_liveQueryPlan);
 
 		// Where are various columns located in the Vector 
 		int pos_SPID = -1;
@@ -494,6 +540,8 @@ extends CountersModel
 //		int pos_HasDbccSqlText     = -1, pos_DbccSqlText    = -1;
 //		int pos_HasProcCallStack   = -1, pos_ProcCallStack  = -1;
 //		int pos_HasStacktrace      = -1, pos_DbccStacktrace = -1;
+		int pos_HasLiveQueryPlan   = -1, pos_LiveQueryPlan  = -1;
+
 		int pos_BlockingOtherSpids = -1, pos_BlockingSPID   = -1;
 		int pos_ImBlockingOthersMaxTimeInSec= -1;
 		int pos_wait_time          = -1;
@@ -530,6 +578,8 @@ extends CountersModel
 			else if (colName.equals("query_plan"))                   pos_ShowPlanText               = colId;
 			else if (colName.equals("HasSqlText"))                   pos_HasMonSqlText              = colId;
 			else if (colName.equals("lastKnownSql"))                 pos_MonSqlText                 = colId;
+			else if (colName.equals("HasLiveQueryplan"))             pos_HasLiveQueryPlan           = colId;
+			else if (colName.equals("LiveQueryPlan"))                pos_LiveQueryPlan              = colId;
 //			else if (colName.equals("HasDbccSqlText"))               pos_HasDbccSqlText             = colId;
 //			else if (colName.equals("DbccSqlText"))                  pos_DbccSqlText                = colId;
 //			else if (colName.equals("HasProcCallStack"))             pos_HasProcCallStack           = colId;
@@ -597,6 +647,13 @@ System.out.println("Can't find the position for columns (''HasMonSqlText'="+pos_
 //			return;
 //		}
 		
+		if (pos_HasLiveQueryPlan < 0 || pos_LiveQueryPlan < 0)
+		{
+System.out.println("Can't find the position for columns ('HasLiveQueryPlan'="+pos_HasLiveQueryPlan+", 'LiveQueryPlan'="+pos_LiveQueryPlan+")");
+			_logger.debug("Can't find the position for columns ('HasLiveQueryPlan'="+pos_HasLiveQueryPlan+", 'LiveQueryPlan'="+pos_LiveQueryPlan+")");
+			return;
+		}
+
 		if (pos_BlockingOtherSpids < 0 || pos_BlockingSPID < 0)
 		{
 System.out.println("Can't find the position for columns ('BlockingOtherSpids'="+pos_BlockingOtherSpids+", 'BlockingSPID'="+pos_BlockingSPID+")");
@@ -671,6 +728,15 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 			if (o_SPID instanceof Number)
 			{
 				int spid = ((Number)o_SPID).intValue();
+				
+//				if (srvVersion >= Ver.ver(2016,0,0, 1)) // 2016 SP1 (or check if the table exists; select 1 from sys.all_tables where name = 'dm_exec_query_statistics_xml'
+//				{
+				if (getLiveQueryPlan && getServerVersion() >= Ver.ver(2016,0,0, 1)) // 2016 SP1 
+				{
+					String liveQueryPlan = SqlServerUtils.getLiveQueryPlanNoThrow(getCounterController().getMonConnection(), spid);
+					if (StringUtil.hasValue(liveQueryPlan))
+						counters.setValueAt(liveQueryPlan, rowId, pos_LiveQueryPlan);
+				}
 
 //				String monSqlText    = "Not properly configured (need 'SQL batch capture' & 'max SQL text monitored').";
 //				String dbccSqlText   = "User does not have: sa_role";
@@ -751,6 +817,11 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 				obj = counters.getValueAt(rowId, pos_ShowPlanText);
 				b = (obj != null && obj instanceof String && StringUtil.hasValue((String)obj)); 
 				counters.setValueAt(new Boolean(b), rowId, pos_HasShowPlan);
+
+				// LiveQueryPlan check box
+				obj = counters.getValueAt(rowId, pos_LiveQueryPlan);
+				b = (obj != null && obj instanceof String && StringUtil.hasValue((String)obj)); 
+				counters.setValueAt(new Boolean(b), rowId, pos_HasLiveQueryPlan);
 
 
 				// Get LIST of SPID's that I'm blocking
@@ -892,7 +963,7 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 		
 		CountersModel cm = this;
 
-		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
 		for (int r=0; r<cm.getRateRowCount(); r++)
 		{
@@ -910,10 +981,11 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 					String BlockingOtherSpidsStr = ImBlockingOtherSessionIdsList + "";
 					int    blockCount            = ImBlockingOtherSessionIdsList.size();
 
-					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): ImBlockingOthersMaxTimeInSec='"+ImBlockingOthersMaxTimeInSec+"', ImBlockingOtherSessionIdsList="+ImBlockingOtherSessionIdsList);
-
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSec, DEFAULT_alarm_ImBlockingOthersMaxTimeInSec);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", ImBlockingOthersMaxTimeInSec='"+ImBlockingOthersMaxTimeInSec+"', ImBlockingOtherSessionIdsList="+ImBlockingOtherSessionIdsList);
+
 					if (ImBlockingOthersMaxTimeInSec > threshold)
 					{
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);

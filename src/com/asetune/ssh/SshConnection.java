@@ -1048,6 +1048,16 @@ public class SshConnection
 
 		String cmd = "nproc";
 		String str = "-empty-";
+		
+		if (_uname != null)
+		{
+			if (_uname.equals("Windows-CMD")) // DOS Prompt
+				cmd = "echo %NUMBER_OF_PROCESSORS%";
+
+			if (_uname.startsWith("Windows-Powershell-")) // Powershell (any kind)
+				cmd = "echo $env:NUMBER_OF_PROCESSORS";
+		}
+
 		try
 		{
 			if (_conn == null)
@@ -1099,25 +1109,67 @@ public class SshConnection
 			throw new IOException("The SSH connection to the host '"+_hostname+"' was null. The connection has not been initialized OR someone has closed the connection.");
 		}
 
-		Session sess = _conn.openSession();
-//		sess.execCommand("uname -a");
-		sess.execCommand("uname");
-
-		InputStream stdout = new StreamGobbler(sess.getStdout());
-		BufferedReader br = new BufferedReader(new InputStreamReader(stdout));
-
+		// Check what OS we ended up in
 		String output = "";
-		while (true)
 		{
-			String line = br.readLine();
-			if (line == null)
-				break;
+			Session sess = _conn.openSession();
+//			sess.execCommand("uname -a");
+			sess.execCommand("uname");
 
-			output += line;
+			InputStream stdout = new StreamGobbler(sess.getStdout());
+			BufferedReader br = new BufferedReader(new InputStreamReader(stdout));
+
+			while (true)
+			{
+				String line = br.readLine();
+				if (line == null)
+					break;
+
+				output += line;
+			}
+
+			br.close();
+			sess.close();
 		}
+		
+		// well we might end up in a Windows SSH ... so lets check if it's CMD or POWERSHELL we ended up in, when loggin on
+		if (StringUtil.isNullOrBlank(output))
+		{
+			// https://stackoverflow.com/questions/34471956/how-to-determine-if-im-in-powershell-or-cmd
+			// (dir 2>&1 *`|echo CMD);&<# rem #>echo PowerShell
+			// (dir 2>&1 *`|echo CMD);&<# rem #>echo ($PSVersionTable).PSEdition
+			
+			// the below returns: 
+			// 'CMD'     - For DOS Command promt environment
+			// 'Core'    - For Powershell 'core' implementation
+			// 'Desktop' - For Powershell 'Desktop' implementation, which is the "full blown Windows version"
+			Session sess = _conn.openSession();
+			sess.execCommand("(dir 2>&1 *`|echo CMD);&<# rem #>echo ($PSVersionTable).PSEdition"); 
 
-		br.close();
-		sess.close();
+			InputStream stdout = new StreamGobbler(sess.getStdout());
+			BufferedReader br = new BufferedReader(new InputStreamReader(stdout));
+
+			while (true)
+			{
+				String line = br.readLine();
+				if (line == null)
+					break;
+
+				output += line;
+			}
+
+			br.close();
+			sess.close();
+			
+			if (StringUtil.hasValue(output))
+			{
+				if (output.equals("Core")   ) output = "Powershell-Core";
+				if (output.equals("Desktop")) output = "Powershell-Desktop";
+
+				output = "Windows-" + output;
+			}
+			
+		}
 		
 		_uname = output;
 		if (_uname != null)
@@ -1130,15 +1182,83 @@ public class SshConnection
 			// on Linux you it might be available using: 'locale charmap' -- returned 'UTF-8'
 			
 			// also try to figure out a dummy default character set for the OS
-			if      (_osName.equals("Linux")) _osCharset = "UTF-8";
-			else if (_osName.equals("SunOS")) _osCharset = "ISO-8859-1";
-			else if (_osName.equals("AIX"))   _osCharset = "ISO-8859-1"; // TODO: CHECK
-			else if (_osName.equals("HP-UX")) _osCharset = "ISO-8859-1"; // TODO: CHECK
+			if      (_osName.equals    ("Linux"   )) _osCharset = "UTF-8";
+			else if (_osName.equals    ("SunOS"   )) _osCharset = "ISO-8859-1";
+			else if (_osName.equals    ("AIX"     )) _osCharset = "ISO-8859-1"; // TODO: CHECK
+			else if (_osName.equals    ("HP-UX"   )) _osCharset = "ISO-8859-1"; // TODO: CHECK
+			else if (_osName.startsWith("Windows-")) _osCharset = windowsToJavaCharset();
 			else _osCharset = null;
 
 			//Charset.forName("ISO-8859-1");
 		}
-		_logger.debug("OS Info: 'uname -a' produced '"+_uname+"'.");
+		_logger.debug("getOsInfo: osName='" + _uname + "', chartset='" + _osCharset + "'.");
+		//System.out.println("getOsInfo: osName='"+_uname+"', chartset='"+_osCharset+"'.");
+
+		return output;
+	}
+	
+	private String windowsToJavaCharset()
+	throws IOException
+	{
+		if (_conn == null)
+		{
+			throw new IOException("The SSH connection to the host '"+_hostname+"' was null. The connection has not been initialized OR someone has closed the connection.");
+		}
+
+		// Check what OS we ended up in
+		String output = "";
+		{
+			Session sess = _conn.openSession();
+			sess.execCommand("chcp");
+
+			InputStream stdout = new StreamGobbler(sess.getStdout());
+			BufferedReader br = new BufferedReader(new InputStreamReader(stdout));
+
+			while (true)
+			{
+				String line = br.readLine();
+				if (line == null)
+					break;
+
+				output += line;
+			}
+
+			br.close();
+			sess.close();
+		}
+
+		if (StringUtil.isNullOrBlank(output))
+		{
+			output = "IBM850";
+			_logger.info("Could not retrive Windows codepage, setting it to '" + output + "'");
+		}
+		else
+		{
+			// Active code page: ###
+			String[] sa = output.split(" ");
+			for (int i=0; i<sa.length; i++)
+			{
+				int num = StringUtil.parseInt(sa[i], -99);
+				if (num != -99)
+				{
+					if      (num > 10  && num <100)  output = "IBM0" + num;
+					else if (num > 100 && num <1000) output = "IBM" + num;
+					else if (num == 65001)           output = "UTF-8";
+					else
+					{
+						output = "IBM850";
+						_logger.warn("Windows codepage '" + num + "' is unknown in translation table, setting it to '" + output + "'");
+					}
+				}
+			}
+			_logger.info("Detected Windows codepage='" + output + "'.");
+		}
+
+		if (StringUtil.isNullOrBlank(output))
+		{
+			output = "IBM850";
+			_logger.info("After codepage lookup translation, the code page is still not known. setting it to '" + output + "' as a last resort.");
+		}
 
 		return output;
 	}

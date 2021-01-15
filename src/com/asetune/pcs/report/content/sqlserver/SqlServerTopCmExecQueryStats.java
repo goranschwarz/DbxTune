@@ -22,11 +22,12 @@
 package com.asetune.pcs.report.content.sqlserver;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -35,8 +36,12 @@ import org.apache.log4j.Logger;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
+import com.asetune.pcs.report.content.ase.SparklineHelper;
+import com.asetune.pcs.report.content.ase.SparklineHelper.AggType;
+import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 
 public class SqlServerTopCmExecQueryStats
 extends SqlServerAbstract
@@ -45,10 +50,23 @@ extends SqlServerAbstract
 
 	private ResultSetTableModel _shortRstm;
 	private Map<String, String> _planMap;
+	private List<String>        _miniChartJsList = new ArrayList<>();
 
 	public SqlServerTopCmExecQueryStats(DailySummaryReportAbstract reportingInstance)
 	{
 		super(reportingInstance);
+	}
+
+	@Override
+	public boolean hasShortMessageText()
+	{
+		return false;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
 	}
 
 	@Override
@@ -58,7 +76,8 @@ extends SqlServerAbstract
 		// Get a description of this section, and column names
 		sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-		sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+//		sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+		sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
 		sb.append(toHtmlTable(_shortRstm));
 
 		if (_planMap != null && !_planMap.isEmpty())
@@ -115,93 +134,13 @@ extends SqlServerAbstract
 				sb.append("\n</script>\n");
 			}
 		}
+		
+		// Write JavaScript code for CPU SparkLine
+		for (String str : _miniChartJsList)
+		{
+			sb.append(str);
+		}
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		// Get a description of this section, and column names
-//		sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//
-//		sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-////		sb.append(_shortRstm.toHtmlTableString("sortable"));
-//		sb.append(toHtmlTable(_shortRstm));
-//
-//		if (_planMap != null && !_planMap.isEmpty())
-//		{
-//			sb.append("\n");
-//			sb.append("<!-- read Javascript and CSS for Showplan --> \n");
-//			sb.append("<link rel='stylesheet' type='text/css' href='http://www.dbxtune.com/sqlserver_showplan/css/qp.css'> \n");
-//			sb.append("<script src='http://www.dbxtune.com/sqlserver_showplan/dist/qp.js' type='text/javascript'></script> \n");
-//			sb.append("\n");
-//			
-//			sb.append("<br> \n");
-//			sb.append("<div id='showplan-list'> \n");
-//			sb.append("<b>Display the execution plan for any of the following <code>plan_handle</code>: </b> \n");
-//			sb.append("<ul> \n");
-//			for (String planHandle : _planMap.keySet())
-//			{
-//				sb.append("    <li> <a href='#showplan-list' title='Copy plan to clipboard and show in browser' onclick='showplanForId(\"").append(planHandle).append("\"); return true;'><code>").append(planHandle).append("</code></a> </li> \n");
-//			}
-//			sb.append("</ul> \n");
-//			sb.append("</div> \n");
-//			sb.append(" \n");
-//			
-//			sb.append("<div id='showplan-head'></div> \n");
-//			sb.append("<div id='showplan-container'></div> \n");
-//			sb.append("<script type='text/javascript'> \n");
-//			sb.append("    function showplanForId(id) \n");
-//			sb.append("    { \n");
-//			sb.append("        var showplanText = document.getElementById('plan_'+id).innerHTML \n");
-//			sb.append("        QP.showPlan(document.getElementById('showplan-container'), showplanText); \n");
-//			sb.append("        document.getElementById('showplan-head').innerHTML = 'Below is Execution plan for <code>plan_handle: ' + id + \"</code> <br>Note: You can also view your plan at <a href='http://www.supratimas.com' target='_blank'>http://www.supratimas.com</a>, or any other <i>plan-view</i> application by pasting (Ctrl-V) the clipboard content. <br>SentryOne Plan Explorer can be downloaded here: <a href='https://www.sentryone.com/plan-explorer' target='_blank'>https://www.sentryone.com/plan-explorer</a>\"; \n");
-//			sb.append("        copyStringToClipboard(showplanText); \n");
-//			sb.append("    } \n");
-//			sb.append("\n");
-//			sb.append("    function copyStringToClipboard (string)                                   \n");
-//			sb.append("    {                                                                         \n");
-//			sb.append("        function handler (event)                                              \n");
-//			sb.append("        {                                                                     \n");
-//			sb.append("            event.clipboardData.setData('text/plain', string);                \n");
-//			sb.append("            event.preventDefault();                                           \n");
-//			sb.append("            document.removeEventListener('copy', handler, true);              \n");
-//			sb.append("        }                                                                     \n");
-//			sb.append("                                                                              \n");
-//			sb.append("        document.addEventListener('copy', handler, true);                     \n");
-//			sb.append("        document.execCommand('copy');                                         \n");
-//			sb.append("    }                                                                         \n");
-//			sb.append("</script> \n");
-//
-//			for (String planHandle : _planMap.keySet())
-//			{
-//				String xmlPlan = _planMap.get(planHandle);
-//
-//				sb.append("\n<script id='plan_").append(planHandle).append("' type='text/xmldata'>\n");
-//				sb.append(xmlPlan);
-//				sb.append("\n</script>\n");
-//			}
-//		}
-//
-////		if (_CmDeviceIo_IoRW != null)
-////		{
-////			sb.append(getDbxCentralLinkWithDescForGraphs(true, "Below are Graphs/Charts with various information that can help you decide how the IO Subsystem is handling the load.",
-////					"CmDeviceIo_IoRW",
-////					"CmDeviceIo_SvcTimeRW",
-////					"CmDeviceIo_SvcTimeR",
-////					"CmDeviceIo_SvcTimeW"
-////					));
-////
-////			sb.append(_CmDeviceIo_IoRW             .getHtmlContent(null, null));
-////			sb.append(_CmDeviceIo_SvcTimeRW_noLimit.getHtmlContent(null, null));
-////			sb.append(_CmDeviceIo_SvcTimeRW        .getHtmlContent(null, null));
-////			sb.append(_CmDeviceIo_SvcTimeR         .getHtmlContent(null, null));
-////			sb.append(_CmDeviceIo_SvcTimeW         .getHtmlContent(null, null));
-////		}
-//
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()
@@ -275,8 +214,16 @@ extends SqlServerAbstract
 		String col_AvgSpills                            = !dummyRstm.hasColumnNoCase("total_spills"                   ) ? "" : "    ,cast(-1 as numeric(16,1)) as [AvgSpills]                  \n";
 		String col_AvgPageServerReads                   = !dummyRstm.hasColumnNoCase("total_page_server_reads"        ) ? "" : "    ,cast(-1 as numeric(16,1)) as [AvgPageServerReads]         \n"; 
 
+		String col_total_worker_time__chart             = !dummyRstm.hasColumnNoCase("total_worker_time"              ) ? "" : "    ,cast('' as varchar(512))  as [total_worker_time__chart]    \n"; 
+		String col_total_physical_reads__chart          = !dummyRstm.hasColumnNoCase("total_physical_reads"           ) ? "" : "    ,cast('' as varchar(512))  as [total_physical_reads__chart] \n"; 
+		String col_total_logical_reads__chart           = !dummyRstm.hasColumnNoCase("total_logical_reads"            ) ? "" : "    ,cast('' as varchar(512))  as [total_logical_reads__chart]  \n"; 
+		String col_max_dop__chart                       = !dummyRstm.hasColumnNoCase("total_dop"                      ) ? "" : "    ,cast('' as varchar(512))  as [max_dop__chart]              \n"; 
+		String col_max_grant_kb__chart                  = !dummyRstm.hasColumnNoCase("total_grant_kb"                 ) ? "" : "    ,cast('' as varchar(512))  as [max_grant_kb__chart]         \n"; 
+		String col_total_spills__chart                  = !dummyRstm.hasColumnNoCase("total_spills"                   ) ? "" : "    ,cast('' as varchar(512))  as [total_spills__chart]         \n"; 
+		
 
-		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+//		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+		int topRows = getTopRows();
 
 		String orderByCol = "[total_worker_time__sum]";
 //		String orderByCol = "[samples__count]";
@@ -295,30 +242,92 @@ extends SqlServerAbstract
 			col_SqlText = "SqlText$dcc$";
 
 
+//		String sql = getCmDiffColumnsAsSqlComment("CmActiveStatements")
+//			    + "select top " + topRows + " \n"
+//			    + "     [dbname] \n"
+//			    + "    ,[plan_handle] \n"
+//			    + "    ,max([query_plan_hash])                 as [query_plan_hash] \n"
+//			    + "    ,max([query_hash])                      as [query_hash] \n"
+//			    + "    ,count(*)                               as [samples__count] \n"
+//			    + "    ,min([SessionSampleTime])               as [SessionSampleTime__min] \n"
+//			    + "    ,max([SessionSampleTime])               as [SessionSampleTime__max] \n"
+//			    + "    ,cast('' as varchar(30))                as [Duration] \n"
+////			    + "    ,sum([CmSampleMs])                      as [CmSampleMs__sum] \n"
+//			    + "    \n"
+//			    + "    ,cast('' as varchar(512))               as [execution_count__chart] \n"
+//			    + "    ,sum([execution_count])                 as [execution_count__sum] \n"
+//			    + "    ,min([creation_time])                   as [creation_time__min] \n"
+//			    + "    ,max([last_execution_time])             as [last_execution_time__max] \n"
+//			    + "    \n"
+//			    + col_total_worker_time__chart            
+//			    + col_total_worker_time__sum               + col_AvgWorkerTimeUs            
+//			    + col_total_physical_reads__chart
+//			    + col_total_physical_reads__sum            + col_AvgPhysicalReads           
+//			    + col_total_logical_writes__sum            + col_AvgLogicalWrites           
+//			    + col_total_logical_reads__chart
+//			    + col_total_logical_reads__sum             + col_AvgLogicalReads            
+//			    + col_total_clr_time__sum                  + col_AvgClrTimeUs               
+//			    + col_total_elapsed_time__sum              + col_AvgElapsedTimeUs           
+//			    + col_total_rows__sum                      + col_AvgRows                    
+//			    + col_max_dop__chart
+//			    + col_total_dop__sum                       + col_AvgDop                     
+//			    + col_max_grant_kb__chart
+//			    + col_total_grant_kb__sum                  + col_AvgGrantKb                 
+//			    + col_total_used_grant_kb__sum             + col_AvgUsedGrantKb             
+//			    + col_total_ideal_grant_kb__sum            + col_AvgIdealGrantKb            
+//			    + col_total_reserved_threads__sum          + col_AvgReservedThreads         
+//			    + col_total_used_threads__sum              + col_AvgUsedThreads             
+//			    + col_total_columnstore_segment_reads__sum + col_AvgColumnstoreSegmentReads 
+//			    + col_total_columnstore_segment_skips__sum + col_AvgColumnstoreSegmentSkips 
+//			    + col_total_spills__chart
+//			    + col_total_spills__sum                    + col_AvgSpills                  
+//			    + col_total_page_server_reads__sum         + col_AvgPageServerReads         
+//			    + "    \n"
+////			    + "    ,max([SqlText])                         as [SqlText] \n"
+//			    + "    ,max([" + col_SqlText +"])                    as [SqlText] \n"
+//				+ "from [CmExecQueryStats_diff] \n"
+//				+ "where [CmNewDiffRateRow] = 0 -- only records that has been diff calculations (not first time seen, when it swaps in/out due to execution every x minute) \n"
+//				+ "  and [execution_count] > 0 \n"
+////				+ "  and [AvgServ_ms] > " + _aboveServiceTime + " \n"
+////				+ "  and [TotalIOs]   > " + _aboveTotalIos    + " \n"
+//				+ getReportPeriodSqlWhere()
+//				+ "group by [plan_handle] \n"
+//				+ "order by " + orderByCol + " desc \n"
+//			    + "";
+		
+//FIXME; group by 'query_hash' or 'query_plan_hash' ... also check that we pick up the correct PLAN in below table
+//Possibly; add link directly in the table for 'plan_handle' instead of the below table!!!
+
 		String sql = getCmDiffColumnsAsSqlComment("CmActiveStatements")
 			    + "select top " + topRows + " \n"
 			    + "     [dbname] \n"
-			    + "    ,[plan_handle] \n"
+			    + "    ,[query_hash] \n"
+			    + "    ,max([plan_handle])                     as [plan_handle] \n"
 			    + "    ,max([query_plan_hash])                 as [query_plan_hash] \n"
-			    + "    ,max([query_hash])                      as [query_hash] \n"
 			    + "    ,count(*)                               as [samples__count] \n"
 			    + "    ,min([SessionSampleTime])               as [SessionSampleTime__min] \n"
 			    + "    ,max([SessionSampleTime])               as [SessionSampleTime__max] \n"
 			    + "    ,cast('' as varchar(30))                as [Duration] \n"
 //			    + "    ,sum([CmSampleMs])                      as [CmSampleMs__sum] \n"
 			    + "    \n"
-			    + "    ,sum([execution_count])                 as [execution_count__sum]\n"
-			    + "    ,min([creation_time])                   as [creation_time__min]\n"
-			    + "    ,max([last_execution_time])             as [last_execution_time__max]\n"
+			    + "    ,cast('' as varchar(512))               as [execution_count__chart] \n"
+			    + "    ,sum([execution_count])                 as [execution_count__sum] \n"
+			    + "    ,min([creation_time])                   as [creation_time__min] \n"
+			    + "    ,max([last_execution_time])             as [last_execution_time__max] \n"
 			    + "    \n"
+			    + col_total_worker_time__chart            
 			    + col_total_worker_time__sum               + col_AvgWorkerTimeUs            
+			    + col_total_physical_reads__chart
 			    + col_total_physical_reads__sum            + col_AvgPhysicalReads           
 			    + col_total_logical_writes__sum            + col_AvgLogicalWrites           
+			    + col_total_logical_reads__chart
 			    + col_total_logical_reads__sum             + col_AvgLogicalReads            
 			    + col_total_clr_time__sum                  + col_AvgClrTimeUs               
 			    + col_total_elapsed_time__sum              + col_AvgElapsedTimeUs           
 			    + col_total_rows__sum                      + col_AvgRows                    
+			    + col_max_dop__chart
 			    + col_total_dop__sum                       + col_AvgDop                     
+			    + col_max_grant_kb__chart
 			    + col_total_grant_kb__sum                  + col_AvgGrantKb                 
 			    + col_total_used_grant_kb__sum             + col_AvgUsedGrantKb             
 			    + col_total_ideal_grant_kb__sum            + col_AvgIdealGrantKb            
@@ -326,6 +335,7 @@ extends SqlServerAbstract
 			    + col_total_used_threads__sum              + col_AvgUsedThreads             
 			    + col_total_columnstore_segment_reads__sum + col_AvgColumnstoreSegmentReads 
 			    + col_total_columnstore_segment_skips__sum + col_AvgColumnstoreSegmentSkips 
+			    + col_total_spills__chart
 			    + col_total_spills__sum                    + col_AvgSpills                  
 			    + col_total_page_server_reads__sum         + col_AvgPageServerReads         
 			    + "    \n"
@@ -337,9 +347,10 @@ extends SqlServerAbstract
 //				+ "  and [AvgServ_ms] > " + _aboveServiceTime + " \n"
 //				+ "  and [TotalIOs]   > " + _aboveTotalIos    + " \n"
 				+ getReportPeriodSqlWhere()
-				+ "group by [plan_handle] \n"
+				+ "group by [dbname], [query_hash] \n"
 				+ "order by " + orderByCol + " desc \n"
 			    + "";
+		
 		
 		_shortRstm = executeQuery(conn, sql, false, "TopCmExecQueryStats");
 		if (_shortRstm == null)
@@ -376,6 +387,105 @@ extends SqlServerAbstract
 				{
 					setProblemException(ex);
 				}
+			}
+
+			// Mini Chart on "..."
+//			String whereKeyColumn = "plan_handle"; 
+			String whereKeyColumn = "dbname, query_hash"; 
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("execution_count__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmExecQueryStats_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("execution_count")
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Total 'execution_count' in below period")
+					.validate()));
+
+			if (StringUtil.hasValue(col_total_worker_time__chart))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("total_worker_time__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmExecQueryStats_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("total_worker_time")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Total 'worker_time' in below period")
+					.validate()));
+			}
+
+			if (StringUtil.hasValue(col_total_physical_reads__chart))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("total_physical_reads__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmExecQueryStats_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("total_physical_reads")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Number of 'physical_reads' in below period")
+					.validate()));
+			}
+
+			if (StringUtil.hasValue(col_total_logical_reads__chart))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("total_logical_reads__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmExecQueryStats_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("total_logical_reads")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Number of 'logical_reads' in below period")
+					.validate()));
+			}
+
+			if (StringUtil.hasValue(col_max_dop__chart))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("max_dop__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmExecQueryStats_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("CASE WHEN sum([execution_count]) = 0 THEN 0.0 ELSE sum([total_dop]*1.0)/sum([execution_count]*1.0) END").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("MAX 'DOP - Degree Of Paralism' in below period")
+					.validate()));
+			}
+
+			if (StringUtil.hasValue(col_max_grant_kb__chart))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("max_grant_kb__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmExecQueryStats_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("CASE WHEN sum([execution_count]) = 0 THEN 0.0 ELSE sum([total_grant_kb]*1.0)/sum([execution_count]*1.0) END").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("MAX 'grant_kb' in below period")
+					.validate()));
+			}
+
+			if (StringUtil.hasValue(col_total_spills__chart))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("total_spills__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmExecQueryStats_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("total_spills")
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Number of 'spills' in below period")
+					.validate()));
 			}
 		}
 	}

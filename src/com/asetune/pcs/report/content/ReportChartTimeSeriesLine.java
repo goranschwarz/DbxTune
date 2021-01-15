@@ -116,11 +116,17 @@ extends ReportChartAbstract
 		if ( dataset == null )                  throw new RuntimeException("The passed dataset is null");
 		if ( ! (dataset instanceof XYDataset) ) throw new RuntimeException("The passed dataset is of type '" + dataset.getClass() + "' it must implement 'XYDataset'.");
 
-		JFreeChart chart = ChartFactory.createTimeSeriesChart(graphTitle, timeAxisLabel, valueAxisLabel, (XYDataset)dataset, true, true, false);
+		JFreeChart chart = ChartFactory.createTimeSeriesChart(graphTitle, timeAxisLabel, valueAxisLabel, (XYDataset)dataset, true, false, false);
 		XYPlot plot = (XYPlot) chart.getPlot();
 //		plot.setDomainCrosshairVisible(true);
 //		plot.setRangeCrosshairVisible(true);
 
+		// Theme - WHITE
+//		plot.setBackgroundPaint(Color.WHITE);
+//		plot.setDomainGridlinePaint(Color.GRAY);
+//		plot.setRangeGridlinePaint(Color.GRAY);
+
+		
 		// Set thicker lines
 		boolean thickLines = false;
 		if (thickLines)
@@ -256,7 +262,7 @@ extends ReportChartAbstract
 			return null;
 		}
 
-		int readCount = 0;
+//		int readCount = 0;
 
 		// autoclose: stmnt, rs
 		try (Statement stmnt = conn.createStatement())
@@ -283,7 +289,7 @@ extends ReportChartAbstract
 
 				while (rs.next())
 				{
-					readCount++;
+//					readCount++;
 
 				//	Timestamp sessionStartTime  = rs.getTimestamp(1);
 					Timestamp sessionSampleTime = rs.getTimestamp(2);
@@ -397,7 +403,7 @@ extends ReportChartAbstract
 		
 		sql = conn.quotifySqlString(sql);
 		
-		int readCount = 0;
+//		int readCount = 0;
 
 		Map<String, TimeSeries> graphSeriesMap = new LinkedHashMap<>(); 
 
@@ -421,7 +427,7 @@ extends ReportChartAbstract
 
 				while (rs.next())
 				{
-					readCount++;
+//					readCount++;
 
 				//	Timestamp sessionStartTime  = rs.getTimestamp(1);
 					Timestamp sessionSampleTime = rs.getTimestamp(2);
@@ -466,124 +472,4 @@ extends ReportChartAbstract
 
 		return dataset;
 	}
-
-//	public XYDataset createGraphDataset(List<DbxGraphData> data)
-//	{
-//		String graphLabel = "";
-//
-//		Map<String, TimeSeries> graphSeriesMap = new LinkedHashMap<>(); 
-//		
-//		for (DbxGraphData entry : data)
-//		{
-//			graphLabel = entry.getGraphLabel();
-//			Timestamp ts = entry.getSessionSampleTime();
-//
-//			Map<String, Double> dataPoint = entry.getData();
-//			for (Entry<String, Double> dpe : dataPoint.entrySet())
-//			{
-//				String seriesName = dpe.getKey();
-//				Double dataValue  = dpe.getValue();
-//				
-//				TimeSeries graphTimeSerie = graphSeriesMap.get(seriesName);
-//				if (graphTimeSerie == null)
-//				{
-//					graphTimeSerie = new TimeSeries(seriesName);
-//					graphSeriesMap.put(seriesName, graphTimeSerie);
-//				}
-//				
-//				graphTimeSerie.add(new Millisecond(ts), dataValue);
-//			}
-//		}
-//
-//		TimeSeriesCollection dataset = new TimeSeriesCollection();
-//		for (TimeSeries dbxGraphData : graphSeriesMap.values())
-//		{
-//			dataset.addSeries(dbxGraphData);
-//		}
-//
-//		return dataset;
-//	}
-//	public List<DbxGraphData> getGraphData(DbxConnection conn, String cmName, String graphName, String graphLabel, String  graphProps, String  graphCategory, boolean isPercentGraph)
-//	{
-//		if (StringUtil.isNullOrBlank(cmName))     throw new IllegalArgumentException("cmName can't be null or blank");
-//		if (StringUtil.isNullOrBlank(graphName))  throw new IllegalArgumentException("graphName can't be null or blank");
-//		if (StringUtil.isNullOrBlank(graphLabel)) throw new IllegalArgumentException("graphLabel can't be null or blank");
-//
-//		if (StringUtil.isNullOrBlank(graphProps))
-//			graphProps = "#{#yAxisScaleLabels#:{#name#:#percent#, #s0#:# %#, #s1#:# %#, #s2#:# %#, #s3#:# %#, #s4#:# %#}}#".replace('#', '"');
-//		
-//		if (StringUtil.isNullOrBlank(graphCategory))
-//			graphCategory = "-UNKNOWN-";
-//		
-//		String tabName   = cmName + "_" + graphName;
-//		String sql = 
-//				 "select * "
-//				+" from [" + tabName + "] \n"
-////				+" where [SessionSampleTime] >= " + whereSessionSampleTime
-//				+" order by [SessionSampleTime] \n"
-//				;
-//		
-//		int readCount = 0;
-//		List<DbxGraphData> list = new ArrayList<>();
-//
-//		// autoclose: stmnt, rs
-//		try (Statement stmnt = conn.createStatement())
-//		{
-//			// set TIMEOUT
-//			stmnt.setQueryTimeout(getDefaultQueryTimeout());
-//
-//			// Execute and read result
-//			try (ResultSet rs = stmnt.executeQuery(sql))
-//			{
-//				ResultSetMetaData md = rs.getMetaData();
-//				int colCount = md.getColumnCount();
-//				
-//				int colDataStart = 4; // "SessionStartTime", "SessionSampleTime", "CmSampleTime", "System+User CPU (@@cpu_busy + @@cpu_io)"
-//				
-//				List<String> labelNames = new LinkedList<>();
-//				for (int c=colDataStart; c<colCount+1; c++)
-//					labelNames.add( md.getColumnLabel(c) );
-//
-//				while (rs.next())
-//				{
-//					readCount++;
-//					LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
-//
-//				//	Timestamp sessionStartTime  = rs.getTimestamp(1);
-//					Timestamp sessionSampleTime = rs.getTimestamp(2);
-//				//	Timestamp cmSampleTime      = rs.getTimestamp(3);
-//					
-//					for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
-//					{
-//						labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
-//					}
-//
-//					DbxGraphData e = new DbxGraphData(cmName, graphName, sessionSampleTime, graphLabel, graphProps, graphCategory, isPercentGraph, labelAndDataMap);
-//					list.add(e);
-//					
-//					// Remove already added records (keep only last X number of rows)
-////					if (onlyLastXNumOfRecords > 0)
-////					{
-////						if (list.size() > onlyLastXNumOfRecords)
-////							list.remove(0);
-////					}
-//				}
-//			}
-//		}
-//		catch (SQLException ex)
-//		{
-//			setProblem(ex);
-//			
-//			//_fullRstm = ResultSetTableModel.createEmpty(name);
-////			_logger.warn("Problems getting '" + name + "': " + ex);
-//		}
-//
-//		// For debugging purposes
-//		if (readCount == 0)
-//		{
-////			_logger.info("NO Records was found: getGraphData(sessionName='"+sessionName+"', cmName='"+cmName+"', graphName='"+graphName+"', startTime='"+startTime+"', endTime='"+endTime+"', sampleType="+sampleType+", sampleValue="+sampleValue+") SQL=|"+sql+"|, readCount="+readCount+", retListSize="+list.size());
-//		}
-//		
-//		return list;
-//	}	
 }

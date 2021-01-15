@@ -36,6 +36,7 @@ import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.hostmon.OsTable;
+import com.asetune.hostmon.HostMonitor.OsVendor;
 
 public class CmOsMeminfo
 extends CounterModelHostMonitor
@@ -93,6 +94,12 @@ extends CounterModelHostMonitor
 		CounterSetTemplates.register(this);
 	}
 
+	@Override
+	protected TabularCntrPanel createGui()
+	{
+		return new CmOsMeminfoPanel(this);
+	}
+
 
 	//------------------------------------------------------------
 	// Implementation
@@ -101,16 +108,11 @@ extends CounterModelHostMonitor
 //	public static final String GRAPH_NAME_MEM_FREE      = "MemFree";
 	public static final String GRAPH_NAME_MEM_AVAILABLE = "MemAvailable";
 
+	public static final String GRAPH_NAME_WIN_PAGING      = "WinPaging";
+	public static final String GRAPH_NAME_WIN_PAGING_FILE = "WinPagingFile";
+
 	private void addTrendGraphs()
 	{
-//		String[] labels_MemUsed      = new String[] { "MemUsed in MB" };
-//		String[] labels_MemFree      = new String[] { "MemFree in MB" };
-//		String[] labels_MemAvailable = new String[] { "MemAvailable in MB" };
-//		
-//		addTrendGraphData(GRAPH_NAME_MEM_USED,      new TrendGraphDataPoint(GRAPH_NAME_MEM_USED,      labels_MemUsed,      LabelType.Static));
-////		addTrendGraphData(GRAPH_NAME_MEM_FREE,      new TrendGraphDataPoint(GRAPH_NAME_MEM_FREE,      labels_MemFree,      LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_MEM_AVAILABLE, new TrendGraphDataPoint(GRAPH_NAME_MEM_AVAILABLE, labels_MemAvailable, LabelType.Static));
-
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_MEM_USED,
 			"meminfo: Used Memory", 	                                // Menu CheckBox text
@@ -147,71 +149,56 @@ extends CounterModelHostMonitor
 			false, // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
-		
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			TrendGraph tg = null;
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_MEM_USED,
-//				"meminfo: Used Memory", 	                                // Menu CheckBox text
-//				"meminfo: Used Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-//				labels_MemUsed, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-////			// GRAPH
-////			tg = new TrendGraph(GRAPH_NAME_MEM_FREE,
-////				"meminfo: Free Memory", 	                                // Menu CheckBox text
-////				"meminfo: Free Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-////				labels_MemFree, 
-////				false, // is Percent Graph
-////				this, 
-////				false, // visible at start
-////				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-////				-1);  // minimum height
-////			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_MEM_AVAILABLE,
-//				"meminfo: Available Memory", 	                                // Menu CheckBox text
-//				"meminfo: Available Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-//				labels_MemAvailable, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_WIN_PAGING,
+			"meminfo: Paging or Swap Usage", 	                                // Menu CheckBox text
+			"meminfo: Paging or Swap Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			new String[] { "Pages/sec", "Pages Input/sec", "Pages Output/sec"}, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.MEMORY,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_WIN_PAGING_FILE,
+			"meminfo: Paging File Usage", 	                                // Menu CheckBox text
+			"meminfo: Paging File Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			new String[] { "Paging File(_Total) - % Usage", "Paging File(_Total) - % Usage Peak"}, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.MEMORY,
+			true,  // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 	}
 	
-	@Override
-	protected TabularCntrPanel createGui()
-	{
-		return new CmOsMeminfoPanel(this);
-	}
-
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
 		if (GRAPH_NAME_MEM_USED.equals(tgdp.getName()))
 		{
-			Double[] arr = new Double[1];
+			if (isConnectedToVendor(OsVendor.Windows))
+			{
+				// FIXME: I don't know how to get "Bytes of memory in use"
+			}
+			else
+			{
+				Double[] arr = new Double[1];
 
-			// NOTE: only ABS values are present in CounterModelHostMonitor
-			Double memTotal = this.getAbsValueAsDouble("MemTotal", "used");
-			Double memFree  = this.getAbsValueAsDouble("MemFree",  "used");
+				// NOTE: only ABS values are present in CounterModelHostMonitor
+				Double memTotal = this.getAbsValueAsDouble("MemTotal", "used");
+				Double memFree  = this.getAbsValueAsDouble("MemFree",  "used");
 
-			// If no data: -1, otherwise: (memTotal - memFree) / 1024
-			arr[0] = (memTotal == null && memFree == null) ? -1 : (memTotal - memFree) / 1024;
+				// If no data: -1, otherwise: (memTotal - memFree) / 1024
+				arr[0] = (memTotal != null && memFree != null) ? (memTotal - memFree) / 1024 : -1;
 
-			tgdp.setDataPoint(this.getTimestamp(), arr);
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
 		}
 
 //		if (GRAPH_NAME_MEM_FREE.equals(tgdp.getName()))
@@ -227,13 +214,61 @@ extends CounterModelHostMonitor
 
 		if (GRAPH_NAME_MEM_AVAILABLE.equals(tgdp.getName()))
 		{
-			Double[] arr = new Double[1];
+			if (isConnectedToVendor(OsVendor.Windows))
+			{
+				Double[] arr = new Double[1];
 
-			// NOTE: only ABS values are present in CounterModelHostMonitor
-			Double val = this.getAbsValueAsDouble("MemAvailable", "used");
-			arr[0] = (val == null) ? 0 : val / 1024;
+				// NOTE: only ABS values are present in CounterModelHostMonitor
+				Double val = this.getAbsValueAsDouble(0, "Available MBytes");
+				arr[0] = (val == null) ? 0 : val;
 
-			tgdp.setDataPoint(this.getTimestamp(), arr);
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				Double[] arr = new Double[1];
+
+				// NOTE: only ABS values are present in CounterModelHostMonitor
+				Double val = this.getAbsValueAsDouble("MemAvailable", "used");
+				arr[0] = (val == null) ? 0 : val / 1024;
+
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+		}
+
+		if (GRAPH_NAME_WIN_PAGING.equals(tgdp.getName()))
+		{
+			if (isConnectedToVendor(OsVendor.Windows))
+			{
+				Double[] arr = new Double[3];
+
+				arr[0] = this.getAbsValueAsDouble(0, "Pages/sec");
+				arr[1] = this.getAbsValueAsDouble(0, "Pages Input/sec");
+				arr[2] = this.getAbsValueAsDouble(0, "Pages Output/sec");
+
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				// none
+			}
+		}
+
+		if (GRAPH_NAME_WIN_PAGING_FILE.equals(tgdp.getName()))
+		{
+			if (isConnectedToVendor(OsVendor.Windows))
+			{
+				Double[] arr = new Double[2];
+
+				arr[0] = this.getAbsValueAsDouble(0, "Paging File(_Total) - % Usage");
+				arr[1] = this.getAbsValueAsDouble(0, "Paging File(_Total) - % Usage Peak");
+
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				// none
+			}
 		}
 	}
 
@@ -242,6 +277,13 @@ extends CounterModelHostMonitor
 	{
 //		if (prevOsSampleTable == null)
 //			return;
+
+		// Windows do NOT (for the moment) have any localCalculations
+		if (isConnectedToVendor(OsVendor.Windows))
+		{
+			return;
+		}
+
 
 		// Check rowcount
 		if (thisOsSampleTable.getRowCount() == 0)
@@ -401,7 +443,7 @@ extends CounterModelHostMonitor
 //
 //		String hostname = cm.getCounterController().getHostMonConnection().getHost();
 //
-//		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+//		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 //		
 //		//-------------------------------------------------------
 //		// Run Queue Length (adjLoadAverage_1Min), Avg Last Minute 

@@ -120,7 +120,7 @@ extends CountersModel
 	 * 
 
         Object (State)  Memory_Consumed  Memory_Consumed_Mb  Max_Memory_Consumed_Mb 
-        ––––––––––––--  ––––––––––––––-  ––––––––––––––––--  ––––––––––––––––––––--
+        ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½--  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½-  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½--  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½--
         Misc (Norm)     17370307         16                  16
         CI   (Norm)     0                0                   0
         EXEC (Norm)     27392            0                   0
@@ -133,7 +133,7 @@ extends CountersModel
         Total(Norm)     21112979         20                  20
                             
         Avg_Memory_Consumed_Mb  Memory_Threshold_Mb  Memory_Ctrl_Time(s)
-        ––––––––––––––––––––--  ––––––––––––––––––-  ––––––––––––––––---
+        ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½--  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½-  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½---
         16                      99                   0
         0                       299                  0
         0                       99                   0
@@ -406,7 +406,7 @@ extends CountersModel
 
 		CountersModel cm = this;
 
-		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
 		//-------------------------------------------------------
 		// Memory Usage in PCT
@@ -421,32 +421,49 @@ extends CountersModel
 				int usedMemInMb = totalMemUsed.intValue();
 				int freeMemInMb = _memoryLimitSizeMb - totalMemUsed.intValue();
 
-				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): usedMemInMb="+usedMemInMb+", freeMemInMb="+freeMemInMb+", usedPct="+usedPct+".");
-
+				//---------------------------------------------------------
 				// level-1 (normally 60%)
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_MemoryUsedPct1, DEFAULT_alarm_MemoryUsedPct1);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): level-1 - threshold="+threshold+", usedMemInMb="+usedMemInMb+", freeMemInMb="+freeMemInMb+", usedPct="+usedPct+".");
+
 				if (usedPct.intValue() > threshold)
 				{
 					AlarmHandler.getInstance().addAlarm( new AlarmEventRsMemoryUsage(cm, threshold, 1, usedMemInMb, freeMemInMb, usedPct.doubleValue(), _memoryLimitSizeMb) );
 				}
 
+				//---------------------------------------------------------
 				// level-2 (normally 70%)
 				threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_MemoryUsedPct2,  DEFAULT_alarm_MemoryUsedPct2);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): level-2 - threshold="+threshold+", usedMemInMb="+usedMemInMb+", freeMemInMb="+freeMemInMb+", usedPct="+usedPct+".");
+
 				if (usedPct.intValue() > threshold)
 				{
 					AlarmHandler.getInstance().addAlarm( new AlarmEventRsMemoryUsage(cm, threshold, 2, usedMemInMb, freeMemInMb, usedPct.doubleValue(), _memoryLimitSizeMb) );
 				}
 
+				//---------------------------------------------------------
 				// level-3 (normally 80%)
 				threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_MemoryUsedPct3,  DEFAULT_alarm_MemoryUsedPct3);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): level-3 - threshold="+threshold+", usedMemInMb="+usedMemInMb+", freeMemInMb="+freeMemInMb+", usedPct="+usedPct+".");
+
 				if (usedPct.intValue() > threshold)
 				{
 					AlarmHandler.getInstance().addAlarm( new AlarmEventRsMemoryUsage(cm, threshold, 3, usedMemInMb, freeMemInMb, usedPct.doubleValue(), _memoryLimitSizeMb) );
 				}
 				
+				//---------------------------------------------------------
 				// level-4 (normally 80%)
 				threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_MemoryUsedPct4,  DEFAULT_alarm_MemoryUsedPct4);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): level-4 - threshold="+threshold+", usedMemInMb="+usedMemInMb+", freeMemInMb="+freeMemInMb+", usedPct="+usedPct+".");
+
 				if (usedPct.intValue() > threshold)
 				{
 					AlarmHandler.getInstance().addAlarm( new AlarmEventRsMemoryUsage(cm, threshold, 4, usedMemInMb, freeMemInMb, usedPct.doubleValue(), _memoryLimitSizeMb) );

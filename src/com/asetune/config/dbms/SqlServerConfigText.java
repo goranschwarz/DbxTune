@@ -161,7 +161,7 @@ public abstract class SqlServerConfigText
 		@Override public    String     getTabLabel()                        { return "traceflags"; }
 		@Override public    String     getName()                            { return ConfigType.SqlServerTraceflags.toString(); }
 		@Override public    String     getConfigType()                      { return getName(); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "DBCC TRACESTATUS WITH NO_INFOMSGS"; }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "DBCC TRACESTATUS(-1) WITH NO_INFOMSGS"; }
 
 		@Override
 		public void refresh(DbxConnection conn, Timestamp ts)
@@ -205,7 +205,7 @@ public abstract class SqlServerConfigText
 
 				// Get the SQL to execute.
 				//long         srvVersion = conn.getDbmsVersionNumber();
-				String sql = "DBCC TRACESTATUS WITH NO_INFOMSGS"; //getSqlCurrentConfig(srvVersion);
+				String sql = "DBCC TRACESTATUS(-1) WITH NO_INFOMSGS"; //getSqlCurrentConfig(srvVersion);
 
 				ResultSetTableModel rstm = null;
 				

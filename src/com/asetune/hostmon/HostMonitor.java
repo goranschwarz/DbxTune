@@ -26,7 +26,8 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringReader;
+import java.io.InputStreamReader;
+import java.io.InterruptedIOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
@@ -106,7 +107,7 @@ implements Runnable
 
 	public enum OsVendor
 	{
-		NotSet, Linux, Solaris, Aix, Hp, Veritas, Unknown //, Windows
+		NotSet, Linux, Solaris, Aix, Hp, Veritas, Windows, Unknown //, Windows
 	};
 	/**
 	 * Implicitly called by any that extends this class
@@ -544,6 +545,20 @@ implements Runnable
 	}
 
 	/**
+	 * Used when splitting one input row like a CSV format into that contains several instances into one row for every instance.
+	 * 
+	 * @param md Meta Data information
+	 * @param row The original String wich was read from the OS Command
+	 * @param preParsed a pre-parsed String[], the parse/split was made based on HostMonitorMetaData.getParseRegexp()
+	 * @param type SDTOUT | STDERR
+	 * @return String[][] of the values in the order which is described by the HostMonitorMetaData, if this row should be SKIPPED, simply return a null value
+	 */
+	public String[][] parseRowOneToMany(HostMonitorMetaData md, String row, String[] preParsed, int type)
+	{
+		return md.parseRowOneToMany(md, row, preParsed, type);
+	}
+	
+	/**
 	 * If we want to change anything in the row before it gets parsed/splitter...
 	 * For instance 'mpstat' sometimes has. HH:MM:SS [PM/AM] CPU, if the AM/PM IS missing we will get faulty numbers of columns...
 	 * So: the solution might be to "strip off" AM/PM from the input, or similar 
@@ -584,42 +599,150 @@ implements Runnable
 	{
 		if (row == null)
 			return;
+		
+//System.out.println(">>parseAndApply(): type=" + type + ", row=|" + row + "|.");
 
-		// Make a simple preparse, which splits the input string into a String[] 
+		// do "dynamic" initialization (reading first row), for example if we parse a CSV and the "dynamic" column names is in header
+		if (type == SshConnection.STDOUT_DATA && md.isInitializeUsingFirstRowEnabled() && !md.isFirstRowInitDone())
+		{
+			md.doInitializeUsingFirstRow(row);
+			return;
+		}
+
+		// some inputs need to "adjust" the input row, for example if numbers are localized with the "wrong" decimal separator: ',' instead of '.'
 		String trimedRow = row.trim();
 		trimedRow = adjustRow(md, trimedRow, type);
+
+		// Make a simple pre-parse, which splits the input string into a String[] 
 		String[] isa = trimedRow.split(md.getParseRegexp()); // Internal String Array
 
-		// Parse: Accept or Re-arrange columns
-		String[] strArr = parseRow(md, row, isa, type);
-		if ( strArr != null )
+		// UnPivot mode: oneInputRow produces manyTableRows 
+		if (md.isUnPivot())
 		{
-			if (_logger.isDebugEnabled())
-				_logger.debug("++ALLOW++: this row has '"+strArr.length+"' entries parseCount='"+md.getParseColumnCount()+"'. Row '"+row+"'. The Input/PreParsed String Array, size("+isa.length+")=["+StringUtil.toCommaStr(isa)+"], The parseRow() returned String Array, size("+strArr.length+")=["+StringUtil.toCommaStr(strArr)+"].");
-
-			// Make a OsTableRow object of the input.
-			// and ADD it to the "sample" table
-			try
+			// Parse: Accept or Re-arrange columns
+			String[][] rowsArr = parseRowOneToMany(md, row, isa, type);
+			if (rowsArr != null)
 			{
-				OsTableRow entry = new OsTableRow(md, strArr);
-				_currentSample.addRow(entry);
+				for (int r=0; r<rowsArr.length; r++)
+				{
+					String[] strArr = rowsArr[r];
+					if ( strArr != null )
+					{
+						if (_logger.isDebugEnabled())
+							_logger.debug("++ALLOW++: this row has '"+strArr.length+"' entries parseCount='"+md.getParseColumnCount()+"'. Row '"+row+"'. The Input/PreParsed String Array, size("+isa.length+")=["+StringUtil.toCommaStr(isa)+"], The parseRow() returned String Array, size("+strArr.length+")=["+StringUtil.toCommaStr(strArr)+"].");
 
-				// start/restart the "auto close sample"
-				if (_closeSampleTimeout != null)
-					_closeSampleTimeout.restart();
-			}
-			catch (OsRecordParseException e)
-			{
-				addException(e);
-				_logger.error("Problems when applying the parsed String Array ["+StringUtil.toCommaStr(strArr)+"].", e);
+						// Make a OsTableRow object of the input.
+						// and ADD it to the "sample" table
+						try
+						{
+							OsTableRow entry = new OsTableRow(md, strArr);
+							_currentSample.addRow(entry);
+							
+							// If we want to use the current entry in a streaming command to calculate something "in-between" samples
+							// This can for example be used to calculate our own implementation of 1,5,15 minutes Average load on Windows...
+							addRowForCurrentSubSampleHookin(entry);
+
+							// start/restart the "auto close sample"
+							if (_closeSampleTimeout != null)
+								_closeSampleTimeout.restart();
+						}
+						catch (OsRecordParseException e)
+						{
+							addException(e);
+							_logger.error("Problems when applying the parsed String Array ["+StringUtil.toCommaStr(strArr)+"].", e);
+						}
+					}
+					else
+					{
+						//_logger.trace("-DISCARD-: The String Array ["+StringUtil.toCommaStr(isa)+"].");
+						_logger.debug("-DISCARD-: This row has '"+isa.length+"' entries. MetaDataExpected parseCount='"+md.getParseColumnCount()+"'. Row '"+row+"'. The Input/PreParsed String Array, size("+isa.length+")=["+StringUtil.toCommaStr(isa)+"].");
+					}
+				}
 			}
 		}
-		else
+		// Normal mode: oneInputRow produces oneTableRow
+		else  
 		{
-			//_logger.trace("-DISCARD-: The String Array ["+StringUtil.toCommaStr(isa)+"].");
-			_logger.debug("-DISCARD-: This row has '"+isa.length+"' entries. MetaDataExpected parseCount='"+md.getParseColumnCount()+"'. Row '"+row+"'. The Input/PreParsed String Array, size("+isa.length+")=["+StringUtil.toCommaStr(isa)+"].");
+			// Parse: Accept or Re-arrange columns
+			String[] strArr = parseRow(md, row, isa, type);
+			if ( strArr != null )
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug("++ALLOW++: this row has '"+strArr.length+"' entries parseCount='"+md.getParseColumnCount()+"'. Row '"+row+"'. The Input/PreParsed String Array, size("+isa.length+")=["+StringUtil.toCommaStr(isa)+"], The parseRow() returned String Array, size("+strArr.length+")=["+StringUtil.toCommaStr(strArr)+"].");
+
+				// Make a OsTableRow object of the input.
+				// and ADD it to the "sample" table
+				try
+				{
+					OsTableRow entry = new OsTableRow(md, strArr);
+					_currentSample.addRow(entry);
+
+					// If we want to use the current entry in a streaming command to calculate something "in-between" samples
+					// This can for example be used to calculate our own implementation of 1,5,15 minutes Average load on Windows...
+					addRowForCurrentSubSampleHookin(entry);
+
+					// start/restart the "auto close sample"
+					if (_closeSampleTimeout != null)
+						_closeSampleTimeout.restart();
+				}
+				catch (OsRecordParseException e)
+				{
+					addException(e);
+					_logger.error("Problems when applying the parsed String Array ["+StringUtil.toCommaStr(strArr)+"].", e);
+				}
+			}
+			else
+			{
+				//_logger.trace("-DISCARD-: The String Array ["+StringUtil.toCommaStr(isa)+"].");
+				_logger.debug("-DISCARD-: This row has '"+isa.length+"' entries. MetaDataExpected parseCount='"+md.getParseColumnCount()+"'. Row '"+row+"'. The Input/PreParsed String Array, size("+isa.length+")=["+StringUtil.toCommaStr(isa)+"].");
+			}
 		}
 	}
+	
+	/**
+	 * For a streaming command, we might want to explore the data captured "in-between" full samples to do various calculations<br>
+	 * This method would be the place to do it, simply override and implement
+	 * 
+	 * @param entry     The OsTableRow entry that was just added...
+	 */
+	public void addRowForCurrentSubSampleHookin(OsTableRow entry)
+	{
+		// do nothing... or override and implement it in any subclasses
+	}
+
+//	private void internalAddRow(HostMonitorMetaData md, String[] strArr)
+//	{
+//		// Parse: Accept or Re-arrange columns
+//		String[] strArr = parseRow(md, row, isa, type);
+//
+//		if ( strArr != null )
+//		{
+//			if (_logger.isDebugEnabled())
+//				_logger.debug("++ALLOW++: this row has '"+strArr.length+"' entries parseCount='"+md.getParseColumnCount()+"'. Row '"+row+"'. The Input/PreParsed String Array, size("+isa.length+")=["+StringUtil.toCommaStr(isa)+"], The parseRow() returned String Array, size("+strArr.length+")=["+StringUtil.toCommaStr(strArr)+"].");
+//
+//			// Make a OsTableRow object of the input.
+//			// and ADD it to the "sample" table
+//			try
+//			{
+//				OsTableRow entry = new OsTableRow(md, strArr);
+//				_currentSample.addRow(entry);
+//
+//				// start/restart the "auto close sample"
+//				if (_closeSampleTimeout != null)
+//					_closeSampleTimeout.restart();
+//			}
+//			catch (OsRecordParseException e)
+//			{
+//				addException(e);
+//				_logger.error("Problems when applying the parsed String Array ["+StringUtil.toCommaStr(strArr)+"].", e);
+//			}
+//		}
+//		else
+//		{
+//			//_logger.trace("-DISCARD-: The String Array ["+StringUtil.toCommaStr(isa)+"].");
+//			_logger.debug("-DISCARD-: This row has '"+isa.length+"' entries. MetaDataExpected parseCount='"+md.getParseColumnCount()+"'. Row '"+row+"'. The Input/PreParsed String Array, size("+isa.length+")=["+StringUtil.toCommaStr(isa)+"].");
+//		}
+//	}
 
 	/**
 	 * Get the default sleep time from the Configuration.<br>
@@ -712,6 +835,10 @@ implements Runnable
 			return;
 		}
 
+		// For "dynamic initialization"... reset the meta data
+		if (getMetaData() != null && getMetaData().isInitializeUsingFirstRowEnabled())
+			setMetaData(null);
+			
 		if (getMetaData() == null)
 			setMetaData(createMetaData());
 
@@ -792,6 +919,14 @@ implements Runnable
 			addException(e);
 			_logger.error("Problems when executing OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
 			_running = false;
+			
+			// In some cases we might want to close the SSH Connection and start "all over"
+			if (e.getMessage().contains("SSH_OPEN_CONNECT_FAILED"))
+			{
+				try { _conn.reconnect(); }
+				catch(IOException ex) { _logger.error("Problems SSH reconnect. Caught: " + ex); }
+			}
+			
 			return;
 		}
 
@@ -829,11 +964,14 @@ implements Runnable
 		
 		Charset osCharset = Charset.forName(_conn.getOsCharset());
 
-		byte[] buffer = new byte[16*1024]; // 16K
+		BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(stdout, osCharset));
+		BufferedReader stderrReader = new BufferedReader(new InputStreamReader(stderr, osCharset));
+
 		while(_running)
 		{
 			try
 			{
+				// Wait for input if both STDOUT & STDERR is empty
 				if ((stdout.available() == 0) && (stderr.available() == 0))
 				{
 					/* Even though currently there is no data available, it may be that new data arrives
@@ -841,6 +979,9 @@ implements Runnable
 					 * This means that EOF and STDOUT_DATA (or STDERR_DATA, or both) may
 					 * be set together.
 					 */
+
+					if (_logger.isDebugEnabled())
+						_logger.debug("----SSH-WAIT-FOR-INPUT[" + getModuleName() + "]");
 
 					int conditions = sess.waitForCondition(
 							  ChannelCondition.STDOUT_DATA 
@@ -880,44 +1021,76 @@ implements Runnable
 				 * will also improve the interleaving, but performance will slightly suffer.
 				 * OKOK, that all matters only if you get HUGE amounts of stdout and stderr data =)
 				 */
-				while (stdout.available() > 0)
+				
+				// STDOUT
+				while (stdout.available() > 0) // or possibly:	while (stdoutReader.ready())
 				{
-					int len = stdout.read(buffer);
-					if (len > 0) // this check is somewhat paranoid
+					long startTs = -1;
+					if (_logger.isDebugEnabled())
 					{
-						// NOTE if charset convertion is needed, use: new String(buffer, CHARSET)
-						String row = null;
-						BufferedReader sr = new BufferedReader(new StringReader(new String(buffer, 0, len, osCharset)));
-						while ((row = sr.readLine()) != null)
-						{
-//							System.out.println(row);
-							parseAndApply(getMetaData(), row, SshConnection.STDOUT_DATA);
-						}
+						startTs = System.currentTimeMillis();
+						_logger.debug("SSH-STDOUT[" + getModuleName() + "][available=" + stdout.available() + "]: -start-");
 					}
+					
+					// NOW READ input
+					String row = stdoutReader.readLine();
+
+					if (_logger.isDebugEnabled())
+						_logger.debug("SSH-STDOUT[" + getModuleName() + "][ms=" + (System.currentTimeMillis()-startTs) + ", available=" + stdout.available() + "]: row=|" + row + "|.");
+
+					// discard empty rows
+					if (StringUtil.isNullOrBlank(row))
+						continue;
+
+//					System.out.println(row);
+					parseAndApply(getMetaData(), row, SshConnection.STDOUT_DATA);
 				}
 
+				// STDERR
 				while (stderr.available() > 0)
 				{
-					int len = stderr.read(buffer);
-					if (len > 0) // this check is somewhat paranoid
+					long startTs = -1;
+					if (_logger.isDebugEnabled())
 					{
-						String row = null;
-						BufferedReader sr = new BufferedReader(new StringReader(new String(buffer, 0, len, osCharset)));
-						while ((row = sr.readLine()) != null)
-						{
-							if (row != null && row.toLowerCase().indexOf("command not found") >= 0)
-							{
-								_logger.error(getModuleName()+" was the command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row);
-								addException(new Exception("Was the command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row));
-							}
-//							System.err.println(row);
-							parseAndApply(getMetaData(), row, SshConnection.STDERR_DATA);
-							//_logger.error("Received on STDERR: "+row);
-						}
+						startTs = System.currentTimeMillis();
+						_logger.debug("SSH-STDERR[" + getModuleName() + "][available=" + stdout.available() + "]: -start-");
 					}
+					
+					// NOW READ input
+					String row = stderrReader.readLine();
+
+					if (_logger.isDebugEnabled())
+						_logger.debug("SSH-STDERR[" + getModuleName() + "][ms=" + (System.currentTimeMillis()-startTs) + ", available=" + stdout.available() + "]: row=|" + row + "|.");
+
+					// discard empty rows
+					if (StringUtil.isNullOrBlank(row))
+						continue;
+
+					if (row != null && row.toLowerCase().indexOf("command not found") >= 0 || row.toLowerCase().indexOf("access denied") >= 0)
+					{
+						_logger.error(getModuleName()+". The command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row);
+						addException(new Exception("The command '"+getCommand()+"'\n"
+								+ "in current $PATH\n"
+								+ "got following message on STDERR: "+row));
+					}
+					
+//					System.err.println(row);
+					parseAndApply(getMetaData(), row, SshConnection.STDERR_DATA);
 				}
 			}
-			catch (IOException e)
+//			catch (IOException e)
+//			{
+//				addException(e);
+//				_logger.error("Problems when reading output from the OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
+//				_running = false;
+//			}
+			catch (InterruptedIOException ex)
+			{
+				if (_running)
+					_logger.warn("If this was during 'shutdown/stop' sequence, it's OK, if not it will be restarted. This happened when reading output from the OS Command '"+getCommand()+"', Caught: "+ex.getMessage());
+				_running = false;
+			}
+			catch (Exception e)
 			{
 				addException(e);
 				_logger.error("Problems when reading output from the OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
@@ -926,12 +1099,23 @@ implements Runnable
 		}
 
 		if (sess != null)
-			sess.close();
+		{
+			// Sometimes I have seen exception here... so map that away
+			try 
+			{
+				int osRetCode = sess.getExitStatus();
+				if (osRetCode != 0)
+					_logger.error("OS Return Code " + osRetCode + ". Expected return code is 0 for command: " + getCommand());
+			}
+			catch (Exception ignore) { /* ignore */ }
 
+			_logger.info("Closing Streaming SSH Session for '" + getModuleName() + "' with command '" + getCommand() + "'.");
+			sess.close();
+		}
+		
 		_running = false;
 		printStopMessage();
 	}
-
 
 	/**
 	 * This method should be used for non streaming OS Commands<br>
@@ -978,7 +1162,9 @@ implements Runnable
 		
 		Charset osCharset = Charset.forName(_conn.getOsCharset());
 
-		byte[] buffer = new byte[16*1024]; // 16K
+		BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(stdout, osCharset));
+		BufferedReader stderrReader = new BufferedReader(new InputStreamReader(stderr, osCharset));
+
 		while(true)
 		{
 			try
@@ -1023,42 +1209,126 @@ implements Runnable
 				 */
 				while (stdout.available() > 0)
 				{
-					int len = stdout.read(buffer);
-					if (len > 0) // this check is somewhat paranoid
+//					int len = stdout.read(buffer);
+//					if (len > 0) // this check is somewhat paranoid
+//					{
+//						// NOTE if charset convertion is needed, use: new String(buffer, CHARSET)
+//						String row = null;
+//						BufferedReader sr = new BufferedReader(new StringReader(new String(buffer, 0, len, osCharset)));
+//						while ((row = sr.readLine()) != null)
+//						{
+////							System.out.println(row);
+//							parseAndApply(getMetaData(), row, SshConnection.STDOUT_DATA);
+//						}
+//					}
+//					long startTs = -1;
+					if (_logger.isDebugEnabled())
 					{
-						// NOTE if charset convertion is needed, use: new String(buffer, CHARSET)
-						String row = null;
-						BufferedReader sr = new BufferedReader(new StringReader(new String(buffer, 0, len, osCharset)));
-						while ((row = sr.readLine()) != null)
-						{
-//							System.out.println(row);
-							parseAndApply(getMetaData(), row, SshConnection.STDOUT_DATA);
-						}
+//						startTs = System.currentTimeMillis();
+						_logger.debug("SSH-STDOUT[" + getModuleName() + "][available=" + stdout.available() + "]: -start-");
 					}
+					
+					// NOW READ input
+//					String row = stdoutReader.readLine();
+					String row = null;
+					while ((row = stdoutReader.readLine()) != null)
+					{
+						// discard empty rows
+						if (StringUtil.isNullOrBlank(row))
+							continue;
+
+						if (_logger.isDebugEnabled())
+							_logger.debug("Received on STDOUT: "+row);
+
+						parseAndApply(getMetaData(), row, SshConnection.STDOUT_DATA);
+					}
+
+//					if (_logger.isDebugEnabled())
+//						_logger.debug("SSH-STDOUT[" + getModuleName() + "][ms=" + (System.currentTimeMillis()-startTs) + ", available=" + stdout.available() + "]: row=|" + row + "|.");
+
+					// discard empty rows
+//					if (StringUtil.isNullOrBlank(row))
+//						continue;
+
+//					parseAndApply(getMetaData(), row, SshConnection.STDOUT_DATA);
 				}
 
 				while (stderr.available() > 0)
 				{
-					int len = stderr.read(buffer);
-					if (len > 0) // this check is somewhat paranoid
+//					int len = stderr.read(buffer);
+//					if (len > 0) // this check is somewhat paranoid
+//					{
+//						String row = null;
+//						BufferedReader sr = new BufferedReader(new StringReader(new String(buffer, 0, len, osCharset)));
+//						while ((row = sr.readLine()) != null)
+//						{
+//							if (row != null && row.toLowerCase().indexOf("command not found") >= 0 || row.toLowerCase().indexOf("access denied") >= 0)
+//							{
+//								_logger.error(getModuleName()+" was the command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row);
+//								addException(new Exception("Was the command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row));
+//							}
+////							System.err.println(row);
+//							parseAndApply(getMetaData(), row, SshConnection.STDERR_DATA);
+//							_logger.error("Received on STDERR: "+row);
+//						}
+//					}
+//					long startTs = -1;
+					if (_logger.isDebugEnabled())
 					{
-						String row = null;
-						BufferedReader sr = new BufferedReader(new StringReader(new String(buffer, 0, len, osCharset)));
-						while ((row = sr.readLine()) != null)
+//						startTs = System.currentTimeMillis();
+						_logger.debug("SSH-STDERR[" + getModuleName() + "][available=" + stdout.available() + "]: -start-");
+					}
+					
+					// NOW READ input
+//					String row = stderrReader.readLine();
+					String row = null;
+					while ((row = stderrReader.readLine()) != null)
+					{
+						// discard empty rows
+						if (StringUtil.isNullOrBlank(row))
+							continue;
+						
+						_logger.error("Received on STDERR: "+row);
+						
+						if (row != null && row.toLowerCase().indexOf("command not found") >= 0 || row.toLowerCase().indexOf("access denied") >= 0)
 						{
-							if (row != null && row.toLowerCase().indexOf("command not found") >= 0)
-							{
-								_logger.error(getModuleName()+" was the command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row);
-								addException(new Exception("Was the command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row));
-							}
-//							System.err.println(row);
+							_logger.error(getModuleName()+". The command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row);
+							addException(new Exception("The command '"+getCommand()+"'\n"
+									+ "in current $PATH\n"
+									+ "got following message on STDERR: "+row));
+						}
+						else
+						{
 							parseAndApply(getMetaData(), row, SshConnection.STDERR_DATA);
-							_logger.error("Received on STDERR: "+row);
 						}
 					}
+
+//					if (_logger.isDebugEnabled())
+//						_logger.debug("SSH-STDERR[" + getModuleName() + "][ms=" + (System.currentTimeMillis()-startTs) + ", available=" + stdout.available() + "]: row=|" + row + "|.");
+
+					// discard empty rows
+//					if (StringUtil.isNullOrBlank(row))
+//						continue;
+
+//					if (row != null && row.toLowerCase().indexOf("command not found") >= 0 || row.toLowerCase().indexOf("access denied") >= 0)
+//					{
+//						_logger.error(getModuleName()+". The command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row);
+//						addException(new Exception("The command '"+getCommand()+"'\n"
+//								+ "in current $PATH\n"
+//								+ "got following message on STDERR: "+row));
+//					}
+					
+//					System.err.println(row);
+//					parseAndApply(getMetaData(), row, SshConnection.STDERR_DATA);
+//					_logger.error("Received on STDERR: "+row);
 				}
 			}
-			catch (IOException e)
+//			catch (IOException e)
+//			{
+//				addException(e);
+//				_logger.error("Problems when reading output from the OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
+//			}
+			catch (Exception e)
 			{
 				addException(e);
 				_logger.error("Problems when reading output from the OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
@@ -1066,7 +1336,18 @@ implements Runnable
 		}
 
 		if (sess != null)
+		{
+			// Sometimes I have seen exception here... so map that away
+			try 
+			{
+				int osRetCode = sess.getExitStatus();
+				if (osRetCode != 0)
+					_logger.error("OS Return Code " + osRetCode + ". Expected return code is 0 for command: " + getCommand());
+			}
+			catch (Exception ignore) { /* ignore */ }
+
 			sess.close();
+		}
 
 		// Now return the object, which the OS Commands output was put into
 		return _currentSample;

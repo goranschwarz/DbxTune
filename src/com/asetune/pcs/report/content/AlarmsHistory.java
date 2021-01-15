@@ -48,7 +48,27 @@ extends ReportEntryAbstract
 	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public boolean hasShortMessageText()
+	{
+		return true;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
+		writeMessageText(w, false);
+	}
+
+	@Override
+	public void writeMessageText(Writer w)
+	throws IOException
+	{
+		writeMessageText(w, true);
+	}
+
+//	@Override
+	public void writeMessageText(Writer sb, boolean isFullText)
 	throws IOException
 	{
 		if (_shortRstm.getRowCount() == 0)
@@ -63,7 +83,7 @@ extends ReportEntryAbstract
 			sb.append("Alarm Count in period: " + _fullRstm.getRowCount() + "<br>\n");
 			sb.append(toHtmlTable(_shortRstm));
 			
-			if (_fullRstm != null)
+			if (isFullText && _fullRstm != null)
 			{
 				// Make output more readable, in a 2 column table
 				// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
@@ -81,46 +101,6 @@ extends ReportEntryAbstract
 			}
 		}
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		if (_shortRstm.getRowCount() == 0)
-//		{
-//			sb.append("No Alarms has been reported <br> \n");
-//		}
-//		else
-//		{
-//			// Get a description of this section, and column names
-//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//			
-//			sb.append("Alarm Count in period: ").append(_fullRstm.getRowCount()).append("<br>\n");
-////			sb.append(_shortRstm.toHtmlTableString("sortable"));
-//			sb.append(toHtmlTable(_shortRstm));
-//			
-//			if (_fullRstm != null)
-//			{
-//				// Make output more readable, in a 2 column table
-//				// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
-//				Map<String, String> colNameValueTagMap = new HashMap<>();
-//				colNameValueTagMap.put("extendedDescription",     "xmp");
-//				colNameValueTagMap.put("lastExtendedDescription", "xmp");
-//
-//				String  divId       = "alarmHistoryDetails";
-//				boolean showAtStart = false;
-//				String  htmlContent = _fullRstm.toHtmlTablesVerticalString("sortable", colNameValueTagMap);
-//
-//				String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Alarm History Details...", htmlContent);
-//
-//				sb.append( msOutlookAlternateText(showHideDiv, "Alarm History Details", null) );
-////				sb.append( showHideDiv );
-//			}
-//		}
-//
-//		return sb.toString();
-//	}
 
 	@Override
 	public boolean canBeDisabled()

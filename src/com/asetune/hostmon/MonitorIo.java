@@ -101,9 +101,14 @@ extends HostMonitor
 			mon = new MonitorIoVeritas();
 			mon.setConnectedToVendor(OsVendor.Veritas);
 		}
+		else if (osname.startsWith("Windows-"))
+		{
+			mon = new MonitorIoWindows();
+			mon.setConnectedToVendor(OsVendor.Windows);
+		}					
 		else
 		{
-			throw new Exception("The Unix system '"+osname+"', is not supported by the module 'MonitorIo' for the moment.");
+			throw new Exception("The OS Name '"+osname+"', is not supported by the module 'MonitorIo' for the moment.");
 		}
 
 		mon.setConnection(conn);

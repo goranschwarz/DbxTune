@@ -21,6 +21,7 @@
 package com.asetune.pcs.report;
 
 import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
+import com.asetune.pcs.report.content.os.OsIoStatOverview;
 import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
 import com.asetune.pcs.report.content.rs.RsRssdQueueSize;
 import com.asetune.pcs.report.content.rs.RsWsRepLatency;
@@ -42,6 +43,7 @@ extends DailySummaryReportDefault
 		addReportEntry( new RsWsRepLatency(this)       );
 
 		// Disk IO Activity
+		addReportEntry( new OsIoStatOverview(this)     );
 		addReportEntry( new OsIoStatSlowIo(this)       );
 	}
 }

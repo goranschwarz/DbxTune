@@ -22,10 +22,11 @@
 package com.asetune.pcs.report.content.postgres;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
@@ -34,6 +35,8 @@ import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.ReportEntryAbstract;
+import com.asetune.pcs.report.content.ase.SparklineHelper;
+import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
@@ -45,10 +48,24 @@ extends ReportEntryAbstract
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _sqTextRstm;
 //	private Exception           _problem = null;
+	private List<String>        _miniChartJsList = new ArrayList<>();
 
 	public PostgresTopSql(DailySummaryReportAbstract reportingInstance)
 	{
 		super(reportingInstance);
+	}
+
+	@Override
+	public boolean hasShortMessageText()
+	{
+		return true;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
+		writeMessageText(w);
 	}
 
 	@Override
@@ -64,7 +81,8 @@ extends ReportEntryAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+//			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+			sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
 			sb.append(toHtmlTable(_shortRstm));
 
 			if (_sqTextRstm != null)
@@ -74,37 +92,13 @@ extends ReportEntryAbstract
 				sb.append(toHtmlTable(_sqTextRstm));
 			}
 		}
+		
+		// Write JavaScript code for CPU SparkLine
+		for (String str : _miniChartJsList)
+		{
+			sb.append(str);
+		}
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		if (_shortRstm.getRowCount() == 0)
-//		{
-//			sb.append("No rows found <br>\n");
-//		}
-//		else
-//		{
-//			// Get a description of this section, and column names
-//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//
-//			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-////			sb.append(_shortRstm.toHtmlTableString("sortable"));
-//			sb.append(toHtmlTable(_shortRstm));
-//
-//			if (_sqTextRstm != null)
-//			{
-//				sb.append("<br>\n");
-//				sb.append("SQL Text by queryid, Row Count: ").append(_sqTextRstm.getRowCount()).append(" (This is the same SQL Text as the in the above table, but without all counter details).<br>\n");
-////				sb.append(_sqTextRstm.toHtmlTableString("sortable"));
-//				sb.append(toHtmlTable(_sqTextRstm));
-//			}
-//		}
-//
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()
@@ -182,7 +176,8 @@ extends ReportEntryAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+//		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+		int topRows = getTopRows();
 
 		// used to lookup queryid->sqlText (as a second step)
 //		List<Integer> queryIdList = new ArrayList<>();
@@ -211,8 +206,10 @@ extends ReportEntryAbstract
 			    + "	,cast('' as varchar(30))                                as [Duration] \n"
 			    + "	,sum([CmSampleMs])                                      as [CmSampleMs_sum] \n"
 			    + " \n"
+			    + " ,cast('' as varchar(512))                               as [calls__chart] \n"
 			    + "	,sum([calls])                                           as [calls_sum] \n"
 			    + "	,CAST( avg([avg_time_per_call]) AS DECIMAL(20,1) )      as [avg_time_per_call_avg] \n"			// needs rounding
+			    + " ,cast('' as varchar(512))                               as [total_time__chart] \n"
 			    + "	,CAST( sum([total_time])        AS DECIMAL(20,1) )      as [total_time_sum] \n"					// needs rounding
 			    + "	,avg([avg_rows_per_call])                               as [avg_rows_per_call_avg] \n"
 			    + "	,sum([rows])                                            as [rows_sum] \n"
@@ -261,10 +258,11 @@ extends ReportEntryAbstract
 			// Create a SQL-Details ResultSet based on values in _shortRstm
 			SimpleResultSet srs = new SimpleResultSet();
 
-			srs.addColumn("datname",      Types.VARCHAR,       60, 0);
-			srs.addColumn("usename",      Types.VARCHAR,       60, 0);
-			srs.addColumn("queryid",      Types.BIGINT,         0, 0);
-			srs.addColumn("query",        Types.VARCHAR, 1024*128, 0); // this is 'text' in the origin table
+			srs.addColumn("datname",           Types.VARCHAR,       60, 0);
+			srs.addColumn("usename",           Types.VARCHAR,       60, 0);
+			srs.addColumn("queryid",           Types.BIGINT,         0, 0);
+			srs.addColumn("total_time__chart", Types.VARCHAR,      512, 0); 
+			srs.addColumn("query",             Types.VARCHAR, 1024*128, 0); // this is 'text' in the origin table
 
 
 			int pos_datname    = _shortRstm.findColumn("datname");
@@ -300,7 +298,7 @@ extends ReportEntryAbstract
 					}
 
 					// add record to SimpleResultSet
-					srs.addRow(datname, usename, queryid, "<xmp>" + query + "</xmp>");
+					srs.addRow(datname, usename, queryid, "", "<xmp>" + query + "</xmp>");
 				}
 			}
 
@@ -318,6 +316,37 @@ extends ReportEntryAbstract
 				_sqTextRstm = ResultSetTableModel.createEmpty("Top SQL TEXT");
 				_logger.warn("Problems getting Top SQL TEXT: " + ex);
 			}
+
+
+			// Mini Chart on "..."
+			String whereKeyColumn = "datname, usename, queryid"; 
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("calls__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgStatements_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("calls")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Number of times executed in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("total_time__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgStatements_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("total_time")
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setDecimalScale(0) // just use whole numbers for this
+					.setSparklineTooltipPostfix  ("Total time spent in the statement in below period")
+					.validate()));
+
+			// Mini Chart on "CPU Time"
+			// COPY Cell data from the "details" table
+			_sqTextRstm.copyCellContentFrom(_shortRstm, whereKeyColumn, "total_time__chart", whereKeyColumn, "total_time__chart");
+			
 		}
 	}
 }

@@ -20,11 +20,14 @@
  ******************************************************************************/
 package com.asetune.tools.sqlw.msg;
 
+import java.text.NumberFormat;
 import java.util.ArrayList;
 
 import javax.swing.table.AbstractTableModel;
 
 import org.apache.log4j.Logger;
+
+import com.asetune.utils.NumberUtils;
 
 public class StatisticsIoTableModel
 extends AbstractTableModel
@@ -32,12 +35,14 @@ extends AbstractTableModel
 	private static Logger _logger = Logger.getLogger(StatisticsIoTableModel.class);
 	private static final long serialVersionUID = 1L;
 	
-	private static final int UNKNOWN    = 0;
-	private static final int SYBASE_ASE = 1;
-	private static final int SQLSERVER  = 2;
+	private static final int UNKNOWN        = 0;
+	private static final int SYBASE_ASE     = 1;
+	private static final int SQLSERVER      = 2;
+	private static final int SQLSERVER_2019 = 3;
 
-	private static final int COL_COUNT_SYBASE_ASE = 9;
-	private static final int COL_COUNT_SQLSERVER  = 8;
+	private static final int COL_COUNT_SYBASE_ASE     = 9;
+	private static final int COL_COUNT_SQLSERVER      = 8;
+	private static final int COL_COUNT_SQLSERVER_2019 = 12;
 
 	private int _type = -1;
 	
@@ -81,14 +86,33 @@ extends AbstractTableModel
 			case 7: return "LobReadAheadReads"; 
 			}
 		}
+		if (_type == SQLSERVER_2019)
+		{			
+			switch (column)
+			{
+			case 0:  return "Table"; 
+			case 1:  return "ScanCount";                  
+			case 2:  return "LogicalReads";               
+			case 3:  return "PhysicalReads";              
+			case 4:  return "PageServerReads";            
+			case 5:  return "ReadAheadReads";             
+			case 6:  return "PageServerReadAheadReads";   
+			case 7:  return "LobLogicalReads";             
+			case 8:  return "LobPhysicalReads";            
+			case 9:  return "LobPageServerReads";          
+			case 10: return "LobReadAheadReads";           
+			case 11: return "LobPageServerReadAheadReads"; 
+			}
+		}
 		return "unknown-"+column;
 	}
 	
 	@Override
 	public int getColumnCount()
 	{
-		if (_type == SYBASE_ASE) return COL_COUNT_SYBASE_ASE;
-		if (_type == SQLSERVER)  return COL_COUNT_SQLSERVER;
+		if (_type == SYBASE_ASE)     return COL_COUNT_SYBASE_ASE;
+		if (_type == SQLSERVER)      return COL_COUNT_SQLSERVER;
+		if (_type == SQLSERVER_2019) return COL_COUNT_SQLSERVER_2019;
 
 		return 0;
 	}
@@ -140,7 +164,135 @@ extends AbstractTableModel
 			case 7: return entry._lobReadAheadReads; 
 			}
 		}
+		if (_type == SQLSERVER_2019)
+		{
+			SqlServerEntry2019 entry = (SqlServerEntry2019) _rows.get(row);
+			switch (column)
+			{
+			case 0:  return entry._table; 
+			case 1:  return entry._scanCount;                  
+			case 2:  return entry._logicalReads;               
+			case 3:  return entry._physicalReads;              
+			case 4:  return entry._pageServerReads;            
+			case 5:  return entry._readAheadReads;             
+			case 6:  return entry._pageServerReadAheadReads;   
+			case 7:  return entry._lobLogicalReads;             
+			case 8:  return entry._lobPhysicalReads;            
+			case 9:  return entry._lobPageServerReads;          
+			case 10: return entry._lobReadAheadReads;           
+			case 11: return entry._lobPageServerReadAheadReads; 
+			}
+		}
 		return "unknown-" + row + "-" + column;
+	}
+
+	public String getToolTipText(int column)
+	{
+		if (_type == SYBASE_ASE)
+		{
+			switch (column)
+			{
+			case 0: return "Table Name";
+			case 1: return "<html> "
+					+ "A <i>scan</i> can represent a number of different access methods.<br> "
+					+ "The statistics io command reports the number of times a query accessed a particular table. A <i>scan</i> can represent any of these access methods: "
+					+ "<ul>"
+					+ "  <li>A <b>table scan</b>.</li>"
+					+ "  <li>An access by way of a <b>clustered index</b>. Each time the query starts at the root page of the index and follows pointers to the data pages, it is counted as a scan.</li>"
+					+ "  <li>An access by way of a <b>nonclustered index</b>. Each time the query starts at the root page of the index and follows pointers to the leaf level of the index (for a covered query) or to the data pages, it is counted.</li>"
+					+ "  <li>If queries run in parallel, each worker process access to the table is counted as a scan.</li>"
+					+ "</ul>"
+					+ "</html>"; 
+			case 2: return "Sum of <b>regular</b> and <b>apf</b> logical reads."; 
+			case 3: return "Any page read request (whether it hits the cache or not) is considered a logical read; only pages not brought in by asynchronous prefetch (APF) are counted here."; 
+			case 4: return "Number of times that a request brought in by an APF request was found in cache."; 
+			case 5: return "Sum of <b>regular</b> and <b>apf</b> physical reads."; 
+			case 6: return "Number of times a buffer was brought into cache by regular asynchronous I/O."; 
+			case 7: return "Number of times that a buffer was brought into cache by APF."; 
+			case 8: return "Number of buffers brought in by APF in which one or more pages were used during the query."; 
+			}
+		}
+		if (_type == SQLSERVER)
+		{
+			switch (column)
+			{
+			case 0: return "Table Name"; 
+			case 1: return "Number of seeks or scans started to retrieve all the values to construct the final dataset for the output."; 
+			case 2: return "A read of a data page from memory."; 
+			case 3: return "A read of a data page from disk when it is not available in memory."; 
+			case 4: return "A read ahead read transfers a data page from disk to memory before it is specifically requested."; 
+			case 5: return "Logical reads for text, ntext, image, varchar(max), nvarchar(max), varbinary(max), or columnstore index pages."; 
+			case 6: return "Physical reads for text, ntext, image, varchar(max), nvarchar(max), varbinary(max), or columnstore index pages."; 
+			case 7: return "Refers to read-ahead reads for text, ntext, image, varchar(max), nvarchar(max), varbinary(max), or columnstore index pages."; 
+			}
+		}
+		if (_type == SQLSERVER_2019)
+		{			
+			// from https://www.mssqltips.com/sqlservertip/6433/query-tuning-in-sql-server-with-set-statistics-io/
+			switch (column)
+			{
+			case 0:  return "Table Name"; 
+			case 1:  return "Number of seeks or scans started to retrieve all the values to construct the final dataset for the output.";                  
+			case 2:  return "A read of a data page from memory.";               
+			case 3:  return "A read of a data page from disk when it is not available in memory.";              
+			case 4:  return "Refers to the transfer of a page from disk to the data buffer in memory.  The page server reads per second reflects the number of page reads across all databases.";            
+			case 5:  return "A read ahead read transfers a data page from disk to memory before it is specifically requested.";             
+			case 6:  return "Refers to the transfer of a page from disk to the data buffer in memory before it is specifically requested.  Reflects read-ahead read throughput in the same way that page server reads reflect physical reads.";   
+			case 7:  return "Logical reads for text, ntext, image, varchar(max), nvarchar(max), varbinary(max), or columnstore index pages.";             
+			case 8:  return "Physical reads for text, ntext, image, varchar(max), nvarchar(max), varbinary(max), or columnstore index pages.";            
+			case 9:  return "Refers to the transfer of a text, ntext, image, varchar(max), nvarchar(max), varbinary(max), or columnstore index pages from disk to the data buffer in memory across all databases.";          
+			case 10: return "Refers to read-ahead reads for text, ntext, image, varchar(max), nvarchar(max), varbinary(max), or columnstore index pages.";           
+			case 11: return "Refers to the transfer of a text, ntext, image, varchar(max), nvarchar(max), varbinary(max), or columnstore index pages from disk to the data buffer in memory before it is specifically requested across all databases."; 
+			}
+		}
+		return "unknown-"+column;
+	}
+	public String getCellToolTipText(int mrow, int mcol, int srvPageSizeKb)
+	{
+//		System.out.println("getCellToolTipText(): mrow=" + mrow + ", mcol=" + mcol + ", srvPageSizeKb=" + srvPageSizeKb);
+
+		if (mcol == 0) return null; // TableName
+		if (mcol == 1) return null; // Scan Count
+
+		Object o_cellVal = getValueAt(mrow, mcol);
+		if (o_cellVal != null &&  o_cellVal instanceof Integer)
+		{
+			int cellVal = (Integer) o_cellVal;
+
+			if (cellVal == 0)
+				return null;
+			
+			NumberFormat nf = NumberFormat.getInstance();
+
+			if (_type == SYBASE_ASE)
+			{
+				if (srvPageSizeKb > 0)
+				{
+					return "<html>" + nf.format(cellVal) + " Pages is: <br>"
+							+ "<b>" + nf.format(NumberUtils.round(cellVal / (1024.0/srvPageSizeKb), 1)) + " MB</b> (in " + srvPageSizeKb + "K pages) <br>"
+							+ " </html>";
+				}
+				else
+				{
+					// Show for all Pages sizes, if we dont know the SrvPageSize
+					return "<html>" + nf.format(cellVal) + " Pages is: <br>"
+							+ "<b>" + nf.format(NumberUtils.round(cellVal / 512.0, 1)) + " MB</b> (in 2K pages) <br>"
+							+ "<b>" + nf.format(NumberUtils.round(cellVal / 256.0, 1)) + " MB</b> (in 4K pages) <br>"
+							+ "<b>" + nf.format(NumberUtils.round(cellVal / 128.0, 1)) + " MB</b> (in 8K pages) <br>"
+							+ "<b>" + nf.format(NumberUtils.round(cellVal /  64.0, 1)) + " MB</b> (in 16K pages) <br>"
+							+ "</html>";
+				}
+			}
+			else
+			{
+				// SQL-Server 
+				return "<html>" + nf.format(cellVal) + " Pages is: <br>"
+						+ "<b>" + nf.format(NumberUtils.round(cellVal / 128.0, 1)) + " MB</b> (in 8K pages) <br>"
+						+ " </html>";
+			}
+		}
+		
+		return null;
 	}
 
 	public void doSummary()
@@ -152,6 +304,7 @@ extends AbstractTableModel
 			sumEntry._table           = "--SUMMARY--";
 			for (StatIoEntry statIoEntry : _rows)
 			{
+//				System.out.println("SUM: Sybase ASE: _rows.size=" + _rows.size());
 				AseServerEntry srvEntry = (AseServerEntry) statIoEntry;
 
 				sumEntry._scanCount       += srvEntry._scanCount      ;
@@ -167,6 +320,7 @@ extends AbstractTableModel
 		}
 		else if (_type == SQLSERVER)
 		{
+//			System.out.println("SUM: SQL-Server: _rows.size=" + _rows.size());
 			SqlServerEntry sumEntry = new SqlServerEntry();
 
 			sumEntry._table           = "--SUMMARY--";
@@ -181,6 +335,31 @@ extends AbstractTableModel
 				sumEntry._lobLogicalReads   += srvEntry._lobLogicalReads  ;
 				sumEntry._lobPhysicalReads  += srvEntry._lobPhysicalReads ;
 				sumEntry._lobReadAheadReads += srvEntry._lobReadAheadReads;
+			}
+			_rows.add(sumEntry);
+		}
+		else if (_type == SQLSERVER_2019)
+		{
+//			System.out.println("SUM: SQL-Server 2019: _rows.size=" + _rows.size());
+			SqlServerEntry2019 sumEntry = new SqlServerEntry2019();
+
+			sumEntry._table           = "--SUMMARY--";
+			for (StatIoEntry statIoEntry : _rows)
+			{
+				SqlServerEntry2019 srvEntry = (SqlServerEntry2019) statIoEntry;
+//				System.out.println("SUM: SQL-Server 2019: "+srvEntry);
+
+				sumEntry._scanCount                   += srvEntry._scanCount                  ;
+				sumEntry._logicalReads                += srvEntry._logicalReads               ;
+				sumEntry._physicalReads               += srvEntry._physicalReads              ;
+				sumEntry._pageServerReads             += srvEntry._pageServerReads            ;
+				sumEntry._readAheadReads              += srvEntry._readAheadReads             ;
+				sumEntry._pageServerReadAheadReads    += srvEntry._pageServerReadAheadReads   ;
+				sumEntry._lobLogicalReads             += srvEntry._lobLogicalReads            ;
+				sumEntry._lobPhysicalReads            += srvEntry._lobPhysicalReads           ;
+				sumEntry._lobPageServerReads          += srvEntry._lobPageServerReads         ;
+				sumEntry._lobReadAheadReads           += srvEntry._lobReadAheadReads          ;
+				sumEntry._lobPageServerReadAheadReads += srvEntry._lobPageServerReadAheadReads; 
 			}
 			_rows.add(sumEntry);
 		}
@@ -204,7 +383,7 @@ extends AbstractTableModel
 
 	public void addMessage(String msgText)
 	{
-//System.out.println("addMessage: msgText='"+msgText+"'");
+//		System.out.println("addMessage: msgText='"+msgText+"'");
 
 		// typical ASE msg: Table: sysdevices (t1) scan count 1, logical reads: (regular=3 apf=0 total=3), physical reads: (regular=0 apf=0 total=0), apf IOs used=0
 		// typical ASE msg: Table: sysdevices scan count 1, logical reads: (regular=3 apf=0 total=3), physical reads: (regular=0 apf=0 total=0), apf IOs used=0
@@ -236,8 +415,11 @@ extends AbstractTableModel
 		String tabName          = msgText.substring("Table ".length(), pos).trim();
 		
 		String[] sa = startAtScanCount.split(" ");
-//System.out.println("addMessage: _type="+_type+", sa.length="+sa.length+", tabName='"+tabName+"', sa="+StringUtil.toCommaStr(sa, "||"));
-		
+
+//		System.out.println("addMessage: _type="+_type+", sa.length="+sa.length+", tabName='"+tabName+"', sa="+StringUtil.toCommaStrQuoted('|', sa));
+//		for (int i = 0; i < sa.length; i++)
+//			System.out.println("      as[" + i + "] = |" + sa[i] + "|.");
+
 		StatIoEntry entry = null;
 		if (_type == SYBASE_ASE)
 		{
@@ -253,25 +435,64 @@ extends AbstractTableModel
 			srvEntry._phyReadsRegular = getInt( sa[10] );
 			srvEntry._phyReadsApf     = getInt( sa[11] );
 			srvEntry._apfIosUsed      = getInt( sa[15] );
-		}
-		else if (_type == SQLSERVER)
-		{
-			SqlServerEntry srvEntry = new SqlServerEntry();
-			entry = srvEntry;
 
-			srvEntry._table             = tabName.replace("'.", "").replace("'", ""); // Remove suroundings of table name: Table 'sysschobjs'. Scan count...
-			srvEntry._scanCount         = getInt( sa[2]  );      
-			srvEntry._logicalReads      = getInt( sa[5]  );   
-			srvEntry._physicalReads     = getInt( sa[8]  );  
-			srvEntry._readAheadReads    = getInt( sa[11] ); 
-			srvEntry._lobLogicalReads   = getInt( sa[15] );
-			srvEntry._lobPhysicalReads  = getInt( sa[19] );
-			srvEntry._lobReadAheadReads = getInt( sa[23] );
-		}
-	
-//System.out.println("add: "+entry);
-		if (entry != null)
 			_rows.add(entry);
+//			System.out.println("add SYBASE ASE, size=" + _rows.size()+ ": "+entry);
+		}
+		else if (_type == SQLSERVER || _type == SQLSERVER_2019)
+		{
+			if (sa.length <= 24)
+			{
+				_type = SQLSERVER;
+				SqlServerEntry srvEntry = new SqlServerEntry();
+				entry = srvEntry;
+
+				// This is how it looked in 200x
+				// /* 2016 */ Table 'Posts'. Scan count 3, logical reads 4188092, physical reads 3, read-ahead reads 4168416, lob logical reads 0, lob physical reads 0, lob read-ahead reads 0.
+				// /* 2017 */ Table 'sysschobjs'. Scan count 1, logical reads 56, physical reads 0, read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob read-ahead reads 0.
+				// pos:-->>       -             -    0     1 2        3     4  5         6     7 8           9    10 11  12      13    14 15  16       17    18 19  20         21    22 23
+				//            ^^^^^^^^^^^^^^^^^^^^
+				//            The above is removed from input
+				srvEntry._table             = tabName.replace("'.", "").replace("'", ""); // Remove suroundings of table name: Table 'sysschobjs'. Scan count...
+				srvEntry._scanCount         = getInt( sa[2]  );      
+				srvEntry._logicalReads      = getInt( sa[5]  );   
+				srvEntry._physicalReads     = getInt( sa[8]  );  
+				srvEntry._readAheadReads    = getInt( sa[11] ); 
+				srvEntry._lobLogicalReads   = getInt( sa[15] );
+				srvEntry._lobPhysicalReads  = getInt( sa[19] );
+				srvEntry._lobReadAheadReads = getInt( sa[23] );
+
+				_rows.add(entry);
+//				System.out.println("add SQL-Server, size=" + _rows.size()+ ": "+entry);
+			}
+			else
+			{
+				_type = SQLSERVER_2019;
+				SqlServerEntry2019 srvEntry = new SqlServerEntry2019();
+				entry = srvEntry;
+
+				// This is how it looks in 2019
+				// /*2019:*/ Table 'Posts'. Scan count 3, logical reads 803579,  physical reads 3, page server reads 0, read-ahead reads 798473, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+				// pos:-->>      -        -    0     1 2        3     4      5          6     7 8     9     10    11 12         13    14     15    16     17         18    19 20  21      22    23 24  25       26    27 28  29   30     31    32 33  34         35    36 37  38   39     40         41    42 43
+				//            ^^^^^^^^^^^^^^^^^^^^
+
+				srvEntry._table                       = tabName.replace("'.", "").replace("'", ""); // Remove suroundings of table name: Table 'sysschobjs'. Scan count...
+				srvEntry._scanCount                   = getInt( sa[2]  );      
+				srvEntry._logicalReads                = getInt( sa[5]  );   
+				srvEntry._physicalReads               = getInt( sa[8]  );  
+				srvEntry._pageServerReads             = getInt( sa[12] );  
+				srvEntry._readAheadReads              = getInt( sa[15] ); 
+				srvEntry._pageServerReadAheadReads    = getInt( sa[20] );  
+				srvEntry._lobLogicalReads             = getInt( sa[24] );
+				srvEntry._lobPhysicalReads            = getInt( sa[28] );
+				srvEntry._lobPageServerReads          = getInt( sa[33] );
+				srvEntry._lobReadAheadReads           = getInt( sa[37] );
+				srvEntry._lobPageServerReadAheadReads = getInt( sa[43] );
+
+				_rows.add(entry);
+//				System.out.println("add: SQL-Server 2019, size=" + _rows.size()+ ": "+entry);
+			}
+		}	
 	}
 
 	private static class StatIoEntry
@@ -331,6 +552,41 @@ extends AbstractTableModel
 			sb.append("lobLogicalReads"  ).append("=").append(_lobLogicalReads  ).append(", ");
 			sb.append("lobPhysicalReads" ).append("=").append(_lobPhysicalReads ).append(", ");
 			sb.append("lobReadAheadReads").append("=").append(_lobReadAheadReads).append(".");
+			return sb.toString();
+		}
+	}
+
+	private static class SqlServerEntry2019
+	extends StatIoEntry
+	{
+		int _scanCount;      
+		int _logicalReads;   
+		int _physicalReads;  
+		int _pageServerReads;  
+		int _readAheadReads; 
+		int _pageServerReadAheadReads;  
+		int _lobLogicalReads;
+		int _lobPhysicalReads;
+		int _lobPageServerReads;
+		int _lobReadAheadReads;
+		int _lobPageServerReadAheadReads;
+
+		@Override
+		public String toString()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.append("table"                      ).append("=").append(_table                      ).append(", ");
+			sb.append("scanCount"                  ).append("=").append(_scanCount                  ).append(", ");
+			sb.append("logicalReads"               ).append("=").append(_logicalReads               ).append(", ");
+			sb.append("physicalReads"              ).append("=").append(_physicalReads              ).append(", ");
+			sb.append("pageServerReads"            ).append("=").append(_pageServerReads            ).append(", ");
+			sb.append("readAheadReads"             ).append("=").append(_readAheadReads             ).append(", ");
+			sb.append("pageServerReadAheadReads"   ).append("=").append(_pageServerReadAheadReads   ).append(", ");
+			sb.append("lobLogicalReads"            ).append("=").append(_lobLogicalReads            ).append(", ");
+			sb.append("lobPhysicalReads"           ).append("=").append(_lobPhysicalReads           ).append(", ");
+			sb.append("lobPageServerReads"         ).append("=").append(_lobPageServerReads         ).append(", ");
+			sb.append("lobReadAheadReads"          ).append("=").append(_lobReadAheadReads          ).append(", ");
+			sb.append("lobPageServerReadAheadReads").append("=").append(_lobPageServerReadAheadReads).append(".");
 			return sb.toString();
 		}
 	}

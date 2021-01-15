@@ -27,6 +27,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +55,6 @@ import com.asetune.cm.NoValidRowsInSample;
 import com.asetune.config.dict.AseErrorMessageDictionary;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
-import com.asetune.config.dict.MonWaitEventIdDictionary;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
@@ -1211,7 +1211,7 @@ extends CountersModel
 
 		CountersModel cm = this;
 
-		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
 		//-------------------------------------------------------
 		// errorCount
@@ -1223,10 +1223,11 @@ extends CountersModel
 
 			if (errorCountPerSec != null)
 			{
-				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): errorCountPerSec='"+errorCountPerSec+"'.");
-
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ErrorCountPerSec, DEFAULT_alarm_ErrorCountPerSec);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", errorCountPerSec='"+errorCountPerSec+"'.");
+
 				if (errorCountPerSec.intValue() > threshold)
 				{
 					// BEGIN: construct a summary Map (for 'error info' to Alarm) of all RATE errors, and set it to a JSON String...
@@ -1386,7 +1387,25 @@ extends CountersModel
 			{
 				int ageInSec = (int) (System.currentTimeMillis() - _sqlCaptureLastUpdateTime) / 1000;
 				int thresholdInSec = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_SqlCapUpdateAgeSec, DEFAULT_alarm_SqlCapUpdateAgeSec);
-//System.out.println("---------------- Alarm Handling -------------- SqlCaptureAge ---- DEBUG: CmSqlStatement: ageInSec="+ageInSec);
+				
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): SqlCaptureAge - thresholdInSec="+thresholdInSec+", ageInSec="+ageInSec+".");
+
+				// possibly get Connection connect time also ... and check if we "just" connected... to alarm after a connection "down" time...
+				if (getCounterController().getMonConnection() != null)
+				{
+					int lastConnectTimeInSec = (int) getCounterController().getMonConnection().getConnectTime() / 1000;
+					
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): SqlCaptureAge - thresholdInSec="+thresholdInSec+", ageInSec="+ageInSec+", lastConnectTimeInSec="+lastConnectTimeInSec+".");
+
+					if (lastConnectTimeInSec > 0 && lastConnectTimeInSec < ageInSec)
+					{
+						ageInSec = lastConnectTimeInSec;
+					}
+				}
+
+
 				if (ageInSec > thresholdInSec)
 				{
 					AlarmEvent alarm = new AlarmEventSqlCaptureOldData(cm, ageInSec, thresholdInSec);
@@ -1407,7 +1426,7 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String cfgVal;
 
-		_map_alarm_ErrorNumbers = new HashMap<>();
+		_map_alarm_ErrorNumbers = new LinkedHashMap<>();
 		
 		String prefix = "       ";
 		
@@ -1444,7 +1463,7 @@ extends CountersModel
 	private long _sqlCaptureLastUpdateTime = -1;
 
 	public static final String  PROPKEY_alarm_ErrorCountPerSec   = CM_NAME + ".alarm.system.if.errorCount.gt";
-	public static final int     DEFAULT_alarm_ErrorCountPerSec   = 10;
+	public static final int     DEFAULT_alarm_ErrorCountPerSec   = 20;
 	
 	public static final String  PROPKEY_alarm_ErrorNumbers       = CM_NAME + ".alarm.system.if.errorNumber";
 	public static final String  DEFAULT_alarm_ErrorNumbers       = "701=0, 713=0, 971=5, 1105=0, 1204=0, 1205=5";

@@ -1621,7 +1621,7 @@ extends CountersModel
 		
 		CountersModel cm = this;
 
-		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
 		for (int r=0; r<cm.getRateRowCount(); r++)
 		{
@@ -1639,10 +1639,11 @@ extends CountersModel
 					String BlockingOtherSpidsStr = BlockingOtherSpidsList + "";
 					int    blockCount            = BlockingOtherSpidsList.size();
 
-					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): BlockingOthersMaxTimeInSec='"+BlockingOthersMaxTimeInSec+"', BlockingOtherSpidsList="+BlockingOtherSpidsList);
-
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_BlockingOthersMaxTimeInSec, DEFAULT_alarm_BlockingOthersMaxTimeInSec);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", BlockingOthersMaxTimeInSec='"+BlockingOthersMaxTimeInSec+"', BlockingOtherSpidsList="+BlockingOtherSpidsList);
+
 					if (BlockingOthersMaxTimeInSec > threshold)
 					{
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);

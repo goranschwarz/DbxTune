@@ -22,19 +22,25 @@
 package com.asetune.pcs.report.content.ase;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
+import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 
 public class AseTopCmCachedProcs extends AseAbstract
 {
@@ -45,10 +51,25 @@ public class AseTopCmCachedProcs extends AseAbstract
 //	private ResultSetTableModel _cmCachedProcsMin;
 //	private ResultSetTableModel _cmCachedProcsMax;
 //	private Exception           _problem = null;
+	private List<String>        _miniChartJsList = new ArrayList<>();
 
+	private Map<Map<String, Object>, SqlCapExecutedSqlEntries> _keyToExecutedSql;
+	
 	public AseTopCmCachedProcs(DailySummaryReportAbstract reportingInstance)
 	{
 		super(reportingInstance);
+	}
+
+	@Override
+	public boolean hasShortMessageText()
+	{
+		return false;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
 	}
 
 	@Override
@@ -64,8 +85,41 @@ public class AseTopCmCachedProcs extends AseAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
-			sb.append(toHtmlTable(_shortRstm));
+//			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+			sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
+//			sb.append(toHtmlTable(_shortRstm));
+
+			// Create a default renderer
+			TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
+			{
+				@Override
+				public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+				{
+					if ("txt".equals(colName))
+					{
+						// Get Actual Executed SQL Text for current 'DBName, ObjectName'
+						String dbName   = rstm.getValueAsString (row, "DBName");
+						String procName = rstm.getValueAsString (row, "ObjectName");
+						
+						Map<String, Object> whereColValMap = new LinkedHashMap<>();
+						whereColValMap.put("DBName"    , dbName);
+						whereColValMap.put("ProcName"  , procName);
+
+						String executedSqlText = getSqlCapExecutedSqlTextAsString(_keyToExecutedSql, whereColValMap);
+
+						// Put the "Actual Executed SQL Text" as a "tooltip"
+						return "<div title='Click for Detailes' "
+								+ "data-toggle='modal' "
+								+ "data-target='#dbx-view-sqltext-dialog' "
+								+ "data-objectname='" + (dbName + ".." + procName) + "' "
+								+ "data-tooltip=\""   + executedSqlText     + "\" "
+								+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+					}
+
+					return strVal;
+				}
+			};
+			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, tableRender));
 
 
 			if (_ssqlRstm != null)
@@ -74,39 +128,13 @@ public class AseTopCmCachedProcs extends AseAbstract
 				sb.append(toHtmlTable(_ssqlRstm));
 			}
 		}
+		
+		// Write JavaScript code for CPU SparkLine
+		for (String str : _miniChartJsList)
+		{
+			sb.append(str);
+		}
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		if (_shortRstm.getRowCount() == 0)
-//		{
-//			sb.append("No rows found <br>\n");
-//		}
-//		else
-//		{
-//			// Get a description of this section, and column names
-//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//
-//			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-////			sb.append(_shortRstm.toHtmlTableString("sortable"));
-////			sb.append(toHtmlTable(_shortRstm));
-//			sb.append(toHtmlTable(_shortRstm));
-//
-//
-//			if (_ssqlRstm != null)
-//			{
-//				sb.append("Statement Cache Entries Count: ").append(_ssqlRstm.getRowCount()).append("<br>\n");
-////				sb.append(_ssqlRstm.toHtmlTableString("sortable"));
-////				sb.append(toHtmlTable(_ssqlRstm));
-//				sb.append(toHtmlTable(_ssqlRstm));
-//			}
-//		}
-//
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()
@@ -188,7 +216,8 @@ public class AseTopCmCachedProcs extends AseAbstract
 
 	private void createTopCmCachedProcs(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+//		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+		int topRows = getTopRows();
 
 		// in some versions (ASE 16.0 SP2 I have observed this in) seems to (in some cases) keep the old counter values even if we compile a new PlanID
 		// So DO NOT TRUST NEWLY created PlanID's 
@@ -206,6 +235,8 @@ public class AseTopCmCachedProcs extends AseAbstract
 				    + "from [CmCachedProcs_diff] \n"
 				    + "where [CmNewDiffRateRow] = 1 \n"
 				    + "  and [ExecutionCount] > " + executionCountThreshold + " \n"
+				    + "  and [ObjectName] NOT like '*ss%' \n" // *ss = Statement Cache
+				    + "  and [ObjectName] NOT like '*sq%' \n" // *sq = Dynamic SQL
 					+ getReportPeriodSqlWhere()
 				    + "";
 			sql = conn.quotifySqlString(sql);
@@ -284,11 +315,18 @@ public class AseTopCmCachedProcs extends AseAbstract
 			ObjectName = "    ,max([ObjectName])        as [ObjectName] \n";
 			groupBy    = "group by [DBName], [Hashkey2] \n"; 
 		}
-		
+
+		//----------------------
+//		FIX // "max" (ExecutionCount, RequestCntDiff)
+		//----------------------
+		// case when [ExecutionCount] > [RequestCntDiff] then [ExecutionCount] else [RequestCntDiff] end
+		// - move a bunch of columns "to the end", so we have it in the same "order" as "top [SQL Capture] SLOW ..."
+
 		String sql = getCmDiffColumnsAsSqlComment("CmCachedProcs")
 			    + "select top " + topRows + " \n"
 			    + "     [DBName] \n"
 			    + ObjectName
+			    + "    ,cast('' as varchar(10))  as [txt] \n"
 			    + "    ,cast('' as varchar(255)) as [Remark] \n"
 			    + "    ,count(distinct [PlanID]) as [PlanID_count] \n"
 			    + "    ,count(*)                 as [samples_count] \n"
@@ -301,16 +339,21 @@ public class AseTopCmCachedProcs extends AseAbstract
 			    + "    ,max([CompileDate])       as [CompileDate_max] \n"
 			    + "    \n"
 			    + "    ,max([MemUsageKB])        as [MemUsageKB_max] \n"
+			    + "    ,cast('' as varchar(512)) as [RequestCntDiff__chart] \n"
 			    + "    ,sum([RequestCntDiff])    as [RequestCntDiff_sum] \n"
 			    + "    ,sum([TempdbRemapCnt])    as [TempdbRemapCnt_sum] \n"
+			    + ( StringUtil.hasValue(ExecutionCount_sum) ? "   ,cast('' as varchar(512))     as [ExecutionCount__chart] \n" : "")
 			    + ExecutionCount_sum
 			    + "    \n"
+			    + ( StringUtil.hasValue(CPUTime_sum) ? "   ,cast('' as varchar(512))     as [CpuTime__chart] \n" : "")
 			    + CPUTime_sum
 			    + AvgCPUTime_max
 			    + ExecutionTime_sum
 			    + AvgExecutionTime_max
+			    + ( StringUtil.hasValue(PhysicalReads_sum) ? "   ,cast('' as varchar(512))     as [PhysicalReads__chart] \n" : "")
 			    + PhysicalReads_sum
 			    + AvgPhysicalReads_max
+			    + ( StringUtil.hasValue(LogicalReads_sum) ? "   ,cast('' as varchar(512))     as [LogicalReads__chart] \n" : "")
 			    + LogicalReads_sum
 			    + AvgLogicalReads_max
 			    + PhysicalWrites_sum
@@ -322,6 +365,7 @@ public class AseTopCmCachedProcs extends AseAbstract
 			    + "where " + whereFilter + " \n"
 			    + whereFilter_skipNewDiffRateRows
 			    + "  and [ObjectName] NOT like '*ss%' -- If we do NOT want statement cache entries.  *ss = Statement Cache, *sq = Dynamic SQL \n"
+			    + "  and [ObjectName] NOT like '*sq%' -- If we do NOT want statement cache entries.  *ss = Statement Cache, *sq = Dynamic SQL \n"
 				+ getReportPeriodSqlWhere()
 			    + groupBy
 			    + " \n"
@@ -345,7 +389,100 @@ public class AseTopCmCachedProcs extends AseAbstract
 			// Check if rows looks strange (or validate) rows
 			// For example if "CPUTime_sum" is above 24 hours (or the sample period), should we mark this entry as "suspect"...
 			validateEntries();
-			
+
+			// Mini Chart on "RequestCntDiff__chart"
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("RequestCntDiff__chart")
+					.setHtmlWhereKeyColumnName   ("DBName, ObjectName")
+					.setDbmsTableName            ("CmCachedProcs_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("RequestCntDiff")   
+					.setDbmsWhereKeyColumnName   ("DBName, ObjectName")
+					.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
+//					.setSparklineTooltipPostfix  ("SUM 'RequestCntDiff' in below time period")
+					.validate()));
+
+			// Mini Chart on "ExecutionCount__chart"
+			if (_shortRstm.hasColumn("ExecutionCount_sum") && _shortRstm.hasColumn("ExecutionCount__chart"))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create()
+						.setHtmlChartColumnName      ("ExecutionCount__chart")
+						.setHtmlWhereKeyColumnName   ("DBName, ObjectName")
+						.setDbmsTableName            ("CmCachedProcs_diff")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("ExecutionCount")   
+						.setDbmsWhereKeyColumnName   ("DBName, ObjectName")
+						.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
+//						.setSparklineTooltipPostfix  ("SUM 'RequestCntDiff' in below time period")
+						.validate()));
+			}
+
+			// Mini Chart on "CPU Time"
+			if (_shortRstm.hasColumn("CPUTime_sum") && _shortRstm.hasColumn("CpuTime__chart"))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create()
+						.setHtmlChartColumnName      ("CpuTime__chart")
+						.setHtmlWhereKeyColumnName   ("DBName, ObjectName")
+						.setDbmsTableName            ("CmCachedProcs_diff")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("CPUTime")   
+						.setDbmsWhereKeyColumnName   ("DBName, ObjectName")
+						.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
+//						.setSparklineTooltipPostfix  ("SUM 'CPU Time (ms)' in below time period")
+						.validate()));
+			}
+
+			// Mini Chart on "PhysicalReads__chart"
+			if (_shortRstm.hasColumn("PhysicalReads_sum") && _shortRstm.hasColumn("PhysicalReads__chart"))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create()
+						.setHtmlChartColumnName      ("PhysicalReads__chart")
+						.setHtmlWhereKeyColumnName   ("DBName, ObjectName")
+						.setDbmsTableName            ("CmCachedProcs_diff")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("PhysicalReads")   
+						.setDbmsWhereKeyColumnName   ("DBName, ObjectName")
+						.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
+//						.setSparklineTooltipPostfix  ("SUM 'PhysicalReads' in ms at below time period")
+						.validate()));
+			}
+
+			// Mini Chart on "LogicalReads__chart"
+			if (_shortRstm.hasColumn("LogicalReads_sum") && _shortRstm.hasColumn("LogicalReads__chart"))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create()
+						.setHtmlChartColumnName      ("LogicalReads__chart")
+						.setHtmlWhereKeyColumnName   ("DBName, ObjectName")
+						.setDbmsTableName            ("CmCachedProcs_diff")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("LogicalReads")   
+						.setDbmsWhereKeyColumnName   ("DBName, ObjectName")
+						.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
+//						.setSparklineTooltipPostfix  ("SUM 'LogicalReads' in ms at below time period")
+						.validate()));
+			}
+
+			//--------------------------------------------------------------------------------------
+			// get Executed SQL Statements from the SQL Capture ...
+			//--------------------------------------------------------------------------------------
+			if (_shortRstm.getRowCount() > 0)
+			{
+				for (int r=0; r<_shortRstm.getRowCount(); r++)
+				{
+					// Get Actual Executed SQL Text for current 'DBName, ProcName'
+					Map<String, Object> whereColValMap = new LinkedHashMap<>();
+					whereColValMap.put("DBName"    , _shortRstm.getValueAsString (r, "DBName"));
+					whereColValMap.put("ProcName"  , _shortRstm.getValueAsString (r, "ObjectName"));  // 'ProcName' in [MonSqlCapStatements] but 'ObjectName' in RSTM
+
+					_keyToExecutedSql = getSqlCapExecutedSqlText(_keyToExecutedSql, conn, true, whereColValMap);
+				}
+			}
+
 			// Get SQL-Text for StatementCache entries
 			Set<String> stmntCacheObjects = getStatementCacheObjects(_shortRstm, "ObjectName");
 			if (stmntCacheObjects != null && ! stmntCacheObjects.isEmpty() )

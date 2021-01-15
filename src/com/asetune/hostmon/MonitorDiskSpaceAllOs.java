@@ -22,6 +22,7 @@ package com.asetune.hostmon;
 
 import com.asetune.ssh.SshConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 
 public class MonitorDiskSpaceAllOs
 extends HostMonitor
@@ -47,7 +48,27 @@ extends HostMonitor
 	public String getCommand()
 	{
 		String cmd = super.getCommand();
-		return cmd != null ? cmd : "df -kP | sed '1d'";
+		
+		if (StringUtil.hasValue(cmd))
+			return cmd;
+		
+		if (isConnectedToVendor(OsVendor.Windows))
+		{
+//			return "powershell \"gwmi win32_logicaldisk | Format-Table -HideTableHeaders DeviceId, MediaType, @{n='SizeKb'; e={[math]::Round($_.Size/1KB,2)}} ,@{n='UsedKb'; e={[math]::Round(($_.Size-$_.FreeSpace)/1KB)}}, @{n='AvailableKb';e={[math]::Round($_.FreeSpace/1KB,2)}} ,@{n='UsedPct'; e={[math]::Round(($_.Size-$_.FreeSpace)/$_.Size*100.0,2)}}, VolumeName\" ";
+			return "powershell \"gwmi win32_logicaldisk | Format-Table -HideTableHeaders"
+					+ " DeviceId"
+					+ ", @{n='SizeKb'; e={[math]::Round($_.Size/1KB,2)}}"
+					+ ", @{n='UsedKb'; e={[math]::Round(($_.Size-$_.FreeSpace)/1KB)}}"
+					+ ", @{n='AvailableKb';e={[math]::Round($_.FreeSpace/1KB,2)}}"
+					+ ", @{n='UsedPct'; e={[math]::Round(($_.Size-$_.FreeSpace)/$_.Size*100.0,2)}}"
+//					+ ", VolumeName"
+					+ ", DeviceId" // use DeviceId both as 'FileSystem' and 'MountedOn'
+					+ "\" ";
+		}
+		else
+		{
+			return "df -kP | sed '1d'";
+		}
 	}
 
 //	gorans@gorans-ub2:/etc/postgresql/9.5/main$ df -k

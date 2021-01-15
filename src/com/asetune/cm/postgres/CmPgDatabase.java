@@ -30,6 +30,8 @@ import java.util.List;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
@@ -59,7 +61,7 @@ import com.asetune.utils.TimeUtils;
 public class CmPgDatabase
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmPgActivity.class);
+	private static Logger        _logger          = Logger.getLogger(CmPgDatabase.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmPgDatabase.class.getSimpleName();
@@ -800,6 +802,8 @@ extends CountersModel
 		if ( ! AlarmHandler.hasInstance() )
 			return;
 
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
+
 		CountersModel cm = this;
 
 		//-------------------------------------------------------
@@ -816,6 +820,10 @@ extends CountersModel
 				double pctUsed = 100.0 - ((sumNumbackends / srvCfgMaxConnections) * 100.0);
 				
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_FreeConnections, DEFAULT_alarm_FreeConnections);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", numFree='"+numFree+"'.");
+
 				if (numFree < threshold)
 				{
 					AlarmHandler.getInstance().addAlarm( 

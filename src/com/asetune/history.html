@@ -37,6 +37,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>new: AlarmEventClientErrorMsgRate       -- If we receive "bursts" of Client Error Messages (more than 10 per second), raise alarm.</LI>
 				<LI>new: AlarmEventSqlCaptureOldData        -- If SqlCapture has "died" for some reason (not updating a timestamp), then raise alarm.</LI>
 				<LI>new: AlarmEventPerfCounterWarning       -- (SQL-Server) - If a PerfCounter value is "out of whack"...</LI>
+				<LI>new: AlarmEventLongRunningStatement     -- If a Statement has been running for more than X seconds/minutes/hours</LI>
 
 				<LI>Changed: AlarmEventConfigResourceIsLow       -- added "raiseDelay", which is used by 'Statement Cache Hit Rate', and the default was set to 5 minutes below configured value before raising alarm.</LI>
 				<LI>Changed: AlarmEventFullTranLog               -- alwaysSend() is now set to true, so even if we do not "subscribe" for alarms on this server, we will still get message, just like SrvDown </LI>
@@ -47,11 +48,39 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>new: Menu -> Tools -> 'Create Daily Summary Report...' Opens a dialog where you can produce a Daily Summary Report on any recording database.</LI>
 		<LI>Focusable Tooltip is now resizable in a better way (all edges can be used)</LI>
 		<LI>new cmdline interface 'dsr.bat' or 'dsr.sh' for Daily Summary Report</LI>
+		<LI>Changed all CM's for Alarm Debugging to print threshold values earlier</LI>
+		<LI>bugfix: Filter Field didn't allow [] in the column names (the bug was introduced when changing version of JSqlParser)</LI>
+
+		<LI>OS Monitoring now also handles Windows, via a SHH Connection executing typeperf (not a OpenSSH Server needs to be installed on the Windows Server, supported modules
+			<UL>
+				<LI>IO Stat, using:        <CODE>typeperf -si 2 "\LogicalDisk(*)\*"</CODE></LI>
+				<LI>MP Stat, using:        <CODE>typeperf -si 2 "\Processor(*)\*"</CODE></LI>
+				<LI>OS Load, using:        <CODE>typeperf -si 2 "\System\*"</CODE> and also adding column 'nproc' and columns '*loadAverage*' load average is calculated based on Windows 'Processor Queue Length' using same algorithm (exponentially-damped moving averages) as Linux</LI>
+				<LI>OS Memory Info, using: <CODE>typeperf -si 2 "\Paging File(_Total)\*" "\Memory\*"</CODE></LI>
+				<LI>Network Stat, using:   <CODE>typeperf -si 2 "\Network Interface(*)\*"</CODE></LI>
+				<LI>OS Disk Space Usage, using: <CODE>powershell "gwmi win32_logicaldisk | Format-Table -HideTableHeaders DeviceId, SizeKb, UsedKb, AvailableKb, UsedPct, DeviceId"</CODE></LI>
+				<LI>For the above Host Monitoring CM's; Existing graphs (the same names as for Linux/Unix monitoring) is using the above, but some unique for Windows has been added</LI>
+				<LI>For Windows there are 3 extra graphs: "meminfo: Paging or Swap Usage", "meminfo: Paging File Usage", and "uptime: Windows Processor Queue Length"</LI>
+			</UL>
+		</LI>
+
+		<LI>OS Monitoring improvement for AIX 7.2 (where some columns in output for 'mpstat' and 'vmstat' was changed, and 'iostat' had a faulty column id)</LI>
+
+		<LI>Daily Summary Report Changes
+			<UL>
+				<LI>Reports split in 2. One short version (which will be the main content for mails), and one long version (it will be attached in mails)</LI>
+				<LI>A new layout using bootsrap look and feel</LI>
+				<LI>All DbxTune Collectors: new section: iostat overview</LI>
+				<LI>Many of the statistical values now also has a "sparkline" (a mini chart) to represent *when* the measurement happened in time (was it during evening, night, morning or spread over the whole day)</LI>
+			</UL>
+		</LI>
+
 		<LI>
 			<b>Upgraded some of the third party libraries/jars</b><br>
 			<ul>
-	 			<li>To version 1.5.0          Component: JfreeChart</li>
+	 			<li>To version 1.5.1          Component: JfreeChart</li>
 	 			<li>To version 3.2            Component: jsqlparser</li>
+	 			<li>To version 19.8           Component: Oracle JDBC Driver</li>
 			</ul>
 		</LI>
 	</UL>
@@ -89,6 +118,31 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>New column: 'errorMsgCountMap'       -- A JSON String, which contains {MsgNumber=count}</li>
 			<li>New column: 'inProcNameNullCount'    -- diff calculated: Estimated SQL Statements requests executed where ProcedureId was not 0, but the ProcedureName could NOT be found</li>
 			<li>New column: 'inProcNameNullCountAbs' -- absolute values: Estimated SQL Statements requests executed where ProcedureId was not 0, but the ProcedureName could NOT be found</li>
+			<li>changed default for CmSqlStatement.alarm.system.if.errorCount.gt from 10 to 20</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmDataCaches - tab: Caches</b><br>
+		<ul>
+			<li>bug fix: 'PhysicalReads' + 'APFReads' sometimes caused arithmic overflow. Converted data type to bigint before adding them</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmOpenDatabases - tab: Databases</b><br>
+		<ul>
+			<li>bug fix: LowDbFreeSpaceInMb and LowLogFreeSpaceInMb sometimes didn't fire correctly</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmProcessActivity - tab: Processes</b><br>
+		<ul>
+			<li>raise AlarmEventLongRunningStatement when a statement has been executed for more than 3 hours (by default), 'skip' can be done on: dbname, login, cmd and tranName</li>
 		</ul>
 		</LI>
 
@@ -100,14 +154,29 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		</ul>
 		</LI>
 
+		<!-- ~~~~~ SQL Capture ~~~~~ -->
+		<LI>
+		<b>SQL Capture</b><br>
+		<ul>
+			<li>Get XML Plan, now has it's own connection, since it sometimes collided with the SQL Capture connection, which caused the Capture thread to freeze</li>
+			<li>now also tries to capture "active SPID's" every second (and potentially) wait statistics on those... which will be visible in the Daily Reports</li>
+			<li>also the internal storage table(s) column layout was redone</li>
+			<li>Normalizations of SQL Statements was made better, and also a "rewrite" functionality was made so we can better support SQL Syntax "not supported" by JsqlParser</li>
+		</ul>
+		</LI>
+
 		<!-- ~~~~~ Daily Report ~~~~~ -->
 		<LI>
 		<b>Daily Report</b><br>
 		<ul>
-			<li>new: AseWaitStats             -- Wait Statistics for the full day (origin: CmSysWaits / monSysWaits)</li>
-			<li>new: AseCmSqlStatement        -- SQL Statement Execution Statistics (origin: CmSqlStatement / monSysStatement)</li>
-			<li>new: AseTopSlowNormalizedSql  -- Top [SQL Captured] SLOW Normalized SQL Statements (order by: sumCpuTime, origin: monSysStatement)</li>
-			<li>new: AseTopSlowDynAndStmnt    -- Top [SQL Captured] SLOW DynamicSQL and StatementCache Calls (order by: sumCpuTime,  origin: monSysStatement)</li>
+			<li>new: AseWaitStats                    -- Wait Statistics for the full day (origin: CmSysWaits / monSysWaits)</li>
+			<li>new: AseCmSqlStatement               -- SQL Statement Execution Statistics (origin: CmSqlStatement / monSysStatement)</li>
+			<li>new: AseTopSlowNormalizedSql         -- Top [SQL Captured] SLOW Normalized SQL Statements (order by: sumCpuTime, origin: monSysStatement)</li>
+			<li>new: AseTopSlowDynAndStmnt           -- Top [SQL Captured] SLOW DynamicSQL and StatementCache Calls (order by: sumCpuTime,  origin: monSysStatement)</li>
+			<li>new: AseTopSlowNormalizedSqlWaits    -- Top [SQL Captured] - WaitTime - SLOW Normalized SQL Statements</li>
+			<li>new: AseTopCmObjectActivityLockWaits -- Top TABLE/INDEX Blocking Lock Wait Statistics</li>
+			<li>new: AseCmDeviceIo                   -- Device IO, (order by: Name, origin: CmDeviceIo_diff / monDeviceIO)</li>
+			<li>change in 'error info', only show first 100 SQL Statements for each error number</li>
 		</ul>
 		</LI>
 
@@ -119,7 +188,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>IqTune - Sybase/SAP IQ (The Column Storage Database) </H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -128,7 +197,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>RsTune - Sybase/SAP Replication Server</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -137,7 +206,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>RaxTune - Sybase/SAP Replication Agent X</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -146,7 +215,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>HanaTune - SAP HANA</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -155,7 +224,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>OracleTune - Oracle Database</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>new: CmExecutionTime - Execution times for individual Oracle Modules using 'V$SYS_TIME_MODEL'</LI>
+		<LI>new: CmSqlStats - shows Oracle SQL Exec/CPU/BUFFER_GETS Statistics using 'V$SQLSTATS'</LI>
+		<LI>PCS: Changed how the JDBC data type information was interpreted, some INTEGER was changed into BIGINT (this is only valid if you are recording data)</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -164,31 +235,47 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>SqlServerTune - Microsoft SQL-Server</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>Added CM: CmIndexMissing - Take information from 'dm_db_missing_index_*' and display them, in a prioritized way... NOTE: as always take the recommendations with 'a grain of salt'</LI>
-		<LI>Added CM: CmIndexUnused - Unused Indexes - ordered by 'user_updates desc' so the undex with most updates will be "first"</LI>
-		<LI>Added CM: CmTableSize - A cheaper version of 'CmIndexPhysical using dm_db_index_physical_stats', this one is using dm_db_partition_stats and is *much* cheaper...</LI>
-		<LI>All (hopefully) CM's now have a "DB-Iterator" which get's system information from sys.objects, sys.schemas, sys.indexes... instead of using the built-in functions object_name(), object_schema_name() etc... Because the BIF will be blocked on many instances</LI>
-		<LI>CmActiveStatements - For blocking locks (marked as red background) - only the root blocker(s) are marked. logic (ImBlockingOtherSessionIds!="" and ImBlockedBySessionId=0)</LI>
-		<LI>CmDatabases - Added 'OldestTranName' and 'OldestTranId' - Now shows the transaction name and id (watch out for OldestTranName 'implicit_transaction', which indicates that AotoCommit is FALSE, which introduces more blocking locks)</LI>
-		<LI>CmPerfCounters - new graph 'Buffer Cache Data Size in MB'</LI>
-		<LI>CmPerfCounters - new alarm: 'FreeListStalls' - Buffer Cache is probably to small... Waiting for memory to become available before a page can be added into the buffer pool.</LI>
-		<LI>CmSessions - Added column 'BlockingOtherSpids' - This holds information about what SPID(s) I'm currently blocking. Root blocker(s) are marked in red. logic (BlockingOtherSpids!="" and blocking_session_id=0)</LI>
-		<LI>CmSessions - Added column 'tat_transaction_id', 'transaction_type', 'transaction_name' , 'transaction_begin_time' (watch out for transaction_name 'implicit_transaction', which indicates that AotoCommit is FALSE, which introduces more blocking locks)</LI>
-		<LI>CmSpidWait - added column 'WaitClass', which tries to group 'wait_type' in groups ... this according to https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15</LI>
-		<LI>CmTempdbSpidUsage - Compleatly rewritten, hopefully this one will work better</LI>
-		<LI>CmTempdbUsage - added 2 new graphs 'Tempdb Usage by Object Type, in MB, {All|Subset}' -- Shows "Version Store", "Internal Objects", "User Objects", "Mixed Extents", "Allocated Space", "Free Space", "Total Space"</LI>
-		<LI>CmWaitStats - added column 'WaitClass', which tries to group 'wait_type' in groups ... this according to https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15</LI>
-		<LI>CmWaitStats - updated the list of 'wait_type' to skip (hopefully up to 2019)</LI>
-		<LI>CmWho - Added column 'BlockingOtherSpids' - This holds information about what SPID(s) I'm currently blocking. Root blocker(s) are marked in red. logic (BlockingOtherSpids!="" and blocked=0)</LI>
+		<LI>Added CM: <b>CmIndexMissing </b> - Take information from 'dm_db_missing_index_*' and display them, in a prioritized way... NOTE: as always take the recommendations with 'a grain of salt'</LI>
+		<LI>Added CM: <b>CmIndexUnused  </b> - Unused Indexes - ordered by 'user_updates desc' so the undex with most updates will be "first"</LI>
+		<LI>Added CM: <b>CmTableSize    </b> - A cheaper version of 'CmIndexPhysical using dm_db_index_physical_stats', this one is using dm_db_partition_stats and is *much* cheaper...</LI>
+		<LI>Added CM: <b>CmMemoryClerks </b> - Information about the memory clerks</LI>
+		<LI>Added CM: <b>CmMemoryGrants </b> - Information about SPID's that requests memory grants</LI>
+		<LI><b>CmActiveStatements </b> - For blocking locks (marked as red background) - only the root blocker(s) are marked. logic (ImBlockingOtherSessionIds!="" and ImBlockedBySessionId=0)</LI>
+		<LI><b>CmActiveStatements </b> - added column 'dop - Degree Of Parallelism' if version is above 2016</LI>
+		<LI><b>CmActiveStatements </b> - added column 'LiveQueryPlan' and 'HasLiveQueryplan', and an option 'Get Live Query Plan'. It's populated if version 1016, SP1 or above</LI>
+		<LI><b>CmDatabases        </b> - Added 'OldestTranName' and 'OldestTranId' - Now shows the transaction name and id (watch out for OldestTranName 'implicit_transaction', which indicates that AotoCommit is FALSE, which introduces more blocking locks)</LI>
+		<LI><b>CmDatabases        </b> - fixed bug: LowDbFreeSpaceInMb and LowLogFreeSpaceInMb sometimes didn't fire correctly</LI>
+		<LI><b>CmPerfCounters     </b> - new graph 'Buffer Cache Data Size in MB'</LI>
+		<LI><b>CmPerfCounters     </b> - new alarm: 'FreeListStalls' - Buffer Cache is probably to small... Waiting for memory to become available before a page can be added into the buffer pool.</LI>
+		<LI><b>CmPerfCounters     </b> - added graph 'Memory Manager', with a line for every entry where object_name is ':Memory Manager'</LI>
+		<LI><b>CmSchedulers       </b> - added 'diff' calculations for columns 'total_cpu_usage_ms', 'total_cpu_idle_capped_ms' and 'total_scheduler_delay_ms'</LI>
+		<LI><b>CmSessions         </b> - Added column 'BlockingOtherSpids' - This holds information about what SPID(s) I'm currently blocking. Root blocker(s) are marked in red. logic (BlockingOtherSpids!="" and blocking_session_id=0)</LI>
+		<LI><b>CmSessions         </b> - Added column 'tat_transaction_id', 'transaction_type', 'transaction_name' , 'transaction_begin_time' (watch out for transaction_name 'implicit_transaction', which indicates that AotoCommit is FALSE, which introduces more blocking locks)</LI>
+		<LI><b>CmSessions         </b> - added column 'mars_count' to check how many MARS entries a connection are using.</LI>
+		<LI><b>CmSessions         </b> - added column 'ExecTimeInMs' and raise AlarmEventLongRunningStatement when a statement has been executed for more than 3 hours (by defualt), 'skip' can be done on: dbname, login, cmd and tranName</LI>
+		<LI><b>CmSessions         </b> - changed 'transaction_isolation_level' from a number to a string description (with the number appended)</LI>
+		<LI><b>CmSessions         </b> - bug fix: when connections are using MARS, summarize all connection counters 'num_reads' and 'num_writes' for MARS sessions.</LI>
+		<LI><b>CmSpidWait         </b> - added column 'WaitClass', which tries to group 'wait_type' in groups ... this according to https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15</LI>
+		<LI><b>CmTempdbSpidUsage  </b> - Completely rewritten, hopefully this one will work better</LI>
+		<LI><b>CmTempdbUsage      </b> - added 2 new graphs 'Tempdb Usage by Object Type, in MB, {All|Subset}' -- Shows "Version Store", "Internal Objects", "User Objects", "Mixed Extents", "Allocated Space", "Free Space", "Total Space"</LI>
+		<LI><b>CmWaitStats        </b> - added column 'WaitClass', which tries to group 'wait_type' in groups ... this according to https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15</LI>
+		<LI><b>CmWaitStats        </b> - updated the list of 'wait_type' to skip (hopefully up to 2019)</LI>
+		<LI><b>CmWho              </b> - Added column 'BlockingOtherSpids' - This holds information about what SPID(s) I'm currently blocking. Root blocker(s) are marked in red. logic (BlockingOtherSpids!="" and blocked=0)</LI>
 
+		<LI>All (hopefully) CM's now have a "DB-Iterator" which get's system information from sys.objects, sys.schemas, sys.indexes... instead of using the built-in functions object_name(), object_schema_name() etc... Because the BIF will be blocked on many instances</LI>
+		<LI>Tooltip changes: if any cell starts with '&lt;ShowPlanXML xmlns=' show the special tooltip which offers to open the plan in various ways.</LI>
+		<LI>Get SQL-Server configurations: to get active traceflags use 'DBCC TRACESTATUS(-1)' instead of 'DBCC TRACESTATUS'</LI>
+		<LI>bug fix: to reset internal SQL-Server version number on disconnect.</LI>
+		
 		<!-- ~~~~~ Daily Report ~~~~~ -->
 		<LI>
 		<b>Daily Report</b><br>
 		<ul>
-			<li>new: SqlServerWaitStats       - Wait Statistics for the full day (origin: CmWaitStat / dm_os_wait_stats)</li>
-			<li>new: SqlServerTopCmTableSize  - Top TABLE Size (order by: SizeInMb, origin: CmTableSize/dm_db_partition_stats)</li>
-			<li>new: SqlServerMissingIndexes  - Top Missing Indexes (origin: CmIndexMissing)</li>
-			<li>new: SqlServerUnusedIndexes   - Top Unused Indexes (origin: CmIndexUnused)</li>
+			<li>new: SqlServerWaitStats       -- Wait Statistics for the full day (origin: CmWaitStat / dm_os_wait_stats)</li>
+			<li>new: SqlServerTopCmTableSize  -- Top TABLE Size (order by: SizeInMb, origin: CmTableSize/dm_db_partition_stats)</li>
+			<li>new: SqlServerMissingIndexes  -- Top Missing Indexes (origin: CmIndexMissing)</li>
+			<li>new: SqlServerUnusedIndexes   -- Top Unused Indexes (origin: CmIndexUnused)</li>
+			<li>new: SqlServerCmDeviceIo      -- DB File IO, (order by: database_id, file_id  origin: CmDeviceIo_diff / dm_io_virtual_file_stats,master_files)</li>
 		</ul>
 		</LI>
 	</UL>
@@ -199,7 +286,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>PostgresTune - PostgreSQL</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
+		<LI>Change how we collect current time from: CURRENT_TIMESTAMP to CLOCK_TIMESTAMP()</LI>
 		<LI>CmPgStatements - Now works with Postgres 9.3 (and possibly versions below that), where I "fake" the 'queryid' by taking a md5 checksum (first 16 chars) and converting that to an bigint</LI>
+		<LI>CmPgActivity - added column 'StatementExecInSec', and raise AlarmEventLongRunningStatement when a statement has been executed for more than 3 hours (by defualt), 'skip' can be done on: dbname, login, cmd and tranName</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -217,7 +306,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>Db2Tune - IBM DB2 LWU</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -233,6 +322,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>chart utility - Added GANTT chart type in 'Create Graph Dialog', and also 'group by column' </LI>
 		<LI>Added option 'rtrim' - to Right trim String values, previously we only had "full trim", which trimmed both left and right side of the string.</LI>
 		<LI>AutoCompletion - Do not need a table alias for simple select, insert, update delete statements. Now you can simply do 'select &lt;ctrl-space&gt; from tabname where &lt;ctrl-space&gt;' to get columns that is part of the table...</LI>
+		<LI>'statistics io' summary table... for SQL-Server 2019 the output was changed (with more data/columns)</LI>
+		<LI>Tooltip changes: if any cell starts with '&lt;ShowPlanXML xmlns=' show the special tooltip which offers to open the plan in various ways.</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -241,7 +332,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>Log Tail Tool</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 </UL>
@@ -761,7 +852,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>RaxTune - Sybase/SAP Replication Agent X</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -770,7 +861,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>HanaTune - SAP HANA</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -986,7 +1077,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>Log Tail Tool</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 </UL>
@@ -1486,7 +1577,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>RaxTune - Sybase/SAP Replication Agent X</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -1495,7 +1586,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>HanaTune - SAP HANA</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -1690,7 +1781,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>Log Tail Tool</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 </UL>
@@ -1976,7 +2067,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>RaxTune - Sybase/SAP Replication Agent X</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -1985,7 +2076,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>HanaTune - SAP HANA</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -1994,7 +2085,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>OracleTune - Oracle Database</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

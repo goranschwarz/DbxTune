@@ -21,8 +21,10 @@
 package com.asetune.pcs.report;
 
 import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
+import com.asetune.pcs.report.content.os.OsIoStatOverview;
 import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
 import com.asetune.pcs.report.content.os.OsSpaceUsageOverview;
+import com.asetune.pcs.report.content.sqlserver.SqlServerCmDeviceIo;
 import com.asetune.pcs.report.content.sqlserver.SqlServerConfiguration;
 import com.asetune.pcs.report.content.sqlserver.SqlServerCpuUsageOverview;
 import com.asetune.pcs.report.content.sqlserver.SqlServerDbSize;
@@ -56,8 +58,10 @@ extends DailySummaryReportDefault
 		//addReportEntry( new SqlServerTopSlowProcCalls(this)     );
 
 		// Disk IO Activity
+		addReportEntry( new SqlServerCmDeviceIo(this)         );
 		addReportEntry( new SqlServerSlowCmDeviceIo(this)     );
 		addReportEntry( new OsSpaceUsageOverview(this)        );
+		addReportEntry( new OsIoStatOverview(this)            );
 		addReportEntry( new OsIoStatSlowIo(this)              );
 
 		// SQL: Accessed Tables

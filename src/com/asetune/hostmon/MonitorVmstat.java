@@ -92,7 +92,7 @@ extends HostMonitor
 		}
 		else
 		{
-			throw new Exception("The Unix system '"+osname+"', is not supported by the module 'MonitorVmstat' for the moment.");
+			throw new Exception("The OS Name '"+osname+"', is not supported by the module 'MonitorVmstat' for the moment.");
 		}
 
 		mon.setConnection(conn);

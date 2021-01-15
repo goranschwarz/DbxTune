@@ -22,6 +22,7 @@
 package com.asetune.cm.sqlserver;
 
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -29,13 +30,21 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.AlarmHelper;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEventLongRunningStatement;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.sqlserver.gui.CmSessionsPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
 public class CmSessions
@@ -352,11 +361,38 @@ extends CountersModel
 //			    + "";
 		
 		String sql = ""
+			    + "-- When MARS is enabled we will have several records in dm_exec_connections, so this just summarizes all entries for: num_reads & num_writes \n"
+			    + "-- see: https://sqljudo.wordpress.com/2014/03/07/cardinality-of-dm_exec_sessions-and-dm_exec_connections/ \n"
+			    + ";WITH ec as ( \n"
+			    + "	select \n"
+			    + "           session_id             = max(session_id) \n"
+			    + "          ,mars_count             = sum(CASE WHEN net_transport = 'Session' THEN 1 ELSE 0 END) \n"
+			    + "          ,connect_time           = min(connect_time) \n"
+			    + "          ,num_reads              = sum(num_reads) \n"
+			    + "          ,num_writes             = sum(num_writes) \n"
+			    + "          ,last_read              = max(last_read) \n"
+			    + "          ,last_write             = max(last_write) \n"
+			    + "          ,net_packet_size        = max(net_packet_size) \n"
+			    + "          ,net_transport          = max(CASE WHEN net_transport = 'Session' THEN '' ELSE net_transport END) \n"
+			    + "          ,protocol_type          = max(protocol_type) \n"
+			    + "          ,encrypt_option         = max(encrypt_option) \n"
+			    + "          ,auth_scheme            = max(auth_scheme) \n"
+			    + "          ,node_affinity          = max(node_affinity) \n"
+			    + "          ,client_net_address     = max(client_net_address) \n"
+			    + "          ,client_tcp_port        = max(client_tcp_port) \n"
+			    + "          ,local_net_address      = max(local_net_address) \n"
+			    + "          ,local_tcp_port         = max(local_tcp_port) \n"
+			    + "          ,most_recent_sql_handle = max(most_recent_sql_handle) \n"
+			    + "	from sys.dm_exec_connections \n"
+			    + "	group by session_id \n"
+			    + ") \n"
+			    + "---------------------------------------\n"
 			    + "select \n"
 			    + "     ec.session_id \n"
 			    + "    ,worker_count = (select count(*) from sys.sysprocesses where spid = ec.session_id) - 1 \n"
 			    + er__dop
 			    + er__parallel_worker_count
+			    + "    ,ec.mars_count \n"
 			    + "    ,er.blocking_session_id --   -2 = The blocking resource is owned by an orphaned distributed transaction, -3 = The blocking resource is owned by a deferred recovery transaction, -4 = Session ID of the blocking latch owner could not be determined at this time because of internal latch state transitions. \n"
 			    + "    ,BlockingOtherSpids=convert(varchar(512),'') \n"
 			    + "    ,es.login_name \n"
@@ -384,6 +420,7 @@ extends CountersModel
 			    + "    ,exec_status     = er.status        --- can probably be found somewhere else -- Background, Running, Runnable, Sleeping, Suspended \n"
 			    + "    ,er.command       -- \n"
 			    + "    ,exec_start_time = er.start_time \n"
+			    + "    ,ExecTimeInMs    = CASE WHEN datediff(day, er.start_time, getdate()) >= 24 THEN -1 ELSE  datediff(ms, er.start_time, getdate()) END \n"
 			    + "    ,es.cpu_time                       -- DIFF CALC \n"
 			    + "    ,es.memory_usage                   -- DIFF CALC ?????? (or add another column so we can see both) \n"
 			    + "    ,es.total_scheduled_time           -- DIFF \n"
@@ -445,7 +482,15 @@ extends CountersModel
 			    + "    ,es.nt_domain \n"
 			    + "    ,es.nt_user_name \n"
 			    + "--    ,es.total_elapsed_time \n"
-			    + "    ,es.transaction_isolation_level   -- 0=Unspecified, 1=ReadUncommitted, 2=ReadCommitted, 3=RepeatableRead, 4=Serializable, 5=Snapshot \n"
+//			    + "    ,es.transaction_isolation_level   -- 0=Unspecified, 1=ReadUncommitted, 2=ReadCommitted, 3=RepeatableRead, 4=Serializable, 5=Snapshot \n"
+				+ "    ,transaction_isolation_level = CASE WHEN es.transaction_isolation_level = 0 THEN 'Unspecified'     + ' - ' + CAST(es.transaction_isolation_level as varchar(10)) \n"
+				+ "                                        WHEN es.transaction_isolation_level = 1 THEN 'ReadUncommitted' + ' - ' + CAST(es.transaction_isolation_level as varchar(10)) \n" 
+				+ "                                        WHEN es.transaction_isolation_level = 2 THEN 'ReadCommitted'   + ' - ' + CAST(es.transaction_isolation_level as varchar(10)) \n"
+				+ "                                        WHEN es.transaction_isolation_level = 3 THEN 'RepeatableRead'  + ' - ' + CAST(es.transaction_isolation_level as varchar(10)) \n"
+				+ "                                        WHEN es.transaction_isolation_level = 4 THEN 'Serializable'    + ' - ' + CAST(es.transaction_isolation_level as varchar(10)) \n"
+				+ "                                        WHEN es.transaction_isolation_level = 5 THEN 'Snapshot'        + ' - ' + CAST(es.transaction_isolation_level as varchar(10)) \n"
+				+ "                                        ELSE                                         'UNKNOWN'         + ' - ' + CAST(es.transaction_isolation_level as varchar(10)) \n"
+				+ "                                   END  \n"
 			    + "    ,es.lock_timeout \n"
 			    + "    ,es.deadlock_priority \n"
 			    + "    ,es.prev_error \n"
@@ -471,13 +516,15 @@ extends CountersModel
 			    + "    ,tmp_internal_objects_alloc_mb    = convert(numeric(12,1), (ssu.internal_objects_alloc_page_count)   / 128.0) \n"
 			    + "    ,tmp_internal_objects_dealloc_mb  = convert(numeric(12,1), (ssu.internal_objects_dealloc_page_count) / 128.0) \n"
 //			    + " \n"
-			    + "FROM sys.dm_exec_connections ec \n"
+//			    + "FROM sys.dm_exec_connections ec \n"
+			    + "FROM ec \n"
 			    + "INNER JOIN sys.dm_exec_sessions es ON ec.session_id = es.session_id \n"
 //			    + "INNER JOIN sys.sysprocesses     sp ON ec.session_id = sp.spid \n"
 			    + "LEFT OUTER join sys.dm_exec_requests                  er ON ec.session_id      = er.session_id \n"
 			    + "LEFT OUTER JOIN sys.dm_tran_session_transactions     tst ON es.session_id      = tst.session_id \n"
 			    + "LEFT OUTER JOIN sys.dm_tran_active_transactions      tat ON tst.transaction_id = tat.transaction_id \n"
 			    + "LEFT OUTER join tempdb.sys.dm_db_session_space_usage ssu ON ec.session_id      = ssu.session_id \n"
+//			    + "WHERE ec.net_transport != 'Session' -- do not include MARS sessions, see: https://sqljudo.wordpress.com/2014/03/07/cardinality-of-dm_exec_sessions-and-dm_exec_connections/ \n"
 			    + "";
 
 		return sql;
@@ -590,5 +637,136 @@ extends CountersModel
 			}
 		}
 		return sb.toString();
+	}
+
+
+
+
+
+
+	@Override
+	public void sendAlarmRequest()
+	{
+		AlarmHelper.sendAlarmRequestForColumn(this, "program_name");
+		AlarmHelper.sendAlarmRequestForColumn(this, "login_name");
+
+		sendAlarmRequestLocal();
+	}
+	
+	public void sendAlarmRequestLocal()
+	{
+		if ( ! hasDiffData() )
+			return;
+		
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+		
+		// EXIT EARLY if no alarm properties has been specified (since there can be *many* logins)
+		boolean isAnyAlarmEnabled = false;
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("StatementExecInSec")) isAnyAlarmEnabled = true;
+//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("xxxxxxxxxxx"      )) isAnyAlarmEnabled = true;
+
+		if (isAnyAlarmEnabled == false)
+			return;
+
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
+
+		AlarmHandler alarmHandler = AlarmHandler.getInstance();
+		
+		CountersModel cm = this;
+
+		for (int r=0; r<cm.getDiffRowCount(); r++)
+		{
+			//-------------------------------------------------------
+			// StatementExecInSec 
+			// --->>> possibly move/copy this to CmActiveStatements
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("StatementExecInSec"))
+			{
+				Object o_ExecTimeInMs = cm.getDiffValue(r, "ExecTimeInMs");
+				if (o_ExecTimeInMs != null && o_ExecTimeInMs instanceof Number)
+				{
+					int StatementExecInSec = ((Number)o_ExecTimeInMs).intValue() / 1000;
+					
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_StatementExecInSec, DEFAULT_alarm_StatementExecInSec);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", StatementExecInSec='"+StatementExecInSec+"'.");
+
+					if (StatementExecInSec > threshold)
+					{
+						// Get config 'skip some known values'
+						String skipDbnameRegExp   = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipDbname,   DEFAULT_alarm_StatementExecInSecSkipDbname);
+						String skipLoginRegExp    = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipLogin,    DEFAULT_alarm_StatementExecInSecSkipLogin);
+						String skipCmdRegExp      = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipCmd,      DEFAULT_alarm_StatementExecInSecSkipCmd);
+						String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipTranName, DEFAULT_alarm_StatementExecInSecSkipTranName);
+
+						String StatementStartTime = cm.getDiffValue(r, "exec_start_time")  + "";
+						String DBName             = cm.getDiffValue(r, "DBName")           + "";
+						String Login              = cm.getDiffValue(r, "login_name")       + "";
+						String Command            = cm.getDiffValue(r, "command")          + "";
+						String tran_name          = cm.getDiffValue(r, "transaction_name") + "";
+						
+						// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+						boolean doAlarm = true;
+
+						// The below could have been done with nested if(!skipXxx), if(!skipYyy) doAlarm=true; 
+						// Below is more readable, from a variable context point-of-view, but HARDER to understand
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbnameRegExp)   || ! DBName   .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipLoginRegExp)    || ! Login    .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipCmdRegExp)      || ! Command  .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranNameRegExp) || ! tran_name.matches(skipTranNameRegExp))); // NO match in the SKIP TranName regexp
+
+						// NO match in the SKIP regEx
+						if (doAlarm)
+						{
+							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+													
+							AlarmEvent ae = new AlarmEventLongRunningStatement(cm, threshold, StatementExecInSec, StatementStartTime, DBName, Login, Command, tran_name);
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+							alarmHandler.addAlarm( ae );
+						}
+					} // end: above threshold
+				} // end: is number
+			} // end: StatementExecInSec
+		} // end: loop rows
+	}
+
+	public static final String  PROPKEY_alarm_StatementExecInSec             = CM_NAME + ".alarm.system.if.StatementExecInSec.gt";
+	public static final int     DEFAULT_alarm_StatementExecInSec             = 3 * 60 * 60;
+
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipDbname   = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.dbname";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipDbname   = "";
+
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipLogin    = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.login";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipLogin    = "";
+
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipCmd      = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.cmd";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipCmd      = "^(BACKUP ).*";
+
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipTranName = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.tranName";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipTranName = "";
+	
+
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("StatementExecInSec",           isAlarmSwitch, PROPKEY_alarm_StatementExecInSec            , Integer.class, conf.getIntProperty(PROPKEY_alarm_StatementExecInSec            , DEFAULT_alarm_StatementExecInSec            ), DEFAULT_alarm_StatementExecInSec            , "If any SPID's has been executed a single SQL Statement for more than ## seconds, then send alarm 'AlarmEventLongRunningStatement'." ));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipDbs",                  PROPKEY_alarm_StatementExecInSecSkipDbname  , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipDbname  , DEFAULT_alarm_StatementExecInSecSkipDbname  ), DEFAULT_alarm_StatementExecInSecSkipDbname  , "If 'StatementExecInSec' is true; Discard databases listed (regexp is used).", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipLogins",               PROPKEY_alarm_StatementExecInSecSkipLogin   , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipLogin   , DEFAULT_alarm_StatementExecInSecSkipLogin   ), DEFAULT_alarm_StatementExecInSecSkipLogin   , "If 'StatementExecInSec' is true; Discard Logins listed (regexp is used)."   , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipCommands",             PROPKEY_alarm_StatementExecInSecSkipCmd     , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipCmd     , DEFAULT_alarm_StatementExecInSecSkipCmd     ), DEFAULT_alarm_StatementExecInSecSkipCmd     , "If 'StatementExecInSec' is true; Discard Commands listed (regexp is used)." , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipTranNames",            PROPKEY_alarm_StatementExecInSecSkipTranName, String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipTranName, DEFAULT_alarm_StatementExecInSecSkipTranName), DEFAULT_alarm_StatementExecInSecSkipTranName, "If 'StatementExecInSec' is true; Discard TranName listed (regexp is used)." , new RegExpInputValidator()));
+		
+		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "program_name") );
+		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "login_name") );
+
+		return list;
 	}
 }

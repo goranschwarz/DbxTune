@@ -57,6 +57,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.text.StrSubstitutor;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Node;
@@ -3683,6 +3684,97 @@ public class StringUtil
 		return input;
 	}
 
+    /**
+     * <p>Case insensitive, ignore leading whitespace, check if a String starts with a specified prefix.</p>
+     *
+     * <p>{@code null}s are handled without exceptions. Two {@code null}
+     * references are considered to be equal. The comparison is case insensitive.</p>
+     *
+     * <pre>
+     * StringUtil.startsWithIgnoreBlankIgnoreCase(null, null)        = true
+     * StringUtil.startsWithIgnoreBlankIgnoreCase(null, "abc")       = false
+     * StringUtil.startsWithIgnoreBlankIgnoreCase("abcdef",   null)  = false
+     * StringUtil.startsWithIgnoreBlankIgnoreCase("abcdef",   "abc") = true
+     * StringUtil.startsWithIgnoreBlankIgnoreCase("ABCDEF",   "abc") = true
+     * StringUtil.startsWithIgnoreBlankIgnoreCase("  abcdef", "abc") = true
+     * StringUtil.startsWithIgnoreBlankIgnoreCase("  ABCDEF", "abc") = true
+     * </pre>
+     *
+     * @param str  the String to check, may be null
+     * @param prefix the prefix to find, may be null
+     * @return {@code true} if the str starts with the prefix, case insensitive, or both {@code null}
+     */
+	public static boolean startsWithIgnoreBlankIgnoreCase(String str, String prefix) 
+	{
+		if (str == null || prefix == null) 
+		{
+			return str == null && prefix == null;
+		}
+		if (prefix.length() > str.length()) 
+		{
+			return false;
+		}
+		
+		int startPos = 0;
+		for (; startPos<str.length(); startPos++)
+		{
+			if ( ! Character.isWhitespace(str.charAt(startPos)) )
+				break;
+		}
+
+		return str.regionMatches(true, startPos, prefix, 0, prefix.length());
+    }
+
+	/**
+	 * Emulates org.apache.commons.lang3.StringUtils.substringBefore ... but with IgnoreCase for the separator
+	 * @param str
+	 * @param separator
+	 * @return
+	 */
+	public static String substringBeforeIgnoreCase(String str, String separator) 
+	{
+		if (StringUtils.isEmpty(str) || separator == null) 
+		{
+			return str;
+		}
+
+		if (separator.isEmpty()) 
+		{
+			return StringUtils.EMPTY;
+		}
+
+		final int pos = StringUtils.indexOfIgnoreCase(str, separator);
+		if (pos == StringUtils.INDEX_NOT_FOUND) 
+		{
+			return str;
+		}
+		
+		return str.substring(0, pos);
+	}
+
+	/**
+	 * Truncate a string after X characters (and put ... ellipse at end of string if it's truncated)
+	 * @param str           the string to truncate
+	 * @param maxLen        the max length
+	 * @param ellipseAtEnd  Put ellipse "..." at the end if the input string is truncated.
+	 * 
+	 * @return The string (truncated if above maxLen)
+	 */
+	public static String truncate(String str, int maxLen, boolean ellipseAtEnd)
+	{
+		if (str == null)
+			return null;
+
+		if ( maxLen > 0 && str.length() > maxLen )
+		{
+			if (ellipseAtEnd)
+				return str.substring(0, maxLen-3) + "...";
+			else
+				return str.substring(0, maxLen);
+		}
+		return str;
+	}
+
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
 	//// TEST CODE
@@ -3691,6 +3783,22 @@ public class StringUtil
 
 	public static void main(String[] args)
 	{
+		System.out.println(StringUtil.truncate(null, 10, true) == null  ? "OK" : "FAIL - "+StringUtil.truncate(null, 10, true));
+		System.out.println(StringUtil.truncate("123"            , 10, true ).equals("123")         ? "OK" : "FAIL - "+StringUtil.truncate("123"            , 10, true ));
+		System.out.println(StringUtil.truncate("123456789-"     , 10, true ).equals("123456789-")  ? "OK" : "FAIL - "+StringUtil.truncate("123456789-"     , 10, true ));
+		System.out.println(StringUtil.truncate("123456789-12345", 10, true ).equals("1234567...")  ? "OK" : "FAIL - "+StringUtil.truncate("123456789-12345", 10, true ));
+		System.out.println(StringUtil.truncate("123456789-12345", 10, false).equals("123456789-")  ? "OK" : "FAIL - "+StringUtil.truncate("123456789-12345", 10, false));
+		System.exit(0);
+
+		System.out.println(StringUtil.startsWithIgnoreBlankIgnoreCase(null, null)        == true  ? "OK" : "FAIL");
+		System.out.println(StringUtil.startsWithIgnoreBlankIgnoreCase(null, "abc")       == false ? "OK" : "FAIL");
+		System.out.println(StringUtil.startsWithIgnoreBlankIgnoreCase("abcdef",   null)  == false ? "OK" : "FAIL");
+		System.out.println(StringUtil.startsWithIgnoreBlankIgnoreCase("abcdef",   "abc") == true  ? "OK" : "FAIL");
+		System.out.println(StringUtil.startsWithIgnoreBlankIgnoreCase("ABCDEF",   "abc") == true  ? "OK" : "FAIL");
+		System.out.println(StringUtil.startsWithIgnoreBlankIgnoreCase("  abcdef", "abc") == true  ? "OK" : "FAIL");
+		System.out.println(StringUtil.startsWithIgnoreBlankIgnoreCase("  ABCDEF", "abc") == true  ? "OK" : "FAIL");
+		System.exit(0);
+
 		// Check if envVariableSubstitution() works with having a default value of another variable name, which does NOT seems to work...
 		System.setProperty("DBXTUNE_ALARM_SOURCE_DIR", "-dbxtune-alarm-source-dir-");
 		System.setProperty("DBXTUNE_HOME",             "-dbxtune-home-");

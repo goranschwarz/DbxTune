@@ -21,6 +21,7 @@
 package com.asetune.pcs.report;
 
 import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
+import com.asetune.pcs.report.content.os.OsIoStatOverview;
 import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
 import com.asetune.pcs.report.content.os.OsSpaceUsageOverview;
 
@@ -41,6 +42,7 @@ extends DailySummaryReportDefault
 
 		// Disk IO Activity
 		addReportEntry( new OsSpaceUsageOverview(this) );
+		addReportEntry( new OsIoStatOverview(this)          );
 		addReportEntry( new OsIoStatSlowIo(this)       );
 	}
 }

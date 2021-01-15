@@ -1501,9 +1501,12 @@ extends CountersModel
 		if ( ! hasDiffData() )
 			return;
 
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
 		CountersModel cm = this;
 
-		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
 		//-------------------------------------------------------
 		// CPU Usage
@@ -1531,31 +1534,37 @@ extends CountersModel
 				BigDecimal pctSystemCPUTime = new BigDecimal( ((1.0 * (CPUSystem          )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 				BigDecimal pctIdleCPUTime   = new BigDecimal( ((1.0 * (CPUIdle            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 
-				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): pctCPUTime='"+pctCPUTime+"', pctSystemCPUTime='"+pctUserCPUTime+"', pctUserCPUTime='"+pctSystemCPUTime+"', pctIdleCPUTime='"+pctIdleCPUTime+"'.");
-
-				if (AlarmHandler.hasInstance())
+				if (isSystemAlarmsForColumnEnabledAndInTimeRange("TotalCPUTime"))
 				{
-					if (isSystemAlarmsForColumnEnabledAndInTimeRange("TotalCPUTime"))
-					{
-						double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_TotalCPUTime, DEFAULT_alarm_TotalCPUTime);
-						if (pctCPUTime.doubleValue() > threshold)
-							AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, threshold, CpuType.TOTAL_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime) );
-					}
+					double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_TotalCPUTime, DEFAULT_alarm_TotalCPUTime);
 
-					if (isSystemAlarmsForColumnEnabledAndInTimeRange("UserCPUTime"))
-					{
-						double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_UserCPUTime, DEFAULT_alarm_UserCPUTime);
-						if (pctUserCPUTime.doubleValue() > threshold)
-							AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, threshold, CpuType.USER_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime) );
-					}
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): TotalCPUTime - threshold="+threshold+", pctCPUTime='"+pctCPUTime+"', pctSystemCPUTime='"+pctUserCPUTime+"', pctUserCPUTime='"+pctSystemCPUTime+"', pctIdleCPUTime='"+pctIdleCPUTime+"'.");
 
-					if (isSystemAlarmsForColumnEnabledAndInTimeRange("IoCPUTime"))
-					{
-						double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_IoCPUTime, DEFAULT_alarm_IoCPUTime);
-						if (pctSystemCPUTime.doubleValue() > threshold)
-							AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, threshold, CpuType.IO_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime) );
-					}
+					if (pctCPUTime.doubleValue() > threshold)
+						AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, threshold, CpuType.TOTAL_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime) );
+				}
+
+				if (isSystemAlarmsForColumnEnabledAndInTimeRange("UserCPUTime"))
+				{
+					double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_UserCPUTime, DEFAULT_alarm_UserCPUTime);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): UserCPUTime - threshold="+threshold+", pctCPUTime='"+pctCPUTime+"', pctSystemCPUTime='"+pctUserCPUTime+"', pctUserCPUTime='"+pctSystemCPUTime+"', pctIdleCPUTime='"+pctIdleCPUTime+"'.");
+
+					if (pctUserCPUTime.doubleValue() > threshold)
+						AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, threshold, CpuType.USER_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime) );
+				}
+
+				if (isSystemAlarmsForColumnEnabledAndInTimeRange("IoCPUTime"))
+				{
+					double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_IoCPUTime, DEFAULT_alarm_IoCPUTime);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): IoCPUTime - threshold="+threshold+", pctCPUTime='"+pctCPUTime+"', pctSystemCPUTime='"+pctUserCPUTime+"', pctUserCPUTime='"+pctSystemCPUTime+"', pctIdleCPUTime='"+pctIdleCPUTime+"'.");
+
+					if (pctSystemCPUTime.doubleValue() > threshold)
+						AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, threshold, CpuType.IO_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime) );
 				}
 			}
 			// CmSummary.system.alarm.system.if.CPUTime.gt=90
@@ -1570,15 +1579,13 @@ extends CountersModel
 			Double LockWaits = cm.getAbsValueAsDouble (0, "LockWaits");
 			if (LockWaits != null)
 			{
-				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): LockWaits='"+LockWaits+"'.");
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LockWaits, DEFAULT_alarm_LockWaits);
 
-				if (AlarmHandler.hasInstance())
-				{
-					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LockWaits, DEFAULT_alarm_LockWaits);
-					if (LockWaits.intValue() > threshold)
-						AlarmHandler.getInstance().addAlarm( new AlarmEventBlockingLockAlarm(cm, threshold, LockWaits) );
-				}
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", LockWaits='"+LockWaits+"'.");
+
+				if (LockWaits.intValue() > threshold)
+					AlarmHandler.getInstance().addAlarm( new AlarmEventBlockingLockAlarm(cm, threshold, LockWaits) );
 			}
 		}
 
@@ -1591,34 +1598,32 @@ extends CountersModel
 			Double oldestOpenTranInSec = cm.getAbsValueAsDouble(0, "oldestOpenTranInSec");
 			if (oldestOpenTranInSec != null)
 			{
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestOpenTranInSec, DEFAULT_alarm_oldestOpenTranInSec);
+
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): oldestOpenTranInSec='"+oldestOpenTranInSec+"'.");
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", oldestOpenTranInSec='"+oldestOpenTranInSec+"'.");
 
-				if (AlarmHandler.hasInstance())
+				if (oldestOpenTranInSec.intValue() > threshold)
 				{
-					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestOpenTranInSec, DEFAULT_alarm_oldestOpenTranInSec);
-					if (oldestOpenTranInSec.intValue() > threshold)
-					{
-						// Get OldestTranName
-						String OldestTranName   = cm.getAbsString(0, "oldestOpenTranName");
-						String OldestTranDbName = cm.getAbsString(0, "oldestOpenTranDbName");
-						
-						// Get config 'skip some transaction names'
-						String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_oldestOpenTranInSecSkipTranName, DEFAULT_alarm_oldestOpenTranInSecSkipTranName);
+					// Get OldestTranName
+					String OldestTranName   = cm.getAbsString(0, "oldestOpenTranName");
+					String OldestTranDbName = cm.getAbsString(0, "oldestOpenTranDbName");
+					
+					// Get config 'skip some transaction names'
+					String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_oldestOpenTranInSecSkipTranName, DEFAULT_alarm_oldestOpenTranInSecSkipTranName);
 
-						// send alarm, if...
-						if (StringUtil.hasValue(skipTranNameRegExp) && StringUtil.hasValue(OldestTranName))
-						{
-							if ( ! OldestTranName.matches(skipTranNameRegExp) )
-								AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, OldestTranDbName, oldestOpenTranInSec, OldestTranName) );
-						}
-						else
-						{
+					// send alarm, if...
+					if (StringUtil.hasValue(skipTranNameRegExp) && StringUtil.hasValue(OldestTranName))
+					{
+						if ( ! OldestTranName.matches(skipTranNameRegExp) )
 							AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, OldestTranDbName, oldestOpenTranInSec, OldestTranName) );
-						}
-						
-						//AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, oldestOpenTranInSec) );
 					}
+					else
+					{
+						AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, OldestTranDbName, oldestOpenTranInSec, OldestTranName) );
+					}
+					
+					//AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, oldestOpenTranInSec) );
 				}
 			}
 		}
@@ -1632,15 +1637,13 @@ extends CountersModel
 			Double fullTranslogCount = cm.getAbsValueAsDouble(0, "fullTranslogCount");
 			if (fullTranslogCount != null)
 			{
-				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): fullTranslogCount='"+fullTranslogCount+"'.");
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_fullTranslogCount, DEFAULT_alarm_fullTranslogCount);
 
-				if (AlarmHandler.hasInstance())
-				{
-					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_fullTranslogCount, DEFAULT_alarm_fullTranslogCount);
-					if (fullTranslogCount.intValue() > threshold)
-						AlarmHandler.getInstance().addAlarm( new AlarmEventFullTranLog(cm, threshold, fullTranslogCount) );
-				}
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", fullTranslogCount='"+fullTranslogCount+"'.");
+
+				if (fullTranslogCount.intValue() > threshold)
+					AlarmHandler.getInstance().addAlarm( new AlarmEventFullTranLog(cm, threshold, fullTranslogCount) );
 			}
 		}
 	}

@@ -22,7 +22,6 @@
 package com.asetune.pcs.report.content.ase;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 
 import com.asetune.gui.ResultSetTableModel;
@@ -40,6 +39,18 @@ public class AseDbSize extends AseAbstract
 	public AseDbSize(DailySummaryReportAbstract reportingInstance)
 	{
 		super(reportingInstance);
+	}
+
+	@Override
+	public boolean hasShortMessageText()
+	{
+		return false;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
 	}
 
 	@Override
@@ -86,55 +97,6 @@ public class AseDbSize extends AseAbstract
 		sb.append("<h4>Tempdb Space Usage</h4> \n");
 		_CmOpenDatabases_TempdbUsedMbGraph     .writeHtmlContent(sb, null, null);
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		// Get a description of this section, and column names
-//		sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//
-//		// Last sample Database Size info
-//		sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-////		sb.append(_shortRstm.toHtmlTableString("sortable"));
-//		sb.append(toHtmlTable(_shortRstm));
-//		
-//
-//		// link to DbxCentral graphs
-//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Transaction Log and Data Size Usage of each Database during the day<br>\n"
-//		                                                  + "Presented as: \n"
-//		                                                  + "<ul> \n"
-//		                                                  + "  <li><b> Space Used in Percent   </b> - When this gets <b>high</b> we could be in trouble. But the below 'Space Left to use' is a better indicator.</li> \n"
-//		                                                  + "  <li><b> Space Left to use in MB </b> - When This gets <b>low</b> we could be in trouble. No space = No more modifications. </li> \n"
-//		                                                  + "  <li><b> Space used in MB        </b> - Just an indicator of how much MB we are actually using for the different databases.</li> \n"
-//		                                                  + "</ul> \n",
-//				"CmOpenDatabases_DbDataSizeUsedPctGraph",
-//				"CmOpenDatabases_DbDataSizeLeftMbGraph",
-//				"CmOpenDatabases_DbDataSizeUsedMbGraph",
-//				
-//				"CmOpenDatabases_DbLogSizeUsedPctGraph",
-//				"CmOpenDatabases_DbLogSizeLeftMbGraph",
-//				"CmOpenDatabases_DbLogSizeUsedMbGraph",
-//
-//				"CmOpenDatabases_TempdbUsedMbGraph"
-//				));
-//
-//		sb.append("<h4>DB Data Space Usage</h4> \n");
-//		sb.append(_CmOpenDatabases_DbDataSizeUsedPctGraph.getHtmlContent(null, null));
-//		sb.append(_CmOpenDatabases_DbDataSizeLeftMbGraph .getHtmlContent(null, null));
-//		sb.append(_CmOpenDatabases_DbDataSizeUsedMbGraph .getHtmlContent(null, null));
-//		
-//		sb.append("<h4>DB Transaction Log Space Usage</h4> \n");
-//		sb.append(_CmOpenDatabases_DbLogSizeUsedPctGraph .getHtmlContent(null, null));
-//		sb.append(_CmOpenDatabases_DbLogSizeLeftMbGraph  .getHtmlContent(null, null));
-//		sb.append(_CmOpenDatabases_DbLogSizeUsedMbGraph  .getHtmlContent(null, null));
-//
-//		sb.append("<h4>Tempdb Space Usage</h4> \n");
-//		sb.append(_CmOpenDatabases_TempdbUsedMbGraph     .getHtmlContent(null, null));
-//		
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()

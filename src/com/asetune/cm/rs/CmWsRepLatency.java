@@ -351,7 +351,7 @@ extends CountersModel
 
 		CountersModel cm = this;
 
-		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
 		for (int r=0; r<cm.getAbsRowCount(); r++)
 		{
@@ -366,6 +366,10 @@ extends CountersModel
 				if (state != null)
 				{
 					String regexp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_ActiveState,  DEFAULT_alarm_ActiveState);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): ActiveState -- regexp='"+regexp+"', state='"+state+"'.");
+
 					if ( ! state.matches(regexp) ) // default is 'Active/'
 						AlarmHandler.getInstance().addAlarm( new AlarmEventRsWsState(cm, lName, "ActiveState", state, regexp) );
 				}
@@ -377,6 +381,10 @@ extends CountersModel
 				if (state != null)
 				{
 					String regexp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StandbyState,  DEFAULT_alarm_StandbyState);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): StandbyState -- regexp='"+regexp+"', state='"+state+"'.");
+
 					if ( ! state.matches(regexp) ) // default is 'Active/'
 						AlarmHandler.getInstance().addAlarm( new AlarmEventRsWsState(cm, lName, "StandbyState", state, regexp) );
 				}
@@ -391,10 +399,11 @@ extends CountersModel
 				Double ApplyAgeInMinutes = cm.getAbsValueAsDouble(r, "ApplyAgeInMinutes");
 				if (ApplyAgeInMinutes != null)
 				{
-					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): lName='"+lName+"', ApplyAgeInMinutes='"+ApplyAgeInMinutes+"'.");
-
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ApplyAgeInMinutes, DEFAULT_alarm_ApplyAgeInMinutes);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", lName='"+lName+"', ApplyAgeInMinutes='"+ApplyAgeInMinutes+"'.");
+
 					if (ApplyAgeInMinutes.intValue() > threshold)
 					{
 						// Get config 'skip some transaction names'
@@ -424,10 +433,11 @@ extends CountersModel
 				Double DataAgeInMinutes = cm.getAbsValueAsDouble(r, "DataAgeInMinutes");
 				if (DataAgeInMinutes != null)
 				{
-					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): lName='"+lName+"', DataAgeInMinutes='"+DataAgeInMinutes+"'.");
-
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_DataAgeInMinutes, DEFAULT_alarm_DataAgeInMinutes);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", lName='"+lName+"', DataAgeInMinutes='"+DataAgeInMinutes+"'.");
+
 					if (DataAgeInMinutes.intValue() > threshold)
 					{
 						// Get config 'skip some transaction names'

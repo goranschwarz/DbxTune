@@ -31,25 +31,22 @@ import java.util.Set;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
+import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterTableModel;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.os.CmOsIostat;
-import com.asetune.gui.TabularCntrPanel;
 import com.asetune.hostmon.HostMonitor;
 import com.asetune.hostmon.MonitorIoLinux;
+import com.asetune.hostmon.HostMonitor.OsVendor;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
-import com.asetune.utils.SwingUtils;
-
-import net.miginfocom.swing.MigLayout;
 
 public class CmOsIostatPanel
-extends TabularCntrPanel
+extends CmOsGenericPanel
 {
 //	private static final Logger  _logger	           = Logger.getLogger(CmOsIostatPanel.class);
 	private static final long    serialVersionUID      = 1L;
@@ -60,9 +57,6 @@ extends TabularCntrPanel
 	{
 		super(cm);
 
-//		if (cm.getIconFile() != null)
-//			setIcon( SwingUtils.readImageIcon(Version.class, cm.getIconFile()) );
-
 		init();
 	}
 	
@@ -70,46 +64,45 @@ extends TabularCntrPanel
 	{
 	}
 
-	private JLabel     _hostmonThreadNotInit_lbl;
-	private JLabel     _hostmonThreadIsRunning_lbl;
-	private JLabel     _hostmonThreadIsStopped_lbl;
-	private JLabel     _hostmonHostname_lbl;
-	private JButton    _hostmonStart_but;
-	private JButton    _hostmonStop_but;
 	private JCheckBox  _opt_N_chk;
 	private JCheckBox  _excludeDevices_chk;
 	private JTextField _excludeDevicesRegExp_txt;
 	private JButton    _iostatMapping_but;
 //	private IoStatDeviceMapperDialog _deviceMapperDialog = null;
 
+	
 	@Override
-	protected JPanel createLocalOptionsPanel()
+	public void checkLocalComponents()
 	{
-		final JPanel panel = SwingUtils.createPanel("Host Monitor", true);
-		panel.setLayout(new MigLayout("ins 5, gap 0", "", "0[0]0"));
-		panel.setToolTipText(
-			"<html>" +
-				"Use this panel to check or control the underlying Host Monitoring Thread.<br>" +
-				"You can Start and/or Stop the hostmon thread.<br>" +
-			"</html>");
+		// Device mapping is NOT supported on Windows... so disable the GUI Objects
+		CountersModel cm = getCm();
+		if (cm != null && cm instanceof CounterModelHostMonitor)
+		{
+			CounterModelHostMonitor hmCm = (CounterModelHostMonitor) cm;
 
-		_hostmonThreadNotInit_lbl    = new JLabel("<html><b>Not yet initialized</b></html>");
-		_hostmonThreadIsRunning_lbl  = new JLabel("<html>Is running</html>");
-		_hostmonThreadIsStopped_lbl  = new JLabel("<html><b>Is stopped</b></html>");
-		_hostmonHostname_lbl         = new JLabel();
-		_hostmonStart_but            = new JButton("Start");
-		_hostmonStop_but             = new JButton("Stop");
+			if (hmCm.isConnectedToVendor(OsVendor.Windows))
+			{
+				_opt_N_chk               .setVisible(false);
+				_excludeDevices_chk      .setVisible(false);
+				_excludeDevicesRegExp_txt.setVisible(false);
+				_iostatMapping_but       .setVisible(false);
+			}
+		}
+
+		// Call the super to do it's job...
+		super.checkLocalComponents();
+	}
+	
+
+
+	@Override
+	protected JPanel configLocalOptionsPanel(JPanel panel)
+	{
 		_opt_N_chk                   = new JCheckBox("Use Device Mapper Name", CmOsIostat.DEFAULT_linux_opt_N);
 		_excludeDevices_chk          = new JCheckBox("Exclude devices", CmOsIostat.DEFAULT_excludeDevices);
 		_excludeDevicesRegExp_txt    = new JTextField(CmOsIostat.DEFAULT_excludeDevicesRegExp, 10);
 		_iostatMapping_but           = new JButton("Device Mapping");
 
-		_hostmonThreadNotInit_lbl  .setToolTipText("<html>Indicates whether the underlying Host Monitor Thread has not yet been initialized.</html>");
-		_hostmonThreadIsRunning_lbl.setToolTipText("<html>Indicates whether the underlying Host Monitor Thread is running.</html>");
-		_hostmonThreadIsStopped_lbl.setToolTipText("<html>Indicates whether the underlying Host Monitor Thread is running.</html>");
-		_hostmonHostname_lbl       .setToolTipText("<html>What host name are we monitoring.</html>");
-		_hostmonStart_but          .setToolTipText("<html>Start the underlying Host Monitor Thread.</html>");
-		_hostmonStop_but           .setToolTipText("<html>Stop the underlying Host Monitor Thread.</html>");
 		_opt_N_chk                 .setToolTipText("<html>iostat -N switch: Display the registered device mapper names for any device mapper devices.<br>"
 		                                               + "<br>"
 		                                               + "For more info on the -N switch, do: man iostat<br>"
@@ -119,12 +112,7 @@ extends TabularCntrPanel
 		_excludeDevices_chk        .setToolTipText("<html>Enable or Disable Exclution of device nemes by regular expressions.</html>");
 		_excludeDevicesRegExp_txt  .setToolTipText("<html>RegExp to test for when excuding devices by name.</html>");
 		_iostatMapping_but         .setToolTipText("<html>Open a dialog where you can map 'device name' to a more readable name, which is displaied in the column 'deviceDescription'.</html>");
-
-		_hostmonThreadNotInit_lbl  .setVisible(true);
-		_hostmonThreadIsRunning_lbl.setVisible(false);
-		_hostmonThreadIsStopped_lbl.setVisible(false);
-		_hostmonStart_but          .setVisible(false);
-		_hostmonStop_but           .setVisible(false);
+		
 		_opt_N_chk                 .setVisible(true);
 		_excludeDevices_chk        .setVisible(true);
 		_excludeDevicesRegExp_txt  .setVisible(true);
@@ -135,60 +123,11 @@ extends TabularCntrPanel
 		_opt_N_chk               .setSelected(conf.getBooleanProperty(CmOsIostat.PROPKEY_linux_opt_N,          CmOsIostat.DEFAULT_linux_opt_N));
 		_excludeDevices_chk      .setSelected(conf.getBooleanProperty(CmOsIostat.PROPKEY_excludeDevices,       CmOsIostat.DEFAULT_excludeDevices));
 		_excludeDevicesRegExp_txt.setText(    conf.getProperty       (CmOsIostat.PROPKEY_excludeDevicesRegExp, CmOsIostat.DEFAULT_excludeDevicesRegExp));
-		
-		panel.add( _hostmonThreadNotInit_lbl,   "hidemode 3, wrap 10");
-		panel.add( _hostmonThreadIsRunning_lbl, "hidemode 3, wrap 10");
-		panel.add( _hostmonThreadIsStopped_lbl, "hidemode 3, wrap 10");
-		panel.add( _hostmonHostname_lbl,        "hidemode 3, wrap 10");
-		panel.add( _hostmonStart_but,           "hidemode 3, wrap");
-		panel.add( _hostmonStop_but,            "hidemode 3, split");
+
 		panel.add( _opt_N_chk,                  "hidemode 3, wrap");
 		panel.add( _excludeDevices_chk,         "hidemode 3, split");
 		panel.add( _excludeDevicesRegExp_txt,   "hidemode 3, pushx, growx, wrap"); 
 		panel.add( _iostatMapping_but,          "hidemode 3, wrap");
-
-		_hostmonStart_but.addActionListener(new ActionListener()
-		{
-			@Override
-			public void actionPerformed(ActionEvent e)
-			{
-				CountersModel cm = getCm();
-				if (cm != null)
-				{
-					HostMonitor hostMonitor = (HostMonitor) cm.getClientProperty(HostMonitor.PROPERTY_NAME);
-					if (hostMonitor != null)
-					{
-						try
-						{
-							hostMonitor.setPaused(false);
-							hostMonitor.start();
-						}
-						catch (Exception ex)
-						{
-							SwingUtils.showErrorMessage("Start", "Problems Starting the Host Monitoring Thread.", ex);
-						}
-					}
-				}
-			}
-		});
-
-		_hostmonStop_but.addActionListener(new ActionListener()
-		{
-			@Override
-			public void actionPerformed(ActionEvent e)
-			{
-				CountersModel cm = getCm();
-				if (cm != null)
-				{
-					HostMonitor hostMonitor = (HostMonitor) cm.getClientProperty(HostMonitor.PROPERTY_NAME);
-					if (hostMonitor != null)
-					{
-						hostMonitor.setPaused(true);
-						hostMonitor.shutdown();
-					}
-				}
-			}
-		});
 
 		_opt_N_chk.addActionListener(new ActionListener()
 		{
@@ -305,47 +244,5 @@ extends TabularCntrPanel
 		});
 
 		return panel;
-	}
-
-	@Override
-	public void checkLocalComponents()
-	{
-		CountersModel cm = getCm();
-		if (cm != null)
-		{
-			HostMonitor hostMonitor = (HostMonitor) cm.getClientProperty(HostMonitor.PROPERTY_NAME);
-			if (hostMonitor != null)
-			{
-				boolean isRunning = hostMonitor.isRunning();
-				boolean isPaused  = hostMonitor.isPaused();
-
-				_hostmonThreadIsRunning_lbl.setText("<html>Command: <b>"+hostMonitor.getCommand()+"</b></html>");
-				_hostmonThreadNotInit_lbl  .setVisible( false );
-				_hostmonThreadIsRunning_lbl.setVisible(   isRunning );
-				_hostmonThreadIsStopped_lbl.setVisible( ! isRunning );
-				_hostmonHostname_lbl       .setText("<html> Host: <b>"+hostMonitor.getHostname()+"</b></html>");
-				_hostmonStart_but          .setVisible( ! isRunning );
-				_hostmonStop_but           .setVisible(   isRunning );
-
-				if (isPaused)
-					setWatermarkText("Warning: The host monitoring thread is Stopped/Paused!");
-			}
-			else
-			{
-				setWatermarkText("Host Monitoring is Disabled or Initializing at Next sample.\n" +
-						"\n" +
-						"Enabled it when you connect to the DBMS by:\n" +
-						"- selecting the checkbox 'Monitor the OS Host for ...'\n" +
-						"In the Options panel at the bottom.");
-
-				_hostmonThreadNotInit_lbl  .setVisible( true );
-				_hostmonThreadIsRunning_lbl.setVisible( false );
-				_hostmonThreadIsStopped_lbl.setVisible( false );
-				_hostmonStart_but          .setVisible( false );
-				_hostmonStop_but           .setVisible( false );
-				if (cm.getSampleException() != null)
-					setWatermarkText(cm.getSampleException().toString());
-			}
-		}
 	}
 }

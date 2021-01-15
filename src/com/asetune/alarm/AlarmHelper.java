@@ -58,7 +58,11 @@ public class AlarmHelper
 		int pos_colName = cm.findColumn(colName);
 		if (pos_colName == -1)
 		{
-			_logger.info("Unable to get desired clumn name '"+colName+"' in cm='"+cm.getName()+"'.");
+			// Probably not yet initialized... get out of here...
+			if (cm.getColumnNames().isEmpty())
+				return;
+
+			_logger.info("Unable to get desired column name '" + colName + "' in cm='" + cm.getName() + "'. Available column names was: " + cm.getColumnNames());
 			return;
 		}
 

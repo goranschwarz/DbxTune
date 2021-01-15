@@ -616,8 +616,17 @@ public class ResultSetTableModel
 		_dbmsProductName         = rstm._dbmsProductName;
 		_rsmdCached              = rstm._rsmdCached;
 		
+//		if (copyRows)
+//			_rows.addAll(rstm._rows);
+
+		// Deep copy... at least on the RowList level (if the RowList object is "complex/mutable" it might not be a "deep copy" on that specific object)
 		if (copyRows)
-			_rows.addAll(rstm._rows);
+		{
+			for (ArrayList<Object> rowList : rstm._rows)
+			{
+				_rows.add(new ArrayList<>(rowList));
+			}
+		}
 	}
 
 	/**
@@ -2001,9 +2010,19 @@ public class ResultSetTableModel
 		int fullSize = getColumnDisplaySize(c);
 		
 		if (o instanceof Number)
+		{
+			if (o != null)
+			{
+				NumberFormat nf = NumberFormat.getInstance();
+				str = nf.format(o);
+			}
+			
 			return StringUtil.right(str, fullSize);
+		}
 		else
+		{
 			return StringUtil.left(str, fullSize);
+		}
 	}
 
 //	public static Object tableToString(ResultSetTableModel tm)
@@ -2296,6 +2315,10 @@ public class ResultSetTableModel
 				String beginTag = "";
 				String endTag   = "";
 				
+				String tdAlignRight = "";
+				if (objVal != null && objVal instanceof Number)
+					tdAlignRight = " align='right'";
+				
 				if (colNameValueTagMap != null && colNameValueTagMap.containsKey(colName))
 				{
 					String tagName = colNameValueTagMap.get(colName);
@@ -2316,7 +2339,7 @@ public class ResultSetTableModel
 				toolTip = toolTip == null ? "" : " title='" + toolTip + "'";
 
 //				sb.append("<td").append(tBodyNoWrapStr).append(">").append(strVal).append("</td>");
-				sb.append("    <td").append(tBodyNoWrapStr).append(toolTip).append(">").append(beginTag).append(strVal).append(endTag).append("</td>\n");
+				sb.append("    <td").append(tdAlignRight).append(tBodyNoWrapStr).append(toolTip).append(">").append(beginTag).append(strVal).append(endTag).append("</td>\n");
 			}
 			sb.append("  </tr>\n");
 			//sb.append("\n");
@@ -2572,9 +2595,51 @@ public class ResultSetTableModel
 	//-- END: Highlighters
 	//------------------------------------------------------------
 
+	public static class ColumnNameNotFoundException
+	extends RuntimeException
+	{
+		private static final long serialVersionUID = 1L;
+
+		public ColumnNameNotFoundException(String colName, String rstmName)
+		{
+			super("Could not find column '" + colName + "' in table '" + rstmName + "'.");
+		}
+	}
+
 	//------------------------------------------------------------
 	//-- BEGIN: sort
 	//------------------------------------------------------------
+	public int findColumnMandatory(String colName)
+	{
+		int index = findColumn(colName);
+		
+		if (index == -1)
+			throw new ColumnNameNotFoundException(colName, getName());
+
+		return index;
+	}
+
+	public int findColumnNoCaseMandatory(String colName)
+	{
+		int index = findColumnNoCase(colName);
+		
+		if (index == -1)
+			throw new ColumnNameNotFoundException(colName, getName());
+
+		return index;
+	}
+
+	/**
+	 * Find the Position (starting at 0)
+	 * @param colName Name to search for
+	 * @return -1 if not found
+	 */
+	@Override
+	public int findColumn(String colName)
+	{
+		return super.findColumn(colName);
+	}
+
 	/**
 	 * Find the Position (starting at 0)
 	 * @param colName Name to search for
@@ -2591,11 +2656,13 @@ public class ResultSetTableModel
 		}
 		return -1;
 	}
+
 	/** true if the column exists */
 	public boolean hasColumnNoCase(String colName)
 	{
 		return findColumnNoCase(colName) != -1;
 	}
+
 	/** true if the column exists */
 	public boolean hasColumn(String colName)
 	{
@@ -3470,7 +3537,166 @@ public class ResultSetTableModel
 	}
 
 
+	/**
+	 * Copy a cell content from one table to this table, where we have a matching column name/value
+	 * 
+	 * @param fromRstm                  Source table to copy from
+	 * @param fromWhereColName          Column name in Source table we should use to qualify the correct row (like a where clause)
+	 * @param fromContentColName        Column name in Source table we should copy 
+	 * @param thisKeyColName            Column name in "this" table we should use to qualify the correct row from the source table (possibly same column name as 'srcWhereColName')
+	 * @param thisContentColName        Column Name in "this" table to *put* the copied data 
+	 * 
+	 * @return number of rows we just copied!
+	 */
+	public int copyCellContentFrom(ResultSetTableModel fromRstm, String fromWhereColName, String fromContentColName, String thisKeyColName, String thisContentColName)
+	{
+		if (StringUtil.isNullOrBlank(thisKeyColName))  thisKeyColName  = fromWhereColName;
+		if (StringUtil.isNullOrBlank(thisContentColName)) thisContentColName = fromContentColName;
+
+		if (fromRstm == null)                             throw new IllegalArgumentException("sourceRstm can't be null");
+		if (StringUtil.isNullOrBlank(fromWhereColName))   throw new IllegalArgumentException("srcWhereColName can't be null or blank");
+		if (StringUtil.isNullOrBlank(fromContentColName)) throw new IllegalArgumentException("srcContentColName can't be null or blank");
+
+		int copyCount = 0;
+		
+		List<String> fromWhereColNameList = StringUtil.parseCommaStrToList(fromWhereColName);
+		List<String> thisKeyColNameList   = StringUtil.parseCommaStrToList(thisKeyColName);
+
+		// Check input
+		if (fromWhereColNameList.size() != thisKeyColNameList.size())
+			throw new RuntimeException("Expecting from and this 'where column count' to be of same size. from.size=" + fromWhereColNameList.size() + ", this.size=" + thisKeyColNameList.size());
+		
+		// check existence for all column in the "from"
+		for (String colName : fromWhereColNameList)
+			fromRstm.findColumnMandatory(colName);
+		int pos_fromContentColName = fromRstm.findColumnMandatory(fromContentColName);
+			
+		// check existence for all column in the "this"
+		for (String colName : thisKeyColNameList)
+			this.findColumnMandatory(colName);
+		int pos_thisContentColName = this.findColumnMandatory(thisContentColName);
+
+//		int pos_fromWhereColName    = fromRstm.findColumnMandatory(fromWhereColName);
+//		int pos_fromContentColName  = fromRstm.findColumnMandatory(fromContentColName);
+//
+//		int pos_thisKeyColName     = findColumnMandatory(thisKeyColName);
+//		int pos_thisContentColName = findColumnMandatory(thisContentColName);
+		
+		if (fromRstm.getRowCount() == 0)
+			return copyCount;
+
+		// loop this table
+		//  - get Key column from this table (get the where clause)
+		//  - get value from "from table" (using above where clause)
+		//  - set fetched value in this table
+		for (int r=0; r<this.getRowCount(); r++)
+		{
+			// Build "where" clause
+			Map<String, Object> keyVal = new LinkedHashMap<>();
+			for (int c=0; c<thisKeyColNameList.size(); c++)
+			{
+				String fromColName = fromWhereColNameList.get(c);
+				String thisColName = thisKeyColNameList.get(c);
+
+				// Get object from THIS table
+				Object this_keyColVal = this.getValueAsObject(r, thisColName);
+
+				// and put the ColName and value in a map, for later lookup
+				keyVal.put(fromColName, this_keyColVal);
+			}
+			
+			// Get row id's (using above map)
+			List<Integer> rowIds = fromRstm.getRowIdsWhere(keyVal);
+			
+			if (_logger.isDebugEnabled())
+				_logger.debug("copyCellContentFrom(): nameValMap=" + keyVal + ", FOUND: count=" + rowIds.size() + ", rowIds=" + rowIds);
+
+			if (rowIds.size() >= 1)
+			{
+				// Get value (only from first row found)
+				Object from_contentVal = fromRstm.getValueAsObject(rowIds.get(0), pos_fromContentColName);
+
+				// Set value
+				this.setValueAtWithOverride(from_contentVal, r, pos_thisContentColName);
+				copyCount++;
+
+				// WARNING: If we found MORE than one row... 
+				if (rowIds.size() > 1)
+				{
+					_logger.warn("Found " + rowIds.size() + " from table '" + fromRstm.getName() + "', expected to find 1 row. (only using first row)");
+				}
+			}
+			else
+			{
+				// No rows was found
+			}
+		}
+
+		return copyCount;
+	}
 	
+	
+
+	/**
+	 * Create a Static CTR (Common Table Expression) using all columns in this ResultSetTableModel
+	 * 
+	 * Below is a example of what will be created if we have a table with 3 columns
+	 * <pre>
+	 * +--+-----+----------------------+
+	 * |id|col1 |col2                  |
+	 * +--+-----+----------------------+
+	 * |1 |one  |this is the first row |
+	 * |2 |two  |this is the second row|
+	 * |3 |three|this is the third row |
+	 * +--+-----+----------------------+
+	 * </pre>
+	 *
+	 * The below will be created
+	 * <pre>
+	 * with cteName as
+	 * (
+	 *               select '1' as [id], 'one'   as [col1], 'this is the first row'  as [col2]
+	 *     union all select '2' as [id], 'two'   as [col1], 'this is the second row' as [col2]
+	 *     union all select '3' as [id], 'three' as [col1], 'this is the third row'  as [col2]
+	 * )
+	 * </pre>
+	 * 
+	 * @param cteName       Name of the CTR to be created
+	 * @return
+	 */
+	public String createStaticCte(String cteName)
+	{
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("with ").append(cteName).append(" as \n");
+		sb.append("( \n");
+		
+		for (int r=0; r<getRowCount(); r++)
+		{
+			if (r == 0)
+				sb.append("              select ");
+			else
+				sb.append("    union all select ");
+			
+			String comma = "";
+			for (int c=0; c<getColumnCount(); c++)
+			{
+				Object obj = getValueAsObject(r, c);
+				sb.append(comma)
+					.append(DbUtils.safeStr(obj)) // value with or without single quotes (and NULL if it's a null value)
+					.append(" as [")
+					.append(getColumnName(c))
+					.append("]");
+
+				comma = ", ";
+			}
+			sb.append("\n");
+		}
+		
+		sb.append(") \n");
+		
+		return sb.toString();
+	}
 	
 	
 	

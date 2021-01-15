@@ -90,9 +90,14 @@ extends HostMonitor
 //			mon = new MonitorMpstatHp();
 //			mon.setConnectedToVendor(OsVendor.Hp);
 //		}
+		else if (osname.startsWith("Windows-"))
+		{
+			mon = new MonitorMpstatWindows();
+			mon.setConnectedToVendor(OsVendor.Windows);
+		}					
 		else
 		{
-			throw new Exception("The Unix system '"+osname+"', is not supported by the module 'MonitorMpstat' for the moment.");
+			throw new Exception("The OS Name '"+osname+"', is not supported by the module 'MonitorMpstat' for the moment.");
 		}
 
 		mon.setConnection(conn);
@@ -110,6 +115,7 @@ extends HostMonitor
 		mdArr[1] = new MonitorMpstatLinux()  .createMetaData();
 		mdArr[2] = new MonitorMpstatAix()    .createMetaData();
 //		mdArr[3] = new MonitorMpstatHp()     .createMetaData();
+		mdArr[3] = new MonitorMpstatWindows().createMetaData(); // FIXME: This wont work since the meta-data is not static (it's generated on first CSV-row)
 
 		return mdArr;
 	}

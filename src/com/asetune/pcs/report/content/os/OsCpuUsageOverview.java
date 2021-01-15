@@ -22,7 +22,6 @@
 package com.asetune.pcs.report.content.os;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 
 import com.asetune.pcs.report.DailySummaryReportAbstract;
@@ -63,6 +62,19 @@ public class OsCpuUsageOverview extends AseAbstract
 	}
 	
 	@Override
+	public boolean hasShortMessageText()
+	{
+		return true;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
+		writeMessageText(w);
+	}
+
+	@Override
 	public void writeMessageText(Writer sb)
 	throws IOException
 	{
@@ -76,24 +88,6 @@ public class OsCpuUsageOverview extends AseAbstract
 		_CmOsMpstat_MpCpu         .writeHtmlContent(sb, null, null);
 		_CmOsUptime_AdjLoadAverage.writeHtmlContent(sb, null, null);
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load on the Operating System Level.",
-//				"CmOsMpstat_MpSum",
-//				"CmOsMpstat_MpCpu",
-//				"CmOsUptime_AdjLoadAverage"
-//				));
-//
-//		sb.append(_CmOsMpstat_MpSum         .getHtmlContent(null, null));
-//		sb.append(_CmOsMpstat_MpCpu         .getHtmlContent(null, null));
-//		sb.append(_CmOsUptime_AdjLoadAverage.getHtmlContent(null, null));
-//		
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()

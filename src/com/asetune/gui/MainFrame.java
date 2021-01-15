@@ -3645,6 +3645,9 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				getWaitDialog().setState("Resetting Counter Collector.");
 				CounterController.getInstance().reset(false); // Which does reset on all CM objects
 
+				// Possibly also the: Mon Table Dictionary Manager
+				MonTablesDictionaryManager.reset();
+
 				//--------------------------
 				// Update status fields
 				setStatus(ST_DISCONNECT);

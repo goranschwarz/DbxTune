@@ -140,7 +140,14 @@ extends CmToolTipSupplierDefault
 			return "<html><pre>" + StringUtil.toHtmlStringExceptNl(cellValue) + "</pre></html>"; 
 		}
 
-		if ("query_plan".equalsIgnoreCase(colName) || "QueryPlan".equalsIgnoreCase(colName) || "LastPlan".equalsIgnoreCase(colName) || "showplan".equalsIgnoreCase(colName))
+		// "any" column that has a "showplan" in it...
+		if (cellValue != null && cellValue.toString().startsWith("<ShowPlanXML xmlns="))
+		{
+			return createXmlPlanTooltip(cellValue.toString());
+		}
+		
+//		if ("query_plan".equalsIgnoreCase(colName) || "QueryPlan".equalsIgnoreCase(colName) || "LastPlan".equalsIgnoreCase(colName) || "showplan".equalsIgnoreCase(colName))
+		if (colName != null && (colName.toLowerCase().contains("query_plan") || "QueryPlan".equalsIgnoreCase(colName) || "LastPlan".equalsIgnoreCase(colName) || "showplan".equalsIgnoreCase(colName)) )
 		{
 			if (cellValue == null)
 				return null;
@@ -161,7 +168,7 @@ extends CmToolTipSupplierDefault
 		}
 
 		// Get tip on sql_handle
-		if ("sql_handle".equals(colName))
+		if (colName != null && colName.toLowerCase().contains("sql_handle"))
 		{
 			//Object cellVal = getValueAt(modelRow, modelCol);
 			if (cellValue instanceof String)
@@ -193,7 +200,8 @@ extends CmToolTipSupplierDefault
 		}
 
 		// Get tip on plan_handle
-		if ("plan_handle".equals(colName))
+//		if ("plan_handle".equals(colName))
+		if (colName != null && colName.toLowerCase().contains("plan_handle"))
 		{
 			//Object cellVal = getValueAt(modelRow, modelCol);
 			if (cellValue instanceof String)
@@ -237,7 +245,8 @@ extends CmToolTipSupplierDefault
 			}
 		}
 
-		if ( "session_id".equals(colName) || "SPID".equalsIgnoreCase(colName) || "blocking_session_id".equals(colName) )
+//		if ( "session_id".equals(colName) || "SPID".equalsIgnoreCase(colName) || "blocking_session_id".equals(colName) )
+		if ( colName != null && (colName.toLowerCase().contains("session_id") || "SPID".equalsIgnoreCase(colName)) )
 		{
 			int spid = StringUtil.parseInt(cellValue+"", -1);
 			if (spid > 0)

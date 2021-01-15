@@ -72,9 +72,9 @@ public abstract class PersistWriterBase
 	public static final int SESSION_DBMS_CONFIG_TEXT = 9;
 //	public static final int RECORDING_OPTIONS        = 10;
 	public static final int DDL_STORAGE              = 50;
-	public static final int SQL_CAPTURE_SQLTEXT      = 60;
+//	public static final int SQL_CAPTURE_SQLTEXT      = 60;
 	public static final int SQL_CAPTURE_STATEMENTS   = 61;
-	public static final int SQL_CAPTURE_PLANS        = 62;
+//	public static final int SQL_CAPTURE_PLANS        = 62;
 	public static final int ALARM_ACTIVE             = 90;
 	public static final int ALARM_HISTORY            = 91;
 	public static final int ABS                      = 100;
@@ -342,6 +342,10 @@ public abstract class PersistWriterBase
 	{
 		_logger.info("Clearing the in-memory cache, which tells us if a specific table has been created or not.");
 		_saveDdlIsCalled.clear();
+	}
+	public void clearIsDdlCreatedCache(String tabName)
+	{
+		_saveDdlIsCalled.remove(tabName);
 	}
 
 	@Override
@@ -669,9 +673,9 @@ public abstract class PersistWriterBase
 		case SESSION_DBMS_CONFIG_TEXT: return lq + "MonSessionDbmsConfigText"    + rq; // old name MonSessionAseConfigText, so AseTune needs to backward compatible
 //		case RECORDING_OPTIONS:        return lq + "MonRecordingOptions"         + rq;
 		case DDL_STORAGE:              return lq + "MonDdlStorage"               + rq;
-		case SQL_CAPTURE_SQLTEXT:      return lq + "MonSqlCapSqlText"            + rq;
+//		case SQL_CAPTURE_SQLTEXT:      return lq + "MonSqlCapSqlText"            + rq;
 		case SQL_CAPTURE_STATEMENTS:   return lq + "MonSqlCapStatements"         + rq;
-		case SQL_CAPTURE_PLANS:        return lq + "MonSqlCapPlans"              + rq;
+//		case SQL_CAPTURE_PLANS:        return lq + "MonSqlCapPlans"              + rq;
 		case ALARM_ACTIVE:             return lq + "MonAlarmActive"              + rq;
 		case ALARM_HISTORY:            return lq + "MonAlarmHistory"             + rq;
 		case ABS:                      return lq + cm.getName() + "_abs"         + rq;

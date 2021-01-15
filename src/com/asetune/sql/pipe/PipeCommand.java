@@ -117,6 +117,13 @@ public class PipeCommand
 			_cmd = cmd;
 			// for the moment this doesn't support MULTIPLE commands in the pipe
 		}
+		else if (_cmdStr.startsWith("lq ") || _cmdStr.equals("linkedquery"))
+		{
+			IPipeCommand cmd = new PipeCommandLinkedQuery(_cmdStr, _sqlStr, _connProvider);
+			_pipeList.add(cmd);
+			_cmd = cmd;
+			// for the moment this doesn't support MULTIPLE commands in the pipe
+		}
 		else if (   _cmdStr.startsWith("graph ") || _cmdStr.equals("graph")
 		         || _cmdStr.startsWith("chart ") || _cmdStr.equals("chart")
 		        )
@@ -135,7 +142,7 @@ public class PipeCommand
 		}
 		else
 		{
-			throw new PipeCommandException("PipeCommand, cmd='"+_cmdStr+"' is unknown. Available commands is: grep, egrep, bcp, tofile, convert, iconv, graph, chart, diff");
+			throw new PipeCommandException("PipeCommand, cmd='"+_cmdStr+"' is unknown. Available commands is: grep, egrep, bcp, tofile, convert, iconv, lq, linkedquery, graph, chart, diff");
 		}
 	}
 	

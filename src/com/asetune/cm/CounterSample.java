@@ -1376,7 +1376,10 @@ extends CounterTableModel
 		List<Object> prevRow = null;
 		Object val;
 		StringBuilder key;
-		_logger.debug("---");
+		
+		if (_logger.isDebugEnabled())
+			_logger.debug("-------------------------------------------------------");
+
 		while (rs.next())
 		{
 			int colCount = getColumnCount();
@@ -1407,7 +1410,7 @@ extends CounterTableModel
 				catch(SQLException ex)
 				{
 					val = getDataValue(rs, i, originRsmd);
-					_logger.warn("Failed reading object for cm='"+cm.getName()+"', row="+_rows.size()+", col="+i+", colName='"+_colNames.get(i)+"'. Trying to read it again but with the ORIGIN ResultSetMetatData. values using Origin rsmd = '"+val+"'.", ex);
+					_logger.warn("Failed reading object for cm='"+cm.getName()+"', row="+_rows.size()+", col="+i+", colName='"+_colNames.get(i-1)+"'. Trying to read it again but with the ORIGIN ResultSetMetatData. values using Origin rsmd = '"+val+"'.", ex);
 				}
 
 				// Right trim strings

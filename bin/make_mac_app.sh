@@ -42,7 +42,7 @@ export CP=${CP}:$javaLibDir/rsyntaxtextarea.jar
 export CP=${CP}:$javaLibDir/autocomplete.jar
 export CP=${CP}:$javaLibDir/rstaui.jar
 export CP=${CP}:$javaLibDir/jcommon-1.0.21.jar
-export CP=${CP}:$javaLibDir/jfreechart-1.5.0.jar
+export CP=${CP}:$javaLibDir/jfreechart-1.5.1.jar
 export CP=${CP}:$javaLibDir/juniversalchardet-2.3.0.jar
 export CP=${CP}:$javaLibDir/DDLGen.jar
 

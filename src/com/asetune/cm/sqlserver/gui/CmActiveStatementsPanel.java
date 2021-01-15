@@ -35,6 +35,7 @@ import org.jdesktop.swingx.decorator.HighlightPredicate;
 
 import com.asetune.CounterController;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.sqlserver.CmActiveStatements;
 import com.asetune.gui.ChangeToJTabDialog;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
@@ -52,6 +53,7 @@ extends TabularCntrPanel
 //	private JCheckBox l_sampleProcCallStack_chk;
 	private JCheckBox l_sampleShowplan_chk;
 //	private JCheckBox l_sampleDbccStacktrace_chk;
+	private JCheckBox l_sampleLiveQueryPlan_chk;
 
 	public CmActiveStatementsPanel(CountersModel cm)
 	{
@@ -134,24 +136,27 @@ extends TabularCntrPanel
 //		Configuration conf = Configuration.getInstance(Configuration.TEMP);
 		Configuration conf = Configuration.getCombinedConfiguration();
 //		l_sampleMonSqltext_chk     = new JCheckBox("Get Monitored SQL Text",   conf == null ? true : conf.getBooleanProperty(getName()+".sample.monSqltext",     true));
-		l_sampleMonSqltext_chk     = new JCheckBox("Get SQL Text",             conf == null ? true : conf.getBooleanProperty(getName()+".sample.monSqltext",     true));
+		l_sampleMonSqltext_chk     = new JCheckBox("Get SQL Text",             conf == null ? CmActiveStatements.DEFAULT_sample_monSqlText    : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_monSqlText,    CmActiveStatements.DEFAULT_sample_monSqlText));
 //		l_sampleDbccSqltext_chk    = new JCheckBox("Get DBCC SQL Text",        conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccSqltext",    false));
 //		l_sampleProcCallStack_chk  = new JCheckBox("Get Procedure Call Stack", conf == null ? true : conf.getBooleanProperty(getName()+".sample.procCallStack",  true));
 //		l_sampleShowplan_chk       = new JCheckBox("Get Showplan",             conf == null ? true : conf.getBooleanProperty(getName()+".sample.showplan",       true));
-		l_sampleShowplan_chk       = new JCheckBox("Get Query Plan",           conf == null ? true : conf.getBooleanProperty(getName()+".sample.showplan",       true));
+		l_sampleShowplan_chk       = new JCheckBox("Get Query Plan",           conf == null ? CmActiveStatements.DEFAULT_sample_showplan      : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_showplan,      CmActiveStatements.DEFAULT_sample_showplan));
 //		l_sampleDbccStacktrace_chk = new JCheckBox("Get ASE Stacktrace",       conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccStacktrace", false));
+		l_sampleLiveQueryPlan_chk  = new JCheckBox("Get Live Query Plan",      conf == null ? CmActiveStatements.DEFAULT_sample_liveQueryPlan : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_liveQueryPlan, CmActiveStatements.DEFAULT_sample_liveQueryPlan));
 
-		l_sampleMonSqltext_chk    .setName(getName()+".sample.monSqltext");
+		l_sampleMonSqltext_chk    .setName(CmActiveStatements.PROPKEY_sample_monSqlText);
 //		l_sampleDbccSqltext_chk   .setName(getName()+".sample.dbccSqltext");
 //		l_sampleProcCallStack_chk .setName(getName()+".sample.procCallStack");
-		l_sampleShowplan_chk      .setName(getName()+".sample.showplan");
+		l_sampleShowplan_chk      .setName(CmActiveStatements.PROPKEY_sample_showplan);
 //		l_sampleDbccStacktrace_chk.setName(getName()+".sample.dbccStacktrace");
+		l_sampleLiveQueryPlan_chk .setName(CmActiveStatements.PROPKEY_sample_liveQueryPlan);
 		
 		l_sampleMonSqltext_chk    .setToolTipText("<html>Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table.<br>    This will help us to diagnose what SQL the client sent to the server.</html>");
 //		l_sampleDbccSqltext_chk   .setToolTipText("<html>Do 'dbcc sqltext(spid)' on every row in the table.<br>     This will help us to diagnose what SQL the client sent to the server.<br><b>Note:</b> Role 'sybase_ts_role' is needed.</html>");
 //		l_sampleProcCallStack_chk .setToolTipText("<html>Do 'select * from monProcessProcedures where SPID=spid.<br>This will help us to diagnose what stored procedure called before we ended up here.</html>");
 		l_sampleShowplan_chk      .setToolTipText("<html>Do 'sp_showplan spid' on every row in the table.<br>       This will help us to diagnose if the current SQL statement is doing something funky.</html>");
 //		l_sampleDbccStacktrace_chk.setToolTipText("<html>do 'dbcc stacktrace(spid)' on every row in the table.<br>  This will help us to diagnose what peace of code the ASE Server is currently executing.<br><b>Note:</b> Role 'sybase_ts_role' is needed.</html>");
+		l_sampleLiveQueryPlan_chk .setToolTipText("<html>Do 'select query_plan from sys.dm_exec_query_statistics_xml(spid)' on every row in the table.<br>       This will give us the LIVE Query Plan of each active session.</html>");
 
 		resetMoveToTab_but.setToolTipText(
 				"<html>" +
@@ -177,6 +182,7 @@ extends TabularCntrPanel
 
 		panel.add(l_sampleMonSqltext_chk,     "wrap");
 		panel.add(l_sampleShowplan_chk,       "wrap");
+		panel.add(l_sampleLiveQueryPlan_chk,  "wrap");
 		panel.add(resetMoveToTab_but,         "wrap");
 
 		l_sampleMonSqltext_chk.addActionListener(new ActionListener()
@@ -187,7 +193,7 @@ extends TabularCntrPanel
 				// Need TMP since we are going to save the configuration somewhere
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
-				conf.setProperty(getName()+".sample.monSqltext", ((JCheckBox)e.getSource()).isSelected());
+				conf.setProperty(CmActiveStatements.PROPKEY_sample_monSqlText, ((JCheckBox)e.getSource()).isSelected());
 				conf.save();
 			}
 		});
@@ -223,7 +229,7 @@ extends TabularCntrPanel
 				// Need TMP since we are going to save the configuration somewhere
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
-				conf.setProperty(getName()+".sample.showplan", ((JCheckBox)e.getSource()).isSelected());
+				conf.setProperty(CmActiveStatements.PROPKEY_sample_showplan, ((JCheckBox)e.getSource()).isSelected());
 				conf.save();
 			}
 		});
@@ -239,6 +245,18 @@ extends TabularCntrPanel
 //				conf.save();
 //			}
 //		});
+		l_sampleLiveQueryPlan_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				conf.setProperty(CmActiveStatements.PROPKEY_sample_liveQueryPlan, ((JCheckBox)e.getSource()).isSelected());
+				conf.save();
+			}
+		});
 		
 		return panel;
 	}

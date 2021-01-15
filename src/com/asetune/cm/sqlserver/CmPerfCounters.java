@@ -199,65 +199,12 @@ extends CountersModel
 	public static final String GRAPH_NAME_PLAN_CACHE_OBJ_CNT        = "PlanCacheObjCnt";
 	public static final String GRAPH_NAME_PLAN_CACHE_OBJ_USE        = "PlanCacheObjUse";
 
-//	public static final String GRAPH_NAME_MEMORY_X1                 = "MemMgr"; xxx
+	public static final String GRAPH_NAME_MEMORY_MANAGER            = "MemMgr";
 //	public static final String GRAPH_NAME_MEMORY_X2                 = "MemMgr"; xxx
 //	public static final String GRAPH_NAME_MEMORY_X3                 = "MemMgr"; xxx
 
 	private void addTrendGraphs()
 	{
-//		String[] labels_cpuPct           = new String[] { "CPU usage %" };
-//		String[] labels_cpuEffectivePct  = new String[] { "CPU effective %" };
-//		String[] labels_sqlBatch         = new String[] { "Batch Requests/sec" };
-//		String[] labels_sqlBatchTimeSpan = new String[] { "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" };
-//
-//		String[] labels_cacheHitRate     = new String[] { "Buffer cache hit ratio (Cache Hit Percent)" };
-//		String[] labels_cacheReads       = new String[] { "Page lookups (LogicalReads)", "Page reads (PhysicalReads)", "Readahead pages (PhysicalReads)" };
-//		String[] labels_cachePhyReads    = new String[] { "Page reads (PhysicalReads)", "Readahead pages (PhysicalReads)" };
-//		String[] labels_cacheWrites      = new String[] { "Page writes", "Checkpoint pages", "Background writer pages", "Lazy writes" };
-//
-//		String[] labels_tempStat         = new String[] { "Active Temp Tables", "Temp Tables Creation Rate", "Temp Tables For Destruction" };
-//
-//		String[] labels_compile          = new String[] { "SQL Compilations/sec" };
-//		String[] labels_reCompile        = new String[] { "SQL Re-Compilations/sec" };
-//
-//		String[] labels_blockedProcs     = new String[] { "Processes blocked" };
-//
-//		String[] labels_cachePle         = new String[] { "Page life expectancy (high is good)" };
-//		
-//		String[] labels_pageSplits       = new String[] { "Page Splits/sec" };
-//		String[] labels_fwdRids          = new String[] { "Forwarded Records/sec" };
-//		String[] labels_accessMethods    = new String[] { "Full Scans/sec", "Range Scans/sec", "Probe Scans/sec" };
-//
-//		String[] labels_latchWaits       = new String[] { "Latch Waits/sec" };
-//		String[] labels_latchWaitTime    = new String[] { "Average Latch Wait Time (ms)" };
-//
-//		
-//		String[] labels_dynamic          = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-//		
-//		addTrendGraphData(GRAPH_NAME_CPU_PCT,               new TrendGraphDataPoint(GRAPH_NAME_CPU_PCT,               labels_cpuPct,            LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_CPU_EFFECTIVE_PCT,     new TrendGraphDataPoint(GRAPH_NAME_CPU_EFFECTIVE_PCT,     labels_cpuEffectivePct,   LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_SQL_BATCHES_SEC,       new TrendGraphDataPoint(GRAPH_NAME_SQL_BATCHES_SEC,       labels_sqlBatch,          LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_SQL_BATCHES_TIME_SPAN, new TrendGraphDataPoint(GRAPH_NAME_SQL_BATCHES_TIME_SPAN, labels_sqlBatchTimeSpan,  LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_CACHE_HIT_RATE,        new TrendGraphDataPoint(GRAPH_NAME_CACHE_HIT_RATE,        labels_cacheHitRate,      LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_CACHE_PLE,             new TrendGraphDataPoint(GRAPH_NAME_CACHE_PLE,             labels_cachePle,          LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_CACHE_READS,           new TrendGraphDataPoint(GRAPH_NAME_CACHE_READS,           labels_cacheReads,        LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_CACHE_PHY_READS,       new TrendGraphDataPoint(GRAPH_NAME_CACHE_PHY_READS,       labels_cachePhyReads,     LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_CACHE_WRITES,          new TrendGraphDataPoint(GRAPH_NAME_CACHE_WRITES,          labels_cacheWrites,       LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_TEMP_STAT,             new TrendGraphDataPoint(GRAPH_NAME_TEMP_STAT,             labels_tempStat,          LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_LOG_CACHE_HIT_RATE,    new TrendGraphDataPoint(GRAPH_NAME_LOG_CACHE_HIT_RATE,    labels_dynamic,           LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_LOG_CACHE_READS,       new TrendGraphDataPoint(GRAPH_NAME_LOG_CACHE_READS,       labels_dynamic,           LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_LOG_POOL_REQUESTS,     new TrendGraphDataPoint(GRAPH_NAME_LOG_POOL_REQUESTS,     labels_dynamic,           LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_TRANS_SEC,             new TrendGraphDataPoint(GRAPH_NAME_TRANS_SEC,             labels_dynamic,           LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_TRANS_ACTIVE,          new TrendGraphDataPoint(GRAPH_NAME_TRANS_ACTIVE,          labels_dynamic,           LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_COMPILE,               new TrendGraphDataPoint(GRAPH_NAME_COMPILE,               labels_compile,           LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_RECOMPILE,             new TrendGraphDataPoint(GRAPH_NAME_RECOMPILE,             labels_reCompile,         LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_BLOCKED_PROCESSES,     new TrendGraphDataPoint(GRAPH_NAME_BLOCKED_PROCESSES,     labels_blockedProcs,      LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_PAGE_SPLITS,           new TrendGraphDataPoint(GRAPH_NAME_PAGE_SPLITS,           labels_pageSplits,        LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_FWD_RIDS,              new TrendGraphDataPoint(GRAPH_NAME_FWD_RIDS,              labels_fwdRids,           LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_ACCESS_METHODS,        new TrendGraphDataPoint(GRAPH_NAME_ACCESS_METHODS,        labels_accessMethods,     LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_LATCH_WAITS,           new TrendGraphDataPoint(GRAPH_NAME_LATCH_WAITS,           labels_latchWaits,        LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_LATCH_WAIT_TIME,       new TrendGraphDataPoint(GRAPH_NAME_LATCH_WAIT_TIME,       labels_latchWaitTime,     LabelType.Static));
-
 		//-----
 		addTrendGraph(GRAPH_NAME_CPU_PCT,
 			"CPU Usage in Percent", // Menu CheckBox text
@@ -762,6 +709,19 @@ extends CountersModel
 			new String[] { "SQL Plans", "Object Plans", "Temporary Tables & Table Variables", "Bound Trees", "Extended Stored Procedures" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_MEMORY_MANAGER,
+			"Memory Manager", // Menu CheckBox text
+			"Memory Manager ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.MEMORY,
 			false, // is Percent Graph
 			false, // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
@@ -1992,6 +1952,29 @@ extends CountersModel
 			}
 		}
 
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_MEMORY_MANAGER.equals(tgdp.getName()))
+		{
+			// get all entries from "Memory Manager" section
+			int[] rowIds = getDiffRowIdsWhere("object_name", ":Memory Manager");
+			
+			String[] larr = new String[rowIds.length];
+			Double[] darr = new Double[rowIds.length];
+			
+			for (int r=0; r<darr.length; r++)
+			{
+				Integer rowId = rowIds[r];
+
+				String label = getDiffString       (rowId, "counter_name");
+				Double value = getDiffValueAsDouble(rowId, "calculated_value");
+
+				larr[r] = label;
+				darr[r] = value;
+			}
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), larr, darr);
+		}
+
 	}
 
 	
@@ -2377,6 +2360,8 @@ extends CountersModel
 		if ( ! AlarmHandler.hasInstance() )
 			return;
 
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
+		
 		AlarmHandler alarmHandler = AlarmHandler.getInstance();
 		
 		CountersModel cm = this;
@@ -2396,6 +2381,10 @@ extends CountersModel
 			if (freeListStalls != null)
 			{
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_FreeListStalls, DEFAULT_alarm_FreeListStalls);
+				
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): FreeListStalls -- threshold="+threshold+", freeListStalls='"+freeListStalls+"'.");
+
 				if (freeListStalls > threshold)
 				{
 					AlarmEvent ae = new AlarmEventPerfCounterWarning(cm, "Free list stalls/sec", freeListStalls, "Buffer Cache is probably to small... Waiting for memory to become available before a page can be added into the buffer pool.", threshold);

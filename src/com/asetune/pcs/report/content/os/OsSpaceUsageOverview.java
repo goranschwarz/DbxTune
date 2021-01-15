@@ -22,7 +22,6 @@
 package com.asetune.pcs.report.content.os;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 
 import com.asetune.pcs.report.DailySummaryReportAbstract;
@@ -63,6 +62,19 @@ public class OsSpaceUsageOverview extends AseAbstract
 	}
 	
 	@Override
+	public boolean hasShortMessageText()
+	{
+		return true;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
+		writeMessageText(w);
+	}
+
+	@Override
 	public void writeMessageText(Writer sb)
 	throws IOException
 	{
@@ -76,24 +88,6 @@ public class OsSpaceUsageOverview extends AseAbstract
 		_CmOsDiskSpace_FsAvailableMb.writeHtmlContent(sb, null, null);
 		_CmOsDiskSpace_FsUsedMb     .writeHtmlContent(sb, null, null);
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Disk Space Usage on the Operating System Level.",
-//				"CmOsDiskSpace_FsUsedPct",
-//				"CmOsDiskSpace_FsAvailableMb",
-//				"CmOsDiskSpace_FsUsedMb"
-//				));
-//
-//		sb.append(_CmOsDiskSpace_FsUsedPct    .getHtmlContent(null, null));
-//		sb.append(_CmOsDiskSpace_FsAvailableMb.getHtmlContent(null, null));
-//		sb.append(_CmOsDiskSpace_FsUsedMb     .getHtmlContent(null, null));
-//		
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()

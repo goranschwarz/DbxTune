@@ -110,6 +110,13 @@ implements IDailySummaryReport
 		_sender = reportSender;
 	}
 
+//	@Override
+//	public MonTablesDictionary createMonTablesDictionary()
+//	{
+//		return null;
+//	}
+// NOTE: The above was not saving the WaitEvent Descriptions to the PCS... so this may be implemented in the future... right now, lets do it statically
+
 	@Override
 	public void init()
 	throws Exception
@@ -119,6 +126,15 @@ implements IDailySummaryReport
 
 		_sender.init();
 		_sender.printConfig();
+
+//		// Initialize MonTableDictionry (if we got any)
+//		MonTablesDictionary monTableDict = createMonTablesDictionary();
+//		if (monTableDict != null)
+//		{
+//			MonTablesDictionaryManager.setInstance(monTableDict);
+//			monTableDict.initialize(getConnection(), false);
+//		}
+		// NOTE: The above was not saving the WaitEvent Descriptions to the PCS... so this may be implemented in the future... right now, lets do it statically
 
 		addReportEntries();
 		_logger.info("Initiated Daily Summary Report with " + getReportEntries().size() + " report entries.");
@@ -566,17 +582,32 @@ implements IDailySummaryReport
 		return dbxCentralBaseUrl;
 	}
 
-	public String createDbxCentralLink()
+	public String createDbxCentralLink(boolean isFullText)
 	{
 		String dbxCentralBaseUrl = getDbxCentralBaseUrl();
 		String dbxCentralUrlLast = dbxCentralBaseUrl + "/report?op=viewLatest&name="+getServerName();
 		String dbxCentralUrlAll  = dbxCentralBaseUrl + "/overview#reportfiles";
 
 		// Return a Text with links
-		return
-			"If you have problems to read this as a mail; Here is a <a href='" + dbxCentralUrlLast + "'>Link</a> to latest HTML Report stored in DbxCentral.<br>\n" +
-			"Or a <a href='" + dbxCentralUrlAll  + "'>link</a> to <b>all</b> Daily Reports.<br>\n" +
-			"";
+		if (isFullText)
+		{
+			// Full Text
+			return
+					"If you have problems to read this as a mail; Here is a <a href='" + dbxCentralUrlLast + "'>Link</a> to latest HTML Report stored in DbxCentral.<br>\n" +
+					"Or a <a href='" + dbxCentralUrlAll  + "'>link</a> to <b>all</b> Daily Reports.<br>\n" +
+					"";
+		}
+		else
+		{
+			// Short message
+			return
+//					"<br>" +
+					"<p style='background-color: yellow'>This is a <b>short</b> version of the Report!</p>" +
+					"The full report is also attached in this mail... So open to read the full story...<br>" +
+					"Also: here is a <a href='" + dbxCentralUrlLast + "'>Link</a> to latest <b>full</b> HTML Report stored in DbxCentral.<br>\n" +
+					"Or a <a href='" + dbxCentralUrlAll  + "'>link</a> to <b>all</b> Daily Reports.<br>\n" +
+					"";
+		}
 	}
 
 	public RecordingInfo getInstanceRecordingInfo()
@@ -598,10 +629,19 @@ implements IDailySummaryReport
 //	private List<DsrSkipEntry> _dbxCentral_dsrSkipEntriesForServerName = null;
 //	private List<DsrSkipEntry> _local_dsrSkipEntriesForServerName = null;
 
+	private int _loadAttemts = 0;
+	
 	public List<DsrSkipEntry> getDsrSkipEntries(String srvName)
 	{
 		if (_dsrSkipEntriesForServerName != null)
 			return _dsrSkipEntriesForServerName;
+
+		_loadAttemts++;
+		if (_loadAttemts > 1)
+		{
+			_logger.debug("Skipping... _loadAttemts=" + _loadAttemts + ". Refreshing Daily Summary Report SKIP Entries for srvName '" + srvName + "' from DbxCentral.");
+			return Collections.emptyList();
+		}
 		
 		String dbxCentralBaseUrl = getDbxCentralBaseUrl();
 		String dbxCentralUrlSkip = dbxCentralBaseUrl + "/api/dsr/skip?srvName="+srvName;
@@ -661,7 +701,7 @@ implements IDailySummaryReport
 				if ( ! entries.isEmpty() )
 				{
 					_logger.info("Also Adding " + entries.size() + " Daily Summary Report SKIP Entries for srvName '" + srvName + "' from local file '" + f.getAbsolutePath() + "'.");
-					if (_dsrSkipEntriesForServerName == null)
+					if (_dsrSkipEntriesForServerName != null)
 						_dsrSkipEntriesForServerName.addAll(entries);
 					else
 						_dsrSkipEntriesForServerName = entries;
@@ -815,6 +855,26 @@ implements IDailySummaryReport
 	public Timestamp getReportPeriodEndTime()   { return _reportPeriodEndTime; }
 	public String    getReportPeriodDuration()  { return _reportPeriodDuration; }
 
+	/**
+	 * @return First try getReportPeriodBeginTime(), if not available use getRecordingStartTime()
+	 */
+	public Timestamp getReportPeriodOrRecordingBeginTime() 
+	{ 
+		if (getReportPeriodBeginTime() != null)
+			return getReportPeriodBeginTime(); 
+		return getRecordingStartTime();
+	}
+
+	/**
+	 * @return First try getReportPeriodEndTime(), if not available use getRecordingEndTime()
+	 */
+	public Timestamp getReportPeriodOrRecordingEndTime()
+	{ 
+		if (getReportPeriodEndTime() != null)
+			return getReportPeriodEndTime(); 
+		return getRecordingEndTime();
+	}
+	
 	/** 
 	 * Get the Actual Reporting BEGIN Time
 	 * <p>
@@ -940,4 +1000,61 @@ implements IDailySummaryReport
 	@Override
 	public abstract void create() throws InterruptedException, IOException;
 
+	
+	
+	public String createShowSqlTextDialogHtml()
+	{
+		StringBuilder sb = new StringBuilder();
+
+		sb.append("																																					\n");
+		sb.append("  <!-- Modal: View SqlText dialog -->																											\n");
+		sb.append("  <div class='modal fade' id='dbx-view-sqltext-dialog' tabindex='-1' role='dialog' aria-labelledby='dbx-view-sqltext-dialog' aria-hidden='true'>	\n");
+//		sb.append("    <div class='modal-dialog modal-dialog-centered modal-lg' role='document'>																	\n");
+		sb.append("    <div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>																	\n");
+		sb.append("      <div class='modal-content'>																												\n");
+		sb.append("        <div class='modal-header'>																												\n");
+		sb.append("          <h5 class='modal-title' id='dbx-view-sqltext-dialog-title'><b>SQL Text:</b> <span id='dbx-view-sqltext-objectName'></span></h5>	\n");
+		sb.append("          <button type='button' class='close' data-dismiss='modal' aria-label='Close'>															\n");
+		sb.append("            <span aria-hidden='true'>&times;</span>																								\n");
+		sb.append("          </button>																																\n");
+		sb.append("        </div>																																	\n");
+		sb.append("        <div class='modal-body'>																													\n");
+		sb.append("          <pre><code id='dbx-view-sqltext-content' class='language-sql dbx-view-sqltext-content' ></code></pre>									\n");
+		sb.append("        </div>																																	\n");
+		sb.append("        <div class='modal-footer'>																												\n");
+		sb.append("          <button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>													\n");
+		sb.append("        </div>																																	\n");
+		sb.append("      </div>																																		\n");
+		sb.append("    </div>																																		\n");
+		sb.append("  </div>  																																		\n");
+		sb.append("																																					\n");
+		
+		return sb.toString();
+	}
+	public String createShowSqlTextDialogJs()
+	{
+		StringBuilder sb = new StringBuilder();
+
+		sb.append("<script> 																			\n");
+		sb.append("  /**																				\n");
+		sb.append("   * ---------------------------------------------------------------------------		\n");
+		sb.append("   * -- View SQL Text																\n");
+		sb.append("   * ---------------------------------------------------------------------------		\n");
+		sb.append("   */																				\n");
+		sb.append("  $('#dbx-view-sqltext-dialog').on('show.bs.modal', function(e) {					\n");
+		sb.append("      var data = $(e.relatedTarget).data();											\n");
+		sb.append("      																				\n");
+		sb.append("      console.log('#dbx-view-sqltext-dialog: data: '+data, data);					\n");
+		sb.append("      																				\n");
+		sb.append("      $('#dbx-view-sqltext-objectName', this).text(data.objectname);					\n");
+		sb.append("      $('#dbx-view-sqltext-content',    this).text(data.tooltip);					\n");
+		sb.append("      																				\n");
+		sb.append("      // highlight again, since the dialog DOM wasn't visible earlier				\n");
+		sb.append("      Prism.highlightAll();															\n");
+		sb.append("  });																				\n");
+		sb.append("  																					\n");
+		sb.append("</script> 																			\n");
+		
+		return sb.toString();
+	}
 }

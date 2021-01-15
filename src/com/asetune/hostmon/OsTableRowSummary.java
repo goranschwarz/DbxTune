@@ -41,11 +41,17 @@ extends OsTableRow
 		_pkStr = pk;
 		_values = new Object[sqlCols];
 
-		String[] pkStrPart = pk.split(":");
+		// split the Primary Key into array
+		//---------------------------------------------------------------------
+		// Using -1 as the second parameter: Keep empty array slots, example:
+		//   "1:2:".split(":")     results in: [1][2]
+		//   "1:2:".split(":", -1) results in: [1][2][]
+		//---------------------------------------------------------------------
+		String[] pkStrPart = pk.split(":", -1); 
 //		if (pkStrPart.length == 0)
 //			System.out.println("pk='"+pk+"', pkStrPart.length="+pkStrPart.length);
 		int pkPos = 0;
-
+		
 		for (HostMonitorMetaData.ColumnEntry ce : _md.getColumns())
 		{
 			if (ce._parseColNum > 0)
@@ -59,7 +65,8 @@ extends OsTableRow
 				_values[dp] = _md.newObject(ce, val);
 			}
 		}
-		// take away trailing ':' from pk 
+		// take away trailing ':' from PK (Hmmm can this cause issues somewhere, meaning if we intentionally has a last : at the end (a PK with a blank part last)
+		// Maybe we should count number of ':' and compare with pkStrPart.length
 		if (_pkStr.endsWith(":"))
 			_pkStr = _pkStr.substring(0, _pkStr.length() - 1 );
 		

@@ -22,7 +22,6 @@
 package com.asetune.pcs.report.content.postgres;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 
 import com.asetune.gui.ResultSetTableModel;
@@ -43,6 +42,18 @@ public class PostgresConfig extends AseAbstract
 	}
 
 	@Override
+	public boolean hasShortMessageText()
+	{
+		return false;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
+	}
+
+	@Override
 	public void writeMessageText(Writer sb)
 	throws IOException
 	{
@@ -53,22 +64,6 @@ public class PostgresConfig extends AseAbstract
 		sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
 		sb.append(toHtmlTable(_shortRstm));
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		// Get a description of this section, and column names
-//		sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//
-//		// Last sample Database Size info
-//		sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-////		sb.append(_shortRstm.toHtmlTableString("sortable"));
-//		sb.append(toHtmlTable(_shortRstm));
-//		
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()

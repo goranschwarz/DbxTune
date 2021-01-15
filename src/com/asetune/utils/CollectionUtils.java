@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.jidesoft.comparator.NumberComparator;
+
 public class CollectionUtils
 {
 //	/**
@@ -90,6 +92,36 @@ public class CollectionUtils
 
 		Map<K, V> result = new LinkedHashMap<K, V>();
 		for (Map.Entry<K, V> entry : list)
+		{
+			result.put(entry.getKey(), entry.getValue());
+		}
+		return result;
+	}
+
+	/**
+	 * Sort a map based on the Value
+	 * 
+	 * @param map the map that we will sort, the value needs to implement Number interface
+	 * @param ascending should we do ascending or descending sort
+	 * @return A LinkedHashMap that is sorted on the values in the map.
+	 */
+	public static Map<String, Number> sortByMapValueNumber(Map<String, Number> map, boolean ascending)
+	{
+		List<Map.Entry<String, Number>> list = new LinkedList<Map.Entry<String, Number>>(map.entrySet());
+		Collections.sort(list, new Comparator<Map.Entry<String, Number>>()
+		{
+			@Override
+			public int compare(Map.Entry<String, Number> o1, Map.Entry<String, Number> o2)
+			{
+				if (ascending)
+					return NumberComparator.getInstance().compare(o1.getValue(), o2.getValue());
+				else
+					return NumberComparator.getInstance().compare(o2.getValue(), o1.getValue());
+			}
+		});
+
+		Map<String, Number> result = new LinkedHashMap<String, Number>();
+		for (Map.Entry<String, Number> entry : list)
 		{
 			result.put(entry.getKey(), entry.getValue());
 		}

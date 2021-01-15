@@ -73,6 +73,8 @@ implements ResultSetMetaData
 
 	private SourceRowAdjuster _sourceRowAdjuster	= null;
 
+	private String[] _descriptionGroups = new String[] {}; // empty array
+	
 	/** Class that holds a entry */
 	public static class ColumnEntry implements Comparable<ColumnEntry>
 	{
@@ -718,6 +720,28 @@ implements ResultSetMetaData
 		return entry._description;
 	}
 
+	/** 
+	 * If any tooltip or description needs to have one or several "group" names we can find the description in
+	 * @return
+	 */
+	public String[] getDescriptionGroup()
+	{
+		if (_descriptionGroups == null)
+			_descriptionGroups = new String[] {}; // empty array;
+
+		return _descriptionGroups;
+	}
+	/** 
+	 * If any tooltip or description needs to have one or several "group" names we can find the description in
+	 * @return
+	 */
+	public void setDescriptionGroup(String[] sa)
+	{
+		if (sa == null)
+			sa = new String[] {}; // empty array;
+		
+		_descriptionGroups = sa;
+	}
 	
 	/**
 	 * Create a new Object, the type of Object is located in the passed ColumnEntry
@@ -738,16 +762,27 @@ implements ResultSetMetaData
 				throw new RuntimeException("The column '"+ce._colName+"' has not set the date parsing format.");
 			else
 			{
-				try 
+				if (val == null)
 				{
-					Date date = ce._dateParseFormat.parse(val);
-					if (ce._sqlType == Types.TIMESTAMP) newObject = new Timestamp( date.getTime() ); 
-					if (ce._sqlType == Types.DATE)      newObject = new Date( date.getTime() );
-					if (ce._sqlType == Types.TIME)      newObject = new Time( date.getTime() );
+					// Not 100% sure if this is correct (or if we should just return null)
+					if (ce._isNullable)
+						newObject = null;
+					else
+						newObject = getDefaultValForNull(ce._sqlType, val, 0);
 				}
-				catch (ParseException e) 
+				else
 				{
-					throw new RuntimeException("The column '"+ce._colName+"' can't parsing using the format '"+ce._dateParseFormat+"'.", e);
+					try 
+					{
+						Date date = ce._dateParseFormat.parse(val);
+						if (ce._sqlType == Types.TIMESTAMP) newObject = new Timestamp( date.getTime() ); 
+						if (ce._sqlType == Types.DATE)      newObject = new Date( date.getTime() );
+						if (ce._sqlType == Types.TIME)      newObject = new Time( date.getTime() );
+					}
+					catch (ParseException e) 
+					{
+						throw new RuntimeException("The column '"+ce._colName+"' can't parsing using the format '"+ce._dateParseFormat+"'.", e);
+					}
 				}
 			}
 		}
@@ -1546,8 +1581,48 @@ implements ResultSetMetaData
 		return _sourceRowAdjuster;
 	}
 	
+
+	//---------------------------------------------------------------------------------
+	//-- dynamic initialization, or init-on-first-row... like a CSV header
+	//---------------------------------------------------------------------------------
+	private boolean _initializeUsingFirstRow  = false;
+	private boolean _firstRowInitDone         = false;
 	
+	public void setInitializeUsingFirstRow(boolean b) { _initializeUsingFirstRow = b; }
+	public void setFirstRowInitDone(boolean b)        { _firstRowInitDone        = b; }
+
+	public boolean isInitializeUsingFirstRowEnabled() { return _initializeUsingFirstRow; }
+	public boolean isFirstRowInitDone()               { return _firstRowInitDone; }
+
+	public void doInitializeUsingFirstRow(String row)
+	{
+		// Add any user defined columns in dynamic initialization
+		addUserDefinedCountersInInitializeUsingFirstRow();
+
+		// Mark it as "done"
+		setFirstRowInitDone(true);
+	}
+
+	/** This method is called "at the end" of <code>doInitializeUsingFirstRow(String row)</code> so you can add any extra columns in dynamic initialization */
+	public void addUserDefinedCountersInInitializeUsingFirstRow()
+	{
+	}
+
+
 	
+	//---------------------------------------------------------------------------------
+	//-- UnPivoting enabled or not... meaning: One input row is producing several "table rows"
+	//---------------------------------------------------------------------------------
+	private boolean _isUnPivot = false;
+	public void setUnPivot(boolean b) { _isUnPivot = b; }
+	public boolean isUnPivot() { return _isUnPivot; }
+
+	public String[][] parseRowOneToMany(HostMonitorMetaData md, String row, String[] preParsed, int type)
+	{
+		return null;
+	}
+
+
 	//-------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------
@@ -1602,4 +1677,5 @@ implements ResultSetMetaData
 			e.printStackTrace();
 		}
 	}
+
 }

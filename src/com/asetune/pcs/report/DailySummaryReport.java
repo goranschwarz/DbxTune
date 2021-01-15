@@ -26,8 +26,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
-import java.time.LocalTime;
 import java.util.Iterator;
 import java.util.Properties;
 
@@ -37,7 +35,6 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
@@ -49,7 +46,6 @@ import com.asetune.pcs.report.content.DailySummaryReportContent;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.StringUtil;
-import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
 
 public class DailySummaryReport
@@ -86,7 +82,8 @@ public class DailySummaryReport
 
 		Properties log4jProps = new Properties();
 		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		//log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
+		if (cmd.hasOption('x'))
+			log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
 		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
 		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
 		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
@@ -101,8 +98,11 @@ public class DailySummaryReport
 		{
 			
 		}
-		
+
+		// Make the report and print timing
+		long startTime = System.currentTimeMillis();
 		makeReport();
+		_logger.info("Total execution time for this report was: " + TimeUtils.msDiffNowToTimeStr(startTime) + "  (HH:MM:SS.ms) ");
 	}
 	
 	private void makeReport()
@@ -291,11 +291,12 @@ public class DailySummaryReport
 		pw.println("usage: dsr [-f <h2dbfile>] [-o <filename>]");
 		pw.println("           [-U <user>] [-P <passwd>] [-S <url>]");
 		pw.println("           [-s <begin-time>] [-e end-time]");
-		pw.println("           [-h] [-v]");
+		pw.println("           [-h] [-v] [-x]");
 		pw.println("  ");
 		pw.println("options:");
 		pw.println("  -h,--help                 Usage information.");
 		pw.println("  -v,--version              Display "+Version.getAppName()+" and JVM Version.");
+		pw.println("  -x,--debug                Enable debug tracing to the log file/output.");
 		pw.println("  ");
 		pw.println("  -f,--h2dbfile   <filename>  H2 database file, same as: --url jdbc:h2:file:/path/<filename>;IFEXISTS=TRUE");
 		pw.println("  -o,--ofile      <filename>  Output filename.");
@@ -325,6 +326,7 @@ public class DailySummaryReport
 		// create the Options
 		options.addOption( "h", "help",        false, "Usage information." );
 		options.addOption( "v", "version",     false, "Display "+Version.getAppName()+" and JVM Version." );
+		options.addOption( "x", "debug",       false, "Enable debug tracing to the log file/output." );
 
 		options.addOption( "f", "h2dbfile",    true, "Input filename" );
 		options.addOption( "o", "ofile",       true, "Output filename" );

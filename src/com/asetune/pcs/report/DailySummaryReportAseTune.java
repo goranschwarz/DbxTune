@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import com.asetune.pcs.report.content.ase.AseCmDeviceIo;
 import com.asetune.pcs.report.content.ase.AseCmSqlStatement;
 import com.asetune.pcs.report.content.ase.AseConfiguration;
 import com.asetune.pcs.report.content.ase.AseCpuUsageOverview;
@@ -31,14 +32,17 @@ import com.asetune.pcs.report.content.ase.AseStatementCacheUsageOverview;
 import com.asetune.pcs.report.content.ase.AseTopCmActiveStatements;
 import com.asetune.pcs.report.content.ase.AseTopCmCachedProcs;
 import com.asetune.pcs.report.content.ase.AseTopCmObjectActivity;
+import com.asetune.pcs.report.content.ase.AseTopCmObjectActivityLockWaits;
 import com.asetune.pcs.report.content.ase.AseTopCmObjectActivityTabSize;
 import com.asetune.pcs.report.content.ase.AseTopCmStmntCacheDetails;
 import com.asetune.pcs.report.content.ase.AseTopSlowDynAndStmnt;
 import com.asetune.pcs.report.content.ase.AseTopSlowNormalizedSql;
+import com.asetune.pcs.report.content.ase.AseTopSlowNormalizedSqlWaits;
 import com.asetune.pcs.report.content.ase.AseTopSlowProcCalls;
-import com.asetune.pcs.report.content.ase.AseTopSlowSql;
+import com.asetune.pcs.report.content.ase.AseTopSlowSqlText;
 import com.asetune.pcs.report.content.ase.AseWaitStats;
 import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
+import com.asetune.pcs.report.content.os.OsIoStatOverview;
 import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
 
 public class DailySummaryReportAseTune 
@@ -62,7 +66,8 @@ extends DailySummaryReportDefault
 		// SQL: from mon SysStatements...
 		addReportEntry( new AseCmSqlStatement(this)         );
 		addReportEntry( new AseTopSlowNormalizedSql(this)   );
-		addReportEntry( new AseTopSlowSql(this)             );
+		addReportEntry( new AseTopSlowNormalizedSqlWaits(this)   );
+		addReportEntry( new AseTopSlowSqlText(this)         );
 		addReportEntry( new AseTopSlowProcCalls(this)       );
 		addReportEntry( new AseTopSlowDynAndStmnt(this)     );
 
@@ -74,11 +79,14 @@ extends DailySummaryReportDefault
 
 		// SQL: Accessed Tables
 		addReportEntry( new AseTopCmObjectActivity(this)    );
+		addReportEntry( new AseTopCmObjectActivityLockWaits(this) );
 		addReportEntry( new AseTopCmObjectActivityTabSize(this) );
 
 		// Disk IO Activity (Slow devices & Overall charts)
-		addReportEntry( new AseSlowCmDeviceIo(this)         );
+		addReportEntry( new OsIoStatOverview(this)          );
 		addReportEntry( new OsIoStatSlowIo(this)            );
+		addReportEntry( new AseCmDeviceIo(this)             );
+		addReportEntry( new AseSlowCmDeviceIo(this)         );
 
 		// Database Size
 		addReportEntry( new AseDbSize(this)                 );
@@ -87,4 +95,13 @@ extends DailySummaryReportDefault
 		addReportEntry( new AseConfiguration(this)          );
 		addReportEntry( new AseSpMonitorConfig(this)        );
 	}
+	
+	
+//	// NOTE: The below was not saving the WaitEvent Descriptions to the PCS... so this may be implemented in the future... right now, lets do it statically
+//	@Override
+//	public MonTablesDictionary createMonTablesDictionary()
+//	{
+//		return new MonTablesDictionaryAse();
+//	}
+	
 }

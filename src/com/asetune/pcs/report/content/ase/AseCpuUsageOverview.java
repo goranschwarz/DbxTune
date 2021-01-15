@@ -22,14 +22,16 @@
 package com.asetune.pcs.report.content.ase;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.sql.Types;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.pcs.report.content.ReportChartTimeSeriesLine;
+import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
@@ -38,6 +40,7 @@ import com.asetune.utils.TimeUtils;
 public class AseCpuUsageOverview extends AseAbstract
 {
 //	private static Logger _logger = Logger.getLogger(AseCpuUsageOverview.class);
+	private List<String>        _miniChartJsList = new ArrayList<>();
 
 	public AseCpuUsageOverview(DailySummaryReportAbstract reportingInstance)
 	{
@@ -45,10 +48,30 @@ public class AseCpuUsageOverview extends AseAbstract
 	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public boolean hasShortMessageText()
+	{
+		return true;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
 	throws IOException
 	{
-		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load.",
+		writeMessageText(w, false);
+	}
+
+	@Override
+	public void writeMessageText(Writer w)
+	throws IOException
+	{
+		writeMessageText(w, true);
+	}
+
+//	@Override
+	public void writeMessageText(Writer w, boolean isFullText)
+	throws IOException
+	{
+		w.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load.",
 				"CmSummary_aaCpuGraph",
 				"CmEngines_aaReadWriteGraph",
 				"CmEngines_cpuSum",
@@ -63,15 +86,18 @@ public class AseCpuUsageOverview extends AseAbstract
 				"CmSummary_IudmOperationsGraph"
 				));
 
-		_CmSummary_aaCpuGraph           .writeHtmlContent(sb, null, "The above graph may contain <i>extra</i> CPU Usages, which will be CPU Used during I/O completaion checks.");
-		_CmSummary_aaDiskGraph          .writeHtmlContent(sb, null, "How many disk I/Os was done... To be used in conjunction with '@@cpu_xxx' to decide if CPU is comming from disk or <i>other</i> DBMS load.");
-		_CmEngines_cpuSum               .writeHtmlContent(sb, null, "The above graph Will only contain CPU Cyckles used to execute User Work.");
-		_CmEngines_cpuEng               .writeHtmlContent(sb, null, "The above graph Will only contain CPU Cyckles used to execute User Work, but for each ASE Engine.<br>\n"
-		                                                    + "So here you can see if you have specififc Engines scheduling work.");
-		_CmSysLoad_EngineRunQLengthGraph.writeHtmlContent(sb, null, "The above graph shows how many task(s) that are in the Schedulers Execution Queue for each ASE Engine.<br>\n"
-		                                                    + "Values above 1 shows that we have to many user tasks waiting to be served/executed and potentially that we are at 100 or a high CPU Usage.");
-		_CmExecutionTime_CpuUsagePct    .writeHtmlContent(sb, null, null);
-		_CmExecutionTime_TimeGraph      .writeHtmlContent(sb, null, "The above graph shows what <i>sub system</i> in ASE where we spend most time (Note: Entries for 'Unknown' with values above 100,000,000 (100 sec) are discarded)<br>\n"
+		_CmSummary_aaCpuGraph           .writeHtmlContent(w, null, "The above graph may contain <i>extra</i> CPU Usages, which will be CPU Used during I/O completaion checks.");
+		_CmSummary_aaDiskGraph          .writeHtmlContent(w, null, "How many disk I/Os was done... To be used in conjunction with '@@cpu_xxx' to decide if CPU is comming from disk or <i>other</i> DBMS load.");
+		if (isFullText)
+		{
+			_CmEngines_cpuSum               .writeHtmlContent(w, null, "The above graph Will only contain CPU Cyckles used to execute User Work.");
+			_CmEngines_cpuEng               .writeHtmlContent(w, null, "The above graph Will only contain CPU Cyckles used to execute User Work, but for each ASE Engine.<br>\n"
+			                                                              + "So here you can see if you have specififc Engines scheduling work.");
+			_CmSysLoad_EngineRunQLengthGraph.writeHtmlContent(w, null, "The above graph shows how many task(s) that are in the Schedulers Execution Queue for each ASE Engine.<br>\n"
+			                                                              + "Values above 1 shows that we have to many user tasks waiting to be served/executed and potentially that we are at 100 or a high CPU Usage.");
+			_CmExecutionTime_CpuUsagePct    .writeHtmlContent(w, null, null);
+		}
+		_CmExecutionTime_TimeGraph      .writeHtmlContent(w, null, "The above graph shows what <i>sub system</i> in ASE where we spend most time (Note: Entries for 'Unknown' with values above 100,000,000 (100 sec) are discarded)<br>\n"
 		                                                              + "<ul> \n"
 		                                                              + "  <li><b>Compilation</b> - Maybe it's time to consider Statement Cache (if not already done), or increase the size of the statement cache.</li>"
 		                                                              + "  <li><b>Sorting    </b> - Find SQL Statement that does a lot of sorting and try to do that on the client side if possible, or add index to support that order.</li>"
@@ -80,76 +106,33 @@ public class AseCpuUsageOverview extends AseAbstract
 		if (_CmExecutionTime_SUM_rstm != null)
 		{
 			// Get a description of this section, and column names
-			sb.append(getSectionDescriptionHtml(_CmExecutionTime_SUM_rstm, true));
+			w.append(getSectionDescriptionHtml(_CmExecutionTime_SUM_rstm, true));
 
 			// Last sample Database Size info
 //			sb.append(_CmExecutionTime_SUM_rstm.toHtmlTableString("sortable"));
-			sb.append(toHtmlTable(_CmExecutionTime_SUM_rstm));
+			w.append(toHtmlTable(_CmExecutionTime_SUM_rstm));
 		}
 			
-		_CmSqlStatement_SqlStmntSumLRead  .writeHtmlContent(sb, null, null);
-		_CmSqlStatement_SqlStmntSumCpuTime.writeHtmlContent(sb, null, "The above two graphs, shows what SQL Statements (<b>long or short in responce time</b>) we are spending LogicalReads & CPU Time on.<br>"
-		                                                      + "This can be used to figure out if it's <i>short</i> or <i>long</i> running Statements that uses most of the machine power...<br>"
-		                                                      + "(where should we start to look)... many 'Logical Reads'; then we might have <i>in memory table scans</i>. Lot of 'CPU Time';  it might be <i>sorting</i> or...");
-		_CmSummary_LogicalReadGraph       .writeHtmlContent(sb, null, null);
-		_CmSummary_SelectOperationsGraph  .writeHtmlContent(sb, null, null);
-		_CmSummary_IudmOperationsGraph    .writeHtmlContent(sb, null, null);
-	}
+		if (isFullText)
+		{
+			_CmSqlStatement_SqlStmntSumLRead  .writeHtmlContent(w, null, null);
+			_CmSqlStatement_SqlStmntSumCpuTime.writeHtmlContent(w, null, "The above two graphs, shows what SQL Statements (<b>long or short in responce time</b>) we are spending LogicalReads & CPU Time on.<br>"
+			                                                      + "This can be used to figure out if it's <i>short</i> or <i>long</i> running Statements that uses most of the machine power...<br>"
+			                                                      + "(where should we start to look)... many 'Logical Reads'; then we might have <i>in memory table scans</i>. Lot of 'CPU Time';  it might be <i>sorting</i> or...");
+			_CmSummary_LogicalReadGraph       .writeHtmlContent(w, null, null);
+			_CmSummary_SelectOperationsGraph  .writeHtmlContent(w, null, null);
+			_CmSummary_IudmOperationsGraph    .writeHtmlContent(w, null, null);
+		}
 
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load.",
-//				"CmSummary_aaCpuGraph",
-//				"CmEngines_aaReadWriteGraph",
-//				"CmEngines_cpuSum",
-//				"CmEngines_cpuEng",
-//				"CmSysLoad_EngineRunQLengthGraph",
-//				"CmExecutionTime_CpuUsagePct",
-//				"CmExecutionTime_TimeGraph",
-//				"CmSqlStatement_SqlStmntSumLRead",
-//				"CmSqlStatement_SqlStmntSumCpuTime",
-//				"CmSummary_LogicalReadGraph",
-//				"CmSummary_SelectOperationsGraph",
-//				"CmSummary_IudmOperationsGraph"
-//				));
-//
-//		sb.append(_CmSummary_aaCpuGraph           .getHtmlContent(null, "The above graph may contain <i>extra</i> CPU Usages, which will be CPU Used during I/O completaion checks."));
-//		sb.append(_CmSummary_aaDiskGraph          .getHtmlContent(null, "How many disk I/Os was done... To be used in conjunction with '@@cpu_xxx' to decide if CPU is comming from disk or <i>other</i> DBMS load."));
-//		sb.append(_CmEngines_cpuSum               .getHtmlContent(null, "The above graph Will only contain CPU Cyckles used to execute User Work."));
-//		sb.append(_CmEngines_cpuEng               .getHtmlContent(null, "The above graph Will only contain CPU Cyckles used to execute User Work, but for each ASE Engine.<br>\n"
-//		                                                              + "So here you can see if you have specififc Engines scheduling work."));
-//		sb.append(_CmSysLoad_EngineRunQLengthGraph.getHtmlContent(null, "The above graph shows how many task(s) that are in the Schedulers Execution Queue for each ASE Engine.<br>\n"
-//		                                                              + "Values above 1 shows that we have to many user tasks waiting to be served/executed and potentially that we are at 100 or a high CPU Usage."));
-//		sb.append(_CmExecutionTime_CpuUsagePct    .getHtmlContent(null, null));
-//		sb.append(_CmExecutionTime_TimeGraph      .getHtmlContent(null, "The above graph shows what <i>sub system</i> in ASE where we spend most time (Note: Entries for 'Unknown' with values above 100,000,000 (100 sec) are discarded)<br>\n"
-//		                                                              + "<ul> \n"
-//		                                                              + "  <li><b>Compilation</b> - Maybe it's time to consider Statement Cache (if not already done), or increase the size of the statement cache.</li>"
-//		                                                              + "  <li><b>Sorting    </b> - Find SQL Statement that does a lot of sorting and try to do that on the client side if possible, or add index to support that order.</li>"
-//		                                                              + "  <li><b>Execution  </b> - Hopefully this is where most CPU Cycles is spent.</li>"
-//		                                                              + "</ul> \n"));
-//		if (_CmExecutionTime_SUM_rstm != null)
-//		{
-//			// Get a description of this section, and column names
-//			sb.append(getSectionDescriptionHtml(_CmExecutionTime_SUM_rstm, true));
-//
-//			// Last sample Database Size info
-////			sb.append(_CmExecutionTime_SUM_rstm.toHtmlTableString("sortable"));
-//			sb.append(toHtmlTable(_CmExecutionTime_SUM_rstm));
-//		}
-//			
-//		sb.append(_CmSqlStatement_SqlStmntSumLRead  .getHtmlContent(null, null));
-//		sb.append(_CmSqlStatement_SqlStmntSumCpuTime.getHtmlContent(null, "The above two graphs, shows what SQL Statements (<b>long or short in responce time</b>) we are spending LogicalReads & CPU Time on.<br>"
-//		                                                                + "This can be used to figure out if it's <i>short</i> or <i>long</i> running Statements that uses most of the machine power...<br>"
-//		                                                                + "(where should we start to look)... many 'Logical Reads'; then we might have <i>in memory table scans</i>. Lot of 'CPU Time';  it might be <i>sorting</i> or..."));
-//		sb.append(_CmSummary_LogicalReadGraph       .getHtmlContent(null, null));
-//		sb.append(_CmSummary_SelectOperationsGraph  .getHtmlContent(null, null));
-//		sb.append(_CmSummary_IudmOperationsGraph    .getHtmlContent(null, null));
-//
-//		return sb.toString();
-//	}
+		// Write JavaScript code for CPU SparkLine
+		if (isFullText)
+		{
+			for (String str : _miniChartJsList)
+			{
+				w.append(str);
+			}
+		}
+	}
 
 	@Override
 	public String getSubject()
@@ -225,6 +208,10 @@ public class AseCpuUsageOverview extends AseAbstract
 		{
 			// Translate "ExecutionTime_InSeconds_sum" to HH:MM:SS
 			rstm.addColumn("ExecutionTime as HH:MM:SS", 2, Types.VARCHAR, "varchar", "varchar(30)", 30, 0, "", String.class);
+
+			// Spark-line
+			rstm.addColumn("ExecutionTime__chart", 3, Types.VARCHAR, "varchar", "varchar(512)", 512, 0, "", String.class);
+
 			for (int r=0; r<rstm.getRowCount(); r++)
 			{
 				int    seconds  = rstm.getValueAsInteger(r, 1);
@@ -234,6 +221,25 @@ public class AseCpuUsageOverview extends AseAbstract
 			}
 			
 			rstm.setDescription("Summary information about <b>what</b> we are spending CPU time on for the <b>whole</b> reporting period from the table <code>CmExecutionTime_diff</code><br>");
+
+			
+			// Mini Chart
+			// Get data for: SparkLine - small chart values ... this will do:
+			//  -- fill in the data cell with: <span class='aClassName' values='v1, v2, v2, v3...'>Mini Chart Here</span>
+			//  -- return JavaScript Code to initialize the Spark line
+			String whereKeyColumn = "OperationName"; 
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, rstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("ExecutionTime__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmExecutionTime_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("ExecutionTime")
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Number of MicroSeconds for 'ExecutionTime' in below period")
+					.validate()));
+
 		}
 		return rstm;
 	}

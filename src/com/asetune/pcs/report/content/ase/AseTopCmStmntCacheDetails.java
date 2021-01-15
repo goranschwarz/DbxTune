@@ -22,21 +22,28 @@
 package com.asetune.pcs.report.content.ase;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
+import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 
 public class AseTopCmStmntCacheDetails extends AseAbstract
 {
@@ -45,10 +52,25 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _ssqlRstm;
 //	private Exception           _problem = null;
+	private List<String>        _miniChartJsList = new ArrayList<>();
 
+	private Map<Map<String, Object>, SqlCapExecutedSqlEntries> _keyToExecutedSql;
+	
 	public AseTopCmStmntCacheDetails(DailySummaryReportAbstract reportingInstance)
 	{
 		super(reportingInstance);
+	}
+
+	@Override
+	public boolean hasShortMessageText()
+	{
+		return false;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
 	}
 
 	@Override
@@ -64,8 +86,39 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
-			sb.append(toHtmlTable(_shortRstm));
+//			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+			sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
+//			sb.append(toHtmlTable(_shortRstm));
+
+			// Create a default renderer
+			TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
+			{
+				@Override
+				public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+				{
+					if ("txt".equals(colName))
+					{
+						// Get Actual Executed SQL Text for current 'Hashkey'
+						int Hashkey = rstm.getValueAsInteger(row, "Hashkey"); // Note: 'HashKey' (capital K) in [MonSqlCapStatements] but 'Hashkey' in RSTM
+						
+						Map<String, Object> whereColValMap = new LinkedHashMap<>();
+						whereColValMap.put("HashKey"  , Hashkey); // Note: 'HashKey' (capital K) in [MonSqlCapStatements] but 'Hashkey' in RSTM
+
+						String executedSqlText = getSqlCapExecutedSqlTextAsString(_keyToExecutedSql, whereColValMap);
+
+						// Put the "Actual Executed SQL Text" as a "tooltip"
+						return "<div title='Click for Detailes' "
+								+ "data-toggle='modal' "
+								+ "data-target='#dbx-view-sqltext-dialog' "
+								+ "data-objectname='" + Hashkey + "' "
+								+ "data-tooltip=\""   + executedSqlText     + "\" "
+								+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+					}
+
+					return strVal;
+				}
+			};
+			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, tableRender));
 
 			if (_ssqlRstm != null)
 			{
@@ -73,37 +126,13 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 				sb.append(toHtmlTable(_ssqlRstm));
 			}
 		}
+		
+		// Write JavaScript code for CPU SparkLine
+		for (String str : _miniChartJsList)
+		{
+			sb.append(str);
+		}
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		if (_shortRstm.getRowCount() == 0)
-//		{
-//			sb.append("No rows found <br>\n");
-//		}
-//		else
-//		{
-//			// Get a description of this section, and column names
-//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//
-//			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-////			sb.append(_shortRstm.toHtmlTableString("sortable"));
-//			sb.append(toHtmlTable(_shortRstm));
-//
-//			if (_ssqlRstm != null)
-//			{
-//				sb.append("Statement Cache Entries Count: ").append(_ssqlRstm.getRowCount()).append("<br>\n");
-////				sb.append(_ssqlRstm.toHtmlTablesVerticalString("sortable"));
-////				sb.append(_ssqlRstm.toHtmlTableString("sortable"));
-//				sb.append(toHtmlTable(_ssqlRstm));
-//			}
-//		}
-//
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()
@@ -189,7 +218,8 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+		int topRows = getTopRows();
+//		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
 
 		// in some versions (ASE 16.0 SP2 I have observed this in) seems to (in some cases) keep the old counter values even if we compile a new PlanID
 		// So DO NOT TRUST NEWLY created PlanID's 
@@ -278,10 +308,13 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 		if (dummyRstm.hasColumnNoCase("TotalLioDiff"))     { orderByCol = "[TotalLioDiff_sum]";     }
 		if (dummyRstm.hasColumnNoCase("TotalCpuTimeDiff")) { orderByCol = "[TotalCpuTimeDiff_sum]"; }
 
+		String whereFilter_skipNewDiffRateRows = !skipNewDiffRateRows ? "" : "  and [CmNewDiffRateRow] = 0 -- only records that has been diff calculations (not first time seen, some ASE Versions has a bug that do not clear counters on reuse) \n";
+
 		String sql = getCmDiffColumnsAsSqlComment("CmStmntCacheDetails")
 			    + "select top " + topRows + " \n"
 			    + "  [DBName] \n"
 			    + " ,[Hashkey] \n"
+				+ " ,cast('' as varchar(10))     as [txt] \n"
 //			    + " ,[ObjectName] \n"
 			    + " ,min([ObjectName])           as [ObjectName] \n"
 			    + " ,count(*)                    as [samples_count] \n"
@@ -293,8 +326,10 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 			    + " \n"
 			    + col_UseCount_max
 			    + col_UseCountDiff_sum
+			    + (StringUtil.hasValue(col_UseCountDiff_sum) ? " ,cast('' as varchar(512)) as [UseCountDiff__chart] \n" : "")
 			    + " \n"
 			    + col_TotalElapsedTimeDiff_sum
+			    + (StringUtil.hasValue(col_TotalCpuTimeDiff_sum) ? " ,cast('' as varchar(512)) as [TotalCpuTimeDiff__chart] \n" : "")
 			    + col_TotalCpuTimeDiff_sum
 			    + col_TotalLioDiff_sum
 			    + col_TotalPioDiff_sum
@@ -321,6 +356,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 			    + "where 1 = 1 \n"
 				+ getReportPeriodSqlWhere()
 			    + extraWhereClause
+			    + whereFilter_skipNewDiffRateRows
 //maybe we can use SqlHash here instead... note: we need to change at the top of the select statement as well [ObjectName] ->> [Hashkey]
 //			    + "group by [DBName], [ObjectName] \n"
 			    + "group by [DBName], [Hashkey] \n"
@@ -396,13 +432,68 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 				}
 			}
 
+			// Mini Chart on "CPU Time"
+			if (_shortRstm.hasColumn("TotalCpuTimeDiff_sum") && _shortRstm.hasColumn("TotalCpuTimeDiff__chart"))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create()
+						.setHtmlChartColumnName      ("TotalCpuTimeDiff__chart")
+						.setHtmlWhereKeyColumnName   ("DBName, Hashkey")
+						.setDbmsTableName            ("CmStmntCacheDetails_diff")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("TotalElapsedTimeDiff")   
+						.setDbmsWhereKeyColumnName   ("DBName, Hashkey")
+						.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
+//						.setSparklineTooltipPostfix  ("SUM 'CPU Time in ms' at below period")
+						.validate()));
+			}
+
+			// Mini Chart on "UseCountDiff"
+			if (_shortRstm.hasColumn("UseCountDiff_sum") && _shortRstm.hasColumn("UseCountDiff__chart"))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create()
+						.setHtmlChartColumnName      ("UseCountDiff__chart")
+						.setHtmlWhereKeyColumnName   ("DBName, Hashkey")
+						.setDbmsTableName            ("CmStmntCacheDetails_diff")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("UseCountDiff")   
+						.setDbmsWhereKeyColumnName   ("DBName, Hashkey")
+						.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
+//						.setSparklineTooltipPostfix  ("SUM 'Execution Count' in below period")
+						.validate()));
+			}
+
 			
+			//--------------------------------------------------------------------------------------
+			// get Executed SQL Statements from the SQL Capture ...
+			//--------------------------------------------------------------------------------------
+			if (_shortRstm.getRowCount() > 0)
+			{
+				for (int r=0; r<_shortRstm.getRowCount(); r++)
+				{
+					// Get Actual Executed SQL Text for current 'Hashkey'
+					Map<String, Object> whereColValMap = new LinkedHashMap<>();
+					whereColValMap.put("HashKey", _shortRstm.getValueAsInteger(r, "Hashkey")); // Note: 'HashKey' (capital K) in [MonSqlCapStatements] but 'Hashkey' in RSTM
+
+					_keyToExecutedSql = getSqlCapExecutedSqlText(_keyToExecutedSql, conn, true, whereColValMap);
+				}
+			}
+
+
 			Set<String> stmntCacheObjects = getStatementCacheObjects(_shortRstm, "ObjectName");
 			if (stmntCacheObjects != null && ! stmntCacheObjects.isEmpty() )
 			{
 				try 
 				{
 					_ssqlRstm = getSqlStatementsFromMonDdlStorage(conn, stmntCacheObjects);
+
+					// Add CpuTime
+					_ssqlRstm.addColumn("CpuTime", 1, Types.VARCHAR, "varchar", "varchar(512)", 512, 0, "-", String.class);
+
+					// Mini Chart on "CPU Time"
+					// COPY Cell data from the "details" table
+					_ssqlRstm.copyCellContentFrom(_shortRstm, "ObjectName", "TotalCpuTimeDiff__chart",   "objectName", "CpuTime");
 				}
 				catch (SQLException ex)
 				{

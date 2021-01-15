@@ -23,8 +23,10 @@ package com.asetune.pcs.report.content;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.List;
 
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.pcs.report.content.ReportEntryAbstract.ReportingIndexEntry;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
@@ -44,6 +46,24 @@ public interface IReportEntry
 	 * Write Report Message as a HTML String (do NOT surround with HTML start/end tags)
 	 */
 	void writeMessageText(Writer writer) throws IOException;
+
+
+	/**
+	 * if we should produce any "short message", which can be used for sending mail messages etc...
+	 * 
+	 * @return
+	 */
+	boolean hasShortMessageText();
+
+	/**
+	 * Write "short report message", which can be used for sending mail messages etc...
+	 * <p>
+	 * You can write HTML text or plain text, it's: up to the implementation
+	 * 
+	 * @param w
+	 * @throws IOException 
+	 */
+	void writeShortMessageText(Writer w) throws IOException;
 
 
 	/**
@@ -169,6 +189,17 @@ public interface IReportEntry
 	String getInfoMsg();
 	boolean hasInfogMsg();
 
+	/**
+	 * Create any needed indexes for helping the report entry to execute faster
+	 * @param connection
+	 */
+	void createReportingIndexes(DbxConnection connection);
+
+	/**
+	 * Get any index that is needed 
+	 * @return
+	 */
+	List<ReportingIndexEntry> getReportingIndexes();
 	
 
 //	/**

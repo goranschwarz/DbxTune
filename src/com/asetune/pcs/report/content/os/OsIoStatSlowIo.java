@@ -22,7 +22,6 @@
 package com.asetune.pcs.report.content.os;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.util.List;
 
@@ -68,6 +67,18 @@ public class OsIoStatSlowIo extends ReportEntryAbstract
 	}
 	
 	@Override
+	public boolean hasShortMessageText()
+	{
+		return false;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
+	}
+
+	@Override
 	public void writeMessageText(Writer sb)
 	throws IOException
 	{
@@ -99,50 +110,6 @@ public class OsIoStatSlowIo extends ReportEntryAbstract
 			_CmOsIostat_IoWriteOp     .writeHtmlContent(sb, null, null);
 		}
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-////		if (_shortRstm.getRowCount() == 0)
-////		{
-////			sb.append("No rows found <br>\n");
-////		}
-////		else
-////		{
-//			// Get a description of this section, and column names
-//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//
-//			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-////			sb.append(_shortRstm.toHtmlTableString("sortable"));
-//			sb.append(toHtmlTable(_shortRstm));
-////		}
-//
-//		// If table "CmOsIostat_abs" do not exists
-//		// the below _CmOsIostat_xxxx objects will be null... early exit in create()
-//		if (_CmOsIostat_IoWait_noLimit != null)
-//		{
-//			sb.append(getDbxCentralLinkWithDescForGraphs(true, "Below are Graphs/Charts with various information that can help you decide how the IO Subsystem is handling the load.",
-//					"CmOsIostat_IoWait",
-//					"CmOsIostat_IoReadWait",
-//					"CmOsIostat_IoWriteWait",
-//					"CmOsIostat_IoServiceTime",
-//					"CmOsIostat_IoReadOp",
-//					"CmOsIostat_IoWriteOp"
-//					));
-//
-//			sb.append(_CmOsIostat_IoWait_noLimit.getHtmlContent(null, null));
-//			sb.append(_CmOsIostat_IoWait        .getHtmlContent(null, null));
-//			sb.append(_CmOsIostat_IoReadWait    .getHtmlContent(null, null));
-//			sb.append(_CmOsIostat_IoWriteWait   .getHtmlContent(null, null));
-//			sb.append(_CmOsIostat_IoServiceTime .getHtmlContent(null, null));
-//			sb.append(_CmOsIostat_IoReadOp      .getHtmlContent(null, null));
-//			sb.append(_CmOsIostat_IoWriteOp     .getHtmlContent(null, null));
-//		}
-//			
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()
@@ -226,7 +193,7 @@ public class OsIoStatSlowIo extends ReportEntryAbstract
 				if ( ! str.endsWith("%") )
 					str += "%";
 
-				sql_skipDeviceNames = "  and [device] not like '" + _skipDeviceNames + "' \n";
+				sql_skipDeviceNames = "  and [device] not like '" + str + "' \n";
 			}
 		}
 
@@ -329,7 +296,7 @@ public class OsIoStatSlowIo extends ReportEntryAbstract
 		
 		// Section description
 		rstm.setDescription(
-				"Slow Disk access (messured by OS Command <code>iostat</code>), or slow disk <i>service time</i> (ordered by: sample time) <br>" +
+				"Slow Disk access (measured by OS Command <code>iostat</code>), or slow disk <i>service time</i> (ordered by: sample time) <br>" +
 				"<br>" +
 				"What disk/devices (at what time) have undelaying storage <i>problems/issues</i>... manifested as long access time<br>" +
 				"<br>" +

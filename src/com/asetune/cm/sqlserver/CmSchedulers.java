@@ -78,7 +78,10 @@ extends CountersModel
 //		"pending_disk_io_count",
 //		"load_factor",
 		"yield_count",
-		"last_timer_activity"
+		"last_timer_activity",
+		"total_cpu_usage_ms",
+		"total_cpu_idle_capped_ms",
+		"total_scheduler_delay_ms"
 		};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;

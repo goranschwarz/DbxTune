@@ -22,12 +22,16 @@
 package com.asetune.pcs.report.content.postgres;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.ase.AseAbstract;
+import com.asetune.pcs.report.content.ase.SparklineHelper;
+import com.asetune.pcs.report.content.ase.SparklineHelper.AggType;
+import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
@@ -37,10 +41,24 @@ public class PostgresTopTableAccess extends AseAbstract
 
 	private ResultSetTableModel _rstm_IoCache;
 	private ResultSetTableModel _rstm_access;
+	private List<String>        _miniChartJsList = new ArrayList<>();
 
 	public PostgresTopTableAccess(DailySummaryReportAbstract reportingInstance)
 	{
 		super(reportingInstance);
+	}
+
+	@Override
+	public boolean hasShortMessageText()
+	{
+		return true;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
+		writeMessageText(w);
 	}
 
 	@Override
@@ -58,7 +76,8 @@ public class PostgresTopTableAccess extends AseAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_rstm_IoCache, true));
 
-			sb.append("Row Count: " + _rstm_IoCache.getRowCount() + "<br>\n");
+//			sb.append("Row Count: " + _rstm_IoCache.getRowCount() + "<br>\n");
+			sb.append("Row Count: " + _rstm_IoCache.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
 			sb.append(toHtmlTable(_rstm_IoCache));
 		}
 
@@ -73,50 +92,17 @@ public class PostgresTopTableAccess extends AseAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_rstm_access, true));
 
-			sb.append("Row Count: " + _rstm_access.getRowCount() + "<br>\n");
+//			sb.append("Row Count: " + _rstm_access.getRowCount() + "<br>\n");
+			sb.append("Row Count: " + _rstm_access.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
 			sb.append(toHtmlTable(_rstm_access));
 		}
+		
+		// Write JavaScript code for CPU SparkLine
+		for (String str : _miniChartJsList)
+		{
+			sb.append(str);
+		}
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		//------------------------------------------
-//		// IO and Cache
-//		if (_rstm_IoCache.getRowCount() == 0)
-//		{
-//			sb.append("No rows found for 'Table/Index IO and Cache Information' <br>\n");
-//		}
-//		else
-//		{
-//			// Get a description of this section, and column names
-//			sb.append(getSectionDescriptionHtml(_rstm_IoCache, true));
-//
-//			sb.append("Row Count: ").append(_rstm_IoCache.getRowCount()).append("<br>\n");
-////			sb.append(_rstm_IoCache.toHtmlTableString("sortable"));
-//			sb.append(toHtmlTable(_rstm_IoCache));
-//		}
-//
-//		//------------------------------------------
-//		// Access
-//		if (_rstm_access.getRowCount() == 0)
-//		{
-//			sb.append("No rows found for 'Table/Index Access Activity' <br>\n");
-//		}
-//		else
-//		{
-//			// Get a description of this section, and column names
-//			sb.append(getSectionDescriptionHtml(_rstm_access, true));
-//
-//			sb.append("Row Count: ").append(_rstm_access.getRowCount()).append("<br>\n");
-////			sb.append(_rstm_access.toHtmlTableString("sortable"));
-//			sb.append(toHtmlTable(_rstm_access));
-//		}
-//
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()
@@ -146,7 +132,8 @@ public class PostgresTopTableAccess extends AseAbstract
 
 	private ResultSetTableModel create_CmPgTablesIo_diff(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+//		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+		int topRows = getTopRows();
 
 		 // just to get Column names
 //		String dummySql = "select * from [CmPgTablesIo_diff] where 1 = 2";
@@ -163,15 +150,25 @@ public class PostgresTopTableAccess extends AseAbstract
 			    + "    ,[relname] \n"
 			    + "    ,max([relid])                  as [relid] \n"
 			    + " \n"
+			    + "    ,cast('' as varchar(512))      as [ALL_blks_read__chart] \n"
+			    + "    ,cast('' as varchar(512))      as [ALL_blks_hit__chart] \n"
+			    + " \n"
 			    + "    ,(sum([heap_blks_read]) + sum([idx_blks_read]) + sum([toast_blks_read]) + sum([tidx_blks_read]) ) as [ALL_blks_read_SUM] \n"
 			    + "    ,(sum([heap_blks_hit])  + sum([idx_blks_hit])  + sum([toast_blks_hit])  + sum([tidx_blks_hit])  ) as [ALL_blks_hit_SUM] \n"
 			    + " \n"
+//			    + "    ,cast('' as varchar(512))      as [heap_blks_read__chart] \n"
 			    + "    ,sum([heap_blks_read])         as [heap_blks_read_SUM] \n"
 			    + "    ,sum([heap_blks_hit])          as [heap_blks_hit_SUM] \n"
+			    + " \n"
+//			    + "    ,cast('' as varchar(512))      as [idx_blks_read__chart] \n"
 			    + "    ,sum([idx_blks_read])          as [idx_blks_read_SUM] \n"
 			    + "    ,sum([idx_blks_hit])           as [idx_blks_hit_SUM] \n"
+			    + " \n"
+//			    + "    ,cast('' as varchar(512))      as [toast_blks_read__chart] \n"
 			    + "    ,sum([toast_blks_read])        as [toast_blks_read_SUM] \n"
 			    + "    ,sum([toast_blks_hit])         as [toast_blks_hit_SUM] \n"
+			    + " \n"
+//			    + "    ,cast('' as varchar(512))      as [tidx_blks_read__chart] \n"
 			    + "    ,sum([tidx_blks_read])         as [tidx_blks_read_SUM] \n"
 			    + "    ,sum([tidx_blks_hit])          as [tidx_blks_hit_SUM] \n"
 			    + "from [CmPgTablesIo_diff] \n"
@@ -215,13 +212,42 @@ public class PostgresTopTableAccess extends AseAbstract
 
 			// Calculate Duration
 			setDurationColumn(rstm, "CmSampleTime_MIN", "CmSampleTime_MAX", "Duration");
+
+			// Mini Chart on "..."
+			String whereKeyColumn = "dbname, schemaname, relname"; 
+			String ALL_blks_read  = "sum([heap_blks_read]) + sum([idx_blks_read]) + sum([toast_blks_read]) + sum([tidx_blks_read])";
+			String ALL_blks_hit   = "sum([heap_blks_hit])  + sum([idx_blks_hit])  + sum([toast_blks_hit])  + sum([tidx_blks_hit])";
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, rstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("ALL_blks_read__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgTablesIo_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  (ALL_blks_read).setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("ALL '*_blks_read' in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, rstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("ALL_blks_hit__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgTablesIo_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  (ALL_blks_hit).setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("ALL '*_blks_hit' in below period")
+					.validate()));
+
 		}
 		return rstm;
 	}
 
 	private ResultSetTableModel create_CmPgTables_diff(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+//		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+		int topRows = getTopRows();
 
 		 // just to get Column names
 		String dummySql = "select * from [CmPgTables_diff] where 1 = 2";
@@ -248,6 +274,10 @@ public class PostgresTopTableAccess extends AseAbstract
 			    + "    ,max([total_kb])                                            as [total_kb_MAX] \n"
 			    + "    ,max([data_kb])                                             as [data_kb_MAX] \n"
 			    + "    ,max([index_kb])                                            as [index_kb_MAX] \n"
+			    + " \n"
+			    + "    ,cast('' as varchar(512))                                   as [seq_scan__chart] \n"
+			    + "    ,cast('' as varchar(512))                                   as [idx_scan__chart] \n"
+			    + "    ,cast('' as varchar(512))                                   as [idx_tup_fetch_per_scan__chart] \n"
 			    + " \n"
 			    + "    ,CAST( avg([table_scan_pct])         as decimal(5,1) )      as [table_scan_pct_AVG] \n"
 			    + "    ,CAST( avg([index_usage_pct])        as decimal(5,1) )      as [index_usage_pct_AVG] \n"
@@ -330,6 +360,42 @@ public class PostgresTopTableAccess extends AseAbstract
 
 			// Calculate Duration
 			setDurationColumn(rstm, "CmSampleTime_MIN", "CmSampleTime_MAX", "Duration");
+
+			// Mini Chart on "..."
+			String whereKeyColumn = "dbname, schemaname, relname"; 
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, rstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("seq_scan__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgTables_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("seq_scan")
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Number of 'seq_scan' in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, rstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("idx_scan__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgTables_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("idx_scan")
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Number of 'idx_scan' in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, rstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("idx_tup_fetch_per_scan__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgTables_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("idx_tup_fetch_per_scan").setGroupDataAggregationType(AggType.AVG)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Average of 'idx_tup_fetch_per_scan' in below period")
+					.validate()));
 		}
 		return rstm;
 	}

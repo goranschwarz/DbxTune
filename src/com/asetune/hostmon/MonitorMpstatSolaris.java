@@ -80,11 +80,11 @@ extends MonitorMpstat
 		md.setPercentCol("wt");
 		md.setPercentCol("idl");
 
-		// Use "CPU" as the Primary Key, which is used to du summary/average calculations
+		// Use "CPU" as the Primary Key, which is used to do summary/average calculations
 		md.setPkCol("CPU");
 
 		// Set column "samples", to a special status, which will contain number of 
-		// underlying samples the summary/average caclulation was based on
+		// underlying samples the summary/average calculation was based on
 		md.setStatusCol("samples",    HostMonitorMetaData.STATUS_COL_SUB_SAMPLE);
 
 		// What regexp to use to split the input row into individual fields

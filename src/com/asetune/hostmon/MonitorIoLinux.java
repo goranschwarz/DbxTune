@@ -109,7 +109,7 @@ extends MonitorIo
 		// 
 		// and: http://sebastien.godard.pagesperso-orange.fr/
 		// Sysstat 9.1.2 released (development version).
-		// New fields have been added to iostat's extended statistics, giving the average time for read and write requests to be served (thanks go to Jérôme Marchand from Redhat for his help with that). 
+		// New fields have been added to iostat's extended statistics, giving the average time for read and write requests to be served (thanks go to Jï¿½rï¿½me Marchand from Redhat for his help with that). 
 		// Note that those fields should not be mistaken for read and write service times as they also include the time spent by the requests in queue... 
 		// Also with this version, tickless CPUs will no longer be displayed as offline processors, but as 100% idle ones.
 

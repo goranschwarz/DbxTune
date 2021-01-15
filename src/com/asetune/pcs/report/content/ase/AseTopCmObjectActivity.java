@@ -22,11 +22,13 @@
 package com.asetune.pcs.report.content.ase;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
+import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
@@ -35,10 +37,23 @@ public class AseTopCmObjectActivity extends AseAbstract
 //	private static Logger _logger = Logger.getLogger(AseTopCmCachedProcs.class);
 
 	private ResultSetTableModel _shortRstm;
+	private List<String>        _miniChartJsList = new ArrayList<>();
 
 	public AseTopCmObjectActivity(DailySummaryReportAbstract reportingInstance)
 	{
 		super(reportingInstance);
+	}
+
+	@Override
+	public boolean hasShortMessageText()
+	{
+		return false;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
 	}
 
 	@Override
@@ -54,32 +69,17 @@ public class AseTopCmObjectActivity extends AseAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+//			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+			sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
 			sb.append(toHtmlTable(_shortRstm));
 		}
+		
+		// Write JavaScript code for CPU SparkLine
+		for (String str : _miniChartJsList)
+		{
+			sb.append(str);
+		}
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		if (_shortRstm.getRowCount() == 0)
-//		{
-//			sb.append("No rows found <br>\n");
-//		}
-//		else
-//		{
-//			// Get a description of this section, and column names
-//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//
-//			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-////			sb.append(_shortRstm.toHtmlTableString("sortable"));
-//			sb.append(toHtmlTable(_shortRstm));
-//		}
-//
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()
@@ -103,7 +103,8 @@ public class AseTopCmObjectActivity extends AseAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+//		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+		int topRows = getTopRows();
 		int havingAbove = 1000;
 
 		 // just to get Column names
@@ -130,16 +131,15 @@ public class AseTopCmObjectActivity extends AseAbstract
 
 		String sql = getCmDiffColumnsAsSqlComment("CmObjectActivity")
 			    + "select top " + topRows + " \n"
-			    + "     min([CmSampleTime])                                   as [CmSampleTime_min] \n"
-			    + "    ,max([CmSampleTime])                                   as [CmSampleTime_max] \n"
-			    + "    ,cast('' as varchar(30))                               as [Duration] \n"
-			    + "    ,[DBName]                                              as [DBName] \n"
+			    + "     [DBName]                                              as [DBName] \n"
 			    + "    ,[ObjectName]                                          as [ObjectName] \n"
 			    + "    ,[IndexName]                                           as [IndexName] \n"
+			    + "    ,cast('' as varchar(512))                              as [UsedCount__chart] \n"
 			    + "    ,sum([UsedCount])                                      as [UsedCount_sum] \n"
 			    + "    ,count(*)                                              as [samples_count] \n"
 			    + "    ,sum(CASE WHEN [Remark] = '' THEN 0 ELSE 1 END)        as [Remark_cnt] \n"
 			    + "    ,sum(CASE WHEN [Remark] = 'TabScan' THEN 1 ELSE 0 END) as [Remark_TabScan_cnt] \n"
+			    + "    ,cast('' as varchar(512))                              as [LogicalReads__chart] \n"
 			    + "    ,sum([LogicalReads])                                   as [LogicalReads_sum] \n"
 			    + "    ,sum([PhysicalReads])                                  as [PhysicalReads_sum] \n"
 			    + "    ,sum([APFReads])                                       as [APFReads_sum] \n"
@@ -151,6 +151,7 @@ public class AseTopCmObjectActivity extends AseAbstract
 			    + "    ,sum([PhysicalWrites])                                 as [PhysicalWrites_sum] \n"
 			    + "    ,sum([PagesWritten])                                   as [PagesWritten_sum] \n"
 			    + "    ,sum([Operations])                                     as [Operations_sum] \n"
+			    + "    ,cast('' as varchar(512))                              as [RowsInsUpdDel__chart] \n"
 			    + "    ,sum([RowsInsUpdDel])                                  as [RowsInsUpdDel_sum] \n"
 			    + "    ,sum([RowsInserted])                                   as [RowsInserted_sum] \n"
 			    + "    ,sum([RowsDeleted])                                    as [RowsDeleted_sum] \n"
@@ -174,6 +175,10 @@ public class AseTopCmObjectActivity extends AseAbstract
 			    + ObjectCacheDate_max
 			    + "    ,max([LastOptSelectDate])                              as [LastOptSelectDate_max] \n"
 			    + "    ,max([LastUsedDate])                                   as [LastUsedDate_max] \n"
+			    
+			    + "    ,min([CmSampleTime])                                   as [CmSampleTime_min] \n"
+			    + "    ,max([CmSampleTime])                                   as [CmSampleTime_max] \n"
+			    + "    ,cast('' as varchar(30))                               as [Duration] \n"
 			    + "from [CmObjectActivity_diff] x \n"
 			    + "where 1 = 1 \n"
 				+ getReportPeriodSqlWhere()
@@ -195,6 +200,42 @@ public class AseTopCmObjectActivity extends AseAbstract
 
 			// Calculate Duration
 			setDurationColumn(_shortRstm, "CmSampleTime_min", "CmSampleTime_max", "Duration");
+			
+			// Mini Chart on: 
+			String whereKeyColumn = "DBName, ObjectName, IndexName"; 
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("UsedCount__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmObjectActivity_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("UsedCount")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+//					.setSparklineTooltipPostfix  ("Number of 'UsedCount' in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("LogicalReads__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmObjectActivity_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("LogicalReads")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+//					.setSparklineTooltipPostfix  ("Number of 'LogicalReads' in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create()
+					.setHtmlChartColumnName      ("RowsInsUpdDel__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmObjectActivity_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("RowsInsUpdDel")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+//					.setSparklineTooltipPostfix  ("Number of 'RowsInsUpdDel' in below period")
+					.validate()));
 		}
 	}
 	

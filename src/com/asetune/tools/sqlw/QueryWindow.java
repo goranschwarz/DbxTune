@@ -39,6 +39,7 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.Insets;
 import java.awt.MouseInfo;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
@@ -163,6 +164,7 @@ import org.fife.ui.rsyntaxtextarea.FileLocation;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
+import org.jdesktop.swingx.JXTableHeader;
 import org.jdesktop.swingx.decorator.Highlighter;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -240,6 +242,7 @@ import com.asetune.sql.pipe.PipeCommandDiff;
 import com.asetune.sql.pipe.PipeCommandException;
 import com.asetune.sql.pipe.PipeCommandGraph;
 import com.asetune.sql.pipe.PipeCommandGrep;
+import com.asetune.sql.pipe.PipeCommandLinkedQuery;
 import com.asetune.sql.pipe.PipeCommandToFile;
 import com.asetune.sql.showplan.ShowplanHtmlView;
 import com.asetune.tools.AseAppTraceDialog;
@@ -8669,7 +8672,19 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 										}
 										else
 										{
-											_resultCompList.add(new JTableResultSet(rstm));
+											JTableResultSet trs = new JTableResultSet(rstm);
+
+											// pipe - LinkedQuery
+											if (pipeCmd != null && (pipeCmd.getCmd() instanceof PipeCommandLinkedQuery))
+											{
+												PipeCommandLinkedQuery pipeCmdLq = (PipeCommandLinkedQuery)pipeCmd.getCmd();
+												
+												// trs = new JTableResultSetLinkedQuery(rstm, pipeCmdLq);
+												pipeCmdLq.doPipe(trs);
+											}
+
+											
+											_resultCompList.add(trs);
 											// FIXME: use a callback interface instead
 										}
 										
@@ -9643,6 +9658,8 @@ checkPanelSize(_resPanel, comp);
 		// ADD Entry
 		// ASE:        Msg 3615: Table: %.*s scan count %d, logical reads: (regular=%d apf=%d total=%d), physical reads: (regular=%d apf=%d total=%d), apf IOs used=%d
 		// SQL-Server: Msg 3615: Table '%.*ls'. Scan count %d, logical reads %d, physical reads %d, read-ahead reads %d, lob logical reads %d, lob physical reads %d, lob read-ahead reads %d.
+
+//		System.out.println(">>> parseAseMessage(): num="+msg.getMsgNum()+", Msg=|"+msg.getText()+"|.");
 		
 		if (msg.getMsgNum() == 3615) 
 //		if (msgText.startsWith("Table: ") || msgText.startsWith("Table '"))   // ASE || SQL-Server
@@ -10263,9 +10280,74 @@ checkPanelSize(_resPanel, comp);
 		return count;
 	}
 
-	private JComponent createStatisticsIoTablePanel(StatisticsIoTableModel tm, boolean asTabbedPane)
+	private JComponent createStatisticsIoTablePanel(final StatisticsIoTableModel tm, boolean asTabbedPane)
 	{
-		ResultSetJXTable tab = new ResultSetJXTable(tm);
+		// Tool-tip for column headers
+		ResultSetJXTable tab = new ResultSetJXTable(tm)
+		{
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			protected JTableHeader createDefaultTableHeader()
+			{
+				JTableHeader tabHeader = new JXTableHeader(getColumnModel())
+				{
+		            private static final long serialVersionUID = 0L;
+
+					@Override
+					public String getToolTipText(MouseEvent e)
+					{
+						String tip = null;
+
+						int vcol = getColumnModel().getColumnIndexAtX(e.getPoint().x);
+						if (vcol == -1) return null;
+
+						int mcol = convertColumnIndexToModel(vcol);
+						if (mcol == -1) return null;
+
+						tip = tm.getToolTipText(mcol);
+
+						if (tip == null)
+							return null;
+						return "<html>" + tip + "</html>";
+					}
+				};
+
+				return tabHeader;
+			}
+			// 
+			// TOOL TIP for: CELLS
+			// Translate Page counts to MB or similar
+			//
+			@Override
+			public String getToolTipText(MouseEvent e)
+			{
+				String tip = null;
+				Point p = e.getPoint();
+				int vrow = rowAtPoint(p);
+				int vcol = columnAtPoint(p);
+				if ( vrow >= 0 && vcol >= 0 )
+				{
+					int mcol = super.convertColumnIndexToModel(vcol);
+					int mrow = super.convertRowIndexToModel(vrow);
+
+					//TableModel model = getModel();
+					//String colName = model.getColumnName(mcol);
+					//Object cellValue = model.getValueAt(mrow, mcol);
+
+					int srvPageSizeKb = -1;
+					try {
+						String srvPageSizeKbStr = _conn == null ? "" : _conn.getDbmsPageSizeInKb();
+						srvPageSizeKb = StringUtil.parseInt(srvPageSizeKbStr, -1);
+					} catch (SQLException ignore) { }
+
+					tip = tm.getCellToolTipText(mrow, mcol, srvPageSizeKb);
+				}
+				if ( tip != null )
+					return tip;
+				return getToolTipText();
+			}
+		};
 		tab.setSortable(true);
 		tab.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
 		tab.packAll(); // set size so that all content in all cells are visible

@@ -22,7 +22,6 @@
 package com.asetune.pcs.report.content.postgres;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.util.LinkedHashMap;
 
@@ -46,6 +45,18 @@ extends ReportEntryAbstract
 	}
 
 	@Override
+	public boolean hasShortMessageText()
+	{
+		return false;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
+	}
+
+	@Override
 	public void writeMessageText(Writer sb)
 	throws IOException
 	{
@@ -58,7 +69,8 @@ extends ReportEntryAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+//			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+			sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
 			sb.append(toHtmlTable(_shortRstm));
 
 			int sumTotalMb      = 0;
@@ -84,56 +96,6 @@ extends ReportEntryAbstract
 			sb.append("<br>\n");
 		}
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		if (_shortRstm.getRowCount() == 0)
-//		{
-//			sb.append("No rows found <br>\n");
-//		}
-//		else
-//		{
-//			// Get a description of this section, and column names
-//			sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//
-//			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-////			sb.append(_shortRstm.toHtmlTableString("sortable"));
-//			sb.append(toHtmlTable(_shortRstm));
-//
-//			int sumTotalMb      = 0;
-//			int sumTotalDataMb  = 0;
-//			int sumTotalIndexMb = 0;
-//			int sumTotalToastMb = 0;
-//			for (int r=0; r<_shortRstm.getRowCount(); r++)
-//			{
-//				sumTotalMb      += _shortRstm.getValueAsInteger(r, "total_mb");
-//				sumTotalDataMb  += _shortRstm.getValueAsInteger(r, "data_mb");
-//				sumTotalIndexMb += _shortRstm.getValueAsInteger(r, "index_mb");
-//				sumTotalToastMb += _shortRstm.getValueAsInteger(r, "toast_mb");
-//			}
-////			sb.append("<br>\n");
-////			sb.append("<b>Sum Size in MB:  </b>").append(sumTotalMb     ).append("<br>\n");
-////			sb.append("<b>Sum Data in MB:  </b>").append(sumTotalDataMb ).append("<br>\n");
-////			sb.append("<b>Sum Index in MB: </b>").append(sumTotalIndexMb).append("<br>\n");
-////			sb.append("<b>Sum TOAST in MB: </b>").append(sumTotalToastMb).append("&emsp;&emsp;&emsp;<i>(TOAST = The Oversized Attribute Storage Technique) or in short 'large rows that spans pages'.</i> <br>\n");
-////			sb.append("<br>\n");
-//
-//			LinkedHashMap<String, Object> summaryMap = new LinkedHashMap<>();
-//			summaryMap.put("Sum Size in MB",   sumTotalMb);
-//			summaryMap.put("Sum Data in MB",   sumTotalDataMb);
-//			summaryMap.put("Sum Index in MB",  sumTotalIndexMb);
-//			summaryMap.put("Sum TOAST in MB",  sumTotalToastMb + "&emsp;&emsp;&emsp;<i>(TOAST = The Oversized Attribute Storage Technique) or in short 'large rows that spans pages'.</i>");
-//			
-//			sb.append("<br>\n");
-//			sb.append(StringUtil.toHtmlTable(summaryMap));
-//			sb.append("<br>\n");
-//		}
-//
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()
@@ -182,7 +144,8 @@ extends ReportEntryAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 30);
+		int topRows = getTopRows();
+//		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 30);
 
 		String sql = ""
 			    + "select top " + topRows + " \n"

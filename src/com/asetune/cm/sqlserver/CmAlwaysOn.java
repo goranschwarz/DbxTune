@@ -514,7 +514,7 @@ extends CountersModel
 			mtd.addColumn("CmAlwaysOn", "p_LogFlushesPerSec                  ".trim(),  "<html>grabed from CmPerfCounters: ':Databases',            'Log Flushes/sec'                  , ${dbname}                     <br>" + pcttd + "Number of log flushes per second.</html>"); 
 
 			mtd.addColumn("CmAlwaysOn", "p_MirroredWriteTransactionsPerSec   ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Mirrored Write Transactions/sec'  , ${dbname}                     <br>" + pcttd + "View on 'Primary'.   Number of transactions that were written to the primary database and then waited to commit until the log was sent to the secondary database, in the last second.</html>"); 
-			mtd.addColumn("CmAlwaysOn", "p_TransactionDelay                  ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Transaction Delay'                , ${dbname}                     <br>" + pcttd + "View on 'Primary'.   Delay in waiting for unterminated commit acknowledgment for all the current transactions, in milliseconds. Divide by Mirrored Write Transaction/sec to get Avg Transaction Delay. For more information, see SQL Server 2012 AlwaysOn – Part 12 – Performance Aspects and Performance Monitoring II</html>"); 
+			mtd.addColumn("CmAlwaysOn", "p_TransactionDelay                  ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Transaction Delay'                , ${dbname}                     <br>" + pcttd + "View on 'Primary'.   Delay in waiting for unterminated commit acknowledgment for all the current transactions, in milliseconds. Divide by Mirrored Write Transaction/sec to get Avg Transaction Delay. For more information, see SQL Server 2012 AlwaysOn ï¿½ Part 12 ï¿½ Performance Aspects and Performance Monitoring II</html>"); 
 			mtd.addColumn("CmAlwaysOn", "p_GroupCommitTime                   ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Group Commit Time'                , ${dbname}                     <br>" + pcttd + "View on 'Primary'.   Number of microseconds all transactions group commit waited.</html>"); // This was found at: https://support.microsoft.com/en-us/help/3173156/update-adds-alwayson-extended-events-and-performance-counters-in-sql-s
 			mtd.addColumn("CmAlwaysOn", "p_GroupCommitsPerSec                ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Group Commits/Sec'                , ${dbname}                     <br>" + pcttd + "View on 'Primary'.   Number of times transactions waited for group commit.</html>");        // This was found at: https://support.microsoft.com/en-us/help/3173156/update-adds-alwayson-extended-events-and-performance-counters-in-sql-s
 			mtd.addColumn("CmAlwaysOn", "p_LogBytesCompressedPerSec          ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Log Bytes Compressed/sec'         , ${dbname}                     <br>" + pcttd + "View on 'Primary?'.  The amount of log in bytes compressed per sec.</html>");               // This was found at: https://support.microsoft.com/en-us/help/3173156/update-adds-alwayson-extended-events-and-performance-counters-in-sql-s
@@ -2006,7 +2006,7 @@ extends CountersModel
 		CountersModel cm = this;
 //		String dbmsSrvName = cm.getServerName();
 
-		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
 		for (int r=0; r<cm.getDiffRowCount(); r++)
 		{
@@ -2167,10 +2167,11 @@ extends CountersModel
 					{
 						int LogSendQueueSizeMb = LogSendQueueSizeKb.intValue() / 1024;
 						
-						if (debugPrint || _logger.isDebugEnabled())
-							System.out.println("##### sendAlarmRequest("+cm.getName()+"): ag_name='"+ag_name+"', server_name='"+server_name+"', dbname='"+dbname+"', LogSendQueueSizeMb='"+LogSendQueueSizeMb+"'.");
-
 						int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LogSendQueueSizeInMb, DEFAULT_alarm_LogSendQueueSizeInMb);
+
+						if (debugPrint || _logger.isDebugEnabled())
+							System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", ag_name='"+ag_name+"', server_name='"+server_name+"', dbname='"+dbname+"', LogSendQueueSizeMb='"+LogSendQueueSizeMb+"'.");
+
 						if (LogSendQueueSizeMb > threshold)
 						{
 							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
@@ -2197,10 +2198,11 @@ extends CountersModel
 					String SecondaryCommitTimeLag = cm.getAbsString(r, "SecondaryCommitTimeLag");
 					if (StringUtil.hasValue(SecondaryCommitTimeLag))
 					{
-						if (debugPrint || _logger.isDebugEnabled())
-							System.out.println("##### sendAlarmRequest("+cm.getName()+"): ag_name='"+ag_name+"', server_name='"+server_name+"', dbname='"+dbname+"', SecondaryCommitTimeLag='"+SecondaryCommitTimeLag+"'.");
-
 						int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_SecondaryCommitTimeLagInSeconds, DEFAULT_alarm_SecondaryCommitTimeLagInSeconds);
+
+						if (debugPrint || _logger.isDebugEnabled())
+							System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", ag_name='"+ag_name+"', server_name='"+server_name+"', dbname='"+dbname+"', SecondaryCommitTimeLag='"+SecondaryCommitTimeLag+"'.");
+
 						try 
 						{
 							Timestamp secondaryCommitTimeLagTs = TimeUtils.parseToUtcTimestamp(SecondaryCommitTimeLag, "HH:mm:ss.SSS");

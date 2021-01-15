@@ -138,7 +138,10 @@ import net.sf.jsqlparser.expression.operators.relational.NotEqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.RegExpMatchOperator;
 import net.sf.jsqlparser.expression.operators.relational.RegExpMySQLOperator;
 import net.sf.jsqlparser.expression.operators.relational.SimilarToExpression;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.parser.CCJSqlParser;
+import net.sf.jsqlparser.parser.CCJSqlParserTokenManager;
+import net.sf.jsqlparser.parser.ParseException;
+import net.sf.jsqlparser.parser.StringProvider;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.select.SubSelect;
 
@@ -606,6 +609,7 @@ extends JPanel
 //			@SuppressWarnings("unused")
 //			SimpleSqlWhereTableFilter swpv = new SimpleSqlWhereTableFilter(table, expr);
 //		}
+
 		public static ALocalFilter<TableModel, Integer> getFilterForWhere(JXTable table, String whereClause)
 		throws Exception
 		{
@@ -624,8 +628,10 @@ extends JPanel
 			}
 
 			// Now parse the "where" string and set filter...
-			Expression expr = CCJSqlParserUtil.parseCondExpression(whereClause);
-			
+			Expression expr = parseWhereClause(whereClause); // <<-- in this method do: withSquareBracketQuotation(true)
+//			Expression expr = CCJSqlParserUtil.parseCondExpression(whereClause);
+//			Expression expr = CCJSqlParserUtil.parseCondExpression(whereClause, parser -> parser.withSquareBracketQuotation(true));
+
 			if (_logger.isDebugEnabled())
 			{
 				_logger.debug("-------------------------------------------------------------");
@@ -635,6 +641,36 @@ extends JPanel
 			// Create a filter
 			SimpleSqlWhereTableFilter swpv = new SimpleSqlWhereTableFilter(table, expr);
 			return swpv.getFilter();
+		}
+
+		/** 
+		 * Workaround to get square brackets [] to work... Code "ripped" from CCJSqlParserUtil.parseCondExpression <br>
+		 * And adding: parser.withSquareBracketQuotation(true);
+		 */
+		private static Expression parseWhereClause(String whereClause) 
+		throws JSQLParserException
+		{
+			boolean allowPartialParse = true;
+//			return CCJSqlParserUtil.parseCondExpression(whereClause);
+			CCJSqlParser parser = new CCJSqlParser(new StringProvider(whereClause));
+			parser.withSquareBracketQuotation(true);
+			try 
+			{
+				Expression expr = parser.Expression();
+				if (!allowPartialParse && parser.getNextToken().kind != CCJSqlParserTokenManager.EOF) 
+				{
+					throw new JSQLParserException("could only parse partial expression " + expr.toString());
+				}
+				return expr;
+			} 
+			catch (JSQLParserException ex) 
+			{
+				throw ex;
+			} 
+			catch (ParseException ex) 
+			{
+				throw new JSQLParserException(ex);
+			}
 		}
 
 

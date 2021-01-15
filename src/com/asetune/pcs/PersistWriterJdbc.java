@@ -2510,18 +2510,32 @@ public class PersistWriterJdbc
 	private boolean checkAndCreateTable(DbxConnection conn, String tabName, ISqlCaptureBroker sqlCapBroker)
 	throws SQLException
 	{
+		// Obtain a DatabaseMetaData object from our current connection        
+		DatabaseMetaData dbmd = conn.getMetaData();
+
+		_logger.info("Checking table '" + tabName + "' for existence.");
+		boolean dropTable = sqlCapBroker.checkForDropTableDdl(conn, dbmd, tabName);
+		if (dropTable)
+		{
+			String sql = conn.quotifySqlString("drop table [" + tabName + "]");
+
+			_logger.info("Dropping table '" + tabName + "', using sql: " + sql);
+			dbDdlExec(conn, sql);
+
+			// Remove this table from the created cache
+			clearIsDdlCreatedCache(tabName);
+		}
+
+
 		if ( ! isDdlCreated(tabName) )
 		{
-			// Obtain a DatabaseMetaData object from our current connection        
-			DatabaseMetaData dbmd = conn.getMetaData();
-	
 			ResultSet rs = dbmd.getColumns(null, null, tabName, "%");
 			boolean tabExists = rs.next();
 			rs.close();
 	
 			if( tabExists )
 			{
-				_logger.info("Checking table '" + tabName + "'.");
+				_logger.info("Checking table '" + tabName + "' in SqlCapture for Column Names (missing columns will be created).");
 				
 				List <String> alterList = sqlCapBroker.checkTableDdl(conn, dbmd, tabName);
 				if (alterList != null && !alterList.isEmpty())
@@ -3291,8 +3305,8 @@ public class PersistWriterJdbc
 					sbSql.append(", ").append(safeStr( ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime())       )); // "cancelTime"              datetime      null true    - 12
 					sbSql.append(", ").append(safeStr( ae.getTimeToLive()                                                        )); // "timeToLive"              int           null true    - 13
 					sbSql.append(", ").append(safeStr( ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+"",15  )); // "threshold"               varchar(15)   null true    - 14
-					sbSql.append(", ").append(safeStr( ae.getData()                                                         ,160 )); // "data"                    varchar(80)   null true    - 15
-					sbSql.append(", ").append(safeStr( ae.getReRaiseData()                                                  ,160 )); // "lastData"                varchar(80)   null true    - 16
+					sbSql.append(", ").append(safeStr( ae.getData()                                                         ,512 )); // "data"                    varchar(512)  null true    - 15
+					sbSql.append(", ").append(safeStr( ae.getReRaiseData()                                                  ,512 )); // "lastData"                varchar(512)  null true    - 16
 					sbSql.append(", ").append(safeStr( ae.getDescription()                                                  ,512 )); // "description"             varchar(512)  null false   - 17
 					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()                                           ,512 )); // "lastDescription"         varchar(512)  null false   - 18
 					sbSql.append(", ").append(safeStr( ae.getExtendedDescription()                                               )); // "extendedDescription"     text          null true    - 19
@@ -3385,8 +3399,8 @@ public class PersistWriterJdbc
 //				pst.setInt      (i++, ae.getTimeToLive() == -1 ? null : ae.getTimeToLive()                 ); // timeToLive              - int         , Nullable = true 
 				pst.setInt      (i++, ae.getTimeToLive()                                                   ); // timeToLive              - int         , Nullable = true 
 				pst.setString   (i++, ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+""); // threshold      - varchar(15) , Nullable = true 
-				pst.setString   (i++, ae.getData()        == null ? null : ae.getData().toString()         ); // data                    - varchar(80) , Nullable = true 
-				pst.setString   (i++, ae.getReRaiseData() == null ? null : ae.getReRaiseData().toString()  ); // lastData                - varchar(80) , Nullable = true 
+				pst.setString   (i++, ae.getData()        == null ? null : ae.getData().toString()         ); // data                    - varchar(512), Nullable = true 
+				pst.setString   (i++, ae.getReRaiseData() == null ? null : ae.getReRaiseData().toString()  ); // lastData                - varchar(512), Nullable = true 
 				pst.setString   (i++, ae.getDescription()                                                  ); // description             - varchar(512), Nullable = false
 				pst.setString   (i++, ae.getReRaiseDescription()                                           ); // lastDescription         - varchar(512), Nullable = false
 				pst.setString   (i++, ae.getExtendedDescription()                                          ); // extendedDescription     - text        , Nullable = true 
@@ -4838,6 +4852,8 @@ public class PersistWriterJdbc
 		report.setServerName(serverName);
 		try
 		{
+			long startTime = System.currentTimeMillis();
+			
 			// Initialize the Report, which also initialized the ReportSender
 			report.init();
 
@@ -4850,6 +4866,8 @@ public class PersistWriterJdbc
 
 			// remove/ old reports from the "archive"
 			report.removeOldReports();
+
+			_logger.info("Total execution time for the Daily Summary Report was: " + TimeUtils.msDiffNowToTimeStr(startTime) + "  (HH:MM:SS.ms) ");
 		}
 		catch(Exception ex)
 		{

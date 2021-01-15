@@ -73,6 +73,7 @@ import org.jdesktop.swingx.table.TableColumnExt;
 import org.mozilla.universalchardet.UniversalDetector;
 
 import com.asetune.cm.CmToolTipSupplierDefault;
+import com.asetune.cm.sqlserver.ToolTipSupplierSqlServer;
 import com.asetune.gui.ResultSetMetaDataViewDialog;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.focusabletip.FocusableTip;
@@ -85,6 +86,7 @@ import com.asetune.utils.JavaVersion;
 import com.asetune.utils.JsonUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+import com.asetune.xmenu.SqlSentryPlanExplorer;
 import com.j256.simplemagic.ContentInfo;
 import com.j256.simplemagic.ContentInfoUtil;
 
@@ -572,18 +574,18 @@ implements ToolTipHyperlinkResolver
 	{
 		String tooltip = null;
 		Point p = e.getPoint();
-		int row = rowAtPoint(p);
-		int col = columnAtPoint(p);
-		if ( row >= 0 && col >= 0 )
+		int vrow = rowAtPoint(p);    // View Row
+		int vcol = columnAtPoint(p); // View Column
+		if ( vrow >= 0 && vcol >= 0 )
 		{
-			col = super.convertColumnIndexToModel(col);
-			row = super.convertRowIndexToModel(row);
+			int mcol = super.convertColumnIndexToModel(vcol); // Model Column
+			int mrow = super.convertRowIndexToModel(vrow);    // Model Row
 
 			TableModel tm = getModel();
 			if (tm instanceof ResultSetTableModel)
 			{
 				ResultSetTableModel rstm = (ResultSetTableModel) tm;
-				int sqlType = rstm.getSqlType(col);
+				int sqlType = rstm.getSqlType(mcol);
 
 				// type
 				// 0 == Other
@@ -602,15 +604,21 @@ implements ToolTipHyperlinkResolver
 				// Show special tool tip (but only if its "long enough", 100 chars)
 				if (type != 0)
 				{
-					Object cellValue = tm.getValueAt(row, col);
+					Object cellValue = tm.getValueAt(mrow, mcol);
 					if (cellValue == null)
 						return null;
 					String cellStr = cellValue.toString();
 
+					// Special logic if it's a SQL-Server "showplan" XML
+					if (cellStr.startsWith("<ShowPlanXML xmlns="))
+					{
+						tooltip = ToolTipSupplierSqlServer.createXmlPlanTooltip(cellStr);
+					}
+
 					// only do if: MEDIUM Size
 					//  - to small is just irritating
 					//  - to big will "freeze" the GUI
-					if (cellStr.length() >= 100)
+					if (tooltip == null && cellStr.length() >= 100)
 					{
 						int maxCellStrLen = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_TOOLTIP_CELL_DISPLAY_MAX_SIZE_KB, DEFAULT_TOOLTIP_CELL_DISPLAY_MAX_SIZE_KB); // default 10MB
 						if (cellStr.length() > maxCellStrLen*1024) // 10 MB
@@ -647,7 +655,7 @@ implements ToolTipHyperlinkResolver
 						boolean stripedRows      = true;
 						boolean addOuterHtmlTags = true;
 
-						tooltip = rstm.toHtmlTableString(row, startMsg, endMsg, borders, stripedRows, addOuterHtmlTags);
+						tooltip = rstm.toHtmlTableString(mrow, startMsg, endMsg, borders, stripedRows, addOuterHtmlTags);
 					}
 					else
 					{
@@ -712,6 +720,19 @@ implements ToolTipHyperlinkResolver
 			{
 				_logger.warn("Problems open URL='"+urlStr+"', in external Browser.", e);
 			}
+		}
+
+		if (desc.startsWith(CmToolTipSupplierDefault.OPEN_IN_SENTRY_ONE_PLAN_EXPLORER))
+		{
+			String urlStr = desc.substring(CmToolTipSupplierDefault.OPEN_IN_SENTRY_ONE_PLAN_EXPLORER.length());
+			if (urlStr.startsWith("file:///"))
+				urlStr = urlStr.substring("file:///".length());
+			
+			File tempFile = new File(urlStr);
+			SqlSentryPlanExplorer.openSqlPlanExplorer(tempFile);
+			
+			return ResolverReturn.createDoNothing(event);
+			//return null;
 		}
 
 		if (desc.startsWith(CmToolTipSupplierDefault.SET_PROPERTY_TEMP))

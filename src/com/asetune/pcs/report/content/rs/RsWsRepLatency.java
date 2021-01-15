@@ -22,7 +22,6 @@
 package com.asetune.pcs.report.content.rs;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 
 import com.asetune.pcs.report.DailySummaryReportAbstract;
@@ -41,6 +40,19 @@ public class RsWsRepLatency extends AseAbstract
 	}
 
 	@Override
+	public boolean hasShortMessageText()
+	{
+		return true;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
+		writeMessageText(w);
+	}
+
+	@Override
 	public void writeMessageText(Writer sb)
 	throws IOException
 	{
@@ -50,20 +62,6 @@ public class RsWsRepLatency extends AseAbstract
 
 		_CmWsRepLatency_DataAgeInSec.writeHtmlContent(sb, null, null);
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Database Tranfer <i>Latency</i> or Age of Data at the Standby.",
-//				"CmWsRepLatency_DataAgeInSec"
-//				));
-//
-//		sb.append(_CmWsRepLatency_DataAgeInSec.getHtmlContent(null, null));
-//		
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()

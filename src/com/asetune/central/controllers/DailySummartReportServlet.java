@@ -246,7 +246,6 @@ public class DailySummartReportServlet extends HttpServlet
 								params.put("state"       , state.toString());
 								params.put("progressText", msg);
 								params.put("percentDone" , guessedPercentDone);
-							//	params.put("reportText"  , entry.getMessageText());
 								String json = new ObjectMapper().writeValueAsString(params);
 
 								writeSseEvent(resp, "progress", json);

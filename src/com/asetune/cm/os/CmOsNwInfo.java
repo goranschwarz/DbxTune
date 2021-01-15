@@ -35,6 +35,7 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.hostmon.HostMonitor.OsVendor;
 import com.asetune.hostmon.OsTable;
 
 public class CmOsNwInfo
@@ -88,10 +89,19 @@ extends CounterModelHostMonitor
 
 		// Normally for HostMonitor is ABS
 		setDataSource(DATA_RATE, false);
+		//NOTE: if it's Windows, then wee need to: setDataSource(DATA_ABS, false); 
+		//      this is done in: localCalculation(OsTable osSampleTable)
+
 		
 		addTrendGraphs();
 		
 		CounterSetTemplates.register(this);
+	}
+
+	@Override
+	protected TabularCntrPanel createGui()
+	{
+		return new CmOsNwInfoPanel(this);
 	}
 
 
@@ -108,6 +118,12 @@ extends CounterModelHostMonitor
 
 	private void addTrendGraphs()
 	{
+		// Windows do NOT (for the moment) have any localCalculations
+		if (isConnectedToVendor(OsVendor.Windows))
+		{
+			return;
+		}
+
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_RECV_BANDWIDTH_KB,
 			"Network Received KB", 	                                           // Menu CheckBox text
@@ -201,12 +217,6 @@ extends CounterModelHostMonitor
 	}
 	
 	@Override
-	protected TabularCntrPanel createGui()
-	{
-		return new CmOsNwInfoPanel(this);
-	}
-
-	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
 		if (GRAPH_NAME_RECV_BANDWIDTH_KB.equals(tgdp.getName()))
@@ -216,8 +226,16 @@ extends CounterModelHostMonitor
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
 			{
-				lArray[i] = this.getRateString       (i, "interface");
-				dArray[i] = this.getRateValueAsDouble(i, "r_KB");
+				if (isConnectedToVendor(OsVendor.Windows))
+				{
+					lArray[i] = this.getAbsString       (i, "Instance");
+					dArray[i] = this.getAbsValueAsDouble(i, "Bytes Received/sec") / 1024d;
+				}
+				else
+				{
+					lArray[i] = this.getRateString       (i, "interface");
+					dArray[i] = this.getRateValueAsDouble(i, "r_KB");
+				}
 			}
 
 			// Set the values
@@ -231,8 +249,16 @@ extends CounterModelHostMonitor
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
 			{
-				lArray[i] = this.getRateString       (i, "interface");
-				dArray[i] = this.getRateValueAsDouble(i, "r_Mbit");
+				if (isConnectedToVendor(OsVendor.Windows))
+				{
+					lArray[i] = this.getAbsString       (i, "Instance");
+					dArray[i] = this.getAbsValueAsDouble(i, "Bytes Received/sec") / 1024d / 1024d * 8d;
+				}
+				else
+				{
+					lArray[i] = this.getRateString       (i, "interface");
+					dArray[i] = this.getRateValueAsDouble(i, "r_Mbit");
+				}
 			}
 
 			// Set the values
@@ -246,8 +272,16 @@ extends CounterModelHostMonitor
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
 			{
-				lArray[i] = this.getRateString       (i, "interface");
-				dArray[i] = this.getRateValueAsDouble(i, "r_packets");
+				if (isConnectedToVendor(OsVendor.Windows))
+				{
+					lArray[i] = this.getAbsString       (i, "Instance");
+					dArray[i] = this.getAbsValueAsDouble(i, "Packets Received/sec");
+				}
+				else
+				{
+					lArray[i] = this.getRateString       (i, "interface");
+					dArray[i] = this.getRateValueAsDouble(i, "r_packets");
+				}
 			}
 
 			// Set the values
@@ -261,8 +295,16 @@ extends CounterModelHostMonitor
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
 			{
-				lArray[i] = this.getRateString       (i, "interface");
-				dArray[i] = this.getRateValueAsDouble(i, "t_KB");
+				if (isConnectedToVendor(OsVendor.Windows))
+				{
+					lArray[i] = this.getAbsString       (i, "Instance");
+					dArray[i] = this.getAbsValueAsDouble(i, "Bytes Sent/sec") / 1024d;
+				}
+				else
+				{
+					lArray[i] = this.getRateString       (i, "interface");
+					dArray[i] = this.getRateValueAsDouble(i, "t_KB");
+				}
 			}
 
 			// Set the values
@@ -276,8 +318,16 @@ extends CounterModelHostMonitor
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
 			{
-				lArray[i] = this.getRateString       (i, "interface");
-				dArray[i] = this.getRateValueAsDouble(i, "t_Mbit");
+				if (isConnectedToVendor(OsVendor.Windows))
+				{
+					lArray[i] = this.getAbsString       (i, "Instance");
+					dArray[i] = this.getAbsValueAsDouble(i, "Bytes Sent/sec") / 1024d / 1024d * 8d;
+				}
+				else
+				{
+					lArray[i] = this.getRateString       (i, "interface");
+					dArray[i] = this.getRateValueAsDouble(i, "t_Mbit");
+				}
 			}
 
 			// Set the values
@@ -291,8 +341,16 @@ extends CounterModelHostMonitor
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
 			{
-				lArray[i] = this.getRateString       (i, "interface");
-				dArray[i] = this.getRateValueAsDouble(i, "t_packets");
+				if (isConnectedToVendor(OsVendor.Windows))
+				{
+					lArray[i] = this.getAbsString       (i, "Instance");
+					dArray[i] = this.getAbsValueAsDouble(i, "Packets Sent/sec");
+				}
+				else
+				{
+					lArray[i] = this.getRateString       (i, "interface");
+					dArray[i] = this.getRateValueAsDouble(i, "t_packets");
+				}
 			}
 
 			// Set the values
@@ -302,8 +360,17 @@ extends CounterModelHostMonitor
 		if (GRAPH_NAME_ALL_BANDWIDTH_MBIT.equals(tgdp.getName()))
 		{
 			Double[] dArray = new Double[2];
-			dArray[0] = this.getRateValueSum("r_Mbit");
-			dArray[1] = this.getRateValueSum("t_Mbit");
+
+			if (isConnectedToVendor(OsVendor.Windows))
+			{
+				dArray[0] = this.getAbsValueSum("Bytes Received/sec") / 1024d / 1024d * 8d;
+				dArray[1] = this.getAbsValueSum("Bytes Sent/sec")     / 1024d / 1024d * 8d;
+			}
+			else
+			{
+				dArray[0] = this.getRateValueSum("r_Mbit");
+				dArray[1] = this.getRateValueSum("t_Mbit");
+			}
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), dArray);
@@ -314,6 +381,16 @@ extends CounterModelHostMonitor
 	@Override
 	public void localCalculation(OsTable osSampleTable)
 	{
+		// Windows do NOT (for the moment) have any localCalculations
+		if (isConnectedToVendor(OsVendor.Windows))
+		{
+			if (getDataSource() != DATA_ABS)
+				setDataSource(DATA_ABS, false);
+
+			return;
+		}
+
+
 //		System.out.println(getName()+ ": localCalculation(OsTable osSampleTable) " 
 //				+ "rowcount="   + osSampleTable.getRowCount()
 //				+ ", colCount=" + osSampleTable.getColumnCount()
@@ -416,6 +493,12 @@ extends CounterModelHostMonitor
 	@Override
 	public void localCalculation(OsTable prevSample, OsTable thisSample, OsTable diffdata)
 	{
+		// Windows do NOT (for the moment) have any localCalculations
+		if (isConnectedToVendor(OsVendor.Windows))
+		{
+			return;
+		}
+
 		// Check/get column position
 		int pos_r_bytes      = diffdata.findColumn("r_bytes");
 		int pos_r_bPerPacket = diffdata.findColumn("r_bPerPacket");

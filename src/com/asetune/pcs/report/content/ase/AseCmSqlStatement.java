@@ -22,12 +22,15 @@
 package com.asetune.pcs.report.content.ase;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
+import java.sql.Types;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.IReportChart;
+import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
@@ -36,10 +39,24 @@ public class AseCmSqlStatement extends AseAbstract
 //	private static Logger _logger = Logger.getLogger(AseCmSqlStatement.class);
 
 	private ResultSetTableModel _shortRstm;
+	private ResultSetTableModel _shortRstm_sl;
+	private List<String>        _miniChartJsList = new ArrayList<>();
 
 	public AseCmSqlStatement(DailySummaryReportAbstract reportingInstance)
 	{
 		super(reportingInstance);
+	}
+
+	@Override
+	public boolean hasShortMessageText()
+	{
+		return false;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
 	}
 
 	@Override
@@ -52,6 +69,11 @@ public class AseCmSqlStatement extends AseAbstract
 		// Last sample Database Size info
 		sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
 		sb.append(toHtmlTable(_shortRstm));
+		
+		sb.append("<br>\n");
+		sb.append("Same table as above but with <i>sparklines</i> I don't know whats easiest to read, so I provided both ;)<br>\n");
+		sb.append("Row Count: " + _shortRstm_sl.getRowCount() + "<br>\n");
+		sb.append(toHtmlTable(_shortRstm_sl));
 		
 		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are SQL Statements Graphs/Charts with various information that can help you set a baseline or to  find out where we have performance issues.",
 				"CmSqlStatement_SqlStmnt",
@@ -75,45 +97,13 @@ public class AseCmSqlStatement extends AseAbstract
 		_CmSqlStatement_SqlStmntSumWaitTime .writeHtmlContent(sb, null, null);
 		_CmSqlStatement_SqlStmntSumRowsAfct .writeHtmlContent(sb, null, null);
 		_CmSqlStatement_SqlStmntSumErrorCnt .writeHtmlContent(sb, null, null);
+		
+		// Write JavaScript code for CPU SparkLine
+		for (String str : _miniChartJsList)
+		{
+			sb.append(str);
+		}
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		// Get a description of this section, and column names
-//		sb.append(getSectionDescriptionHtml(_shortRstm, true));
-//
-//		// Last sample Database Size info
-//		sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-//		sb.append(toHtmlTable(_shortRstm));
-//		
-//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are SQL Statements Graphs/Charts with various information that can help you set a baseline or to  find out where we have performance issues.",
-//				"CmSqlStatement_SqlStmnt",
-//				"CmSqlStatement_SqlStmntTSpanAll",
-//				"CmSqlStatement_SqlStmntSumExecMs",
-//				"CmSqlStatement_SqlStmntSumLRead",
-//				"CmSqlStatement_SqlStmntSumPRead",
-//				"CmSqlStatement_SqlStmntSumCpuTime",
-//				"CmSqlStatement_SqlStmntSumWaitTime",
-//				"CmSqlStatement_SqlStmntSumRowsAfct",
-//				"CmSqlStatement_SqlStmntSumErrorCnt"
-//				));
-//
-//		sb.append(_CmSqlStatement_SqlStmnt            .getHtmlContent(null, null));
-//		sb.append(_CmSqlStatement_SqlStmntTSpanAll    .getHtmlContent(null, null));
-//
-//		sb.append(_CmSqlStatement_SqlStmntSumExecMs   .getHtmlContent(null, null));
-//		sb.append(_CmSqlStatement_SqlStmntSumLRead    .getHtmlContent(null, null));
-//		sb.append(_CmSqlStatement_SqlStmntSumPRead    .getHtmlContent(null, null));
-//		sb.append(_CmSqlStatement_SqlStmntSumCpuTime  .getHtmlContent(null, null));
-//		sb.append(_CmSqlStatement_SqlStmntSumWaitTime .getHtmlContent(null, null));
-//		sb.append(_CmSqlStatement_SqlStmntSumRowsAfct .getHtmlContent(null, null));
-//		sb.append(_CmSqlStatement_SqlStmntSumErrorCnt .getHtmlContent(null, null));
-//
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()
@@ -182,7 +172,177 @@ public class AseCmSqlStatement extends AseAbstract
 
 		// Describe the table
 		setSectionDescription(_shortRstm);
+		
+		// Create a copy of the table and add columns for "spark-lines" or "mini-charts"
+		_shortRstm_sl = new ResultSetTableModel(_shortRstm, "CmSqlStatement_diff_sparkline", true);
 
+		_shortRstm_sl.addColumn("totalCount"          + "__chart", _shortRstm_sl.findColumn("totalCount"         ), Types.VARCHAR, "varchar", "varchar(512)", 512, -1, "", String.class);
+		_shortRstm_sl.addColumn("sqlBatchCount"       + "__chart", _shortRstm_sl.findColumn("sqlBatchCount"      ), Types.VARCHAR, "varchar", "varchar(512)", 512, -1, "", String.class);
+		_shortRstm_sl.addColumn("errorCount"          + "__chart", _shortRstm_sl.findColumn("errorCount"         ), Types.VARCHAR, "varchar", "varchar(512)", 512, -1, "", String.class);
+		_shortRstm_sl.addColumn("inStmntCacheCount"   + "__chart", _shortRstm_sl.findColumn("inStmntCacheCount"  ), Types.VARCHAR, "varchar", "varchar(512)", 512, -1, "", String.class);
+		_shortRstm_sl.addColumn("dynamicStmntCount"   + "__chart", _shortRstm_sl.findColumn("dynamicStmntCount"  ), Types.VARCHAR, "varchar", "varchar(512)", 512, -1, "", String.class);
+		_shortRstm_sl.addColumn("inProcedureCount"    + "__chart", _shortRstm_sl.findColumn("inProcedureCount"   ), Types.VARCHAR, "varchar", "varchar(512)", 512, -1, "", String.class);
+		_shortRstm_sl.addColumn("inProcNameNullCount" + "__chart", _shortRstm_sl.findColumn("inProcNameNullCount"), Types.VARCHAR, "varchar", "varchar(512)", 512, -1, "", String.class);
+
+		_shortRstm_sl.addColumn("sumExecTimeMs"       + "__chart", _shortRstm_sl.findColumn("sumExecTimeMs"      ), Types.VARCHAR, "varchar", "varchar(512)", 512, -1, "", String.class);
+		_shortRstm_sl.addColumn("sumCpuTime"          + "__chart", _shortRstm_sl.findColumn("sumCpuTime"         ), Types.VARCHAR, "varchar", "varchar(512)", 512, -1, "", String.class);
+		_shortRstm_sl.addColumn("sumWaitTime"         + "__chart", _shortRstm_sl.findColumn("sumWaitTime"        ), Types.VARCHAR, "varchar", "varchar(512)", 512, -1, "", String.class);
+		_shortRstm_sl.addColumn("sumLogicalReads"     + "__chart", _shortRstm_sl.findColumn("sumLogicalReads"    ), Types.VARCHAR, "varchar", "varchar(512)", 512, -1, "", String.class);
+		_shortRstm_sl.addColumn("sumPhysicalReads"    + "__chart", _shortRstm_sl.findColumn("sumPhysicalReads"   ), Types.VARCHAR, "varchar", "varchar(512)", 512, -1, "", String.class);
+		_shortRstm_sl.addColumn("sumRowsAffected"     + "__chart", _shortRstm_sl.findColumn("sumRowsAffected"    ), Types.VARCHAR, "varchar", "varchar(512)", 512, -1, "", String.class);
+
+//		System.out.println("-----------------" + _shortRstm_sl.getName() + "----------------\n"+_shortRstm_sl.toAsciiTableString());
+
+		String tabWhereKeyColumn  = "id"; 
+		String dbmsWhereKeyColumn = "statId"; 
+
+		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
+				SparkLineParams.create()
+				.setHtmlChartColumnName      ("totalCount__chart")
+				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
+				.setDbmsTableName            ("CmSqlStatement_diff")
+				.setDbmsSampleTimeColumnName ("SessionSampleTime")
+				.setDbmsDataValueColumnName  ("totalCount")
+				.setDbmsWhereKeyColumnName   (dbmsWhereKeyColumn)
+//				.setSparklineTooltipPostfix  ("SUM 'totalCount' at below time period")
+				.validate()));
+		
+		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
+				SparkLineParams.create()
+				.setHtmlChartColumnName      ("sqlBatchCount__chart")
+				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
+				.setDbmsTableName            ("CmSqlStatement_diff")
+				.setDbmsSampleTimeColumnName ("SessionSampleTime")
+				.setDbmsDataValueColumnName  ("sqlBatchCount")
+				.setDbmsWhereKeyColumnName   (dbmsWhereKeyColumn)
+//				.setSparklineTooltipPostfix  ("SUM 'sqlBatchCount' at below time period")
+				.validate()));
+		
+		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
+				SparkLineParams.create()
+				.setHtmlChartColumnName      ("errorCount__chart")
+				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
+				.setDbmsTableName            ("CmSqlStatement_diff")
+				.setDbmsSampleTimeColumnName ("SessionSampleTime")
+				.setDbmsDataValueColumnName  ("errorCount")
+				.setDbmsWhereKeyColumnName   (dbmsWhereKeyColumn)
+//				.setSparklineTooltipPostfix  ("SUM 'errorCount' at below time period")
+				.validate()));
+		
+		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
+				SparkLineParams.create()
+				.setHtmlChartColumnName      ("inStmntCacheCount__chart")
+				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
+				.setDbmsTableName            ("CmSqlStatement_diff")
+				.setDbmsSampleTimeColumnName ("SessionSampleTime")
+				.setDbmsDataValueColumnName  ("inStmntCacheCount")
+				.setDbmsWhereKeyColumnName   (dbmsWhereKeyColumn)
+//				.setSparklineTooltipPostfix  ("SUM 'inStmntCacheCount' at below time period")
+				.validate()));
+		
+		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
+				SparkLineParams.create()
+				.setHtmlChartColumnName      ("dynamicStmntCount__chart")
+				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
+				.setDbmsTableName            ("CmSqlStatement_diff")
+				.setDbmsSampleTimeColumnName ("SessionSampleTime")
+				.setDbmsDataValueColumnName  ("dynamicStmntCount")
+				.setDbmsWhereKeyColumnName   (dbmsWhereKeyColumn)
+//				.setSparklineTooltipPostfix  ("SUM 'dynamicStmntCount' at below time period")
+				.validate()));
+		
+		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
+				SparkLineParams.create()
+				.setHtmlChartColumnName      ("inProcedureCount__chart")
+				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
+				.setDbmsTableName            ("CmSqlStatement_diff")
+				.setDbmsSampleTimeColumnName ("SessionSampleTime")
+				.setDbmsDataValueColumnName  ("inProcedureCount")
+				.setDbmsWhereKeyColumnName   (dbmsWhereKeyColumn)
+//				.setSparklineTooltipPostfix  ("SUM 'inProcedureCount' at below time period")
+				.validate()));
+		
+		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
+				SparkLineParams.create()
+				.setHtmlChartColumnName      ("inProcNameNullCount__chart")
+				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
+				.setDbmsTableName            ("CmSqlStatement_diff")
+				.setDbmsSampleTimeColumnName ("SessionSampleTime")
+				.setDbmsDataValueColumnName  ("inProcNameNullCount")
+				.setDbmsWhereKeyColumnName   (dbmsWhereKeyColumn)
+//				.setSparklineTooltipPostfix  ("SUM 'inProcNameNullCount' at below time period")
+				.validate()));
+		
+		
+		
+		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
+				SparkLineParams.create()
+				.setHtmlChartColumnName      ("sumExecTimeMs__chart")
+				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
+				.setDbmsTableName            ("CmSqlStatement_diff")
+				.setDbmsSampleTimeColumnName ("SessionSampleTime")
+				.setDbmsDataValueColumnName  ("sumExecTimeMs")
+				.setDbmsWhereKeyColumnName   (dbmsWhereKeyColumn)
+//				.setSparklineTooltipPostfix  ("SUM 'sumExecTimeMs' at below time period")
+				.validate()));
+		
+		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
+				SparkLineParams.create()
+				.setHtmlChartColumnName      ("sumCpuTime__chart")
+				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
+				.setDbmsTableName            ("CmSqlStatement_diff")
+				.setDbmsSampleTimeColumnName ("SessionSampleTime")
+				.setDbmsDataValueColumnName  ("sumCpuTime")
+				.setDbmsWhereKeyColumnName   (dbmsWhereKeyColumn)
+//				.setSparklineTooltipPostfix  ("SUM 'sumCpuTime' at below time period")
+				.validate()));
+		
+		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
+				SparkLineParams.create()
+				.setHtmlChartColumnName      ("sumWaitTime__chart")
+				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
+				.setDbmsTableName            ("CmSqlStatement_diff")
+				.setDbmsSampleTimeColumnName ("SessionSampleTime")
+				.setDbmsDataValueColumnName  ("sumWaitTime")
+				.setDbmsWhereKeyColumnName   (dbmsWhereKeyColumn)
+//				.setSparklineTooltipPostfix  ("SUM 'sumWaitTime' at below time period")
+				.validate()));
+		
+		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
+				SparkLineParams.create()
+				.setHtmlChartColumnName      ("sumLogicalReads__chart")
+				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
+				.setDbmsTableName            ("CmSqlStatement_diff")
+				.setDbmsSampleTimeColumnName ("SessionSampleTime")
+				.setDbmsDataValueColumnName  ("sumLogicalReads")
+				.setDbmsWhereKeyColumnName   (dbmsWhereKeyColumn)
+//				.setSparklineTooltipPostfix  ("SUM 'sumLogicalReads' at below time period")
+				.validate()));
+		
+		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
+				SparkLineParams.create()
+				.setHtmlChartColumnName      ("sumPhysicalReads__chart")
+				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
+				.setDbmsTableName            ("CmSqlStatement_diff")
+				.setDbmsSampleTimeColumnName ("SessionSampleTime")
+				.setDbmsDataValueColumnName  ("sumPhysicalReads")
+				.setDbmsWhereKeyColumnName   (dbmsWhereKeyColumn)
+//				.setSparklineTooltipPostfix  ("SUM 'sumPhysicalReads' at below time period")
+				.validate()));
+		
+		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
+				SparkLineParams.create()
+				.setHtmlChartColumnName      ("sumRowsAffected__chart")
+				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
+				.setDbmsTableName            ("CmSqlStatement_diff")
+				.setDbmsSampleTimeColumnName ("SessionSampleTime")
+				.setDbmsDataValueColumnName  ("sumRowsAffected")
+				.setDbmsWhereKeyColumnName   (dbmsWhereKeyColumn)
+//				.setSparklineTooltipPostfix  ("SUM 'sumRowsAffected' at below time period")
+				.validate()));
+		
+
+		// Add Charts
 		_CmSqlStatement_SqlStmnt              = createTsLineChart(conn, "CmSqlStatement",  "SqlStmnt",            -1, null, "SQL Statements Executed per Sec (Object/Access->SQL Statements)");
 		_CmSqlStatement_SqlStmntTSpanAll      = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntTSpanAll",    -1, null, "SQL Statements (all) In Time Span Received per Sec (Object/Access->SQL Statements)");
 

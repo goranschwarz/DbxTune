@@ -90,6 +90,12 @@ extends CounterModelHostMonitor
 		CounterSetTemplates.register(this);
 	}
 
+	@Override
+	protected TabularCntrPanel createGui()
+	{
+		return new CmOsVmstatPanel(this);
+	}
+
 
 	//------------------------------------------------------------
 	// Implementation
@@ -103,17 +109,6 @@ extends CounterModelHostMonitor
 
 	private void addTrendGraphs()
 	{
-//////		String[] labelsCpu  = new String[] { "cpu_sy+cpu_us", "cpu_sy", "cpu_us", "cpu_id" };
-////		String[] labelsCpu  = new String[] { "-runtime-replaced-" };
-//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-//		
-//		addTrendGraphData(GRAPH_NAME_PROCS_USAGE,   new TrendGraphDataPoint(GRAPH_NAME_PROCS_USAGE,   labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_SWAP_USAGE,    new TrendGraphDataPoint(GRAPH_NAME_SWAP_USAGE,    labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_MEM_USAGE,     new TrendGraphDataPoint(GRAPH_NAME_MEM_USAGE,     labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_SWAP_IN_OUT,   new TrendGraphDataPoint(GRAPH_NAME_SWAP_IN_OUT,   labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_IO_READ_WRITE, new TrendGraphDataPoint(GRAPH_NAME_IO_READ_WRITE, labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_CPU_USAGE,     new TrendGraphDataPoint(GRAPH_NAME_CPU_USAGE,     labels, LabelType.Dynamic));
-
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_PROCS_USAGE,
 			"vmstat: Processes Usage",                                // Menu CheckBox text
@@ -189,91 +184,9 @@ extends CounterModelHostMonitor
 			false, // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);  // minimum height
-		
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			TrendGraph tg = null;
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_PROCS_USAGE,
-//				"vmstat: Processes Usage",                                // Menu CheckBox text
-//				"vmstat: Processes Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_SWAP_USAGE,
-//				"vmstat: Swap Usage",                                // Menu CheckBox text
-//				"vmstat: Swap Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_MEM_USAGE,
-//				"vmstat: Memory Usage",                                // Menu CheckBox text
-//				"vmstat: Memory Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_SWAP_IN_OUT,
-//				"vmstat: Swap In/Out per sec",                                // Menu CheckBox text
-//				"vmstat: Swap In/Out per sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_IO_READ_WRITE,
-//				"vmstat: IO Read/Write or blk-in/out per sec",                                // Menu CheckBox text
-//				"vmstat: IO Read/Write or blk-in/out per sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_CPU_USAGE,
-//				"vmstat: CPU Usage",                                // Menu CheckBox text
-//				"vmstat: CPU Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-//				labels, 
-//				true, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 	
-	@Override
-	protected TabularCntrPanel createGui()
-	{
-		return new CmOsVmstatPanel(this);
-	}
-
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
@@ -477,7 +390,7 @@ extends CounterModelHostMonitor
 //
 //		String hostname = cm.getCounterController().getHostMonConnection().getHost();
 //
-//		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+//		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 //		
 //		//-------------------------------------------------------
 //		// Run Queue Length (adjLoadAverage_1Min), Avg Last Minute 

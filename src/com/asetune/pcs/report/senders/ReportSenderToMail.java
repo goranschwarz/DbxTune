@@ -69,37 +69,33 @@ extends ReportSenderAbstract
 //		int msgBodyTextSizeKb = msgBodyText == null ? 0 : msgBodyText.length() / 1024;
 //		int msgBodyHtmlSizeKb = msgBodyHtml == null ? 0 : msgBodyHtml.length() / 1024;
 
-		String  msgBodyHtml = null;
-		File    msgFile     = null;
-		long    msgSizeKb   = -1;
-//		if (reportContent.hasReportFile())
-//		{
-			msgFile   = reportContent.getReportFile();
-			msgSizeKb = reportContent.getReportFile().length() / 1024;
-//		}
-//		else
-//		{
-			try 
-			{
-				msgBodyHtml = reportContent.getReportAsHtml();
-				msgSizeKb   = msgBodyHtml.length() / 1024;
-			} 
-			catch (IOException ex) 
-			{
-				_logger.error("Problems reading Report Content.", ex);
-			}
-//		}
+//		String  msgBodyHtml  = null;
+		String  msgBody      = null;
+		File    msgFile      = null;
+		long    msgSizeKb    = -1;
+		long    attachSizeKb = -1;
+
+		if (reportContent.hasReportFile())
+		{
+			msgFile      = reportContent.getReportFile();
+			attachSizeKb = reportContent.getReportFile().length() / 1024;
+		}
+
+		try 
+		{
+//			msgBodyHtml = reportContent.getReportAsHtml();
+			msgBody     = reportContent.getShortMessage();
+			msgSizeKb   = msgBody.length() / 1024;
+		} 
+		catch (IOException ex) 
+		{
+			_logger.error("Problems reading Report Content.", ex);
+		}
+
 		
 		if (reportContent.hasNothingToReport())
 			msgSubject = _subjectNtrTemplate.replace("${srvName}", serverName);
 
-//		String msgBody = msgBodyHtml;
-//		String msgBody = msgBodyText;
-//		if (StringUtil.hasValue(msgBodyHtml))
-//			msgBody = msgBodyHtml;
-//
-//		if (_msgBodyUseHtml)
-//			msgBody = msgBodyHtml;
 
 		List<String> toList = getToAddressForServerNameAsList(serverName);
 
@@ -109,7 +105,7 @@ extends ReportSenderAbstract
 
 			email.setHostName(_smtpHostname);
 
-			// Charset
+			// CharSet
 			email.setCharset(EmailConstants.UTF_8);
 			
 			// Connection timeout
@@ -148,53 +144,37 @@ extends ReportSenderAbstract
 			email.setSubject(msgSubject);
 
 			// CONTENT HTML or PLAIN
-//			if (msgFile != null)
-//			{
-//				email.setHtmlMsg("This is a Daily Summary Report for Server '" + reportContent.getServerName() + "'.");
-//				email.embed(msgFile, "ReportContent");
-//			}
-//			else
-//			{
-//				email.setHtmlMsg(msgBodyHtml);
-//			}
-			email.setHtmlMsg(msgBodyHtml);
+			if (reportContent.isShortMessageOfHtml())
+			{
+				email.setHtmlMsg(msgBody);
 
-			// Client do not have HTML support
-			email.setTextMsg("Your email client does not support HTML messages, see DbxCentral to read the report!");
+				// Client do not have HTML support
+				email.setTextMsg("Your email client does not support HTML messages, see DbxCentral to read the report!");
+			}
+			else
+			{
+				email.setTextMsg(msgBody);
+			}
 
-			// If the mail client is not so good at rendering HTML...
-			// Should we attach the content as a File, so it can be opened in a browser...  
-//			if (_attachHtmlContent)
-//			{
-//				if (msgBodyHtml.length() < (_attachHtmlContentMaxSizeMb * 1024 * 1024))
-//				{
-//					_logger.info("Mail-Attach: -NOT-YET-IMPLEMENTED-");
-////					email.attach(...);
-//				}
-//				else
-//				{
-//					_logger.info("No-Mail-Attach: Mail message is to large to attach. '" + PROPKEY_attachHtmlContentMaxSizeMb + "' is " + _attachHtmlContentMaxSizeMb + ", content size = " + msgBodyHtml.length() + " (bytes).");
-//				}
-//			}
+			// If we also should attach the FULL Report as an ATTACHMENT
 			if (_attachHtmlContent && msgFile != null)
 			{
 				email.attach(msgFile);
 			}
 			
-//			System.out.println("About to send the following message: \n" + msgBodyHtml);
 			if (_logger.isDebugEnabled())
 			{
-				_logger.debug("About to send the following message: \n" + (msgFile == null ? msgBodyHtml : msgFile.getAbsolutePath()) );
+				_logger.debug("About to send the following message: \n" + (msgFile == null ? msgBody : msgFile.getAbsolutePath()) );
 			}
 
 			// SEND
 			email.send();
 
-			_logger.info("Sent mail message: htmlSizeKb="+msgSizeKb+", host='"+_smtpHostname+"', toList="+toList+", cc='"+_cc+"', subject='"+msgSubject+"'.");
+			_logger.info("Sent mail message: msgSizeKb="+msgSizeKb+", attachSizeKb="+attachSizeKb+", host='"+_smtpHostname+"', toList="+toList+", cc='"+_cc+"', subject='"+msgSubject+"'.");
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems sending mail (htmlSizeKb="+msgSizeKb+", host='"+_smtpHostname+"', toList="+toList+", cc='"+_cc+"', subject='"+msgSubject+"').", ex);
+			_logger.error("Problems sending mail (msgSizeKb="+msgSizeKb+", attachSizeKb="+attachSizeKb+", host='"+_smtpHostname+"', toList="+toList+", cc='"+_cc+"', subject='"+msgSubject+"').", ex);
 		}
 	}
 
@@ -454,7 +434,7 @@ extends ReportSenderAbstract
 //	public static final boolean DEFAULT_msgBodyUseHtml             = true;
                                                                    
 	public static final String  PROPKEY_attachHtmlContent          = "ReportSenderToMail.attachHtmlContent";
-	public static final boolean DEFAULT_attachHtmlContent          = false;
+	public static final boolean DEFAULT_attachHtmlContent          = true;
 
 //	public static final String  PROPKEY_attachHtmlContentMaxSizeMb = "ReportSenderToMail.attachHtmlContent.maxSizeMb";
 //	public static final int     DEFAULT_attachHtmlContentMaxSizeMb = 5;

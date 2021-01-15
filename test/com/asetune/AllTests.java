@@ -28,6 +28,7 @@ import org.junit.runners.Suite.SuiteClasses;
 @SuiteClasses({
 	com.asetune.cm.AllTests.class,
 	com.asetune.graph.AllTests.class,
+	com.asetune.gui.AllTests.class,
 	com.asetune.pcs.AllTests.class,
 //	com.asetune.pcs.report.senders.AllTests.class,
 	com.asetune.sql.AllTests.class,

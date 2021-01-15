@@ -452,7 +452,7 @@ extends CountersModel
 
 		CountersModel cm = this;
 
-		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 //debugPrint = true;
 
 //		// Get a array of rowId's where the column 'Name' has the value 'procedure cache size'
@@ -506,6 +506,10 @@ extends CountersModel
 			if ("procedure cache size"           .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("ProcedureCacheUsage"))
 			{
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ProcedureCacheUsagePct, DEFAULT_alarm_ProcedureCacheUsagePct);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", 'procedure cache size': numFreeMb='"+(numFree/512.0)+"', pctAct='"+pctAct+"'.");
+
 				if (pctAct.intValue() > threshold)
 				{
 					Double numFreeMb = numFree / 512.0;
@@ -517,6 +521,10 @@ extends CountersModel
 			else if ("number of open objects"    .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfOpenObjectsPct"))
 			{
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenObjectsPct, DEFAULT_alarm_NumberOfOpenObjectsPct);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", 'number of open objects': numFree='"+numFree+"', numActive="+numActive+", pctAct='"+pctAct+"'.");
+
 				if (pctAct.intValue() > threshold)
 				{
 					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold) );
@@ -526,6 +534,10 @@ extends CountersModel
 			else if ("number of open partitions" .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfOpenPartitionsPct"))
 			{
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenPartitionsPct, DEFAULT_alarm_NumberOfOpenPartitionsPct);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", 'number of open partitions': numFree='"+numFree+"', numActive="+numActive+", pctAct='"+pctAct+"'.");
+
 				if (pctAct.intValue() > threshold)
 				{
 					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold) );
@@ -535,6 +547,10 @@ extends CountersModel
 			else if ("number of open indexes"    .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfOpenIndexesPct"))
 			{
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenIndexesPct, DEFAULT_alarm_NumberOfOpenIndexesPct);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", 'number of open indexes': numFree='"+numFree+"', numActive="+numActive+", pctAct='"+pctAct+"'.");
+
 				if (pctAct.intValue() > threshold)
 				{
 					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold) );
@@ -544,6 +560,10 @@ extends CountersModel
 			else if ("number of open databases"  .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfOpenDatabasesPct"))
 			{
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenDatabasesPct, DEFAULT_alarm_NumberOfOpenDatabasesPct);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", 'number of open databases': numFree='"+numFree+"', numActive="+numActive+", pctAct='"+pctAct+"'.");
+
 				if (pctAct.intValue() > threshold)
 				{
 					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold) );
@@ -554,6 +574,10 @@ extends CountersModel
 			{
 				// AlarmEventConfigResourceIsUsedUp: is called from CounterModel.java 
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfLocksPct, DEFAULT_alarm_NumberOfLocksPct);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", 'number of locks': numFree='"+numFree+"', numActive="+numActive+", pctAct='"+pctAct+"'.");
+
 				if (pctAct.intValue() > threshold)
 				{
 					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold) );
@@ -563,6 +587,10 @@ extends CountersModel
 			else if ("number of user connections".equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfUserConnectionsPct"))
 			{
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfUserConnectionsPct, DEFAULT_alarm_NumberOfUserConnectionsPct);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", 'number of user connections': numFree='"+numFree+"', numActive="+numActive+", pctAct='"+pctAct+"'.");
+
 				if (pctAct.intValue() > threshold)
 				{
 					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold) );

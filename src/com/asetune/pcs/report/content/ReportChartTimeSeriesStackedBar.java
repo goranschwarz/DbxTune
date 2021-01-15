@@ -33,14 +33,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.apache.log4j.Logger;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.LegendItemCollection;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.ValueAxis;
-import org.jfree.chart.labels.CategorySeriesLabelGenerator;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.renderer.category.StackedBarRenderer;
@@ -146,6 +143,8 @@ extends ReportChartAbstract
 		CategoryPlot plot = new CategoryPlotSparselyLabeled(dataset, categoryAxis, valueAxis, render);
 		plot.setOrientation(PlotOrientation.VERTICAL);
 		plot.setDomainGridlinesVisible(true);
+
+		// Theme - GRAY
 		plot.setDomainGridlinePaint(Color.WHITE);
 		plot.setRangeGridlinePaint(Color.WHITE);
 		plot.setBackgroundPaint(Color.LIGHT_GRAY);

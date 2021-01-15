@@ -22,7 +22,6 @@
 package com.asetune.pcs.report.content.sqlserver;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 
 import com.asetune.pcs.report.DailySummaryReportAbstract;
@@ -41,10 +40,30 @@ extends SqlServerAbstract
 	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public boolean hasShortMessageText()
+	{
+		return true;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
 	throws IOException
 	{
-		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load.",
+		writeMessageText(w, false);
+	}
+
+	@Override
+	public void writeMessageText(Writer w)
+	throws IOException
+	{
+		writeMessageText(w, true);
+	}
+
+//	@Override
+	public void writeMessageText(Writer w, boolean isFullText)
+	throws IOException
+	{
+		w.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load.",
 				"CmSummary_aaCpuGraph",
 				"CmSummary_aaReadWriteGraph",
 				"CmPerfCounters_CacheReads",
@@ -56,46 +75,19 @@ extends SqlServerAbstract
 				"CmSchedulers_RunQLengthEng"
 				));
 
-		_CmSummary_aaCpuGraph         .writeHtmlContent(sb, null, null);
-		_CmSummary_aaReadWriteGraph   .writeHtmlContent(sb, null, null);
-		_CmPerfCounters_CacheReads    .writeHtmlContent(sb, null, null);
-		_CmPerfCounters_CacheHitRate  .writeHtmlContent(sb, null, null);
+		_CmSummary_aaCpuGraph         .writeHtmlContent(w, null, null);
+		_CmSummary_aaReadWriteGraph   .writeHtmlContent(w, null, null);
+		_CmPerfCounters_CacheReads    .writeHtmlContent(w, null, null);
+		_CmPerfCounters_CacheHitRate  .writeHtmlContent(w, null, null);
 //		_CmPerfCounters_OsCpuEffective.writeHtmlContent(sb, null, null);
-		_CmPerfCounters_SqlBatch      .writeHtmlContent(sb, null, null);
-		_CmPerfCounters_TransWriteSec .writeHtmlContent(sb, null, null);
-		_CmSchedulers_RunQLengthSum   .writeHtmlContent(sb, null, null);
-		_CmSchedulers_RunQLengthEng   .writeHtmlContent(sb, null, null);
+		_CmPerfCounters_SqlBatch      .writeHtmlContent(w, null, null);
+		_CmPerfCounters_TransWriteSec .writeHtmlContent(w, null, null);
+		if (isFullText)
+		{
+			_CmSchedulers_RunQLengthSum   .writeHtmlContent(w, null, null);
+			_CmSchedulers_RunQLengthEng   .writeHtmlContent(w, null, null);
+		}
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load.",
-//				"CmSummary_aaCpuGraph",
-//				"CmSummary_aaReadWriteGraph",
-//				"CmPerfCounters_CacheReads",
-//				"CmPerfCounters_CacheHitRate",
-////				"CmPerfCounters_OsCpuEffective",
-//				"CmPerfCounters_SqlBatch",
-//				"CmPerfCounters_TransWriteSec",
-//				"CmSchedulers_RunQLengthSum",
-//				"CmSchedulers_RunQLengthEng"
-//				));
-//
-//		sb.append(_CmSummary_aaCpuGraph         .getHtmlContent(null, null));
-//		sb.append(_CmSummary_aaReadWriteGraph   .getHtmlContent(null, null));
-//		sb.append(_CmPerfCounters_CacheReads    .getHtmlContent(null, null));
-//		sb.append(_CmPerfCounters_CacheHitRate  .getHtmlContent(null, null));
-////		sb.append(_CmPerfCounters_OsCpuEffective.getHtmlContent(null, null));
-//		sb.append(_CmPerfCounters_SqlBatch      .getHtmlContent(null, null));
-//		sb.append(_CmPerfCounters_TransWriteSec .getHtmlContent(null, null));
-//		sb.append(_CmSchedulers_RunQLengthSum   .getHtmlContent(null, null));
-//		sb.append(_CmSchedulers_RunQLengthEng   .getHtmlContent(null, null));
-//
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()

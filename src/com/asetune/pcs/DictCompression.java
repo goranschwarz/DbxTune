@@ -109,6 +109,9 @@ public class DictCompression
 
 	private long _stat_bytesSaved           = 0;
 	private long _stat_bytesAdded           = 0;
+
+	private long _stat_saveCount            = 0;
+	private long _stat_saveErrors           = 0;
 	
 	//////////////////////////////////////////////
 	// BEGIN: Instance
@@ -223,10 +226,11 @@ public class DictCompression
 		}
 
 		// Print report (this should only be 1 line)
-		String report = String.format("Dictionary Compression Statistics: savedSpace[MB=%.1f, KB=%.1f], addedSpace[MB=%.1f, KB=%.1f], lookups[cnt=%d, add=%d, reUse=%d, reUsePct=%.1f]. This report period was for %s (MM:SS) or %d seconds.",
+		String report = String.format("STAT [Dictionary Compression Statistics] savedSpace[MB=%.1f, KB=%.1f], addedSpace[MB=%.1f, KB=%.1f], lookups[cnt=%d, add=%d, reUse=%d, reUsePct=%.1f], dbms[saveCount=%d, errorCount=%d]. This report period was for %s (MM:SS) or %d seconds.",
 				(_stat_bytesSaved/1024.0/1024.0), (_stat_bytesSaved/1024.0),
 				(_stat_bytesAdded/1024.0/1024.0), (_stat_bytesAdded/1024.0),
 				_stat_lookupCount, _stat_addCount, _stat_reuseCount, ((_stat_reuseCount*100.0f)/_stat_lookupCount),
+				_stat_saveCount, _stat_saveErrors,
 				TimeUtils.secToTimeStrShort(secSinceLastReport), secSinceLastReport);
 		_logger.info(report);
 
@@ -239,6 +243,9 @@ public class DictCompression
 
 		_stat_bytesSaved    = 0;
 		_stat_bytesAdded    = 0;
+		
+		_stat_saveCount     = 0;
+		_stat_saveErrors    = 0;
 	}
 
 	/**
@@ -589,6 +596,8 @@ public class DictCompression
 		// Check that the table exists
 		if ( DbUtils.checkIfTableExistsNoThrow(conn, null, schemaName, tabName) )
 		{
+			_logger.debug("Dictionary Compression: table " + qSchName + qTabName + " for column '" + colName + "' already exists. Now populating in-memory-cache with existing 'hashId' values...");
+
 			// Populate the cache with existing values
 			String sql = "select [hashId] from " + qSchName + qTabName;
 			sql = conn.quotifySqlString(sql);
@@ -610,9 +619,14 @@ public class DictCompression
 			
 			// SHould we check the Data Type for 'hashId'... If we have changed the "digest method", then the data type may need a change...
 
-			_logger.debug("Dictionary Compression: Fetched " + cnt + " (dupCnt=" + dupCnt + ") Hash ID's from table " + qSchName + qTabName + " for column '" + colName + "'.");
+//			_logger.debug("Dictionary Compression: Fetched " + cnt + " (dupCnt=" + dupCnt + ") Hash ID's from table " + qSchName + qTabName + " for column '" + colName + "'.");
+			_logger.info("Dictionary Compression: Fetched " + cnt + " (dupCnt=" + dupCnt + ") Hash ID's from table " + qSchName + qTabName + " for column '" + colName + "'.");
 
 			return null;
+		}
+		else
+		{
+			_logger.info("Dictionary Compression: table " + qSchName + qTabName + " for column '" + colName + "' do NOT exists. createTable=" + createTable);
 		}
 		
 		// Get DBMS data types for: hashId & colVal
@@ -797,13 +811,17 @@ public class DictCompression
 			for (String colName : colMap.keySet())
 			{
 				// Add the entry to the storage
-				String tabName = "[" + cmName + DCC_MARKER + colName + "]";
-				String sql = "insert into " + tabName + " ([hashId], [colVal]) values(?, ?)";
+				String tabName = cmName + DCC_MARKER + colName;
+				String sql = "insert into [" + tabName + "] ([hashId], [colVal]) values(?, ?)";
 				
 				// Translate [] into DBMS Specific Quoted chars
 				sql = conn.quotifySqlString(sql);
 
 				Map<String, String> hashIdMap = colMap.get(colName);
+
+				// declare here so we can use it in the "catch block"
+				String hashId = null;
+				String colVal = null;
 
 				// Loop hashId, colVal
 				// ADD to SQL Batch
@@ -813,8 +831,8 @@ public class DictCompression
 
 					for (Entry<String, String> hashEntry : hashIdMap.entrySet())
 					{
-						String hashId = hashEntry.getKey();
-						String colVal = hashEntry.getValue();
+						hashId = hashEntry.getKey();
+						colVal = hashEntry.getValue();
 
 						pstmnt.setString(1, hashId);
 						pstmnt.setString(2, colVal);
@@ -822,6 +840,7 @@ public class DictCompression
 
 						pstmnt.addBatch();
 						rows++;
+						_stat_saveCount++;
 					}
 					
 					// SAVE/EXECUTE - SQL Batch
@@ -830,11 +849,62 @@ public class DictCompression
 				}
 				catch (SQLException ex)
 				{
-					_logger.error("Problems adding values to Dictionary Compressed table " + tabName + ". Caught: " + ex + ". Clearing this batch and continuing with next table. Cleared size=" + hashIdMap.size() + ", Entries=" + hashIdMap);
+					_stat_saveErrors++;
+
+					// 0 = DBMS lookup failed (or no value in DBMS)
+					// 1 = AlreadyExistsInDbms-NoCollision, 
+					// 2 = AlreadyExistsInDbms-Collision
+					int catchAction = 0; 
+
+					// Is it a PrimaryKey violation... ??? there are no generic way in JDBC to determen that no SQL-Code, ex.getSQLState() that can tell this...
+					// So lets check the value for existence, and potentially check for hash collision... (add it to the "cache")
+					String storedValueForHashId = null;
+					try 
+					{
+						storedValueForHashId = getValueForHashId(conn, null, cmName, colName, hashId);
+
+						// Check for Collision (if DBMS Stored value is same as the sent, and NOT JUST the same key, then we have a Collision)
+						if (storedValueForHashId != null)
+						{
+							catchAction = 1; // 1 = AlreadyExistsInDbms-NoCollision
+
+							if ( ! storedValueForHashId.equals(colVal) )
+							{
+								catchAction = 2; // 2 = AlreadyExistsInDbms-Collision
+							}
+						}
+					} 
+					catch (SQLException ex2) 
+					{
+						_logger.error("Problems checking for HashId Collision when adding values to Dictionary Compressed table " + tabName + ". Lookup Caught: " + ex2 + ". Initial insert Caught: " + ex);
+					}
+					
+					if (catchAction == 1) // AlreadyExistsInDbms-NoCollision
+					{
+						_logger.warn("Issue when adding value hashId='" + hashId + "' to Dictionary Compressed table " + tabName + ". catchAction=1 [AlreadyExistsInDbms-NoCollision], Simply adding the HashId to the cache!");
+
+						// Add the hashId to the "exists" or "cache" structure, RetCode == false -->>> The entry already existed... can we have a race condition or what is happening here??? 
+						// The SqlCapture thread is single-threaded... so there shouldn't be any threaded race condition issues...
+						if ( add(cmName, colName, hashId) == false )
+						{
+						//	_logger.warn("When adding hashId='" + hashId + "' to In-Memory-Cache for Dictionary Compressed table " + tabName + ". the HashId already existed... Can we have a race-condition issue?");
+						}
+					}
+					else if (catchAction == 2) // AlreadyExistsInDbms-Collision
+					{
+						_logger.error("Data Value COLLISION, when adding value for hashId='" + hashId + "' to Dictionary Compressed table " + tabName + ". catchAction=2 [AlreadyExistsInDbms-Collision], Not sure what to do here... DbmsStoredValue=|" + storedValueForHashId + "|, InsertValue=|" + colVal + "|.");
+					}
+					else
+					{
+						_logger.error("Problems adding values to Dictionary Compressed table " + tabName + ". Can't resolve catchAction=" + catchAction + "... Insert Caught: " + ex + ".");
+					}
+
+					_logger.error("Problems adding values to Dictionary Compressed table " + tabName + ". Clearing this batch and continuing with next table. Cleared size=" + hashIdMap.size() + ", Entries=" + hashIdMap);
 					hashIdMap.clear();
-				}
-			}
-		}
+					
+				} // end: catch
+			} // end: loop - colMap.keySet()
+		} // end: loop - _batchQueue.keySet()
 		
 		// Clear the old structure, a new one will be allocated by add(...)
 		_batchQueue = null;
@@ -893,7 +963,12 @@ public class DictCompression
 		return exists;
 	}
 
-	/** check the HashId to the "cache" */
+	/** 
+	 * Add the HashId to the "cache" 
+	 * 
+	 * @return true = If it didn't exist (inserted a new record),<br> 
+	 *         false = if it already existed (replaced existing entry)
+	 */
 	private boolean add(String cmName, String colName, String hashId)
 	{
 		return getHashIdSet(cmName, colName).add(hashId);

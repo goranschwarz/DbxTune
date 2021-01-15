@@ -27,6 +27,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.Version;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
@@ -41,7 +42,10 @@ public abstract class XmlPlanCache
 	private ConnectionProvider _connProvider = null;
 //	private HashMap<String, String> _cache = new HashMap<String, String>();
 	private LinkedHashMap<String, String> _cache = new LinkedHashMap<String, String>();
-	
+
+	/** Keep a local DBMS Connection for the lookups */
+	private DbxConnection _localConnection;
+
 	protected long _statLogicalRead       = 0;    // How many times did we read from the cache 
 	protected long _statPhysicalRead      = 0;    // How many times did we read from the back-end storage
 	protected long _statBulkPhysicalReads = 0;    // How many times did we call getPlanBulk()
@@ -215,8 +219,13 @@ public abstract class XmlPlanCache
 		String entry = _cache.get(key);
 		if (entry == null)
 		{
+			// If the Connection in the ConnectionProvider is *busy* executing a query this might Fail...
+			// And that in a ugly way (getting "stuck") -->> at com.sybase.jdbc4.utils.SyncQueue.take(SyncQueue.java:93)
+			// Is there any way we could have our own Connection here... OR wait for the Connection to finish/complete
+			
 			_statPhysicalRead++;
-			entry = getPlan(_connProvider.getConnection(), planName, planId);
+//			entry = getPlan(_connProvider.getConnection(), planName, planId);
+			entry = getPlan(getConnection(), planName, planId);
 			if (entry != null)
 			{
 				_cache.put(key, entry);
@@ -227,7 +236,38 @@ public abstract class XmlPlanCache
 
 		return entry;
 	}
-	
+
+	/**
+	 * get the connection used to lookup things in the DBMS
+	 * <p>
+	 * If no connection is "cached", get a new connection using the connection provider 
+	 */
+	private DbxConnection getConnection()
+	{
+		if (_localConnection == null)
+		{
+			_logger.info("No connection was found, creating a new using the Connection Provider.");
+			_localConnection = _connProvider.getNewConnection(Version.getAppName() + "-" + this.getClass().getSimpleName());
+		}
+		
+		if (_localConnection == null)
+		{
+			throw new RuntimeException("Not possible to grab a DBMS connection. _localConnection == null");
+		}
+		
+		// Check if connection is "alive", and possibly "re-connect"
+		if ( ! _localConnection.isConnectionOk() )
+		{
+			_logger.info("Cached Connection was broken, closing the connection and creating a new using the Connection Provider.");
+
+			_localConnection.closeNoThrow();
+
+			// _localConnection.reConnect(null);
+			_localConnection = _connProvider.getNewConnection(Version.getAppName() + "-" + this.getClass().getSimpleName());
+		}
+		
+		return _localConnection;
+	}
 
 	/**
 	 * Set a new Plan for a specific key. <br>
@@ -276,7 +316,8 @@ public abstract class XmlPlanCache
 	 */
 	public void getPlanBulk(List<String> list)
 	{
-		getPlanBulk(_connProvider.getConnection(), list);
+//		getPlanBulk(_connProvider.getConnection(), list);
+		getPlanBulk(getConnection(), list);
 	}
 
 	/**

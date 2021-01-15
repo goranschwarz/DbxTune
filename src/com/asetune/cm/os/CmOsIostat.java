@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
@@ -48,7 +49,9 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.hostmon.HostMonitor;
 import com.asetune.hostmon.OsTable;
+import com.asetune.hostmon.HostMonitor.OsVendor;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.NumberUtils;
 import com.asetune.utils.StringUtil;
 
 
@@ -161,23 +164,6 @@ extends CounterModelHostMonitor
 
 	private void addTrendGraphs()
 	{
-////		String[] labels = new String[] { "runtime-replaced" };
-//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-//		
-//		addTrendGraphData(GRAPH_NAME_WaitTime,        new TrendGraphDataPoint(GRAPH_NAME_WaitTime,        labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_ReadWaitTime,    new TrendGraphDataPoint(GRAPH_NAME_ReadWaitTime,    labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_WriteWaitTime,   new TrendGraphDataPoint(GRAPH_NAME_WriteWaitTime,   labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_SericeTime,      new TrendGraphDataPoint(GRAPH_NAME_SericeTime,      labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_QueueLength,     new TrendGraphDataPoint(GRAPH_NAME_QueueLength,     labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_BusyPct,         new TrendGraphDataPoint(GRAPH_NAME_BusyPct,         labels, LabelType.Dynamic));
-//
-//		addTrendGraphData(GRAPH_NAME_ReadOp,          new TrendGraphDataPoint(GRAPH_NAME_ReadOp,          labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_WriteOp,         new TrendGraphDataPoint(GRAPH_NAME_WriteOp,         labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_ReadKb,          new TrendGraphDataPoint(GRAPH_NAME_ReadKb,          labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_WriteKb,         new TrendGraphDataPoint(GRAPH_NAME_WriteKb,         labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_AvgReadKbPerIo,  new TrendGraphDataPoint(GRAPH_NAME_AvgReadKbPerIo,  labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_AvgWriteKbPerIo, new TrendGraphDataPoint(GRAPH_NAME_AvgWriteKbPerIo, labels, LabelType.Dynamic));
-
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_WaitTime,
 			"iostat: Wait Time(await) per Device",                                           // Menu CheckBox text
@@ -348,157 +334,6 @@ extends CounterModelHostMonitor
 			false, // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
-
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//			tg = new TrendGraph(GRAPH_NAME_WaitTime,
-//				"iostat: Wait Time(await) per Device",                                           // Menu CheckBox text
-//				"iostat: Wait Time(await) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_ReadWaitTime,
-//				"iostat: Read Wait Time(r_await) per Device",                                           // Menu CheckBox text
-//				"iostat: Read wait Time(r_await) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_WriteWaitTime,
-//				"iostat: Write Wait Time(w_await) per Device",                                           // Menu CheckBox text
-//				"iostat: Write wait Time(w_await) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_SericeTime,
-//				"iostat: Service Time(svctm) per Device",                                           // Menu CheckBox text
-//				"iostat: Service Time(svctm) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_QueueLength,
-//				"iostat: Avg Queue Length(avgqu-sz) per Device",                                     // Menu CheckBox text
-//				"iostat: Avg Queue Length(avgqu-sz) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_BusyPct,
-//				"iostat: Busy Percent(utilPct) per Device",                                     // Menu CheckBox text
-//				"iostat: Busy Percent(utilPct) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-//				labels, 
-//				true, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			
-//			
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_ReadOp,
-//				"iostat: Read Operations(readsPerSec) per Device & sec",                                     // Menu CheckBox text
-//				"iostat: Read Operations(readsPerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_WriteOp,
-//				"iostat: Write Operations(writesPerSec) per Device & sec",                                     // Menu CheckBox text
-//				"iostat: Write Operations(writesPerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_ReadKb,
-//				"iostat: Read KB(kbReadPerSec) per Device & sec",                                     // Menu CheckBox text
-//				"iostat: Read KB(kbReadPerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_WriteKb,
-//				"iostat: Write KB(kbWritePerSec) per Device & sec",                                     // Menu CheckBox text
-//				"iostat: Write KB(kbWritePerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_AvgReadKbPerIo,
-//				"iostat: Avg Read KB/IO(avgReadKbPerIo) per Device",                                     // Menu CheckBox text
-//				"iostat: Avg Read KB/IO(avgReadKbPerIo) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_AvgWriteKbPerIo,
-//				"iostat: Avg Write KB/IO(avgWriteKbPerIo) per Device",                                     // Menu CheckBox text
-//				"iostat: Avg Write KB/IO(avgWriteKbPerIo) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 	
 	@Override
@@ -515,332 +350,466 @@ extends CounterModelHostMonitor
 		// GRAPH: WAIT TIME
 		if (GRAPH_NAME_WaitTime.equals(tgdp.getName()))
 		{
-			int dataPoint_pos                    = this.findColumn("await"); // Linix
-//			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("wait");  // Solaris
-
-			int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
-//			if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
-//			if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
-			
-			int deviceDesc_pos = this.findColumn("deviceDescription");
-
-			if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+			if (isConnectedToVendor(OsVendor.Windows))
 			{
-				String msg = "";
-				if (dataPoint_pos  < 0) msg += "'await', ";
-				if (device_pos     < 0) msg += "'device', ";
-				if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
-				
-				if (tg != null)
-					tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux systems");
-			}
-			else
-			{
-				// Write 1 "line" for each device
-				Double[] dArray  = new Double[this.getRowCount()];
-				String[] lArray  = new String[dArray.length];
-				String[] ldArray = new String[dArray.length];
-				
+				Double[] dArray = new Double[this.getRowCount()];
+				String[] lArray = new String[dArray.length];
+
 				for (int i = 0; i < dArray.length; i++)
 				{
-					String deviceDesc = this.getAbsString(i, deviceDesc_pos);
-					String deviceName = this.getAbsString(i, device_pos);
+					Double avgDiskSecRead  = this.getAbsValueAsDouble(i, "Avg. Disk sec/Read");
+					Double avgDiskSecWrite = this.getAbsValueAsDouble(i, "Avg. Disk sec/Write");
 
-					String  label = deviceName;
-					if (StringUtil.hasValue(deviceDesc))
-						label += " ("+deviceDesc+")";
+					lArray[i] = this.getAbsString       (i, "Instance");
+//					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk sec/Transfer") / 1000d; // make this into MILLISEC instead of SEC
+					dArray[i] = (avgDiskSecRead + avgDiskSecWrite) * 1000d; // make this into MILLISEC instead of SEC
+				}
 
-					Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
-
-					ldArray[i] = label;
-					lArray[i]  = deviceName;
-					dArray[i]  = dataPoint;
+				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
+				if (lArray[lArray.length-1].equals("_Total"))
+				{
+					ArrayUtils.shift(lArray, 1);
+					ArrayUtils.shift(dArray, 1);
 				}
 
 				// Set the values
-				tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
-//				tgdp.setDate(this.getTimestamp());
-//				tgdp.setLabel(lArray);
-//				tgdp.setData(dArray);
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+			else
+			{
+				int dataPoint_pos                    = this.findColumn("await"); // Linix
+//				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("wait");  // Solaris
 
-				if (tg != null)
-					tg.setWarningLabel(null);
+				int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
+//				if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
+//				if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
+				
+				int deviceDesc_pos = this.findColumn("deviceDescription");
+
+				if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+				{
+					String msg = "";
+					if (dataPoint_pos  < 0) msg += "'await', ";
+					if (device_pos     < 0) msg += "'device', ";
+					if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+					
+					if (tg != null)
+						tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux systems");
+				}
+				else
+				{
+					// Write 1 "line" for each device
+					Double[] dArray  = new Double[this.getRowCount()];
+					String[] lArray  = new String[dArray.length];
+					String[] ldArray = new String[dArray.length];
+					
+					for (int i = 0; i < dArray.length; i++)
+					{
+						String deviceDesc = this.getAbsString(i, deviceDesc_pos);
+						String deviceName = this.getAbsString(i, device_pos);
+
+						String  label = deviceName;
+						if (StringUtil.hasValue(deviceDesc))
+							label += " ("+deviceDesc+")";
+
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+
+						ldArray[i] = label;
+						lArray[i]  = deviceName;
+						dArray[i]  = dataPoint;
+					}
+
+					// Set the values
+					tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
+
+					if (tg != null)
+						tg.setWarningLabel(null);
+				}
 			}
 		} // end: graph
 
 		// GRAPH: READ WAIT TIME
 		if (GRAPH_NAME_ReadWaitTime.equals(tgdp.getName()))
 		{
-			int dataPoint_pos  = this.findColumn("r_await"); // Linix
-			int device_pos     = this.findColumn("device"); // Linux
-			int deviceDesc_pos = this.findColumn("deviceDescription");
-
-			if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+			if (isConnectedToVendor(OsVendor.Windows))
 			{
-				String msg = "";
-				if (dataPoint_pos  < 0) msg += "'r_await', ";
-				if (device_pos     < 0) msg += "'device', ";
-				if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+				Double[] dArray = new Double[this.getRowCount()];
+				String[] lArray = new String[dArray.length];
 
-				if (tg != null)
-					tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux systems (where iostat ver >= 9.1.2)");
-			}
-			else
-			{
-				// Write 1 "line" for each device
-				Double[] dArray  = new Double[this.getRowCount()];
-				String[] lArray  = new String[dArray.length];
-				String[] ldArray = new String[dArray.length];
-				
 				for (int i = 0; i < dArray.length; i++)
 				{
-					String deviceDesc = this.getAbsString(i, deviceDesc_pos);
-					String deviceName = this.getAbsString(i, device_pos);
+					lArray[i] = this.getAbsString       (i, "Instance");
+					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk sec/Read") * 1000d; // make this into MILLISEC instead of SEC
+				}
 
-					String  label = deviceName;
-					if (StringUtil.hasValue(deviceDesc))
-						label += " ("+deviceDesc+")";
-
-					Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
-
-					ldArray[i] = label;
-					lArray[i]  = deviceName;
-					dArray[i]  = dataPoint;
+				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
+				if (lArray[lArray.length-1].equals("_Total"))
+				{
+					ArrayUtils.shift(lArray, 1);
+					ArrayUtils.shift(dArray, 1);
 				}
 
 				// Set the values
-				tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
-//				tgdp.setDate(this.getTimestamp());
-//				tgdp.setLabel(lArray);
-//				tgdp.setData(dArray);
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+			else
+			{
+				int dataPoint_pos  = this.findColumn("r_await"); // Linix
+				int device_pos     = this.findColumn("device"); // Linux
+				int deviceDesc_pos = this.findColumn("deviceDescription");
 
-				if (tg != null)
-					tg.setWarningLabel(null);
+				if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+				{
+					String msg = "";
+					if (dataPoint_pos  < 0) msg += "'r_await', ";
+					if (device_pos     < 0) msg += "'device', ";
+					if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+
+					if (tg != null)
+						tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux systems (where iostat ver >= 9.1.2)");
+				}
+				else
+				{
+					// Write 1 "line" for each device
+					Double[] dArray  = new Double[this.getRowCount()];
+					String[] lArray  = new String[dArray.length];
+					String[] ldArray = new String[dArray.length];
+					
+					for (int i = 0; i < dArray.length; i++)
+					{
+						String deviceDesc = this.getAbsString(i, deviceDesc_pos);
+						String deviceName = this.getAbsString(i, device_pos);
+
+						String  label = deviceName;
+						if (StringUtil.hasValue(deviceDesc))
+							label += " ("+deviceDesc+")";
+
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+
+						ldArray[i] = label;
+						lArray[i]  = deviceName;
+						dArray[i]  = dataPoint;
+					}
+
+					// Set the values
+					tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
+
+					if (tg != null)
+						tg.setWarningLabel(null);
+				}
 			}
 		} // end: graph
 
 		// GRAPH: WRITE WAIT TIME
 		if (GRAPH_NAME_WriteWaitTime.equals(tgdp.getName()))
 		{
-			int dataPoint_pos  = this.findColumn("w_await"); // Linix
-			int device_pos     = this.findColumn("device"); // Linux
-			int deviceDesc_pos = this.findColumn("deviceDescription");
-
-			if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+			if (isConnectedToVendor(OsVendor.Windows))
 			{
-				String msg = "";
-				if (dataPoint_pos  < 0) msg += "'w_await', ";
-				if (device_pos     < 0) msg += "'device', ";
-				if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
-
-				if (tg != null)
-					tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux systems (where iostat ver >= 9.1.2)");
-			}
-			else
-			{
-				// Write 1 "line" for each device
-				Double[] dArray  = new Double[this.getRowCount()];
-				String[] lArray  = new String[dArray.length];
-				String[] ldArray = new String[dArray.length];
+				Double[] dArray = new Double[this.getRowCount()];
+				String[] lArray = new String[dArray.length];
 
 				for (int i = 0; i < dArray.length; i++)
 				{
-					String deviceDesc = this.getAbsString(i, deviceDesc_pos);
-					String deviceName = this.getAbsString(i, device_pos);
+					lArray[i] = this.getAbsString       (i, "Instance");
+					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk sec/Write") * 1000d; // make this into MILLISEC instead of SEC
+				}
 
-					String  label = deviceName;
-					if (StringUtil.hasValue(deviceDesc))
-						label += " ("+deviceDesc+")";
-
-					Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
-
-					ldArray[i] = label;
-					lArray[i]  = deviceName;
-					dArray[i]  = dataPoint;
+				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
+				if (lArray[lArray.length-1].equals("_Total"))
+				{
+					ArrayUtils.shift(lArray, 1);
+					ArrayUtils.shift(dArray, 1);
 				}
 
 				// Set the values
-				tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
-//				tgdp.setDate(this.getTimestamp());
-//				tgdp.setLabel(lArray);
-//				tgdp.setData(dArray);
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+			else
+			{
+				int dataPoint_pos  = this.findColumn("w_await"); // Linix
+				int device_pos     = this.findColumn("device"); // Linux
+				int deviceDesc_pos = this.findColumn("deviceDescription");
 
-				if (tg != null)
-					tg.setWarningLabel(null);
+				if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+				{
+					String msg = "";
+					if (dataPoint_pos  < 0) msg += "'w_await', ";
+					if (device_pos     < 0) msg += "'device', ";
+					if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+
+					if (tg != null)
+						tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux systems (where iostat ver >= 9.1.2)");
+				}
+				else
+				{
+					// Write 1 "line" for each device
+					Double[] dArray  = new Double[this.getRowCount()];
+					String[] lArray  = new String[dArray.length];
+					String[] ldArray = new String[dArray.length];
+
+					for (int i = 0; i < dArray.length; i++)
+					{
+						String deviceDesc = this.getAbsString(i, deviceDesc_pos);
+						String deviceName = this.getAbsString(i, device_pos);
+
+						String  label = deviceName;
+						if (StringUtil.hasValue(deviceDesc))
+							label += " ("+deviceDesc+")";
+
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+
+						ldArray[i] = label;
+						lArray[i]  = deviceName;
+						dArray[i]  = dataPoint;
+					}
+
+					// Set the values
+					tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
+
+					if (tg != null)
+						tg.setWarningLabel(null);
+				}
 			}
 		} // end: graph
 
 		// GRAPH: SERVICE TIME
 		if (GRAPH_NAME_ServiceTime.equals(tgdp.getName()))
 		{
-			int dataPoint_pos                    = this.findColumn("svctm"); // Linix
-			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("svc_t");  // Solaris
-//			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("XXXXX");  // AIX
-			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("msps");  // HP
-
-			int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
-			if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
-			if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
-			
-			int deviceDesc_pos = this.findColumn("deviceDescription");
-
-			if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+			if (isConnectedToVendor(OsVendor.Windows))
 			{
-				String msg = "";
-				if (dataPoint_pos  < 0) msg += "'svctm|svc_t|msps', ";
-				if (device_pos     < 0) msg += "'device|Disk|name', ";
-				if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+				Double[] dArray = new Double[this.getRowCount()];
+				String[] lArray = new String[dArray.length];
 
-				if (tg != null)
-					tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/HP systems");
-			}
-			else
-			{
-				// Write 1 "line" for each device
-				Double[] dArray  = new Double[this.getRowCount()];
-				String[] lArray  = new String[dArray.length];
-				String[] ldArray = new String[dArray.length];
-				
 				for (int i = 0; i < dArray.length; i++)
 				{
-					String deviceDesc = this.getAbsString(i, deviceDesc_pos);
-					String deviceName = this.getAbsString(i, device_pos);
+					lArray[i] = this.getAbsString       (i, "Instance");
+					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk sec/Transfer") * 1000d; // make this into MILLISEC instead of SEC
+				}
 
-					String  label = deviceName;
-					if (StringUtil.hasValue(deviceDesc))
-						label += " ("+deviceDesc+")";
-
-					Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
-
-					ldArray[i] = label;
-					lArray[i]  = deviceName;
-					dArray[i]  = dataPoint;
+				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
+				if (lArray[lArray.length-1].equals("_Total"))
+				{
+					ArrayUtils.shift(lArray, 1);
+					ArrayUtils.shift(dArray, 1);
 				}
 
 				// Set the values
-				tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
-//				tgdp.setDate(this.getTimestamp());
-//				tgdp.setLabel(lArray);
-//				tgdp.setData(dArray);
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+			else
+			{
+				int dataPoint_pos                    = this.findColumn("svctm"); // Linix
+				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("svc_t");  // Solaris
+//				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("XXXXX");  // AIX
+				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("msps");  // HP
 
-				if (tg != null)
-					tg.setWarningLabel(null);
+				int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
+				if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
+				if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
+				
+				int deviceDesc_pos = this.findColumn("deviceDescription");
+
+				if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+				{
+					String msg = "";
+					if (dataPoint_pos  < 0) msg += "'svctm|svc_t|msps', ";
+					if (device_pos     < 0) msg += "'device|Disk|name', ";
+					if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+
+					if (tg != null)
+						tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/HP systems");
+				}
+				else
+				{
+					// Write 1 "line" for each device
+					Double[] dArray  = new Double[this.getRowCount()];
+					String[] lArray  = new String[dArray.length];
+					String[] ldArray = new String[dArray.length];
+					
+					for (int i = 0; i < dArray.length; i++)
+					{
+						String deviceDesc = this.getAbsString(i, deviceDesc_pos);
+						String deviceName = this.getAbsString(i, device_pos);
+
+						String  label = deviceName;
+						if (StringUtil.hasValue(deviceDesc))
+							label += " ("+deviceDesc+")";
+
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+
+						ldArray[i] = label;
+						lArray[i]  = deviceName;
+						dArray[i]  = dataPoint;
+					}
+
+					// Set the values
+					tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
+
+					if (tg != null)
+						tg.setWarningLabel(null);
+				}
 			}
 		} // end: graph
 
 		// GRAPH: QUEUE LENGTH
 		if (GRAPH_NAME_QueueLength.equals(tgdp.getName()))
 		{
-			int dataPoint_pos                    = this.findColumn("avgqu-sz");  // Linix
-			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("wait");      // Solaris
-			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("Q_avgwqsz"); // AIX
-//			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("???");       // HP
-
-			int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
-			if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
-			if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
-			
-			int deviceDesc_pos = this.findColumn("deviceDescription");
-
-			if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+			if (isConnectedToVendor(OsVendor.Windows))
 			{
-				String msg = "";
-				if (dataPoint_pos  < 0) msg += "'avgqu-sz|wait|Q_avgwqsz', ";
-				if (device_pos     < 0) msg += "'device|Disk|name', ";
-				if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+				Double[] dArray = new Double[this.getRowCount()];
+				String[] lArray = new String[dArray.length];
 
-				if (tg != null)
-					tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
-			}
-			else
-			{
-				// Write 1 "line" for each device
-				Double[] dArray  = new Double[this.getRowCount()];
-				String[] lArray  = new String[dArray.length];
-				String[] ldArray = new String[dArray.length];
-				
 				for (int i = 0; i < dArray.length; i++)
 				{
-					String deviceDesc = this.getAbsString(i, deviceDesc_pos);
-					String deviceName = this.getAbsString(i, device_pos);
+					lArray[i] = this.getAbsString       (i, "Instance");
+					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk Queue Length");
+				}
 
-					String  label = deviceName;
-					if (StringUtil.hasValue(deviceDesc))
-						label += " ("+deviceDesc+")";
-
-					Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
-
-					ldArray[i] = label;
-					lArray[i]  = deviceName;
-					dArray[i]  = dataPoint;
+				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
+				if (lArray[lArray.length-1].equals("_Total"))
+				{
+					ArrayUtils.shift(lArray, 1);
+					ArrayUtils.shift(dArray, 1);
 				}
 
 				// Set the values
-				tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
-//				tgdp.setDate(this.getTimestamp());
-//				tgdp.setLabel(lArray);
-//				tgdp.setData(dArray);
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+			else
+			{
+				int dataPoint_pos                    = this.findColumn("avgqu-sz");  // Linix
+				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("wait");      // Solaris
+				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("Q_avgwqsz"); // AIX
+//				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("???");       // HP
 
-				if (tg != null)
-					tg.setWarningLabel(null);
+				int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
+				if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
+				if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
+				
+				int deviceDesc_pos = this.findColumn("deviceDescription");
+
+				if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+				{
+					String msg = "";
+					if (dataPoint_pos  < 0) msg += "'avgqu-sz|wait|Q_avgwqsz', ";
+					if (device_pos     < 0) msg += "'device|Disk|name', ";
+					if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+
+					if (tg != null)
+						tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
+				}
+				else
+				{
+					// Write 1 "line" for each device
+					Double[] dArray  = new Double[this.getRowCount()];
+					String[] lArray  = new String[dArray.length];
+					String[] ldArray = new String[dArray.length];
+					
+					for (int i = 0; i < dArray.length; i++)
+					{
+						String deviceDesc = this.getAbsString(i, deviceDesc_pos);
+						String deviceName = this.getAbsString(i, device_pos);
+
+						String  label = deviceName;
+						if (StringUtil.hasValue(deviceDesc))
+							label += " ("+deviceDesc+")";
+
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+
+						ldArray[i] = label;
+						lArray[i]  = deviceName;
+						dArray[i]  = dataPoint;
+					}
+
+					// Set the values
+					tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
+
+					if (tg != null)
+						tg.setWarningLabel(null);
+				}
 			}
 		} // end: graph
 
 		// GRAPH: BUSSY PCT
 		if (GRAPH_NAME_BusyPct.equals(tgdp.getName()))
 		{
-			int dataPoint_pos                    = this.findColumn("utilPct");  // Linix
-			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("busyPct");  // Solaris
-			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("X_tm_act"); // AIX
-//			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("???");       // HP
-
-			int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
-			if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
-			if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
-			
-			int deviceDesc_pos = this.findColumn("deviceDescription");
-
-			if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+			if (isConnectedToVendor(OsVendor.Windows))
 			{
-				String msg = "";
-				if (dataPoint_pos  < 0) msg += "'utilPct|busyPct|X_tm_act', ";
-				if (device_pos     < 0) msg += "'device|Disk|name', ";
-				if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+				Double[] dArray = new Double[this.getRowCount()];
+				String[] lArray = new String[dArray.length];
 
-				if (tg != null)
-					tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
-			}
-			else
-			{
-				// Write 1 "line" for each device
-				Double[] dArray  = new Double[this.getRowCount()];
-				String[] lArray  = new String[dArray.length];
-				String[] ldArray = new String[dArray.length];
-				
 				for (int i = 0; i < dArray.length; i++)
 				{
-					String deviceDesc = this.getAbsString(i, deviceDesc_pos);
-					String deviceName = this.getAbsString(i, device_pos);
+					Double idleTimePct = this.getAbsValueAsDouble(i, "% Idle Time");
+					Double busyTimePct = 100d - idleTimePct;
 
-					String  label = deviceName;
-					if (StringUtil.hasValue(deviceDesc))
-						label += " ("+deviceDesc+")";
+					lArray[i] = this.getAbsString       (i, "Instance");
+				//	dArray[i] = this.getAbsValueAsDouble(i, "% Disk Time");
+					dArray[i] = busyTimePct;
+				}
 
-					Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
-
-					ldArray[i] = label;
-					lArray[i]  = deviceName;
-					dArray[i]  = dataPoint;
+				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
+				if (lArray[lArray.length-1].equals("_Total"))
+				{
+					ArrayUtils.shift(lArray, 1);
+					ArrayUtils.shift(dArray, 1);
 				}
 
 				// Set the values
-				tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
-//				tgdp.setDate(this.getTimestamp());
-//				tgdp.setLabel(lArray);
-//				tgdp.setData(dArray);
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+			else
+			{
+				int dataPoint_pos                    = this.findColumn("utilPct");  // Linix
+				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("busyPct");  // Solaris
+				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("X_tm_act"); // AIX
+//				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("???");       // HP
 
-				if (tg != null)
-					tg.setWarningLabel(null);
+				int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
+				if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
+				if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
+				
+				int deviceDesc_pos = this.findColumn("deviceDescription");
+
+				if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+				{
+					String msg = "";
+					if (dataPoint_pos  < 0) msg += "'utilPct|busyPct|X_tm_act', ";
+					if (device_pos     < 0) msg += "'device|Disk|name', ";
+					if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+
+					if (tg != null)
+						tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
+				}
+				else
+				{
+					// Write 1 "line" for each device
+					Double[] dArray  = new Double[this.getRowCount()];
+					String[] lArray  = new String[dArray.length];
+					String[] ldArray = new String[dArray.length];
+					
+					for (int i = 0; i < dArray.length; i++)
+					{
+						String deviceDesc = this.getAbsString(i, deviceDesc_pos);
+						String deviceName = this.getAbsString(i, device_pos);
+
+						String  label = deviceName;
+						if (StringUtil.hasValue(deviceDesc))
+							label += " ("+deviceDesc+")";
+
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+
+						ldArray[i] = label;
+						lArray[i]  = deviceName;
+						dArray[i]  = dataPoint;
+					}
+
+					// Set the values
+					tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
+
+					if (tg != null)
+						tg.setWarningLabel(null);
+				}
 			}
 		} // end: graph
 
@@ -850,406 +819,559 @@ extends CounterModelHostMonitor
 		// GRAPH: READ OP
 		if (GRAPH_NAME_ReadWriteOp.equals(tgdp.getName()))
 		{
-			int readDataPoint_pos                        = this.findColumn("readsPerSec"); // Linix/Solaris
-			if (readDataPoint_pos < 0) readDataPoint_pos = this.findColumn("R_rps");  // AIX
-//			if (readDataPoint_pos < 0) readDataPoint_pos = this.findColumn("msps");  // HP
-
-			int writeDataPoint_pos                         = this.findColumn("writesPerSec"); // Linix/Solaris
-			if (writeDataPoint_pos < 0) writeDataPoint_pos = this.findColumn("W_rps");  // AIX
-//			if (writeDataPoint_pos < 0) writeDataPoint_pos = this.findColumn("msps");  // HP
-
-			int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
-			if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
-			if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
-			
-			int deviceDesc_pos = this.findColumn("deviceDescription");
-
-			if (readDataPoint_pos < 0 || writeDataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+			if (isConnectedToVendor(OsVendor.Windows))
 			{
-				String msg = "";
-				if (readDataPoint_pos  < 0) msg += "'readsPerSec|R_rps', ";
-				if (writeDataPoint_pos < 0) msg += "'writesPerSec|W_rps', ";
-				if (device_pos         < 0) msg += "'device|Disk|name', ";
-				if (deviceDesc_pos     < 0) msg += "'deviceDescription', ";
+				Double[] dArray = new Double[this.getRowCount()];
+				String[] lArray = new String[dArray.length];
 
-				if (tg != null)
-					tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
-			}
-			else
-			{
-				// Write 1 "line" for each device
-				Double[] dArray  = new Double[this.getRowCount()];
-				String[] lArray  = new String[dArray.length];
-				String[] ldArray = new String[dArray.length];
-				
 				for (int i = 0; i < dArray.length; i++)
 				{
-					String deviceDesc = this.getAbsString(i, deviceDesc_pos);
-					String deviceName = this.getAbsString(i, device_pos);
+					lArray[i] = this.getAbsString       (i, "Instance");
+					dArray[i] = this.getAbsValueAsDouble(i, "Disk Transfers/sec");
+				}
 
-					String  label = deviceName;
-					if (StringUtil.hasValue(deviceDesc))
-						label += " ("+deviceDesc+")";
-
-					Double readDataPoint  = this.getAbsValueAsDouble(i, readDataPoint_pos);
-					Double writedataPoint = this.getAbsValueAsDouble(i, writeDataPoint_pos);
-					Double rwDataPoint    = readDataPoint + writedataPoint;
-
-					ldArray[i] = label;
-					lArray[i]  = deviceName;
-					dArray[i]  = rwDataPoint;
+				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
+				if (lArray[lArray.length-1].equals("_Total"))
+				{
+					ArrayUtils.shift(lArray, 1);
+					ArrayUtils.shift(dArray, 1);
 				}
 
 				// Set the values
-				tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
-//				tgdp.setDate(this.getTimestamp());
-//				tgdp.setLabel(lArray);
-//				tgdp.setData(dArray);
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+			else
+			{
+				int readDataPoint_pos                        = this.findColumn("readsPerSec"); // Linix/Solaris
+				if (readDataPoint_pos < 0) readDataPoint_pos = this.findColumn("R_rps");  // AIX
+//				if (readDataPoint_pos < 0) readDataPoint_pos = this.findColumn("msps");  // HP
 
-				if (tg != null)
-					tg.setWarningLabel(null);
+				int writeDataPoint_pos                         = this.findColumn("writesPerSec"); // Linix/Solaris
+				if (writeDataPoint_pos < 0) writeDataPoint_pos = this.findColumn("W_rps");  // AIX
+//				if (writeDataPoint_pos < 0) writeDataPoint_pos = this.findColumn("msps");  // HP
+
+				int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
+				if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
+				if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
+				
+				int deviceDesc_pos = this.findColumn("deviceDescription");
+
+				if (readDataPoint_pos < 0 || writeDataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+				{
+					String msg = "";
+					if (readDataPoint_pos  < 0) msg += "'readsPerSec|R_rps', ";
+					if (writeDataPoint_pos < 0) msg += "'writesPerSec|W_rps', ";
+					if (device_pos         < 0) msg += "'device|Disk|name', ";
+					if (deviceDesc_pos     < 0) msg += "'deviceDescription', ";
+
+					if (tg != null)
+						tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
+				}
+				else
+				{
+					// Write 1 "line" for each device
+					Double[] dArray  = new Double[this.getRowCount()];
+					String[] lArray  = new String[dArray.length];
+					String[] ldArray = new String[dArray.length];
+					
+					for (int i = 0; i < dArray.length; i++)
+					{
+						String deviceDesc = this.getAbsString(i, deviceDesc_pos);
+						String deviceName = this.getAbsString(i, device_pos);
+
+						String  label = deviceName;
+						if (StringUtil.hasValue(deviceDesc))
+							label += " ("+deviceDesc+")";
+
+						Double readDataPoint  = this.getAbsValueAsDouble(i, readDataPoint_pos);
+						Double writedataPoint = this.getAbsValueAsDouble(i, writeDataPoint_pos);
+						Double rwDataPoint    = readDataPoint + writedataPoint;
+
+						ldArray[i] = label;
+						lArray[i]  = deviceName;
+						dArray[i]  = rwDataPoint;
+					}
+
+					// Set the values
+					tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
+
+					if (tg != null)
+						tg.setWarningLabel(null);
+				}
 			}
 		} // end: graph
 
 		// GRAPH: READ OP
 		if (GRAPH_NAME_ReadOp.equals(tgdp.getName()))
 		{
-			int dataPoint_pos                    = this.findColumn("readsPerSec"); // Linix/Solaris
-			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("R_rps");  // AIX
-//			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("msps");  // HP
-
-			int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
-			if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
-			if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
-			
-			int deviceDesc_pos = this.findColumn("deviceDescription");
-
-			if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+			if (isConnectedToVendor(OsVendor.Windows))
 			{
-				String msg = "";
-				if (dataPoint_pos  < 0) msg += "'readsPerSec|R_rps', ";
-				if (device_pos     < 0) msg += "'device|Disk|name', ";
-				if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+				Double[] dArray = new Double[this.getRowCount()];
+				String[] lArray = new String[dArray.length];
 
-				if (tg != null)
-					tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
-			}
-			else
-			{
-				// Write 1 "line" for each device
-				Double[] dArray  = new Double[this.getRowCount()];
-				String[] lArray  = new String[dArray.length];
-				String[] ldArray = new String[dArray.length];
-				
 				for (int i = 0; i < dArray.length; i++)
 				{
-					String deviceDesc = this.getAbsString(i, deviceDesc_pos);
-					String deviceName = this.getAbsString(i, device_pos);
+					lArray[i] = this.getAbsString       (i, "Instance");
+					dArray[i] = this.getAbsValueAsDouble(i, "Disk Reads/sec");
+				}
 
-					String  label = deviceName;
-					if (StringUtil.hasValue(deviceDesc))
-						label += " ("+deviceDesc+")";
-
-					Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
-
-					ldArray[i] = label;
-					lArray[i]  = deviceName;
-					dArray[i]  = dataPoint;
+				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
+				if (lArray[lArray.length-1].equals("_Total"))
+				{
+					ArrayUtils.shift(lArray, 1);
+					ArrayUtils.shift(dArray, 1);
 				}
 
 				// Set the values
-				tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
-//				tgdp.setDate(this.getTimestamp());
-//				tgdp.setLabel(lArray);
-//				tgdp.setData(dArray);
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+			else
+			{
+				int dataPoint_pos                    = this.findColumn("readsPerSec"); // Linix/Solaris
+				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("R_rps");  // AIX
+//				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("msps");  // HP
 
-				if (tg != null)
-					tg.setWarningLabel(null);
+				int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
+				if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
+				if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
+				
+				int deviceDesc_pos = this.findColumn("deviceDescription");
+
+				if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+				{
+					String msg = "";
+					if (dataPoint_pos  < 0) msg += "'readsPerSec|R_rps', ";
+					if (device_pos     < 0) msg += "'device|Disk|name', ";
+					if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+
+					if (tg != null)
+						tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
+				}
+				else
+				{
+					// Write 1 "line" for each device
+					Double[] dArray  = new Double[this.getRowCount()];
+					String[] lArray  = new String[dArray.length];
+					String[] ldArray = new String[dArray.length];
+					
+					for (int i = 0; i < dArray.length; i++)
+					{
+						String deviceDesc = this.getAbsString(i, deviceDesc_pos);
+						String deviceName = this.getAbsString(i, device_pos);
+
+						String  label = deviceName;
+						if (StringUtil.hasValue(deviceDesc))
+							label += " ("+deviceDesc+")";
+
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+
+						ldArray[i] = label;
+						lArray[i]  = deviceName;
+						dArray[i]  = dataPoint;
+					}
+
+					// Set the values
+					tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
+
+					if (tg != null)
+						tg.setWarningLabel(null);
+				}
 			}
 		} // end: graph
 
 		// GRAPH: WRITE OP
 		if (GRAPH_NAME_WriteOp.equals(tgdp.getName()))
 		{
-			int dataPoint_pos                    = this.findColumn("writesPerSec"); // Linix/Solaris
-			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("W_rps");  // AIX
-//			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("msps");  // HP
-
-			int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
-			if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
-			if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
-			
-			int deviceDesc_pos = this.findColumn("deviceDescription");
-
-			if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+			if (isConnectedToVendor(OsVendor.Windows))
 			{
-				String msg = "";
-				if (dataPoint_pos  < 0) msg += "'writesPerSec|W_rps', ";
-				if (device_pos     < 0) msg += "'device|Disk|name', ";
-				if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+				Double[] dArray = new Double[this.getRowCount()];
+				String[] lArray = new String[dArray.length];
 
-				if (tg != null)
-					tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
-			}
-			else
-			{
-				// Write 1 "line" for each device
-				Double[] dArray  = new Double[this.getRowCount()];
-				String[] lArray  = new String[dArray.length];
-				String[] ldArray = new String[dArray.length];
-				
 				for (int i = 0; i < dArray.length; i++)
 				{
-					String deviceDesc = this.getAbsString(i, deviceDesc_pos);
-					String deviceName = this.getAbsString(i, device_pos);
+					lArray[i] = this.getAbsString       (i, "Instance");
+					dArray[i] = this.getAbsValueAsDouble(i, "Disk Writes/sec");
+				}
 
-					String  label = deviceName;
-					if (StringUtil.hasValue(deviceDesc))
-						label += " ("+deviceDesc+")";
-
-					Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
-
-					ldArray[i] = label;
-					lArray[i]  = deviceName;
-					dArray[i]  = dataPoint;
+				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
+				if (lArray[lArray.length-1].equals("_Total"))
+				{
+					ArrayUtils.shift(lArray, 1);
+					ArrayUtils.shift(dArray, 1);
 				}
 
 				// Set the values
-				tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
-//				tgdp.setDate(this.getTimestamp());
-//				tgdp.setLabel(lArray);
-//				tgdp.setData(dArray);
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+			else
+			{
+				int dataPoint_pos                    = this.findColumn("writesPerSec"); // Linix/Solaris
+				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("W_rps");  // AIX
+//				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("msps");  // HP
 
-				if (tg != null)
-					tg.setWarningLabel(null);
+				int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
+				if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
+				if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
+				
+				int deviceDesc_pos = this.findColumn("deviceDescription");
+
+				if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+				{
+					String msg = "";
+					if (dataPoint_pos  < 0) msg += "'writesPerSec|W_rps', ";
+					if (device_pos     < 0) msg += "'device|Disk|name', ";
+					if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+
+					if (tg != null)
+						tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
+				}
+				else
+				{
+					// Write 1 "line" for each device
+					Double[] dArray  = new Double[this.getRowCount()];
+					String[] lArray  = new String[dArray.length];
+					String[] ldArray = new String[dArray.length];
+					
+					for (int i = 0; i < dArray.length; i++)
+					{
+						String deviceDesc = this.getAbsString(i, deviceDesc_pos);
+						String deviceName = this.getAbsString(i, device_pos);
+
+						String  label = deviceName;
+						if (StringUtil.hasValue(deviceDesc))
+							label += " ("+deviceDesc+")";
+
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+
+						ldArray[i] = label;
+						lArray[i]  = deviceName;
+						dArray[i]  = dataPoint;
+					}
+
+					// Set the values
+					tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
+
+					if (tg != null)
+						tg.setWarningLabel(null);
+				}
 			}
 		} // end: graph
 
 		// GRAPH: READ KB
 		if (GRAPH_NAME_ReadKb.equals(tgdp.getName()))
 		{
-			int dataPoint_pos                    = this.findColumn("kbReadPerSec"); // Linix/Solaris
-			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("X_bread");  // AIX
-//			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("xxx");  // HP
-
-			int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
-			if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
-			if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
-			
-			int deviceDesc_pos = this.findColumn("deviceDescription");
-
-			if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+			if (isConnectedToVendor(OsVendor.Windows))
 			{
-				String msg = "";
-				if (dataPoint_pos  < 0) msg += "'kbReadPerSec|X_bread', ";
-				if (device_pos     < 0) msg += "'device|Disk|name', ";
-				if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+				Double[] dArray = new Double[this.getRowCount()];
+				String[] lArray = new String[dArray.length];
 
-				if (tg != null)
-					tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
-			}
-			else
-			{
-				// Write 1 "line" for each device
-				Double[] dArray  = new Double[this.getRowCount()];
-				String[] lArray  = new String[dArray.length];
-				String[] ldArray = new String[dArray.length];
-				
 				for (int i = 0; i < dArray.length; i++)
 				{
-					String deviceDesc = this.getAbsString(i, deviceDesc_pos);
-					String deviceName = this.getAbsString(i, device_pos);
+					lArray[i] = this.getAbsString       (i, "Instance");
+					dArray[i] = this.getAbsValueAsDouble(i, "Disk Read Bytes/sec") / 1024d; // transform from bytes to KB
+				}
 
-					String  label = deviceName;
-					if (StringUtil.hasValue(deviceDesc))
-						label += " ("+deviceDesc+")";
-
-					Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
-
-					ldArray[i] = label;
-					lArray[i]  = deviceName;
-					dArray[i]  = dataPoint;
+				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
+				if (lArray[lArray.length-1].equals("_Total"))
+				{
+					ArrayUtils.shift(lArray, 1);
+					ArrayUtils.shift(dArray, 1);
 				}
 
 				// Set the values
-				tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
-//				tgdp.setDate(this.getTimestamp());
-//				tgdp.setLabel(lArray);
-//				tgdp.setData(dArray);
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+			else
+			{
+				int dataPoint_pos                    = this.findColumn("kbReadPerSec"); // Linix/Solaris
+				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("X_bread");  // AIX
+//				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("xxx");  // HP
 
-				if (tg != null)
-					tg.setWarningLabel(null);
+				int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
+				if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
+				if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
+				
+				int deviceDesc_pos = this.findColumn("deviceDescription");
+
+				if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+				{
+					String msg = "";
+					if (dataPoint_pos  < 0) msg += "'kbReadPerSec|X_bread', ";
+					if (device_pos     < 0) msg += "'device|Disk|name', ";
+					if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+
+					if (tg != null)
+						tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
+				}
+				else
+				{
+					// Write 1 "line" for each device
+					Double[] dArray  = new Double[this.getRowCount()];
+					String[] lArray  = new String[dArray.length];
+					String[] ldArray = new String[dArray.length];
+					
+					for (int i = 0; i < dArray.length; i++)
+					{
+						String deviceDesc = this.getAbsString(i, deviceDesc_pos);
+						String deviceName = this.getAbsString(i, device_pos);
+
+						String  label = deviceName;
+						if (StringUtil.hasValue(deviceDesc))
+							label += " ("+deviceDesc+")";
+
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+
+						ldArray[i] = label;
+						lArray[i]  = deviceName;
+						dArray[i]  = dataPoint;
+					}
+
+					// Set the values
+					tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
+
+					if (tg != null)
+						tg.setWarningLabel(null);
+				}
 			}
 		} // end: graph
 
 		// GRAPH: WRITE KB
 		if (GRAPH_NAME_WriteKb.equals(tgdp.getName()))
 		{
-			int dataPoint_pos                    = this.findColumn("kbWritePerSec"); // Linix/Solaris
-			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("X_bwrtn");  // AIX
-//			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("xxx");  // HP
-
-			int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
-			if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
-			if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
-			
-			int deviceDesc_pos = this.findColumn("deviceDescription");
-
-			if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+			if (isConnectedToVendor(OsVendor.Windows))
 			{
-				String msg = "";
-				if (dataPoint_pos  < 0) msg += "'kbWritePerSec|X_bwrtn', ";
-				if (device_pos     < 0) msg += "'device|Disk|name', ";
-				if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+				Double[] dArray = new Double[this.getRowCount()];
+				String[] lArray = new String[dArray.length];
 
-				if (tg != null)
-					tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
-			}
-			else
-			{
-				// Write 1 "line" for each device
-				Double[] dArray  = new Double[this.getRowCount()];
-				String[] lArray  = new String[dArray.length];
-				String[] ldArray = new String[dArray.length];
-				
 				for (int i = 0; i < dArray.length; i++)
 				{
-					String deviceDesc = this.getAbsString(i, deviceDesc_pos);
-					String deviceName = this.getAbsString(i, device_pos);
+					lArray[i] = this.getAbsString       (i, "Instance");
+					dArray[i] = this.getAbsValueAsDouble(i, "Disk Write Bytes/sec") / 1024d; // transform from bytes to KB
+				}
 
-					String  label = deviceName;
-					if (StringUtil.hasValue(deviceDesc))
-						label += " ("+deviceDesc+")";
-
-					Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
-
-					ldArray[i] = label;
-					lArray[i]  = deviceName;
-					dArray[i]  = dataPoint;
+				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
+				if (lArray[lArray.length-1].equals("_Total"))
+				{
+					ArrayUtils.shift(lArray, 1);
+					ArrayUtils.shift(dArray, 1);
 				}
 
 				// Set the values
-				tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
-//				tgdp.setDate(this.getTimestamp());
-//				tgdp.setLabel(lArray);
-//				tgdp.setData(dArray);
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+			else
+			{
+				int dataPoint_pos                    = this.findColumn("kbWritePerSec"); // Linix/Solaris
+				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("X_bwrtn");  // AIX
+//				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("xxx");  // HP
 
-				if (tg != null)
-					tg.setWarningLabel(null);
+				int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
+				if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
+				if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
+				
+				int deviceDesc_pos = this.findColumn("deviceDescription");
+
+				if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+				{
+					String msg = "";
+					if (dataPoint_pos  < 0) msg += "'kbWritePerSec|X_bwrtn', ";
+					if (device_pos     < 0) msg += "'device|Disk|name', ";
+					if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+
+					if (tg != null)
+						tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
+				}
+				else
+				{
+					// Write 1 "line" for each device
+					Double[] dArray  = new Double[this.getRowCount()];
+					String[] lArray  = new String[dArray.length];
+					String[] ldArray = new String[dArray.length];
+					
+					for (int i = 0; i < dArray.length; i++)
+					{
+						String deviceDesc = this.getAbsString(i, deviceDesc_pos);
+						String deviceName = this.getAbsString(i, device_pos);
+
+						String  label = deviceName;
+						if (StringUtil.hasValue(deviceDesc))
+							label += " ("+deviceDesc+")";
+
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+
+						ldArray[i] = label;
+						lArray[i]  = deviceName;
+						dArray[i]  = dataPoint;
+					}
+
+					// Set the values
+					tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
+
+					if (tg != null)
+						tg.setWarningLabel(null);
+				}
 			}
 		} // end: graph
 
 		// GRAPH: WRITE KB
 		if (GRAPH_NAME_AvgReadKbPerIo.equals(tgdp.getName()))
 		{
-			int dataPoint_pos                    = this.findColumn("avgReadKbPerIo"); // Linix/Solaris
-//			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("X_bwrtn");  // AIX
-//			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("xxx");  // HP
-
-			int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
-			if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
-			if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
-			
-			int deviceDesc_pos = this.findColumn("deviceDescription");
-
-			if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+			if (isConnectedToVendor(OsVendor.Windows))
 			{
-				String msg = "";
-				if (dataPoint_pos  < 0) msg += "'avgReadKbPerIo', ";
-				if (device_pos     < 0) msg += "'device|Disk|name', ";
-				if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+				Double[] dArray = new Double[this.getRowCount()];
+				String[] lArray = new String[dArray.length];
 
-				if (tg != null)
-					tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
-			}
-			else
-			{
-				// Write 1 "line" for each device
-				Double[] dArray  = new Double[this.getRowCount()];
-				String[] lArray  = new String[dArray.length];
-				String[] ldArray = new String[dArray.length];
-				
 				for (int i = 0; i < dArray.length; i++)
 				{
-					String deviceDesc = this.getAbsString(i, deviceDesc_pos);
-					String deviceName = this.getAbsString(i, device_pos);
+					Double diskReadsSec   = this.getAbsValueAsDouble(i, "Disk Reads/sec");
+					Double diskReadKbSec  = this.getAbsValueAsDouble(i, "Disk Read Bytes/sec") / 1024d; // transform from bytes to KB
 
-					String  label = deviceName;
-					if (StringUtil.hasValue(deviceDesc))
-						label += " ("+deviceDesc+")";
+					lArray[i] = this.getAbsString       (i, "Instance");
+					dArray[i] = diskReadsSec <= 0d ? 0d : NumberUtils.round(diskReadKbSec / diskReadsSec, 1);
+				}
 
-					Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
-
-					ldArray[i] = label;
-					lArray[i]  = deviceName;
-					dArray[i]  = dataPoint;
+				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
+				if (lArray[lArray.length-1].equals("_Total"))
+				{
+					ArrayUtils.shift(lArray, 1);
+					ArrayUtils.shift(dArray, 1);
 				}
 
 				// Set the values
-				tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
-//				tgdp.setDate(this.getTimestamp());
-//				tgdp.setLabel(lArray);
-//				tgdp.setData(dArray);
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+			else
+			{
+				int dataPoint_pos                    = this.findColumn("avgReadKbPerIo"); // Linix/Solaris
+//				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("X_bwrtn");  // AIX
+//				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("xxx");  // HP
 
-				if (tg != null)
-					tg.setWarningLabel(null);
+				int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
+				if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
+				if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
+				
+				int deviceDesc_pos = this.findColumn("deviceDescription");
+
+				if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+				{
+					String msg = "";
+					if (dataPoint_pos  < 0) msg += "'avgReadKbPerIo', ";
+					if (device_pos     < 0) msg += "'device|Disk|name', ";
+					if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+
+					if (tg != null)
+						tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
+				}
+				else
+				{
+					// Write 1 "line" for each device
+					Double[] dArray  = new Double[this.getRowCount()];
+					String[] lArray  = new String[dArray.length];
+					String[] ldArray = new String[dArray.length];
+					
+					for (int i = 0; i < dArray.length; i++)
+					{
+						String deviceDesc = this.getAbsString(i, deviceDesc_pos);
+						String deviceName = this.getAbsString(i, device_pos);
+
+						String  label = deviceName;
+						if (StringUtil.hasValue(deviceDesc))
+							label += " ("+deviceDesc+")";
+
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+
+						ldArray[i] = label;
+						lArray[i]  = deviceName;
+						dArray[i]  = dataPoint;
+					}
+
+					// Set the values
+					tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
+
+					if (tg != null)
+						tg.setWarningLabel(null);
+				}
 			}
 		} // end: graph
 
 		// GRAPH: WRITE KB
 		if (GRAPH_NAME_AvgWriteKbPerIo.equals(tgdp.getName()))
 		{
-			int dataPoint_pos                    = this.findColumn("avgWriteKbPerIo"); // Linix/Solaris
-//			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("X_bwrtn");  // AIX
-//			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("xxx");  // HP
-
-			int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
-			if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
-			if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
-			
-			int deviceDesc_pos = this.findColumn("deviceDescription");
-
-			if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+			if (isConnectedToVendor(OsVendor.Windows))
 			{
-				String msg = "";
-				if (dataPoint_pos  < 0) msg += "'avgWriteKbPerIo', ";
-				if (device_pos     < 0) msg += "'device|Disk|name', ";
-				if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
-				
-				if (tg != null)
-					tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
-			}
-			else
-			{
-				// Write 1 "line" for each device
-				Double[] dArray  = new Double[this.getRowCount()];
-				String[] lArray  = new String[dArray.length];
-				String[] ldArray = new String[dArray.length];
-				
+				Double[] dArray = new Double[this.getRowCount()];
+				String[] lArray = new String[dArray.length];
+
 				for (int i = 0; i < dArray.length; i++)
 				{
-					String deviceDesc = this.getAbsString(i, deviceDesc_pos);
-					String deviceName = this.getAbsString(i, device_pos);
+					Double diskWritesSec  = this.getAbsValueAsDouble(i, "Disk Writes/sec");
+					Double diskWriteKbSec = this.getAbsValueAsDouble(i, "Disk Write Bytes/sec") / 1024d; // transform from bytes to KB
 
-					String  label = deviceName;
-					if (StringUtil.hasValue(deviceDesc))
-						label += " ("+deviceDesc+")";
+					lArray[i] = this.getAbsString       (i, "Instance");
+					dArray[i] = diskWritesSec <= 0d ? 0d : NumberUtils.round(diskWriteKbSec / diskWritesSec, 1);
+				}
 
-					Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
-
-					ldArray[i] = label;
-					lArray[i]  = deviceName;
-					dArray[i]  = dataPoint;
+				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
+				if (lArray[lArray.length-1].equals("_Total"))
+				{
+					ArrayUtils.shift(lArray, 1);
+					ArrayUtils.shift(dArray, 1);
 				}
 
 				// Set the values
-				tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
-//				tgdp.setDate(this.getTimestamp());
-//				tgdp.setLabel(lArray);
-//				tgdp.setData(dArray);
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+			else
+			{
+				int dataPoint_pos                    = this.findColumn("avgWriteKbPerIo"); // Linix/Solaris
+//				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("X_bwrtn");  // AIX
+//				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("xxx");  // HP
 
-				if (tg != null)
-					tg.setWarningLabel(null);
+				int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
+				if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
+				if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
+				
+				int deviceDesc_pos = this.findColumn("deviceDescription");
+
+				if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+				{
+					String msg = "";
+					if (dataPoint_pos  < 0) msg += "'avgWriteKbPerIo', ";
+					if (device_pos     < 0) msg += "'device|Disk|name', ";
+					if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
+					
+					if (tg != null)
+						tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
+				}
+				else
+				{
+					// Write 1 "line" for each device
+					Double[] dArray  = new Double[this.getRowCount()];
+					String[] lArray  = new String[dArray.length];
+					String[] ldArray = new String[dArray.length];
+					
+					for (int i = 0; i < dArray.length; i++)
+					{
+						String deviceDesc = this.getAbsString(i, deviceDesc_pos);
+						String deviceName = this.getAbsString(i, device_pos);
+
+						String  label = deviceName;
+						if (StringUtil.hasValue(deviceDesc))
+							label += " ("+deviceDesc+")";
+
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+
+						ldArray[i] = label;
+						lArray[i]  = deviceName;
+						dArray[i]  = dataPoint;
+					}
+
+					// Set the values
+					tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
+
+					if (tg != null)
+						tg.setWarningLabel(null);
+				}
 			}
 		} // end: graph
 
@@ -1398,7 +1520,7 @@ extends CounterModelHostMonitor
 
 		String hostname = cm.getCounterController().getHostMonConnection().getHost();
 
-		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 		
 		//-------------------------------------------------------
 		// Loop all devices and check for 'utilPct' 
@@ -1420,10 +1542,11 @@ extends CounterModelHostMonitor
 				if (utilPct == null)
 					utilPct = -1.0;
 				
-				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): device='" + device + "', utilPct=" + utilPct + ".");
-
 				double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_utilPct, DEFAULT_alarm_utilPct);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", device='" + device + "', utilPct=" + utilPct + ".");
+
 				if (utilPct > threshold)
 				{
 					// Get configuration 'skip some device'

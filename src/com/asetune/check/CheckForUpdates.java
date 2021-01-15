@@ -753,6 +753,7 @@ public abstract class CheckForUpdates
 			if ( ! foundActionLine )
 			{
 				_logger.warn("When checking for new version, no 'ACTION:' response was found. The response rows was '" + responseLines + "'.");
+				_logger.info("The above from URL='" + urlParams.getUrl() + "', with params='" + urlParams + "'.");
 			}
 
 			_checkSucceed = true;

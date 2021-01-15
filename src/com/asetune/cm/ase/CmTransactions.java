@@ -237,10 +237,11 @@ extends CountersModel
 					
 					if (ageInSec != null)
 					{
-						if (debugPrint || _logger.isDebugEnabled())
-							System.out.println("##### sendAlarmRequest("+cm.getName()+"): ageInSec='"+ageInSec+"'.");
-
 						int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_StateDetached_ageInSec, DEFAULT_alarm_StateDetached_ageInSec);
+
+						if (debugPrint || _logger.isDebugEnabled())
+							System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", ageInSec='"+ageInSec+"'.");
+
 						if (ageInSec.intValue() > threshold)
 						{
 							AlarmHandler.getInstance().addAlarm( 

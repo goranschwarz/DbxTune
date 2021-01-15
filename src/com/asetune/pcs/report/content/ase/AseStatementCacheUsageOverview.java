@@ -22,7 +22,6 @@
 package com.asetune.pcs.report.content.ase;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 
 import com.asetune.gui.ResultSetTableModel;
@@ -43,6 +42,19 @@ public class AseStatementCacheUsageOverview extends AseAbstract
 	}
 
 	@Override
+	public boolean hasShortMessageText()
+	{
+		return true;
+	}
+
+	@Override
+	public void writeShortMessageText(Writer w)
+	throws IOException
+	{
+		writeMessageText(w);
+	}
+
+	@Override
 	public void writeMessageText(Writer sb)
 	throws IOException
 	{
@@ -59,27 +71,6 @@ public class AseStatementCacheUsageOverview extends AseAbstract
 		_CmStatementCache_RequestPerSecGraph.writeHtmlContent(sb, null, null);
 		_CmSqlStatement_SqlStmnt            .writeHtmlContent(sb, null, "The above graph is a bit more than just from the Statement Cache, and the origin is from monSysStatement");
 	}
-
-//	@Override
-//	public String getMessageText()
-//	{
-//		StringBuilder sb = new StringBuilder();
-//
-//		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are some Graphs/Charts regarding the Statement Cache.",
-//				"CmStatementCache_HitRatePctGraph",
-//				"CmStatementCache_RequestPerSecGraph",
-//				"CmSqlStatement_SqlStmnt"
-//				));
-//
-//		if (_cfg != null && _cfg.getRowCount() > 0)
-//			sb.append(_cfg.toHtmlTableString("sortable"));
-//
-//		sb.append(_CmStatementCache_HitRatePctGraph   .getHtmlContent(null, null));
-//		sb.append(_CmStatementCache_RequestPerSecGraph.getHtmlContent(null, null));
-//		sb.append(_CmSqlStatement_SqlStmnt            .getHtmlContent(null, "The above graph is a bit more than just from the Statement Cache, and the origin is from monSysStatement"));
-//
-//		return sb.toString();
-//	}
 
 	@Override
 	public String getSubject()

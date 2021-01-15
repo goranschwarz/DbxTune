@@ -88,6 +88,11 @@ extends HostMonitor
 			mon = new MonitorDiskSpaceAllOs();
 			mon.setConnectedToVendor(OsVendor.Hp);
 		}
+		else if (osname.startsWith("Windows-"))
+		{
+			mon = new MonitorDiskSpaceAllOs();
+			mon.setConnectedToVendor(OsVendor.Windows);
+		}					
 		else
 		{
 			throw new Exception("The Unix system '"+osname+"', is not supported by the module 'MonitorDiskSpace' for the moment.");

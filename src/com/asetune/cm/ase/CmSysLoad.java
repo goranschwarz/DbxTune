@@ -577,9 +577,12 @@ extends CountersModel
 		if ( ! hasDiffData() )
 			return;
 
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
 		CountersModel cm = this;
 
-		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
 		// If version is below 15.5: do not continue
 		long srvVersion = cm.getServerVersion();
@@ -610,15 +613,13 @@ extends CountersModel
 				{
 					if (Avg_1min != null)
 					{
-						if (debugPrint || _logger.isDebugEnabled())
-							System.out.println("##### sendAlarmRequest("+cm.getName()+"): RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min="+Avg_5min+", avg_15min="+Avg_15min+".");
+						double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg1min, DEFAULT_alarm_RunQueueLengthAvg1min);
 
-						if (AlarmHandler.hasInstance())
-						{
-							double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg1min, DEFAULT_alarm_RunQueueLengthAvg1min);
-							if (Avg_1min > threshold)
-								AlarmHandler.getInstance().addAlarm( new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_1_MINUTE, Avg_1min, Avg_5min, Avg_15min) );
-						}
+						if (debugPrint || _logger.isDebugEnabled())
+							System.out.println("##### sendAlarmRequest("+cm.getName()+"): RunQueueLengthAvg1min - threshold="+threshold+", RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min="+Avg_5min+", avg_15min="+Avg_15min+".");
+
+						if (Avg_1min > threshold)
+							AlarmHandler.getInstance().addAlarm( new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_1_MINUTE, Avg_1min, Avg_5min, Avg_15min) );
 					}
 				}
 
@@ -626,15 +627,13 @@ extends CountersModel
 				{
 					if (Avg_5min != null)
 					{
-						if (debugPrint || _logger.isDebugEnabled())
-							System.out.println("##### sendAlarmRequest("+cm.getName()+"): RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min="+Avg_5min+", avg_15min="+Avg_15min+".");
+						double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg5min, DEFAULT_alarm_RunQueueLengthAvg5min);
 
-						if (AlarmHandler.hasInstance())
-						{
-							double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg5min, DEFAULT_alarm_RunQueueLengthAvg5min);
-							if (Avg_5min > threshold)
-								AlarmHandler.getInstance().addAlarm( new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_5_MINUTE, Avg_1min, Avg_5min, Avg_15min) );
-						}
+						if (debugPrint || _logger.isDebugEnabled())
+							System.out.println("##### sendAlarmRequest("+cm.getName()+"): RunQueueLengthAvg5min - threshold="+threshold+", RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min="+Avg_5min+", avg_15min="+Avg_15min+".");
+
+						if (Avg_5min > threshold)
+							AlarmHandler.getInstance().addAlarm( new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_5_MINUTE, Avg_1min, Avg_5min, Avg_15min) );
 					}
 				}
 
@@ -642,15 +641,13 @@ extends CountersModel
 				{
 					if (Avg_15min != null)
 					{
-						if (debugPrint || _logger.isDebugEnabled())
-							System.out.println("##### sendAlarmRequest("+cm.getName()+"): RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min="+Avg_5min+", avg_15min="+Avg_15min+".");
+						double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg15min, DEFAULT_alarm_RunQueueLengthAvg15min);
 
-						if (AlarmHandler.hasInstance())
-						{
-							double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg15min, DEFAULT_alarm_RunQueueLengthAvg15min);
-							if (Avg_15min > threshold)
-								AlarmHandler.getInstance().addAlarm( new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_15_MINUTE, Avg_1min, Avg_5min, Avg_15min) );
-						}
+						if (debugPrint || _logger.isDebugEnabled())
+							System.out.println("##### sendAlarmRequest("+cm.getName()+"): RunQueueLengthAvg15min - threshold="+threshold+", RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min="+Avg_5min+", avg_15min="+Avg_15min+".");
+
+						if (Avg_15min > threshold)
+							AlarmHandler.getInstance().addAlarm( new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_15_MINUTE, Avg_1min, Avg_5min, Avg_15min) );
 					}
 				}
 			}

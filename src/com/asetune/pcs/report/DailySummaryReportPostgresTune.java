@@ -21,6 +21,7 @@
 package com.asetune.pcs.report;
 
 import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
+import com.asetune.pcs.report.content.os.OsIoStatOverview;
 import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
 import com.asetune.pcs.report.content.os.OsSpaceUsageOverview;
 import com.asetune.pcs.report.content.postgres.PostgresConfig;
@@ -51,6 +52,7 @@ extends DailySummaryReportDefault
 		addReportEntry( new PostgresConfig        (this) );
 		addReportEntry( new PostgresDbSize        (this) );  // DB SIZE and or growth
 		addReportEntry( new PostgresTopTableSize  (this) );
+		addReportEntry( new OsIoStatOverview      (this) );
 		addReportEntry( new OsIoStatSlowIo        (this) );
 
 		// Configuration

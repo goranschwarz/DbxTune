@@ -2507,6 +2507,14 @@ implements Runnable
 						Thread.sleep(1000);
 						continue;
 					}
+					
+					// Should we check if the "main" collector is paused
+//					if ( CounterController.getInstance().isPauseSampling() ) // FIXME: isPauseSampling() was only in the GUI not in CounterController
+//					{
+//						_logger.debug("Counter Controller is paused... skipping: doSqlCapture()");
+//						Thread.sleep(1000);
+//						continue;
+//					}
 
 					// Go and store or consume the in-data/container
 					long startTime = System.currentTimeMillis();
@@ -2658,7 +2666,7 @@ implements Runnable
 			_logger.warn("doObjectInfoLookup(): Sorry can't continue: There are no Object Lookup Inspector installed.");
 			return false;
 		}
-
+		
 //System.out.println("doSqlCapture(): START");
 		int entries = _sqlCaptureBroker.doSqlCapture(conn, this);
 //System.out.println("doSqlCapture(): END - entries="+entries);

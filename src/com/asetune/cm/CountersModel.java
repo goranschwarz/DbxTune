@@ -858,6 +858,16 @@ implements Cloneable, ITableTooltip
 	**---------------------------------------------------
 	*/
 
+	public List<String> getColumnNames()
+	{
+		CounterTableModel data = getCounterData();
+
+		if (data == null)
+			return Collections.emptyList();
+
+		return data.getColNames();
+	}
+	
 	/**
 	 * Simply a convenience method that calls <code>findColumn(colName)</code>
 	 * @param colName Column name to check for existance

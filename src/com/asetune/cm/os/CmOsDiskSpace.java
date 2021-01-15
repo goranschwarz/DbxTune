@@ -22,9 +22,10 @@ package com.asetune.cm.os;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.log4j.Logger;
@@ -40,13 +41,14 @@ import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.os.gui.CmOsUptimePanel;
+import com.asetune.cm.os.gui.CmOsDiskSpacePanel;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.Category;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.hostmon.OsTable;
+import com.asetune.utils.CollectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
@@ -108,6 +110,12 @@ extends CounterModelHostMonitor
 		CounterSetTemplates.register(this);
 	}
 
+	@Override
+	protected TabularCntrPanel createGui()
+	{
+		return new CmOsDiskSpacePanel(this);
+	}
+
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
@@ -157,16 +165,7 @@ extends CounterModelHostMonitor
 			-1);   // minimum height
 
 	}
-//	private void addTrendGraphs()
-//	{
-//	}
 	
-	@Override
-	protected TabularCntrPanel createGui()
-	{
-		return new CmOsUptimePanel(this);
-	}
-
 	@Override
 	public void localCalculation(OsTable newSample)
 	{
@@ -276,6 +275,8 @@ extends CounterModelHostMonitor
 		if ( ! AlarmHandler.hasInstance() )
 			return;
 
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
+
 		CountersModel cm = this;
 		Configuration conf = Configuration.getCombinedConfiguration();
 		
@@ -310,7 +311,7 @@ extends CounterModelHostMonitor
 			// SKIP: if in skipRegExp
 			if (StringUtil.hasValue(skipRegExp) && mountPoint.matches(skipRegExp))
 			{
-				if (_logger.isDebugEnabled())
+				if (debugPrint || _logger.isDebugEnabled())
 					_logger.debug("sendAlarmRequest(): skipping[skipRegExp]: mountPoint=" + mountPoint + ", " + PROPKEY_alarm_SkipMountNameRegex + "=" + skipRegExp);
 				continue;
 			}
@@ -319,7 +320,7 @@ extends CounterModelHostMonitor
 			Double sizeMb = cm.getAbsValueAsDouble(r, "Size-MB");
 			if (sizeMb != null && sizeMb < sizeMbSkipThreshold)
 			{
-				if (_logger.isDebugEnabled())
+				if (debugPrint || _logger.isDebugEnabled())
 					_logger.debug("sendAlarmRequest(): skipping[sizeMb]: mountPoint=" + mountPoint + ", sizeMb=" + sizeMb + ", less than threshold=" + sizeMbSkipThreshold);
 				continue;
 			}
@@ -332,6 +333,10 @@ extends CounterModelHostMonitor
 				Double freeMb     = cm.getAbsValueAsDouble(r, "Available-MB");
 				Double usedPct    = cm.getAbsValueAsDouble(r, "UsedPct");
 				Number threshold = getFreeSpaceThreshold(mountPoint, _map_alarm_LowFreeSpaceInMb); // This uses dbname.matches(map:anyKey)
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): Available-MB - threshold="+threshold+", mountPoint='"+mountPoint+"', freeMb='"+freeMb+"', usedPct='"+usedPct+"'.");
+
 				if (usedPct != null && usedPct != null && threshold != null)
 				{
 					if (freeMb.intValue() < threshold.intValue())
@@ -349,6 +354,10 @@ extends CounterModelHostMonitor
 				Double freeMb     = cm.getAbsValueAsDouble(r, "Available-MB");
 				Double usedPct    = cm.getAbsValueAsDouble(r, "UsedPct");
 				Number threshold = getFreeSpaceThreshold(mountPoint, _map_alarm_LowFreeSpaceInPct); // This uses dbname.matches(map:anyKey)
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): UsedPct - threshold="+threshold+", mountPoint='"+mountPoint+"', freeMb='"+freeMb+"', usedPct='"+usedPct+"'.");
+
 				if (usedPct != null && usedPct != null && threshold != null)
 				{
 					if (usedPct > threshold.doubleValue())
@@ -387,10 +396,29 @@ extends CounterModelHostMonitor
 			return num;
 
 		// Check all key in the match and check if they match the REGEXP in the key of the map
-		for (String key : map.keySet())
+//		for (String key : map.keySet())
+//		{
+//			if (name.matches(key))
+//				return map.get(key);
+//		}
+
+    	// Check all key in the match and check if they match the REGEXP in the key of the map
+    	for (String key : map.keySet())
 		{
 			if (name.matches(key))
-				return map.get(key);
+			{
+				Number val= map.get(key);
+				
+				if (_logger.isDebugEnabled())
+					_logger.debug("<<<--  <<-MATCH: getFreeSpaceThreshold() name='" + name + "', matches='" + key + "', returns: " + val);
+
+				return val;
+			}
+			else
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug("   --  NO-MATCH: getFreeSpaceThreshold() name='" + name + "', regex='" + key + "'.");
+			}
 		}
 		
 		// no match
@@ -414,8 +442,8 @@ extends CounterModelHostMonitor
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String cfgVal;
 
-		_map_alarm_LowFreeSpaceInMb   = new HashMap<>();
-		_map_alarm_LowFreeSpaceInPct  = new HashMap<>();
+		_map_alarm_LowFreeSpaceInMb   = new LinkedHashMap<>();
+		_map_alarm_LowFreeSpaceInPct  = new LinkedHashMap<>();
 		
 		String prefix = "       ";
 
@@ -482,6 +510,22 @@ extends CounterModelHostMonitor
 					_logger.info(prefix + "Initializing alarm. Skipping 'LowFreeSpaceInMb' enty mountPoint='"+key+"', val='"+val+"'. The value is not a number.");
 				}
 			}
+			
+			// Sort the MAP by value in descending order (high number first)
+			_map_alarm_LowFreeSpaceInMb = CollectionUtils.sortByMapValueNumber(_map_alarm_LowFreeSpaceInMb, false);
+			
+			// Remove ".*" wild-card and add that to the *end*
+			if (_map_alarm_LowFreeSpaceInMb.containsKey(".*"))
+			{
+				Number num = _map_alarm_LowFreeSpaceInMb.get(".*");
+				_map_alarm_LowFreeSpaceInMb.put(".*", num);
+			}
+
+			_logger.info(prefix + "Evaluating alarm for 'LowFreeSpaceInMb' in the following order:");
+			for (Entry<String, Number> entry : _map_alarm_LowFreeSpaceInMb.entrySet())
+			{
+				_logger.info(prefix + "    dbname='" + entry.getKey() + "', mb=" + entry.getValue());
+			}
 		}
 		
 		//--------------------------------------
@@ -508,6 +552,22 @@ extends CounterModelHostMonitor
 				{
 					_logger.info(prefix + "Initializing alarm. Skipping 'LowFreeSpaceInPct' enty mountPoint='"+key+"', val='"+val+"'. The value is not a number.");
 				}
+			}
+			
+			// Sort the MAP by value in descending order (high number first)
+			_map_alarm_LowFreeSpaceInPct = CollectionUtils.sortByMapValueNumber(_map_alarm_LowFreeSpaceInPct, false);
+			
+			// Remove ".*" wild-card and add that to the *end*
+			if (_map_alarm_LowFreeSpaceInPct.containsKey(".*"))
+			{
+				Number num = _map_alarm_LowFreeSpaceInPct.get(".*");
+				_map_alarm_LowFreeSpaceInPct.put(".*", num);
+			}
+
+			_logger.info(prefix + "Evaluating alarm for 'LowFreeSpaceInPct' in the following order:");
+			for (Entry<String, Number> entry : _map_alarm_LowFreeSpaceInPct.entrySet())
+			{
+				_logger.info(prefix + "    dbname='" + entry.getKey() + "', mb=" + entry.getValue());
 			}
 		}
 	}

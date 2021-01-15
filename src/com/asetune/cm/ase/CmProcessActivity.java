@@ -36,8 +36,12 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.Version;
+import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.AlarmHelper;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEventLongRunningStatement;
 import com.asetune.cm.CmSettingsHelper;
+import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -1366,132 +1370,134 @@ extends CountersModel
 	{
 		AlarmHelper.sendAlarmRequestForColumn(this, "Application");
 		AlarmHelper.sendAlarmRequestForColumn(this, "Login");
+		sendAlarmRequestLocal();
 	}
 	
+	public void sendAlarmRequestLocal()
+	{
+		if ( ! hasDiffData() )
+			return;
+		
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+		
+		// EXIT EARLY if no alarm properties has been specified (since there can be *many* logins)
+		boolean isAnyAlarmEnabled = false;
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("StatementExecInSec")) isAnyAlarmEnabled = true;
+//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("xxxxxxxxxxx"      )) isAnyAlarmEnabled = true;
+
+		if (isAnyAlarmEnabled == false)
+			return;
+
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
+
+		AlarmHandler alarmHandler = AlarmHandler.getInstance();
+		
+		CountersModel cm = this;
+
+		for (int r=0; r<cm.getDiffRowCount(); r++)
+		{
+			//-------------------------------------------------------
+			// StatementExecInSec 
+			// --->>> possibly move/copy this to CmActiveStatements
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("StatementExecInSec"))
+			{
+				Object o_StatementExecInMs = cm.getDiffValue(r, "StatementExecInMs");
+				if (o_StatementExecInMs != null && o_StatementExecInMs instanceof Number)
+				{
+					int StatementExecInSec = ((Number)o_StatementExecInMs).intValue() / 1000;
+					
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_StatementExecInSec, DEFAULT_alarm_StatementExecInSec);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", StatementExecInSec='"+StatementExecInSec+"'.");
+
+//					also -- copy it to SqlServerTune, PgTune, etc...
+
+					if (StatementExecInSec > threshold)
+					{
+						Double WaitEventID = cm.getDiffValueAsDouble(r, "WaitEventID");
+						
+						// Some ASE Statements seems to "not reset" StatementStartTime when it finish, which leads to "Faulty Alarms"
+						// so also check WaitEventId != 250 (250 = 'waiting for incoming network data'... or "waiting for client to send a new SQL request")
+						if (WaitEventID != null && WaitEventID.intValue() != 250)
+						{
+							// Get config 'skip some known values'
+							String skipDbnameRegExp   = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipDbname,   DEFAULT_alarm_StatementExecInSecSkipDbname);
+							String skipLoginRegExp    = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipLogin,    DEFAULT_alarm_StatementExecInSecSkipLogin);
+							String skipCmdRegExp      = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipCmd,      DEFAULT_alarm_StatementExecInSecSkipCmd);
+							String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipTranName, DEFAULT_alarm_StatementExecInSecSkipTranName);
+
+							String StatementStartTime = cm.getDiffValue(r, "StatementStartTime") + "";
+							String DBName             = cm.getDiffValue(r, "DBName")             + "";
+							String Login              = cm.getDiffValue(r, "Login")              + "";
+							String Command            = cm.getDiffValue(r, "Command")            + "";
+							String tran_name          = cm.getDiffValue(r, "tran_name")          + "";
+							
+							// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+							boolean doAlarm = true;
+
+							// The below could have been done with nested if(!skipXxx), if(!skipYyy) doAlarm=true; 
+							// Below is more readable, from a variable context point-of-view, but HARDER to understand
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbnameRegExp)   || ! DBName   .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipLoginRegExp)    || ! Login    .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipCmdRegExp)      || ! Command  .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranNameRegExp) || ! tran_name.matches(skipTranNameRegExp))); // NO match in the SKIP TranName regexp
+
+							// NO match in the SKIP regEx
+							if (doAlarm)
+							{
+								String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+								String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+														
+								AlarmEvent ae = new AlarmEventLongRunningStatement(cm, threshold, StatementExecInSec, StatementStartTime, DBName, Login, Command, tran_name);
+								ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							
+								alarmHandler.addAlarm( ae );
+							}
+						} // end: WaitEventID != 250
+					} // end: above threshold
+				} // end: is number
+			} // end: StatementExecInSec
+		} // end: loop rows
+	}
+
+	public static final String  PROPKEY_alarm_StatementExecInSec             = CM_NAME + ".alarm.system.if.StatementExecInSec.gt";
+	public static final int     DEFAULT_alarm_StatementExecInSec             = 3 * 60 * 60;
+
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipDbname   = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.dbname";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipDbname   = "";
+
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipLogin    = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.login";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipLogin    = "";
+
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipCmd      = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.cmd";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipCmd      = "^(DUMP ).*";
+
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipTranName = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.tranName";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipTranName = "^(DUMP |\\$dmpxact).*";
+	
+
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
+		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
+
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("StatementExecInSec",           isAlarmSwitch, PROPKEY_alarm_StatementExecInSec            , Integer.class, conf.getIntProperty(PROPKEY_alarm_StatementExecInSec            , DEFAULT_alarm_StatementExecInSec            ), DEFAULT_alarm_StatementExecInSec            , "If any SPID's has been executed a single SQL Statement for more than ## seconds, then send alarm 'AlarmEventLongRunningStatement'." ));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipDbs",                  PROPKEY_alarm_StatementExecInSecSkipDbname  , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipDbname  , DEFAULT_alarm_StatementExecInSecSkipDbname  ), DEFAULT_alarm_StatementExecInSecSkipDbname  , "If 'StatementExecInSec' is true; Discard databases listed (regexp is used).", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipLogins",               PROPKEY_alarm_StatementExecInSecSkipLogin   , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipLogin   , DEFAULT_alarm_StatementExecInSecSkipLogin   ), DEFAULT_alarm_StatementExecInSecSkipLogin   , "If 'StatementExecInSec' is true; Discard Logins listed (regexp is used)."   , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipCommands",             PROPKEY_alarm_StatementExecInSecSkipCmd     , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipCmd     , DEFAULT_alarm_StatementExecInSecSkipCmd     ), DEFAULT_alarm_StatementExecInSecSkipCmd     , "If 'StatementExecInSec' is true; Discard Commands listed (regexp is used)." , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipTranNames",            PROPKEY_alarm_StatementExecInSecSkipTranName, String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipTranName, DEFAULT_alarm_StatementExecInSecSkipTranName), DEFAULT_alarm_StatementExecInSecSkipTranName, "If 'StatementExecInSec' is true; Discard TranName listed (regexp is used)." , new RegExpInputValidator()));
 		
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "Application") );
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "Login") );
-		
+
 		return list;
 	}
-
-//	@Override
-//	public void sendAlarmRequest()
-//	{
-//		if ( ! hasDiffData() )
-//			return;
-//		
-//		if ( ! AlarmHandler.hasInstance() )
-//			return;
-//
-//		// EXIT EARLY if no alarm properties has been specified (since there can be *many* logins)
-//		boolean isAnyAlarmEnabled = false;
-//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("Application")) isAnyAlarmEnabled = true;
-//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("Login"      )) isAnyAlarmEnabled = true;
-//
-//		if (isAnyAlarmEnabled == false)
-//			return;
-//
-//		
-//		AlarmHandler alarmHandler = AlarmHandler.getInstance();
-//		
-//		CountersModel cm = this;
-//
-//		// If some databases (in Db/Log dump) is not available... we may still want to alarm, due to "any" reason
-//		// So add those databases to the below list, and make decitions after looping all databases
-//		Map<String, Integer> appNameCountMap   = new HashMap<>();
-//		Map<String, Integer> loginNameCountMap = new HashMap<>();
-//		
-//		int pos_Application = cm.findColumn("Application");
-//		int pos_Login       = cm.findColumn("Login");
-//		
-//		if (pos_Application == -1 || pos_Login == -1)
-//		{
-//			_logger.info("Unable to get desired clumn names. Application=" + pos_Application + ", Login=" + pos_Login);
-//			return;
-//		}
-//			
-//		// Count 'Application' and 'Login' instances
-//		for (int r=0; r<cm.getDiffRowCount(); r++)
-//		{
-//			String appName   = StringUtil.fixNull(cm.getAbsString(r, pos_Application), "");
-//			String loginName = StringUtil.fixNull(cm.getAbsString(r, pos_Login)      , "");
-//			
-//			appNameCountMap  .put( appName  , appNameCountMap  .getOrDefault(appName  , 0) + 1 );
-//			loginNameCountMap.put( loginName, loginNameCountMap.getOrDefault(loginName, 0) + 1 );
-//		}
-//
-//		//-------------------------------------------------------
-//		// Application name count
-//		//-------------------------------------------------------
-//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("Application"))
-//		{
-//			List<String> list = StringUtil.commaStrToList(Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_ApplicationMandatory, DEFAULT_alarm_ApplicationMandatory));
-//
-//			for (String name : list)
-//			{
-//				if (StringUtil.isNullOrBlank(name))
-//					continue;
-//
-//				int count = appNameCountMap.getOrDefault(name, 0);
-//				
-//				if (count == 0)
-//				{
-//					AlarmEvent ae = new AlarmEventMissingMandatoryContent(cm, "Application", name);
-//					alarmHandler.addAlarm( ae );
-//				}
-//			}
-//		}
-//
-//		//-------------------------------------------------------
-//		// Login name count
-//		//-------------------------------------------------------
-//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("Login"))
-//		{
-//			List<String> list = StringUtil.commaStrToList(Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LoginMandatory, DEFAULT_alarm_LoginMandatory));
-//
-//			for (String name : list)
-//			{
-//				if (StringUtil.isNullOrBlank(name))
-//					continue;
-//
-//				int count = appNameCountMap.getOrDefault(name, 0);
-//				
-//				if (count == 0)
-//				{
-//					AlarmEvent ae = new AlarmEventMissingMandatoryContent(cm, "Login", name);
-//					alarmHandler.addAlarm( ae );
-//				}
-//			}
-//		}
-//	}
-//
-//	public static final String  PROPKEY_alarm_ApplicationMandatory            = CM_NAME + ".alarm.system.mandatory.Application";
-//	public static final String  DEFAULT_alarm_ApplicationMandatory            = "";
-////	public static final String  DEFAULT_alarm_ApplicationMandatory            = "XxxYyy.*, BlockingLocks-check, StatementCacheUsage-check";
-//
-//	public static final String  PROPKEY_alarm_LoginMandatory                  = CM_NAME + ".alarm.system.mandatory.Login";
-//	public static final String  DEFAULT_alarm_LoginMandatory                  = "";
-////	public static final String  DEFAULT_alarm_LoginMandatory                  = "XxxYyy.*, BlockingLocks-check, StatementCacheUsage-check";
-//
-//	public static final String  PROPKEY_alarm_LoginInfo                       = CM_NAME + ".alarm.system.LoginInfo";
-//	public static final String  DEFAULT_alarm_LoginInfo                       = "";
-//
-//	@Override
-//	public List<CmSettingsHelper> getLocalAlarmSettings()
-//	{
-//		Configuration conf = Configuration.getCombinedConfiguration();
-//		List<CmSettingsHelper> list = new ArrayList<>();
-//		
-//		list.add(new CmSettingsHelper("Mandatory-Application-List",   PROPKEY_alarm_ApplicationMandatory, String.class, conf.getProperty(PROPKEY_alarm_ApplicationMandatory, DEFAULT_alarm_ApplicationMandatory), DEFAULT_alarm_ApplicationMandatory, "If any of the 'application' names in the list is missing from the column 'Application' then send alarm 'AlarmEventMissingMandatoryContent'." ));
-//		list.add(new CmSettingsHelper("Mandatory-Login-List",         PROPKEY_alarm_LoginMandatory      , String.class, conf.getProperty(PROPKEY_alarm_LoginMandatory      , DEFAULT_alarm_LoginMandatory      ), DEFAULT_alarm_LoginMandatory      , "If any of the 'login' names in the list is missing from the column 'Login' then send alarm 'AlarmEventMissingMandatoryContent'." ));
-//		
-//		return list;
-//	}
 }
 
 //------------------------------------------------------------------------

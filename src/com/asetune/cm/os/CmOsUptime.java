@@ -41,7 +41,10 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.hostmon.HostMonitor;
 import com.asetune.hostmon.OsTable;
+import com.asetune.hostmon.HostMonitor.OsVendor;
+import com.asetune.hostmon.MonitorUpTimeWindows;
 import com.asetune.utils.Configuration;
 
 public class CmOsUptime
@@ -100,21 +103,22 @@ extends CounterModelHostMonitor
 		CounterSetTemplates.register(this);
 	}
 
+	@Override
+	protected TabularCntrPanel createGui()
+	{
+		return new CmOsUptimePanel(this);
+	}
+
 
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
 	public static final String GRAPH_NAME_LOAD_AVERAGE     = "LoadAverage";
 	public static final String GRAPH_NAME_ADJ_LOAD_AVERAGE = "AdjLoadAverage";
+	public static final String GRAPH_NAME_WIN_LOAD_AVERAGE = "WinLoadAverage";
 
 	private void addTrendGraphs()
 	{
-//		String[] labels_1  = new String[] { "loadAverage_1Min",    "loadAverage_5Min",    "loadAverage_15Min" };
-//		String[] labels_2  = new String[] { "adjLoadAverage_1Min", "adjLoadAverage_5Min", "adjLoadAverage_15Min" };
-//		
-//		addTrendGraphData(GRAPH_NAME_LOAD_AVERAGE,     new TrendGraphDataPoint(GRAPH_NAME_LOAD_AVERAGE,     labels_1, LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_ADJ_LOAD_AVERAGE, new TrendGraphDataPoint(GRAPH_NAME_ADJ_LOAD_AVERAGE, labels_2, LabelType.Static));
-
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_LOAD_AVERAGE,
 			"uptime: Load Average", 	                                    // Menu CheckBox text
@@ -140,47 +144,41 @@ extends CounterModelHostMonitor
 			false, // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
-		
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			TrendGraph tg = null;
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_LOAD_AVERAGE,
-//				"uptime: Load Average", 	                                    // Menu CheckBox text
-//				"uptime: Load Average ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-//				labels_1, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_ADJ_LOAD_AVERAGE,
-//				"uptime: Adjusted Load Average", 	                                    // Menu CheckBox text
-//				"uptime: Adjusted Load Average ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-//				labels_2, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
-	}
-	
-	@Override
-	protected TabularCntrPanel createGui()
-	{
-		return new CmOsUptimePanel(this);
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_WIN_LOAD_AVERAGE,
+			"uptime: Windows Processor Queue Length", 	                                    // Menu CheckBox text
+			"uptime: Windows Processor Queue Length ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			new String[] { "Processor Queue Length" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CPU,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 	}
 
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
+		// Windows
+		if (isConnectedToVendor(OsVendor.Windows))
+		{
+			if (GRAPH_NAME_WIN_LOAD_AVERAGE.equals(tgdp.getName()))
+			{
+				Double[] arr = new Double[1];
+
+				// NOTE: only ABS values are present in CounterModelHostMonitor
+				arr[0] = this.getAbsValueAvg("Processor Queue Length");
+
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+
+			// For Windows I generate/calculate the 1,5,15 minute load average
+			// return; // So do NOT return here
+		}
+
 		if (GRAPH_NAME_LOAD_AVERAGE.equals(tgdp.getName()))
 		{
 			Double[] arr = new Double[3];
@@ -209,6 +207,22 @@ extends CounterModelHostMonitor
 	@Override
 	public void localCalculation(OsTable osSampleTable)
 	{
+		if (osSampleTable.getRowCount() == 0)
+			return;
+
+		// Windows ... fill in load Average
+		if (isConnectedToVendor(OsVendor.Windows))
+		{
+			HostMonitor hostMonitor = (HostMonitor) getClientProperty(HostMonitor.PROPERTY_NAME);
+			if (hostMonitor != null)
+			{
+				MonitorUpTimeWindows monitorUpTimeWindows = (MonitorUpTimeWindows) hostMonitor;
+				monitorUpTimeWindows.setLoadAverageColumns(osSampleTable);
+			}
+
+			return;
+		}
+
 //		System.out.println(getName()+ ": localCalculation(OsTable osSampleTable) " 
 //				+ "rowcount="   + osSampleTable.getRowCount()
 //				+ ", colCount=" + osSampleTable.getColumnCount()
@@ -282,16 +296,26 @@ extends CounterModelHostMonitor
 	@Override
 	public void sendAlarmRequest()
 	{
+		// Windows do NOT (for the moment) have any localCalculations
+		if (isConnectedToVendor(OsVendor.Windows))
+		{
+			return;
+		}
+
 		CountersModel cm = this;
 
 		if ( ! cm.hasAbsData() )
 			return;
+
 		if ( ! cm.getCounterController().isHostMonConnected() )
+			return;
+
+		if ( ! AlarmHandler.hasInstance() )
 			return;
 
 		String hostname = cm.getCounterController().getHostMonConnection().getHost();
 
-		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 		
 		//-------------------------------------------------------
 		// Run Queue Length (adjLoadAverage_1Min), Avg Last Minute 
@@ -304,15 +328,13 @@ extends CounterModelHostMonitor
 		{
 			if (adjLoadAverage_1Min != null)
 			{
-				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): adjLoadAverage: 1min=" + adjLoadAverage_1Min + ", 5min=" + adjLoadAverage_5Min + ", 15min=" + adjLoadAverage_15Min + ".");
+				double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_adjLoadAverage_1Min, DEFAULT_alarm_adjLoadAverage_1Min);
 
-				if (AlarmHandler.hasInstance())
-				{
-					double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_adjLoadAverage_1Min, DEFAULT_alarm_adjLoadAverage_1Min);
-					if (adjLoadAverage_1Min > threshold)
-						AlarmHandler.getInstance().addAlarm( new AlarmEventOsLoadAverage(cm, threshold, hostname, RangeType.RANGE_1_MINUTE, adjLoadAverage_1Min, adjLoadAverage_5Min, adjLoadAverage_15Min) );
-				}
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): adjLoadAverage_1Min: threshold="+threshold+", 1min=" + adjLoadAverage_1Min + ", 5min=" + adjLoadAverage_5Min + ", 15min=" + adjLoadAverage_15Min + ".");
+
+				if (adjLoadAverage_1Min > threshold)
+					AlarmHandler.getInstance().addAlarm( new AlarmEventOsLoadAverage(cm, threshold, hostname, RangeType.RANGE_1_MINUTE, adjLoadAverage_1Min, adjLoadAverage_5Min, adjLoadAverage_15Min) );
 			}
 		}
 
@@ -320,15 +342,13 @@ extends CounterModelHostMonitor
 		{
 			if (adjLoadAverage_5Min != null)
 			{
-				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): adjLoadAverage: 1min=" + adjLoadAverage_1Min + ", 5min=" + adjLoadAverage_5Min + ", 15min=" + adjLoadAverage_15Min + ".");
+				double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_adjLoadAverage_5Min, DEFAULT_alarm_adjLoadAverage_5Min);
 
-				if (AlarmHandler.hasInstance())
-				{
-					double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_adjLoadAverage_5Min, DEFAULT_alarm_adjLoadAverage_5Min);
-					if (adjLoadAverage_5Min > threshold)
-						AlarmHandler.getInstance().addAlarm( new AlarmEventOsLoadAverage(cm, threshold, hostname, RangeType.RANGE_5_MINUTE, adjLoadAverage_1Min, adjLoadAverage_5Min, adjLoadAverage_15Min) );
-				}
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): adjLoadAverage_5Min: threshold="+threshold+", 1min=" + adjLoadAverage_1Min + ", 5min=" + adjLoadAverage_5Min + ", 15min=" + adjLoadAverage_15Min + ".");
+
+				if (adjLoadAverage_5Min > threshold)
+					AlarmHandler.getInstance().addAlarm( new AlarmEventOsLoadAverage(cm, threshold, hostname, RangeType.RANGE_5_MINUTE, adjLoadAverage_1Min, adjLoadAverage_5Min, adjLoadAverage_15Min) );
 			}
 		}
 
@@ -336,15 +356,13 @@ extends CounterModelHostMonitor
 		{
 			if (adjLoadAverage_15Min != null)
 			{
-				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): adjLoadAverage: 1min=" + adjLoadAverage_1Min + ", 5min=" + adjLoadAverage_5Min + ", 15min=" + adjLoadAverage_15Min + ".");
+				double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_adjLoadAverage_15Min, DEFAULT_alarm_adjLoadAverage_15Min);
 
-				if (AlarmHandler.hasInstance())
-				{
-					double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_adjLoadAverage_15Min, DEFAULT_alarm_adjLoadAverage_15Min);
-					if (adjLoadAverage_15Min > threshold)
-						AlarmHandler.getInstance().addAlarm( new AlarmEventOsLoadAverage(cm, threshold, hostname, RangeType.RANGE_15_MINUTE, adjLoadAverage_1Min, adjLoadAverage_5Min, adjLoadAverage_15Min) );
-				}
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): adjLoadAverage_15Min: threshold="+threshold+", 1min=" + adjLoadAverage_1Min + ", 5min=" + adjLoadAverage_5Min + ", 15min=" + adjLoadAverage_15Min + ".");
+
+				if (adjLoadAverage_15Min > threshold)
+					AlarmHandler.getInstance().addAlarm( new AlarmEventOsLoadAverage(cm, threshold, hostname, RangeType.RANGE_15_MINUTE, adjLoadAverage_1Min, adjLoadAverage_5Min, adjLoadAverage_15Min) );
 			}
 		}
 	}

@@ -373,8 +373,8 @@ extends CountersModel
 			APFReads            = "APFReads, ";
 			Overhead            = "Overhead, ";
 
-			RealPhysicalReads   = "RealPhysicalReads = PhysicalReads + APFReads, \n";
-			calcPhysicalReads = "(PhysicalReads+APFReads)";
+			RealPhysicalReads   = "RealPhysicalReads = convert(bigint, PhysicalReads) + convert(bigint, APFReads), \n";
+			calcPhysicalReads = "(convert(bigint,PhysicalReads)+convert(bigint,APFReads))";
 		}
 
 		if (srvVersion >= Ver.ver(16,0,0, 2))
@@ -664,7 +664,7 @@ extends CountersModel
 
 		CountersModel cm = this;
 		
-		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 //debugPrint = true;
 
 		// Get a array of rowId's where the column 'Name' has the value 'procedure cache size'
@@ -684,10 +684,11 @@ extends CountersModel
 				{
 					cacheSize = cacheSize / 1024.0;
 
-					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): CacheName='default data cache', cacheSize="+cacheSize+".");
-
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_DefaultDataCacheSizeInMb, DEFAULT_alarm_DefaultDataCacheSizeInMb);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", CacheName='default data cache', cacheSize="+cacheSize+".");
+
 					if (cacheSize.intValue() < threshold)
 					{
 						String msg = "The 'default data cache' is configured at the factory setting... 8 MB or similar... This is WAY TO LOW. fix this using: exec sp_cacheconfig 'default data cache', '#G'";
