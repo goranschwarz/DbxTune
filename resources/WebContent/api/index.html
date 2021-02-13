@@ -283,6 +283,18 @@
 		<h5 class='card-header'><a href='/alarmLog?name=ALARM.LOG.SRVNAME.log'>/alarmLog</a></h5>
 		<div class='card-body'>
 		Get alarm log file
+		<br>
+		Parameters:
+		<table>
+			<!--     ==========        =================          =========== -->
+			<tr> <th>Name    </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
+			<!--     ==========        =================          =========== -->
+			<tr> <td>name    </td> <td><b>mandatory</b> </td> <td>Name of the file (only the filename, not full path)</td> </tr>
+			<tr> <td>type    </td> <td>                 </td> <td>for example: RAISE, CANCEL</td> </tr>
+			<tr> <td>method  </td> <td>html             </td> <td>can be: 'pcs', 'json', 'html'</td> </tr>
+			<tr> <td>age     </td> <td>                 </td> <td>for 'pcs' only: YYYY-MM-DD hh:mm:ss or -10, 10m, 10h, 10d, 10l (-10=last-10-rows, 10m=last-10-minutes, 10h=last-10-hours, 10d=last-10-days, 10l=last-10-rows)</td> </tr>
+		</table>
+		
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->
 

@@ -37,6 +37,7 @@ import org.apache.log4j.Logger;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
+import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -392,7 +393,7 @@ public class AseTopCmCachedProcs extends AseAbstract
 
 			// Mini Chart on "RequestCntDiff__chart"
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("RequestCntDiff__chart")
 					.setHtmlWhereKeyColumnName   ("DBName, ObjectName")
 					.setDbmsTableName            ("CmCachedProcs_diff")
@@ -407,7 +408,7 @@ public class AseTopCmCachedProcs extends AseAbstract
 			if (_shortRstm.hasColumn("ExecutionCount_sum") && _shortRstm.hasColumn("ExecutionCount__chart"))
 			{
 				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-						SparkLineParams.create()
+						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("ExecutionCount__chart")
 						.setHtmlWhereKeyColumnName   ("DBName, ObjectName")
 						.setDbmsTableName            ("CmCachedProcs_diff")
@@ -423,7 +424,7 @@ public class AseTopCmCachedProcs extends AseAbstract
 			if (_shortRstm.hasColumn("CPUTime_sum") && _shortRstm.hasColumn("CpuTime__chart"))
 			{
 				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-						SparkLineParams.create()
+						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("CpuTime__chart")
 						.setHtmlWhereKeyColumnName   ("DBName, ObjectName")
 						.setDbmsTableName            ("CmCachedProcs_diff")
@@ -439,7 +440,7 @@ public class AseTopCmCachedProcs extends AseAbstract
 			if (_shortRstm.hasColumn("PhysicalReads_sum") && _shortRstm.hasColumn("PhysicalReads__chart"))
 			{
 				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-						SparkLineParams.create()
+						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("PhysicalReads__chart")
 						.setHtmlWhereKeyColumnName   ("DBName, ObjectName")
 						.setDbmsTableName            ("CmCachedProcs_diff")
@@ -455,7 +456,7 @@ public class AseTopCmCachedProcs extends AseAbstract
 			if (_shortRstm.hasColumn("LogicalReads_sum") && _shortRstm.hasColumn("LogicalReads__chart"))
 			{
 				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-						SparkLineParams.create()
+						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("LogicalReads__chart")
 						.setHtmlWhereKeyColumnName   ("DBName, ObjectName")
 						.setDbmsTableName            ("CmCachedProcs_diff")

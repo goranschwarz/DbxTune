@@ -50,9 +50,16 @@ extends CountersModel
 	public static final String   CM_NAME          = CmIndexUsage.class.getSimpleName();
 	public static final String   SHORT_NAME       = "Index Usage";
 	public static final String   HTML_DESC        = 
-		"<html>" +
-		"<p>FIXME</p>" +
-		"</html>";
+		"<html>"
+		+ "Get an overview of what indexes are used the most. (estimates and not actual usages)<br>"
+		+ "<br>"
+		+ "Note that the counter values here does <b>not</b> reflect <b>actual</b> operators on the tables.<br>"
+		+ "Instead the counters reflects what <i>operators</i> the optimizer think it will use, or operators in the execution plan.<br>"
+		+ "<br>"
+		+ "This DMV (dm_db_index_usage_stats) tells you how many times a query uses an index in its execution plan... but it doesn’t tell you exactly how many times the index was <i>accessed</i>. Only the number of operators referencing it when the plan was run.<br>"
+		+ "<br>"
+		+ "If you want to view <i>actual</i> counters (what happened during execution), you may look at the collector 'Index Operational' (CmIndexOpStat) instead... which using using the DMV 'dm_db_index_operational_stats' instead.<br>"
+		+ "</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
@@ -116,7 +123,7 @@ extends CountersModel
 	
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
-	public static final int      DEFAULT_POSTPONE_TIME          = 0;
+	public static final int      DEFAULT_POSTPONE_TIME          = 300;
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
@@ -285,7 +292,7 @@ extends CountersModel
 	@Override
 	public String[] getDdlDetailsColNames()
 	{
-		String[] sa = {"dbname", "schemaName", "objectName"};
+		String[] sa = {"DbName", "SchemaName", "TableName"};
 		return sa;
 	}
 	/**

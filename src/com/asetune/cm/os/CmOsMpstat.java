@@ -150,17 +150,18 @@ extends CounterModelHostMonitor
 		{
 			if (isConnectedToVendor(OsVendor.Windows))
 			{
-				Double[] dArray = new Double[4];
-				String[] lArray = new String[4];
+				Double[] dArray = new Double[5];
+				String[] lArray = new String[5];
 
 				// Initialize the "sum" array
 				for (int i=0; i<dArray.length; i++)
 					dArray[i] = 0.0;
 
-				lArray[0] = "% Processor Time";
-				lArray[1] = "% User Time";
-				lArray[2] = "% Privileged Time";
-				lArray[3] = "% Idle Time";
+				lArray[0] = "% Total (Processor + User + Privileged)";
+				lArray[1] = "% Processor Time";
+				lArray[2] = "% User Time";
+				lArray[3] = "% Privileged Time";
+				lArray[4] = "% Idle Time";
 
 				for (int i=0; i<this.getRowCount(); i++)
 				{
@@ -168,10 +169,16 @@ extends CounterModelHostMonitor
 
 					if ("_Total".equalsIgnoreCase(cpu))
 					{
-						dArray[0] = this.getAbsValueAsDouble(i, "% Processor Time");
-						dArray[1] = this.getAbsValueAsDouble(i, "% User Time");
-						dArray[2] = this.getAbsValueAsDouble(i, "% Privileged Time");
-						dArray[3] = this.getAbsValueAsDouble(i, "% Idle Time");
+						Double processorTime  = this.getAbsValueAsDouble(i, "% Processor Time");
+						Double userTime       = this.getAbsValueAsDouble(i, "% User Time");
+						Double privilegedTime = this.getAbsValueAsDouble(i, "% Privileged Time");
+						Double idleTime       = this.getAbsValueAsDouble(i, "% Idle Time");
+
+						dArray[0] = processorTime + userTime + privilegedTime;
+						dArray[1] = processorTime;
+						dArray[2] = userTime;
+						dArray[3] = privilegedTime;
+						dArray[4] = idleTime;
 					}
 				}
 
@@ -190,22 +197,22 @@ extends CounterModelHostMonitor
 				if (sysPct_pos < 0)       sysPct_pos = this.findColumn("sys");    // Solaris
 				if (sysPct_pos < 0)       sysPct_pos = this.findColumn("sy");     // AIX
 
-				int idlePct_pos                      = this.findColumn("idlePct"); // Linix
-				if (idlePct_pos < 0)     idlePct_pos = this.findColumn("idl");     // Solaris
-				if (idlePct_pos < 0)     idlePct_pos = this.findColumn("id");      // AIX
-
 				int iowaitPct_pos                    = this.findColumn("iowaitPct"); // Linix
 				if (iowaitPct_pos < 0) iowaitPct_pos = this.findColumn("wt");        // Solaris
 				if (iowaitPct_pos < 0) iowaitPct_pos = this.findColumn("wt");        // AIX
 
-				if (cpu_pos < 0 || usrPct_pos < 0 || sysPct_pos < 0 || idlePct_pos < 0 || iowaitPct_pos < 0)
+				int idlePct_pos                      = this.findColumn("idlePct"); // Linix
+				if (idlePct_pos < 0)     idlePct_pos = this.findColumn("idl");     // Solaris
+				if (idlePct_pos < 0)     idlePct_pos = this.findColumn("id");      // AIX
+
+				if (cpu_pos < 0 || usrPct_pos < 0 || sysPct_pos < 0 || iowaitPct_pos < 0 || idlePct_pos < 0)
 				{
 					String msg = "";
 					if (cpu_pos        < 0) msg += "'CPU', ";
 					if (usrPct_pos     < 0) msg += "'usrPct|usr|us', ";
 					if (sysPct_pos     < 0) msg += "'sysPct|sys|sy', ";
-					if (idlePct_pos    < 0) msg += "'idlePct|idl|id', ";
 					if (iowaitPct_pos  < 0) msg += "'iowaitPct|wt', ";
+					if (idlePct_pos    < 0) msg += "'idlePct|idl|id', ";
 
 					if (tg != null)
 						tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
@@ -215,18 +222,19 @@ extends CounterModelHostMonitor
 					boolean gotAllEntry = false;
 
 //					Double[] dArray = new Double[this.getRowCount()];
-					Double[] aArray = new Double[4]; // "all" array (for values that do have the 'all' record)
-					Double[] sArray = new Double[4]; // "sum" array (for values that do NOT have the 'all' record)
-					String[] lArray = new String[4];
+					Double[] aArray = new Double[5]; // "all" array (for values that do have the 'all' record)
+					Double[] sArray = new Double[5]; // "sum" array (for values that do NOT have the 'all' record)
+					String[] lArray = new String[5];
 
 					// Initialize the "sum" array
 					for (int i=0; i<sArray.length; i++)
 						sArray[i] = 0.0;
 
-					lArray[0] = "usrPct";
-					lArray[1] = "sysPct";
-					lArray[2] = "idlePct";
+					lArray[0] = "TotalPct (usr + sys + iowait)";
+					lArray[1] = "usrPct";
+					lArray[2] = "sysPct";
 					lArray[3] = "iowaitPct";
+					lArray[4] = "idlePct";
 
 					for (int i=0; i<this.getRowCount(); i++)
 					{
@@ -238,25 +246,27 @@ extends CounterModelHostMonitor
 							
 							Double usrPct    = this.getAbsValueAsDouble(i, usrPct_pos);
 							Double sysPct    = this.getAbsValueAsDouble(i, sysPct_pos);
-							Double idlePct   = this.getAbsValueAsDouble(i, idlePct_pos);
 							Double iowaitPct = this.getAbsValueAsDouble(i, iowaitPct_pos);
+							Double idlePct   = this.getAbsValueAsDouble(i, idlePct_pos);
 
-							aArray[0] = usrPct;
-							aArray[1] = sysPct;
-							aArray[2] = idlePct;
+							aArray[0] = usrPct + sysPct + iowaitPct;
+							aArray[1] = usrPct;
+							aArray[2] = sysPct;
 							aArray[3] = iowaitPct;
+							aArray[4] = idlePct;
 						}
 						else
 						{
 							Double usrPct    = this.getAbsValueAsDouble(i, usrPct_pos);
 							Double sysPct    = this.getAbsValueAsDouble(i, sysPct_pos);
-							Double idlePct   = this.getAbsValueAsDouble(i, idlePct_pos);
 							Double iowaitPct = this.getAbsValueAsDouble(i, iowaitPct_pos);
+							Double idlePct   = this.getAbsValueAsDouble(i, idlePct_pos);
 
-							sArray[0] += usrPct;
-							sArray[1] += sysPct;
-							sArray[2] += idlePct;
+							sArray[0] += usrPct + sysPct + iowaitPct;
+							sArray[1] += usrPct;
+							sArray[2] += sysPct;
 							sArray[3] += iowaitPct;
+							sArray[4] += idlePct;
 						}
 					}
 
@@ -357,22 +367,22 @@ extends CounterModelHostMonitor
 				if (sysPct_pos < 0)       sysPct_pos = this.findColumn("sys");    // Solaris
 				if (sysPct_pos < 0)       sysPct_pos = this.findColumn("sy");     // AIX
 
-				int idlePct_pos                      = this.findColumn("idlePct"); // Linix
-				if (idlePct_pos < 0)     idlePct_pos = this.findColumn("idl");     // Solaris
-				if (idlePct_pos < 0)     idlePct_pos = this.findColumn("id");      // AIX
-
 				int iowaitPct_pos                    = this.findColumn("iowaitPct"); // Linix
 				if (iowaitPct_pos < 0) iowaitPct_pos = this.findColumn("wt");        // Solaris
 				if (iowaitPct_pos < 0) iowaitPct_pos = this.findColumn("wt");        // AIX
 
-				if (cpu_pos < 0 || usrPct_pos < 0 || sysPct_pos < 0 || idlePct_pos < 0 || iowaitPct_pos < 0)
+				int idlePct_pos                      = this.findColumn("idlePct"); // Linix
+				if (idlePct_pos < 0)     idlePct_pos = this.findColumn("idl");     // Solaris
+				if (idlePct_pos < 0)     idlePct_pos = this.findColumn("id");      // AIX
+
+				if (cpu_pos < 0 || usrPct_pos < 0 || sysPct_pos < 0 || iowaitPct_pos < 0 || idlePct_pos < 0)
 				{
 					String msg = "";
 					if (cpu_pos        < 0) msg += "'CPU', ";
 					if (usrPct_pos     < 0) msg += "'usrPct|usr|us', ";
 					if (sysPct_pos     < 0) msg += "'sysPct|sys|sy', ";
-					if (idlePct_pos    < 0) msg += "'idlePct|idl|id', ";
 					if (iowaitPct_pos  < 0) msg += "'iowaitPct|wt', ";
+					if (idlePct_pos    < 0) msg += "'idlePct|idl|id', ";
 
 					if (tg != null)
 						tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
@@ -388,8 +398,8 @@ extends CounterModelHostMonitor
 
 						Double usrPct    = this.getAbsValueAsDouble(i, usrPct_pos);
 						Double sysPct    = this.getAbsValueAsDouble(i, sysPct_pos);
-//						Double idlePct   = this.getAbsValueAsDouble(i, idlePct_pos);
 						Double iowaitPct = this.getAbsValueAsDouble(i, iowaitPct_pos);
+//						Double idlePct   = this.getAbsValueAsDouble(i, idlePct_pos);
 
 						lArray[i] = "c-" + cpu;
 						dArray[i] = usrPct + sysPct + iowaitPct;

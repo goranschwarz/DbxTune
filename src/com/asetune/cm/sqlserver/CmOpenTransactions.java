@@ -28,6 +28,7 @@ import java.util.Map;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.ICounterController.DbmsOption;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -160,11 +161,12 @@ extends CountersModel
 	@Override
 	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
-		List <String> pkCols = new LinkedList<String>();
-
-		pkCols.add("session_id");
-
-		return pkCols;
+//		List <String> pkCols = new LinkedList<String>();
+//
+//		pkCols.add("session_id");
+//
+//		return pkCols;
+		return null;
 	}
 
 	@Override
@@ -178,6 +180,12 @@ extends CountersModel
 		String dm_exec_sql_text              = "sys.dm_exec_sql_text";
 		String dm_exec_query_plan            = "sys.dm_exec_query_plan";
 		
+		// get Actual-Query-Plan instead of Estimated-QueryPlan
+		if (isDbmsOptionEnabled(DbmsOption.SQL_SERVER__LAST_QUERY_PLAN_STATS))
+		{
+			dm_exec_query_plan = "sys.dm_exec_query_plan_stats";
+		}
+
 		if (isAzure)
 		{
 			dm_tran_database_transactions = "sys.dm_pdw_nodes_tran_database_transactions";

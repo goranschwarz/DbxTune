@@ -532,6 +532,7 @@ extends CountersModel
 		list.add(new CmSettingsHelper("Get ASE Stacktrace"       , PROPKEY_sample_dbccStacktrace  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_dbccStacktrace  , DEFAULT_sample_dbccStacktrace ), DEFAULT_sample_dbccStacktrace , "Do 'dbcc stacktrace(spid)' on every row in the table."                                 ));
 		list.add(new CmSettingsHelper("Get Cached Plan in XML"   , PROPKEY_sample_cachedPlanInXml , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_cachedPlanInXml , DEFAULT_sample_cachedPlanInXml), DEFAULT_sample_cachedPlanInXml, "Do 'select show_cached_plan_in_xml(planid, 0, 0)' on every row in the table."          ));
 		list.add(new CmSettingsHelper("Get SPID's holding locks" , PROPKEY_sample_holdingLocks    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_holdingLocks    , DEFAULT_sample_holdingLocks   ), DEFAULT_sample_holdingLocks   , "Include SPID's that holds locks even if that are not active in the server."            ));
+		list.add(new CmSettingsHelper("Get SPID Locks"           , PROPKEY_sample_spidLocks       , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidLocks       , DEFAULT_sample_spidLocks      ), DEFAULT_sample_spidLocks      , "Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking."));
 		
 		return list;
 	}

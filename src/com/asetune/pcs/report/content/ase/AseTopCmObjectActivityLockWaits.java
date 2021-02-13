@@ -28,6 +28,7 @@ import java.util.List;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
+import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -214,7 +215,7 @@ public class AseTopCmObjectActivityLockWaits extends AseAbstract
 			String whereKeyColumn = "DBName, ObjectName, IndexName"; 
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("LockWaits__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmObjectActivity_diff")
@@ -224,7 +225,7 @@ public class AseTopCmObjectActivityLockWaits extends AseAbstract
 					.validate()));
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("LockWaitTime__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmObjectActivity_diff")
@@ -235,7 +236,7 @@ public class AseTopCmObjectActivityLockWaits extends AseAbstract
 					.validate()));
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("SharedLockWaitTime__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmObjectActivity_diff")
@@ -245,7 +246,7 @@ public class AseTopCmObjectActivityLockWaits extends AseAbstract
 					.validate()));
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("ExclusiveLockWaitTime__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmObjectActivity_diff")
@@ -255,7 +256,7 @@ public class AseTopCmObjectActivityLockWaits extends AseAbstract
 					.validate()));
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("UpdateLockWaitTime__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmObjectActivity_diff")
@@ -265,7 +266,7 @@ public class AseTopCmObjectActivityLockWaits extends AseAbstract
 					.validate()));
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("RowsInsUpdDel__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmObjectActivity_diff")

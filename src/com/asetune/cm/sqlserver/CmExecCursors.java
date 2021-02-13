@@ -29,7 +29,9 @@ import com.asetune.IGuiController;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.sqlserver.gui.CmExecCursorsPanel;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.TabularCntrPanel;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -45,6 +47,11 @@ extends CountersModel
 	public static final String   HTML_DESC        = 
 		"<html>" +
 		"<p>Show information about the cursors that are open in various databases.</p>" +
+		"<br>" +
+		"Table (cell) Background colors:" +
+		"<ul>" +
+		"    <li>ORANGE - (in column 'properties') Cursor is declared as GLOBAL (a better way is: <code>DECLARE <i>CURSOR_NAME</i> cursor <b>STATIC LOCAL</b> for...</code>).</li>" +
+		"</ul>" +
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
@@ -59,8 +66,11 @@ extends CountersModel
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
+		"fetch_buffer_start",
+		"worker_time",
 		"reads", 
-		"writes"
+		"writes",
+		"dormant_duration"
 		};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
@@ -116,11 +126,11 @@ extends CountersModel
 	{
 	}
 
-//	@Override
-//	protected TabularCntrPanel createGui()
-//	{
-//		return new CmRaSysmonPanel(this);
-//	}
+	@Override
+	protected TabularCntrPanel createGui()
+	{
+		return new CmExecCursorsPanel(this);
+	}
 
 	@Override
 	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
@@ -142,13 +152,25 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
-		String dm_exec_cursors = "dm_exec_cursors";
-		
-		if (isAzure)
-			dm_exec_cursors = "dm_exec_cursors";  // SAME NAME IN AZURE ????
+//		String dm_exec_cursors = "dm_exec_cursors";
+//		
+//		if (isAzure)
+//			dm_exec_cursors = "dm_exec_cursors";  // SAME NAME IN AZURE ????
+//
+//		String sql = "select * from sys." + dm_exec_cursors + "(0)";
 
-
-		String sql = "select * from sys." + dm_exec_cursors + "(0)";
+		String sql = ""
+			    + "select c.* \n"
+			    + "    ,isnull(txt.dbid, -1)     AS dbid \n"
+			    + "    ,isnull(txt.objectid, -1) AS objectid \n"
+			    + "    ,substring(txt.text, (c.statement_start_offset/2)+1, \n"
+			    + "        ((CASE c.statement_end_offset WHEN -1 THEN datalength(txt.text) \n"
+			    + "                                      ELSE c.statement_end_offset \n"
+			    + "          END - c.statement_start_offset)/2) + 1) AS exec_sql_text \n"
+			    + "    ,txt.text as full_sql_text \n"
+			    + "from sys.dm_exec_cursors(0) c \n"
+			    + "cross apply sys.dm_exec_sql_text(sql_handle) txt \n"
+			    + "";
 
 		return sql;
 	}

@@ -61,8 +61,8 @@ extends CountersModel
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
-		"waiting_requests_count", 
-		"wait_time_ms"
+		"waiting_requests_count_diff", 
+		"wait_time_ms_diff"
 		};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
@@ -160,6 +160,8 @@ extends CountersModel
 				+ "    latch_class, \n"
 				+ "    waiting_requests_count, \n"
 				+ "    wait_time_ms, \n"
+				+ "    waiting_requests_count_diff = waiting_requests_count, \n"
+				+ "    wait_time_ms_diff           = wait_time_ms, \n"
 				+ "    max_wait_time_ms, \n"
 				+ "    waitTimePerCount = CASE WHEN waiting_requests_count > 0 \n"
 				+ "                            THEN convert(numeric(12,1), (wait_time_ms*1.0) / waiting_requests_count) \n"

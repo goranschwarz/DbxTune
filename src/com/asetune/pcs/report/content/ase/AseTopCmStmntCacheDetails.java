@@ -40,6 +40,7 @@ import org.apache.log4j.Logger;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
+import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -55,6 +56,8 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	private List<String>        _miniChartJsList = new ArrayList<>();
 
 	private Map<Map<String, Object>, SqlCapExecutedSqlEntries> _keyToExecutedSql;
+	private Map<String, String> _planMap;
+
 	
 	public AseTopCmStmntCacheDetails(DailySummaryReportAbstract reportingInstance)
 	{
@@ -124,6 +127,66 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 			{
 				sb.append("Statement Cache Entries Count: " + _ssqlRstm.getRowCount() + "<br>\n");
 				sb.append(toHtmlTable(_ssqlRstm));
+			}
+			
+			sb.append("<script type='text/javascript'> \n");
+			sb.append("    function showplanForId(id) \n");
+			sb.append("    { \n");
+			sb.append("        var showplanText = document.getElementById('plan_'+id).innerHTML \n");
+//			sb.append("        QP.showPlan(document.getElementById('showplan-container'), showplanText); \n");
+//			sb.append("        document.getElementById('showplan-head').innerHTML = 'Below is Execution plan for <code>plan_handle: ' + id + \"</code> <br>Note: You can also view your plan at <a href='http://www.supratimas.com' target='_blank'>http://www.supratimas.com</a>, or any other <i>plan-view</i> application by pasting (Ctrl-V) the clipboard content. <br>SentryOne Plan Explorer can be downloaded here: <a href='https://www.sentryone.com/plan-explorer' target='_blank'>https://www.sentryone.com/plan-explorer</a>\"; \n");
+			sb.append("        copyStringToClipboard(showplanText); \n");
+			sb.append("    } \n");
+			sb.append("\n");
+			sb.append("    function copyStringToClipboard (string)                                   \n");
+			sb.append("    {                                                                         \n");
+			sb.append("        function handler (event)                                              \n");
+			sb.append("        {                                                                     \n");
+			sb.append("            event.clipboardData.setData('text/plain', string);                \n");
+			sb.append("            event.preventDefault();                                           \n");
+			sb.append("            document.removeEventListener('copy', handler, true);              \n");
+			sb.append("        }                                                                     \n");
+			sb.append("                                                                              \n");
+			sb.append("        document.addEventListener('copy', handler, true);                     \n");
+			sb.append("        document.execCommand('copy');                                         \n");
+			sb.append("                                                                              \n");
+			sb.append("        // Open a popup... and close it 3 seconds later...                    \n");
+			sb.append("        $('#copyPastePopup').modal('show');                                   \n");
+			sb.append("            setTimeout(function() {                                           \n");
+			sb.append("            $('#copyPastePopup').modal('hide');                               \n");
+			sb.append("        }, 3000);		                                                     \n");
+			sb.append("    }                                                                         \n");
+			sb.append("</script> \n");
+
+
+			// HTML Code for the bootstrap popup...
+			sb.append("    <div class='modal fade' id='copyPastePopup'>                              \n");
+			sb.append("        <div class='modal-dialog'>                                            \n");
+			sb.append("            <div class='modal-content'>                                       \n");
+			sb.append("                <div class='modal-header'>                                    \n");
+//			sb.append("                    <button type='button' class='close' data-dismiss='modal' aria-hidden='true'>&times;</button> \n");
+			sb.append("                    <h4 class='modal-title'>Auto Close in 3 seconds</h4>      \n");
+			sb.append("                </div>                                                        \n");
+			sb.append("                <div class='modal-body'>                                      \n");
+			sb.append("                    <p>The XML Plan was copied to Clipboard</p>               \n");
+			sb.append("                    <p>To see the GUI Plan, for example: Past it into SQL Window (sqlw)<br> \n");
+			sb.append("                       SQL Window is included in the DbxTune package.         \n");
+			sb.append("                    </p>                                                      \n");
+			sb.append("                </div>                                                        \n");
+			sb.append("            </div>                                                            \n");
+			sb.append("        </div>                                                                \n");
+			sb.append("    </div>                                                                    \n");
+
+			for (String planHandle : _planMap.keySet())
+			{
+				String xmlPlan = _planMap.get(planHandle);
+
+				// replace '*' with '_'
+				planHandle = planHandle.replace('*', '_');
+
+				sb.append("\n<script id='plan_").append(planHandle).append("' type='text/xmldata'>\n");
+				sb.append(xmlPlan);
+				sb.append("\n</script>\n");
 			}
 		}
 		
@@ -436,7 +499,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 			if (_shortRstm.hasColumn("TotalCpuTimeDiff_sum") && _shortRstm.hasColumn("TotalCpuTimeDiff__chart"))
 			{
 				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-						SparkLineParams.create()
+						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("TotalCpuTimeDiff__chart")
 						.setHtmlWhereKeyColumnName   ("DBName, Hashkey")
 						.setDbmsTableName            ("CmStmntCacheDetails_diff")
@@ -452,7 +515,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 			if (_shortRstm.hasColumn("UseCountDiff_sum") && _shortRstm.hasColumn("UseCountDiff__chart"))
 			{
 				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-						SparkLineParams.create()
+						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("UseCountDiff__chart")
 						.setHtmlWhereKeyColumnName   ("DBName, Hashkey")
 						.setDbmsTableName            ("CmStmntCacheDetails_diff")
@@ -486,10 +549,17 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 			{
 				try 
 				{
+					// Get full XML Query Plan
+					_planMap = getXmlShowplanMapFromMonDdlStorage(conn, stmntCacheObjects);
+
+					// Get SQL Text 
 					_ssqlRstm = getSqlStatementsFromMonDdlStorage(conn, stmntCacheObjects);
 
 					// Add CpuTime
 					_ssqlRstm.addColumn("CpuTime", 1, Types.VARCHAR, "varchar", "varchar(512)", 512, 0, "-", String.class);
+
+					// Add "CopyXmlPlan"
+					_ssqlRstm.addColumn("XmlPlan", 1, Types.LONGVARCHAR, "text", "text", 512, 0, "-not-available-", String.class);
 
 					// Mini Chart on "CPU Time"
 					// COPY Cell data from the "details" table
@@ -499,6 +569,32 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 				{
 					setProblemException(ex);
 				}
+
+				// Set the "html link0" for "Copy XML Plan"
+				if (_planMap != null && !_planMap.isEmpty())
+				{
+					int pos_objectName  = _ssqlRstm.findColumn("objectName");
+					int pos_CopyXmlPlan = _ssqlRstm.findColumn("XmlPlan");
+
+					if (pos_objectName != -1 && pos_CopyXmlPlan != -1)
+					{
+						for (int r=0; r<_ssqlRstm.getRowCount(); r++)
+						{
+							String ObjectName = _ssqlRstm.getValueAsString(r, pos_objectName);
+
+							if (ObjectName != null && (ObjectName.trim().startsWith("*ss") || ObjectName.trim().startsWith("*sq")) )
+							{
+								if (_planMap.containsKey(ObjectName))
+								{
+									String planHandle = ObjectName.replace('*', '_');
+									String newCellContent = "<a href='#showplan-list' title='Copy plan to clipboard... then you can copy it into SqlW to view the GUI Plan!' onclick='showplanForId(\"" + planHandle + "\"); return true;'>Copy XML</a>";
+
+									_ssqlRstm.setValueAtWithOverride(newCellContent, r, pos_CopyXmlPlan);
+								}
+							}
+						}
+					}
+				} // end: Set the "html link0" for "Copy XML Plan"
 			}
 		}
 	}

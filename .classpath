@@ -128,5 +128,6 @@
 	<classpathentry kind="lib" path="lib/ganymed-ssh2-262.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1609427714184/source/ganymed-ssh2-262-sources-1609428472895.jar"/>
 	<classpathentry kind="lib" path="lib/jsqlparser-3.2.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1609427714184/source/jsqlparser-3.2-sources-1610626717069.jar"/>
 	<classpathentry kind="lib" path="lib/jfreechart-1.5.1.jar" sourcepath="3pp/jfreechart-1.5.1-sources.jar"/>
+	<classpathentry kind="lib" path="lib/commons-text-1.9.jar" sourcepath="3pp/commons-text-1.9-sources.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>

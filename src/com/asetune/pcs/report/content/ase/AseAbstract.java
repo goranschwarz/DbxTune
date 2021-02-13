@@ -28,13 +28,14 @@ import java.sql.Statement;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.ModelMissmatchException;
@@ -127,6 +128,73 @@ extends ReportEntryAbstract
 		
 		return set;
 	}
+
+	public String getXmlShowplanFromMonDdlStorage(DbxConnection conn, String sSqlIdStr)
+	throws SQLException
+	{
+		String xml = "";
+		
+		if (StringUtil.isNullOrBlank(sSqlIdStr))
+			return "";
+		
+		String sql = ""
+			    + "select [objectName], [extraInfoText] as [SQLText] \n"
+			    + "from [MonDdlStorage] \n"
+			    + "where 1 = 1 \n"
+			    + "  and [dbname]     = 'statement_cache' \n"
+			    + "  and [owner]      = 'ssql' \n"
+			    + "  and [objectName] = " + DbUtils.safeStr(sSqlIdStr) + " \n"
+			    + "";
+		
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while(rs.next())
+				{
+					xml += rs.getString(2);
+				}
+
+			}
+		}
+		catch(SQLException ex)
+		{
+			//_problem = ex;
+
+			_logger.warn("Problems getting XML Showplan for name = '"+sSqlIdStr+"': " + ex);
+			throw ex;
+		}
+
+		// Remove "stuff" this is not part of the XML
+		if (StringUtil.hasValue(xml))
+		{
+			int xmlStart = xml.indexOf("<?xml version");
+			if (xmlStart > 0) // If it doesn't start with "<?xml version" then strip that part off
+			{
+				xml = xml.substring(xmlStart);
+			}
+		}
+		
+		return xml;
+	}
+
+	public Map<String, String> getXmlShowplanMapFromMonDdlStorage(DbxConnection conn, Set<String> nameSet)
+	throws SQLException
+	{
+		Map<String, String> map = new LinkedHashMap<>();
+
+		for (String sSqlIdStr : nameSet)
+		{
+			String xml = getXmlShowplanFromMonDdlStorage(conn, sSqlIdStr);
+			map.put(sSqlIdStr, xml);
+		}
+
+		return map;
+	}
+
 
 	public ResultSetTableModel getSqlStatementsFromMonDdlStorage(DbxConnection conn, Set<String> nameSet)
 	throws SQLException

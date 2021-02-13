@@ -1018,8 +1018,10 @@ implements IDailySummaryReport
 		sb.append("            <span aria-hidden='true'>&times;</span>																								\n");
 		sb.append("          </button>																																\n");
 		sb.append("        </div>																																	\n");
-		sb.append("        <div class='modal-body'>																													\n");
-		sb.append("          <pre><code id='dbx-view-sqltext-content' class='language-sql dbx-view-sqltext-content' ></code></pre>									\n");
+		sb.append("        <div class='modal-body' style='overflow-x: auto;'>																						\n");
+		sb.append("          <div class='scroll-tree' style='width: 3000px;'>																						\n");
+		sb.append("            <pre><code id='dbx-view-sqltext-content' class='language-sql dbx-view-sqltext-content' ></code></pre>								\n");
+		sb.append("          </div>																																	\n");
 		sb.append("        </div>																																	\n");
 		sb.append("        <div class='modal-footer'>																												\n");
 		sb.append("          <button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>													\n");

@@ -40,6 +40,7 @@ import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
+import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -501,7 +502,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 			String whereKeyColumn = "NormJavaSqlHashCode"; 
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("ExecCount__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("MonSqlCapStatements")
@@ -514,7 +515,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 
 			// Mini Chart on "CPU Time"
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("CpuTime__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("MonSqlCapStatements")
@@ -526,7 +527,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 
 			// Mini Chart on "Wait Time"
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("WaitTime__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("MonSqlCapStatements")
@@ -538,7 +539,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 
 			// Mini Chart on "Physical Reads"
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("PhysicalReads__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("MonSqlCapStatements")
@@ -550,7 +551,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 
 			// Mini Chart on "Logical Reads"
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("LogicalReads__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("MonSqlCapStatements")

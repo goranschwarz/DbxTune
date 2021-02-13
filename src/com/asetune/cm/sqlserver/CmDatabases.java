@@ -29,6 +29,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -39,6 +40,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.CounterControllerSqlServer;
 import com.asetune.ICounterController;
+import com.asetune.ICounterController.DbmsOption;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
@@ -49,9 +51,12 @@ import com.asetune.alarm.events.AlarmEventLowLogFreeSpace;
 import com.asetune.alarm.events.AlarmEventLowOsDiskFreeSpace;
 import com.asetune.alarm.events.AlarmEventOldBackup;
 import com.asetune.alarm.events.AlarmEventOldTranLogBackup;
+import com.asetune.alarm.events.sqlserver.AlarmEventQueryStoreLowFreeSpace;
+import com.asetune.alarm.events.sqlserver.AlarmEventQueryStoreUnexpectedState;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.MapNumberValidator;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -65,8 +70,10 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
+import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.CollectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
@@ -126,7 +133,8 @@ extends CountersModel
 			"LogOsDiskUsedPct", 
 			"LogOsDiskFreePct", 
 			"DataOsDiskUsedPct",
-			"DataOsDiskFreePct"
+			"DataOsDiskFreePct",
+			"QsUsedPct"
 	};
 	public static final String[] DIFF_COLUMNS     = new String[] {
 			"LogSizeUsedInMbDiff",
@@ -193,6 +201,9 @@ extends CountersModel
 	
 	public static final String  PROPKEY_sample_monSqlText            = PROP_PREFIX + ".sample.monSqltext";
 	public static final boolean DEFAULT_sample_monSqlText            = true;
+
+	public static final String  PROPKEY_sample_locks                 = PROP_PREFIX + ".sample.locks";
+	public static final boolean DEFAULT_sample_locks                 = true;
 
 //	public static final String  PROPKEY_spaceusageInMb               = PROP_PREFIX + ".sample.spaceusageInMb";
 //	public static final boolean DEFAULT_spaceusageInMb               = false;
@@ -769,8 +780,31 @@ extends CountersModel
 			mtd.addColumn(cmName, "LastLogBackupTime"       ,"<html>Last Date/time a LOG backup was done.</html>");                                                                //   =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L') 
 			mtd.addColumn(cmName, "LastLogBackupAgeInHours" ,"<html>How many hours ago was the last LOG backup taken.</html>");                                                    //   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L'), -1) 
 
+			mtd.addColumn(cmName, "QsIsEnabled"             ,"<html>If the Query Store is enabled on not for this database</html>"); 
+			mtd.addColumn(cmName, "QsIsOk"                  ,"<html>If column '' and '' is in the same state, then this is true/yes, if it's NULL means that no entry was found in the table <i>dbname</i>.sys.database_query_store_options</html>"); 
+			mtd.addColumn(cmName, "QsDesiredState"          ,"<html>Indicates the desired operation mode of Query Store, explicitly set by user.</html>"); 
+			mtd.addColumn(cmName, "QsActualState"           ,"<html>Indicates the operation mode of Query Store. In addition to list of desired states required by the user, actual state can be an error state.</html>"); 
+			mtd.addColumn(cmName, "QsMaxSizeInMb"           ,"<html>Maximum disk size for the Query Store in megabytes (MB)</html>"); 
+			mtd.addColumn(cmName, "QsUsedSpaceInMb"         ,"<html>Size of Query Store on disk in megabytes.</html>"); 
+			mtd.addColumn(cmName, "QsFreeSpaceInMb"         ,"<html>Free Space in Query Store before it gets full, and state will be set to <i>read-only</i>.</html>"); 
+			mtd.addColumn(cmName, "QsUsedPct"               ,"<html>How many Percent of the Query Store MAX Size have we used.</html>"); 
+			mtd.addColumn(cmName, "QsReadOnlyReason"        ,"<html>When the <b>desired_state_desc</b> is READ_WRITE and the <b>actual_state_desc</b> is READ_ONLY, <b>readonly_reason</b> returns a bit map to indicate why the Query Store is in readonly mode."
+			                                                + "<ul>"
+			                                                + "   <li>1 - database is in read-only mode</li>"
+			                                                + "   <li>2 - database is in single-user mode</li>"
+			                                                + "   <li>4 - database is in emergency mode</li>"
+			                                                + "   <li>8 - database is secondary replica (applies to Always On and Azure SQL Database geo-replication). This value can be effectively observed only on readable secondary replicas</li>"
+			                                                + "   <li>65536 - the Query Store has reached the size limit set by the MAX_STORAGE_SIZE_MB option. For more information about this option, see ALTER DATABASE SET options (Transact-SQL)</li>"
+			                                                + "   <li>131072 - The number of different statements in Query Store has reached the internal memory limit. Consider removing queries that you do not need or upgrading to a higher service tier to enable transferring Query Store to read-write mode.</li>"
+			                                                + "   <li>262144 - Size of in-memory items waiting to be persisted on disk has reached the internal memory limit. Query Store will be in read-only mode temporarily until the in-memory items are persisted on disk.</li>"
+			                                                + "   <li>524288 - Database has reached disk size limit. Query Store is part of user database, so if there is no more available space for a database, that means that Query Store cannot grow further anymore.</li>"
+			                                                + "</ul>"
+			                                                + "To switch the Query Store operations mode back to read-write, see Verify Query Store is Collecting Query Data Continuously section of Best Practice with the Query Store."
+			                                                + "</html>"); 
+
 			mtd.addColumn(cmName, "OldestTranSqlText"       ,"<html>SQL Text of the oldest open transaction</html>");                                                              //   = oti.most_recent_sql_text 
 			mtd.addColumn(cmName, "OldestTranShowPlanText"  ,"<html>Showplan Text of the oldest open transaction</html>");                                                         //   = oti.plan_text 
+			mtd.addColumn(cmName, "OldestTranLocks"         ,"<html>Summary of what locks this spid is using.</html>");                                                            //   = oti.plan_text 
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -786,6 +820,7 @@ extends CountersModel
 			map = new HashMap<>();
 			map.put("OldestTranSqlText"     , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
 			map.put("OldestTranShowPlanText", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+//			map.put("OldestTranLocks"       , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
 
 			// Set the map in the super
 			setPcsColumnOptions(map);
@@ -836,6 +871,12 @@ extends CountersModel
 		String databases                    = "sys.databases";
 		String backupset                    = "msdb.dbo.backupset";
 
+		// get Actual-Query-Plan instead of Estimated-QueryPlan
+		if (isDbmsOptionEnabled(DbmsOption.SQL_SERVER__LAST_QUERY_PLAN_STATS))
+		{
+			dm_exec_query_plan = "sys.dm_exec_query_plan_stats";
+		}
+
 		if (isAzure)
 		{
 			dm_db_file_space_usage       = "sys.dm_pdw_nodes_db_file_space_usage";
@@ -866,7 +907,50 @@ extends CountersModel
 			whereAvailabilityGroup         = "  OR d.replica_id is not null \n";
 		}
 
-//		String sql = ""
+		String queryStoreCreateTempTable   = "";
+		String queryStoreColumns           = "";
+		String queryStoreJoin              = "";
+		String queryStoreDropTempTable1    = "";
+		String queryStoreDropTempTable2    = "";
+
+		if (srvVersion >= Ver.ver(2016))
+		{
+			queryStoreCreateTempTable   = "--------------------------- \n"
+			                            + "-- Query Store \n"
+			                            + "--------------------------- \n"
+			                            + "CREATE TABLE #queryStore (database_id int, is_enabled bit, state_is_ok varchar(3), desired_state_desc varchar(60), actual_state_desc varchar(60), max_storage_size_mb bigint, current_storage_size_mb bigint, usedPct numeric(10,1), readonly_reason int) \n"
+			                            + "INSERT INTO #queryStore \n"
+			                            + "EXEC sp_MSforeachdb ' \n"
+			                            + "SELECT \n"
+			                            + "     DB_ID(''?'')   as database_id \n"
+			                            + "    ,CASE WHEN (desired_state = 0 /*0=OFF*/ ) THEN cast(0 as bit) ELSE cast(1 as bit) END as is_enabled \n"
+			                            + "    ,CASE WHEN (desired_state = actual_state) THEN ''YES''        ELSE ''NO''         END as state_is_ok \n"
+			                            + "    ,desired_state_desc \n"
+			                            + "    ,actual_state_desc \n"
+			                            + "    ,max_storage_size_mb \n"
+			                            + "    ,current_storage_size_mb \n"
+			                            + "    ,cast(((current_storage_size_mb*1.0)/(max_storage_size_mb*1.0))*100.0 as numeric(10,1)) as usedPct \n"
+			                            + "    ,readonly_reason \n"
+			                            + "FROM ?.sys.database_query_store_options' \n"
+			                            + " \n";
+
+			queryStoreColumns           = "    ,QsIsEnabled              = qs.is_enabled \n"
+			                            + "    ,QsIsOk                   = qs.state_is_ok \n"
+			                            + "    ,QsDesiredState           = qs.desired_state_desc \n"
+			                            + "    ,QsActualState            = qs.actual_state_desc \n"
+			                            + "    ,QsMaxSizeInMb            = qs.max_storage_size_mb \n"
+			                            + "    ,QsUsedSpaceInMb          = qs.current_storage_size_mb \n"
+			                            + "    ,QsFreeSpaceInMb          = qs.max_storage_size_mb - qs.current_storage_size_mb \n"
+			                            + "    ,QsUsedPct                = qs.usedPct \n"
+			                            + "    ,QsReadOnlyReason         = qs.readonly_reason \n"
+			                            + "\n";
+
+			queryStoreJoin              = "LEFT OUTER JOIN #queryStore  qs     ON d.database_id = qs     .database_id \n";
+			queryStoreDropTempTable1    = "if (object_id('tempdb..#queryStore') is not null) drop table #queryStore \n";
+			queryStoreDropTempTable2    = "drop table #queryStore \n";
+		}
+
+		//		String sql = ""
 //			    + " \n"
 //			    + "--------------------------- \n"
 //			    + "-- DATA SIZE MB \n"
@@ -1128,6 +1212,7 @@ extends CountersModel
 			    + "if (object_id('tempdb..#oti')        is not null) drop table #oti  \n"
 			    + "if (object_id('tempdb..#osvData')    is not null) drop table #osvData  \n"
 			    + "if (object_id('tempdb..#osvLog')     is not null) drop table #osvLog  \n"
+			    + queryStoreDropTempTable1
 			    + "go \n"
 			    + " \n"
 			    + "--------------------------- \n"
@@ -1160,6 +1245,10 @@ extends CountersModel
 			    + "    ,log_space_in_bytes_since_last_backup/1024/1024 \n"
 			    + "FROM ?." + dm_db_log_space_usage + "' \n"
 			    + " \n"
+			    
+			    // Query Store (if 2016 or above)
+			    + queryStoreCreateTempTable
+			    
 			    + "--------------------------- \n"
 			    + "-- Backup Info \n"
 			    + "--------------------------- \n"
@@ -1355,20 +1444,24 @@ extends CountersModel
 //			    + "--  ,OldestTranProcName       = -1 \n"
 			    + "    ,OldestTranHasSqlText     = CASE WHEN oti.most_recent_sql_text is not null THEN convert(bit,1) ELSE convert(bit,0) END \n"
 			    + "    ,OldestTranHasShowPlan    = CASE WHEN oti.plan_text            is not null THEN convert(bit,1) ELSE convert(bit,0) END \n"
+			    + "    ,OldestTranHasLocks       = convert(bit,0) \n"
 			    + " \n"
 				+ "    ,LastDbBackupTime         =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D') \n"
 				+ "    ,LastDbBackupAgeInHours   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) \n"
 				+ "    ,LastLogBackupTime        =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L') \n"
 				+ "    ,LastLogBackupAgeInHours  = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L'), -1) \n"
 			    + " \n"
+			    + queryStoreColumns
 			    + "    ,OldestTranSqlText        = oti.most_recent_sql_text \n"
 			    + "    ,OldestTranShowPlanText   = oti.plan_text \n"
+			    + "    ,OldestTranLocks          = convert(varchar(max), null) \n" // NOTE: This will be deferred and fetched at: localCalculation()
 			    + "FROM " + databases + " d \n"
 			    + "LEFT OUTER JOIN #oti            oti ON d.database_id = oti    .database_id and oti.row_num = 1 \n"
 			    + "LEFT OUTER JOIN #dataSizeMb    data ON d.database_id = data   .database_id \n"
 			    + "LEFT OUTER JOIN #logSizeMb      log ON d.database_id = log    .database_id \n"
 			    + "LEFT OUTER JOIN #osvData    osvData ON d.database_id = osvData.database_id and osvData.row_num = 1 \n"
 			    + "LEFT OUTER JOIN #osvLog      osvLog ON d.database_id = osvLog .database_id and osvLog .row_num = 1 \n"
+			    + queryStoreJoin
 			    + "WHERE has_dbaccess(d.name) != 0 \n"
 			    + whereAvailabilityGroup
 			    + "go \n"
@@ -1380,6 +1473,7 @@ extends CountersModel
 			    + "drop table #oti  \n"
 			    + "drop table #osvData  \n"
 			    + "drop table #osvLog  \n"
+			    + queryStoreDropTempTable2
 			    + "go \n"
 			    + "";
 
@@ -1724,6 +1818,23 @@ extends CountersModel
 			return cellValue == null ? null : ToolTipSupplierSqlServer.createXmlPlanTooltip(cellValue.toString());
 		}
 		
+		// LOCKS
+		if ("OldestTranHasLocks".equals(colName))
+		{
+			// Find 'OldestTranLocks' column, is so get it and set it as the tool tip
+			int pos = findColumn("OldestTranLocks");
+			if (pos > 0)
+			{
+				Object cellVal = getValueAt(modelRow, pos);
+				if (cellVal instanceof String)
+					//return (String) cellVal;
+					return "<html><pre>" + cellVal + "</pre></html>";
+			}
+		}
+		if ("OldestTranLocks".equals(colName))
+		{
+			return cellValue == null ? null : "<html><pre>" + cellValue + "</pre></html>";
+		}
 		
 		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
 	}
@@ -1740,6 +1851,72 @@ extends CountersModel
 //		return "<html><pre>" + str + "</pre></html>";
 //	}
 
+	@Override
+	public void localCalculation(CounterSample newSample)
+	{
+		int pos_OldestTranSpid         = -1; 
+		int pos_OldestTranHasLocks     = -1; 
+		int pos_OldestTranLocks        = -1;
+		
+		// Find column Id's
+		List<String> colNames = newSample.getColNames();
+		if (colNames == null)
+			return;
+
+		for (int colId=0; colId < colNames.size(); colId++) 
+		{
+			String colName = colNames.get(colId);
+
+			if      (colName.equals("OldestTranSpid"))         pos_OldestTranSpid         = colId;
+			else if (colName.equals("OldestTranHasLocks"))     pos_OldestTranHasLocks     = colId;
+			else if (colName.equals("OldestTranLocks"))        pos_OldestTranLocks        = colId;
+		}
+
+		// Loop on all rows
+		for (int rowId = 0; rowId < newSample.getRowCount(); rowId++)
+		{
+//			OldestTranLocks
+			Object oval_OldestTranSpid = newSample.getValueAt(rowId, pos_OldestTranSpid);
+			if (oval_OldestTranSpid != null && oval_OldestTranSpid instanceof Number)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+//				boolean getShowplan   = conf.getBooleanProperty(PROPKEY_sample_showplan,   DEFAULT_sample_showplan);
+//				boolean getMonSqltext = conf.getBooleanProperty(PROPKEY_sample_monSqlText, DEFAULT_sample_monSqlText);
+				boolean getLocks      = conf.getBooleanProperty(PROPKEY_sample_locks,   DEFAULT_sample_locks);
+
+				int OldestTranSpid = ((Number)newSample.getValueAt(rowId, pos_OldestTranSpid)).intValue();
+
+				if (OldestTranSpid > 0) // NULL result from the DBMS is translated as 0... so lets not hope that the SPID 0 has issues.
+				{
+					String sysLocks = "This was disabled";
+
+					if (getLocks)
+					{
+						try
+						{
+							sysLocks  = SqlServerUtils.getLockSummaryForSpid(getCounterController().getMonConnection(), OldestTranSpid, true, false);
+							if (sysLocks == null)
+								sysLocks = "No locks was found."; //sysLocks = "Not Available";
+						}
+						catch (TimeoutException ex)
+						{
+							sysLocks = "Timeout - when getting lock information";
+						}						
+					}
+
+					// Set the values: *Has* and *Text*
+					boolean b = true;
+
+					b = !"This was disabled".equals(sysLocks) && !"Not Available".equals(sysLocks) && !"Timeout - when getting lock information".equals(sysLocks);
+					newSample.setValueAt(new Boolean(b), rowId, pos_OldestTranHasLocks);
+					newSample.setValueAt(sysLocks,       rowId, pos_OldestTranLocks);
+				}
+			}
+		}
+	}
+	
+	
+	
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -1783,27 +1960,29 @@ extends CountersModel
 					if (OldestTranInSeconds.intValue() > threshold)
 					{
 						// Get OldestTranName
-//						String OldestTranName = cm.getAbsString(r, "OldestTranName");
-						String OldestTranName = "this-is-not-yet-implemented";
+						String OldestTranName = cm.getAbsString(r, "OldestTranName");
+						String OldestTranProg = cm.getAbsString(r, "OldestTranProg");
+						String OldestTranUser = cm.getAbsString(r, "OldestTranUser");
+						String OldestTranHost = cm.getAbsString(r, "OldestTranHost");
 						
 						// Get config 'skip some transaction names'
 						String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OldestTranInSecondsSkipTranName, DEFAULT_alarm_OldestTranInSecondsSkipTranName);
+						String skipTranProgRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OldestTranInSecondsSkipTranProg, DEFAULT_alarm_OldestTranInSecondsSkipTranProg);
+						String skipTranUserRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OldestTranInSecondsSkipTranUser, DEFAULT_alarm_OldestTranInSecondsSkipTranUser);
+						String skipTranHostRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OldestTranInSecondsSkipTranHost, DEFAULT_alarm_OldestTranInSecondsSkipTranHost);
 
-						// send alarm, if...
-						if (StringUtil.hasValue(skipTranNameRegExp) && StringUtil.hasValue(OldestTranName))
-						{
-							if ( ! OldestTranName.matches(skipTranNameRegExp) )
-							{
-								String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-								String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-								AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName);
-								ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-								
-								alarmHandler.addAlarm( ae );
-								//alarmHandler.addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName) );
-							}
-						}
-						else
+						// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+						boolean doAlarm = true;
+
+						// The below could have been done with nested if(skip-name), if(skip-prog), if(skip-user), if(skip-host) doAlarm=true; 
+						// Below is more readable, from a variable context point-of-view, but HARDER to understand
+						// to *continue*: doAlarm needs to be true AND (regExp is empty OR not-matching)
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranNameRegExp) || ! OldestTranName.matches(skipTranNameRegExp)));
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranProgRegExp) || ! OldestTranProg.matches(skipTranProgRegExp)));
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranUserRegExp) || ! OldestTranUser.matches(skipTranUserRegExp)));
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranHostRegExp) || ! OldestTranHost.matches(skipTranHostRegExp)));
+
+						if (doAlarm)
 						{
 							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
@@ -1811,7 +1990,6 @@ extends CountersModel
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
 							alarmHandler.addAlarm( ae );
-							//alarmHandler.addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName) );
 						}
 					}
 				}
@@ -1907,7 +2085,7 @@ extends CountersModel
 					if (val.intValue() < 0 && StringUtil.isNullOrBlankForAll(keepDbRegExp, skipDbRegExp, keepSrvRegExp, skipSrvRegExp))
 						doAlarm = false;
 					
-					// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
+					// The below could have been done with nested if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
 					// Below is more readable, from a variable context point-of-view, but HARDER to understand
 					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
 					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepSrvRegExp) ||   dbmsSrvName.matches(keepSrvRegExp))); //     matches the KEEP Srv regexp
@@ -2232,7 +2410,112 @@ extends CountersModel
 				}
 			}
 
+			//-------------------------------------------------------
+			// QsIsOk
+			//-------------------------------------------------------
+//TestThis;
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("QsIsOk") && isQueryStoreEnabledForDatabaseAtRow(r))
+			{
+				String QsIsOk = cm.getAbsString(r, "QsIsOk");
+				
+				if (QsIsOk != null)
+				{
+					String expectedStr = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_QsIsOk, DEFAULT_alarm_QsIsOk);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): QsUsedSpaceInPct -- dbname='"+dbname+"', expectedStr="+expectedStr+", QsIsOk='"+QsIsOk+"'.");
+
+					if ( ! QsIsOk.equals(expectedStr) ) // NOT EQUAL
+					{
+						String qsDesiredState   = cm.getAbsString       (r, "QsDesiredState");
+						String qsActualState    = cm.getAbsString       (r, "QsActualState");
+						Double qsReadOnlyReason = cm.getAbsValueAsDouble(r, "QsReadOnlyReason");
+
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						AlarmEvent ae = new AlarmEventQueryStoreUnexpectedState(cm, dbname, qsDesiredState, qsActualState, qsReadOnlyReason, expectedStr);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
+					}
+				}
+			}
+			//-------------------------------------------------------
+			// QsUsedSpaceInPct
+			//-------------------------------------------------------
+//TestThis;
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("QsUsedSpaceInPct") && isQueryStoreEnabledForDatabaseAtRow(r))
+			{
+				Double QsUsedSpaceInPct = cm.getAbsValueAsDouble(r, "QsUsedSpaceInPct");
+
+				if (QsUsedSpaceInPct != null)
+				{
+					Double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_QsUsedSpaceInPct, DEFAULT_alarm_QsUsedSpaceInPct);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): QsUsedSpaceInPct -- dbname='"+dbname+"', threshold="+threshold+", QsUsedSpaceInPct='"+QsUsedSpaceInPct+"'.");
+
+					Double QsMaxSizeInMb   = cm.getAbsValueAsDouble(r, "QsMaxSizeInMb");
+					Double QsUsedSpaceInMb = cm.getAbsValueAsDouble(r, "QsUsedSpaceInMb");
+					Double QsFreeSpaceInMb = cm.getAbsValueAsDouble(r, "QsFreeSpaceInMb");
+					
+					if (QsUsedSpaceInPct > threshold.doubleValue())
+					{
+							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+							AlarmEvent ae = new AlarmEventQueryStoreLowFreeSpace(cm, dbname, QsUsedSpaceInPct, QsMaxSizeInMb, QsUsedSpaceInMb, QsFreeSpaceInMb, AlarmEventQueryStoreLowFreeSpace.Type.PCT, threshold);
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							alarmHandler.addAlarm( ae );
+					}
+				}
+			}
+			//-------------------------------------------------------
+			// QsFreeSpaceInMb
+			//-------------------------------------------------------
+//TestThis;
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("QsFreeSpaceInMb") && isQueryStoreEnabledForDatabaseAtRow(r))
+			{
+				Double QsFreeSpaceInMb = cm.getAbsValueAsDouble(r, "QsFreeSpaceInMb");
+
+				if (QsFreeSpaceInMb != null)
+				{
+					Double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_QsFreeSpaceInMb, DEFAULT_alarm_QsFreeSpaceInMb);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): QsUsedSpaceInPct -- dbname='"+dbname+"', threshold="+threshold+", QsFreeSpaceInMb='"+QsFreeSpaceInMb+"'.");
+
+					Double QsMaxSizeInMb    = cm.getAbsValueAsDouble(r, "QsMaxSizeInMb");
+					Double QsUsedSpaceInMb  = cm.getAbsValueAsDouble(r, "QsUsedSpaceInMb");
+					Double QsUsedSpaceInPct = cm.getAbsValueAsDouble(r, "QsUsedSpaceInPct");
+					
+					if (QsFreeSpaceInMb < threshold.doubleValue())
+					{
+							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+							AlarmEvent ae = new AlarmEventQueryStoreLowFreeSpace(cm, dbname, QsUsedSpaceInPct, QsMaxSizeInMb, QsUsedSpaceInMb, QsFreeSpaceInMb, AlarmEventQueryStoreLowFreeSpace.Type.MB, threshold);
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							
+							alarmHandler.addAlarm( ae );
+					}
+				}
+			}
+
 		} // end: loop dbname(s)
+	}
+
+	/** Helper method to check if a Query Store is enabled */
+	private boolean isQueryStoreEnabledForDatabaseAtRow(int row)
+	{
+		Object o_isEnabled = getAbsValue(row, "QsIsEnabled");
+		if (o_isEnabled == null)
+			return false;
+		
+		if (o_isEnabled instanceof Boolean)
+		{
+			return (Boolean) o_isEnabled;
+		}
+		return false;
 	}
 
 	/**
@@ -2674,8 +2957,16 @@ extends CountersModel
 	public static final int     DEFAULT_alarm_OldestTranInSeconds             = 60;
 	
 	public static final String  PROPKEY_alarm_OldestTranInSecondsSkipTranName = CM_NAME + ".alarm.system.if.OldestTranInSeconds.skip.tranName";
-//	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranName = "^(DUMP |\\$dmpxact).*";
 	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranName = "";
+
+	public static final String  PROPKEY_alarm_OldestTranInSecondsSkipTranProg = CM_NAME + ".alarm.system.if.OldestTranInSeconds.skip.tranProg";
+	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranProg = "";
+	
+	public static final String  PROPKEY_alarm_OldestTranInSecondsSkipTranUser = CM_NAME + ".alarm.system.if.OldestTranInSeconds.skip.tranUser";
+	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranUser = "";
+	
+	public static final String  PROPKEY_alarm_OldestTranInSecondsSkipTranHost = CM_NAME + ".alarm.system.if.OldestTranInSeconds.skip.tranHost";
+	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranHost = "";
 	
 //	public static final String  PROPKEY_alarm_TransactionLogFull              = CM_NAME + ".alarm.system.if.TransactionLogFull.gt";
 //	public static final int     DEFAULT_alarm_TransactionLogFull              = 0;
@@ -2733,6 +3024,15 @@ extends CountersModel
 	public static final String  PROPKEY_alarm_DbState                         = CM_NAME + ".alarm.system.if.state.not.in";
 	public static final String  DEFAULT_alarm_DbState                         = ".*=(MULTI_USER|ONLINE)";
 	
+	public static final String  PROPKEY_alarm_QsIsOk                          = CM_NAME + ".alarm.system.if.QsIsOk.ne";
+	public static final String  DEFAULT_alarm_QsIsOk                          = "YES";
+
+	public static final String  PROPKEY_alarm_QsUsedSpaceInPct                = CM_NAME + ".alarm.system.if.QsUsedPct.gt";
+	public static final double  DEFAULT_alarm_QsUsedSpaceInPct                = 90.0;
+
+	public static final String  PROPKEY_alarm_QsFreeSpaceInMb                 = CM_NAME + ".alarm.system.if.QsFreeSpaceInMb.lt";
+	public static final int     DEFAULT_alarm_QsFreeSpaceInMb                 = 20;
+	
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
@@ -2741,35 +3041,43 @@ extends CountersModel
 		
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("OldestTranInSeconds",              isAlarmSwitch, PROPKEY_alarm_OldestTranInSeconds             , Integer.class, conf.getIntProperty(PROPKEY_alarm_OldestTranInSeconds             , DEFAULT_alarm_OldestTranInSeconds            ), DEFAULT_alarm_OldestTranInSeconds            , "If 'OldestTranInSeconds' is greater than ## then send 'AlarmEventLongRunningTransaction'." ));
-//		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranName",                PROPKEY_alarm_OldestTranInSecondsSkipTranName , String .class, conf.getProperty   (PROPKEY_alarm_OldestTranInSecondsSkipTranName , DEFAULT_alarm_OldestTranInSecondsSkipTranName), DEFAULT_alarm_OldestTranInSecondsSkipTranName, "If 'OldestTranInSeconds' is true; then we can filter out transaction names using a Regular expression... if (tranName.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
-//		list.add(new CmSettingsHelper("TransactionLogFull",               isAlarmSwitch, PROPKEY_alarm_TransactionLogFull              , Integer.class, conf.getIntProperty(PROPKEY_alarm_TransactionLogFull              , DEFAULT_alarm_TransactionLogFull             ), DEFAULT_alarm_TransactionLogFull             , "If 'TransactionLogFull' is greater than ## then send 'AlarmEventFullTranLog'." ));
+		list.add(new CmSettingsHelper("OldestTranInSeconds",              isAlarmSwitch, PROPKEY_alarm_OldestTranInSeconds             , Integer.class, conf.getIntProperty   (PROPKEY_alarm_OldestTranInSeconds             , DEFAULT_alarm_OldestTranInSeconds            ), DEFAULT_alarm_OldestTranInSeconds            , "If 'OldestTranInSeconds' is greater than ## then send 'AlarmEventLongRunningTransaction'." ));
+		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranName",                PROPKEY_alarm_OldestTranInSecondsSkipTranName , String .class, conf.getProperty      (PROPKEY_alarm_OldestTranInSecondsSkipTranName , DEFAULT_alarm_OldestTranInSecondsSkipTranName), DEFAULT_alarm_OldestTranInSecondsSkipTranName, "If 'OldestTranInSeconds' is true; then we can filter out transaction names using a Regular expression... if (tranName.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranProg",                PROPKEY_alarm_OldestTranInSecondsSkipTranProg , String .class, conf.getProperty      (PROPKEY_alarm_OldestTranInSecondsSkipTranProg , DEFAULT_alarm_OldestTranInSecondsSkipTranProg), DEFAULT_alarm_OldestTranInSecondsSkipTranProg, "If 'OldestTranInSeconds' is true; then we can filter out transaction names using a Regular expression... if (tranProg.matches('regexp'))... This to remove alarms of 'SQLAgent.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranUser",                PROPKEY_alarm_OldestTranInSecondsSkipTranUser , String .class, conf.getProperty      (PROPKEY_alarm_OldestTranInSecondsSkipTranUser , DEFAULT_alarm_OldestTranInSecondsSkipTranUser), DEFAULT_alarm_OldestTranInSecondsSkipTranUser, "If 'OldestTranInSeconds' is true; then we can filter out transaction names using a Regular expression... if (tranUser.matches('regexp'))... This to remove alarms of '(user1|user2)' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranHost",                PROPKEY_alarm_OldestTranInSecondsSkipTranHost , String .class, conf.getProperty      (PROPKEY_alarm_OldestTranInSecondsSkipTranHost , DEFAULT_alarm_OldestTranInSecondsSkipTranHost), DEFAULT_alarm_OldestTranInSecondsSkipTranHost, "If 'OldestTranInSeconds' is true; then we can filter out transaction names using a Regular expression... if (tranHost.matches('regexp'))... This to remove alarms of '.*-prod-.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
 
-//		list.add(new CmSettingsHelper("LastBackupFailed",                 isAlarmSwitch, PROPKEY_alarm_LastBackupFailed                , Integer.class, conf.getIntProperty(PROPKEY_alarm_LastBackupFailed                , DEFAULT_alarm_LastBackupFailed               ), DEFAULT_alarm_LastBackupFailed               , "If 'LastBackupFailed' is greater than ## then send 'AlarmEventLastBackupFailed'." ));
+//		list.add(new CmSettingsHelper("TransactionLogFull",               isAlarmSwitch, PROPKEY_alarm_TransactionLogFull              , Integer.class, conf.getIntProperty   (PROPKEY_alarm_TransactionLogFull              , DEFAULT_alarm_TransactionLogFull             ), DEFAULT_alarm_TransactionLogFull             , "If 'TransactionLogFull' is greater than ## then send 'AlarmEventFullTranLog'." ));
+                                                                                                                                                                              
+//		list.add(new CmSettingsHelper("LastBackupFailed",                 isAlarmSwitch, PROPKEY_alarm_LastBackupFailed                , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LastBackupFailed                , DEFAULT_alarm_LastBackupFailed               ), DEFAULT_alarm_LastBackupFailed               , "If 'LastBackupFailed' is greater than ## then send 'AlarmEventLastBackupFailed'." ));
 
-		list.add(new CmSettingsHelper("LastDbBackupAgeInHours",           isAlarmSwitch, PROPKEY_alarm_LastDbBackupAgeInHours          , Integer.class, conf.getIntProperty(PROPKEY_alarm_LastDbBackupAgeInHours          , DEFAULT_alarm_LastDbBackupAgeInHours         ), DEFAULT_alarm_LastDbBackupAgeInHours         , "If 'LastDbBackupAgeInHours' is greater than ## then send 'AlarmEventOldBackup'." ));
-		list.add(new CmSettingsHelper("LastDbBackupAgeInHours ForDbs",                   PROPKEY_alarm_LastDbBackupAgeInHoursForDbs    , String .class, conf.getProperty   (PROPKEY_alarm_LastDbBackupAgeInHoursForDbs    , DEFAULT_alarm_LastDbBackupAgeInHoursForDbs   ), DEFAULT_alarm_LastDbBackupAgeInHoursForDbs   , "If 'LastDbBackupAgeInHours' is true; Only for the databases listed (regexp is used, blank=for-all-dbs). After this rule the 'skip' rule is evaluated.", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("LastDbBackupAgeInHours SkipDbs",                  PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs   , String .class, conf.getProperty   (PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs   , DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs  ), DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs  , "If 'LastDbBackupAgeInHours' is true; Discard databases listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                     new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("LastDbBackupAgeInHours ForSrv",                   PROPKEY_alarm_LastDbBackupAgeInHoursForSrv    , String .class, conf.getProperty   (PROPKEY_alarm_LastDbBackupAgeInHoursForSrv    , DEFAULT_alarm_LastDbBackupAgeInHoursForSrv   ), DEFAULT_alarm_LastDbBackupAgeInHoursForSrv   , "If 'LastDbBackupAgeInHours' is true; Only for the servers listed (regexp is used, blank=for-all-srv). After this rule the 'skip' rule is evaluated.",   new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("LastDbBackupAgeInHours SkipSrv",                  PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv   , String .class, conf.getProperty   (PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv   , DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv  ), DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv  , "If 'LastDbBackupAgeInHours' is true; Discard servers listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                       new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastDbBackupAgeInHours",           isAlarmSwitch, PROPKEY_alarm_LastDbBackupAgeInHours          , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LastDbBackupAgeInHours          , DEFAULT_alarm_LastDbBackupAgeInHours         ), DEFAULT_alarm_LastDbBackupAgeInHours         , "If 'LastDbBackupAgeInHours' is greater than ## then send 'AlarmEventOldBackup'." ));
+		list.add(new CmSettingsHelper("LastDbBackupAgeInHours ForDbs",                   PROPKEY_alarm_LastDbBackupAgeInHoursForDbs    , String .class, conf.getProperty      (PROPKEY_alarm_LastDbBackupAgeInHoursForDbs    , DEFAULT_alarm_LastDbBackupAgeInHoursForDbs   ), DEFAULT_alarm_LastDbBackupAgeInHoursForDbs   , "If 'LastDbBackupAgeInHours' is true; Only for the databases listed (regexp is used, blank=for-all-dbs). After this rule the 'skip' rule is evaluated.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastDbBackupAgeInHours SkipDbs",                  PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs   , String .class, conf.getProperty      (PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs   , DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs  ), DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs  , "If 'LastDbBackupAgeInHours' is true; Discard databases listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                     new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastDbBackupAgeInHours ForSrv",                   PROPKEY_alarm_LastDbBackupAgeInHoursForSrv    , String .class, conf.getProperty      (PROPKEY_alarm_LastDbBackupAgeInHoursForSrv    , DEFAULT_alarm_LastDbBackupAgeInHoursForSrv   ), DEFAULT_alarm_LastDbBackupAgeInHoursForSrv   , "If 'LastDbBackupAgeInHours' is true; Only for the servers listed (regexp is used, blank=for-all-srv). After this rule the 'skip' rule is evaluated.",   new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastDbBackupAgeInHours SkipSrv",                  PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv   , String .class, conf.getProperty      (PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv   , DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv  ), DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv  , "If 'LastDbBackupAgeInHours' is true; Discard servers listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                       new RegExpInputValidator()));
+                                                                                                                                                                              
+		list.add(new CmSettingsHelper("LastLogBackupAgeInHours",          isAlarmSwitch, PROPKEY_alarm_LastLogBackupAgeInHours         , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LastLogBackupAgeInHours         , DEFAULT_alarm_LastLogBackupAgeInHours        ), DEFAULT_alarm_LastLogBackupAgeInHours        , "If 'LastLogBackupAgeInHours' is greater than ## then send 'AlarmEventOldBackup'." ));
+		list.add(new CmSettingsHelper("LastLogBackupAgeInHours ForDbs",                  PROPKEY_alarm_LastLogBackupAgeInHoursForDbs   , String .class, conf.getProperty      (PROPKEY_alarm_LastLogBackupAgeInHoursForDbs   , DEFAULT_alarm_LastLogBackupAgeInHoursForDbs  ), DEFAULT_alarm_LastLogBackupAgeInHoursForDbs  , "If 'LastLogBackupAgeInHours' is true; Only for the databases listed (regexp is used, blank=skip-no-dbs). After this rule the 'skip' rule is evaluated.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastLogBackupAgeInHours SkipDbs",                 PROPKEY_alarm_LastLogBackupAgeInHoursSkipDbs  , String .class, conf.getProperty      (PROPKEY_alarm_LastLogBackupAgeInHoursSkipDbs  , DEFAULT_alarm_LastLogBackupAgeInHoursSkipDbs ), DEFAULT_alarm_LastLogBackupAgeInHoursSkipDbs , "If 'LastLogBackupAgeInHours' is true; Discard databases listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                     new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastLogBackupAgeInHours ForSrv",                  PROPKEY_alarm_LastLogBackupAgeInHoursForSrv   , String .class, conf.getProperty      (PROPKEY_alarm_LastLogBackupAgeInHoursForSrv   , DEFAULT_alarm_LastLogBackupAgeInHoursForSrv  ), DEFAULT_alarm_LastLogBackupAgeInHoursForSrv  , "If 'LastLogBackupAgeInHours' is true; Only for the servers listed (regexp is used, blank=skip-no-srv). After this rule the 'skip' rule is evaluated.",   new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastLogBackupAgeInHours SkipSrv",                 PROPKEY_alarm_LastLogBackupAgeInHoursSkipSrv  , String .class, conf.getProperty      (PROPKEY_alarm_LastLogBackupAgeInHoursSkipSrv  , DEFAULT_alarm_LastLogBackupAgeInHoursSkipSrv ), DEFAULT_alarm_LastLogBackupAgeInHoursSkipSrv , "If 'LastLogBackupAgeInHours' is true; Discard servers listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                       new RegExpInputValidator()));
 
-		list.add(new CmSettingsHelper("LastLogBackupAgeInHours",          isAlarmSwitch, PROPKEY_alarm_LastLogBackupAgeInHours         , Integer.class, conf.getIntProperty(PROPKEY_alarm_LastLogBackupAgeInHours         , DEFAULT_alarm_LastLogBackupAgeInHours        ), DEFAULT_alarm_LastLogBackupAgeInHours        , "If 'LastLogBackupAgeInHours' is greater than ## then send 'AlarmEventOldBackup'." ));
-		list.add(new CmSettingsHelper("LastLogBackupAgeInHours ForDbs",                  PROPKEY_alarm_LastLogBackupAgeInHoursForDbs   , String .class, conf.getProperty   (PROPKEY_alarm_LastLogBackupAgeInHoursForDbs   , DEFAULT_alarm_LastLogBackupAgeInHoursForDbs  ), DEFAULT_alarm_LastLogBackupAgeInHoursForDbs  , "If 'LastLogBackupAgeInHours' is true; Only for the databases listed (regexp is used, blank=skip-no-dbs). After this rule the 'skip' rule is evaluated.", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("LastLogBackupAgeInHours SkipDbs",                 PROPKEY_alarm_LastLogBackupAgeInHoursSkipDbs  , String .class, conf.getProperty   (PROPKEY_alarm_LastLogBackupAgeInHoursSkipDbs  , DEFAULT_alarm_LastLogBackupAgeInHoursSkipDbs ), DEFAULT_alarm_LastLogBackupAgeInHoursSkipDbs , "If 'LastLogBackupAgeInHours' is true; Discard databases listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                     new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("LastLogBackupAgeInHours ForSrv",                  PROPKEY_alarm_LastLogBackupAgeInHoursForSrv   , String .class, conf.getProperty   (PROPKEY_alarm_LastLogBackupAgeInHoursForSrv   , DEFAULT_alarm_LastLogBackupAgeInHoursForSrv  ), DEFAULT_alarm_LastLogBackupAgeInHoursForSrv  , "If 'LastLogBackupAgeInHours' is true; Only for the servers listed (regexp is used, blank=skip-no-srv). After this rule the 'skip' rule is evaluated.",   new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("LastLogBackupAgeInHours SkipSrv",                 PROPKEY_alarm_LastLogBackupAgeInHoursSkipSrv  , String .class, conf.getProperty   (PROPKEY_alarm_LastLogBackupAgeInHoursSkipSrv  , DEFAULT_alarm_LastLogBackupAgeInHoursSkipSrv ), DEFAULT_alarm_LastLogBackupAgeInHoursSkipSrv , "If 'LastLogBackupAgeInHours' is true; Discard servers listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                       new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LowDbFreeSpaceInMb",               isAlarmSwitch, PROPKEY_alarm_LowDbFreeSpaceInMb              , String .class, conf.getProperty      (PROPKEY_alarm_LowDbFreeSpaceInMb              , DEFAULT_alarm_LowDbFreeSpaceInMb             ), DEFAULT_alarm_LowDbFreeSpaceInMb             , "If 'LowDbFreeSpaceInMb' is greater than ## MB then send 'AlarmEventLowDbFreeSpace'. format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"     , new MapNumberValidator()));
+		list.add(new CmSettingsHelper("LowLogFreeSpaceInMb",              isAlarmSwitch, PROPKEY_alarm_LowLogFreeSpaceInMb             , String .class, conf.getProperty      (PROPKEY_alarm_LowLogFreeSpaceInMb             , DEFAULT_alarm_LowLogFreeSpaceInMb            ), DEFAULT_alarm_LowLogFreeSpaceInMb            , "If 'LowLogFreeSpaceInMb' is greater than ## MB then send 'AlarmEventLowLogFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"    , new MapNumberValidator()));
+		list.add(new CmSettingsHelper("LowDbFreeSpaceInPct",              isAlarmSwitch, PROPKEY_alarm_LowDbFreeSpaceInPct             , String .class, conf.getProperty      (PROPKEY_alarm_LowDbFreeSpaceInPct             , DEFAULT_alarm_LowDbFreeSpaceInPct            ), DEFAULT_alarm_LowDbFreeSpaceInPct            , "If 'LowDbFreeSpaceInPct' is less than ## Percent then send 'AlarmEventLowDbFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"   , new MapNumberValidator()));
+		list.add(new CmSettingsHelper("LowLogFreeSpaceInPct",             isAlarmSwitch, PROPKEY_alarm_LowLogFreeSpaceInPct            , String .class, conf.getProperty      (PROPKEY_alarm_LowLogFreeSpaceInPct            , DEFAULT_alarm_LowLogFreeSpaceInPct           ), DEFAULT_alarm_LowLogFreeSpaceInPct           , "If 'LowLogFreeSpaceInPct' is less than ## Percent then send 'AlarmEventLowLogFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)" , new MapNumberValidator())); 
+                                                                                                                                                                              
+		list.add(new CmSettingsHelper("LowOsDiskFreeSpaceInMb",           isAlarmSwitch, PROPKEY_alarm_LowOsDiskFreeSpaceInMb          , String .class, conf.getProperty      (PROPKEY_alarm_LowOsDiskFreeSpaceInMb          , DEFAULT_alarm_LowOsDiskFreeSpaceInMb         ), DEFAULT_alarm_LowOsDiskFreeSpaceInMb         , "If 'LogOsDiskFreeMb' or 'DataOsDiskFreeMb' is less than ## MB then send 'AlarmEventLowOsDiskFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"        , new MapNumberValidator()));
+		list.add(new CmSettingsHelper("LowOsDiskFreeSpaceInPct",          isAlarmSwitch, PROPKEY_alarm_LowOsDiskFreeSpaceInPct         , String .class, conf.getProperty      (PROPKEY_alarm_LowOsDiskFreeSpaceInPct         , DEFAULT_alarm_LowOsDiskFreeSpaceInPct        ), DEFAULT_alarm_LowOsDiskFreeSpaceInPct        , "If 'LogOsDiskFreePct' or 'DataOsDiskFreePct' is less than ## Percent then send 'AlarmEventLowOsDiskFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)" , new MapNumberValidator()));
+                                                                                                                                                                              
+//		list.add(new CmSettingsHelper("MandatoryDatabaseList",                           PROPKEY_alarm_MandatoryDatabaseList           , String .class, conf.getProperty      (PROPKEY_alarm_MandatoryDatabaseList           , DEFAULT_alarm_MandatoryDatabaseList          ), DEFAULT_alarm_MandatoryDatabaseList          , "A list of databases that needs to be present. This is a comma separated list of databases (each name can contain regex)" ));
+		                                                                                                                                                                      
+		list.add(new CmSettingsHelper("DbState",                          isAlarmSwitch, PROPKEY_alarm_DbState                         , String .class, conf.getProperty      (PROPKEY_alarm_DbState                         , DEFAULT_alarm_DbState                        ), DEFAULT_alarm_DbState                        , "If 'user_access_desc' or 'state_desc' do NOT match the regexp then send 'AlarmEventDatabaseState'. format: db1=(MULTI_USER|RESTRICTED_USER|ONLINE|OFFLINE ), db2=(MULTI_USER|ONLINE|RESTORING)  (Note: the 'dbname' can aslo be a regexp)" , new RegExpInputValidator()));
 
-		list.add(new CmSettingsHelper("LowDbFreeSpaceInMb",               isAlarmSwitch, PROPKEY_alarm_LowDbFreeSpaceInMb              , String.class, conf.getProperty    (PROPKEY_alarm_LowDbFreeSpaceInMb              , DEFAULT_alarm_LowDbFreeSpaceInMb             ), DEFAULT_alarm_LowDbFreeSpaceInMb             , "If 'LowDbFreeSpaceInMb' is greater than ## MB then send 'AlarmEventLowDbFreeSpace'. format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"     , new MapNumberValidator()));
-		list.add(new CmSettingsHelper("LowLogFreeSpaceInMb",              isAlarmSwitch, PROPKEY_alarm_LowLogFreeSpaceInMb             , String.class, conf.getProperty    (PROPKEY_alarm_LowLogFreeSpaceInMb             , DEFAULT_alarm_LowLogFreeSpaceInMb            ), DEFAULT_alarm_LowLogFreeSpaceInMb            , "If 'LowLogFreeSpaceInMb' is greater than ## MB then send 'AlarmEventLowLogFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"    , new MapNumberValidator()));
-		list.add(new CmSettingsHelper("LowDbFreeSpaceInPct",              isAlarmSwitch, PROPKEY_alarm_LowDbFreeSpaceInPct             , String.class, conf.getProperty    (PROPKEY_alarm_LowDbFreeSpaceInPct             , DEFAULT_alarm_LowDbFreeSpaceInPct            ), DEFAULT_alarm_LowDbFreeSpaceInPct            , "If 'LowDbFreeSpaceInPct' is less than ## Percent then send 'AlarmEventLowDbFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"   , new MapNumberValidator()));
-		list.add(new CmSettingsHelper("LowLogFreeSpaceInPct",             isAlarmSwitch, PROPKEY_alarm_LowLogFreeSpaceInPct            , String.class, conf.getProperty    (PROPKEY_alarm_LowLogFreeSpaceInPct            , DEFAULT_alarm_LowLogFreeSpaceInPct           ), DEFAULT_alarm_LowLogFreeSpaceInPct           , "If 'LowLogFreeSpaceInPct' is less than ## Percent then send 'AlarmEventLowLogFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)" , new MapNumberValidator()));
-
-		list.add(new CmSettingsHelper("LowOsDiskFreeSpaceInMb",           isAlarmSwitch, PROPKEY_alarm_LowOsDiskFreeSpaceInMb          , String.class, conf.getProperty    (PROPKEY_alarm_LowOsDiskFreeSpaceInMb          , DEFAULT_alarm_LowOsDiskFreeSpaceInMb         ), DEFAULT_alarm_LowOsDiskFreeSpaceInMb         , "If 'LogOsDiskFreeMb' or 'DataOsDiskFreeMb' is less than ## MB then send 'AlarmEventLowOsDiskFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"        , new MapNumberValidator()));
-		list.add(new CmSettingsHelper("LowOsDiskFreeSpaceInPct",          isAlarmSwitch, PROPKEY_alarm_LowOsDiskFreeSpaceInPct         , String.class, conf.getProperty    (PROPKEY_alarm_LowOsDiskFreeSpaceInPct         , DEFAULT_alarm_LowOsDiskFreeSpaceInPct        ), DEFAULT_alarm_LowOsDiskFreeSpaceInPct        , "If 'LogOsDiskFreePct' or 'DataOsDiskFreePct' is less than ## Percent then send 'AlarmEventLowOsDiskFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)" , new MapNumberValidator()));
-
-//		list.add(new CmSettingsHelper("MandatoryDatabaseList",                           PROPKEY_alarm_MandatoryDatabaseList           , String.class, conf.getProperty    (PROPKEY_alarm_MandatoryDatabaseList           , DEFAULT_alarm_MandatoryDatabaseList          ), DEFAULT_alarm_MandatoryDatabaseList          , "A list of databases that needs to be present. This is a comma separated list of databases (each name can contain regex)" ));
-		
-		list.add(new CmSettingsHelper("DbState",                          isAlarmSwitch, PROPKEY_alarm_DbState                         , String.class, conf.getProperty    (PROPKEY_alarm_DbState                         , DEFAULT_alarm_DbState                        ), DEFAULT_alarm_DbState                        , "If 'user_access_desc' or 'state_desc' do NOT match the regexp then send 'AlarmEventDatabaseState'. format: db1=(MULTI_USER|RESTRICTED_USER|ONLINE|OFFLINE ), db2=(MULTI_USER|ONLINE|RESTORING)  (Note: the 'dbname' can aslo be a regexp)" , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("QsIsOk ",                          isAlarmSwitch, PROPKEY_alarm_QsIsOk                          , String .class, conf.getProperty      (PROPKEY_alarm_QsIsOk                          , DEFAULT_alarm_QsIsOk                         ), DEFAULT_alarm_QsIsOk                         , "If 'QsIsOk' is not 'YES' (meaning 'QsDesiredState' and 'QsActualState' do not match) then send 'AlarmEventQueryStoreUnexpectedState'. Note: This is not configurabe per database name"));
+		list.add(new CmSettingsHelper("QsUsedPct",                        isAlarmSwitch, PROPKEY_alarm_QsUsedSpaceInPct                , Double .class, conf.getDoubleProperty(PROPKEY_alarm_QsUsedSpaceInPct                , DEFAULT_alarm_QsUsedSpaceInPct               ), DEFAULT_alarm_QsUsedSpaceInPct               , "If 'QsUsedSpaceInPct' more than ## Percent then send 'AlarmEventQueryStoreLowFreeSpace'. Note: This is not configurabe per database name"));
+		list.add(new CmSettingsHelper("QsFreeSpaceInMb",                  isAlarmSwitch, PROPKEY_alarm_QsFreeSpaceInMb                 , Integer.class, conf.getIntProperty   (PROPKEY_alarm_QsFreeSpaceInMb                 , DEFAULT_alarm_QsFreeSpaceInMb                ), DEFAULT_alarm_QsFreeSpaceInMb                , "If 'QsFreeSpaceInMb' is less that ## MB then send 'AlarmEventQueryStoreLowFreeSpace'. Note: This is not configurabe per database name"));
 
 		return list;
 	}

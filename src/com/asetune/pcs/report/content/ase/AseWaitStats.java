@@ -38,6 +38,7 @@ import com.asetune.pcs.report.content.ReportChartTimeSeriesStackedBar;
 import com.asetune.pcs.report.content.ReportChartTimeSeriesStackedBar.TopGroupCountReport;
 import com.asetune.pcs.report.content.ReportChartTimeSeriesStackedBar.TopGroupDataRecord;
 import com.asetune.pcs.report.content.ase.SparklineHelper.AggType;
+import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.ase.SparklineHelper.SparklineResult;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -212,10 +213,12 @@ extends AseAbstract
 						{
 							SparklineResult result = SparklineHelper.getSparclineData(
 									conn,
+									DataSource.CounterModel,
 									getReportingInstance().getReportPeriodOrRecordingBeginTime().toLocalDateTime(),
 									getReportingInstance().getReportPeriodOrRecordingEndTime()  .toLocalDateTime(), 
 									groupByMinutes,                                     // params.getGroupDataInMinutes()
 									AggType.SUM,                                        // params.getGroupDataAggregationType()
+									null,                                               // params.getDbmsSchemaName()
 									"CmSysWaits_diff",                                  // params.getDbmsTableName()
 									"SessionSampleTime",                                // params.getDbmsSampleTimeColumnName()
 									"WaitTime",                                         // params.getDbmsDataValueColumnName()
@@ -254,10 +257,12 @@ extends AseAbstract
 						{
 							SparklineResult result = SparklineHelper.getSparclineData(
 									conn,
+									DataSource.CounterModel,
 									getReportingInstance().getReportPeriodOrRecordingBeginTime().toLocalDateTime(),
 									getReportingInstance().getReportPeriodOrRecordingEndTime()  .toLocalDateTime(), 
 									groupByMinutes,                                     // params.getGroupDataInMinutes()
 									AggType.MAX,                                        // params.getGroupDataAggregationType()
+									null,                                               // params.getDbmsSchemaName()
 									"CmSysWaits_diff",                                  // params.getDbmsTableName()
 									"SessionSampleTime",                                // params.getDbmsSampleTimeColumnName()
 									"WaitTimePerWait",                                  // params.getDbmsDataValueColumnName()

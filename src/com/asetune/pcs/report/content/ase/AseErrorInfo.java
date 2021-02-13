@@ -38,6 +38,7 @@ import com.asetune.config.dict.AseErrorMessageDictionary;
 import com.asetune.gui.ModelMissmatchException;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
+import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -259,7 +260,7 @@ public class AseErrorInfo extends AseAbstract
 			
 			// Mini Chart on "Physical Reads"
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("ErrorCount__chart")
 					.setHtmlWhereKeyColumnName   ("ErrorStatus")
 					.setDbmsTableName            ("MonSqlCapStatements")

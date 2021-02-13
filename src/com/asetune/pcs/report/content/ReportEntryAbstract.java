@@ -36,7 +36,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
@@ -1097,7 +1096,8 @@ implements IReportEntry
 	}
 	public int getTopRowsDefault()
 	{
-		return 20;
+//		return 20;
+		return 15;
 	}
 	public int getTopRows()
 	{

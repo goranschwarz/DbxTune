@@ -28,13 +28,14 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
+import com.asetune.ICounterController.DbmsOption;
 import com.asetune.IGuiController;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
-import com.asetune.cm.sqlserver.gui.CmMemoryGrantsPanel;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.sqlserver.gui.CmMemoryGrantsPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
@@ -176,11 +177,12 @@ extends CountersModel
 	@Override
 	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
-		List <String> pkCols = new LinkedList<String>();
+//		List <String> pkCols = new LinkedList<String>();
 
 //		pkCols.add("session_id");
 
-		return pkCols;
+//		return pkCols;
+		return null;
 	}
 
 //	@Override
@@ -203,15 +205,17 @@ extends CountersModel
 	{
 		String dm_exec_query_plan = "dm_exec_query_plan";
 
+		// get Actual-Query-Plan instead of Estimated-QueryPlan
+		if (isDbmsOptionEnabled(DbmsOption.SQL_SERVER__LAST_QUERY_PLAN_STATS))
+		{
+			dm_exec_query_plan = "dm_exec_query_plan_stats";
+		}
+
 		Configuration conf = Configuration.getCombinedConfiguration();
 		boolean getSqltext        = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_sqlText,        DEFAULT_sample_sqlText);
 		boolean getQueryPlan      = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_queryPlan,      DEFAULT_sample_queryPlan);
 //		boolean getLiveQueryPlan  = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan,  DEFAULT_sample_liveQueryPlan);
 
-//		if (srvVersion >= Ver.ver(2019) && getLiveQueryPlan)
-//		{
-//			dm_exec_query_plan = "dm_exec_query_plan_stats";
-//		}
 
 		String sql = ""
 				+ "SELECT \n"

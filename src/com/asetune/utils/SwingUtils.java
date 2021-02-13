@@ -1179,6 +1179,11 @@ public class SwingUtils
 	{
 		return tableToString(tm, true);
 	}
+	public static String tableToString(TableModel tm, String newLineWhenValueChangesForColName)
+	{
+		JTable dummyJtable = new JTable(tm);
+		return tableToString(dummyJtable, false, null, null, -1, -1, null, true, newLineWhenValueChangesForColName);
+	}
 	public static String tableToString(TableModel tm, boolean printNumOfRowsAtEnd)
 	{
 		JTable dummyJtable = new JTable(tm);
@@ -1239,6 +1244,11 @@ public class SwingUtils
 	 */
 	public static String tableToString(JTable jtable, boolean stripHtml, String[] prefixColName, Object[] prefixColData, int firstRow, int lastRow, int[] justRowNumbers, boolean printNumOfRowsAtEnd)
 	{
+		return tableToString(jtable, stripHtml, prefixColName, prefixColData, firstRow, lastRow, justRowNumbers, printNumOfRowsAtEnd, null);
+	}
+
+	public static String tableToString(JTable jtable, boolean stripHtml, String[] prefixColName, Object[] prefixColData, int firstRow, int lastRow, int[] justRowNumbers, boolean printNumOfRowsAtEnd, String newLineWhenValueChangesForColName)
+	{
 		String colSepOther = "+";
 		String colSepData  = "|";
 		String lineSpace   = "-";
@@ -1289,6 +1299,15 @@ public class SwingUtils
 
 		TableModel tm = jtable.getModel();
 
+		// Figgure out if we should do 'newLineWhenValueChangesForColName'
+		int pos_newLineWhenValueChangesForColName = -1;
+		if (StringUtil.hasValue(newLineWhenValueChangesForColName))
+		{
+			pos_newLineWhenValueChangesForColName = tableHead.indexOf(newLineWhenValueChangesForColName);
+			if (pos_newLineWhenValueChangesForColName == -1)
+				throw new RuntimeException("Could not find column: newLineWhenValueChangesForColName='" + newLineWhenValueChangesForColName + "' in table.");
+		}
+		
 		//------------------------------------
 		// Copy ROWS (from firstRow to lastRow)
 		//------------------------------------
@@ -1466,6 +1485,9 @@ public class SwingUtils
 		}
 		sb.append(colSepOther).append(newLine);
 
+
+		// used by: pos_newLineWhenValueChangesForColName
+		Object rememberColValue = null;
 		
 		//-------------------------------------------
 		// Print the TABLE DATA
@@ -1494,6 +1516,26 @@ public class SwingUtils
 			// NO multiple lines for any cells on this row
 			if (maxCellLineCountOnThisRow == 0)
 			{
+				// if values has been changed for column: Add a "line-separator" (|------|------|-----|) 
+				if (pos_newLineWhenValueChangesForColName != -1)
+				{
+					Object colValue = tableData.get(r).get(pos_newLineWhenValueChangesForColName);
+					if (colValue != null && !colValue.equals(rememberColValue))
+					{
+						rememberColValue = colValue;
+						if (r > 0)
+						{
+							// print: |------|------|-----|\n
+							for (int c=0; c<cols; c++)
+							{
+								String line = StringUtil.replicate(lineSpace, colLength[c]);
+								sb.append(colSepData).append(line);
+							}
+							sb.append(colSepData).append(newLine);
+						}
+					}
+				}
+
 				// |col1|col2   |col3|\n
 				for (int c=0; c<cols; c++)
 				{

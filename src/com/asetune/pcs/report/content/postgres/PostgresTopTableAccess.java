@@ -31,6 +31,7 @@ import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.ase.AseAbstract;
 import com.asetune.pcs.report.content.ase.SparklineHelper;
 import com.asetune.pcs.report.content.ase.SparklineHelper.AggType;
+import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -219,7 +220,7 @@ public class PostgresTopTableAccess extends AseAbstract
 			String ALL_blks_hit   = "sum([heap_blks_hit])  + sum([idx_blks_hit])  + sum([toast_blks_hit])  + sum([tidx_blks_hit])";
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, rstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("ALL_blks_read__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmPgTablesIo_diff")
@@ -230,7 +231,7 @@ public class PostgresTopTableAccess extends AseAbstract
 					.validate()));
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, rstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("ALL_blks_hit__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmPgTablesIo_diff")
@@ -365,7 +366,7 @@ public class PostgresTopTableAccess extends AseAbstract
 			String whereKeyColumn = "dbname, schemaname, relname"; 
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, rstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("seq_scan__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmPgTables_diff")
@@ -376,7 +377,7 @@ public class PostgresTopTableAccess extends AseAbstract
 					.validate()));
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, rstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("idx_scan__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmPgTables_diff")
@@ -387,7 +388,7 @@ public class PostgresTopTableAccess extends AseAbstract
 					.validate()));
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, rstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("idx_tup_fetch_per_scan__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmPgTables_diff")

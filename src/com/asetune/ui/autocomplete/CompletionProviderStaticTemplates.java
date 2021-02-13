@@ -34,7 +34,8 @@ public class CompletionProviderStaticTemplates
 		ArrayList<CompletionTemplate> list = new ArrayList<CompletionTemplate>();
 		
 		// Add completions for all SQL keywords. A BasicCompletion is just a straightforward word completion.
-		list.add( new CompletionTemplate("SELECT * FROM "));
+		list.add( new CompletionTemplate("ss", "SELECT * FROM "));
+		list.add( new CompletionTemplate(      "SELECT * FROM "));
 
 		list.add( new CompletionTemplate("CASE WHEN x=1 THEN 'x=1' WHEN x=2 THEN 'x=2' ELSE 'not' END"));
 

@@ -115,7 +115,7 @@ public class H2WriterStat
 	public static final Double      DEFAULT_AlarmOsLoadAverageAdjusted30m = 3.0;
 
 	public static final String      PROPKEY_AlarmOsLoadAverageAdjusted60m = "H2WriterStat.alarm.osLoadAverage.adjusted.60m.gt";
-	public static final Double      DEFAULT_AlarmOsLoadAverageAdjusted60m = 2.0;
+	public static final Double      DEFAULT_AlarmOsLoadAverageAdjusted60m = 2.5;
 
 	private static final String     DEFAULT_sampleTimeFormat = "%?DD[d ]%?HH[:]%MM:%SS.%ms";
 

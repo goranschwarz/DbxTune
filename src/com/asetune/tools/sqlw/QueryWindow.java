@@ -502,6 +502,7 @@ public class QueryWindow
 
 	public static final String ACTION_VIEW_CMD_HISTORY          = "VIEW_CMD_HISTORY";
 	public static final String ACTION_LOAD_LAST_HISTORY_ENTRY   = "LOAD_LAST_HISTORY_ENTRY";
+	public static final String ACTION_REFRESH_CODE_COMPLETION   = "REFRESH_CODE_COMPLETION";
 	public static final String ACTION_VIEW_LOG_TAIL             = "VIEW_LOG_TAIL";
 	public static final String ACTION_VIEW_DBMS_CONFIG          = "VIEW_DBMS_CONFIG";
 	public static final String ACTION_VIEW_ASE_HADR_MEMBERS     = "VIEW_ASE_HADR_MEMBERS";
@@ -2207,6 +2208,26 @@ public class QueryWindow
 			public void actionPerformed(ActionEvent e)
 			{
 				_execGuiShowplan_but.doClick();
+			}
+		});
+
+		// ADD: Ctrl+Shift+R   == Refresh the Code Completion
+		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.SHIFT_DOWN_MASK | Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), ACTION_REFRESH_CODE_COMPLETION);
+		_query_txt.getActionMap().put(ACTION_REFRESH_CODE_COMPLETION, new AbstractAction(ACTION_REFRESH_CODE_COMPLETION)
+		{
+			private static final long serialVersionUID = 1L;
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// mark code completion for refresh
+				if (_compleationProviderAbstract != null)
+				{
+					_compleationProviderAbstract.setNeedRefresh(true);
+					_compleationProviderAbstract.setNeedRefreshSystemInfo(true);
+					_compleationProviderAbstract.clearSavedCache();
+
+					_compleationProviderAbstract.refresh();
+				}
 			}
 		});
 
@@ -10373,7 +10394,7 @@ checkPanelSize(_resPanel, comp);
 			// Add a filter field if "number of records in table" is above the threshold
 			int rowcountForFilterActivation = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_rsFilterRowThresh, DEFAULT_rsFilterRowThresh);
 			if (tab.getRowCount() >= rowcountForFilterActivation)
-				p.add(new GTableFilter(tab, GTableFilter.ROW_COUNT_LAYOUT_LEFT), "growx, pushx, span, wrap");
+				p.add(new GTableFilter(tab, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true), "growx, pushx, span, wrap");
 
 			// JScrollPane is on _resPanel
 			// So we need to display the table header ourself
@@ -10402,7 +10423,7 @@ checkPanelSize(_resPanel, comp);
 //			// Add a filter field if "number of records in table" is above the threshold
 //			int rowcountForFilterActivation = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_rsFilterRowThresh, DEFAULT_rsFilterRowThresh);
 //			if (tab.getRowCount() >= rowcountForFilterActivation)
-//				p.add(new GTableFilter(tab, GTableFilter.ROW_COUNT_LAYOUT_LEFT), "growx, pushx, span, wrap");
+//				p.add(new GTableFilter(tab, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true), "growx, pushx, span, wrap");
 //
 //			// JScrollPane is on _resPanel
 //			// So we need to display the table header ourself
@@ -10489,7 +10510,7 @@ checkPanelSize(_resPanel, comp);
 				// Add a filter field if "number of records in table" is above the threshold
 				int rowcountForFilterActivation = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_rsFilterRowThresh, DEFAULT_rsFilterRowThresh);
 				if (tab.getRowCount() >= rowcountForFilterActivation)
-					p.add(new GTableFilter(tab, GTableFilter.ROW_COUNT_LAYOUT_LEFT), "growx, pushx, span, wrap");
+					p.add(new GTableFilter(tab, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true), "growx, pushx, span, wrap");
 
 				// JScrollPane is on _resPanel
     			// So we need to display the table header ourself
@@ -12191,9 +12212,11 @@ checkPanelSize(_resPanel, comp);
 
 				JMenuItem cc_exec_mi    = new JMenuItem("<html><b>Open</b>      - <i><font color='green'>Open the Code Completion window. Just like pressing <code><b>Ctrl+Space</b><code/></font></i></html>");
 				JMenuItem cc_reset_mi   = new JMenuItem("<html><b>Clear</b>     - <i><font color='green'>Clear the in memory cache for the Code Completion.</font></i></html>");
-				JMenuItem cc_refresh_mi = new JMenuItem("<html><b>Refresh</b>   - <i><font color='green'>Refreshes the in memory cache for the Code Completion.</font></i></html>");
+				JMenuItem cc_refresh_mi = new JMenuItem("<html><b>Refresh</b>   - <i><font color='green'>Refreshes the in memory cache for the Code Completion. <code><b>Ctrl+Shift+R</b><code/></font></i></html>");
 				JMenuItem cc_config_mi  = new JMenuItem("<html><b>Configure</b> - <i><font color='green'>Configure what types of objects should be fetched.</font></i></html>");
 
+//				cc_refresh_mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, ActionEvent.CTRL_MASK | ActionEvent.SHIFT_MASK));
+				
 //				JMenuItem cc_stat_mi   = new JCheckBoxMenuItem("<html><b>Static Commands</b>                 - <i><font color='green'>Get Static Commands or Templates that can be used <code><b>Ctrl+Space</b><code/></font></i></html>", _compleationProviderAbstract.isLookupStaticCmds());
 //				JMenuItem cc_misc_mi   = new JCheckBoxMenuItem("<html><b>Miscelanious</b>                    - <i><font color='green'>Get Miscelanious Info, like ASE Monitoring tables</font></i></html>",                                _compleationProviderAbstract.isLookupMisc());
 //				JMenuItem cc_db_mi     = new JCheckBoxMenuItem("<html><b>Database Info</b>                   - <i><font color='green'>Get Database Info, prev word is <code><b>use</b><code/></font></i></html>",                          _compleationProviderAbstract.isLookupDb());

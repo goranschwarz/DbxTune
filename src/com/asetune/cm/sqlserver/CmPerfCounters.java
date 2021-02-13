@@ -25,8 +25,10 @@ import java.math.BigDecimal;
 import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 
@@ -54,6 +56,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -202,6 +205,12 @@ extends CountersModel
 	public static final String GRAPH_NAME_MEMORY_MANAGER            = "MemMgr";
 //	public static final String GRAPH_NAME_MEMORY_X2                 = "MemMgr"; xxx
 //	public static final String GRAPH_NAME_MEMORY_X3                 = "MemMgr"; xxx
+
+	public static final String GRAPH_NAME_QUERY_STORE_TOTAL         = "QsTotal";
+	public static final String GRAPH_NAME_QUERY_STORE_DB_CPU        = "QsDbCpu";
+	public static final String GRAPH_NAME_QUERY_STORE_DB_PHYS_READ  = "QsDbPhysRead";
+	public static final String GRAPH_NAME_QUERY_STORE_DB_LOGI_READ  = "QsDbLogiRead";
+	public static final String GRAPH_NAME_QUERY_STORE_DB_LOGI_WRITE = "QsDbLogiWrite";
 
 	private void addTrendGraphs()
 	{
@@ -727,6 +736,70 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
+		//-----
+		addTrendGraph(GRAPH_NAME_QUERY_STORE_TOTAL,
+			"Query Story Total", // Menu CheckBox text
+			"Query Store Total ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			new String[] { "CPU Usage", "Physical Reads", "Logical Reads", "Logical Writes" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OTHER,
+			false,         // is Percent Graph
+			false,         // visible at start
+			Ver.ver(2016), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);           // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_QUERY_STORE_DB_CPU,
+			"Query Story DB - CPU", // Menu CheckBox text
+			"Query Store DB - CPU ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OTHER,
+			false,         // is Percent Graph
+			false,         // visible at start
+			Ver.ver(2016), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);           // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_QUERY_STORE_DB_PHYS_READ,
+			"Query Story DB - Physical Reads", // Menu CheckBox text
+			"Query Store DB - Physical Reads ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OTHER,
+			false,         // is Percent Graph
+			false,         // visible at start
+			Ver.ver(2016), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);           // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_QUERY_STORE_DB_LOGI_READ,
+			"Query Story DB - Logical Reads", // Menu CheckBox text
+			"Query Store DB - Logical Reads ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OTHER,
+			false,         // is Percent Graph
+			false,         // visible at start
+			Ver.ver(2016), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);           // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_QUERY_STORE_DB_LOGI_WRITE,
+			"Query Story DB - Logical Writes", // Menu CheckBox text
+			"Query Store DB - Logical Writes ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OTHER,
+			false,         // is Percent Graph
+			false,         // visible at start
+			Ver.ver(2016), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);           // minimum height
 	}
 
 	@Override
@@ -1975,6 +2048,144 @@ extends CountersModel
 			tgdp.setDataPoint(this.getTimestamp(), larr, darr);
 		}
 
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_QUERY_STORE_TOTAL.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[4];
+			
+			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+			String pk1 = createPkStr(":Query Store", "Query Store CPU usage",      "_Total");
+			String pk2 = createPkStr(":Query Store", "Query Store physical reads", "_Total");
+			String pk3 = createPkStr(":Query Store", "Query Store logical reads",  "_Total");
+			String pk4 = createPkStr(":Query Store", "Query Store logical writes", "_Total");
+			
+			Double val1 = this.getAbsValueAsDouble(pk1, "calculated_value");
+			Double val2 = this.getAbsValueAsDouble(pk2, "calculated_value");
+			Double val3 = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val4 = this.getAbsValueAsDouble(pk3, "calculated_value");
+			
+			if (val1 != null && val2 != null && val3 != null && val4 != null)
+			{
+				arr[0] = val1;
+				arr[1] = val2;
+				arr[2] = val3;
+				arr[3] = val4;
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				TrendGraph tg = getTrendGraph(tgdp.getName());
+				if (tg != null)
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"'.");
+			}
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_QUERY_STORE_DB_CPU.equals(tgdp.getName()))
+		{
+			// get all entries from "Query Store" -- "Query Store CPU usage" section
+			Map<String, Object> map = new HashMap<>();
+			map.put("object_name", ":Query Store");
+			map.put("counter_name", "Query Store CPU usage");
+			List<Integer> rowIds = getDiffRowIdsWhere(map); // Should we use ABS or DIFF here
+			
+			String[] larr = new String[rowIds.size()];
+			Double[] darr = new Double[rowIds.size()];
+			
+			for (int r=0; r<darr.length; r++)
+			{
+				Integer rowId = rowIds.get(r);
+
+				String label = getDiffString       (rowId, "instance_name");
+				Double value = getDiffValueAsDouble(rowId, "calculated_value");
+
+				larr[r] = label;
+				darr[r] = value;
+			}
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), larr, darr);
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_QUERY_STORE_DB_PHYS_READ.equals(tgdp.getName()))
+		{
+			// get all entries from "Query Store" -- "Query Store physical reads" section
+			Map<String, Object> map = new HashMap<>();
+			map.put("object_name", ":Query Store");
+			map.put("counter_name", "Query Store physical reads");
+			List<Integer> rowIds = getDiffRowIdsWhere(map); // Should we use ABS or DIFF here
+			
+			String[] larr = new String[rowIds.size()];
+			Double[] darr = new Double[rowIds.size()];
+			
+			for (int r=0; r<darr.length; r++)
+			{
+				Integer rowId = rowIds.get(r);
+
+				String label = getDiffString       (rowId, "instance_name");
+				Double value = getDiffValueAsDouble(rowId, "calculated_value");
+
+				larr[r] = label;
+				darr[r] = value;
+			}
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), larr, darr);
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_QUERY_STORE_DB_LOGI_READ.equals(tgdp.getName()))
+		{
+			// get all entries from "Query Store" -- "Query Store logical reads" section
+			Map<String, Object> map = new HashMap<>();
+			map.put("object_name", ":Query Store");
+			map.put("counter_name", "Query Store logical reads");
+			List<Integer> rowIds = getDiffRowIdsWhere(map); // Should we use ABS or DIFF here
+			
+			String[] larr = new String[rowIds.size()];
+			Double[] darr = new Double[rowIds.size()];
+			
+			for (int r=0; r<darr.length; r++)
+			{
+				Integer rowId = rowIds.get(r);
+
+				String label = getDiffString       (rowId, "instance_name");
+				Double value = getDiffValueAsDouble(rowId, "calculated_value");
+
+				larr[r] = label;
+				darr[r] = value;
+			}
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), larr, darr);
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_QUERY_STORE_DB_LOGI_WRITE.equals(tgdp.getName()))
+		{
+			// get all entries from "Query Store" -- "Query Store logical writes" section
+			Map<String, Object> map = new HashMap<>();
+			map.put("object_name", ":Query Store");
+			map.put("counter_name", "Query Store logical writes");
+			List<Integer> rowIds = getDiffRowIdsWhere(map); // Should we use ABS or DIFF here
+			
+			String[] larr = new String[rowIds.size()];
+			Double[] darr = new Double[rowIds.size()];
+			
+			for (int r=0; r<darr.length; r++)
+			{
+				Integer rowId = rowIds.get(r);
+
+				String label = getDiffString       (rowId, "instance_name");
+				Double value = getDiffValueAsDouble(rowId, "calculated_value");
+
+				larr[r] = label;
+				darr[r] = value;
+			}
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), larr, darr);
+		}
+		
 	}
 
 	
@@ -2387,7 +2598,7 @@ extends CountersModel
 
 				if (freeListStalls > threshold)
 				{
-					AlarmEvent ae = new AlarmEventPerfCounterWarning(cm, "Free list stalls/sec", freeListStalls, "Buffer Cache is probably to small... Waiting for memory to become available before a page can be added into the buffer pool.", threshold);
+					AlarmEvent ae = new AlarmEventPerfCounterWarning(cm, "Free list stalls/sec", freeListStalls, "Buffer Cache is probably to small... 'Free list stalls/sec'=" + freeListStalls + ". Waiting for memory to become available before a page can be added into the buffer pool.", threshold);
 					
 					alarmHandler.addAlarm( ae );
 				}

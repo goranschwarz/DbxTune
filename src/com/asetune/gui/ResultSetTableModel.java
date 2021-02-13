@@ -133,6 +133,15 @@ public class ResultSetTableModel
 	public static final boolean DEFAULT_NumberToStringFmt = false; 
 //	public static final boolean DEFAULT_NumberToStringFmt_local = true;
 
+	public static final String  PROPKEY_TimeWithTimezone_to_time           = "ResultSetTableModel.timeWithTimezone.to.time";
+	public static final boolean DEFAULT_TimeWithTimezone_to_time           = true;
+
+	public static final String  PROPKEY_TimestampWithTimezone_to_timestamp = "ResultSetTableModel.timestampWithTimezone.to.timestamp";
+	public static final boolean DEFAULT_TimestampWithTimezone_to_timestamp = true;
+
+	private boolean _timeWithTimezone_to_time           = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_TimeWithTimezone_to_time,           DEFAULT_TimeWithTimezone_to_time);
+	private boolean _timestampWithTimezone_to_timestamp = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_TimestampWithTimezone_to_timestamp, DEFAULT_TimestampWithTimezone_to_timestamp);
+
 	private int	_numcols;
 
 //	FIXME: cleanup the below members and INSTEAD use: ResultSetMetaDataCached _rsmdCached
@@ -735,6 +744,15 @@ public class ResultSetTableModel
 		case java.sql.Types.NCLOB:         return rs.getString(col);
 		case java.sql.Types.SQLXML:        return rs.getString(col);
 
+	    //--------------------------JDBC 4.2 -----------------------------
+//		case java.sql.Types.REF_CURSOR:                     return rs.getString(col);
+		case java.sql.Types.TIME_WITH_TIMEZONE:             return _timeWithTimezone_to_time           ? rs.getTime(col)      : rs.getString(col);
+		case java.sql.Types.TIMESTAMP_WITH_TIMEZONE:        return _timestampWithTimezone_to_timestamp ? rs.getTimestamp(col) : rs.getString(col);
+//xxx;         Leta upp alla ställen som vi har ... case: Types.XXXX and check if we handle *_WITH_TIMEZONE
+//yyy;         Horizonal Scrollbar on "SQL Text" bootstrap modal popup...
+//DONE:   zzz; QsWaitDetails -- Make a new "linebreak" after each 'runtime_stats_interval_id' group
+//DONE??  ååå; OsHostMon -- Chart -- add new "line" -- "userPct+sysPct+ioWaitPct"
+		
 		case -156: // case microsoft.sql.Types.SQL_VARIANT:
 		{
 			// variant can be many things (possibly all object types), so try to get it in different ways
@@ -2078,6 +2096,11 @@ public class ResultSetTableModel
 	public String toAsciiTableString()
 	{
 		return SwingUtils.tableToString(this);
+	}
+
+	public String toAsciiTableString(String newLineWhenValueChangesForColName)
+	{
+		return SwingUtils.tableToString(this, newLineWhenValueChangesForColName);
 	}
 
 	public String toTableString()

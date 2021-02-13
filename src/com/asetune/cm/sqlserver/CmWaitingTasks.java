@@ -26,13 +26,16 @@ import java.util.List;
 import java.util.Map;
 
 import com.asetune.ICounterController;
+import com.asetune.ICounterController.DbmsOption;
 import com.asetune.IGuiController;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.sqlserver.gui.CmWaitingTasksPanel;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
 
@@ -49,7 +52,13 @@ extends CountersModel
 	public static final String   SHORT_NAME       = "Waiting Tasks";
 	public static final String   HTML_DESC        = 
 		"<html>" +
-		"<p>FIXME</p>" +
+		"<p>Tasks that are <b>waiting</b> for something toe become available.</p>" +
+		"<br><br>" +
+		"Table Background colors:" +
+		"<ul>" +
+		"    <li>PINK   - SPID is Blocked by some other SPID. This is the Victim.</li>" +
+//		"    <li>RED    - SPID is Blocking other SPID's from running, this SPID is Responsible or the Root Cause of a Blocking Lock.</li>" +
+		"</ul>" +
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
@@ -132,11 +141,11 @@ extends CountersModel
 	// Implementation
 	//------------------------------------------------------------
 	
-//	@Override
-//	protected TabularCntrPanel createGui()
-//	{
-//		return new CmWaitingTasksPanel(this);
-//	}
+	@Override
+	protected TabularCntrPanel createGui()
+	{
+		return new CmWaitingTasksPanel(this);
+	}
 
 	@Override
 	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
@@ -202,6 +211,12 @@ extends CountersModel
 		String dm_exec_sql_text    = "dm_exec_sql_text";
 		String dm_exec_query_plan  = "dm_exec_query_plan";
 		
+		// get Actual-Query-Plan instead of Estimated-QueryPlan
+		if (isDbmsOptionEnabled(DbmsOption.SQL_SERVER__LAST_QUERY_PLAN_STATS))
+		{
+			dm_exec_query_plan = "dm_exec_query_plan_stats";
+		}
+
 		if (isAzure)
 		{
 			dm_os_waiting_tasks = "dm_pdw_nodes_os_waiting_tasks";
@@ -244,6 +259,14 @@ extends CountersModel
 			    + "    [owt].[wait_duration_ms], \n"
 			    + "    [owt].[wait_type], \n"
 			    + "    [owt].[blocking_session_id], \n"
+			    + "    [er].[cpu_time], \n"
+			    + "    [er].[status], \n"
+			    + "    [er].[command], \n"
+				+ "    object_name([est].objectid, [est].dbid) AS [ProcName], \n"
+				+ "    [er].statement_start_offset             AS [StmntStart], \n"
+			    + "    [es].[program_name], \n"
+			    + "    [er].[database_id], \n"
+			    + "    db_name([er].[database_id]) AS [database_name], \n"
 			    + "    [owt].[resource_description], \n"
 			    + "    CASE [owt].[wait_type] \n"
 			    + "        WHEN N'CXPACKET' THEN \n"
@@ -251,16 +274,13 @@ extends CountersModel
 			    + "                CHARINDEX (N'=', REVERSE ([owt].[resource_description])) - 1) \n"
 			    + "        ELSE NULL \n"
 			    + "    END AS [Node ID], \n"
-			    + "    [es].[program_name], \n"
 				+ "    SUBSTRING([est].text, [er].statement_start_offset / 2,  \n"
 				+ "        ( CASE WHEN [er].statement_end_offset = -1  \n"
 				+ "               THEN DATALENGTH([est].text)  \n"
 				+ "               ELSE [er].statement_end_offset  \n"
 				+ "          END - [er].statement_start_offset ) / 2 +2) AS [currentSqlText], \n"
 			    + "    [est].text as [fullSqlBatchText], \n"
-			    + "    [er].[database_id], \n"
-			    + "    [eqp].[query_plan], \n"
-			    + "    [er].[cpu_time] \n"
+			    + "    [eqp].[query_plan] \n"
 			    + "FROM sys." + dm_os_waiting_tasks + " [owt] \n"
 			    + "INNER JOIN  sys." + dm_os_tasks + "      [ot] ON [owt].[waiting_task_address] = [ot].[task_address] \n"
 			    + "INNER JOIN  sys." + dm_exec_sessions + " [es] ON [owt].[session_id] = [es].[session_id] \n"

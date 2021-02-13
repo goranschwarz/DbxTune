@@ -36,7 +36,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 
 import javax.swing.ImageIcon;
@@ -47,10 +50,17 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.Timer;
 import javax.swing.UIManager;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.PropertyConfigurator;
 import org.fife.ui.rtextarea.RTextScrollPane;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 
 import com.asetune.Version;
 import com.asetune.cache.XmlPlanCache;
@@ -85,6 +95,7 @@ implements ActionListener
 	private JButton           _loadFile_but      = new JButton("Load File");
 	private JButton           _loadName_but      = new JButton("Load Name");
 	private JTextField        _loadName_txt      = new JTextField();
+	private JButton           _fixParams_but     = new JButton("Fix Params");
 	private JButton           _close_but         = new JButton("Close");
 
 	private RSyntaxTextAreaX   _sqlText = new RSyntaxTextAreaX(7, 30);
@@ -225,6 +236,14 @@ implements ActionListener
 			
 			// SHOWPLAN PANEL is get prior to the IF statement
 
+			_toggleSql_but    .setToolTipText("<html>Show/Hide the top 'SQL Text' panel.</html>");
+			_cloneWindow_but  .setToolTipText("<html>Make a new Window</html>");
+			_loadName_but     .setToolTipText("<html></html>");
+			_loadName_txt     .setToolTipText("<html></html>");
+			_loadFile_but     .setToolTipText("<html>Open File Dialog to open and load a XML Plan from file.</html>");
+			_loadClipboard_but.setToolTipText("<html>Load XML Contecnt from the clipboard</html>");
+			_fixParams_but    .setToolTipText("<html>Try to <i>fill in</i> runtime values for variables (from the XML Plan)</html>");
+			_close_but        .setToolTipText("<html>Close the windows</html>");
 			
 			// PUTTON PANEL
 			_butPanel = SwingUtils.createPanel("Buttons", false);
@@ -235,8 +254,9 @@ implements ActionListener
 //			_butPanel.add(new JLabel(),       "pushx, growx");
 			_butPanel.add(_loadName_but,      "gap 20");
 			_butPanel.add(_loadName_txt,      "pushx, growx");
-			_butPanel.add(_loadClipboard_but, "gap 20");
 			_butPanel.add(_loadFile_but,      "");
+			_butPanel.add(_loadClipboard_but, "gap 20");
+			_butPanel.add(_fixParams_but,     "");
 			_butPanel.add(_close_but,         "gap 20");
 
 			_toggleSql_but    .addActionListener(this);
@@ -245,6 +265,7 @@ implements ActionListener
 			_loadName_but     .addActionListener(this);
 			_loadClipboard_but.addActionListener(this);
 			_loadFile_but     .addActionListener(this);
+			_fixParams_but    .addActionListener(this);
 			_close_but        .addActionListener(this);
 			
 
@@ -371,8 +392,118 @@ implements ActionListener
 				}
 	        }
 		}
+
+		// BUTTON: FIX PARAMS
+		if (_fixParams_but.equals(source))
+		{
+			Map<String, String> paramValMap = extractParameterValuesFromXml();
+			
+			String sql = _sqlText.getText();
+			boolean changed = false;
+			
+			for (Entry<String, String> eentry : paramValMap.entrySet())
+			{
+				String param = eentry.getKey();
+				String value = eentry.getValue();
+
+				if (sql.contains(param))
+				{
+					sql = sql.replace(param, value);
+					changed = true;
+				}
+			}
+			
+			if (changed)
+				_sqlText.setText(sql);
+		}
 	}
 
+	private Map<String, String> extractParameterValuesFromXml()
+	{
+		Map<String, String> map = new LinkedHashMap<>();
+
+		if (StringUtil.hasValue(_inputXmlPlan))
+		{
+			// <execParameters>
+			//     <parameter>
+			//         <name>@@@V59_VCHAR1</name>
+			//         <number>1</number>
+			//         <type>VARCHAR</type>
+			//         <value>'1762'</value>
+			//     </parameter>
+			//     ...
+			// </execParameters>
+			if (_inputXmlPlan.contains("<execParameters>"))
+			{
+				int startPos = _inputXmlPlan.indexOf("<execParameters>");
+				int endPos   = _inputXmlPlan.indexOf("</execParameters>");
+				
+				String execParameters = _inputXmlPlan.substring(startPos, endPos +  + "</execParameters>".length());
+				map = getParametersFromXmlStr(execParameters);
+			}
+
+			// <compileParameters>
+			//     <parameter>
+			//         <name>@@@V59_VCHAR1</name>
+			//         <number>1</number>
+			//         <type>VARCHAR</type>
+			//         <value>'1762'</value>
+			//     </parameter>
+			//     ...
+			// </compileParameters>
+			if (map.isEmpty() && _inputXmlPlan.contains("<compileParameters>"))
+			{
+				int startPos = _inputXmlPlan.indexOf("<compileParameters>");
+				int endPos   = _inputXmlPlan.indexOf("</compileParameters>");
+				
+				String compileParameters = _inputXmlPlan.substring(startPos, endPos + "</compileParameters>".length());
+				map = getParametersFromXmlStr(compileParameters);
+			}
+
+		}
+		
+		return map;
+	}
+	
+	public Map<String, String> getParametersFromXmlStr(String xml) 
+	{
+		Map<String, String> map = new LinkedHashMap<>();
+
+		try
+		{
+			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+			DocumentBuilder builder = factory.newDocumentBuilder();
+			InputSource is = new InputSource(new StringReader(xml));
+			Document doc = builder.parse(is);
+
+			doc.getDocumentElement().normalize();
+			
+			NodeList nList = doc.getElementsByTagName("parameter");
+			for (int i = 0; i < nList.getLength(); i++) 
+			{
+				Node node = nList.item(i);
+				if (node.getNodeType() == Node.ELEMENT_NODE)
+				{
+					Element elem = (Element) node;
+					
+					String name  = elem.getElementsByTagName("name").item(0).getTextContent();
+					String value = elem.getElementsByTagName("value").item(0).getTextContent();
+
+					if (StringUtil.hasValue(name))
+						map.put(name, value);
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			System.out.println("Problem XML: " + xml);
+			ex.printStackTrace();
+			SwingUtils.showErrorMessage(this, "Problems Filling in parameters from XML", "Caught: "+ex, ex);
+		}
+		
+		return map;
+	}
+	
 	/**
 	 * Load a XML File
 	 * @param file

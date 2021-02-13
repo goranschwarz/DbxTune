@@ -36,6 +36,15 @@ import com.asetune.utils.Configuration;
 
 public interface ICounterController
 {
+	public enum DbmsOption
+	{
+		
+		/**
+		 * For SQL-Server 2019, check if option to get Query Plan from <code>sys.dm_exec_query_plan</code> (the estimated query plan) or <code>sys.dm_exec_query_plan_stats</code> (last actual query plan) 
+		 */
+		SQL_SERVER__LAST_QUERY_PLAN_STATS
+	};
+	
 	void addCm(CountersModel cm);
 
 	/**
@@ -253,8 +262,29 @@ public interface ICounterController
 	Configuration getDbmsProperty();
 
 	/**
+	 * Check if a specific DBMS Option is enabled 
+	 * 
+	 * @return true if it's enabled... false if it's disabled
+	 * @throws RuntimeException if the Counter Cotroller is not yet initialized
+	 */
+	boolean isDbmsOptionEnabled(DbmsOption dbmsOption);
+
+	/**
 	 * This should call all Counter Models and prepare for a PCS Database Rollover
 	 */
 	void prepareForPcsDatabaseRollover();
+
+	/**
+	 * This is called from PCS (in it's own thread) right before 'Daily Summary Report' followed by 'recording database shutdown'
+	 * <p>
+	 * In here we could do various stuff that we want to extract from the monitored server<br>
+	 * An example could be:
+	 * <ul>
+	 *    <li>SQL-Server: capture (part of) any database(s) Query Store into the Recording database</li>
+	 * </ul>
+	 * 
+	 * @param recordingDbConn Connection to the recording database!
+	 */
+	void doLastRecordingActionBeforeDatabaseRollover(DbxConnection recordingDbConn);
 
 }

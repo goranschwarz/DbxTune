@@ -286,6 +286,18 @@ public class TimeUtils
 		return msToTimeStr("%?DD[d ]%?HH[:]%MM:%SS.%ms", execTimeInMs);
 	}
 
+	/** microsecond as a string in format %?DD[d ]%HH:%MM:%SS.%ms */
+	public static String usToTimeStrLong(long execTimeInUs)
+	{
+		return msToTimeStr("%?DD[d ]%HH:%MM:%SS.%ms", execTimeInUs/1000);
+	}
+
+	/** microsecond as a string in format %?DD[d ]%?HH[:]%MM:%SS.%ms */
+	public static String usToTimeStrShort(long execTimeInUs)
+	{
+		return msToTimeStr("%?DD[d ]%?HH[:]%MM:%SS.%ms", execTimeInUs/1000);
+	}
+
 	/**
 	 * Convert a long into a time string 
 	 * 

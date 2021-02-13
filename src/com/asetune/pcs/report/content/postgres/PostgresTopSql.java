@@ -25,17 +25,21 @@ import java.io.IOException;
 import java.io.Writer;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.ReportEntryAbstract;
 import com.asetune.pcs.report.content.ase.SparklineHelper;
+import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -83,7 +87,30 @@ extends ReportEntryAbstract
 
 //			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
 			sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
-			sb.append(toHtmlTable(_shortRstm));
+			TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
+			{
+				@Override
+				public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+				{
+					if ("query".equals(colName))
+					{
+						// Get Actual Executed SQL Text for current row
+						String queryid = rstm.getValueAsString(row, "queryid");
+						
+						// Put the "Actual Executed SQL Text" as a "tooltip"
+						return "<div title='Click for Detailes' "
+								+ "data-toggle='modal' "
+								+ "data-target='#dbx-view-sqltext-dialog' "
+								+ "data-objectname='" + queryid + "' "
+								+ "data-tooltip=\""   + getTooltipForSqlText(rstm, row) + "\" "
+								+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+					}
+
+					return strVal;
+				}
+			};
+			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+//			sb.append(toHtmlTable(_shortRstm));
 
 			if (_sqTextRstm != null)
 			{
@@ -100,6 +127,45 @@ extends ReportEntryAbstract
 		}
 	}
 
+	/** double quotes (") must be avoided or escaped */
+	private String getTooltipForSqlText(ResultSetTableModel rstm, int row)
+	{
+		StringBuilder sb = new StringBuilder();
+		NumberFormat nf = NumberFormat.getInstance();
+
+		sb.append("-- Some columns extracted from current row.\n");
+		sb.append("-----------------------------------------------------------------------------------------------\n");
+		sb.append("-- datname:                      ").append( rstm.getValueAsString(row, "datname"                  ) ).append("\n");
+		sb.append("-- usename:                      ").append( rstm.getValueAsString(row, "usename"                  ) ).append("\n");
+		sb.append("-- queryid:                      ").append( rstm.getValueAsString(row, "queryid"                  ) ).append("\n");
+		sb.append("-- SessionSampleTime__min:       ").append( rstm.getValueAsString(row, "SessionSampleTime__min"    ) ).append("\n");
+		sb.append("-- SessionSampleTime__max:       ").append( rstm.getValueAsString(row, "SessionSampleTime__max"    ) ).append("\n");
+		sb.append("-- Duration:                     ").append( rstm.getValueAsString(row, "Duration"                 ) ).append("\n");
+		
+		sb.append("-- calls__sum:                   ").append( nf.format(rstm.getValueAsBigDecimal(row, "calls__sum"                  ))).append("\n");
+		sb.append("-- avg_time_per_call__avg:       ").append( nf.format(rstm.getValueAsBigDecimal(row, "avg_time_per_call__avg"      ))).append("\n");
+		sb.append("-- total_time__sum:              ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_time__sum"             ))).append("\n");
+		sb.append("-- avg_rows_per_call__avg:       ").append( nf.format(rstm.getValueAsBigDecimal(row, "avg_rows_per_call__avg"      ))).append("\n");
+		sb.append("-- rows__sum:                    ").append( nf.format(rstm.getValueAsBigDecimal(row, "rows__sum"                   ))).append("\n");
+		sb.append("-- shared_blks_hit_per_row__avg: ").append( nf.format(rstm.getValueAsBigDecimal(row, "shared_blks_hit_per_row__avg"))).append("\n");
+		sb.append("-- shared_blks_hit__sum:         ").append( nf.format(rstm.getValueAsBigDecimal(row, "shared_blks_hit__sum"        ))).append("\n");
+		sb.append("-- shared_blks_read__sum:        ").append( nf.format(rstm.getValueAsBigDecimal(row, "shared_blks_read__sum"       ))).append("\n");
+		sb.append("-- shared_blks_dirtied__sum:     ").append( nf.format(rstm.getValueAsBigDecimal(row, "shared_blks_dirtied__sum"    ))).append("\n");
+		sb.append("-- shared_blks_written__sum:     ").append( nf.format(rstm.getValueAsBigDecimal(row, "shared_blks_written__sum"    ))).append("\n");
+		sb.append("-- local_blks_hit__sum:          ").append( nf.format(rstm.getValueAsBigDecimal(row, "local_blks_hit__sum"         ))).append("\n");
+		sb.append("-- local_blks_read__sum:         ").append( nf.format(rstm.getValueAsBigDecimal(row, "local_blks_read__sum"        ))).append("\n");
+		sb.append("-- local_blks_dirtied__sum:      ").append( nf.format(rstm.getValueAsBigDecimal(row, "local_blks_dirtied__sum"     ))).append("\n");
+		sb.append("-- local_blks_written__sum:      ").append( nf.format(rstm.getValueAsBigDecimal(row, "local_blks_written__sum"     ))).append("\n");
+		sb.append("-- temp_blks_read__sum:          ").append( nf.format(rstm.getValueAsBigDecimal(row, "temp_blks_read__sum"         ))).append("\n");
+		sb.append("-- temp_blks_written__sum:       ").append( nf.format(rstm.getValueAsBigDecimal(row, "temp_blks_written__sum"      ))).append("\n");
+		sb.append("-- blks_read_time__sum:          ").append( nf.format(rstm.getValueAsBigDecimal(row, "blks_read_time__sum"         ))).append("\n");
+		sb.append("-- blks_write_time__sum:         ").append( nf.format(rstm.getValueAsBigDecimal(row, "blks_write_time__sum"        ))).append("\n");
+		sb.append("-----------------------------------------------------------------------------------------------\n");
+		sb.append(StringEscapeUtils.escapeHtml4(rstm.getValueAsString(row, "query")));
+
+		return sb.toString();
+	}
+	
 	@Override
 	public String getSubject()
 	{
@@ -122,7 +188,7 @@ extends ReportEntryAbstract
 		
 		// Section description
 		rstm.setDescription(
-				"Top Slow SQL Statements are presented here (ordered by: total_time_sum) <br>" +
+				"Top Slow SQL Statements are presented here (ordered by: total_time__sum) <br>" +
 				"<br>" +
 				"Postgres Source table is 'pg_stat_statements'. <br>" +
 				"PCS Source table is 'CmPgStatements_diff'. (PCS = Persistent Counter Store) <br>" +
@@ -132,39 +198,39 @@ extends ReportEntryAbstract
 				"");
 
 		// Columns description
-		rstm.setColumnDescription("datname"                    , "Database name this Statement was executed in.");
-		rstm.setColumnDescription("usename"                    , "Username that executed this Statement.");
-		rstm.setColumnDescription("queryid"                    , "Internal hash code, computed from the statement's parse tree");
-		rstm.setColumnDescription("samples_count"              , "Number of entries for this 'datname, usename, queryid' in the report period");
-		rstm.setColumnDescription("SessionSampleTime_min"      , "First entry was sampled for this entry");
-		rstm.setColumnDescription("SessionSampleTime_max"      , "Last entry was sampled for this entry");
-		rstm.setColumnDescription("Duration"                   , "Start/end time presented as HH:MM:SS, so we can see if this entry is just for a short time or if it spans over a long period of time.");
-		rstm.setColumnDescription("CmSampleMs_sum"             , "Number of milliseconds this object has been available for sampling");
+		rstm.setColumnDescription("datname"                     , "Database name this Statement was executed in.");
+		rstm.setColumnDescription("usename"                     , "Username that executed this Statement.");
+		rstm.setColumnDescription("queryid"                     , "Internal hash code, computed from the statement's parse tree");
+		rstm.setColumnDescription("samples_count"               , "Number of entries for this 'datname, usename, queryid' in the report period");
+		rstm.setColumnDescription("SessionSampleTime__min"      , "First entry was sampled for this entry");
+		rstm.setColumnDescription("SessionSampleTime__max"      , "Last entry was sampled for this entry");
+		rstm.setColumnDescription("Duration"                    , "Start/end time presented as HH:MM:SS, so we can see if this entry is just for a short time or if it spans over a long period of time.");
+		rstm.setColumnDescription("CmSampleMs__sum"             , "Number of milliseconds this object has been available for sampling");
 
-		rstm.setColumnDescription("calls_sum"                  , "Number of times executed");
-		rstm.setColumnDescription("avg_time_per_call_avg"      , "Average Execution Time per call              (Algorithm: total_time / calls)");
-		rstm.setColumnDescription("total_time_sum"             , "Total time spent in the statement, in milliseconds");
-		rstm.setColumnDescription("avg_rows_per_call_avg"      , "Average 'number of rows retrived' per call   (Algorithm: rows / calls)");
-		rstm.setColumnDescription("rows_sum"                   , "Total number of rows retrieved or affected by the statement");
+		rstm.setColumnDescription("calls__sum"                  , "Number of times executed");
+		rstm.setColumnDescription("avg_time_per_call__avg"      , "Average Execution Time per call              (Algorithm: total_time / calls)");
+		rstm.setColumnDescription("total_time__sum"             , "Total time spent in the statement, in milliseconds");
+		rstm.setColumnDescription("avg_rows_per_call__avg"      , "Average 'number of rows retrived' per call   (Algorithm: rows / calls)");
+		rstm.setColumnDescription("rows_sum"                    , "Total number of rows retrieved or affected by the statement");
 
-		rstm.setColumnDescription("shared_blks_hit_per_row_avg", "Average 'number of cache reads' per call     (Algorithm: shared_blks_hit / calls)");
-		rstm.setColumnDescription("shared_blks_hit_sum"        , "Total number of shared block cache hits by the statement");
-		rstm.setColumnDescription("shared_blks_read_sum"       , "Total number of shared blocks read by the statement");
-		rstm.setColumnDescription("shared_blks_dirtied_sum"    , "Total number of shared blocks dirtied by the statement");
-		rstm.setColumnDescription("shared_blks_written_sum"    , "Total number of shared blocks written by the statement");
+		rstm.setColumnDescription("shared_blks_hit_per_row__avg", "Average 'number of cache reads' per call     (Algorithm: shared_blks_hit / calls)");
+		rstm.setColumnDescription("shared_blks_hit__sum"        , "Total number of shared block cache hits by the statement");
+		rstm.setColumnDescription("shared_blks_read__sum"       , "Total number of shared blocks read by the statement");
+		rstm.setColumnDescription("shared_blks_dirtied__sum"    , "Total number of shared blocks dirtied by the statement");
+		rstm.setColumnDescription("shared_blks_written__sum"    , "Total number of shared blocks written by the statement");
 		
-		rstm.setColumnDescription("local_blks_hit_sum"         , "Total number of local block cache hits by the statement");
-		rstm.setColumnDescription("local_blks_read_sum"        , "Total number of local blocks read by the statement");
-		rstm.setColumnDescription("local_blks_dirtied_sum"     , "Total number of local blocks dirtied by the statement");
-		rstm.setColumnDescription("local_blks_written_sum"     , "Total number of local blocks written by the statement");
+		rstm.setColumnDescription("local_blks_hit__sum"         , "Total number of local block cache hits by the statement");
+		rstm.setColumnDescription("local_blks_read__sum"        , "Total number of local blocks read by the statement");
+		rstm.setColumnDescription("local_blks_dirtied__sum"     , "Total number of local blocks dirtied by the statement");
+		rstm.setColumnDescription("local_blks_written__sum"     , "Total number of local blocks written by the statement");
 
-		rstm.setColumnDescription("temp_blks_read_sum"         , "Total number of temp blocks read by the statement");
-		rstm.setColumnDescription("temp_blks_written_sum"      , "Total number of temp blocks written by the statement");
+		rstm.setColumnDescription("temp_blks_read__sum"         , "Total number of temp blocks read by the statement");
+		rstm.setColumnDescription("temp_blks_written__sum"      , "Total number of temp blocks written by the statement");
 
-		rstm.setColumnDescription("blks_read_time_sum"         , "Total time the statement spent reading blocks, in milliseconds (if track_io_timing is enabled, otherwise zero)");
-		rstm.setColumnDescription("blks_write_time_sum"        , "Total time the statement spent writing blocks, in milliseconds (if track_io_timing is enabled, otherwise zero)");
+		rstm.setColumnDescription("blks_read_time__sum"         , "Total time the statement spent reading blocks, in milliseconds (if track_io_timing is enabled, otherwise zero)");
+		rstm.setColumnDescription("blks_write_time__sum"        , "Total time the statement spent writing blocks, in milliseconds (if track_io_timing is enabled, otherwise zero)");
 
-		rstm.setColumnDescription("query"                      , "Text of a representative statement");
+		rstm.setColumnDescription("query"                       , "Text of a representative statement");
 	}
 
 	@Override
@@ -200,44 +266,43 @@ extends ReportEntryAbstract
 			    + "	 [datname] \n"
 			    + "	,[usename] \n"
 			    + "	,[queryid] \n"
+			    + "	,min([" + col_query + "])                               as [query] \n"
 			    + "	,count(*)                                               as [samples_count] \n"
-			    + "	,min([SessionSampleTime])                               as [SessionSampleTime_min] \n"
-			    + "	,max([SessionSampleTime])                               as [SessionSampleTime_max] \n"
+			    + "	,min([SessionSampleTime])                               as [SessionSampleTime__min] \n"
+			    + "	,max([SessionSampleTime])                               as [SessionSampleTime__max] \n"
 			    + "	,cast('' as varchar(30))                                as [Duration] \n"
-			    + "	,sum([CmSampleMs])                                      as [CmSampleMs_sum] \n"
+			    + "	,sum([CmSampleMs])                                      as [CmSampleMs__sum] \n"
 			    + " \n"
 			    + " ,cast('' as varchar(512))                               as [calls__chart] \n"
-			    + "	,sum([calls])                                           as [calls_sum] \n"
-			    + "	,CAST( avg([avg_time_per_call]) AS DECIMAL(20,1) )      as [avg_time_per_call_avg] \n"			// needs rounding
+			    + "	,sum([calls])                                           as [calls__sum] \n"
+			    + "	,CAST( avg([avg_time_per_call]) AS DECIMAL(20,1) )      as [avg_time_per_call__avg] \n"			// needs rounding
 			    + " ,cast('' as varchar(512))                               as [total_time__chart] \n"
-			    + "	,CAST( sum([total_time])        AS DECIMAL(20,1) )      as [total_time_sum] \n"					// needs rounding
-			    + "	,avg([avg_rows_per_call])                               as [avg_rows_per_call_avg] \n"
-			    + "	,sum([rows])                                            as [rows_sum] \n"
+			    + "	,CAST( sum([total_time])        AS DECIMAL(20,1) )      as [total_time__sum] \n"					// needs rounding
+			    + "	,avg([avg_rows_per_call])                               as [avg_rows_per_call__avg] \n"
+			    + "	,sum([rows])                                            as [rows__sum] \n"
 			    + " \n"
-			    + "	,avg([shared_blks_hit_per_row])                         as [shared_blks_hit_per_row_avg] \n"
-			    + "	,sum([shared_blks_hit])                                 as [shared_blks_hit_sum] \n"
-			    + "	,sum([shared_blks_read])                                as [shared_blks_read_sum] \n"
-			    + "	,sum([shared_blks_dirtied])                             as [shared_blks_dirtied_sum] \n"
-			    + "	,sum([shared_blks_written])                             as [shared_blks_written_sum] \n"
+			    + "	,avg([shared_blks_hit_per_row])                         as [shared_blks_hit_per_row__avg] \n"
+			    + "	,sum([shared_blks_hit])                                 as [shared_blks_hit__sum] \n"
+			    + "	,sum([shared_blks_read])                                as [shared_blks_read__sum] \n"
+			    + "	,sum([shared_blks_dirtied])                             as [shared_blks_dirtied__sum] \n"
+			    + "	,sum([shared_blks_written])                             as [shared_blks_written__sum] \n"
 			    + " \n"                                                     
-			    + "	,sum([local_blks_hit])                                  as [local_blks_hit_sum] \n"
-			    + "	,sum([local_blks_read])                                 as [local_blks_read_sum] \n"
-			    + "	,sum([local_blks_dirtied])                              as [local_blks_dirtied_sum] \n"
-			    + "	,sum([local_blks_written])                              as [local_blks_written_sum] \n"
+			    + "	,sum([local_blks_hit])                                  as [local_blks_hit__sum] \n"
+			    + "	,sum([local_blks_read])                                 as [local_blks_read__sum] \n"
+			    + "	,sum([local_blks_dirtied])                              as [local_blks_dirtied__sum] \n"
+			    + "	,sum([local_blks_written])                              as [local_blks_written__sum] \n"
 			    + " \n"                                                     
-			    + "	,sum([temp_blks_read])                                  as [temp_blks_read_sum] \n"
-			    + "	,sum([temp_blks_written])                               as [temp_blks_written_sum] \n"
+			    + "	,sum([temp_blks_read])                                  as [temp_blks_read__sum] \n"
+			    + "	,sum([temp_blks_written])                               as [temp_blks_written__sum] \n"
 			    + " \n"                                                     
-			    + "	,sum([blk_read_time])                                   as [blks_read_time_sum] \n"
-			    + "	,sum([blk_write_time])                                  as [blks_write_time_sum] \n"
-			    + " \n"                                                     
-			    + "	,min([" + col_query + "])                                      as [query] \n"
+			    + "	,sum([blk_read_time])                                   as [blks_read_time__sum] \n"
+			    + "	,sum([blk_write_time])                                  as [blks_write_time__sum] \n"
 			    + "from [CmPgStatements_diff] x \n"
 //			    + "where [usename] != 'postgres' \n"
 			    + "where [calls] > 0 \n"                          // do only get records that has been executed (even if presented in the "Statement cache")
 				+ getReportPeriodSqlWhere()
 			    + "group by [datname], [usename], [queryid] \n"
-			    + "order by [total_time_sum] desc \n"
+			    + "order by [total_time__sum] desc \n"
 			    + "";
 
 		_shortRstm = executeQuery(conn, sql, false, "Top SQL");
@@ -321,7 +386,7 @@ extends ReportEntryAbstract
 			// Mini Chart on "..."
 			String whereKeyColumn = "datname, usename, queryid"; 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("calls__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmPgStatements_diff")
@@ -332,7 +397,7 @@ extends ReportEntryAbstract
 					.validate()));
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("total_time__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmPgStatements_diff")

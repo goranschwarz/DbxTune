@@ -1747,7 +1747,7 @@ extends CountersModel
 		// LOCKS
 		if ("OldestTranHasLocks".equals(colName))
 		{
-			// Find 'OldestTranShowPlanText' column, is so get it and set it as the tool tip
+			// Find 'OldestTranLocks' column, is so get it and set it as the tool tip
 			int pos = findColumn("OldestTranLocks");
 			if (pos > 0)
 			{
@@ -1816,31 +1816,34 @@ extends CountersModel
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_OldestTranInSeconds, DEFAULT_alarm_OldestTranInSeconds);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', threshold="+threshold+", OldestTranInSeconds='"+OldestTranInSeconds+"'.");
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", dbname='"+dbname+"', OldestTranInSeconds='"+OldestTranInSeconds+"'.");
 
 					if (OldestTranInSeconds.intValue() > threshold)
 					{
 						// Get OldestTranName
 						String OldestTranName = cm.getAbsString(r, "OldestTranName");
+						String OldestTranProg = cm.getAbsString(r, "OldestTranProg");
+						String OldestTranUser = cm.getAbsString(r, "OldestTranUser");
+						String OldestTranHost = cm.getAbsString(r, "OldestTranHost");
 						
 						// Get config 'skip some transaction names'
 						String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OldestTranInSecondsSkipTranName, DEFAULT_alarm_OldestTranInSecondsSkipTranName);
+						String skipTranProgRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OldestTranInSecondsSkipTranProg, DEFAULT_alarm_OldestTranInSecondsSkipTranProg);
+						String skipTranUserRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OldestTranInSecondsSkipTranUser, DEFAULT_alarm_OldestTranInSecondsSkipTranUser);
+						String skipTranHostRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OldestTranInSecondsSkipTranHost, DEFAULT_alarm_OldestTranInSecondsSkipTranHost);
 
-						// send alarm, if...
-						if (StringUtil.hasValue(skipTranNameRegExp) && StringUtil.hasValue(OldestTranName))
-						{
-							if ( ! OldestTranName.matches(skipTranNameRegExp) )
-							{
-								String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-								String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-								AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName);
-								ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-								
-								alarmHandler.addAlarm( ae );
-								//alarmHandler.addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName) );
-							}
-						}
-						else
+						// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+						boolean doAlarm = true;
+
+						// The below could have been done with nested if(skip-name), if(skip-prog), if(skip-user), if(skip-host) doAlarm=true; 
+						// Below is more readable, from a variable context point-of-view, but HARDER to understand
+						// to *continue*: doAlarm needs to be true AND (regExp is empty OR not-matching)
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranNameRegExp) || ! OldestTranName.matches(skipTranNameRegExp)));
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranProgRegExp) || ! OldestTranProg.matches(skipTranProgRegExp)));
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranUserRegExp) || ! OldestTranUser.matches(skipTranUserRegExp)));
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranHostRegExp) || ! OldestTranHost.matches(skipTranHostRegExp)));
+
+						if (doAlarm)
 						{
 							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
@@ -1848,7 +1851,6 @@ extends CountersModel
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
 							alarmHandler.addAlarm( ae );
-							//alarmHandler.addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName) );
 						}
 					}
 				}
@@ -2511,6 +2513,15 @@ extends CountersModel
 	public static final String  PROPKEY_alarm_OldestTranInSecondsSkipTranName = CM_NAME + ".alarm.system.if.OldestTranInSeconds.skip.tranName";
 	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranName = "^(DUMP |\\$dmpxact).*";
 	
+	public static final String  PROPKEY_alarm_OldestTranInSecondsSkipTranProg = CM_NAME + ".alarm.system.if.OldestTranInSeconds.skip.tranProg";
+	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranProg = "";
+	
+	public static final String  PROPKEY_alarm_OldestTranInSecondsSkipTranUser = CM_NAME + ".alarm.system.if.OldestTranInSeconds.skip.tranUser";
+	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranUser = "";
+	
+	public static final String  PROPKEY_alarm_OldestTranInSecondsSkipTranHost = CM_NAME + ".alarm.system.if.OldestTranInSeconds.skip.tranHost";
+	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranHost = "";
+	
 	public static final String  PROPKEY_alarm_TransactionLogFull              = CM_NAME + ".alarm.system.if.TransactionLogFull.gt";
 	public static final int     DEFAULT_alarm_TransactionLogFull              = 0;
 
@@ -2566,6 +2577,10 @@ extends CountersModel
 		
 		list.add(new CmSettingsHelper("OldestTranInSeconds",              isAlarmSwitch, PROPKEY_alarm_OldestTranInSeconds             , Integer.class, conf.getIntProperty(PROPKEY_alarm_OldestTranInSeconds             , DEFAULT_alarm_OldestTranInSeconds            ), DEFAULT_alarm_OldestTranInSeconds            , "If 'OldestTranInSeconds' is greater than ## then send 'AlarmEventLongRunningTransaction'." ));
 		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranName",                PROPKEY_alarm_OldestTranInSecondsSkipTranName , String .class, conf.getProperty   (PROPKEY_alarm_OldestTranInSecondsSkipTranName , DEFAULT_alarm_OldestTranInSecondsSkipTranName), DEFAULT_alarm_OldestTranInSecondsSkipTranName, "If 'OldestTranInSeconds' is true; then we can filter out transaction names using a Regular expression... if (tranName.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranProg",                PROPKEY_alarm_OldestTranInSecondsSkipTranProg , String .class, conf.getProperty   (PROPKEY_alarm_OldestTranInSecondsSkipTranProg , DEFAULT_alarm_OldestTranInSecondsSkipTranProg), DEFAULT_alarm_OldestTranInSecondsSkipTranProg, "If 'OldestTranInSeconds' is true; then we can filter out transaction names using a Regular expression... if (tranProg.matches('regexp'))... This to remove alarms of 'SQLAgent.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranUser",                PROPKEY_alarm_OldestTranInSecondsSkipTranUser , String .class, conf.getProperty   (PROPKEY_alarm_OldestTranInSecondsSkipTranUser , DEFAULT_alarm_OldestTranInSecondsSkipTranUser), DEFAULT_alarm_OldestTranInSecondsSkipTranUser, "If 'OldestTranInSeconds' is true; then we can filter out transaction names using a Regular expression... if (tranUser.matches('regexp'))... This to remove alarms of '(user1|user2)' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranHost",                PROPKEY_alarm_OldestTranInSecondsSkipTranHost , String .class, conf.getProperty   (PROPKEY_alarm_OldestTranInSecondsSkipTranHost , DEFAULT_alarm_OldestTranInSecondsSkipTranHost), DEFAULT_alarm_OldestTranInSecondsSkipTranHost, "If 'OldestTranInSeconds' is true; then we can filter out transaction names using a Regular expression... if (tranHost.matches('regexp'))... This to remove alarms of '.*-prod-.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+
 		list.add(new CmSettingsHelper("TransactionLogFull",               isAlarmSwitch, PROPKEY_alarm_TransactionLogFull              , Integer.class, conf.getIntProperty(PROPKEY_alarm_TransactionLogFull              , DEFAULT_alarm_TransactionLogFull             ), DEFAULT_alarm_TransactionLogFull             , "If 'TransactionLogFull' is greater than ## then send 'AlarmEventFullTranLog'." ));
 
 		list.add(new CmSettingsHelper("LastBackupFailed",                 isAlarmSwitch, PROPKEY_alarm_LastBackupFailed                , Integer.class, conf.getIntProperty(PROPKEY_alarm_LastBackupFailed                , DEFAULT_alarm_LastBackupFailed               ), DEFAULT_alarm_LastBackupFailed               , "If 'LastBackupFailed' is greater than ## then send 'AlarmEventLastBackupFailed'." ));

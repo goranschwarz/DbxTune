@@ -72,6 +72,7 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.DbxTune;
 import com.asetune.ICounterController;
+import com.asetune.ICounterController.DbmsOption;
 import com.asetune.IGuiController;
 import com.asetune.Version;
 import com.asetune.alarm.AlarmHandler;
@@ -1249,6 +1250,22 @@ implements Cloneable, ITableTooltip
 	public List<CmSettingsHelper> getLocalSettings()
 	{
 		return null;
+	}
+
+	/**
+	 * Check if a specific DBMS Option is enabled 
+	 * 
+	 * @return true if it's enabled... false if it's disabled
+	 * @throws RuntimeException if the Counter Cotroller is not yet initialized
+	 */
+	public boolean isDbmsOptionEnabled(DbmsOption dbmsOption)
+	{
+		ICounterController cc = getCounterController();
+		
+		if (cc == null)
+			throw new RuntimeException("The Counter Controller is null.");
+
+		return cc.isDbmsOptionEnabled(dbmsOption);
 	}
 
 	/**
@@ -2923,6 +2940,8 @@ implements Cloneable, ITableTooltip
 
 		// Generate PrimaryKey, for the specific ASE version
 		List<String> pkList = getPkForVersion(conn, srvVersion, isClusterEnabled);
+//		if (pkList != null && pkList.isEmpty()) // NOTE: not sure if we can do this here: since "empty" list I think does "diffCalc - but on CM's with a single row"
+//			pkList = null;
 		setPk(pkList);
 		
 		// Set specific column descriptions

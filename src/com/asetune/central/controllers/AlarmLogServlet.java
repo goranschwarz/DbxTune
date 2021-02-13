@@ -63,15 +63,19 @@ public class AlarmLogServlet extends HttpServlet
 
 		
 		// Check for known input parameters
-		if (Helper.hasUnKnownParameters(req, resp, "name", "type", "method"))
+		if (Helper.hasUnKnownParameters(req, resp, "name", "type", "method", "age"))
 			return;
 
 		String inputName   = Helper.getParameter(req, "name");
 		String inputType   = Helper.getParameter(req, "type");
 		String inputMethod = Helper.getParameter(req, "method");
+		String inputAge    = Helper.getParameter(req, "age");
 		
 		System.out.println("AlarmLogServlet: name = '"+inputName+"'.");
 		System.out.println("AlarmLogServlet: type = '"+inputType+"'.");
+		System.out.println("AlarmLogServlet: age  = '"+inputAge +"'.");
+		
+		int age = StringUtil.parseInt(inputAge, 0);
 
 		if  ("json".equalsIgnoreCase(inputMethod))
 		{
@@ -81,7 +85,7 @@ public class AlarmLogServlet extends HttpServlet
 			resp.setContentType("text/html");
 //			resp.setContentType("application/json");
 			resp.setCharacterEncoding("UTF-8");
-			asJson(inputName, inputType);
+			asJson(inputName, inputType, age);
 		}
 		else if ("plain".equalsIgnoreCase(inputMethod))
 		{
@@ -91,14 +95,14 @@ public class AlarmLogServlet extends HttpServlet
 			resp.setContentType("text/html");
 			resp.setCharacterEncoding("UTF-8");
 
-			asCode(inputName, inputType);
+			asCode(inputName, inputType, age);
 		}
 		else if ("pcs".equalsIgnoreCase(inputMethod))
 		{
 			resp.setContentType("text/html");
 			resp.setCharacterEncoding("UTF-8");
 
-			fromPcsAsHtmlTable(inputName, inputType);
+			fromPcsAsHtmlTable(inputName, inputType, inputAge);
 		}
 		else
 		{
@@ -107,11 +111,11 @@ public class AlarmLogServlet extends HttpServlet
 
 			resp.setContentType("text/html");
 			resp.setCharacterEncoding("UTF-8");
-			asHtml(inputName, inputType);
+			asHtml(inputName, inputType, age);
 		}
 	}
 
-	private void asJson(String inputName, String inputType)
+	private void asJson(String inputName, String inputType, int age)
 	throws ServletException, IOException
 	{
 		JsonFactory jfactory = new JsonFactory();
@@ -232,7 +236,7 @@ public class AlarmLogServlet extends HttpServlet
 		}
 	}
 
-	private void asCode(String inputName, String inputType)
+	private void asCode(String inputName, String inputType, int age)
 	throws ServletException, IOException
 	{
 		out.println("<html> ");
@@ -298,7 +302,7 @@ public class AlarmLogServlet extends HttpServlet
 		out.close();
 	}
 
-	private void asHtml(String inputName, String inputType)
+	private void asHtml(String inputName, String inputType, int age)
 	throws ServletException, IOException
 	{
 		
@@ -529,7 +533,7 @@ public class AlarmLogServlet extends HttpServlet
 	}
 	
 	
-	private void fromPcsAsHtmlTable(String inputName, String inputType)
+	private void fromPcsAsHtmlTable(String inputName, String inputType, String age)
 	throws ServletException, IOException
 	{
 		out.println("<html>");
@@ -587,7 +591,7 @@ public class AlarmLogServlet extends HttpServlet
 		
 		try
 		{
-			List<DbxAlarmHistory> list = CentralPersistReader.getInstance().getAlarmHistory(inputName, null, null, null);
+			List<DbxAlarmHistory> list = CentralPersistReader.getInstance().getAlarmHistory(inputName, null, inputType, age);
 			
 			for (DbxAlarmHistory e : list)
 			{

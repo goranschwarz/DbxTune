@@ -25,7 +25,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.PatternSyntaxException;
+
+import javax.swing.JOptionPane;
 
 import org.apache.log4j.Logger;
 
@@ -78,9 +84,13 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
+import com.asetune.pcs.SqlServerQueryStoreExtractor;
+import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.SqlServerUtils;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
 
@@ -94,6 +104,21 @@ extends CounterControllerAbstract
 	public static final String  PROPKEY_onRefresh_setDirtyReads = "SqlServerTune.onRefresh.setDirtyReads";
 	public static final boolean DEFAULT_onRefresh_setDirtyReads = true;
 	
+	public static final String  PROPKEY_onRefresh_setLockTimeout = "SqlServerTune.onRefresh.setLockTimeout";
+	public static final boolean DEFAULT_onRefresh_setLockTimeout = true;
+	
+	public static final String  PROPKEY_onRefresh_setLockTimeout_ms = "SqlServerTune.onRefresh.setLockTimeout.ms";
+	public static final int     DEFAULT_onRefresh_setLockTimeout_ms = 3000;
+	
+	public static final String  PROPKEY_onPcsDatabaseRollover_captureQueryStore = "SqlServerTune.onPcsDatabaseRollover.captureQueryStore";
+	public static final boolean DEFAULT_onPcsDatabaseRollover_captureQueryStore = true;
+
+	public static final String  PROPKEY_onPcsDatabaseRollover_captureQueryStore_skipServer = "SqlServerTune.onPcsDatabaseRollover.captureQueryStore.skipServer";
+	public static final String  DEFAULT_onPcsDatabaseRollover_captureQueryStore_skipServer = "";
+	
+	public static final String  PROPKEY_onPcsDatabaseRollover_captureQueryStore_daysToCopy = "SqlServerTune.onPcsDatabaseRollover.captureQueryStore.daysToCopy";
+	public static final int     DEFAULT_onPcsDatabaseRollover_captureQueryStore_daysToCopy = 1; // -1=ALL, 1=OneDay, 2=TwoDays...
+
 	
 	/**
 	 * The default constructor
@@ -189,6 +214,21 @@ extends CounterControllerAbstract
 	}
 
 	/**
+	 * Reset All CM's etc, this so we build new SQL statements if we connect to a different ASE version<br>
+	 * Most possible called from disconnect() or similar
+	 * 
+	 * @param resetAllCms call reset() on all cm's
+	 */
+	@Override
+	public void reset(boolean resetAllCms)
+	{
+		super.reset(resetAllCms);
+
+		_useLastQueryPlanStats = false;
+	}
+
+
+	/**
 	 * When we have a database connection, lets do some extra init this
 	 * so all the CountersModel can decide what SQL to use. <br>
 	 * SQL statement usually depends on what ASE Server version we monitor.
@@ -221,7 +261,7 @@ extends CounterControllerAbstract
 		_logger.info("Initializing all CM objects, using MS SQL-Server version number "+srvVersion+" ("+Ver.versionNumToStr(srvVersion)+").");
 
 		// get SQL-Server Specific properties and store them in setDbmsProperties() 
-		initializeDbmsProperties(conn);
+		initializeDbmsProperties(conn, srvVersion, hasGui);
 		
 		isAzure = isAzure();
 
@@ -262,7 +302,7 @@ extends CounterControllerAbstract
 		setInitialized(true);
 	}
 
-	private void initializeDbmsProperties(DbxConnection conn)
+	private void initializeDbmsProperties(DbxConnection conn, long srvVersion, boolean hasGui)
 	{
 		//------------------------------------------------
 		// Get server EDITION
@@ -293,10 +333,173 @@ extends CounterControllerAbstract
 		{
 			_logger.warn("Problems getting @@version, using sql='"+sql+"'. Caught: "+ex);
 		}
+
+
+		//------------------------------------------------
+		// Get Global Trace Flags
+		List<Integer> activeGlobalTraceFlagList = Collections.emptyList(); 
+		try 
+		{ 
+			activeGlobalTraceFlagList = SqlServerUtils.getGlobalTraceFlags(conn); 
+		}
+		catch(SQLException ex)
+		{
+			_logger.error("Problems getting SQL-Server 'Global Trace Flag List'. Caught: " + ex);
+		}
+
+		// Below is used to build GUI Messages on LAST_QUERY_PLAN_STATS and "missing" Trace Flags
+		String guiHtmlMessages = "";
+		
+		//------------------------------------------------
+		// for SQL-Server 2019 - Check if TraceFlag 2451 is set or if any databases has database scoped configuration 'LAST_QUERY_PLAN_STATS'
+		_useLastQueryPlanStats = false;
+		if (srvVersion >= Ver.ver(2019))
+		{
+			boolean disableLastQueryPlanStats = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_DisableLastQueryPlanStats, false);
+
+			// If not MANUALLY Disabled... write info abut that!
+			if ( disableLastQueryPlanStats )
+			{
+				_logger.info("For SQL-Server 2019, Actual-Query-Plans was DISABLED using property '" + PROPKEY_DisableLastQueryPlanStats + "=true'. " + Version.getAppName() + " will use 'sys.dm_exec_query_plan' to get Estimated-Query-Plans.");
+			}
+			else
+			{
+				// Check if GlobalTraceFlag=2451
+				if (activeGlobalTraceFlagList.contains(2451))
+				{
+					_useLastQueryPlanStats = true;
+					_logger.info("For SQL-Server 2019, Actual-Query-Plans is ENABLED, found Global Trace Flag 2451. This can be overridden/disabled by specifying property '" + PROPKEY_DisableLastQueryPlanStats + "=true'. Actual-Query-Plans WILL be attemted using 'sys.dm_exec_query_plan_stats' instead of 'sys.dm_exec_query_plan'" );
+				}
+				
+				// Check if DB Scoped Configuration 'LAST_QUERY_PLAN_STATS' in any databases
+				try
+				{
+//					List<String> dbnames = SqlServerUtils.getDatabasesWithLastActualQueryPlansCapability(conn);
+					Map<String, Map<String, Object>> dbCfgMap = SqlServerUtils.getDatabasesScopedConfigNonDefaults(conn, "LAST_QUERY_PLAN_STATS");
+					if ( ! dbCfgMap.isEmpty() )
+					{
+						_useLastQueryPlanStats = true;
+						_logger.info("For SQL-Server 2019, Actual-Query-Plans is ENABLED, found Database Scoped Configuration 'LAST_QUERY_PLAN_STATS' in database(s) " + dbCfgMap.keySet() + ". This can be overridden/disabled by specifying property '" + PROPKEY_DisableLastQueryPlanStats + "=true'. Actual-Query-Plans WILL be attemted using 'sys.dm_exec_query_plan_stats' instead of 'sys.dm_exec_query_plan'" );
+					}
+				}
+				catch(SQLException ex)
+				{
+					_logger.error("Problems getting SQL-Server 'Database Scoped Configuration - LAST_QUERY_PLAN_STATS'. So we will NOT use Actual-Query-Plans (sys.dm_exec_query_plan_stats). Instead Estimated-Query-Plans will be fetched using 'sys.dm_exec_query_plan'", ex);
+					_useLastQueryPlanStats = false;
+				}
+				
+				if (_useLastQueryPlanStats == false)
+				{
+					_logger.warn("For SQL-Server 2019, Actual-Query-Plans will NOT be used/available. " + Version.getAppName() + " will use 'sys.dm_exec_query_plan' to get Estimated-Query-Plans. To enable Actual-Query-Plans please set Trace Flag 2451 or set Database Scoped Configuration 'LAST_QUERY_PLAN_STATS' in the database(s) where you need this.");
+
+					guiHtmlMessages += "<li>For SQL-Server 2019, <b>Actual-Query-Plans</b> will NOT be available. " + Version.getAppName() + " will use 'sys.dm_exec_query_plan' to get Estimated-Query-Plans. <br>"
+					             + "To enable Actual-Query-Plans please set Trace Flag 2451 on a server level or set Database Scoped Configuration 'LAST_QUERY_PLAN_STATS' in the database(s) where you need this."
+					             + "<ul>"
+					             + "   <li>Set Trace Flag: in startup file add <code>-T2451</code> or temporary set it using <code>dbcc traceon(2451, -1)</code>, wich will <b>not</b> survive a restart!</li>"
+					             + "   <li>Or issue command <code>alter database scoped configuration set LAST_QUERY_PLAN_STATS = ON</code> for the database(s) you want to enable Actual-Query-Plans.</li>"
+					             + "</ul>"
+					             + "</li>";
+				}
+			}
+		}
+		
+		// Check for trace flag 7412 (between 2016 SP1 & 2019)
+		//
+		// 7412: Enables the lightweight query execution statistics profiling infrastructure. For more information, see this Microsoft Support article.
+		// Note: This trace flag applies to SQL Server 2016 (13.x) SP1 and higher builds. Starting with SQL Server 2019 (15.x) this trace flag has no effect because lightweight profiling is enabled by default.
+		// Scope: global only
+		if (srvVersion >= Ver.ver(2016,0,0, 1) && srvVersion < Ver.ver(2019))
+		{
+			if ( ! activeGlobalTraceFlagList.contains(7412) )
+			{
+				_logger.warn("For SQL-Server between 2016 SP1 and below 2019, Trace flag 7412 is needed to view Live-Query-Plans for other sessions. This Trace Flag is MISSING so Live-Query-Plans may be missing." );
+
+				guiHtmlMessages += "<li>For SQL-Server between 2016 SP1 and up to 2019, Global Trace flag 7412 is needed to view <b>Live-Query-Plans</b> for <b>other sessions</b>. <br>"
+				                 + "This Trace Flag is <b>missing</b> so Live-Query-Plans not be visible."
+					             + "<ul>"
+					             + "   <li>Set Trace Flag: in startup file add <code>-T7412</code> or temporary set it using <code>dbcc traceon(7412, -1)</code>, wich will <b>not</b> survive a restart!</li>"
+					             + "</ul>"
+				                 + "</li>";
+			}
+		}
+
+		// GUI Message -- if we are not running in NO-GUI mode
+		if (hasGui && StringUtil.hasValue(guiHtmlMessages))
+		{
+			String dbmsServerName = conn.getDbmsServerNameNoThrow();
+			
+			String  PROPKEY_showInfo = Version.getAppName() + ".show.info." + dbmsServerName + ".traceFlag_4712_2451_or_LAST_QUERY_PLAN_STATS";
+			boolean DEFAULT_showInfo = true;
+			
+			boolean showInfoPopup = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_showInfo, DEFAULT_showInfo);
+			if (showInfoPopup)
+			{
+				String sqlVersionStr = "-unknown-";
+				try { sqlVersionStr = conn.getDbmsVersionStr(); } catch (SQLException ignore) {}
+				
+				String htmlMsg = "<html>"
+						+ "<h2>Some properties in server '" + dbmsServerName + "' might need adjustment!</h2>"
+						+ "You just connected to: " + sqlVersionStr + " <br>"
+						+ "<br>"
+						+ "For optimal experiance and usability the following options may need to be changed: <br>"
+						+ "<ul>" + guiHtmlMessages + "</ul>"
+						+ "<br>"
+						+ Version.getAppName() + " will work without the above changes, but some functionality might not be available."
+						+ "</html>"
+						;
+
+				Object[] options = {"Connect: and SHOW this msg next time", "Connect: and do NOT show this msg again", "CANCEL: Do not connect"};
+
+				int answer = JOptionPane.showOptionDialog(null, //_window, 
+						htmlMsg,
+						"DBMS Properties Notice", // title
+						JOptionPane.YES_NO_CANCEL_OPTION,
+						JOptionPane.WARNING_MESSAGE,
+						null,     //do not use a custom Icon
+						options,  //the titles of buttons
+						options[0]); //default button title
+
+				if (answer == 0)
+				{
+					// Do nothing
+				}
+				// Save "DO NOT SHOW AGAIN"
+				if (answer == 1)
+				{
+					Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (tmpConf != null)
+					{
+						tmpConf.setProperty(PROPKEY_showInfo, ! DEFAULT_showInfo);
+						tmpConf.save();
+					}
+				}
+				if (answer == 2) // DO NOT Connect
+				{
+					conn.closeNoThrow();
+					throw new RuntimeException("Connect attempt was aborted by user.");
+				}
+			} // end: show info message
+		}
+	}
+
+	@Override
+	public boolean isDbmsOptionEnabled(DbmsOption dbmsOption)
+	{
+		// call super (which does some checks)... probably always returns false
+		super.isDbmsOptionEnabled(dbmsOption);
+
+		if (DbmsOption.SQL_SERVER__LAST_QUERY_PLAN_STATS.equals(dbmsOption))
+			return _useLastQueryPlanStats;
+
+		return false;
 	}
 	
-	public static final String PROPKEY_Edition    = CounterControllerSqlServer.class.getSimpleName() + ".Edition";
-	public static final String PROPKEY_VersionStr = CounterControllerSqlServer.class.getSimpleName() + ".VersionStr";
+	// used when checking LAST_QUERY_PLAN_STATS is set in any database, or TF 2541 
+	private boolean _useLastQueryPlanStats = false;
+	
+	public static final String PROPKEY_Edition                   = CounterControllerSqlServer.class.getSimpleName() + ".Edition";
+	public static final String PROPKEY_VersionStr                = CounterControllerSqlServer.class.getSimpleName() + ".VersionStr";
+	public static final String PROPKEY_DisableLastQueryPlanStats = CounterControllerSqlServer.class.getSimpleName() + ".disable.LastQueryPlanStats";
 
 	public boolean isAzure()
 	{
@@ -383,16 +586,23 @@ extends CounterControllerAbstract
 		return "SELECT 'SqlServerTune-check:isClosed(conn)'";
 	}
 
+	/**
+	 * NOTE: This method IS/MUST bee called from both GUI & NO-GUI: CounterCollectorThreadGui AND CounterCollectorThreadNoGui
+	 */
 	@Override
 	public void setInRefresh(boolean enterRefreshMode)
 	{
 		if (enterRefreshMode)
 		{
 			// Check if we are configured to do: SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
-			boolean onRefreshSetDirtyReads = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_onRefresh_setDirtyReads, DEFAULT_onRefresh_setDirtyReads);
+			boolean onRefreshSetDirtyReads    = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_onRefresh_setDirtyReads    , DEFAULT_onRefresh_setDirtyReads);
+			boolean onRefreshSetLockTimeout   = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_onRefresh_setLockTimeout   , DEFAULT_onRefresh_setLockTimeout);
+			int     onRefreshSetLockTimeoutMs = Configuration.getCombinedConfiguration().getIntProperty    (PROPKEY_onRefresh_setLockTimeout_ms, DEFAULT_onRefresh_setLockTimeout_ms);
 
+			//----------------------------------------------------------
 			// Many of the collectors will probably be helped if we are in "Dirty Read" mode (so that they are NOT blocked...)
 			// So lets set "Dirty Reads" at the session level
+			//----------------------------------------------------------
 			if (onRefreshSetDirtyReads)
 			{
 				String getSql = "select transaction_isolation_level from sys.dm_exec_sessions where session_id = @@SPID";
@@ -414,7 +624,7 @@ extends CounterControllerAbstract
 				}
 				catch(SQLException e)
 				{
-					_logger.error("Problem when CHECKING the SQL-Server isolation level before entering refresh mode. SQL="+sql);
+					_logger.error("Problem when CHECKING the SQL-Server 'isolation level' before entering refresh mode. SQL="+sql);
 				}
 				
 				//------- SET DirtyReads
@@ -429,6 +639,54 @@ extends CounterControllerAbstract
 					catch(SQLException e)
 					{
 						_logger.error("Problem when SETTING the SQL-Server isolation level before entering refresh mode. SQL="+sql);
+					}
+				}
+			}
+
+			//----------------------------------------------------------
+			// Although if we are getting blocked (if we for instance is using object_name(id, dbid)... which is done in some places...
+			// Set maximum time that we can be blocked by issuing: SET LOCK_TIMEOUT ####
+			// This will case the following error message:
+			//     Msg 1222, Level 16, State 56:
+			//     Server 'gorans-ub2', Line 1 (script row 8397)
+			//     Lock request time out period exceeded.
+			//----------------------------------------------------------
+			if (onRefreshSetLockTimeout)
+			{
+				String getSql = "select @@lock_timeout";
+				String setSql = "SET LOCK_TIMEOUT " + onRefreshSetLockTimeoutMs;
+				String sql;
+
+				// get connection
+				DbxConnection dbxConn = getMonConnection();
+				
+				// Make a default value, that we are NOT in "dirty read"
+				int currentLockTimeout = Integer.MIN_VALUE;
+
+				//------- GET/CHECK
+				sql = getSql;
+				try(Statement stmnt = dbxConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+				{
+					while(rs.next())
+						currentLockTimeout = rs.getInt(1); // <0 = Unlimited, 0=TimeoutImmediately, >0 = Timeout after #### ms
+				}
+				catch(SQLException e)
+				{
+					_logger.error("Problem when CHECKING the SQL-Server 'lock timeout' before entering refresh mode. SQL="+sql);
+				}
+				
+				//------- SET LOCK_TIMEOUT
+				if ( currentLockTimeout != onRefreshSetLockTimeoutMs )
+				{
+					sql = setSql;
+					try(Statement stmnt = dbxConn.createStatement())
+					{
+						_logger.info("SETTING 'lock timeout' from " + currentLockTimeout + " to " + onRefreshSetLockTimeoutMs + " before entering refresh mode. executing SQL="+sql);
+						stmnt.executeUpdate(sql);
+					}
+					catch(SQLException e)
+					{
+						_logger.error("Problem when SETTING the SQL-Server 'lock timeout' before entering refresh mode. SQL="+sql);
 					}
 				}
 			}
@@ -479,6 +737,102 @@ extends CounterControllerAbstract
 			if (dir == null)
 				dir = osFileName;
 			return dir;
+		}
+	}
+	
+	
+	@Override
+	public void doLastRecordingActionBeforeDatabaseRollover(DbxConnection pcsConn)
+	{
+		int daysToCopy = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_onPcsDatabaseRollover_captureQueryStore_daysToCopy, DEFAULT_onPcsDatabaseRollover_captureQueryStore_daysToCopy);
+		
+		// Check if Capture Query Store is DISABLED 
+		boolean captureQueryStore = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_onPcsDatabaseRollover_captureQueryStore, DEFAULT_onPcsDatabaseRollover_captureQueryStore);
+		if ( ! captureQueryStore)
+		{
+			_logger.info("On PCS Database Rollover: Skipping 'Capture Query Store', due to Configuration '" + PROPKEY_onPcsDatabaseRollover_captureQueryStore + "' is set to FALSE.");
+			return;
+		}
+		
+		// Check if Capture Query Store is DISABLED for a specific server 
+		String srvName = getMonConnection().getDbmsServerNameNoThrow();
+		String captureQueryStoreSkipServer = Configuration.getCombinedConfiguration().getProperty(PROPKEY_onPcsDatabaseRollover_captureQueryStore_skipServer, DEFAULT_onPcsDatabaseRollover_captureQueryStore_skipServer);
+		if (StringUtil.hasValue(captureQueryStoreSkipServer) && StringUtil.hasValue(srvName))
+		{
+			try
+			{
+				if ( srvName.matches(captureQueryStoreSkipServer) )
+				{
+					_logger.info("On PCS Database Rollover: Skipping 'Capture Query Store' for Server Name '" + srvName + "', due to Configuration '" + PROPKEY_onPcsDatabaseRollover_captureQueryStore_skipServer + "' is set to '" + captureQueryStoreSkipServer + "'.");
+				}
+			}
+			catch (PatternSyntaxException ex) 
+			{
+				_logger.error("On PCS Database Rollover: Problems with regular expression '" + captureQueryStoreSkipServer + "' in cofiguration '" + PROPKEY_onPcsDatabaseRollover_captureQueryStore_skipServer + "'. Skipping this and Continuing...", ex);
+			}
+		}
+		
+		// Open a new connection to the monitored server
+		ConnectionProp connProp = getMonConnection().getConnPropOrDefault();
+		DbxConnection conn = null;
+		try
+		{
+			_logger.info("On PCS Database Rollover: Creating a new connection to server '" + srvName+ "' for extracting 'Query Store'.");
+			conn = DbxConnection.connect(null, connProp);
+		}
+		catch (Exception ex)
+		{
+			_logger.error("On PCS Database Rollover: Failed to establish a new connection to server '" + srvName + "'. SKIPPING 'Capture Query Store'.", ex);
+			return;
+		}
+
+		// Get databases which has Query Store Enabled
+		List<String> enabledDatabases = new ArrayList<>();
+		String sql = ""
+			    + "declare @dbnames table(dbame nvarchar(128)) \n"
+			    + "INSERT INTO @dbnames \n"
+			    + "exec sys.sp_MSforeachdb 'select ''?'' from ?.sys.database_query_store_options where desired_state != 0' \n"
+			    + "SELECT * FROM @dbnames \n"
+			    + "";
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while (rs.next())
+				enabledDatabases.add(rs.getString(1));
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("On PCS Database Rollover: Problems when getting list of databases that has 'Query Store' enabled on '" + srvName + "'. SKIPPING 'Capture Query Store'.", ex);
+		}
+
+		// if we have "Query Store enabled" in any databases Extract them
+		if (enabledDatabases.isEmpty())
+		{
+			_logger.info("On PCS Database Rollover: No databases had 'Query Store' enabled on server '" + srvName + "'. Skipping this.");
+		}
+		else
+		{
+			_logger.info("On PCS Database Rollover: Extracting 'Query Store' On server '" + srvName+ "' for the following " + enabledDatabases.size() + " database(s): " + enabledDatabases);
+
+			// loop and extract each of the databases
+			for (String dbname : enabledDatabases)
+			{
+				try
+				{
+					SqlServerQueryStoreExtractor qse = new SqlServerQueryStoreExtractor(dbname, daysToCopy, conn, pcsConn);
+					qse.transfer();
+				}
+				catch (Exception ex)
+				{
+					_logger.error("On PCS Database Rollover: Problems extracting 'Query Store' from server '" + srvName + "', database '" + dbname + "'.", ex);
+				}
+			}
+		}
+
+		// Close
+		if (conn != null)
+		{
+			_logger.info("On PCS Database Rollover: Closing connection to server '" + srvName + "'..");
+			conn.closeNoThrow();
 		}
 	}
 }

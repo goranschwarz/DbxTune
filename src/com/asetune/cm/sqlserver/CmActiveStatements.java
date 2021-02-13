@@ -30,11 +30,13 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.ICounterController.DbmsOption;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventBlockingLockAlarm;
@@ -52,6 +54,7 @@ import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SqlServerUtils;
+import com.asetune.utils.SqlServerUtils.LockRecord;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
@@ -152,6 +155,9 @@ extends CountersModel
 	public static final String  PROPKEY_sample_liveQueryPlan      = PROP_PREFIX + ".sample.liveQueryPlan";
 	public static final boolean DEFAULT_sample_liveQueryPlan      = true;
 
+	public static final String  PROPKEY_sample_spidLocks          = PROP_PREFIX + ".sample.spidLocks";
+	public static final boolean DEFAULT_sample_spidLocks          = true;
+
 	
 	private void addTrendGraphs()
 	{
@@ -197,6 +203,12 @@ extends CountersModel
 		                                                                  + "</html>");
 		setLocalToolTipTextOnTableColumnHeader("query_plan",                "<html>Query Plan for the SQL-Statement that is currently executing.<br><b>Note:</b> Only valid for the 'ACTIVE' sessions.</html>");
 		setLocalToolTipTextOnTableColumnHeader("LiveQueryPlan",             "<html>Query Plan for the SQL-Statement that is currently executing.<br><b>Note:</b> Only valid for the 'ACTIVE' sessions.</html>");
+
+		setLocalToolTipTextOnTableColumnHeader("HasSpidLocks",               "This SPID holds the following locks in the database");
+		setLocalToolTipTextOnTableColumnHeader("SpidLockCount",              "This SPID holds number of locks in the database");
+		setLocalToolTipTextOnTableColumnHeader("SpidLocks",                  "This SPID holds the following locks in the database");
+		setLocalToolTipTextOnTableColumnHeader("HasBlockedSpidsInfo",        "Has values in column 'BlockedSpidsInfo'");
+		setLocalToolTipTextOnTableColumnHeader("BlockedSpidsInfo",           "If this SPID is BLOCKING other spid's, then here is a html-table of showplan for the Blocked spid's. (Note: 'Get Showplan' must be enabled)");
 	}
 
 	@Override
@@ -243,7 +255,13 @@ extends CountersModel
 //		String dm_exec_connections = "dm_exec_connections";
 		String dm_exec_sql_text    = "dm_exec_sql_text";
 		String dm_exec_query_plan  = "dm_exec_query_plan";
-		
+
+		// get Actual-Query-Plan instead of Estimated-QueryPlan
+		if (isDbmsOptionEnabled(DbmsOption.SQL_SERVER__LAST_QUERY_PLAN_STATS))
+		{
+			dm_exec_query_plan = "dm_exec_query_plan_stats";
+		}
+
 		if (isAzure)
 		{
 			dm_exec_sessions    = "dm_pdw_nodes_exec_sessions";
@@ -290,10 +308,15 @@ extends CountersModel
 			"    ,ImBlockingOthersMaxTimeInSec = convert(int, 0) \n" +
 			"    ,des.status \n" +
 			"    ,der.command \n" +
+			"    ,ProcName         = object_name(dest.objectid, dest.dbid) \n" +
+			"    ,StmntStart       = der.statement_start_offset \n" +
 			"    ,des.[HOST_NAME] \n" +
-			"    ,HasSqlText       = convert(bit,0) \n" +
-			"    ,HasQueryplan     = convert(bit,0) \n" +
-			"    ,HasLiveQueryplan = convert(bit,0) \n" +
+			"    ,HasSqlText          = convert(bit,0) \n" +
+			"    ,HasQueryplan        = convert(bit,0) \n" +
+			"    ,HasLiveQueryplan    = convert(bit,0) \n" +
+			"    ,HasSpidLocks        = convert(bit,0) \n" +
+			"    ,HasBlockedSpidsInfo = convert(bit,0) \n" +
+			"    ,SpidLockCount       = convert(int,-1) \n" +
 //			"    ,DB_NAME(der.database_id) AS database_name \n" +
 			"    ,(select db.name from sys.databases db where db.database_id = der.database_id) AS database_name \n" +
 			"    ,exec_cpu_time      = der.cpu_time \n" +
@@ -330,6 +353,8 @@ extends CountersModel
 			"          END - der.statement_start_offset ) / 2 +2) AS [lastKnownSql] \n" +
 			"    ,deqp.query_plan \n" +
 			LiveQueryPlanActive +
+			"    ,SpidLocks        = convert(varchar(max),null) \n" +
+			"    ,BlockedSpidsInfo = convert(varchar(max),null) \n" +
 			"FROM sys." + dm_exec_sessions + " des \n" +
 			"LEFT JOIN sys." + dm_exec_requests + " der ON des.session_id = der.session_id \n" +
 //			"LEFT JOIN sys." + dm_exec_connections + " dec ON des.session_id = dec.session_id \n" +
@@ -350,20 +375,25 @@ extends CountersModel
 			"    ,ImBlockingOthersMaxTimeInSec = convert(int, 0) " +
 			"    ,p1.status                                    --des.status \n" +
 			"    ,p1.cmd                                       --der.command \n" +
+			"    ,ProcName            = object_name(dest.objectid, dest.dbid) \n" +
+			"    ,StmntStart          = -1 \n" +
 			"    ,p1.hostname                                  --des.[HOST_NAME] \n" +
-			"    ,HasSqlText       = convert(bit,0)  \n" +
-			"    ,HasQueryplan     = convert(bit,0)  \n" +
-			"    ,HasLiveQueryplan = convert(bit,0) \n" +
+			"    ,HasSqlText          = convert(bit,0)  \n" +
+			"    ,HasQueryplan        = convert(bit,0)  \n" +
+			"    ,HasLiveQueryplan    = convert(bit,0) \n" +
+			"    ,HasSpidLocks        = convert(bit,0) \n" +
+			"    ,HasBlockedSpidsInfo = convert(bit,0) \n" +
+			"    ,SpidLockCount       = convert(int,-1) \n" +
 //			"    ,DB_NAME(p1.dbid) AS database_name  \n" +
 			"    ,(select db.name from sys.databases db where db.database_id = p1.dbid) AS database_name \n" +
 			"    ,p1.cpu                                       --der.cpu_time \n" +
-			"    ,999999                                       --der.reads   \n" +
-			"    ,999999                                       --der.logical_reads   \n" +
-			"    ,999999                                       --der.writes   \n" +
-			"    ,999999                                       --des.cpu_time \n" +
-			"    ,999999                                       --des.reads   \n" +
-			"    ,999999                                       --des.logical_reads   \n" +
-			"    ,999999                                       --des.writes   \n" +
+			"    ,0                                            --der.reads   \n" +
+			"    ,0                                            --der.logical_reads   \n" +
+			"    ,0                                            --der.writes   \n" +
+			"    ,0                                            --des.cpu_time \n" +
+			"    ,0                                            --des.reads   \n" +
+			"    ,0                                            --des.logical_reads   \n" +
+			"    ,0                                            --des.writes   \n" +
 			"    ,p1.last_batch                                --der.start_time  \n" +
 			"    ,ExecTimeInMs    = CASE WHEN datediff(day, p1.last_batch, getdate()) >= 24 THEN -1 ELSE  datediff(ms, p1.last_batch, getdate()) END  \n" +
 			"    ,UsefullExecTime = CASE WHEN datediff(day, p1.last_batch, getdate()) >= 24 THEN -1 ELSE (datediff(ms, p1.last_batch, getdate()) - p1.waittime) END  \n" +
@@ -373,24 +403,26 @@ extends CountersModel
 			"    ,p1.waittype                                  --der.last_wait_type \n" +
 			"    ,p1.waitresource                              --der.wait_resource \n" +
 			"    ,'unknown' \n" +
-			"--    ,CASE des.transaction_isolation_level \n" +
-			"--        WHEN 0 THEN 'Unspecified[0]' \n" +
-			"--        WHEN 1 THEN 'ReadUnCommitted[1]' \n" +
-			"--        WHEN 2 THEN 'ReadCommitted[2]' \n" +
-			"--        WHEN 3 THEN 'Repeatable[3]' \n" +
-			"--        WHEN 4 THEN 'Serializable[4]' \n" +
-			"--        WHEN 5 THEN 'Snapshot[5]' \n" +
-			"--        ELSE        'Unknown' + convert(varchar(10), des.transaction_isolation_level) + ']' \n" +
-			"--    END AS transaction_isolation_level \n" +
+//			"--    ,CASE des.transaction_isolation_level \n" +
+//			"--        WHEN 0 THEN 'Unspecified[0]' \n" +
+//			"--        WHEN 1 THEN 'ReadUnCommitted[1]' \n" +
+//			"--        WHEN 2 THEN 'ReadCommitted[2]' \n" +
+//			"--        WHEN 3 THEN 'Repeatable[3]' \n" +
+//			"--        WHEN 4 THEN 'Serializable[4]' \n" +
+//			"--        WHEN 5 THEN 'Snapshot[5]' \n" +
+//			"--        ELSE        'Unknown' + convert(varchar(10), des.transaction_isolation_level) + ']' \n" +
+//			"--    END AS transaction_isolation_level \n" +
 //			"    ,'unknown', --OBJECT_NAME(dest.objectid, der.database_id) AS OBJECT_NAME \n" +
-			"--  , SUBSTRING(dest.text, der.statement_start_offset / 2,   \n" +
-			"--        ( CASE WHEN der.statement_end_offset = -1   \n" +
-			"--               THEN DATALENGTH(dest.text)   \n" +
-			"--               ELSE der.statement_end_offset   \n" +
-			"--          END - der.statement_start_offset ) / 2 +2) AS [lastKnownSql] \n" +
+//			"--  , SUBSTRING(dest.text, der.statement_start_offset / 2,   \n" +
+//			"--        ( CASE WHEN der.statement_end_offset = -1   \n" +
+//			"--               THEN DATALENGTH(dest.text)   \n" +
+//			"--               ELSE der.statement_end_offset   \n" +
+//			"--          END - der.statement_start_offset ) / 2 +2) AS [lastKnownSql] \n" +
 			"    ,dest.text \n" +
 			"    ,''                                           --deqp.query_plan  \n" +
 			LiveQueryPlanBlocked +
+			"    ,SpidLocks        = convert(varchar(max),null) \n" +
+			"    ,BlockedSpidsInfo = convert(varchar(max),null) \n" +
 			"FROM sys.sysprocesses p1 \n" +
 			"CROSS APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
 			"WHERE p1.spid in (select p2.blocked from sys.sysprocesses p2 where p2.blocked > 0) \n" + 
@@ -465,6 +497,42 @@ extends CountersModel
 			}
 		}
 		
+		if ("HasSpidLocks".equals(colName))
+		{
+			// Find 'SpidLocks' column, is so get it and set it as the tool tip
+			int pos_SpidLocks = findColumn("SpidLocks");
+			if (pos_SpidLocks > 0)
+			{
+				Object cellVal = getValueAt(modelRow, pos_SpidLocks);
+				if (cellVal instanceof String)
+				{
+					return "<html><pre>" + cellVal + "</pre></html>";
+				}
+			}
+		}
+		if ("SpidLocks".equals(colName))
+		{
+			return cellValue == null ? null : "<html><pre>" + cellValue + "</pre></html>";
+		}
+
+		if ("HasBlockedSpidsInfo".equals(colName))
+		{
+			// Find 'BlockedSpidsInfo' column, is so get it and set it as the tool tip
+			int pos_BlockedSpidsInfo = findColumn("BlockedSpidsInfo");
+			if (pos_BlockedSpidsInfo > 0)
+			{
+				Object cellVal = getValueAt(modelRow, pos_BlockedSpidsInfo);
+				if (cellVal == null)
+					return "<html>No value</html>";
+				else
+					return "<html><pre>" + cellVal + "</pre></html>";
+			}
+		}
+		if ("BlockedSpidsInfo".equals(colName))
+		{
+			return cellValue == null ? null : "<html><pre>" + cellValue + "</pre></html>";
+		}
+
 		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
 	}
 	/** add HTML around the string, and translate line breaks into <br> */
@@ -495,6 +563,10 @@ extends CountersModel
 		list.add(new CmSettingsHelper("Get SQL Text",        PROPKEY_sample_monSqlText   , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_monSqlText   , DEFAULT_sample_monSqlText   ), true, "Also get SQL Text"  ));
 		list.add(new CmSettingsHelper("Get Live Query Plan", PROPKEY_sample_liveQueryPlan, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan, DEFAULT_sample_liveQueryPlan), true, "Also get LIVE queryplan" ));
 
+//FIXME:		list.add(new CmSettingsHelper("Get Live Query Plan", PROPKEY_sample_liveQueryPlan, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan, DEFAULT_sample_liveQueryPlan), true, "Also get LIVE queryplan" ));
+//FIXME:		list.add(new CmSettingsHelper("Get Live Query Plan", PROPKEY_sample_liveQueryPlan, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan, DEFAULT_sample_liveQueryPlan), true, "Also get LIVE queryplan" ));
+		list.add(new CmSettingsHelper("Get SPID Locks"           , PROPKEY_sample_spidLocks       , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidLocks       , DEFAULT_sample_spidLocks      ), DEFAULT_sample_spidLocks      , "Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking."));
+
 		return list;
 	}
 
@@ -505,9 +577,11 @@ extends CountersModel
 		// use CHECKBOX for some columns of type bit/Boolean
 		String colName = getColumnName(columnIndex);
 
-		if      ("HasSqlText"      .equals(colName)) return Boolean.class;
-		else if ("HasQueryplan"    .equals(colName)) return Boolean.class;
-		else if ("HasLiveQueryplan".equals(colName)) return Boolean.class;
+		if      ("HasSqlText"         .equals(colName)) return Boolean.class;
+		else if ("HasQueryplan"       .equals(colName)) return Boolean.class;
+		else if ("HasLiveQueryplan"   .equals(colName)) return Boolean.class;
+		else if ("HasSpidLocks"       .equals(colName)) return Boolean.class;
+		else if ("HasBlockedSpidsInfo".equals(colName)) return Boolean.class;
 		else return super.getColumnClass(columnIndex);
 	}
 
@@ -531,16 +605,19 @@ extends CountersModel
 //		boolean getProcCallStack  = conf == null ? true : conf.getBooleanProperty(getName()+".sample.procCallStack",  true);
 //		boolean getDbccStacktrace = conf == null ? false: conf.getBooleanProperty(getName()+".sample.dbccStacktrace", false);
 		boolean getLiveQueryPlan  = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan,  DEFAULT_sample_liveQueryPlan);
+		boolean getSpidLocks      = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_spidLocks,      DEFAULT_sample_spidLocks);
 
 		// Where are various columns located in the Vector 
 		int pos_SPID = -1;
-//		int pos_WaitEventID        = -1, pos_WaitEventDesc  = -1, pos_WaitClassDesc = -1;
-		int pos_HasShowPlan        = -1, pos_ShowPlanText   = -1;
-		int pos_HasMonSqlText      = -1, pos_MonSqlText     = -1;
-//		int pos_HasDbccSqlText     = -1, pos_DbccSqlText    = -1;
-//		int pos_HasProcCallStack   = -1, pos_ProcCallStack  = -1;
-//		int pos_HasStacktrace      = -1, pos_DbccStacktrace = -1;
-		int pos_HasLiveQueryPlan   = -1, pos_LiveQueryPlan  = -1;
+//		int pos_WaitEventID         = -1, pos_WaitEventDesc    = -1, pos_WaitClassDesc = -1;
+		int pos_HasShowPlan         = -1, pos_ShowPlanText     = -1;
+		int pos_HasMonSqlText       = -1, pos_MonSqlText       = -1;
+//		int pos_HasDbccSqlText      = -1, pos_DbccSqlText      = -1;
+//		int pos_HasProcCallStack    = -1, pos_ProcCallStack    = -1;
+//		int pos_HasStacktrace       = -1, pos_DbccStacktrace   = -1;
+		int pos_HasLiveQueryPlan    = -1, pos_LiveQueryPlan    = -1;
+		int pos_HasSpidLocks        = -1, pos_SpidLocks        = -1, pos_SpidLockCount = -1;
+		int pos_HasBlockedSpidsInfo = -1, pos_BlockedSpidsInfo = -1;
 
 		int pos_BlockingOtherSpids = -1, pos_BlockingSPID   = -1;
 		int pos_ImBlockingOthersMaxTimeInSec= -1;
@@ -593,20 +670,11 @@ extends CountersModel
 			else if (colName.equals("multiSampled"))                 pos_multiSampled               = colId;
 //			else if (colName.equals("StartTime"))                    pos_StartTime                  = colId;
 			else if (colName.equals("start_time"))                   pos_StartTime                  = colId;
-
-//			// Noo need to continue, we got all our columns
-//			if (    pos_WaitEventID        >= 0 && pos_WaitEventDesc  >= 0 
-//			     && pos_WaitClassDesc      >= 0 && pos_SPID >= 0 
-//			     && pos_HasShowPlan        >= 0 && pos_ShowPlanText   >= 0 
-//			     && pos_HasMonSqlText      >= 0 && pos_MonSqlText     >= 0 
-//			     && pos_HasDbccSqlText     >= 0 && pos_DbccSqlText    >= 0 
-//			     && pos_HasProcCallStack   >= 0 && pos_ProcCallStack  >= 0 
-//			     && pos_HasStacktrace      >= 0 && pos_DbccStacktrace >= 0 
-//			     && pos_BlockingOtherSpids >= 0 && pos_BlockingSPID   >= 0
-//			     && pos_multiSampled       >= 0
-//			     && pos_StartTime          >= 0
-//			   )
-//				break;
+			else if (colName.equals("HasSpidLocks"))                 pos_HasSpidLocks               = colId;
+			else if (colName.equals("SpidLocks"))                    pos_SpidLocks                  = colId;
+			else if (colName.equals("SpidLockCount"))                pos_SpidLockCount              = colId;
+			else if (colName.equals("HasBlockedSpidsInfo"))          pos_HasBlockedSpidsInfo        = colId;
+			else if (colName.equals("BlockedSpidsInfo"))             pos_BlockedSpidsInfo           = colId;
 		}
 
 //		if (pos_WaitEventID < 0 || pos_WaitEventDesc < 0 || pos_WaitClassDesc < 0)
@@ -681,6 +749,24 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 			_logger.debug("Can't find the position for columns ('StartTime'="+pos_StartTime+")");
 			return;
 		}
+
+		if (pos_HasSpidLocks < 0 || pos_SpidLocks < 0 || pos_SpidLockCount < 0)
+		{
+			_logger.debug("Can't find the position for columns ('HasSpidLocks'="+pos_HasSpidLocks+", 'SpidLocks'="+pos_SpidLocks+", 'SpidLockCount'="+pos_SpidLockCount+")");
+			return;
+		}
+		
+		if (pos_BlockedSpidsInfo < 0)
+		{
+			_logger.debug("Can't find the position for columns ('BlockedSpidsInfo'="+pos_BlockedSpidsInfo+")");
+			return;
+		}
+
+		if (pos_HasBlockedSpidsInfo < 0)
+		{
+			_logger.debug("Can't find the position for columns ('HasBlockedSpidsInfo'="+pos_HasBlockedSpidsInfo+")");
+			return;
+		}
 		
 		// Loop on all diffData rows
 		for (int rowId=0; rowId < counters.getRowCount(); rowId++) 
@@ -728,7 +814,10 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 			if (o_SPID instanceof Number)
 			{
 				int spid = ((Number)o_SPID).intValue();
-				
+
+				String spidLocks       = "This was disabled";
+				int    spidLockCount   = -1;
+
 //				if (srvVersion >= Ver.ver(2016,0,0, 1)) // 2016 SP1 (or check if the table exists; select 1 from sys.all_tables where name = 'dm_exec_query_statistics_xml'
 //				{
 				if (getLiveQueryPlan && getServerVersion() >= Ver.ver(2016,0,0, 1)) // 2016 SP1 
@@ -736,6 +825,28 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 					String liveQueryPlan = SqlServerUtils.getLiveQueryPlanNoThrow(getCounterController().getMonConnection(), spid);
 					if (StringUtil.hasValue(liveQueryPlan))
 						counters.setValueAt(liveQueryPlan, rowId, pos_LiveQueryPlan);
+				}
+
+				if (getSpidLocks)
+				{
+					List<LockRecord> lockList = null;
+					try
+					{
+						lockList = SqlServerUtils.getLockSummaryForSpid(getCounterController().getMonConnection(), spid);
+						spidLocks = SqlServerUtils.getLockSummaryForSpid(lockList, true, false);
+						if (spidLocks == null)
+							spidLocks = "Not Available";
+					}
+					catch (TimeoutException ex)
+					{
+						spidLocks = "Timeout - when getting lock information";
+					}
+					
+					spidLockCount = 0;
+					for (LockRecord lockRecord : lockList)
+					{
+						spidLockCount += lockRecord._lockCount;
+					}
 				}
 
 //				String monSqlText    = "Not properly configured (need 'SQL batch capture' & 'max SQL text monitored').";
@@ -823,6 +934,12 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 				b = (obj != null && obj instanceof String && StringUtil.hasValue((String)obj)); 
 				counters.setValueAt(new Boolean(b), rowId, pos_HasLiveQueryPlan);
 
+				// SPID Locks
+				b = !"This was disabled".equals(spidLocks) && !"Not Available".equals(spidLocks) && !"Timeout - when getting lock information".equals(spidLocks);
+                counters.setValueAt(new Boolean(b), rowId, pos_HasSpidLocks);
+                counters.setValueAt(spidLocks,      rowId, pos_SpidLocks);
+                counters.setValueAt(spidLockCount,  rowId, pos_SpidLockCount);
+
 
 				// Get LIST of SPID's that I'm blocking
 				String blockingList = getBlockingListStr(counters, spid, pos_BlockingSPID, pos_SPID);
@@ -835,9 +952,40 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 
 				counters.setValueAt(blockingList,                 rowId, pos_BlockingOtherSpids);
 				counters.setValueAt(ImBlockingOthersMaxTimeInSec, rowId, pos_ImBlockingOthersMaxTimeInSec);
-			}
-		}
-	}
+			} // end: SPID is a number
+		} // end: Loop on all diffData rows
+		
+		// Loop a seconds time, This to:
+		// Fill in the column 'BlockedSpidsInfo'
+		// - If this SPID is a BLOCKER - the root cause of blocking other SPID's
+		//   Then get: get already collected Showplans etc for SPID's that are BLOCKED (the victims)
+		// This will be helpful (to see both side of the story; ROOT cause and the VICTIMS) in a alarm message
+		if (pos_BlockedSpidsInfo >= 0)
+		{
+			for (int rowId=0; rowId < counters.getRowCount(); rowId++) 
+			{
+				Object o_BlockingOtherSpids = counters.getValueAt(rowId, pos_BlockingOtherSpids);
+
+				// MAYBE TODO: possibly check if the 'monSource' is of type "BLOCKER", before getting: getBlockedSpidInfo()
+				
+				if (o_BlockingOtherSpids != null && o_BlockingOtherSpids instanceof String)
+				{
+					String str_BlockingOtherSpids = (String) o_BlockingOtherSpids;
+					if (StringUtil.hasValue(str_BlockingOtherSpids))
+					{
+						List<String> list_BlockingOtherSpids = StringUtil.parseCommaStrToList(str_BlockingOtherSpids);
+						
+						String blockedInfoStr = getBlockedSpidInfo(counters, pos_SPID, list_BlockingOtherSpids, pos_MonSqlText, pos_ShowPlanText, pos_LiveQueryPlan, pos_SpidLocks);
+						if (StringUtil.hasValue(blockedInfoStr))
+						{
+							counters.setValueAt(blockedInfoStr, rowId, pos_BlockedSpidsInfo);
+							counters.setValueAt(true,           rowId, pos_HasBlockedSpidsInfo);
+						}
+					}
+				}
+			} // end: loop all rows
+		} // end: BlockedSpidsInfo
+	} // end: method
 	
 //	@Override
 //	protected Object clone() throws CloneNotSupportedException
@@ -928,6 +1076,114 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 		return maxBlockingTimeInSec;
 	}
 
+	private String getBlockedSpidInfo(CounterSample counters, int pos_SPID, List<String> blockedSpidList, int pos_MonSqlText, int pos_ShowPlanText, int pos_LiveQueryPlan, int pos_SpidLocks)
+	{
+		if (blockedSpidList == null)   return "";
+		if (blockedSpidList.isEmpty()) return "";
+
+		if (pos_SPID         < 0) return "";
+		if (pos_MonSqlText   < 0) return "";
+		if (pos_SpidLocks    < 0) return "";
+		if (pos_ShowPlanText < 0) return "";
+
+
+		StringBuilder sb = new StringBuilder(1024);
+
+		sb.append("<TABLE BORDER=1>\n");
+//		sb.append("  <TR> <TH>Blocked SPID</TH> <TH>MonSqlText</TH> <TH>LockInfo</TH> <TH>XML Showplan</TH> </TR>\n");
+		sb.append("  <TR> <TH>Blocked SPID</TH> <TH>MonSqlText</TH> <TH>LockInfo</TH> </TR>\n");
+		
+		int addCount = 0;
+		
+		// Loop the blockedSpidList
+		for (String blockedSpidStr : blockedSpidList)
+		{
+			int blockedSpid = StringUtil.parseInt(blockedSpidStr, Integer.MIN_VALUE);
+			if (blockedSpid == Integer.MIN_VALUE)
+				continue;
+			
+			int rowId = getRowIdForSpid(counters, blockedSpid, pos_SPID);
+
+			if (rowId != -1)
+			{
+				addCount++;
+				
+				Object o_monSqlText = pos_MonSqlText    == -1 ? null : counters.getValueAt(rowId, pos_MonSqlText);
+				Object o_lockInfo   = pos_SpidLocks     == -1 ? null : counters.getValueAt(rowId, pos_SpidLocks);
+				Object o_liveQp     = pos_LiveQueryPlan == -1 ? null : counters.getValueAt(rowId, pos_LiveQueryPlan);
+////				Object o_showplan   = pos_ShowPlanText  == -1 ? null : counters.getValueAt(rowId, pos_ShowPlanText); // this is TO BIG... can we convert a XML to "simple" plan instead?
+//				Object o_showplan   = null;
+				
+				String monSqlText = o_monSqlText == null ? "" : o_monSqlText.toString();
+				String lockInfo   = o_lockInfo   == null ? "" : o_lockInfo  .toString();
+//				String liveQp     = o_liveQp     == null ? "" : o_liveQp    .toString();
+//				String showplan   = o_showplan   == null ? "" : o_showplan  .toString();
+
+//				// Prefer a LIVE Plan before a "long" XML Plan
+//				String finalShowPlan = showplan;
+//				if (StringUtil.hasValue(liveQp))
+//					finalShowPlan = liveQp;
+//
+//				boolean skipLongShowplans     = Configuration.getCombinedConfiguration().getBooleanProperty("CmActiveStatements.longExecutionPlans.skip", true);
+//				int     skipLongShowplansSize = Configuration.getCombinedConfiguration().getIntProperty    ("CmActiveStatements.longExecutionPlans.size", 8192);
+//				if (skipLongShowplans && finalShowPlan.length() > skipLongShowplansSize)
+//					finalShowPlan = "TODO: Rewrite long XML plan to short version...";
+				
+				if (monSqlText.startsWith("<html>") && monSqlText.endsWith("</html>"))
+				{
+					monSqlText = monSqlText.substring("<html>".length());
+					monSqlText = monSqlText.substring(0, monSqlText.length() - "</html>".length());
+				}
+
+				if (lockInfo.startsWith("<html>") && lockInfo.endsWith("</html>"))
+				{
+					lockInfo = lockInfo.substring("<html>".length());
+					lockInfo = lockInfo.substring(0, lockInfo.length() - "</html>".length());
+				}
+
+//				if (finalShowPlan.startsWith("<html>") && finalShowPlan.endsWith("</html>"))
+//				{
+//					finalShowPlan = finalShowPlan.substring("<html>".length());
+//					finalShowPlan = finalShowPlan.substring(0, finalShowPlan.length() - "</html>".length());
+//				}
+
+				sb.append("  <TR>\n");
+				sb.append("    <TD><B>")  .append(blockedSpid  ).append("</B></TD>\n");
+				sb.append("    <TD>"   )  .append(monSqlText   ).append("</TD>\n");
+				sb.append("    <TD>"   )  .append(lockInfo     ).append("</TD>\n");
+//				sb.append("    <TD><xmp>").append(showplan     ).append("</xmp></TD>\n");
+//				sb.append("    <TD><xmp>").append(finalShowPlan).append("</xmp></TD>\n");
+				sb.append("  </TR>\n");
+			}
+		}
+
+		sb.append("</TABLE>\n");
+		
+		if (addCount == 0)
+			return "";
+
+		return sb.toString();
+	}
+	
+	private int getRowIdForSpid(CounterSample counters, int spidToFind, int pos_SPID)
+	{
+		// Loop on all diffData rows
+		int rows = counters.getRowCount();
+		for (int rowId=0; rowId < rows; rowId++)
+		{
+			Object o_SPID = counters.getValueAt(rowId, pos_SPID);
+			if (o_SPID instanceof Number)
+			{
+				Number SPID = (Number)o_SPID;
+				if (SPID.intValue() == spidToFind)
+				{
+					return rowId;
+				}
+			}
+		}
+		return -1;
+	}
+	
 //	/** 
 //	 * Get number of rows to save/request ddl information for 
 //	 */

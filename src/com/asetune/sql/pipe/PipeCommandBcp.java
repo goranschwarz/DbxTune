@@ -1163,18 +1163,27 @@ extends PipeCommandAbstract
 					// for each column in source set it to the output
 					for (int sqlPos=1; sqlPos<sourceNumCols+1; sqlPos++)
 					{
-						int colJdbcDataType = destRsmdC.getColumnType(sqlPos);//destSqlTypeInt.get(c-1);
+						int sourceColJdbcDataType = sourceRsmdC.getColumnType(sqlPos);
+						int targetColJdbcDataType = destRsmdC  .getColumnType(sqlPos);
 						try
 						{
+							// GET data
 							Object obj = sourceRs.getObject(sqlPos);
 //							if (obj == null) System.out.println("DATA for column c="+c+", sourceName='"+sourceColNames.get(c-1)+"'. is NULL: sourceRs.getObject(c)");
 							
+							// if source type is "TIMESTAMP WITH TIME ZONE"
+							// Then we might have to get it as a string (at least for SQL-Server)
+							if (obj != null && sourceColJdbcDataType == Types.TIMESTAMP_WITH_TIMEZONE)
+							{
+								obj = obj.toString();
+							}
+
 							// Check for "source DATA String" is TO LONG IN DESTINATION, due to UTF-8 storage in Sybase ASE and MS SQL-Server
 							if ( ! UTF8_destMode.NONE.equals(_cmdParams._utf8DestCheckTrunc) )
 							{
 								// NOTE: NCHAR, NVARCHAR == Should handle UTF-8, LONGVARCHAR etc should be mapped to CLOB or similar
 								//       so that leaves us with: CHAR and VARCHAR
-								if (obj instanceof String && (colJdbcDataType == Types.CHAR || colJdbcDataType == Types.VARCHAR))
+								if (obj instanceof String && (targetColJdbcDataType == Types.CHAR || targetColJdbcDataType == Types.VARCHAR))
 								{
 									String colValue = (String) obj;
 
@@ -1222,9 +1231,9 @@ extends PipeCommandAbstract
 							// SET the data or NULL value
 							//---------------------------------------
 							if (obj != null)
-								pstmt.setObject(sqlPos, obj, colJdbcDataType);
+								pstmt.setObject(sqlPos, obj, targetColJdbcDataType);
 							else
-								pstmt.setNull(sqlPos, colJdbcDataType);
+								pstmt.setNull(sqlPos, targetColJdbcDataType);
 						}
 						catch (SQLException ex)
 						{

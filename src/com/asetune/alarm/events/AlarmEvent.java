@@ -247,7 +247,7 @@ extends Throwable
 			if (postponeTime < 1000)
 				postponeTime = postponeTime * 1000;
 
-			// Get last sample intervall, if not found: get the default sleep time... if the numbers are negative turn them into positive...
+			// Get last sample interval, if not found: get the default sleep time... if the numbers are negative turn them into positive...
 			int sampleInterval = (int)cm.getLastSampleInterval();
 			if (sampleInterval <= 0)
 				sampleInterval = cm.getCounterController().getDefaultSleepTimeInSec();

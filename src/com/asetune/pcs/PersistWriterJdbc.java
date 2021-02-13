@@ -756,6 +756,23 @@ public class PersistWriterJdbc
 				@Override
 				public void run()
 				{
+					// Extract any "final thoughts" from the server we are monitoring
+					// This can for example be:
+					//   - SqlServer: Transfer portion of the Query Store in to the Recording database
+					//   - Some other DBMS Vendor may have specific statistics we want to download before we "switch" to a new Recording database
+					if (dueToDatabaseRollover)
+					{
+						// Do this in a try/catch so if we have issues: We would still continue with the "db-file-roll-over"
+						try
+						{
+							doLastRecordingActionBeforeDatabaseRollover(final_mainConn);
+						}
+						catch (Exception ex)
+						{
+							_logger.error("Problems executing 'doLastRecordingActionBeforeDatabaseRollover', skipping this and continuing with next step...", ex);
+						}
+					}
+					
 					// Execute the Daily Report NOW
 					if (dueToDatabaseRollover && StringUtil.hasValue(dailyReportServerName))
 					{
@@ -766,10 +783,13 @@ public class PersistWriterJdbc
 						//  - A summary of Performance issues that has happened the day
 						//  - etc...
 						// Do this in a try/catch so if we have issues: We would still continue with the "db-file-roll-over"
-						try { createDailySummaryReport(final_mainConn, dailyReportServerName); }
+						try 
+						{ 
+							createDailySummaryReport(final_mainConn, dailyReportServerName); 
+						}
 						catch (Exception ex)
 						{
-							_logger.error("Problems creating Daily Report, skipping this.", ex);
+							_logger.error("Problems creating Daily Report, skipping this and continuing with next step...", ex);
 						}
 					}
 
@@ -4878,4 +4898,17 @@ public class PersistWriterJdbc
 	// END: Daily Summary Report
 	//---------------------------------------------
 
+	//---------------------------------------------
+	// BEGIN: Last Recording Action
+	//---------------------------------------------
+	private void doLastRecordingActionBeforeDatabaseRollover(DbxConnection recordingDbConn)
+	{
+		if (CounterController.hasInstance())
+		{
+			CounterController.getInstance().doLastRecordingActionBeforeDatabaseRollover(recordingDbConn);
+		}
+	}
+	//---------------------------------------------
+	// END: Last Recording Action
+	//---------------------------------------------
 }

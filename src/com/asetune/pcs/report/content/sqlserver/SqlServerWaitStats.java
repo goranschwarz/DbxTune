@@ -35,6 +35,7 @@ import com.asetune.pcs.report.content.ReportChartTimeSeriesStackedBar.TopGroupCo
 import com.asetune.pcs.report.content.ase.SparklineHelper;
 import com.asetune.pcs.report.content.ase.SparklineJfreeChart;
 import com.asetune.pcs.report.content.ase.SparklineHelper.AggType;
+import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.ase.SparklineHelper.SparklineResult;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -180,10 +181,12 @@ extends SqlServerAbstract
 						{
 							SparklineResult result = SparklineHelper.getSparclineData(
 									conn,
+									DataSource.CounterModel,
 									getReportingInstance().getReportPeriodOrRecordingBeginTime().toLocalDateTime(),
 									getReportingInstance().getReportPeriodOrRecordingEndTime()  .toLocalDateTime(), 
 									groupByMinutes,                  // params.getGroupDataInMinutes()
 									AggType.SUM,                     // params.getGroupDataAggregationType()
+									null,                            // params.getDbmsSchemaName()
 									"CmWaitStats_diff",              // params.getDbmsTableName()
 									"SessionSampleTime",             // params.getDbmsSampleTimeColumnName()
 									"wait_time_ms",                  // params.getDbmsDataValueColumnName()
@@ -221,10 +224,12 @@ extends SqlServerAbstract
 						{
 							SparklineResult result = SparklineHelper.getSparclineData(
 									conn,
+									DataSource.CounterModel,
 									getReportingInstance().getReportPeriodOrRecordingBeginTime().toLocalDateTime(),
 									getReportingInstance().getReportPeriodOrRecordingEndTime()  .toLocalDateTime(), 
 									groupByMinutes,                  // params.getGroupDataInMinutes()
 									AggType.MAX,                     // params.getGroupDataAggregationType()
+									null,                            // params.getDbmsSchemaName()
 									"CmWaitStats_diff",              // params.getDbmsTableName()
 									"SessionSampleTime",             // params.getDbmsSampleTimeColumnName()
 									"WaitTimePerCount",              // params.getDbmsDataValueColumnName()

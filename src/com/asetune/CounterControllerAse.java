@@ -260,6 +260,25 @@ public class CounterControllerAse extends CounterControllerAbstract
 			_config_threadedKernelMode = "threaded".equals(kernelMode);
 		}
 
+		// set metrics_capture off
+		if (_config_enableMetricsCapture)
+		{
+			try (Statement stmnt = conn.createStatement())
+			{
+				_logger.info("Disabling QP Metrics for the Monitoring Connection using 'set metrics_capture off', this to NOT log extra information about monitoring commands in tables master.dbo.sysqueryplans and master.dbo.systabstats.");
+				stmnt.executeUpdate("set metrics_capture off");
+			}
+			catch(SQLException ex)
+			{
+				_logger.error("Problems executing 'set metrics_capture off'... Skipping this. Caught: " + ex);
+			}
+		}
+
+		if (_config_captureMissingStatistics)
+		{
+			// It would be nice to turn OFF missing statistics for CURRENT SPID as well...
+			// 'set capture_missing_stats off' but there is NO such commands... only the SERVER Level exists...
+		}
 		
 		// in version 15.0.3.1 compatibility_mode was introduced, this to use 12.5.4 optimizer & exec engine
 		// This will hurt performance, especially when querying sysmonitors table, so set this to off

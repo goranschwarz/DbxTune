@@ -106,6 +106,7 @@ set classpath=%classpath%;%TAILW_HOME%\lib\miglayout-core-5.2.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\swingx-all-1.6.5-1.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\jchart2d-3.2.2.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\planviewer.jar
+set classpath=%classpath%;%TAILW_HOME%\lib\commons-text-1.9.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\commons-lang3-3.7.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\commons-io-2.6.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\commons-csv-1.5.jar

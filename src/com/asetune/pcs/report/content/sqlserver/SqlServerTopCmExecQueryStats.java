@@ -26,22 +26,25 @@ import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.ase.SparklineHelper;
 import com.asetune.pcs.report.content.ase.SparklineHelper.AggType;
+import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
 
 public class SqlServerTopCmExecQueryStats
 extends SqlServerAbstract
@@ -49,7 +52,7 @@ extends SqlServerAbstract
 	private static Logger _logger = Logger.getLogger(SqlServerTopCmExecQueryStats.class);
 
 	private ResultSetTableModel _shortRstm;
-	private Map<String, String> _planMap;
+	private ExecutionPlanCollection _planCollection;
 	private List<String>        _miniChartJsList = new ArrayList<>();
 
 	public SqlServerTopCmExecQueryStats(DailySummaryReportAbstract reportingInstance)
@@ -78,63 +81,36 @@ extends SqlServerAbstract
 
 //		sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
 		sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
-		sb.append(toHtmlTable(_shortRstm));
-
-		if (_planMap != null && !_planMap.isEmpty())
+		TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
 		{
-			sb.append("\n");
-			sb.append("<!-- read Javascript and CSS for Showplan --> \n");
-			sb.append("<link rel='stylesheet' type='text/css' href='http://www.dbxtune.com/sqlserver_showplan/css/qp.css'> \n");
-			sb.append("<script src='http://www.dbxtune.com/sqlserver_showplan/dist/qp.js' type='text/javascript'></script> \n");
-			sb.append("\n");
-			
-			sb.append("<br> \n");
-			sb.append("<div id='showplan-list'> \n");
-			sb.append("<b>Display the execution plan for any of the following <code>plan_handle</code>: </b> \n");
-			sb.append("<ul> \n");
-			for (String planHandle : _planMap.keySet())
+			@Override
+			public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
 			{
-				sb.append("    <li> <a href='#showplan-list' title='Copy plan to clipboard and show in browser' onclick='showplanForId(\"").append(planHandle).append("\"); return true;'><code>").append(planHandle).append("</code></a> </li> \n");
-			}
-			sb.append("</ul> \n");
-			sb.append("</div> \n");
-			sb.append(" \n");
-			
-			sb.append("<div id='showplan-head'></div> \n");
-			sb.append("<div id='showplan-container'></div> \n");
-			sb.append("<script type='text/javascript'> \n");
-			sb.append("    function showplanForId(id) \n");
-			sb.append("    { \n");
-			sb.append("        var showplanText = document.getElementById('plan_'+id).innerHTML \n");
-			sb.append("        QP.showPlan(document.getElementById('showplan-container'), showplanText); \n");
-			sb.append("        document.getElementById('showplan-head').innerHTML = 'Below is Execution plan for <code>plan_handle: ' + id + \"</code> <br>Note: You can also view your plan at <a href='http://www.supratimas.com' target='_blank'>http://www.supratimas.com</a>, or any other <i>plan-view</i> application by pasting (Ctrl-V) the clipboard content. <br>SentryOne Plan Explorer can be downloaded here: <a href='https://www.sentryone.com/plan-explorer' target='_blank'>https://www.sentryone.com/plan-explorer</a>\"; \n");
-			sb.append("        copyStringToClipboard(showplanText); \n");
-			sb.append("    } \n");
-			sb.append("\n");
-			sb.append("    function copyStringToClipboard (string)                                   \n");
-			sb.append("    {                                                                         \n");
-			sb.append("        function handler (event)                                              \n");
-			sb.append("        {                                                                     \n");
-			sb.append("            event.clipboardData.setData('text/plain', string);                \n");
-			sb.append("            event.preventDefault();                                           \n");
-			sb.append("            document.removeEventListener('copy', handler, true);              \n");
-			sb.append("        }                                                                     \n");
-			sb.append("                                                                              \n");
-			sb.append("        document.addEventListener('copy', handler, true);                     \n");
-			sb.append("        document.execCommand('copy');                                         \n");
-			sb.append("    }                                                                         \n");
-			sb.append("</script> \n");
+				if ("SqlText".equals(colName))
+				{
+					// Get Actual Executed SQL Text for current row
+					String query_hash = rstm.getValueAsString(row, "query_hash");
+				//	String sqlText    = rstm.getValueAsString(row, "SqlText");
+					
+					// Put the "Actual Executed SQL Text" as a "tooltip"
+					return "<div title='Click for Detailes' "
+							+ "data-toggle='modal' "
+							+ "data-target='#dbx-view-sqltext-dialog' "
+							+ "data-objectname='" + query_hash + "' "
+							+ "data-tooltip=\""   + getTooltipForSqlText(rstm, row) + "\" "
+							+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+				}
 
-			for (String planHandle : _planMap.keySet())
-			{
-				String xmlPlan = _planMap.get(planHandle);
-
-				sb.append("\n<script id='plan_").append(planHandle).append("' type='text/xmldata'>\n");
-				sb.append(xmlPlan);
-				sb.append("\n</script>\n");
+				return strVal;
 			}
-		}
-		
+		};
+		sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+//		sb.append(toHtmlTable(_shortRstm));
+
+		// Write HTML/JavaScript Code for the Execution Plan...
+		if (_planCollection != null)
+			_planCollection.writeMessageText(sb);			
+
 		// Write JavaScript code for CPU SparkLine
 		for (String str : _miniChartJsList)
 		{
@@ -142,10 +118,49 @@ extends SqlServerAbstract
 		}
 	}
 
+	/** double quotes (") must be avoided or escaped */
+	private String getTooltipForSqlText(ResultSetTableModel rstm, int row)
+	{
+		StringBuilder sb = new StringBuilder();
+		NumberFormat nf = NumberFormat.getInstance();
+
+//		SessionSampleTime__min	SessionSampleTime__max	Duration	execution_count__chart	execution_count__sum	creation_time__min	last_execution_time__max	total_worker_time__chart	
+		sb.append("-- Some columns extracted from current row.\n");
+		sb.append("-----------------------------------------------------------------------------------------------\n");
+		sb.append("-- query_hash:                ").append( rstm.getValueAsString(row, "query_hash"               ) ).append("\n");
+		sb.append("-- SessionSampleTime__min:    ").append( rstm.getValueAsString(row, "SessionSampleTime__min"   ) ).append("\n");
+		sb.append("-- SessionSampleTime__max:    ").append( rstm.getValueAsString(row, "SessionSampleTime__max"   ) ).append("\n");
+		sb.append("-- Duration:                  ").append( rstm.getValueAsString(row, "Duration"                 ) ).append("\n");
+		sb.append("-- creation_time__min:        ").append( rstm.getValueAsString(row, "creation_time__min"       ) ).append("\n");
+		sb.append("-- last_execution_time__max:  ").append( rstm.getValueAsString(row, "last_execution_time__max" ) ).append("\n");
+		
+		sb.append("-- execution_count__sum:      ").append( nf.format(rstm.getValueAsBigDecimal(row, "execution_count__sum"     ))).append("\n");
+		sb.append("-- total_worker_time__sum:    ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_worker_time__sum"   ))).append("  (in micro seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.usToTimeStrLong(rstm.getValueAsLong(row, "total_worker_time__sum"))).append(" \n");
+		sb.append("-- AvgWorkerTimeUs:           ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgWorkerTimeUs"          ))).append("\n");
+		sb.append("-- total_physical_reads__sum: ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_physical_reads__sum"))).append("\n");
+		sb.append("-- AvgPhysicalReads:          ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgPhysicalReads"         ))).append("\n");
+		sb.append("-- total_logical_writes__sum: ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_logical_writes__sum"))).append("\n");
+		sb.append("-- AvgLogicalWrites:          ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgLogicalWrites"         ))).append("\n");
+		sb.append("-- total_logical_reads__sum:  ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_logical_reads__sum" ))).append("\n");
+		sb.append("-- AvgLogicalReads:           ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgLogicalReads"          ))).append("\n");
+		sb.append("-- total_elapsed_time__sum:   ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_elapsed_time__sum"  ))).append("  (in micro seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.usToTimeStrLong(rstm.getValueAsLong(row, "total_elapsed_time__sum"))).append(" \n");
+		sb.append("-- AvgElapsedTimeUs:          ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgElapsedTimeUs"         ))).append("\n");
+		sb.append("-- total_rows__sum:           ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_rows__sum"          ))).append("\n");
+		sb.append("-- AvgRows:                   ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgRows"                  ))).append("\n");
+		sb.append("-- total_dop__sum:            ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_dop__sum"           ))).append("\n");
+		sb.append("-- AvgDop:                    ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgDop"                   ))).append("\n");
+		sb.append("-- total_grant_kb__sum:       ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_grant_kb__sum"      ))).append("\n");
+		sb.append("-- AvgGrantKb:                ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgGrantKb"               ))).append("\n");
+		sb.append("-----------------------------------------------------------------------------------------------\n");
+		sb.append(StringEscapeUtils.escapeHtml4(rstm.getValueAsString(row, "SqlText")));
+
+		return sb.toString();
+	}
+	
 	@Override
 	public String getSubject()
 	{
-		return "Top SQL Statements (order by: XXX, origin: CmExecQueryStats/dm_exec_query_stats)";
+		return "Top SQL Statements (order by: total_worker_time__sum, origin: CmExecQueryStats/dm_exec_query_stats)";
 	}
 
 	@Override
@@ -302,8 +317,9 @@ extends SqlServerAbstract
 			    + "select top " + topRows + " \n"
 			    + "     [dbname] \n"
 			    + "    ,[query_hash] \n"
+			    + "    ,max([" + col_SqlText +"])              as [SqlText] \n"
 			    + "    ,max([plan_handle])                     as [plan_handle] \n"
-			    + "    ,max([query_plan_hash])                 as [query_plan_hash] \n"
+//			    + "    ,max([query_plan_hash])                 as [query_plan_hash] \n"
 			    + "    ,count(*)                               as [samples__count] \n"
 			    + "    ,min([SessionSampleTime])               as [SessionSampleTime__min] \n"
 			    + "    ,max([SessionSampleTime])               as [SessionSampleTime__max] \n"
@@ -338,9 +354,6 @@ extends SqlServerAbstract
 			    + col_total_spills__chart
 			    + col_total_spills__sum                    + col_AvgSpills                  
 			    + col_total_page_server_reads__sum         + col_AvgPageServerReads         
-			    + "    \n"
-//			    + "    ,max([SqlText])                         as [SqlText] \n"
-			    + "    ,max([" + col_SqlText +"])                    as [SqlText] \n"
 				+ "from [CmExecQueryStats_diff] \n"
 				+ "where [CmNewDiffRateRow] = 0 -- only records that has been diff calculations (not first time seen, when it swaps in/out due to execution every x minute) \n"
 				+ "  and [execution_count] > 0 \n"
@@ -350,8 +363,7 @@ extends SqlServerAbstract
 				+ "group by [dbname], [query_hash] \n"
 				+ "order by " + orderByCol + " desc \n"
 			    + "";
-		
-		
+
 		_shortRstm = executeQuery(conn, sql, false, "TopCmExecQueryStats");
 		if (_shortRstm == null)
 		{
@@ -374,27 +386,25 @@ extends SqlServerAbstract
 				updateDictionaryCompressedColumn(_shortRstm, conn, null, "CmExecQueryStats", "SqlText", null);
 			}
 
-			// Get Showplan for StatementCache entries, and SqlText from the above table
-			Set<String> planHandleObjects = getPlanHandleObjects(_shortRstm, "plan_handle");
-			if (planHandleObjects != null && ! planHandleObjects.isEmpty() )
+			// - Get all "plann_handle" in table '_shortRstm'
+			// - Get the Execution Plan all the "plann_handle"s
+			// - In the table substitute the "plann_handle"s with a link that will display the XML Plan on the HTML Page
+			_planCollection = new ExecutionPlanCollection(this, _shortRstm, this.getClass().getSimpleName())
 			{
-				try 
+				@Override
+				public Object renderCellView(Object val)
 				{
-//					_ssqlRstm = getShowplanFromMonDdlStorage(conn, planHandleObjects);
-					_planMap = getShowplanAsMapFromMonDdlStorage(conn, planHandleObjects);
+//					return "view plan";
+					return super.renderCellView(val);
 				}
-				catch (SQLException ex)
-				{
-					setProblemException(ex);
-				}
-			}
-
+			};
+			_planCollection.getPlansAndSubstituteWithLinks(conn, "plan_handle");
+			
 			// Mini Chart on "..."
-//			String whereKeyColumn = "plan_handle"; 
 			String whereKeyColumn = "dbname, query_hash"; 
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("execution_count__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmExecQueryStats_diff")
@@ -407,7 +417,7 @@ extends SqlServerAbstract
 			if (StringUtil.hasValue(col_total_worker_time__chart))
 			{
 				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("total_worker_time__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmExecQueryStats_diff")
@@ -421,7 +431,7 @@ extends SqlServerAbstract
 			if (StringUtil.hasValue(col_total_physical_reads__chart))
 			{
 				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("total_physical_reads__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmExecQueryStats_diff")
@@ -435,7 +445,7 @@ extends SqlServerAbstract
 			if (StringUtil.hasValue(col_total_logical_reads__chart))
 			{
 				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("total_logical_reads__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmExecQueryStats_diff")
@@ -449,7 +459,7 @@ extends SqlServerAbstract
 			if (StringUtil.hasValue(col_max_dop__chart))
 			{
 				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("max_dop__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmExecQueryStats_diff")
@@ -463,7 +473,7 @@ extends SqlServerAbstract
 			if (StringUtil.hasValue(col_max_grant_kb__chart))
 			{
 				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("max_grant_kb__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmExecQueryStats_diff")
@@ -477,7 +487,7 @@ extends SqlServerAbstract
 			if (StringUtil.hasValue(col_total_spills__chart))
 			{
 				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("total_spills__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmExecQueryStats_diff")

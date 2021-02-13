@@ -32,6 +32,7 @@ export CP=${CP}:$javaLibDir/miglayout-core-5.2.jar
 export CP=${CP}:$javaLibDir/swingx-all-1.6.5-1.jar
 export CP=${CP}:$javaLibDir/jchart2d-3.2.2.jar
 export CP=${CP}:$javaLibDir/planviewer.jar
+export CP=${CP}:$javaLibDir/commons-text-1.9.jar
 export CP=${CP}:$javaLibDir/commons-lang3-3.7.jar
 export CP=${CP}:$javaLibDir/commons-io-2.6.jar
 export CP=${CP}:$javaLibDir/commons-csv-1.5.jar

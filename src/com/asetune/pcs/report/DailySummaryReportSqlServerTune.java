@@ -29,13 +29,20 @@ import com.asetune.pcs.report.content.sqlserver.SqlServerConfiguration;
 import com.asetune.pcs.report.content.sqlserver.SqlServerCpuUsageOverview;
 import com.asetune.pcs.report.content.sqlserver.SqlServerDbSize;
 import com.asetune.pcs.report.content.sqlserver.SqlServerMissingIndexes;
+import com.asetune.pcs.report.content.sqlserver.SqlServerQueryStore;
 import com.asetune.pcs.report.content.sqlserver.SqlServerSlowCmDeviceIo;
+import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecCursors;
+import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecFunctionStats;
+import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecProcedureStats;
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecQueryStats;
+import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecTriggerStats;
+import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmIndexOpStat;
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmIndexPhysicalAvgPageUsedPct;
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmIndexPhysicalTabSize;
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmTableSize;
 import com.asetune.pcs.report.content.sqlserver.SqlServerUnusedIndexes;
 import com.asetune.pcs.report.content.sqlserver.SqlServerWaitStats;
+import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmIndexOpStat.ReportType;
 
 public class DailySummaryReportSqlServerTune 
 extends DailySummaryReportDefault
@@ -52,10 +59,16 @@ extends DailySummaryReportDefault
 		addReportEntry( new OsCpuUsageOverview(this)          );
 		
 		// SQL
-		addReportEntry( new SqlServerTopCmExecQueryStats(this)    );
-//		addReportEntry( new SqlServerTopCmExecProcedureStats(this));
+		addReportEntry( new SqlServerTopCmExecQueryStats    (this));
+		addReportEntry( new SqlServerTopCmExecProcedureStats(this));
+		addReportEntry( new SqlServerTopCmExecFunctionStats (this));
+		addReportEntry( new SqlServerTopCmExecTriggerStats  (this));
+		addReportEntry( new SqlServerTopCmExecCursors   (this));
 		//addReportEntry( new SqlServerTopSlowSql(this)           );
 		//addReportEntry( new SqlServerTopSlowProcCalls(this)     );
+
+		// QueryStore
+		addReportEntry( new SqlServerQueryStore(this)         );
 
 		// Disk IO Activity
 		addReportEntry( new SqlServerCmDeviceIo(this)         );
@@ -65,8 +78,10 @@ extends DailySummaryReportDefault
 		addReportEntry( new OsIoStatSlowIo(this)              );
 
 		// SQL: Accessed Tables
-//		addReportEntry( new SqlServerTopCmObjectActivity(this)    );
-//		addReportEntry( new SqlServerTopCmObjectActivityTabSize(this) );
+		addReportEntry( new SqlServerTopCmIndexOpStat(this, ReportType.BY_LOCKS) );
+		addReportEntry( new SqlServerTopCmIndexOpStat(this, ReportType.BY_WAITS) );
+		addReportEntry( new SqlServerTopCmIndexOpStat(this, ReportType.BY_CRUD)  );
+		addReportEntry( new SqlServerTopCmIndexOpStat(this, ReportType.BY_IO)    );
 		addReportEntry( new SqlServerTopCmTableSize(this) );
 		addReportEntry( new SqlServerTopCmIndexPhysicalTabSize(this) );
 		addReportEntry( new SqlServerTopCmIndexPhysicalAvgPageUsedPct(this) );

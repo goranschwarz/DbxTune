@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.naming.NameNotFoundException;
+
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
@@ -34,13 +36,16 @@ import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.AlarmHelper;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventLongRunningStatement;
+import com.asetune.alarm.events.sqlserver.AlarmEventDacInUse;
 import com.asetune.cm.CmSettingsHelper;
+import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.sqlserver.gui.CmSessionsPanel;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
@@ -77,11 +82,21 @@ extends CountersModel
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
 
-	public static final String[] MON_TABLES       = new String[] {"dm_exec_sessions"};
+	public static final String[] MON_TABLES       = new String[] {
+			"CmSessions"
+			,"dm_exec_connections"
+			,"dm_exec_sessions"
+			,"dm_exec_requests"
+			,"dm_tran_session_transactions"
+			,"dm_tran_active_transactions"
+			,"dm_db_session_space_usage"
+			,"dm_exec_sql_text"
+			};
+
 	public static final String[] NEED_ROLES       = new String[] {};//{"VIEW SERVER STATE"};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
-	public static final String[] PCT_COLUMNS      = new String[] {};
+	public static final String[] PCT_COLUMNS      = new String[] { "percent_complete" };
 	public static final String[] DIFF_COLUMNS     = new String[] {
 			"net_bytes_received"
 			,"net_bytes_sent"
@@ -161,6 +176,74 @@ extends CountersModel
 	}
 
 	@Override
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	{
+		try 
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+			
+			mtd.addTable("CmSessions", "This CM");
+			
+			mtd.addColumn("CmSessions",  "worker_count",                         "<html>Number of <b>active</i> worker threads that exists in sys.sysprocesses for this session.<br>"
+			                                                                         + "<b>Formula</b>: sub-select that does: select count(*) from sys.sysprocesses where spid = ec.session_id"
+			                                                                         + "</html>");
+			mtd.addColumn("CmSessions",  "mars_count",                           "<html>Number of <i>sessions</i> <i>shares</i> a connection/session_id through MARS (Multiple Active Result Sets)<br>"
+			                                                                         + "<i>Multiple Active Result Sets (MARS) is a feature that allows the execution of multiple batches on a single connection. <br>"
+			                                                                         + "In previous versions (2005 or 2008), only one batch could be executed at a time against a single connection. <br>"
+			                                                                         + "Executing multiple batches with MARS does not imply simultaneous execution of operations.</i>"
+			                                                                         + "</html>");
+			mtd.addColumn("CmSessions",  "BlockingOtherSpids",                   "<html>This session_id is blocking other session_id's. This is a list of session_id's that I'm blocking.</html>");
+			mtd.addColumn("CmSessions",  "connect_time_sec",                     "<html>Number of seconds this session_id connected.</html>");
+			mtd.addColumn("CmSessions",  "DBName",                               "<html>Name of the database</html>");
+			mtd.addColumn("CmSessions",  "AuthDbName",                           "<html>What database we used to <i>autenticate</i> a login. Normally 'master', but if it's a <i>Database Contained Login/User</i> then this will be the database name used to authenticate.</html>");
+			mtd.addColumn("CmSessions",  "tat_transaction_id",                   "<html>The 'transaction_id' column from table 'dm_tran_active_transactions'...<br> ID of the transaction at the instance level, not the database level. It is only unique across all databases within an instance but not unique across all server instances. </html>");
+			mtd.addColumn("CmSessions",  "transaction_name",                     "<html>The 'name' column from table 'dm_tran_active_transactions'...<br> Transaction name. This is overwritten if the transaction is marked and the marked name replaces the transaction name. </html>");
+			mtd.addColumn("CmSessions",  "exec_status",                          "<html>The 'status' column from table 'dm_exec_requests'...<br>  <p>Status of the request. This can be of the following:</p><ul class=\"unordered\"> <li><p>Background</p></li> <li><p>Running</p></li> <li><p>Runnable</p></li> <li><p>Sleeping</p></li> <li><p>Suspended</p></li></ul><p>Is not nullable.</html>");
+			mtd.addColumn("CmSessions",  "ProcName",                             "<html>If it's a Stored Proc that is executing... this is the name of the proc.<br><b>Algorithm:</b> SQL Used: object_name(dest.objectid, dest.dbid)</html>");
+			mtd.addColumn("CmSessions",  "StmntStart",                           "<html>If it's a Stored Proc: What's the <i>offset</i> in the procedure (not line number), but <i>character position</i> </html>");
+			mtd.addColumn("CmSessions",  "exec_start_time",                      "<html>The 'start_time' column from table 'dm_exec_requests'...<br>Timestamp when the request arrived.</html>");
+			mtd.addColumn("CmSessions",  "ExecTimeInMs",                         "<html>How long has this been executed for (in milliseconds)</html>");
+			mtd.addColumn("CmSessions",  "total_reads",                          "<html>The 'reads' column from table 'dm_exec_sessions'...<br>Number of reads performed, by requests in this session, during this session.</html>");
+			mtd.addColumn("CmSessions",  "total_writes",                         "<html>The 'writes' column from table 'dm_exec_sessions'...<br>Number of writes performed, by requests in this session, during this session.</html>");
+			mtd.addColumn("CmSessions",  "total_logical_reads",                  "<html>The 'logical_reads' column from table 'dm_exec_sessions'...<br>Number of logical reads that have been performed on the session.</html>");
+			mtd.addColumn("CmSessions",  "total_row_count",                      "<html>The 'row_count' column from table 'dm_exec_sessions'...<br>Number of rows returned on the session up to this point.</html>");
+			mtd.addColumn("CmSessions",  "last_request_exec_time",               "<html>Number of milliseconds this statement has been executing. SQL: datediff(ms, es.last_request_start_time, es.last_request_end_time)</html>");
+			mtd.addColumn("CmSessions",  "last_request_age_sec",                 "<html>How many seconds has passed since last execition for this session happened. SQL: datediff(ss, es.last_request_end_time, getdate()</html>");
+			mtd.addColumn("CmSessions",  "exec_open_transaction_count",          "<html>The 'open_transaction_count' column from table 'dm_exec_requests'...<br>Number of transactions that are open for this request.</html>");
+			mtd.addColumn("CmSessions",  "exec_transaction_id",                  "<html>The 'transaction_id' column from table 'dm_exec_requests'...<br>ID of the transaction in which this request executes</html>");
+			mtd.addColumn("CmSessions",  "exec_cpu_time",                        "<html>The 'cpu_time' column from table 'dm_exec_requests'...<br>CPU time in milliseconds that is used by the request</html>");
+			mtd.addColumn("CmSessions",  "exec_total_elapsed_time",              "<html>The 'total_elapsed_time' column from table 'dm_exec_requests'...<br>Total time elapsed in milliseconds since the request arrived</html>");
+			mtd.addColumn("CmSessions",  "exec_reads",                           "<html>The 'reads' column from table 'dm_exec_requests'...<br>Number of reads performed by this request</html>");
+			mtd.addColumn("CmSessions",  "exec_writes",                          "<html>The 'writes' column from table 'dm_exec_requests'...<br>Number of writes performed by this request</html>");
+			mtd.addColumn("CmSessions",  "exec_logical_reads",                   "<html>The 'logical_reads' column from table 'dm_exec_requests'...<br>Number of logical reads that have been performed by the request</html>");
+			mtd.addColumn("CmSessions",  "exec_row_count",                       "<html>The 'row_count' column from table 'dm_exec_requests'...<br>Number of rows that have been returned to the client by this request</html>");
+			mtd.addColumn("CmSessions",  "exec_granted_query_memory",            "<html>The 'granted_query_memory' column from table 'dm_exec_requests'...<br>Number of pages allocated to the execution of a query on the request</html>");
+			mtd.addColumn("CmSessions",  "net_bytes_received",                   "<html>The 'num_reads' column from table 'dm_exec_connections'...<br>Number of packet reads that have occurred over this connection</html>");
+			mtd.addColumn("CmSessions",  "net_bytes_sent",                       "<html>The 'num_writes' column from table 'dm_exec_connections'...<br>Number of data packet writes that have occurred over this connection</html>");
+			mtd.addColumn("CmSessions",  "last_read_sec",                        "<html>How many seconds ago did we <i>read</i> from this connection. SQL: datediff(ss, dm_exec_connections.last_read, getdate())</html>");
+			mtd.addColumn("CmSessions",  "last_write_sec",                       "<html>How many seconds ago did we <i>write</i> to this connection. SQL: datediff(ss, dm_exec_connections.last_write, getdate())</html>");
+			mtd.addColumn("CmSessions",  "endpoint_type",                        "<html>What type of connection is this."
+			                                                                         + "<ul>"
+			                                                                         + "  <li>DAC - Dedicated Admin Connection (TCP)</li>"
+			                                                                         + "  <li>TSQL Local Machine (SHARED_MEMORY)</li>"
+			                                                                         + "  <li>TSQL Named Pipes (NAMED_PIPES)</li>"
+			                                                                         + "  <li>TSQL Default TCP (TCP)</li>"
+			                                                                         + "  <li>TSQL Default VIA (Virtual Interface Adapter)</li>"
+			                                                                         + "</ul>"
+			                                                                         + "</html>");
+			mtd.addColumn("CmSessions",  "tmp_total_used_mb",                    "<html>Total MB this session holds in 'tempdb'. <br><b>Algorithm</b>: 'tmp_user_objects_now_mb' + 'tmp_internal_objects_now_mb'</html>");
+			mtd.addColumn("CmSessions",  "tmp_user_objects_now_mb",              "<html>MB in 'tempdb': Used now for <b>user objects</b> by this session. <br><b>Algorithm</b>: (user_objects_alloc_page_count - user_objects_dealloc_page_count - user_objects_deferred_dealloc_page_count) / 128 </html>");
+			mtd.addColumn("CmSessions",  "tmp_user_objects_alloc_mb",            "<html>MB in 'tempdb': reserved or allocated for <b>user objects</b> by this session</html>");
+			mtd.addColumn("CmSessions",  "tmp_user_objects_dealloc_mb",          "<html>MB in 'tempdb': deallocated and no longer reserved for <b>user objects</b> by this session </html>");
+			mtd.addColumn("CmSessions",  "tmp_user_objects_deferred_dealloc_mb", "<html>MB in 'tempdb': which have been marked for deferred deallocation for <b>user objects</b></html>");
+			mtd.addColumn("CmSessions",  "tmp_internal_objects_now_mb",          "<html>MB in 'tempdb': Used now for <b>internal objects</b> by this session. <br><b>Algorithm</b>: (internal_objects_alloc_page_count - internal_objects_dealloc_page_count) / 128 </html>");
+			mtd.addColumn("CmSessions",  "tmp_internal_objects_alloc_mb",        "<html>MB in 'tempdb': reserved or allocated for <b>internal objects</b> by this session</html>");
+			mtd.addColumn("CmSessions",  "tmp_internal_objects_dealloc_mb",      "<html>MB in 'tempdb': deallocated and no longer reserved for <b>internal objects</b> by this session</html>");
+		}
+		catch (NameNotFoundException e) {/*ignore*/}
+	}
+
+	@Override
 	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
@@ -231,135 +314,6 @@ extends CountersModel
 		// And Some DMV's contains session_id + execution_context_id/ecid (which are the actual Parallel Worker "threads")
 		// So do NOT join with tables that contains BOTH the session_id + execution_context_id, then you will have duplicates on 'session_id', which is the PK for this Performance Counter
 		//--------------------------------------------------------------------------
-//		String sql = ""
-//			    + "select \n"
-//			    + "     ec.session_id \n"
-//			    + "    ,worker_count = (select count(*) from sys.sysprocesses where spid = ec.session_id) - 1 \n"
-//			    + "    ,ec.connect_time \n"
-//			    + "    ,connect_time_sec = datediff(ss, ec.connect_time, getdate())  -- fix case... if seconds are to big \n"
-//			    + "    ,ec.net_transport \n"
-//			    + "    ,ec.protocol_type \n"
-//			    + "    ,ec.encrypt_option \n"
-//			    + "    ,ec.auth_scheme \n"
-//			    + "    ,ec.node_affinity \n"
-//			    + "    ,net_bytes_received = ec.num_reads                    -- DIFF CALC \n"
-//			    + "    ,net_bytes_sent     = ec.num_writes                   -- DIFF CALC \n"
-//			    + "    ,ec.last_read \n"
-//			    + "    ,last_read_sec = datediff(ss, ec.last_read, getdate())  -- fix case... if seconds are to big \n"
-//			    + "    ,ec.last_write \n"
-//			    + "    ,last_write_sec = datediff(ss, ec.last_write, getdate())  -- fix case... if seconds are to big \n"
-//			    + "    ,ec.net_packet_size \n"
-//			    + "    ,ec.client_net_address \n"
-//			    + "    ,ec.client_tcp_port \n"
-//			    + "    ,ec.local_net_address \n"
-//			    + "    ,ec.local_tcp_port \n"
-//			    + "    ,ec.most_recent_sql_handle \n"
-//			    + " \n"
-//			    + "    ,es.host_name \n"
-//			    + "    ,es.host_process_id \n"
-//			    + "    ,es.program_name \n"
-//			    + "    ,es.client_version \n"
-//			    + "    ,es.client_interface_name \n"
-//			    + "    ,es.login_name \n"
-//			    + "    ,es.nt_domain \n"
-//			    + "    ,es.nt_user_name \n"
-//			    + "    ,es.status  -- Running, Sleeping, Dormant, Preconnect \n"
-//			    + "    ,es.cpu_time                       -- DIFF CALC \n"
-//			    + "    ,es.memory_usage                   -- DIFF CALC ?????? (or add another column so we can see both) \n"
-//			    + "    ,es.total_scheduled_time           -- DIFF \n"
-//			    + "--    ,es.total_elapsed_time \n"
-//			    + "    ,es.last_request_start_time \n"
-//			    + "    ,es.last_request_end_time \n"
-//			    + "    ,last_request_exec_time = datediff(ms, es.last_request_start_time, es.last_request_end_time) -- fix case... if ms are to big \n"
-//			    + "    ,last_request_age_sec   = datediff(ms, es.last_request_end_time, getdate())                  -- fix case... if ms are to big \n"
-//			    + "    ,total_reads            = es.reads                          -- DIFF \n"
-//			    + "    ,total_writes           = es.writes                         -- DIFF \n"
-//			    + "    ,total_logical_reads    = es.logical_reads \n"
-//			    + "    ,es.transaction_isolation_level   -- 0=Unspecified, 1=ReadUncommitted, 2=ReadCommitted, 3=RepeatableRead, 4=Serializable, 5=Snapshot \n"
-//			    + "    ,es.lock_timeout \n"
-//			    + "    ,es.deadlock_priority \n"
-//			    + "    ,total_row_count        = es.row_count                      -- DIFF \n"
-//			    + "    ,es.prev_error \n"
-//			    + es__last_unsuccessful_logon
-//			    + es__unsuccessful_logons
-//			    + es__DBName
-//			    + es__database_id
-//			    + es__AuthDbName
-//			    + es__open_transaction_count
-//			    + es__page_server_reads
-//			    + " \n"
-//			    + "    ,exec_start_time = er.start_time \n"
-//			    + "    ,er.request_id \n"
-//			    + "    ,exec_status     = er.status        --- can probably be found somewhere else -- Background, Running, Runnable, Sleeping, Suspended \n"
-//			    + "    ,er.command       -- \n"
-//			    + "    ,er.sql_handle \n"
-//			    + "    ,er.statement_start_offset \n"
-//			    + "    ,er.statement_end_offset \n"
-//			    + "    ,er.plan_handle \n"
-//			    + "--    ,er.database_id  -- Can this be different than the \"others\"... ID of the database the request is executing against. Is not nullable. \n"
-//			    + "    ,er.blocking_session_id --   -2 = The blocking resource is owned by an orphaned distributed transaction, -3 = The blocking resource is owned by a deferred recovery transaction, -4 = Session ID of the blocking latch owner could not be determined at this time because of internal latch state transitions. \n"
-//			    + "    ,er.wait_type \n"
-//			    + "    ,er.wait_time \n"
-//			    + "    ,er.last_wait_type \n"
-//			    + "    ,er.wait_resource \n"
-//			    + "    ,exec_open_transaction_count    = er.open_transaction_count \n"
-//			    + "    ,er.open_resultset_count \n"
-//			    + "    ,er.transaction_id \n"
-//			    + "    ,er.percent_complete \n"
-//			    + "    ,er.estimated_completion_time \n"
-//			    + "    ,exec_cpu_time           = er.cpu_time                        -- DIFF (is that the same as xxxx) \n"
-//			    + "    ,exec_total_elapsed_time = er.total_elapsed_time \n"
-//			    + "    ,er.scheduler_id \n"
-//			    + "    ,exec_reads                = er.reads                           -- DIFF (is that the same as xxxx) \n"
-//			    + "    ,exec_writes               = er.writes                          -- DIFF (is that the same as xxxx) \n"
-//			    + "    ,exec_logical_reads        = er.logical_reads                   -- DIFF (is that the same as xxxx) \n"
-//			    + "    ,exec_row_count            = er.row_count                       -- DIFF (is that the same as xxxx) \n"
-//			    + "    ,exec_granted_query_memory = er.granted_query_memory \n"
-//			    + "    ,er.executing_managed_code \n"
-//			    + "    ,er.query_hash \n"
-//			    + "    ,er.query_plan_hash \n"
-//			    + er__statement_sql_handle
-//			    + er__dop
-//			    + er__parallel_worker_count
-//			    + er__page_resource
-//			    + " \n"
-//			    + "	-- MOST OF THIS ARE PROBABLY DUPLICATES (physical_io might not be) \n"
-//			    + "--    ,sp.ecid                     -- Execution Context ID, is the ID of any Parallel Worker(s) \n"
-//			    + "--    ,sp.cpu \n"
-//			    + "--    ,sp.physical_io \n"
-//			    + "--    ,sp.memusage \n"
-//			    + "--    ,sp.last_batch \n"
-//			    + "--    ,sp.open_tran \n"
-//			    + "--    ,sp.status                    -- does this has more statuses... spinloop, suspended \n"
-//			    + "--    ,sp.hostname \n"
-//			    + "--    ,sp.program_name \n"
-//			    + "--    ,sp.hostprocess \n"
-//			    + "--    ,sp.cmd \n"
-//			    + "--    ,sp.loginame \n"
-//			    + " \n"
-//			    + "    ,s_user_objects_now_page_count          = ssu.user_objects_alloc_page_count - ssu.user_objects_dealloc_page_count \n"
-//			    + "    ,s_user_objects_alloc_page_count        = ssu.user_objects_alloc_page_count \n"
-//			    + "    ,s_user_objects_dealloc_page_count      = ssu.user_objects_dealloc_page_count \n"
-//			    + "    ,s_internal_objects_now_page_count      = ssu.internal_objects_alloc_page_count - ssu.internal_objects_dealloc_page_count \n"
-//			    + "    ,s_internal_objects_alloc_page_count    = ssu.internal_objects_alloc_page_count \n"
-//			    + "    ,s_internal_objects_dealloc_page_count  = ssu.internal_objects_dealloc_page_count \n"
-//			    + ssu__s_user_objects_deferred_dealloc_page_count
-//			    + " \n"
-////			    + "    ,t_user_objects_now_page_count          = tsu.user_objects_alloc_page_count - tsu.user_objects_dealloc_page_count \n"
-////			    + "    ,t_user_objects_alloc_page_count        = tsu.user_objects_alloc_page_count \n"
-////			    + "    ,t_user_objects_dealloc_page_count      = tsu.user_objects_dealloc_page_count \n"
-////			    + "    ,t_internal_objects_now_page_count      = tsu.internal_objects_alloc_page_count - tsu.internal_objects_dealloc_page_count \n"
-////			    + "    ,t_internal_objects_alloc_page_count    = tsu.internal_objects_alloc_page_count \n"
-////			    + "    ,t_internal_objects_dealloc_page_count  = tsu.internal_objects_dealloc_page_count \n"
-////			    + " \n"
-//			    + "from sys.dm_exec_connections ec \n"
-//			    + "inner join sys.dm_exec_sessions es on ec.session_id = es.session_id \n"
-////			    + "inner join sys.sysprocesses     sp on ec.session_id = sp.spid \n"
-//			    + "left outer join sys.dm_exec_requests er on ec.session_id = er.session_id \n"
-//			    + "left outer join tempdb.sys.dm_db_session_space_usage ssu on ec.session_id = ssu.session_id \n"
-////			    + "left outer join tempdb.sys.dm_db_task_space_usage    tsu on ec.session_id = tsu.session_id and tsu.execution_context_id = sp.ecid \n"
-//			    + "";
-		
 		String sql = ""
 			    + "-- When MARS is enabled we will have several records in dm_exec_connections, so this just summarizes all entries for: num_reads & num_writes \n"
 			    + "-- see: https://sqljudo.wordpress.com/2014/03/07/cardinality-of-dm_exec_sessions-and-dm_exec_connections/ \n"
@@ -419,6 +373,8 @@ extends CountersModel
 			    + "    ,es.status  -- Running, Sleeping, Dormant, Preconnect \n"
 			    + "    ,exec_status     = er.status        --- can probably be found somewhere else -- Background, Running, Runnable, Sleeping, Suspended \n"
 			    + "    ,er.command       -- \n"
+				+ "    ,ProcName        = object_name(dest.objectid, dest.dbid) \n"
+				+ "    ,StmntStart      = er.statement_start_offset \n"
 			    + "    ,exec_start_time = er.start_time \n"
 			    + "    ,ExecTimeInMs    = CASE WHEN datediff(day, er.start_time, getdate()) >= 24 THEN -1 ELSE  datediff(ms, er.start_time, getdate()) END \n"
 			    + "    ,es.cpu_time                       -- DIFF CALC \n"
@@ -466,6 +422,13 @@ extends CountersModel
 			    + "    ,ec.last_write \n"
 			    + "    ,last_write_sec = datediff(ss, ec.last_write, getdate())  -- fix case... if seconds are to big \n"
 			    + "    ,ec.net_packet_size \n"
+			    + "    ,endpoint_type = CASE WHEN es.endpoint_id = 1 THEN 'DAC - Dedicated Admin Connection (TCP) - 1' \n"
+			    + "                          WHEN es.endpoint_id = 2 THEN 'TSQL Local Machine (SHARED_MEMORY) - 2' \n"
+			    + "                          WHEN es.endpoint_id = 3 THEN 'TSQL Named Pipes (NAMED_PIPES) - 3' \n"
+			    + "                          WHEN es.endpoint_id = 4 THEN 'TSQL Default TCP (TCP) - 4' \n"
+			    + "                          WHEN es.endpoint_id = 5 THEN 'TSQL Default VIA (Virtual Interface Adapter) - 5' \n"
+			    + "                          ELSE                         'unknown - ' + cast(es.endpoint_id as varchar(5)) \n"
+			    + "                     END \n"
 			    + "    ,ec.net_transport \n"
 			    + "    ,ec.protocol_type \n"
 			    + "    ,ec.encrypt_option \n"
@@ -524,6 +487,7 @@ extends CountersModel
 			    + "LEFT OUTER JOIN sys.dm_tran_session_transactions     tst ON es.session_id      = tst.session_id \n"
 			    + "LEFT OUTER JOIN sys.dm_tran_active_transactions      tat ON tst.transaction_id = tat.transaction_id \n"
 			    + "LEFT OUTER join tempdb.sys.dm_db_session_space_usage ssu ON ec.session_id      = ssu.session_id \n"
+				+ "OUTER APPLY sys.dm_exec_sql_text(er.sql_handle) dest \n"
 //			    + "WHERE ec.net_transport != 'Session' -- do not include MARS sessions, see: https://sqljudo.wordpress.com/2014/03/07/cardinality-of-dm_exec_sessions-and-dm_exec_connections/ \n"
 			    + "";
 
@@ -731,6 +695,42 @@ extends CountersModel
 					} // end: above threshold
 				} // end: is number
 			} // end: StatementExecInSec
+
+			//-------------------------------------------------------
+			// StatementExecInSec 
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("DacInUse"))
+			{
+				Object o_endpoint_type = cm.getAbsValue(r, "endpoint_type");
+				
+				if (o_endpoint_type != null && o_endpoint_type instanceof String)
+				{
+					String endpoint_type = (String) o_endpoint_type;
+					
+					boolean threshold = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_alarm_DacInUse, DEFAULT_alarm_DacInUse);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", endpoint_type='"+endpoint_type+"'.");
+
+					if (endpoint_type.startsWith("DAC") && threshold == true)
+					{
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+						String spid      = "" + cm.getAbsValue(r, "session_id");
+						String fromIp    = "" + cm.getAbsValue(r, "client_net_address");
+						String fromHost  = "" + cm.getAbsValue(r, "host_name");
+						String asLogin   = "" + cm.getAbsValue(r, "login_name");
+						String loginTime = "" + cm.getAbsValue(r, "connect_time");
+						String inDBName  = "" + cm.getAbsValue(r, "DBName");
+
+						AlarmEvent ae = new AlarmEventDacInUse(cm, spid, fromIp, fromHost, asLogin, loginTime, inDBName);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+					
+						alarmHandler.addAlarm( ae );
+					}
+				}
+			}
 		} // end: loop rows
 	}
 
@@ -749,6 +749,9 @@ extends CountersModel
 	public static final String  PROPKEY_alarm_StatementExecInSecSkipTranName = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.tranName";
 	public static final String  DEFAULT_alarm_StatementExecInSecSkipTranName = "";
 	
+	public static final String  PROPKEY_alarm_DacInUse                       = CM_NAME + ".alarm.system.if.EndpointType.is.DAC";
+	public static final boolean DEFAULT_alarm_DacInUse                       = true;
+	
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -758,11 +761,12 @@ extends CountersModel
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("StatementExecInSec",           isAlarmSwitch, PROPKEY_alarm_StatementExecInSec            , Integer.class, conf.getIntProperty(PROPKEY_alarm_StatementExecInSec            , DEFAULT_alarm_StatementExecInSec            ), DEFAULT_alarm_StatementExecInSec            , "If any SPID's has been executed a single SQL Statement for more than ## seconds, then send alarm 'AlarmEventLongRunningStatement'." ));
-		list.add(new CmSettingsHelper("StatementExecInSec SkipDbs",                  PROPKEY_alarm_StatementExecInSecSkipDbname  , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipDbname  , DEFAULT_alarm_StatementExecInSecSkipDbname  ), DEFAULT_alarm_StatementExecInSecSkipDbname  , "If 'StatementExecInSec' is true; Discard databases listed (regexp is used).", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("StatementExecInSec SkipLogins",               PROPKEY_alarm_StatementExecInSecSkipLogin   , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipLogin   , DEFAULT_alarm_StatementExecInSecSkipLogin   ), DEFAULT_alarm_StatementExecInSecSkipLogin   , "If 'StatementExecInSec' is true; Discard Logins listed (regexp is used)."   , new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("StatementExecInSec SkipCommands",             PROPKEY_alarm_StatementExecInSecSkipCmd     , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipCmd     , DEFAULT_alarm_StatementExecInSecSkipCmd     ), DEFAULT_alarm_StatementExecInSecSkipCmd     , "If 'StatementExecInSec' is true; Discard Commands listed (regexp is used)." , new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("StatementExecInSec SkipTranNames",            PROPKEY_alarm_StatementExecInSecSkipTranName, String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipTranName, DEFAULT_alarm_StatementExecInSecSkipTranName), DEFAULT_alarm_StatementExecInSecSkipTranName, "If 'StatementExecInSec' is true; Discard TranName listed (regexp is used)." , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec",           isAlarmSwitch, PROPKEY_alarm_StatementExecInSec            , Integer.class, conf.getIntProperty    (PROPKEY_alarm_StatementExecInSec            , DEFAULT_alarm_StatementExecInSec            ), DEFAULT_alarm_StatementExecInSec            , "If any SPID's has been executed a single SQL Statement for more than ## seconds, then send alarm 'AlarmEventLongRunningStatement'." ));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipDbs",                  PROPKEY_alarm_StatementExecInSecSkipDbname  , String .class, conf.getProperty       (PROPKEY_alarm_StatementExecInSecSkipDbname  , DEFAULT_alarm_StatementExecInSecSkipDbname  ), DEFAULT_alarm_StatementExecInSecSkipDbname  , "If 'StatementExecInSec' is true; Discard databases listed (regexp is used).", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipLogins",               PROPKEY_alarm_StatementExecInSecSkipLogin   , String .class, conf.getProperty       (PROPKEY_alarm_StatementExecInSecSkipLogin   , DEFAULT_alarm_StatementExecInSecSkipLogin   ), DEFAULT_alarm_StatementExecInSecSkipLogin   , "If 'StatementExecInSec' is true; Discard Logins listed (regexp is used)."   , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipCommands",             PROPKEY_alarm_StatementExecInSecSkipCmd     , String .class, conf.getProperty       (PROPKEY_alarm_StatementExecInSecSkipCmd     , DEFAULT_alarm_StatementExecInSecSkipCmd     ), DEFAULT_alarm_StatementExecInSecSkipCmd     , "If 'StatementExecInSec' is true; Discard Commands listed (regexp is used)." , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipTranNames",            PROPKEY_alarm_StatementExecInSecSkipTranName, String .class, conf.getProperty       (PROPKEY_alarm_StatementExecInSecSkipTranName, DEFAULT_alarm_StatementExecInSecSkipTranName), DEFAULT_alarm_StatementExecInSecSkipTranName, "If 'StatementExecInSec' is true; Discard TranName listed (regexp is used)." , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("DacInUse",                     isAlarmSwitch, PROPKEY_alarm_DacInUse                      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_DacInUse                      , DEFAULT_alarm_DacInUse                      ), DEFAULT_alarm_DacInUse                      , "If any user is connected via the DAC (Dedicated Admin Connection), then send alarm 'AlarmEventDacInUse'." ));
 		
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "program_name") );
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "login_name") );

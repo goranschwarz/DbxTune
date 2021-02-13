@@ -2502,6 +2502,8 @@ extends SqlCaptureBrokerAbstract
 
 					String procName   = rs.getString(pos_ProcName);
 					int    lineNumber = rs.getInt   (pos_LineNumber);
+					
+					String DBName     = rs.getString(pos_DBName);
 
 
 					// To be used by keep/discard Set
@@ -2524,7 +2526,7 @@ extends SqlCaptureBrokerAbstract
 					//     20-30 sec
 					//     above 30 sec
 					if (_statementStatistics != null)
-						updateStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber);
+						updateStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, DBName);
 
 					
 					//System.out.println("Statement CHECK if above THRESHOLD: SPID="+SPID+",KPID="+KPID+",BatchID="+BatchID+": execTime="+execTime+", logicalReads="+logicalReads+", physicalReads="+physicalReads+".   SAVE="+(execTime > saveStatement_gt_execTime && logicalReads > saveStatement_gt_logicalReads && physicalReads > saveStatement_gt_physicalReads));
@@ -2541,7 +2543,7 @@ extends SqlCaptureBrokerAbstract
 							// send ProcName or StatementCacheEntry to the DDL Capture
 							if (StringUtil.hasValue(procName))
 							{
-								String DBName = rs.getString(pos_DBName);
+//								String DBName = rs.getString(pos_DBName);
 
 								// Only send if it's above the defined limits
 								if (    execTime      > sendDdlForLookup_gt_execTime
@@ -4302,14 +4304,15 @@ extends SqlCaptureBrokerAbstract
 	 * @param procedureId 
 	 * @param procName 
 	 * @param lineNumber 
+	 * @param dbname 
 	 * @param contextID 
 	 */
-	private void updateStatementStats(int execTime, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, int procedureId, String procName, int lineNumber)
+	private void updateStatementStats(int execTime, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, int procedureId, String procName, int lineNumber, String dbname)
 	{
 		if (_statementStatistics == null)
 			return;
 		
-		_statementStatistics.addStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber);
+		_statementStatistics.addStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname);
 	}
 
 	public void closeStatementStats()

@@ -59,6 +59,15 @@ public class SparklineHelper
 //		SQL_EXPRESSION
 //	};
 
+	public enum DataSource
+	{
+		/** All Normal CM (Counter Model) */
+		CounterModel,
+
+		/** SQL Server Query Store */
+		QueryStore,
+	};
+
 	public enum AggType
 	{
 		/** SUM(colName) NOTE: This is the DEFAULT */
@@ -82,9 +91,13 @@ public class SparklineHelper
 	 */
 	public static class SparkLineParams
 	{
+//		private DataSource  _dataSource = DataSource.CounterModel;
+		private DataSource  _dataSource;
+
 		private String  _htmlChartColumnName;
 		private String  _htmlWhereKeyColumnName;
 //		private boolean _htmlWhereKeyColumnNameIsList        = false;
+		private String  _dbmsSchemaName;
 		private String  _dbmsTableName;
 		private String  _dbmsSampleTimeColumnName;
 		private String  _dbmsDataValueColumnName;
@@ -96,20 +109,32 @@ public class SparklineHelper
 		private int     _groupDataInMinutes                  = 10;
 		private int     _noDataInGroupDefaultValue           = 0;
 		private int     _decimalScale                        = 0;
+		private String  _sparklineClassNamePrefix;
 		private String  _sparklineClassName;
 		private String  _sparklineTooltipPostfix;
 		private String  _noBrowserText = "Only in Web Browser";
 
-		public static SparkLineParams create()
-		{	
-			return new SparkLineParams();
+		public SparkLineParams(DataSource dataSource)
+		{
+			_dataSource = dataSource;
 		}
+
+		public static SparkLineParams create(DataSource dataSource)
+		{	
+			return new SparkLineParams(dataSource);
+		}
+
+		/** What is the "source" for this SparkLine */
+		public SparkLineParams setDataSource                         (DataSource dataSource                      ) { _dataSource                          = dataSource;                          return this; }
 
 		/** HTML Table column name to replace with a mini-chart */
 		public SparkLineParams setHtmlChartColumnName                (String  htmlChartColumnName                ) { _htmlChartColumnName                 = htmlChartColumnName;                 return this; }
 
 		/** HTML Table column name to get data for when building a where clause against in the SQL query */
 		public SparkLineParams setHtmlWhereKeyColumnName             (String  htmlWhereKeyColumnName             ) { _htmlWhereKeyColumnName              = htmlWhereKeyColumnName;              return this; }
+
+		/** DBMS schema name to use in query */
+		public SparkLineParams setDbmsSchemaName                     (String  dbmsSchemaName                     ) { _dbmsSchemaName                      = dbmsSchemaName;                      return this; }
 
 		/** DBMS table name to use in query */
 		public SparkLineParams setDbmsTableName                      (String  dbmsTableName                      ) { _dbmsTableName                       = dbmsTableName;                       return this; }
@@ -145,6 +170,9 @@ public class SparklineHelper
 		public SparkLineParams setDecimalScale                       (int     decimalScale                       ) { _decimalScale                        = decimalScale;                        return this; }
 
 		/** HTML class-name to use for this mini-chart */
+		public SparkLineParams setSparklineClassNamePrefix           (String  sparklineClassNamePrefix           ) { _sparklineClassNamePrefix            = StringUtil.stripAllNonAlphaNum(sparklineClassNamePrefix); return this; }
+
+		/** HTML class-name to use for this mini-chart */
 		public SparkLineParams setSparklineClassName                 (String  sparklineClassName                 ) { _sparklineClassName                  = sparklineClassName;                  return this; }
 
 		/** When showing tool tip for this value, this can be used to <i>describe</i> what it represents */
@@ -153,23 +181,36 @@ public class SparklineHelper
 		/** If we are reading this from a Mail reader that do not support JavaScript, then this value will be used as a placement instead of the mini-chart */
 		public SparkLineParams setNoBrowserText                      (String  noBrowserText                      ) { _noBrowserText                       = noBrowserText;                       return this; }
 
-		public String  getHtmlChartColumnName()                 { return _htmlChartColumnName; }
-		public String  getHtmlWhereKeyColumnName()              { return _htmlWhereKeyColumnName; }
-		public String  getDbmsTableName()                       { return _dbmsTableName; }
-		public String  getDbmsSampleTimeColumnName()            { return _dbmsSampleTimeColumnName; }
-		public String  getDbmsDataValueColumnName()             { return _dbmsDataValueColumnName; }
-		public boolean getDbmsDataValueColumnNameIsExpression() { return _dbmsDataValueColumnNameIsExpression; }
-		public String  getDbmsWhereKeyColumnName()              { return _dbmsWhereKeyColumnName        != null ? _dbmsWhereKeyColumnName          : getHtmlWhereKeyColumnName(); }
-//		public boolean getDbmsWhereKeyColumnNameIsList()        { return _dbmsWhereKeyColumnNameIsList; }
-		public boolean getDbmsWhereKeyColumnNameIsList()        { return getDbmsWhereKeyColumnName().contains(","); }
-		public String  getDbmsExtraWhereClause()                { return _dbmsExtraWhereclause          != null ? _dbmsExtraWhereclause            : ""; }
-		public AggType getGroupDataAggregationType()            { return _groupDataAggregationType; }
-		public int     getGroupDataInMinutes()                  { return _groupDataInMinutes; }
-		public int     getNoDataInGroupDefaultValue()           { return _noDataInGroupDefaultValue; }
-		public int     getDecimalScale()                        { return _decimalScale; }
-		public String  getSparklineClassName()                  { return _sparklineClassName            != null ? _sparklineClassName              : "sparklines_" + getHtmlChartColumnName(); }
-		public String  getSparklineTooltipPostfix()             { return _sparklineTooltipPostfix       != null ? " - " + _sparklineTooltipPostfix : " - " + getGroupDataAggregationType() + " '" + getDbmsDataValueColumnName() +"' in below time period" ; }
-		public String  getNoBrowserText()                       { return _noBrowserText                 != null ? _noBrowserText                   : ""; }
+		public DataSource getDataSource()                          { return _dataSource; }
+		public String     getHtmlChartColumnName()                 { return _htmlChartColumnName; }
+		public String     getHtmlWhereKeyColumnName()              { return _htmlWhereKeyColumnName; }
+		public String     getDbmsSchemaName()                      { return _dbmsSchemaName; }
+		public String     getDbmsTableName()                       { return _dbmsTableName; }
+		public String     getDbmsSampleTimeColumnName()            { return _dbmsSampleTimeColumnName; }
+		public String     getDbmsDataValueColumnName()             { return _dbmsDataValueColumnName; }
+		public boolean    getDbmsDataValueColumnNameIsExpression() { return _dbmsDataValueColumnNameIsExpression; }
+		public String     getDbmsWhereKeyColumnName()              { return _dbmsWhereKeyColumnName        != null ? _dbmsWhereKeyColumnName          : getHtmlWhereKeyColumnName(); }
+//		public boolean    getDbmsWhereKeyColumnNameIsList()        { return _dbmsWhereKeyColumnNameIsList; }
+		public boolean    getDbmsWhereKeyColumnNameIsList()        { return getDbmsWhereKeyColumnName().contains(","); }
+		public String     getDbmsExtraWhereClause()                { return _dbmsExtraWhereclause          != null ? _dbmsExtraWhereclause            : ""; }
+		public AggType    getGroupDataAggregationType()            { return _groupDataAggregationType; }
+		public int        getGroupDataInMinutes()                  { return _groupDataInMinutes; }
+		public int        getNoDataInGroupDefaultValue()           { return _noDataInGroupDefaultValue; }
+		public int        getDecimalScale()                        { return _decimalScale; }
+		public String     getSparklineClassNamePrefix()            { return _sparklineClassNamePrefix; }
+//		public String     getSparklineClassName()                  { return _sparklineClassName            != null ? _sparklineClassName              : "sparklines_" + getHtmlChartColumnName(); }
+		public String     getSparklineTooltipPostfix()             { return _sparklineTooltipPostfix       != null ? " - " + _sparklineTooltipPostfix : " - " + getGroupDataAggregationType() + " '" + getDbmsDataValueColumnName() +"' in below time period" ; }
+		public String     getNoBrowserText()                       { return _noBrowserText                 != null ? _noBrowserText                   : ""; }
+
+		public String     getSparklineClassName()                  
+		{ 
+			String prefix = _sparklineClassNamePrefix == null ? "" : _sparklineClassNamePrefix + "_";
+					
+			if (_sparklineClassName != null)
+				return prefix + _sparklineClassName;
+			
+			return "sparklines_" + prefix + getHtmlChartColumnName(); 
+		}
 
 		/**
 		 * Validate that all settings are OK
@@ -180,6 +221,11 @@ public class SparklineHelper
 		{
 			// Check if everything is OK
 			String problem = null;
+
+			if (getDataSource() == null)
+			{
+				problem = "'DataSource' has NOT been assigned. ";
+			}
 
 			if (getDbmsWhereKeyColumnNameIsList())
 			{
@@ -199,6 +245,20 @@ public class SparklineHelper
 			}
 			
 			return this;
+		}
+
+		public boolean isDataSourceIn(DataSource... dataSource)
+		{
+			if (dataSource == null)
+				return false;
+
+			for (DataSource ds : dataSource)
+			{
+				if (getDataSource().equals(ds))
+					return true;
+			}
+			
+			return false;
 		}
 	}
 
@@ -258,55 +318,67 @@ public class SparklineHelper
 			// Create a helper index in the DBMS (if it doesnt already exists)
 			// The index will be called "ix_DSR_SL_" + "tableName"
 			// Columns will be: "all columns in the DBMS where clause" and the "SampleTime" column
-			String indexDdl = "";
-			try
+			if (params.isDataSourceIn(DataSource.CounterModel))
 			{
-				String tableName = params.getDbmsTableName();
-				String indexName = "ix_DSR_" + tableName;
-				String colNames  = "";
-				String ixPostFix = "";
-
-				for (String colName : StringUtil.parseCommaStrToList(params.getDbmsWhereKeyColumnName()))
+				String indexDdl = "";
+				try
 				{
-					colNames += "[" + colName + "], ";
-					ixPostFix += "_" + colName.replaceAll("[^a-zA-Z0-9]", ""); // remove anything suspect chars keep onle: a-z and numbers
-				}
-				colNames += "[" + params.getDbmsSampleTimeColumnName() + "]";
+					String schemaName = params.getDbmsSchemaName();
+					String tableName  = params.getDbmsTableName();
+					String ixSchName  = "";
 
-				// add "column names" as a "postfix" at the end of the index name (there might be more than one index)
-				indexName += ixPostFix;
-
-				// Check if index already exists
-				boolean indexExists = false;
-				try (ResultSet rs = conn.getMetaData().getIndexInfo(null, null, tableName, false, false))
-				{
-					while(rs.next())
+					if (StringUtil.hasValue(schemaName))
 					{
-						String ixName = rs.getString("INDEX_NAME");
-						if (indexName.equalsIgnoreCase(ixName))
+						ixSchName = schemaName.replaceAll("[^a-zA-Z0-9]", "") + "_"; // remove anything suspect chars keep only: a-z and numbers
+					}
+
+					String indexName  = "ix_DSR_" + ixSchName + tableName;
+					String colNames   = "";
+					String ixPostFix  = "";
+
+					for (String colName : StringUtil.parseCommaStrToList(params.getDbmsWhereKeyColumnName()))
+					{
+						colNames += "[" + colName + "], ";
+						ixPostFix += "_" + colName.replaceAll("[^a-zA-Z0-9]", ""); // remove anything suspect chars keep only: a-z and numbers
+					}
+					colNames += "[" + params.getDbmsSampleTimeColumnName() + "]";
+
+					// add "column names" as a "postfix" at the end of the index name (there might be more than one index)
+					indexName += ixPostFix;
+
+					// Check if index already exists
+					boolean indexExists = false;
+					try (ResultSet rs = conn.getMetaData().getIndexInfo(null, schemaName, tableName, false, false))
+					{
+						while(rs.next())
 						{
-							indexExists = true;
-							break;
+							String ixName = rs.getString("INDEX_NAME");
+							if (indexName.equalsIgnoreCase(ixName))
+							{
+								indexExists = true;
+								break;
+							}
 						}
 					}
-				}
-				
-				// Create the index
-				if ( ! indexExists )
-				{
-					indexDdl = conn.quotifySqlString("create index [" + indexName + "] on [" + tableName + "] (" + colNames + ")");
 					
-					long startTime = System.currentTimeMillis();
-					try (Statement stmnt = conn.createStatement())
+					// Create the index
+					if ( ! indexExists )
 					{
-						stmnt.executeUpdate(indexDdl);
+						String schemaStr = StringUtil.isNullOrBlank(schemaName) ? "" : "[" + schemaName + "].";
+						indexDdl = conn.quotifySqlString("create index [" + indexName + "] on " + schemaStr + "[" + tableName + "] (" + colNames + ")");
+						
+						long startTime = System.currentTimeMillis();
+						try (Statement stmnt = conn.createStatement())
+						{
+							stmnt.executeUpdate(indexDdl);
+						}
+						_logger.info("ReportEntry '" + reportEntry.getClass().getSimpleName() + "'. Created helper index to support Daily Summary Report. SQL='" + indexDdl + "' ExecTime=" + TimeUtils.msDiffNowToTimeStr(startTime));
 					}
-					_logger.info("ReportEntry '" + reportEntry.getClass().getSimpleName() + "'. Created helper index to support Daily Summary Report. SQL='" + indexDdl + "' ExecTime=" + TimeUtils.msDiffNowToTimeStr(startTime));
 				}
-			}
-			catch (SQLException ex)
-			{
-				_logger.error("ReportEntry '" + reportEntry.getClass().getSimpleName() + "'. Problems creating a helper index, skipping the error and continuing... SQL=|" + indexDdl + "|.", ex);
+				catch (SQLException ex)
+				{
+					_logger.error("ReportEntry '" + reportEntry.getClass().getSimpleName() + "'. Problems creating a helper index, skipping the error and continuing... SQL=|" + indexDdl + "|.", ex);
+				}
 			}
 
 			// get value from DBMS
@@ -314,10 +386,12 @@ public class SparklineHelper
 			{
 				result = SparklineHelper.getSparclineData(
 						conn, 
+						params.getDataSource(),
 						reportBegin, 
 						reportEnd, 
 						params.getGroupDataInMinutes(),
 						params.getGroupDataAggregationType(),
+						params.getDbmsSchemaName(), 
 						params.getDbmsTableName(), 
 						params.getDbmsSampleTimeColumnName(), 
 						params.getDbmsDataValueColumnName(), 
@@ -403,31 +477,44 @@ public class SparklineHelper
 			if (tooltipPostfix != null)
 				tooltipPostfix = tooltipPostfix.replace("'", "\\'");
 			
+			// The below tries to make pixels *wider* when we have few records... minPixels=3 (the default), maxPixels=9
+			int maxMixelWidth = 432;   // 432 is based on defaultWidth=3 * 24h and intervalOf 10 minutes... 342==(24*6*3) hours*valuesPerHour*pixelWidth
+			int pixels = maxMixelWidth / result.values.size();
+
+			if (pixels > 9) pixels = 9;
+			if (pixels < 3) pixels = 3;
+			
 			sb.append("<script type='text/javascript'> \n");
 			sb.append("\n");
 			sb.append("    // Execute when page has LOADED \n");
 			sb.append("    document.addEventListener('DOMContentLoaded', function() \n");
 			sb.append("    { \n");
-			sb.append("        // Initialize all mini charts -- sparklines \n");
-			sb.append("        $('." + sparklineClassName + "').sparkline('html', {										\n");
-			sb.append("            type: 'line',						  												\n");
-			sb.append("            chartRangeMin: 0,					  												\n");
-			sb.append("            tooltipFormat: '<span style=\"font-size:12px;\"><span style=\"color: {{color}}\">&#9679;</span> {{y}}" + tooltipPostfix + "<br>&nbsp;&nbsp; {{offset:toolTipArray}}</span>',	\n");
-			sb.append("            tooltipValueLookups: { 				  												\n");
-			sb.append("                toolTipArray: { 																	\n");
+			sb.append("        // do: deferred (so we dont block the event tread at initial load) \n");
+			sb.append("        setTimeout(function() \n");
+			sb.append("        { \n");
+			sb.append("            // Initialize all mini charts -- sparklines \n");
+			sb.append("            $('." + sparklineClassName + "').sparkline('html', {										\n");
+			sb.append("                type: 'line',						  												\n");
+			sb.append("                defaultPixelsPerValue: ").append(pixels).append(",									\n");
+//			sb.append("                type: 'bar',						  													\n");
+			sb.append("                chartRangeMin: 0,					  												\n");
+			sb.append("                tooltipFormat: '<span style=\"font-size:12px;\"><span style=\"color: {{color}}\">&#9679;</span> {{y}}" + tooltipPostfix + "<br>&nbsp;&nbsp; {{offset:toolTipArray}}</span>',	\n");
+			sb.append("                tooltipValueLookups: { 				  												\n");
+			sb.append("                    toolTipArray: { 																	\n");
 			String comma = " ";
 			int    pos   = 0;
 			for (String str : result.tooltips)
 			{
-				sb.append("                    " + comma + pos + ": '" + str + "' \n");
+				sb.append("                        " + comma + pos + ": '" + str + "' \n");
 				comma = ",";
 				pos++;
 			}
-			sb.append("                }																				\n");
-			sb.append("            }																					\n");
-			sb.append("        });																						\n");
-			sb.append("        // now show the Max: ### overlay															\n");
-			sb.append("        $('.sparkline-max-val').css('display', 'block');											\n");
+			sb.append("                    }																				\n");
+			sb.append("                }																					\n");
+			sb.append("            });																						\n");
+			sb.append("            // now show the Max: ### overlay															\n");
+			sb.append("            $('.sparkline-max-val').css('display', 'block');											\n");
+			sb.append("        }, 100); \n");
 			sb.append("    }); \n");
 			sb.append("\n");
 			sb.append("\n");
@@ -482,7 +569,7 @@ public class SparklineHelper
 	 * @return
 	 * @throws SQLException
 	 */
-	public static SparklineResult getSparclineData(DbxConnection conn, LocalDateTime beginLdt, LocalDateTime endLdt, int durationInMinutes, AggType aggType, String tabName, String tabPeriodColName, String sumColName, boolean sumColNameIsExpr, List<String> whereColNameList, List<Object> whereColValList, String extraWhereClause, int noDataInPeriod, int decimalScale)
+	public static SparklineResult getSparclineData(DbxConnection conn, DataSource dataSource, LocalDateTime beginLdt, LocalDateTime endLdt, int durationInMinutes, AggType aggType, String schName, String tabName, String tabPeriodColName, String sumColName, boolean sumColNameIsExpr, List<String> whereColNameList, List<Object> whereColValList, String extraWhereClause, int noDataInPeriod, int decimalScale)
 	throws SQLException
 	{
 		SparklineResult res = new SparklineResult();
@@ -495,48 +582,123 @@ public class SparklineHelper
 		LocalDateTime tmpBegin = beginLdt;
 		LocalDateTime tmpEnd   = beginLdt.plusMinutes(durationInMinutes);
 		
-		StringBuilder sb = new StringBuilder();
+		StringBuilder sqlSb = new StringBuilder();
 		DateTimeFormatter tsFormat = DateTimeFormatter.ISO_DATE_TIME;
 		
 		// If sumColName is an expression or if it's a USER_PROVIDED aggregation, then do not Quote it...
 		String colName = (sumColNameIsExpr || AggType.USER_PROVIDED.equals(aggType)) ? sumColName : "[" + sumColName + "]";
 
-		sb.append("with [tt] as ( \n");
-//		sb.append("              select cast('" + tmpBegin.format(tsFormat) + "' as datetime) as [bts], cast('" + tmpEnd.format(tsFormat) + "' as datetime) as [ets] \n");
-		sb.append("              select '" + tmpBegin.format(tsFormat) + "' as [bts], '" + tmpEnd.format(tsFormat) + "' as [ets] \n");
-
-		while(tmpEnd.isBefore(endLdt) )
+		// BUILD SQL (based on what DataSource)
+		if (DataSource.CounterModel.equals(dataSource))
 		{
-			tmpBegin = tmpBegin.plusMinutes(durationInMinutes);
-			tmpEnd   = tmpEnd.plusMinutes(durationInMinutes);
+			sqlSb.append("with [tt] as ( \n");
+//			sb.append("              select cast('" + tmpBegin.format(tsFormat) + "' as datetime) as [bts], cast('" + tmpEnd.format(tsFormat) + "' as datetime) as [ets] \n");
+			sqlSb.append("              select '" + tmpBegin.format(tsFormat) + "' as [bts], '" + tmpEnd.format(tsFormat) + "' as [ets] \n");
 
-			sb.append("    union all select '" + tmpBegin.format(tsFormat) + "' as [bts], '" + tmpEnd.format(tsFormat) + "' as [ets] \n");
-		}
-		
-		sb.append(") \n");
-		
-		String aggStr =  aggType + "(" + colName + ")";
-		if (AggType.USER_PROVIDED.equals(aggType))
-			aggStr = colName;
-		
-		sb.append("select \n");
-		sb.append("     [bts] \n");
-		sb.append("    ,[ets] \n");
-		sb.append("    ,( select coalesce((" + aggStr + "), " + noDataInPeriod + ") \n");
-		sb.append("       from [" + tabName + "] s \n");
-		sb.append("       where s.[" + tabPeriodColName + "] between [tt].[bts] and [tt].[ets] \n");
-		for (int i=0; i<whereColNameList.size(); i++)
-		{
-			sb.append("         and [" + whereColNameList.get(i) + "] = " + DbUtils.safeStrHexAsBinary(conn, whereColValList.get(i)) + " \n");
-		}
-		if (StringUtil.hasValue(extraWhereClause))
-		{
-			sb.append("         " + extraWhereClause + " \n");
-		}
-		sb.append("     ) as [sumData] \n");
-		sb.append("from [tt] \n");
+			while(tmpEnd.isBefore(endLdt) )
+			{
+				tmpBegin = tmpBegin.plusMinutes(durationInMinutes);
+				tmpEnd   = tmpEnd.plusMinutes(durationInMinutes);
 
-		String sql = sb.toString();
+				sqlSb.append("    union all select '" + tmpBegin.format(tsFormat) + "' as [bts], '" + tmpEnd.format(tsFormat) + "' as [ets] \n");
+			}
+			
+			sqlSb.append(") \n");
+			
+			String aggStr =  aggType + "(" + colName + ")";
+			if (AggType.USER_PROVIDED.equals(aggType))
+				aggStr = colName;
+			
+			String schemaStr = StringUtil.isNullOrBlank(schName) ? "" : "[" + schName + "].";
+
+			sqlSb.append("select \n");
+			sqlSb.append("     [bts] \n");
+			sqlSb.append("    ,[ets] \n");
+			sqlSb.append("    ,( select coalesce((" + aggStr + "), " + noDataInPeriod + ") \n");
+			sqlSb.append("       from " + schemaStr + "[" + tabName + "] s \n");
+			sqlSb.append("       where s.[" + tabPeriodColName + "] between [tt].[bts] and [tt].[ets] \n");
+			for (int i=0; i<whereColNameList.size(); i++)
+			{
+				sqlSb.append("         and [" + whereColNameList.get(i) + "] = " + DbUtils.safeStrHexAsBinary(conn, whereColValList.get(i)) + " \n");
+			}
+			if (StringUtil.hasValue(extraWhereClause))
+			{
+				sqlSb.append("         " + extraWhereClause + " \n");
+			}
+			sqlSb.append("     ) as [sumData] \n");
+			sqlSb.append("from [tt] \n");
+		}
+
+		if (DataSource.QueryStore.equals(dataSource))
+		{
+			String aggStr =  aggType + "(" + colName + ")";
+			if (AggType.USER_PROVIDED.equals(aggType))
+				aggStr = colName;
+			
+			String schemaStr = StringUtil.isNullOrBlank(schName) ? "" : "[" + schName + "].";
+
+			//Example SQL that we construct
+			//-------------------------------
+			// select 
+			//      i.[start_time]
+			//     ,i.[end_time]
+			//     ,sum(rs.[count_executions]) as [sumData]
+			// from [" + _schemaName + "].[query_store_runtime_stats] rs
+			// inner join [" + _schemaName + "].[query_store_runtime_stats_interval] i ON rs.[runtime_stats_interval_id] = i.[runtime_stats_interval_id]
+			// where rs.[plan_id] = 57
+			// group by i.[start_time]
+			// order by i.[start_time]
+			//-------------------------------
+			
+			// If we want to keep same "structure" for the SQL as "above" we might do something like the below
+			//-------------------------------
+			// with [tt] as (
+			//    select 
+			//         [start_time] as [bts]
+			//        ,[end_time]   as [ets]
+			//    from [" + _schemaName + "].[query_store_runtime_stats_interval]
+			//    order by [start_time]
+			// )
+			// select
+			//      [bts] 
+			//     ,[ets] 
+			//     ,( select coalesce((sum(s.[count_executions])), 0)
+			//        from [" + _schemaName + "].[query_store_runtime_stats] s
+			//        where s.[first_execution_time] between [tt].[bts] and [tt].[ets]
+			//          and [plan_id] = 57
+			//      ) as [sumData] 
+			// from [tt]
+			//-------------------------------
+		
+			
+//			sqlSb.append("select \n");
+//			sqlSb.append("     i.[start_time] as [bts]  \n");
+//			sqlSb.append("    ,i.[end_time]   as [ets]  \n");
+//			sqlSb.append("    ,coalesce((" + aggStr + "), " + noDataInPeriod + ") as [sumData] \n");
+//			sqlSb.append("from " + schemaStr + "[" + tabName + "] s \n");
+//			sqlSb.append("left outer join " + schemaStr + "[query_store_runtime_stats_interval] i ON s.[runtime_stats_interval_id] = i.[runtime_stats_interval_id] \n");
+//			sqlSb.append("where 1 = 1 \n");
+			sqlSb.append("select \n");
+			sqlSb.append("     i.[start_time] as [bts]  \n");
+			sqlSb.append("    ,i.[end_time]   as [ets]  \n");
+			sqlSb.append("    ,coalesce((" + aggStr + "), " + noDataInPeriod + ") as [sumData] \n");
+			sqlSb.append("from " + schemaStr + "[query_store_runtime_stats_interval] i \n");
+			sqlSb.append("left outer join " + schemaStr + "[" + tabName + "] s ON i.[runtime_stats_interval_id] = s.[runtime_stats_interval_id] \n");
+			for (int i=0; i<whereColNameList.size(); i++)
+			{
+				sqlSb.append("      and s.[" + whereColNameList.get(i) + "] = " + DbUtils.safeStrHexAsBinary(conn, whereColValList.get(i)) + " \n");
+			}
+			if (StringUtil.hasValue(extraWhereClause))
+			{
+				sqlSb.append("      " + extraWhereClause + " \n");
+			}
+			sqlSb.append("group by i.[start_time] \n");
+			sqlSb.append("order by i.[start_time] \n");
+
+//System.out.println("getSparclineData(): QUERY_STORE - SQL=\n" + sqlSb.toString());
+		}
+
+		String sql = sqlSb.toString();
 		
 //System.out.println("getSparclineData(): SQL=\n" + sql);
 
@@ -546,6 +708,7 @@ public class SparklineHelper
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(conn.quotifySqlString(sql)))
 		{
 			ResultSetMetaData rsmd = rs.getMetaData();
+//			int btsDt = rsmd.getColumnType(1); // for column 1 -- Begin Time
 			int valDt = rsmd.getColumnType(3); // for column 3 -- the aggregated column
 
 			while(rs.next())
@@ -556,6 +719,14 @@ public class SparklineHelper
 //				Number    val = rs.getInt      (3);
 				Number    val = null;
 
+//				// Convert to LOCAL Time
+//				if (btsDt == Types.TIMESTAMP_WITH_TIMEZONE)
+//				{
+//					System.out.println("BTS---TIMESTAMP_WITH_TIMEZONE: to local ts: |"+bts+"| ->>> |"+bts.toLocalDateTime()+"|   ("+Timestamp.valueOf(bts.toLocalDateTime())+").");
+//					bts = Timestamp.valueOf(bts.toLocalDateTime());
+//					ets = Timestamp.valueOf(ets.toLocalDateTime());
+//				}
+				
 				switch (valDt)
 				{
 				case Types.TINYINT:
@@ -589,6 +760,10 @@ public class SparklineHelper
 
 				String tooltip = sdf_HM.format(bts) + " - " + sdf_HM.format(ets) + " @ [" + sdf_YMD.format(bts) + "]";
 
+//if (DataSource.QueryStore.equals(dataSource))
+//{
+//	System.out.println("---- DATA: bts=|"+bts+"|, val=|"+val+"|, tooltip=|"+tooltip+"|.");
+//}
 				res.values  .add(val);
 				res.tooltips.add(tooltip);
 				res.beginTs .add(bts);

@@ -111,6 +111,7 @@ extends ObjectLookupInspectorAbstract
 			try
 			{
 				String xmlPlan = SqlServerUtils.getXmlQueryPlan(conn, objectName);
+//System.out.println("ObjectLookupInspectorSqlServer.doObjectInfoLookup(): ExecPlanHandle='" + objectName + "', getXmlQueryPlan returned: " + xmlPlan);
 //				entry.setObjectText( xmlPlan );
 				entry.setExtraInfoText( xmlPlan ); // AseTune uses setExtraInfoText(), so lets stick with that
 				

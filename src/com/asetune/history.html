@@ -38,6 +38,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>new: AlarmEventSqlCaptureOldData        -- If SqlCapture has "died" for some reason (not updating a timestamp), then raise alarm.</LI>
 				<LI>new: AlarmEventPerfCounterWarning       -- (SQL-Server) - If a PerfCounter value is "out of whack"...</LI>
 				<LI>new: AlarmEventLongRunningStatement     -- If a Statement has been running for more than X seconds/minutes/hours</LI>
+				
 
 				<LI>Changed: AlarmEventConfigResourceIsLow       -- added "raiseDelay", which is used by 'Statement Cache Hit Rate', and the default was set to 5 minutes below configured value before raising alarm.</LI>
 				<LI>Changed: AlarmEventFullTranLog               -- alwaysSend() is now set to true, so even if we do not "subscribe" for alarms on this server, we will still get message, just like SrvDown </LI>
@@ -65,6 +66,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		</LI>
 
 		<LI>OS Monitoring improvement for AIX 7.2 (where some columns in output for 'mpstat' and 'vmstat' was changed, and 'iostat' had a faulty column id)</LI>
+		<LI>OS Monitoring: CmOsMpstat - Added column 'TotalPct (usr + sys + iowait)'</LI>
 
 		<LI>Daily Summary Report Changes
 			<UL>
@@ -100,7 +102,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
 		<li>When recording a session: SQL Capture -- Rewritten;  now picks up SQL Text/Plan in a better way </li>
-		
+		<li>On connect: if option 'enable metrics capture' is enabled at server level, then disable it at the monConnection level using 'set metrics_capture off'</li>
+		<li>AsePlanViewer - Fill in 'execParameters' or 'compileParameters' in the SQL Text</li>
+
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
 		<b>CmActiveStatements - tab: Active Statements</b><br>
@@ -132,9 +136,18 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
+		<b>CmErrorLog</b><br>
+		<ul>
+			<li>for AlarmEventErrorLogEntry also send a description of the error number</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
 		<b>CmOpenDatabases - tab: Databases</b><br>
 		<ul>
 			<li>bug fix: LowDbFreeSpaceInMb and LowLogFreeSpaceInMb sometimes didn't fire correctly</li>
+			<li>for AlarmEventLongRunningTransaction, added filters on 'OldestTranProg', 'OldestTranUser', 'OldestTranHost' so we can filter out known users or programs</li>
 		</ul>
 		</LI>
 
@@ -162,6 +175,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>now also tries to capture "active SPID's" every second (and potentially) wait statistics on those... which will be visible in the Daily Reports</li>
 			<li>also the internal storage table(s) column layout was redone</li>
 			<li>Normalizations of SQL Statements was made better, and also a "rewrite" functionality was made so we can better support SQL Syntax "not supported" by JsqlParser</li>
+			<li>Statement Normalizer enhanced to handle Stored Procedure execution a bit better</li>
 		</ul>
 		</LI>
 
@@ -177,6 +191,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>new: AseTopCmObjectActivityLockWaits -- Top TABLE/INDEX Blocking Lock Wait Statistics</li>
 			<li>new: AseCmDeviceIo                   -- Device IO, (order by: Name, origin: CmDeviceIo_diff / monDeviceIO)</li>
 			<li>change in 'error info', only show first 100 SQL Statements for each error number</li>
+			<li>Copy the XML Plan in 'Top Statement Cache Entries'</li>
 		</ul>
 		</LI>
 
@@ -235,37 +250,91 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>SqlServerTune - Microsoft SQL-Server</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
+		<LI>Added Alarm: <b>AlarmEventDacInUse                  </b> -- If someone is using te DAC (Dedicated Admin Connection) which normally should be used in emergency cases</LI>
+		<LI>Added Alarm: <b>AlarmEventQueryStoreLowFreeSpace    </b> -- If querey Store Space starts to get low </LI>
+		<LI>Added Alarm: <b>AlarmEventQueryStoreUnexpectedState </b> -- If Query Store 'state' is not the expected/desired state</LI>
+
 		<LI>Added CM: <b>CmIndexMissing </b> - Take information from 'dm_db_missing_index_*' and display them, in a prioritized way... NOTE: as always take the recommendations with 'a grain of salt'</LI>
 		<LI>Added CM: <b>CmIndexUnused  </b> - Unused Indexes - ordered by 'user_updates desc' so the undex with most updates will be "first"</LI>
 		<LI>Added CM: <b>CmTableSize    </b> - A cheaper version of 'CmIndexPhysical using dm_db_index_physical_stats', this one is using dm_db_partition_stats and is *much* cheaper...</LI>
 		<LI>Added CM: <b>CmMemoryClerks </b> - Information about the memory clerks</LI>
 		<LI>Added CM: <b>CmMemoryGrants </b> - Information about SPID's that requests memory grants</LI>
+
 		<LI><b>CmActiveStatements </b> - For blocking locks (marked as red background) - only the root blocker(s) are marked. logic (ImBlockingOtherSessionIds!="" and ImBlockedBySessionId=0)</LI>
 		<LI><b>CmActiveStatements </b> - added column 'dop - Degree Of Parallelism' if version is above 2016</LI>
 		<LI><b>CmActiveStatements </b> - added column 'LiveQueryPlan' and 'HasLiveQueryplan', and an option 'Get Live Query Plan'. It's populated if version 1016, SP1 or above</LI>
+		<LI><b>CmActiveStatements </b> - new column 'HasSpidLocks', 'SpidLocks' to collect what locks SPID's are holding </LI>
+		<LI><b>CmActiveStatements </b> - new column 'SpidLocks' to summarize how many locks a SPID holds </LI>
+		<LI><b>CmActiveStatements </b> - new column 'HasBlockedSpidsInfo', 'BlockedSpidsInfo' so that alarms can see both the root-cause-spid and the victim-spid information </LI>
+		<LI><b>CmActiveStatements </b> - new column 'ProcName', 'StmntStart' so we can see if a Stored Proc is executing (and not just the SQL Text) </LI>
+		<LI><b>CmActiveStatements </b> - Query Plans: get actual execution plans if the server supports it (2019 & traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
+		
 		<LI><b>CmDatabases        </b> - Added 'OldestTranName' and 'OldestTranId' - Now shows the transaction name and id (watch out for OldestTranName 'implicit_transaction', which indicates that AotoCommit is FALSE, which introduces more blocking locks)</LI>
 		<LI><b>CmDatabases        </b> - fixed bug: LowDbFreeSpaceInMb and LowLogFreeSpaceInMb sometimes didn't fire correctly</LI>
+		<LI><b>CmDatabases        </b> - Query Plans: get actual execution plans if the server supports it (2019 & traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
+		<LI><b>CmDatabases        </b> - new columns for Query Store: 'QsIsEnabled', 'QsIsOk', 'QsDesiredState', 'QsActualState', 'QsMaxSizeInMb', 'QsUsedSpaceInMb', 'QsFreeSpaceInMb', 'QsUsedPct', 'QsReadOnlyReason' </LI>
+		<LI><b>CmDatabases        </b> - new column 'OldestTranHasLocks', 'OldestTranLocks' to collect what locks Oldest Transaction are holding </LI>
+		<LI><b>CmDatabases        </b> - for AlarmEventLongRunningTransaction, added filters on 'OldestTranProg', 'OldestTranUser', 'OldestTranHost' so we can filter out known users or programs </LI>
+
+		<LI><b>CmExecCursors      </b> - new columns 'exec_sql_text', 'full_sql_text', to see what the cursor looks like. Also 'dbid', 'objectid' (which for the moment may not be trusted, since the origon from dm_exec_sql_text) </LI>
+		
+		<LI><b>CmExecQueryStat    </b> - new columns 'objectid', 'object_name'. so we can see if it's a procedure call </LI>
+
+		<LI><b>CmIndexOpStat      </b> - new postpone value of 300 seconds (5 minutes) </LI>
+
+		<LI><b>CmIndexUsage       </b> - new postpone value of 300 seconds (5 minutes) </LI>
+
+		<LI><b>CmOpenTransactions </b> - Removed Primary Key & Query Plans: get actual execution plans if the server supports it (2019 & traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
+
+		<LI><b>CmOsLatch          </b> - added columns 'waiting_requests_count_diff', 'wait_time_ms_diff' to make it easier to see both ABS and DIFF value when in 'diff' mode </LI>
+
 		<LI><b>CmPerfCounters     </b> - new graph 'Buffer Cache Data Size in MB'</LI>
 		<LI><b>CmPerfCounters     </b> - new alarm: 'FreeListStalls' - Buffer Cache is probably to small... Waiting for memory to become available before a page can be added into the buffer pool.</LI>
 		<LI><b>CmPerfCounters     </b> - added graph 'Memory Manager', with a line for every entry where object_name is ':Memory Manager'</LI>
+		<LI><b>CmPerfCounters     </b> - Added 5 graphs for Query Store Usage. 'QsTotal', 'QsDbCpu', 'QsDbPhysRead', 'QsDbLogiRead', 'QsDbLogiWrite' </LI>
+
 		<LI><b>CmSchedulers       </b> - added 'diff' calculations for columns 'total_cpu_usage_ms', 'total_cpu_idle_capped_ms' and 'total_scheduler_delay_ms'</LI>
+
 		<LI><b>CmSessions         </b> - Added column 'BlockingOtherSpids' - This holds information about what SPID(s) I'm currently blocking. Root blocker(s) are marked in red. logic (BlockingOtherSpids!="" and blocking_session_id=0)</LI>
 		<LI><b>CmSessions         </b> - Added column 'tat_transaction_id', 'transaction_type', 'transaction_name' , 'transaction_begin_time' (watch out for transaction_name 'implicit_transaction', which indicates that AotoCommit is FALSE, which introduces more blocking locks)</LI>
 		<LI><b>CmSessions         </b> - added column 'mars_count' to check how many MARS entries a connection are using.</LI>
 		<LI><b>CmSessions         </b> - added column 'ExecTimeInMs' and raise AlarmEventLongRunningStatement when a statement has been executed for more than 3 hours (by defualt), 'skip' can be done on: dbname, login, cmd and tranName</LI>
 		<LI><b>CmSessions         </b> - changed 'transaction_isolation_level' from a number to a string description (with the number appended)</LI>
 		<LI><b>CmSessions         </b> - bug fix: when connections are using MARS, summarize all connection counters 'num_reads' and 'num_writes' for MARS sessions.</LI>
+		<LI><b>CmSessions         </b> - new column 'ProcName', 'StmntStart' so we can see if a Stored Proc is executing and what "line" </LI>
+		<LI><b>CmSessions         </b> - new column 'endpoint_type' so we can see what type of coonection it's using (DAC, SHARED_MEMORY, NAMED_PIPES, TCP, VIA) </LI>
+
 		<LI><b>CmSpidWait         </b> - added column 'WaitClass', which tries to group 'wait_type' in groups ... this according to https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15</LI>
+
 		<LI><b>CmTempdbSpidUsage  </b> - Completely rewritten, hopefully this one will work better</LI>
 		<LI><b>CmTempdbUsage      </b> - added 2 new graphs 'Tempdb Usage by Object Type, in MB, {All|Subset}' -- Shows "Version Store", "Internal Objects", "User Objects", "Mixed Extents", "Allocated Space", "Free Space", "Total Space"</LI>
+
+		<LI><b>CmWaitingTasks     </b> - new columns 'cpu_time', 'status', 'command', 'ProcName', 'StmntStart', 'program_name', 'database_id', 'database_name' </LI>
+		<LI><b>CmWaitingTasks     </b> - Query Plans: get actual execution plans if the server supports it (2019 & traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
+
 		<LI><b>CmWaitStats        </b> - added column 'WaitClass', which tries to group 'wait_type' in groups ... this according to https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15</LI>
 		<LI><b>CmWaitStats        </b> - updated the list of 'wait_type' to skip (hopefully up to 2019)</LI>
+
 		<LI><b>CmWho              </b> - Added column 'BlockingOtherSpids' - This holds information about what SPID(s) I'm currently blocking. Root blocker(s) are marked in red. logic (BlockingOtherSpids!="" and blocked=0)</LI>
+		<LI><b>CmWho              </b> - added column 'dupMergeCount' to "merge" when we have duplicates which seems to happen when there are parrallel workers even if the PK is 'spid' and 'ecid' </LI>
 
 		<LI>All (hopefully) CM's now have a "DB-Iterator" which get's system information from sys.objects, sys.schemas, sys.indexes... instead of using the built-in functions object_name(), object_schema_name() etc... Because the BIF will be blocked on many instances</LI>
 		<LI>Tooltip changes: if any cell starts with '&lt;ShowPlanXML xmlns=' show the special tooltip which offers to open the plan in various ways.</LI>
 		<LI>Get SQL-Server configurations: to get active traceflags use 'DBCC TRACESTATUS(-1)' instead of 'DBCC TRACESTATUS'</LI>
 		<LI>bug fix: to reset internal SQL-Server version number on disconnect.</LI>
+		<LI>On Connect: Check for Recommended trace flags for different versions<br> 
+		    &emsp;&bull; SQL Server (between 2016 SP1 & 2019) traceflag 7412 -- to get "live query plans"<br> 
+		    &emsp;&bull; SQL-Server 2019, Actual-Query-Plans: traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS<br>
+		</LI>
+		<LI>PCS: Capture last day (or more) for databases that has Query Store enabled.<br>
+		    &emsp;&bull; config: <code>SqlServerTune.onPcsDatabaseRollover.captureQueryStore = true|false       </code> (if you want to change this)<br>
+		    &emsp;&bull; config: <code>SqlServerTune.onPcsDatabaseRollover.captureQueryStore.daysToCopy = #     </code> (if you want to change how many days)<br>
+		    &emsp;&bull; config: <code>SqlServerTune.onPcsDatabaseRollover.captureQueryStore.skipServer = regex </code> (if you want to skip some servers)<br>
+		</LI>
+		<LI>Set session level option 'set timeout 3000' on the monitoring connection (that is if we are blocked, dont wait for more thatn 3 seconds)<br> 
+		    &emsp;&bull; config: <code>SqlServerTune.onRefresh.setLockTimeout = true|false </code>   (if you want to change this)<br> 
+		    &emsp;&bull; config: <code>SqlServerTune.onRefresh.setLockTimeout.ms = ms      </code>   (if change the timeout value)<br>
+		</LI>
 		
 		<!-- ~~~~~ Daily Report ~~~~~ -->
 		<LI>
@@ -276,6 +345,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>new: SqlServerMissingIndexes  -- Top Missing Indexes (origin: CmIndexMissing)</li>
 			<li>new: SqlServerUnusedIndexes   -- Top Unused Indexes (origin: CmIndexUnused)</li>
 			<li>new: SqlServerCmDeviceIo      -- DB File IO, (order by: database_id, file_id  origin: CmDeviceIo_diff / dm_io_virtual_file_stats,master_files)</li>
+			<li>new: Procedure Executions</li>
+			<li>new: Function Executions</li>
+			<li>new: Trigger Executions</li>
+			<li>new: Cursor Executions</li>
+			<li>new: Table Access 4 reports: By Locks (simulate Logical Reads), By Waits, by Insert-Update-Delete, By Physical IO</li>
+			<li>new: Query Store for databases where it was enabled</li>
 		</ul>
 		</LI>
 	</UL>
@@ -289,6 +364,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Change how we collect current time from: CURRENT_TIMESTAMP to CLOCK_TIMESTAMP()</LI>
 		<LI>CmPgStatements - Now works with Postgres 9.3 (and possibly versions below that), where I "fake" the 'queryid' by taking a md5 checksum (first 16 chars) and converting that to an bigint</LI>
 		<LI>CmPgActivity - added column 'StatementExecInSec', and raise AlarmEventLongRunningStatement when a statement has been executed for more than 3 hours (by defualt), 'skip' can be done on: dbname, login, cmd and tranName</LI>
+		<LI>Daily Summary Report - Statements - tooltip and popup with the SQL Text</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -324,6 +400,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>AutoCompletion - Do not need a table alias for simple select, insert, update delete statements. Now you can simply do 'select &lt;ctrl-space&gt; from tabname where &lt;ctrl-space&gt;' to get columns that is part of the table...</LI>
 		<LI>'statistics io' summary table... for SQL-Server 2019 the output was changed (with more data/columns)</LI>
 		<LI>Tooltip changes: if any cell starts with '&lt;ShowPlanXML xmlns=' show the special tooltip which offers to open the plan in various ways.</LI>
+		<LI>Refresh Code Completion: Ctrl + Shift + R</LI>
+		<LI>Filter field can now be enabled or disabled with a checkbox</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

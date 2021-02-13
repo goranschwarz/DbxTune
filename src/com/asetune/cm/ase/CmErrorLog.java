@@ -41,6 +41,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelAppend;
+import com.asetune.config.dict.AseErrorMessageDictionary;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TabularCntrPanelAppend;
@@ -446,8 +447,12 @@ extends CountersModelAppend
 					}
 					else
 					{
-						String extendedDescText = getErrorRecordAsText(lastRefreshRows, r);
-						String extendedDescHtml = getErrorRecordAsHtml(lastRefreshRows, r);
+						String errorDesc     = AseErrorMessageDictionary.getInstance().getDescription(errorNumber);
+						String errorDescTxt  = "\nError: "      + errorNumber + ", Description: "     + errorDesc + "\n";
+						String errorDescHtml = "<br><b>Error: " + errorNumber + ", Description</b>: " + errorDesc + "<br>";
+
+						String extendedDescText = getErrorRecordAsText(lastRefreshRows, r) + errorDescTxt;
+						String extendedDescHtml = getErrorRecordAsHtml(lastRefreshRows, r) + errorDescHtml;
 
 						AlarmEvent.Severity alarmSeverity = AlarmEvent.Severity.WARNING;
 						if (severity > 17)

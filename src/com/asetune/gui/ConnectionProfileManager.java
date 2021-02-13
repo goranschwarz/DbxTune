@@ -33,6 +33,7 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -2236,6 +2237,37 @@ public class ConnectionProfileManager
 			saveThread.start();
 		}
 	}
+
+	/** 
+	 * Try to lock the file, if it fails, sleep 100ms and retry again <br>
+	 * Max retry is 50 (so max 5 seconds)
+	 */
+	private FileLock lockWithRetry(FileChannel channel, String filename)
+	throws IOException
+	{
+		OverlappingFileLockException lastEx = null;
+		
+		for (int i=0; i<50; i++) // retry 50 times... sleep 100ms SO MAX: 5 seconds
+		{
+			try
+			{
+				return channel.lock();
+			}
+			catch (OverlappingFileLockException ex)
+			{
+				lastEx = ex;
+				
+				_logger.info("Locking file issue. RetryCount=" + i + ". Sleeping 100ms and retry. File='" + filename + "', Caught: " + ex);
+
+				try { Thread.sleep(100); }
+				catch(InterruptedException ignore) {}
+			}
+		}
+		
+		if (lastEx != null)
+			throw lastEx;
+		throw new OverlappingFileLockException();
+	}
 	
 	private void saveInternal(String filename, boolean writeTemplateFile)
 	{
@@ -2293,7 +2325,8 @@ public class ConnectionProfileManager
 			try 
 			{
 				// Get an exclusive lock on the whole file
-				FileLock lock = channel.lock();
+//				FileLock lock = channel.lock();
+				FileLock lock = lockWithRetry(channel, filename);
 
 				try 
 				{

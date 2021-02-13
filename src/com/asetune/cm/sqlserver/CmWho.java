@@ -26,6 +26,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.naming.NameNotFoundException;
+
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
@@ -37,6 +39,8 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.gui.CmWhoPanel;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
@@ -182,6 +186,22 @@ extends CountersModel
 	{
 		return NEED_CONFIG;
 	}
+	
+	@Override
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	{
+		try 
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+			mtd.addColumn("sysprocesses",  "dupMergeCount", "<html>" +
+			                                                       "If more than <b>one</b> row was fetched for this <i>Primary Key</i> (spid, ecid).<br>" +
+			                                                       "Then this column will hold number of rows merged into this row. 0=No Merges(only one row for this PK), 1=One Merge accurred(two rows was seen for this PK), etc...<br>" +
+			                                                       "This means that the non-diff columns will be from the first row fetched,<br>" +
+			                                                       "then all columns which is marked for difference calculation will be a summary of all the rows (so it's basically a SQL SUM(colName) operation)." +
+			                                                   "</html>");
+		}
+		catch (NameNotFoundException e) {/*ignore*/}
+	}
 
 	@Override
 	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
@@ -191,6 +211,9 @@ extends CountersModel
 		pkCols.add("spid");
 		pkCols.add("ecid");
 
+		// NOTE: PK is NOT unique, so therefore 'dupMergeCount' column is added to the SQL Query
+		//       when there are Parallel Statements ECID isn't unique enough (sometimes there are 2 ECID's but with different KPID (OS Thread ID)
+		
 		return pkCols;
 	}
 
@@ -228,6 +251,7 @@ extends CountersModel
 			"    dbname = db_name(dbid), \n" +
 			"    authenticating_dbname = db_name(es.authenticating_database_id), \n" +
 			"    sp.uid, \n" +
+			"    dupMergeCount = convert(int, 0), \n" + // merge duplicates and increment the count (spid, ecid) do not seem to be unique when there are Parallel Statements
 			"    sp.cpu, \n" +
 			"    sp.physical_io, \n" +
 			"    es.logical_reads, \n" +

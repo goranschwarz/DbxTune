@@ -181,7 +181,7 @@ extends CountersModel
 			"    s.spins, \n" +
 			"    s.collisions, \n" +
 			"    s.spins_per_collision, \n" + 
-			"    ContentionPct = CASE WHEN s.spins > 0 THEN convert(numeric(5,1), ((s.collisions*1.0)/(s.spins*1.0))*100.0) ELSE convert(numeric(5,1), 0.0) END, \n" +
+			"    ContentionPct = CASE WHEN s.spins > 0 THEN convert(numeric(10,1), ((s.collisions*1.0)/(s.spins*1.0))*100.0) ELSE convert(numeric(5,1), 0.0) END, \n" +
 			"    s.sleep_time, \n" +
 			"    s.backoffs, \n" +
 			"    Description = convert(varchar(1024), '') \n" +

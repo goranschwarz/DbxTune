@@ -30,6 +30,7 @@ import java.util.List;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.IReportChart;
+import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -197,7 +198,7 @@ public class AseCmSqlStatement extends AseAbstract
 		String dbmsWhereKeyColumn = "statId"; 
 
 		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
-				SparkLineParams.create()
+				SparkLineParams.create       (DataSource.CounterModel)
 				.setHtmlChartColumnName      ("totalCount__chart")
 				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
 				.setDbmsTableName            ("CmSqlStatement_diff")
@@ -208,7 +209,7 @@ public class AseCmSqlStatement extends AseAbstract
 				.validate()));
 		
 		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
-				SparkLineParams.create()
+				SparkLineParams.create       (DataSource.CounterModel)
 				.setHtmlChartColumnName      ("sqlBatchCount__chart")
 				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
 				.setDbmsTableName            ("CmSqlStatement_diff")
@@ -219,7 +220,7 @@ public class AseCmSqlStatement extends AseAbstract
 				.validate()));
 		
 		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
-				SparkLineParams.create()
+				SparkLineParams.create       (DataSource.CounterModel)
 				.setHtmlChartColumnName      ("errorCount__chart")
 				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
 				.setDbmsTableName            ("CmSqlStatement_diff")
@@ -230,7 +231,7 @@ public class AseCmSqlStatement extends AseAbstract
 				.validate()));
 		
 		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
-				SparkLineParams.create()
+				SparkLineParams.create       (DataSource.CounterModel)
 				.setHtmlChartColumnName      ("inStmntCacheCount__chart")
 				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
 				.setDbmsTableName            ("CmSqlStatement_diff")
@@ -241,7 +242,7 @@ public class AseCmSqlStatement extends AseAbstract
 				.validate()));
 		
 		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
-				SparkLineParams.create()
+				SparkLineParams.create       (DataSource.CounterModel)
 				.setHtmlChartColumnName      ("dynamicStmntCount__chart")
 				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
 				.setDbmsTableName            ("CmSqlStatement_diff")
@@ -252,7 +253,7 @@ public class AseCmSqlStatement extends AseAbstract
 				.validate()));
 		
 		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
-				SparkLineParams.create()
+				SparkLineParams.create       (DataSource.CounterModel)
 				.setHtmlChartColumnName      ("inProcedureCount__chart")
 				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
 				.setDbmsTableName            ("CmSqlStatement_diff")
@@ -263,7 +264,7 @@ public class AseCmSqlStatement extends AseAbstract
 				.validate()));
 		
 		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
-				SparkLineParams.create()
+				SparkLineParams.create       (DataSource.CounterModel)
 				.setHtmlChartColumnName      ("inProcNameNullCount__chart")
 				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
 				.setDbmsTableName            ("CmSqlStatement_diff")
@@ -276,7 +277,7 @@ public class AseCmSqlStatement extends AseAbstract
 		
 		
 		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
-				SparkLineParams.create()
+				SparkLineParams.create       (DataSource.CounterModel)
 				.setHtmlChartColumnName      ("sumExecTimeMs__chart")
 				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
 				.setDbmsTableName            ("CmSqlStatement_diff")
@@ -287,7 +288,7 @@ public class AseCmSqlStatement extends AseAbstract
 				.validate()));
 		
 		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
-				SparkLineParams.create()
+				SparkLineParams.create       (DataSource.CounterModel)
 				.setHtmlChartColumnName      ("sumCpuTime__chart")
 				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
 				.setDbmsTableName            ("CmSqlStatement_diff")
@@ -298,7 +299,7 @@ public class AseCmSqlStatement extends AseAbstract
 				.validate()));
 		
 		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
-				SparkLineParams.create()
+				SparkLineParams.create       (DataSource.CounterModel)
 				.setHtmlChartColumnName      ("sumWaitTime__chart")
 				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
 				.setDbmsTableName            ("CmSqlStatement_diff")
@@ -309,7 +310,7 @@ public class AseCmSqlStatement extends AseAbstract
 				.validate()));
 		
 		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
-				SparkLineParams.create()
+				SparkLineParams.create       (DataSource.CounterModel)
 				.setHtmlChartColumnName      ("sumLogicalReads__chart")
 				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
 				.setDbmsTableName            ("CmSqlStatement_diff")
@@ -320,7 +321,7 @@ public class AseCmSqlStatement extends AseAbstract
 				.validate()));
 		
 		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
-				SparkLineParams.create()
+				SparkLineParams.create       (DataSource.CounterModel)
 				.setHtmlChartColumnName      ("sumPhysicalReads__chart")
 				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
 				.setDbmsTableName            ("CmSqlStatement_diff")
@@ -331,7 +332,7 @@ public class AseCmSqlStatement extends AseAbstract
 				.validate()));
 		
 		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm_sl, 
-				SparkLineParams.create()
+				SparkLineParams.create       (DataSource.CounterModel)
 				.setHtmlChartColumnName      ("sumRowsAffected__chart")
 				.setHtmlWhereKeyColumnName   (tabWhereKeyColumn)
 				.setDbmsTableName            ("CmSqlStatement_diff")

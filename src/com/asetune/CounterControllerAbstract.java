@@ -263,7 +263,6 @@ implements ICounterController
 		getCounterCollectorThread().shutdown();
 	}
 
-
 	@Override
 	public CountersModel getSummaryCm()
 	{
@@ -2384,6 +2383,21 @@ implements ICounterController
 		return _dbmsProperties;
 	}
 
+	/**
+	 * Check if a specific DBMS Option is enabled 
+	 * 
+	 * @return true if it's enabled... false if it's disabled
+	 * @throws RuntimeException if the Counter Controller is not yet initialized
+	 */
+	@Override
+	public boolean isDbmsOptionEnabled(DbmsOption dbmsOption)
+	{
+//		if ( ! isInitialized() )
+//			throw new RuntimeException("The Counter Controller is not yet initialized.");
+
+		return false;
+	}
+
 	//==================================================================
 	// END: DBMS Properties
 	//==================================================================
@@ -2397,4 +2411,9 @@ implements ICounterController
 		}
 	}
 
+	@Override
+	public void doLastRecordingActionBeforeDatabaseRollover(DbxConnection recordingDbConn)
+	{
+		// override this if thsi Vendor needs to save anything...
+	}
 }

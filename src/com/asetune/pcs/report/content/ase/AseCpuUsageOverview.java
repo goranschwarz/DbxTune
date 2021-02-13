@@ -31,6 +31,7 @@ import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.pcs.report.content.ReportChartTimeSeriesLine;
+import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -230,7 +231,7 @@ public class AseCpuUsageOverview extends AseAbstract
 			String whereKeyColumn = "OperationName"; 
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, rstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("ExecutionTime__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmExecutionTime_diff")

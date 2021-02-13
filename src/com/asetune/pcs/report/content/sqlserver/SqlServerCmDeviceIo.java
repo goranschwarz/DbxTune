@@ -30,6 +30,7 @@ import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.ase.SparklineHelper;
 import com.asetune.pcs.report.content.ase.SparklineHelper.AggType;
+import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -163,7 +164,7 @@ public class SqlServerCmDeviceIo extends SqlServerAbstract
 
 			// Mini Chart on "Physical Reads"
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("Reads__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmDeviceIo_diff")
@@ -174,7 +175,7 @@ public class SqlServerCmDeviceIo extends SqlServerAbstract
 					.validate()));
 			
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("Writes__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmDeviceIo_diff")
@@ -185,7 +186,7 @@ public class SqlServerCmDeviceIo extends SqlServerAbstract
 					.validate()));
 			
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("TotalServiceTimeMs__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmDeviceIo_diff")
@@ -196,7 +197,7 @@ public class SqlServerCmDeviceIo extends SqlServerAbstract
 					.validate()));
 			
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("ReadServiceTimeMs__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmDeviceIo_diff")
@@ -207,7 +208,7 @@ public class SqlServerCmDeviceIo extends SqlServerAbstract
 					.validate()));
 			
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("WriteServiceTimeMs__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmDeviceIo_diff")

@@ -33,6 +33,7 @@ import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.pcs.report.content.ReportEntryAbstract;
 import com.asetune.pcs.report.content.ase.SparklineHelper;
 import com.asetune.pcs.report.content.ase.SparklineHelper.AggType;
+import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -213,7 +214,7 @@ public class OsIoStatOverview extends ReportEntryAbstract
 			// Mini Chart on
 			String whereKeyColumn = "device"; 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("readsPerSec__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmOsIostat_abs")
@@ -224,7 +225,7 @@ public class OsIoStatOverview extends ReportEntryAbstract
 					.validate()));
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("writesPerSec__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmOsIostat_abs")
@@ -235,7 +236,7 @@ public class OsIoStatOverview extends ReportEntryAbstract
 					.validate()));
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("avgqu-sz__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmOsIostat_abs")
@@ -246,7 +247,7 @@ public class OsIoStatOverview extends ReportEntryAbstract
 					.validate()));
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("svctm__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmOsIostat_abs")
@@ -257,7 +258,7 @@ public class OsIoStatOverview extends ReportEntryAbstract
 					.validate()));
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create()
+					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("utilPct__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmOsIostat_abs")

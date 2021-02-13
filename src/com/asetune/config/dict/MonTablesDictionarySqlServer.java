@@ -121,6 +121,75 @@ extends MonTablesDictionaryDefault
 
 
 		// ---------------------------------------------------------------------------------------
+		// sysprocesses
+		// ---------------------------------------------------------------------------------------
+		try
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+
+			// Table name and description
+			mtd.addTable("sysprocesses",  "<p>Contains information about processes that are running on an instance of SQL Server. These processes can be client processes or system processes. To access sysprocesses, you must be in the master database context, or you must use the master.dbo.sysprocesses three-part name.</p>");
+
+			// Column names and description
+			mtd.addColumn("sysprocesses", "spid"         , "<html> SQL Server session ID </html>");
+			mtd.addColumn("sysprocesses", "kpid"         , "<html> Windows thread ID. </html>");
+			mtd.addColumn("sysprocesses", "blocked"      , "<html> ID of the session that is blocking the request. If this column is NULL, the request is not blocked, or the session information of the blocking session is not available (or cannot be identified). "
+			                                              + "  <ul>"
+			                                              + "    <li>-2 = The blocking resource is owned by an orphaned distributed transaction.</li>"
+			                                              + "    <li>-3 = The blocking resource is owned by a deferred recovery transaction.</li>"
+			                                              + "    <li>-4 = Session ID of the blocking latch owner could not be determined due to internal latch state transitions.</li>"
+			                                              + "  </ul>"
+			                                              + "</html>");
+			mtd.addColumn("sysprocesses", "waittype"     , "<html> Reserved </html>");
+			mtd.addColumn("sysprocesses", "waittime"     , "<html> Current wait time in milliseconds. (0 = Process is not waiting) </html>");
+			mtd.addColumn("sysprocesses", "lastwaittype" , "<html> A string indicating the name of the last or current wait type. </html>");
+			mtd.addColumn("sysprocesses", "waitresource" , "<html> Textual representation of a lock resource. </html>");
+			mtd.addColumn("sysprocesses", "dbid"         , "<html> ID of the database currently being used by the process. </html>");
+			mtd.addColumn("sysprocesses", "uid"          , "<html> ID of the user that executed the command. Overflows or returns NULL if the number of users and roles exceeds 32,767. </html>");
+			mtd.addColumn("sysprocesses", "cpu"          , "<html> Cumulative CPU time for the process. The entry is updated for all processes, regardless of whether the SET STATISTICS TIME option is ON or OFF. </html>");
+			mtd.addColumn("sysprocesses", "physical_io"  , "<html> Cumulative disk reads and writes for the process. </html>");
+			mtd.addColumn("sysprocesses", "memusage"     , "<html> Number of pages in the procedure cache that are currently allocated to this process. A negative number indicates that the process is freeing memory allocated by another process. </html>");
+			mtd.addColumn("sysprocesses", "login_time"   , "<html> Time at which a client process logged into the server. </html>");
+			mtd.addColumn("sysprocesses", "last_batch"   , "<html> Last time a client process executed a remote stored procedure call or an EXECUTE statement. </html>");
+			mtd.addColumn("sysprocesses", "ecid"         , "<html> Execution context ID used to uniquely identify the subthreads operating on behalf of a single process. </html>");
+			mtd.addColumn("sysprocesses", "open_tran"    , "<html> Number of open transactions for the process. </html>");
+			mtd.addColumn("sysprocesses", "status"       , "<html> Process ID status. The possible values are:"
+			                                              + "  <ul>"
+			                                              + "    <li><b>dormant   </b> = SQL Server is resetting the session.</li>"
+			                                              + "    <li><b>running   </b> = The session is running one or more batches. When Multiple Active Result Sets (MARS) is enabled, a session can run multiple batches. For more information, see Using Multiple Active Result Sets (MARS).</li>"
+			                                              + "    <li><b>background</b> = The session is running a background task, such as deadlock detection.</li>"
+			                                              + "    <li><b>rollback  </b> = The session has a transaction rollback in process.</li>"
+			                                              + "    <li><b>pending   </b> = The session is waiting for a worker thread to become available.</li>"
+			                                              + "    <li><b>runnable  </b> = The task in the session is in the runnable queue of a scheduler while waiting to get a time quantum.</li>"
+			                                              + "    <li><b>spinloop  </b> = The task in the session is waiting for a spinlock to become free.</li>"
+			                                              + "    <li><b>suspended </b> = The session is waiting for an event, such as I/O, to complete.</li>"
+			                                              + "  </ul>"
+			                                              + " </html>");
+			mtd.addColumn("sysprocesses", "sid"          , "<html> Globally unique identifier (GUID) for the user. </html>");
+			mtd.addColumn("sysprocesses", "hostname"     , "<html> Name of the workstation. </html>");
+			mtd.addColumn("sysprocesses", "program_name" , "<html> Name of the application program. </html>");
+			mtd.addColumn("sysprocesses", "hostprocess"  , "<html> Workstation process ID number. </html>");
+			mtd.addColumn("sysprocesses", "cmd"          , "<html> Command currently being executed. </html>");
+			mtd.addColumn("sysprocesses", "nt_domain"    , "<html> Windows domain for the client, if using Windows Authentication, or a trusted connection. </html>");
+			mtd.addColumn("sysprocesses", "nt_username"  , "<html> Windows user name for the process, if using Windows Authentication, or a trusted connection. </html>");
+			mtd.addColumn("sysprocesses", "net_address"  , "<html> Assigned unique identifier for the network adapter on the workstation of each user. When a user logs in, this identifier is inserted in the net_address column. </html>");
+			mtd.addColumn("sysprocesses", "net_library"  , "<html> Column in which the client's network library is stored. Every client process comes in on a network connection. Network connections have a network library associated with them that enables them to make the connection. </html>");
+			mtd.addColumn("sysprocesses", "loginame"     , "<html> Login name. </html>");
+			mtd.addColumn("sysprocesses", "context_info" , "<html> Data stored in a batch by using the SET CONTEXT_INFO statement. </html>");
+			mtd.addColumn("sysprocesses", "sql_handle"   , "<html> Represents the currently executing batch or object.<br><b>Note:</b> This value is derived from the batch or memory address of the object. This value is not calculated by using the SQL Server hash-based algorithm. </html>");
+			mtd.addColumn("sysprocesses", "stmt_start"   , "<html> Starting offset of the current SQL statement for the specified sql_handle. </html>");
+			mtd.addColumn("sysprocesses", "stmt_end"     , "<html> Ending offset of the current SQL statement for the specified sql_handle.<br> -1 = Current statement runs to the end of the results returned by the fn_get_sql function for the specified sql_handle. </html>");
+			mtd.addColumn("sysprocesses", "request_id"   , "<html> ID of request. Used to identify requests running in a specific session. </html>");
+			mtd.addColumn("sysprocesses", "page_resource", "<html> An 8-byte hexadecimal representation of the page resource if the waitresource column contains a page. </html>");
+		}
+		catch (NameNotFoundException e)
+		{
+			_logger.warn("Problems adding 'sysprocesses ' to MonTablesDictionary. Caught: " + e, e);
+		}
+
+
+
+		// ---------------------------------------------------------------------------------------
 		// availability_databases_cluster
 		// ---------------------------------------------------------------------------------------
 		try
@@ -2225,7 +2294,7 @@ extends MonTablesDictionaryDefault
 			mtd.addTable("dm_exec_query_optimizer_info",  "<p></p>");
 
 			// Column names and description
-			mtd.addColumn("dm_exec_query_optimizer_info", "name"            , "<html><p>column contains the internal name for the rule. An example is JNtoSM — an implementation rule to transform a logical inner join to a physical sort-merge join operator.</p></html>");
+			mtd.addColumn("dm_exec_query_optimizer_info", "name"            , "<html><p>column contains the internal name for the rule. An example is JNtoSM ï¿½ an implementation rule to transform a logical inner join to a physical sort-merge join operator.</p></html>");
 			mtd.addColumn("dm_exec_query_optimizer_info", "promised"        , "<html><p>The promised column shows how many times the rule has been asked to provide a promise value to the optimizer.</p></html>");
 			mtd.addColumn("dm_exec_query_optimizer_info", "promise_total"   , "<html><p>The promise_total column is the sum of all the promise values returned.</p></html>");
 			mtd.addColumn("dm_exec_query_optimizer_info", "promise_avg"     , "<html><p>The promise_avg column is promise_total divided by promised.</p></html>");
@@ -2533,8 +2602,14 @@ extends MonTablesDictionaryDefault
 			mtd.addColumn("dm_exec_requests", "group_id"                   , "<html><p>ID of the workload group to which this query belongs. Is not nullable.</p></html>");
 			mtd.addColumn("dm_exec_requests", "query_hash"                 , "<html><p>Binary hash value calculated on the query and used to identify queries with similar logic. You can use the query hash to determine the aggregate resource usage for queries that differ only by literal values. </p></html>");
 			mtd.addColumn("dm_exec_requests", "query_plan_hash"            , "<html><p>Binary hash value calculated on the query execution plan and used to identify similar query execution plans. You can use query plan hash to find the cumulative cost of queries with similar execution plans. </p></html>");
-			mtd.addColumn("dm_exec_requests", "statement_sql_handle"       , "<html><p><strong>Applies to</strong>: SQL Server 2014 through SQL Server 2016. </p><p>Reserved for future use.</p></html>");
-			mtd.addColumn("dm_exec_requests", "statement_context_id"       , "<html><p><strong>Applies to</strong>: SQL Server 2014 through SQL Server 2016.</p><p>Reserved for future use.</p></html>");
+			mtd.addColumn("dm_exec_requests", "statement_sql_handle"       , "<html><p>SQL handle of the individual query.<br> This column is NULL if Query Store is not enabled for the database.</p></html>");
+			mtd.addColumn("dm_exec_requests", "statement_context_id"       , "<html><p>The optional foreign key to sys.query_context_settings.<br> This column is NULL if Query Store is not enabled for the database.</p></html>");
+			mtd.addColumn("dm_exec_requests", "dop"                        , "<html><p>The degree of parallelism of the query.</p></html>");
+			mtd.addColumn("dm_exec_requests", "parallel_worker_count"      , "<html><p>The number of reserved parallel workers if this is a parallel query.</p></html>");
+			mtd.addColumn("dm_exec_requests", "external_script_request_id" , "<html><p>The external script request ID associated with the current request.</p></html>");
+			mtd.addColumn("dm_exec_requests", "is_resumable"               , "<html><p>Indicates whether the request is a resumable index operation.</p></html>");
+			mtd.addColumn("dm_exec_requests", "page_resource"              , "<html><p>An 8-byte hexadecimal representation of the page resource if the wait_resource column contains a page. For more information, see sys.fn_PageResCracker.</p></html>");
+			mtd.addColumn("dm_exec_requests", "page_server_reads"          , "<html><p>Number of page server reads performed by this request. Is not nullable.</p></html>");
 		}
 		catch (NameNotFoundException e)
 		{
@@ -2597,6 +2672,7 @@ extends MonTablesDictionaryDefault
 			mtd.addColumn("dm_exec_sessions", "prev_error"                 , "<html><p>ID of the last error returned on the session. Is not nullable.</p></html>");
 			mtd.addColumn("dm_exec_sessions", "original_security_id"       , "<html><p>Microsoft Windows security ID that is associated with the <span class=\"literal\">original_login_name</span>. Is not nullable. </p></html>");
 			mtd.addColumn("dm_exec_sessions", "original_login_name"        , "<html><p>SQL Server login name that the client used to create this session. Can be a SQL Server authenticated login name, a Windows authenticated domain user name, or a contained database user. Note that the session could have gone through many implicit or explicit context switches after the initial connection. For example, if <a href=\"https://msdn.microsoft.com/en-us/library/ms181362.aspx\">EXECUTE AS</a> is used. Is not nullable.</p></html>");
+
 			mtd.addColumn("dm_exec_sessions", "last_successful_logon"      , "<html><p>Time of the last successful logon for the <span class=\"literal\">original_login_name</span> before the current session started.</p><div> <div class=\"contentTableWrapper\">  <table>   <tbody>    <tr>     <td><p><strong>Applies to</strong>: SQL Server 2008 through SQL Server 2016.</p></td>    </tr>   </tbody>  </table> </div></div></html>");
 			mtd.addColumn("dm_exec_sessions", "last_unsuccessful_logon"    , "<html><p>Time of the last unsuccessful logon attempt for the <span class=\"literal\">original_login_name</span> before the current session started.</p><div> <div class=\"contentTableWrapper\">  <table>   <tbody>    <tr>     <td><p><strong>Applies to</strong>: SQL Server 2008 through SQL Server 2016.</p></td>    </tr>   </tbody>  </table> </div></div></html>");
 			mtd.addColumn("dm_exec_sessions", "unsuccessful_logons"        , "<html><p>Number of unsuccessful logon attempts for the <span class=\"literal\">original_login_name</span> between the <span class=\"literal\">last_successful_logon</span> and <span class=\"literal\">login_time</span>.</p><div> <div class=\"contentTableWrapper\">  <table>   <tbody>    <tr>     <td><p><strong>Applies to</strong>: SQL Server 2008 through SQL Server 2016.</p></td>    </tr>   </tbody>  </table> </div></div></html>");

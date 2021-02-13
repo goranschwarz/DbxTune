@@ -336,12 +336,28 @@ extends CountersModel
 				"     SUBSTRING(txt.text, (qs.statement_start_offset/2)+1, ((CASE WHEN qs.statement_end_offset = -1 THEN DATALENGTH(txt.text) ELSE qs.statement_end_offset END - qs.statement_start_offset)/2) + 1) AS [SqlText] \n" +
 //				"    ,db_name(txt.dbid) AS dbname \n" + // NOTE: dm_exec_sql_text.dbid is NULL in many cases, so using dm_exec_plan_attributes.dbid seems a lot better
 				"    ,(select isnull(db_name(CONVERT(int, value)),CONVERT(nvarchar(10), value)) from sys.dm_exec_plan_attributes(qs.plan_handle) where attribute = N'dbid') AS dbname \n" +
+				"    ,txt.objectid \n" +
+				"    ,CASE WHEN txt.objectid IS NOT NULL and txt.dbid IS NOT NULL THEN object_name(txt.objectid, txt.dbid) ELSE NULL END AS object_name \n" +
 				"    ,qs.* \n" +
 				"FROM sys." + dm_exec_query_stats + " qs \n" +
 				"CROSS APPLY sys.dm_exec_sql_text(qs.sql_handle) txt \n" +
 				"WHERE 1 = 1 -- to make extra where clauses easier \n" +
 				sql_sample_extraWhereClause +
 				sql_sample_lastXminutes;
+		
+		// Possible SQL if we want to use CROSS APPLY to get the DBID in dm_exec_plan_attributes
+        //    SELECT
+        //         SUBSTRING(txt.text, (qs.statement_start_offset/2)+1, ((CASE WHEN qs.statement_end_offset = -1 THEN DATALENGTH(txt.text) ELSE qs.statement_end_offset END - qs.statement_start_offset)/2) + 1) AS [SqlText]
+        //        ,db_name(pa.dbid) AS dbname
+        //        ,txt.objectid
+        //        ,CASE WHEN txt.objectid IS NOT NULL and pa.dbid IS NOT NULL THEN object_name(txt.objectid, pa.dbid) ELSE NULL END AS object_name
+        //        ,qs.*
+        //    FROM sys.dm_exec_query_stats qs
+        //    CROSS APPLY sys.dm_exec_sql_text(qs.sql_handle) txt
+        //    CROSS APPLY (select CONVERT(int, value) as dbid from sys.dm_exec_plan_attributes(qs.plan_handle) where attribute = N'dbid') pa
+        //    WHERE 1 = 1 -- to make extra where clauses easier
+        //      AND qs.last_logical_reads > 100
+
 
 		return sql;
 	}

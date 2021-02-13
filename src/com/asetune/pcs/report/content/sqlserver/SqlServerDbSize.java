@@ -87,7 +87,10 @@ extends SqlServerAbstract
 					int compatLevel_curDb = StringUtil.parseInt(strVal, -1);
 					if (compatLevel_curDb < compatLevel_tempdb)
 					{
-						String tooltip = "Column 'compatibility_level' is less than the 'server level'.\nYou may not take advantage of new functionality, which is available at this SQL-Server version... Server compatibility_level is: "+compatLevel_tempdb;
+						String tooltip = "Column 'compatibility_level' " + compatLevel_curDb + dbVersionToStr(compatLevel_curDb) + " is less than the 'server level'.\n"
+								+ "You may not take advantage of new functionality, which is available at this SQL-Server version... \n"
+								+ "Server compatibility_level is: " + compatLevel_tempdb + dbVersionToStr(compatLevel_tempdb);
+
 						strVal = "<div title=\""+tooltip+"\"> <font color='red'>" + strVal + "</font><div>";
 					}
 				}
@@ -117,6 +120,26 @@ extends SqlServerAbstract
 					}
 				}
 				return strVal;
+			}
+
+			private String dbVersionToStr(int compatLevel)
+			{
+				switch (compatLevel)
+				{
+//				case 180: return compatLevel + " (SQL Server 2025)"; // just guessing here
+//				case 170: return compatLevel + " (SQL Server 2023)"; // just guessing here
+				case 160: return compatLevel + " (SQL Server 2021)"; // just guessing here
+				case 150: return compatLevel + " (SQL Server 2019)";
+				case 140: return compatLevel + " (SQL Server 2017)";
+				case 130: return compatLevel + " (SQL Server 2016)";
+				case 120: return compatLevel + " (SQL Server 2014)";
+				case 110: return compatLevel + " (SQL Server 2012)";
+				case 100: return compatLevel + " (SQL Server 2008 or 2008 R2)";
+				case 90:  return compatLevel + " (SQL Server 2005)";
+				case 80:  return compatLevel + " (SQL Server 2000)";
+				}
+				
+				return compatLevel + " (unknown)";
 			}
 		}));
 		

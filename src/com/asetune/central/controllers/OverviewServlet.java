@@ -949,7 +949,7 @@ public class OverviewServlet extends HttpServlet
 						lastUpdateTs   = "" + (new Timestamp(f_alarmFileActive.lastModified()));
 						lastUpdateAge  = TimeUtils.msToTimeStr("%?DD[d ]%?HH[:]%MM:%SS", System.currentTimeMillis()-f_alarmFileActive.lastModified());
 //						logFileTd      = "<a href='/log?name="+f_alarmFileLog.getName()+"'>file</a> <a href='/alarmLog?name="+f_alarmFileLog.getName()+"&type=CANCEL'>table</a>: "+f_alarmFileLog.getName();
-						logFileTd      = "<a href='/log?name="+f_alarmFileLog.getName()+"'>file</a> <a href='/alarmLog?name="+f_alarmFileLog.getName()+"&type=CANCEL'>table</a> <a href='/alarmLog?name="+srvName+"&method=pcs'>pcs</a>: "+f_alarmFileLog.getName();
+						logFileTd      = "<a href='/log?name="+f_alarmFileLog.getName()+"'>file</a> <a href='/alarmLog?name="+f_alarmFileLog.getName()+"&type=CANCEL'>table</a> <a href='/alarmLog?name="+srvName+"&age=7d&method=pcs'>pcs</a>: "+f_alarmFileLog.getName();
 						fileContent    = getActiveAlarmContent(f_alarmFileActive);
 						lastLogLine    = getLastLine(f_alarmFileLog);
 						lastLogLineAge = getLastLineAge(lastLogLine);
@@ -978,7 +978,7 @@ public class OverviewServlet extends HttpServlet
 						lastUpdateTs   = "" + session.getLastSampleTime();
 						lastUpdateAge  = TimeUtils.msToTimeStr("%?DD[d ]%?HH[:]%MM:%SS", System.currentTimeMillis()-session.getLastSampleTime().getTime());
 						logFileTd      = "-no-active-alarm-file-";
-						logFileTd      = "<a href='/alarmLog?name="+srvName+"&method=pcs'>pcs</a>: -no-active-alarm-file-";
+						logFileTd      = "<a href='/alarmLog?name="+srvName+"&age=7d&method=pcs'>pcs</a>: -no-active-alarm-file-";
 						fileContent    = "-no-active-alarm-file-";
 						lastLogLine    = "-no-active-alarm-file-";
 						lastLogLineAge = "-no-active-alarm-file-";
@@ -1002,7 +1002,7 @@ public class OverviewServlet extends HttpServlet
 					lastUpdateTs   = "" + session.getLastSampleTime();
 					lastUpdateAge  = TimeUtils.msToTimeStr("%?DD[d ]%?HH[:]%MM:%SS", System.currentTimeMillis()-session.getLastSampleTime().getTime());
 					logFileTd      = "-remote-file-";
-					logFileTd      = "<a href='/alarmLog?name="+srvName+"&method=pcs'>pcs</a>: -remote-file-";
+					logFileTd      = "<a href='/alarmLog?name="+srvName+"&age=7d&method=pcs'>pcs</a>: -remote-file-";
 					fileContent    = "-remote-file-";
 					lastLogLine    = "-remote-file-";
 					lastLogLineAge = "-remote-file-";

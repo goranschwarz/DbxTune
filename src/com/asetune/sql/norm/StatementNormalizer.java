@@ -22,8 +22,10 @@ package com.asetune.sql.norm;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 
 import com.asetune.sql.norm.StatementNormalizer.NormalizeParameters.AddStatus;
 import com.asetune.utils.StringUtil;
@@ -197,10 +199,11 @@ public class StatementNormalizer
 			NONE                           (0),
 			NORMALIZE_SUCCESS_LEVEL_1      (1),
 			NORMALIZE_SUCCESS_LEVEL_2      (2),
-			NORMALIZE_STATIC_REPLACE       (3),
-			NORMALIZE_SUCCESS_AFTER_REWRITE(4),
-			NORMALIZE_FAILED               (5),
-			NOT_SUPPORTED_BY_PARSER        (6);
+			NORMALIZE_SUCCESS_LEVEL_3      (3),
+			NORMALIZE_STATIC_REPLACE       (10),
+			NORMALIZE_SUCCESS_AFTER_REWRITE(20),
+			NORMALIZE_FAILED               (30),
+			NOT_SUPPORTED_BY_PARSER        (40);
 
 			private AddStatus(int v) { val = v; }
 			private final int val;
@@ -216,19 +219,32 @@ public class StatementNormalizer
 	/**
 	 * Called before "real" parser... this to change some stuff that the parser copes with, but is miss intepered ...
 	 * like <code>exec procName "param1"</code> should really be <code>exec procName 'param1'</code> otherwise it will se the "param1" as a identifier instead of a string
+	 * <p>
+	 * <b>DO AS LITTLE AS POSSIBLE in here</b>, because ALL Statements will go through this code path
+	 * 
 	 * @param sqlText
 	 * @return
 	 */
 	public String preParseStatement(String sqlText)
 	{
-		// starts with 'exec' and has any double quotes: change to single quotes
-		if (StringUtil.startsWithIgnoreBlankIgnoreCase(sqlText, "exec ") && sqlText.contains("\""))
-			sqlText = sqlText.replace('"', '\'');
-		
-		// starts with 'execute' and has any double quotes: change to single quotes
-		if (StringUtil.startsWithIgnoreBlankIgnoreCase(sqlText, "execute ")  && sqlText.contains("\""))
-			sqlText = sqlText.replace('"', '\'');
+		// starts with 'sp_' add 'exec' at start
+		if (StringUtil.startsWithIgnoreBlankIgnoreCase(sqlText, "sp_"))
+		{
+			sqlText = "exec " + sqlText;
+		}
 
+		// starts with 'exec' or 'execute'
+		if (StringUtil.startsWithIgnoreBlankIgnoreCase(sqlText, "exec ") || StringUtil.startsWithIgnoreBlankIgnoreCase(sqlText, "execute "))
+		{
+			// and has any double quotes: change to single quotes
+			if (sqlText.contains("\""))
+				sqlText = sqlText.replace('"', '\'');
+			
+			// Remove any ";1"
+			if (sqlText.contains(";1"))
+				sqlText = sqlText.replace(";1", "");
+		}
+		
 		return sqlText;
 	}
 
@@ -250,12 +266,12 @@ public class StatementNormalizer
 
 		try
 		{
-			// Pre Parse
-			normalizedSqlText = preParseStatement(sqlText);
+			// Pre Parse: for example rewrites: |exec procname "a"| -->> |exec procname 'a'|
+			sqlText = preParseStatement(sqlText);
 
-			// Parse and normalize
+			// Parse and normalize: rewrite: |select * from 'a'| -->> |select * from ?|
 			normalizedSqlText = normalizeStatement(sqlText);
-
+			
 			np.addStatus = AddStatus.NORMALIZE_SUCCESS_LEVEL_1;
 
 			_statNormalizeSuccessCount++;
@@ -297,6 +313,7 @@ public class StatementNormalizer
 
 				List<String> rewriteComments = new ArrayList<>();
 				boolean isRewritten = false;
+				boolean failedInParseAfterReWrite = false;
 
 				// Get available "ReWrites" and apply them
 				for (IStatementFixer fixer : StatementFixerManager.getInstance().getFixerEntries())
@@ -345,6 +362,8 @@ public class StatementNormalizer
 					}
 					catch(JSQLParserException ex2)
 					{
+						failedInParseAfterReWrite = true;
+
 						normalizedSqlText = null;
 						_statNormalizeErrorLevel2Count++;
 						np.addStatus = AddStatus.NORMALIZE_FAILED;
@@ -360,6 +379,38 @@ public class StatementNormalizer
 							_logger.debug("SQL Normalizer failed at level-2 to parse the SQL Text |" + sqlText + "|.", ex2);
 					}
 				}
+
+				// SO We still have a problem... (noReWrite or ReWrite and FAILED parse)
+				// As a *last* resort: Lets check if it's maybe a Stored procedure that needs "exec" in front of the SQL Text
+				if ( !isRewritten || failedInParseAfterReWrite)
+				{
+					try
+					{
+						// pretend it's a Stored Procedure EXECution
+						sqlText = "exec " + sqlText;
+
+						// Parse and normalize
+						normalizedSqlText = normalizeStatement(sqlText);
+
+						rewriteComments.add("Add: EXEC as prefix");
+
+						np.addStatus = AddStatus.NORMALIZE_SUCCESS_LEVEL_3;
+
+						_statNormalizeSuccessCount++;
+					}
+					catch(JSQLParserException ex3)
+					{
+						normalizedSqlText = null;
+						_statNormalizeErrorLevel3Count++;
+						np.addStatus = AddStatus.NORMALIZE_FAILED;
+
+						// Report this to a "good" place, so we can look at it later and create new User Defined Fixers/Normalizers 
+						// Note: do NOT add it to the log as a Error or Warning
+						if (_logger.isDebugEnabled())
+							_logger.debug("SQL Normalizer failed at level-3 (AFTER Adding 'EXEC') to parse the SQL Text |" + sqlText + "|.", ex3);
+					}
+				}
+
 				// If the Second Level Parse was successful, add a comment at the start of *what* we changed
 				// Note: This can't be added before the second level parsing, because the Parser removes comments...
 				if (StringUtil.hasValue(normalizedSqlText))
@@ -382,6 +433,7 @@ public class StatementNormalizer
 	public long _statNormalizeSkipCount    = 0;
 	public long _statNormalizeErrorLevel1Count   = 0;
 	public long _statNormalizeErrorLevel2Count   = 0;
+	public long _statNormalizeErrorLevel3Count   = 0;
 //	public long _statNormalizeErrorCount   = 0;
 
 	public long _statNormalizeUdCount      = 0;
@@ -539,6 +591,54 @@ public class StatementNormalizer
 //		//System.out.println(sn.normalizeStatement("dump DATABASE master to \"sybackup::-SERV netbackup.maxm.se -CLIENT prod-a-ase.maxm.se -POL Sybase_ASE -SCHED Default-Application-Backup\""));
 //	}
 
+	public static void main(String[] args) throws JSQLParserException
+	{
+		Properties log4jProps = new Properties();
+//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
+		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
+		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
+		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
+		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
+		PropertyConfigurator.configure(log4jProps);
+
+		
+		StatementNormalizer sn = new StatementNormalizer();
+
+		test(sn, "SELECT 'abc', 5 FROM mytable WHERE col='test'");
+		test(sn, "exec xxx 1,2,3");
+		test(sn, "exec xxx 'a', 'b', 'c'");
+		test(sn, "exec xxx \"a\", \"b\", \"c\"");
+		test(sn, "execute dbo.NTT_sel_list;1");
+		test(sn, "execute dbo.NTT_sel_list;1 @NameSearch = 'MTG-B%'");
+		test(sn, "execute dbo.NTT_sel_list @NameSearch = 'MTG-B%'");
+		test(sn, "sp_who '1'");
+		test(sn, "xxx \"a\", \"b\", \"c\"");
+		test(sn, "nti_sel_dup_tic_gac 5,'20210121'");
+	}
+
+	private static String test(StatementNormalizer sn, String sql)
+	{
+		System.out.println();
+		System.out.println("--------------------------------");
+		System.out.println(">>> |" + sql + "|.");
+
+		
+		String norm = null;
+		try 
+		{
+			norm = sn.normalizeSqlText(sql, null);
+		}
+		catch(Exception ex)
+		{
+			System.out.println(" ++++++ EXCEPTION");
+			ex.printStackTrace();
+		}
+
+		System.out.println("<<< |" + norm + "|.");
+
+		return norm;
+	}
+	
 	// public static void main(String[] args)
 	// {
 	// try
