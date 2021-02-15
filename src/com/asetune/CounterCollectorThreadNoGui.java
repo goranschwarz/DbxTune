@@ -1580,7 +1580,7 @@ implements Memory.MemoryListener
 			if (heapDumpPath != null)
 			{
 				long timeSinceLastCheck = System.currentTimeMillis() - heapDumpPathLastCheck;
-				if (timeSinceLastCheck > TimeUnit.HOURS.toMillis(1)) // Only check this once an hour
+				if (timeSinceLastCheck > TimeUnit.HOURS.toMillis(6)) // Only check this once an hour
 				{
 					_logger.info("Checking for Java HPROF file(s) at directory '" + heapDumpPath + "'. heapDumpPath.exists=" + heapDumpPath.exists());
 
@@ -1593,6 +1593,8 @@ implements Memory.MemoryListener
 							int fileNoMatchCount      = 0;
 							int fileDeleteCount       = 0;
 							int fileNotOldEnoughCount = 0;
+
+							int fileAgeThreshold = 3;
 							
 							for (Path path : directoryStream)
 							{
@@ -1605,16 +1607,16 @@ implements Memory.MemoryListener
 									fileMatchCount++;
 
 									long ageInMs = System.currentTimeMillis() - path.toFile().lastModified();
-									if (ageInMs > TimeUnit.DAYS.toMillis(7))
+									if (ageInMs > TimeUnit.DAYS.toMillis(fileAgeThreshold))
 									{
 										fileDeleteCount++;
-										_logger.info("Deleting old HPROF file, wich is older than 7 days (lastMod='" + (new Timestamp(path.toFile().lastModified())) + "', sizeInMb=" + (path.toFile().length()/1024/1024) + ", filename='" + path + "').");
+										_logger.info("Deleting old HPROF file, wich is older than " + fileAgeThreshold + " days (lastMod='" + (new Timestamp(path.toFile().lastModified())) + "', sizeInMb=" + (path.toFile().length()/1024/1024) + ", filename='" + path + "').");
 										path.toFile().delete();
 									}
 									else
 									{
 										fileNotOldEnoughCount++;
-										_logger.info("DEBUG: HPROF file was found, but not yet older than 7 days, this can be manually removed if you like. (lastMod='" + (new Timestamp(path.toFile().lastModified())) + "', sizeInMb=" + (path.toFile().length()/1024/1024) + ", filename='" + path + "').");
+										_logger.info("HPROF file was found, but not yet older than " + fileAgeThreshold + " days, this can be manually removed if you like. (lastMod='" + (new Timestamp(path.toFile().lastModified())) + "', sizeInMb=" + (path.toFile().length()/1024/1024) + ", filename='" + path + "').");
 									}
 								}
 								else
@@ -1622,9 +1624,9 @@ implements Memory.MemoryListener
 									fileNoMatchCount++;
 									_logger.debug("this is NOT a HPROF file, skipping this file. filename='" + path.getFileName() + "', fullFilename='" + path + "'.");
 								}
-
-								_logger.info("Checking for Java HPROF file(s) is complete. fileCount=" + fileCount + ", matchCount=" + fileMatchCount + ", noMatchCount=" + fileNoMatchCount + ", deleteCount=" + fileDeleteCount + ", notOldEnoughCount=" + fileNotOldEnoughCount + ".");
 							}
+
+							_logger.info("Checking for Java HPROF file(s) is complete. fileCount=" + fileCount + ", matchCount=" + fileMatchCount + ", noMatchCount=" + fileNoMatchCount + ", deleteCount=" + fileDeleteCount + ", notOldEnoughCount=" + fileNotOldEnoughCount + ".");
 						}
 						catch (IOException ex)
 						{

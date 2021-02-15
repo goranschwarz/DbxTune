@@ -1572,6 +1572,11 @@ public class ResultSetTableModel
 		return _rows.size();
 	}
 
+	public boolean isEmpty()
+	{
+		return _rows.size() == 0;
+	}
+
 	@Override
 	public String getColumnName(int column)
 	{

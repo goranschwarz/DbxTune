@@ -38,6 +38,7 @@ import java.util.Set;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 
+import com.asetune.gui.ModelMissmatchException;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
@@ -132,6 +133,30 @@ extends SqlServerAbstract
 			w.append("<li><a href='#").append("qs_").append(dbname).append("'>").append(dbname).append("</a></li>\n");  // FIXME: This should be a LINK to below sections
 		}
 		w.append("</ul>\n");
+
+
+		// Merge ALL Query Store Configuration into ONE ResultSetTableModel then print that in a HTML Table
+		ResultSetTableModel allConfRstm = null;
+		for (QsDbReport entry : _dbMap.values())
+		{
+			if (allConfRstm == null)
+			{
+				allConfRstm = new ResultSetTableModel(entry._confRstm, "allConfRstm", true);
+			}
+			else
+			{
+				try { allConfRstm.add(entry._confRstm); }
+				catch(ModelMissmatchException ex) { _logger.error("Problems adding Query Store Configuration for database ''.", ex);}
+			}
+		}
+		if (allConfRstm != null && !allConfRstm.isEmpty())
+		{
+			w.append("Query Store Configuration/Options for all databases that has Query Store Enabled\n");
+
+			w.append(allConfRstm.toHtmlTableString("sortable"));
+			w.append("<br>\n");
+			w.append("<br>\n");
+		}
 
 
 		// Write a report for each of the databases
@@ -277,6 +302,8 @@ extends SqlServerAbstract
 		String _dbname;
 		ResultSetTableModel _topCpuRstm;
 		ResultSetTableModel _topWaitRstm;
+		ResultSetTableModel _confRstm;    // database_query_store_options
+		ResultSetTableModel _recomRstm;   // dm_db_tuning_recommendations
 
 		private ExecutionPlanCollection _planCollectionCpu;
 		private ExecutionPlanCollection _planCollectionWait;
@@ -457,6 +484,32 @@ extends SqlServerAbstract
 					_planCollectionWait.writeMessageText(w);
 			}
 
+			//----------------------------------------------------
+			//---- Recommendations
+			//----------------------------------------------------
+			w.append("<br>\n");
+			w.append("<hr> \n");
+			if (_recomRstm == null)
+			{
+				w.append("This SQL Server Version do NOT have 'Tuning Recommendation' in the Query Store. Needs at least SQL Server 2017.<br>\n");
+			}
+			else
+			{
+				if (_recomRstm.isEmpty())
+				{
+					w.append("NO Tuning Recomendations from the Query Store subsystem.<br>");
+				}
+				else
+				{
+					w.append("Tuning Recomendations from the Quesry Store subsystem.<br>");
+
+					w.append("Row Count: " + _recomRstm.getRowCount() + "<br>\n");
+					w.append(toHtmlTable(_recomRstm));
+//					w.append(_recomRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+				}
+			}
+
+			
 			// Section FOOTER
 			if (useBootstrap)
 			{
@@ -476,6 +529,22 @@ extends SqlServerAbstract
 
 		public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 		{
+			String sql = "";
+
+			//-----------------------------------------------------------
+			// database_query_store_options
+			//-----------------------------------------------------------
+			sql = "select '" + _dbname + "' as [dbname], * from [" + _schemaName + "].[database_query_store_options] \n";
+			_confRstm = executeQuery(conn, sql, false, _dbname + "_conf");
+
+
+			//-----------------------------------------------------------
+			// dm_db_tuning_recommendations
+			//-----------------------------------------------------------
+			sql = "select '" + _dbname + "' as [dbname], * from [" + _schemaName + "].[dm_db_tuning_recommendations] \n";
+			_recomRstm = executeQuery(conn, sql, false, _dbname + "_conf");
+
+
 			//-----------------------------------------------------------
 			// runtime_stats
 			//-----------------------------------------------------------
@@ -498,7 +567,7 @@ extends SqlServerAbstract
 			String total_tempdb_space_used         = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,cast(sum([count_executions]) * sum([avg_tempdb_space_used]) as bigint)     as [total_tempdb_space_used__sum] \n"    ; // in 2017
 			String total_tempdb_space_used_mb      = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,(sum([count_executions]) * sum([avg_tempdb_space_used]))/128.0             as [total_tempdb_space_used_mb__sum] \n" ; // in 2017
 			
-			String sql = ""
+			sql = ""
 				    + "select top " + getTopRows() + " \n"
 				    + "     [plan_id] \n"
 //				    + "    ,cast([plan_id] as varchar(20))                                             as [plan_text] \n"
@@ -1309,8 +1378,8 @@ extends SqlServerAbstract
 
 			String sql = ""
 				    + "select qt.[query_sql_text] \n"
-				    + "      ,q.schema_name \n"
-				    + "      ,q.object_name \n"
+				    + "      ,q.[schema_name] \n"
+				    + "      ,q.[object_name] \n"
 				    + "from [" + _schemaName + "].[query_store_query_text] qt \n"
 				    + "inner join [" + _schemaName + "].[query_store_query] q ON qt.[query_text_id] = q.[query_text_id] \n"
 				    + "inner join [" + _schemaName + "].[query_store_plan]  p ON q.[query_id]       = p.[query_id] \n"

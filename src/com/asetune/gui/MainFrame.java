@@ -985,12 +985,36 @@ public abstract class MainFrame
 
 		//--------------------------
 		// TOOLBAR
+		String screenshotTt = "<html>"
+				+ "Take a screenshot of the application<br>"
+				+ "<br>"
+				+ "If you want to <b>record</b> everything that happens, and replay/view it later...<br>"
+				+ "This is how you do it!"
+				+ "<ul>"
+				+ "  <li>In the Connections dialog, panel <b>Options</b></li>"
+				+ "  <li>Check: <b>Record this Performance Session in a DB...</b></li>"
+				+ "  <li>Then fill in values in tab <b>Record this Session</b></li>"
+				+ "  <li><i>Note:</i> Username and Password is <b>not</b> to the DBMS you are monitoring, it's to the (H2) database where the recording are stored, and password can be left blank.</li>"
+				+ "  <li>When you press OK, you will get a question: <i>do you want to record</i></li>"
+				+ "  <li>To stop the recording, just <b>disconnect</b> from the DBMS</li>"
+				+ "</ul>"
+				+ "The to replay/view the recording, you need to do the following"
+				+ "<ul>"
+				+ "  <li>In the Connections dialog, goto tab <b>Load Recorded Session</b></li>"
+				+ "  <li>JDBC Driver: Choose <b>org.h2.Driver</b> (or if you saved the recording to any other DBMS Ventor choose that)</li>"
+				+ "  <li>JDBC Url: press button &quot;<b>...</b>&quot; and select the H2 database file where the recording was saved into. </li>"
+				+ "  <li>Press <b>OK</b>, and it will connect</li>"
+				+ "  <li>At the <i>toolbar</i> you will see a <i>timeline</i> where you can position yourself in the recording. (or double click on a time in any graphs).</li>"
+				+ "  <li>Click any of the <i>Performance Counter</i> tabs to see data that was recorded!</li>"
+				+ "</ul>"
+				+ "</html";
+		
 		_connectTb_but      = SwingUtils.makeToolbarButton(Version.class, "images/connect_16.png",    ACTION_CONNECT,    this, "Connect to a DB Server",         "Connect");
 		_disConnectTb_but   = SwingUtils.makeToolbarButton(Version.class, "images/disconnect_16.png", ACTION_DISCONNECT, this, "Close the DB Server Connection", "Disconnect");
 
-		_screenshotTb_but   = SwingUtils.makeToolbarButton(Version.class, "images/screenshot.png",   ACTION_SCREENSHOT,     this, "Take a screenshot of the application", "Screenshot");
-		_samplePauseTb_but  = SwingUtils.makeToolbarButton(Version.class, "images/sample_pause.png", ACTION_SAMPLING_PAUSE, this, "Pause ALL sampling activity",          "Pause");
-		_samplePlayTb_but   = SwingUtils.makeToolbarButton(Version.class, "images/sample_play.png",  ACTION_SAMPLING_PLAY,  this, "Continue to sample...",          "Pause");
+		_screenshotTb_but   = SwingUtils.makeToolbarButton(Version.class, "images/screenshot.png",   ACTION_SCREENSHOT,     this, screenshotTt, "Screenshot");
+		_samplePauseTb_but  = SwingUtils.makeToolbarButton(Version.class, "images/sample_pause.png", ACTION_SAMPLING_PAUSE, this, "Pause ALL sampling activity", "Pause");
+		_samplePlayTb_but   = SwingUtils.makeToolbarButton(Version.class, "images/sample_play.png",  ACTION_SAMPLING_PLAY,  this, "Continue to sample...",       "Pause");
 		_samplePlayTb_but.setVisible(false);
 
 		JButton tabSelectorNoSort = SwingUtils.makeToolbarButton(Version.class, "images/tab_selector_no_sort.gif", ACTION_TAB_SELECTOR, this, "Activate a specific tab", "Activate Tab");

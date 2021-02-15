@@ -83,6 +83,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	 			<li>To version 1.5.1          Component: JfreeChart</li>
 	 			<li>To version 3.2            Component: jsqlparser</li>
 	 			<li>To version 19.8           Component: Oracle JDBC Driver</li>
+	 			<li>To version 9.2.0          Component: Microsoft JDBC Driver</li>
 			</ul>
 		</LI>
 	</UL>
@@ -311,6 +312,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI><b>CmWaitingTasks     </b> - new columns 'cpu_time', 'status', 'command', 'ProcName', 'StmntStart', 'program_name', 'database_id', 'database_name' </LI>
 		<LI><b>CmWaitingTasks     </b> - Query Plans: get actual execution plans if the server supports it (2019 & traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
+		<LI><b>CmWaitingTasks     </b> - Added the following columns 'blocking_exec_context_id', 'blocking_task_address' for tracability </LI>
+		<LI><b>CmWaitingTasks     </b> - Changed columns: 'currentSqlText', 'fullSqlBatchText', 'query_plan' only get SQL Text and Query Plan if 'exec_context_id' is 0, which is the "parent" for all worker threads </LI>
 
 		<LI><b>CmWaitStats        </b> - added column 'WaitClass', which tries to group 'wait_type' in groups ... this according to https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15</LI>
 		<LI><b>CmWaitStats        </b> - updated the list of 'wait_type' to skip (hopefully up to 2019)</LI>

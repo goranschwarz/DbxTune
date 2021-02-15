@@ -843,9 +843,12 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 					}
 					
 					spidLockCount = 0;
-					for (LockRecord lockRecord : lockList)
+					if (lockList != null)
 					{
-						spidLockCount += lockRecord._lockCount;
+						for (LockRecord lockRecord : lockList)
+						{
+							spidLockCount += lockRecord._lockCount;
+						}
 					}
 				}
 
