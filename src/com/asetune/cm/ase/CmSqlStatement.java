@@ -914,7 +914,8 @@ extends CountersModel
 			mtd.addColumn("CmSqlStatement", "avgRowsAffected",      "<html>Average RowsAffected for this time span.<br><b>Algorithm:</b> abs.sumRowsAffected / abs.totalCount</html>");
 			mtd.addColumn("CmSqlStatement", "maxRowsAffected",      "<html>Maximum RowsAffected for this time span.</html>");
 
-			mtd.addColumn("CmSqlStatement", "errorMsgCountMap",      "<html>A JSON String, which contains: {\"MsgNumber\"=count, \"MsgNumber\"=count}.</html>");
+//			mtd.addColumn("CmSqlStatement", "errorMsgCountMap",      "<html>A JSON String, which contains: {\"MsgNumber\"=count, \"MsgNumber\"=count}.</html>");
+			mtd.addColumn("CmSqlStatement", "errorMsgCountMap",      "<html>A JSON String, which contains: {\"MsgNumber\"={\"dbname\"=count}, \"MsgNumber\"={\"dbname\"=count}}.</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -1059,6 +1060,59 @@ extends CountersModel
 		}
 	};
 
+//	/**
+//	 * Do DIFF calculation on the JSON value at column 'errorMsgCountMap', which is a HashMap of &lt;MsgNumber, Counter&gt;
+//	 */
+//	@Override
+//	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
+//	{
+//		int errorMsgCountMap_pos = newSample.findColumn("errorMsgCountMap");
+//		if (errorMsgCountMap_pos == -1)
+//			return;
+//		
+//		@SuppressWarnings("serial")
+//		java.lang.reflect.Type mapIntLongType = new TypeToken<Map<Integer, Long>>(){}.getType();
+//		Gson gson = new Gson();
+//
+//		for (int r=0; r<newSample.getRowCount(); r++)
+//		{
+//			String pk = newSample.getPkValue(r);
+//			
+//			String prevSampleErrorMsgCountMapStr = prevSample.getValueAsString(pk, "errorMsgCountMap");
+//			String newSampleErrorMsgCountMapStr  = newSample .getValueAsString(pk, "errorMsgCountMap");
+//			
+//			if (StringUtil.isNullOrBlank(prevSampleErrorMsgCountMapStr) || StringUtil.isNullOrBlank(newSampleErrorMsgCountMapStr))
+//				continue;
+//
+//			Map<Integer, Long> prevSampleErrorMsgCountMap = gson.fromJson(prevSampleErrorMsgCountMapStr, mapIntLongType);
+//			Map<Integer, Long> newSampleErrorMsgCountMap  = gson.fromJson(newSampleErrorMsgCountMapStr , mapIntLongType);
+//
+//			Map<Integer, Long> diffErrorMsgCountMap = new HashMap<>();
+//			
+//			for (Entry<Integer, Long> ne : newSampleErrorMsgCountMap.entrySet())
+//			{
+//				Integer key    = ne.getKey();
+//				Long newCount  = ne.getValue();
+//				Long prevCount = prevSampleErrorMsgCountMap.get(key);
+//				if (prevCount == null)
+//					prevCount = 0L;
+//				
+//				Long newDiffCount = newCount - prevCount;
+////System.out.println("   >>> "+getName()+".localCalculation(prevSample,newSample,diffData): pk='"+pk+"', key="+key+", newDiffCount="+newDiffCount+", newCount="+newCount+", prevCount="+prevCount);
+//				if (newDiffCount > 0)
+//					diffErrorMsgCountMap.put(key, newDiffCount);
+//			}
+//
+//			String json = null;
+//			if ( ! diffErrorMsgCountMap.isEmpty() )
+//				json = gson.toJson(diffErrorMsgCountMap);
+//
+//			// Set Value
+//			int diffRowId = diffData.getRowNumberForPkValue(pk);
+//			diffData.setValueAt(json, diffRowId, errorMsgCountMap_pos);
+////System.out.println("     + "+getName()+".localCalculation(prevSample,newSample,diffData): pk='"+pk+"', diffRowId="+diffRowId+", errorMsgCountMap_pos="+errorMsgCountMap_pos+", json="+json);
+//		}
+//	}
 	/**
 	 * Do DIFF calculation on the JSON value at column 'errorMsgCountMap', which is a HashMap of &lt;MsgNumber, Counter&gt;
 	 */
@@ -1070,7 +1124,7 @@ extends CountersModel
 			return;
 		
 		@SuppressWarnings("serial")
-		java.lang.reflect.Type mapIntLongType = new TypeToken<Map<Integer, Long>>(){}.getType();
+		java.lang.reflect.Type mapType = new TypeToken<Map<Integer, Map<String,Long>>>(){}.getType();
 		Gson gson = new Gson();
 
 		for (int r=0; r<newSample.getRowCount(); r++)
@@ -1083,23 +1137,36 @@ extends CountersModel
 			if (StringUtil.isNullOrBlank(prevSampleErrorMsgCountMapStr) || StringUtil.isNullOrBlank(newSampleErrorMsgCountMapStr))
 				continue;
 
-			Map<Integer, Long> prevSampleErrorMsgCountMap = gson.fromJson(prevSampleErrorMsgCountMapStr, mapIntLongType);
-			Map<Integer, Long> newSampleErrorMsgCountMap  = gson.fromJson(newSampleErrorMsgCountMapStr , mapIntLongType);
+			Map<Integer, Map<String,Long>> prevSampleErrorMsgCountMap = gson.fromJson(prevSampleErrorMsgCountMapStr, mapType);
+			Map<Integer, Map<String,Long>> newSampleErrorMsgCountMap  = gson.fromJson(newSampleErrorMsgCountMapStr , mapType);
 
-			Map<Integer, Long> diffErrorMsgCountMap = new HashMap<>();
+			if (prevSampleErrorMsgCountMap == null || newSampleErrorMsgCountMap == null)
+				continue;
+
+			Map<Integer, Map<String,Long>> diffErrorMsgCountMap = new HashMap<>();
 			
-			for (Entry<Integer, Long> ne : newSampleErrorMsgCountMap.entrySet())
+			for (Entry<Integer, Map<String,Long>> ne : newSampleErrorMsgCountMap.entrySet())
 			{
-				Integer key    = ne.getKey();
-				Long newCount  = ne.getValue();
-				Long prevCount = prevSampleErrorMsgCountMap.get(key);
-				if (prevCount == null)
-					prevCount = 0L;
+				Integer           errorNum  = ne.getKey();
+				Map<String, Long> dbCntrMap = ne.getValue();
 				
-				Long newDiffCount = newCount - prevCount;
-//System.out.println("   >>> "+getName()+".localCalculation(prevSample,newSample,diffData): pk='"+pk+"', key="+key+", newDiffCount="+newDiffCount+", newCount="+newCount+", prevCount="+prevCount);
-				if (newDiffCount > 0)
-					diffErrorMsgCountMap.put(key, newDiffCount);
+				for (Entry<String, Long> ndbe : dbCntrMap.entrySet())
+				{
+					String  dbname   = ndbe.getKey();
+					Long    newCount = ndbe.getValue();
+					
+					Long prevCount = prevSampleErrorMsgCountMap.get(errorNum) == null ? 0L : prevSampleErrorMsgCountMap.get(errorNum).get(dbname);
+
+					Long newDiffCount = newCount - prevCount;
+//System.out.println("   >>> "+getName()+".localCalculation(prevSample,newSample,diffData): pk='"+pk+"', errorNum="+errorNum+", dbname='"+dbname+"', newDiffCount="+newDiffCount+", newCount="+newCount+", prevCount="+prevCount);
+					if (newDiffCount > 0)
+					{
+						Map<String, Long> newDbCntrMap = new HashMap<>();
+						newDbCntrMap.put(dbname, newDiffCount);
+						
+						diffErrorMsgCountMap.put(errorNum, newDbCntrMap);
+					}
+				}
 			}
 
 			String json = null;
@@ -1113,6 +1180,48 @@ extends CountersModel
 		}
 	}
 	
+//	/**
+//	 * Do RATE on the JSON value at column 'errorMsgCountMap', which is a HashMap of &lt;MsgNumber, Counter&gt;
+//	 */
+//	@Override
+//	public void localCalculationRatePerSec(CounterSample rateData, CounterSample diffData)
+//	{
+//		int errorMsgCountMap_pos = rateData.findColumn("errorMsgCountMap");
+//		if (errorMsgCountMap_pos == -1)
+//			return;
+//
+//		@SuppressWarnings("serial")
+//		java.lang.reflect.Type mapIntLongType = new TypeToken<Map<Integer, Long>>(){}.getType();
+//		Gson gson = new Gson();
+//
+//		for (int r=0; r<rateData.getRowCount(); r++)
+//		{
+//			String jsonSrc = rateData.getValueAsString(r, errorMsgCountMap_pos);
+//			if (StringUtil.isNullOrBlank(jsonSrc))
+//				continue;
+//
+//			Map<Integer, Long> errorMsgCountMap = gson.fromJson(jsonSrc, mapIntLongType);
+//
+//			Map<Integer, Double> newRateMap = new HashMap<>();
+//
+//			for (Entry<Integer, Long> e : errorMsgCountMap.entrySet())
+//			{
+//				Double newRateVal = round3( e.getValue() * 1000.0 / rateData.getSampleInterval() );
+////System.out.println("   >>> "+getName()+".localCalculationRatePerSec(rateData,diffData):   pk='"+rateData.getPkValue(r)+"', key="+e.getKey()+", newRateVal="+newRateVal+", diffVal="+e.getValue()+", rateSampleInterval="+rateData.getSampleInterval());
+//
+//				if (newRateVal > 0.0)
+//					newRateMap.put(e.getKey(), newRateVal);
+//			}
+//
+//			String jsonDest = null;
+//			if ( ! newRateMap.isEmpty() )
+//				jsonDest = gson.toJson(newRateMap);
+//			
+//			// Set Value
+//			rateData.setValueAt(jsonDest, r, errorMsgCountMap_pos);
+////System.out.println("     + "+getName()+".localCalculationRatePerSec(rateData,diffData):   r="+r+", errorMsgCountMap_pos="+errorMsgCountMap_pos+", jsonDest="+jsonDest);
+//		}
+//	}
 	/**
 	 * Do RATE on the JSON value at column 'errorMsgCountMap', which is a HashMap of &lt;MsgNumber, Counter&gt;
 	 */
@@ -1124,7 +1233,7 @@ extends CountersModel
 			return;
 
 		@SuppressWarnings("serial")
-		java.lang.reflect.Type mapIntLongType = new TypeToken<Map<Integer, Long>>(){}.getType();
+		java.lang.reflect.Type mapType = new TypeToken<Map<Integer, Map<String,Long>>>(){}.getType();
 		Gson gson = new Gson();
 
 		for (int r=0; r<rateData.getRowCount(); r++)
@@ -1133,17 +1242,34 @@ extends CountersModel
 			if (StringUtil.isNullOrBlank(jsonSrc))
 				continue;
 
-			Map<Integer, Long> errorMsgCountMap = gson.fromJson(jsonSrc, mapIntLongType);
+			Map<Integer, Map<String,Long>> errorMsgCountMap = gson.fromJson(jsonSrc, mapType);
+			if (errorMsgCountMap == null)
+				continue;
 
-			Map<Integer, Double> newRateMap = new HashMap<>();
+			Map<Integer, Map<String,Double>> newRateMap = new HashMap<>();
 
-			for (Entry<Integer, Long> e : errorMsgCountMap.entrySet())
+			for (Entry<Integer, Map<String,Long>> e : errorMsgCountMap.entrySet())
 			{
-				Double newRateVal = round3( e.getValue() * 1000.0 / rateData.getSampleInterval() );
-//System.out.println("   >>> "+getName()+".localCalculationRatePerSec(rateData,diffData):   pk='"+rateData.getPkValue(r)+"', key="+e.getKey()+", newRateVal="+newRateVal+", diffVal="+e.getValue()+", rateSampleInterval="+rateData.getSampleInterval());
+				Integer           errorNum  = e.getKey();
+				Map<String, Long> dbCntrMap = e.getValue();
+				
+				for (Entry<String, Long> dbe : dbCntrMap.entrySet())
+				{
+					String  dbname    = dbe.getKey();
+					Long    diffCount = dbe.getValue();
 
-				if (newRateVal > 0.0)
-					newRateMap.put(e.getKey(), newRateVal);
+					Double newRateVal = round3( diffCount * 1000.0 / rateData.getSampleInterval() );
+
+//System.out.println("   >>> "+getName()+".localCalculationRatePerSec(rateData,diffData):   pk='"+rateData.getPkValue(r)+"', errorNum="+errorNum+", dbname='"+dbname+"', newRateVal="+newRateVal+", diffCount="+diffCount+", rateSampleInterval="+rateData.getSampleInterval());
+
+					if (newRateVal > 0.0)
+					{
+						Map<String, Double> newDbRateMap = new HashMap<>();
+						newDbRateMap.put(dbname, newRateVal);
+	
+						newRateMap.put(errorNum, newDbRateMap);
+					}
+				}
 			}
 
 			String jsonDest = null;
@@ -1156,6 +1282,46 @@ extends CountersModel
 		}
 	}
 
+//	@Override
+//	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol)
+//	{
+//		// Get tip on errorMsgCountMap
+//		if ("errorMsgCountMap".equals(colName) && cellValue != null)
+//		{
+//			@SuppressWarnings("serial")
+//			java.lang.reflect.Type mapIntStringType = new TypeToken<Map<Integer, String>>(){}.getType();
+//			Gson gson = new Gson();
+//
+//			Object objVal = getValueAt(modelRow, modelCol);
+//			if (objVal instanceof String)
+//			{
+//				String jsonSrc = (String) objVal;
+//				if (StringUtil.hasValue(jsonSrc))
+//				{
+//					String htmlTxt = "";
+//					Map<Integer, String> errorMsgCountMap = gson.fromJson(jsonSrc, mapIntStringType);
+//
+//					htmlTxt += "<html>\n";
+//					htmlTxt += "<p>The below table is the parsed JSON value in the cell<br>\n";
+//					htmlTxt += "   The Error Number is also <i>enriched</i> with a static description found in <code>master.dbo.sysmessages</code>\n";
+//					htmlTxt += "</p>\n";
+//					htmlTxt += "<br>\n";
+//					htmlTxt += "<table border=1>\n";
+//					htmlTxt += "<tr> <th>Error Number</th> <th>Error Count</th> <th>Description</th> </tr>\n";
+//					for (Entry<Integer, String> entry : errorMsgCountMap.entrySet())
+//					{
+//						htmlTxt += "<tr> <td>" + entry.getKey() + "</td> <td>" + entry.getValue() + "</td> <td>" + AseErrorMessageDictionary.getInstance().getDescription(entry.getKey()) + "</td> </tr>\n";
+//					}
+//					htmlTxt += "</table>\n";
+//					htmlTxt += "</html>\n";
+//					
+//					return htmlTxt;
+//				}
+//			}
+//		}
+//
+//		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
+//	}
 	@Override
 	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol)
 	{
@@ -1163,7 +1329,8 @@ extends CountersModel
 		if ("errorMsgCountMap".equals(colName) && cellValue != null)
 		{
 			@SuppressWarnings("serial")
-			java.lang.reflect.Type mapIntStringType = new TypeToken<Map<Integer, String>>(){}.getType();
+//			java.lang.reflect.Type mapIntStringType = new TypeToken<Map<Integer, String>>(){}.getType();
+			java.lang.reflect.Type mapType = new TypeToken<Map<Integer, Map<String,String>>>(){}.getType();
 			Gson gson = new Gson();
 
 			Object objVal = getValueAt(modelRow, modelCol);
@@ -1173,21 +1340,38 @@ extends CountersModel
 				if (StringUtil.hasValue(jsonSrc))
 				{
 					String htmlTxt = "";
-					Map<Integer, String> errorMsgCountMap = gson.fromJson(jsonSrc, mapIntStringType);
+					Map<Integer, Map<String,String>> errorMsgCountMap = gson.fromJson(jsonSrc, mapType);
+					if (errorMsgCountMap == null)
+						return null;
 
-					htmlTxt += "<html>\n";
-					htmlTxt += "<p>The below table is the parsed JSON value in the cell<br>\n";
-					htmlTxt += "   The Error Number is also <i>enriched</i> with a static description found in <code>master.dbo.sysmessages</code>\n";
-					htmlTxt += "</p>\n";
-					htmlTxt += "<br>\n";
-					htmlTxt += "<table border=1>\n";
-					htmlTxt += "<tr> <th>Error Number</th> <th>Error Count</th> <th>Description</th> </tr>\n";
-					for (Entry<Integer, String> entry : errorMsgCountMap.entrySet())
+					htmlTxt += "<html> \n";
+					htmlTxt += "<p>The below table is the parsed JSON value in the cell<br> \n";
+					htmlTxt += "   The Error Number is also <i>enriched</i> with a static description found in <code>master.dbo.sysmessages</code> \n";
+					htmlTxt += "</p> \n";
+					htmlTxt += "<br> \n";
+					htmlTxt += "<table border=1> \n";
+					htmlTxt += "<tr> <th>Error Number</th> <th>DBName</th> <th>Error Count</th> <th>Description</th> </tr> \n";
+					for (Entry<Integer, Map<String,String>> entry : errorMsgCountMap.entrySet())
 					{
-						htmlTxt += "<tr> <td>" + entry.getKey() + "</td> <td>" + entry.getValue() + "</td> <td>" + AseErrorMessageDictionary.getInstance().getDescription(entry.getKey()) + "</td> </tr>\n";
+						Integer             errorNum  = entry.getKey();
+						Map<String, String> dbCntrMap = entry.getValue();
+						
+						for (Entry<String, String> dbe : dbCntrMap.entrySet())
+						{
+							String  dbname  = dbe.getKey();
+							String  counter = dbe.getValue();
+
+							htmlTxt += ""
+								+ "<tr> "
+								+    "<td>" + errorNum + "</td> "
+								+    "<td>" + dbname   + "</td> "
+								+    "<td>" + counter  + "</td> "
+								+    "<td>" + AseErrorMessageDictionary.getInstance().getDescription(errorNum) + "</td> "
+								+ "</tr> \n";
+						}
 					}
-					htmlTxt += "</table>\n";
-					htmlTxt += "</html>\n";
+					htmlTxt += "</table> \n";
+					htmlTxt += "</html> \n";
 					
 					return htmlTxt;
 				}
@@ -1213,6 +1397,172 @@ extends CountersModel
 
 		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
+//		//-------------------------------------------------------
+//		// errorCount
+//		//-------------------------------------------------------
+//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("errorCount"))
+//		{
+//			// SUM all rows for 'errorCount' column
+//			Double errorCountPerSec = cm.getRateValueSum("errorCount");
+//
+//			if (errorCountPerSec != null)
+//			{
+//				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ErrorCountPerSec, DEFAULT_alarm_ErrorCountPerSec);
+//
+//				if (debugPrint || _logger.isDebugEnabled())
+//					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", errorCountPerSec='"+errorCountPerSec+"'.");
+//
+//				if (errorCountPerSec.intValue() > threshold)
+//				{
+//					// BEGIN: construct a summary Map (for 'error info' to Alarm) of all RATE errors, and set it to a JSON String...
+//					Map<Integer, Double> sumRateMap = new HashMap<>();
+//
+//					CounterSample rateData = cm.getCounterSampleRate();
+//					int errorMsgCountMap_pos = rateData.findColumn("errorMsgCountMap");
+//
+//					@SuppressWarnings("serial")
+//					java.lang.reflect.Type mapIntLongType = new TypeToken<Map<Integer, Double>>(){}.getType();
+//					Gson gson = new Gson();
+//
+//					if (errorMsgCountMap_pos != -1)
+//					{
+//						for (int r=0; r<rateData.getRowCount(); r++)
+//						{
+//							String jsonSrc = rateData.getValueAsString(r, errorMsgCountMap_pos);
+//							if (StringUtil.isNullOrBlank(jsonSrc))
+//								continue;
+//
+//							Map<Integer, Double> errorMsgCountMap = gson.fromJson(jsonSrc, mapIntLongType);
+//
+//							for (Entry<Integer, Double> e : errorMsgCountMap.entrySet())
+//							{
+//								Double sumRateValue = sumRateMap.get(e.getKey());
+//								if (sumRateValue == null)
+//									sumRateValue = 0.0;
+//								
+//								sumRateValue += e.getValue();
+//
+//								sumRateMap.put(e.getKey(), round1(sumRateValue));
+//							}
+//						}
+//					}
+//
+//					String errorMsgInfoJson = "";
+//					String errorMsgInfoTxt  = "";
+//					String errorMsgInfoHtml = "";
+//
+//					// JSON
+//					if ( ! sumRateMap.isEmpty() )
+//						errorMsgInfoJson = gson.toJson(sumRateMap);
+//					
+//					// TXT
+//					
+//					for (Entry<Integer, Double> e : sumRateMap.entrySet())
+//						errorMsgInfoTxt += "Msg=" + e.getKey() + ", ErrorsPerSec=" + e.getValue() + ", Description='" + AseErrorMessageDictionary.getInstance().getDescription(e.getKey()) + "\n";
+//
+//					// HTML
+//					errorMsgInfoHtml += "<table border=1>\n";
+//					errorMsgInfoHtml += "<tr> <th>Msg</th> <th>ErrorsPerSec</th> <th>Description</th> </tr>\n";
+//					for (Entry<Integer, Double> e : sumRateMap.entrySet())
+//						errorMsgInfoHtml += "<tr> <td>" + e.getKey() + "</td> <td>" + e.getValue() + "</td> <td>" + AseErrorMessageDictionary.getInstance().getDescription(e.getKey()) + "</td> </tr>\n";
+//					errorMsgInfoHtml += "</table>\n";
+//					
+//					// END: construct a summary Map (for 'error info' to Alarm) of all RATE errors, and set it to a JSON String...
+//
+////					System.out.println("--------------------------------------------------------------------------------------");
+////					System.out.println("XXXXXXXXXXXXXXXXXX: errorMsgInfoJson="+errorMsgInfoJson);
+////					System.out.println("XXXXXXXXXXXXXXXXXX: errorMsgInfoTxt ="+errorMsgInfoTxt);
+////					System.out.println("XXXXXXXXXXXXXXXXXX: errorMsgInfoHtml="+errorMsgInfoHtml);
+//
+//					// Create Alarm
+//					AlarmEvent alarm = new AlarmEventClientErrorMsgRate(cm, round1(errorCountPerSec), errorMsgInfoJson, threshold);
+//					
+//					// Set the Error Info
+//					alarm.setExtendedDescription(errorMsgInfoTxt, errorMsgInfoHtml);
+//					
+//					// Add the Alarm
+//					AlarmHandler.getInstance().addAlarm(alarm);
+//				}
+//			}
+//		} //end: errorCount
+//
+//		//-------------------------------------------------------
+//		// ErrorNumber
+//		//-------------------------------------------------------
+//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("ErrorNumbers"))
+//		{
+//			// BEGIN: construct a summary Map of all DIFF errors, and set it to a JSON String... errorMsgInfo
+//			Map<Integer, Long> sumDiffMap = new HashMap<>();
+//
+//			CounterSample diffData = cm.getCounterSampleDiff();
+//			int errorMsgCountMap_pos = diffData.findColumn("errorMsgCountMap");
+//
+//			if (errorMsgCountMap_pos != -1)
+//			{
+//				@SuppressWarnings("serial")
+//				java.lang.reflect.Type mapIntLongType = new TypeToken<Map<Integer, Long>>(){}.getType();
+//				Gson gson = new Gson();
+//
+//				for (int r=0; r<diffData.getRowCount(); r++)
+//				{
+//					String jsonSrc = diffData.getValueAsString(r, errorMsgCountMap_pos);
+//					if (StringUtil.isNullOrBlank(jsonSrc))
+//						continue;
+//
+//					Map<Integer, Long> errorMsgCountMap = gson.fromJson(jsonSrc, mapIntLongType);
+//
+//					for (Entry<Integer, Long> e : errorMsgCountMap.entrySet())
+//					{
+//						Long sumDiffValue = sumDiffMap.get(e.getKey());
+//						if (sumDiffValue == null)
+//							sumDiffValue = 0L;
+//						
+//						sumDiffValue += e.getValue();
+//
+//						sumDiffMap.put(e.getKey(), sumDiffValue);
+//					}
+//				}
+//			}
+//			
+////			Map<Integer, Integer> _alarmErrorMap = new HashMap<>();
+////			_alarmErrorMap.put(1105, 0);
+////			_alarmErrorMap.put(1205, 0);
+//			if ( ! sumDiffMap.isEmpty() )
+//			{
+//				// loop ErrorNumbers and check if we got any matching entries
+//				for (Entry<Integer, Integer> e : _map_alarm_ErrorNumbers.entrySet())
+//				{
+//					Integer alarmErrorNum  = e.getKey();
+//					Integer alarmThreshold = e.getValue();
+//
+//					if (sumDiffMap.containsKey(alarmErrorNum))
+//					{
+//						Long errorCount = sumDiffMap.getOrDefault(alarmErrorNum, 0L);
+//						
+//						if (errorCount > alarmThreshold)
+//						{
+//							String errorDesc = AseErrorMessageDictionary.getInstance().getDescription(alarmErrorNum);
+//							
+//							if (debugPrint || _logger.isDebugEnabled())
+//								System.out.println("##### sendAlarmRequest("+cm.getName()+"): ErrorNumber="+alarmErrorNum+", Count="+errorCount+", is above threshold="+alarmThreshold+".)");
+//
+//							// Create Alarm
+//							AlarmEvent alarm = new AlarmEventClientErrorMsg(cm, alarmErrorNum, errorCount, errorDesc, alarmThreshold);
+//							
+//							// Set the Error Info
+//							String errorMsgInfoTxt  = "Msg=" + alarmErrorNum + ", DiffErrorCount=" + errorCount + ", Description='" + errorDesc + "'";
+//							String errorMsgInfoHtml = errorMsgInfoTxt;
+//
+//							alarm.setExtendedDescription(errorMsgInfoTxt, errorMsgInfoHtml);
+//							
+//							// Add the Alarm
+//							AlarmHandler.getInstance().addAlarm(alarm);
+//						}
+//					}
+//				}
+//			}
+//		} //end: ErrorNumber
+		
 		//-------------------------------------------------------
 		// errorCount
 		//-------------------------------------------------------
@@ -1231,13 +1581,14 @@ extends CountersModel
 				if (errorCountPerSec.intValue() > threshold)
 				{
 					// BEGIN: construct a summary Map (for 'error info' to Alarm) of all RATE errors, and set it to a JSON String...
-					Map<Integer, Double> sumRateMap = new HashMap<>();
+//					Map<Integer, Double> sumRateMap = new HashMap<>();
+					Map<Integer, Map<String,Double>> sumDbRateMap = new HashMap<>();
 
 					CounterSample rateData = cm.getCounterSampleRate();
 					int errorMsgCountMap_pos = rateData.findColumn("errorMsgCountMap");
 
 					@SuppressWarnings("serial")
-					java.lang.reflect.Type mapIntLongType = new TypeToken<Map<Integer, Double>>(){}.getType();
+					java.lang.reflect.Type mapType = new TypeToken<Map<Integer, Map<String,Double>>>(){}.getType();
 					Gson gson = new Gson();
 
 					if (errorMsgCountMap_pos != -1)
@@ -1248,17 +1599,38 @@ extends CountersModel
 							if (StringUtil.isNullOrBlank(jsonSrc))
 								continue;
 
-							Map<Integer, Double> errorMsgCountMap = gson.fromJson(jsonSrc, mapIntLongType);
+							Map<Integer, Map<String,Double>> errorMsgCountMap = gson.fromJson(jsonSrc, mapType);
+							if (errorMsgCountMap == null)
+								continue;
 
-							for (Entry<Integer, Double> e : errorMsgCountMap.entrySet())
+							for (Entry<Integer, Map<String, Double>> e : errorMsgCountMap.entrySet())
 							{
-								Double sumRateValue = sumRateMap.get(e.getKey());
-								if (sumRateValue == null)
-									sumRateValue = 0.0;
+								Integer errorNum = e.getKey();
+								Map<String, Double> dbMap = e.getValue();
 								
-								sumRateValue += e.getValue();
+								for (Entry<String, Double> dbe : dbMap.entrySet())
+								{
+									String dbname  = dbe.getKey();
+									Double rateVal = dbe.getValue();
 
-								sumRateMap.put(e.getKey(), round1(sumRateValue));
+									// Sum on ErrorMumber per DBName
+									Map<String, Double> sumDbMap = sumDbRateMap.get(errorNum);
+									if (sumDbMap == null)
+									{
+										sumDbMap = new HashMap<>();
+										sumDbMap.put(dbname, 0d);
+									}
+									
+									Double sumDbRateValue = sumDbMap.get(dbname);
+									if (sumDbRateValue == null)
+										sumDbRateValue = 0d;
+
+									sumDbRateValue += rateVal;
+									dbMap.put(dbname, sumDbRateValue);
+									
+									sumDbRateMap.put(errorNum, dbMap);
+									
+								}
 							}
 						}
 					}
@@ -1268,19 +1640,40 @@ extends CountersModel
 					String errorMsgInfoHtml = "";
 
 					// JSON
-					if ( ! sumRateMap.isEmpty() )
-						errorMsgInfoJson = gson.toJson(sumRateMap);
+					if ( ! sumDbRateMap.isEmpty() )
+						errorMsgInfoJson = gson.toJson(sumDbRateMap);
 					
 					// TXT
-					
-					for (Entry<Integer, Double> e : sumRateMap.entrySet())
-						errorMsgInfoTxt += "Msg=" + e.getKey() + ", ErrorsPerSec=" + e.getValue() + ", Description='" + AseErrorMessageDictionary.getInstance().getDescription(e.getKey()) + "\n";
+					for (Entry<Integer, Map<String, Double>> e : sumDbRateMap.entrySet())
+					{
+						Integer errorNum = e.getKey();
+						Map<String, Double> dbMap = e.getValue();
+
+						for (Entry<String, Double> dbe : dbMap.entrySet())
+						{
+							String dbname  = dbe.getKey();
+							Double rateVal = dbe.getValue();
+							
+							errorMsgInfoTxt += "Msg=" + errorNum + ", DBName='" + dbname + "', ErrorsPerSec=" + rateVal + ", Description='" + AseErrorMessageDictionary.getInstance().getDescription(errorNum) + "\n";
+						}
+					}
 
 					// HTML
 					errorMsgInfoHtml += "<table border=1>\n";
-					errorMsgInfoHtml += "<tr> <th>Msg</th> <th>ErrorsPerSec</th> <th>Description</th> </tr>\n";
-					for (Entry<Integer, Double> e : sumRateMap.entrySet())
-						errorMsgInfoHtml += "<tr> <td>" + e.getKey() + "</td> <td>" + e.getValue() + "</td> <td>" + AseErrorMessageDictionary.getInstance().getDescription(e.getKey()) + "</td> </tr>\n";
+					errorMsgInfoHtml += "<tr> <th>Msg</th> <th>DBName</th> <th>ErrorsPerSec</th> <th>Description</th> </tr>\n";
+					for (Entry<Integer, Map<String, Double>> e : sumDbRateMap.entrySet())
+					{
+						Integer errorNum = e.getKey();
+						Map<String, Double> dbMap = e.getValue();
+
+						for (Entry<String, Double> dbe : dbMap.entrySet())
+						{
+							String dbname  = dbe.getKey();
+							Double rateVal = dbe.getValue();
+							
+							errorMsgInfoHtml += "<tr> <td>" + errorNum + "</td> <td>" + dbname + "</td> <td>" + rateVal + "</td> <td>" + AseErrorMessageDictionary.getInstance().getDescription(errorNum) + "</td> </tr>\n";
+						}
+					}
 					errorMsgInfoHtml += "</table>\n";
 					
 					// END: construct a summary Map (for 'error info' to Alarm) of all RATE errors, and set it to a JSON String...
@@ -1308,7 +1701,8 @@ extends CountersModel
 		if (isSystemAlarmsForColumnEnabledAndInTimeRange("ErrorNumbers"))
 		{
 			// BEGIN: construct a summary Map of all DIFF errors, and set it to a JSON String... errorMsgInfo
-			Map<Integer, Long> sumDiffMap = new HashMap<>();
+//			Map<Integer, Long> sumDiffMap = new HashMap<>();
+			Map<Integer, Map<String,Long>> sumDbDiffMap = new HashMap<>();
 
 			CounterSample diffData = cm.getCounterSampleDiff();
 			int errorMsgCountMap_pos = diffData.findColumn("errorMsgCountMap");
@@ -1316,7 +1710,7 @@ extends CountersModel
 			if (errorMsgCountMap_pos != -1)
 			{
 				@SuppressWarnings("serial")
-				java.lang.reflect.Type mapIntLongType = new TypeToken<Map<Integer, Long>>(){}.getType();
+				java.lang.reflect.Type mapType = new TypeToken<Map<Integer, Map<String,Long>>>(){}.getType();
 				Gson gson = new Gson();
 
 				for (int r=0; r<diffData.getRowCount(); r++)
@@ -1325,17 +1719,47 @@ extends CountersModel
 					if (StringUtil.isNullOrBlank(jsonSrc))
 						continue;
 
-					Map<Integer, Long> errorMsgCountMap = gson.fromJson(jsonSrc, mapIntLongType);
+					Map<Integer, Map<String,Long>> errorMsgCountMap = gson.fromJson(jsonSrc, mapType);
+					if (errorMsgCountMap == null)
+						continue;
 
-					for (Entry<Integer, Long> e : errorMsgCountMap.entrySet())
+					for (Entry<Integer, Map<String,Long>> e : errorMsgCountMap.entrySet())
 					{
-						Long sumDiffValue = sumDiffMap.get(e.getKey());
-						if (sumDiffValue == null)
-							sumDiffValue = 0L;
+						Integer           errorNum  = e.getKey();
+						Map<String, Long> dbCntrMap = e.getValue();
 						
-						sumDiffValue += e.getValue();
+						for (Entry<String, Long> dbe : dbCntrMap.entrySet())
+						{
+							String  dbname    = dbe.getKey();
+							Long    diffCount = dbe.getValue();
 
-						sumDiffMap.put(e.getKey(), sumDiffValue);
+//							// Sum on ErrorMumber
+//							Long sumDiffValue = sumDiffMap.get(errorNum);
+//							if (sumDiffValue == null)
+//								sumDiffValue = 0L;
+//							
+//							sumDiffValue += diffCount;
+//
+//							sumDiffMap.put(errorNum, sumDiffValue);
+							
+
+							// Sum on ErrorMumber per DBName
+							Map<String, Long> dbMap = sumDbDiffMap.get(errorNum);
+							if (dbMap == null)
+							{
+								dbMap = new HashMap<>();
+								dbMap.put(dbname, 0L);
+							}
+							
+							Long sumDbDiffValue = dbMap.get(dbname);
+							if (sumDbDiffValue == null)
+								sumDbDiffValue = 0L;
+
+							sumDbDiffValue += diffCount;
+							dbMap.put(dbname, sumDbDiffValue);
+							
+							sumDbDiffMap.put(errorNum, dbMap);
+						}
 					}
 				}
 			}
@@ -1343,7 +1767,7 @@ extends CountersModel
 //			Map<Integer, Integer> _alarmErrorMap = new HashMap<>();
 //			_alarmErrorMap.put(1105, 0);
 //			_alarmErrorMap.put(1205, 0);
-			if ( ! sumDiffMap.isEmpty() )
+			if ( ! sumDbDiffMap.isEmpty() )
 			{
 				// loop ErrorNumbers and check if we got any matching entries
 				for (Entry<Integer, Integer> e : _map_alarm_ErrorNumbers.entrySet())
@@ -1351,35 +1775,46 @@ extends CountersModel
 					Integer alarmErrorNum  = e.getKey();
 					Integer alarmThreshold = e.getValue();
 
-					if (sumDiffMap.containsKey(alarmErrorNum))
+					if (sumDbDiffMap.containsKey(alarmErrorNum))
 					{
-						Long errorCount = sumDiffMap.getOrDefault(alarmErrorNum, 0L);
-						
-						if (errorCount > alarmThreshold)
+						Map<String, Long> dbMap = sumDbDiffMap.get(alarmErrorNum);
+						if (dbMap != null)
 						{
-							String errorDesc = AseErrorMessageDictionary.getInstance().getDescription(alarmErrorNum);
-							
-							if (debugPrint || _logger.isDebugEnabled())
-								System.out.println("##### sendAlarmRequest("+cm.getName()+"): ErrorNumber="+alarmErrorNum+", Count="+errorCount+", is above threshold="+alarmThreshold+".)");
+							for (Entry<String, Long> dbe : dbMap.entrySet())
+							{
+								String dbname     = dbe.getKey();
+								Long   errorCount = dbe.getValue();
+								
+								if (errorCount == null)
+									errorCount = 0L;
 
-							// Create Alarm
-							AlarmEvent alarm = new AlarmEventClientErrorMsg(cm, alarmErrorNum, errorCount, errorDesc, alarmThreshold);
-							
-							// Set the Error Info
-							String errorMsgInfoTxt  = "Msg=" + alarmErrorNum + ", DiffErrorCount=" + errorCount + ", Description='" + errorDesc + "'";
-							String errorMsgInfoHtml = errorMsgInfoTxt;
+								if (errorCount > alarmThreshold)
+								{
+									String errorDesc = AseErrorMessageDictionary.getInstance().getDescription(alarmErrorNum);
+									
+									if (debugPrint || _logger.isDebugEnabled())
+										System.out.println("##### sendAlarmRequest("+cm.getName()+"): ErrorNumber="+alarmErrorNum+", Count="+errorCount+", is above threshold="+alarmThreshold+".)");
 
-							alarm.setExtendedDescription(errorMsgInfoTxt, errorMsgInfoHtml);
-							
-							// Add the Alarm
-							AlarmHandler.getInstance().addAlarm(alarm);
-						}
-					}
-				}
+									// Create Alarm
+									AlarmEvent alarm = new AlarmEventClientErrorMsg(cm, alarmErrorNum, dbname, errorCount, errorDesc, alarmThreshold);
+									
+									// Set the Error Info
+									String errorMsgInfoTxt  = "Msg=" + alarmErrorNum + ", DBName='" + dbname + "', DiffErrorCount=" + errorCount + ", Description='" + errorDesc + "'";
+									String errorMsgInfoHtml = errorMsgInfoTxt;
+
+									alarm.setExtendedDescription(errorMsgInfoTxt, errorMsgInfoHtml);
+									
+									// Add the Alarm
+									AlarmHandler.getInstance().addAlarm(alarm);
+								}
+							} // end: dbMap loop
+						} // end: dbMap != null
+					} // end: sumDbDiffMap has alarmErrorNum
+				} // end: _map_alarm_ErrorNumbers
 			}
 		} //end: ErrorNumber
-		
-		
+
+
 		// Check if the "statistics producer - SQL Capture Thread" is delivering data statistics (is still alive)
 		if (isSystemAlarmsForColumnEnabledAndInTimeRange("SqlCaptureAge"))
 		{

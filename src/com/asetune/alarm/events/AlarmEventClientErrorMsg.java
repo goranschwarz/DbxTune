@@ -65,18 +65,18 @@ extends AlarmEvent
 	}
 
 	// Set: Time To Live if postpone is enabled
-	public AlarmEventClientErrorMsg(CountersModel cm, int errorNum, long errorCount, String errorDesc, int threshold)
+	public AlarmEventClientErrorMsg(CountersModel cm, int errorNum, String dbname, long errorCount, String errorDesc, int threshold)
 	{
 		super(
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
-				errorNum,             // extraInfo
+				errorNum + ":" + dbname,             // extraInfo
 				AlarmEvent.Category.OTHER,
 				getSeverity(errorNum), 
 				getServiceState(errorNum), 
 				// Note: max length for the below message is 512
-				"The Client Error Message " + errorNum + " has been raised " + errorCount + " times in last sample interval of " + cm.getSampleInterval() + " ms to client connection(s) from server '" + cm.getServerName() + "'. Threshold='"+threshold,
+				"The Client Error Message " + errorNum + " has been raised " + errorCount + " times for database '" + dbname + "' in last sample interval of " + cm.getSampleInterval() + " ms to client connection(s) from server '" + cm.getServerName() + "'. Threshold='"+threshold,
 				threshold // crossedThreshold... well this one do not have a number.
 				);
 
@@ -94,6 +94,6 @@ extends AlarmEvent
 		setTimeToLive(cm);
 
 		// Set the raw data
-		setData(errorCount);
+		setData("errorNum=" + errorNum + ", dbname=" + dbname + ", errorCount=" + errorCount);
 	}
 }

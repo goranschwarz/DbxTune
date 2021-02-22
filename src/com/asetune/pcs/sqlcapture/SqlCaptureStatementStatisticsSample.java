@@ -141,7 +141,8 @@ public class SqlCaptureStatementStatisticsSample
 		public long   count;
 		public long   sqlBatchCount;
 		public long   errorCount;
-		public Map<Integer, Long>   errorCountMap;
+//		public Map<Integer, Long>   errorCountMap;
+		public Map<Integer, Map<String, Long>> errorCountMap;  // Map<errorNumber, Map<dbname, counter>>
 		public long   inProcCount;
 		public long   inProcNullCount;
 		public long   inStmntCacheCount;
@@ -278,11 +279,28 @@ public class SqlCaptureStatementStatisticsSample
 
 			// Each error number will have it's own counter
 			// Get it and increment the count, and set it back in the map
-			Long errorNumberCounter = st.errorCountMap.get(errorStatus);
-			if (errorNumberCounter == null)
-				errorNumberCounter = 0L;
+//			Long errorNumberCounter = st.errorCountMap.get(errorStatus);
+//			if (errorNumberCounter == null)
+//				errorNumberCounter = 0L;
+//			errorNumberCounter++;
+//			st.errorCountMap.put(errorStatus, errorNumberCounter);
+			
+			// Each error number will have it's own Map with: DBName, counter
+			// Get it and increment the count, and set it back in the map
+			Map<String, Long> dbMapCounter = st.errorCountMap.get(errorStatus);
+			if (dbMapCounter == null)
+			{
+				dbMapCounter = new HashMap<>();
+				dbMapCounter.put(dbname, 0L);
+
+				// st.errorCountMap.put(errorStatus, dbMapCounter); // This is done AT THE END
+			}
+			Long errorNumberCounter = dbMapCounter.getOrDefault(dbname, 0L);
+			
 			errorNumberCounter++;
-			st.errorCountMap.put(errorStatus, errorNumberCounter);
+			dbMapCounter.put(dbname, errorNumberCounter);
+			
+			st.errorCountMap.put(errorStatus, dbMapCounter);
 		}
 
 //		if (procedureId > 0)
@@ -396,7 +414,7 @@ public class SqlCaptureStatementStatisticsSample
 		rs.addColumn("avgRowsAffected",        Types.INTEGER,  0, 0);
 		rs.addColumn("maxRowsAffected",        Types.INTEGER,  0, 0);
                                                
-		rs.addColumn("errorMsgCountMap",       Types.VARCHAR, 512, 0);
+		rs.addColumn("errorMsgCountMap",       Types.VARCHAR, 1024, 0);
 
 		rs.addColumn("statId",                 Types.INTEGER,  0, 0);
 

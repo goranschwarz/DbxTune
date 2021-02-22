@@ -121,7 +121,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>
 		<b>CmSqlStatement - tab: SQL Statements</b><br>
 		<ul>
-			<li>New column: 'errorMsgCountMap'       -- A JSON String, which contains {MsgNumber=count}</li>
+			<li>New column: 'errorMsgCountMap'       -- A JSON String, which contains {MsgNumber={DBName=count}} example: {"1105":{"db1":5}} </li>
 			<li>New column: 'inProcNameNullCount'    -- diff calculated: Estimated SQL Statements requests executed where ProcedureId was not 0, but the ProcedureName could NOT be found</li>
 			<li>New column: 'inProcNameNullCountAbs' -- absolute values: Estimated SQL Statements requests executed where ProcedureId was not 0, but the ProcedureName could NOT be found</li>
 			<li>changed default for CmSqlStatement.alarm.system.if.errorCount.gt from 10 to 20</li>
