@@ -33,6 +33,8 @@ import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
 import com.asetune.Version;
+import com.asetune.cache.DbmsObjectIdCache;
+import com.asetune.cache.DbmsObjectIdCacheSqlServer;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.DbmsConfigTextManager;
 import com.asetune.config.dbms.IDbmsConfig;
@@ -175,6 +177,10 @@ extends MainFrame
 		{
 			_logger.warn("Problems in connectMonitorHookin(): When Initializing DBMS SET Properties, using sql='" + sql + "'. Continuing... Caught: MsgNum=" + ex.getErrorCode() + ": " + ex);
 		}
+		
+
+		// DBMS ObjectID --> ObjectName Cache... maybe it's not the perfect place to initialize this...
+		DbmsObjectIdCache.setInstance( new DbmsObjectIdCacheSqlServer(this) );
 	}
 
 	@Override

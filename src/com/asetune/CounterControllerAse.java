@@ -843,8 +843,21 @@ public class CounterControllerAse extends CounterControllerAbstract
 				// Disconnect, and get out of here...
 				conn.closeNoThrow();
 				
-				// STOP: throw Exception() will case use to "stop/exit"
-				throw new Exception("Problems when checking the ASE Server for 'proper monitoring configuration'.");
+				// Have we managed to connect previously or not
+				if (getMonConnection() == null)
+				{
+					// STOP: throw Exception() will case use to "stop/exit"
+					// OR: If we know that we have connected earlier, and has pass this check... we might just want to retry... 
+					//     The failure might be to insufficient resources (or whatever) on the Server side!  
+					throw new Exception("Problems when checking the ASE Server for 'proper monitoring configuration'.");
+				}
+				else
+				{
+					// If we have previously been connected...
+					// Then throw SQLException, which will be retried later on
+					// DBMS Server may be in a strange state, where it couldn't handle the statements in: AseConnectionUtils.checkForMonitorOptions()
+					throw new SQLException("Problems when checking the ASE Server for 'proper monitoring configuration'.");
+				}
 			}
 
 			// Finally return the connection

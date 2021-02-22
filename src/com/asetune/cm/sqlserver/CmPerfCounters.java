@@ -2591,7 +2591,7 @@ extends CountersModel
 			
 			if (freeListStalls != null)
 			{
-				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_FreeListStalls, DEFAULT_alarm_FreeListStalls);
+				double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_FreeListStalls, DEFAULT_alarm_FreeListStalls);
 				
 				if (debugPrint || _logger.isDebugEnabled())
 					System.out.println("##### sendAlarmRequest("+cm.getName()+"): FreeListStalls -- threshold="+threshold+", freeListStalls='"+freeListStalls+"'.");
@@ -2600,14 +2600,52 @@ extends CountersModel
 				{
 					AlarmEvent ae = new AlarmEventPerfCounterWarning(cm, "Free list stalls/sec", freeListStalls, "Buffer Cache is probably to small... 'Free list stalls/sec'=" + freeListStalls + ". Waiting for memory to become available before a page can be added into the buffer pool.", threshold);
 					
+					int raiseDelay = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_FreeListStalls_delay, DEFAULT_alarm_FreeListStalls_delay);
+					ae.setRaiseDelayInSec(raiseDelay);
+					
+					alarmHandler.addAlarm( ae );
+				}
+			}
+		}
+
+		//-------------------------------------------------------
+		// Lazy writes/sec
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("LazyWrites"))
+		{
+			String pk = createPkStr(":Buffer Manager", "Lazy writes/sec", "");
+			
+			Double lazyWrites = this.getAbsValueAsDouble(pk, "calculated_value");
+			
+			if (lazyWrites != null)
+			{
+				double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_LazyWrites, DEFAULT_alarm_LazyWrites);
+				
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): LazyWrites -- threshold="+threshold+", lazyWrites='"+lazyWrites+"'.");
+
+				if (lazyWrites > threshold)
+				{
+					AlarmEvent ae = new AlarmEventPerfCounterWarning(cm, "Lazy writes/sec", lazyWrites, "Buffer Cache is probably to small... 'Lazy writes/sec'=" + lazyWrites + ". Lazy Writer process moves 'dirty' pages from cache/buffer-pool to disk. This is an indication of 'memory pressure' or 'to little memory'.", threshold);
+
+					int raiseDelay = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LazyWrites_delay, DEFAULT_alarm_LazyWrites_delay);
+					ae.setRaiseDelayInSec(raiseDelay);
+					
 					alarmHandler.addAlarm( ae );
 				}
 			}
 		}
 	}
 
-	public static final String  PROPKEY_alarm_FreeListStalls = CM_NAME + ".alarm.system.if.FreeListStalls.gt";
-	public static final int     DEFAULT_alarm_FreeListStalls = 0;
+	public static final String  PROPKEY_alarm_FreeListStalls       = CM_NAME + ".alarm.system.if.FreeListStalls.gt";
+	public static final double  DEFAULT_alarm_FreeListStalls       = 0.5;
+	public static final String  PROPKEY_alarm_FreeListStalls_delay = CM_NAME + ".alarm.system.if.FreeListStalls.raise.delay";
+	public static final int     DEFAULT_alarm_FreeListStalls_delay = 120; // 2 minutes
+
+	public static final String  PROPKEY_alarm_LazyWrites           = CM_NAME + ".alarm.system.if.LazyWrites.gt";
+	public static final double  DEFAULT_alarm_LazyWrites           = 20;
+	public static final String  PROPKEY_alarm_LazyWrites_delay     = CM_NAME + ".alarm.system.if.LazyWrites.raise.delay";
+	public static final int     DEFAULT_alarm_LazyWrites_delay     = 180; // 3 minutes
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -2617,7 +2655,10 @@ extends CountersModel
 		
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("FreeListStalls", isAlarmSwitch, PROPKEY_alarm_FreeListStalls, Integer.class, conf.getIntProperty(PROPKEY_alarm_FreeListStalls, DEFAULT_alarm_FreeListStalls), DEFAULT_alarm_FreeListStalls, "If 'Free list stalls/sec' is greater than 0 then send 'AlarmEventPerfCounterWarning'." ));
+		list.add(new CmSettingsHelper("FreeListStalls",            isAlarmSwitch, PROPKEY_alarm_FreeListStalls      , Double .class, conf.getDoubleProperty(PROPKEY_alarm_FreeListStalls      , DEFAULT_alarm_FreeListStalls      ), DEFAULT_alarm_FreeListStalls      , "If 'Free list stalls/sec' is greater than 0.5 then send 'AlarmEventPerfCounterWarning'." ));
+		list.add(new CmSettingsHelper("FreeListStalls RaiseDelay",                PROPKEY_alarm_FreeListStalls_delay, Integer.class, conf.getDoubleProperty(PROPKEY_alarm_FreeListStalls_delay, DEFAULT_alarm_FreeListStalls_delay), DEFAULT_alarm_FreeListStalls_delay, "If 'Free list stalls/sec' is true and has been so for 2 minutes then proceed with the Alarm Raise." ));
+		list.add(new CmSettingsHelper("LazyWrites",                isAlarmSwitch, PROPKEY_alarm_LazyWrites          , Double.class , conf.getDoubleProperty(PROPKEY_alarm_LazyWrites          , DEFAULT_alarm_LazyWrites          ), DEFAULT_alarm_LazyWrites          , "If 'Lazy writes/sec' is greater than 20 then send 'AlarmEventPerfCounterWarning'." ));
+		list.add(new CmSettingsHelper("LazyWrites RaiseDelay",                    PROPKEY_alarm_LazyWrites_delay    , Integer.class, conf.getDoubleProperty(PROPKEY_alarm_LazyWrites_delay    , DEFAULT_alarm_LazyWrites_delay    ), DEFAULT_alarm_LazyWrites_delay    , "If 'Lazy writes/sec' is true and has been so for 3 minutes then proceed with the Alarm Raise." ));
 
 		return list;
 	}

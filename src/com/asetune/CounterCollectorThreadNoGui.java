@@ -49,6 +49,7 @@ import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.ase.AlarmEventAseLicensExpiration;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
+import com.asetune.cache.DbmsObjectIdCache;
 import com.asetune.cache.XmlPlanCache;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesDbx.DbxConnectInfo;
@@ -724,6 +725,12 @@ implements Memory.MemoryListener
 			XmlPlanCache.getInstance().outOfMemoryHandler();
 		}
 
+		// ObjectID -> ObjectName Cache
+		if (DbmsObjectIdCache.hasInstance())
+		{
+			DbmsObjectIdCache.getInstance().outOfMemoryHandler();
+		}
+
 		// Persistent Counter Storage
 		if (PersistentCounterHandler.hasInstance())
 		{
@@ -745,6 +752,12 @@ implements Memory.MemoryListener
 			if (XmlPlanCache.hasInstance())
 			{
 				XmlPlanCache.getInstance().lowOnMemoryHandler();
+			}
+
+			// ObjectID -> ObjectName Cache
+			if (DbmsObjectIdCache.hasInstance())
+			{
+				DbmsObjectIdCache.getInstance().lowOnMemoryHandler();
 			}
 
 			// Persistent Counter Storage
@@ -1022,130 +1035,12 @@ implements Memory.MemoryListener
 			// This is also done right before we go to sleep (waiting for next data collection)
 			HeartbeatMonitor.doHeartbeat();
 			
-			// Check if current MONITOR-DBMS connection is lost
-//			if (_monConn != null)
-//			{
-//				try
-//				{
-//					if ( _monConn.isClosed() )
-//					{
-//						try {_monConn.close();}
-//						catch(SQLException ignore) {}
-//						finally {_monConn = null;}
-//					}
-//				}
-//				catch (SQLException ignore) {}
-//			}
-
 			// CONNECT (initial or reconnect)
-//			if (_monConn == null)
 			if ( ! getCounterController().isMonConnected(true, true))
 			{
 				_logger.debug("Connecting to DBMS server using. user='"+_dbmsUsername+"', passwd='"+_dbmsPassword+"', hostPortStr='"+_dbmsHostPortStr+"'. dbmsServer='"+_dbmsServer+"'");
 				_logger.info( "Connecting to DBMS server using. user='"+_dbmsUsername+"', passwd='"+ "*hidden*" +"', hostPortStr='"+_dbmsHostPortStr+"'. dbmsServer='"+_dbmsServer+"'");
 
-//				// get a connection
-//				try
-//				{
-//					// FIXME: this doesn't work for OTHER DBMS than Sybase...
-//					AseConnectionFactory.setUser(_dbmsUsername); // Set this just for SendConnectInfo uses it
-//					AseConnectionFactory.setHostPort(_dbmsHostPortStr);
-//
-//					Connection conn = AseConnectionFactory.getConnection(_dbmsHostPortStr, null, _dbmsUsername, _dbmsPassword, Version.getAppName()+"-nogui", Version.getVersionStr(), null, (Properties)null, null);
-////					getCounterController().setMonConnection( conn);
-//					getCounterController().setMonConnection( DbxConnection.createDbxConnection(conn) );
-////					getCounterController().getMonConnection().reConnect();
-//
-//					// set the connection props so it can be reused...
-//					// FIXME: This is very ASE Specific right now... it needs to be more generic for DbxTune (sqlServerTune, oracleTune, etc)
-////					ConnectionProp cp = new ConnectionProp();
-//					cp.setLoginTimeout ( 20 );
-//					cp.setDriverClass  ( AseConnectionFactory.getDriver() );
-//					cp.setUrl          ( AseConnectionFactory.getUrlTemplateBase() + AseConnectionFactory.getHostPortStr() );
-////					cp.setUrlOptions   ( tdsUrlOptions );
-//					cp.setUsername     ( _dbmsUsername );
-//					cp.setPassword     ( _dbmsPassword );
-//					cp.setAppName      ( Version.getAppName() );
-//					cp.setAppVersion   ( Version.getVersionStr() );
-////					cp.setHostPort     ( hosts, ports );
-////					cp.setSshTunnelInfo( sshTunnelInfo );
-//
-//					DbxConnection.setDefaultConnProp(cp);
-//					
-//					// ASE: 
-//					// XML Plan Cache... maybe it's not the perfect place to initialize this...
-//					XmlPlanCache.setInstance( new XmlPlanCacheAse( new ConnectionProvider()
-//					{
-//						@Override
-//						public DbxConnection getNewConnection(String appname)
-//						{
-//							try 
-//							{
-//								return DbxConnection.connect(null, appname);
-//							} 
-//							catch(Exception e) 
-//							{
-//								_logger.error("Problems getting a new connection. Caught: "+e, e);
-//								return null;
-//							}
-//						}
-//						
-//						@Override
-//						public DbxConnection getConnection()
-//						{
-//							return getCounterController().getMonConnection();
-//						}
-//					}) );
-//
-//					
-//					// CHECK the connection for proper configuration.
-//					// If failure, go and FIX
-//					// FIXME: implement the below "set minimal logging options"
-//					if ( ! AseConnectionUtils.checkForMonitorOptions(getCounterController().getMonConnection(), _dbmsUsername, false, null) )
-//					{
-//						AseConnectionUtils.setBasicAseConfigForMonitoring(getCounterController().getMonConnection());
-//					}
-//
-//					// CHECK the connection for proper configuration.
-//					// The fix did not work, so lets get out of here
-//					if ( ! AseConnectionUtils.checkForMonitorOptions(getCounterController().getMonConnection(), _dbmsUsername, false, null) )
-//					{
-//						_logger.error("Problems when checking the ASE Server for 'proper monitoring configuration'.");
-//
-//						// Disconnect, and get out of here...
-//						getCounterController().closeMonConnection();
-//						
-//						// THE LOOP WILL BE FALSE (_running = false)
-//						_running = false;
-//
-//						// START AT THE TOP AGAIN
-//						continue;
-//					}
-//
-//					// Do this later, when the MonTablesDictionary is initialized
-//					//CheckForUpdates.sendConnectInfoNoBlock(ConnectionDialog.TDS_CONN, null);
-//				}
-//				catch (SQLException e)
-//				{
-//					String msg = AseConnectionUtils.getMessageFromSQLException(e, false); 
-//					_logger.error("Problems when connecting to a ASE Server. "+msg);
-//
-//					// JZ00L: Login failed
-//					if (e.getSQLState().equals("JZ00L"))
-//					{
-//						// THE LOOP WILL BE FALSE (_running = false)
-//						_running = false;
-//
-//						_logger.error("Faulty PASSWORD when connecting to the server '"+_dbmsServer+"' at '"+_dbmsHostPortStr+"', with user '"+_dbmsUsername+"', I cant recover from this... exiting...");
-//
-//						// GET OUT OF THE LOOP, causing us to EXIT
-//						break;
-//					}
-//				}
-//				catch (Exception e)
-//				{
-//					_logger.error("Problems when connecting to a ASE Server. "+e);
-//				}
 
 				// get a connection
 				SQLException connectException = null;
@@ -1162,7 +1057,7 @@ implements Memory.MemoryListener
 
 					// Make a connection using any specific implementation for the installed counter controller
 					DbxConnection conn = getCounterController().noGuiConnect(_dbmsUsername, _dbmsPassword, _dbmsServer, _dbmsHostPortStr, _jdbcUrlOptions);
-
+					
 					// Set the connection to be used
 					//getCounterController().setMonConnection( DbxConnection.createDbxConnection(conn) );
 					getCounterController().setMonConnection(conn);
@@ -1172,11 +1067,13 @@ implements Memory.MemoryListener
 						_logger.warn("No Default Connection Properties was specified...");
 
 					// Special thing for AlrmWriters, set SERVERNAME
-					try {
+					try 
+					{
 						String dbmsServerName = conn.getDbmsServerName();
 						if (StringUtil.hasValue(dbmsServerName))
 							System.setProperty("SERVERNAME", DbxTune.stripSrvName(dbmsServerName));
-					} catch (Exception ignore) {}
+					} 
+					catch (Exception ignore) {}
 				}
 				catch (SQLException ex)
 				{

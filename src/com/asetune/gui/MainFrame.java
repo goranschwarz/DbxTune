@@ -114,6 +114,7 @@ import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.ui.config.AlarmConfigDialog;
 import com.asetune.alarm.ui.view.AlarmViewer;
 import com.asetune.alarm.writers.AlarmWriterToTableModel;
+import com.asetune.cache.DbmsObjectIdCache;
 import com.asetune.cache.XmlPlanCache;
 import com.asetune.cache.XmlPlanCacheOffline;
 import com.asetune.check.CheckForUpdates;
@@ -2417,6 +2418,12 @@ public abstract class MainFrame
 				XmlPlanCache.getInstance().outOfMemoryHandler();
 			}
 
+			// ObjectID -> ObjectName Cache
+			if (DbmsObjectIdCache.hasInstance())
+			{
+				DbmsObjectIdCache.getInstance().outOfMemoryHandler();
+			}
+
 			// Persistent Counter Storage
 			if (PersistentCounterHandler.hasInstance())
 			{
@@ -2485,6 +2492,12 @@ public abstract class MainFrame
 			if (XmlPlanCache.hasInstance())
 			{
 				XmlPlanCache.getInstance().lowOnMemoryHandler();
+			}
+
+			// ObjectID -> ObjectName Cache
+			if (DbmsObjectIdCache.hasInstance())
+			{
+				DbmsObjectIdCache.getInstance().lowOnMemoryHandler();
 			}
 
 			// Persistent Counter Storage
@@ -3597,6 +3610,22 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					_offlineView = null;
 				}
 		
+				//--------------------------
+				// Close XML Plan Cache (if we have one)
+				if (XmlPlanCache.hasInstance())
+				{
+					getWaitDialog().setState("Closing XML Plan Cache.");
+					XmlPlanCache.getInstance().close();
+				}
+				
+				//--------------------------
+				// Close DBMS ObjectId Cache (if we have one)
+				if (DbmsObjectIdCache.hasInstance())
+				{
+					getWaitDialog().setState("Closing DBMS ObjectID Cache.");
+					DbmsObjectIdCache.getInstance().close();
+				}
+				
 				//--------------------------
 				// Close the DDL View
 				if (_ddlViewer != null)

@@ -51,6 +51,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>new cmdline interface 'dsr.bat' or 'dsr.sh' for Daily Summary Report</LI>
 		<LI>Changed all CM's for Alarm Debugging to print threshold values earlier</LI>
 		<LI>bugfix: Filter Field didn't allow [] in the column names (the bug was introduced when changing version of JSqlParser)</LI>
+		<LI>NoGUI - if we have a previous connection, then do not exit (when checking for "proper monitoring configuration") when connecting.</LI>
 
 		<LI>OS Monitoring now also handles Windows, via a SHH Connection executing typeperf (not a OpenSSH Server needs to be installed on the Windows Server, supported modules
 			<UL>
@@ -260,6 +261,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added CM: <b>CmTableSize    </b> - A cheaper version of 'CmIndexPhysical using dm_db_index_physical_stats', this one is using dm_db_partition_stats and is *much* cheaper...</LI>
 		<LI>Added CM: <b>CmMemoryClerks </b> - Information about the memory clerks</LI>
 		<LI>Added CM: <b>CmMemoryGrants </b> - Information about SPID's that requests memory grants</LI>
+		<LI>Added CM: <b>CmActiveStPlanStats</b> - Active Stmnts Plan Stat -- get info about execution plan operators, to check what's taking most time in a execution plan. NOTE: This is in beta mode, and may be discarded</LI>
 
 		<LI><b>CmActiveStatements </b> - For blocking locks (marked as red background) - only the root blocker(s) are marked. logic (ImBlockingOtherSessionIds!="" and ImBlockedBySessionId=0)</LI>
 		<LI><b>CmActiveStatements </b> - added column 'dop - Degree Of Parallelism' if version is above 2016</LI>
@@ -268,11 +270,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmActiveStatements </b> - new column 'SpidLocks' to summarize how many locks a SPID holds </LI>
 		<LI><b>CmActiveStatements </b> - new column 'HasBlockedSpidsInfo', 'BlockedSpidsInfo' so that alarms can see both the root-cause-spid and the victim-spid information </LI>
 		<LI><b>CmActiveStatements </b> - new column 'ProcName', 'StmntStart' so we can see if a Stored Proc is executing (and not just the SQL Text) </LI>
-		<LI><b>CmActiveStatements </b> - Query Plans: get actual execution plans if the server supports it (2019 & traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
+		<LI><b>CmActiveStatements </b> - Query Plans: get actual execution plans if the server supports it (2019 &amp; traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
 		
 		<LI><b>CmDatabases        </b> - Added 'OldestTranName' and 'OldestTranId' - Now shows the transaction name and id (watch out for OldestTranName 'implicit_transaction', which indicates that AotoCommit is FALSE, which introduces more blocking locks)</LI>
 		<LI><b>CmDatabases        </b> - fixed bug: LowDbFreeSpaceInMb and LowLogFreeSpaceInMb sometimes didn't fire correctly</LI>
-		<LI><b>CmDatabases        </b> - Query Plans: get actual execution plans if the server supports it (2019 & traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
+		<LI><b>CmDatabases        </b> - Query Plans: get actual execution plans if the server supports it (2019 &amp; traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
 		<LI><b>CmDatabases        </b> - new columns for Query Store: 'QsIsEnabled', 'QsIsOk', 'QsDesiredState', 'QsActualState', 'QsMaxSizeInMb', 'QsUsedSpaceInMb', 'QsFreeSpaceInMb', 'QsUsedPct', 'QsReadOnlyReason' </LI>
 		<LI><b>CmDatabases        </b> - new column 'OldestTranHasLocks', 'OldestTranLocks' to collect what locks Oldest Transaction are holding </LI>
 		<LI><b>CmDatabases        </b> - for AlarmEventLongRunningTransaction, added filters on 'OldestTranProg', 'OldestTranUser', 'OldestTranHost' so we can filter out known users or programs </LI>
@@ -285,14 +287,16 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI><b>CmIndexUsage       </b> - new postpone value of 300 seconds (5 minutes) </LI>
 
-		<LI><b>CmOpenTransactions </b> - Removed Primary Key & Query Plans: get actual execution plans if the server supports it (2019 & traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
+		<LI><b>CmOpenTransactions </b> - Removed Primary Key &amp; Query Plans: get actual execution plans if the server supports it (2019 &amp; traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
 
 		<LI><b>CmOsLatch          </b> - added columns 'waiting_requests_count_diff', 'wait_time_ms_diff' to make it easier to see both ABS and DIFF value when in 'diff' mode </LI>
 
 		<LI><b>CmPerfCounters     </b> - new graph 'Buffer Cache Data Size in MB'</LI>
-		<LI><b>CmPerfCounters     </b> - new alarm: 'FreeListStalls' - Buffer Cache is probably to small... Waiting for memory to become available before a page can be added into the buffer pool.</LI>
+		<LI><b>CmPerfCounters     </b> - new alarm: 'FreeListStalls' - Buffer Cache is probably to small... Waiting for memory to become available before a page can be added into the buffer pool. Alarm if 'FreeListStalls' is above 0.5 for 2 minutes</LI>
+		<LI><b>CmPerfCounters     </b> - new alarm: if 'LazyWrites' is above 20 for 3 minutes</LI>
 		<LI><b>CmPerfCounters     </b> - added graph 'Memory Manager', with a line for every entry where object_name is ':Memory Manager'</LI>
 		<LI><b>CmPerfCounters     </b> - Added 5 graphs for Query Store Usage. 'QsTotal', 'QsDbCpu', 'QsDbPhysRead', 'QsDbLogiRead', 'QsDbLogiWrite' </LI>
+		<LI><b>CmPerfCounters     </b> - </LI>
 
 		<LI><b>CmSchedulers       </b> - added 'diff' calculations for columns 'total_cpu_usage_ms', 'total_cpu_idle_capped_ms' and 'total_scheduler_delay_ms'</LI>
 
@@ -311,9 +315,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmTempdbUsage      </b> - added 2 new graphs 'Tempdb Usage by Object Type, in MB, {All|Subset}' -- Shows "Version Store", "Internal Objects", "User Objects", "Mixed Extents", "Allocated Space", "Free Space", "Total Space"</LI>
 
 		<LI><b>CmWaitingTasks     </b> - new columns 'cpu_time', 'status', 'command', 'ProcName', 'StmntStart', 'program_name', 'database_id', 'database_name' </LI>
-		<LI><b>CmWaitingTasks     </b> - Query Plans: get actual execution plans if the server supports it (2019 & traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
+		<LI><b>CmWaitingTasks     </b> - Query Plans: get actual execution plans if the server supports it (2019 &amp; traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
 		<LI><b>CmWaitingTasks     </b> - Added the following columns 'blocking_exec_context_id', 'blocking_task_address' for tracability </LI>
 		<LI><b>CmWaitingTasks     </b> - Changed columns: 'currentSqlText', 'fullSqlBatchText', 'query_plan' only get SQL Text and Query Plan if 'exec_context_id' is 0, which is the "parent" for all worker threads </LI>
+		<LI><b>CmWaitingTasks     </b> - new column 'resource_description_decoded', which tries to decode/enrich values in 'resource_description'. For example get DBName, SchemaName and ObjectName </LI>
 
 		<LI><b>CmWaitStats        </b> - added column 'WaitClass', which tries to group 'wait_type' in groups ... this according to https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15</LI>
 		<LI><b>CmWaitStats        </b> - updated the list of 'wait_type' to skip (hopefully up to 2019)</LI>
@@ -326,7 +331,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Get SQL-Server configurations: to get active traceflags use 'DBCC TRACESTATUS(-1)' instead of 'DBCC TRACESTATUS'</LI>
 		<LI>bug fix: to reset internal SQL-Server version number on disconnect.</LI>
 		<LI>On Connect: Check for Recommended trace flags for different versions<br> 
-		    &emsp;&bull; SQL Server (between 2016 SP1 & 2019) traceflag 7412 -- to get "live query plans"<br> 
+		    &emsp;&bull; SQL Server (between 2016 SP1 &amp; 2019) traceflag 7412 -- to get "live query plans"<br> 
 		    &emsp;&bull; SQL-Server 2019, Actual-Query-Plans: traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS<br>
 		</LI>
 		<LI>PCS: Capture last day (or more) for databases that has Query Store enabled.<br>
@@ -338,6 +343,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		    &emsp;&bull; config: <code>SqlServerTune.onRefresh.setLockTimeout = true|false </code>   (if you want to change this)<br> 
 		    &emsp;&bull; config: <code>SqlServerTune.onRefresh.setLockTimeout.ms = ms      </code>   (if change the timeout value)<br>
 		</LI>
+		<LI>toHtmlTableString now also checks for '&lt;ShowPlanXML xmlns=' and wraps that with a 'xmp' html-tag</LI>
+		<LI>DbmsObjectIdCache - subsystem to cache ObjectID's to ObjectNames</LI>
 		
 		<!-- ~~~~~ Daily Report ~~~~~ -->
 		<LI>

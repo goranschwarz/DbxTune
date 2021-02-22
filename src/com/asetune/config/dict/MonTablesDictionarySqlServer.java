@@ -2463,6 +2463,61 @@ extends MonTablesDictionaryDefault
 			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 
 			// Table name and description
+			mtd.addTable("dm_exec_query_profiles",  "<p>Monitors real time query progress while the query is in execution. For example, use this DMV to determine which part of the query is running slow. Join this DMV with other system DMVs using the columns identified in the description field. Or, join this DMV with other performance counters (such as Performance Monitor, xperf) by using the timestamp columns.</p>");
+
+			// Column names and description
+			mtd.addColumn("dm_exec_query_profiles", "session_id"                 , "<html>Identifies the session in which this query runs. References dm_exec_sessions.session_id.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "request_id"                 , "<html>Identifies the target request. References dm_exec_sessions.request_id.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "sql_handle"                 , "<html>Is a token that uniquely identifies the batch or stored procedure that the query is part of. References dm_exec_query_stats.sql_handle.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "plan_handle"                , "<html>Is a token that uniquely identifies a query execution plan for a batch that has executed and its plan resides in the plan cache, or is currently executing. References dm_exec_query_stats.plan_handle.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "physical_operator_name"     , "<html>Physical operator name.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "node_id"                    , "<html>Identifies an operator node in the query tree.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "thread_id"                  , "<html>Distinguishes the threads (for a parallel query) belonging to the same query operator node.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "task_address"               , "<html>Identifies the SQLOS task that this thread is using. References dm_os_tasks.task_address.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "row_count"                  , "<html>Number of rows returned by the operator so far.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "rewind_count"               , "<html>Number of rewinds so far.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "rebind_count"               , "<html>Number of rebinds so far.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "end_of_scan_count"          , "<html>Number of end of scans so far.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "estimate_row_count"         , "<html>Estimated number of rows. It can be useful to compare to estimated_row_count to the actual row_count.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "first_active_time"          , "<html>The time, in milliseconds, when the operator was first called.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "last_active_time"           , "<html>The time, in milliseconds, when the operator was last called.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "open_time"                  , "<html>Timestamp when open (in milliseconds).</html>");
+			mtd.addColumn("dm_exec_query_profiles", "first_row_time"             , "<html>Timestamp when first row was opened (in milliseconds).</html>");
+			mtd.addColumn("dm_exec_query_profiles", "last_row_time"              , "<html>Timestamp when last row was opened(in milliseconds).</html>");
+			mtd.addColumn("dm_exec_query_profiles", "close_time"                 , "<html>Timestamp when close (in milliseconds).</html>");
+			mtd.addColumn("dm_exec_query_profiles", "elapsed_time_ms"            , "<html>Total elapsed time (in milliseconds) used by the target node's operations so far.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "cpu_time_ms"                , "<html>Total CPU time (in milliseconds) use by target node's operations so far.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "database_id"                , "<html>ID of the database that contains the object on which the reads and writes are being performed.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "object_id"                  , "<html>The identifier for the object on which the reads and writes are being performed. References sys.objects.object_id.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "index_id"                   , "<html>The index (if any) the rowset is opened against.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "scan_count"                 , "<html>Number of table/index scans so far.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "logical_read_count"         , "<html>Number of logical reads so far.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "physical_read_count"        , "<html>Number of physical reads so far.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "read_ahead_count"           , "<html>Number of read-aheads so far.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "write_page_count"           , "<html>Number of page-writes so far due to spilling.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "lob_logical_read_count"     , "<html>Number of LOB logical reads so far.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "lob_physical_read_count"    , "<html>Number of LOB physical reads so far.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "lob_read_ahead_count"       , "<html>Number of LOB read-aheads so far.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "segment_read_count"         , "<html>Number of segment read-aheads so far.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "segment_skip_count"         , "<html>Number of segments skipped so far.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "actual_read_row_count"      , "<html>Number of rows read by an operator before the residual predicate was applied.</html>");
+			mtd.addColumn("dm_exec_query_profiles", "estimated_read_row_count"   , "<html>Number of rows estimated to be read by an operator before the residual predicate was applied. <br>Applies to: Beginning with SQL Server 2016 (13.x) SP1. </html>");
+		}
+		catch (NameNotFoundException e)
+		{
+			_logger.warn("Problems adding 'dm_exec_query_profiles' to MonTablesDictionary. Caught: " + e, e);
+		}
+
+		
+		
+		// ---------------------------------------------------------------------------------------
+		// dm_exec_query_stats
+		// ---------------------------------------------------------------------------------------
+		try
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+
+			// Table name and description
 			mtd.addTable("dm_exec_query_stats",  "<p>Returns aggregate performance statistics for cached query plans in SQL Server. The view contains one row per query statement within the cached plan, and the lifetime of the rows are tied to the plan itself. When a plan is removed from the cache, the corresponding rows are eliminated from this view. </p>");
 
 			// Column names and description

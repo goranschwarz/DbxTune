@@ -294,7 +294,7 @@ implements Cloneable, ITableTooltip
 	
 	// Columns that should be first in the output table
 //	private Set<String> _preferredColumnOrder = new LinkedHashSet<String>();
-	private HashMap<String, ColumnHeaderPropsEntry> _preferredColumnProps = new LinkedHashMap<String, ColumnHeaderPropsEntry>();
+	private LinkedHashMap<String, ColumnHeaderPropsEntry> _preferredColumnProps = new LinkedHashMap<String, ColumnHeaderPropsEntry>();
 
 	private int _aseError_2714_count = 0;
 	private int _aseError_2714_actionThreshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_aseError_2714_actionThreshold, DEFAULT_aseError_2714_actionThreshold);
@@ -1922,7 +1922,7 @@ implements Cloneable, ITableTooltip
 				else
 				{
 					// check for XML content "somewhere" in the string
-					if (strVal.indexOf("<?xml") >= 0)
+					if (strVal.indexOf("<?xml") >= 0 || strVal.indexOf("<ShowPlanXML xmlns=") >= 0)
 					{
 						// if there are any XML tag in the field... Then surround the value with a '<xmp>' tag
 						strVal = "<xmp>" + strVal + "</xmp>";
@@ -3873,7 +3873,7 @@ implements Cloneable, ITableTooltip
 	 * 
 	 * @return Column names <b>not</b> in the Map should be put at the end
 	 */
-	public HashMap<String, ColumnHeaderPropsEntry> getPreferredColumnProps()
+	public LinkedHashMap<String, ColumnHeaderPropsEntry> getPreferredColumnProps()
 	{
 		return _preferredColumnProps;
 	}
@@ -3883,7 +3883,7 @@ implements Cloneable, ITableTooltip
 	 * Column names <b>not</b> in the Map should be put at the end
 	 * @param columns
 	 */
-	public void setPreferredColumnProps(HashMap<String, ColumnHeaderPropsEntry> columns)
+	public void setPreferredColumnProps(LinkedHashMap<String, ColumnHeaderPropsEntry> columns)
 	{
 		_preferredColumnProps = columns;
 	}
@@ -3894,7 +3894,7 @@ implements Cloneable, ITableTooltip
 	 */
 	public void addPreferredColumnOrder(ColumnHeaderPropsEntry colProps)
 	{
-		HashMap<String, ColumnHeaderPropsEntry> columns = getPreferredColumnProps();
+		LinkedHashMap<String, ColumnHeaderPropsEntry> columns = getPreferredColumnProps();
 		if (columns != null && colProps != null)
 		{
 			columns.put(colProps.getColumnName(), colProps);

@@ -49,7 +49,7 @@ extends AlarmEvent
 				AlarmEvent.Severity.WARNING,
 				AlarmEvent.ServiceState.UP, 
 				warningText,
-				null);
+				threshold);
 
 		setData("counterVal="+counterVal);
 

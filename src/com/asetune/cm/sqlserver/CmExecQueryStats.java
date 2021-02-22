@@ -330,6 +330,7 @@ extends CountersModel
 		String sql_sample_lastXminutes = "";
 		if (sample_lastXminutes)
 			sql_sample_lastXminutes = "  AND last_execution_time > dateadd(mi, -"+sample_lastXminutesTime+", getdate())\n";
+//CHECK; is last_execution_time good enough or do we need to do something like 'last_execution_time +or- last_elapsed_time' to catch queries above sample_lastXminutesTime...
 
 		String sql = 
 				"SELECT \n" +

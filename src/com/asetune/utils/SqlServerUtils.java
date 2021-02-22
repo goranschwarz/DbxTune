@@ -29,17 +29,16 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
 import com.asetune.ICounterController.DbmsOption;
-import com.asetune.cm.ase.CmLockTimeout;
+import com.asetune.cache.DbmsObjectIdCache;
+import com.asetune.cache.DbmsObjectIdCache.ObjectInfo;
 import com.asetune.sql.conn.DbxConnection;
 
 public class SqlServerUtils
@@ -431,68 +430,72 @@ public class SqlServerUtils
 			    + "select \n"
 			    + "     spid       = req_spid \n"
 			    + "    ,dbid       = rsc_dbid \n"
-			    + "    ,dbname     = db_name(rsc_dbid) \n"
+//			    + "    ,dbname     = db_name(rsc_dbid) \n"
 			    + "    ,objectid   = rsc_objid \n"
-			    + "    ,schemaName = '' \n"            // filled in at a second pass because object_name() blocks in many cases
-			    + "    ,tableName  = '' \n"            // filled in at a second pass because object_name() blocks in many cases
+//			    + "    ,schemaName = '' \n"            // filled in at a second pass because object_name() blocks in many cases
+//			    + "    ,tableName  = '' \n"            // filled in at a second pass because object_name() blocks in many cases
 			    + "    ,indexId    = rsc_indid \n"
-			    + "    ,indexName  = '' \n"            // filled in at a second pass because object_name() blocks in many cases
-			    + "    ,type       = CASE WHEN rsc_type =  0 THEN 'LOCK RESOURCES' \n"
-			    + "                       WHEN rsc_type =  1 THEN 'NULL' \n"
-			    + "                       WHEN rsc_type =  2 THEN 'DB' \n"
-			    + "                       WHEN rsc_type =  3 THEN 'FILE' \n"
-			    + "                       WHEN rsc_type =  4 THEN 'INDEX' \n"
-			    + "                       WHEN rsc_type =  5 THEN 'TABLE' \n"
-			    + "                       WHEN rsc_type =  6 THEN 'PAGE ' \n"
-			    + "                       WHEN rsc_type =  7 THEN 'KEY' \n"
-			    + "                       WHEN rsc_type =  8 THEN 'EXT' \n"
-			    + "                       WHEN rsc_type =  9 THEN 'RID' \n"
-			    + "                       WHEN rsc_type = 10 THEN 'APP' \n"
-			    + "                       WHEN rsc_type = 11 THEN 'MD' \n"
-			    + "                       WHEN rsc_type = 12 THEN 'HBT' \n"
-			    + "                       WHEN rsc_type = 13 THEN 'AU' \n"
-			    + "                       ELSE '(UNKNOWN) - ' + cast(rsc_type as varchar(10)) \n"
-			    + "                  END \n"
-			    + "    ,mode       = CASE WHEN req_mode =  0 THEN 'NULL (placeholder)' \n"
-			    + "                       WHEN req_mode =  1 THEN 'Sch-S (Schema stability)' \n"
-			    + "                       WHEN req_mode =  2 THEN 'Sch-M (Schema modification)' \n"
-			    + "                       WHEN req_mode =  3 THEN 'S (Shared)' \n"
-			    + "                       WHEN req_mode =  4 THEN 'U (Update)' \n"
-			    + "                       WHEN req_mode =  5 THEN 'X (Exclusive)' \n"
-			    + "                       WHEN req_mode =  6 THEN 'IS (Intent Shared)' \n"
-			    + "                       WHEN req_mode =  7 THEN 'IU (Intent Update)' \n"
-			    + "                       WHEN req_mode =  8 THEN 'IX (Intent Exclusive)' \n"
-			    + "                       WHEN req_mode =  9 THEN 'SIU (Shared Intent Update)' \n"
-			    + "                       WHEN req_mode = 10 THEN 'SIX (Shared Intent Exclusive)' \n"
-			    + "                       WHEN req_mode = 11 THEN 'UIX (Update Intent Exclusive)' \n"
-			    + "                       WHEN req_mode = 12 THEN 'BU (Used by bulk operations)' \n"
-			    + "                       WHEN req_mode = 13 THEN 'RangeS-S (Shared Key-Range and Shared Resource lock)' \n"
-			    + "                       WHEN req_mode = 14 THEN 'RangeS-U (Shared Key-Range and Update Resource lock)' \n"
-			    + "                       WHEN req_mode = 15 THEN 'RangeIn-N (Insert Key-Range and Null Resource lock)' \n"
-			    + "                       WHEN req_mode = 16 THEN 'RangeIn-S (created by an overlap of RangeI_N and S locks)' \n"
-			    + "                       WHEN req_mode = 17 THEN 'RangeIn-U (created by an overlap of RangeI_N and U locks)' \n"
-			    + "                       WHEN req_mode = 18 THEN 'RangeIn-X (created by an overlap of RangeI_N and X locks)' \n"
-			    + "                       WHEN req_mode = 19 THEN 'RangeX-S (created by an overlap of RangeI_N and RangeS_S locks)' \n"
-			    + "                       WHEN req_mode = 20 THEN 'RangeX-U (created by an overlap of RangeI_N and RangeS_U locks)' \n"
-			    + "                       WHEN req_mode = 21 THEN 'RangeX-X (Exclusive Key-Range and Exclusive Resource lock)' \n"
-			    + "                       ELSE '(UNKNOWN) - ' + cast(req_mode as varchar(10)) \n"
-			    + "                  END \n"
-			    + "    ,status     = CASE WHEN req_status = 0 THEN 'LOCK REQ STATUS' \n"
-			    + "                       WHEN req_status = 1 THEN 'GRANT' \n"
-			    + "                       WHEN req_status = 2 THEN 'CNVT' \n"
-			    + "                       WHEN req_status = 3 THEN 'WAIT' \n"
-			    + "                       WHEN req_status = 4 THEN 'RELN' \n"
-			    + "                       WHEN req_status = 5 THEN 'BLCKN' \n"
-			    + "                       ELSE '(UNKNOWN) - ' + cast(req_status as varchar(10)) \n"
-			    + "                  END \n"
+//			    + "    ,indexName  = '' \n"            // filled in at a second pass because object_name() blocks in many cases
+			    + "    ,rsc_type \n" // Resolved to a String on client side
+//			    + "    ,type       = CASE WHEN rsc_type =  0 THEN 'LOCK RESOURCES' \n"
+//			    + "                       WHEN rsc_type =  1 THEN 'NULL' \n"
+//			    + "                       WHEN rsc_type =  2 THEN 'DB' \n"
+//			    + "                       WHEN rsc_type =  3 THEN 'FILE' \n"
+//			    + "                       WHEN rsc_type =  4 THEN 'INDEX' \n"
+//			    + "                       WHEN rsc_type =  5 THEN 'TABLE' \n"
+//			    + "                       WHEN rsc_type =  6 THEN 'PAGE ' \n"
+//			    + "                       WHEN rsc_type =  7 THEN 'KEY' \n"
+//			    + "                       WHEN rsc_type =  8 THEN 'EXT' \n"
+//			    + "                       WHEN rsc_type =  9 THEN 'RID' \n"
+//			    + "                       WHEN rsc_type = 10 THEN 'APP' \n"
+//			    + "                       WHEN rsc_type = 11 THEN 'MD' \n"
+//			    + "                       WHEN rsc_type = 12 THEN 'HBT' \n"
+//			    + "                       WHEN rsc_type = 13 THEN 'AU' \n"
+//			    + "                       ELSE '(UNKNOWN) - ' + cast(rsc_type as varchar(10)) \n"
+//			    + "                  END \n"
+			    + "    ,req_mode \n" // Resolved to a String on client side
+//			    + "    ,mode       = CASE WHEN req_mode =  0 THEN 'NULL (placeholder)' \n"
+//			    + "                       WHEN req_mode =  1 THEN 'Sch-S (Schema stability)' \n"
+//			    + "                       WHEN req_mode =  2 THEN 'Sch-M (Schema modification)' \n"
+//			    + "                       WHEN req_mode =  3 THEN 'S (Shared)' \n"
+//			    + "                       WHEN req_mode =  4 THEN 'U (Update)' \n"
+//			    + "                       WHEN req_mode =  5 THEN 'X (Exclusive)' \n"
+//			    + "                       WHEN req_mode =  6 THEN 'IS (Intent Shared)' \n"
+//			    + "                       WHEN req_mode =  7 THEN 'IU (Intent Update)' \n"
+//			    + "                       WHEN req_mode =  8 THEN 'IX (Intent Exclusive)' \n"
+//			    + "                       WHEN req_mode =  9 THEN 'SIU (Shared Intent Update)' \n"
+//			    + "                       WHEN req_mode = 10 THEN 'SIX (Shared Intent Exclusive)' \n"
+//			    + "                       WHEN req_mode = 11 THEN 'UIX (Update Intent Exclusive)' \n"
+//			    + "                       WHEN req_mode = 12 THEN 'BU (Used by bulk operations)' \n"
+//			    + "                       WHEN req_mode = 13 THEN 'RangeS-S (Shared Key-Range and Shared Resource lock)' \n"
+//			    + "                       WHEN req_mode = 14 THEN 'RangeS-U (Shared Key-Range and Update Resource lock)' \n"
+//			    + "                       WHEN req_mode = 15 THEN 'RangeIn-N (Insert Key-Range and Null Resource lock)' \n"
+//			    + "                       WHEN req_mode = 16 THEN 'RangeIn-S (created by an overlap of RangeI_N and S locks)' \n"
+//			    + "                       WHEN req_mode = 17 THEN 'RangeIn-U (created by an overlap of RangeI_N and U locks)' \n"
+//			    + "                       WHEN req_mode = 18 THEN 'RangeIn-X (created by an overlap of RangeI_N and X locks)' \n"
+//			    + "                       WHEN req_mode = 19 THEN 'RangeX-S (created by an overlap of RangeI_N and RangeS_S locks)' \n"
+//			    + "                       WHEN req_mode = 20 THEN 'RangeX-U (created by an overlap of RangeI_N and RangeS_U locks)' \n"
+//			    + "                       WHEN req_mode = 21 THEN 'RangeX-X (Exclusive Key-Range and Exclusive Resource lock)' \n"
+//			    + "                       ELSE '(UNKNOWN) - ' + cast(req_mode as varchar(10)) \n"
+//			    + "                  END \n"
+			    + "    ,req_status \n" // Resolved to a String on client side
+//			    + "    ,status     = CASE WHEN req_status = 0 THEN 'LOCK REQ STATUS' \n"
+//			    + "                       WHEN req_status = 1 THEN 'GRANT' \n"
+//			    + "                       WHEN req_status = 2 THEN 'CNVT' \n"
+//			    + "                       WHEN req_status = 3 THEN 'WAIT' \n"
+//			    + "                       WHEN req_status = 4 THEN 'RELN' \n"
+//			    + "                       WHEN req_status = 5 THEN 'BLCKN' \n"
+//			    + "                       ELSE '(UNKNOWN) - ' + cast(req_status as varchar(10)) \n"
+//			    + "                  END \n"
 			    + "    ,lockCount  = count(*) \n"
-			    + "from master.dbo.syslockinfo \n"
+			    + "from master.dbo.syslockinfo WITH (READUNCOMMITTED) \n"
 			    + "where rsc_type != 2 -- DB \n"
-			    + "  and req_spid = ? \n"
+			    + "  and (req_spid = ? OR req_status = 3) -- req_status=3 is 'WAIT' \n"
 			    + "group by req_spid, rsc_dbid, rsc_objid, rsc_indid, rsc_type, req_mode, req_status \n"
 			    + "";
 
 		List<LockRecord> lockList = new ArrayList<>();
+		List<LockRecord> otherSpidsWaiting = null;
 
 		try (PreparedStatement pstmnt = conn.prepareStatement(sql)) // Auto CLOSE
 		{
@@ -506,20 +509,69 @@ public class SqlServerUtils
 			{
 				while(rs.next())
 				{
-					int    SPID       = rs.getInt   (1);
-					int    dbid       = rs.getInt   (2);
-					String dbname     = rs.getString(3);
-					int    objectid   = rs.getInt   (4);
-					String schemaName = rs.getString(5);
-					String tableName  = rs.getString(6);
-					int    indexId    = rs.getInt   (7);
-					String indexName  = rs.getString(8);
-					String lockType   = rs.getString(9);
-					String lockMode   = rs.getString(10);
-					String lockStatus = rs.getString(11);
-					int    lockCount  = rs.getInt   (12);
+//					int    SPID       = rs.getInt   (1);
+//					int    dbid       = rs.getInt   (2);
+//					String dbname     = rs.getString(3);
+//					int    objectid   = rs.getInt   (4);
+//					String schemaName = rs.getString(5);
+//					String tableName  = rs.getString(6);
+//					int    indexId    = rs.getInt   (7);
+//					String indexName  = rs.getString(8);
+//					String lockType   = rs.getString(9);
+//					String lockMode   = rs.getString(10);
+//					String lockStatus = rs.getString(11);
+//					int    lockCount  = rs.getInt   (12);
+					
+					int SPID       = rs.getInt(1);
+					int dbid       = rs.getInt(2);
+					int objectid   = rs.getInt(3);
+					int indexId    = rs.getInt(4);
+					int lockType   = rs.getInt(5);
+					int lockMode   = rs.getInt(6);
+					int lockStatus = rs.getInt(7);
+					int lockCount  = rs.getInt(8);
 
-					lockList.add( new LockRecord(SPID, dbid, dbname, objectid, schemaName, tableName, indexId, indexName, lockType, lockMode, lockStatus, lockCount) );
+					// If this SPID is same as we are checking for... Add it to 'lockList' otherwise add it to 'otherSpidsWaiting'
+					if (spid == SPID)
+					{
+//						lockList.add( new LockRecord(SPID, dbid, dbname, objectid, schemaName, tableName, indexId, indexName, lockType, lockMode, lockStatus, lockCount) );
+						lockList.add( new LockRecord(SPID, dbid, objectid, indexId, lockType, lockMode, lockStatus, lockCount) );
+					}
+					else
+					{
+						if (otherSpidsWaiting == null)
+							otherSpidsWaiting = new ArrayList<>();
+
+						otherSpidsWaiting.add( new LockRecord(SPID, dbid, objectid, indexId, lockType, lockMode, lockStatus, lockCount) );
+					}
+				}
+			}
+			
+			// Check/Set for SPID's that are BLOCKING *this* SPID 
+			if (otherSpidsWaiting != null)
+			{
+				for (LockRecord lr : lockList)
+				{
+					// if the LockRecord is already in lockStatus 'WAIT'... then it can't be a "root cause locker"... so get next row
+					if (lr._lockStatus == 3)
+						continue;
+
+					for (LockRecord wlr : otherSpidsWaiting)
+					{
+						// only check for 'WAIT' (lookStatus == 3) ... this is not needed since it'a already taken care of in the SQL WHERE Clause
+						if (wlr._lockStatus != 3)
+							continue;
+
+						// If: dbid && objectid && lockType are matching --> isBlocking
+						if (lr._dbid == wlr._dbid && lr._objectid == wlr._objectid && lr._lockType == wlr._lockType)
+						{
+							// We have a BLOCKING SPID
+							if (lr._blockingSpids == null)
+								lr._blockingSpids = new ArrayList<>();
+
+							lr._blockingSpids.add(wlr._spid);
+						}
+					}
 				}
 			}
 		}
@@ -536,66 +588,97 @@ public class SqlServerUtils
 			}
 		}
 
-		// Add all databases to a SET, which we later loops to get Schema, Table and Index Names
-		Set<String> dbnames = new LinkedHashSet<>();
-		for (LockRecord r : lockList)
-			dbnames.add(r._dbname);
-
-		// Loop above DB's
-		for (String dbname : dbnames)
+//		// Add all databases to a SET, which we later loops to get Schema, Table and Index Names
+//		Set<String> dbnames = new LinkedHashSet<>();
+//		for (LockRecord r : lockList)
+//			dbnames.add(r._dbname);
+//
+//		// Loop above DB's
+//		for (String dbname : dbnames)
+//		{
+//			if (StringUtil.isNullOrBlank(dbname))
+//				continue;
+//
+//			// Lookup SchemaName and TableName for the object id's
+//			// This because object_name(objid, dbid) is BLOCKING
+//			sql = ""
+//				    + "select \n"
+//				    + "     SchemaName = (select s.name from " + dbname + ".sys.objects o inner join " + dbname + ".sys.schemas s ON s.schema_id = o.schema_id where o.object_id = ?) \n"
+//				    + "    ,ObjectName = (select o.name from " + dbname + ".sys.objects o where o.object_id = ?) \n"
+//				    + "    ,IndexName  = (select i.name FROM " + dbname + ".sys.indexes i where i.object_id = ? and i.index_id = ?) \n"
+//				    + "";
+//			try (PreparedStatement pstmnt = conn.prepareStatement(sql)) // Auto CLOSE
+//			{
+//				// Timeout after 1 second --- if we get blocked when doing: object_name()
+//				pstmnt.setQueryTimeout(1);
+//				
+//				for (LockRecord r : lockList)
+//				{
+//					// set SPID
+//					pstmnt.setInt(1, r._objectid);
+//					pstmnt.setInt(2, r._objectid);
+//					pstmnt.setInt(3, r._objectid);
+//					pstmnt.setInt(4, r._indexId);
+//				
+//					try (ResultSet rs = pstmnt.executeQuery()) // Auto CLOSE
+//					{
+//						while(rs.next())
+//						{
+//							String schemaName = rs.getString(1);
+//							String tableName  = rs.getString(2);
+//							String indexName  = rs.getString(3);
+//
+//							r._schemaName = schemaName == null ? "" : schemaName;
+//							r._tableName  = tableName  == null ? "" : tableName;
+//							r._indexName  = indexName  == null ? "" : indexName;
+//							
+//							if (r._objectid != 0 && r._indexId == 0)
+//								r._indexName = "-DATA-";
+//						}
+//					}
+//				}
+//			}
+//			catch (SQLException ex)
+//			{
+//				if (ex.getMessage() != null && ex.getMessage().contains("query has timed out"))
+//				{
+//					_logger.warn("getLockSummaryForSpid: Problems getting schema/table/index name. The query has timed out. But the lock information will still be returned (but without the schema/table/index name.");
+//					throw new TimeoutException();
+//				}
+//				else
+//				{
+//					_logger.warn("Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "'.", ex);
+//				}
+//			}
+//		}
+		
+		// Lookup ID's to Names (using a CACHED way... keeping already looked-up id's in memory)
+		if (DbmsObjectIdCache.hasInstance())
 		{
-			if (StringUtil.isNullOrBlank(dbname))
-				continue;
+			DbmsObjectIdCache objIdCache = DbmsObjectIdCache.getInstance();
 
-			// Lookup SchemaName and TableName for the object id's
-			// This because object_name(objid, dbid) is BLOCKING
-			sql = ""
-				    + "select \n"
-				    + "     SchemaName = (select s.name from " + dbname + ".sys.objects o inner join " + dbname + ".sys.schemas s ON s.schema_id = o.schema_id where o.object_id = ?) \n"
-				    + "    ,ObjectName = (select o.name from " + dbname + ".sys.objects o where o.object_id = ?) \n"
-				    + "    ,IndexName  = (select i.name FROM " + dbname + ".sys.indexes i where i.object_id = ? and i.index_id = ?) \n"
-				    + "";
-			try (PreparedStatement pstmnt = conn.prepareStatement(sql)) // Auto CLOSE
+			for (LockRecord r : lockList)
 			{
-				// Timeout after 1 second --- if we get blocked when doing: object_name()
-				pstmnt.setQueryTimeout(1);
-				
-				for (LockRecord r : lockList)
+				// When ObjectID is 0... just get the DBName 
+				if (r._objectid == 0)
 				{
-					// set SPID
-					pstmnt.setInt(1, r._objectid);
-					pstmnt.setInt(2, r._objectid);
-					pstmnt.setInt(3, r._objectid);
-					pstmnt.setInt(4, r._indexId);
-				
-					try (ResultSet rs = pstmnt.executeQuery()) // Auto CLOSE
-					{
-						while(rs.next())
-						{
-							String schemaName = rs.getString(1);
-							String tableName  = rs.getString(2);
-							String indexName  = rs.getString(3);
+					r._dbname = objIdCache.getDBName(r._dbid);
+					continue;
+				}
 
-							r._schemaName = schemaName == null ? "" : schemaName;
-							r._tableName  = tableName  == null ? "" : tableName;
-							r._indexName  = indexName  == null ? "" : indexName;
-							
-							if (r._objectid != 0 && r._indexId == 0)
-								r._indexName = "-DATA-";
-						}
-					}
-				}
-			}
-			catch (SQLException ex)
-			{
-				if (ex.getMessage() != null && ex.getMessage().contains("query has timed out"))
+//				ObjectInfo oi = objIdCache.get(conn, r._dbid, r._objectid);
+				ObjectInfo oi = objIdCache.getByObjectId(r._dbid, r._objectid);
+				if (oi != null)
 				{
-					_logger.warn("getLockSummaryForSpid: Problems getting schema/table/index name. The query has timed out. But the lock information will still be returned (but without the schema/table/index name.");
-					throw new TimeoutException();
-				}
-				else
-				{
-					_logger.warn("Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "'.", ex);
+					r._dbname     = oi.getDBName();
+					r._schemaName = oi.getSchemaName();
+					r._tableName  = oi.getObjectName();
+					r._indexName  = oi.getIndexName(r._indexId);
+
+					if (r._dbname     == null) r._dbname     = "";
+					if (r._schemaName == null) r._schemaName = "";
+					if (r._tableName  == null) r._tableName  = "";
+					if (r._indexName  == null) r._indexName  = "";
 				}
 			}
 		}
@@ -615,25 +698,30 @@ public class SqlServerUtils
 		sb.append("<TR> <TH>spid</TH> <TH>dbid</TH> <TH>dbname</TH> <TH>ObjectID</TH> <TH>Schema</TH> <TH>Table</TH> <TH>IndexID</TH> <TH>IndexName</TH> <TH>Type</TH> <TH>Mode</TH> <TH>Status</TH> <TH>Count</TH> </TR>");
 		for (LockRecord lr : list)
 		{
-			if (lr._lockStatus != null && lr._lockStatus.equals("WAIT"))
-				sb.append("<TR style='color: red'>");
-//			else if (lr._lockStatus != null && lr._lockStatus.equals("BLCKN???")) // FIXME: hmmm there is NO BLOCKING status... how the hell do we know if this row is "root cause" for BLOCKING lock or not 
+//			if (lr._lockStatusStr != null && lr._lockStatusStr.equals("WAIT"))
 //				sb.append("<TR style='color: red'>");
-			else
-				sb.append("<TR>");
+////			else if (lr._lockStatus != null && lr._lockStatus.equals("BLCKN???")) // FIXME: hmmm there is NO BLOCKING status... how the hell do we know if this row is "root cause" for BLOCKING lock or not 
+////				sb.append("<TR style='color: red'>");
+//			else
+//				sb.append("<TR>");
 
-			sb.append("<TD>").append(lr._spid      ).append("</TD>");
-			sb.append("<TD>").append(lr._dbid      ).append("</TD>");
-			sb.append("<TD>").append(lr._dbname    ).append("</TD>");
-			sb.append("<TD>").append(lr._objectid  ).append("</TD>");
-			sb.append("<TD>").append(lr._schemaName).append("</TD>");
-			sb.append("<TD>").append(lr._tableName ).append("</TD>");
-			sb.append("<TD>").append(lr._indexId   ).append("</TD>");
-			sb.append("<TD>").append(lr._indexName ).append("</TD>");
-			sb.append("<TD>").append(lr._lockType  ).append("</TD>");
-			sb.append("<TD>").append(lr._lockMode  ).append("</TD>");
-			sb.append("<TD>").append(lr._lockStatus).append("</TD>");
-			sb.append("<TD>").append(lr._lockCount ).append("</TD>");
+//			if      (lr._isBlocking     ) sb.append("<TR style='color: red;'>");    // BLOCKING
+			if      (lr._blockingSpids != null) sb.append("<TR style='color: red;'>");    // BLOCKING
+			else if (lr._lockStatus    == 3   ) sb.append("<TR style='color: orange;'>"); // WAIT
+			else                                sb.append("<TR>");
+
+			sb.append("<TD>").append(lr._spid         ).append("</TD>");
+			sb.append("<TD>").append(lr._dbid         ).append("</TD>");
+			sb.append("<TD>").append(lr._dbname       ).append("</TD>");
+			sb.append("<TD>").append(lr._objectid     ).append("</TD>");
+			sb.append("<TD>").append(lr._schemaName   ).append("</TD>");
+			sb.append("<TD>").append(lr._tableName    ).append("</TD>");
+			sb.append("<TD>").append(lr._indexId      ).append("</TD>");
+			sb.append("<TD>").append(lr._indexName    ).append("</TD>");
+			sb.append("<TD>").append(lr._lockTypeStr  ).append("</TD>");
+			sb.append("<TD>").append(lr._lockModeStr  ).append( lr._blockingSpids == null ? "" : "<br>BLOCKING SPIDs: " + lr._blockingSpids  ).append("</TD>");
+			sb.append("<TD>").append(lr._lockStatusStr).append("</TD>");
+			sb.append("<TD>").append(lr._lockCount    ).append("</TD>");
 			sb.append("</TR>");
 		}
 		sb.append("</TABLE>");
@@ -657,18 +745,18 @@ public class SqlServerUtils
 		{
 			List<Object> row = new ArrayList<>();
 			
-			row.add(lr._spid      );
-			row.add(lr._dbid      );
-			row.add(lr._dbname    );
-			row.add(lr._objectid  );
-			row.add(lr._schemaName);
-			row.add(lr._tableName );
-			row.add(lr._indexId   );
-			row.add(lr._indexName );
-			row.add(lr._lockType  );
-			row.add(lr._lockMode  );
-			row.add(lr._lockStatus);
-			row.add(lr._lockCount );
+			row.add(lr._spid         );
+			row.add(lr._dbid         );
+			row.add(lr._dbname       );
+			row.add(lr._objectid     );
+			row.add(lr._schemaName   );
+			row.add(lr._tableName    );
+			row.add(lr._indexId      );
+			row.add(lr._indexName    );
+			row.add(lr._lockTypeStr  );
+			row.add(lr._lockModeStr  );
+			row.add(lr._lockStatusStr);
+			row.add(lr._lockCount    );
 			
 			tData.add(row);
 		}
@@ -724,144 +812,229 @@ public class SqlServerUtils
 	 */
 	public static class LockRecord
 	{
-		public int    _spid       = 0;
-		public int    _dbid       = 0;
-		public String _dbname     = "";
-		public int    _objectid   = 0;
-		public String _schemaName = "";
-		public String _tableName  = "";
-		public int    _indexId    = 0;
-		public String _indexName  = "";
-		public String _lockType   = "";
-		public String _lockMode   = "";
-		public String _lockStatus = "";
-		public int    _lockCount  = 0;
+		public int     _spid          = 0;
+		public int     _dbid          = 0;
+		public String  _dbname        = "";
+		public int     _objectid      = 0;
+		public String  _schemaName    = "";
+		public String  _tableName     = "";
+		public int     _indexId       = 0;
+		public String  _indexName     = "";
+		public int     _lockType      = -1;
+		public String  _lockTypeStr   = "";
+		public int     _lockMode      = -1;
+		public String  _lockModeStr   = "";
+		public int     _lockStatus    = -1;
+		public String  _lockStatusStr = "";
+		public int     _lockCount     = 0;
+//		public boolean _isBlocking    = false; // If the record is BLOCKING Other SPID's (set at a second pass)
+		public List<Integer> _blockingSpids = null;
 
-		public LockRecord(int spid, int dbid, String dbname, int objectid, String schemaName, String tableName, int indexId, String indexName, String lockType, String lockMode, String lockStatus, int lockCount)
+//		public LockRecord(int spid, int dbid, String dbname, int objectid, String schemaName, String tableName, int indexId, String indexName, String lockType, String lockMode, String lockStatus, int lockCount)
+//		{
+//			_spid       = spid       ;
+//			_dbid       = dbid       ;
+//			_dbname     = dbname     == null ? "" : dbname;
+//			_objectid   = objectid   ;
+//			_schemaName = schemaName == null ? "" : schemaName;
+//			_tableName  = tableName  == null ? "" : tableName;
+//			_indexId    = indexId    ;
+//			_indexName  = indexName  == null ? "" : indexName;
+//			_lockType   = lockType   == null ? "" : lockType;
+//			_lockMode   = lockMode   == null ? "" : lockMode;
+//			_lockStatus = lockStatus == null ? "" : lockStatus;
+//			_lockCount  = lockCount  ;
+//		}
+		public LockRecord(int spid, int dbid, int objectid, int indexId, int lockType, int lockMode, int lockStatus, int lockCount)
 		{
-			_spid       = spid       ;
-			_dbid       = dbid       ;
-			_dbname     = dbname     == null ? "" : dbname;
-			_objectid   = objectid   ;
-			_schemaName = schemaName == null ? "" : schemaName;
-			_tableName  = tableName  == null ? "" : tableName;
-			_indexId    = indexId    ;
-			_indexName  = indexName  == null ? "" : indexName;
-			_lockType   = lockType   == null ? "" : lockType;
-			_lockMode   = lockMode   == null ? "" : lockMode;
-			_lockStatus = lockStatus == null ? "" : lockStatus;
-			_lockCount  = lockCount  ;
+			_spid          = spid       ;
+			_dbid          = dbid       ;
+			_objectid      = objectid   ;
+			_indexId       = indexId    ;
+			_lockType      = lockType   ;
+			_lockTypeStr   = lockTypeStr  (lockType);
+			_lockMode      = lockMode   ;
+			_lockModeStr   = lockModeStr  (lockMode);
+			_lockStatus    = lockStatus ;
+			_lockStatusStr = lockStatusStr(lockStatus);
+			_lockCount     = lockCount  ;
 		}
-	}
 
-	/**
-	 * ObjectName details
-	 */
-	public static class ObjectName
-	{
-		public int    _dbid       = 0;
-		public int    _objectid   = 0;
-
-		public String _dbname     = "";
-		public String _schemaName = "";
-		public String _tableName  = "";
-	}
-
-	/**
-	 * Get object information
-	 * 
-	 * @param conn
-	 * @param dbid
-	 * @param objectid
-	 * @return ObjectName   null if problems
-	 */
-	public static ObjectName getObjectName(DbxConnection conn, int dbid, int objectid)
-	{
-		String sql    = "select db_name(?)";
-		String dbname = null;
-
-		try (PreparedStatement pstmnt = conn.prepareStatement(sql)) // Auto CLOSE
+		public static String lockTypeStr(int type)
 		{
-			// Timeout after 1 second --- if we get blocked when doing: object_name()
-			pstmnt.setQueryTimeout(1);
-
-			// set SPID
-			pstmnt.setInt(1, dbid);
-		
-			try (ResultSet rs = pstmnt.executeQuery()) // Auto CLOSE
+			switch (type)
 			{
-				while(rs.next())
-				{
-					dbname = rs.getString(1);
-				}
+				case  0: return "LOCK RESOURCES";
+				case  1: return "NULL";
+				case  2: return "DB";
+				case  3: return "FILE";
+				case  4: return "INDEX";
+				case  5: return "TABLE";
+				case  6: return "PAGE";
+				case  7: return "KEY";
+				case  8: return "EXT";
+				case  9: return "RID";
+				case 10: return "APP";
+				case 11: return "MD";
+				case 12: return "HBT";
+				case 13: return "AU";
 			}
-		}
-		catch (SQLException ex)
-		{
-			_logger.warn("Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "'.", ex);
+			return "(UNKNOWN) - " + type;
 		}
 
-		if (StringUtil.isNullOrBlank(dbname))
-			return null;
-		
-		return getObjectName(conn, dbname, objectid);
-	}
-	
-	/**
-	 * Get object information
-	 * 
-	 * @param conn
-	 * @param dbname
-	 * @param objectid
-	 * @return ObjectName   null if problems
-	 */
-	public static ObjectName getObjectName(DbxConnection conn, String dbname, int objectid)
-	{
-		String sql = ""
-			    + "select \n"
-			    + "     dbid       = (select db_id(?)) \n"
-			    + "    ,SchemaName = (select s.name from " + dbname + ".sys.objects o inner join " + dbname + ".sys.schemas s ON s.schema_id = o.schema_id where o.object_id = ?) \n"
-			    + "    ,ObjectName = (select o.name from " + dbname + ".sys.objects o where o.object_id = ?) \n"
-			    + "";
-
-		ObjectName objName = new ObjectName();
-
-		try (PreparedStatement pstmnt = conn.prepareStatement(sql)) // Auto CLOSE
+		public static String lockModeStr(int mode)
 		{
-			// Timeout after 1 second --- if we get blocked when doing: object_name()
-			pstmnt.setQueryTimeout(1);
-
-			// set SPID
-			pstmnt.setString(1, dbname);
-			pstmnt.setInt   (2, objectid);
-			pstmnt.setInt   (3, objectid);
-		
-			try (ResultSet rs = pstmnt.executeQuery()) // Auto CLOSE
+			switch (mode)
 			{
-				while(rs.next())
-				{
-					int    dbid       = rs.getInt   (1);
-					String schemaName = rs.getString(2);
-					String tableName  = rs.getString(3);
-
-					objName._dbid       = dbid;
-					objName._dbname     = dbname;
-					
-					objName._objectid   = objectid;
-					objName._schemaName = schemaName;
-					objName._tableName  = tableName;
-				}
+				case  0: return "NULL (placeholder)";
+				case  1: return "Sch-S (Schema stability)";
+				case  2: return "Sch-M (Schema modification)";
+				case  3: return "S (Shared)";
+				case  4: return "U (Update)";
+				case  5: return "X (Exclusive)";
+				case  6: return "IS (Intent Shared)";
+				case  7: return "IU (Intent Update)";
+				case  8: return "IX (Intent Exclusive)";
+				case  9: return "SIU (Shared Intent Update)";
+				case 10: return "SIX (Shared Intent Exclusive)";
+				case 11: return "UIX (Update Intent Exclusive)";
+				case 12: return "BU (Used by bulk operations)";
+				case 13: return "RangeS-S (Shared Key-Range and Shared Resource lock)";
+				case 14: return "RangeS-U (Shared Key-Range and Update Resource lock)";
+				case 15: return "RangeIn-N (Insert Key-Range and Null Resource lock)";
+				case 16: return "RangeIn-S (created by an overlap of RangeI_N and S locks)";
+				case 17: return "RangeIn-U (created by an overlap of RangeI_N and U locks)";
+				case 18: return "RangeIn-X (created by an overlap of RangeI_N and X locks)";
+				case 19: return "RangeX-S (created by an overlap of RangeI_N and RangeS_S locks)";
+				case 20: return "RangeX-U (created by an overlap of RangeI_N and RangeS_U locks)";
+				case 21: return "RangeX-X (Exclusive Key-Range and Exclusive Resource lock)";
 			}
-		}
-		catch (SQLException ex)
-		{
-			_logger.warn("Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "'.", ex);
+			return "(UNKNOWN) - " + mode;
 		}
 
-		if (StringUtil.isNullOrBlank(objName._dbname))
-			return null;
-		
-		return objName;
+		public static String lockStatusStr(int status)
+		{
+			switch (status)
+			{
+				case 0: return "LOCK REQ STATUS";
+				case 1: return "GRANT";
+				case 2: return "CNVT";
+				case 3: return "WAIT";
+				case 4: return "RELN";
+				case 5: return "BLCKN";
+			}
+			return "(UNKNOWN) - " + status;
+		}
 	}
+
+//	/**
+//	 * ObjectName details
+//	 */
+//	public static class ObjectName
+//	{
+//		public int    _dbid       = 0;
+//		public int    _objectid   = 0;
+//
+//		public String _dbname     = "";
+//		public String _schemaName = "";
+//		public String _tableName  = "";
+//	}
+//
+//	/**
+//	 * Get object information
+//	 * 
+//	 * @param conn
+//	 * @param dbid
+//	 * @param objectid
+//	 * @return ObjectName   null if problems
+//	 */
+//	public static ObjectName getObjectName(DbxConnection conn, int dbid, int objectid)
+//	{
+//		String sql    = "select db_name(?)";
+//		String dbname = null;
+//
+//		try (PreparedStatement pstmnt = conn.prepareStatement(sql)) // Auto CLOSE
+//		{
+//			// Timeout after 1 second --- if we get blocked when doing: object_name()
+//			pstmnt.setQueryTimeout(1);
+//
+//			// set SPID
+//			pstmnt.setInt(1, dbid);
+//		
+//			try (ResultSet rs = pstmnt.executeQuery()) // Auto CLOSE
+//			{
+//				while(rs.next())
+//				{
+//					dbname = rs.getString(1);
+//				}
+//			}
+//		}
+//		catch (SQLException ex)
+//		{
+//			_logger.warn("Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "'.", ex);
+//		}
+//
+//		if (StringUtil.isNullOrBlank(dbname))
+//			return null;
+//		
+//		return getObjectName(conn, dbname, objectid);
+//	}
+//	
+//	/**
+//	 * Get object information
+//	 * 
+//	 * @param conn
+//	 * @param dbname
+//	 * @param objectid
+//	 * @return ObjectName   null if problems
+//	 */
+//	public static ObjectName getObjectName(DbxConnection conn, String dbname, int objectid)
+//	{
+//		String sql = ""
+//			    + "select \n"
+//			    + "     dbid       = (select db_id(?)) \n"
+//			    + "    ,SchemaName = (select s.name from " + dbname + ".sys.objects o inner join " + dbname + ".sys.schemas s ON s.schema_id = o.schema_id where o.object_id = ?) \n"
+//			    + "    ,ObjectName = (select o.name from " + dbname + ".sys.objects o where o.object_id = ?) \n"
+//			    + "";
+//
+//		ObjectName objName = new ObjectName();
+//
+//		try (PreparedStatement pstmnt = conn.prepareStatement(sql)) // Auto CLOSE
+//		{
+//			// Timeout after 1 second --- if we get blocked when doing: object_name()
+//			pstmnt.setQueryTimeout(1);
+//
+//			// set SPID
+//			pstmnt.setString(1, dbname);
+//			pstmnt.setInt   (2, objectid);
+//			pstmnt.setInt   (3, objectid);
+//		
+//			try (ResultSet rs = pstmnt.executeQuery()) // Auto CLOSE
+//			{
+//				while(rs.next())
+//				{
+//					int    dbid       = rs.getInt   (1);
+//					String schemaName = rs.getString(2);
+//					String tableName  = rs.getString(3);
+//
+//					objName._dbid       = dbid;
+//					objName._dbname     = dbname;
+//					
+//					objName._objectid   = objectid;
+//					objName._schemaName = schemaName;
+//					objName._tableName  = tableName;
+//				}
+//			}
+//		}
+//		catch (SQLException ex)
+//		{
+//			_logger.warn("Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "'.", ex);
+//		}
+//
+//		if (StringUtil.isNullOrBlank(objName._dbname))
+//			return null;
+//		
+//		return objName;
+//	}
 
 }

@@ -64,7 +64,7 @@ public abstract class XmlPlanCache
 	{
 		if (_instance == null)
 		{
-			throw new RuntimeException("XmlPlanCache dosn't have an instace yet, please set with setInstance(instance).");
+			throw new RuntimeException("XmlPlanCache dosn't have an instance yet, please set with setInstance(instance).");
 		}
 		return _instance;
 	}
@@ -88,6 +88,19 @@ public abstract class XmlPlanCache
 	// END: Constructors
 	//----------------------------------------------------------------
 
+	/** 
+	 * Close and release all object 
+	 */
+	public void close()
+	{
+		_cache    = null;
+
+		if (_localConnection != null)
+			_localConnection.closeNoThrow();
+		
+		_instance = null;
+	}
+	
 	/**
 	 * In case someone finds out that we are low on memory... 
 	 */

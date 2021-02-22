@@ -22,12 +22,20 @@ package com.asetune.cm.sqlserver;
 
 import java.sql.Connection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.ICounterController.DbmsOption;
 import com.asetune.IGuiController;
+import com.asetune.cache.DbmsObjectIdCache;
+import com.asetune.cache.DbmsObjectIdCache.ObjectInfo;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -38,6 +46,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
+import com.asetune.utils.StringUtil;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -45,7 +54,7 @@ import com.asetune.pcs.PcsColumnOptions.ColumnType;
 public class CmWaitingTasks
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmWaitingTasks.class);
+	private static Logger        _logger          = Logger.getLogger(CmWaitingTasks.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmWaitingTasks.class.getSimpleName();
@@ -270,6 +279,7 @@ extends CountersModel
 			    + "    ,[er].[database_id] \n"
 			    + "    ,db_name([er].[database_id]) AS [database_name] \n"
 			    + "    ,[owt].[resource_description] \n"
+			    + "    ,cast('' as varchar(512)) AS [resource_description_decoded] \n"
 			    
 			    + "    ,CASE [owt].[wait_type] \n"
 			    + "        WHEN N'CXPACKET' THEN \n"
@@ -313,6 +323,113 @@ extends CountersModel
 //	"               ELSE der.statement_end_offset  \n" +
 //	"          END - der.statement_start_offset ) / 2) AS [lastKnownSql], \n" +
 
+	
+	@Override
+	public void localCalculation(CounterSample newSample)
+	{
+		int resource_description_pos         = newSample.findColumn("resource_description");
+		int resource_description_decoded_pos = newSample.findColumn("resource_description_decoded");
+
+		if (resource_description_pos == -1 || resource_description_decoded_pos == -1)
+		{
+			_logger.error("Cant find desired columns: resource_description_pos=" + resource_description_pos +", resource_description_decoded_pos=" + resource_description_decoded_pos);
+			return;
+		}
+		
+		for (int rowId=0; rowId<newSample.getRowCount(); rowId++)
+		{
+			String resource_description = newSample.getValueAsString(rowId, resource_description_pos);
+			String resource_description_decoded = "";
+
+			if (StringUtil.hasValue(resource_description))
+			{
+				// ridlock fileid=1 pageid=392 dbid=2 id=lock14306dd800 mode=X associatedObjectId=2738293458776227840
+				// keylock hobtid=72057595465433088 dbid=5 id=lock2403057280 mode=X associatedObjectId=72057595465433088
+
+				//String firstWord = StringUtils.substringBefore(resource_description, " ");
+				
+				// Parse content based on the first word
+//				if ("ridlock".equals(firstWord))
+//				{
+//				}
+//				else if ("keylock".equals(firstWord))
+//				{
+//				}
+//				else if ("zzzzzz".equals(firstWord))
+//				{
+//				}
+
+				// Or do it a bit more generic based on what "keys=" we fin in the "resource_description" 
+				boolean has_dbid               = resource_description.contains("dbid=");
+				boolean has_objid              = resource_description.contains("objid=");
+				boolean has_associatedObjectId = resource_description.contains("associatedObjectId=");
+				boolean has_hobtid             = resource_description.contains("hobt=");
+
+				if (has_dbid && (has_objid || has_associatedObjectId || has_hobtid))
+				{
+					String firstWord = StringUtils.substringBefore(resource_description, " ");
+
+					// SPLIT into the various parts... which is parsed to a Map
+					String keyValStr = firstWord == null ? "" : resource_description.substring(firstWord.length()+1);
+					Map<String, String> keyVal       = StringUtil.parseCommaStrToMap(keyValStr, "=", " ");
+					Map<String, String> decodeKeyVal = new LinkedHashMap<>();
+
+					int  dbid        = !keyVal.containsKey("dbid")               ? -1 : StringUtil.parseInt (keyVal.get("dbid")              , -1);
+					int  objid       = !keyVal.containsKey("objid")              ? -1 : StringUtil.parseInt (keyVal.get("objid")             , -1);
+					long partitionId = !keyVal.containsKey("associatedObjectId") ? -1 : StringUtil.parseLong(keyVal.get("associatedObjectId"), -1);
+					long hobtId      = !keyVal.containsKey("hobt")               ? -1 : StringUtil.parseLong(keyVal.get("hobt")              , -1);
+
+					if (dbid != -1 && (objid != -1 || partitionId != -1 || hobtId != -1))
+					{
+						if (DbmsObjectIdCache.hasInstance())
+						{
+							String dbname = DbmsObjectIdCache.getInstance().getDBName(dbid);
+							decodeKeyVal.put("dbname", dbname);
+
+							try
+							{
+								ObjectInfo oi = null;
+								if (oi == null && objid       != -1) oi = DbmsObjectIdCache.getInstance().getByObjectId   (dbid, objid);
+								if (oi == null && partitionId != -1) oi = DbmsObjectIdCache.getInstance().getByPartitionId(dbid, partitionId);
+								if (oi == null && hobtId      != -1) oi = DbmsObjectIdCache.getInstance().getByHobtId     (dbid, hobtId);
+								
+								if (oi != null)
+								{
+									decodeKeyVal.put("schemaName", oi.getSchemaName());
+									decodeKeyVal.put("objectName", oi.getObjectName());
+								}
+							}
+							catch (TimeoutException ignore) {}
+						}
+					}
+
+					if (keyVal.containsKey("pageid"))
+					{
+						int pageid = StringUtil.parseInt (keyVal.get("pageid"), -1);
+						if (pageid != -1)
+						{
+							// The below algorithm is reused from 'sp_whoIsActive'
+							if      (pageid == 1 ||       pageid % 8088   == 0) decodeKeyVal.put("pageType", "PFS");
+							else if (pageid == 2 ||       pageid % 511232 == 0) decodeKeyVal.put("pageType", "GAM");
+							else if (pageid == 3 || (pageid - 1) % 511232 == 0) decodeKeyVal.put("pageType", "SGAM");
+							else if (pageid == 6 || (pageid - 6) % 511232 == 0) decodeKeyVal.put("pageType", "DCM");
+							else if (pageid == 7 || (pageid - 7) % 511232 == 0) decodeKeyVal.put("pageType", "BCM");
+						}
+						
+					}
+
+					if ( ! decodeKeyVal.isEmpty() )
+						resource_description_decoded = decodeKeyVal.toString();
+				}
+					
+				// Set the decoded values
+				if (StringUtil.hasValue(resource_description_decoded))
+				{
+					newSample.setValueAt(resource_description_decoded, rowId, resource_description_decoded_pos);
+				}
+			}
+		}
+	}
 
 	//---------------------------------------------------------------------------------
 	//---------------------------------------------------------------------------------

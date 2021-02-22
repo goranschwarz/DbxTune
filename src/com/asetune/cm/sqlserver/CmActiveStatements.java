@@ -351,10 +351,10 @@ extends CountersModel
 			"               THEN DATALENGTH(dest.text)  \n" +
 			"               ELSE der.statement_end_offset  \n" +
 			"          END - der.statement_start_offset ) / 2 +2) AS [lastKnownSql] \n" +
-			"    ,deqp.query_plan \n" +
-			LiveQueryPlanActive +
 			"    ,SpidLocks        = convert(varchar(max),null) \n" +
 			"    ,BlockedSpidsInfo = convert(varchar(max),null) \n" +
+			"    ,deqp.query_plan \n" +
+			LiveQueryPlanActive +
 			"FROM sys." + dm_exec_sessions + " des \n" +
 			"LEFT JOIN sys." + dm_exec_requests + " der ON des.session_id = der.session_id \n" +
 //			"LEFT JOIN sys." + dm_exec_connections + " dec ON des.session_id = dec.session_id \n" +
@@ -419,10 +419,10 @@ extends CountersModel
 //			"--               ELSE der.statement_end_offset   \n" +
 //			"--          END - der.statement_start_offset ) / 2 +2) AS [lastKnownSql] \n" +
 			"    ,dest.text \n" +
-			"    ,''                                           --deqp.query_plan  \n" +
-			LiveQueryPlanBlocked +
 			"    ,SpidLocks        = convert(varchar(max),null) \n" +
 			"    ,BlockedSpidsInfo = convert(varchar(max),null) \n" +
+			"    ,''                                           --deqp.query_plan  \n" +
+			LiveQueryPlanBlocked +
 			"FROM sys.sysprocesses p1 \n" +
 			"CROSS APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
 			"WHERE p1.spid in (select p2.blocked from sys.sysprocesses p2 where p2.blocked > 0) \n" + 
@@ -835,7 +835,7 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 						lockList = SqlServerUtils.getLockSummaryForSpid(getCounterController().getMonConnection(), spid);
 						spidLocks = SqlServerUtils.getLockSummaryForSpid(lockList, true, false);
 						if (spidLocks == null)
-							spidLocks = "Not Available";
+							spidLocks = "No Locks found";
 					}
 					catch (TimeoutException ex)
 					{
@@ -938,7 +938,7 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 				counters.setValueAt(new Boolean(b), rowId, pos_HasLiveQueryPlan);
 
 				// SPID Locks
-				b = !"This was disabled".equals(spidLocks) && !"Not Available".equals(spidLocks) && !"Timeout - when getting lock information".equals(spidLocks);
+				b = !"This was disabled".equals(spidLocks) && !"No Locks found".equals(spidLocks) && !"Timeout - when getting lock information".equals(spidLocks);
                 counters.setValueAt(new Boolean(b), rowId, pos_HasSpidLocks);
                 counters.setValueAt(spidLocks,      rowId, pos_SpidLocks);
                 counters.setValueAt(spidLockCount,  rowId, pos_SpidLockCount);

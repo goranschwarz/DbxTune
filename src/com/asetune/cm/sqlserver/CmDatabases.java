@@ -1443,8 +1443,8 @@ extends CountersModel
 //			    + "--  ,OldestTranPage           = -1 \n"
 //			    + "--  ,OldestTranProcName       = -1 \n"
 			    + "    ,OldestTranHasSqlText     = CASE WHEN oti.most_recent_sql_text is not null THEN convert(bit,1) ELSE convert(bit,0) END \n"
-			    + "    ,OldestTranHasShowPlan    = CASE WHEN oti.plan_text            is not null THEN convert(bit,1) ELSE convert(bit,0) END \n"
 			    + "    ,OldestTranHasLocks       = convert(bit,0) \n"
+			    + "    ,OldestTranHasShowPlan    = CASE WHEN oti.plan_text            is not null THEN convert(bit,1) ELSE convert(bit,0) END \n"
 			    + " \n"
 				+ "    ,LastDbBackupTime         =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D') \n"
 				+ "    ,LastDbBackupAgeInHours   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) \n"
@@ -1453,8 +1453,8 @@ extends CountersModel
 			    + " \n"
 			    + queryStoreColumns
 			    + "    ,OldestTranSqlText        = oti.most_recent_sql_text \n"
-			    + "    ,OldestTranShowPlanText   = oti.plan_text \n"
 			    + "    ,OldestTranLocks          = convert(varchar(max), null) \n" // NOTE: This will be deferred and fetched at: localCalculation()
+			    + "    ,OldestTranShowPlanText   = oti.plan_text \n"
 			    + "FROM " + databases + " d \n"
 			    + "LEFT OUTER JOIN #oti            oti ON d.database_id = oti    .database_id and oti.row_num = 1 \n"
 			    + "LEFT OUTER JOIN #dataSizeMb    data ON d.database_id = data   .database_id \n"
@@ -1896,7 +1896,7 @@ extends CountersModel
 						{
 							sysLocks  = SqlServerUtils.getLockSummaryForSpid(getCounterController().getMonConnection(), OldestTranSpid, true, false);
 							if (sysLocks == null)
-								sysLocks = "No locks was found."; //sysLocks = "Not Available";
+								sysLocks = "No locks was found"; //sysLocks = "Not Available";
 						}
 						catch (TimeoutException ex)
 						{
@@ -1907,7 +1907,7 @@ extends CountersModel
 					// Set the values: *Has* and *Text*
 					boolean b = true;
 
-					b = !"This was disabled".equals(sysLocks) && !"Not Available".equals(sysLocks) && !"Timeout - when getting lock information".equals(sysLocks);
+					b = !"This was disabled".equals(sysLocks) && !"No locks was found".equals(sysLocks) && !"Timeout - when getting lock information".equals(sysLocks);
 					newSample.setValueAt(new Boolean(b), rowId, pos_OldestTranHasLocks);
 					newSample.setValueAt(sysLocks,       rowId, pos_OldestTranLocks);
 				}

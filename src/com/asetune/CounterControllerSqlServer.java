@@ -35,6 +35,8 @@ import javax.swing.JOptionPane;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.cache.DbmsObjectIdCache;
+import com.asetune.cache.DbmsObjectIdCacheSqlServer;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.os.CmOsDiskSpace;
 import com.asetune.cm.os.CmOsIostat;
@@ -43,6 +45,7 @@ import com.asetune.cm.os.CmOsMpstat;
 import com.asetune.cm.os.CmOsNwInfo;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
+import com.asetune.cm.sqlserver.CmActiveStPlanStats;
 import com.asetune.cm.sqlserver.CmActiveStatements;
 import com.asetune.cm.sqlserver.CmAlwaysOn;
 import com.asetune.cm.sqlserver.CmDatabases;
@@ -89,6 +92,7 @@ import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
@@ -177,6 +181,7 @@ extends CounterControllerAbstract
 		CmSpinlocks          .create(counterController, guiController);
                              
 		CmActiveStatements   .create(counterController, guiController);
+		CmActiveStPlanStats  .create(counterController, guiController);
 		CmOpenTransactions   .create(counterController, guiController);
 		CmIndexUsage         .create(counterController, guiController);
 		CmIndexOpStat        .create(counterController, guiController);
@@ -834,5 +839,42 @@ extends CounterControllerAbstract
 			_logger.info("On PCS Database Rollover: Closing connection to server '" + srvName + "'..");
 			conn.closeNoThrow();
 		}
+	}
+
+	//==================================================================
+	// BEGIN: NO-GUI methods
+	//==================================================================
+	@Override
+	public DbxConnection noGuiConnect(String dbmsUsername, String dbmsPassword, String dbmsServer, String dbmsHostPortStr, String jdbcUrlOptions) throws SQLException, Exception
+	{
+		DbxConnection conn = super.noGuiConnect(dbmsUsername, dbmsPassword, dbmsServer, dbmsHostPortStr, jdbcUrlOptions);
+		
+		// DBMS ObjectID --> ObjectName Cache... maybe it's not the perfect place to initialize this...
+		DbmsObjectIdCache.setInstance( new DbmsObjectIdCacheSqlServer( new ConnectionProvider()
+		{
+			@Override
+			public DbxConnection getNewConnection(String appname)
+			{
+				try 
+				{
+					return DbxConnection.connect(null, appname);
+				} 
+				catch(Exception e) 
+				{
+					_logger.error("Problems getting a new connection. Caught: "+e, e);
+					return null;
+				}
+			}
+			
+			@Override
+			public DbxConnection getConnection()
+			{
+//				return getCounterController().getMonConnection();
+				return getMonConnection();
+			}
+		}) );
+
+		// Return the connection
+		return conn;
 	}
 }
