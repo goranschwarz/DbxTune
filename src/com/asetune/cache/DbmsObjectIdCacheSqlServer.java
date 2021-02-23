@@ -56,6 +56,10 @@ extends DbmsObjectIdCache
 		if (conn == null)
 			return null;
 
+		//  dbid == 32768 -- is "mssqlsystemresource", which is a hidden database
+		if (dbid == 32767)
+			return null;
+
 		// Get database name from ID, if nor found... go and get it
 		String dbname = getDBName(dbid);
 		if (StringUtil.isNullOrBlank(dbname))
@@ -163,12 +167,12 @@ extends DbmsObjectIdCache
 		{
 			if (ex.getMessage() != null && ex.getMessage().contains("query has timed out"))
 			{
-				_logger.warn("DbmsObjectIdCacheSqlServer.get(conn,dbid,objectid): Problems getting schema/table/index name. The query has timed out. But the lock information will still be returned (but without the schema/table/index name.");
+				_logger.warn("DbmsObjectIdCacheSqlServer.get(conn, lookupType=" + lookupType + ", dbid=" + dbid + ", lookupId=" + lookupId + "): Problems getting schema/table/index name. The query has timed out. But the lock information will still be returned (but without the schema/table/index name.");
 				throw new TimeoutException();
 			}
 			else
 			{
-				_logger.warn("DbmsObjectIdCacheSqlServer.get(conn,dbid,objectid): Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "'.", ex);
+				_logger.warn("DbmsObjectIdCacheSqlServer.get(conn, lookupType=" + lookupType + ", dbid=" + dbid + ", lookupId=" + lookupId + ")): Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "'.", ex);
 			}
 		}
 		

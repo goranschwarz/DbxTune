@@ -173,8 +173,11 @@ public abstract class DbmsObjectIdCache
 	protected long _statBulkPhysicalReads = 0;    // How many times did we call getPlanBulk()
 	protected long _statLogicalWrite      = 0;    // How many times did we call setPlan()
 
-	private   long _statReportModulus     = 5000; // When it gets crossed it will double itself, but max is always _statReportModulusMax
-	private   long _statReportModulusMax  = 100000;
+//	private   long _statReportModulus     = 5000; // When it gets crossed it will double itself, but max is always _statReportModulusMax
+//	private   long _statReportModulusMax  = 100000;
+	private   long _statReportModulus     = 500; // When it gets crossed it will double itself, but max is always _statReportModulusMax
+	private   long _statReportModulusMax  = 10000;
+	// Or possibly change to report when X minutes has passed... since last report print
 
 	protected long _statResetCalls        = 0;    // How many times did we call outOfMemoryHandler()
 	protected long _statDecreaseCalls     = 0;    // How many times did we call lowOfMemoryHandler()
@@ -367,6 +370,9 @@ public abstract class DbmsObjectIdCache
 	 */
 	public String getDBName(int dbid)
 	{
+//		if (dbid == 32767)
+//			return "mssqlsystemresource";
+
 		return _dbNamesMap.get(dbid);
 	}
 
@@ -599,7 +605,8 @@ public abstract class DbmsObjectIdCache
 		if (_statReportModulus > _statReportModulusMax)
 			_statReportModulus = _statReportModulusMax;
 
-		_logger.info("DbmsObjectIdCache Statistics: Size=" + size() + ", ResetCalls=" + _statResetCalls + ", DecreaseCalls=" + _statDecreaseCalls + ", LogicalRead=" + _statLogicalRead + ", LogicalWrite=" + _statLogicalWrite + ", BulkPhysicalReads=" + _statBulkPhysicalReads + ", PhysicalRead=" + _statPhysicalRead);
+//		_logger.info("DbmsObjectIdCache Statistics: Size=" + size() + ", ResetCalls=" + _statResetCalls + ", DecreaseCalls=" + _statDecreaseCalls + ", LogicalRead=" + _statLogicalRead + ", LogicalWrite=" + _statLogicalWrite + ", BulkPhysicalReads=" + _statBulkPhysicalReads + ", PhysicalRead=" + _statPhysicalRead);
+		_logger.info("STAT [DbmsObjectIdCache] Size=" + size() + ", ResetCalls=" + _statResetCalls + ", DecreaseCalls=" + _statDecreaseCalls + ", LogicalRead=" + _statLogicalRead + ", LogicalWrite=" + _statLogicalWrite + ", BulkPhysicalReads=" + _statBulkPhysicalReads + ", PhysicalRead=" + _statPhysicalRead);
 	}
 
 	/**

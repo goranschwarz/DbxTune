@@ -25,6 +25,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
@@ -357,8 +358,17 @@ extends CountersModelAppend
 				{
 					String extendedDescText = ErrorMessage;
 					String extendedDescHtml = ErrorMessage;
-						
-					AlarmEvent ae = new AlarmEventFullTranLog(this, 0, "monErrorlog");
+
+					// Try to copy everything between "database" and a dot (".")
+					String dbname = StringUtils.substringBetween(ErrorMessage, "database", ".");
+					// Strip out chars we do not need or want
+					if (StringUtil.hasValue(dbname))
+						dbname = dbname.replace('\'', ' ').replace('.', ' ').trim();
+
+					if (StringUtil.isNullOrBlank(dbname))
+						dbname = "-no-dbname-found-in-errorlog-";
+
+					AlarmEvent ae = new AlarmEventFullTranLog(this, 0, dbname);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
 					alarmHandler.addAlarm( ae );
