@@ -164,18 +164,36 @@ public class SshConnection
 	 */
 	public SshConnection(String hostname, int port, String username, String password, String keyFile)
 	{
-		_hostname = hostname;
-		_port     = port;
-		_username = username;
-		_password = password;
-		_keyFile  = keyFile;
+		setHost    (hostname);
+		setPort    (port);
+		setUsername(username);
+		setPassword(password);
+		setKeyFile (keyFile);
 	}
 
 	public void setUsername(String username) { _username = username; }
 	public void setPassword(String password) { _password = password; }
-	public void setHost(String host)         { _hostname = host; }
+//	public void setHost(String host)         { _hostname = host; }
 	public void setPort(int port)            { _port     = port; }
 	public void setKeyFile(String keyFile)   { _keyFile  = keyFile; }
+	public void setHost(String host)
+	{
+		// If this looks like a SQL-Server instance name on a Windows machine (it contains a backslash 'hostname\instanceName' then strip of '\instanceName')
+		if (host != null) 
+		{
+			int pos = host.indexOf("\\");
+			if (pos >= 1) // Not starting with '\', but has '\'  somewhere in the middle
+			{
+				// Strip off 'hostname\instanceName' instance name part
+				String newHostname = host.substring(0, pos);
+				
+				_logger.info("This looks like a Windows (SQL-Server hostname/instance) name. The instance part has been stripped out. originHostName='" + host + "', strippedHostName='" + newHostname + "'.");
+				host = newHostname;
+			}
+		}
+
+		_hostname = host; 
+	}
 
 	public String getUsername() { return _username; }
 	public String getPassword() { return _password; }

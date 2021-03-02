@@ -226,7 +226,8 @@ public class Helper
 								LoginService loginService = security.getLoginService();
 								if (loginService != null)
 								{
-									UserIdentity userIdentity = loginService.login(login, password);
+//									UserIdentity userIdentity = loginService.login(login, password);
+									UserIdentity userIdentity = loginService.login(login, password, request);
 									return userIdentity != null; // true of success
 								}
 							}

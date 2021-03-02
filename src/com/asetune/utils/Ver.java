@@ -1085,7 +1085,7 @@ public class Ver
 						// Forward compatible with SAP version string if they will change it to 'SP## PL##' instead of 'sp##.##'  
 						if (start >= 0)
 						{
-							if (start >= 0)
+//							if (start >= 0)
 								start += "SP".length();
 
 							// set end to first NON digit (or end of string)

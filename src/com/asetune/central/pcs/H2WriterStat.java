@@ -163,7 +163,7 @@ public class H2WriterStat
 	 * 
 	 * @return do NOT return null (a dummy instance will be created if none has been installed)
 	 */
-	public static H2WriterStat getInstance()
+	public synchronized static H2WriterStat getInstance()
 	{
 		if (_instance == null)
 			_instance = new H2WriterStat(null);

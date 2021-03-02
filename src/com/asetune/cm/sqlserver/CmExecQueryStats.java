@@ -329,8 +329,20 @@ extends CountersModel
 
 		String sql_sample_lastXminutes = "";
 		if (sample_lastXminutes)
-			sql_sample_lastXminutes = "  AND last_execution_time > dateadd(mi, -"+sample_lastXminutesTime+", getdate())\n";
-//CHECK; is last_execution_time good enough or do we need to do something like 'last_execution_time +or- last_elapsed_time' to catch queries above sample_lastXminutesTime...
+		{
+			// The below Wont work correctly (Check the below Note)
+			//sql_sample_lastXminutes = "  AND last_execution_time > dateadd(mi, -"+sample_lastXminutesTime+", getdate())\n";
+			//
+			// Note:
+			//  - statements are added to 'dm_exec_query_stats' when they are FINNISHED (at end of execution)
+			//  - The 'last_execution_time' is when the statement was last STARTED
+			// Which means that if we have 'lastXMinutes' to 10 minutes (as an example) and the execution takes 11 minutes it wont be captured :(
+			// So we need to **add** 'last_elapsed_time' to the 'last_execution_time' to get a Statement END/COMPLETION time!
+			// hence: dateadd(ms, (last_elapsed_time/1000), last_execution_time) > #numberOfMinutesToSave#
+			//                     ^^^^^^^^^^^^^^^^^ ^^^^
+			//                     in-microseconds   to-milliseconds
+			sql_sample_lastXminutes = "  AND dateadd(ms, (last_elapsed_time/1000), last_execution_time) > dateadd(mi, -"+sample_lastXminutesTime+", getdate())\n";
+		}
 
 		String sql = 
 				"SELECT \n" +
@@ -373,9 +385,14 @@ extends CountersModel
 		{
     		Timestamp prevSample = getPreviousSampleTime();
     		if (prevSample == null)
+    		{
     			setSqlWhere("AND 1=0"); // do not get any rows for the first sample...
+    		}
     		else
-    			setSqlWhere("AND last_execution_time > '"+prevSample+"' "); 
+    		{
+//    			setSqlWhere("AND last_execution_time > '"+prevSample+"' "); 
+    			setSqlWhere("AND dateadd(ms, (last_elapsed_time/1000), last_execution_time) > '"+prevSample+"' "); 
+    		}
 		}
 		else
 			setSqlWhere("");

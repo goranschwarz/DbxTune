@@ -1130,7 +1130,7 @@ extends JPanel
 			
 			// The parser do not seems to remove escaped single quotes: so do replace '' -> '
 			if (_lastStrValue.indexOf("''") >= 0)
-				_lastStrValue.replace("''", "'");
+				_lastStrValue = _lastStrValue.replace("''", "'");
 		}
 
 		//-------------------------------------------------------

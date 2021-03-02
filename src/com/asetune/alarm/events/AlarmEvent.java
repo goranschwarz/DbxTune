@@ -306,7 +306,8 @@ extends Throwable
 	public void markCancel()
 	{
 		_cancelTime    = System.currentTimeMillis();
-		_cancelTimeStr = _dateFormater.format(new Date(_cancelTime));
+//		_cancelTimeStr = _dateFormater.format(new Date(_cancelTime));
+		_cancelTimeStr = TimeUtils.toString(_cancelTime);
 	}
 
 //	public String getAlarmClassNameShort()
@@ -344,7 +345,8 @@ extends Throwable
 		super();
 
 		_crTime       = System.currentTimeMillis();
-		_crTimeStr    = _dateFormater.format(new Date(_crTime));
+//		_crTimeStr    = _dateFormater.format(new Date(_crTime));
+		_crTimeStr    = TimeUtils.toString(_crTime);
 		_timeToLive   = -1;
 
 		_serviceType  = (serviceType == null) ? "" : serviceType;

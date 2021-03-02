@@ -671,6 +671,21 @@ public class TimeUtils
 	}
 
 	/**
+	 * Format a Timestamp to a String<br>
+	 * format is: "yyyy-MM-dd HH:mm:ss.SSS"<br>
+	 * Example output: "2018-01-08 09:56:53.716"
+	 * @param ts
+	 * @return String in above format
+	 */
+	public static String toString(Date ts)
+	{
+		synchronized (DATE_FORMAT)
+		{
+			return DATE_FORMAT.format(ts);
+		}
+	}
+
+	/**
 	 * Format a Timestamp to a Local TimeZone String<br>
 	 * format is: "yyyy-MM-dd HH:mm:ss.SSS"<br>
 	 * Example output: "2018-01-08 09:56:53.716"

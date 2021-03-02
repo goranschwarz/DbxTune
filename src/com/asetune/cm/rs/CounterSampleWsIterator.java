@@ -569,7 +569,7 @@ extends CounterSample
 					}
 					catch (SQLException sqlEx)
 					{
-						_logger.warn("CounterSample("+getName()+").getCnt : ACTIVE='"+name+"', Error=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. Inner-ACTION: Closing the connection.");
+						_logger.warn("CounterSample("+getName()+").getCnt : ACTIVE='"+name+"', ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. Inner-ACTION: Closing the connection.");
 						if (dbConn != null)
 							dbConn.closeNoThrow();
 
@@ -812,7 +812,7 @@ extends CounterSample
 				catch (SQLException sqlEx)
 				{
 					// Closing the connection... for example if the Gateway connection has failed and we are still in RepServer...
-					_logger.warn("CounterSample("+getName()+").getCnt : STANDBY='"+name+"', Error=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. Inner-ACTION: Closing the connection.");
+					_logger.warn("CounterSample("+getName()+").getCnt : STANDBY='"+name+"', ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. Inner-ACTION: Closing the connection.");
 					if (dbConn != null)
 						dbConn.closeNoThrow();
 					
@@ -865,7 +865,7 @@ extends CounterSample
 		{
 			if (sqlExList.size() == 0)
 			{
-				_logger.warn("CounterSample("+getName()+").getCnt : Error=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. SQL: "+sql, sqlEx);
+				_logger.warn("CounterSample("+getName()+").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. SQL: "+sql, sqlEx);
 				if (sqlEx.toString().indexOf("SocketTimeoutException") > 0)
 				{
 					_logger.info("QueryTimeout in '"+getName()+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+getName()+".queryTimeout=seconds' in the config file.");

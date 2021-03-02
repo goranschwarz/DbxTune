@@ -2095,7 +2095,14 @@ extends CountersModel
 					// NO match in the SKIP regexp
 					if (doAlarm)
 					{
-						alarmHandler.addAlarm( new AlarmEventOldBackup(cm, threshold, dbname, val.intValue()) );
+						String lastBackupDate = cm.getAbsValue(r, "LastDbBackupTime") + "";
+						
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						AlarmEvent ae = new AlarmEventOldBackup(cm, threshold, dbname, lastBackupDate, val.intValue());
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
 					}
 				}
 			}
@@ -2138,7 +2145,14 @@ extends CountersModel
 					
 					if (doAlarm)
 					{
-						alarmHandler.addAlarm( new AlarmEventOldTranLogBackup(cm, threshold, dbname, val.intValue()) );
+						String lastBackupDate = cm.getAbsValue(r, "LastLogBackupTime") + "";
+						
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						AlarmEvent ae = new AlarmEventOldTranLogBackup(cm, threshold, dbname, lastBackupDate, val.intValue());
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
 					}
 				}
 			}
@@ -2269,6 +2283,9 @@ extends CountersModel
 				Double freeMb     = -99d;
 				Double usedPct    = -99d;
 
+//FIXME; Double is OBJECT and not a 'double' ... so we need to do xxx.equal(yyy) 
+//And this issue id probably in ALOT of places...
+
 				if (dataFreeMb  != null && logFreeMb  != null) freeMb  = Math.min(dataFreeMb,  logFreeMb);
 				if (dataUsedPct != null && logUsedPct != null) usedPct = Math.max(dataUsedPct, logUsedPct);
 				
@@ -2283,17 +2300,19 @@ extends CountersModel
 					{
 						String osVolume   = "";
 						String osFileName = "";
-						if (freeMb == logFreeMb)
+
+						if (freeMb.equals(logFreeMb))
 						{
 							osVolume    = cm.getAbsString(r, "LogOsDisk");
 							osFileName  = cm.getAbsString(r, "LogOsFileName");
 						}
-						if (freeMb == dataFreeMb)
+
+						if (freeMb.equals(dataFreeMb))
 						{
 							osVolume    = cm.getAbsString(r, "DataOsDisk");
 							osFileName  = cm.getAbsString(r, "DataOsFileName");
 						}
-
+						
 						// If 'osVolume' is empty... try to get the File directory...
 						String mountPoint = osVolume;
 						if (StringUtil.isNullOrBlank(mountPoint))
@@ -2302,6 +2321,12 @@ extends CountersModel
 							if (StringUtil.hasValue(osFileName))
 								mountPoint = CounterControllerSqlServer.resolvFileNameToDirectory(osFileName);
 						}
+//_logger.info("---DEBUG---: LowOsDiskFreeSpaceInMb --- "
+//		+ "freeMb="      + freeMb      + ", usedPct="    + usedPct    + ", "
+//		+ "dataFreeMb="  + dataFreeMb  + ", logFreeMb="  + logFreeMb  + ", "
+//		+ "dataUsedPct=" + dataUsedPct + ", logUsedPct=" + logUsedPct + ", "
+//		+ "osVolume="    + osVolume    + ", osFileName=" + osFileName + ", "
+//		+ "mountPoint="  + mountPoint  + ", threshold="  + threshold  + ".");
 						
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
@@ -2344,12 +2369,12 @@ extends CountersModel
 					{
 						String osVolume   = "";
 						String osFileName = "";
-						if (usedPct == logUsedPct)
+						if (usedPct.equals(logUsedPct))
 						{
 							osVolume    = cm.getAbsString(r, "LogOsDisk");
 							osFileName  = cm.getAbsString(r, "LogOsFileName");
 						}
-						if (usedPct == dataUsedPct)
+						if (usedPct.equals(dataUsedPct))
 						{
 							osVolume    = cm.getAbsString(r, "DataOsDisk");
 							osFileName  = cm.getAbsString(r, "DataOsFileName");
@@ -2364,6 +2389,13 @@ extends CountersModel
 								mountPoint = CounterControllerSqlServer.resolvFileNameToDirectory(osFileName);
 						}
 						
+//_logger.info("---DEBUG---: LowOsDiskFreeSpaceInPct --- "
+//		+ "freeMb="      + freeMb      + ", usedPct="    + usedPct    + ", "
+//		+ "dataFreeMb="  + dataFreeMb  + ", logFreeMb="  + logFreeMb  + ", "
+//		+ "dataUsedPct=" + dataUsedPct + ", logUsedPct=" + logUsedPct + ", "
+//		+ "osVolume="    + osVolume    + ", osFileName=" + osFileName + ", "
+//		+ "mountPoint="  + mountPoint  + ", threshold="  + threshold  + ".");
+												
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 						AlarmEvent ae = new AlarmEventLowOsDiskFreeSpace(cm, mountPoint, freeMb.intValue(), usedPct, threshold.doubleValue()); // NOTE: threshold is Double = PCT

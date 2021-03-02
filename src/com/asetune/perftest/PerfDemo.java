@@ -980,8 +980,8 @@ implements ActionListener
 			Connection aseConn = AseConnectionFactory.getConnection(host, port, dbname, user, passwd, appname, null, "", null);
 			DbxConnection conn = new AseConnection(aseConn);
 
-			if (conn instanceof SybConnection)
-				((SybConnection)conn).setSybMessageHandler(new PerfDemoSybMessageHandler(appname+": ", this, null));
+			if (aseConn instanceof SybConnection)
+				((SybConnection)aseConn).setSybMessageHandler(new PerfDemoSybMessageHandler(appname+": ", this, null));
 
 			if (conn instanceof TdsConnection)
 				((TdsConnection)conn).setSybMessageHandler(new PerfDemoSybMessageHandler(appname+": ", this, null));

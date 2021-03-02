@@ -1917,7 +1917,12 @@ extends CountersModel
 
 					if (val.intValue() > threshold)
 					{
-						alarmHandler.addAlarm( new AlarmEventLastBackupFailed(cm, dbname, threshold) );
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						AlarmEvent ae = new AlarmEventLastBackupFailed(cm, dbname, threshold);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
 					}
 				}
 			}
@@ -1990,7 +1995,14 @@ extends CountersModel
 					// NO match in the SKIP regexp
 					if (doAlarm)
 					{
-						alarmHandler.addAlarm( new AlarmEventOldBackup(cm, threshold, dbname, val.intValue()) );
+						String lastBackupDate = cm.getAbsValue(r, "BackupStartTime") + "";
+	
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						AlarmEvent ae = new AlarmEventOldBackup(cm, threshold, dbname, lastBackupDate, val.intValue());
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
 					}
 				}
 
@@ -2092,7 +2104,14 @@ extends CountersModel
 					
 					if (doAlarm)
 					{
-						alarmHandler.addAlarm( new AlarmEventOldTranLogBackup(cm, threshold, dbname, val.intValue()) );
+						String lastBackupDate = cm.getAbsValue(r, "LastTranLogDumpTime") + "";
+
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						AlarmEvent ae = new AlarmEventOldTranLogBackup(cm, threshold, dbname, lastBackupDate, val.intValue());
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
 					}
 				}
 

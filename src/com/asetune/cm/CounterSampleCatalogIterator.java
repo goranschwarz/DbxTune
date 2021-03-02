@@ -37,6 +37,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
 
 public class CounterSampleCatalogIterator 
 extends CounterSample
@@ -97,6 +98,8 @@ extends CounterSample
 		if (_logger.isDebugEnabled())
 			_logger.debug(getName()+": queryTimeout="+queryTimeout);
 
+		long execStartTime = System.currentTimeMillis();
+
 		String originCatalog = "";
 		try
 		{
@@ -116,6 +119,8 @@ extends CounterSample
 			// Loop over all the databases
 			for (String catname : dblist)
 			{
+				execStartTime = System.currentTimeMillis();
+
 				// set context to the correct database
 				conn.setCatalog(catname);
 				if (_logger.isDebugEnabled())
@@ -235,7 +240,9 @@ extends CounterSample
 		}
 		catch (SQLException sqlEx)
 		{
-			_logger.warn("CounterSample("+getName()+").getCnt : " + sqlEx.getErrorCode() + " " + sqlEx.getMessage() + ". SQL: "+sql, sqlEx);
+			long execTime = TimeUtils.msDiffNow(execStartTime);
+
+			_logger.warn("CounterSample("+getName()+").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", SqlState=" + sqlEx.getSQLState() + ", Message=|" + sqlEx.getMessage() + "|. execTimeInMs=" + execTime + ", SQL: "+sql, sqlEx);
 			if (sqlEx.toString().indexOf("SocketTimeoutException") > 0)
 			{
 				_logger.info("QueryTimeout in '"+getName()+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+getName()+".queryTimeout=seconds' in the config file.");

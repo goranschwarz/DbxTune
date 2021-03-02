@@ -29,6 +29,7 @@ import com.asetune.ssh.SshTunnelInfo;
 import com.asetune.utils.StringUtil;
 
 public class ConnectionProp
+implements Cloneable
 {
 	private static Logger _logger = Logger.getLogger(ConnectionProp.class);
 

@@ -838,7 +838,7 @@ implements ActionListener
 				if(resultset.next())
 					saveTextSize = resultset.getInt(1);
 				if(saveTextSize < 105906176)
-					statement.executeQuery("set textsize 105906176");
+					statement.executeUpdate("set textsize 105906176");
 				statement.executeUpdate("set plan for show_execio_xml to message on");
 				statement.executeUpdate("set nodata on");
 				statement.executeUpdate("set showplan on");

@@ -58,6 +58,7 @@ import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
 
 
 public  class CounterSample 
@@ -809,7 +810,7 @@ extends CounterTableModel
 //		}
 //		catch (SQLException sqlEx)
 //		{
-//			_logger.warn("CounterSample("+_name+").getCnt : " + sqlEx.getErrorCode() + " " + sqlEx.getMessage() + ". SQL: "+sql, sqlEx);
+//			_logger.warn("CounterSample("+_name+").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. SQL: "+sql, sqlEx);
 //			if (sqlEx.toString().indexOf("SocketTimeoutException") > 0)
 //			{
 //				_logger.info("QueryTimeout in '"+_name+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+_name+".queryTimeout=seconds' in the config file.");
@@ -948,6 +949,8 @@ extends CounterTableModel
 
 		Statement stmnt = null;
 		ResultSet rs = null;
+
+		long execStartTime = System.currentTimeMillis();
 
 		try
 		{
@@ -1092,7 +1095,9 @@ extends CounterTableModel
 		}
 		catch (SQLException sqlEx)
 		{
-			_logger.warn("CounterSample("+getName()+").getCnt : " + sqlEx.getErrorCode() + " " + sqlEx.getMessage() + ". SQL: "+sql, sqlEx);
+			long execTime = TimeUtils.msDiffNow(execStartTime);
+
+			_logger.warn("CounterSample("+getName()+").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", SqlState=" + sqlEx.getSQLState() + ", Message=|" + sqlEx.getMessage() + "|. execTimeInMs=" + execTime + ", SQL: "+sql, sqlEx);
 			if (sqlEx.toString().indexOf("SocketTimeoutException") > 0)
 			{
 				_logger.info("QueryTimeout in '"+getName()+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+getName()+".queryTimeout=seconds' in the config file.");

@@ -233,7 +233,7 @@ extends Properties
 	}
 	
 	private static FileWatcher _combinedConfigurationFileWatcher;
-	public static void startCombinedConfigurationFileWatcher()
+	public synchronized static void startCombinedConfigurationFileWatcher()
 	{
 		if (_combinedConfigurationFileWatcher == null)
 		{

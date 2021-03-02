@@ -2355,7 +2355,8 @@ extends JXTable
 		@Override
 		public void paint(Graphics graphics)
 		{
-			if ( _textBr == null || _textBr != null && _textBr.length < 0 )
+//			if (_textBr == null || _textBr != null && _textBr.length < 0)
+			if (_textBr == null || _textBr != null && _textBr.length == 0)
 				return;
 
 			r = getDecorationBounds();

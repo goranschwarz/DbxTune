@@ -119,7 +119,8 @@ class SortIcon implements Icon, SwingConstants
 {
 	private int					baseSize;
 	private int					size;
-	private int					direction;
+//	private int					direction;
+	private int					direction = NORTH;
 	private BasicArrowButton	iconRenderer;
 //	private double[]			sizePercentages	= { 1.0, .85, .70, .55, .40, .25, .10 };
 //	private double[]			sizePercentages	= { .70, .70, .70, .70, .70, .70, .70 };

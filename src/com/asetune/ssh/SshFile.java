@@ -118,7 +118,8 @@ public class SshFile extends File //implements Comparable
 			return "";
 		
 		String fStr = f.toString();
-		if ("\\".equals(fStr) || "\\".equals(fStr))
+//		if ("\\".equals(fStr) || "\\".equals(fStr))
+		if ("\\".equals(fStr))
 			return "/";
 		
 		return fStr + "/";

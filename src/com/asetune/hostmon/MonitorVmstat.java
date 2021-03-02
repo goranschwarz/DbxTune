@@ -90,6 +90,13 @@ extends HostMonitor
 			mon = new MonitorVmstatHp();
 			mon.setConnectedToVendor(OsVendor.Hp);
 		}
+		else if (osname.startsWith("Windows-"))
+		{
+			mon = new MonitorVmstatWindows();
+			mon.setConnectedToVendor(OsVendor.Windows);
+			
+			//mon.setEnabled(false, "Not yet implemented");
+		}
 		else
 		{
 			throw new Exception("The OS Name '"+osname+"', is not supported by the module 'MonitorVmstat' for the moment.");

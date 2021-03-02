@@ -2475,7 +2475,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 	protected void refreshCompletionForMandatory(Connection conn, WaitForExecDialog waitDialog)
 	throws SQLException
 	{
-		if (waitDialog.wasCancelPressed())
+		if (waitDialog != null && waitDialog.wasCancelPressed())
 			return;
 
 		if (StringUtil.hasValue(_localCatalogName))
@@ -2559,7 +2559,8 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		// For some DBMS go and check stuff and "override" defaults
 		if (DbUtils.DB_PROD_NAME_H2.equals(_dbProductName))
 		{
-			waitDialog.setState("Getting H2 database settings");
+			if (waitDialog != null)
+				waitDialog.setState("Getting H2 database settings");
 
 			// if 'DATABASE_TO_UPPER' is true, then table names must be quoted
 		//	String sql = "select VALUE from INFORMATION_SCHEMA.SETTINGS where NAME = 'DATABASE_TO_UPPER'";

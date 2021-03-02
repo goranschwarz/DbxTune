@@ -21,14 +21,19 @@
 package com.asetune.cm.sqlserver;
 
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
+
+import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
-import com.asetune.IGuiController;
 import com.asetune.ICounterController.DbmsOption;
+import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -37,6 +42,9 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
+import com.asetune.utils.Configuration;
+import com.asetune.utils.SqlServerUtils;
+import com.asetune.utils.SqlServerUtils.LockRecord;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -44,7 +52,7 @@ import com.asetune.pcs.PcsColumnOptions.ColumnType;
 public class CmOpenTransactions
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmServiceMemory.class);
+	private static Logger        _logger          = Logger.getLogger(CmOpenTransactions.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmOpenTransactions.class.getSimpleName();
@@ -122,6 +130,10 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	private static final String  PROP_PREFIX                      = CM_NAME;
+
+	public static final String  PROPKEY_sample_spidLocks          = PROP_PREFIX + ".sample.spidLocks";
+	public static final boolean DEFAULT_sample_spidLocks          = true;
 	
 	private void addTrendGraphs()
 	{
@@ -204,28 +216,31 @@ extends CountersModel
 				+ "-- Just reformated the code and added a bunch of columns \n"
 				+ "-------------------------------------------------------------------------------------------------------\n"
 				+ "SELECT \n"
-				+ "    [s_tst].[session_id], \n"
-				+ "    DB_NAME (s_tdt.database_id)                       AS [Database], \n"
-				+ "    [s_es].[status]                                   AS [Status], \n"
-				+ "    [s_es].[login_name]                               AS [LoginName], \n"
-				+ "    [s_es].[login_time]                               AS [LoginTime], \n"
-				+ "    [s_es].[host_name]                                AS [HostName], \n"
-				+ "    [s_es].[host_process_id]                          AS [HostPID], \n"
-				+ "    [s_es].[program_name]                             AS [ProgramName], \n"
-				+ "    [s_es].[last_request_start_time]                  AS [LastRequestStartTime], \n"
-				+ "    [s_tdt].[database_transaction_begin_time]         AS [TranBeginTime], \n"
-				+ "    [s_tdt].[database_transaction_log_record_count]   AS [TranLogRecordCount], \n"
-				+ "    [s_tdt].[database_transaction_log_bytes_used]     AS [LogBytesUsed], \n"
-				+ "    [s_tdt].[database_transaction_log_bytes_reserved] AS [LogBytesReserved], \n"
-				+ "    [s_er].[status]                                   AS [ExecStatus], \n"
-				+ "    [s_er].[command]                                  AS [ExecCommand], \n"
-				+ "    [s_er].[blocking_session_id]                      AS [BlockedBySpid], \n"
-				+ "    (SELECT count(*) FROM " + dm_exec_requests + " x where x.blocking_session_id = s_tst.session_id) AS [BlockingOtherSpidCount], \n"
-				+ "    [s_er].[wait_type]                                AS [WaitType], \n"
-				+ "    [s_er].[wait_time]                                AS [WaitTimeInMs], \n"
-				+ "    [s_er].[last_wait_type]                           AS [LastWaitType], \n"
-				+ "    [s_est].text                                      AS [LastSqlText], \n"
-				+ "    [s_eqp].[query_plan]                              AS [LastPlan] \n"
+				+ "     [s_tst].[session_id] \n"
+				+ "    ,db_name(s_tdt.database_id)                       AS [Database] \n"
+				+ "    ,[s_es].[status]                                   AS [Status] \n"
+				+ "    ,[s_es].[login_name]                               AS [LoginName] \n"
+				+ "    ,[s_es].[login_time]                               AS [LoginTime] \n"
+				+ "    ,[s_es].[host_name]                                AS [HostName] \n"
+				+ "    ,[s_es].[host_process_id]                          AS [HostPID] \n"
+				+ "    ,[s_es].[program_name]                             AS [ProgramName] \n"
+				+ "    ,convert(bit,0)                                    AS [HasSpidLocks]\n"
+				+ "    ,convert(int,-1)                                   AS [SpidLockCount] \n"
+				+ "    ,[s_es].[last_request_start_time]                  AS [LastRequestStartTime] \n"
+				+ "    ,[s_tdt].[database_transaction_begin_time]         AS [TranBeginTime] \n"
+				+ "    ,[s_tdt].[database_transaction_log_record_count]   AS [TranLogRecordCount] \n"
+				+ "    ,[s_tdt].[database_transaction_log_bytes_used]     AS [LogBytesUsed] \n"
+				+ "    ,[s_tdt].[database_transaction_log_bytes_reserved] AS [LogBytesReserved] \n"
+				+ "    ,[s_er].[status]                                   AS [ExecStatus] \n"
+				+ "    ,[s_er].[command]                                  AS [ExecCommand] \n"
+				+ "    ,[s_er].[blocking_session_id]                      AS [BlockedBySpid] \n"
+				+ "    ,(SELECT count(*) FROM " + dm_exec_requests + " x where x.blocking_session_id = s_tst.session_id) AS [BlockingOtherSpidCount] \n"
+				+ "    ,[s_er].[wait_type]                                AS [WaitType] \n"
+				+ "    ,[s_er].[wait_time]                                AS [WaitTimeInMs] \n"
+				+ "    ,[s_er].[last_wait_type]                           AS [LastWaitType] \n"
+				+ "    ,[s_est].text                                      AS [LastSqlText] \n"
+				+ "    ,[s_eqp].[query_plan]                              AS [LastPlan] \n"
+				+ "    ,convert(varchar(max),null)                        AS [SpidLocks] \n"
 				+ "FROM            " + dm_tran_database_transactions + " [s_tdt] \n"
 				+ "JOIN            " + dm_tran_session_transactions + "  [s_tst]  ON [s_tst].[transaction_id] = [s_tdt].[transaction_id] \n"
 				+ "JOIN            " + dm_exec_sessions + "              [s_es]   ON [s_es] .[session_id]     = [s_tst].[session_id] \n"
@@ -239,4 +254,98 @@ extends CountersModel
 
 		return sql;
 	}
+	
+	
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public List<CmSettingsHelper> getLocalSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("Get SPID Locks"           , PROPKEY_sample_spidLocks       , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidLocks       , DEFAULT_sample_spidLocks      ), DEFAULT_sample_spidLocks      , "Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking."));
+
+		return list;
+	}
+
+	
+	@Override
+	public Class<?> getColumnClass(int columnIndex)
+	{
+		// use CHECKBOX for some columns of type bit/Boolean
+		String colName = getColumnName(columnIndex);
+
+		if ("HasSpidLocks".equals(colName)) return Boolean.class;
+		else return super.getColumnClass(columnIndex);
+	}
+
+	@Override
+	public void localCalculation(CounterSample newSample)
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		
+		boolean getSpidLocks      = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_spidLocks,      DEFAULT_sample_spidLocks);
+
+		int pos_session_id    = newSample.findColumn("session_id"); 
+		int pos_SpidLocks     = newSample.findColumn("SpidLocks"); 
+		int pos_HasSpidLocks  = newSample.findColumn("HasSpidLocks"); 
+		int pos_SpidLockCount = newSample.findColumn("SpidLockCount");
+
+		if (pos_session_id < 0 || pos_SpidLocks < 0 || pos_HasSpidLocks < 0 || pos_SpidLockCount < 0)
+		{
+			_logger.debug("Can't find the position for columns ('session_id'="+pos_session_id+", 'SpidLocks'="+pos_SpidLocks+", 'HasSpidLocks'="+pos_HasSpidLocks+", SpidLockCount="+pos_SpidLockCount+")");
+			return;
+		}
+		
+		
+		// Loop on all diffData rows
+		for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
+		{
+			Object o_SPID = newSample.getValueAt(rowId, pos_session_id);
+			
+			if (o_SPID instanceof Number)
+			{
+				int spid = ((Number)o_SPID).intValue();
+
+				String spidLocks       = "This was disabled";
+				int    spidLockCount   = -1;
+
+				if (getSpidLocks)
+				{
+					List<LockRecord> lockList = null;
+					try
+					{
+						lockList = SqlServerUtils.getLockSummaryForSpid(getCounterController().getMonConnection(), spid);
+						spidLocks = SqlServerUtils.getLockSummaryForSpid(lockList, true, false);
+						if (spidLocks == null)
+							spidLocks = "No Locks found";
+					}
+					catch (TimeoutException ex)
+					{
+						spidLocks = "Timeout - when getting lock information";
+					}
+					
+					spidLockCount = 0;
+					if (lockList != null)
+					{
+						for (LockRecord lockRecord : lockList)
+						{
+							spidLockCount += lockRecord._lockCount;
+						}
+					}
+				}
+
+				boolean b;
+
+				// SPID Locks
+				b = !"This was disabled".equals(spidLocks) && !"No Locks found".equals(spidLocks) && !"Timeout - when getting lock information".equals(spidLocks);
+				newSample.setValueAt(new Boolean(b), rowId, pos_HasSpidLocks);
+				newSample.setValueAt(spidLocks,      rowId, pos_SpidLocks);
+				newSample.setValueAt(spidLockCount,  rowId, pos_SpidLockCount);
+	
+			} // end: SPID is a number
+
+		} // end: loop rows
+
+	} // end: method
 }

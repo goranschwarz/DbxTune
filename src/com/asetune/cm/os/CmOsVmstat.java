@@ -109,6 +109,12 @@ extends CounterModelHostMonitor
 
 	private void addTrendGraphs()
 	{
+		// Windows do NOT (for the moment) have any graphs for Windows
+		if (isConnectedToVendor(OsVendor.Windows))
+		{
+			return;
+		}
+
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_PROCS_USAGE,
 			"vmstat: Processes Usage",                                // Menu CheckBox text
@@ -190,6 +196,12 @@ extends CounterModelHostMonitor
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
+		// Windows do NOT (for the moment) have any graphs for Windows
+		if (isConnectedToVendor(OsVendor.Windows))
+		{
+			return;
+		}
+
 		if (GRAPH_NAME_PROCS_USAGE.equals(tgdp.getName()))
 		{
 			String procs_r = null;

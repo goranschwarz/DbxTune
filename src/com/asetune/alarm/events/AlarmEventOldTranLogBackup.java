@@ -33,7 +33,7 @@ extends AlarmEvent
 	 * @param cm
 	 * @param dbname
 	 */
-	public AlarmEventOldTranLogBackup(CountersModel cm, Number threshold, String dbname, int age)
+	public AlarmEventOldTranLogBackup(CountersModel cm, Number threshold, String dbname, String lastBackupStartTime, int age)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -45,7 +45,7 @@ extends AlarmEvent
 				AlarmEvent.ServiceState.UP, 
 				"Old or No Transaction Log Backup found in '" + cm.getServerName() + "', dbname='" + dbname + "', Backup Age in Hours '" + age + "'" 
 						+ (age == -1 ? ", (where -1 means: Since ASE was started)" : "") 
-						+ ". (threshold="+threshold+")",
+						+ ", lastBackupStartTime='" + lastBackupStartTime + "'. (threshold="+threshold+")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled

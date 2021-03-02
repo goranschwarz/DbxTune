@@ -118,7 +118,7 @@ extends CounterModelHostMonitor
 
 	private void addTrendGraphs()
 	{
-		// Windows do NOT (for the moment) have any localCalculations
+		// Windows do NOT (for the moment) have any graphs for Windows
 		if (isConnectedToVendor(OsVendor.Windows))
 		{
 			return;

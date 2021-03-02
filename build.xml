@@ -15,7 +15,8 @@
 	<property name="launch4j.dir" location="c:/Program Files/Launch4j" />
 
 	<path id="project.class.path">
-		<fileset dir="lib" includes="*.jar"/>
+		<fileset dir="lib"              includes="*.jar"/>
+		<fileset dir="lib/jetty"        includes="*.jar"/>
 		<fileset dir="lib/jdbc_drivers" includes="jconn4.jar"/>
 		<fileset dir="lib/jdbc_drivers" includes="mssql-jdbc-9.2.0.jre8.jar"/>
 <!--
@@ -180,6 +181,10 @@
 			<fileset dir="lib">
 				<include name="*.jar"/>
 			</fileset>
+		</copy>
+
+		<copy todir="${dist}/lib/jetty">
+			<fileset dir="lib/jetty"/>
 		</copy>
 
 		<copy todir="${dist}/lib/jdbc_drivers">

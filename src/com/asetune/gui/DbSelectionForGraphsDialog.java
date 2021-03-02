@@ -339,13 +339,13 @@ implements ActionListener, TableModelListener
 			conf.setProperty(cmShortName+"."+PROPERTY_skipDbsInGraphs, skipDbsStr);
 
 		// skipDbsWithSizeLtInGraphs
-		if (skipDbsWithSizeLtStr.equals(DEFAULT_skipDbsWithSizeLtInGraphs))
+		if (skipDbsWithSizeLtStr.equals(DEFAULT_skipDbsWithSizeLtInGraphs + ""))
 			conf.remove(cmShortName+"."+PROPERTY_skipDbsWithSizeLtInGraphs);
 		else
 			conf.setProperty(cmShortName+"."+PROPERTY_skipDbsWithSizeLtInGraphs, skipDbsWithSizeLtStr);
 
 		// keepDbsWithPctUsageGtInGraphs
-		if (keepDbsWithPctUsageGtStr.equals(DEFAULT_keepDbsWithPctUsageGtInGraphs))
+		if (keepDbsWithPctUsageGtStr.equals(DEFAULT_keepDbsWithPctUsageGtInGraphs + ""))
 			conf.remove(cmShortName+"."+PROPERTY_keepDbsWithPctUsageGtInGraphs);
 		else
 			conf.setProperty(cmShortName+"."+PROPERTY_keepDbsWithPctUsageGtInGraphs, keepDbsWithPctUsageGtStr);

@@ -493,10 +493,10 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 			}
 		}
 
-		if (srvName       != null) srvName.trim();
-		if (srvIpPort     != null) srvIpPort.trim();
-		if (srvUser       != null) srvUser.trim();
-		if (srvVersionStr != null) srvVersionStr.replace("\n", " ").replace("\r", "").trim();
+		if (srvName       != null) srvName       = srvName.trim();
+		if (srvIpPort     != null) srvIpPort     = srvIpPort.trim();
+		if (srvUser       != null) srvUser       = srvUser.trim();
+		if (srvVersionStr != null) srvVersionStr = srvVersionStr.replace("\n", " ").replace("\r", "").trim();
 
 		if (_logger.isDebugEnabled())
 			urlParams.add("debug",    "true");

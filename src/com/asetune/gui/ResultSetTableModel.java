@@ -3545,7 +3545,7 @@ public class ResultSetTableModel
 
 		for (int r=0; r<rowCount; r++)
 		{
-			for (int c=0; r<colCount; c++)
+			for (int c=0; c<colCount; c++)
 			{
 				Object cell = getValueAt(r, c);
 				if (cell != null)

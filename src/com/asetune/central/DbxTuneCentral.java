@@ -49,7 +49,6 @@ import org.apache.log4j.RollingFileAppender;
 import org.apache.log4j.spi.Filter;
 import org.apache.log4j.spi.LoggingEvent;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.webapp.WebAppContext;
 
 import com.asetune.AppDir;
@@ -1484,7 +1483,7 @@ public class DbxTuneCentral
 			_server = new Server(port);
 	   
 			// Handler for multiple web apps
-			HandlerCollection handlers = new HandlerCollection();
+//			HandlerCollection handlers = new HandlerCollection();
 	 
 //			// Creating the first web application context
 //			WebAppContext webapp1 = new WebAppContext();
@@ -1507,7 +1506,7 @@ public class DbxTuneCentral
 //	        classlist.addAfter("org.eclipse.jetty.webapp.FragmentConfiguration", "org.eclipse.jetty.plus.webapp.EnvConfiguration", "org.eclipse.jetty.plus.webapp.PlusConfiguration");
 //	        classlist.addBefore("org.eclipse.jetty.webapp.JettyWebXmlConfiguration", "org.eclipse.jetty.annotations.AnnotationConfiguration");
 
-			handlers.addHandler(webapp1);
+//			handlers.addHandler(webapp1);
 
 //			// Creating the second web application context
 //			WebAppContext webapp2 = new WebAppContext();
@@ -1516,7 +1515,11 @@ public class DbxTuneCentral
 //			webapp2.setDefaultsDescriptor("src/main/webdefault/webdefault.xml");
 //			handlers.addHandler(webapp2);
 
-
+//-----------------------------------------------------
+// Possibly we can learn something from this:
+//https://github.com/jetty-project/embedded-jetty-cookbook/tree/master/src/main/java/org/eclipse/jetty/cookbook
+//-----------------------------------------------------
+	
 			// Creating the LoginService for the realm
 			DbxCentralRealm loginService = new DbxCentralRealm("DbxTuneCentralRealm");
 
@@ -1540,8 +1543,10 @@ public class DbxTuneCentral
 			_server.addBean(loginService);
 
 			// Adding the handlers to the server
-			_server.setHandler(handlers);
-	 
+//			_server.setHandler(handlers);
+			_server.setHandler(webapp1);
+
+
 			// Starting the Server
 			_server.start();
 			_logger.info("Started 'Jetty' as Web server.");

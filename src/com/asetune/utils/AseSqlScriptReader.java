@@ -196,7 +196,7 @@ public class AseSqlScriptReader
 	{
 		_file = null;
 		if (file.exists())
-			new FileNotFoundException("The input file '"+file.toString()+"' doesn't exists.");
+			throw new FileNotFoundException("The input file '"+file.toString()+"' doesn't exists.");
 		_file = file;
 
 		_reader = new FileReader(_file);

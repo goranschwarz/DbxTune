@@ -164,7 +164,7 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 		}
 		public int     getColumnJdbcType        () { return getColumnType(); }
 		public String  getColumnJdbcTypeStr     () { return DataTypeNotResolvedException.getJdbcTypeAsString(_columnType); }
-		public String  getColumnTypeStr         () { return getColumnTypeStr(); }
+//		public String  getColumnTypeStr         () { return getColumnTypeStr(); } // ERROR: This calls itself
 		public String  getColumnResolvedTypeName() { return _columnResolvedTypeName; }
 
 

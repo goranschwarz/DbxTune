@@ -107,8 +107,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="lib/jconn4.jar"/>
 	<classpathentry kind="lib" path="lib/jackson-core-2.9.2.jar" sourcepath="3pp/jackson-core-2.9.2-sources.jar"/>
-	<classpathentry kind="lib" path="lib/jetty-all-9.2.22.v20170606.jar" sourcepath="3pp/jetty-all-9.2.22.v20170606-sources.jar"/>
-	<classpathentry kind="lib" path="lib/javax.servlet-api-3.1.0.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1603565653461/source/javax.servlet-api-3.1.0-sources-1603573086834.jar"/>
 	<classpathentry kind="lib" path="lib/jackson-databind-2.9.2.jar" sourcepath="3pp/jackson-databind-2.9.2-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jackson-annotations-2.9.2.jar"/>
 	<classpathentry kind="lib" path="lib/gson-2.8.0.jar" sourcepath="3pp/gson-gson-parent-2.8.0.zip"/>
@@ -129,5 +127,9 @@
 	<classpathentry kind="lib" path="lib/jfreechart-1.5.1.jar" sourcepath="3pp/jfreechart-1.5.1-sources.jar"/>
 	<classpathentry kind="lib" path="lib/commons-text-1.9.jar" sourcepath="3pp/commons-text-1.9-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-9.2.0.jre8.jar"/>
+	<classpathentry kind="lib" path="lib/jetty/geronimo-jaspi-2.0.0.jar"/>
+	<classpathentry kind="lib" path="lib/jetty/javax.security.auth.message-1.0.0.v201108011116.jar"/>
+	<classpathentry kind="lib" path="lib/jetty/jetty-all-9.4.38.v20210224-uber.jar"/>
+	<classpathentry kind="lib" path="lib/jetty/javax.servlet-api-3.1.0.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>

@@ -93,9 +93,9 @@ public class Screenshot
 	public static boolean windowScreenshot(Component window, String filename, String extraInfo)
 	{
 		if ( window == null )
-			new IllegalArgumentException("Window can't be null");
+			throw new IllegalArgumentException("Window can't be null");
 		if ( filename == null )
-			new IllegalArgumentException("Filename can't be null");
+			throw new IllegalArgumentException("Filename can't be null");
 
 		// Get File
 		File file = new File(filename);

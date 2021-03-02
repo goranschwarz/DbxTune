@@ -43,6 +43,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>Changed: AlarmEventConfigResourceIsLow       -- added "raiseDelay", which is used by 'Statement Cache Hit Rate', and the default was set to 5 minutes below configured value before raising alarm.</LI>
 				<LI>Changed: AlarmEventFullTranLog               -- alwaysSend() is now set to true, so even if we do not "subscribe" for alarms on this server, we will still get message, just like SrvDown </LI>
 				<LI>Changed: AlarmEventProcedureCacheOutOfMemory -- alwaysSend() is now set to true, so even if we do not "subscribe" for alarms on this server, we will still get message, just like SrvDown </LI>
+				<LI>Changed: AlarmEventOldBackup                 -- added lastBackupStartTime to the alarm message</LI>
+				<LI>Changed: AlarmEventOldTranLogBackup          -- added lastBackupStartTime to the alarm message</LI>
 			</UL>
 		</LI>
 		<LI>All CM's -- SqlPrefix -- Prefix SQL Statements issued by the CounterModel with /* DbxTuneAppName:CmName */ so we can see in the daily report that it's AseTune / PostgresTune etc that are responsible for the SQL Statements issued</LI>
@@ -52,10 +54,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Changed all CM's for Alarm Debugging to print threshold values earlier</LI>
 		<LI>bugfix: Filter Field didn't allow [] in the column names (the bug was introduced when changing version of JSqlParser)</LI>
 		<LI>NoGUI - if we have a previous connection, then do not exit (when checking for "proper monitoring configuration") when connecting.</LI>
+		<LI>Enhanced som error messages, with ErrorCode, SqlState</LI>
+		<LI>Fixed various small bugs by using 'SpotBugs'</LI>
+		<LI>SshConnection: when passing a SQL-Server instance name with 'hostname\instance' only use the first part when connecting.</LI>
 
 		<LI>OS Monitoring now also handles Windows, via a SHH Connection executing typeperf (not a OpenSSH Server needs to be installed on the Windows Server, supported modules
 			<UL>
 				<LI>IO Stat, using:        <CODE>typeperf -si 2 "\LogicalDisk(*)\*"</CODE></LI>
+				<LI>VM Stat, using:        <CODE>Not yet implemented</CODE></LI>
 				<LI>MP Stat, using:        <CODE>typeperf -si 2 "\Processor(*)\*"</CODE></LI>
 				<LI>OS Load, using:        <CODE>typeperf -si 2 "\System\*"</CODE> and also adding column 'nproc' and columns '*loadAverage*' load average is calculated based on Windows 'Processor Queue Length' using same algorithm (exponentially-damped moving averages) as Linux</LI>
 				<LI>OS Memory Info, using: <CODE>typeperf -si 2 "\Paging File(_Total)\*" "\Memory\*"</CODE></LI>
@@ -85,6 +91,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	 			<li>To version 3.2            Component: jsqlparser</li>
 	 			<li>To version 19.8           Component: Oracle JDBC Driver</li>
 	 			<li>To version 9.2.0          Component: Microsoft JDBC Driver</li>
+	 			<li>To version 9.4.38         Component: Jetty Embedded WebServer</li>
 			</ul>
 		</LI>
 	</UL>
@@ -97,6 +104,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Create a Daily Summary Report directly from the Web Interface (a link in the "offline" table + shows a dialog where you can specifiy a time range within that recording)</LI>
 		<LI>Daily Summary Report - Directly from the Report, click a link that will open "admin page" and fill in: Daily Summary Report - SKIP Entries (or exclude some SQL Statements from reports)</LI>
 		<LI>User Defined Content (http://dbxcentral:8080/overview#ud-content) - The ability to create a User Defined Chart or Report that connects to your bussines data and produce some output (initially made to draw a "gantt/timeline" of "work" that was done during the night jobs</LI>
+		<LI>In the 'remove Server'. now stopping the collector if it's running. (note: a Timeout of 1 minute, without wait feedback)</LI>
  	</UL>
 
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -150,6 +158,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<ul>
 			<li>bug fix: LowDbFreeSpaceInMb and LowLogFreeSpaceInMb sometimes didn't fire correctly</li>
 			<li>for AlarmEventLongRunningTransaction, added filters on 'OldestTranProg', 'OldestTranUser', 'OldestTranHost' so we can filter out known users or programs</li>
+			<li>Added HTML Table with all info to the alarms: AlarmEventLastBackupFailed, AlarmEventOldBackup, AlarmEventOldTranLogBackup</li>
 		</ul>
 		</LI>
 
@@ -278,16 +287,20 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmDatabases        </b> - new columns for Query Store: 'QsIsEnabled', 'QsIsOk', 'QsDesiredState', 'QsActualState', 'QsMaxSizeInMb', 'QsUsedSpaceInMb', 'QsFreeSpaceInMb', 'QsUsedPct', 'QsReadOnlyReason' </LI>
 		<LI><b>CmDatabases        </b> - new column 'OldestTranHasLocks', 'OldestTranLocks' to collect what locks Oldest Transaction are holding </LI>
 		<LI><b>CmDatabases        </b> - for AlarmEventLongRunningTransaction, added filters on 'OldestTranProg', 'OldestTranUser', 'OldestTranHost' so we can filter out known users or programs </LI>
+		<LI><b>CmDatabases        </b> - Added HTML Table with all info to the alarms: AlarmEventLastBackupFailed, AlarmEventOldBackup, AlarmEventOldTranLogBackup</LI>
+		<LI><b>CmDatabases        </b> - AlarmEventLowOsDiskFreeSpace fixed bug that did not disaply the correct 'mountPoint' ... it always said '-unknown-'</LI>
 
 		<LI><b>CmExecCursors      </b> - new columns 'exec_sql_text', 'full_sql_text', to see what the cursor looks like. Also 'dbid', 'objectid' (which for the moment may not be trusted, since the origon from dm_exec_sql_text) </LI>
 		
 		<LI><b>CmExecQueryStat    </b> - new columns 'objectid', 'object_name'. so we can see if it's a procedure call </LI>
+		<LI><b>CmExecQueryStat    </b> - Long running statements was sometimes missing, if 'sample_lastXminutes' was enabled.</LI>
 
 		<LI><b>CmIndexOpStat      </b> - new postpone value of 300 seconds (5 minutes) </LI>
 
 		<LI><b>CmIndexUsage       </b> - new postpone value of 300 seconds (5 minutes) </LI>
 
 		<LI><b>CmOpenTransactions </b> - Removed Primary Key &amp; Query Plans: get actual execution plans if the server supports it (2019 &amp; traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
+		<LI><b>CmOpenTransactions </b> - Now also gets what locks the OpenTransactions is holding.</LI>
 
 		<LI><b>CmOsLatch          </b> - added columns 'waiting_requests_count_diff', 'wait_time_ms_diff' to make it easier to see both ABS and DIFF value when in 'diff' mode </LI>
 

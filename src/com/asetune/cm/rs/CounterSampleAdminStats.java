@@ -395,7 +395,7 @@ extends CounterSample
 		}
 		catch (SQLException sqlEx)
 		{
-			_logger.warn("CounterSample("+_name+").getCnt : " + sqlEx.getErrorCode() + " " + sqlEx.getMessage() + ". SQL: "+sql, sqlEx);
+			_logger.warn("CounterSample("+_name+").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. SQL: "+sql, sqlEx);
 			if (sqlEx.toString().indexOf("SocketTimeoutException") > 0)
 			{
 				_logger.info("QueryTimeout in '"+_name+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+_name+".queryTimeout=seconds' in the config file.");

@@ -40,7 +40,7 @@ public class DbxCentralStatistics
 	private int       _H2DbFileSizeDiffInMb = -1;
 	private String    _pcsJdbcWriterUrl     = "";
 	
-	public static DbxCentralStatistics getInstance()
+	public synchronized static DbxCentralStatistics getInstance()
 	{
 		if (_instance == null)
 			_instance = new DbxCentralStatistics();

@@ -35,6 +35,7 @@ import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.SQLTimeoutException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -4797,6 +4798,10 @@ implements Cloneable, ITableTooltip
 			
 			// Look for Timeout exception
 			boolean isTimeoutException = false;
+			
+			if (e instanceof SQLTimeoutException) // Not sure in what JDBC Version this was introduced, but not all JDBC Drivers are using this.
+				isTimeoutException = true;
+			
 			if ("JZ006".equals(e.getSQLState()))
 			{
 				String msg = e.toString();

@@ -337,7 +337,7 @@ extends CounterModelHostMonitor
 				if (debugPrint || _logger.isDebugEnabled())
 					System.out.println("##### sendAlarmRequest("+cm.getName()+"): Available-MB - threshold="+threshold+", mountPoint='"+mountPoint+"', freeMb='"+freeMb+"', usedPct='"+usedPct+"'.");
 
-				if (usedPct != null && usedPct != null && threshold != null)
+				if (freeMb != null && usedPct != null && threshold != null)
 				{
 					if (freeMb.intValue() < threshold.intValue())
 					{
@@ -358,7 +358,7 @@ extends CounterModelHostMonitor
 				if (debugPrint || _logger.isDebugEnabled())
 					System.out.println("##### sendAlarmRequest("+cm.getName()+"): UsedPct - threshold="+threshold+", mountPoint='"+mountPoint+"', freeMb='"+freeMb+"', usedPct='"+usedPct+"'.");
 
-				if (usedPct != null && usedPct != null && threshold != null)
+				if (freeMb != null && usedPct != null && threshold != null)
 				{
 					if (usedPct > threshold.doubleValue())
 					{

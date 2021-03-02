@@ -147,7 +147,8 @@ implements Cloneable
 		_visibleAtStart = visibleAtStart;
 		_labelType      = labelType;
 		
-		if ( labelArray.equals(RUNTIME_REPLACED_LABELS) )
+//		if ( labelArray.equals(RUNTIME_REPLACED_LABELS) )
+		if ( labelArray == RUNTIME_REPLACED_LABELS )
 		{
 			_labelArray = null;
 			_initializedWithRuntimeReplacedLabels = true;

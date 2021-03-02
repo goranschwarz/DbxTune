@@ -109,7 +109,7 @@ extends HostMonitor
 
 	public static HostMonitorMetaData[] createOfflineMetaData()
 	{
-		HostMonitorMetaData[] mdArr = new HostMonitorMetaData[3];
+		HostMonitorMetaData[] mdArr = new HostMonitorMetaData[4];
 
 		mdArr[0] = new MonitorMpstatSolaris().createMetaData();
 		mdArr[1] = new MonitorMpstatLinux()  .createMetaData();

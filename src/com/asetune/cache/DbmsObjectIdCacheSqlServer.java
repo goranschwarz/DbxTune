@@ -37,6 +37,7 @@ import org.h2.value.Value;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
 
 public class DbmsObjectIdCacheSqlServer 
 extends DbmsObjectIdCache
@@ -115,11 +116,12 @@ extends DbmsObjectIdCache
 		
 		// return object
 		ObjectInfo objectInfo = null;
+		long execStartTime = System.currentTimeMillis();
 
 		try (PreparedStatement pstmnt = conn.prepareStatement(sql)) // Auto CLOSE
 		{
-			// Timeout after 1 second --- if we get blocked when doing: object_name()
-			pstmnt.setQueryTimeout(1);
+			// Timeout after 2 second --- if we get blocked when doing: object_name()
+			pstmnt.setQueryTimeout(2);
 			
 			// set lookup ID
 			if      (LookupType.ObjectId   .equals(lookupType)) pstmnt.setInt (1, lookupId.intValue());
@@ -165,14 +167,18 @@ extends DbmsObjectIdCache
 		}
 		catch (SQLException ex)
 		{
-			if (ex.getMessage() != null && ex.getMessage().contains("query has timed out"))
+			long execTime = TimeUtils.msDiffNow(execStartTime);
+			
+			// SET LOCK_TIMEOUT ### causes:   ErrorCode=1222, MsgText=Lock request time out period exceeded.
+			// jdbc.setQueryTimeout() causes:                 MsgText=...query has timed out...
+			if ( ex.getErrorCode() == 1222 || (ex.getMessage() != null && ex.getMessage().contains("query has timed out")) )
 			{
-				_logger.warn("DbmsObjectIdCacheSqlServer.get(conn, lookupType=" + lookupType + ", dbid=" + dbid + ", lookupId=" + lookupId + "): Problems getting schema/table/index name. The query has timed out. But the lock information will still be returned (but without the schema/table/index name.");
+				_logger.warn("DbmsObjectIdCacheSqlServer.get(conn, lookupType=" + lookupType + ", dbid=" + dbid + ", lookupId=" + lookupId + "): Problems getting schema/table/index name. The query has timed out (after " + execTime + " ms). But the lock information will still be returned (but without the schema/table/index name.");
 				throw new TimeoutException();
 			}
 			else
 			{
-				_logger.warn("DbmsObjectIdCacheSqlServer.get(conn, lookupType=" + lookupType + ", dbid=" + dbid + ", lookupId=" + lookupId + ")): Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "'.", ex);
+				_logger.warn("DbmsObjectIdCacheSqlServer.get(conn, lookupType=" + lookupType + ", dbid=" + dbid + ", lookupId=" + lookupId + ")): Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "', execTime=" + execTime + " ms.", ex);
 			}
 		}
 		

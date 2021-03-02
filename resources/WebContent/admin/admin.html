@@ -164,6 +164,8 @@
               <button type="button" class="btn btn-sm btn-primary">Loading server list <i class='fa fa-spinner fa-spin '></i></button>
           </div>
     
+          <div id="delete-result"></div>
+
         </div>  <!-- end: card-body -->
       </div>  <!-- end: card -->
 
@@ -291,7 +293,6 @@
   <!-- Error message: browser support -->
   <div id="browser-not-supported"></div>
 
-  <div id="delete-result"></div>
 
 
   <!-- Modal: Confirm dialog -->
@@ -307,11 +308,14 @@
         <div class="modal-body">
           When removing the server, the following will be done.
           <ul>
-            <li>Remove Server from Dbx Central Meta Data tables.</li>
-            <li>Remove Server Data from Dbx Central database (db schema '<b class="title"></b>').</li>
+<!--        <li>NOTE: you need to <b>MANUALLY STOP</b> the DbxTune Collector.</li> -->
+            <li>Stopping the DbxTune collector (if possible).</li>
+            <li>Remove Server from DbxCentral Meta Data tables.</li>
+            <li>Remove Server Data from DbxCentral database (db schema '<b class="title"></b>').</li>
             <li>Remove all DBMS recording(s), <i>H2 database files</i></li>
             <li>Remove Server from <code>conf/SERVER_LIST</code></li>
             <li>Remove Log files for the Server</li>
+            <li>Waiting for 'Stop Server' to complete (max WaitTime is 1 minute).</li>
           </ul>
           A report will show, what was possible to remove (if you press: Remove)
         </div>
@@ -995,7 +999,7 @@
 
         var refreshBut = '<a class="btn btn-sm btn-primary mb-2" href="/admin/admin.html" role="button">Refresh Page...</a>';
         var deleteResultDiv = document.getElementById("delete-result");
-        deleteResultDiv.innerHTML = "<p>Results when changing status for: <b>"+serverName+"</b></p>"+tab+"<br>"+refreshBut;
+        deleteResultDiv.innerHTML = "<br><hr><p>Results when changing status for: <b>"+serverName+"</b></p>"+tab+"<br>"+refreshBut;
       },
       error: function(xhr, desc, err) 
       {
@@ -1051,7 +1055,7 @@
 
         var refreshBut = '<a class="btn btn-sm btn-primary mb-2" href="/admin/admin.html" role="button">Refresh Page...</a>';
         var deleteResultDiv = document.getElementById("delete-result");
-        deleteResultDiv.innerHTML = "<p>Results when removing: <b>"+serverName+"</b></p>"+tab+"<br>"+refreshBut;
+        deleteResultDiv.innerHTML = "<br><hr><p>Results when removing: <b>"+serverName+"</b></p>"+tab+"<br>"+refreshBut;
       },
       error: function(xhr, desc, err) 
       {

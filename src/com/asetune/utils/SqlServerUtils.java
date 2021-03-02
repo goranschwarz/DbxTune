@@ -497,6 +497,8 @@ public class SqlServerUtils
 		List<LockRecord> lockList = new ArrayList<>();
 		List<LockRecord> otherSpidsWaiting = null;
 
+		long execStartTime = System.currentTimeMillis();
+
 		try (PreparedStatement pstmnt = conn.prepareStatement(sql)) // Auto CLOSE
 		{
 			// Timeout after 1 second --- if we get blocked when doing: object_name()
@@ -577,9 +579,11 @@ public class SqlServerUtils
 		}
 		catch (SQLException ex)
 		{
+			long execTime = TimeUtils.msDiffNow(execStartTime);
+
 			if (ex.getMessage() != null && ex.getMessage().contains("query has timed out"))
 			{
-				_logger.warn("getLockSummaryForSpid: Problems getting Lock List (from syslockinfo). The query has timed out.");
+				_logger.warn("getLockSummaryForSpid: Problems getting Lock List (from syslockinfo). The query has timed out after execTimeInMs=" + execTime + ".");
 				throw new TimeoutException();
 			}
 			else

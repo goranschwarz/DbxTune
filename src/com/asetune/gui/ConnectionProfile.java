@@ -284,9 +284,9 @@ public class ConnectionProfile
 	{
 //		throw new IllegalStateException("No Entry has been assigned. _tdsEntry==null, _jdbcEntry==null, _offlineEntry==null");
 
-		if      (entry instanceof TdsEntry    ) { if (_type != Type.TDS    ) new IllegalStateException("Passed entry is TdsEntry, but current Type is '"+_type+"'."); }
-		else if (entry instanceof JdbcEntry   ) { if (_type != Type.JDBC   ) new IllegalStateException("Passed entry is JdbcEntry, but current Type is '"+_type+"'."); }
-		else if (entry instanceof OfflineEntry) { if (_type != Type.OFFLINE) new IllegalStateException("Passed entry is OfflineEntry, but current Type is '"+_type+"'."); }
+		if      (entry instanceof TdsEntry    ) { if (_type != Type.TDS    ) throw new IllegalStateException("Passed entry is TdsEntry, but current Type is '"+_type+"'."); }
+		else if (entry instanceof JdbcEntry   ) { if (_type != Type.JDBC   ) throw new IllegalStateException("Passed entry is JdbcEntry, but current Type is '"+_type+"'."); }
+		else if (entry instanceof OfflineEntry) { if (_type != Type.OFFLINE) throw new IllegalStateException("Passed entry is OfflineEntry, but current Type is '"+_type+"'."); }
 		else
 			throw new RuntimeException("Unknown ConnectionProfile Entry Object. entry="+entry.getClass().getName());
 

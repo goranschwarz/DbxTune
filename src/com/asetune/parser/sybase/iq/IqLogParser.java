@@ -75,6 +75,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.asetune.utils.TimeUtils;
+
 public class IqLogParser
 {
 	/**
@@ -452,8 +454,10 @@ public class IqLogParser
 		ps.append("=======================================================================================\n");
 		ps.append("IQ Log Report:\n");
 		ps.append("File:     "+_currentFile).append("\n");
-		ps.append("Start:    "+_dateFormat.format(_startTime)).append("\n");
-		ps.append("End:      "+_dateFormat.format(_endTime)).append("\n");
+//		ps.append("Start:    "+_dateFormat.format(_startTime)).append("\n");
+//		ps.append("End:      "+_dateFormat.format(_endTime)).append("\n");
+		ps.append("Start:    "+TimeUtils.toString(_startTime)).append("\n");
+		ps.append("End:      "+TimeUtils.toString(_endTime)).append("\n");
 		ps.append("Duration: "+msToTimeStr("%HH:%MM", _endTime.getTime() - _startTime.getTime()) + "    (HH:MM)").append("\n");
 		ps.append("=======================================================================================\n");
 		ps.append("\n");

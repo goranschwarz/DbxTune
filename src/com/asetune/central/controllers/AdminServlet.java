@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -48,7 +49,10 @@ import com.asetune.central.pcs.CentralPcsWriterHandler.NotificationType;
 import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.central.pcs.objects.DbxCentralServerDescription;
 import com.asetune.central.pcs.objects.DbxCentralSessions;
+import com.asetune.utils.Configuration;
+import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -122,13 +126,14 @@ public class AdminServlet extends HttpServlet
 			if (StringUtil.isNullOrBlank(inputName))
 				throw new ServletException("No input parameter named 'name'.");
 
+			boolean stopCollector        = getParameter(req, "stopCollector",        "true").trim().equalsIgnoreCase("true");
 			boolean removeFromServerList = getParameter(req, "removeFromServerList", "true").trim().equalsIgnoreCase("true");
 			boolean removeLogFiles       = getParameter(req, "removeLogFiles",       "true").trim().equalsIgnoreCase("true");
 			boolean removeDbmsData       = getParameter(req, "removeDbmsData",       "true").trim().equalsIgnoreCase("true");
 			boolean removeH2Files        = getParameter(req, "removeH2Files",        "true").trim().equalsIgnoreCase("true");
 			
 			// Remove the server name from the system
-			ActionObject ao = removeManagedServer(inputName, removeFromServerList, removeLogFiles, removeDbmsData, removeH2Files);
+			ActionObject ao = removeManagedServer(inputName, stopCollector, removeFromServerList, removeLogFiles, removeDbmsData, removeH2Files);
 
 			ObjectMapper om = Helper.createObjectMapper();
 			String payload = om.writeValueAsString(ao);
@@ -233,7 +238,7 @@ public class AdminServlet extends HttpServlet
 	 * 
 	 * @return A ActionObject that can be converted to a JSON object with what we have done
 	 */
-	private ActionObject removeManagedServer(String name, boolean removeFromServerList, boolean removeLogFiles, boolean removeDbmsData, boolean removeH2Files)
+	private ActionObject removeManagedServer(String name, boolean stopCollector, boolean removeFromServerList, boolean removeLogFiles, boolean removeDbmsData, boolean removeH2Files)
 	{
 		// Remove files
 		// Remove PCS - Schema
@@ -253,6 +258,27 @@ public class AdminServlet extends HttpServlet
 		// we can use Java9 ProcessHandle 
 		// or https://github.com/profesorfalken/jProcesses
 		
+		// STOP/KILL: Collector
+		boolean waitforStopCollector = false;
+		if (stopCollector)
+		{
+			try
+			{
+				// Get the servers controller file (where we find the PID) in property "dbxtune.pid"
+				// possibly checking if the server runs on the same host as DbxCentral
+				// issue 'kill #pid#'
+				// wait for it to stop...
+				int pid = stopCollector(name);
+				ao.add("Stopping DbxTune Collector", new ActionType(ActionStatus.SUCCESS, "Succeeded signaling a stopping request (kill " + pid + ") for server '"+name+"'."));
+				
+				waitforStopCollector = true;
+			}
+			catch (Exception e) 
+			{
+				ao.add("Stopping DbxTune Collector", new ActionType(ActionStatus.FAIL, "Problems stopping server '"+name+"'. Caught: "+e));
+			}
+		}
+
 		// REMOVE: DBMS content/data
 		if (removeDbmsData)
 		{
@@ -365,6 +391,13 @@ public class AdminServlet extends HttpServlet
 							f.delete();
 							removedList.add(f.getName());
 						}
+
+						// Also remove "ALARM" file(s)
+						if (f.isFile() && (filename.equals("ALARM.ACTIVE."+name+".txt") || filename.equals("ALARM.LOG."+name+".log")) )
+						{
+							f.delete();
+							removedList.add(f.getName());
+						}
 					}
 				}
 
@@ -373,6 +406,23 @@ public class AdminServlet extends HttpServlet
 			catch (Exception e) 
 			{
 				ao.add("Remove Collector Log File", new ActionType(ActionStatus.FAIL, "Problems Collector Log Files for '"+name+"'. Caught: "+e));
+			}
+		}
+
+		// Wait for STOP/KILL: Collector
+		if (waitforStopCollector)
+		{
+			long timeout = Configuration.getCombinedConfiguration().getLongProperty("collector.stop.timeout", 65 * 1000);
+
+			try
+			{
+				// Wait for server to be stopped
+				long waitTime = waitforStopCollector(name, timeout);
+				ao.add("Waitfor Stopping DbxTune Collector", new ActionType(ActionStatus.SUCCESS, "Succeeded waiting for server '"+name+"' to stop. waitTime=" + waitTime + ", maxWaitTime="+timeout));
+			}
+			catch (TimeoutException e) 
+			{
+				ao.add("Stopping DbxTune Collector", new ActionType(ActionStatus.FAIL, "Timeout waiting for server '"+name+"' to stop. The server will Hopefully soon be stopped. waited for " + timeout + " ms."));
 			}
 		}
 
@@ -454,6 +504,84 @@ public class AdminServlet extends HttpServlet
 	
 	
 	
+	private int stopCollector(String serverName)
+	throws Exception
+	{
+		String directory = DbxTuneCentral.getAppInfoDir();
+
+		// Check if the file exists
+		File f = new File(directory + "/" + serverName + ".dbxtune");
+		if ( ! f.exists() )
+			throw new Exception("The controller file '" + f.getAbsolutePath() + "' didn't exists, so the PID is unknown");
+
+		// Read the file
+		Configuration conf = new Configuration(f.getAbsolutePath());
+		conf.load();
+		
+		// Get the PID
+		int pid = conf.getIntProperty("dbxtune.pid", -1);
+		if (pid == -1)
+			throw new Exception("Can't find a PID ");
+		
+		// Possibly if we want to check that it runs on same server
+//		String tcpPort = conf.getProperty("pcs.h2.tcp.url", null);
+
+		// KILL the PID
+		//throw new Exception("stopCollector() -- Not yet implemented.");
+		
+		List<String> cmd = new ArrayList<>();
+//		String cmd = "kill " + pid;
+		if (PlatformUtils.isWindows())
+		{
+			cmd.add("taskkill");
+			cmd.add("/F");
+			cmd.add("/PID");
+			cmd.add(pid + "");
+		}
+		else
+		{
+			cmd.add("kill");
+			cmd.add(pid + "");
+		}
+			
+
+		Process process = new ProcessBuilder(cmd).start();
+		int exitCode = process.waitFor();
+
+		if (exitCode != 0)
+			throw new Exception("Expected return code 0 when issuing command '" + cmd + "'. Actual return code was "+ exitCode);
+		
+		return pid;
+	}
+
+	private long waitforStopCollector(String serverName, long timeout)
+	throws TimeoutException
+	{
+		long startTime = System.currentTimeMillis();
+		
+		String directory = DbxTuneCentral.getAppInfoDir();
+		File f = new File(directory + "/" + serverName + ".dbxtune");
+		
+		while(true)
+		{
+			long waitTime = TimeUtils.msDiffNow(startTime);
+
+			if (waitTime > timeout)
+				throw new TimeoutException("Timeout waiting for server '" + serverName + "' to shutdown. waitTime=" + waitTime + ", timeout=" + timeout + ".");
+
+			if (f.exists())
+			{
+				_logger.info("Waiting for server '" + serverName + "' to shutdown. waitTime=" + waitTime + ", timeout=" + timeout + ". (expecting file '" + f .getAbsolutePath() + "' to be removed.");
+				try { Thread.sleep(1000); }
+				catch(InterruptedException ignore) {}
+			}
+			else
+			{
+				_logger.info("Done waiting for server '" + serverName + "' to shutdown. waitTime=" + waitTime + ". The server has now been stopped.");
+				return waitTime;
+			}
+		}
+	}
 	
 	
 

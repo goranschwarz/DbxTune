@@ -346,7 +346,7 @@ extends PersistWriterBase
 			return "";
 		
 		// If nothing to escape... get out of here
-		if ( ! (val.indexOf(' ') != -1  || val.indexOf(' ') != -1 || val.indexOf(' ') != -1) )	
+		if ( ! (val.indexOf(' ') != -1  || val.indexOf(',') != -1 || val.indexOf('=') != -1) )	
 			return val;
 
 		StringBuilder sb = new StringBuilder(val.length() + 10);
