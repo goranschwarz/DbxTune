@@ -288,4 +288,15 @@ extends CounterControllerAbstract
 	{
 		return false;
 	}
+
+	@Override
+	public void noGuiConnectErrorHandler(SQLException ex, String dbmsUsername, String dbmsPassword, String dbmsServer, String dbmsHostPortStr, String jdbcUrlOptions) 
+	throws Exception
+	{
+		// Error checking for "invalid password" or other "unrecoverable errors"
+		if ("JZ00L".equals(ex.getSQLState()))
+		{
+			throw new Exception("The error message suggest that the wrong USER '" + dbmsUsername + "' or PASSWORD '" + dbmsPassword + "' to DBMS server '" + dbmsServer + "' was entered. This is a non-recovarable error. DBMS Error Message='" + ex.getMessage() + "'.", ex);
+		}
+	}
 }

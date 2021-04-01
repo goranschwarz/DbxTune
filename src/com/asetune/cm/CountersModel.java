@@ -3822,7 +3822,7 @@ implements Cloneable, ITableTooltip
 	 * <p>
 	 * Override this to get specific or UserDefined Checkings
 	 */
-	public boolean checkDependsOnOther(Connection conn)
+	public boolean checkDependsOnOther(DbxConnection conn)
 	{
 		return true;
 	}
@@ -4474,8 +4474,14 @@ implements Cloneable, ITableTooltip
 			setNonConfiguredMonitoringHappened(false); // also resets the message(s) etc...
 			setSampleException(null);
 
-			// call the implementation
-			rowsFetched = refreshGetData(conn);
+			// execute any "pre-check" for this CM
+			boolean doRefresh = beforeRefreshGetData(conn);
+			
+			if (doRefresh)
+			{
+				// call the implementation
+				rowsFetched = refreshGetData(conn);
+			}
 
 			// if we fetched any rows, this means that we would have a Valid Sample
 			// a rowcount with -1 = FAILURE
@@ -4548,6 +4554,20 @@ implements Cloneable, ITableTooltip
 	public CounterSample createCounterSample(String name, boolean negativeDiffCountersToZero, String[] diffColumns, CounterSample prevSample)
 	{
 		return new CounterSample(name, negativeDiffCountersToZero, diffColumns, prevSample);
+	}
+
+	/**
+	 * Called just before <code>refreshGetData</code> so we can verify <i>whatever</i>
+	 * <br>
+	 * This is empty and should be implemented by any CM that needs it!
+	 * 
+	 * @param conn
+	 * @return true         true = continue and refresh, false = skip refresh 
+	 * @throws Exception    throws if we do not want to continue with refreshGetData(conn)
+	 */
+	protected boolean beforeRefreshGetData(DbxConnection conn) throws Exception
+	{
+		return true;
 	}
 
 	/**
@@ -6030,6 +6050,15 @@ implements Cloneable, ITableTooltip
 		if ( ! isAlarmEnabled() )
 			return;
 
+		// Add a "message" to the AlarmHandler saying that THIS CM have undergone Alarm detection
+		// So when endOfScan() is called, we can see WHAT CM's we can CANCEL alarms for
+		// endOfScan() should NOT cancel alarms for CM's that we have NOT made any alarms checks for
+		// For example if we would have (several) "timeout" on CM's the TimeToLive wont be trustworthy and then we will CANCEL alarms even if we shouldn't
+		if (AlarmHandler.hasInstance())
+		{
+			AlarmHandler.getInstance().addUndergoneAlarmDetection(getName());
+		}
+		
 		// Lets use the "built in" logic... which any subclases has to implement :)
 		if (hasSystemAlarms() && isSystemAlarmsEnabled()) 
 		{

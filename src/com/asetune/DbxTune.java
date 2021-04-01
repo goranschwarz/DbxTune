@@ -232,7 +232,13 @@ public abstract class DbxTune
 		
 		// Windows do not handle ':' characters in filenames that well
 		if (srvName.indexOf(':') >= 0)
+		{
+//			// note: we do not yet have a log system, so use: System.out.println
+//			System.out.println("Replacing characters in the LOG filename. ");
+			
 			srvName = srvName.replace(':', '_');
+		}
+
 
 		return srvName;
 	}
@@ -574,9 +580,11 @@ public abstract class DbxTune
 
 
 
-		// Both below is used later in the code
-		String dbmsSrvName = null;
-		String logFilename = null;
+		// Both below is used later in the code (dbmsSrv* for NO-GUI to set the INFO file)
+		String dbmsSrvName        = null;
+		String dbmsSrvAliasName   = null;
+		String dbmsSrvOrAliasName = null;
+		String logFilename        = null; // in GUI mode it will be NULL & Logging.init() will assign a default name...
 		
 		// Check if we have a specific LOG filename before we initialize the logger...
 		if (cmd.hasOption('L'))
@@ -585,37 +593,81 @@ public abstract class DbxTune
 			//check/fix opt Str
 			logFilename = opt;
 		}
-		// If NO-GUI mode try to figgure out a 
+
+		// If NO-GUI mode, try tof figgure out:
+		//  - dbms server name or alias to use (for info and log file)
+		//  - if 'logFilename' is only a directory... then add server/alias name as the logFilename
 		if ( ! _gui )
 		{
 			// first: get servername from the propfile
 			//String srvName = storeConfigProps.getProperty("conn.dbmsName");
-			String srvName = storeConfigProps.getProperty("conn.dbmsName");
+			String tmpSrvName = storeConfigProps.getProperty("conn.dbmsName");
 
 			// Override the name if we got the servernmae from the command line params
 			if (cmd.hasOption('S'))
-				srvName = cmd.getOptionValue('S');
+			{
+				tmpSrvName = cmd.getOptionValue('S');
 
-			// If we GOT a servername, set the log-name based on that
-			if (srvName != null)
-				srvName = stripSrvName(srvName);
+				// dbmsSrv*Name is used later
+				dbmsSrvName        = tmpSrvName;
+				dbmsSrvOrAliasName = tmpSrvName;
+			}
 
+			if (cmd.hasOption('A'))
+			{
+				tmpSrvName = cmd.getOptionValue('A');
+				
+				// dbmsSrv*Name is used later
+				dbmsSrvAliasName   = tmpSrvName;
+				dbmsSrvOrAliasName = tmpSrvName;
+			}
+
+			// Strip off "bad" characters from the server name (since it will be used in filenames etc)
+			tmpSrvName = stripSrvName(tmpSrvName);
+
+			// If we don't have a log file or log file directory...
+			// Can we grab the "log directory" from ENVironment variable: DBXTUNE_CENTRAL_BASE, which normally is: ${HOME}/.dbxtune/dbxc
+			if ( StringUtil.isNullOrBlank(logFilename) )
+			{
+				// Configuration also contains ENV variables
+				String dbxCentralBase = Configuration.getCombinedConfiguration().getProperty("DBXTUNE_CENTRAL_BASE");
+
+				// If not found in getCombinedConfiguration, try another way...
+				if (StringUtil.isNullOrBlank(dbxCentralBase)) 
+					dbxCentralBase = StringUtil.getEnvVariableValue("DBXTUNE_CENTRAL_BASE");
+
+				if (StringUtil.hasValue(dbxCentralBase))
+				{
+					logFilename = dbxCentralBase + File.separator + "log";
+					System.out.println("INFO: No log file (or directory) was specified ('-L' or '--logfile'), but the environment variable 'DBXTUNE_CENTRAL_BASE' was found using that as a base. The log file directory will be '" + logFilename + "'.");
+				}
+			}
+			
+			// Investigate if logFilename is ONLY a DIRECTORY ... then add "srvName"
+			if (StringUtil.hasValue(logFilename) && tmpSrvName != null)
+			{
+				File tmpFile = new File(logFilename);
+				if (tmpFile.isDirectory())
+				{
+					logFilename += File.separator + tmpSrvName + ".log";
+
+					// No log file is yet available, so we need to use 'System.out.println' to print stuff
+					System.out.println("INFO: The logfile '" + tmpFile + "' specified by '-L' or '--logfile' is a directory, and no log file was specified. Constructing a log file using the switches '-S,--server' or '-A,--serverAlias' to fill in the server name. new logFilename is '" + logFilename + "'.");
+				}
+			}
+			
 			// NO Logfile was specified, maybe try to set the filename to AppName.nogui.dbmsSrvName.log
-			if ( srvName != null && StringUtil.isNullOrBlank(logFilename) )
+			if ( tmpSrvName != null && StringUtil.isNullOrBlank(logFilename) )
 			{
 				logFilename = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() : System.getProperty("user.home");
 				if ( logFilename != null && ! (logFilename.endsWith("/") || logFilename.endsWith("\\")) )
-					logFilename += System.getProperty("file.separator");
+					logFilename += File.separator;
 
-				logFilename += "log" + System.getProperty("file.separator");
+				logFilename += "log" + File.separator;
 
-				logFilename += Version.getAppName()+".nogui."+srvName+".log";
+				logFilename += Version.getAppName()+".nogui."+tmpSrvName+".log";
 			}
-			
-			// DBMS Srv Name is used later
-			dbmsSrvName = srvName;
 		}
-
 
 
 
@@ -838,7 +890,7 @@ public abstract class DbxTune
 			if (cmd.hasOption('S'))	storeConfigProps.setProperty("conn.dbmsName",        cmd.getOptionValue('S'));
 			if (cmd.hasOption('A'))	storeConfigProps.setProperty("conn.dbmsServerAlias", cmd.getOptionValue('A'));
 			if (cmd.hasOption('O'))	storeConfigProps.setProperty("conn.jdbcUrlOptions",  cmd.getOptionValue('O'));
-			
+
 			// Check servername
 			boolean plainAseServerName = false;
 			String dbmsCmdLineSwitchHostname = null;
@@ -895,7 +947,6 @@ public abstract class DbxTune
 						dbmsCmdLineSwitchHostname = cmdLineServer.substring(0, cmdLineServer.indexOf(":"));
 						storeConfigProps.setProperty("conn.dbmsHostPort", cmdLineServer);
 					}
-					
 				}
 			}
 
@@ -911,8 +962,16 @@ public abstract class DbxTune
 				String aseUser   = storeConfigProps.getProperty("conn.dbmsUsername", "sa");
 				String aseServer = plainAseServerName ? cmd.getOptionValue('S', null) : dbmsCmdLineSwitchHostname;
 
-				try 
+				// if we have an alias/alternate server name
+				if (cmd.hasOption('A'))
+					aseServer = cmd.getOptionValue('A');
+
+//FIXME; rewrite a bunch of this... this is to "rörigt" and it's also a bit of duplicate in CounterCollectorThreadNoGui
+
+				try
 				{
+					//_logger.info("Reading password for DBMS server name '" + aseServer + "' from file '" + OpenSslAesUtil.getPasswordFilename() + "'.");
+
 					// Note: generate a passwd in linux: echo 'thePasswd' | openssl enc -aes-128-cbc -a -salt -pass:sybase
 					String asePasswd = OpenSslAesUtil.readPasswdFromFile(aseUser, aseServer);
 					
@@ -1252,7 +1311,8 @@ public abstract class DbxTune
 			if (writeDbxTuneServiceFile)
 			{
 				// file location: ${HOME}/.asetune/info/${dbmsSrvName}.dbxtune
-				String noGuiServiceInfoFile = AppDir.getAppStoreDir() + File.separator + "info" + File.separator + dbmsSrvName + ".dbxtune";
+//				String noGuiServiceInfoFile = AppDir.getAppStoreDir() + File.separator + "info" + File.separator + dbmsSrvName + ".dbxtune";
+				String noGuiServiceInfoFile = AppDir.getAppStoreDir() + File.separator + "info" + File.separator + dbmsSrvOrAliasName + ".dbxtune";
 				File f = new File(noGuiServiceInfoFile);
 
 				_logger.info("Creating DbxTune - NOGUI Service information file '" + f.getAbsolutePath() + "'.");
@@ -1273,13 +1333,15 @@ public abstract class DbxTune
 				Configuration.setInstance(DBXTUNE_NOGUI_INFO_CONFIG, conf);
 				
 				// Set some configuartion in the file
-				conf.setProperty("dbxtune.app.name",     Version.getAppName());
-				conf.setProperty("dbxtune.startTime",    new Timestamp(System.currentTimeMillis())+"" );
-				conf.setProperty("dbxtune.pid",          JavaUtils.getProcessId("-1"));
-				conf.setProperty("dbxtune.log.file",     logFilename);
-				conf.setProperty("dbxtune.config.file",  noGuiConfigFile);
-				conf.setProperty("dbxtune.dbms.srvName", dbmsSrvName);
-				conf.setProperty("dbxtune.refresh.rate", storeConfigProps.getProperty("offline.sampleTime", ""));
+				conf.setProperty("dbxtune.app.name",            Version.getAppName());
+				conf.setProperty("dbxtune.startTime",           new Timestamp(System.currentTimeMillis())+"" );
+				conf.setProperty("dbxtune.pid",                 JavaUtils.getProcessId("-1"));
+				conf.setProperty("dbxtune.log.file",            logFilename);
+				conf.setProperty("dbxtune.config.file",         noGuiConfigFile);
+				conf.setProperty("dbxtune.dbms.srvName",        dbmsSrvName);
+				conf.setProperty("dbxtune.dbms.srvAliasName",   dbmsSrvAliasName);
+				conf.setProperty("dbxtune.dbms.srvOrAliasName", dbmsSrvOrAliasName);
+				conf.setProperty("dbxtune.refresh.rate",        storeConfigProps.getProperty("offline.sampleTime", ""));
 
 				// AlarmWriteToFile ACTIVE/LOG properties (so the DBXCENTRAL OverviewServlet can pick it up)
 				String wtoFileActiveFilename = Configuration.getCombinedConfiguration().getPropertyRaw(AlarmWriterToFile.PROPKEY_activeFilename);
@@ -1805,6 +1867,8 @@ public abstract class DbxTune
 		pw.println("  -s,--sshServer <host>     SSH Hostname, used by Host Monitoring subsystem.");
 		pw.println("  ");
 		pw.println("  -L,--logfile <filename>   Name of the logfile where application logging is saved.");
+		pw.println("                            if the filename is only a directory, the -S or -A will be");
+		pw.println("                            used as the filename in that directory.");
 		pw.println("  -H,--homedir <dirname>    HOME Directory, where all personal files are stored.");
 		pw.println("  -R,--savedir <dirname>    DBXTUNE_SAVE_DIR, where H2 Database recordings are stored.");
 		pw.println("  -D,--javaSystemProp <k=v> set Java System Property, same as java -Dkey=value");

@@ -43,6 +43,7 @@ public abstract class SqlServerConfigText
 		 SqlServerHelpDb
 		,SqlServerSysDatabases
 		,SqlServerTraceflags
+		,SqlServerLinkedServers
 		,SqlServerHelpSort
 		,SqlServerHostInfo
 		,SqlServerSysInfo
@@ -58,6 +59,7 @@ public abstract class SqlServerConfigText
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.HelpDb());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SysDatabases());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.Traceflags());
+		DbmsConfigTextManager.addInstance(new SqlServerConfigText.LinkedServers());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.HelpSort());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.HostInfo());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SysInfo());
@@ -253,6 +255,14 @@ public abstract class SqlServerConfigText
 			// Now set the config
 			setConfig(sb.toString());
 		}
+	}
+
+	public static class LinkedServers extends DbmsConfigTextAbstract
+	{
+		@Override public    String     getTabLabel()                        { return "sp_linkedservers"; }
+		@Override public    String     getName()                            { return ConfigType.SqlServerLinkedServers.toString(); }
+		@Override public    String     getConfigType()                      { return getName(); }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_linkedservers"; }
 	}
 
 	public static class HelpSort extends DbmsConfigTextAbstract

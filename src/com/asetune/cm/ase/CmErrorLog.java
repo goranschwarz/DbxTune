@@ -583,7 +583,10 @@ extends CountersModelAppend
 	public static final int     DEFAULT_alarm_Severity              = 16;
 
 	public static final String  PROPKEY_alarm_ErrorNumberSkipList   = CM_NAME + ".alarm.system.errorNumber.skip.list";
-	public static final String  DEFAULT_alarm_ErrorNumberSkipList   = "";
+//	public static final String  DEFAULT_alarm_ErrorNumberSkipList   = "";
+	public static final String  DEFAULT_alarm_ErrorNumberSkipList   = "1621";
+	// Below number are usually found when a "penetration test tool" is checking the environment
+	// Num=1621, Severity=18, Text=Type '3' not allowed before login.
 
 	public static final String  PROPKEY_alarm_ConfigChanges         = CM_NAME + ".alarm.system.on.ConfigChanges";
 	public static final boolean DEFAULT_alarm_ConfigChanges         = true;

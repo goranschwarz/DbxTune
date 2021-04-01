@@ -1,10 +1,19 @@
 ##===========================================================================
 ## Fields in this file
-## 1 - ASE SERVERNAME
+## 1 - SERVERNAME (must be unique) (this is connection info sent to the specified DbxTune collector) 
 ## 2 - 1=Enabled, 0=Disabled
 ## 3 - Some explanation for the role of this server
 ## 4 - Script that will be used to start the server.
 ##     NOTE: <SRVNAME> is replaced with the servername in field 1
+##===========================================================================
+## NOTE about field 1 / ServerName
+##  * This must be a unique name
+##  * If this field contain any strange char like '/', '\', ';' or ':' then we need to add: -A alternameSrvName
+##    The alternate server name will be used for log files, H2 Database Recordings, DbxCentral SchemaName, etc...
+##  For example if the server do not run on the default port name, a entry might look like:
+##    prod-1a-pg.acme.com:1234 ; 1 ; Some Desc ; ${DBXTUNE_CENTRAL_BASE}/bin/start_postgrestune.sh <SRVNAME> -A prod-1a-pg
+##  Or for a SQL-Server with dynamic ports
+##    GS-1-WIN\SS_2016 ; 1 ; SQL-Server 2016 on Windows ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.sh <SRVNAME> -A GS-1-WIN__SS_2016
 ##===========================================================================
 ## NOTE about field 4 / Script...
 ## ${DBXTUNE_CENTRAL_BASE} is normally: ${HOME}/.dbxtune/dbxc
@@ -12,12 +21,12 @@
 ## You CAN also put everything (all cmdline switches) in here as well, but the row will be very long...
 ##===========================================================================
 
-PROD_A1_ASE       ; 1 ; PROD Active Side   ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
-PROD_B1_ASE       ; 1 ; PROD Standby Side  ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
-PROD_REP          ; 1 ; PROD RepServer     ; ${DBXTUNE_CENTRAL_BASE}/bin/start_rstune.sh <SRVNAME>
-prod-psql1        ; 1 ; PROD Postgres      ; ${DBXTUNE_CENTRAL_BASE}/bin/start_postgrestune.sh <SRVNAME>
-DEV_ASE           ; 1 ; DEV                ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
-SYS_ASE           ; 1 ; SYS                ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
-INT_ASE           ; 1 ; INT                ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
-STAGE_ASE         ; 1 ; STAGE              ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
-hostname\instname ; 1 ; TEST MS SQL-Server ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.sh <SRVNAME>
+PROD_A1_ASE      ; 1 ; PROD Active Side              ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
+PROD_B1_ASE      ; 1 ; PROD Standby Side             ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
+DEV_ASE          ; 1 ; DEV                           ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
+SYS_ASE          ; 0 ; SYS                           ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
+INT_ASE          ; 0 ; INT                           ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
+STAGE_ASE        ; 0 ; STAGE                         ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
+prod-psql1       ; 1 ; Postgres on default port      ; ${DBXTUNE_CENTRAL_BASE}/bin/start_postgrestune.sh <SRVNAME>
+host-1:1234      ; 1 ; Postgres on non default port  ; ${DBXTUNE_CENTRAL_BASE}/bin/start_postgrestune.sh <SRVNAME> -A prod-1a-pg
+GS-1-WIN\SS_2016 ; 1 ; SQL-Server on dynamic port    ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.sh <SRVNAME> -A GS-1-WIN__SS_2016

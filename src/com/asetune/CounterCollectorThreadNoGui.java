@@ -158,6 +158,42 @@ implements Memory.MemoryListener
 		return false;
 	}
 
+	public boolean checkValidDbmsServerName(String dbmsServer)
+	throws Exception
+	{
+		char foundChar = ' ';
+
+		if (dbmsServer.indexOf('/')  != -1) foundChar = '/';
+		if (dbmsServer.indexOf('\\') != -1) foundChar = '\\';
+		if (dbmsServer.indexOf(':')  != -1) foundChar = ':';
+		if (dbmsServer.indexOf(';')  != -1) foundChar = ';';
+		
+		if (foundChar == ' ')
+			return true;
+		
+		String suggestedName = dbmsServer.replace(foundChar+"", "__");
+		throw new Exception("DBMS Server name '" + dbmsServer + "' is NOT ALLOWED. It containes character '" + foundChar + "' which will cause problems in various places. Please use an alternate name using cmd line switch -A|--serverAlias NameOfServer, for example: -A " + suggestedName + ". This name will be used as Collector DatabaseName and various other files.");
+	}
+
+
+	public boolean checkValidDbmsAliasName(String dbmsServer)
+	throws Exception
+	{
+		char foundChar = ' ';
+
+		if (dbmsServer.indexOf('/')  != -1) foundChar = '/';
+		if (dbmsServer.indexOf('\\') != -1) foundChar = '\\';
+		if (dbmsServer.indexOf(':')  != -1) foundChar = ':';
+		if (dbmsServer.indexOf(';')  != -1) foundChar = ';';
+		
+		if (foundChar == ' ')
+			return true;
+		
+		String suggestedName = dbmsServer.replace(foundChar+"", "__");
+		throw new Exception("DBMS Alias Server name '" + dbmsServer + "' is NOT ALLOWED. It containes character '" + foundChar + "' which will cause problems in various places. Please use another alternate name, for example: -A " + suggestedName);
+	}
+
+
 	@Override
 	public void init(boolean hasGui)
 	throws Exception
@@ -264,6 +300,23 @@ implements Memory.MemoryListener
 		if (_dbmsUsername == null) throw new Exception("No DBMS User has been specified. Not by commandLine parameters '-U', or by property 'conn.dbmsUsername' in the file '"+_storeProps.getFilename()+"'.");
 		if (_dbmsServer == null)   throw new Exception("No DBMS Server has been specified. Not by commandLine parameters '-S', or by property 'conn.dbmsName' in the file '"+_storeProps.getFilename()+"'.");
 
+		// Check the server name for characters we KNOW will be hard to use, like: 
+		//  * '/' -- slash     in a H2 database name will cause H" to create a directory... 
+		//  * '\' -- backslash in a H2 database name will cause H" to create a directory...
+		//  * ';' -- semicolon can't be part of a H2 URL
+		//  * ':' -- colon is harder to handle on a Windows Server that other chars
+		if (StringUtil.isNullOrBlank(_dbmsServerAlias))
+		{
+			// This will check for "bad" characters, and if we find any it will throw an Exception
+			checkValidDbmsServerName(_dbmsServer);
+		}
+		if (StringUtil.hasValue(_dbmsServerAlias))
+		{
+			// This will check for "bad" characters, and if we find any it will throw an Exception
+			checkValidDbmsAliasName(_dbmsServerAlias);
+		}
+
+		
 		
 		// TODO: maybe break this out into the counterCollector, so we can adapt to other DBMS types
 		if (    "AseTune".equalsIgnoreCase(Version.getAppName())
@@ -1038,6 +1091,7 @@ implements Memory.MemoryListener
 			// CONNECT (initial or reconnect)
 			if ( ! getCounterController().isMonConnected(true, true))
 			{
+				_logger.info("-----------------------------------------------------------------------------------------");
 				_logger.debug("Connecting to DBMS server using. user='"+_dbmsUsername+"', passwd='"+_dbmsPassword+"', hostPortStr='"+_dbmsHostPortStr+"'. dbmsServer='"+_dbmsServer+"'");
 				_logger.info( "Connecting to DBMS server using. user='"+_dbmsUsername+"', passwd='"+ "*hidden*" +"', hostPortStr='"+_dbmsHostPortStr+"'. dbmsServer='"+_dbmsServer+"'");
 
@@ -1077,14 +1131,37 @@ implements Memory.MemoryListener
 				}
 				catch (SQLException ex)
 				{
-					// connection failed, and we should retry
-					// Do nothing here, later on in the code will will (send alarms), and start at the top again
-					connectException = ex;
-					connectInfoMsg   = "Username='"+_dbmsUsername+"', Password='"+ "*secret*"    +"', Server='"+_dbmsServer+"', HostPortStr='"+_dbmsHostPortStr+"', UrlOptions='"+_jdbcUrlOptions+"'. Caught: "+ex;
-					
-					// But at least, log the exception...
-					_logger.info ("Problems connecting to DBMS, retry  will be done later. Username='"+_dbmsUsername+"', Password='"+ "*secret*"    +"', Server='"+_dbmsServer+"', HostPortStr='"+_dbmsHostPortStr+"', UrlOptions='"+_jdbcUrlOptions+"'. Caught: "+ex);
-					_logger.debug("Problems connecting to DBMS, retry  will be done later. Username='"+_dbmsUsername+"', Password='"+ _dbmsPassword +"', Server='"+_dbmsServer+"', HostPortStr='"+_dbmsHostPortStr+"', UrlOptions='"+_jdbcUrlOptions+"'. Caught: "+ex);
+					try
+					{
+						// DBMS Specific error checking on Connect error
+						// This can for example check if it's a Login Fail due to wrong Password, and then throw an Exception
+						getCounterController().noGuiConnectErrorHandler(ex, _dbmsUsername, _dbmsPassword, _dbmsServer, _dbmsHostPortStr, _jdbcUrlOptions);
+
+						// connection failed, and we should retry
+						// Do nothing here, later on in the code will will (send alarms), and start at the top again
+						connectException = ex;
+						connectInfoMsg   = "Username='"+_dbmsUsername+"', Password='"+ "*secret*"    +"', Server='"+_dbmsServer+"', HostPortStr='"+_dbmsHostPortStr+"', UrlOptions='"+_jdbcUrlOptions+"'. Caught: "+ex;
+						
+						// But at least, log the exception...
+						_logger.info ("Problems connecting to DBMS, retry  will be done later. Username='"+_dbmsUsername+"', Password='"+ "*secret*"    +"', Server='"+_dbmsServer+"', HostPortStr='"+_dbmsHostPortStr+"', UrlOptions='"+_jdbcUrlOptions+"'. Caught: "+ex);
+						_logger.debug("Problems connecting to DBMS, retry  will be done later. Username='"+_dbmsUsername+"', Password='"+ _dbmsPassword +"', Server='"+_dbmsServer+"', HostPortStr='"+_dbmsHostPortStr+"', UrlOptions='"+_jdbcUrlOptions+"'. Caught: "+ex);
+					}
+					catch (Exception ex2)
+					{
+						_logger.info("-----------------------------------------------------------------------------------------");
+						_logger.info("Problems connecting to DBMS, non-retryable error. Username='"+_dbmsUsername+"', Password='"+_dbmsPassword+"', Server='"+_dbmsServer+"', HostPortStr='"+_dbmsHostPortStr+"', UrlOptions='"+_jdbcUrlOptions+"'. Caught: "+ex);
+						_logger.info("-----------------------------------------------------------------------------------------");
+
+						// Disconnect, and get out of here...
+						getCounterController().closeMonConnection();
+						
+						// THE LOOP WILL BE FALSE (_running = false)
+						_running = false;
+
+						// GET OUT OF THE LOOP, causing us to EXIT
+						break;
+					}
+
 				}
 				catch (Exception ex)
 				{
@@ -1097,7 +1174,7 @@ implements Memory.MemoryListener
 					// GET OUT OF THE LOOP, causing us to EXIT
 					break;
 				}
-
+				_logger.info("-----------------------------------------------------------------------------------------");
 
 				if ( ! getCounterController().isMonConnected(true, true) )
 				{

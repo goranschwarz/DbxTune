@@ -298,4 +298,16 @@ extends CounterControllerAbstract
 	{
 		return false;
 	}
+
+	@Override
+	public void noGuiConnectErrorHandler(SQLException ex, String dbmsUsername, String dbmsPassword, String dbmsServer, String dbmsHostPortStr, String jdbcUrlOptions) 
+	throws Exception
+	{
+		// Error checking for "invalid password" or other "unrecoverable errors"
+		// ORA-01017: invalid username/password; logon denied
+		if (ex.getMessage().contains("ORA-01017"))
+		{
+			throw new Exception("The error message suggest that the wrong USER '" + dbmsUsername + "' or PASSWORD '" + dbmsPassword + "' to DBMS server '" + dbmsServer + "' was entered. This is a non-recovarable error. DBMS Error Message='" + ex.getMessage() + "'.", ex);
+		}
+	}
 }

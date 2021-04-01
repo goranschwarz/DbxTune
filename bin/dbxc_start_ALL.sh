@@ -37,6 +37,35 @@ then
 fi
 
 
+##----------------------------------------------
+## Check that the server names are UNIQUE in the SERVER_LIST
+##----------------------------------------------
+tmpSrvList=$(cat ${dbxCentralBase}/conf/SERVER_LIST | sed -e '/^[[:space:]]*$/d' -e '/^#/d' |  awk -F\; '{ if (int($2) > 0) print $1 }')
+tmpServerCount=$(echo ${tmpSrvList} | wc -w)
+tmpUniqueCount=$(echo ${tmpSrvList} | xargs -n1 | sort -u | xargs | wc -w)
+if [ ${tmpServerCount} -ne ${tmpUniqueCount} ]
+then
+	echo ""
+	echo "========================================================================"
+	echo " ERROR: server names are NOT unique"
+	echo "        All server names if field 1 (server name) must be unique."
+	echo ""
+	echo " Duplicate Server Count: $(( ${tmpServerCount} - ${tmpUniqueCount} ))"
+	echo " Total     Server Count: ${tmpServerCount}"
+	echo " Unique    Server Count: ${tmpUniqueCount}"
+	echo "========================================================================"
+	echo " SERVER LIST file: ${dbxCentralBase}/conf/SERVER_LIST"
+	echo " Below is ALL entries in the file."
+	echo "------------------------------------------------------------------------"
+	echo "${tmpSrvList}"
+	echo "------------------------------------------------------------------------"
+	echo "Exiting..."
+	echo ""
+	
+	exit 1
+fi
+
+
 ##------------------------------------
 ## Function: 
 ##------------------------------------
@@ -148,12 +177,27 @@ do
 			## evaluate / resolve any variables inside ${startCmd}
 			escapedStartCmd=$(echo "${startCmd}" | sed 's/\\/\\\\/g') ## escape '\' into '\\' otherwise the non-escaped '\' will disappear in eval.
 			startCmdEval=$( eval echo "${escapedStartCmd}" )
-		
+
+			## Get '-A' or '--serverAlias' to use as "console log" name
+			srvNameOrAlias=${srvName}
+			withAliasDesc=""
+			params=( $( getopt -q -o A: -l serverAlias: -- ${startCmdEval} ) )
+			for (( j=0; j<${#params[@]}; j++ ))
+			do
+				if [ "${params[j]}" == "-A" ] || [ "${params[j]}" == "--serverAlias" ]
+				then
+					srvNameOrAlias=$(echo ${params[j+1]} | tr -d \')
+					withAliasDesc="with alias name '${srvNameOrAlias}'"
+				fi
+			done
+
+			
+
 			echo ""
-			echo " * Starting monitoring of server '${srvName}' (with nohup in background, output to ${dbxCentralBase}/log/${srvName}.console)."
-			nohup ${startCmdEval} > ${dbxCentralBase}/log/${srvName}.console 2>&1 &
+			echo " * Starting monitoring of server '${srvName}' ${withAliasDesc} (with nohup in background, output to ${dbxCentralBase}/log/${srvNameOrAlias}.console)."
+			nohup ${startCmdEval} > ${dbxCentralBase}/log/${srvNameOrAlias}.console 2>&1 &
 			## Stop writing to console file after 100M, so we don't use to much space... During statup, the interesting things are at the start of the file 
-#			nohup ${startCmdEval} 2>&1 | head -c 100M > ${dbxCentralBase}/log/${srvName}.console &
+#			nohup ${startCmdEval} 2>&1 | head -c 100M > ${dbxCentralBase}/log/${srvNameOrAlias}.console &
 			#echo "################## startCmd: ${startCmd}"
 			#echo "############## startCmdEval: ${startCmdEval}"
 			lastBgPid=$!
@@ -171,7 +215,7 @@ do
 				echo "  cmd: ${startCmd}"
 				echo " eval: ${startCmdEval}"
 				echo "------ BEGIN output from the start command ------------------------"
-				cat ${dbxCentralBase}/log/${srvName}.console
+				cat ${dbxCentralBase}/log/${srvNameOrAlias}.console
 				echo "------ END   output from the start command ------------------------"
 				echo ""
 			fi

@@ -631,6 +631,7 @@ public class CentralPersistReader
 	private void getAlarmHistory(DbxConnection conn, List<DbxAlarmHistory> list, String schema, String age, String type, String category)
 	throws SQLException
 	{
+//System.out.println("----- getAlarmHistory(conn, list='" + list + "', schema='" + schema + "', age='" + age + "', type='" + type + "', category='" + category + "')");
 		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
 		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 
@@ -730,6 +731,7 @@ public class CentralPersistReader
 			//	+" order by " + lq+"createTime"+rq + ", " +lq+"cancelTime"+rq;
 				+" order by " + lq+"SessionStartTime"+rq + ", " +lq+"SessionSampleTime"+rq + ", " +lq+"eventTime"+rq;
 
+//System.out.println("----- getAlarmHistory(): SQL=|" + sql + "|");
 		// autoclose: stmnt, rs
 		// autoclose: stmnt, rs
 		try (Statement stmnt = conn.createStatement())
@@ -782,6 +784,7 @@ public class CentralPersistReader
 				list.remove(0);
 			}
 		}
+//System.out.println("----- getAlarmHistory(): end: list.size=" + list.size());
 	}
 
 

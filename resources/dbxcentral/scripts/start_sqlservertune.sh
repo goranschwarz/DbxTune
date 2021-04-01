@@ -36,24 +36,40 @@ dbxSwHome=${DBXTUNE_HOME:-${HOME}/dbxtune/0}
 #dbmsUser=sa
 dbmsUser=dbxtune
 
-osUser=${USER:-sybase}
-
-#srvNameAlias="-A ${srvName}_ss"  ## if you use alias, don't forget to set the ${logFile} to the alias as well
+osUser=${USER:-dbxtune}
+osUserSwitch=-u${USER:-dbxtune}
 
 cfgFile=${dbxCentralBase}/conf/sqlserver.GENERIC.conf
 logDir=${dbxCentralBase}/log
 saveDir=${dbxCentralBase}/data
-logFile=${logDir}/${srvName%%.*}.log    ## only keep 'host1' of the srvName (host1.acme.com)
+#logFile=${logDir}/${srvName%%.*}.log    ## only keep 'host1' of the srvName (host1.acme.com)
+
 
 #export DBXTUNE_JVM_SWITCHES="-DSqlCaptureBrokerAse.debug=true"
 #export DBXTUNE_JVM_SWITCHES="-Dnogui.password.print=true"
+
+## Override settings for specific server names
+#case ${srvName} in
+#    srvname1 | srvname2)
+#        DBXTUNE_JVM_SWITCHES="-Xmx4G"
+#        ;;
+#    srvname3)
+#        cfgFile=${dbxCentralBase}/conf/sqlserver.srvname3.conf
+#        ;;
+#    someWindowsServer)
+#        osUserSwitch="" ## disable OS Monitoring
+#        ;;
+#esac
 
 ##----------------------------------------------
 ## Start
 ##----------------------------------------------
 
+${dbxSwHome}/bin/sqlservertune.sh -n ${cfgFile} -U${dbmsUser} -S${srvName} ${osUserSwitch} -L ${logDir} --savedir ${saveDir} ${extraParams}
+
+
 ## If SQL-Server is on Windows (we can NOT do OS monitoring for the moment)
-${dbxSwHome}/bin/sqlservertune.sh -n ${cfgFile} -U${dbmsUser} -S${srvName} ${srvNameAlias}             -L ${logFile} --savedir ${saveDir} ${extraParams}
+#${dbxSwHome}/bin/sqlservertune.sh -n ${cfgFile} -U${dbmsUser} -S${srvName}             -L ${logDir} --savedir ${saveDir} ${extraParams}
 
 ## If SQL-Server is on Linux
-#${dbxSwHome}/bin/sqlservertune.sh -n ${cfgFile} -U${dbmsUser} -S${srvName} ${srvNameAlias} -u${osUser} -L ${logFile} --savedir ${saveDir} ${extraParams}
+#${dbxSwHome}/bin/sqlservertune.sh -n ${cfgFile} -U${dbmsUser} -S${srvName} -u${osUser} -L ${logDir} --savedir ${saveDir} ${extraParams}

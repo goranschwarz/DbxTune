@@ -976,6 +976,26 @@ public class SshConnection
 	synchronized public Session execCommand(String command) 
 	throws IOException
 	{
+		return execCommand(command, false);
+	}
+
+	/**
+	 * Execute a Operating System Command on the remote host
+	 * <p>
+	 * If the connection has been closed, a new one will be attempted.
+	 * <p>
+	 * Note: This is synchronized because if several execute it simultaneously and we have 
+	 * lost the connection and make a reconnect attempt, it's likely to fail with 'is already in connected state!' or 'IllegalStateException: Cannot open session, you need to establish a connection first.'  or similar errors.
+	 * 
+	 * @param command       The OS Command to be executed
+	 * @param requestPty    Request a "teminal" from where the command is executed on
+	 * @return a Session object, which you can read stdout and stderr on
+	 * @throws IOException 
+	 * @see Session
+	 */
+	synchronized public Session execCommand(String command, boolean requestPty) 
+	throws IOException
+	{
 		if (_conn == null)
 		{
 			throw new IOException("The SSH connection to the host '"+_hostname+"' was null. The connection has not been initialized OR someone has closed the connection.");
@@ -985,7 +1005,16 @@ public class SshConnection
 		{
 			Session sess = _conn.openSession();
 			_logger.debug("Executing command '"+command+"' on connection: "+toString());
+			
+			// SSHD On Windows do not close "long running" commands on the server side on disconnect
+			// see: https://github.com/PowerShell/Win32-OpenSSH/issues/1751
+			// The workaround seems to be "ssh -t user@ip" where the "-t" is to request a Terminal
+			if (requestPty)
+				sess.requestDumbPTY();
+			
+			// Now execute the command
 			sess.execCommand(command);
+
 			return sess;
 		}
 		catch (IllegalStateException e)

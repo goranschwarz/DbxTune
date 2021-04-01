@@ -387,7 +387,8 @@ extends CountersModelAppend
 						String extendedDescText = errorTxt;
 						String extendedDescHtml = errorTxt;
 
-						AlarmEvent ae = new AlarmEventErrorLogEntry(this, AlarmEvent.Severity.WARNING, searchFor, errorTxt);
+//						AlarmEvent ae = new AlarmEventErrorLogEntry(this, AlarmEvent.Severity.WARNING, searchFor, errorTxt);
+						AlarmEvent ae = new AlarmEventErrorLogEntry(this, AlarmEvent.Severity.INFO, searchFor, errorTxt);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
 						alarmHandler.addAlarm( ae );
@@ -565,7 +566,12 @@ extends CountersModelAppend
 	public static final int     DEFAULT_alarm_Severity              = 16;
 
 	public static final String  PROPKEY_alarm_ErrorNumberSkipList   = CM_NAME + ".alarm.system.errorNumber.skip.list";
-	public static final String  DEFAULT_alarm_ErrorNumberSkipList   = "";
+//	public static final String  DEFAULT_alarm_ErrorNumberSkipList   = "";
+	public static final String  DEFAULT_alarm_ErrorNumberSkipList   = "17810, 17832, 17836";
+	// Below number are usually found when a "penetration test tool" is checking the environment
+	// Num=17810, Severity=20, Text=Could not connect because the maximum number of '1' dedicated administrator connections already exists. Before a new connection can be made, the existing dedicated administrator connection must be dropped, either by logging off or ending the process. [CLIENT: 172.25.0.49] 
+	// Num=17832, Severity=20, Text=The login packet used to open the connection is structurally invalid; the connection has been closed. Please contact the vendor of the client library. [CLIENT: 172.25.0.49] 
+	// Num=17836, Severity=20, Text=Length specified in network packet payload did not match number of bytes read; the connection has been closed. Please contact the vendor of the client library. [CLIENT: 172.25.0.49] 
 
 	public static final String  PROPKEY_alarm_ConfigChanges         = CM_NAME + ".alarm.system.on.ConfigChanges";
 	public static final boolean DEFAULT_alarm_ConfigChanges         = true;

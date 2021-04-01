@@ -22,9 +22,12 @@ package com.asetune.alarm;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -34,6 +37,7 @@ import org.apache.log4j.PropertyConfigurator;
 import com.asetune.AppDir;
 import com.asetune.Version;
 import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEventSrvDown;
 import com.asetune.alarm.events.AlarmEvent.Category;
 import com.asetune.alarm.events.AlarmEvent.ServiceState;
 import com.asetune.alarm.events.AlarmEvent.Severity;
@@ -475,6 +479,8 @@ implements Runnable
 
 	private void raise(AlarmEvent alarmEvent)
 	{
+		addUndergoneAlarmDetection(alarmEvent.getServiceInfo()); // in _serviceInfo the CM.getName() is stored 
+		
 		isInitialized();
 		if (isSendAlarmsDisabled())
 		{
@@ -648,11 +654,25 @@ implements Runnable
 	}
 	
 	/**
-	 * This methos should only be executed at the end of a check loop.
+	 * Add a "message" to the AlarmHandler saying that THIS CM have undergone Alarm detection
+	 * So when endOfScan() is called, we can see WHAT CM's we can CANCEL alarms for
+	 * endOfScan() should NOT cancel alarms for CM's that we have NOT made any alarms checks for
+	 * For example if we would have (several) "timeout" on CM's the TimeToLive wont be trustworthy and then we will CANCEL alarms even if we shouldn't
+	 * 
+	 * @param name
+	 */
+	public void addUndergoneAlarmDetection(String name)
+	{
+		_hasUndergoneAlarmDetection.add(name);
+	}
+	private Set<String> _hasUndergoneAlarmDetection = new HashSet<>();
+
+	/**
+	 * This method should only be executed at the end of a check loop.
 	 */
 	public void endOfScan()
 	{
-		// Remove any alarms in the "delayd alarms" when TimeToLive has expired and no "repeat" has been sent
+		// Remove any alarms in the "delayed alarms" when TimeToLive has expired and no "repeat" has been sent
 		checkForCancelationsDelayedAlarms();
 		
 		// Check if there are any delayed alarms that we need to handle/raise
@@ -678,6 +698,9 @@ implements Runnable
 			}
 		}
 
+		// Clear this for next "end-of-scan"
+		_hasUndergoneAlarmDetection.clear();
+		
 		// Notify that we got changes
 		fireChangeListener();
 	}
@@ -747,6 +770,28 @@ implements Runnable
 		// get all alarms from the "saved/history" which is NOT part of ThisScan  
 		List<AlarmEvent> cancelList = _alarmContActive.getCancelList(_alarmContThisScan);
 
+		// If the Cancelled Alarm has NOT been marked as "undergone Alarm detection"...
+		// then remove it from the cancelList
+		ListIterator<AlarmEvent> li = cancelList.listIterator();
+		while(li.hasNext())
+		{
+			AlarmEvent cancelledAlarm = li.next();
+
+			//if (cancelledAlarm.isXxx) // NOTE: Possibly implement a method on the Alarm to check if the Alarm *must* have a "have undergone alarm detection" message
+			//                                   But for now, just check the alarm class for AlarmEventSrvDown
+			if (cancelledAlarm instanceof AlarmEventSrvDown)
+			{
+				_logger.info("Keeping Alarm 'SRV-DOWN' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. cancelledAlarm: " + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
+				continue;
+			}
+
+			if ( ! _hasUndergoneAlarmDetection.contains( cancelledAlarm.getServiceInfo() ) )
+			{
+				_logger.info("Removing Alarm '" + cancelledAlarm.getAlarmClassAbriviated() + "' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. Possibly a timeout or some other error when the CM sampled data. cancelledAlarm=" + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
+				li.remove();
+			}
+		}
+		
 		// Mark the AlarmEvent as "canceled"
 		for (AlarmEvent alarmEvent : cancelList)
 		{

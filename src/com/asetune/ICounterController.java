@@ -231,6 +231,21 @@ public interface ICounterController
 	 */
 	public DbxConnection noGuiConnect(String dbmsUsername, String dbmsPassword, String dbmsServer, String dbmsHostPortStr, String jdbcUrlOptions) throws SQLException, Exception;
 
+	/**
+	 * no-gui: On Connection error, this will be called<br>
+	 * In here every DBMS implementor can check for <i>invalid password</i> or other <i>unrecoverable errors</i> and in those 
+	 * cases throw an exception so the server wont start... and just goes into a re-connect state that will continue forever<br>
+	 * 
+	 * @param ex              Exception that occurred on Connection Failure
+	 * @param dbmsUsername
+	 * @param dbmsPassword
+	 * @param dbmsServer
+	 * @param dbmsHostPortStr
+	 * @param jdbcUrlOptions
+	 */
+	void noGuiConnectErrorHandler(SQLException ex, String dbmsUsername, String dbmsPassword, String dbmsServer, String dbmsHostPortStr, String jdbcUrlOptions) throws Exception;
+
+
 	/** Set the normal sleep time between refresh */
 	void setDefaultSleepTimeInSec(int sleepTime);
 	/** Get the normal sleep time between refresh */
@@ -286,5 +301,4 @@ public interface ICounterController
 	 * @param recordingDbConn Connection to the recording database!
 	 */
 	void doLastRecordingActionBeforeDatabaseRollover(DbxConnection recordingDbConn);
-
 }

@@ -39,7 +39,8 @@ import com.asetune.IGuiController;
 import com.asetune.Version;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
-import com.asetune.alarm.events.sqlserver.AlarmEventPerfCounterWarning;
+import com.asetune.alarm.events.AlarmEvent.Severity;
+import com.asetune.alarm.events.sqlserver.AlarmEventPerfCounter;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -2598,7 +2599,8 @@ extends CountersModel
 
 				if (freeListStalls > threshold)
 				{
-					AlarmEvent ae = new AlarmEventPerfCounterWarning(cm, "Free list stalls/sec", freeListStalls, "Buffer Cache is probably to small... 'Free list stalls/sec'=" + freeListStalls + ". Waiting for memory to become available before a page can be added into the buffer pool.", threshold);
+//					AlarmEvent ae = new AlarmEventPerfCounterWarning(cm, "Free list stalls/sec", freeListStalls, "Buffer Cache is probably to small... 'Free list stalls/sec'=" + freeListStalls + ". Waiting for memory to become available before a page can be added into the buffer pool.", threshold);
+					AlarmEvent ae = new AlarmEventPerfCounter(cm, Severity.INFO, "Free list stalls/sec", freeListStalls, "Buffer Cache is probably to small... 'Free list stalls/sec'=" + freeListStalls + ". Waiting for memory to become available before a page can be added into the buffer pool.", threshold);
 					
 					int raiseDelay = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_FreeListStalls_delay, DEFAULT_alarm_FreeListStalls_delay);
 					ae.setRaiseDelayInSec(raiseDelay);
@@ -2626,7 +2628,8 @@ extends CountersModel
 
 				if (lazyWrites > threshold)
 				{
-					AlarmEvent ae = new AlarmEventPerfCounterWarning(cm, "Lazy writes/sec", lazyWrites, "Buffer Cache is probably to small... 'Lazy writes/sec'=" + lazyWrites + ". Lazy Writer process moves 'dirty' pages from cache/buffer-pool to disk. This is an indication of 'memory pressure' or 'to little memory'.", threshold);
+//					AlarmEvent ae = new AlarmEventPerfCounterWarning(cm, "Lazy writes/sec", lazyWrites, "Buffer Cache is probably to small... 'Lazy writes/sec'=" + lazyWrites + ". Lazy Writer process moves 'dirty' pages from cache/buffer-pool to disk. This is an indication of 'memory pressure' or 'to little memory'.", threshold);
+					AlarmEvent ae = new AlarmEventPerfCounter(cm, Severity.INFO, "Lazy writes/sec", lazyWrites, "Buffer Cache is probably to small... 'Lazy writes/sec'=" + lazyWrites + ". Lazy Writer process moves 'dirty' pages from cache/buffer-pool to disk. This is an indication of 'memory pressure' or 'to little memory'.", threshold);
 
 					int raiseDelay = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LazyWrites_delay, DEFAULT_alarm_LazyWrites_delay);
 					ae.setRaiseDelayInSec(raiseDelay);

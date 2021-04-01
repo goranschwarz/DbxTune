@@ -57,6 +57,9 @@ implements Runnable
 	private static Logger _logger = Logger.getLogger(HostMonitor.class);
 	
 	public static final String PROPERTY_NAME = "HostMonitor";
+	
+//	public static final String  PROPKEY_forcePty = "HostMonitor.ssh.requestPty.force";
+	
 
 	/**The Operating System command that will be used to get valid information*/
 //	private String _command = null;
@@ -911,7 +914,21 @@ implements Runnable
 		Session sess = null;
 		try
 		{
-			_logger.info("Executing command '"+getCommand()+"' for the module '"+getModuleName()+"'.");
+//			boolean requestPty = false;
+//			if (isConnectedToVendor(OsVendor.Windows))
+//				requestPty = true;
+//
+//			if (Configuration.getCombinedConfiguration().hasProperty(PROPKEY_forcePty))
+//			{
+//				requestPty = Configuration.getCombinedConfiguration().getBooleanProperty("HostMonitor.ssh.requestPty.force", requestPty);
+//				_logger.info("Using property '" + PROPKEY_forcePty + "' to set PTY Terminal, requestPty=" + requestPty);
+//			}
+//			
+//			_logger.info("Executing command '"+getCommand()+"', requestPty=" + requestPty + ", for the module '"+getModuleName()+"'.");
+//
+//			sess = _conn.execCommand(getCommand(), requestPty);
+
+			_logger.info("Executing command '"+getCommand()+"', for the module '"+getModuleName()+"'.");
 			sess = _conn.execCommand(getCommand());
 		}
 		catch (IOException e)

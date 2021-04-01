@@ -41,12 +41,22 @@ osUser=${USER:-sybase}
 cfgFile=${dbxCentralBase}/conf/ase.GENERIC.conf
 logDir=${dbxCentralBase}/log
 saveDir=${dbxCentralBase}/data
-logFile=${logDir}/${srvName%%.*}.log    ## only keep 'host1' of the srvName (host1.acme.com)
+#logFile=${logDir}/${srvName%%.*}.log    ## only keep 'host1' of the srvName (host1.acme.com)
 
 #export DBXTUNE_JVM_SWITCHES="-DSqlCaptureBrokerAse.debug=true"
 #export DBXTUNE_JVM_SWITCHES="-Dnogui.password.print=true"
 
+## Override settings for specific server names
+#case ${srvName} in
+#    srvname1 | srvname2)
+#        DBXTUNE_JVM_SWITCHES="-Xmx4G"
+#        ;;
+#    srvname3)
+#        cfgFile=${dbxCentralBase}/conf/sqlserver.srvname3.conf
+#        ;;
+#esac
+
 ##----------------------------------------------
 ## Start
 ##----------------------------------------------
-${dbxSwHome}/bin/asetune.sh -n ${cfgFile} -U${dbmsUser} -S${srvName} -u${osUser} -L ${logFile} --savedir ${saveDir} --reconfigure ${extraParams}
+${dbxSwHome}/bin/asetune.sh -n ${cfgFile} -U${dbmsUser} -S${srvName} -u${osUser} -L ${logDir} --savedir ${saveDir} --reconfigure ${extraParams}

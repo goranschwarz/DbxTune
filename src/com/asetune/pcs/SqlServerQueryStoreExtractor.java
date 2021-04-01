@@ -114,12 +114,48 @@ public class SqlServerQueryStoreExtractor
 
 	public String getSqlForTable(QsTables tabName)
 	{
+		// SAME SQL for both ALL-PERIOD and LAST-X-DAYS
+		if (QsTables.database_query_store_options.equals(tabName))
+		{
+			// Get some extra columns:
+			// * stateIsOk                  -- (YES/NO) If desired_state = actual_state
+			// * storageUsedPct             -- How many percent have we used up of 'max_storage_size_mb'
+			// * daysInStorage              -- How many days of metrics are stored in QS
+			// * expectedMaxStorageSizeMb   -- If we continue with same daily usage, we will end up using this amount of MB. (algorithm: currentSize/numberOfDays*daysToSave) 
+			// * willExceedMaxStorageSizeMb -- (YES/NO) Do we need to alter 'max_storage_size_mb'? (algorithm: currentSize/numberOfDays*daysToSave < max_storage_size_mb)
+			return ""
+				    + "select \n"
+				    + "     CASE WHEN (desired_state = actual_state) THEN 'YES' ELSE 'NO' END AS stateIsOk \n"
+				    + "    ,CAST(((current_storage_size_mb*1.0)/(max_storage_size_mb*1.0))*100.0 as numeric(10,1)) AS storageUsedPct \n"
+				    + "    ,(select datediff(day, min(start_time), max(start_time)) from [" + _monDbName + "].sys.query_store_runtime_stats_interval) AS daysInStorage \n"
+				    + "    ,current_storage_size_mb / (select datediff(day, min(start_time), max(start_time)) from [" + _monDbName + "].sys.query_store_runtime_stats_interval) * stale_query_threshold_days AS expectedMaxStorageSizeMb \n"
+				    + "    ,CASE WHEN current_storage_size_mb / (select datediff(day, min(start_time), max(start_time)) from [" + _monDbName + "].sys.query_store_runtime_stats_interval) * stale_query_threshold_days > max_storage_size_mb \n"
+				    + "          THEN 'YES' \n"
+				    + "          ELSE 'NO' \n"
+				    + "     END AS willExceedMaxStorageSizeMb \n"
+				    + "    ,* \n"
+				    + "from [" + _monDbName + "].sys." + tabName + " \n"
+				    + "where 1=1"
+				    + "";
+		}
+
+		if (QsTables.database_automatic_tuning_options.equals(tabName))
+		{
+			return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+		}
+
+		if (QsTables.dm_db_tuning_recommendations.equals(tabName))
+		{
+			return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+		}
+		
+		
 		// transfer EVERYTHING
 		if (_period <= 0)
 		{
 			switch (tabName)
 			{
-				case database_query_store_options      : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+//				case database_query_store_options      : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
 				case query_context_settings            : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
 				case query_store_query_text            : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
 				case query_store_query                 : return "select * \n"
@@ -141,11 +177,11 @@ public class SqlServerQueryStoreExtractor
 			// Last X days
 			switch (tabName)
 			{
-				case database_query_store_options:
-				{
-					// OPTIONS
-					return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
-				}
+//				case database_query_store_options:
+//				{
+//					// OPTIONS
+//					return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+//				}
 
 				case query_context_settings:
 				{
@@ -294,17 +330,17 @@ public class SqlServerQueryStoreExtractor
 						    + "";
 				}
 
-				case database_automatic_tuning_options:
-				{
-					// GET ALL
-					return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
-				}
-			
-				case dm_db_tuning_recommendations:
-				{
-					// GET ALL Recommendations
-					return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
-				}
+//				case database_automatic_tuning_options:
+//				{
+//					// GET ALL
+//					return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+//				}
+//			
+//				case dm_db_tuning_recommendations:
+//				{
+//					// GET ALL Recommendations
+//					return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+//				}
 			
 				default:
 					throw new RuntimeException("getSqlForTable(): Unhandled Query Store Table Name: " + tabName);

@@ -361,9 +361,12 @@ public class AdminServlet extends HttpServlet
 			String filename = DbxCentralServerDescription.getDefaultFile();
 			try 
 			{
-				DbxCentralServerDescription.removeFromFile(filename, name, true); // 3 param: only comment out the file
+				boolean foundRow = DbxCentralServerDescription.removeFromFile(filename, name, true); // 3 param: only comment out the file
 
-				ao.add("Remove From Server List", new ActionType(ActionStatus.SUCCESS, "Removed server in ServerList '"+filename+"' for '"+name+"'."));
+				if (foundRow)
+					ao.add("Remove From Server List", new ActionType(ActionStatus.SUCCESS, "Removed server in ServerList '"+filename+"' for '"+name+"'."));
+				else
+					ao.add("Remove From Server List", new ActionType(ActionStatus.FAIL, "Server name '"+name+"' was NOT found in ServerList '"+filename+"'."));
 			}
 			catch (Exception e) 
 			{

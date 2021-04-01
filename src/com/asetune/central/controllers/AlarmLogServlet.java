@@ -71,9 +71,10 @@ public class AlarmLogServlet extends HttpServlet
 		String inputMethod = Helper.getParameter(req, "method");
 		String inputAge    = Helper.getParameter(req, "age");
 		
-		System.out.println("AlarmLogServlet: name = '"+inputName+"'.");
-		System.out.println("AlarmLogServlet: type = '"+inputType+"'.");
-		System.out.println("AlarmLogServlet: age  = '"+inputAge +"'.");
+		System.out.println("AlarmLogServlet: name   = '" + inputName   + "'.");
+		System.out.println("AlarmLogServlet: type   = '" + inputType   + "'.");
+		System.out.println("AlarmLogServlet: method = '" + inputMethod + "'.");
+		System.out.println("AlarmLogServlet: age    = '" + inputAge    + "'.");
 		
 		int age = StringUtil.parseInt(inputAge, 0);
 
@@ -549,6 +550,53 @@ public class AlarmLogServlet extends HttpServlet
 		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/jquery.tablesorter.widgets.js'></script> ");
 //		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/widgets/widget-scroller.js'></script> ");
 
+//		out.println("");
+//		out.println("<style>");
+//		out.println("    .cappedCell");
+//		out.println("    {");
+//		out.println("        text-overflow: ellipsis; ");
+//		out.println("        height: 10px !important;");
+//		out.println("    }");
+//		out.println("                                                  ");
+//		out.println("    .cappedCell:hover");
+//		out.println("    {");
+//		out.println("        text-overflow: none; ");
+//		out.println("        height: auto;");
+//		out.println("    }");
+//		out.println("</style>");
+//		out.println("");
+
+		out.println("");
+		out.println("<style>");
+		out.println("    .extDesc-origin-class");
+		out.println("    {");
+		out.println("        display: none; ");
+		out.println("    }");
+		out.println("                                                  ");
+		out.println("    .extDesc-stripped-class");
+		out.println("    {");
+		out.println("        display: block; ");
+		out.println("    }");
+		out.println("</style>");
+		out.println("");
+
+		out.println("");
+		out.println("<script>");
+		out.println("                                                      ");
+		out.println("function toggleExtendedDesciption()");
+		out.println("{");
+		out.println("	var extDesc = document.querySelectorAll('.extDesc-origin-class,.extDesc-stripped-class')");
+		out.println("                                                      ");
+		out.println("	// Toggle all elements in the above clases");
+		out.println("	for (let i=0; i<extDesc.length; i++)");
+		out.println("	{");
+		out.println("		extDesc[i].style.display = extDesc[i].style.display === 'none' ? 'block' : 'none';");
+		out.println("	}");
+		out.println("}");
+		out.println("                                                      ");
+		out.println("</script>");
+		out.println("");
+
 		
 		out.println("<body>");
 		out.println("<h1>" + inputName + "</h1>");
@@ -556,42 +604,48 @@ public class AlarmLogServlet extends HttpServlet
 //		out.println("<p>Error records are marked with red.</p>");
 		out.println();
 		out.println();
-		out.println("<table id='alarmTable' class='alarmTableClass tablesorter'>");
-		out.println("<thead> ");
-		out.println("  <tr> ");
-		out.println("    <th>SessionStartTime</th>");
-		out.println("    <th>SessionSampleTime</th>");
-		out.println("    <th>EventTime</th>");
-		out.println("    <th>SrvName</th>");
-		out.println("    <th>Action</th>");
-		out.println("    <th>AlarmClass</th>");
-		out.println("    <th>ServiceType</th>");
-		out.println("    <th>ServiceName</th>");
-		out.println("    <th>ServiceInfo</th>");
-		out.println("    <th>ExtraInfo</th>");
-		out.println("    <th>Category</th>");
-		out.println("    <th>Severity</th>");
-		out.println("    <th>State</th>");
-		out.println("    <th>RepeatCnt</th>");
-		out.println("    <th>Duration</th>");
-		out.println("    <th>CreateTime</th>");
-		out.println("    <th>CancelTime</th>");
-		out.println("    <th>TimeToLive</th>");
-		out.println("    <th>Threshold</th>");
-		out.println("    <th>Data</th>");
-		out.println("    <th>LastData</th>");
-		out.println("    <th>Description</th>");
-		out.println("    <th>LastDescription</th>");
-		out.println("    <th>ExtendedDescription</th>");
-		out.println("    <th>LastExtendedDescription</th>");
-		out.println("  </tr>");
-		out.println("</thead> ");
 
-		out.println("<tbody>");
-		
 		try
 		{
-			List<DbxAlarmHistory> list = CentralPersistReader.getInstance().getAlarmHistory(inputName, null, inputType, age);
+			List<DbxAlarmHistory> list = CentralPersistReader.getInstance().getAlarmHistory(inputName, age, null, inputType);
+
+			// Write how many rows there is in the table
+			out.println(list.size() + " rows in below table... <a href='javascript:toggleExtendedDesciption();'>Show/hide: Extended description</a><br>");
+			out.println("<br>");
+
+			// Write the table head + data
+			out.println("<table id='alarmTable' class='alarmTableClass tablesorter'>");
+			out.println("<thead> ");
+			out.println("  <tr> ");
+			out.println("    <th>SessionStartTime</th>");
+			out.println("    <th>SessionSampleTime</th>");
+			out.println("    <th>EventTime</th>");
+			out.println("    <th>SrvName</th>");
+			out.println("    <th>Action</th>");
+			out.println("    <th>AlarmClass</th>");
+			out.println("    <th>ServiceType</th>");
+			out.println("    <th>ServiceName</th>");
+			out.println("    <th>ServiceInfo</th>");
+			out.println("    <th>ExtraInfo</th>");
+			out.println("    <th>Category</th>");
+			out.println("    <th>Severity</th>");
+			out.println("    <th>State</th>");
+			out.println("    <th>RepeatCnt</th>");
+			out.println("    <th>Duration</th>");
+			out.println("    <th>CreateTime</th>");
+			out.println("    <th>CancelTime</th>");
+			out.println("    <th>TimeToLive</th>");
+			out.println("    <th>Threshold</th>");
+			out.println("    <th>Data</th>");
+			out.println("    <th>LastData</th>");
+			out.println("    <th>Description</th>");
+			out.println("    <th>LastDescription</th>");
+			out.println("    <th>ExtendedDescription</th>");
+			out.println("    <th>LastExtendedDescription</th>");
+			out.println("  </tr>");
+			out.println("</thead> ");
+
+			out.println("<tbody>");
 			
 			for (DbxAlarmHistory e : list)
 			{
@@ -629,9 +683,16 @@ public class AlarmLogServlet extends HttpServlet
 				out.println("  <td nowrap>" + e.getLastData()                + "</td>");
 				out.println("  <td nowrap>" + e.getDescription()             + "</td>");
 				out.println("  <td nowrap>" + e.getLastDescription()         + "</td>");
-				out.println("  <td nowrap>" + e.getExtendedDescription()     + "</td>");
-				out.println("  <td nowrap>" + e.getLastExtendedDescription() + "</td>");
-				
+//FIXME; extended, lastExtended to be "collapsable"
+//				out.println("  <td nowrap>" + e.getExtendedDescription()     + "</td>");
+//				out.println("  <td nowrap>" + e.getLastExtendedDescription() + "</td>");
+
+//				out.println("  <td nowrap><div class='cappedCell'>" + e.getExtendedDescription()     + "</div></td>");
+//				out.println("  <td nowrap><div class='cappedCell'>" + e.getLastExtendedDescription() + "</div></td>");
+
+				out.println("  <td nowrap>" + createExtendedDescEntry(e.getExtendedDescription()    ) + "</td>");
+				out.println("  <td nowrap>" + createExtendedDescEntry(e.getLastExtendedDescription()) + "</td>");
+
 				out.println("</tr>");
 			}
 		}
@@ -681,5 +742,20 @@ public class AlarmLogServlet extends HttpServlet
 		
 		out.flush();
 		out.close();
+	}
+	
+	private String createExtendedDescEntry(String originText)
+	{
+		if (StringUtil.isNullOrBlank(originText))
+			return "";
+
+		String val = ""
+				+ "<a href='javascript:toggleExtendedDesciption();'>Show/hide: Extended description</a>"
+				+ "<br> "
+				+ "<div style='display: none;'  class='extDesc-origin-class'>"   + originText + "</div>"
+				+ "<div style='display: block;' class='extDesc-stripped-class'>" + StringUtil.stripHtml( originText ) + "</div>"
+				+ "";
+
+		return val;
 	}
 }

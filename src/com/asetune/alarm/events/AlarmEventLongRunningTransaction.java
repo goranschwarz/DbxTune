@@ -38,7 +38,7 @@ extends AlarmEvent
 				cm.getName(),         // serviceInfo
 				null,                 // extraInfo
 				AlarmEvent.Category.OTHER,
-				AlarmEvent.Severity.WARNING, 
+				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
 				"Found Long running transaction in '" + cm.getServerName() + "'. Seconds=" + val + ". (threshold="+threshold+")",
 				threshold);
@@ -58,7 +58,7 @@ extends AlarmEvent
 				cm.getName(),         // serviceInfo
 				dbname,               // extraInfo
 				AlarmEvent.Category.OTHER,
-				AlarmEvent.Severity.WARNING, 
+				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
 				"Found Long running transaction in '" + cm.getServerName() + "', dbname='" + dbname +"'. Seconds=" + oldestTranInSeconds + ", TranName='"+StringUtils.trim(oldestTranName)+"'. (threshold="+threshold+")",
 				threshold);

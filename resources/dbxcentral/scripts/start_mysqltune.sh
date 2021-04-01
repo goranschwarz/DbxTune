@@ -38,12 +38,10 @@ dbmsUser=mysql
 
 osUser=${USER:-mysql}
 
-#srvNameAlias="-A ${srvName}_pg"  ## if you use alias, don't forget to set the ${logFile} to the alias as well
-
 cfgFile=${dbxCentralBase}/conf/mysql.GENERIC.conf
 logDir=${dbxCentralBase}/log
 saveDir=${dbxCentralBase}/data
-logFile=${logDir}/${srvName%%.*}.log    ## only keep 'host1' of the srvName (host1.acme.com)
+#logFile=${logDir}/${srvName%%.*}.log    ## only keep 'host1' of the srvName (host1.acme.com)
 
 osTimeZone=$(cat /etc/timezone) ## example 'Europe/Stockholm'
 JdbcOption="-O serverTimezone=${osTimeZone}"
@@ -51,7 +49,17 @@ JdbcOption="-O serverTimezone=${osTimeZone}"
 #export DBXTUNE_JVM_SWITCHES="-DSqlCaptureBrokerAse.debug=true"
 #export DBXTUNE_JVM_SWITCHES="-Dnogui.password.print=true"
 
+## Override settings for specific server names
+#case ${srvName} in
+#    srvname1 | srvname2)
+#        DBXTUNE_JVM_SWITCHES="-Xmx4G"
+#        ;;
+#    srvname3)
+#        cfgFile=${dbxCentralBase}/conf/sqlserver.srvname3.conf
+#        ;;
+#esac
+
 ##----------------------------------------------
 ## Start
 ##----------------------------------------------
-${dbxSwHome}/bin/mysqltune.sh -n ${cfgFile} -U${dbmsUser} -S${srvName} ${srvNameAlias} ${JdbcOption} -u${osUser} -L ${logFile} --savedir ${saveDir} ${extraParams}
+${dbxSwHome}/bin/mysqltune.sh -n ${cfgFile} -U${dbmsUser} -S${srvName} ${JdbcOption} -u${osUser} -L ${logDir} --savedir ${saveDir} ${extraParams}

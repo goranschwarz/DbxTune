@@ -107,12 +107,21 @@ then
 		for pid in ${pidList}
 		do
 			fullCmd=$(ps -ww --pid ${pid} --format cmd | grep java)
-			params=( $( getopt -q -o D:S: -- ${fullCmd} ) )
+			params=( $( getopt -q -o D:S:A: -l serverAlias: -- ${fullCmd} ) )
+			srvNameOrAlias=""
+			withAliasDesc=""
+
 			for (( j=0; j<${#params[@]}; j++ ))
 			do
 				if [ "${params[j]}" == "-S" ]
 				then
 					srvName=${params[j+1]}
+				fi
+
+				if [ "${params[j]}" == "-A" ] || [ "${params[j]}" == "--serverAlias" ]
+				then
+					srvNameOrAlias=$(echo ${params[j+1]} | tr -d \')
+					withAliasDesc=" with alias name '${srvNameOrAlias}'"
 				fi
 
 				if [[ ${params[j]} =~ com.asetune.*Tune ]]
@@ -128,10 +137,10 @@ then
 
 			if [ ${longList} -eq 0 ]
 			then
-				echo " >> ${appName}: ${srvName}, PID=${pid}"
+				echo " >> ${appName}: ${srvName}${withAliasDesc}, PID=${pid}"
 			else
 				echo ""
-				echo " >> ${appName}: ${srvName}, PID=${pid}"
+				echo " >> ${appName}: ${srvName}${withAliasDesc}, PID=${pid}"
 				echo "======================================================"
 				ps -fww -p ${pid}
 				echo "======================================================"
@@ -199,14 +208,23 @@ do
 		unRegisteredPidListArray=( $(echo "${unRegisteredPidListArray[@]/${pid}/}") )
 
 		## Get detailes about this PID
+		srvNameOrAlias=""
+		withAliasDesc=""
 		fullCmd=$(ps --pid ${pid} --format cmd | grep java)
-		params=( $( getopt -q -o D:S: -- ${fullCmd} ) )
+		params=( $( getopt -q -o D:S:A: -l serverAlias: -- ${fullCmd} ) )
 		for (( j=0; j<${#params[@]}; j++ ))
 		do
 			#if [ "${params[j]}" == "-S" ]
 			#then
 			#	srvName=${params[j+1]}
 			#fi
+
+			if [ "${params[j]}" == "-A" ] || [ "${params[j]}" == "--serverAlias" ]
+			then
+				srvNameOrAlias=$(echo ${params[j+1]} | tr -d \')
+				withAliasDesc=" with alias name '${srvNameOrAlias}'"
+			fi
+
 
 			if [[ ${params[j]} =~ com.asetune.*Tune ]]
 			then
@@ -222,10 +240,10 @@ do
 		if [ ${longList} -eq 0 ]
 		then
 			#echo " >> INFO: ${appName} - Collector for '${srvName}' is running... PID=${pid}"
-			printf " >> INFO: %-15s - Collector for '${srvName}' is running... PID=${pid}\n" "${appName}"
+			printf " >> INFO: %-15s - Collector for '${srvName}'${withAliasDesc} is running... PID=${pid}\n" "${appName}"
 		else
 			echo ""
-			echo " >> INFO: ${appName} - Collector for '${srvName}' is running... PID=${pid}"
+			echo " >> INFO: ${appName} - Collector for '${srvName}'${withAliasDesc} is running... PID=${pid}"
 			echo "======================================================"
 			echo "${fullCmd}"
 			echo "======================================================"
@@ -276,7 +294,7 @@ then
 		do
 			if [ "${params[j]}" == "-S" ]
 			then
-				srvName=${params[j+1]}
+				srvName=$(echo ${params[j+1]} | tr -d \')
 			fi
 
 			if [[ ${params[j]} =~ com.asetune.*Tune ]]

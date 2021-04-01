@@ -32,6 +32,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<UL>
 		<LI>Improved removal of old HPROF files</LI>
 		<LI>Alarms
+			<LI>Bugfix: Alarms may be canceled to early, if for example any 'timout' happened when the CM refreshed it's data (or other errors happened)</LI>
 			<UL>
 				<LI>New: AlarmEventClientErrorMsg           -- If the AseSqlCapture part sees an Error Number that is severe, then raise alarm.</LI>
 				<LI>new: AlarmEventClientErrorMsgRate       -- If we receive "bursts" of Client Error Messages (more than 10 per second), raise alarm.</LI>
@@ -45,6 +46,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>Changed: AlarmEventProcedureCacheOutOfMemory -- alwaysSend() is now set to true, so even if we do not "subscribe" for alarms on this server, we will still get message, just like SrvDown </LI>
 				<LI>Changed: AlarmEventOldBackup                 -- added lastBackupStartTime to the alarm message</LI>
 				<LI>Changed: AlarmEventOldTranLogBackup          -- added lastBackupStartTime to the alarm message</LI>
+				<LI>Changed: AlarmEventLongRunningTransaction    -- Changed from Severity WARNING to INFO</LI>
 			</UL>
 		</LI>
 		<LI>All CM's -- SqlPrefix -- Prefix SQL Statements issued by the CounterModel with /* DbxTuneAppName:CmName */ so we can see in the daily report that it's AseTune / PostgresTune etc that are responsible for the SQL Statements issued</LI>
@@ -57,6 +59,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Enhanced som error messages, with ErrorCode, SqlState</LI>
 		<LI>Fixed various small bugs by using 'SpotBugs'</LI>
 		<LI>SshConnection: when passing a SQL-Server instance name with 'hostname\instance' only use the first part when connecting.</LI>
+		<LI>NOGUI - better name checking for server name and Alias Names, not allowing '/', '\', ':', or ';' </LI>
+		<LI>NOGUI - If we have a 'non-retryable error', like 'wrong password' do not continue in the 'retry' loop, instead throw Exception. This makes it easier to debug...</LI>
 
 		<LI>OS Monitoring now also handles Windows, via a SHH Connection executing typeperf (not a OpenSSH Server needs to be installed on the Windows Server, supported modules
 			<UL>
@@ -89,9 +93,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<ul>
 	 			<li>To version 1.5.1          Component: JfreeChart</li>
 	 			<li>To version 3.2            Component: jsqlparser</li>
-	 			<li>To version 19.8           Component: Oracle JDBC Driver</li>
+	 			<li>To version 21.1           Component: Oracle JDBC Driver</li>
 	 			<li>To version 9.2.0          Component: Microsoft JDBC Driver</li>
 	 			<li>To version 9.4.38         Component: Jetty Embedded WebServer</li>
+<!--TODO:			<li>To version ASE 16 SP4     Component: jConnect, jTSD3, DDLGen, planviewer, dsparser</li> -->
 			</ul>
 		</LI>
 	</UL>
@@ -149,6 +154,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<b>CmErrorLog</b><br>
 		<ul>
 			<li>for AlarmEventErrorLogEntry also send a description of the error number</li>
+			<li>Alarm: Added error number 1621 to the SkipList</li>
 		</ul>
 		</LI>
 
@@ -264,6 +270,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added Alarm: <b>AlarmEventDacInUse                  </b> -- If someone is using te DAC (Dedicated Admin Connection) which normally should be used in emergency cases</LI>
 		<LI>Added Alarm: <b>AlarmEventQueryStoreLowFreeSpace    </b> -- If querey Store Space starts to get low </LI>
 		<LI>Added Alarm: <b>AlarmEventQueryStoreUnexpectedState </b> -- If Query Store 'state' is not the expected/desired state</LI>
+		<LI>Added Alarm: <b>AlarmEventPerfCounter               </b> -- may be used for all PerfCounter Alarms (the Severity is passed by the CM depending on what it think is appropriate)</LI>
 
 		<LI>Added CM: <b>CmIndexMissing </b> - Take information from 'dm_db_missing_index_*' and display them, in a prioritized way... NOTE: as always take the recommendations with 'a grain of salt'</LI>
 		<LI>Added CM: <b>CmIndexUnused  </b> - Unused Indexes - ordered by 'user_updates desc' so the undex with most updates will be "first"</LI>
@@ -271,6 +278,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added CM: <b>CmMemoryClerks </b> - Information about the memory clerks</LI>
 		<LI>Added CM: <b>CmMemoryGrants </b> - Information about SPID's that requests memory grants</LI>
 		<LI>Added CM: <b>CmActiveStPlanStats</b> - Active Stmnts Plan Stat -- get info about execution plan operators, to check what's taking most time in a execution plan. NOTE: This is in beta mode, and may be discarded</LI>
+
+		<LI><b>DBMS Configuration </b> - Also get linked servers using 'exec sp_linkedservers'</LI>
 
 		<LI><b>CmActiveStatements </b> - For blocking locks (marked as red background) - only the root blocker(s) are marked. logic (ImBlockingOtherSessionIds!="" and ImBlockedBySessionId=0)</LI>
 		<LI><b>CmActiveStatements </b> - added column 'dop - Degree Of Parallelism' if version is above 2016</LI>
@@ -289,6 +298,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmDatabases        </b> - for AlarmEventLongRunningTransaction, added filters on 'OldestTranProg', 'OldestTranUser', 'OldestTranHost' so we can filter out known users or programs </LI>
 		<LI><b>CmDatabases        </b> - Added HTML Table with all info to the alarms: AlarmEventLastBackupFailed, AlarmEventOldBackup, AlarmEventOldTranLogBackup</LI>
 		<LI><b>CmDatabases        </b> - AlarmEventLowOsDiskFreeSpace fixed bug that did not disaply the correct 'mountPoint' ... it always said '-unknown-'</LI>
+
+		<LI><b>CmErrorlog         </b> - Alarm: for 'LongIoRequests': Changed from Severity WARNING to INFO </LI>
+		<LI><b>CmErrorlog         </b> - Alarm: Added error number 17810, 17832, 17836 to the SkipList </LI>
 
 		<LI><b>CmExecCursors      </b> - new columns 'exec_sql_text', 'full_sql_text', to see what the cursor looks like. Also 'dbid', 'objectid' (which for the moment may not be trusted, since the origon from dm_exec_sql_text) </LI>
 		
@@ -309,7 +321,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmPerfCounters     </b> - new alarm: if 'LazyWrites' is above 20 for 3 minutes</LI>
 		<LI><b>CmPerfCounters     </b> - added graph 'Memory Manager', with a line for every entry where object_name is ':Memory Manager'</LI>
 		<LI><b>CmPerfCounters     </b> - Added 5 graphs for Query Store Usage. 'QsTotal', 'QsDbCpu', 'QsDbPhysRead', 'QsDbLogiRead', 'QsDbLogiWrite' </LI>
-		<LI><b>CmPerfCounters     </b> - </LI>
+		<LI><b>CmPerfCounters     </b> - Alarm: for 'Lazy writes/sec': Changed from Severity WARNING to INFO </LI>
 
 		<LI><b>CmSchedulers       </b> - added 'diff' calculations for columns 'total_cpu_usage_ms', 'total_cpu_idle_capped_ms' and 'total_scheduler_delay_ms'</LI>
 
@@ -358,6 +370,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		</LI>
 		<LI>toHtmlTableString now also checks for '&lt;ShowPlanXML xmlns=' and wraps that with a 'xmp' html-tag</LI>
 		<LI>DbmsObjectIdCache - subsystem to cache ObjectID's to ObjectNames</LI>
+		<LI>html-query-plan: upgraded to version 2.6.1 </LI>
 		
 		<!-- ~~~~~ Daily Report ~~~~~ -->
 		<LI>

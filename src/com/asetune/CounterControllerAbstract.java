@@ -2263,11 +2263,22 @@ implements ICounterController
 		else if ("RsTune"        .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.sybase.jdbc4.jdbc.SybDriver";              jdbcUrl = "jdbc:sybase:Tds:"     + dbmsHostPortStr; }
 		else if ("RaxTune"       .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.sybase.jdbc4.jdbc.SybDriver";              jdbcUrl = "jdbc:sybase:Tds:"     + dbmsHostPortStr; }
 		else if ("SqlServerTune" .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.microsoft.sqlserver.jdbc.SQLServerDriver"; jdbcUrl = "jdbc:sqlserver://"    + dbmsHostPortStr; }
-		else if ("PostgresTune"  .equalsIgnoreCase(dbxTune)) { jdbcDriver = "org.postgresql.Driver";                        jdbcUrl = "jdbc:postgresql://"   + dbmsHostPortStr + "/postgres"; }
+//		else if ("PostgresTune"  .equalsIgnoreCase(dbxTune)) { jdbcDriver = "org.postgresql.Driver";                        jdbcUrl = "jdbc:postgresql://"   + dbmsHostPortStr + "/postgres"; }
 		else if ("MySqlTune"     .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.mysql.jdbc.Driver";                        jdbcUrl = "jdbc:mysql://"        + dbmsHostPortStr; }
 		else if ("Db2Tune"       .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.ibm.db2.jcc.DB2Driver";                    jdbcUrl = "jdbc:db2://"          + dbmsHostPortStr; }
 		else if ("OracleTune"    .equalsIgnoreCase(dbxTune)) { jdbcDriver = "oracle.jdbc.OracleDriver";                     jdbcUrl = "jdbc:oracle:thin:@//" + dbmsHostPortStr; }
 		else if ("HanaTune"      .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.sap.db.jdbc.Driver";                       jdbcUrl = "jdbc:sap://"          + dbmsHostPortStr; }
+		else if ("PostgresTune"  .equalsIgnoreCase(dbxTune))
+		{
+			// If we do NOT pass a database name in the URL, then we will add "/postgres" as the default database
+			String pgDefaultDbname = "";
+
+			if ( ! dbmsHostPortStr.contains("/") )
+				pgDefaultDbname = "/postgres";
+
+			jdbcDriver = "org.postgresql.Driver";
+			jdbcUrl = "jdbc:postgresql://" + dbmsHostPortStr + pgDefaultDbname;
+		}
 		else throw new Exception(Version.getAppName() + " Do not yet support no-gui mode.");
 
 		// Load the driver
@@ -2314,6 +2325,9 @@ implements ICounterController
 		// Make the connection, and create a DbxConnection
 		try
 		{
+			_logger.info("Connecting to: jdbcUrl='"+jdbcUrl+"'.");
+			_logger.debug("Connecting to: jdbcUrl='"+jdbcUrl+"', jdbcProps='"+jdbcProps+"'.");
+
 			Connection jdbcConn = DriverManager.getConnection(jdbcUrl, jdbcProps);
 			DbxConnection conn = DbxConnection.createDbxConnection(jdbcConn);
 
@@ -2343,6 +2357,14 @@ implements ICounterController
 			throw ex;
 		}
 	}
+	
+	@Override
+	public void noGuiConnectErrorHandler(SQLException ex, String dbmsUsername, String dbmsPassword, String dbmsServer, String dbmsHostPortStr, String jdbcUrlOptions) 
+	throws Exception
+	{
+		// Error checking for "invalid password" or other "unrecoverable errors"
+	}
+
 	//==================================================================
 	// END: NO-GUI methods
 	//==================================================================

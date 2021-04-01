@@ -103,6 +103,9 @@ implements ActionListener, FocusListener
 
 	private GButton              _setEvent_but            = new GButton("Set Alarm");
 	private GButton              _sendEvent_but           = new GButton("Send Alarm");
+	private JLabel               _or_lbl                  = new JLabel("or");
+	private GButton              _checkEvent_but          = new GButton("Add Check");
+	private JLabel               _then_lbl                = new JLabel("then >>");
 	private GButton              _sendEos_but             = new GButton("Send End-Of-Scan");
 
 	private AlarmEventSetCallback  _callback = null;
@@ -175,23 +178,33 @@ implements ActionListener, FocusListener
 				+ "Create and Send an Alarm event<br>"
 				+ "If you send several <i>Alarm Events</i> before you press <i>EndOfScan</i> they will be filtered out or marked as <i>RE-RAISED</i><br>"
 				+ "So <i>EndOfScan</i> has to be pressed to <i>end</i> a <i>check loop</i>.<br>"
-				+ "At <i>EndOfScan</i> cancelation(s) will be propegated.<br>"
+				+ "At <i>AddCheck</i> plus <i>EndOfScan</i> cancelation(s) will be propegated.<br>"
 				+ "Also see: button <i>EndOfScan</i> for more help."
 				+ "</html>");
 
+		_checkEvent_but.setToolTipText("<html>"
+				+ "Add <i>has Undergone Alarm Detection</i><br>"
+				+ "This needs to be pressed as <i>emulating</i> a CM That has checked for alarms, but did not find any.<br>"
+				+ "If <i>EndOfScan</i> is pressed and <i>this - check</i> has <b>not</b> been pressed, cancelation(s) will <b>NOT</b> be propegated at <i>EndOfScan</i>.<br>"
+				+ "Also see: button <i>EndOfScan</i> for more help."
+				+ "</html>");
+		
 		_sendEos_but  .setToolTipText("<html>"
 				+ "Create and Send an <b>EndOfScan</b> event.<br>"
 				+ "- EndOfScan is send <i>at-the-end</i> of every check loop, when all CM's has been sampled.<br>"
 				+ "This is where we can determen if we need or can Cancel any Alarms.<br>"
 				+ "An Alarm is Canceled if the Alarm has <b>not</b> been repeated in two samples (no overlapp), <br>"
 				+ "or when the <i>Time To Live</i> property has been exhausted <br>"
+				+ "And that a <i>AddCheck</i> has been pressed (which tells the alarm that a CM has <i>has Undergone Alarm Detection</i> and not been the victim of a <i>timeout</i> or some other <i>error</i>). <br>"
 				+ "(Time To Live is set by CM's that has enabled the <i>postpone</i> refresh option, which means that the CM wont be refreshed until the postpone time expires)."
 				+ "</html>");
 
-		_sendEvent_but.setUseFocusableTips(true);
-		_sendEvent_but.setUseFocusableTipsSize(0);
-		_sendEos_but.setUseFocusableTips(true);
-		_sendEos_but.setUseFocusableTipsSize(0);
+		_checkEvent_but.setUseFocusableTips(true);
+		_checkEvent_but.setUseFocusableTipsSize(0);
+		_sendEvent_but .setUseFocusableTips(true);
+		_sendEvent_but .setUseFocusableTipsSize(0);
+		_sendEos_but   .setUseFocusableTips(true);
+		_sendEos_but   .setUseFocusableTipsSize(0);
 		
 		
 		_className_txt  .setEditable(false);
@@ -244,7 +257,10 @@ implements ActionListener, FocusListener
 
 		panel.add(_setEvent_but,      "gap top 20, skip, split, hidemode 3");
 		panel.add(_sendEvent_but,     "gap top 20, skip, split, hidemode 3");
+		panel.add(_or_lbl,            "gap top 20, hidemode 3");
+		panel.add(_checkEvent_but,    "gap top 20, hidemode 3");
 		panel.add(new JLabel(),       "growx, pushx");
+		panel.add(_then_lbl,          "");
 		panel.add(_sendEos_but,       "wrap, hidemode 3");
 
 		// ADD the OK, Cancel, Apply buttons
@@ -284,6 +300,7 @@ implements ActionListener, FocusListener
 
 		// ADD ACTIONS TO COMPONENTS
 		_setEvent_but     .addActionListener(this);
+		_checkEvent_but   .addActionListener(this);
 		_sendEvent_but    .addActionListener(this);
 		_sendEos_but      .addActionListener(this);
 
@@ -304,9 +321,12 @@ implements ActionListener, FocusListener
 		_extendedDesc_txt .addFocusListener(this);
 		
 		// what should be visible...
-		_setEvent_but .setVisible(_callback != null);
-		_sendEvent_but.setVisible(_callback == null);
-		_sendEos_but  .setVisible(_callback == null);
+		_setEvent_but  .setVisible(_callback != null);
+		_sendEvent_but .setVisible(_callback == null);
+		_or_lbl        .setVisible(_callback == null);
+		_checkEvent_but.setVisible(_callback == null);
+		_then_lbl      .setVisible(_callback == null);
+		_sendEos_but   .setVisible(_callback == null);
 	}
 
 	@Override
@@ -353,6 +373,14 @@ implements ActionListener, FocusListener
 				alarmEvent.setRaiseDelayInSec(raiseDelay);
 			
 			_callback.setAlarmEvent(alarmEvent);
+		}
+
+		// --- BUTTON: Check Event ---
+		if (_checkEvent_but.equals(source))
+		{
+			String serviceInfo = _serviceInfo_txt .getText();
+			
+			AlarmHandler.getInstance().addUndergoneAlarmDetection(serviceInfo);
 		}
 
 		// --- BUTTON: Send Event ---

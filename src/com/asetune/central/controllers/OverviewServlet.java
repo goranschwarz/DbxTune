@@ -77,7 +77,7 @@ public class OverviewServlet extends HttpServlet
 	private static final long serialVersionUID = 1L;
 	private static final Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
 
-	private static final String HOME_DIR    = DbxTuneCentral.getAppHomeDir();
+//	private static final String HOME_DIR    = DbxTuneCentral.getAppHomeDir();
 	private static final String INFO_DIR    = DbxTuneCentral.getAppInfoDir();
 	private static final String LOG_DIR     = DbxTuneCentral.getAppLogDir();
 	private static final String CONF_DIR    = DbxTuneCentral.getAppConfDir();
@@ -108,70 +108,70 @@ public class OverviewServlet extends HttpServlet
 		return fileNames;
 	}
 
-	private String getSrvDescription(String srvName)
-	{
-		String file = DbxTuneCentral.getAppConfDir() + "/SERVER_LIST";
-		File f = new File(file);
+//	private String getSrvDescription(String srvName)
+//	{
+//		String file = DbxTuneCentral.getAppConfDir() + "/SERVER_LIST";
+//		File f = new File(file);
+//
+//		String description = "";
+//		try
+//		{
+//			FileInputStream in = new FileInputStream(f);
+//			BufferedReader br = new BufferedReader(new InputStreamReader(in));
+//
+//			String tmp;
+//			while ((tmp = br.readLine()) != null)
+//			{
+//				if (StringUtil.hasValue(tmp))
+//				{
+//					if ( ! tmp.startsWith("#") )
+//					{
+//						String[] sa = tmp.split(";");
+//						if (sa.length >= 3)
+//						{
+//							String name    = sa[0].trim();
+//							//String enabled = sa[1].trim();
+//							String desc    = sa[2].trim();
+//
+//							if (srvName.equals(name))
+//								return desc;
+//						}
+//					}
+//				}
+//			}
+//			br.close();
+//			in.close();
+//		}
+//		catch (Exception ex)
+//		{
+//			return ex.toString();
+//		}
+//		return description;
+//	}
 
-		String description = "";
-		try
-		{
-			FileInputStream in = new FileInputStream(f);
-			BufferedReader br = new BufferedReader(new InputStreamReader(in));
-
-			String tmp;
-			while ((tmp = br.readLine()) != null)
-			{
-				if (StringUtil.hasValue(tmp))
-				{
-					if ( ! tmp.startsWith("#") )
-					{
-						String[] sa = tmp.split(";");
-						if (sa.length >= 3)
-						{
-							String name    = sa[0].trim();
-							//String enabled = sa[1].trim();
-							String desc    = sa[2].trim();
-
-							if (srvName.equals(name))
-								return desc;
-						}
-					}
-				}
-			}
-			br.close();
-			in.close();
-		}
-		catch (Exception ex)
-		{
-			return ex.toString();
-		}
-		return description;
-	}
-
-	private List<String> getFilesActiveAlarms()
-	{
-		String directory = LOG_DIR;
-
-		List<String> fileNames = new ArrayList<>();
-		try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(Paths.get(directory)))
-		{
-			for (Path path : directoryStream)
-			{
-				if (path.getFileName().toString().matches("ALARM\\.ACTIVE\\..*\\.txt"))
-					fileNames.add(path.toString());
-			}
-		}
-		catch (IOException ex)
-		{
-			ex.printStackTrace();
-		}
-
-		// Sort the list
-		Collections.sort(fileNames);
-		
-		return fileNames;
-	}
+//	private List<String> getFilesActiveAlarms()
+//	{
+//		String directory = LOG_DIR;
+//
+//		List<String> fileNames = new ArrayList<>();
+//		try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(Paths.get(directory)))
+//		{
+//			for (Path path : directoryStream)
+//			{
+//				if (path.getFileName().toString().matches("ALARM\\.ACTIVE\\..*\\.txt"))
+//					fileNames.add(path.toString());
+//			}
+//		}
+//		catch (IOException ex)
+//		{
+//			ex.printStackTrace();
+//		}
+//
+//		// Sort the list
+//		Collections.sort(fileNames);
+//		
+//		return fileNames;
+//	}
 
 	private List<String> getFilesInLogDir()
 	{
