@@ -859,7 +859,36 @@ public class ConnectionDialog
 					catch(SQLException ignoreRsExceptions) {_logger.debug("getDatabaseProductName(): at DR Agent", ignoreRsExceptions);}
 //					catch(SQLException ignoreRsExceptions) {System.out.println("getDatabaseProductName(): at DR Agent, caught: "+ignoreRsExceptions);}
 				}
-				
+
+				// Check for ??? ... @@version (possibly IQ or any other Sybase TDS service) 
+				if (StringUtil.isNullOrBlank(productName))
+				{
+    				try
+    				{
+    					String str1 = "";
+    					Statement stmt = conn.createStatement();
+    					ResultSet rs = stmt.executeQuery("select @@version");
+    					while ( rs.next() )
+    					{
+    						str1 = rs.getString(1);
+    						
+        					_logger.info("unknown-srv-type: @@version='"+str1+"'.");
+
+    						if (StringUtil.hasValue(str1))
+    						{
+    							if (str1.startsWith("Sybase IQ/"))
+    								productName = DbUtils.DB_PROD_NAME_SYBASE_IQ;
+
+    							if (str1.startsWith("SAP IQ/"))
+    								productName = DbUtils.DB_PROD_NAME_SYBASE_IQ;
+    						}
+    					}
+    					rs.close();
+    					stmt.close();
+    				}
+    				catch(SQLException ignoreRsExceptions) {}
+				}
+
 				if (StringUtil.hasValue(productName))
 					return productName;
 			}
