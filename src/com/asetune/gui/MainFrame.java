@@ -102,6 +102,7 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.lf5.LogLevel;
 
 import com.asetune.AppDir;
+import com.asetune.AseTune;
 import com.asetune.CounterCollectorThreadAbstract;
 import com.asetune.CounterCollectorThreadGui;
 import com.asetune.CounterController;
@@ -5778,7 +5779,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			sql = _udTooltipMap.get(colName);
 
 		// Make a default for some COLUMNS if they was not found in the USER DEFINED MAP
-		if (sql == null)
+		if ( sql == null && AseTune.APP_NAME.equals(Version.getAppName()) )
 		{
 			if (    "SPID"          .equalsIgnoreCase(colName) // From a bunch of places
 			     || "OldestTranSpid".equalsIgnoreCase(colName) // from CmOpenDatabases
@@ -5823,7 +5824,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					" MP.LineNumber, " +
 					" MP.BlockingXLOID, " +
 					" MP.MasterTransactionID" +
-					" from monProcess MP " +
+					" from master.dbo.monProcess MP " +
 					" where "+whereColName+" = ? ";
 			}
 		}

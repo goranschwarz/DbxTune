@@ -320,7 +320,7 @@ java -cp classes;lib/jconn3.jar com.asetune.test.JdbcMsSqlAgTest ston60238837a 1
 		System.out.println("dbname = '"+dbname+"'");
 		System.out.println("fUrl   = '"+fUrl+"'");
 		
-//		String jdbcDriver    = "com.sybase.jdbc4.jdbc.SybDriver";
+//		String jdbcDriver    = "com.sybase.jdbc42.jdbc.SybDriver";
 		String jdbcUrl       = "jdbc:sqlserver://" + host + ":" + port + (dbname==null?"":";databaseName="+dbname);
 		String jdbcUser      = user;
 		String jdbcPasswd    = pawd;

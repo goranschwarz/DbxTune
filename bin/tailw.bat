@@ -93,6 +93,7 @@ rem --- setup the CLASSPATH
 rem ------------------------------------------------------------------------
 set classpath=%TAILW_HOME%\classes
 set classpath=%classpath%;%TAILW_HOME%\lib\asetune.jar
+set classpath=%classpath%;%TAILW_HOME%\lib\jconn42.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\jconn4.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\jconn3.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\jtds-1.3.1.jar

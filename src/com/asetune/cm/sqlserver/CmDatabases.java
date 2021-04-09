@@ -1896,7 +1896,7 @@ extends CountersModel
 						{
 							sysLocks  = SqlServerUtils.getLockSummaryForSpid(getCounterController().getMonConnection(), OldestTranSpid, true, false);
 							if (sysLocks == null)
-								sysLocks = "No locks was found"; //sysLocks = "Not Available";
+								sysLocks = NO_LOCKS_WAS_FOUND; // "No locks was found"; //sysLocks = "Not Available";
 						}
 						catch (TimeoutException ex)
 						{
@@ -1907,7 +1907,7 @@ extends CountersModel
 					// Set the values: *Has* and *Text*
 					boolean b = true;
 
-					b = !"This was disabled".equals(sysLocks) && !"No locks was found".equals(sysLocks) && !"Timeout - when getting lock information".equals(sysLocks);
+					b = !"This was disabled".equals(sysLocks) && !NO_LOCKS_WAS_FOUND.equals(sysLocks) && !"Timeout - when getting lock information".equals(sysLocks);
 					newSample.setValueAt(new Boolean(b), rowId, pos_OldestTranHasLocks);
 					newSample.setValueAt(sysLocks,       rowId, pos_OldestTranLocks);
 				}
@@ -1915,6 +1915,7 @@ extends CountersModel
 		}
 	}
 	
+	private static final String NO_LOCKS_WAS_FOUND = "No locks was found";
 	
 	
 	@Override
@@ -1952,6 +1953,16 @@ extends CountersModel
 				Double OldestTranInSeconds = cm.getAbsValueAsDouble(r, "OldestTranInSeconds");
 				if (OldestTranInSeconds != null)
 				{
+					// Check for "No locks was found" 
+					String OldestTranLocks = cm.getAbsString(r, "OldestTranLocks");
+					if (NO_LOCKS_WAS_FOUND.equals(OldestTranLocks))
+					{
+						// Reset OldestTranInSeconds to -1
+						if (debugPrint || _logger.isDebugEnabled())
+							System.out.println("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', OldestTranInSeconds='"+OldestTranInSeconds+"'. BUT OldestTranLocks='" + NO_LOCKS_WAS_FOUND + "' -- Setting: OldestTranInSeconds to: -1");
+						OldestTranInSeconds = new Double(-1);
+					}
+
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_OldestTranInSeconds, DEFAULT_alarm_OldestTranInSeconds);
 
 					if (debugPrint || _logger.isDebugEnabled())

@@ -38,6 +38,7 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -140,10 +141,14 @@ extends CountersModel
 //	Create graph: Sheduler Queue: runnable_tasks_count
 //	Create graph: Outstanding IO: pending_disk_io_count
 		
-	public static final String GRAPH_NAME_RUN_QUEUE_LENGTH_SUM   = "RunQLengthSum";
-	public static final String GRAPH_NAME_RUN_QUEUE_LENGTH_ENG   = "RunQLengthEng";
-	public static final String GRAPH_NAME_PENDING_IO_SUM         = "PendingIoSum";
-	public static final String GRAPH_NAME_PENDING_IO_ENG         = "PendingIoEng";
+	public static final String GRAPH_NAME_RUN_QUEUE_LENGTH_SUM     = "RunQLengthSum";
+	public static final String GRAPH_NAME_RUN_QUEUE_LENGTH_ENG     = "RunQLengthEng";
+	public static final String GRAPH_NAME_PENDING_IO_SUM           = "PendingIoSum";
+	public static final String GRAPH_NAME_PENDING_IO_ENG           = "PendingIoEng";
+	public static final String GRAPH_NAME_CPU_PER_SCHEDULER        = "CpuPerSch";
+	public static final String GRAPH_NAME_CPU_ALL_SCHEDULERS       = "CpuAllSch";
+	public static final String GRAPH_NAME_CPU_DELAY_PER_SCHEDULER  = "CpuDelayPerSch";
+	public static final String GRAPH_NAME_CPU_DELAY_ALL_SCHEDULERS = "CpuDelayAllSch";
 	
 
 	private void addTrendGraphs()
@@ -208,6 +213,58 @@ extends CountersModel
 			false, // is Percent Graph
 			false, // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH: CPU ALL Schedulers
+		addTrendGraph(GRAPH_NAME_CPU_ALL_SCHEDULERS,
+			"CPU Usage in Percent, ALL Schedulers", 	                        // Menu CheckBox text
+			"CPU Usage in Percent, ALL Schedulers (using dm_os_schedulers.total_cpu_usage_ms)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			new String[] { "cpu_usage_in_percent_all_schedulers" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CPU,
+			true, // is Percent Graph
+			false, // visible at start
+			Ver.ver(2016),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH: CPU per Scheduler
+		addTrendGraph(GRAPH_NAME_CPU_PER_SCHEDULER,
+			"CPU Usage in Percent, per Scheduler", 	                        // Menu CheckBox text
+			"CPU Usage in Percent, per Scheduler (using dm_os_schedulers.total_cpu_usage_ms)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CPU,
+			true, // is Percent Graph
+			false, // visible at start
+			Ver.ver(2016),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH: Delay per Scheduler
+		addTrendGraph(GRAPH_NAME_CPU_DELAY_PER_SCHEDULER,
+			"CPU Delay in Milisec, per Scheduler", 	                        // Menu CheckBox text
+			"CPU Delay in Milisec, per Scheduler (using dm_os_schedulers.total_scheduler_delay_ms)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CPU,
+			false, // is Percent Graph
+			false, // visible at start
+			Ver.ver(2016),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH: Delay all Scheduler
+		addTrendGraph(GRAPH_NAME_CPU_DELAY_ALL_SCHEDULERS,
+			"CPU Delay in Milisec, ALL Schedulers", 	                        // Menu CheckBox text
+			"CPU Delay in Milisec, ALL Schedulers (using dm_os_schedulers.total_scheduler_delay_ms)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			new String[] { "Sum: total_scheduler_delay_ms", "Avg: total_scheduler_delay_ms" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CPU,
+			false, // is Percent Graph
+			false, // visible at start
+			Ver.ver(2016),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
 //		// if GUI
@@ -385,6 +442,126 @@ extends CountersModel
 				tgdp.setDataPoint(this.getTimestamp(), label, data);
 			}
 		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_CPU_ALL_SCHEDULERS.equals(tgdp.getName()))
+		{	
+			// Get a array of rowId's where the column 'status' has the value 'VISIBLE ONLINE'
+			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
+			if (rowIds == null)
+				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), retuned null, so I can't do more here.");
+			else
+			{
+				Double[] arr = new Double[1];
+
+				Double cpuUsageMsSum = this.getRateValueSum(rowIds, "total_cpu_usage_ms");
+				arr[0] = cpuUsageMsSum / 10.0 / (rowIds.length * 1.0);
+
+				if (_logger.isDebugEnabled())
+					_logger.debug("updateGraphData("+tgdp.getName()+"): runnable_tasks_count(sum)='"+arr[0]+"', runnable_tasks_count(avg)='"+arr[1]+"'.");
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_CPU_PER_SCHEDULER.equals(tgdp.getName()))
+		{	
+			// Get a array of rowId's where the column 'status' has the value 'VISIBLE ONLINE'
+			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
+			if (rowIds == null)
+				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), retuned null, so I can't do more here.");
+			else
+			{
+				Double[] data  = new Double[rowIds.length];
+				String[] label = new String[rowIds.length];
+				for (int i=0; i<rowIds.length; i++)
+				{
+					int rowId = rowIds[i];
+
+					// get LABEL
+					label[i] = "sch-" + this.getAbsString(rowId, "scheduler_id");
+
+					// get DATA
+					Double cpuUsageMs = this.getRateValueAsDouble(rowId, "total_cpu_usage_ms");
+					data[i]  = cpuUsageMs / 10.0;
+				}
+				if (_logger.isDebugEnabled())
+				{
+					String debugStr = "";
+					for (int i=0; i<data.length; i++)
+						debugStr += label[i] + "='"+data[i]+"', ";
+					_logger.debug("updateGraphData("+tgdp.getName()+"): "+debugStr);
+				}
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), label, data);
+			}
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_CPU_DELAY_PER_SCHEDULER.equals(tgdp.getName()))
+		{	
+			// Get a array of rowId's where the column 'status' has the value 'VISIBLE ONLINE'
+			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
+			if (rowIds == null)
+				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), retuned null, so I can't do more here.");
+			else
+			{
+				Double[] data  = new Double[rowIds.length];
+				String[] label = new String[rowIds.length];
+				for (int i=0; i<rowIds.length; i++)
+				{
+					int rowId = rowIds[i];
+
+					// get LABEL
+					label[i] = "sch-" + this.getAbsString(rowId, "scheduler_id");
+
+					// get DATA
+					data[i]  = this.getRateValueAsDouble(rowId, "total_scheduler_delay_ms");
+				}
+				if (_logger.isDebugEnabled())
+				{
+					String debugStr = "";
+					for (int i=0; i<data.length; i++)
+						debugStr += label[i] + "='"+data[i]+"', ";
+					_logger.debug("updateGraphData("+tgdp.getName()+"): "+debugStr);
+				}
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), label, data);
+			}
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_CPU_DELAY_ALL_SCHEDULERS.equals(tgdp.getName()))
+		{	
+			// Get a array of rowId's where the column 'status' has the value 'VISIBLE ONLINE'
+			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
+			if (rowIds == null)
+				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), retuned null, so I can't do more here.");
+			else
+			{
+				Double[] arr = new Double[2];
+				arr[0] = this.getRateValueSum(rowIds, "total_scheduler_delay_ms");
+				arr[1] = this.getRateValueAvg(rowIds, "total_scheduler_delay_ms");
+
+				if (_logger.isDebugEnabled())
+					_logger.debug("updateGraphData("+tgdp.getName()+"): runnable_tasks_count(sum)='"+arr[0]+"', runnable_tasks_count(avg)='"+arr[1]+"'.");
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+		}
 	}
 
 	@Override
@@ -465,6 +642,11 @@ extends CountersModel
 			mtd.addColumn("dm_os_schedulers", "memory_object_address",      "<html>Memory address of the scheduler memory object</html>");
 			mtd.addColumn("dm_os_schedulers", "task_memory_object_address", "<html>Memory address of the task memory object. Is not nullable. For more information, see sys.dm_os_memory_objects (Transact-SQL).</html>");
 			mtd.addColumn("dm_os_schedulers", "quantum_length_us",          "<html>Identified for informational purposes only. Not supported. Future compatibility is not guaranteed. Exposes the scheduler quantum used by SQLOS.</html>");
+			mtd.addColumn("dm_os_schedulers", "total_cpu_usage_ms",         "<html>Total CPU consumed by this scheduler as reported by non-preemptive workers. Is not nullable.</html>");
+			mtd.addColumn("dm_os_schedulers", "total_cpu_idle_capped_ms",   "<html>Identified for informational purposes only. Not supported. Future compatibility is not guaranteed. Indicates throttling based on Service Level Objective, will always be 0 for non-Azure versions of SQL Server. Is nullable.</html>");
+			mtd.addColumn("dm_os_schedulers", "total_scheduler_delay_ms",   "<html>The time between one worker switching out and another one switching in. Can be caused by preemptive workers delaying the scheduling of the next non-preemptive worker, or due to the OS scheduling threads from other processes. Is not nullable.</html>");
+			mtd.addColumn("dm_os_schedulers", "ideal_workers_limit",        "<html>How many workers should ideally be on the scheduler. If the current workers exceed the limit due to imbalanced task load, once they become idle they will be trimmed. Is not nullable.</html>");
+			mtd.addColumn("dm_os_schedulers", "pdw_node_id",                "<html>The identifier for the node that this distribution is on</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}

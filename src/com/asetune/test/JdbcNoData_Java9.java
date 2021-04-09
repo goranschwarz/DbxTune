@@ -42,27 +42,27 @@ import com.asetune.utils.JdbcDriverHelper.DriverInfoEntry;
 java -cp .\classes;.\lib2\* com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
 
 
-java -cp .\classes;.\lib\jconn4.jar                                                                                                                                                                       com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
-java -cp .\classes;.\lib\jconn4.jar;.\lib\jdbc_drivers\sqljdbc41.jar;                                                                                                                                     com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
-java -cp .\classes;.\lib\jconn4.jar;.\lib\jdbc_drivers\sqljdbc41.jar;.\lib\jdbc_drivers\postgresql-9.4.1209.jre7.jar                                                                                      com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
-java -cp .\classes;.\lib\jconn4.jar;.\lib\jdbc_drivers\sqljdbc41.jar;.\lib\jdbc_drivers\postgresql-9.4.1209.jre7.jar;.\lib\jdbc_drivers\mysql-connector-java-5.1.44-bin.jar                               com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
-java -cp .\classes;.\lib\jconn4.jar;.\lib\jdbc_drivers\sqljdbc41.jar;.\lib\jdbc_drivers\postgresql-9.4.1209.jre7.jar;.\lib\jdbc_drivers\mysql-connector-java-5.1.44-bin.jar;.\lib\jdbc_drivers\ojdbc6.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib\jconn42.jar                                                                                                                                                                       com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib\jconn42.jar;.\lib\jdbc_drivers\sqljdbc41.jar;                                                                                                                                     com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib\jconn42.jar;.\lib\jdbc_drivers\sqljdbc41.jar;.\lib\jdbc_drivers\postgresql-9.4.1209.jre7.jar                                                                                      com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib\jconn42.jar;.\lib\jdbc_drivers\sqljdbc41.jar;.\lib\jdbc_drivers\postgresql-9.4.1209.jre7.jar;.\lib\jdbc_drivers\mysql-connector-java-5.1.44-bin.jar                               com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib\jconn42.jar;.\lib\jdbc_drivers\sqljdbc41.jar;.\lib\jdbc_drivers\postgresql-9.4.1209.jre7.jar;.\lib\jdbc_drivers\mysql-connector-java-5.1.44-bin.jar;.\lib\jdbc_drivers\ojdbc6.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
 
-java -cp .\classes;.\lib2\jconn4.jar                                                                                                                                                              com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
-java -cp .\classes;.\lib2\jconn4.jar;.\lib2\jtds-1.3.1.jar                                                                                                                                        com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
-java -cp .\classes;.\lib2\jconn4.jar;.\lib2\jtds-1.3.1.jar;.\lib2\ngdbc.jar                                                                                                                       com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
-java -cp .\classes;.\lib2\jconn4.jar;.\lib2\jtds-1.3.1.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar                                                                               com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
-java -cp .\classes;.\lib2\jconn4.jar;.\lib2\jtds-1.3.1.jar;.\lib2\ngdbc.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar                                                              com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
-java -cp .\classes;.\lib2\jconn4.jar;.\lib2\jtds-1.3.1.jar;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\ngdbc.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar                   com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
-java -cp .\classes;.\lib2\jconn4.jar;.\lib2\jtds-1.3.1.jar;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\ngdbc.jar;.\lib2\ojdbc7.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib2\jconn42.jar                                                                                                                                                              com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib2\jconn42.jar;.\lib2\jtds-1.3.1.jar                                                                                                                                        com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib2\jconn42.jar;.\lib2\jtds-1.3.1.jar;.\lib2\ngdbc.jar                                                                                                                       com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib2\jconn42.jar;.\lib2\jtds-1.3.1.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar                                                                               com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib2\jconn42.jar;.\lib2\jtds-1.3.1.jar;.\lib2\ngdbc.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar                                                              com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib2\jconn42.jar;.\lib2\jtds-1.3.1.jar;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\ngdbc.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar                   com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib2\jconn42.jar;.\lib2\jtds-1.3.1.jar;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\ngdbc.jar;.\lib2\ojdbc7.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
 
-java -cp .\lib2\ojdbc6.jar;.\classes;.\lib2\jconn4.jar;.\lib2\jtds-1.3.1.jar;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\lib2\ojdbc6.jar;.\classes;.\lib2\jconn42.jar;.\lib2\jtds-1.3.1.jar;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
 
 
-java -cp .\classes;.\lib\jconn4.jar;.\lib\jdbc_drivers\mysql-connector-java-5.1.44-bin.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
-java -cp .\classes;.\lib\jconn4.jar;.\lib\jdbc_drivers\sqljdbc41.jar;.\lib\jdbc_drivers\postgresql-9.4.1209.jre7.jar .\lib\jdbc_drivers\mysql-connector-java-5.1.44-bin.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
-java -cp .\classes;.\lib\jconn4.jar;.\lib\jdbc_drivers\sqljdbc41.jar;.\lib\jdbc_drivers\postgresql-9.4.1209.jre7.jar .\lib\jdbc_drivers\mysql-connector-java-5.1.44-bin.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
-java -cp .\classes;.\lib\jconn4.jar;.\lib\jdbc_drivers\sqljdbc41.jar;.\lib\jdbc_drivers\postgresql-9.4.1209.jre7.jar .\lib\jdbc_drivers\mysql-connector-java-5.1.44-bin.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib\jconn42.jar;.\lib\jdbc_drivers\mysql-connector-java-5.1.44-bin.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib\jconn42.jar;.\lib\jdbc_drivers\sqljdbc41.jar;.\lib\jdbc_drivers\postgresql-9.4.1209.jre7.jar .\lib\jdbc_drivers\mysql-connector-java-5.1.44-bin.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib\jconn42.jar;.\lib\jdbc_drivers\sqljdbc41.jar;.\lib\jdbc_drivers\postgresql-9.4.1209.jre7.jar .\lib\jdbc_drivers\mysql-connector-java-5.1.44-bin.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib\jconn42.jar;.\lib\jdbc_drivers\sqljdbc41.jar;.\lib\jdbc_drivers\postgresql-9.4.1209.jre7.jar .\lib\jdbc_drivers\mysql-connector-java-5.1.44-bin.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
 
 
 
@@ -74,7 +74,7 @@ java -cp .\classes;.\lib\jconn4.jar;.\lib\jdbc_drivers\sqljdbc41.jar;.\lib\jdbc_
 18/11/2015  00:36           586,192 sqljdbc41.jar
 
  Directory of C:\projects\AseTune\lib2
-10/01/2017  11:00         1,873,815 jconn4.jar
+10/01/2017  11:00         1,873,815 jconn42.jar
 08/06/2013  11:27           317,816 jtds-1.3.1.jar
 29/08/2017  03:13           999,635 mysql-connector-java-5.1.44-bin.jar
 25/06/2014  17:04           795,503 ngdbc.jar
@@ -86,20 +86,20 @@ java -cp .\classes;.\lib\jconn4.jar;.\lib\jdbc_drivers\sqljdbc41.jar;.\lib\jdbc_
 
 
 
-java -cp .\classes;.\lib2\jconn4.jar;.\lib2\jtds-1.3.1.jar;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\ngdbc.jar;.\lib2\ojdbc7.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib2\jconn42.jar;.\lib2\jtds-1.3.1.jar;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\ngdbc.jar;.\lib2\ojdbc7.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
 
 
 ## wildcard = FAIL
 java -cp .\classes;.\lib2\* com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
 
 ## all jars = FAIL
-java -cp .\classes;.\lib2\jconn4.jar;.\lib2\jtds-1.3.1.jar;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\ngdbc.jar;.\lib2\ojdbc7.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib2\jconn42.jar;.\lib2\jtds-1.3.1.jar;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\ngdbc.jar;.\lib2\ojdbc7.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
 
 ## Oracle ONLY = OK
 java -cp .\classes;.\lib2\ojdbc7.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
 
 ## all excpet Oracle = OK
-java -cp .\classes;.\lib2\jconn4.jar;.\lib2\jtds-1.3.1.jar;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\ngdbc.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib2\jconn42.jar;.\lib2\jtds-1.3.1.jar;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\ngdbc.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
 
 ## MySQL and Oracle = OK
 java -cp .\classes;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\ojdbc7.jar; com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
@@ -108,16 +108,16 @@ java -cp .\classes;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\ojdbc7.jar;
 java -cp .\classes;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\ngdbc.jar;.\lib2\ojdbc7.jar; com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
 
 ## jConnect, MySQL, HANA, Oracle, Postgres, MS = FAIL
-java -cp .\classes;.\lib2\jconn4.jar;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\ngdbc.jar;.\lib2\ojdbc7.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib2\jconn42.jar;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\ngdbc.jar;.\lib2\ojdbc7.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
 
 ## jConnect, Oracle = FAIL
-java -cp .\classes;.\lib2\jconn4.jar;.\lib2\ojdbc7.jar; com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib2\jconn42.jar;.\lib2\ojdbc7.jar; com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
 
 ## Oracle, jConnect = OK
-java -cp .\classes;.\lib2\ojdbc7.jar;.\lib2\jconn4.jar; com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib2\ojdbc7.jar;.\lib2\jconn42.jar; com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
 
 ## ALL jars, but Oracle first = OK
-java -cp .\classes;.\lib2\ojdbc7.jar;.\lib2\jconn4.jar;.\lib2\jtds-1.3.1.jar;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\ngdbc.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
+java -cp .\classes;.\lib2\ojdbc7.jar;.\lib2\jconn42.jar;.\lib2\jtds-1.3.1.jar;.\lib2\mysql-connector-java-5.1.44-bin.jar;.\lib2\ngdbc.jar;.\lib2\postgresql-9.4.1209.jre7.jar;.\lib2\sqljdbc41.jar com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
 
 ## ALL jars, but Oracle first = OK
 java -cp .\classes;.\lib2\ojdbc7.jar;.\lib2\* com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:sybase:Tds:mig1-sybase:5000 "select * from sysobjects" N
@@ -136,7 +136,7 @@ java -cp .\classes;.\lib2\* com.asetune.test.JdbcNoData_Java9 sa Wq26kl73 jdbc:s
 
 
 java -cp .\classes;
-.\lib2\jconn4.jar;
+.\lib2\jconn42.jar;
 .\lib2\jtds-1.3.1.jar;
 .\lib2\mysql-connector-java-5.1.44-bin.jar;
 .\lib2\ngdbc.jar;
@@ -273,7 +273,7 @@ public class JdbcNoData_Java9
 			props.put("user",      user);
 			props.put("password",  passwd);
 
-			String driverClassName = "com.sybase.jdbc4.jdbc.SybDriver";
+			String driverClassName = "com.sybase.jdbc42.jdbc.SybDriver";
 			try
 			{
 				System.out.println("before: DriverManager.getDriver(url)... driverClassName='"+driverClassName+"', url='"+url+"')");

@@ -191,7 +191,7 @@ public class DDLGeneratorWrapper
 		try
 		{
 			ConnectionProp connProp = new ConnectionProp();
-			connProp.setDriverClass("com.sybase.jdbc4.jdbc.SybDriver");
+			connProp.setDriverClass("com.sybase.jdbc42.jdbc.SybDriver");
 			connProp.setUrl("jdbc:sybase:Tds:192.168.0.110:1600?ENCRYPT_PASSWORD=true");
 			connProp.setUsername("sa");
 			connProp.setPassword("sybase");

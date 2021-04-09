@@ -65,7 +65,7 @@ public class DbTimeoutTest
 //			Connection conn = AseConnectionFactory.getConnection("localhost:5000", null, "sa", "", "DbTimeoutTest", "dummy", props, null);
 
 			String url = "jdbc:sybase:Tds:localhost:5000";
-			Class.forName("com.sybase.jdbc4.jdbc.SybDriver");
+			Class.forName("com.sybase.jdbc42.jdbc.SybDriver");
 			Connection conn = DriverManager.getConnection(url, props);
 
 			int aseSpid = AseConnectionUtils.getAseSpid(conn);

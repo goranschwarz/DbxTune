@@ -2259,9 +2259,9 @@ implements ICounterController
 
 		String dbxTune = Version.getAppName();
 		if      ("AseTune"       .equalsIgnoreCase(dbxTune)) { throw new Exception("This is handled in CounterControllerAse"); }
-		else if ("IqTune"        .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.sybase.jdbc4.jdbc.SybDriver";              jdbcUrl = "jdbc:sybase:Tds:"     + dbmsHostPortStr; }
-		else if ("RsTune"        .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.sybase.jdbc4.jdbc.SybDriver";              jdbcUrl = "jdbc:sybase:Tds:"     + dbmsHostPortStr; }
-		else if ("RaxTune"       .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.sybase.jdbc4.jdbc.SybDriver";              jdbcUrl = "jdbc:sybase:Tds:"     + dbmsHostPortStr; }
+		else if ("IqTune"        .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.sybase.jdbc42.jdbc.SybDriver";             jdbcUrl = "jdbc:sybase:Tds:"     + dbmsHostPortStr; }
+		else if ("RsTune"        .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.sybase.jdbc42.jdbc.SybDriver";             jdbcUrl = "jdbc:sybase:Tds:"     + dbmsHostPortStr; }
+		else if ("RaxTune"       .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.sybase.jdbc42.jdbc.SybDriver";             jdbcUrl = "jdbc:sybase:Tds:"     + dbmsHostPortStr; }
 		else if ("SqlServerTune" .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.microsoft.sqlserver.jdbc.SQLServerDriver"; jdbcUrl = "jdbc:sqlserver://"    + dbmsHostPortStr; }
 //		else if ("PostgresTune"  .equalsIgnoreCase(dbxTune)) { jdbcDriver = "org.postgresql.Driver";                        jdbcUrl = "jdbc:postgresql://"   + dbmsHostPortStr + "/postgres"; }
 		else if ("MySqlTune"     .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.mysql.jdbc.Driver";                        jdbcUrl = "jdbc:mysql://"        + dbmsHostPortStr; }

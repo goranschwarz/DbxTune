@@ -99,7 +99,7 @@ public class IsqlApp
             {
                 // First try to load the 5.x driver
                 sybDriver = (SybDriver) Class.forName(
-                    "com.sybase.jdbc4.jdbc.SybDriver").newInstance();
+                    "com.sybase.jdbc42.jdbc.SybDriver").newInstance();
             }
             catch (Exception ex41)
             {

@@ -482,5 +482,5 @@ public class PmlGetXidTester
 
 /*
 cd C:\projects\AseTune
-java -cp C:\projects\AseTune\classes;C:\projects\AseTune\lib\jconn4.jar com.asetune.test.PmlGetXidTester
+java -cp C:\projects\AseTune\classes;C:\projects\AseTune\lib\jconn42.jar com.asetune.test.PmlGetXidTester
 */

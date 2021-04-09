@@ -145,8 +145,9 @@ public class JdbcDriverHelper
 		{
 			templates.add("jdbc:odbc:DSN");
 		}
-		else if (    "com.sybase.jdbc3.jdbc.SybDriver".equals(driverName)
-		          || "com.sybase.jdbc4.jdbc.SybDriver".equals(driverName) )
+		else if (    "com.sybase.jdbc3.jdbc.SybDriver" .equals(driverName)
+		          || "com.sybase.jdbc4.jdbc.SybDriver" .equals(driverName)
+			      || "com.sybase.jdbc42.jdbc.SybDriver".equals(driverName) )
 		{
 			templates.add("jdbc:sybase:Tds:<host>:<port>");
 			templates.add("jdbc:sybase:Tds:<host>:<port>[/<dbname>]");
@@ -256,6 +257,7 @@ public class JdbcDriverHelper
 		if      ("sun.jdbc.odbc.JdbcOdbcDriver"                .equals(driverName)) return "JDBC - ODBC Bridge";
 		else if ("com.sybase.jdbc3.jdbc.SybDriver"             .equals(driverName)) return "Sybase JDBC 3.0 Driver";
 		else if ("com.sybase.jdbc4.jdbc.SybDriver"             .equals(driverName)) return "Sybase JDBC 4.0 Driver";
+		else if ("com.sybase.jdbc42.jdbc.SybDriver"            .equals(driverName)) return "Sybase JDBC 4.2 Driver";
 		else if ("net.sourceforge.jtds.jdbc.Driver"            .equals(driverName)) return "jTDS JDBC Driver";
 		else if ("org.h2.Driver"                               .equals(driverName)) return "H2 JDBC Driver";
 		else if ("com.sap.db.jdbc.Driver"                      .equals(driverName)) return "SAP HANA JDBC Driver";
@@ -287,7 +289,8 @@ public class JdbcDriverHelper
 	{
 		if      ("sun.jdbc.odbc.JdbcOdbcDriver"                .equals(driverName)) return "en.wikipedia.org/wiki/JDBC_driver";
 		else if ("com.sybase.jdbc3.jdbc.SybDriver"             .equals(driverName)) return "www.sybase.com/jconnect";
-		else if ("com.sybase.jdbc4.jdbc.SybDriver"             .equals(driverName)) return "www.sybase.com/jconnect";
+		else if ("com.sybase.jdbc4.jdbc.SybDriver"             .equals(driverName)) return "https://help.sap.com/viewer/product/SAP_ASE_SDK";
+		else if ("com.sybase.jdbc42.jdbc.SybDriver"            .equals(driverName)) return "https://help.sap.com/viewer/product/SAP_ASE_SDK";
 		else if ("net.sourceforge.jtds.jdbc.Driver"            .equals(driverName)) return "jtds.sourceforge.net";
 		else if ("org.h2.Driver"                               .equals(driverName)) return "www.h2database.com";
 		else if ("com.sap.db.jdbc.Driver"                      .equals(driverName)) return "www.sap.com/HANA";
@@ -313,6 +316,7 @@ public class JdbcDriverHelper
 
 		if      (jarName.equals ("jconn3.jar"))         return "com.sybase.jdbc3.jdbc.SybDriver";
 		else if (jarName.equals ("jconn4.jar"))         return "com.sybase.jdbc4.jdbc.SybDriver";
+		else if (jarName.equals ("jconn42.jar"))        return "com.sybase.jdbc42.jdbc.SybDriver";
 		else if (jarName.matches("jtds-.*\\.jar"))      return "net.sourceforge.jtds.jdbc.Driver";
 		else if (jarName.matches("h2-.*\\.jar"))        return "org.h2.Driver";
 		else if (jarName.equals ("ngdbc.jar"))          return "com.sap.db.jdbc.Driver";
@@ -336,6 +340,8 @@ public class JdbcDriverHelper
 			return "";
 
 		if (jdbcUrl.startsWith("jdbc:odbc:"))                return "sun.jdbc.odbc.JdbcOdbcDriver";
+		if (jdbcUrl.startsWith("jdbc:sapase:Tds:"))          return "com.sybase.jdbc42.jdbc.SybDriver";
+		if (jdbcUrl.startsWith("jdbc:sybase:Tds:"))          return "com.sybase.jdbc42.jdbc.SybDriver";
 		if (jdbcUrl.startsWith("jdbc:sybase:Tds:"))          return "com.sybase.jdbc4.jdbc.SybDriver";
 		if (jdbcUrl.startsWith("jdbc:jtds:"))                return "net.sourceforge.jtds.jdbc.Driver";
 		if (jdbcUrl.startsWith("jdbc:h2:"))                  return "org.h2.Driver";
@@ -1490,7 +1496,7 @@ public class JdbcDriverHelper
 			}
 			else throw new RuntimeException("Unknown Dialog Type");
 
-			_className_lbl  .setToolTipText("<html>Classname of the JDBC Driver, for example <i>com.sybase.jdbc4.jdbc.SybDriver</i>.</html>");
+			_className_lbl  .setToolTipText("<html>Classname of the JDBC Driver, for example <i>com.sybase.jdbc42.jdbc.SybDriver</i>.</html>");
 			_className_txt  .setToolTipText(_className_lbl.getToolTipText());
 			_description_lbl.setToolTipText("<html><i><b>Optional</b></i> A Text description of what this this JDBC Driver is. (from what company etc...)</html>");
 			_description_txt.setToolTipText(_description_lbl.getToolTipText());

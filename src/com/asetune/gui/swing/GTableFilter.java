@@ -207,7 +207,7 @@ extends JPanel
 	}
 	public GTableFilter(JXTable table, int rowCountLayout, boolean showCheckbox)
 	{
-		_table = table;
+//		_table = table; // This is set in: setTable();
 		_rowCntLayout = rowCountLayout;
 		_filter_chk_visible = showCheckbox;
 
@@ -220,12 +220,22 @@ extends JPanel
 	{
 		this(null);
 	}
-	
+
 	public void setTable(JXTable table)
 	{
 		if (_table != null)
 		{
 			_logger.warn("Table is already assigned. Some listeners will also be triggered from the old tables. (I havn't YET-IMPLEMENTED a proper cleanup strategy here.");
+			//new Exception("DUMMY EXCEPTION to get where it was called from").printStackTrace();
+
+//			TableModel tm = _table.getModel();
+//			if (tm != null && tm instanceof AbstractTableModel)
+//			{
+//				AbstractTableModel atm = (AbstractTableModel) tm;
+//				TableModelListener[] tmla = atm.getTableModelListeners();
+//				if (ArrayUtils.contains(tmla, this))
+//					/*do*/;
+//			}
 			return;
 		}
 		

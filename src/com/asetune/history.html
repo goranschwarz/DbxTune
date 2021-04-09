@@ -96,7 +96,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	 			<li>To version 21.1           Component: Oracle JDBC Driver</li>
 	 			<li>To version 9.2.0          Component: Microsoft JDBC Driver</li>
 	 			<li>To version 9.4.38         Component: Jetty Embedded WebServer</li>
-<!--TODO:			<li>To version ASE 16 SP4     Component: jConnect, jTSD3, DDLGen, planviewer, dsparser</li> -->
+				<li>To version ASE 16 SP4     Component: jConnect: jconn4.jar to jconn42.jar (which has JDBC 4.2 implementation)</li> -->
 			</ul>
 		</LI>
 	</UL>
@@ -146,6 +146,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<b>CmDataCaches - tab: Caches</b><br>
 		<ul>
 			<li>bug fix: 'PhysicalReads' + 'APFReads' sometimes caused arithmic overflow. Converted data type to bigint before adding them</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmDeviceIo - tab: Devices</b><br>
+		<ul>
+			<li>3 new Graph: Number of Disk Operations, for ALL Devices (Read+Write, Read, Write)</li>
 		</ul>
 		</LI>
 
@@ -297,7 +305,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmDatabases        </b> - new column 'OldestTranHasLocks', 'OldestTranLocks' to collect what locks Oldest Transaction are holding </LI>
 		<LI><b>CmDatabases        </b> - for AlarmEventLongRunningTransaction, added filters on 'OldestTranProg', 'OldestTranUser', 'OldestTranHost' so we can filter out known users or programs </LI>
 		<LI><b>CmDatabases        </b> - Added HTML Table with all info to the alarms: AlarmEventLastBackupFailed, AlarmEventOldBackup, AlarmEventOldTranLogBackup</LI>
-		<LI><b>CmDatabases        </b> - AlarmEventLowOsDiskFreeSpace fixed bug that did not disaply the correct 'mountPoint' ... it always said '-unknown-'</LI>
+		<LI><b>CmDatabases        </b> - AlarmEventLowOsDiskFreeSpace fixed bug that did not display the correct 'mountPoint' ... it always said '-unknown-'</LI>
+		<LI><b>CmDatabases        </b> - Do not raise LongRunningTransaction if we do NOT have any locks</LI>
+
+		<LI><b>CmDeviceIo         </b> - 3 new Graph: Number of Disk Operations, for ALL Devices (Read+Write, Read, Write)</LI>
 
 		<LI><b>CmErrorlog         </b> - Alarm: for 'LongIoRequests': Changed from Severity WARNING to INFO </LI>
 		<LI><b>CmErrorlog         </b> - Alarm: Added error number 17810, 17832, 17836 to the SkipList </LI>
@@ -324,6 +335,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmPerfCounters     </b> - Alarm: for 'Lazy writes/sec': Changed from Severity WARNING to INFO </LI>
 
 		<LI><b>CmSchedulers       </b> - added 'diff' calculations for columns 'total_cpu_usage_ms', 'total_cpu_idle_capped_ms' and 'total_scheduler_delay_ms'</LI>
+		<LI><b>CmSchedulers       </b> - New Graph: CPU Usage in Percent, ALL Schedulers (using dm_os_schedulers.total_cpu_usage_ms)</LI>
+		<LI><b>CmSchedulers       </b> - New Graph: CPU Usage in Percent, per Scheduler (using dm_os_schedulers.total_cpu_usage_ms)</LI>
+		<LI><b>CmSchedulers       </b> - New Graph: CPU Delay in Milisec, per Scheduler (using dm_os_schedulers.total_scheduler_delay_ms)</LI>
+		<LI><b>CmSchedulers       </b> - New Graph: CPU Delay in Milisec, ALL Schedulers (using dm_os_schedulers.total_scheduler_delay_ms)</LI>
+		<LI><b>CmSchedulers       </b> - Tooltip for columns: total_cpu_usage_ms, total_cpu_idle_capped_ms, total_scheduler_delay_ms, ideal_workers_limit, pdw_node_id</LI>
 
 		<LI><b>CmSessions         </b> - Added column 'BlockingOtherSpids' - This holds information about what SPID(s) I'm currently blocking. Root blocker(s) are marked in red. logic (BlockingOtherSpids!="" and blocking_session_id=0)</LI>
 		<LI><b>CmSessions         </b> - Added column 'tat_transaction_id', 'transaction_type', 'transaction_name' , 'transaction_begin_time' (watch out for transaction_name 'implicit_transaction', which indicates that AotoCommit is FALSE, which introduces more blocking locks)</LI>

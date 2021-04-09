@@ -105,7 +105,6 @@
 	</classpathentry>
 	<classpathentry kind="lib" path="lib/jide-oss-3.6.18.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1605637792987/source/jide-oss-3.6.18-sources-1605719684373.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
-	<classpathentry kind="lib" path="lib/jconn4.jar"/>
 	<classpathentry kind="lib" path="lib/jackson-core-2.9.2.jar" sourcepath="3pp/jackson-core-2.9.2-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jackson-databind-2.9.2.jar" sourcepath="3pp/jackson-databind-2.9.2-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jackson-annotations-2.9.2.jar"/>
@@ -131,5 +130,6 @@
 	<classpathentry kind="lib" path="lib/jetty/javax.security.auth.message-1.0.0.v201108011116.jar"/>
 	<classpathentry kind="lib" path="lib/jetty/jetty-all-9.4.38.v20210224-uber.jar"/>
 	<classpathentry kind="lib" path="lib/jetty/javax.servlet-api-3.1.0.jar"/>
+	<classpathentry kind="lib" path="lib/jconn42.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>

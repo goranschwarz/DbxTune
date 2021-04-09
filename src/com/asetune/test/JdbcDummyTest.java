@@ -46,7 +46,7 @@ public class JdbcDummyTest
 			System.out.println(" SQL-Server - java -cp \"lib\\asetune.jar;lib\\jdbc_drivers\\mssql-jdbc-7.2.2.jre8.jar\"  com.asetune.test.JdbcDummyTest sa       \"secret\" \"jdbc:sqlserver://prod-2a-mssql:1433\"             20 10000 0 \"select getdate()\"                    ");
 			System.out.println(" Oracle     - java -cp \"lib\\asetune.jar;lib\\jdbc_drivers\\ojdbc7.jar\"                 com.asetune.test.JdbcDummyTest system   \"secret\" \"jdbc:oracle:thin:@//gs-11-ora:1521/XE\"           20 10000 0 \"select CURRENT_TIMESTAMP from dual\"  ");
 			System.out.println(" Postgres   - java -cp \"lib\\asetune.jar;lib\\jdbc_drivers\\postgresql-42.2.5.jre7.jar\" com.asetune.test.JdbcDummyTest postgres \"secret\" \"jdbc:postgresql://192.168.0.110:5432/postgres\"   20 10000 0 \"select now()\"                        ");
-			System.out.println(" Sybase ASE - java -cp \"lib\\asetune.jar;lib\\jconn4.jar\"                              com.asetune.test.JdbcDummyTest sa       \"secret\" \"jdbc:sybase:Tds:192.168.0.110:1600\"              20 10000 0 \"select getdate()\"                    ");
+			System.out.println(" Sybase ASE - java -cp \"lib\\asetune.jar;lib\\jconn42.jar\"                              com.asetune.test.JdbcDummyTest sa       \"secret\" \"jdbc:sybase:Tds:192.168.0.110:1600\"              20 10000 0 \"select getdate()\"                    ");
 			System.out.println();
 			System.exit(1);
 

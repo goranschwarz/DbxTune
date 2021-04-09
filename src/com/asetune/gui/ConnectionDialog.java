@@ -3604,6 +3604,7 @@ public class ConnectionDialog
 //			if      ("sun.jdbc.odbc.JdbcOdbcDriver"    .equals(className)) { desc = "JDBC - ODBC Bridge";     homePage = "en.wikipedia.org/wiki/JDBC_driver"; }
 //			else if ("com.sybase.jdbc3.jdbc.SybDriver" .equals(className)) { desc = "Sybase JDBC 3.0 Driver"; homePage = "www.sybase.com/jconnect"; }
 //			else if ("com.sybase.jdbc4.jdbc.SybDriver" .equals(className)) { desc = "Sybase JDBC 4.0 Driver"; homePage = "www.sybase.com/jconnect"; }
+//			else if ("com.sybase.jdbc42.jdbc.SybDriver".equals(className)) { desc = "Sybase JDBC 4.2 Driver"; homePage = "www.sybase.com/jconnect"; }
 //			else if ("net.sourceforge.jtds.jdbc.Driver".equals(className)) { desc = "jTDS Driver";            homePage = "jtds.sourceforge.net"; }
 //			else if ("org.h2.Driver"                   .equals(className)) { desc = "H2 Driver";              homePage = "www.h2database.com"; }
 //			else if ("com.sap.db.jdbc.Driver"          .equals(className)) { desc = "SAP HANA Driver";        homePage = "www.sap.com/HANA"; }

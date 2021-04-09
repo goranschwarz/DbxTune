@@ -1600,7 +1600,8 @@ public abstract class DbxTune
 			// Install a "special" EventQueue, which monitors deadlocks, and other "long" and time
 			// consuming operations on the EDT (Event Dispatch Thread)
 			// A WARN message will be written to the error log starting with 'Swing EDT-DEBUG - Hang: '
-			boolean useEdtHang = Version.getVersionStr().endsWith(".dev");
+//			boolean useEdtHang = Version.getVersionStr().endsWith(".dev");
+			boolean useEdtHang = System.getProperty("user.name").equals("goran");
 			if (Debug.hasDebug(DebugOptions.EDT_HANG) || useEdtHang)
 			{
 				_logger.info("Installing a Swing EDT (Event Dispatch Thread) - Hang Monitor, which will write information about long running EDT operations to the "+Version.getAppName()+" log.");

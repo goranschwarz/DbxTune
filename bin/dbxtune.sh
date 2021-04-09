@@ -375,6 +375,7 @@ export CLASSPATH=${CLASSPATH}:${HOME}/.dbxtune/jdbc_drivers/*
 export CLASSPATH=${CLASSPATH}:${HOME}/.dbxtune/lib/*
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jdbc_drivers/*
 export CLASSPATH=${CLASSPATH}:${EXTRA_JDBC_DRIVERS}
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jconn42.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jconn4.jar
 
 

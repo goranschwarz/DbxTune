@@ -46,7 +46,7 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.Ver;
-import com.sybase.jdbc4.jdbc.SybDriver;
+import com.sybase.jdbc42.jdbc.SybDriver;
 import com.sybase.jdbcx.SybMessageHandler;
 
 public class StressConnect
