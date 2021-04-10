@@ -20,9 +20,13 @@
  ******************************************************************************/
 package com.asetune.cm.rs;
 
+import java.io.File;
 import java.sql.Connection;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.naming.NameNotFoundException;
 
@@ -30,7 +34,10 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.RsTune;
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.rs.AlarmEventRsMissingLogicalConnection;
 import com.asetune.alarm.events.rs.AlarmEventRsReplicationAge;
 import com.asetune.alarm.events.rs.AlarmEventRsWsState;
 import com.asetune.cm.CmSettingsHelper;
@@ -353,6 +360,60 @@ extends CountersModel
 
 		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
+		//-------------------------------------------------------
+		// not in MandatoryLogicalConnections
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("MandatoryLogicalConnections"))
+		{
+			// Check if we should reset saved '_mandatoryLogicalConnections'
+			String tmpDir = System.getProperty("java.io.tmpdir");
+			File f = new File(RESET_LOGICAL_CONNECTION_FILE_NAME.replace("${tmpdir}", tmpDir));
+			if (f.exists())
+			{
+				_logger.info("Resetting Saved Mandatory Logical Connections Set, due to: Found file '" + f + "', which will be removed.");
+				_mandatoryLogicalConnections = null;
+				f.delete();
+			}
+
+			// Add all LogicalName's to a set of "connections that exists"
+			// This set will later on be checked for existence against PROPKEY_alarm_MandatoryLogicalConnections
+			// New connections will automatically be added added to the "mandatory set", if they are missing at at next check an alarm will be raised!
+			Set<String> thisSampleLogicalConnections = new HashSet<>();
+			if (_mandatoryLogicalConnections == null)
+				_mandatoryLogicalConnections = new LinkedHashSet<>();
+
+			for (int r=0; r<cm.getAbsRowCount(); r++)
+			{
+				String lName = cm.getAbsString(r, "LogicalName");
+				thisSampleLogicalConnections.add(lName);
+				_mandatoryLogicalConnections.add(lName);
+			}
+
+			// Get the configuration
+			String configMandatoryLogicalConnections = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_MandatoryLogicalConnections,  DEFAULT_alarm_MandatoryLogicalConnections);
+			
+			if (debugPrint || _logger.isDebugEnabled())
+				System.out.println("##### sendAlarmRequest("+cm.getName()+"): MandatoryLogicalConnections -- configMandatoryLogicalConnections='"+configMandatoryLogicalConnections+"', thisSampleLogicalConnections="+thisSampleLogicalConnections+", _mandatoryLogicalConnections="+_mandatoryLogicalConnections+".");
+
+
+			// Check ALL previous existing Logical Connections (since RsTune was started) 
+			Set<String> mandatoryLogicalConnections = _mandatoryLogicalConnections;
+			// Or what's in the Config file...
+			if ( ! configMandatoryLogicalConnections.equals(DEFAULT_alarm_MandatoryLogicalConnections) )
+				mandatoryLogicalConnections = StringUtil.commaStrToSet(configMandatoryLogicalConnections);
+
+			// Now loop any of the 2 above: previously-existing-connections  OR  values-from-the-config-file
+			for (String mandatoryLogicalName : mandatoryLogicalConnections)
+			{
+				if ( ! thisSampleLogicalConnections.contains(mandatoryLogicalName) )
+				{
+					AlarmEvent alarm = new AlarmEventRsMissingLogicalConnection(cm, mandatoryLogicalName, thisSampleLogicalConnections, mandatoryLogicalConnections, configMandatoryLogicalConnections);
+					AlarmHandler.getInstance().addAlarm(alarm);
+				}
+			}
+		}
+
+		// Loop all rows
 		for (int r=0; r<cm.getAbsRowCount(); r++)
 		{
 			String lName = cm.getAbsString(r, "LogicalName");
@@ -461,6 +522,9 @@ extends CountersModel
 		} // end: loop all rows
 	} // end: method
 
+	public static final String  PROPKEY_alarm_MandatoryLogicalConnections       = CM_NAME + ".alarm.system.MandatoryLogicalConnections.list";
+	public static final String  DEFAULT_alarm_MandatoryLogicalConnections       = "ALL"; // Remember every logical connection... if any are dropped: raise alarm
+
 	public static final String  PROPKEY_alarm_ActiveState                       = CM_NAME + ".alarm.system.if.ActiveState.ne";
 	public static final String  DEFAULT_alarm_ActiveState                       = "Active/";
 	
@@ -485,6 +549,9 @@ extends CountersModel
 //	public static final String  PROPKEY_alarm_OldestTranInSecondsSkipTranName   = CM_NAME + ".alarm.system.if.OldestTranInSeconds.skip.tranName";
 //	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranName   = "^(DUMP |\\$dmpxact).*";
 	
+	// Class members that has to do with Alarm Handling
+	private Set<String> _mandatoryLogicalConnections;
+	private static final String RESET_LOGICAL_CONNECTION_FILE_NAME = "${tmpdir}/RsTune.reset.saved.MandatoryLogicalConnections";
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -493,6 +560,8 @@ extends CountersModel
 		List<CmSettingsHelper> list = new ArrayList<>();
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+
+		list.add(new CmSettingsHelper("MandatoryLogicalConnections",       isAlarmSwitch, PROPKEY_alarm_MandatoryLogicalConnections      , String.class,  conf.getProperty   (PROPKEY_alarm_MandatoryLogicalConnections      , DEFAULT_alarm_MandatoryLogicalConnections      ), DEFAULT_alarm_MandatoryLogicalConnections      , "Logical Connection names that MUST be present, if not send 'AlarmEventRsMissingLogicalConnection'. This can be a comma separated list of Logical Connection Names. If config is '" + DEFAULT_alarm_MandatoryLogicalConnections + "', it means: Remember ALL present logical connections. if any are dropped: raise alarm. To reset this 'in-memory' list, restart " + RsTune.APP_NAME + " (or create the file '" + RESET_LOGICAL_CONNECTION_FILE_NAME + "'). "));
 		
 		list.add(new CmSettingsHelper("ActiveState",                       isAlarmSwitch, PROPKEY_alarm_ActiveState                      , String.class,  conf.getProperty   (PROPKEY_alarm_ActiveState                      , DEFAULT_alarm_ActiveState                      ), DEFAULT_alarm_ActiveState                      , "If 'ActiveState' does NOT match the regexp send 'AlarmEventRsWsState'.",  new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("StandbyState",                      isAlarmSwitch, PROPKEY_alarm_StandbyState                     , String.class,  conf.getProperty   (PROPKEY_alarm_StandbyState                     , DEFAULT_alarm_StandbyState                     ), DEFAULT_alarm_StandbyState                     , "If 'StandbyState' does NOT match the regexp send 'AlarmEventRsWsState'.", new RegExpInputValidator()));

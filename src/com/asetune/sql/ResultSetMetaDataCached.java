@@ -32,6 +32,8 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.RsTune;
+import com.asetune.Version;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.ddl.DataTypeNotResolvedException;
 import com.asetune.sql.ddl.IDbmsDataTypeResolver;
@@ -330,6 +332,22 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 		_entries.add(entry);
 	}
 
+	protected void handlePopulateMetaDataException(String methodName, int colNum, SQLException sqle)
+	{
+		// Do a bit less logging for RsTune
+		if (RsTune.APP_NAME.equals(Version.getAppName()))
+		{
+			if ( StringUtil.equalsAny(methodName, "isCaseSensitive", "isSearchable", "getColumnTypeName"))
+				/* Skip some methods... */;
+			else
+				_logger.info("Problems reading ResultSetMetaData." + methodName + "(" + colNum + "). Caught: " + sqle);
+		}
+		else
+		{
+			_logger.info("Problems reading ResultSetMetaData." + methodName + "(" + colNum + "). Caught: " + sqle);
+		}
+	}
+
 	protected void populate(ResultSetMetaData source) 
 	throws SQLException
 	{
@@ -341,26 +359,26 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 			// NOTE: source.isSearchable(), and source.getColumnTypeName() seems to be "heavy" or blocks the if we have a LARGE ResultSet (at least for Sybase ASE)
 			//       check if there is something we can do about that???
 			//       maybe NOT get them if not needed. (but if we do ResultSet MetaData translations with IDbmsDataTypeResolver and possibly IDbmsDdlResolver getColumnTypeName is used)
-			try { entry._autoIncrement      = source.isAutoIncrement     (col); } catch(SQLException sqle) { entry._autoIncrement      = false;                                         _logger.info("Problems reading ResultSetMetaData.isAutoIncrement("     + col + "). Caught: " + sqle); }
-			try { entry._caseSensitive      = source.isCaseSensitive     (col); } catch(SQLException sqle) { entry._caseSensitive      = false;                                         _logger.info("Problems reading ResultSetMetaData.isCaseSensitive("     + col + "). Caught: " + sqle); }
-			try { entry._searchable         = source.isSearchable        (col); } catch(SQLException sqle) { entry._searchable         = false;                                         _logger.info("Problems reading ResultSetMetaData.isSearchable("        + col + "). Caught: " + sqle); }
-			try { entry._currency           = source.isCurrency          (col); } catch(SQLException sqle) { entry._currency           = false;                                         _logger.info("Problems reading ResultSetMetaData.isCurrency("          + col + "). Caught: " + sqle); }
-			try { entry._nullable           = source.isNullable          (col); } catch(SQLException sqle) { entry._nullable           = ResultSetMetaData.columnNullable;              _logger.info("Problems reading ResultSetMetaData.isNullable("          + col + "). Caught: " + sqle); }
-			try { entry._signed             = source.isSigned            (col); } catch(SQLException sqle) { entry._signed             = false;                                         _logger.info("Problems reading ResultSetMetaData.isSigned("            + col + "). Caught: " + sqle); }
-			try { entry._columnDisplaySize  = source.getColumnDisplaySize(col); } catch(SQLException sqle) { entry._columnDisplaySize  = 30;                                            _logger.info("Problems reading ResultSetMetaData.getColumnDisplaySize("+ col + "). Caught: " + sqle); }
-			try { entry._columnLabel        = source.getColumnLabel      (col); } catch(SQLException sqle) { entry._columnLabel        = "unknown";                                     _logger.info("Problems reading ResultSetMetaData.getColumnLabel("      + col + "). Caught: " + sqle); }
-			try { entry._columnName         = source.getColumnName       (col); } catch(SQLException sqle) { entry._columnName         = "unknown";                                     _logger.info("Problems reading ResultSetMetaData.getColumnName("       + col + "). Caught: " + sqle); }
-			try { entry._schemaName         = source.getSchemaName       (col); } catch(SQLException sqle) { entry._schemaName         = "";                                            _logger.info("Problems reading ResultSetMetaData.getSchemaName("       + col + "). Caught: " + sqle); }
-			try { entry._precision          = source.getPrecision        (col); } catch(SQLException sqle) { entry._precision          = 0;                                             _logger.info("Problems reading ResultSetMetaData.getPrecision("        + col + "). Caught: " + sqle); }
-			try { entry._scale              = source.getScale            (col); } catch(SQLException sqle) { entry._scale              = 0;                                             _logger.info("Problems reading ResultSetMetaData.getScale("            + col + "). Caught: " + sqle); }
-			try { entry._tableName          = source.getTableName        (col); } catch(SQLException sqle) { entry._tableName          = "";                                            _logger.info("Problems reading ResultSetMetaData.getTableName("        + col + "). Caught: " + sqle); }
-			try { entry._catalogName        = source.getCatalogName      (col); } catch(SQLException sqle) { entry._catalogName        = "";                                            _logger.info("Problems reading ResultSetMetaData.getCatalogName("      + col + "). Caught: " + sqle); }
-			try { entry._columnType         = source.getColumnType       (col); } catch(SQLException sqle) { entry._columnType         = Types.OTHER;                                   _logger.info("Problems reading ResultSetMetaData.getColumnType("       + col + "). Caught: " + sqle); }
-			try { entry._columnTypeName     = source.getColumnTypeName   (col); } catch(SQLException sqle) { entry._columnTypeName     = getSqlDatatypeFromJdbcType(entry._columnType); _logger.info("Problems reading ResultSetMetaData.getColumnTypeName("   + col + "). Caught: " + sqle); }
-			try { entry._readOnly           = source.isReadOnly          (col); } catch(SQLException sqle) { entry._readOnly           = true;                                          _logger.info("Problems reading ResultSetMetaData.isReadOnly("          + col + "). Caught: " + sqle); }
-			try { entry._writable           = source.isWritable          (col); } catch(SQLException sqle) { entry._writable           = false;                                         _logger.info("Problems reading ResultSetMetaData.isWritable("          + col + "). Caught: " + sqle); }
-			try { entry._definitelyWritable = source.isDefinitelyWritable(col); } catch(SQLException sqle) { entry._definitelyWritable = false;                                         _logger.info("Problems reading ResultSetMetaData.isDefinitelyWritable("+ col + "). Caught: " + sqle); }
-			try { entry._columnClassName    = source.getColumnClassName  (col); } catch(SQLException sqle) { entry._columnClassName    = "unknown";                                     _logger.info("Problems reading ResultSetMetaData.getColumnClassName("  + col + "). Caught: " + sqle); }
+			try { entry._autoIncrement      = source.isAutoIncrement     (col); } catch(SQLException sqle) { entry._autoIncrement      = false;                                         handlePopulateMetaDataException("isAutoIncrement"     , col, sqle); }
+			try { entry._caseSensitive      = source.isCaseSensitive     (col); } catch(SQLException sqle) { entry._caseSensitive      = false;                                         handlePopulateMetaDataException("isCaseSensitive"     , col, sqle); }
+			try { entry._searchable         = source.isSearchable        (col); } catch(SQLException sqle) { entry._searchable         = false;                                         handlePopulateMetaDataException("isSearchable"        , col, sqle); }
+			try { entry._currency           = source.isCurrency          (col); } catch(SQLException sqle) { entry._currency           = false;                                         handlePopulateMetaDataException("isCurrency"          , col, sqle); }
+			try { entry._nullable           = source.isNullable          (col); } catch(SQLException sqle) { entry._nullable           = ResultSetMetaData.columnNullable;              handlePopulateMetaDataException("isNullable"          , col, sqle); }
+			try { entry._signed             = source.isSigned            (col); } catch(SQLException sqle) { entry._signed             = false;                                         handlePopulateMetaDataException("isSigned"            , col, sqle); }
+			try { entry._columnDisplaySize  = source.getColumnDisplaySize(col); } catch(SQLException sqle) { entry._columnDisplaySize  = 30;                                            handlePopulateMetaDataException("getColumnDisplaySize", col, sqle); }
+			try { entry._columnLabel        = source.getColumnLabel      (col); } catch(SQLException sqle) { entry._columnLabel        = "unknown";                                     handlePopulateMetaDataException("getColumnLabel"      , col, sqle); }
+			try { entry._columnName         = source.getColumnName       (col); } catch(SQLException sqle) { entry._columnName         = "unknown";                                     handlePopulateMetaDataException("getColumnName"       , col, sqle); }
+			try { entry._schemaName         = source.getSchemaName       (col); } catch(SQLException sqle) { entry._schemaName         = "";                                            handlePopulateMetaDataException("getSchemaName"       , col, sqle); }
+			try { entry._precision          = source.getPrecision        (col); } catch(SQLException sqle) { entry._precision          = 0;                                             handlePopulateMetaDataException("getPrecision"        , col, sqle); }
+			try { entry._scale              = source.getScale            (col); } catch(SQLException sqle) { entry._scale              = 0;                                             handlePopulateMetaDataException("getScale"            , col, sqle); }
+			try { entry._tableName          = source.getTableName        (col); } catch(SQLException sqle) { entry._tableName          = "";                                            handlePopulateMetaDataException("getTableName"        , col, sqle); }
+			try { entry._catalogName        = source.getCatalogName      (col); } catch(SQLException sqle) { entry._catalogName        = "";                                            handlePopulateMetaDataException("getCatalogName"      , col, sqle); }
+			try { entry._columnType         = source.getColumnType       (col); } catch(SQLException sqle) { entry._columnType         = Types.OTHER;                                   handlePopulateMetaDataException("getColumnType"       , col, sqle); }
+			try { entry._columnTypeName     = source.getColumnTypeName   (col); } catch(SQLException sqle) { entry._columnTypeName     = getSqlDatatypeFromJdbcType(entry._columnType); handlePopulateMetaDataException("getColumnTypeName"   , col, sqle); }
+			try { entry._readOnly           = source.isReadOnly          (col); } catch(SQLException sqle) { entry._readOnly           = true;                                          handlePopulateMetaDataException("isReadOnly"          , col, sqle); }
+			try { entry._writable           = source.isWritable          (col); } catch(SQLException sqle) { entry._writable           = false;                                         handlePopulateMetaDataException("isWritable"          , col, sqle); }
+			try { entry._definitelyWritable = source.isDefinitelyWritable(col); } catch(SQLException sqle) { entry._definitelyWritable = false;                                         handlePopulateMetaDataException("isDefinitelyWritable", col, sqle); }
+			try { entry._columnClassName    = source.getColumnClassName  (col); } catch(SQLException sqle) { entry._columnClassName    = "unknown";                                     handlePopulateMetaDataException("getColumnClassName"  , col, sqle); }
 
 			entry._columnPos = col;
 

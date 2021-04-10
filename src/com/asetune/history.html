@@ -127,7 +127,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>New column: 'SpidLockCount'       -- How Many Locks does this SPID hold</li>
 			<li>New column: 'BlockedSpidsInfo'    -- If This SPID blocks other spid's, then this column include information about the SPID's that we are blocking.</li>
 			<li>New column: 'HasBlockedSpidsInfo' -- true or false, based on the above column.</li>
-			<li>New column: 'SrvUserName'         -- Name of the Server Login. SQL: SrvUserName = suser_name(P.ServerUserID) </li>
+			<li>New column: 'SrvUserName'         -- Name of the Server Login. SQL: SrvUserName = suser_name(P.ServerUserID) Note: Only in ASE 15.0.2 ESD#2 or later</li>
 			<li>Added skip capabilities for alarm BlockingLockAlarm, you can skip on columns 'Command', 'Application', 'SrvUserName', and 'HostName'. The default is to skip where Command = <code>^(DUMP DATABASE|DUMP TRANSACTION).*</code> </li>
 		</ul>
 		</LI>
@@ -239,7 +239,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>RsTune - Sybase/SAP Replication Server</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to evolve</LI>
+		<LI>New Alarm: AlarmEventRsMissingLogicalConnection, which is raised when any logical connection is dropped (or not part of the configured list)<br>
+			config 'CmWsRepLatency.alarm.system.MandatoryLogicalConnections.list', which can be: <br>
+			- ALL to remember any existing logical connections on the server. and if any are dropped, the alarms will be raised. <br> 
+			- or a Comma separated list with mandatory servers, for example: LSRV.db1, LSRV.db2, LSRV.db3<br>
+		</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
