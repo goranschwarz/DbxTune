@@ -38,12 +38,14 @@ import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventBlockingLockAlarm;
+import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
 import com.asetune.cache.XmlPlanCache;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.ase.gui.CmActiveStatementsPanel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
@@ -220,6 +222,7 @@ extends CountersModel
 			mtd.addColumn("monProcess",  "SpidLocks",                  "This SPID holds the following locks in the database");
 			mtd.addColumn("monProcess",  "HasBlockedSpidsInfo",        "Has values in column 'BlockedSpidsInfo'");
 			mtd.addColumn("monProcess",  "BlockedSpidsInfo",           "If this SPID is BLOCKING other spid's, then here is a html-table of showplan for the Blocked spid's. (Note: 'Get Showplan' must be enabled)");
+			mtd.addColumn("monProcess",  "SrvUserName",                "Login Name: SrvUserName = suser_name(P.ServerUserID)");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -287,6 +290,14 @@ extends CountersModel
 
 		boolean showHoldingLocks = Configuration.getCombinedConfiguration().getBooleanProperty(getName()+".sample.holdingLocks", false);
 
+		// ASE 15.0.2 ESD#2
+		String SrvUserName = "";
+
+		if (srvVersion >= Ver.ver(15,0,2, 2))
+		{
+			SrvUserName = "SrvUserName = suser_name(P.ServerUserID), \n";
+		}
+
 		// ASE 15.7
 		String HostName       = "";
 		String ClientName     = "";
@@ -294,8 +305,6 @@ extends CountersModel
 		String ClientApplName = "";
 		String ase1570_nl     = "";
 
-//		if (srvVersion >= 15700)
-//		if (srvVersion >= 1570000)
 		if (srvVersion >= Ver.ver(15,7))
 		{
 			HostName       = "P.HostName, ";
@@ -306,7 +315,6 @@ extends CountersModel
 		}
 		// ASE 16.0
 		String ClientDriverVersion = ""; // The version of the connectivity driver used by the client program
-//		if (srvVersion >= 1600000)
 		if (srvVersion >= Ver.ver(16,0))
 		{
 			ClientDriverVersion = "P.ClientDriverVersion, ";
@@ -324,8 +332,6 @@ extends CountersModel
 		}
 		
 		String optGoalPlan = "";
-//		if (srvVersion >= 15020)
-//		if (srvVersion >= 1502000)
 		if (srvVersion >= Ver.ver(15,0,2))
 		{
 			optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
@@ -337,8 +343,6 @@ extends CountersModel
 		}
 
 		String dbNameCol  = "dbname=db_name(S.DBID)";
-//		if (srvVersion >= 15026) // just a guess what release this was introduced (not in 15.0.2.1, but at least in 15.0.2.6, I have not gathered info for 15022-15025])
-//		if (srvVersion >= 1502060) // just a guess what release this was introduced (not in 15.0.2.1, but at least in 15.0.2.6, I have not gathered info for 15022-15025])
 		if (srvVersion >= Ver.ver(15,0,2,6)) // just a guess what release this was introduced (not in 15.0.2.1, but at least in 15.0.2.6, I have not gathered info for 15022-15025])
 		{
 			dbNameCol  = "dbname=S.DBName";
@@ -349,6 +353,7 @@ extends CountersModel
 		         "multiSampled=convert(varchar(10),''), \n" +
 		         "S.BatchID, S.LineNumber, \n" +
 		         dbNameCol+", procname=isnull(isnull(object_name(S.ProcedureID,S.DBID),object_name(S.ProcedureID,2)),''), linenum=S.LineNumber, \n" +
+		         SrvUserName +
 		         "P.Command, P.Application, \n" +
 		         HostName + ClientName + ClientHostName + ClientApplName + ClientDriverVersion + ase1570_nl +
 		         "S.CpuTime, S.WaitTime, \n" +
@@ -439,6 +444,7 @@ extends CountersModel
 		         "multiSampled=convert(varchar(10),''), \n" +
 		         "P.BatchID, P.LineNumber, \n" +
 		         dbNameCol+", procname='', linenum=P.LineNumber, \n" +
+		         SrvUserName +
 		         "P.Command, P.Application, \n" +
 		         HostName + ClientName + ClientHostName + ClientApplName + ClientDriverVersion + ase1570_nl +
 		         "CpuTime=-1, WaitTime=-1, \n" +
@@ -1189,274 +1195,6 @@ extends CountersModel
 	} // end: method
 
 
-//	/** 
-//	 * Fill in the WaitEventDesc column with data from
-//	 * MonTableDictionary.. transforms a WaitEventId -> text description
-//	 * This so we do not have to do a subselect in the query that gets data
-//	 * doing it this way, means better performance, since the values are cached locally in memory
-//	 * Also do post lookups of dbcc sqltext, sp_showplan, dbcc stacktrace
-//	 */
-//	@Override
-//	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
-//	{
-////		long startTime = System.currentTimeMillis();
-//
-////		Configuration conf = Configuration.getInstance(Configuration.TEMP);
-//		Configuration conf = Configuration.getCombinedConfiguration();
-//		boolean getShowplan       = conf == null ? true : conf.getBooleanProperty(getName()+".sample.showplan",       true);
-//		boolean getMonSqltext     = conf == null ? true : conf.getBooleanProperty(getName()+".sample.monSqltext",     true);
-//		boolean getDbccSqltext    = conf == null ? false: conf.getBooleanProperty(getName()+".sample.dbccSqltext",    false);
-//		boolean getProcCallStack  = conf == null ? true : conf.getBooleanProperty(getName()+".sample.procCallStack",  true);
-//		boolean getDbccStacktrace = conf == null ? false: conf.getBooleanProperty(getName()+".sample.dbccStacktrace", false);
-//
-//		// Where are various columns located in the Vector 
-//		int pos_WaitEventID        = -1, pos_WaitEventDesc  = -1, pos_WaitClassDesc = -1, pos_SPID = -1;
-//		int pos_HasShowPlan        = -1, pos_ShowPlanText   = -1;
-//		int pos_HasMonSqlText      = -1, pos_MonSqlText     = -1;
-//		int pos_HasDbccSqlText     = -1, pos_DbccSqlText    = -1;
-//		int pos_HasProcCallStack   = -1, pos_ProcCallStack  = -1;
-//		int pos_HasStacktrace      = -1, pos_DbccStacktrace = -1;
-//		int pos_BlockingOtherSpids = -1, pos_BlockingSPID   = -1;
-//		int pos_multiSampled       = -1;
-//		int pos_StartTime          = -1;
-//		int waitEventID = 0;
-//		String waitEventDesc = "";
-//		String waitClassDesc = "";
-//		CounterSample counters = diffData;
-//
-//		if ( ! MonTablesDictionaryManager.hasInstance() )
-//			return;
-//		MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
-//
-//		if (counters == null)
-//			return;
-//
-//		// Find column Id's
-//		List<String> colNames = counters.getColNames();
-//		if (colNames==null) return;
-//
-//		for (int colId=0; colId < colNames.size(); colId++) 
-//		{
-//			String colName = colNames.get(colId);
-//			if      (colName.equals("WaitEventID"))        pos_WaitEventID        = colId;
-//			else if (colName.equals("WaitEventDesc"))      pos_WaitEventDesc      = colId;
-//			else if (colName.equals("WaitClassDesc"))      pos_WaitClassDesc      = colId;
-//			else if (colName.equals("SPID"))               pos_SPID               = colId;
-//			else if (colName.equals("HasShowPlan"))        pos_HasShowPlan        = colId;
-//			else if (colName.equals("ShowPlanText"))       pos_ShowPlanText       = colId;
-//			else if (colName.equals("HasMonSqlText"))      pos_HasMonSqlText      = colId;
-//			else if (colName.equals("MonSqlText"))         pos_MonSqlText         = colId;
-//			else if (colName.equals("HasDbccSqlText"))     pos_HasDbccSqlText     = colId;
-//			else if (colName.equals("DbccSqlText"))        pos_DbccSqlText        = colId;
-//			else if (colName.equals("HasProcCallStack"))   pos_HasProcCallStack   = colId;
-//			else if (colName.equals("ProcCallStack"))      pos_ProcCallStack      = colId;
-//			else if (colName.equals("HasStacktrace"))      pos_HasStacktrace      = colId;
-//			else if (colName.equals("DbccStacktrace"))     pos_DbccStacktrace     = colId;
-//			else if (colName.equals("BlockingOtherSpids")) pos_BlockingOtherSpids = colId;
-//			else if (colName.equals("BlockingSPID"))       pos_BlockingSPID       = colId;
-//			else if (colName.equals("multiSampled"))       pos_multiSampled       = colId;
-//			else if (colName.equals("StartTime"))          pos_StartTime          = colId;
-//
-//			// Noo need to continue, we got all our columns
-//			if (    pos_WaitEventID        >= 0 && pos_WaitEventDesc  >= 0 
-//			     && pos_WaitClassDesc      >= 0 && pos_SPID >= 0 
-//			     && pos_HasShowPlan        >= 0 && pos_ShowPlanText   >= 0 
-//			     && pos_HasMonSqlText      >= 0 && pos_MonSqlText     >= 0 
-//			     && pos_HasDbccSqlText     >= 0 && pos_DbccSqlText    >= 0 
-//			     && pos_HasProcCallStack   >= 0 && pos_ProcCallStack  >= 0 
-//			     && pos_HasStacktrace      >= 0 && pos_DbccStacktrace >= 0 
-//			     && pos_BlockingOtherSpids >= 0 && pos_BlockingSPID   >= 0
-//			     && pos_multiSampled       >= 0
-//			     && pos_StartTime          >= 0
-//			   )
-//				break;
-//		}
-//
-//		if (pos_WaitEventID < 0 || pos_WaitEventDesc < 0 || pos_WaitClassDesc < 0)
-//		{
-//			_logger.debug("Can't find the position for columns ('WaitEventID'="+pos_WaitEventID+", 'WaitEventDesc'="+pos_WaitEventDesc+", 'WaitClassDesc'="+pos_WaitClassDesc+")");
-//			return;
-//		}
-//		
-//		if (pos_SPID < 0 || pos_HasShowPlan < 0 || pos_ShowPlanText < 0)
-//		{
-//			_logger.debug("Can't find the position for columns ('SPID'="+pos_SPID+", 'HasShowPlan'="+pos_HasShowPlan+", 'ShowPlanText'="+pos_ShowPlanText+")");
-//			return;
-//		}
-//
-//		if (pos_HasDbccSqlText < 0 || pos_DbccSqlText < 0)
-//		{
-//			_logger.debug("Can't find the position for columns ('HasDbccSqlText'="+pos_HasDbccSqlText+", 'DbccSqlText'="+pos_DbccSqlText+")");
-//			return;
-//		}
-//
-//		if (pos_HasProcCallStack < 0 || pos_ProcCallStack < 0)
-//		{
-//			_logger.debug("Can't find the position for columns ('HasProcCallStack'="+pos_HasProcCallStack+", 'ProcCallStack'="+pos_ProcCallStack+")");
-//			return;
-//		}
-//
-//		if (pos_HasMonSqlText < 0 || pos_MonSqlText < 0)
-//		{
-//			_logger.debug("Can't find the position for columns (''HasMonSqlText'="+pos_HasMonSqlText+", 'MonSqlText'="+pos_MonSqlText+")");
-//			return;
-//		}
-//
-//		if (pos_HasStacktrace < 0 || pos_DbccStacktrace < 0)
-//		{
-//			_logger.debug("Can't find the position for columns ('HasShowplan'="+pos_HasStacktrace+", 'DbccStacktrace'="+pos_DbccStacktrace+")");
-//			return;
-//		}
-//		
-//		if (pos_BlockingOtherSpids < 0 || pos_BlockingSPID < 0)
-//		{
-//			_logger.debug("Can't find the position for columns ('BlockingOtherSpids'="+pos_BlockingOtherSpids+", 'BlockingSPID'="+pos_BlockingSPID+")");
-//			return;
-//		}
-//		
-//		if (pos_multiSampled < 0)
-//		{
-//			_logger.debug("Can't find the position for columns ('multiSampled'="+pos_multiSampled+")");
-//			return;
-//		}
-//		
-//		if (pos_StartTime < 0)
-//		{
-//			_logger.debug("Can't find the position for columns ('StartTime'="+pos_StartTime+")");
-//			return;
-//		}
-//		
-//		// Loop on all diffData rows
-//		for (int rowId=0; rowId < counters.getRowCount(); rowId++) 
-//		{
-//			String thisRowPk = counters.getPkValue(rowId);
-//			int prevPkRowId = (prevSample == null) ? -1 : prevSample.getRowNumberForPkValue(thisRowPk);
-//			boolean prevPkExists = prevPkRowId >= 0;
-//
-//			Object o_waitEventId = counters.getValueAt(rowId, pos_WaitEventID);
-//			Object o_SPID        = counters.getValueAt(rowId, pos_SPID);
-//
-//			if (prevPkExists)
-//			{
-//				Object o_this_StartTime = counters  .getValueAt(rowId,       pos_StartTime);
-//				Object o_prev_StartTime = prevSample.getValueAt(prevPkRowId, pos_StartTime);
-//
-//				if (o_this_StartTime instanceof Timestamp && o_prev_StartTime instanceof Timestamp)
-//				{
-//					if (o_this_StartTime.equals(o_prev_StartTime))
-//						counters.setValueAt("YES", rowId, pos_multiSampled);
-//				}
-//			}
-//
-//			if (o_waitEventId instanceof Number)
-//			{
-//				waitEventID	  = ((Number)o_waitEventId).intValue();
-//
-//				if (mtd.hasWaitEventDescription(waitEventID))
-//				{
-//					waitEventDesc = mtd.getWaitEventDescription(waitEventID);
-//					waitClassDesc = mtd.getWaitEventClassDescription(waitEventID);
-//				}
-//				else
-//				{
-//					waitEventDesc = "";
-//					waitClassDesc = "";
-//				}
-//
-//				//row.set( pos_WaitEventDesc, waitEventDesc);
-//				counters.setValueAt(waitEventDesc, rowId, pos_WaitEventDesc);
-//				counters.setValueAt(waitClassDesc, rowId, pos_WaitClassDesc);
-//			}
-//
-//			if (o_SPID instanceof Number)
-//			{
-//				int spid = ((Number)o_SPID).intValue();
-//
-//				String monSqlText    = "Not properly configured (need 'SQL batch capture' & 'max SQL text monitored').";
-//				String dbccSqlText   = "User does not have: sa_role";
-//				String procCallStack = "User does not have: sa_role";
-//				String showplan      = "User does not have: sa_role";
-//				String stacktrace    = "User does not have: sa_role";
-//
-//				if (getMonitorConfig("SQL batch capture") > 0 && getMonitorConfig("max SQL text monitored") > 0)
-//				{
-//					// monProcessSQLText; needs 'enable monitoring', 'SQL batch capture' and 'max SQL text monitored' configuration parameters for this monitoring table to collect data.
-//					if (getMonSqltext)
-//						monSqlText  = AseConnectionUtils.monSqlText(getCounterController().getMonConnection(), spid, true);
-//					else
-//						monSqlText = "This was disabled";
-//					if (monSqlText == null)
-//						monSqlText = "Not Available";
-//				}
-//				if (isServerRoleOrPermissionActive(AseConnectionUtils.SA_ROLE))
-//				{
-//					if (getDbccSqltext)
-//						dbccSqlText  = AseConnectionUtils.dbccSqlText(getCounterController().getMonConnection(), spid, true);
-//					else
-//						dbccSqlText = "This was disabled";
-//					if (dbccSqlText == null)
-//						dbccSqlText = "Not Available";
-//
-//					if (getProcCallStack)
-//						procCallStack  = AseConnectionUtils.monProcCallStack(getCounterController().getMonConnection(), spid, true);
-//					else
-//						procCallStack = "This was disabled";
-//					if (procCallStack == null)
-//						procCallStack = "Not Available";
-//
-//					if (getShowplan)
-//						showplan = AseConnectionUtils.getShowplan(getCounterController().getMonConnection(), spid, "Showplan:", true);
-//					else
-//						showplan = "This was disabled";
-//					if (showplan == null)
-//						showplan = "Not Available";
-//
-//					if (getDbccStacktrace)
-//						stacktrace = AseConnectionUtils.dbccStacktrace(getCounterController().getMonConnection(), spid, true, waitEventID);
-//					else
-//						stacktrace = "This was disabled";
-//					if (stacktrace == null)
-//						stacktrace = "Not Available";
-//				}
-//				boolean b = true;
-//				b = !"This was disabled".equals(monSqlText)    && !"Not Available".equals(monSqlText)    && !monSqlText   .startsWith("Not properly configured");
-//				counters.setValueAt(new Boolean(b), rowId, pos_HasMonSqlText);
-//				counters.setValueAt(monSqlText,     rowId, pos_MonSqlText);
-//
-//				b = !"This was disabled".equals(dbccSqlText)   && !"Not Available".equals(dbccSqlText)   && !dbccSqlText  .startsWith("User does not have");
-//				counters.setValueAt(new Boolean(b), rowId, pos_HasDbccSqlText);
-//				counters.setValueAt(dbccSqlText,    rowId, pos_DbccSqlText);
-//
-//				b = !"This was disabled".equals(procCallStack) && !"Not Available".equals(procCallStack) && !procCallStack.startsWith("User does not have");
-//				counters.setValueAt(new Boolean(b), rowId, pos_HasProcCallStack);
-//				counters.setValueAt(procCallStack,  rowId, pos_ProcCallStack);
-//
-//				b = !"This was disabled".equals(showplan)      && !"Not Available".equals(showplan)      && !showplan     .startsWith("User does not have");
-//				counters.setValueAt(new Boolean(b), rowId, pos_HasShowPlan);
-//				counters.setValueAt(showplan,       rowId, pos_ShowPlanText);
-//
-//				b = !"This was disabled".equals(stacktrace)    && !"Not Available".equals(stacktrace)    && !stacktrace   .startsWith("User does not have");
-//				counters.setValueAt(new Boolean(b), rowId, pos_HasStacktrace);
-//				counters.setValueAt(stacktrace,     rowId, pos_DbccStacktrace);
-//
-//				// Get LIST of SPID's that I'm blocking
-//				String blockingList = getBlockingListStr(counters, spid, pos_BlockingSPID, pos_SPID);
-//
-//				// This could be used to test that PCS.store() will truncate string size to the tables storage size
-//				//blockingList += "'1:aaa:0', '1:bbb:0', '1:ccc:0', '1:ddd:0', '1:eee:0', '1:fff:0', '1:ggg:0', '1:hhh:0', '1:iii:0', '1:jjj:0', '1:kkk:0', '1:lll:0', '1:mmm:0', '1:nnn:0', '1:ooo:0', '1:ppp:0', '1:qqq:0', '1:rrr:0', '1:sss:0', '1:ttt:0', '1:uuu:0', '1:vvv:0', '1:wwww:0', '1:xxx:0', '1:yyy:0', '1:zzz:0' -end-";
-//
-//				counters.setValueAt(blockingList,      rowId, pos_BlockingOtherSpids);
-//			}
-//		}
-//	}
-	
-//	@Override
-//	protected Object clone() throws CloneNotSupportedException
-//	{
-//		// TODO Auto-generated method stub
-//		return super.clone();
-//	}
-
 	private String getBlockingListStrForSpid(CounterSample counters, int spid, int pos_BlockingSPID, int pos_SPID)
 	{
 		StringBuilder sb = new StringBuilder();
@@ -1647,12 +1385,38 @@ extends CountersModel
 
 					if (BlockingOthersMaxTimeInSec > threshold)
 					{
-						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-						AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, BlockingOthersMaxTimeInSec, BlockingOtherSpidsStr, blockCount);
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						// Get various names to "skip"
+						String currentCommand  = cm.getAbsString(r, "Command");
+						String currentAppName  = cm.getAbsString(r, "Application");
+						String currentUserName = cm.getAbsString(r, "SrvUserName");  // if column name isn't found "" (empty string) will be returned
+						String currentHostName = cm.getAbsString(r, "HostName");     // if column name isn't found "" (empty string) will be returned
 						
-						alarmHandler.addAlarm( ae );
+						// Get config 'skip some transaction names'
+						String skipCommandRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipCommand    , DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipCommand);
+						String skipAppNameRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipApplication, DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipApplication);
+						String skipUserNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipSrvUserName, DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipSrvUserName);
+						String skipHostNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipHostName   , DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipHostName);
+
+						// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+						boolean doAlarm = true;
+
+						// The below could have been done with nested if(skip-name), if(skip-prog), if(skip-user), if(skip-host) doAlarm=true; 
+						// Below is more readable, from a variable context point-of-view, but HARDER to understand
+						// to *continue*: doAlarm needs to be true AND (regExp is empty OR not-matching)
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipCommandRegExp)  || ! currentCommand .matches(skipCommandRegExp)));
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipAppNameRegExp)  || ! currentAppName .matches(skipAppNameRegExp)));
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipUserNameRegExp) || ! currentUserName.matches(skipUserNameRegExp)));
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipHostNameRegExp) || ! currentHostName.matches(skipHostNameRegExp)));
+
+						if (doAlarm)
+						{
+							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+							AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, BlockingOthersMaxTimeInSec, BlockingOtherSpidsStr, blockCount);
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							
+							alarmHandler.addAlarm( ae );
+						}
 					}
 				}
 			}
@@ -1661,6 +1425,18 @@ extends CountersModel
 
 	public static final String  PROPKEY_alarm_BlockingOthersMaxTimeInSec = CM_NAME + ".alarm.system.if.BlockingOthersMaxTimeInSec.gt";
 	public static final int     DEFAULT_alarm_BlockingOthersMaxTimeInSec = 60;
+	
+	public static final String  PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipCommand     = CM_NAME + ".alarm.system.if.BlockingOthersMaxTimeInSec.skip.Command";
+	public static final String  DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipCommand     = "^(DUMP DATABASE|DUMP TRANSACTION).*";
+	
+	public static final String  PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipApplication = CM_NAME + ".alarm.system.if.BlockingOthersMaxTimeInSec.skip.Application";
+	public static final String  DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipApplication = "";
+	
+	public static final String  PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipSrvUserName = CM_NAME + ".alarm.system.if.BlockingOthersMaxTimeInSec.skip.SrvUserName";
+	public static final String  DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipSrvUserName = "";
+	
+	public static final String  PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipHostName    = CM_NAME + ".alarm.system.if.BlockingOthersMaxTimeInSec.skip.HostName";
+	public static final String  DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipHostName    = "";
 	
 	
 	@Override
@@ -1671,7 +1447,11 @@ extends CountersModel
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("BlockingOthersMaxTimeInSec", isAlarmSwitch, PROPKEY_alarm_BlockingOthersMaxTimeInSec, Integer.class, conf.getIntProperty(PROPKEY_alarm_BlockingOthersMaxTimeInSec, DEFAULT_alarm_BlockingOthersMaxTimeInSec), DEFAULT_alarm_BlockingOthersMaxTimeInSec, "If 'BlockingOthersMaxTimeInSec' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
+		list.add(new CmSettingsHelper("BlockingOthersMaxTimeInSec", isAlarmSwitch , PROPKEY_alarm_BlockingOthersMaxTimeInSec                , Integer.class, conf.getIntProperty(PROPKEY_alarm_BlockingOthersMaxTimeInSec                , DEFAULT_alarm_BlockingOthersMaxTimeInSec               ), DEFAULT_alarm_BlockingOthersMaxTimeInSec               , "If 'BlockingOthersMaxTimeInSec' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
+		list.add(new CmSettingsHelper("BlockingOthersMaxTimeInSec SkipCommand"    , PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipCommand     , String .class, conf.getProperty   (PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipCommand     , DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipCommand    ), DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipCommand    , "If 'BlockingOthersMaxTimeInSec' is true; then we can filter out transaction names using a Regular expression... if (tranName.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("BlockingOthersMaxTimeInSec SkipApplication", PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipApplication , String .class, conf.getProperty   (PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipApplication , DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipApplication), DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipApplication, "If 'BlockingOthersMaxTimeInSec' is true; then we can filter out transaction names using a Regular expression... if (tranProg.matches('regexp'))... This to remove alarms of 'SQLAgent.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'."   , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("BlockingOthersMaxTimeInSec SkipSrvUserName", PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipSrvUserName , String .class, conf.getProperty   (PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipSrvUserName , DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipSrvUserName), DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipSrvUserName, "If 'BlockingOthersMaxTimeInSec' is true; then we can filter out transaction names using a Regular expression... if (tranUser.matches('regexp'))... This to remove alarms of '(user1|user2)' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("BlockingOthersMaxTimeInSec SkipHostName"   , PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipHostName    , String .class, conf.getProperty   (PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipHostName    , DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipHostName   ), DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipHostName   , "If 'BlockingOthersMaxTimeInSec' is true; then we can filter out transaction names using a Regular expression... if (tranHost.matches('regexp'))... This to remove alarms of '.*-prod-.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'."   , new RegExpInputValidator()));
 
 		return list;
 	}
