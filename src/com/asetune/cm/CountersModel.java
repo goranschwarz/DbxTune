@@ -68,6 +68,7 @@ import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
@@ -1926,7 +1927,9 @@ implements Cloneable, ITableTooltip
 					if (strVal.indexOf("<?xml") >= 0 || strVal.indexOf("<ShowPlanXML xmlns=") >= 0)
 					{
 						// if there are any XML tag in the field... Then surround the value with a '<xmp>' tag
-						strVal = "<xmp>" + strVal + "</xmp>";
+//						strVal = "<xmp>" + strVal + "</xmp>";
+						strVal = "<pre>" + StringEscapeUtils.escapeHtml4(strVal) + "</pre>";
+//						strVal = "<pre>" + StringEscapeUtils.escapeXml10(strVal) + "</pre>";
 					}
 					else
 					{
