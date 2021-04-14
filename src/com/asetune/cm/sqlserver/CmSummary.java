@@ -389,24 +389,24 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzureAnalytics)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzureAnalytics)
 	{
 		List <String> pkCols = new LinkedList<String>();
 		return pkCols;
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzureAnalytics)
 	{
 		String dm_tran_database_transactions = "dm_tran_database_transactions";
 		
-		if (isAzure)
+		if (isAzureAnalytics)
 			dm_tran_database_transactions = "dm_pdw_nodes_tran_database_transactions";
 
 		String sql = "" +
@@ -430,7 +430,13 @@ extends CountersModel
 				", aaConnections      = @@connections  \n" +
 				", distinctLogins     = (select count(distinct sid) from sys.sysprocesses where sid != 0x01)  \n" +
 				", fullTranslogCount  = convert(int, 0)  \n" +
-				", oldestOpenTranInSec= (select max(isnull(datediff(ss, database_transaction_begin_time, getdate()),0)) from sys." + dm_tran_database_transactions + ") \n" +
+//				", oldestOpenTranInSec= (select max(isnull(datediff(ss, database_transaction_begin_time, getdate()),0)) from sys." + dm_tran_database_transactions + ") \n" +
+				", oldestOpenTranInSec= (select max(isnull(datediff(ss, database_transaction_begin_time, getdate()),0)) \n" + 
+				"                        from sys." + dm_tran_database_transactions + " \n" + 
+				"                        where database_transaction_type  = 1 /* 1=read/write transaction, 2=Read-only transaction, 3=System transaction */ \n" + 
+//				"                          and database_transaction_state = 4 /* 4=The transaction has generated log records */ \n" +
+				"                          and database_transaction_log_record_count > 0 \n" + // since SQL-Server 2008
+				"                       ) \n" +
 				", oldestOpenTranInSecThreshold = convert(int, 10) \n" +
 				", maxSqlExecTimeInSec= (select max(isnull(datediff(ss, start_time, getdate()),0)) from sys.dm_exec_requests x where x.connection_id is not null and x.transaction_id > 0) \n" +
 				", StartDate          =               (select login_time from sys.dm_exec_sessions where session_id = 1) \n" +

@@ -130,16 +130,16 @@ public class CheckForUpdatesSqlServer extends CheckForUpdatesDbx
 		String checkId          = getCheckId() + "";
 		String clientTime       = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
 
-		String srvVersion       = mtd.getDbmsExecutableVersionNum() + "";
-		boolean isAzure         = false; //FIXME; mtd.isClusterEnabled() + "";
+		String srvVersion        = mtd.getDbmsExecutableVersionNum() + "";
+		boolean isAzureAnalytics = false; 
 		
-		String atAtVersion = mtd.getDbmsExecutableVersionStr();
-		if (StringUtil.hasValue(atAtVersion))
-			isAzure = atAtVersion.contains("Microsoft SQL Azure");
+//		String atAtVersion = mtd.getDbmsExecutableVersionStr();
+//		if (StringUtil.hasValue(atAtVersion))
+//			isAzureAnalytics = atAtVersion.contains("Microsoft SQL Azure");
 		
 		ICounterController cc = CounterController.getInstance();
 		if (cc instanceof CounterControllerSqlServer)
-			isAzure = ((CounterControllerSqlServer)cc).isAzure();
+			isAzureAnalytics = ((CounterControllerSqlServer)cc).isAzureAnalytics();
 
 		// Get MDA information 
 		try
@@ -326,19 +326,19 @@ public class CheckForUpdatesSqlServer extends CheckForUpdatesDbx
 
 			// DM VEWS/FUNCTIONS
 			getMdaInfo(CounterController.getInstance().getMonConnection(), 
-					checkId, clientTime, System.getProperty("user.name"), srvVersion, isAzure+"", 
+					checkId, clientTime, System.getProperty("user.name"), srvVersion, isAzureAnalytics+"", 
 					sql_dmv_tables_rowCount, sql_dmv_tables, 
 					sendMdaInfoBatchSize, sendQueryList);
 
 			// DM VEWS/FUNCTIONS COLUMNS
 			getMdaInfo(CounterController.getInstance().getMonConnection(), 
-					checkId, clientTime, System.getProperty("user.name"), srvVersion, isAzure+"", 
+					checkId, clientTime, System.getProperty("user.name"), srvVersion, isAzureAnalytics+"", 
 					sql_dmv_columns_rowCount, sql_dmv_columns, 
 					sendMdaInfoBatchSize, sendQueryList);
 			
 			// DM FUNCTIONS PARAMETERS
 			getMdaInfo(CounterController.getInstance().getMonConnection(), 
-					checkId, clientTime, System.getProperty("user.name"), srvVersion, isAzure+"", 
+					checkId, clientTime, System.getProperty("user.name"), srvVersion, isAzureAnalytics+"", 
 					sql_dmv_parameters_rowCount, sql_dmv_parameters, 
 					sendMdaInfoBatchSize, sendQueryList);
 			

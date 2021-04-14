@@ -6815,9 +6815,15 @@ if ( ! jdbcSshTunnelUse )
 		Map<String,String> optionsMap  = StringUtil.parseCommaStrToMap(_aseOptions_txt.getText());
 
 		if (encrypt)
+		{
 			optionsMap.put("ENCRYPT_PASSWORD", "true");
+//			optionsMap.put("RETRY_WITH_NO_ENCRYPTION", "true");
+		}
 		else
+		{
 			optionsMap.remove("ENCRYPT_PASSWORD");
+//			optionsMap.remove("RETRY_WITH_NO_ENCRYPTION");
+		}
 
 		_aseOptions_txt.setText( StringUtil.toCommaStr(optionsMap, "=", ", ") );
 	}

@@ -247,7 +247,7 @@ extends CounterControllerAbstract
 	@Override
 //	public void initCounters(Connection conn, boolean hasGui, long srvVersion, boolean isClusterEnabled, long monTablesVersion)
 //	throws Exception
-	public void initCounters(DbxConnection conn, boolean hasGui, long srvVersion, boolean isAzure, long monTablesVersion)
+	public void initCounters(DbxConnection conn, boolean hasGui, long srvVersion, boolean isAzureAnalytics, long monTablesVersion)
 	throws Exception
 	{
 		if (isInitialized())
@@ -268,7 +268,7 @@ extends CounterControllerAbstract
 		// get SQL-Server Specific properties and store them in setDbmsProperties() 
 		initializeDbmsProperties(conn, srvVersion, hasGui);
 		
-		isAzure = isAzure();
+		isAzureAnalytics = isAzureAnalytics();
 
 		// initialize all the CM's
 		for (CountersModel cm : getCmList())
@@ -277,7 +277,7 @@ extends CounterControllerAbstract
 
 			// set the version
 			cm.setServerVersion(monTablesVersion);
-			cm.setClusterEnabled(isAzure);
+			cm.setClusterEnabled(isAzureAnalytics); // use the "cluster" option for "Azure Analytics"
 
 			// set the active roles, so it can be used in initSql()
 			cm.setActiveServerRolesOrPermissions(activeServerPermissionList);
@@ -322,6 +322,21 @@ extends CounterControllerAbstract
 		catch (SQLException ex)
 		{
 			_logger.warn("Problems geting SQL-Server 'Edition', using sql='"+sql+"'. Caught: "+ex);
+		}
+
+		//------------------------------------------------
+		// Get server ENGINE EDITION  --- https://docs.microsoft.com/en-us/sql/t-sql/functions/serverproperty-transact-sql
+		sql = "select ServerProperty('EngineEdition')";
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
+		{
+			while(rs.next())
+			{
+				setDbmsProperty(PROPKEY_EngineEdition, rs.getString(1));
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems geting SQL-Server 'EngineEdition', using sql='"+sql+"'. Caught: "+ex);
 		}
 
 		//------------------------------------------------
@@ -503,14 +518,53 @@ extends CounterControllerAbstract
 	private boolean _useLastQueryPlanStats = false;
 	
 	public static final String PROPKEY_Edition                   = CounterControllerSqlServer.class.getSimpleName() + ".Edition";
+	public static final String PROPKEY_EngineEdition             = CounterControllerSqlServer.class.getSimpleName() + ".EngineEdition";
 	public static final String PROPKEY_VersionStr                = CounterControllerSqlServer.class.getSimpleName() + ".VersionStr";
 	public static final String PROPKEY_DisableLastQueryPlanStats = CounterControllerSqlServer.class.getSimpleName() + ".disable.LastQueryPlanStats";
 
-	public boolean isAzure()
+	// doc on @@version --- https://docs.microsoft.com/sv-se/sql/t-sql/functions/version-transact-sql-configuration-functions?view=sql-server-ver15&viewFallbackFrom=sqlallproducts-allversions
+	// says that "To programmatically determine the engine edition, use SELECT SERVERPROPERTY('EngineEdition'). This query will return '5' for Azure SQL Database and '8' for Azure SQL Managed Instance."
+	// 
+	// and: https://docs.microsoft.com/en-us/sql/t-sql/functions/serverproperty-transact-sql?view=sql-server-ver15
+	// Says that: EngineEdition (integer) will have the following values
+	// Database Engine edition of the instance of SQL Server installed on the server.
+	//    1 = Personal or Desktop Engine (Not available in SQL Server 2005 (9.x) and later versions.)
+	//    2 = Standard (This is returned for Standard, Web, and Business Intelligence.)
+	//    3 = Enterprise (This is returned for Evaluation, Developer, and Enterprise editions.)
+	//    4 = Express (This is returned for Express, Express with Tools, and Express with Advanced Services)
+	//    5 = SQL Database
+	//    6 = Microsoft Azure Synapse Analytics
+	//    8 = Azure SQL Managed Instance
+	//    9 = Azure SQL Edge (This is returned for all editions of Azure SQL Edge)
+	//    11 = Azure Synapse serverless SQL pool
+	// Base data type: int
+	
+	
+	public boolean isAzureAnalytics()
 	{
-		String edition = getDbmsProperty(PROPKEY_Edition, "");
+//		String edition = getDbmsProperty(PROPKEY_Edition, "");
+//		
+//		return (edition != null && edition.toLowerCase().indexOf("azure") >= 0);
+
+		String engineEditionStr = getDbmsProperty(PROPKEY_EngineEdition, "3");
+		int engineEdition = 3;
+		try {
+			engineEdition = Integer.parseInt(engineEditionStr);
+		} catch (NumberFormatException ex) {
+			_logger.error("Problems Parsing 'EngineEdition' String (" + engineEditionStr + ") into a number. Asuming this is a NORMAL SQL-Server...");
+		}
 		
-		return (edition != null && edition.toLowerCase().indexOf("azure") >= 0);
+		if (engineEdition == 1 ) return false; //  1 = Personal or Desktop Engine (Not available in SQL Server 2005 (9.x) and later versions.)
+		if (engineEdition == 2 ) return false; //  2 = Standard (This is returned for Standard, Web, and Business Intelligence.)
+		if (engineEdition == 3 ) return false; //  3 = Enterprise (This is returned for Evaluation, Developer, and Enterprise editions.)
+		if (engineEdition == 4 ) return false; //  4 = Express (This is returned for Express, Express with Tools, and Express with Advanced Services)
+		if (engineEdition == 5 ) return false; //  5 = SQL Database
+		if (engineEdition == 6 ) return true ; //  6 = Microsoft Azure Synapse Analytics
+		if (engineEdition == 8 ) return false; //  8 = Azure SQL Managed Instance
+		if (engineEdition == 9 ) return false; //  9 = Azure SQL Edge (This is returned for all editions of Azure SQL Edge)
+		if (engineEdition == 11) return true ; // 11 = Azure Synapse serverless SQL pool
+
+		return false;
 	}
 
 	public boolean isLinux()
