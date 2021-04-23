@@ -270,7 +270,7 @@ extends AlarmWriterAbstract
 	public static final String  DEFAULT_from                   = "";
 	                                                           
 	public static final String  PROPKEY_subjectTemplate        = "AlarmWriterToMail.msg.subject.template";
-	public static final String  DEFAULT_subjectTemplate        = "${type}: ${serviceName} - ${alarmClassAbriviated} - ${extraInfo}";
+	public static final String  DEFAULT_subjectTemplate        = "${type}: ${serviceName} - ${severity} - ${alarmClassAbriviated} - ${extraInfo}";
 	                                                           
 	public static final String  PROPKEY_msgBodyTemplate        = "AlarmWriterToMail.msg.body.template";
 	public static final String  DEFAULT_msgBodyTemplate        = createMsgBodyTemplate();

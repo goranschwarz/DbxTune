@@ -90,7 +90,8 @@ extends CountersModel
 		"UseCountDiff", "NumRecompilesPlanFlushes", "NumRecompilesSchemaChanges", 
 		"LockWaitsDiff", "LockWaitTimeDiff", "SortCountDiff", "SortSpilledCount", "TotalSortTimeDiff", 
 		"ParallelDegreeReduced", "ParallelPlanRanSerial", "WorkerThreadDeficit",
-		"TotalPioDiff", "TotalLioDiff", "TotalCpuTimeDiff", "TotalElapsedTimeDiff"};
+		"TotalPioDiff", "TotalLioDiff", "TotalCpuTimeDiff", "TotalElapsedTimeDiff", 
+		"TotalEstWaitTimeDiff"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -231,6 +232,9 @@ extends CountersModel
 			mtd.addColumn("monCachedStatement",  "xmlPlan",       xmlPlanTooltip);
 			mtd.addColumn("monCachedStatement",  "HasXmlPlan",    xmlPlanTooltip);
 			mtd.addColumn("monCachedStatement",  "Remark",        "<html>Some tip of what's happening with this PerformanceCounter.<br><b>Tip</b>: \"Hover\" over the cell to get more information on the Tip.</html>");
+
+			mtd.addColumn("monCachedStatement",  "TotalEstWaitTime",     "<html>Total Estimated Wait Time <br><b>Algorithm</b>: TotalElapsedTime - TotalCpuTime </html>");
+			mtd.addColumn("monCachedStatement",  "TotalEstWaitTimeDiff", "<html>Total Estimated Wait Time <br><b>Algorithm</b>: TotalElapsedTime - TotalCpuTime </html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -382,10 +386,12 @@ extends CountersModel
 		String TotalLIO                = ""; // The total LIO value.
 		String TotalCpuTime            = ""; // The total execution time value. (ms)
 		String TotalElapsedTime        = ""; // The total elapsed time value. (ms)
+		String TotalEstWaitTime        = ""; // TotalElapsedTime - TotalCpuTime
 		String TotalPioDiff            = ""; // The total PIO value.
 		String TotalLioDiff            = ""; // The total LIO value.
 		String TotalCpuTimeDiff        = ""; // The total execution time value. (ms)
 		String TotalElapsedTimeDiff    = ""; // The total elapsed time value. (ms)
+		String TotalEstWaitTimeDiff    = ""; // TotalElapsedTime - TotalCpuTime
 //		if (srvVersion >= Ver.ver(16,0))
 		if (srvVersion >= Ver.ver(15,7,0, 130))
 		{
@@ -393,11 +399,13 @@ extends CountersModel
 			TotalLIO             = "TotalLIO,         ";
 			TotalCpuTime         = "TotalCpuTime,     ";
 			TotalElapsedTime     = "TotalElapsedTime, ";
+			TotalEstWaitTime     = "TotalEstWaitTime = TotalElapsedTime - TotalCpuTime, \n";
 
 			TotalPioDiff		 = "TotalPioDiff         = TotalPIO, ";         // DIFF COUNTER
 			TotalLioDiff         = "TotalLioDiff         = TotalLIO, ";         // DIFF COUNTER
 			TotalCpuTimeDiff     = "TotalCpuTimeDiff     = TotalCpuTime, ";     // DIFF COUNTER
 			TotalElapsedTimeDiff = "TotalElapsedTimeDiff = TotalElapsedTime, "; // DIFF COUNTER
+			TotalEstWaitTimeDiff = "TotalEstWaitTimeDiff = TotalElapsedTime - TotalCpuTime, \n";
 		}
 
 		
@@ -439,6 +447,8 @@ extends CountersModel
 			" MaxLIO,         MinLIO,         AvgLIO,         "+ TotalLIO         + TotalLioDiff         + "\n" + // Logical IO
 			" MaxPIO,         MinPIO,         AvgPIO,         "+ TotalPIO         + TotalPioDiff         + "\n" + // Physical IO
 			" MaxCpuTime,     MinCpuTime,     AvgCpuTime,     "+ TotalCpuTime     + TotalCpuTimeDiff     + "\n" + // Execution time.
+			TotalEstWaitTime +
+			TotalEstWaitTimeDiff +
 			" LastUsedDate, \n" +               // Date when this statement was last used.
 			" LastRecompiledDate, \n" +         // Date when this statement was last recompiled.
 			" CachedDate, \n" +                 // Date when this statement was cached.
@@ -794,7 +804,7 @@ extends CountersModel
 	@Override
 	public String[] getDdlDetailsSortOnColName()
 	{
-		String[] sa = {"UseCount", "UseCountDiff", "AvgLIO", "AvgElapsedTime"};
+		String[] sa = {"UseCount", "UseCountDiff", "AvgLIO", "AvgElapsedTime", "TotalEstWaitTime"};
 		return sa;
 	}
 }

@@ -1302,8 +1302,34 @@ class DbxGraph
 							window.open(`${location.pathname}?${params}`, '_blank');
 						}
 					},
-					showThisInNewTabLast7Days: {
-						name: "Open this graph (last 7 days) in new Tab",
+					showThisInNewTabLast7DaysFullDay: {
+						name: "Open this graph (last 7 days, full day) in new Tab",
+						callback: function(key, opt) 
+						{
+							var graphName = $(this).attr('id');
+							console.log("contextMenu(graphName="+graphName+"): key='"+key+"'.");
+
+							// Get serverName this graph is for
+							var srvName = getGraphByName(graphName).getServerName();
+
+							// Get Get current URL
+							var currentUrl  = window.location.href;
+							const url = new URL(currentUrl);
+							const params = new URLSearchParams(url.search);
+
+							// Change/set some parameters
+							params.set('mdc',         "999");
+							params.set('startTime',   new moment().subtract(6, "days").startOf('day').format('YYYY-MM-DD HH:mm'));
+							params.set('endTime',     "24h");
+							params.set('sessionName', srvName);
+							params.set('graphList',   graphName);
+							params.set('gcols',       1);
+
+							window.open(`${location.pathname}?${params}`, '_blank');
+						}
+					},
+					showThisInNewTabLast7DaysCurrentPeriod: {
+						name: "Open this graph (last 7 days, # time) in new Tab",
 						callback: function(key, opt) 
 						{
 							var graphName = $(this).attr('id');
@@ -1336,8 +1362,34 @@ class DbxGraph
 							window.open(`${location.pathname}?${params}`, '_blank');
 						}
 					},
-					showThisInNewTabLast30Days: {
-						name: "Open this graph (last 30 days) in new Tab",
+					showThisInNewTabLast30DaysFullDay: {
+						name: "Open this graph (last 30 days, full day) in new Tab",
+						callback: function(key, opt) 
+						{
+							var graphName = $(this).attr('id');
+							console.log("contextMenu(graphName="+graphName+"): key='"+key+"'.");
+
+							// Get serverName this graph is for
+							var srvName = getGraphByName(graphName).getServerName();
+
+							// Get Get current URL
+							var currentUrl  = window.location.href;
+							const url = new URL(currentUrl);
+							const params = new URLSearchParams(url.search);
+
+							// Change/set some parameters
+							params.set('mdc',         "999");
+							params.set('startTime',   new moment().subtract(30, "days").startOf('day').format('YYYY-MM-DD HH:mm'));
+							params.set('endTime',     "24h");
+							params.set('sessionName', srvName);
+							params.set('graphList',   graphName);
+							params.set('gcols',       1);
+
+							window.open(`${location.pathname}?${params}`, '_blank');
+						}
+					},
+					showThisInNewTabLast30DaysCurrentPeriod: {
+						name: "Open this graph (last 30 days, # time) in new Tab",
 						callback: function(key, opt) 
 						{
 							var graphName = $(this).attr('id');
@@ -1453,6 +1505,7 @@ class DbxGraph
 					},
 				}
 			});
+
 		} catch (error) {
 			console.log("Failed to install Context menu: error="+error);
 		}

@@ -58,10 +58,17 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	private Map<Map<String, Object>, SqlCapExecutedSqlEntries> _keyToExecutedSql;
 	private Map<String, String> _planMap;
 
+	private ReportType _reportType = ReportType.CPU_TIME;
 	
-	public AseTopCmStmntCacheDetails(DailySummaryReportAbstract reportingInstance)
+	public enum ReportType
+	{
+		CPU_TIME, WAIT_TIME
+	};
+	
+	public AseTopCmStmntCacheDetails(DailySummaryReportAbstract reportingInstance, ReportType reportType)
 	{
 		super(reportingInstance);
+		_reportType = reportType;
 	}
 
 	@Override
@@ -200,7 +207,10 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Top Statement Cache Entries (order by: TotalCpuTimeDiff_sum, origin: CmStmntCacheDetails / monCachedStatement)";
+		if (ReportType.WAIT_TIME.equals(_reportType))
+			return "Top Statement Cache Entries by WAIT Time (order by: TotalSortTimeDiff_sum, origin: CmStmntCacheDetails / monCachedStatement)";
+
+		return "Top Statement Cache Entries by CPU Time (order by: TotalCpuTimeDiff_sum, origin: CmStmntCacheDetails / monCachedStatement)";
 	}
 
 	@Override
@@ -219,7 +229,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 		
 		// Section description
 		rstm.setDescription(
-				"Both slow and fast SQL Statements (from the Statement Cache) are presented here (ordered by: TotalCpuTimeDiff_sum) <br>" +
+				"Both slow and fast SQL Statements (from the Statement Cache) are presented here (ordered by: " + _reportType + ") <br>" +
 				"<br>" +
 				"This so you can see if there are problems with <i>Statement Cache Entries</i> that falls <i>just below</i> the threshold for 'Slow SQL Statements' <br>" +
 				"<br>" +
@@ -236,12 +246,13 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 		rstm.setColumnDescription("samples_count"            , "Number of entries for this 'ObjectName' in the report period");
 		rstm.setColumnDescription("SessionSampleTime_min"    , "First entry was sampled at this time");
 		rstm.setColumnDescription("SessionSampleTime_max"    , "Last entry was sampled at this time");
-		rstm.setColumnDescription("newDiffRow_sum"        , "Number of Diff Records that was seen for the first time.");
+		rstm.setColumnDescription("newDiffRow_sum"           , "Number of Diff Records that was seen for the first time.");
 		rstm.setColumnDescription("CmSampleMs_sum"           , "Number of milliseconds this object has been available for sampling");
 
 		rstm.setColumnDescription("UseCountDiff_sum"         , "How many times this object was Uased");
 
 		rstm.setColumnDescription("TotalElapsedTimeDiff_sum" , "How many milliseconds did we spend in execution during the report period");
+		rstm.setColumnDescription("TotalEstWaitTimeDiff_sum" , "How many milliseconds did we WAIT for execution during the report period (the reason for wait is harder to figure out on a Statement level)");
 		rstm.setColumnDescription("TotalCpuTimeDiff_sum"     , "How much CPUTime did we use during the report period");
 		rstm.setColumnDescription("TotalLioDiff_sum"         , "How many Logical I/O did we do during the report period");
 		rstm.setColumnDescription("TotalPioDiff_sum"         , "How many Physical I/O did we do during the report period");
@@ -259,18 +270,6 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 		rstm.setColumnDescription("SortCountDiff_sum"        , "How many times did this object perform sort operation during the reporting period.");
 		rstm.setColumnDescription("TotalSortTimeDiff_sum"    , "Total time used for Sorting for this object during the reporting period. (if much, do we have an index to support the sort).");
 	}
-//if (srvVersion >= Ver.ver(15,7,0, 130))
-//{
-//	TotalPIO		     = "TotalPIO,         ";
-//	TotalLIO             = "TotalLIO,         ";
-//	TotalCpuTime         = "TotalCpuTime,     ";
-//	TotalElapsedTime     = "TotalElapsedTime, ";
-//
-//	TotalPioDiff		 = "TotalPioDiff         = TotalPIO, ";         // DIFF COUNTER
-//	TotalLioDiff         = "TotalLioDiff         = TotalLIO, ";         // DIFF COUNTER
-//	TotalCpuTimeDiff     = "TotalCpuTimeDiff     = TotalCpuTime, ";     // DIFF COUNTER
-//	TotalElapsedTimeDiff = "TotalElapsedTimeDiff = TotalElapsedTime, "; // DIFF COUNTER
-//}
 
 	@Override
 	public String[] getMandatoryTables()
@@ -359,10 +358,13 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 		String col_LockWaitTimeDiff_sum     = !dummyRstm.hasColumnNoCase("LockWaitTimeDiff"      ) ? "" : " ,sum([LockWaitTimeDiff])       as [LockWaitTimeDiff_sum] \n"; 
 		
 		String col_MaxSortTime_max          = !dummyRstm.hasColumnNoCase("MaxSortTime"           ) ? "" : " ,max([MaxSortTime])            as [MaxSortTime_max] \n"; 
-		String col_SortSpilledCount_sum     = !dummyRstm.hasColumnNoCase("SortSpilledCount"      ) ? "" : " ,max([SortSpilledCount])       as [SortSpilledCount_sum] \n"; 
-		String col_SortCountDiff_sum        = !dummyRstm.hasColumnNoCase("SortCountDiff"         ) ? "" : " ,max([SortCountDiff])          as [SortCountDiff_sum] \n"; 
-		String col_TotalSortTimeDiff_sum    = !dummyRstm.hasColumnNoCase("TotalSortTimeDiff"     ) ? "" : " ,max([TotalSortTimeDiff])      as [TotalSortTimeDiff_sum] \n"; 
+		String col_SortSpilledCount_sum     = !dummyRstm.hasColumnNoCase("SortSpilledCount"      ) ? "" : " ,sum([SortSpilledCount])       as [SortSpilledCount_sum] \n"; 
+		String col_SortCountDiff_sum        = !dummyRstm.hasColumnNoCase("SortCountDiff"         ) ? "" : " ,sum([SortCountDiff])          as [SortCountDiff_sum] \n"; 
+		String col_TotalSortTimeDiff_sum    = !dummyRstm.hasColumnNoCase("TotalSortTimeDiff"     ) ? "" : " ,sum([TotalSortTimeDiff])      as [TotalSortTimeDiff_sum] \n"; 
 
+		String col_TotalEstWaitTimeDiff_sum = !dummyRstm.hasColumnNoCase("TotalEstWaitTimeDiff"  ) ? "" : " ,sum([TotalEstWaitTimeDiff])   as [TotalEstWaitTimeDiff_sum] \n"; 
+		
+		
 //		String extraWhereClause = "where [UseCount] > 100 or [AvgLIO] > 100000\n"; // this is only used if we havn't got "TotalLioDiff" or "TotalCpuTimeDiff"
 		String extraWhereClause = "";
 		String orderByCol = "[samples_count]";
@@ -370,6 +372,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 		if (dummyRstm.hasColumnNoCase("AvgCpuTime"))       { orderByCol = "[AvgCpuTime_est_max]";   }
 		if (dummyRstm.hasColumnNoCase("TotalLioDiff"))     { orderByCol = "[TotalLioDiff_sum]";     }
 		if (dummyRstm.hasColumnNoCase("TotalCpuTimeDiff")) { orderByCol = "[TotalCpuTimeDiff_sum]"; }
+		if (ReportType.WAIT_TIME.equals(_reportType))      { orderByCol = "[TotalEstWaitTimeDiff_sum]"; }
 
 		String whereFilter_skipNewDiffRateRows = !skipNewDiffRateRows ? "" : "  and [CmNewDiffRateRow] = 0 -- only records that has been diff calculations (not first time seen, some ASE Versions has a bug that do not clear counters on reuse) \n";
 
@@ -393,6 +396,10 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 			    + " \n"
 			    + col_TotalElapsedTimeDiff_sum
 			    + (StringUtil.hasValue(col_TotalCpuTimeDiff_sum) ? " ,cast('' as varchar(512)) as [TotalCpuTimeDiff__chart] \n" : "")
+			    + " \n"
+			    + col_TotalEstWaitTimeDiff_sum
+			    + (StringUtil.hasValue(col_TotalEstWaitTimeDiff_sum) ? " ,cast('' as varchar(512)) as [TotalEstWaitTimeDiff__chart] \n" : "")
+			    + " \n"
 			    + col_TotalCpuTimeDiff_sum
 			    + col_TotalLioDiff_sum
 			    + col_TotalPioDiff_sum
@@ -511,6 +518,23 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 						.validate()));
 			}
 
+
+			// Mini Chart on "CPU Time"
+			if (_shortRstm.hasColumn("TotalEstWaitTimeDiff_sum") && _shortRstm.hasColumn("TotalEstWaitTimeDiff__chart"))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create       (DataSource.CounterModel)
+						.setHtmlChartColumnName      ("TotalEstWaitTimeDiff__chart")
+						.setHtmlWhereKeyColumnName   ("DBName, Hashkey")
+						.setDbmsTableName            ("CmStmntCacheDetails_diff")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("TotalEstWaitTimeDiff")   
+						.setDbmsWhereKeyColumnName   ("DBName, Hashkey")
+						.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
+//						.setSparklineTooltipPostfix  ("SUM 'WAIT Time in ms' at below period")
+						.validate()));
+			}
+			
 			// Mini Chart on "UseCountDiff"
 			if (_shortRstm.hasColumn("UseCountDiff_sum") && _shortRstm.hasColumn("UseCountDiff__chart"))
 			{
@@ -555,15 +579,31 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 					// Get SQL Text 
 					_ssqlRstm = getSqlStatementsFromMonDdlStorage(conn, stmntCacheObjects);
 
-					// Add CpuTime
-					_ssqlRstm.addColumn("CpuTime", 1, Types.VARCHAR, "varchar", "varchar(512)", 512, 0, "-", String.class);
+					if (ReportType.CPU_TIME.equals(_reportType))
+					{
+						// Add CpuTime
+						_ssqlRstm.addColumn("CpuTime", 1, Types.VARCHAR, "varchar", "varchar(512)", 512, 0, "-", String.class);
 
-					// Add "CopyXmlPlan"
-					_ssqlRstm.addColumn("XmlPlan", 1, Types.LONGVARCHAR, "text", "text", 512, 0, "-not-available-", String.class);
+						// Add "CopyXmlPlan"
+						_ssqlRstm.addColumn("XmlPlan", 1, Types.LONGVARCHAR, "text", "text", 512, 0, "-not-available-", String.class);
 
-					// Mini Chart on "CPU Time"
-					// COPY Cell data from the "details" table
-					_ssqlRstm.copyCellContentFrom(_shortRstm, "ObjectName", "TotalCpuTimeDiff__chart",   "objectName", "CpuTime");
+						// Mini Chart on "CPU Time"
+						// COPY Cell data from the "details" table
+						_ssqlRstm.copyCellContentFrom(_shortRstm, "ObjectName", "TotalCpuTimeDiff__chart",   "objectName", "CpuTime");
+					}
+
+					if (ReportType.WAIT_TIME.equals(_reportType))
+					{
+						// Add CpuTime
+						_ssqlRstm.addColumn("WaitTime", 1, Types.VARCHAR, "varchar", "varchar(512)", 512, 0, "-", String.class);
+
+						// Add "CopyXmlPlan"
+						_ssqlRstm.addColumn("XmlPlan", 1, Types.LONGVARCHAR, "text", "text", 512, 0, "-not-available-", String.class);
+
+						// Mini Chart on "WAIT Time"
+						// COPY Cell data from the "details" table
+						_ssqlRstm.copyCellContentFrom(_shortRstm, "ObjectName", "TotalEstWaitTimeDiff__chart",   "objectName", "WaitTime");
+					}
 				}
 				catch (SQLException ex)
 				{

@@ -266,7 +266,8 @@ public class ExecutionPlanCollection
 					+ "Note: You can also view your plan at <a href='http://www.supratimas.com' target='_blank'>http://www.supratimas.com</a>"
 					+ ", or any other <i>plan-view</i> application by pasting (Ctrl-V) the clipboard content. <br>"
 					+ "SentryOne Plan Explorer can be downloaded here: <a href='https://www.sentryone.com/plan-explorer' target='_blank'>https://www.sentryone.com/plan-explorer</a> <br>"
-					+ "<a href='javascript:void(0)' onclick='copyShowplanForLastIdToClipboard();'>Copy Below Plan as XML to Clipboard</a> <br>"
+					+ "<a href='javascript:void(0)' onclick='copyShowplanToClipboardForId_" + getId() + "();'>Copy Below Plan as XML to Clipboard</a> <br>"
+					+ "<a href='javascript:void(0)' onclick='downloadShowplanForId_" + getId() + "();'>Download Below Plan...</a> <br>"
 					+ "<br>"
 					+ "\""; // End JavaScript double quote
 			
@@ -274,9 +275,11 @@ public class ExecutionPlanCollection
 			w.append("<div id='showplan-container-" + getId() + "'></div> \n");
 			w.append("<script type='text/javascript'> \n");
 			w.append("    // Remember last plan in var... \n");
-			w.append("    var last_showplanForId_" + getId() + " = ''; \n");
-			w.append("    function showplanForId_" + getId() + "(id) \n");
+			w.append("    var last_showplanForId_" + getId() + "_id = ''; \n"); // Variable ON ID
+			w.append("    var last_showplanForId_" + getId() + " = ''; \n");    // Variable ON ID
+			w.append("    function showplanForId_" + getId() + "(id) \n");      // Function ON ID
 			w.append("    { \n");
+			w.append("        last_showplanForId_" + getId() + "_id = id;");
 			w.append("        var showplanText = document.getElementById('plan_" + getId() + "_'+id).innerHTML; \n");
 			
 			w.append("        if (showplanText === last_showplanForId_" + getId() + ") \n");
@@ -291,37 +294,49 @@ public class ExecutionPlanCollection
 			w.append("        document.getElementById('showplan-head-" + getId() + "').innerHTML = " + showplanHead_innerHtml + "; \n");
 			w.append("        copyStringToClipboard(showplanText); \n");
 			w.append("    } \n");
-			w.append("    function hideShowplan_" + getId() + "() \n");
+			w.append("    function hideShowplan_" + getId() + "() \n"); // Function ON ID
 			w.append("    { \n");
 			w.append("        last_showplanForId_" + getId() + " = 'none'; \n");
 			w.append("        document.getElementById('showplan-head-"      + getId() + "').innerHTML = ''; \n");
 			w.append("        document.getElementById('showplan-container-" + getId() + "').innerHTML = ''; \n");
 			w.append("    } \n");
 			w.append("\n");
-			w.append("    function copyStringToClipboard (string)                                   \n");
-			w.append("    {                                                                         \n");
-			w.append("        function handler (event)                                              \n");
-			w.append("        {                                                                     \n");
-			w.append("            event.clipboardData.setData('text/plain', string);                \n");
-			w.append("            event.preventDefault();                                           \n");
-			w.append("            document.removeEventListener('copy', handler, true);              \n");
-			w.append("        }                                                                     \n");
-			w.append("                                                                              \n");
-			w.append("        document.addEventListener('copy', handler, true);                     \n");
-			w.append("        document.execCommand('copy');                                         \n");
-			w.append("    }                                                                         \n");
-			w.append("    function copyShowplanForLastIdToClipboard()                               \n");
-			w.append("    {                                                                         \n");
-			w.append("        copyStringToClipboard(last_showplanForId_" + getId() + ");          \n");
-			w.append("                                                                              \n");
-			w.append("        // Open a popup... and close it 3 seconds later...                    \n");
-			w.append("        $('#copyPastePopup').modal('show');                                   \n");
-			w.append("            setTimeout(function() {                                           \n");
-			w.append("            $('#copyPastePopup').modal('hide');                               \n");
-			w.append("        }, 3000);		                                                        \n");
-			w.append("    }                                                                         \n");
+			w.append("    function copyStringToClipboard (string)                                       \n");
+			w.append("    {                                                                             \n");
+			w.append("        function handler (event)                                                  \n");
+			w.append("        {                                                                         \n");
+			w.append("            event.clipboardData.setData('text/plain', string);                    \n");
+			w.append("            event.preventDefault();                                               \n");
+			w.append("            document.removeEventListener('copy', handler, true);                  \n");
+			w.append("        }                                                                         \n");
+			w.append("                                                                                  \n");
+			w.append("        document.addEventListener('copy', handler, true);                         \n");
+			w.append("        document.execCommand('copy');                                             \n");
+			w.append("    }                                                                             \n");
+			w.append("    function copyShowplanToClipboardForId_" + getId() + "()                       \n"); // Function ON ID
+			w.append("    {                                                                             \n");
+			w.append("        copyStringToClipboard(last_showplanForId_" + getId() + ");                \n");
+			w.append("                                                                                  \n");
+			w.append("        // Open a popup... and close it 3 seconds later...                        \n");
+			w.append("        $('#copyPastePopup').modal('show');                                       \n");
+			w.append("            setTimeout(function() {                                               \n");
+			w.append("            $('#copyPastePopup').modal('hide');                                   \n");
+			w.append("        }, 3000);		                                                            \n");
+			w.append("    }                                                                             \n"); 
+			w.append("    function downloadShowplanForId_" + getId() + "()                              \n"); // Function ON ID
+			w.append("    {                                                                             \n");
+			w.append("        var textToSave    = last_showplanForId_" + getId() + ";                   \n");
+			w.append("        var hiddenElement = document.createElement('a');                          \n");
+			w.append("        var showplanId    = last_showplanForId_" + getId() + "_id;                \n");
+			w.append("        var filename      = 'showplan_" + getId() + "_' + showplanId + '.xml';    \n");
+			w.append("                                                                                  \n");
+			w.append("        hiddenElement.href     = 'data:attachment/text,' + encodeURI(textToSave); \n");
+			w.append("        hiddenElement.target   = '_blank';                                        \n");
+			w.append("        hiddenElement.download = filename                                         \n");
+			w.append("        hiddenElement.click();                                                    \n");
+			w.append("    }                                                                             \n"); 
 			w.append("</script> \n");
-
+			
 			// HTML Code for the bootstrap popup...
 			w.append("    <div class='modal fade' id='copyPastePopup'>                              \n");
 			w.append("        <div class='modal-dialog'>                                            \n");

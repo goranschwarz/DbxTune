@@ -1153,7 +1153,7 @@ extends CountersModel
 				for (Entry<String, Long> ndbe : dbCntrMap.entrySet())
 				{
 					String  dbname   = ndbe.getKey();
-					Long    newCount = ndbe.getValue();
+					Long    newCount = ndbe.getValue() == null ? 0L : ndbe.getValue();
 					
 					Long prevCount = prevSampleErrorMsgCountMap.get(errorNum) == null ? 0L : prevSampleErrorMsgCountMap.get(errorNum).get(dbname);
 

@@ -508,6 +508,7 @@ public abstract class ShowplanHtmlView
 			out.write("Feel free to copy the showplan xml and past it into some other tool...<br> \n");
 			out.write("For example the online tool: <a target='_blank' href='http://www.supratimas.com/'>http://www.supratimas.com/</a><br> \n");
 			out.write("<button onclick='copyShowplanToClipboard()'>Copy Showplan</button>        \n");
+			out.write("<button onclick='downloadShowplan()'>Download Showplan</button>           \n");
 			out.write("<div id='copy-done'></div>                                                \n");
 			out.write("<br>                                                                      \n");
 			out.write("<hr>                                                                      \n");
@@ -561,6 +562,17 @@ public abstract class ShowplanHtmlView
 			out.write("    document.addEventListener('copy', handler, true);                     \n");
 			out.write("    document.execCommand('copy');                                         \n");
 			out.write("}                                                                         \n");
+			out.write("                                                                          \n");
+			out.write("function downloadShowplan()                                               \n");
+			out.write("{                                                                         \n");
+			out.write("    var textToSave = showplanText;                                        \n");
+			out.write("    var hiddenElement = document.createElement('a');                      \n");
+			out.write("                                                                          \n");
+			out.write("    hiddenElement.href     = 'data:attachment/text,' + encodeURI(textToSave); \n");
+			out.write("    hiddenElement.target   = '_blank';                                    \n");
+			out.write("    hiddenElement.download = 'showplan_xxx.xml'                           \n");
+			out.write("    hiddenElement.click();                                                \n");
+			out.write("}                                                                         \n"); 
 			out.write("</script>                                                                 \n");
 			out.write("                                                                          \n");
 			out.write("</body>                                                                   \n");

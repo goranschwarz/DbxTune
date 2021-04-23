@@ -102,6 +102,7 @@ import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.TdsConnection;
+import com.asetune.sql.showplan.transform.SqlServerShowPlanXmlTransformer;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.Configuration;
@@ -1924,12 +1925,30 @@ implements Cloneable, ITableTooltip
 				else
 				{
 					// check for XML content "somewhere" in the string
-					if (strVal.indexOf("<?xml") >= 0 || strVal.indexOf("<ShowPlanXML xmlns=") >= 0)
+					if (strVal.indexOf("<?xml") >= 0)
 					{
-						// if there are any XML tag in the field... Then surround the value with a '<xmp>' tag
-//						strVal = "<xmp>" + strVal + "</xmp>";
-						strVal = "<pre>" + StringEscapeUtils.escapeHtml4(strVal) + "</pre>";
-//						strVal = "<pre>" + StringEscapeUtils.escapeXml10(strVal) + "</pre>";
+						String conf = Configuration.getCombinedConfiguration().getProperty("toHtmlTableString.xml", "TO_ESCAPED_TEXT");
+
+						if ("TO_ESCAPED_TEXT".equals(conf))
+						{
+							// if there are any XML tag in the field... Then surround the value with a '<pre>' tag and escape all "xml" tags etc...
+							strVal = "<pre>" + StringEscapeUtils.escapeHtml4(strVal) + "</pre>";
+//							strVal = "<pre>" + StringEscapeUtils.escapeXml10(strVal) + "</pre>";
+						}
+					}
+					else if (strVal.indexOf("<ShowPlanXML xmlns=") >= 0)
+					{
+						SqlServerShowPlanXmlTransformer t = new SqlServerShowPlanXmlTransformer();
+						try
+						{
+							// Get HTML (what type/look-and-feel) is decided by configuration in: SqlServerShowPlanXmlTransformer.PROKKEY_transform
+							strVal = t.toHtml(strVal);
+						}
+						catch (Exception ex)
+						{
+							strVal = "Could not translate SQL-Server ShowPlanXML to HTML text. Caught: " + ex;
+							_logger.error(strVal);
+						}
 					}
 					else
 					{

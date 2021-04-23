@@ -30,24 +30,24 @@ extends AlarmEvent
 {
 	private static final long serialVersionUID = 1L;
 
-	public AlarmEventLongRunningTransaction(CountersModel cm, Number threshold, Number val)
+	public AlarmEventLongRunningTransaction(CountersModel cm, Number threshold, Number oldestTranInSeconds, String dbname)
 	{
 		super(
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
-				null,                 // extraInfo
+				"CmSummary".equals(cm.getName()) ? "[&sum;]:" + dbname : dbname, // extraInfo -- &sum; or &#8721;  is Greek symbol for Summary
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
-				"Found Long running transaction in '" + cm.getServerName() + "'. Seconds=" + val + ". (threshold="+threshold+")",
+				"Found Long running transaction in '" + cm.getServerName() + "'. DBName='" + dbname + "', Seconds=" + oldestTranInSeconds + ". (threshold="+threshold+")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);
 
 		// Set the raw data carier: current cpu usage
-		setData(val);
+		setData(oldestTranInSeconds);
 	}
 
 	public AlarmEventLongRunningTransaction(CountersModel cm, Number threshold, String dbname, Number oldestTranInSeconds, String oldestTranName)

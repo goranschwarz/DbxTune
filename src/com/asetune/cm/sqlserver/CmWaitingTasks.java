@@ -312,6 +312,12 @@ extends CountersModel
 			    + "    [owt].[exec_context_id] \n"
 			    + "";
 
+//		NOTE:
+//			- Do we need: dm_os_tasks.scheduler_id /not a big table to join on, but anything we can strip might be good)
+//			- Do we need to: OUTER APPLY sys.dm_exec_query_plan... Or can we do that *AFTER* we have sampled data (or inject data into a temp table, and get dm_exec_query_plan for unique plan_handle's)
+//			- (same with dm_exec_sql_text, but I think its the PLAN (on all the paralell worker threads) that kills performance when SQL-Server is under heavy load)
+//			- Do we only want to look at USER_PROCESSES or do we want to look at ALL waiting_tasks
+
 		return sql;
 	}
 //	String dm_exec_requests    = "dm_exec_requests"; == der

@@ -129,8 +129,10 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-//	public static final String GRAPH_NAME_XXX             = "xxx";
-
+	public static final String  PROPKEY_oldestOpenTran_discard_tempdb = "CmSummary.oldestOpenTran.discard.tempdb";
+	public static final boolean DEFAULT_oldestOpenTran_discard_tempdb = false;
+	
+	
 	public static final String GRAPH_NAME_AA_CPU                   = "aaCpuGraph";         // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_CPU;
 	public static final String GRAPH_NAME_BLOCKING_LOCKS           = "BlockingLocksGraph";
 	public static final String GRAPH_NAME_CONNECTION               = "ConnectionsGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__CONNECTION;
@@ -142,35 +144,6 @@ extends CountersModel
 	
 	private void addTrendGraphs()
 	{
-//		String[] labels_xxx              = new String[] { "Hour", "Minute", "Second"};
-//		String[] labels_aaCpu            = new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" };
-//		String[] labels_blockingLocks    = new String[] { "Blocking Locks" };
-//		String[] labels_connection       = new String[] { "UserConnections (abs)", "distinctLogins (abs)", "@@connections (diff)", "@@connections (rate)" };
-//		String[] labels_connRate         = new String[] { "@@connections (rate)" };
-//		String[] labels_aaDiskRW         = new String[] { "@@total_read", "@@total_write" };
-//		String[] labels_aaNwPacket       = new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" };
-//		String[] labels_openTran         = new String[] { "Seconds" };
-//
-//		addTrendGraphData(GRAPH_NAME_XXX,               new TrendGraphDataPoint(GRAPH_NAME_XXX,                 labels_xxx,           LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_AA_CPU,             new TrendGraphDataPoint(GRAPH_NAME_AA_CPU,             labels_aaCpu,         LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_BLOCKING_LOCKS,     new TrendGraphDataPoint(GRAPH_NAME_BLOCKING_LOCKS,     labels_blockingLocks, LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_CONNECTION,         new TrendGraphDataPoint(GRAPH_NAME_CONNECTION,         labels_connection,    LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_CONNECTION_RATE,    new TrendGraphDataPoint(GRAPH_NAME_CONNECTION_RATE,    labels_connRate,      LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_AA_DISK_READ_WRITE, new TrendGraphDataPoint(GRAPH_NAME_AA_DISK_READ_WRITE, labels_aaDiskRW,      LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_AA_NW_PACKET,       new TrendGraphDataPoint(GRAPH_NAME_AA_NW_PACKET,       labels_aaNwPacket,    LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_OLDEST_TRAN_IN_SEC, new TrendGraphDataPoint(GRAPH_NAME_OLDEST_TRAN_IN_SEC, labels_openTran,      LabelType.Static));
-
-		// GRAPH
-//		addTrendGraph(GRAPH_NAME_XXX,
-//			"Dummy Graph", 	                        // Menu CheckBox text
-//			"Dummy Graph showing hour, minute, second", // Label 
-//			new String[] { "Hour", "Minute", "Second"}, 
-//			LabelType.Static,
-//			true,  // is Percent Graph
-//			true, // visible at start
-//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//			-1);   // minimum height
-
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_AA_CPU,
 			"CPU Summary, Global Variables", 	                        // Menu CheckBox text
@@ -267,102 +240,6 @@ extends CountersModel
 			true,  // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
-
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			TrendGraph tg = null;
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_XXX,
-//				"Dummy Graph", 	                        // Menu CheckBox text
-//				"Dummy Graph showing hour, minute, second", // Label 
-//				labels_xxx, 
-//				true,  // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_AA_CPU,
-//				"CPU Summary, Global Variables", 	                        // Menu CheckBox text
-//				"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io)", // Label 
-//				labels_aaCpu, 
-//				true,  // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
-//				"Blocking Locks", 	                                     // Menu CheckBox text
-//				"Number of Concurrently Blocking Locks (from XXXXXXXX)", // Label 
-//				labels_blockingLocks, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_CONNECTION,
-//				"Connections/Users in SQL-Server", 	          // Menu CheckBox text
-//				"Connections/Users connected to the SQL-Server", // Label 
-//				labels_connection, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_CONNECTION_RATE,
-//					"Connection Rate in ASE", 	          // Menu CheckBox text
-//					"Connection Attemtps per Second (source @@connections)", // Label 
-//					labels_connRate, 
-//					false, // is Percent Graph
-//					this, 
-//					false, // visible at start
-//					0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//					-1);   // minimum height
-//				addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_AA_DISK_READ_WRITE,
-//				"Disk read/write, Global Variables", 	                         // Menu CheckBox text
-//				"Disk read/write per second, using @@total_read, @@total_write", // Label 
-//				labels_aaDiskRW, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_AA_NW_PACKET,
-//				"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
-//				"Network Packets received/sent per second, using @@pack_received, @@pack_sent", // Label 
-//				labels_aaNwPacket, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
-//				"Oldest Open Transaction in any Databases",     // Menu CheckBox text
-//				"Oldest Open Transaction in any Databases, in Seconds", // Label 
-//				labels_openTran, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 	@Override
@@ -409,42 +286,57 @@ extends CountersModel
 		if (isAzureAnalytics)
 			dm_tran_database_transactions = "dm_pdw_nodes_tran_database_transactions";
 
+		String notInTempdb = "";
+		if ( Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_oldestOpenTran_discard_tempdb, DEFAULT_oldestOpenTran_discard_tempdb))
+		{
+			notInTempdb = "and database_id != 2 ";
+		}
+
+		
 		String sql = "" +
 				"select \n" +
-				"  srvVersion         = @@version  \n" +
-				", atAtServerName     = @@servername  \n" +
-				", clusterInstanceId  = 'Not Enabled'  \n" +
-				", clusterCoordId     = 'Not Enabled'  \n" +
-				", timeIsNow          = getdate()  \n" +
-				", utcTimeDiff        = datediff(mi, getutcdate(), getdate())  \n" +
-				", NetworkAddressInfo = convert(varchar(100), SERVERPROPERTY('MachineName')) \n" +
-				", srvPageSize        = convert(int, 8196)--@@maxpagesize  \n" +
-				", LockWaits          = (select count(*) from sys.sysprocesses where blocked != 0 and waittime >= 5000) \n" +
-				", LockWaitThreshold  = convert(int, 5000) \n" +
-				", cpu_busy           = @@cpu_busy  \n" +
-				", cpu_io             = @@io_busy  \n" +
-				", cpu_idle           = @@idle  \n" +
-				", io_total_read      = @@total_read  \n" +
-				", io_total_write     = @@total_write  \n" +
-				", Connections        = (select count(*) from sys.sysprocesses where sid != 0x01)  \n" + 
-				", aaConnections      = @@connections  \n" +
-				", distinctLogins     = (select count(distinct sid) from sys.sysprocesses where sid != 0x01)  \n" +
-				", fullTranslogCount  = convert(int, 0)  \n" +
-//				", oldestOpenTranInSec= (select max(isnull(datediff(ss, database_transaction_begin_time, getdate()),0)) from sys." + dm_tran_database_transactions + ") \n" +
-				", oldestOpenTranInSec= (select max(isnull(datediff(ss, database_transaction_begin_time, getdate()),0)) \n" + 
-				"                        from sys." + dm_tran_database_transactions + " \n" + 
-				"                        where database_transaction_type  = 1 /* 1=read/write transaction, 2=Read-only transaction, 3=System transaction */ \n" + 
-//				"                          and database_transaction_state = 4 /* 4=The transaction has generated log records */ \n" +
-				"                          and database_transaction_log_record_count > 0 \n" + // since SQL-Server 2008
-				"                       ) \n" +
+				"  srvVersion           = @@version  \n" +
+				", atAtServerName       = @@servername  \n" +
+				", clusterInstanceId    = 'Not Enabled'  \n" +
+				", clusterCoordId       = 'Not Enabled'  \n" +
+				", timeIsNow            = getdate()  \n" +
+				", utcTimeDiff          = datediff(mi, getutcdate(), getdate())  \n" +
+				", NetworkAddressInfo   = convert(varchar(100), SERVERPROPERTY('MachineName')) \n" +
+				", srvPageSize          = convert(int, 8196)--@@maxpagesize  \n" +
+				", LockWaits            = (select count(*) from sys.sysprocesses where blocked != 0 and waittime >= 5000) \n" +
+				", LockWaitThreshold    = convert(int, 5000) \n" +
+				", cpu_busy             = @@cpu_busy  \n" +
+				", cpu_io               = @@io_busy  \n" +
+				", cpu_idle             = @@idle  \n" +
+				", io_total_read        = @@total_read  \n" +
+				", io_total_write       = @@total_write  \n" +
+				", Connections          = (select count(*) from sys.sysprocesses where sid != 0x01)  \n" + 
+				", aaConnections        = @@connections  \n" +
+				", distinctLogins       = (select count(distinct sid) from sys.sysprocesses where sid != 0x01)  \n" +
+				", fullTranslogCount    = convert(int, 0)  \n" +
+				", oldestOpenTranDbname = (select isnull(db_name(max(database_id)), convert(varchar(15), max(database_id))) \n" + 
+				"                          from sys." + dm_tran_database_transactions + " \n" + 
+				"                          where database_transaction_begin_time = (select min(database_transaction_begin_time) \n" + // min() is the oldest time
+				"                                                                   from sys." + dm_tran_database_transactions + "\n" + 
+				"                                                                   where 1=1 " + notInTempdb + "\n" + 
+				"                                                                  ) \n" +
+				"                         ) \n" +
+//				", oldestOpenTranInSec  = (select max(isnull(datediff(ss, database_transaction_begin_time, getdate()),0)) from sys." + dm_tran_database_transactions + ") \n" +
+				", oldestOpenTranInSec  = (select max(isnull(datediff(ss, database_transaction_begin_time, getdate()),0)) \n" + 
+				"                          from sys." + dm_tran_database_transactions + " \n" + 
+				"                          where database_transaction_type  = 1 /* 1=read/write transaction, 2=Read-only transaction, 3=System transaction */ \n" + 
+//				"                            and database_transaction_state = 4 /* 4=The transaction has generated log records */ \n" +
+				"                            and database_transaction_log_record_count > 0 \n" + // since SQL-Server 2008
+				"                            " + notInTempdb + " \n" +
+				"                         ) \n" +
 				", oldestOpenTranInSecThreshold = convert(int, 10) \n" +
-				", maxSqlExecTimeInSec= (select max(isnull(datediff(ss, start_time, getdate()),0)) from sys.dm_exec_requests x where x.connection_id is not null and x.transaction_id > 0) \n" +
-				", StartDate          =               (select login_time from sys.dm_exec_sessions where session_id = 1) \n" +
-				", DaysRunning        = datediff(day, (select login_time from sys.dm_exec_sessions where session_id = 1), getdate()) \n" +
-				", pack_received      = @@pack_received  \n" +
-				", pack_sent          = @@pack_sent  \n" +
-				", packet_errors      = @@packet_errors  \n" +
-				", total_errors       = @@total_errors  \n";
+				", maxSqlExecTimeInSec  = (select max(isnull(datediff(ss, start_time, getdate()),0)) from sys.dm_exec_requests x where x.connection_id is not null and x.transaction_id > 0) \n" +
+				", StartDate            =               (select login_time from sys.dm_exec_sessions where session_id = 1) \n" +
+				", DaysRunning          = datediff(day, (select login_time from sys.dm_exec_sessions where session_id = 1), getdate()) \n" +
+				", pack_received        = @@pack_received  \n" +
+				", pack_sent            = @@pack_sent  \n" +
+				", packet_errors        = @@packet_errors  \n" +
+				", total_errors         = @@total_errors  \n";
 
 		return sql;
 	}
@@ -691,8 +583,10 @@ extends CountersModel
 //					{
 //						AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, OldestTranDbName, oldestOpenTranInSec, OldestTranName) );
 //					}
-					
-					AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, oldestOpenTranInSec) );
+
+					String oldestOpenTranDbname = cm.getAbsString(0, "oldestOpenTranDbname");
+
+					AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, oldestOpenTranInSec, oldestOpenTranDbname) );
 				}
 			}
 		}

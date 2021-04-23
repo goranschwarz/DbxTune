@@ -216,6 +216,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //	private JTextField       _LogicalReads_Rate_txt        = new JTextField();
 	private JLabel           _fullTranslog_lbl             = new JLabel();
 	private JTextField       _fullTranslog_txt             = new JTextField();
+	private JLabel           _oldestOpenTranDbname_lbl     = new JLabel();
+	private JTextField       _oldestOpenTranDbname_txt     = new JTextField();
 	private JLabel           _oldestOpenTran_lbl           = new JLabel();
 	private JTextField       _oldestOpenTran_txt           = new JTextField();
 	private JLabel           _oldestOpenTranThreshold_lbl  = new JLabel();
@@ -809,10 +811,13 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_fullTranslog_txt.setToolTipText(tooltip);
 		_fullTranslog_txt.setEditable(false);
 
-//		tooltip = "<html>Oldest Open Transaction in any database, presented in seconds.<br>" +
-//				"Check Performance Counter '"+CmOpenDatabases.SHORT_NAME+"' for details.<br>" +
-//				"<br>" +
-//				"<b>Note</b>: if value is -99, this means that you did not have access to the 'master..syslogshold' table.</html>";
+		tooltip = "Database name which has the oldest open transaction (empty if no open transactions).";
+		_oldestOpenTranDbname_lbl.setText("Oldest Open Tran DB");
+		_oldestOpenTranDbname_lbl.setToolTipText(tooltip);
+		_oldestOpenTranDbname_txt.setToolTipText(tooltip);
+		_oldestOpenTranDbname_txt.setEditable(false);
+
+		tooltip = "Oldest Open Transaction in any database, presented in seconds.";
 		_oldestOpenTran_lbl.setText("Oldest Open Tran");
 		_oldestOpenTran_lbl.setToolTipText(tooltip);
 		_oldestOpenTran_txt.setToolTipText(tooltip);
@@ -1097,6 +1102,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 		panel.add(_fullTranslog_lbl,        "");
 		panel.add(_fullTranslog_txt,        "growx, wrap");
+		
+		panel.add(_oldestOpenTranDbname_lbl, "");
+		panel.add(_oldestOpenTranDbname_txt, "growx, wrap");
 		
 		panel.add(_oldestOpenTran_lbl,      "");
 		panel.add(_oldestOpenTran_txt,      "growx, wrap");
@@ -1459,6 +1467,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		setFieldAbsDiffRate(cm, "LogicalReads",   _LogicalReads_lbl,   _LogicalReads_Abs_txt,   _LogicalReads_Diff_txt,   _LogicalReads_Rate_txt);
 //
 		_fullTranslog_txt           .setText(cm.getAbsString (0, "fullTranslogCount"));
+		_oldestOpenTranDbname_txt   .setText(cm.getAbsString (0, "oldestOpenTranDbname"));
 		_oldestOpenTran_txt         .setText(cm.getAbsString (0, "oldestOpenTranInSec"));
 		_oldestOpenTranThreshold_txt.setText(cm.getAbsString (0, "oldestOpenTranInSecThreshold"));
 		_maxSqlExecTimeInSec_txt    .setText(cm.getAbsString (0, "maxSqlExecTimeInSec"));
@@ -1740,10 +1749,11 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_LogicalReads_Diff_txt  .setText("");
 //		_LogicalReads_Rate_txt  .setText("");
 
-		_fullTranslog_txt       .setText("");
-		_oldestOpenTran_txt     .setText("");
+		_fullTranslog_txt           .setText("");
+		_oldestOpenTranDbname_txt   .setText("");
+		_oldestOpenTran_txt         .setText("");
 		_oldestOpenTranThreshold_txt.setText("");
-		_maxSqlExecTimeInSec_txt.setText("");
+		_maxSqlExecTimeInSec_txt    .setText("");
 		
 //		_bootcount_txt          .setText("");
 //		_recoveryState_txt      .setText("");

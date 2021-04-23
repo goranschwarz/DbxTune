@@ -74,7 +74,8 @@ extends DailySummaryReportDefault
 		// SQL: from Cm's
 		addReportEntry( new AseTopCmCachedProcs(this)       );
 		addReportEntry( new AseStatementCacheUsageOverview(this) ); // This isn't really SQL, but statistics/charts on the Statement Cache
-		addReportEntry( new AseTopCmStmntCacheDetails(this) );
+		addReportEntry( new AseTopCmStmntCacheDetails(this, AseTopCmStmntCacheDetails.ReportType.CPU_TIME) );
+		addReportEntry( new AseTopCmStmntCacheDetails(this, AseTopCmStmntCacheDetails.ReportType.WAIT_TIME) );
 		addReportEntry( new AseTopCmActiveStatements(this)  );
 
 		// SQL: Accessed Tables

@@ -45,6 +45,7 @@ import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.showplan.ShowplanHtmlView;
 import com.asetune.sql.showplan.ShowplanHtmlView.Type;
+import com.asetune.sql.showplan.transform.SqlServerShowPlanXmlTransformer;
 import com.asetune.ui.autocomplete.CompletionProviderJdbc;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SqlServerUtils;
@@ -390,7 +391,8 @@ extends CmToolTipSupplierDefault
 				String propName_xmlInline    = Version.getAppName() + ".tooltip.xmlplan.show.inline";
 				String propName_autoExternal = Version.getAppName() + ".tooltip.xmlplan.show.auto.externalBrowser";
 
-				boolean showInline     = Configuration.getCombinedConfiguration().getBooleanProperty(propName_xmlInline,    false);
+//				boolean showInline     = Configuration.getCombinedConfiguration().getBooleanProperty(propName_xmlInline,    false);
+				boolean showInline     = Configuration.getCombinedConfiguration().getBooleanProperty(propName_xmlInline,    true);
 				boolean showAutoExtern = Configuration.getCombinedConfiguration().getBooleanProperty(propName_autoExternal, false);
 				
 				URL htmlUrl = new URL(htmlUrlStr);
@@ -408,7 +410,8 @@ extends CmToolTipSupplierDefault
 				sb.append("<a href='").append(OPEN_IN_EXTERNAL_BROWSER         + xmlUrlStr2).append("'>Open in 'SSMS' or other...</a> (registered application for file extention <b>'.sqlplan'</b> will be used, Note: This may take a few seconds to start)<br>");
 				sb.append("<br>");
 				sb.append("<a href='").append(SET_PROPERTY_TEMP + propName_autoExternal + "=" + (!showAutoExtern) ).append("'>"+(showAutoExtern ? "Disable" : "Enable")+"</a> - Automatically open in Extrnal Browser. (set property <code>"+propName_autoExternal+"="+(!showAutoExtern)+"</code>)<br>");
-				sb.append("<a href='").append(SET_PROPERTY_TEMP + propName_xmlInline    + "=" + (!showInline)     ).append("'>"+(showInline     ? "Disable" : "Enable")+"</a> - Show the XML Plan in here. (set property <code>"+propName_xmlInline+"="+(!showInline)+"</code>)<br>");
+//				sb.append("<a href='").append(SET_PROPERTY_TEMP + propName_xmlInline    + "=" + (!showInline)     ).append("'>"+(showInline     ? "Disable" : "Enable")+"</a> - Show the XML Plan in here. (set property <code>"+propName_xmlInline+"="+(!showInline)+"</code>)<br>");
+				sb.append("<a href='").append(SET_PROPERTY_TEMP + propName_xmlInline    + "=" + (!showInline)     ).append("'>"+(showInline     ? "Disable" : "Enable")+"</a> - Show a Simplified HTML Version of the XML Plan in here. (set property <code>"+propName_xmlInline+"="+(!showInline)+"</code>)<br>");
 				if (showAutoExtern)
 					sb.append("<h3>Auto open external browser is enabled! (Check the browser for results)</h3>");
 				sb.append("<hr>");
@@ -418,9 +421,22 @@ extends CmToolTipSupplierDefault
 					String formatedQueryPlanText = StringUtil.xmlFormat(queryPlanText);
 					formatedQueryPlanText = formatedQueryPlanText.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"); 
 
-					sb.append("<pre><code>");
-					sb.append(formatedQueryPlanText);
-					sb.append("</code></pre>");
+//					sb.append("<pre><code>");
+//					sb.append(formatedQueryPlanText);
+//					sb.append("</code></pre>");
+
+					SqlServerShowPlanXmlTransformer t = new SqlServerShowPlanXmlTransformer();
+					try
+					{
+						// Get HTML (what type/look-and-feel) is decided by configuration in: SqlServerShowPlanXmlTransformer.PROKKEY_transform
+						sb.append(t.toHtml(queryPlanText));
+					}
+					catch (Exception ex)
+					{
+						String msg = "Could not translate SQL-Server ShowPlanXML to HTML text. Caught: " + ex;
+						_logger.error(msg);
+						sb.append(msg);
+					}
 				}
 
 				sb.append("</html>");
