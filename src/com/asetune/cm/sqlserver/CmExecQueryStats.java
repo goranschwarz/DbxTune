@@ -353,7 +353,7 @@ extends CountersModel
 				"    ,CASE WHEN txt.objectid IS NOT NULL and txt.dbid IS NOT NULL THEN object_name(txt.objectid, txt.dbid) ELSE NULL END AS object_name \n" +
 				"    ,qs.* \n" +
 				"FROM sys." + dm_exec_query_stats + " qs \n" +
-				"CROSS APPLY sys.dm_exec_sql_text(qs.sql_handle) txt \n" +
+				"OUTER APPLY sys.dm_exec_sql_text(qs.sql_handle) txt \n" +
 				"WHERE 1 = 1 -- to make extra where clauses easier \n" +
 				sql_sample_extraWhereClause +
 				sql_sample_lastXminutes;

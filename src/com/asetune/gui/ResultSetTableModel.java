@@ -55,6 +55,8 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.jdesktop.swingx.decorator.Highlighter;
@@ -69,6 +71,7 @@ import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.pipe.PipeCommand;
 import com.asetune.sql.pipe.PipeCommandConvert;
 import com.asetune.sql.pipe.PipeCommandGrep;
+import com.asetune.sql.showplan.transform.SqlServerShowPlanXmlTransformer;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
@@ -2569,6 +2572,55 @@ public class ResultSetTableModel
 				// or maybe: wrap it with <pre>"strVal"</pre> instead
 				if ( ! StringUtil.containsHtml(strVal) )
 					strVal = strVal.replace("\n", "<br>");
+
+				//----------------------------------------------------------------
+				// BEGIN -- grabbed from CounterModel.toHtmlTableString(...)
+				//----------------------------------------------------------------
+				// Remove any leading/ending HTML tags
+				if (StringUtils.startsWithIgnoreCase(strVal, "<html>"))
+				{
+					strVal = strVal.substring("<html>".length());
+					strVal = strVal.trim();
+					if (StringUtils.endsWithIgnoreCase(strVal, "</html>"))
+						strVal = strVal.substring(0, strVal.length() - "</html>".length() );
+				}
+				else
+				{
+					// check for XML content "somewhere" in the string
+					if (strVal.indexOf("<?xml") >= 0)
+					{
+						String conf = Configuration.getCombinedConfiguration().getProperty("toHtmlTableString.xml", "TO_ESCAPED_TEXT");
+
+						if ("TO_ESCAPED_TEXT".equals(conf))
+						{
+							// if there are any XML tag in the field... Then surround the value with a '<pre>' tag and escape all "xml" tags etc...
+							strVal = "<pre>" + StringEscapeUtils.escapeHtml4(strVal) + "</pre>";
+//							strVal = "<pre>" + StringEscapeUtils.escapeXml10(strVal) + "</pre>";
+						}
+					}
+					else if (strVal.indexOf("<ShowPlanXML xmlns=") >= 0)
+					{
+						SqlServerShowPlanXmlTransformer t = new SqlServerShowPlanXmlTransformer();
+						try
+						{
+							// Get HTML (what type/look-and-feel) is decided by configuration in: SqlServerShowPlanXmlTransformer.PROKKEY_transform
+							strVal = t.toHtml(strVal);
+						}
+						catch (Exception ex)
+						{
+							strVal = "Could not translate SQL-Server ShowPlanXML to HTML text. Caught: " + ex;
+							_logger.error(strVal);
+						}
+					}
+					else
+					{
+						// make '\n' into '<br>'
+						strVal = strVal.replace("\n", "<br>");
+					}
+				}
+				//----------------------------------------------------------------
+				// END -- grabbed from CounterModel.toHtmlTableString(...)
+				//----------------------------------------------------------------
 				
 				sb.append("  <tr>\n");
 				sb.append("    <td").append(tBodyNoWrapStr).append("><b>").append(colName).append("</b></td>\n");

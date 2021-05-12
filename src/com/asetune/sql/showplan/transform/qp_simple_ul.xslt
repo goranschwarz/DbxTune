@@ -697,8 +697,8 @@
       </xsl:apply-templates>
     </xsl:variable>
 <!--    <div>-->
-      <xsl:value-of select="substring($ObjectName, 0, 36)" />
-      <xsl:if test="string-length($ObjectName) >= 36">…</xsl:if>
+    <xsl:value-of select="substring($ObjectName, 0, 265)" />
+    <xsl:if test="string-length($ObjectName) >= 265">…</xsl:if>
 <!--    </div>-->
   </xsl:template>
 

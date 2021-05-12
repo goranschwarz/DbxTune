@@ -743,7 +743,8 @@ extends CountersModel
 			mtd.addColumn(cmName, "LogOsDiskFreePct"        ,"<html>How much of the Operating System <i>disk/mount point</i> are FREE in Percent</html>");                         //   = osvLog.osFreePct 
 			mtd.addColumn(cmName, "LogOsFileName"           ,"<html>Physical name on Operating System. <br>NOTE: Only the <b>first</b> file is visible here.</html>");             //   = osvLog.physical_name 
 			mtd.addColumn(cmName, "LogFileName"             ,"<html>SQL-Servers internal name if the <i>file</i>. <br>NOTE: Only the <b>first</b> file is visible here.</html>");  //   = osvLog.name 
-			mtd.addColumn(cmName, "logFileId"               ,"<html>SQL-Servers internal ID if the <i>file</i>. <br>NOTE: Only the <b>first</b> file is visible here.</html>");    //   = osvLog.file_id 
+			mtd.addColumn(cmName, "LogFileId"               ,"<html>SQL-Servers internal ID of the <i>file</i>. <br>NOTE: Only the <b>first</b> file is visible here.</html>");    //   = osvLog.file_id 
+			mtd.addColumn(cmName, "LogFileCount"            ,"<html>Number of LOG file(s). <br>NOTE: Only the <b>first</b> file is displayed in the tab, this would be number of files.</html>");    //   = osvLog.file_count 
 			mtd.addColumn(cmName, "LogOsDiskUsedMb"         ,"<html>How much of the Operating System <i>disk/mount point</i> are USED in MB</html>");                              //   = osvLog.osUsedMb 
 			mtd.addColumn(cmName, "LogOsDiskFreeMb"         ,"<html>How much of the Operating System <i>disk/mount point</i> are FREE in MB</html>");                              //   = osvLog.osFreeMb 
 			mtd.addColumn(cmName, "LogNextGrowthSizeMb"     ,"<html>Next time the database needs to grow the LOG file on the Operating System, how many MB will we grow.</html>"); //   = osvLog.nextGrowSizeMb 
@@ -759,6 +760,7 @@ extends CountersModel
 			mtd.addColumn(cmName, "DataOsFileName"          ,"<html>Physical name on Operating System. <br>NOTE: Only the <b>first</b> file is visible here.</html>");             //   = osvData.physical_name 
 			mtd.addColumn(cmName, "DataFileName"            ,"<html>SQL-Servers internal name if the <i>file</i>. <br>NOTE: Only the <b>first</b> file is visible here.</html>");  //   = osvData.name 
 			mtd.addColumn(cmName, "DataFileId"              ,"<html>SQL-Servers internal ID if the <i>file</i>. <br>NOTE: Only the <b>first</b> file is visible here.</html>");    //   = osvData.file_id 
+			mtd.addColumn(cmName, "DataFileCount"           ,"<html>Number of DATA file(s) available. <br>NOTE: Only the <b>first</b> file is displayed in the tab, this would be number of files.</html>");    //   = osvData.file_count 
 			mtd.addColumn(cmName, "DataOsDiskUsedMb"        ,"<html>How much of the Operating System <i>disk/mount point</i> are USED in MB</html>");                              //   = osvData.osUsedMb 
 			mtd.addColumn(cmName, "DataOsDiskFreeMb"        ,"<html>How much of the Operating System <i>disk/mount point</i> are FREE in MB</html>");                              //   = osvData.osFreeMb 
 			mtd.addColumn(cmName, "DataNextGrowthSizeMb"    ,"<html>Next time the database needs to grow the DATA file on the Operating System, how many MB will we grow.</html>");//   = osvData.nextGrowSizeMb 
@@ -857,19 +859,20 @@ extends CountersModel
 	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		// Table names are probably different in Normal SQL-Server and Azure SQL-Server
-		String dm_db_file_space_usage       = "sys.dm_db_file_space_usage";
-		String dm_db_log_space_usage        = "sys.dm_db_log_space_usage";
-		String dm_exec_sessions             = "sys.dm_exec_sessions";
-		String dm_exec_connections          = "sys.dm_exec_connections";
-		String dm_exec_requests             = "sys.dm_exec_requests";
-		String dm_tran_session_transactions = "sys.dm_tran_session_transactions";
-		String dm_tran_active_transactions  = "sys.dm_tran_active_transactions";
-		String dm_exec_sql_text             = "sys.dm_exec_sql_text";
-		String dm_exec_query_plan           = "sys.dm_exec_query_plan";
-		String master_files                 = "sys.master_files";
-		String dm_os_volume_stats           = "sys.dm_os_volume_stats";
-		String databases                    = "sys.databases";
-		String backupset                    = "msdb.dbo.backupset";
+		String dm_db_file_space_usage        = "sys.dm_db_file_space_usage";
+		String dm_db_log_space_usage         = "sys.dm_db_log_space_usage";
+		String dm_exec_sessions              = "sys.dm_exec_sessions";
+		String dm_exec_connections           = "sys.dm_exec_connections";
+		String dm_exec_requests              = "sys.dm_exec_requests";
+		String dm_tran_database_transactions = "sys.dm_tran_database_transactions";
+		String dm_tran_session_transactions  = "sys.dm_tran_session_transactions";
+		String dm_tran_active_transactions   = "sys.dm_tran_active_transactions";
+		String dm_exec_sql_text              = "sys.dm_exec_sql_text";
+		String dm_exec_query_plan            = "sys.dm_exec_query_plan";
+		String master_files                  = "sys.master_files";
+		String dm_os_volume_stats            = "sys.dm_os_volume_stats";
+		String databases                     = "sys.databases";
+		String backupset                     = "msdb.dbo.backupset";
 
 		// get Actual-Query-Plan instead of Estimated-QueryPlan
 		if (isDbmsOptionEnabled(DbmsOption.SQL_SERVER__LAST_QUERY_PLAN_STATS))
@@ -894,6 +897,7 @@ extends CountersModel
 			backupset                    = "msdb.dbo.backupset";                      // same as Normal SQL-Server
 		}
 
+		// ----- SQL-Server 2012 and above
 		String availabilityGroupName          = "";
 		String availabilityGroupRole          = "";
 		String availabilityGroupPrimaryServer = "";
@@ -907,6 +911,14 @@ extends CountersModel
 			whereAvailabilityGroup         = "  OR d.replica_id is not null \n";
 		}
 
+		// ----- SQL-Server 2014 and above
+		String user_objects_deferred_dealloc_page_count = "0";
+		if (srvVersion >= Ver.ver(2014))
+		{
+			user_objects_deferred_dealloc_page_count = "user_objects_deferred_dealloc_page_count";
+		}
+
+		// ----- SQL-Server 2016 and above
 		String queryStoreCreateTempTable   = "";
 		String queryStoreColumns           = "";
 		String queryStoreJoin              = "";
@@ -1264,45 +1276,101 @@ extends CountersModel
 			    + "--------------------------- \n"
 			    + "-- Open Transaction Info \n"
 			    + "--------------------------- \n"
-			    + "    SELECT --top 1 \n"
-			    + "         es.session_id \n"
-			    + "        ,es.database_id \n"
+//add the below "somhow" to get TempdbUsageMb
+//				"    ,TempdbUsageMb       = (select \n" + 
+//				"                            CAST( ( \n" + // The below calculations also used in: CmTempdbSpidUsage
+//				"                                        (user_objects_alloc_page_count - user_objects_dealloc_page_count - " + user_objects_deferred_dealloc_page_count + ") \n" + 
+//				"                                      + (internal_objects_alloc_page_count - internal_objects_dealloc_page_count) \n" + 
+//				"                                  ) / 128.0 AS decimal(12,1) \n" + 
+//				"                                ) \n" + 
+//				"                            from tempdb.sys.dm_db_session_space_usage ts \n" + 
+//				"                            where ts.session_id = des.session_id \n" +
+//				"                           ) \n" +
+			    
+//			    + "    SELECT --top 1 \n"
+//			    + "         es.session_id \n"
+//			    + "        ,es.database_id \n"
+//			    + "        ,es.status \n"
+//			    + "        ,es.program_name \n"
+//			    + "        ,es.login_name \n"
+//			    + "        ,es.host_name \n"
+//			    + "        ,es.open_transaction_count \n"
+//			    
+//			    + "        ,tat.transaction_id \n"
+//			    + "        ,tat.name AS transaction_name  \n"
+//			    + "        ,tat.transaction_begin_time \n"
+//
+//			    + "        ,es.last_request_start_time \n"
+//			    + "        ,es.last_request_end_time \n"
+//			    + "        ,er.statement_start_offset \n"
+//			    + "        ,er.statement_end_offset \n"
+//			    + "        ,er.wait_type \n"
+//			    + "        ,er.estimated_completion_time \n"
+//				+ "        ,SUBSTRING(sql_text.text, er.statement_start_offset / 2,  \n"
+//				+ "             ( CASE WHEN er.statement_end_offset = -1  \n"
+//				+ "                    THEN DATALENGTH(sql_text.text)  \n"
+//				+ "                    ELSE er.statement_end_offset  \n"
+//				+ "               END - er.statement_start_offset ) / 2 +2) AS most_recent_sql_text \n"
+//			    + "        ,plan_text.query_plan as plan_text \n"
+////			    + "        ,ROW_NUMBER() OVER (PARTITION BY es.database_id ORDER BY es.last_request_start_time) AS row_num \n"
+//			    + "        ,ROW_NUMBER() OVER (PARTITION BY es.database_id ORDER BY tat.transaction_begin_time) AS row_num \n"
+//			    + "    INTO #oti \n"
+//			    + "    FROM " + dm_exec_sessions + " es \n"
+//			    + "    JOIN " + dm_exec_connections + " ec            ON es.session_id = ec.session_id \n"
+//			    + "    LEFT OUTER JOIN " + dm_exec_requests + " er    ON er.session_id = es.session_id \n"
+//			    + "    LEFT OUTER JOIN " + dm_tran_session_transactions + " tst ON es.session_id = tst.session_id \n"
+//			    + "    LEFT OUTER JOIN " + dm_tran_active_transactions  + " tat ON tst.transaction_id = tat.transaction_id \n"
+//			    + "    OUTER APPLY " + dm_exec_sql_text + " (ec.most_recent_sql_handle) AS sql_text \n"
+//			    + "    OUTER APPLY " + dm_exec_query_plan + " (er.plan_handle)          AS plan_text \n"
+//			    + "    WHERE es.open_transaction_count > 0 \n"
+//			    + "    --AND es.status = 'sleeping' \n"
+//			    + "      AND es.is_user_process = 1 \n"
+//			    + "      AND es.session_id != @@spid \n"
+//			    + "\n"
+			    + "    SELECT \n"
+			    + "         tst.session_id \n"
+			    + "        ,tdt.database_id \n"
 			    + "        ,es.status \n"
 			    + "        ,es.program_name \n"
 			    + "        ,es.login_name \n"
 			    + "        ,es.host_name \n"
 			    + "        ,es.open_transaction_count \n"
-			    
+			    + "\n"
 			    + "        ,tat.transaction_id \n"
-			    + "        ,tat.name AS transaction_name  \n"
+			    + "        ,tat.name AS transaction_name \n"
 			    + "        ,tat.transaction_begin_time \n"
-
+			    + "        ,tdt.database_transaction_begin_time \n"
+			    + "\n"
 			    + "        ,es.last_request_start_time \n"
 			    + "        ,es.last_request_end_time \n"
 			    + "        ,er.statement_start_offset \n"
 			    + "        ,er.statement_end_offset \n"
 			    + "        ,er.wait_type \n"
 			    + "        ,er.estimated_completion_time \n"
-				+ "        ,SUBSTRING(sql_text.text, er.statement_start_offset / 2,  \n"
-				+ "             ( CASE WHEN er.statement_end_offset = -1  \n"
-				+ "                    THEN DATALENGTH(sql_text.text)  \n"
-				+ "                    ELSE er.statement_end_offset  \n"
-				+ "               END - er.statement_start_offset ) / 2 +2) AS most_recent_sql_text \n"
+			    + "        ,SUBSTRING(sql_text.text, er.statement_start_offset / 2, \n"
+			    + "             ( CASE WHEN er.statement_end_offset = -1 \n"
+			    + "                    THEN DATALENGTH(sql_text.text) \n"
+			    + "                    ELSE er.statement_end_offset \n"
+			    + "               END - er.statement_start_offset ) / 2 +2) AS most_recent_sql_text \n"
 			    + "        ,plan_text.query_plan as plan_text \n"
-			    + "        ,ROW_NUMBER() OVER (PARTITION BY es.database_id ORDER BY es.last_request_start_time) AS row_num \n"
+			    + "        ,ROW_NUMBER() OVER (PARTITION BY tdt.database_id ORDER BY tdt.database_transaction_begin_time) AS row_num \n"
+			    + "        ,COUNT(*)     OVER (PARTITION BY tdt.database_id)                                              AS active_tran_count \n"
 			    + "    INTO #oti \n"
-			    + "    FROM " + dm_exec_sessions + " es \n"
-			    + "    JOIN " + dm_exec_connections + " ec            ON es.session_id = ec.session_id \n"
-			    + "    LEFT OUTER JOIN " + dm_exec_requests + " er    ON er.session_id = es.session_id \n"
-			    + "    LEFT OUTER JOIN " + dm_tran_session_transactions + " tst ON es.session_id = tst.session_id \n"
-			    + "    LEFT OUTER JOIN " + dm_tran_active_transactions  + " tat ON tst.transaction_id = tat.transaction_id \n"
-			    + "    OUTER APPLY " + dm_exec_sql_text + " (ec.most_recent_sql_handle) AS sql_text \n"
-			    + "    OUTER APPLY " + dm_exec_query_plan + " (er.plan_handle)          AS plan_text \n"
-			    + "    WHERE es.open_transaction_count > 0 \n"
-			    + "    --AND es.status = 'sleeping' \n"
-			    + "      AND es.is_user_process = 1 \n"
-			    + "      AND es.session_id != @@spid \n"
+			    + "    FROM " + dm_tran_database_transactions + "            tdt \n"
+			    + "    INNER JOIN      " + dm_tran_session_transactions + "             tst ON tdt.transaction_id = tst.transaction_id \n"
+			    + "    INNER JOIN      " + dm_tran_active_transactions  + "             tat ON tst.transaction_id = tat.transaction_id \n"
+			    + "    LEFT OUTER JOIN " + dm_exec_sessions             + "              es ON tst.session_id     =  es.session_id \n"
+			    + "    LEFT OUTER JOIN " + dm_exec_connections          + "              ec ON tst.session_id     =  ec.session_id \n"
+			    + "    LEFT OUTER JOIN " + dm_exec_requests             + "              er ON tst.session_id     =  er.session_id \n"
+			    + "    OUTER APPLY     " + dm_exec_sql_text   + "(ec.most_recent_sql_handle) AS sql_text \n"
+			    + "    OUTER APPLY     " + dm_exec_query_plan + "(er.plan_handle)            AS plan_text \n"
 			    + "\n"
+			    + "    WHERE tdt.database_transaction_begin_time IS NOT NULL \n"
+			    + "      AND tdt.database_transaction_type  = 1 /* 1=read/write transaction, 2=Read-only transaction, 3=System transaction */ \n"
+			    + "      AND tdt.database_transaction_log_record_count > 0 \n"
+			    + "      AND tst.session_id != @@spid \n"
+			    + "\n"
+
 			    + "--------------------------- \n"
 			    + "-- Operating System Volume DATA \n"
 			    + "--------------------------- \n"
@@ -1332,10 +1400,11 @@ extends CountersModel
 			    + "        ,convert(numeric(5,1), (osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)           AS osFreePct \n"
 			    + "        ,convert(numeric(5,1), 100.0 - ((osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)) AS osUsedPct \n" 
 			    + "        ,ROW_NUMBER() OVER (PARTITION BY mf.database_id ORDER BY osv.available_bytes)               AS row_num \n"
+			    + "        ,COUNT(*)     OVER (PARTITION BY mf.database_id)                                            AS file_count \n"
 			    + "    INTO #osvData \n"
 			    + "    FROM " + master_files + " AS mf \n"
 			    + "    CROSS APPLY " + dm_os_volume_stats + " (mf.database_id, mf.file_id) AS osv \n"
-			    + "    WHERE mf.type IN (0) /*0=ROWS, 0=LOG*/ \n"
+			    + "    WHERE mf.type IN (0)   /* 0=ROWS, 1=LOG, 2=FILESTREAM */ \n"
 			    + "\n"
 			    + "--------------------------- \n"
 			    + "-- Operating System Volume LOG \n"
@@ -1366,10 +1435,11 @@ extends CountersModel
 			    + "        ,convert(numeric(5,1), (osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)           AS osFreePct \n"
 			    + "        ,convert(numeric(5,1), 100.0 - ((osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)) AS osUsedPct \n" 
 			    + "        ,ROW_NUMBER() OVER (PARTITION BY mf.database_id ORDER BY osv.available_bytes)               AS row_num \n"
+			    + "        ,COUNT(*)     OVER (PARTITION BY mf.database_id)                                            AS file_count \n"
 			    + "    INTO #osvLog \n"
 			    + "    FROM " + master_files + " AS mf \n"
 			    + "    CROSS APPLY " + dm_os_volume_stats + " (mf.database_id, mf.file_id) AS osv \n"
-			    + "    WHERE mf.type IN (1) /*0=ROWS, 0=LOG*/ \n"
+			    + "    WHERE mf.type IN (1)   /* 0=ROWS, 1=LOG, 2=FILESTREAM */ \n"
 			    + "go\n"
 			    + "\n"
 			    + "------------------------------- \n"
@@ -1408,7 +1478,8 @@ extends CountersModel
 			    + "    ,LogOsDiskFreePct         = osvLog.osFreePct \n"
 			    + "    ,LogOsFileName            = osvLog.physical_name \n"
 			    + "    ,LogFileName              = osvLog.name \n"
-			    + "    ,logFileId                = osvLog.file_id \n"
+			    + "    ,LogFileId                = osvLog.file_id \n"
+			    + "    ,LogFileCount             = osvLog.file_count \n"
 			    + "    ,LogOsDiskUsedMb          = osvLog.osUsedMb \n"
 			    + "    ,LogOsDiskFreeMb          = osvLog.osFreeMb \n"
 			    + "    ,LogNextGrowthSizeMb      = osvLog.nextGrowSizeMb \n"
@@ -1424,19 +1495,32 @@ extends CountersModel
 			    + "    ,DataOsFileName           = osvData.physical_name \n"
 			    + "    ,DataFileName             = osvData.name \n"
 			    + "    ,DataFileId               = osvData.file_id \n"
+			    + "    ,DataFileCount            = osvData.file_count \n"
 			    + "    ,DataOsDiskUsedMb         = osvData.osUsedMb \n"
 			    + "    ,DataOsDiskFreeMb         = osvData.osFreeMb \n"
 			    + "    ,DataNextGrowthSizeMb     = osvData.nextGrowSizeMb \n"
 			    + " \n"
 //			    + "--	,TransactionLogFull = -1 \n"
 //			    + " \n"
-			    + "    ,OldestTranStartTime      = oti.last_request_start_time \n"
+//			    + "    ,OldestTranStartTime      = oti.last_request_start_time \n"
+			    + "    ,OldestTranStartTime      = oti.transaction_begin_time \n"
 			    + "    ,OldestTranWaitType       = oti.wait_type \n"
 			    + "    ,OldestTranECT            = oti.estimated_completion_time \n"
-			    + "    ,OldestTranInSeconds      = datediff(second, oti.last_request_start_time, getdate()) \n"
+//			    + "    ,OldestTranInSeconds      = datediff(second, oti.last_request_start_time, getdate()) \n"
+			    + "    ,OldestTranInSeconds      = datediff(second, oti.transaction_begin_time, getdate()) \n"
 			    + "    ,OldestTranName           = oti.transaction_name \n"
 			    + "    ,OldestTranId             = oti.transaction_id \n"
 			    + "    ,OldestTranSpid           = oti.session_id \n"
+				+ "    ,OldestTranTempdbUsageMb  = (select \n" 
+				+ "                                 CAST( ( \n"  // The below calculations also used in: CmTempdbSpidUsage
+				+ "                                             (ts.user_objects_alloc_page_count - ts.user_objects_dealloc_page_count - " + user_objects_deferred_dealloc_page_count + ") \n"  
+				+ "                                           + (ts.internal_objects_alloc_page_count - ts.internal_objects_dealloc_page_count) \n" 
+				+ "                                       ) / 128.0 AS decimal(12,1) \n" 
+				+ "                                     ) \n" 
+				+ "                                 from tempdb.sys.dm_db_session_space_usage ts \n" 
+				+ "                                 where ts.session_id = oti.session_id \n"
+				+ "                                ) \n"
+//Possibly move above (OldestTranTempdbUsageMb) to section; "oti"
 			    + "    ,OldestTranProg           = oti.program_name \n"
 			    + "    ,OldestTranUser           = oti.login_name \n"
 			    + "    ,OldestTranHost           = oti.host_name \n"

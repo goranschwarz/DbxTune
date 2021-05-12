@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.asetune.alarm.writers;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -89,7 +90,7 @@ extends AlarmWriterAbstract
 			email.setHostName(_smtpHostname);
 
 			// Charset
-			//email.setCharset(StandardCharsets.UTF_8.name());
+			email.setCharset(StandardCharsets.UTF_8.name());
 			
 			// Connection timeout
 			if (_smtpConnectTimeout >= 0)

@@ -169,7 +169,7 @@ extends CountersModel
 			    + "          END - c.statement_start_offset)/2) + 1) AS exec_sql_text \n"
 			    + "    ,txt.text as full_sql_text \n"
 			    + "from sys.dm_exec_cursors(0) c \n"
-			    + "cross apply sys.dm_exec_sql_text(sql_handle) txt \n"
+			    + "outer apply sys.dm_exec_sql_text(sql_handle) txt \n"
 			    + "";
 
 		return sql;

@@ -224,8 +224,8 @@ extends CountersModel
 				+ (getQueryPlan ? "    ,qp.[query_plan] \n"         : "    ,cast('' as varchar(max)) as [query_plan] \n")
 				+ "    ,cast(null as varchar(max)) as [live_query_plan] \n"
 				+ "FROM sys.dm_exec_query_memory_grants mg \n"
-			    + (getSqltext   ? "CROSS APPLY sys.dm_exec_sql_text  (mg.plan_handle) AS st \n"         : "")
-			    + (getQueryPlan ? "CROSS APPLY sys." + dm_exec_query_plan + "(mg.plan_handle) AS qp \n" : "")
+			    + (getSqltext   ? "OUTER APPLY sys.dm_exec_sql_text  (mg.plan_handle) AS st \n"         : "")
+			    + (getQueryPlan ? "OUTER APPLY sys." + dm_exec_query_plan + "(mg.plan_handle) AS qp \n" : "")
 //				+ "WHERE mg.session_id != @@spid \n"
 //				+ "ORDER BY mg.required_memory_kb DESC \n"
 				+ "";

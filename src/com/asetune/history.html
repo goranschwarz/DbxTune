@@ -39,8 +39,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>new: AlarmEventSqlCaptureOldData        -- If SqlCapture has "died" for some reason (not updating a timestamp), then raise alarm.</LI>
 				<LI>new: AlarmEventPerfCounterWarning       -- (SQL-Server) - If a PerfCounter value is "out of whack"...</LI>
 				<LI>new: AlarmEventLongRunningStatement     -- If a Statement has been running for more than X seconds/minutes/hours</LI>
+				<LI>new  AlarmEventExtensiveUsage           -- for example if tempdb is heavely used</LI>
+				<LI>new  AlarmEventStackDump                -- for SQL-Server only: Sends the StackDump as a chunk of text</LI>
 				
-
 				<LI>Changed: AlarmEventConfigResourceIsLow       -- added "raiseDelay", which is used by 'Statement Cache Hit Rate', and the default was set to 5 minutes below configured value before raising alarm.</LI>
 				<LI>Changed: AlarmEventFullTranLog               -- alwaysSend() is now set to true, so even if we do not "subscribe" for alarms on this server, we will still get message, just like SrvDown </LI>
 				<LI>Changed: AlarmEventProcedureCacheOutOfMemory -- alwaysSend() is now set to true, so even if we do not "subscribe" for alarms on this server, we will still get message, just like SrvDown </LI>
@@ -49,7 +50,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>Changed: AlarmEventLongRunningTransaction    -- Changed from Severity WARNING to INFO</LI>
 			</UL>
 		</LI>
-		<LI>AlarmWriterToMail: Changed temple for Subject to include ${severity}</LI>
+		<LI>AlarmWriterToMail: Changed temple for Subject to include ${severity}, also changed encoding to UTF-8</LI>
 		<LI>All CM's -- SqlPrefix -- Prefix SQL Statements issued by the CounterModel with /* DbxTuneAppName:CmName */ so we can see in the daily report that it's AseTune / PostgresTune etc that are responsible for the SQL Statements issued</LI>
 		<LI>new: Menu -> Tools -> 'Create Daily Summary Report...' Opens a dialog where you can produce a Daily Summary Report on any recording database.</LI>
 		<LI>Focusable Tooltip is now resizable in a better way (all edges can be used)</LI>
@@ -98,6 +99,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	 			<li>To version 9.2.0          Component: Microsoft JDBC Driver</li>
 	 			<li>To version 9.4.38         Component: Jetty Embedded WebServer</li>
 				<li>To version ASE 16 SP4     Component: jConnect: jconn4.jar to jconn42.jar (which has JDBC 4.2 implementation)</li>
+				<li>To version 8.0.25         Component: mysql-connector, JDBC Driver for MySQL</li>
 			</ul>
 		</LI>
 	</UL>
@@ -317,6 +319,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmActiveStatements </b> - new column 'HasBlockedSpidsInfo', 'BlockedSpidsInfo' so that alarms can see both the root-cause-spid and the victim-spid information </LI>
 		<LI><b>CmActiveStatements </b> - new column 'ProcName', 'StmntStart' so we can see if a Stored Proc is executing (and not just the SQL Text) </LI>
 		<LI><b>CmActiveStatements </b> - Query Plans: get actual execution plans if the server supports it (2019 &amp; traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
+		<LI><b>CmActiveStatements </b> - new columns: 'TempdbUsageMb', 'is_user_process', 'percent_complete', 'estimated_completion_time' </LI>
+		<LI><b>CmActiveStatements </b> - new option 'Sample System SPID's' </LI>
+		<LI><b>CmActiveStatements </b> - using OUTER apply instead of CROSS apply to *not* miss records with no query or query plan </LI>
+		<LI><b>CmActiveStatements </b> - new alarm: if 'TempdbUsageMb' is above 16GB then send alarm: AlarmEventExtensiveUsage </LI>
 		
 		<LI><b>CmDatabases        </b> - Added 'OldestTranName' and 'OldestTranId' - Now shows the transaction name and id (watch out for OldestTranName 'implicit_transaction', which indicates that AotoCommit is FALSE, which introduces more blocking locks)</LI>
 		<LI><b>CmDatabases        </b> - fixed bug: LowDbFreeSpaceInMb and LowLogFreeSpaceInMb sometimes didn't fire correctly</LI>
@@ -327,23 +333,30 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmDatabases        </b> - Added HTML Table with all info to the alarms: AlarmEventLastBackupFailed, AlarmEventOldBackup, AlarmEventOldTranLogBackup</LI>
 		<LI><b>CmDatabases        </b> - AlarmEventLowOsDiskFreeSpace fixed bug that did not display the correct 'mountPoint' ... it always said '-unknown-'</LI>
 		<LI><b>CmDatabases        </b> - Do not raise LongRunningTransaction if we do NOT have any locks</LI>
+		<LI><b>CmDatabases        </b> - new columns: 'LogFileCount', 'DataFileCount', 'OldestTranTempdbUsageMb'</LI>
 
 		<LI><b>CmDeviceIo         </b> - 3 new Graph: Number of Disk Operations, for ALL Devices (Read+Write, Read, Write)</LI>
 
 		<LI><b>CmErrorlog         </b> - Alarm: for 'LongIoRequests': Changed from Severity WARNING to INFO </LI>
 		<LI><b>CmErrorlog         </b> - Alarm: Added error number 17810, 17832, 17836 to the SkipList </LI>
+		<LI><b>CmErrorlog         </b> - Alarm: if we find a 'StackDump' collect all rows and send it as a Alarm </LI>
 
 		<LI><b>CmExecCursors      </b> - new columns 'exec_sql_text', 'full_sql_text', to see what the cursor looks like. Also 'dbid', 'objectid' (which for the moment may not be trusted, since the origon from dm_exec_sql_text) </LI>
+		<LI><b>CmExecCursors      </b> - using OUTER apply instead of CROSS apply to *not* miss records with no query or query plan </LI>
 		
 		<LI><b>CmExecQueryStat    </b> - new columns 'objectid', 'object_name'. so we can see if it's a procedure call </LI>
 		<LI><b>CmExecQueryStat    </b> - Long running statements was sometimes missing, if 'sample_lastXminutes' was enabled.</LI>
+		<LI><b>CmExecQueryStat    </b> - using OUTER apply instead of CROSS apply to *not* miss records with no query or query plan </LI>
 
 		<LI><b>CmIndexOpStat      </b> - new postpone value of 300 seconds (5 minutes) </LI>
 
 		<LI><b>CmIndexUsage       </b> - new postpone value of 300 seconds (5 minutes) </LI>
 
+		<LI><b>CmMemoryGrants     </b> - using OUTER apply instead of CROSS apply to *not* miss records with no query or query plan </LI>
+
 		<LI><b>CmOpenTransactions </b> - Removed Primary Key &amp; Query Plans: get actual execution plans if the server supports it (2019 &amp; traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
 		<LI><b>CmOpenTransactions </b> - Now also gets what locks the OpenTransactions is holding.</LI>
+		<LI><b>CmOpenTransactions </b> - using OUTER apply instead of CROSS apply to *not* miss records with no query or query plan </LI>
 
 		<LI><b>CmOsLatch          </b> - added columns 'waiting_requests_count_diff', 'wait_time_ms_diff' to make it easier to see both ABS and DIFF value when in 'diff' mode </LI>
 
@@ -369,21 +382,29 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmSessions         </b> - bug fix: when connections are using MARS, summarize all connection counters 'num_reads' and 'num_writes' for MARS sessions.</LI>
 		<LI><b>CmSessions         </b> - new column 'ProcName', 'StmntStart' so we can see if a Stored Proc is executing and what "line" </LI>
 		<LI><b>CmSessions         </b> - new column 'endpoint_type' so we can see what type of coonection it's using (DAC, SHARED_MEMORY, NAMED_PIPES, TCP, VIA) </LI>
+		<LI><b>CmSessions         </b> - skip alarm 'LongRunningStatement' if column 'executing_managed_code' is true, and 'wait_type' is 'SLEEP_TASK' </LI>
 
 		<LI><b>CmSpidWait         </b> - added column 'WaitClass', which tries to group 'wait_type' in groups ... this according to https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15</LI>
 
 		<LI><b>CmSummary          </b> - Changed how to detect 'oldestOpenTranInSec' -- now only checks for "write" transactions</LI>
 		<LI><b>CmSummary          </b> - Added column 'oldestOpenTranDbname' to see in what database the oldest tran is originating from</LI>
 		<LI><b>CmSummary          </b> - Added option 'CmSummary.oldestOpenTran.discard.tempdb' to NOT alarm on old transactions in tempdb</LI>
+		<LI><b>CmSummary          </b> - new columns: some new columns for oldestOpenTran***</LI>
+		<LI><b>CmSummary          </b> - Skip alarm 'LongRunningTransaction' properies oldestOpenTran(LoginName|Cmd|Name|WaitType)</LI>
 
 		<LI><b>CmTempdbSpidUsage  </b> - Completely rewritten, hopefully this one will work better</LI>
+		<LI><b>CmTempdbSpidUsage  </b> - better version handling (older versions of SQL-Server, then we skip more columns, not yet invented)</LI>
+		
 		<LI><b>CmTempdbUsage      </b> - added 2 new graphs 'Tempdb Usage by Object Type, in MB, {All|Subset}' -- Shows "Version Store", "Internal Objects", "User Objects", "Mixed Extents", "Allocated Space", "Free Space", "Total Space"</LI>
+		<LI><b>CmTempdbUsage      </b> - better version handling (older versions of SQL-Server, then we skip more columns, not yet invented)</LI>
+		<LI><b>CmTempdbUsage      </b> - new columns: to easier see what happening in MB</LI>
 
 		<LI><b>CmWaitingTasks     </b> - new columns 'cpu_time', 'status', 'command', 'ProcName', 'StmntStart', 'program_name', 'database_id', 'database_name' </LI>
 		<LI><b>CmWaitingTasks     </b> - Query Plans: get actual execution plans if the server supports it (2019 &amp; traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
 		<LI><b>CmWaitingTasks     </b> - Added the following columns 'blocking_exec_context_id', 'blocking_task_address' for tracability </LI>
 		<LI><b>CmWaitingTasks     </b> - Changed columns: 'currentSqlText', 'fullSqlBatchText', 'query_plan' only get SQL Text and Query Plan if 'exec_context_id' is 0, which is the "parent" for all worker threads </LI>
 		<LI><b>CmWaitingTasks     </b> - new column 'resource_description_decoded', which tries to decode/enrich values in 'resource_description'. For example get DBName, SchemaName and ObjectName </LI>
+		<LI><b>CmWaitingTasks     </b> - rewrote outer apply to be more 'in-line' and only grabbing the rows when needed (not for parallel workers, only for the parent SPID)</LI>
 
 		<LI><b>CmWaitStats        </b> - added column 'WaitClass', which tries to group 'wait_type' in groups ... this according to https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15</LI>
 		<LI><b>CmWaitStats        </b> - updated the list of 'wait_type' to skip (hopefully up to 2019)</LI>
@@ -484,6 +505,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Tooltip changes: if any cell starts with '&lt;ShowPlanXML xmlns=' show the special tooltip which offers to open the plan in various ways.</LI>
 		<LI>Refresh Code Completion: Ctrl + Shift + R</LI>
 		<LI>Filter field can now be enabled or disabled with a checkbox</LI>
+		<LI>for SQL-Server, the @@trancount warning was missing</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

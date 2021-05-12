@@ -657,7 +657,29 @@ extends CountersModel
 					if (debugPrint || _logger.isDebugEnabled())
 						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", StatementExecInSec='"+StatementExecInSec+"'.");
 
-					if (StatementExecInSec > threshold)
+					boolean isValidRow = true;
+
+					// Discard some "known long running statements"
+					// SQL in CmActiveStatements: "  AND (der.executing_managed_code = 0 OR (der.executing_managed_code = 1 AND der.wait_type != 'SLEEP_TASK')) \n" + // SSIS seems to be executing ALL THE TIME... so discard some of them... (this may be unique to MaxM)
+					Object o_executing_managed_code = cm.getDiffValue(r, "executing_managed_code");
+					Object o_wait_type              = cm.getDiffValue(r, "wait_type");
+					if (o_executing_managed_code != null && o_wait_type != null)
+					{
+						if (o_executing_managed_code instanceof Boolean && o_wait_type instanceof String)
+						{
+							boolean executing_managed_code = (Boolean) o_executing_managed_code;
+							String  wait_type              = (String)  o_wait_type;
+
+							if (executing_managed_code && "SLEEP_TASK".equals(wait_type))
+							{
+								if (debugPrint || _logger.isDebugEnabled())
+									System.out.println("##### sendAlarmRequest("+cm.getName()+"): SKIPPING record: executing_managed_code="+executing_managed_code+", wait_type='"+wait_type+"'.");
+								isValidRow = false;
+							}
+						}
+					}
+					
+					if (isValidRow && StatementExecInSec > threshold)
 					{
 						// Get config 'skip some known values'
 						String skipDbnameRegExp   = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipDbname,   DEFAULT_alarm_StatementExecInSecSkipDbname);
@@ -676,9 +698,9 @@ extends CountersModel
 
 						// The below could have been done with nested if(!skipXxx), if(!skipYyy) doAlarm=true; 
 						// Below is more readable, from a variable context point-of-view, but HARDER to understand
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbnameRegExp)   || ! DBName   .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipLoginRegExp)    || ! Login    .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipCmdRegExp)      || ! Command  .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbnameRegExp)   || ! DBName   .matches(skipDbnameRegExp  ))); // NO match in the SKIP Cmd      regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipLoginRegExp)    || ! Login    .matches(skipLoginRegExp   ))); // NO match in the SKIP Cmd      regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipCmdRegExp)      || ! Command  .matches(skipCmdRegExp     ))); // NO match in the SKIP Cmd      regexp
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranNameRegExp) || ! tran_name.matches(skipTranNameRegExp))); // NO match in the SKIP TranName regexp
 
 						// NO match in the SKIP regEx

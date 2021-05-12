@@ -29,7 +29,9 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 
@@ -46,6 +48,7 @@ import javax.swing.ToolTipManager;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
@@ -93,17 +96,37 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private TrendGraphDashboardPanel _graphPanel;
 //	private JScrollPane      _graphPanelScroll;
 	
+	// Simple Local TextField class that displays the content as the tool tip 
+	private static class LocalTextField
+	extends JTextField
+	{
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public String getToolTipText(MouseEvent event)
+		{
+			String ott = getToolTipText();
+			String txt = getText();
+			if (StringUtil.isNullOrBlank(txt))
+				return ott;
+			txt = txt.replace("\n", "<br>");
+			return "<html>" + ott + "<hr><pre>" + StringEscapeUtils.escapeHtml4(txt) + "</pre></html>";
+		}
+	}
+	
 	private JLabel           _title_lbl                    = new JLabel();
 	private JButton          _trendGraphs_but              = new JButton();
 
 	// SERVER INFO PANEL
-	private JTextField       _localServerName_txt          = new JTextField();
+	private JTextField       _localServerName_txt          = new LocalTextField();
 	private JLabel           _localServerName_lbl          = new JLabel();
 	private JTextField       _atAtServerName_txt           = new JTextField();
 	private JLabel           _atAtServerName_lbl           = new JLabel();
-	private JTextField       _listeners_txt                = new JTextField();
+	private JTextField       _listeners_txt                = new LocalTextField();
 	private JLabel           _listeners_lbl                = new JLabel();
-	private JTextField       _srvVersion_txt               = new JTextField();
+	private JTextField       _onHostName_txt               = new JTextField();
+	private JLabel           _onHostName_lbl               = new JLabel();
+	private JTextField       _srvVersion_txt               = new LocalTextField();
 	private JLabel           _srvVersion_lbl               = new JLabel();
 	private JTextField       _asePageSize_txt              = new JTextField();
 	private JLabel           _asePageSize_lbl              = new JLabel();
@@ -216,10 +239,26 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //	private JTextField       _LogicalReads_Rate_txt        = new JTextField();
 	private JLabel           _fullTranslog_lbl             = new JLabel();
 	private JTextField       _fullTranslog_txt             = new JTextField();
+	private JLabel           _oldestOpenTranBeginTime_lbl  = new JLabel();
+	private JTextField       _oldestOpenTranBeginTime_txt  = new JTextField();
+	private JLabel           _oldestOpenTranId_lbl         = new JLabel();
+	private JTextField       _oldestOpenTranId_txt         = new JTextField();
+	private JLabel           _oldestOpenTranSpid_lbl       = new JLabel();
+	private JTextField       _oldestOpenTranSpid_txt       = new JTextField();
+	private JLabel           _oldestOpenTranName_lbl       = new JLabel();
+	private JTextField       _oldestOpenTranName_txt       = new JTextField();
 	private JLabel           _oldestOpenTranDbname_lbl     = new JLabel();
 	private JTextField       _oldestOpenTranDbname_txt     = new JTextField();
-	private JLabel           _oldestOpenTran_lbl           = new JLabel();
-	private JTextField       _oldestOpenTran_txt           = new JTextField();
+	private JLabel           _oldestOpenTranWaitType_lbl   = new JLabel();
+	private JTextField       _oldestOpenTranWaitType_txt   = new JTextField();
+	private JLabel           _oldestOpenTranCmd_lbl        = new JLabel();
+	private JTextField       _oldestOpenTranCmd_txt        = new JTextField();
+	private JLabel           _oldestOpenTranLoginName_lbl  = new JLabel();
+	private JTextField       _oldestOpenTranLoginName_txt  = new JTextField();
+	private JLabel           _oldestOpenTranTempdbUsageMb_lbl = new JLabel();
+	private JTextField       _oldestOpenTranTempdbUsageMb_txt = new JTextField();
+	private JLabel           _oldestOpenTranSec_lbl        = new JLabel();
+	private JTextField       _oldestOpenTranSec_txt        = new JTextField();
 	private JLabel           _oldestOpenTranThreshold_lbl  = new JLabel();
 	private JTextField       _oldestOpenTranThreshold_txt  = new JTextField();
 	private JLabel           _maxSqlExecTimeInSec_lbl      = new JLabel();
@@ -428,11 +467,17 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_atAtServerName_txt   .setToolTipText(tooltip);
 		_atAtServerName_txt   .setEditable(false);
 
-		tooltip = "Hostname that the SQL-Server server has listener services on, this makes it easier to see what physical machine we have connected to.";
+		tooltip = "All ports that the SQL-Server has listener services on.";
 		_listeners_lbl        .setText("SRV Port listeners");
 		_listeners_lbl        .setToolTipText(tooltip);
 		_listeners_txt        .setToolTipText(tooltip);
 		_listeners_txt        .setEditable(false);
+
+		tooltip = "Hostname that the SQL-Server server has listener services on, this makes it easier to see what physical machine we have connected to.";
+		_onHostName_lbl       .setText("SRV On Hostname");
+		_onHostName_lbl       .setToolTipText(tooltip);
+		_onHostName_txt       .setToolTipText(tooltip);
+		_onHostName_txt       .setEditable(false);
 
 		tooltip = "The version string taken from @@version";
 		_srvVersion_lbl       .setText("SRV Version");
@@ -811,17 +856,65 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_fullTranslog_txt.setToolTipText(tooltip);
 		_fullTranslog_txt.setEditable(false);
 
+		tooltip = "Oldest Open Transaction Time (empty if no open transactions).";
+		_oldestOpenTranBeginTime_lbl.setText("Oldest Open Tran Time");
+		_oldestOpenTranBeginTime_lbl.setToolTipText(tooltip);
+		_oldestOpenTranBeginTime_txt.setToolTipText(tooltip);
+		_oldestOpenTranBeginTime_txt.setEditable(false);
+
+		tooltip = "Oldest Open Transaction ID (empty if no open transactions).";
+		_oldestOpenTranId_lbl.setText("Oldest Open Tran ID");
+		_oldestOpenTranId_lbl.setToolTipText(tooltip);
+		_oldestOpenTranId_txt.setToolTipText(tooltip);
+		_oldestOpenTranId_txt.setEditable(false);
+
+		tooltip = "Oldest Open Transaction SPID (empty if no open transactions).";
+		_oldestOpenTranSpid_lbl.setText("Oldest Open Tran SPID");
+		_oldestOpenTranSpid_lbl.setToolTipText(tooltip);
+		_oldestOpenTranSpid_txt.setToolTipText(tooltip);
+		_oldestOpenTranSpid_txt.setEditable(false);
+
+		tooltip = "Oldest Open Transaction Name (empty if no open transactions).";
+		_oldestOpenTranName_lbl.setText("Oldest Open Tran Name");
+		_oldestOpenTranName_lbl.setToolTipText(tooltip);
+		_oldestOpenTranName_txt.setToolTipText(tooltip);
+		_oldestOpenTranName_txt.setEditable(false);
+
 		tooltip = "Database name which has the oldest open transaction (empty if no open transactions).";
 		_oldestOpenTranDbname_lbl.setText("Oldest Open Tran DB");
 		_oldestOpenTranDbname_lbl.setToolTipText(tooltip);
 		_oldestOpenTranDbname_txt.setToolTipText(tooltip);
 		_oldestOpenTranDbname_txt.setEditable(false);
 
+		tooltip = "What the 'Oldest Open Tran SPID' is waiting for (empty if no open transactions).";
+		_oldestOpenTranWaitType_lbl.setText("Oldest Open Tran Wait");
+		_oldestOpenTranWaitType_lbl.setToolTipText(tooltip);
+		_oldestOpenTranWaitType_txt.setToolTipText(tooltip);
+		_oldestOpenTranWaitType_txt.setEditable(false);
+
+		tooltip = "What the 'Oldest Open Tran SPID' status/command (empty if no open transactions).";
+		_oldestOpenTranCmd_lbl.setText("Oldest Open Tran Cmd");
+		_oldestOpenTranCmd_lbl.setToolTipText(tooltip);
+		_oldestOpenTranCmd_txt.setToolTipText(tooltip);
+		_oldestOpenTranCmd_txt.setEditable(false);
+
+		tooltip = "What the 'Oldest Open Tran SPID' Login Name (empty if no open transactions).";
+		_oldestOpenTranLoginName_lbl.setText("Oldest Open Tran Login");
+		_oldestOpenTranLoginName_lbl.setToolTipText(tooltip);
+		_oldestOpenTranLoginName_txt.setToolTipText(tooltip);
+		_oldestOpenTranLoginName_txt.setEditable(false);
+
+		tooltip = "How many MB in tempdb does the 'Oldest Open Tran SPID' hold (empty if no open transactions).";
+		_oldestOpenTranTempdbUsageMb_lbl.setText("Oldest Open Tran TmpMb");
+		_oldestOpenTranTempdbUsageMb_lbl.setToolTipText(tooltip);
+		_oldestOpenTranTempdbUsageMb_txt.setToolTipText(tooltip);
+		_oldestOpenTranTempdbUsageMb_txt.setEditable(false);
+
 		tooltip = "Oldest Open Transaction in any database, presented in seconds.";
-		_oldestOpenTran_lbl.setText("Oldest Open Tran");
-		_oldestOpenTran_lbl.setToolTipText(tooltip);
-		_oldestOpenTran_txt.setToolTipText(tooltip);
-		_oldestOpenTran_txt.setEditable(false);
+		_oldestOpenTranSec_lbl.setText("Oldest Open Tran Sec");
+		_oldestOpenTranSec_lbl.setToolTipText(tooltip);
+		_oldestOpenTranSec_txt.setToolTipText(tooltip);
+		_oldestOpenTranSec_txt.setEditable(false);
 
 		tooltip = "After this amount of seconds, and 'alarm' will be raised...";
 		_oldestOpenTranThreshold_lbl.setText("Open Tran Threshold");
@@ -953,6 +1046,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		
 		panel.add(_listeners_lbl,           "");
 		panel.add(_listeners_txt,           "growx, wrap");
+		
+		panel.add(_onHostName_lbl,          "");
+		panel.add(_onHostName_txt,          "growx, wrap");
 		
 		panel.add(_srvVersion_lbl,          "");
 		panel.add(_srvVersion_txt,          "growx, wrap");
@@ -1100,21 +1196,44 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		panel.add(_LogicalReads_Diff_txt,   "hidemode 3, growx, split");
 //		panel.add(_LogicalReads_Rate_txt,   "hidemode 3, growx, wrap");
 
-		panel.add(_fullTranslog_lbl,        "");
-		panel.add(_fullTranslog_txt,        "growx, wrap");
-		
-		panel.add(_oldestOpenTranDbname_lbl, "");
-		panel.add(_oldestOpenTranDbname_txt, "growx, wrap");
-		
-		panel.add(_oldestOpenTran_lbl,      "");
-		panel.add(_oldestOpenTran_txt,      "growx, wrap");
-		
+		panel.add(_fullTranslog_lbl,            "");
+		panel.add(_fullTranslog_txt,            "growx, wrap");
+
+		panel.add(_maxSqlExecTimeInSec_lbl,     "");
+		panel.add(_maxSqlExecTimeInSec_txt,     "growx, wrap 20");
+
+		panel.add(_oldestOpenTranBeginTime_lbl, "");
+		panel.add(_oldestOpenTranBeginTime_txt, "growx, wrap");
+
+		panel.add(_oldestOpenTranId_lbl,        "");
+		panel.add(_oldestOpenTranId_txt,        "growx, wrap");
+
+		panel.add(_oldestOpenTranSpid_lbl,      "");
+		panel.add(_oldestOpenTranSpid_txt,      "growx, wrap");
+
+		panel.add(_oldestOpenTranName_lbl,      "");
+		panel.add(_oldestOpenTranName_txt,      "growx, wrap");
+
+		panel.add(_oldestOpenTranDbname_lbl,    "");
+		panel.add(_oldestOpenTranDbname_txt,    "growx, wrap");
+
+		panel.add(_oldestOpenTranWaitType_lbl,  "");
+		panel.add(_oldestOpenTranWaitType_txt,  "growx, wrap");
+
+		panel.add(_oldestOpenTranCmd_lbl,       "");
+		panel.add(_oldestOpenTranCmd_txt,       "growx, wrap");
+
+		panel.add(_oldestOpenTranLoginName_lbl, "");
+		panel.add(_oldestOpenTranLoginName_txt, "growx, wrap");
+
+		panel.add(_oldestOpenTranTempdbUsageMb_lbl, "");
+		panel.add(_oldestOpenTranTempdbUsageMb_txt, "growx, wrap");
+
+		panel.add(_oldestOpenTranSec_lbl,       "");
+		panel.add(_oldestOpenTranSec_txt,       "growx, wrap");
+
 		panel.add(_oldestOpenTranThreshold_lbl, "");
-		panel.add(_oldestOpenTranThreshold_txt, "growx, wrap");
-		
-		panel.add(_maxSqlExecTimeInSec_lbl, "");
-		panel.add(_maxSqlExecTimeInSec_txt, "growx, wrap");
-		
+		panel.add(_oldestOpenTranThreshold_txt, "growx, wrap 20");
 
 		
 //		panel.add(_bootcount_lbl,           "gapy 20");
@@ -1130,7 +1249,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		panel.add(_cpuSystem_lbl,           "");
 //		panel.add(_cpuSystem_txt,           "growx, wrap");
 
-		panel.add(_cpuTime_lbl,             "gapy 20");
+		panel.add(_cpuTime_lbl,             "");
 		panel.add(_cpuTime_txt,             "growx, split");
 		panel.add(_cpuUser_txt,             "growx, split");
 		panel.add(_cpuSystem_txt,           "growx, wrap");
@@ -1413,6 +1532,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_localServerName_txt  .setText();
 		_atAtServerName_txt    .setText(cm.getAbsString (0, "atAtServerName"));
 		_listeners_txt         .setText(cm.getAbsString (0, "NetworkAddressInfo")); _listeners_txt.setCaretPosition(0);
+		_onHostName_txt        .setText(cm.getAbsString (0, "OnHostName"));
 		_srvVersion_txt        .setText(cm.getAbsString (0, "srvVersion").replaceFirst("Microsoft SQL Server ", "")); _srvVersion_txt.setCaretPosition(0);
 		_asePageSize_txt       .setText(cm.getAbsString (0, "srvPageSize"));
 		_lastSampleTime_txt    .setText(cm.getAbsString (0, "timeIsNow"));
@@ -1466,12 +1586,42 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		setFieldAbsDiffRate(cm, "PhysicalWrites", _PhysicalWrites_lbl, _PhysicalWrites_Abs_txt, _PhysicalWrites_Diff_txt, _PhysicalWrites_Rate_txt);
 //		setFieldAbsDiffRate(cm, "LogicalReads",   _LogicalReads_lbl,   _LogicalReads_Abs_txt,   _LogicalReads_Diff_txt,   _LogicalReads_Rate_txt);
 //
-		_fullTranslog_txt           .setText(cm.getAbsString (0, "fullTranslogCount"));
-		_oldestOpenTranDbname_txt   .setText(cm.getAbsString (0, "oldestOpenTranDbname"));
-		_oldestOpenTran_txt         .setText(cm.getAbsString (0, "oldestOpenTranInSec"));
-		_oldestOpenTranThreshold_txt.setText(cm.getAbsString (0, "oldestOpenTranInSecThreshold"));
-		_maxSqlExecTimeInSec_txt    .setText(cm.getAbsString (0, "maxSqlExecTimeInSec"));
+		_fullTranslog_txt               .setText(cm.getAbsString (0, "fullTranslogCount"));
+		_oldestOpenTranBeginTime_txt    .setText(cm.getAbsString (0, "oldestOpenTranBeginTime"));
+		_oldestOpenTranId_txt           .setText(cm.getAbsString (0, "oldestOpenTranId"));
+		_oldestOpenTranSpid_txt         .setText(cm.getAbsString (0, "oldestOpenTranSpid"));
+		_oldestOpenTranName_txt         .setText(cm.getAbsString (0, "oldestOpenTranName"));
+		_oldestOpenTranDbname_txt       .setText(cm.getAbsString (0, "oldestOpenTranDbname"));
+		_oldestOpenTranWaitType_txt     .setText(cm.getAbsString (0, "oldestOpenTranWaitType"));
+		_oldestOpenTranCmd_txt          .setText(cm.getAbsString (0, "oldestOpenTranCmd"));
+		_oldestOpenTranLoginName_txt    .setText(cm.getAbsString (0, "oldestOpenTranLoginName"));
+		_oldestOpenTranTempdbUsageMb_txt.setText(cm.getAbsString (0, "oldestOpenTranTempdbUsageMb"));		
 
+		_oldestOpenTranSec_txt          .setText(cm.getAbsString (0, "oldestOpenTranInSec"));
+		_oldestOpenTranThreshold_txt    .setText(cm.getAbsString (0, "oldestOpenTranInSecThreshold"));
+		_maxSqlExecTimeInSec_txt        .setText(cm.getAbsString (0, "maxSqlExecTimeInSec"));
+
+		// Fix some integer "null" values into blanks
+		if (_oldestOpenTranId_txt  .getText().trim().equals("0")) _oldestOpenTranId_txt.setText("");
+		if (_oldestOpenTranSpid_txt.getText().trim().equals("0")) _oldestOpenTranSpid_txt.setText("");
+
+// print some extra info if current user is "goran"
+if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(System.getProperty("user.name")))
+{
+	System.out.println("");
+	System.out.println("####################################################: " + new Timestamp(System.currentTimeMillis()));
+	System.out.println("CmSummary: _oldestOpenTranBeginTime     = '" + _oldestOpenTranBeginTime_txt    .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranId            = '" + _oldestOpenTranId_txt           .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranSpid          = '" + _oldestOpenTranSpid_txt         .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranName          = '" + _oldestOpenTranName_txt         .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranDbname        = '" + _oldestOpenTranDbname_txt       .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranWaitType      = '" + _oldestOpenTranWaitType_txt     .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranCmd           = '" + _oldestOpenTranCmd_txt          .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranLoginName     = '" + _oldestOpenTranLoginName_txt    .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranTempdbUsageMb = '" + _oldestOpenTranTempdbUsageMb_txt.getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranSec           = '" + _oldestOpenTranSec_txt              .getText() + "'.");
+	System.out.println("");
+}
 //		_bootcount_txt        .setText(cm.getAbsString (0, "bootcount"));
 //		_recoveryState_txt    .setText(cm.getAbsString (0, "recovery_state"));
 //		_cpuBusy_txt          .setText(cm.getDiffString(0, "cpu_busy"));
@@ -1601,12 +1751,12 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		//----------------------------------------------
 		// Check OLDEST OPEN TRANSACTION and, do notification
 		//----------------------------------------------
-		int oldestOpenTranInSec          = StringUtil.parseInt(_oldestOpenTran_txt.getText(), 0);
+		int oldestOpenTranInSec          = StringUtil.parseInt(_oldestOpenTranSec_txt.getText(), 0);
 		int oldestOpenTranInSecThreshold = StringUtil.parseInt(_oldestOpenTranThreshold_txt.getText(), 0);
-		_logger.debug("OLDEST-OPEN-TRANSACTION="+oldestOpenTranInSec+", TEXT='"+_oldestOpenTran_txt.getText()+"'.");
+		_logger.debug("OLDEST-OPEN-TRANSACTION="+oldestOpenTranInSec+", TEXT='"+_oldestOpenTranSec_txt.getText()+"'.");
 		if (oldestOpenTranInSec > oldestOpenTranInSecThreshold)
 		{
-			_oldestOpenTran_txt.setBackground(Color.RED);
+			_oldestOpenTranSec_txt.setBackground(Color.RED);
 
 			boolean isVisibleInPrevSample = MainFrame.getInstance().hasOldestOpenTran();
 			MainFrame.getInstance().setOldestOpenTran(true, oldestOpenTranInSec);
@@ -1620,7 +1770,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		}
 		else
 		{
-			_oldestOpenTran_txt.setBackground(_atAtServerName_txt.getBackground());
+			_oldestOpenTranSec_txt.setBackground(_atAtServerName_txt.getBackground());
 
 			MainFrame.getInstance().setOldestOpenTran(false, 0);
 		}
@@ -1652,6 +1802,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 		_atAtServerName_txt     .setText("");
 		_listeners_txt          .setText("");
+		_onHostName_txt         .setText("");
 		_srvVersion_txt         .setText("");
 		_asePageSize_txt        .setText("");
 		_lastSampleTime_txt     .setText("");
@@ -1749,11 +1900,20 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_LogicalReads_Diff_txt  .setText("");
 //		_LogicalReads_Rate_txt  .setText("");
 
-		_fullTranslog_txt           .setText("");
-		_oldestOpenTranDbname_txt   .setText("");
-		_oldestOpenTran_txt         .setText("");
-		_oldestOpenTranThreshold_txt.setText("");
-		_maxSqlExecTimeInSec_txt    .setText("");
+		_fullTranslog_txt               .setText("");
+		_oldestOpenTranBeginTime_txt    .setText("");
+		_oldestOpenTranId_txt           .setText("");
+		_oldestOpenTranSpid_txt         .setText("");
+		_oldestOpenTranName_txt         .setText("");
+		_oldestOpenTranDbname_txt       .setText("");
+		_oldestOpenTranWaitType_txt     .setText("");
+		_oldestOpenTranCmd_txt          .setText("");
+		_oldestOpenTranLoginName_txt    .setText("");
+		_oldestOpenTranTempdbUsageMb_txt.setText("");
+
+		_oldestOpenTranSec_txt          .setText("");
+		_oldestOpenTranThreshold_txt    .setText("");
+		_maxSqlExecTimeInSec_txt        .setText("");
 		
 //		_bootcount_txt          .setText("");
 //		_recoveryState_txt      .setText("");

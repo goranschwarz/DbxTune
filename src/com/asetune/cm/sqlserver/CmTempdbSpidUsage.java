@@ -39,6 +39,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -281,23 +282,29 @@ extends CountersModel
 		boolean sample_sqlText        = conf.getBooleanProperty(PROPKEY_sample_sqlText      , DEFAULT_sample_sqlText);
 
 
+		String user_objects_deferred_dealloc_page_count = "0";
+		if (srvVersion >= Ver.ver(2014))
+		{
+			user_objects_deferred_dealloc_page_count = "user_objects_deferred_dealloc_page_count";
+		}
+
 		String sql = ""
 			    + "; \n"
 			    + "WITH \n"
 			    + "tmpSess as ( \n"
 			    + "    SELECT \n"
 			    + "         session_id \n"
-			    + "        ,CAST((user_objects_alloc_page_count - user_objects_dealloc_page_count - user_objects_deferred_dealloc_page_count) / 128.0 AS DECIMAL(15, 1)) AS s_user_objects_MB \n"
+			    + "        ,CAST((user_objects_alloc_page_count - user_objects_dealloc_page_count - " + user_objects_deferred_dealloc_page_count + ") / 128.0 AS DECIMAL(15, 1)) AS s_user_objects_MB \n"
 			    + "        ,CAST( user_objects_alloc_page_count                                                                               / 128.0 AS DECIMAL(15, 1)) AS s_user_objects_alloc_MB \n"
 			    + "        ,CAST( user_objects_dealloc_page_count                                                                             / 128.0 AS DECIMAL(15, 1)) AS s_user_objects_dealloc_MB \n"
-			    + "        ,CAST( user_objects_deferred_dealloc_page_count                                                                    / 128.0 AS DECIMAL(15, 1)) AS s_user_objects_deferred_dealloc_MB \n"
+			    + "        ,CAST( " + user_objects_deferred_dealloc_page_count + "                                                                    / 128.0 AS DECIMAL(15, 1)) AS s_user_objects_deferred_dealloc_MB \n"
 			    + "        ,CAST((internal_objects_alloc_page_count - internal_objects_dealloc_page_count)                                    / 128.0 AS DECIMAL(15, 1)) AS s_internal_objects_MB \n"
 			    + "        ,CAST( internal_objects_alloc_page_count                                                                           / 128.0 AS DECIMAL(15, 1)) AS s_internal_objects_alloc_MB \n"
 			    + "        ,CAST( internal_objects_dealloc_page_count                                                                         / 128.0 AS DECIMAL(15, 1)) AS s_internal_objects_dealloc_MB \n"
 			    + "    FROM tempdb.sys." + dm_db_session_space_usage +" \n"
 			    + "    WHERE (   user_objects_alloc_page_count            > 0 \n"
 			    + "           OR user_objects_dealloc_page_count          > 0 \n"
-			    + "           OR user_objects_deferred_dealloc_page_count > 0 \n"
+			    + "           OR " + user_objects_deferred_dealloc_page_count + " > 0 \n"
 			    + "           OR internal_objects_alloc_page_count        > 0 \n"
 			    + "           OR internal_objects_dealloc_page_count      > 0 \n"
 			    + "          ) \n"

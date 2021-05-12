@@ -28,6 +28,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
@@ -38,6 +39,7 @@ import com.asetune.alarm.events.AlarmEventConfigChanges;
 import com.asetune.alarm.events.AlarmEventConfigResourceIsUsedUp;
 import com.asetune.alarm.events.AlarmEventErrorLogEntry;
 import com.asetune.alarm.events.AlarmEventFullTranLog;
+import com.asetune.alarm.events.sqlserver.AlarmEventStackDump;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -549,6 +551,54 @@ extends CountersModelAppend
 					}
 				}
 			} // end: severity
+			
+//			Possibly Check for Stack Traces...
+//			see: code for ASE at the end --- ProcessInfected
+//			start: "**Dump thread - "
+//			end:   "Stack Signature for the dump is 0x"
+				
+			//-------------------------------------------------------
+			// ProcessInfected
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("StackDump"))
+			{
+				// START ROW: 00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  Current process (0x2bad014c) infected with signal 11 (SIGSEGV)
+				//            ... collect anything in between, as the message ...
+				//   END ROW: 00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  end of stack trace, spid 308, kpid 732758348, suid 1
+				// ErrorNumber=???, Severity=??, ErrorMessage=
+				if (errorTxt.startsWith("**Dump thread - "))
+				{
+					// Read messages until 'end of stack trace, ' and stuff it in the below StringBuilder
+					StringBuilder sb = new StringBuilder();
+
+					// Continue to read messages (but do not move the "original r", create a new "rr" to loop on
+					for (int rr=r; rr<lastRefreshRows.size(); rr++)
+					{
+						List<Object> rrRow = lastRefreshRows.get(rr);
+
+						String ee_ErrorMessage = rrRow.get(col_Text_pos) + "";
+						sb.append( ee_ErrorMessage ).append("\n");
+						
+						// STOP Looping when we find 'end of stack trace, '
+						if (ee_ErrorMessage.startsWith("Stack Signature for the dump is 0x"))
+							break;
+
+						// OK: something is probably wrong (we didn't find 'end of stack trace, '), break the loop after 200 rows...
+						if (rr >= 1000)
+							break;
+					}
+					String fullErrorMessage = sb.toString();
+						
+					String extendedDescText = fullErrorMessage;
+					String extendedDescHtml = "<pre>\n" + StringEscapeUtils.escapeHtml4(fullErrorMessage) + "\n</pre>";
+
+//					AlarmEvent ae = new AlarmEventProcessInfected(this, fullErrorMessage);
+					AlarmEvent ae = new AlarmEventStackDump(this, fullErrorMessage);
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+					alarmHandler.addAlarm( ae );
+				}
+			}
 
 		} // end: rows loop
 	}
@@ -579,8 +629,8 @@ extends CountersModelAppend
 	public static final String  PROPKEY_alarm_LongIoRequests        = CM_NAME + ".alarm.system.on.LongIoRequests";
 	public static final boolean DEFAULT_alarm_LongIoRequests        = true;
 
-//	public static final String  PROPKEY_alarm_ProcessInfected       = CM_NAME + ".alarm.system.on.ProcessInfected";
-//	public static final boolean DEFAULT_alarm_ProcessInfected       = true;
+	public static final String  PROPKEY_alarm_StackDump             = CM_NAME + ".alarm.system.on.StackDump";
+	public static final boolean DEFAULT_alarm_StackDump             = true;
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -595,7 +645,7 @@ extends CountersModelAppend
 		list.add(new CmSettingsHelper("TransactionLogFull"     , isAlarmSwitch, PROPKEY_alarm_TransactionLogFull , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_TransactionLogFull , DEFAULT_alarm_TransactionLogFull ), DEFAULT_alarm_TransactionLogFull , "On Error 9002, send 'AlarmEventFullTranLog'." ));
 		list.add(new CmSettingsHelper("ConfigChanges"          , isAlarmSwitch, PROPKEY_alarm_ConfigChanges      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ConfigChanges      , DEFAULT_alarm_ConfigChanges      ), DEFAULT_alarm_ConfigChanges      , "On error log message 'The configuration option '.*' has been changed', send 'AlarmEventConfigChanges'." ));
 		list.add(new CmSettingsHelper("LongIoRequests"         , isAlarmSwitch, PROPKEY_alarm_LongIoRequests     , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_LongIoRequests     , DEFAULT_alarm_LongIoRequests     ), DEFAULT_alarm_LongIoRequests     , "On error log message 'I/O requests taking longer than 15 seconds to complete', send 'AlarmEventErrorLogEntry'." ));
-//		list.add(new CmSettingsHelper("ProcessInfected"        , isAlarmSwitch, PROPKEY_alarm_ProcessInfected    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessInfected    , DEFAULT_alarm_ProcessInfected    ), DEFAULT_alarm_ProcessInfected    , "On error log message 'Current process .* infected with signal', send 'AlarmEventProcessInfected'." ));
+		list.add(new CmSettingsHelper("StackDump"              , isAlarmSwitch, PROPKEY_alarm_StackDump          , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_StackDump          , DEFAULT_alarm_StackDump          ), DEFAULT_alarm_StackDump          , "On error log message '**Dump thread - ', collect the dump text and send 'AlarmEventStackDump'." ));
 
 		list.add(new CmSettingsHelper("Severity"               , isAlarmSwitch, PROPKEY_alarm_Severity           , Integer.class, conf.getIntProperty    (PROPKEY_alarm_Severity           , DEFAULT_alarm_Severity           ), DEFAULT_alarm_Severity           , "If 'Severity' is greater than ## then send 'AlarmEventErrorLogEntry'." ));
 		list.add(new CmSettingsHelper("SkipList ErrorNumber(s)",                PROPKEY_alarm_ErrorNumberSkipList, String .class, conf.getProperty       (PROPKEY_alarm_ErrorNumberSkipList, DEFAULT_alarm_ErrorNumberSkipList), DEFAULT_alarm_ErrorNumberSkipList, "Skip errors number in this list, that is if Severity is above that rule. format(comma separated list of numbers): 123, 321, 231" ));

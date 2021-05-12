@@ -1046,14 +1046,14 @@ extends CountersModel
 		String log_recovery_size_mb         = "";
 		String active_log_size_mb           = "";
 		String log_state                    = "";
-		String cross_apply__dm_db_log_stats = "";
+		String outer_apply__dm_db_log_stats = "";
 		if (srvVersion >= Ver.ver(2016,0,0, 2))
 		{
 			log_truncation_holdup_reason = "    ,log_truncation_holdup_reason          = CASE WHEN ars.is_local = 1 THEN ls.log_truncation_holdup_reason                 ELSE NULL END \n";
 			log_recovery_size_mb         = "    ,log_recovery_size_mb                  = CASE WHEN ars.is_local = 1 THEN convert(decimal(10,1), ls.log_recovery_size_mb) ELSE NULL END \n";
 			active_log_size_mb           = "    ,active_log_size_mb                    = CASE WHEN ars.is_local = 1 THEN convert(decimal(10,1), ls.active_log_size_mb  ) ELSE NULL END \n";
 			total_log_size_mb            = "    ,total_log_size_mb                     = CASE WHEN ars.is_local = 1 THEN convert(decimal(10,1), ls.total_log_size_mb   ) ELSE NULL END \n";
-			cross_apply__dm_db_log_stats = "cross apply sys.dm_db_log_stats(drs.database_id) ls \n";
+			outer_apply__dm_db_log_stats = "outer apply sys.dm_db_log_stats(drs.database_id) ls \n";
 		}
 		if (srvVersion >= Ver.ver(2019))
 		{
@@ -1214,7 +1214,7 @@ extends CountersModel
 			+ "inner join sys.dm_hadr_availability_group_states        ags on ar.group_id   = ags.group_id \n"
 			+ "left outer join sys.dm_hadr_availability_replica_states ars on ar.replica_id = ars.replica_id \n"
 			+ "left outer join sys.dm_hadr_database_replica_states     drs on ar.replica_id = drs.replica_id \n"
-			+ cross_apply__dm_db_log_stats
+			+ outer_apply__dm_db_log_stats
 			+ "where 1 = 1 \n"
 //			+ "order by ar.replica_server_name, adc.database_name \n"
 			+ "order by 1, 4, 2  -- locality, database_name, server_name \n"

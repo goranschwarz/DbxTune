@@ -238,84 +238,100 @@ extends CountersModel
 
 		
 		String sql = ""
-			    + "/*============================================================================ \n"
-			    + "  File:     WaitingTasks.sql \n"
-			    + " \n"
-			    + "  Summary:  Snapshot of waiting tasks \n"
-			    + " \n"
-			    + "  SQL Server Versions: 2005 onwards \n"
-			    + "------------------------------------------------------------------------------ \n"
-			    + "  Written by Paul S. Randal, SQLskills.com \n"
-			    + " \n"
-			    + "  (c) 2015, SQLskills.com. All rights reserved. \n"
-			    + " \n"
-			    + "  For more scripts and sample code, check out \n"
-			    + "    http://www.SQLskills.com \n"
-			    + " \n"
-			    + "  You may alter this code for your own *non-commercial* purposes. You may \n"
-			    + "  republish altered code as long as you include this copyright and give due \n"
-			    + "  credit, but you must obtain prior permission before blogging this code. \n"
-			    + " \n"
-			    + "  THIS CODE AND INFORMATION ARE PROVIDED \"AS IS\" WITHOUT WARRANTY OF \n"
-			    + "  ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED \n"
-			    + "  TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A \n"
-			    + "  PARTICULAR PURPOSE. \n"
-			    + "============================================================================*/ \n"
-			    + "SELECT \n"
-			    + "     [owt].[session_id] \n"
-			    + "    ,[owt].[exec_context_id] \n"
-			    + "    ,[ot].[scheduler_id] \n"
-			    + "    ,[owt].[wait_duration_ms] \n"
-			    + "    ,[owt].[wait_type] \n"
-			    + "    ,[owt].[blocking_session_id] \n"
-			    + "    ,[owt].[blocking_exec_context_id] \n"
-			    + "    ,[owt].[blocking_task_address] \n"
-			    + "    ,[er].[cpu_time] \n"
-			    + "    ,[er].[status] \n"
-			    + "    ,[er].[command] \n"
-				+ "    ,object_name([est].objectid, [est].dbid) AS [ProcName] \n"
+				+ "/*============================================================================ \n"
+				+ "  File:     WaitingTasks.sql \n"
+				+ " \n"
+				+ "  Summary:  Snapshot of waiting tasks \n"
+				+ " \n"
+				+ "  SQL Server Versions: 2005 onwards \n"
+				+ "------------------------------------------------------------------------------ \n"
+				+ "  Written by Paul S. Randal, SQLskills.com \n"
+				+ " \n"
+				+ "  (c) 2015, SQLskills.com. All rights reserved. \n"
+				+ " \n"
+				+ "  For more scripts and sample code, check out \n"
+				+ "    http://www.SQLskills.com \n"
+				+ " \n"
+				+ "  You may alter this code for your own *non-commercial* purposes. You may \n"
+				+ "  republish altered code as long as you include this copyright and give due \n"
+				+ "  credit, but you must obtain prior permission before blogging this code. \n"
+				+ " \n"
+				+ "  THIS CODE AND INFORMATION ARE PROVIDED \"AS IS\" WITHOUT WARRANTY OF \n"
+				+ "  ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED \n"
+				+ "  TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A \n"
+				+ "  PARTICULAR PURPOSE. \n"
+				+ " \n"
+				+ "  The content has been heavily modified by Goran Schwarz for SqlServerTune \n"
+				+ "============================================================================*/ \n"
+				+ "SELECT \n"
+				+ "     [owt].[session_id] \n"
+				+ "    ,[owt].[exec_context_id] \n"
+				+ "    ,[ot].[scheduler_id] \n"
+				+ "    ,[owt].[wait_duration_ms] \n"
+				+ "    ,[owt].[wait_type] \n"
+				+ "    ,[owt].[blocking_session_id] \n"
+				+ "    ,[owt].[blocking_exec_context_id] \n"
+				+ "    ,[owt].[blocking_task_address] \n"
+				+ "    ,[er].[cpu_time] \n"
+				+ "    ,[er].[status] \n"
+				+ "    ,[er].[command] \n"
+//				+ "    ,object_name([est].objectid, [est].dbid) AS [ProcName] \n"
+				+ "    ,CASE WHEN [owt].[exec_context_id] != 0 THEN '' ELSE (select object_name([objectid], [dbid]) from sys." + dm_exec_sql_text   + " ([er].[sql_handle])) END AS [ProcName] \n"
 				+ "    ,[er].statement_start_offset             AS [StmntStart] \n"
-			    + "    ,[es].[program_name] \n"
-			    + "    ,[er].[database_id] \n"
-			    + "    ,db_name([er].[database_id]) AS [database_name] \n"
-			    + "    ,[owt].[resource_description] \n"
-			    + "    ,cast('' as varchar(512)) AS [resource_description_decoded] \n"
-			    
-			    + "    ,CASE [owt].[wait_type] \n"
-			    + "        WHEN N'CXPACKET' THEN \n"
-			    + "            RIGHT ([owt].[resource_description], \n"
-			    + "                CHARINDEX (N'=', REVERSE ([owt].[resource_description])) - 1) \n"
-			    + "        ELSE NULL \n"
-			    + "     END AS [Node ID] \n"
-
-			    + "    ,CASE WHEN [owt].[exec_context_id] != 0 THEN '' \n"
-				+ "     ELSE \n"
-				+ "        SUBSTRING([est].text, [er].statement_start_offset / 2,  \n"
-				+ "            ( CASE WHEN [er].statement_end_offset = -1  \n"
-				+ "                   THEN DATALENGTH([est].text)  \n"
-				+ "                   ELSE [er].statement_end_offset  \n"
-				+ "              END - [er].statement_start_offset ) / 2 +2) \n"
-				+ "     END AS [currentSqlText] \n"
+				+ "    ,[es].[program_name] \n"
+				+ "    ,[er].[database_id] \n"
+				+ "    ,db_name([er].[database_id]) AS [database_name] \n"
+				+ "    ,[owt].[resource_description] \n"
+				+ "    ,cast('' as varchar(512)) AS [resource_description_decoded] \n"
 				
-			    + "    ,CASE WHEN [owt].[exec_context_id] != 0 THEN '' ELSE [est].text         END AS [fullSqlBatchText] \n"
-			    + "    ,CASE WHEN [owt].[exec_context_id] != 0 THEN '' ELSE [eqp].[query_plan] END AS [query_plan] \n"
-			    + "FROM sys." + dm_os_waiting_tasks + " [owt] \n"
-			    + "INNER JOIN  sys." + dm_os_tasks + "      [ot] ON [owt].[waiting_task_address] = [ot].[task_address] \n"
-			    + "INNER JOIN  sys." + dm_exec_sessions + " [es] ON [owt].[session_id] = [es].[session_id] \n"
-			    + "INNER JOIN  sys." + dm_exec_requests + " [er] ON [es].[session_id] = [er].[session_id] \n"
-			    + "OUTER APPLY sys." + dm_exec_sql_text + " ([er].[sql_handle]) [est] \n"
-			    + "OUTER APPLY sys." + dm_exec_query_plan + " ([er].[plan_handle]) [eqp] \n"
-			    + "WHERE \n"
-			    + "    [es].[is_user_process] = 1 \n"
-			    + "ORDER BY \n"
-			    + "    [owt].[session_id], \n"
-			    + "    [owt].[exec_context_id] \n"
-			    + "";
+				+ "    ,CASE [owt].[wait_type] \n"
+				+ "        WHEN N'CXPACKET' THEN \n"
+				+ "            RIGHT ([owt].[resource_description], \n"
+				+ "                CHARINDEX (N'=', REVERSE ([owt].[resource_description])) - 1) \n"
+				+ "        ELSE NULL \n"
+				+ "     END AS [Node ID] \n"
+
+//				+ "    ,CASE WHEN [owt].[exec_context_id] != 0 THEN '' \n"
+//				+ "     ELSE \n"
+//				+ "        SUBSTRING([est].text, [er].statement_start_offset / 2,  \n"
+//				+ "            ( CASE WHEN [er].statement_end_offset = -1  \n"
+//				+ "                   THEN DATALENGTH([est].text)  \n"
+//				+ "                   ELSE [er].statement_end_offset  \n"
+//				+ "              END - [er].statement_start_offset ) / 2 +2) \n"
+//				+ "     END AS [currentSqlText] \n"
+				
+//				+ "    ,CASE WHEN [owt].[exec_context_id] != 0 THEN '' ELSE [est].text         END AS [fullSqlBatchText] \n"
+//				+ "    ,CASE WHEN [owt].[exec_context_id] != 0 THEN '' ELSE [eqp].[query_plan] END AS [query_plan] \n"
+				+ "    ,CASE WHEN [owt].[exec_context_id] != 0 THEN '' \n"
+				+ "     ELSE \n"
+				+ "        (SELECT \n"
+				+ "           SUBSTRING([est].text, [er].statement_start_offset / 2,  \n"
+				+ "               ( CASE WHEN [er].statement_end_offset = -1  \n"
+				+ "                      THEN DATALENGTH([est].text)  \n"
+				+ "                      ELSE [er].statement_end_offset  \n"
+				+ "                 END - [er].statement_start_offset ) / 2 +2) \n"
+				+ "         FROM sys.dm_exec_sql_text ([er].[sql_handle]) [est] \n"
+				+ "        ) \n"
+				+ "     END AS [currentSqlText] \n"
+				+ "    ,CASE WHEN [owt].[exec_context_id] != 0 THEN '' ELSE (select [text]       from sys." + dm_exec_sql_text   + " ([er].[sql_handle]))  END AS [fullSqlBatchText] \n"
+				+ "    ,CASE WHEN [owt].[exec_context_id] != 0 THEN '' ELSE (select [query_plan] from sys." + dm_exec_query_plan + " ([er].[plan_handle])) END AS [query_plan] \n"
+				+ "FROM sys." + dm_os_waiting_tasks + " [owt] \n"
+				+ "INNER JOIN  sys." + dm_os_tasks + "      [ot] ON [owt].[waiting_task_address] = [ot].[task_address] \n"
+				+ "INNER JOIN  sys." + dm_exec_sessions + " [es] ON [owt].[session_id] = [es].[session_id] \n"
+				+ "INNER JOIN  sys." + dm_exec_requests + " [er] ON [es].[session_id] = [er].[session_id] \n"
+//				+ "OUTER APPLY sys." + dm_exec_sql_text + " ([er].[sql_handle]) [est] \n"
+//				+ "OUTER APPLY sys." + dm_exec_query_plan + " ([er].[plan_handle]) [eqp] \n"
+				+ "WHERE \n"
+				+ "    [es].[is_user_process] = 1 \n"
+				+ "ORDER BY \n"
+				+ "    [owt].[session_id], \n"
+				+ "    [owt].[exec_context_id] \n"
+				+ "";
 
 //		NOTE:
 //			- Do we need: dm_os_tasks.scheduler_id /not a big table to join on, but anything we can strip might be good)
-//			- Do we need to: OUTER APPLY sys.dm_exec_query_plan... Or can we do that *AFTER* we have sampled data (or inject data into a temp table, and get dm_exec_query_plan for unique plan_handle's)
-//			- (same with dm_exec_sql_text, but I think its the PLAN (on all the paralell worker threads) that kills performance when SQL-Server is under heavy load)
+//	FIXED	- Do we need to: OUTER APPLY sys.dm_exec_query_plan... Or can we do that *AFTER* we have sampled data (or inject data into a temp table, and get dm_exec_query_plan for unique plan_handle's)
+//	FIXED	- (same with dm_exec_sql_text, but I think its the PLAN (on all the paralell worker threads) that kills performance when SQL-Server is under heavy load)
 //			- Do we only want to look at USER_PROCESSES or do we want to look at ALL waiting_tasks
 
 		return sql;
@@ -335,15 +351,44 @@ extends CountersModel
 	{
 		int resource_description_pos         = newSample.findColumn("resource_description");
 		int resource_description_decoded_pos = newSample.findColumn("resource_description_decoded");
+		
+//		int exec_context_id_pos = newSample.findColumn("exec_context_id");
+//		int query_plan_pos      = newSample.findColumn("query_plan");
+//		int plan_handle_pos     = newSample.findColumn("plan_handle");
 
 		if (resource_description_pos == -1 || resource_description_decoded_pos == -1)
 		{
 			_logger.error("Cant find desired columns: resource_description_pos=" + resource_description_pos +", resource_description_decoded_pos=" + resource_description_decoded_pos);
 			return;
 		}
+
+//		if (exec_context_id_pos == -1 || query_plan_pos == -1 || plan_handle_pos == -1)
+//		{
+//			_logger.error("Cant find desired columns: exec_context_id_pos=" + exec_context_id_pos + ", query_plan_pos=" + query_plan_pos + ", plan_handle_pos=" + plan_handle_pos);
+//			return;
+//		}
 		
 		for (int rowId=0; rowId<newSample.getRowCount(); rowId++)
 		{
+			//-----------------------------------------------------------------------------------------------------
+			// Go and get 'XML Execution Plan' when 'exec_context_id' is 0 -- In a Parallel plan, thats the "owner"
+			// option is to 'OUTER APPLY' it in the Collector SQL, but that seems to take to long time, due to the fact that it does it for ALL rows
+			// NOTE: The below is not yet tested, I reverted back to modify the SQL Statement using 'CASE WHEN [exec_context_id] != 0 THEN '' ELSE (getPlan) END'
+			//-----------------------------------------------------------------------------------------------------
+//			Double exec_context_id = newSample.getValueAsDouble(rowId, exec_context_id_pos);
+//			if (exec_context_id != null && exec_context_id.intValue() == 0)
+//			{
+//				String plan_handle = newSample.getValueAsString(rowId, plan_handle_pos);
+//				if (StringUtil.hasValue(plan_handle))
+//				{
+//					String query_plan = SqlServerUtils.getXmlQueryPlanNoThrow(getCounterController().getMonConnection(), plan_handle);
+//					newSample.setValueAt(query_plan, rowId, query_plan_pos);
+//				}
+//			}
+
+			//-----------------------------------------------------------------------------------------------------
+			// Try to "decode" the 'resource_description'
+			//-----------------------------------------------------------------------------------------------------
 			String resource_description = newSample.getValueAsString(rowId, resource_description_pos);
 			String resource_description_decoded = "";
 

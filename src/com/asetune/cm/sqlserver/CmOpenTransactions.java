@@ -246,7 +246,7 @@ extends CountersModel
 				+ "JOIN            " + dm_exec_sessions + "              [s_es]   ON [s_es] .[session_id]     = [s_tst].[session_id] \n"
 				+ "JOIN            " + dm_exec_connections + "           [s_ec]   ON [s_ec] .[session_id]     = [s_tst].[session_id] \n"
 				+ "LEFT OUTER JOIN " + dm_exec_requests + "              [s_er]   ON [s_er] .[session_id]     = [s_tst].[session_id] \n"
-				+ "CROSS APPLY     " + dm_exec_sql_text + " ([s_ec].[most_recent_sql_handle]) AS [s_est] \n"
+				+ "OUTER APPLY     " + dm_exec_sql_text + " ([s_ec].[most_recent_sql_handle]) AS [s_est] \n"
 				+ "OUTER APPLY     " + dm_exec_query_plan + " ([s_er].[plan_handle])          AS [s_eqp] \n"
 				+ "WHERE [s_tdt].[database_transaction_begin_time] IS NOT NULL -- Time at which the database became involved in the transaction. \n"
 				+ "ORDER BY [TranBeginTime] ASC                                -- Specifically, it is the time of the first log record in the database for the transaction. \n"

@@ -30,17 +30,17 @@ extends AlarmEvent
 {
 	private static final long serialVersionUID = 1L;
 
-	public AlarmEventLongRunningTransaction(CountersModel cm, Number threshold, Number oldestTranInSeconds, String dbname)
+	public AlarmEventLongRunningTransaction(CountersModel cm, Number threshold, Number oldestTranInSeconds, Number spid, String dbname, String tranName, String tranCmd, String waitType, String loginName, Double tempdbUsageMb)
 	{
 		super(
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
-				"CmSummary".equals(cm.getName()) ? "[&sum;]:" + dbname : dbname, // extraInfo -- &sum; or &#8721;  is Greek symbol for Summary
+				"CmSummary".equals(cm.getName()) ? "[\u03A3]:" + dbname : dbname, // extraInfo -- &sum; or &#8721; or \u03A3 is Greek symbol for Summary
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
-				"Found Long running transaction in '" + cm.getServerName() + "'. DBName='" + dbname + "', Seconds=" + oldestTranInSeconds + ". (threshold="+threshold+")",
+				"Found Long running transaction in '" + cm.getServerName() + "'. DBName='" + dbname + "', Seconds=" + oldestTranInSeconds + ", SPID=" + spid + ", tranName='" + tranName + "', cmd='" + tranCmd + "', waitType='" + waitType + "', login='" + loginName + "', tempdbUsageMb=" + tempdbUsageMb + ". (threshold="+threshold+")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled

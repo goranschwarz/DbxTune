@@ -24,17 +24,21 @@ import java.sql.Connection;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.naming.NameNotFoundException;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.gui.CmTempdbSpidUsagePanel;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
-import com.asetune.gui.TrendGraph;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -75,8 +79,17 @@ extends CountersModel
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
-	public static final String[] PCT_COLUMNS      = new String[] {};
+	public static final String[] PCT_COLUMNS      = new String[] {"usedPct"};
 	public static final String[] DIFF_COLUMNS     = new String[] {
+		"total_MB",
+		"allocated_extent_MB",
+		"unallocated_extent_MB",
+		"version_store_reserved_MB",
+		"user_object_reserved_MB",
+		"internal_object_reserved_MB",
+		"mixed_extent_MB",
+		"modified_extent_MB",
+
 		"total_page_count",
 		"allocated_extent_page_count",
 		"unallocated_extent_page_count",
@@ -219,6 +232,26 @@ extends CountersModel
 	}
 
 	@Override
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isAzure)
+	{
+		try 
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+//			mtd.addTable("dm_db_file_space_usage",  "");
+
+			mtd.addColumn("dm_db_file_space_usage",  "total_MB"                   ,     "<html>Same as 'total_page_count'                    but as MB. <br><b>Algorithm</b>: total_page_count                    / 128.0 </html>");
+			mtd.addColumn("dm_db_file_space_usage",  "allocated_extent_MB"        ,     "<html>Same as 'allocated_extent_page_count'         but as MB. <br><b>Algorithm</b>: allocated_extent_page_count         / 128.0</html>");
+			mtd.addColumn("dm_db_file_space_usage",  "modified_extent_MB"         ,     "<html>Same as 'modified_extent_page_count'          but as MB. <br><b>Algorithm</b>: modified_extent_page_count          / 128.0</html>");
+			mtd.addColumn("dm_db_file_space_usage",  "unallocated_extent_MB"      ,     "<html>Same as 'unallocated_extent_page_count'       but as MB. <br><b>Algorithm</b>: unallocated_extent_page_count       / 128.0</html>");
+			mtd.addColumn("dm_db_file_space_usage",  "version_store_reserved_MB"  ,     "<html>Same as 'version_store_reserved_page_count'   but as MB. <br><b>Algorithm</b>: version_store_reserved_page_count   / 128.0</html>");
+			mtd.addColumn("dm_db_file_space_usage",  "user_object_reserved_MB"    ,     "<html>Same as 'user_object_reserved_page_count'     but as MB. <br><b>Algorithm</b>: user_object_reserved_page_count     / 128.0</html>");
+			mtd.addColumn("dm_db_file_space_usage",  "internal_object_reserved_MB",     "<html>Same as 'internal_object_reserved_page_count' but as MB. <br><b>Algorithm</b>: internal_object_reserved_page_count / 128.0</html>");
+			mtd.addColumn("dm_db_file_space_usage",  "mixed_extent_MB"            ,     "<html>Same as 'mixed_extent_page_count'             but as MB. <br><b>Algorithm</b>: mixed_extent_page_count             / 128.0</html>");
+		}
+		catch (NameNotFoundException e) {/*ignore*/}
+	}
+
+	@Override
 	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
@@ -231,7 +264,9 @@ extends CountersModel
 
 		pkCols.add("database_id");
 		pkCols.add("file_id");
-		pkCols.add("filegroup_id");
+		
+		if (srvVersion >= Ver.ver(2012))
+			pkCols.add("filegroup_id");
 
 		return pkCols;
 	}
@@ -244,11 +279,71 @@ extends CountersModel
 		if (isAzure)
 			dm_db_file_space_usage = "dm_pdw_nodes_db_file_space_usage";
 
+		String filegroup_id                  = "";
+		String usedPct                       = "";
+		String total_MB_abs                  = "";
+		String total_MB                      = "";
+		String allocated_extent_MB           = "";
+		String total_page_count_abs          = "";
+		String total_page_count              = "";
+		String allocated_extent_page_count   = "";
+		String unallocated_extent_MB         = ", unallocated_extent_MB       = convert(numeric(12,1), unallocated_extent_page_count       / 128.0) \n";
+		String unallocated_extent_page_count = ", unallocated_extent_page_count \n";
+
+		if (srvVersion >= Ver.ver(2012))
+		{
+			filegroup_id                  = ", filegroup_id \n";
+			
+			usedPct                       = ", usedPct = convert(numeric(6,2), ((allocated_extent_page_count*1.0) / (total_page_count*1.0)) * 100.0) \n";
+			total_MB_abs                  = ", total_MB_abs                = convert(numeric(12,1), total_page_count                    / 128.0) \n";
+			total_MB                      = ", total_MB                    = convert(numeric(12,1), total_page_count                    / 128.0) \n";
+			allocated_extent_MB           = ", allocated_extent_MB         = convert(numeric(12,1), allocated_extent_page_count         / 128.0) \n";
+			unallocated_extent_MB         = "";
+
+			total_page_count_abs          = ", total_page_count_abs = total_page_count \n";
+			total_page_count              = ", total_page_count \n";
+			allocated_extent_page_count   = ", allocated_extent_page_count \n";
+			unallocated_extent_page_count = "";
+		}
+		
+		String modified_extent_MB         = "";
+		String modified_extent_page_count = "";
+		if (srvVersion >= Ver.ver(2016,0,0, 2))
+		{
+			modified_extent_MB            = ", modified_extent_MB          = convert(numeric(12,1), modified_extent_page_count          / 128.0) \n";
+			modified_extent_page_count    = ", modified_extent_page_count \n";
+		}
+		
 		// FIXME: THIS CAN BE IMPROVED: Just a placeholder to do something
 		String sql = 
-			"SELECT * \n" +
-			"FROM tempdb.sys."+dm_db_file_space_usage+" u \n" +
-			"WHERE u.database_id = 2 \n"
+			"SELECT "
+			+ "  database_id"
+			+ ", file_id \n"
+			+ filegroup_id
+			
+			+ usedPct
+			+ total_MB_abs
+			+ total_MB
+			+ allocated_extent_MB
+			+ unallocated_extent_MB // only show if below SQL-Server 2012
+			+ ", version_store_reserved_MB   = convert(numeric(12,1), version_store_reserved_page_count   / 128.0) \n"
+			+ ", user_object_reserved_MB     = convert(numeric(12,1), user_object_reserved_page_count     / 128.0) \n"
+			+ ", internal_object_reserved_MB = convert(numeric(12,1), internal_object_reserved_page_count / 128.0) \n"
+			+ ", mixed_extent_MB             = convert(numeric(12,1), mixed_extent_page_count             / 128.0) \n"
+			+ modified_extent_MB
+
+			+ total_page_count_abs
+			+ total_page_count
+			+ allocated_extent_page_count
+			+ unallocated_extent_page_count // only show if below SQL-Server 2012
+			+ ", version_store_reserved_page_count \n"
+			+ ", user_object_reserved_page_count \n"
+			+ ", internal_object_reserved_page_count \n"
+			+ ", mixed_extent_page_count \n"
+			+ modified_extent_page_count
+
+			+ "FROM tempdb.sys." + dm_db_file_space_usage + " u \n"
+			+ "WHERE u.database_id = 2 \n"
 			;
 
 		return sql;

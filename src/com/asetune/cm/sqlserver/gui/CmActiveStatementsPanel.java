@@ -48,6 +48,7 @@ extends TabularCntrPanel
 {
 	private static final long serialVersionUID = 1L;
 
+	private JCheckBox l_sampleSystemSpids_chk;
 	private JCheckBox l_sampleMonSqltext_chk;
 //	private JCheckBox l_sampleDbccSqltext_chk;
 //	private JCheckBox l_sampleProcCallStack_chk;
@@ -67,6 +68,20 @@ extends TabularCntrPanel
 
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String colorStr = null;
+
+		// YELLOW = SYSTEM process
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.system");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				Boolean isUserProcess = (Boolean) adapter.getValue(adapter.getColumnIndex("is_user_process"));
+				if ( isUserProcess == null || (isUserProcess != null && isUserProcess == false) )
+					return true;
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, Color.YELLOW), null));
 
 		// Mark the row as ORANGE if PK has been visible on more than 1 sample
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.multiSampled");
@@ -135,6 +150,7 @@ extends TabularCntrPanel
 
 //		Configuration conf = Configuration.getInstance(Configuration.TEMP);
 		Configuration conf = Configuration.getCombinedConfiguration();
+		l_sampleSystemSpids_chk    = new JCheckBox("Sample System SPID's",     conf == null ? CmActiveStatements.DEFAULT_sample_systemSpids   : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_systemSpids,   CmActiveStatements.DEFAULT_sample_systemSpids));
 //		l_sampleMonSqltext_chk     = new JCheckBox("Get Monitored SQL Text",   conf == null ? true : conf.getBooleanProperty(getName()+".sample.monSqltext",     true));
 		l_sampleMonSqltext_chk     = new JCheckBox("Get SQL Text",             conf == null ? CmActiveStatements.DEFAULT_sample_monSqlText    : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_monSqlText,    CmActiveStatements.DEFAULT_sample_monSqlText));
 //		l_sampleDbccSqltext_chk    = new JCheckBox("Get DBCC SQL Text",        conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccSqltext",    false));
@@ -144,6 +160,7 @@ extends TabularCntrPanel
 //		l_sampleDbccStacktrace_chk = new JCheckBox("Get ASE Stacktrace",       conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccStacktrace", false));
 		l_sampleLiveQueryPlan_chk  = new JCheckBox("Get Live Query Plan",      conf == null ? CmActiveStatements.DEFAULT_sample_liveQueryPlan : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_liveQueryPlan, CmActiveStatements.DEFAULT_sample_liveQueryPlan));
 
+		l_sampleSystemSpids_chk   .setName(CmActiveStatements.PROPKEY_sample_systemSpids);
 		l_sampleMonSqltext_chk    .setName(CmActiveStatements.PROPKEY_sample_monSqlText);
 //		l_sampleDbccSqltext_chk   .setName(getName()+".sample.dbccSqltext");
 //		l_sampleProcCallStack_chk .setName(getName()+".sample.procCallStack");
@@ -151,6 +168,7 @@ extends TabularCntrPanel
 //		l_sampleDbccStacktrace_chk.setName(getName()+".sample.dbccStacktrace");
 		l_sampleLiveQueryPlan_chk .setName(CmActiveStatements.PROPKEY_sample_liveQueryPlan);
 		
+		l_sampleSystemSpids_chk   .setToolTipText("<html>Do 'Incluse System SPID's in the list.</html>");
 		l_sampleMonSqltext_chk    .setToolTipText("<html>Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table.<br>    This will help us to diagnose what SQL the client sent to the server.</html>");
 //		l_sampleDbccSqltext_chk   .setToolTipText("<html>Do 'dbcc sqltext(spid)' on every row in the table.<br>     This will help us to diagnose what SQL the client sent to the server.<br><b>Note:</b> Role 'sybase_ts_role' is needed.</html>");
 //		l_sampleProcCallStack_chk .setToolTipText("<html>Do 'select * from monProcessProcedures where SPID=spid.<br>This will help us to diagnose what stored procedure called before we ended up here.</html>");
@@ -180,11 +198,27 @@ extends TabularCntrPanel
 //		panel.add(l_sampleShowplan_chk,       "wrap");
 //		panel.add(l_sampleDbccStacktrace_chk, "wrap");
 
+		panel.add(l_sampleSystemSpids_chk,    "wrap");
 		panel.add(l_sampleMonSqltext_chk,     "wrap");
 		panel.add(l_sampleShowplan_chk,       "wrap");
 		panel.add(l_sampleLiveQueryPlan_chk,  "wrap");
 		panel.add(resetMoveToTab_but,         "wrap");
 
+		l_sampleSystemSpids_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				conf.setProperty(CmActiveStatements.PROPKEY_sample_systemSpids, ((JCheckBox)e.getSource()).isSelected());
+				conf.save();
+				
+				// re-create the SQL Statement on next sample
+				getCm().setSql(null);
+			}
+		});
 		l_sampleMonSqltext_chk.addActionListener(new ActionListener()
 		{
 			@Override

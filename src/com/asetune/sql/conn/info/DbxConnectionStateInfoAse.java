@@ -117,46 +117,40 @@ implements DbxConnectionStateInfo
 		// Do the work
 		try
 		{
-			Statement stmnt = conn.createStatement();
-			ResultSet rs = stmnt.executeQuery(sql);
-
-			while(rs.next())
+			// use AutoClose for stmnt & rs
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 			{
-				_dbname      = rs.getString(1);
-				_spid        = rs.getInt   (2);
-				_username    = rs.getString(3);
-				_susername   = rs.getString(4);
-				_tranCount   = rs.getInt   (5);
-				_tranChained = rs.getInt   (6);
-				if (_isAse)
+				while(rs.next())
 				{
-					_tranState = rs.getInt(7);
-
-					if (conn.getDbmsVersionNumber() >= Ver.ver(16,0,0, 2)) // 16.0 SP2
+					_dbname      = rs.getString(1);
+					_spid        = rs.getInt   (2);
+					_username    = rs.getString(3);
+					_susername   = rs.getString(4);
+					_tranCount   = rs.getInt   (5);
+					_tranChained = rs.getInt   (6);
+					if (_isAse)
 					{
-    					_hadrModeInt  = rs.getInt   (8);
-    					_hadrModeStr  = rs.getString(9);
-    					_hadrStateInt = rs.getInt   (10);
-    					_hadrStateStr = rs.getString(11);
+						_tranState = rs.getInt(7);
+
+						if (conn.getDbmsVersionNumber() >= Ver.ver(16,0,0, 2)) // 16.0 SP2
+						{
+	    					_hadrModeInt  = rs.getInt   (8);
+	    					_hadrModeStr  = rs.getString(9);
+	    					_hadrStateInt = rs.getInt   (10);
+	    					_hadrStateStr = rs.getString(11);
+						}
+					}
+					else
+					{
+						_tranState    = TSQL_TRANSTATE_NOT_AVAILABLE;
+						_hadrModeInt  = -1;
+						_hadrModeStr  = "Not Available";
+						_hadrStateInt = 0;
+						_hadrStateStr = "Not Available";
 					}
 				}
-				else
-				{
-					_tranState    = TSQL_TRANSTATE_NOT_AVAILABLE;
-					_hadrModeInt  = -1;
-					_hadrModeStr  = "Not Available";
-					_hadrStateInt = 0;
-					_hadrStateStr = "Not Available";
-				}
 			}
-			rs.close();
 
-//			sql = "select count(*) from master.dbo.syslocks where spid = @@spid";
-//			rs = stmnt.executeQuery(sql);
-//			while(rs.next())
-//			{
-//				_lockCount = rs.getInt(1);
-//			}
 			if (_isAse)
 			{
 				sql = "select dbname=db_name(dbid), table_name=object_name(id, dbid), lock_type=type, lock_count=count(*) "
@@ -167,48 +161,63 @@ implements DbxConnectionStateInfo
 				_lockCount = 0;
 				_lockList.clear();
 
-				rs = stmnt.executeQuery(sql);
-				while(rs.next())
+				// use AutoClose for stmnt & rs
+				try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 				{
-					String dbname    = rs.getString(1);
-					String tableName = rs.getString(2);
-					int    lockType  = rs.getInt   (3);
-					int    lockCount = rs.getInt   (4);
+					while(rs.next())
+					{
+						String dbname    = rs.getString(1);
+						String tableName = rs.getString(2);
+						int    lockType  = rs.getInt   (3);
+						int    lockCount = rs.getInt   (4);
 
-					_lockCount += lockCount;
-					_lockList.add( new LockRecord(dbname, tableName, lockType, lockCount) );
+						_lockCount += lockCount;
+						_lockList.add( new LockRecord(dbname, tableName, lockType, lockCount) );
+					}
 				}
-
-				rs.close();
-				stmnt.close();
 			}
 			else // MS SQL do not have syslocks anymore, so use: sys.dm_tran_locks, and simulate some kind of equal question...
 			{    // NOTE: this needs permission 'VIEW SERVER STATE'
 				List<String> permissions = conn.getActiveServerRolesOrPermissions();
 				if (permissions != null && permissions.contains("VIEW SERVER STATE"))
 				{
-    				sql = "select dbname=db_name(resource_database_id),	table_name=object_name(resource_associated_entity_id, resource_database_id), lock_type=request_mode, lock_count=request_reference_count "
-    				    + " from sys.dm_tran_locks "
-    				    + " where request_session_id = @@spid "
-    				    + "  and resource_type = 'OBJECT' ";
-    
-    				_lockCount = 0;
-    				_lockList.clear();
-    
-    				rs = stmnt.executeQuery(sql);
-    				while(rs.next())
+					// First check if THIS SPID has any open transaction 
+					// This due to 'dm_tran_locks' might contain *many* rows
+    				sql = "select 1 from sys.dm_tran_session_transactions where session_id = @@spid";
+    				boolean hasSessionTran = false;
+
+    				// use AutoClose for stmnt & rs
+    				try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
     				{
-    					String dbname    = rs.getString(1);
-    					String tableName = rs.getString(2);
-    					String lockType  = rs.getString(3);
-    					int    lockCount = rs.getInt   (4);
-    
-    					_lockCount += lockCount;
-    					_lockList.add( new LockRecord(dbname, tableName, lockType, lockCount) );
+        				while(rs.next())
+        					hasSessionTran = true;
     				}
-    
-    				rs.close();
-    				stmnt.close();
+
+       				_lockCount = 0;
+       				_lockList.clear();
+        
+    				if (hasSessionTran)
+    				{
+        				sql = "select dbname=db_name(resource_database_id),	table_name=object_name(resource_associated_entity_id, resource_database_id), lock_type=request_mode, lock_count=request_reference_count "
+            				    + " from sys.dm_tran_locks "
+            				    + " where request_session_id = @@spid "
+            				    + "  and resource_type = 'OBJECT' ";
+            
+           				// use AutoClose for stmnt & rs
+           				try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+           				{
+               				while(rs.next())
+               				{
+               					String dbname    = rs.getString(1);
+               					String tableName = rs.getString(2);
+               					String lockType  = rs.getString(3);
+               					int    lockCount = rs.getInt   (4);
+               
+               					_lockCount += lockCount;
+               					_lockList.add( new LockRecord(dbname, tableName, lockType, lockCount) );
+               				}
+           				}
+    				}
 				}
 				else
 				{
@@ -239,7 +248,8 @@ implements DbxConnectionStateInfo
 	public String getWaterMarkText()
 	{
 		String str = null;
-		
+
+//		System.out.println("getWaterMarkText(): _tranCount=" + _tranCount + ", _tranChained=" + _tranChained);
 		if ( _tranCount > 0 || isNonNormalTranState() )
 		{
 			if (_tranChained == 1)
@@ -257,6 +267,7 @@ implements DbxConnectionStateInfo
     				str = "@@trancount = " + _tranCount + ", @@tranchained = " + _tranChained;
 			}
 		}
+//		System.out.println("getWaterMarkText(): <<<< '" + str + "'.");
 		
 		return str;
 	}

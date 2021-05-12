@@ -35,11 +35,12 @@ import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
-import com.asetune.IGuiController;
 import com.asetune.ICounterController.DbmsOption;
+import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventBlockingLockAlarm;
+import com.asetune.alarm.events.AlarmEventExtensiveUsage;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -84,7 +85,7 @@ extends CountersModel
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
-	public static final String[] PCT_COLUMNS      = new String[] {};
+	public static final String[] PCT_COLUMNS      = new String[] { "percent_complete" };
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"exec_cpu_time",
 		"exec_reads",
@@ -146,6 +147,9 @@ extends CountersModel
 	//------------------------------------------------------------
 	private static final String  PROP_PREFIX                      = CM_NAME;
 	
+	public static final String  PROPKEY_sample_systemSpids        = PROP_PREFIX + ".sample.systemSpids";
+	public static final boolean DEFAULT_sample_systemSpids        = true;
+
 	public static final String  PROPKEY_sample_showplan           = PROP_PREFIX + ".sample.showplan";
 	public static final boolean DEFAULT_sample_showplan           = true;
 
@@ -209,6 +213,8 @@ extends CountersModel
 		setLocalToolTipTextOnTableColumnHeader("SpidLocks",                  "This SPID holds the following locks in the database");
 		setLocalToolTipTextOnTableColumnHeader("HasBlockedSpidsInfo",        "Has values in column 'BlockedSpidsInfo'");
 		setLocalToolTipTextOnTableColumnHeader("BlockedSpidsInfo",           "If this SPID is BLOCKING other spid's, then here is a html-table of showplan for the Blocked spid's. (Note: 'Get Showplan' must be enabled)");
+
+		setLocalToolTipTextOnTableColumnHeader("TempdbUsageMb",              "Number of MB this Statement is using in tempdb.");
 	}
 
 	@Override
@@ -296,6 +302,18 @@ extends CountersModel
 			dop_locks  = "    ,-1 as dop \n";
 		}
 		
+		String user_objects_deferred_dealloc_page_count = "0";
+		if (srvVersion >= Ver.ver(2014))
+		{
+			user_objects_deferred_dealloc_page_count = "user_objects_deferred_dealloc_page_count";			
+		}
+		
+		String whereIsUserSpid  = "  AND des.is_user_process = 1 \n";
+		if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_systemSpids, DEFAULT_sample_systemSpids))
+		{
+			whereIsUserSpid = "  AND (des.is_user_process = 1 OR (des.is_user_process = 0 AND des.status != 'sleeping')) \n ";
+		}
+		
 		String sql1 =
 			"SELECT  \n" +
 			"     monSource    = convert(varchar(10), 'ACTIVE') \n" +
@@ -304,13 +322,22 @@ extends CountersModel
 			"    ,des.session_id \n" +
 			dop_active +
 			"    ,ImBlockedBySessionId = der.blocking_session_id \n" +
-			"    ,ImBlockingOtherSessionIds = convert(varchar(512), '') \n" +
+			"    ,ImBlockingOtherSessionIds    = convert(varchar(512), '') \n" +
 			"    ,ImBlockingOthersMaxTimeInSec = convert(int, 0) \n" +
 			"    ,des.status \n" +
 			"    ,der.command \n" +
-			"    ,ProcName         = object_name(dest.objectid, dest.dbid) \n" +
-			"    ,StmntStart       = der.statement_start_offset \n" +
+			"    ,ProcName            = object_name(dest.objectid, dest.dbid) \n" +
+			"    ,StmntStart          = der.statement_start_offset \n" +
 			"    ,des.[HOST_NAME] \n" +
+			"    ,TempdbUsageMb       = (select \n" + 
+			"                            CAST( ( \n" + // The below calculations also used in: CmTempdbSpidUsage
+			"                                        (user_objects_alloc_page_count - user_objects_dealloc_page_count - " + user_objects_deferred_dealloc_page_count + ") \n" + 
+			"                                      + (internal_objects_alloc_page_count - internal_objects_dealloc_page_count) \n" + 
+			"                                  ) / 128.0 AS decimal(12,1) \n" + 
+			"                                ) \n" + 
+			"                            from tempdb.sys.dm_db_session_space_usage ts \n" + 
+			"                            where ts.session_id = des.session_id \n" +
+			"                           ) \n" +
 			"    ,HasSqlText          = convert(bit,0) \n" +
 			"    ,HasQueryplan        = convert(bit,0) \n" +
 			"    ,HasLiveQueryplan    = convert(bit,0) \n" +
@@ -319,18 +346,18 @@ extends CountersModel
 			"    ,SpidLockCount       = convert(int,-1) \n" +
 //			"    ,DB_NAME(der.database_id) AS database_name \n" +
 			"    ,(select db.name from sys.databases db where db.database_id = der.database_id) AS database_name \n" +
-			"    ,exec_cpu_time      = der.cpu_time \n" +
-			"    ,exec_reads         = der.reads \n" +
-			"    ,exec_logical_reads = der.logical_reads \n" +
-			"    ,exec_writes        = der.writes \n" +
-			"    ,sess_cpu_time      = des.cpu_time \n" +
-			"    ,sess_reads         = des.reads \n" +
-			"    ,sess_logical_reads = des.logical_reads \n" +
-			"    ,sess_writes        = des.writes \n" +
+			"    ,exec_cpu_time       = der.cpu_time \n" +
+			"    ,exec_reads          = der.reads \n" +
+			"    ,exec_logical_reads  = der.logical_reads \n" +
+			"    ,exec_writes         = der.writes \n" +
+			"    ,sess_cpu_time       = des.cpu_time \n" +
+			"    ,sess_reads          = des.reads \n" +
+			"    ,sess_logical_reads  = des.logical_reads \n" +
+			"    ,sess_writes         = des.writes \n" +
 //			"    ,dec.last_write \n" +
 			"    ,der.start_time \n" +
-			"    ,ExecTimeInMs    = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE  datediff(ms, der.start_time, getdate()) END \n" +               // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
-			"    ,UsefullExecTime = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE (datediff(ms, der.start_time, getdate()) - der.wait_time) END \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+			"    ,ExecTimeInMs        = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE  datediff(ms, der.start_time, getdate()) END \n" +               // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+			"    ,UsefullExecTime     = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE (datediff(ms, der.start_time, getdate()) - der.wait_time) END \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 			"    ,des.[program_name] \n" +
 			"    ,der.wait_type \n" +
 			"    ,der.wait_time \n" +
@@ -345,6 +372,9 @@ extends CountersModel
 			"        WHEN 5 THEN 'Snapshot[5]' \n" +
 			"        ELSE        'Unknown' + convert(varchar(10), des.transaction_isolation_level) + ']' \n" +
 			"    END AS transaction_isolation_level \n" +
+			"    ,des.is_user_process \n" +
+			"    ,der.percent_complete \n" +
+			"    ,der.estimated_completion_time \n" +
 //			"    ,OBJECT_NAME(dest.objectid, der.database_id) AS OBJECT_NAME \n" +
 			"    ,SUBSTRING(dest.text, der.statement_start_offset / 2,  \n" +
 			"        ( CASE WHEN der.statement_end_offset = -1  \n" +
@@ -356,11 +386,13 @@ extends CountersModel
 			"    ,deqp.query_plan \n" +
 			LiveQueryPlanActive +
 			"FROM sys." + dm_exec_sessions + " des \n" +
-			"LEFT JOIN sys." + dm_exec_requests + " der ON des.session_id = der.session_id \n" +
+			"JOIN sys." + dm_exec_requests + " der ON des.session_id = der.session_id \n" +
 //			"LEFT JOIN sys." + dm_exec_connections + " dec ON des.session_id = dec.session_id \n" +
-			"CROSS APPLY sys." + dm_exec_sql_text + "(der.sql_handle) dest \n" +
-			"CROSS APPLY sys." + dm_exec_query_plan + "(der.plan_handle) deqp \n" +
+			"OUTER APPLY sys." + dm_exec_sql_text + "(der.sql_handle) dest \n" +
+			"OUTER APPLY sys." + dm_exec_query_plan + "(der.plan_handle) deqp \n" +
 			"WHERE des.session_id != @@spid \n " +
+			whereIsUserSpid +
+			"  AND (der.executing_managed_code = 0 OR (der.executing_managed_code = 1 AND der.wait_type != 'SLEEP_TASK')) \n" + // SSIS seems to be executing ALL THE TIME... so discard some of them... (this may be unique to MaxM)
 			"";
 
 		String sql2 = 
@@ -378,6 +410,7 @@ extends CountersModel
 			"    ,ProcName            = object_name(dest.objectid, dest.dbid) \n" +
 			"    ,StmntStart          = -1 \n" +
 			"    ,p1.hostname                                  --des.[HOST_NAME] \n" +
+			"    ,TempdbUsageMb       = -1 \n" +
 			"    ,HasSqlText          = convert(bit,0)  \n" +
 			"    ,HasQueryplan        = convert(bit,0)  \n" +
 			"    ,HasLiveQueryplan    = convert(bit,0) \n" +
@@ -418,13 +451,16 @@ extends CountersModel
 //			"--               THEN DATALENGTH(dest.text)   \n" +
 //			"--               ELSE der.statement_end_offset   \n" +
 //			"--          END - der.statement_start_offset ) / 2 +2) AS [lastKnownSql] \n" +
+			"    ,is_user_process           = CASE WHEN sid != 0x01 THEN convert(bit, 1) ELSE convert(bit, 0) END \n" +
+			"    ,percent_complete          = -1\n" +
+			"    ,estimated_completion_time = -1\n" +
 			"    ,dest.text \n" +
 			"    ,SpidLocks        = convert(varchar(max),null) \n" +
 			"    ,BlockedSpidsInfo = convert(varchar(max),null) \n" +
 			"    ,''                                           --deqp.query_plan  \n" +
 			LiveQueryPlanBlocked +
 			"FROM sys.sysprocesses p1 \n" +
-			"CROSS APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
+			"OUTER APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
 			"WHERE p1.spid in (select p2.blocked from sys.sysprocesses p2 where p2.blocked > 0) \n" + 
 			"";
 			
@@ -559,13 +595,11 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("Get Query Plan",      PROPKEY_sample_showplan     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_showplan     , DEFAULT_sample_showplan     ), true, "Also get queryplan" ));
-		list.add(new CmSettingsHelper("Get SQL Text",        PROPKEY_sample_monSqlText   , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_monSqlText   , DEFAULT_sample_monSqlText   ), true, "Also get SQL Text"  ));
-		list.add(new CmSettingsHelper("Get Live Query Plan", PROPKEY_sample_liveQueryPlan, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan, DEFAULT_sample_liveQueryPlan), true, "Also get LIVE queryplan" ));
-
-//FIXME:		list.add(new CmSettingsHelper("Get Live Query Plan", PROPKEY_sample_liveQueryPlan, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan, DEFAULT_sample_liveQueryPlan), true, "Also get LIVE queryplan" ));
-//FIXME:		list.add(new CmSettingsHelper("Get Live Query Plan", PROPKEY_sample_liveQueryPlan, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan, DEFAULT_sample_liveQueryPlan), true, "Also get LIVE queryplan" ));
-		list.add(new CmSettingsHelper("Get SPID Locks"           , PROPKEY_sample_spidLocks       , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidLocks       , DEFAULT_sample_spidLocks      ), DEFAULT_sample_spidLocks      , "Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking."));
+		list.add(new CmSettingsHelper("Sample System SPIDs", PROPKEY_sample_systemSpids  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemSpids  , DEFAULT_sample_systemSpids  ), DEFAULT_sample_systemSpids  , "Sample System SPID's" ));
+		list.add(new CmSettingsHelper("Get Query Plan",      PROPKEY_sample_showplan     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_showplan     , DEFAULT_sample_showplan     ), DEFAULT_sample_showplan     , "Also get queryplan" ));
+		list.add(new CmSettingsHelper("Get SQL Text",        PROPKEY_sample_monSqlText   , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_monSqlText   , DEFAULT_sample_monSqlText   ), DEFAULT_sample_monSqlText   , "Also get SQL Text"  ));
+		list.add(new CmSettingsHelper("Get Live Query Plan", PROPKEY_sample_liveQueryPlan, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan, DEFAULT_sample_liveQueryPlan), DEFAULT_sample_liveQueryPlan, "Also get LIVE queryplan" ));
+		list.add(new CmSettingsHelper("Get SPID Locks"     , PROPKEY_sample_spidLocks    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidLocks    , DEFAULT_sample_spidLocks    ), DEFAULT_sample_spidLocks    , "Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking."));
 
 		return list;
 	}
@@ -1256,12 +1290,41 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 					}
 				}
 			}
+
+			//-------------------------------------------------------
+			// TempdbUsageMb 
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("TempdbUsageMb"))
+			{
+				Object o_TempdbUsageMb = cm.getRateValue(r, "TempdbUsageMb");
+				if (o_TempdbUsageMb != null && o_TempdbUsageMb instanceof Number)
+				{
+					int TempdbUsageMb = ((Number)o_TempdbUsageMb).intValue();
+					
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_TempdbUsageMb, DEFAULT_alarm_TempdbUsageMb);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", TempdbUsageMb='"+TempdbUsageMb);
+
+					if (TempdbUsageMb > threshold)
+					{
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						AlarmEvent ae = new AlarmEventExtensiveUsage(cm, threshold, AlarmEventExtensiveUsage.Resource.TEMPDB, "TempdbUsageMb", TempdbUsageMb);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
+					}
+				}
+			}
 		} // end: loop rows
 	}
 
 	public static final String  PROPKEY_alarm_ImBlockingOthersMaxTimeInSec = CM_NAME + ".alarm.system.if.ImBlockingOthersMaxTimeInSec.gt";
 	public static final int     DEFAULT_alarm_ImBlockingOthersMaxTimeInSec = 60;
 	
+	public static final String  PROPKEY_alarm_TempdbUsageMb                = CM_NAME + ".alarm.system.if.TempdbUsageMb.gt";
+	public static final int     DEFAULT_alarm_TempdbUsageMb                = 16384; // 16 GB ... which is pretty much
 	
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -1272,6 +1335,7 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
 		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec", isAlarmSwitch, PROPKEY_alarm_ImBlockingOthersMaxTimeInSec, Integer.class, conf.getIntProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSec, DEFAULT_alarm_ImBlockingOthersMaxTimeInSec), DEFAULT_alarm_ImBlockingOthersMaxTimeInSec, "If 'ImBlockingOthersMaxTimeInSec' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
+		list.add(new CmSettingsHelper("TempdbUsageMb"               , isAlarmSwitch, PROPKEY_alarm_TempdbUsageMb               , Integer.class, conf.getIntProperty(PROPKEY_alarm_TempdbUsageMb               , DEFAULT_alarm_TempdbUsageMb               ), DEFAULT_alarm_TempdbUsageMb               , "If 'TempdbUsageMb' is greater than ## then send 'AlarmEventExtensiveUsage'." ));
 
 		return list;
 	}

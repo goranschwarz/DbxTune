@@ -13312,7 +13312,8 @@ checkPanelSize(_resPanel, comp);
 		{
 			setWatermarkText("Not Connected...");
 		}
-		else if ( _conn.getConnectionStateInfo() != null && !_conn.getConnectionStateInfo().isNormalState() )
+//		else if ( _conn.getConnectionStateInfo() != null && !_conn.getConnectionStateInfo().isNormalState() )
+		else if ( _conn.getConnectionStateInfo() != null )
 		{
 			setWatermarkText( _conn.getConnectionStateInfo().getWaterMarkText() );
 		}
