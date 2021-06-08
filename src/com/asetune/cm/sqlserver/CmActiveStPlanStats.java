@@ -80,7 +80,7 @@ extends CountersModel
 			 "row_count"
 			,"rewind_count"
 			,"rebind_count"
-			,"end_of_scan_count"
+//			,"end_of_scan_count"
 //			,"estimate_row_count"
 			,"scan_count"
 			,"logical_read_count"

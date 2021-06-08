@@ -13,6 +13,7 @@ Sybase:
 
 --------------------------------------------------------------------
 SSH: http://www.cleondris.ch/opensource/ssh2/
+     https://github.com/SoftwareAG/ganymed-ssh-2/releases
 - ganymed-ssh2-build251beta1.jar
 
 

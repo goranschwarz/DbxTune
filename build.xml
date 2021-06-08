@@ -236,7 +236,7 @@
 		<echo> Note: specify password with: ant -Dpassword=theSecretPasswd push</echo>
 		<echo> ----------------------------------------------------------------</echo>
 		<!-- use: ant -Dpassword=xxx push -->
-		<scp file="asetune_${DSTAMP}.zip" todir="gorans:${password}@gorans.org:www/asetune/tmp/" />
+		<scp file="asetune_${DSTAMP}.zip" todir="gorans:${password}@gorans.org:www/asetune/tmp/" trust="true" />
 		<!-- <scp file="asetune_${DSTAMP}.zip" todir="gorans@gorans.org:www/asetune/tmp/" keyfile="${user.home}/.ssh/id_dsa" /> -->
 
 		<!-- Delete the ${build} and ${dist} directory trees -->
@@ -259,7 +259,7 @@
 		<echo> Note: specify password with: ant -Dpassword=theSecretPasswd push</echo>
 		<echo> ----------------------------------------------------------------</echo>
 		<!-- use: ant -Dpassword=xxx push -->
-		<scp port="443" file="asetune_${DSTAMP}.zip" todir="gorans:${password}@gorans.org:www/asetune/tmp/" />
+		<scp port="443" file="asetune_${DSTAMP}.zip" todir="gorans:${password}@gorans.org:www/asetune/tmp/" trust="true" />
 		<!-- <scp file="asetune_${DSTAMP}.zip" todir="gorans@gorans.org:www/asetune/tmp/" keyfile="${user.home}/.ssh/id_dsa" /> -->
 
 		<!-- Delete the ${build} and ${dist} directory trees -->

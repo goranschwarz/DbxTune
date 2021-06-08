@@ -328,6 +328,8 @@ extends CountersModel
 				+ "    [owt].[exec_context_id] \n"
 				+ "";
 
+//Add - select * from sys.dm_exec_query_profiles --- physical_operator_name, estimated_row_count, row_count, cpu_time_ms, logical/physical_raed_count, etc.
+
 //		NOTE:
 //			- Do we need: dm_os_tasks.scheduler_id /not a big table to join on, but anything we can strip might be good)
 //	FIXED	- Do we need to: OUTER APPLY sys.dm_exec_query_plan... Or can we do that *AFTER* we have sampled data (or inject data into a temp table, and get dm_exec_query_plan for unique plan_handle's)
