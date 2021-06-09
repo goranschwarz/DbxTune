@@ -134,6 +134,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>New column: 'HasBlockedSpidsInfo' -- true or false, based on the above column.</li>
 			<li>New column: 'SrvUserName'         -- Name of the Server Login. SQL: SrvUserName = suser_name(P.ServerUserID) Note: Only in ASE 15.0.2 ESD#2 or later</li>
 			<li>Added skip capabilities for alarm BlockingLockAlarm, you can skip on columns 'Command', 'Application', 'SrvUserName', and 'HostName'. The default is to skip where Command = <code>^(DUMP DATABASE|DUMP TRANSACTION).*</code> </li>
+			<li>raise AlarmEventLongRunningStatement when a statement has been executed for more than 3 hours (by default), 'skip' can be done on: dbname, Application, SrvUserName, HostName, Command</li>
 		</ul>
 		</LI>
 

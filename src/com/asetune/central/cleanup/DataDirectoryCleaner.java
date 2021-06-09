@@ -78,7 +78,7 @@ extends Task
 
 	public static final String  PROPKEY_multiplyFactor = "DataDirectoryCleaner.multiply.factor";
 //	public static final double  DEFAULT_multiplyFactor = 2.0;
-	public static final double  DEFAULT_multiplyFactor = 1.5;
+	public static final double  DEFAULT_multiplyFactor = 1.2;
 
 	public static final String  PROPKEY_printSpaceInfo = "DataDirectoryCleaner.print.space.info";
 	public static final boolean DEFAULT_printSpaceInfo = true;
@@ -438,7 +438,7 @@ extends Task
 		}
 		else
 		{
-			_logger.info(_prefix + "Max space usage in GB for historical recordings is NOT enabled. This can be enabled by setting property '"+PROPKEY_maxHistoricalSpaceUsageInGb+"'.");
+			_logger.info(_prefix + "Max space usage in GB for historical recordings is NOT enabled. This can be enabled by setting property '" + PROPKEY_maxHistoricalSpaceUsageInGb + "'.");
 		}
 
 		if (_logger.isDebugEnabled())
@@ -456,8 +456,8 @@ extends Task
 		BigDecimal dateMapMaxSizeGb = new BigDecimal( dateMapMaxSize/1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 		BigDecimal needSpaceInGb    = new BigDecimal( needSpaceInMb /1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 
-		_logger.info(_prefix + "Calculated/Esitimated Space Usage for next "+multiplyFactor+" Days is "+needSpaceInMb + " MB ("+needSpaceInGb+" GB). Maximum date-range-space-usage is "+dateMapMaxSize+" MB ("+dateMapMaxSizeGb+" GB).");
-			
+		_logger.info(_prefix + "Calculated/Esitimated Space Usage for next " + multiplyFactor + " Days is " + needSpaceInMb + " MB (" + needSpaceInGb + " GB). Maximum date-range-space-usage is " + dateMapMaxSize + " MB (" + dateMapMaxSizeGb + " GB). Number of days to reserve space for can be changed by setting property '" + PROPKEY_multiplyFactor + "'.");
+
 		// Should we deduct 'beforeFreeMb' from 'needSpaceInGb'
 //		needSpaceInMb = needSpaceInMb - beforeFreeMb;
 //		needSpaceInGb = new BigDecimal( needSpaceInMb /1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);

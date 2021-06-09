@@ -38,6 +38,7 @@ import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventBlockingLockAlarm;
+import com.asetune.alarm.events.AlarmEventLongRunningStatement;
 import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
 import com.asetune.cache.XmlPlanCache;
 import com.asetune.cm.CmSettingsHelper;
@@ -1386,12 +1387,14 @@ extends CountersModel
 					if (BlockingOthersMaxTimeInSec > threshold)
 					{
 						// Get various names to "skip"
+						String currentDbname   = cm.getAbsString(r, "dbname");
 						String currentCommand  = cm.getAbsString(r, "Command");
 						String currentAppName  = cm.getAbsString(r, "Application");
 						String currentUserName = cm.getAbsString(r, "SrvUserName");  // if column name isn't found "" (empty string) will be returned
 						String currentHostName = cm.getAbsString(r, "HostName");     // if column name isn't found "" (empty string) will be returned
 						
 						// Get config 'skip some transaction names'
+						String skipDbnameRegExp   = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipDbname     , DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipDbname);
 						String skipCommandRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipCommand    , DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipCommand);
 						String skipAppNameRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipApplication, DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipApplication);
 						String skipUserNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipSrvUserName, DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipSrvUserName);
@@ -1403,6 +1406,7 @@ extends CountersModel
 						// The below could have been done with nested if(skip-name), if(skip-prog), if(skip-user), if(skip-host) doAlarm=true; 
 						// Below is more readable, from a variable context point-of-view, but HARDER to understand
 						// to *continue*: doAlarm needs to be true AND (regExp is empty OR not-matching)
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbnameRegExp)   || ! currentDbname  .matches(skipDbnameRegExp)));
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipCommandRegExp)  || ! currentCommand .matches(skipCommandRegExp)));
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipAppNameRegExp)  || ! currentAppName .matches(skipAppNameRegExp)));
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipUserNameRegExp) || ! currentUserName.matches(skipUserNameRegExp)));
@@ -1420,11 +1424,78 @@ extends CountersModel
 					}
 				}
 			}
+
+			//-------------------------------------------------------
+			// StatementExecInSec 
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("StatementExecInSec"))
+			{
+				String monSource      = cm.getRateString(r, "monSource");
+				Object o_ExecTimeInMs = cm.getRateValue (r, "ExecTimeInMs");
+
+				if ("ACTIVE".equals(monSource) && o_ExecTimeInMs != null && o_ExecTimeInMs instanceof Number)
+				{
+					int ExecTimeInInSec = ((Number)o_ExecTimeInMs).intValue() / 1000;
+
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_StatementExecInSec, DEFAULT_alarm_StatementExecInSec);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", ExecTimeInInSec='"+ExecTimeInInSec+"'.");
+
+					if (ExecTimeInInSec > threshold)
+					{
+						// Get various fields passed to the AlarmEvent
+						String StatementStartTime = cm.getRateString(r, "StartTime");
+						String currentTranName    = "-unknown-";
+
+						// Get various names to "skip"
+						String currentDbname   = cm.getRateString(r, "dbname");
+						String currentCommand  = cm.getRateString(r, "Command");
+						String currentAppName  = cm.getRateString(r, "Application");
+						String currentUserName = cm.getRateString(r, "SrvUserName");  // if column name isn't found "" (empty string) will be returned
+						String currentHostName = cm.getRateString(r, "HostName");     // if column name isn't found "" (empty string) will be returned
+						
+						// Get config 'skip some transaction names'
+						String skipDbnameRegExp   = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipDbname     , DEFAULT_alarm_StatementExecInSecSkipDbname);
+						String skipCommandRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipCommand    , DEFAULT_alarm_StatementExecInSecSkipCommand);
+						String skipAppNameRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipApplication, DEFAULT_alarm_StatementExecInSecSkipApplication);
+						String skipUserNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipSrvUserName, DEFAULT_alarm_StatementExecInSecSkipSrvUserName);
+						String skipHostNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipHostName   , DEFAULT_alarm_StatementExecInSecSkipHostName);
+
+						// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+						boolean doAlarm = true;
+
+						// The below could have been done with nested if(skip-name), if(skip-prog), if(skip-user), if(skip-host) doAlarm=true; 
+						// Below is more readable, from a variable context point-of-view, but HARDER to understand
+						// to *continue*: doAlarm needs to be true AND (regExp is empty OR not-matching)
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbnameRegExp)   || ! currentDbname  .matches(skipDbnameRegExp)));
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipCommandRegExp)  || ! currentCommand .matches(skipCommandRegExp)));
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipAppNameRegExp)  || ! currentAppName .matches(skipAppNameRegExp)));
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipUserNameRegExp) || ! currentUserName.matches(skipUserNameRegExp)));
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipHostNameRegExp) || ! currentHostName.matches(skipHostNameRegExp)));
+
+						if (doAlarm)
+						{
+							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+							
+							AlarmEvent ae = new AlarmEventLongRunningStatement(cm, threshold, ExecTimeInInSec, StatementStartTime, currentDbname, currentUserName, currentCommand, currentTranName);
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							
+							alarmHandler.addAlarm( ae );
+						}
+					}
+				}
+			}
+
 		} // end: loop rows
 	}
 
-	public static final String  PROPKEY_alarm_BlockingOthersMaxTimeInSec = CM_NAME + ".alarm.system.if.BlockingOthersMaxTimeInSec.gt";
-	public static final int     DEFAULT_alarm_BlockingOthersMaxTimeInSec = 60;
+	public static final String  PROPKEY_alarm_BlockingOthersMaxTimeInSec                = CM_NAME + ".alarm.system.if.BlockingOthersMaxTimeInSec.gt";
+	public static final int     DEFAULT_alarm_BlockingOthersMaxTimeInSec                = 60;
+	
+	public static final String  PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipDbname      = CM_NAME + ".alarm.system.if.BlockingOthersMaxTimeInSec.skip.dbname";
+	public static final String  DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipDbname      = "";
 	
 	public static final String  PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipCommand     = CM_NAME + ".alarm.system.if.BlockingOthersMaxTimeInSec.skip.Command";
 	public static final String  DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipCommand     = "^(DUMP DATABASE|DUMP TRANSACTION).*";
@@ -1437,7 +1508,25 @@ extends CountersModel
 	
 	public static final String  PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipHostName    = CM_NAME + ".alarm.system.if.BlockingOthersMaxTimeInSec.skip.HostName";
 	public static final String  DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipHostName    = "";
-	
+
+
+	public static final String  PROPKEY_alarm_StatementExecInSec                        = CM_NAME + ".alarm.system.if.StatementExecInSec.gt";
+	public static final int     DEFAULT_alarm_StatementExecInSec                        = 3 * 60 * 60;
+
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipDbname              = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.dbname";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipDbname              = "";
+
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipCommand             = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.Command";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipCommand             = "^(DUMP DATABASE|DUMP TRANSACTION).*";
+	                                                                                    
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipApplication         = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.Application";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipApplication         = "";
+	                                                                                    
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipSrvUserName         = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.SrvUserName";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipSrvUserName         = "";
+	                                                                                    
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipHostName            = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.HostName";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipHostName            = "";
 	
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -1448,10 +1537,18 @@ extends CountersModel
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
 		list.add(new CmSettingsHelper("BlockingOthersMaxTimeInSec", isAlarmSwitch , PROPKEY_alarm_BlockingOthersMaxTimeInSec                , Integer.class, conf.getIntProperty(PROPKEY_alarm_BlockingOthersMaxTimeInSec                , DEFAULT_alarm_BlockingOthersMaxTimeInSec               ), DEFAULT_alarm_BlockingOthersMaxTimeInSec               , "If 'BlockingOthersMaxTimeInSec' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
+		list.add(new CmSettingsHelper("BlockingOthersMaxTimeInSec SkipDbname"     , PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipDbname      , String .class, conf.getProperty   (PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipDbname      , DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipDbname     ), DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipDbname     , "If 'BlockingOthersMaxTimeInSec' is true; then we can filter out transaction names using a Regular expression... if (dbname  .matches('regexp'))... This to remove alarms of '(db1|db2)' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'."    , new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("BlockingOthersMaxTimeInSec SkipCommand"    , PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipCommand     , String .class, conf.getProperty   (PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipCommand     , DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipCommand    ), DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipCommand    , "If 'BlockingOthersMaxTimeInSec' is true; then we can filter out transaction names using a Regular expression... if (tranName.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("BlockingOthersMaxTimeInSec SkipApplication", PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipApplication , String .class, conf.getProperty   (PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipApplication , DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipApplication), DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipApplication, "If 'BlockingOthersMaxTimeInSec' is true; then we can filter out transaction names using a Regular expression... if (tranProg.matches('regexp'))... This to remove alarms of 'SQLAgent.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'."   , new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("BlockingOthersMaxTimeInSec SkipSrvUserName", PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipSrvUserName , String .class, conf.getProperty   (PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipSrvUserName , DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipSrvUserName), DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipSrvUserName, "If 'BlockingOthersMaxTimeInSec' is true; then we can filter out transaction names using a Regular expression... if (tranUser.matches('regexp'))... This to remove alarms of '(user1|user2)' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("BlockingOthersMaxTimeInSec SkipHostName"   , PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipHostName    , String .class, conf.getProperty   (PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipHostName    , DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipHostName   ), DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipHostName   , "If 'BlockingOthersMaxTimeInSec' is true; then we can filter out transaction names using a Regular expression... if (tranHost.matches('regexp'))... This to remove alarms of '.*-prod-.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'."   , new RegExpInputValidator()));
+
+		list.add(new CmSettingsHelper("StatementExecInSec", isAlarmSwitch         , PROPKEY_alarm_StatementExecInSec                        , Integer.class, conf.getIntProperty(PROPKEY_alarm_StatementExecInSec                        , DEFAULT_alarm_StatementExecInSec                       ), DEFAULT_alarm_StatementExecInSec                       , "If 'ExecTimeInMs/1000' is greater than ## then send 'AlarmEventLongRunningStatement'." ));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipDbname"             , PROPKEY_alarm_StatementExecInSecSkipDbname              , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipDbname              , DEFAULT_alarm_StatementExecInSecSkipDbname             ), DEFAULT_alarm_StatementExecInSecSkipDbname             , "If 'ExecTimeInMs/1000' is true; then we can filter out transaction names using a Regular expression... if (dbname  .matches('regexp'))... This to remove alarms of '(db1|db2)' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'."    , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipCommand"            , PROPKEY_alarm_StatementExecInSecSkipCommand             , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipCommand             , DEFAULT_alarm_StatementExecInSecSkipCommand            ), DEFAULT_alarm_StatementExecInSecSkipCommand            , "If 'ExecTimeInMs/1000' is true; then we can filter out transaction names using a Regular expression... if (tranName.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipApplication"        , PROPKEY_alarm_StatementExecInSecSkipApplication         , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipApplication         , DEFAULT_alarm_StatementExecInSecSkipApplication        ), DEFAULT_alarm_StatementExecInSecSkipApplication        , "If 'ExecTimeInMs/1000' is true; then we can filter out transaction names using a Regular expression... if (tranProg.matches('regexp'))... This to remove alarms of 'SQLAgent.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'."   , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipSrvUserName"        , PROPKEY_alarm_StatementExecInSecSkipSrvUserName         , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipSrvUserName         , DEFAULT_alarm_StatementExecInSecSkipSrvUserName        ), DEFAULT_alarm_StatementExecInSecSkipSrvUserName        , "If 'ExecTimeInMs/1000' is true; then we can filter out transaction names using a Regular expression... if (tranUser.matches('regexp'))... This to remove alarms of '(user1|user2)' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipHostName"           , PROPKEY_alarm_StatementExecInSecSkipHostName            , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipHostName            , DEFAULT_alarm_StatementExecInSecSkipHostName           ), DEFAULT_alarm_StatementExecInSecSkipHostName           , "If 'ExecTimeInMs/1000' is true; then we can filter out transaction names using a Regular expression... if (tranHost.matches('regexp'))... This to remove alarms of '.*-prod-.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'."   , new RegExpInputValidator()));
 
 		return list;
 	}
