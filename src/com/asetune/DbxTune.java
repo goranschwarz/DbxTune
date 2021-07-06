@@ -807,6 +807,7 @@ public abstract class DbxTune
 		_logger.info("User configuration file is '"+userPropFile+"'.");
 		_logger.info("Storing temporary configurations in file '"+tmpPropFile+"'.");
 		_logger.info("Combined Configuration Search Order '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'.");
+		_logger.info("Combined Configuration Search Order, With file names: "+StringUtil.toCommaStr(Configuration.getSearchOrder(true)));
 
 		if (crAppDirLog != null && !crAppDirLog.isEmpty())
 		{

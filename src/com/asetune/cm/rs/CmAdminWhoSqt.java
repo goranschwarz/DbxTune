@@ -30,6 +30,7 @@ import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.cm.rs.helper.RsDbidStripper;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
@@ -220,85 +221,6 @@ extends CountersModel
 			false, // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
-
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_CLOSED,
-//				"SQT: Number of committed transactions in the SQT cache (col 'Closed', absolute)", // Menu CheckBox text
-//				"SQT: Number of committed transactions in the SQT cache (col 'Closed', absolute)", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_READ,
-//				"SQT: Number of transactions processed, but not yet deleted (col 'Read', absolute)", // Menu CheckBox text
-//				"SQT: Number of transactions processed, but not yet deleted (col 'Read', absolute)", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_OPEN,
-//				"SQT: Number of uncommitted or unaborted transactions (col 'Open', absolute)", // Menu CheckBox text
-//				"SQT: Number of uncommitted or unaborted transactions (col 'Open', absolute)", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_TRUNC,
-//				"SQT: Number of transactions in the SQT cache, sum of Closed, Read, and Open (col 'Trunc', absolute)", // Menu CheckBox text
-//				"SQT: Number of transactions in the SQT cache, sum of Closed, Read, and Open (col 'Trunc', absolute)", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_REMOVED,
-//				"SQT: Number of transactions removed from memory (col 'Removed', absolute)", // Menu CheckBox text
-//				"SQT: Number of transactions removed from memory (col 'Removed', absolute)", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_PARSED,
-//				"SQT: Number of transactions that have been parsed (col 'Parsed', per second)", // Menu CheckBox text
-//				"SQT: Number of transactions that have been parsed (col 'Parsed', per second)", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 	@Override
@@ -313,6 +235,9 @@ extends CountersModel
 			{
 				lArray[i] = this.getAbsString       (i, "Info");
 				dArray[i] = this.getAbsValueAsDouble(i, "Closed");
+
+				// Remove DBID and append ('in-q' or 'out-q')
+				lArray[i] = RsDbidStripper.stripDbid(lArray[i]); 
 			}
 
 			// Set the values
@@ -328,6 +253,9 @@ extends CountersModel
 			{
 				lArray[i] = this.getAbsString       (i, "Info");
 				dArray[i] = this.getAbsValueAsDouble(i, "Read");
+
+				// Remove DBID and append ('in-q' or 'out-q')
+				lArray[i] = RsDbidStripper.stripDbid(lArray[i]); 
 			}
 
 			// Set the values
@@ -343,6 +271,9 @@ extends CountersModel
 			{
 				lArray[i] = this.getAbsString       (i, "Info");
 				dArray[i] = this.getAbsValueAsDouble(i, "Open");
+
+				// Remove DBID and append ('in-q' or 'out-q')
+				lArray[i] = RsDbidStripper.stripDbid(lArray[i]); 
 			}
 
 			// Set the values
@@ -358,6 +289,9 @@ extends CountersModel
 			{
 				lArray[i] = this.getAbsString       (i, "Info");
 				dArray[i] = this.getAbsValueAsDouble(i, "Trunc");
+
+				// Remove DBID and append ('in-q' or 'out-q')
+				lArray[i] = RsDbidStripper.stripDbid(lArray[i]); 
 			}
 
 			// Set the values
@@ -373,6 +307,9 @@ extends CountersModel
 			{
 				lArray[i] = this.getAbsString       (i, "Info");
 				dArray[i] = this.getAbsValueAsDouble(i, "Removed");
+
+				// Remove DBID and append ('in-q' or 'out-q')
+				lArray[i] = RsDbidStripper.stripDbid(lArray[i]); 
 			}
 
 			// Set the values
@@ -388,6 +325,9 @@ extends CountersModel
 			{
 				lArray[i] = this.getRateString       (i, "Info");
 				dArray[i] = this.getRateValueAsDouble(i, "Parsed");
+
+				// Remove DBID and append ('in-q' or 'out-q')
+				lArray[i] = RsDbidStripper.stripDbid(lArray[i]); 
 			}
 
 			// Set the values

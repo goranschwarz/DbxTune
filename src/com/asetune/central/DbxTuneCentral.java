@@ -71,6 +71,7 @@ import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesDbxCentral;
 import com.asetune.gui.GuiLogAppender;
 import com.asetune.pcs.PersistReader;
+import com.asetune.pcs.report.senders.MailHelper;
 import com.asetune.pcs.report.senders.ReportSenderToMail;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.CronUtils;
@@ -381,6 +382,7 @@ public class DbxTuneCentral
 //		_logger.info("User configuration file is '"+userPropFile+"'.");
 //		_logger.info("Storing temporary configurations in file '"+tmpPropFile+"'.");
 		_logger.info("Combined Configuration Search Order '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'.");
+		_logger.info("Combined Configuration Search Order, With file names: "+StringUtil.toCommaStr(Configuration.getSearchOrder(true)));
 
 		if (crAppDirLog != null && !crAppDirLog.isEmpty())
 		{
@@ -556,7 +558,7 @@ public class DbxTuneCentral
 		
 		String  smtpHostname       = conf.getProperty       (AlarmWriterToMail.PROPKEY_smtpHostname,           AlarmWriterToMail.DEFAULT_smtpHostname);
 		String  toCsv              = conf.getProperty       (AlarmWriterToMail.PROPKEY_to,                     AlarmWriterToMail.DEFAULT_to);
-		String  ccCsv              = conf.getProperty       (AlarmWriterToMail.PROPKEY_cc,                     AlarmWriterToMail.DEFAULT_cc);
+//		String  ccCsv              = conf.getProperty       (AlarmWriterToMail.PROPKEY_cc,                     AlarmWriterToMail.DEFAULT_cc);
 		String  from               = conf.getProperty       (AlarmWriterToMail.PROPKEY_from,                   AlarmWriterToMail.DEFAULT_from);
 
 		String  username           = conf.getProperty       (AlarmWriterToMail.PROPKEY_username,               AlarmWriterToMail.DEFAULT_username);
@@ -570,7 +572,7 @@ public class DbxTuneCentral
 		{
 			smtpHostname       = conf.getProperty       (ReportSenderToMail.PROPKEY_smtpHostname,           ReportSenderToMail.DEFAULT_smtpHostname);
 			toCsv              = conf.getProperty       (ReportSenderToMail.PROPKEY_to,                     ReportSenderToMail.DEFAULT_to);
-			ccCsv              = conf.getProperty       (ReportSenderToMail.PROPKEY_cc,                     ReportSenderToMail.DEFAULT_cc);
+//			ccCsv              = conf.getProperty       (ReportSenderToMail.PROPKEY_cc,                     ReportSenderToMail.DEFAULT_cc);
 			from               = conf.getProperty       (ReportSenderToMail.PROPKEY_from,                   ReportSenderToMail.DEFAULT_from);
 
 			username           = conf.getProperty       (ReportSenderToMail.PROPKEY_username,               ReportSenderToMail.DEFAULT_username);
@@ -583,11 +585,13 @@ public class DbxTuneCentral
 
 		if (StringUtil.hasValue(smtpHostname) && StringUtil.hasValue(toCsv) && StringUtil.hasValue(from))
 		{
-			List<String> toList = StringUtil.commaStrToList(toCsv);
+			// If the TO List contains any JSON entry (filters)... then STRIP OUT the server name and just get the email addresses
+			// If it's a CSV just split and add
+			List<String> toList = MailHelper.getAllMailToAddress(toCsv);
 
-			List<String> ccList = new ArrayList<>();
-			if (StringUtil.hasValue(ccCsv))
-				ccList = StringUtil.commaStrToList(ccCsv);
+//			List<String> ccList = new ArrayList<>();
+//			if (StringUtil.hasValue(ccCsv))
+//				ccList = StringUtil.commaStrToList(ccCsv);
 			
 			int msgBodySizeKb = msgBody == null ? 0 : msgBody.length() / 1024;
 
@@ -624,8 +628,8 @@ public class DbxTuneCentral
 				for (String to : toList)
 					email.addTo(to);
 
-				for (String cc : ccList)
-					email.addCc(cc);
+//				for (String cc : ccList)
+//					email.addCc(cc);
 
 				// FROM & SUBJECT
 				email.setFrom(from);
@@ -648,11 +652,11 @@ public class DbxTuneCentral
 				// SEND
 				email.send();
 
-				_logger.info("Sent mail message: msgBodySizeKb="+msgBodySizeKb+", host='"+smtpHostname+"', to='"+toCsv+"', cc='"+ccCsv+"', subject='"+msgSubject+"'.");
+				_logger.info("Sent mail message: msgBodySizeKb="+msgBodySizeKb+", host='"+smtpHostname+"', to='"+toCsv+"', subject='"+msgSubject+"'.");
 			}
 			catch (Exception ex)
 			{
-				_logger.error("Problems sending mail (msgBodySizeKb="+msgBodySizeKb+", host='"+smtpHostname+"', to='"+toCsv+"', cc='"+ccCsv+"', subject='"+msgSubject+"').", ex);
+				_logger.error("Problems sending mail (msgBodySizeKb="+msgBodySizeKb+", host='"+smtpHostname+"', to='"+toCsv+"', subject='"+msgSubject+"').", ex);
 			}
 		}
 		else // not enough params to send mail.

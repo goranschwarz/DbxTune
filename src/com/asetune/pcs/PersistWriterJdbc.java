@@ -4877,8 +4877,12 @@ public class PersistWriterJdbc
 			// Initialize the Report, which also initialized the ReportSender
 			report.init();
 
-			// Create & and Send the report
+			// Create
 			report.create();
+			
+			// Send the report
+			// NOTE: The sender might have filters to NOT send it... 
+			//       which means that if isCreateReportEnabledForServer()==true then the report will still be created and SAVED but not sent 
 			report.send();
 
 			// Save the report

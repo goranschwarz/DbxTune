@@ -170,6 +170,9 @@ extends CountersModel
 			{
 				lArray[i] = this.getRateString       (i, "LogicalName");
 				dArray[i] = this.getRateValueAsDouble(i, "Bytes Sent");
+
+//				// Remove DBID and append ('in-q' or 'out-q')
+//				lArray[i] = RsDbidStripper.stripDbid(lArray[i]); 
 			}
 
 			// Set the values

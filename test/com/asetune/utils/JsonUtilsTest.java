@@ -46,6 +46,9 @@ public class JsonUtilsTest
 		assertEquals("A JSON String",                true, JsonUtils.isPossibleJson("{\"key\":\"value\"}"));
 		assertEquals("A JSON String",                true, JsonUtils.isPossibleJson("      {\"key\":\"value\"}"));
 		assertEquals("A JSON String",                true, JsonUtils.isPossibleJson("  [    {\"key\":\"value\"}    ]"));
+
+		assertEquals("A JSON String",                true, JsonUtils.isPossibleJson("[ {\"serverName\":\"SYB_MXG_P01\", \"to\":\"sybase-dba-alarms@b3.se, lafo@sek.se\"}, {\"serverName\":\"SYB_SEK_MXGT0\", \"to\":\"lafo@sek.se\"} ]"));
+		assertEquals("A JSON String",                true, JsonUtils.isJsonValid   ("[ {\"serverName\":\"SYB_MXG_P01\", \"to\":\"sybase-dba-alarms@b3.se, lafo@sek.se\"}, {\"serverName\":\"SYB_SEK_MXGT0\", \"to\":\"lafo@sek.se\"} ]"));
 	}
 
 

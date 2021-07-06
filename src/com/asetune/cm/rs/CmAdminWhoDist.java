@@ -31,6 +31,7 @@ import com.asetune.IGuiController;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.rs.helper.RsDbidStripper;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
@@ -205,6 +206,9 @@ extends CountersModel
 			{
 				lArray[i] = this.getRateString       (i, "Info");
 				dArray[i] = this.getRateValueAsDouble(i, "TransProcessed");
+				
+				// Remove DBID and append ('in-q' or 'out-q')
+				lArray[i] = RsDbidStripper.stripDbid(lArray[i]); 
 			}
 
 			// Set the values
@@ -220,6 +224,9 @@ extends CountersModel
 			{
 				lArray[i] = this.getRateString       (i, "Info");
 				dArray[i] = this.getRateValueAsDouble(i, "CmdsProcessed");
+
+				// Remove DBID and append ('in-q' or 'out-q')
+				lArray[i] = RsDbidStripper.stripDbid(lArray[i]); 
 			}
 
 			// Set the values

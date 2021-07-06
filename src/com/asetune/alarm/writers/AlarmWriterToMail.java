@@ -32,6 +32,7 @@ import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.Type;
 import com.asetune.cm.CmSettingsHelper.UrlInputValidator;
+import com.asetune.pcs.report.senders.MailHelper;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
@@ -77,6 +78,20 @@ extends AlarmWriterAbstract
 	 */
 	private void sendMessage(String action, AlarmEvent alarmEvent)
 	{
+		// Get server name from the Alarm
+		String serverName = alarmEvent.getServiceName();
+
+		// Getting mail addresses to send the report to
+		List<String> toList = MailHelper.getMailToAddressForServerNameAsList(serverName, PROPKEY_to, DEFAULT_to);
+		
+		if (toList.isEmpty())
+		{
+			String toPropVal = ", property: " + PROPKEY_to + "=" + Configuration.getCombinedConfiguration().getProperty(PROPKEY_to, DEFAULT_to);
+
+			_logger.info("Canceling sending '" + action + "' Alarm '" + alarmEvent.getAlarmClassAbriviated() + "' for server '" + serverName + "' due to NO mail recipiants. toList=" + toList + toPropVal);
+			return;
+		}
+
 		// replace variables in the template with runtime variables
 		String msgSubject = WriterUtils.createMessageFromTemplate(action, alarmEvent, _subjectTemplate, true, null, getDbxCentralUrl());
 		String msgBody    = WriterUtils.createMessageFromTemplate(action, alarmEvent, _msgBodyTemplate, true, null, getDbxCentralUrl());
@@ -116,12 +131,14 @@ extends AlarmWriterAbstract
 			if (StringUtil.hasValue(_username))
 				email.setAuthentication(_username, _password);
 			
-			// add TO and CC
-			for (String to : _toList)
+			// add TO
+//			for (String to : _toList)
+			for (String to : toList)
 				email.addTo(to);
 
-			for (String cc : _ccList)
-				email.addCc(cc);
+			// add CC
+//			for (String cc : _ccList)
+//				email.addCc(cc);
 
 			// FROM & SUBJECT
 			email.setFrom(_from);
@@ -136,13 +153,149 @@ extends AlarmWriterAbstract
 			// SEND
 			email.send();
 
-			_logger.info("Sent mail message: msgBodySizeKb="+msgBodySizeKb+", host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"'.");
+			_logger.info("Sent mail message: msgBodySizeKb="+msgBodySizeKb+", host='"+_smtpHostname+"', to='"+toList+"', subject='"+msgSubject+"', for server name '" + serverName + "'.");
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems sending mail (msgBodySizeKb="+msgBodySizeKb+", host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"').", ex);
+			_logger.error("Problems sending mail (msgBodySizeKb="+msgBodySizeKb+", host='"+_smtpHostname+"', to='"+toList+"', subject='"+msgSubject+"', for server name '" + serverName + "').", ex);
 		}
 	}
+
+//	/**
+//	 * Get mail address based on the ServerName 
+//	 * 
+//	 * @param srvName    name of the DBMS Server Name where the Alarm originates from
+//	 * @param parseStr   string to parse... [SrvNameRegExp=]xxx@acme.com
+//	 * @return 
+//	 * <ul>
+//	 *   <li>mail address to recipient</li>
+//	 *   <li>or "" (blank) if no srvName is matching</li>
+//	 * </ul> 
+//	 * @throws RuntimeException
+//	 */
+//	public static String getMailAddressForServerName(String srvName, String parseStr)
+//	throws RuntimeException
+//	{
+//		if (StringUtil.isNullOrBlank(srvName))
+//			throw new RuntimeException("In method 'getMailAddressForServerName()', srvName was null or blank, which wasn't expected. srvName='" + srvName + "', parseStr='" + parseStr + "'.");
+//
+//		if (StringUtil.isNullOrBlank(parseStr))
+//			throw new RuntimeException("In method 'getMailAddressForServerName()', parseStr was null or blank, which wasn't expected. srvName='" + srvName + "', parseStr='" + parseStr + "'.");
+//
+//		// Parse the 'parseStr' 
+//		// TO entry can look like this: [SrvNameRegExp=]xxx@acme.com
+//		if (parseStr.contains("="))
+//		{
+//			String regEx = StringUtils.trim( StringUtils.substringBefore(parseStr, "=") );
+//			String addr  = StringUtils.trim( StringUtils.substringAfter (parseStr, "=") );
+//			
+//			// Return the mail address if the regex is true
+//			// or "" if it do NOT match
+//			if (srvName.matches(regEx))
+//				return addr; // match: return mail address
+//			else
+//				return "";   // not for this server
+//		}
+//
+//		// If we didn't find any "=" char in the input then simply return the input, which hopefully is an email address
+//		return parseStr;
+//	}
+//
+//	/**
+//	 * Here is where the send happens
+//	 * @param action
+//	 * @param alarmEvent
+//	 */
+//	private void sendMessage(String action, AlarmEvent alarmEvent)
+//	{
+//		String srvName = alarmEvent.getServiceName();
+//
+//		// TO list entry can look like this: [SrvNameRegExp=]xxx@acme.com
+//		// where the SrvNameRegExp dictates if we should send mail for this serverName to the email address
+//
+//		// replace variables in the template with runtime variables
+//		String msgSubject = WriterUtils.createMessageFromTemplate(action, alarmEvent, _subjectTemplate, true, null, getDbxCentralUrl());
+//		String msgBody    = WriterUtils.createMessageFromTemplate(action, alarmEvent, _msgBodyTemplate, true, null, getDbxCentralUrl());
+//
+//		int msgBodySizeKb = msgBody == null ? 0 : msgBody.length() / 1024;
+//
+//		try
+//		{
+//			HtmlEmail email = new HtmlEmail();
+//
+//			email.setHostName(_smtpHostname);
+//
+//			// Charset
+//			email.setCharset(StandardCharsets.UTF_8.name());
+//			
+//			// Connection timeout
+//			if (_smtpConnectTimeout >= 0)
+//				email.setSocketConnectionTimeout(_smtpConnectTimeout);
+//
+//			// SMTP PORT
+//			if (_smtpPort >= 0)
+//				email.setSmtpPort(_smtpPort);
+//
+//			// USE SSL
+//			if (_useSsl)
+//				email.setSSLOnConnect(_useSsl);
+//
+//			// SSL PORT
+//			if (_sslPort >= 0)
+//				email.setSslSmtpPort(_sslPort+""); // Hmm why is this a String parameter?
+//
+//			// START TLS
+//			if (_startTls)
+//				email.setStartTLSEnabled(_startTls);
+//			
+//			// AUTHENTICATION
+//			if (StringUtil.hasValue(_username))
+//				email.setAuthentication(_username, _password);
+//			
+//			// add TO
+//			for (String to : _toList)
+//			{
+//				String mailAddress = AlarmWriterToMail.getMailAddressForServerName(srvName, to);
+//				if (StringUtil.hasValue(mailAddress))
+//					email.addTo(mailAddress);
+//			}
+//
+//			// add CC
+//			for (String cc : _ccList)
+//			{
+//				String mailAddress = AlarmWriterToMail.getMailAddressForServerName(srvName, cc);
+//				if (StringUtil.hasValue(mailAddress))
+//					email.addCc(mailAddress);
+//			}
+//
+//			// FROM & SUBJECT
+//			email.setFrom(_from);
+//			email.setSubject(msgSubject);
+//
+//			// CONTENT HTMP or PLAIN
+//			if (StringUtils.startsWithIgnoreCase(msgBody.trim(), "<html>"))
+//				email.setHtmlMsg(msgBody);
+//			else
+//				email.setTextMsg(msgBody);
+//			
+//			// SEND if we got any recipients for this server
+//			if ( email.getToAddresses().isEmpty() )
+//			{
+//				_logger.info("Skipping send mail due to 'no recipients' for ServerName '" + srvName + "'. to='" + _to + "', cc='" + _cc + "', subject='" + msgSubject + "'.");
+//			}
+//			else
+//			{
+//				// SEND
+//				email.send();
+//
+//				_logger.info("Sent mail message: msgBodySizeKb="+msgBodySizeKb+", host='"+_smtpHostname+"', to='"+email.getToAddresses()+"', cc='"+email.getCcAddresses()+"', subject='"+msgSubject+"'.");
+//			}
+//		}
+//		catch (Exception ex)
+//		{
+//			_logger.error("Problems sending mail (msgBodySizeKb="+msgBodySizeKb+", host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"').", ex);
+//		}
+//	}
 
 	@Override
 	public List<CmSettingsHelper> getAvailableSettings()
@@ -152,7 +305,8 @@ extends AlarmWriterAbstract
 		Configuration conf = Configuration.getCombinedConfiguration();
 
 		list.add( new CmSettingsHelper("hostname",         Type.MANDATORY, PROPKEY_smtpHostname,           String .class, conf.getProperty       (PROPKEY_smtpHostname          , DEFAULT_smtpHostname          ), DEFAULT_smtpHostname          , "Name of the host that holds the smtp server"));
-		list.add( new CmSettingsHelper("to",               Type.MANDATORY, PROPKEY_to,                     String .class, conf.getProperty       (PROPKEY_to                    , DEFAULT_to                    ), DEFAULT_to                    , "To what mail adresses should we send the mail (if several ones, just comma separate them)"));
+//		list.add( new CmSettingsHelper("to",               Type.MANDATORY, PROPKEY_to,                     String .class, conf.getProperty       (PROPKEY_to                    , DEFAULT_to                    ), DEFAULT_to                    , "To what mail adresses should we send the mail (if several ones, just comma separate them)"));
+		list.add( new CmSettingsHelper("to",               Type.MANDATORY, PROPKEY_to,                     String .class, conf.getProperty       (PROPKEY_to                    , DEFAULT_to                    ), DEFAULT_to                    , "To what mail adresses should we send the mail (if several ones, just comma separate them). Note: this can be configured to filter on <i>serverName</i>, in the property <code>" + PROPKEY_to + "=[ {#serverName#:#xxx#, #to#:#user1@acme.com, user2@acme.com#}, {#serverName#:#yyy#, #to#:#user1@acme.com#}, {#serverName#:#zzz#, #to#:#user3@acme.com#} ]</code>".replace('#', '"') ));
 		list.add( new CmSettingsHelper("from",             Type.MANDATORY, PROPKEY_from,                   String .class, conf.getProperty       (PROPKEY_from                  , DEFAULT_from                  ), DEFAULT_from                  , "What should be the senders email address"));
 		list.add( new CmSettingsHelper("Subject-Template",                 PROPKEY_subjectTemplate,        String .class, conf.getProperty       (PROPKEY_subjectTemplate       , DEFAULT_subjectTemplate       ), DEFAULT_subjectTemplate       , "What should be the subject (Note: this is a template)"));
 		list.add( new CmSettingsHelper("Msg-Template",                     PROPKEY_msgBodyTemplate,        String .class, conf.getProperty       (PROPKEY_msgBodyTemplate       , DEFAULT_msgBodyTemplate       ), DEFAULT_msgBodyTemplate       , "What content should we send (Note: this is a template, if the content starts with <html> then it will try to send the mail as a HTML mail.)"));
@@ -160,7 +314,7 @@ extends AlarmWriterAbstract
 
 		list.add( new CmSettingsHelper("username",                         PROPKEY_username,               String .class, conf.getProperty       (PROPKEY_username              , DEFAULT_username              ), DEFAULT_username              , "If the SMTP server reuires you to login (default: is not to logon)"));
 		list.add( new CmSettingsHelper("password",                         PROPKEY_password,               String .class, conf.getProperty       (PROPKEY_password              , DEFAULT_password              ), DEFAULT_password              , "If the SMTP server reuires you to login (default: is not to logon)"));
-		list.add( new CmSettingsHelper("cc",                               PROPKEY_cc,                     String .class, conf.getProperty       (PROPKEY_cc                    , DEFAULT_cc                    ), DEFAULT_cc                    , "To what CC mail adresses should we send the mail (if several ones, just comma separate them)"));
+//		list.add( new CmSettingsHelper("cc",                               PROPKEY_cc,                     String .class, conf.getProperty       (PROPKEY_cc                    , DEFAULT_cc                    ), DEFAULT_cc                    , "To what CC mail adresses should we send the mail (if several ones, just comma separate them)"));
 		list.add( new CmSettingsHelper("smtp-port",                        PROPKEY_smtpPort,               Integer.class, conf.getIntProperty    (PROPKEY_smtpPort              , DEFAULT_smtpPort              ), DEFAULT_smtpPort              , "What port number is the SMTP server on (-1 = use the default)"));
 		list.add( new CmSettingsHelper("ssl-port",                         PROPKEY_sslPort,                Integer.class, conf.getIntProperty    (PROPKEY_sslPort               , DEFAULT_sslPort               ), DEFAULT_sslPort               , "What port number is the SSL-SMTP server on (-1 = use the default)"));
 		list.add( new CmSettingsHelper("use-ssl",                          PROPKEY_useSsl,                 Boolean.class, conf.getBooleanProperty(PROPKEY_useSsl                , DEFAULT_useSsl                ), DEFAULT_useSsl                , "Sets whether SSL/TLS encryption should be enabled for the SMTP transport upon connection (SMTPS/POPS)"));
@@ -184,7 +338,7 @@ extends AlarmWriterAbstract
                                          
 	private String  _username               = "";
 	private String  _password               = "";
-	private String  _cc                     = "";
+//	private String  _cc                     = "";
 	private int     _smtpPort               = -1;
 	private int     _sslPort                = -1;
 	private boolean _useSsl                 = DEFAULT_useSsl;
@@ -192,7 +346,7 @@ extends AlarmWriterAbstract
 	private int     _smtpConnectTimeout     = -1;
 
 	private List<String> _toList     = new ArrayList<>();
-	private List<String> _ccList     = new ArrayList<>();
+//	private List<String> _ccList     = new ArrayList<>();
 	//-------------------------------------------------------
 
 	@Override
@@ -204,7 +358,7 @@ extends AlarmWriterAbstract
 
 		_smtpHostname           = conf.getProperty       (PROPKEY_smtpHostname,           DEFAULT_smtpHostname);
 		_to                     = conf.getProperty       (PROPKEY_to,                     DEFAULT_to);
-		_cc                     = conf.getProperty       (PROPKEY_cc,                     DEFAULT_cc);
+//		_cc                     = conf.getProperty       (PROPKEY_cc,                     DEFAULT_cc);
 		_from                   = conf.getProperty       (PROPKEY_from,                   DEFAULT_from);
 		_subjectTemplate        = conf.getProperty       (PROPKEY_subjectTemplate,        DEFAULT_subjectTemplate);
 		_msgBodyTemplate        = conf.getProperty       (PROPKEY_msgBodyTemplate,        DEFAULT_msgBodyTemplate);
@@ -230,8 +384,8 @@ extends AlarmWriterAbstract
 		// Parse the 'to string' into a list
 		_toList = StringUtil.parseCommaStrToList(_to);
 		
-		if (StringUtil.hasValue(_cc))
-			_ccList = StringUtil.parseCommaStrToList(_cc);
+//		if (StringUtil.hasValue(_cc))
+//			_ccList = StringUtil.parseCommaStrToList(_cc);
 
 		//------------------------------------------
 		// Check for valid configuration
@@ -252,7 +406,7 @@ extends AlarmWriterAbstract
 
 		_logger.info("    " + StringUtil.left(PROPKEY_username              , spaces) + ": " + _username);
 		_logger.info("    " + StringUtil.left(PROPKEY_password              , spaces) + ": " + (_logger.isDebugEnabled() ? _password : "*secret*") );
-		_logger.info("    " + StringUtil.left(PROPKEY_cc                    , spaces) + ": " + _cc);
+//		_logger.info("    " + StringUtil.left(PROPKEY_cc                    , spaces) + ": " + _cc);
 		_logger.info("    " + StringUtil.left(PROPKEY_smtpPort              , spaces) + ": " + _smtpPort);
 		_logger.info("    " + StringUtil.left(PROPKEY_sslPort               , spaces) + ": " + _sslPort);
 		_logger.info("    " + StringUtil.left(PROPKEY_useSsl                , spaces) + ": " + _useSsl);
@@ -286,8 +440,8 @@ extends AlarmWriterAbstract
 	public static final String  PROPKEY_password               = "AlarmWriterToMail.smpt.password";
 	public static final String  DEFAULT_password               = "";
                                                                
-	public static final String  PROPKEY_cc                     = "AlarmWriterToMail.cc";
-	public static final String  DEFAULT_cc                     = "";
+//	public static final String  PROPKEY_cc                     = "AlarmWriterToMail.cc";
+//	public static final String  DEFAULT_cc                     = "";
                                                                
 	public static final String  PROPKEY_smtpPort               = "AlarmWriterToMail.smpt.port";
 	public static final int     DEFAULT_smtpPort               = -1;

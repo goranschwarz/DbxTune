@@ -981,28 +981,54 @@ extends CountersModel
 			}
 
 
-			for (String dbname : primaryDbs)
+			if ( ! primaryDbs.isEmpty() )
 			{
-				String updateTable = 
-						"-- Create the dummy table if it do not exist \n" +
-						"if not exists (select 1 from " + dbname + ".sys.objects where name = 'sqlserverTune_ag_dummy_update' and type = 'U') \n" +
-						"begin \n" +
-						"   exec('create table " + dbname + ".dbo.sqlserverTune_ag_dummy_update(id varchar(36), primaryServerName varchar(30), ts datetime, primary key(id))') \n" +
-						"   exec('grant select,insert,update,delete on " + dbname + ".dbo.sqlserverTune_ag_dummy_update to public') \n" +
-						"end \n" +
-						"-- remove all old rows \n" +
-						"exec('delete from " + dbname + ".dbo.sqlserverTune_ag_dummy_update') \n" +
-						"-- insert a new dummy row \n" +
-						"exec('insert into " + dbname + ".dbo.sqlserverTune_ag_dummy_update(id, primaryServerName, ts) select newid(), @@servername, getdate()') \n" +
-						"";
+				String cwdbBefore = null;
+				String cwdbAfter  = null;
 
-				try ( Statement stmnt = conn.createStatement() )
+				// Get Current Working DataBase
+				try { cwdbBefore = conn.getCatalog(); } catch(SQLException ex) { /* ignore */ }
+
+				// Loop all Primary Databases and update table: sqlserverTune_ag_dummy_update
+				for (String dbname : primaryDbs)
 				{
-					stmnt.executeUpdate(updateTable);
+					String updateTable = 
+							"/*** Create the dummy table if it do not exist ***/ \n" +
+							"if not exists (select 1 from " + dbname + ".sys.objects where name = 'sqlserverTune_ag_dummy_update' and type = 'U') \n" +
+							"begin \n" +
+							"   exec('create table " + dbname + ".dbo.sqlserverTune_ag_dummy_update(id varchar(36), primaryServerName varchar(30), ts datetime, primary key(id))') \n" +
+							// NOTE: must do 'use dbname' here... but the database context seems to be restored after a exec('sql statement')
+							"   exec('use " + dbname + "; grant select,insert,update,delete on dbo.sqlserverTune_ag_dummy_update to public') \n" +
+							"end \n" +
+							"/*** remove all old rows ***/ \n" +
+							"exec('delete from " + dbname + ".dbo.sqlserverTune_ag_dummy_update') \n" +
+							"/*** insert a new dummy row ***/ \n" +
+							"exec('insert into " + dbname + ".dbo.sqlserverTune_ag_dummy_update(id, primaryServerName, ts) select newid(), @@servername, getdate()') \n" +
+							"";
+
+					try ( Statement stmnt = conn.createStatement() )
+					{
+						_logger.debug("updating 'sqlserverTune_ag_dummy_update' in database '" + dbname + "'.");
+						stmnt.executeUpdate(updateTable);
+					}
+					catch (SQLException ex)
+					{
+						_logger.warn("Problems updating dummy table 'sqlserverTune_ag_dummy_update' at '"+dbname+"'. But continuing with next step. Caught: Error="+ex.getErrorCode()+", Msg='"+ex.getMessage().trim()+"', SQL="+updateTable);
+					}
 				}
-				catch (SQLException ex)
+
+				// If current database was available
+				if (cwdbBefore != null)
 				{
-					_logger.warn("Problems updating dummy table 'sqlserverTune_ag_dummy_update' at '"+dbname+"'. But continuing with next step. Caught: Error="+ex.getErrorCode()+", Msg='"+ex.getMessage().trim()+"', SQL="+updateTable);
+					// Get Current Working DataBase
+					try { cwdbAfter = conn.getCatalog(); } catch(SQLException ex) { /* ignore */ }
+
+					_logger.debug("updatePrimaryDatabases(): cwdbBefore='" + cwdbBefore + "', cwdbAfter='" + cwdbAfter + "'.");
+					// If we have changed database... change it back
+					if ( ! cwdbBefore.equals(cwdbAfter) )
+					{
+						try { conn.setCatalog(cwdbBefore); } catch(SQLException ex) { /* ignore */ }
+					}
 				}
 			}
 

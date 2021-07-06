@@ -235,6 +235,11 @@ extends CountersModel
 				
 				Double totalMemUsed = this.getAbsValueAsDouble("Total", "Memory_Consumed_Mb");
 				if (totalMemUsed == null)
+					totalMemUsed = this.getAbsValueAsDouble("Total(Norm)", "Memory_Consumed_Mb"); // RepServer 16 the row seems to be named 'Total(Norm)'
+				if (totalMemUsed == null)
+					totalMemUsed = this.getAbsValueAsDouble("Total(Ctrl)", "Memory_Consumed_Mb"); // RepServer 16 the row seems to be named 'Total(Ctrl)' -- When a component consumes all memory resources, it turns on the memory control state and stops processing more data. When data are drained to the downstream component and some memory resources are released, the component turns off the memory control state and works normally again.
+
+				if (totalMemUsed == null)
 				{
 					_logger.warn("Skipping GraphUpdate of '"+GRAPH_NAME_MEMORY_PCT+"'. reason: value for 'Total', 'Memory_Consumed_Mb' was not found or null.");
 				}
@@ -257,7 +262,11 @@ extends CountersModel
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
 			{
-				lArray[i] = this.getAbsString       (i, "Object/State");
+				if (this.findColumn("Object/State") >= 0)
+					lArray[i] = this.getAbsString(i, "Object/State");
+				if (this.findColumn("Object(State)") >= 0)
+					lArray[i] = this.getAbsString(i, "Object(State)");
+
 				dArray[i] = this.getAbsValueAsDouble(i, "Memory_Consumed_Mb");
 			}
 
@@ -414,6 +423,10 @@ extends CountersModel
 		if (isSystemAlarmsForColumnEnabledAndInTimeRange("MemoryUsedPct"))
 		{
 			Double totalMemUsed = cm.getAbsValueAsDouble("Total", "Memory_Consumed_Mb");
+			if (totalMemUsed == null)
+				totalMemUsed = cm.getAbsValueAsDouble("Total(Norm)", "Memory_Consumed_Mb"); // RepServer 16 the row seems to be named 'Total(Norm)'
+			if (totalMemUsed == null)
+				totalMemUsed = this.getAbsValueAsDouble("Total(Ctrl)", "Memory_Consumed_Mb"); // RepServer 16 the row seems to be named 'Total(Ctrl)' -- When a component consumes all memory resources, it turns on the memory control state and stops processing more data. When data are drained to the downstream component and some memory resources are released, the component turns off the memory control state and works normally again.
 			
 			if (totalMemUsed != null && _memoryLimitSizeMb != -1)
 			{

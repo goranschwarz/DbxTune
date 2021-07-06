@@ -2337,7 +2337,34 @@ extends Properties
 	 */
 	public static String[] getSearchOrder()
 	{
-		return _searchOrder;
+//		return _searchOrder;
+		return getSearchOrder(false);
+	}
+
+	/**
+	 * Get the search order for the Combined Configuration
+	 * 
+	 * @param showFilenames  Also show what filename is used by the Search Order
+	 * @return String array of configured search order, if none is set an empty array will be returned
+	 */
+	public static String[] getSearchOrder(boolean showFilenames)
+	{
+		// Plain
+		if (showFilenames == false)
+			return _searchOrder;
+
+		// return: searchOrder='filename' for each instance
+		String[] sa = new String[_searchOrder.length];
+		for (int i = 0; i < _searchOrder.length; i++)
+		{
+			String searchOrder = _searchOrder[i]; 
+			Configuration conf = getInstance(searchOrder);
+
+			String filename = conf == null ? "-instance-not-found-" : conf.getFilename();
+			
+			sa[i] = searchOrder + "='" + filename + "'";
+		}
+		return sa;
 	}
 
 	/** Holds the Combined Configuration Object */

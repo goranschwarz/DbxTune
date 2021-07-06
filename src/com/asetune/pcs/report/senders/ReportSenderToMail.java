@@ -35,10 +35,6 @@ import com.asetune.pcs.report.content.DailySummaryReportContent;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.JsonUtils;
 import com.asetune.utils.StringUtil;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 public class ReportSenderToMail 
 extends ReportSenderAbstract
@@ -62,6 +58,17 @@ extends ReportSenderAbstract
 			}
 		}
 		
+		// Getting mail addresses to send the report to
+		List<String> toList = MailHelper.getMailToAddressForServerNameAsList(serverName, PROPKEY_to, DEFAULT_to);
+		
+		if (toList.isEmpty())
+		{
+			String toPropVal = ", property: " + PROPKEY_to + "=" + Configuration.getCombinedConfiguration().getProperty(PROPKEY_to, DEFAULT_to);
+
+			_logger.info("Canceling sending Daily Report for server '" + serverName + "' due to NO mail recipiants. toList=" + toList + toPropVal);
+			return;
+		}
+
 		String msgSubject = _subjectTemplate.replace("${srvName}", serverName);
 //		String msgBodyText    = reportContent.getReportAsText();
 //		String msgBodyHtml    = reportContent.getReportAsHtml();
@@ -97,8 +104,6 @@ extends ReportSenderAbstract
 			msgSubject = _subjectNtrTemplate.replace("${srvName}", serverName);
 
 
-		List<String> toList = getToAddressForServerNameAsList(serverName);
-
 		try
 		{
 			HtmlEmail email = new HtmlEmail();
@@ -121,23 +126,25 @@ extends ReportSenderAbstract
 				email.setSSLOnConnect(_useSsl);
 
 			// SSL PORT
-			if (_useSsl && _sslPort >= 0)
+			if (_sslPort >= 0)
 				email.setSslSmtpPort(_sslPort+""); // Hmm why is this a String parameter?
 
+			// START TLS
+			if (_startTls)
+				email.setStartTLSEnabled(_startTls);
+			
 			// AUTHENTICATION
 			if (StringUtil.hasValue(_username))
 				email.setAuthentication(_username, _password);
 			
 			// add TO
 //			for (String to : _toList)
-//				email.addTo(to);
-
 			for (String to : toList)
 				email.addTo(to);
 
 			// add CC
-			for (String cc : _ccList)
-				email.addCc(cc);
+//			for (String cc : _ccList)
+//				email.addCc(cc);
 
 			// FROM & SUBJECT
 			email.setFrom(_from);
@@ -170,11 +177,11 @@ extends ReportSenderAbstract
 			// SEND
 			email.send();
 
-			_logger.info("Sent mail message: msgSizeKb="+msgSizeKb+", attachSizeKb="+attachSizeKb+", host='"+_smtpHostname+"', toList="+toList+", cc='"+_cc+"', subject='"+msgSubject+"'.");
+			_logger.info("Sent mail message: msgSizeKb="+msgSizeKb+", attachSizeKb="+attachSizeKb+", host='"+_smtpHostname+"', toList="+toList+", subject='"+msgSubject+"', for server name '" + serverName + "'.");
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems sending mail (msgSizeKb="+msgSizeKb+", attachSizeKb="+attachSizeKb+", host='"+_smtpHostname+"', toList="+toList+", cc='"+_cc+"', subject='"+msgSubject+"').", ex);
+			_logger.error("Problems sending mail (msgSizeKb="+msgSizeKb+", attachSizeKb="+attachSizeKb+", host='"+_smtpHostname+"', toList="+toList+", subject='"+msgSubject+"', for server name '" + serverName + "').", ex);
 		}
 	}
 
@@ -189,7 +196,7 @@ extends ReportSenderAbstract
 		list.add( new CmSettingsHelper("from",             Type.MANDATORY, PROPKEY_from,                       String .class, conf.getProperty       (PROPKEY_from                      , DEFAULT_from                      ), DEFAULT_from                      , "What should be the senders email address"));
 		list.add( new CmSettingsHelper("hostname",         Type.MANDATORY, PROPKEY_smtpHostname,               String .class, conf.getProperty       (PROPKEY_smtpHostname              , DEFAULT_smtpHostname              ), DEFAULT_smtpHostname              , "Name of the host that holds the smtp server"));
 		list.add( new CmSettingsHelper("to",               Type.MANDATORY, PROPKEY_to,                         String .class, conf.getProperty       (PROPKEY_to                        , DEFAULT_to                        ), DEFAULT_to                        , "To what mail adresses should we send the mail (if several ones, just comma separate them). Note: this can be configured to filter on <i>serverName</i>, in the property <code>ReportSenderToMail.to=[ {#serverName#:#xxx#, #to#:#user1@acme.com, user2@acme.com#}, {#serverName#:#yyy#, #to#:#user1@acme.com#}, {#serverName#:#zzz#, #to#:#user3@acme.com#} ]</code>".replace('#', '"') ));
-		list.add( new CmSettingsHelper("cc",                               PROPKEY_cc,                         String .class, conf.getProperty       (PROPKEY_cc                        , DEFAULT_cc                        ), DEFAULT_cc                        , "To what CC mail adresses should we send the mail (if several ones, just comma separate them)"));
+//		list.add( new CmSettingsHelper("cc",                               PROPKEY_cc,                         String .class, conf.getProperty       (PROPKEY_cc                        , DEFAULT_cc                        ), DEFAULT_cc                        , "To what CC mail adresses should we send the mail (if several ones, just comma separate them)"));
 		list.add( new CmSettingsHelper("Subject-Template",                 PROPKEY_subjectTemplate,            String .class, conf.getProperty       (PROPKEY_subjectTemplate           , DEFAULT_subjectTemplate           ), DEFAULT_subjectTemplate           , "What should be the subject (Note: this is a template)"));
 		list.add( new CmSettingsHelper("Subject-NTR-Template",             PROPKEY_subjectNtrTemplate,         String .class, conf.getProperty       (PROPKEY_subjectNtrTemplate        , DEFAULT_subjectNtrTemplate        ), DEFAULT_subjectNtrTemplate        , "What should be the subject, when NTR=Nothing To Report (Note: this is a template)"));
 		list.add( new CmSettingsHelper("Send-NothingToReport",             PROPKEY_sendNtr,                    Boolean.class, conf.getBooleanProperty(PROPKEY_sendNtr                   , DEFAULT_sendNtr                   ), DEFAULT_sendNtr                   , "Send email even when there is Nothing To Report (NTR)."));
@@ -204,6 +211,7 @@ extends ReportSenderAbstract
 		list.add( new CmSettingsHelper("smtp-port",                        PROPKEY_smtpPort,                   Integer.class, conf.getIntProperty    (PROPKEY_smtpPort                  , DEFAULT_smtpPort                  ), DEFAULT_smtpPort                  , "What port number is the SMTP server on (-1 = use the default)"));
 		list.add( new CmSettingsHelper("ssl-port",                         PROPKEY_sslPort,                    Integer.class, conf.getIntProperty    (PROPKEY_sslPort                   , DEFAULT_sslPort                   ), DEFAULT_sslPort                   , "What port number is the SSL-SMTP server on (-1 = use the default)"));
 		list.add( new CmSettingsHelper("use-ssl",                          PROPKEY_useSsl,                     Boolean.class, conf.getBooleanProperty(PROPKEY_useSsl                    , DEFAULT_useSsl                    ), DEFAULT_useSsl                    , "Sets whether SSL/TLS encryption should be enabled for the SMTP transport upon connection (SMTPS/POPS)"));
+		list.add( new CmSettingsHelper("start-tls",                        PROPKEY_startTls,                   Boolean.class, conf.getBooleanProperty(PROPKEY_startTls                  , DEFAULT_startTls                  ), DEFAULT_startTls                  , "Set required STARTTLS encryption. "));
 		list.add( new CmSettingsHelper("connection-timeout",               PROPKEY_connectionTimeout,          Integer.class, conf.getIntProperty    (PROPKEY_connectionTimeout         , DEFAULT_connectionTimeout         ), DEFAULT_connectionTimeout         , "Set the socket connection timeout value in milliseconds. (-1 = use the default)"));
 
 		return list;
@@ -226,14 +234,15 @@ extends ReportSenderAbstract
                                          
 	private String  _username                   = "";
 	private String  _password                   = "";
-	private String  _cc                         = "";
+//	private String  _cc                         = "";
 	private int     _smtpPort                   = -1;
 	private int     _sslPort                    = -1;
 	private boolean _useSsl                     = DEFAULT_useSsl;
+	private boolean _startTls                   = DEFAULT_startTls;
 	private int     _smtpConnectTimeout         = -1;
 
 //	private List<String> _toList     = new ArrayList<>();
-	private List<String> _ccList     = new ArrayList<>();
+//	private List<String> _ccList     = new ArrayList<>();
 	//-------------------------------------------------------
 
 
@@ -247,89 +256,90 @@ extends ReportSenderAbstract
 	@Override
 	public boolean isEnabledForServer(String serverName)
 	{
-		return StringUtil.hasValue( getToAddressForServerName(serverName) );
+		return StringUtil.hasValue( MailHelper.getMailToAddressForServerName(serverName, PROPKEY_to, DEFAULT_to) );
 
 		// TODO: not yet implemented
 		//return true;
 	}
 	
-	private List<String> getToAddressForServerNameAsList(String serverName)
-	{
-		String toStr = getToAddressForServerName(serverName);
-		return StringUtil.parseCommaStrToList(toStr);
-	}
-	
-	private String getToAddressForServerName(String serverName)
-	{
-		Configuration conf = Configuration.getCombinedConfiguration();
-		
-		String retStr = "";
-
-		// If the "to" sender is of JSON Content, then we need to parse the JSON and see if any of the entries is enabled for this serverName  
-		String toStr = conf.getProperty(PROPKEY_to, DEFAULT_to);
-		
-		if (_logger.isDebugEnabled())
-			_logger.debug("getToAddressForServerName('"+serverName+"'): "+PROPKEY_to+"=|"+toStr+"|");
-
-		// Exit early if not properly configured.
-		if (StringUtil.isNullOrBlank(toStr))
-		{
-			_logger.warn("getToAddressForServerName('"+serverName+"'): "+PROPKEY_to+"=|"+toStr+"| is EMPTY... This is a Mandatory property value.");
-			return null;
-		}
-
-		
-		retStr = toStr;
-		if (JsonUtils.isPossibleJson(toStr))
-		{
-			try
-			{
-				JsonArray jsonArr = new JsonParser().parse(toStr).getAsJsonArray();
-				for (JsonElement jsonElement : jsonArr)
-				{
-					JsonObject jsonObj = jsonElement.getAsJsonObject();
-					
-					if (_logger.isDebugEnabled())
-						_logger.debug("Checking serverName='" + serverName + "' against the JSON entry: " + jsonObj );
-
-					if (jsonObj.has("serverName") && jsonObj.has("to"))
-					{
-						String entryServerName = jsonObj.get("serverName").getAsString();
-						String entryTo         = jsonObj.get("to"        ).getAsString();
-						
-						if (_logger.isDebugEnabled())
-							_logger.debug("Checking serverName='" + serverName + "' against the JSON entry with: serverNameRegExp='" + entryServerName + "', toStr='" + entryTo + "'.");
-
-						if (StringUtil.hasValue(entryServerName) && StringUtil.hasValue(entryTo))
-						{
-							// USE REGEXP to check if it matches
-							if (serverName.matches(entryServerName))
-							{
-								if (_logger.isDebugEnabled())
-									_logger.debug("MATCH: using mail address to='" + entryTo + "' for serverName='" + serverName + "'.");
-
-								return entryTo;
-							}
-						}
-					}
-					else
-					{
-						_logger.info("Skipping JSON entry '" + jsonObj + "', it dosn't contain members: 'serverName' and 'to'.");
-					}
-				}
-			}
-			catch(Exception ex)
-			{
-				_logger.error("getToAddressForServerName('"+serverName+"'): Trying to parse the JSON Array String '" + toStr + "', Caught: " + ex, ex);
-			}
-		}
-		else
-		{
-			_logger.debug("getToAddressForServerName('"+serverName+"'): NOT a JSON Array, using as 'plain-email-address': "+PROPKEY_to+"=|"+toStr+"|");
-		}
-		
-		return retStr;
-	}
+//	private static List<String> getMailToAddressForServerNameAsList(String serverName, String propKeyTo, String defaultTo)
+//	{
+//		String toStr = getMailToAddressForServerName(serverName, propKeyTo, defaultTo);
+//		return StringUtil.parseCommaStrToList(toStr);
+//	}
+//	
+//	private static String getMailToAddressForServerName(String serverName, String propKeyTo, String defaultTo)
+//	{
+//		Configuration conf = Configuration.getCombinedConfiguration();
+//		
+//		String retStr = "";
+//
+//		// If the "to" sender is of JSON Content, then we need to parse the JSON and see if any of the entries is enabled for this serverName  
+////		String toStr = conf.getProperty(PROPKEY_to, DEFAULT_to);
+//		String toStr = conf.getProperty(propKeyTo, defaultTo);
+//		
+//		if (_logger.isDebugEnabled())
+//			_logger.debug("getMailToAddressForServerName('"+serverName+"'): "+propKeyTo+"=|"+toStr+"|");
+//
+//		// Exit early if not properly configured.
+//		if (StringUtil.isNullOrBlank(toStr))
+//		{
+//			_logger.warn("getMailToAddressForServerName('"+serverName+"'): "+propKeyTo+"=|"+toStr+"| is EMPTY... This is a Mandatory property value.");
+//			return null;
+//		}
+//
+//		
+//		retStr = toStr;
+//		if (JsonUtils.isPossibleJson(toStr))
+//		{
+//			try
+//			{
+//				JsonArray jsonArr = new JsonParser().parse(toStr).getAsJsonArray();
+//				for (JsonElement jsonElement : jsonArr)
+//				{
+//					JsonObject jsonObj = jsonElement.getAsJsonObject();
+//					
+//					if (_logger.isDebugEnabled())
+//						_logger.debug("Checking serverName='" + serverName + "' against the JSON entry: " + jsonObj );
+//
+//					if (jsonObj.has("serverName") && jsonObj.has("to"))
+//					{
+//						String entryServerName = jsonObj.get("serverName").getAsString();
+//						String entryTo         = jsonObj.get("to"        ).getAsString();
+//						
+//						if (_logger.isDebugEnabled())
+//							_logger.debug("Checking serverName='" + serverName + "' against the JSON entry with: serverNameRegExp='" + entryServerName + "', toStr='" + entryTo + "'.");
+//
+//						if (StringUtil.hasValue(entryServerName) && StringUtil.hasValue(entryTo))
+//						{
+//							// USE REGEXP to check if it matches
+//							if (serverName.matches(entryServerName))
+//							{
+//								if (_logger.isDebugEnabled())
+//									_logger.debug("MATCH: using mail address to='" + entryTo + "' for serverName='" + serverName + "'.");
+//
+//								return entryTo;
+//							}
+//						}
+//					}
+//					else
+//					{
+//						_logger.info("Skipping JSON entry '" + jsonObj + "', it dosn't contain members: 'serverName' and 'to'.");
+//					}
+//				}
+//			}
+//			catch(Exception ex)
+//			{
+//				_logger.error("getMailToAddressForServerName('"+serverName+"'): Trying to parse the JSON Array String '" + toStr + "', Caught: " + ex, ex);
+//			}
+//		}
+//		else
+//		{
+//			_logger.debug("getMailToAddressForServerName('"+serverName+"'): NOT a JSON Array, using as 'plain-email-address': "+propKeyTo+"=|"+toStr+"|");
+//		}
+//		
+//		return retStr;
+//	}
 
 	@Override
 	public void init() throws Exception
@@ -341,7 +351,7 @@ extends ReportSenderAbstract
 
 		_smtpHostname               = conf.getProperty       (PROPKEY_smtpHostname,               DEFAULT_smtpHostname);
 		_to                         = conf.getProperty       (PROPKEY_to,                         DEFAULT_to);
-		_cc                         = conf.getProperty       (PROPKEY_cc,                         DEFAULT_cc);
+//		_cc                         = conf.getProperty       (PROPKEY_cc,                         DEFAULT_cc);
 		_from                       = conf.getProperty       (PROPKEY_from,                       DEFAULT_from);
 		_subjectTemplate            = conf.getProperty       (PROPKEY_subjectTemplate,            DEFAULT_subjectTemplate);
 		_subjectNtrTemplate         = conf.getProperty       (PROPKEY_subjectNtrTemplate,         DEFAULT_subjectNtrTemplate);
@@ -357,6 +367,7 @@ extends ReportSenderAbstract
 		_smtpPort                   = conf.getIntProperty    (PROPKEY_smtpPort,                   DEFAULT_smtpPort);
 		_sslPort                    = conf.getIntProperty    (PROPKEY_sslPort,                    DEFAULT_sslPort);
 		_useSsl                     = conf.getBooleanProperty(PROPKEY_useSsl,                     DEFAULT_useSsl);
+		_startTls                   = conf.getBooleanProperty(PROPKEY_startTls,                   DEFAULT_startTls);
 		_smtpConnectTimeout         = conf.getIntProperty    (PROPKEY_connectionTimeout,          DEFAULT_connectionTimeout);
 
 		//------------------------------------------
@@ -372,8 +383,8 @@ extends ReportSenderAbstract
 		// Parse the 'to string' into a list
 //		_toList = StringUtil.parseCommaStrToList(_to);
 		
-		if (StringUtil.hasValue(_cc))
-			_ccList = StringUtil.parseCommaStrToList(_cc);
+//		if (StringUtil.hasValue(_cc))
+//			_ccList = StringUtil.parseCommaStrToList(_cc);
 
 		//------------------------------------------
 		// Check for valid configuration
@@ -401,10 +412,11 @@ extends ReportSenderAbstract
 
 		_logger.info("    " + StringUtil.left(PROPKEY_username                  , spaces) + ": " + _username);
 		_logger.info("    " + StringUtil.left(PROPKEY_password                  , spaces) + ": " + (_logger.isDebugEnabled() ? _password : "*secret*") );
-		_logger.info("    " + StringUtil.left(PROPKEY_cc                        , spaces) + ": " + _cc);
+//		_logger.info("    " + StringUtil.left(PROPKEY_cc                        , spaces) + ": " + _cc);
 		_logger.info("    " + StringUtil.left(PROPKEY_smtpPort                  , spaces) + ": " + _smtpPort);
 		_logger.info("    " + StringUtil.left(PROPKEY_sslPort                   , spaces) + ": " + _sslPort);
 		_logger.info("    " + StringUtil.left(PROPKEY_useSsl                    , spaces) + ": " + _useSsl);
+		_logger.info("    " + StringUtil.left(PROPKEY_startTls                  , spaces) + ": " + _startTls);
 		_logger.info("    " + StringUtil.left(PROPKEY_connectionTimeout         , spaces) + ": " + _smtpConnectTimeout);
 	}
 
@@ -446,8 +458,8 @@ extends ReportSenderAbstract
 	public static final String  PROPKEY_password                   = "ReportSenderToMail.smpt.password";
 	public static final String  DEFAULT_password                   = "";
                                                                    
-	public static final String  PROPKEY_cc                         = "ReportSenderToMail.cc";
-	public static final String  DEFAULT_cc                         = "";
+//	public static final String  PROPKEY_cc                         = "ReportSenderToMail.cc";
+//	public static final String  DEFAULT_cc                         = "";
                                                                    
 	public static final String  PROPKEY_smtpPort                   = "ReportSenderToMail.smpt.port";
 	public static final int     DEFAULT_smtpPort                   = -1;
@@ -458,6 +470,9 @@ extends ReportSenderAbstract
 	public static final String  PROPKEY_useSsl                     = "ReportSenderToMail.ssl.use";
 	public static final boolean DEFAULT_useSsl                     = false;
                                                                    
+	public static final String  PROPKEY_startTls                   = "ReportSenderToMail.start.tls";
+	public static final boolean DEFAULT_startTls                   = false;
+                                                               
 	public static final String  PROPKEY_connectionTimeout          = "ReportSenderToMail.smtp.connect.timeout";
 	public static final int     DEFAULT_connectionTimeout          = -1;
 }

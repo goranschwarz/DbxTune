@@ -21,8 +21,10 @@
 package com.asetune.cm.rs;
 
 import java.sql.Connection;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 
 import javax.naming.NameNotFoundException;
 
@@ -33,6 +35,7 @@ import com.asetune.IGuiController;
 import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.cm.rs.helper.RsDbidStripper;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
@@ -164,38 +167,108 @@ extends CountersModel
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
+//		if (GRAPH_NAME_QUEUE_SIZE.equals(tgdp.getName()))
+//		{
+//			int size = 0;
+//			for (int i = 0; i < this.size(); i++)
+//			{
+//				String monitorVal = this.getAbsString       (i, "Monitor");
+//				Double Obs        = this.getAbsValueAsDouble(i, "Obs");
+//				if (monitorVal.indexOf("SQMRBacklogSeg") >= 0 && Obs > 0.0)
+//					size++;
+//			}
+//			
+//			if (size == 0)
+//			{
+//				_logger.info("Skipping adding entry to graph '"+tgdp.getName()+"'. There are NO 'Monitor' (SQMRBacklogSeg) values with a 'Obs' value above 0");
+//			}
+//			else
+//			{
+//				// Write 1 "line" for every SQMRBacklogSeg row
+//				Double[] dArray = new Double[size];
+//				String[] lArray = new String[dArray.length];
+//				int i2 = 0;
+////				for (int i = 0; i < dArray.length; i++)
+//				for (int i = 0; i < this.size(); i++)
+//				{
+//					String monitorVal = this.getAbsString       (i, "Monitor");
+//					Double Obs        = this.getAbsValueAsDouble(i, "Obs");
+//					if (monitorVal.indexOf("SQMRBacklogSeg") >= 0 && Obs > 0.0)
+//					{
+//						lArray[i2] = this.getAbsString       (i, "Instance");
+//						dArray[i2] = this.getAbsValueAsDouble(i, "Last");
+//						i2++;
+//					}
+//				}
+//
+//				// Set the values
+//				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+//			}
+//		}
 		if (GRAPH_NAME_QUEUE_SIZE.equals(tgdp.getName()))
 		{
-			int size = 0;
+			// STEP 1 -- put all desired/wanted entries in a MAP with <LabelName, RowPos> so we in STEP 2, easily can add desired records to the GraphDataArray
+			LinkedHashMap<String, Integer> segRowsToUse = new LinkedHashMap<>(); 
+//			LinkedHashMap<String, Integer> blkRowsToUse = new LinkedHashMap<>(); 
+
 			for (int i = 0; i < this.size(); i++)
 			{
+				String instance   = this.getAbsString       (i, "Instance");
 				String monitorVal = this.getAbsString       (i, "Monitor");
 				Double Obs        = this.getAbsValueAsDouble(i, "Obs");
+
+				// Add SEGMENTS (1M sizes) in a separate Map
 				if (monitorVal.indexOf("SQMRBacklogSeg") >= 0 && Obs > 0.0)
-					size++;
+				{
+					// Skip 'USER' entries
+					if (instance.contains(", USER"))
+						continue;
+
+					String label = instance;
+
+					// Remove prefix: "SQMR, "
+					if (label.startsWith("SQMR, "))
+						label = label.replace("SQMR, ", "");
+					
+					// Remove DBID and append ('in-q' or 'out-q')
+					// "108:1 LDS.mts, 0, SQT" -->> "LDS.mts, 0, SQT (in-q)"
+					//  ^^^ ^  <<<<< remove DBID and if ':1' append with ' (in-q)', and of ':0' append with ' (out-q)'
+					label = RsDbidStripper.stripDbid(label);
+					
+					Integer existingRowId = segRowsToUse.put(label, i);
+					if (existingRowId != null)
+						_logger.warn("DUPLICATE row for graph '" + tgdp.getName() + "'. label='" + label + "', CurrentRowId=" + i + ", ExistingRowId=" + existingRowId + ". Current instance='" + instance + "', Existing instance='" + this.getAbsString(existingRowId, "Instance") + "'.");
+				}
+
+				// Possibly also add "Blocks" (number of 16K blocked used)
+				// But we need to add them via to a separate Map
+				// and when we get the records we need to apply: #blocks * 16.0 / 1024.0
+//				if (monitorVal.indexOf("SQMRBacklogBlock") >= 0 && Obs > 0.0)
+//				{
+//					possibly the same logic as above... and then at STEP 2... merge the maps seg & blk!
+//				}
 			}
-			
-			if (size == 0)
+
+			if (segRowsToUse.isEmpty())
 			{
 				_logger.info("Skipping adding entry to graph '"+tgdp.getName()+"'. There are NO 'Monitor' (SQMRBacklogSeg) values with a 'Obs' value above 0");
 			}
 			else
 			{
 				// Write 1 "line" for every SQMRBacklogSeg row
-				Double[] dArray = new Double[size];
+				Double[] dArray = new Double[segRowsToUse.size()];
 				String[] lArray = new String[dArray.length];
+
 				int i2 = 0;
-//				for (int i = 0; i < dArray.length; i++)
-				for (int i = 0; i < this.size(); i++)
+				for (Entry<String, Integer> entry : segRowsToUse.entrySet())
 				{
-					String monitorVal = this.getAbsString       (i, "Monitor");
-					Double Obs        = this.getAbsValueAsDouble(i, "Obs");
-					if (monitorVal.indexOf("SQMRBacklogSeg") >= 0 && Obs > 0.0)
-					{
-						lArray[i2] = this.getAbsString       (i, "Instance");
-						dArray[i2] = this.getAbsValueAsDouble(i, "Last");
-						i2++;
-					}
+					String label = entry.getKey();
+					int    row   = entry.getValue();
+
+					lArray[i2] = label;
+					dArray[i2] = this.getAbsValueAsDouble(row, "Last");
+
+					i2++;
 				}
 
 				// Set the values
@@ -317,3 +390,66 @@ extends CountersModel
 		return sql;
 	}
 }
+
+
+//################################################################################################################
+// The below is from MaxM DbxCentral
+// * Possibly remove: ID:{1|0}   -- This due to when we drop and recreate a connection, the ID will be a new one... but we still want to *keep* the same name
+// * And possibly remove records with ", USER" 
+// * maybe: add filter so we can "skip" some names like "dummy" or similar
+//################################################################################################################
+
+// RS> Col# Label                             
+// RS> ---- --------------------------------- 
+// RS> 1    SessionStartTime                  
+// RS> 2    SessionSampleTime                 
+// RS> 3    CmSampleTime                      
+// 
+// RS> 29   SQMR, 108:0 LDS.mts, 0, USER      <<-- possibly remove
+// RS> 30   SQMR, 108:1 LDS.mts, 0, USER      <<-- possibly remove
+// RS> 31   SQMR, 108:1 LDS.mts, 0, SQT       <<<< Duplicate RS: 31, 4
+// RS> 32   SQMR, 108:1 LDS.mts, 1, DSI       <<<< Duplicate RS: 32, 5
+// RS> 4    SQMR, 209:1 LDS.mts, 0, SQT       <<<< Duplicate RS: 31, 4
+// RS> 19   SQMR, 209:1 LDS.mts, 0, DSI       
+// RS> 5    SQMR, 209:1 LDS.mts, 1, DSI       <<<< Duplicate RS: 32, 5
+// RS> 12   SQMR, 209:1 LDS.mts, 1, SQT       
+// 
+// RS> 35   SQMR, 114:1 LDS.Linda, 0, SQT     <<<< Duplicate RS: 6, 35
+// RS> 36   SQMR, 114:1 LDS.Linda, 1, DSI     <<<< Duplicate RS: 7, 36
+// RS> 6    SQMR, 215:1 LDS.Linda, 0, SQT     <<<< Duplicate RS: 6, 35
+// RS> 7    SQMR, 215:1 LDS.Linda, 1, DSI     <<<< Duplicate RS: 7, 36
+// RS> 13   SQMR, 215:1 LDS.Linda, 0, DSI     
+// RS> 14   SQMR, 215:1 LDS.Linda, 1, SQT     
+// 
+// RS> 37   SQMR, 117:1 LDS.PML, 0, SQT       <<<< Duplicate RS: 8, 37
+// RS> 38   SQMR, 117:1 LDS.PML, 1, DSI       <<<< Duplicate RS: 9, 38
+// RS> 8    SQMR, 218:1 LDS.PML, 0, SQT       <<<< Duplicate RS: 8, 37
+// RS> 9    SQMR, 218:1 LDS.PML, 1, DSI       <<<< Duplicate RS: 9, 38
+// RS> 15   SQMR, 218:1 LDS.PML, 0, DSI       
+// RS> 16   SQMR, 218:1 LDS.PML, 1, SQT       
+// 
+// RS> 27   SQMR, 105:1 LDS.fs, 0, SQT        <<<< Duplicate RS: 10, 27
+// RS> 28   SQMR, 105:1 LDS.fs, 1, DSI        <<<< Duplicate RS: 11, 28
+// RS> 10   SQMR, 221:1 LDS.fs, 0, SQT        <<<< Duplicate RS: 10, 27
+// RS> 11   SQMR, 221:1 LDS.fs, 1, DSI        <<<< Duplicate RS: 11, 28
+// RS> 22   SQMR, 221:1 LDS.fs, 0, DSI        
+// RS> 23   SQMR, 221:1 LDS.fs, 1, SQT        
+// 
+// RS> 33   SQMR, 111:1 LDS.b2b, 0, SQT       
+// RS> 34   SQMR, 111:1 LDS.b2b, 1, DSI       
+// RS> 20   SQMR, 212:1 LDS.b2b, 0, DSI       
+// RS> 21   SQMR, 212:1 LDS.b2b, 1, SQT       
+// 
+// RS> 43   SQMR, 126:0 GORANS.dummy, 0, USER <<-- possibly remove
+// RS> 44   SQMR, 126:1 GORANS.dummy, 0, USER <<-- possibly remove
+// 
+// 
+// RS> 24   SQMR, 102:1 LDS.gorans, 0, USER   <<-- possibly remove
+// RS> 25   SQMR, 102:1 LDS.gorans, 0, SQT    <<<< Duplicate RS: 25, 39, 41
+// RS> 26   SQMR, 102:1 LDS.gorans, 1, DSI    <<<< Duplicate RS: 26, 40, 42
+// RS> 17   SQMR, 206:1 LDS.gorans, 0, DSI    
+// RS> 18   SQMR, 206:1 LDS.gorans, 1, SQT    
+// RS> 39   SQMR, 120:1 LDS.gorans, 0, SQT    <<<< Duplicate RS: 25, 39, 41
+// RS> 40   SQMR, 120:1 LDS.gorans, 1, DSI    <<<< Duplicate RS: 26, 40, 42
+// RS> 41   SQMR, 123:1 LDS.gorans, 0, SQT    <<<< Duplicate RS: 25, 39, 41
+// RS> 42   SQMR, 123:1 LDS.gorans, 1, DSI    <<<< Duplicate RS: 26, 40, 42

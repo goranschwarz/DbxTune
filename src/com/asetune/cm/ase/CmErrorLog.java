@@ -37,6 +37,8 @@ import com.asetune.alarm.events.AlarmEventConfigResourceIsUsedUp;
 import com.asetune.alarm.events.AlarmEventErrorLogEntry;
 import com.asetune.alarm.events.AlarmEventFullTranLog;
 import com.asetune.alarm.events.AlarmEventProcessInfected;
+import com.asetune.alarm.events.AlarmEventProcessStackTrace;
+import com.asetune.alarm.events.AlarmEventProcessTimeSliceError;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -509,16 +511,64 @@ extends CountersModelAppend
 
 
 			//-------------------------------------------------------
-			// ProcessInfected
+			// ProcessInfected & ProcessTimeSliceError
 			//-------------------------------------------------------
-			if (isSystemAlarmsForColumnEnabledAndInTimeRange("ProcessInfected"))
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("ProcessInfected") || isSystemAlarmsForColumnEnabledAndInTimeRange("ProcessTimeSliceError"))
 			{
+				// --- Process infected error
 				// START ROW: 00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  Current process (0x2bad014c) infected with signal 11 (SIGSEGV)
 				//            ... collect anything in between, as the message ...
 				//   END ROW:          >>>> 00308: <<<< when SPID is changing into a new SPID, if we can't find SPID: fallback on below "end of stack trace,"
 				//   END ROW: 00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  end of stack trace, spid 308, kpid 732758348, suid 1
 				// ErrorNumber=???, Severity=??, ErrorMessage=
-				if (ErrorMessage.indexOf("Current process (") >= 0 && ErrorMessage.indexOf(") infected with ") >= 0)
+				boolean processInfected = ErrorMessage.indexOf("Current process (") >= 0 && ErrorMessage.indexOf(") infected with ") >= 0;
+
+				// --- timeslice error
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  timeslice -501, current process infected at 0x20757ef (pausenonatomic+0x9)
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  **** Saved signal context (0x0x00002aaaba93b0c0): ****
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  uc_flags: 0x1, uc_link: 0x(nil)
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  uc_sigmask: 0x7bfbf037 0xa 0xfffffffa 0x336f6
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  uc_stack: ss_sp: 0x(nil), ss_size: 0x0, ss_flags: 0x2
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  General Registers (uc_mcontext.gregs):
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel       PC : 0x00000000020757ef (pausenonatomic+0x9)
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel          RAX : 0x000000003b364ae9  RBX : 0x00002aaaf2367000
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel          RCX : 0x00000000045d28c8  RDX : 0x0000000000000001
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel       RBP : 0x00002aaaba93bdc0  RSP : 0x00002aaaba93bdc0
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel       R8  : (nil)  R9  : 0x00002aab0ce61d98
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel       R10 : 0x0000000000000001  R11 : 0x00002aaaac4c8d28
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel       R12 : (nil)  R13 : 0x00002aaaacc99500
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel       R14 : 0x0000000000000017  R15 : 0x000000000000013e
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel       RDI : 0x00002aaaacc99500  RSI : (nil)
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel       RIP : 0x00000000020757ef  CSGSFS : 0x0000000000000033
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel       TRAPNO : (nil)  ERR : (nil)
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel       EFL : 0x0000000000000202
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  **** end of signal context ****
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  timeslice error: spid 451 exhausted its 'time slice' of 100 milliseconds and additional 'cpu grace time' of 500 ticks (50000 milliseconds). It has been marked for termination.
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  This Adaptive Server process has had 0 major and 63642 minor page faults since boot.
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  ************************************
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 server  SQL Text: [no text]
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  curdb = 5 tempdb = 2 pstat = 0x400200 p2stat = 0x100100
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  p3stat = 0x400800 p4stat = 0x0 p5stat = 0x0 p6stat = 0x400 p7stat = 0x10000
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  lasterror = 0 preverror = 0 transtate = 1
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  curcmd = 318 program =
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  extended error information: hostname:  login:
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  pc: 0x0000000001324e07 pcstkwalk+0x28()
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  pc: 0x0000000001324aa6 ucstkgentrace+0x37e()
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  pc: 0x000000000132169a ucbacktrace+0xba()
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  pc: 0x00000000018b0a7a terminate_process+0x54a()
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  pc: 0x000000000134f314 kitermproc+0x1e3()
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  pc: 0x00007fd9701ba5d0 (null)+0x7fd9701ba5d0()
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  [Handler pc: 0x0x0000000000bfacdd des__errhdl installed by the following function:-]
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  pc: 0x0000000001cb5e62 des_checkpoint+0x1202()
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  [Handler pc: 0x0x0000000000f5dc4a hdl_backout_msg installed by the following function:-]
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  pc: 0x0000000001b72f87 checkpoint+0xbf7()
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  [Handler pc: 0x0x00000000008f802a ckptproc_backout installed by the following function:-]
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  pc: 0x00000000018d83bf ckpt_process_dbs+0x34f()
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  pc: 0x00000000018d790c ckptproc+0x20c()
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  end of stack trace, spid 451, kpid 405078453, suid 0
+				boolean timesliceError  = ErrorMessage.indexOf("timeslice ") >= 0 && ErrorMessage.indexOf(", current process infected at") >= 0;
+
+				if (processInfected || timesliceError)
 				{
 					// Read messages until 'end of stack trace, ' and stuff it in the below StringBuilder
 					StringBuilder sb = new StringBuilder();
@@ -564,14 +614,113 @@ extends CountersModelAppend
 					String extendedDescText = fullErrorMessage;
 					String extendedDescHtml = "<pre>\n" + fullErrorMessage + "\n</pre>";
 
-					AlarmEvent ae = new AlarmEventProcessInfected(this, fullErrorMessage);
+					if (processInfected)
+					{
+						AlarmEvent ae = new AlarmEventProcessInfected(this, fullErrorMessage);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							
+						alarmHandler.addAlarm( ae );
+					}
+
+					if (timesliceError)
+					{
+						AlarmEvent ae = new AlarmEventProcessTimeSliceError(this, fullErrorMessage);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							
+						alarmHandler.addAlarm( ae );
+					}
+				}
+			}
+
+			//-------------------------------------------------------
+			// ProcessStackTrace
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("ProcessStackTrace"))
+			{
+				// 00:0003:00000:00451:2021/06/23 01:51:18.27 kernel  end of stack trace, spid 451, kpid 405078453, suid 0
+				//                                                    0   1  2     3      4    5    6    7          8    9
+				if (ErrorMessage.contains("end of stack trace, spid "))
+				{
+					// get SPID and capture entries until we see a new SPID...
+					// below is a "start" for that
+					int col_SPID_pos = findColumn("SPID");
+
+					String[] sa = ErrorMessage.replace(",", "").split(" ");
+					int msgSpid = sa.length > 5 ? StringUtil.parseInt(sa[5], -1) : -2;
+					int msgKpid = sa.length > 7 ? StringUtil.parseInt(sa[7], -1) : -2;
+					int msgSuid = sa.length > 9 ? StringUtil.parseInt(sa[9], -1) : -2;
+
+					String fullErrorMessage = getMessagesForSpid(lastRefreshRows, msgSpid, col_SPID_pos, col_ErrorMessage_pos);
+
+					
+					String extendedDescText = fullErrorMessage;
+					String extendedDescHtml = "<pre>\n" + fullErrorMessage + "\n</pre>";
+
+					AlarmEvent ae = new AlarmEventProcessStackTrace(this, msgSpid, msgKpid, msgSuid, fullErrorMessage, errorNumber);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-						
+
 					alarmHandler.addAlarm( ae );
+//					if (processInfected)
+//					if (timesliceError)
 				}
 			}
 		}
 	}
+
+	/**
+	 *  Read ALL messages in the input buffer for a specific SPID and stuff it in the below StringBuilder
+	 *  
+	 *  @return String of all messages
+	 */
+	private String getMessagesForSpid(List<List<Object>> rows, int spid, int col_SPID_pos, int col_ErrorMessage_pos)
+	{
+		if (col_SPID_pos < 0)
+			return "Column 'SPID' wasnt found in the Error list";
+
+		if (col_ErrorMessage_pos < 0)
+			return "Column 'ErrorMessage' wasnt found in the Error list";
+
+		// Read ALL messages in the input buffer for a specific SPID and stuff it in the below StringBuilder
+		StringBuilder sb = new StringBuilder();
+
+		// Should we get 'processInfected' or 'timesliceError' 
+		// maybe add the below checks in the loop
+		// But then we need a "object" like ErrorMessageForSpid(int SPID, int KPID, int SUID, MessageType type, String messages)
+//		boolean processInfected = false;
+//		boolean timesliceError  = false;
+
+		for (List<Object> row : rows)
+		{
+			Object o_SPID = row.get(col_SPID_pos);
+			
+			if (o_SPID == null)
+				continue;
+			
+			if (o_SPID instanceof Integer)
+			{
+				int row_SPID = ((Integer) o_SPID).intValue();
+				if (row_SPID == spid)
+				{
+					String row_ErrorMessage = row.get(col_ErrorMessage_pos) + "";
+
+//					if (row_ErrorMessage.indexOf("Current process (") >= 0 && row_ErrorMessage.indexOf(") infected with ") >= 0)
+//						processInfected = true;
+//
+//					if (row_ErrorMessage.indexOf("timeslice ") >= 0 && row_ErrorMessage.indexOf(", current process infected at") >= 0)
+//						timesliceError = true;
+
+					sb.append(row_ErrorMessage);
+					sb.append("\n");
+				}
+			}
+		}
+
+		if (sb.length() == 0)
+			return "Now rows was found for SPID=" + spid;
+
+		return sb.toString();
+	}
+
 
 	public static final String  PROPKEY_alarm_UserConnections       = CM_NAME + ".alarm.system.on.UserConnections";
 	public static final boolean DEFAULT_alarm_UserConnections       = true;
@@ -591,8 +740,14 @@ extends CountersModelAppend
 	public static final String  PROPKEY_alarm_ConfigChanges         = CM_NAME + ".alarm.system.on.ConfigChanges";
 	public static final boolean DEFAULT_alarm_ConfigChanges         = true;
 
+	public static final String  PROPKEY_alarm_ProcessStackTrace     = CM_NAME + ".alarm.system.on.ProcessStackTrace";
+	public static final boolean DEFAULT_alarm_ProcessStackTrace     = true;
+
 	public static final String  PROPKEY_alarm_ProcessInfected       = CM_NAME + ".alarm.system.on.ProcessInfected";
 	public static final boolean DEFAULT_alarm_ProcessInfected       = true;
+
+	public static final String  PROPKEY_alarm_ProcessTimesliceError = CM_NAME + ".alarm.system.on.ProcessTimesliceError";
+	public static final boolean DEFAULT_alarm_ProcessTimesliceError = true;
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -602,13 +757,15 @@ extends CountersModelAppend
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("UserConnections"        , isAlarmSwitch, PROPKEY_alarm_UserConnections    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_UserConnections    , DEFAULT_alarm_UserConnections    ), DEFAULT_alarm_UserConnections    , "On Error 1601, send 'AlarmEventConfigResourceIsUsedUp'." ));
-		list.add(new CmSettingsHelper("TransactionLogFull"     , isAlarmSwitch, PROPKEY_alarm_TransactionLogFull , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_TransactionLogFull , DEFAULT_alarm_TransactionLogFull ), DEFAULT_alarm_TransactionLogFull , "On Error 7413, send 'AlarmEventFullTranLog'." ));
-		list.add(new CmSettingsHelper("ConfigChanges"          , isAlarmSwitch, PROPKEY_alarm_ConfigChanges      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ConfigChanges      , DEFAULT_alarm_ConfigChanges      ), DEFAULT_alarm_ConfigChanges      , "On error log message 'The configuration option '.*' has been changed', send 'AlarmEventConfigChanges'." ));
-		list.add(new CmSettingsHelper("ProcessInfected"        , isAlarmSwitch, PROPKEY_alarm_ProcessInfected    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessInfected    , DEFAULT_alarm_ProcessInfected    ), DEFAULT_alarm_ProcessInfected    , "On error log message 'Current process .* infected with signal', send 'AlarmEventProcessInfected'." ));
+		list.add(new CmSettingsHelper("UserConnections"        , isAlarmSwitch, PROPKEY_alarm_UserConnections      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_UserConnections      , DEFAULT_alarm_UserConnections      ), DEFAULT_alarm_UserConnections      , "On Error 1601, send 'AlarmEventConfigResourceIsUsedUp'." ));
+		list.add(new CmSettingsHelper("TransactionLogFull"     , isAlarmSwitch, PROPKEY_alarm_TransactionLogFull   , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_TransactionLogFull   , DEFAULT_alarm_TransactionLogFull   ), DEFAULT_alarm_TransactionLogFull   , "On Error 7413, send 'AlarmEventFullTranLog'." ));
+		list.add(new CmSettingsHelper("ConfigChanges"          , isAlarmSwitch, PROPKEY_alarm_ConfigChanges        , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ConfigChanges        , DEFAULT_alarm_ConfigChanges        ), DEFAULT_alarm_ConfigChanges        , "On error log message 'The configuration option '.*' has been changed', send 'AlarmEventConfigChanges'." ));
+		list.add(new CmSettingsHelper("ProcessStackTrace"      , isAlarmSwitch, PROPKEY_alarm_ProcessStackTrace    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessStackTrace    , DEFAULT_alarm_ProcessStackTrace    ), DEFAULT_alarm_ProcessStackTrace    , "On error log message 'end of stack trace, spid .*, kpid .*, suid .*', send 'AlarmEventProcessStackTrace'." ));
+		list.add(new CmSettingsHelper("ProcessInfected"        , isAlarmSwitch, PROPKEY_alarm_ProcessInfected      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessInfected      , DEFAULT_alarm_ProcessInfected      ), DEFAULT_alarm_ProcessInfected      , "On error log message 'Current process .* infected with signal', send 'AlarmEventProcessInfected'." ));
+		list.add(new CmSettingsHelper("ProcessTimeSliceError"  , isAlarmSwitch, PROPKEY_alarm_ProcessTimesliceError, Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessTimesliceError, DEFAULT_alarm_ProcessTimesliceError), DEFAULT_alarm_ProcessTimesliceError, "On error log message 'timeslice .*, current process infected at', send 'AlarmEventProcessTimeSliceError'." ));
 
-		list.add(new CmSettingsHelper("Severity"               , isAlarmSwitch, PROPKEY_alarm_Severity           , Integer.class, conf.getIntProperty    (PROPKEY_alarm_Severity           , DEFAULT_alarm_Severity           ), DEFAULT_alarm_Severity           , "If 'Severity' is greater than ## then send 'AlarmEventErrorLogEntry'." ));
-		list.add(new CmSettingsHelper("SkipList ErrorNumber(s)"               , PROPKEY_alarm_ErrorNumberSkipList, String .class, conf.getProperty       (PROPKEY_alarm_ErrorNumberSkipList, DEFAULT_alarm_ErrorNumberSkipList), DEFAULT_alarm_ErrorNumberSkipList, "Skip errors number in this list, that is if Severity is above that rule. format(comma separated list of numbers): 123, 321, 231" ));
+		list.add(new CmSettingsHelper("Severity"               , isAlarmSwitch, PROPKEY_alarm_Severity             , Integer.class, conf.getIntProperty    (PROPKEY_alarm_Severity             , DEFAULT_alarm_Severity             ), DEFAULT_alarm_Severity             , "If 'Severity' is greater than ## then send 'AlarmEventErrorLogEntry'." ));
+		list.add(new CmSettingsHelper("SkipList ErrorNumber(s)"               , PROPKEY_alarm_ErrorNumberSkipList  , String .class, conf.getProperty       (PROPKEY_alarm_ErrorNumberSkipList  , DEFAULT_alarm_ErrorNumberSkipList  ), DEFAULT_alarm_ErrorNumberSkipList  , "Skip errors number in this list, that is if Severity is above that rule. format(comma separated list of numbers): 123, 321, 231" ));
 
 		return list;
 	}

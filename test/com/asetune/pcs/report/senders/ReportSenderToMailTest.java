@@ -23,6 +23,7 @@ package com.asetune.pcs.report.senders;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.Arrays;
 import java.util.Properties;
 
 import org.apache.log4j.Logger;
@@ -114,6 +115,19 @@ public class ReportSenderToMailTest
 		// to any server
 		cfg.setProperty(ReportSenderToMail.PROPKEY_to, "[ { \"ServerName\" : \"XXX\", \"To\" : \"xxx@xxx.com\"}, { \"serverName\" : \"XXX\" } ]");
 		assertEquals(true, DailySummaryReportFactory.isCreateReportEnabledForServer("PROD_ASE") );
+	}
+
+	@Test
+	public void testToMail_getAllMailToAddress()
+	{
+		_logger.debug("-------------------------------------------------------- " + new Throwable().getStackTrace()[0].getMethodName() );
+		assertEquals(
+				Arrays.asList("user1@acme.com", "user2@acme.com", "user3@acme.com"),
+				MailHelper.getAllMailToAddress("[ {#serverName#:#xxx#, #to#:#user1@acme.com, user2@acme.com#}, {#serverName#:#yyy#, #to#:#user1@acme.com#}, {#serverName#:#zzz#, #to#:#user3@acme.com#} ]".replace('#', '"')) );
+
+		assertEquals(
+				Arrays.asList("user1@acme.com", "user2@acme.com", "user3@acme.com"),
+				MailHelper.getAllMailToAddress("user1@acme.com, user2@acme.com, user3@acme.com") );
 	}
 
 }

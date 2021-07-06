@@ -31,6 +31,7 @@ import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.cm.rs.helper.RsDbidStripper;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
@@ -273,21 +274,13 @@ extends CountersModel
 			{
 				lArray[i] = this.getRateString       (validRows.get(i), "Info");
 				dArray[i] = this.getRateValueAsDouble(validRows.get(i), "Writes");
+
+				// Remove DBID and append ('in-q' or 'out-q')
+				lArray[i] = RsDbidStripper.stripDbid(lArray[i]); 
 			}
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
-
-//			Double[] dArray = new Double[this.size()];
-//			String[] lArray = new String[dArray.length];
-//			for (int i = 0; i < dArray.length; i++)
-//			{
-//				lArray[i] = this.getRateString       (i, "Info");
-//				dArray[i] = this.getRateValueAsDouble(i, "Writes");
-//			}
-//
-//			// Set the values
-//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_READ.equals(tgdp.getName()))
@@ -300,21 +293,13 @@ extends CountersModel
 			{
 				lArray[i] = this.getRateString       (validRows.get(i), "Info");
 				dArray[i] = this.getRateValueAsDouble(validRows.get(i), "Read");
+
+				// Remove DBID and append ('in-q' or 'out-q')
+				lArray[i] = RsDbidStripper.stripDbid(lArray[i]); 
 			}
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
-		
-//			Double[] dArray = new Double[this.size()];
-//			String[] lArray = new String[dArray.length];
-//			for (int i = 0; i < dArray.length; i++)
-//			{
-//				lArray[i] = this.getRateString       (i, "Info");
-//				dArray[i] = this.getRateValueAsDouble(i, "Read");
-//			}
-//
-//			// Set the values
-//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_BLK_READS.equals(tgdp.getName()))
@@ -327,21 +312,13 @@ extends CountersModel
 			{
 				lArray[i] = this.getRateString       (validRows.get(i), "Info");
 				dArray[i] = this.getRateValueAsDouble(validRows.get(i), "B Reads");
+
+				// Remove DBID and append ('in-q' or 'out-q')
+				lArray[i] = RsDbidStripper.stripDbid(lArray[i]); 
 			}
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
-
-//			Double[] dArray = new Double[this.size()];
-//			String[] lArray = new String[dArray.length];
-//			for (int i = 0; i < dArray.length; i++)
-//			{
-//				lArray[i] = this.getRateString       (i, "Info");
-//				dArray[i] = this.getRateValueAsDouble(i, "B Reads");
-//			}
-//
-//			// Set the values
-//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_BLK_CACHE_READS.equals(tgdp.getName()))
@@ -354,21 +331,13 @@ extends CountersModel
 			{
 				lArray[i] = this.getRateString       (validRows.get(i), "Info");
 				dArray[i] = this.getRateValueAsDouble(validRows.get(i), "B Cache");
+
+				// Remove DBID and append ('in-q' or 'out-q')
+				lArray[i] = RsDbidStripper.stripDbid(lArray[i]); 
 			}
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
-
-//			Double[] dArray = new Double[this.size()];
-//			String[] lArray = new String[dArray.length];
-//			for (int i = 0; i < dArray.length; i++)
-//			{
-//				lArray[i] = this.getRateString       (i, "Info");
-//				dArray[i] = this.getRateValueAsDouble(i, "B Cache");
-//			}
-//
-//			// Set the values
-//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 	}
 

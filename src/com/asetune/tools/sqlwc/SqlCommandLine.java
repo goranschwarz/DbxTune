@@ -158,6 +158,8 @@ public class SqlCommandLine
 //		_logger.debug("User configuration file is '"+userPropFile+"'.");
 //		_logger.debug("Storing temporary configurations in file '"+tmpPropFile+"'.");
 //		_logger.debug("Combined Configuration Search Order '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'.");
+//		_logger.info("Combined Configuration Search Order, With file names: "+StringUtil.toCommaStr(Configuration.getSearchOrder(true)));
+
 
 
 //		String hostPortStr = "";

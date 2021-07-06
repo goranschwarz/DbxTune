@@ -31,6 +31,7 @@ import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.cm.rs.helper.RsDbidStripper;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
@@ -260,21 +261,13 @@ extends CountersModel
 			{
 				lArray[i] = this.getRateString       (validRows.get(i), "Info");
 				dArray[i] = this.getRateValueAsDouble(validRows.get(i), "Xacts_succeeded");
+
+				// Remove DBID and append ('in-q' or 'out-q')
+				lArray[i] = RsDbidStripper.stripDbid(lArray[i]); 
 			}
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
-
-//			Double[] dArray = new Double[this.size()];
-//			String[] lArray = new String[dArray.length];
-//			for (int i = 0; i < dArray.length; i++)
-//			{
-//				lArray[i] = this.getRateString       (i, "Info");
-//				dArray[i] = this.getRateValueAsDouble(i, "Xacts_succeeded");
-//			}
-//
-//			// Set the values
-//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_CMD_READ.equals(tgdp.getName()))
@@ -287,21 +280,13 @@ extends CountersModel
 			{
 				lArray[i] = this.getRateString       (validRows.get(i), "Info");
 				dArray[i] = this.getRateValueAsDouble(validRows.get(i), "Cmds_read");
+
+				// Remove DBID and append ('in-q' or 'out-q')
+				lArray[i] = RsDbidStripper.stripDbid(lArray[i]); 
 			}
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
-			
-//			Double[] dArray = new Double[this.size()];
-//			String[] lArray = new String[dArray.length];
-//			for (int i = 0; i < dArray.length; i++)
-//			{
-//				lArray[i] = this.getRateString       (i, "Info");
-//				dArray[i] = this.getRateValueAsDouble(i, "Cmds_read");
-//			}
-//
-//			// Set the values
-//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_CMD_PARSED_BY_SQT.equals(tgdp.getName()))
@@ -314,21 +299,13 @@ extends CountersModel
 			{
 				lArray[i] = this.getRateString       (validRows.get(i), "Info");
 				dArray[i] = this.getRateValueAsDouble(validRows.get(i), "Cmds_parsed_by_sqt");
+
+				// Remove DBID and append ('in-q' or 'out-q')
+				lArray[i] = RsDbidStripper.stripDbid(lArray[i]); 
 			}
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
-
-//			Double[] dArray = new Double[this.size()];
-//			String[] lArray = new String[dArray.length];
-//			for (int i = 0; i < dArray.length; i++)
-//			{
-//				lArray[i] = this.getRateString       (i, "Info");
-//				dArray[i] = this.getRateValueAsDouble(i, "Cmds_parsed_by_sqt");
-//			}
-//
-//			// Set the values
-//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 	}
 

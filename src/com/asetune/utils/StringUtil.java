@@ -75,6 +75,21 @@ import org.xml.sax.InputSource;
 public class StringUtil
 {
 	private static Logger _logger = Logger.getLogger(StringUtil.class);
+	
+	// https://stackoverflow.com/questions/18893390/splitting-on-comma-outside-quotes
+	private static final String REGEX_SPLIT_COMMA_RESPECT_QUOTES = ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)";
+	//	Explanation: 
+	//	,           // Split on comma
+	//	(?=         // Followed by
+	//	   (?:      // Start a non-capture group
+	//	     [^"]*  // 0 or more non-quote characters
+	//	     "      // 1 quote
+	//	     [^"]*  // 0 or more non-quote characters
+	//	     "      // 1 quote
+	//	   )*       // 0 or more repetition of non-capture group (multiple of 2 quotes will be even)
+	//	   [^"]*    // Finally 0 or more non-quotes
+	//	   $        // Till the end  (This is necessary, else every comma will satisfy the condition)
+	//	)
 
 	public static String toCommaStr(boolean[] array) { return Arrays.toString(array).replace("[", "").replace("]", ""); }
 	public static String toCommaStr(byte   [] array) { return Arrays.toString(array).replace("[", "").replace("]", ""); }
@@ -532,19 +547,37 @@ public class StringUtil
 	/**
 	 * Parsers a comma separated list and returns a ArrayList which holds all values.<br>
 	 * The entries will be trimmed()...
+	 * Empty strings will be a separate entry
 	 * @param str a comma separated list
 	 * @return a ArrayList with Strings  (if input string is null, return empty list)
 	 */
 	public static List<String> parseCommaStrToList(String str)
+	{
+		return parseCommaStrToList(str, false);
+	}
+
+	/**
+	 * Parsers a comma separated list and returns a ArrayList which holds all values.<br>
+	 * The entries will be trimmed()...
+	 * @param str a comma separated list
+	 * @param skipEmtyStrings Do not add empty string to the output list
+	 * @return a ArrayList with Strings  (if input string is null, return empty list)
+	 */
+	public static List<String> parseCommaStrToList(String str, boolean skipEmtyStrings)
 	{
 		ArrayList<String> list = new ArrayList<String>();
 
 		if (str == null)
 			return list;
 
-		String[] sa = str.split(",");
+//		String[] sa = str.split(",");
+		String[] sa = str.split(REGEX_SPLIT_COMMA_RESPECT_QUOTES);
 		for (String se : sa)
+		{
+			if (skipEmtyStrings && se.equals(""))
+				continue;
 			list.add(se.trim());
+		}
 		
 		return list;
 	}
@@ -580,7 +613,8 @@ public class StringUtil
 		if (str == null)
 			return set;
 
-		String[] sa = str.split(",");
+//		String[] sa = str.split(",");
+		String[] sa = str.split(REGEX_SPLIT_COMMA_RESPECT_QUOTES);
 		for (String se : sa)
 		{
 			String trimmed = se.trim();
@@ -783,7 +817,8 @@ public class StringUtil
 		if (str == null)
 			return new String[] {};
 
-		String[] sa = str.split(",");
+//		String[] sa = str.split(",");
+		String[] sa = str.split(REGEX_SPLIT_COMMA_RESPECT_QUOTES);
 		for (int i=0; i<sa.length; i++)
 			sa[i] = sa[i].trim();
 
@@ -802,7 +837,8 @@ public class StringUtil
 
 		int emptyCount = 0;
 		
-		String[] sa = str.split(",");
+//		String[] sa = str.split(",");
+		String[] sa = str.split(REGEX_SPLIT_COMMA_RESPECT_QUOTES);
 		for (int i=0; i<sa.length; i++)
 		{
 			sa[i] = sa[i].trim();
@@ -885,7 +921,7 @@ public class StringUtil
 		ArrayList<String> retList = new ArrayList<String>();
 		for (String s : sa)
 		{
-			if (s.equals("") && skipEmtyStrings)
+			if (skipEmtyStrings && s.equals(""))
 				continue;
 			retList.add(s);
 		}

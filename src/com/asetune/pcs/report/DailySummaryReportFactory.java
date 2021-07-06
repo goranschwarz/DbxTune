@@ -114,15 +114,17 @@ public class DailySummaryReportFactory
 		
 		// Check the Senders/Writers and see if they have rules that still allow this server
 		// Potentially in the future: we might have several "senders/writers", then we need to loop all senders/writers and check...
-		if (isEnabled)
-		{
-			IReportSender reportSender = loadReportSender();
-			if ( ! reportSender.isEnabledForServer(serverName) )
-			{
-				_logger.info("The DailyReportSender's writer/sender named '" + reportSender.getName() + "' is NOT enabled to send reports for serverName '" + serverName + "'. Report will NOT be created for this server...");
-				isEnabled = false;
-			}
-		}
+//hmm... If we still want to Save the ReportFile but NOT sending it via the writer...
+//Then we should NOT have this check here...
+//		if (isEnabled)
+//		{
+//			IReportSender reportSender = loadReportSender();
+//			if ( ! reportSender.isEnabledForServer(serverName) )
+//			{
+//				_logger.info("The DailyReportSender's writer/sender named '" + reportSender.getName() + "' is NOT enabled to send reports for serverName '" + serverName + "'. Report will NOT be created for this server...");
+//				isEnabled = false;
+//			}
+//		}
 		
 		return isEnabled;
 	}

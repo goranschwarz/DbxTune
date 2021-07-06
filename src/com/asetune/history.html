@@ -63,6 +63,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>SshConnection: when passing a SQL-Server instance name with 'hostname\instance' only use the first part when connecting.</LI>
 		<LI>NOGUI - better name checking for server name and Alias Names, not allowing '/', '\', ':', or ';' </LI>
 		<LI>NOGUI - If we have a 'non-retryable error', like 'wrong password' do not continue in the 'retry' loop, instead throw Exception. This makes it easier to debug...</LI>
+		<LI>AlarmWriterToMail: removed 'cc' property</LI>
+		<LI>ReportSenderToMail: removed 'cc' and also added functionality to send mail based on to and server name (same config as for: AlarmWriterToMail)</LI>
 
 		<LI>OS Monitoring now also handles Windows, via a SHH Connection executing typeperf (not a OpenSSH Server needs to be installed on the Windows Server, supported modules
 			<UL>
@@ -173,6 +175,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<ul>
 			<li>for AlarmEventErrorLogEntry also send a description of the error number</li>
 			<li>Alarm: Added error number 1621 to the SkipList</li>
+			<li>Added 'AlarmEventProcessStackTrace' and 'AlarmEventProcessTimeSliceError'. Note: only 'StackTrace' will be kept at the en (but for now I overlap the alarms until properly tested)</li>
 		</ul>
 		</LI>
 
@@ -262,6 +265,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			- ALL to remember any existing logical connections on the server. and if any are dropped, the alarms will be raised. <br> 
 			- or a Comma separated list with mandatory servers, for example: LSRV.db1, LSRV.db2, LSRV.db3<br>
 		</LI>
+		<LI><b>CmAdminStatsBacklog</b> - Removed DBID:qType in graphs so when connections are re-created we do not get a new chart line</LI>
+		<LI><b>CmAdminWhoDist</b> - Removed DBID:qType in graphs so when connections are re-created we do not get a new chart line</LI>
+		<LI><b>CmAdminWhoDsi</b> - Removed DBID:qType in graphs so when connections are re-created we do not get a new chart line</LI>
+		<LI><b>CmAdminWhoSqm</b> - Removed DBID:qType in graphs so when connections are re-created we do not get a new chart line</LI>
+		<LI><b>CmAdminWhoSqt</b> - Removed DBID:qType in graphs so when connections are re-created we do not get a new chart line</LI>
+		<LI><b>CmRsMemory</b> - RS 16.0 was using new name postfix (norm) in the key column</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -326,6 +335,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmActiveStatements </b> - using OUTER apply instead of CROSS apply to *not* miss records with no query or query plan </LI>
 		<LI><b>CmActiveStatements </b> - new alarm: if 'TempdbUsageMb' is above 16GB then send alarm: AlarmEventExtensiveUsage </LI>
 		
+		<LI><b>CmAlwaysOn         </b> - Granting select,insert,update,delete on table 'sqlserverTune_ag_dummy_update' was enhanced (note: this will still fail if the connection do not have authorization to create the table in the database. </LI>
+
 		<LI><b>CmDatabases        </b> - Added 'OldestTranName' and 'OldestTranId' - Now shows the transaction name and id (watch out for OldestTranName 'implicit_transaction', which indicates that AotoCommit is FALSE, which introduces more blocking locks)</LI>
 		<LI><b>CmDatabases        </b> - fixed bug: LowDbFreeSpaceInMb and LowLogFreeSpaceInMb sometimes didn't fire correctly</LI>
 		<LI><b>CmDatabases        </b> - Query Plans: get actual execution plans if the server supports it (2019 &amp; traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>

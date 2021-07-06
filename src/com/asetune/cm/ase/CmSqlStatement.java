@@ -1153,9 +1153,12 @@ extends CountersModel
 				for (Entry<String, Long> ndbe : dbCntrMap.entrySet())
 				{
 					String  dbname   = ndbe.getKey();
-					Long    newCount = ndbe.getValue() == null ? 0L : ndbe.getValue();
+					Long    newCount = ndbe.getValue();
 					
 					Long prevCount = prevSampleErrorMsgCountMap.get(errorNum) == null ? 0L : prevSampleErrorMsgCountMap.get(errorNum).get(dbname);
+
+					if (newCount  == null) newCount  = 0L;
+					if (prevCount == null) prevCount = 0L;
 
 					Long newDiffCount = newCount - prevCount;
 //System.out.println("   >>> "+getName()+".localCalculation(prevSample,newSample,diffData): pk='"+pk+"', errorNum="+errorNum+", dbname='"+dbname+"', newDiffCount="+newDiffCount+", newCount="+newCount+", prevCount="+prevCount);

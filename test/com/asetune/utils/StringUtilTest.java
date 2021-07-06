@@ -23,8 +23,11 @@ package com.asetune.utils;
 import static org.junit.Assert.assertEquals;
 
 import java.nio.charset.Charset;
+import java.util.Arrays;
 
 import org.junit.Test;
+
+import com.asetune.pcs.report.senders.MailHelper;
 
 public class StringUtilTest
 {
@@ -34,6 +37,20 @@ public class StringUtilTest
 //	{
 //		fail("A lot of stuff needs to be tested here... but not yet implemented");
 //	}
+
+	@Test
+	public void testCommaStrToList_noQuotes()
+	{
+		assertEquals(Arrays.asList("a", "b", "c"), StringUtil.commaStrToList("a,b,c") );
+		assertEquals(Arrays.asList("a", "b", "c"), StringUtil.commaStrToList("a,b,c,") );
+	}
+
+	@Test
+	public void testCommaStrToList_withQuotes()
+	{
+		assertEquals(Arrays.asList("a", "xx\"b,b\"xx", "c"), StringUtil.commaStrToList("a,xx\"b,b\"xx,c") );
+		assertEquals(Arrays.asList("a", "xx\"b,b\"xx", "c"), StringUtil.commaStrToList("a, xx\"b,b\"xx, c ") );
+	}
 
 	@Test
 	public void testRemoveLastComma()

@@ -99,6 +99,7 @@ public class ConfigurationTest
 				Configuration.SYSTEM_CONF); // Forth
 
 		System.out.println("Combined Configuration Search Order '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'.");
+		System.out.println("Combined Configuration Search Order, With file names: "+StringUtil.toCommaStr(Configuration.getSearchOrder(true)));
 
 		Configuration sys = Configuration.getInstance(Configuration.SYSTEM_CONF);
 		sys.setProperty("key.test.system.1", "val-test-system-1");
