@@ -992,13 +992,17 @@ extends CountersModel
 				// Loop all Primary Databases and update table: sqlserverTune_ag_dummy_update
 				for (String dbname : primaryDbs)
 				{
+					String createTableSql = "create table " + dbname + ".dbo.sqlserverTune_ag_dummy_update(id varchar(36), primaryServerName varchar(30), ts datetime, primary key(id))";
+					String grantTableSql  = "use " + dbname + "; grant select,insert,update,delete on dbo.sqlserverTune_ag_dummy_update to public";
+					
+					// we can check that we are authorized to create the table with: SELECT HAS_PERMS_BY_NAME('" + dbname + "', 'DATABASE', 'CREATE TABLE');
+					// Or we can check the ErrorCode for 262, which is that we do are not authorized
 					String updateTable = 
 							"/*** Create the dummy table if it do not exist ***/ \n" +
 							"if not exists (select 1 from " + dbname + ".sys.objects where name = 'sqlserverTune_ag_dummy_update' and type = 'U') \n" +
 							"begin \n" +
-							"   exec('create table " + dbname + ".dbo.sqlserverTune_ag_dummy_update(id varchar(36), primaryServerName varchar(30), ts datetime, primary key(id))') \n" +
-							// NOTE: must do 'use dbname' here... but the database context seems to be restored after a exec('sql statement')
-							"   exec('use " + dbname + "; grant select,insert,update,delete on dbo.sqlserverTune_ag_dummy_update to public') \n" +
+							"   exec('" + createTableSql + "') \n" +
+							"   exec('" + grantTableSql  + "') \n" +
 							"end \n" +
 							"/*** remove all old rows ***/ \n" +
 							"exec('delete from " + dbname + ".dbo.sqlserverTune_ag_dummy_update') \n" +
@@ -1013,21 +1017,41 @@ extends CountersModel
 					}
 					catch (SQLException ex)
 					{
-						_logger.warn("Problems updating dummy table 'sqlserverTune_ag_dummy_update' at '"+dbname+"'. But continuing with next step. Caught: Error="+ex.getErrorCode()+", Msg='"+ex.getMessage().trim()+"', SQL="+updateTable);
+						_logger.warn("Problems updating dummy table 'sqlserverTune_ag_dummy_update' at '" + dbname + "'. But continuing with next step. Caught: Error=" + ex.getErrorCode() + ", Msg='" + ex.getMessage().trim() + "', SQL=" + updateTable);
+						
+						// Msg 262, Level 14, State 1:
+						// Server 'dev-mssql', Line 1 (script row 10073)
+						// CREATE TABLE permission denied in database 'master'.
+						if (ex.getErrorCode() == 262)
+						{
+							ConnectionProp connProps = conn.getConnProp();
+							String curentUsername = connProps == null ? "-unknown-" : connProps.getUsername();
+							
+							_logger.error("Current user '" + curentUsername + "' are not authorized to create table 'sqlserverTune_ag_dummy_update' in database '" + dbname + "' at server '" + conn.getDbmsServerNameNoThrow() + "'. To woraround this issue create the table manually using the following SQL Statements: \n"
+									+ createTableSql + " \n"
+									+ grantTableSql  + " \n"
+									);
+						}
 					}
 				}
 
 				// If current database was available
-				if (cwdbBefore != null)
+				if (StringUtil.hasValue(cwdbBefore))
 				{
 					// Get Current Working DataBase
 					try { cwdbAfter = conn.getCatalog(); } catch(SQLException ex) { /* ignore */ }
 
 					_logger.debug("updatePrimaryDatabases(): cwdbBefore='" + cwdbBefore + "', cwdbAfter='" + cwdbAfter + "'.");
+
 					// If we have changed database... change it back
 					if ( ! cwdbBefore.equals(cwdbAfter) )
 					{
-						try { conn.setCatalog(cwdbBefore); } catch(SQLException ex) { /* ignore */ }
+						_logger.info("Setting current database to '" + cwdbBefore + "' after updatePrimaryDatabases(). cwdbBefore='" + cwdbBefore + "', cwdbAfter='" + cwdbAfter + "'.");
+						try { conn.setCatalog(cwdbBefore); } 
+						catch(SQLException ex) 
+						{
+							_logger.warn("Problems setting Current Working database to '" + cwdbBefore + "'. Last known Current Working database '" + cwdbAfter + "'. Caught: Error="+ex.getErrorCode()+", Msg='"+ex.getMessage().trim()+"'.");
+						}
 					}
 				}
 			}
