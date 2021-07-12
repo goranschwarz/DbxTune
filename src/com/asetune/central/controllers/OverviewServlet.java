@@ -84,6 +84,9 @@ public class OverviewServlet extends HttpServlet
 	private static final String REPORTS_DIR = DbxTuneCentral.getAppReportsDir();
 	private static final String DATA_DIR    = DbxTuneCentral.getAppDataDir();
 
+	public static final String PROPKEY_LogfilesShortcuts = "logfiles.shortcuts";
+	public static final String DEFAULT_LogfilesShortcuts = "*.console";
+	
 	private List<String> getInfoFilesDbxTune()
 	{
 		String directory = INFO_DIR;
@@ -1097,6 +1100,71 @@ public class OverviewServlet extends HttpServlet
 			out.println("</ul>");
 			out.println("</p>");
 
+			List<String> shortcutLogfilesList = StringUtil.commaStrToList( Configuration.getCombinedConfiguration().getProperty(PROPKEY_LogfilesShortcuts, DEFAULT_LogfilesShortcuts) );
+			if ( ! shortcutLogfilesList.isEmpty() )
+			{
+//				List<String> allFilesInLogDir = getFilesInLogDir();
+
+				for (String shortcutEntry : shortcutLogfilesList)
+				{
+					// Strip of char '*' if name starts with "*."
+					if (shortcutEntry.startsWith("*."))
+						shortcutEntry = shortcutEntry.substring(1);
+
+					out.println("<b>Shortcuts for files ending with '" + shortcutEntry + "'</b>");
+
+					out.println("<table>");
+					out.println("<table>");
+					out.println("<thead>");
+					out.println("  <tr>");
+					out.println("    <th>File</th>");
+					out.println("    <th>View Options</th>");
+					out.println("    <th>Size GB</th>");
+					out.println("    <th>Size MB</th>");
+					out.println("    <th>Size KB</th>");
+					out.println("    <th>Last Modified</th>");
+					out.println("    <th>Discard Text</th>");
+					out.println("  </tr>");
+					out.println("</thead>");
+					out.println("<tbody>");
+
+					for (String file : getFilesInLogDir())
+					{
+						File f = new File(file);
+						if (f.isDirectory())
+							continue;
+
+						if ( ! f.getName().endsWith(shortcutEntry) )
+							continue;
+						
+						String sizeInGB = String.format("%.1f GB", f.length() / 1024.0 / 1024.0 / 1024.0);
+						String sizeInMB = String.format("%.1f MB", f.length() / 1024.0 / 1024.0);
+						String sizeInKB = String.format("%.1f KB", f.length() / 1024.0);
+						
+						String urlDiscardStr = "&discard=Persisting Counters using|Sent subscription data for server";
+						out.println("  <tr>");
+						out.println("    <td><a href='/log?name="+f.getName()+"'>"+f.getName()+"</a></td>");
+						out.println("    <td>");
+						out.println("      <a href='/log?name="+f.getName()+"'>plain</a>");
+						out.println("      | <a href='/log?name="+f.getName()+urlDiscardStr+"'>discard</a>");
+						out.println("      | <a href='/log?name="+f.getName()+"&tail=500'>tail</a>");
+						out.println("      | <a href='/log?name="+f.getName()+urlDiscardStr+"&tail=500'>tail+discard</a>");
+						out.println("    </td>");
+						out.println("    <td>" + sizeInGB     + "</td>");
+						out.println("    <td>" + sizeInMB     + "</td>");
+						out.println("    <td>" + sizeInKB     + "</td>");
+						out.println("    <td>" + (new Timestamp(f.lastModified())) + "</td>");
+						out.println("    <td><input type='text' placeholder='filter-out some text (regexp can be used), hit <enter> to search' class='search' size='80' style='border:none' onkeydown='openLogFileWithDiscard(this, \""+f.getName()+"\")'/></td>");
+						out.println("  </tr>");
+
+					}
+					out.println("</tbody>");
+					out.println("</table>");
+					out.println("<br>");
+				}
+			}
+
+			
 //			out.println("<table>");
 //			out.println("<thead>");
 //			out.println("  <tr>");
@@ -1136,6 +1204,9 @@ public class OverviewServlet extends HttpServlet
 //			}
 //			out.println("</tbody>");
 //			out.println("</table>");
+
+			out.println("<b>All files in the log directory</b>");
+			
 			out.println("<table>");
 			out.println("<thead>");
 			out.println("  <tr>");
