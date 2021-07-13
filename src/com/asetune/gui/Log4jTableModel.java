@@ -36,13 +36,21 @@ extends AbstractTableModel
 
     //	LogManager.
 	private LinkedList<Log4jLogRecord> _records = new LinkedList<Log4jLogRecord>();
-	private int        _maxRecords  = 500;
+	private int        _maxRecords = 500;
+	private boolean    _noGuiMode  = false;
 
 	public void setMaxRecords(int max) { _maxRecords = max; }
 	public int  getMaxRecords()        { return _maxRecords; }
 
+	public void    setNoGuiMode(boolean val) { _noGuiMode = val; }
+	public boolean isNoGuiMode()             { return _noGuiMode;	}
+
 	public void addMessage(Log4jLogRecord record)
 	{
+		// Skip info messages (in NO-GUI mode we only want to save more severe messages)
+		if (isNoGuiMode() && ! (record.isSevereLevel() || record.isWarningLevel()) )
+			return;
+
 		_records.add(record);
 		fireTableRowsInserted(_records.size()-1, _records.size()-1);
 
@@ -133,7 +141,5 @@ extends AbstractTableModel
 //		case 4: return r.getNDC();
 		}
 		return null;
-	}
-
-	
+	}	
 }

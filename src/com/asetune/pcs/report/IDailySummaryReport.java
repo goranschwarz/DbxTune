@@ -65,9 +65,19 @@ extends AutoCloseable
 	List<IReportEntry> getReportEntries();
 
 	/**
-	 * Default method which adds Report Entries by any implementations (called from init) 
+	 * Default method which adds Report Entries by any implementations and is placed at the TOP of the report (called from init) 
+	 */
+	void addReportEntriesTop();
+	
+	/**
+	 * Default method which adds Report Entries by any implementations and is placed at the MIDDLE of the report  (called from init) 
 	 */
 	void addReportEntries();
+
+	/**
+	 * Default method which adds Report Entries by any implementations and is placed at the BOTTOM of the report (called from init) 
+	 */
+	void addReportEntriesBottom();
 
 	/**
 	 * Create the report
@@ -166,6 +176,7 @@ extends AutoCloseable
 	/**
 	 * Close any internal objects, like the DBMS Connection
 	 */
+	@Override
 	void close();
 
 }

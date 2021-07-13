@@ -41,6 +41,7 @@ import com.asetune.pcs.report.IProgressReporter.State;
 import com.asetune.pcs.report.content.AlarmsActive;
 import com.asetune.pcs.report.content.AlarmsHistory;
 import com.asetune.pcs.report.content.DailySummaryReportContent;
+import com.asetune.pcs.report.content.DbxTuneErrors;
 import com.asetune.pcs.report.content.IReportEntry;
 import com.asetune.pcs.report.content.RecordingInfo;
 import com.asetune.pcs.report.content.ReportContent;
@@ -200,11 +201,22 @@ extends DailySummaryReportAbstract
 	}
 
 	@Override
-	public void addReportEntries()
+	public void addReportEntriesTop()
 	{
 		addReportEntry( new RecordingInfo(this) );
 		addReportEntry( new AlarmsActive(this)  );
 		addReportEntry( new AlarmsHistory(this) );
+	}
+
+	@Override
+	public void addReportEntries()
+	{
+	}
+
+	@Override
+	public void addReportEntriesBottom()
+	{
+		addReportEntry( new DbxTuneErrors(this) );
 	}
 
 	@Override

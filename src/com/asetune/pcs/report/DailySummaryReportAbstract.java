@@ -136,7 +136,15 @@ implements IDailySummaryReport
 //		}
 		// NOTE: The above was not saving the WaitEvent Descriptions to the PCS... so this may be implemented in the future... right now, lets do it statically
 
+		// Report entries "at the TOP of the report"
+		addReportEntriesTop();
+
+		// Report entries 
 		addReportEntries();
+
+		// Report entries "at the BOTTOM of the report"
+		addReportEntriesBottom();
+
 		_logger.info("Initiated Daily Summary Report with " + getReportEntries().size() + " report entries.");
 	}
 

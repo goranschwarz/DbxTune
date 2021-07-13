@@ -62,6 +62,7 @@ import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.GuiLogAppender;
+import com.asetune.gui.Log4jTableModel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.SplashWindow;
 import com.asetune.gui.swing.EventQueueProxy;
@@ -754,6 +755,17 @@ public abstract class DbxTune
 		// Always register the "gui" LogAppender, which will also send errors to 'dbxtune.com'
 		// Calling this would make GuiLogAppender, to register itself in log4j.
 		GuiLogAppender.getInstance();
+		
+		// if we are in NO-GUI mode, set some special things for the log appender
+		if ( ! _gui )
+		{
+			Log4jTableModel tm = GuiLogAppender.getTableModel();
+			if (tm != null)
+			{
+				tm.setMaxRecords(1000);
+				tm.setNoGuiMode(true);
+			}
+		}
 
 		// Check registered LOG4J appenders
 		// NOTE: this should NOT be here for production
