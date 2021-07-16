@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.io.Writer;
 import java.sql.Timestamp;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.gui.GuiLogAppender;
 import com.asetune.gui.Log4jLogRecord;
 import com.asetune.gui.Log4jTableModel;
@@ -36,7 +38,7 @@ import com.asetune.utils.StringUtil;
 public class DbxTuneErrors
 extends ReportEntryAbstract
 {
-//	private static Logger _logger = Logger.getLogger(DbxTuneErrors.class);
+	private static Logger _logger = Logger.getLogger(DbxTuneErrors.class);
 	
 	public DbxTuneErrors(DailySummaryReportAbstract reportingInstance)
 	{
@@ -77,27 +79,14 @@ extends ReportEntryAbstract
 		}
 		else
 		{
-			sb.append("Warning/Error Count: " + tm.getRowCount() + "<br>\n");
-//			sb.append(toHtmlTable(tm));
-//			sb.append(SwingUtils.tableToHtmlString(tm);
-			tableToHtmlString(tm, sb);
+			sb.append("Warning/Error Count with attached Stacktraces: " + getRowCountWithStackTrace(tm) + "<br>\n");
+			tableToHtmlString(tm, sb, true); // true = only StackTrace Entries
 
-//			if (_fullRstm != null)
-//			{
-//				// Make output more readable, in a 2 column table
-//				// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
-//				Map<String, String> colNameValueTagMap = new HashMap<>();
-//				colNameValueTagMap.put("extendedDescription",     "xmp");
-//				colNameValueTagMap.put("lastExtendedDescription", "xmp");
-//
-//				String  divId       = "alarmActiveDetails";
-//				boolean showAtStart = false;
-//				String  htmlContent = _fullRstm.toHtmlTablesVerticalString("sortable", colNameValueTagMap);
-//
-//				String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Active Alarm Details...", htmlContent);
-//
-//				sb.append( msOutlookAlternateText(showHideDiv, "Active Alarm Details", null) );
-//			}
+			sb.append("Warning/Error Count: " + tm.getRowCount() + "<br>\n");
+			tableToHtmlString(tm, sb, false); // false = all entries
+
+			_logger.info("Clearing the in-memory TableModel for 'GuiLogAppender', which currently has " + tm.getRowCount() + " entries.");
+			tm.clear();
 		}
 	}
 
@@ -107,11 +96,36 @@ extends ReportEntryAbstract
 //		return false;
 //	}
 
-	private void tableToHtmlString(Log4jTableModel tm, Writer w)
+	private int getRowCountWithStackTrace(Log4jTableModel tm)
+	{
+		int rows = tm.getRowCount();
+		int rowsWithStacktrace = 0;
+
+		// Count Rows WITH StackTrace
+		for (int r=0; r<rows; r++)
+		{
+			Log4jLogRecord rec = tm.getRecord(r);
+
+			if (StringUtil.isNullOrBlank(rec.getThrownStackTrace()))
+				rowsWithStacktrace++;
+		}
+		
+		return rowsWithStacktrace;
+	}
+
+	private int tableToHtmlString(Log4jTableModel tm, Writer w, boolean onlyStacktraceEntries)
 	throws IOException
 	{
 		int rows = tm.getRowCount();
+		int rowsAppeded = 0;
+		int rowsWithStacktrace = getRowCountWithStackTrace(tm);
 
+		if (onlyStacktraceEntries && rowsWithStacktrace == 0)
+		{
+			w.append("No records with stacktrace was found. \n");
+			return rowsAppeded;
+		}
+		
 		w.append("<TABLE> \n");
 
 		// Headers
@@ -142,16 +156,21 @@ extends ReportEntryAbstract
 			{
 				stackTrace = "<pre>" + stackTrace + "</pre>";
 			}
-			
+
+			// Skip records that do NOT have stack traces
+			if (onlyStacktraceEntries && StringUtil.isNullOrBlank(stackTrace))
+				continue;
+
+			// Print the ROW 
 			w.append("<TBODY> \n");
 			w.append("  <TR> \n");
-			w.append("    <TD>").append("" + new Timestamp(rec.getMillis())).append("</TD> \n");  // TIME
-			w.append("    <TD>").append("" + rec.getLevel()).append("</TD> \n");                  // LEVEL
-			w.append("    <TD>").append(rec.getThreadDescription()).append("</TD> \n");           // Thread Name 
-			w.append("    <TD>").append(rec.getCategory()).append("</TD> \n");                    // Class Name
-			w.append("    <TD>").append(rec.getLocation()).append("</TD> \n");                    // Location
-			w.append("    <TD>").append(rec.getMessage()).append("</TD> \n");                     // Message
-			w.append("    <TD>").append(stackTrace).append("</TD> \n");                           // StackTrace
+			w.append("    <TD>")       .append("" + new Timestamp(rec.getMillis())).append("</TD> \n");  // TIME
+			w.append("    <TD>")       .append("" + rec.getLevel()).append("</TD> \n");                  // LEVEL
+			w.append("    <TD>")       .append(rec.getThreadDescription()).append("</TD> \n");           // Thread Name 
+			w.append("    <TD>")       .append(rec.getCategory()).append("</TD> \n");                    // Class Name
+			w.append("    <TD>")       .append(rec.getLocation()).append("</TD> \n");                    // Location
+			w.append("    <TD>")       .append(rec.getMessage()).append("</TD> \n");                     // Message
+			w.append("    <TD NOWRAP>").append(stackTrace).append("</TD> \n");                           // StackTrace
 			w.append("  </TR> \n");
 			w.append("</TBODY> \n");
 		}
@@ -164,6 +183,8 @@ extends ReportEntryAbstract
 //		w.append("</TFOOT> \n");
 
 		w.append("</TABLE> \n");
+		
+		return rowsAppeded;
 	}
 
 	@Override
