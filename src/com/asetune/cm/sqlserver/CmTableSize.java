@@ -26,8 +26,13 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.naming.NameNotFoundException;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cache.DbmsObjectIdCache;
+import com.asetune.cache.DbmsObjectIdCacheSqlServer;
+import com.asetune.cache.DbmsObjectIdCacheUtils;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSampleCatalogIteratorSqlServer;
 import com.asetune.cm.CounterSetTemplates;
@@ -37,6 +42,8 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.SortOptions.ColumnNameSensitivity;
 import com.asetune.cm.SortOptions.DataSortSensitivity;
 import com.asetune.cm.SortOptions.SortOrder;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 
 public class CmTableSize
@@ -58,7 +65,7 @@ extends CountersModel
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
 
-	public static final String[] MON_TABLES       = new String[] {"dm_db_partition_stats"};
+	public static final String[] MON_TABLES       = new String[] {CM_NAME, "dm_db_partition_stats"};
 	public static final String[] NEED_ROLES       = new String[] {"VIEW SERVER STATE", "CONNECT ANY DATABASE"};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
@@ -159,6 +166,79 @@ extends CountersModel
 //	}
 
 	@Override
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	{
+		try 
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+
+			String cmName = this.getName();
+			mtd.addTable(cmName, HTML_DESC);
+
+			mtd.addColumn(cmName, "DBName"                             ,"<html>Name of the database</html>");
+			mtd.addColumn(cmName, "SchemaName"                         ,"<html>Name of the Schema</html>");
+			mtd.addColumn(cmName, "TableName"                          ,"<html>Name of the Table</html>");
+			
+			mtd.addColumn(cmName, "HasClusteredIndex"                  ,"<html>true if we gor a Clustered Index on this table</html>"); 
+			mtd.addColumn(cmName, "NcIndexCount"                       ,"<html>How many NON Clustered Indexes do we have on this table... (A rule of thumb: maybe not more than 5 indexes)</html>"); 
+			mtd.addColumn(cmName, "PartitionCount"                     ,"<html>How many partitions do this table have. 1=UnPartitioned</html>"); 
+			mtd.addColumn(cmName, "RowCountAbs"                        ,"<html>How many rows does this table have</html>"); 
+			mtd.addColumn(cmName, "RowCountDiff"                       ,"<html>Diff or Rate value for row count. <br>"
+			                                                                  + "If there has been inserts since last sample, this will be a <b>positive</b> number (DIFF=since last sample, RATE=number of insert per second since last sample).<br>"
+			                                                                  + "If there has been inserts since last sample, this will be a <b>negative</b> number (DIFF=since last sample, RATE=number of deletes per second since last sample).<br>"
+			                                                                  + "</html>"); 
+			mtd.addColumn(cmName, "DataRowsPerPage"                    ,"<html>How many rows in average does a page hold. <br><br><b>Algorithm:</b> row_count / used_page_count </html>");
+			mtd.addColumn(cmName, "DataVsIndexPct"                     ,"<html>How much index space is used compared to data space (10% = Index size is 10% of data size, 200% = Index size is double the size of data.<br><br><b>Algorithm:</b> ncistat.UsedSizeMB / dstat.UsedSizeMB) * 100.0</html>");
+			
+			mtd.addColumn(cmName, "TotalReservedSizeMB"                ,"<html>Total 'reseved' size of the table, both data and all indexes.</html>"); 
+			mtd.addColumn(cmName, "TotalUsedSizeMB"                    ,"<html>Total 'used' size of the table, both data and all indexes.</html>");
+			mtd.addColumn(cmName, "TotalUnUsedSizeMB"                  ,"<html>Total 'un-used' size of the table, both data and all indexes.</html>");
+			mtd.addColumn(cmName, "TotalUnUsedPct"                     ,"<html>Total 'un-used' percent of the tables total size.</html>");
+			
+			mtd.addColumn(cmName, "HasLobData"                         ,"<html>If the table has any columns of LOB data. LOB Large OBjects, large columns that <i>may</i> not be part of the normal data page. So that data may be stored 'off-row' in it's own page chain.</html>"); 
+
+			mtd.addColumn(cmName, "DataReservedSizeMB"                 ,"<html>FIXME</html>"); 
+			mtd.addColumn(cmName, "DataUsedSizeMB"                     ,"<html>FIXME</html>"); 
+			mtd.addColumn(cmName, "DataUnUsedSizeMB"                   ,"<html>FIXME</html>"); 
+			mtd.addColumn(cmName, "DataUnUsedPct"                      ,"<html>FIXME</html>"); 
+
+			mtd.addColumn(cmName, "IndexReservedSizeMB"                ,"<html>FIXME</html>"); 
+			mtd.addColumn(cmName, "IndexUsedSizeMB"                    ,"<html>FIXME</html>"); 
+			mtd.addColumn(cmName, "IndexUnUsedSizeMB"                  ,"<html>FIXME</html>"); 
+			mtd.addColumn(cmName, "IndexUnUsedPct"                     ,"<html>FIXME</html>"); 
+
+			mtd.addColumn(cmName, "LobReservedSizeMB"                  ,"<html>FIXME</html>"); 
+			mtd.addColumn(cmName, "LobUsedSizeMB"                      ,"<html>FIXME</html>"); 
+			mtd.addColumn(cmName, "LobUnUsedSizeMB"                    ,"<html>FIXME</html>"); 
+			mtd.addColumn(cmName, "LobUnUsedPct"                       ,"<html>FIXME</html>"); 
+			mtd.addColumn(cmName, "LobTableContentPct"                 ,"<html>FIXME</html>"); 
+			
+			mtd.addColumn(cmName, "DataStatsUpdated"                   ,"<html>Last date that the statistics was updated.</html>"); 
+			mtd.addColumn(cmName, "NcIndexStatsUpdated"                ,"<html>Last date that the statistics was updated on any of the indexes.</html>"); 
+			
+			mtd.addColumn(cmName, "d_in_row_data_page_count"           ,"<html>Data 'in_row_data_page_count'.</html>"); 
+			mtd.addColumn(cmName, "d_in_row_used_page_count"           ,"<html>Data 'in_row_used_page_count'.</html>"); 
+			mtd.addColumn(cmName, "d_in_row_reserved_page_count"       ,"<html>Data 'in_row_reserved_page_count'.</html>"); 
+			mtd.addColumn(cmName, "d_lob_used_page_count"              ,"<html>Data 'lob_used_page_count'.</html>"); 
+			mtd.addColumn(cmName, "d_lob_reserved_page_count"          ,"<html>Data 'lob_reserved_page_count'.</html>"); 
+			mtd.addColumn(cmName, "d_row_overflow_used_page_count"     ,"<html>Data 'row_overflow_used_page_count'.</html>"); 
+			mtd.addColumn(cmName, "d_row_overflow_reserved_page_count" ,"<html>Data 'row_overflow_reserved_page_count'.</html>");
+
+			mtd.addColumn(cmName, "i_in_row_data_page_count"           ,"<html>Index 'in_row_data_page_count'.</html>"); 
+			mtd.addColumn(cmName, "i_in_row_used_page_count"           ,"<html>Index 'in_row_used_page_count'.</html>"); 
+			mtd.addColumn(cmName, "i_in_row_reserved_page_count"       ,"<html>Index 'in_row_reserved_page_count'.</html>"); 
+			mtd.addColumn(cmName, "i_lob_used_page_count"              ,"<html>Index 'lob_used_page_count'.</html>"); 
+			mtd.addColumn(cmName, "i_lob_reserved_page_count"          ,"<html>Index 'lob_reserved_page_count'.</html>"); 
+			mtd.addColumn(cmName, "i_row_overflow_used_page_count"     ,"<html>Index 'row_overflow_used_page_count'.</html>"); 
+			mtd.addColumn(cmName, "i_row_overflow_reserved_page_count" ,"<html>Index 'row_overflow_reserved_page_count'.</html>"); 
+
+			mtd.addColumn(cmName, "database_id"                        ,"<html>ID of the Database.</html>"); 
+			mtd.addColumn(cmName, "object_id"                          ,"<html>ObjectID of the table.</html>"); 
+		}
+		catch (NameNotFoundException e) {/*ignore*/}
+	}
+
+	@Override
 	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
@@ -169,12 +249,12 @@ extends CountersModel
 	{
 		List <String> pkCols = new LinkedList<String>();
 
-		pkCols.add("DbName");
-		pkCols.add("SchemaName");
-		pkCols.add("TableName");
+//		pkCols.add("DbName");
+//		pkCols.add("SchemaName");
+//		pkCols.add("TableName");
 
-//		pkCols.add("database_id");
-//		pkCols.add("object_id");
+		pkCols.add("database_id");
+		pkCols.add("object_id");
 		
 		return pkCols;
 	}
@@ -214,9 +294,21 @@ extends CountersModel
 			dm_db_partition_stats   = "sys.dm_pdw_nodes_db_partition_stats";
 		}
 
+		String DbName     = "      DbName              = db_name() \n";
+		String SchemaName = "    , SchemaName          = (select sys.schemas.name from sys.objects WITH (READUNCOMMITTED) inner join sys.schemas WITH (READUNCOMMITTED) ON sys.schemas.schema_id = sys.objects.schema_id where sys.objects.object_id = dstat.object_id) \n";
+		String TableName  = "    , TableName           = (select sys.objects.name from sys.objects WITH (READUNCOMMITTED) where sys.objects.object_id = dstat.object_id) \n";
+
+		if (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled())
+		{
+			DbName     = "      DbName     = convert(varchar(128), '') /* using DbmsObjectIdCache to do DbxTune cached lookups */ \n";
+			SchemaName = "    , SchemaName = convert(varchar(128), '') /* using DbmsObjectIdCache to do DbxTune cached lookups */ \n";
+			TableName  = "    , TableName  = convert(varchar(128), '') /* using DbmsObjectIdCache to do DbxTune cached lookups */ \n";
+		}
+		
 		String sql = ""
 			    + "-- Note: Below SQL Statement is executed in every database that is 'online', more or less like: sp_msforeachdb \n"
 			    + "-- Note: object_schema_name() and object_name() can be used for 'dirty-reads', they may block... hence the 'ugly' fullname sub-selects in the select column list \n"
+			    + "-- Note: To enable/disable DbxTune Cached Lookups for ObjectID to name translation is done with property '" + DbmsObjectIdCacheSqlServer.PROPKEY_BulkLoadOnStart + "=true|false'. Current Status=" + (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled() ? "ENABLED" : "DISABLED") + " \n"
 			    + " \n"
 			    + "-- Drop temp tables (if they already exists \n"
 			    + "if (object_id('tempdb..#dstat')   is not null) drop table #dstat \n"
@@ -235,9 +327,9 @@ extends CountersModel
 			    + "        ,UsedSizeMB                       = convert(decimal(12,1), sum(used_page_count)     / 128.0) \n"
 			    + "        ,UnUsedSizeMB                     = convert(decimal(12,1), (sum(reserved_page_count) - sum(used_page_count)) / 128.0) \n"
 			    + " \n"
-			    + "        ,LobReservedSizeMB                   = convert(decimal(12,1), sum(lob_reserved_page_count) / 128.0) \n"
-			    + "        ,LobUsedSizeMB                       = convert(decimal(12,1), sum(lob_used_page_count)     / 128.0) \n"
-			    + "        ,LobUnUsedSizeMB                     = convert(decimal(12,1), (sum(lob_reserved_page_count) - sum(lob_used_page_count)) / 128.0) \n"
+			    + "        ,LobReservedSizeMB                = convert(decimal(12,1), sum(lob_reserved_page_count) / 128.0) \n"
+			    + "        ,LobUsedSizeMB                    = convert(decimal(12,1), sum(lob_used_page_count)     / 128.0) \n"
+			    + "        ,LobUnUsedSizeMB                  = convert(decimal(12,1), (sum(lob_reserved_page_count) - sum(lob_used_page_count)) / 128.0) \n"
 			    + " \n"
 			    + "        ,reserved_page_count              = sum(reserved_page_count) \n"
 			    + "        ,used_page_count                  = sum(used_page_count) \n"
@@ -286,12 +378,15 @@ extends CountersModel
 			    + " \n"
 			    + "-- Joint the two temp tables \n"
 			    + "select \n"
-			    + "--      DbName              = db_name() \n"
-			    + "--    , SchemaName          = object_schema_name(dstat.object_id) \n"
-			    + "--    , TableName           = object_name(dstat.object_id) \n"
-			    + "      DbName              = db_name() \n"
-			    + "    , SchemaName          = (select sys.schemas.name from sys.objects inner join sys.schemas ON sys.schemas.schema_id = sys.objects.schema_id where sys.objects.object_id = dstat.object_id) \n"
-			    + "    , TableName           = (select sys.objects.name from sys.objects where sys.objects.object_id = dstat.object_id) \n"
+//			    + "--      DbName              = db_name() \n"
+//			    + "--    , SchemaName          = object_schema_name(dstat.object_id) \n"
+//			    + "--    , TableName           = object_name(dstat.object_id) \n"
+//			    + "      DbName              = db_name() \n"
+//			    + "    , SchemaName          = (select sys.schemas.name from sys.objects inner join sys.schemas ON sys.schemas.schema_id = sys.objects.schema_id where sys.objects.object_id = dstat.object_id) \n"
+//			    + "    , TableName           = (select sys.objects.name from sys.objects where sys.objects.object_id = dstat.object_id) \n"
+				+        DbName
+				+        SchemaName
+				+        TableName
 			    + "    , dstat.HasClusteredIndex \n"
 			    + "    , NcIndexCount        = isnull(ncistat.NcIndexCount, 0) \n"
 			    + "    , dstat.PartitionCount \n"
@@ -356,5 +451,17 @@ extends CountersModel
 
 
 		return sql;
+	}
+
+	@Override
+	public void localCalculation(CounterSample newSample)
+	{
+		// Resolve "database_id", "object_id", "index_id" to real names 
+		if (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled())
+		{
+			DbmsObjectIdCacheUtils.localCalculation_DbmsObjectIdFiller(this, newSample, 
+					"database_id", "object_id", null,            // Source columns to translate into the below columns 
+					"DbName", "SchemaName", "TableName", null);  // Target columns for the above source columns
+		}
 	}
 }

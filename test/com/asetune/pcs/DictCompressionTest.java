@@ -56,6 +56,7 @@ public class DictCompressionTest
 
 		Properties log4jProps = new Properties();
 		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
+//		log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
 //		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
 		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
 		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");

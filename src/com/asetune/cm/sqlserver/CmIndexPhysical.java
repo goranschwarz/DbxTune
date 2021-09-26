@@ -27,6 +27,9 @@ import java.util.List;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cache.DbmsObjectIdCache;
+import com.asetune.cache.DbmsObjectIdCacheSqlServer;
+import com.asetune.cache.DbmsObjectIdCacheUtils;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSampleCatalogIteratorSqlServer;
@@ -250,13 +253,30 @@ extends CountersModel
 //				+ "' \n"
 //				+ "";
 
+		String DbName     = "      [DbName]     = db_name(database_id) \n";
+		String SchemaName = "    , [SchemaName] = (select sys.schemas.name from sys.objects WITH (READUNCOMMITTED) inner join sys.schemas WITH (READUNCOMMITTED) ON sys.schemas.schema_id = sys.objects.schema_id where sys.objects.object_id = BASE.object_id) \n";
+		String TableName  = "    , [TableName]  = (select sys.objects.name from sys.objects WITH (READUNCOMMITTED) where sys.objects.object_id = BASE.object_id) \n";
+//		String IndexName  = "    , [IndexName]  = (select case when sys.indexes.index_id = 0 then 'HEAP' else sys.indexes.name end from sys.indexes where sys.indexes.object_id = BASE.object_id and sys.indexes.index_id = BASE.index_id) \n";
+
+		if (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled())
+		{
+			DbName     = "      [DbName]     = convert(varchar(128), '') /* using DbmsObjectIdCache to do DbxTune cached lookups */ \n";
+			SchemaName = "    , [SchemaName] = convert(varchar(128), '') /* using DbmsObjectIdCache to do DbxTune cached lookups */ \n";
+			TableName  = "    , [TableName]  = convert(varchar(128), '') /* using DbmsObjectIdCache to do DbxTune cached lookups */ \n";
+//			IndexName  = "    , [IndexName]  = convert(varchar(128), '') /* using DbmsObjectIdCache to do DbxTune cached lookups */ \n";
+		}
+
 		String sql = ""
 			    + "-- Note: Below SQL Statement is executed in every database that is 'online', more or less like: sp_msforeachdb \n"
 			    + "-- Note: object_schema_name() and object_name() can NOT be used for 'dirty-reads', they may block... hence the 'ugly' fullname sub-selects in the select column list \n"
+			    + "-- Note: To enable/disable DbxTune Cached Lookups for ObjectID to name translation is done with property '" + DbmsObjectIdCacheSqlServer.PROPKEY_BulkLoadOnStart + "=true|false'. Current Status=" + (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled() ? "ENABLED" : "DISABLED") + " \n"
 			    + "select \n"
-			    + "      [DbName]         = db_name(database_id) \n"
-			    + "    , [SchemaName]     = (select sys.schemas.name from sys.objects inner join sys.schemas ON sys.schemas.schema_id = sys.objects.schema_id where sys.objects.object_id = BASE.object_id) \n"
-			    + "    , [TableName]      = (select sys.objects.name from sys.objects where sys.objects.object_id = BASE.object_id) \n"
+//			    + "      [DbName]         = db_name(database_id) \n"
+//			    + "    , [SchemaName]     = (select sys.schemas.name from sys.objects inner join sys.schemas ON sys.schemas.schema_id = sys.objects.schema_id where sys.objects.object_id = BASE.object_id) \n"
+//			    + "    , [TableName]      = (select sys.objects.name from sys.objects where sys.objects.object_id = BASE.object_id) \n"
+				+        DbName
+				+        SchemaName
+				+        TableName
 				+ "    , [SizeInMb]       = convert(decimal(12,1), page_count / 128.0) \n"
 				+ "    , [pageCountDiff]  = page_count \n"
 				+ "    , [rowCount]       = record_count \n"
@@ -272,6 +292,17 @@ extends CountersModel
 		return sql;
 	}
 
+	@Override
+	public void localCalculation(CounterSample newSample)
+	{
+		// Resolve "database_id", "object_id", "index_id" to real names 
+		if (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled())
+		{
+			DbmsObjectIdCacheUtils.localCalculation_DbmsObjectIdFiller(this, newSample, 
+					"database_id", "object_id", null,            // Source columns to translate into the below columns 
+					"DbName", "SchemaName", "TableName", null);  // Target columns for the above source columns
+		}
+	}
 
 
 	

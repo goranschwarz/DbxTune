@@ -159,8 +159,8 @@ public class SqlServerQueryStoreExtractor
 				case query_context_settings            : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
 				case query_store_query_text            : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
 				case query_store_query                 : return "select * \n"
-				                                                      + "    ,schema_name = CASE WHEN q.object_id = 0 THEN NULL ELSE (select s.name from [" + _monDbName + "].sys.objects o inner join [" + _monDbName + "].sys.schemas s ON o.schema_id = s.schema_id where o.object_id = q.object_id) END \n"
-				                                                      + "    ,object_name = CASE WHEN q.object_id = 0 THEN NULL ELSE (select o.name from [" + _monDbName + "].sys.objects o where o.object_id = q.object_id) END \n"
+				                                                      + "    ,schema_name = CASE WHEN q.object_id = 0 THEN NULL ELSE (select s.name from [" + _monDbName + "].sys.objects o WITH (READUNCOMMITTED) inner join [" + _monDbName + "].sys.schemas s WITH (READUNCOMMITTED) ON o.schema_id = s.schema_id where o.object_id = q.object_id) END \n"
+				                                                      + "    ,object_name = CASE WHEN q.object_id = 0 THEN NULL ELSE (select o.name from [" + _monDbName + "].sys.objects o WITH (READUNCOMMITTED) where o.object_id = q.object_id) END \n"
 				                                                      + " from [" + _monDbName + "].sys." + tabName + " q where 1=1";
 				case query_store_plan                  : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
 				case query_store_wait_stats            : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
@@ -247,8 +247,8 @@ public class SqlServerQueryStoreExtractor
 				{
 					// QUERY
 					return    "SELECT q.* \n" 
-							+ "      ,schema_name = CASE WHEN q.object_id = 0 THEN NULL ELSE (select s.name from [" + _monDbName + "].sys.objects o inner join [" + _monDbName + "].sys.schemas s ON o.schema_id = s.schema_id where o.object_id = q.object_id) END \n" // get NAME of schema
-							+ "      ,object_name = CASE WHEN q.object_id = 0 THEN NULL ELSE (select o.name from [" + _monDbName + "].sys.objects o where o.object_id = q.object_id) END \n" // get NAME of object
+							+ "      ,schema_name = CASE WHEN q.object_id = 0 THEN NULL ELSE (select s.name from [" + _monDbName + "].sys.objects o WITH (READUNCOMMITTED) inner join [" + _monDbName + "].sys.schemas s WITH (READUNCOMMITTED) ON o.schema_id = s.schema_id where o.object_id = q.object_id) END \n" // get NAME of schema
+							+ "      ,object_name = CASE WHEN q.object_id = 0 THEN NULL ELSE (select o.name from [" + _monDbName + "].sys.objects o WITH (READUNCOMMITTED) where o.object_id = q.object_id) END \n" // get NAME of object
 						    + "FROM [" + _monDbName + "].sys.query_store_query q \n"
 						    + "WHERE q.query_id IN \n"
 						    + "( \n"

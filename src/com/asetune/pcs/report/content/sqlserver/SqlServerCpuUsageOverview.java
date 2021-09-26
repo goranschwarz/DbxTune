@@ -65,6 +65,7 @@ extends SqlServerAbstract
 	{
 		w.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load.",
 				"CmSummary_aaCpuGraph",
+				"CmOsMpstat_MpSum",
 				"CmSummary_aaReadWriteGraph",
 				"CmPerfCounters_CacheReads",
 				"CmPerfCounters_CacheHitRate",
@@ -76,6 +77,7 @@ extends SqlServerAbstract
 				));
 
 		_CmSummary_aaCpuGraph         .writeHtmlContent(w, null, null);
+		_CmOsMpstat_MpSum             .writeHtmlContent(w, null, null);
 		_CmSummary_aaReadWriteGraph   .writeHtmlContent(w, null, null);
 		_CmPerfCounters_CacheReads    .writeHtmlContent(w, null, null);
 		_CmPerfCounters_CacheHitRate  .writeHtmlContent(w, null, null);
@@ -107,6 +109,7 @@ extends SqlServerAbstract
 	{
 		int maxValue = 100;
 		_CmSummary_aaCpuGraph          = createTsLineChart(conn, "CmSummary",      "aaCpuGraph",       maxValue, null, "CPU Summary for all Schedulers (using @@cpu_busy, @@cpu_io) (Summary)");
+		_CmOsMpstat_MpSum              = createTsLineChart(conn, "CmOsMpstat",     "MpSum",            maxValue, null, "OS: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
 		_CmSummary_aaReadWriteGraph    = createTsLineChart(conn, "CmSummary",      "aaReadWriteGraph", -1,       null, "Disk read/write per second, using @@total_read, @@total_write");
 //		_CmPerfCounters_OsCpuEffective = createTsLineChart(conn, "CmPerfCounters", "OsCpuEffective",   maxValue, null, "CPU Usage Effective in Percent (Perf Counters)");
 		_CmPerfCounters_CacheReads     = createTsLineChart(conn, "CmPerfCounters", "CacheReads",       -1,       null, "Buffer Cache Reads per Sec (Server->Perf Counters)");
@@ -118,6 +121,7 @@ extends SqlServerAbstract
 	}
 
 	private IReportChart _CmSummary_aaCpuGraph;
+	private IReportChart _CmOsMpstat_MpSum;
 	private IReportChart _CmSummary_aaReadWriteGraph;
 	private IReportChart _CmPerfCounters_CacheReads;
 	private IReportChart _CmPerfCounters_CacheHitRate;

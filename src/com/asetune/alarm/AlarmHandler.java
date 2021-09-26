@@ -37,10 +37,10 @@ import org.apache.log4j.PropertyConfigurator;
 import com.asetune.AppDir;
 import com.asetune.Version;
 import com.asetune.alarm.events.AlarmEvent;
-import com.asetune.alarm.events.AlarmEventSrvDown;
 import com.asetune.alarm.events.AlarmEvent.Category;
 import com.asetune.alarm.events.AlarmEvent.ServiceState;
 import com.asetune.alarm.events.AlarmEvent.Severity;
+import com.asetune.alarm.events.AlarmEventSrvDown;
 import com.asetune.alarm.events.internal.AlarmEvent_EndOfScan;
 import com.asetune.alarm.events.internal.AlarmEvent_Stop;
 import com.asetune.alarm.writers.AlarmWriterAbstract;
@@ -529,11 +529,54 @@ implements Runnable
 		checkAndPostDelayedAlarms();
 	}
 
+//	/**
+//	 * if the "raise delay" has expired, raise the event (and delete it from the "deleayed queue"
+//	 */
+//	// NOTE: This will/may throw ConcurrentModificationException due to:  _delayedAlarmsActive.remove(alarmEvent);
+//	private void checkAndPostDelayedAlarms()
+//	{
+//		// now iterate the queue and check for entries that has passed the "delay" time
+//		for (AlarmEvent alarmEvent : _delayedAlarmsActive.getAlarmList())
+//		{
+//			//long timeToExpireMs = (alarmEvent.getRaiseDelayInSec()*1000) - alarmEvent.getCrAgeInMs();
+//			//System.out.println("checkAndPostDelayedAlarms: hasRaiseDelayExpired="+alarmEvent.hasRaiseDelayExpired() + ", timeToExpireMs="+timeToExpireMs);
+//			
+//			if (alarmEvent.hasRaiseDelayExpired())
+//			{
+//				_delayedAlarmsActive.remove(alarmEvent);
+//				raiseInternal(alarmEvent);
+//			}
+//		}
+//	}
+
+//	/**
+//	 * if the "raise delay" has expired, raise the event (and delete it from the "deleayed queue"
+//	 */
+//	// NOTE: This may work... if there are no duplicates in the list... 
+//	private void checkAndPostDelayedAlarms()
+//	{
+//		// now iterate the queue and check for entries that has passed the "delay" time
+//		Iterator<AlarmEvent> iter = _delayedAlarmsActive.getAlarmList().iterator();
+//		while (iter.hasNext())
+//		{
+//			AlarmEvent alarmEvent = iter.next();
+//
+//			if (alarmEvent.hasRaiseDelayExpired())
+//			{
+//				iter.remove();
+//				raiseInternal(alarmEvent);
+//			}
+//		}
+//	}
+
 	/**
 	 * if the "raise delay" has expired, raise the event (and delete it from the "deleayed queue"
 	 */
+	// NOTE: This works... if there ARE duplicates in the list... 
 	private void checkAndPostDelayedAlarms()
 	{
+		List<AlarmEvent> alarmsToBeRemoved = null;
+
 		// now iterate the queue and check for entries that has passed the "delay" time
 		for (AlarmEvent alarmEvent : _delayedAlarmsActive.getAlarmList())
 		{
@@ -542,9 +585,20 @@ implements Runnable
 			
 			if (alarmEvent.hasRaiseDelayExpired())
 			{
-				_delayedAlarmsActive.remove(alarmEvent);
+//				_delayedAlarmsActive.remove(alarmEvent); // <<-- This will/may cause ConcurrentModificationException
+				// Add the removed Alarm into another list, and delete them later (otherwise we will/may cause ConcurrentModificationException)
+				if (alarmsToBeRemoved == null)
+					alarmsToBeRemoved = new ArrayList<AlarmEvent>();
+				alarmsToBeRemoved.add(alarmEvent);
+
 				raiseInternal(alarmEvent);
 			}
+		}
+		
+		if (alarmsToBeRemoved != null)
+		{
+			for (AlarmEvent alarmEvent : alarmsToBeRemoved)
+				_delayedAlarmsActive.remove(alarmEvent);
 		}
 	}
 

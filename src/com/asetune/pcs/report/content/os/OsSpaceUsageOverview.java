@@ -49,15 +49,15 @@ public class OsSpaceUsageOverview extends AseAbstract
 			return isEnabled;
 
 		// NOT For Windows
-		String dbmsVerStr = getReportingInstance().getDbmsVersionStr();
-		if (StringUtil.hasValue(dbmsVerStr))
-		{
-			if (dbmsVerStr.indexOf("Windows") >= 0)
-			{
-				setDisabledReason("This DBMS is running on Windows, wich is not supported by this report.");
-				return false;
-			}
-		}
+//		String dbmsVerStr = getReportingInstance().getDbmsVersionStr();
+//		if (StringUtil.hasValue(dbmsVerStr))
+//		{
+//			if (dbmsVerStr.indexOf("Windows") >= 0)
+//			{
+//				setDisabledReason("This DBMS is running on Windows, wich is not supported by this report.");
+//				return false;
+//			}
+//		}
 		return true;
 	}
 	

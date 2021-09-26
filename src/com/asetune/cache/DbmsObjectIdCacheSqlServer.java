@@ -32,9 +32,9 @@ import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.log4j.Logger;
-import org.h2.value.Value;
 
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
@@ -44,11 +44,64 @@ extends DbmsObjectIdCache
 {
 	private static Logger _logger = Logger.getLogger(DbmsObjectIdCacheSqlServer.class);
 
+	public static final String  PROPKEY_BulkLoadOnStart = "SqlServerTune.objectIdCahe.bulkLoadOnStart";
+	public static final boolean DEFAULT_BulkLoadOnStart = true;  // for testing just now...
+//	public static final boolean DEFAULT_BulkLoadOnStart = false; // if we want to revert back for X number of CM's to use SQL Server direct lookups of: sys.objects, etc...
+
+	public static final String  PROPKEY_lockTimeoutMs = "SqlServerTune.objectIdCahe.lockTimeout";
+	public static final int     DEFAULT_lockTimeoutMs = 1000;
+
 	public DbmsObjectIdCacheSqlServer(ConnectionProvider connProvider)
 	{
 		super(connProvider);
 	}
 
+	@Override
+	public boolean isBulkLoadOnStartEnabled()
+	{
+		return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_BulkLoadOnStart, DEFAULT_BulkLoadOnStart);
+	}
+
+	@Override
+	protected void onConnect(DbxConnection conn)
+	{
+		int desiredLockTimeoutMs = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_lockTimeoutMs, DEFAULT_lockTimeoutMs);
+
+		String getSql = "select @@lock_timeout";
+		String setSql = "SET LOCK_TIMEOUT " + desiredLockTimeoutMs;
+		String sql;
+
+		// Make a default value, that we are NOT in "dirty read"
+		int currentLockTimeout = Integer.MIN_VALUE;
+
+		//------- GET/CHECK
+		sql = getSql;
+		try(Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+				currentLockTimeout = rs.getInt(1); // <0 = Unlimited, 0=TimeoutImmediately, >0 = Timeout after #### ms
+		}
+		catch(SQLException e)
+		{
+			_logger.error("Problem when CHECKING the SQL-Server 'lock timeout' for DbmsObjectIdCacheSqlServer.onConnect(). SQL="+sql);
+		}
+		
+		//------- SET LOCK_TIMEOUT
+		if ( currentLockTimeout != desiredLockTimeoutMs )
+		{
+			sql = setSql;
+			try(Statement stmnt = conn.createStatement())
+			{
+				_logger.info("SETTING 'lock timeout' from " + currentLockTimeout + " to " + desiredLockTimeoutMs + " for DbmsObjectIdCacheSqlServer.onConnect(). executing SQL="+sql);
+				stmnt.executeUpdate(sql);
+			}
+			catch(SQLException e)
+			{
+				_logger.error("Problem when SETTING the SQL-Server 'lock timeout' for DbmsObjectIdCacheSqlServer.onConnect(). SQL="+sql);
+			}
+		}
+	}
+	
 	@Override
 //	protected ObjectInfo get(DbxConnection conn, int dbid, int objectid) 
 	protected ObjectInfo get(DbxConnection conn, LookupType lookupType, int dbid, Number lookupId) 
@@ -173,12 +226,12 @@ extends DbmsObjectIdCache
 			// jdbc.setQueryTimeout() causes:                 MsgText=...query has timed out...
 			if ( ex.getErrorCode() == 1222 || (ex.getMessage() != null && ex.getMessage().contains("query has timed out")) )
 			{
-				_logger.warn("DbmsObjectIdCacheSqlServer.get(conn, lookupType=" + lookupType + ", dbid=" + dbid + ", lookupId=" + lookupId + "): Problems getting schema/table/index name. The query has timed out (after " + execTime + " ms). But the lock information will still be returned (but without the schema/table/index name.");
+				_logger.warn("DbmsObjectIdCacheSqlServer.get(conn, lookupType=" + lookupType + ", dbid=" + dbid + " [dbname=" + dbname + "], lookupId=" + lookupId + "): Problems getting schema/table/index name. The query has timed out (after " + execTime + " ms). But the lock information will still be returned (but without the schema/table/index name.");
 				throw new TimeoutException();
 			}
 			else
 			{
-				_logger.warn("DbmsObjectIdCacheSqlServer.get(conn, lookupType=" + lookupType + ", dbid=" + dbid + ", lookupId=" + lookupId + ")): Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "', execTime=" + execTime + " ms.", ex);
+				_logger.warn("DbmsObjectIdCacheSqlServer.get(conn, lookupType=" + lookupType + ", dbid=" + dbid + " [dbname=" + dbname + "], lookupId=" + lookupId + ")): Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "', execTime=" + execTime + " ms.", ex);
 			}
 		}
 		
@@ -235,7 +288,8 @@ extends DbmsObjectIdCache
 			
 			int objectIdsRead = 0;
 			int totalRowsRead = 0;
-			_logger.info("Getting Object Names in BULK mode from database '" + dbname + "' (only for System and User Tables).");
+//			_logger.info("Getting Object Names in BULK mode from database '" + dbname + "' (only for System and User Tables).");
+			long startTime = System.currentTimeMillis();
 			
 			sql = ""
 				    + "select \n"
@@ -300,8 +354,9 @@ extends DbmsObjectIdCache
 				} // end: rs.next()
 
 	    		_statBulkPhysicalReads++;
-
-	    		_logger.info("DONE: Getting ObjectNames in BULK mode from database '" + dbname + "'. Read " + objectIdsRead + " Obects/Tables, Index Names " + (totalRowsRead - objectIdsRead) + " and totally " + totalRowsRead + " was read.");
+				long execTimeMs = TimeUtils.msDiffNow(startTime);
+				
+	    		_logger.info("DONE: Getting ObjectNames in BULK mode from database '" + dbname + "'. Read " + objectIdsRead + " Obects/Tables, Index Names " + (totalRowsRead - objectIdsRead) + " and totally " + totalRowsRead + " was read. execTimeMs=" + execTimeMs);
 			}
 			catch(SQLException ex)
 			{

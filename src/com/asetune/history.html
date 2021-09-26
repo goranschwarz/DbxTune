@@ -77,11 +77,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>OS Disk Space Usage, using: <CODE>powershell "gwmi win32_logicaldisk | Format-Table -HideTableHeaders DeviceId, SizeKb, UsedKb, AvailableKb, UsedPct, DeviceId"</CODE></LI>
 				<LI>For the above Host Monitoring CM's; Existing graphs (the same names as for Linux/Unix monitoring) is using the above, but some unique for Windows has been added</LI>
 				<LI>For Windows there are 3 extra graphs: "meminfo: Paging or Swap Usage", "meminfo: Paging File Usage", and "uptime: Windows Processor Queue Length"</LI>
+				<LI>Changed how timeout handling works when reading outout from OS Command</LI>
 			</UL>
 		</LI>
 
 		<LI>OS Monitoring improvement for AIX 7.2 (where some columns in output for 'mpstat' and 'vmstat' was changed, and 'iostat' had a faulty column id)</LI>
 		<LI>OS Monitoring: CmOsMpstat - Added column 'TotalPct (usr + sys + iowait)'</LI>
+
+		<LI>DictCompression - Not storing records as a batch, instead reverting back to single statement, also changed some concurrency issues</LI>
 
 		<LI>Daily Summary Report Changes
 			<UL>
@@ -90,6 +93,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>All DbxTune Collectors: new section: iostat overview</LI>
 				<LI>Many of the statistical values now also has a "sparkline" (a mini chart) to represent *when* the measurement happened in time (was it during evening, night, morning or spread over the whole day)</LI>
 				<LI>New section (at the end) that shows DbxTune Collectors Errors and Warnings... Used to check for problems/issues/bugs with the collector (<i>without having to read the error log</i>).</LI>
+				<LI>For Windows: do not skip Host Monitoring information</LI>
+				<LI>Mail Sender - If the attachment is larger than 30MB, do not attach, only send the small mail report.</LI>
 			</UL>
 		</LI>
 
@@ -119,6 +124,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>In the 'remove Server'. now stopping the collector if it's running. (note: a Timeout of 1 minute, without wait feedback)</LI>
 		<LI>On graphs, added right click menu item: Open this graph (last 7 days, full day) in new Tab</LI>
 		<LI>In the tab 'Server', and section 'All file(s) in the LOG Directory', added a shortcut section where you can add file endings that you want to list here. <code>logfiles.shortcuts=*.console</code> </LI>
+		<LI>Changed number of lines in file tail from 500 to 5000</LI>
  	</UL>
 
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -336,6 +342,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmActiveStatements </b> - new option 'Sample System SPID's' </LI>
 		<LI><b>CmActiveStatements </b> - using OUTER apply instead of CROSS apply to *not* miss records with no query or query plan </LI>
 		<LI><b>CmActiveStatements </b> - new alarm: if 'TempdbUsageMb' is above 16GB then send alarm: AlarmEventExtensiveUsage </LI>
+		<LI><b>CmActiveStatements </b> - Changed the 'BLOCKER' to only return Parent SPID's in parallel statements </LI>
 		
 		<LI><b>CmAlwaysOn         </b> - Granting select,insert,update,delete on table 'sqlserverTune_ag_dummy_update' was enhanced (note: this will still fail if the connection do not have authorization to create the table in the database. </LI>
 
@@ -364,9 +371,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmExecQueryStat    </b> - using OUTER apply instead of CROSS apply to *not* miss records with no query or query plan </LI>
 
 		<LI><b>CmIndexOpStat      </b> - new postpone value of 300 seconds (5 minutes) </LI>
+		<LI><b>CmIndexOpStat      </b> - using the DbmsObjectIdCache to lookup database_id-&gt;DbName, object_id-&gt;(TableName, SchemaName), index_id-&gt;IndexName </LI>
+
+		<LI><b>CmIndexPhysical    </b> - using the DbmsObjectIdCache to lookup database_id-&gt;DbName, object_id-&gt;(TableName, SchemaName), index_id-&gt;IndexName </LI>
 
 		<LI><b>CmIndexUsage       </b> - new postpone value of 300 seconds (5 minutes) </LI>
-
+		<LI><b>CmIndexUsage       </b> - using the DbmsObjectIdCache to lookup database_id-&gt;DbName, object_id-&gt;(TableName, SchemaName), index_id-&gt;IndexName </LI>
+		
 		<LI><b>CmMemoryGrants     </b> - using OUTER apply instead of CROSS apply to *not* miss records with no query or query plan </LI>
 
 		<LI><b>CmOpenTransactions </b> - Removed Primary Key &amp; Query Plans: get actual execution plans if the server supports it (2019 &amp; traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
@@ -407,6 +418,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmSummary          </b> - new columns: some new columns for oldestOpenTran***</LI>
 		<LI><b>CmSummary          </b> - Skip alarm 'LongRunningTransaction' properies oldestOpenTran(LoginName|Cmd|Name|WaitType)</LI>
 
+		<LI><b>CmTableSize        </b> - using the DbmsObjectIdCache to lookup database_id-&gt;DbName, object_id-&gt;(TableName, SchemaName), index_id-&gt;IndexName </LI>
+
 		<LI><b>CmTempdbSpidUsage  </b> - Completely rewritten, hopefully this one will work better</LI>
 		<LI><b>CmTempdbSpidUsage  </b> - better version handling (older versions of SQL-Server, then we skip more columns, not yet invented)</LI>
 		
@@ -446,9 +459,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		</LI>
 		<LI>toHtmlTableString now also checks for '&lt;ShowPlanXML xmlns=' and wraps that with a 'xmp' html-tag</LI>
 		<LI>DbmsObjectIdCache - subsystem to cache ObjectID's to ObjectNames</LI>
+		<LI>DbmsObjectIdCache - is pupulated at startup (this can be disabled with property: <code>SqlServerTune.objectIdCahe.bulkLoadOnStart=false</code>)</LI>
 		<LI>html-query-plan: upgraded to version 2.6.1 </LI>
 		<LI>Changed how to detect if the SQL-Server is a 'Azure Synapse Analytics' or 'Parallel Data Warehouse'. now using: select ServerProperty('EngineEdition')</LI>
 		<LI>Tooltip and Alarm with ShowPlanXML content... show a simplified plan with a Unordered List (that is indented to show children)</LI>
+		<LI>DBMS Config: added capture for Resource Governor</LI>
 		
 		<!-- ~~~~~ Daily Report ~~~~~ -->
 		<LI>

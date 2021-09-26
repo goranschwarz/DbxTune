@@ -1352,7 +1352,7 @@ public abstract class DbxTune
 				conf.setProperty("dbxtune.log.file",            logFilename);
 				conf.setProperty("dbxtune.config.file",         noGuiConfigFile);
 				conf.setProperty("dbxtune.dbms.srvName",        dbmsSrvName);
-				conf.setProperty("dbxtune.dbms.srvAliasName",   dbmsSrvAliasName);
+				conf.setProperty("dbxtune.dbms.srvAliasName",   dbmsSrvAliasName == null ? "" : dbmsSrvAliasName); // on null: set it to ""
 				conf.setProperty("dbxtune.dbms.srvOrAliasName", dbmsSrvOrAliasName);
 				conf.setProperty("dbxtune.refresh.rate",        storeConfigProps.getProperty("offline.sampleTime", ""));
 

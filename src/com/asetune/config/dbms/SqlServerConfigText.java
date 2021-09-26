@@ -47,6 +47,7 @@ public abstract class SqlServerConfigText
 		,SqlServerHelpSort
 		,SqlServerHostInfo
 		,SqlServerSysInfo
+		,SqlServerServerResourceGovernor
 		,SqlServerServerRegistry
 		,SqlServerClusterNodes
 		};
@@ -63,6 +64,7 @@ public abstract class SqlServerConfigText
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.HelpSort());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.HostInfo());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SysInfo());
+		DbmsConfigTextManager.addInstance(new SqlServerConfigText.ResourceGovernor());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.ServerRegistry());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.ClusterNodes());
 	}
@@ -297,6 +299,43 @@ public abstract class SqlServerConfigText
 		@Override public    String     getName()                            { return ConfigType.SqlServerServerRegistry.toString(); }
 		@Override public    String     getConfigType()                      { return getName(); }
 		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from sys.dm_server_registry"; }
+	}
+
+	public static class ResourceGovernor extends DbmsConfigTextAbstract
+	{
+		@Override public    String     getTabLabel()                        { return "Resource Governor"; }
+		@Override public    String     getName()                            { return ConfigType.SqlServerServerResourceGovernor.toString(); }
+		@Override public    String     getConfigType()                      { return getName(); }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) 
+		{
+			String sql = ""
+				    + "print '' \n"
+				    + "print 'INFO: Below is from table: resource_governor_configuration' \n"
+				    + "select *, active_classifier_function_name = object_name(classifier_function_id) from sys.resource_governor_configuration \n"
+				    + " \n"
+				    + "print '' \n"
+				    + "print 'INFO: Below is from table: sys.resource_governor_workload_groups' \n"
+				    + "select * from sys.resource_governor_workload_groups \n"
+				    + " \n"
+				    + "print '' \n"
+				    + "print 'INFO: Below is from table: resource_governor_resource_pools' \n"
+				    + "select * from sys.resource_governor_resource_pools \n"
+				    + " \n"
+				    + "print '' \n"
+				    + "print 'INFO: Below is from table: resource_governor_resource_pool_affinity' \n"
+				    + "select * from sys.resource_governor_resource_pool_affinity \n"
+				    + " \n"
+				    + "declare @active_classifier_function_name varchar(128) \n"
+				    + "select @active_classifier_function_name = object_name(classifier_function_id) from sys.resource_governor_configuration \n"
+				    + "if (@active_classifier_function_name is not null) \n"
+				    + "begin \n"
+				    + "    print '' \n"
+				    + "    print 'INFO: SQL Text for the classifier_function: ' + @active_classifier_function_name \n"
+				    + "    exec sp_helptext @active_classifier_function_name \n"
+				    + "end \n"
+				    + "";
+			return sql;
+		}
 	}
 
 	public static class ClusterNodes extends DbmsConfigTextAbstract

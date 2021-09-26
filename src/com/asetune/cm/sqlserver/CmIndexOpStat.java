@@ -27,6 +27,9 @@ import java.util.List;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cache.DbmsObjectIdCache;
+import com.asetune.cache.DbmsObjectIdCacheSqlServer;
+import com.asetune.cache.DbmsObjectIdCacheUtils;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSampleCatalogIteratorSqlServer;
 import com.asetune.cm.CounterSetTemplates;
@@ -38,6 +41,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.SortOptions;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.swing.ColumnHeaderPropsEntry;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -235,6 +239,15 @@ extends CountersModel
 		pkCols.add("object_id");
 		pkCols.add("index_id");
 		pkCols.add("partition_number");
+		
+		if (srvVersion >= Ver.ver(2016) || isAzure)
+		{
+			// hobt_id -- Applies to: yesSQL Server 2016 (13.x) and later, Azure SQL Database.
+			// ID of the data heap or B-tree rowset that tracks internal data for a columnstore index.
+			// NULL - this is not an internal columnstore rowset.
+			// For more details, see sys.internal_partitions (Transact-SQL) -- https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-internal-partitions-transact-sql?view=sql-server-ver15
+			pkCols.add("hobt_id");
+		}
 
 		return pkCols;
 	}
@@ -299,16 +312,31 @@ extends CountersModel
 //				+ "from sys." + dm_db_index_operational_stats + "(DEFAULT, DEFAULT, DEFAULT, DEFAULT) \n"
 //				+ "where object_id > 100";
 
+		String DbName     = "    DbName     = db_name(database_id), \n";
+		String SchemaName = "    SchemaName = (select sys.schemas.name from sys.objects WITH (READUNCOMMITTED) inner join sys.schemas WITH (READUNCOMMITTED) ON sys.schemas.schema_id = sys.objects.schema_id where sys.objects.object_id = BASE.object_id), \n";
+		String TableName  = "    TableName  = (select sys.objects.name from sys.objects WITH (READUNCOMMITTED) where sys.objects.object_id = BASE.object_id), \n";
+		String IndexName  = "    IndexName  = (select case when sys.indexes.index_id = 0 then 'HEAP' else sys.indexes.name end from sys.indexes where sys.indexes.object_id = BASE.object_id and sys.indexes.index_id = BASE.index_id), \n";
+
+		if (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled())
+		{
+			DbName     = "    DbName     = convert(varchar(128), ''), /* using DbmsObjectIdCache to do DbxTune cached lookups */ \n";
+			SchemaName = "    SchemaName = convert(varchar(128), ''), /* using DbmsObjectIdCache to do DbxTune cached lookups */ \n";
+			TableName  = "    TableName  = convert(varchar(128), ''), /* using DbmsObjectIdCache to do DbxTune cached lookups */ \n";
+			IndexName  = "    IndexName  = convert(varchar(128), ''), /* using DbmsObjectIdCache to do DbxTune cached lookups */ \n";
+		}
+		
 		String sql = ""
 			    + "-- Note: Below SQL Statement is executed in every database that is 'online', more or less like: sp_msforeachdb \n"
 			    + "-- Note: object_schema_name() and object_name() can NOT be used for 'dirty-reads', they may block... hence the 'ugly' fullname sub-selects in the select column list \n"
+			    + "-- Note: To enable/disable DbxTune Cached Lookups for ObjectID to name translation is done with property '" + DbmsObjectIdCacheSqlServer.PROPKEY_BulkLoadOnStart + "=true|false'. Current Status=" + (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled() ? "ENABLED" : "DISABLED") + " \n"
 			    + "select \n"
-			    + "    DbName     = db_name(database_id), \n"
-			    + "    SchemaName = (select sys.schemas.name from sys.objects inner join sys.schemas ON sys.schemas.schema_id = sys.objects.schema_id where sys.objects.object_id = BASE.object_id), \n"
-			    + "    TableName  = (select sys.objects.name from sys.objects where sys.objects.object_id = BASE.object_id), \n"
-			    + "    IndexName  = (select case when sys.indexes.index_id = 0 then 'HEAP' else sys.indexes.name end from sys.indexes where sys.indexes.object_id = BASE.object_id and sys.indexes.index_id = BASE.index_id), \n"
+			    +      DbName
+			    +      SchemaName
+			    +      TableName
+			    +      IndexName
 			    + "    * \n"
-			    + "from sys." + dm_db_index_operational_stats + "(DEFAULT, DEFAULT, DEFAULT, DEFAULT) BASE \n"
+//			    + "from sys." + dm_db_index_operational_stats + "(DEFAULT, DEFAULT, DEFAULT, DEFAULT) BASE \n"
+			    + "from sys." + dm_db_index_operational_stats + "(db_id(), DEFAULT, DEFAULT, DEFAULT) BASE \n"
 			    + "where BASE.database_id = db_id() \n"
 				+ "  and BASE.object_id > 100"
 			    + "";
@@ -334,6 +362,19 @@ extends CountersModel
 	}
 
 
+	@Override
+	public void localCalculation(CounterSample newSample)
+	{
+		// Resolve "database_id", "object_id", "index_id" to real names 
+		if (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled())
+		{
+			DbmsObjectIdCacheUtils.localCalculation_DbmsObjectIdFiller(this, newSample, 
+					"database_id", "object_id", "index_id",             // Source columns to translate into the below columns 
+					"DbName", "SchemaName", "TableName", "IndexName");  // Target columns for the above source columns
+		}
+	}
+	
+	
 
 
 	

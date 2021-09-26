@@ -402,16 +402,18 @@ public class AseUrlHelper
 		hostPort = StringUtil.parseCommaStrToMultiMap(baseStr, ":", ",");
 
 		// get the servername from sql.ini/interfaces file
-		String serverName = AseConnectionFactory.getIServerName(hostPort);
+		String serverName = null;
+		if (hostPort != null && !hostPort.isEmpty())
+			serverName = AseConnectionFactory.getIServerName(hostPort);
 
 		if (_logger.isDebugEnabled())
 		{
 			_logger.debug("----------------------------------------------");
-			_logger.debug("originUrl  = '"+urlStr+"'.");
-			_logger.debug("serverName = '"+serverName+"'.");
-			_logger.debug("hostPort   = '"+hostPort+"'.");
-			_logger.debug("dbname     = '"+dbname+"'.");
-			_logger.debug("options    = '"+options+"'.");
+			_logger.debug("originUrl  = '" + urlStr     + "'.");
+			_logger.debug("serverName = '" + serverName + "'.");
+			_logger.debug("hostPort   = '" + hostPort   + "'.");
+			_logger.debug("dbname     = '" + dbname     + "'.");
+			_logger.debug("options    = '" + options    + "'.");
 		}
 
 		return new AseUrlHelper(urlStr, serverName, hostPort, dbname, options);

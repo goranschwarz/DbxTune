@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
@@ -36,6 +37,7 @@ import com.asetune.Version;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
+import com.asetune.utils.TimeUtils;
 
 public abstract class DbmsObjectIdCache
 {
@@ -173,10 +175,10 @@ public abstract class DbmsObjectIdCache
 	protected long _statBulkPhysicalReads = 0;    // How many times did we call getPlanBulk()
 	protected long _statLogicalWrite      = 0;    // How many times did we call setPlan()
 
-//	private   long _statReportModulus     = 5000; // When it gets crossed it will double itself, but max is always _statReportModulusMax
-//	private   long _statReportModulusMax  = 100000;
-	private   long _statReportModulus     = 500; // When it gets crossed it will double itself, but max is always _statReportModulusMax
-	private   long _statReportModulusMax  = 10000;
+	private   long _statReportModulus     = 5000; // When it gets crossed it will double itself, but max is always _statReportModulusMax
+	private   long _statReportModulusMax  = 100000;
+//	private   long _statReportModulus     = 500;   // <<<--- for TEST purposes
+//	private   long _statReportModulusMax  = 10000; // <<<--- for TEST purposes
 	// Or possibly change to report when X minutes has passed... since last report print
 
 	protected long _statResetCalls        = 0;    // How many times did we call outOfMemoryHandler()
@@ -229,7 +231,9 @@ public abstract class DbmsObjectIdCache
 		_instance = null;
 	}
 	
-	/** How many entries is in the cache */ 
+	/** 
+	 * How many entries is in the cache
+	 */ 
 	public int size()
 	{
 		int size = 0;
@@ -238,6 +242,31 @@ public abstract class DbmsObjectIdCache
 			size += e.size();
 
 		return size;
+	}
+
+	/** 
+	 * How many entries do we have per database 
+	 */ 
+	public Map<String, Integer> sizePerDb()
+	{
+		Map<String, Integer> dbSizeMap = new LinkedHashMap<>();
+
+		for (Entry<Integer, Map<Integer, ObjectInfo>> e : _dbid_objectId.entrySet())
+		{
+			Integer dbid = e.getKey();
+			Map<Integer, ObjectInfo> objInfoPerDb = e.getValue();
+
+			if (dbid != null)
+			{
+				String dbname = _dbNamesMap.get(dbid);
+				int    size   = objInfoPerDb.size();
+
+				dbSizeMap.put(dbname, size);
+			}
+
+		}
+
+		return dbSizeMap;
 	}
 
 	/**
@@ -406,7 +435,42 @@ public abstract class DbmsObjectIdCache
 		return objectInfo.getIndexName(indexid);
 	}
 
+	/**
+	 * 
+	 * @param dbid
+	 * @param objectid
+	 * @return SchemaName if it was found. Null if the ID wasn't found
+	 * @throws TimeoutException
+	 */
+	public String getSchemaName(int dbid, int objectid) 
+	throws TimeoutException
+	{
+		ObjectInfo objectInfo = getByObjectId(dbid, objectid);
+		
+		if (objectInfo == null)
+			return null;
 
+		return objectInfo.getSchemaName();
+	}
+
+	/**
+	 * 
+	 * @param dbid
+	 * @param objectid
+	 * @return ObjectName if it was found. Null if the ID wasn't found
+	 * @throws TimeoutException
+	 */
+	public String getObjectName(int dbid, int objectid) 
+	throws TimeoutException
+	{
+		ObjectInfo objectInfo = getByObjectId(dbid, objectid);
+		
+		if (objectInfo == null)
+			return null;
+
+		return objectInfo.getObjectName();
+	}
+	
 	/**
 	 * Get the content from cache, if it's not in the cache it will call the back-end to get the information 
 	 * @param dbid
@@ -506,8 +570,11 @@ public abstract class DbmsObjectIdCache
 	{
 		if (_localConnection == null)
 		{
-			_logger.info("No connection was found, creating a new using the Connection Provider.");
+			_logger.info("No local connection was found for the DBMS ObjectID Cache, creating a new using the Connection Provider. A Seperate connection is needed so we can do ObjectID lookups concurrently while we get counter data.");
 			_localConnection = _connProvider.getNewConnection(Version.getAppName() + "-" + this.getClass().getSimpleName());
+
+			// make DBMS specific settings
+			onConnect(_localConnection);
 		}
 		
 		if (_localConnection == null)
@@ -615,9 +682,21 @@ public abstract class DbmsObjectIdCache
 	 */
 	public void getBulk(Set<String> dbnameSet)
 	{
+		long startTime = System.currentTimeMillis();
+		_logger.info("Begin: getBulk() in DbmsObjectIdCache. Populating local caching for looking up objectId->names for databases: " + (dbnameSet == null ? "-all-dbs-" : dbnameSet) );
+		
 		getBulk(getConnection(), dbnameSet);
+		
+		long execTimeMs = TimeUtils.msDiffNow(startTime);
+		_logger.info("DONE: getBulk() in DbmsObjectIdCache. execTimeMs=" + execTimeMs + ", execTimeStr=" + TimeUtils.msToTimeStrShort(execTimeMs) + " ([HH:]%MM:%SS.%ms), TotalEntries=" + size() + ", EntriesPerDb=" + sizePerDb());
 	}
 
+	/**
+	 * If "bulk load on start" is enabled, then try to populate all/as-many-as-possible on startup 
+	 * @return true if we should call <code>getBulk()</code> on startup
+	 */
+	public abstract boolean isBulkLoadOnStartEnabled();
+	
 	/**
 	 * Someone subclass to implement this method
 	 * 
@@ -636,4 +715,10 @@ public abstract class DbmsObjectIdCache
 	 * @param dbnameSet This is entries you need to fetch. If NULL, you need to fetch/populate "everything"
 	 */
 	protected abstract void getBulk(DbxConnection connection, Set<String> dbnameSet);
+
+	/**
+	 * Do DBMS specific settings after a new connection has been esablished
+	 * @param conn The newly Connection handle
+	 */
+	protected abstract void onConnect(DbxConnection conn);
 }

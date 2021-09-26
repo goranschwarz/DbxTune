@@ -625,7 +625,12 @@ implements Memory.MemoryListener
 				double percentageUsed    = (((double) usedMemory) / maxMemory) * 100.0;
 				String percentageUsedStr = String.format("%.1f",percentageUsed);
 				long freeMem = maxMemory - usedMemory;
-				_logger.warn("Low on memory usage ? ... percentageUsed="+percentageUsedStr+", maxMemoryMb="+(maxMemory/1024/1024)+", usedMemoryMb="+(usedMemory/1024/1024)+", freeMemoryMb="+(freeMem/1024/1024));
+
+				// Write warning message
+				_logger.warn("Low on memory usage, invoking manual Garbage Collection... Memory info before GC: percentageUsed="+percentageUsedStr+", maxMemoryMb="+(maxMemory/1024/1024)+", usedMemoryMb="+(usedMemory/1024/1024)+", freeMemoryMb="+(freeMem/1024/1024));
+
+				// Do manual Garbage Collection
+				System.gc();
 			}
 		});
 		

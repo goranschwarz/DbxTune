@@ -559,7 +559,7 @@ public class DbxTuneLogServlet extends HttpServlet
 			out.println("<input id='logLine-discardText' type='text' size='100' value='" + (StringUtil.hasValue(discardRegExp) ? discardRegExp : "") + "'/><br>");
 			out.println("<br>");
 			out.println("<b>Tail number of records:</b> <br>");
-			out.println("<input id='tail-numOfLines' type='text' size='10' value='" + (tailNumOfLines > 0 ? tailNumOfLines : 500) + "'/><br>");
+			out.println("<input id='tail-numOfLines' type='text' size='10' value='" + (tailNumOfLines > 0 ? tailNumOfLines : 5000) + "'/><br>");
 			out.println("<br>");
 			out.println("<button onclick='refreshWithFilter()'>Refresh page with above filter</button>");
 			out.println("</div>");
@@ -580,7 +580,7 @@ public class DbxTuneLogServlet extends HttpServlet
 			out.println("<input id='logLine-discardText' type='text' size='100' value='" + (StringUtil.hasValue(discardRegExp) ? discardRegExp : "") + "'/><br>");
 			out.println("<br>");
 			out.println("<b>Tail number of records:</b> <br>");
-			out.println("<input id='tail-numOfLines' type='text' size='10' value='" + (tailNumOfLines > 0 ? tailNumOfLines : 500) + "'/><br>");
+			out.println("<input id='tail-numOfLines' type='text' size='10' value='" + (tailNumOfLines > 0 ? tailNumOfLines : 5000) + "'/><br>");
 			out.println("<br>");
 			out.println("<button onclick='refreshWithFilter()'>Refresh page AND Start Tail - with above filter</button>");
 			out.println("</div>");

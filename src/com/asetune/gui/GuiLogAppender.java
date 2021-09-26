@@ -40,6 +40,8 @@ import com.asetune.check.CheckForUpdates;
 public class GuiLogAppender
     extends AppenderSkeleton
 {
+	private static Logger _logger = Logger.getLogger(GuiLogAppender.class);
+
 	private Log4jTableModel _logTable = new Log4jTableModel();
 	private static GuiLogAppender _instance = null;
 
@@ -140,10 +142,35 @@ public class GuiLogAppender
 		return _instance;
 	}
 
+	/**
+	 * Get current/active TableModel
+	 * 
+	 * @return The current/active TableModel
+	 */
 	public static Log4jTableModel getTableModel()
 	{
 		if (_instance == null) 
 			return null;
 		return getInstance()._logTable;
+	}
+
+	/**
+	 * create a new TableModel... all settings will/should be copied from the "old/current/active" TableModel to the "new" TableModel
+	 * 
+	 * @return The previous active table will be returned (if this instance has not yet been created a null will be returned)
+	 */
+	public static Log4jTableModel getTableModelAndCreateNew()
+	{
+		if (_instance == null) 
+			return null;
+
+		// create a new table... all settings will/should be copied from the "old" TableModel to the "new" TableModel
+		// The previous active table will be returned
+		Log4jTableModel logTable = _instance._logTable;
+		_instance._logTable = new Log4jTableModel(logTable);
+
+		_logger.info("Clearing the in-memory TableModel for 'GuiLogAppender', which currently has " + logTable.getRowCount() + " entries.");
+
+		return logTable;
 	}
 }

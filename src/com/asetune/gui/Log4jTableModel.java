@@ -24,18 +24,35 @@
  */
 package com.asetune.gui;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
+import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import javax.swing.table.AbstractTableModel;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.log4j.Logger;
+
+import com.asetune.central.DbxTuneCentral;
+import com.asetune.utils.StringUtil;
 
 public class Log4jTableModel
 extends AbstractTableModel
 {
+	private static Logger _logger = Logger.getLogger(Log4jTableModel.class);
     private static final long serialVersionUID = 2152458182894425275L;
 
     //	LogManager.
 	private LinkedList<Log4jLogRecord> _records = new LinkedList<Log4jLogRecord>();
+	private ArrayList<SkipMessageEntry> _skipMessagesList = null;
 	private int        _maxRecords = 500;
 	private boolean    _noGuiMode  = false;
 
@@ -44,11 +61,237 @@ extends AbstractTableModel
 
 	public void    setNoGuiMode(boolean val) { _noGuiMode = val; }
 	public boolean isNoGuiMode()             { return _noGuiMode;	}
+	public boolean isGuiMode()               { return ! _noGuiMode;	}
+
+	// Constructors
+	public Log4jTableModel()
+	{
+		loadSkipMessages();
+	}
+	public Log4jTableModel(Log4jTableModel tm)
+	{
+		// Copy settings from the "old" TableModel to the new TableModel
+		setNoGuiMode (tm.isNoGuiMode());
+		setMaxRecords(tm.getMaxRecords());
+		_skipMessagesList = tm._skipMessagesList;
+	}
+
+	public enum SkipMesssageType
+	{
+		REGEX, 
+		INDEXOF
+	};
+	
+	private static class SkipMessageEntry
+	{
+		SkipMesssageType _type;
+		String           _str;
+		Pattern          _pattern;
+		LocalTime        _beginTime;
+		LocalTime        _endTime;
+
+		public SkipMessageEntry(SkipMesssageType type, String str)
+		throws PatternSyntaxException
+		{
+			this(type, str, null, null);
+		}
+
+		public SkipMessageEntry(SkipMesssageType type, String str, LocalTime beginTime, LocalTime endTime)
+		throws PatternSyntaxException
+		{
+			_type = type;
+			_str  = str;
+
+			if (SkipMesssageType.REGEX.equals(type))
+			{
+				_pattern = Pattern.compile(str);
+			}
+			else if (SkipMesssageType.INDEXOF.equals(type))
+			{
+				_str  = str;
+			}
+			
+			_beginTime = beginTime;
+			_endTime   = endTime;
+		}
+
+		public boolean isType(SkipMesssageType type)
+		{
+			return _type.equals(type);
+		}
+
+//		public SkipMessageEntry(Pattern pattern)
+//		{
+//			_pattern = pattern;
+//		}
+//		public SkipMessageEntry(Pattern pattern, LocalTime beginTime, LocalTime endTime)
+//		{
+//			_pattern   = pattern;
+//			_beginTime = beginTime;
+//			_endTime   = endTime;
+//		}
+	}
+
+	/**
+	 * Load "skip messages" from a file or a static list... compile them into regex
+	 */
+	private void loadSkipMessages()
+	{
+		_skipMessagesList = new ArrayList<>();
+
+		String dirName  = DbxTuneCentral.getAppConfDir();
+//		String dirName  = DbxTune.getInstance().getAppConfDir();
+		String fileName = "Log4jTableModel.nogui.skiplist";
+
+		// From file
+		// - open files into a linked list of regexStr
+		// - compile ... with try/catch to check for valid regEx in above list... errors: print ...
+		File f = new File(dirName + "/" + fileName);
+		if (f.exists())
+		{
+			_logger.info("User Defined LogAppender 'skiplist' file was found. using filename: '" + f.getAbsolutePath() + "'.");
+			try
+			{
+				List<String> skipList = FileUtils.readLines(null, StandardCharsets.UTF_8);
+				for (String line : skipList)
+				{
+					if (StringUtil.isNullOrBlank(line))
+						continue;
+					
+					_logger.info("Loading User Defined LogAppender no-gui skiplist entry '" + line + "'.");
+					try
+					{
+						_skipMessagesList.add( new SkipMessageEntry(SkipMesssageType.REGEX, line) );
+					}
+					catch(PatternSyntaxException ex)
+					{
+						_logger.error("Problems loading User Defined LogAppender no-gui skiplist regex entry '" + line + "'. Caught: " + ex);
+					}
+				}
+			}
+			catch (IOException ex)
+			{
+				_logger.error("Problems reading User Defined LogAppender 'skiplist' file '" + f.getAbsolutePath() + "'. Caught: " + ex, ex);
+			}
+		}
+		else
+		{
+			_logger.info("No User Defined LogAppender 'skiplist' file was found. Continuing with static settings. checked for filename '" + f.getAbsolutePath() + "'.");
+
+			// From static list
+			_skipMessagesList.add(new SkipMessageEntry(SkipMesssageType.REGEX, "When trying to initialize Counters Model"));
+			_skipMessagesList.add(new SkipMessageEntry(SkipMesssageType.REGEX, "The environment variable 'DBXTUNE_UD_ALARM_SOURCE_DIR' is NOT set."));
+			_skipMessagesList.add(new SkipMessageEntry(SkipMesssageType.REGEX, "The environment variable 'DBXTUNE_NORMALIZER_SOURCE_DIR' is NOT set."));
+			_skipMessagesList.add(new SkipMessageEntry(SkipMesssageType.REGEX, "The Directory '.*' does NOT exists. No User Defined Normalizer classes will be Compiled."));
+//			_skipMessagesList.add(new SkipMessageEntry(SkipMesssageType.REGEX, "Rejected .* plan names due to ' not executed '. For the last "));
+			_skipMessagesList.add(new SkipMessageEntry(SkipMesssageType.REGEX, "The persistent queue has [1-5] entries. The persistent writer might not keep in pace"));
+			_skipMessagesList.add(new SkipMessageEntry(SkipMesssageType.REGEX, "The configuration '.*' might be to low. For the last"));
+
+			_skipMessagesList.add(new SkipMessageEntry(SkipMesssageType.INDEXOF, "plan names due to ' not executed '. For the last "));
+
+			// Skip some messages between 04:00 and 05:00
+			_skipMessagesList.add( new SkipMessageEntry(
+					SkipMesssageType.REGEX, "Problems connecting/sending JSON-REST call to ", 
+					LocalTime.of(04,00), 
+					LocalTime.of(05,00) ) );
+		}
+	}
+
+	/**
+	 * Check if the "skip message" is within the desired time limit<br>
+	 * If the is <i>no</i> time limit, the true is returned. 
+	 * @param entry
+	 * @return
+	 */
+	private boolean skipMessageIfWithinTime(SkipMessageEntry entry)
+	{
+		if (entry._beginTime != null && entry._endTime != null)
+		{
+			LocalTime msgTime = LocalTime.now();
+			// TODO: Test if the below works... otherwise just use "now"
+//			LocalTime msgTime = Instant.ofEpochMilli(record.getMillis())
+//					.atZone(ZoneId.systemDefault())
+//					.toLocalTime();
+
+			// isBetween begin/end time
+			if (msgTime.isAfter(entry._beginTime) && msgTime.isBefore(entry._endTime))
+				return true; // SKIP message
+			else
+				return false; // KEEP message
+		}
+		else
+		{
+			return true; // SKIP message
+		}
+	}
+	/**
+	 * Should the incoming message be "skipped"
+	 * @param record
+	 * @return
+	 */
+	public boolean skipMessage(Log4jLogRecord record)
+	{
+		if ( isGuiMode() )
+		{
+			// if GUI mode ALWAYS keep message
+			return false; // KEEP message
+		}
+		else
+		{
+			//--------------------------
+			// NO-GUI Mode is below
+			//--------------------------
+
+			// Only keep severe messages
+			if ( record.isWarningLevel() || record.isSevereLevel() )
+			{
+				String msg = record.getMessage();
+				if (msg == null)
+					return true; // SKIP message
+
+				if (_skipMessagesList != null)
+				{
+					for (SkipMessageEntry entry : _skipMessagesList)
+					{
+						if (entry.isType(SkipMesssageType.REGEX))
+						{
+							Matcher m = entry._pattern.matcher(msg);
+							if (m.find())
+							{
+								return skipMessageIfWithinTime(entry);
+							}
+						}
+						else if (entry.isType(SkipMesssageType.INDEXOF))
+						{
+							if (msg.contains(entry._str))
+							{
+								return skipMessageIfWithinTime(entry);
+							}
+						}
+					}
+				}
+				
+				// TODO: SKIP some "common" messages
+				// FIXME
+//				if (msg.contains("x")) return true;
+//				if (msg.contains("y")) return true;
+//				if (msg.contains("z")) return true;
+
+				// if we get here it's a KEEPER
+				return false; // KEEP message
+			}
+			else
+			{
+				// Skip all messages that are not WARN or Severe
+				return true; // SKIP message
+			}
+		}
+	}
 
 	public void addMessage(Log4jLogRecord record)
 	{
 		// Skip info messages (in NO-GUI mode we only want to save more severe messages)
-		if (isNoGuiMode() && ! (record.isSevereLevel() || record.isWarningLevel()) )
+		if ( skipMessage(record) )
 			return;
 
 		_records.add(record);

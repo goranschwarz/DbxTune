@@ -38,6 +38,7 @@ import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -2579,15 +2580,272 @@ extends CounterTableModel
 	//----------------------------------------------------------------------------------
 	//-- getValueAsInt
 	//----------------------------------------------------------------------------------
+
+//	// 
+//	public int getValueAsInt(int rowId, int colPos)
+//	{
+//		return getValueAsInt(rowId, colPos, -1);
+//	}
+//
+//	// 
+//	public int getValueAsInt(int rowId, int colPos, int def)
+//	{
+//		Object o = getValueAsObject(rowId, colPos);
+//		if (o == null)
+//			return def;
+//
+//		if (o instanceof Number)
+//			return ((Number) o).intValue();
+//		else
+//			return new Integer(Integer.parseInt(o.toString()));
+//	}
+//
+//	// 
+//	public int getValueAsInt(int rowId, String colname, boolean caseSensitive)
+//	{
+//		return getValueAsInt(rowId, colname, caseSensitive, -1);
+//	}
+//
+//	// 
+//	public int getValueAsInt(int rowId, String colname, boolean caseSensitive, int def)
+//	{
+//		Object o = getValueAsObject(rowId, colname, caseSensitive);
+//		if (o == null)
+//			return def;
+//
+//		if (o instanceof Number)
+//			return ((Number) o).intValue();
+//		else
+//			return new Integer(Integer.parseInt(o.toString()));
+//	}
+//
+//	// 
+//	public int getValueAsInt(String pkStr, String colname, boolean caseSensitive)
+//	{
+//		return getValueAsInt(pkStr, colname, caseSensitive, -1);
+//	}
+//
+//	// 
+//	public int getValueAsInt(String pkStr, String colname, boolean caseSensitive, int def)
+//	{
+//		Object o = getValueAsObject(pkStr, colname, caseSensitive);
+//		if (o == null)
+//			return def;
+//
+//		if (o instanceof Number)
+//			return ((Number) o).intValue();
+//		else
+//			return new Integer(Integer.parseInt(o.toString()));
+//	}
+
 	
+	//----------------------------------------------------------------------------------
+	//-- getValueAsInteger
+	//----------------------------------------------------------------------------------
+	
+	// 
+	public Integer getValueAsInteger(int rowId, int colPos)
+	{
+		return getValueAsInteger(rowId, colPos, null);
+	}
+
+	// 
+	public Integer getValueAsInteger(int rowId, int colPos, Integer def)
+	{
+		Object o = getValueAsObject(rowId, colPos);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return new Integer(((Number) o).intValue());
+		else
+			return new Integer(Integer.parseInt(o.toString()));
+	}
+
+	// 
+	public Integer getValueAsInteger(int rowId, String colname, boolean caseSensitive)
+	{
+		return getValueAsInteger(rowId, colname, caseSensitive, null);
+	}
+
+	// 
+	public Integer getValueAsInteger(int rowId, String colname, boolean caseSensitive, Integer def)
+	{
+		Object o = getValueAsObject(rowId, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return new Integer(((Number) o).intValue());
+		else
+			return new Integer(Integer.parseInt(o.toString()));
+	}
+
+	// 
+	public Integer getValueAsInteger(String pkStr, String colname, boolean caseSensitive)
+	{
+		return getValueAsInteger(pkStr, colname, caseSensitive, null);
+	}
+
+	// 
+	public Integer getValueAsInteger(String pkStr, String colname, boolean caseSensitive, Integer def)
+	{
+		Object o = getValueAsObject(pkStr, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return new Integer(((Number) o).intValue());
+		else
+			return new Integer(Integer.parseInt(o.toString()));
+	}
+
+
 	//----------------------------------------------------------------------------------
 	//-- getValueAsLong
 	//----------------------------------------------------------------------------------
+	
+	// 
+	public Long getValueAsLong(int rowId, int colPos)
+	{
+		return getValueAsLong(rowId, colPos, null);
+	}
+
+	// 
+	public Long getValueAsLong(int rowId, int colPos, Long def)
+	{
+		Object o = getValueAsObject(rowId, colPos);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return new Long(((Number) o).longValue());
+		else
+			return new Long(Long.parseLong(o.toString()));
+	}
+
+	// 
+	public Long getValueAsLong(int rowId, String colname, boolean caseSensitive)
+	{
+		return getValueAsLong(rowId, colname, caseSensitive, null);
+	}
+
+	// 
+	public Long getValueAsLong(int rowId, String colname, boolean caseSensitive, Long def)
+	{
+		Object o = getValueAsObject(rowId, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return new Long(((Number) o).longValue());
+		else
+			return new Long(Long.parseLong(o.toString()));
+	}
+
+	// 
+	public Long getValueAsLong(String pkStr, String colname, boolean caseSensitive)
+	{
+		return getValueAsLong(pkStr, colname, caseSensitive, null);
+	}
+
+	// 
+	public Long getValueAsLong(String pkStr, String colname, boolean caseSensitive, Long def)
+	{
+		Object o = getValueAsObject(pkStr, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return new Long(((Number) o).longValue());
+		else
+			return new Long(Long.parseLong(o.toString()));
+	}
+
 
 	//----------------------------------------------------------------------------------
 	//-- getValueAsTimestamp
 	//----------------------------------------------------------------------------------
 	
+	// 
+	public Timestamp getValueAsTimestamp(int rowId, int colPos)
+	{
+		return getValueAsTimestamp(rowId, colPos, null);
+	}
+
+	// 
+	public Timestamp getValueAsTimestamp(int rowId, int colPos, Timestamp def)
+	{
+		Object o = getValueAsObject(rowId, colPos);
+		if (o == null)
+			return def;
+
+		if (o instanceof Timestamp)
+			return (Timestamp) o;
+		else
+		{
+			try { 
+				return TimeUtils.parseToTimestamp(o.toString()); 
+			} catch(ParseException ex) {
+				_logger.warn("Problems parsing value '" + o + "' for rowId=" + rowId + ", colPos=" + colPos + ". Returning default value: " + def);
+				return def;
+			}
+		}
+	}
+
+	// 
+	public Timestamp getValueAsTimestamp(int rowId, String colname, boolean caseSensitive)
+	{
+		return getValueAsTimestamp(rowId, colname, caseSensitive, null);
+	}
+
+	// 
+	public Timestamp getValueAsTimestamp(int rowId, String colname, boolean caseSensitive, Timestamp def)
+	{
+		Object o = getValueAsObject(rowId, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Timestamp)
+			return (Timestamp) o;
+		else
+		{
+			try { 
+				return TimeUtils.parseToTimestamp(o.toString()); 
+			} catch(ParseException ex) {
+				_logger.warn("Problems parsing value '" + o + "' for rowId=" + rowId + ", colname=" + colname + ". Returning default value: " + def);
+				return def;
+			}
+		}
+	}
+
+	// 
+	public Timestamp getValueAsTimestamp(String pkStr, String colname, boolean caseSensitive)
+	{
+		return getValueAsTimestamp(pkStr, colname, caseSensitive, null);
+	}
+
+	// 
+	public Timestamp getValueAsTimestamp(String pkStr, String colname, boolean caseSensitive, Timestamp def)
+	{
+		Object o = getValueAsObject(pkStr, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Timestamp)
+			return (Timestamp) o;
+		else
+		{
+			try { 
+				return TimeUtils.parseToTimestamp(o.toString()); 
+			} catch(ParseException ex) {
+				_logger.warn("Problems parsing value '" + o + "' for pkStr=" + pkStr + ", colname=" + colname + ". Returning default value: " + def);
+				return def;
+			}
+		}
+	}
+
+
 	//----------------------------------------------------------------------------------
 	//-- getValueAsXXX
 	//----------------------------------------------------------------------------------

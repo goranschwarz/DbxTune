@@ -181,6 +181,10 @@ extends MainFrame
 
 		// DBMS ObjectID --> ObjectName Cache... maybe it's not the perfect place to initialize this...
 		DbmsObjectIdCache.setInstance( new DbmsObjectIdCacheSqlServer(this) );
+		
+		// Populate Object ID Cache
+		if (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled())
+			DbmsObjectIdCache.getInstance().getBulk(null); // null == ALL Databases
 	}
 
 	@Override

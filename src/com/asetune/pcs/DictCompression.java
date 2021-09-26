@@ -801,13 +801,188 @@ public class DictCompression
 		if (_batchQueue == null)   return 0;
 		if (_batchQueue.isEmpty()) return 0;
 
+		// Should we make this configurable ???  (for now just go with SINGLE-Statement and have MULTI-BATCH-Statement as "dead code"
+		boolean useSingleStatement = true;
+
+		if (useSingleStatement)
+			return storeBatch_usingSingleStmnt(conn);
+		else
+			return storeBatch_usingJdbcBatchStmnt(conn);
+	}
+
+	/**
+	 * Values that previously was added with 'addToBatch(...)' will be persisted to the DBMS
+	 * 
+	 * @param conn       The DBMS Connection 
+	 * @return           Number of records saved in the DBMS
+	 * @throws SQLException
+	 */
+	private int storeBatch_usingSingleStmnt(DbxConnection conn)
+	throws SQLException
+	{
+		if (_batchQueue == null)   return 0;
+		if (_batchQueue.isEmpty()) return 0;
+
 		int rows = 0;
 
+		// Clear the old structure, a new one will be allocated by add(...)
+		// Make a new tmp map which we will iterate on, new entries will be added with a "new" _batchQueue instance
+		Map<String, Map<String, Map<String, String>>> tmpBatchQueue;
+		synchronized(this) // This shouldn't really be needed, since the storeBatch() method is called from a single thread 
+		{
+			tmpBatchQueue = _batchQueue;
+			_batchQueue = null;
+		}
+		
 		// Loop cmName(s)
-		for (String cmName : _batchQueue.keySet())
+		for (String cmName : tmpBatchQueue.keySet())
 		{
 			// Loop colName(s)
-			Map<String, Map<String, String>> colMap = _batchQueue.get(cmName);
+			Map<String, Map<String, String>> colMap = tmpBatchQueue.get(cmName);
+			for (String colName : colMap.keySet())
+			{
+				// Add the entry to the storage
+				String tabName = cmName + DCC_MARKER + colName;
+				String sql = "insert into [" + tabName + "] ([hashId], [colVal]) values(?, ?)";
+				
+				// Translate [] into DBMS Specific Quoted chars
+				sql = conn.quotifySqlString(sql);
+
+				Map<String, String> hashIdMap = colMap.get(colName);
+
+				// declare here so we can use it in the "catch block"
+				String hashId = null;
+				String colVal = null;
+
+				// Loop hashId, colVal
+				// ADD to SQL Batch
+				try
+				{
+					PreparedStatement pstmnt = conn.prepareStatement(sql);
+
+					for (Entry<String, String> hashEntry : hashIdMap.entrySet())
+					{
+						hashId = hashEntry.getKey();
+						colVal = hashEntry.getValue();
+
+						try
+						{
+							pstmnt.setString(1, hashId);
+							pstmnt.setString(2, colVal);
+			
+							if (_logger.isDebugEnabled())
+								_logger.debug("DictCompression.storeBatch_singleStmnt(): SQL=" + sql + " --->>>> hash='" + hashId + "', val='" + colVal + "'");
+
+							pstmnt.executeUpdate();
+							rows++;
+							_stat_saveCount++;
+						}
+						catch (SQLException singleStmntEx)
+						{
+							_stat_saveErrors++;
+
+							// 0 = DBMS lookup failed (or no value in DBMS)
+							// 1 = AlreadyExistsInDbms-NoCollision, 
+							// 2 = AlreadyExistsInDbms-Collision
+							int catchAction = 0; 
+
+							// Is it a PrimaryKey violation... ??? there are no generic way in JDBC to determine that no SQL-Code, ex.getSQLState() that can tell this...
+							// So lets check the value for existence, and potentially check for hash collision... (add it to the "cache")
+							String storedValueForHashId = null;
+							try 
+							{
+								storedValueForHashId = getValueForHashId(conn, null, cmName, colName, hashId);
+
+								// Check for Collision (if DBMS Stored value is same as the sent, and NOT JUST the same key, then we have a Collision)
+								if (storedValueForHashId != null)
+								{
+									catchAction = 1; // 1 = AlreadyExistsInDbms-NoCollision
+
+									if ( ! storedValueForHashId.equals(colVal) )
+									{
+										catchAction = 2; // 2 = AlreadyExistsInDbms-Collision
+									}
+								}
+							} 
+							catch (SQLException ex2) 
+							{
+								_logger.error("Problems checking for HashId Collision when adding values to Dictionary Compressed table " + tabName + ". LookupDbmsInfo(ErrorCode=" + ex2.getErrorCode() + ", SqlState=" + ex2.getSQLState() + ", Message=|" + ex2.getMessage() + "|). Lookup Caught: " + ex2 + ". Initial insert Caught: " + singleStmntEx);
+							}
+							
+							if (catchAction == 1) // AlreadyExistsInDbms-NoCollision
+							{
+								// maybe change this to INFO instead of WARNING
+								_logger.warn("Issue when adding value hashId='" + hashId + "' to Dictionary Compressed table " + tabName + ". catchAction=1 [AlreadyExistsInDbms-NoCollision], Simply adding the HashId to the cache!  DbmsInfo(ErrorCode=" + singleStmntEx.getErrorCode() + ", SqlState=" + singleStmntEx.getSQLState() + ", Message=|" + singleStmntEx.getMessage() + "|).");
+
+								// Add the hashId to the "exists" or "cache" structure, RetCode == false -->>> The entry already existed... can we have a race condition or what is happening here??? 
+								// The SqlCapture thread is single-threaded... so there shouldn't be any threaded race condition issues...
+								if ( add(cmName, colName, hashId) == false )
+								{
+									_logger.warn("When adding hashId='" + hashId + "' to In-Memory-Cache for Dictionary Compressed table " + tabName + ". the HashId already existed... Can we have a race-condition issue?");
+								}
+							}
+							else if (catchAction == 2) // AlreadyExistsInDbms-Collision
+							{
+								_logger.error("Data Value HASH COLLISION, when adding value for hashId='" + hashId + "' to Dictionary Compressed table " + tabName + ". catchAction=2 [AlreadyExistsInDbms-Collision], Not sure what to do here... DbmsInfo(ErrorCode=" + singleStmntEx.getErrorCode() + ", SqlState=" + singleStmntEx.getSQLState() + ", Message=|" + singleStmntEx.getMessage() + "|). DbmsStoredValue=|" + storedValueForHashId + "|, InsertValue=|" + colVal + "|.");
+							}
+							else
+							{
+								_logger.error("Problems adding values to Dictionary Compressed table " + tabName + ". Can't resolve catchAction=" + catchAction + "... DbmsInfo(ErrorCode=" + singleStmntEx.getErrorCode() + ", SqlState=" + singleStmntEx.getSQLState() + ", Message=|" + singleStmntEx.getMessage() + "|). Insert Caught: " + singleStmntEx + ".");
+							}
+						} // end catch singleStmntEx
+					}
+					
+					// Close the Prepared statement
+					pstmnt.close();
+				}
+				catch (SQLException ex)
+				{
+					_stat_saveErrors++;
+
+					// Else write out more info
+					_logger.error("Problems during prepare/adding values to Dictionary Compressed table " + tabName + ". Clearing this batch and continuing with next table. DbmsInfo(ErrorCode=" + ex.getErrorCode() + ", SqlState=" + ex.getSQLState() + ", Message=|" + ex.getMessage() + "|). Cleared size=" + hashIdMap.size() + ", Entries=" + hashIdMap);
+					
+				} // end: catch
+
+				// Clear the map is not really needed here, but lets do it anyway
+				hashIdMap.clear();
+
+			} // end: loop - colMap.keySet()
+
+		} // end: loop - tmpBatchQueue.keySet()
+		
+		return rows;
+	}
+
+	/**
+	 * Values that previously was added with 'addToBatch(...)' will be persisted to the DBMS
+	 * 
+	 * @param conn       The DBMS Connection 
+	 * @return           Number of records saved in the DBMS
+	 * @throws SQLException
+	 */
+	private int storeBatch_usingJdbcBatchStmnt(DbxConnection conn)
+	throws SQLException
+	{
+		if (_batchQueue == null)   return 0;
+		if (_batchQueue.isEmpty()) return 0;
+
+		int rows = 0;
+
+		// Clear the old structure, a new one will be allocated by add(...)
+		// Make a new tmp map which we will iterate on, new entries will be added with a "new" _batchQueue instance
+		Map<String, Map<String, Map<String, String>>> tmpBatchQueue;
+		synchronized(this) // This shouldn't really be needed, since the storeBatch() method is called from a single thread 
+		{
+			tmpBatchQueue = _batchQueue;
+			_batchQueue = null;
+		}
+		
+		// Loop cmName(s)
+		for (String cmName : tmpBatchQueue.keySet())
+		{
+			// Loop colName(s)
+			Map<String, Map<String, String>> colMap = tmpBatchQueue.get(cmName);
 			for (String colName : colMap.keySet())
 			{
 				// Add the entry to the storage
@@ -836,7 +1011,9 @@ public class DictCompression
 
 						pstmnt.setString(1, hashId);
 						pstmnt.setString(2, colVal);
-	//System.out.println("DictCompression.storeBatch(): SQL=" + sql + " --->>>> hash='" + hashId + "', val='" + colVal + "'");
+
+						if (_logger.isDebugEnabled())
+							_logger.debug("DictCompression.storeBatch_multiBatch(): SQL=" + sql + " --->>>> hash='" + hashId + "', val='" + colVal + "'");
 
 						pstmnt.addBatch();
 						rows++;
@@ -844,6 +1021,7 @@ public class DictCompression
 					}
 					
 					// SAVE/EXECUTE - SQL Batch
+					// NOTE, OR FIXME: Should we revert to "row-by-row-inserts" instead of batch... due to easier error/exception handling and error printing... (easier to see/print individual statements that fails)
 					pstmnt.executeBatch();
 					pstmnt.close();
 				}
@@ -856,7 +1034,7 @@ public class DictCompression
 					// 2 = AlreadyExistsInDbms-Collision
 					int catchAction = 0; 
 
-					// Is it a PrimaryKey violation... ??? there are no generic way in JDBC to determen that no SQL-Code, ex.getSQLState() that can tell this...
+					// Is it a PrimaryKey violation... ??? there are no generic way in JDBC to determine that no SQL-Code, ex.getSQLState() that can tell this...
 					// So lets check the value for existence, and potentially check for hash collision... (add it to the "cache")
 					String storedValueForHashId = null;
 					try 
@@ -892,25 +1070,33 @@ public class DictCompression
 					}
 					else if (catchAction == 2) // AlreadyExistsInDbms-Collision
 					{
-						_logger.error("Data Value COLLISION, when adding value for hashId='" + hashId + "' to Dictionary Compressed table " + tabName + ". catchAction=2 [AlreadyExistsInDbms-Collision], Not sure what to do here... DbmsStoredValue=|" + storedValueForHashId + "|, InsertValue=|" + colVal + "|.");
+						_logger.error("Data Value HASH COLLISION, when adding value for hashId='" + hashId + "' to Dictionary Compressed table " + tabName + ". catchAction=2 [AlreadyExistsInDbms-Collision], Not sure what to do here... DbmsStoredValue=|" + storedValueForHashId + "|, InsertValue=|" + colVal + "|.");
 					}
 					else
 					{
 						_logger.error("Problems adding values to Dictionary Compressed table " + tabName + ". Can't resolve catchAction=" + catchAction + "... Insert Caught: " + ex + ".");
 					}
 
-					_logger.error("Problems adding values to Dictionary Compressed table " + tabName + ". Clearing this batch and continuing with next table. Cleared size=" + hashIdMap.size() + ", Entries=" + hashIdMap);
+					// Write some info about what we are about to CLEAR
+					if (catchAction == 1 && hashIdMap.size() == 1) // AlreadyExistsInDbms-NoCollision
+					{
+						// if no collision & only 1 entry in batch: Do nothing
+					}
+					else
+					{
+						// Else write out more info
+						_logger.error("Problems adding values to Dictionary Compressed table " + tabName + ". catchAction=" + catchAction + " (1=AlreadyExistsInDbms-NoCollision, 2=AlreadyExistsInDbms-Collision), Clearing this batch and continuing with next table. DbmsInfo(ErrorCode=" + ex.getErrorCode() + ", SqlState=" + ex.getSQLState() + ", Message=|" + ex.getMessage() + "|). Cleared size=" + hashIdMap.size() + ", Entries=" + hashIdMap);
+					}
+						
 					hashIdMap.clear();
 					
 				} // end: catch
 			} // end: loop - colMap.keySet()
-		} // end: loop - _batchQueue.keySet()
+		} // end: loop - tmpBatchQueue.keySet()
 		
-		// Clear the old structure, a new one will be allocated by add(...)
-		_batchQueue = null;
-
 		return rows;
 	}
+
 
 	/** get a digest for the column value, the returned string length depends on the Digest type used when instantiating this instance */
 	private String getDigest(String colVal)

@@ -1147,8 +1147,8 @@ public class OverviewServlet extends HttpServlet
 						out.println("    <td>");
 						out.println("      <a href='/log?name="+f.getName()+"'>plain</a>");
 						out.println("      | <a href='/log?name="+f.getName()+urlDiscardStr+"'>discard</a>");
-						out.println("      | <a href='/log?name="+f.getName()+"&tail=500'>tail</a>");
-						out.println("      | <a href='/log?name="+f.getName()+urlDiscardStr+"&tail=500'>tail+discard</a>");
+						out.println("      | <a href='/log?name="+f.getName()+"&tail=5000'>tail</a>");
+						out.println("      | <a href='/log?name="+f.getName()+urlDiscardStr+"&tail=5000'>tail+discard</a>");
 						out.println("    </td>");
 						out.println("    <td>" + sizeInGB     + "</td>");
 						out.println("    <td>" + sizeInMB     + "</td>");
@@ -1195,8 +1195,8 @@ public class OverviewServlet extends HttpServlet
 //				out.println("    <td>" + sizeInGB     + "</td>");
 //				out.println("    <td>" + sizeInMB     + "</td>");
 //				out.println("    <td>" + sizeInKB     + "</td>");
-//				out.println("    <td><a href='/log?name="+f.getName()+"&tail=500'><code>"+f.getName()+"</code></a></td>");
-//				out.println("    <td><a href='/log?name="+f.getName()+urlDiscardStr+"&tail=500'><code>"+f.getName()+"</code></a></td>");
+//				out.println("    <td><a href='/log?name="+f.getName()+"&tail=5000'><code>"+f.getName()+"</code></a></td>");
+//				out.println("    <td><a href='/log?name="+f.getName()+urlDiscardStr+"&tail=5000'><code>"+f.getName()+"</code></a></td>");
 //				out.println("    <td><a href='/log?name="+f.getName()+urlDiscardStr+"'><code>"+f.getName()+"</code></a></td>");
 //				out.println("    <td><input type='text' placeholder='filter-out some text (regexp can be used), hit <enter> to search' class='search' size='80' style='border:none' onkeydown='openLogFileWithDiscard(this, \""+f.getName()+"\")'/></td>");
 //				out.println("  </tr>");
@@ -1236,8 +1236,8 @@ public class OverviewServlet extends HttpServlet
 				out.println("    <td>");
 				out.println("      <a href='/log?name="+f.getName()+"'>plain</a>");
 				out.println("      | <a href='/log?name="+f.getName()+urlDiscardStr+"'>discard</a>");
-				out.println("      | <a href='/log?name="+f.getName()+"&tail=500'>tail</a>");
-				out.println("      | <a href='/log?name="+f.getName()+urlDiscardStr+"&tail=500'>tail+discard</a>");
+				out.println("      | <a href='/log?name="+f.getName()+"&tail=5000'>tail</a>");
+				out.println("      | <a href='/log?name="+f.getName()+urlDiscardStr+"&tail=5000'>tail+discard</a>");
 				out.println("    </td>");
 				out.println("    <td>" + sizeInGB     + "</td>");
 				out.println("    <td>" + sizeInMB     + "</td>");
@@ -1519,12 +1519,12 @@ public class OverviewServlet extends HttpServlet
 			out.println("<br>");
 			out.println("Quick links to Some Dbx Central log files.");
 			out.println("<ul>");
-			fn = "DBX_CENTRAL.console";                   out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=500'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=500'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
-			fn = "DBX_CENTRAL.log";                       out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=500'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=500'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
-			fn = "DBX_CENTRAL_H2WriterStatCronTask.log";  out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=500'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=500'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
-			fn = "DBX_CENTRAL_CentralH2Defrag.log";       out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=500'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=500'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
-			fn = "DBX_CENTRAL_DataDirectoryCleaner.log";  out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=500'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=500'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
-			fn = "DBX_CENTRAL_CentralPcsJdbcCleaner.log"; out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=500'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=500'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
+			fn = "DBX_CENTRAL.console";                   out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=5000'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=5000'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
+			fn = "DBX_CENTRAL.log";                       out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=5000'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=5000'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
+			fn = "DBX_CENTRAL_H2WriterStatCronTask.log";  out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=5000'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=5000'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
+			fn = "DBX_CENTRAL_CentralH2Defrag.log";       out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=5000'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=5000'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
+			fn = "DBX_CENTRAL_DataDirectoryCleaner.log";  out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=5000'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=5000'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
+			fn = "DBX_CENTRAL_CentralPcsJdbcCleaner.log"; out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=5000'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=5000'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
 //			out.println("  <li><a href='/log?name=DBX_CENTRAL.console'>                   DBX_CENTRAL.console                   </a></li>");
 //			out.println("  <li><a href='/log?name=DBX_CENTRAL.log'>                       DBX_CENTRAL.log                       </a></li>");
 //			out.println("  <li><a href='/log?name=DBX_CENTRAL_CentralH2Defrag.log'>       DBX_CENTRAL_CentralH2Defrag.log       </a></li>");
@@ -1800,7 +1800,8 @@ public class OverviewServlet extends HttpServlet
 					// Point the URL to the ACTIVE recording (which is on non-default port)
 					if (session != null)
 					{
-						url        = session.getCollectorCurrentUrl();
+						if (session.getCollectorCurrentUrl() != null)
+							url = session.getCollectorCurrentUrl();
 						dbxTuneUrl = dbxTuneGuiUrl.replace(":PORT/", ":"+DbxTune.getGuiWebPort(dbxTuneName)+"/") + url;
 					}
 				}

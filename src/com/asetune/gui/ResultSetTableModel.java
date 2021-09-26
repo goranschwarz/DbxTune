@@ -2600,6 +2600,7 @@ public class ResultSetTableModel
 					}
 					else if (strVal.indexOf("<ShowPlanXML xmlns=") >= 0)
 					{
+						String originXmlPlan = strVal;
 						SqlServerShowPlanXmlTransformer t = new SqlServerShowPlanXmlTransformer();
 						try
 						{
@@ -2609,7 +2610,8 @@ public class ResultSetTableModel
 						catch (Exception ex)
 						{
 							strVal = "Could not translate SQL-Server ShowPlanXML to HTML text. Caught: " + ex;
-							_logger.error(strVal);
+							_logger.error(strVal, ex);
+							_logger.warn("DEBUG-AS-WARNING: XML Showplan Text caused the above error: |" + originXmlPlan + "|.");
 						}
 					}
 					else
@@ -2689,6 +2691,13 @@ public class ResultSetTableModel
 	//------------------------------------------------------------
 	//-- BEGIN: sort
 	//------------------------------------------------------------
+	/**
+	 * Find the column position for a column name. (starting at 0)
+	 * 
+	 * @param colName
+	 * @return index pos (0 index)
+	 * @throws ColumnNameNotFoundException if the column name wasn't found.
+	 */
 	public int findColumnMandatory(String colName)
 	{
 		int index = findColumn(colName);
@@ -2699,6 +2708,13 @@ public class ResultSetTableModel
 		return index;
 	}
 
+	/**
+	 * Find the column position for a column name. (starting at 0)
+	 * 
+	 * @param colName
+	 * @return index pos (0 index)
+	 * @throws ColumnNameNotFoundException if the column name wasn't found.
+	 */
 	public int findColumnNoCaseMandatory(String colName)
 	{
 		int index = findColumnNoCase(colName);

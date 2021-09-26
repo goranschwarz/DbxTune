@@ -986,6 +986,8 @@ implements Runnable
 
 		while(_running)
 		{
+			int timeoutVal = 60 * 1000;
+			
 			try
 			{
 				// Wait for input if both STDOUT & STDERR is empty
@@ -1004,17 +1006,25 @@ implements Runnable
 							  ChannelCondition.STDOUT_DATA 
 							| ChannelCondition.STDERR_DATA
 							| ChannelCondition.EOF, 
-							30*1000);
+							timeoutVal);
 
-					// Wait no longer than 30 seconds
-					if ((conditions & ChannelCondition.TIMEOUT) != 0)
+					// Wait no longer than XX seconds
+					if ((conditions & ChannelCondition.TIMEOUT) == ChannelCondition.TIMEOUT)
 					{
 						// A timeout occurred.
-						throw new IOException("Timeout while waiting for data from peer.");
+						_logger.warn("Timeout while waiting for data from peer, continuing waiting on data. return ChannelCondition from waitForCondition(...), condition=" + conditions + ", asStr=" + toString_ChannelCondition(conditions) + ", timeoutInMs=" + timeoutVal);
+
+						continue;
+
+						// A timeout occurred.
+//						throw new IOException("Timeout while waiting for data from peer.");
+//						throw new IOException("Unexpected return ChannelCondition from waitForCondition(...), condition=" + conditions + ", asStr=" + toString_ChannelCondition(conditions) + ", timeoutInMs=" + timeoutVal);
 					}
 
 					// Here we do not need to check separately for CLOSED, since CLOSED implies EOF
-					if ((conditions & ChannelCondition.EOF) != 0)
+					if (   ((conditions & ChannelCondition.EOF)    == ChannelCondition.EOF) 
+					    || ((conditions & ChannelCondition.CLOSED) == ChannelCondition.CLOSED) 
+					   )
 					{
 						// The remote side won't send us further data...
 						if ((conditions & (ChannelCondition.STDOUT_DATA | ChannelCondition.STDERR_DATA)) == 0)
@@ -1132,6 +1142,24 @@ implements Runnable
 		
 		_running = false;
 		printStopMessage();
+	}
+
+	private static String toString_ChannelCondition(int conditions)
+	{
+		String str = "";
+		
+		if ((conditions & ChannelCondition.TIMEOUT    ) == ChannelCondition.TIMEOUT    ) str += ", TIMEOUT";       // 1  = TIMEOUT
+		if ((conditions & ChannelCondition.CLOSED     ) == ChannelCondition.CLOSED     ) str += ", CLOSED";        // 2  = CLOSED
+		if ((conditions & ChannelCondition.STDOUT_DATA) == ChannelCondition.STDOUT_DATA) str += ", STDOUT_DATA";   // 4  = STDOUT_DATA
+		if ((conditions & ChannelCondition.STDERR_DATA) == ChannelCondition.STDERR_DATA) str += ", STDERR_DATA";   // 8  = STDERR_DATA
+		if ((conditions & ChannelCondition.EOF        ) == ChannelCondition.EOF        ) str += ", EOF";           // 16 = EOF        
+		if ((conditions & ChannelCondition.EXIT_STATUS) == ChannelCondition.EXIT_STATUS) str += ", EXIT_STATUS";   // 32 = EXIT_STATUS
+		if ((conditions & ChannelCondition.EXIT_SIGNAL) == ChannelCondition.EXIT_SIGNAL) str += ", EXIT_SIGNAL";   // 64 = EXIT_SIGNAL
+
+		if ( ! str.isEmpty() )
+			str = str.substring(2);
+
+		return str;
 	}
 
 	/**

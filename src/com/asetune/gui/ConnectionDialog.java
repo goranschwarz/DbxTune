@@ -376,7 +376,8 @@ public class ConnectionDialog
 
 	private ImageIcon            _hostmonServerImageIcon = SwingUtils.readImageIcon(Version.class, "images/server_32.png");
 	private JLabel               _hostmonServerIcon      = new JLabel(_hostmonServerImageIcon);
-	private MultiLineLabel       _hostmonServerHelp      = new MultiLineLabel("Specify host name to the machine where you want to do Operating System Monitoring. The connection will be using SSH (Secure Shell), which normally is listening on port 22. ");
+//	private MultiLineLabel       _hostmonServerHelp      = new MultiLineLabel("Specify host name to the machine where you want to do Operating System Monitoring. The connection will be using SSH (Secure Shell), which normally is listening on port 22. ");
+	private MultiLineLabel       _hostmonServerHelp      = new MultiLineLabel("Specify host name to the machine where you want to do Operating System Monitoring. The connection will be using SSH (Secure Shell), which normally is listening on port 22.  Note: If the OS is Windows, you need to install OpenSSH Server on the host you want to monitor.");
 	private JLabel               _hostmonServerName_lbl  = new JLabel();
 
 	private JLabel               _hostmonHost_lbl        = new JLabel("Host Name");
@@ -2669,7 +2670,16 @@ public class ConnectionDialog
 				"</ul>" +
 		    "If you are using <b>Veritas</b> as the Disk IO subsystem and want to sample disk statistics with <b>vxstat</b> and not iostat.<br>" +
 		    "Make sure <b>vxstat</b> is executable and in the <b>$PATH</b> off the user that you're connecting to the Operating System with.<br>" +
-		    "Then it will execute <b>vxstat</b> instead of iostat and use that information.";
+		    "Then it will execute <b>vxstat</b> instead of iostat and use that information.<br>" +
+		    "<br>" +
+		    "If the OS is Windows, then we will use:" +
+				"<ul>" +
+				"  <li>For <code>iostat</code> - Simulation using: <code> typeperf -si ${sleepTime} \"\\PhysicalDisk(*)\\*\" </code></li>" +
+				"  <li>For <code>vmstat</code> - not yet implemented</li>" +
+				"  <li>For <code>mpstat</code> - Simulation using: <code> typeperf -si ${sleepTime} \"\\Processor(*)\\*\" </code></li>" +
+				"  <li>For <code>uptime</code> - Simulation using: <code> typeperf -si ${sleepTime} \"\\System\\*\" </code></li>" +
+				"</ul>" +
+		    "";
 		txt = new GLabel("<html>"+s+"</html>");
 		txt.setToolTipText("<html>"+t+"</html>");
 		panel.add(txt, "wmin 100, push, grow, wrap 10");
@@ -8595,7 +8605,7 @@ if ( ! jdbcSshTunnelUse )
 		bol = conf.getBooleanProperty("conn.url.raw.checkbox", false);
 		_aseConnUrl_chk.setSelected(bol);
 
-		if (_aseConnUrl_chk.isSelected())
+		if (_aseConnUrl_chk.isSelected() && StringUtil.hasValue(_aseConnUrl_txt.getText()))
 		{
 			try
 			{
@@ -8625,6 +8635,9 @@ if ( ! jdbcSshTunnelUse )
 			catch (ParseException pe)
 			{
 			}			
+			catch (RuntimeException re)
+			{
+			}
 		}
 
 		String hostPortStr = AseConnectionFactory.toHostPortStr(_aseHost_txt.getText(), _asePort_txt.getText());

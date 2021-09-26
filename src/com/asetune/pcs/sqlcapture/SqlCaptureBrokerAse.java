@@ -397,7 +397,7 @@ extends SqlCaptureBrokerAbstract
 			// END: Special for 'BlockedBySqlText'
 			
 			// Now check for missing columns and add them
-			if ( ! colNames.contains("WaitTimeDetails"     ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"WaitTimeDetails"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 1024),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("WaitTimeDetails"     ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"WaitTimeDetails"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 4000),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
 			if ( ! colNames.contains("BlockedBySpid"       ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"BlockedBySpid"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
 			if ( ! colNames.contains("BlockedByKpid"       ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByKpid"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
 			if ( ! colNames.contains("BlockedByBatchId"    ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByBatchId"    +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
@@ -631,7 +631,7 @@ extends SqlCaptureBrokerAbstract
 			sbSql.append("   ,"+fill(lq+col_PlanText_name        +rq,40)+" "+fill(getDatatype(conn, col_PlanText_jdbcType,         col_PlanText_jdbcLen        ),20)+" "+getNullable(true) +"\n"); // NULLABLE
 			sbSql.append("   ,"+fill(lq+col_BlockedBySqlText_name+rq,40)+" "+fill(getDatatype(conn, col_BlockedBySqlText_jdbcType, col_BlockedBySqlText_jdbcLen),20)+" "+getNullable(true) +"\n"); // NULLABLE
 
-			sbSql.append("   ,"+fill(lq+"WaitTimeDetails"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 1024),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"WaitTimeDetails"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 4000),20)+" "+getNullable(true)+"\n"); // NULLABLE
 			sbSql.append("   ,"+fill(lq+"BlockedBySpid"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
 			sbSql.append("   ,"+fill(lq+"BlockedByKpid"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
 			sbSql.append("   ,"+fill(lq+"BlockedByBatchId"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
@@ -799,7 +799,7 @@ extends SqlCaptureBrokerAbstract
 			sbSql.append("   ,"+fill(lq+"Application"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30   ),20)+" "+getNullable(true )+"\n");
 			sbSql.append("   ,"+fill(lq+"HostName"           +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30   ),20)+" "+getNullable(true )+"\n");
 			sbSql.append("   ,"+fill(lq+"MasterTransactionID"+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255  ),20)+" "+getNullable(true )+"\n");
-			sbSql.append("   ,"+fill(lq+"snapWaitTimeDetails"+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 1024 ),20)+" "+getNullable(true )+"\n");
+			sbSql.append("   ,"+fill(lq+"snapWaitTimeDetails"+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 4000 ),20)+" "+getNullable(true )+"\n");
 			sbSql.append("   ,"+fill(lq+"SqlText"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, SpidInfoBatchIdEntry.SQL_TEXT_LEN ),20)+" "+getNullable(true )+"\n");
 			sbSql.append("   ,"+fill(lq+"BlockingSqlText"    +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, SpidInfoBatchIdEntry.SQL_TEXT_LEN ),20)+" "+getNullable(true )+"\n");
 			sbSql.append(") \n");
@@ -2484,12 +2484,15 @@ extends SqlCaptureBrokerAbstract
 					rowCount++;
 //					statementReadCount++;
 
+					int physicalReads = -1;
+					
 					int SPID          = rs.getInt(pos_SPID);
 //					int KPID          = rs.getInt(pos_KPID);
 //					int BatchID       = rs.getInt(pos_BatchID);
 					int execTime      = rs.getInt(pos_Elapsed_ms);
 					int logicalReads  = rs.getInt(pos_LogicalReads);
-					int physicalReads = rs.getInt(pos_PhysicalReads);
+//					int physicalReads = rs.getInt(pos_PhysicalReads); // throws: java.sql.SQLException: JZ00B: Numeric overflow. sometimes
+					try { physicalReads = rs.getInt(pos_PhysicalReads); } catch (SQLException ex) { _logger.warn("Problems reading column 'PhysicalReads', setting this to -1 and continuing. Caught: " + ex); }
 					int errorStatus   = rs.getInt(pos_ErrorStatus);
 
 					int cpuTime       = rs.getInt(pos_CpuTime);

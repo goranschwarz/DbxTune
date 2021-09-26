@@ -25,17 +25,22 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cache.DbmsObjectIdCache;
+import com.asetune.cache.DbmsObjectIdCacheSqlServer;
+import com.asetune.cache.DbmsObjectIdCacheUtils;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSampleCatalogIteratorSqlServer;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.cm.CountersModel;
+import com.asetune.cm.SortOptions;
 import com.asetune.cm.SortOptions.ColumnNameSensitivity;
 import com.asetune.cm.SortOptions.DataSortSensitivity;
 import com.asetune.cm.SortOptions.SortOrder;
-import com.asetune.cm.CountersModel;
-import com.asetune.cm.SortOptions;
 import com.asetune.gui.MainFrame;
 
 /**
@@ -44,7 +49,7 @@ import com.asetune.gui.MainFrame;
 public class CmIndexUsage
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmServiceMemory.class);
+	private static Logger        _logger          = Logger.getLogger(CmIndexUsage.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmIndexUsage.class.getSimpleName();
@@ -239,14 +244,28 @@ extends CountersModel
 //				+ "    * \n"
 //				+ "from sys." + dm_db_index_usage_stats;
 
+		String DbName     = "    DbName     = db_name(database_id), \n";
+		String SchemaName = "    SchemaName = (select sys.schemas.name from sys.objects WITH (READUNCOMMITTED) inner join sys.schemas WITH (READUNCOMMITTED) ON sys.schemas.schema_id = sys.objects.schema_id where sys.objects.object_id = BASE.object_id), \n";
+		String TableName  = "    TableName  = (select sys.objects.name from sys.objects WITH (READUNCOMMITTED) where sys.objects.object_id = BASE.object_id), \n";
+		String IndexName  = "    IndexName  = (select case when sys.indexes.index_id = 0 then 'HEAP' else sys.indexes.name end from sys.indexes WITH (READUNCOMMITTED) where sys.indexes.object_id = BASE.object_id and sys.indexes.index_id = BASE.index_id), \n";
+
+		if (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled())
+		{
+			DbName     = "    DbName     = convert(varchar(128), ''), /* using DbmsObjectIdCache to do DbxTune cached lookups */ \n";
+			SchemaName = "    SchemaName = convert(varchar(128), ''), /* using DbmsObjectIdCache to do DbxTune cached lookups */ \n";
+			TableName  = "    TableName  = convert(varchar(128), ''), /* using DbmsObjectIdCache to do DbxTune cached lookups */ \n";
+			IndexName  = "    IndexName  = convert(varchar(128), ''), /* using DbmsObjectIdCache to do DbxTune cached lookups */ \n";
+		}
+		
 		String sql = ""
 			    + "-- Note: Below SQL Statement is executed in every database that is 'online', more or less like: sp_msforeachdb \n"
 			    + "-- Note: object_schema_name() and object_name() can NOT be used for 'dirty-reads', they may block... hence the 'ugly' fullname sub-selects in the select column list \n"
+			    + "-- Note: To enable/disable DbxTune Cached Lookups for ObjectID to name translation is done with property '" + DbmsObjectIdCacheSqlServer.PROPKEY_BulkLoadOnStart + "=true|false'. Current Status=" + (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled() ? "ENABLED" : "DISABLED") + " \n"
 			    + "select \n"
-			    + "    DbName     = db_name(database_id), \n"
-			    + "    SchemaName = (select sys.schemas.name from sys.objects inner join sys.schemas ON sys.schemas.schema_id = sys.objects.schema_id where sys.objects.object_id = BASE.object_id), \n"
-			    + "    TableName  = (select sys.objects.name from sys.objects where sys.objects.object_id = BASE.object_id), \n"
-			    + "    IndexName  = (select case when sys.indexes.index_id = 0 then 'HEAP' else sys.indexes.name end from sys.indexes where sys.indexes.object_id = BASE.object_id and sys.indexes.index_id = BASE.index_id), \n"
+			    +      DbName
+			    +      SchemaName
+			    +      TableName
+			    +      IndexName
 			    + "    * \n"
 			    + "from sys." + dm_db_index_usage_stats + " BASE \n"
 			    + "where BASE.database_id = db_id() \n"
@@ -273,9 +292,82 @@ extends CountersModel
 	}
 
 
+	@Override
+	public void localCalculation(CounterSample newSample)
+	{
+		// Resolve "database_id", "object_id", "index_id" to real names 
+		if (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled())
+		{
+			DbmsObjectIdCacheUtils.localCalculation_DbmsObjectIdFiller(this, newSample, 
+					"database_id", "object_id", "index_id",             // Source columns to translate into the below columns 
+					"DbName", "SchemaName", "TableName", "IndexName");  // Target columns for the above source columns
+		}
+	}
+	
 
-	
-	
+//	@Override
+//	public void localCalculation(CounterSample newSample)
+//	{
+//		// Resolve "database_id", "object_id", "index_id" to real names 
+//		if (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled())
+//		{
+//			int DbName_pos      = newSample.findColumn("DbName");
+//			int SchemaName_pos  = newSample.findColumn("SchemaName");
+//			int TableName_pos   = newSample.findColumn("TableName");
+//			int IndexName_pos   = newSample.findColumn("IndexName");
+//
+//			int database_id_pos = newSample.findColumn("database_id");
+//			int object_id_pos   = newSample.findColumn("object_id");
+//			int index_id_pos    = newSample.findColumn("index_id");
+//
+//			if (DbName_pos == -1 || SchemaName_pos == -1 || TableName_pos == -1 || IndexName_pos == -1 || database_id_pos == -1 || object_id_pos == -1 || index_id_pos == -1)
+//			{
+//				_logger.error("Missing mandatory columns in " + getName() + ".localCalculation. DbName_pos=" + DbName_pos + ", SchemaName_pos=" + SchemaName_pos + ", TableName_pos=" + TableName_pos + ", IndexName_pos=" + IndexName_pos + ", database_id_pos=" + database_id_pos + ", object_id_pos=" + object_id_pos + ", index_id_pos=" + index_id_pos + ".");
+//				return;
+//			}
+//
+//			// Get the DBMS ID Cache Instance
+//			DbmsObjectIdCache idc = DbmsObjectIdCache.getInstance();
+//
+//			// Loop on all counter rows
+//			for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
+//			{
+//				// Do the lookup
+//				Integer database_id = newSample.getValueAsInteger(rowId, database_id_pos);
+//				Integer object_id   = newSample.getValueAsInteger(rowId, object_id_pos);
+//				Integer index_id    = newSample.getValueAsInteger(rowId, index_id_pos);
+//
+//				String DbName      = idc.getDBName(database_id);;
+//				String SchemaName  = null;
+//				String TableName   = null;
+//				String IndexName   = null;
+//
+//				try
+//				{
+//					ObjectInfo objInfo = idc.getByObjectId(database_id, object_id);
+//					if (objInfo != null)
+//					{
+//						SchemaName  = objInfo.getSchemaName();
+//						TableName   = objInfo.getObjectName();
+//						IndexName   = objInfo.getIndexName(index_id);
+//					}
+//
+//					newSample.setValueAt(DbName    , rowId, DbName_pos);
+//					newSample.setValueAt(SchemaName, rowId, SchemaName_pos);
+//					newSample.setValueAt(TableName , rowId, TableName_pos);
+//					newSample.setValueAt(IndexName , rowId, IndexName_pos);
+//
+////System.out.println(getName() + ": localCalculation: Resolved-DbmsObjectIdCache -- database_id=" + database_id + ", object_id=" + object_id + ", index_id=" + index_id + "  --->>>  DbName='" + DbName + "', SchemaName='" + SchemaName + "', TableName='" + TableName + "', IndexName='" + IndexName + "'.");
+//				}
+//				catch (TimeoutException ex)
+//				{
+//					_logger.warn("Timeout exception in localCalculation() when getting id's to names. look up on: database_id=" + database_id + ", object_id=" + object_id + ", index_id=" + index_id + ".", ex);
+//				}
+//			}
+//		}
+//	}
+
+
 	/** 
 	 * Get number of rows to save/request ddl information for 
 	 * if 0 is return no lookup will be done.

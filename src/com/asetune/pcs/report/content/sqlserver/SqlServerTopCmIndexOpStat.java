@@ -142,9 +142,12 @@ public class SqlServerTopCmIndexOpStat extends AseAbstract
 		String sql = getCmDiffColumnsAsSqlComment("CmIndexOpStat")
 			    + "select top " + topRows + " \n"
 			    + "     [DbName]                                                                        as [DbName] \n"
-			    + "    ,[SchemaName]                                                                    as [SchemaName] \n"
-			    + "    ,[TableName]                                                                     as [TableName] \n"
-			    + "    ,[IndexName]                                                                     as [IndexName] \n"
+//			    + "    ,[SchemaName]                                                                    as [SchemaName] \n"
+//			    + "    ,[TableName]                                                                     as [TableName] \n"
+//			    + "    ,[IndexName]                                                                     as [IndexName] \n"
+			    + "    ,coalesce([SchemaName], '-unknown-')                                             as [SchemaName] \n"
+			    + "    ,coalesce([TableName] , 'id:'||cast([object_id] as varchar(20)))                 as [TableName] \n"
+			    + "    ,coalesce([IndexName] , 'id:'||cast([index_id] as varchar(20)))                  as [IndexName] \n"
                                                                                                         
 			    + "    ,cast('' as varchar(512))                                                        as [lock_count__chart] \n"
 			    + "    ,sum([row_lock_count]) + sum([page_lock_count])                                  as [lock_count__sum] \n"
@@ -218,7 +221,11 @@ public class SqlServerTopCmIndexOpStat extends AseAbstract
 			    + "from [CmIndexOpStat_diff] x \n"
 			    + "where 1 = 1 \n"
 				+ getReportPeriodSqlWhere()
-			    + "group by [DbName], [SchemaName], [TableName], [IndexName] \n"
+//			    + "group by [DbName], [SchemaName], [TableName], [IndexName] \n"
+				+ "group by [DbName] \n"
+				+ "         ,coalesce([SchemaName], '-unknown-') \n"
+				+ "         ,coalesce([TableName] , 'id:'||cast([object_id] as varchar(20))) \n"
+				+ "         ,coalesce([IndexName] , 'id:'||cast([index_id] as varchar(20))) \n"
 			    + havingSql
 			    + "order by [" + _orderByCol + "] desc \n"
 			    + "";

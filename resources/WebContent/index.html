@@ -170,10 +170,11 @@
       <p align="right"><font size="-2">Support for: Sybase/SAP: ASE, IQ, <i>RS, RAX, MS SQL-Server, Postgres, MySQL, DB2, Oracle, SAP HANA</i></font></p>
 <!--      <a class="btn btn-lg btn-primary" href="/graph.html" role="button">View charts &raquo;</a>-->
 <!--      <a class="btn btn-lg btn-primary" role="button" data-toggle="modal" data-backdrop="static" data-target="#dbx-choose-graphs-dialog">View charts &raquo;</a>-->
-      <button type="button" class="btn btn-lg btn-primary btn-ok" data-toggle="modal" data-backdrop="static" data-target="#dbx-choose-graphs-dialog">View charts &raquo;</button>
 
-
-      &nbsp;&nbsp;&nbsp;<span id="dbx-alarm-cnt">0</span> Active Alams<span id="dbx-alarm-srv-cnt">, in 0 Servers.</span> <span id="dbx-alarm-age">0</span> seconds ago. Click <a href='?refresh=60'>here</a> to refresh every 60 seconds
+      <div id="x"> <!-- So we can "skip" the top image in an easy way -->
+        <button type="button" class="btn btn-lg btn-primary btn-ok" data-toggle="modal" data-backdrop="static" data-target="#dbx-choose-graphs-dialog">View charts &raquo;</button>
+        &nbsp;&nbsp;&nbsp;<span id="dbx-alarm-cnt">0</span> Active Alams<span id="dbx-alarm-srv-cnt">, in 0 Servers.</span> <span id="dbx-alarm-age">0</span> seconds ago. Click <a href='?refresh=60'>here</a> to refresh every 60 seconds
+      </div>
       <p></p>
       <p>
         <input type="checkbox" name="dbx-openInNewTab-chk" id="dbx-openInNewTab-chk" checked> Open Below Graphs in a new Tab &nbsp;&nbsp;&nbsp;

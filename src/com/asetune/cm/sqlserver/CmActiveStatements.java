@@ -461,7 +461,8 @@ extends CountersModel
 			LiveQueryPlanBlocked +
 			"FROM sys.sysprocesses p1 \n" +
 			"OUTER APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
-			"WHERE p1.spid in (select p2.blocked from sys.sysprocesses p2 where p2.blocked > 0) \n" + 
+			"WHERE p1.spid in (SELECT p2.blocked FROM sys.sysprocesses p2 WHERE p2.blocked > 0) \n" + 
+			"  AND p1.ecid = 0 \n" + // Only Parent SPID's in parallel statements ... or we can add/introduce the ECID in the primary key... 
 			"";
 			
 

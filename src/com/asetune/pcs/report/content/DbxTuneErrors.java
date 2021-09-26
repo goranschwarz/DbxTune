@@ -25,8 +25,6 @@ import java.io.IOException;
 import java.io.Writer;
 import java.sql.Timestamp;
 
-import org.apache.log4j.Logger;
-
 import com.asetune.gui.GuiLogAppender;
 import com.asetune.gui.Log4jLogRecord;
 import com.asetune.gui.Log4jTableModel;
@@ -38,7 +36,9 @@ import com.asetune.utils.StringUtil;
 public class DbxTuneErrors
 extends ReportEntryAbstract
 {
-	private static Logger _logger = Logger.getLogger(DbxTuneErrors.class);
+//	private static Logger _logger = Logger.getLogger(DbxTuneErrors.class);
+	
+	private Log4jTableModel _tm = null;
 	
 	public DbxTuneErrors(DailySummaryReportAbstract reportingInstance)
 	{
@@ -63,30 +63,36 @@ extends ReportEntryAbstract
 	throws IOException
 	{
 		// Describe this section
-		sb.append("Error and Warning messages produced by this collector.<br>");
+		sb.append("Error and Warning messages produced by this DbxTune Collector.<br>");
 		sb.append("Used to check for problems/issues/bugs with the collector (<i>without having to read the errorlog</i>).<br>");
 		sb.append("<br>");
 
-		Log4jTableModel tm = GuiLogAppender.getTableModel();
-		if (tm == null)
+		if (_tm == null)
 		{
 			sb.append("No Log4J Appender was installed. <br>\n");
+			return;
 		}
 		
-		if (tm.getRowCount() == 0)
+		if (_tm.getRowCount() == 0)
 		{
-			sb.append("No Log4J Errors or Warnings was found. <br>\n");
+			sb.append("<b>No</b> DbxTune Collector Errors or Warnings was found. <br>\n");
 		}
 		else
 		{
-			sb.append("Warning/Error Count with attached Stacktraces: " + getRowCountWithStackTrace(tm) + "<br>\n");
-			tableToHtmlString(tm, sb, true); // true = only StackTrace Entries
+			int countWithStacktrace = getRowCountWithStackTrace(_tm);
+			if (countWithStacktrace > 0)
+			{
+				sb.append("<b>" + countWithStacktrace + "</b> DbxTune Collector Errors or Warnings with <b>attached Stacktraces</b> <br>\n");
+				tableToHtmlString(_tm, sb, true); // true = only StackTrace Entries
+			}
+			else
+			{
+				sb.append("<b>No</b> DbxTune Collector Errors or Warnings with <b>attached Stacktraces</b> <br>\n");
+			}
+			sb.append("<br>\n");
 
-			sb.append("Warning/Error Count: " + tm.getRowCount() + "<br>\n");
-			tableToHtmlString(tm, sb, false); // false = all entries
-
-			_logger.info("Clearing the in-memory TableModel for 'GuiLogAppender', which currently has " + tm.getRowCount() + " entries.");
-			tm.clear();
+			sb.append("Warning/Error Count: " + _tm.getRowCount() + "<br>\n");
+			tableToHtmlString(_tm, sb, false); // false = all entries
 		}
 	}
 
@@ -106,7 +112,7 @@ extends ReportEntryAbstract
 		{
 			Log4jLogRecord rec = tm.getRecord(r);
 
-			if (StringUtil.isNullOrBlank(rec.getThrownStackTrace()))
+			if (StringUtil.hasValue(rec.getThrownStackTrace()))
 				rowsWithStacktrace++;
 		}
 		
@@ -205,6 +211,9 @@ extends ReportEntryAbstract
 	{
 		// nothing is done in the create...
 		// all messages should already be available in the Log4j Table Model
+		
+		// get the table model, and at the same time clear it (or create a new model)
+		_tm = GuiLogAppender.getTableModelAndCreateNew();
 	}
 
 //	@Override

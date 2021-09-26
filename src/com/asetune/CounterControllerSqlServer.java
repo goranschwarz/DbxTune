@@ -440,6 +440,28 @@ extends CounterControllerAbstract
 					             + "   <li>Set Trace Flag: in startup file add <code>-T7412</code> or temporary set it using <code>dbcc traceon(7412, -1)</code>, wich will <b>not</b> survive a restart!</li>"
 					             + "</ul>"
 				                 + "</li>";
+				
+// FIXME: 
+//				// In NO-GUI Mode we might want to set that trace flag ???
+//				if ( ! hasGui )
+//				{
+//					if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_NoGui_enableTraceFlag_LiveQueryPlans, DEFAULT_NoGui_enableTraceFlag_LiveQueryPlans))
+//					{
+//						sql = "dbcc traceon(7412, -1)";
+//
+//						try (Statement stmnt = conn.createStatement())
+//						{
+//							stmnt.executeUpdate(sql);
+//						}
+//						catch(SQLException ex)
+//						{
+//							_logger.error("Trying to set SQL Server traceflag '7412'. In NO-GUI mode the property '" + PROPKEY_xxx + "' was true, so we issued SQL Command '" + sql + "', but we had problems. Continuing anyway. Caught: " + ex);
+//						}
+//					}
+//					// We probably need to refresh the "activeGlobalTraceFlagList" or similar...
+//					// And possibly more stuff...
+//					// So the above is NOT tested, just an idea (which I didn't have time to implement/test)
+//				}
 			}
 		}
 
@@ -928,6 +950,11 @@ extends CounterControllerAbstract
 			}
 		}) );
 
+		
+		// Populate Object ID Cache
+		if (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled())
+			DbmsObjectIdCache.getInstance().getBulk(null); // null == ALL Databases
+		
 		// Return the connection
 		return conn;
 	}
