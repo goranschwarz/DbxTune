@@ -20,8 +20,16 @@
  ******************************************************************************/
 package com.asetune.cm.os;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.log4j.Logger;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEventOsSwapping;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -33,11 +41,12 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.hostmon.HostMonitor.OsVendor;
+import com.asetune.utils.Configuration;
 
 public class CmOsVmstat
 extends CounterModelHostMonitor
 {
-//	private static Logger        _logger          = Logger.getLogger(CmOsVmstat.class);
+	private static Logger        _logger          = Logger.getLogger(CmOsVmstat.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final int      CM_TYPE          = CounterModelHostMonitor.HOSTMON_VMSTAT;
@@ -384,6 +393,71 @@ extends CounterModelHostMonitor
 		}
 	}
 
+	
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		AlarmHandler alarmHandler = AlarmHandler.getInstance();
+		
+		CountersModel cm = this;
+
+		if ( ! cm.hasAbsData() )
+			return;
+		if ( ! cm.getCounterController().isHostMonConnected() )
+			return;
+
+		String hostname = cm.getCounterController().getHostMonConnection().getHost();
+
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
+		
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("swappInOut"))
+		{
+			// Get column name based on what OS we are connected to
+			String swap_si = null;
+			String swap_so = null;
+			if (     isConnectedToVendor(OsVendor.Linux))   { swap_si = "swap_si"; swap_so = "swap_so"; }
+			else if (isConnectedToVendor(OsVendor.Solaris)) { swap_si = "page_pi"; swap_so = "page_po";  }
+			else if (isConnectedToVendor(OsVendor.Aix))     { swap_si = "page_pi"; swap_so = "page_po";  }
+			else if (isConnectedToVendor(OsVendor.Hp))      { swap_si = "page_pi"; swap_so = "page_po"; }
+
+			// Get data
+			Double swapIn_tmp  = this.getAbsValueAvg(swap_si);
+			Double swapOut_tmp = this.getAbsValueAvg(swap_so);
+
+			int swapIn  = (swapIn_tmp  == null) ? 0 : swapIn_tmp .intValue();
+			int swapOut = (swapOut_tmp == null) ? 0 : swapOut_tmp.intValue();
+
+			
+			if (debugPrint || _logger.isDebugEnabled())
+				System.out.println("##### sendAlarmRequest("+cm.getName()+"): swapping: in=" + swapIn + ", out=" + swapOut + ".");
+
+			int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_swap, DEFAULT_alarm_swap);
+			if (swapIn > threshold || swapOut > threshold)
+			{
+				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, hostname, swapIn, swapOut);
+				alarmHandler.addAlarm( alarm );
+			}
+		}
+	}
+
+	public static final String  PROPKEY_alarm_swap = CM_NAME + ".alarm.system.if.swap.gt";
+	public static final int     DEFAULT_alarm_swap = 5000;
+
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("swappInOut", PROPKEY_alarm_swap , Integer.class, conf.getIntProperty(PROPKEY_alarm_swap , DEFAULT_alarm_swap), DEFAULT_alarm_swap, "If 'swap-in' or 'swap-out' is greater than ## then send 'AlarmEventOsSwapping'. NOTE: This Alarm is only on Linux/Unix. (for Windows see 'CmOsMeminfo')" ));
+
+		return list;
+	}
+	
 
 //-----------------------------------------------------------------------------
 //-- MAYBE: Do alarm when the machine has been swaping "to much" for a while

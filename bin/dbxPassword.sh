@@ -7,7 +7,8 @@ srvName=""
 password=""
 keyPassPhrase="sybase"
 #passwdFile="${HOME}/.passwd.enc"
-passwdFile="$(echo ~sybase/.passwd.enc)" ## Do echo so bash will resolve it to a real/full path 
+#passwdFile="$(echo ~sybase/.passwd.enc)" ## Do echo so bash will resolve it to a real/full path 
+passwdFile="$(echo ~/.passwd.enc)" ## Do echo so bash will resolve it to a real/full path 
 debugMode=0
 listPasswdFile=1
 

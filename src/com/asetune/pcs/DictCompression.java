@@ -76,6 +76,10 @@ public class DictCompression
 	private Map<String, Map<String, Set<String>>> _valExistsMap = new HashMap<>();
 	//          tabName     colName     HashId
 
+	private Map<String, Map<String, Integer>> _tabColNameMaxLenMap = new HashMap<>();
+	//          tabName     colName colMaxLen
+	
+	
 	// Where we get a connection from
 //	private ConnectionProvider _connProvider;
 	private DigestType _digestType;
@@ -503,7 +507,8 @@ public class DictCompression
 		printStatistics(true);
 
 		// Simply clear the "cache"
-		_valExistsMap = new HashMap<>();		
+		_valExistsMap = new HashMap<>();
+		_tabColNameMaxLenMap = new HashMap<>();
 	}
 
 	/** Close this */
@@ -664,6 +669,73 @@ public class DictCompression
 		}
 	}
 
+	/**
+	 * Get MAX column storage size for a Dictionary Compressed table and column name
+	 * <p>
+	 * The value is <b>cached</b> (but if it's not found a DBMS lookup will be done
+	 * <p>
+	 * 
+	 * @param conn
+	 * @param tabName
+	 * @param colName
+	 * @return
+	 */
+	private int getMaxColumnStorageSizeForTable(DbxConnection conn, String cmName, String colName)
+	{
+		Integer maxLen = null;
+		
+		// Get the Map: Column->MaxLen for tableName 
+		Map<String, Integer> colNameMap = _tabColNameMaxLenMap.get(cmName);
+		if (colNameMap == null)
+		{
+			colNameMap = new HashMap<>();
+			_tabColNameMaxLenMap.put(cmName, colNameMap);
+		}
+
+		// Get the MaxLen for column
+		// If not found... look it up in the DBMS
+		maxLen = colNameMap.get(colName);
+		if (maxLen == null)
+		{
+			try
+			{
+//				_logger.info("Lookup Max Column Storage length for Dictionary Compressed Column with name='" + cmName + "', colName='" + colName + "'.");
+				DatabaseMetaData dbmd = conn.getMetaData();
+
+				String tabName = cmName + DCC_MARKER + colName;
+//				ResultSet rsmd = dbmd.getColumns(null, schemaName, tabName, "colVal");
+				ResultSet rsmd = dbmd.getColumns(null, null, tabName, "colVal");
+
+				while(rsmd.next())
+				{
+					String jdbcColName = rsmd.getString("COLUMN_NAME");
+//					int jdbcColType = rsmd.getInt("DATA_TYPE");
+					int jdbcColLen  = rsmd.getInt("COLUMN_SIZE");
+
+//					if (jdbcColType == Types.CLOB || jdbcColType == Types.NCLOB)
+//						jdbcColLen = Integer.MAX_VALUE;
+
+					if ("colVal".equalsIgnoreCase(jdbcColName))
+					{
+						maxLen = jdbcColLen;
+						
+						// Cache the value for further usage
+						colNameMap.put(colName, maxLen);
+					}
+				}
+				rsmd.close();
+
+				_logger.info("The MAX Column Storage length for Dictionary Compressed Column is " + maxLen + " for: name='" + cmName + "', colName='" + colName + "'.");
+			}
+			catch(SQLException ex)
+			{
+				_logger.error("Problems looking up column MAX Storage size for Dictionary Compressed Column for: name='" + cmName + "', colName='" + colName + "'. The used size will be " + (maxLen == null ? Integer.MAX_VALUE : maxLen.intValue()) + ".", ex);
+			}
+		}
+		
+		return maxLen == null ? Integer.MAX_VALUE : maxLen.intValue();
+	}
+	
 	/**
 	 * Save a Column Value... a digest string will be returned (save in the DBMS will only be done if it's a NEW column value)
 	 * 
@@ -853,6 +925,7 @@ public class DictCompression
 				// declare here so we can use it in the "catch block"
 				String hashId = null;
 				String colVal = null;
+				int colValMaxLen = getMaxColumnStorageSizeForTable(conn, cmName, colName);
 
 				// Loop hashId, colVal
 				// ADD to SQL Batch
@@ -865,6 +938,15 @@ public class DictCompression
 						hashId = hashEntry.getKey();
 						colVal = hashEntry.getValue();
 
+						int colValLen = colVal == null ? 0 : colVal.length(); 
+
+						// Check the length of "string to store"... make it smaller if it exceeds the MAX Size
+						if (colValLen >= colValMaxLen)
+						{
+							_logger.info("When storing content in table '" + tabName + "' the value column was to long, so it was shorten to " + colValMaxLen + " characters. originColLen=" + colValLen + ", originColValue=|" + colVal + "|");
+							colVal = colVal.substring(0, colValMaxLen - 3) + "...";
+						}
+						
 						try
 						{
 							pstmnt.setString(1, hashId);
@@ -997,6 +1079,7 @@ public class DictCompression
 				// declare here so we can use it in the "catch block"
 				String hashId = null;
 				String colVal = null;
+				int colValMaxLen = getMaxColumnStorageSizeForTable(conn, cmName, colName);
 
 				// Loop hashId, colVal
 				// ADD to SQL Batch
@@ -1009,6 +1092,15 @@ public class DictCompression
 						hashId = hashEntry.getKey();
 						colVal = hashEntry.getValue();
 
+						int colValLen = colVal == null ? 0 : colVal.length(); 
+
+						// Check the length of "string to store"... make it smaller if it exceeds the MAX Size
+						if (colValLen >= colValMaxLen)
+						{
+							_logger.info("When storing content in table '" + tabName + "' the value column was to long, so it was shorten to " + colValMaxLen + " characters. originColLen=" + colValLen + ", originColValue=|" + colVal + "|");
+							colVal = colVal.substring(0, colValMaxLen - 3) + "...";
+						}
+						
 						pstmnt.setString(1, hashId);
 						pstmnt.setString(2, colVal);
 

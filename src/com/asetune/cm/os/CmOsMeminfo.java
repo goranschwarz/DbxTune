@@ -21,11 +21,16 @@
 package com.asetune.cm.os;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEventOsSwapping;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -37,6 +42,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.hostmon.OsTable;
 import com.asetune.hostmon.HostMonitor.OsVendor;
+import com.asetune.utils.Configuration;
 
 public class CmOsMeminfo
 extends CounterModelHostMonitor
@@ -152,9 +158,9 @@ extends CounterModelHostMonitor
 
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_WIN_PAGING,
-			"meminfo: Paging or Swap Usage", 	                                // Menu CheckBox text
-			"meminfo: Paging or Swap Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			"meminfo: Windows Paging or Swap Usage", 	                                // Menu CheckBox text
+			"meminfo: Windows Paging or Swap Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "Pages/sec", "Pages Input/sec", "Pages Output/sec"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -165,8 +171,8 @@ extends CounterModelHostMonitor
 
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_WIN_PAGING_FILE,
-			"meminfo: Paging File Usage", 	                                // Menu CheckBox text
-			"meminfo: Paging File Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"meminfo: Windows Paging File Usage", 	                                // Menu CheckBox text
+			"meminfo: Windows Paging File Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			new String[] { "Paging File(_Total) - % Usage", "Paging File(_Total) - % Usage Peak"}, 
 			LabelType.Static,
@@ -425,6 +431,64 @@ extends CounterModelHostMonitor
 		if ("DirectMap2M"      .equalsIgnoreCase(memoryType)) return "The amount of memory being mapped to hugepages (usually 2MB in size)";
 
 		return "";
+	}
+
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		AlarmHandler alarmHandler = AlarmHandler.getInstance();
+		
+		CountersModel cm = this;
+
+		if ( ! cm.hasAbsData() )
+			return;
+		if ( ! cm.getCounterController().isHostMonConnected() )
+			return;
+
+		String hostname = cm.getCounterController().getHostMonConnection().getHost();
+
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
+		
+		//-------------------------------------------------------
+		// swapping -- Windows Only
+		//-------------------------------------------------------
+		if (isConnectedToVendor(OsVendor.Windows) && isSystemAlarmsForColumnEnabledAndInTimeRange("swapping"))
+		{
+			// Get data
+			Double swapIn_tmp  = this.getAbsValueAsDouble(0, "Pages Input/sec");
+			Double swapOut_tmp = this.getAbsValueAsDouble(0, "Pages Output/sec");
+
+			int swapIn  = (swapIn_tmp  == null) ? 0 : swapIn_tmp .intValue();
+			int swapOut = (swapOut_tmp == null) ? 0 : swapOut_tmp.intValue();
+
+			
+			if (debugPrint || _logger.isDebugEnabled())
+				System.out.println("##### sendAlarmRequest("+cm.getName()+"): swapping: in=" + swapIn + ", out=" + swapOut + ".");
+
+			int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_swap, DEFAULT_alarm_swap);
+			if (swapIn > threshold || swapOut > threshold)
+			{
+				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, hostname, swapIn, swapOut);
+				alarmHandler.addAlarm( alarm );
+			}
+		}
+	}
+
+	public static final String  PROPKEY_alarm_swap = CM_NAME + ".alarm.system.if.swap.gt";
+	public static final int     DEFAULT_alarm_swap = 5000;
+
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("Swapping", PROPKEY_alarm_swap , Integer.class, conf.getIntProperty(PROPKEY_alarm_swap , DEFAULT_alarm_swap), DEFAULT_alarm_swap, "If 'Pages Input/sec' or 'Pages Output/sec' is greater than ## then send 'AlarmEventOsSwapping'. NOTE: This Alarm is only on Windows. (for Unix/Linux see 'CmOsVmstat')" ));
+
+		return list;
 	}
 
 //-----------------------------------------------------------------------------

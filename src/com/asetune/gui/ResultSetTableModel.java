@@ -2586,8 +2586,12 @@ public class ResultSetTableModel
 				}
 				else
 				{
+					int xml_StartPos         = strVal.indexOf("<?xml");
+					int ShowPlanXML_startPos = strVal.indexOf("<ShowPlanXML xmlns=");
+
 					// check for XML content "somewhere" in the string
-					if (strVal.indexOf("<?xml") >= 0)
+//					if (xml_StartPos >= 0)
+					if (xml_StartPos >= 0 && xml_StartPos < 30)
 					{
 						String conf = Configuration.getCombinedConfiguration().getProperty("toHtmlTableString.xml", "TO_ESCAPED_TEXT");
 
@@ -2598,7 +2602,8 @@ public class ResultSetTableModel
 //							strVal = "<pre>" + StringEscapeUtils.escapeXml10(strVal) + "</pre>";
 						}
 					}
-					else if (strVal.indexOf("<ShowPlanXML xmlns=") >= 0)
+//					else if (ShowPlanXML_startPos >= 0)
+					else if (ShowPlanXML_startPos >= 0 && ShowPlanXML_startPos < 30)
 					{
 						String originXmlPlan = strVal;
 						SqlServerShowPlanXmlTransformer t = new SqlServerShowPlanXmlTransformer();
@@ -2609,9 +2614,9 @@ public class ResultSetTableModel
 						}
 						catch (Exception ex)
 						{
-							strVal = "Could not translate SQL-Server ShowPlanXML to HTML text. Caught: " + ex;
+							strVal = "For columnName='" + colName + "', ShowPlanXML_startPos=" + ShowPlanXML_startPos + ". Could not translate SQL-Server ShowPlanXML to HTML text. Caught: " + ex;
 							_logger.error(strVal, ex);
-							_logger.warn("DEBUG-AS-WARNING: XML Showplan Text caused the above error: |" + originXmlPlan + "|.");
+							_logger.warn("DEBUG-AS-WARNING: For columnName='" + colName + "', ShowPlanXML_startPos=" + ShowPlanXML_startPos + ". XML Showplan Text caused the above error: |" + originXmlPlan + "|.");
 						}
 					}
 					else

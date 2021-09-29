@@ -2492,7 +2492,7 @@ extends SqlCaptureBrokerAbstract
 					int execTime      = rs.getInt(pos_Elapsed_ms);
 					int logicalReads  = rs.getInt(pos_LogicalReads);
 //					int physicalReads = rs.getInt(pos_PhysicalReads); // throws: java.sql.SQLException: JZ00B: Numeric overflow. sometimes
-					try { physicalReads = rs.getInt(pos_PhysicalReads); } catch (SQLException ex) { _logger.warn("Problems reading column 'PhysicalReads', setting this to -1 and continuing. Caught: " + ex); }
+					try { physicalReads = rs.getInt(pos_PhysicalReads); } catch (SQLException ex) { _logger.warn("Problems reading column 'PhysicalReads', strVal='" + rs.getString(pos_PhysicalReads) + "', setting this to -1 and continuing. Caught: " + ex); }
 					int errorStatus   = rs.getInt(pos_ErrorStatus);
 
 					int cpuTime       = rs.getInt(pos_CpuTime);

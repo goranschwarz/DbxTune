@@ -47,7 +47,7 @@ public abstract class SqlServerConfigText
 		,SqlServerHelpSort
 		,SqlServerHostInfo
 		,SqlServerSysInfo
-		,SqlServerServerResourceGovernor
+		,SqlServerResourceGovernor
 		,SqlServerServerRegistry
 		,SqlServerClusterNodes
 		};
@@ -293,18 +293,10 @@ public abstract class SqlServerConfigText
 		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from sys.dm_os_sys_info"; }
 	}
 
-	public static class ServerRegistry extends DbmsConfigTextAbstract
-	{
-		@Override public    String     getTabLabel()                        { return "Server Registry"; }
-		@Override public    String     getName()                            { return ConfigType.SqlServerServerRegistry.toString(); }
-		@Override public    String     getConfigType()                      { return getName(); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from sys.dm_server_registry"; }
-	}
-
 	public static class ResourceGovernor extends DbmsConfigTextAbstract
 	{
 		@Override public    String     getTabLabel()                        { return "Resource Governor"; }
-		@Override public    String     getName()                            { return ConfigType.SqlServerServerResourceGovernor.toString(); }
+		@Override public    String     getName()                            { return ConfigType.SqlServerResourceGovernor.toString(); }
 		@Override public    String     getConfigType()                      { return getName(); }
 		@Override protected String     getSqlCurrentConfig(long srvVersion) 
 		{
@@ -336,6 +328,14 @@ public abstract class SqlServerConfigText
 				    + "";
 			return sql;
 		}
+	}
+
+	public static class ServerRegistry extends DbmsConfigTextAbstract
+	{
+		@Override public    String     getTabLabel()                        { return "Server Registry"; }
+		@Override public    String     getName()                            { return ConfigType.SqlServerServerRegistry.toString(); }
+		@Override public    String     getConfigType()                      { return getName(); }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from sys.dm_server_registry"; }
 	}
 
 	public static class ClusterNodes extends DbmsConfigTextAbstract

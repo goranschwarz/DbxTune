@@ -41,6 +41,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>new: AlarmEventLongRunningStatement     -- If a Statement has been running for more than X seconds/minutes/hours</LI>
 				<LI>new  AlarmEventExtensiveUsage           -- for example if tempdb is heavely used</LI>
 				<LI>new  AlarmEventStackDump                -- for SQL-Server only: Sends the StackDump as a chunk of text</LI>
+				<LI>new  AlarmEventOsSwapping               -- if IN or OUT is above 5000. For Linux/Unix it's in 'CmOsVmstat', for Windows it's in 'CmOsMeminfo'</LI>
 				
 				<LI>Changed: AlarmEventConfigResourceIsLow       -- added "raiseDelay", which is used by 'Statement Cache Hit Rate', and the default was set to 5 minutes below configured value before raising alarm.</LI>
 				<LI>Changed: AlarmEventFullTranLog               -- alwaysSend() is now set to true, so even if we do not "subscribe" for alarms on this server, we will still get message, just like SrvDown </LI>
