@@ -74,6 +74,7 @@ public class AseCpuUsageOverview extends AseAbstract
 	{
 		w.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load.",
 				"CmSummary_aaCpuGraph",
+				"CmOsMpstat_MpSum",
 				"CmEngines_aaReadWriteGraph",
 				"CmEngines_cpuSum",
 				"CmEngines_cpuEng",
@@ -88,6 +89,7 @@ public class AseCpuUsageOverview extends AseAbstract
 				));
 
 		_CmSummary_aaCpuGraph           .writeHtmlContent(w, null, "The above graph may contain <i>extra</i> CPU Usages, which will be CPU Used during I/O completaion checks.");
+		_CmOsMpstat_MpSum               .writeHtmlContent(w, null, null);
 		_CmSummary_aaDiskGraph          .writeHtmlContent(w, null, "How many disk I/Os was done... To be used in conjunction with '@@cpu_xxx' to decide if CPU is comming from disk or <i>other</i> DBMS load.");
 		if (isFullText)
 		{
@@ -159,6 +161,7 @@ public class AseCpuUsageOverview extends AseAbstract
 	{
 		int maxValue = 100;
 		_CmSummary_aaCpuGraph            = createTsLineChart(conn, "CmSummary", "aaCpuGraph",            maxValue, null, "CPU Summary for all Engines (using @@cpu_busy, @@cpu_io) (Summary)");
+		_CmOsMpstat_MpSum                = createTsLineChart(conn, "CmOsMpstat",     "MpSum",            maxValue, null, "OS: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
 		_CmSummary_aaDiskGraph           = createTsLineChart(conn, "CmSummary", "aaReadWriteGraph",      -1,       null, "Disk read/write per second, using @@total_read, @@total_write (Summary)");
 		_CmEngines_cpuSum                = createTsLineChart(conn, "CmEngines", "cpuSum",                maxValue, null, "CPU Summary for all Engines (Server->Engines)");
 		_CmEngines_cpuEng                = createTsLineChart(conn, "CmEngines", "cpuEng",                maxValue, null, "CPU Usage per Engine (System + User) (Server->Engines)");
@@ -246,6 +249,7 @@ public class AseCpuUsageOverview extends AseAbstract
 	}
 
 	private IReportChart _CmSummary_aaCpuGraph;
+	private IReportChart _CmOsMpstat_MpSum;
 	private IReportChart _CmSummary_aaDiskGraph;
 	private IReportChart _CmEngines_cpuSum;
 	private IReportChart _CmEngines_cpuEng;

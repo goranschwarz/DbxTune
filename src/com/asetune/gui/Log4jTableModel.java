@@ -183,11 +183,11 @@ extends AbstractTableModel
 			_skipMessagesList.add(new SkipMessageEntry(SkipMesssageType.REGEX, "The environment variable 'DBXTUNE_UD_ALARM_SOURCE_DIR' is NOT set."));
 			_skipMessagesList.add(new SkipMessageEntry(SkipMesssageType.REGEX, "The environment variable 'DBXTUNE_NORMALIZER_SOURCE_DIR' is NOT set."));
 			_skipMessagesList.add(new SkipMessageEntry(SkipMesssageType.REGEX, "The Directory '.*' does NOT exists. No User Defined Normalizer classes will be Compiled."));
-//			_skipMessagesList.add(new SkipMessageEntry(SkipMesssageType.REGEX, "Rejected .* plan names due to ' not executed '. For the last "));
+			_skipMessagesList.add(new SkipMessageEntry(SkipMesssageType.REGEX, "Rejected .* plan names due to '<planStatus> not executed </planStatus>'. For the last "));
 			_skipMessagesList.add(new SkipMessageEntry(SkipMesssageType.REGEX, "The persistent queue has [1-5] entries. The persistent writer might not keep in pace"));
 			_skipMessagesList.add(new SkipMessageEntry(SkipMesssageType.REGEX, "The configuration '.*' might be to low. For the last"));
 
-			_skipMessagesList.add(new SkipMessageEntry(SkipMesssageType.INDEXOF, "plan names due to ' not executed '. For the last "));
+//			_skipMessagesList.add(new SkipMessageEntry(SkipMesssageType.INDEXOF, "plan names due to '<planStatus> not executed </planStatus>'. For the last "));
 
 			// Skip some messages between 04:00 and 05:00
 			_skipMessagesList.add( new SkipMessageEntry(

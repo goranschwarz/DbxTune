@@ -60,7 +60,7 @@ public class Log4jTableModelTest
 		tm.addMessage( createMessage("When trying to initialize Counters Model 'CmSqlStatement', named 'SQL Statements'. No recording is active, which this CM depends on."));
 		tm.addMessage( createMessage("The environment variable 'DBXTUNE_UD_ALARM_SOURCE_DIR' is NOT set. Setting this to 'C:\\Users\\goran\\.dbxtune'."));
 		tm.addMessage( createMessage("The environment variable 'DBXTUNE_NORMALIZER_SOURCE_DIR' is NOT set. Setting this to '/home/sybase/.dbxtune'."));
-		tm.addMessage( createMessage("Rejected 1 plan names due to ' not executed '. For the last '01:00' (HH:MM), The following plans was rejected (planName=count). {*sq1911778937_1029785637ss*=1}"));
+		tm.addMessage( createMessage("Rejected 1 plan names due to '<planStatus> not executed </planStatus>'. For the last '01:00' (HH:MM), The following plans was rejected (planName=count). {*sq1911778937_1029785637ss*=1}"));
 		tm.addMessage( createMessage("The persistent queue has 1 entries. The persistent writer might not keep in pace. The current consumer..."));
 		tm.addMessage( createMessage("The persistent queue has 2 entries. The persistent writer might not keep in pace. The current consumer..."));
 		tm.addMessage( createMessage("The persistent queue has 3 entries. The persistent writer might not keep in pace. The current consumer..."));
