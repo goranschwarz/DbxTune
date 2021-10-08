@@ -1384,6 +1384,9 @@ extends CounterModelHostMonitor
 		int deviceDescription_pos = -1;
 		int device_pos = -1;
 		
+		int readPct_pos         = -1;
+		int writePct_pos        = -1;
+		int totalIoPerSec_pos   = -1;
 		int readsPerSec_pos     = -1;
 		int writesPerSec_pos    = -1;
 		int kbReadPerSec_pos    = -1;
@@ -1415,6 +1418,10 @@ extends CounterModelHostMonitor
 			else if (colName.equals("Disks"))             device_pos            = colId; // AIX
 			else if (colName.equals("device"))            device_pos            = colId; // HPUX, Linux, Solaris
 			else if (colName.equals("name"))              device_pos            = colId; // Veritas
+
+			else if (colName.equals("readPct"))           readPct_pos           = colId;
+			else if (colName.equals("writePct"))          writePct_pos          = colId;
+			else if (colName.equals("totalIoPerSec"))     totalIoPerSec_pos     = colId;
 
 			else if (colName.equals("readsPerSec"))       readsPerSec_pos       = colId;
 			else if (colName.equals("writesPerSec"))      writesPerSec_pos      = colId;
@@ -1461,6 +1468,23 @@ extends CounterModelHostMonitor
 				}
 			}
 
+			// Calculate: Total IOs Per Second
+			if (totalIoPerSec_pos >= 0 && readsPerSec_pos >= 0 && writesPerSec_pos >= 0)
+			{
+				Object readsPerSec_obj     = newSample.getValueAt(rowId, readsPerSec_pos);
+				Object writesPerSec_obj    = newSample.getValueAt(rowId, writesPerSec_pos);
+
+				if (readsPerSec_obj instanceof Number && writesPerSec_obj instanceof Number)
+				{
+					Number readsPerSec   = (Number) readsPerSec_obj;
+					Number writesPerSec  = (Number) writesPerSec_obj; 
+
+					BigDecimal totIos = new BigDecimal(readsPerSec.doubleValue() + writesPerSec.doubleValue()).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+					
+					newSample.setValueAt(totIos, rowId, totalIoPerSec_pos);
+				}
+			}
+
 			// Calculate Average Read/Write Size per IO (how big IO's do we issue)
 			if (readsPerSec_pos >= 0 && writesPerSec_pos >= 0 && kbReadPerSec_pos >= 0 && kbWritePerSec_pos >= 0 && avgReadKbPerIo_pos >= 0 && avgWriteKbPerIo_pos >= 0)
 			{
@@ -1491,6 +1515,38 @@ extends CounterModelHostMonitor
 
 					newSample.setValueAt(avgReadKbPerIo,  rowId, avgReadKbPerIo_pos);
 					newSample.setValueAt(avgWriteKbPerIo, rowId, avgWriteKbPerIo_pos);
+				}
+			}
+
+			// Calculate Average Read/Write Percent
+			if (readPct_pos >= 0 && writePct_pos >= 0 && readsPerSec_pos >= 0 && writesPerSec_pos >= 0)
+			{
+				Object readsPerSec_obj     = newSample.getValueAt(rowId, readsPerSec_pos);
+				Object writesPerSec_obj    = newSample.getValueAt(rowId, writesPerSec_pos);
+
+				if (readsPerSec_obj instanceof Number && writesPerSec_obj instanceof Number)
+				{
+					Number readsPerSec   = (Number) readsPerSec_obj;
+					Number writesPerSec  = (Number) writesPerSec_obj; 
+
+					BigDecimal readPct = null;
+					BigDecimal writePct = null;
+
+					double totIos = readsPerSec.doubleValue() + writesPerSec.doubleValue();
+					
+					if (totIos > 0)
+					{
+						readPct  = new BigDecimal(readsPerSec .doubleValue() / totIos * 100.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+						writePct = new BigDecimal(writesPerSec.doubleValue() / totIos * 100.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+					}
+					else
+					{
+						readPct = new BigDecimal(0.0);
+						writePct = new BigDecimal(0.0);
+					}
+
+					newSample.setValueAt(readPct,  rowId, readPct_pos);
+					newSample.setValueAt(writePct, rowId, writePct_pos);
 				}
 			}
 		}

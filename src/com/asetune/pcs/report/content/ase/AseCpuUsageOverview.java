@@ -160,12 +160,12 @@ public class AseCpuUsageOverview extends AseAbstract
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		int maxValue = 100;
-		_CmSummary_aaCpuGraph            = createTsLineChart(conn, "CmSummary", "aaCpuGraph",            maxValue, null, "CPU Summary for all Engines (using @@cpu_busy, @@cpu_io) (Summary)");
-		_CmOsMpstat_MpSum                = createTsLineChart(conn, "CmOsMpstat",     "MpSum",            maxValue, null, "OS: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
-		_CmSummary_aaDiskGraph           = createTsLineChart(conn, "CmSummary", "aaReadWriteGraph",      -1,       null, "Disk read/write per second, using @@total_read, @@total_write (Summary)");
-		_CmEngines_cpuSum                = createTsLineChart(conn, "CmEngines", "cpuSum",                maxValue, null, "CPU Summary for all Engines (Server->Engines)");
-		_CmEngines_cpuEng                = createTsLineChart(conn, "CmEngines", "cpuEng",                maxValue, null, "CPU Usage per Engine (System + User) (Server->Engines)");
-		_CmSysLoad_EngineRunQLengthGraph = createTsLineChart(conn, "CmSysLoad", "EngineRunQLengthGraph", -1,       null, "Run Queue Length, Average over last minute, Per Engine (Server->System Load)");
+		_CmSummary_aaCpuGraph            = createTsLineChart(conn, "CmSummary",  "aaCpuGraph",            maxValue, null,      "CPU Summary for all Engines (using @@cpu_busy, @@cpu_io) (Summary)");
+		_CmOsMpstat_MpSum                = createTsLineChart(conn, "CmOsMpstat", "MpSum",                 maxValue, "idlePct", "OS: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
+		_CmSummary_aaDiskGraph           = createTsLineChart(conn, "CmSummary",  "aaReadWriteGraph",      -1,       null,      "Disk read/write per second, using @@total_read, @@total_write (Summary)");
+		_CmEngines_cpuSum                = createTsLineChart(conn, "CmEngines",  "cpuSum",                maxValue, null,      "CPU Summary for all Engines (Server->Engines)");
+		_CmEngines_cpuEng                = createTsLineChart(conn, "CmEngines",  "cpuEng",                maxValue, null,      "CPU Usage per Engine (System + User) (Server->Engines)");
+		_CmSysLoad_EngineRunQLengthGraph = createTsLineChart(conn, "CmSysLoad",  "EngineRunQLengthGraph", -1,       null,      "Run Queue Length, Average over last minute, Per Engine (Server->System Load)");
 
 		// For CmExecutionTime_TimeGraph do not sample values for "Unknown" which is "out-of-bounds"
 		String skip1 = null;

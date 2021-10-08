@@ -181,6 +181,31 @@ implements ResultSetMetaData
 	{
 		return _columns;
 	}
+	
+	/**
+	 * Check if there is a SQL Column name 
+	 * @param name SQL Column name
+	 * @return true or false
+	 */
+	public boolean hasColumn(String name)
+	{
+		return findColumn(name) != -1;
+	}
+
+	/**
+	 * Get index (starting at 0) of the SQL Position for a column name!
+	 * @param name SQL Column name
+	 * @return The position (starting at 0)  or -1 if not found.
+	 */
+	public int findColumn(String name)
+	{
+		for (ColumnEntry e: _columns)
+		{
+			if (e._colName.equals(name))
+				return e._sqlColNum;
+		}
+		return -1;
+	}
 
 	/**
 	 * Get a ColumnEntry for a specific column NAME

@@ -1319,6 +1319,7 @@ class DbxGraph
 
 							// Change/set some parameters
 							params.set('mdc',         "999");
+							params.set('mdcp',        "false");
 							params.set('startTime',   new moment().subtract(6, "days").startOf('day').format('YYYY-MM-DD HH:mm'));
 							params.set('endTime',     "24h");
 							params.set('sessionName', srvName);
@@ -1354,6 +1355,7 @@ class DbxGraph
 
 							// Change/set some parameters
 							params.set('mdc',         "-6");
+							params.set('mdcp',        "false");
 							params.set('endTime',     currentHourSpan + "h");
 							params.set('sessionName', srvName);
 							params.set('graphList',   graphName);
@@ -1379,6 +1381,7 @@ class DbxGraph
 
 							// Change/set some parameters
 							params.set('mdc',         "999");
+							params.set('mdcp',        "false");
 							params.set('startTime',   new moment().subtract(30, "days").startOf('day').format('YYYY-MM-DD HH:mm'));
 							params.set('endTime',     "24h");
 							params.set('sessionName', srvName);
@@ -1414,6 +1417,7 @@ class DbxGraph
 							
 							// Change/set some parameters
 							params.set('mdc',         "-30");
+							params.set('mdcp',        "false");
 							params.set('endTime',     currentHourSpan + "h");
 							params.set('sessionName', srvName);
 							params.set('graphList',   graphName);
@@ -1446,6 +1450,7 @@ class DbxGraph
 							// Change/set some parameters
 							params.set('endTime',     currentHourSpan + "h");
 							params.set('mdc',         "-2");
+							params.set('mdcp',        "false");
 							params.set('gcols',       3);
 
 							window.open(`${location.pathname}?${params}`, '_blank');
@@ -1472,6 +1477,7 @@ class DbxGraph
 							// Change/set some parameters
 							params.set('endTime',     currentHourSpan + "h");
 							params.set('mdc',         "-4");
+							params.set('mdcp',        "false");
 							params.set('gcols',       5);
 
 							window.open(`${location.pathname}?${params}`, '_blank');
@@ -1498,6 +1504,7 @@ class DbxGraph
 							// Change/set some parameters
 							params.set('endTime',     currentHourSpan + "h");
 							params.set('mdc',         "-6");
+							params.set('mdcp',        "false");
 							params.set('gcols',       7);
 
 							window.open(`${location.pathname}?${params}`, '_blank');

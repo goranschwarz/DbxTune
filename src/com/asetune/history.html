@@ -84,18 +84,21 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI>OS Monitoring improvement for AIX 7.2 (where some columns in output for 'mpstat' and 'vmstat' was changed, and 'iostat' had a faulty column id)</LI>
 		<LI>OS Monitoring: CmOsMpstat - Added column 'TotalPct (usr + sys + iowait)'</LI>
+		<LI>OS Monitoring: CmOsIostat - Added column 'totalIoPerSec' just readsPerSec+writesPerSec. and 'readPct', 'writePct' which just is a percent calculation of totalIoPerSec</LI>
+		<LI>OS Monitoring: New CmOsPs <i>OS Top Processes(ps)</i> - snapshot top processes on the Server side. Solaris, Aix, Hp: <code>not yet implemented</code>, Linux: <code>ps -e -ww --format pid,ppid,euser,tty,vsz,rss,etimes,cputime,pmem,pcpu,args --sort=-pcpu | head -n ##</code>, for Windows <code>powershell "Get-Process | sort -desc cpu | select -first ##"</code></LI> 
 
 		<LI>DictCompression - Not storing records as a batch, instead reverting back to single statement, also changed some concurrency issues</LI>
 
 		<LI>Daily Summary Report Changes
 			<UL>
 				<LI>Reports split in 2. One short version (which will be the main content for mails), and one long version (it will be attached in mails)</LI>
-				<LI>A new layout using bootsrap look and feel</LI>
+				<LI>A new layout using bootstrap look and feel</LI>
 				<LI>All DbxTune Collectors: new section: iostat overview</LI>
 				<LI>Many of the statistical values now also has a "sparkline" (a mini chart) to represent *when* the measurement happened in time (was it during evening, night, morning or spread over the whole day)</LI>
 				<LI>New section (at the end) that shows DbxTune Collectors Errors and Warnings... Used to check for problems/issues/bugs with the collector (<i>without having to read the error log</i>).</LI>
 				<LI>For Windows: do not skip Host Monitoring information</LI>
 				<LI>Mail Sender - If the attachment is larger than 30MB, do not attach, only send the small mail report.</LI>
+				<LI>Added section in "Recording Info": 1: If the HostMonitoring is enabled. 2: Hostname for the HostMonitoring. 3: If HostMonitoring is NOT Enabled, then write some info about <b>how</b> to enable it., and if it's Windows... Print some extra information about how to install SSH Server etc.</LI>
 			</UL>
 		</LI>
 

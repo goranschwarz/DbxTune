@@ -35,6 +35,7 @@ import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
 public class RecordingInfo
@@ -59,6 +60,9 @@ extends ReportEntryAbstract
 	private String _recordingVersion = null;
 	
 	private int    _recordingSampleTime = -1;
+	
+	private boolean _isHostMonitoringEnabled = false;
+	private String  _hostMonitorHostname;
 
 	public RecordingInfo(DailySummaryReportAbstract reportingInstance)
 	{
@@ -118,6 +122,7 @@ extends ReportEntryAbstract
 			sb.append("<br>\n");
 
 			sb.append("<table class='recording-info'>\n");
+
 			sb.append("  <tr> " + tdBullet +" <td><b>Recording was Made Using:   </b></td> <td>" + _recordingVersion      + "</td> </tr>\n");
 			sb.append("  <tr> " + tdBullet +" <td><b>The Report is Produced by : </b></td> <td>" + _reportVersion         + "</td> </tr>\n");
 			if (getReportingInstance().hasReportPeriod())
@@ -145,7 +150,90 @@ extends ReportEntryAbstract
 			sb.append(blankTableRow);
    			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Last Restart at Time:  </b></td> <td>" + _dbmsStartTimeStr       + "</td> </tr>\n");
 			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Last Restart in Days:  </b></td> <td>" + _dbmsStartTimeInDaysStr + "</td> </tr>\n");
+
+			sb.append(blankTableRow);
+			sb.append("  <tr> " + tdBullet +" <td><b>Host Monitoring was Enabled:  </b></td> <td>" + _isHostMonitoringEnabled + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet +" <td><b>Host Monitoring hostname:     </b></td> <td>" + _hostMonitorHostname     + "</td> </tr>\n");
+
 			sb.append("</table>\n");
+			
+			
+			// Get if HostMonitoring is enabled/disabled
+			//  * if disabled: Write info on how to enable it
+			//  * if Windows: write additional info on how to:
+			//                - install SSH
+			//                - create user 'dbxtune' or other user (with correct permissions)
+			//                - test the above
+			if ( ! _isHostMonitoringEnabled )
+			{
+				sb.append("<br> \n");
+				sb.append("<b><i>Note:</i></b> Host monitoring is <b>not</b> enabled. If you want to get a closer look on various Operating System Counters, please enable it... see below.<br> \n");
+				sb.append("The following commands is used to monitor the Operating System <i>(on Linux/Unix)</i> <br> \n");
+				sb.append("<ul> \n");
+				sb.append("  <li><code>mpstat</code            - For CPU activity</li> \n");
+				sb.append("  <li><code>iostat</code            - For Disk activity</li> \n");
+				sb.append("  <li><code>uptime</code            - For 'Average Load' or 'Average Run Queue Length' </li> \n");
+				sb.append("  <li><code>vmstat</code            - For Swapping and CPU activity</li> \n");
+				sb.append("  <li><code>df</code                - For Disk Usage</li> \n");
+				sb.append("  <li><code>cat /proc/meminfo</code - For Memory Information</li> \n");
+				sb.append("  <li><code>cat /proc/net/dev</code - For Network Activity</li> \n");
+				sb.append("</ul> \n");
+				sb.append("<br> \n");
+				sb.append("To enable this functionality, do the following: \n");
+				sb.append("In the start <i>wrapper</i> command/shellscript, found in <code>~/.dbxtune/dbxc/bin/start_<i>xxx</i>tune.sh</code> \n");
+				sb.append("<ul> \n");
+				sb.append("  <li>Specify switch <code>-u<i>osUsername</i></code> </li> \n");
+				sb.append("  <li>Set the password using: <code>~/.dbxtune/dbxc/bin/dbxPassword.sh set -U<i>osUsername</i> -P<i>theSecretPasswd</i> -S<i>serverName</i></code></li> \n");
+				sb.append("</ul> \n");
+				sb.append("And enable desired Counter Models you want to collect in the config file: <code>~/.dbxtune/dbxc/conf/someName.conf</code> \n");
+				sb.append("<ul> \n");
+				sb.append("  <li><code>CmOsMpstat.persistCounters=true    </code></li> \n");
+				sb.append("  <li><code>CmOsIostat.persistCounters=true    </code></li> \n");
+				sb.append("  <li><code>CmOsUptime.persistCounters=true    </code></li> \n");
+				sb.append("  <li><code>CmOsVmstat.persistCounters=true    </code>  <i> ## Note: This is <b>not</b> supported for Windows.</i> And do <b>NOT</b> add this comment in the config file!!!</li> \n");
+				sb.append("  <li><code>CmOsDiskSpace.persistCounters=true </code></li> \n");
+				sb.append("  <li><code>CmOsMeminfo.persistCounters=true   </code></li> \n");
+				sb.append("  <li><code>CmOsNwInfo.persistCounters=true    </code></li> \n");
+				sb.append("  <li><code>CmOsPs.persistCounters=true        </code></li> \n");
+				sb.append("</ul> \n");
+				sb.append("<br> \n");
+
+				if (StringUtil.hasValue(_dbmsVersionString) && _dbmsVersionString.toLowerCase().contains("windows"))
+				{
+					sb.append("It looks like the DBMS is running on Windows ? <br> \n");
+					sb.append("<i>&emsp; This asumption was made since the DBMS version string contained 'Windows'. DBMS Version String: '" + _dbmsVersionString + "'</i> <br> \n");
+					sb.append("If this asumption is <b>correct</b>, then if you want to do host monitoring, you need to do the following on the Windows host where the DBMS is running on: \n");
+					sb.append("<ul> \n");
+					sb.append("  <li>Install a SSH (Secure Shell) on Windows. <br> \n");
+					sb.append("  Here is a link how to do that <a href='https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse'>https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse</a>\n");
+					sb.append("  </li>\n");
+
+					sb.append("  <li>Create a user on the machine (Local or Active Directory user), below is an example of adding a Local user called 'dbxtune' <br>\n");
+					sb.append("  <code>net user /add dbxtune someSecretPassword</code> <br> \n");
+					sb.append("  </li> \n");
+
+					sb.append("  <li>And grant some Authorizations to the above user, se example below<br> \n");
+					sb.append("  <code>net localgroup \"Performance Log Users\" dbxtune /add</code> <br> \n");
+					sb.append("  <code>net localgroup \"Distributed COM Users\" dbxtune /add</code> <br> \n");
+					sb.append("  Or the below for becoming a <i>Local Admin</i> <br> \n");
+					sb.append("  <code>net localgroup administrators dbxtune /add</code> <br> \n");
+					sb.append("  </li> \n");
+					sb.append("</ul> \n");
+
+					sb.append("To test if the above works, you can open a DOS promt as user <i>dbxtune</i> and issue the below commands: \n");
+					sb.append("<ul> \n");
+					sb.append("  <li><code>typeperf -si 2 \"\\Memory\\*\"</code></li>\n");
+					sb.append("  <li><code>powershell \"gwmi win32_logicaldisk | Format-Table\"</code></li>\n");
+					sb.append("</ul> \n");
+
+					sb.append("As a final test, you can test <i>end-to-end</i> by: \n");
+					sb.append("<ul> \n");
+					sb.append("  <li><code>ssh dbxtune@hostname-where-sqlserver-is-running.com</code></li>\n");
+					sb.append("  <li>Then execute the two commands from the previous test section.</li>\n");
+					sb.append("</ul> \n");
+					sb.append("<br> \n");
+				}
+			}
 		}
 	}
 
@@ -176,6 +264,8 @@ extends ReportEntryAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
+		String sql;
+
 		if (hasReportingInstance())
 		{
 			DailySummaryReportAbstract dsr = getReportingInstance();
@@ -186,12 +276,25 @@ extends ReportEntryAbstract
 			_recordingVersion       = dsr.getRecDbxAppName() + ", Version: " + dsr.getRecDbxVersionStr() + ", Build: " + dsr.getRecDbxBuildStr();
 		}
 
-		_recordingSampleTime = getRecordingSampleTime(conn);
+		//-----------------------------------------
+		// Get "sample time" for the recording
+		//-----------------------------------------
+		_recordingSampleTime = StringUtil.parseInt(getRecordingSessionParameter(conn, null, "offline.sampleTime"), -1);
+		//_recordingSampleTime = getRecordingSampleTime(conn);
 
-		
-		String sql;
+		//-----------------------------------------
+		// Get Host Monitoring HOSTNAME
+		//-----------------------------------------
+		_hostMonitorHostname = getRecordingSessionParameter(conn, null, "conn.sshHostname");
 
+		//-----------------------------------------
+		// Get/Check if Host Monitoring was enabled
+		//-----------------------------------------
+		_isHostMonitoringEnabled = isHostMonitoringEnabled(conn);
+
+		//-----------------------------------------
 		// Start/end time for the recording
+		//-----------------------------------------
 		sql = "select min([SessionSampleTime]), max([SessionSampleTime]) \n" +
 		      "from ["+PersistWriterBase.getTableName(conn, PersistWriterBase.SESSION_SAMPLES, null, false) + "] \n";
 
@@ -226,5 +329,19 @@ extends ReportEntryAbstract
 
 			_logger.warn("Problems getting: '" + getSubject() + "', Caught: " + ex);
 		}
+	}
+
+	private boolean isHostMonitoringEnabled(DbxConnection conn)
+	{
+		// Check if any of the tables exists... exit as soon as you find a table
+		if (doTableExist(conn, null, "CmOsDiskSpace_abs")) return true;
+		if (doTableExist(conn, null, "CmOsIostat_abs"   )) return true;
+		if (doTableExist(conn, null, "CmOsMeminfo_abs"  )) return true;
+		if (doTableExist(conn, null, "CmOsMpstat_abs"   )) return true;
+		if (doTableExist(conn, null, "CmOsNwInfo_abs"   )) return true;
+		if (doTableExist(conn, null, "CmOsUptime_abs"   )) return true;
+		if (doTableExist(conn, null, "CmOsVmstat_abs"   )) return true;
+		
+		return false;
 	}
 }

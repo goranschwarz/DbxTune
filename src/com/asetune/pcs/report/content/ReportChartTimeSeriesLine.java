@@ -66,7 +66,7 @@ extends ReportChartAbstract
 	
 	private String        _graphName;
 	private int           _maxValue;
-	private String        _skipNames;
+	private String        _skipNames;      // This is used two fold: skip "chart lines" OR skip some values that might be to "high/low" for the chart...
 	
 	public ReportChartTimeSeriesLine(ReportEntryAbstract reportEntry, DbxConnection conn, String cmName, String graphName, int maxValue, String skipNames, String graphTitle)
 	{
@@ -214,7 +214,7 @@ extends ReportChartAbstract
 		{
 			if (skipNameVal.startsWith(SKIP_COLNAME_WITH_VALUE_ABOVE))
 			{
-				String tmpStr = skipNames.substring(SKIP_COLNAME_WITH_VALUE_ABOVE.length()) + " \n";
+				String tmpStr = skipNameVal.substring(SKIP_COLNAME_WITH_VALUE_ABOVE.length()) + " \n";
 				Map<String, String> tmpMap = StringUtil.parseCommaStrToMap(tmpStr);
 				for (Entry<String, String> e : tmpMap.entrySet())
 				{
@@ -227,7 +227,7 @@ extends ReportChartAbstract
 			}
 			if (skipNameVal.startsWith(SKIP_COLNAME_WITH_VALUE_BELOW))
 			{
-				String tmpStr = skipNames.substring(SKIP_COLNAME_WITH_VALUE_BELOW.length()) + " \n";
+				String tmpStr = skipNameVal.substring(SKIP_COLNAME_WITH_VALUE_BELOW.length()) + " \n";
 				Map<String, String> tmpMap = StringUtil.parseCommaStrToMap(tmpStr);
 				for (Entry<String, String> e : tmpMap.entrySet())
 				{
@@ -278,14 +278,14 @@ extends ReportChartAbstract
 				ResultSetMetaData md = rs.getMetaData();
 				int colCount = md.getColumnCount();
 				
-				int colDataStart = 4; // "SessionStartTime", "SessionSampleTime", "CmSampleTime", "System+User CPU (@@cpu_busy + @@cpu_io)"
+//				int colDataStart = 4; // "SessionStartTime", "SessionSampleTime", "CmSampleTime", "System+User CPU (@@cpu_busy + @@cpu_io)"
 
 				String[] labels = new String[(colCount-3)/2];
 				Double[] datapt = new Double[(colCount-3)/2];
 				
-				List<String> labelNames = new LinkedList<>();
-				for (int c=colDataStart; c<colCount+1; c++)
-					labelNames.add( md.getColumnLabel(c) );
+//				List<String> labelNames = new LinkedList<>();
+//				for (int c=colDataStart; c<colCount+1; c++)
+//					labelNames.add( md.getColumnLabel(c) );
 
 				while (rs.next())
 				{
@@ -348,6 +348,12 @@ extends ReportChartAbstract
 							}
 						}
 
+						// Should this Chart Line (label) be skipped
+						if (skipNameList.contains(label))
+						{
+							addEntry = false;
+						}
+							
 						if (addEntry)
 						{
 							// Grab TimeSeries object

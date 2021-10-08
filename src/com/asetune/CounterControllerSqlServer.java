@@ -27,8 +27,10 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.regex.PatternSyntaxException;
 
 import javax.swing.JOptionPane;
@@ -43,6 +45,7 @@ import com.asetune.cm.os.CmOsIostat;
 import com.asetune.cm.os.CmOsMeminfo;
 import com.asetune.cm.os.CmOsMpstat;
 import com.asetune.cm.os.CmOsNwInfo;
+import com.asetune.cm.os.CmOsPs;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
 import com.asetune.cm.sqlserver.CmActiveStPlanStats;
@@ -95,6 +98,7 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.SwingUtils;
 import com.asetune.utils.Ver;
 
 
@@ -123,6 +127,12 @@ extends CounterControllerAbstract
 	public static final String  PROPKEY_onPcsDatabaseRollover_captureQueryStore_daysToCopy = "SqlServerTune.onPcsDatabaseRollover.captureQueryStore.daysToCopy";
 	public static final int     DEFAULT_onPcsDatabaseRollover_captureQueryStore_daysToCopy = 1; // -1=ALL, 1=OneDay, 2=TwoDays...
 
+
+	public static final String  PROPKEY_NoGui_AutoEnable_TraceFlag_LastQueryPlanStats = "SqlServerTune.nogui.autoEnable.traceflag.lastQueryPlanStats";
+	public static final boolean DEFAULT_NoGui_AutoEnable_TraceFlag_LastQueryPlanStats = false;
+	
+	public static final String  PROPKEY_NoGui_AutoEnable_TraceFlag_LiveQueryPlans = "SqlServerTune.nogui.autoEnable.traceflag.liveQueryPlans";
+	public static final boolean DEFAULT_NoGui_AutoEnable_TraceFlag_LiveQueryPlans = false;
 	
 	/**
 	 * The default constructor
@@ -209,6 +219,7 @@ extends CounterControllerAbstract
 		CmOsMeminfo          .create(counterController, guiController);
 		CmOsNwInfo           .create(counterController, guiController);
 		CmOsDiskSpace        .create(counterController, guiController);
+		CmOsPs               .create(counterController, guiController);
 
 		// USER DEFINED COUNTERS
 		createUserDefinedCounterModels(counterController, guiController);
@@ -369,6 +380,8 @@ extends CounterControllerAbstract
 
 		// Below is used to build GUI Messages on LAST_QUERY_PLAN_STATS and "missing" Trace Flags
 		String guiHtmlMessages = "";
+		String sqlFixCmds      = "";
+		Map<String, String> noGuiSqlFixCmdList = new LinkedHashMap<>();
 		
 		//------------------------------------------------
 		// for SQL-Server 2019 - Check if TraceFlag 2451 is set or if any databases has database scoped configuration 'LAST_QUERY_PLAN_STATS'
@@ -419,6 +432,20 @@ extends CounterControllerAbstract
 					             + "   <li>Or issue command <code>alter database scoped configuration set LAST_QUERY_PLAN_STATS = ON</code> for the database(s) you want to enable Actual-Query-Plans.</li>"
 					             + "</ul>"
 					             + "</li>";
+					
+					sqlFixCmds = ""
+							+ "/*** To enable 'Actual-Query-Plans', you may execute one of the below statements ***/ \n"
+							+ "-- dbcc traceon(2451, -1) \n"
+							+ "-- use dbname; alter database scoped configuration set LAST_QUERY_PLAN_STATS = ON \n"
+							+ "\n";
+					
+					if (!hasGui)
+					{
+						if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_NoGui_AutoEnable_TraceFlag_LastQueryPlanStats, DEFAULT_NoGui_AutoEnable_TraceFlag_LastQueryPlanStats))
+							noGuiSqlFixCmdList.put(PROPKEY_NoGui_AutoEnable_TraceFlag_LastQueryPlanStats, "dbcc traceon(2451, -1)");
+						else
+							_logger.info("TIP: in no-gui mode you can set property '" + PROPKEY_NoGui_AutoEnable_TraceFlag_LastQueryPlanStats + "=true' to automatically enable 'Actual-Query-Plans'.");
+					}
 				}
 			}
 		}
@@ -430,7 +457,11 @@ extends CounterControllerAbstract
 		// Scope: global only
 		if (srvVersion >= Ver.ver(2016,0,0, 1) && srvVersion < Ver.ver(2019))
 		{
-			if ( ! activeGlobalTraceFlagList.contains(7412) )
+			if ( activeGlobalTraceFlagList.contains(7412) )
+			{
+				_logger.info("For SQL-Server between 2016 SP1 and below 2019, Live-Query-Plans is ENABLED, found Global Trace Flag 7412." );
+			}
+			else
 			{
 				_logger.warn("For SQL-Server between 2016 SP1 and below 2019, Trace flag 7412 is needed to view Live-Query-Plans for other sessions. This Trace Flag is MISSING so Live-Query-Plans may be missing." );
 
@@ -441,27 +472,18 @@ extends CounterControllerAbstract
 					             + "</ul>"
 				                 + "</li>";
 				
-// FIXME: 
-//				// In NO-GUI Mode we might want to set that trace flag ???
-//				if ( ! hasGui )
-//				{
-//					if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_NoGui_enableTraceFlag_LiveQueryPlans, DEFAULT_NoGui_enableTraceFlag_LiveQueryPlans))
-//					{
-//						sql = "dbcc traceon(7412, -1)";
-//
-//						try (Statement stmnt = conn.createStatement())
-//						{
-//							stmnt.executeUpdate(sql);
-//						}
-//						catch(SQLException ex)
-//						{
-//							_logger.error("Trying to set SQL Server traceflag '7412'. In NO-GUI mode the property '" + PROPKEY_xxx + "' was true, so we issued SQL Command '" + sql + "', but we had problems. Continuing anyway. Caught: " + ex);
-//						}
-//					}
-//					// We probably need to refresh the "activeGlobalTraceFlagList" or similar...
-//					// And possibly more stuff...
-//					// So the above is NOT tested, just an idea (which I didn't have time to implement/test)
-//				}
+				sqlFixCmds += ""
+						+ "/*** for SQL Server between 2016 SP1 and 2019. To enable 'Live-Query-Plans', you may execute the below statement ***/ \n"
+						+ "-- dbcc traceon(7412, -1) \n"
+						+ "\n";
+
+				if (!hasGui)
+				{
+					if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_NoGui_AutoEnable_TraceFlag_LiveQueryPlans, DEFAULT_NoGui_AutoEnable_TraceFlag_LiveQueryPlans))
+						noGuiSqlFixCmdList.put(PROPKEY_NoGui_AutoEnable_TraceFlag_LiveQueryPlans, "dbcc traceon(7412, -1)");
+					else
+						_logger.info("TIP: in no-gui mode you can set property '" + PROPKEY_NoGui_AutoEnable_TraceFlag_LastQueryPlanStats + "=true' to automatically enable 'Live-Query-Plans'.");
+				}
 			}
 		}
 
@@ -486,7 +508,8 @@ extends CounterControllerAbstract
 						+ "For optimal experiance and usability the following options may need to be changed: <br>"
 						+ "<ul>" + guiHtmlMessages + "</ul>"
 						+ "<br>"
-						+ Version.getAppName() + " will work without the above changes, but some functionality might not be available."
+						+ Version.getAppName() + " will work without the above changes, but some functionality might not be available.<br>"
+						+ "<b>Note:</b> The above SQL Command(s) has been put in the <i>Copy Paste Buffer</i>, for easy access.<br>"
 						+ "</html>"
 						;
 
@@ -500,6 +523,9 @@ extends CounterControllerAbstract
 						null,     //do not use a custom Icon
 						options,  //the titles of buttons
 						options[0]); //default button title
+
+				// Copy command to Copy/Paste buffer
+				SwingUtils.setClipboardContents(sqlFixCmds);
 
 				if (answer == 0)
 				{
@@ -521,6 +547,39 @@ extends CounterControllerAbstract
 					throw new RuntimeException("Connect attempt was aborted by user.");
 				}
 			} // end: show info message
+		}
+
+		// In NOGUI Mode, execute SQL Statements (which was added in above logic) 
+		if (!hasGui && !noGuiSqlFixCmdList.isEmpty())
+		{
+			for (Entry<String, String> entry : noGuiSqlFixCmdList.entrySet())
+			{
+				String propKey    = entry.getKey();
+				String sloganName = "-unknown-";
+
+				sql = entry.getValue();
+
+				if (propKey.equals(PROPKEY_NoGui_AutoEnable_TraceFlag_LastQueryPlanStats)) sloganName = "Actual-Query-Plans";
+				if (propKey.equals(PROPKEY_NoGui_AutoEnable_TraceFlag_LiveQueryPlans))     sloganName = "Live-Query-Plans";
+				
+				try (Statement stmnt = conn.createStatement())
+				{
+					stmnt.executeUpdate(sql);
+					_logger.info("Success setting SQL Server traceflag for '" + sloganName + "'. In NO-GUI mode the property '" + propKey + "' was true. The following SQL Command was issued '" + sql + "'.");
+					
+					// Set specific internal options...
+					if (propKey.equals(PROPKEY_NoGui_AutoEnable_TraceFlag_LastQueryPlanStats))
+					{
+						_useLastQueryPlanStats = true;
+					}
+					
+				}
+				catch(SQLException ex)
+				{
+					_logger.error("FAILED setting SQL Server traceflag for '" + sloganName + "'. In NO-GUI mode the property '" + propKey + "' was true. The following SQL Command was issued '" + sql + "', but we had problems. Continuing anyway. DBMS Error=" + ex.getErrorCode() + ", SQLState=" + ex.getSQLState()+ ", Caught: " + ex);
+				}
+				
+			}
 		}
 	}
 

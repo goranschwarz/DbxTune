@@ -33,6 +33,7 @@ import com.asetune.cm.os.CmOsIostat;
 import com.asetune.cm.os.CmOsMeminfo;
 import com.asetune.cm.os.CmOsMpstat;
 import com.asetune.cm.os.CmOsNwInfo;
+import com.asetune.cm.os.CmOsPs;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
 import com.asetune.cm.rs.CmAdminDiskSpace;
@@ -156,6 +157,7 @@ extends CounterControllerAbstract
 		CmOsMeminfo         .create(counterController, guiController);
 		CmOsNwInfo          .create(counterController, guiController);
 		CmOsDiskSpace       .create(counterController, guiController);
+		CmOsPs              .create(counterController, guiController);
 
 		// USER DEFINED COUNTERS
 		createUserDefinedCounterModels(counterController, guiController);

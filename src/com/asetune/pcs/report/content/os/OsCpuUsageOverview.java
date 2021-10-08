@@ -106,9 +106,9 @@ public class OsCpuUsageOverview extends AseAbstract
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		int maxValue = 100;
-		_CmOsMpstat_MpSum          = createTsLineChart(conn, "CmOsMpstat", "MpSum",          maxValue, null, "mpstat: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
-		_CmOsMpstat_MpCpu          = createTsLineChart(conn, "CmOsMpstat", "MpCpu",          maxValue, null, "mpstat: CPU usage per core (usr+sys+iowait) (Host Monitor->OS CPU(mpstat))");
-		_CmOsUptime_AdjLoadAverage = createTsLineChart(conn, "CmOsUptime", "AdjLoadAverage", -1,       null, "uptime: Adjusted Load Average (Host Monitor->OS Load Average(uptime))");
+		_CmOsMpstat_MpSum          = createTsLineChart(conn, "CmOsMpstat", "MpSum",          maxValue, "idlePct", "mpstat: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
+		_CmOsMpstat_MpCpu          = createTsLineChart(conn, "CmOsMpstat", "MpCpu",          maxValue, null,      "mpstat: CPU usage per core (usr+sys+iowait) (Host Monitor->OS CPU(mpstat))");
+		_CmOsUptime_AdjLoadAverage = createTsLineChart(conn, "CmOsUptime", "AdjLoadAverage", -1,       null,      "uptime: Adjusted Load Average (Host Monitor->OS Load Average(uptime))");
 	}
 
 	private IReportChart _CmOsMpstat_MpSum;

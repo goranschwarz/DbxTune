@@ -40,6 +40,7 @@ import com.asetune.hostmon.MonitorIo;
 import com.asetune.hostmon.MonitorMeminfo;
 import com.asetune.hostmon.MonitorMpstat;
 import com.asetune.hostmon.MonitorNwInfo;
+import com.asetune.hostmon.MonitorPs;
 import com.asetune.hostmon.MonitorUpTime;
 import com.asetune.hostmon.MonitorUserDefined;
 import com.asetune.hostmon.MonitorVmstat;
@@ -77,7 +78,8 @@ extends CountersModel
 	public static final int HOSTMON_MEMINFO   = 5;
 	public static final int HOSTMON_NWINFO    = 6;
 	public static final int HOSTMON_DISKSPACE = 7;
-	public static final int HOSTMON_UD_CLASS  = 8;
+	public static final int HOSTMON_PS        = 8;
+	public static final int HOSTMON_UD_CLASS  = 9;
 	private String _udModuleName = null;
 
 	public static String getTypeExplanation(int type)
@@ -89,6 +91,7 @@ extends CountersModel
 		if (type == HOSTMON_MEMINFO)   return "HOSTMON_MEMINFO";
 		if (type == HOSTMON_NWINFO)    return "HOSTMON_NWINFO";
 		if (type == HOSTMON_DISKSPACE) return "HOSTMON_DISKSPACE";
+		if (type == HOSTMON_PS)        return "HOSTMON_PS";
 		if (type == HOSTMON_UD_CLASS)  return "HOSTMON_UD_CLASS";
 		return "UNKNOWN TYPE("+type+")";
 	}
@@ -201,6 +204,7 @@ extends CountersModel
 			else if (_hostMonType == HOSTMON_MEMINFO)   _hostMonitor = MonitorMeminfo  .createMonitor(sshConn, false);
 			else if (_hostMonType == HOSTMON_NWINFO)    _hostMonitor = MonitorNwInfo   .createMonitor(sshConn, false);
 			else if (_hostMonType == HOSTMON_DISKSPACE) _hostMonitor = MonitorDiskSpace.createMonitor(sshConn, false);
+			else if (_hostMonType == HOSTMON_PS)        _hostMonitor = MonitorPs       .createMonitor(sshConn, false);
 			else if (_hostMonType == HOSTMON_UD_CLASS)
 			{
 				Configuration conf = null;
@@ -430,6 +434,7 @@ extends CountersModel
 			else if (_hostMonType == HOSTMON_MEMINFO)   offlineMetadataArr = MonitorMeminfo    .createOfflineMetaData();
 			else if (_hostMonType == HOSTMON_NWINFO)    offlineMetadataArr = MonitorNwInfo     .createOfflineMetaData();
 			else if (_hostMonType == HOSTMON_DISKSPACE) offlineMetadataArr = MonitorDiskSpace  .createOfflineMetaData();
+			else if (_hostMonType == HOSTMON_PS)        offlineMetadataArr = MonitorPs         .createOfflineMetaData();
 			else if (_hostMonType == HOSTMON_UD_CLASS)  offlineMetadataArr = MonitorUserDefined.createOfflineMetaData(_udModuleName);
 	
 			_offlineMetadata = null;
