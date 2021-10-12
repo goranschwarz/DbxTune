@@ -80,8 +80,11 @@ extends ReportSenderAbstract
 		String  msgBody      = null;
 		File    msgFile      = null;
 		long    msgSizeKb    = -1;
+		long    msgSizeMb    = -1;
 		long    attachSizeKb = -1;
 		long    attachSizeMb = -1;
+		long    fullSizeKb   = -1;
+		long    fullSizeMb   = -1;
 		boolean hasAttachment = false;
 
 		if (reportContent.hasReportFile())
@@ -96,6 +99,10 @@ extends ReportSenderAbstract
 //			msgBodyHtml = reportContent.getReportAsHtml();
 			msgBody     = reportContent.getShortMessage();
 			msgSizeKb   = msgBody.length() / 1024;
+			msgSizeMb   = msgSizeKb / 1024;
+
+			fullSizeKb  = attachSizeKb == -1 ? msgSizeKb : msgSizeKb + attachSizeKb;
+			fullSizeMb  = fullSizeKb / 1024;
 		} 
 		catch (IOException ex) 
 		{
@@ -169,14 +176,15 @@ extends ReportSenderAbstract
 			// If we also should attach the FULL Report as an ATTACHMENT
 			if (_attachHtmlContent && msgFile != null)
 			{
-				if ((attachSizeMb) < _attachHtmlContentMaxSizeMb)
+//				if ((attachSizeMb) < _attachHtmlContentMaxSizeMb)
+				if ((fullSizeMb) < _attachHtmlContentMaxSizeMb)
 				{
 					hasAttachment = true;
 					email.attach(msgFile);
 				}
 				else
 				{
-					_logger.warn("Skipping attaching HTML Content file to Daily Summary Report. Due to: attached-file-size-to-big. attachSizeMb=" + attachSizeMb + ", limit=" + _attachHtmlContentMaxSizeMb + ". (the limit can be changed with property '" + PROPKEY_attachHtmlContentMaxSizeMb + "=###'.");
+					_logger.warn("Skipping attaching HTML Content file to Daily Summary Report. Due to: attached-file-size-to-big. fullSizeMb=" + fullSizeMb + ", msgSizeMb=" + msgSizeMb + ", attachSizeMb=" + attachSizeMb + ", limit=" + _attachHtmlContentMaxSizeMb + ". (the limit can be changed with property '" + PROPKEY_attachHtmlContentMaxSizeMb + "=###'.");
 				}
 			}
 
@@ -188,11 +196,11 @@ extends ReportSenderAbstract
 			// SEND
 			email.send();
 
-			_logger.info("Sent mail message: msgSizeKb=" + msgSizeKb + ", hasAttachment=" + hasAttachment + ", attachSizeKb=" + attachSizeKb + ", attachSizeMb=" + attachSizeMb + ", attachMaxSizeMb=" + _attachHtmlContentMaxSizeMb + ", host='" + _smtpHostname + "', toList=" + toList + ", subject='" + msgSubject + "', for server name '" + serverName + "'.");
+			_logger.info("Sent mail message: fullSizeKb=" + fullSizeKb + ", fullSizeMb=" + fullSizeMb + ", msgSizeKb=" + msgSizeKb + ", msgSizeMb=" + msgSizeMb + ", hasAttachment=" + hasAttachment + ", attachSizeKb=" + attachSizeKb + ", attachSizeMb=" + attachSizeMb + ", attachMaxSizeMb=" + _attachHtmlContentMaxSizeMb + ", host='" + _smtpHostname + "', toList=" + toList + ", subject='" + msgSubject + "', for server name '" + serverName + "'.");
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems sending mail (msgSizeKb=" + msgSizeKb + ", hasAttachment=" + hasAttachment + ", attachSizeKb=" + attachSizeKb + ", attachSizeMb=" + attachSizeMb + ", attachMaxSizeMb=" + _attachHtmlContentMaxSizeMb + ", host='" + _smtpHostname + "', toList=" + toList + ", subject='" + msgSubject + "', for server name '" + serverName + "').", ex);
+			_logger.error("Problems sending mail (fullSizeKb=" + fullSizeKb + ", fullSizeMb=" + fullSizeMb + ", msgSizeKb=" + msgSizeKb + ", msgSizeMb=" + msgSizeMb + ", hasAttachment=" + hasAttachment + ", attachSizeKb=" + attachSizeKb + ", attachSizeMb=" + attachSizeMb + ", attachMaxSizeMb=" + _attachHtmlContentMaxSizeMb + ", host='" + _smtpHostname + "', toList=" + toList + ", subject='" + msgSubject + "', for server name '" + serverName + "').", ex);
 		}
 	}
 

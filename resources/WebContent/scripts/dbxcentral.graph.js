@@ -2320,8 +2320,39 @@ function dbxTuneLoadCharts(destinationDivId)
 			for (let i=0; i<graphNameArr.length; i++) 
 			{
 				var graphEntry = {};
-				graphEntry.graph = graphNameArr[i];
+				var tmpStrEntry = graphNameArr[i];
 
+				// Plain graph name (no specifications/properties)
+			//	if ( ! tmpStrEntry.includes("[") )
+				if ( ! tmpStrEntry.indexOf("[") !== -1 )
+				{
+					graphEntry.graph = tmpStrEntry;
+				}
+				// If the "graphName" contains any "specifications" (if specififc "chart lines" are hidden or visible, handle them here)
+				// a specification looks like: graphList=CmXXX_graph1[+line1;-line2;],CmXXX_graph2[-line2]
+				//                                                   ^^^^^^^^^^^^^^^^             ^^^^^^^^
+				else
+				{
+					// First copy/separate the: graphName and then properties into two different variables
+					const tmpStrGraphName  = tmpStrEntry.substring(0, str.indexOf("["));
+					const tmpStrGraphProps = tmpStrEntry.substring(str.indexOf("[") + 1, str.lastIndexOf("]");
+					
+//					// TODO: parse properties into a "Object"
+//					let tmpGraphPropArr = graphList.split(";");
+//					let tmpGraphPropObj = {}; // empty Object
+//					for (let i=0; i<tmpGraphPropArr.length; i++) 
+//					{
+//						var tmpPropEntry = tmpGraphPropArr[i];
+//						
+//						// FIXME: Check what to do with this entry... 
+//						tmpGraphPropObj.hideCol.push(graphEntry); // FIXME: push column names to hide on this name
+//						tmpGraphPropObj.showCol.push(graphEntry); // FIXME: push column names to show on this name
+//					}
+					
+					graphEntry.graph = tmpStrGraphName;
+//					graphEntry.graphLineProps = tmpGraphPropObj; // FIXME: This object should later on be passed into: new DbxGraph(... entry.graphLineProps, ...) the DbxGraph Object should handle "the rest"
+				}
+				
 				// Add the object to the profile
 				graphProfile.push(graphEntry);
 			}

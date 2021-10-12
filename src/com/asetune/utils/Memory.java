@@ -51,6 +51,12 @@ public class Memory
 	{
 		public void outOfMemoryHandler();
 		public void memoryConsumption(int memoryLeftInMB);
+
+//		/** Get a information string about the memory consumption in the implementation module */
+//		public String getMemoryConsumption();
+//
+//		/** Get the name of the implementation */
+//		public String getMemoryModuleName();
 	}
 
 	/** Set the limit in MB when the check thread will fire OutOfMemoryHandler calls, default is below 10 MB */ 
@@ -108,6 +114,22 @@ public class Memory
 			ml.memoryConsumption(memoryLeftInMB);
 		}
 	}
+//	/** Call all listers.getMemoryConsumption() */
+//	public static Map<String, String> getMemoryConsumption() 
+//	{
+//		Map<String, String> map = new LinkedHashMap<>();
+//		//  name,   memInfo
+//
+//		for (MemoryListener ml : getMemoryListener())
+//		{
+//			String name    = ml.getMemoryModuleName();
+//			String memInfo = ml.getMemoryConsumption();
+//			
+//			map.put(name, memInfo);
+//		}
+//		
+//		return map;
+//	}
 
 	/**
 	 * If the memory checker thread is sleeping, simply interrupt it and let it go to work. <br>

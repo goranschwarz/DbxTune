@@ -417,6 +417,10 @@ extends CountersModel
 		for (int r=0; r<cm.getAbsRowCount(); r++)
 		{
 			String lName = cm.getAbsString(r, "LogicalName");
+			
+			// Skip rows where LogicalName is "blank" (not sure how this happens, but it does...)
+			if (StringUtil.isNullOrBlank(lName))
+				continue;
 
 			//-------------------------------------------------------
 			// not in status 'Active/' (ActiveState & StandbyState)

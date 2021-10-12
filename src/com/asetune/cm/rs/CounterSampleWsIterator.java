@@ -299,6 +299,11 @@ extends CounterSample
 			}
 			else
 			{
+				// Release the connection from the pool if we had errors
+				// if NOT: the pool will get full soon
+				cp.releaseConnection(dbConn);
+				
+				// Now throw the error
 				throw ex;
 			}
 		}

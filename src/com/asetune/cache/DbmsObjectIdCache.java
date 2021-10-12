@@ -81,6 +81,34 @@ public abstract class DbmsObjectIdCache
 		
 		// Partitions
 		private Set<Long> _hobtIds;
+
+		/** get an <b>estimate</b> of how much memory this object consumes */
+		public int getMemorySize()
+		{
+			int size = 0; 
+			
+			// db(4) + dbname(36=overhead + strLen*2)
+			size += 4 + 36 + (_dbname == null ? 0 : _dbname.length() * 2); 
+
+			// schema(4) + schemaName(36=overhead + strLen*2)
+			size += 4 + 36 + (_schemaName == null ? 0 : _schemaName.length() * 2); 
+
+			// object(4) + schemaName(36=overhead + strLen*2)
+			size += 4 + 36 + (_objectName == null ? 0 : _objectName.length() * 2); 
+
+			// Index info
+			for (Entry<Integer, String> entry : _indexNames.entrySet())
+			{
+				size += 4; // index id
+				size += entry.getValue().length() * 2; // index name
+			}
+			
+			size += _partitionIds == null ? 0 : _partitionIds.size() * 8;
+
+			size += _hobtIds      == null ? 0 : _hobtIds.size()      * 8;
+			
+			return size;
+		}
 		
 //		public ObjectInfo(int dbid, String dbname, int schemaId, String schemaName, int objectId, String objectName, int indexId, String indexName)
 		public ObjectInfo(int dbid, String dbname, int schemaId, String schemaName, int objectId, String objectName)
@@ -280,6 +308,34 @@ public abstract class DbmsObjectIdCache
 		_dbid_hobtId      = new HashMap<>();
 
 		_statResetCalls++;
+	}
+
+	/**
+	 * Get some information about how much memory is used by this cache.
+	 * @return A string with information.
+	 */
+	public String getMemoryConsumption()
+	{
+		int entryCount  = 0;
+		int usedMemory  = 0;
+		int avgPerEntry = 0;
+
+		if (_dbid_objectId != null)
+		{
+			for (Entry<Integer, Map<Integer, ObjectInfo>> dbidEntry : _dbid_objectId.entrySet())
+			{
+				for (Entry<Integer, ObjectInfo> objIdEntry : dbidEntry.getValue().entrySet())
+				{
+					entryCount++;
+					usedMemory += objIdEntry.getValue().getMemorySize();
+				}
+			}
+		}
+		
+		if (entryCount > 0) 
+			avgPerEntry = usedMemory / entryCount;
+
+		return this.getClass().getSimpleName() + ": entryCount=" + entryCount + ", usedBytes=" + usedMemory + ", avgPerEntry=" + avgPerEntry;
 	}
 
 	/**

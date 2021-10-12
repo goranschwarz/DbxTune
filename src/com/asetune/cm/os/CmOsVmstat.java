@@ -445,7 +445,7 @@ extends CounterModelHostMonitor
 	}
 
 	public static final String  PROPKEY_alarm_swap = CM_NAME + ".alarm.system.if.swap.gt";
-	public static final int     DEFAULT_alarm_swap = 5000;
+	public static final int     DEFAULT_alarm_swap = 2000;
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()

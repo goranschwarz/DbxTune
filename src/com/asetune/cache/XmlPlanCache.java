@@ -24,6 +24,7 @@ import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
 
@@ -101,6 +102,34 @@ public abstract class XmlPlanCache
 		_instance = null;
 	}
 	
+
+	/**
+	 * Get some information about how much memory is used by this cache.
+	 * @return A string with information.
+	 */
+	public String getMemoryConsumption()
+	{
+		int entryCount  = _cache == null ? 0 : _cache.size();
+		int usedMemory  = 0;
+		int avgPerEntry = 0;
+		
+		for (Entry<String, String> entry : _cache.entrySet())
+		{
+//			usedMemory += entry.getKey()  .length();
+//			usedMemory += entry.getValue().length();
+
+			// algo: 36          + (2 * str.length)
+			//       VM overhead + (every char is 16 bits, since internal of strings is UTF-16)
+			usedMemory += 36 + (2 * entry.getKey()  .length());
+			usedMemory += 36 + (2 * entry.getValue().length());
+		}
+		
+		if (entryCount > 0) 
+			avgPerEntry = usedMemory / entryCount;
+
+		return this.getClass().getSimpleName() + ": entryCount=" + entryCount + ", usedBytes=" + usedMemory + ", avgPerEntry=" + avgPerEntry;
+	}
+
 	/**
 	 * In case someone finds out that we are low on memory... 
 	 */

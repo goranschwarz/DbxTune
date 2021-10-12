@@ -626,8 +626,31 @@ implements Memory.MemoryListener
 				String percentageUsedStr = String.format("%.1f",percentageUsed);
 				long freeMem = maxMemory - usedMemory;
 
+				//Should we call "subsystems" and ask them to report there usage (a cache, should report entries and memory usage etc?);
+//				String memoryInfo = Memory.getMemoryConsumption() + "";
+				String memoryInfo = "";
+
+				// XML Plan Cache
+				if (XmlPlanCache.hasInstance())
+				{
+					memoryInfo += XmlPlanCache.getInstance().getMemoryConsumption();
+				}
+
+				// ObjectID -> ObjectName Cache
+				if (DbmsObjectIdCache.hasInstance())
+				{
+					memoryInfo += DbmsObjectIdCache.getInstance().getMemoryConsumption();
+				}
+
+				// Persistent Counter Storage
+//				if (PersistentCounterHandler.hasInstance())
+//				{
+//					memoryInfo += PersistentCounterHandler.getInstance().getMemoryConsumption();
+//				}
+				
+				
 				// Write warning message
-				_logger.warn("Low on memory usage, invoking manual Garbage Collection... Memory info before GC: percentageUsed="+percentageUsedStr+", maxMemoryMb="+(maxMemory/1024/1024)+", usedMemoryMb="+(usedMemory/1024/1024)+", freeMemoryMb="+(freeMem/1024/1024));
+				_logger.warn("Low on memory usage, invoking manual Garbage Collection... Memory info before GC: percentageUsed="+percentageUsedStr+", maxMemoryMb="+(maxMemory/1024/1024)+", usedMemoryMb="+(usedMemory/1024/1024)+", freeMemoryMb="+(freeMem/1024/1024) + ". Memory Information: " + memoryInfo);
 
 				// Do manual Garbage Collection
 				System.gc();
@@ -834,6 +857,19 @@ implements Memory.MemoryListener
 			outOfMemoryHandler();
 		}
 	}
+	
+//	@Override
+//	public String getMemoryModuleName()
+//	{
+//		return this.getClass().getSimpleName();
+//	}
+//	
+//	@Override
+//	public String getMemoryConsumption()
+//	{
+//		return null;
+//	}
+
 	/*---------------------------------------------------
 	** END: implementing Memory.MemoryListener
 	**---------------------------------------------------
