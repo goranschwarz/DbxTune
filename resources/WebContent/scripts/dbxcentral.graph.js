@@ -2323,10 +2323,11 @@ function dbxTuneLoadCharts(destinationDivId)
 				var tmpStrEntry = graphNameArr[i];
 
 				// Plain graph name (no specifications/properties)
-			//	if ( ! tmpStrEntry.includes("[") )
-				if ( ! tmpStrEntry.indexOf("[") !== -1 )
+				if ( ! tmpStrEntry.includes("[") )
+			//	if ( ! (tmpStrEntry.indexOf("[") !== -1) )
 				{
 					graphEntry.graph = tmpStrEntry;
+					console.log("DEBUG: tmpStrEntry="+tmpStrEntry);
 				}
 				// If the "graphName" contains any "specifications" (if specififc "chart lines" are hidden or visible, handle them here)
 				// a specification looks like: graphList=CmXXX_graph1[+line1;-line2;],CmXXX_graph2[-line2]
@@ -2334,8 +2335,11 @@ function dbxTuneLoadCharts(destinationDivId)
 				else
 				{
 					// First copy/separate the: graphName and then properties into two different variables
-					const tmpStrGraphName  = tmpStrEntry.substring(0, str.indexOf("["));
-					const tmpStrGraphProps = tmpStrEntry.substring(str.indexOf("[") + 1, str.lastIndexOf("]");
+					const tmpStrGraphName  = tmpStrEntry.substring(0, tmpStrEntry.indexOf("["));
+					const tmpStrGraphProps = tmpStrEntry.substring(tmpStrEntry.indexOf("[") + 1, tmpStrEntry.lastIndexOf("]"));
+					
+					console.log("DEBUG: tmpStrGraphName="+tmpStrGraphName+", tmpStrGraphProps="+tmpStrGraphProps);
+					
 					
 //					// TODO: parse properties into a "Object"
 //					let tmpGraphPropArr = graphList.split(";");

@@ -63,6 +63,7 @@ import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
+import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistentCounterHandler;
@@ -633,13 +634,19 @@ implements Memory.MemoryListener
 				// XML Plan Cache
 				if (XmlPlanCache.hasInstance())
 				{
-					memoryInfo += XmlPlanCache.getInstance().getMemoryConsumption();
+					memoryInfo += XmlPlanCache.getInstance().getMemoryConsumption() + "; ";
 				}
 
 				// ObjectID -> ObjectName Cache
 				if (DbmsObjectIdCache.hasInstance())
 				{
-					memoryInfo += DbmsObjectIdCache.getInstance().getMemoryConsumption();
+					memoryInfo += DbmsObjectIdCache.getInstance().getMemoryConsumption() + "; ";
+				}
+
+				// ObjectID -> ObjectName Cache
+				if (DictCompression.hasInstance())
+				{
+					memoryInfo += DictCompression.getInstance().getMemoryConsumption() + "; ";
 				}
 
 				// Persistent Counter Storage

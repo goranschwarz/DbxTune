@@ -135,11 +135,11 @@ public class DictCompression
 		return _instance;
 	}
 
-//	public static boolean hasInstance()
-//	{
-//		return (_instance != null);
-//	}
-//
+	public static boolean hasInstance()
+	{
+		return (_instance != null);
+	}
+
 //	public static void setInstance(DictCompression inst)
 //	{
 //		_instance = inst;
@@ -250,6 +250,49 @@ public class DictCompression
 		
 		_stat_saveCount     = 0;
 		_stat_saveErrors    = 0;
+	}
+
+	/**
+	 * Get some information about how much memory is used by this cache.
+	 * @return A string with information.
+	 */
+	public String getMemoryConsumption()
+	{
+//		_valExistsMap
+
+		int entryCount  = 0;
+		int usedMemory  = 0;
+		int avgPerEntry = 0;
+
+		if (_valExistsMap != null)
+		{
+			// _valExistsMap holds: tabName colName HashId
+
+			int hashIdLen = 36 + (2 * getDigestLength());
+			// algorithm:   36 + (2 * str.length)
+			//     VM overhead + (every char is 16 bits, since internal of strings is UTF-16)
+
+			// loop tableName entries
+			for (Entry<String, Map<String, Set<String>>> tabEntry : _valExistsMap.entrySet())
+			{
+				// loop columnName entries
+				for (Entry<String, Set<String>> colEntry : tabEntry.getValue().entrySet())
+				{
+					// get the HashId SET (which holds all hash ID's)
+					Set<String> hashIdSet = colEntry.getValue();
+
+					entryCount += hashIdSet.size();
+					usedMemory += hashIdSet.size() * hashIdLen;
+					
+					// FIXME ???: yes, we can probably add tableName and columnName Strings to the size, but that's probably marginal
+				}
+			}
+		}
+		
+		if (entryCount > 0) 
+			avgPerEntry = usedMemory / entryCount;
+
+		return this.getClass().getSimpleName() + ": entryCount=" + entryCount + ", usedBytes=" + usedMemory + ", avgPerEntry=" + avgPerEntry;
 	}
 
 	/**
@@ -1314,4 +1357,5 @@ public class DictCompression
 		System.out.println("SHA-1   length=" + sha1  .length() + ", value='" + someStr + "', digest='" + sha1   + "'.");
 		System.out.println("SHA-256 length=" + sha256.length() + ", value='" + someStr + "', digest='" + sha256 + "'.");
 	}
+
 }

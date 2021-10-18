@@ -381,7 +381,7 @@ extends MonitorIo
 
 		// Skip the header line
 //		md.setSkipRows("device", "Device:");
-		md.setSkipRows("device", "^[Dd]evice"); // later versions (11,5,7 ???) of iostat do NOT have the ':' in the string...
+		md.setSkipRows("device", "^[Dd]evice.*"); // later versions (11,5,7 ???) of iostat do NOT have the ':' in the string...
 
 		// Skip "loop" devices
 		if (Configuration.getCombinedConfiguration().getBooleanProperty("hostmon.MonitorIo.skipLoopDevices", true))

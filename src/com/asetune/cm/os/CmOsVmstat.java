@@ -42,6 +42,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.hostmon.HostMonitor.OsVendor;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.MovingAverageCounterManager;
 
 public class CmOsVmstat
 extends CounterModelHostMonitor
@@ -395,6 +396,16 @@ extends CounterModelHostMonitor
 
 	
 	@Override
+	public void reset()
+	{
+		// Reset 5 minute average counters
+		MovingAverageCounterManager.getInstance("swapIn",  5).reset();
+		MovingAverageCounterManager.getInstance("swapOut", 5).reset();
+		
+		super.reset();
+	}
+
+	@Override
 	public void sendAlarmRequest()
 	{
 		if ( ! AlarmHandler.hasInstance() )
@@ -431,29 +442,38 @@ extends CounterModelHostMonitor
 			int swapIn  = (swapIn_tmp  == null) ? 0 : swapIn_tmp .intValue();
 			int swapOut = (swapOut_tmp == null) ? 0 : swapOut_tmp.intValue();
 
+			int swapIn_5mAvg  = (int) MovingAverageCounterManager.getInstance("swapIn",  5).add(swapIn) .getAvg(0, true);
+			int swapOut_5mAvg = (int) MovingAverageCounterManager.getInstance("swapOut", 5).add(swapOut).getAvg(0, true);
 			
 			if (debugPrint || _logger.isDebugEnabled())
-				System.out.println("##### sendAlarmRequest("+cm.getName()+"): swapping: in=" + swapIn + ", out=" + swapOut + ".");
+				System.out.println("##### sendAlarmRequest("+cm.getName()+"): swapping: in=" + swapIn + ", out=" + swapOut + ". swapIn_5mAvg=" + swapIn_5mAvg + ", swapOut_5mAvg=" + swapOut_5mAvg);
+
+//			int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_swap, DEFAULT_alarm_swap);
+//			if (swapIn > threshold || swapOut > threshold)
+//			{
+//				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, hostname, swapIn, swapOut);
+//				alarmHandler.addAlarm( alarm );
+//			}
 
 			int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_swap, DEFAULT_alarm_swap);
-			if (swapIn > threshold || swapOut > threshold)
+			if (swapIn_5mAvg > threshold || swapOut_5mAvg > threshold)
 			{
-				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, hostname, swapIn, swapOut);
+				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, hostname, swapIn_5mAvg, swapOut_5mAvg);
 				alarmHandler.addAlarm( alarm );
 			}
 		}
 	}
 
 	public static final String  PROPKEY_alarm_swap = CM_NAME + ".alarm.system.if.swap.gt";
-	public static final int     DEFAULT_alarm_swap = 2000;
+	public static final int     DEFAULT_alarm_swap = 1000;
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
-		
-		list.add(new CmSettingsHelper("swappInOut", PROPKEY_alarm_swap , Integer.class, conf.getIntProperty(PROPKEY_alarm_swap , DEFAULT_alarm_swap), DEFAULT_alarm_swap, "If 'swap-in' or 'swap-out' is greater than ## then send 'AlarmEventOsSwapping'. NOTE: This Alarm is only on Linux/Unix. (for Windows see 'CmOsMeminfo')" ));
+
+		list.add(new CmSettingsHelper("swappInOut", PROPKEY_alarm_swap , Integer.class, conf.getIntProperty(PROPKEY_alarm_swap , DEFAULT_alarm_swap), DEFAULT_alarm_swap, "If 'swap-in' or 'swap-out' is greater than ## (5 minute average), then send 'AlarmEventOsSwapping'. NOTE: This Alarm is only on Linux/Unix. (for Windows see 'CmOsMeminfo')" ));
 
 		return list;
 	}

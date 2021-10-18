@@ -678,6 +678,13 @@ extends CounterSample
 				{
 					// Grab a connection (from the connection pool)
 					dbConn = getConnection(cm, srvConn, name);
+					
+					// NOTE: If above connection fails (via the RepServer Gateway Connection)... we will throw a connection error...
+					//       which causes the CM's data to be "invalid"... So no Alarms etc can be checked/fired
+					//       Is this desired, or should we just set NULL values for the columns "standby columns" (LatenceInSec, ApplyAgeInSec, ApplyAgeInMinutes, DataAge..., OriginCommitTime, DestCommitTime, StandbyLocalTime)
+					// Think about the above... 
+					//       Also possible to add a column "StandbyConnectionMessage" -- If we have connection errors etc, we can put the message in here...
+					//       Maybe update a "simulated" ApplyAge etc... based on last "date" + sampleTime or similar "stuff"
 
 					if (cm.getGuiController() != null)
 							cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "check standby '"+name+"'");
