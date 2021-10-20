@@ -272,6 +272,7 @@ extends CountersModel
 			mtd.addColumn("logical_status", "DestCommitTime",      "<html> <b>Algorithm:</b> dest_commit_time                                 from rs_lastcommit </html>");
 			mtd.addColumn("logical_status", "ActiveLocalTime",     "<html> <b>Algorithm:</b> getdate() <br> <b>Note:</b> This is only updated if/when we issue a dummy update on the Active Side, otherwise it will be NULL.</html>");
 			mtd.addColumn("logical_status", "StandbyLocalTime",    "<html> <b>Algorithm:</b> getdate() </html>");
+			mtd.addColumn("logical_status", "StandbyMsg",          "<html> Some information why some columns for this logical connection is missing.<br>Might be 'problems' connecting to the Standby DBMS or a 'faulty' status. </html>");
 			
 			mtd.addColumn("logical_status", "RsId",                "<html>ID of the Controlling Replication Server</html>");
 			mtd.addColumn("logical_status", "RsName",              "<html>Name of the Controlling Replication Server</html>");
@@ -436,13 +437,15 @@ extends CountersModel
 						System.out.println("##### sendAlarmRequest("+cm.getName()+"): ActiveState -- regexp='"+regexp+"', state='"+state+"'.");
 
 					if ( ! state.matches(regexp) ) // default is 'Active/'
-						AlarmHandler.getInstance().addAlarm( new AlarmEventRsWsState(cm, lName, "ActiveState", state, regexp) );
+						AlarmHandler.getInstance().addAlarm( new AlarmEventRsWsState(cm, lName, "ActiveState", state, "", regexp) );
 				}
 			}
 
 			if (isSystemAlarmsForColumnEnabledAndInTimeRange("StandbyState"))
 			{
-				String state = cm.getAbsString(r, "StandbyState");
+				String state      = cm.getAbsString(r, "StandbyState");
+				String standbyMsg = cm.getAbsString(r, "StandbyMsg");
+				
 				if (state != null)
 				{
 					String regexp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StandbyState,  DEFAULT_alarm_StandbyState);
@@ -450,8 +453,8 @@ extends CountersModel
 					if (debugPrint || _logger.isDebugEnabled())
 						System.out.println("##### sendAlarmRequest("+cm.getName()+"): StandbyState -- regexp='"+regexp+"', state='"+state+"'.");
 
-					if ( ! state.matches(regexp) ) // default is 'Active/'
-						AlarmHandler.getInstance().addAlarm( new AlarmEventRsWsState(cm, lName, "StandbyState", state, regexp) );
+					if ( ! state.matches(regexp) || StringUtil.hasValue(standbyMsg)) // default is 'Active/'
+						AlarmHandler.getInstance().addAlarm( new AlarmEventRsWsState(cm, lName, "StandbyState", state, standbyMsg, regexp) );
 				}
 			}
 

@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.SQLClientInfoException;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
@@ -348,7 +349,7 @@ extends CounterSample
 	 * @param e
 	 * @return
 	 */
-	private List<Object> createSkipRow(AdminLogicalStatusEntry e)
+	private List<Object> createSkipRow(AdminLogicalStatusEntry e, String standbyMsg)
 	{
 		List<Object> row = new ArrayList<>();
 		
@@ -383,6 +384,7 @@ extends CounterSample
 			// "    DestCommitTime      = x.dest_commit_time,  \n" +
 			// "    ActiveLocalTime     = convert(datetime, "+DbUtils.safeStr(wsEntry.getActiveTimestamp())+"),  \n" +
 			// "    StandbyLocalTime    = getdate(),  \n" +
+			// "    StandbyMsg          = convert(varchar(1024), ''),  \n" +
 
 			long now = System.currentTimeMillis();
 			int LatencyInSec      = (int) ( dct.getTime() - oct.getTime() ) / 1000;
@@ -400,6 +402,7 @@ extends CounterSample
 			row.add(dct);                        // "DestCommitTime",      java.sql.Types.TIMESTAMP, "datetime",    
 			row.add(e.getActiveTimestamp());     // "ActiveLocalTime",     java.sql.Types.TIMESTAMP, "datetime",    
 			row.add(new Timestamp(now));         // "StandbyLocalTime",    java.sql.Types.TIMESTAMP, "datetime",    
+			row.add(standbyMsg);                 // "StandbyMsg",          java.sql.Types.VARCHAR,   "varchar(1024)",
 		}
 		else
 		{
@@ -412,6 +415,7 @@ extends CounterSample
 			row.add(null);                       // "DestCommitTime",      java.sql.Types.TIMESTAMP, "datetime",    
 			row.add(null);                       // "ActiveLocalTime",     java.sql.Types.TIMESTAMP, "datetime",    
 			row.add(null);                       // "StandbyLocalTime",    java.sql.Types.TIMESTAMP, "datetime",    
+			row.add(standbyMsg);                 // "StandbyMsg",          java.sql.Types.VARCHAR,   "varchar(1024)",
 		}
 
 		row.add(e.getRsId());                    // "RsId",                java.sql.Types.INTEGER,   "int",         
@@ -428,12 +432,14 @@ extends CounterSample
 	 * This is a special getSample(), below is what it does<br>
 	 * <ul>
 	 *    <li>Get sample time</li>
-	 *    <li>Get databases that we should interrogate</li>
-	 *    <li>Loop over all the databases</li>
+	 *    <li>Get databases (logical connections) that we should interrogate</li>
+	 *    <li>Loop over all the databases (logical connections)</li>
 	 *    <ul>
-	 *       <li>Make a connection (using a connection pool)</li>
-	 *       <li>Execute the SQL constructed by the CM</li>
-	 *       <li>release the connection (to the connection pool)</li>
+	 *       <li>Active: Optionally: Update the Active side every ## minute</li>
+	 *       <li>Standby: Make a connection (using a connection pool), using RepServer Gateway Connection (so we don't have to hassle with user/password)</li>
+	 *       <li>Standby: Execute the SQL to get values</li>
+	 *       <li>Standby: release the connection (to the connection pool)</li>
+	 *       <li>Standby: On errors a row will still be created, column 'standbyMsg' will hold any message details.</li>
 	 *    </ul>
 	 * </ul>
 	 */
@@ -470,6 +476,7 @@ extends CounterSample
 		rsmd.addColumn("DestCommitTime",      java.sql.Types.TIMESTAMP, "datetime",     true,     Timestamp.class.getName(),  26,                0,         0);
 		rsmd.addColumn("ActiveLocalTime",     java.sql.Types.TIMESTAMP, "datetime",     true,     Timestamp.class.getName(),  26,                0,         0);
 		rsmd.addColumn("StandbyLocalTime",    java.sql.Types.TIMESTAMP, "datetime",     true,     Timestamp.class.getName(),  26,                0,         0);
+		rsmd.addColumn("StandbyMsg",          java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  1024,              0,         0);
 
 		rsmd.addColumn("RsId",                java.sql.Types.INTEGER,   "int",          true,     Integer  .class.getName(),  12,                0,         0);
 		rsmd.addColumn("RsName",              java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  80,                0,         0);
@@ -494,7 +501,7 @@ extends CounterSample
 			// update/set the current refresh time and interval
 			updateSampleTime(srvConn, cm);
 
-			// Get the list of databases
+			// Get the list of databases (logical connections)
 			List<AdminLogicalStatusEntry> wslist = getWsList(cm, srvConn);
 
 			// create a "bucket" where all the rows will end up in ( add will be done in method: readResultset() )
@@ -610,7 +617,7 @@ extends CounterSample
 				{
 					//_logger.info("Skipping STANDBY Connection '"+name+"', State should be in 'Active/', and current status is in '"+state+"'.");
 					
-					_rows.add(createSkipRow(wsEntry));
+					_rows.add(createSkipRow(wsEntry, "StandbyState != 'Active/'"));
 					continue;
 				}
 
@@ -659,6 +666,7 @@ extends CounterSample
 						"    DestCommitTime      = x.dest_commit_time,  \n" +
 						"    ActiveLocalTime     = convert(datetime, "+DbUtils.safeStr(wsEntry.getActiveTimestamp())+"),  \n" +
 						"    StandbyLocalTime    = getdate(),  \n" +
+						"    StandbyMsg          = convert(varchar(1024), ''),  \n" +
 						" \n" +
 						"    RsId                = convert(int,         " +wsEntry.getRsId()+"), \n" +
 						"    RsName              = convert(varchar(80), '"+wsEntry.getRsSrvName()+"'), \n" +
@@ -678,7 +686,7 @@ extends CounterSample
 				{
 					// Grab a connection (from the connection pool)
 					dbConn = getConnection(cm, srvConn, name);
-					
+
 					// NOTE: If above connection fails (via the RepServer Gateway Connection)... we will throw a connection error...
 					//       which causes the CM's data to be "invalid"... So no Alarms etc can be checked/fired
 					//       Is this desired, or should we just set NULL values for the columns "standby columns" (LatenceInSec, ApplyAgeInSec, ApplyAgeInMinutes, DataAge..., OriginCommitTime, DestCommitTime, StandbyLocalTime)
@@ -823,6 +831,11 @@ extends CounterSample
 				}
 				catch (SQLException sqlEx)
 				{
+					String standbyMsg = "STANDBY='"+name+"', ErrorCode=" + sqlEx.getErrorCode() + ", Message=" + sqlEx.getMessage();
+
+					// Add a row (with most "Standby" fields empty/null), but the "StandbyMsg" filled in with the ERROR message 
+					_rows.add(createSkipRow(wsEntry, standbyMsg));
+
 					// Closing the connection... for example if the Gateway connection has failed and we are still in RepServer...
 					_logger.warn("CounterSample("+getName()+").getCnt : STANDBY='"+name+"', ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. Inner-ACTION: Closing the connection.");
 					if (dbConn != null)

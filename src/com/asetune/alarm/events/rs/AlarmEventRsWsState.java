@@ -37,7 +37,7 @@ extends AlarmEvent
 	 * @param colName
 	 * @param state
 	 */
-	public AlarmEventRsWsState(CountersModel cm, String logicalName, String colName, String state, String regexp)
+	public AlarmEventRsWsState(CountersModel cm, String logicalName, String colName, String state, String msg, String regexp)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -47,7 +47,7 @@ extends AlarmEvent
 				AlarmEvent.Category.DOWN,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"Not a normal State in Server '" + cm.getServerName() + "' for Logical Connection '" + logicalName + "', colName='"+colName+"', state='"+state+"'. (regexp="+regexp+")",
+				"Not a normal State in Server '" + cm.getServerName() + "' for Logical Connection '" + logicalName + "', colName='"+colName+"', state='"+state+"', msg='"+msg+"'. (regexp="+regexp+")",
 				null
 				);
 
