@@ -1857,7 +1857,7 @@ public class RefreshProcess extends Thread
 ////			end
 //
 //			sqlStatement = "select c.text, c.status, c.id"
-//				+ " from "+dbname+"..sysobjects o, "+dbname+"..syscomments c"
+//				+ " from ["+dbname+"]..sysobjects o, ["+dbname+"]..syscomments c"
 //				+ " where o.name = '"+procName+"'"
 //				+ "   and o.id = c.id"
 //				+ " order by c.number, c.colid2, c.colid";

@@ -157,10 +157,10 @@ extends DbmsObjectIdCache
 			    + "    ,i.name AS IndexName \n"
 			    + "    ,p.partition_id \n"
 			    + "    ,p.hobt_id \n"
-			    + "from            " + dbname + ".sys.objects    o WITH (READUNCOMMITTED) \n"
-			    + "inner join      " + dbname + ".sys.partitions p WITH (READUNCOMMITTED) ON o.object_id = p.object_id \n"
-			    + "inner join      " + dbname + ".sys.schemas    s WITH (READUNCOMMITTED) ON o.schema_id = s.schema_id \n"
-			    + "left outer join " + dbname + ".sys.indexes    i WITH (READUNCOMMITTED) ON o.object_id = i.object_id \n"
+			    + "from            [" + dbname + "].sys.objects    o WITH (READUNCOMMITTED) \n"
+			    + "inner join      [" + dbname + "].sys.partitions p WITH (READUNCOMMITTED) ON o.object_id = p.object_id \n"
+			    + "inner join      [" + dbname + "].sys.schemas    s WITH (READUNCOMMITTED) ON o.schema_id = s.schema_id \n"
+			    + "left outer join [" + dbname + "].sys.indexes    i WITH (READUNCOMMITTED) ON o.object_id = i.object_id \n"
 //			    + "where o.object_id = ? \n"
 			    + whereClause
 			    + "";
@@ -301,10 +301,10 @@ extends DbmsObjectIdCache
 				    + "    ,i.name AS IndexName \n"
 				    + "    ,p.partition_id \n"
 				    + "    ,p.hobt_id \n"
-				    + "from            " + dbname + ".sys.objects    o WITH (READUNCOMMITTED) \n"
-				    + "inner join      " + dbname + ".sys.partitions p WITH (READUNCOMMITTED) ON o.object_id = p.object_id \n"
-				    + "inner join      " + dbname + ".sys.schemas    s WITH (READUNCOMMITTED) ON o.schema_id = s.schema_id \n"
-				    + "left outer join " + dbname + ".sys.indexes    i WITH (READUNCOMMITTED) ON o.object_id = i.object_id \n"
+				    + "from            [" + dbname + "].sys.objects    o WITH (READUNCOMMITTED) \n"
+				    + "inner join      [" + dbname + "].sys.partitions p WITH (READUNCOMMITTED) ON o.object_id = p.object_id \n"
+				    + "inner join      [" + dbname + "].sys.schemas    s WITH (READUNCOMMITTED) ON o.schema_id = s.schema_id \n"
+				    + "left outer join [" + dbname + "].sys.indexes    i WITH (READUNCOMMITTED) ON o.object_id = i.object_id \n"
 				    + "where o.type in ('U', 'S') \n" // only User Tables and System Tables
 				   	+ "order by o.object_id \n"       // The order by is probably redundant (since it comes in this order without the order by... it's just for safety
 				   	+ "";

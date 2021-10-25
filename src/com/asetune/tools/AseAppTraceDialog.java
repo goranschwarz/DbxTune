@@ -2493,7 +2493,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 								//--------------------------------------------
 								// GET OBJECT TEXT
 								sql = " select c.text "
-									+ " from "+dbname+"..sysobjects o, "+dbname+"..syscomments c "
+									+ " from ["+dbname+"]..sysobjects o, ["+dbname+"]..syscomments c "
 									+ " where o.name = '"+procName+"' "
 									+ "   and o.id = c.id "
 									+ " order by c.number, c.colid2, c.colid ";

@@ -464,7 +464,7 @@ implements ActionListener
 			"        dataSizeInKB     = used_pages(db_id('"+dbname+"'), id) * (@@maxpagesize / 1024), \n" +
 			"        rowsInTableRate  = row_count (db_id('"+dbname+"'), id), \n" +
 			"        dataSizeInKBRate = used_pages(db_id('"+dbname+"'), id) * (@@maxpagesize / 1024)\n" +
-			" from "+dbname+"..sysobjects  \n" +
+			" from ["+dbname+"]..sysobjects  \n" +
 			" where type = 'U'  \n" +
 			"   and name like '"+tabname+"' \n" +
 			" order by name ";

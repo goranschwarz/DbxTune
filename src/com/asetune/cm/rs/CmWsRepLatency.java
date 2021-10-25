@@ -386,9 +386,21 @@ extends CountersModel
 			for (int r=0; r<cm.getAbsRowCount(); r++)
 			{
 				String lName = cm.getAbsString(r, "LogicalName");
+
+				if (StringUtil.isNullOrBlank(lName))
+					continue;
+				
 				thisSampleLogicalConnections.add(lName);
 				_mandatoryLogicalConnections.add(lName);
 			}
+
+// SOME TIMES it seems that getAbsRowCount() is 0 ... when the B node is DOWN ... 
+// But I don't understand... since a "dummy" row is still added in CounterSampleWsIterator.getSample(...) catch(StandbyErrors) _rows.add(createSkipRow(wsEntry, standbyMsg));  
+if (debugPrint || _logger.isDebugEnabled())
+{
+	_logger.debug("##### sendAlarmRequest("+cm.getName()+"): getAbsRowCount()=" + cm.getAbsRowCount() + ", thisSampleLogicalConnections=" + thisSampleLogicalConnections);
+	System.out.println("##### sendAlarmRequest("+cm.getName()+"): getAbsRowCount()=" + cm.getAbsRowCount() + ", thisSampleLogicalConnections=" + thisSampleLogicalConnections);
+}
 
 			// Get the configuration
 			String configMandatoryLogicalConnections = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_MandatoryLogicalConnections,  DEFAULT_alarm_MandatoryLogicalConnections);
@@ -401,11 +413,14 @@ extends CountersModel
 			Set<String> mandatoryLogicalConnections = _mandatoryLogicalConnections;
 			// Or what's in the Config file...
 			if ( ! configMandatoryLogicalConnections.equals(DEFAULT_alarm_MandatoryLogicalConnections) )
-				mandatoryLogicalConnections = StringUtil.commaStrToSet(configMandatoryLogicalConnections);
+				mandatoryLogicalConnections = StringUtil.commaStrToSet(configMandatoryLogicalConnections, true);
 
 			// Now loop any of the 2 above: previously-existing-connections  OR  values-from-the-config-file
 			for (String mandatoryLogicalName : mandatoryLogicalConnections)
 			{
+				if (StringUtil.isNullOrBlank(mandatoryLogicalName))
+					continue;
+
 				if ( ! thisSampleLogicalConnections.contains(mandatoryLogicalName) )
 				{
 					AlarmEvent alarm = new AlarmEventRsMissingLogicalConnection(cm, mandatoryLogicalName, thisSampleLogicalConnections, mandatoryLogicalConnections, configMandatoryLogicalConnections);
@@ -453,7 +468,7 @@ extends CountersModel
 					if (debugPrint || _logger.isDebugEnabled())
 						System.out.println("##### sendAlarmRequest("+cm.getName()+"): StandbyState -- regexp='"+regexp+"', state='"+state+"'.");
 
-					if ( ! state.matches(regexp) || StringUtil.hasValue(standbyMsg)) // default is 'Active/'
+					if ( (! state.matches(regexp)) || StringUtil.hasValue(standbyMsg)) // default is 'Active/'
 						AlarmHandler.getInstance().addAlarm( new AlarmEventRsWsState(cm, lName, "StandbyState", state, standbyMsg, regexp) );
 				}
 			}

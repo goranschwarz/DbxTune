@@ -24,7 +24,10 @@
  */
 package com.asetune.config.dbms;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
@@ -40,6 +43,7 @@ import com.asetune.PostgresTune;
 import com.asetune.pcs.MonRecordingInfo;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 
@@ -144,6 +148,7 @@ extends DbmsConfigAbstract
 	public static final String CONFIG_NAME          = "ParameterName";
 	public static final String CONFIG_TYPE          = "ParameterType";
 	public static final String CURENT_VALUE         = "CurrentValue";
+	public static final String CURENT_VALUE_IN_MB   = "ValueInMb";
 //	public static final String PENDING              = "Pending";
 //	public static final String PENDING_VALUE        = "PendingValue";
 //	public static final String DEFAULT_VALUE        = "DefaultValue";
@@ -180,6 +185,7 @@ extends DbmsConfigAbstract
 		{CONFIG_NAME,          true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ "Run-time configuration parameter name."},
 		{CONFIG_TYPE,          true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ "What type of parameter is this."},
 		{CURENT_VALUE,         true,     String .class, Types.VARCHAR, 255,        -1,        /* "varchar(255)",  */ "Value of the configuration."},
+		{CURENT_VALUE_IN_MB,   true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ "Value of the configuration as MB. Formula: if (8kb) CurrentValue/128; if (kb) CurrentValue/1024; "},
                                                                                                                   
 		{CONTEXT,              true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ CONTEXT_TOOLTIP},
 		{VARTYPE,              true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ "Parameter type (bool, enum, integer, real, or string)"},
@@ -335,6 +341,9 @@ extends DbmsConfigAbstract
 
 		/** sqlCol='unit', What type of parameter is this. second, millisecond etc... */
 		public String  configType;
+
+		/** Config value recalculated as MB */
+		public String configValueMb;
 
 		/** sqlCol='category', Different sections in the configuration */
 		public String  sectionName;
@@ -581,6 +590,9 @@ extends DbmsConfigAbstract
 					// Add it to the section list, if not already there
 					if ( ! _configSectionList.contains(entry.sectionName) )
 						_configSectionList.add(entry.sectionName);
+					
+					// Add or descriptions or make special calculations...
+					enrichOnlineEntry(entry);
 				}
 				rs.close();
 			}
@@ -616,31 +628,63 @@ extends DbmsConfigAbstract
 
 				// Then execute the Real query
 				ResultSet rs = stmt.executeQuery(sql);
+				ResultSetMetaData rsmd = rs.getMetaData();
+
+				// Store all column names/labels in a List, for DBMS portability use "lower-case" name
+				List<String> columns = new ArrayList<>();
+				int colCount = rsmd.getColumnCount();
+				for (int c=0; c<colCount; c++)
+					columns.add(rsmd.getColumnLabel(c).toLowerCase());
+
 				while ( rs.next() )
 				{
 					PostgresConfigEntry entry = new PostgresConfigEntry();
 
 					// NOTE: same order as in COLUMN_HEADERS
 					_timestamp               = rs.getTimestamp(1);
-					entry.isNonDefault       = rs.getBoolean(2);
+//					entry.isNonDefault       = rs.getBoolean(2);
 
-					entry.configName         = rs.getString (3);
-					entry.configValue        = rs.getString (4);
-					entry.configType         = rs.getString (5);
-					entry.sectionName        = rs.getString (6);
-					entry.description        = rs.getString (7);
-					entry.extraDescription   = rs.getString (8);
+//					entry.configName         = rs.getString (3);
+//					entry.configValue        = rs.getString (4);
+//					entry.configValueMb      = rs.getString (4); // This is a column that might NOT been stored in previous releases...
+//					entry.configType         = rs.getString (5);
+//					entry.sectionName        = rs.getString (6);
+//					entry.description        = rs.getString (7);
+//					entry.extraDescription   = rs.getString (8);
+//
+//					entry.context            = rs.getString (9);
+//					entry.vartype            = rs.getString (10);
+//					entry.source             = rs.getString (11);
+//					entry.min_val            = rs.getString (12);
+//					entry.max_val            = rs.getString (13);
+//					entry.enumvals           = rs.getString (14);
+//					entry.boot_val           = rs.getString (15);
+//					entry.reset_val          = rs.getString (16);
+//					entry.sourcefile         = rs.getString (17);
+//					entry.sourceline         = rs.getInt    (18);
 
-					entry.context            = rs.getString (9);
-					entry.vartype            = rs.getString (10);
-					entry.source             = rs.getString (11);
-					entry.min_val            = rs.getString (12);
-					entry.max_val            = rs.getString (13);
-					entry.enumvals           = rs.getString (14);
-					entry.boot_val           = rs.getString (15);
-					entry.reset_val          = rs.getString (16);
-					entry.sourcefile         = rs.getString (17);
-					entry.sourceline         = rs.getInt    (18);
+					// All columns may not be stored in the offline database 
+					// Only get the columns that are stored...
+					// for DBMS portability use "lower-case" name
+					if (columns.contains(NON_DEFAULT       .toLowerCase())) entry.isNonDefault       = rs.getBoolean( 1 + columns.indexOf(NON_DEFAULT       .toLowerCase()) );
+					if (columns.contains(SECTION_NAME      .toLowerCase())) entry.sectionName        = rs.getString ( 1 + columns.indexOf(SECTION_NAME      .toLowerCase()) );
+					if (columns.contains(CONFIG_NAME       .toLowerCase())) entry.configName         = rs.getString ( 1 + columns.indexOf(CONFIG_NAME       .toLowerCase()) );
+					if (columns.contains(CONFIG_TYPE       .toLowerCase())) entry.configType         = rs.getString ( 1 + columns.indexOf(CONFIG_TYPE       .toLowerCase()) );
+					if (columns.contains(CURENT_VALUE      .toLowerCase())) entry.configValue        = rs.getString ( 1 + columns.indexOf(CURENT_VALUE      .toLowerCase()) );
+					if (columns.contains(CURENT_VALUE_IN_MB.toLowerCase())) entry.configValueMb      = rs.getString ( 1 + columns.indexOf(CURENT_VALUE_IN_MB.toLowerCase()) );
+					if (columns.contains(DESCRIPTION       .toLowerCase())) entry.description        = rs.getString ( 1 + columns.indexOf(DESCRIPTION       .toLowerCase()) );
+					if (columns.contains(EXTRA_DESCRIPTION .toLowerCase())) entry.extraDescription   = rs.getString ( 1 + columns.indexOf(EXTRA_DESCRIPTION .toLowerCase()) );
+
+					if (columns.contains(CONTEXT           .toLowerCase())) entry.context            = rs.getString ( 1 + columns.indexOf(CONTEXT           .toLowerCase()) );
+					if (columns.contains(VARTYPE           .toLowerCase())) entry.vartype            = rs.getString ( 1 + columns.indexOf(VARTYPE           .toLowerCase()) );
+					if (columns.contains(SOURCE            .toLowerCase())) entry.source             = rs.getString ( 1 + columns.indexOf(SOURCE            .toLowerCase()) );
+					if (columns.contains(MIN_VALUE         .toLowerCase())) entry.min_val            = rs.getString ( 1 + columns.indexOf(MIN_VALUE         .toLowerCase()) );
+					if (columns.contains(MAX_VALUE         .toLowerCase())) entry.max_val            = rs.getString ( 1 + columns.indexOf(MAX_VALUE         .toLowerCase()) );
+					if (columns.contains(ENUMVALS          .toLowerCase())) entry.enumvals           = rs.getString ( 1 + columns.indexOf(ENUMVALS          .toLowerCase()) );
+					if (columns.contains(BOOT_VAL          .toLowerCase())) entry.boot_val           = rs.getString ( 1 + columns.indexOf(BOOT_VAL          .toLowerCase()) );
+					if (columns.contains(RESET_VAL         .toLowerCase())) entry.reset_val          = rs.getString ( 1 + columns.indexOf(RESET_VAL         .toLowerCase()) );
+					if (columns.contains(SOURCE_FILE       .toLowerCase())) entry.sourcefile         = rs.getString ( 1 + columns.indexOf(SOURCE_FILE       .toLowerCase()) );
+					if (columns.contains(SOURCE_LINE       .toLowerCase())) entry.sourceline         = rs.getInt    ( 1 + columns.indexOf(SOURCE_LINE       .toLowerCase()) );
 
 //					entry.defaultValue = entry.reset_val;
 					entry.defaultValue = entry.boot_val;
@@ -675,6 +719,94 @@ extends DbmsConfigAbstract
 		
 		// notify change
 		fireTableDataChanged();
+	}
+
+
+	/**
+	 * Set or enrich some fields in the Config Entry
+	 * @param entry
+	 */
+	private void enrichOnlineEntry(PostgresConfigEntry entry)
+	{
+		if (entry == null)
+			return;
+
+		if (entry.configName == null)
+			return;
+
+		//-----------------------------------------------------------------
+		// ADD More descriptions for a specific CONFIG_NAME
+		//
+		if ("shared_buffers".equals(entry.configName))
+		{
+			entry.extraDescription = StringUtil.isNullOrBlank(entry.extraDescription) ? "" : entry.extraDescription + " ";
+			
+			entry.extraDescription += "NOTE: This should typically be sized to 25-40% of available memory (Postgres do also relay on the OS FS Cache, so to big means 'double buffering').";
+		}
+
+		if ("effective_cache_size".equals(entry.configName))
+		{
+			entry.extraDescription = StringUtil.isNullOrBlank(entry.extraDescription) ? "" : entry.extraDescription + " ";
+			
+			entry.extraDescription += "NOTE: NOT a physical memory allocation, instead it's an indicator/hint to the planner. This should typically be sized to 50-75% of available memory. Used by the query planer for determine wheather data may or may not fit in memory.";
+		}
+
+		if ("work_mem".equals(entry.configName))
+		{
+			entry.extraDescription = StringUtil.isNullOrBlank(entry.extraDescription) ? "" : entry.extraDescription + " ";
+			
+			entry.extraDescription += "NOTE: Increase based on temp file activity to cover the size of generating temp files by ORDER BY, DISTINCT, JOIN, and hash tables. WARNING: Be CAREFUL - Memory is allocating per-operation. If to big the system (or OS) may start to memory swap. This can also be set on a session level by a connection that needs a larger work_mem";
+		}
+
+		if ("maintenance_work_mem".equals(entry.configName))
+		{
+			entry.extraDescription = StringUtil.isNullOrBlank(entry.extraDescription) ? "" : entry.extraDescription + " ";
+			
+			entry.extraDescription += "NOTE: 10% of memory up to 1GB. Used for maintenance ops such as VACUUM, CREATE INDEX and ALTER TABLE ADD FOREIGN KEY.";
+		}
+
+		if ("max_connections".equals(entry.configName))
+		{
+			entry.extraDescription = StringUtil.isNullOrBlank(entry.extraDescription) ? "" : entry.extraDescription + " ";
+			
+			entry.extraDescription += "NOTE: each connection creates an OS Process, which usually takes approx 10MB";
+		}
+
+		
+		//-----------------------------------------------------------------
+		// Translate Memory Used into a "readable" column... like "UsedMemoryMB", "UsedMemoryKB"
+		//
+		//-- FIXME: add the column and calculate like: 
+		//                8kB * ### -->> ##.# MB
+		//                 kB * ### -->> ##.# MB
+		if ("8kB".equalsIgnoreCase(entry.configType))
+		{
+			try 
+			{ 
+				int intVal = Integer.parseInt(entry.configValue);
+				if (intVal > 0)
+				{
+					BigDecimal inMb = new BigDecimal(intVal / 128.0).setScale(1, RoundingMode.HALF_EVEN);
+
+					entry.configValueMb = "" + inMb; 
+				}
+			} 
+			catch (NumberFormatException ignore) {}
+		}
+		if ("kB".equalsIgnoreCase(entry.configType))
+		{
+			try 
+			{
+				int intVal = Integer.parseInt(entry.configValue);
+				if (intVal > 0)
+				{
+					BigDecimal inMb = new BigDecimal(intVal / 1024.0).setScale(1, RoundingMode.HALF_EVEN);
+
+					entry.configValueMb = "" + inMb; 
+				}
+			} 
+			catch (NumberFormatException ignore) {}
+		}
 	}
 
 	/**
@@ -768,38 +900,27 @@ extends DbmsConfigAbstract
 
 		switch (columnIndex)
 		{
-//		case 0:  return e.isNonDefault;
-//		case 1:  return e.sectionName;
-//		case 2:  return e.configName;
-//		case 3:  return e.configType;
-//		case 4:  return e.configValue;
-//		case 5:  return e.isPending;
-//		case 6:  return e.pendingValue;
-//		case 7:  return e.defaultValue;
-//		case 8:  return e.requiresRestart; 
-//		case 9:  return e.legalValues; 
-//		case 10: return e.description;
-
 		case 0:  return e.isNonDefault;
 		case 1:  return e.sectionName;
 		case 2:  return e.configName;
 		case 3:  return e.configType;
 		case 4:  return e.configValue;
+		case 5:  return e.configValueMb;
 
-		case 5:  return e.context;
-		case 6:  return e.vartype;
-		case 7:  return e.source;
-		case 8:  return e.min_val;
-		case 9:  return e.max_val;
-		case 10: return e.enumvals;
-		case 11: return e.boot_val;
-		case 12: return e.reset_val;
+		case 6:  return e.context;
+		case 7:  return e.vartype;
+		case 8:  return e.source;
+		case 9:  return e.min_val;
+		case 10:  return e.max_val;
+		case 11: return e.enumvals;
+		case 12: return e.boot_val;
+		case 13: return e.reset_val;
 
-		case 13: return e.description;
-		case 14: return e.extraDescription;
+		case 14: return e.description;
+		case 15: return e.extraDescription;
 
-		case 15: return e.sourcefile;
-		case 16: return e.sourceline;
+		case 16: return e.sourcefile;
+		case 17: return e.sourceline;
 		}
 		return null;
 	}
@@ -877,11 +998,14 @@ extends DbmsConfigAbstract
 	{
 		StringBuilder sb = new StringBuilder();
 		sb.append("<html>");
-		sb.append("<b>Description:  </b>").append(getValueAt(mrow, findColumn(PostgresConfig.DESCRIPTION)))      .append("<br>");
-		sb.append("<b>Extra Descr:  </b>").append(getValueAt(mrow, findColumn(PostgresConfig.EXTRA_DESCRIPTION))).append("<br>");
-		sb.append("<b>Section Name: </b>").append(getValueAt(mrow, findColumn(PostgresConfig.SECTION_NAME)))     .append("<br>");
-		sb.append("<b>Config Name:  </b>").append(getValueAt(mrow, findColumn(PostgresConfig.CONFIG_NAME)))      .append("<br>");
-		sb.append("<b>Run Value:    </b>").append(getValueAt(mrow, findColumn(PostgresConfig.CURENT_VALUE)))     .append("<br>");
+		sb.append("<b>Description:  </b>").append(getValueAt(mrow, findColumn(PostgresConfig.DESCRIPTION)))       .append("<br>");
+		sb.append("<b>Extra Descr:  </b>").append(getValueAt(mrow, findColumn(PostgresConfig.EXTRA_DESCRIPTION))) .append("<br>");
+		sb.append("<b>Section Name: </b>").append(getValueAt(mrow, findColumn(PostgresConfig.SECTION_NAME)))      .append("<br>");
+		sb.append("<b>Config Name:  </b>").append(getValueAt(mrow, findColumn(PostgresConfig.CONFIG_NAME)))       .append("<br>");
+		sb.append("<b>Run Value:    </b>").append(getValueAt(mrow, findColumn(PostgresConfig.CURENT_VALUE)))      .append("<br>");
+		if (findColumn(PostgresConfig.CURENT_VALUE_IN_MB) != -1)
+			sb.append("<b>Run Value MB: </b>").append(getValueAt(mrow, findColumn(PostgresConfig.CURENT_VALUE_IN_MB))).append("<br>");
+
 //		if (Boolean.TRUE.equals(getValueAt(mrow, findColumn(PostgresConfig.PENDING))))
 //		{
 //			sb.append("<br>");

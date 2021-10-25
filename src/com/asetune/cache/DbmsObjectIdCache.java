@@ -335,7 +335,7 @@ public abstract class DbmsObjectIdCache
 		if (entryCount > 0) 
 			avgPerEntry = usedMemory / entryCount;
 
-		return this.getClass().getSimpleName() + ": entryCount=" + entryCount + ", usedBytes=" + usedMemory + ", avgPerEntry=" + avgPerEntry;
+		return this.getClass().getSimpleName() + ": entryCount=" + entryCount + ", usedMem=[" + usedMemory + "b, " + (usedMemory/1024) + "KB, " + (usedMemory/1024/1024) + "MB], avgPerEntry=" + avgPerEntry;
 	}
 
 	/**

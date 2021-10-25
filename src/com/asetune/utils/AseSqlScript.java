@@ -1261,7 +1261,7 @@ implements SybMessageHandler
 
 			sql="declare @partitions int \n" +
 				"select @partitions = count(*) \n" +
-				"from "+dbname+"..sysobjects o, "+dbname+"..sysusers u, "+dbname+"..syspartitions p \n" +
+				"from ["+dbname+"]..sysobjects o, ["+dbname+"]..sysusers u, ["+dbname+"]..syspartitions p \n" +
 				"where o.name = '"+objname+"' \n" +
 				"  and u.name = '"+owner+"' \n" +
 				"  and o.id  = p.id \n" +
@@ -1271,7 +1271,7 @@ implements SybMessageHandler
 				"if (@partitions > 1) \n" +
 				"    print 'Table is partitioned, and this is not working so well with sp__optdiag, sorry.' \n" +
 				"else \n" +
-				"    exec "+dbname+"..sp__optdiag '"+owner+"."+objname+"' \n" +
+				"    exec ["+dbname+"]..sp__optdiag '"+owner+"."+objname+"' \n" +
 				"print 'xxxxxxxxxxxxxxx' \n" +
 				"raiserror 99999 'test raise error...' \n" +
 				"print 'yyyyyyyyyyyyyyy' \n" +

@@ -326,7 +326,7 @@ public class AseConnectionUtils
 		ResultSet	rs     = null;
 
 		String sql = "select crdate " +
-		             "from "+dbname+"..sysobjects " +
+		             "from ["+dbname+"]..sysobjects " +
 		             "where name = '"+objectName+"'";
 
 		if (type != null)
@@ -3811,7 +3811,7 @@ public class AseConnectionUtils
 
 //		String sql = 
 //			"select owner = u.name \n" +
-//			"from "+dbname+"..sysobjects o, "+dbname+"..sysusers u \n" +
+//			"from ["+dbname+"]..sysobjects o, ["+dbname+"]..sysusers u \n" +
 //			"where o.name = '"+objectName+"' \n" +
 //			"  and o.uid  = u.uid";
 		String sql = "";
@@ -3824,14 +3824,14 @@ public class AseConnectionUtils
 			int objId = Integer.parseInt(objectName);
 
 			sql = "select owner = u.name \n" +
-				      "from "+dbname+"..sysobjects o, "+dbname+"..sysusers u \n" +
+				      "from ["+dbname+"]..sysobjects o, ["+dbname+"]..sysusers u \n" +
 				      "where o.id  = "+objId+" \n" +
 				      "  and o.uid = u.uid";
 		}
 		catch(NumberFormatException nfe)
 		{
 			sql = "select owner = u.name \n" +
-			      "from "+dbname+"..sysobjects o, "+dbname+"..sysusers u \n" +
+			      "from ["+dbname+"]..sysobjects o, ["+dbname+"]..sysusers u \n" +
 			      "where o.name = '"+objectName+"' \n" +
 			      "  and o.uid  = u.uid";
 		}
@@ -4035,7 +4035,7 @@ public class AseConnectionUtils
 			if (dbnameStr == null)
 				dbnameStr = "";
 			else
-				dbnameStr = dbname + ".dbo.";
+				dbnameStr = "[" + dbname + "].dbo.";
 
 			// Check if the "owner" is a number
 			boolean ownerIsNumber = false;

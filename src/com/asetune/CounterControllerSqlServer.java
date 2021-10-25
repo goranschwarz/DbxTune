@@ -931,7 +931,7 @@ extends CounterControllerAbstract
 		String sql = ""
 			    + "declare @dbnames table(dbame nvarchar(128)) \n"
 			    + "INSERT INTO @dbnames \n"
-			    + "exec sys.sp_MSforeachdb 'select ''?'' from ?.sys.database_query_store_options where desired_state != 0' \n"
+			    + "exec sys.sp_MSforeachdb 'select ''?'' from [?].sys.database_query_store_options where desired_state != 0' \n"
 			    + "SELECT * FROM @dbnames \n"
 			    + "";
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))

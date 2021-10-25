@@ -279,11 +279,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			- or a Comma separated list with mandatory servers, for example: LSRV.db1, LSRV.db2, LSRV.db3<br>
 		</LI>
 		<LI><b>CmAdminStatsBacklog</b> - Removed DBID:qType in graphs so when connections are re-created we do not get a new chart line</LI>
-		<LI><b>CmAdminWhoDist</b> - Removed DBID:qType in graphs so when connections are re-created we do not get a new chart line</LI>
-		<LI><b>CmAdminWhoDsi</b> - Removed DBID:qType in graphs so when connections are re-created we do not get a new chart line</LI>
-		<LI><b>CmAdminWhoSqm</b> - Removed DBID:qType in graphs so when connections are re-created we do not get a new chart line</LI>
-		<LI><b>CmAdminWhoSqt</b> - Removed DBID:qType in graphs so when connections are re-created we do not get a new chart line</LI>
-		<LI><b>CmRsMemory</b> - RS 16.0 was using new name postfix (norm) in the key column</LI>
+		<LI><b>CmAdminWhoDist</b>      - Removed DBID:qType in graphs so when connections are re-created we do not get a new chart line</LI>
+		<LI><b>CmAdminWhoDsi</b>       - Removed DBID:qType in graphs so when connections are re-created we do not get a new chart line</LI>
+		<LI><b>CmAdminWhoSqm</b>       - Removed DBID:qType in graphs so when connections are re-created we do not get a new chart line</LI>
+		<LI><b>CmAdminWhoSqt</b>       - Removed DBID:qType in graphs so when connections are re-created we do not get a new chart line</LI>
+		<LI><b>CmRsMemory</b>          - RS 16.0 was using new name postfix (norm) in the key column</LI>
+		<LI><b>CmWsRepLatency</b>      - Fixed some bugs (with "" empty logical database names)</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -332,6 +333,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added CM: <b>CmMemoryClerks </b> - Information about the memory clerks</LI>
 		<LI>Added CM: <b>CmMemoryGrants </b> - Information about SPID's that requests memory grants</LI>
 		<LI>Added CM: <b>CmActiveStPlanStats</b> - Active Stmnts Plan Stat -- get info about execution plan operators, to check what's taking most time in a execution plan. NOTE: This is in beta mode, and may be discarded</LI>
+
+		<LI><b>Spaces in dbname   </b> - bugfix: when database names contains spaces. now they are quoted with square brackets. example: [my db name].sys.some_table_name</LI>
 
 		<LI><b>DBMS Configuration </b> - Also get linked servers using 'exec sp_linkedservers'</LI>
 
@@ -497,12 +500,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
 		<LI>Change how we collect current time from: CURRENT_TIMESTAMP to CLOCK_TIMESTAMP()</LI>
-		<LI>CmPgStatements - Now works with Postgres 9.3 (and possibly versions below that), where I "fake" the 'queryid' by taking a md5 checksum (first 16 chars) and converting that to an bigint</LI>
-		<LI>CmPgActivity   - added column 'StatementExecInSec', and raise AlarmEventLongRunningStatement when a statement has been executed for more than 3 hours (by defualt), 'skip' can be done on: dbname, login, cmd and tranName</LI>
-		<LI>CmSummary      - added column 'in_recovery' to check if we connected to the ACTIVE or the STANDBY instance.</LI>
-		<LI>CmSummary      - added columns 'oldest_running_xact_age', 'oldest_prepared_xact_age', 'oldest_replication_slot_age', 'oldest_replica_xact_age' to check if we will exceed the MAX Transaction ID in some "near" future!</LI>
-		<LI>CmSummary      - Also a Graph on columns 'oldest_running_xact_age', 'oldest_prepared_xact_age', 'oldest_replication_slot_age', 'oldest_replica_xact_age'</LI>
-		<LI>Daily Summary Report - Statements - tooltip and popup with the SQL Text</LI>
+		<LI><b>CmPgStatements       </b> - Now works with Postgres 9.3 (and possibly versions below that), where I "fake" the 'queryid' by taking a md5 checksum (first 16 chars) and converting that to an bigint</LI>
+		<LI><b>CmPgActivity         </b> - added column 'StatementExecInSec', and raise AlarmEventLongRunningStatement when a statement has been executed for more than 3 hours (by defualt), 'skip' can be done on: dbname, login, cmd and tranName</LI>
+		<LI><b>CmSummary            </b> - added column 'in_recovery' to check if we connected to the ACTIVE or the STANDBY instance.</LI>
+		<LI><b>CmSummary            </b> - added columns 'oldest_running_xact_age', 'oldest_prepared_xact_age', 'oldest_replication_slot_age', 'oldest_replica_xact_age' to check if we will exceed the MAX Transaction ID in some "near" future!</LI>
+		<LI><b>CmSummary            </b> - Also a Graph on columns 'oldest_running_xact_age', 'oldest_prepared_xact_age', 'oldest_replication_slot_age', 'oldest_replica_xact_age'</LI>
+		<LI><b>Daily Summary Report </b> - Statements - tooltip and popup with the SQL Text</LI>
+		<LI><b>View Configuration   </b> - added one extra, calculated column: "ValueInMb"</LI> 
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

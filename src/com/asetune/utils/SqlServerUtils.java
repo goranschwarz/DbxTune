@@ -294,7 +294,7 @@ public class SqlServerUtils
 //		String sql = ""
 //			    + "declare @dbOptions table(dbame varchar(128), dboption varchar(60), value int) \n"
 //			    + "INSERT INTO @dbOptions \n"
-//			    + "exec sys.sp_MSforeachdb 'select ''?'', name, cast(value as int) from ?.sys.database_scoped_configurations where name = ''LAST_QUERY_PLAN_STATS'' and value != 0' \n"
+//			    + "exec sys.sp_MSforeachdb 'select ''?'', name, cast(value as int) from [?].sys.database_scoped_configurations where name = ''LAST_QUERY_PLAN_STATS'' and value != 0' \n"
 //			    + "SELECT * FROM @dbOptions \n"
 //			    + "";
 //
@@ -325,7 +325,7 @@ public class SqlServerUtils
 		String sql = ""
 			    + "declare @dbOptions table(dbame nvarchar(128), dboption nvarchar(60), value sql_variant) \n"
 			    + "INSERT INTO @dbOptions \n"
-			    + "exec sys.sp_MSforeachdb 'select ''?'', name, value from ?.sys.database_scoped_configurations' \n"
+			    + "exec sys.sp_MSforeachdb 'select ''?'', name, value from [?].sys.database_scoped_configurations' \n"
 			    + "SELECT * FROM @dbOptions \n"
 			    + "";
 
@@ -347,7 +347,7 @@ public class SqlServerUtils
 		String sql = ""
 			    + "declare @dbOptions table(dbame nvarchar(128), dboption nvarchar(60), value sql_variant) \n"
 			    + "INSERT INTO @dbOptions \n"
-			    + "exec sys.sp_MSforeachdb 'select ''?'', name, value from ?.sys.database_scoped_configurations where name = ''" + optionName + "''' \n"
+			    + "exec sys.sp_MSforeachdb 'select ''?'', name, value from [?].sys.database_scoped_configurations where name = ''" + optionName + "''' \n"
 			    + "SELECT * FROM @dbOptions \n"
 			    + "";
 
@@ -369,7 +369,7 @@ public class SqlServerUtils
 		String sql = ""
 			    + "declare @dbOptions table(dbame nvarchar(128), dboption nvarchar(60), value sql_variant) \n"
 			    + "INSERT INTO @dbOptions \n"
-			    + "exec sys.sp_MSforeachdb 'select ''?'', name, value from ?.sys.database_scoped_configurations where name = ''" + optionName + "'' and is_value_default = 0' \n"
+			    + "exec sys.sp_MSforeachdb 'select ''?'', name, value from [?].sys.database_scoped_configurations where name = ''" + optionName + "'' and is_value_default = 0' \n"
 			    + "SELECT * FROM @dbOptions \n"
 			    + "";
 
@@ -607,9 +607,9 @@ public class SqlServerUtils
 //			// This because object_name(objid, dbid) is BLOCKING
 //			sql = ""
 //				    + "select \n"
-//				    + "     SchemaName = (select s.name from " + dbname + ".sys.objects o inner join " + dbname + ".sys.schemas s ON s.schema_id = o.schema_id where o.object_id = ?) \n"
-//				    + "    ,ObjectName = (select o.name from " + dbname + ".sys.objects o where o.object_id = ?) \n"
-//				    + "    ,IndexName  = (select i.name FROM " + dbname + ".sys.indexes i where i.object_id = ? and i.index_id = ?) \n"
+//				    + "     SchemaName = (select s.name from [" + dbname + "].sys.objects o inner join [" + dbname + "].sys.schemas s ON s.schema_id = o.schema_id where o.object_id = ?) \n"
+//				    + "    ,ObjectName = (select o.name from [" + dbname + "].sys.objects o where o.object_id = ?) \n"
+//				    + "    ,IndexName  = (select i.name FROM [" + dbname + "].sys.indexes i where i.object_id = ? and i.index_id = ?) \n"
 //				    + "";
 //			try (PreparedStatement pstmnt = conn.prepareStatement(sql)) // Auto CLOSE
 //			{
@@ -997,8 +997,8 @@ public class SqlServerUtils
 //		String sql = ""
 //			    + "select \n"
 //			    + "     dbid       = (select db_id(?)) \n"
-//			    + "    ,SchemaName = (select s.name from " + dbname + ".sys.objects o inner join " + dbname + ".sys.schemas s ON s.schema_id = o.schema_id where o.object_id = ?) \n"
-//			    + "    ,ObjectName = (select o.name from " + dbname + ".sys.objects o where o.object_id = ?) \n"
+//			    + "    ,SchemaName = (select s.name from [" + dbname + "].sys.objects o inner join [" + dbname + "].sys.schemas s ON s.schema_id = o.schema_id where o.object_id = ?) \n"
+//			    + "    ,ObjectName = (select o.name from [" + dbname + "].sys.objects o where o.object_id = ?) \n"
 //			    + "";
 //
 //		ObjectName objName = new ObjectName();

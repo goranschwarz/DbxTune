@@ -145,7 +145,7 @@ extends XmenuActionBase
 //		procText.setEditable(false);
 
 //		String sqlStatement = "select c.text"
-//			+ " from "+dbname+"..sysobjects o, "+dbname+"..syscomments c"
+//			+ " from ["+dbname+"]..sysobjects o, ["+dbname+"]..syscomments c"
 //			+ " where o.name = '"+procName+"'"
 //			+ "   and o.id = c.id"
 //			+ " order by c.number, c.colid2, c.colid";
@@ -292,7 +292,7 @@ extends XmenuActionBase
 							tabname = ss[2];
 						}
 					}
-					String sql = "exec "+dbname+"..sp_help '"+tabname+"'";
+					String sql = "exec ["+dbname+"]..sp_help '"+tabname+"'";
 
 					QueryWindow qw = new QueryWindow(_conn, sql, null, false, WindowType.JFRAME, null);
 					qw.openTheWindow();

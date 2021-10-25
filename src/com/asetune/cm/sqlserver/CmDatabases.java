@@ -943,7 +943,7 @@ extends CountersModel
 			                            + "    ,current_storage_size_mb \n"
 			                            + "    ,cast(((current_storage_size_mb*1.0)/(max_storage_size_mb*1.0))*100.0 as numeric(10,1)) as usedPct \n"
 			                            + "    ,readonly_reason \n"
-			                            + "FROM ?.sys.database_query_store_options' \n"
+			                            + "FROM [?].sys.database_query_store_options' \n"
 			                            + " \n";
 
 			queryStoreColumns           = "    ,QsIsEnabled              = qs.is_enabled \n"
@@ -978,7 +978,7 @@ extends CountersModel
 //			    + "    ,unallocatedMb  = sum(unallocated_extent_page_count) / 128.0 \n"
 //			    + "    ,usedPct        = (sum(allocated_extent_page_count)  *1.0) / (sum(total_page_count)*1.0) * 100.0 \n"
 //			    + "    ,freePct        = (sum(unallocated_extent_page_count)*1.0) / (sum(total_page_count)*1.0) * 100.0 \n"
-//			    + "FROM ?." + dm_db_file_space_usage + " GROUP BY database_id' \n"
+//			    + "FROM [?]." + dm_db_file_space_usage + " GROUP BY database_id' \n"
 //			    + " \n"
 //			    + "--------------------------- \n"
 //			    + "-- LOG SIZE MB \n"
@@ -992,7 +992,7 @@ extends CountersModel
 //			    + "    ,used_log_space_in_bytes/1024/1024 \n"
 //			    + "    ,used_log_space_in_percent \n"
 //			    + "    ,log_space_in_bytes_since_last_backup/1024/1024 \n"
-//			    + "FROM ?." + dm_db_log_space_usage + "' \n"
+//			    + "FROM [?]." + dm_db_log_space_usage + "' \n"
 //			    + " \n"
 //			    + "--------------------------- \n"
 //			    + "-- Backup Info \n"
@@ -1241,7 +1241,7 @@ extends CountersModel
 			    + "    ,unallocatedMb  = sum(unallocated_extent_page_count) / 128.0 \n"
 			    + "    ,usedPct        = (sum(allocated_extent_page_count)  *1.0) / (sum(total_page_count)*1.0) * 100.0 \n"
 			    + "    ,freePct        = (sum(unallocated_extent_page_count)*1.0) / (sum(total_page_count)*1.0) * 100.0 \n"
-			    + "FROM ?." + dm_db_file_space_usage + " GROUP BY database_id' \n"
+			    + "FROM [?]." + dm_db_file_space_usage + " GROUP BY database_id' \n"
 			    + " \n"
 			    + "--------------------------- \n"
 			    + "-- LOG SIZE MB \n"
@@ -1255,7 +1255,7 @@ extends CountersModel
 			    + "    ,used_log_space_in_bytes/1024/1024 \n"
 			    + "    ,used_log_space_in_percent \n"
 			    + "    ,log_space_in_bytes_since_last_backup/1024/1024 \n"
-			    + "FROM ?." + dm_db_log_space_usage + "' \n"
+			    + "FROM [?]." + dm_db_log_space_usage + "' \n"
 			    + " \n"
 			    
 			    // Query Store (if 2016 or above)

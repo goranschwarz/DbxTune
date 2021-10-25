@@ -3908,7 +3908,7 @@ public class PersistWriterJdbc
 		
 		if (rows == null || cols == null)
 		{
-			_logger.error("Rows or Columns can't be null. rows='"+rows+"', cols='"+cols+"'");
+			_logger.error("Rows or Columns can't be null. cmWhatDataStr="+cmWhatDataStr+", rows='"+rows+"', cols='"+cols+"'");
 			return -1;
 		}
 

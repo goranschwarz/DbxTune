@@ -993,22 +993,22 @@ extends CountersModel
 				// Loop all Primary Databases and update table: sqlserverTune_ag_dummy_update
 				for (String dbname : primaryDbs)
 				{
-					String createTableSql = "create table " + dbname + ".dbo.sqlserverTune_ag_dummy_update(id varchar(36), primaryServerName varchar(30), ts datetime, primary key(id))";
-					String grantTableSql  = "use " + dbname + "; grant select,insert,update,delete on dbo.sqlserverTune_ag_dummy_update to public";
+					String createTableSql = "create table [" + dbname + "].dbo.sqlserverTune_ag_dummy_update(id varchar(36), primaryServerName varchar(30), ts datetime, primary key(id))";
+					String grantTableSql  = "use [" + dbname + "]; grant select,insert,update,delete on dbo.sqlserverTune_ag_dummy_update to public";
 					
 					// we can check that we are authorized to create the table with: SELECT HAS_PERMS_BY_NAME('" + dbname + "', 'DATABASE', 'CREATE TABLE');
 					// Or we can check the ErrorCode for 262, which is that we do are not authorized
 					String updateTable = 
 							"/*** Create the dummy table if it do not exist ***/ \n" +
-							"if not exists (select 1 from " + dbname + ".sys.objects where name = 'sqlserverTune_ag_dummy_update' and type = 'U') \n" +
+							"if not exists (select 1 from [" + dbname + "].sys.objects where name = 'sqlserverTune_ag_dummy_update' and type = 'U') \n" +
 							"begin \n" +
 							"   exec('" + createTableSql + "') \n" +
 							"   exec('" + grantTableSql  + "') \n" +
 							"end \n" +
 							"/*** remove all old rows ***/ \n" +
-							"exec('delete from " + dbname + ".dbo.sqlserverTune_ag_dummy_update') \n" +
+							"exec('delete from [" + dbname + "].dbo.sqlserverTune_ag_dummy_update') \n" +
 							"/*** insert a new dummy row ***/ \n" +
-							"exec('insert into " + dbname + ".dbo.sqlserverTune_ag_dummy_update(id, primaryServerName, ts) select newid(), @@servername, getdate()') \n" +
+							"exec('insert into [" + dbname + "].dbo.sqlserverTune_ag_dummy_update(id, primaryServerName, ts) select newid(), @@servername, getdate()') \n" +
 							"";
 
 					try ( Statement stmnt = conn.createStatement() )

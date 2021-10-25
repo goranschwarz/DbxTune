@@ -1122,7 +1122,7 @@ implements Runnable
 //			// GET type and creation time
 //			String sql = 
 //				"select o.type, u.name, o.crdate \n" +
-//				"from "+dbname+"..sysobjects o, "+dbname+"..sysusers u \n" +
+//				"from ["+dbname+"]..sysobjects o, ["+dbname+"]..sysusers u \n" +
 //				"where o.name = '"+objectName+"' \n" +
 //				"  and o.uid = u.uid ";
 //			try

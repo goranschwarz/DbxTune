@@ -904,7 +904,7 @@ public class RepServerUtils
 	public static void stopRepAgent(Connection conn, String dsname, String dbname, boolean force)
 	throws SQLException
 	{
-		String cmd = "exec "+dbname+"..sp_stop_rep_agent '"+dbname+"'";
+		String cmd = "exec ["+dbname+"]..sp_stop_rep_agent '"+dbname+"'";
 		if (force)
 			cmd += ", 'nowait'";
 
@@ -928,7 +928,7 @@ public class RepServerUtils
 	public static void startRepAgent(Connection conn, String dsname, String dbname)
 	throws SQLException
 	{
-		String cmd = "exec "+dbname+"..sp_start_rep_agent '"+dbname+"'";
+		String cmd = "exec ["+dbname+"]..sp_start_rep_agent '"+dbname+"'";
 
 		// Expected output: for more info see: isRepAgentAlive()
 

@@ -1098,7 +1098,7 @@ extends CounterTableModel
 		{
 			long execTime = TimeUtils.msDiffNow(execStartTime);
 
-			_logger.warn("CounterSample("+getName()+").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", SqlState=" + sqlEx.getSQLState() + ", Message=|" + sqlEx.getMessage() + "|. execTimeInMs=" + execTime + ", SQL: "+sql, sqlEx);
+			_logger.warn("CounterSample("+getName()+").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", SqlState=" + sqlEx.getSQLState() + ", Message=|" + sqlEx.getMessage() + "|. execTimeInMs=" + execTime + ", SQL: " + sql, sqlEx);
 			if (sqlEx.toString().indexOf("SocketTimeoutException") > 0)
 			{
 				_logger.info("QueryTimeout in '"+getName()+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+getName()+".queryTimeout=seconds' in the config file.");

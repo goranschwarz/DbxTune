@@ -6548,7 +6548,7 @@ implements Cloneable, ITableTooltip
 		return data;
 	}
 
-	protected String getWhatDataTranslationStr(int whatData)
+	public static String getWhatDataTranslationStr(int whatData)
 	{
 		if      (whatData == DATA_ABS)  return "DATA_ABS";
 		else if (whatData == DATA_DIFF) return "DATA_DIFF";

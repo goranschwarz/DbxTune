@@ -428,6 +428,7 @@ extends CounterSample
 		return row;
 	}
 
+//private int _deleteme_callCount_getSample = 0;
 	/**
 	 * This is a special getSample(), below is what it does<br>
 	 * <ul>
@@ -618,6 +619,7 @@ extends CounterSample
 					//_logger.info("Skipping STANDBY Connection '"+name+"', State should be in 'Active/', and current status is in '"+state+"'.");
 					
 					_rows.add(createSkipRow(wsEntry, "StandbyState != 'Active/'"));
+//					addRow(cm, createSkipRow(wsEntry, "StandbyState != 'Active/'")); // this wont work here
 					continue;
 				}
 
@@ -684,6 +686,11 @@ extends CounterSample
 				
 				try
 				{
+//_deleteme_callCount_getSample++;
+//boolean doDummyThrow = true;
+//if (doDummyThrow && _deleteme_callCount_getSample > 3)
+//	throw new SQLException("Dummy Connection FAIL.");
+
 					// Grab a connection (from the connection pool)
 					dbConn = getConnection(cm, srvConn, name);
 
@@ -835,6 +842,7 @@ extends CounterSample
 
 					// Add a row (with most "Standby" fields empty/null), but the "StandbyMsg" filled in with the ERROR message 
 					_rows.add(createSkipRow(wsEntry, standbyMsg));
+//					addRow(cm, createSkipRow(wsEntry, standbyMsg)); // this wont work here
 
 					// Closing the connection... for example if the Gateway connection has failed and we are still in RepServer...
 					_logger.warn("CounterSample("+getName()+").getCnt : STANDBY='"+name+"', ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. Inner-ACTION: Closing the connection.");
@@ -865,18 +873,21 @@ extends CounterSample
 				// Only throw if we have NOT added any rows
 				boolean doThrow = _rows.isEmpty();
 
-				SQLException crEx = new SQLException("In the Active/Standby check we had "+sqlExList.size()+" SQLException(only first Exception): "+sqlExList.get(0));
+//				SQLException crEx = new SQLException("In the Active/Standby check we had "+sqlExList.size()+" SQLException(only first Exception): "+sqlExList.get(0));
 				if (doThrow)
 				{
 					// NOTE: if we THROW here: POST handling like "Alarm Handling" will NOT be kicked off
-					throw crEx;
+//					throw crEx;
 				}
 				else
 				{
 					// Set the exception so that the GUI well SEE that there is "some" problems
 					// HOPEFULLY the NO-GUI will not examen the "setSampleException()" and bail out... (at least from what I can see in the code)
 					// ... otherwise we can do: if (cm.getGuiController() != null && cm.getGuiController().hasGUI()) cm.setSampleException(crEx); 
-					cm.setSampleException(crEx);
+//					cm.setSampleException(crEx);
+					// it looks like it was a BAD idea calling: cm.setSampleException(crEx); 
+					// Things did NOT work as expected... investigate a bit more here...
+					// However since we have the "StandbyMsg" column now, maybe the "GUI WaterMark message" is not needed...
 					
 					_logger.warn("In the Active/Standby check we had "+sqlExList.size()+" Below are this list: ");
 					for (int ec= 0; ec<sqlExList.size(); ec++)
