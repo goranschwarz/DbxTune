@@ -491,14 +491,14 @@ extends CounterModelHostMonitor
 			int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_swap, DEFAULT_alarm_swap);
 			if (swapIn_5mAvg > threshold || swapOut_5mAvg > threshold)
 			{
-				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, hostname, swapIn_5mAvg, swapOut_5mAvg);
+				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, hostname, "over 5 minute moving average", swapIn_5mAvg, swapOut_5mAvg);
 				alarmHandler.addAlarm( alarm );
 			}
 		}
 	}
 
 	public static final String  PROPKEY_alarm_swap = CM_NAME + ".alarm.system.if.swap.gt";
-	public static final int     DEFAULT_alarm_swap = 250;
+	public static final int     DEFAULT_alarm_swap = 500;
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()

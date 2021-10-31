@@ -28,6 +28,7 @@ import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 
 public class SqlServerCpuUsageOverview 
 extends SqlServerAbstract
@@ -107,17 +108,31 @@ extends SqlServerAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
+		// For Linux/Unix do NOT show chart-line for "idlePct"
+		String idlePct = "idlePct";
+
+		// If the SQL Server is hosted on Windows... remove chart-line: "% Idle Time" 
+		String dbmsVerStr = getReportingInstance().getDbmsVersionStr();
+		if (StringUtil.hasValue(dbmsVerStr))
+		{
+			if (dbmsVerStr.contains("Windows"))
+			{
+				idlePct = "% Idle Time";
+			}
+		}
+		
+
 		int maxValue = 100;
-		_CmSummary_aaCpuGraph          = createTsLineChart(conn, "CmSummary",      "aaCpuGraph",       maxValue, null,      "CPU Summary for all Schedulers (using @@cpu_busy, @@cpu_io) (Summary)");
-		_CmOsMpstat_MpSum              = createTsLineChart(conn, "CmOsMpstat",     "MpSum",            maxValue, "idlePct", "OS: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
-		_CmSummary_aaReadWriteGraph    = createTsLineChart(conn, "CmSummary",      "aaReadWriteGraph", -1,       null,      "Disk read/write per second, using @@total_read, @@total_write");
-//		_CmPerfCounters_OsCpuEffective = createTsLineChart(conn, "CmPerfCounters", "OsCpuEffective",   maxValue, null,      "CPU Usage Effective in Percent (Perf Counters)");
-		_CmPerfCounters_CacheReads     = createTsLineChart(conn, "CmPerfCounters", "CacheReads",       -1,       null,      "Buffer Cache Reads per Sec (Server->Perf Counters)");
-		_CmPerfCounters_CacheHitRate   = createTsLineChart(conn, "CmPerfCounters", "CacheHitRate",     -1,       null,      "Buffer Cache Hit Rate, in Percent (Server->Perf Counters)");
-		_CmPerfCounters_SqlBatch       = createTsLineChart(conn, "CmPerfCounters", "SqlBatch",         -1,       null,      "SQL Batches Received per Sec (Perf Counters)");
-		_CmPerfCounters_TransWriteSec  = createTsLineChart(conn, "CmPerfCounters", "TransWriteSec",    -1,       null,      "Write Transactions per Sec (Perf Counters)");
-		_CmSchedulers_RunQLengthSum    = createTsLineChart(conn, "CmSchedulers",   "RunQLengthSum",    -1,       null,      "Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)");
-		_CmSchedulers_RunQLengthEng    = createTsLineChart(conn, "CmSchedulers",   "RunQLengthEng",    -1,       null,      "Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)");
+		_CmSummary_aaCpuGraph          = createTsLineChart(conn, "CmSummary",      "aaCpuGraph",       maxValue, null,    "CPU Summary for all Schedulers (using @@cpu_busy, @@cpu_io) (Summary)");
+		_CmOsMpstat_MpSum              = createTsLineChart(conn, "CmOsMpstat",     "MpSum",            maxValue, idlePct, "OS: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
+		_CmSummary_aaReadWriteGraph    = createTsLineChart(conn, "CmSummary",      "aaReadWriteGraph", -1,       null,    "Disk read/write per second, using @@total_read, @@total_write");
+//		_CmPerfCounters_OsCpuEffective = createTsLineChart(conn, "CmPerfCounters", "OsCpuEffective",   maxValue, null,    "CPU Usage Effective in Percent (Perf Counters)");
+		_CmPerfCounters_CacheReads     = createTsLineChart(conn, "CmPerfCounters", "CacheReads",       -1,       null,    "Buffer Cache Reads per Sec (Server->Perf Counters)");
+		_CmPerfCounters_CacheHitRate   = createTsLineChart(conn, "CmPerfCounters", "CacheHitRate",     -1,       null,    "Buffer Cache Hit Rate, in Percent (Server->Perf Counters)");
+		_CmPerfCounters_SqlBatch       = createTsLineChart(conn, "CmPerfCounters", "SqlBatch",         -1,       null,    "SQL Batches Received per Sec (Perf Counters)");
+		_CmPerfCounters_TransWriteSec  = createTsLineChart(conn, "CmPerfCounters", "TransWriteSec",    -1,       null,    "Write Transactions per Sec (Perf Counters)");
+		_CmSchedulers_RunQLengthSum    = createTsLineChart(conn, "CmSchedulers",   "RunQLengthSum",    -1,       null,    "Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)");
+		_CmSchedulers_RunQLengthEng    = createTsLineChart(conn, "CmSchedulers",   "RunQLengthEng",    -1,       null,    "Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)");
 	}
 
 	private IReportChart _CmSummary_aaCpuGraph;

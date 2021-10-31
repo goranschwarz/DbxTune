@@ -2562,6 +2562,7 @@ extends SqlCaptureBrokerAbstract
 											XmlPlanCache xmlPlanCache = XmlPlanCache.getInstance();
 											if ( ! xmlPlanCache.isPlanCached(procName) )
 											{
+												// Only bring it into the cache. The value is of no interest here
 												xmlPlanCache.getPlan(procName);
 											}
 										}

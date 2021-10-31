@@ -408,6 +408,10 @@ extends CounterModelHostMonitor
 	@Override
 	public void sendAlarmRequest()
 	{
+		// Windows isn't supported for VMSTAT
+		if (isConnectedToVendor(OsVendor.Windows))
+			return;
+
 		if ( ! AlarmHandler.hasInstance() )
 			return;
 
@@ -458,7 +462,7 @@ extends CounterModelHostMonitor
 			int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_swap, DEFAULT_alarm_swap);
 			if (swapIn_5mAvg > threshold || swapOut_5mAvg > threshold)
 			{
-				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, hostname, swapIn_5mAvg, swapOut_5mAvg);
+				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, hostname, "over 5 minute moving average", swapIn_5mAvg, swapOut_5mAvg);
 				alarmHandler.addAlarm( alarm );
 			}
 		}

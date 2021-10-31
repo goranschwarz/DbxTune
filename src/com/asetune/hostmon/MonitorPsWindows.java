@@ -54,7 +54,13 @@ extends HostMonitor
 		
 		int top = Configuration.getCombinedConfiguration().getIntProperty(CmOsPs.PROPKEY_top, CmOsPs.DEFAULT_top);
 
-		return "powershell \"Get-Process | sort -desc cpu | select -first " + top + "\""; 
+		// NOTE: [cultureinfo]::CurrentCulture = 'en-US'; will force the "CPU(s)" output to be: ###,###.## instead of some localized string ex: ### ###,##
+		//       if the localized string is returned... parsing may of numbers may fail!
+		return "powershell \"" // -start- quote for embedded command
+				+ "(Get-Culture).NumberFormat.NumberGroupSeparator=''; "     // numbers should not have comma separators for readability
+				+ "(Get-Culture).NumberFormat.NumberDecimalSeparator='.'; "  // numbers should have "." separator for ####.12
+				+ "Get-Process | sort -desc cpu | select -first " + top 
+				+ "\""; // -end- quote for embedded command
 		
 		// or possibly: tasklist
 		// or powershell Get-WMIObject Win32_Process

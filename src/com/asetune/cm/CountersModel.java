@@ -6081,14 +6081,22 @@ implements Cloneable, ITableTooltip
 			AlarmHandler.getInstance().addUndergoneAlarmDetection(getName());
 		}
 		
-		// Lets use the "built in" logic... which any subclases has to implement :)
+		// Lets use the "built in" logic... which any CM/subclass has to implement :)
 		if (hasSystemAlarms() && isSystemAlarmsEnabled()) 
 		{
-			sendAlarmRequest();
+			// The alarmRequest() implementation could throw RuntimeExceptions etc... then we dont want to abort...
+			try
+			{
+				sendAlarmRequest();
+			}
+			catch (Throwable t)
+			{
+				_logger.warn("Problems executing sendAlarmRequest() in CM '"+getName()+"'. This will be ignored, and monitoring will continue... Caught: "+t, t);
+			}
 		}
 
 		//
-		// The default behaviour is to load a java source file, that is compiled "on the fly"<br>
+		// The default behavior is to load a java source file, that is compiled "on the fly"<br>
 		// The User Defined logic is implemented by the Java Source file
 		// 
 		if (hasUserDefinedAlarmInterrogator() && isUserDefinedAlarmsEnabled() )
@@ -6096,14 +6104,14 @@ implements Cloneable, ITableTooltip
 //			if ( ! UserDefinedAlarmHandler.hasInstance() )
 //			return;
 //
-//			IUserDefinedAlarmInterrogator interrorgator = UserDefinedAlarmHandler.getInstance().newClassInstance(this);
-//			if (interrorgator != null)
+//			IUserDefinedAlarmInterrogator interrogator = UserDefinedAlarmHandler.getInstance().newClassInstance(this);
+//			if (interrogator != null)
 //			{
 //				interrorgator.interrogateCounterData(this, absData, diffData, rateData);
 //			}
 		
-			// FIXME: sendAlarmRequest_internal() should be called, which calls overrided/local sendAlarmRequest() where this/local should be empty
-			// FIXME: The UserDefinedAlarmHander should also considder other loaded JAR files
+			// FIXME: sendAlarmRequest_internal() should be called, which calls overridden/local sendAlarmRequest() where this/local should be empty
+			// FIXME: The UserDefinedAlarmHander should also consider other loaded JAR files
 			try
 			{
 //System.out.println("DEBUG: Create new object interrogator for "+getName());

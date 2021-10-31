@@ -81,12 +81,16 @@ public class OsCpuUsageOverview extends AseAbstract
 		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load on the Operating System Level.",
 				"CmOsMpstat_MpSum",
 				"CmOsMpstat_MpCpu",
-				"CmOsUptime_AdjLoadAverage"
+				"CmOsUptime_AdjLoadAverage",
+				_isWindows ? "CmOsMeminfo_WinPaging" : "CmOsVmStat_SwapInOut"
 				));
 
 		_CmOsMpstat_MpSum         .writeHtmlContent(sb, null, null);
 		_CmOsMpstat_MpCpu         .writeHtmlContent(sb, null, null);
 		_CmOsUptime_AdjLoadAverage.writeHtmlContent(sb, null, null);
+		
+		if (_CmOsVmStat_SwapInOut  != null) _CmOsVmStat_SwapInOut .writeHtmlContent(sb, null, null);
+		if (_CmOsMeminfo_WinPaging != null)	_CmOsMeminfo_WinPaging.writeHtmlContent(sb, null, null);
 	}
 
 	@Override
@@ -105,13 +109,38 @@ public class OsCpuUsageOverview extends AseAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
+		// For Linux/Unix do NOT show chart-line for "idlePct"
+		String idlePct = "idlePct";
+		_isWindows = false;
+
+		// If the SQL Server is hosted on Windows... remove chart-line: "% Idle Time" 
+		String dbmsVerStr = getReportingInstance().getDbmsVersionStr();
+		if (StringUtil.hasValue(dbmsVerStr))
+		{
+			if (dbmsVerStr.contains("Windows"))
+			{
+				_isWindows = true;
+				idlePct = "% Idle Time";
+			}
+		}
+
 		int maxValue = 100;
-		_CmOsMpstat_MpSum          = createTsLineChart(conn, "CmOsMpstat", "MpSum",          maxValue, "idlePct", "mpstat: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
-		_CmOsMpstat_MpCpu          = createTsLineChart(conn, "CmOsMpstat", "MpCpu",          maxValue, null,      "mpstat: CPU usage per core (usr+sys+iowait) (Host Monitor->OS CPU(mpstat))");
-		_CmOsUptime_AdjLoadAverage = createTsLineChart(conn, "CmOsUptime", "AdjLoadAverage", -1,       null,      "uptime: Adjusted Load Average (Host Monitor->OS Load Average(uptime))");
+		_CmOsMpstat_MpSum          = createTsLineChart(conn, "CmOsMpstat", "MpSum",          maxValue, idlePct, "mpstat: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
+		_CmOsMpstat_MpCpu          = createTsLineChart(conn, "CmOsMpstat", "MpCpu",          maxValue, null,    "mpstat: CPU usage per core (usr+sys+iowait) (Host Monitor->OS CPU(mpstat))");
+		_CmOsUptime_AdjLoadAverage = createTsLineChart(conn, "CmOsUptime", "AdjLoadAverage", -1,       null,    "uptime: Adjusted Load Average (Host Monitor->OS Load Average(uptime))");
+
+		if ( ! _isWindows)
+			_CmOsVmStat_SwapInOut  = createTsLineChart(conn, "CmOsVmStat", "SwapInOut",      -1,       null,    "vmstat: Swap In/Out per sec (Host Monitor->OS CPU(vmstat))");
+		else
+			_CmOsMeminfo_WinPaging = createTsLineChart(conn, "CmOsMeminfo", "WinPaging",     -1,       null,    "meminfo: Windows Paging or Swap Usage (Host Monitor->OS Memory Info)");
+			
 	}
+
+	private boolean _isWindows = false;
 
 	private IReportChart _CmOsMpstat_MpSum;
 	private IReportChart _CmOsMpstat_MpCpu;
 	private IReportChart _CmOsUptime_AdjLoadAverage;
+	private IReportChart _CmOsVmStat_SwapInOut;
+	private IReportChart _CmOsMeminfo_WinPaging;
 }

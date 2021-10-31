@@ -28,7 +28,7 @@ extends AlarmEvent
 {
 	private static final long serialVersionUID = 1L;
 
-	public AlarmEventOsSwapping(CountersModel cm, int threshold, String hostname, int swapIn, int swapOut)
+	public AlarmEventOsSwapping(CountersModel cm, int threshold, String hostname, String sampleTimeStr, int swapIn, int swapOut)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -38,7 +38,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Extensive Usage of OS Swapping on hostname '" + cm.getServerName() + "' time to increase memory or move some processes. swapIn=" + swapIn + ", swapOut=" + swapOut + ". (threshold="+threshold+")",
+				"Extensive Usage of OS Swapping on hostname '" + cm.getServerName() + "' " + sampleTimeStr + ". Time to increase memory or move some processes. swapIn=" + swapIn + ", swapOut=" + swapOut + ". (threshold="+threshold+")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled

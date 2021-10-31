@@ -38,6 +38,7 @@ import java.util.Properties;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.MandatoryPropertyException;
 import com.asetune.utils.PropPropEntry;
@@ -931,7 +932,7 @@ implements ResultSetMetaData
 		}
 		catch (NumberFormatException e)
 		{
-			_logger.warn("When creating a new Object for column '"+ce._colName+"' with value '"+val+"', a NumberFormatException was thrown, which implies that the value is not a number. Creating the object with a zero value instead.");
+			_logger.warn("When creating a new Object for column '"+ce._colName+"' of java.sql.Types='"+sqlType+"' ["+ResultSetTableModel.getColumnJavaSqlTypeName(sqlType)+"] with value '"+val+"', for osCommand='"+_osCommand+"'. A NumberFormatException was thrown, which implies that the value is not a number. Creating the object with a zero value instead.");
 			return createJavaObject(ce, null);
 		}
 		catch (ParseException e) // for: SimpleDateFormat.parse()

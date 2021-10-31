@@ -187,13 +187,13 @@ public abstract class XmlPlanCache
 		}
 		catch(ConcurrentModificationException ex)
 		{
-			_logger.info("XmlPlanCache, lowOnMemoryHandler(): when removing entries from the cache, we caught ConcurrentModificationException... lets just continue... Exception: "+ex);
+			_logger.warn("XmlPlanCache, lowOnMemoryHandler(): when removing entries from the cache, we caught ConcurrentModificationException... lets just continue... Exception: "+ex);
 		}
 
 		int countAfterClean  = _cache.size();
 		removeCount = countBeforeClean - countAfterClean;
 
-		_logger.info("XmlPlanCache, lowOnMemoryHandler() was called. Removed "+removeCount+" entries from the XmlPlanCache (config: '"+PROPKEY_lowOnMememory_removePct+"'="+removePct+"). Number of entries before clean was "+countBeforeClean+", after clean was "+countAfterClean+".");
+		_logger.warn("XmlPlanCache, lowOnMemoryHandler() was called. Removed "+removeCount+" entries from the XmlPlanCache (config: '"+PROPKEY_lowOnMememory_removePct+"'="+removePct+"). Number of entries before clean was "+countBeforeClean+", after clean was "+countAfterClean+".");
 		_statDecreaseCalls++;
 	}
 
