@@ -184,26 +184,55 @@ public class OsIoStatSlowIo extends ReportEntryAbstract
 //		String Deletes_sum             = !dummyRstm.hasColumnNoCase("Deletes"            ) ? "" : "    ,sum([Deletes])                                        as [Deletes_sum] -- 16.0 \n"; 
 //		String Scans_sum               = !dummyRstm.hasColumnNoCase("Scans"              ) ? "" : "    ,sum([Scans])                                          as [Scans_sum]   -- 16.0 \n"; 
 
-		String sql_skipDeviceNames = "";
-		if (StringUtil.hasValue(_skipDeviceNames))
+		String sql = "";
+
+		if ( isWindows() )
 		{
-			List<String> skipList = StringUtil.parseCommaStrToList(_skipDeviceNames);
-			for (String str : skipList)
+			String sql_skipDeviceNames = "";
+			if (StringUtil.hasValue(_skipDeviceNames))
 			{
-				if ( ! str.endsWith("%") )
-					str += "%";
+				List<String> skipList = StringUtil.parseCommaStrToList(_skipDeviceNames);
+				for (String str : skipList)
+				{
+					if ( ! str.endsWith("%") )
+						str += "%";
 
-				sql_skipDeviceNames = "  and [device] not like '" + str + "' \n";
+					sql_skipDeviceNames = "  and [Instance] not like '" + str + "' \n";
+				}
 			}
-		}
 
-		String sql = "select * \n"
-				+ "from [CmOsIostat_abs] \n"
-				+ "where [await] > " + _aboveServiceTime + " \n"
-				+ "  and ([readsPerSec] > " + _aboveTotalIos + " or [writesPerSec] > " + _aboveTotalIos + ") \n"
-				+ getReportPeriodSqlWhere()
-				+ sql_skipDeviceNames
-			    + "";
+			sql = "select [Avg. Disk sec/Transfer] * 1000.0 AS [ServiceTimeInMs], * \n"
+					+ "from [CmOsIostat_abs] \n"
+					+ "where [Avg. Disk sec/Transfer] * 1000.0 > " + _aboveServiceTime + " \n"
+					+ "  and ([Disk Reads/sec] > " + _aboveTotalIos + " or [Disk Writes/sec] > " + _aboveTotalIos + ") \n"
+					+ getReportPeriodSqlWhere()
+					+ sql_skipDeviceNames
+				    + "  and [Instance] != '_Total' \n"
+				    + "";
+		}
+		else
+		{
+			String sql_skipDeviceNames = "";
+			if (StringUtil.hasValue(_skipDeviceNames))
+			{
+				List<String> skipList = StringUtil.parseCommaStrToList(_skipDeviceNames);
+				for (String str : skipList)
+				{
+					if ( ! str.endsWith("%") )
+						str += "%";
+
+					sql_skipDeviceNames = "  and [device] not like '" + str + "' \n";
+				}
+			}
+
+			sql = "select * \n"
+					+ "from [CmOsIostat_abs] \n"
+					+ "where [await] > " + _aboveServiceTime + " \n"
+					+ "  and ([readsPerSec] > " + _aboveTotalIos + " or [writesPerSec] > " + _aboveTotalIos + ") \n"
+					+ getReportPeriodSqlWhere()
+					+ sql_skipDeviceNames
+				    + "";
+		}
 
 		_shortRstm = executeQuery(conn, sql, false, "OsIoStat_slow");
 		if (_shortRstm == null)

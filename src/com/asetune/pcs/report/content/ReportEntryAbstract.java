@@ -91,6 +91,19 @@ implements IReportEntry
 		return _reportingInstance;
 	}
 
+	public boolean isWindows()
+	{
+		String dbmsVerStr = getReportingInstance().getDbmsVersionStr();
+		if (StringUtil.hasValue(dbmsVerStr))
+		{
+			if (dbmsVerStr.contains("Windows"))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	@Override
 	public boolean isEnabled()
 	{

@@ -26,10 +26,8 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.asetune.cm.os.CmOsIostat;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.pcs.report.content.ReportEntryAbstract;
 import com.asetune.pcs.report.content.ase.SparklineHelper;
 import com.asetune.pcs.report.content.ase.SparklineHelper.AggType;
@@ -37,6 +35,7 @@ import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.NumberUtils;
 import com.asetune.utils.StringUtil;
 
 public class OsIoStatOverview extends ReportEntryAbstract
@@ -161,112 +160,269 @@ public class OsIoStatOverview extends ReportEntryAbstract
 				if ( ! str.endsWith("%") )
 					str = str + "%";
 
-				sql_skipDeviceNames = "  and [device] not like '" + str + "' \n";
+				sql_skipDeviceNames = "  and [Instance] not like '" + str + "' \n";
 			}
 		}
 
-		// Create Column selects, but only if the column exists in the PCS Table
-		String r_await__avg = !dummyRstm.hasColumnNoCase("r_await") ? "" : "    ,cast(avg([r_await])         as numeric(10,1)) as [r_await__avg] \n";
-		String w_await__avg = !dummyRstm.hasColumnNoCase("w_await") ? "" : "    ,cast(avg([w_await])         as numeric(10,1)) as [w_await__avg] \n";
-
-		String sql = ""
-			    + "select \n"
-			    + "     [device] \n"
-			    + "    ,cast(avg([rrqmPerSec])      as numeric(10,1)) as [rrqmPerSec__avg] \n"
-			    + "    ,cast(avg([wrqmPerSec])      as numeric(10,1)) as [wrqmPerSec__avg] \n"
-			    + "    ,cast('' as varchar(512))                      as [readsPerSec__chart] \n"
-			    + "    ,cast(avg([readsPerSec])     as numeric(10,1)) as [readsPerSec__avg] \n"
-			    + "    ,cast('' as varchar(512))                      as [writesPerSec__chart] \n"
-			    + "    ,cast(avg([writesPerSec])    as numeric(10,1)) as [writesPerSec__avg] \n"
-			    + "    ,cast(avg([kbReadPerSec])    as numeric(10,1)) as [kbReadPerSec__avg] \n"
-			    + "    ,cast(avg([kbWritePerSec])   as numeric(10,1)) as [kbWritePerSec__avg] \n"
-			    + "    ,cast(avg([avgReadKbPerIo])  as numeric(10,1)) as [avgReadKbPerIo__avg] \n"
-			    + "    ,cast(avg([avgWriteKbPerIo]) as numeric(10,1)) as [avgWriteKbPerIo__avg] \n"
-			    + "    ,cast(avg([avgrq-sz])        as numeric(10,1)) as [avgrq-sz__avg] \n"
-			    + "    ,cast('' as varchar(512))                      as [avgqu-sz__chart] \n"
-			    + "    ,cast(avg([avgqu-sz])        as numeric(10,1)) as [avgqu-sz__avg] \n"
-			    + "    ,cast(avg([await])           as numeric(10,1)) as [await__avg] \n"
-			    + r_await__avg
-			    + w_await__avg
-			    + "    ,cast('' as varchar(512))                      as [svctm__chart] \n"
-			    + "    ,cast(avg([svctm])           as numeric(10,1)) as [svctm__avg] \n"
-			    + "    ,cast('' as varchar(512))                      as [utilPct__chart] \n"
-			    + "    ,cast(avg([utilPct])         as numeric(10,1)) as [utilPct__avg] \n"
-			    + "    ,max([deviceDescription])                      as [deviceDescription] \n"
-				+ "from [CmOsIostat_abs] \n"
-				+ "where 1=1 \n"
-				+ getReportPeriodSqlWhere()
-				+ sql_skipDeviceNames
-			    + "group by [device] \n"
-			    + "";
-
-		_shortRstm = executeQuery(conn, sql, false, "OsIoStat");
-		if (_shortRstm == null)
+		if ( isWindows() )
 		{
-			_shortRstm = ResultSetTableModel.createEmpty("OsIoStat");
-			return;
+			String sql = ""
+				    + "select \n"
+				    + "     [Instance] \n"
+
+				    + "    ,cast('' as varchar(512))                                      as [iosPerSec__chart] \n"
+				    + "    ,cast(avg([Disk Transfers/sec])              as numeric(10,1)) as [iosPerSec__avg] \n"
+
+				    + "    ,cast('' as varchar(512))                                      as [readsPerSec__chart] \n"
+				    + "    ,cast(avg([Disk Reads/sec])                  as numeric(10,1)) as [readsPerSec__avg] \n"
+
+				    + "    ,cast('' as varchar(512))                                      as [writesPerSec__chart] \n"
+				    + "    ,cast(avg([Disk Writes/sec])                 as numeric(10,1)) as [writesPerSec__avg] \n"
+
+				    + "    ,cast(avg([Disk Read Bytes/sec] /1024.0)     as numeric(10,1)) as [kbReadPerSec__avg] \n"
+				    + "    ,cast(avg([Disk Write Bytes/sec]/1024.0)     as numeric(10,1)) as [kbWritePerSec__avg] \n"
+
+//				    + "    ,cast(avg([Disk Read Bytes/sec] /1024.0])/avg([Disk Reads/sec])  as numeric(10,1)) as [avgReadKbPerIo__avg] \n"
+//				    + "    ,cast(avg([Disk Write Bytes/sec]/1024.0])/avg([Disk Writes/sec]) as numeric(10,1)) as [avgWriteKbPerIo__avg] \n"
+
+				    + "    ,cast('' as varchar(512))                                      as [diskQueueLength__avg__chart] \n"
+				    + "    ,cast(avg([Avg. Disk Queue Length])          as numeric(10,1)) as [diskQueueLength__avg] \n"
+
+//				    + "    ,cast('' as varchar(512))                                      as [diskReadQueueLength__avg__chart] \n"
+//				    + "    ,cast(avg([Avg. Disk Read Queue Length])     as numeric(10,1)) as [diskReadQueueLength__avg] \n"
+//
+//				    + "    ,cast('' as varchar(512))                                      as [diskWriteQueueLength__avg__chart] \n"
+//				    + "    ,cast(avg([Avg. Disk Write Queue Length])    as numeric(10,1)) as [diskWriteQueueLength__avg] \n"
+
+				    + "    ,cast('' as varchar(512))                                      as [svctm__chart] \n"
+				    + "    ,cast(avg([Avg. Disk sec/Transfer]*1000.0)   as numeric(10,1)) as [svctm__avg] \n"
+
+				    + "    ,cast('' as varchar(512))                                      as [readSvctm__chart] \n"
+				    + "    ,cast(avg([Avg. Disk sec/Read]*1000.0)       as numeric(10,1)) as [readSvctm__avg] \n"
+
+				    + "    ,cast('' as varchar(512))                                      as [writeSvctm__chart] \n"
+				    + "    ,cast(avg([Avg. Disk sec/Write]*1000.0)      as numeric(10,1)) as [writeSvctm__avg] \n"
+
+				    + "    ,cast('' as varchar(512))                                      as [utilPct__chart] \n"
+				    + "    ,cast(avg(100.0-[% Idle Time])               as numeric(10,1)) as [utilPct__avg] \n"
+
+//				    + "    ,max([deviceDescription])                                      as [deviceDescription] \n"
+					+ "from [CmOsIostat_abs] \n"
+					+ "where 1=1 \n"
+					+ getReportPeriodSqlWhere()
+					+ sql_skipDeviceNames
+//				    + "  and [Instance] != '_Total' \n"
+				    + "group by [Instance] \n"
+				    + "";
+
+			_shortRstm = executeQuery(conn, sql, false, "OsIoStat");
+			if (_shortRstm == null)
+			{
+				_shortRstm = ResultSetTableModel.createEmpty("OsIoStat");
+				return;
+			}
+			else
+			{
+				// Describe the table
+				setSectionDescription(_shortRstm);
+
+				// Mini Chart on
+				String whereKeyColumn = "Instance"; 
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create       (DataSource.CounterModel)
+						.setHtmlChartColumnName      ("iosPerSec__chart")
+						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsTableName            ("CmOsIostat_abs")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("Disk Transfers/sec").setGroupDataAggregationType(AggType.AVG)
+						.setDbmsWhereKeyColumnName   (whereKeyColumn)
+						.setSparklineTooltipPostfix  ("AVG 'iosPerSec' (Disk Transfers/sec) in below period")
+						.validate()));
+
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create       (DataSource.CounterModel)
+						.setHtmlChartColumnName      ("readsPerSec__chart")
+						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsTableName            ("CmOsIostat_abs")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("Disk Reads/sec").setGroupDataAggregationType(AggType.AVG)
+						.setDbmsWhereKeyColumnName   (whereKeyColumn)
+						.setSparklineTooltipPostfix  ("AVG 'readsPerSec' (Disk Reads/sec) in below period")
+						.validate()));
+
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create       (DataSource.CounterModel)
+						.setHtmlChartColumnName      ("writesPerSec__chart")
+						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsTableName            ("CmOsIostat_abs")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("Disk Writes/sec").setGroupDataAggregationType(AggType.AVG)
+						.setDbmsWhereKeyColumnName   (whereKeyColumn)
+						.setSparklineTooltipPostfix  ("AVG 'writesPerSec' (Disk Writes/sec) in below period")
+						.validate()));
+
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create       (DataSource.CounterModel)
+						.setHtmlChartColumnName      ("diskQueueLength__avg__chart")
+						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsTableName            ("CmOsIostat_abs")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("Avg. Disk Queue Length").setGroupDataAggregationType(AggType.MAX).setDecimalScale(1)
+						.setDbmsWhereKeyColumnName   (whereKeyColumn)
+						.setSparklineTooltipPostfix  ("MAX 'diskQueueLength' (Avg. Disk Queue Length) in below period")
+						.validate()));
+
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create       (DataSource.CounterModel)
+						.setHtmlChartColumnName      ("svctm__chart")
+						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsTableName            ("CmOsIostat_abs")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("[Avg. Disk sec/Transfer] * 1000.0").setGroupDataAggregationType(AggType.MAX).setDbmsDataValueColumnNameIsExpression(true).setDecimalScale(1)
+						.setDbmsWhereKeyColumnName   (whereKeyColumn)
+						.setSparklineTooltipPostfix  ("MAX 'svctm' (Avg. Disk sec/Transfer * 1000.0) in below period")
+						.validate()));
+
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create       (DataSource.CounterModel)
+						.setHtmlChartColumnName      ("readSvctm__chart")
+						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsTableName            ("CmOsIostat_abs")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("[Avg. Disk sec/Read] * 1000.0").setGroupDataAggregationType(AggType.MAX).setDbmsDataValueColumnNameIsExpression(true).setDecimalScale(1)
+						.setDbmsWhereKeyColumnName   (whereKeyColumn)
+						.setSparklineTooltipPostfix  ("MAX 'read svctm' (Avg. Disk sec/Read * 1000.0) in below period")
+						.validate()));
+
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create       (DataSource.CounterModel)
+						.setHtmlChartColumnName      ("writeSvctm__chart")
+						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsTableName            ("CmOsIostat_abs")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("[Avg. Disk sec/Write] * 1000.0").setGroupDataAggregationType(AggType.MAX).setDbmsDataValueColumnNameIsExpression(true).setDecimalScale(1)
+						.setDbmsWhereKeyColumnName   (whereKeyColumn)
+						.setSparklineTooltipPostfix  ("MAX 'write svctm' (Avg. Disk sec/Write * 1000.0) in below period")
+						.validate()));
+
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create       (DataSource.CounterModel)
+						.setHtmlChartColumnName      ("utilPct__chart")
+						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsTableName            ("CmOsIostat_abs")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("100.0 - [% Idle Time]").setGroupDataAggregationType(AggType.AVG).setDbmsDataValueColumnNameIsExpression(true).setDecimalScale(1)
+						.setDbmsWhereKeyColumnName   (whereKeyColumn)
+						.setSparklineTooltipPostfix  ("AVG 'utilPct' (100.0 - % Idle Time) in below period")
+						.validate()));
+			}
+			
 		}
-		else
+		else // ALL OTHERS: Linux, Unix
 		{
-			// Describe the table
-			setSectionDescription(_shortRstm);
+			// Create Column selects, but only if the column exists in the PCS Table
+			String r_await__avg = !dummyRstm.hasColumnNoCase("r_await") ? "" : "    ,cast(avg([r_await])         as numeric(10,1)) as [r_await__avg] \n";
+			String w_await__avg = !dummyRstm.hasColumnNoCase("w_await") ? "" : "    ,cast(avg([w_await])         as numeric(10,1)) as [w_await__avg] \n";
 
-			// Mini Chart on
-			String whereKeyColumn = "device"; 
-			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create       (DataSource.CounterModel)
-					.setHtmlChartColumnName      ("readsPerSec__chart")
-					.setHtmlWhereKeyColumnName   (whereKeyColumn)
-					.setDbmsTableName            ("CmOsIostat_abs")
-					.setDbmsSampleTimeColumnName ("SessionSampleTime")
-					.setDbmsDataValueColumnName  ("readsPerSec").setGroupDataAggregationType(AggType.AVG)
-					.setDbmsWhereKeyColumnName   (whereKeyColumn)
-					.setSparklineTooltipPostfix  ("AVG 'readsPerSec' in below period")
-					.validate()));
+			String sql = ""
+				    + "select \n"
+				    + "     [device] \n"
+				    + "    ,cast(avg([rrqmPerSec])      as numeric(10,1)) as [rrqmPerSec__avg] \n"
+				    + "    ,cast(avg([wrqmPerSec])      as numeric(10,1)) as [wrqmPerSec__avg] \n"
+				    + "    ,cast('' as varchar(512))                      as [readsPerSec__chart] \n"
+				    + "    ,cast(avg([readsPerSec])     as numeric(10,1)) as [readsPerSec__avg] \n"
+				    + "    ,cast('' as varchar(512))                      as [writesPerSec__chart] \n"
+				    + "    ,cast(avg([writesPerSec])    as numeric(10,1)) as [writesPerSec__avg] \n"
+				    + "    ,cast(avg([kbReadPerSec])    as numeric(10,1)) as [kbReadPerSec__avg] \n"
+				    + "    ,cast(avg([kbWritePerSec])   as numeric(10,1)) as [kbWritePerSec__avg] \n"
+				    + "    ,cast(avg([avgReadKbPerIo])  as numeric(10,1)) as [avgReadKbPerIo__avg] \n"
+				    + "    ,cast(avg([avgWriteKbPerIo]) as numeric(10,1)) as [avgWriteKbPerIo__avg] \n"
+				    + "    ,cast(avg([avgrq-sz])        as numeric(10,1)) as [avgrq-sz__avg] \n"
+				    + "    ,cast('' as varchar(512))                      as [avgqu-sz__chart] \n"
+				    + "    ,cast(avg([avgqu-sz])        as numeric(10,1)) as [avgqu-sz__avg] \n"
+				    + "    ,cast(avg([await])           as numeric(10,1)) as [await__avg] \n"
+				    + r_await__avg
+				    + w_await__avg
+				    + "    ,cast('' as varchar(512))                      as [svctm__chart] \n"
+				    + "    ,cast(avg([svctm])           as numeric(10,1)) as [svctm__avg] \n"
+				    + "    ,cast('' as varchar(512))                      as [utilPct__chart] \n"
+				    + "    ,cast(avg([utilPct])         as numeric(10,1)) as [utilPct__avg] \n"
+				    + "    ,max([deviceDescription])                      as [deviceDescription] \n"
+					+ "from [CmOsIostat_abs] \n"
+					+ "where 1=1 \n"
+					+ getReportPeriodSqlWhere()
+					+ sql_skipDeviceNames
+				    + "group by [device] \n"
+				    + "";
 
-			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create       (DataSource.CounterModel)
-					.setHtmlChartColumnName      ("writesPerSec__chart")
-					.setHtmlWhereKeyColumnName   (whereKeyColumn)
-					.setDbmsTableName            ("CmOsIostat_abs")
-					.setDbmsSampleTimeColumnName ("SessionSampleTime")
-					.setDbmsDataValueColumnName  ("writesPerSec").setGroupDataAggregationType(AggType.AVG)
-					.setDbmsWhereKeyColumnName   (whereKeyColumn)
-					.setSparklineTooltipPostfix  ("AVG 'writesPerSec' in below period")
-					.validate()));
+			_shortRstm = executeQuery(conn, sql, false, "OsIoStat");
+			if (_shortRstm == null)
+			{
+				_shortRstm = ResultSetTableModel.createEmpty("OsIoStat");
+				return;
+			}
+			else
+			{
+				// Describe the table
+				setSectionDescription(_shortRstm);
 
-			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create       (DataSource.CounterModel)
-					.setHtmlChartColumnName      ("avgqu-sz__chart")
-					.setHtmlWhereKeyColumnName   (whereKeyColumn)
-					.setDbmsTableName            ("CmOsIostat_abs")
-					.setDbmsSampleTimeColumnName ("SessionSampleTime")
-					.setDbmsDataValueColumnName  ("avgqu-sz").setGroupDataAggregationType(AggType.MAX).setDecimalScale(1)
-					.setDbmsWhereKeyColumnName   (whereKeyColumn)
-					.setSparklineTooltipPostfix  ("MAX 'avgqu-sz' in below period")
-					.validate()));
+				// Mini Chart on
+				String whereKeyColumn = "device"; 
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create       (DataSource.CounterModel)
+						.setHtmlChartColumnName      ("readsPerSec__chart")
+						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsTableName            ("CmOsIostat_abs")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("readsPerSec").setGroupDataAggregationType(AggType.AVG)
+						.setDbmsWhereKeyColumnName   (whereKeyColumn)
+						.setSparklineTooltipPostfix  ("AVG 'readsPerSec' in below period")
+						.validate()));
 
-			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create       (DataSource.CounterModel)
-					.setHtmlChartColumnName      ("svctm__chart")
-					.setHtmlWhereKeyColumnName   (whereKeyColumn)
-					.setDbmsTableName            ("CmOsIostat_abs")
-					.setDbmsSampleTimeColumnName ("SessionSampleTime")
-					.setDbmsDataValueColumnName  ("svctm").setGroupDataAggregationType(AggType.MAX).setDecimalScale(1)
-					.setDbmsWhereKeyColumnName   (whereKeyColumn)
-					.setSparklineTooltipPostfix  ("MAX 'svctm' in below period")
-					.validate()));
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create       (DataSource.CounterModel)
+						.setHtmlChartColumnName      ("writesPerSec__chart")
+						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsTableName            ("CmOsIostat_abs")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("writesPerSec").setGroupDataAggregationType(AggType.AVG)
+						.setDbmsWhereKeyColumnName   (whereKeyColumn)
+						.setSparklineTooltipPostfix  ("AVG 'writesPerSec' in below period")
+						.validate()));
 
-			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create       (DataSource.CounterModel)
-					.setHtmlChartColumnName      ("utilPct__chart")
-					.setHtmlWhereKeyColumnName   (whereKeyColumn)
-					.setDbmsTableName            ("CmOsIostat_abs")
-					.setDbmsSampleTimeColumnName ("SessionSampleTime")
-					.setDbmsDataValueColumnName  ("utilPct").setGroupDataAggregationType(AggType.AVG).setDecimalScale(1)
-					.setDbmsWhereKeyColumnName   (whereKeyColumn)
-					.setSparklineTooltipPostfix  ("AVG 'utilPct' in below period")
-					.validate()));
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create       (DataSource.CounterModel)
+						.setHtmlChartColumnName      ("avgqu-sz__chart")
+						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsTableName            ("CmOsIostat_abs")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("avgqu-sz").setGroupDataAggregationType(AggType.MAX).setDecimalScale(1)
+						.setDbmsWhereKeyColumnName   (whereKeyColumn)
+						.setSparklineTooltipPostfix  ("MAX 'avgqu-sz' in below period")
+						.validate()));
+
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create       (DataSource.CounterModel)
+						.setHtmlChartColumnName      ("svctm__chart")
+						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsTableName            ("CmOsIostat_abs")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("svctm").setGroupDataAggregationType(AggType.MAX).setDecimalScale(1)
+						.setDbmsWhereKeyColumnName   (whereKeyColumn)
+						.setSparklineTooltipPostfix  ("MAX 'svctm' in below period")
+						.validate()));
+
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create       (DataSource.CounterModel)
+						.setHtmlChartColumnName      ("utilPct__chart")
+						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsTableName            ("CmOsIostat_abs")
+						.setDbmsSampleTimeColumnName ("SessionSampleTime")
+						.setDbmsDataValueColumnName  ("utilPct").setGroupDataAggregationType(AggType.AVG).setDecimalScale(1)
+						.setDbmsWhereKeyColumnName   (whereKeyColumn)
+						.setSparklineTooltipPostfix  ("AVG 'utilPct' in below period")
+						.validate()));
+			}
 		}
 	}
 
