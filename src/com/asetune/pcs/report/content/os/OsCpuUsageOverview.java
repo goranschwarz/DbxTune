@@ -82,14 +82,14 @@ public class OsCpuUsageOverview extends AseAbstract
 				"CmOsMpstat_MpSum",
 				"CmOsMpstat_MpCpu",
 				"CmOsUptime_AdjLoadAverage",
-				_isWindows ? "CmOsMeminfo_WinPaging" : "CmOsVmStat_SwapInOut"
+				_isWindows ? "CmOsMeminfo_WinPaging" : "CmOsVmstat_SwapInOut"
 				));
 
 		_CmOsMpstat_MpSum         .writeHtmlContent(sb, null, null);
 		_CmOsMpstat_MpCpu         .writeHtmlContent(sb, null, null);
 		_CmOsUptime_AdjLoadAverage.writeHtmlContent(sb, null, null);
 		
-		if (_CmOsVmStat_SwapInOut  != null) _CmOsVmStat_SwapInOut .writeHtmlContent(sb, null, null);
+		if (_CmOsVmstat_SwapInOut  != null) _CmOsVmstat_SwapInOut .writeHtmlContent(sb, null, null);
 		if (_CmOsMeminfo_WinPaging != null)	_CmOsMeminfo_WinPaging.writeHtmlContent(sb, null, null);
 	}
 
@@ -130,7 +130,7 @@ public class OsCpuUsageOverview extends AseAbstract
 		_CmOsUptime_AdjLoadAverage = createTsLineChart(conn, "CmOsUptime", "AdjLoadAverage", -1,       null,    "uptime: Adjusted Load Average (Host Monitor->OS Load Average(uptime))");
 
 		if ( ! _isWindows)
-			_CmOsVmStat_SwapInOut  = createTsLineChart(conn, "CmOsVmStat", "SwapInOut",      -1,       null,    "vmstat: Swap In/Out per sec (Host Monitor->OS CPU(vmstat))");
+			_CmOsVmstat_SwapInOut  = createTsLineChart(conn, "CmOsVmstat", "SwapInOut",      -1,       null,    "vmstat: Swap In/Out per sec (Host Monitor->OS CPU(vmstat))");
 		else
 			_CmOsMeminfo_WinPaging = createTsLineChart(conn, "CmOsMeminfo", "WinPaging",     -1,       null,    "meminfo: Windows Paging or Swap Usage (Host Monitor->OS Memory Info)");
 			
@@ -141,6 +141,6 @@ public class OsCpuUsageOverview extends AseAbstract
 	private IReportChart _CmOsMpstat_MpSum;
 	private IReportChart _CmOsMpstat_MpCpu;
 	private IReportChart _CmOsUptime_AdjLoadAverage;
-	private IReportChart _CmOsVmStat_SwapInOut;
+	private IReportChart _CmOsVmstat_SwapInOut;
 	private IReportChart _CmOsMeminfo_WinPaging;
 }
