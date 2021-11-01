@@ -1502,7 +1502,7 @@ public class SshConnection
 	 */
 	public enum LinuxUtilType
 	{
-		IOSTAT, VMSTAT, MPSTAT, UPTIME
+		IOSTAT, VMSTAT, MPSTAT, UPTIME, PS
 	};
 
 	/**
@@ -1532,11 +1532,15 @@ public class SshConnection
 //		sysstat version 10.2.0
 //		(C) Sebastien Godard (sysstat <at> orange.fr)
 
+//		[23:23:38][sybase@mig2-sybase:~/dbxtune]$ ps -V
+//		procps-ng version 3.3.10
+		
 		String cmd = "";
 		if      (LinuxUtilType.IOSTAT.equals(utilType)) cmd = "iostat -V";
 		else if (LinuxUtilType.VMSTAT.equals(utilType)) cmd = "vmstat -V";
 		else if (LinuxUtilType.MPSTAT.equals(utilType)) cmd = "mpstat -V";
 		else if (LinuxUtilType.UPTIME.equals(utilType)) cmd = "uptime -V";
+		else if (LinuxUtilType.PS    .equals(utilType)) cmd = "ps -V";
 		else
 			throw new Exception("Unsupported utility of '"+utilType+"'.");
 	

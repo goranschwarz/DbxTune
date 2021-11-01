@@ -24,6 +24,7 @@ import com.asetune.cm.os.CmOsPs;
 import com.asetune.ssh.SshConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.VersionShort;
 
 public class MonitorPsLinux
 extends HostMonitor
@@ -56,9 +57,16 @@ extends HostMonitor
 		int top = Configuration.getCombinedConfiguration().getIntProperty(CmOsPs.PROPKEY_top, CmOsPs.DEFAULT_top);
 
 		// NOTE: 'etimes' is not available in RHEL 6.6 (possible version 6)
-//		return "ps -e -ww --format pid,ppid,euser,tty,vsz,rss,etimes,cputime,pmem,pcpu,args --sort=-pcpu | head -n " + top;
+		//       'etimes' was introduced in version 3.3 according to -- https://abi-laboratory.pro/?view=changelog&l=procps-ng&v=3.3.12
+		if ( getUtilVersion() < VersionShort.toInt(3,3,0))
+		{
+			return "ps -e -ww --format pid,ppid,euser,tty,vsz,rss,cputime,pmem,pcpu,args --sort=-pcpu | head -n " + top;
+		}
+		else
+		{
+			return "ps -e -ww --format pid,ppid,euser,tty,vsz,rss,etimes,cputime,pmem,pcpu,args --sort=-pcpu | head -n " + top;
+		}
 
-		return "ps -e -ww --format pid,ppid,euser,tty,vsz,rss,cputime,pmem,pcpu,args --sort=-pcpu | head -n " + top;
 	}
 
 	@Override
@@ -67,29 +75,35 @@ extends HostMonitor
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());
 
-//		md.addIntColumn ("pid",         1,  1,  false,        "a number representing the process ID");
-//		md.addIntColumn ("ppid",        2,  2,  false,        "parent process ID");
-//		md.addStrColumn ("user",        3,  3,  false, 20,    "effective user name.  This will be the textual user ID, if it can be obtained and the field width permits, or a decimal representation otherwise.");
-//		md.addStrColumn ("tty",         4,  4,  false, 10,    "controlling tty (terminal)");
-//		md.addIntColumn ("vsize",       5,  5,  false,        "virtual memory size of the process in KiB (1024-byte units).  Device mappings are currently excluded; this is subject to change.");
-//		md.addIntColumn ("rss",         6,  6,  false,        "resident set size, the non-swapped physical memory that a task has used (in kiloBytes).");
-//		md.addIntColumn ("etimes",      7,  7,  false,        "elapsed time since the process was started, in seconds."); // This is not available in RHEL 6.6 (possible version 6)
-//		md.addStrColumn ("cputime",     8,  8,  false, 15,    "cumulative CPU time, '[DD-]hh:mm:ss' format.");
-//		md.addDecColumn ("%mem",        9,  9,  false, 5, 1,  "ratio of the process's resident set size  to the physical memory on the machine, expressed as a percentage.");
-//		md.addDecColumn ("%cpu",        10, 10, false, 5, 1,  "cpu utilization of the process in ##.# format. Currently, it is the CPU time used divided by the time the process has been running (cputime/realtime ratio), expressed as a percentage.  It will not add up to 100% unless you are lucky.");
-//		md.addStrColumn ("command",     11, 11, false, 4096,  "command with all its arguments as a string. Modifications to the arguments may be shown.  The output in this column may contain spaces.  A process marked <defunct> is partly dead, waiting to be fully destroyed by its parent.  Sometimes the process args will be unavailable; when this happens, ps will instead print the executable name in brackets.  (alias cmd, command).  See also the comm format keyword, the -f option, and the c option.");
+		if ( utilVersion < VersionShort.toInt(3,3,0))
+		{
+			// NOTE: 'etimes' was introduced in version 3.3 (so it's skipped here)
+			md.addIntColumn ("pid",         1,  1,  false,        "a number representing the process ID");
+			md.addIntColumn ("ppid",        2,  2,  false,        "parent process ID");
+			md.addStrColumn ("user",        3,  3,  false, 20,    "effective user name.  This will be the textual user ID, if it can be obtained and the field width permits, or a decimal representation otherwise.");
+			md.addStrColumn ("tty",         4,  4,  false, 10,    "controlling tty (terminal)");
+			md.addIntColumn ("vsize",       5,  5,  false,        "virtual memory size of the process in KiB (1024-byte units).  Device mappings are currently excluded; this is subject to change.");
+			md.addIntColumn ("rss",         6,  6,  false,        "resident set size, the non-swapped physical memory that a task has used (in kiloBytes).");
+			md.addStrColumn ("cputime",     7,  7,  false, 15,    "cumulative CPU time, '[DD-]hh:mm:ss' format.");
+			md.addDecColumn ("%mem",        8,  8,  false, 5, 1,  "ratio of the process's resident set size  to the physical memory on the machine, expressed as a percentage.");
+			md.addDecColumn ("%cpu",        9,  9,  false, 5, 1,  "cpu utilization of the process in ##.# format. Currently, it is the CPU time used divided by the time the process has been running (cputime/realtime ratio), expressed as a percentage.  It will not add up to 100% unless you are lucky.");
+			md.addStrColumn ("command",     10, 10, false, 4096,  "command with all its arguments as a string. Modifications to the arguments may be shown.  The output in this column may contain spaces.  A process marked <defunct> is partly dead, waiting to be fully destroyed by its parent.  Sometimes the process args will be unavailable; when this happens, ps will instead print the executable name in brackets.  (alias cmd, command).  See also the comm format keyword, the -f option, and the c option.");
+		}
+		else
+		{
+			md.addIntColumn ("pid",         1,  1,  false,        "a number representing the process ID");
+			md.addIntColumn ("ppid",        2,  2,  false,        "parent process ID");
+			md.addStrColumn ("user",        3,  3,  false, 20,    "effective user name.  This will be the textual user ID, if it can be obtained and the field width permits, or a decimal representation otherwise.");
+			md.addStrColumn ("tty",         4,  4,  false, 10,    "controlling tty (terminal)");
+			md.addIntColumn ("vsize",       5,  5,  false,        "virtual memory size of the process in KiB (1024-byte units).  Device mappings are currently excluded; this is subject to change.");
+			md.addIntColumn ("rss",         6,  6,  false,        "resident set size, the non-swapped physical memory that a task has used (in kiloBytes).");
+			md.addIntColumn ("etimes",      7,  7,  false,        "elapsed time since the process was started, in seconds."); // 'etimes' was introduced in version 3.3
+			md.addStrColumn ("cputime",     8,  8,  false, 15,    "cumulative CPU time, '[DD-]hh:mm:ss' format.");
+			md.addDecColumn ("%mem",        9,  9,  false, 5, 1,  "ratio of the process's resident set size  to the physical memory on the machine, expressed as a percentage.");
+			md.addDecColumn ("%cpu",        10, 10, false, 5, 1,  "cpu utilization of the process in ##.# format. Currently, it is the CPU time used divided by the time the process has been running (cputime/realtime ratio), expressed as a percentage.  It will not add up to 100% unless you are lucky.");
+			md.addStrColumn ("command",     11, 11, false, 4096,  "command with all its arguments as a string. Modifications to the arguments may be shown.  The output in this column may contain spaces.  A process marked <defunct> is partly dead, waiting to be fully destroyed by its parent.  Sometimes the process args will be unavailable; when this happens, ps will instead print the executable name in brackets.  (alias cmd, command).  See also the comm format keyword, the -f option, and the c option.");
+		}
 
-		// NOTE: 'etimes' is not available in RHEL 6.6 (possible version 6)
-		md.addIntColumn ("pid",         1,  1,  false,        "a number representing the process ID");
-		md.addIntColumn ("ppid",        2,  2,  false,        "parent process ID");
-		md.addStrColumn ("user",        3,  3,  false, 20,    "effective user name.  This will be the textual user ID, if it can be obtained and the field width permits, or a decimal representation otherwise.");
-		md.addStrColumn ("tty",         4,  4,  false, 10,    "controlling tty (terminal)");
-		md.addIntColumn ("vsize",       5,  5,  false,        "virtual memory size of the process in KiB (1024-byte units).  Device mappings are currently excluded; this is subject to change.");
-		md.addIntColumn ("rss",         6,  6,  false,        "resident set size, the non-swapped physical memory that a task has used (in kiloBytes).");
-		md.addStrColumn ("cputime",     7,  7,  false, 15,    "cumulative CPU time, '[DD-]hh:mm:ss' format.");
-		md.addDecColumn ("%mem",        8,  8,  false, 5, 1,  "ratio of the process's resident set size  to the physical memory on the machine, expressed as a percentage.");
-		md.addDecColumn ("%cpu",        9,  9,  false, 5, 1,  "cpu utilization of the process in ##.# format. Currently, it is the CPU time used divided by the time the process has been running (cputime/realtime ratio), expressed as a percentage.  It will not add up to 100% unless you are lucky.");
-		md.addStrColumn ("command",     10, 10, false, 4096,  "command with all its arguments as a string. Modifications to the arguments may be shown.  The output in this column may contain spaces.  A process marked <defunct> is partly dead, waiting to be fully destroyed by its parent.  Sometimes the process args will be unavailable; when this happens, ps will instead print the executable name in brackets.  (alias cmd, command).  See also the comm format keyword, the -f option, and the c option.");
 
 		// What regexp to use to split the input row into individual fields
 		md.setParseRegexp(HostMonitorMetaData.REGEXP_IS_SPACE);

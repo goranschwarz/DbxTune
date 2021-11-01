@@ -20,7 +20,9 @@
  ******************************************************************************/
 package com.asetune.hostmon;
 
+import com.asetune.hostmon.HostMonitor.OsVendor;
 import com.asetune.ssh.SshConnection;
+import com.asetune.ssh.SshConnection.LinuxUtilType;
 
 public abstract class MonitorPs
 extends HostMonitor
@@ -66,7 +68,8 @@ extends HostMonitor
 		HostMonitor mon = null;
 		if (osname.equals("Linux"))
 		{
-			mon = new MonitorPsLinux();
+			int utilVersion = conn.getLinuxUtilVersion(LinuxUtilType.PS);
+			mon = new MonitorPsLinux(utilVersion, null);
 			mon.setConnectedToVendor(OsVendor.Linux);
 		}
 //		else if (osname.equals("SunOS"))
