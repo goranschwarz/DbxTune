@@ -150,18 +150,51 @@ extends CounterModelHostMonitor
 		{
 			if (isConnectedToVendor(OsVendor.Windows))
 			{
-				Double[] dArray = new Double[5];
-				String[] lArray = new String[5];
+//				Double[] dArray = new Double[5];
+//				String[] lArray = new String[5];
+//
+//				// Initialize the "sum" array
+//				for (int i=0; i<dArray.length; i++)
+//					dArray[i] = 0.0;
+//
+//				lArray[0] = "% Total (Processor + User + Privileged)"; // this is faulty??? ... I think "% Processor Time" is "% User Time + % Privileged Time"
+//				lArray[1] = "% Processor Time";
+//				lArray[2] = "% User Time";
+//				lArray[3] = "% Privileged Time";
+//				lArray[4] = "% Idle Time";
+//
+//				for (int i=0; i<this.getRowCount(); i++)
+//				{
+//					String cpu = this.getAbsString(i, "Instance");
+//
+//					if ("_Total".equalsIgnoreCase(cpu))
+//					{
+//						Double processorTime  = this.getAbsValueAsDouble(i, "% Processor Time");
+//						Double userTime       = this.getAbsValueAsDouble(i, "% User Time");
+//						Double privilegedTime = this.getAbsValueAsDouble(i, "% Privileged Time");
+//						Double idleTime       = this.getAbsValueAsDouble(i, "% Idle Time");
+//
+//						dArray[0] = processorTime + userTime + privilegedTime;
+//						dArray[1] = processorTime;
+//						dArray[2] = userTime;
+//						dArray[3] = privilegedTime;
+//						dArray[4] = idleTime;
+//					}
+//				}
+//
+//				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+
+				Double[] dArray = new Double[4];
+				String[] lArray = new String[4];
 
 				// Initialize the "sum" array
 				for (int i=0; i<dArray.length; i++)
 					dArray[i] = 0.0;
 
-				lArray[0] = "% Total (Processor + User + Privileged)";
-				lArray[1] = "% Processor Time";
-				lArray[2] = "% User Time";
-				lArray[3] = "% Privileged Time";
-				lArray[4] = "% Idle Time";
+				lArray[0] = "% Processor Time";
+				lArray[1] = "% User Time";
+				lArray[2] = "% Privileged Time";
+				lArray[3] = "% Idle Time";
 
 				for (int i=0; i<this.getRowCount(); i++)
 				{
@@ -174,11 +207,10 @@ extends CounterModelHostMonitor
 						Double privilegedTime = this.getAbsValueAsDouble(i, "% Privileged Time");
 						Double idleTime       = this.getAbsValueAsDouble(i, "% Idle Time");
 
-						dArray[0] = processorTime + userTime + privilegedTime;
-						dArray[1] = processorTime;
-						dArray[2] = userTime;
-						dArray[3] = privilegedTime;
-						dArray[4] = idleTime;
+						dArray[0] = processorTime;
+						dArray[1] = userTime;
+						dArray[2] = privilegedTime;
+						dArray[3] = idleTime;
 					}
 				}
 
