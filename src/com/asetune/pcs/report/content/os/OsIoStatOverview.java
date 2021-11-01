@@ -148,23 +148,23 @@ public class OsIoStatOverview extends ReportEntryAbstract
 //		String col_r_await__avg  = !dummyRstm.hasColumnNoCase("r_await") ? "" : "    ,avg([r_await]) as [r_await__avg] \n"; 
 //		String col_w_await__avg  = !dummyRstm.hasColumnNoCase("w_await") ? "" : "    ,avg([w_await]) as [r_await__avg] \n"; 
 
-		String sql_skipDeviceNames = "";
-		if (StringUtil.hasValue(_skipDeviceNames))
-		{
-			List<String> skipList = StringUtil.parseCommaStrToList(_skipDeviceNames);
-			for (String str : skipList)
-			{
-				str = str.trim();
-
-				if ( ! str.endsWith("%") )
-					str = str + "%";
-
-				sql_skipDeviceNames = "  and [Instance] not like '" + str + "' \n";
-			}
-		}
-
 		if ( isWindows() )
 		{
+			String sql_skipDeviceNames = "";
+			if (StringUtil.hasValue(_skipDeviceNames))
+			{
+				List<String> skipList = StringUtil.parseCommaStrToList(_skipDeviceNames);
+				for (String str : skipList)
+				{
+					str = str.trim();
+
+					if ( ! str.endsWith("%") )
+						str = str + "%";
+
+					sql_skipDeviceNames = "  and [Instance] not like '" + str + "' \n";
+				}
+			}
+
 			String sql = ""
 				    + "select \n"
 				    + "     [Instance] \n"
@@ -319,6 +319,21 @@ public class OsIoStatOverview extends ReportEntryAbstract
 		}
 		else // ALL OTHERS: Linux, Unix
 		{
+			String sql_skipDeviceNames = "";
+			if (StringUtil.hasValue(_skipDeviceNames))
+			{
+				List<String> skipList = StringUtil.parseCommaStrToList(_skipDeviceNames);
+				for (String str : skipList)
+				{
+					str = str.trim();
+
+					if ( ! str.endsWith("%") )
+						str = str + "%";
+
+					sql_skipDeviceNames = "  and [device] not like '" + str + "' \n";
+				}
+			}
+
 			// Create Column selects, but only if the column exists in the PCS Table
 			String r_await__avg = !dummyRstm.hasColumnNoCase("r_await") ? "" : "    ,cast(avg([r_await])         as numeric(10,1)) as [r_await__avg] \n";
 			String w_await__avg = !dummyRstm.hasColumnNoCase("w_await") ? "" : "    ,cast(avg([w_await])         as numeric(10,1)) as [w_await__avg] \n";

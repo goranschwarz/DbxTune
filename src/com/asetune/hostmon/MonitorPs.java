@@ -20,7 +20,6 @@
  ******************************************************************************/
 package com.asetune.hostmon;
 
-import com.asetune.hostmon.HostMonitor.OsVendor;
 import com.asetune.ssh.SshConnection;
 import com.asetune.ssh.SshConnection.LinuxUtilType;
 
