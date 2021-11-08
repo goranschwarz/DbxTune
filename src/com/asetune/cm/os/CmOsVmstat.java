@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.asetune.cm.os;
 
+import java.sql.Date;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -462,7 +463,15 @@ extends CounterModelHostMonitor
 			int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_swap, DEFAULT_alarm_swap);
 			if (swapIn_5mAvg > threshold || swapOut_5mAvg > threshold)
 			{
-				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, hostname, "over 5 minute moving average", swapIn_5mAvg, swapOut_5mAvg);
+				Date   swapIn_peakTime    = MovingAverageCounterManager.getInstance("swapIn",  5).getPeakTime();
+				double swapIn_peakNumber  = MovingAverageCounterManager.getInstance("swapIn",  5).getPeakNumber();
+				Date   swapOut_peakTime   = MovingAverageCounterManager.getInstance("swapOut", 5).getPeakTime();
+				double swapOut_peakNumber = MovingAverageCounterManager.getInstance("swapOut", 5).getPeakNumber();
+
+				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, hostname, "over 5 minute moving average", 
+						swapIn_5mAvg,  swapIn_peakTime,  swapIn_peakNumber,
+						swapOut_5mAvg, swapOut_peakTime, swapOut_peakNumber);
+
 				alarmHandler.addAlarm( alarm );
 			}
 		}

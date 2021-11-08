@@ -21,6 +21,7 @@
  ******************************************************************************/
 package com.asetune.utils;
 
+import java.sql.Date;
 import java.util.LinkedList;
 
 public class MovingAverageCounter
@@ -233,6 +234,45 @@ public class MovingAverageCounter
 		return sum / size;
 	}
 
+	/**
+	 * Get peak/max value over the period 
+	 * @return
+	 */
+	public double getPeakNumber()
+	{
+		double peak = 0;
+		
+		for (Entry e : _values)
+		{
+			peak = Math.max(peak, e._val);
+		}
+		
+		return peak;
+	}
+	
+
+	/**
+	 * Get peak time (as a java.util.Date) over the period 
+	 * @return
+	 */
+	public Date getPeakTime()
+	{
+		double peakNumber = 0;
+		long   peakTime   = 0;
+		
+		for (Entry e : _values)
+		{
+			if (e._val >= peakNumber)
+			{
+				peakNumber = e._val;
+				peakTime   = e._ts;
+			}
+		}
+		
+		return new Date(peakTime);
+	}
+	
+
 //	/**
 //	 * Get average value for records that has been sampled during the sample period
 //	 * 
@@ -261,5 +301,5 @@ public class MovingAverageCounter
 			_val = val;
 		}
 	}
-	
+
 }

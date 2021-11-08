@@ -20,6 +20,8 @@
  ******************************************************************************/
 package com.asetune.alarm.events;
 
+import java.sql.Date;
+
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 
@@ -28,7 +30,7 @@ extends AlarmEvent
 {
 	private static final long serialVersionUID = 1L;
 
-	public AlarmEventOsSwapping(CountersModel cm, int threshold, String hostname, String sampleTimeStr, int swapIn, int swapOut)
+	public AlarmEventOsSwapping(CountersModel cm, int threshold, String hostname, String sampleTimeStr, int swapIn_avg, int swapOut_avg)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -38,13 +40,33 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Extensive Usage of OS Swapping on hostname '" + cm.getServerName() + "' " + sampleTimeStr + ". Time to increase memory or move some processes. swapIn=" + swapIn + ", swapOut=" + swapOut + ". (threshold="+threshold+")",
+				"Extensive Usage of OS Swapping on hostname '" + hostname + "' " + sampleTimeStr + ". Time to increase memory or move some processes. swapInAvg=" + swapIn_avg + ", swapOutAvg=" + swapOut_avg + ". (threshold="+threshold+")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);
 
 		// Set the raw data
-		setData("swapIn=" + swapIn + "', swapOut=" + swapOut);
+		setData("swapInAvg=" + swapIn_avg + "', swapOutAvg=" + swapOut_avg);
+	}
+
+	public AlarmEventOsSwapping(CountersModel cm, int threshold, String hostname, String sampleTimeStr, int swapIn_avg, Date swapIn_peakTime, double swapIn_peakVal, int swapOut_avg, Date swapOut_peakTime, double swapOut_peakVal)
+	{
+		super(
+				Version.getAppName(), // serviceType
+				cm.getServerName(),   // serviceName
+				cm.getName(),         // serviceInfo
+				null,                 // extraInfo
+				AlarmEvent.Category.OTHER,
+				AlarmEvent.Severity.WARNING, 
+				AlarmEvent.ServiceState.UP, 
+				"Extensive Usage of OS Swapping on hostname '" + hostname + "' " + sampleTimeStr + ". Time to increase memory or move some processes. swapIn=[avgVal=" + swapIn_avg + ", PeakTime='" + swapIn_peakTime + "', peakVal=" + swapIn_peakVal + "], swapOut=[avgVal=" + swapIn_avg + ", peakTime='" + swapOut_peakTime + "', peakVal=" + swapOut_peakVal + "]. (threshold="+threshold+")",
+				threshold);
+
+		// Set: Time To Live if postpone is enabled
+		setTimeToLive(cm);
+
+		// Set the raw data
+		setData("swapInAvg=" + swapIn_avg + "', swapOutAvg=" + swapOut_avg);
 	}
 }
