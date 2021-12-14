@@ -289,7 +289,7 @@ extends CountersModel
 		// IMPORTANT: when you add a column to the FIRST you need to add it to the SECOND as well
 		////////////////////////////
 
-		boolean showHoldingLocks = Configuration.getCombinedConfiguration().getBooleanProperty(getName()+".sample.holdingLocks", false);
+		boolean showHoldingLocks = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_holdingLocks, DEFAULT_sample_holdingLocks);
 
 		// ASE 15.0.2 ESD#2
 		String SrvUserName = "";
@@ -1414,9 +1414,11 @@ extends CountersModel
 
 						if (doAlarm)
 						{
+							int spid = cm.getRateValueAsDouble(r, "SPID").intValue();
+
 							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-							AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, BlockingOthersMaxTimeInSec, BlockingOtherSpidsStr, blockCount);
+							AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, spid, BlockingOthersMaxTimeInSec, BlockingOtherSpidsStr, blockCount);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
 							alarmHandler.addAlarm( ae );

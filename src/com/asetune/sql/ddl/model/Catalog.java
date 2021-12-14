@@ -72,7 +72,8 @@ public class Catalog
 		// Get TABLES, VIEWS, etc
 		// For each Table... do create a Table object
 		// Note: Schema Objects will be created by the Table Object etc...
-		String[] tableTypesTable = new String[] {"TABLE"};
+//		String[] tableTypesTable = new String[] {"TABLE"};
+		String[] tableTypesTable = new String[] {"TABLE", "BASE_TABLE"};
 		String[] tableTypesView  = new String[] {"VIEW"};
 		
 		// map of: SchemaNames -> ListOfTables

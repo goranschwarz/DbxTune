@@ -50,17 +50,17 @@ extends AlarmEvent
 	}
 
 	/** used by CmActiveStatements */
-	public AlarmEventBlockingLockAlarm(CountersModel cm, Number threshold, Number blockingOthersMaxTimeInSec, String blockingOtherSpids, Number blockCount)
+	public AlarmEventBlockingLockAlarm(CountersModel cm, Number threshold, int spid, Number blockingOthersMaxTimeInSec, String blockingOtherSpids, Number blockCount)
 	{
 		super(
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
-				null,                 // extraInfo
+				spid < 0 ? null : "spid="+spid,         // extraInfo
 				AlarmEvent.Category.LOCK,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"Found Blocking locks in '" + cm.getServerName() + "'. BlockingOthersMaxTimeInSec=" + blockingOthersMaxTimeInSec + ", BlockingOtherSpids=" + blockingOtherSpids + ", BlockCount=" + blockCount + ". (thresholdInSec="+threshold+")",
+				"Found Blocking locks in '" + cm.getServerName() + "'. For SPID=" + spid + ", BlockingOthersMaxTimeInSec=" + blockingOthersMaxTimeInSec + ", BlockingOtherSpids=" + blockingOtherSpids + ", BlockCount=" + blockCount + ". (thresholdInSec="+threshold+")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled

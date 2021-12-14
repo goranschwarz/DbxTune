@@ -1186,7 +1186,8 @@ implements Runnable, ConnectionProvider
 			DatabaseMetaData dbmd = _conn.getMetaData();
 	
 	//		rs = dbmd.getTables(null, null, "%", null);
-			rs = dbmd.getTables(null, null, "%", new String[] { "TABLE" });
+//			rs = dbmd.getTables(null, null, "%", new String[] { "TABLE" });
+			rs = dbmd.getTables(null, null, "%", new String[] { "TABLE", "BASE TABLE" });
 
 			while(rs.next())
 			{

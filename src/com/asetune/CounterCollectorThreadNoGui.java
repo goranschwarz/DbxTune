@@ -635,6 +635,12 @@ implements Memory.MemoryListener
 				if (XmlPlanCache.hasInstance())
 				{
 					memoryInfo += XmlPlanCache.getInstance().getMemoryConsumption() + "; ";
+
+					if (Configuration.getCombinedConfiguration().getBooleanProperty("CounterCollectorThreadNoGui.on.memoryUsageLow.XmlPlanCache.clean", true))
+					{
+						XmlPlanCache.getInstance().lowOnMemoryHandler();
+						memoryInfo += "AFTER-MEM-CLEAN:" + XmlPlanCache.getInstance().getMemoryConsumption() + "; ";
+					}
 				}
 
 				// ObjectID -> ObjectName Cache

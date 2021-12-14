@@ -805,7 +805,8 @@ public class DbUtils
 
 		// First try with *original* name
 		DatabaseMetaData dbmd = conn.getMetaData();
-		try ( ResultSet rs = dbmd.getTables(cat, schema, tableName, new String[] {"TABLE"}) )
+//		try ( ResultSet rs = dbmd.getTables(cat, schema, tableName, new String[] {"TABLE"}) )
+		try ( ResultSet rs = dbmd.getTables(cat, schema, tableName, new String[] {"TABLE", "BASE TABLE"}) )
 		{
 			while(rs.next())
 				tabExists = true;
@@ -817,7 +818,8 @@ public class DbUtils
 			try ( ResultSet rs = dbmd.getTables(cat       == null ? null : cat      .toUpperCase(), 
 			                                    schema    == null ? null : schema   .toUpperCase(), 
 			                                    tableName == null ? null : tableName.toUpperCase(), 
-			                                    new String[] {"TABLE"}) )
+//			                                    new String[] {"TABLE"}) )
+			                                    new String[] {"TABLE", "BASE TABLE"}) )
 			{
 				while(rs.next())
 					tabExists = true;
@@ -830,7 +832,8 @@ public class DbUtils
 			try ( ResultSet rs = dbmd.getTables(cat       == null ? null : cat      .toLowerCase(), 
 			                                    schema    == null ? null : schema   .toLowerCase(), 
 			                                    tableName == null ? null : tableName.toLowerCase(), 
-			                                    new String[] {"TABLE"}) )
+//			                                    new String[] {"TABLE"}) )
+			                                    new String[] {"TABLE", "BASE TABLE"}) )
 			{
 				while(rs.next())
 					tabExists = true;

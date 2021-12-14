@@ -414,7 +414,8 @@ implements Runnable
 		}
 
 		// Get tables
-		try (ResultSet rs = conn.getMetaData().getTables(null, null, "%", new String[] {"TABLE"}))
+//		try (ResultSet rs = conn.getMetaData().getTables(null, null, "%", new String[] {"TABLE"}))
+		try (ResultSet rs = conn.getMetaData().getTables(null, null, "%", new String[] {"TABLE", "BASE TABLE"}))
 		{
 			while (rs.next())
 			{

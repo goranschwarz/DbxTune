@@ -40,6 +40,7 @@ import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEvent.Category;
 import com.asetune.alarm.events.AlarmEvent.ServiceState;
 import com.asetune.alarm.events.AlarmEvent.Severity;
+import com.asetune.alarm.events.dbxc.AlarmEventHttpDestinationDown;
 import com.asetune.alarm.events.AlarmEventSrvDown;
 import com.asetune.alarm.events.internal.AlarmEvent_EndOfScan;
 import com.asetune.alarm.events.internal.AlarmEvent_Stop;
@@ -836,6 +837,11 @@ implements Runnable
 			if (cancelledAlarm instanceof AlarmEventSrvDown)
 			{
 				_logger.info("Keeping Alarm 'SRV-DOWN' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. cancelledAlarm: " + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
+				continue;
+			}
+			if (cancelledAlarm instanceof AlarmEventHttpDestinationDown)
+			{
+				_logger.info("Keeping Alarm 'HTTP-DESTINATION-DOWN' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. cancelledAlarm: " + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
 				continue;
 			}
 

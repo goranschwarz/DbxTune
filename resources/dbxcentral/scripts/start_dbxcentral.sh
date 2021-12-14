@@ -44,6 +44,9 @@ export DBXTUNE_SAVE_DIR=${DBXTUNE_CENTRAL_DATA}
 cfgFile=${DBXTUNE_CENTRAL_CONF}/DBX_CENTRAL.conf
 logFile=${DBXTUNE_CENTRAL_LOG}/DBX_CENTRAL.log
 
+## Possibly add this to the below start command...
+#-Djava.net.preferIPv4Stack=true
+
 ##----------------------------------------------
 ## Start
 ##----------------------------------------------

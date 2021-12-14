@@ -546,7 +546,8 @@ extends SqlStatementAbstract
 		try  { leftCurCat = leftConn.getCatalog(); if (StringUtil.isNullOrBlank(leftCurCat)) leftCurCat = null; } catch (SQLException ignore) {}
 		if (_params._leftCatFilter != null) 
 			leftCurCat = _params._leftCatFilter;
-		ResultSet leftPreRs = leftConn.getMetaData().getTables(leftCurCat, _params._leftSchFilter, _params._leftTabFilter, new String[] {"TABLE"});
+//		ResultSet leftPreRs = leftConn.getMetaData().getTables(leftCurCat, _params._leftSchFilter, _params._leftTabFilter, new String[] {"TABLE"});
+		ResultSet leftPreRs = leftConn.getMetaData().getTables(leftCurCat, _params._leftSchFilter, _params._leftTabFilter, new String[] {"TABLE", "BASE TABLE"});
 //		ResultSetTableModel leftPreRstm = new ResultSetTableModel(leftPreRs, "leftPreRs");
 		while(leftPreRs.next())
 		{
@@ -582,7 +583,8 @@ extends SqlStatementAbstract
 		try  { rightCurCat = rightConn.getCatalog(); if (StringUtil.isNullOrBlank(rightCurCat)) rightCurCat = null; } catch (SQLException ignore) {}
 		if (_params._rightCatFilter != null) 
 			rightCurCat = _params._rightCatFilter;
-		ResultSet rightPreRs = rightConn.getMetaData().getTables(rightCurCat, _params._rightSchFilter, _params._rightTabFilter, new String[] {"TABLE"});
+//		ResultSet rightPreRs = rightConn.getMetaData().getTables(rightCurCat, _params._rightSchFilter, _params._rightTabFilter, new String[] {"TABLE"});
+		ResultSet rightPreRs = rightConn.getMetaData().getTables(rightCurCat, _params._rightSchFilter, _params._rightTabFilter, new String[] {"TABLE", "BASE TABLE"});
 //		ResultSetTableModel rightPreRstm = new ResultSetTableModel(rightPreRs, "rightPreRs");
 		while(rightPreRs.next())
 		{

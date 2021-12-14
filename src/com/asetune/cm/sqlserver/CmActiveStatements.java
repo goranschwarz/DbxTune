@@ -159,6 +159,9 @@ extends CountersModel
 	public static final String  PROPKEY_sample_liveQueryPlan      = PROP_PREFIX + ".sample.liveQueryPlan";
 	public static final boolean DEFAULT_sample_liveQueryPlan      = true;
 
+	public static final String  PROPKEY_sample_holdingLocks       = PROP_PREFIX + ".sample.holdingLocks";
+	public static final boolean DEFAULT_sample_holdingLocks       = true;
+	
 	public static final String  PROPKEY_sample_spidLocks          = PROP_PREFIX + ".sample.spidLocks";
 	public static final boolean DEFAULT_sample_spidLocks          = true;
 
@@ -256,6 +259,8 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
+		boolean showHoldingLocks = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_holdingLocks, DEFAULT_sample_holdingLocks);
+
 		String dm_exec_sessions    = "dm_exec_sessions";
 		String dm_exec_requests    = "dm_exec_requests";
 //		String dm_exec_connections = "dm_exec_connections";
@@ -316,7 +321,7 @@ extends CountersModel
 		
 		String sql1 =
 			"SELECT  \n" +
-			"     monSource    = convert(varchar(10), 'ACTIVE') \n" +
+			"     monSource    = convert(varchar(20), 'ACTIVE') \n" +
 			"    ,multiSampled = convert(varchar(10), '') \n" +
 			"    ,des.login_name \n" +
 			"    ,des.session_id \n" +
@@ -395,9 +400,12 @@ extends CountersModel
 			"  AND (der.executing_managed_code = 0 OR (der.executing_managed_code = 1 AND der.wait_type != 'SLEEP_TASK')) \n" + // SSIS seems to be executing ALL THE TIME... so discard some of them... (this may be unique to MaxM)
 			"";
 
-		String sql2 = 
+		//-----------------------------------------------------------------------
+		// SPID's that are BLOCKING
+		//
+		String sql2_cols = 
 			"SELECT  \n" +
-			"     monSource    = convert(varchar(10), 'BLOCKER')  \n" +
+			"     monSource    = convert(varchar(20), 'BLOCKER')  \n" +
 			"    ,multiSampled = convert(varchar(10), '')  \n" +
 			"    ,p1.loginame                                  --des.login_name \n" +
 			"    ,p1.spid                                      --des.session_id \n" +
@@ -459,19 +467,52 @@ extends CountersModel
 			"    ,BlockedSpidsInfo = convert(varchar(max),null) \n" +
 			"    ,''                                           --deqp.query_plan  \n" +
 			LiveQueryPlanBlocked +
+			"";
+
+		String sql2_tabs = 
 			"FROM sys.sysprocesses p1 \n" +
 			"OUTER APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
+			"";
+
+		String sql2_where = 
 			"WHERE p1.spid in (SELECT p2.blocked FROM sys.sysprocesses p2 WHERE p2.blocked > 0) \n" + 
 			"  AND p1.ecid = 0 \n" + // Only Parent SPID's in parallel statements ... or we can add/introduce the ECID in the primary key... 
 			"";
-			
+
+		String sql2 = 
+			sql2_cols +
+			sql2_tabs + 
+			sql2_where; 
+		
+
+		//-----------------------------------------------------------------------
+		// get info about SPID's that are in transaction (or holding locks) but are at Client (EventID = 250 for Sybase)
+		//
+		String sql3 = "";
+		if (showHoldingLocks)
+		{
+			sql3 = 	"\n" +
+					"UNION ALL \n" +
+					"\n" +
+			sql2_cols.replace("'BLOCKER'", "'HOLDING-LOCKS'") +
+			sql2_tabs + 
+			"WHERE p1.open_tran > 0 \n" + 
+			"  AND p1.status    = 'sleeping' \n" +  
+			"  AND p1.cmd       = 'AWAITING COMMAND' \n" +  
+			"  AND exists (SELECT * FROM sys.dm_tran_locks WHERE request_session_id = p1.spid AND resource_type != 'DATABASE') \n" + 
+//			"  AND p1.spid in (select session_id from sys.dm_tran_session_transactions) \n" + 
+			"  AND p1.ecid = 0 \n" + // Only Parent SPID's in parallel statements ... or we can add/introduce the ECID in the primary key... 
+			"";
+		}
 
 		return 
 			sql1 +
-			"\n" +
-			"UNION ALL \n" +
-			"\n" +
-			sql2;
+				"\n" +
+				"UNION ALL \n" +
+				"\n" +
+			sql2 +
+			sql3 +
+				"";
 	}
 
 
@@ -596,11 +637,12 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("Sample System SPIDs", PROPKEY_sample_systemSpids  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemSpids  , DEFAULT_sample_systemSpids  ), DEFAULT_sample_systemSpids  , "Sample System SPID's" ));
-		list.add(new CmSettingsHelper("Get Query Plan",      PROPKEY_sample_showplan     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_showplan     , DEFAULT_sample_showplan     ), DEFAULT_sample_showplan     , "Also get queryplan" ));
-		list.add(new CmSettingsHelper("Get SQL Text",        PROPKEY_sample_monSqlText   , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_monSqlText   , DEFAULT_sample_monSqlText   ), DEFAULT_sample_monSqlText   , "Also get SQL Text"  ));
-		list.add(new CmSettingsHelper("Get Live Query Plan", PROPKEY_sample_liveQueryPlan, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan, DEFAULT_sample_liveQueryPlan), DEFAULT_sample_liveQueryPlan, "Also get LIVE queryplan" ));
-		list.add(new CmSettingsHelper("Get SPID Locks"     , PROPKEY_sample_spidLocks    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidLocks    , DEFAULT_sample_spidLocks    ), DEFAULT_sample_spidLocks    , "Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking."));
+		list.add(new CmSettingsHelper("Sample System SPIDs"      , PROPKEY_sample_systemSpids  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemSpids  , DEFAULT_sample_systemSpids  ), DEFAULT_sample_systemSpids  , "Sample System SPID's" ));
+		list.add(new CmSettingsHelper("Get Query Plan"           , PROPKEY_sample_showplan     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_showplan     , DEFAULT_sample_showplan     ), DEFAULT_sample_showplan     , "Also get queryplan" ));
+		list.add(new CmSettingsHelper("Get SQL Text"             , PROPKEY_sample_monSqlText   , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_monSqlText   , DEFAULT_sample_monSqlText   ), DEFAULT_sample_monSqlText   , "Also get SQL Text"  ));
+		list.add(new CmSettingsHelper("Get Live Query Plan"      , PROPKEY_sample_liveQueryPlan, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan, DEFAULT_sample_liveQueryPlan), DEFAULT_sample_liveQueryPlan, "Also get LIVE queryplan" ));
+		list.add(new CmSettingsHelper("Get SPID's holding locks" , PROPKEY_sample_holdingLocks , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_holdingLocks , DEFAULT_sample_holdingLocks ), DEFAULT_sample_holdingLocks , "Include SPID's that holds locks even if that are not active in the server." ));
+		list.add(new CmSettingsHelper("Get SPID Locks"           , PROPKEY_sample_spidLocks    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidLocks    , DEFAULT_sample_spidLocks    ), DEFAULT_sample_spidLocks    , "Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking."));
 
 		return list;
 	}
@@ -1266,28 +1308,36 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 			//-------------------------------------------------------
 			if (isSystemAlarmsForColumnEnabledAndInTimeRange("ImBlockingOthersMaxTimeInSec"))
 			{
+				Object o_ImBlockingOtherSessionIds    = cm.getRateValue(r, "ImBlockingOtherSessionIds");
 				Object o_ImBlockingOthersMaxTimeInSec = cm.getRateValue(r, "ImBlockingOthersMaxTimeInSec");
-				if (o_ImBlockingOthersMaxTimeInSec != null && o_ImBlockingOthersMaxTimeInSec instanceof Number)
+
+				if (    (o_ImBlockingOthersMaxTimeInSec != null && o_ImBlockingOthersMaxTimeInSec instanceof Number)
+				     && (o_ImBlockingOtherSessionIds    != null && o_ImBlockingOtherSessionIds    instanceof Number) )
 				{
+					int ImBlockingOtherSessionIds    = ((Number)o_ImBlockingOtherSessionIds   ).intValue();
 					int ImBlockingOthersMaxTimeInSec = ((Number)o_ImBlockingOthersMaxTimeInSec).intValue();
 					
-					List<String> ImBlockingOtherSessionIdsList = StringUtil.commaStrToList(cm.getRateValue(r, "ImBlockingOtherSessionIds") + "");
-					String BlockingOtherSpidsStr = ImBlockingOtherSessionIdsList + "";
-					int    blockCount            = ImBlockingOtherSessionIdsList.size();
-
-					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSec, DEFAULT_alarm_ImBlockingOthersMaxTimeInSec);
-
-					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", ImBlockingOthersMaxTimeInSec='"+ImBlockingOthersMaxTimeInSec+"', ImBlockingOtherSessionIdsList="+ImBlockingOtherSessionIdsList);
-
-					if (ImBlockingOthersMaxTimeInSec > threshold)
+					if (ImBlockingOtherSessionIds != 0)
 					{
-						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-						AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, ImBlockingOthersMaxTimeInSec, BlockingOtherSpidsStr, blockCount);
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-						
-						alarmHandler.addAlarm( ae );
+						List<String> ImBlockingOtherSessionIdsList = StringUtil.commaStrToList(cm.getRateValue(r, "ImBlockingOtherSessionIds") + "");
+						String BlockingOtherSpidsStr = ImBlockingOtherSessionIdsList + "";
+						int    blockCount            = ImBlockingOtherSessionIdsList.size();
+						int    spid                  = cm.getRateValueAsDouble(r, "session_id").intValue();
+
+						int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSec, DEFAULT_alarm_ImBlockingOthersMaxTimeInSec);
+
+						if (debugPrint || _logger.isDebugEnabled())
+							System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", ImBlockingOthersMaxTimeInSec='"+ImBlockingOthersMaxTimeInSec+"', ImBlockingOtherSessionIdsList="+ImBlockingOtherSessionIdsList);
+
+						if (ImBlockingOthersMaxTimeInSec > threshold)
+						{
+							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+							AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, spid, ImBlockingOthersMaxTimeInSec, BlockingOtherSpidsStr, blockCount);
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							
+							alarmHandler.addAlarm( ae );
+						}
 					}
 				}
 			}

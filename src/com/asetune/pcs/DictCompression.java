@@ -371,7 +371,8 @@ public class DictCompression
 	{
 		DatabaseMetaData dbmd = conn.getMetaData();
 
-		ResultSet rsmd = dbmd.getTables(null, schemaName, "%" + DCC_MARKER + "%", new String[] {"TABLE"});
+//		ResultSet rsmd = dbmd.getTables(null, schemaName, "%" + DCC_MARKER + "%", new String[] {"TABLE"});
+		ResultSet rsmd = dbmd.getTables(null, schemaName, "%" + DCC_MARKER + "%", new String[] {"TABLE", "BASE TABLE"});
 		while(rsmd.next())
 		{
 			rsmd.close();
@@ -397,7 +398,8 @@ public class DictCompression
 		
 		DatabaseMetaData dbmd = conn.getMetaData();
 
-		ResultSet rsmd = dbmd.getTables(null, schemaName, "%" + DCC_MARKER + "%", new String[] {"TABLE"});
+//		ResultSet rsmd = dbmd.getTables(null, schemaName, "%" + DCC_MARKER + "%", new String[] {"TABLE"});
+		ResultSet rsmd = dbmd.getTables(null, schemaName, "%" + DCC_MARKER + "%", new String[] {"TABLE", "BASE TABLE"});
 		while(rsmd.next())
 		{
 			String schName = rsmd.getString("TABLE_SCHEM");

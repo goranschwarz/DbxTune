@@ -123,6 +123,7 @@ extends DefaultListCellRenderer
 			if      (info.getType().equalsIgnoreCase("MDA Table"))        return ICON_MDA_TABLE;
 			else if (info.getType().equalsIgnoreCase("SYNONYM"))          return ICON_SYNONYM;
 			else if (info.getType().equalsIgnoreCase("TABLE"))            return ICON_TABLE;
+			else if (info.getType().equalsIgnoreCase("BASE TABLE"))       return ICON_TABLE;           // H2 ver 2.0.202 or above
 			else if (info.getType().equalsIgnoreCase("SYSTEM TABLE"))     return ICON_SYSTEM_TABLE;
 			else if (info.getType().equalsIgnoreCase("VIEW"))             return ICON_VIEW;
 			else if (info.getType().equalsIgnoreCase("ALIAS"))            return ICON_ALIAS;

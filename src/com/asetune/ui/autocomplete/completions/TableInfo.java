@@ -177,7 +177,8 @@ implements Serializable
 			
 			if (StringUtil.hasValue(_tabType))
 			{
-				if ( _tabType.equalsIgnoreCase("TABLE") || _tabType.equalsIgnoreCase("SYSTEM") )
+//				if ( _tabType.equalsIgnoreCase("TABLE") || _tabType.equalsIgnoreCase("SYSTEM") )
+				if ( _tabType.equalsIgnoreCase("TABLE") || _tabType.equalsIgnoreCase("BASE TABLE") || _tabType.equalsIgnoreCase("SYSTEM") )
 				{
 					//System.out.println("refreshColumnInfo(): _tabCat='"+_tabCat+"', _tabSchema='"+_tabSchema+"', _tabName='"+_tabName+"'.");
 					
@@ -343,7 +344,8 @@ implements Serializable
 
 		if (StringUtil.hasValue(_tabType))
 		{
-			if ( _tabType.equalsIgnoreCase("TABLE") || _tabType.equalsIgnoreCase("SYSTEM") )
+//			if ( _tabType.equalsIgnoreCase("TABLE") || _tabType.equalsIgnoreCase("SYSTEM") )
+			if ( _tabType.equalsIgnoreCase("TABLE") || _tabType.equalsIgnoreCase("BASE TABLE") || _tabType.equalsIgnoreCase("SYSTEM") )
 			{
 				sb.append(getOtherTableInfo());
 

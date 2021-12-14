@@ -99,7 +99,8 @@ public class Table
 		//--------------------
 //		String[] tableTypes = null;
 		if (tableTypes == null)
-			tableTypes = new String[] {"TABLE", "SYSTEM TABLE"};
+//			tableTypes = new String[] {"TABLE", "SYSTEM TABLE"};
+			tableTypes = new String[] {"TABLE", "BASE TABLE", "SYSTEM TABLE"};
 		
 //		String[] DB2_tableTypes        = new String[] {"ALIAS", "HIERARCHY TABLE", "INOPERATIVE VIEW", "MATERIALIZED QUERY TABLE", "NICKNAME", "SYSTEM TABLE", "TABLE", "TYPED TABLE", "TYPED VIEW", "VIEW"};
 //		String[] ORACLE_tableTypes     = new String[] {"SYNONYM", "TABLE", "VIEW"};
@@ -328,7 +329,8 @@ public class Table
 		//--------------------
 		if (StringUtil.hasValue(t._tabType))
 		{
-			if ( t._tabType.equalsIgnoreCase("TABLE") || t._tabType.equalsIgnoreCase("SYSTEM") )
+//			if ( t._tabType.equalsIgnoreCase("TABLE") || t._tabType.equalsIgnoreCase("SYSTEM") )
+			if ( t._tabType.equalsIgnoreCase("TABLE") || t._tabType.equalsIgnoreCase("BASE TABLE") || t._tabType.equalsIgnoreCase("SYSTEM") )
 			{
 				// (thisTable -->> otherTables)  This table pointing to OTHER tables
 				if (true)

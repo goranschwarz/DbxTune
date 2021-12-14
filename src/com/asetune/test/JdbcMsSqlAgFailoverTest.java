@@ -62,18 +62,24 @@ public class JdbcMsSqlAgFailoverTest
 
 				if (_conn != null)
 				{
-					execAction(_sleepBetweenInserts, _numOfInsertsPerBatch);
+					execAction(_sleepBetweenInserts, _numOfInsertsPerBatch, (_numOfExecutions - cnt) );
 				}
 			}
 			catch (SQLException ex)
 			{
-				System.out.println("Problem (closing conn and retry)... " + ex.getMessage());
-				ex.printStackTrace();
+				System.out.println("--- Problem (closing conn and retry)... " + ex);
+				//ex.printStackTrace();
 				close();
+
+				int sleep = 1000;
+				System.out.println("--- Sleeping for " + sleep + " ms, before retrying... at: cnt=" + cnt +", of Total=" + _numOfExecutions);
+				cnt--;
+				try { Thread.sleep(sleep); }
+				catch(InterruptedException ignore) {}
 			}
 			catch (Exception ex)
 			{
-				System.out.println("EXITING... " + ex.getMessage());
+				System.out.println("EXITING... " + ex);
 				//ex.printStackTrace();
 				close();
 				return;
@@ -87,7 +93,7 @@ public class JdbcMsSqlAgFailoverTest
 		}
 	}
 
-	private void execAction(int sleepTime, int count)
+	private void execAction(int sleepTime, int count, int execBeforeStop)
 	throws Exception
 	{
 		// check if last inserted entry exists
@@ -112,7 +118,7 @@ public class JdbcMsSqlAgFailoverTest
 		long execTime = System.currentTimeMillis() - startTime;
 
 		long rowsPerSec = count * 1000 / execTime; 
-		System.out.println("DONE inserting " + count + " records (in " + execTime + " ms, " + rowsPerSec + " rowsPerSec, at='" + _currentServerName + "'). last ID = " + _lastInsertedId);
+		System.out.println("DONE inserting " + count + " records (in " + execTime + " ms, " + rowsPerSec + " rowsPerSec, at='" + _currentServerName + "'). last ID = " + _lastInsertedId + ". OuterExecBeforeStop = " + execBeforeStop);
 	}
 	
 	private int getLastId()
@@ -142,6 +148,37 @@ public class JdbcMsSqlAgFailoverTest
 		stmnt.close();
 
 		return newId;
+	}
+
+	private void checkExistingValues()
+	throws SQLException
+	{
+		int prevId = -1;
+
+		String sql = "select id from dbo.test_ag_table order by id";
+		
+		Statement stmnt = _conn.createStatement();
+		ResultSet rs = stmnt.executeQuery(sql);
+		while (rs.next())
+		{
+			int id = rs.getInt(1);
+
+			if (prevId == -1)
+			{
+				prevId = id;
+				continue;
+			}
+			else
+			{
+				if (prevId != (id - 1) )
+				{
+					System.out.println("   >>> WARNING: id=" + id + ", prevId=" + prevId + ". NOT in SEQUENCE...");
+				}
+				prevId = id;
+			}
+		}
+		rs.close();
+		stmnt.close();
 	}
 
 	private void connect()
@@ -199,6 +236,8 @@ public class JdbcMsSqlAgFailoverTest
 			}
 			else
 			{
+				System.out.println("This must be a *FAILED-OVER* connection, CHECK that all prev inserted values are in SEQUENCE.");
+				checkExistingValues();
 				System.out.println("This must be a *FAILED-OVER* connection, lets continue with ID: " + _lastInsertedId);
 			}
 		}
@@ -294,31 +333,34 @@ java -cp classes;lib/jconn3.jar com.asetune.test.JdbcMsSqlAgTest ston60238837a 1
  */
 	public static void main(String[] args)
 	{
-		System.out.println("Usage: hostname port user passwd [dbname] [full-jdbc-url]");
+		System.out.println("Usage: hostname port user passwd [dbname] [execCount] [full-jdbc-url]");
 		
-//		String host = "prod-2a-mssql";
-		String host = "prod-2v-mssql.home";
-		String port = "1433";
-//		String user = "gs1_app";
-//		String pawd = "Sc6eK2JMSSO+Zuum";
-		String user = "gs1_owner";
-		String pawd = "ge10V8zGQY9Zg7im";
-		String dbname = "gs1";
-		String fUrl = "";
+//		String host      = "prod-2a-mssql";
+		String host      = "prod-2v-mssql.home";
+		String port      = "1433";
+//		String user      = "gs1_app";
+//		String pawd      = "Sc6eK2JMSSO+Zuum";
+		String user      = "gs1_owner";
+		String pawd      = "ge10V8zGQY9Zg7im";
+		String execCount = "1000";
+		String dbname    = "gs1";
+		String fUrl      = "";
 		
-		if (args.length > 0) host   = args[0];
-		if (args.length > 1) port   = args[1];
-		if (args.length > 2) user   = args[2];
-		if (args.length > 3) pawd   = args[3];
-		if (args.length > 4) dbname = args[4];
-		if (args.length > 5) fUrl   = args[5];
+		if (args.length > 0) host      = args[0];
+		if (args.length > 1) port      = args[1];
+		if (args.length > 2) user      = args[2];
+		if (args.length > 3) pawd      = args[3];
+		if (args.length > 4) dbname    = args[4];
+		if (args.length > 5) execCount = args[5];
+		if (args.length > 6) fUrl      = args[6];
 
-		System.out.println("host   = '"+host+"'");
-		System.out.println("port   = '"+port+"'");
-		System.out.println("user   = '"+user+"'");
-		System.out.println("pawd   = '"+pawd+"'");
-		System.out.println("dbname = '"+dbname+"'");
-		System.out.println("fUrl   = '"+fUrl+"'");
+		System.out.println("host      = '"+host+"'");
+		System.out.println("port      = '"+port+"'");
+		System.out.println("user      = '"+user+"'");
+		System.out.println("pawd      = '"+pawd+"'");
+		System.out.println("dbname    = '"+dbname+"'");
+		System.out.println("execCount =  "+execCount);
+		System.out.println("fUrl      = '"+fUrl+"'");
 		
 //		String jdbcDriver    = "com.sybase.jdbc42.jdbc.SybDriver";
 		String jdbcUrl       = "jdbc:sqlserver://" + host + ":" + port + (dbname==null?"":";databaseName="+dbname);
@@ -330,7 +372,9 @@ java -cp classes;lib/jconn3.jar com.asetune.test.JdbcMsSqlAgTest ston60238837a 1
 		if ( ! "".equals(fUrl) )
 			jdbcUrl = fUrl;
 
-		JdbcMsSqlAgFailoverTest t = new JdbcMsSqlAgFailoverTest(1000, jdbcUrl, jdbcUser, jdbcPasswd);
+		int execCountInt = Integer.parseInt(execCount);
+		
+		JdbcMsSqlAgFailoverTest t = new JdbcMsSqlAgFailoverTest(execCountInt, jdbcUrl, jdbcUser, jdbcPasswd);
 		t.start();
 		
 	}

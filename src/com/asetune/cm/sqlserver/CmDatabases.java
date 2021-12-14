@@ -51,6 +51,7 @@ import com.asetune.alarm.events.AlarmEventLowLogFreeSpace;
 import com.asetune.alarm.events.AlarmEventLowOsDiskFreeSpace;
 import com.asetune.alarm.events.AlarmEventOldBackup;
 import com.asetune.alarm.events.AlarmEventOldTranLogBackup;
+import com.asetune.alarm.events.sqlserver.AlarmEventDbccCheckdbAge;
 import com.asetune.alarm.events.sqlserver.AlarmEventQueryStoreLowFreeSpace;
 import com.asetune.alarm.events.sqlserver.AlarmEventQueryStoreUnexpectedState;
 import com.asetune.cm.CmSettingsHelper;
@@ -70,7 +71,6 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
-import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.CollectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SqlServerUtils;
@@ -807,6 +807,8 @@ extends CountersModel
 			mtd.addColumn(cmName, "OldestTranSqlText"       ,"<html>SQL Text of the oldest open transaction</html>");                                                              //   = oti.most_recent_sql_text 
 			mtd.addColumn(cmName, "OldestTranShowPlanText"  ,"<html>Showplan Text of the oldest open transaction</html>");                                                         //   = oti.plan_text 
 			mtd.addColumn(cmName, "OldestTranLocks"         ,"<html>Summary of what locks this spid is using.</html>");                                                            //   = oti.plan_text 
+			mtd.addColumn(cmName, "LastGoodCheckDbTime"     ,"<html>Timestamp when we last executed a successfull DBCC CHECKDB. <br>NOTE: only in 2016 SP2 and later.</html>"); 
+			mtd.addColumn(cmName, "LastGoodCheckDbDays"     ,"<html>How many days since we executed a successfull DBCC CHECKDB. <br>NOTE: only in 2016 SP2 and later.</html>"); 
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -961,6 +963,17 @@ extends CountersModel
 			queryStoreDropTempTable1    = "if (object_id('tempdb..#queryStore') is not null) drop table #queryStore \n";
 			queryStoreDropTempTable2    = "drop table #queryStore \n";
 		}
+
+		// ----- SQL-Server 2016, SP2 and above
+		String lastGoodCheckDbTime   = "";
+		String lastGoodCheckDbDays   = "";
+		if (srvVersion >= Ver.ver(2016,0,0, 2)) // 2016 SP2
+		{
+			lastGoodCheckDbTime += "\n";
+			lastGoodCheckDbTime += "    ,LastGoodCheckDbTime      = convert(datetime, DATABASEPROPERTYEX(d.Name, 'LastGoodCheckDbTime')) \n";
+			lastGoodCheckDbDays  = "    ,LastGoodCheckDbDays      = datediff(day, convert(datetime, DATABASEPROPERTYEX(d.Name, 'LastGoodCheckDbTime')), getdate()) \n";
+		}
+
 
 		//		String sql = ""
 //			    + " \n"
@@ -1534,6 +1547,8 @@ extends CountersModel
 				+ "    ,LastDbBackupAgeInHours   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) \n"
 				+ "    ,LastLogBackupTime        =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L') \n"
 				+ "    ,LastLogBackupAgeInHours  = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L'), -1) \n"
+			    + lastGoodCheckDbTime
+			    + lastGoodCheckDbDays
 			    + " \n"
 			    + queryStoreColumns
 			    + "    ,OldestTranSqlText        = oti.most_recent_sql_text \n"
@@ -2588,12 +2603,12 @@ extends CountersModel
 					
 					if (QsUsedSpaceInPct > threshold.doubleValue())
 					{
-							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-							AlarmEvent ae = new AlarmEventQueryStoreLowFreeSpace(cm, dbname, QsUsedSpaceInPct, QsMaxSizeInMb, QsUsedSpaceInMb, QsFreeSpaceInMb, AlarmEventQueryStoreLowFreeSpace.Type.PCT, threshold);
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						AlarmEvent ae = new AlarmEventQueryStoreLowFreeSpace(cm, dbname, QsUsedSpaceInPct, QsMaxSizeInMb, QsUsedSpaceInMb, QsFreeSpaceInMb, AlarmEventQueryStoreLowFreeSpace.Type.PCT, threshold);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
-							alarmHandler.addAlarm( ae );
+						alarmHandler.addAlarm( ae );
 					}
 				}
 			}
@@ -2618,16 +2633,50 @@ extends CountersModel
 					
 					if (QsFreeSpaceInMb < threshold.doubleValue())
 					{
-							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-							AlarmEvent ae = new AlarmEventQueryStoreLowFreeSpace(cm, dbname, QsUsedSpaceInPct, QsMaxSizeInMb, QsUsedSpaceInMb, QsFreeSpaceInMb, AlarmEventQueryStoreLowFreeSpace.Type.MB, threshold);
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-							
-							alarmHandler.addAlarm( ae );
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						AlarmEvent ae = new AlarmEventQueryStoreLowFreeSpace(cm, dbname, QsUsedSpaceInPct, QsMaxSizeInMb, QsUsedSpaceInMb, QsFreeSpaceInMb, AlarmEventQueryStoreLowFreeSpace.Type.MB, threshold);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
 					}
 				}
 			}
 
+			//-------------------------------------------------------
+			// LastGoodCheckDbDays
+			//-------------------------------------------------------
+//TestThis;
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("LastGoodCheckDbDays"))
+			{
+				// Skip tempdb, model
+				if ( ! StringUtil.equalsAny(dbname, "tempdb", "model") )
+				{
+					// Only if we has the column... which was introduced in: 2016 SP2
+					if (cm.findColumn("LastGoodCheckDbDays") != -1)
+					{
+						Double LastGoodCheckDbDays = cm.getAbsValueAsDouble(r, "LastGoodCheckDbDays");
+						String LastGoodCheckDbTime = cm.getAbsValue(r, "LastGoodCheckDbTime") + "";
+
+//						int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastGoodCheckDbDays, DEFAULT_alarm_LastGoodCheckDbDays);
+						Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LastGoodCheckDbDays); // This uses dbname.matches(map:anyKey)
+
+						if (debugPrint || _logger.isDebugEnabled())
+							System.out.println("##### sendAlarmRequest("+cm.getName()+"): LastGoodCheckDbDays -- dbname='"+dbname+"', threshold="+threshold+", LastGoodCheckDbDays='"+LastGoodCheckDbDays+"'.");
+
+						if (threshold != null && LastGoodCheckDbDays != null && LastGoodCheckDbDays.intValue() > threshold.intValue())
+						{
+							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+							AlarmEvent ae = new AlarmEventDbccCheckdbAge(cm, dbname, LastGoodCheckDbDays.intValue(), LastGoodCheckDbTime, threshold.intValue());
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							
+							alarmHandler.addAlarm( ae );
+						}
+					}
+				}
+			} // end: LastGoodCheckDbDays
+			
 		} // end: loop dbname(s)
 	}
 
@@ -2752,6 +2801,8 @@ extends CountersModel
 	private Map<String, Number> _map_alarm_LowOsDiskFreeSpaceInMb;  // Note: do NOT initialize this here... since the initAlarms() is done in super, if initialized it will be overwritten here...
 	private Map<String, Number> _map_alarm_LowOsDiskFreeSpaceInPct; // Note: do NOT initialize this here... since the initAlarms() is done in super, if initialized it will be overwritten here...
 
+	private Map<String, Number> _map_alarm_LastGoodCheckDbDays; // Note: do NOT initialize this here... since the initAlarms() is done in super, if initialized it will be overwritten here...
+
 	private Map<String, Pattern> _map_alarm_DbState;
 
 
@@ -2771,6 +2822,8 @@ extends CountersModel
 
 		_map_alarm_LowOsDiskFreeSpaceInMb  = new LinkedHashMap<>();
 		_map_alarm_LowOsDiskFreeSpaceInPct = new LinkedHashMap<>();
+
+		_map_alarm_LastGoodCheckDbDays     = new LinkedHashMap<>();
 
 		_map_alarm_DbState = new LinkedHashMap<>();
 
@@ -3037,6 +3090,50 @@ extends CountersModel
 
 		
 		//--------------------------------------
+		// LastGoodCheckDbDays
+		cfgVal = conf.getProperty(PROPKEY_alarm_LastGoodCheckDbDays, DEFAULT_alarm_LastGoodCheckDbDays);
+		if (StringUtil.hasValue(cfgVal))
+		{
+			Map<String, String> map = StringUtil.parseCommaStrToMap(cfgVal);
+			if (_logger.isDebugEnabled())
+				_logger.debug(prefix + "Initializing alarm 'LastGoodCheckDbDays'. After parseCommaStrToMap, map looks like: "+map);
+			
+			for (String key : map.keySet())
+			{
+				String val = map.get(key);
+				
+				try
+				{
+					int age = NumberUtils.createNumber(val).intValue();
+					_map_alarm_LastGoodCheckDbDays.put(key, age);
+
+					_logger.info(prefix + "Initializing alarm. Using 'LastGoodCheckDbDays', dbname='"+key+"', age="+age);
+				}
+				catch (NumberFormatException ex)
+				{
+					_logger.info(prefix + "Initializing alarm. Skipping 'LastGoodCheckDbDays' enty dbname='"+key+"', val='"+val+"'. The value is not a number.");
+				}
+			}
+			
+			// Sort the MAP by value in ascending order (low number first)
+			_map_alarm_LastGoodCheckDbDays = CollectionUtils.sortByMapValueNumber(_map_alarm_LastGoodCheckDbDays, true);
+			
+			// Remove ".*" wild-card and add that to the *end*
+			if (_map_alarm_LastGoodCheckDbDays.containsKey(".*"))
+			{
+				Number num = _map_alarm_LastGoodCheckDbDays.get(".*");
+				_map_alarm_LastGoodCheckDbDays.put(".*", num);
+			}
+
+			_logger.info(prefix + "Evaluating alarm for 'LastGoodCheckDbDays' in the following order:");
+			for (Entry<String, Number> entry : _map_alarm_LastGoodCheckDbDays.entrySet())
+			{
+				_logger.info(prefix + "    dbname='" + entry.getKey() + "', age=" + entry.getValue());
+			}
+		}
+
+		
+		//--------------------------------------
 		// DbState
 		cfgVal = conf.getProperty(PROPKEY_alarm_DbState, DEFAULT_alarm_DbState);
 		if (StringUtil.hasValue(cfgVal))
@@ -3160,6 +3257,9 @@ extends CountersModel
 	public static final String  PROPKEY_alarm_QsFreeSpaceInMb                 = CM_NAME + ".alarm.system.if.QsFreeSpaceInMb.lt";
 	public static final int     DEFAULT_alarm_QsFreeSpaceInMb                 = 20;
 	
+	public static final String  PROPKEY_alarm_LastGoodCheckDbDays             = CM_NAME + ".alarm.system.if.LastGoodCheckDbDays.gt";
+	public static final String  DEFAULT_alarm_LastGoodCheckDbDays             = ".*=99999"; // 99_999; // Basically turned OFF
+	
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
@@ -3205,6 +3305,8 @@ extends CountersModel
 		list.add(new CmSettingsHelper("QsIsOk ",                          isAlarmSwitch, PROPKEY_alarm_QsIsOk                          , String .class, conf.getProperty      (PROPKEY_alarm_QsIsOk                          , DEFAULT_alarm_QsIsOk                         ), DEFAULT_alarm_QsIsOk                         , "If 'QsIsOk' is not 'YES' (meaning 'QsDesiredState' and 'QsActualState' do not match) then send 'AlarmEventQueryStoreUnexpectedState'. Note: This is not configurabe per database name"));
 		list.add(new CmSettingsHelper("QsUsedPct",                        isAlarmSwitch, PROPKEY_alarm_QsUsedSpaceInPct                , Double .class, conf.getDoubleProperty(PROPKEY_alarm_QsUsedSpaceInPct                , DEFAULT_alarm_QsUsedSpaceInPct               ), DEFAULT_alarm_QsUsedSpaceInPct               , "If 'QsUsedSpaceInPct' more than ## Percent then send 'AlarmEventQueryStoreLowFreeSpace'. Note: This is not configurabe per database name"));
 		list.add(new CmSettingsHelper("QsFreeSpaceInMb",                  isAlarmSwitch, PROPKEY_alarm_QsFreeSpaceInMb                 , Integer.class, conf.getIntProperty   (PROPKEY_alarm_QsFreeSpaceInMb                 , DEFAULT_alarm_QsFreeSpaceInMb                ), DEFAULT_alarm_QsFreeSpaceInMb                , "If 'QsFreeSpaceInMb' is less that ## MB then send 'AlarmEventQueryStoreLowFreeSpace'. Note: This is not configurabe per database name"));
+
+		list.add(new CmSettingsHelper("LastGoodCheckDbDays",              isAlarmSwitch, PROPKEY_alarm_LastGoodCheckDbDays             , String .class, conf.getProperty      (PROPKEY_alarm_LastGoodCheckDbDays             , DEFAULT_alarm_LastGoodCheckDbDays            ), DEFAULT_alarm_LastGoodCheckDbDays            , "If DBCC CHECKDB hasn't been executed for X days... ('LastGoodCheckDbDays' is greater that ## DAYS) then send 'AlarmEventDbccCheckdbAge'. format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)" , new MapNumberValidator()));
 
 		return list;
 	}

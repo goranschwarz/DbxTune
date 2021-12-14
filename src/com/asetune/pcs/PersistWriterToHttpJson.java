@@ -194,7 +194,7 @@ extends PersistWriterBase
 			// Set the time to live
 			// But why ????
 			// IF:   the "other" PCS Writers takes a long time (longer than the "sample interval" in the Collector thread
-			// THEN: It will not see any Alarms from here... so it will see that as a "CANCEL" (since no re-rease has happened)
+			// THEN: It will not see any Alarms from here... so it will see that as a "CANCEL" (since no re-raise has happened)
 			// SO:   Set the TimeToLive to "maxSaveTime" for "any" of the PCS Writers in the PCS Handler
 			long timeToLive = 120*1000; // 2 minutes by default
 			if (PersistentCounterHandler.hasInstance())

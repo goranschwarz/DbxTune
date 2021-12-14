@@ -252,7 +252,8 @@ extends SqlStatementAbstract
 			String catalogPattern = sqlObj.getCatalogNameNull();
 			String schemaPattern  = sqlObj.getSchemaNameNull();
 			String tablePattern   = sqlObj.getObjectNameOrigin();
-			String[] tableTypes   = new String[] {"TABLE"};
+//			String[] tableTypes   = new String[] {"TABLE"};
+			String[] tableTypes   = new String[] {"TABLE", "BASE TABLE"};
 
 			ResultSet rs = dbmd.getTables(catalogPattern, schemaPattern, tablePattern, tableTypes);
 			while(rs.next())

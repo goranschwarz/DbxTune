@@ -1475,7 +1475,8 @@ extends JDialog
 	 */
 	public ResultSetTableModel getTables(Connection conn, String catalog, String schemaPattern, String valueNamePattern, String tableTypesStr)
 	{
-		String[] tableTypes = new String[] {"TABLE"};
+//		String[] tableTypes = new String[] {"TABLE"};
+		String[] tableTypes = new String[] {"TABLE", "BASE TABLE"};
 
 		if (StringUtil.isNullOrBlank(valueNamePattern))
 			valueNamePattern = "";

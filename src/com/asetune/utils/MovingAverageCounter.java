@@ -21,7 +21,7 @@
  ******************************************************************************/
 package com.asetune.utils;
 
-import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.LinkedList;
 
 public class MovingAverageCounter
@@ -138,7 +138,7 @@ public class MovingAverageCounter
 
 		long now = System.currentTimeMillis();
 		long threshold = _minutes * 60 * 1000;
-		while(true)
+		while( ! _values.isEmpty() )
 		{
 			Entry oldestEntry = _values.getFirst(); // note: new entries are added at "END", so oldest entry would be FIRST
 			long ageinMs = now - oldestEntry._ts;
@@ -252,10 +252,10 @@ public class MovingAverageCounter
 	
 
 	/**
-	 * Get peak time (as a java.util.Date) over the period 
+	 * Get peak time over the period 
 	 * @return
 	 */
-	public Date getPeakTime()
+	public Timestamp getPeakTimestamp()
 	{
 		double peakNumber = 0;
 		long   peakTime   = 0;
@@ -269,7 +269,7 @@ public class MovingAverageCounter
 			}
 		}
 		
-		return new Date(peakTime);
+		return new Timestamp(peakTime);
 	}
 	
 

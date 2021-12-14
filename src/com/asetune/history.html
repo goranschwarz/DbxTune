@@ -42,6 +42,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>new  AlarmEventExtensiveUsage           -- for example if tempdb is heavely used</LI>
 				<LI>new  AlarmEventStackDump                -- for SQL-Server only: Sends the StackDump as a chunk of text</LI>
 				<LI>new  AlarmEventOsSwapping               -- if IN or OUT is above 5000. For Linux/Unix it's in 'CmOsVmstat', for Windows it's in 'CmOsMeminfo'</LI>
+				<LI>new  AlarmEventDbccCheckdbAge           -- for SQL Server, when dbcc checkdb hasn't been executed. </LI>
 				
 				<LI>Changed: AlarmEventConfigResourceIsLow       -- added "raiseDelay", which is used by 'Statement Cache Hit Rate', and the default was set to 5 minutes below configured value before raising alarm.</LI>
 				<LI>Changed: AlarmEventFullTranLog               -- alwaysSend() is now set to true, so even if we do not "subscribe" for alarms on this server, we will still get message, just like SrvDown </LI>
@@ -49,6 +50,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>Changed: AlarmEventOldBackup                 -- added lastBackupStartTime to the alarm message</LI>
 				<LI>Changed: AlarmEventOldTranLogBackup          -- added lastBackupStartTime to the alarm message</LI>
 				<LI>Changed: AlarmEventLongRunningTransaction    -- Changed from Severity WARNING to INFO</LI>
+				<LI>Changed: AlarmEventHttpDestinationDown       -- bugfix: was never canceled (it was kept due to 'hasUndergoneAlarmDetection' checks)</LI>
+				<LI>Changed: AlarmEventBlockingLockAlarm         -- Added SPID to key, so we can have multiple alarms on blocking locks</LI>
 			</UL>
 		</LI>
 		<LI>AlarmWriterToMail: Changed temple for Subject to include ${severity}, also changed encoding to UTF-8</LI>
@@ -88,6 +91,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>OS Monitoring: New CmOsPs <i>OS Top Processes(ps)</i> - snapshot top processes on the Server side. Solaris, Aix, Hp: <code>not yet implemented</code>, Linux: <code>ps -e -ww --format pid,ppid,euser,tty,vsz,rss,etimes,cputime,pmem,pcpu,args --sort=-pcpu | head -n ##</code>, for Windows <code>powershell "Get-Process | sort -desc cpu | select -first ##"</code></LI> 
 
 		<LI>DictCompression - Not storing records as a batch, instead reverting back to single statement, also changed some concurrency issues</LI>
+		<LI>Prepared for some H2 upgrade. ver 2.0.202 or above: JDBC MetaData getTables() new table type 'TABLE' --> 'BASE TABLE'</LI>
 
 		<LI>Daily Summary Report Changes
 			<UL>
@@ -130,6 +134,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>On graphs, added right click menu item: Open this graph (last 7 days, full day) in new Tab</LI>
 		<LI>In the tab 'Server', and section 'All file(s) in the LOG Directory', added a shortcut section where you can add file endings that you want to list here. <code>logfiles.shortcuts=*.console</code> </LI>
 		<LI>Changed number of lines in file tail from 500 to 5000</LI>
+		<LI>changed default retention time from 12 months to 14 months (so we can see any "end-of-year" statistics)</LI>
  	</UL>
 
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -139,6 +144,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<li>When recording a session: SQL Capture -- Rewritten;  now picks up SQL Text/Plan in a better way </li>
 		<li>On connect: if option 'enable metrics capture' is enabled at server level, then disable it at the monConnection level using 'set metrics_capture off'</li>
 		<li>AsePlanViewer - Fill in 'execParameters' or 'compileParameters' in the SQL Text</li>
+		<li>bugfix: Discard Msg 938 -- Database 'xxx' is unavailable. It is undergoing LOAD TRANSACTION. in createPcsHeaderInfo()</li>
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
@@ -150,6 +156,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>New column: 'SrvUserName'         -- Name of the Server Login. SQL: SrvUserName = suser_name(P.ServerUserID) Note: Only in ASE 15.0.2 ESD#2 or later</li>
 			<li>Added skip capabilities for alarm BlockingLockAlarm, you can skip on columns 'Command', 'Application', 'SrvUserName', and 'HostName'. The default is to skip where Command = <code>^(DUMP DATABASE|DUMP TRANSACTION).*</code> </li>
 			<li>raise AlarmEventLongRunningStatement when a statement has been executed for more than 3 hours (by default), 'skip' can be done on: dbname, Application, SrvUserName, HostName, Command</li>
+			<li>AlarmEventBlockingLockAlarm now also contains SPID, so we can report multiple blocking locks</li>
 		</ul>
 		</LI>
 
@@ -221,7 +228,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
-		<b>CmStmntCacheDetails - tab: Statement Cache< Details/b><br>
+		<b>CmStmntCacheDetails - tab: Statement Cache Details</b><br>
 		<ul>
 			<li> added columns 'TotalEstWaitTime' and 'TotalEstWaitTimeDiff' -- Total Estimated Wait Time... Algorithm: TotalElapsedTime - TotalCpuTime</li>
 		</ul>
@@ -236,6 +243,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>also the internal storage table(s) column layout was redone</li>
 			<li>Normalizations of SQL Statements was made better, and also a "rewrite" functionality was made so we can better support SQL Syntax "not supported" by JsqlParser</li>
 			<li>Statement Normalizer enhanced to handle Stored Procedure execution a bit better</li>
+			<li>XmlPlanCache -- getMemoryConsumption(): wrapped integer, changed to long for better info messages</li>
+			<li>XmlPlanCache -- lowOnMemoryHandler(): removes entries that hasn't been accessed for 1 hour (config: <code>XmlPlanCache.lowOnMememory.removeAgeInMinutes=60</code>)</li>
 		</ul>
 		</LI>
 
@@ -351,6 +360,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmActiveStatements </b> - using OUTER apply instead of CROSS apply to *not* miss records with no query or query plan </LI>
 		<LI><b>CmActiveStatements </b> - new alarm: if 'TempdbUsageMb' is above 16GB then send alarm: AlarmEventExtensiveUsage </LI>
 		<LI><b>CmActiveStatements </b> - Changed the 'BLOCKER' to only return Parent SPID's in parallel statements </LI>
+		<LI><b>CmActiveStatements </b> - Also sampling SPID's that are 'holding locks' but are not active on server, and control are at 'client side' </LI>
+		<LI><b>CmActiveStatements </b> - bugfix: Only report 'root cause' session_id's on blocking locks </LI>
+		<LI><b>CmActiveStatements </b> - AlarmEventBlockingLockAlarm now alos contains SPID, so we can report multiple blocking locks </LI>
 		
 		<LI><b>CmAlwaysOn         </b> - Granting select,insert,update,delete on table 'sqlserverTune_ag_dummy_update' was enhanced (note: this will still fail if the connection do not have authorization to create the table in the database. </LI>
 
@@ -364,6 +376,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmDatabases        </b> - AlarmEventLowOsDiskFreeSpace fixed bug that did not display the correct 'mountPoint' ... it always said '-unknown-'</LI>
 		<LI><b>CmDatabases        </b> - Do not raise LongRunningTransaction if we do NOT have any locks</LI>
 		<LI><b>CmDatabases        </b> - new columns: 'LogFileCount', 'DataFileCount', 'OldestTranTempdbUsageMb'</LI>
+		<LI><b>CmDatabases        </b> - new columns: 'LastGoodCheckDbTime', 'LastGoodCheckDbDays' to reflect what we have executed a DBCC CHECKDB. NOte: Only in 2016 SP2 and later.</LI>
+		<LI><b>CmDatabases        </b> - raise AlarmEventDbccCheckdbAge when dbcc checkdb hasn't been executed. Default is 99999 (Basically turned OFF)</LI>
 
 		<LI><b>CmDeviceIo         </b> - 3 new Graph: Number of Disk Operations, for ALL Devices (Read+Write, Read, Write)</LI>
 
@@ -377,6 +391,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmExecQueryStat    </b> - new columns 'objectid', 'object_name'. so we can see if it's a procedure call </LI>
 		<LI><b>CmExecQueryStat    </b> - Long running statements was sometimes missing, if 'sample_lastXminutes' was enabled.</LI>
 		<LI><b>CmExecQueryStat    </b> - using OUTER apply instead of CROSS apply to *not* miss records with no query or query plan </LI>
+		<LI><b>CmExecQueryStat    </b> - Changed Default 'postpone time' to 5 minutes... sample this less often </LI>
 
 		<LI><b>CmIndexOpStat      </b> - new postpone value of 300 seconds (5 minutes) </LI>
 		<LI><b>CmIndexOpStat      </b> - using the DbmsObjectIdCache to lookup database_id-&gt;DbName, object_id-&gt;(TableName, SchemaName), index_id-&gt;IndexName </LI>
@@ -417,6 +432,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmSessions         </b> - new column 'ProcName', 'StmntStart' so we can see if a Stored Proc is executing and what "line" </LI>
 		<LI><b>CmSessions         </b> - new column 'endpoint_type' so we can see what type of coonection it's using (DAC, SHARED_MEMORY, NAMED_PIPES, TCP, VIA) </LI>
 		<LI><b>CmSessions         </b> - skip alarm 'LongRunningStatement' if column 'executing_managed_code' is true, and 'wait_type' is 'SLEEP_TASK' </LI>
+		<LI><b>CmSessions         </b> - added columns 'tran_age_ms', and a few other columns for completion time and elaped time </LI>
 
 		<LI><b>CmSpidWait         </b> - added column 'WaitClass', which tries to group 'wait_type' in groups ... this according to https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15</LI>
 
@@ -505,7 +521,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmSummary            </b> - added column 'in_recovery' to check if we connected to the ACTIVE or the STANDBY instance.</LI>
 		<LI><b>CmSummary            </b> - added columns 'oldest_running_xact_age', 'oldest_prepared_xact_age', 'oldest_replication_slot_age', 'oldest_replica_xact_age' to check if we will exceed the MAX Transaction ID in some "near" future!</LI>
 		<LI><b>CmSummary            </b> - Also a Graph on columns 'oldest_running_xact_age', 'oldest_prepared_xact_age', 'oldest_replication_slot_age', 'oldest_replica_xact_age'</LI>
+		<LI><b>CmPgTables           </b> - New chart 'DeadRows' so we can follow number of dead rows for each database</LI>
 		<LI><b>Daily Summary Report </b> - Statements - tooltip and popup with the SQL Text</LI>
+		<LI><b>Daily Summary Report </b> - New section for 'DeadRows'.</LI>
 		<LI><b>View Configuration   </b> - added one extra, calculated column: "ValueInMb"</LI> 
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->

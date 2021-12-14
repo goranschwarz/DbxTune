@@ -27,6 +27,7 @@ import com.asetune.pcs.report.content.os.OsSpaceUsageOverview;
 import com.asetune.pcs.report.content.postgres.PostgresConfig;
 import com.asetune.pcs.report.content.postgres.PostgresConfiguration;
 import com.asetune.pcs.report.content.postgres.PostgresDbSize;
+import com.asetune.pcs.report.content.postgres.PostgresTopDeadRows;
 import com.asetune.pcs.report.content.postgres.PostgresTopSql;
 import com.asetune.pcs.report.content.postgres.PostgresTopTableAccess;
 import com.asetune.pcs.report.content.postgres.PostgresTopTableSize;
@@ -45,6 +46,7 @@ extends DailySummaryReportDefault
 
 		// SQL
 		addReportEntry( new PostgresTopSql        (this) );
+		addReportEntry( new PostgresTopDeadRows   (this) );
 		addReportEntry( new PostgresTopTableAccess(this) );
 
 		// Disk IO Activity

@@ -896,7 +896,8 @@ System.out.println("XXXX: guessedEncoding='"+guessedEncoding+"', encoding='"+enc
 	 */
 	public ResultSetTableModel getTables(DbxConnection conn, String catalog, String schemaPattern, String valueNamePattern, String tableTypesStr)
 	{
-		String[] tableTypes = new String[] {"TABLE"};
+//		String[] tableTypes = new String[] {"TABLE"};
+		String[] tableTypes = new String[] {"TABLE", "BASE TABLE"};
 
 		if (StringUtil.isNullOrBlank(valueNamePattern))
 			valueNamePattern = "";

@@ -519,8 +519,9 @@ public class CounterControllerAse extends CounterControllerAbstract
 					if (msgStr != null)
 						msgStr = msgStr.trim();
 					
-					// Msg 937: Database 'PML' is unavailable. It is undergoing LOAD DATABASE.
-					if (code == 937)
+					// Msg 937: Database 'xxx' is unavailable. It is undergoing LOAD DATABASE.
+					// Msg 938: Database 'xxx' is unavailable. It is undergoing LOAD TRANSACTION.
+					if (code == 937 || code == 938)
 					{
 						_logger.debug("createPcsHeaderInfo(): Discarding Msg "+code+", Str '"+msgStr+"'.");
 						
@@ -600,14 +601,15 @@ public class CounterControllerAse extends CounterControllerAbstract
 				}
 			}
 			
-			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '"+sql+"', Caught: " + sqlex.toString() );
 			mainSampleTime   = new Timestamp(System.currentTimeMillis());
 			aseServerName    = _savedAseServerName;
 			aseHostname      = _savedAseHostName;
 			counterClearTime = new Timestamp(0);
-			
+
 			if (StringUtil.isNullOrBlank(aseServerName)) aseServerName = "unknown";
 			if (StringUtil.isNullOrBlank(aseHostname))   aseHostname   = "unknown";
+			
+			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static/saved values' (mainSampleTime='" + mainSampleTime + "', aseServerName='" + aseServerName + "', aseHostname='" + aseHostname + "', counterClearTime='" + counterClearTime + "'). SQL '"+sql+"', Caught: " + sqlex.toString() );
 		}
 		finally
 		{

@@ -23,8 +23,11 @@ package com.asetune.cm.postgres;
 import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
@@ -33,8 +36,11 @@ import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSampleCatalogIteratorPostgres;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.cm.CounterTableModel;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.postgres.gui.CmPgTablesPanel;
+import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
@@ -159,6 +165,8 @@ extends CountersModel
 	public static final String  PROPKEY_sample_systemTables           = PROP_PREFIX + ".sample.systemTables";
 	public static final boolean DEFAULT_sample_systemTables           = false;
 
+	public static final String GRAPH_NAME_DEAD_ROWS                   = "DeadRows";
+
 	@Override
 	protected void registerDefaultValues()
 	{
@@ -182,7 +190,77 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
+		addTrendGraph(GRAPH_NAME_DEAD_ROWS,
+			"Number of Dead Rows per Database", 	                // Menu CheckBox text
+			"Number of Dead Rows per Database(n_dead_tup) per Database ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB,
+			null, LabelType.Dynamic, 
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 	}
+
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		if (GRAPH_NAME_DEAD_ROWS.equals(tgdp.getName()))
+		{
+			// loop all rows and add "n_dead_tup" to a Map
+			Map<String, Integer> dbMap = new LinkedHashMap<>();
+
+			CounterTableModel data = getCounterDataAbs();
+			
+			int dbname_pos     = data.findColumn("dbname");
+			int n_dead_tup_pos = data.findColumn("n_dead_tup");
+			
+			if (dbname_pos != -1 && n_dead_tup_pos != -1)
+			{
+				// Loop all rows, and add value to "dbMap"
+				int rc = data.getRowCount();
+				for (int rowId = 0; rowId < rc; rowId++)
+				{
+					String dbname      = data.getValueAt(rowId, dbname_pos) + "";
+					int    n_dead_tup  = ((Number)data.getValueAt(rowId, n_dead_tup_pos )).intValue();
+
+					Integer val = dbMap.get(dbname);
+					if (val == null)
+						val = 0;
+
+					val += n_dead_tup;
+					
+					dbMap.put(dbname, val);
+				}
+
+				// XXXXXXXXXX
+				Double[] dArray = new Double[dbMap.size() + 1 ]; // add one for ALL Tables (or sum)
+				String[] lArray = new String[dArray.length];
+
+				int ap = 1;
+				double sum = 0;
+				for (Entry<String, Integer> entry : dbMap.entrySet())
+				{
+					String dbname = entry.getKey();
+					double val = entry.getValue().doubleValue();
+					
+					sum += val;
+					
+					lArray[ap] = dbname;
+					dArray[ap] = val;
+
+					ap++;
+				}
+				
+				lArray[0] = "ALL-DBs";
+				dArray[0] = sum;
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+
+			} //end: if we have columns
+		} // end: graph
+	} // end: method
 
 	@Override
 	protected TabularCntrPanel createGui()

@@ -61,7 +61,7 @@ extends Task
 //	public static final String DEFAULT_cron = "* * * * *";
 
 	public static final String PROPKEY_keepDays = "CentralPcsJdbcCleaner.keep.days";
-	public static final int    DEFAULT_keepDays = 365 + 31; // keep for 13 months (so we can see any "end-of-year" work
+	public static final int    DEFAULT_keepDays = 365 + 62; // keep for 14 months (so we can see any "end-of-year" work
 //	public static final int    DEFAULT_keepDays = 60;
 
 //	public static final String  PROPKEY_printSpaceInfo = "CentralPcsJdbcCleaner.print.space.info";

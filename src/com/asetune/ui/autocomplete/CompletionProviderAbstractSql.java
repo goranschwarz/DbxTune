@@ -1295,7 +1295,8 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 				if (_logger.isDebugEnabled())
 					_logger.debug("type='"+ti._tabType+"', name='"+ti._tabName+"'.");
 
-				if ("TABLE".equals(ti._tabType))
+//				if ("TABLE".equals(ti._tabType))
+				if ("TABLE".equals(ti._tabType) || "BASE TABLE".equals(ti._tabType))
 					clist.add(tc);
 			}
 

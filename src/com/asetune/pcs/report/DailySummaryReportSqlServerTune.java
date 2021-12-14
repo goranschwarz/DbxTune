@@ -60,6 +60,15 @@ extends DailySummaryReportDefault
 		
 		// SQL
 		addReportEntry( new SqlServerTopCmExecQueryStats    (this));
+				// CmExecQueryStatsCpu         Order BY: CPU Usage (total_worker_time)
+				// CmExecQueryStatsWaits       Order BY: CPU Usage (total_elapsed_time - total_worker_time)
+				// CmExecQueryStatsSpills      Order BY: tempdb Spills
+				// CmExecQueryStatsLReads      Order BY: Logical Reads
+				// CmExecQueryStatsPReads      Order BY: Physical Reads
+				// CmExecQueryStatsWrites      Order BY: Physical Writes
+				// CmExecQueryStatsExecCnt     Order BY: Execution Count
+				// CmExecQueryStatsCompile     Order BY: "recent compilations"
+				// CmExecQueryStatsMemoryGrant Order BY: memory_grant
 		addReportEntry( new SqlServerTopCmExecProcedureStats(this));
 		addReportEntry( new SqlServerTopCmExecFunctionStats (this));
 		addReportEntry( new SqlServerTopCmExecTriggerStats  (this));

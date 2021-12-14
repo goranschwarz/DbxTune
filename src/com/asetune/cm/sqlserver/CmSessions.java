@@ -369,6 +369,7 @@ extends CountersModel
 			    + "                        END \n"
 			    + "    ,tat.name AS transaction_name \n"
 			    + "    ,tat.transaction_begin_time \n"
+			    + "    ,tran_age_ms     = CASE WHEN datediff(day, tat.transaction_begin_time, getdate()) >= 24 THEN -1 ELSE  datediff(ms, tat.transaction_begin_time, getdate()) END \n"
 
 			    + "    ,es.status  -- Running, Sleeping, Dormant, Preconnect \n"
 			    + "    ,exec_status     = er.status        --- can probably be found somewhere else -- Background, Running, Runnable, Sleeping, Suspended \n"
@@ -405,15 +406,18 @@ extends CountersModel
 			    + "    ,er.open_resultset_count \n"
 			    + "    ,exec_transaction_id            = er.transaction_id \n"
 			    + "    ,er.percent_complete \n"
-			    + "    ,er.estimated_completion_time \n"
-			    + "    ,exec_cpu_time           = er.cpu_time                        -- DIFF (is that the same as xxxx) \n"
-			    + "    ,exec_total_elapsed_time = er.total_elapsed_time \n"
+			    + "    ,est_completion_time_ms     = er.estimated_completion_time \n"
+			    + "    ,est_completion_ts          = CASE WHEN er.estimated_completion_time <= 0 THEN NULL ELSE dateadd(second, er.estimated_completion_time/1000, getdate()) END \n"
+			    + "    ,est_completion_time        = CASE WHEN er.estimated_completion_time <= 0 THEN NULL ELSE convert(time, dateadd(second, er.estimated_completion_time/1000, '2020-01-01')) END \n"
+			    + "    ,exec_cpu_time              = er.cpu_time                        -- DIFF (is that the same as xxxx) \n"
+			    + "    ,exec_total_elapsed_time_ms = er.total_elapsed_time \n"
+			    + "    ,exec_total_elapsed_time    = CASE WHEN er.total_elapsed_time <= 0 THEN NULL ELSE convert(time, dateadd(second, er.total_elapsed_time/1000, '2020-01-01')) END \n"
 			    + "    ,er.scheduler_id \n"
-			    + "    ,exec_reads                = er.reads                           -- DIFF (is that the same as xxxx) \n"
-			    + "    ,exec_writes               = er.writes                          -- DIFF (is that the same as xxxx) \n"
-			    + "    ,exec_logical_reads        = er.logical_reads                   -- DIFF (is that the same as xxxx) \n"
-			    + "    ,exec_row_count            = er.row_count                       -- DIFF (is that the same as xxxx) \n"
-			    + "    ,exec_granted_query_memory = er.granted_query_memory \n"
+			    + "    ,exec_reads                 = er.reads                           -- DIFF (is that the same as xxxx) \n"
+			    + "    ,exec_writes                = er.writes                          -- DIFF (is that the same as xxxx) \n"
+			    + "    ,exec_logical_reads         = er.logical_reads                   -- DIFF (is that the same as xxxx) \n"
+			    + "    ,exec_row_count             = er.row_count                       -- DIFF (is that the same as xxxx) \n"
+			    + "    ,exec_granted_query_memory  = er.granted_query_memory \n"
 
 			    + "    ,net_bytes_received = ec.num_reads                    -- DIFF CALC \n"
 			    + "    ,net_bytes_sent     = ec.num_writes                   -- DIFF CALC \n"
@@ -663,17 +667,20 @@ extends CountersModel
 					// SQL in CmActiveStatements: "  AND (der.executing_managed_code = 0 OR (der.executing_managed_code = 1 AND der.wait_type != 'SLEEP_TASK')) \n" + // SSIS seems to be executing ALL THE TIME... so discard some of them... (this may be unique to MaxM)
 					Object o_executing_managed_code = cm.getDiffValue(r, "executing_managed_code");
 					Object o_wait_type              = cm.getDiffValue(r, "wait_type");
-					if (o_executing_managed_code != null && o_wait_type != null)
+					Object o_last_wait_type         = cm.getDiffValue(r, "last_wait_type");
+				//	Object o_DBName                 = cm.getDiffValue(r, "DBName"); // should we remove anything with "SSISDB" ???
+					if (o_executing_managed_code != null)
 					{
-						if (o_executing_managed_code instanceof Boolean && o_wait_type instanceof String)
+						if (o_executing_managed_code instanceof Boolean)
 						{
 							boolean executing_managed_code = (Boolean) o_executing_managed_code;
-							String  wait_type              = (String)  o_wait_type;
+							String  wait_type              = "" + o_wait_type;
+							String  last_wait_type         = "" + o_last_wait_type;
 
-							if (executing_managed_code && "SLEEP_TASK".equals(wait_type))
+							if (executing_managed_code && ("SLEEP_TASK".equals(wait_type) || "SLEEP_TASK".equals(last_wait_type)) )
 							{
 								if (debugPrint || _logger.isDebugEnabled())
-									System.out.println("##### sendAlarmRequest("+cm.getName()+"): SKIPPING record: executing_managed_code="+executing_managed_code+", wait_type='"+wait_type+"'.");
+									System.out.println("##### sendAlarmRequest("+cm.getName()+"): SKIPPING record: executing_managed_code="+executing_managed_code+", wait_type='"+wait_type+"', last_wait_type='"+last_wait_type+"'.");
 								isValidRow = false;
 							}
 						}

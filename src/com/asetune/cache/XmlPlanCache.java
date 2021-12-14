@@ -22,9 +22,9 @@ package com.asetune.cache;
 
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 
@@ -37,12 +37,16 @@ public abstract class XmlPlanCache
 {
 	private static Logger _logger = Logger.getLogger(XmlPlanCache.class);
 
-	public static final String  PROPKEY_lowOnMememory_removePct  = "XmlPlanCache.lowOnMememory.removePct";
-	public static final int     DEFAULT_lowOnMememory_removePct  = 20;
+	public static final String  PROPKEY_lowOnMememory_removePct        = "XmlPlanCache.lowOnMememory.removePct";
+	public static final int     DEFAULT_lowOnMememory_removePct        = 20;
+	
+	public static final String  PROPKEY_lowOnMememory_removeAgeMinutes = "XmlPlanCache.lowOnMememory.removeAgeInMinutes";
+	public static final int     DEFAULT_lowOnMememory_removeAgeMinutes = 60;
 
 	private ConnectionProvider _connProvider = null;
 //	private HashMap<String, String> _cache = new HashMap<String, String>();
-	private LinkedHashMap<String, String> _cache = new LinkedHashMap<String, String>();
+//	private LinkedHashMap<String, String> _cache = new LinkedHashMap<String, String>();
+	private ConcurrentHashMap<String, ContentValue> _cache = new ConcurrentHashMap<>();  // key=PlanId, val=ContentValue(lastAccessed, xmlText)
 
 	/** Keep a local DBMS Connection for the lookups */
 	private DbxConnection _localConnection;
@@ -109,11 +113,12 @@ public abstract class XmlPlanCache
 	 */
 	public String getMemoryConsumption()
 	{
-		int entryCount  = _cache == null ? 0 : _cache.size();
-		int usedMemory  = 0;
-		int avgPerEntry = 0;
+		long entryCount  = _cache == null ? 0 : _cache.size();
+		long usedMemory  = 0;
+		long avgPerEntry = 0;
 		
-		for (Entry<String, String> entry : _cache.entrySet())
+//		for (Entry<String, String> entry : _cache.entrySet())
+		for (Entry<String, ContentValue> entry : _cache.entrySet())
 		{
 //			usedMemory += entry.getKey()  .length();
 //			usedMemory += entry.getValue().length();
@@ -121,7 +126,7 @@ public abstract class XmlPlanCache
 			// algo: 36          + (2 * str.length)
 			//       VM overhead + (every char is 16 bits, since internal of strings is UTF-16)
 			usedMemory += 36 + (2 * entry.getKey()  .length());
-			usedMemory += 36 + (2 * entry.getValue().length());
+			usedMemory += 36 + (2 * entry.getValue()._xmlText.length()) + 32; // +32 for long and ContentValue object overhead
 		}
 		
 		if (entryCount > 0) 
@@ -139,50 +144,94 @@ public abstract class XmlPlanCache
 		_statResetCalls++;
 		// Simply create a new _cache to clear it.
 //		_cache = new HashMap<String, String>();
-		_cache = new LinkedHashMap<String, String>();
+//		_cache = new LinkedHashMap<String, String>();
+		_cache = new ConcurrentHashMap<>();
 	}
 
+//	/**
+//	 * In case someone finds out that we are low on memory... 
+//	 */
+//	public void lowOnMemoryHandler()
+//	{
+//		// Get remove percent from configuration
+//		int removePct = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_lowOnMememory_removePct, DEFAULT_lowOnMememory_removePct);
+//		
+//		int countBeforeClean = _cache.size();
+//		int removeCount = (int) (countBeforeClean * (removePct / 100.0));
+////		for (String key : _cache.keySet())
+////		{
+////			_cache.remove(key);
+////			removeCount--;
+////			if (removeCount <= 0)
+////				break;
+////		}
+//// The above fails with some concurrent access exception, the below works better
+//// OR simply add the entries to a list and remove the content of the list from the cache later on...
+//
+//		// SInce this structure isn't really protected, we can still get ConcurrentModificationException
+//		// if other threads accesses this structure at the same time...
+//		// Don't care about this, just catch it and continue...
+//		try
+//		{
+//			if (removeCount < 20)
+//			{
+//				// If small enough chunk, lets just create a new cache...
+////				_cache = new LinkedHashMap<String, String>();
+//				_cache = new ConcurrentHashMap<>();
+//			}
+//			else
+//			{
+//	    		Iterator<String> it = _cache.values().iterator();
+//	    		while(it.hasNext())
+//	    		{
+//	    			it.next(); // Must be called before we can call remove()
+//	    			it.remove();
+//	    			removeCount--;
+//	    			if (removeCount <= 0)
+//	    				break;
+//	    		}
+//			}
+//		}
+//		catch(ConcurrentModificationException ex)
+//		{
+//			_logger.warn("XmlPlanCache, lowOnMemoryHandler(): when removing entries from the cache, we caught ConcurrentModificationException... lets just continue... Exception: "+ex);
+//		}
+//
+//		int countAfterClean  = _cache.size();
+//		removeCount = countBeforeClean - countAfterClean;
+//
+//		_logger.warn("XmlPlanCache, lowOnMemoryHandler() was called. Removed "+removeCount+" entries from the XmlPlanCache (config: '"+PROPKEY_lowOnMememory_removePct+"'="+removePct+"). Number of entries before clean was "+countBeforeClean+", after clean was "+countAfterClean+".");
+//		_statDecreaseCalls++;
+//	}
 	/**
 	 * In case someone finds out that we are low on memory... 
 	 */
 	public void lowOnMemoryHandler()
 	{
 		// Get remove percent from configuration
-		int removePct = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_lowOnMememory_removePct, DEFAULT_lowOnMememory_removePct);
+		int removeAgeMinutes = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_lowOnMememory_removeAgeMinutes, DEFAULT_lowOnMememory_removeAgeMinutes);
 		
 		int countBeforeClean = _cache.size();
-		int removeCount = (int) (countBeforeClean * (removePct / 100.0));
-//		for (String key : _cache.keySet())
-//		{
-//			_cache.remove(key);
-//			removeCount--;
-//			if (removeCount <= 0)
-//				break;
-//		}
-// The above fails with some concurrent access exception, the below works better
-// OR simply add the entries to a list and remove the content of the list from the cache later on...
+		int removeCount = 0;
 
 		// SInce this structure isn't really protected, we can still get ConcurrentModificationException
 		// if other threads accesses this structure at the same time...
 		// Don't care about this, just catch it and continue...
 		try
 		{
-			if (removeCount < 20)
+			long now = System.currentTimeMillis();
+			
+			Iterator<ContentValue> it = _cache.values().iterator();
+			while(it.hasNext())
 			{
-				// If small enough chunk, lets just create a new cache...
-				_cache = new LinkedHashMap<String, String>();
-			}
-			else
-			{
-	    		Iterator<String> it = _cache.values().iterator();
-	    		while(it.hasNext())
-	    		{
-	    			it.next(); // Must be called before we can call remove()
-	    			it.remove();
-	    			removeCount--;
-	    			if (removeCount <= 0)
-	    				break;
-	    		}
+				ContentValue val = it.next(); // Must be called before we can call remove()
+
+				long ageInMinutes = now - val._lastAccessed / 1000 / 60;  // remove: milliseconds(1000) and minutes(60)
+				if (ageInMinutes >= removeAgeMinutes)
+				{
+					it.remove();
+					removeCount++;
+				}
 			}
 		}
 		catch(ConcurrentModificationException ex)
@@ -193,7 +242,7 @@ public abstract class XmlPlanCache
 		int countAfterClean  = _cache.size();
 		removeCount = countBeforeClean - countAfterClean;
 
-		_logger.warn("XmlPlanCache, lowOnMemoryHandler() was called. Removed "+removeCount+" entries from the XmlPlanCache (config: '"+PROPKEY_lowOnMememory_removePct+"'="+removePct+"). Number of entries before clean was "+countBeforeClean+", after clean was "+countAfterClean+".");
+		_logger.warn("XmlPlanCache, lowOnMemoryHandler() was called. Removed "+removeCount+" entries from the XmlPlanCache (config: '"+PROPKEY_lowOnMememory_removeAgeMinutes+"'="+removeAgeMinutes+"). Number of entries before clean was "+countBeforeClean+", after clean was "+countAfterClean+".");
 		_statDecreaseCalls++;
 	}
 
@@ -253,30 +302,62 @@ public abstract class XmlPlanCache
 	 * @param planId
 	 * @return
 	 */
+//	public String getPlan(String planName, int planId)
+//	{
+//		String key = composeKey(planName, planId);
+//
+//		_statLogicalRead++;
+//		String entry = _cache.get(key);
+//		if (entry == null)
+//		{
+//			// If the Connection in the ConnectionProvider is *busy* executing a query this might Fail...
+//			// And that in a ugly way (getting "stuck") -->> at com.sybase.jdbc4.utils.SyncQueue.take(SyncQueue.java:93)
+//			// Is there any way we could have our own Connection here... OR wait for the Connection to finish/complete
+//			
+//			_statPhysicalRead++;
+////			entry = getPlan(_connProvider.getConnection(), planName, planId);
+//			entry = getPlan(getConnection(), planName, planId);
+//			if (entry != null)
+//			{
+//				_cache.put(key, entry);
+//			}
+//		}
+//		if ( (_statLogicalRead % _statReportModulus) == 0 )
+//			printStatistics();
+//
+//		return entry;
+//	}
 	public String getPlan(String planName, int planId)
 	{
 		String key = composeKey(planName, planId);
 
 		_statLogicalRead++;
-		String entry = _cache.get(key);
-		if (entry == null)
+
+		String xmlText = null;
+		ContentValue entry = _cache.get(key);
+		
+		if (entry != null)
+		{
+			xmlText = entry.getText();
+		}
+		else
 		{
 			// If the Connection in the ConnectionProvider is *busy* executing a query this might Fail...
 			// And that in a ugly way (getting "stuck") -->> at com.sybase.jdbc4.utils.SyncQueue.take(SyncQueue.java:93)
 			// Is there any way we could have our own Connection here... OR wait for the Connection to finish/complete
 			
 			_statPhysicalRead++;
-//			entry = getPlan(_connProvider.getConnection(), planName, planId);
-			entry = getPlan(getConnection(), planName, planId);
-			if (entry != null)
+			xmlText = getPlan(getConnection(), planName, planId);
+			if (xmlText != null)
 			{
+				entry = new ContentValue(xmlText);
 				_cache.put(key, entry);
 			}
 		}
 		if ( (_statLogicalRead % _statReportModulus) == 0 )
 			printStatistics();
 
-		return entry;
+		return xmlText;
 	}
 
 	/**
@@ -336,7 +417,10 @@ public abstract class XmlPlanCache
 	public String setPlan(String planName, int planId, String planContent)
 	{
 		_statLogicalWrite++;
-		return _cache.put(composeKey(planName, planId), planContent);
+//		return _cache.put(composeKey(planName, planId), planContent);
+		ContentValue oldVal = _cache.put(composeKey(planName, planId), new ContentValue(planContent));
+		
+		return oldVal == null ? null : oldVal.getText();
 	}
 	
 	/**
@@ -375,4 +459,39 @@ public abstract class XmlPlanCache
 	 * @param list This is entries you need to fetch. If NULL, you need to fetch/populate "everything"
 	 */
 	protected abstract void getPlanBulk(DbxConnection connection, List<String> list);
+
+
+	/**
+	 * <p>
+	 * The Content structure in the Map that holds a XmlPlan<br>
+	 * Previously it was just "xml" text<br>
+	 * Now it's
+	 * <ul>
+	 *  <li> LastAccessed </li>
+	 *  <li> XML Text     </li>
+	 * </ul>
+	 * </p>
+	 * 
+	 * I need <i>last accessed</i> so we can discard entry after X minutes/hours if not used<br>
+	 * We could have used some kind of MRU/LRU chain... but I went for timestamp based, and when "low" on memory we discard the ones that we do not longer need!
+	 * 
+	 * @author goran
+	 */
+	private static class ContentValue
+	{
+		private long   _lastAccessed;
+		private String _xmlText;
+
+		public ContentValue(String xmlText)
+		{
+			_xmlText = xmlText;
+			_lastAccessed = System.currentTimeMillis();
+		}
+		
+		public String getText()
+		{
+			_lastAccessed = System.currentTimeMillis();
+			return _xmlText;
+		}
+	}
 }
