@@ -111,7 +111,8 @@ public class TrendGraphPanelReorderDialog
 		// Try to fit all rows on the open window
 		Dimension size = getSize();
 		size.height += (_table.getRowCount() - 6) * SwingUtils.hiDpiScale(18); // lets say 6 rows is the default showed AND each row takes 18 pixels
-		size.width = Math.min(size.width, 645);
+//		size.width = Math.min(size.width, 645);
+		size.width = Math.min(size.width, 945);
 		setSize(size);
 		
 		SwingUtils.setSizeWithingScreenLimit(this, 5);

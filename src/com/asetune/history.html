@@ -39,10 +39,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>new: AlarmEventSqlCaptureOldData        -- If SqlCapture has "died" for some reason (not updating a timestamp), then raise alarm.</LI>
 				<LI>new: AlarmEventPerfCounterWarning       -- (SQL-Server) - If a PerfCounter value is "out of whack"...</LI>
 				<LI>new: AlarmEventLongRunningStatement     -- If a Statement has been running for more than X seconds/minutes/hours</LI>
-				<LI>new  AlarmEventExtensiveUsage           -- for example if tempdb is heavely used</LI>
-				<LI>new  AlarmEventStackDump                -- for SQL-Server only: Sends the StackDump as a chunk of text</LI>
-				<LI>new  AlarmEventOsSwapping               -- if IN or OUT is above 5000. For Linux/Unix it's in 'CmOsVmstat', for Windows it's in 'CmOsMeminfo'</LI>
-				<LI>new  AlarmEventDbccCheckdbAge           -- for SQL Server, when dbcc checkdb hasn't been executed. </LI>
+				<LI>new: AlarmEventExtensiveUsage           -- for example if tempdb is heavely used</LI>
+				<LI>new: AlarmEventStackDump                -- for SQL-Server only: Sends the StackDump as a chunk of text</LI>
+				<LI>new: AlarmEventOsSwapping               -- if IN or OUT is above 5000. For Linux/Unix it's in 'CmOsVmstat', for Windows it's in 'CmOsMeminfo'</LI>
+				<LI>new: AlarmEventDbccCheckdbAge           -- for SQL Server, when dbcc checkdb hasn't been executed. </LI>
+				<LI>new: AlarmEventHoldingLocksWhileWaitForClientInput -- When a SPID has started a transaction, but been idle at the Client side for more than X seconds. </LI>
 				
 				<LI>Changed: AlarmEventConfigResourceIsLow       -- added "raiseDelay", which is used by 'Statement Cache Hit Rate', and the default was set to 5 minutes below configured value before raising alarm.</LI>
 				<LI>Changed: AlarmEventFullTranLog               -- alwaysSend() is now set to true, so even if we do not "subscribe" for alarms on this server, we will still get message, just like SrvDown </LI>
@@ -362,7 +363,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmActiveStatements </b> - Changed the 'BLOCKER' to only return Parent SPID's in parallel statements </LI>
 		<LI><b>CmActiveStatements </b> - Also sampling SPID's that are 'holding locks' but are not active on server, and control are at 'client side' </LI>
 		<LI><b>CmActiveStatements </b> - bugfix: Only report 'root cause' session_id's on blocking locks </LI>
-		<LI><b>CmActiveStatements </b> - AlarmEventBlockingLockAlarm now alos contains SPID, so we can report multiple blocking locks </LI>
+		<LI><b>CmActiveStatements </b> - AlarmEventBlockingLockAlarm now also contains SPID, so we can report multiple blocking locks </LI>
+		<LI><b>CmActiveStatements </b> - raise alarm 'AlarmEventHoldingLocksWhileWaitForClientInput' when a SPID has been holding locks at DBMS but not issuing any new commands from the client side.</LI>
 		
 		<LI><b>CmAlwaysOn         </b> - Granting select,insert,update,delete on table 'sqlserverTune_ag_dummy_update' was enhanced (note: this will still fail if the connection do not have authorization to create the table in the database. </LI>
 

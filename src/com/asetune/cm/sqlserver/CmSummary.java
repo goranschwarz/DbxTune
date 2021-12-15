@@ -80,7 +80,8 @@ extends CountersModel
 		"LockWaits", "Connections", 
 		"cpu_busy", "cpu_io", "cpu_idle", "io_total_read", "io_total_write", 
 		"aaConnections", "distinctLogins", 
-		"pack_received", "pack_sent", "packet_errors", "total_errors"
+		"pack_received", "pack_sent", "packet_errors", "total_errors",
+		"ms_ticks", "process_kernel_time_ms", "process_user_time_ms" 
 	};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
@@ -135,8 +136,8 @@ extends CountersModel
 	public static final String  PROPKEY_oldestOpenTran_discard_tempdb = "CmSummary.oldestOpenTran.discard.tempdb";
 	public static final boolean DEFAULT_oldestOpenTran_discard_tempdb = false;
 	
-	
 	public static final String GRAPH_NAME_AA_CPU                   = "aaCpuGraph";         // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_CPU;
+//	public static final String GRAPH_NAME_SYS_INFO_CPU             = "sysInfoCpuGraph";
 	public static final String GRAPH_NAME_BLOCKING_LOCKS           = "BlockingLocksGraph";
 	public static final String GRAPH_NAME_CONNECTION               = "ConnectionsGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__CONNECTION;
 	public static final String GRAPH_NAME_CONNECTION_RATE          = "ConnRateGraph";
@@ -159,6 +160,20 @@ extends CountersModel
 			true,  // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
+
+		// NOTE: The below showed the same info as above (@@cpu_busy, @@cpu_io) so it wasnt worth keeping it
+		//       But lets keep the code as a #reminder" that it has already been tested
+		//addTrendGraph(GRAPH_NAME_SYS_INFO_CPU,
+		//	"CPU Summary from dm_os_sys_info", 	                        // Menu CheckBox text
+		//	"CPU Summary for all Engines (using dm_os_sys_info: process_kernel_time_ms, process_user_time_ms)", // Label 
+		//	TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+		//	new String[] { "System+User CPU (kernel_time+user_time)", "System CPU (kernel_time)", "User CPU (user_time)" }, 
+		//	LabelType.Static,
+		//	TrendGraphDataPoint.Category.CPU,
+		//	true,  // is Percent Graph
+		//	false, // visible at start
+		//	0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+		//	-1);   // minimum height
 
 		addTrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
 			"Blocking Locks", 	                                     // Menu CheckBox text
@@ -333,6 +348,11 @@ extends CountersModel
 				"declare @oldestOpenTranInSec          int = 0\n" +
 				"declare @oldestOpenTranInSecThreshold int = " + oldestOpenTranInSec + " \n" +
 				"\n" +
+//				"declare @scheduler_count              int    = 0\n" +
+//				"declare @ms_ticks                     bigint = 0\n" +
+//				"declare @process_kernel_time_ms       bigint = 0\n" +
+//				"declare @process_user_time_ms         bigint = 0\n" +
+//				"\n" +
 				"/* Get info about Listeners (as a Comma Separated List): TYPE=ipv#[ip;port] */\n" +
 				"select @listeners = coalesce(@listeners + ', ', '') \n" +
 				"    + type_desc \n" +
@@ -347,6 +367,13 @@ extends CountersModel
 //				"--  and type_desc = 'TSQL' \n" +
 				"order by listener_id \n" +
 				"\n" +
+//				"/* CPU time from dm_os_sys_info */\n" +
+//				"select @scheduler_count        = scheduler_count \n" +
+//				"      ,@ms_ticks               = ms_ticks \n" +
+//				"      ,@process_kernel_time_ms = process_kernel_time_ms \n" +
+//				"      ,@process_user_time_ms   = process_user_time_ms \n" + 
+//				"from sys.dm_os_sys_info \n" +
+//				"\n" +
 				"/* Get info about Open Transactions */\n" +
 				"select @oldestOpenTranBeginTime = min(database_transaction_begin_time) \n" +
 				"                                  from sys." + dm_tran_database_transactions + " \n" +
@@ -442,7 +469,12 @@ extends CountersModel
 				", pack_received                = @@pack_received  \n" +
 				", pack_sent                    = @@pack_sent      \n" +
 				", packet_errors                = @@packet_errors  \n" +
-				", total_errors                 = @@total_errors   \n";
+				", total_errors                 = @@total_errors   \n" +
+//				", scheduler_count              = @scheduler_count \n" +
+//				", ms_ticks                     = @ms_ticks               \n" +
+//				", process_kernel_time_ms       = @process_kernel_time_ms \n" +
+//				", process_user_time_ms         = @process_user_time_ms   \n" + 
+				"";
 
 		return sql;
 	}
@@ -515,6 +547,40 @@ extends CountersModel
 				tgdp.setDataPoint(this.getTimestamp(), arr);
 			}
 		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+//		if (GRAPH_NAME_SYS_INFO_CPU.equals(tgdp.getName()))
+//		{
+//			Double scheduler_count        = getDiffValueAsDouble(0, "scheduler_count");
+//			Double ms_ticks               = getDiffValueAsDouble(0, "ms_ticks");
+//			Double process_kernel_time_ms = getDiffValueAsDouble(0, "process_kernel_time_ms");
+//			Double process_user_time_ms   = getDiffValueAsDouble(0, "process_user_time_ms");
+//
+//			if (ms_ticks != null && process_kernel_time_ms != null && process_user_time_ms != null)
+//			{
+//				double CPUTime   = (scheduler_count.doubleValue() * ms_ticks.doubleValue());
+//				double CPUSystem = process_kernel_time_ms.doubleValue();
+//				double CPUUser   = process_user_time_ms  .doubleValue();
+//
+//				BigDecimal calcCPUTime       = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+//				BigDecimal calcSystemCPUTime = new BigDecimal( ((1.0 * (CPUSystem          )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+//				BigDecimal calcUserCPUTime   = new BigDecimal( ((1.0 * (CPUUser            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+//
+//				Double[] arr = new Double[3];
+//
+//				arr[0] = calcCPUTime      .doubleValue();
+//				arr[1] = calcSystemCPUTime.doubleValue();
+//				arr[2] = calcUserCPUTime  .doubleValue();
+//				_logger.debug("updateGraphData("+tgdp.getName()+"): kernel_time+user_time='"+arr[0]+"', kernel_time='"+arr[1]+"', user_time='"+arr[2]+"'.");
+//System.out.println("updateGraphData("+tgdp.getName()+"): kernel_time+user_time='"+arr[0]+"', kernel_time='"+arr[1]+"', user_time='"+arr[2]+"'.");
+//
+//				// Set the values
+//				tgdp.setDataPoint(this.getTimestamp(), arr);
+//			}
+//		}
+		
 
 		//---------------------------------
 		// GRAPH:
