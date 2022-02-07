@@ -24,7 +24,6 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.HashMap;
 
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
@@ -38,7 +37,6 @@ import org.jdesktop.swingx.decorator.HighlightPredicate;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.CmWho;
 import com.asetune.gui.TabularCntrPanel;
-import com.asetune.utils.ColorUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 

@@ -94,6 +94,9 @@ implements Memory.MemoryListener
 
 	public static final String THREAD_NAME = "GetCountersNoGui";
 
+	public static final String    PROPKEY_noGuiDoJavaGcAfterRefresh         = "no.gui.do.java.gc.after.refresh";	
+	public static final boolean   DEFAULT_noGuiDoJavaGcAfterRefresh         = true;
+
 
 	public CounterCollectorThreadNoGui(CounterControllerAbstract counterController)
 	{
@@ -1448,6 +1451,9 @@ implements Memory.MemoryListener
 									conn.close();
 									conn.reConnect(null);
 									_logger.info("Succeeded: reconnect. continuing to refresh data for next CM.");
+
+									// After reconnect, call: onMonConnect() again. 
+									getCounterController().onMonConnect(conn);
 								}
 								catch(Exception reconnectEx)
 								{
@@ -1584,6 +1590,9 @@ implements Memory.MemoryListener
 					conn.clearConnectionMark(DbxConnection.MarkTypes.MarkForReConnect);
 					conn.close();
 					conn.reConnect(null);
+
+					// After reconnect, call: onMonConnect() again. 
+					getCounterController().onMonConnect(conn);
 				}
 				catch (Exception ex)
 				{
@@ -1594,8 +1603,9 @@ implements Memory.MemoryListener
 			//-----------------------------
 			// Do Java Garbage Collection?
 			//-----------------------------
-			boolean doJavaGcAfterRefresh = Configuration.getCombinedConfiguration().getBooleanProperty(MainFrame.PROPKEY_doJavaGcAfterRefresh, MainFrame.DEFAULT_doJavaGcAfterRefresh);
-			if (doJavaGcAfterRefresh)
+			boolean noGuiDoJavaGcAfterRefresh = Configuration.getCombinedConfiguration().getBooleanProperty(          PROPKEY_noGuiDoJavaGcAfterRefresh,           DEFAULT_noGuiDoJavaGcAfterRefresh);
+			boolean doJavaGcAfterRefresh      = Configuration.getCombinedConfiguration().getBooleanProperty(MainFrame.PROPKEY_doJavaGcAfterRefresh     , MainFrame.DEFAULT_doJavaGcAfterRefresh);
+			if (noGuiDoJavaGcAfterRefresh || doJavaGcAfterRefresh)
 			{
 				getCounterController().setWaitEvent("Doing Java Garbage Collection.");
 				System.gc();

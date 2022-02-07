@@ -31,8 +31,9 @@ import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.pcs.report.content.ReportChartTimeSeriesLine;
-import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
-import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
+import com.asetune.pcs.report.content.SparklineHelper;
+import com.asetune.pcs.report.content.SparklineHelper.DataSource;
+import com.asetune.pcs.report.content.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
@@ -54,22 +55,22 @@ public class AseCpuUsageOverview extends AseAbstract
 		return true;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-		writeMessageText(w, false);
-	}
-
-	@Override
-	public void writeMessageText(Writer w)
-	throws IOException
-	{
-		writeMessageText(w, true);
-	}
-
 //	@Override
-	public void writeMessageText(Writer w, boolean isFullText)
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//		writeMessageText(w, false);
+//	}
+//
+//	@Override
+//	public void writeMessageText(Writer w)
+//	throws IOException
+//	{
+//		writeMessageText(w, true);
+//	}
+
+	@Override
+	public void writeMessageText(Writer w, MessageType messageType)
 	throws IOException
 	{
 		w.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load.",
@@ -91,7 +92,7 @@ public class AseCpuUsageOverview extends AseAbstract
 		_CmSummary_aaCpuGraph           .writeHtmlContent(w, null, "The above graph may contain <i>extra</i> CPU Usages, which will be CPU Used during I/O completaion checks.");
 		_CmOsMpstat_MpSum               .writeHtmlContent(w, null, null);
 		_CmSummary_aaDiskGraph          .writeHtmlContent(w, null, "How many disk I/Os was done... To be used in conjunction with '@@cpu_xxx' to decide if CPU is comming from disk or <i>other</i> DBMS load.");
-		if (isFullText)
+		if (isFullMessageType())
 		{
 			_CmEngines_cpuSum               .writeHtmlContent(w, null, "The above graph Will only contain CPU Cyckles used to execute User Work.");
 			_CmEngines_cpuEng               .writeHtmlContent(w, null, "The above graph Will only contain CPU Cyckles used to execute User Work, but for each ASE Engine.<br>\n"
@@ -116,7 +117,7 @@ public class AseCpuUsageOverview extends AseAbstract
 			w.append(toHtmlTable(_CmExecutionTime_SUM_rstm));
 		}
 			
-		if (isFullText)
+		if (isFullMessageType())
 		{
 			_CmSqlStatement_SqlStmntSumLRead  .writeHtmlContent(w, null, null);
 			_CmSqlStatement_SqlStmntSumCpuTime.writeHtmlContent(w, null, "The above two graphs, shows what SQL Statements (<b>long or short in responce time</b>) we are spending LogicalReads & CPU Time on.<br>"
@@ -128,12 +129,10 @@ public class AseCpuUsageOverview extends AseAbstract
 		}
 
 		// Write JavaScript code for CPU SparkLine
-		if (isFullText)
+		if (isFullMessageType())
 		{
 			for (String str : _miniChartJsList)
-			{
 				w.append(str);
-			}
 		}
 	}
 
@@ -210,6 +209,9 @@ public class AseCpuUsageOverview extends AseAbstract
 		ResultSetTableModel rstm = executeQuery(conn, sql, true, "CmExecutionTime_diff");
 		if (rstm != null)
 		{
+			// Highlight sort column
+			rstm.setHighlightSortColumns("ExecutionTime_InSeconds_sum");
+
 			// Translate "ExecutionTime_InSeconds_sum" to HH:MM:SS
 			rstm.addColumn("ExecutionTime as HH:MM:SS", 2, Types.VARCHAR, "varchar", "varchar(30)", 30, 0, "", String.class);
 

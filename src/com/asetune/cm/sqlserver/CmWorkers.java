@@ -183,7 +183,7 @@ extends CountersModel
 		if (isAzure)
 			dm_exec_query_optimizer_info = "dm_exec_query_parallel_workers";
 		
-		String sql = "select \n"
+		String sql = "select /* ${cmCollectorName} */ \n"
 				+ "     node_id \n"
 				+ "    ,scheduler_count \n"
 				+ "    ,max_worker_count \n"

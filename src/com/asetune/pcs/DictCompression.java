@@ -446,15 +446,20 @@ public class DictCompression
 	 * @param colName
 	 * @return
 	 */
-	public static String getRewriteForColumnName(String tabName, String colName)
+	public static String getRewriteForColumnName(String tabName, String colName, String aliasName)
 	{
 		if (tabName == null) return null;
 		if (colName == null) return null;
-		
+
+		if (StringUtil.isNullOrBlank(aliasName)) 
+			aliasName = "";
+		else
+			aliasName = aliasName + ".";
+
 		if (colName.endsWith(DictCompression.DCC_MARKER))
 		{
 			String strippedColName = colName.substring(0, colName.length() - DictCompression.DCC_MARKER.length());
-			colName = "(select [colVal] from [" + tabName + DCC_MARKER + strippedColName + "] where [hashId] = [" + colName + "]) AS [" + strippedColName + "]";
+			colName = "(select [colVal] from [" + tabName + DCC_MARKER + strippedColName + "] where [hashId] = " + aliasName + "[" + colName + "]) AS [" + strippedColName + "]";
 		}
 		else
 		{
@@ -476,7 +481,7 @@ public class DictCompression
 	 * 
 	 * @throws SQLException In case of issues when calling <code>DatabaseMetaData dbmd.getColumns(null, schemaName, tabName, "%");</code>
 	 */
-	public static LinkedHashMap<String, String> getRewriteForColumnNames(DbxConnection conn, String schemaName, String tabName, String replacementTabName)
+	public static LinkedHashMap<String, String> getRewriteForColumnNames(DbxConnection conn, String schemaName, String tabName, String replacementTabName, String tabAliasName)
 	throws SQLException
 	{
 		LinkedHashMap<String, String> map = new LinkedHashMap<>();
@@ -487,7 +492,7 @@ public class DictCompression
 		while(rsmd.next())
 		{
 			String originColName  = rsmd.getString("COLUMN_NAME");
-			String rewriteColName = getRewriteForColumnName(StringUtil.hasValue(replacementTabName) ? replacementTabName : tabName, originColName);
+			String rewriteColName = getRewriteForColumnName(StringUtil.hasValue(replacementTabName) ? replacementTabName : tabName, originColName, tabAliasName);
 
 			map.put(originColName, rewriteColName);
 
@@ -510,12 +515,12 @@ public class DictCompression
 	 * 
 	 * @throws SQLException In case of issues when calling <code>DatabaseMetaData dbmd.getColumns(null, schemaName, tabName, "%");</code>
 	 */
-	public static String getRewriteForSelectColumnList(DbxConnection conn, String schemaName, String tabName, String replacementTabName)
+	public static String getRewriteForSelectColumnList(DbxConnection conn, String schemaName, String tabName, String replacementTabName, String tabAliasName)
 	throws SQLException
 	{
 		StringBuilder sb = new StringBuilder();
 
-		LinkedHashMap<String, String> map = DictCompression.getRewriteForColumnNames(conn, schemaName, tabName, replacementTabName);
+		LinkedHashMap<String, String> map = DictCompression.getRewriteForColumnNames(conn, schemaName, tabName, replacementTabName, tabAliasName);
 		for (String colStr : map.values())
 		{
 			if (sb.length() > 0)

@@ -779,78 +779,6 @@ public class DbUtils
 	 * @param cat       a catalog name; must match the catalog name as it is stored in the database; "" retrieves those without a catalog; null means that the catalog name should not be used to narrow the search
 	 * @param schema    a schema name pattern; must match the schema name as it is stored in the database; "" retrieves those without a schema; null means that the schema name should not be used to narrow the search
 	 * @param tableName a table name pattern; must match the table name as it is stored in the database 
-	 * @return true if table exists
-	 * @throws SQLException
-	 */
-//	public static boolean checkIfTableExists(Connection conn, String cat, String schema, String tableName)
-//	throws SQLException
-//	{
-//		if (conn == null)
-//			throw new SQLException("Connection is NULL.");
-//		
-//		DatabaseMetaData dbmd = conn.getMetaData();
-//		ResultSet rs = dbmd.getTables(cat, schema, tableName, new String[] {"TABLE"});
-//		boolean tabExists = rs.next();
-//		rs.close();
-//
-//		return tabExists;
-//	}
-	public static boolean checkIfTableExists(Connection conn, String cat, String schema, String tableName)
-	throws SQLException
-	{
-		if (conn == null)
-			throw new SQLException("Connection is NULL.");
-
-		boolean tabExists = false;
-
-		// First try with *original* name
-		DatabaseMetaData dbmd = conn.getMetaData();
-//		try ( ResultSet rs = dbmd.getTables(cat, schema, tableName, new String[] {"TABLE"}) )
-		try ( ResultSet rs = dbmd.getTables(cat, schema, tableName, new String[] {"TABLE", "BASE TABLE"}) )
-		{
-			while(rs.next())
-				tabExists = true;
-		}
-
-		// Second try: UPPER case
-		if ( !tabExists && dbmd.storesUpperCaseIdentifiers() )
-		{
-			try ( ResultSet rs = dbmd.getTables(cat       == null ? null : cat      .toUpperCase(), 
-			                                    schema    == null ? null : schema   .toUpperCase(), 
-			                                    tableName == null ? null : tableName.toUpperCase(), 
-//			                                    new String[] {"TABLE"}) )
-			                                    new String[] {"TABLE", "BASE TABLE"}) )
-			{
-				while(rs.next())
-					tabExists = true;
-			}
-		}
-		
-		// Third try: lower case
-		if ( !tabExists && dbmd.storesLowerCaseIdentifiers() )
-		{
-			try ( ResultSet rs = dbmd.getTables(cat       == null ? null : cat      .toLowerCase(), 
-			                                    schema    == null ? null : schema   .toLowerCase(), 
-			                                    tableName == null ? null : tableName.toLowerCase(), 
-//			                                    new String[] {"TABLE"}) )
-			                                    new String[] {"TABLE", "BASE TABLE"}) )
-			{
-				while(rs.next())
-					tabExists = true;
-			}
-		}
-
-		return tabExists;
-	}
-	/**
-	 * This checks table if the table name in following order: MixedCase, then UPPER or lower (depending on the metadata)
-	 * <p>
-	 * Simply calls DatabaseMetaData.getMetaData().getTables(cat, schema, tableName) to check if the table exists.
-	 * 
-	 * @param conn
-	 * @param cat       a catalog name; must match the catalog name as it is stored in the database; "" retrieves those without a catalog; null means that the catalog name should not be used to narrow the search
-	 * @param schema    a schema name pattern; must match the schema name as it is stored in the database; "" retrieves those without a schema; null means that the schema name should not be used to narrow the search
-	 * @param tableName a table name pattern; must match the table name as it is stored in the database 
 	 * @return true if table exists else false (false if any exception)
 	 */
 	public static boolean checkIfTableExistsNoThrow(Connection conn, String cat, String schema, String tableName)
@@ -864,6 +792,143 @@ public class DbUtils
 			_logger.error("checkIfTableExistsNoThrow(cat='" + cat + "', schema='" + schema + "', tableName='" + tableName + "'): Caught: " + ex);
 			return false; 
 		}
+	}
+
+	/**
+	 * Check if an table exists or not. 
+	 */
+	public static boolean checkIfTableExists(Connection conn, String cat, String schema, String tableName)
+	throws SQLException
+	{
+		if (conn == null)
+			throw new SQLException("Connection is NULL.");
+
+		boolean exists = false;
+
+		// First try with *original* name
+		DatabaseMetaData dbmd = conn.getMetaData();
+//		try ( ResultSet rs = dbmd.getTables(cat, schema, tableName, new String[] {"TABLE"}) )
+		try ( ResultSet rs = dbmd.getTables(cat, schema, tableName, new String[] {"TABLE", "BASE TABLE"}) )
+		{
+			while(rs.next())
+				exists = true;
+		}
+
+		// Second try: UPPER case
+		if ( !exists && dbmd.storesUpperCaseIdentifiers() )
+		{
+			try ( ResultSet rs = dbmd.getTables(cat       == null ? null : cat      .toUpperCase(), 
+			                                    schema    == null ? null : schema   .toUpperCase(), 
+			                                    tableName == null ? null : tableName.toUpperCase(), 
+//			                                    new String[] {"TABLE"}) )
+			                                    new String[] {"TABLE", "BASE TABLE"}) )
+			{
+				while(rs.next())
+					exists = true;
+			}
+		}
+		
+		// Third try: lower case
+		if ( !exists && dbmd.storesLowerCaseIdentifiers() )
+		{
+			try ( ResultSet rs = dbmd.getTables(cat       == null ? null : cat      .toLowerCase(), 
+			                                    schema    == null ? null : schema   .toLowerCase(), 
+			                                    tableName == null ? null : tableName.toLowerCase(), 
+//			                                    new String[] {"TABLE"}) )
+			                                    new String[] {"TABLE", "BASE TABLE"}) )
+			{
+				while(rs.next())
+					exists = true;
+			}
+		}
+
+		return exists;
+	}
+
+	/**
+	 * Check if an index exists or not. 
+	 */
+	public static boolean checkIfIndexExistsNoThrow(Connection conn, String cat, String schema, String tableName, String indexName)
+	{
+		try 
+		{ 
+			return checkIfIndexExists(conn, cat, schema, tableName, indexName); 
+		}
+		catch (SQLException ex) 
+		{
+			_logger.error("checkIfTableExistsNoThrow(cat='" + cat + "', schema='" + schema + "', tableName='" + tableName + "', indexName='" + indexName + "'): Caught: " + ex);
+			return false; 
+		}
+	}
+
+	/**
+	 * Check if an index exists or not. 
+	 */
+	public static boolean checkIfIndexExists(Connection conn, String cat, String schema, String tableName, String indexName)
+	throws SQLException
+	{
+		if (conn == null)
+			throw new SQLException("Connection is NULL.");
+
+		boolean exists = false;
+
+		DatabaseMetaData dbmd = conn.getMetaData();
+
+		// First try with *original* name
+		try (ResultSet rs = dbmd.getIndexInfo(cat, schema, tableName, false, false))
+		{
+			while(rs.next())
+			{
+				String ixName = rs.getString("INDEX_NAME");
+				if (indexName.equalsIgnoreCase(ixName))
+				{
+					exists = true;
+					break;
+				}
+			}
+		}
+		
+		// Second try: UPPER case
+		if ( !exists && dbmd.storesUpperCaseIdentifiers() )
+		{
+			try ( ResultSet rs = dbmd.getIndexInfo(cat       == null ? null : cat      .toUpperCase(), 
+			                                       schema    == null ? null : schema   .toUpperCase(), 
+			                                       tableName == null ? null : tableName.toUpperCase(), 
+			                                       false, false) )
+			{
+				while(rs.next())
+				{
+					String ixName = rs.getString("INDEX_NAME");
+					if (indexName.equalsIgnoreCase(ixName))
+					{
+						exists = true;
+						break;
+					}
+				}
+			}
+		}
+		
+		// Third try: lower case
+		if ( !exists && dbmd.storesLowerCaseIdentifiers() )
+		{
+			try ( ResultSet rs = dbmd.getIndexInfo(cat       == null ? null : cat      .toLowerCase(), 
+			                                       schema    == null ? null : schema   .toLowerCase(), 
+			                                       tableName == null ? null : tableName.toLowerCase(), 
+			                                       false, false) )
+			{
+				while(rs.next())
+				{
+					String ixName = rs.getString("INDEX_NAME");
+					if (indexName.equalsIgnoreCase(ixName))
+					{
+						exists = true;
+						break;
+					}
+				}
+			}
+		}
+
+		return exists;
 	}
 
 	/**

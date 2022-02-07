@@ -45,15 +45,15 @@ public class RsWsRepLatency extends AseAbstract
 		return true;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-		writeMessageText(w);
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//		writeMessageText(w);
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Database Tranfer <i>Latency</i> or Age of Data at the Standby.",

@@ -21,7 +21,9 @@
 package com.asetune.sql.conn;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
@@ -49,5 +51,20 @@ public class HanaConnection extends DbxConnection
 	public boolean isInTransaction() throws SQLException
 	{
 		return false; // FIXME: Don't know how to check this, so lets assume FALSE
+	}
+
+	@Override
+	protected int getDbmsSessionId_impl() throws SQLException
+	{
+		String sql = "select current_connection from dummy";
+		
+		int spid = -1;
+		try (Statement stmnt = _conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+				spid = rs.getInt(1);
+		}
+		
+		return spid;
 	}
 }

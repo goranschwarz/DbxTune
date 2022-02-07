@@ -164,4 +164,20 @@ extends DbxConnection
 		_databaseServerName = serverName;
 		return serverName;
 	}
+
+	@Override
+	protected int getDbmsSessionId_impl() throws SQLException
+	{
+		// Not 100% sure if this is the correct one to use... and it also returns a BIGINT... but when doing a select I can only see small numbers
+		String sql = "select sysproc.mon_get_application_handle() from SYSIBM.SYSDUMMY1";
+		
+		int spid = -1;
+		try (Statement stmnt = _conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+				spid = rs.getInt(1);
+		}
+		
+		return spid;
+	}
 }

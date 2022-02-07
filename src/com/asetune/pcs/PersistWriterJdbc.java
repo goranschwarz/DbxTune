@@ -3199,6 +3199,9 @@ public class PersistWriterJdbc
 
 			for (MonTableEntry mte : monTablesDictMap.values())
 			{
+				mte._tableName   = StringUtil.truncate(mte._tableName  , MonTableEntry.TABLE_NAME_MAXLEN , true, null);
+				mte._description = StringUtil.truncate(mte._description, MonTableEntry.DESCRIPTION_MAXLEN, true, null);
+
 				sbSql = new StringBuffer();
 //				sbSql.append(" insert into ").append(monTabName).append(" \n");
 				sbSql.append(getTableInsertStr(conn, SESSION_MON_TAB_DICT, null, false));
@@ -3217,6 +3220,11 @@ public class PersistWriterJdbc
 
 				for (MonTableColumnsEntry mtce : mte._monTableColumns.values())
 				{
+					mtce._tableName   = StringUtil.truncate(mtce._tableName  , MonTableColumnsEntry.TABLE_NAME_MAXLEN , true, null);
+					mtce._columnName  = StringUtil.truncate(mtce._columnName , MonTableColumnsEntry.COLUMN_NAME_MAXLEN, true, null);
+					mtce._typeName    = StringUtil.truncate(mtce._typeName   , MonTableColumnsEntry.TYPE_NAME_MAXLEN  , true, null);
+					mtce._description = StringUtil.truncate(mtce._description, MonTableColumnsEntry.DESCRIPTION_MAXLEN, true, null);
+					
 					sbSql = new StringBuffer();
 //					sbSql.append(" insert into ").append(monTabColName).append(" \n");
 					sbSql.append(getTableInsertStr(conn, SESSION_MON_TAB_COL_DICT, null, false));

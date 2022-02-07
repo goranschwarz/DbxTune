@@ -28,11 +28,11 @@ import java.util.List;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
+import com.asetune.pcs.report.content.SparklineHelper;
+import com.asetune.pcs.report.content.SparklineHelper.AggType;
+import com.asetune.pcs.report.content.SparklineHelper.DataSource;
+import com.asetune.pcs.report.content.SparklineHelper.SparkLineParams;
 import com.asetune.pcs.report.content.ase.AseAbstract;
-import com.asetune.pcs.report.content.ase.SparklineHelper;
-import com.asetune.pcs.report.content.ase.SparklineHelper.AggType;
-import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
-import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
@@ -71,14 +71,14 @@ public class SqlServerTopCmIndexOpStat extends AseAbstract
 		return false;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		if (_shortRstm.getRowCount() == 0)
@@ -96,9 +96,10 @@ public class SqlServerTopCmIndexOpStat extends AseAbstract
 		}
 		
 		// Write JavaScript code for CPU SparkLine
-		for (String str : _miniChartJsList)
+		if (isFullMessageType())
 		{
-			sb.append(str);
+			for (String str : _miniChartJsList)
+				sb.append(str);
 		}
 	}
 
@@ -238,6 +239,9 @@ public class SqlServerTopCmIndexOpStat extends AseAbstract
 		}
 		else
 		{
+			// Highlight sort column
+			_shortRstm.setHighlightSortColumns(_orderByCol);
+
 			// Describe the table
 			setSectionDescription(_shortRstm);
 

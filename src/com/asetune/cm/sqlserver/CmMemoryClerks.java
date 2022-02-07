@@ -211,7 +211,7 @@ extends CountersModel
 	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		String sql = ""
-			    + "SELECT \n"
+			    + "SELECT /* ${cmCollectorName} */ \n"
 			    + "     [type] \n"
 			    + "    ,count(*) as [InstanceCount] \n"
 			    + "    ,cast(SUM([pages_kb]) / 1024.0 as numeric(12,1)) AS [SizeMb] \n"

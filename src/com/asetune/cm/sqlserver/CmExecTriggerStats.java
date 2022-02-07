@@ -233,7 +233,7 @@ extends CountersModel
 		String sql = ""
 			    + "-- Note: Below SQL Statement is executed in every database that is 'online', more or less like: sp_msforeachdb \n"
 			    + "-- Note: object_schema_name() and object_name() can NOT be used for 'dirty-reads', they may block... hence the 'ugly' fullname sub-selects in the select column list \n"
-			    + "select \n"
+			    + "select /* ${cmCollectorName} */ \n"
 			    + "    DbName     = db_name(database_id), \n"
 			    + "    SchemaName = (select sys.schemas.name from sys.objects WITH (READUNCOMMITTED) inner join sys.schemas WITH (READUNCOMMITTED) ON sys.schemas.schema_id = sys.objects.schema_id where sys.objects.object_id = BASE.object_id), \n"
 			    + "    TableName  = (select sys.objects.name from sys.objects WITH (READUNCOMMITTED) where sys.objects.object_id = BASE.object_id), \n"

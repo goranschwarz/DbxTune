@@ -27,6 +27,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
 
@@ -55,6 +57,8 @@ extends ReportEntryAbstract
 	private String _dbmsServerName;
 	private String _dbmsStartTimeStr;
 	private String _dbmsStartTimeInDaysStr;
+
+	private Map<String, String> _dbmsOtherInfoMap;
 	
 	private String _reportVersion    = Version.getAppName() + ", Version: " + Version.getVersionStr() + ", Build: " + Version.getBuildStr();
 	private String _recordingVersion = null;
@@ -83,15 +87,15 @@ extends ReportEntryAbstract
 		return true;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-		writeMessageText(w);
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//		writeMessageText(w);
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		String blankTableRow = "  <tr> <td>&nbsp;</td> <td>&nbsp;</td> <td>&nbsp;</td> </tr>\n";
@@ -150,6 +154,15 @@ extends ReportEntryAbstract
 			sb.append(blankTableRow);
    			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Last Restart at Time:  </b></td> <td>" + _dbmsStartTimeStr       + "</td> </tr>\n");
 			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Last Restart in Days:  </b></td> <td>" + _dbmsStartTimeInDaysStr + "</td> </tr>\n");
+
+			if (_dbmsOtherInfoMap != null && !_dbmsOtherInfoMap.isEmpty())
+			{
+				sb.append(blankTableRow);
+				for (Entry<String, String> entry : _dbmsOtherInfoMap.entrySet())
+				{
+		   			sb.append("  <tr> " + tdBullet +" <td><b>" + entry.getKey() + ":  </b></td> <td>" + entry.getValue()   + "</td> </tr>\n");
+				}
+			}
 
 			sb.append(blankTableRow);
 			sb.append("  <tr> " + tdBullet +" <td><b>Host Monitoring was Enabled:  </b></td> <td>" + _isHostMonitoringEnabled + "</td> </tr>\n");
@@ -273,6 +286,7 @@ extends ReportEntryAbstract
 			_dbmsServerName         = dsr.getDbmsServerName();
 			_dbmsStartTimeStr       = dsr.getDbmsStartTime()       == null ? "-unknown-" : dsr.getDbmsStartTime().toString();
 			_dbmsStartTimeInDaysStr = dsr.getDbmsStartTimeInDays()     < 0 ? "-unknown-" : dsr.getDbmsStartTimeInDays()+"";
+			_dbmsOtherInfoMap       = dsr.getDbmsOtherInfoMap();
 			_recordingVersion       = dsr.getRecDbxAppName() + ", Version: " + dsr.getRecDbxVersionStr() + ", Build: " + dsr.getRecDbxBuildStr();
 		}
 

@@ -166,7 +166,7 @@ extends CountersModel
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;
 
 //	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
-	@Override public int     getDefaultPostponeTime()                 { return 300; }
+	@Override public int     getDefaultPostponeTime()                 { return 600; } // every 10 minute
 	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
 	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
 	@Override public Type    getTemplateLevel()                       { return Type.ALL; }
@@ -346,7 +346,7 @@ extends CountersModel
 		}
 
 		String sql = 
-				"SELECT \n" +
+				"SELECT /* ${cmCollectorName} */ \n" +
 				"     SUBSTRING(txt.text, (qs.statement_start_offset/2)+1, ((CASE WHEN qs.statement_end_offset = -1 THEN DATALENGTH(txt.text) ELSE qs.statement_end_offset END - qs.statement_start_offset)/2) + 1) AS [SqlText] \n" +
 //				"    ,db_name(txt.dbid) AS dbname \n" + // NOTE: dm_exec_sql_text.dbid is NULL in many cases, so using dm_exec_plan_attributes.dbid seems a lot better
 				"    ,(select isnull(db_name(CONVERT(int, value)),CONVERT(nvarchar(10), value)) from sys.dm_exec_plan_attributes(qs.plan_handle) where attribute = N'dbid') AS dbname \n" +

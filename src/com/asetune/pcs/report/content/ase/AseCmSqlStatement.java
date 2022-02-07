@@ -30,8 +30,9 @@ import java.util.List;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.IReportChart;
-import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
-import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
+import com.asetune.pcs.report.content.SparklineHelper;
+import com.asetune.pcs.report.content.SparklineHelper.DataSource;
+import com.asetune.pcs.report.content.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
@@ -54,14 +55,14 @@ public class AseCmSqlStatement extends AseAbstract
 		return false;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		// Get a description of this section, and column names
@@ -100,9 +101,10 @@ public class AseCmSqlStatement extends AseAbstract
 		_CmSqlStatement_SqlStmntSumErrorCnt .writeHtmlContent(sb, null, null);
 		
 		// Write JavaScript code for CPU SparkLine
-		for (String str : _miniChartJsList)
+		if (isFullMessageType())
 		{
-			sb.append(str);
+			for (String str : _miniChartJsList)
+				sb.append(str);
 		}
 	}
 

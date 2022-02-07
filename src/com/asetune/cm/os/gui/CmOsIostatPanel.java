@@ -40,8 +40,8 @@ import com.asetune.cm.CounterTableModel;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.os.CmOsIostat;
 import com.asetune.hostmon.HostMonitor;
-import com.asetune.hostmon.MonitorIoLinux;
 import com.asetune.hostmon.HostMonitor.OsVendor;
+import com.asetune.hostmon.MonitorIoLinux;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 

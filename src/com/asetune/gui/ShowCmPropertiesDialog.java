@@ -621,6 +621,10 @@ extends JDialog implements ActionListener, ChangeListener
 			sqlExec = sqlPrefix + sqlExec;
 		}
 
+		// Replace any "${cmCollectorName}" --> "xxxTune:CmName"
+		sqlExec = _cm.replaceCollectorName(sqlExec);
+
+
 		_sqlInit .setText(sqlInit);
 		_sqlExec .setText(sqlExec);
 		_sqlWhere.setText(sqlWhere);

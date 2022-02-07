@@ -233,7 +233,7 @@ extends CountersModel
 //			sql_sample_systemThreads = "  and isnull(es.is_user_process, 0) = 0 -- Property: "+PROPKEY_sample_systemThreads+" is "+sample_systemThreads+". \n";
 
 		String sql = 
-			"select  \n" +
+			"select /* ${cmCollectorName} */ \n" +
 			"    is_user_process = isnull(es.is_user_process, 0), \n" +
 			"    sp.spid, \n" +
 			"    sp.ecid, \n" +

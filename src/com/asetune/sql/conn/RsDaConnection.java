@@ -56,4 +56,11 @@ public class RsDaConnection extends TdsConnection
 	{
 		return ! _conn.isClosed();
 	}
+
+	@Override
+	protected int getDbmsSessionId_impl() throws SQLException
+	{
+		// I don't know how to get SPID... so lets just return -1 for unknown 
+		return -1;
+	}
 }

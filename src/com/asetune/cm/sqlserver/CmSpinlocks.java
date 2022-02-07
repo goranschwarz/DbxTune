@@ -176,7 +176,7 @@ extends CountersModel
 			dm_os_spinlock_stats = "dm_os_spinlock_stats"; // IS THIS THE SAME OR DOESNT IT EXISTS...????
 
 		String sql = 
-			"select \n" +
+			"select /* ${cmCollectorName} */ \n" +
 			"    s.name, \n" +
 			"    s.spins, \n" +
 			"    s.collisions, \n" +

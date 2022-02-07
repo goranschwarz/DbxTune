@@ -36,8 +36,9 @@ import java.util.Set;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
-import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
+import com.asetune.pcs.report.content.SparklineHelper;
+import com.asetune.pcs.report.content.SparklineHelper.DataSource;
+import com.asetune.pcs.report.content.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
@@ -64,14 +65,14 @@ public class AseTopSlowDynAndStmnt extends AseAbstract
 		return false;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		if (_shortRstm.getRowCount() == 0)
@@ -126,9 +127,10 @@ public class AseTopSlowDynAndStmnt extends AseAbstract
 		}
 		
 		// Write JavaScript code for CPU SparkLine
-		for (String str : _miniChartJsList)
+		if (isFullMessageType())
 		{
-			sb.append(str);
+			for (String str : _miniChartJsList)
+				sb.append(str);
 		}
 	}
 
@@ -228,9 +230,6 @@ public class AseTopSlowDynAndStmnt extends AseAbstract
 			    + "   ,cast('' as varchar(512))     as [ExecCount__chart] \n"
 			    + " \n"
 			    + "   ,cast('' as varchar(512))     as [SkipThis] \n"
-			    + "	  ,min([StartTime])             as [StartTime_min] \n"
-			    + "	  ,max([EndTime])               as [EndTime_max] \n"
-			    + "	  ,cast('' as varchar(30))      as [Duration] \n"
 			    + " \n"
 			    + "   ,sum([Elapsed_ms])            as [Elapsed_ms__sum] \n"
 			    + "   ,avg([Elapsed_ms])            as [Elapsed_ms__avg] \n"
@@ -273,6 +272,11 @@ public class AseTopSlowDynAndStmnt extends AseAbstract
 //				+ "   ,(sum([LogicalReads])*1.0) / (coalesce(sum([RowsAffected]),1)*1.0) as [LogicalReadsPerRowsAffected] \n"
 				+ "   ,-9999999.0 as [LogicalReadsPerRowsAffected] \n"
 				
+			    + " \n"
+			    + "	  ,min([StartTime])             as [StartTime_min] \n"
+			    + "	  ,max([EndTime])               as [EndTime_max] \n"
+			    + "	  ,cast('' as varchar(30))      as [Duration] \n"
+
 			    + "from [MonSqlCapStatements] \n"
 				+ "where [ProcedureID] != 0 \n"
 				+ "  and [ProcName] like '*%' \n"
@@ -295,6 +299,9 @@ public class AseTopSlowDynAndStmnt extends AseAbstract
 		}
 		else
 		{
+			// Highlight sort column
+			_shortRstm.setHighlightSortColumns("CpuTime__sum");
+
 			// Describe the table
 			setSectionDescription(_shortRstm);
 

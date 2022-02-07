@@ -187,10 +187,11 @@ public class StatementNormalizerTest
 			if (normalizeParameters == null)
 				normalizeParameters = new StatementNormalizer.NormalizeParameters();
 
-			String normalizedSqlText = StatementNormalizer.getInstance().normalizeSqlText(sqlText, normalizeParameters);
+			List<String> tableList = new ArrayList<>();
+			String normalizedSqlText = StatementNormalizer.getInstance().normalizeSqlText(sqlText, normalizeParameters, tableList);
 
 			int addStatus = normalizeParameters.addStatus.getIntValue();
-			System.out.println("normalized: addStatus=[" + addStatus + "]" + normalizeParameters.addStatus + ", SqlText=|" + normalizedSqlText + "|.");
+			System.out.println("normalized: addStatus=[" + addStatus + "]" + normalizeParameters.addStatus + ", TableList=" + tableList + ", SqlText=|" + normalizedSqlText + "|.");
 		}
 	}
 }

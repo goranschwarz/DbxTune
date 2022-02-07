@@ -28,11 +28,11 @@ import java.util.List;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
+import com.asetune.pcs.report.content.SparklineHelper;
+import com.asetune.pcs.report.content.SparklineHelper.AggType;
+import com.asetune.pcs.report.content.SparklineHelper.DataSource;
+import com.asetune.pcs.report.content.SparklineHelper.SparkLineParams;
 import com.asetune.pcs.report.content.ase.AseAbstract;
-import com.asetune.pcs.report.content.ase.SparklineHelper;
-import com.asetune.pcs.report.content.ase.SparklineHelper.AggType;
-import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
-import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
@@ -55,15 +55,15 @@ public class PostgresTopTableAccess extends AseAbstract
 		return true;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-		writeMessageText(w);
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//		writeMessageText(w);
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		//------------------------------------------
@@ -99,9 +99,10 @@ public class PostgresTopTableAccess extends AseAbstract
 		}
 		
 		// Write JavaScript code for CPU SparkLine
-		for (String str : _miniChartJsList)
+		if (isFullMessageType())
 		{
-			sb.append(str);
+			for (String str : _miniChartJsList)
+				sb.append(str);
 		}
 	}
 
@@ -142,18 +143,16 @@ public class PostgresTopTableAccess extends AseAbstract
 
 		String sql = getCmDiffColumnsAsSqlComment("CmPgTablesIo")
 			    + "select top " + topRows + " \n"
-			    + "     min([CmSampleTime])           as [CmSampleTime_MIN] \n"
-			    + "    ,max([CmSampleTime])           as [CmSampleTime_MAX] \n"
-			    + "    ,cast('' as varchar(30))       as [Duration] \n"
-			    + " \n"
-			    + "    ,[dbname] \n"
+			    + "     [dbname] \n"
 			    + "    ,[schemaname] \n"
 			    + "    ,[relname] \n"
 			    + "    ,max([relid])                  as [relid] \n"
 			    + " \n"
 			    + "    ,cast('' as varchar(512))      as [ALL_blks_read__chart] \n"
 			    + "    ,cast('' as varchar(512))      as [ALL_blks_hit__chart] \n"
-			    + " \n"
+			    + " \n" //             ----------------------- ALL_blks_hit_SUM ------------------------------------------------- / nullif( ----------------------- ALL_blks_hit_SUM ------------------------------------------------- + ------------------------ ALL_blks_read_SUM ----------------------------------------------------, 0)
+				+ "    ,CAST( 100.0 * (sum([heap_blks_hit]) + sum([idx_blks_hit]) + sum([toast_blks_hit]) + sum([tidx_blks_hit])) / nullif((sum([heap_blks_hit]) + sum([idx_blks_hit]) + sum([toast_blks_hit]) + sum([tidx_blks_hit])) + (sum([heap_blks_read]) + sum([idx_blks_read]) + sum([toast_blks_read]) + sum([tidx_blks_read])), 0) AS DECIMAL(5,1) ) as [cache_hit_pct] \n"
+
 			    + "    ,(sum([heap_blks_read]) + sum([idx_blks_read]) + sum([toast_blks_read]) + sum([tidx_blks_read]) ) as [ALL_blks_read_SUM] \n"
 			    + "    ,(sum([heap_blks_hit])  + sum([idx_blks_hit])  + sum([toast_blks_hit])  + sum([tidx_blks_hit])  ) as [ALL_blks_hit_SUM] \n"
 			    + " \n"
@@ -172,6 +171,10 @@ public class PostgresTopTableAccess extends AseAbstract
 //			    + "    ,cast('' as varchar(512))      as [tidx_blks_read__chart] \n"
 			    + "    ,sum([tidx_blks_read])         as [tidx_blks_read_SUM] \n"
 			    + "    ,sum([tidx_blks_hit])          as [tidx_blks_hit_SUM] \n"
+			    + " \n"
+			    + "    ,min([CmSampleTime])           as [CmSampleTime_MIN] \n"
+			    + "    ,max([CmSampleTime])           as [CmSampleTime_MAX] \n"
+			    + "    ,cast('' as varchar(30))       as [Duration] \n"
 			    + "from [CmPgTablesIo_diff] \n"
 			    + "where 1 = 1 \n"
 				+ getReportPeriodSqlWhere()
@@ -186,8 +189,11 @@ public class PostgresTopTableAccess extends AseAbstract
 		}
 		else
 		{
+			// Highlight sort column
+			rstm.setHighlightSortColumns("ALL_blks_hit_SUM");
+
 			// Describe the table
-			rstm.setDescription("<h4>Table/Index IO and Cache Activity (ordered by: heap_blks_hit + idx_blks_hit + toast_blks_hit + tidx_blks_hit)</h4>");
+			rstm.setDescription("<h4>Table/Index IO and Cache Activity (ordered by: /*-cache-hits-*/ heap_blks_hit + idx_blks_hit + toast_blks_hit + tidx_blks_hit)</h4>");
 
 			// Columns description
 			rstm.setColumnDescription("CmSampleTime_MIN"          , "First entry was sampled.");
@@ -263,11 +269,7 @@ public class PostgresTopTableAccess extends AseAbstract
 		
 		String sql = getCmDiffColumnsAsSqlComment("CmPgTables")
 			    + "select top " + topRows + " \n"
-			    + "     min([CmSampleTime])                                        as [CmSampleTime_MIN] \n"
-			    + "    ,max([CmSampleTime])                                        as [CmSampleTime_MAX] \n"
-			    + "    ,cast('' as varchar(30))                                    as [Duration] \n"
-			    + " \n"
-			    + "    ,[dbname] \n"
+			    + "     [dbname] \n"
 			    + "    ,[schemaname] \n"
 			    + "    ,[relname] \n"
 			    + "    ,max([relid])                                               as [relid] \n"
@@ -304,6 +306,10 @@ public class PostgresTopTableAccess extends AseAbstract
 			    + "    ,sum([autovacuum_count])                                    as [autovacuum_count_SUM] \n"
 			    + "    ,sum([analyze_count])                                       as [analyze_count_SUM] \n"
 			    + "    ,sum([autoanalyze_count])                                   as [autoanalyze_count_SUM] \n"
+			    + " \n"
+			    + "    ,min([CmSampleTime])                                        as [CmSampleTime_MIN] \n"
+			    + "    ,max([CmSampleTime])                                        as [CmSampleTime_MAX] \n"
+			    + "    ,cast('' as varchar(30))                                    as [Duration] \n"
 			    + "from [CmPgTables_diff] \n"
 			    + "group by [dbname], [schemaname], [relname] \n"
 			    + "order by sum([seq_tup_read]) + sum([idx_tup_fetch]) desc \n"
@@ -316,8 +322,11 @@ public class PostgresTopTableAccess extends AseAbstract
 		}
 		else
 		{
+			// Highlight sort column
+//			rstm.setHighlightSortColumns("FIXME");
+
 			// Describe the table
-			rstm.setDescription("<h4>Table/Index Access Activity (ordered by: seq_tup_read + idx_tup_fetch)</h4>"
+			rstm.setDescription("<h4>Table/Index Access Activity (ordered by: /*-table-scan-rows-read- and -index-rows-read-*/ seq_tup_read + idx_tup_fetch)</h4>"
 					+ "Autovacuum Tuning Basics (for TOAST cleanup/reduction)<br>"
 					+ "https://www.2ndquadrant.com/en/blog/autovacuum-tuning-basics/"
 					+ "<br>");

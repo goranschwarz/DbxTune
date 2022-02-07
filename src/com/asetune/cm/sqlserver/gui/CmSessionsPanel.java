@@ -22,7 +22,6 @@ package com.asetune.cm.sqlserver.gui;
 
 import java.awt.Color;
 import java.awt.Component;
-import java.util.HashMap;
 
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;

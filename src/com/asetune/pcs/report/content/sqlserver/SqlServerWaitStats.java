@@ -32,11 +32,11 @@ import com.asetune.config.dict.SqlServerWaitTypeDictionary;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.pcs.report.content.ReportChartTimeSeriesStackedBar.TopGroupCountReport;
-import com.asetune.pcs.report.content.ase.SparklineHelper;
-import com.asetune.pcs.report.content.ase.SparklineJfreeChart;
-import com.asetune.pcs.report.content.ase.SparklineHelper.AggType;
-import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
-import com.asetune.pcs.report.content.ase.SparklineHelper.SparklineResult;
+import com.asetune.pcs.report.content.SparklineHelper;
+import com.asetune.pcs.report.content.SparklineHelper.AggType;
+import com.asetune.pcs.report.content.SparklineHelper.DataSource;
+import com.asetune.pcs.report.content.SparklineHelper.SparklineResult;
+import com.asetune.pcs.report.content.SparklineJfreeChart;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -58,15 +58,15 @@ extends SqlServerAbstract
 		return true;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-		writeMessageText(w);
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//		writeMessageText(w);
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		sb.append("Wait Statistics for the full day (origin: CmWaitStat / dm_os_wait_stats) <br>");
@@ -260,7 +260,7 @@ extends SqlServerAbstract
 					sb.append("  <td>").append(cnt++           ).append("</td> \n");
 					sb.append("  <td>").append(entry.getKey()  ).append("</td> \n");
 					sb.append("  <td>").append(sparklineDataStr_ms).append("</td> \n");
-					sb.append("  <td>").append(NumberFormat.getInstance().format(entry.getValue())).append("</td> \n");
+					sb.append("  <td><b>").append(NumberFormat.getInstance().format(entry.getValue())).append("</b></td> \n");
 					sb.append("  <td>").append(TimeUtils.msToTimeStr("%?DD[d ]%HH:%MM:%SS", entry.getValue().intValue())).append("</td> \n");
 					sb.append("  <td>").append(sparklineDataStr_wtpc).append("</td> \n");
 					sb.append("  <td> <a href='https://www.sqlskills.com/help/waits/"+entry.getKey()+"' target='_blank'>"+entry.getKey()+"</a>").append("</td> \n");

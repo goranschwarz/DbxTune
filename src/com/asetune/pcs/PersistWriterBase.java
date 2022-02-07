@@ -43,6 +43,8 @@ import org.apache.log4j.Logger;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.config.dict.MonTablesDictionary.MonTableColumnsEntry;
+import com.asetune.config.dict.MonTablesDictionary.MonTableEntry;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.sql.conn.DbxConnection;
@@ -854,8 +856,8 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(lq+"Parameters"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"Indicators"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"Size"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"TableName"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255 ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"Description"      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 8000),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(lq+"TableName"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, MonTableEntry.TABLE_NAME_MAXLEN ),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(lq+"Description"      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, MonTableEntry.DESCRIPTION_MAXLEN),20)+" "+getNullable(true)+"\n");
 				sbSql.append(") \n");
 
 				ddlList.add(sbSql.toString());
@@ -874,10 +876,10 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(lq+"Scale"            +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"Length"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"Indicators"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"TableName"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255 ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"ColumnName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255 ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"TypeName"         +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255 ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"Description"      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 8000),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(lq+"TableName"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, MonTableColumnsEntry.TABLE_NAME_MAXLEN ),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(lq+"ColumnName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, MonTableColumnsEntry.COLUMN_NAME_MAXLEN),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(lq+"TypeName"         +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, MonTableColumnsEntry.TYPE_NAME_MAXLEN  ),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(lq+"Description"      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, MonTableColumnsEntry.DESCRIPTION_MAXLEN),20)+" "+getNullable(true)+"\n");
 				sbSql.append(") \n");
 				
 				ddlList.add(sbSql.toString());

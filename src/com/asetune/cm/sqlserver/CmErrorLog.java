@@ -155,7 +155,7 @@ extends CountersModelAppend
 	@Override
 	public boolean checkDependsOnRole(DbxConnection conn)
 	{
-		String sql = "exec xp_readerrorlog 0, 1, null, null, '20500101'"; // a long time in the future
+		String sql = "exec xp_readerrorlog 0, 1, null, null, '20500101' /* ${cmCollectorName} */ "; // a long time in the future
 		try (Statement stmnt = conn.createStatement())
 		{
 			boolean hasRs = stmnt.execute(sql);

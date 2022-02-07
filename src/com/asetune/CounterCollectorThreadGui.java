@@ -284,6 +284,9 @@ extends CounterCollectorThreadAbstract
 //								getCounterController().getMonConnection().reConnect(MainFrame.getInstance());
 								getCounterController().getMonConnection().reConnect(null);
 
+								// After reconnect, call: onMonConnect() again. 
+								getCounterController().onMonConnect(getCounterController().getMonConnection());
+								
 //								String str = AseConnectionFactory.getServer() + " (" +
 //								             AseConnectionFactory.getHost()   + ":" +
 //								             AseConnectionFactory.getPort()   + ")";
@@ -692,6 +695,9 @@ extends CounterCollectorThreadAbstract
 									conn.close();
 									conn.reConnect(null);
 									_logger.info("Succeeded: reconnect. continuing to refresh data for next CM.");
+									
+									// After reconnect, call: onMonConnect() again. 
+									getCounterController().onMonConnect(conn);
 								}
 								catch(Exception reconnectEx)
 								{
@@ -833,6 +839,9 @@ extends CounterCollectorThreadAbstract
 						conn.clearConnectionMark(DbxConnection.MarkTypes.MarkForReConnect);
 						conn.close();
 						conn.reConnect( MainFrame.hasInstance() ? MainFrame.getInstance() : null );
+
+						// After reconnect, call: onMonConnect() again. 
+						getCounterController().onMonConnect(conn);
 					}
 					catch (Exception ex)
 					{

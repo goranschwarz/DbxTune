@@ -920,6 +920,48 @@ implements Cloneable, ITableTooltip
 	}
 
 
+	//----------------------------------------------------------
+	// BEGIN: Helper methods to check for CounterSample column names
+	//----------------------------------------------------------
+	private int _findCsColumn_missing_count = 0;
+	public void findCsColumn_resetMissingCounter()
+	{
+		_findCsColumn_missing_count = 0;
+	}
+	public boolean findCsColumn_hasMissingColumns()
+	{
+		return _findCsColumn_missing_count > 0;
+	}
+	public int findCsColumn_getMissingColumns()
+	{
+		return _findCsColumn_missing_count;
+	}
+	public int findCsColumn(CounterSample cs, String... colNames)
+	{
+		return findCsColumn(cs, true, colNames);
+	}
+	public int findCsColumn(CounterSample cs, boolean printError, String... colNames)
+	{
+		int pos = -1;
+		for (String name : colNames)
+		{
+			pos = cs.findColumn(name);
+
+			if (pos != -1)
+				return pos;
+		}
+		
+		_findCsColumn_missing_count++;
+		if (printError)
+			_logger.warn("Cant find any of the column(s) " + StringUtil.toCommaStrQuoted("'", colNames) + " in CounterSample '" + cs.getName() + "'.");
+
+		return -1;
+	}
+	//----------------------------------------------------------
+	// END: Helper methods to check for CounterSample column names
+	//----------------------------------------------------------
+
+
 
 	/**
 	 * Set who is responsible for collecting the counters for this CounterModel
@@ -2942,6 +2984,9 @@ implements Cloneable, ITableTooltip
 		// Generate the SQL, for the specific ASE version
 		String sql = getSqlForVersion(conn, srvVersion, isClusterEnabled);
 
+		// Replace any "${cmCollectorName}" --> "xxxTune:CmName"
+		sql = replaceCollectorName(sql);
+		
 		// set the SQL to use
 		if (useSqlPrefix())
 		{
@@ -2979,6 +3024,32 @@ implements Cloneable, ITableTooltip
 	public String getSqlPrefix()
 	{
 		return "/* " + Version.getAppName() + ":" + getName() + " */ \n";
+	}
+
+	/** 
+	 * If you want to use SQL Prefix in a query, this can be used to automatically create a prefix string
+	 * <p>
+	 * The default is to use: <code>&#47* APPNAME:CmName *&#47; \n</code> 
+	 */
+	public String replaceCollectorName(String sql)
+	{
+		if (sql == null)
+			return null;
+	
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+		boolean replaceCollectorName = conf.getBooleanProperty("cm.replaceCollectorName", true);
+		if (replaceCollectorName)
+		{
+			if (conf.hasProperty("cm." + getName() + ".replaceCollectorName"))
+			{
+				replaceCollectorName = conf.getBooleanProperty("cm." + getName() + ".replaceCollectorName", true);
+			}
+		}
+		if (replaceCollectorName)
+			return sql.replace("${cmCollectorName}", Version.getAppName() + ":" + getName());
+
+		return sql;
 	}
 
 	/**

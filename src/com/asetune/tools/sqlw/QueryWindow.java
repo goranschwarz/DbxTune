@@ -211,6 +211,7 @@ import com.asetune.gui.JdbcMetaDataInfoDialog;
 import com.asetune.gui.JvmMemorySettingsDialog;
 import com.asetune.gui.Log4jViewer;
 import com.asetune.gui.MainFrameAse;
+import com.asetune.gui.ModelMissmatchException;
 import com.asetune.gui.ParameterDialog;
 import com.asetune.gui.ResultSetMetaDataViewDialog;
 import com.asetune.gui.ResultSetTableModel;
@@ -263,6 +264,7 @@ import com.asetune.tools.sqlw.msg.JAseRowCount;
 import com.asetune.tools.sqlw.msg.JBcpWarning;
 import com.asetune.tools.sqlw.msg.JClientExecTime;
 import com.asetune.tools.sqlw.msg.JDbmsOuputMessage;
+import com.asetune.tools.sqlw.msg.JForeachDbMessage;
 import com.asetune.tools.sqlw.msg.JGraphResultSet;
 import com.asetune.tools.sqlw.msg.JOracleMessage;
 import com.asetune.tools.sqlw.msg.JPipeMessage;
@@ -3945,7 +3947,7 @@ public class QueryWindow
 					}
 					if ( ! resultCompList2.isEmpty() )
 						resultCompList2.add(0, new JAseMessage("Messages below was received when connecting to Replication Server\n----------------------------------------------------------------------------------------------", "connect"));
-					addToResultsetPanel(resultCompList2, false, false, false);
+					addToResultsetPanel(resultCompList2, false, false, false, null);
 
 					// Check RS Grace Period
 					String gracePeriodWarning   = AseConnectionUtils.getRsGracePeriodWarning(_conn);
@@ -3992,7 +3994,7 @@ public class QueryWindow
 					}
 					if ( ! resultCompList2.isEmpty() )
 						resultCompList2.add(0, new JAseMessage("Messages below was received when connecting to Replication Agent\n----------------------------------------------------------------------------------------------", "connect"));
-					addToResultsetPanel(resultCompList2, false, false, false);
+					addToResultsetPanel(resultCompList2, false, false, false, null);
 
 					_logger.info("Connected to Replication Agent X version '"+_srvVersion+"'.");
 				}
@@ -7714,7 +7716,8 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 			_result_txt = out;
 
 			// add exception text to OUTPUT TEXT
-			out.setText(ex.toString());
+//			out.setText(ex.toString());
+			out.setText(StringUtil.stackTraceToString(ex));
 
 			// DO POPUP
 //			if ( ! (ex instanceof SQLException) )
@@ -8307,6 +8310,8 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 
 			boolean sr_goTabbedPane = false;
 			boolean sr_goPlaneText  = false;
+			boolean sr_mergeRs      = false;
+			String  sr_filterText   = null;
 			
 			// Just for DEBUG Purposes: to see what the DBMS is doing if you are NOT closing the Statement
 			boolean debugStatementClose = Configuration.getCombinedConfiguration().getBooleanProperty("sqlw.Statement.close", true);
@@ -8348,6 +8353,8 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 
 				sr_goTabbedPane = sr.hasOption_asTabbedPane();
 				sr_goPlaneText  = sr.hasOption_asPlainText();
+				sr_mergeRs      = sr.hasOption_mergeRs();
+				sr_filterText   = sr.getOption_filterText();
 
 				// Set "global" flag, sine it's used elsewhere
 				_appendResults_scriptReader = sr.hasOption_appendOutput();
@@ -8357,559 +8364,128 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 				if (! isConnectionOk)
 					break;
 				
-				// Substitute variables ${varname} in the text.
-				String[] skipList = {"\\ddlgen ", "\\tabdiff ", "\\dbdiff"};
-				sql = SqlStatementCmdSet.substituteVariables(sql, skipList, _resultCompList);
-				
-				progress.setCurrentSqlText(sql, batchCount, sr.getMultiExecCount());
-				
-				SqlStatement sqlStmntInfo = null;
-				
-				// if 'go 10' we need to execute this 10 times
-				for (int execCnt=0; execCnt<sr.getMultiExecCount(); execCnt++)
+				// if 'go foreachdb', populate the foreachDbNames LIST with ALL available databases (if not set specifically by the 'go foreachdb' command)
+				String foreachDbBeforeExecuteVarDbname = null;
+				List<String> foreachDbNames = new ArrayList<>();
+				if (sr.hasOption_foreachDb())
 				{
-					// If cancel has been pressed, do not continue to repeat the command
+					foreachDbBeforeExecuteVarDbname = SqlStatementCmdSet.getVariable("dbname"); 
+
+					foreachDbNames = sr.getOption_foreachDb();
+					if (foreachDbNames.isEmpty()) // get all databases
+					{
+						// Get it from the JCombobox: _dbnames_cbx
+						// if we are going to change this list, we should do: new ArrayList(_dbnames_cbx.getDbList());
+						foreachDbNames = _dbnames_cbx.getDbList();
+					}
+				}
+
+				// Save "origin" SQL (for various reasons; like multi executions (go ##|foreachdb) and variable substitution... then we need the origin SQL (that holds the variables)
+				String originSqlBatch = sql;
+
+				//-----------------------------------------------------------------
+				// iterate over DBNAMES (if we got: 'go foreachdb')
+				// if there is NO 'go foreachdb', the loop will only be 
+				//-----------------------------------------------------------------
+				String foreachDbBeforeExecuteCwdb = null;
+
+				// loop at least 1 time, or number of entries in foreachDbNames
+				for (int dbloop=0; dbloop < foreachDbNames.size() || dbloop == 0; dbloop++)
+				{
+					// If cancel has been pressed, do not continue
 					if (progress.isCancelled())
 						break;
 
-					// Increment Usage Statistics
-					incExecBatchCount();
-
-					Statement stmnt = null;
-					try
+					if ( ! foreachDbNames.isEmpty() )
 					{
-						int rowsAffected = 0;
+						String tmpDbname = foreachDbNames.get(dbloop);
 
-						// RPC handling if the text starts with '\exec '
-						// The for of this would be: {?=call procName(parameters)}
-//						SqlStatementInfo sqlStmntInfo = new SqlStatementInfo(_conn, sql, _connectedToProductName, _resultCompList);
-						sqlStmntInfo = SqlStatementFactory.create(_conn, sql, _connectedToProductName, _resultCompList, progress, _window, this);
+    					foreachDbBeforeExecuteCwdb = _currentDbName;// getCurrentDb()
 
-						if (_showSentSql_chk.isSelected() || sr.hasOption_printSql())
-							_resultCompList.add( new JSentSqlStatement(sql, sr.getSqlBatchStartLine() + startRowInSelection) );
-
-						// remember the start time
-						long execStartTime = System.currentTimeMillis();
-						progress.setCurrentBatchStartTime(execCnt);
-
-						// Get the Statement used for execution, which is used below when reading resultsets etc
-						stmnt = sqlStmntInfo.getStatement();
-						progress.setSqlStatement(stmnt); // Used to cancel() on the statement level
-
-						if (_jdbcAutoCommit_chk.isSelected())
+    					// Add message: Foreach DB: changed database context to 'xxx'.
+						_resultCompList.add( new JForeachDbMessage(tmpDbname, sql) );
+    					
+    					// set: tmpDbname
+						try 
 						{
-							int fetchSize = StringUtil.parseInt(_fetchSize_txt.getText(), -1);
-							if (fetchSize > 0)
-							{
-								stmnt.setFetchSize(fetchSize);
-								_logger.info("Setting fetchSize to " + fetchSize + " for the current execution.");
-							}
+							setDbName(tmpDbname);
+						} 
+						catch(SQLException ex) 
+						{
+							putSqlWarningMsgs(ex, _resultCompList, null, "foreachdb="+tmpDbname, sr.getSqlBatchStartLine(), startRowInSelection, sql);
+							continue;
 						}
-
-						
-						// Execute the SQL
-						boolean hasRs = sqlStmntInfo.execute();
-	
-						// calculate the execution time
-						long execStopTime = System.currentTimeMillis();
-						
-						// Keep a summary of the time to read ResultSet
-						long execReadRsSum = 0;
-	
-						// Check for Any messages in the sqlStmntInfo
-						if (sqlStmntInfo instanceof IMessageAware)
-						{
-							IMessageAware ma = (IMessageAware)sqlStmntInfo;
-							
-							for (Message msg : ma.getMessages())
-								_resultCompList.add( new JPipeMessage(msg, sql) );
-							ma.clearMessages();
-						}
-
-						progress.setState("Waiting for Server to return resultset.");
-						_statusBar.setMsg("Waiting for Server to return resultset.");
-			
-						// iterate through each result set
-						int rsCount = 0;
-						int loopCount = 0;
-						do
-						{
-							loopCount++; // used for debugging
-
-							// Append, messages and Warnings to _resultCompList, if any
-							putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-hasRs-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
-	
-							if(hasRs)
-							{
-								incRsCount();
-								rsCount++;
-								_statusBar.setMsg("Reading resultset "+rsCount+".");
-								progress.setState("Reading resultset "+rsCount+".");
-			
-								// Get next ResultSet to work with
-								ResultSet rs = stmnt.getResultSet();
-
-								// If we should NOT keep the ResultSet, simply discard the resultset and continue with next
-								if (sr.hasOption_keepRs() || sr.hasOption_skipRs())
-								{
-									boolean keepRs = true;
-
-									List<Integer> keepRsList = sr.getOption_keepRs();
-									List<Integer> skipRsList = sr.getOption_skipRs();
-									
-									if (sr.hasOption_keepRs())
-									{
-    									if ( ! keepRsList.contains(rsCount) )
-    										keepRs = false;
-									}
-									
-									if (sr.hasOption_skipRs())
-									{
-										if ( skipRsList.contains(rsCount) )
-											keepRs = false;
-									}
-									
-									if ( ! keepRs )
-									{
-										_resultCompList.add( new JAseMessage("SKIPPING ResultSet number "+rsCount+" due to: keepList="+keepRsList+", skipList="+skipRsList, sql) );
-										while(rs.next())
-											; // Just Read every row in the RS to "clear" it...
-										rs.close();
-
-										// Get NEXT ResultSet and start from the TOP (in the do {})
-										hasRs = stmnt.getMoreResults();
-						/*<----------*/ continue;
-									}
-								}
-								
-								ResultSetTableModel rstm = null;
-			
-								// Append, messages and Warnings to _resultCompList, if any
-								putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-after-getResultSet()-Statement-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
-								putSqlWarningMsgs(rs,    _resultCompList, sr.getPipeCmd(), "-after-getResultSet()-ResultSet-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
-	
-								// Check for BCP pipe command
-								PipeCommand pipeCmd = sr.getPipeCmd();
-								if (pipeCmd != null)
-									pipeCmd.getCmd().setGuiOwner(_window);
-
-								//---------------------------------
-								// PIPE - BCP
-								//---------------------------------
-								if (pipeCmd != null && (pipeCmd.getCmd() instanceof PipeCommandBcp))
-								{
-									//PipeCommandBcp pipeCmdBcp = (PipeCommandBcp)pipeCmd.getCmd();
-									
-									// BCP command needs the initial Connection, to get Connection Properties, in case the --crTable/crIndex (access source DBMS)
-									// if this isn't done the (Sybase) JDBC driver seems to READ FULLY the LEFT/RIGHT side (and cache the rows)...
-									//pipeCmdBcp.setConnection(getConnection()); // Maybe change this to use the ConnectionProvider class instead...
-									// This is actually using the ConnectionProvider now
-
-									try
-									{
-										pipeCmd.getCmd().doEndPoint(rs, progress);
-									}
-									catch (Exception e)
-									{
-										progress.setState("Canceling the query (if the JDBC driver supports this).");
-										_logger.info("Calling stmnt.cancel() to Canceling the query (if the JDBC driver supports this).");
-										stmnt.cancel();
-										throw e;
-									}
-
-									int rowsSelected = (Integer) pipeCmd.getCmd().getEndPointResult(PipeCommandBcp.rowsSelected);
-									int rowsInserted = (Integer) pipeCmd.getCmd().getEndPointResult(PipeCommandBcp.rowsInserted);
-									incRsRowsCount(rowsSelected);
-									incIudRowsCount(rowsInserted);
-
-									if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
-										_resultCompList.add( new JAseRowCount(rowsInserted, sql) );
-
-									SQLWarning bcpSqlWarnings = (SQLWarning) pipeCmd.getCmd().getEndPointResult(PipeCommandBcp.sqlWarnings);
-									if (bcpSqlWarnings != null)
-										_resultCompList.add( new JBcpWarning(bcpSqlWarnings, pipeCmd, sql) );
-								}
-								//---------------------------------
-								// PIPE - ToFile
-								//---------------------------------
-								else if (pipeCmd != null && (pipeCmd.getCmd() instanceof PipeCommandToFile))
-								{
-									try
-									{
-										pipeCmd.getCmd().doEndPoint(rs, progress);
-									}
-									catch (Exception e)
-									{
-										progress.setState("Canceling the query (if the JDBC driver supports this).");
-										_logger.info("Calling stmnt.cancel() to Canceling the query (if the JDBC driver supports this).");
-										stmnt.cancel(); // Cancel big queries
-										throw e;
-									}
-
-									int rowsSelected = (Integer) pipeCmd.getCmd().getEndPointResult(PipeCommandToFile.rowsSelected);
-									int rowsWritten  = (Integer) pipeCmd.getCmd().getEndPointResult(PipeCommandToFile.rowsWritten);
-									incRsRowsCount(rowsSelected);
-									incIudRowsCount(rowsWritten);
-
-									if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
-										_resultCompList.add( new JAseRowCount(rowsWritten, sql) );
-
-									String toFileMessage = (String) pipeCmd.getCmd().getEndPointResult(PipeCommandToFile.message);
-									if (toFileMessage != null)
-										_resultCompList.add( new JToFileMessage(toFileMessage, pipeCmd, sql) );
-								}
-								//---------------------------------
-								// PIPE - Diff
-								//---------------------------------
-								else if (pipeCmd != null && (pipeCmd.getCmd() instanceof PipeCommandDiff))
-								{
-									PipeCommandDiff pipeCmdDiff = (PipeCommandDiff)pipeCmd.getCmd();
-									
-									// Diff command needs the initial Connection, to get Connection Properties, in case the --keyCols are empty
-									// if this isn't done the (Sybase) JDBC driver seems to READ FULLY the LEFT/RIGHT side (and cache the rows)...
-									//pipeCmdDiff.setConnection(getConnection()); // Maybe change this to use the ConnectionProvider class instead...
-									// This is actually using the ConnectionProvider now
-
-									try
-									{
-										pipeCmdDiff.doEndPoint(rs, progress);
-										
-										for (Message pmsg : pipeCmdDiff.getMessages())
-											_resultCompList.add( new JPipeMessage(pmsg, pipeCmd.getCmd()) );
-										pipeCmdDiff.clearMessages();
-										
-										if (pipeCmdDiff.hasDiffTableMode())
-										{
-//											_resultCompList.add(new JTableResultSet(rstm));
-											_resultCompList.add(new JTableResultSet(pipeCmdDiff.getDiffTableMode()));
-//											System.out.println("FIXME: ADD THE TABLE MODEL TO THE RESULTS");
-										}
-									}
-									catch (Exception e)
-									{
-										progress.setState("Canceling the query (if the JDBC driver supports this).");
-										_logger.info("Calling stmnt.cancel() to Canceling the query (if the JDBC driver supports this).");
-										stmnt.cancel(); // Cancel big queries
-										throw e;
-									}
-									
-//									int rowsSelected = (Integer) pipeCmd.getCmd().getEndPointResult(PipeCommandBcp.rowsSelected);
-//									int rowsInserted = (Integer) pipeCmd.getCmd().getEndPointResult(PipeCommandBcp.rowsInserted);
-//									incRsRowsCount(rowsSelected);
-//									incIudRowsCount(rowsInserted);
-//
-//									if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
-//										_resultCompList.add( new JAseRowCount(rowsInserted, sql) );
-//
-//									SQLWarning bcpSqlWarnings = (SQLWarning) pipeCmd.getCmd().getEndPointResult(PipeCommandBcp.sqlWarnings);
-//									if (bcpSqlWarnings != null)
-//										_resultCompList.add( new JBcpWarning(bcpSqlWarnings, pipeCmd, sql) );
-								}
-								//---------------------------------
-								// Normal ResultSet handling
-								//---------------------------------
-								else
-								{
-									int limitRsRowsCount = -1; // do not limit
-									if (_limitRsRowsRead_chk.isSelected())
-										limitRsRowsCount = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_limitRsRowsReadCount, DEFAULT_limitRsRowsReadCount);
-									if (sr.hasOption_topRows())
-										limitRsRowsCount = sr.getOption_topRows();
-									
-									int bottomRsRowsCount = -1; // do not limit
-									if (sr.hasOption_bottomRows())
-										bottomRsRowsCount = sr.getOption_bottomRows();
-									
-									boolean asPlainText = _asPlainText_chk.isSelected();
-									if (sr.hasOption_asPlainText())
-										asPlainText = sr.getOption_asPlainText();
-
-									boolean noData = false;
-									if (sr.hasOption_noData())
-										noData = sr.getOption_noData();
-									
-									if (asPlainText)
-									{
-										rstm = new ResultSetTableModel(rs, true, sql, sql, limitRsRowsCount, bottomRsRowsCount, noData, sr.getPipeCmd(), progress);
-										putSqlWarningMsgs(rstm.getSQLWarning(), _resultCompList, sr.getPipeCmd(), "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
-
-										execReadRsSum += rstm.getResultSetReadTime();
-										
-										if (_printRsInfo_chk.isSelected() || sr.hasOption_printRsi())
-											_resultCompList.add( new JResultSetInfo(rstm, sql, sr.getSqlBatchStartLine() + startRowInSelection) );
-
-										_resultCompList.add(new JPlainResultSet(rstm));
-										// FIXME: use a callback interface instead
-										
-										if (rstm.isCancelled())
-											_resultCompList.add(new JAseCancelledResultSet(sql));
-
-										if (rstm.wasAbortedAfterXRows())
-											_resultCompList.add(new JAseLimitedResultSetTop(rstm.getAbortedAfterXRows(), sql));
-
-										if (rstm.wasBottomApplied())
-											_resultCompList.add(new JAseLimitedResultSetBottom(rstm.getBottomXRowsDiscarded(), sr.getOption_bottomRows(), sql));
-									}
-									else
-									{
-										// Convert the ResultSet into a TableModel, which fits on a JTable
-										rstm = new ResultSetTableModel(rs, true, sql, sql, limitRsRowsCount, bottomRsRowsCount, noData, sr.getPipeCmd(), progress);
-										putSqlWarningMsgs(rstm.getSQLWarning(), _resultCompList, sr.getPipeCmd(), "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
-					
-										execReadRsSum += rstm.getResultSetReadTime();
-
-		
-										if (_printRsInfo_chk.isSelected() || sr.hasOption_printRsi())
-											_resultCompList.add( new JResultSetInfo(rstm, sql, sr.getSqlBatchStartLine() + startRowInSelection) );
-
-
-										// ADD TO: _resultCompList
-
-										//---------------------------------
-										// PIPE - Graph/Chart
-										//---------------------------------
-										if (pipeCmd != null && (pipeCmd.getCmd() instanceof PipeCommandGraph))
-										{
-											PipeCommandGraph pipeCmdGraph = (PipeCommandGraph)pipeCmd.getCmd();
-
-											// Add a Graph/Chart DATA to the _resultCompList
-											JGraphResultSet grs = new JGraphResultSet(rstm, pipeCmdGraph);
-											if ( pipeCmdGraph.isWindowEnabled() )
-											{
-    											grs.createWindow();
-											}
-											else
-											{
-    											grs.createChart(); // Create the chart object NOW so we can retrieve any messages
-    											for (Message pmsg : pipeCmdGraph.getMessages())
-    												_resultCompList.add( new JPipeMessage(pmsg, pipeCmd.getCmd()) );
-    											pipeCmdGraph.clearMessages();
     
-    											// Add the GRAPH to the results list
-    											_resultCompList.add( grs );
-											}
-										    
-											// Also add the DATA TABLE (if we have stated that)
-											if (pipeCmdGraph.isAddDataEnabled())
-												_resultCompList.add(new JTableResultSet(rstm));
-										}
-										else
-										{
-											JTableResultSet trs = new JTableResultSet(rstm);
-
-											// pipe - LinkedQuery
-											if (pipeCmd != null && (pipeCmd.getCmd() instanceof PipeCommandLinkedQuery))
-											{
-												PipeCommandLinkedQuery pipeCmdLq = (PipeCommandLinkedQuery)pipeCmd.getCmd();
-												
-												// trs = new JTableResultSetLinkedQuery(rstm, pipeCmdLq);
-												pipeCmdLq.doPipe(trs);
-											}
-
-											
-											_resultCompList.add(trs);
-											// FIXME: use a callback interface instead
-										}
-										
-										if (rstm.isCancelled())
-											_resultCompList.add(new JAseCancelledResultSet(sql));
-
-										if (rstm.wasAbortedAfterXRows())
-											_resultCompList.add(new JAseLimitedResultSetTop(rstm.getAbortedAfterXRows(), sql));
-
-										if (rstm.wasBottomApplied())
-											_resultCompList.add(new JAseLimitedResultSetBottom(rstm.getBottomXRowsDiscarded(), sr.getOption_bottomRows(), sql));
-									}
-								} // end: NORMAL read ResultSet
-			
-								// Append, messages and Warnings to _resultCompList, if any
-								putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-rs.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
-
-								// Messages from PIPE Commands
-								if (pipeCmd != null && pipeCmd.getCmd().hasMessages())
-								{
-									for (Message pmsg : pipeCmd.getCmd().getMessages())
-										_resultCompList.add( new JPipeMessage(pmsg, pipeCmd.getCmd()) );
-								}
-
-								// Get rowcount from the ResultSetTableModel
-								if (rstm != null)
-								{
-									int readCount = rstm.getReadCount();
-        							if (readCount >= 0)
-        							{
-        								incRsRowsCount(readCount);
-        								if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
-        									_resultCompList.add( new JAseRowCount(readCount, sql) );
-        							}
-								}
-
-								// Close it
-								rs.close();
-
-							} // end: hasResultSets 
-							else // Treat update/row count(s) for NON RESULTSETS
-							{
-								// Java DOC: getUpdateCount() Retrieves the current result as an update count; if the result is a ResultSet object 
-								//           or there are no more results, -1 is returned. This method should be called only once per result.
-								// Without this else statement, some drivers maight fail... (MS-SQL actally did)
-
-								rowsAffected = stmnt.getUpdateCount();
-
-								if (rowsAffected >= 0)
-								{
-    								incIudRowsCount(rowsAffected);
-									_logger.debug("---- DDL or DML (statement with no-resultset) Rowcount: "+rowsAffected);
-
-									if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
-										_resultCompList.add( new JAseRowCount(rowsAffected, sql) );
-								}
-								else
-								{
-									_logger.debug("---- No more results to process.");
-								}
-							} // end: no-resultset
-			
-							// Append, messages and Warnings to _resultCompList, if any
-							putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-rs.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
-			
-							// Check if we have more resultsets
-							// If any SQLWarnings has not been found above, it will throw one here
-							// so catch raiserrors or other stuff that is not SQLWarnings.
-							hasRs = stmnt.getMoreResults();
-			
-							// Append, messages and Warnings to _resultCompList, if any
-							putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-rs.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
-
-							if (_logger.isTraceEnabled())
-								_logger.trace( "--loopCount="+loopCount+", hasRs="+hasRs+", rowsAffected="+rowsAffected+", "+((hasRs || rowsAffected != -1) ? "continue-to-loop" : "<<< EXIT LOOP <<<") );
-						}
-						while (hasRs || rowsAffected != -1);
-			
-						progress.setState("No more results for this batch");
-	
-						// Read RPC returnCode and output parameters, if it was a RPC and any retCode and/or params exists
-						sqlStmntInfo.readRpcReturnCodeAndOutputParameters(_resultCompList, _asPlainText_chk.isSelected());
-	
-						// Append, messages and Warnings to _resultCompList, if any
-						putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-stmnt.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
-						
-						// Close the statement
-						if (debugStatementClose)
-							stmnt.close();
-						else
-							_logger.info("DEBUG: The JDBC Statement will NOT be closed. property 'sqlw.Statement.close' is set to FALSE, please set this to true or remove the property.");
-						progress.setSqlStatement(null);
-
-						// Connection level WARNINGS, Append, messages and Warnings to _resultCompList, if any
-						putSqlWarningMsgs(_conn, _resultCompList, sr.getPipeCmd(), "-before-stmnt.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
-	
-						// Check for Any messages in the sqlStmntInfo
-						if (sqlStmntInfo instanceof IMessageAware)
-						{
-							IMessageAware ma = (IMessageAware)sqlStmntInfo;
-							
-							for (Message msg : ma.getMessages())
-								_resultCompList.add( new JPipeMessage(msg, sql) );
-							ma.clearMessages();
-						}
-
-						// if the statement wants us to execute any post commands.
-						// In this case the SqlStatementCmd is just a "preprocessor" that generated Commands that we should run 
-						//_postExecGeneratedSql = sqlStmntInfo.getPostExecSqlCommands();
-						// maybe workaround to above: add it to the script reader
-						//sr.addSqlAfterThisExec(listOfExtraSqlStatements)
-						
-						// How long did it take
-						long execFinnishTime = System.currentTimeMillis();
-						if (_clientTiming_chk.isSelected() || sr.hasOption_printClientTiming())
-							_resultCompList.add( new JClientExecTime(execStartTime, execStopTime, execFinnishTime, execReadRsSum, startRowInSelection + sr.getSqlBatchStartLine() + 1, sql));
-	
-						// Increment Usage Statistics
-						incExecTimeTotal  (execFinnishTime - execStartTime);
-						incExecTimeSqlExec(execStopTime    - execStartTime);
-						incExecTimeRsRead (execReadRsSum);
-						incExecTimeOther  ((execFinnishTime - execStopTime) - execReadRsSum);
-						
-						// Sleep for a while, if that's enabled
-						if (sr.getMultiExecWait() > 0)
-						{
-							//System.out.println("WAITING for multi exec sleep: "+sr.getMultiExecWait());
-							Thread.sleep(sr.getMultiExecWait());
-						}
+    					// Set variable ${dbname} (for variable substitution)
+    					SqlStatementCmdSet.setVariable("dbname", tmpDbname);
 					}
-					catch (SQLException ex)
+
+					// To get variable substitution to work, we need to set the origin SQL that contains the ${VARIABLE} names, so we can do substitution (especially for 'go foreachdb')
+					sql = originSqlBatch;
+
+					// Substitute variables ${varname} in the text.
+					String[] skipList = {"\\ddlgen ", "\\tabdiff ", "\\dbdiff"};
+					sql = SqlStatementCmdSet.substituteVariables(sql, skipList, _resultCompList);
+					
+					// Set current SQL to execute in the dialog
+					progress.setCurrentSqlText(sql, batchCount, sr.getMultiExecCount());
+					
+					SqlStatement sqlStmntInfo = null;
+					
+					//-----------------------------------------------------------------
+					// if 'go 10' we need to execute this 10 times
+					//-----------------------------------------------------------------
+					for (int execCnt=0; execCnt<sr.getMultiExecCount(); execCnt++)
 					{
-						_logger.debug("Caught SQL Exception, get the stacktrace if in debug mode...", ex);
-
-						incSqlExceptionCount();
-						progress.setSqlStatement(null);
-
-						// Check for Any messages in the sqlStmntInfo
-						if (sqlStmntInfo != null && sqlStmntInfo instanceof IMessageAware)
-						{
-							IMessageAware ma = (IMessageAware)sqlStmntInfo;
-							
-							for (Message msg : ma.getMessages())
-								_resultCompList.add( new JPipeMessage(msg, sql) );
-							ma.clearMessages();
-						}
-
-						// If something goes wrong, clear the message line
-						_statusBar.setMsg("Error: "+ex.getMessage());
-
-						// when NOT using jConnect, I can't downgrade a SQLException to a SQLWarning
-						// so we will always end up here (for the moment)
-						// Try to read the SQLException and figure out on what line it happened + mark that line with an error
-						if (CommonEedInfo.hasEedInfo(ex))
-							putSqlWarningMsgs(ex, _resultCompList, sr.getPipeCmd(), "-errorReportingVendorSqlException-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
-						else
-							errorReportingVendorSqlException(ex, _resultCompList, startRowInSelection, sr.getSqlBatchStartLine(), sql);
-
-						// Add the information to the output window
-						// This is done in: errorReportingVendorSqlException()
-						
-						
-						// Check if we are still connected...
-						if ( ! AseConnectionUtils.isConnectionOk(conn) )
-						{
-							isConnectionOk = false;
+						// If cancel has been pressed, do not continue to repeat the command
+						if (progress.isCancelled())
 							break;
-						}
 
-						// If we want to STOP if we get any errors...
-						// Then we should return the origin Exception
-						// NOTE: THIS HAS NOT BEEN TESTED
-//						if (_abortOnDbMessages)
-//							throw ex;
-					}
-					finally
-					{
-						// ALWAYS close the statement... or simply start to use Java 7 try-with-resources: try(Statement stmnt=...)
-						// ---------------------------------------------------------
-						// This is especially important on Microsoft SQL-Server!!!
-						// ---------------------------------------------------------
-						// If a procedure starts a transaction, does DML and a trigger do ROLLBACK, then the client will 
-						// receive an Exception: ErrorCode=3971, The srevr failed to resume the transaction. Desc:someHexNumber
-						// For more detail see: https://blogs.msdn.microsoft.com/jdbcteam/2009/02/24/the-server-failed-to-resume-the-transaction-why/
-						// If that happens we need to close the connection and open a new one (since the Statement object is "lost" and hasn't been closed)
-						// 
-						// Once a connection is put in a transaction, either through a call to Connection.setAutoCommit(false) followed by some DDL or DML, or through execution of a BEGIN TRANSACTION statement, everything done on that connection should happen within that transaction until it is committed or rolled back.  
-						// SQL Server forces drivers like the JDBC driver to honor that contract by passing a transaction ID back to the driver when the transaction is started and requiring the driver to pass that ID back to the server when executing subsequent statements.  
-						// If the driver continues to use a transaction ID after the transaction has been committed or rolled back, that�s when you get the �failed to resume the transaction� error.
-						// 
-						// So how does the driver end up using a transaction ID for a transaction that is no longer active?  
-						// SQL Server sends �transaction started� and �transaction rolled back/committed� messages to the driver �in band� with a query�s execution results (update counts, result sets, errors).  
-						// The driver can�t �see� the messages until the results that precede them have been processed.  
-						// So once a transaction has been started, if a statement�s execution causes a commit or rollback, the driver will think the transaction is still active until the statement�s results have been processed.  
-						// Now that you understand what�s going on and why, the next question is: who should be processing those results?  You guessed it: the app.
-						if (stmnt != null)
-							stmnt.close();
+						// Increment Usage Statistics
+						incExecBatchCount();
 
-						if (sqlStmntInfo != null)
+						Statement stmnt = null;
+						try
 						{
-							sqlStmntInfo.close();
+							int rowsAffected = 0;
 
+							// RPC handling if the text starts with '\exec '
+							// The for of this would be: {?=call procName(parameters)}
+//							SqlStatementInfo sqlStmntInfo = new SqlStatementInfo(_conn, sql, _connectedToProductName, _resultCompList);
+							sqlStmntInfo = SqlStatementFactory.create(_conn, sql, _connectedToProductName, _resultCompList, progress, _window, this);
+
+							if (_showSentSql_chk.isSelected() || sr.hasOption_printSql())
+								_resultCompList.add( new JSentSqlStatement(sql, sr.getSqlBatchStartLine() + startRowInSelection) );
+
+							// remember the start time
+							long execStartTime = System.currentTimeMillis();
+							progress.setCurrentBatchStartTime(execCnt);
+
+							// Get the Statement used for execution, which is used below when reading ResultSets etc
+							stmnt = sqlStmntInfo.getStatement();
+							progress.setSqlStatement(stmnt); // Used to cancel() on the statement level
+
+							if (_jdbcAutoCommit_chk.isSelected())
+							{
+								int fetchSize = StringUtil.parseInt(_fetchSize_txt.getText(), -1);
+								if (fetchSize > 0)
+								{
+									stmnt.setFetchSize(fetchSize);
+									_logger.info("Setting fetchSize to " + fetchSize + " for the current execution.");
+								}
+							}
+
+							
+							// Execute the SQL
+							boolean hasRs = sqlStmntInfo.execute();
+		
+							// calculate the execution time
+							long execStopTime = System.currentTimeMillis();
+							
+							// Keep a summary of the time to read ResultSet
+							long execReadRsSum = 0;
+		
+							// Check for Any messages in the sqlStmntInfo
 							if (sqlStmntInfo instanceof IMessageAware)
 							{
 								IMessageAware ma = (IMessageAware)sqlStmntInfo;
@@ -8918,14 +8494,518 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 									_resultCompList.add( new JPipeMessage(msg, sql) );
 								ma.clearMessages();
 							}
+
+							progress.setState("Waiting for Server to return resultset.");
+							_statusBar.setMsg("Waiting for Server to return resultset.");
+				
+							// iterate through each result set
+							int rsCount = 0;
+							int loopCount = 0;
+							do
+							{
+								loopCount++; // used for debugging
+
+								// Append, messages and Warnings to _resultCompList, if any
+								putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-hasRs-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+		
+								if(hasRs)
+								{
+									incRsCount();
+									rsCount++;
+									_statusBar.setMsg("Reading resultset "+rsCount+".");
+									progress.setState("Reading resultset "+rsCount+".");
+				
+									// Get next ResultSet to work with
+									ResultSet rs = stmnt.getResultSet();
+
+									// If we should NOT keep the ResultSet, simply discard the ResultSet and continue with next
+									if (sr.hasOption_keepRs() || sr.hasOption_skipRs())
+									{
+										boolean keepRs = true;
+
+										List<Integer> keepRsList = sr.getOption_keepRs();
+										List<Integer> skipRsList = sr.getOption_skipRs();
+										
+										if (sr.hasOption_keepRs())
+										{
+	    									if ( ! keepRsList.contains(rsCount) )
+	    										keepRs = false;
+										}
+										
+										if (sr.hasOption_skipRs())
+										{
+											if ( skipRsList.contains(rsCount) )
+												keepRs = false;
+										}
+										
+										if ( ! keepRs )
+										{
+											_resultCompList.add( new JAseMessage("SKIPPING ResultSet number "+rsCount+" due to: keepList="+keepRsList+", skipList="+skipRsList, sql) );
+											while(rs.next())
+												; // Just Read every row in the RS to "clear" it...
+											rs.close();
+
+											// Get NEXT ResultSet and start from the TOP (in the do {})
+											hasRs = stmnt.getMoreResults();
+							/*<----------*/ continue;
+										}
+									}
+									
+									ResultSetTableModel rstm = null;
+				
+									// Append, messages and Warnings to _resultCompList, if any
+									putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-after-getResultSet()-Statement-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+									putSqlWarningMsgs(rs,    _resultCompList, sr.getPipeCmd(), "-after-getResultSet()-ResultSet-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+		
+									// Check for BCP pipe command
+									PipeCommand pipeCmd = sr.getPipeCmd();
+									if (pipeCmd != null)
+										pipeCmd.getCmd().setGuiOwner(_window);
+
+									//---------------------------------
+									// PIPE - BCP
+									//---------------------------------
+									if (pipeCmd != null && (pipeCmd.getCmd() instanceof PipeCommandBcp))
+									{
+										//PipeCommandBcp pipeCmdBcp = (PipeCommandBcp)pipeCmd.getCmd();
+										
+										// BCP command needs the initial Connection, to get Connection Properties, in case the --crTable/crIndex (access source DBMS)
+										// if this isn't done the (Sybase) JDBC driver seems to READ FULLY the LEFT/RIGHT side (and cache the rows)...
+										//pipeCmdBcp.setConnection(getConnection()); // Maybe change this to use the ConnectionProvider class instead...
+										// This is actually using the ConnectionProvider now
+
+										try
+										{
+											pipeCmd.getCmd().doEndPoint(rs, progress);
+										}
+										catch (Exception e)
+										{
+											progress.setState("Canceling the query (if the JDBC driver supports this).");
+											_logger.info("Calling stmnt.cancel() to Canceling the query (if the JDBC driver supports this).");
+											stmnt.cancel();
+											throw e;
+										}
+
+										int rowsSelected = (Integer) pipeCmd.getCmd().getEndPointResult(PipeCommandBcp.rowsSelected);
+										int rowsInserted = (Integer) pipeCmd.getCmd().getEndPointResult(PipeCommandBcp.rowsInserted);
+										incRsRowsCount(rowsSelected);
+										incIudRowsCount(rowsInserted);
+
+										if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
+											_resultCompList.add( new JAseRowCount(rowsInserted, sql) );
+
+										SQLWarning bcpSqlWarnings = (SQLWarning) pipeCmd.getCmd().getEndPointResult(PipeCommandBcp.sqlWarnings);
+										if (bcpSqlWarnings != null)
+											_resultCompList.add( new JBcpWarning(bcpSqlWarnings, pipeCmd, sql) );
+									}
+									//---------------------------------
+									// PIPE - ToFile
+									//---------------------------------
+									else if (pipeCmd != null && (pipeCmd.getCmd() instanceof PipeCommandToFile))
+									{
+										try
+										{
+											pipeCmd.getCmd().doEndPoint(rs, progress);
+										}
+										catch (Exception e)
+										{
+											progress.setState("Canceling the query (if the JDBC driver supports this).");
+											_logger.info("Calling stmnt.cancel() to Canceling the query (if the JDBC driver supports this).");
+											stmnt.cancel(); // Cancel big queries
+											throw e;
+										}
+
+										int rowsSelected = (Integer) pipeCmd.getCmd().getEndPointResult(PipeCommandToFile.rowsSelected);
+										int rowsWritten  = (Integer) pipeCmd.getCmd().getEndPointResult(PipeCommandToFile.rowsWritten);
+										incRsRowsCount(rowsSelected);
+										incIudRowsCount(rowsWritten);
+
+										if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
+											_resultCompList.add( new JAseRowCount(rowsWritten, sql) );
+
+										String toFileMessage = (String) pipeCmd.getCmd().getEndPointResult(PipeCommandToFile.message);
+										if (toFileMessage != null)
+											_resultCompList.add( new JToFileMessage(toFileMessage, pipeCmd, sql) );
+									}
+									//---------------------------------
+									// PIPE - Diff
+									//---------------------------------
+									else if (pipeCmd != null && (pipeCmd.getCmd() instanceof PipeCommandDiff))
+									{
+										PipeCommandDiff pipeCmdDiff = (PipeCommandDiff)pipeCmd.getCmd();
+										
+										// Diff command needs the initial Connection, to get Connection Properties, in case the --keyCols are empty
+										// if this isn't done the (Sybase) JDBC driver seems to READ FULLY the LEFT/RIGHT side (and cache the rows)...
+										//pipeCmdDiff.setConnection(getConnection()); // Maybe change this to use the ConnectionProvider class instead...
+										// This is actually using the ConnectionProvider now
+
+										try
+										{
+											pipeCmdDiff.doEndPoint(rs, progress);
+											
+											for (Message pmsg : pipeCmdDiff.getMessages())
+												_resultCompList.add( new JPipeMessage(pmsg, pipeCmd.getCmd()) );
+											pipeCmdDiff.clearMessages();
+											
+											if (pipeCmdDiff.hasDiffTableMode())
+											{
+//												_resultCompList.add(new JTableResultSet(rstm));
+												_resultCompList.add(new JTableResultSet(pipeCmdDiff.getDiffTableMode()));
+//												System.out.println("FIXME: ADD THE TABLE MODEL TO THE RESULTS");
+											}
+										}
+										catch (Exception e)
+										{
+											progress.setState("Canceling the query (if the JDBC driver supports this).");
+											_logger.info("Calling stmnt.cancel() to Canceling the query (if the JDBC driver supports this).");
+											stmnt.cancel(); // Cancel big queries
+											throw e;
+										}
+										
+//										int rowsSelected = (Integer) pipeCmd.getCmd().getEndPointResult(PipeCommandBcp.rowsSelected);
+//										int rowsInserted = (Integer) pipeCmd.getCmd().getEndPointResult(PipeCommandBcp.rowsInserted);
+//										incRsRowsCount(rowsSelected);
+//										incIudRowsCount(rowsInserted);
+//
+//										if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
+//											_resultCompList.add( new JAseRowCount(rowsInserted, sql) );
+//
+//										SQLWarning bcpSqlWarnings = (SQLWarning) pipeCmd.getCmd().getEndPointResult(PipeCommandBcp.sqlWarnings);
+//										if (bcpSqlWarnings != null)
+//											_resultCompList.add( new JBcpWarning(bcpSqlWarnings, pipeCmd, sql) );
+									}
+									//---------------------------------
+									// Normal ResultSet handling
+									//---------------------------------
+									else
+									{
+										int limitRsRowsCount = -1; // do not limit
+										if (_limitRsRowsRead_chk.isSelected())
+											limitRsRowsCount = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_limitRsRowsReadCount, DEFAULT_limitRsRowsReadCount);
+										if (sr.hasOption_topRows())
+											limitRsRowsCount = sr.getOption_topRows();
+										
+										int bottomRsRowsCount = -1; // do not limit
+										if (sr.hasOption_bottomRows())
+											bottomRsRowsCount = sr.getOption_bottomRows();
+										
+										boolean asPlainText = _asPlainText_chk.isSelected();
+										if (sr.hasOption_asPlainText())
+											asPlainText = sr.getOption_asPlainText();
+
+										boolean noData = false;
+										if (sr.hasOption_noData())
+											noData = sr.getOption_noData();
+										
+										if (asPlainText)
+										{
+											rstm = new ResultSetTableModel(rs, true, sql, sql, limitRsRowsCount, bottomRsRowsCount, noData, sr.getPipeCmd(), progress);
+											putSqlWarningMsgs(rstm.getSQLWarning(), _resultCompList, sr.getPipeCmd(), "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+
+											execReadRsSum += rstm.getResultSetReadTime();
+											
+											if (_printRsInfo_chk.isSelected() || sr.hasOption_printRsi())
+												_resultCompList.add( new JResultSetInfo(rstm, sql, sr.getSqlBatchStartLine() + startRowInSelection) );
+
+											_resultCompList.add(new JPlainResultSet(rstm));
+											// FIXME: use a callback interface instead
+											
+											if (rstm.isCancelled())
+												_resultCompList.add(new JAseCancelledResultSet(sql));
+
+											if (rstm.wasAbortedAfterXRows())
+												_resultCompList.add(new JAseLimitedResultSetTop(rstm.getAbortedAfterXRows(), sql));
+
+											if (rstm.wasBottomApplied())
+												_resultCompList.add(new JAseLimitedResultSetBottom(rstm.getBottomXRowsDiscarded(), sr.getOption_bottomRows(), sql));
+										}
+										else
+										{
+											// Convert the ResultSet into a TableModel, which fits on a JTable
+											rstm = new ResultSetTableModel(rs, true, sql, sql, limitRsRowsCount, bottomRsRowsCount, noData, sr.getPipeCmd(), progress);
+											putSqlWarningMsgs(rstm.getSQLWarning(), _resultCompList, sr.getPipeCmd(), "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+						
+											execReadRsSum += rstm.getResultSetReadTime();
+
+			
+											if (_printRsInfo_chk.isSelected() || sr.hasOption_printRsi())
+												_resultCompList.add( new JResultSetInfo(rstm, sql, sr.getSqlBatchStartLine() + startRowInSelection) );
+
+
+											// ADD TO: _resultCompList
+
+											//---------------------------------
+											// PIPE - Graph/Chart
+											//---------------------------------
+											if (pipeCmd != null && (pipeCmd.getCmd() instanceof PipeCommandGraph))
+											{
+												PipeCommandGraph pipeCmdGraph = (PipeCommandGraph)pipeCmd.getCmd();
+
+												// Add a Graph/Chart DATA to the _resultCompList
+												JGraphResultSet grs = new JGraphResultSet(rstm, pipeCmdGraph);
+												if ( pipeCmdGraph.isWindowEnabled() )
+												{
+	    											grs.createWindow();
+												}
+												else
+												{
+	    											grs.createChart(); // Create the chart object NOW so we can retrieve any messages
+	    											for (Message pmsg : pipeCmdGraph.getMessages())
+	    												_resultCompList.add( new JPipeMessage(pmsg, pipeCmd.getCmd()) );
+	    											pipeCmdGraph.clearMessages();
+	    
+	    											// Add the GRAPH to the results list
+	    											_resultCompList.add( grs );
+												}
+											    
+												// Also add the DATA TABLE (if we have stated that)
+												if (pipeCmdGraph.isAddDataEnabled())
+													_resultCompList.add(new JTableResultSet(rstm));
+											}
+											else
+											{
+												JTableResultSet trs = new JTableResultSet(rstm);
+
+												// pipe - LinkedQuery
+												if (pipeCmd != null && (pipeCmd.getCmd() instanceof PipeCommandLinkedQuery))
+												{
+													PipeCommandLinkedQuery pipeCmdLq = (PipeCommandLinkedQuery)pipeCmd.getCmd();
+													
+													// trs = new JTableResultSetLinkedQuery(rstm, pipeCmdLq);
+													pipeCmdLq.doPipe(trs);
+												}
+
+												
+												_resultCompList.add(trs);
+												// FIXME: use a callback interface instead
+											}
+											
+											if (rstm.isCancelled())
+												_resultCompList.add(new JAseCancelledResultSet(sql));
+
+											if (rstm.wasAbortedAfterXRows())
+												_resultCompList.add(new JAseLimitedResultSetTop(rstm.getAbortedAfterXRows(), sql));
+
+											if (rstm.wasBottomApplied())
+												_resultCompList.add(new JAseLimitedResultSetBottom(rstm.getBottomXRowsDiscarded(), sr.getOption_bottomRows(), sql));
+										}
+									} // end: NORMAL read ResultSet
+				
+									// Append, messages and Warnings to _resultCompList, if any
+									putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-rs.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+
+									// Messages from PIPE Commands
+									if (pipeCmd != null && pipeCmd.getCmd().hasMessages())
+									{
+										for (Message pmsg : pipeCmd.getCmd().getMessages())
+											_resultCompList.add( new JPipeMessage(pmsg, pipeCmd.getCmd()) );
+									}
+
+									// Get rowcount from the ResultSetTableModel
+									if (rstm != null)
+									{
+										int readCount = rstm.getReadCount();
+	        							if (readCount >= 0)
+	        							{
+	        								incRsRowsCount(readCount);
+	        								if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
+	        									_resultCompList.add( new JAseRowCount(readCount, sql) );
+	        							}
+									}
+
+									// Close it
+									rs.close();
+
+								} // end: hasResultSets 
+								else // Treat update/row count(s) for NON RESULTSETS
+								{
+									// Java DOC: getUpdateCount() Retrieves the current result as an update count; if the result is a ResultSet object 
+									//           or there are no more results, -1 is returned. This method should be called only once per result.
+									// Without this else statement, some drivers maight fail... (MS-SQL actally did)
+
+									rowsAffected = stmnt.getUpdateCount();
+
+									if (rowsAffected >= 0)
+									{
+	    								incIudRowsCount(rowsAffected);
+										_logger.debug("---- DDL or DML (statement with no-resultset) Rowcount: "+rowsAffected);
+
+										if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
+											_resultCompList.add( new JAseRowCount(rowsAffected, sql) );
+									}
+									else
+									{
+										_logger.debug("---- No more results to process.");
+									}
+								} // end: no-resultset
+				
+								// Append, messages and Warnings to _resultCompList, if any
+								putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-rs.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+				
+								// Check if we have more resultsets
+								// If any SQLWarnings has not been found above, it will throw one here
+								// so catch raiserrors or other stuff that is not SQLWarnings.
+								hasRs = stmnt.getMoreResults();
+				
+								// Append, messages and Warnings to _resultCompList, if any
+								putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-rs.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+
+								if (_logger.isTraceEnabled())
+									_logger.trace( "--loopCount="+loopCount+", hasRs="+hasRs+", rowsAffected="+rowsAffected+", "+((hasRs || rowsAffected != -1) ? "continue-to-loop" : "<<< EXIT LOOP <<<") );
+							}
+							while (hasRs || rowsAffected != -1);
+				
+							progress.setState("No more results for this batch");
+		
+							// Read RPC returnCode and output parameters, if it was a RPC and any retCode and/or params exists
+							sqlStmntInfo.readRpcReturnCodeAndOutputParameters(_resultCompList, _asPlainText_chk.isSelected());
+		
+							// Append, messages and Warnings to _resultCompList, if any
+							putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-stmnt.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+							
+							// Close the statement
+							if (debugStatementClose)
+								stmnt.close();
+							else
+								_logger.info("DEBUG: The JDBC Statement will NOT be closed. property 'sqlw.Statement.close' is set to FALSE, please set this to true or remove the property.");
+							progress.setSqlStatement(null);
+
+							// Connection level WARNINGS, Append, messages and Warnings to _resultCompList, if any
+							putSqlWarningMsgs(_conn, _resultCompList, sr.getPipeCmd(), "-before-stmnt.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+		
+							// Check for Any messages in the sqlStmntInfo
+							if (sqlStmntInfo instanceof IMessageAware)
+							{
+								IMessageAware ma = (IMessageAware)sqlStmntInfo;
+								
+								for (Message msg : ma.getMessages())
+									_resultCompList.add( new JPipeMessage(msg, sql) );
+								ma.clearMessages();
+							}
+
+							// if the statement wants us to execute any post commands.
+							// In this case the SqlStatementCmd is just a "preprocessor" that generated Commands that we should run 
+							//_postExecGeneratedSql = sqlStmntInfo.getPostExecSqlCommands();
+							// maybe workaround to above: add it to the script reader
+							//sr.addSqlAfterThisExec(listOfExtraSqlStatements)
+							
+							// How long did it take
+							long execFinnishTime = System.currentTimeMillis();
+							if (_clientTiming_chk.isSelected() || sr.hasOption_printClientTiming())
+								_resultCompList.add( new JClientExecTime(execStartTime, execStopTime, execFinnishTime, execReadRsSum, startRowInSelection + sr.getSqlBatchStartLine() + 1, sql));
+		
+							// Increment Usage Statistics
+							incExecTimeTotal  (execFinnishTime - execStartTime);
+							incExecTimeSqlExec(execStopTime    - execStartTime);
+							incExecTimeRsRead (execReadRsSum);
+							incExecTimeOther  ((execFinnishTime - execStopTime) - execReadRsSum);
+							
+							// Sleep for a while, if that's enabled
+							if (sr.getMultiExecWait() > 0)
+							{
+								//System.out.println("WAITING for multi exec sleep: "+sr.getMultiExecWait());
+								Thread.sleep(sr.getMultiExecWait());
+							}
+						}
+						catch (SQLException ex)
+						{
+							_logger.debug("Caught SQL Exception, get the stacktrace if in debug mode...", ex);
+
+							incSqlExceptionCount();
+							progress.setSqlStatement(null);
+
+							// Check for Any messages in the sqlStmntInfo
+							if (sqlStmntInfo != null && sqlStmntInfo instanceof IMessageAware)
+							{
+								IMessageAware ma = (IMessageAware)sqlStmntInfo;
+								
+								for (Message msg : ma.getMessages())
+									_resultCompList.add( new JPipeMessage(msg, sql) );
+								ma.clearMessages();
+							}
+
+							// If something goes wrong, clear the message line
+							_statusBar.setMsg("Error: "+ex.getMessage());
+
+							// when NOT using jConnect, I can't downgrade a SQLException to a SQLWarning
+							// so we will always end up here (for the moment)
+							// Try to read the SQLException and figure out on what line it happened + mark that line with an error
+							if (CommonEedInfo.hasEedInfo(ex))
+								putSqlWarningMsgs(ex, _resultCompList, sr.getPipeCmd(), "-errorReportingVendorSqlException-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+							else
+								errorReportingVendorSqlException(ex, _resultCompList, startRowInSelection, sr.getSqlBatchStartLine(), sql);
+
+							// Add the information to the output window
+							// This is done in: errorReportingVendorSqlException()
+							
+							
+							// Check if we are still connected...
+							if ( ! AseConnectionUtils.isConnectionOk(conn) )
+							{
+								isConnectionOk = false;
+								break;
+							}
+
+							// If we want to STOP if we get any errors...
+							// Then we should return the origin Exception
+							// NOTE: THIS HAS NOT BEEN TESTED
+//							if (_abortOnDbMessages)
+//								throw ex;
+						}
+						finally
+						{
+							// ALWAYS close the statement... or simply start to use Java 7 try-with-resources: try(Statement stmnt=...)
+							// ---------------------------------------------------------
+							// This is especially important on Microsoft SQL-Server!!!
+							// ---------------------------------------------------------
+							// If a procedure starts a transaction, does DML and a trigger do ROLLBACK, then the client will 
+							// receive an Exception: ErrorCode=3971, The srevr failed to resume the transaction. Desc:someHexNumber
+							// For more detail see: https://blogs.msdn.microsoft.com/jdbcteam/2009/02/24/the-server-failed-to-resume-the-transaction-why/
+							// If that happens we need to close the connection and open a new one (since the Statement object is "lost" and hasn't been closed)
+							// 
+							// Once a connection is put in a transaction, either through a call to Connection.setAutoCommit(false) followed by some DDL or DML, or through execution of a BEGIN TRANSACTION statement, everything done on that connection should happen within that transaction until it is committed or rolled back.  
+							// SQL Server forces drivers like the JDBC driver to honor that contract by passing a transaction ID back to the driver when the transaction is started and requiring the driver to pass that ID back to the server when executing subsequent statements.  
+							// If the driver continues to use a transaction ID after the transaction has been committed or rolled back, that�s when you get the �failed to resume the transaction� error.
+							// 
+							// So how does the driver end up using a transaction ID for a transaction that is no longer active?  
+							// SQL Server sends �transaction started� and �transaction rolled back/committed� messages to the driver �in band� with a query�s execution results (update counts, result sets, errors).  
+							// The driver can�t �see� the messages until the results that precede them have been processed.  
+							// So once a transaction has been started, if a statement�s execution causes a commit or rollback, the driver will think the transaction is still active until the statement�s results have been processed.  
+							// Now that you understand what�s going on and why, the next question is: who should be processing those results?  You guessed it: the app.
+							if (stmnt != null)
+								stmnt.close();
+
+							if (sqlStmntInfo != null)
+							{
+								sqlStmntInfo.close();
+
+								if (sqlStmntInfo instanceof IMessageAware)
+								{
+									IMessageAware ma = (IMessageAware)sqlStmntInfo;
+									
+									for (Message msg : ma.getMessages())
+										_resultCompList.add( new JPipeMessage(msg, sql) );
+									ma.clearMessages();
+								}
+							}
+
+							// Read some extra stuff, yes do this even if a SQLException was thrown
+							readVendorSpecificResults(_conn, progress, _resultCompList, startRowInSelection, sr.getSqlBatchStartLine(), sql);
 						}
 
-						// Read some extra stuff, yes do this even if a SQLException was thrown
-						readVendorSpecificResults(_conn, progress, _resultCompList, startRowInSelection, sr.getSqlBatchStartLine(), sql);
-					}
+					} // end: 'go 10'
 
-				} // end: 'go 10'
+				} // end: 'go foreachdb'
+
+				// if 'go foreachdb' restore database we used prior to changes
+				if (foreachDbBeforeExecuteCwdb != null)
+					setDbName(foreachDbBeforeExecuteCwdb);
 				
+				// Set back 'dbname' variable to what it was prior to 'go foreachdb'
+				if (sr.hasOption_foreachDb())
+					SqlStatementCmdSet.setVariable("dbname", foreachDbBeforeExecuteVarDbname);
+
+
 			} // end: read batches
 
 			// Close the script reader
@@ -8934,12 +9014,19 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 			
 			progress.setState("Add data to GUI result");
 
+			// Merge ResultSet
+			if (sr_mergeRs)
+			{
+				_resultCompList = mergeResultSets(_resultCompList);
+			}
+			
 			// Finally, add all the results to the output
 			addToResultsetPanel(
-					_resultCompList, 
-					(_appendResults_chk.isSelected() || _appendResults_scriptReader), // append results
-					(_asPlainText_chk.isSelected()   || sr_goPlaneText),              // as Plain text
-					(_rsInTabs_chk.isSelected()      || sr_goTabbedPane)              // as Tabbed Pane
+					_resultCompList 
+					,(_appendResults_chk.isSelected() || _appendResults_scriptReader) // append results
+					,(_asPlainText_chk.isSelected()   || sr_goPlaneText)              // as Plain text
+					,(_rsInTabs_chk.isSelected()      || sr_goTabbedPane)             // as Tabbed Pane
+					,sr_filterText
 			);
 //			Runnable doRun = new Runnable()
 //			{
@@ -9047,9 +9134,80 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 		_resPanel.repaint();
 	}
 
+	/**
+	 * Merge any ResultSets in the Component list into the "first matching" ResultSet
+	 * @param componentList
+	 * @return a new componentList...
+	 */
+	private ArrayList<JComponent> mergeResultSets(ArrayList<JComponent> compList)
+	{
+		ArrayList<JComponent> retCompList = new ArrayList<>();
+
+		ArrayList<ResultSetTableModel> uniqueRstm = new ArrayList<>();
+
+		// Add ResultSet  
+		for (JComponent jcomp: compList)
+		{
+			if (jcomp instanceof JTableResultSet || jcomp instanceof JPlainResultSet)
+			{
+				ResultSetTableModel rstm = null;
+
+				if (jcomp instanceof JTableResultSet)
+				{
+					JTableResultSet tableRs = (JTableResultSet)jcomp;
+					if (tableRs.getResultSetTableModel() instanceof ResultSetTableModel)
+						rstm = (ResultSetTableModel) tableRs.getResultSetTableModel();
+				}
+				else if (jcomp instanceof JPlainResultSet)
+				{
+					rstm = ((JPlainResultSet)jcomp).getResultSetTableModel();
+				}
+				
+
+				if (rstm != null)
+				{
+					for (ResultSetTableModel mergeCandidate : uniqueRstm)
+					{
+						if (mergeCandidate.isMergeable(rstm, false)) // false=do not check: ColumnNames
+						{
+							try
+							{
+								// MERGE
+								mergeCandidate.add(rstm, false);  // false=do not check: ColumnNames
+
+								// No need to add component since it's already merged
+								jcomp = null;
+								
+								// Add INFO message... 
+								retCompList.add(new JAseMessage("INFO: The ResultSet with " + rstm.getRowCount() + " row(s) was merged into a previously added ResultSet. This due to option 'rsm'.", rstm.getName()));
+							}
+							catch(ModelMissmatchException ex)
+							{
+								// This should NOT happen, since isMergeable() is OK
+							}
+						}
+					}
+					// if NOT merged (typically the first one we see)
+					if (jcomp != null)
+						uniqueRstm.add(rstm);
+				}
+
+				if (jcomp != null)
+					retCompList.add(jcomp);
+			}
+			else
+			{
+				retCompList.add(jcomp);
+			}
+		}
+		
+		return retCompList;
+	}
+
+
 	/** Add components to output 
 	 * @param asPlainText */
-	private void addToResultsetPanel(ArrayList<JComponent> compList, boolean append, boolean asPlainText, boolean asRsTabbedPane)
+	private void addToResultsetPanel(ArrayList<JComponent> compList, boolean append, boolean asPlainText, boolean asRsTabbedPane, String jTableFilterText)
 	{
 		//-----------------------------
 		// Add data... to panel(s) in various ways
@@ -9140,7 +9298,7 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 				{
 					JTableResultSet tableRs = (JTableResultSet)jcomp;
 //					JPanel p = createTablePanel(tableRs);
-					JComponent p = createTablePanel(tableRs, false);
+					JComponent p = createTablePanel(tableRs, false, jTableFilterText);
 
 					_resPanel.add(p, "");
 checkPanelSize(_resPanel, p);
@@ -9253,7 +9411,7 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 					{
 						JTableResultSet tableRs = (JTableResultSet)jcomp;
 //						JPanel p = createTablePanel(tableRs);
-						JComponent p = createTablePanel(tableRs, true);
+						JComponent p = createTablePanel(tableRs, true, jTableFilterText);
 
 //						tabPane.addTab("Result "+(i++), p);
 						final String titleName = "ResultSet "+(i++);
@@ -9402,7 +9560,7 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 					{
 						JTableResultSet tableRs = (JTableResultSet)jcomp;
 //						JPanel p = createTablePanel(tableRs);
-						JComponent p = createTablePanel(tableRs, false);
+						JComponent p = createTablePanel(tableRs, false, jTableFilterText);
 
 						Border border = BorderFactory.createTitledBorder("ResultSet "+(i++));
 						p.setBorder(border);
@@ -10433,7 +10591,7 @@ checkPanelSize(_resPanel, comp);
 //			p.add(tab,                  "wrap");
 		}
 	}
-	private JComponent createTablePanel(JTableResultSet jtrs, boolean asTabbedPane)
+	private JComponent createTablePanel(JTableResultSet jtrs, boolean asTabbedPane, String jTableFilterText)
 	{
 		ResultSetJXTable tab = new ResultSetJXTable(jtrs.getResultSetTableModel());
 		tab.setSortable(true);
@@ -10512,7 +10670,12 @@ checkPanelSize(_resPanel, comp);
 				// Add a filter field if "number of records in table" is above the threshold
 				int rowcountForFilterActivation = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_rsFilterRowThresh, DEFAULT_rsFilterRowThresh);
 				if (tab.getRowCount() >= rowcountForFilterActivation)
-					p.add(new GTableFilter(tab, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true), "growx, pushx, span, wrap");
+				{
+					GTableFilter filter = new GTableFilter(tab, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true);
+					if (StringUtil.hasValue(jTableFilterText))
+						filter.setFilterText(jTableFilterText);
+					p.add(filter, "growx, pushx, span, wrap");
+				}
 
 				// JScrollPane is on _resPanel
     			// So we need to display the table header ourself
@@ -10556,7 +10719,7 @@ checkPanelSize(_resPanel, comp);
 				public void actionPerformed(ActionEvent e)
 				{
 //					SwingUtils.showInfoMessage(_window, "Not yet implemented.", "Not yet implemented.");
-					addToResultsetPanel(_resultCompList, false, false, true);
+					addToResultsetPanel(_resultCompList, false, false, true, null);
 				}
 			});
 
@@ -12655,6 +12818,7 @@ checkPanelSize(_resPanel, comp);
 		commandList.add(new FavoriteCommandEntry(VendorType.RS, "admin disk_space",                   "", "Displays the state and amount of used space for disk partitions"));
 		commandList.add(new FavoriteCommandEntry(VendorType.RS, "admin statistics, backlog",          "", "Queue/Thread backlog"));
 		commandList.add(new FavoriteCommandEntry(VendorType.RS, "admin logical_status",               "", "Displays status of logical connections of Warm Standby"));
+		commandList.add(new FavoriteCommandEntry(VendorType.RS, "admin stats, mem_detail_stats\ngo psql\nadmin config , memory_limit\ngo psql", "admin stats, mem_detail_stats", "Memory usage, per module. Watch for 'xxx(Cntr)', which is in Memeory Control."));
 		commandList.add(new FavoriteCommandEntry(VendorType.RS, "admin who, sqm",                     "", "Displays status information about all queues"));
 		commandList.add(new FavoriteCommandEntry(VendorType.RS, "admin who, sqt",                     "", "Displays status information about the transactions of each queue"));
 		commandList.add(new FavoriteCommandEntry(VendorType.RS, "admin who, dist",                    "", "Displays information about DIST thread"));

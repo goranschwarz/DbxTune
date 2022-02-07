@@ -39,14 +39,13 @@ import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.asetune.alarm.events.AlarmEventLongRunningStatement;
-import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
 import com.asetune.cache.XmlPlanCache;
 import com.asetune.cm.CmSettingsHelper;
+import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.ase.gui.CmActiveStatementsPanel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
@@ -1513,13 +1512,13 @@ extends CountersModel
 
 
 	public static final String  PROPKEY_alarm_StatementExecInSec                        = CM_NAME + ".alarm.system.if.StatementExecInSec.gt";
-	public static final int     DEFAULT_alarm_StatementExecInSec                        = 3 * 60 * 60;
+	public static final int     DEFAULT_alarm_StatementExecInSec                        = 3 * 60 * 60; // 3 hours
 
 	public static final String  PROPKEY_alarm_StatementExecInSecSkipDbname              = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.dbname";
 	public static final String  DEFAULT_alarm_StatementExecInSecSkipDbname              = "";
 
 	public static final String  PROPKEY_alarm_StatementExecInSecSkipCommand             = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.Command";
-	public static final String  DEFAULT_alarm_StatementExecInSecSkipCommand             = "^(DUMP DATABASE|DUMP TRANSACTION).*";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipCommand             = "^(DUMP DATABASE|DUMP TRANSACTION|LOAD DATABASE).*";
 	                                                                                    
 	public static final String  PROPKEY_alarm_StatementExecInSecSkipApplication         = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.Application";
 	public static final String  DEFAULT_alarm_StatementExecInSecSkipApplication         = "";

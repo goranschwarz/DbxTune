@@ -24,13 +24,11 @@ package com.asetune.test;
 import java.util.Properties;
 
 import org.apache.log4j.PropertyConfigurator;
-import org.eclipse.jetty.security.HashLoginService;
 import org.eclipse.jetty.server.Server;
 //import org.eclipse.jetty.websocket.javax.server.config.JavaxWebSocketServletContainerInitializer;
 import org.eclipse.jetty.webapp.WebAppContext;
 
 import com.asetune.central.pcs.DbxCentralRealm;
-import com.asetune.utils.Configuration;
 
 public class WebServerJetty
 {

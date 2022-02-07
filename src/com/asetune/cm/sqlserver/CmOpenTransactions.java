@@ -215,7 +215,7 @@ extends CountersModel
 				+ "-- Origin SQL from: https://www.sqlskills.com/blogs/paul/script-open-transactions-with-text-and-plans/ \n"
 				+ "-- Just reformated the code and added a bunch of columns \n"
 				+ "-------------------------------------------------------------------------------------------------------\n"
-				+ "SELECT \n"
+				+ "SELECT /* ${cmCollectorName} */ \n"
 				+ "     [s_tst].[session_id] \n"
 				+ "    ,db_name(s_tdt.database_id)                       AS [Database] \n"
 				+ "    ,[s_es].[status]                                   AS [Status] \n"

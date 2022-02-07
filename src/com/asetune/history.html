@@ -41,7 +41,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>new: AlarmEventLongRunningStatement     -- If a Statement has been running for more than X seconds/minutes/hours</LI>
 				<LI>new: AlarmEventExtensiveUsage           -- for example if tempdb is heavely used</LI>
 				<LI>new: AlarmEventStackDump                -- for SQL-Server only: Sends the StackDump as a chunk of text</LI>
-				<LI>new: AlarmEventOsSwapping               -- if IN or OUT is above 5000. For Linux/Unix it's in 'CmOsVmstat', for Windows it's in 'CmOsMeminfo'</LI>
+				<LI>new: AlarmEventOsSwapping               -- if IN or OUT is above 5000. For Linux/Unix it's in 'CmOsVmstat', for Windows it's in 'CmOsMeminfo', also include a small chart of last 15 minutes</LI>
 				<LI>new: AlarmEventDbccCheckdbAge           -- for SQL Server, when dbcc checkdb hasn't been executed. </LI>
 				<LI>new: AlarmEventHoldingLocksWhileWaitForClientInput -- When a SPID has started a transaction, but been idle at the Client side for more than X seconds. </LI>
 				
@@ -68,6 +68,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>SshConnection: when passing a SQL-Server instance name with 'hostname\instance' only use the first part when connecting.</LI>
 		<LI>NOGUI - better name checking for server name and Alias Names, not allowing '/', '\', ':', or ';' </LI>
 		<LI>NOGUI - If we have a 'non-retryable error', like 'wrong password' do not continue in the 'retry' loop, instead throw Exception. This makes it easier to debug...</LI>
+		<LI>NOGUI - Option to do Java Garbage Collection after each refresh/sample. In the properties file: no.gui.do.java.gc.after.refresh=true
+		<LI>Injected comments about the origin of the Statement (se we can se that a stataement originates from DbxTune)</LI>
 		<LI>AlarmWriterToMail: removed 'cc' property</LI>
 		<LI>ReportSenderToMail: removed 'cc' and also added functionality to send mail based on to and server name (same config as for: AlarmWriterToMail)</LI>
 
@@ -96,14 +98,21 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI>Daily Summary Report Changes
 			<UL>
+				<LI>Changed a bunch of things :)</LI>
 				<LI>Reports split in 2. One short version (which will be the main content for mails), and one long version (it will be attached in mails)</LI>
 				<LI>A new layout using bootstrap look and feel</LI>
 				<LI>All DbxTune Collectors: new section: iostat overview</LI>
 				<LI>Many of the statistical values now also has a "sparkline" (a mini chart) to represent *when* the measurement happened in time (was it during evening, night, morning or spread over the whole day)</LI>
 				<LI>New section (at the end) that shows DbxTune Collectors Errors and Warnings... Used to check for problems/issues/bugs with the collector (<i>without having to read the error log</i>).</LI>
 				<LI>For Windows: do not skip Host Monitoring information</LI>
+				<LI>Mail Sender - if the attached HTML file is to big, ZIP the file. (default is ZIP if above 10MB)</LI>
 				<LI>Mail Sender - If the attachment is larger than 30MB, do not attach, only send the small mail report.</LI>
 				<LI>Added section in "Recording Info": 1: If the HostMonitoring is enabled. 2: Hostname for the HostMonitoring. 3: If HostMonitoring is NOT Enabled, then write some info about <b>how</b> to enable it., and if it's Windows... Print some extra information about how to install SSH Server etc.</LI>
+				<LI>Charts (for HTML Page is now using, ChartJS, which means we can hide some labels, get tool tip etc), The images are still keps as a fallback for mail content or other readers that do not have JavaScript access.</LI>
+				<LI>New section at the end: Tracing how long the various sections took to produce. (more or less debugging)</LI>
+				<LI>Highligtning (in bold) what culumns we are sorting on (when the report was created)</LI>
+				<LI></LI>
+				<LI></LI>
 			</UL>
 		</LI>
 
@@ -202,6 +211,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
+		<b>CmObjectActivity - tab: Objects</b><br>
+		<ul>
+			<li>Changed default postpone time to 10 minutes</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
 		<b>CmOpenDatabases - tab: Databases</b><br>
 		<ul>
 			<li>bug fix: LowDbFreeSpaceInMb and LowLogFreeSpaceInMb sometimes didn't fire correctly</li>
@@ -246,6 +263,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>Statement Normalizer enhanced to handle Stored Procedure execution a bit better</li>
 			<li>XmlPlanCache -- getMemoryConsumption(): wrapped integer, changed to long for better info messages</li>
 			<li>XmlPlanCache -- lowOnMemoryHandler(): removes entries that hasn't been accessed for 1 hour (config: <code>XmlPlanCache.lowOnMememory.removeAgeInMinutes=60</code>)</li>
+			<li>DDL Storage, new option if you want to do 'sp_depends' at all. 'PersistentCounterHandler.ddl.doSpDepends=true'</li>
+			<li>When parsing/normalizing the SQL text, also extract Table names, and send them of to DDL Storage</li>
 		</ul>
 		</LI>
 
@@ -260,9 +279,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>new: AseTopSlowNormalizedSqlWaits    -- Top [SQL Captured] - WaitTime - SLOW Normalized SQL Statements</li>
 			<li>new: AseTopCmObjectActivityLockWaits -- Top TABLE/INDEX Blocking Lock Wait Statistics</li>
 			<li>new: AseCmDeviceIo                   -- Device IO, (order by: Name, origin: CmDeviceIo_diff / monDeviceIO)</li>
+			<li>new: AseUnusedIndexes                -- Top Unused Indexes, ordered by 'RowsInsUpdDel' (origin: CmObjectActivity)</li>
 			<li>Added one sections for Statement Cache Details, to show top "wait" statements</li>
 			<li>change in 'error info', only show first 100 SQL Statements for each error number</li>
 			<li>Copy the XML Plan in 'Top Statement Cache Entries'</li>
+			<li>SQL Captured - Slow Normalized -- More miniCharts/Sparklines also a "summary" section for every table, where important info is placed</li>
+			<li>Statement Cache -- More miniCharts/Sparklines also a "summary" section for every table, where important info is placed</li>
+			<li>Object Activity -- More miniCharts/Sparklines also a "summary" section for every table, where important info is placed</li>
+			<li>Recording Information -- Now also contains ASE: PageSize, SortOrder, Charset, LicenseInfo</li>
 		</ul>
 		</LI>
 
@@ -288,6 +312,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			- ALL to remember any existing logical connections on the server. and if any are dropped, the alarms will be raised. <br> 
 			- or a Comma separated list with mandatory servers, for example: LSRV.db1, LSRV.db2, LSRV.db3<br>
 		</LI>
+		<LI>New Alarm: AlarmEventRsInMemoryControl -- If any module is in Memory Control. column 'Object(State)' contains '.*(Ctrl)', send 'AlarmEventRsInMemoryControl'.</LI>
+
 		<LI><b>CmAdminStatsBacklog</b> - Removed DBID:qType in graphs so when connections are re-created we do not get a new chart line</LI>
 		<LI><b>CmAdminWhoDist</b>      - Removed DBID:qType in graphs so when connections are re-created we do not get a new chart line</LI>
 		<LI><b>CmAdminWhoDsi</b>       - Removed DBID:qType in graphs so when connections are re-created we do not get a new chart line</LI>
@@ -295,6 +321,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmAdminWhoSqt</b>       - Removed DBID:qType in graphs so when connections are re-created we do not get a new chart line</LI>
 		<LI><b>CmRsMemory</b>          - RS 16.0 was using new name postfix (norm) in the key column</LI>
 		<LI><b>CmWsRepLatency</b>      - Fixed some bugs (with "" empty logical database names)</LI>
+		<LI><b>CmAdminDiskSpace</b>    - fix in "usedPct" calculation, which is just a info number sent as the alarm</LI>
+		<LI><b>CmWsRepLatency</b>      - bugfix: if B srv was down, sometimes we sent alarm RsMissingLogicalConnection (hoefully this is solved now)</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -365,7 +393,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmActiveStatements </b> - bugfix: Only report 'root cause' session_id's on blocking locks </LI>
 		<LI><b>CmActiveStatements </b> - AlarmEventBlockingLockAlarm now also contains SPID, so we can report multiple blocking locks </LI>
 		<LI><b>CmActiveStatements </b> - raise alarm 'AlarmEventHoldingLocksWhileWaitForClientInput' when a SPID has been holding locks at DBMS but not issuing any new commands from the client side.</LI>
-		
+
+		<LI><b>CmActiveStatements </b> - new column 'tran_name' to easier track if this is an "implicit" or a "normal" transaction </LI>
+		<LI><b>CmActiveStatements </b> - alarm HoldingLocksWhileWaitForClientInput, new option to only send alarm if it hold exclusive locks (CmActiveStatements.alarm.system.if.HoldingLocksWhileWaitForClientInputInSec.exclusiveLocksOnly=true|false) default=true</LI>
+
 		<LI><b>CmAlwaysOn         </b> - Granting select,insert,update,delete on table 'sqlserverTune_ag_dummy_update' was enhanced (note: this will still fail if the connection do not have authorization to create the table in the database. </LI>
 
 		<LI><b>CmDatabases        </b> - Added 'OldestTranName' and 'OldestTranId' - Now shows the transaction name and id (watch out for OldestTranName 'implicit_transaction', which indicates that AotoCommit is FALSE, which introduces more blocking locks)</LI>
@@ -393,7 +424,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmExecQueryStat    </b> - new columns 'objectid', 'object_name'. so we can see if it's a procedure call </LI>
 		<LI><b>CmExecQueryStat    </b> - Long running statements was sometimes missing, if 'sample_lastXminutes' was enabled.</LI>
 		<LI><b>CmExecQueryStat    </b> - using OUTER apply instead of CROSS apply to *not* miss records with no query or query plan </LI>
-		<LI><b>CmExecQueryStat    </b> - Changed Default 'postpone time' to 5 minutes... sample this less often </LI>
+		<LI><b>CmExecQueryStat    </b> - Changed Default 'postpone time' to 10 minutes... sample this less often </LI>
 
 		<LI><b>CmIndexOpStat      </b> - new postpone value of 300 seconds (5 minutes) </LI>
 		<LI><b>CmIndexOpStat      </b> - using the DbmsObjectIdCache to lookup database_id-&gt;DbName, object_id-&gt;(TableName, SchemaName), index_id-&gt;IndexName </LI>
@@ -417,6 +448,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmPerfCounters     </b> - added graph 'Memory Manager', with a line for every entry where object_name is ':Memory Manager'</LI>
 		<LI><b>CmPerfCounters     </b> - Added 5 graphs for Query Store Usage. 'QsTotal', 'QsDbCpu', 'QsDbPhysRead', 'QsDbLogiRead', 'QsDbLogiWrite' </LI>
 		<LI><b>CmPerfCounters     </b> - Alarm: for 'Lazy writes/sec': Changed from Severity WARNING to INFO </LI>
+
+		<LI><b>CmPlanCacheHistory </b> - New collector: To check how old entries in the Plan Cahe are (can we trust the values or is the Plan cache "stable") </LI>
 
 		<LI><b>CmSchedulers       </b> - added 'diff' calculations for columns 'total_cpu_usage_ms', 'total_cpu_idle_capped_ms' and 'total_scheduler_delay_ms'</LI>
 		<LI><b>CmSchedulers       </b> - New Graph: CPU Usage in Percent, ALL Schedulers (using dm_os_schedulers.total_cpu_usage_ms)</LI>
@@ -490,6 +523,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Changed how to detect if the SQL-Server is a 'Azure Synapse Analytics' or 'Parallel Data Warehouse'. now using: select ServerProperty('EngineEdition')</LI>
 		<LI>Tooltip and Alarm with ShowPlanXML content... show a simplified plan with a Unordered List (that is indented to show children)</LI>
 		<LI>DBMS Config: added capture for Resource Governor</LI>
+		<LI>all collectors had a SQL change. the Collector name is injected *after* the select statement (for easier identification when monitoring)</LI>
 		
 		<!-- ~~~~~ Daily Report ~~~~~ -->
 		<LI>
@@ -507,7 +541,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>new: Table Access 4 reports: By Locks (simulate Logical Reads), By Waits, by Insert-Update-Delete, By Physical IO</li>
 			<li>new: Query Store for databases where it was enabled</li>
 			<li>Added 'download' XML Plan for 'Query Store' reports</li>
-		</ul>
+			<li>new section: TopCmExecQueryStats sorted by: TEMPDB_SPILLS </li>
+			<li>new section: TopCmExecQueryStats sorted by: LOGICAL_READS  </li>
+			<li>new section: TopCmExecQueryStats sorted by: LOGICAL_WRITES </li>
+			<li>new section: TopCmExecQueryStats sorted by: PHYSICAL_READS </li>
+			<li>new section: TopCmExecQueryStats sorted by: EXECUTION_COUNT</li>
+			<li>new section: TopCmExecQueryStats sorted by: MEMORY_GRANTS  </li>
+			<li>new section: Plan Cache History                            </li>
+			<li>new section in Query Store: A Summary of ALL databases sorted by CPU also a section for every SQL, where important info/Sparklines is placed</li>
+		</ul>                                                              
 		</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
@@ -517,16 +559,20 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>PostgresTune - PostgreSQL</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
+		<LI>onConnect, execute: set session work_mem = '128MB'       Can be changed by config: PostgresTune.onMonConnect.set.dbms.option.work_mem=SOME_VALUE|DEFAULT</LI>
+		<LI>onConnect, execute: set session temp_buffers = '128MB'   Can be changed by config: PostgresTune.onMonConnect.set.dbms.option.temp_buffers=SOME_VALUE|DEFAULT</LI>
 		<LI>Change how we collect current time from: CURRENT_TIMESTAMP to CLOCK_TIMESTAMP()</LI>
 		<LI><b>CmPgStatements       </b> - Now works with Postgres 9.3 (and possibly versions below that), where I "fake" the 'queryid' by taking a md5 checksum (first 16 chars) and converting that to an bigint</LI>
+		<LI><b>CmPgStatements       </b> - new columns for later versions (up to version 14)</LI>
 		<LI><b>CmPgActivity         </b> - added column 'StatementExecInSec', and raise AlarmEventLongRunningStatement when a statement has been executed for more than 3 hours (by defualt), 'skip' can be done on: dbname, login, cmd and tranName</LI>
 		<LI><b>CmSummary            </b> - added column 'in_recovery' to check if we connected to the ACTIVE or the STANDBY instance.</LI>
 		<LI><b>CmSummary            </b> - added columns 'oldest_running_xact_age', 'oldest_prepared_xact_age', 'oldest_replication_slot_age', 'oldest_replica_xact_age' to check if we will exceed the MAX Transaction ID in some "near" future!</LI>
 		<LI><b>CmSummary            </b> - Also a Graph on columns 'oldest_running_xact_age', 'oldest_prepared_xact_age', 'oldest_replication_slot_age', 'oldest_replica_xact_age'</LI>
 		<LI><b>CmPgTables           </b> - New chart 'DeadRows' so we can follow number of dead rows for each database</LI>
-		<LI><b>Daily Summary Report </b> - Statements - tooltip and popup with the SQL Text</LI>
-		<LI><b>Daily Summary Report </b> - New section for 'DeadRows'.</LI>
 		<LI><b>View Configuration   </b> - added one extra, calculated column: "ValueInMb"</LI> 
+		<LI><b>Daily Summary Report </b> - Statements - tooltip and popup with the SQL Text</LI>
+		<LI><b>Daily Summary Report </b> - New section for 'DeadRows', also printing configuration that has to do with Autovacuum.</LI>
+		<LI><b>Daily Summary Report </b> - Top SQL -- More miniCharts/Sparklines also a "summary" section for every table, where important info is placed.</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -565,6 +611,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Refresh Code Completion: Ctrl + Shift + R</LI>
 		<LI>Filter field can now be enabled or disabled with a checkbox</LI>
 		<LI>for SQL-Server, the @@trancount warning was missing</LI>
+		<LI>new 'go foreachdb' to execute the command in every database (variable ${dbname} will be set, and can be used in the SQL Text)</LI>
+		<LI>new 'go filter xxx' to fill in the "filter" text </LI>
+		<LI>new 'go mrs' -- Merge ResultSets. Like a union, when you can't do union in SQL</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

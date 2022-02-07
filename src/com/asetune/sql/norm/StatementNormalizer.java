@@ -43,6 +43,7 @@ import net.sf.jsqlparser.expression.operators.relational.InExpression;
 import net.sf.jsqlparser.expression.operators.relational.SupportsOldOracleJoinSyntax;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
+import net.sf.jsqlparser.util.TablesNamesFinder;
 import net.sf.jsqlparser.util.deparser.ExpressionDeParser;
 import net.sf.jsqlparser.util.deparser.SelectDeParser;
 import net.sf.jsqlparser.util.deparser.StatementDeParser;
@@ -170,7 +171,7 @@ public class StatementNormalizer
 		_exprDeParser.setBuffer(_buffer);
 	}
 
-	public String normalizeStatement(String sql) 
+	public String normalizeStatement(String sql, List<String> tableList) 
 	throws JSQLParserException
 	{
 		if (StringUtil.isNullOrBlank(sql))
@@ -179,6 +180,20 @@ public class StatementNormalizer
 		Statement stmt = CCJSqlParserUtil.parse(sql, parser -> parser.withSquareBracketQuotation(true));
 
 		stmt.accept(_stmtDeParser);
+		
+		// Get tables that TABLES are part of the "slow" statement, then send those tables to the DDL Storage
+		// The blow might work, but I have not tested it (and what performance side effects it will add)
+		if (tableList != null)
+		{
+			try 
+			{
+				TablesNamesFinder tablesNamesFinder = new TablesNamesFinder();
+				List<String> tmpTableList = tablesNamesFinder.getTableList(stmt);
+				
+				tableList.addAll(tmpTableList);
+			} 
+			catch (RuntimeException ignore) {}
+		}
 
 		// Get string and truncate the buffer for next statement
 		String normalizedSql = _buffer.toString();
@@ -254,7 +269,7 @@ public class StatementNormalizer
 	 * @param addStatus
 	 * @return
 	 */
-	public String normalizeSqlText(String sqlText, NormalizeParameters np)
+	public String normalizeSqlText(String sqlText, NormalizeParameters np, List<String> tableList)
 	{
 		// If parameter is null, use a dummy internal object so we don't have to do NULL checks everywhere
 		if (np == null)
@@ -270,7 +285,7 @@ public class StatementNormalizer
 			sqlText = preParseStatement(sqlText);
 
 			// Parse and normalize: rewrite: |select * from 'a'| -->> |select * from ?|
-			normalizedSqlText = normalizeStatement(sqlText);
+			normalizedSqlText = normalizeStatement(sqlText, tableList);
 			
 			np.addStatus = AddStatus.NORMALIZE_SUCCESS_LEVEL_1;
 
@@ -349,7 +364,7 @@ public class StatementNormalizer
 					try
 					{
 						// Parse and normalize
-						normalizedSqlText = normalizeStatement(sqlText);
+						normalizedSqlText = normalizeStatement(sqlText, tableList);
 
 						np.addStatus = AddStatus.NORMALIZE_SUCCESS_LEVEL_2;
 
@@ -390,7 +405,7 @@ public class StatementNormalizer
 						sqlText = "exec " + sqlText;
 
 						// Parse and normalize
-						normalizedSqlText = normalizeStatement(sqlText);
+						normalizedSqlText = normalizeStatement(sqlText, tableList);
 
 						rewriteComments.add("Add: EXEC as prefix");
 
@@ -626,7 +641,7 @@ public class StatementNormalizer
 		String norm = null;
 		try 
 		{
-			norm = sn.normalizeSqlText(sql, null);
+			norm = sn.normalizeSqlText(sql, null, null);
 		}
 		catch(Exception ex)
 		{

@@ -1464,7 +1464,7 @@ extends CountersModel
 	}
 
 	public static final String  PROPKEY_alarm_StatementExecInSec             = CM_NAME + ".alarm.system.if.StatementExecInSec.gt";
-	public static final int     DEFAULT_alarm_StatementExecInSec             = 3 * 60 * 60;
+	public static final int     DEFAULT_alarm_StatementExecInSec             = 3 * 60 * 60; // 3 hours
 
 	public static final String  PROPKEY_alarm_StatementExecInSecSkipDbname   = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.dbname";
 	public static final String  DEFAULT_alarm_StatementExecInSecSkipDbname   = "";
@@ -1473,7 +1473,7 @@ extends CountersModel
 	public static final String  DEFAULT_alarm_StatementExecInSecSkipLogin    = "";
 
 	public static final String  PROPKEY_alarm_StatementExecInSecSkipCmd      = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.cmd";
-	public static final String  DEFAULT_alarm_StatementExecInSecSkipCmd      = "^(DUMP ).*";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipCmd      = "^(DUMP |LOAD ).*";
 
 	public static final String  PROPKEY_alarm_StatementExecInSecSkipTranName = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.tranName";
 	public static final String  DEFAULT_alarm_StatementExecInSecSkipTranName = "^(DUMP |\\$dmpxact).*";

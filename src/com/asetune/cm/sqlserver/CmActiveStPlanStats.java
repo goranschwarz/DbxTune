@@ -186,7 +186,8 @@ extends CountersModel
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("sql_handle",    ColumnHeaderPropsEntry.AS_LAST_VIEW_COLUMN));
 
 		String sql = ""
-			    + "select * \n"
+			    + "select /* ${cmCollectorName} */ \n"
+				+ "     * \n"
 				+ "    ,cast('' as varchar(128)) AS database_name \n"
 				+ "    ,cast('' as varchar(128)) AS schema_name \n"
 				+ "    ,cast('' as varchar(128)) AS object_name \n"

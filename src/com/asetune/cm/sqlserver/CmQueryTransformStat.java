@@ -161,7 +161,8 @@ extends CountersModel
 		if (isAzure)
 			dm_exec_query_optimizer_info = "dm_pdw_nodes_exec_query_transformation_stats"; // Just guessed here...
 		
-		String sql = "select * from sys." + dm_exec_query_optimizer_info;
+		String sql = "select *    /* ${cmCollectorName} */ \n" 
+		           + "from sys." + dm_exec_query_optimizer_info;
 
 		return sql;
 	}

@@ -389,7 +389,8 @@ extends CountersModel
 		       "a.file_id \n";
 
 		String sql = 
-			"select " + cols +
+			"select /* ${cmCollectorName} */ \n" + 
+			cols +
 			"FROM sys." + dm_io_virtual_file_stats + " (NULL, NULL) a \n" +
 			"JOIN sys." + master_files +" b ON a.file_id = b.file_id AND a.database_id = b.database_id \n" +
 //			"ORDER BY a.io_stall DESC \n";

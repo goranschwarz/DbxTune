@@ -21,7 +21,6 @@
 package com.asetune.cm.os;
 
 import java.math.BigDecimal;
-import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,6 +44,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.hostmon.HostMonitor.OsVendor;
 import com.asetune.hostmon.OsTable;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.MovingAverageChart;
 import com.asetune.utils.MovingAverageCounterManager;
 
 public class CmOsMeminfo
@@ -336,27 +336,37 @@ extends CounterModelHostMonitor
 			}
 			else
 			{
-				// if prev sample is smaller than current row... get next row...
-				if (prevOsSampleTable.getRowCount() < r)
-					continue;
+				String thisPk = (String) thisOsSampleTable.getValueAt(r, pos_memoryType);
+				try
+				{
+					// if prev sample is smaller than current row... get next row...
+					if (prevOsSampleTable.getRowCount() < r)
+						continue;
+						
+					// sometimes we get 'IndexOutOfBoundsException: Index: 46, Size: 46', on the below 'prevPk' get, which is *strange*... That's why the try/catch(RuntimeException) and logging some extra information.
+					// the above '(prevOsSampleTable.getRowCount() < r)' should check for issues, so I don't know exactly what's wrong here...
+					String prevPk   = (String) prevOsSampleTable.getValueAt(r, pos_memoryType);  
+					Long   thisUsed = (Long)   thisOsSampleTable.getValueAt(r, pos_used);
+					Long   prevUsed = (Long)   prevOsSampleTable.getRowByPk(prevPk).getValue(pos_used+1); // The model starts at pos 1
+					String description = getFieldDescription(prevPk);
 					
-				String pk       = (String) prevOsSampleTable.getValueAt(r, pos_memoryType);
-				Long   thisUsed = (Long)   thisOsSampleTable.getValueAt(r, pos_used);
-				Long   prevUsed = (Long)   prevOsSampleTable.getRowByPk(pk).getValue(pos_used+1); // The model starts at pos 1
-				String description = getFieldDescription(pk);
-				
-//				OsTableRow ostr = prevOsSampleTable.getRowByPk(pk);
-//				System.out.println("ostr.pk='"+ostr.getPk()+"', val="+ostr.getValue(pos_used+1)); // The model starts at pos 1
-//				Long   prevUsed = (Long)   ostr.getValue(pos_used+1);
+//					OsTableRow ostr = prevOsSampleTable.getRowByPk(pk);
+//					System.out.println("ostr.pk='"+ostr.getPk()+"', val="+ostr.getValue(pos_used+1)); // The model starts at pos 1
+//					Long   prevUsed = (Long)   ostr.getValue(pos_used+1);
 
-				Long       diffVal = thisUsed - prevUsed;
-				BigDecimal rateVal = new BigDecimal( (diffVal*1.0) / (getSampleInterval()/1000.0) ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				
-//				System.out.println("############: getSampleInterval()="+getSampleInterval()+", pk="+StringUtil.left(pk,20)+", thisUsed="+thisUsed+", prevUsed="+prevUsed+", diffVal="+diffVal+", rateVal="+rateVal);
+					Long       diffVal = thisUsed - prevUsed;
+					BigDecimal rateVal = new BigDecimal( (diffVal*1.0) / (getSampleInterval()/1000.0) ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+					
+//					System.out.println("############: getSampleInterval()="+getSampleInterval()+", pk="+StringUtil.left(pk,20)+", thisUsed="+thisUsed+", prevUsed="+prevUsed+", diffVal="+diffVal+", rateVal="+rateVal);
 
-				thisOsSampleTable.setValueAt(diffVal,     r, pos_usedDiff);
-				thisOsSampleTable.setValueAt(rateVal,     r, pos_usedRate);
-				thisOsSampleTable.setValueAt(description, r, pos_description);
+					thisOsSampleTable.setValueAt(diffVal,     r, pos_usedDiff);
+					thisOsSampleTable.setValueAt(rateVal,     r, pos_usedRate);
+					thisOsSampleTable.setValueAt(description, r, pos_description);
+				}
+				catch (RuntimeException ex)
+				{
+					_logger.warn("Problems doing local diff calculation for '" + getName() + "'. r=" + r + ", thisPk='" + thisPk + "', thisOsSampleTable.getRowCount()=" + thisOsSampleTable.getRowCount() + ", prevOsSampleTable.getRowCount()=" + prevOsSampleTable.getRowCount() + ". Skipping and continuing with next row.", ex);
+				}
 			}
 		}
 	}
@@ -480,6 +490,9 @@ extends CounterModelHostMonitor
 			int swapIn_5mAvg  = (int) MovingAverageCounterManager.getInstance("swapIn",  5).add(swapIn) .getAvg(0, true);
 			int swapOut_5mAvg = (int) MovingAverageCounterManager.getInstance("swapOut", 5).add(swapOut).getAvg(0, true);
 
+			int swapIn_15mAvg  = (int) MovingAverageCounterManager.getInstance("swapIn",  15).add(swapIn) .getAvg(0, true);
+			int swapOut_15mAvg = (int) MovingAverageCounterManager.getInstance("swapOut", 15).add(swapOut).getAvg(0, true);
+			
 			if (debugPrint || _logger.isDebugEnabled())
 				System.out.println("##### sendAlarmRequest("+cm.getName()+"): swapping: in=" + swapIn + ", out=" + swapOut + ". swapIn_5mAvg=" + swapIn_5mAvg + ", swapOut_5mAvg=" + swapOut_5mAvg);
 
@@ -498,9 +511,16 @@ extends CounterModelHostMonitor
 				Timestamp swapOut_peakTs     = MovingAverageCounterManager.getInstance("swapOut", 5).getPeakTimestamp();
 				double    swapOut_peakNumber = MovingAverageCounterManager.getInstance("swapOut", 5).getPeakNumber();
 
+				// Create a small chart, that can be used in emails etc.
+				String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("OS Swapping (15 minutes)", 
+						MovingAverageCounterManager.getInstance("swapIn",  15),  // Note make the chart on 15 minutes to see more info
+						MovingAverageCounterManager.getInstance("swapOut", 15)); // Note make the chart on 15 minutes to see more info
+				
 				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, hostname, "over 5 minute moving average", 
 						swapIn_5mAvg,  swapIn_peakTs,  swapIn_peakNumber,
 						swapOut_5mAvg, swapOut_peakTs, swapOut_peakNumber);
+				
+				alarm.setExtendedDescription(null, htmlChartImage);
 
 				alarmHandler.addAlarm( alarm );
 			}

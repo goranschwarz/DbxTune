@@ -21,20 +21,35 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content;
 
+import java.awt.Color;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.codec.binary.Base64OutputStream;
 import org.apache.commons.io.output.WriterOutputStream;
 import org.apache.log4j.Logger;
+import org.jfree.chart.ChartRenderingInfo;
 import org.jfree.chart.ChartUtils;
 import org.jfree.chart.JFreeChart;
+import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.data.general.Dataset;
+import org.jfree.data.time.RegularTimePeriod;
+import org.jfree.data.time.TimeSeries;
+import org.jfree.data.time.TimeSeriesCollection;
+import org.jfree.data.time.TimeSeriesDataItem;
 
+import com.asetune.graph.TrendGraphColors;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
 
 public abstract class ReportChartAbstract implements IReportChart
 {
@@ -49,12 +64,25 @@ public abstract class ReportChartAbstract implements IReportChart
 //	public final static String SQL_WHERE_PREFIX = "SQL-WHERE:";
 	public final static String SKIP_COLNAME_WITH_VALUE_ABOVE = "SKIP_COLNAME_WITH_VALUE_ABOVE:";
 	
-//	public final static int CHART_HEIGHT = 300;  // 100%
-//	public final static int CHART_WIDTH  = 1900; // 100%
-	public final static int CHART_HEIGHT = 240;  // 80%
-	public final static int CHART_WIDTH  = 1500; // 80% 
-//	public final static int CHART_HEIGHT = 210;  // 70%
-//	public final static int CHART_WIDTH  = 1300; // 70%
+	public final static int CHART_HEIGHT_100 = 300;  // 100%
+	public final static int CHART_WIDTH_100  = 1900; // 100%
+	public final static int CHART_HEIGHT_90  = 270;  // 90%
+	public final static int CHART_WIDTH_90   = 1710; // 80%
+	public final static int CHART_HEIGHT_80  = 240;  // 80%
+	public final static int CHART_WIDTH_80   = 1500; // 80% 
+	public final static int CHART_HEIGHT_70  = 210;  // 70%
+	public final static int CHART_WIDTH_70   = 1330; // 70%
+	public final static int CHART_HEIGHT_60  = 180;  // 60%
+	public final static int CHART_WIDTH_60   = 1130; // 60%
+	public final static int CHART_HEIGHT_50  = 150;  // 50%
+	public final static int CHART_WIDTH_50   = 950;  // 50%
+
+	public final static int CHART_HEIGHT_FULL_MSG = CHART_HEIGHT_80;
+	public final static int CHART_WIDTH_FULL_MSG  = CHART_WIDTH_80; 
+
+	public final static int CHART_HEIGHT_SHORT_MSG = CHART_HEIGHT_80;
+	public final static int CHART_WIDTH_SHORT_MSG  = CHART_WIDTH_80; 
+	
 	
 	private JFreeChart _chart;
 	private Dataset    _dataset;
@@ -73,6 +101,8 @@ public abstract class ReportChartAbstract implements IReportChart
 	private String        _cmName;
 	private String        _graphName;
 	private String        _graphTitle;
+	private String        _chartId;  // used to create 
+	private static long   _chartIdCounter = 0; // incremented in the constructor for every creation.
 	
 	@Override public JFreeChart          getChart()               { return _chart;               }
 	@Override public Dataset             getDataset()             { return _dataset;             }
@@ -102,13 +132,17 @@ public abstract class ReportChartAbstract implements IReportChart
 	public void setPreComment         (String              preComment ) { _preComment          = preComment;  }
 	public void setPostComment        (String              postComment) { _postComment         = postComment; }
 
-	public ReportChartAbstract(ReportEntryAbstract reportEntry, DbxConnection conn, ChartType chartType, String cmName, String graphTitle)
+	public ReportChartAbstract(ReportEntryAbstract reportEntry, DbxConnection conn, ChartType chartType, String cmName, String graphName, String graphTitle)
 	{
 		_reportEntry     = reportEntry;
 		_conn            = conn;
 		_chartType       = chartType;
 		_cmName          = cmName;
+		_graphName       = graphName; 
 		_graphTitle      = graphTitle;
+		
+		_chartIdCounter++;
+		_chartId         = _cmName + "_" + _chartIdCounter;
 	}
 
 	@Override
@@ -135,6 +169,48 @@ public abstract class ReportChartAbstract implements IReportChart
 
 		return this;
 	}
+
+	private int getJsChartSizeHeight()
+	{
+		return CHART_HEIGHT_FULL_MSG;
+	}
+	
+	private int getJsChartSizeWidth()
+	{
+		return CHART_WIDTH_FULL_MSG;
+	}
+
+	private int getImageSizeHeight()
+	{
+		return CHART_HEIGHT_FULL_MSG;
+//		return CHART_HEIGHT_SHORT_MSG;
+//		if (getReportEntry() != null)
+//		{
+//			if (getReportEntry().isFullMessageType())
+//				return CHART_HEIGHT_FULL_MSG;
+//			
+//			if (getReportEntry().isShortMessageType())
+//				return CHART_HEIGHT_SHORT_MSG;
+//		}
+//
+//		return CHART_HEIGHT_FULL_MSG;
+	}
+	
+	private int getImageSizeWidth()
+	{
+		return CHART_WIDTH_FULL_MSG;
+//		if (getReportEntry() != null)
+//		{
+//			if (getReportEntry().isFullMessageType())
+//				return CHART_WIDTH_FULL_MSG;
+//			
+//			if (getReportEntry().isShortMessageType())
+//				return CHART_WIDTH_SHORT_MSG;
+//		}
+//
+//		return CHART_WIDTH_FULL_MSG;
+	}
+	
 	/**
 	 * 
 	 * @return
@@ -305,7 +381,8 @@ public abstract class ReportChartAbstract implements IReportChart
 		// CHART
 		sb.append("<br>\n");
 		//sb.append(toHtmlInlineImage());
-		writeAsHtmlInlineImage(sb);
+		writeAsHtmlInlineImage(sb);           // Write as <img id='img_" + _cmName + _graphTitle + "' src='data:image/png;base64,...>
+		writeAsChartJs(sb);                   // Write as <canvas id='canvas_" + _cmName + _graphTitle + "'>...</div>
 		sb.append("<br>\n");
 
 		// Post Text
@@ -319,6 +396,397 @@ public abstract class ReportChartAbstract implements IReportChart
 			sb.append(getPostComment());
 			sb.append("<br>\n");
 		}
+	}
+
+	private static boolean _chartJs_writeOnce = false;
+
+	public void writeAsChartJs(Writer writer)
+	throws IOException
+	{
+		// Only write this once
+		if (_chartJs_writeOnce == false)
+		{
+			_chartJs_writeOnce = true;
+
+			String name = "chartJs";
+			String label = "Initializing Chart Info: ";
+			String topPx = "50px";
+			
+			writer.append("\n");
+			writer.append("\n");
+			writer.append("<div id='" + name + "-progress-div' style='display:none'> \n");
+			writer.append("  <label for='" + name + "-progress-bar'>" + label + "</label> \n");
+			writer.append("  <progress id='" + name + "-progress-bar' max='100' style='height: 20px; width:80%;'></progress> \n");
+			writer.append("</div>\n");
+
+			writer.append("\n");
+			writer.append("<script type='text/javascript'>\n");
+			writer.append("\n");
+			writer.append("    // Variable to hold all ChartJS objects \n");
+			writer.append("    const chartJsListToLoad  = []; \n");
+			writer.append("    const chartJsListCreated = []; \n");
+			writer.append("      var chartJsListMax     = 0; \n");
+			writer.append("    const chartJsConfMap     = new Map(); \n");
+			writer.append("\n");
+			writer.append("    // function to be called at page load, which will initialize all Charts, (and update progressbar) \n");
+			writer.append("    function loadNextChart() \n");
+			writer.append("    { \n");
+
+			writer.append("        // Enable the progresbar; \n");
+			writer.append("        if (chartJsListCreated.length === 0) \n");
+			writer.append("        { \n");
+			writer.append("            console.log('-load-first-" + name + "-');  \n");
+			writer.append("            chartJsListMax = chartJsListToLoad.length; \n");
+			
+			writer.append("            // show the progressbar\n");
+			writer.append("            document.getElementById('" + name + "-progress-div').style.display = 'block'; \n");  // show
+			
+			writer.append("            // if possible move the div into the 'progress-area' or add some attributes to it. \n");
+			writer.append("            if (document.getElementById('progress-area')) \n");
+			writer.append("            { \n");
+			writer.append("                console.log('Moving div: " + name + "-progress-div --to--> div: progress-area');  \n");
+			writer.append("                $('#" + name + "-progress-div').detach().appendTo('#progress-area'); \n");
+			writer.append("            } \n");
+			writer.append("            else \n");
+			writer.append("            { \n");
+			writer.append("                console.log('Cant find div: progress-area. instead; Setting some css options for div: " + name + "-progress-div');  \n");
+			writer.append("                $('#" + name + "-progress-div').css({'position':'fixed', 'background-color':'white', 'top':'" + topPx + "', 'left':'20px', 'width':'100%'}); \n");
+			writer.append("            } \n");
+			writer.append("        } \n");
+
+			writer.append("        // Disable the progresbar; \n");
+			writer.append("        if (chartJsListToLoad.length === 0) \n");
+			writer.append("        { \n");
+			writer.append("            console.log('-end-of-" + name + "-to-load-');  \n");
+			writer.append("            // hide the progressbar \n");
+			writer.append("            document.getElementById('" + name + "-progress-div').style.display = 'none'; \n");   // hide
+			writer.append("            return; \n");
+			writer.append("        } \n");
+			
+			writer.append("        var tagName = chartJsListToLoad.shift(); \n");
+			writer.append("        var config  = chartJsConfMap.get(tagName); \n");
+			
+			writer.append("        var pctLoaded = chartJsListCreated.length / chartJsListMax * 100; \n");
+			writer.append("        document.getElementById('" + name + "-progress-bar').value = pctLoaded; \n");
+
+			writer.append("        console.log('-creating-chart: ' + tagName);  \n");
+			writer.append("        var ctx     = document.getElementById('canvas_' + tagName).getContext('2d'); \n");
+			writer.append("        var chartjs = new Chart(ctx, config); \n");
+			
+			writer.append("        chartJsListCreated.push(chartjs); \n");
+			writer.append("\n");
+			writer.append("        // HIDE the image, and SHOW the chart! \n");
+			writer.append("        document.getElementById('img_'       + tagName).style.display = 'none'; \n");   // hide
+			writer.append("        document.getElementById('div_chart_' + tagName).style.display = 'block'; \n");  // show
+
+			writer.append("        // Load next chart \n");
+			writer.append("        setTimeout(loadNextChart, 10); \n");
+			writer.append("    }\n");
+			writer.append("\n");
+			writer.append("    // Call the function loadNextChart() for the FIRST time \n");
+			writer.append("    document.addEventListener('DOMContentLoaded', function() \n");
+			writer.append("    { \n");
+			writer.append("        loadNextChart(); \n");
+			writer.append("    }); \n");
+			writer.append("\n");
+			writer.append("\n");
+			writer.append("    const chartAreaBackgroundPlugin = {                                                               \n");
+			writer.append("        id: 'chartAreaBackgroundPlugin',                                                            \n");
+			writer.append("        beforeDraw: function (chart, args, options) {                                               \n");
+//			writer.append("            console.log('beforeDraw', chart, args, options);                                        \n");
+			writer.append("            var ctx = chart.ctx;                                                                    \n");
+			writer.append("            var chartArea = chart.chartArea;                                                        \n");
+			writer.append("                                                                                                    \n");
+			writer.append("            ctx.save();                                                                             \n");
+//			writer.append("            ctx.fillStyle = 'rgba(251, 85, 85, 0.4)';                                               \n"); // Pink
+			writer.append("            ctx.fillStyle = options.bgColor;                                                        \n");
+			writer.append("            ctx.fillRect(chartArea.left, chartArea.top, chartArea.right - chartArea.left, chartArea.bottom - chartArea.top); \n");
+			writer.append("            ctx.restore();                                                                          \n");
+			writer.append("        }                                                                                           \n");
+			writer.append("    };                                                                                              \n");
+			writer.append("\n");
+			writer.append("</script>\n");
+			writer.append("\n");
+			writer.append("\n");
+			
+			// reference/call the above using:
+			// var config = {
+			//     ...
+			//     options: { 
+			//         plugins: { 
+			//             chartAreaBackgroundPlugin: { 
+			//                 bgColor: 'rgba(191, 191, 191, 0.4)', 
+			//             },
+			//         },
+			//     },
+			//     plugins: [ chartAreaBackgroundPlugin ]
+			// }
+		}
+
+		if (ChartType.LINE.equals(_chartType))
+		{
+			writeAsChartJsLineChart(writer);
+		}
+		else if (ChartType.STACKED_BAR.equals(_chartType))
+		{
+			writeAsChartJsStackedBarChart(writer);
+		}
+		else
+		{
+			throw new RuntimeException("Unhandled ChartType '" + _chartType + "'.");
+		}
+	}
+
+
+	private void writeAsChartJsHtmlAndJsCode(Writer writer, ChartType chartType, List<String> dataTs, LinkedHashMap<String, List<Number>> seriesDataVal)
+	throws IOException
+	{
+		String tagName    = _chartId;
+		String chartLabel = _graphTitle.replace("'", "\\'"); // escape single-quote[']
+
+		String type = null;
+		if      (ChartType.LINE       .equals(chartType)) type = "line";
+		else if (ChartType.STACKED_BAR.equals(chartType)) type = "bar";
+		else throw new IllegalArgumentException("chartType '" + chartType + "' is not supported.");
+		
+		int width  = getJsChartSizeWidth();
+		int height = getJsChartSizeHeight();
+
+		// If we have a lot of "labels", the chart area will shrink, so make it slightly bigger here
+		Set<String> seriesLabels = seriesDataVal.keySet();
+		int legendLabelPixWidthSum = 0;
+		for (String str : seriesLabels)
+			legendLabelPixWidthSum += str.length() * 5; // lets assume that every char is approximately 5 pixel wide (for simplicity)
+		double guessedLegendRows = Math.ceil(legendLabelPixWidthSum / width);
+		if (guessedLegendRows > 1)
+			height += guessedLegendRows * 17; // Assume every Legend row takes approximately 17px
+		
+		// Write the HTML part, with values from: getDataset()
+		writer.append("\n");
+		writer.append("\n");
+		writer.append("<div id='div_chart_" + tagName + "' style='display:none'>\n");
+		writer.append("<canvas id='canvas_" + tagName + "' width='" + width +"' height='" + height + "'></canvas> \n");
+		writer.append("</div>\n");
+
+		// Write the JavaScript part... which will hide the IMAGE and show the ChartJS object
+		writer.append("\n");
+		writer.append("\n");
+		writer.append("<script type='text/javascript'>\n");
+		
+		writer.append("// Create option and a ChartJS object \n");
+		writer.append("const options_" + tagName + " = { \n");
+//		writer.append("const options = { \n");
+
+		writer.append("    type: '" + type + "', \n");
+
+		writer.append("    data: \n");
+		writer.append("    { \n");
+		writer.append("        labels: ["); writer.append(StringUtil.toCommaStr(dataTs)); writer.append("], \n");
+		writer.append("        datasets: [ \n");
+
+		int cnt = 0;
+		for (Entry<String, List<Number>> entry : seriesDataVal.entrySet())
+		{
+			Color color = TrendGraphColors._colors[cnt % TrendGraphColors._colors.length];
+			//String newColor = chartColors[cnt % chartColors.length];
+			String newColor = "'rgb(" + color.getRed() + ", " + color.getGreen() + ", " + color.getBlue() + ")'";
+			String label = entry.getKey().replace("\\", "\\\\").replace("'", "\\'"); // Replace any backslash with 2 backslash (\ -> \\) and (' -> \')
+			
+			writer.append("            { \n");
+			writer.append("                label: '" + label + "', \n");    // The label for the dataset which appears in the legend and tooltips
+			writer.append("                data: ["); writer.append(StringUtil.toCommaStr(entry.getValue())); writer.append("], \n");
+			if (ChartType.LINE.equals(chartType))
+			{
+				writer.append("                borderWidth: 1, \n");                     // The width of the line in pixels.
+				writer.append("                pointRadius: 0, \n");                     // The radius of the point shape. If set to 0, the point is not rendered.
+				writer.append("                pointHitRadius: 5, \n");                  // The pixel size of the non-displayed point that reacts to mouse events.
+				writer.append("                fill: false, \n");                        // How to fill the area under the line.
+				writer.append("                borderColor: " + newColor + ", \n");      // The color of the line.
+			}
+			writer.append("                backgroundColor: " + newColor + ", \n");  // The fill color under the line.
+			writer.append("            }, \n");
+			cnt++;
+		}
+		writer.append("        ] \n");
+		writer.append("    }, \n");
+
+		writer.append("    options: { \n");
+		writer.append("        responsive: false, \n");
+		writer.append("        maintainAspectRatio: true, \n");
+		writer.append("        plugins: { \n");
+		writer.append("            title: { \n");
+		writer.append("                display: true, \n");
+		writer.append("                position: 'top', \n");
+		writer.append("                font: { size: 20, weight: 'bold' }, \n");
+		writer.append("                text: '" + chartLabel + "', \n");
+		writer.append("            }, \n");
+		writer.append("            legend: { \n");
+		writer.append("                position: 'bottom', \n");
+		writer.append("                labels: { \n");
+		writer.append("                    boxWidth: 10, \n");
+		writer.append("                    fontSize: 10, \n");
+		writer.append("                } \n");
+		writer.append("            }, \n");
+		writer.append("            chartAreaBackgroundPlugin: { \n");
+		writer.append("                bgColor: 'rgba(191, 191, 191, 0.4)', \n"); // Gray (ish)
+		writer.append("            }, \n");
+		writer.append("        }, \n"); // end: plugins
+		writer.append("        scales: { \n");
+		writer.append("            x: { \n");
+		if (ChartType.STACKED_BAR.equals(chartType))
+		{
+			writer.append("                stacked: true, \n");
+		}
+		writer.append("                type: 'time', \n");
+//		writer.append("                distribution: 'linear', \n");
+		writer.append("                time: { \n");
+//		writer.append("                    tooltipFormat: 'DD T', \n");
+		writer.append("                    unit: 'hour', \n");
+//		writer.append("                    parser: 'YYYY-MM-DDTHH:mm:ss.SSSSSSZ', \n");
+		writer.append("                    stepSize: 1, \n");
+		writer.append("                    displayFormats: { \n");
+		writer.append("                        millisecond: 'HH:mm:ss', \n");
+		writer.append("                        second: 'HH:mm:ss', \n");
+		writer.append("                        minute: 'HH:mm:ss', \n");
+		writer.append("                        hour:   'HH:mm', \n");
+		writer.append("                    } \n");
+		writer.append("                }, \n");
+		writer.append("                ticks: { \n");
+		writer.append("                    beginAtZero: true \n");
+		writer.append("                }, \n");
+		writer.append("                gridLines: { \n");
+		writer.append("                    color: 'rgba(0, 0, 0, 0.1)', \n");
+		writer.append("                    zeroLineColor: 'rgba(0, 0, 0, 0.25)', \n");
+		writer.append("                }, \n");
+		writer.append("            }, \n"); // end: x
+		writer.append("            y: { \n");
+		if (ChartType.STACKED_BAR.equals(chartType))
+		{
+			writer.append("                stacked: true, \n");
+		}
+		writer.append("                ticks: { \n");
+		writer.append("                    beginAtZero: true \n");
+		writer.append("                }, \n");
+		writer.append("                gridLines: { \n");
+		writer.append("                    color: 'rgba(0, 0, 0, 0.1)', \n");
+		writer.append("                    zeroLineColor: 'rgba(0, 0, 0, 0.25)', \n");
+		writer.append("                }, \n");
+		writer.append("            }, \n"); // end: y
+		writer.append("        }, \n"); // end: scales
+		writer.append("    }, \n"); // end: options
+		writer.append("    plugins: [ chartAreaBackgroundPlugin ] \n");
+		writer.append("} \n"); // end: var options_xxx
+
+		// Push the 'tagName' to a list, which later will be pulled to create the ChartJS Object
+		writer.append("chartJsListToLoad.push('" + tagName + "') \n");
+		writer.append("chartJsConfMap.set('" + tagName + "', options_" + tagName + "); \n");
+		
+//		writer.append("var ctx_" + tagName + " = document.getElementById('canvas_" + tagName + "').getContext('2d'); \n");
+//		writer.append("var chartjs_" + tagName + " = new Chart(ctx_" + tagName + ", options_" + tagName + "); \n");
+//		writer.append("\n");
+//
+//		writer.append("// disable the image \n");
+//		writer.append("document.getElementById('img_"       + tagName + "').style.display = 'none'; \n");   // hide
+//		writer.append("document.getElementById('div_chart_" + tagName + "').style.display = 'block'; \n");  // show
+
+		writer.append("</script>\n");
+	}
+
+	/**
+	 * STACKED BAR CHART
+	 * 
+	 * @param writer
+	 * @throws IOException
+	 */
+	public void writeAsChartJsStackedBarChart(Writer writer)
+	throws IOException
+	{
+		// Extract "data" from the "data set"
+		LinkedHashMap<String, List<Number>> seriesDataVal = new LinkedHashMap<>();
+		List<String> dataTs = new ArrayList<>();
+		
+		Dataset dataset = getDataset();
+		if (dataset instanceof DefaultCategoryDataset)
+		{
+			DefaultCategoryDataset catDataset = (DefaultCategoryDataset) dataset;
+
+			// Columns - contains the Timestamps
+			for (int c=0; c<catDataset.getColumnCount(); c++)
+			{
+				Comparable colKey = catDataset.getColumnKey(c);
+				dataTs.add("'" + colKey + "'");
+
+				//System.out.println("CCCCCCCCCCCCCCC[" + c + "]: colKey=|" + colKey + "|.");
+			}
+
+			// Rows - contains the "series" (or the different parts of each bar... the: waitType1, waitType2, waitType3...
+			for (int r=0; r<catDataset.getRowCount(); r++)
+			{
+				Comparable rowKey = catDataset.getRowKey(r);
+				//System.out.println("RRRRRRRRRRRRRRR[" + r + "]: colKey=|" + rowKey + "|.");
+
+				List<Number> dataVal = new ArrayList<>();
+				seriesDataVal.put(rowKey.toString(), dataVal);
+
+				for (int c=0; c<catDataset.getColumnCount(); c++)
+				{
+					Comparable colKey = catDataset.getColumnKey(c);
+
+					Number val = catDataset.getValue(rowKey, colKey);
+					dataVal.add(val);
+				}
+			}
+		}
+
+		// Write the HTML and JavaScript code
+		writeAsChartJsHtmlAndJsCode(writer, ChartType.STACKED_BAR, dataTs, seriesDataVal);
+	}
+
+	/**
+	 * LINE CHART
+	 * 
+	 * @param writer
+	 * @throws IOException
+	 */
+	public void writeAsChartJsLineChart(Writer writer)
+	throws IOException
+	{
+		// Extract "data" from the "data set"
+		LinkedHashMap<String, List<String>> seriesDataTs  = new LinkedHashMap<>();
+		LinkedHashMap<String, List<Number>> seriesDataVal = new LinkedHashMap<>();
+		List<String> dataTsXxx = null;
+		
+		Dataset dataset = getDataset();
+		if (dataset instanceof TimeSeriesCollection)
+		{
+			TimeSeriesCollection tsDataset = (TimeSeriesCollection) dataset;
+
+			for (int s=0; s<tsDataset.getSeriesCount(); s++)
+			{
+				TimeSeries timeSeries = tsDataset.getSeries(s);
+
+				List<String> dataTs  = new ArrayList<>();
+				List<Number> dataVal = new ArrayList<>();
+
+				dataTsXxx = dataTs;
+
+				seriesDataTs .put(timeSeries.getKey().toString(), dataTs);
+				seriesDataVal.put(timeSeries.getKey().toString(), dataVal);
+
+				for (int i=0; i<timeSeries.getItemCount(); i++)
+				{
+					TimeSeriesDataItem dataItem = timeSeries.getDataItem(i);
+					RegularTimePeriod dataPeriod = dataItem.getPeriod();
+					Number dataValue = dataItem.getValue();
+					
+					dataTs .add( "'" + TimeUtils.toStringIso8601(dataPeriod.getFirstMillisecond()) + "'");
+					dataVal.add( dataValue );
+				}
+			}
+		}
+		
+		// Write the HTML and JavaScript code
+		writeAsChartJsHtmlAndJsCode(writer, ChartType.LINE, dataTsXxx, seriesDataVal);
 	}
 
 	public void writeAsHtmlInlineImage(Writer writer)
@@ -339,19 +807,22 @@ public abstract class ReportChartAbstract implements IReportChart
 
 			// writeChartAsPNG produces the same size with compression="default" (just using with, height), compression=0 and compression=9
 			// So no difference here... 
-			int     width       = CHART_WIDTH;
-			int     height      = CHART_HEIGHT;
+			int     width       = getImageSizeWidth();
+			int     height      = getImageSizeHeight();
 			boolean encodeAlpha = false;
 			int     compression = 0;
+//			String  tagName     = _cmName + "_" + _graphName;
+			String  tagName     = _chartId;
 
 			boolean asPng = true;
 			if (asPng)
 			{
 				// Write the HTML Meta data
-				writer.append("<img width='" + width + "' height='" + height + "' src='data:image/png;base64,");
+				writer.append("<img id='img_" + tagName + "' width='" + width + "' height='" + height + "' src='data:image/png;base64,");
 				
 				// Write the Base64 representation of the image
-				ChartUtils.writeChartAsPNG(base64out, _chart, width, height, encodeAlpha, compression);
+//				ChartUtils.writeChartAsPNG(base64out, _chart, width, height, encodeAlpha, compression);
+				writeChartAsPNG(base64out, _chart, width, height, encodeAlpha, compression);
 
 				// Write the HTML end tag
 				writer.append("'>");
@@ -361,8 +832,14 @@ public abstract class ReportChartAbstract implements IReportChart
 				// Write the HTML Meta data
 				writer.append("<img width='" + width + "' height='" + height + "' src='data:image/jpeg;base64,");
 				
+				float   jpgQuality  = 0.0f; // A compression quality setting of 0.0 is most genericallyinterpreted as "high compression is important," while a setting of1.0 is most generically interpreted as "high image quality isimportant." 
+				ChartRenderingInfo renderInfo = null;
+//				ChartRenderingInfo renderInfo = new ChartRenderingInfo();
+//				renderInfo.
+				
 				// Write the Base64 representation of the image
-				ChartUtils.writeChartAsJPEG(base64out, _chart, width, height);
+//				ChartUtils.writeChartAsJPEG(base64out, _chart, width, height);
+				ChartUtils.writeChartAsJPEG(base64out, jpgQuality, _chart, width, height, renderInfo);
 
 				// Write the HTML end tag
 				writer.append("'>");
@@ -379,6 +856,53 @@ public abstract class ReportChartAbstract implements IReportChart
 		}
 	}
 
+	/**
+	 * Writes a chart to an output stream in PNG format.
+	 *
+	 * @param out  the output stream ({@code null} not permitted).
+	 * @param chart  the chart ({@code null} not permitted).
+	 * @param width  the image width.
+	 * @param height  the image height.
+	 * @param encodeAlpha  encode alpha?
+     * @param compression  the compression level (0-9).
+     *
+     * @throws IOException if there are any I/O errors.
+     */
+	public static void writeChartAsPNG(OutputStream out, JFreeChart chart, int width, int height, boolean encodeAlpha, int compression)
+	throws IOException 
+	{
+		ChartUtils.writeChartAsPNG(out, chart, width, height, encodeAlpha, compression);
+
+//		BufferedImage chartImage = chart.createBufferedImage(width, height, BufferedImage.TYPE_INT_ARGB, null);
+//        new PngEncoder()
+//        	.withBufferedImage(chartImage)
+//        	.toStream(out);
+
+//		try( ImageOutputStream imageOut = ImageIO.createImageOutputStream(out) )
+//		{
+//			BufferedImage      image    = chart.createBufferedImage(width, height, BufferedImage.TYPE_INT_ARGB, null);
+//			IIOMetadata        metadata = null;
+//			ImageTypeSpecifier type     = ImageTypeSpecifier.createFromRenderedImage(image);
+//			ImageWriter        writer   = ImageIO.getImageWriters(type, "png").next();
+//
+//			ImageWriteParam param = writer.getDefaultWriteParam();
+//			if (param.canWriteCompressed()) 
+//			{
+//				param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+//				param.setCompressionQuality(0.0f);
+//			}
+//
+//			writer.setOutput(imageOut);
+//			writer.write(null, new IIOImage(image, null, metadata), param);
+//			writer.dispose();
+//		}
+//		catch(Exception ex)
+//		{
+//ex.printStackTrace();
+//System.out.println("USING NORMAL 'ChartUtils.writeChartAsPNG' instead!");
+//			ChartUtils.writeChartAsPNG(out, chart, width, height, encodeAlpha, compression);
+//		}
+	}
 
 	//----------------------------------------------------------
 	// Below are code for creating Graph/Chart images that can be included in the HTML Report

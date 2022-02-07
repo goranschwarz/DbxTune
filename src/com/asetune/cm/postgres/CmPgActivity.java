@@ -24,7 +24,6 @@ import java.awt.event.MouseEvent;
 import java.sql.Connection;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -396,7 +395,7 @@ extends CountersModel
 	}
 
 	public static final String  PROPKEY_alarm_StatementExecInSec             = CM_NAME + ".alarm.system.if.StatementExecInSec.gt";
-	public static final int     DEFAULT_alarm_StatementExecInSec             = 3 * 60 * 60;
+	public static final int     DEFAULT_alarm_StatementExecInSec             = 3 * 60 * 60; // 3 Hours
 
 	public static final String  PROPKEY_alarm_StatementExecInSecSkipDbname   = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.dbname";
 	public static final String  DEFAULT_alarm_StatementExecInSecSkipDbname   = "";
@@ -405,7 +404,8 @@ extends CountersModel
 	public static final String  DEFAULT_alarm_StatementExecInSecSkipLogin    = "";
 
 	public static final String  PROPKEY_alarm_StatementExecInSecSkipCmd      = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.cmd";
-	public static final String  DEFAULT_alarm_StatementExecInSecSkipCmd      = "^(BACKUP ).*";
+//	public static final String  DEFAULT_alarm_StatementExecInSecSkipCmd      = "^(BACKUP |RESTORE ).*";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipCmd      = "";
 
 	public static final String  PROPKEY_alarm_StatementExecInSecSkipTranName = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.tranName";
 	public static final String  DEFAULT_alarm_StatementExecInSecSkipTranName = "";

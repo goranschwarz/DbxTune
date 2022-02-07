@@ -50,14 +50,14 @@ extends ReportEntryAbstract
 		return false;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		if (_shortRstm.getRowCount() == 0)
@@ -171,6 +171,9 @@ extends ReportEntryAbstract
 		}
 		else
 		{
+			// Highlight sort column
+			_shortRstm.setHighlightSortColumns("total_mb");
+
 			// Describe the table
 			setSectionDescription(_shortRstm);
 		}

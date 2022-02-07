@@ -47,15 +47,15 @@ public class AseStatementCacheUsageOverview extends AseAbstract
 		return true;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-		writeMessageText(w);
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//		writeMessageText(w);
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are some Graphs/Charts regarding the Statement Cache.",

@@ -42,9 +42,9 @@ import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.hostmon.HostMonitor;
-import com.asetune.hostmon.OsTable;
 import com.asetune.hostmon.HostMonitor.OsVendor;
 import com.asetune.hostmon.MonitorUpTimeWindows;
+import com.asetune.hostmon.OsTable;
 import com.asetune.utils.Configuration;
 
 public class CmOsUptime

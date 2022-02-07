@@ -25,6 +25,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -34,9 +35,12 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.postgres.gui.CmPgStatementsPanel;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
@@ -45,6 +49,7 @@ import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.NumberUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
@@ -74,10 +79,12 @@ extends CountersModel
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
-	public static final String[] PCT_COLUMNS      = new String[] {};
+	public static final String[] PCT_COLUMNS      = new String[] { "cache_hit_pct" };
 	public static final String[] DIFF_COLUMNS     = new String[] {
 			"calls",
 			"total_time",
+			"total_plan_time", // from: 13.0
+			"total_exec_time", // from: 13.0 and replaces "total_time"
 			"rows",
 			"shared_blks_hit",
 			"shared_blks_read",
@@ -90,7 +97,10 @@ extends CountersModel
 			"temp_blks_read",
 			"temp_blks_written",
 			"blk_read_time",
-			"blk_write_time"
+			"blk_write_time",
+			"wal_records",      // from: 13.0
+			"wal_fpi",          // from: 13.0   FPI = Full Page Image
+			"wal_bytes"         // from: 13.0
 	};
 //	RS> Col# Label               JDBC Type Name         Guessed DBMS type
 //	RS> ---- ------------------- ---------------------- -----------------
@@ -114,6 +124,60 @@ extends CountersModel
 //	RS> 18   blk_read_time       java.sql.Types.DOUBLE  float8           
 //	RS> 19   blk_write_time      java.sql.Types.DOUBLE  float8           
 
+	// Column History: pg_stat_statements
+
+	// ------- 8.4 -> 9.0 -- 8 new column
+	//                      new: shared_blks_hit     -- Total number of shared blocks hits by the statement
+	//                      new: shared_blks_read    -- Total number of shared blocks reads by the statement
+	//                      new: shared_blks_written -- Total number of shared blocks writes by the statement
+	//                      new: local_blks_hit      -- Total number of local blocks hits by the statement
+	//                      new: local_blks_read     -- Total number of local blocks reads by the statement
+	//                      new: local_blks_written  -- Total number of local blocks writes by the statement
+	//                      new: temp_blks_read      -- Total number of temp blocks reads by the statement
+	//                      new: temp_blks_written   -- Total number of temp blocks writes by the statement	
+	// ------- 9.0 -> 9.1 -- No Change 
+	// ------- 9.1 -> 9.2 -- 5 new column
+	//                      new: shared_blks_dirtied -- Total number of shared blocks dirtied by the statement
+	//                      new: shared_blks_written -- Total number of shared blocks written by the statement
+	//                      new: local_blks_dirtied	 -- Total number of local blocks dirtied by the statement
+	//                      new: blk_read_time	     -- Total time the statement spent reading blocks, in milliseconds (if track_io_timing is enabled, otherwise zero)
+	//                      new: blk_write_time	     -- Total time the statement spent writing blocks, in milliseconds (if track_io_timing is enabled, otherwise zero)
+	// ------- 9.2 -> 9.3 -- No Change 
+	// ------- 9.3 -> 9.4 -- 1 new column
+	//                      new: queryid             -- Internal hash code, computed from the statement's parse tree
+	// ------- 9.4 -> 9.5 -- 4 new column            
+	//                      new: min_time            -- Minimum time spent in the statement, in milliseconds
+	//                      new: max_time            -- Maximum time spent in the statement, in milliseconds
+	//                      new: mean_time           -- Mean time spent in the statement, in milliseconds
+	//                      new: stddev_time         -- Population standard deviation of time spent in the statement, in milliseconds
+	// ------- 9.5 -> 9.6 -- No Change 
+	// ------- 9.6 -> 10 -- No Change 
+	// -------  10 -> 11 -- No Change 
+	// -------  11 -> 12 -- No Change 
+	// -------  12 -> 13 -- 9 new column, 6 renamed columns
+	//                      new: plans               -- Number of times the statement was planned                  (if pg_stat_statements.track_planning is enabled, otherwise zero)
+	//                      new: total_plan_time     -- Total time spent planning the statement, in milliseconds   (if pg_stat_statements.track_planning is enabled, otherwise zero)
+	//                      new: min_plan_time       -- Minimum time spent planning the statement, in milliseconds (if pg_stat_statements.track_planning is enabled, otherwise zero)
+	//                      new: max_plan_time       -- Maximum time spent planning the statement, in milliseconds (if pg_stat_statements.track_planning is enabled, otherwise zero)
+	//                      new: mean_plan_time      -- Mean time spent planning the statement, in milliseconds    (if pg_stat_statements.track_planning is enabled, otherwise zero)
+	//                      new: stddev_plan_time    -- Population standard deviation of time spent planning the statement, in milliseconds (if pg_stat_statements.track_planning is enabled, otherwise zero)
+	//                  renamed: total_time          >> changed to 'total_exec_time'
+	//                  renamed: min_time            >> changed to 'min_exec_time'
+	//                  renamed: max_time            >> changed to 'max_exec_time'
+	//                  renamed: mean_time           >> changed to 'mean_exec_time'
+	//                  renamed: stddev_time         >> changed to 'stddev_exec_time'
+	//                      new: total_exec_time     -- Total   time spent executing the statement, in milliseconds
+	//                      new: min_exec_time       -- Minimum time spent executing the statement, in milliseconds
+	//                      new: max_exec_time       -- Maximum time spent executing the statement, in milliseconds
+	//                      new: mean_exec_time      -- Mean    time spent executing the statement, in milliseconds
+	//                      new: stddev_exec_time    -- Population standard deviation of time spent executing the statement, in milliseconds
+	//                      new: wal_records         -- Total number of WAL records generated by the statement
+	//                      new: wal_fpi             -- Total number of WAL full page images generated by the statement
+	//                      new: wal_bytes           -- Total amount of WAL generated by the statement in bytes
+	// -------  13 -> 14 -- 1 new column
+	//                      new: toplevel            -- True if the query was executed as a top-level statement (always true if pg_stat_statements.track is set to top)
+	// -------  14 -> 15 -- 15 not yet released 
+	
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
@@ -157,13 +221,27 @@ extends CountersModel
 	}
 
 
+	@Override
+	protected TabularCntrPanel createGui()
+	{
+		return new CmPgStatementsPanel(this);
+	}
+	
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	private static final String  PROP_PREFIX                = CM_NAME;
+
+	public static final String  PROPKEY_createExtension     = PROP_PREFIX + ".if.missing.pg_stat_statements.createExtension";
+	public static final boolean DEFAULT_createExtension     = true; 
+
+	public static final String PROPKEY_sample_total_time_gt = PROP_PREFIX + ".sample.total_time.gt";
+	public static final int    DEFAULT_sample_total_time_gt = 1000;
+	
+
+
 	public static final String GRAPH_NAME_SQL_STATEMENTS = "SqlStatements";
 	
-	public static final String  PROPKEY_createExtension = "CmPgStatements.if.missing.pg_stat_statements.createExtension";
-	public static final boolean DEFAULT_createExtension = true; 
 
 	private void addTrendGraphs()
 	{
@@ -194,12 +272,18 @@ extends CountersModel
 		}
 	}
 
-//	@Override
-//	protected TabularCntrPanel createGui()
-//	{
-//		return new CmActiveStatementsPanel(this);
-//	}
-	
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public List<CmSettingsHelper> getLocalSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("Sample 'total_time' above", PROPKEY_sample_total_time_gt  , Integer.class, conf.getIntProperty(PROPKEY_sample_total_time_gt  , DEFAULT_sample_total_time_gt  ), DEFAULT_sample_total_time_gt  , "Sample 'total_time' above" ));
+
+		return list;
+	}
+
 	@Override
 	public Map<String, PcsColumnOptions> getPcsColumnOptions()
 	{
@@ -241,22 +325,93 @@ extends CountersModel
 //			queryid = "    ,md5(query) as queryid \n";
 			queryid = "    ,('x'||substr(md5(query),1,16))::bit(64)::bigint as queryid \n";
 		}
-			
-		// TODO: calculate the per_xxx for diff values... localCalculation()...
+
+		String total_time1 = "s.total_time";
+		String total_time2 = "";
+		if (srvVersion >= Ver.ver(13))
+		{
+			total_time1 = "(s.total_plan_time + s.total_exec_time)";
+			total_time2 = "    ,(s.total_plan_time + s.total_exec_time) AS total_time n";
+		}
+
+		int total_time_gt = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_sample_total_time_gt, DEFAULT_sample_total_time_gt);
+
+		//TODO: look at 'pg_show_plans' at https://github.com/cybertec-postgresql/pg_show_plans
+		//      to get "runtime" plans (just like sp_showplan)
+		//      Possibly we can incorporate the in the below SQL statement (or get it in a separate collection tab)
+
 		return  "select \n" +
-				"     CASE WHEN s.calls > 0 THEN s.total_time      / s.calls ELSE 0 END as avg_time_per_call \n" +
+				"     CASE WHEN s.calls > 0 THEN " + total_time1 + "      / s.calls ELSE 0 END as avg_time_per_call \n" +
 				"    ,CASE WHEN s.calls > 0 THEN s.rows            / s.calls ELSE 0 END as avg_rows_per_call \n" +
 				"    ,CASE WHEN s.rows  > 0 THEN s.shared_blks_hit / s.rows  ELSE 0 END as shared_blks_hit_per_row \n" +
+				"    ,CAST(100.0 * s.shared_blks_hit / nullif(s.shared_blks_hit + s.shared_blks_read, 0) as numeric(5,1)) AS cache_hit_pct \n" +
 				"    ,d.datname \n" +
 				"    ,u.usename \n" +
 				queryid +
+				total_time2 +
 				"    ,s.* \n" +
 				"    ,cast(0 as integer) AS \"dupMergeCount\" \n" +
 				"from pg_stat_statements s \n" +
 				"left outer join pg_catalog.pg_database d ON s.dbid   = d.oid      \n" +
 				"left outer join pg_catalog.pg_user     u ON s.userid = u.usesysid \n" +
-				"where s.calls > 1 \n" +
+//				"where s.calls > 1 \n" +
+				"where " + total_time1 + " > " + total_time_gt + " \n" +
 				"";
+	}
+
+	@Override
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
+	{
+		// Reset missing columns count so we can check it later.
+		findCsColumn_resetMissingCounter();
+
+		// Get column positions
+		int avg_time_per_call_pos       = findCsColumn(diffData, true, "avg_time_per_call");
+		int avg_rows_per_call_pos       = findCsColumn(diffData, true, "avg_rows_per_call");
+		int shared_blks_hit_per_row_pos = findCsColumn(diffData, true, "shared_blks_hit_per_row");
+		int cache_hit_pct_pos           = findCsColumn(diffData, true, "cache_hit_pct");
+
+		int rows_pos                    = findCsColumn(diffData, true, "rows");
+		int calls_pos                   = findCsColumn(diffData, true, "calls");
+		int total_time_pos              = findCsColumn(diffData, true, "total_time", "total_exec_time"); // any of the two: total_exec_time is in pg version 13 and above
+		int shared_blks_hit_pos         = findCsColumn(diffData, true, "shared_blks_hit");
+		int shared_blks_read_pos        = findCsColumn(diffData, true, "shared_blks_read");
+
+
+		// return if we are missing any columns.
+		if (findCsColumn_hasMissingColumns())
+		{
+			_logger.error(getName() + ": Missing " + findCsColumn_getMissingColumns() + " columns when doing localCalculation(prevSample, newSample, diffData) skipping the local Calculation.");
+			return;
+		}
+		
+		// Loop all rows and calculate new values for: avg_time_per_call, avg_rows_per_call, shared_blks_hit_per_row
+		for (int rowId = 0; rowId < diffData.getRowCount(); rowId++)
+		{
+			long   rows             = ((Number) diffData.getValueAt(rowId, rows_pos             )).longValue();
+			long   calls            = ((Number) diffData.getValueAt(rowId, calls_pos            )).longValue();
+			double total_time       = ((Number) diffData.getValueAt(rowId, total_time_pos       )).doubleValue();
+			long   shared_blks_hit  = ((Number) diffData.getValueAt(rowId, shared_blks_hit_pos  )).longValue();
+			long   shared_blks_read = ((Number) diffData.getValueAt(rowId, shared_blks_read_pos )).longValue();
+			
+			long   shared_blks_count = shared_blks_hit + shared_blks_read;
+
+			// Calculate new values
+			Double avg_time_per_call       = calls             <= 0 ? null : total_time      / calls;
+			Long   avg_rows_per_call       = calls             <= 0 ? null : rows            / calls;
+			Long   shared_blks_hit_per_row = rows              <= 0 ? null : shared_blks_hit / rows;
+			Double cache_hit_pct           = shared_blks_count <= 0 ? null : 100.0 * shared_blks_hit / shared_blks_count;
+
+			// 1 decimal for 'avg_time_per_call' and 'cache_hit_pct'
+			avg_time_per_call = NumberUtils.round(avg_time_per_call, 1);
+			cache_hit_pct     = NumberUtils.round(cache_hit_pct      , 1);
+			
+			// Set new DIFF values
+			diffData.setValueAt(avg_time_per_call      , rowId, avg_time_per_call_pos);
+			diffData.setValueAt(avg_rows_per_call      , rowId, avg_rows_per_call_pos);
+			diffData.setValueAt(shared_blks_hit_per_row, rowId, shared_blks_hit_per_row_pos);
+			diffData.setValueAt(cache_hit_pct          , rowId, cache_hit_pct_pos);
+		}
 	}
 
 	@Override

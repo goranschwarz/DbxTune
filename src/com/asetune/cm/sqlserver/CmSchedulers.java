@@ -675,7 +675,8 @@ extends CountersModel
 		if (isAzure)
 			dm_os_schedulers = "dm_pdw_nodes_os_schedulers";
 		
-		String sql = "select * from sys." + dm_os_schedulers;
+		String sql = "select *     /* ${cmCollectorName} */ " 
+		           + "from sys." + dm_os_schedulers;
 
 		return sql;
 	}

@@ -47,14 +47,14 @@ public class AseDbSize extends AseAbstract
 		return false;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		// Get a description of this section, and column names
@@ -153,6 +153,10 @@ public class AseDbSize extends AseAbstract
 		
 		_shortRstm = executeQuery(conn, sql, true, "CmOpenDatabases_abs");
 
+		// Highlight sort column
+		if (_shortRstm != null)
+			_shortRstm.setHighlightSortColumns("DbSizeInMb");
+			
 		// Describe the table
 		setSectionDescription(_shortRstm);
 		

@@ -20,6 +20,11 @@
  ******************************************************************************/
 package com.asetune.test;
 
+import java.awt.Desktop;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Properties;
 
 import org.apache.log4j.Logger;
@@ -43,15 +48,31 @@ public class DailySummaryReportTest
 	
 	public static void main(String[] args)
 	{
-		Properties log4jProps = new Properties();
-		//log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
-
 		String propFile = AppDir.getAppStoreDir(true) + "DailySummaryReportTest.props";
+
+		try (InputStream input = new FileInputStream(propFile)) 
+		{
+			System.out.println("Loading LOG4J properties from file '" + propFile + "'.");
+
+			Properties log4jProps = new Properties();
+			log4jProps.load(input);
+			PropertyConfigurator.configure(log4jProps);
+		}
+		catch (IOException ex)
+		{
+			System.out.println("Problems Loading properties file '" + propFile + "'. Caught: " + ex);
+
+			System.out.println("Using static configuration.");
+			
+			Properties log4jProps = new Properties();
+			//log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
+			log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
+			log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
+			log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
+			log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
+			PropertyConfigurator.configure(log4jProps);
+		}
+
 		System.out.println("PROPFILE: '"+propFile+"'.");
 		Configuration conf = new Configuration(propFile);
 		Configuration.setInstance(Configuration.USER_TEMP, conf);
@@ -141,10 +162,41 @@ public class DailySummaryReportTest
 
 			// remove/ old reports from the "archive"
 			report.removeOldReports();
+			
+			// Open in browser
+			boolean openInBrowser = conf.getBooleanProperty("DailySummaryReport.openInBrowser", false);
+			if (openInBrowser)
+			{
+				openInBrowser(report);
+			}
 		}
 		catch(Exception ex)
 		{
 			_logger.error("Problems Sending Daily Summary Report. Caught: "+ex, ex);
+		}
+	}
+	
+	private static void openInBrowser(IDailySummaryReport report)
+	{
+		File reportFile = report.getReportFile();
+		if (reportFile == null)
+			return;
+
+		if (Desktop.isDesktopSupported())
+		{
+			Desktop desktop = Desktop.getDesktop();
+			if ( desktop.isSupported(Desktop.Action.BROWSE) )
+			{
+				try
+				{
+//					desktop.browse(rr.getUrl().toURI());
+					desktop.browse(reportFile.toURI());
+				}
+				catch (Exception ex)
+				{
+					_logger.error("Problems when open the URL '"+reportFile+"'. Caught: "+ex, ex);
+				}
+			}
 		}
 	}
 }

@@ -326,7 +326,7 @@ extends CountersModel
 
 
 		String sql = 
-			"SELECT \n"
+			"SELECT /* ${cmCollectorName} */ \n"
 			+ "dbname       = db_name(a.database_id), \n"
 			+ "db_file_type = CASE \n"
 			+ "                   WHEN a.file_id = 2 THEN 'Log' \n"

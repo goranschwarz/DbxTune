@@ -84,6 +84,9 @@ public class NumberUtils
 	 */
 	public static Double round(Double value, int places)
 	{
+		if (value == null)
+			return null;
+			
 		if (places < 0) 
 			throw new IllegalArgumentException();
 

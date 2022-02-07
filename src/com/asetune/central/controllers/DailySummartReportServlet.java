@@ -48,7 +48,6 @@ import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.StringUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.net.MediaType;
 import com.google.gson.Gson;
 
 public class DailySummartReportServlet extends HttpServlet

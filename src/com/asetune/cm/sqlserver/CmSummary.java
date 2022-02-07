@@ -431,7 +431,7 @@ extends CountersModel
 				"select @fullTranslogCount   = 0 \n" +
 				" \n" +
 				"/* Output the data */\n" +
-				"select \n" +
+				"select /* ${cmCollectorName} */ \n" +
 				"  srvVersion                   = @@version  \n" +
 				", atAtServerName               = @@servername  \n" +
 				", clusterInstanceId            = 'Not Enabled'  \n" +

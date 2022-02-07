@@ -83,6 +83,9 @@ implements Runnable
 	public static final String  PROPKEY_ddl_afterDdlLookupSleepTimeInMs          = "PersistentCounterHandler.ddl.afterDdlLookupSleepTimeInMs";
 	public static final int     DEFAULT_ddl_afterDdlLookupSleepTimeInMs          = 250;
                                                                                  
+	public static final String  PROPKEY_ddl_doSpDepends                          = "PersistentCounterHandler.ddl.doSpDepends";
+	public static final boolean DEFAULT_ddl_doSpDepends                          = true;
+
 	public static final String  PROPKEY_ddl_addDependantObjectsToDdlInQueue      = "PersistentCounterHandler.ddl.addDependantObjectsToDdlInQueue";
 	public static final boolean DEFAULT_ddl_addDependantObjectsToDdlInQueue      = true;
                                                                                  
@@ -164,6 +167,7 @@ implements Runnable
 		Configuration.registerDefaultValue(PROPKEY_ddl_warnDdlInputQueueSizeThresh,          DEFAULT_ddl_warnDdlInputQueueSizeThresh);
 		Configuration.registerDefaultValue(PROPKEY_ddl_warnDdlStoreQueueSizeThresh,          DEFAULT_ddl_warnDdlStoreQueueSizeThresh);
 		Configuration.registerDefaultValue(PROPKEY_ddl_afterDdlLookupSleepTimeInMs,          DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
+		Configuration.registerDefaultValue(PROPKEY_ddl_doSpDepends,                          DEFAULT_ddl_doSpDepends);
 		Configuration.registerDefaultValue(PROPKEY_ddl_addDependantObjectsToDdlInQueue,      DEFAULT_ddl_addDependantObjectsToDdlInQueue);
 		Configuration.registerDefaultValue(PROPKEY_warnQueueSizeThresh,                      DEFAULT_warnQueueSizeThresh);
 
@@ -274,6 +278,7 @@ implements Runnable
 	private int _afterDdlLookupSleepTimeInMs = DEFAULT_ddl_afterDdlLookupSleepTimeInMs;
 	
 	/** */
+	private boolean _doSpDepends                     = DEFAULT_ddl_doSpDepends;
 	private boolean _addDependantObjectsToDdlInQueue = DEFAULT_ddl_addDependantObjectsToDdlInQueue;
 
 	/** How many milliseconds have we maximum spent in <i>consume</i> */
@@ -329,6 +334,7 @@ implements Runnable
 		return configStr;
 	}
 	
+	public boolean getConfig_doSpDepends()                     { return _doSpDepends; }
 	public boolean getConfig_addDependantObjectsToDdlInQueue() { return _addDependantObjectsToDdlInQueue; }
 
 	/** Initialize various member of the class */
@@ -349,14 +355,15 @@ implements Runnable
 		
 		_logger.info("Initializing the Persistent Counter Handler functionality.");
 
-		_warnQueueSizeThresh                 = _props.getIntProperty    (PROPKEY_warnQueueSizeThresh,                 _warnQueueSizeThresh);
+		_warnQueueSizeThresh                 = _props.getIntProperty    (PROPKEY_warnQueueSizeThresh,                 DEFAULT_warnQueueSizeThresh);
 
 		// DDL Lookup & Store Props
-		_warnDdlInputQueueSizeThresh         = _props.getIntProperty    (PROPKEY_ddl_warnDdlInputQueueSizeThresh,     _warnDdlInputQueueSizeThresh);
-		_warnDdlStoreQueueSizeThresh         = _props.getIntProperty    (PROPKEY_ddl_warnDdlStoreQueueSizeThresh,     _warnDdlStoreQueueSizeThresh);
+		_warnDdlInputQueueSizeThresh         = _props.getIntProperty    (PROPKEY_ddl_warnDdlInputQueueSizeThresh,     DEFAULT_ddl_warnDdlInputQueueSizeThresh);
+		_warnDdlStoreQueueSizeThresh         = _props.getIntProperty    (PROPKEY_ddl_warnDdlStoreQueueSizeThresh,     DEFAULT_ddl_warnDdlStoreQueueSizeThresh);
 
-		_afterDdlLookupSleepTimeInMs         = _props.getIntProperty    (PROPKEY_ddl_afterDdlLookupSleepTimeInMs,     _afterDdlLookupSleepTimeInMs);
-		_addDependantObjectsToDdlInQueue     = _props.getBooleanProperty(PROPKEY_ddl_addDependantObjectsToDdlInQueue, _addDependantObjectsToDdlInQueue);
+		_afterDdlLookupSleepTimeInMs         = _props.getIntProperty    (PROPKEY_ddl_afterDdlLookupSleepTimeInMs,     DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
+		_doSpDepends                         = _props.getBooleanProperty(PROPKEY_ddl_doSpDepends,                     DEFAULT_ddl_doSpDepends);
+		_addDependantObjectsToDdlInQueue     = _props.getBooleanProperty(PROPKEY_ddl_addDependantObjectsToDdlInQueue, DEFAULT_ddl_addDependantObjectsToDdlInQueue);
 		
 		_doDdlLookupAndStore                 = _props.getBooleanProperty(PROPKEY_ddl_doDdlLookupAndStore,             DEFAULT_ddl_doDdlLookupAndStore);
 		_ddlLookup_enabledForDatabaseObjects = _props.getBooleanProperty(PROPKEY_ddl_enabledForDatabaseObjects,       DEFAULT_ddl_enabledForDatabaseObjects);
@@ -384,6 +391,7 @@ implements Runnable
 		_logger.info("             ---- ObjectLookupInspector ClassName                      = "+( _objectLookupInspector == null ? "null" : _objectLookupInspector.getClass().getName()));
 		_logger.info("                  "+PROPKEY_ddl_enabledForDatabaseObjects+"            = "+_ddlLookup_enabledForDatabaseObjects);
 		_logger.info("                  "+PROPKEY_ddl_enabledForStatementCache+"             = "+_ddlLookup_enabledForStatementCache);
+		_logger.info("                  "+PROPKEY_ddl_doSpDepends+"                          = "+_doSpDepends);
 		_logger.info("                  "+PROPKEY_ddl_addDependantObjectsToDdlInQueue+"      = "+_addDependantObjectsToDdlInQueue);
 		_logger.info("                  "+PROPKEY_ddl_afterDdlLookupSleepTimeInMs+"          = "+_afterDdlLookupSleepTimeInMs);
 		_logger.info("                  "+PROPKEY_ddl_warnDdlInputQueueSizeThresh+"          = "+_warnDdlInputQueueSizeThresh);
@@ -1647,6 +1655,14 @@ implements Runnable
 			{
 				_logger.info("DdlLookupQueueHandler: Discovered a config change in sleep time 'after persist' from '"+_sqlCaptureSleepTimeInMs+"', to '"+afterDdlLookupSleepTimeInMs+"'.");
 				_afterDdlLookupSleepTimeInMs = afterDdlLookupSleepTimeInMs;
+			}
+
+			// 
+			boolean doSpDepends = _props.getBooleanProperty(PROPKEY_ddl_doSpDepends, DEFAULT_ddl_doSpDepends);
+			if (doSpDepends != _doSpDepends)
+			{
+				_logger.info("DdlLookupQueueHandler: Discovered a config change in _doSpDepends from '"+_doSpDepends+"', to '"+doSpDepends+"'.");
+				_doSpDepends = doSpDepends;
 			}
 
 			// Add defendant Object

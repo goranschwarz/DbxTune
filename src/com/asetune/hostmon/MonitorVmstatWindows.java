@@ -21,8 +21,6 @@
  ******************************************************************************/
 package com.asetune.hostmon;
 
-import org.apache.log4j.Logger;
-
 import com.asetune.utils.Configuration;
 
 public class MonitorVmstatWindows 

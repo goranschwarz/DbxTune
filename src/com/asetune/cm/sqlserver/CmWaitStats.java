@@ -189,7 +189,7 @@ extends CountersModel
 		// NOTE: If you change the below column order UPDATE THE ABOVE POS_* columns
 		// ---------------------------------------------------------------------------------------
 		String sql = ""
-			+ "select \n"
+			+ "select /* ${cmCollectorName} */ \n"
 			+ "    wait_type, \n"
 			+ "    WaitClass = convert(varchar(30), null), \n"
 			+ "    waiting_tasks_count, \n"

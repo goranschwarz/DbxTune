@@ -320,7 +320,7 @@ extends CountersModel
 			if (TotalSegs != null && UsedSegs != null)
 			{
 				
-				BigDecimal usedPct = new BigDecimal(UsedSegs / TotalSegs).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal usedPct = new BigDecimal(100.0 * (UsedSegs / TotalSegs)).setScale(2, BigDecimal.ROUND_HALF_EVEN);
 				int usedSpaceInMb = UsedSegs.intValue();
 				int freeSpaceInMb = TotalSegs.intValue() - UsedSegs.intValue();
 

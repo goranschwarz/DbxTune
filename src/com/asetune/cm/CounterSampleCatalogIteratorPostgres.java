@@ -34,6 +34,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.CounterController;
 import com.asetune.gui.MainFrame;
 import com.asetune.sql.JdbcUrlParser;
 import com.asetune.sql.conn.ConnectionProp;
@@ -165,12 +166,15 @@ extends CounterSampleCatalogIterator
 		if (cm != null && cm.getGuiController() != null)
 			cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "Connecting to db '"+dbname+"'");
 
-		// grab a new conntion.
+		// grab a new connection.
 		DbxConnection dbConn = cp.getConnection(guiOwner);
 
 		_logger.info("Created a new Connection for db '"+dbname+"', which will be cached in a connection pool. with maxSize=5, url='"+url+"', connProp="+connProp);
-		
-		// when first connection is successfull, add the connection pool to the MAP
+
+		// Make the same settings as for a new Monitor Connection
+		CounterController.getInstance().onMonConnect(dbConn);
+
+		// when first connection is successful, add the connection pool to the MAP
 		_cpm.setPool(dbname, cp);
 		
 		return dbConn;

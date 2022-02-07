@@ -41,7 +41,6 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ResultSetTableModel;
-import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.DailySummaryReportFactory;
@@ -66,7 +65,19 @@ implements IReportEntry
 	private   List<String> _infoMsgList;
 	protected DailySummaryReportAbstract _reportingInstance;
 	private   String _disabledReason; 
+	
+	private   MessageType _currentMessageType;
 
+	private   long _execTime;
+
+	@Override public void setExecTime(long ms) { _execTime = ms;}
+	@Override public long getExecTime()        { return _execTime; }
+
+	@Override public boolean isShortMessageType() { return MessageType.SHORT_MESSAGE.equals(getCurrentMessageType()); }
+	@Override public boolean isFullMessageType() { return MessageType.FULL_MESSAGE.equals(getCurrentMessageType()); }
+	@Override public void setCurrentMessageType(MessageType messageType) { _currentMessageType = messageType; }
+	@Override public MessageType getCurrentMessageType() { return _currentMessageType; }
+	
 //	private Timestamp _reportBeginTime = null;
 //	private Timestamp _reportEndTime   = null;
 //	
@@ -152,9 +163,47 @@ implements IReportEntry
 	implements ResultSetTableModel.TableStringRenderer
 	{
 		@Override
+		public String tagThAttr(ResultSetTableModel rstm, int col, String colName, boolean nowrapPreferred)
+		{
+			String attr = ResultSetTableModel.TableStringRenderer.super.tagThAttr(rstm, col, colName, nowrapPreferred);
+
+			if ("Sparklines".equals(colName))
+			{
+				// This is to make the "Sparklines" columns not to *shrink* in Outlook Mail (since it uses "Word" to render HTML)
+//				attr = "class='sparkline-td'";                  // did NOT work; This class has "width: 1100;" but only for outlook "<!--[if mso]>...<![endif]-->"
+//				attr = "width='1100'";                          // This is the best so far but it breaks IOS a bit, Outloook=OK, Chrome=OK, iPhone=Leaves a gap (to big for being 100% OK)
+//				attr = "mso-width='1100'";                      // did NOT work at all
+				attr = "style='width:1100;'";                   // BEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+//				attr = "mso-width-alt='1100'";                  // 
+//				attr = "style='mso-width-alt:1100;'";           // did NOT work at all
+//				attr = "<!--[if mso]>width='1100'<![endif]-->"; // This did NOT work... possibly I can try: "\n<!--[if mso]>\nwidth='1100'\n<![endif]-->\n" ... but does ALL the HTML Browsers accept that ???
+//				attr = "\n"                                     // Width... but only for MS Outlook (this left some strange chars in Outlook)
+//						+ "<!--[if mso]>\n"
+//						+ "width='1100'\n"
+//						+ "<![endif]-->\n";
+			}
+
+			return attr;
+		}
+
+		@Override
+		public String tagTdAttr(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal, boolean nowrapPreferred)
+		{
+			String attr = ResultSetTableModel.TableStringRenderer.super.tagTdAttr(rstm, row, col, colName, objVal, strVal, nowrapPreferred);
+
+			if ("Sparklines".equals(colName))
+			{
+				// This is to make the "Sparklines" columns not to *shrink* in Outlook Mail (since it uses "Word" to render HTML)
+				attr = "style='width:1100;'";
+			}
+
+			return attr;
+		}
+		
+		@Override
 		public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
 		{
-			return TableStringRenderer.super.cellValue(rstm, row, col, colName, objVal, strVal);
+			return ResultSetTableModel.TableStringRenderer.super.cellValue(rstm, row, col, colName, objVal, strVal);
 		}
 
 		@Override
@@ -295,7 +344,7 @@ implements IReportEntry
 		StringWriter writer = new StringWriter();
 		
 		// StringWriter do not throw exception, but the interface does, do not care about the Exception 
-		try { writeMessageText(writer); }
+		try { writeMessageText(writer, getCurrentMessageType()); }
 		catch (IOException ignore) {}
 
 		return writer.toString();

@@ -47,14 +47,14 @@ extends SqlServerAbstract
 		return false;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		// Get a description of this section, and column names
@@ -100,6 +100,16 @@ extends SqlServerAbstract
 		
 		_shortRstm = executeQuery(conn, sql, true, "CmIndexMissing_abs");
 
+		// Highlight sort column
+		_shortRstm.setHighlightSortColumns("Impact");
+
+		// Remove some columns which we don't really need
+		_shortRstm.removeColumnNoCase("SessionStartTime");
+		_shortRstm.removeColumnNoCase("SessionSampleTime");
+//		_shortRstm.removeColumnNoCase("CmSampleTime");
+		_shortRstm.removeColumnNoCase("CmSampleMs");
+		_shortRstm.removeColumnNoCase("CmNewDiffRateRow");
+		
 		// Describe the table
 		setSectionDescription(_shortRstm);
 	}

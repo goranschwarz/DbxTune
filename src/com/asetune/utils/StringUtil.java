@@ -1025,11 +1025,32 @@ public class StringUtil
 	 * get word in string
 	 * @param str input string
 	 * @param number what word to extract (starts at 0)
-	 * @return the exctacted word
+	 * @return the extracted word
 	 */
 	public static String word(String str, int number)
 	{
-		String[] stra = str.split("[ \t\n\f\r]");
+		String[] stra = str.split("[ \t\n\f\r]+");
+		if ( stra.length <= number )
+		{
+			return null;
+			// throw new
+			// IndexOutOfBoundsException("This string only consists of "+stra.length+", while you want to read word "+number);
+		}
+		return stra[number];
+	}
+
+	/**
+	 * get word in string
+	 * 
+	 * @param str              input string
+	 * @param number           what word to extract (starts at 0)
+	 * 
+	 * @return the extracted word
+	 */
+	public static String wordRespectQuotes(String str, int number)
+	{
+//		String[] stra = str.split("[ \t\n\f\r]+");
+		String[] stra = translateCommandline(str, false);
 		if ( stra.length <= number )
 		{
 			return null;
@@ -1043,7 +1064,7 @@ public class StringUtil
      */
 	public static String lastWord(String str)
 	{
-		String[] stra = str.split("[ \t\n\f\r]");
+		String[] stra = str.split("[ \t\n\f\r]+");
 		return stra[stra.length - 1];
 	}
 
@@ -2611,6 +2632,23 @@ public class StringUtil
 	}
 
 	/**
+	 * Split a string on any whitespace but respect whitespaces that are within quotes 
+	 * 
+	 * @param str
+	 * @return
+	 */
+	public static List<String> splitOnWhitespaceRespectQuotes(String str)
+	{
+		return splitOnCharAllowQuotes(str, ' ', true, false, false);
+//		String[] stra = translateCommandline(str, false);
+//
+//		if (stra == null)
+//			return Collections.emptyList();
+//
+//		return Arrays.asList(stra);
+	}
+
+	/**
 	 * Split on commas (,) but if a commas is found inside quotes (" or ') then treat that comma to be part of the string
 	 * <p>
 	 * It allows both single(') and double quotes(") to start/terminate a string.<br>
@@ -3793,22 +3831,76 @@ public class StringUtil
 	 * @param str           the string to truncate
 	 * @param maxLen        the max length
 	 * @param ellipseAtEnd  Put ellipse "..." at the end if the input string is truncated.
+	 * @param logMessage    Write a log message with this text. ${maxlen} in the text will be replaced with the the ""maxLen" parameter.
+	 *                      A RuntimeException will also be logged (so you know from where the call was made. new RuntimeException(logMessage))
 	 * 
 	 * @return The string (truncated if above maxLen)
 	 */
-	public static String truncate(String str, int maxLen, boolean ellipseAtEnd)
+	public static String truncate(String str, int maxLen, boolean ellipseAtEnd, String logMessage)
 	{
 		if (str == null)
 			return null;
 
 		if ( maxLen > 0 && str.length() > maxLen )
 		{
+			if (StringUtil.hasValue(logMessage))
+			{
+				logMessage = logMessage.replace("${maxlen}", ""+maxLen);
+				RuntimeException rte = new RuntimeException(logMessage);
+				_logger.warn("Truncated a to long string. MaxLenth=" + maxLen + ", PassedStrLength=" + str.length() + ". User message=|" + logMessage + "|. PassedStr=|" + str + "|", rte);
+			}
+
 			if (ellipseAtEnd)
 				return str.substring(0, maxLen-3) + "...";
 			else
 				return str.substring(0, maxLen);
 		}
 		return str;
+	}
+
+
+	/**
+	 * Read a string "line by line" and return it as a List of strings.
+	 * <p>
+	 * simply calls: readLines(inStr, doTrim=true, skipEmpty=true)
+	 * @param inStr        The String to read
+	 * @param doTrim       do trim() on each line before add to return list
+	 * @param skipEmpty    Skip lines that seems to be empty
+	 * @return List of strings, one entry for each "newline" in the string 
+	 */
+	public static List<String> readLines(String inStr)
+	{
+		return readLines(inStr, true, true);
+	}
+
+	/**
+	 * Read a string "line by line" and return it as a List of strings.
+	 * @param inStr        The String to read
+	 * @param doTrim       do trim() on each line before add to return list
+	 * @param skipEmpty    Skip lines that seems to be empty
+	 * @return List of strings, one entry for each "newline" in the string 
+	 */
+	public static List<String> readLines(String inStr, boolean doTrim, boolean skipEmpty)
+	{
+		List<String> list = new ArrayList<>();
+		
+		try(Scanner scanner = new Scanner(inStr))
+		{
+			while (scanner.hasNextLine()) 
+			{
+				String line = scanner.nextLine();
+				
+				if (doTrim)
+					line = line.trim();
+				
+				if (skipEmpty && line.isEmpty())
+					continue;
+					
+				list.add(line);
+			}
+		}
+		
+		return list;
 	}
 
 	/////////////////////////////////////////////////////////////////////////////
@@ -3819,11 +3911,11 @@ public class StringUtil
 
 	public static void main(String[] args)
 	{
-		System.out.println(StringUtil.truncate(null, 10, true) == null  ? "OK" : "FAIL - "+StringUtil.truncate(null, 10, true));
-		System.out.println(StringUtil.truncate("123"            , 10, true ).equals("123")         ? "OK" : "FAIL - "+StringUtil.truncate("123"            , 10, true ));
-		System.out.println(StringUtil.truncate("123456789-"     , 10, true ).equals("123456789-")  ? "OK" : "FAIL - "+StringUtil.truncate("123456789-"     , 10, true ));
-		System.out.println(StringUtil.truncate("123456789-12345", 10, true ).equals("1234567...")  ? "OK" : "FAIL - "+StringUtil.truncate("123456789-12345", 10, true ));
-		System.out.println(StringUtil.truncate("123456789-12345", 10, false).equals("123456789-")  ? "OK" : "FAIL - "+StringUtil.truncate("123456789-12345", 10, false));
+		System.out.println(StringUtil.truncate(null             , 10, true , null) == null               ? "OK" : "FAIL - "+StringUtil.truncate(null, 10, true, null));
+		System.out.println(StringUtil.truncate("123"            , 10, true , null).equals("123")         ? "OK" : "FAIL - "+StringUtil.truncate("123"            , 10, true , null));
+		System.out.println(StringUtil.truncate("123456789-"     , 10, true , null).equals("123456789-")  ? "OK" : "FAIL - "+StringUtil.truncate("123456789-"     , 10, true , null));
+		System.out.println(StringUtil.truncate("123456789-12345", 10, true , null).equals("1234567...")  ? "OK" : "FAIL - "+StringUtil.truncate("123456789-12345", 10, true , null));
+		System.out.println(StringUtil.truncate("123456789-12345", 10, false, null).equals("123456789-")  ? "OK" : "FAIL - "+StringUtil.truncate("123456789-12345", 10, false, null));
 		System.exit(0);
 
 		System.out.println(StringUtil.startsWithIgnoreBlankIgnoreCase(null, null)        == true  ? "OK" : "FAIL");

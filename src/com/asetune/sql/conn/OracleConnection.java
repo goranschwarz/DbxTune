@@ -191,4 +191,18 @@ extends DbxConnection
 		return extraInfo;
 	}
 
+	@Override
+	protected int getDbmsSessionId_impl() throws SQLException
+	{
+		String sql = "select sys_context('USERENV','SID') from dual";
+
+		int spid = -1;
+		try (Statement stmnt = _conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+				spid = rs.getInt(1);
+		}
+		
+		return spid;
+	}
 }

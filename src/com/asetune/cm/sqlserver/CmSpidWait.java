@@ -219,7 +219,7 @@ extends CountersModel
 			sql_sample_extraWhereClause = "  and " + sample_extraWhereClause + "\n";
 
 		String sql = 
-				"select \n" +
+				"select /* ${cmCollectorName} */ \n" +
 				"    session_id, \n" +
 				"    wait_type, \n" +
 				"    WaitClass = convert(varchar(30), null), \n" +

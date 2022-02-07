@@ -23,8 +23,6 @@ package com.asetune.pcs.report.content.sqlserver;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,12 +32,12 @@ import org.apache.log4j.Logger;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.ase.SparklineHelper;
-import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
-import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
+import com.asetune.pcs.report.content.SparklineHelper;
+import com.asetune.pcs.report.content.SparklineHelper.AggType;
+import com.asetune.pcs.report.content.SparklineHelper.DataSource;
+import com.asetune.pcs.report.content.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
-import com.asetune.utils.StringUtil;
 
 public class SqlServerTopCmExecCursors
 extends SqlServerAbstract
@@ -61,14 +59,14 @@ extends SqlServerAbstract
 		return false;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		// Get a description of this section, and column names
@@ -79,20 +77,24 @@ extends SqlServerAbstract
 		sb.append(toHtmlTable(_shortRstm));
 
 		// Write HTML/JavaScript Code for the Execution Plan...
-		if (_planCollection != null)
-			_planCollection.writeMessageText(sb);			
+		if (isFullMessageType())
+		{
+			if (_planCollection != null)
+				_planCollection.writeMessageText(sb);
+		}
 	
 		// Write JavaScript code for CPU SparkLine
-		for (String str : _miniChartJsList)
+		if (isFullMessageType())
 		{
-			sb.append(str);
+			for (String str : _miniChartJsList)
+				sb.append(str);
 		}
 	}
 
 	@Override
 	public String getSubject()
 	{
-		return "Top Cursor Calls (order by: total_worker_time, origin: CmExecCursors/dm_exec_cursors_stats)";
+		return "Top Cursor Calls (order by: worker_time, origin: CmExecCursors/dm_exec_cursors_stats)";
 	}
 
 	@Override
@@ -130,7 +132,7 @@ extends SqlServerAbstract
 
 		int topRows = getTopRows();
 
-		String orderByCol = "[worker_time__sum]";
+		String orderByCol = "[worker_time_ms__sum]";
 
 		// Check if table "CmPgStatements_abs" has Dictionary Compressed Columns (any columns ends with "$dcc$")
 		boolean hasDictCompCols = false;
@@ -147,17 +149,13 @@ extends SqlServerAbstract
 
 		String sql = getCmDiffColumnsAsSqlComment("CmExecCursors")
 			    + "select top " + topRows + " \n"
-			    + "     [sql_handle] \n"
-			    + "    ,max([name])                            as [name] \n"
+			    + "     max([name])                            as [name] \n"
 			    + "    ,max([properties])                      as [properties] \n"
 			    + "    ,cast('' as varchar(512))               as [samples__chart] \n"
 			    + "    ,count(*)                               as [samples__count] \n"
-			    + "    ,min([SessionSampleTime])               as [SessionSampleTime__min] \n"
-			    + "    ,max([SessionSampleTime])               as [SessionSampleTime__max] \n"
-			    + "    ,cast('' as varchar(30))                as [Duration] \n"
 			    + "    \n"
 			    + "    ,cast('' as varchar(512))               as [worker_time__chart] \n"
-			    + "    ,sum([worker_time])                     as [worker_time__sum] \n"    // note: this should actually be MAX on the LAST cursor_id... but lets do that later
+			    + "    ,sum([worker_time]/1000.0)              as [worker_time_ms__sum] \n"    // note: this should actually be MAX on the LAST cursor_id... but lets do that later
 
 //			    + "    ,sum([fetch_buffer_start])              as [fetch_buffer_start__sum] \n"
 
@@ -169,7 +167,12 @@ extends SqlServerAbstract
 
 			    + "    ,sum([dormant_duration])                as [dormant_duration__sum] \n" // note: this should actually be MAX on the LAST cursor_id... but lets do that later
 			    
+			    + "    ,[sql_handle] \n"
 			    + "    ,max([exec_sql_text])                   as [exec_sql_text] \n"
+
+			    + "    ,min([SessionSampleTime])               as [SessionSampleTime__min] \n"
+			    + "    ,max([SessionSampleTime])               as [SessionSampleTime__max] \n"
+			    + "    ,cast('' as varchar(30))                as [Duration] \n"
 			    + "    \n"
 				+ "from [CmExecCursors_abs] \n"
 				+ getReportPeriodSqlWhere()
@@ -186,6 +189,9 @@ extends SqlServerAbstract
 		}
 		else
 		{
+			// Highlight sort column
+			String orderByCol_noBrackets = orderByCol.replace("[", "").replace("]", "");
+			_shortRstm.setHighlightSortColumns(orderByCol_noBrackets);
 
 			// Describe the table
 			setSectionDescription(_shortRstm);
@@ -198,13 +204,18 @@ extends SqlServerAbstract
 				updateDictionaryCompressedColumn(_shortRstm, conn, null, "CmExecQueryStats", "SqlText", null);
 			}
 
-			// - Get all "plann_handle" in table '_shortRstm'
-			// - Get the Execution Plan all the "plann_handle"s
-			// - In the table substitute the "plann_handle"s with a link that will display the XML Plan on the HTML Page
-			_planCollection = new ExecutionPlanCollection(this, _shortRstm, this.getClass().getSimpleName());
-			_planCollection.getPlansAndSubstituteWithLinks(conn, "plan_handle");
+//			// - Get all "plann_handle" in table '_shortRstm'
+//			// - Get the Execution Plan all the "plann_handle"s
+//			// - In the table substitute the "plann_handle"s with a link that will display the XML Plan on the HTML Page
+//			_planCollection = new ExecutionPlanCollection(this, _shortRstm, this.getClass().getSimpleName());
+//			_planCollection.getPlans(conn, null, "plan_handle");
+//			_planCollection.substituteWithLinks(null, "plan_handle", "ExecPlan", "view plan", "--not-found--"); // this needs to be first, no modification of plan_handle cell content
+//			_planCollection.substituteWithLinks(null, "plan_handle");                                         // this needs to be "last", since it changes of 'plan_handle' cell content
 			
+
+			//-----------------------------------------------
 			// Mini Chart on "..."
+			//-----------------------------------------------
 			String whereKeyColumn = "sql_handle"; 
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
@@ -223,7 +234,11 @@ extends SqlServerAbstract
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsTableName            ("CmExecCursors_abs")
 					.setDbmsSampleTimeColumnName ("SessionSampleTime")
-					.setDbmsDataValueColumnName  ("worker_time")
+//					.setDbmsDataValueColumnName  ("worker_time")
+//					.setDbmsDataValueColumnName  ("sum([worker_time]/1000.0) / nullif(sum([execution_count]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsDataValueColumnName  ("sum([worker_time]/1000.0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+//					.setSparklineTooltipPostfix  ("Average 'worker_time' in in milliseconds for below period")
+//					.setSparklineTooltipPostfix  ("Total 'worker_time' in in milliseconds for below period")
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 					.validate()));
 
@@ -259,7 +274,7 @@ extends SqlServerAbstract
 		
 		// Section description
 		rstm.setDescription(
-				"Top Cursors (and it's SQL Text)...  (ordered by: total_worker_time__sum) <br>" +
+				"Top Cursors (and it's SQL Text)...  (ordered by: worker_time__sum) <br>" +
 				"Note: The information in 'dm_exec_cursors_stats' is only available when the cursor is <i>active</i>.<br>" +
 				"So we will/might miss cursors, if they wasn't <b>active</b> while we <i>sampled</i> values! <br>" +
 				"<br>" +

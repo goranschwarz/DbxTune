@@ -55,6 +55,7 @@ import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.Ver;
 
 
@@ -297,6 +298,106 @@ extends CounterControllerAbstract
 //		return false;
 //	}
 
+	public static final String  PROPKEY_postgres_setDbmsOption_prefix   = Version.getAppName() + ".onMonConnect.set.dbms.option."; // DEFAULT -> DEFAULT; val -> 'val'; noop == DO-NOT-SET
+
+	@Override
+	public void onMonConnect(DbxConnection conn)
+	{
+		String dbname = "-unknown-";
+		try { dbname = conn.getCatalog(); } catch (SQLException ignore) {}
+		
+		//------------------------------------------------
+		// Set Some Options
+		Configuration tmpConf = new Configuration();
+		tmpConf.setProperty(PROPKEY_postgres_setDbmsOption_prefix + "work_mem",     "128MB");
+		tmpConf.setProperty(PROPKEY_postgres_setDbmsOption_prefix + "temp_buffers", "128MB");
+		// set
+		setPostgresOptions(conn, dbname, tmpConf);
+
+		//------------------------------------------------
+		// User Provided Options (from any of the configuration files)
+		setPostgresOptions(conn, dbname, Configuration.getCombinedConfiguration());
+
+		//------------------------------------------------
+		// Print Options...
+		printPostgresOptions(conn, dbname, tmpConf);
+		printPostgresOptions(conn, dbname, Configuration.getCombinedConfiguration());
+	}
+
+	/** Set options */
+	private void setPostgresOptions(DbxConnection conn, String dbname, Configuration conf)
+	{
+		for (String key : conf.getKeys(PROPKEY_postgres_setDbmsOption_prefix))
+		{
+			String val = conf.getProperty(key);
+
+			// Take away the prefix
+			String optName = key.replaceFirst(PROPKEY_postgres_setDbmsOption_prefix, "");
+
+			// Set
+			setPostgresOption(conn, dbname, optName, val);
+		}
+	}
+
+	/** Set option */
+	private String setPostgresOption(DbxConnection conn, String dbname, String optName, String confVal)
+	{
+		if ( "noop".equalsIgnoreCase(confVal) )
+			return null;
+
+		if ( ! "DEFAULT".equalsIgnoreCase(confVal) )
+			confVal = "'" + confVal + "'"; // quote the string if content is NOT "DEFAULT"/"default"
+
+		String sql = "SET SESSION " + optName + " = " + confVal;
+		try (Statement stmnt = conn.createStatement() )
+		{
+			_logger.info("onMonConnect(): pid="+conn.getDbmsSessionId()+", dbname='" + dbname + "'. Setting Postgres session option '" + optName + "' using sql: " + sql);
+			stmnt.executeUpdate(sql);
+
+			return confVal;
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems in onMonConnect(): pid=" + conn.getDbmsSessionId() + ", dbname='" + dbname + "'. When Initializing DBMS SET Property '" + optName + "', using sql='" + sql + "'. Continuing... Caught: MsgNum=" + ex.getErrorCode() + ": " + ex);
+			return null;
+		}
+	}
+
+	/** Print option */
+	private void printPostgresOptions(DbxConnection conn, String dbname, Configuration conf)
+	{
+		for (String key : conf.getKeys(PROPKEY_postgres_setDbmsOption_prefix))
+		{
+			// Take away the prefix
+			String optName = key.replaceFirst(PROPKEY_postgres_setDbmsOption_prefix, "");
+
+			// Show
+			showPostgresOption(conn, dbname, optName, true);
+		}
+	}
+
+	/** Show/Get/print option */
+	private String showPostgresOption(DbxConnection conn, String dbname, String optName, boolean print)
+	{
+		String ret = "";
+
+		String sql = "SHOW " + optName;
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
+		{
+			while(rs.next())
+			{
+				ret = rs.getString(1);
+				if (print)
+					_logger.info("onMonConnect(): pid="+conn.getDbmsSessionId()+", dbname='" + dbname + "'. current setting for '" + optName + "' is '" + ret + "'.");
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems in onMonConnect(): pid="+conn.getDbmsSessionId()+", dbname='" + dbname + "'. When GET property '" + optName + "', using sql='" + sql + "'. Continuing... Caught: MsgNum=" + ex.getErrorCode() + ": " + ex);
+		}
+		return ret;
+	}
+	
 	@Override
 	public void setInRefresh(boolean enterRefreshMode)
 	{

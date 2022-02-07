@@ -211,4 +211,44 @@ extends TdsConnection
 			return false;
 		}
 	}
+
+	@Override
+	protected int getDbmsSessionId_impl() throws SQLException
+	{
+//		return -1;
+
+		// There is no command to get current spid (that I know of)
+		// So lets try using 'admin who', checking for 'USER' which is 'Active' right now
+
+		String sql = "admin who";
+		//-------------------------------------------------------------------------------
+		// admin who 
+		// go filter "where Name='USER' and State = 'Active'"
+		//-------------------------------------------------------------------------------
+		// Filter information: visibleRows=1, actualRows=67, filterText='where Name='USER' and State = 'Active''.
+		// +----+----+------+----+
+		// |Spid|Name|State |Info|
+		// +----+----+------+----+
+		// | 230|USER|Active|sa  |
+		// +----+----+------+----+
+		// Rows 1
+		// (67 rows affected)
+		
+		int spid = -1;
+		try (Statement stmnt = _conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+//			go filter "where Name='USER' and State = 'Active'"
+
+			while(rs.next())
+			{
+				String name  = rs.getString(2);
+				String state = rs.getString(3);
+				
+				if ("USER".equals(name) && "Active".equals(state))
+					spid = rs.getInt(1);
+			}
+		}
+		
+		return spid;
+	}
 }

@@ -20,18 +20,11 @@
  ******************************************************************************/
 package com.asetune.pcs.sqlcapture;
 
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.ParseException;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-
-import org.apache.log4j.PropertyConfigurator;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.PersistentCounterHandler;

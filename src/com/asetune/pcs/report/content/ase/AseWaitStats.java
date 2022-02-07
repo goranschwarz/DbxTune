@@ -37,9 +37,11 @@ import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.pcs.report.content.ReportChartTimeSeriesStackedBar;
 import com.asetune.pcs.report.content.ReportChartTimeSeriesStackedBar.TopGroupCountReport;
 import com.asetune.pcs.report.content.ReportChartTimeSeriesStackedBar.TopGroupDataRecord;
-import com.asetune.pcs.report.content.ase.SparklineHelper.AggType;
-import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
-import com.asetune.pcs.report.content.ase.SparklineHelper.SparklineResult;
+import com.asetune.pcs.report.content.SparklineHelper;
+import com.asetune.pcs.report.content.SparklineHelper.AggType;
+import com.asetune.pcs.report.content.SparklineHelper.DataSource;
+import com.asetune.pcs.report.content.SparklineHelper.SparklineResult;
+import com.asetune.pcs.report.content.SparklineJfreeChart;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -61,15 +63,15 @@ extends AseAbstract
 		return true;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-		writeMessageText(w);
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//		writeMessageText(w);
+//	}
 
 	@Override
-	public void writeMessageText(Writer w)
+	public void writeMessageText(Writer w, MessageType messageType)
 	throws IOException
 	{
 		w.append("Wait Statistics for the full day (origin: CmSysWaits / monSysWaits) <br>");
@@ -295,7 +297,7 @@ extends AseAbstract
 					sb.append("  <td>").append(cnt++           ).append("</td> \n");
 					sb.append("  <td>").append(entry.getKey()  ).append("</td> \n");
 					sb.append("  <td>").append(sparklineDataStr_wt).append("</td> \n");
-					sb.append("  <td>").append(NumberFormat.getInstance().format(entry.getValue())).append("</td> \n");
+					sb.append("  <td><b>").append(NumberFormat.getInstance().format(entry.getValue())).append("</b></td> \n");
 					sb.append("  <td>").append(TimeUtils.secToTimeStrLong(entry.getValue().intValue())).append("</td> \n");
 					sb.append("  <td>").append(sparklineDataStr_wtpc).append("</td> \n");
 					sb.append("  <td> <a href='https://wiki.scn.sap.com/wiki/display/SYBASE/ASE+Wait+Event+" + waitEventId + "' target='_blank'>WaitEventID - " + waitEventId + "</a>").append("</td> \n");

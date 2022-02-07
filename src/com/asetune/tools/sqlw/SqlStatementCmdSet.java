@@ -239,6 +239,37 @@ extends SqlStatementAbstract
 	}
 
 	/**
+	 * Set variable 
+	 * 
+	 * @param key
+	 * @param val
+	 * 
+	 * @return previous set value, or null if not previously set
+	 */
+	public static String setVariable(String key, String value)
+	{
+		if (_variableMap == null)
+			_variableMap = new LinkedHashMap<>();
+
+		return _variableMap.put(key, value);
+	}
+
+	/**
+	 * Get variable 
+	 * 
+	 * @param key
+	 * 
+	 * @return previous set value, or null if not previously set
+	 */
+	public static String getVariable(String key)
+	{
+		if (_variableMap == null)
+			_variableMap = new LinkedHashMap<>();
+
+		return _variableMap.get(key);
+	}
+
+	/**
 	 * This searches and replaces ${varName} into a real value<br>
 	 * If no variables has been set or if we cant find any '${' in the input, then it simply does nothing.
 	 * 

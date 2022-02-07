@@ -40,6 +40,7 @@ import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -807,6 +808,39 @@ public class ResultSetTableModel
 	}
     
 	/**
+	 * Checks if the ResultSetTableModel is <b>mergeable</b> with another ResultSetTableModel
+	 * 
+	 * @param rstm the ResultSetTableModel to check if it's compatible with the current
+	 * @return true if OK
+	 */
+	public boolean isMergeable(ResultSetTableModel rstm, boolean checkColumnNames)
+	{
+		// Check column count
+		if (getColumnCount() != rstm.getColumnCount())
+			return false;
+		
+		// Check column name differences
+		if (checkColumnNames)
+		{
+			for (int i=0; i<getColumnCount(); i++)
+			{
+				if ( ! _rsmdColumnLabel.get(i).equals(rstm._rsmdColumnLabel.get(i)) )
+					return false;
+			}
+		}
+
+		// Check column data type differences
+		for (int i=0; i<getColumnCount(); i++)
+		{
+			if ( ! _rsmdColumnTypeStr.get(i).equals(rstm._rsmdColumnTypeStr.get(i)) )
+				return false;
+		}
+		
+		return true;
+	}
+
+    
+	/**
 	 * Set new data content for the table model.
 	 * 
 	 * @param rstm the new Data rows
@@ -814,7 +848,7 @@ public class ResultSetTableModel
 	 * 
 	 * @throws ModelMissmatchException if the data model doesn't has the same structure (number of columns, column names, etc) 
 	 */
-	public void setModelData(ResultSetTableModel rstm, boolean merge)
+	public void setModelData(ResultSetTableModel rstm, boolean merge, boolean checkColumnNames)
 	throws ModelMissmatchException
 	{
 		// Check column count
@@ -822,10 +856,13 @@ public class ResultSetTableModel
 			throw new ModelMissmatchException("Column COUNT missmatch. current count="+getColumnCount()+", passed count="+rstm.getColumnCount());
 		
 		// Check column name differences
-		for (int i=0; i<getColumnCount(); i++)
+		if (checkColumnNames)
 		{
-			if ( ! _rsmdColumnLabel.get(i).equals(rstm._rsmdColumnLabel.get(i)) )
-				throw new ModelMissmatchException("Column NAME missmatch. current columns="+_rsmdColumnLabel+", passed columns="+rstm._rsmdColumnLabel);
+			for (int i=0; i<getColumnCount(); i++)
+			{
+				if ( ! _rsmdColumnLabel.get(i).equals(rstm._rsmdColumnLabel.get(i)) )
+					throw new ModelMissmatchException("Column NAME missmatch. current columns="+_rsmdColumnLabel+", passed columns="+rstm._rsmdColumnLabel);
+			}
 		}
 
 		// Check column data type differences
@@ -936,7 +973,12 @@ public class ResultSetTableModel
 	public void add(ResultSetTableModel rstm)
 	throws ModelMissmatchException
 	{
-		setModelData(rstm, true);
+		setModelData(rstm, true, false);
+	}
+	public void add(ResultSetTableModel rstm, boolean checkColumnNames )
+	throws ModelMissmatchException
+	{
+		setModelData(rstm, true, checkColumnNames );
 	}
 
 	public static String getColumnTypeName(ResultSetMetaData rsmd, int col)
@@ -1575,6 +1617,24 @@ public class ResultSetTableModel
 		return _rows.size();
 	}
 
+	/** 
+	 * Remove all rows except the first # rows 
+	 * @return number of rows deleted;
+	 */
+	public int setRowCount(int newRowCount)
+	{
+		int cnt = 0;
+
+		while (_rows.size() > newRowCount)
+		{
+			removeRow(_rows.size()-1);
+			cnt++;
+		}
+		
+		return cnt;
+	}
+
+	/** @return true if number of rows is 0 */
 	public boolean isEmpty()
 	{
 		return _rows.size() == 0;
@@ -2254,6 +2314,24 @@ public class ResultSetTableModel
 	/** renderer used in toHtmlTableString() */
 	public interface TableStringRenderer
 	{
+		/** called to create Attributes for any TABLE attribute */
+		default String tagTableAttr(ResultSetTableModel rstm)
+		{
+			return "border='1'";
+		}
+
+		/** called to create Attributes for any TH-TableHead attribute */
+		default String tagThAttr(ResultSetTableModel rstm, int col, String colName, boolean nowrapPreferred)
+		{
+			return nowrapPreferred ? "nowrap" : null;
+		}
+
+		/** called to create Attributes for any TD-TableData attribute */
+		default String tagTdAttr(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal, boolean nowrapPreferred)
+		{
+			return nowrapPreferred ? "nowrap" : null;
+		}
+
 		/** returns a string that should be used as a value, this could be decorated with HTML tags to highlight various parts of the table cells */
 		default String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
 		{
@@ -2283,24 +2361,49 @@ public class ResultSetTableModel
 	{
 		StringBuilder sb = new StringBuilder(1024);
 
-		String tHeadNoWrapStr = tHeadNoWrap ? " nowrap" : "";
-		String tBodyNoWrapStr = tBodyNoWrap ? " nowrap" : "";
+		// Use renderer to set <table ATTRIBUTES>
+		String tableAttr = tsRenderer == null ? "" : tsRenderer.tagTableAttr(this);
+		if (tableAttr == null)
+			tableAttr = "";
 
+		// If tableAttr holds any 'class' information, merge in the method parameter 'className'
 		if (StringUtil.hasValue(className))
 		{
-			sb.append("<table border='1' class='").append(className).append("'>\n");
+			int pos = tableAttr.indexOf("class=");
+			if (pos != -1)
+			{
+				List<String> list = StringUtil.splitOnWhitespaceRespectQuotes(tableAttr);
+				tableAttr = "";
+				for (String entry : list)
+				{
+					if (entry.startsWith("class="))
+					{
+						// inject the methods parameter 'className' into the: class='METHOD_PARAMETER_className_GOES_HERE CLASS_NAMES_THAT_WE_PREVIOUSLY_HAD_GOES_HERE'
+						String tmp = entry.substring("class=".length()+1, entry.length()-1);
+						entry = "class='" + className + " " + tmp + "'";
+					}
+					tableAttr += " " + entry;
+				}
+			}
+			else
+			{
+				tableAttr += " class='" + className + "'";
+			}
 		}
-		else
-		{
-			sb.append("<table border='1'>\n");
-//			sb.append("<table border=1 style='min-width: 1024px; width: 100%;' width='100%'>\n");
-		}
+		// If we have attribute it has to start with a space " "
+		if (StringUtil.hasValue(tableAttr) && !tableAttr.startsWith(" "))
+			tableAttr = " " + tableAttr;
+
+		// TABLE start
+		sb.append("<table").append(tableAttr).append(">\n");
+
+		// Get column and row count
 		int cols = getColumnCount();
 		int rows = getRowCount();
 		
 		// build header names
 		sb.append("<thead>\n");
-		sb.append("<tr>");
+		sb.append("<tr>\n");
 		for (int c=0; c<cols; c++)
 		{
 			String colName = getColumnName(c);
@@ -2313,7 +2416,16 @@ public class ResultSetTableModel
 				tooltip = " title='" + colDesc + "'";
 			}
 
-			sb.append("<th").append(tHeadNoWrapStr).append(tooltip).append(">").append(colName).append("</th>");
+			// Use renderer to set <th ATTRIBUTES>
+			String thAttr = tsRenderer == null ? "" : tsRenderer.tagThAttr(this, c, colName, tHeadNoWrap);
+			if (thAttr == null)
+				thAttr = "";
+
+			// If we have attribute it has to start with a space " "
+			if (StringUtil.hasValue(thAttr) && !thAttr.startsWith(" "))
+				thAttr = " " + thAttr;
+
+			sb.append("<th").append(thAttr).append(tooltip).append(">").append(colName).append("</th>\n");
 		}
 		sb.append("</tr>\n");
 		sb.append("</thead>\n");
@@ -2365,12 +2477,25 @@ public class ResultSetTableModel
 					strVal  = tsRenderer.cellValue  (this, r, c, colName, objVal, strVal);
 					toolTip = tsRenderer.cellToolTip(this, r, c, colName, objVal, strVal);
 				}
+
+				// Is part of "highlighted" sorted column (mark them as "bold" font)
+				if (isHighlightSortColumn(colName))
+					strVal = renderHighlightSortColumnForHtml(colName, strVal);
 				
 				// Set the tool tip value (if we have any)
 				toolTip = toolTip == null ? "" : " title='" + toolTip + "'";
 
+				// Use renderer to set <td ATTRIBUTES>
+				String tdAttr = tsRenderer == null ? "" : tsRenderer.tagTdAttr(this, r, c, colName, objVal, strVal, tBodyNoWrap);
+				if (tdAttr == null)
+					tdAttr = "";
+
+				// If we have attribute it has to start with a space " "
+				if (StringUtil.hasValue(tdAttr) && !tdAttr.startsWith(" "))
+					tdAttr = " " + tdAttr;
+
 //				sb.append("<td").append(tBodyNoWrapStr).append(">").append(strVal).append("</td>");
-				sb.append("    <td").append(tdAlignRight).append(tBodyNoWrapStr).append(toolTip).append(">").append(beginTag).append(strVal).append(endTag).append("</td>\n");
+				sb.append("    <td").append(tdAlignRight).append(tdAttr).append(toolTip).append(">").append(beginTag).append(strVal).append(endTag).append("</td>\n");
 			}
 			sb.append("  </tr>\n");
 			//sb.append("\n");
@@ -2380,7 +2505,41 @@ public class ResultSetTableModel
 
 		return sb.toString();
 	}
-	
+
+	/** Is column part of the sorted columns list, which should be highlighted */
+	public boolean isHighlightSortColumn(String colName)
+	{
+		if (_highlightSortColumnsList == null)
+			return false;
+		
+		return _highlightSortColumnsList.contains(colName);
+	}
+
+	/** List of columns we should "highlight" as sorted when we create a HTML Table */
+	private List<String> _highlightSortColumnsList;
+
+	/** Set column(s) that is part of the sorted columns and should should be highlighted */
+	public void setHighlightSortColumns(String... colNames)
+	{
+		_highlightSortColumnsList = Arrays.asList(colNames);
+	}
+
+	/** Set column(s) that is part of the sorted columns and should should be highlighted */
+	public List<String> getHighlightSortColumns()
+	{
+		if (_highlightSortColumnsList == null)
+			return Collections.emptyList();
+
+		return _highlightSortColumnsList;
+	}
+
+	/** Implementation of HOW to highlight any sorted column */
+	public String renderHighlightSortColumnForHtml(String colName, String strVal)
+	{
+		return "<b>" + strVal + "</b>";
+	}
+
+
 	public String toString(Object objVal)
 	{
 		return toString(objVal, null, "");
@@ -3802,6 +3961,63 @@ public class ResultSetTableModel
 	
 	
 	/**
+	 * Create a HTML Table from a ResultSetTableModel.<br>
+	 * The parameter 'rowSpec' will create one row in the created table for each columns fetched from the 'sourceRstm'.
+	 * 
+	 * @param row           Row number in the sourceRstm
+	 * @param rowSpec       A LinkedHashMap<CoulumnNameOfTheRow, RowLabelName>
+	 * @param htmlClassname Table className
+	 * @return
+	 */
+	public String createHtmlKeyValueTableFromRow(int row, LinkedHashMap<String, String> rowSpec, String htmlClassname)
+	{
+		return createHtmlKeyValueTableFromRow(this, row, rowSpec, htmlClassname);
+	}
+
+	/**
+	 * Create a HTML Table from a ResultSetTableModel.<br>
+	 * The parameter 'rowSpec' will create one row in the created table for each columns fetched from the 'sourceRstm'.
+	 * 
+	 * @param sourceRstm    The ResultSetTableModel that we are going to fetch data from
+	 * @param row           Row number in the sourceRstm
+	 * @param rowSpec       A LinkedHashMap<CoulumnNameOfTheRow, RowLabelName>
+	 * @param htmlClassname Table className
+	 * @return
+	 */
+	public static String createHtmlKeyValueTableFromRow(ResultSetTableModel sourceRstm, int row, LinkedHashMap<String, String> rowSpec, String htmlClassname)
+	{
+		StringBuilder sb = new StringBuilder();
+
+		String className = "";
+		if (StringUtil.hasValue(htmlClassname))
+			className = " class='" + htmlClassname + "'";
+		
+		sb.append("<table" + className + "> \n");
+		sb.append("<tbody> \n");
+
+		for (Entry<String, String> entry : rowSpec.entrySet())
+		{
+			String srcColName = entry.getKey();
+			String rowLabel   = entry.getValue();
+			String rowContent = sourceRstm.getValueAsString(row, srcColName, false, "'" + srcColName + "' column not found in table." );
+
+			if (rowLabel == null)
+				rowLabel = srcColName;
+
+			sb.append("<tr> \n");
+			sb.append("  <td><b>").append( rowLabel   ).append("</b></td> \n");
+			sb.append("  <td>")   .append( rowContent ).append(    "</td> \n");
+			sb.append("</tr> \n");
+		}
+		
+		sb.append("</tbody> \n");
+		sb.append("</table> \n");
+		
+		return sb.toString();
+	}
+
+
+	/**
 	 * Column name not found
 	 */
 	public static class ColumnNameNotFound
@@ -3815,9 +4031,6 @@ public class ResultSetTableModel
 		}
 	}
 
-	
-	
-	
 	public static void main(String[] args)
 	{
 		Properties log4jProps = new Properties();

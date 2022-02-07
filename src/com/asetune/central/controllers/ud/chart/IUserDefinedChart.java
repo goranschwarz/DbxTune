@@ -24,8 +24,6 @@ package com.asetune.central.controllers.ud.chart;
 import java.util.List;
 import java.util.Map;
 
-import com.asetune.central.pcs.CentralPersistReader.SampleType;
-
 public interface IUserDefinedChart
 {
 	public enum ChartType

@@ -36,9 +36,9 @@ import com.asetune.cache.DbmsObjectIdCacheUtils;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSampleCatalogIteratorSqlServer;
 import com.asetune.cm.CounterSetTemplates;
+import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.SortOptions;
-import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.SortOptions.ColumnNameSensitivity;
 import com.asetune.cm.SortOptions.DataSortSensitivity;
 import com.asetune.cm.SortOptions.SortOrder;
@@ -315,7 +315,7 @@ extends CountersModel
 			    + "if (object_id('tempdb..#ncistat') is not null) drop table #ncistat \n"
 			    + " \n"
 			    + "-- temptable: #dstat -- DATA STAT \n"
-			    + "    select \n"
+			    + "    select /* ${cmCollectorName} */ \n"
 			    + "         object_id \n"
 			    + "        ,StatsUpdated                     = nullif( max(isnull(stats_date(object_id, index_id), '2000-01-01')), '2000-01-01') -- this to get rid of: Warning: Null value is eliminated by an aggregate or other SET operation. \n"
 			    + "        ,HasClusteredIndex                = convert(bit, case when sum(index_id) = 1 then 1 else 0 end) \n"
@@ -350,7 +350,7 @@ extends CountersModel
 			    + "    group by object_id \n"
 			    + " \n"
 			    + "-- temptable: #ncistat -- NONCLUSTERED INDEX STAT \n"
-			    + "    select \n"
+			    + "    select /* ${cmCollectorName} */ \n"
 			    + "         object_id \n"
 			    + "        ,StatsUpdated                     = nullif( max(isnull(stats_date(object_id, index_id), '2000-01-01')), '2000-01-01') -- this to get rid of: Warning: Null value is eliminated by an aggregate or other SET operation. \n"
 			    + "        ,NcIndexCount                     = count(*) \n"
@@ -377,7 +377,7 @@ extends CountersModel
 			    + "    group by object_id \n"
 			    + " \n"
 			    + "-- Joint the two temp tables \n"
-			    + "select \n"
+			    + "select /* ${cmCollectorName} */ \n"
 //			    + "--      DbName              = db_name() \n"
 //			    + "--    , SchemaName          = object_schema_name(dstat.object_id) \n"
 //			    + "--    , TableName           = object_name(dstat.object_id) \n"

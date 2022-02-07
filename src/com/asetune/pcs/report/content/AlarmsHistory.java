@@ -53,22 +53,22 @@ extends ReportEntryAbstract
 		return true;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-		writeMessageText(w, false);
-	}
-
-	@Override
-	public void writeMessageText(Writer w)
-	throws IOException
-	{
-		writeMessageText(w, true);
-	}
-
 //	@Override
-	public void writeMessageText(Writer sb, boolean isFullText)
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//		writeMessageText(w, false);
+//	}
+//
+//	@Override
+//	public void writeMessageText(Writer w)
+//	throws IOException
+//	{
+//		writeMessageText(w, true);
+//	}
+
+	@Override
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		if (_shortRstm.getRowCount() == 0)
@@ -83,7 +83,7 @@ extends ReportEntryAbstract
 			sb.append("Alarm Count in period: " + _fullRstm.getRowCount() + "<br>\n");
 			sb.append(toHtmlTable(_shortRstm));
 			
-			if (isFullText && _fullRstm != null)
+			if (isFullMessageType() && _fullRstm != null)
 			{
 				// Make output more readable, in a 2 column table
 				// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
@@ -95,7 +95,7 @@ extends ReportEntryAbstract
 				boolean showAtStart = false;
 				String  htmlContent = _fullRstm.toHtmlTablesVerticalString("sortable", colNameValueTagMap);
 
-				String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Alarm History Details...", htmlContent);
+				String showHideDiv = "<br>" + createShowHideDiv(divId, showAtStart, "Show/Hide Alarm History Details...", htmlContent);
 
 				sb.append( msOutlookAlternateText(showHideDiv, "Alarm History Details", null) );
 			}
@@ -213,5 +213,8 @@ extends ReportEntryAbstract
 		boolean truncateLongCells = true;
 
 		_fullRstm = executeQuery(conn, sql, true, "Alarm History Full", truncateLongCells);
+
+		// Highlight sort column
+		_shortRstm.setHighlightSortColumns("eventTime");
 	}
 }

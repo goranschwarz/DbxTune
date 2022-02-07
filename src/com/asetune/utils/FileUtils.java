@@ -39,7 +39,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -726,7 +729,11 @@ public class FileUtils
 		}
 		finally 
 		{
-			IOUtils.closeQuietly(is);
+			if (is != null)
+			{
+				try { is.close(); }
+				catch (final IOException ignore) {}
+			}
 		}
 	}
 	
@@ -742,5 +749,38 @@ public class FileUtils
 			return null;
 
 		 return filename.replaceAll("[\\\\/:*?\"<>|]", "");
+	}
+	
+	
+	/**
+	 * Zip a File
+	 * 
+	 * @param source
+	 * @param zipFileName
+	 * @throws IOException
+	 */
+	public static void zipSingleFile(Path source, String zipFileName) 
+	throws IOException
+	{
+		if ( ! Files.isRegularFile(source) )
+			throw new IOException("The passed file '" + source + "' is NOT a regular file. Please provide a file.");
+
+		if ( StringUtil.isNullOrBlank(zipFileName) )
+			throw new IOException("The destination ZIP file '" + zipFileName + "' Can no be blank or null.");
+
+		try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFileName)); 
+		     FileInputStream fis = new FileInputStream(source.toFile());)
+		{
+			ZipEntry zipEntry = new ZipEntry(source.getFileName().toString());
+			zos.putNextEntry(zipEntry);
+
+			byte[] buffer = new byte[1024];
+			int    len;
+			while ((len = fis.read(buffer)) > 0)
+			{
+				zos.write(buffer, 0, len);
+			}
+			zos.closeEntry();
+		}
 	}
 }

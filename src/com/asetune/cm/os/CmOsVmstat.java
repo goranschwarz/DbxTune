@@ -20,7 +20,6 @@
  ******************************************************************************/
 package com.asetune.cm.os;
 
-import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +43,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.hostmon.HostMonitor.OsVendor;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.MovingAverageChart;
 import com.asetune.utils.MovingAverageCounterManager;
 
 public class CmOsVmstat
@@ -450,6 +450,9 @@ extends CounterModelHostMonitor
 
 			int swapIn_5mAvg  = (int) MovingAverageCounterManager.getInstance("swapIn",  5).add(swapIn) .getAvg(0, true);
 			int swapOut_5mAvg = (int) MovingAverageCounterManager.getInstance("swapOut", 5).add(swapOut).getAvg(0, true);
+
+			int swapIn_15mAvg  = (int) MovingAverageCounterManager.getInstance("swapIn",  15).add(swapIn) .getAvg(0, true);
+			int swapOut_15mAvg = (int) MovingAverageCounterManager.getInstance("swapOut", 15).add(swapOut).getAvg(0, true);
 			
 			if (debugPrint || _logger.isDebugEnabled())
 				System.out.println("##### sendAlarmRequest("+cm.getName()+"): swapping: in=" + swapIn + ", out=" + swapOut + ". swapIn_5mAvg=" + swapIn_5mAvg + ", swapOut_5mAvg=" + swapOut_5mAvg);
@@ -469,9 +472,16 @@ extends CounterModelHostMonitor
 				Timestamp swapOut_peakTs     = MovingAverageCounterManager.getInstance("swapOut", 5).getPeakTimestamp();
 				double    swapOut_peakNumber = MovingAverageCounterManager.getInstance("swapOut", 5).getPeakNumber();
 
+				// Create a small chart, that can be used in emails etc.
+				String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("OS Swapping (15 minutes)", 
+						MovingAverageCounterManager.getInstance("swapIn",  15),  // Note make the chart on 15 minutes to see more info
+						MovingAverageCounterManager.getInstance("swapOut", 15)); // Note make the chart on 15 minutes to see more info
+				
 				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, hostname, "over 5 minute moving average", 
 						swapIn_5mAvg,  swapIn_peakTs,  swapIn_peakNumber,
 						swapOut_5mAvg, swapOut_peakTs, swapOut_peakNumber);
+
+				alarm.setExtendedDescription(null, htmlChartImage);
 
 				alarmHandler.addAlarm( alarm );
 			}

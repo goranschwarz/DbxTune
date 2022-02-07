@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
-import java.sql.SQLClientInfoException;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
@@ -488,6 +487,12 @@ extends CounterSample
 
 		if ( ! cm.hasResultSetMetaData() )
 			cm.setResultSetMetaData( rsmd );
+
+		// Initialize the column structure (this normally done in: readResultset(...) but if we get exceptions and we don't read data, Then we add 
+		// rows manually to "_rows", hence the column structure etc, are NOT initialized...
+		// I think it's safe to do "up here", but we might have to move it into the "exceptions section"  
+		if (getColNames() == null)
+			initColumnInfo(rsmd, pkList, 1);
 		
 		// To remember exception in the entire loop
 		List<SQLException> sqlExList = new ArrayList<>();
@@ -892,6 +897,9 @@ extends CounterSample
 					_logger.warn("In the Active/Standby check we had "+sqlExList.size()+" Below are this list: ");
 					for (int ec= 0; ec<sqlExList.size(); ec++)
 						_logger.warn("  -- Active/Standby check Exception["+ec+"]: " + sqlExList.get(ec));
+
+					for (int r=0; r<_rows.size(); r++)
+						_logger.info("Just for intermidiate DEBUG: Row[" + r + "] still contains the following values: "+ _rows.get(r));
 				}
 			}
 

@@ -3075,7 +3075,15 @@ extends SqlCaptureBrokerAbstract
 					//   - if any re.writes has been applied, we try to parse it again...
 					//   - if we still have problems to parse: an null or empty string will be returned
 					// The re-writes & UserDefinedNormalizations are held in: StatementFixerManager & UserDefinedNormalizerManager 
-					normalizedSqlText = StatementNormalizer.getInstance().normalizeSqlText(sqlText, normalizeParameters);
+					List<String> tableNamesInStatement = new ArrayList<>();
+					normalizedSqlText = StatementNormalizer.getInstance().normalizeSqlText(sqlText, normalizeParameters, tableNamesInStatement);
+
+					// Send any table names the Statement was referencing to the Persistence Counter Handler for further lookup and storage
+					if (tableNamesInStatement != null && !tableNamesInStatement.isEmpty())
+					{
+						for (String tableName : tableNamesInStatement)
+							pch.addDdl(stRec.DBName, tableName, this.getClass().getSimpleName());
+					}
 
 					stRec.AddStatus = normalizeParameters.addStatus.getIntValue();
 				}
@@ -3982,8 +3990,8 @@ extends SqlCaptureBrokerAbstract
 			row.add(_MasterTransactionID);
 
 			row.add(_snapWaitTimeDetails);
-			row.add(StringUtil.truncate(_SqlText        , SQL_TEXT_LEN, true));
-			row.add(StringUtil.truncate(_BlockingSqlText, SQL_TEXT_LEN, true));
+			row.add(StringUtil.truncate(_SqlText        , SQL_TEXT_LEN, true, null));
+			row.add(StringUtil.truncate(_BlockingSqlText, SQL_TEXT_LEN, true, null));
 
 			return row;
 		}

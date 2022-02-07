@@ -39,6 +39,19 @@ public class StringUtilTest
 //	}
 
 	@Test
+	public void testWordRespectQuotes()
+	{
+		String str = "This is a line 'with single quotes' and \"double quotes (') and a embedded singe quote.\" -end-";
+		//            0    1  2 3    4                    5    6                                                7
+		
+		assertEquals("This"                                           , StringUtil.wordRespectQuotes(str, 0));
+		assertEquals("is"                                             , StringUtil.wordRespectQuotes(str, 1));
+		assertEquals("with single quotes"                             , StringUtil.wordRespectQuotes(str, 4));
+		assertEquals("double quotes (') and a embedded singe quote."  , StringUtil.wordRespectQuotes(str, 6));
+		assertEquals("-end-"                                          , StringUtil.wordRespectQuotes(str, 7));
+	}
+
+	@Test
 	public void testCommaStrToList_noQuotes()
 	{
 		assertEquals(Arrays.asList("a", "b", "c"), StringUtil.commaStrToList("a,b,c") );

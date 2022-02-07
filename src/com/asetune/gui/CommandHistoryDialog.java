@@ -183,7 +183,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 	private static final int     DEFAULT_FILE_SAVE_ENTRIES        = 100;
 
 	private static final String  PROPKEY_ENTRY_LIMIT_SIZE         = "CommandHistory.entry.limit.size";
-	private static final int     DEFAULT_ENTRY_LIMIT_SIZE         = 5*1024; // 5KB
+	private static final int     DEFAULT_ENTRY_LIMIT_SIZE         = 10*1024; // 10KB
 
 	private static final String  PROPKEY_FILTER_CASE_IN_SENSITIVE = "CommandHistory.filter.caseInSensitive";
 	private static final boolean DEFAULT_FILTER_CASE_IN_SENSITIVE = true;

@@ -20,8 +20,6 @@
  ******************************************************************************/
 package com.asetune.central.pcs.objects;
 
-import javax.servlet.http.HttpServletResponse;
-
 import com.asetune.utils.StringUtil;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 

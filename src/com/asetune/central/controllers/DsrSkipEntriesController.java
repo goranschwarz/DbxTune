@@ -23,11 +23,9 @@ package com.asetune.central.controllers;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.StringTokenizer;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -35,12 +33,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
-import org.eclipse.jetty.security.LoginService;
-import org.eclipse.jetty.security.SecurityHandler;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.UserIdentity;
 
 import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.central.pcs.objects.DsrSkipEntry;

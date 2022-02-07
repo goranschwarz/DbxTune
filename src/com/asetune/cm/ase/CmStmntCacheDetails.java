@@ -416,23 +416,15 @@ extends CountersModel
 		String cols = 
 			(isClusterEnabled ? " InstanceID, \n" : "") + //  The Server Instance Identifier (cluster only)
 			" DBID, \n" +                       // The database ID from which the statement was cached.
-//			(srvVersion >= 15024 ? " DBName, \n" : "DBName = db_name(DBID), \n") + //  Name of the database (will be NULL if the database is no longer open)
-//			(srvVersion >= 1502040 ? " DBName, \n" : "DBName = db_name(DBID), \n") + //  Name of the database (will be NULL if the database is no longer open)
 			(srvVersion >= Ver.ver(15,0,2,4) ? " DBName, \n" : "DBName = db_name(DBID), \n") + //  Name of the database (will be NULL if the database is no longer open)
-//			(srvVersion >= 15700 ? " StmtType, " : "") + // The type of the cached statement.
-//			(srvVersion >= 1570000 ? " StmtType, " : "") + // The type of the cached statement.
-			(srvVersion >= Ver.ver(15,7) ? " StmtType, " : "") + // The type of the cached statement.
+			(srvVersion >= Ver.ver(15,7) ? " StmtType, " : "") + // The type of the cached statement. (1=Batch, 2=Cursor, 3=Dynamic)
 			" UserID, SUserID, SUserName = suser_name(SUserID), \n" +
 			" ObjectName = object_name(SSQLID, 2), \n" +
 			" SSQLID, \n" +                     // The unique identifier for a statement.
 			" Hashkey, \n" +                    // The hashkey over the statement's text.
 //			" HasShowplan   = CASE WHEN show_plan(-1,SSQLID,-1,-1) < 0 THEN convert(bit,0) ELSE convert(bit,1) END, \n" +
 //			" HasSqltext    = convert(bit,1), \n" +
-//			(srvVersion >= 15700 ? " OptimizationGoal, " : "") + // The optimization goal stored in the statement cache
-//			(srvVersion >= 1570000 ? " OptimizationGoal, " : "") + // The optimization goal stored in the statement cache
 			(srvVersion >= Ver.ver(15,7) ? " OptimizationGoal, " : "") + // The optimization goal stored in the statement cache
-//			(srvVersion >= 15700 ? " OptimizerLevel, \n" : "") + // The optimizer level stored in the statement cache
-//			(srvVersion >= 1570000 ? " OptimizerLevel, \n" : "") + // The optimizer level stored in the statement cache
 			(srvVersion >= Ver.ver(15,7) ? " OptimizerLevel, \n" : "") + // The optimizer level stored in the statement cache
 			"Remark = convert(varchar(60), ''), \n" + // Display some findings...
 			sql_hasSqlText +
@@ -808,3 +800,72 @@ extends CountersModel
 		return sa;
 	}
 }
+
+
+//-------------------------------------------------------------------------------
+//SAP - Documentation
+//https://help.sap.com/viewer/ad4a1ddf1bf34768841bd09d1eddf434/16.0.4.1/en-US/ab9cd3c8bc2b1014b077e45dbad89abe.html?q=monCachedStatement
+//-------------------------------------------------------------------------------
+//  Names                          Datatypes     Description
+//  ------------------------------ ------------- --------------------------------------------------
+//  InstanceID                     tinyint       (Cluster environments only) ID of an instance in a shared-disk cluster.
+//  SSQLID                         int           Unique identifier for each cached statement. This value is treated as a primary key for monCachedStatement, and is used in functions. show_cached_text uses SSQLID to refer to individual statements in the cache.
+//  Hashkey                        int           Hash value of the SQL text of the cached statement. A hash key is generated based on a statement’s text, and can be used as an approximate key for searching other monitoring tables.
+//  StmtType                       tinyint       
+//  UserID                         int           User ID of the user who initiated the statement that has been cached.
+//  SUserID                        int           Server ID of the user who initiated the cached statement.
+//  DBID                           smallint      Database ID of the database from which the statement was cached.
+//  UseCount                       int           Number of times the statement was accessed after it was cached.
+//  StatementSize                  int           Size of the cached statement, in bytes.
+//  MinPlanSizeKB                  int           Size of the plan when it is not in use, in kilobytes.
+//  MaxPlanSizeKB                  int           Size of the plan when it is in use, in kilobytes.
+//  CurrentUsageCount              int           Number of concurrent users of the cached statement. Attribute is counter.
+//  MaxUsageCount                  int           Maximum number of times the cached statement’s text was simultaneously accessed. Attribute is counter.
+//  NumRecompilesSchemaChanges     int           Number of times the statement was recompiled due to schema changes. Running update statistics on a table may result in changes to the best plan. This change is treated as a minor schema change. Recompiling a statement many times indicates that it is not effective to cache this particular statement, and that you may want to delete the statement from the statement cache to make space for some other, more stable, statement. Attribute is counter.
+//  NumRecompilesPlanFlushes       int           Number of times the cached statement was recompiled because a plan was not found in the cache. Attribute is counter.
+//  HasAutoParams                  tinyint       “true” if the statement has any parameterized literals, “false” if it does not.
+//  ParallelDegree                 tinyint       Degree of parallelism used by the query that is stored for this statement
+//  QuotedIdentifier               tinyint       Specifies whether the plan compiled with set quoted_identifier is enabled.
+//  TransactionIsolationLevel      tinyint       Transaction isolation level for which the statement was compiled.
+//  TransactionMode                tinyint       Specifies whether “chained transaction mode” is enabled for the statement.
+//  SAAuthorization                tinyint       Specifies whether the plan was compiled with sa_role authorization.
+//  SystemCatalogUpdate            tinyint       Specifies whether allow catalog updates was enabled when the plan was compiled.
+//  MetricsCount                   int           Number of times metrics were aggregated for this statement.
+//  MinPIO                         int           Maximum physical I/Os that occurred during any execution of this statement.
+//  MaxPIO                         int           Maximum physical I/Os that occurred during any execution of this statement.
+//  AvgPIO                         int           Average number of physical I/Os that occurred during execution of this statement.
+//  MinLIO                         int           Minimum logical I/Os that occurred during any execution of this statement.
+//  MaxLIO                         int           Maximum logical I/Os that occurred during any one execution of this statement.
+//  AvgLIO                         int           Average number of logical I/Os that occurred during execution of this statement.
+//  MinCpuTime                     int           The minimum amount of CPU time, in milliseconds, consumed by any execution of this statement.
+//  MaxCpuTime                     int           The maximum amount of CPU time, in milliseconds, consumed by any execution of this statement.
+//  AvgCpuTime                     int           The average amount of CPU time, in milliseconds, consumed by this statement.
+//  MinElapsedTime                 int           Minimum elapsed execution time for this statement.
+//  MaxElapsedTime                 int           Maximum elapsed execution time for this statement.
+//  AvgElapsedTime                 int           Average elapsed execution time for this statement.
+//  AvgScanRows                    int           Average number of scanned rows read per execution
+//  MaxScanRows                    int           Maximum number of scanned rows read per execution
+//  AvgQualifyingReadRows          int           Average number of qualifying data rows per read command execution
+//  MaxQualifyingReadRows          int           Maximum number of qualifying data rows per query execution
+//  AvgQualifyingWriteRows         int           Average number of qualifying data rows per query execution
+//  MaxQualifyingWriteRows         int           Maximum number of qualifying data rows per query execution
+//  LockWaits                      int           Total number of lock waits
+//  LockWaitTime                   int           Total amount of time, in milliseconds, spent waiting for locks
+//  SortCount                      int           Total number of sort operations
+//  SortSpilledCount               int           Total number of sort operations spilled to disk
+//  TotalSortTime                  int           Total amount of time, in milliseconds, spent in sorts
+//  MaxSortTime                    int           Maximum amount of time, in milliseconds, spent in a sort
+//  DBName                         varchar(30)   Name of database from which the statement was cached. Attribute is null.
+//  CachedDate                     datetime      Timestamp of the date and time when the statement was first cached.
+//  LastUsedDate                   datetime      Timestamp of the date and time when the cached statement was last used. Use this information with CachedDate to determine how frequently this statement is used, and whether it is helpful to have it cached.
+//  LastRecompiledDate             datetime      Date when the statement was last recompiled, because of schema changes or because the statement was not found in the statement cache.
+//  OptimizationGoal               varchar(30)   The optimization goal used to optimize this statement.
+//  OptimizerLevel                 varchar(30)   The optimizer level used to optimize this statement.
+//  ParallelDegreeReduced          int           Indicates if an insufficient number of worker threads were available to execute the query with the full degree of parallelism the query plan calls for, but the query did execute with some parallelism.
+//  ParallelPlanRanSerial          int           Indicates if an insufficient number of worker threads were available to execute the query in parallel so the query was executed serially.
+//  WorkerThreadDeficit            int           Indicates that the cumulative total number of worker threads were unavailable to execute this query since it was added to the statement cache.
+//  TotalLIO                       bigint        Cumulative logical I/O
+//  TotalPIO                       bigint        Cumulative physical I/O
+//  TotalCpuTime                   bigint        Cumulative elapsed time, in seconds, this statement spent using CPU
+//  TotalElapsedTime               bigint        Cumulative amount of time, in seconds spent executing this statement
+//-------------------------------------------------------------------------------

@@ -23,6 +23,8 @@ package com.asetune.utils;
 
 import java.sql.Timestamp;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Random;
 
 public class MovingAverageCounter
 {
@@ -286,11 +288,15 @@ public class MovingAverageCounter
 //
 //		return getAvg();
 //	}
-	
+
+	public List<Entry> getValues()
+	{
+		return _values;
+	}
 	/**
 	 * Simple place holder entry
 	 */
-	private static class Entry
+	static class Entry
 	{
 		long   _ts;
 		double _val;
@@ -300,6 +306,45 @@ public class MovingAverageCounter
 			_ts  = ts;
 			_val = val;
 		}
+		public long   getTime()  { return _ts; }
+		public double getValue() { return _val; }
 	}
 
+
+
+	/**
+	 * Small dummy test to see how an image looks like!
+	 * <p>
+	 * Use https://jsfiddle.net/ to check result
+	 * @param args
+	 */
+	public static void main(String[] args)
+	{
+		MovingAverageCounter si = MovingAverageCounterManager.getInstance("swapIn",  5);
+		MovingAverageCounter so = MovingAverageCounterManager.getInstance("swapOut", 5);
+
+		int crCnt = 30;
+		long startTime = System.currentTimeMillis() / 1000 - 300;
+
+		Random r = new Random();
+		int low = 100;
+		int high = 1000;
+		
+		for (int i=0; i<crCnt; i++)
+		{
+			int si_val = r.nextInt(high-low) + low;
+			int so_val = r.nextInt(high-low) + low;
+			
+			si._values.add(new Entry((startTime + (i*30))* 1000 , 1000+si_val));
+			so._values.add(new Entry((startTime + (i*30))* 1000 , 1200+so_val));
+		}
+
+		// Create a small chart, that can be used in emails etc.
+		String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("OS Swapping (15 minutes)", 
+				MovingAverageCounterManager.getInstance("swapIn",  5),
+				MovingAverageCounterManager.getInstance("swapOut", 5));
+
+		// To check the image, use for example: https://jsfiddle.net/
+		System.out.println(htmlChartImage);
+	}
 }

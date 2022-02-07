@@ -909,7 +909,8 @@ extends PersistWriterBase
                                                           
 	public static final String  PROPKEY_errorSendAlarmThresholdInSec      = "PersistWriterToHttpJson.{KEY}.error.sendAlarm.thresholdInSec";
 //	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 30; // 30 minutes
-	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 60; // 1 Hour
+//	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 60; // 1 Hour
+	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 90; // 1.5 Hour
 
 	
 	public static final String  PROPKEY_errorSaveToDisk                   = "PersistWriterToHttpJson.{KEY}.error.saveToDisk";

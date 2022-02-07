@@ -32,9 +32,9 @@ import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSampleCatalogIteratorSqlServer;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
-import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
 
 /**
@@ -207,7 +207,7 @@ extends CountersModel
 		String sql = ""
 			    + "-- Note: Below SQL Statement is executed in every database that is 'online', more or less like: sp_msforeachdb \n"
 			    + "-- Note: object_schema_name() and object_name() can NOT be used for 'dirty-reads', they may block... hence the 'ugly' fullname sub-selects in the select column list \n"
-			    + "select \n"
+			    + "select /* ${cmCollectorName} */ \n"
 			    + "      DbName      = db_name(mid.database_id) \n"
 //			    + "    , SchemaName  = object_schema_name(mid.object_id, mid.database_id) \n"
 //			    + "    , TableName   = object_name(mid.object_id, mid.database_id) \n"

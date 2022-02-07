@@ -263,7 +263,7 @@ extends CountersModel
 				+ " \n"
 				+ "  The content has been heavily modified by Goran Schwarz for SqlServerTune \n"
 				+ "============================================================================*/ \n"
-				+ "SELECT \n"
+				+ "SELECT /* ${cmCollectorName} */ \n"
 				+ "     [owt].[session_id] \n"
 				+ "    ,[owt].[exec_context_id] \n"
 				+ "    ,[ot].[scheduler_id] \n"

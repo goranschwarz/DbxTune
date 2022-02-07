@@ -119,6 +119,7 @@ implements Connection, AutoCloseable
 	protected String _databaseServerName      = null;
 	protected long   _dbmsVersionNumber       = -1;
 	protected String _dbmsVersionStr          = null;
+	protected int    _dbmsSessionId           = -1;
 	
 	protected String _dbmsPageSizeInKb        = null;
 	protected String _dbmsCharsetName         = null;
@@ -1132,6 +1133,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 		_databaseServerName      = null;
 		_dbmsVersionNumber       = -1;
 		_dbmsVersionStr          = null;  // more or less the same as _databaseProductVersion, but ASE 16 is not returning the FULL string, so this is a wrapper around  
+		_dbmsSessionId           = -1;
 
 		_dbmsCharsetName         = null;
 		_dbmsCharsetId           = null;
@@ -1561,6 +1563,36 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 //			return false;
 //		}
 //	}
+
+	/**
+	 * Get the session id of the connection to the DBMS
+	 * 
+	 * @return -1 if not known
+	 */
+	protected abstract int getDbmsSessionId_impl()
+	throws SQLException;
+
+	/**
+	 * Get the session id of the connection to the DBMS
+	 * 
+	 * @return -1 if not known
+	 */
+	public int getDbmsSessionId() 
+	{
+		if (_dbmsSessionId != -1)
+			return _dbmsSessionId;
+
+		try
+		{
+			_dbmsSessionId = getDbmsSessionId_impl();
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("getDbmsSessionId(): returning blank-string, Caught: " + ex);
+			_dbmsSessionId = -1;
+		}
+		return _dbmsSessionId;
+	}
 
 	/**
 	 * Get the connected database server/instance name.

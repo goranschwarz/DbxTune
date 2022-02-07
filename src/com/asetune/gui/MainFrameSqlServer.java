@@ -21,9 +21,7 @@
 package com.asetune.gui;
 
 import java.awt.event.ActionEvent;
-import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.List;
 
 import javax.swing.Icon;
@@ -158,27 +156,6 @@ extends MainFrame
 	@Override
 	public void connectMonitorHookin()
 	{
-		Connection conn = CounterController.getInstance().getMonConnection();
-
-		//------------------------------------------------
-		// Set some options
-		//   -- set deadlock priority LOW or similar... (SET DEADLOCK_PRIORITY LOW)
-		//      if SqlServerTune is involved in a DEADLOCK, then the "other" SPID will have a higher chance to "win"
-		//      SET DEADLOCK_PRIORITY { LOW | NORMAL | HIGH | <numeric-priority> | @deadlock_var | @deadlock_intvar }  
-		//          <numeric-priority> ::= { -10 | -9 | -8 | ... | 0 | ... | 8 | 9 | 10 }
-		//          LOW=-5, NORMAL=9, HIGH=5
-		// see: https://docs.microsoft.com/en-us/sql/t-sql/statements/set-deadlock-priority-transact-sql?view=sql-server-ver15
-		String sql = "SET DEADLOCK_PRIORITY LOW"; // should we go for -7 or -8 to be even more submissive
-		try (Statement stmnt = conn.createStatement() )
-		{
-			stmnt.executeUpdate(sql);
-		}
-		catch (SQLException ex)
-		{
-			_logger.warn("Problems in connectMonitorHookin(): When Initializing DBMS SET Properties, using sql='" + sql + "'. Continuing... Caught: MsgNum=" + ex.getErrorCode() + ": " + ex);
-		}
-		
-
 		// DBMS ObjectID --> ObjectName Cache... maybe it's not the perfect place to initialize this...
 		DbmsObjectIdCache.setInstance( new DbmsObjectIdCacheSqlServer(this) );
 		

@@ -2360,7 +2360,7 @@ extends Properties
 			String searchOrder = _searchOrder[i]; 
 			Configuration conf = getInstance(searchOrder);
 
-			String filename = conf == null ? "-instance-not-found-" : conf.getFilename();
+			String filename = conf == null ? "--instance-not-found--" : conf.getFilename();
 			
 			sa[i] = searchOrder + "='" + filename + "'";
 		}

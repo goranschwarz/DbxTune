@@ -43,6 +43,7 @@ import com.asetune.pcs.report.content.AlarmsHistory;
 import com.asetune.pcs.report.content.DailySummaryReportContent;
 import com.asetune.pcs.report.content.DbxTuneErrors;
 import com.asetune.pcs.report.content.IReportEntry;
+import com.asetune.pcs.report.content.IReportEntry.MessageType;
 import com.asetune.pcs.report.content.RecordingInfo;
 import com.asetune.pcs.report.content.ReportContent;
 import com.asetune.sql.conn.DbxConnection;
@@ -97,6 +98,8 @@ extends DailySummaryReportAbstract
 			{
 				if (entry.isEnabled())
 				{
+					long entryStartTime = System.currentTimeMillis();
+
 					// Report Progress 
 					if (progressReporter != null)
 					{
@@ -127,6 +130,8 @@ extends DailySummaryReportAbstract
 							throw new InterruptedException("Report Creation was aborted...");
 					}
 
+					// Set how long it took
+					entry.setExecTime(TimeUtils.msDiffNow(entryStartTime));
 				}
 			} 
 			catch (RuntimeException rte) 
@@ -354,6 +359,7 @@ extends DailySummaryReportAbstract
 		w.append("            white-space: no-wrap; \n");
 //		sb.append("            space: nowrap; \n");
 		w.append("        } \n");
+		w.append("\n");
 		w.append("        table { \n");
 		w.append("            mso-table-layout-alt: fixed; \n"); // not sure about this - https://gist.github.com/webtobesocial/ac9d052595b406d5a5c1
 		w.append("            mso-table-overlap: never; \n");    // not sure about this - https://gist.github.com/webtobesocial/ac9d052595b406d5a5c1
@@ -380,6 +386,36 @@ extends DailySummaryReportAbstract
 		w.append("        tr:nth-child(even) { \n");
 		w.append("            background-color: #f2f2f2; \n");
 		w.append("        } \n");
+		w.append("\n");
+//		w.append("<!--[if mso]> \n");
+//		w.append("        sparkline-td { \n");
+////		w.append("            mso-width-alt: 1100; \n");
+//		w.append("            width: 1100; \n");
+//		w.append("            white-space: nowrap; \n");
+//		w.append("        } \n");
+//		w.append("<![endif]--> \n");
+//		w.append("\n");
+		w.append("        .dsr-sub-table-chart {                    \n");
+		w.append("            border: none;                         \n");
+		w.append("        }                                         \n");
+		w.append("        .dsr-sub-table-chart th {                 \n");
+		w.append("            border: none;                         \n");
+		w.append("            font-size: 12px;                      \n");
+		w.append("            color: black;                         \n");
+		w.append("            background-color: transparent;        \n");
+//		w.append("            border-bottom: 1px solid black;       \n");
+		w.append("            border-bottom: 1px dotted black;       \n");
+		w.append("        }                                         \n");
+		w.append("        .dsr-sub-table-chart td {                 \n");
+		w.append("            border: none;                         \n");
+		w.append("        }                                         \n");
+		w.append("        .dsr-sub-table-chart tr:nth-child(odd) {  \n");
+		w.append("            background-color: transparent;        \n");
+		w.append("        }                                         \n");
+		w.append("        .dsr-sub-table-chart tr:nth-child(even) { \n");
+		w.append("            background-color: transparent;        \n");
+		w.append("        }                                         \n");
+		w.append("\n");
 		w.append("        h2 { \n");
 		w.append("            border-bottom: 2px solid black; \n");
 		w.append("            border-top: 2px solid black; \n");
@@ -628,6 +664,15 @@ extends DailySummaryReportAbstract
 		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.22.0/prism.min.js'></script> \n");
 		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.22.0/components/prism-sql.min.js'></script> \n");
 
+		// chart.js
+		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js'   integrity='sha512-TW5s0IT/IppJtu76UbysrBH9Hy/5X41OTAbQuffZFU6lQ1rdcLHzpU5BzVvr/YFykoiMYZVWlr/PX1mDcfM9Qg==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
+//		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.js'       integrity='sha512-uLlukEfSLB7gWRBvzpDnLGvzNUluF19IDEdUoyGAtaO0MVSBsQ+g3qhLRL3GTVoEzKpc24rVT6X1Pr5fmsShBg==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
+//old//		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.bundle.js' integrity='sha512-oaUGh3C8smdaT0kMeyQ7xS1UY60lko23ZRSnRljkh2cbB7GJHZjqe3novnhSNc+Qj21dwBE5dFBqhcUrFc9xIw==' crossorigin='anonymous' referrerpolicy='no-referrer'></script>\n");
+//old//		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.js'        integrity='sha512-YB9sg4Z0/6+Q2qyde+om6RdPat0bLazJXJe15qHmZ9FjckJKxHOpHbp1mGTnHq7fzljiKbMEPiwHSLU2cX8qHA==' crossorigin='anonymous' referrerpolicy='no-referrer'></script>\n");
+
+		// moment.js
+		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js'                             integrity='sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
+		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-moment/1.0.0/chartjs-adapter-moment.min.js' integrity='sha512-oh5t+CdSBsaVVAvxcZKy3XJdP7ZbYUBSRCXDTVn0ODewMDDNnELsrG9eDm8rVZAQg7RsDD/8K3MjPAFB13o6eA==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
 
 		w.append("\n");
 		w.append("    <script type='text/javascript'>  \n");
@@ -673,9 +718,14 @@ extends DailySummaryReportAbstract
 		{
 			sb.append("<div class='container-fluid'> \n"); // BEGIN: Bootstrap 4 container
 		}
-
 		sb.append("\n");
+
 		
+		// Create an area where we can add/show progress bars
+		sb.append("<div id='progress-area' style='background-color: white; position:fixed; top:50px; left:30px; width:100%; z-index: 9999;'>\n");
+		sb.append("</div>\n");
+		
+
 		// TOC HEADER
 		if (useBootstrap())
 		{
@@ -769,13 +819,15 @@ extends DailySummaryReportAbstract
 			{
 				try
 				{
+					entry.setCurrentMessageType(MessageType.FULL_MESSAGE);
+
 					// Warning messages
 					if (entry.hasWarningMsg())
 						sb.append(entry.getWarningMsg());
 
 					// Get the message text
 					if ( ! entry.hasProblem() )
-						entry.writeMessageText(sb);
+						entry.writeMessageText(sb, entry.getCurrentMessageType());
 					
 					// If the entry indicates that it has a problem... then print that.
 					if ( entry.hasProblem() )
@@ -800,6 +852,10 @@ extends DailySummaryReportAbstract
 					sb.append("<pre><code> \n");
 					sb.append(StringUtil.exceptionToString(rte));
 					sb.append("</code></pre> \n");
+				}
+				finally
+				{
+					entry.setCurrentMessageType(null);
 				}
 			}
 			else
@@ -834,6 +890,67 @@ extends DailySummaryReportAbstract
 //System.out.println("  ******* Used Memory " + Memory.getUsedMemoryInMB() + " MB ****** "+ entry.getClass().getSimpleName());
 		}
 		sb.append("\n<br>");
+
+		//--------------------------------------------------
+		// DEBUG - Write time it too to create each report entry
+		String PROPKEY_printExecTime = "DailySummaryReport.report.entry.enabled.printExecTime";
+		boolean printExecTime = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_printExecTime, true);
+		if (printExecTime)
+		{
+			String tocDiv = "sectionTime";
+			String headingName = "Exec/Creation time for each Report Section";
+
+			// Section HEADER
+			if (useBootstrap())
+			{
+				// Bootstrap "card" - BEGIN
+				sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+				sb.append("<div id='").append(tocDiv).append("' class='card border-dark mb-3'>");
+				sb.append("<h5 class='card-header'><b>").append(headingName).append("</b></h5>");
+				sb.append("<div class='card-body'>");
+				sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+				
+				sb.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
+				sb.append("<h2 id='").append(tocDiv).append("'>").append(headingName).append("</h2> \n");
+				sb.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
+			}
+			else
+			{
+				// Normal HTML - H2 heading
+				sb.append("<h2 id='").append(tocDiv).append("'>").append(headingName).append("</h2> \n");
+			}
+			
+			sb.append("This is a DEBUG Section, just to see how long each Report Section takes. \n");
+			sb.append("<br> \n");
+			sb.append("<table class='sortable'> \n");
+			sb.append("<tr><th>Section Name</th><th>Time HH:MM:SS</th></tr> \n");
+			for (IReportEntry entry : _reportEntries)
+			{
+				String tocSubject = entry.getSubject();
+				String timeStr    = TimeUtils.msToTimeStrDHMS( entry.getExecTime() );
+
+				// Strip off parts that may be details
+				int firstLeftParentheses = tocSubject.indexOf("(");
+				if (firstLeftParentheses != -1)
+					tocSubject = tocSubject.substring(0, firstLeftParentheses - 1).trim();
+
+				// Add the row
+				sb.append("<tr><td>" + tocSubject + "</td><td>" + timeStr + "</td></tr> \n");
+			}
+			sb.append("</table> \n");
+			sb.append("\n<br>");
+			sb.append("<i>To disable this report entry, put the following in the configuration file. <code>" + PROPKEY_printExecTime + " = false</code></i>");
+
+			// Section FOOTER
+			if (useBootstrap())
+			{
+				// Bootstrap "card" - END
+				sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+				sb.append("</div>"); // end: card-body
+				sb.append("</div>"); // end: card
+				sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+			}
+		}
 
 		//--------------------------------------------------
 		// END
@@ -968,13 +1085,17 @@ extends DailySummaryReportAbstract
 			{
 				try
 				{
+					entry.setCurrentMessageType(MessageType.SHORT_MESSAGE);
+
 					// Warning messages
 					if (entry.hasWarningMsg())
 						w.append(entry.getWarningMsg());
 
 					// Get the message text
+//					if ( ! entry.hasProblem() )
+//						entry.writeShortMessageText(w);
 					if ( ! entry.hasProblem() )
-						entry.writeShortMessageText(w);
+						entry.writeMessageText(w, entry.getCurrentMessageType());
 					
 					// If the entry indicates that it has a problem... then print that.
 					if ( entry.hasProblem() )
@@ -999,6 +1120,10 @@ extends DailySummaryReportAbstract
 					w.append("<pre><code> \n");
 					w.append(StringUtil.exceptionToString(rte));
 					w.append("</code></pre> \n");
+				}
+				finally
+				{
+					entry.setCurrentMessageType(null);
 				}
 			}
 			else

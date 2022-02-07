@@ -45,14 +45,14 @@ extends SqlServerAbstract
 		return false;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		if (_shortRstm.getRowCount() == 0)
@@ -114,6 +114,9 @@ extends SqlServerAbstract
 		}
 		else
 		{
+			// Highlight sort column
+			_shortRstm.setHighlightSortColumns("TotalReservedSizeMB");
+
 			// Remove some columns which we dont really need
 			_shortRstm.removeColumnNoCase("SessionStartTime");
 			_shortRstm.removeColumnNoCase("SessionSampleTime");

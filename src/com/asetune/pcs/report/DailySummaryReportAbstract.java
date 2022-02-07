@@ -74,6 +74,8 @@ implements IDailySummaryReport
 	private DailySummaryReportContent _reportContent = null; 
 	private IProgressReporter _progressReporter = null;
 
+	private Map<String, String> _dbmsOtherInfoMap = null;
+
 	@Override
 	public void          setConnection(DbxConnection conn) { _conn = conn; }
 	public DbxConnection getConnection()                   { return _conn; }
@@ -109,6 +111,7 @@ implements IDailySummaryReport
 	{
 		_sender = reportSender;
 	}
+
 
 //	@Override
 //	public MonTablesDictionary createMonTablesDictionary()
@@ -206,6 +209,15 @@ implements IDailySummaryReport
 		{
 			_logger.error("Problems writing Daily Report to file '" + saveToFileName + "'. Caught: "+ex, ex);
 		}
+	}
+	
+	@Override
+	public File getReportFile()
+	{
+		// Get the report object
+		DailySummaryReportContent content = getReportContent();
+		
+		return (content == null) ? null : content.getLastSavedReportFile();
 	}
 	
 	@Override
@@ -324,6 +336,24 @@ implements IDailySummaryReport
 		return _recordingInfo.getDbmsStartTimeInDays();
 	}
 
+	/** Get the DBMS other info map. This could be "PAGE-SIZE" or whatever "stuff" that are special for that DBMS type */
+	public Map<String, String> getDbmsOtherInfoMap()
+	{
+		initialize();
+		return _dbmsOtherInfoMap;
+	}
+
+	/** Set the DBMS other info map. This could be "PAGE-SIZE" or whatever "stuff" that are special for that DBMS type, and will show up in "Recording Information" */
+	public void setDbmsOtherInfoMap(Map<String, String> dbmsOtherInfoMap)
+	{
+		_dbmsOtherInfoMap = dbmsOtherInfoMap;
+	}
+
+	/** Create the DBMS other info map. This could be "PAGE-SIZE" or whatever "stuff" that are special for that DBMS type */
+	public Map<String, String> createDbmsOtherInfoMap(DbxConnection conn)
+	{
+		return null;
+	}
 
 	/** Get the DbxTune application type that recorded this info */
 	public String getRecDbxAppName()
@@ -357,6 +387,9 @@ implements IDailySummaryReport
 		
 		// set _recording* variables
 		refreshRecordingStartEndTime(conn);
+		
+		// create the DBMS "other info" map
+		setDbmsOtherInfoMap(createDbmsOtherInfoMap(conn));
 	}
 
 //	private boolean   _initialized       = false;

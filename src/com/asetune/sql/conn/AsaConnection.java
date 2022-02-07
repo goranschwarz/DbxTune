@@ -21,7 +21,9 @@
 package com.asetune.sql.conn;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
@@ -62,5 +64,20 @@ extends TdsConnection
 	public boolean isDbmsClusterEnabled()
 	{
 		return false;
+	}
+
+	@Override
+	protected int getDbmsSessionId_impl() throws SQLException
+	{
+		String sql = "select @@spid";
+		
+		int spid = -1;
+		try (Statement stmnt = _conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+				spid = rs.getInt(1);
+		}
+		
+		return spid;
 	}
 }

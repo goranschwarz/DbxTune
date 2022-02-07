@@ -23,35 +23,46 @@ package com.asetune.pcs.report.content.ase;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
+import org.h2.tools.SimpleResultSet;
 
-import com.asetune.gui.ModelMissmatchException;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
-import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
+import com.asetune.pcs.report.content.SparklineHelper;
+import com.asetune.pcs.report.content.SparklineHelper.AggType;
+import com.asetune.pcs.report.content.SparklineHelper.DataSource;
+import com.asetune.pcs.report.content.SparklineHelper.SparkLineParams;
+import com.asetune.sql.SqlParserUtils;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
+import com.asetune.utils.HtmlTableProducer;
+import com.asetune.utils.HtmlTableProducer.ColumnCopyDef;
+import com.asetune.utils.HtmlTableProducer.ColumnCopyRender;
+import com.asetune.utils.HtmlTableProducer.ColumnCopyRow;
+import com.asetune.utils.HtmlTableProducer.ColumnStatic;
+import com.asetune.utils.StringUtil;
+
+import net.sf.jsqlparser.parser.ParseException;
 
 public class AseTopSlowNormalizedSql extends AseAbstract
 {
 	private static Logger _logger = Logger.getLogger(AseTopSlowNormalizedSql.class);
 
 	private ResultSetTableModel _shortRstm;
-	private ResultSetTableModel _longRstm;
+	private ResultSetTableModel _sqlRstm;
 //	private Exception           _problem = null;
 	private ResultSetTableModel _skippedDsrRows;
 //	private String              _sparkline_CpuTime_js = "";
@@ -60,25 +71,46 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 	private Map<Map<String, Object>, SqlCapExecutedSqlEntries> _keyToExecutedSql;
 	private Map<Map<String, Object>, SqlCapWaitEntry>          _keyToWaitTime;
 	
-	public AseTopSlowNormalizedSql(DailySummaryReportAbstract reportingInstance)
+	private ReportType _reportType    = ReportType.CPU_TIME;
+	private String     _sqlOrderByCol = "-unknown-";
+	private String     _sqlHavingCol  = "-unknown-";
+	private String     _orderByCol_noBrackets = "-unknown-";
+	
+	public enum ReportType
+	{
+		CPU_TIME, 
+		WAIT_TIME
+	};
+	
+	public AseTopSlowNormalizedSql(DailySummaryReportAbstract reportingInstance, ReportType reportType)
 	{
 		super(reportingInstance);
+		_reportType = reportType;
+
+		if      (ReportType.CPU_TIME .equals(_reportType)) { _sqlOrderByCol = "[CpuTime__sum]";  _sqlHavingCol = "[CpuTime__sum]"; }
+		else if (ReportType.WAIT_TIME.equals(_reportType)) { _sqlOrderByCol = "[WaitTime__sum]"; _sqlHavingCol = "[WaitTime__sum]"; }
+		else throw new IllegalArgumentException("Unhandled reportType='" + reportType + "'.");
+
+		_orderByCol_noBrackets = _sqlOrderByCol.replace("[", "").replace("]", "");
 	}
 
 	@Override
 	public boolean hasShortMessageText()
 	{
+		if (ReportType.CPU_TIME.equals(_reportType))
+			return true;
+
 		return false;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		if (_shortRstm.getRowCount() == 0)
@@ -87,87 +119,86 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		}
 		else
 		{
-			// Get a description of this section, and column names
-			sb.append(getSectionDescriptionHtml(_shortRstm, true));
-
-			sb.append(createSkippedEntriesReport(_skippedDsrRows));
-
-//			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
-			sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
-//			sb.append(_shortRstm.toHtmlTableString("sortable"));
-//			sb.append(toHtmlTable(_shortRstm));
-
-			// Create a default renderer
-			if (_shortRstm != null) // always true... but just to use {} to scope 'tableRender' var
+			// Full information, including (top summary table)
+			if (isFullMessageType())
 			{
-				TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
+				// Get a description of this section, and column names
+				sb.append(getSectionDescriptionHtml(_shortRstm, true));
+
+				sb.append(createSkippedEntriesReport(_skippedDsrRows));
+
+//				sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+				sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
+//				sb.append(_shortRstm.toHtmlTableString("sortable"));
+//				sb.append(toHtmlTable(_shortRstm));
+
+				// Create a default renderer
+				if (_shortRstm != null) // always true... but just to use {} to scope 'tableRender' var
 				{
-					@Override
-					public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+					TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
 					{
-						if ("txt".equals(colName))
+						@Override
+						public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
 						{
-							// Get Actual Executed SQL Text for current 'NormJavaSqlHashCode'
-							int    normJavaSqlHashCode = rstm.getValueAsInteger(row, "NormJavaSqlHashCode");
-							
-							Map<String, Object> whereColValMap = new LinkedHashMap<>();
-							whereColValMap.put("NormJavaSqlHashCode", normJavaSqlHashCode);
+							if ("txt".equals(colName))
+							{
+								// Get Actual Executed SQL Text for current 'NormJavaSqlHashCode'
+								int    normJavaSqlHashCode = rstm.getValueAsInteger(row, "NormJavaSqlHashCode");
+								
+								Map<String, Object> whereColValMap = new LinkedHashMap<>();
+								whereColValMap.put("NormJavaSqlHashCode", normJavaSqlHashCode);
 
-							String executedSqlText = getSqlCapExecutedSqlTextAsString(_keyToExecutedSql, whereColValMap);
+								String executedSqlText = getSqlCapExecutedSqlTextAsString(_keyToExecutedSql, whereColValMap);
 
-							// Put the "Actual Executed SQL Text" as a "tooltip"
-							return "<div title='Click for Detailes' "
-									+ "data-toggle='modal' "
-									+ "data-target='#dbx-view-sqltext-dialog' "
-									+ "data-objectname='" + normJavaSqlHashCode + "' "
-									+ "data-tooltip=\""   + executedSqlText     + "\" "
-									+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+								// Put the "Actual Executed SQL Text" as a "tooltip"
+								return "<div title='Click for Detailes' "
+										+ "data-toggle='modal' "
+										+ "data-target='#dbx-view-sqltext-dialog' "
+										+ "data-objectname='" + normJavaSqlHashCode + "' "
+										+ "data-tooltip=\""   + executedSqlText     + "\" "
+										+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+							}
+
+							if ("wait".equals(colName))
+							{
+								// Get Actual Executed SQL Text for current 'NormJavaSqlHashCode'
+								int    normJavaSqlHashCode = rstm.getValueAsInteger(row, "NormJavaSqlHashCode");
+								
+								Map<String, Object> whereColValMap = new LinkedHashMap<>();
+								whereColValMap.put("NormJavaSqlHashCode", normJavaSqlHashCode);
+
+								String waitText = getSqlCapWaitTimeAsString(_keyToWaitTime, whereColValMap);
+
+								// Put the "Actual Executed SQL Text" as a "tooltip"
+								return "<div title='Click for Detailes' "
+										+ "data-toggle='modal' "
+										+ "data-target='#dbx-view-sqltext-dialog' "
+										+ "data-objectname='" + normJavaSqlHashCode + "' "
+										+ "data-tooltip=\""   + waitText     + "\" "
+										+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+							}
+
+							return strVal;
 						}
-
-						if ("wait".equals(colName))
-						{
-							// Get Actual Executed SQL Text for current 'NormJavaSqlHashCode'
-							int    normJavaSqlHashCode = rstm.getValueAsInteger(row, "NormJavaSqlHashCode");
-							
-							Map<String, Object> whereColValMap = new LinkedHashMap<>();
-							whereColValMap.put("NormJavaSqlHashCode", normJavaSqlHashCode);
-
-							String waitText = getSqlCapWaitTimeAsString(_keyToWaitTime, whereColValMap);
-
-							// Put the "Actual Executed SQL Text" as a "tooltip"
-							return "<div title='Click for Detailes' "
-									+ "data-toggle='modal' "
-									+ "data-target='#dbx-view-sqltext-dialog' "
-									+ "data-objectname='" + normJavaSqlHashCode + "' "
-									+ "data-tooltip=\""   + waitText     + "\" "
-									+ ">&#x1F4AC;</div>"; // symbol popup with "..."
-						}
-
-						return strVal;
-					}
-				};
-				sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+					};
+					sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+				}
 			}
 
-			if (_longRstm != null)
+			// The "sub table" with pivot info on most mini-charts/sparkline
+			if (_sqlRstm != null)
 			{
-				sb.append("<br>\n");
-				sb.append("SQL Text by NormJavaSqlHashCode: " + _longRstm.getRowCount() + "<br>\n");
-				sb.append("Tip: To format the SQL text below you can use any online formatting tool, like <a href='https://poorsql.com/'>Poor Man's T-SQL Formatter</a><br>\n");
-//				sb.append(_longRstm.toHtmlTablesVerticalString("sortable"));
-//				sb.append(_longRstm.toHtmlTableString("sortable"));
-
 				// Create a default renderer
 				TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
 				{
 					@Override
 					public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
 					{
-						if ("NormSQLText".equals(colName))
-						{
-						//	return "<xmp style='width:100%; max-height:400px; overflow:auto'>" + strVal + "</xmp>";
-							return "<xmp>" + strVal + "</xmp>";
-						}
+//						if ("NormSQLText".equals(colName))
+//						{
+//						//	return "<xmp style='width:100%; max-height:400px; overflow:auto'>" + strVal + "</xmp>";
+//							return "<xmp>" + strVal + "</xmp>";
+//						}
 
 						if ("txt".equals(colName))
 						{
@@ -210,29 +241,34 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 						return strVal;
 					}
 				};
-				sb.append(_longRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+
+				sb.append("<br>\n");
+				sb.append("<details open> \n");
+				sb.append("<summary>Details for above Statements, including SQL Text (click to collapse) </summary> \n");
 				
-//				// Surround the column 'NormSQLText' content with '<xmp>' content '</xmp>'
-//				Map<String, String> colNameValueTagMap = new HashMap<>();
-//				colNameValueTagMap.put("NormSQLText",   "xmp");
-//
-//				sb.append(toHtmlTable(_longRstm, colNameValueTagMap));
+				sb.append("<br>\n");
+				sb.append("SQL Text by NormJavaSqlHashCode: " + _sqlRstm.getRowCount() + "<br>\n");
+				sb.append("Tip: To format the SQL text below you can use any online formatting tool, like <a href='https://poorsql.com/'>Poor Man's T-SQL Formatter</a><br>\n");
+
+				sb.append(_sqlRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+
+				sb.append("\n");
+				sb.append("</details> \n");
 			}
 		}
 		
 		// Write JavaScript code for CPU SparkLine
-		for (String str : _miniChartJsList)
+		if (isFullMessageType())
 		{
-			sb.append(str);
+			for (String str : _miniChartJsList)
+				sb.append(str);
 		}
-//		sb.append(createShowSqlTextDialogHtml());
-//		sb.append(createShowSqlTextDialogJs());
 	}
 	
 	@Override
 	public String getSubject()
 	{
-		return "Top [SQL Captured] - CpuTime - SLOW Normalized SQL Statements (order by: CpuTime__sum, origin: monSysStatement) [with gt: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"]";
+		return "Top [SQL Captured] - " + _reportType + " - SLOW Normalized SQL Statements (order by: " + _orderByCol_noBrackets + ", origin: monSysStatement) [with gt: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"]";
 	}
 
 	@Override
@@ -261,7 +297,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		
 		// Section description
 		rstm.setDescription(
-				"Top [SQL Captured] Slow Normalized SQL Statements are presented here (ordered by: CpuTime__sum) <br>" +
+				"Top [SQL Captured] - " + _reportType + "- Slow Normalized SQL Statements are presented here (ordered by: " + _orderByCol_noBrackets + ") <br>" +
 				"How we <i>normalize</i> SQL Text: " +
 				"<ul>" +
 				"  <li>When we cross the threshold to <i>Capture SQL</i></li>" +
@@ -276,7 +312,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 				"NormJavaSqlHashCode = -1 -- NO SQLText was found. <br>" +
 				"<br>" +
 				"Thresholds: with GreaterThan: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"<br>" +
-				"Thresholds: having CpuTime__sum &gt;= 1000 <br>" +
+				"Thresholds: having " + _orderByCol_noBrackets +" &gt;= 1000 <br>" +
 				"<br>" +
 				"ASE Source table is 'master.dbo.monSysStatement', which is a <i>ring buffer</i>, if the buffer is small, then we will be missing entries. <br>" +
 				"PCS Source table is 'MonSqlCapStatements'. (PCS = Persistent Counter Store) <br>" +
@@ -327,59 +363,16 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		// Set: _statement_gt_* variables
 		getSlowQueryThresholds(conn);
 		
-		int topRows          = getTopRows();
-		int havingSumCpuTime = 1000; // 1 second
-		int dsrSkipCount     = getDsrSkipCount();
-		
-//		String sql = "-- source table: MonSqlCapStatements \n"
-//			    + "select top " + (topRows + skipCount) + " \n"
-//			    + "    [NormJavaSqlHashCode] \n"
-//			    + "   ,count(*)                     as [ExecCount] \n"
-//			    + " \n"
-//			    + "   ,cast('' as varchar(512))     as [SkipThis] \n"
-//			    + "	  ,min([StartTime])             as [StartTime_min] \n"
-//			    + "	  ,max([EndTime])               as [EndTime_max] \n"
-//			    + "	  ,cast('' as varchar(30))      as [Duration] \n"
-//			    + " \n"
-//			    + "   ,avg([Elapsed_ms])            as [avgElapsed_ms] \n"
-//			    + "   ,avg([CpuTime])               as [avgCpuTime] \n"
-//			    + "   ,avg([WaitTime])              as [avgWaitTime] \n"
-//			    + "   ,avg([MemUsageKB])            as [avgMemUsageKB] \n"
-//			    + "   ,avg([PhysicalReads])         as [avgPhysicalReads] \n"
-//			    + "   ,avg([LogicalReads])          as [avgLogicalReads] \n"
-//			    + "   ,avg([RowsAffected])          as [avgRowsAffected] \n"
-////			    + "   ,avg([QueryOptimizationTime]) as [avgQueryOptimizationTime] \n"
-////			    + "   ,avg([PagesModified])         as [avgPagesModified] \n"
-////			    + "   ,avg([PacketsSent])           as [avgPacketsSent] \n"
-////			    + "   ,avg([PacketsReceived])       as [avgPacketsReceived] \n"
-//			    + " \n"
-//			    + "   ,sum([Elapsed_ms])            as [sumElapsed_ms] \n"
-//			    + "   ,sum([CpuTime])               as [sumCpuTime] \n"
-//			    + "   ,sum([WaitTime])              as [sumWaitTime] \n"
-//			    + "   ,sum([MemUsageKB])            as [sumMemUsageKB] \n"
-//			    + "   ,sum([PhysicalReads])         as [sumPhysicalReads] \n"
-//			    + "   ,sum([LogicalReads])          as [sumLogicalReads] \n"
-//			    + "   ,sum([RowsAffected])          as [sumRowsAffected] \n"
-////			    + "   ,sum([QueryOptimizationTime]) as [sumQueryOptimizationTime] \n"
-////			    + "   ,sum([PagesModified])         as [sumPagesModified] \n"
-////			    + "   ,sum([PacketsSent])           as [sumPacketsSent] \n"
-////			    + "   ,sum([PacketsReceived])       as [sumPacketsReceived] \n"
-//
-////				+ "   ,(sum([LogicalReads])*1.0) / (coalesce(sum([RowsAffected]),1)*1.0) as [LogicalReadsPerRowsAffected] \n"
-//				+ "   ,-9999999.0 as [LogicalReadsPerRowsAffected] \n"
-//				
-//			    + "from [MonSqlCapStatements] \n"
-//			    + "where 1 = 1 \n"
-////			    + "where [ProcName] is NULL \n"
-////			    + "where [ProcedureID] = 0 \n"
-//				+ getReportPeriodSqlWhere("StartTime")
-//			    + "group by [NormJavaSqlHashCode] \n"
-//			    + "having [sumCpuTime] >= " + havingSumCpuTime + " \n"
-////			    + "order by [ExecCount] desc \n"
-////			    + "order by [sumLogicalReads] desc \n"
-//			    + "order by [sumCpuTime] desc \n"
-//			    + "";
+		// Get ASE Page Size
+		int asePageSize = -1;
+		try	{ asePageSize = getAsePageSizeFromMonDdlStorage(conn); }
+		catch (SQLException ex) { }
+		int asePageSizeDivider = 1024 * 1024 / asePageSize; // 2k->512, 4k->256, 8k=128, 16k=64
 
+		int topRows       = getTopRows();
+		int havingSumTime = 1000; // 1 second
+		int dsrSkipCount  = getDsrSkipCount();
+		
 		String sql = "-- source table: MonSqlCapStatements \n"
 			    + "select top " + (topRows + dsrSkipCount) + " \n"
 //			    + "    [NormJavaSqlHashCode] \n"
@@ -388,16 +381,16 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 	    	    + "         WHEN [NormJavaSqlHashCode] = -1 AND [JavaSqlHashCode]  = -1 THEN -1 -- NO SQLText \n"
 	    	    + "         ELSE [NormJavaSqlHashCode] \n"
 	    	    + "    END as [NormJavaSqlHashCode] \n"
-			    + "   ,cast('' as varchar(10))      as [txt] \n"
-			    + "   ,cast('' as varchar(10))      as [wait] \n"
-			    + "   ,count(*)                     as [ExecCount] \n"
-			    + "   ,cast('' as varchar(512))     as [ExecCount__chart] \n"
 			    + " \n"
 			    + "   ,cast('' as varchar(512))     as [SkipThis] \n"
-			    + "	  ,min([StartTime])             as [StartTime_min] \n"
-			    + "	  ,max([EndTime])               as [EndTime_max] \n"
-			    + "	  ,cast('' as varchar(30))      as [Duration] \n"
 			    + " \n"
+			    + "   ,cast('' as varchar(10))      as [txt] \n"
+			    + "   ,cast('' as varchar(10))      as [wait] \n"
+			    + " \n"
+			    + "   ,cast('' as varchar(512))     as [ExecCount__chart] \n"
+			    + "   ,count(*)                     as [ExecCount] \n"
+			    + " \n"
+			    + "   ,cast('' as varchar(512))     as [Elapsed_ms__chart] \n"
 			    + "   ,sum([Elapsed_ms])            as [Elapsed_ms__sum] \n"
 			    + "   ,avg([Elapsed_ms])            as [Elapsed_ms__avg] \n"
 			    
@@ -409,6 +402,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 			    + "   ,sum([WaitTime])              as [WaitTime__sum] \n"
 			    + "   ,avg([WaitTime])              as [WaitTime__avg] \n"
 			    
+			    + "   ,cast('' as varchar(512))     as [MemUsageKB__chart] \n"
 			    + "   ,sum([MemUsageKB])            as [MemUsageKB__sum] \n"
 			    + "   ,avg([MemUsageKB])            as [MemUsageKB__avg] \n"
 			    
@@ -420,8 +414,16 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 			    + "   ,sum([LogicalReads])          as [LogicalReads__sum] \n"
 			    + "   ,avg([LogicalReads])          as [LogicalReads__avg] \n"
 			    
+			    + "   ,cast('' as varchar(512))     as [LogicalReadsMb__chart] \n"
+			    + "   ,sum([LogicalReads]) / "+asePageSizeDivider+" as [LogicalReadsMb__sum] \n"
+			    + "   ,avg([LogicalReads]) * 1.0 / "+asePageSizeDivider+" as [LogicalReadsMb__avg] \n"
+			    
+			    + "   ,cast('' as varchar(512))     as [RowsAffected__chart] \n"
 			    + "   ,sum([RowsAffected])          as [RowsAffected__sum] \n"
 			    + "   ,avg([RowsAffected])          as [RowsAffected__avg] \n"
+			    
+			    + "   ,cast('' as varchar(512))     as [LogicalReadsPerRowsAffected__chart] \n"
+				+ "   ,sum([LogicalReads]*1.0) / nullif(sum([RowsAffected]),0) as [LogicalReadsPerRowsAffected__avg] \n"
 			    
 //			    + "   ,sum([QueryOptimizationTime]) as [QueryOptimizationTime__sum] \n"
 //			    + "   ,avg([QueryOptimizationTime]) as [QueryOptimizationTime__avg] \n"
@@ -436,20 +438,20 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 //			    + "   ,avg([PacketsReceived])       as [PacketsReceived__avg] \n"
 			    + " \n"
 
-//				+ "   ,(sum([LogicalReads])*1.0) / (coalesce(sum([RowsAffected]),1)*1.0) as [LogicalReadsPerRowsAffected] \n"
-				+ "   ,-9999999.0 as [LogicalReadsPerRowsAffected] \n"
+//				+ "   ,(sum([LogicalReads])*1.0) / nullif(sum([RowsAffected]),0) as [LogicalReadsPerRowsAffected] \n"
+//				+ "   ,-9999999.0 as [LogicalReadsPerRowsAffected] \n"
+
+			    + "	  ,min([StartTime])             as [StartTime_min] \n"
+			    + "	  ,max([EndTime])               as [EndTime_max] \n"
+			    + "	  ,cast('' as varchar(30))      as [Duration] \n"
 				
 			    + "from [MonSqlCapStatements] \n"
 			    + "where 1 = 1 \n"
 			    + "  and [ErrorStatus] = 0 \n"
-//			    + "where [ProcName] is NULL \n"
-//			    + "where [ProcedureID] = 0 \n"
 				+ getReportPeriodSqlWhere("StartTime")
 			    + "group by [NormJavaSqlHashCode] \n"
-			    + "having [CpuTime__sum] >= " + havingSumCpuTime + " \n"
-//			    + "order by [ExecCount] desc \n"
-//			    + "order by [LogicalReads__sum] desc \n"
-			    + "order by [CpuTime__sum] desc \n"
+			    + "having "   + _sqlHavingCol  + " >= " + havingSumTime + " \n"
+			    + "order by " + _sqlOrderByCol + " desc \n"
 			    + "";
 		
 		_shortRstm = executeQuery(conn, sql, false, "Top SQL");
@@ -460,6 +462,9 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		}
 		else
 		{
+			// Highlight sort column
+			_shortRstm.setHighlightSortColumns(_orderByCol_noBrackets);
+
 			// Describe the table
 			setSectionDescription(_shortRstm);
 
@@ -469,33 +474,36 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 			// Fill in a column with a "skip link" to DbxCentral
 			setSkipEntriesUrl(_shortRstm, "SkipThis", "NormJavaSqlHashCode", null);
 						
-			// Do some calculations (which was hard to do in a PORTABLE SQL Way)
-			int pos_sumLogicalReads             = _shortRstm.findColumn("LogicalReads__sum");
-			int pos_sumRowsAffected             = _shortRstm.findColumn("RowsAffected__sum");
-			int pos_LogicalReadsPerRowsAffected = _shortRstm.findColumn("LogicalReadsPerRowsAffected");
-
-			if (pos_sumLogicalReads >= 0 && pos_sumRowsAffected >= 0 && pos_LogicalReadsPerRowsAffected >= 0)
-			{
-				for (int r=0; r<_shortRstm.getRowCount(); r++)
-				{
-					//------------------------------------------------
-					// set "LogicalReadsPerRowsAffected"
-					long sumLogicalReads = _shortRstm.getValueAsLong(r, pos_sumLogicalReads);
-					long sumRowsAffected = _shortRstm.getValueAsLong(r, pos_sumRowsAffected);
-
-					BigDecimal calc = new BigDecimal(-1);
-					if (sumRowsAffected > 0)
-						calc = new BigDecimal( (sumLogicalReads*1.0) / (sumRowsAffected*1.0) ).setScale(2, RoundingMode.HALF_EVEN);
-					
-					_shortRstm.setValueAtWithOverride(calc, r, pos_LogicalReadsPerRowsAffected);
-				}
-			}
+//			// Do some calculations (which was hard to do in a PORTABLE SQL Way)
+//			int pos_sumLogicalReads             = _shortRstm.findColumn("LogicalReads__sum");
+//			int pos_sumRowsAffected             = _shortRstm.findColumn("RowsAffected__sum");
+//			int pos_LogicalReadsPerRowsAffected = _shortRstm.findColumn("LogicalReadsPerRowsAffected");
+//
+//			if (pos_sumLogicalReads >= 0 && pos_sumRowsAffected >= 0 && pos_LogicalReadsPerRowsAffected >= 0)
+//			{
+//				for (int r=0; r<_shortRstm.getRowCount(); r++)
+//				{
+//					//------------------------------------------------
+//					// set "LogicalReadsPerRowsAffected"
+//					long sumLogicalReads = _shortRstm.getValueAsLong(r, pos_sumLogicalReads);
+//					long sumRowsAffected = _shortRstm.getValueAsLong(r, pos_sumRowsAffected);
+//
+//					BigDecimal calc = new BigDecimal(-1);
+//					if (sumRowsAffected > 0)
+//						calc = new BigDecimal( (sumLogicalReads*1.0) / (sumRowsAffected*1.0) ).setScale(2, RoundingMode.HALF_EVEN);
+//					
+//					_shortRstm.setValueAtWithOverride(calc, r, pos_LogicalReadsPerRowsAffected);
+//				}
+//			}
 
 
 			// Remove anything from the *SKIP* entries
 			_skippedDsrRows = removeSkippedEntries(_shortRstm, topRows, getDsrSkipEntries());
 
-			// Mini Chart on "ExecCount"
+			//----------------------------------------
+			// Spark lines -- mini charts
+			//----------------------------------------
+
 			// Get data for: SparkLine - small chart values ... this will do:
 			//  -- fill in the data cell with: <span class='aClassName' values='v1, v2, v2, v3...'>Mini Chart Here</span>
 			//  -- return JavaScript Code to initialize the Spark line
@@ -510,10 +518,19 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 					.setDbmsDataValueColumnName  ("1") // not actually a column name, but will be used as: sum(1)   
 					.setDbmsDataValueColumnNameIsExpression(true) // do NOT quotify the 'dbmsDataValueColumnName' 
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
-					.setSparklineTooltipPostfix  ("Number of execution in below period")
+//					.setSparklineTooltipPostfix  ("Number of execution in below period")
 					.validate()));
 
-			// Mini Chart on "CPU Time"
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("Elapsed_ms__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("MonSqlCapStatements")
+					.setDbmsSampleTimeColumnName ("StartTime")
+					.setDbmsDataValueColumnName  ("Elapsed_ms")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.validate()));
+
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
 					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("CpuTime__chart")
@@ -522,10 +539,8 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 					.setDbmsSampleTimeColumnName ("StartTime")
 					.setDbmsDataValueColumnName  ("CpuTime")   
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
-					.setSparklineTooltipPostfix  ("CPU Time in ms")
 					.validate()));
 
-			// Mini Chart on "Wait Time"
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
 					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("WaitTime__chart")
@@ -534,10 +549,18 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 					.setDbmsSampleTimeColumnName ("StartTime")
 					.setDbmsDataValueColumnName  ("WaitTime")   
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
-					.setSparklineTooltipPostfix  ("Wait Time in ms")
 					.validate()));
 
-			// Mini Chart on "Physical Reads"
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("MemUsageKB__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("MonSqlCapStatements")
+					.setDbmsSampleTimeColumnName ("StartTime")
+					.setDbmsDataValueColumnName  ("MemUsageKB")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.validate()));
+
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
 					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("PhysicalReads__chart")
@@ -546,10 +569,8 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 					.setDbmsSampleTimeColumnName ("StartTime")
 					.setDbmsDataValueColumnName  ("PhysicalReads")   
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
-					.setSparklineTooltipPostfix  ("Number of Physical Reads in below period")
 					.validate()));
 
-			// Mini Chart on "Logical Reads"
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
 					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("LogicalReads__chart")
@@ -558,7 +579,37 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 					.setDbmsSampleTimeColumnName ("StartTime")
 					.setDbmsDataValueColumnName  ("LogicalReads")   
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
-					.setSparklineTooltipPostfix  ("Number of Logical Reads in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("LogicalReadsMb__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("MonSqlCapStatements")
+					.setDbmsSampleTimeColumnName ("StartTime")
+//					.setDbmsDataValueColumnName  ("LogicalReads")   
+					.setDbmsDataValueColumnName  ("sum([LogicalReads]) * 1.0 / " + asePageSizeDivider).setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("RowsAffected__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("MonSqlCapStatements")
+					.setDbmsSampleTimeColumnName ("StartTime")
+					.setDbmsDataValueColumnName  ("RowsAffected")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("LogicalReadsPerRowsAffected__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("MonSqlCapStatements")
+					.setDbmsSampleTimeColumnName ("StartTime")
+					.setDbmsDataValueColumnName  ("sum([LogicalReads]*1.0) / nullif(sum([RowsAffected]),0)").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 					.validate()));
 
 			
@@ -607,31 +658,64 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 				}
 			}
 
-			// Get SQL Text
+			//----------------------------------------------------
+			// Create a SQL-Details ResultSet based on values in _shortRstm
+			//----------------------------------------------------
 			if (_shortRstm.getRowCount() > 0)
 			{
-				// For each record... try to get the SQL Text based on the NormJavaSqlHashCode
+				SimpleResultSet srs = new SimpleResultSet();
+
+				srs.addColumn("NormJavaSqlHashCode", Types.VARCHAR,       60, 0);
+				srs.addColumn("Skip This"          , Types.VARCHAR,       60, 0);
+				srs.addColumn("Sparklines"         , Types.VARCHAR,      512, 0); 
+				srs.addColumn("txt"                , Types.VARCHAR,       60, 0);
+				srs.addColumn("wait"               , Types.VARCHAR,       60, 0);
+				srs.addColumn("NormSQLText"        , Types.VARCHAR, 1024*128, 0); // this is 'text' in the origin table
+
+				// Position in the "source" _shortRstm table (values we will fetch)
 				int pos_NormJavaSqlHashCode = _shortRstm.findColumn("NormJavaSqlHashCode");
-				if (pos_NormJavaSqlHashCode != -1)
+				int pos_skipThis            = _shortRstm.findColumn("SkipThis");
+				int pos_txt                 = _shortRstm.findColumn("txt");
+				int pos_wait                = _shortRstm.findColumn("wait");
+
+
+				ColumnCopyRender msToHMS    = HtmlTableProducer.MS_TO_HMS;
+				ColumnCopyRender oneDecimal = HtmlTableProducer.ONE_DECIMAL;
+				
+				HtmlTableProducer htp = new HtmlTableProducer(_shortRstm, "dsr-sub-table-chart");
+				htp.setTableHeaders("Charts at 10 minute interval", "Total;style='text-align:right!important'", "Avg per exec;style='text-align:right!important'", "");
+				htp.add("exec-cnt"  , new ColumnCopyRow().add( new ColumnCopyDef("ExecCount__chart"                   ) ).add(new ColumnCopyDef("ExecCount").setColBold())   .addEmptyCol()                                                        .addEmptyCol() );
+				htp.add("exec-time" , new ColumnCopyRow().add( new ColumnCopyDef("Elapsed_ms__chart"                  ) ).add(new ColumnCopyDef("Elapsed_ms__sum", msToHMS) ).add(new ColumnCopyDef("Elapsed_ms__avg"                 , oneDecimal).setColBold()).add(new ColumnStatic("ms" )) );
+				htp.add("cpu-time"  , new ColumnCopyRow().add( new ColumnCopyDef("CpuTime__chart"                     ) ).add(new ColumnCopyDef("CpuTime__sum"   , msToHMS) ).add(new ColumnCopyDef("CpuTime__avg"                    , oneDecimal).setColBold()).add(new ColumnStatic("ms" )) );
+				htp.add("wait-time" , new ColumnCopyRow().add( new ColumnCopyDef("WaitTime__chart"                    ) ).add(new ColumnCopyDef("WaitTime__sum"  , msToHMS) ).add(new ColumnCopyDef("WaitTime__avg"                   , oneDecimal).setColBold()).add(new ColumnStatic("ms" )) );
+				htp.add("l-read"    , new ColumnCopyRow().add( new ColumnCopyDef("LogicalReads__chart"                ) ).add(new ColumnCopyDef("LogicalReads__sum"       ) ).add(new ColumnCopyDef("LogicalReads__avg"               , oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
+				htp.add("l-read-mb" , new ColumnCopyRow().add( new ColumnCopyDef("LogicalReadsMb__chart"              ) ).add(new ColumnCopyDef("LogicalReadsMb__sum"     ) ).add(new ColumnCopyDef("LogicalReadsMb__avg"             , oneDecimal).setColBold()).add(new ColumnStatic("mb" )) );
+				htp.add("p-read"    , new ColumnCopyRow().add( new ColumnCopyDef("PhysicalReads__chart"               ) ).add(new ColumnCopyDef("PhysicalReads__sum"      ) ).add(new ColumnCopyDef("PhysicalReads__avg"              , oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
+				htp.add("rowcount"  , new ColumnCopyRow().add( new ColumnCopyDef("RowsAffected__chart"                ) ).add(new ColumnCopyDef("RowsAffected__sum"       ) ).add(new ColumnCopyDef("RowsAffected__avg"               , oneDecimal).setColBold()).add(new ColumnStatic("#"  )) );
+				htp.add("l-read/row", new ColumnCopyRow().add( new ColumnCopyDef("LogicalReadsPerRowsAffected__chart" ) ).add(new ColumnStatic ("n/a").setColAlign("right") ).add(new ColumnCopyDef("LogicalReadsPerRowsAffected__avg", oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
+				htp.add("mem-use"   , new ColumnCopyRow().add( new ColumnCopyDef("MemUsageKB__chart"                  ) ).add(new ColumnCopyDef("MemUsageKB__sum"         ) ).add(new ColumnCopyDef("MemUsageKB__avg"                 , oneDecimal).setColBold()).add(new ColumnStatic("kb" )) );
+				htp.validate();
+
+				// add rows to Simple ResultSet
+				if (pos_NormJavaSqlHashCode >= 0)
 				{
 					for (int r=0; r<_shortRstm.getRowCount(); r++)
 					{
-						int NormJavaSqlHashCode = _shortRstm.getValueAsInteger(r, pos_NormJavaSqlHashCode);
-						
-						if (NormJavaSqlHashCode != -1)
+						String NormJavaSqlHashCode = _shortRstm.getValueAsString(r, pos_NormJavaSqlHashCode);
+						String skipThis            = _shortRstm.getValueAsString(r, pos_skipThis);
+						String txt                 = _shortRstm.getValueAsString(r, pos_txt);
+						String wait                = _shortRstm.getValueAsString(r, pos_wait);
+						String sqlText             = "--not-found--";
+
+						// get the SQL Text
+						if (true)
 						{
 							String col_NormSQLText = "[NormSQLText]";
 							if (hasDictCompCols)
-								col_NormSQLText = DictCompression.getRewriteForColumnName(sqlTextTable, "NormSQLText$dcc$").replace(" AS [NormSQLText]", "");
+								col_NormSQLText = DictCompression.getRewriteForColumnName(sqlTextTable, "NormSQLText$dcc$", null).replace(" AS [NormSQLText]", "");
 
 							sql = ""
-								    + "select distinct \n"
-								    + "    [NormJavaSqlHashCode] \n"
-								    + "   ,cast('' as varchar(512)) as [SkipThis] \n"
-								    + "   ,cast('' as varchar(512)) as [CpuTime] \n"
-								    + "   ,cast('' as varchar(10))  as [txt] \n"
-								    + "   ,cast('' as varchar(10))  as [wait] \n"
-								    + "   ," + col_NormSQLText + " as [NormSQLText] \n"
+								    + "select " + col_NormSQLText + " as [NormSQLText] \n"
 								    + "from [" + sqlTextTable + "] \n"
 								    + "where [NormJavaSqlHashCode] = " + NormJavaSqlHashCode + " \n"
 								    + "";
@@ -643,42 +727,160 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 								stmnt.setQueryTimeout(0);
 								try ( ResultSet rs = stmnt.executeQuery(sql) )
 								{
-//									ResultSetTableModel rstm = new ResultSetTableModel(rs, "SqlDetails");
-									ResultSetTableModel rstm = createResultSetTableModel(rs, "SqlDetails", sql);
-									
-									if (_longRstm == null)
-										_longRstm = rstm;
-									else
-										_longRstm.add(rstm);
-	
-									// Fill in a column with a "skip link" to DbxCentral
-									setSkipEntriesUrl(_longRstm, "SkipThis", "NormJavaSqlHashCode", "NormSQLText");
-									
-									if (_logger.isDebugEnabled())
-										_logger.debug("SqlDetails.getRowCount()="+ rstm.getRowCount());
+									while(rs.next())
+										sqlText = rs.getString(1);
 								}
 							}
 							catch(SQLException ex)
 							{
 								setProblemException(ex);
 	
-								_logger.warn("Problems getting SQL by NormJavaSqlHashCode = "+NormJavaSqlHashCode+": " + ex);
-							} 
-							catch(ModelMissmatchException ex)
-							{
-								setProblemException(ex);
-	
-								_logger.warn("Problems (merging into previous ResultSetTableModel) when getting SQL by NormJavaSqlHashCode = "+NormJavaSqlHashCode+": " + ex);
+								_logger.warn("Problems getting SQL by NormJavaSqlHashCode = "+NormJavaSqlHashCode+": " + ex + ". SQL=|" + sql + "|.");
 							} 
 						}
 						
-					} // end: _shortRstm row loop
+						// Parse the 'sqlText' and extract Table Names..
+						// - then get table information (like we do in 'AseTopCmObjectActivity')
+						String tableInfo = "";
+						boolean parseSqlText = true;
+						if (parseSqlText)
+						{
+							// Parse the SQL Text to get all tables that are used in the Statement
+							String problemDesc = "";
+							List<String> tableList = Collections.emptyList();
+							try { tableList = SqlParserUtils.getTables(sqlText, true); }
+							catch (ParseException pex) { problemDesc = pex + ""; }
 
-					// Mini Chart on "CPU Time"
-					// COPY Cell data from the "details" table
-					_longRstm.copyCellContentFrom(_shortRstm, "NormJavaSqlHashCode", "CpuTime__chart",   "NormJavaSqlHashCode", "CpuTime");
+							// Get information about ALL tables in list 'tableList' from the DDL Storage
+							List<AseTableInfo> tableInfoList = getTableInformationFromMonDdlStorage(conn, tableList);
+							if (tableInfoList.isEmpty() && StringUtil.isNullOrBlank(problemDesc))
+								problemDesc = "&emsp; &bull; No tables was found in the DDL Storage for tables: " + tableList;
+
+							// And make it into a HTML table with various information about the table and indexes 
+							tableInfo = problemDesc + getTableInfoAsHtmlTable(tableInfoList, tableList, true, "dsr-sub-table-tableinfo");
+
+							// Finally make up a message that will be appended to the SQL Text
+							if (StringUtil.hasValue(tableInfo))
+							{
+								// Surround with collapse div
+								tableInfo = ""
+										//+ "<!--[if !mso]><!--> \n" // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+
+										+ "\n<br>\n<br>\n"
+										+ "<details open> \n"
+										+ "<summary>Show/Hide Table information for: " + tableList + "</summary> \n"
+										+ tableInfo
+										+ "</details> \n"
+
+										//+ "<!--<![endif]-->    \n" // END: IGNORE THIS SECTION FOR OUTLOOK
+										+ "";
+							}
+						}
+						
+						// Grab all SparkLines we defined in 'subTableRowSpec'
+						String sparklines = htp.getHtmlTextForRow(r);
+
+						sqlText = "<xmp>" + sqlText + "</xmp>" + tableInfo;
+						
+						//-------------------------------------
+						// add record to SimpleResultSet
+						srs.addRow(NormJavaSqlHashCode, skipThis, sparklines, txt, wait, sqlText);
+					}
+				}
+
+				// GET SQLTEXT (only)
+				try
+				{
+					// Note the 'srs' is populated when reading above ResultSet from query
+					_sqlRstm = createResultSetTableModel(srs, "Top SQL TEXT", null);
+					srs.close();
+				}
+				catch (SQLException ex)
+				{
+					setProblemException(ex);
+		
+					_sqlRstm = ResultSetTableModel.createEmpty("Top SQL TEXT");
+					_logger.warn("Problems getting Top SQL TEXT: " + ex);
 				}
 			}
-		}
-	}
-}
+
+//			if (_shortRstm.getRowCount() > 0)
+//			{
+//				// For each record... try to get the SQL Text based on the NormJavaSqlHashCode
+//				int pos_NormJavaSqlHashCode = _shortRstm.findColumn("NormJavaSqlHashCode");
+//				if (pos_NormJavaSqlHashCode != -1)
+//				{
+//					for (int r=0; r<_shortRstm.getRowCount(); r++)
+//					{
+//						int NormJavaSqlHashCode = _shortRstm.getValueAsInteger(r, pos_NormJavaSqlHashCode);
+//						
+//						if (NormJavaSqlHashCode != -1)
+//						{
+//							String col_NormSQLText = "[NormSQLText]";
+//							if (hasDictCompCols)
+//								col_NormSQLText = DictCompression.getRewriteForColumnName(sqlTextTable, "NormSQLText$dcc$", null).replace(" AS [NormSQLText]", "");
+//
+//							sql = ""
+//								    + "select distinct \n"
+//								    + "    [NormJavaSqlHashCode] \n"
+//								    + "   ,cast('' as varchar(512))  as [SkipThis] \n"
+//								    + "   ,cast('' as varchar(512))  as [CpuTime] \n"
+//								    + "   ,cast('' as varchar(10))   as [txt] \n"
+//								    + "   ,cast('' as varchar(10))   as [wait] \n"
+//								    + "   ,cast(-1 as int        )   as [calls] \n"
+//								    + "   ,cast(-1 as decimal(16,1)) as [avg_time] \n"
+//								    + "   ," + col_NormSQLText + "   as [NormSQLText] \n"
+//								    + "from [" + sqlTextTable + "] \n"
+//								    + "where [NormJavaSqlHashCode] = " + NormJavaSqlHashCode + " \n"
+//								    + "";
+//							
+//							sql = conn.quotifySqlString(sql);
+//							try ( Statement stmnt = conn.createStatement() )
+//							{
+//								// Unlimited execution time
+//								stmnt.setQueryTimeout(0);
+//								try ( ResultSet rs = stmnt.executeQuery(sql) )
+//								{
+////									ResultSetTableModel rstm = new ResultSetTableModel(rs, "SqlDetails");
+//									ResultSetTableModel rstm = createResultSetTableModel(rs, "SqlDetails", sql);
+//									
+//									if (_sqlRstm == null)
+//										_sqlRstm = rstm;
+//									else
+//										_sqlRstm.add(rstm);
+//	
+//									// Fill in a column with a "skip link" to DbxCentral
+//									setSkipEntriesUrl(_sqlRstm, "SkipThis", "NormJavaSqlHashCode", "NormSQLText");
+//									
+//									if (_logger.isDebugEnabled())
+//										_logger.debug("SqlDetails.getRowCount()="+ rstm.getRowCount());
+//								}
+//							}
+//							catch(SQLException ex)
+//							{
+//								setProblemException(ex);
+//	
+//								_logger.warn("Problems getting SQL by NormJavaSqlHashCode = "+NormJavaSqlHashCode+": " + ex);
+//							} 
+//							catch(ModelMissmatchException ex)
+//							{
+//								setProblemException(ex);
+//	
+//								_logger.warn("Problems (merging into previous ResultSetTableModel) when getting SQL by NormJavaSqlHashCode = "+NormJavaSqlHashCode+": " + ex);
+//							} 
+//						}
+//						
+//					} // end: _shortRstm row loop
+//
+//					// Mini Chart on "CPU Time"
+//					// COPY Cell data from the "details" table
+//					_sqlRstm.copyCellContentFrom(_shortRstm, "NormJavaSqlHashCode", "CpuTime__chart" , "NormJavaSqlHashCode", "CpuTime");
+//					_sqlRstm.copyCellContentFrom(_shortRstm, "NormJavaSqlHashCode", "ExecCount"      , "NormJavaSqlHashCode", "calls");
+//					_sqlRstm.copyCellContentFrom(_shortRstm, "NormJavaSqlHashCode", "Elapsed_ms__avg", "NormJavaSqlHashCode", "avg_time");
+//				}
+//			}
+		} // end: _shortRstm has data
+		
+	} // end: method
+	
+} // end: class

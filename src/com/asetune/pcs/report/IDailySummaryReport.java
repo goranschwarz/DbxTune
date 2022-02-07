@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import java.io.File;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.List;
@@ -93,13 +94,19 @@ extends AutoCloseable
 	/**
 	 * Save a report for "archiving"... For example: To DbxCentral, so it can be viewed at a later stage.
 	 */
-	public void save();
+	void save();
+
+	/**
+	 * If the report is saved by the save() method, then return the File here!
+	 * @return File or null if not available
+	 */
+	File getReportFile();
 
 	/**
 	 * Remove old report from the "archive"
 	 */
 	void removeOldReports();
-
+	
 
 	/**
 	 * Set the implementation for a ReportSender

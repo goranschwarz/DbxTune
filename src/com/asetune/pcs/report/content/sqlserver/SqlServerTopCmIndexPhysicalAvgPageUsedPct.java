@@ -45,14 +45,14 @@ extends SqlServerAbstract
 		return false;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		if (_shortRstm.getRowCount() == 0)
@@ -126,6 +126,9 @@ extends SqlServerAbstract
 		}
 		else
 		{
+			// Highlight sort column
+			_shortRstm.setHighlightSortColumns("avg_page_space_used_in_percent");
+
 			// Remove some columns which we dont really need
 			rstm.removeColumnNoCase("SessionStartTime");
 			rstm.removeColumnNoCase("SessionSampleTime");

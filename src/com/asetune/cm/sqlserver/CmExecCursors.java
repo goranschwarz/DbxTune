@@ -160,7 +160,8 @@ extends CountersModel
 //		String sql = "select * from sys." + dm_exec_cursors + "(0)";
 
 		String sql = ""
-			    + "select c.* \n"
+			    + "select /* ${cmCollectorName} */ \n" 
+				+ "     c.* \n"
 			    + "    ,isnull(txt.dbid, -1)     AS dbid \n"
 			    + "    ,isnull(txt.objectid, -1) AS objectid \n"
 			    + "    ,substring(txt.text, (c.statement_start_offset/2)+1, \n"

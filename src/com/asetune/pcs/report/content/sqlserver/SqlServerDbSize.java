@@ -49,14 +49,14 @@ extends SqlServerAbstract
 		return false;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		// Get a description of this section, and column names
@@ -258,6 +258,9 @@ extends SqlServerAbstract
 			    + "";
 		
 		_shortRstm = executeQuery(conn, sql, true, "CmDatabases_abs");
+
+		// Highlight sort column
+		_shortRstm.setHighlightSortColumns("DbSizeInMb");
 
 		// Describe the table
 		setSectionDescription(_shortRstm);

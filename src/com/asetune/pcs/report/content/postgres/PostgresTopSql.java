@@ -38,11 +38,19 @@ import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.ReportEntryAbstract;
-import com.asetune.pcs.report.content.ase.SparklineHelper;
-import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
-import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
+import com.asetune.pcs.report.content.SparklineHelper;
+import com.asetune.pcs.report.content.SparklineHelper.AggType;
+import com.asetune.pcs.report.content.SparklineHelper.DataSource;
+import com.asetune.pcs.report.content.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.HtmlTableProducer;
+import com.asetune.utils.HtmlTableProducer.ColumnCopyDef;
+import com.asetune.utils.HtmlTableProducer.ColumnCopyRender;
+import com.asetune.utils.HtmlTableProducer.ColumnCopyRow;
+import com.asetune.utils.HtmlTableProducer.ColumnStatic;
+import com.asetune.utils.HtmlTableProducer.EmptyColumn;
+import com.asetune.utils.StringUtil;
 
 public class PostgresTopSql
 extends ReportEntryAbstract
@@ -53,6 +61,12 @@ extends ReportEntryAbstract
 	private ResultSetTableModel _sqTextRstm;
 //	private Exception           _problem = null;
 	private List<String>        _miniChartJsList = new ArrayList<>();
+
+	public static final String PROPKEY_skip_dbname_csv   = "PostgresTopSql.skip.dbname.csv";
+	public static final String DEFAULT_skip_dbname_csv   = null;
+
+	public static final String PROPKEY_skip_username_csv = "PostgresTopSql.skip.username.csv";
+	public static final String DEFAULT_skip_username_csv = null;
 
 	public PostgresTopSql(DailySummaryReportAbstract reportingInstance)
 	{
@@ -65,15 +79,15 @@ extends ReportEntryAbstract
 		return true;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-		writeMessageText(w);
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//		writeMessageText(w);
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		if (_shortRstm.getRowCount() == 0)
@@ -82,48 +96,86 @@ extends ReportEntryAbstract
 		}
 		else
 		{
-			// Get a description of this section, and column names
-			sb.append(getSectionDescriptionHtml(_shortRstm, true));
-
-//			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
-			sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
-			TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
+			// Full information, including (top summary table)
+			if (isFullMessageType())
 			{
-				@Override
-				public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+				// Get a description of this section, and column names
+				sb.append(getSectionDescriptionHtml(_shortRstm, true));
+
+				sb.append("Optional settings:<br>\n");
+				sb.append(" &emsp; &bull; Skip any database(s) in the below table, set property <code>" + PROPKEY_skip_dbname_csv + "=db1,db2,db3</code> <br>\n");
+				sb.append(" &emsp; &bull; Skip any username(s) in the below table, set property <code>" + PROPKEY_skip_username_csv + "=user1,user2</code> <br>\n");
+				sb.append("<br>\n");
+
+//				sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+				sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
+				TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
 				{
-					if ("query".equals(colName))
+					@Override
+					public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
 					{
-						// Get Actual Executed SQL Text for current row
-						String queryid = rstm.getValueAsString(row, "queryid");
-						
-						// Put the "Actual Executed SQL Text" as a "tooltip"
-						return "<div title='Click for Detailes' "
-								+ "data-toggle='modal' "
-								+ "data-target='#dbx-view-sqltext-dialog' "
-								+ "data-objectname='" + queryid + "' "
-								+ "data-tooltip=\""   + getTooltipForSqlText(rstm, row) + "\" "
-								+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+						if ("query".equals(colName))
+						{
+							// Get Actual Executed SQL Text for current row
+							String queryid = rstm.getValueAsString(row, "queryid");
+							
+							// Put the "Actual Executed SQL Text" as a "tooltip"
+							return "<div title='Click for Detailes' "
+									+ "data-toggle='modal' "
+									+ "data-target='#dbx-view-sqltext-dialog' "
+									+ "data-objectname='" + queryid + "' "
+									+ "data-tooltip=\""   + getTooltipForSqlText(rstm, row) + "\" "
+									+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+						}
+
+						return strVal;
 					}
+				};
+				sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+			}
 
-					return strVal;
-				}
-			};
-			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, tableRender));
-//			sb.append(toHtmlTable(_shortRstm));
-
+			// The "sub table" with pivot info on most mini-charts/sparkline
 			if (_sqTextRstm != null)
 			{
+//				sb.append("<br>\n");
+//				sb.append("SQL Text by queryid, Row Count: " + _sqTextRstm.getRowCount() + " (This is the same SQL Text as the in the above table, but without all counter details).<br>\n");
+//				sb.append(toHtmlTable(_sqTextRstm));
+
+				sb.append("<br>\n");
+				sb.append("<details open> \n");
+				sb.append("<summary>Details for above Statements, including SQL Text (click to collapse) </summary> \n");
+				
 				sb.append("<br>\n");
 				sb.append("SQL Text by queryid, Row Count: " + _sqTextRstm.getRowCount() + " (This is the same SQL Text as the in the above table, but without all counter details).<br>\n");
 				sb.append(toHtmlTable(_sqTextRstm));
+
+				sb.append("\n");
+				sb.append("</details> \n");
 			}
 		}
 		
 		// Write JavaScript code for CPU SparkLine
-		for (String str : _miniChartJsList)
+		if (isFullMessageType())
 		{
-			sb.append(str);
+			for (String str : _miniChartJsList)
+				sb.append(str);
+		}
+	}
+
+	/** Format Numbers with comma separators for readability), everything else "as is" */
+	private String format(Object obj)
+	{
+		if (obj == null)
+			return null;
+
+		if (obj instanceof Number)
+		{
+			NumberFormat nf = NumberFormat.getInstance();
+			return nf.format( (Number) obj );
+		}
+		else
+		{
+			return obj.toString();
 		}
 	}
 
@@ -131,7 +183,6 @@ extends ReportEntryAbstract
 	private String getTooltipForSqlText(ResultSetTableModel rstm, int row)
 	{
 		StringBuilder sb = new StringBuilder();
-		NumberFormat nf = NumberFormat.getInstance();
 
 		sb.append("-- Some columns extracted from current row.\n");
 		sb.append("-----------------------------------------------------------------------------------------------\n");
@@ -142,24 +193,27 @@ extends ReportEntryAbstract
 		sb.append("-- SessionSampleTime__max:       ").append( rstm.getValueAsString(row, "SessionSampleTime__max"    ) ).append("\n");
 		sb.append("-- Duration:                     ").append( rstm.getValueAsString(row, "Duration"                 ) ).append("\n");
 		
-		sb.append("-- calls__sum:                   ").append( nf.format(rstm.getValueAsBigDecimal(row, "calls__sum"                  ))).append("\n");
-		sb.append("-- avg_time_per_call__avg:       ").append( nf.format(rstm.getValueAsBigDecimal(row, "avg_time_per_call__avg"      ))).append("\n");
-		sb.append("-- total_time__sum:              ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_time__sum"             ))).append("\n");
-		sb.append("-- avg_rows_per_call__avg:       ").append( nf.format(rstm.getValueAsBigDecimal(row, "avg_rows_per_call__avg"      ))).append("\n");
-		sb.append("-- rows__sum:                    ").append( nf.format(rstm.getValueAsBigDecimal(row, "rows__sum"                   ))).append("\n");
-		sb.append("-- shared_blks_hit_per_row__avg: ").append( nf.format(rstm.getValueAsBigDecimal(row, "shared_blks_hit_per_row__avg"))).append("\n");
-		sb.append("-- shared_blks_hit__sum:         ").append( nf.format(rstm.getValueAsBigDecimal(row, "shared_blks_hit__sum"        ))).append("\n");
-		sb.append("-- shared_blks_read__sum:        ").append( nf.format(rstm.getValueAsBigDecimal(row, "shared_blks_read__sum"       ))).append("\n");
-		sb.append("-- shared_blks_dirtied__sum:     ").append( nf.format(rstm.getValueAsBigDecimal(row, "shared_blks_dirtied__sum"    ))).append("\n");
-		sb.append("-- shared_blks_written__sum:     ").append( nf.format(rstm.getValueAsBigDecimal(row, "shared_blks_written__sum"    ))).append("\n");
-		sb.append("-- local_blks_hit__sum:          ").append( nf.format(rstm.getValueAsBigDecimal(row, "local_blks_hit__sum"         ))).append("\n");
-		sb.append("-- local_blks_read__sum:         ").append( nf.format(rstm.getValueAsBigDecimal(row, "local_blks_read__sum"        ))).append("\n");
-		sb.append("-- local_blks_dirtied__sum:      ").append( nf.format(rstm.getValueAsBigDecimal(row, "local_blks_dirtied__sum"     ))).append("\n");
-		sb.append("-- local_blks_written__sum:      ").append( nf.format(rstm.getValueAsBigDecimal(row, "local_blks_written__sum"     ))).append("\n");
-		sb.append("-- temp_blks_read__sum:          ").append( nf.format(rstm.getValueAsBigDecimal(row, "temp_blks_read__sum"         ))).append("\n");
-		sb.append("-- temp_blks_written__sum:       ").append( nf.format(rstm.getValueAsBigDecimal(row, "temp_blks_written__sum"      ))).append("\n");
-		sb.append("-- blks_read_time__sum:          ").append( nf.format(rstm.getValueAsBigDecimal(row, "blks_read_time__sum"         ))).append("\n");
-		sb.append("-- blks_write_time__sum:         ").append( nf.format(rstm.getValueAsBigDecimal(row, "blks_write_time__sum"        ))).append("\n");
+		sb.append("-- calls__sum:                   ").append( format(rstm.getValueAsBigDecimal(row, "calls__sum"                  ))).append("\n");
+//		sb.append("-- avg_time_per_call__avg:       ").append( format(rstm.getValueAsBigDecimal(row, "avg_time_per_call__avg"      ))).append("\n");
+		sb.append("-- total_time__per_call:         ").append( format(rstm.getValueAsBigDecimal(row, "total_time__per_call"        ))).append("\n");
+		sb.append("-- total_time__sum:              ").append( format(rstm.getValueAsBigDecimal(row, "total_time__sum"             ))).append("\n");
+//		sb.append("-- avg_rows_per_call__avg:       ").append( format(rstm.getValueAsBigDecimal(row, "avg_rows_per_call__avg"      ))).append("\n");
+		sb.append("-- rows__per_call:               ").append( format(rstm.getValueAsBigDecimal(row, "rows__per_call"              ))).append("\n");
+		sb.append("-- rows__sum:                    ").append( format(rstm.getValueAsBigDecimal(row, "rows__sum"                   ))).append("\n");
+		sb.append("-- cache_hit_pct__avg:           ").append( format(rstm.getValueAsBigDecimal(row, "cache_hit_pct__avg"          ))).append("\n");
+//		sb.append("-- shared_blks_hit_per_row__avg: ").append( format(rstm.getValueAsBigDecimal(row, "shared_blks_hit_per_row__avg"))).append("\n");
+		sb.append("-- shared_blks_hit__sum:         ").append( format(rstm.getValueAsBigDecimal(row, "shared_blks_hit__sum"        ))).append("\n");
+		sb.append("-- shared_blks_read__sum:        ").append( format(rstm.getValueAsBigDecimal(row, "shared_blks_read__sum"       ))).append("\n");
+		sb.append("-- shared_blks_dirtied__sum:     ").append( format(rstm.getValueAsBigDecimal(row, "shared_blks_dirtied__sum"    ))).append("\n");
+		sb.append("-- shared_blks_written__sum:     ").append( format(rstm.getValueAsBigDecimal(row, "shared_blks_written__sum"    ))).append("\n");
+		sb.append("-- local_blks_hit__sum:          ").append( format(rstm.getValueAsBigDecimal(row, "local_blks_hit__sum"         ))).append("\n");
+		sb.append("-- local_blks_read__sum:         ").append( format(rstm.getValueAsBigDecimal(row, "local_blks_read__sum"        ))).append("\n");
+		sb.append("-- local_blks_dirtied__sum:      ").append( format(rstm.getValueAsBigDecimal(row, "local_blks_dirtied__sum"     ))).append("\n");
+		sb.append("-- local_blks_written__sum:      ").append( format(rstm.getValueAsBigDecimal(row, "local_blks_written__sum"     ))).append("\n");
+		sb.append("-- temp_blks_read__sum:          ").append( format(rstm.getValueAsBigDecimal(row, "temp_blks_read__sum"         ))).append("\n");
+		sb.append("-- temp_blks_written__sum:       ").append( format(rstm.getValueAsBigDecimal(row, "temp_blks_written__sum"      ))).append("\n");
+		sb.append("-- blks_read_time__sum:          ").append( format(rstm.getValueAsBigDecimal(row, "blks_read_time__sum"         ))).append("\n");
+		sb.append("-- blks_write_time__sum:         ").append( format(rstm.getValueAsBigDecimal(row, "blks_write_time__sum"        ))).append("\n");
 		sb.append("-----------------------------------------------------------------------------------------------\n");
 		sb.append(StringEscapeUtils.escapeHtml4(rstm.getValueAsString(row, "query")));
 
@@ -213,7 +267,8 @@ extends ReportEntryAbstract
 		rstm.setColumnDescription("avg_rows_per_call__avg"      , "Average 'number of rows retrived' per call   (Algorithm: rows / calls)");
 		rstm.setColumnDescription("rows_sum"                    , "Total number of rows retrieved or affected by the statement");
 
-		rstm.setColumnDescription("shared_blks_hit_per_row__avg", "Average 'number of cache reads' per call     (Algorithm: shared_blks_hit / calls)");
+		rstm.setColumnDescription("cache_hit_pct__avg"          , "Average blockes found in cache by the statement (Algorithm: 100.0 * shared_blks_hit / (shared_blks_hit + shared_blks_read)");
+//		rstm.setColumnDescription("shared_blks_hit_per_row__avg", "Average 'number of cache reads' per call     (Algorithm: shared_blks_hit / calls)");
 		rstm.setColumnDescription("shared_blks_hit__sum"        , "Total number of shared block cache hits by the statement");
 		rstm.setColumnDescription("shared_blks_read__sum"       , "Total number of shared blocks read by the statement");
 		rstm.setColumnDescription("shared_blks_dirtied__sum"    , "Total number of shared blocks dirtied by the statement");
@@ -260,46 +315,94 @@ extends ReportEntryAbstract
 		if (hasDictCompCols)
 			col_query = "query$dcc$";
 
+
+		// Skip DB name(s)
+		String skip_dbname   = "";
+		List<String> skipDbnameList   = StringUtil.parseCommaStrToList(Configuration.getCombinedConfiguration().getProperty(PROPKEY_skip_dbname_csv, DEFAULT_skip_dbname_csv), true);
+		if ( ! skipDbnameList.isEmpty() )
+			skip_dbname = "  and [datname] not in(" + StringUtil.toCommaStrQuoted("'", skipDbnameList) + ") \n";
+
+		// Skip user name(s)
+		String skip_username = "";
+		List<String> skipUsernameList = StringUtil.parseCommaStrToList(Configuration.getCombinedConfiguration().getProperty(PROPKEY_skip_username_csv, DEFAULT_skip_username_csv), true);
+		if ( ! skipUsernameList.isEmpty() )
+			skip_username = "  and [usename] not in(" + StringUtil.toCommaStrQuoted("'", skipUsernameList) + ") \n";
+
 		// GET ALL INFO
 		String sql = getCmDiffColumnsAsSqlComment("CmPgStatements")
 			    + "select top " + topRows + " \n"
-			    + "	 [datname] \n"
-			    + "	,[usename] \n"
-			    + "	,[queryid] \n"
-			    + "	,min([" + col_query + "])                               as [query] \n"
-			    + "	,count(*)                                               as [samples_count] \n"
-			    + "	,min([SessionSampleTime])                               as [SessionSampleTime__min] \n"
-			    + "	,max([SessionSampleTime])                               as [SessionSampleTime__max] \n"
-			    + "	,cast('' as varchar(30))                                as [Duration] \n"
-			    + "	,sum([CmSampleMs])                                      as [CmSampleMs__sum] \n"
+			    + "     [datname] \n"
+			    + "    ,[usename] \n"
+			    + "    ,[queryid] \n"
+			    + "    ,min([" + col_query + "])                                                             as [query] \n"
+			    + " \n"                                                                                      
+			    + "    ,cast('' as varchar(512))                                                             as [calls__chart] \n"
+			    + "    ,sum([calls])                                                                         as [calls__sum] \n"
+
+			    + "    ,cast('' as varchar(512))                                                             as [total_time__chart] \n"
+			    + "    ,CAST( sum([total_time])        AS DECIMAL(20,0) )                                    as [total_time__sum] \n"					// 0 decimals for readability
+//			    + "    ,CAST( avg([avg_time_per_call]) AS DECIMAL(19,1) )                                    as [avg_time_per_call__avg] \n"			// 1 decimal (so we can track sub millisecond executions)
+			    + "    ,CAST( sum([total_time])          * 1.0 / nullif(sum([calls]), 0) AS DECIMAL(19,1) )  as [total_time__per_call] \n"			// 1 decimal (so we can track sub millisecond executions)
+
+			    + "    ,cast('' as varchar(512))                                                             as [rows__chart] \n"
+			    + "    ,sum([rows])                                                                          as [rows__sum] \n"
+//			    + "    ,avg([avg_rows_per_call])                                                             as [avg_rows_per_call__avg] \n"
+			    + "    ,CAST( sum([rows]) / nullif(sum([calls]), 0) AS DECIMAL(19,1) )                       as [rows__per_call] \n"
 			    + " \n"
-			    + " ,cast('' as varchar(512))                               as [calls__chart] \n"
-			    + "	,sum([calls])                                           as [calls__sum] \n"
-			    + "	,CAST( avg([avg_time_per_call]) AS DECIMAL(20,1) )      as [avg_time_per_call__avg] \n"			// needs rounding
-			    + " ,cast('' as varchar(512))                               as [total_time__chart] \n"
-			    + "	,CAST( sum([total_time])        AS DECIMAL(20,1) )      as [total_time__sum] \n"					// needs rounding
-			    + "	,avg([avg_rows_per_call])                               as [avg_rows_per_call__avg] \n"
-			    + "	,sum([rows])                                            as [rows__sum] \n"
+				+ "    ,cast('' as varchar(512))                                                             as [cache_hit_pct__chart] \n"
+			    + "    ,CAST( avg(100.0 * [shared_blks_hit] / nullif([shared_blks_hit] + [shared_blks_read], 0)) AS DECIMAL(5,1) ) as [cache_hit_pct__avg] \n"
+
+				+ "    ,cast('' as varchar(512))                                                             as [logical_reads__chart] \n"
+				+ "    ,sum([shared_blks_hit] + [shared_blks_read])                                          as [logical_reads__sum] \n"
+				+ "    ,CAST( sum([shared_blks_hit] + [shared_blks_read]) * 1.0 / nullif(sum([calls]), 0) AS DECIMAL(19,1) )      as [logical_reads__per_call] \n"
+			    
+				+ "    ,cast('' as varchar(512))                                                             as [shared_blks_hit__chart] \n"
+			    + "    ,sum([shared_blks_hit])                                                               as [shared_blks_hit__sum] \n"
+			    + "    ,CAST( sum([shared_blks_hit])     * 1.0 / nullif(sum([calls]), 0) AS DECIMAL(19,1) )  as [shared_blks_hit__per_call] \n"
+
+			    + "    ,cast('' as varchar(512))                                                             as [shared_blks_read__chart] \n"
+			    + "    ,sum([shared_blks_read])                                                              as [shared_blks_read__sum] \n"
+			    + "    ,CAST( sum([shared_blks_read])    * 1.0 / nullif(sum([calls]), 0) AS DECIMAL(19,1) )  as [shared_blks_read__per_call] \n"
+
+			    + "    ,cast('' as varchar(512))                                                             as [shared_blks_dirtied__chart] \n"
+			    + "    ,sum([shared_blks_dirtied])                                                           as [shared_blks_dirtied__sum] \n"
+			    + "    ,CAST( sum([shared_blks_dirtied]) * 1.0 / nullif(sum([calls]), 0) AS DECIMAL(19,1) )  as [shared_blks_dirtied__per_call] \n"
+
+			    + "    ,cast('' as varchar(512))                                                             as [shared_blks_written__chart] \n"
+			    + "    ,sum([shared_blks_written])                                                           as [shared_blks_written__sum] \n"
+			    + "    ,CAST( sum([shared_blks_written]) * 1.0 / nullif(sum([calls]), 0) AS DECIMAL(19,1) )  as [shared_blks_written__per_call] \n"
 			    + " \n"
-			    + "	,avg([shared_blks_hit_per_row])                         as [shared_blks_hit_per_row__avg] \n"
-			    + "	,sum([shared_blks_hit])                                 as [shared_blks_hit__sum] \n"
-			    + "	,sum([shared_blks_read])                                as [shared_blks_read__sum] \n"
-			    + "	,sum([shared_blks_dirtied])                             as [shared_blks_dirtied__sum] \n"
-			    + "	,sum([shared_blks_written])                             as [shared_blks_written__sum] \n"
-			    + " \n"                                                     
-			    + "	,sum([local_blks_hit])                                  as [local_blks_hit__sum] \n"
-			    + "	,sum([local_blks_read])                                 as [local_blks_read__sum] \n"
-			    + "	,sum([local_blks_dirtied])                              as [local_blks_dirtied__sum] \n"
-			    + "	,sum([local_blks_written])                              as [local_blks_written__sum] \n"
-			    + " \n"                                                     
-			    + "	,sum([temp_blks_read])                                  as [temp_blks_read__sum] \n"
-			    + "	,sum([temp_blks_written])                               as [temp_blks_written__sum] \n"
-			    + " \n"                                                     
-			    + "	,sum([blk_read_time])                                   as [blks_read_time__sum] \n"
-			    + "	,sum([blk_write_time])                                  as [blks_write_time__sum] \n"
+			    + "    ,sum([local_blks_hit])                                                                as [local_blks_hit__sum] \n"
+			    + "    ,sum([local_blks_read])                                                               as [local_blks_read__sum] \n"
+			    + "    ,sum([local_blks_dirtied])                                                            as [local_blks_dirtied__sum] \n"
+			    + "    ,sum([local_blks_written])                                                            as [local_blks_written__sum] \n"
+			    + " \n"
+			    + "    ,cast('' as varchar(512))                                                             as [temp_blks_read__chart] \n"
+			    + "    ,sum([temp_blks_read])                                                                as [temp_blks_read__sum] \n"
+			    + "    ,CAST( sum([temp_blks_read])      * 1.0 / nullif(sum([calls]), 0) AS DECIMAL(19,1) )  as [temp_blks_read__per_call] \n"
+			    
+			    + "    ,cast('' as varchar(512))                                                             as [temp_blks_written__chart] \n"
+			    + "    ,sum([temp_blks_written])                                                             as [temp_blks_written__sum] \n"
+			    + "    ,CAST( sum([temp_blks_written])   * 1.0 / nullif(sum([calls]), 0) AS DECIMAL(19,1) )  as [temp_blks_written__per_call] \n"
+			    + " \n"
+			    + "    ,sum([blk_read_time])                                                                 as [blks_read_time__chart] \n"
+			    + "    ,sum([blk_read_time])                                                                 as [blks_read_time__sum] \n"
+			    + "    ,CAST( sum([blk_read_time])       * 1.0 / nullif(sum([calls]), 0) AS DECIMAL(19,1) )  as [blk_read_time__per_call] \n"
+			    
+			    + "    ,sum([blk_write_time])                                                                as [blks_write_time__chart] \n"
+			    + "    ,sum([blk_write_time])                                                                as [blks_write_time__sum] \n"
+			    + "    ,CAST( sum([blk_write_time])      * 1.0 / nullif(sum([calls]), 0) AS DECIMAL(19,1) )  as [blk_write_time__per_call] \n"
+			    + " \n"
+			    + "    ,count(*)                                                                             as [samples_count] \n"
+			    + "    ,min([SessionSampleTime])                                                             as [SessionSampleTime__min] \n"
+			    + "    ,max([SessionSampleTime])                                                             as [SessionSampleTime__max] \n"
+			    + "    ,cast('' as varchar(30))                                                              as [Duration] \n"
+			    + "    ,sum([CmSampleMs])                                                                    as [CmSampleMs__sum] \n"
 			    + "from [CmPgStatements_diff] x \n"
 //			    + "where [usename] != 'postgres' \n"
 			    + "where [calls] > 0 \n"                          // do only get records that has been executed (even if presented in the "Statement cache")
+			    + skip_dbname
+			    + skip_username
 				+ getReportPeriodSqlWhere()
 			    + "group by [datname], [usename], [queryid] \n"
 			    + "order by [total_time__sum] desc \n"
@@ -313,6 +416,9 @@ extends ReportEntryAbstract
 		}
 		else
 		{
+			// Highlight sort column
+			_shortRstm.setHighlightSortColumns("total_time__sum");
+
 			// Describe the table
 			setSectionDescription(_shortRstm);
 
@@ -320,29 +426,264 @@ extends ReportEntryAbstract
 			setDurationColumn(_shortRstm, "SessionSampleTime_min", "SessionSampleTime_max", "Duration");
 						
 			
+			//--------------------------------------------------------------------------------
+			// Mini Chart on "..."
+			//--------------------------------------------------------------------------------
+			String whereKeyColumn = "datname, usename, queryid"; 
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("calls__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgStatements_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("calls")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Number of times executed in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("total_time__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgStatements_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+//					.setDbmsDataValueColumnName  ("total_time")
+					.setDbmsDataValueColumnName  ("sum(1.0*[total_time]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setDecimalScale(3) // just use whole numbers for this
+//					.setDecimalScale(0) // just use whole numbers for this
+					.setSparklineTooltipPostfix  ("Total time spent in the statement in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("rows__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgStatements_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+//					.setDbmsDataValueColumnName  ("rows")
+					.setDbmsDataValueColumnName  ("sum(1.0*[rows]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setDecimalScale(1) // just use whole numbers for this
+//					.setDecimalScale(0) // just use whole numbers for this
+					.setSparklineTooltipPostfix  ("Total 'rows' in the statement in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("cache_hit_pct__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgStatements_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("100.0 * sum([shared_blks_hit]) / nullif(sum([shared_blks_hit] + [shared_blks_read]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setDecimalScale(2) // just use whole numbers for this
+					.setSparklineTooltipPostfix  ("Total 'pages read' from CACHE and DISK for the statement in below period")
+					.validate()));
+
+// the below charts: are getting "total" for the mement... but we might want to divide that witch "calls" in period, to easier read the values... 
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("logical_reads__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgStatements_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+//					.setDbmsDataValueColumnName  ("sum([shared_blks_hit] + [shared_blks_read])").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsDataValueColumnName  ("sum(1.0*[shared_blks_hit] + [shared_blks_read]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+//					.setDecimalScale(0) // just use whole numbers for this
+					.setDecimalScale(1)
+					.setSparklineTooltipPostfix  ("Total 'pages read' from CACHE and DISK for the statement in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("shared_blks_hit__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgStatements_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+//					.setDbmsDataValueColumnName  ("shared_blks_hit")
+					.setDbmsDataValueColumnName  ("sum(1.0*[shared_blks_hit]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+//					.setDecimalScale(0) // just use whole numbers for this
+					.setDecimalScale(1)
+					.setSparklineTooltipPostfix  ("Total 'pages read' from CACHE for the statement in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("shared_blks_read__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgStatements_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+//					.setDbmsDataValueColumnName  ("shared_blks_read")
+					.setDbmsDataValueColumnName  ("sum(1.0*[shared_blks_read]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+//					.setDecimalScale(0) // just use whole numbers for this
+					.setDecimalScale(1)
+					.setSparklineTooltipPostfix  ("Total 'pages read' from DISK for the statement in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("shared_blks_dirtied__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgStatements_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+//					.setDbmsDataValueColumnName  ("shared_blks_dirtied")
+					.setDbmsDataValueColumnName  ("sum(1.0*[shared_blks_dirtied]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+//					.setDecimalScale(0) // just use whole numbers for this
+					.setDecimalScale(1)
+					.setSparklineTooltipPostfix  ("Total 'pages' changed by the statement in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("shared_blks_written__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgStatements_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+//					.setDbmsDataValueColumnName  ("shared_blks_written")
+					.setDbmsDataValueColumnName  ("sum(1.0*[shared_blks_written]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+//					.setDecimalScale(0) // just use whole numbers for this
+					.setDecimalScale(1)
+					.setSparklineTooltipPostfix  ("Total 'pages' synchronously written to disk by the statement in below period")
+					.validate()));
+
+			
+			
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("temp_blks_read__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgStatements_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+//					.setDbmsDataValueColumnName  ("temp_blks_read")
+					.setDbmsDataValueColumnName  ("sum(1.0*[temp_blks_read]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+//					.setDecimalScale(0) // just use whole numbers for this
+					.setDecimalScale(1)
+					.setSparklineTooltipPostfix  ("Total 'temp_blks_read' by the statement in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("temp_blks_written__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgStatements_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+//					.setDbmsDataValueColumnName  ("temp_blks_written")
+					.setDbmsDataValueColumnName  ("sum(1.0*[temp_blks_written]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+//					.setDecimalScale(0) // just use whole numbers for this
+					.setDecimalScale(1)
+					.setSparklineTooltipPostfix  ("Total 'temp_blks_written' by the statement in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("blks_read_time__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgStatements_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+//					.setDbmsDataValueColumnName  ("blk_read_time")
+					.setDbmsDataValueColumnName  ("sum(1.0*[blk_read_time]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+//					.setDecimalScale(0) // just use whole numbers for this
+					.setDecimalScale(1)
+					.setSparklineTooltipPostfix  ("Total 'blk_read_time' by the statement in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("blks_write_time__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgStatements_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+//					.setDbmsDataValueColumnName  ("blk_write_time")
+					.setDbmsDataValueColumnName  ("sum(1.0*[blk_write_time]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+//					.setDecimalScale(0) // just use whole numbers for this
+					.setDecimalScale(1)
+					.setSparklineTooltipPostfix  ("Total 'blk_write_time' by the statement in below period")
+					.validate()));
+
+			//----------------------------------------------------
 			// Create a SQL-Details ResultSet based on values in _shortRstm
+			//----------------------------------------------------
 			SimpleResultSet srs = new SimpleResultSet();
 
-			srs.addColumn("datname",           Types.VARCHAR,       60, 0);
-			srs.addColumn("usename",           Types.VARCHAR,       60, 0);
-			srs.addColumn("queryid",           Types.BIGINT,         0, 0);
-			srs.addColumn("total_time__chart", Types.VARCHAR,      512, 0); 
-			srs.addColumn("query",             Types.VARCHAR, 1024*128, 0); // this is 'text' in the origin table
+			srs.addColumn("datname",    Types.VARCHAR,       60, 0);
+			srs.addColumn("usename",    Types.VARCHAR,       60, 0);
+			srs.addColumn("queryid",    Types.BIGINT,         0, 0);
+			srs.addColumn("sparklines", Types.VARCHAR,      512, 0); 
+//			srs.addColumn("total_time" , Types.VARCHAR,      30, 0);
+//			srs.addColumn("calls",      Types.BIGINT,         0, 0); 
+//			srs.addColumn("avg_time",   Types.DECIMAL,       20, 1); 
+			srs.addColumn("query",      Types.VARCHAR, 1024*128, 0); // this is 'text' in the origin table
 
-
+			// Position in the "source" _shortRstm table (values we will fetch)
 			int pos_datname    = _shortRstm.findColumn("datname");
 			int pos_usename    = _shortRstm.findColumn("usename");
 			int pos_queryid    = _shortRstm.findColumn("queryid");
+//			int pos_total_time = _shortRstm.findColumn("total_time__sum");
+//			int pos_calls      = _shortRstm.findColumn("calls__sum");
+//			int pos_avg_time   = _shortRstm.findColumn("avg_time_per_call__avg");
 			int pos_query      = _shortRstm.findColumn("query");
 
+			// Define what columns/SparkLines to: copy from "above RSTM" table into a "sub table"
+//			LinkedHashMap<String, String> subTableRowSpec = new LinkedHashMap<>();
+//			subTableRowSpec.put("calls__chart"              , "call-cnt");
+//			subTableRowSpec.put("total_time__chart"         , "exec-time");
+//			subTableRowSpec.put("rows__chart"               , "rows");
+//			subTableRowSpec.put("cache_hit_pct__chart"      , "cache-hit");
+//			subTableRowSpec.put("logical_reads__chart"      , "total-read");
+////			subTableRowSpec.put("shared_blks_hit__chart"    , "cache-read");
+//			subTableRowSpec.put("shared_blks_read__chart"   , "phys-read");
+//			subTableRowSpec.put("shared_blks_dirtied__chart", "dirtied");
+////			subTableRowSpec.put("shared_blks_written__chart", "written");
+//			subTableRowSpec.put("temp_blks_read__chart"     , "tmp-read");
+//			subTableRowSpec.put("temp_blks_written__chart"  , "tmp-write");
+
+			ColumnCopyRender msToHMS    = HtmlTableProducer.MS_TO_HMS;
+			ColumnCopyRender oneDecimal = HtmlTableProducer.ONE_DECIMAL;
+			
+			HtmlTableProducer htp = new HtmlTableProducer(_shortRstm, "dsr-sub-table-chart");
+			htp.setTableHeaders("Charts at 10 minute interval", "Total;style='text-align:right!important'", "Avg per call;style='text-align:right!important'", "");
+			htp.add("call-cnt"  , new ColumnCopyRow().add( new ColumnCopyDef("calls__chart"              ) ).add(new ColumnCopyDef("calls__sum").setColBold() ).addEmptyCol()                                                               .addEmptyCol() );
+			htp.add("exec-time" , new ColumnCopyRow().add( new ColumnCopyDef("total_time__chart"         ) ).add(new ColumnCopyDef("total_time__sum", msToHMS)).add(new ColumnCopyDef("total_time__per_call"         , oneDecimal).setColBold()).add(new ColumnStatic("ms")) );
+			htp.add("rows"      , new ColumnCopyRow().add( new ColumnCopyDef("rows__chart"               ) ).add(new ColumnCopyDef("rows__sum"               )).add(new ColumnCopyDef("rows__per_call"               , oneDecimal).setColBold()).add(new ColumnStatic("rows")) );
+			htp.add("cache-hit" , new ColumnCopyRow().add( new ColumnCopyDef("cache_hit_pct__chart"      ) ).add(new EmptyColumn(                            )).add(new ColumnCopyDef("cache_hit_pct__avg"           , oneDecimal).setColBold()).add(new ColumnStatic("%")) );
+			htp.add("total-read", new ColumnCopyRow().add( new ColumnCopyDef("logical_reads__chart"      ) ).add(new ColumnCopyDef("logical_reads__sum"      )).add(new ColumnCopyDef("logical_reads__per_call"      , oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
+//			htp.add("cache-read", new ColumnCopyRow().add( new ColumnCopyDef("shared_blks_hit__chart"    ) ).add(new ColumnCopyDef("shared_blks_hit__sum"    )).add(new ColumnCopyDef("shared_blks_hit__per_call"    , oneDec).setColBold()).add(new ColumnStatic("pgs")) );
+			htp.add("phys-read" , new ColumnCopyRow().add( new ColumnCopyDef("shared_blks_read__chart"   ) ).add(new ColumnCopyDef("shared_blks_read__sum"   )).add(new ColumnCopyDef("shared_blks_read__per_call"   , oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
+			htp.add("dirtied"   , new ColumnCopyRow().add( new ColumnCopyDef("shared_blks_dirtied__chart") ).add(new ColumnCopyDef("shared_blks_dirtied__sum")).add(new ColumnCopyDef("shared_blks_dirtied__per_call", oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
+//			htp.add("written"   , new ColumnCopyRow().add( new ColumnCopyDef("shared_blks_written__chart") ).add(new ColumnCopyDef("shared_blks_written__sum")).add(new ColumnCopyDef("shared_blks_written__per_call", oneDec).setColBold()).add(new ColumnStatic("pgs")) );
+			htp.add("tmp-read"  , new ColumnCopyRow().add( new ColumnCopyDef("temp_blks_read__chart"     ) ).add(new ColumnCopyDef("temp_blks_read__sum"     )).add(new ColumnCopyDef("temp_blks_read__per_call"     , oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
+			htp.add("tmp-write" , new ColumnCopyRow().add( new ColumnCopyDef("temp_blks_written__chart"  ) ).add(new ColumnCopyDef("temp_blks_written__sum"  )).add(new ColumnCopyDef("temp_blks_written__per_call"  , oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
+			htp.validate();
+			
+			// loop "data table" and create "sql table" 
 			if (pos_datname >= 0 && pos_usename >= 0 && pos_queryid >= 0 && pos_query >= 0)
 			{
 				for (int r=0; r<_shortRstm.getRowCount(); r++)
 				{
-					String  datname  = _shortRstm.getValueAsString (r, pos_datname);
-					String  usename  = _shortRstm.getValueAsString (r, pos_usename);
-					Long    queryid  = _shortRstm.getValueAsLong   (r, pos_queryid);
-					String  query    = _shortRstm.getValueAsString (r, pos_query);
+					String     datname    = _shortRstm.getValueAsString    (r, pos_datname);
+					String     usename    = _shortRstm.getValueAsString    (r, pos_usename);
+					Long       queryid    = _shortRstm.getValueAsLong      (r, pos_queryid);
+//					Long       total_time = _shortRstm.getValueAsLong      (r, pos_total_time);
+//					Long       calls      = _shortRstm.getValueAsLong      (r, pos_calls);
+//					BigDecimal avg_time   = _shortRstm.getValueAsBigDecimal(r, pos_avg_time);
+					String     query      = _shortRstm.getValueAsString    (r, pos_query);
+
+					// ms -> HH:MM:SS
+//					String total_time_duration = TimeUtils.msToTimeStrDHMS(total_time); 
+
+//					String sparklines = _shortRstm.createHtmlKeyValueTableFromRow(r, subTableRowSpec, "dsr-sub-table-chart");
+					String sparklines = htp.getHtmlTextForRow(r);
 
 					// When using Dictionary Compression the "query" is just a hashId
 					// So get the real Query TEXT from the key/value lookup table
@@ -363,7 +704,8 @@ extends ReportEntryAbstract
 					}
 
 					// add record to SimpleResultSet
-					srs.addRow(datname, usename, queryid, "", "<xmp>" + query + "</xmp>");
+//					srs.addRow(datname, usename, queryid, sparklines, total_time_duration, calls, avg_time, "<xmp>" + query + "</xmp>");
+					srs.addRow(datname, usename, queryid, sparklines, "<xmp>" + query + "</xmp>");
 				}
 			}
 
@@ -382,36 +724,6 @@ extends ReportEntryAbstract
 				_logger.warn("Problems getting Top SQL TEXT: " + ex);
 			}
 
-
-			// Mini Chart on "..."
-			String whereKeyColumn = "datname, usename, queryid"; 
-			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create       (DataSource.CounterModel)
-					.setHtmlChartColumnName      ("calls__chart")
-					.setHtmlWhereKeyColumnName   (whereKeyColumn)
-					.setDbmsTableName            ("CmPgStatements_diff")
-					.setDbmsSampleTimeColumnName ("SessionSampleTime")
-					.setDbmsDataValueColumnName  ("calls")   
-					.setDbmsWhereKeyColumnName   (whereKeyColumn)
-					.setSparklineTooltipPostfix  ("Number of times executed in below period")
-					.validate()));
-
-			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-					SparkLineParams.create       (DataSource.CounterModel)
-					.setHtmlChartColumnName      ("total_time__chart")
-					.setHtmlWhereKeyColumnName   (whereKeyColumn)
-					.setDbmsTableName            ("CmPgStatements_diff")
-					.setDbmsSampleTimeColumnName ("SessionSampleTime")
-					.setDbmsDataValueColumnName  ("total_time")
-					.setDbmsWhereKeyColumnName   (whereKeyColumn)
-					.setDecimalScale(0) // just use whole numbers for this
-					.setSparklineTooltipPostfix  ("Total time spent in the statement in below period")
-					.validate()));
-
-			// Mini Chart on "CPU Time"
-			// COPY Cell data from the "details" table
-			_sqTextRstm.copyCellContentFrom(_shortRstm, whereKeyColumn, "total_time__chart", whereKeyColumn, "total_time__chart");
-			
 		}
 	}
 }

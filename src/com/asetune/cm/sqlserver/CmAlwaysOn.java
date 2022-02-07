@@ -540,7 +540,7 @@ extends CountersModel
 			mtd.addColumn("CmAlwaysOn", "s_LogSendQueue                      ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Log Send Queue'                   , ${dbname}                     <br>" + pcttd + "View on 'Secondary'. Amount of log records in the log files of the primary database, in kilobytes, that haven't been sent to the secondary replica. This value is sent to the secondary replica from the primary replica. Queue size doesn't include FILESTREAM files that are sent to a secondary.</html>"); 
 			mtd.addColumn("CmAlwaysOn", "s_RecoveryQueue                     ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Recovery Queue'                   , ${dbname}                     <br>" + pcttd + "View on 'Secondary'. Amount of log records in the log files of the secondary replica that have not been redone.	</html>"); 
 			mtd.addColumn("CmAlwaysOn", "s_RedoneBytesPerSec                 ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Redone Bytes/sec'                 , ${dbname}                     <br>" + pcttd + "View on 'Secondary'. Amount of log records redone on the secondary database in the last second.</html>"); 
-			mtd.addColumn("CmAlwaysOn", "s_RedonesPerSec                     ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Redones/sec'                      , ${dbname}                     <br>" + pcttd + "View on 'Secondary'. -not-found-in-manual- </html>"); 
+			mtd.addColumn("CmAlwaysOn", "s_RedonesPerSec                     ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Redones/sec'                      , ${dbname}                     <br>" + pcttd + "View on 'Secondary'. --not-found-in-manual-- </html>"); 
 			mtd.addColumn("CmAlwaysOn", "s_LogApplyReadyQueue                ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Log Apply Ready Queue'            , ${dbname}                     <br>" + pcttd + "View on 'Secondary'. Number of log blocks that are waiting and ready to be applied to the database replica.</html>"); 
 			mtd.addColumn("CmAlwaysOn", "s_LogApplyPendingQueue              ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Log Apply Pending Queue'          , ${dbname}                     <br>" + pcttd + "View on 'Secondary'. Number of log blocks that are waiting to be applied to the database replica.</html>"); 
 			mtd.addColumn("CmAlwaysOn", "s_LogBytesReceivedPerSec            ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Log Bytes Received/sec'           , ${dbname}                     <br>" + pcttd + "View on 'Secondary'. Amount of log records received by the secondary replica for the database in the last second.</html>"); 
@@ -1113,7 +1113,7 @@ extends CountersModel
 
 
 		String sql = ""
-			+ "select \n"
+			+ "select /* ${cmCollectorName} */ \n"
 			+ "     locality                              = CASE WHEN ars.is_local = 1 THEN convert(varchar(20), 'LOCAL') ELSE convert(varchar(20), 'REMOTE') END \n" // Make it 20 so REMOTE-LIVE-DATA also fits
 			+ "    ,server_name                           = ar.replica_server_name \n"
 			+ "    ,ag_name                               = ag.name \n"

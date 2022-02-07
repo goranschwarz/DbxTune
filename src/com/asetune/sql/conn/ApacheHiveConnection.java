@@ -79,4 +79,11 @@ extends DbxConnection
 //	}
 // workbench.db.postgresql.opentransaction.query=select count(*) from pg_locks where pid = pg_backend_pid() and locktype in ('transactionid') and mode = 'ExclusiveLock'
 
+
+	@Override
+	protected int getDbmsSessionId_impl() throws SQLException
+	{
+		// I don't know how to get Session/connection ID... so lets just return -1 for unknown 
+		return -1;
+	}
 }

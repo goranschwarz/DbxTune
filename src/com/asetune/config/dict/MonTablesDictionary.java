@@ -31,6 +31,7 @@ import java.util.Map;
 import javax.naming.NameNotFoundException;
 
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.StringUtil;
 
 
 public abstract class MonTablesDictionary
@@ -259,6 +260,9 @@ public abstract class MonTablesDictionary
 		public String    _tableName       = null; // Name of the table
 		public String    _description     = null; // Description of the table
 
+		public static final int TABLE_NAME_MAXLEN  = 255;
+		public static final int DESCRIPTION_MAXLEN = 8000;
+
 		/** hashtable with MonTableColumnsEntry */
 		public HashMap<String,MonTableColumnsEntry> _monTableColumns = null;
 
@@ -287,6 +291,11 @@ public abstract class MonTablesDictionary
 		public String _typeName    = null; // Name of the data type of the column
 		public String _description = null; // Description of the column
 
+		public static final int TABLE_NAME_MAXLEN  = 255;
+		public static final int COLUMN_NAME_MAXLEN = 255;
+		public static final int TYPE_NAME_MAXLEN   = 255;
+		public static final int DESCRIPTION_MAXLEN = 8000;
+		
 		@Override
 		public String toString()
 		{
@@ -1095,8 +1104,8 @@ public abstract class MonTablesDictionary
 
 		MonTableEntry entry = new MonTableEntry();
 
-		entry._tableName    = tabName;
-		entry._description  = desc;
+		entry._tableName    = StringUtil.truncate(tabName, MonTableEntry.TABLE_NAME_MAXLEN , true, "addTable(): MonTableEntry._tableName");
+		entry._description  = StringUtil.truncate(desc   , MonTableEntry.DESCRIPTION_MAXLEN, true, "addTable(): MonTableEntry._description");;
 		
 		// Create substructure with the columns
 		entry._monTableColumns = new HashMap<String,MonTableColumnsEntry>();
@@ -1135,9 +1144,9 @@ public abstract class MonTablesDictionary
 		{
 			entry = new MonTableColumnsEntry();
 
-			entry._tableName    = tabName;
-			entry._columnName   = colName;
-			entry._description  = desc;
+			entry._tableName    = StringUtil.truncate(tabName, MonTableColumnsEntry.TABLE_NAME_MAXLEN , true, "addColumn(): MonTableColumnsEntry._tableName");
+			entry._columnName   = StringUtil.truncate(colName, MonTableColumnsEntry.COLUMN_NAME_MAXLEN, true, "addColumn(): MonTableColumnsEntry._columnName");
+			entry._description  = StringUtil.truncate(desc   , MonTableColumnsEntry.DESCRIPTION_MAXLEN, true, "addColumn(): MonTableColumnsEntry._description");
 
 			monTableEntry._monTableColumns.put(entry._columnName, entry);
 		}
@@ -1147,7 +1156,7 @@ public abstract class MonTablesDictionary
 			if (! currentDesc.trim().endsWith("."))
 				currentDesc = currentDesc.trim() + ".";
 
-			entry._description  = currentDesc + " " + desc;
+			entry._description  = StringUtil.truncate(currentDesc + " " + desc, MonTableColumnsEntry.DESCRIPTION_MAXLEN, true, "addColumn(exists): MonTableColumnsEntry._description");
 		}
 
 		
@@ -1181,9 +1190,9 @@ public abstract class MonTablesDictionary
 
 		MonTableColumnsEntry entry = new MonTableColumnsEntry();
 
-		entry._tableName    = tabName;
-		entry._columnName   = colName;
-		entry._description  = desc;
+		entry._tableName    = StringUtil.truncate(tabName, MonTableColumnsEntry.TABLE_NAME_MAXLEN , true, "setColumn(): MonTableColumnsEntry._tableName");
+		entry._columnName   = StringUtil.truncate(colName, MonTableColumnsEntry.COLUMN_NAME_MAXLEN, true, "setColumn(): MonTableColumnsEntry._columnName");
+		entry._description  = StringUtil.truncate(desc   , MonTableColumnsEntry.DESCRIPTION_MAXLEN, true, "setColumn(): MonTableColumnsEntry._description");
 		
 		monTableEntry._monTableColumns.put(entry._columnName, entry);
 	}

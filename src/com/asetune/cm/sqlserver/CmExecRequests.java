@@ -257,7 +257,8 @@ extends CountersModel
 			dm_exec_requests = "dm_exec_requests";  // SAME NAME IN AZURE ???
 
 		
-		String sql = "select * from sys." + dm_exec_requests;
+		String sql = "select *    /* ${cmCollectorName} */ \n"
+		           + "from sys." + dm_exec_requests;
 
 		return sql;
 	}

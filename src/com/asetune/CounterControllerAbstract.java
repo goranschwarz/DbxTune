@@ -1876,7 +1876,10 @@ implements ICounterController
 	{
 		_conn = conn;
 		if (isMonConnected())
+		{
 			_lastMonConnectTime = new Date();
+			onMonConnect(conn);
+		}
 	}
 
 	/**
@@ -1887,6 +1890,16 @@ implements ICounterController
 	public DbxConnection getMonConnection()
 	{
 		return _conn;
+	}
+
+	/**
+	 * After a Monitor Connection has been created, this is called so we can do various static settings on the newly created connection
+	 * <p>
+	 * This is called from {@link #setMonConnection(DbxConnection)}
+	 */
+	@Override
+	public void onMonConnect(DbxConnection conn)
+	{
 	}
 
 	/** Gets the <code>Connection</code> to the monitored server. */

@@ -25,8 +25,13 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.text.NumberFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -38,15 +43,19 @@ import java.util.Set;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 
+import com.asetune.cache.XmlPlanAseUtils;
 import com.asetune.gui.ModelMissmatchException;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.ReportEntryAbstract;
+import com.asetune.sql.SqlObjectName;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
+import com.asetune.utils.MathUtils;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
 
 public abstract class AseAbstract
 extends ReportEntryAbstract
@@ -129,6 +138,981 @@ extends ReportEntryAbstract
 		return set;
 	}
 
+	public int getAsePageSizeFromMonDdlStorage(DbxConnection conn)
+	throws SQLException
+	{
+		String sql = "select top 1 [asePageSize] from [CmSummary_abs]";
+		
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			int asePageSize = -1;
+
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while(rs.next())
+				{
+					asePageSize = rs.getInt(1);
+				}
+			}
+
+			return asePageSize;
+		}
+		catch(SQLException ex)
+		{
+			//_problem = ex;
+
+			_logger.warn("Problems getting ASE Page Size from DDL Storage.", ex);
+			throw ex;
+		}
+	}
+
+	public String getTableInfoAsHtmlTable(List<AseTableInfo> tableInfoList, List<String> tableList, boolean includeIndexInfo, String classname)
+	{
+		// Exit early: if no data
+		if (tableInfoList == null)   return "";
+		if (tableInfoList.isEmpty()) return "";
+		
+		StringBuilder sb = new StringBuilder();
+
+		// Figure out if we are missing any rows in 'tableInfoList' that existed in 'tableList'
+		if (tableList != null && tableList.size() > tableInfoList.size())
+		{
+			for(String tabName : tableList)
+			{
+				// Remove any "schema" names from the tableName
+//				SqlObjectName sqlObj = new SqlObjectName(tabName, DbUtils.DB_PROD_NAME_SYBASE_ASE, "\"", false, true);
+//				tabName = sqlObj.getObjectNameOrigin();
+
+				boolean exists = false;
+				for(AseTableInfo ti : tableInfoList)
+				{
+					if (tabName.equals(ti.getTableName()))
+					{
+						exists = true;
+						break;
+					}
+				}
+				if ( ! exists )
+				{
+					sb.append("&emsp; &bull; Table '").append(tabName).append("' was NOT found in the DDL Storage.<br>\n");
+				}
+			}
+		}
+		
+		String className = "";
+		if (StringUtil.hasValue(classname))
+			className = " class='" + classname + "'";
+		
+		sb.append("<table" + className + "> \n");
+
+		//--------------------------------------------------------------------------
+		// Table Header
+		sb.append("<thead> \n");
+		sb.append("<tr> \n");
+
+		sb.append("  <th>DBName</th> \n");
+		sb.append("  <th>Schema</th> \n");
+		sb.append("  <th>Table</th> \n");
+		sb.append("  <th>Rowcount</th> \n");
+		sb.append("  <th>Used MB</th> \n");
+		sb.append("  <th>Data MB</th> \n");
+		sb.append("  <th>Index MB</th> \n");
+		sb.append("  <th>Lock Scheme</th> \n");
+		sb.append("  <th>Index Count</th> \n");
+		
+		if (includeIndexInfo)
+			sb.append("  <th>Index Information</th> \n");
+
+		sb.append("</tr> \n");
+		sb.append("</thead> \n");
+
+		NumberFormat nf = NumberFormat.getInstance();
+
+		//--------------------------------------------------------------------------
+		// Table BODY
+		sb.append("<tbody> \n");
+		for (AseTableInfo entry : tableInfoList)
+		{
+			sb.append("<tr> \n");
+			sb.append("  <td>").append( entry.getDbName()                ).append("</td> \n");
+			sb.append("  <td>").append( entry.getSchemaName()            ).append("</td> \n");
+			sb.append("  <td>").append( entry.getTableName()             ).append("</td> \n");
+			sb.append("  <td>").append( nf.format( entry.getRowTotal()  )).append("</td> \n");
+			sb.append("  <td>").append( nf.format( entry.getSizeMb()    )).append("</td> \n");
+			sb.append("  <td>").append( nf.format( entry.getDataMb()    )).append("</td> \n");
+			sb.append("  <td>").append( nf.format( entry.getIndexMb()   )).append("</td> \n");
+			sb.append("  <td>").append( entry.getLockScheme()            ).append("</td> \n");
+			sb.append("  <td>").append( entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>"   )).append("</td> \n");
+			if (includeIndexInfo)
+				sb.append("  <td>").append( getIndexInfoAsHtmlTable(entry, classname) ).append("</td> \n");
+
+			sb.append("</tr> \n");
+		}
+		sb.append("</tbody> \n");
+		
+		//--------------------------------------------------------------------------
+		// Table Footer
+//		sb.append("<tfoot> \n");
+//		sb.append("<tr> \n");
+//
+//		sb.append("  <td></td> \n"); // first column is empty, which is the "row name"
+//
+//		sb.append("</tr> \n");
+//		sb.append("</tfoot> \n");
+
+		sb.append("</table> \n");
+		
+		return sb.toString();
+	}
+
+	public String getIndexInfoAsHtmlTable(AseTableInfo tableEntry, String classname)
+	{
+		// Exit early: if no data
+		if (tableEntry == null)   return "";
+
+		// Get the index list
+		List<AseIndexInfo> indexInfoList = tableEntry.getIndexList();
+
+		// Exit early: if no data
+		if (indexInfoList == null)   return "";
+		if (indexInfoList.isEmpty()) return "";
+		
+		StringBuilder sb = new StringBuilder();
+
+		String className = "";
+		if (StringUtil.hasValue(classname))
+			className = " class='" + classname + "'";
+		
+		sb.append("<table" + className + "> \n");
+
+		//--------------------------------------------------------------------------
+		// Table Header
+		sb.append("<thead> \n");
+		sb.append("<tr> \n");
+
+		sb.append("  <th>Index Name</th> \n");
+		sb.append("  <th>Keys</th> \n");
+		sb.append("  <th>Desciption</th> \n");
+		sb.append("  <th>Size MB</th> \n");
+		sb.append("  <th title='Average Bytes used per Row\nCalculted by: SizeBytes/TableRowcount'>Avg RowSize</th> \n");
+		sb.append("  <th>Reserved MB</th> \n");
+		sb.append("  <th>Unused MB</th> \n");
+//		sb.append("  <th>DDL</th> \n");
+
+		sb.append("  <th>IndexID</th> \n");
+
+		String tt1 = "\nTime span: During the report period.";
+		sb.append("  <th title='Number of Insert, Update and Deletes that has been done." + tt1                      + "'>RowsInsUpdDel</th> \n");
+		sb.append("  <th title='Number of times the optimizer selected this index to be used in a query plan." + tt1 + "'>OptSelectCount</th> \n");
+		sb.append("  <th title='Number of times the object was used in a plan during execution." + tt1               + "'>UsedCount</th> \n");
+		sb.append("  <th title='Number of times the object was accessed." + tt1                                      + "'>Operations</th> \n");
+
+		sb.append("  <th title='Indicates the date and time when the index structure was added to the ASE cache."    + "'>CacheDate</th> \n");
+		sb.append("  <th title='When was the index created."                                                         + "'>CrDate</th> \n");
+
+		String tt2 = "\nTime span: Since object was cached (see CacheDate)."
+		           + "\nNOTE: This counter is an integer that may/will wrap, if incremeted frequently."
+		           + "\nUse this to decide if the index has **ever** been used since CacheDate."
+		           + "\nA low value indicates that the index has NOT been used. And therefor may be an *unused* index.";
+		sb.append("  <th title='Number of Insert, Update and Deletes that has been done." + tt2                      + "'>AbsRowsInsUpdDel</th> \n");
+		sb.append("  <th title='Number of times the optimizer selected this index to be used in a query plan." + tt2 + "'>AbsOptSelectCount</th> \n");
+		sb.append("  <th title='Number of times the object was used in a plan during execution." + tt2               + "'>AbsUsedCount</th> \n");
+		sb.append("  <th title='Number of times the object was accessed." + tt2                                      + "'>AbsOperations</th> \n");
+
+		sb.append("</tr> \n");
+		sb.append("</thead> \n");
+
+		NumberFormat nf = NumberFormat.getInstance();
+
+		//--------------------------------------------------------------------------
+		// Table BODY
+		sb.append("<tbody> \n");
+		for (AseIndexInfo entry : indexInfoList)
+		{
+			long avgBytesPerRow = (entry.getSizeKb() * 1024L) / tableEntry.getRowTotal();
+
+			sb.append("<tr> \n");
+			sb.append("  <td>").append(            entry.getIndexName()          ).append("</td> \n");
+			sb.append("  <td>").append(            entry.getKeysStr()            ).append("</td> \n");
+			sb.append("  <td>").append(            entry.getDescription()        ).append("</td> \n");
+			sb.append("  <td>").append( nf.format( entry.getSizeMb()            )).append("</td> \n");
+			sb.append("  <td>").append( nf.format( avgBytesPerRow               )).append("</td> \n");
+			sb.append("  <td>").append( nf.format( entry.getReservedMb()        )).append("</td> \n");
+			sb.append("  <td>").append( nf.format( entry.getUnusedMb()          )).append("</td> \n");
+//			sb.append("  <td>").append(            entry.getDdlText()            ).append("</td> \n");
+
+			sb.append("  <td>").append(            entry.getIndexID()            ).append("</td> \n");
+			
+			sb.append("  <td>").append( nf.format( entry.getRowsInsUpdDel()     )).append("</td> \n");
+			sb.append("  <td>").append( nf.format( entry.getOptSelectCount()    )).append("</td> \n");
+			sb.append("  <td>").append( nf.format( entry.getUsedCount()         )).append("</td> \n");
+			sb.append("  <td>").append( nf.format( entry.getOperations()        )).append("</td> \n");
+
+			sb.append("  <td>").append(            entry.getCacheDateStr()       ).append("</td> \n");
+			sb.append("  <td>").append(            entry.getCreationDateStr()    ).append("</td> \n");
+
+			sb.append("  <td>").append( nf.format( entry.getAbsRowsInsUpdDel()  )).append("</td> \n");
+			sb.append("  <td>").append( nf.format( entry.getAbsOptSelectCount() )).append("</td> \n");
+			sb.append("  <td>").append( nf.format( entry.getAbsUsedCount()      )).append("</td> \n");
+			sb.append("  <td>").append( nf.format( entry.getAbsOperations()     )).append("</td> \n");
+			sb.append("</tr> \n");
+		}
+		sb.append("</tbody> \n");
+		
+		//--------------------------------------------------------------------------
+		// Table Footer
+//		sb.append("<tfoot> \n");
+//		sb.append("<tr> \n");
+//
+//		sb.append("  <td></td> \n"); // first column is empty, which is the "row name"
+//
+//		sb.append("</tr> \n");
+//		sb.append("</tfoot> \n");
+
+		sb.append("</table> \n");
+		
+		return sb.toString();
+	}
+
+	/**
+	 * FIXME
+	 */
+	public List<AseTableInfo> getTableInformationFromMonDdlStorage(DbxConnection conn, List<String> tableList)
+	{
+		// Exit early if nothing todo
+		if (tableList == null)   return Collections.emptyList();
+		if (tableList.isEmpty()) return Collections.emptyList();
+
+		// Put all the results back in one list
+		List<AseTableInfo> combinedReturnList = new ArrayList<>();
+		
+		for (String tableName : tableList)
+		{
+			try
+			{
+				List<AseTableInfo> tmpList = getTableInformationFromMonDdlStorage(conn, null, null, tableName);
+				
+				if (tmpList != null && !tmpList.isEmpty())
+					combinedReturnList.addAll(tmpList);
+			}
+			catch(SQLException ignore) 
+			{
+				// this is already logged in getTableInformationFromMonDdlStorage(...)
+				//_logger.error("Problems reading from DDL Storage.");
+			}
+		}
+		return combinedReturnList;
+	}
+	
+	/**
+	 * Get a list of AseTableInfo (basically sp_spaceused) 
+	 * 
+	 * @param conn       The connection to the PCS
+	 * @param dbname     Name of the database the object is in. (can be "" or null; or contains '%' SQL wild-card)
+	 * @param owner      Name of the schema   the object is in. (can be "" or null; or contains '%' SQL wild-card)
+	 * @param table      Name of the table                      (can be "" or null; or contains '%' SQL wild-card), can also contain DBName.schema which will override the parameters dbname and owner
+	 * 
+	 * @return A list of found entries, each as an entry of AseTableInfo.
+	 * 
+	 * @throws SQLException In case of issues.
+	 */
+	public List<AseTableInfo> getTableInformationFromMonDdlStorage(DbxConnection conn, String dbname, String owner, String table)
+	throws SQLException
+	{
+//		if (StringUtil.isNullOrBlank(dbname))
+//			return null;
+//		if (StringUtil.isNullOrBlank(table))
+//			return null;
+
+		// Check if 'table' has dbname/schema name specified.
+		SqlObjectName sqlObj = new SqlObjectName(table, DbUtils.DB_PROD_NAME_SYBASE_ASE, "\"", false, true);
+		if (sqlObj.hasCatalogName()) dbname = sqlObj.getCatalogNameOrigin();
+		if (sqlObj.hasSchemaName() ) owner  = sqlObj.getSchemaNameOrigin();
+		if (sqlObj.hasObjectName() ) table  = sqlObj.getObjectNameOrigin();
+		
+		if ("dbo".equalsIgnoreCase(owner))
+			owner = "";
+
+		String and_dbname = !StringUtil.hasValue(dbname) ? "" : "  and [dbname]     = " + DbUtils.safeStr(dbname) + " \n";
+		String and_owner  = !StringUtil.hasValue(owner)  ? "" : "  and [owner]      = " + DbUtils.safeStr(owner)  + " \n";
+		String and_table  = !StringUtil.hasValue(table)  ? "" : "  and [objectName] = " + DbUtils.safeStr(table)  + " \n";
+
+		if (and_dbname.contains("%")) and_dbname = and_dbname.replace(" = ", " like ");
+		if (and_owner .contains("%")) and_owner  = and_owner .replace(" = ", " like ");
+		if (and_table .contains("%")) and_table  = and_table .replace(" = ", " like ");
+
+		String sql = ""
+			    + "select [dbname], [owner], [objectName], [extraInfoText], [objectText] \n"
+			    + "from [MonDdlStorage] \n"
+			    + "where 1 = 1 \n"
+			    + "  and [type] = 'U' \n"
+			    + and_dbname
+			    + and_owner
+			    + and_table
+			    + "";
+		
+		List<AseTableInfo> tmpList = new ArrayList<>();
+		
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while(rs.next())
+				{
+					AseTableInfo ti = new AseTableInfo();
+					
+					ti._dbName        = rs.getString(1);
+					ti._schemaName    = rs.getString(2);
+					ti._tableName     = rs.getString(3);
+					ti._extraInfoText = rs.getString(4);
+					ti._objectText    = rs.getString(5);
+					
+					tmpList.add(ti);
+				}
+			}
+		}
+		catch(SQLException ex)
+		{
+			//_problem = ex;
+
+			_logger.warn("Problems getting Table Information for dbname='" + dbname + "', owner='" + owner + "', table='" + table + "': " + ex);
+			throw ex;
+		}
+
+		// Parse the values from "sp_spaceused" looking like below (between the ### lines)
+		//####################################################################################
+		//     index_name size    reserved unused
+		//     ---------- ------- -------- ------
+		//     MATSET_ND0 1824 KB 2080 KB  256 KB
+		//     MATSET_ND2 1008 KB 1180 KB  172 KB
+		//     MATSET_ND3 5928 KB 6036 KB  108 KB
+		//     name       rowtotal reserved data     index_size unused
+		//     ---------- -------- -------- -------- ---------- ------
+		//     MATSET_DBF 66932    36084 KB 26776 KB 8760 KB    532 KB		
+		//####################################################################################
+		// arrayPos:    0     1        2  3     4  5    6  7      8  9
+		//####################################################################################
+		
+		// If we want to parse out the "index names" and *INDEX COLUMNS* ... we can use the below from column "objectText"
+		//   |Object has the following indexes
+		//   | 
+		//   | index_name index_keys                          index_description    index_max_rows_per_page index_fillfactor index_reservepagegap index_created       index_local 
+		//   | ---------- ----------------------------------- -------------------- ----------------------- ---------------- -------------------- ------------------- ------------
+		//   | MATSET_ND0  M_LABEL, M_TYPE, M_US_TYPE         nonclustered, unique                       0                0                    0 Nov 13 2021  2:38AM Global Index
+		//   | MATSET_ND2  M_US_TYPE                          nonclustered                               0                0                    0 Nov 13 2021  2:38AM Global Index
+		//   | MATSET_ND3  M_DISPLAY_LABEL, M_TYPE, M_US_TYPE nonclustered, unique                       0                0                    0 Nov 13 2021  2:38AM Global Index
+		//   | index_ptn_name       index_ptn_seg index_ptn_comp    
+		//   | -------------------- ------------- ------------------
+		//   | MATSET_ND0_343374906 default       inherit from index
+		//   | MATSET_ND2_343374906 default       inherit from index
+		//   | MATSET_ND3_343374906 default       inherit from index
+		//   |No defined keys for this object.
+
+
+		List<AseTableInfo> retList = new ArrayList<>();
+		
+		for (AseTableInfo ti : tmpList)
+		{
+			if (StringUtil.hasValue(ti._extraInfoText))
+			{
+				// Read the content line by line
+				List<String> extraInfoList  = StringUtil.readLines(ti._extraInfoText);
+//				List<String> objectInfoList = StringUtil.readLines(ti._objectText);
+
+				int indexCount = 0;
+				List<AseIndexInfo> indexInfoList = new ArrayList<>();
+
+				for (String line : extraInfoList)
+				{
+					if (_logger.isDebugEnabled())
+						_logger.debug("############## line=|" + line + "|, for dbname='" + ti._dbName + "', schema='" + ti._schemaName + "', table='" + ti._tableName + "'");
+
+					if (line.endsWith(" KB"))
+					{
+						String[] sa = line.split("[ \t\n\f\r]+");
+
+						if (_logger.isDebugEnabled())
+							_logger.debug("####### >>>>>> sa.length=" + sa.length + ". sa[]=" + StringUtil.toCommaStrQuoted(sa) + ", line=|" + line + "|");
+
+						//INDEX entry
+						if (sa.length == 7)
+						{
+							indexCount++;
+
+							AseIndexInfo indexInfo = new AseIndexInfo();
+							indexInfo._indexName  = sa[0];
+							indexInfo._sizeKb     = StringUtil.parseInt(sa[1], -1);
+							indexInfo._reservedKb = StringUtil.parseInt(sa[3], -1);
+							indexInfo._unusedKb   = StringUtil.parseInt(sa[5], -1);
+
+							// Set indexInfo fields: _keysStr, _keys, _desc, _CreationDate, _ddlTxt
+							scrapeIndexInfo(ti.getFullTableName(), indexInfo._indexName, ti._objectText, indexInfo);
+
+							if (_logger.isDebugEnabled())
+								_logger.debug("####### >>>>>> INDEX tab=|" + ti.getFullTableName() + "|, index='" + indexInfo._indexName + "', DDL=|" + indexInfo._ddlTxt + "|.");
+							
+							indexInfoList.add(indexInfo);
+						}
+
+						// TABLE entry
+						if (sa.length == 10)
+						{
+//							AseTableInfo ti = new AseTableInfo();
+							ti._tableName  = sa[0];
+							ti._rowtotal   = StringUtil.parseInt(sa[1], -1);
+							ti._reservedKb = StringUtil.parseInt(sa[2], -1);
+							ti._dataKb     = StringUtil.parseInt(sa[4], -1);
+							ti._indexKb    = StringUtil.parseInt(sa[6], -1);
+							ti._unusedKb   = StringUtil.parseInt(sa[8], -1);
+
+							ti._indexCount = indexCount;
+							ti._indexList  = indexInfoList;
+
+							indexCount = 0;
+							indexInfoList = new ArrayList<>();
+
+							// get Lock Schema: "allpages", "datapages", "datarows"
+							ti._lockSchema = scrapeObjectText("^Lock scheme .*", 2, ti._objectText);
+
+							retList.add(ti);
+						}
+					} // end: line.endsWith(" KB")
+				} // end: loop lines
+			} // end: has _extraInfoText
+			
+			// also get Statistics how often the indexes was used/accessed during the report period
+			// As the index 'ix_DSR_CmObjectActivity_diff_DBName_ObjectName_IndexName' exists, this is a pretty cheap operation (if NOT exists, should we create one?)
+			if ( ! DbUtils.checkIfIndexExists(conn, null, null, "CmObjectActivity_diff", "ix_DSR_CmObjectActivity_diff_DBName_ObjectName_IndexName") )
+			{
+				sql = conn.quotifySqlString("create index [ix_DSR_CmObjectActivity_diff_DBName_ObjectName_IndexName] on [CmObjectActivity_diff] ([DBName], [ObjectName], [IndexName])");
+
+				long startTime = System.currentTimeMillis();
+				try (Statement stmnt = conn.createStatement())
+				{
+					stmnt.executeUpdate(sql);
+					_logger.info("ReportEntry '" + this.getClass().getSimpleName() + "'. Created helper index to support Daily Summary Report. SQL='" + sql + "' ExecTime=" + TimeUtils.msDiffNowToTimeStr(startTime));
+				}
+				catch (SQLException ex)
+				{
+					_logger.warn("Problems index to help ReportEntry '" + this.getClass().getSimpleName() + "'. SQL='" + sql + "'. Continuing without the index. Caught: " + ex);
+				}
+			}
+
+			// create SQL Statement to get ...
+//			sql = ""
+//				+ "select \n"
+//				+ "     [DBName] \n"
+//				+ "    ,[ObjectName] \n"
+//				+ "    ,[IndexName] \n"
+//				+ "    ,[IndexID] \n"
+//				+ "    ,sum([OptSelectCount])  as [OptSelectCount] \n"
+//				+ "    ,sum([UsedCount])       as [UsedCount] \n"
+//				+ "    ,sum([Operations])      as [Operations] \n"
+//				+ "    ,max([ObjectCacheDate]) as [ObjectCacheDate] \n"
+//				+ "from [CmObjectActivity_diff] \n"
+//				+ "where [DBName]     = " + DbUtils.safeStr(ti._dbName)    + " \n"
+//				+ "  and [ObjectName] = " + DbUtils.safeStr(ti._tableName) + " \n"
+//				+ "group by [DBName], [ObjectName], [IndexName], [IndexID] \n"
+//				+ "order by [IndexID] \n"
+//				+ "";
+
+			sql = ""
+				+ "WITH diff as \n"
+				+ "( \n"
+				+ "    select \n"
+				+ "         [DBName] \n"
+				+ "        ,[ObjectName] \n"
+				+ "        ,[IndexName] \n"
+				+ "        ,[IndexID] \n"
+				+ "        ,max([ObjectCacheDate]) as [ObjectCacheDate] \n"
+				+ "        ,sum([RowsInsUpdDel])   as [RowsInsUpdDel] \n"
+				+ "        ,sum([OptSelectCount])  as [OptSelectCount] \n"
+				+ "        ,sum([UsedCount])       as [UsedCount] \n"
+				+ "        ,sum([Operations])      as [Operations] \n"
+				+ "    from [CmObjectActivity_diff] \n"
+				+ "    where [DBName]     = " + DbUtils.safeStr(ti._dbName)    + " \n"
+				+ "      and [ObjectName] = " + DbUtils.safeStr(ti._tableName) + " \n"
+				+ "    group by [DBName], [ObjectName], [IndexName], [IndexID] \n"
+				+ ") \n"
+				+ ", abs as \n"
+				+ "( \n"
+				+ "    select \n"
+				+ "         [DBName] \n"
+				+ "        ,[ObjectName] \n"
+				+ "        ,[IndexName] \n"
+				+ "        ,max([RowsInsUpdDel])   as [AbsRowsInsUpdDel] \n"
+				+ "        ,max([OptSelectCount])  as [AbsOptSelectCount] \n"
+				+ "        ,max([UsedCount])       as [AbsUsedCount] \n"
+				+ "        ,max([Operations])      as [AbsOperations] \n"
+				+ "    from [CmObjectActivity_abs] \n"
+				+ "    where [SessionSampleTime] = (select max([SessionSampleTime]) from [CmObjectActivity_abs]) \n"
+				+ "      and [DBName]     = " + DbUtils.safeStr(ti._dbName)    + " \n"
+				+ "      and [ObjectName] = " + DbUtils.safeStr(ti._tableName) + " \n"
+				+ "    group by [DBName], [ObjectName], [IndexName] \n"
+				+ ") \n"
+				+ "select \n"
+				+ "     diff.[DBName] \n"
+				+ "    ,diff.[ObjectName] \n"
+				+ "    ,diff.[IndexName] \n"
+				+ "    ,diff.[IndexID] \n"
+				+ "    ,diff.[RowsInsUpdDel] \n"
+				+ "    ,diff.[OptSelectCount] \n"
+				+ "    ,diff.[UsedCount] \n"
+				+ "    ,diff.[Operations] \n"
+				+ "    ,diff.[ObjectCacheDate] \n"
+				+ "    ,abs. [AbsRowsInsUpdDel] \n"
+				+ "    ,abs. [AbsOptSelectCount] \n"
+				+ "    ,abs. [AbsUsedCount] \n"
+				+ "    ,abs. [AbsOperations] \n"
+				+ "from diff \n"
+				+ "left outer join abs on diff.[DBName]     = abs.[DBName] \n"
+				+ "                   and diff.[ObjectName] = abs.[ObjectName] \n"
+				+ "                   and diff.[IndexName]  = abs.[IndexName] \n"
+				+ "order by diff.[IndexID] \n"
+				+ "";
+			
+			sql = conn.quotifySqlString(sql);
+			try ( Statement stmnt = conn.createStatement() )
+			{
+				// Unlimited execution time
+				stmnt.setQueryTimeout(0);
+				try ( ResultSet rs = stmnt.executeQuery(sql) )
+				{
+					while(rs.next())
+					{
+					//	String    DBName             = rs.getString   (1);
+					//	String    ObjectName         = rs.getString   (2);
+						String    IndexName          = rs.getString   (3);
+						int       IndexID            = rs.getInt      (4);
+						long      RowsInsUpdDel      = rs.getLong     (5);
+						long      OptSelectCount     = rs.getLong     (6);
+						long      UsedCount          = rs.getLong     (7);
+						long      Operations         = rs.getLong     (8);
+						Timestamp ObjectCacheDate    = rs.getTimestamp(9);
+						long      AbsRowsInsUpdDel   = rs.getLong     (10);
+						long      AbsOptSelectCount  = rs.getLong     (11);
+						long      AbsUsedCount       = rs.getLong     (12);
+						long      AbsOperations      = rs.getLong     (13);
+						
+						AseIndexInfo indexEntry = ti.getIndexInfoForName(IndexName);
+
+						if (indexEntry != null)
+						{
+							indexEntry._IndexID            = IndexID;
+							indexEntry._ObjectCacheDate    = ObjectCacheDate;
+							indexEntry._RowsInsUpdDel      = RowsInsUpdDel;
+							indexEntry._OptSelectCount     = OptSelectCount;
+							indexEntry._UsedCount          = UsedCount;
+							indexEntry._Operations         = Operations;
+
+							indexEntry._AbsRowsInsUpdDel   = AbsRowsInsUpdDel;
+							indexEntry._AbsOptSelectCount  = AbsOptSelectCount;
+							indexEntry._AbsUsedCount       = AbsUsedCount;
+							indexEntry._AbsOperations      = AbsOperations;
+						}
+						else
+						{
+							indexEntry = new AseIndexInfo();
+
+							indexEntry._indexName          = IndexName;
+							indexEntry._sizeKb             = -1;
+							indexEntry._reservedKb         = -1;
+							indexEntry._unusedKb           = -1;
+							indexEntry._keysStr            = "-unknown-";
+						//	indexEntry._keys               = null;
+							indexEntry._desc               = "-unknown-";
+							indexEntry._ddlTxt             = "";
+
+							indexEntry._IndexID            = IndexID;
+							indexEntry._ObjectCacheDate    = ObjectCacheDate;
+							indexEntry._RowsInsUpdDel      = RowsInsUpdDel;
+							indexEntry._OptSelectCount     = OptSelectCount;
+							indexEntry._UsedCount          = UsedCount;
+							indexEntry._Operations         = Operations;
+
+							indexEntry._AbsRowsInsUpdDel   = AbsRowsInsUpdDel;
+							indexEntry._AbsOptSelectCount  = AbsOptSelectCount;
+							indexEntry._AbsUsedCount       = AbsUsedCount;
+							indexEntry._AbsOperations      = AbsOperations;
+
+							// Copy some "stuff" from current Table Information
+							if ("DATA".equals(indexEntry._indexName))
+							{
+								indexEntry._sizeKb          = ti._dataKb;
+								indexEntry._reservedKb      = ti._reservedKb;
+								indexEntry._unusedKb        = ti._unusedKb;
+
+								indexEntry._keysStr         = "-data-";
+								indexEntry._desc            = "-data-";
+							}
+
+							ti._indexList.add(indexEntry);
+						}
+					}
+				}
+			}
+			catch(SQLException ex)
+			{
+				_logger.warn("Problems getting INDEX Information for dbname='" + dbname + "', owner='" + owner + "', table='" + table + "'.", ex);
+				//throw ex;
+			}
+
+		} // end: loop AseTableInfo
+		
+		return retList;
+	}
+	private static String scrapeIndexInfo(String tableName, String indexName, String objectInfoStr, AseIndexInfo indexInfo)
+	{
+		if (StringUtil.isNullOrBlank(objectInfoStr))
+			return "";
+
+		if (StringUtil.isNullOrBlank(indexName))
+			throw new IllegalArgumentException("parseIndexDll(): indexName can't be null or ''.");
+		
+		List<String> objectInfoList = StringUtil.readLines(objectInfoStr);
+
+		// 1: get row with "index_name"
+		// 2: get row after that: "---------- ------------- ---------", which is a length indicator of "where" to substring 
+		// 4: Get the correct index name
+		// 5: extract indexName, indexKeys, indexDesc by using the delimiters ---- ---- ---- positions
+		// 6: construct a "guessed": create index statement...
+
+		// The input might look something like this....
+		//   |...rows deleted...
+		//   |Object has the following indexes
+		//   | 
+		//   | index_name index_keys                          index_description    index_max_rows_per_page index_fillfactor index_reservepagegap index_created       index_local 
+		//   | ---------- ----------------------------------- -------------------- ----------------------- ---------------- -------------------- ------------------- ------------
+		//   | MATSET_ND0  M_LABEL, M_TYPE, M_US_TYPE         nonclustered, unique                       0                0                    0 Nov 13 2021  2:38AM Global Index
+		//   | MATSET_ND2  M_US_TYPE                          nonclustered                               0                0                    0 Nov 13 2021  2:38AM Global Index
+		//   | MATSET_ND3  M_DISPLAY_LABEL, M_TYPE, M_US_TYPE nonclustered, unique                       0                0                    0 Nov 13 2021  2:38AM Global Index
+		//   | index_ptn_name       index_ptn_seg index_ptn_comp    
+		//   | -------------------- ------------- ------------------
+		//   | MATSET_ND0_343374906 default       inherit from index
+		//   | MATSET_ND2_343374906 default       inherit from index
+		//   | MATSET_ND3_343374906 default       inherit from index
+		//   |No defined keys for this object.
+		//   |...rows deleted...
+
+		// get "index_name "
+		String indexNameHeadLine    = null;
+		int    indexNameHeadLineNum = -1;
+		for (int r=0; r<objectInfoList.size(); r++)
+		{
+			if (objectInfoList.get(r).startsWith("index_name ")) // note the " " (space) needs to be here... since the line is not yet split
+			{
+				indexNameHeadLine    = objectInfoList.get(r);
+				indexNameHeadLineNum = r;
+				break;
+			}
+		}
+
+		// get first line after "index_name ", which should be "--------"
+		String indexNameLineHeadSep    = null; 
+		int    indexNameLineHeadSepNum = indexNameHeadLineNum + 1;
+		if (indexNameLineHeadSepNum < objectInfoList.size()) 
+			indexNameLineHeadSep = objectInfoList.get(indexNameLineHeadSepNum);
+		if (indexNameLineHeadSep != null && !indexNameLineHeadSep.startsWith("---"))
+			indexNameLineHeadSep = null;
+
+		// get index *NAME* line
+		String indexNameEntryLine    = null;
+//		int    indexNameEntryLineNum = -1;
+		for (int r=0; r<objectInfoList.size(); r++)
+		{
+			if (objectInfoList.get(r).startsWith(indexName + " ")) // note the " " (space) needs to be here... since the line is not yet split
+			{
+				indexNameEntryLine = objectInfoList.get(r);
+//				indexNameEntryLineNum = r;
+				break;
+			}
+		}
+
+		// Scrape columns: index_name, index_keys, index_description, index_created
+		if (indexNameHeadLine != null && indexNameLineHeadSep != null && indexNameEntryLine != null)
+		{
+			String xIndexName = scrapeStringForColumn("index_name"       , indexNameEntryLine, indexNameHeadLine, indexNameLineHeadSep);
+			String xIndexKeys = scrapeStringForColumn("index_keys"       , indexNameEntryLine, indexNameHeadLine, indexNameLineHeadSep);
+			String xIndexDesc = scrapeStringForColumn("index_description", indexNameEntryLine, indexNameHeadLine, indexNameLineHeadSep);
+			String xIndexCrTs = scrapeStringForColumn("index_created"    , indexNameEntryLine, indexNameHeadLine, indexNameLineHeadSep);
+
+			// parse index creation time
+			Timestamp xCrTs = null;
+			if (StringUtil.hasValue(xIndexCrTs))
+			{
+				try
+				{
+					SimpleDateFormat sdf = new SimpleDateFormat("MMM dd yyyy hh:mmaa");
+					Date date = sdf.parse(xIndexCrTs);
+					if (date != null)
+						xCrTs = new Timestamp(date.getTime());
+				}
+				catch(ParseException ex) 
+				{
+					_logger.warn("Problem parsing CreationDate for table='" +  tableName + "', index='" + indexName + "', xIndexCrTs='" + xIndexCrTs + "'. Skipping and continuing... Caught: " + ex);
+				}
+			}
+
+			// Compose the DDL
+			String unique       = xIndexDesc.contains  ("unique")       ?  "unique "       : "";
+			String nonclustered = xIndexDesc.startsWith("nonclustered") ?  "nonclustered " : "";
+			String clustered    = xIndexDesc.startsWith("clustered")    ?  "clustered "    : "";
+
+			String ddlText = "create " + unique + nonclustered + clustered + "index " + xIndexName + " on " + tableName + "(" + xIndexKeys + ")";
+			
+			// Set the values in the passed AseIndexInfo
+			if (indexInfo != null)
+			{
+				indexInfo._keysStr      = xIndexKeys;
+				indexInfo._keys         = StringUtil.commaStrToList(xIndexKeys, true);
+				indexInfo._desc         = xIndexDesc;
+				indexInfo._CreationDate = xCrTs;
+				indexInfo._ddlTxt       = ddlText;
+			}
+			return ddlText;
+		}
+		
+		return "";
+	}
+	/**
+	 * <pre>
+	 *   index_name index_keys                          index_description    index_max_rows_per_page index_fillfactor index_reservepagegap index_created       index_local |
+	 *   ---------- ----------------------------------- -------------------- ----------------------- ---------------- -------------------- ------------------- ------------|
+	 *   MATSET_ND0  M_LABEL, M_TYPE, M_US_TYPE         nonclustered, unique                       0                0                    0 Nov 13 2021  2:38AM Global Index|
+	 * </pre>
+	 *
+	 * @param colName     name of the column we want to extract
+	 * @param entryLine   The data "row" that we want to scrape a column from
+	 * @param headLine    the table column heads
+	 * @param headSepLine the line with all the column separators <code>-------- --------- --------</code>
+	 * @return The data in the desired column. NULL if something unexpected happened!
+	 */
+	private static String scrapeStringForColumn(String colName, String entryLine, String headLine, String headSepLine)
+	{
+		String[] saHead = headLine   .split("[ \t\n\f\r]+");
+		String[] saSep  = headSepLine.split("[ \t\n\f\r]+");
+
+		if (saHead.length != saSep.length)
+		{
+			System.out.println("getStringForPos(): saHead.length=" + saHead.length + ", saSep.length=" + saSep.length + ". the length of the two arrays must mastch in size");
+			System.out.println("                   headLine=|" + headLine + "|, headSepLine=|" + headSepLine + "|.");
+			return null;
+		}
+
+		// Get "colName" position
+		int colNameSaPos = -1;
+		for (int i=0; i<saHead.length; i++)
+		{
+			if (colName.equals(saHead[i]))
+			{
+				colNameSaPos = i;
+				break;
+			}
+		}
+		if (colNameSaPos == -1)
+		{
+			System.out.println("getStringForPos(): colName='" + colName + "' was NOT found. headLine=|" + headLine + "|.");
+			return null;
+		}
+
+		// get start/stop position for the desired column!
+		int startPos = -1;
+		int endPos   = -1;
+
+		for (int i=0; i<=colNameSaPos; i++)
+		{
+			startPos = endPos + 1;
+			endPos   = startPos + saSep[i].length();
+		}
+
+		if (_logger.isDebugEnabled())
+			_logger.debug("scrapeStringForColumn(): colName='" + colName + "', colNameSaPos=" + colNameSaPos + ", startPos=" + startPos + ", endPos=" + endPos + ", entryLine.length()=" + entryLine.length());
+
+		if (startPos != -1 && endPos > startPos && endPos < entryLine.length())
+		{
+			String retStr = entryLine.substring(startPos, endPos).trim();
+			return retStr;
+		}
+		
+		return null;
+	}
+//    public static void main(String[] args)
+//    {
+//    	String indexNameHeadLine    = "index_name index_keys                          index_description    index_max_rows_per_page index_fillfactor index_reservepagegap index_created       index_local";
+//    	String indexNameLineHeadSep = "---------- ----------------------------------- -------------------- ----------------------- ---------------- -------------------- ------------------- ------------";
+//    	String indexNameEntryLine   = "MATSET_ND0  M_LABEL, M_TYPE, M_US_TYPE         nonclustered, unique                       0                0                    0 Nov 13 2021  2:38AM Global Index";
+//    
+//    	String xIndexName = scrapeStringForColumn("index_name"       , indexNameEntryLine, indexNameHeadLine, indexNameLineHeadSep);
+//    	String xIndexKeys = scrapeStringForColumn("index_keys"       , indexNameEntryLine, indexNameHeadLine, indexNameLineHeadSep);
+//    	String xIndexDesc = scrapeStringForColumn("index_description", indexNameEntryLine, indexNameHeadLine, indexNameLineHeadSep);
+//    	String xIndexCrTs = scrapeStringForColumn("index_created"    , indexNameEntryLine, indexNameHeadLine, indexNameLineHeadSep);
+//    
+//    	System.out.println("=================== xIndexName='" + xIndexName + "'");
+//    	System.out.println("=================== xIndexKeys='" + xIndexKeys + "'");
+//    	System.out.println("=================== xIndexDesc='" + xIndexDesc + "'");
+//    	System.out.println("=================== xIndexCrTs='" + xIndexCrTs + "'");
+//    }
+
+	/**
+	 * Scrape the input string 'objectText' and get first matching line, then get a specific word of that line
+	 * 
+	 * @param rowRegEx       Used to <b>match<b/> a specific row to get data from
+	 * @param wordIndex      (start at 0), which word on the first found line should we extract (note: it respects quotes strings as <i>one</i> word)
+	 * @param objectText     input string to search in
+	 * @return String of the word ("" if not found, or the found row has less words that the desired wordIndex)
+	 */
+	private static String scrapeObjectText(String rowRegEx, int wordIndex, String objectText)
+	{
+		// Early exit
+		if (StringUtil.isNullOrBlank(objectText))
+			return "";
+
+		// Convert to a List of "lines"
+		List<String> objectInfoList = StringUtil.readLines(objectText);
+
+		// Do the work
+		return scrapeObjectText(rowRegEx, wordIndex, objectInfoList);
+	}
+
+	/**
+	 * Scrape the input List of Strings and get first matching line, then get a specific word of that line
+	 * 
+	 * @param rowRegEx       Used to <b>match<b/> a specific row to get data from
+	 * @param wordIndex      (start at 0), which word on the first found line should we extract (note: it respects quotes strings as <i>one</i> word)
+	 * @param objectTextList List if strings to search in
+	 * @return String of the word ("" if not found, or the found row has less words that the desired wordIndex)
+	 */
+	private static String scrapeObjectText(String rowRegEx, int wordIndex, List<String> objectTextList)
+	{
+		// Early exit
+		if (objectTextList == null)   return "";
+		if (objectTextList.isEmpty()) return "";
+
+		for (String line : objectTextList)
+		{
+			if (line.matches(rowRegEx))
+			{
+				String tmp = StringUtil.wordRespectQuotes(line, wordIndex);
+				return tmp == null ? "" : tmp;
+			}
+		}
+		
+		return "";
+	}
+	
+	public static class AseIndexInfo
+	{
+		private String       _indexName;
+		private int          _sizeKb            = -1;
+		private int          _reservedKb        = -1;
+		private int          _unusedKb          = -1;
+		private String       _keysStr;
+		private List<String> _keys;
+		private String       _desc;
+		private String       _ddlTxt;
+		private int          _IndexID           = -1;
+		private Timestamp    _CreationDate;
+		private Timestamp    _ObjectCacheDate;
+		private long         _RowsInsUpdDel     = -1;
+		private long         _OptSelectCount    = -1;
+		private long         _UsedCount         = -1;
+		private long         _Operations        = -1;
+		private long         _AbsRowsInsUpdDel  = -1;
+		private long         _AbsOptSelectCount = -1;
+		private long         _AbsUsedCount      = -1;
+		private long         _AbsOperations     = -1;
+
+		public String       getIndexName         () { return _indexName; }
+		public int          getSizeKb            () { return _sizeKb; }
+		public int          getReservedKb        () { return _reservedKb; }
+		public int          getUnusedKb          () { return _unusedKb; }
+		public String       getKeysStr           () { return _keysStr; }
+		public List<String> getKeys              () { return _keys; }
+		public String       getDescription       () { return _desc; }
+		public String       getDdlText           () { return _ddlTxt; }
+                                                 
+		public int          getIndexID           () { return _IndexID;            }
+		public Timestamp    getCreationDate      () { return _CreationDate;       }
+		public String       getCreationDateStr   () { return _CreationDate    == null ? "--not-found--" : _CreationDate.toString(); }
+		public Timestamp    getCacheDate         () { return _ObjectCacheDate;    }
+		public String       getCacheDateStr      () { return _ObjectCacheDate == null ? "--not-found--" : _ObjectCacheDate.toString(); }
+		public long         getRowsInsUpdDel     () { return _RowsInsUpdDel;     }
+		public long         getOptSelectCount    () { return _OptSelectCount;     }
+		public long         getUsedCount         () { return _UsedCount;          }
+		public long         getOperations        () { return _Operations;         }
+		public long         getAbsRowsInsUpdDel  () { return _AbsRowsInsUpdDel;   }
+		public long         getAbsOptSelectCount () { return _AbsOptSelectCount;  }
+		public long         getAbsUsedCount      () { return _AbsUsedCount;       }
+		public long         getAbsOperations     () { return _AbsOperations;      }
+
+		
+		public double getSizeMb()     { return MathUtils.round(getSizeKb()     / 1024.0, 1); }
+		public double getReservedMb() { return MathUtils.round(getReservedKb() / 1024.0, 1); }
+		public double getUnusedMb()   { return MathUtils.round(getUnusedKb()   / 1024.0, 1); }
+	}
+	public static class AseTableInfo
+	{
+		private String _dbName;
+		private String _schemaName;
+		private String _tableName;
+		private String _extraInfoText;  // sp_spaceused tabname, 1
+		private String _objectText;     // sp_help tabname
+		private int    _rowtotal;
+		private int    _reservedKb;
+		private int    _dataKb;
+		private int    _indexKb;
+		private int    _unusedKb;
+		private String _lockSchema;
+		private int    _indexCount;
+		private List<AseIndexInfo> _indexList = new ArrayList<>();
+
+		public AseIndexInfo getIndexInfoForName(String indexName)
+		{
+			if (StringUtil.isNullOrBlank(indexName))
+				return null;
+
+			for (AseIndexInfo e : _indexList)
+				if (indexName.equals(e._indexName))
+					return e;
+			return null;
+		}
+		
+		public String getFullTableName()
+		{
+			String prefix = "";
+			if (StringUtil.hasValue(_dbName))     prefix += _dbName     + ".";
+			if (StringUtil.hasValue(_schemaName)) prefix += _schemaName + ".";
+			return prefix + _tableName;
+		}
+		
+		public String getDbName()     { return _dbName; }
+		public String getSchemaName() { return _schemaName; }
+		public String getTableName()  { return _tableName; }
+		public int    getRowTotal()   { return _rowtotal; }
+		public int    getReservedKb() { return _reservedKb; }
+		public int    getDataKb()     { return _dataKb; }
+		public int    getIndexKb()    { return _indexKb; }
+		public int    getUnusedKb()   { return _unusedKb; }
+
+		public int    getSizeKb()     { return _reservedKb - _unusedKb; }
+		public double getSizeMb()     { return MathUtils.round(getSizeKb() / 1024.0, 1); }
+
+		public double getReservedMb() { return MathUtils.round(getReservedKb() / 1024.0, 1); }
+		public double getDataMb()     { return MathUtils.round(getDataKb()     / 1024.0, 1); }
+		public double getIndexMb()    { return MathUtils.round(getIndexKb()    / 1024.0, 1); }
+		public double getUnusedMb()   { return MathUtils.round(getUnusedKb()   / 1024.0, 1); }
+		public String getLockScheme() { return _lockSchema; }
+		public int    getIndexCount() { return _indexCount; }
+		public List<AseIndexInfo> getIndexList()  { return _indexList == null ? Collections.emptyList() : _indexList; }
+	}
+
+
 	public String getXmlShowplanFromMonDdlStorage(DbxConnection conn, String sSqlIdStr)
 	throws SQLException
 	{
@@ -195,6 +1179,11 @@ extends ReportEntryAbstract
 		return map;
 	}
 
+
+	public String extractSqlStatementsFromXmlShowplan(String xmlPlan)
+	{
+		return XmlPlanAseUtils.getSqlStatement(xmlPlan);
+	}
 
 	public ResultSetTableModel getSqlStatementsFromMonDdlStorage(DbxConnection conn, Set<String> nameSet)
 	throws SQLException
@@ -304,14 +1293,14 @@ extends ReportEntryAbstract
 	public static class SqlCapExecutedSqlEntry
 	{
 		String sqlTextHashId;
-		int    execCount;
-		int    elapsed_ms;
-		int    cpuTime;
-		int    waitTime;
-		int    logicalReads;
-		int    physicalReads;
-		int    rowsAffected;
-		int    memUsageKB;
+		long   execCount;
+		long   elapsed_ms;
+		long   cpuTime;
+		long   waitTime;
+		long   logicalReads;
+		long   physicalReads;
+		long   rowsAffected;
+		long   memUsageKB;
 		String sqlText;
 	}
 
@@ -405,7 +1394,7 @@ extends ReportEntryAbstract
 //		String sql = ""
 //			    + "select " + sqlTopRows + " distinct " + col_NormSQLText + " \n"
 //			    + "from [" + tabName + "] \n"
-//			    + "where [" + colName + "] = " + DbUtils.safeStr(colVal) + " \n"
+//			    + "where [" + colName + "] = " + DbUtils.safeStr(colVal) + " \n"REMOVE-THIS: 
 //			    + "";
 
 		String whereColValStr = "";
@@ -435,7 +1424,6 @@ extends ReportEntryAbstract
 			    + "";
 		
 		sql = conn.quotifySqlString(sql);
-//System.out.println("getExecutedSqlText(map="+map+", conn="+conn+", topRows="+topRows+", colName="+colName+", colVal="+colVal+"): SQL="+sql);
 		try ( Statement stmnt = conn.createStatement() )
 		{
 			// Unlimited execution time
@@ -453,14 +1441,14 @@ extends ReportEntryAbstract
 
 						int colPos = 1;
 						entry.sqlTextHashId = rs.getString(colPos++);
-						entry.execCount     = rs.getInt   (colPos++);
-						entry.elapsed_ms    = rs.getInt   (colPos++);
-						entry.cpuTime       = rs.getInt   (colPos++);
-						entry.waitTime      = rs.getInt   (colPos++);
-						entry.logicalReads  = rs.getInt   (colPos++);
-						entry.physicalReads = rs.getInt   (colPos++);
-						entry.rowsAffected  = rs.getInt   (colPos++);
-						entry.memUsageKB    = rs.getInt   (colPos++);
+						entry.execCount     = rs.getLong  (colPos++);
+						entry.elapsed_ms    = rs.getLong  (colPos++);
+						entry.cpuTime       = rs.getLong  (colPos++);
+						entry.waitTime      = rs.getLong  (colPos++);
+						entry.logicalReads  = rs.getLong  (colPos++);
+						entry.physicalReads = rs.getLong  (colPos++);
+						entry.rowsAffected  = rs.getLong  (colPos++);
+						entry.memUsageKB    = rs.getLong  (colPos++);
 						entry.sqlText       = rs.getString(colPos++);
 
 						entries._entryList.add(entry);
@@ -476,7 +1464,7 @@ extends ReportEntryAbstract
 		}
 		catch(SQLException ex)
 		{
-			_logger.warn("Problems getting SQL Text by: " + whereColValMap + ": " + ex);
+			_logger.warn("Problems getting SQL Text by: " + whereColValMap + ": " + ex, ex);
 		}
 		
 		return map;

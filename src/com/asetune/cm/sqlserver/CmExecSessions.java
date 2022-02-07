@@ -211,7 +211,7 @@ extends CountersModel
 		// datediff(ms, last_request_start_time, last_request_end_time)
 		
 		String sql = ""
-				+ "select \n"
+				+ "select /* ${cmCollectorName} */ \n"
 				+ "     last_request_ms = datediff(ms, last_request_start_time, last_request_end_time) \n"
 				+ "    ,login_time_ss   = CASE WHEN datediff(day, login_time, getdate()) >= 24 THEN -1 ELSE  datediff(ss, login_time, getdate()) END \n"
 				+ "    ,* \n"

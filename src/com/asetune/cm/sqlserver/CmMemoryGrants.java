@@ -22,7 +22,6 @@ package com.asetune.cm.sqlserver;
 
 import java.sql.Connection;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -218,7 +217,7 @@ extends CountersModel
 
 
 		String sql = ""
-				+ "SELECT \n"
+				+ "SELECT /* ${cmCollectorName} */ \n"
 				+ "     mg.* \n"
 				+ (getSqltext   ? "    ,st.[TEXT] AS [sql_text] \n" : "    ,cast('' as varchar(max)) as [sql_text]   \n")
 				+ (getQueryPlan ? "    ,qp.[query_plan] \n"         : "    ,cast('' as varchar(max)) as [query_plan] \n")
@@ -268,7 +267,7 @@ extends CountersModel
 						String liveQueryPlan = SqlServerUtils.getLiveQueryPlanNoThrow(getCounterController().getMonConnection(), spid);
 
 						if (StringUtil.isNullOrBlank(liveQueryPlan))
-							liveQueryPlan = "-not-found-";
+							liveQueryPlan = "--not-found--";
 
 						newSample.setValueAt(liveQueryPlan, rowId, pos_liveQueryPlan);
 					}

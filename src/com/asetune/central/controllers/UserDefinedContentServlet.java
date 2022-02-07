@@ -21,7 +21,6 @@
 package com.asetune.central.controllers;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.sql.Timestamp;
 
 import javax.servlet.ServletException;
@@ -32,7 +31,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.ArrayUtils;
 
-import com.asetune.Version;
 import com.asetune.central.controllers.ud.chart.IUserDefinedChart;
 import com.asetune.central.controllers.ud.chart.UserDefinedChartManager;
 import com.asetune.utils.StringUtil;

@@ -270,7 +270,7 @@ extends CountersModel
 			    + "-- Note: Below SQL Statement is executed in every database that is 'online', more or less like: sp_msforeachdb \n"
 			    + "-- Note: object_schema_name() and object_name() can NOT be used for 'dirty-reads', they may block... hence the 'ugly' fullname sub-selects in the select column list \n"
 			    + "-- Note: To enable/disable DbxTune Cached Lookups for ObjectID to name translation is done with property '" + DbmsObjectIdCacheSqlServer.PROPKEY_BulkLoadOnStart + "=true|false'. Current Status=" + (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled() ? "ENABLED" : "DISABLED") + " \n"
-			    + "select \n"
+			    + "select /* ${cmCollectorName} */ \n"
 //			    + "      [DbName]         = db_name(database_id) \n"
 //			    + "    , [SchemaName]     = (select sys.schemas.name from sys.objects inner join sys.schemas ON sys.schemas.schema_id = sys.objects.schema_id where sys.objects.object_id = BASE.object_id) \n"
 //			    + "    , [TableName]      = (select sys.objects.name from sys.objects where sys.objects.object_id = BASE.object_id) \n"

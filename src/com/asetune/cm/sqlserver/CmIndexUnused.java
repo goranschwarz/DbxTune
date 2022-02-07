@@ -271,7 +271,7 @@ extends CountersModel
 
 		String sql = ""
 			    + "-- Note: Below SQL Statement is executed in every database that is 'online', more or less like: sp_msforeachdb \n"
-			    + "SELECT \n"
+			    + "SELECT /* ${cmCollectorName} */ \n"
 			    + "       DbName     = db_name(u.database_id) \n"
 			    + "     , SchemaName = object_schema_name(u.object_id, u.database_id) \n"
 			    + "     , TableName  = o.name \n"

@@ -23,6 +23,7 @@ package com.asetune.graph;
 
 import java.awt.Graphics2D;
 import java.awt.geom.Rectangle2D;
+import java.util.List;
 
 import org.jfree.chart.axis.CategoryAnchor;
 import org.jfree.chart.axis.CategoryAxis;

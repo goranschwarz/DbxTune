@@ -92,7 +92,6 @@ import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.pcs.PersistentCounterHandler;
-import com.asetune.pcs.sqlcapture.SqlCaptureBrokerAse;
 import com.asetune.sql.SqlPickList;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.norm.StatementNormalizer;
@@ -993,7 +992,7 @@ implements ActionListener, ChangeListener//, MouseListener
 			try
 			{
 				// Get all columns in a Map with <colName, resolvedColName>
-				LinkedHashMap<String, String> existingCols = DictCompression.getRewriteForColumnNames(conn, null, tabName, null);
+				LinkedHashMap<String, String> existingCols = DictCompression.getRewriteForColumnNames(conn, null, tabName, null, null);
 
 				if (existingCols.isEmpty())
 					_logger.warn("Lookup of the table name '" + tabName + "' returned 0 column, which looks STRANGE...");
@@ -1032,10 +1031,30 @@ implements ActionListener, ChangeListener//, MouseListener
 			//---------------------------------------------
 			// GET SHOWPLAN TEXT
 			//---------------------------------------------
+			col_SQLText = "[PlanText]";
+			try
+			{
+				// Get all columns in a Map with <colName, resolvedColName>
+				LinkedHashMap<String, String> existingCols = DictCompression.getRewriteForColumnNames(conn, null, tabName, null, null);
+
+				if (existingCols.isEmpty())
+					_logger.warn("Lookup of the table name '" + tabName + "' returned 0 column, which looks STRANGE...");
+
+				if (existingCols.containsKey("PlanText" + DictCompression.DCC_MARKER))
+				{
+					// to: (select [colVal] from [tabName$dcc$SQLText] where [hashId] = [SQLText$dcc$]) AS [SQLText]
+					col_SQLText = existingCols.get("PlanText" + DictCompression.DCC_MARKER);
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.warn("Problems getting column names from table='"+tabName+"', columns 'PlanText' Lets try with origin Columns instead. Dictionary Compression Columns will NOT be resolved", ex);
+			}
+			
 			ta = _showplan_txt;
 //			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_PLANS, null, false);
 			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
-			sql = conn.quotifySqlString("select [PlanText] from [" + tabName + "] " + where);
+			sql = conn.quotifySqlString("select " + col_SQLText + " from [" + tabName + "] " + where);
 
 			rs = stmnt.executeQuery(sql);
 			ta.setText("");
@@ -1213,7 +1232,7 @@ implements ActionListener, ChangeListener//, MouseListener
 			if (StringUtil.hasValue(sqlText) && StringUtil.isNullOrBlank(normSqlText))
 			{
 //				normSqlText = stmntNorm.normalizeStatementNoThrow(SqlCaptureBrokerAse.removeKnownPrefixes(sqlText));
-				normSqlText = stmntNorm.normalizeSqlText(sqlText, null);
+				normSqlText = stmntNorm.normalizeSqlText(sqlText, null, null);
 				rstm.setValueAt(normSqlText, r, NormSQLText_pos);
 			}
 		}
@@ -1427,7 +1446,7 @@ implements ActionListener, ChangeListener//, MouseListener
 			try
 			{
 				// Get all columns in a Map with <colName, resolvedColName>
-				LinkedHashMap<String, String> existingCols = DictCompression.getRewriteForColumnNames(conn, null, tabNameSqlText, null);
+				LinkedHashMap<String, String> existingCols = DictCompression.getRewriteForColumnNames(conn, null, tabNameSqlText, null, "s"); // "s" == alias for table "MonSqlCapStatements"
 				
 				if (existingCols.isEmpty())
 					_logger.warn("Lookup of the table name '" + tabNameSqlText + "' returned 0 column, which looks STRANGE...");
@@ -1546,7 +1565,7 @@ implements ActionListener, ChangeListener//, MouseListener
 		String sqlColList = "*";
 		try
 		{
-			sqlColList = DictCompression.getRewriteForSelectColumnList(conn, null, tabName, null);
+			sqlColList = DictCompression.getRewriteForSelectColumnList(conn, null, tabName, null, null);
 		}
 		catch (SQLException ex)
 		{
@@ -1743,7 +1762,7 @@ implements ActionListener, ChangeListener//, MouseListener
 				+ "select \n"
 				+ "    [records] \n"
 //				+ "    (select [colVal] from [" + tabName + "$dcc$SQLText] where [hashId] = [SQLText$dcc$]) AS [SQLText] \n"
-				+ "    " + DictCompression.getRewriteForColumnName(tabName, col_SQLText_dcc) + " \n"
+				+ "    " + DictCompression.getRewriteForColumnName(tabName, col_SQLText_dcc, null) + " \n"
 				+ "from [tmp] \n"
 				+ "order by [records] desc \n"
 				+ "";
@@ -1755,7 +1774,7 @@ implements ActionListener, ChangeListener//, MouseListener
 			try
 			{
 				// Get all columns in a Map with <colName, resolvedColName>
-				LinkedHashMap<String, String> existingCols = DictCompression.getRewriteForColumnNames(conn, null, tabName, null);
+				LinkedHashMap<String, String> existingCols = DictCompression.getRewriteForColumnNames(conn, null, tabName, null, null);
 
 				if (existingCols.isEmpty())
 					_logger.warn("Lookup of the table name '" + tabName + "' returned 0 column, which looks STRANGE...");
@@ -1934,6 +1953,10 @@ implements ActionListener, ChangeListener//, MouseListener
 		if (_showplanXmlGui_but.equals(source))
 		{
 			AsePlanViewer.getInstance().loadXmlFromCacheDeferred(_showplanSsName_txt.getText());
+			//String planText = AsePlanViewer.getInstance().loadXmlFromCacheDeferred(_showplanSsName_txt.getText());
+			// Should we do something with the XML-Plan here?
+			// We could write it to '_showplan_txt' but the we overwrite the TEXTual Showplan... if we got any...
+			// So lets just do "nothing" here (except getting the XML Plan into the PlanViewer)
 		}
 		// TextField: Statement Plan Name
 		if (_showplanSsName_txt.equals(source))

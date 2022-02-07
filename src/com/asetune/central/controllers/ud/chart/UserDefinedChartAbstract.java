@@ -22,12 +22,10 @@
 package com.asetune.central.controllers.ud.chart;
 
 import java.io.File;
-import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang3.time.DateUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.Version;
@@ -36,7 +34,6 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.OpenSslAesUtil;
-import com.asetune.utils.StringUtil;
 
 public abstract class UserDefinedChartAbstract
 implements IUserDefinedChart

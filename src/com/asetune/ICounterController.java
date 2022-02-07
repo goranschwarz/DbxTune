@@ -60,6 +60,11 @@ public interface ICounterController
 	public DbxConnection getMonConnection();
 
 	/**
+	 * After a Monitor Connection has been created, this is called so we can do various static settings on the newly created connection
+	 */
+	public void onMonConnect(DbxConnection conn);
+
+	/**
 	 * Do we have a connection to the database?<br>
 	 * <b>NOTE:</b> Do NOT call the database to check it, just use the last information we got.
 	 * The last status should be maintained everytime a physical check is done via isMonConnected().<br>

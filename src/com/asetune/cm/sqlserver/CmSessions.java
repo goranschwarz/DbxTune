@@ -318,7 +318,7 @@ extends CountersModel
 			    + "-- When MARS is enabled we will have several records in dm_exec_connections, so this just summarizes all entries for: num_reads & num_writes \n"
 			    + "-- see: https://sqljudo.wordpress.com/2014/03/07/cardinality-of-dm_exec_sessions-and-dm_exec_connections/ \n"
 			    + ";WITH ec as ( \n"
-			    + "	select \n"
+			    + "	select /* ${cmCollectorName} */ \n"
 			    + "           session_id             = max(session_id) \n"
 			    + "          ,mars_count             = sum(CASE WHEN net_transport = 'Session' THEN 1 ELSE 0 END) \n"
 			    + "          ,connect_time           = min(connect_time) \n"
@@ -341,7 +341,7 @@ extends CountersModel
 			    + "	group by session_id \n"
 			    + ") \n"
 			    + "---------------------------------------\n"
-			    + "select \n"
+			    + "select /* ${cmCollectorName} */ \n"
 			    + "     ec.session_id \n"
 			    + "    ,worker_count = (select count(*) from sys.sysprocesses where spid = ec.session_id) - 1 \n"
 			    + er__dop
@@ -764,7 +764,7 @@ extends CountersModel
 	}
 
 	public static final String  PROPKEY_alarm_StatementExecInSec             = CM_NAME + ".alarm.system.if.StatementExecInSec.gt";
-	public static final int     DEFAULT_alarm_StatementExecInSec             = 3 * 60 * 60;
+	public static final int     DEFAULT_alarm_StatementExecInSec             = 3 * 60 * 60; // 3 Hours
 
 	public static final String  PROPKEY_alarm_StatementExecInSecSkipDbname   = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.dbname";
 	public static final String  DEFAULT_alarm_StatementExecInSecSkipDbname   = "";
@@ -773,7 +773,7 @@ extends CountersModel
 	public static final String  DEFAULT_alarm_StatementExecInSecSkipLogin    = "";
 
 	public static final String  PROPKEY_alarm_StatementExecInSecSkipCmd      = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.cmd";
-	public static final String  DEFAULT_alarm_StatementExecInSecSkipCmd      = "^(BACKUP ).*";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipCmd      = "^(BACKUP |RESTORE ).*";
 
 	public static final String  PROPKEY_alarm_StatementExecInSecSkipTranName = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.tranName";
 	public static final String  DEFAULT_alarm_StatementExecInSecSkipTranName = "";

@@ -2228,7 +2228,8 @@ extends CountersModel
 		//   cntr_type: 272696320 -->> PERF_COUNTER_BULK_COUNT 
 		
 		String sql = 
-			  "select object_name = substring(object_name, charindex(':', object_name),128), -- removing 'SQLServer' or 'MSSQL$@@servicename' for easier lookups\n"
+			  "select /* ${cmCollectorName} */ \n" 
+			+ "       object_name = substring(object_name, charindex(':', object_name),128), /* removing 'SQLServer' or 'MSSQL$@@servicename' for easier lookups */ \n"
 			+ "       counter_name, \n"
 			+ "       instance_name, \n"
 			+ "       calculated_value = convert(numeric(15,2), CASE WHEN cntr_type = 65792 THEN cntr_value ELSE null END), \n"
@@ -2244,13 +2245,13 @@ extends CountersModel
 			+ "       END as cntr_type_desc, \n"
 			+ "       cntr_value, \n"
 			+ "       CASE \n"
-			+ "          WHEN cntr_type = 65792      THEN convert(varchar(30), 'PERF_COUNTER_LARGE_RAWCOUNT') -- provides the last observed value for the counter; for this type of counter, the values in cntr_value can be used directly, making this the most easily usable type  \n" 
-			+ "          WHEN cntr_type = 65536      THEN convert(varchar(30), 'PERF_COUNTER_LARGE_RAWCOUNT') -- provides the last observed value for the counter; for this type of counter, the values in cntr_value can be used directly, making this the most easily usable type  \n" 
-			+ "          WHEN cntr_type = 272696576  THEN convert(varchar(30), 'PERF_COUNTER_BULK_COUNT')     -- provides the average number of operations per second. Two readings of cntr_value will be required for this counter type, in order to get the per second averages    \n" 
-			+ "          WHEN cntr_type = 272696320  THEN convert(varchar(30), 'PERF_COUNTER_BULK_COUNT')     -- provides the average number of operations per second. Two readings of cntr_value will be required for this counter type, in order to get the per second averages    \n" 
-			+ "          WHEN cntr_type = 537003264  THEN convert(varchar(30), 'PERF_LARGE_RAW_FRACTION')     -- used in conjunction with PERF_LARGE_RAW_BASE to calculate ratio values, such as the cache hit ratio                                                                 \n" 
-			+ "          WHEN cntr_type = 1073874176 THEN convert(varchar(30), 'PERF_AVERAGE_BULK')           -- used to calculate an average number of operations completed during a time interval; like PERF_LARGE_RAW_FRACTION, it uses PERF_LARGE_RAW_BASE to do the calculation \n" 
-			+ "          WHEN cntr_type = 1073939712 THEN convert(varchar(30), 'PERF_LARGE_RAW_BASE')         -- used in the translation of PERF_LARGE_RAW_FRACTION and PERF_AVERAGE_BULK values to readable output; should not be displayed alone.                                  \n" 
+			+ "          WHEN cntr_type = 65792      THEN convert(varchar(30), 'PERF_COUNTER_LARGE_RAWCOUNT') /* provides the last observed value for the counter; for this type of counter, the values in cntr_value can be used directly, making this the most easily usable type  */ \n" 
+			+ "          WHEN cntr_type = 65536      THEN convert(varchar(30), 'PERF_COUNTER_LARGE_RAWCOUNT') /* provides the last observed value for the counter; for this type of counter, the values in cntr_value can be used directly, making this the most easily usable type  */ \n" 
+			+ "          WHEN cntr_type = 272696576  THEN convert(varchar(30), 'PERF_COUNTER_BULK_COUNT')     /* provides the average number of operations per second. Two readings of cntr_value will be required for this counter type, in order to get the per second averages    */ \n" 
+			+ "          WHEN cntr_type = 272696320  THEN convert(varchar(30), 'PERF_COUNTER_BULK_COUNT')     /* provides the average number of operations per second. Two readings of cntr_value will be required for this counter type, in order to get the per second averages    */ \n" 
+			+ "          WHEN cntr_type = 537003264  THEN convert(varchar(30), 'PERF_LARGE_RAW_FRACTION')     /* used in conjunction with PERF_LARGE_RAW_BASE to calculate ratio values, such as the cache hit ratio                                                                 */ \n" 
+			+ "          WHEN cntr_type = 1073874176 THEN convert(varchar(30), 'PERF_AVERAGE_BULK')           /* used to calculate an average number of operations completed during a time interval; like PERF_LARGE_RAW_FRACTION, it uses PERF_LARGE_RAW_BASE to do the calculation */ \n" 
+			+ "          WHEN cntr_type = 1073939712 THEN convert(varchar(30), 'PERF_LARGE_RAW_BASE')         /* used in the translation of PERF_LARGE_RAW_FRACTION and PERF_AVERAGE_BULK values to readable output; should not be displayed alone.                                  */ \n" 
 			+ "          ELSE convert(varchar(30), cntr_type) \n"
 			+ "       END as cntr_type_name \n"
 			+ "from sys." + dm_os_performance_counters;

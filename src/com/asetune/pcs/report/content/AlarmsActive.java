@@ -53,15 +53,15 @@ extends ReportEntryAbstract
 		return true;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-		writeMessageText(w);
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//		writeMessageText(w);
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		if (_shortRstm.getRowCount() == 0)
@@ -88,7 +88,7 @@ extends ReportEntryAbstract
 				boolean showAtStart = false;
 				String  htmlContent = _fullRstm.toHtmlTablesVerticalString("sortable", colNameValueTagMap);
 
-				String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Active Alarm Details...", htmlContent);
+				String showHideDiv = "<br>" + createShowHideDiv(divId, showAtStart, "Show/Hide Active Alarm Details...", htmlContent);
 
 				sb.append( msOutlookAlternateText(showHideDiv, "Active Alarm Details", null) );
 			}
@@ -197,6 +197,9 @@ extends ReportEntryAbstract
 		      "order by [createTime]";
 		
 		_fullRstm = executeQuery(conn, sql, true, "Active Alarms Full");
+
+		// Highlight sort column
+		_shortRstm.setHighlightSortColumns("createTime");
 	}
 
 }

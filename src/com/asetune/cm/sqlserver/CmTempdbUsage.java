@@ -316,8 +316,8 @@ extends CountersModel
 		
 		// FIXME: THIS CAN BE IMPROVED: Just a placeholder to do something
 		String sql = 
-			"SELECT "
-			+ "  database_id"
+			"SELECT /* ${cmCollectorName} */ \n"
+			+ "  database_id \n"
 			+ ", file_id \n"
 			+ filegroup_id
 			

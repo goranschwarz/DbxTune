@@ -65,7 +65,7 @@ public class SqlCaptureSqlTextStatisticsSample
 	{
 		return dynamicName + "-" + operation;
 	}
-	public void addSqlTextInternal(String dynamicName, String operation)
+	public synchronized void addSqlTextInternal(String dynamicName, String operation)
 	{
 //System.out.println("addSqlTextInternal(): dynamicName='"+dynamicName+"', op='"+operation+"'.");
 
@@ -178,7 +178,7 @@ public class SqlCaptureSqlTextStatisticsSample
 	}
 	
 	
-	public ResultSet toResultSet()
+	public synchronized ResultSet toResultSet()
 	{
 		SimpleResultSet rs = new SimpleResultSet();
 
@@ -216,3 +216,15 @@ public class SqlCaptureSqlTextStatisticsSample
 		return rs;
 	}
 }
+
+// FIX THE BELOW...  possibly: ConcurrentHashMap (but its Linked and ConcurrentLinkedHashMap do not exists... so use synchronized instead)
+// java.util.ConcurrentModificationException
+//     at java.util.LinkedHashMap$LinkedHashIterator.nextNode(LinkedHashMap.java:719)
+//     at java.util.LinkedHashMap$LinkedValueIterator.next(LinkedHashMap.java:747)
+//     at com.asetune.pcs.sqlcapture.SqlCaptureSqlTextStatisticsSample.toResultSet(SqlCaptureSqlTextStatisticsSample.java:191)
+//     at com.asetune.cm.ase.CmSqlDynamic$CounterSamplePrivate.getSample(CmSqlDynamic.java:408)
+//     at com.asetune.cm.CountersModel.refreshGetData(CountersModel.java:4673)
+//     at com.asetune.cm.CountersModel.refresh(CountersModel.java:4505)
+//     at com.asetune.cm.CountersModel.refresh(CountersModel.java:4441)
+//     at com.asetune.CounterCollectorThreadNoGui.run(CounterCollectorThreadNoGui.java:1424)
+

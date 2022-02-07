@@ -36,6 +36,8 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.rs.AlarmEventRsInMemoryControl;
 import com.asetune.alarm.events.rs.AlarmEventRsMemoryUsage;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
@@ -118,32 +120,20 @@ extends CountersModel
 	 * 
 	 * WHERE the column name looks like 'Object(State)' -- that is WITHOUT the space in the column name...  
 	 * 
-
-        Object (State)  Memory_Consumed  Memory_Consumed_Mb  Max_Memory_Consumed_Mb 
-        ������������--  ��������������-  ����������������--  ��������������������--
-        Misc (Norm)     17370307         16                  16
-        CI   (Norm)     0                0                   0
-        EXEC (Norm)     27392            0                   0
-        IBQ  (Norm)     1196960          1                   1
-        SQT  (Norm)     108408           0                   0
-        DIST (Norm)     218456           0                   0
-        OBQ  (Norm)     1381880          1                   1
-        DSIS (Norm)     369800           0                   0
-        DSIE (Norm)     439776           0                   0
-        Total(Norm)     21112979         20                  20
-                            
-        Avg_Memory_Consumed_Mb  Memory_Threshold_Mb  Memory_Ctrl_Time(s)
-        ��������������������--  ������������������-  ����������������---
-        16                      99                   0
-        0                       299                  0
-        0                       99                   0
-        1                       99                   0
-        0                       159                  0
-        0                       99                   0
-        0                       199                  0
-        0                       399                  0
-        0                       539                  0
-        N/A                     1997                 0
+	 *  +-------------+---------------+------------------+----------------------+----------------------+-------------------+-------------------+
+	 *  |Object(State)|Memory_Consumed|Memory_Consumed_Mb|Max_Memory_Consumed_Mb|Avg_Memory_Consumed_Mb|Memory_Threshold_Mb|Memory_Ctrl_Time(s)|
+	 *  +-------------+---------------+------------------+----------------------+----------------------+-------------------+-------------------+
+	 *  |Misc (Norm)  |36363989       |34                |34                    |34                    |407                |0                  |
+	 *  |CI   (Norm)  |0              |0                 |0                     |0                     |1221               |0                  |
+	 *  |EXEC (Norm)  |1709904        |1                 |10                    |1                     |407                |0                  |
+	 *  |IBQ  (Norm)  |1836944        |1                 |2                     |1                     |407                |0                  |
+	 *  |SQT  (Norm)  |209120         |0                 |62                    |0                     |651                |0                  |
+	 *  |DIST (Norm)  |268560         |0                 |46                    |0                     |407                |0                  |
+	 *  |OBQ  (Norm)  |1994792        |1                 |1                     |0                     |814                |0                  |
+	 *  |DSIS (Norm)  |1418992        |1                 |20                    |1                     |1628               |0                  |
+	 *  |DSIE (Norm)  |4409904        |4                 |25                    |4                     |2198               |0                  |
+	 *  |Total(Norm)  |48212205       |45                |128                   |N/A                   |8142               |0                  |
+	 *  +-------------+---------------+------------------+----------------------+----------------------+-------------------+-------------------+
 	 */
 	
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
@@ -418,6 +408,65 @@ extends CountersModel
 		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
 		//-------------------------------------------------------
+		// In Memory Control
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("InMemoryControl"))
+		{
+			boolean doCheck = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_alarm_InMemoryControl, DEFAULT_alarm_InMemoryControl);
+
+			int pos_objectState = this.findColumn("Object(State)");
+			if (pos_objectState == -1)
+				pos_objectState = this.findColumn("Object/State");
+
+			if (doCheck && pos_objectState != -1)
+			{
+				for (int r=0; r<cm.getAbsRowCount(); r++)
+				{
+					String objectState = cm.getAbsString(r, pos_objectState);
+
+					// If the module is in Memory Control... Alarm, since that module is "Paused" !!!
+					if (objectState != null && objectState.contains("(Ctrl)"))
+					{
+						AlarmEvent alarm = new AlarmEventRsInMemoryControl(cm, objectState, _memoryLimitSizeMb);
+
+						AlarmHandler.getInstance().addAlarm( alarm );
+					}
+				} // end: loop all rows
+			}
+		}
+
+//		//-------------------------------------------------------
+//		// In Memory Control -- Time
+//		//-------------------------------------------------------
+//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("InMemoryControlTime"))
+//		{
+//			int pos_objectState = this.findColumn("Object(State)");
+//			if (pos_objectState == -1)
+//				pos_objectState = this.findColumn("Object/State");
+//			
+//			int pos_memCtlTimeInSec = this.findColumn("Memory_Ctrl_Time(s)");
+//
+//			if (pos_objectState != -1)
+//			{
+//				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_InMemoryControlTime, DEFAULT_alarm_InMemoryControlTime);
+//
+//				for (int r=0; r<cm.getAbsRowCount(); r++)
+//				{
+//					String objectState     = cm.getAbsString(r, pos_objectState);
+//					Double memCtlTimeInSec = pos_memCtlTimeInSec == -1 ? 0d : cm.getAbsValueAsDouble(r, pos_memCtlTimeInSec, 0d);
+//
+//					// If the module is in Memory Control... Alarm, since that module is "Paused" !!!
+//					if (memCtlTimeInSec.intValue() > threshold)
+//					{
+//						AlarmEvent alarm = new AlarmEventRsInMemoryControl(cm, objectState, memCtlTimeInSec.intValue(), _memoryLimitSizeMb, threshold);
+//
+//						AlarmHandler.getInstance().addAlarm( alarm );
+//					}
+//				} // end: loop all rows
+//			}
+//		}
+
+		//-------------------------------------------------------
 		// Memory Usage in PCT
 		//-------------------------------------------------------
 		if (isSystemAlarmsForColumnEnabledAndInTimeRange("MemoryUsedPct"))
@@ -485,6 +534,12 @@ extends CountersModel
 		}
 	} // end: method
 
+	public static final String  PROPKEY_alarm_InMemoryControl                    = CM_NAME + ".alarm.system.if.InMemoryControl";
+	public static final boolean DEFAULT_alarm_InMemoryControl                    = true;
+
+//	public static final String  PROPKEY_alarm_InMemoryControlTime                = CM_NAME + ".alarm.system.if.MemoryCtrlTime.gt";
+//	public static final int     DEFAULT_alarm_InMemoryControlTime                = 60;
+
 	public static final String  PROPKEY_alarm_MemoryUsedPct1                     = CM_NAME + ".alarm.system.if.MemoryUsedPct.1.gt";
 	public static final int     DEFAULT_alarm_MemoryUsedPct1                     = 60;
 	
@@ -506,10 +561,12 @@ extends CountersModel
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("MemoryUsedPct", isAlarmSwitch, PROPKEY_alarm_MemoryUsedPct1, Integer.class,  conf.getIntProperty(PROPKEY_alarm_MemoryUsedPct1, DEFAULT_alarm_MemoryUsedPct1), DEFAULT_alarm_MemoryUsedPct1, "If 'MemoryUsedPct' is GREATER than ## pct, send 'AlarmEventRsMemoryUsage'."));
-		list.add(new CmSettingsHelper("MemoryUsedPct", isAlarmSwitch, PROPKEY_alarm_MemoryUsedPct2, Integer.class,  conf.getIntProperty(PROPKEY_alarm_MemoryUsedPct2, DEFAULT_alarm_MemoryUsedPct2), DEFAULT_alarm_MemoryUsedPct2, "If 'MemoryUsedPct' is GREATER than ## pct, send 'AlarmEventRsMemoryUsage'."));
-		list.add(new CmSettingsHelper("MemoryUsedPct", isAlarmSwitch, PROPKEY_alarm_MemoryUsedPct3, Integer.class,  conf.getIntProperty(PROPKEY_alarm_MemoryUsedPct3, DEFAULT_alarm_MemoryUsedPct3), DEFAULT_alarm_MemoryUsedPct3, "If 'MemoryUsedPct' is GREATER than ## pct, send 'AlarmEventRsMemoryUsage'."));
-		list.add(new CmSettingsHelper("MemoryUsedPct", isAlarmSwitch, PROPKEY_alarm_MemoryUsedPct4, Integer.class,  conf.getIntProperty(PROPKEY_alarm_MemoryUsedPct4, DEFAULT_alarm_MemoryUsedPct4), DEFAULT_alarm_MemoryUsedPct4, "If 'MemoryUsedPct' is GREATER than ## pct, send 'AlarmEventRsMemoryUsage'."));
+		list.add(new CmSettingsHelper("InMemoryControl"    , isAlarmSwitch, PROPKEY_alarm_InMemoryControl    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_InMemoryControl    , DEFAULT_alarm_InMemoryControl    ), DEFAULT_alarm_InMemoryControl    , "If any module is in Memory Control. column 'Object(State)' contains '.*(Ctrl)', send 'AlarmEventRsInMemoryControl'."));
+//		list.add(new CmSettingsHelper("InMemoryControlTime", isAlarmSwitch, PROPKEY_alarm_InMemoryControlTime, Integer.class, conf.getIntProperty    (PROPKEY_alarm_InMemoryControlTime, DEFAULT_alarm_InMemoryControlTime), DEFAULT_alarm_InMemoryControlTime, "If any module is in Memory Control, column 'Memory_Ctrl_Time(s)' is above ##, send 'AlarmEventRsInMemoryControl'."));
+		list.add(new CmSettingsHelper("MemoryUsedPct"      , isAlarmSwitch, PROPKEY_alarm_MemoryUsedPct1     , Integer.class, conf.getIntProperty    (PROPKEY_alarm_MemoryUsedPct1     , DEFAULT_alarm_MemoryUsedPct1     ), DEFAULT_alarm_MemoryUsedPct1     , "If 'MemoryUsedPct' is GREATER than ## pct, send 'AlarmEventRsMemoryUsage'."));
+		list.add(new CmSettingsHelper("MemoryUsedPct"      , isAlarmSwitch, PROPKEY_alarm_MemoryUsedPct2     , Integer.class, conf.getIntProperty    (PROPKEY_alarm_MemoryUsedPct2     , DEFAULT_alarm_MemoryUsedPct2     ), DEFAULT_alarm_MemoryUsedPct2     , "If 'MemoryUsedPct' is GREATER than ## pct, send 'AlarmEventRsMemoryUsage'."));
+		list.add(new CmSettingsHelper("MemoryUsedPct"      , isAlarmSwitch, PROPKEY_alarm_MemoryUsedPct3     , Integer.class, conf.getIntProperty    (PROPKEY_alarm_MemoryUsedPct3     , DEFAULT_alarm_MemoryUsedPct3     ), DEFAULT_alarm_MemoryUsedPct3     , "If 'MemoryUsedPct' is GREATER than ## pct, send 'AlarmEventRsMemoryUsage'."));
+		list.add(new CmSettingsHelper("MemoryUsedPct"      , isAlarmSwitch, PROPKEY_alarm_MemoryUsedPct4     , Integer.class, conf.getIntProperty    (PROPKEY_alarm_MemoryUsedPct4     , DEFAULT_alarm_MemoryUsedPct4     ), DEFAULT_alarm_MemoryUsedPct4     , "If 'MemoryUsedPct' is GREATER than ## pct, send 'AlarmEventRsMemoryUsage'."));
 
 		return list;
 	}

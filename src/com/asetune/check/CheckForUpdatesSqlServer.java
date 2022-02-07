@@ -37,7 +37,6 @@ import com.asetune.ICounterController;
 import com.asetune.Version;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
-import com.asetune.utils.StringUtil;
 
 public class CheckForUpdatesSqlServer extends CheckForUpdatesDbx
 {

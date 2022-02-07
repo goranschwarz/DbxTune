@@ -32,6 +32,24 @@ import com.asetune.utils.Configuration;
 
 public interface IReportEntry
 {
+	public enum MessageType
+	{
+		/** This will typically be a Mail Message, not holding ALL the information */
+		SHORT_MESSAGE,
+		
+		/** This will typically be a HTML File/Report holding ALL information */
+		FULL_MESSAGE
+	};
+
+	/** Check if current message type is MessageType.SHORT_MESSAGE */ 
+	boolean isShortMessageType();
+	/** Check if current message type is MessageType.FULL_MESSAGE */ 
+	boolean isFullMessageType();
+	/** Set the current message type */
+	void setCurrentMessageType(MessageType messageType);
+	/** Get the current message type */
+	MessageType getCurrentMessageType();
+	
 	/**
 	 * Get Report Message as a text String
 	 */
@@ -45,7 +63,7 @@ public interface IReportEntry
 	/**
 	 * Write Report Message as a HTML String (do NOT surround with HTML start/end tags)
 	 */
-	void writeMessageText(Writer writer) throws IOException;
+	void writeMessageText(Writer writer, MessageType messageType) throws IOException;
 
 
 	/**
@@ -63,7 +81,7 @@ public interface IReportEntry
 	 * @param w
 	 * @throws IOException 
 	 */
-	void writeShortMessageText(Writer w) throws IOException;
+//	void writeShortMessageText(Writer w) throws IOException;
 
 
 	/**
@@ -200,6 +218,17 @@ public interface IReportEntry
 	 * @return
 	 */
 	List<ReportingIndexEntry> getReportingIndexes();
+
+	/**
+	 * Set how long it took to create/execute this report
+	 * @param msDiffNow
+	 */
+	void setExecTime(long ms);
+
+	/**
+	 * Get how long it took to create/execute this report
+	 */
+	long getExecTime();
 	
 
 //	/**

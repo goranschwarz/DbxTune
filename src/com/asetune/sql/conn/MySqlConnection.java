@@ -405,4 +405,19 @@ public class MySqlConnection extends DbxConnection
 		}
 		return false;
 	}
+
+	@Override
+	protected int getDbmsSessionId_impl() throws SQLException
+	{
+		String sql = "select connection_id()";
+
+		int spid = -1;
+		try (Statement stmnt = _conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+				spid = rs.getInt(1);
+		}
+		
+		return spid;
+	}
 }

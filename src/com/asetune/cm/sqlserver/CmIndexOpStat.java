@@ -34,11 +34,11 @@ import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSampleCatalogIteratorSqlServer;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.cm.CountersModel;
+import com.asetune.cm.SortOptions;
 import com.asetune.cm.SortOptions.ColumnNameSensitivity;
 import com.asetune.cm.SortOptions.DataSortSensitivity;
 import com.asetune.cm.SortOptions.SortOrder;
-import com.asetune.cm.CountersModel;
-import com.asetune.cm.SortOptions;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.swing.ColumnHeaderPropsEntry;
 import com.asetune.utils.Ver;
@@ -329,7 +329,7 @@ extends CountersModel
 			    + "-- Note: Below SQL Statement is executed in every database that is 'online', more or less like: sp_msforeachdb \n"
 			    + "-- Note: object_schema_name() and object_name() can NOT be used for 'dirty-reads', they may block... hence the 'ugly' fullname sub-selects in the select column list \n"
 			    + "-- Note: To enable/disable DbxTune Cached Lookups for ObjectID to name translation is done with property '" + DbmsObjectIdCacheSqlServer.PROPKEY_BulkLoadOnStart + "=true|false'. Current Status=" + (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled() ? "ENABLED" : "DISABLED") + " \n"
-			    + "select \n"
+			    + "select /* ${cmCollectorName} */ \n"
 			    +      DbName
 			    +      SchemaName
 			    +      TableName

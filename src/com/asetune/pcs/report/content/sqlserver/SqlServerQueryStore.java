@@ -26,6 +26,7 @@ import java.io.Writer;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,19 +38,29 @@ import java.util.Set;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
+import org.h2.tools.SimpleResultSet;
 
+import com.asetune.cm.SortOptions;
+import com.asetune.cm.SortOptions.ColumnNameSensitivity;
+import com.asetune.cm.SortOptions.DataSortSensitivity;
+import com.asetune.cm.SortOptions.SortOrder;
 import com.asetune.gui.ModelMissmatchException;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.DailySummaryReportDefault;
-import com.asetune.pcs.report.content.ase.SparklineHelper;
-import com.asetune.pcs.report.content.ase.SparklineHelper.AggType;
-import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
-import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
+import com.asetune.pcs.report.content.SparklineHelper;
+import com.asetune.pcs.report.content.SparklineHelper.AggType;
+import com.asetune.pcs.report.content.SparklineHelper.DataSource;
+import com.asetune.pcs.report.content.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
+import com.asetune.utils.HtmlTableProducer;
+import com.asetune.utils.HtmlTableProducer.ColumnCopyDef;
+import com.asetune.utils.HtmlTableProducer.ColumnCopyRender;
+import com.asetune.utils.HtmlTableProducer.ColumnCopyRow;
+import com.asetune.utils.HtmlTableProducer.ColumnStatic;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
@@ -69,58 +80,68 @@ extends SqlServerAbstract
 	@Override
 	public boolean hasShortMessageText()
 	{
-		return false;
+//		return false;
+		return true;  // but only for the SUMMARY
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//	}
 
 	@Override
-	public void writeMessageText(Writer w)
+	public void writeMessageText(Writer w, MessageType messageType)
 	throws IOException
 	{
 		if (_dbMap.isEmpty())
 		{
-			w.append("No databases with 'Query Store' enabled was found or captured.\n");
-			w.append("<br>\n");
-			w.append("To enable Query Store for a database, you can do the following<br>\n");
-			w.append("<pre>\n");
-			w.append("USE master \n");
-			w.append("go \n");
-			w.append("ALTER DATABASE [dbname] SET QUERY_STORE = ON \n");
-			w.append("go \n");
-			w.append("ALTER DATABASE [dbname] SET QUERY_STORE (OPERATION_MODE = READ_WRITE, MAX_STORAGE_SIZE_MB = 2048) \n");
-			w.append("go \n");
-			w.append("--or if you want a bit more fine grained options/controll before we starts to persists to the Query Store: \n");
-			w.append("--ALTER DATABASE [gs1] \n");
-			w.append("--SET QUERY_STORE  \n");
-			w.append("--( \n");
-			w.append("--	OPERATION_MODE = READ_WRITE,  \n");
-			w.append("--	MAX_STORAGE_SIZE_MB         = 2048,                 -- Determines the space issued to the Query Store. MAX_STORAGE_SIZE_MB is type bigint. The default value is 100 MB for SQL Server (SQL Server 2016 (13.x) through SQL Server 2017 (14.x)). Starting with SQL Server 2019 (15.x), the default value is 1 GB. \n");
-			w.append("--	CLEANUP_POLICY = (STALE_QUERY_THRESHOLD_DAYS = 30), -- Describes the data retention policy of the Query Store. STALE_QUERY_THRESHOLD_DAYS determines the number of days for which the information for a query is kept in the Query Store. STALE_QUERY_THRESHOLD_DAYS is type bigint. The default value is 30. \n");
-			w.append("--	DATA_FLUSH_INTERVAL_SECONDS = 900,                  -- Determines the frequency at which data written to the Query Store is persisted to disk. To optimize for performance, data collected by the Query Store is asynchronously written to the disk. The frequency at which this asynchronous transfer occurs is configured by using the DATA_FLUSH_INTERVAL_SECONDS argument. DATA_FLUSH_INTERVAL_SECONDS is type bigint. The default value is 900 (15 min). \n");
-			w.append("--	INTERVAL_LENGTH_MINUTES     = 1440,                 -- Determines the time interval at which runtime execution statistics data is aggregated into the Query Store. To optimize for space usage, the runtime execution statistics in the runtime stats store are aggregated over a fixed time window. This fixed time window is configured by using the INTERVAL_LENGTH_MINUTES argument. INTERVAL_LENGTH_MINUTES is type bigint. The default value is 60. \n");
-			w.append("--	SIZE_BASED_CLEANUP_MODE     = AUTO,                 -- Size-based cleanup will be automatically activated when size on disk reaches 90% of MAX_STORAGE_SIZE_MB. Size-based cleanup removes the least expensive and oldest queries first. It stops at approximately 80% of MAX_STORAGE_SIZE_MB. This value is the default configuration value. \n");
-			w.append("--	MAX_PLANS_PER_QUERY         = 200,                  -- Defines the maximum number of plans maintained for each query. MAX_PLANS_PER_QUERY is type int. The default value is 200. \n");
-			w.append("--	WAIT_STATS_CAPTURE_MODE     = ON                    -- Controls whether wait statistics will be captured per query. Starting with SQL Server 2017  \n");
-			w.append("--	QUERY_CAPTURE_MODE          = CUSTOM,               -- Designates the currently active query capture mode. Each mode defines specific query capture policies. { ALL | AUTO | CUSTOM | NONE } \n");
-			w.append("--	QUERY_CAPTURE_POLICY        =                       -- Allows control over the QUERY_CAPTURE_POLICY options. \n");
-			w.append("--	( \n");
-			w.append("--		STALE_CAPTURE_POLICY_THRESHOLD = 1 HOURS,       -- Defines the evaluation interval period to determine if a query should be captured. The default is 1 day, and it can be set from 1 hour to seven days. number is type int. \n");
-			w.append("--		EXECUTION_COUNT                = 30,            -- Defines the number of times a query is executed over the evaluation period. The default is 30, which means that for the default Stale Capture Policy Threshold, a query must execute at least 30 times in one day to be persisted in the Query Store. \n");
-			w.append("--		TOTAL_COMPILE_CPU_TIME_MS      = 1000,          -- Defines total elapsed compile CPU time used by a query over the evaluation period. The default is 1000 which means that for the default Stale Capture Policy Threshold, a query must have a total of at least one second of CPU time spent during query compilation in one day to be persisted in the Query Store.  \n");
-			w.append("--		TOTAL_EXECUTION_CPU_TIME_MS    = 100            -- Defines total elapsed execution CPU time used by a query over the evaluation period. The default is 100 which means that for the default Stale Capture Policy Threshold, a query must have a total of at least 100 ms of CPU time spent during execution in one day to be persisted in the Query Store \n");
-			w.append("--	) \n");
-			w.append("--) \n");
-			w.append("go \n");
-			w.append("-- Check below URLs for more information about Query Store \n");
-			w.append("https://docs.microsoft.com/en-us/sql/relational-databases/performance/monitoring-performance-by-using-the-query-store?view=sql-server-ver15 \n");
-			w.append("https://docs.microsoft.com/en-us/sql/relational-databases/performance/how-query-store-collects-data?view=sql-server-ver15 \n");
-			w.append("</pre>\n");
-			w.append("<br>\n");
+			if (isFullMessageType())
+			{
+				w.append("No databases with 'Query Store' enabled was found or captured.\n");
+				w.append("<br>\n");
+				w.append("To enable Query Store for a database, you can do the following<br>\n");
+				w.append("<pre>\n");
+				w.append("USE master \n");
+				w.append("go \n");
+				w.append("ALTER DATABASE [dbname] SET QUERY_STORE = ON \n");
+				w.append("go \n");
+				w.append("ALTER DATABASE [dbname] SET QUERY_STORE (OPERATION_MODE = READ_WRITE, MAX_STORAGE_SIZE_MB = 2048) \n");
+				w.append("go \n");
+				w.append("--or if you want a bit more fine grained options/controll before we starts to persists to the Query Store: \n");
+				w.append("--ALTER DATABASE [gs1] \n");
+				w.append("--SET QUERY_STORE  \n");
+				w.append("--( \n");
+				w.append("--	OPERATION_MODE = READ_WRITE,  \n");
+				w.append("--	MAX_STORAGE_SIZE_MB         = 2048,                 -- Determines the space issued to the Query Store. MAX_STORAGE_SIZE_MB is type bigint. The default value is 100 MB for SQL Server (SQL Server 2016 (13.x) through SQL Server 2017 (14.x)). Starting with SQL Server 2019 (15.x), the default value is 1 GB. \n");
+				w.append("--	CLEANUP_POLICY = (STALE_QUERY_THRESHOLD_DAYS = 30), -- Describes the data retention policy of the Query Store. STALE_QUERY_THRESHOLD_DAYS determines the number of days for which the information for a query is kept in the Query Store. STALE_QUERY_THRESHOLD_DAYS is type bigint. The default value is 30. \n");
+				w.append("--	DATA_FLUSH_INTERVAL_SECONDS = 900,                  -- Determines the frequency at which data written to the Query Store is persisted to disk. To optimize for performance, data collected by the Query Store is asynchronously written to the disk. The frequency at which this asynchronous transfer occurs is configured by using the DATA_FLUSH_INTERVAL_SECONDS argument. DATA_FLUSH_INTERVAL_SECONDS is type bigint. The default value is 900 (15 min). \n");
+				w.append("--	INTERVAL_LENGTH_MINUTES     = 1440,                 -- Determines the time interval at which runtime execution statistics data is aggregated into the Query Store. To optimize for space usage, the runtime execution statistics in the runtime stats store are aggregated over a fixed time window. This fixed time window is configured by using the INTERVAL_LENGTH_MINUTES argument. INTERVAL_LENGTH_MINUTES is type bigint. The default value is 60. \n");
+				w.append("--	SIZE_BASED_CLEANUP_MODE     = AUTO,                 -- Size-based cleanup will be automatically activated when size on disk reaches 90% of MAX_STORAGE_SIZE_MB. Size-based cleanup removes the least expensive and oldest queries first. It stops at approximately 80% of MAX_STORAGE_SIZE_MB. This value is the default configuration value. \n");
+				w.append("--	MAX_PLANS_PER_QUERY         = 200,                  -- Defines the maximum number of plans maintained for each query. MAX_PLANS_PER_QUERY is type int. The default value is 200. \n");
+				w.append("--	WAIT_STATS_CAPTURE_MODE     = ON                    -- Controls whether wait statistics will be captured per query. Starting with SQL Server 2017  \n");
+				w.append("--	QUERY_CAPTURE_MODE          = CUSTOM,               -- Designates the currently active query capture mode. Each mode defines specific query capture policies. { ALL | AUTO | CUSTOM | NONE } \n");
+				w.append("--	QUERY_CAPTURE_POLICY        =                       -- Allows control over the QUERY_CAPTURE_POLICY options. \n");
+				w.append("--	( \n");
+				w.append("--		STALE_CAPTURE_POLICY_THRESHOLD = 1 HOURS,       -- Defines the evaluation interval period to determine if a query should be captured. The default is 1 day, and it can be set from 1 hour to seven days. number is type int. \n");
+				w.append("--		EXECUTION_COUNT                = 30,            -- Defines the number of times a query is executed over the evaluation period. The default is 30, which means that for the default Stale Capture Policy Threshold, a query must execute at least 30 times in one day to be persisted in the Query Store. \n");
+				w.append("--		TOTAL_COMPILE_CPU_TIME_MS      = 1000,          -- Defines total elapsed compile CPU time used by a query over the evaluation period. The default is 1000 which means that for the default Stale Capture Policy Threshold, a query must have a total of at least one second of CPU time spent during query compilation in one day to be persisted in the Query Store.  \n");
+				w.append("--		TOTAL_EXECUTION_CPU_TIME_MS    = 100            -- Defines total elapsed execution CPU time used by a query over the evaluation period. The default is 100 which means that for the default Stale Capture Policy Threshold, a query must have a total of at least 100 ms of CPU time spent during execution in one day to be persisted in the Query Store \n");
+				w.append("--	) \n");
+				w.append("--) \n");
+				w.append("go \n");
+				w.append("-- Check below URLs for more information about Query Store \n");
+				w.append("https://docs.microsoft.com/en-us/sql/relational-databases/performance/monitoring-performance-by-using-the-query-store?view=sql-server-ver15 \n");
+				w.append("https://docs.microsoft.com/en-us/sql/relational-databases/performance/how-query-store-collects-data?view=sql-server-ver15 \n");
+				w.append("</pre>\n");
+				w.append("<br>\n");
+			}
+
+			if (isShortMessageType())
+			{
+				w.append("No databases with 'Query Store' enabled was found or captured.\n");
+				w.append("For tips on how to enable 'Query Store', see the <i>full</i> report!\n");
+			}
 			return;
 		}
 
@@ -158,11 +179,33 @@ extends SqlServerAbstract
 			w.append("<br>\n");
 		}
 
-
-		// Write a report for each of the databases
-		for (QsDbReport entry : _dbMap.values())
+		// FULL MESAGE - write SUMMARY and ALL databases
+		if (isFullMessageType())
 		{
-			entry.writeMessageText(w);
+			// First Write SUMMARY REPORT For ALL Databases (only if we have more that 1 db's activated for Query Store)
+			if (_qsSummaryDbReport != null)
+				_qsSummaryDbReport.writeMessageText(w);
+
+			// Write a report for each of the databases
+			for (QsDbReport entry : _dbMap.values())
+			{
+				entry.writeMessageText(w);
+			}
+		}
+		// SHORT MESAGE - Write SUMMARY or FIRST entry (if we only got 1 entry)
+		else if (isShortMessageType())
+		{
+			if (_qsSummaryDbReport != null)
+			{
+				_qsSummaryDbReport.writeMessageText(w);
+			}
+			else if (_dbMap.size() == 1)
+			{
+				for (QsDbReport entry : _dbMap.values())
+				{
+					entry.writeMessageText(w);
+				}
+			}
 		}
 	}
 
@@ -209,7 +252,23 @@ extends SqlServerAbstract
 			_logger.error("Problems getting schemas in the PCS.");
 			return;
 		}
+		
+		// merge all QsDbReport into a "ALL_DB's"
+		if (_dbMap.size() > 1)
+		{
+			_qsSummaryDbReport = new QsDbReportSummary();
+
+			for (QsDbReport entry : _dbMap.values())
+			{
+				_qsSummaryDbReport.merge(entry);
+			}
+			_qsSummaryDbReport.sort();
+			_qsSummaryDbReport.setTopRows(getTopRows()); // Keep only the ## top rows.
+			_qsSummaryDbReport.postMerge(); // Fixes links etc to ShowPlans... NOT YET IMPLEMENTED
+			_qsSummaryDbReport.createSqlTextTable();
+		}
 	}
+	private QsDbReportSummary _qsSummaryDbReport;
 
 //	/**
 //	 * Set descriptions for the table, and the columns
@@ -245,19 +304,64 @@ extends SqlServerAbstract
 			_schemaName = schemaName;
 		}
 		
+//		@Override
+//		public Map<String, String> getShowplanAsMap(DbxConnection conn, Set<String> nameSet)
+//		throws SQLException
+//		{
+//			Map<String, String> planMap = new LinkedHashMap<>();
+//			
+//			for (String name : nameSet)
+//			{
+//				String sql = ""
+//					    + "select [plan_id], [query_plan] \n"
+//					    + "from [" + _schemaName + "].[query_store_plan] \n"
+//					    + "where 1 = 1 \n"
+//					    + "  and [plan_id] = " + DbUtils.safeStr(name) + " \n"
+//					    + "";
+//				
+//				sql = conn.quotifySqlString(sql);
+//				try ( Statement stmnt = conn.createStatement() )
+//				{
+//					// Unlimited execution time
+//					stmnt.setQueryTimeout(0);
+//					try ( ResultSet rs = stmnt.executeQuery(sql) )
+//					{
+//						while(rs.next())
+//						{
+//							String objectName    = rs.getString(1);
+//							String extraInfoText = rs.getString(2);
+//
+//							planMap.put(objectName, extraInfoText);
+//						}
+//					}
+//				}
+//				catch(SQLException ex)
+//				{
+//					//_problem = ex;
+//
+//					_logger.warn("Problems getting SQL Statement name = '"+name+"': " + ex);
+//					throw ex;
+//				} 
+//			}
+//			
+//			return planMap;
+//		}
 		@Override
-		public Map<String, String> getShowplanAsMap(DbxConnection conn, Set<String> nameSet)
+		public Map<PlanKey, String> getShowplanAsMap(DbxConnection conn, Set<PlanKey> nameSet)
 		throws SQLException
 		{
-			Map<String, String> planMap = new LinkedHashMap<>();
+			Map<PlanKey, String> planMap = new LinkedHashMap<>();
 			
-			for (String name : nameSet)
+			for (PlanKey planKey : nameSet)
 			{
+				String dbname = planKey.getDbname();
+				String planId = planKey.getPlanId();
+
 				String sql = ""
 					    + "select [plan_id], [query_plan] \n"
 					    + "from [" + _schemaName + "].[query_store_plan] \n"
 					    + "where 1 = 1 \n"
-					    + "  and [plan_id] = " + DbUtils.safeStr(name) + " \n"
+					    + "  and [plan_id] = " + DbUtils.safeStr(planId) + " \n"
 					    + "";
 				
 				sql = conn.quotifySqlString(sql);
@@ -272,7 +376,7 @@ extends SqlServerAbstract
 							String objectName    = rs.getString(1);
 							String extraInfoText = rs.getString(2);
 
-							planMap.put(objectName, extraInfoText);
+							planMap.put(new PlanKey(dbname, objectName), extraInfoText);
 						}
 					}
 				}
@@ -280,7 +384,7 @@ extends SqlServerAbstract
 				{
 					//_problem = ex;
 
-					_logger.warn("Problems getting SQL Statement name = '"+name+"': " + ex);
+					_logger.warn("Problems getting SQL Statement name = '"+planId+"': " + ex);
 					throw ex;
 				} 
 			}
@@ -292,6 +396,94 @@ extends SqlServerAbstract
 	//----------------------------------------------------------------------------------------------
 	//-- CLASS: QsDbReport
 	//----------------------------------------------------------------------------------------------
+	private class QsDbReportSummary
+	extends QsDbReport
+	{
+		public QsDbReportSummary()
+		{
+			super("SUMMARY", "ALL Databases with Query Store Enabled.");
+		}
+
+		//----------------------------------------------------------
+		// BEGIN: methods for merging into SUMMARY 
+		//----------------------------------------------------------
+		public void merge(QsDbReport entry)
+		{
+			//-----------------------------------------------------
+			// Copy: ResultSets
+			//-----------------------------------------------------
+			if (_topCpuRstm  == null) _topCpuRstm  = new ResultSetTableModel(entry._topCpuRstm , "SUMMARY-CPU"   , false);
+			if (_topWaitRstm == null) _topWaitRstm = new ResultSetTableModel(entry._topWaitRstm, "SUMMARY-WAIT"  , false);
+			if (_confRstm    == null) _confRstm    = new ResultSetTableModel(entry._confRstm   , "SUMMARY-CONFIG", false);
+			if (_recomRstm   == null) _recomRstm   = new ResultSetTableModel(entry._recomRstm  , "SUMMARY-RECOM" , false);
+
+			try
+			{
+				_topCpuRstm .add(entry._topCpuRstm);
+				_topWaitRstm.add(entry._topWaitRstm);
+				_confRstm   .add(entry._confRstm);
+				_recomRstm  .add(entry._recomRstm);
+			}
+			catch (ModelMissmatchException ex)
+			{
+				_logger.warn("Problems merging Query Store entry '" + _dbname + "' into 'SUMMARY'. Skipping this entry.", ex);
+			}
+
+			//-----------------------------------------------------
+			// Copy: SQL Text for CPU and WAIT
+			//-----------------------------------------------------
+			if (_keyToSqlText  == null) _keyToSqlText  = new HashMap<>();
+			if (_keyToWaitTime == null) _keyToWaitTime = new HashMap<>();
+
+			_keyToSqlText .putAll(entry._keyToSqlText);
+			_keyToWaitTime.putAll(entry._keyToWaitTime);
+
+		
+			//-----------------------------------------------------
+			// Copy: Plan Text for CPU and WAIT
+			//-----------------------------------------------------
+			if (_planCollectionCpu  == null) _planCollectionCpu  = new QsExecutionPlanCollection(SqlServerQueryStore.this, _topCpuRstm,  "qs_SUMMARY_cpu", _schemaName);
+			if (_planCollectionWait == null) _planCollectionWait = new QsExecutionPlanCollection(SqlServerQueryStore.this, _topWaitRstm, "qs_SUMMARY_wait", _schemaName);
+
+			_planCollectionCpu .addShowplanMap(entry._planCollectionCpu .getShowplanAsMap());
+			_planCollectionWait.addShowplanMap(entry._planCollectionWait.getShowplanAsMap());
+		}
+
+		public void sort()
+		{
+			List<SortOptions> cpuSortOptions  = new ArrayList<>();
+			List<SortOptions> waitSortOptions = new ArrayList<>();
+			
+			cpuSortOptions .add(new SortOptions("total_cpu_time_ms__sum"       , ColumnNameSensitivity.IN_SENSITIVE, SortOrder.DESCENDING, DataSortSensitivity.SENSITIVE));
+			waitSortOptions.add(new SortOptions("total_query_wait_time_ms__sum", ColumnNameSensitivity.IN_SENSITIVE, SortOrder.DESCENDING, DataSortSensitivity.SENSITIVE));
+
+			_topCpuRstm .sort(cpuSortOptions);
+			_topWaitRstm.sort(waitSortOptions);
+		}
+
+		public void setTopRows(int topRows)
+		{
+			_topCpuRstm .setRowCount(topRows);
+			_topWaitRstm.setRowCount(topRows);
+		}
+
+		public void postMerge()
+		{
+			// FIX various stuff like:
+			//  * Execution plan DEV and variables... (right now the plan is displayed in the DATABASE section)
+
+			setCpuSectionDescription(_topCpuRstm);
+			setWaitSectionDescription(_topWaitRstm);
+			
+			// FIXME: remove extra rows in PlanCollection(s) 
+			_planCollectionCpu .cleanupMap("dbname", "plan_id");
+			_planCollectionWait.cleanupMap("dbname", "plan_id");
+		}
+		//----------------------------------------------------------
+		// END: methods for merging into SUMMARY 
+		//----------------------------------------------------------
+	}
+
 	/**
 	 * Implements reporting for ONE database in PCS: Query Store
 	 * @author goran
@@ -301,15 +493,16 @@ extends SqlServerAbstract
 		String _schemaName;
 		String _dbname;
 		ResultSetTableModel _topCpuRstm;
+		ResultSetTableModel _cpuSqlTextRstm;
 		ResultSetTableModel _topWaitRstm;
 		ResultSetTableModel _confRstm;    // database_query_store_options
 		ResultSetTableModel _recomRstm;   // dm_db_tuning_recommendations
 
-		private ExecutionPlanCollection _planCollectionCpu;
-		private ExecutionPlanCollection _planCollectionWait;
+		ExecutionPlanCollection _planCollectionCpu;
+		ExecutionPlanCollection _planCollectionWait;
 
-		private Map<Map<String, Object>, QsSqlTextEntry> _keyToSqlText;
-		private Map<Map<String, Object>, QsWaitEntry>    _keyToWaitTime;
+		Map<Map<String, Object>, QsSqlTextEntry> _keyToSqlText;
+		Map<Map<String, Object>, QsWaitEntry>    _keyToWaitTime;
 		
 		private List<String> _miniChartJsList = new ArrayList<>();
 
@@ -319,27 +512,7 @@ extends SqlServerAbstract
 			_dbname     = dbname;
 		}
 
-//		public void writeMessageText(Writer w) 
-//		throws IOException
-//		{
-//			w.append("<br>\n");
-//			w.append("<h4>Query Store Report for: ").append(_dbname).append("</h4>\n");
-//
-//			w.append("<h5>Top CPU</h5>\n");
-//			w.append("Row Count: " + _topCpuRstm.getRowCount() + "<br>\n");
-//			w.append(toHtmlTable(_topCpuRstm));
-//
-//			w.append("<h5>Top WAIT</h5>\n");
-//			if (_topWaitRstm == null)
-//			{
-//				w.append("This SQL Server Version do NOT have 'wait statistics' in the Query Store. Needs at least SQL Server 2017.<br>\n");
-//			}
-//			else
-//			{
-//				w.append("Row Count: " + _topWaitRstm.getRowCount() + "<br>\n");
-//				w.append(toHtmlTable(_topWaitRstm));
-//			}
-//		}
+		
 		public void writeMessageText(Writer w) 
 		throws IOException
 		{
@@ -377,9 +550,11 @@ extends SqlServerAbstract
 					{
 						// Get Actual Executed SQL Text for current 'plan_id'
 						int    plan_id = rstm.getValueAsInteger(row, "plan_id");
+						String dbname  = rstm.getValueAsString (row, "dbname");
 						
 						Map<String, Object> whereColValMap = new LinkedHashMap<>();
 						whereColValMap.put("plan_id", plan_id);
+						whereColValMap.put("!dbname", dbname);
 
 						String sqlText = getQsSqlTextAsString(_keyToSqlText, whereColValMap, rstm, row);
 						
@@ -399,9 +574,11 @@ extends SqlServerAbstract
 					{
 						// Get Actual Executed SQL Text for current 'plan_id'
 						int    plan_id = rstm.getValueAsInteger(row, "plan_id");
+						String dbname  = rstm.getValueAsString (row, "dbname");
 						
 						Map<String, Object> whereColValMap = new LinkedHashMap<>();
 						whereColValMap.put("plan_id", plan_id);
+						whereColValMap.put("!dbname", dbname);
 
 						String waitText = getQsWaitTimeAsString(_keyToWaitTime, whereColValMap, rstm, row);
 
@@ -415,6 +592,22 @@ extends SqlServerAbstract
 								+ "data-objectname='" + plan_id + "' "
 								+ "data-tooltip=\""   + waitText     + "\" "
 								+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+					}
+
+					if ("plan_text".equals(colName))
+					{
+						// Get Actual Executed SQL Text for current 'plan_id'
+						String plan_id = rstm.getValueAsString(row, "plan_id");
+						String dbname  = rstm.getValueAsString(row, "dbname");
+
+						if (rstm == _topCpuRstm)
+						{
+							return _planCollectionCpu.getLinkText(dbname, plan_id, null, "-no-plan-");
+						}
+						else if (rstm == _topWaitRstm)
+						{
+							return _planCollectionWait.getLinkText(dbname, plan_id, null, "-no-plan-");
+						}
 					}
 
 					return strVal;
@@ -435,7 +628,8 @@ extends SqlServerAbstract
 							return TimeUtils.usToTimeStrLong(((Number)objVal).longValue());
 						}
 
-						if (colName.indexOf("total_query_wait_time_ms__sum" ) != -1 )
+//						if ( colName.indexOf("total_query_wait_time_ms__sum" ) != -1 )
+						if ( colName.indexOf("_ms__sum" ) != -1 )
 						{
 							// MilliSeconds to HH:MM:SS.ms
 							return TimeUtils.msToTimeStrLong(((Number)objVal).longValue());
@@ -456,12 +650,29 @@ extends SqlServerAbstract
 				w.append("Row Count: " + _topCpuRstm.getRowCount() + "<br>\n");
 //				w.append(toHtmlTable(_topCpuRstm));
 				w.append(_topCpuRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+
+				// Write HTML/JavaScript Code for the Execution Plan...
+				if (isFullMessageType())
+				{
+					if (_planCollectionCpu  != null)
+						_planCollectionCpu .writeMessageText(w);
+				}
+
+				if (_cpuSqlTextRstm != null)
+				{
+					w.append("<br>\n");
+					w.append("<details open> \n");
+					w.append("<summary>Details for above Plans, including SQL Text (click to collapse) </summary> \n");
+					
+					w.append("<br>\n");
+					w.append("SQL Text by 'plan_id', Row Count: " + _cpuSqlTextRstm.getRowCount() + "\n");
+					w.append(_cpuSqlTextRstm.toHtmlTableString("sortable", true, true, null, null));
+
+					w.append("\n");
+					w.append("</details> \n");
+				}
 			}
 			
-			// Write HTML/JavaScript Code for the Execution Plan...
-			if (_planCollectionCpu  != null)
-				_planCollectionCpu .writeMessageText(w);
-
 			//----------------------------------------------------
 			//---- WAIT
 			//----------------------------------------------------
@@ -480,8 +691,11 @@ extends SqlServerAbstract
 				w.append(_topWaitRstm.toHtmlTableString("sortable", true, true, null, tableRender));
 
 				// Write HTML/JavaScript Code for the Execution Plan...
-				if (_planCollectionWait != null) 
-					_planCollectionWait.writeMessageText(w);
+				if (isFullMessageType())
+				{
+					if (_planCollectionWait != null) 
+						_planCollectionWait.writeMessageText(w);
+				}
 			}
 
 			//----------------------------------------------------
@@ -521,9 +735,10 @@ extends SqlServerAbstract
 			}
 
 			// Write JavaScript code for CPU SparkLine
-			for (String str : _miniChartJsList)
+			if (isFullMessageType())
 			{
-				w.append(str);
+				for (String str : _miniChartJsList)
+					w.append(str);
 			}
 		}
 
@@ -531,6 +746,29 @@ extends SqlServerAbstract
 		{
 			String sql = "";
 
+			boolean hasTable_query_store_wait_stats = DbUtils.checkIfTableExistsNoThrow(conn, null, _schemaName, "query_store_wait_stats");
+
+			// Create helper index (which is needed for performance)
+			if (hasTable_query_store_wait_stats)
+			{
+				try
+				{
+					if ( ! DbUtils.checkIfIndexExists(conn, null, _schemaName, "query_store_wait_stats", "query_store_wait_stats__plan_id") )
+					{
+						sql = conn.quotifySqlString("create index [query_store_wait_stats__plan_id] on [" + _schemaName + "].[query_store_wait_stats]([plan_id])");
+
+						_logger.info("Creating helper index using sql='" + sql + "'.");
+
+						conn.dbExec(sql);
+					}
+				}
+				catch (SQLException ex)
+				{
+					_logger.error("Problems creating extra tables on schema='" + _schemaName + "', table='query_store_wait_stats', index='query_store_wait_stats__plan_id'. sql='" + sql + "'. Continuing anyway.", ex);
+				}
+			}
+
+			
 			//-----------------------------------------------------------
 			// database_query_store_options
 			//-----------------------------------------------------------
@@ -557,19 +795,54 @@ extends SqlServerAbstract
 			String avg_num_physical_io_reads       = !dummyRstm.hasColumnNoCase("avg_num_physical_io_reads") ? "" : "    ,sum([avg_num_physical_io_reads])                           as [avg_num_physical_io_reads__sum] \n";   // in 2017
 			String avg_num_physical_io_reads_chart = !dummyRstm.hasColumnNoCase("avg_num_physical_io_reads") ? "" : "    ,''                                                         as [avg_num_physical_io_reads__chart] \n"; // in 2017
 			String avg_log_bytes_used              = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,sum([avg_log_bytes_used])                                  as [avg_log_bytes_used__sum] \n";          // in 2017
+			String avg_log_bytes_used_kb           = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,sum([avg_log_bytes_used]/1024.0)                           as [avg_log_bytes_used_kb__sum] \n";       // in 2017
+			String avg_log_bytes_used_mb           = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,sum([avg_log_bytes_used]/1024.0/1024.0)                    as [avg_log_bytes_used_mb__sum] \n";       // in 2017
 			String avg_log_bytes_used_chart        = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,''                                                         as [avg_log_bytes_used__chart] \n";        // in 2017
 			String avg_tempdb_space_used           = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,sum([avg_tempdb_space_used])                               as [avg_tempdb_space_used__sum] \n";       // in 2017
+			String avg_tempdb_space_used_kb        = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,sum([avg_tempdb_space_used]*8.0)                           as [avg_tempdb_space_used_kb__sum] \n";    // in 2017
+			String avg_tempdb_space_used_mb        = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,sum([avg_tempdb_space_used]/128.0)                         as [avg_tempdb_space_used_mb__sum] \n";    // in 2017
 			String avg_tempdb_space_used_chart     = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,''                                                         as [avg_tempdb_space_used__chart] \n";     // in 2017
 
-			String total_num_physical_io_reads     = !dummyRstm.hasColumnNoCase("avg_num_physical_io_reads") ? "" : "    ,cast(sum([count_executions]) * sum([avg_num_physical_io_reads]) as bigint) as [total_num_physical_io_reads__sum] \n"; // in 2017
-			String total_log_bytes_used            = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,cast(sum([count_executions]) * sum([avg_log_bytes_used]) as bigint)        as [total_log_bytes_used__sum] \n"       ; // in 2017
-			String total_log_bytes_used_mb         = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,(sum([count_executions]) * sum([avg_log_bytes_used]))/1024.0/1024.0        as [total_log_bytes_used_mb__sum] \n"    ; // in 2017
-			String total_tempdb_space_used         = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,cast(sum([count_executions]) * sum([avg_tempdb_space_used]) as bigint)     as [total_tempdb_space_used__sum] \n"    ; // in 2017
-			String total_tempdb_space_used_mb      = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,(sum([count_executions]) * sum([avg_tempdb_space_used]))/128.0             as [total_tempdb_space_used_mb__sum] \n" ; // in 2017
-			
+			String total_num_physical_io_reads     = !dummyRstm.hasColumnNoCase("avg_num_physical_io_reads") ? "" : "    ,cast(sum([count_executions]) * sum([avg_num_physical_io_reads])          as bigint) as [total_num_physical_io_reads__sum] \n"; // in 2017
+			String total_log_bytes_used            = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,cast(sum([count_executions]) * sum([avg_log_bytes_used])                 as bigint) as [total_log_bytes_used__sum] \n"       ; // in 2017
+			String total_log_bytes_used_kb         = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,cast((sum([count_executions]) * sum([avg_log_bytes_used]))/1024.0        as bigint) as [total_log_bytes_used_kb__sum] \n"    ; // in 2017
+			String total_log_bytes_used_mb         = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,cast((sum([count_executions]) * sum([avg_log_bytes_used]))/1024.0/1024.0 as bigint) as [total_log_bytes_used_mb__sum] \n"    ; // in 2017
+			String total_tempdb_space_used         = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,cast(sum([count_executions]) * sum([avg_tempdb_space_used])              as bigint) as [total_tempdb_space_used__sum] \n"    ; // in 2017
+			String total_tempdb_space_used_kb      = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,cast((sum([count_executions]) * sum([avg_tempdb_space_used]))*8.0        as bigint) as [total_tempdb_space_used_kb__sum] \n" ; // in 2017
+			String total_tempdb_space_used_mb      = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,cast((sum([count_executions]) * sum([avg_tempdb_space_used]))/128.0      as bigint) as [total_tempdb_space_used_mb__sum] \n" ; // in 2017
+
+			String   avg_query_wait_time_ms_chart    = "";
+			String total_query_wait_time_ms          = "";
+			String   avg_query_wait_time_ms          = "";
+
+			String   avg_query_wait_time_other_ms_chart    = "";
+			String total_query_wait_time_other_ms          = "";
+			String   avg_query_wait_time_other_ms          = "";
+
+			String   avg_query_wait_time_paralell_ms_chart = "";
+			String total_query_wait_time_paralell_ms       = "";
+			String   avg_query_wait_time_paralell_ms       = "";
+
+			if (hasTable_query_store_wait_stats)
+			{
+				  avg_query_wait_time_ms_chart          = "    ,''                                                         as [avg_query_wait_time_ms__chart] \n";
+				total_query_wait_time_ms                = "    ,(select sum([total_query_wait_time_ms])                                             from [" + _schemaName + "].[query_store_wait_stats] w where w.[plan_id] = rs.[plan_id]) as [total_query_wait_time_ms__sum] \n";
+//				  avg_query_wait_time_ms                = "    ,cast(-1, bigint)                                           as [avg_query_wait_time_other_ms__sum] \n";
+				  avg_query_wait_time_ms                = "    ,(select sum([avg_query_wait_time_ms])/count(distinct w.[runtime_stats_interval_id]) from [" + _schemaName + "].[query_store_wait_stats] w where w.[plan_id] = rs.[plan_id]) as [avg_query_wait_time_ms__sum] \n";  
+
+				  avg_query_wait_time_other_ms_chart    = "    ,''                                                         as [avg_query_wait_time_other_ms__chart] \n";
+				total_query_wait_time_other_ms          = "    ,(select sum([total_query_wait_time_ms])                                             from [" + _schemaName + "].[query_store_wait_stats] w where w.[plan_id] = rs.[plan_id] and w.[wait_category] != 16) as [total_query_wait_time_other_ms__sum] \n"; // wait_category:16 = 'Parallelism'
+				  avg_query_wait_time_other_ms          = "    ,(select sum([avg_query_wait_time_ms])/count(distinct w.[runtime_stats_interval_id]) from [" + _schemaName + "].[query_store_wait_stats] w where w.[plan_id] = rs.[plan_id] and w.[wait_category] != 16) as [avg_query_wait_time_other_ms__sum] \n";  
+
+				  avg_query_wait_time_paralell_ms_chart = "    ,''                                                         as [avg_query_wait_time_paralell_ms__chart] \n";
+				total_query_wait_time_paralell_ms       = "    ,(select sum([total_query_wait_time_ms])                                             from [" + _schemaName + "].[query_store_wait_stats] w where w.[plan_id] = rs.[plan_id] and w.[wait_category] = 16) as [total_query_wait_time_paralell_ms__sum] \n"; // wait_category:16 = 'Parallelism'
+				  avg_query_wait_time_paralell_ms       = "    ,(select sum([avg_query_wait_time_ms])/count(distinct w.[runtime_stats_interval_id]) from [" + _schemaName + "].[query_store_wait_stats] w where w.[plan_id] = rs.[plan_id] and w.[wait_category] = 16) as [avg_query_wait_time_paralell_ms__sum] \n";
+			}
+
 			sql = ""
 				    + "select top " + getTopRows() + " \n"
-				    + "     [plan_id] \n"
+				    + "     '" + _dbname + "'                                                          as [dbname] \n"
+				    + "    ,[plan_id] \n"
 //				    + "    ,cast([plan_id] as varchar(20))                                             as [plan_text] \n"
 				    + "    ,''                                                                         as [plan_text] \n"
 				    + "    ,''                                                                         as [txt] \n"
@@ -583,20 +856,37 @@ extends SqlServerAbstract
 				    + "    ,sum([count_executions])                                                    as [count_executions__sum] \n"
 
 				    + "    ,''                                                                         as [avg_duration__chart] \n"
-				    + "    ,cast(sum([count_executions]) * sum([avg_duration]) as bigint)              as [total_duration__sum] \n"
-				    + "    ,sum([avg_duration])                                                        as [avg_duration__sum] \n"
+				    + "    ,cast(sum([count_executions]) * sum([avg_duration]/1000.0) as bigint)       as [total_duration_ms__sum] \n"
+				    + "    ,sum([avg_duration]/1000.0)                                                 as [avg_duration_ms__sum] \n"
 
 				    + "    ,''                                                                         as [avg_cpu_time__chart] \n"
-				    + "    ,cast(sum([count_executions]) * sum([avg_cpu_time]) as bigint)              as [total_cpu_time__sum] \n"
-				    + "    ,sum([avg_cpu_time])                                                        as [avg_cpu_time__sum] \n"
+				    + "    ,cast(sum([count_executions]) * sum([avg_cpu_time]/1000.0) as bigint)       as [total_cpu_time_ms__sum] \n"
+				    + "    ,sum([avg_cpu_time]/1000.0)                                                 as [avg_cpu_time_ms__sum] \n"
 
-				    + "    ,''                                                                         as [avg_wait_time__chart] \n"
-				    + "    ,cast((sum([count_executions]) * sum([avg_duration])) - (sum([count_executions]) * sum([avg_cpu_time])) as bigint) as [total_wait_time__sum] \n"
-				    + "    ,sum([avg_duration]) - sum([avg_cpu_time])                                  as [avg_wait_time__sum] \n"
+// Wait time like this do NOT work if we are running in parallel (since 'duration' is shorter than 'cpu_time')
+//				    + "    ,''                                                                         as [avg_wait_time__chart] \n"
+//				    + "    ,cast((sum([count_executions]) * sum([avg_duration/1000.0])) - (sum([count_executions/1000.0]) * sum([avg_cpu_time/1000.0])) as bigint) as [total_wait_time_ms__sum] \n"
+//				    + "    ,sum([avg_duration]/1000.0) - sum([avg_cpu_time]/1000.0)                    as [avg_wait_time__sum] \n"
+
+				    +   avg_query_wait_time_ms_chart
+				    + total_query_wait_time_ms
+				    +   avg_query_wait_time_ms
+				    
+				    +   avg_query_wait_time_other_ms_chart
+				    + total_query_wait_time_other_ms
+				    +   avg_query_wait_time_other_ms
+				    
+				    +   avg_query_wait_time_paralell_ms_chart
+				    + total_query_wait_time_paralell_ms
+				    +   avg_query_wait_time_paralell_ms
 				    
 				    + "    ,''                                                                         as [avg_logical_io_reads__chart] \n"
 				    + "    ,cast(sum([count_executions]) * sum([avg_logical_io_reads]) as bigint)      as [total_logical_io_reads__sum] \n"
 				    + "    ,sum([avg_logical_io_reads])                                                as [avg_logical_io_reads__sum] \n"
+				    
+				    + "    ,''                                                                         as [avg_logical_io_reads_mb__chart] \n"
+				    + "    ,sum([count_executions]) * sum([avg_logical_io_reads]) / 128                as [total_logical_io_reads_mb__sum] \n"
+				    + "    ,sum([avg_logical_io_reads]) / 128.0                                        as [avg_logical_io_reads_mb__sum] \n"
 				    
 				    + "    ,''                                                                         as [avg_logical_io_writes__chart] \n"
 				    + "    ,cast(sum([count_executions]) * sum([avg_logical_io_writes]) as bigint)     as [total_logical_io_writes__sum] \n"
@@ -607,16 +897,19 @@ extends SqlServerAbstract
 				    + "    ,sum([avg_physical_io_reads])                                               as [avg_physical_io_reads__sum] \n"
 				    
 				    + "    ,''                                                                         as [avg_clr_time__chart] \n"
-				    + "    ,cast(sum([count_executions]) * sum([avg_clr_time]) as bigint)              as [total_clr_time__sum] \n"
-				    + "    ,sum([avg_clr_time])                                                        as [avg_clr_time__sum] \n"
+				    + "    ,cast(sum([count_executions]) * sum([avg_clr_time]/1000.0) as bigint)       as [total_clr_time_ms__sum] \n"
+				    + "    ,sum([avg_clr_time]/1000.0)                                                 as [avg_clr_time_ms__sum] \n"
 				    
 				    + "    ,''                                                                         as [avg_dop__chart] \n"
-				    + "    ,cast(sum([count_executions]) * sum([avg_dop]) as bigint)                   as [total_dop__sum] \n"
-				    + "    ,sum([avg_dop])                                                             as [avg_dop__sum] \n"
+//				    + "    ,cast(sum([count_executions]) * sum([avg_dop]) as bigint)                   as [total_dop__sum] \n"
+//				    + "    ,sum([avg_dop])                                                             as [avg_dop__sum] \n"
+				    + "    ,avg([avg_dop])                                                             as [avg_dop__avg] \n"
 				    
-				    + "    ,''                                                                         as [avg_query_max_used_memory__chart] \n"
-				    + "    ,cast(sum([count_executions]) * sum([avg_query_max_used_memory]) as bigint) as [total_query_max_used_memory__sum] \n"
-				    + "    ,sum([avg_query_max_used_memory])                                           as [avg_query_max_used_memory__sum] \n"
+				    + "    ,''                                                                                 as [avg_query_max_used_memory__chart] \n"
+				    + "    ,cast(sum([count_executions]) * sum([avg_query_max_used_memory]) as bigint)         as [total_query_max_used_memory__sum] \n"
+				    + "    ,cast(sum([count_executions]) * sum([avg_query_max_used_memory]) / 128.0 as bigint) as [total_query_max_used_memory_mb__sum] \n"
+				    + "    ,sum([avg_query_max_used_memory])                                                   as [avg_query_max_used_memory__sum] \n"
+				    + "    ,sum([avg_query_max_used_memory]/128.0)                                             as [avg_query_max_used_memory_mb__sum] \n"
 				    
 				    + "    ,''                                                                         as [avg_rowcount__chart] \n"
 				    + "    ,cast(sum([count_executions]) * sum([avg_rowcount]) as bigint)              as [total_rowcount__sum] \n"
@@ -628,29 +921,40 @@ extends SqlServerAbstract
 
 				    + avg_log_bytes_used_chart
 				    + total_log_bytes_used
+				    + total_log_bytes_used_kb
 				    + total_log_bytes_used_mb
 				    + avg_log_bytes_used
+				    + avg_log_bytes_used_kb
+				    + avg_log_bytes_used_mb
 
 				    + avg_tempdb_space_used_chart
 				    + total_tempdb_space_used
+				    + total_tempdb_space_used_kb
 				    + total_tempdb_space_used_mb
 				    + avg_tempdb_space_used
+				    + avg_tempdb_space_used_kb
+				    + avg_tempdb_space_used_mb
 
 
-				    + "from [" + _schemaName + "].[query_store_runtime_stats] \n"
+				    + "from [" + _schemaName + "].[query_store_runtime_stats] rs \n"
 //					+ getReportPeriodSqlWhere()
 				    + "group by [plan_id] \n"
-				    + "order by [total_cpu_time__sum] desc \n"
+				    + "order by [total_cpu_time_ms__sum] desc \n"
 				    + "";
 			
-			_topCpuRstm = executeQuery(conn, sql, false, _dbname + "_topCpu");
+			_topCpuRstm = executeQuery(conn, sql, true, _dbname + "_topCpu");
 			setCpuSectionDescription(_topCpuRstm);
+
+			// Highlight sort column
+			_topCpuRstm.setHighlightSortColumns("total_cpu_time_ms__sum");
 
 			// - Get all "plann_handle" in table '_shortRstm'
 			// - Get the Execution Plan all the "plann_handle"s
 			// - In the table substitute the "plann_handle"s with a link that will display the XML Plan on the HTML Page
+//			createPlanCollectorForCpu();
 			_planCollectionCpu = new QsExecutionPlanCollection(SqlServerQueryStore.this, _topCpuRstm, "qs_" + _dbname + "_cpu", _schemaName);
-			_planCollectionCpu.getPlansAndSubstituteWithLinks(conn, "plan_id", "plan_text");
+//			_planCollectionCpu.getPlansAndSubstituteWithLinks(conn, "dbname", "plan_id", "plan_text", null, null);
+			_planCollectionCpu.getPlans(conn, "dbname", "plan_id");
 
 			//--------------------------------------------------------------------------------------
 			// get Executed SQL Text for 'plan_id' from QueryStore
@@ -662,9 +966,12 @@ extends SqlServerAbstract
 					// Get Actual Executed SQL Text for current 'NormJavaSqlHashCode'
 					Map<String, Object> whereColValMap = new LinkedHashMap<>();
 					whereColValMap.put("plan_id", _topCpuRstm.getValueAsInteger(r, "plan_id"));
+					whereColValMap.put("!dbname", _topCpuRstm.getValueAsString (r, "dbname"));
 
 					_keyToSqlText = getQsSqlText(_keyToSqlText, conn, whereColValMap);
 				}
+
+//				calculateAvg(_topCpuRstm);
 				
 				// create a tooltip where the MICRO Seconds has been converted to a more readable format [HH:MM:SS.ms]
 				
@@ -674,7 +981,7 @@ extends SqlServerAbstract
 			//-----------------------------------------------------------
 			// WAIT --->>> Only if SQL-Server Version 2017 or above
 			//-----------------------------------------------------------
-			if (DbUtils.checkIfTableExistsNoThrow(conn, null, _schemaName, "query_store_wait_stats"))
+			if (hasTable_query_store_wait_stats)
 			{
 //				sql = ""
 //					    + "select top " + getTopRows() + " \n"
@@ -701,7 +1008,8 @@ extends SqlServerAbstract
 //					    + "";
 				sql = ""
 					    + "select top " + getTopRows() + " \n"
-					    + "     [plan_id] \n"
+					    + "     '" + _dbname + "'                as [dbname] \n"
+					    + "    ,[plan_id] \n"
 //					    + "    ,cast([plan_id] as varchar(20))   as [plan_text] \n"
 						+ "    ,''                               as [plan_text] \n"
 					    + "    ,''                               as [txt] \n"
@@ -724,11 +1032,17 @@ extends SqlServerAbstract
 					    + "order by [total_query_wait_time_ms__sum] desc \n"
 					    + "";
 
-				_topWaitRstm = executeQuery(conn, sql, false, _dbname + "_topWait");
+				_topWaitRstm = executeQuery(conn, sql, true, _dbname + "_topWait");
 				setWaitSectionDescription(_topWaitRstm);
 
+				// Highlight sort column
+				_topWaitRstm.setHighlightSortColumns("total_query_wait_time_ms__sum");
+
+				// DESCRIBE_ME
+//				createPlanCollectorForWait();
 				_planCollectionWait = new QsExecutionPlanCollection(SqlServerQueryStore.this, _topWaitRstm, "qs_" + _dbname + "_wait", _schemaName);
-				_planCollectionWait.getPlansAndSubstituteWithLinks(conn, "plan_id", "plan_text");
+//				_planCollectionWait.getPlansAndSubstituteWithLinks(conn, "dbname", "plan_id", "plan_text", null, null);
+				_planCollectionWait.getPlans(conn, "dbname", "plan_id");
 
 				//--------------------------------------------------------------------------------------
 				// get "ALL Wait Entries" for 'plan_id' from QueryStore
@@ -740,6 +1054,7 @@ extends SqlServerAbstract
 						// Get 'WitTimes' current 'NormJavaSqlHashCode'
 						Map<String, Object> whereColValMap = new LinkedHashMap<>();
 						whereColValMap.put("plan_id", _topWaitRstm.getValueAsInteger(r, "plan_id"));
+						whereColValMap.put("!dbname", _topWaitRstm.getValueAsString (r, "dbname"));
 
 						_keyToWaitTime = getQsWaitTime(_keyToWaitTime, conn, whereColValMap);
 					}
@@ -818,7 +1133,8 @@ extends SqlServerAbstract
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsSchemaName           (_schemaName)
 					.setDbmsTableName            ("query_store_runtime_stats")
-					.setDbmsDataValueColumnName  ("avg_duration")   
+//					.setDbmsDataValueColumnName  ("avg_duration")   
+					.setDbmsDataValueColumnName  ("sum([avg_duration]/1000.0)").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1)   // MS
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 					.validate()));
 			
@@ -829,23 +1145,62 @@ extends SqlServerAbstract
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsSchemaName           (_schemaName)
 					.setDbmsTableName            ("query_store_runtime_stats")
-					.setDbmsDataValueColumnName  ("avg_cpu_time")   
+//					.setDbmsDataValueColumnName  ("avg_cpu_time")   
+					.setDbmsDataValueColumnName  ("sum([avg_cpu_time]/1000.0)").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1)   // MS
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 					.validate()));
 			
-			_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topCpuRstm, 
+//			_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topCpuRstm, 
+//					SparkLineParams.create       (DataSource.QueryStore)
+//					.setSparklineClassNamePrefix (_dbname)
+//					.setHtmlChartColumnName      ("avg_wait_time__chart")
+//					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+//					.setDbmsSchemaName           (_schemaName)
+//					.setDbmsTableName            ("query_store_runtime_stats")
+////					.setDbmsDataValueColumnName  ("avg_wait_time")
+//					.setDbmsDataValueColumnName  ("cast((sum([count_executions]) * sum([avg_duration])) - (sum([count_executions]) * sum([avg_cpu_time])) as bigint)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+//					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+//					.setSparklineTooltipPostfix  ("WaitTime: 'total_duration' - 'total_cpu_time') in below time period")
+//					.validate()));
+
+			if (StringUtil.hasValue(avg_query_wait_time_ms_chart)) 
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topCpuRstm, 
 					SparkLineParams.create       (DataSource.QueryStore)
 					.setSparklineClassNamePrefix (_dbname)
-					.setHtmlChartColumnName      ("avg_wait_time__chart")
+					.setHtmlChartColumnName      ("avg_query_wait_time_ms__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsSchemaName           (_schemaName)
-					.setDbmsTableName            ("query_store_runtime_stats")
-//					.setDbmsDataValueColumnName  ("avg_wait_time")
-					.setDbmsDataValueColumnName  ("cast((sum([count_executions]) * sum([avg_duration])) - (sum([count_executions]) * sum([avg_cpu_time])) as bigint)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsTableName            ("query_store_wait_stats")
+					.setDbmsDataValueColumnName  ("avg_query_wait_time_ms").setDecimalScale(1)   // MS
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
-					.setSparklineTooltipPostfix  ("WaitTime: 'total_duration' - 'total_cpu_time') in below time period")
 					.validate()));
 
+			if (StringUtil.hasValue(avg_query_wait_time_other_ms_chart)) 
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topCpuRstm, 
+            		SparkLineParams.create       (DataSource.QueryStore)
+            		.setSparklineClassNamePrefix (_dbname)
+            		.setHtmlChartColumnName      ("avg_query_wait_time_other_ms__chart")
+            		.setHtmlWhereKeyColumnName   (whereKeyColumn)
+            		.setDbmsSchemaName           (_schemaName)
+            		.setDbmsTableName            ("query_store_wait_stats")
+            		.setDbmsDataValueColumnName  ("sum(s.[avg_query_wait_time_ms]) / count(distinct s.[runtime_stats_interval_id])").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1)   // MS
+            		.setDbmsExtraWhereClause     ("and s.[wait_category] != 16")  // 16 == Parallel
+            		.setDbmsWhereKeyColumnName   (whereKeyColumn)
+            		.validate()));
+            
+			if (StringUtil.hasValue(avg_query_wait_time_paralell_ms_chart)) 
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topCpuRstm, 
+            		SparkLineParams.create       (DataSource.QueryStore)
+            		.setSparklineClassNamePrefix (_dbname)
+            		.setHtmlChartColumnName      ("avg_query_wait_time_paralell_ms__chart")
+            		.setHtmlWhereKeyColumnName   (whereKeyColumn)
+            		.setDbmsSchemaName           (_schemaName)
+            		.setDbmsTableName            ("query_store_wait_stats")
+            		.setDbmsDataValueColumnName  ("sum(s.[avg_query_wait_time_ms]) / count(distinct s.[runtime_stats_interval_id])").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1)   // MS
+            		.setDbmsExtraWhereClause     ("and s.[wait_category] = 16")  // 16 == Parallel
+            		.setDbmsWhereKeyColumnName   (whereKeyColumn)
+            		.validate()));
+			
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topCpuRstm, 
 					SparkLineParams.create       (DataSource.QueryStore)
 					.setSparklineClassNamePrefix (_dbname)
@@ -854,6 +1209,18 @@ extends SqlServerAbstract
 					.setDbmsSchemaName           (_schemaName)
 					.setDbmsTableName            ("query_store_runtime_stats")
 					.setDbmsDataValueColumnName  ("avg_logical_io_reads")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.validate()));
+			
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topCpuRstm, 
+					SparkLineParams.create       (DataSource.QueryStore)
+					.setSparklineClassNamePrefix (_dbname)
+					.setHtmlChartColumnName      ("avg_logical_io_reads_mb__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsSchemaName           (_schemaName)
+					.setDbmsTableName            ("query_store_runtime_stats")
+//					.setDbmsDataValueColumnName  ("avg_logical_io_reads")   
+            		.setDbmsDataValueColumnName  ("sum([avg_logical_io_reads]) / 128.0").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1)   // MB
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 					.validate()));
 			
@@ -886,7 +1253,8 @@ extends SqlServerAbstract
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsSchemaName           (_schemaName)
 					.setDbmsTableName            ("query_store_runtime_stats")
-					.setDbmsDataValueColumnName  ("avg_clr_time")   
+//					.setDbmsDataValueColumnName  ("avg_clr_time")   
+					.setDbmsDataValueColumnName  ("sum([avg_clr_time]/1000.0)").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1)   // MS
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 					.validate()));
 			
@@ -908,7 +1276,8 @@ extends SqlServerAbstract
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsSchemaName           (_schemaName)
 					.setDbmsTableName            ("query_store_runtime_stats")
-					.setDbmsDataValueColumnName  ("avg_query_max_used_memory")   
+//					.setDbmsDataValueColumnName  ("avg_query_max_used_memory")   
+					.setDbmsDataValueColumnName  ("sum([avg_query_max_used_memory]/128.0)").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(3)   // MB
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 					.validate()));
 			
@@ -923,7 +1292,8 @@ extends SqlServerAbstract
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 					.validate()));
 			
-			_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topCpuRstm, 
+			if (StringUtil.hasValue(avg_num_physical_io_reads_chart)) 
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topCpuRstm, 
 					SparkLineParams.create       (DataSource.QueryStore)
 					.setSparklineClassNamePrefix (_dbname)
 					.setHtmlChartColumnName      ("avg_num_physical_io_reads__chart")
@@ -934,7 +1304,8 @@ extends SqlServerAbstract
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 					.validate()));
 			
-			_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topCpuRstm, 
+			if (StringUtil.hasValue(avg_log_bytes_used_chart)) 
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topCpuRstm, 
 					SparkLineParams.create       (DataSource.QueryStore)
 					.setSparklineClassNamePrefix (_dbname)
 					.setHtmlChartColumnName      ("avg_log_bytes_used__chart")
@@ -942,23 +1313,27 @@ extends SqlServerAbstract
 					.setDbmsSchemaName           (_schemaName)
 					.setDbmsTableName            ("query_store_runtime_stats")
 					.setDbmsDataValueColumnName  ("avg_log_bytes_used")   
+					.setDbmsDataValueColumnName  ("sum([avg_log_bytes_used]/1024.0/1024)").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(3)   // MB
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 					.validate()));
 			
-			_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topCpuRstm, 
+			if (StringUtil.hasValue(avg_tempdb_space_used_chart)) 
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topCpuRstm, 
 					SparkLineParams.create       (DataSource.QueryStore)
 					.setSparklineClassNamePrefix (_dbname)
 					.setHtmlChartColumnName      ("avg_tempdb_space_used__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsSchemaName           (_schemaName)
 					.setDbmsTableName            ("query_store_runtime_stats")
-					.setDbmsDataValueColumnName  ("avg_tempdb_space_used")   
+//					.setDbmsDataValueColumnName  ("avg_tempdb_space_used")   
+					.setDbmsDataValueColumnName  ("sum([avg_tempdb_space_used]/128.0)").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(3)   // MB
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 					.validate()));
 			
 
 			// WAITS
-			_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topWaitRstm, 
+			if (hasTable_query_store_wait_stats)
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topWaitRstm, 
 					SparkLineParams.create       (DataSource.QueryStore)
 					.setSparklineClassNamePrefix (_dbname)
 					.setHtmlChartColumnName      ("total_query_wait_time_ms__chart")
@@ -969,7 +1344,8 @@ extends SqlServerAbstract
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 					.validate()));
 			
-			_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topWaitRstm, 
+			if (hasTable_query_store_wait_stats)
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topWaitRstm, 
 					SparkLineParams.create       (DataSource.QueryStore)
 					.setSparklineClassNamePrefix (_dbname)
 					.setHtmlChartColumnName      ("avg_query_wait_time_ms__chart")
@@ -982,10 +1358,142 @@ extends SqlServerAbstract
 			
 		}
 
+		
+//		public void createSqlTextTable(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
+		public void createSqlTextTable()
+		{
+			SimpleResultSet srs = new SimpleResultSet();
+			ResultSetTableModel rstm = _topCpuRstm;
+
+			srs.addColumn("dbname"     , Types.VARCHAR,       60, 0);
+			srs.addColumn("plan_id"    , Types.VARCHAR,       60, 0);
+			srs.addColumn("sparklines" , Types.VARCHAR,      512, 0); 
+			srs.addColumn("SQLText"    , Types.VARCHAR, 1024*128, 0); // this is 'text' in the origin table
+
+			// Position in the "source" _shortRstm table (values we will fetch)
+			int pos_dbname  = rstm.findColumn("dbname");
+			int pos_plan_id = rstm.findColumn("plan_id");
+//			int pos_query   = rstm.findColumn("SqlText");
+
+			// Special Content Producer, that shows detailed Wait Information as a "tooltip help"
+			HtmlTableProducer.ColumnContentProducer waitInfo = new HtmlTableProducer.ColumnContentProducer()
+			{
+				@Override
+				public String getValue(ResultSetTableModel rstm, int rstmRow, String rowKey)
+				{
+					// Get Actual Executed SQL Text for current 'plan_id'
+					int    plan_id = rstm.getValueAsInteger(rstmRow, "plan_id");
+					String dbname  = rstm.getValueAsString (rstmRow, "dbname");
+					
+					Map<String, Object> whereColValMap = new LinkedHashMap<>();
+					whereColValMap.put("plan_id", plan_id);
+					whereColValMap.put("!dbname", dbname);
+					
+					String waitText = getQsWaitTimeAsString(_keyToWaitTime, whereColValMap, rstm, rstmRow);
+
+					if (StringUtil.isNullOrBlank(waitText))
+						return "<i>ms</i>";
+
+					// Put the "Actual Executed SQL Text" as a "tooltip"
+					return "<div title='Click for Detailes' "
+							+ "data-toggle='modal' "
+							+ "data-target='#dbx-view-sqltext-dialog' "
+							+ "data-objectname='" + plan_id + "' "
+							+ "data-tooltip=\""   + waitText     + "\" "
+							+ "><i>ms</i>&#x1F4AC;</div>"; // ms... (Vertical Horizontal Ellipsis)
+//							+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+				}
+			};
+
+			ColumnCopyRender msToHMS    = HtmlTableProducer.MS_TO_HMS;
+//			ColumnCopyRender usToHMS    = HtmlTableProducer.US_TO_HMS;
+			ColumnCopyRender oneDecimal = HtmlTableProducer.ONE_DECIMAL;
+
+			HtmlTableProducer htp = new HtmlTableProducer(rstm, "dsr-sub-table-chart");
+//			htp.setTableHeaders("Charts at 10 minute interval", "Total;style='text-align:right!important'", "Avg per exec;style='text-align:right!important'", "");
+			htp.setTableHeaders("Charts at QS flush interval", "Total;style='text-align:right!important'", "Avg per exec;style='text-align:right!important'", "");
+			if (rstm.hasColumn("count_executions__chart"               )) htp.add("exec-cnt"     , new ColumnCopyRow().add( new ColumnCopyDef("count_executions__chart"               ) ).add(new ColumnCopyDef("count_executions__sum").setColBold()              ).addEmptyCol()                                                                          .addEmptyCol() );
+			if (rstm.hasColumn("avg_duration__chart"                   )) htp.add("exec-time"    , new ColumnCopyRow().add( new ColumnCopyDef("avg_duration__chart"                   ) ).add(new ColumnCopyDef("total_duration_ms__sum"                , msToHMS) ).add(new ColumnCopyDef("avg_duration_ms__sum"                , oneDecimal).setColBold()).add(new ColumnStatic("ms")) );
+			if (rstm.hasColumn("avg_cpu_time__chart"                   )) htp.add("cpu-time"     , new ColumnCopyRow().add( new ColumnCopyDef("avg_cpu_time__chart"                   ) ).add(new ColumnCopyDef("total_cpu_time_ms__sum"                , msToHMS) ).add(new ColumnCopyDef("avg_cpu_time_ms__sum"                , oneDecimal).setColBold()).add(new ColumnStatic("ms")) );
+//			if (rstm.hasColumn("avg_query_wait_time_ms__chart"         )) htp.add("wait-time"    , new ColumnCopyRow().add( new ColumnCopyDef("avg_query_wait_time_ms__chart"         ) ).add(new ColumnCopyDef("total_query_wait_time_ms__sum"         , msToHMS) ).add(new ColumnCopyDef("avg_query_wait_time_ms__sum"         , oneDecimal).setColBold()).add(new ColumnStatic("ms")) );
+			if (rstm.hasColumn("avg_query_wait_time_ms__chart"         )) htp.add("wait-time"    , new ColumnCopyRow().add( new ColumnCopyDef("avg_query_wait_time_ms__chart"         ) ).add(new ColumnCopyDef("total_query_wait_time_ms__sum"         , msToHMS) ).add(new ColumnCopyDef("avg_query_wait_time_ms__sum"         , oneDecimal).setColBold()).add(waitInfo) );
+		    if (rstm.hasColumn("avg_query_wait_time_other_ms__chart"   )) htp.add("wait-other"   , new ColumnCopyRow().add( new ColumnCopyDef("avg_query_wait_time_other_ms__chart"   ) ).add(new ColumnCopyDef("total_query_wait_time_other_ms__sum"   , msToHMS) ).add(new ColumnCopyDef("avg_query_wait_time_other_ms__sum"   , oneDecimal).setColBold()).add(new ColumnStatic("ms")) );
+			if (rstm.hasColumn("avg_query_wait_time_paralell_ms__chart")) htp.add("wait-parallel", new ColumnCopyRow().add( new ColumnCopyDef("avg_query_wait_time_paralell_ms__chart") ).add(new ColumnCopyDef("total_query_wait_time_paralell_ms__sum", msToHMS) ).add(new ColumnCopyDef("avg_query_wait_time_paralell_ms__sum", oneDecimal).setColBold()).add(new ColumnStatic("ms")) );
+			if (rstm.hasColumn("avg_clr_time__chart"                   )) htp.add("clr-time"     , new ColumnCopyRow().add( new ColumnCopyDef("avg_clr_time__chart"                   ) ).add(new ColumnCopyDef("total_clr_time_ms__sum"                , msToHMS) ).add(new ColumnCopyDef("avg_clr_time_ms__sum"                , oneDecimal).setColBold()).add(new ColumnStatic("ms")) );
+			if (rstm.hasColumn("avg_dop__chart"                        )) htp.add("dop"          , new ColumnCopyRow().add( new ColumnCopyDef("avg_dop__chart"                        ) ).addEmptyCol()                                                             .add(new ColumnCopyDef("avg_dop__avg"                        , oneDecimal).setColBold()).add(new ColumnStatic("#")) );
+			if (rstm.hasColumn("avg_rowcount__chart"                   )) htp.add("rowcount"     , new ColumnCopyRow().add( new ColumnCopyDef("avg_rowcount__chart"                   ) ).add(new ColumnCopyDef("total_rowcount__sum"                            ) ).add(new ColumnCopyDef("avg_rowcount__sum"                   , oneDecimal).setColBold()).add(new ColumnStatic("rows")) );
+			if (rstm.hasColumn("avg_logical_io_reads__chart"           )) htp.add("l-read"       , new ColumnCopyRow().add( new ColumnCopyDef("avg_logical_io_reads__chart"           ) ).add(new ColumnCopyDef("total_logical_io_reads__sum"                    ) ).add(new ColumnCopyDef("avg_logical_io_reads__sum"           , oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
+			if (rstm.hasColumn("avg_logical_io_reads_mb__chart"        )) htp.add("l-read-mb"    , new ColumnCopyRow().add( new ColumnCopyDef("avg_logical_io_reads_mb__chart"        ) ).add(new ColumnCopyDef("total_logical_io_reads_mb__sum"                 ) ).add(new ColumnCopyDef("avg_logical_io_reads_mb__sum"        , oneDecimal).setColBold()).add(new ColumnStatic("mb" )) );
+			if (rstm.hasColumn("avg_physical_io_reads__chart"          )) htp.add("p-read"       , new ColumnCopyRow().add( new ColumnCopyDef("avg_physical_io_reads__chart"          ) ).add(new ColumnCopyDef("total_physical_io_reads__sum"                   ) ).add(new ColumnCopyDef("avg_physical_io_reads__sum"          , oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
+			if (rstm.hasColumn("avg_num_physical_io_reads__chart"      )) htp.add("pio-read"     , new ColumnCopyRow().add( new ColumnCopyDef("avg_num_physical_io_reads__chart"      ) ).add(new ColumnCopyDef("total_num_physical_io_reads__sum"               ) ).add(new ColumnCopyDef("avg_num_physical_io_reads__sum"      , oneDecimal).setColBold()).add(new ColumnStatic("ios")) );
+			if (rstm.hasColumn("avg_logical_io_writes__chart"          )) htp.add("l-write"      , new ColumnCopyRow().add( new ColumnCopyDef("avg_logical_io_writes__chart"          ) ).add(new ColumnCopyDef("total_logical_io_writes__sum"                   ) ).add(new ColumnCopyDef("avg_logical_io_writes__sum"          , oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
+			if (rstm.hasColumn("avg_query_max_used_memory__chart"      )) htp.add("mem-used"     , new ColumnCopyRow().add( new ColumnCopyDef("avg_query_max_used_memory__chart"      ) ).add(new ColumnCopyDef("total_query_max_used_memory_mb__sum"            ) ).add(new ColumnCopyDef("avg_query_max_used_memory_mb__sum"   , oneDecimal).setColBold()).add(new ColumnStatic("mb")) );
+			if (rstm.hasColumn("avg_log_bytes_used__chart"             )) htp.add("xlog-mb"      , new ColumnCopyRow().add( new ColumnCopyDef("avg_log_bytes_used__chart"             ) ).add(new ColumnCopyDef("total_log_bytes_used_mb__sum"                   ) ).add(new ColumnCopyDef("avg_log_bytes_used_mb__sum"          , oneDecimal).setColBold()).add(new ColumnStatic("mb")) );
+			if (rstm.hasColumn("avg_tempdb_space_used__chart"          )) htp.add("tempdb"       , new ColumnCopyRow().add( new ColumnCopyDef("avg_tempdb_space_used__chart"          ) ).add(new ColumnCopyDef("total_tempdb_space_used_mb__sum"                ) ).add(new ColumnCopyDef("avg_tempdb_space_used_mb__sum"       , oneDecimal).setColBold()).add(new ColumnStatic("mb")) );
+			htp.validate();
+			
+			// Filter out some rows...
+			htp.setRowFilter(new HtmlTableProducer.RowFilter()
+			{
+				@Override
+				public boolean include(ResultSetTableModel rstm, int rstmRow, String rowKey)
+				{
+					if ("wait-other".equals(rowKey) || "wait-parallel".equals(rowKey))
+					{
+						return rstm.hasColumn("avg_dop__avg") && rstm.getValueAsInteger(rstmRow, "avg_dop__avg") > 1;
+					}
+					return true;
+				}
+			});
+
+			// Loop the RSTM and create a ResultSet that is later translated to another RSTM (containing spark-lines and SQL Text) 
+			if (pos_dbname >= 0 && pos_plan_id >= 0)
+			{
+				for (int r=0; r<rstm.getRowCount(); r++)
+				{
+					String     dbname  = rstm.getValueAsString(r, pos_dbname);
+					Integer    plan_id = rstm.getValueAsInteger(r, pos_plan_id);
+
+					// Get SQL Text
+					Map<String, Object> whereColValMap = new LinkedHashMap<>();
+					whereColValMap.put("plan_id", plan_id);
+					whereColValMap.put("!dbname", dbname);
+
+					String query = "--not-found--";
+					QsSqlTextEntry entry = _keyToSqlText.get(whereColValMap);
+					if (entry != null)
+						query = entry.sqlText;
+					
+					// get the "spark lines"
+					String sparklines = htp.getHtmlTextForRow(r);
+
+					// add record to SimpleResultSet
+					srs.addRow(dbname, plan_id, sparklines, "<xmp>" + query + "</xmp>");
+				}
+			}
+
+			// Create a ResultSetTableModel to hold the information
+			try
+			{
+				// Note the 'srs' is populated when reading above ResultSet from query
+				_cpuSqlTextRstm = createResultSetTableModel(srs, "Top SQL TEXT", null);
+				srs.close();
+
+			}
+			catch (SQLException ex)
+			{
+				setProblemException(ex);
+			
+				_cpuSqlTextRstm = ResultSetTableModel.createEmpty("Top SQL TEXT");
+				_logger.warn("Problems getting Top SQL TEXT: " + ex);
+			}
+		}
+		
+
 		/**
 		 * Set CPU column descriptions
 		 */
-		private void setCpuSectionDescription(ResultSetTableModel rstm)
+		protected void setCpuSectionDescription(ResultSetTableModel rstm)
 		{
 			if (rstm == null)
 				return;
@@ -1006,6 +1514,7 @@ extends SqlServerAbstract
 			rstm.setColumnDescription("count_executions__sum"            , "Summary of: Total count of executions for the query plan within the recording period (usually 24 hours).");
 			rstm.setColumnDescription("count_executions__chart"          , "Chart of:   Total count of executions for the query plan within the aggregation interval.");
                                                                          
+			rstm.setColumnDescription("avg_duration_ms__sum"             , "Summary of: Average duration for the query plan within the recording period (usually 24 hours) (reported in milliseconds) .");
 			rstm.setColumnDescription("avg_duration__sum"                , "Summary of: Average duration for the query plan within the recording period (usually 24 hours) (reported in microseconds) .");
 			rstm.setColumnDescription("avg_duration__chart"              , "Chart of:   Average duration for the query plan within the aggregation interval (reported in microseconds) .");
 			rstm.setColumnDescription("avg_duration"                     , "Average duration for the query plan within the aggregation interval (reported in microseconds) .");
@@ -1014,6 +1523,7 @@ extends SqlServerAbstract
 			rstm.setColumnDescription("max_duration"                     , "Maximum duration for the query plan within the aggregation interval (reported in microseconds).");
 			rstm.setColumnDescription("stdev_duration"                   , "Duration standard deviation for the query plan within the aggregation interval (reported in microseconds).");
                                                                          
+			rstm.setColumnDescription("avg_cpu_time_ms__sum"             , "Summary of: Average CPU time for the query plan within the recording period (usually 24 hours) (reported in milliseconds).");
 			rstm.setColumnDescription("avg_cpu_time__sum"                , "Summary of: Average CPU time for the query plan within the recording period (usually 24 hours) (reported in microseconds).");
 			rstm.setColumnDescription("avg_cpu_time__chart"              , "Chart of:   Average CPU time for the query plan within the aggregation interval (reported in microseconds).");
 			rstm.setColumnDescription("avg_cpu_time"                     , "Average CPU time for the query plan within the aggregation interval (reported in microseconds).");
@@ -1046,6 +1556,7 @@ extends SqlServerAbstract
 			rstm.setColumnDescription("max_physical_io_reads"            , "Maximum number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
 			rstm.setColumnDescription("stdev_physical_io_reads"          , "Number of physical I/O reads standard deviation for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
 			                                                             
+			rstm.setColumnDescription("avg_clr_time_ms__sum"             , "Summary of: Average CLR time for the query plan within the recording period (usually 24 hours) (reported in milliseconds).");
 			rstm.setColumnDescription("avg_clr_time__sum"                , "Summary of: Average CLR time for the query plan within the recording period (usually 24 hours) (reported in microseconds).");
 			rstm.setColumnDescription("avg_clr_time__chart"              , "Chart of:   Average CLR time for the query plan within the aggregation interval (reported in microseconds).");
 			rstm.setColumnDescription("avg_clr_time"                     , "Average CLR time for the query plan within the aggregation interval (reported in microseconds).");
@@ -1054,6 +1565,7 @@ extends SqlServerAbstract
 			rstm.setColumnDescription("max_clr_time"                     , "Maximum CLR time for the query plan within the aggregation interval (reported in microseconds).");
 			rstm.setColumnDescription("stdev_clr_time"                   , "CLR time standard deviation for the query plan within the aggregation interval (reported in microseconds).");
 			                                                             
+			rstm.setColumnDescription("avg_dop__avg"                     , "Average of: Average DOP (degree of parallelism) for the query plan within the recording period (usually 24 hours).");
 			rstm.setColumnDescription("avg_dop__sum"                     , "Summary of: Average DOP (degree of parallelism) for the query plan within the recording period (usually 24 hours).");
 			rstm.setColumnDescription("avg_dop__chart"                   , "Chart of:   Average DOP (degree of parallelism) for the query plan within the aggregation interval.");
 			rstm.setColumnDescription("avg_dop"                          , "Average DOP (degree of parallelism) for the query plan within the aggregation interval.");
@@ -1111,11 +1623,14 @@ extends SqlServerAbstract
 			rstm.setColumnDescription("stdev_page_server_io_reads"       , "Number of page server I/O reads standard deviation for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
 			
 
+			rstm.setColumnDescription("total_duration_ms__sum"           , "Total duration for the query plan (reported in milliseconds).");
 			rstm.setColumnDescription("total_duration__sum"              , "Total duration for the query plan (reported in microseconds).");
+			rstm.setColumnDescription("total_cpu_time_ms__sum"           , "Total CPU time for the query plan (reported in milliseconds).");
 			rstm.setColumnDescription("total_cpu_time__sum"              , "Total CPU time for the query plan (reported in microseconds).");
 			rstm.setColumnDescription("total_logical_io_reads__sum"      , "Total number of logical I/O reads for the query plan. (expressed as a number of 8KB pages read).");
 			rstm.setColumnDescription("total_logical_io_writes__sum"     , "Total number of logical I/O writes for the query plan.");
 			rstm.setColumnDescription("total_physical_io_reads__sum"     , "Total number of physical I/O reads for the query plan (expressed as a number of 8KB pages read).");
+			rstm.setColumnDescription("total_clr_time_ms__sum"           , "Total CLR time for the query plan (reported in milliseconds).");
 			rstm.setColumnDescription("total_clr_time__sum"              , "Total CLR time for the query plan (reported in microseconds).");
 			rstm.setColumnDescription("total_dop__sum"                   , "Total DOP (degree of parallelism) for the query plan.");
 			rstm.setColumnDescription("total_query_max_used_memory__sum" , "Total memory grant (reported as the number of 8 KB pages) for the query plan. Always 0 for queries using natively compiled memory optimized procedures.");
@@ -1130,7 +1645,7 @@ extends SqlServerAbstract
 		/**
 		 * Set WAIT column descriptions
 		 */
-		private void setWaitSectionDescription(ResultSetTableModel rstm)
+		protected void setWaitSectionDescription(ResultSetTableModel rstm)
 		{
 			if (rstm == null)
 				return;
@@ -1176,20 +1691,21 @@ extends SqlServerAbstract
 				{
 					sb.append("-- Some columns extracted from current row.\n");
 					sb.append("-------------------------------------------------------------------------------------------------------------------------------\n");
+					sb.append("-- dbname:                           ").append( rstm.getValueAsString(row, "dbname"                ) ).append("\n");
 					sb.append("-- plan_id:                          ").append( rstm.getValueAsString(row, "plan_id"               ) ).append("\n");
 					sb.append("-- first_execution_time:             ").append( rstm.getValueAsString(row, "first_execution_time"  ) ).append("\n");
 					sb.append("-- last_execution_time:              ").append( rstm.getValueAsString(row, "last_execution_time"   ) ).append("\n");
 
 					sb.append("-- count_executions__sum:            ").append(                 nf.format(rstm.getValueAsBigDecimal(row, "count_executions__sum"           ))).append("\n");
 
-					sb.append("-- total_duration__sum:              ").append( StringUtil.left(nf.format(rstm.getValueAsBigDecimal(row, "total_duration__sum"             )),18)).append("  (in micro seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.usToTimeStrLong(rstm.getValueAsLong(row, "total_duration__sum"))).append(" \n");
-					sb.append("-- avg_duration__sum:                ").append( StringUtil.left(nf.format(rstm.getValueAsBigDecimal(row, "avg_duration__sum"               )),18)).append("  (in micro seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.usToTimeStrLong(rstm.getValueAsLong(row, "avg_duration__sum"))).append(" \n");
+					sb.append("-- total_duration_ms__sum:           ").append( StringUtil.left(nf.format(rstm.getValueAsBigDecimal(row, "total_duration_ms__sum"          )),18)).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "total_duration_ms__sum"))).append(" \n");
+					sb.append(">> avg_duration_sm__sum:             ").append( StringUtil.left(nf.format(rstm.getValueAsBigDecimal(row, "avg_duration_ms__sum"            )),18)).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "avg_duration_ms__sum"))).append(" \n");
 
-					sb.append("-- total_cpu_time__sum:              ").append( StringUtil.left(nf.format(rstm.getValueAsBigDecimal(row, "total_cpu_time__sum"             )),18)).append("  (in micro seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.usToTimeStrLong(rstm.getValueAsLong(row, "total_cpu_time__sum"))).append(" \n");
-					sb.append("-- avg_cpu_time__sum:                ").append( StringUtil.left(nf.format(rstm.getValueAsBigDecimal(row, "avg_cpu_time__sum"               )),18)).append("  (in micro seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.usToTimeStrLong(rstm.getValueAsLong(row, "avg_cpu_time__sum"))).append(" \n");
+					sb.append("-- total_cpu_time_ms__sum:           ").append( StringUtil.left(nf.format(rstm.getValueAsBigDecimal(row, "total_cpu_time_ms__sum"          )),18)).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "total_cpu_time_ms__sum"))).append(" \n");
+					sb.append(">> avg_cpu_time_ms__sum:             ").append( StringUtil.left(nf.format(rstm.getValueAsBigDecimal(row, "avg_cpu_time_ms__sum"            )),18)).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "avg_cpu_time_ms__sum"))).append(" \n");
 
-					sb.append("-- total_wait_time__sum:             ").append( StringUtil.left(nf.format(rstm.getValueAsBigDecimal(row, "total_wait_time__sum"            )),18)).append("  (in micro seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.usToTimeStrLong(rstm.getValueAsLong(row, "total_wait_time__sum"))).append(" \n");
-					sb.append("-- avg_wait_time__sum:               ").append( StringUtil.left(nf.format(rstm.getValueAsBigDecimal(row, "avg_wait_time__sum"              )),18)).append("  (in micro seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.usToTimeStrLong(rstm.getValueAsLong(row, "avg_wait_time__sum"))).append(" \n");
+//					sb.append("-- total_wait_time_ms__sum:          ").append( StringUtil.left(nf.format(rstm.getValueAsBigDecimal(row, "total_wait_time_ms__sum"         )),18)).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "total_wait_time_ms__sum"))).append(" \n");
+//					sb.append(">> avg_wait_time_ms__sum:            ").append( StringUtil.left(nf.format(rstm.getValueAsBigDecimal(row, "avg_wait_time_ms__sum"           )),18)).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "avg_wait_time_ms__sum"))).append(" \n");
 
 					sb.append("-- total_logical_io_reads__sum:      ").append(                 nf.format(rstm.getValueAsBigDecimal(row, "total_logical_io_reads__sum"     ))).append("\n");
 					sb.append("-- avg_logical_io_reads__sum:        ").append(                 nf.format(rstm.getValueAsBigDecimal(row, "avg_logical_io_reads__sum"       ))).append("\n");
@@ -1200,11 +1716,12 @@ extends SqlServerAbstract
 					sb.append("-- total_physical_io_reads__sum:     ").append(                 nf.format(rstm.getValueAsBigDecimal(row, "total_physical_io_reads__sum"    ))).append("\n");
 					sb.append("-- avg_physical_io_reads__sum:       ").append(                 nf.format(rstm.getValueAsBigDecimal(row, "avg_physical_io_reads__sum"      ))).append("\n");
 
-					sb.append("-- total_clr_time__sum:              ").append( StringUtil.left(nf.format(rstm.getValueAsBigDecimal(row, "total_clr_time__sum"             )),18)).append("  (in micro seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.usToTimeStrLong(rstm.getValueAsLong(row, "total_clr_time__sum"))).append(" \n");
-					sb.append("-- avg_clr_time__sum:                ").append( StringUtil.left(nf.format(rstm.getValueAsBigDecimal(row, "avg_clr_time__sum"               )),18)).append("  (in micro seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.usToTimeStrLong(rstm.getValueAsLong(row, "avg_clr_time__sum"))).append(" \n");
+					sb.append("-- total_clr_time_ms__sum:           ").append( StringUtil.left(nf.format(rstm.getValueAsBigDecimal(row, "total_clr_time_ms__sum"          )),18)).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "total_clr_time_ms__sum"))).append(" \n");
+					sb.append("-- avg_clr_time_ms__sum:             ").append( StringUtil.left(nf.format(rstm.getValueAsBigDecimal(row, "avg_clr_time_ms__sum"            )),18)).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "avg_clr_time_ms__sum"))).append(" \n");
 
-					sb.append("-- total_dop__sum:                   ").append(                 nf.format(rstm.getValueAsBigDecimal(row, "total_dop__sum"                  ))).append("\n");
-					sb.append("-- avg_dop__sum:                     ").append(                 nf.format(rstm.getValueAsBigDecimal(row, "avg_dop__sum"                    ))).append("\n");
+//					sb.append("-- total_dop__sum:                   ").append(                 nf.format(rstm.getValueAsBigDecimal(row, "total_dop__sum"                  ))).append("\n");
+//					sb.append("-- avg_dop__sum:                     ").append(                 nf.format(rstm.getValueAsBigDecimal(row, "avg_dop__sum"                    ))).append("\n");
+					sb.append("-- avg_dop__avg:                     ").append(                 nf.format(rstm.getValueAsBigDecimal(row, "avg_dop__avg"                    ))).append("\n");
 
 					sb.append("-- total_query_max_used_memory__sum: ").append(                 nf.format(rstm.getValueAsBigDecimal(row, "total_query_max_used_memory__sum"))).append("\n");
 					sb.append("-- avg_query_max_used_memory__sum:   ").append(                 nf.format(rstm.getValueAsBigDecimal(row, "avg_query_max_used_memory__sum"  ))).append("\n");
@@ -1299,6 +1816,7 @@ extends SqlServerAbstract
 				{
 					sb.append("-- Some columns extracted from current row.\n");
 					sb.append("-------------------------------------------------------------------------------------------------------------------------------\n");
+					sb.append("-- dbname:                        ").append(                           rstm.getValueAsString    (row, "dbname"                           ) ).append("\n");
 					sb.append("-- plan_id:                       ").append(                           rstm.getValueAsString    (row, "plan_id"                          ) ).append("\n");
 					sb.append("-- total_query_wait_time_ms__sum: ").append( StringUtil.left(nf.format(rstm.getValueAsBigDecimal(row, "total_query_wait_time_ms__sum")),18)).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "total_query_wait_time_ms__sum"))).append(" \n");
 					sb.append("-- avg_query_wait_time_ms__sum:   ").append( StringUtil.left(nf.format(rstm.getValueAsBigDecimal(row, "avg_query_wait_time_ms__sum"  )),18)).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "avg_query_wait_time_ms__sum"  ))).append(" \n");
@@ -1373,6 +1891,10 @@ extends SqlServerAbstract
 			String whereColValStr = "";
 			for (Entry<String, Object> entry : whereColValMap.entrySet())
 			{
+				// Skip entries that starts with "!"
+				if (entry.getKey().startsWith("!"))
+					continue;
+
 				whereColValStr += "  and [" + entry.getKey() + "] = " + DbUtils.safeStr( entry.getValue() ) + "\n";
 			}
 
@@ -1428,6 +1950,10 @@ extends SqlServerAbstract
 			String whereColValStr = "";
 			for (Entry<String, Object> entry : whereColValMap.entrySet())
 			{
+				// Skip entries that starts with "!"
+				if (entry.getKey().startsWith("!"))
+					continue;
+
 				whereColValStr += "      and [" + entry.getKey() + "] = " + DbUtils.safeStr( entry.getValue() ) + "\n";
 			}
 

@@ -19,7 +19,7 @@
  * You should have received a copy of the GNU General Public License
  * along with DbxTune.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
-package com.asetune.pcs.report.content.ase;
+package com.asetune.pcs.report.content;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -39,7 +39,6 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.ResultSetTableModel;
-import com.asetune.pcs.report.content.ReportEntryAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
@@ -466,13 +465,112 @@ public class SparklineHelper
 		return sparkline;
 	}
 
+	private static boolean _jsLoadSparkline_writeOnce = false;
+
 	public static String getJavaScriptInitCode(SparklineResult result, String sparklineClassName, String tooltipPostfix)
 	{
+		StringBuilder sb = new StringBuilder();
+
+		// Only write this once
+		if (_jsLoadSparkline_writeOnce == false)
+		{
+			_jsLoadSparkline_writeOnce = true;
+
+			String name = "sparkline";
+			String label = "Initializing Sparklines: ";
+			String topPx = "20px";
+			
+			sb.append("\n");
+			sb.append("\n");
+			sb.append("<div id='" + name + "-progress-div' style='display:none'> \n");
+			sb.append("  <label for='" + name + "-progress-bar'>" + label + "</label> \n");
+			sb.append("  <progress id='" + name + "-progress-bar' max='100' style='height: 20px; width:80%;'></progress> \n");
+			sb.append("</div>\n");
+
+			sb.append("\n");
+			sb.append("<script type='text/javascript'>\n");
+			sb.append("\n");
+			sb.append("    // Variable to hold all sparkline objects \n");
+			sb.append("    const sparklineListToLoad  = []; \n");
+			sb.append("    const sparklineListCreated = []; \n");
+			sb.append("      var sparklineListMax     = 0; \n");
+			sb.append("    const sparklineConfMap     = new Map(); \n");
+			sb.append("\n");
+			sb.append("    // function to be called at page load, which will initialize all Charts, (and update progressbar) \n");
+			sb.append("    function loadNextSparkline() \n");
+			sb.append("    { \n");
+
+			sb.append("        // Enable the progresbar; \n");
+			sb.append("        if (sparklineListCreated.length === 0) \n");
+			sb.append("        { \n");
+			sb.append("            console.log('-load-first-" + name + "-');  \n");
+			sb.append("            sparklineListMax = sparklineListToLoad.length; \n");
+			
+			sb.append("            // show the progressbar\n");
+			sb.append("            document.getElementById('" + name + "-progress-div').style.display = 'block'; \n");  // show
+			
+			sb.append("            // if possible move the div into the 'progress-area' or add some attributes to it. \n");
+			sb.append("            if (document.getElementById('progress-area')) \n");
+			sb.append("            { \n");
+			sb.append("                console.log('Moving div: " + name + "-progress-div --to--> div: progress-area');  \n");
+			sb.append("                $('#" + name + "-progress-div').detach().appendTo('#progress-area'); \n");
+			sb.append("            } \n");
+			sb.append("            else \n");
+			sb.append("            { \n");
+			sb.append("                console.log('Cant find div: progress-area. instead; Setting some css options for div: " + name + "-progress-div');  \n");
+			sb.append("                $('#" + name + "-progress-div').css({'position':'fixed', 'background-color':'white', 'top':'" +topPx + "', 'left':'20px', 'width':'100%'}); \n");
+			sb.append("            } \n");
+			sb.append("        } \n");
+
+			sb.append("        // Disable the progresbar; \n");
+			sb.append("        if (sparklineListToLoad.length === 0) \n");
+			sb.append("        { \n");
+			sb.append("            console.log('-end-of-" + name + "-to-load-');  \n");
+			sb.append("            // hide the progressbar\n");
+			sb.append("            document.getElementById('" + name + "-progress-div').style.display = 'none'; \n");   // hide
+			sb.append("            return; \n");
+			sb.append("        } \n");
+
+			sb.append("        var tagName = sparklineListToLoad.shift(); \n");
+			sb.append("        var config  = sparklineConfMap.get(tagName); \n");
+
+			sb.append("        var pctLoaded = sparklineListCreated.length / sparklineListMax * 100; \n");
+			sb.append("        document.getElementById('" + name + "-progress-bar').value = pctLoaded; \n");
+			
+			sb.append("        console.log('-creating-sparkline: ' + tagName + ', toLoadListSize=' + sparklineListToLoad.length);  \n");
+
+			sb.append("        // Initialize all mini charts -- sparklines   \n");
+			sb.append("        $('.' + tagName).sparkline('html', config);  \n");
+
+//			sb.append("        sparklineListCreated.push(sparkline); \n");
+			sb.append("        sparklineListCreated.push(tagName); \n");
+			sb.append("\n");
+			sb.append("        // now show the Max: ### overlay  \n");
+			sb.append("        $('.sparkline-max-val').css('display', 'block');  \n");
+			
+//			sb.append("        // HIDE the image, and SHOW the chart! \n");
+//			sb.append("        document.getElementById('img_'       + tagName).style.display = 'none'; \n");   // hide
+//			sb.append("        document.getElementById('div_chart_' + tagName).style.display = 'block'; \n");  // show
+
+			sb.append("        // Load next chart \n");
+			sb.append("        setTimeout(loadNextSparkline, 10); \n");
+			sb.append("    }\n");
+			sb.append("\n");
+			sb.append("    // Call the function loadNextSparkline() for the FIRST time \n");
+			sb.append("    document.addEventListener('DOMContentLoaded', function() \n");
+			sb.append("    { \n");
+			sb.append("        loadNextSparkline(); \n");
+			sb.append("    }); \n");
+			sb.append("\n");
+			sb.append("</script>\n");
+			sb.append("\n");
+			sb.append("\n");
+		}
+
+
 		// write a "timeArray", which will be used by 'JQuery sparkline' tooltip functionality. 
 		if (result != null && result.tooltips != null && ! result.tooltips.isEmpty())
 		{
-			StringBuilder sb = new StringBuilder();
-
 			// Get tool tip and escape any single quotes in the tool tip text 
 			if (tooltipPostfix != null)
 				tooltipPostfix = tooltipPostfix.replace("'", "\\'");
@@ -483,24 +581,65 @@ public class SparklineHelper
 
 			if (pixels > 9) pixels = 9;
 			if (pixels < 3) pixels = 3;
-			
+
+//			// if we want to use BAR as type in the Sparkline, the below might be a good fit (produces the same size as; type: 'line') 
+//			sb.append("                type: 'bar',							  												\n");
+//			sb.append("                nullColor: 'pink',					  												\n");
+//			sb.append("                barWidth: 2,							  												\n");
+//			sb.append("                barSpacing: 1,						  												\n");
+
+
+
+
+//			sb.append("<script type='text/javascript'> \n");
+//			sb.append("\n");
+//			sb.append("    // Execute when page has LOADED \n");
+//			sb.append("    document.addEventListener('DOMContentLoaded', function() \n");
+//			sb.append("    { \n");
+//			sb.append("        // do: deferred (so we dont block the event tread at initial load) \n");
+//			sb.append("        setTimeout(function() \n");
+//			sb.append("        { \n");
+//			sb.append("            // Initialize all mini charts -- sparklines \n");
+//			sb.append("            $('." + sparklineClassName + "').sparkline('html', {										\n");
+//			sb.append("                type: 'line',						  												\n");
+//			sb.append("                defaultPixelsPerValue: ").append(pixels).append(",									\n");
+////			sb.append("                type: 'bar',						  													\n");
+//			sb.append("                chartRangeMin: 0,					  												\n");
+//			sb.append("                tooltipFormat: '<span style=\"font-size:12px;\"><span style=\"color: {{color}}\">&#9679;</span> {{y}}" + tooltipPostfix + "<br>&nbsp;&nbsp; {{offset:toolTipArray}}</span>',	\n");
+//			sb.append("                tooltipValueLookups: { 				  												\n");
+//			sb.append("                    toolTipArray: { 																	\n");
+//			String comma = " ";
+//			int    pos   = 0;
+//			for (String str : result.tooltips)
+//			{
+//				sb.append("                        " + comma + pos + ": '" + str + "' \n");
+//				comma = ",";
+//				pos++;
+//			}
+//			sb.append("                    }																				\n");
+//			sb.append("                }																					\n");
+//			sb.append("            });																						\n");
+//			sb.append("            // now show the Max: ### overlay															\n");
+//			sb.append("            $('.sparkline-max-val').css('display', 'block');											\n");
+//			sb.append("        }, 100); \n");
+//			sb.append("    }); \n");
+//			sb.append("\n");
+//			sb.append("\n");
+//			sb.append("</script> \n");
 			sb.append("<script type='text/javascript'> \n");
 			sb.append("\n");
-			sb.append("    // Execute when page has LOADED \n");
-			sb.append("    document.addEventListener('DOMContentLoaded', function() \n");
-			sb.append("    { \n");
-			sb.append("        // do: deferred (so we dont block the event tread at initial load) \n");
-			sb.append("        setTimeout(function() \n");
-			sb.append("        { \n");
-			sb.append("            // Initialize all mini charts -- sparklines \n");
-			sb.append("            $('." + sparklineClassName + "').sparkline('html', {										\n");
-			sb.append("                type: 'line',						  												\n");
-			sb.append("                defaultPixelsPerValue: ").append(pixels).append(",									\n");
-//			sb.append("                type: 'bar',						  													\n");
-			sb.append("                chartRangeMin: 0,					  												\n");
-			sb.append("                tooltipFormat: '<span style=\"font-size:12px;\"><span style=\"color: {{color}}\">&#9679;</span> {{y}}" + tooltipPostfix + "<br>&nbsp;&nbsp; {{offset:toolTipArray}}</span>',	\n");
-			sb.append("                tooltipValueLookups: { 				  												\n");
-			sb.append("                    toolTipArray: { 																	\n");
+			sb.append("    // add name to a variable to load 'later'. \n");
+			sb.append("    sparklineListToLoad.push('" + sparklineClassName + "'); 									\n"); 
+			sb.append("\n");
+			sb.append("    // add config to a map to load 'later'. \n");
+			sb.append("    sparklineConfMap.set('" + sparklineClassName + "', {										\n");
+			sb.append("        type: 'line',						  												\n");
+			sb.append("        defaultPixelsPerValue: ").append(pixels).append(",									\n");
+//			sb.append("        type: 'bar',						  													\n");
+			sb.append("        chartRangeMin: 0,					  												\n");
+			sb.append("        tooltipFormat: '<span style=\"font-size:12px;\"><span style=\"color: {{color}}\">&#9679;</span> {{y}}" + tooltipPostfix + "<br>&nbsp;&nbsp; {{offset:toolTipArray}}</span>',	\n");
+			sb.append("        tooltipValueLookups: { 				  												\n");
+			sb.append("            toolTipArray: { 																	\n");
 			String comma = " ";
 			int    pos   = 0;
 			for (String str : result.tooltips)
@@ -509,21 +648,15 @@ public class SparklineHelper
 				comma = ",";
 				pos++;
 			}
-			sb.append("                    }																				\n");
-			sb.append("                }																					\n");
-			sb.append("            });																						\n");
-			sb.append("            // now show the Max: ### overlay															\n");
-			sb.append("            $('.sparkline-max-val').css('display', 'block');											\n");
-			sb.append("        }, 100); \n");
-			sb.append("    }); \n");
+			sb.append("            }																				\n");
+			sb.append("        }																					\n");
+			sb.append("    });																						\n");
 			sb.append("\n");
 			sb.append("\n");
 			sb.append("</script> \n");
-			
-			return sb.toString();
 		}
 
-		return "";
+		return sb.toString();
 	}
 
 	/**
@@ -541,7 +674,7 @@ public class SparklineHelper
 			Number maxValue = Integer.MIN_VALUE;
 			for (Number val : values)
 			{
-				maxValue = Math.max(maxValue.doubleValue(), val.doubleValue());
+				maxValue = Math.max(maxValue.doubleValue(), (val == null) ? 0 : val.doubleValue());
 			}
 			return maxValue;
 		}

@@ -49,14 +49,14 @@ extends SqlServerAbstract
 		return false;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		sb.append(getSectionDescriptionHtml(_shortRstm, true));
@@ -149,6 +149,9 @@ extends SqlServerAbstract
 			_shortRstm.removeColumnNoCase("CmNewDiffRateRow");
 
 //			_shortRstm.setColumnOrder("aaa", "bbb", "ccc", "ddd", "eee");
+
+			// Highlight sort column
+			_shortRstm.setHighlightSortColumns("CmSampleTime");
 
 			// Describe the table
 			setSectionDescription(_shortRstm);

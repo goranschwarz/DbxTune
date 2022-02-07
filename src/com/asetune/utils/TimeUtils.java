@@ -431,6 +431,23 @@ public class TimeUtils
 		return res;
 	}
 
+	public static String usToTimeStrDHMS(long duration)
+	{
+		String res = ""; // java.util.concurrent.TimeUnit;
+		
+		long days    = TimeUnit.MICROSECONDS.toDays(duration);
+		long hours   = TimeUnit.MICROSECONDS.toHours(duration)   - TimeUnit.DAYS   .toHours(  TimeUnit.MICROSECONDS.toDays(duration));
+		long minutes = TimeUnit.MICROSECONDS.toMinutes(duration) - TimeUnit.HOURS  .toMinutes(TimeUnit.MICROSECONDS.toHours(duration));
+		long seconds = TimeUnit.MICROSECONDS.toSeconds(duration) - TimeUnit.MINUTES.toSeconds(TimeUnit.MICROSECONDS.toMinutes(duration));
+//		long millis  = TimeUnit.MICROSECONDS.toMillis(duration)  - TimeUnit.SECONDS.toMillis( TimeUnit.MICROSECONDS.toSeconds(duration));
+
+		if ( days == 0 )
+			res = String.format("%02d:%02d:%02d", hours, minutes, seconds);
+		else
+			res = String.format("%dd %02d:%02d:%02d", days, hours, minutes, seconds);
+
+		return res;
+	}
 
 	public static final int DD_MS          = 0;
 	public static final int DD_MILLISECOND = DD_MS;

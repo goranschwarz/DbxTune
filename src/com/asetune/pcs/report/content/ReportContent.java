@@ -36,6 +36,7 @@ public class ReportContent
 	private boolean _isShortMessageHtml = true;
 	private String _contentHtml;
 	private File   _contentFile;
+	private File   _lastSavedReportFile;
 	private boolean _hasNothingToReport = false;
 
 	public String getServerName()   { return _serverName  == null ? "" : _serverName; }
@@ -114,16 +115,23 @@ public class ReportContent
 	}
 
 	
+	public File getLastSavedReportFile()
+	{
+		return _lastSavedReportFile;
+	}
+
 	public void saveReportAsFile(File file)
 	throws IOException
 	{
 		if (_contentFile != null)
 		{
 			FileUtils.copyFile(_contentFile, file);
+			_lastSavedReportFile = file;
 		}
 		else if (_contentHtml != null)
 		{
 			FileUtils.write(file, _contentHtml, StandardCharsets.UTF_8.name());
+			_lastSavedReportFile = file;
 		}
 		else
 		{

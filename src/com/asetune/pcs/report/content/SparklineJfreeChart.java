@@ -19,7 +19,7 @@
  * You should have received a copy of the GNU General Public License
  * along with DbxTune.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
-package com.asetune.pcs.report.content.ase;
+package com.asetune.pcs.report.content;
 
 import java.awt.Color;
 import java.awt.Desktop;
@@ -55,7 +55,7 @@ import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.ui.RefineryUtilities;
 
-import com.asetune.pcs.report.content.ase.SparklineHelper.SparklineResult;
+import com.asetune.pcs.report.content.SparklineHelper.SparklineResult;
 
 public class SparklineJfreeChart
 {
@@ -348,6 +348,7 @@ public class SparklineJfreeChart
 			int     compression = 0;
 //			ChartUtils.writeChartAsPNG(b64o, _chart, 2048, 300);
 			ChartUtils.writeChartAsPNG(b64o, _chart, width, height, encodeAlpha, compression);
+			ReportChartAbstract.writeChartAsPNG(b64o, _chart, width, height, encodeAlpha, compression);
 //			ChartUtils.writeChartAsJPEG(b64o, _chart, width, height);
 
 			String base64Str = new String(bo.toByteArray());
@@ -384,6 +385,7 @@ public class SparklineJfreeChart
 		}
 	}
 
+	@SuppressWarnings("deprecation")
 	public static void main(String[] args)
 	{
 		

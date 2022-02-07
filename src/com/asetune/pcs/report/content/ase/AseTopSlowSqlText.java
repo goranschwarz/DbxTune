@@ -38,9 +38,9 @@ import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.ReportEntryAbstract.ReportEntryTableStringRenderer;
-import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
-import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
+import com.asetune.pcs.report.content.SparklineHelper;
+import com.asetune.pcs.report.content.SparklineHelper.DataSource;
+import com.asetune.pcs.report.content.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
@@ -66,14 +66,14 @@ public class AseTopSlowSqlText extends AseAbstract
 		return false;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		if (_shortRstm.getRowCount() == 0)
@@ -90,7 +90,9 @@ public class AseTopSlowSqlText extends AseAbstract
 //			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
 			sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
 //			sb.append(_shortRstm.toHtmlTableString("sortable"));
-			sb.append(toHtmlTable(_shortRstm));
+
+//			sb.append(toHtmlTable(_shortRstm));
+			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, null));
 
 			if (_longRstm != null)
 			{
@@ -119,9 +121,10 @@ public class AseTopSlowSqlText extends AseAbstract
 		}
 		
 		// Write JavaScript code for CPU SparkLine
-		for (String str : _miniChartJsList)
+		if (isFullMessageType())
 		{
-			sb.append(str);
+			for (String str : _miniChartJsList)
+				sb.append(str);
 		}
 	}
 
@@ -214,9 +217,6 @@ public class AseTopSlowSqlText extends AseAbstract
 			    + "   ,cast('' as varchar(512))     as [ExecCount__chart] \n"
 			    + " \n"
 			    + "   ,cast('' as varchar(512))     as [SkipThis] \n"
-			    + "	  ,min([StartTime])             as [StartTime_min] \n"
-			    + "	  ,max([EndTime])               as [EndTime_max] \n"
-			    + "	  ,cast('' as varchar(30))      as [Duration] \n"
 			    + " \n"
 			    + "   ,sum([Elapsed_ms])            as [Elapsed_ms__sum] \n"
 			    + "   ,avg([Elapsed_ms])            as [Elapsed_ms__avg] \n"
@@ -259,6 +259,11 @@ public class AseTopSlowSqlText extends AseAbstract
 //				+ "   ,(sum([LogicalReads])*1.0) / (coalesce(sum([RowsAffected]),1)*1.0) as [LogicalReadsPerRowsAffected] \n"
 				+ "   ,-9999999.0 as [LogicalReadsPerRowsAffected] \n"
 				
+			    + " \n"
+			    + "	  ,min([StartTime])             as [StartTime_min] \n"
+			    + "	  ,max([EndTime])               as [EndTime_max] \n"
+			    + "	  ,cast('' as varchar(30))      as [Duration] \n"
+
 			    + "from [MonSqlCapStatements] \n"
 //			    + "where [ProcName] is NULL \n"
 			    + "where [ProcedureID] = 0 \n"
@@ -279,6 +284,9 @@ public class AseTopSlowSqlText extends AseAbstract
 		}
 		else
 		{
+			// Highlight sort column
+			_shortRstm.setHighlightSortColumns("CpuTime__sum");
+
 			// Describe the table
 			setSectionDescription(_shortRstm);
 
@@ -409,7 +417,7 @@ public class AseTopSlowSqlText extends AseAbstract
 						{
 							String col_SQLText = "[SQLText]";
 							if (hasDictCompCols)
-								col_SQLText = DictCompression.getRewriteForColumnName(sqlTextTable, "SQLText$dcc$").replace(" AS [SQLText]", "");
+								col_SQLText = DictCompression.getRewriteForColumnName(sqlTextTable, "SQLText$dcc$", null).replace(" AS [SQLText]", "");
 
 //							sql = ""
 //								    + "select distinct [JavaSqlHashCode], [ServerLogin], cast('' as varchar(512)) as [SkipThis], " + col_SQLText + " as [SQLText] \n"

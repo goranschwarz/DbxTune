@@ -27,7 +27,7 @@ import org.junit.Test;
 public class JsonUtilsTest
 {
 	@Test
-	public void simpleTest()
+	public void isPossibleJson()
 	{
 		assertEquals("Blank or null should return false", false, JsonUtils.isPossibleJson(null));
 		assertEquals("Blank or null should return false", false, JsonUtils.isPossibleJson(""));
@@ -36,19 +36,49 @@ public class JsonUtilsTest
 
 		assertEquals("Not A JSON String",            false, JsonUtils.isPossibleJson("{}"));
 		assertEquals("Not A JSON String",            false, JsonUtils.isPossibleJson("[]"));
-		assertEquals("Not A JSON String",            false, JsonUtils.isPossibleJson("\"key\":\"value\""));
-		assertEquals("Not A JSON String",            false, JsonUtils.isPossibleJson("  xx    \"{key\":\"value\"}"));
-		assertEquals("Not A JSON String",            false, JsonUtils.isPossibleJson("        \"{key\"=\"value\"}"));
+		assertEquals("Not A JSON String",            false, JsonUtils.isPossibleJson("#key#:#value#"               .replace('#', '"')));
+		assertEquals("Not A JSON String",            false, JsonUtils.isPossibleJson("  xx    #{key#:#value#}"     .replace('#', '"')));
+		assertEquals("Not A JSON String",            false, JsonUtils.isPossibleJson("        #{key#=#value#}"     .replace('#', '"')));
 
-		assertEquals("Not A JSON String, but close", false, JsonUtils.isPossibleJson("\"{key\":\"value\"}"));
-		assertEquals("Not A JSON String, but close", false, JsonUtils.isPossibleJson("      \"{key\":\"value\"}"));
+		assertEquals("Not A JSON String, but close", false, JsonUtils.isPossibleJson("#{key#:#value#}"             .replace('#', '"')));
+		assertEquals("Not A JSON String, but close", false, JsonUtils.isPossibleJson("      #{key#:#value#}"       .replace('#', '"')));
 
-		assertEquals("A JSON String",                true, JsonUtils.isPossibleJson("{\"key\":\"value\"}"));
-		assertEquals("A JSON String",                true, JsonUtils.isPossibleJson("      {\"key\":\"value\"}"));
-		assertEquals("A JSON String",                true, JsonUtils.isPossibleJson("  [    {\"key\":\"value\"}    ]"));
+		assertEquals("A JSON String",                true, JsonUtils.isPossibleJson("{#key#:#value#}"              .replace('#', '"')));
+		assertEquals("A JSON String",                true, JsonUtils.isPossibleJson("      {#key#:#value#}"        .replace('#', '"')));
+		assertEquals("A JSON String",                true, JsonUtils.isPossibleJson("  [    {#key#:#value#}    ]"  .replace('#', '"')));
 
-		assertEquals("A JSON String",                true, JsonUtils.isPossibleJson("[ {\"serverName\":\"SYB_MXG_P01\", \"to\":\"sybase-dba-alarms@b3.se, lafo@sek.se\"}, {\"serverName\":\"SYB_SEK_MXGT0\", \"to\":\"lafo@sek.se\"} ]"));
-		assertEquals("A JSON String",                true, JsonUtils.isJsonValid   ("[ {\"serverName\":\"SYB_MXG_P01\", \"to\":\"sybase-dba-alarms@b3.se, lafo@sek.se\"}, {\"serverName\":\"SYB_SEK_MXGT0\", \"to\":\"lafo@sek.se\"} ]"));
+		assertEquals("A JSON String",                true, JsonUtils.isPossibleJson("[ {#serverName#:#SYB_MXG_P01#, #to#:#sybase-dba-alarms@b3.se, lafo@sek.se#}, {#serverName#:#SYB_SEK_MXGT0#, #to#:#lafo@sek.se#} ]".replace('#', '"')));
+
+		assertEquals("Not A JSON String",            false, JsonUtils.isPossibleJson("xxx"));
+		assertEquals("Not A JSON String",            false, JsonUtils.isPossibleJson("name@acme.com"));
+	}
+
+
+	@Test
+	public void isJsonValid()
+	{
+		assertEquals("Blank or null should return false", false, JsonUtils.isJsonValid(null));
+		assertEquals("Blank or null should return false", false, JsonUtils.isJsonValid(""));
+
+		assertEquals("Not A JSON String",                 false, JsonUtils.isJsonValid("   not a json"));
+
+//		assertEquals("Not A JSON String",            false, JsonUtils.isJsonValid("{}"));
+//		assertEquals("Not A JSON String",            false, JsonUtils.isJsonValid("[]"));
+		assertEquals("Not A JSON String",            false, JsonUtils.isJsonValid("#key#:#value#"               .replace('#', '"')));
+		assertEquals("Not A JSON String",            false, JsonUtils.isJsonValid("  xx    #{key#:#value#}"     .replace('#', '"')));
+		assertEquals("Not A JSON String",            false, JsonUtils.isJsonValid("        #{key#=#value#}"     .replace('#', '"')));
+
+		assertEquals("Not A JSON String, but close", false, JsonUtils.isJsonValid("#{key#:#value#}"             .replace('#', '"')));
+		assertEquals("Not A JSON String, but close", false, JsonUtils.isJsonValid("      #{key#:#value#}"       .replace('#', '"')));
+
+		assertEquals("A JSON String",                true,  JsonUtils.isJsonValid("{#key#:#value#}"              .replace('#', '"')));
+		assertEquals("A JSON String",                true,  JsonUtils.isJsonValid("      {#key#:#value#}"        .replace('#', '"')));
+		assertEquals("A JSON String",                true,  JsonUtils.isJsonValid("  [    {#key#:#value#}    ]"  .replace('#', '"')));
+
+		assertEquals("A JSON String",                true,  JsonUtils.isJsonValid("[ {#serverName#:#SYB_MXG_P01#, #to#:#sybase-dba-alarms@b3.se, lafo@sek.se#}, {#serverName#:#SYB_SEK_MXGT0#, #to#:#lafo@sek.se#} ]".replace('#', '"')));
+
+		assertEquals("Not A JSON String",            false, JsonUtils.isJsonValid("xxx"));
+		assertEquals("Not A JSON String",            false, JsonUtils.isJsonValid("name@acme.com"));
 	}
 
 

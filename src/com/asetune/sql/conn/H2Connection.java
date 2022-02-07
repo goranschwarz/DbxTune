@@ -233,4 +233,19 @@ public class H2Connection extends DbxConnection
 //		String qic = getMetaData().getIdentifierQuoteString();
 //		dbExec("create schema if not exists "+qic+schemaName+qic);
 //	}
+
+	@Override
+	protected int getDbmsSessionId_impl() throws SQLException
+	{
+		String sql = "select session_id()";
+
+		int spid = -1;
+		try (Statement stmnt = _conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+				spid = rs.getInt(1);
+		}
+		
+		return spid;
+	}
 }

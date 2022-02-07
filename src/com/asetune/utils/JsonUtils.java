@@ -27,8 +27,6 @@ import com.google.gson.JsonParser;
 
 public class JsonUtils
 {
-	private static final Gson gson = new Gson();
-
 	private JsonUtils()
 	{
 	}
@@ -96,10 +94,11 @@ public class JsonUtils
 
 		try
 		{
-			gson.fromJson(jsonInString, Object.class);
-			return true;
+			JsonElement elem = new JsonParser().parse(jsonInString);
+			//System.out.println("isJsonValid(): isJsonArray="+elem.isJsonArray()+", isJsonObject()="+elem.isJsonObject() + ". input=|"+jsonInString+"|.");
+			return elem.isJsonArray() || elem.isJsonObject();
 		}
-		catch (com.google.gson.JsonSyntaxException ex)
+		catch (Exception ex)
 		{
 			return false;
 		}

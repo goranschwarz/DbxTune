@@ -71,6 +71,7 @@ import com.asetune.cm.sqlserver.CmOpenTransactions;
 import com.asetune.cm.sqlserver.CmOptimizer;
 import com.asetune.cm.sqlserver.CmOsLatchStats;
 import com.asetune.cm.sqlserver.CmPerfCounters;
+import com.asetune.cm.sqlserver.CmPlanCacheHistory;
 import com.asetune.cm.sqlserver.CmProcedureStats;
 import com.asetune.cm.sqlserver.CmQueryTransformStat;
 import com.asetune.cm.sqlserver.CmSchedulers;
@@ -199,6 +200,7 @@ extends CounterControllerAbstract
 		CmIndexPhysical      .create(counterController, guiController);
 		CmIndexMissing       .create(counterController, guiController);
 		CmIndexUnused        .create(counterController, guiController);
+		CmPlanCacheHistory   .create(counterController, guiController);
 		CmExecQueryStats     .create(counterController, guiController);
 		CmExecProcedureStats .create(counterController, guiController);
 		CmExecFunctionStats  .create(counterController, guiController);
@@ -725,6 +727,31 @@ extends CounterControllerAbstract
 	{
 		return "SELECT 'SqlServerTune-check:isClosed(conn)'";
 	}
+
+
+	@Override
+	public void onMonConnect(DbxConnection conn)
+	{
+		//------------------------------------------------
+		// Set some options
+		//   -- set deadlock priority LOW or similar... (SET DEADLOCK_PRIORITY LOW)
+		//      if SqlServerTune is involved in a DEADLOCK, then the "other" SPID will have a higher chance to "win"
+		//      SET DEADLOCK_PRIORITY { LOW | NORMAL | HIGH | <numeric-priority> | @deadlock_var | @deadlock_intvar }  
+		//          <numeric-priority> ::= { -10 | -9 | -8 | ... | 0 | ... | 8 | 9 | 10 }
+		//          LOW=-5, NORMAL=9, HIGH=5
+		// see: https://docs.microsoft.com/en-us/sql/t-sql/statements/set-deadlock-priority-transact-sql?view=sql-server-ver15
+		String sql = "SET DEADLOCK_PRIORITY LOW"; // should we go for -7 or -8 to be even more submissive
+		try (Statement stmnt = conn.createStatement() )
+		{
+			_logger.info("onMonConnect(): Setting SQL-Server session option 'DEADLOCK_PRIORITY' using sql: " + sql);
+			stmnt.executeUpdate(sql);
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems in onMonConnect(): When Initializing DBMS SET Properties, using sql='" + sql + "'. Continuing... Caught: MsgNum=" + ex.getErrorCode() + ": " + ex);
+		}
+	}
+
 
 	/**
 	 * NOTE: This method IS/MUST bee called from both GUI & NO-GUI: CounterCollectorThreadGui AND CounterCollectorThreadNoGui

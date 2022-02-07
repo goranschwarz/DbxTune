@@ -345,7 +345,7 @@ extends AlarmWriterAbstract
 	private boolean _startTls               = DEFAULT_startTls;
 	private int     _smtpConnectTimeout     = -1;
 
-	private List<String> _toList     = new ArrayList<>();
+//	private List<String> _toList     = new ArrayList<>();
 //	private List<String> _ccList     = new ArrayList<>();
 	//-------------------------------------------------------
 
@@ -382,7 +382,7 @@ extends AlarmWriterAbstract
 		if ( StringUtil.isNullOrBlank(_msgBodyTemplate) ) throw new Exception("The property '" + PROPKEY_msgBodyTemplate + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
 
 		// Parse the 'to string' into a list
-		_toList = StringUtil.parseCommaStrToList(_to);
+//		_toList = StringUtil.parseCommaStrToList(_to);
 		
 //		if (StringUtil.hasValue(_cc))
 //			_ccList = StringUtil.parseCommaStrToList(_cc);

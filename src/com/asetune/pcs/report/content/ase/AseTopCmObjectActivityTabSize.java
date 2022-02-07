@@ -49,14 +49,14 @@ public class AseTopCmObjectActivityTabSize extends AseAbstract
 		return false;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		if (_shortRstm.getRowCount() == 0)
@@ -131,6 +131,8 @@ public class AseTopCmObjectActivityTabSize extends AseAbstract
 		
 		String ObjectCacheDate_max       = !dummyRstm.hasColumnNoCase("ObjectCacheDate"      ) ? "" : "    ,max([ObjectCacheDate])                                as [ObjectCacheDate_max] \n"; 
 
+//		FIXME; first try to get if there is Any records with 'UsageInMb', 'TabRowCount' in the ABS table. then use that sample to get a snapshot or various sizes
+//		OR; possibly get rows from (select [extraInfoText] from [MonDdlStorage]), which *may* have records... (need to parse the sp_spaceused info and then sort it)
 
 		String sql = getCmDiffColumnsAsSqlComment("CmObjectActivity")
 			    + "select top " + topRows + " \n"
@@ -194,6 +196,9 @@ public class AseTopCmObjectActivityTabSize extends AseAbstract
 		}
 		else
 		{
+			// Highlight sort column
+			_shortRstm.setHighlightSortColumns("UsageInMb_max");
+
 			// Describe the table
 			setSectionDescription(_shortRstm);
 

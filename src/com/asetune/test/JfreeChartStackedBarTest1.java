@@ -26,11 +26,9 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.LegendItemCollection;
-import org.jfree.chart.axis.CategoryLabelPositions;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.labels.StandardCategoryToolTipGenerator;
@@ -46,7 +44,6 @@ import org.jfree.ui.RefineryUtilities;
 
 import com.asetune.graph.CategoryAxisSparselyLabeled;
 import com.asetune.graph.CategoryPlotSparselyLabeled;
-import com.asetune.utils.StringUtil;
 
 public class JfreeChartStackedBarTest1 extends ApplicationFrame
 {

@@ -1273,108 +1273,6 @@ extends CounterTableModel
 			rs.close();
 			return false;
 		}
-		
-//		if (_colNames == null)
-//		{
-//			// Initialize column names
-//			_colNames       = new ArrayList<String>();
-//			_colSqlType     = new ArrayList<Integer>();
-//			_colSqlTypeName = new ArrayList<String>();
-//			_colClassName   = new ArrayList<String>();
-//			int colCount    = rsmd.getColumnCount();
-//			_colIsPk        = new boolean[colCount];
-//
-//			_keysToRowid    = new HashMap<String,Integer>();
-//			_rowidToKey     = new ArrayList<String>();
-//
-//			List<Integer> tmpPkPos = new LinkedList<Integer>();
-//
-//			for (int i=1; i<=colCount; i++)
-//			{
-//				String colName      = rsmd.getColumnLabel(i); 
-//				int    colType      = rsmd.getColumnType(i);
-////				String colTypeName  = rsmd.getColumnTypeName(i); // The generic one doesn't handle RepServer due to MetaData issues
-//				String colTypeName  = ResultSetTableModel.getColumnTypeName(rsmd, i); // This one handles RepServer better, NOTE: this delivers length, precision & scale
-//				String colClassName = rsmd.getColumnClassName(i);
-//
-//				_colNames      .add(colName);
-//				_colSqlType    .add(new Integer(colType));
-//				_colSqlTypeName.add(colTypeName);
-//				_colClassName  .add(colClassName);
-//
-//				// pkList could contain the ColumnName
-//				// or a column position
-//				_colIsPk[i-1] = false;
-//				if ( pkList != null && pkList.size() > 0)
-//				{
-//					if ( pkList.contains(colName) ) 
-//						_colIsPk[i-1] = true;
-//					if ( pkList.contains( Integer.toString(i) ) )
-//						_colIsPk[i-1] = true;
-//					
-//					if (_colIsPk[i-1])
-//						tmpPkPos.add(new Integer(i));
-//				}
-//
-//				// Special... if colname is "msgAsColValue", 
-//				// all TDS Msg on the ResultSet should be added to this column
-//				if ( SPECIAL_COLUMN_msgAsColValue.equals(colName) )
-//					_pos_msgAsColValue = i;
-//				// Note on the above:
-//				// It would be nice to do, something like: 
-//				// - strip away the msgAsColValue::theRealColName part and replace it with a "real" column name
-//				// - but since the ResultSetMetaData is not writable, it can't be done
-//				// - and the PersistWriterXXX uses the RSMD to get the column name... so the persist table would be faulty
-//
-//				// Special... if colname is "sampleTimeInMs", 
-//				// Simply substitute/replace with the "last sample sample time" in this column
-//				if ( SPECIAL_COLUMN_sampleTimeInMs.equals(colName) )
-//				{
-//					if (colType == Types.INTEGER)
-//						_pos_sampleTimeInMs = i;
-//					else
-//					{
-//						_logger.warn(getName()+": found column '"+SPECIAL_COLUMN_sampleTimeInMs+"', but it's not a INTEGER, so it will be treated as a normal column.");
-//					}
-//				}
-//			}
-//
-//			if (pkList != null && (pkList.size() != tmpPkPos.size()) )
-//			{
-//				throw new RuntimeException("sample, can't find all the primary keys in the ResultSet. pkList='"+pkList+"', _colNames='"+_colNames+"', tmpPkPos='"+tmpPkPos+"'.");
-//			}
-//				
-//			_pkPosArray = new int[tmpPkPos.size()];
-//			for(int i= 0; i<tmpPkPos.size(); i++)
-//			{
-////				_pkPosArray[i] = ((Integer)tmpPkPos.get(i)).intValue();
-//				_pkPosArray[i] = tmpPkPos.get(i);
-//			}
-//			tmpPkPos = null;
-//		}
-//		else // check previous result set for match
-//		{
-//			int cols = rsmd.getColumnCount();
-//			if (getColumnCount() != cols)
-//			{
-//				_logger.error(getName()+": ResultSet number "+rsNum+" has "+cols+" while it was expected to have "+getColumnCount()+". Skipping this result set.");
-//				rs.close();
-//				return false;
-//			}
-//
-//			// Check data types match for all columns.
-//			for (int i=1; i<=cols; i++)
-//			{
-//				String oldType = _colClassName.get(i-1);
-//				String newType = rsmd.getColumnClassName(i);
-//				if ( ! oldType.equals(newType) )
-//				{
-//					_logger.error(getName()+": ResultSet number "+rsNum+" column number "+i+" (colName='"+rsmd.getColumnLabel(i)+"') has SQL datatype "+newType+", while we expected datatype "+oldType+".  Skipping this result set.");
-//					rs.close();
-//					return false;
-//				}
-//			}
-//		}
 
 		// Load counters in memory
 		int rsRowNum = 0;
@@ -1524,16 +1422,24 @@ extends CounterTableModel
 						for (String diffColName : _diffColNames) // FIXME _colNames is not the correct list.
 						{
 							int diffCollNamePos = findColumn(diffColName);
-							Number prevColVal = (Number) curRow.get(diffCollNamePos);
-							Number thisColVal = (Number)    row.get(diffCollNamePos);
+							if (diffCollNamePos == -1)
+							{
+								if (_logger.isTraceEnabled())
+									_logger.trace(getName()+":    >> MERGE for key='"+key+"', rowId="+intObj+", colName='"+diffColName+"', colPos="+diffCollNamePos+". COLUMN NOT FOUND... Skipping this column.");
+							}
+							else
+							{
+								Number prevColVal = (Number) curRow.get(diffCollNamePos);
+								Number thisColVal = (Number)    row.get(diffCollNamePos);
 
-							// Merge the columns and set the new value.
-							// On failure, it returns the prevColVal
-							Number mergeColVal = mergeColumnValue(prevColVal, thisColVal);
-							curRow.set(diffCollNamePos, mergeColVal);
+								// Merge the columns and set the new value.
+								// On failure, it returns the prevColVal
+								Number mergeColVal = mergeColumnValue(prevColVal, thisColVal);
+								curRow.set(diffCollNamePos, mergeColVal);
 
-							if (_logger.isTraceEnabled())
-								_logger.trace(getName()+":    >> MERGE for key='"+key+"', rowId="+intObj+", colName='"+diffColName+"', colPos="+diffCollNamePos+", prevValue="+prevColVal+", thisVal="+thisColVal+", mergedVal="+mergeColVal+".");
+								if (_logger.isTraceEnabled())
+									_logger.trace(getName()+":    >> MERGE for key='"+key+"', rowId="+intObj+", colName='"+diffColName+"', colPos="+diffCollNamePos+", prevValue="+prevColVal+", thisVal="+thisColVal+", mergedVal="+mergeColVal+".");
+							}
 						}
 						
 						// on MERGE no need to add the row, so just read next row

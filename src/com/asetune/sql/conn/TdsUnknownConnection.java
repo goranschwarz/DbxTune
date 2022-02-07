@@ -54,4 +54,10 @@ public class TdsUnknownConnection extends DbxConnection
 		System.out.println("INFO: TdsUnknownConnection.isValid("+timeout+") is using !isClosed() instead of isValid()");
 		return ! _conn.isClosed();
 	}
+
+	@Override
+	protected int getDbmsSessionId_impl() throws SQLException
+	{
+		return -1;
+	}
 }

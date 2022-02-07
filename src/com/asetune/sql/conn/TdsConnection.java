@@ -63,4 +63,7 @@ public abstract class TdsConnection extends DbxConnection
 
 	@Override
 	public abstract boolean isInTransaction() throws SQLException;
+
+	@Override
+	protected abstract int getDbmsSessionId_impl() throws SQLException;
 }

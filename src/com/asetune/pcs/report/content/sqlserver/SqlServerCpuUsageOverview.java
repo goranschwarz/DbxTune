@@ -46,22 +46,22 @@ extends SqlServerAbstract
 		return true;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-		writeMessageText(w, false);
-	}
-
-	@Override
-	public void writeMessageText(Writer w)
-	throws IOException
-	{
-		writeMessageText(w, true);
-	}
-
 //	@Override
-	public void writeMessageText(Writer w, boolean isFullText)
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//		writeMessageText(w, false);
+//	}
+//
+//	@Override
+//	public void writeMessageText(Writer w)
+//	throws IOException
+//	{
+//		writeMessageText(w, true);
+//	}
+
+	@Override
+	public void writeMessageText(Writer w, MessageType messageType)
 	throws IOException
 	{
 		w.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load.",
@@ -85,7 +85,7 @@ extends SqlServerAbstract
 //		_CmPerfCounters_OsCpuEffective.writeHtmlContent(sb, null, null);
 		_CmPerfCounters_SqlBatch      .writeHtmlContent(w, null, null);
 		_CmPerfCounters_TransWriteSec .writeHtmlContent(w, null, null);
-		if (isFullText)
+		if (isFullMessageType())
 		{
 			_CmSchedulers_RunQLengthSum   .writeHtmlContent(w, null, null);
 			_CmSchedulers_RunQLengthEng   .writeHtmlContent(w, null, null);

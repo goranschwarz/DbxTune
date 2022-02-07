@@ -60,14 +60,14 @@ public class AseTopCmActiveStatements extends AseAbstract
 		return false;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		if (_messages.size() > 0)
@@ -200,10 +200,7 @@ public class AseTopCmActiveStatements extends AseAbstract
 		
 		String sql = getCmDiffColumnsAsSqlComment("CmActiveStatements")
 			    + "select top " + topRows + " \n"
-			    + "     min([CmSampleTime])                                               as [CmSampleTime_min] \n"
-			    + "    ,max([CmSampleTime])                                               as [CmSampleTime_max] \n"
-			    + "    ,cast('' as varchar(30))                                           as [Duration] \n"
-			    + "    ,[dbname]                                                          as [dbname] \n"
+			    + "     [dbname]                                                          as [dbname] \n"
 			    + "    , CASE WHEN [procname] != '' THEN [procname] ELSE [" + col_MonSqlText + "] END as [ProcNameOrSqlText] \n"
 			    + "    ,[linenum]                                                         as [linenum] \n"
 			    + "    ,count(*)                                                          as [samples_count] \n"
@@ -232,6 +229,11 @@ public class AseTopCmActiveStatements extends AseAbstract
 //			    + "    ,max([ShowPlanText])                                               as [ShowPlanText_max] \n"
 			    + "    ,max([" + col_MonSqlText + "])                                         as [MonSqlText_max] \n"
 			    + "    ,max([" + col_ShowPlanText + "])                                       as [ShowPlanText_max] \n"
+			    
+			    + "    ,min([CmSampleTime])                                               as [CmSampleTime_min] \n"
+			    + "    ,max([CmSampleTime])                                               as [CmSampleTime_max] \n"
+			    + "    ,cast('' as varchar(30))                                           as [Duration] \n"
+			    
 			    + "from [CmActiveStatements_diff] x \n"
 			    + "where 1=1 \n"
 			    + skipDumpDbAndTran
@@ -251,6 +253,9 @@ public class AseTopCmActiveStatements extends AseAbstract
 		}
 		else
 		{
+			// Highlight sort column
+			_shortRstm.setHighlightSortColumns("CpuTime_max");
+
 			// Describe the table
 			setSectionDescription(_shortRstm);
 

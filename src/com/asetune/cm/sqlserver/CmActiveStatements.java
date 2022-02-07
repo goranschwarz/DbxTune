@@ -321,7 +321,7 @@ extends CountersModel
 		}
 		
 		String sql1 =
-			"SELECT  \n" +
+			"SELECT /* ${cmCollectorName} */  \n" +
 			"     monSource    = convert(varchar(20), 'ACTIVE') \n" +
 			"    ,multiSampled = convert(varchar(10), '') \n" +
 			"    ,des.login_name \n" +
@@ -332,6 +332,10 @@ extends CountersModel
 			"    ,ImBlockingOthersMaxTimeInSec = convert(int, 0) \n" +
 			"    ,des.status \n" +
 			"    ,der.command \n" +
+			"    ,tran_name=(select top 1 tat.name \n" +
+			"                from       sys.dm_tran_session_transactions tst \n" +
+	        "                inner join sys.dm_tran_active_transactions  tat on tst.transaction_id = tat.transaction_id \n" + 
+	        "                where tst.session_id = des.session_id) \n" +
 			"    ,ProcName            = object_name(dest.objectid, dest.dbid) \n" +
 			"    ,StmntStart          = der.statement_start_offset \n" +
 			"    ,des.[HOST_NAME] \n" +
@@ -405,7 +409,7 @@ extends CountersModel
 		// SPID's that are BLOCKING
 		//
 		String sql2_cols = 
-			"SELECT  \n" +
+			"SELECT /* ${cmCollectorName} */  \n" +
 			"     monSource    = convert(varchar(20), 'BLOCKER')  \n" +
 			"    ,multiSampled = convert(varchar(10), '')  \n" +
 			"    ,p1.loginame                                  --des.login_name \n" +
@@ -416,6 +420,10 @@ extends CountersModel
 			"    ,ImBlockingOthersMaxTimeInSec = convert(int, 0) " +
 			"    ,p1.status                                    --des.status \n" +
 			"    ,p1.cmd                                       --der.command \n" +
+			"    ,tran_name=(select top 1 tat.name \n" +
+			"                from       sys.dm_tran_session_transactions tst \n" +
+	        "                inner join sys.dm_tran_active_transactions  tat on tst.transaction_id = tat.transaction_id \n" + 
+	        "                where tst.session_id = p1.spid) \n" +
 			"    ,ProcName            = object_name(dest.objectid, dest.dbid) \n" +
 			"    ,StmntStart          = -1 \n" +
 			"    ,p1.hostname                                  --des.[HOST_NAME] \n" +
@@ -1337,7 +1345,9 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 						{
 							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
 							AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, spid, ImBlockingOthersMaxTimeInSec, BlockingOtherSpidsStr, blockCount);
+
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
 							alarmHandler.addAlarm( ae );
@@ -1365,17 +1375,26 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 
 					if (ExecTimeInSec > threshold)
 					{
-						int    spid      = cm.getRateValueAsDouble(r, "session_id").intValue();
+						int    spid      = cm.getRateValueAsDouble(r, "session_id") .intValue();
 						String startTime = cm.getRateValue        (r, "start_time") + "";
+						String spidLocks = cm.getRateValue        (r, "SpidLocks")  + "";
 
-						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						// only alarm if it has "Exclusive" or "Update" locks
+						boolean hasExlusiveLocks = (spidLocks.contains("Exclusive") || spidLocks.contains("Update"));
 
-						AlarmEvent ae = new AlarmEventHoldingLocksWhileWaitForClientInput(cm, threshold, spid, ExecTimeInSec, startTime);
-						
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-						
-						alarmHandler.addAlarm( ae );
+						boolean onlySendAlarmForExclusiveLocks = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecX, DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecX);
+
+						if ( (onlySendAlarmForExclusiveLocks && hasExlusiveLocks) || onlySendAlarmForExclusiveLocks == false )
+						{
+							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+							AlarmEvent ae = new AlarmEventHoldingLocksWhileWaitForClientInput(cm, threshold, spid, ExecTimeInSec, startTime, hasExlusiveLocks);
+							
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							
+							alarmHandler.addAlarm( ae );
+						}
 					}
 				}
 			}
@@ -1399,7 +1418,9 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 					{
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
 						AlarmEvent ae = new AlarmEventExtensiveUsage(cm, threshold, AlarmEventExtensiveUsage.Resource.TEMPDB, "TempdbUsageMb", TempdbUsageMb);
+
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
 						alarmHandler.addAlarm( ae );
@@ -1409,14 +1430,17 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 		} // end: loop rows
 	}
 
-	public static final String  PROPKEY_alarm_ImBlockingOthersMaxTimeInSec             = CM_NAME + ".alarm.system.if.ImBlockingOthersMaxTimeInSec.gt";
-	public static final int     DEFAULT_alarm_ImBlockingOthersMaxTimeInSec             = 60;
+	public static final String  PROPKEY_alarm_ImBlockingOthersMaxTimeInSec              = CM_NAME + ".alarm.system.if.ImBlockingOthersMaxTimeInSec.gt";
+	public static final int     DEFAULT_alarm_ImBlockingOthersMaxTimeInSec              = 60;
 	
-	public static final String  PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSec = CM_NAME + ".alarm.system.if.HoldingLocksWhileWaitForClientInputInSec.gt";
-	public static final int     DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSec = 180; // 3 minutes
+	public static final String  PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSec  = CM_NAME + ".alarm.system.if.HoldingLocksWhileWaitForClientInputInSec.gt";
+	public static final int     DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSec  = 180; // 3 minutes
+
+	public static final String  PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecX = CM_NAME + ".alarm.system.if.HoldingLocksWhileWaitForClientInputInSec.exclusiveLocksOnly";
+	public static final boolean DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecX = true;
 	
-	public static final String  PROPKEY_alarm_TempdbUsageMb                            = CM_NAME + ".alarm.system.if.TempdbUsageMb.gt";
-	public static final int     DEFAULT_alarm_TempdbUsageMb                            = 16384; // 16 GB ... which is pretty much
+	public static final String  PROPKEY_alarm_TempdbUsageMb                             = CM_NAME + ".alarm.system.if.TempdbUsageMb.gt";
+	public static final int     DEFAULT_alarm_TempdbUsageMb                             = 16384; // 16 GB ... which is pretty much
 	
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -1426,9 +1450,10 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec"            , isAlarmSwitch, PROPKEY_alarm_ImBlockingOthersMaxTimeInSec            , Integer.class, conf.getIntProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSec            , DEFAULT_alarm_ImBlockingOthersMaxTimeInSec            ), DEFAULT_alarm_ImBlockingOthersMaxTimeInSec            , "If 'ImBlockingOthersMaxTimeInSec' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
-		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec", isAlarmSwitch, PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSec, Integer.class, conf.getIntProperty(PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSec, DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSec), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSec, "If Client is HOLDING-LOCKS at DBMS and 'ExecTimeInMs' is greater than ## seconds then send 'AlarmEventHoldingLocksWhileWaitForClientInput'." ));
-		list.add(new CmSettingsHelper("TempdbUsageMb"                           , isAlarmSwitch, PROPKEY_alarm_TempdbUsageMb                           , Integer.class, conf.getIntProperty(PROPKEY_alarm_TempdbUsageMb                           , DEFAULT_alarm_TempdbUsageMb                           ), DEFAULT_alarm_TempdbUsageMb                           , "If 'TempdbUsageMb' is greater than ## then send 'AlarmEventExtensiveUsage'." ));
+		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec"                , isAlarmSwitch, PROPKEY_alarm_ImBlockingOthersMaxTimeInSec             , Integer.class, conf.getIntProperty    (PROPKEY_alarm_ImBlockingOthersMaxTimeInSec             , DEFAULT_alarm_ImBlockingOthersMaxTimeInSec             ), DEFAULT_alarm_ImBlockingOthersMaxTimeInSec             , "If 'ImBlockingOthersMaxTimeInSec' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
+		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec"    , isAlarmSwitch, PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSec , Integer.class, conf.getIntProperty    (PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSec , DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSec ), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSec , "If Client is HOLDING-LOCKS at DBMS and 'ExecTimeInMs' is greater than ## seconds then send 'AlarmEventHoldingLocksWhileWaitForClientInput'." ));
+		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec ExclusiveLocksOnly", PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecX, Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecX, DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecX), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecX, "Only send Alarm AlarmEventHoldingLocksWhileWaitForClientInput, if we are holding any Exlusive Locks" ));
+		list.add(new CmSettingsHelper("TempdbUsageMb"                               , isAlarmSwitch, PROPKEY_alarm_TempdbUsageMb                            , Integer.class, conf.getIntProperty    (PROPKEY_alarm_TempdbUsageMb                            , DEFAULT_alarm_TempdbUsageMb                            ), DEFAULT_alarm_TempdbUsageMb                            , "If 'TempdbUsageMb' is greater than ## then send 'AlarmEventExtensiveUsage'." ));
 
 		return list;
 	}

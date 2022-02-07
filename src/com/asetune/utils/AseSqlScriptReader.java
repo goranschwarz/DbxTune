@@ -84,7 +84,8 @@ public class AseSqlScriptReader
 	private int             _batchStartLine        = -1;
 	private int             _batchNumber           = -1;
 	private int             _totalBatchCount       = -1;
-	
+
+	private List<String>    _foreachdb             = null; // option 'foreachdb'
 	private int             _topRows               = -1;   // option 'top #'
 	private int             _bottomRows            = -1;   // option 'bottom #'
 	private int             _rowCount              = -1;   // option 'rowc'
@@ -95,8 +96,10 @@ public class AseSqlScriptReader
 	private int             _printSql              = -1;   // option 'psql' -- print SQL Statement
 	private int             _printRsi              = -1;   // option 'prsi' -- print ResultSet Information
 	private int             _printClientTiming     = -1;   // option 'time' -- print client timing
+	private int             _mergeRs               = -1;   // option 'mrs'
 	private List<Integer>   _keepRs                = null; // option 'keeprs #[,#...]'
 	private List<Integer>   _skipRs                = null; // option 'skiprs #[,#...]'
+	private String          _filterText            = null; // option 'filter someText'
 	private int             _replaceFakeQuotedId   = -1;   // option 'rfqi'
 
 	
@@ -639,6 +642,7 @@ public class AseSqlScriptReader
 	}
 
 
+	public boolean hasOption_foreachDb()              { return _foreachdb != null; }
 	public boolean hasOption_topRows()                { return _topRows           > 0; }
 	public boolean hasOption_bottomRows()             { return _bottomRows        > 0; }
 	public boolean hasOption_rowCount()               { return _rowCount          > 0; }
@@ -649,24 +653,29 @@ public class AseSqlScriptReader
 	public boolean hasOption_printSql()               { return _printSql          > 0; }
 	public boolean hasOption_printRsi()               { return _printRsi          > 0; }
 	public boolean hasOption_printClientTiming()      { return _printClientTiming > 0; }
+	public boolean hasOption_mergeRs()                { return _mergeRs           > 0; }
 	public boolean hasOption_keepRs()                 { return _keepRs != null && _keepRs.size() > 0; }
 	public boolean hasOption_skipRs()                 { return _skipRs != null && _skipRs.size() > 0; }
+	public boolean hasOption_filterText()             { return _filterText != null; }
 	public boolean hasOption_replaceFakeQuotedIdent() { return _replaceFakeQuotedId > 0; }
 
 	// Below boolean methods, yes we use "int opt = -1" as "not specified"
-	public int     getOption_topRows()                { return _topRows; }
-	public int     getOption_bottomRows()             { return _bottomRows; }
-	public boolean getOption_rowCount()               { return _rowCount          > 0; }
-	public boolean getOption_asPlainText()            { return _asPlainText       > 0; }
-	public boolean getOption_asTabbedPane()           { return _asTabbedPane      > 0; }
-	public boolean getOption_noData()                 { return _noData            > 0; }
-	public boolean getOption_appendOutput()           { return _appendOutput      > 0; }
-	public boolean getOption_printSql()               { return _printSql          > 0; }
-	public boolean getOption_printRsi()               { return _printRsi          > 0; }
-	public boolean getOption_printClientTiming()      { return _printClientTiming > 0; }
-	public List<Integer> getOption_keepRs()           { return _keepRs; }
-	public List<Integer> getOption_skipRs()           { return _skipRs; }
-	public boolean getOption_replaceFakeQuotedIdent() { return _replaceFakeQuotedId > 0; }
+	public List<String>  getOption_foreachDb()              { return _foreachdb; }
+	public int           getOption_topRows()                { return _topRows; }
+	public int           getOption_bottomRows()             { return _bottomRows; }
+	public boolean       getOption_rowCount()               { return _rowCount          > 0; }
+	public boolean       getOption_asPlainText()            { return _asPlainText       > 0; }
+	public boolean       getOption_asTabbedPane()           { return _asTabbedPane      > 0; }
+	public boolean       getOption_noData()                 { return _noData            > 0; }
+	public boolean       getOption_appendOutput()           { return _appendOutput      > 0; }
+	public boolean       getOption_printSql()               { return _printSql          > 0; }
+	public boolean       getOption_printRsi()               { return _printRsi          > 0; }
+	public boolean       getOption_printClientTiming()      { return _printClientTiming > 0; }
+	public boolean       getOption_mergeRs()                { return _mergeRs           > 0; }
+	public List<Integer> getOption_keepRs()                 { return _keepRs; }
+	public List<Integer> getOption_skipRs()                 { return _skipRs; }
+	public String        getOption_filterText()             { return _filterText; }
+	public boolean       getOption_replaceFakeQuotedIdent() { return _replaceFakeQuotedId > 0; }
 
 
 	/**
@@ -696,6 +705,7 @@ public class AseSqlScriptReader
 		StringBuilder batchBuffer = new StringBuilder();
 
 		// Reset some stuff (like options)
+		_foreachdb           = null;
 		_topRows             = -1;
 		_bottomRows          = -1;
 		_rowCount            = -1;
@@ -706,8 +716,10 @@ public class AseSqlScriptReader
 		_printSql            = -1;
 		_printRsi            = -1;
 		_printClientTiming   = -1;
+		_mergeRs             = -1;
 		_keepRs              = null;
 		_skipRs              = null;
+		_filterText          = null;
 		_replaceFakeQuotedId = -1;
 
 		// Get lines from the reader
@@ -857,13 +869,17 @@ public class AseSqlScriptReader
 						// so split them on ',' and loop them all
 						if (goCmdStr.length() > 0)
 						{
-							String[] goSubCmds = goCmdStr.split(",");
+							String[] goSubCmds = StringUtil.parseCommaStrToList(goCmdStr, true).toArray(new String[0]);
+//							String[] goSubCmds = goCmdStr.split(",");
 							for (String subCmd : goSubCmds)
 							{
 								subCmd = subCmd.trim();
-								String word1 = StringUtil.word(subCmd, 0);
-								String word2 = StringUtil.word(subCmd, 1);
-								String word3 = StringUtil.word(subCmd, 2);
+//								String word1 = StringUtil.word(subCmd, 0);
+//								String word2 = StringUtil.word(subCmd, 1);
+//								String word3 = StringUtil.word(subCmd, 2);
+								String word1 = StringUtil.wordRespectQuotes(subCmd, 0);
+								String word2 = StringUtil.wordRespectQuotes(subCmd, 1);
+								String word3 = StringUtil.wordRespectQuotes(subCmd, 2);
 
 								// get wait/sleep time
 								// or any options after: go [#] options
@@ -877,6 +893,18 @@ public class AseSqlScriptReader
 										catch (NumberFormatException nfe) 
 										{
 											error = "Sub command 'wait #' The parameter '"+word2+"' is not a number.";
+										}
+									}
+									if ("foreachdb".equalsIgnoreCase(word1))
+									{
+										_foreachdb = new ArrayList<>();
+										
+										if (StringUtil.hasValue(word2))
+										{
+											String[] strList = word2.split(":");
+											for (String str : strList)
+												if (StringUtil.hasValue(str)) // skip empty entries
+													_foreachdb.add(str);
 										}
 									}
 									else if ("top".equalsIgnoreCase(word1))
@@ -943,6 +971,12 @@ public class AseSqlScriptReader
 										if (StringUtil.hasValue(word2))
 											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
 									}
+									else if ("mrs".equalsIgnoreCase(word1))
+									{
+										_mergeRs = 1;
+										if (StringUtil.hasValue(word2))
+											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+									}
 									else if ("keeprs".equalsIgnoreCase(word1))
 									{
 										_keepRs = new ArrayList<>();
@@ -971,6 +1005,10 @@ public class AseSqlScriptReader
 											}
 										}
 									}
+									else if ("filter".equalsIgnoreCase(word1))
+									{
+										_filterText = word2;
+									}
 									else if ("rfqi".equalsIgnoreCase(word1))
 									{
 										_replaceFakeQuotedId = 1;
@@ -994,7 +1032,7 @@ public class AseSqlScriptReader
 										String desc = 
 											error +" \n" +
 											"\n" +
-											"Syntax is 'go [#1] [,top #2] [,bottom #3] [,wait #4] [,plain] [,tab] [,nodata] [,append] [,psql] [,prsi] [,time] [,keeprs #5[:#5]] [,skiprs #5[:#5]]'\n" +
+											"Syntax is 'go [#1] [,top #2] [,bottom #3] [,wait #4] [,foreachdb [db1:db2:db3]] [,plain] [,tab] [,nodata] [,append] [,psql] [,prsi] [,time] [,mrs] [,keeprs #5[:#5]] [,skiprs #5[:#5]] [,filter str]'\n" +
 											"\n" +
 											"#1 = Number of times to repeat the command\n" +
 											"#2 = Rows to read from a ResultSet.\n" +
@@ -1003,19 +1041,22 @@ public class AseSqlScriptReader
 											"#5 = ResultSet to keep (starting at 1).\n" +
 											"\n" +
 											"Description of sub commands\n" +
-											"top #    - Read only first # rows in the result set\n" +
-											"bottom # - Only display last # rows in the result set\n" +
-											"wait #   - Wait #ms after the SQL Batch has been sent, probably used in conjunction with (multi go) 'go 10'\n" +
-											"plain    - Do NOT use a GUI table for result set, instead print as plain text.\n" +
-											"tab      - Present ResultSet(s) in Tabbed Panel.\n" +
-											"nodata   - Do NOT read the result set rows, just read the column headers. just do rs.next(), no rs.getString(col#)\n" +
-											"append   - Do NOT clear results from previous executions. Append at the end.\n" +
-											"psql     - Print the executed SQL Statement in the output\n" +
-											"prsi     - Print info about the ResultSet data types etc in the output\n" +
-											"time     - Print how long time the SQL Batch took, from the clients perspective\n" +
-											"rowc     - Print the rowcount from JDBC driver, not the number of rows actually returned\n" +
-											"skiprs   - If you have multiple ResultSet, skip some ResultSet(s) (starting at 1). Example skip rs   1 and 2: go keeprs 1:2\n" +
-											"keeprs   - If you have multiple ResultSet, keep only ResultSet(s) (starting at 1). Example Keep only 2 : go keeprs 2\n" +
+											"top #     - Read only first # rows in the result set\n" +
+											"bottom #  - Only display last # rows in the result set\n" +
+											"wait #    - Wait #ms after the SQL Batch has been sent, probably used in conjunction with (multi go) 'go 10'\n" +
+											"foreachdb - Execute in every known database, or list of db's. Variable ${dbname} is replaced in text\n" +
+											"plain     - Do NOT use a GUI table for result set, instead print as plain text.\n" +
+											"tab       - Present ResultSet(s) in Tabbed Panel.\n" +
+											"nodata    - Do NOT read the result set rows, just read the column headers. just do rs.next(), no rs.getString(col#)\n" +
+											"append    - Do NOT clear results from previous executions. Append at the end.\n" +
+											"psql      - Print the executed SQL Statement in the output\n" +
+											"prsi      - Print info about the ResultSet data types etc in the output\n" +
+											"time      - Print how long time the SQL Batch took, from the clients perspective\n" +
+											"rowc      - Print the rowcount from JDBC driver, not the number of rows actually returned\n" +
+											"mrs       - If you have multiple ResultSet, MERGE ResultSets that are equals in ColumnCount and DataTypes\n" +
+											"skiprs    - If you have multiple ResultSet, skip some ResultSet(s) (starting at 1). Example skip rs   1 and 2: go keeprs 1:2\n" +
+											"keeprs    - If you have multiple ResultSet, keep only ResultSet(s) (starting at 1). Example Keep only 2 : go keeprs 2\n" +
+											"filter    - Set a filter text on the ResultSet filter dialog. Example: filter \"where col like 'val%'\" \n" +
 											"\n" +
 											"Example:\n" +
 											"select * from tabName where ...\n" +

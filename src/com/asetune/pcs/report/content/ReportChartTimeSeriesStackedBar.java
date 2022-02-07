@@ -81,7 +81,7 @@ extends ReportChartAbstract
 	
 	public ReportChartTimeSeriesStackedBar(ReportEntryAbstract reportEntry, DbxConnection conn, String cmName, String dataGroupColumn, int dataGroupMinutes, TopGroupCountReport topGroupCountReport, String dataValueColumn, Double dataDivideByValue, String keepGroups, String skipGroups, String graphTitle)
 	{
-		super(reportEntry, conn, ChartType.STACKED_BAR, cmName, graphTitle);
+		super(reportEntry, conn, ChartType.STACKED_BAR, cmName, dataGroupColumn, graphTitle);
 		
 		_dataGroupColumn     = dataGroupColumn;
 		_dataGroupMinutes    = dataGroupMinutes;

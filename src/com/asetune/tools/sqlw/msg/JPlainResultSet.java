@@ -58,6 +58,11 @@ extends JTextArea
 	}
 
 
+	public ResultSetTableModel getResultSetTableModel()
+	{
+		return _tm;
+	}
+
 	public int getRowCount()
 	{
 		return _tm.getRowCount();

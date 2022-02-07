@@ -29,6 +29,7 @@ import com.asetune.pcs.report.content.sqlserver.SqlServerConfiguration;
 import com.asetune.pcs.report.content.sqlserver.SqlServerCpuUsageOverview;
 import com.asetune.pcs.report.content.sqlserver.SqlServerDbSize;
 import com.asetune.pcs.report.content.sqlserver.SqlServerMissingIndexes;
+import com.asetune.pcs.report.content.sqlserver.SqlServerPlanCacheHistory;
 import com.asetune.pcs.report.content.sqlserver.SqlServerQueryStore;
 import com.asetune.pcs.report.content.sqlserver.SqlServerSlowCmDeviceIo;
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecCursors;
@@ -42,7 +43,6 @@ import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmIndexPhysicalTabSi
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmTableSize;
 import com.asetune.pcs.report.content.sqlserver.SqlServerUnusedIndexes;
 import com.asetune.pcs.report.content.sqlserver.SqlServerWaitStats;
-import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmIndexOpStat.ReportType;
 
 public class DailySummaryReportSqlServerTune 
 extends DailySummaryReportDefault
@@ -59,22 +59,20 @@ extends DailySummaryReportDefault
 		addReportEntry( new OsCpuUsageOverview(this)          );
 		
 		// SQL
-		addReportEntry( new SqlServerTopCmExecQueryStats    (this));
-				// CmExecQueryStatsCpu         Order BY: CPU Usage (total_worker_time)
-				// CmExecQueryStatsWaits       Order BY: CPU Usage (total_elapsed_time - total_worker_time)
-				// CmExecQueryStatsSpills      Order BY: tempdb Spills
-				// CmExecQueryStatsLReads      Order BY: Logical Reads
-				// CmExecQueryStatsPReads      Order BY: Physical Reads
-				// CmExecQueryStatsWrites      Order BY: Physical Writes
-				// CmExecQueryStatsExecCnt     Order BY: Execution Count
-				// CmExecQueryStatsCompile     Order BY: "recent compilations"
-				// CmExecQueryStatsMemoryGrant Order BY: memory_grant
-		addReportEntry( new SqlServerTopCmExecProcedureStats(this));
+		addReportEntry( new SqlServerPlanCacheHistory(this));        // Check if the Plan Cache can be trusted... https://www.brentozar.com/archive/2018/07/tsql2sday-how-much-plan-cache-history-do-you-have/
+		addReportEntry( new SqlServerTopCmExecQueryStats(this, SqlServerTopCmExecQueryStats.ReportType.CPU_TIME));
+//		addReportEntry( new SqlServerTopCmExecQueryStats(this, SqlServerTopCmExecQueryStats.ReportType.WAIT_TIME));
+		addReportEntry( new SqlServerTopCmExecQueryStats(this, SqlServerTopCmExecQueryStats.ReportType.TEMPDB_SPILLS));
+		addReportEntry( new SqlServerTopCmExecQueryStats(this, SqlServerTopCmExecQueryStats.ReportType.LOGICAL_READS));
+		addReportEntry( new SqlServerTopCmExecQueryStats(this, SqlServerTopCmExecQueryStats.ReportType.LOGICAL_WRITES));
+		addReportEntry( new SqlServerTopCmExecQueryStats(this, SqlServerTopCmExecQueryStats.ReportType.PHYSICAL_READS));
+		addReportEntry( new SqlServerTopCmExecQueryStats(this, SqlServerTopCmExecQueryStats.ReportType.EXECUTION_COUNT));
+//		addReportEntry( new SqlServerTopCmExecQueryStats(this, SqlServerTopCmExecQueryStats.ReportType.RECENTLY_COMPILED));
+		addReportEntry( new SqlServerTopCmExecQueryStats(this, SqlServerTopCmExecQueryStats.ReportType.MEMORY_GRANTS));
+		addReportEntry( new SqlServerTopCmExecProcedureStats(this));	// Part of mail-message
 		addReportEntry( new SqlServerTopCmExecFunctionStats (this));
 		addReportEntry( new SqlServerTopCmExecTriggerStats  (this));
-		addReportEntry( new SqlServerTopCmExecCursors   (this));
-		//addReportEntry( new SqlServerTopSlowSql(this)           );
-		//addReportEntry( new SqlServerTopSlowProcCalls(this)     );
+		addReportEntry( new SqlServerTopCmExecCursors       (this));
 
 		// QueryStore
 		addReportEntry( new SqlServerQueryStore(this)         );
@@ -87,10 +85,10 @@ extends DailySummaryReportDefault
 		addReportEntry( new OsIoStatSlowIo(this)              );
 
 		// SQL: Accessed Tables
-		addReportEntry( new SqlServerTopCmIndexOpStat(this, ReportType.BY_LOCKS) );
-		addReportEntry( new SqlServerTopCmIndexOpStat(this, ReportType.BY_WAITS) );
-		addReportEntry( new SqlServerTopCmIndexOpStat(this, ReportType.BY_CRUD)  );
-		addReportEntry( new SqlServerTopCmIndexOpStat(this, ReportType.BY_IO)    );
+		addReportEntry( new SqlServerTopCmIndexOpStat(this, SqlServerTopCmIndexOpStat.ReportType.BY_LOCKS) );
+		addReportEntry( new SqlServerTopCmIndexOpStat(this, SqlServerTopCmIndexOpStat.ReportType.BY_WAITS) );
+		addReportEntry( new SqlServerTopCmIndexOpStat(this, SqlServerTopCmIndexOpStat.ReportType.BY_CRUD)  );
+		addReportEntry( new SqlServerTopCmIndexOpStat(this, SqlServerTopCmIndexOpStat.ReportType.BY_IO)    );
 		addReportEntry( new SqlServerTopCmTableSize(this) );
 		addReportEntry( new SqlServerTopCmIndexPhysicalTabSize(this) );
 		addReportEntry( new SqlServerTopCmIndexPhysicalAvgPageUsedPct(this) );

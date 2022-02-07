@@ -48,4 +48,10 @@ public class UnknownConnection extends DbxConnection
 	{
 		return false; // FIXME: Don't know how to check this, so lets assume FALSE
 	}
+
+	@Override
+	protected int getDbmsSessionId_impl() throws SQLException
+	{
+		return -1;
+	}
 }

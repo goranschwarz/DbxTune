@@ -33,6 +33,7 @@ import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.Type;
 import com.asetune.pcs.report.content.DailySummaryReportContent;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.FileUtils;
 import com.asetune.utils.JsonUtils;
 import com.asetune.utils.StringUtil;
 
@@ -76,16 +77,19 @@ extends ReportSenderAbstract
 //		int msgBodyTextSizeKb = msgBodyText == null ? 0 : msgBodyText.length() / 1024;
 //		int msgBodyHtmlSizeKb = msgBodyHtml == null ? 0 : msgBodyHtml.length() / 1024;
 
-//		String  msgBodyHtml  = null;
-		String  msgBody      = null;
-		File    msgFile      = null;
-		long    msgSizeKb    = -1;
-		long    msgSizeMb    = -1;
-		long    attachSizeKb = -1;
-		long    attachSizeMb = -1;
-		long    fullSizeKb   = -1;
-		long    fullSizeMb   = -1;
+//		String  msgBodyHtml   = null;
+		String  msgBody       = null;
+		File    msgFile       = null;
+		long    msgSizeKb     = -1;
+		long    msgSizeMb     = -1;
+		long    attachSizeKb  = -1;
+		long    attachSizeMb  = -1;
+		long    fullSizeKb    = -1;
+		long    fullSizeMb    = -1;
 		boolean hasAttachment = false;
+		boolean zipAttachment = false;
+		long    zipSaveMb     = -1;
+		File    zipFile       = null;
 
 		if (reportContent.hasReportFile())
 		{
@@ -176,6 +180,36 @@ extends ReportSenderAbstract
 			// If we also should attach the FULL Report as an ATTACHMENT
 			if (_attachHtmlContent && msgFile != null)
 			{
+				// Should we try to ZIP the file!
+				if ((fullSizeMb) >= _attachHtmlZipContentGtMb)
+				{
+					String zipFilename = msgFile.getAbsolutePath() + ".zip";
+					try 
+					{
+						FileUtils.zipSingleFile(msgFile.toPath(), zipFilename);
+						
+						zipFile = new File(zipFilename);
+						// Delete the file later on...
+						//zipFile.deleteOnExit();
+						
+						msgFile = zipFile;
+						zipAttachment = true;
+						
+						zipSaveMb = (attachSizeKb - (zipFile.length() / 1024)) / 1024;
+
+						// Adjust Sizes etc...
+						attachSizeKb = zipFile.length() / 1024;
+						attachSizeMb = zipFile.length() / 1024 / 1024;
+						
+						fullSizeKb  = attachSizeKb == -1 ? msgSizeKb : msgSizeKb + attachSizeKb;
+						fullSizeMb  = fullSizeKb / 1024;
+					}
+					catch (Exception ex)
+					{
+						_logger.error("Problems ZIP the mail attachement file from '" + msgFile + "' to '" + zipFilename + "'. Sending the plain file instead.", ex);
+					}
+				}
+
 //				if ((attachSizeMb) < _attachHtmlContentMaxSizeMb)
 				if ((fullSizeMb) < _attachHtmlContentMaxSizeMb)
 				{
@@ -196,11 +230,17 @@ extends ReportSenderAbstract
 			// SEND
 			email.send();
 
-			_logger.info("Sent mail message: fullSizeKb=" + fullSizeKb + ", fullSizeMb=" + fullSizeMb + ", msgSizeKb=" + msgSizeKb + ", msgSizeMb=" + msgSizeMb + ", hasAttachment=" + hasAttachment + ", attachSizeKb=" + attachSizeKb + ", attachSizeMb=" + attachSizeMb + ", attachMaxSizeMb=" + _attachHtmlContentMaxSizeMb + ", host='" + _smtpHostname + "', toList=" + toList + ", subject='" + msgSubject + "', for server name '" + serverName + "'.");
+			_logger.info("Sent mail message: fullSizeKb=" + fullSizeKb + ", fullSizeMb=" + fullSizeMb + ", msgSizeKb=" + msgSizeKb + ", msgSizeMb=" + msgSizeMb + ", hasAttachment=" + hasAttachment + ", zipAttachment=" + zipAttachment + ", zipSaveMb=" + zipSaveMb + ", attachSizeKb=" + attachSizeKb + ", attachSizeMb=" + attachSizeMb + ", attachMaxSizeMb=" + _attachHtmlContentMaxSizeMb + ", host='" + _smtpHostname + "', toList=" + toList + ", subject='" + msgSubject + "', for server name '" + serverName + "'.");
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems sending mail (fullSizeKb=" + fullSizeKb + ", fullSizeMb=" + fullSizeMb + ", msgSizeKb=" + msgSizeKb + ", msgSizeMb=" + msgSizeMb + ", hasAttachment=" + hasAttachment + ", attachSizeKb=" + attachSizeKb + ", attachSizeMb=" + attachSizeMb + ", attachMaxSizeMb=" + _attachHtmlContentMaxSizeMb + ", host='" + _smtpHostname + "', toList=" + toList + ", subject='" + msgSubject + "', for server name '" + serverName + "').", ex);
+			_logger.error("Problems sending mail (fullSizeKb=" + fullSizeKb + ", fullSizeMb=" + fullSizeMb + ", msgSizeKb=" + msgSizeKb + ", msgSizeMb=" + msgSizeMb + ", hasAttachment=" + hasAttachment + ", zipAttachment=" + zipAttachment + ", zipSaveMb=" + zipSaveMb + ", attachSizeKb=" + attachSizeKb + ", attachSizeMb=" + attachSizeMb + ", attachMaxSizeMb=" + _attachHtmlContentMaxSizeMb + ", host='" + _smtpHostname + "', toList=" + toList + ", subject='" + msgSubject + "', for server name '" + serverName + "').", ex);
+		}
+		finally
+		{
+			// Delete the ZIP file if we have one.
+			if (zipFile != null)
+				zipFile.delete();
 		}
 	}
 
@@ -223,7 +263,8 @@ extends ReportSenderAbstract
 //		list.add( new CmSettingsHelper("Msg-Template-Use-HTML",            PROPKEY_msgBodyTemplateUseHtml,     Boolean.class, conf.getBooleanProperty(PROPKEY_msgBodyTemplateUseHtml    , DEFAULT_msgBodyTemplateUseHtml    ), DEFAULT_msgBodyTemplateUseHtml    , "If '"+PROPKEY_msgBodyTemplate+"' is not specified, then use a HTML Template as the default."));
 //		list.add( new CmSettingsHelper("Msg-Use-HTML",                     PROPKEY_msgBodyUseHtml,             Boolean.class, conf.getBooleanProperty(PROPKEY_msgBodyUseHtml            , DEFAULT_msgBodyUseHtml            ), DEFAULT_msgBodyUseHtml            , "Send HTML message."));
 		list.add( new CmSettingsHelper("Attach-HTML-content",              PROPKEY_attachHtmlContent,          Boolean.class, conf.getBooleanProperty(PROPKEY_attachHtmlContent         , DEFAULT_attachHtmlContent         ), DEFAULT_attachHtmlContent         , "Attach the content as a HTML file (might be easier to open/read)"));
-		list.add( new CmSettingsHelper("Attach-HTML-content-maxSizeKb",    PROPKEY_attachHtmlContentMaxSizeMb, Integer.class, conf.getIntProperty    (PROPKEY_attachHtmlContentMaxSizeMb, DEFAULT_attachHtmlContentMaxSizeMb), DEFAULT_attachHtmlContentMaxSizeMb, "Only attach HTML file if the file size is below this value in MB (some receivers do not allow large messages)"));
+		list.add( new CmSettingsHelper("Attach-HTML-zip-content-gt-mb",    PROPKEY_attachHtmlZipContentGtMb,   Integer.class, conf.getIntProperty    (PROPKEY_attachHtmlZipContentGtMb  , DEFAULT_attachHtmlZipContentGtMb  ), DEFAULT_attachHtmlZipContentGtMb  , "If the Attached HTML content is greater than XX MB, then ZIP it before it's sent."));
+		list.add( new CmSettingsHelper("Attach-HTML-content-maxSizeMb",    PROPKEY_attachHtmlContentMaxSizeMb, Integer.class, conf.getIntProperty    (PROPKEY_attachHtmlContentMaxSizeMb, DEFAULT_attachHtmlContentMaxSizeMb), DEFAULT_attachHtmlContentMaxSizeMb, "Only attach HTML file if the file size is below this value in MB (some receivers do not allow large messages)"));
 
 		list.add( new CmSettingsHelper("username",                         PROPKEY_username,                   String .class, conf.getProperty       (PROPKEY_username                  , DEFAULT_username                  ), DEFAULT_username                  , "If the SMTP server reuires you to login (default: is not to logon)"));
 		list.add( new CmSettingsHelper("password",                         PROPKEY_password,                   String .class, conf.getProperty       (PROPKEY_password                  , DEFAULT_password                  ), DEFAULT_password                  , "If the SMTP server reuires you to login (default: is not to logon)"));
@@ -249,6 +290,7 @@ extends ReportSenderAbstract
 //	private boolean _msgBodyTemplateUseHtml     = DEFAULT_msgBodyTemplateUseHtml;
 //	private boolean _msgBodyUseHtml             = DEFAULT_msgBodyUseHtml;
 	private boolean _attachHtmlContent          = DEFAULT_attachHtmlContent;
+	private int     _attachHtmlZipContentGtMb   = DEFAULT_attachHtmlZipContentGtMb;
 	private int     _attachHtmlContentMaxSizeMb = DEFAULT_attachHtmlContentMaxSizeMb;
                                          
 	private String  _username                   = "";
@@ -379,6 +421,7 @@ extends ReportSenderAbstract
 //		_msgBodyTemplateUseHtml     = conf.getBooleanProperty(PROPKEY_msgBodyTemplateUseHtml,     DEFAULT_msgBodyTemplateUseHtml);
 //		_msgBodyUseHtml             = conf.getBooleanProperty(PROPKEY_msgBodyUseHtml,             DEFAULT_msgBodyUseHtml);
 		_attachHtmlContent          = conf.getBooleanProperty(PROPKEY_attachHtmlContent,          DEFAULT_attachHtmlContent);
+		_attachHtmlZipContentGtMb   = conf.getIntProperty    (PROPKEY_attachHtmlZipContentGtMb,   DEFAULT_attachHtmlZipContentGtMb);
 		_attachHtmlContentMaxSizeMb = conf.getIntProperty    (PROPKEY_attachHtmlContentMaxSizeMb, DEFAULT_attachHtmlContentMaxSizeMb);
                                                                                                   
 		_username                   = conf.getProperty       (PROPKEY_username,                   DEFAULT_username);
@@ -427,6 +470,7 @@ extends ReportSenderAbstract
 //		_logger.info("    " + StringUtil.left(PROPKEY_msgBodyTemplateUseHtml    , spaces) + ": " + _msgBodyTemplateUseHtml);
 //		_logger.info("    " + StringUtil.left(PROPKEY_msgBodyUseHtml            , spaces) + ": " + _msgBodyUseHtml);
 		_logger.info("    " + StringUtil.left(PROPKEY_attachHtmlContent         , spaces) + ": " + _attachHtmlContent);
+		_logger.info("    " + StringUtil.left(PROPKEY_attachHtmlZipContentGtMb  , spaces) + ": " + _attachHtmlZipContentGtMb);
 		_logger.info("    " + StringUtil.left(PROPKEY_attachHtmlContentMaxSizeMb, spaces) + ": " + _attachHtmlContentMaxSizeMb);
 
 		_logger.info("    " + StringUtil.left(PROPKEY_username                  , spaces) + ": " + _username);
@@ -467,10 +511,12 @@ extends ReportSenderAbstract
 	public static final String  PROPKEY_attachHtmlContent          = "ReportSenderToMail.attachHtmlContent";
 	public static final boolean DEFAULT_attachHtmlContent          = true;
 
+	public static final String  PROPKEY_attachHtmlZipContentGtMb   = "ReportSenderToMail.attachHtmlContent.zip.gt.mb";
+	public static final int     DEFAULT_attachHtmlZipContentGtMb   = 10;
+	
 	public static final String  PROPKEY_attachHtmlContentMaxSizeMb = "ReportSenderToMail.attachHtmlContent.maxSizeMb";
 	public static final int     DEFAULT_attachHtmlContentMaxSizeMb = 30;
 
-	
 	public static final String  PROPKEY_username                   = "ReportSenderToMail.smtp.username";
 	public static final String  DEFAULT_username                   = "";
                                                                    

@@ -178,4 +178,19 @@ extends TdsConnection
 		return extraInfo;
 	}
 
+
+	@Override
+	protected int getDbmsSessionId_impl() throws SQLException
+	{
+		String sql = "select @@spid";
+		
+		int spid = -1;
+		try (Statement stmnt = _conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+				spid = rs.getInt(1);
+		}
+		
+		return spid;
+	}
 }

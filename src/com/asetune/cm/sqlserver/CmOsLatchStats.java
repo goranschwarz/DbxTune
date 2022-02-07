@@ -156,7 +156,7 @@ extends CountersModel
 			dm_os_latch_stats = "dm_pdw_nodes_os_latch_stats";
 
 		String sql = 
-				  "select "
+				  "select /* ${cmCollectorName} */ "
 				+ "    latch_class, \n"
 				+ "    waiting_requests_count, \n"
 				+ "    wait_time_ms, \n"

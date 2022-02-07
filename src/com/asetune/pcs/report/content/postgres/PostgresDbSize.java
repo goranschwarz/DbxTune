@@ -50,15 +50,15 @@ public class PostgresDbSize extends AseAbstract
 		return true;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-		writeMessageText(w);
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//		writeMessageText(w);
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		// Get a description of this section, and column names
@@ -127,6 +127,9 @@ public class PostgresDbSize extends AseAbstract
 			    + "";
 		
 		_shortRstm = executeQuery(conn, sql, true, "CmOpenDatabases_abs");
+
+		// Highlight sort column
+		_shortRstm.setHighlightSortColumns("dbsize_mb");
 
 		// Describe the table
 		setSectionDescription(_shortRstm);

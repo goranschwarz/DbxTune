@@ -37,8 +37,9 @@ import org.apache.log4j.Logger;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.ase.SparklineHelper.DataSource;
-import com.asetune.pcs.report.content.ase.SparklineHelper.SparkLineParams;
+import com.asetune.pcs.report.content.SparklineHelper;
+import com.asetune.pcs.report.content.SparklineHelper.DataSource;
+import com.asetune.pcs.report.content.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -64,17 +65,17 @@ public class AseTopCmCachedProcs extends AseAbstract
 	@Override
 	public boolean hasShortMessageText()
 	{
-		return false;
+		return true;
 	}
 
-	@Override
-	public void writeShortMessageText(Writer w)
-	throws IOException
-	{
-	}
+//	@Override
+//	public void writeShortMessageText(Writer w)
+//	throws IOException
+//	{
+//	}
 
 	@Override
-	public void writeMessageText(Writer sb)
+	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
 		if (_shortRstm.getRowCount() == 0)
@@ -131,9 +132,10 @@ public class AseTopCmCachedProcs extends AseAbstract
 		}
 		
 		// Write JavaScript code for CPU SparkLine
-		for (String str : _miniChartJsList)
+		if (isFullMessageType())
 		{
-			sb.append(str);
+			for (String str : _miniChartJsList)
+				sb.append(str);
 		}
 	}
 
@@ -306,6 +308,7 @@ public class AseTopCmCachedProcs extends AseAbstract
 
 		String whereFilter           = !dummyRstm.hasColumnNoCase("CPUTime"          ) ? "1 = 1 \n" : "([CPUTime] > 0.0 OR [ExecutionTime] > 0.0 OR [LogicalReads] > 0.0) \n";
 		String orderBy               = !dummyRstm.hasColumnNoCase("CPUTime"          ) ? "order by [RequestCntDiff_sum] desc \n" : "order by [CPUTime_sum] desc \n"; 
+		String orderBy_colName       = !dummyRstm.hasColumnNoCase("CPUTime"          ) ? "RequestCntDiff_sum" : "CPUTime_sum"; 
 
 		String whereFilter_skipNewDiffRateRows = !skipNewDiffRateRows ? "" : "  and [CmNewDiffRateRow] = 0 -- only records that has been diff calculations (not first time seen, some ASE Versions has a bug that do not clear counters on reuse) \n";
 
@@ -329,23 +332,14 @@ public class AseTopCmCachedProcs extends AseAbstract
 			    + ObjectName
 			    + "    ,cast('' as varchar(10))  as [txt] \n"
 			    + "    ,cast('' as varchar(255)) as [Remark] \n"
-			    + "    ,count(distinct [PlanID]) as [PlanID_count] \n"
-			    + "    ,count(*)                 as [samples_count] \n"
-			    + "    ,min([SessionSampleTime]) as [SessionSampleTime_min] \n"
-			    + "    ,max([SessionSampleTime]) as [SessionSampleTime_max] \n"
-			    + "    ,cast('' as varchar(30))  as [Duration] \n"
-			    + "    ,sum([CmNewDiffRateRow])  as [newDiffRow_sum] \n"
-			    + "    ,sum([CmSampleMs])        as [CmSampleMs_sum] \n"
-			    + "    ,min([CompileDate])       as [CompileDate_min] \n"
-			    + "    ,max([CompileDate])       as [CompileDate_max] \n"
-			    + "    \n"
+			    + " \n"
 			    + "    ,max([MemUsageKB])        as [MemUsageKB_max] \n"
 			    + "    ,cast('' as varchar(512)) as [RequestCntDiff__chart] \n"
 			    + "    ,sum([RequestCntDiff])    as [RequestCntDiff_sum] \n"
 			    + "    ,sum([TempdbRemapCnt])    as [TempdbRemapCnt_sum] \n"
 			    + ( StringUtil.hasValue(ExecutionCount_sum) ? "   ,cast('' as varchar(512))     as [ExecutionCount__chart] \n" : "")
 			    + ExecutionCount_sum
-			    + "    \n"
+			    + " \n"
 			    + ( StringUtil.hasValue(CPUTime_sum) ? "   ,cast('' as varchar(512))     as [CpuTime__chart] \n" : "")
 			    + CPUTime_sum
 			    + AvgCPUTime_max
@@ -361,6 +355,17 @@ public class AseTopCmCachedProcs extends AseAbstract
 			    + AvgPhysicalWrites_max
 			    + PagesWritten_sum
 			    + AvgPagesWritten_max
+			    + " \n"
+			    + "    ,min([CompileDate])       as [CompileDate_min] \n"
+			    + "    ,max([CompileDate])       as [CompileDate_max] \n"
+			    + " \n"
+			    + "    ,count(distinct [PlanID]) as [PlanID_count] \n"
+			    + "    ,count(*)                 as [samples_count] \n"
+			    + "    ,min([SessionSampleTime]) as [SessionSampleTime_min] \n"
+			    + "    ,max([SessionSampleTime]) as [SessionSampleTime_max] \n"
+			    + "    ,cast('' as varchar(30))  as [Duration] \n"
+			    + "    ,sum([CmNewDiffRateRow])  as [newDiffRow_sum] \n"
+			    + "    ,sum([CmSampleMs])        as [CmSampleMs_sum] \n"
 			    + " \n"
 			    + "from [CmCachedProcs_diff] \n"
 			    + "where " + whereFilter + " \n"
@@ -381,6 +386,9 @@ public class AseTopCmCachedProcs extends AseAbstract
 		}
 		else
 		{
+			// Highlight sort column
+			_shortRstm.setHighlightSortColumns(orderBy_colName);
+
 			// Describe the table
 			setSectionDescription(_shortRstm);
 

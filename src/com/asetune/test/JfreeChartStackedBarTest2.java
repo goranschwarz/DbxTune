@@ -21,13 +21,7 @@
  ******************************************************************************/
 package com.asetune.test;
 
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.RenderingHints;
 import java.sql.Timestamp;
-import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.jfree.chart.ChartPanel;
@@ -35,26 +29,16 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.axis.DateTickMarkPosition;
 import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.block.BlockBorder;
-import org.jfree.chart.labels.ItemLabelAnchor;
-import org.jfree.chart.labels.ItemLabelPosition;
 import org.jfree.chart.labels.StandardXYItemLabelGenerator;
-import org.jfree.chart.labels.StandardXYToolTipGenerator;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.StackedXYBarRenderer;
 import org.jfree.chart.renderer.xy.StandardXYBarPainter;
-import org.jfree.chart.title.LegendTitle;
-import org.jfree.chart.title.TextTitle;
-import org.jfree.data.time.Hour;
 import org.jfree.data.time.Minute;
-import org.jfree.data.time.Second;
 import org.jfree.data.time.TimeTableXYDataset;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.ui.ApplicationFrame;
-import org.jfree.ui.RectangleEdge;
 import org.jfree.ui.RefineryUtilities;
-import org.jfree.ui.TextAnchor;
 
 public class JfreeChartStackedBarTest2 extends ApplicationFrame
 {
