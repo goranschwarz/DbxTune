@@ -666,8 +666,8 @@ public class QueryWindow
 	private String      _winPropsKey     = null; // Used in saveWinProps() to save Window size/location to to be able to restore size/location for a connection name
 	private WindowType  _windowType      = null;
 
-	private JButton     _connect_but     = SwingUtils.makeToolbarButton(Version.class, "images/connect_16.png",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
-	private JButton     _disconnect_but  = SwingUtils.makeToolbarButton(Version.class, "images/disconnect_16.png", ACTION_DISCONNECT, this, "Close the ASE Connection", "Disconnect");
+	private JButton     _connect_but     = SwingUtils.makeToolbarButton(Version.class, "images/connect_16.png",    ACTION_CONNECT,    this, "Connect to a DBMS",         "Connect");
+	private JButton     _disconnect_but  = SwingUtils.makeToolbarButton(Version.class, "images/disconnect_16.png", ACTION_DISCONNECT, this, "Close the DBMS Connection", "Disconnect");
 
 	private JButton     _cmdSql_but      = null;
 	private JButton     _cmdRcl_but      = null;
@@ -1407,8 +1407,8 @@ public class QueryWindow
 			_viewCmdHistory_mi .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_H, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
 
 			// TOOLBAR
-//			_connect_but    = SwingUtils.makeToolbarButton(Version.class, "images/connect_16.png",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
-//			_disConnect_but = SwingUtils.makeToolbarButton(Version.class, "images/disconnect_16.png", ACTION_DISCONNECT, this, "Close the ASE Connection", "Disconnect");
+//			_connect_but    = SwingUtils.makeToolbarButton(Version.class, "images/connect_16.png",    ACTION_CONNECT,    this, "Connect to a DBMS",         "Connect");
+//			_disConnect_but = SwingUtils.makeToolbarButton(Version.class, "images/disconnect_16.png", ACTION_DISCONNECT, this, "Close the DBMS Connection", "Disconnect");
 
 			_splitPane_chk.setActionCommand(ACTION_SPLITPANE_TOGGLE);
 			_splitPane_chk.addActionListener(this);

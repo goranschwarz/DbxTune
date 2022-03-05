@@ -110,7 +110,7 @@ extends CounterSampleCatalogIterator
 		return list;
 	}
 
-	private DbxConnection getConnection(CountersModel cm, DbxConnection srvConn, String dbname)
+	public static DbxConnection getConnection(CountersModel cm, DbxConnection srvConn, String dbname)
 	throws SQLException
 	{
 		if (srvConn == null)
@@ -160,7 +160,7 @@ extends CounterSampleCatalogIterator
 		connProp.setUrl(url);
 		
 		// Create a new connection pool for this DB
-		DbxConnectionPool cp = new DbxConnectionPool(this.getClass().getSimpleName(), connProp, 5); // Max size = 5
+		DbxConnectionPool cp = new DbxConnectionPool(CounterSampleCatalogIteratorPostgres.class.getSimpleName(), connProp, 5); // Max size = 5
 
 		// Set status in GUI if available
 		if (cm != null && cm.getGuiController() != null)
@@ -187,7 +187,7 @@ extends CounterSampleCatalogIterator
 	 * @param dbConn
 	 * @param dbname
 	 */
-	private void releaseConnection(CountersModel cm, DbxConnection dbConn, String dbname)
+	public static void releaseConnection(CountersModel cm, DbxConnection dbConn, String dbname)
 	{
 		if (dbConn == null)
 			return;

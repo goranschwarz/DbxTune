@@ -40,6 +40,7 @@ import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEvent.Category;
 import com.asetune.alarm.events.AlarmEvent.ServiceState;
 import com.asetune.alarm.events.AlarmEvent.Severity;
+import com.asetune.alarm.events.AlarmEventOsLoadAverageAdjusted;
 import com.asetune.alarm.events.AlarmEventSrvDown;
 import com.asetune.alarm.events.dbxc.AlarmEventHttpDestinationDown;
 import com.asetune.alarm.events.internal.AlarmEvent_EndOfScan;
@@ -843,6 +844,14 @@ implements Runnable
 			{
 				_logger.info("Keeping Alarm 'HTTP-DESTINATION-DOWN' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. cancelledAlarm: " + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
 				continue;
+			}
+			if (cancelledAlarm instanceof AlarmEventOsLoadAverageAdjusted)
+			{
+				if ("H2WriterStat".equals(cancelledAlarm.getServiceInfo()))
+				{
+					_logger.info("Keeping Alarm 'OS-LOAD-AVERAGE-ADJUSTED' with serviceInfo='H2WriterStat' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. cancelledAlarm: " + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
+					continue;
+				}
 			}
 
 			if ( ! _hasUndergoneAlarmDetection.contains( cancelledAlarm.getServiceInfo() ) )

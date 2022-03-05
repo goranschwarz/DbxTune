@@ -26,10 +26,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -47,6 +51,8 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
+import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.sql.SqlParserUtils;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.NumberUtils;
@@ -235,9 +241,17 @@ extends CountersModel
 	public static final String  PROPKEY_createExtension     = PROP_PREFIX + ".if.missing.pg_stat_statements.createExtension";
 	public static final boolean DEFAULT_createExtension     = true; 
 
-	public static final String PROPKEY_sample_total_time_gt = PROP_PREFIX + ".sample.total_time.gt";
-	public static final int    DEFAULT_sample_total_time_gt = 1000;
+	public static final String  PROPKEY_sample_total_time_gt = PROP_PREFIX + ".sample.total_time.gt";
+	public static final int     DEFAULT_sample_total_time_gt = 1000;
 	
+	public static final String  PROPKEY_view_parseAndSendTables = PROP_PREFIX + ".ddlStore.parse.send.tables";
+	public static final boolean DEFAULT_view_parseAndSendTables = true;
+
+	public static final String  PROPKEY_view_parseAndSendTables_topTotalTimeRowcount = PROP_PREFIX + ".ddlStore.parse.send.tables.top.total_time.rowcount";
+	public static final int     DEFAULT_view_parseAndSendTables_topTotalTimeRowcount = 10;
+	
+	// Structure to "cache" what QueryID's that already has been parsed
+	private Set<String> _alreadyParsedQueryId_cache = new HashSet<>();
 
 
 	public static final String GRAPH_NAME_SQL_STATEMENTS = "SqlStatements";
@@ -412,8 +426,120 @@ extends CountersModel
 			diffData.setValueAt(shared_blks_hit_per_row, rowId, shared_blks_hit_per_row_pos);
 			diffData.setValueAt(cache_hit_pct          , rowId, cache_hit_pct_pos);
 		}
+		
+		// Parse SQL Text and send of tables for DDL Storage
+		if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_view_parseAndSendTables, DEFAULT_view_parseAndSendTables))
+		{
+			parseSqlTextAndSendTablesForDdlStorage(newSample, diffData);
+		}
 	}
 
+	
+	/**
+	 * Parse SQL Text for top "total_time" since "last sample" and send of tables for DDL Storage
+	 * 
+	 * @param newSample
+	 * @param diffData
+	 */
+	private void parseSqlTextAndSendTablesForDdlStorage(CounterSample newSample, CounterSample diffData)
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+		
+		if (pch == null)
+			return;
+
+		// First we need to SORT the DIFF or RATE data on "total_time"
+		final String sort_colName = "total_time";
+		final int    sort_colPos  = diffData.findColumn(sort_colName);
+		if (sort_colPos == -1)
+		{
+			_logger.error("parseSqlTextAndSendTablesForDdlStorage() cmName='" + diffData.getName() + "', Cant find column '" + sort_colName + "'.");
+			return;
+		}
+
+		// Take a copy of the data, and sort it...
+		ArrayList<List<Object>> sorted = new ArrayList<List<Object>>( diffData.getDataCollection() );
+		Collections.sort(sorted,
+			new Comparator<List<Object>>()
+			{
+				@Override
+				public int compare(List<Object> o1, List<Object> o2)
+				{
+					Object objVal1 = o1.get(sort_colPos);
+					Object objVal2 = o2.get(sort_colPos);
+					
+					if (objVal1 instanceof Number && objVal2 instanceof Number)
+					{
+						if ( ((Number)objVal1).doubleValue() < ((Number)objVal2).doubleValue() ) return 1;
+						if ( ((Number)objVal1).doubleValue() > ((Number)objVal2).doubleValue() ) return -1;
+						return 0;
+					}
+					_logger.warn("CM='" + getName() + "', NOT A NUMBER colName='" + sort_colName + "', colPos=" + sort_colPos + ": objVal1=" + objVal1.getClass().getName() + ", objVal2=" + objVal2.getClass().getName());
+					return 0;
+				}
+			});
+		
+		
+		int query_pos   = diffData.findColumn("query");
+		int datname_pos = diffData.findColumn("datname");
+		int queryid_pos = diffData.findColumn("queryid");
+
+		if (query_pos == -1 || datname_pos == -1)
+		{
+			_logger.error("parseSqlTextAndSendTablesForDdlStorage() cmName='" + diffData.getName() + "', Cant find column 'query' or 'datname'.");
+			return;
+		}
+
+		// How many rows should we DO
+		int topRowcount   = conf.getIntProperty(PROPKEY_view_parseAndSendTables_topTotalTimeRowcount, DEFAULT_view_parseAndSendTables_topTotalTimeRowcount);
+		int maxRowsToSend = Math.min(topRowcount, sorted.size());
+		
+		// Loop first ## rows on SORTED data, extract table names and send to DDL Storage
+		for (int rowId = 0; rowId < maxRowsToSend; rowId++)
+		{
+			// Skipping 'total_time' that is ZERO
+			Object obj_total_time = sorted.get(rowId).get(sort_colPos);
+			if (obj_total_time instanceof Number && ((Number)obj_total_time).doubleValue() == 0d)
+				continue;
+			
+			String sqlText = "" + sorted.get(rowId).get(query_pos);
+			String dbname  = "" + sorted.get(rowId).get(datname_pos);
+			String queryid = "" + sorted.get(rowId).get(queryid_pos);
+
+			// If we already has parsed this QueryID, we don't need to do it again!
+			if (_alreadyParsedQueryId_cache.contains(queryid))
+				continue;
+
+			// mark this QueryID as parsed
+			_alreadyParsedQueryId_cache.add(queryid);
+
+			// PARSE
+			Set<String> tableList = SqlParserUtils.getTables(sqlText);
+
+			// Post to DDL Storage, for lookup
+			for (String tableName : tableList)
+			{
+				// All tables starting with "pg_" must be a Postgres System table... so do not bother to look this up.
+				if (tableName.startsWith("pg_"))                    continue;
+				if (tableName.startsWith("$"))                      continue;
+				if (tableName.equalsIgnoreCase("CLOCK_TIMESTAMP"))  continue;
+
+				pch.addDdl(dbname, tableName, CM_NAME + ".ddlStore.parse.send.tables");
+			}
+		}
+	}
+
+	@Override
+	public void reset()
+	{
+		// IMPORTANT: call super
+		super.reset();
+
+		// Clear any local caches
+		_alreadyParsedQueryId_cache = new HashSet<>();
+	}
+	
 	@Override
 	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
 	{

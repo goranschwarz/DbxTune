@@ -28,7 +28,6 @@ import java.util.List;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.ReportEntryAbstract;
 import com.asetune.pcs.report.content.SparklineHelper;
 import com.asetune.pcs.report.content.SparklineHelper.AggType;
 import com.asetune.pcs.report.content.SparklineHelper.DataSource;
@@ -37,7 +36,7 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
-public class OsIoStatOverview extends ReportEntryAbstract
+public class OsIoStatOverview extends OsAbstract
 {
 //	private static Logger _logger = Logger.getLogger(OsIoStatIo.class);
 

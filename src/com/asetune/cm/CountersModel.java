@@ -6334,7 +6334,7 @@ implements Cloneable, ITableTooltip
 				if ( ! SchedulingPattern.validate(cronPatStr) )
 					_logger.error("The cron scheduling pattern '"+cronPatStr+"' is NOT VALID. for the property '"+replaceCmAndColName(PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, colname)+"', this will not be used at runtime, furter warnings will also be issued.");
 
-				String cronPatDesc = CronUtils.getCronExpressionDescriptionForAlarms(cronPatStr);
+				String cronPatDesc = CronUtils.getCronExpressionDescriptionForAlarms(cronPat);
 
 				_logger.info(prefix + propName + " = " + propVal);
 				_logger.info(prefix + cronProp + " = " + cronPat + "   #-- desc: " + cronPatDesc);
@@ -6404,7 +6404,7 @@ implements Cloneable, ITableTooltip
 		if (DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange.equals(cronStr))
 			return enabled;
 
-		// is this a negation/not withing time period...
+		// is this a negation/not within time period...
 		boolean negation = false;
 		if (cronStr.startsWith("!"))
 		{

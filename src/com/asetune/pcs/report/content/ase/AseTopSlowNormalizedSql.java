@@ -28,7 +28,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +43,6 @@ import com.asetune.pcs.report.content.SparklineHelper;
 import com.asetune.pcs.report.content.SparklineHelper.AggType;
 import com.asetune.pcs.report.content.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.SparklineHelper.SparkLineParams;
-import com.asetune.sql.SqlParserUtils;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
@@ -53,9 +51,6 @@ import com.asetune.utils.HtmlTableProducer.ColumnCopyDef;
 import com.asetune.utils.HtmlTableProducer.ColumnCopyRender;
 import com.asetune.utils.HtmlTableProducer.ColumnCopyRow;
 import com.asetune.utils.HtmlTableProducer.ColumnStatic;
-import com.asetune.utils.StringUtil;
-
-import net.sf.jsqlparser.parser.ParseException;
 
 public class AseTopSlowNormalizedSql extends AseAbstract
 {
@@ -739,43 +734,47 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 							} 
 						}
 						
-						// Parse the 'sqlText' and extract Table Names..
-						// - then get table information (like we do in 'AseTopCmObjectActivity')
-						String tableInfo = "";
-						boolean parseSqlText = true;
-						if (parseSqlText)
-						{
-							// Parse the SQL Text to get all tables that are used in the Statement
-							String problemDesc = "";
-							List<String> tableList = Collections.emptyList();
-							try { tableList = SqlParserUtils.getTables(sqlText, true); }
-							catch (ParseException pex) { problemDesc = pex + ""; }
+						// Parse the 'sqlText' and extract Table Names, then get various table and index information
+						String tableInfo = getDbmsTableInformationFromSqlText(conn, sqlText, DbUtils.DB_PROD_NAME_SYBASE_ASE);
 
-							// Get information about ALL tables in list 'tableList' from the DDL Storage
-							List<AseTableInfo> tableInfoList = getTableInformationFromMonDdlStorage(conn, tableList);
-							if (tableInfoList.isEmpty() && StringUtil.isNullOrBlank(problemDesc))
-								problemDesc = "&emsp; &bull; No tables was found in the DDL Storage for tables: " + tableList;
-
-							// And make it into a HTML table with various information about the table and indexes 
-							tableInfo = problemDesc + getTableInfoAsHtmlTable(tableInfoList, tableList, true, "dsr-sub-table-tableinfo");
-
-							// Finally make up a message that will be appended to the SQL Text
-							if (StringUtil.hasValue(tableInfo))
-							{
-								// Surround with collapse div
-								tableInfo = ""
-										//+ "<!--[if !mso]><!--> \n" // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-
-										+ "\n<br>\n<br>\n"
-										+ "<details open> \n"
-										+ "<summary>Show/Hide Table information for: " + tableList + "</summary> \n"
-										+ tableInfo
-										+ "</details> \n"
-
-										//+ "<!--<![endif]-->    \n" // END: IGNORE THIS SECTION FOR OUTLOOK
-										+ "";
-							}
-						}
+//						// Parse the 'sqlText' and extract Table Names..
+//						// - then get table information (like we do in 'AseTopCmObjectActivity')
+//						String tableInfo = "";
+//						boolean parseSqlText = true;
+//						if (parseSqlText)
+//						{
+//							// Parse the SQL Text to get all tables that are used in the Statement
+//							String problemDesc = "";
+//							Set<String> tableList = SqlParserUtils.getTables(sqlText);
+////							List<String> tableList = Collections.emptyList();
+////							try { tableList = SqlParserUtils.getTables(sqlText, true); }
+////							catch (ParseException pex) { problemDesc = pex + ""; }
+//
+//							// Get information about ALL tables in list 'tableList' from the DDL Storage
+//							Set<AseTableInfo> tableInfoSet = getTableInformationFromMonDdlStorage(conn, tableList);
+//							if (tableInfoSet.isEmpty() && StringUtil.isNullOrBlank(problemDesc))
+//								problemDesc = "&emsp; &bull; No tables was found in the DDL Storage for tables: " + listToHtmlCode(tableList);
+//
+//							// And make it into a HTML table with various information about the table and indexes 
+//							tableInfo = problemDesc + getTableInfoAsHtmlTable(tableInfoSet, tableList, true, "dsr-sub-table-tableinfo");
+//
+//							// Finally make up a message that will be appended to the SQL Text
+//							if (StringUtil.hasValue(tableInfo))
+//							{
+//								// Surround with collapse div
+//								tableInfo = ""
+//										//+ "<!--[if !mso]><!--> \n" // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+//
+//										+ "\n<br>\n<br>\n"
+//										+ "<details open> \n"
+//										+ "<summary>Show/Hide Table information for " + tableList.size() + " table(s): " + listToHtmlCode(tableList) + "</summary> \n"
+//										+ tableInfo
+//										+ "</details> \n"
+//
+//										//+ "<!--<![endif]-->    \n" // END: IGNORE THIS SECTION FOR OUTLOOK
+//										+ "";
+//							}
+//						}
 						
 						// Grab all SparkLines we defined in 'subTableRowSpec'
 						String sparklines = htp.getHtmlTextForRow(r);
@@ -792,7 +791,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 				try
 				{
 					// Note the 'srs' is populated when reading above ResultSet from query
-					_sqlRstm = createResultSetTableModel(srs, "Top SQL TEXT", null);
+					_sqlRstm = createResultSetTableModel(srs, "Top SQL TEXT", null, false); // DO NOT TRUNCATE COLUMNS
 					srs.close();
 				}
 				catch (SQLException ex)

@@ -22,6 +22,7 @@ package com.asetune.cm.ase;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -29,15 +30,17 @@ import javax.naming.NameNotFoundException;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.ase.gui.CmCachedProcsPanel;
+import com.asetune.cm.ase.gui.CmCachedProcsSumPanel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
@@ -134,7 +137,14 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	
+	private static final String  PROP_PREFIX                        = CM_NAME;
+
+	public static final String  PROPKEY_sample_statementCacheObjects = PROP_PREFIX + ".sample.statementCacheObjects";
+	public static final boolean DEFAULT_sample_statementCacheObjects = false;
+
+	public static final String  PROPKEY_sample_dynamicSqlObjects     = PROP_PREFIX + ".sample.dynamicSqlObjects";
+	public static final boolean DEFAULT_sample_dynamicSqlObjects     = false;
+
 	private void addTrendGraphs()
 	{
 	}
@@ -143,7 +153,7 @@ extends CountersModel
 	protected TabularCntrPanel createGui()
 	{
 		// YES THIS SHOULD BE CmCachedProcsPanel and not CmCachedProcsSumPanel, it's only Icon renders for the JXTable
-		return new CmCachedProcsPanel(this);
+		return new CmCachedProcsSumPanel(this);
 	}
 
 	@Override
@@ -154,6 +164,19 @@ extends CountersModel
 			return NEED_CONFIG;
 
 		return new String[] {"per object statistics active=1"};
+	}
+
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public List<CmSettingsHelper> getLocalSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("Sample Lightweight Procs from Statement Cache",        PROPKEY_sample_statementCacheObjects, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_statementCacheObjects, DEFAULT_sample_statementCacheObjects), DEFAULT_sample_statementCacheObjects, CmCachedProcsSumPanel.TOOLTIP_sample_statementCacheObjects));
+		list.add(new CmSettingsHelper("Sample Lightweight Procs from Dynamic SQL Statements", PROPKEY_sample_dynamicSqlObjects    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_dynamicSqlObjects    , DEFAULT_sample_dynamicSqlObjects    ), DEFAULT_sample_dynamicSqlObjects    , CmCachedProcsSumPanel.TOOLTIP_sample_dynamicSqlObjects));
+
+		return list;
 	}
 
 	@Override
@@ -213,6 +236,10 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		boolean sample_statementCacheObjects = conf.getBooleanProperty(PROPKEY_sample_statementCacheObjects, DEFAULT_sample_statementCacheObjects);
+		boolean sample_dynamicSqlObjects     = conf.getBooleanProperty(PROPKEY_sample_dynamicSqlObjects,     DEFAULT_sample_dynamicSqlObjects);
+
 		String cols = "";
 		int    orderByColumnNumber = 8; // order by column 'SumRequestCnt'
 
@@ -324,9 +351,15 @@ extends CountersModel
 		// remove last comma
 		cols = StringUtil.removeLastComma(cols);
 
+		// Build where clause
+		String whereClause = "where 1=1 \n";
+		if ( ! sample_statementCacheObjects ) whereClause += "  and ObjectName not like '*ss%' \n";
+		if ( ! sample_dynamicSqlObjects     ) whereClause += "  and ObjectName not like '*sq%' \n";
+		
 		String sql = 
 			"select " + cols + "\n" +
 			"from master..monCachedProcedures \n" +
+			whereClause +
 			"group by DBName, ObjectName, ObjectType \n" +
 			"order by "+orderByColumnNumber+" desc" +
 			"";

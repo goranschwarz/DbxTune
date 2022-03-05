@@ -36,7 +36,8 @@ import com.asetune.pcs.report.content.ase.AseAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
-public class PostgresTopTableAccess extends AseAbstract
+public class PostgresTopTableAccess 
+extends PostgresAbstract
 {
 //	private static Logger _logger = Logger.getLogger(PostgresTopTableAccess.class);
 

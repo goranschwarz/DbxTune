@@ -53,6 +53,7 @@ import com.asetune.pcs.report.content.SparklineHelper;
 import com.asetune.pcs.report.content.SparklineHelper.AggType;
 import com.asetune.pcs.report.content.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.SparklineHelper.SparkLineParams;
+import com.asetune.sql.SqlParserUtils;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
@@ -71,6 +72,7 @@ extends SqlServerAbstract
 
 //	private ResultSetTableModel _shortRstm;
 	private LinkedHashMap<String, QsDbReport> _dbMap = new LinkedHashMap<>();
+	private QsDbReportSummary _qsSummaryDbReport;
 
 	public SqlServerQueryStore(DailySummaryReportAbstract reportingInstance)
 	{
@@ -142,7 +144,7 @@ extends SqlServerAbstract
 				w.append("No databases with 'Query Store' enabled was found or captured.\n");
 				w.append("For tips on how to enable 'Query Store', see the <i>full</i> report!\n");
 			}
-			return;
+			return; /** <<<<<<<<-------------------- */
 		}
 
 		// Write what databases we will make a report for
@@ -187,25 +189,19 @@ extends SqlServerAbstract
 				_qsSummaryDbReport.writeMessageText(w);
 
 			// Write a report for each of the databases
-			for (QsDbReport entry : _dbMap.values())
-			{
-				entry.writeMessageText(w);
-			}
-		}
-		// SHORT MESAGE - Write SUMMARY or FIRST entry (if we only got 1 entry)
-		else if (isShortMessageType())
-		{
-			if (_qsSummaryDbReport != null)
-			{
-				_qsSummaryDbReport.writeMessageText(w);
-			}
-			else if (_dbMap.size() == 1)
+			if (_dbMap.size() > 1)
 			{
 				for (QsDbReport entry : _dbMap.values())
 				{
 					entry.writeMessageText(w);
 				}
 			}
+		}
+		// SHORT MESAGE - Write SUMMARY or FIRST entry (if we only got 1 entry)
+		else if (isShortMessageType())
+		{
+			if (_qsSummaryDbReport != null)
+				_qsSummaryDbReport.writeMessageText(w);
 		}
 	}
 
@@ -254,7 +250,7 @@ extends SqlServerAbstract
 		}
 		
 		// merge all QsDbReport into a "ALL_DB's"
-		if (_dbMap.size() > 1)
+		if (_dbMap.size() > 0) // Make the summary even if we only have one entry (since the Summary holds the "Sparkline")
 		{
 			_qsSummaryDbReport = new QsDbReportSummary();
 
@@ -265,10 +261,9 @@ extends SqlServerAbstract
 			_qsSummaryDbReport.sort();
 			_qsSummaryDbReport.setTopRows(getTopRows()); // Keep only the ## top rows.
 			_qsSummaryDbReport.postMerge(); // Fixes links etc to ShowPlans... NOT YET IMPLEMENTED
-			_qsSummaryDbReport.createSqlTextTable();
+			_qsSummaryDbReport.createSqlTextTable(conn);
 		}
 	}
-	private QsDbReportSummary _qsSummaryDbReport;
 
 //	/**
 //	 * Set descriptions for the table, and the columns
@@ -645,15 +640,14 @@ extends SqlServerAbstract
 			// Create a default renderer
 			if (_topCpuRstm != null) // always true... but just to use {} to scope 'tableRender' var
 			{
-				w.append("<hr> \n");
-				w.append(getSectionDescriptionHtml(_topCpuRstm, true));
-				w.append("Row Count: " + _topCpuRstm.getRowCount() + "<br>\n");
-//				w.append(toHtmlTable(_topCpuRstm));
-				w.append(_topCpuRstm.toHtmlTableString("sortable", true, true, null, tableRender));
-
-				// Write HTML/JavaScript Code for the Execution Plan...
 				if (isFullMessageType())
 				{
+					w.append("<hr> \n");
+					w.append(getSectionDescriptionHtml(_topCpuRstm, true));
+					w.append("Row Count: " + _topCpuRstm.getRowCount() + "<br>\n");
+					w.append(_topCpuRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+					
+					// Write HTML/JavaScript Code for the Execution Plan...
 					if (_planCollectionCpu  != null)
 						_planCollectionCpu .writeMessageText(w);
 				}
@@ -666,7 +660,7 @@ extends SqlServerAbstract
 					
 					w.append("<br>\n");
 					w.append("SQL Text by 'plan_id', Row Count: " + _cpuSqlTextRstm.getRowCount() + "\n");
-					w.append(_cpuSqlTextRstm.toHtmlTableString("sortable", true, true, null, null));
+					w.append(_cpuSqlTextRstm.toHtmlTableString("sortable", true, true, null, tableRender));
 
 					w.append("\n");
 					w.append("</details> \n");
@@ -684,15 +678,14 @@ extends SqlServerAbstract
 			}
 			else
 			{
-				w.append(getSectionDescriptionHtml(_topWaitRstm, true));
-
-				w.append("Row Count: " + _topWaitRstm.getRowCount() + "<br>\n");
-//				w.append(toHtmlTable(_topWaitRstm));
-				w.append(_topWaitRstm.toHtmlTableString("sortable", true, true, null, tableRender));
-
-				// Write HTML/JavaScript Code for the Execution Plan...
 				if (isFullMessageType())
 				{
+					w.append(getSectionDescriptionHtml(_topWaitRstm, true));
+
+					w.append("Row Count: " + _topWaitRstm.getRowCount() + "<br>\n");
+					w.append(_topWaitRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+
+					// Write HTML/JavaScript Code for the Execution Plan...
 					if (_planCollectionWait != null) 
 						_planCollectionWait.writeMessageText(w);
 				}
@@ -1360,7 +1353,7 @@ extends SqlServerAbstract
 
 		
 //		public void createSqlTextTable(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
-		public void createSqlTextTable()
+		public void createSqlTextTable(DbxConnection conn)
 		{
 			SimpleResultSet srs = new SimpleResultSet();
 			ResultSetTableModel rstm = _topCpuRstm;
@@ -1459,16 +1452,60 @@ extends SqlServerAbstract
 					whereColValMap.put("plan_id", plan_id);
 					whereColValMap.put("!dbname", dbname);
 
-					String query = "--not-found--";
+					String sqlText = "--not-found--";
 					QsSqlTextEntry entry = _keyToSqlText.get(whereColValMap);
 					if (entry != null)
-						query = entry.sqlText;
-					
+						sqlText = entry.sqlText;
+
+					// Parse the 'sqlText' and extract Table Names, then get various table and index information
+					String tableInfo = getDbmsTableInformationFromSqlText(conn, sqlText, DbUtils.DB_PROD_NAME_MSSQL);
+
+//					// Parse the 'sqlText' and extract Table Names..
+//					// - then get table information (like we do in 'AseTopCmObjectActivity')
+//					String tableInfo = "";
+//					boolean parseSqlText = true;
+//					if (parseSqlText)
+//					{
+//						// Parse the SQL Text to get all tables that are used in the Statement
+//						String problemDesc = "";
+//						Set<String> tableList = SqlParserUtils.getTables(sqlText);
+////						List<String> tableList = Collections.emptyList();
+////						try { tableList = SqlParserUtils.getTables(sqlText, true); }
+////						catch (ParseException pex) { problemDesc = pex + ""; }
+//
+//						// Get information about ALL tables in list 'tableList' from the DDL Storage (or other counter collectors)
+//						Set<SqlServerTableInfo> tableInfoSet = getTableInformationFromMonDdlStorage(conn, tableList);
+//						if (tableInfoSet.isEmpty() && StringUtil.isNullOrBlank(problemDesc))
+//							problemDesc = "&emsp; &bull; No tables was found in the DDL Storage for tables: " + listToHtmlCode(tableList);
+//
+//						// And make it into a HTML table with various information about the table and indexes 
+//						tableInfo = problemDesc + getTableInfoAsHtmlTable(tableInfoSet, tableList, true, "dsr-sub-table-tableinfo");
+//
+//						// Finally make up a message that will be appended to the SQL Text
+//						if (StringUtil.hasValue(tableInfo))
+//						{
+//							// Surround with collapse div
+//							tableInfo = ""
+//									//+ "<!--[if !mso]><!--> \n" // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+//
+//									+ "\n<br>\n<br>\n"
+//									+ "<details open> \n"
+//									+ "<summary>Show/Hide Table information for " + tableList.size() + " table(s): " + listToHtmlCode(tableList) + "</summary> \n"
+//									+ tableInfo
+//									+ "</details> \n"
+//
+//									//+ "<!--<![endif]-->    \n" // END: IGNORE THIS SECTION FOR OUTLOOK
+//									+ "";
+//						}
+//					}
+
 					// get the "spark lines"
 					String sparklines = htp.getHtmlTextForRow(r);
 
+					sqlText = "<xmp>" + sqlText + "</xmp>" + tableInfo;
+
 					// add record to SimpleResultSet
-					srs.addRow(dbname, plan_id, sparklines, "<xmp>" + query + "</xmp>");
+					srs.addRow(dbname, plan_id, sparklines, sqlText);
 				}
 			}
 
@@ -1476,7 +1513,7 @@ extends SqlServerAbstract
 			try
 			{
 				// Note the 'srs' is populated when reading above ResultSet from query
-				_cpuSqlTextRstm = createResultSetTableModel(srs, "Top SQL TEXT", null);
+				_cpuSqlTextRstm = createResultSetTableModel(srs, "Top SQL TEXT", null, false); // DO NOT TRUNCATE COLUMNS
 				srs.close();
 
 			}

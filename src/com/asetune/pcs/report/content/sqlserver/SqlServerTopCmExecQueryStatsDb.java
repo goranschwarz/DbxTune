@@ -25,17 +25,13 @@ import java.io.IOException;
 import java.io.Writer;
 import java.sql.SQLException;
 import java.sql.Types;
-import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
 import com.asetune.gui.ResultSetTableModel;
-import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
-import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.SparklineHelper;
 import com.asetune.pcs.report.content.SparklineHelper.AggType;
@@ -43,74 +39,38 @@ import com.asetune.pcs.report.content.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
-import com.asetune.utils.DbUtils;
 import com.asetune.utils.HtmlTableProducer;
 import com.asetune.utils.HtmlTableProducer.ColumnCopyDef;
 import com.asetune.utils.HtmlTableProducer.ColumnCopyRender;
 import com.asetune.utils.HtmlTableProducer.ColumnCopyRow;
 import com.asetune.utils.HtmlTableProducer.ColumnStatic;
 import com.asetune.utils.StringUtil;
-import com.asetune.utils.TimeUtils;
 
-public class SqlServerTopCmExecQueryStats
+public class SqlServerTopCmExecQueryStatsDb
 extends SqlServerAbstract
 {
-	private static Logger _logger = Logger.getLogger(SqlServerTopCmExecQueryStats.class);
+	private static Logger _logger = Logger.getLogger(SqlServerTopCmExecQueryStatsDb.class);
 
-	public enum ReportType
-	{
-		CPU_TIME, 
-//		WAIT_TIME,
-		TEMPDB_SPILLS,
-		LOGICAL_READS,
-		LOGICAL_WRITES,
-		PHYSICAL_READS,
-		EXECUTION_COUNT,
-//		RECENTLY_COMPILED,
-		MEMORY_GRANTS,
-	};
-	
 	private ResultSetTableModel _shortRstm;
-	private ResultSetTableModel _sqTextRstm;                  // only used for CPU_TIME, to fill in a "sub" table with ExecTime and SQL Text (easier for mail client)
-	private ExecutionPlanCollection _planCollection;
+	private ResultSetTableModel _sparklineRstm;
 	private List<String>        _miniChartJsList = new ArrayList<>();
 
-	private ReportType _reportType;
 	private String _sqlOrderByCol = "-unknown-";
 	private String _sqlHaving     = "";
 
-	public SqlServerTopCmExecQueryStats(DailySummaryReportAbstract reportingInstance, ReportType reportType)
+	public SqlServerTopCmExecQueryStatsDb(DailySummaryReportAbstract reportingInstance)
 	{
 		super(reportingInstance);
 
-		_reportType = reportType;
-
-		if      (ReportType.CPU_TIME            .equals(_reportType)) { _sqlOrderByCol = "[total_worker_time_ms__sum]";   _sqlHaving = ""; }
-//		else if (ReportType.WAIT_TIME           .equals(_reportType)) { _sqlOrderByCol = "[total_wait_time_ms__sum]";     _sqlHaving = ""; }
-		else if (ReportType.TEMPDB_SPILLS       .equals(_reportType)) { _sqlOrderByCol = "[total_spills__sum]";           _sqlHaving = "having sum([total_spills]) > 0 \n"; }
-		else if (ReportType.LOGICAL_READS       .equals(_reportType)) { _sqlOrderByCol = "[total_logical_reads__sum]";    _sqlHaving = ""; }
-		else if (ReportType.LOGICAL_WRITES      .equals(_reportType)) { _sqlOrderByCol = "[total_logical_writes__sum]";   _sqlHaving = ""; }
-		else if (ReportType.PHYSICAL_READS      .equals(_reportType)) { _sqlOrderByCol = "[total_physical_reads__sum]";   _sqlHaving = ""; }
-		else if (ReportType.EXECUTION_COUNT     .equals(_reportType)) { _sqlOrderByCol = "[execution_count__sum]";        _sqlHaving = ""; }
-//		else if (ReportType.RECENTLY_COMPILED   .equals(_reportType)) { _sqlOrderByCol = "[]";                            _sqlHaving = ""; }
-		else if (ReportType.MEMORY_GRANTS       .equals(_reportType)) { _sqlOrderByCol = "[total_grant_kb__sum]";         _sqlHaving = ""; }
-		else throw new IllegalArgumentException("Unhandled reportType='" + reportType + "'.");
+		_sqlOrderByCol = "[total_worker_time_ms__sum]";
+		_sqlHaving     = "";
 	}
 
 	@Override
 	public boolean hasShortMessageText()
 	{
-		if (ReportType.CPU_TIME.equals(_reportType)) 
-			return true;
-
 		return false;
 	}
-
-//	@Override
-//	public void writeShortMessageText(Writer w)
-//	throws IOException
-//	{
-//	}
 
 	@Override
 	public void writeMessageText(Writer sb, MessageType messageType)
@@ -122,61 +82,19 @@ extends SqlServerAbstract
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
 			sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
-			TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
-			{
-				@Override
-				public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
-				{
-					if ("SqlText".equals(colName))
-					{
-						// Get Actual Executed SQL Text for current row
-						String query_hash = rstm.getValueAsString(row, "query_hash");
-					//	String sqlText    = rstm.getValueAsString(row, "SqlText");
-						
-						// Put the "Actual Executed SQL Text" as a "tooltip"
-						return "<div title='Click for Detailes' "
-								+ "data-toggle='modal' "
-								+ "data-target='#dbx-view-sqltext-dialog' "
-								+ "data-objectname='" + query_hash + "' "
-								+ "data-tooltip=\""   + getTooltipForSqlText(rstm, row) + "\" "
-								+ ">&#x1F4AC;</div>"; // symbol popup with "..."
-					}
-
-	//- do the "bold" on some other level in ResultSetTableModel or _shortRstm.toHtmlTableString
-	//- tooltip on time from US to MS
-//					// Order by values are in bold
-//					if (_sqlOrderByCol_noBrackets != null && _sqlOrderByCol_noBrackets.equals(colName))
-//					{
-//						return "<b>" + strVal + "</b>";
-//					}
-
-					return strVal;
-				}
-			};
-
-			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+			sb.append(toHtmlTable(_shortRstm));
 		}
 
-		// Write HTML/JavaScript Code for the Execution Plan...
-		if (isFullMessageType())
+		if (_sparklineRstm != null)
 		{
-			if (_planCollection != null)
-				_planCollection.writeMessageText(sb);
-		}
-
-		if (_sqTextRstm != null)
-		{
-//			sb.append("<br>\n");
-//			sb.append("SQL Text by queryid, Row Count: " + _sqTextRstm.getRowCount() + " (This is the same SQL Text as the in the above table, but without all counter details).<br>\n");
-//			sb.append(toHtmlTable(_sqTextRstm));
-
 			sb.append("<br>\n");
 			sb.append("<details open> \n");
-			sb.append("<summary>Details for above Statements, including SQL Text (click to collapse) </summary> \n");
+//			sb.append("<details> \n");
+			sb.append("<summary>Details for above Databases (click to collapse) </summary> \n");
 			
 			sb.append("<br>\n");
-			sb.append("SQL Text by 'query_hash', Row Count: " + _sqTextRstm.getRowCount() + "\n");
-			sb.append(toHtmlTable(_sqTextRstm));
+			sb.append("Activity by 'dbname', Row Count: " + _sparklineRstm.getRowCount() + "\n");
+			sb.append(toHtmlTable(_sparklineRstm));
 
 			sb.append("\n");
 			sb.append("</details> \n");
@@ -190,52 +108,10 @@ extends SqlServerAbstract
 		}
 	}
 
-	/** double quotes (") must be avoided or escaped */
-	private String getTooltipForSqlText(ResultSetTableModel rstm, int row)
-	{
-		StringBuilder sb = new StringBuilder();
-		NumberFormat nf = NumberFormat.getInstance();
-
-//		SessionSampleTime__min	SessionSampleTime__max	Duration	execution_count__chart	execution_count__sum	creation_time__min	last_execution_time__max	total_worker_time__chart	
-		sb.append("-- Some columns extracted from current row.\n");
-		sb.append("-----------------------------------------------------------------------------------------------\n");
-		sb.append("-- query_hash:                 ").append( rstm.getValueAsString(row, "query_hash"               ) ).append("\n");
-		sb.append("-- SessionSampleTime__min:     ").append( rstm.getValueAsString(row, "SessionSampleTime__min"   ) ).append("\n");
-		sb.append("-- SessionSampleTime__max:     ").append( rstm.getValueAsString(row, "SessionSampleTime__max"   ) ).append("\n");
-		sb.append("-- Duration:                   ").append( rstm.getValueAsString(row, "Duration"                 ) ).append("\n");
-
-		sb.append("-- creation_time__min:         ").append( rstm.getValueAsString(row, "creation_time__min"       ) ).append("\n");
-		sb.append("-- last_execution_time__max:   ").append( rstm.getValueAsString(row, "last_execution_time__max" ) ).append("\n");
-
-		sb.append("-- execution_count__sum:       ").append( nf.format(rstm.getValueAsBigDecimal(row, "execution_count__sum"      ))).append("\n");
-		sb.append("-- total_elapsed_time_ms__sum: ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_elapsed_time_ms__sum"))).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "total_elapsed_time_ms__sum"))).append(" \n");
-		sb.append(">> AvgElapsedTimeMs:           ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgElapsedTimeMs"          ))).append("\n");
-		sb.append("-- total_worker_time_ms__sum:  ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_worker_time_ms__sum" ))).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "total_worker_time_ms__sum"))).append(" \n");
-		sb.append(">> AvgWorkerTimeMs:            ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgWorkerTimeMs"           ))).append("\n");
-//		sb.append("-- total_wait_time_ms__sum:    ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_wait_time_ms__sum"   ))).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "total_wait_time_ms__sum"))).append(" \n");
-//		sb.append("-- AvgWaitTimeMs:              ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgWaitTimeMs"             ))).append("\n");
-		sb.append("-- total_physical_reads__sum:  ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_physical_reads__sum" ))).append("\n");
-		sb.append("-- AvgPhysicalReads:           ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgPhysicalReads"          ))).append("\n");
-		sb.append("-- total_logical_writes__sum:  ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_logical_writes__sum" ))).append("\n");
-		sb.append("-- AvgLogicalWrites:           ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgLogicalWrites"          ))).append("\n");
-		sb.append("-- total_logical_reads__sum:   ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_logical_reads__sum"  ))).append("\n");
-		sb.append("-- AvgLogicalReads:            ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgLogicalReads"           ))).append("\n");
-		sb.append("-- total_rows__sum:            ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_rows__sum"           ))).append("\n");
-		sb.append("-- AvgRows:                    ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgRows"                   ))).append("\n");
-		sb.append("-- total_dop__sum:             ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_dop__sum"            ))).append("\n");
-		sb.append("-- AvgDop:                     ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgDop"                    ))).append("\n");
-		sb.append("-- total_grant_kb__sum:        ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_grant_kb__sum"       ))).append("\n");
-		sb.append("-- AvgGrantKb:                 ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgGrantKb"                ))).append("\n");
-		sb.append("-----------------------------------------------------------------------------------------------\n");
-		sb.append(StringEscapeUtils.escapeHtml4(rstm.getValueAsString(row, "SqlText")));
-
-		return sb.toString();
-	}
-	
 	@Override
 	public String getSubject()
 	{
-		return "Top SQL Statements - " + _reportType + " (order by: " + _sqlOrderByCol + ", origin: CmExecQueryStats/dm_exec_query_stats)";
+		return "Top Database Activity (order by: " + _sqlOrderByCol + ", origin: CmExecQueryStats/dm_exec_query_stats)";
 	}
 
 	@Override
@@ -342,92 +218,18 @@ extends SqlServerAbstract
 		String col_grant_kb__chart                      = !dummyRstm.hasColumnNoCase("total_grant_kb"                 ) ? "" : "    ,cast('' as varchar(512))  as [grant_kb__chart]       \n"; 
 		String col_spills__chart                        = !dummyRstm.hasColumnNoCase("total_spills"                   ) ? "" : "    ,cast('' as varchar(512))  as [spills__chart]         \n"; 
 
-		// Reset "HAVING ..." is SQL if we cant find some columns
-		if (!dummyRstm.hasColumnNoCase("total_spills"))
-			_sqlHaving = "";
-
-		int topRows = getTopRows();
-
-		// Check if table "CmPgStatements_diff" has Dictionary Compressed Columns (any columns ends with "$dcc$")
-		boolean hasDictCompCols = false;
-		try {
-			hasDictCompCols = DictCompression.hasCompressedColumnNames(conn, null, "CmExecQueryStats_diff");
-		} catch (SQLException ex) {
-			_logger.error("Problems checking for Dictionary Compressed Columns in table 'CmExecQueryStats_diff'.", ex);
-		}
-		
-		String col_SqlText = "SqlText";
-		if (hasDictCompCols)
-			col_SqlText = "SqlText$dcc$";
-
-
-//		String sql = getCmDiffColumnsAsSqlComment("CmActiveStatements")
-//			    + "select top " + topRows + " \n"
-//			    + "     [dbname] \n"
-//			    + "    ,[plan_handle] \n"
-//			    + "    ,max([query_plan_hash])                 as [query_plan_hash] \n"
-//			    + "    ,max([query_hash])                      as [query_hash] \n"
-//			    + "    ,count(*)                               as [samples__count] \n"
-//			    + "    ,min([SessionSampleTime])               as [SessionSampleTime__min] \n"
-//			    + "    ,max([SessionSampleTime])               as [SessionSampleTime__max] \n"
-//			    + "    ,cast('' as varchar(30))                as [Duration] \n"
-////			    + "    ,sum([CmSampleMs])                      as [CmSampleMs__sum] \n"
-//			    + "    \n"
-//			    + "    ,cast('' as varchar(512))               as [execution_count__chart] \n"
-//			    + "    ,sum([execution_count])                 as [execution_count__sum] \n"
-//			    + "    ,min([creation_time])                   as [creation_time__min] \n"
-//			    + "    ,max([last_execution_time])             as [last_execution_time__max] \n"
-//			    + "    \n"
-//			    + col_total_worker_time__chart            
-//			    + col_total_worker_time__sum               + col_AvgWorkerTimeUs            
-//			    + col_total_physical_reads__chart
-//			    + col_total_physical_reads__sum            + col_AvgPhysicalReads           
-//			    + col_total_logical_writes__sum            + col_AvgLogicalWrites           
-//			    + col_total_logical_reads__chart
-//			    + col_total_logical_reads__sum             + col_AvgLogicalReads            
-//			    + col_total_clr_time__sum                  + col_AvgClrTimeUs               
-//			    + col_total_elapsed_time__sum              + col_AvgElapsedTimeUs           
-//			    + col_total_rows__sum                      + col_AvgRows                    
-//			    + col_max_dop__chart
-//			    + col_total_dop__sum                       + col_AvgDop                     
-//			    + col_max_grant_kb__chart
-//			    + col_total_grant_kb__sum                  + col_AvgGrantKb                 
-//			    + col_total_used_grant_kb__sum             + col_AvgUsedGrantKb             
-//			    + col_total_ideal_grant_kb__sum            + col_AvgIdealGrantKb            
-//			    + col_total_reserved_threads__sum          + col_AvgReservedThreads         
-//			    + col_total_used_threads__sum              + col_AvgUsedThreads             
-//			    + col_total_columnstore_segment_reads__sum + col_AvgColumnstoreSegmentReads 
-//			    + col_total_columnstore_segment_skips__sum + col_AvgColumnstoreSegmentSkips 
-//			    + col_total_spills__chart
-//			    + col_total_spills__sum                    + col_AvgSpills                  
-//			    + col_total_page_server_reads__sum         + col_AvgPageServerReads         
-//			    + "    \n"
-////			    + "    ,max([SqlText])                         as [SqlText] \n"
-//			    + "    ,max([" + col_SqlText +"])                    as [SqlText] \n"
-//				+ "from [CmExecQueryStats_diff] \n"
-//				+ "where [CmNewDiffRateRow] = 0 -- only records that has been diff calculations (not first time seen, when it swaps in/out due to execution every x minute) \n"
-//				+ "  and [execution_count] > 0 \n"
-////				+ "  and [AvgServ_ms] > " + _aboveServiceTime + " \n"
-////				+ "  and [TotalIOs]   > " + _aboveTotalIos    + " \n"
-//				+ getReportPeriodSqlWhere()
-//				+ "group by [plan_handle] \n"
-//				+ "order by " + orderByCol + " desc \n"
-//			    + "";
-		
-//FIXME; group by 'query_hash' or 'query_plan_hash' ... also check that we pick up the correct PLAN in below table
-//Possibly; add link directly in the table for 'plan_handle' instead of the below table!!!
 
 		String sql = getCmDiffColumnsAsSqlComment("CmActiveStatements")
-			    + "select top " + topRows + " \n"
+			    + "select \n"
 			    + "     [dbname] \n"
-			    + "    ,[query_hash] \n"
-			    + "    ,max([" + col_SqlText +"])              as [SqlText] \n"
-			    + "    ,cast('' as varchar(30))                as [ExecPlan] \n"
+//			    + "    ,[query_hash] \n"
+//			    + "    ,max([" + col_SqlText +"])              as [SqlText] \n"
+//			    + "    ,cast('' as varchar(30))                as [ExecPlan] \n"
 			    + "    \n"
 			    + "    ,cast('' as varchar(512))               as [execution_count__chart] \n"
 			    + "    ,sum([execution_count])                 as [execution_count__sum] \n"
-			    + "    ,min([creation_time])                   as [creation_time__min] \n"
-			    + "    ,max([last_execution_time])             as [last_execution_time__max] \n"
+//			    + "    ,min([creation_time])                   as [creation_time__min] \n"
+//			    + "    ,max([last_execution_time])             as [last_execution_time__max] \n"
 			    + "    \n"
 			    + col_elapsed_time__chart
 			    + col_total_elapsed_time_ms__sum           + col_AvgElapsedTimeMs           
@@ -476,7 +278,7 @@ extends SqlServerAbstract
 
 			    + col_total_page_server_reads__sum         + col_AvgPageServerReads         
 
-			    + "    ,max([plan_handle])                     as [plan_handle] \n"
+//			    + "    ,max([plan_handle])                     as [plan_handle] \n"
 			    + "    ,count(*)                               as [samples__count] \n"
 			    + "    ,min([SessionSampleTime])               as [SessionSampleTime__min] \n"
 			    + "    ,max([SessionSampleTime])               as [SessionSampleTime__max] \n"
@@ -488,22 +290,14 @@ extends SqlServerAbstract
 //				+ "  and [AvgServ_ms] > " + _aboveServiceTime + " \n"
 //				+ "  and [TotalIOs]   > " + _aboveTotalIos    + " \n"
 				+ getReportPeriodSqlWhere()
-				+ "group by [dbname], [query_hash] \n"
+				+ "group by [dbname] \n"
 				+ _sqlHaving
 				+ "order by " + _sqlOrderByCol + " desc \n"
 			    + "";
 
-		// For some REPORT TYPES, we need specififc columns... if not found... simply DO NOT RUN!
-		String noNeedToExecMessage = "";
-		if ( ReportType.TEMPDB_SPILLS.equals(_reportType) && !dummyRstm.hasColumnNoCase("total_spills")   )  noNeedToExecMessage = "Column 'total_spills' was introduced in SQL Server 2016 SP2 and 2017. The sampled data does NOT have this column.";
-		if ( ReportType.MEMORY_GRANTS.equals(_reportType) && !dummyRstm.hasColumnNoCase("total_grant_kb") )  noNeedToExecMessage = "Column 'total_grant_kb' was introduced in SQL Server 2016. The sampled data does NOT have this column.";
+		// Execute
+		_shortRstm = executeQuery(conn, sql, false, "TopCmExecQueryStats");
 
-		// Execute or NOT
-		if (StringUtil.hasValue(noNeedToExecMessage))
-			setProblemMsg(noNeedToExecMessage);
-		else
-			_shortRstm = executeQuery(conn, sql, false, "TopCmExecQueryStats");
-		
 		// FAILURE or OK
 		if (_shortRstm == null)
 		{
@@ -522,45 +316,10 @@ extends SqlServerAbstract
 
 			setDurationColumn(_shortRstm, "SessionSampleTime__min", "SessionSampleTime__max", "Duration");
 
-//			calculateAvg(_shortRstm);
-
-			// get Dictionary Compressed values for column: SqlText
-			if (hasDictCompCols)
-			{
-				updateDictionaryCompressedColumn(_shortRstm, conn, null, "CmExecQueryStats", "SqlText", null);
-			}
-
-			// - Get all "plann_handle" in table '_shortRstm'
-			// - Get the Execution Plan all the "plann_handle"s
-			// - In the table substitute the "plann_handle"s with a link that will display the XML Plan on the HTML Page
-			_planCollection = new ExecutionPlanCollection(this, _shortRstm, this.getClass().getSimpleName() + "_" + _reportType);
-//			_planCollection = new ExecutionPlanCollection(this, _shortRstm, this.getClass().getSimpleName() + "_" + _reportType)
-//			{
-//				@Override
-//				public Object renderCellView(Object val)
-//				{
-////					return "view plan";
-//					return super.renderCellView(val);
-//				}
-//			};
-			// Get the plans
-			_planCollection.getPlans(conn, null, "plan_handle");
-
-			// Fill in a link with 'ExecPlan' to show the plan.
-			// If no plans was found substitute to: '--not-found--'
-//			_planCollection.getPlansAndSubstituteWithLinks(conn, null, "plan_handle", "ExecPlan", "view plan", "--not-found--");
-			_planCollection.substituteWithLinks(null, "plan_handle", "ExecPlan", "view plan", "--not-found--");
-
-			// Fill in a link with 'plan_handle' to show the plan.
-//			_planCollection.getPlansAndSubstituteWithLinks(conn, null, "plan_handle");
-			_planCollection.substituteWithLinks(null, "plan_handle");
-
-
 			//----------------------------------------------------
 			// Mini Chart on "..."
 			//----------------------------------------------------
-//			String whereKeyColumn = "dbname, query_hash"; 
-			String whereKeyColumn = "query_hash, dbname";
+			String whereKeyColumn = "dbname";
 
 //			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
 //					SparkLineParams.create       (DataSource.CounterModel)
@@ -935,21 +694,17 @@ extends SqlServerAbstract
 			
 
 			//----------------------------------------------------
-			// Create a SQL-Details ResultSet based on values in _shortRstm
+			// Create a Sparkline table
 			//----------------------------------------------------
-			if ( ReportType.CPU_TIME.equals(_reportType) )
+			if ( true )
 			{
 				SimpleResultSet srs = new SimpleResultSet();
 
 				srs.addColumn("dbname"     , Types.VARCHAR,       60, 0);
-				srs.addColumn("query_hash" , Types.VARCHAR,       60, 0);
 				srs.addColumn("sparklines" , Types.VARCHAR,      512, 0); 
-				srs.addColumn("query"      , Types.VARCHAR, 1024*128, 0); // this is 'text' in the origin table
 
 				// Position in the "source" _shortRstm table (values we will fetch)
 				int pos_dbname     = _shortRstm.findColumn("dbname");
-				int pos_query_hash = _shortRstm.findColumn("query_hash");
-				int pos_query      = _shortRstm.findColumn("SqlText");
 
 
 				ColumnCopyRender msToHMS    = HtmlTableProducer.MS_TO_HMS;
@@ -972,63 +727,17 @@ extends SqlServerAbstract
 				htp.validate();
 				
 				
-				if (pos_dbname >= 0 && pos_query_hash >= 0 && pos_query >= 0)
+				if (pos_dbname >= 0)
 				{
 					for (int r=0; r<_shortRstm.getRowCount(); r++)
 					{
 						String dbname     = _shortRstm.getValueAsString    (r, pos_dbname);
-						String query_hash = _shortRstm.getValueAsString    (r, pos_query_hash);
-						String sqlText    = _shortRstm.getValueAsString    (r, pos_query);
 						
-						// Parse the 'sqlText' and extract Table Names, then get various table and index information
-						String tableInfo = getDbmsTableInformationFromSqlText(conn, sqlText, DbUtils.DB_PROD_NAME_MSSQL);
-
-//						// Parse the 'sqlText' and extract Table Names..
-//						// - then get table information (like we do in 'AseTopCmObjectActivity')
-//						String tableInfo = "";
-//						boolean parseSqlText = true;
-//						if (parseSqlText)
-//						{
-//							// Parse the SQL Text to get all tables that are used in the Statement
-//							String problemDesc = "";
-//							Set<String> tableList = SqlParserUtils.getTables(sqlText);
-////							List<String> tableList = Collections.emptyList();
-////							try { tableList = SqlParserUtils.getTables(sqlText, true); }
-////							catch (ParseException pex) { problemDesc = pex + ""; }
-//
-//							// Get information about ALL tables in list 'tableList' from the DDL Storage (or other counter collectors)
-//							Set<SqlServerTableInfo> tableInfoSet = getTableInformationFromMonDdlStorage(conn, tableList);
-//							if (tableInfoSet.isEmpty() && StringUtil.isNullOrBlank(problemDesc))
-//								problemDesc = "&emsp; &bull; No tables was found in the DDL Storage for tables: " + listToHtmlCode(tableList);
-//
-//							// And make it into a HTML table with various information about the table and indexes 
-//							tableInfo = problemDesc + getTableInfoAsHtmlTable(tableInfoSet, tableList, true, "dsr-sub-table-tableinfo");
-//
-//							// Finally make up a message that will be appended to the SQL Text
-//							if (StringUtil.hasValue(tableInfo))
-//							{
-//								// Surround with collapse div
-//								tableInfo = ""
-//										//+ "<!--[if !mso]><!--> \n" // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-//
-//										+ "\n<br>\n<br>\n"
-//										+ "<details open> \n"
-//										+ "<summary>Show/Hide Table information for " + tableList.size() + " table(s): " + listToHtmlCode(tableList) + "</summary> \n"
-//										+ tableInfo
-//										+ "</details> \n"
-//
-//										//+ "<!--<![endif]-->    \n" // END: IGNORE THIS SECTION FOR OUTLOOK
-//										+ "";
-//							}
-//						}
-
 						// Grab all SparkLines we defined in 'subTableRowSpec'
 						String sparklines = htp.getHtmlTextForRow(r);
 
-						sqlText = "<xmp>" + sqlText + "</xmp>" + tableInfo;
-						
 						// add record to SimpleResultSet
-						srs.addRow(dbname, query_hash, sparklines, sqlText);
+						srs.addRow(dbname, sparklines);
 					}
 				}
 
@@ -1036,7 +745,7 @@ extends SqlServerAbstract
 				try
 				{
 					// Note the 'srs' is populated when reading above ResultSet from query
-					_sqTextRstm = createResultSetTableModel(srs, "Top SQL TEXT", null, false); // DO NOT TRUNCATE COLUMNS
+					_sparklineRstm = createResultSetTableModel(srs, "DB Activity", null, false); // DO NOT TRUNCATE COLUMNS
 					srs.close();
 
 					// Mini Chart on "total_elapsed_time"
@@ -1047,68 +756,12 @@ extends SqlServerAbstract
 				{
 					setProblemException(ex);
 		
-					_sqTextRstm = ResultSetTableModel.createEmpty("Top SQL TEXT");
-					_logger.warn("Problems getting Top SQL TEXT: " + ex);
+					_sparklineRstm = ResultSetTableModel.createEmpty("DB Activity");
+					_logger.warn("Problems getting DB Activity: " + ex);
 				}
 			}
 		}
 	}
-
-//	private void calculateAvg(ResultSetTableModel rstm)
-//	{
-//		for (int r=0; r<rstm.getRowCount(); r++)
-//		{
-//			calculateAvg(rstm, r, "execution_count__sum", "total_worker_time__sum"              , "AvgWorkerTimeUs");           
-//			calculateAvg(rstm, r, "execution_count__sum", "total_wait_time__sum"                , "AvgWaitTimeUs");           
-//			calculateAvg(rstm, r, "execution_count__sum", "total_physical_reads__sum"           , "AvgPhysicalReads");          
-//			calculateAvg(rstm, r, "execution_count__sum", "total_logical_writes__sum"           , "AvgLogicalWrites");          
-//			calculateAvg(rstm, r, "execution_count__sum", "total_logical_reads__sum"            , "AvgLogicalReads");           
-//			calculateAvg(rstm, r, "execution_count__sum", "total_clr_time__sum"                 , "AvgClrTimeUs");              
-//			calculateAvg(rstm, r, "execution_count__sum", "total_elapsed_time__sum"             , "AvgElapsedTimeUs");          
-//			calculateAvg(rstm, r, "execution_count__sum", "total_rows__sum"                     , "AvgRows");                   
-//			calculateAvg(rstm, r, "execution_count__sum", "total_dop__sum"                      , "AvgDop");                    
-//			calculateAvg(rstm, r, "execution_count__sum", "total_grant_kb__sum"                 , "AvgGrantKb");                
-//			calculateAvg(rstm, r, "execution_count__sum", "total_used_grant_kb__sum"            , "AvgUsedGrantKb");            
-//			calculateAvg(rstm, r, "execution_count__sum", "total_ideal_grant_kb__sum"           , "AvgIdealGrantKb");           
-//			calculateAvg(rstm, r, "execution_count__sum", "total_reserved_threads__sum"         , "AvgReservedThreads");        
-//			calculateAvg(rstm, r, "execution_count__sum", "total_used_threads__sum"             , "AvgUsedThreads");            
-//			calculateAvg(rstm, r, "execution_count__sum", "total_columnstore_segment_reads__sum", "AvgColumnstoreSegmentReads");
-//			calculateAvg(rstm, r, "execution_count__sum", "total_columnstore_segment_skips__sum", "AvgColumnstoreSegmentSkips");
-//			calculateAvg(rstm, r, "execution_count__sum", "total_spills__sum"                   , "AvgSpills");                 
-//			calculateAvg(rstm, r, "execution_count__sum", "total_page_server_reads__sum"        , "AvgPageServerReads");        
-//		}
-//	}
-//
-//	private void calculateAvg(ResultSetTableModel rstm, int r, String cntColName, String srcColName, String destColName)
-//	{
-//		int pos_cnt  = rstm.findColumnNoCase(cntColName);
-//		int pos_src  = rstm.findColumnNoCase(srcColName);
-//		int pos_dest = rstm.findColumnNoCase(destColName);
-//		
-//		// Any of the columns was NOT found
-//		if (pos_cnt == -1 || pos_src == -1 || pos_dest == -1)
-//		{
-//			if (_logger.isDebugEnabled())
-//				_logger.debug("calculateAvg(): Some columns was NOT Found when calculation average value for: row="+r+", cntColName["+cntColName+"]="+pos_cnt+", srcColName["+srcColName+"]="+pos_src+", destColName["+destColName+"]="+pos_dest+"."); 
-//			return;
-//		}
-//
-//		long cnt = rstm.getValueAsLong(r, pos_cnt);
-//		long src = rstm.getValueAsLong(r, pos_src);
-//
-//		BigDecimal calc;
-//		if (cnt > 0)
-//		{
-//			calc = new BigDecimal( (src*1.0) / (cnt*1.0) ).setScale(1, RoundingMode.HALF_EVEN);
-//		}
-//		else
-//		{
-//			calc = new BigDecimal(-1);
-//		}
-//		
-//		rstm.setValueAtWithOverride(calc, r, pos_dest);
-//	}
-	
 
 	/**
 	 * Set descriptions for the table, and the columns
@@ -1120,7 +773,7 @@ extends SqlServerAbstract
 		
 		// Section description
 		rstm.setDescription(
-				"Top SQL Statements (and it's Query Plan)...  (ordered by: " + _sqlOrderByCol + ") <br>" +
+				"Top Database Activity...  (ordered by: " + _sqlOrderByCol + ") <br>" +
 				"<br>" +
 				"SqlServer Source table is 'dm_exec_query_stats'. <br>" +
 				"PCS Source table is 'CmExecQueryStats_diff'. (PCS = Persistent Counter Store) <br>" +

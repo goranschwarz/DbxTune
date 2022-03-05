@@ -27,6 +27,10 @@ import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 
+import com.github.vertical_blank.sqlformatter.SqlFormatter;
+import com.github.vertical_blank.sqlformatter.core.FormatConfig;
+import com.github.vertical_blank.sqlformatter.languages.Dialect;
+
 //import gudusoft.gsqlparser.EDbVendor;
 //import gudusoft.gsqlparser.TGSqlParser;
 //
@@ -117,7 +121,61 @@ public class SqlUtils
 		return _prettyPrintDatabaseProductName;
 	}
 	
+	public enum SqlDialict
+	{
+		StandardSql,
+		DB2, 
+		MariaDB, 
+		MySQL,
+//		CouchbaseN1QL,
+		OraclePlSql,
+		Postgres,
+//		Redshift,
+//		SparkSql,
+		TSql
+	};
+	
 	public static String format(String sql)
+//	throws Exception
+	{
+		return formatPureJava(sql, SqlDialict.StandardSql);
+	}
+
+	public static String format(String sql, SqlDialict sqlDialect)
+//	throws Exception
+	{
+		return formatPureJava(sql, sqlDialect);
+	}
+
+	public static String format(String sql, String jdbcProductName)
+//	throws Exception
+	{
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_DB2_LUW))      return formatPureJava(sql, SqlDialict.DB2);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_DB2_ZOS))      return formatPureJava(sql, SqlDialict.DB2);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_APACHE_HIVE))  return formatPureJava(sql, SqlDialict.StandardSql);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_COCKROACHDB))  return formatPureJava(sql, SqlDialict.StandardSql);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_DERBY))        return formatPureJava(sql, SqlDialict.StandardSql);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_H2))           return formatPureJava(sql, SqlDialict.StandardSql);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_HANA))         return formatPureJava(sql, SqlDialict.StandardSql);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_HSQL))         return formatPureJava(sql, SqlDialict.StandardSql);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_MAXDB))        return formatPureJava(sql, SqlDialict.StandardSql);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_MSSQL))        return formatPureJava(sql, SqlDialict.TSql);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_MYSQL))        return formatPureJava(sql, SqlDialict.MySQL);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_ORACLE))       return formatPureJava(sql, SqlDialict.OraclePlSql);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_POSTGRES))     return formatPureJava(sql, SqlDialict.Postgres);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE))   return formatPureJava(sql, SqlDialict.TSql);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_SYBASE_ASA))   return formatPureJava(sql, SqlDialict.TSql);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_SYBASE_IQ))    return formatPureJava(sql, SqlDialict.TSql);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_SYBASE_RAX))   return formatPureJava(sql, SqlDialict.StandardSql);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_SYBASE_RS))    return formatPureJava(sql, SqlDialict.StandardSql);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_SYBASE_RSDA))  return formatPureJava(sql, SqlDialict.StandardSql);
+		if (DbUtils.isProductName(jdbcProductName, DbUtils.DB_PROD_NAME_SYBASE_RSDRA)) return formatPureJava(sql, SqlDialict.StandardSql);
+
+		// STANDARD
+		return formatPureJava(sql, SqlDialict.StandardSql);
+	}
+
+	private static String formatUsingWindowsBinary(String sql)
 	throws Exception
 	{
 		String dbxTuneHome = System.getenv("DBXTUNE_HOME");
@@ -168,5 +226,27 @@ public class SqlUtils
 			return stdout;
 		else
 			return StringUtil.removeLastNewLine(stdout);
+	}
+
+
+	private static String formatPureJava(String sql, SqlDialict sqlDialect)
+//	throws Exception
+	{
+		FormatConfig format = FormatConfig.builder()
+			.indent("    ")
+			.uppercase(true)
+			.linesBetweenQueries(1)
+			.maxColumnLength(300)
+			.build();
+		
+		Dialect dialect = Dialect.StandardSql;
+		if      (SqlDialict.TSql       .equals(sqlDialect)) dialect = Dialect.TSql;
+		else if (SqlDialict.Postgres   .equals(sqlDialect)) dialect = Dialect.PostgreSql;
+		else if (SqlDialict.MySQL      .equals(sqlDialect)) dialect = Dialect.MySql;
+		else if (SqlDialict.MariaDB    .equals(sqlDialect)) dialect = Dialect.MariaDb;
+		else if (SqlDialict.DB2        .equals(sqlDialect)) dialect = Dialect.Db2;
+		else if (SqlDialict.OraclePlSql.equals(sqlDialect)) dialect = Dialect.PlSql;
+		
+		return SqlFormatter.of(dialect).format(sql, format);
 	}
 }

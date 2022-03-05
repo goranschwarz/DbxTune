@@ -70,7 +70,7 @@ extends ReportChartAbstract
 	
 	public ReportChartTimeSeriesLine(ReportEntryAbstract reportEntry, DbxConnection conn, String cmName, String graphName, int maxValue, String skipNames, String graphTitle)
 	{
-		super(reportEntry, conn, ChartType.LINE, cmName, graphName, graphTitle);
+		super(reportEntry, conn, ChartType.LINE, cmName, graphName, graphTitle, maxValue);
 		
 		_graphName       = graphName;
 		_maxValue        = maxValue;

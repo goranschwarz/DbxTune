@@ -21,6 +21,11 @@
 package com.asetune.cm.ase.gui;
 
 import java.awt.Component;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+import javax.swing.JCheckBox;
+import javax.swing.JPanel;
 
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
@@ -28,13 +33,23 @@ import org.jdesktop.swingx.decorator.IconHighlighter;
 
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.ase.CmCachedProcs;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmCachedProcsPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmCachedProcsPanel.class);
+	private JCheckBox l_sample_statementCacheObjects_chk;
+	private JCheckBox l_sample_dynamicSqlObjects_chk;
+
+	public final static String TOOLTIP_sample_statementCacheObjects = "<html>Normally you will find Statement Cache entries in the StatementCache Details Collector, but you can also enable it here.</html>";
+	public final static String TOOLTIP_sample_dynamicSqlObjects     = "<html>Normally you will find Dynamic SQL Statements entries in the StatementCache Details Collector, but you can also enable it here.</html>";
+
+	//	private static final Logger  _logger	           = Logger.getLogger(CmCachedProcsPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmCachedProcsPanel.CM_NAME;
@@ -146,4 +161,87 @@ extends TabularCntrPanel
 			}
 		}, SwingUtils.readImageIcon(Version.class, "images/highlighter_rule.png")));
 	}
+
+	
+	@Override
+	protected JPanel createLocalOptionsPanel()
+	{
+		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+		l_sample_statementCacheObjects_chk = new JCheckBox("Sample Lightweight Procs for Statement Cache",        conf == null ? CmCachedProcs.DEFAULT_sample_statementCacheObjects : conf.getBooleanProperty(CmCachedProcs.PROPKEY_sample_statementCacheObjects, CmCachedProcs.DEFAULT_sample_statementCacheObjects));
+		l_sample_dynamicSqlObjects_chk     = new JCheckBox("Sample Lightweight Procs for Dynamic SQL Statements", conf == null ? CmCachedProcs.DEFAULT_sample_dynamicSqlObjects     : conf.getBooleanProperty(CmCachedProcs.PROPKEY_sample_dynamicSqlObjects,     CmCachedProcs.DEFAULT_sample_dynamicSqlObjects));
+
+		l_sample_statementCacheObjects_chk.setName(CmCachedProcs.PROPKEY_sample_statementCacheObjects);
+		l_sample_dynamicSqlObjects_chk    .setName(CmCachedProcs.PROPKEY_sample_dynamicSqlObjects);
+
+		l_sample_dynamicSqlObjects_chk    .setToolTipText(TOOLTIP_sample_dynamicSqlObjects);
+		l_sample_statementCacheObjects_chk.setToolTipText(TOOLTIP_sample_statementCacheObjects);
+
+		panel.add(l_sample_statementCacheObjects_chk, "wrap");
+		panel.add(l_sample_dynamicSqlObjects_chk,     "wrap");
+
+		l_sample_statementCacheObjects_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				conf.setProperty(CmCachedProcs.PROPKEY_sample_statementCacheObjects, ((JCheckBox)e.getSource()).isSelected());
+				conf.save();
+				
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+		
+		l_sample_dynamicSqlObjects_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				conf.setProperty(CmCachedProcs.PROPKEY_sample_dynamicSqlObjects, ((JCheckBox)e.getSource()).isSelected());
+				conf.save();
+				
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+		
+		return panel;
+	}
+
+//	@Override
+//	public void checkLocalComponents()
+//	{
+//		CountersModel cm = getCm();
+//		if (cm != null)
+//		{
+//			if (cm.isRuntimeInitialized())
+//			{
+//				// disable CachedPlanInXml is not 16.0
+//				if ( cm.getServerVersion() > Ver.ver(16,0))
+//				{
+//					l_sampleSqlText_chk.setEnabled(true);
+//				}
+//				else
+//				{
+//					l_sampleSqlText_chk.setEnabled(false);
+//
+//					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+//					if (conf != null)
+//					{
+//						conf.setProperty(CmProcessActivity.PROPKEY_sample_sqlText, false);
+//					}
+//				}
+//			} // end isRuntimeInitialized
+//		} // end (cm != null)
+//	}
 }

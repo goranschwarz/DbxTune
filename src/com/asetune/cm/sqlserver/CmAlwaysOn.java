@@ -46,6 +46,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.Version;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.sqlserver.AlarmEventAgLogSendQueueSize;
@@ -962,7 +963,7 @@ extends CountersModel
 			
 			// Get a list of databases
 			String sql = ""
-				    + "select d.name \n"
+				    + "select d.name   /* " + Version.getAppName() + ":" + getName() + ":updatePrimaryDatabases */ \n"
 				    + "from sys.databases d \n"
 				    + "join sys.dm_hadr_availability_replica_states ars on d.replica_id = ars.replica_id \n"
 				    + "where d.replica_id is not null \n"

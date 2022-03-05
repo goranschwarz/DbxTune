@@ -320,6 +320,18 @@ public abstract class PersistWriterBase
 	{
 	}
 
+	@Override
+	public boolean isDdlDetailsDiscarded(String dbname, String objectName)
+	{
+		return false;
+	}
+
+	/** Empty implementation */
+	@Override
+	public void markDdlDetailsAsDiscarded(String dbname, String objectName)
+	{
+	}
+
 	/** Empty implementation */
 	@Override
 	public void clearDdlDetailesCache()
@@ -945,7 +957,7 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(lq+"owner"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   30),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"objectName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  255),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"type"             +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   20),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"crdate"           +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"crdate"           +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"sampleTime"       +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"source"           +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  255),20)+" "+getNullable(true) +"\n");
 				sbSql.append("   ,"+fill(lq+"dependParent"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  255),20)+" "+getNullable(true) +"\n");
@@ -969,7 +981,7 @@ public abstract class PersistWriterBase
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"alarmClass"                 +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"serviceType"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"serviceName"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   30),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"serviceName"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"serviceInfo"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"extraInfo"                  +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"category"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   20),20)+" "+getNullable(false)+"\n");
@@ -1005,7 +1017,7 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(lq+"action"                     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   15),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"alarmClass"                 +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"serviceType"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"serviceName"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   30),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"serviceName"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"serviceInfo"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"extraInfo"                  +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"category"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   20),20)+" "+getNullable(false)+"\n");

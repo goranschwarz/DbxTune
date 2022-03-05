@@ -72,6 +72,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Injected comments about the origin of the Statement (se we can se that a stataement originates from DbxTune)</LI>
 		<LI>AlarmWriterToMail: removed 'cc' property</LI>
 		<LI>ReportSenderToMail: removed 'cc' and also added functionality to send mail based on to and server name (same config as for: AlarmWriterToMail)</LI>
+		<LI>osLoadAverage Alarms is disabled between 00:00 and 02:00, when the Daily Summary Reports is created</LI>
+		<LI>PCS: do not call "sp_depends" on objects during DDL Lookup </LI>
+		<LI>SQL Inspector, if it sees a view, it tries to parse the view, and sent the referenced tables into the DDL Storage</LI>
 
 		<LI>OS Monitoring now also handles Windows, via a SHH Connection executing typeperf (not a OpenSSH Server needs to be installed on the Windows Server, supported modules
 			<UL>
@@ -111,8 +114,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>Charts (for HTML Page is now using, ChartJS, which means we can hide some labels, get tool tip etc), The images are still keps as a fallback for mail content or other readers that do not have JavaScript access.</LI>
 				<LI>New section at the end: Tracing how long the various sections took to produce. (more or less debugging)</LI>
 				<LI>Highligtning (in bold) what culumns we are sorting on (when the report was created)</LI>
-				<LI></LI>
-				<LI></LI>
+				<LI>new section to track how long time each Report Section takes</LI>
 			</UL>
 		</LI>
 
@@ -180,6 +182,26 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>changed default for CmSqlStatement.alarm.system.if.errorCount.gt from 10 to 20</li>
 			<li>Bugfix - fixed null pointer exception in error number mapping count</li>
 			
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmCachedProcs - tab: Cached Procedures</b><br>
+		<ul>
+			<li>Turned off sampling of StatementCache and DynamicSql object (this can be enabled again with: <code>CmCachedProcs.sample.statementCacheObjects=true</code> and <code>CmCachedProcs.sample.dynamicSqlObjects=true</code><br>
+			    So by default only "procedures" are visible here. This was made due to "amount of data" and that Daily Summary Report will only show Procedures. <br>
+			    Dynamic SQL and Statement Cache can be view in the Statement Cache Collector (with much more details)</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmCachedProcsSum - tab: Cached Procedures Sum</b><br>
+		<ul>
+			<li>Turned off sampling of StatementCache and DynamicSql object (this can be enabled again with: <code>CmCachedProcsSum.sample.statementCacheObjects=true</code> and <code>CmCachedProcsSum.sample.dynamicSqlObjects=true</code><br>
+			    So by default only "procedures" are visible here. This was made due to "amount of data" and that Daily Summary Report will only show Procedures. <br>
+			    Dynamic SQL and Statement Cache can be view in the Statement Cache Collector (with much more details)</li>
 		</ul>
 		</LI>
 
@@ -265,6 +287,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>XmlPlanCache -- lowOnMemoryHandler(): removes entries that hasn't been accessed for 1 hour (config: <code>XmlPlanCache.lowOnMememory.removeAgeInMinutes=60</code>)</li>
 			<li>DDL Storage, new option if you want to do 'sp_depends' at all. 'PersistentCounterHandler.ddl.doSpDepends=true'</li>
 			<li>When parsing/normalizing the SQL text, also extract Table names, and send them of to DDL Storage</li>
+			<li>DDL Lookup: extract SQL Text from XML Plan, extract table names and send those to DDL Storage</li>
+			<li>DDL Lookup: If DDL Stored object are views... extract table names and send those to DDL Storage</li>
 		</ul>
 		</LI>
 
@@ -287,6 +311,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>Statement Cache -- More miniCharts/Sparklines also a "summary" section for every table, where important info is placed</li>
 			<li>Object Activity -- More miniCharts/Sparklines also a "summary" section for every table, where important info is placed</li>
 			<li>Recording Information -- Now also contains ASE: PageSize, SortOrder, Charset, LicenseInfo</li>
+			<li>Added a "summary" table for most active SQL Statements: with sparklines, SQL Text and Table information (Table and Index Sizes etc)</li>
 		</ul>
 		</LI>
 
@@ -524,6 +549,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Tooltip and Alarm with ShowPlanXML content... show a simplified plan with a Unordered List (that is indented to show children)</LI>
 		<LI>DBMS Config: added capture for Resource Governor</LI>
 		<LI>all collectors had a SQL change. the Collector name is injected *after* the select statement (for easier identification when monitoring)</LI>
+		<LI>DDL Lookup: extract SQL Text from XML Plan, extract table names and send those to DDL Storage</LI>
+		<LI>DDL Lookup: If DDL Stored object are views... extract table names and send those to DDL Storage</LI>
 		
 		<!-- ~~~~~ Daily Report ~~~~~ -->
 		<LI>
@@ -549,6 +576,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>new section: TopCmExecQueryStats sorted by: MEMORY_GRANTS  </li>
 			<li>new section: Plan Cache History                            </li>
 			<li>new section in Query Store: A Summary of ALL databases sorted by CPU also a section for every SQL, where important info/Sparklines is placed</li>
+			<li>Added a "summary" table for most active SQL Statements: with sparklines, SQL Text and Table information (Table and Index Sizes etc)</li>
+			<li>Wait Statistics: Added LCK_M_U, LCK_M_IX, PAGELATCH_SH, PAGELATCH_EX, RESOURCE_SEMAPHORE to the most common wait types</li>
 		</ul>                                                              
 		</LI>
 	</UL>
@@ -559,11 +588,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>PostgresTune - PostgreSQL</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
+		<LI>Implemented DDL Store... Or capture various information about tables etc, that later can be checked up (for example by the Daily Summary Report)</LI>
 		<LI>onConnect, execute: set session work_mem = '128MB'       Can be changed by config: PostgresTune.onMonConnect.set.dbms.option.work_mem=SOME_VALUE|DEFAULT</LI>
 		<LI>onConnect, execute: set session temp_buffers = '128MB'   Can be changed by config: PostgresTune.onMonConnect.set.dbms.option.temp_buffers=SOME_VALUE|DEFAULT</LI>
 		<LI>Change how we collect current time from: CURRENT_TIMESTAMP to CLOCK_TIMESTAMP()</LI>
 		<LI><b>CmPgStatements       </b> - Now works with Postgres 9.3 (and possibly versions below that), where I "fake" the 'queryid' by taking a md5 checksum (first 16 chars) and converting that to an bigint</LI>
 		<LI><b>CmPgStatements       </b> - new columns for later versions (up to version 14)</LI>
+		<LI><b>CmPgStatements       </b> - Parse SQL Text and send of tables for top ## statements to DDL Store</LI>
 		<LI><b>CmPgActivity         </b> - added column 'StatementExecInSec', and raise AlarmEventLongRunningStatement when a statement has been executed for more than 3 hours (by defualt), 'skip' can be done on: dbname, login, cmd and tranName</LI>
 		<LI><b>CmSummary            </b> - added column 'in_recovery' to check if we connected to the ACTIVE or the STANDBY instance.</LI>
 		<LI><b>CmSummary            </b> - added columns 'oldest_running_xact_age', 'oldest_prepared_xact_age', 'oldest_replication_slot_age', 'oldest_replica_xact_age' to check if we will exceed the MAX Transaction ID in some "near" future!</LI>
@@ -573,6 +604,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>Daily Summary Report </b> - Statements - tooltip and popup with the SQL Text</LI>
 		<LI><b>Daily Summary Report </b> - New section for 'DeadRows', also printing configuration that has to do with Autovacuum.</LI>
 		<LI><b>Daily Summary Report </b> - Top SQL -- More miniCharts/Sparklines also a "summary" section for every table, where important info is placed.</LI>
+		<LI><b>Daily Summary Report </b> - Added a "summary" table for most active SQL Statements: with sparklines, SQL Text and Table information (Table and Index Sizes etc)</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -611,6 +643,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Refresh Code Completion: Ctrl + Shift + R</LI>
 		<LI>Filter field can now be enabled or disabled with a checkbox</LI>
 		<LI>for SQL-Server, the @@trancount warning was missing</LI>
+		<LI>Connection dialog; option for 'Show Root Handlers', the + sign in the tree view</LI>
 		<LI>new 'go foreachdb' to execute the command in every database (variable ${dbname} will be set, and can be used in the SQL Text)</LI>
 		<LI>new 'go filter xxx' to fill in the "filter" text </LI>
 		<LI>new 'go mrs' -- Merge ResultSets. Like a union, when you can't do union in SQL</LI>

@@ -186,4 +186,7 @@ extends AutoCloseable
 	@Override
 	void close();
 
+	/** What time did we initialize the Report */
+	long getInitTime();
+
 }

@@ -28,12 +28,12 @@ import java.util.LinkedHashMap;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.IReportChart;
-import com.asetune.pcs.report.content.ase.AseAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
-public class PostgresDbSize extends AseAbstract
+public class PostgresDbSize
+extends PostgresAbstract
 {
 //	private static Logger _logger = Logger.getLogger(PostgresDbSize.class);
 

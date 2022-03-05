@@ -26,7 +26,7 @@ import java.io.Writer;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.List;
+import java.util.Set;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
@@ -161,15 +161,15 @@ extends AseAbstract
 				String IndexName  = _shortRstm.getValueAsString(r, "IndexName");
 
 				String problem = "";
-				List<AseTableInfo> aseTableInfoList = null;
-				try	{ aseTableInfoList = getTableInformationFromMonDdlStorage(conn, DBName, null, ObjectName); }
+				Set<AseTableInfo> aseTableInfoSet = null;
+				try	{ aseTableInfoSet = getTableInformationFromMonDdlStorage(conn, DBName, null, ObjectName); }
 				catch (SQLException ex) { problem = "ERROR: Mon DDL Storage lookup, Msg: " + ex.getMessage(); }
 
-				if (aseTableInfoList != null && !aseTableInfoList.isEmpty())
+				if (aseTableInfoSet != null && !aseTableInfoSet.isEmpty())
 				{
-					AseTableInfo aseTableInfo = aseTableInfoList.get(0);
+					AseTableInfo aseTableInfo = aseTableInfoSet.iterator().next(); // Get first entry from iterator (simulating: list.get(0))
 
-					String dropStmnt = "DROP INDEX [" + ObjectName + "].['" + IndexName + "']'";
+					String dropStmnt = "DROP INDEX [" + ObjectName + "].[" + IndexName + "]";
 					
 					// Set: CreateDate, SchemaName, TabRowCount, TableSizeMB
 					_shortRstm.setValueAtWithOverride(aseTableInfo.getSchemaName(), r, pos_SchemaName);

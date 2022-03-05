@@ -30,7 +30,9 @@ import java.nio.file.Files;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
@@ -98,7 +100,8 @@ extends DailySummaryReportAbstract
 			{
 				if (entry.isEnabled())
 				{
-					long entryStartTime = System.currentTimeMillis();
+					entry.setExecStartTime();
+//					long entryStartTime = System.currentTimeMillis();
 
 					// Report Progress 
 					if (progressReporter != null)
@@ -131,7 +134,8 @@ extends DailySummaryReportAbstract
 					}
 
 					// Set how long it took
-					entry.setExecTime(TimeUtils.msDiffNow(entryStartTime));
+					entry.setExecEndTime();
+//					entry.setExecTime(TimeUtils.msDiffNow(entryStartTime));
 				}
 			} 
 			catch (RuntimeException rte) 
@@ -387,14 +391,46 @@ extends DailySummaryReportAbstract
 		w.append("            background-color: #f2f2f2; \n");
 		w.append("        } \n");
 		w.append("\n");
-//		w.append("<!--[if mso]> \n");
-//		w.append("        sparkline-td { \n");
-////		w.append("            mso-width-alt: 1100; \n");
-//		w.append("            width: 1100; \n");
+		w.append("<!--[if mso]> \n");
+		w.append("        sparkline-td { \n");
+//		w.append("            mso-width-alt: 1100; \n");
+		w.append("            width: 1100!important; \n");
 //		w.append("            white-space: nowrap; \n");
-//		w.append("        } \n");
+		w.append("        } \n");
+		w.append("<![endif]--> \n");
+
+//		// SQL Text -- for ALL Other
+//		w.append("        .sqltext {                                \n");
+//		w.append("        }                                         \n");
+//
+//		// SQL Text -- for Microsoft Outlook
+//		w.append("<!--[if mso]> \n");
+//		w.append("        .sqltext {                                \n");
+//		w.append("            max-width: 500px;                     \n");
+//		w.append("            margin: auto;                         \n");
+//		w.append("            border: 3px solid #73AD21;            \n");
+//		
+//		w.append("            font-family: monospace;               \n");
+//		w.append("            white-space: pre-wrap;                \n");
+////		w.append("            display: block;                       \n");
+////		w.append("            margin: 1em 0;                        \n");
+//		w.append("        }                                         \n");
 //		w.append("<![endif]--> \n");
-//		w.append("\n");
+//
+//		w.append("        .sparklines-table th {                 \n");
+////		w.append("            border: none;                         \n");
+////		w.append("            font-size: 12px;                      \n");
+////		w.append("            color: black;                         \n");
+////		w.append("            background-color: transparent;        \n");
+////		w.append("            border-bottom: 1px solid black;       \n");
+////		w.append("            border-bottom: 1px dotted black;       \n");
+//		w.append("        }                                         \n");
+//		w.append("        .sparklines-table td {                 \n");
+////		w.append("            border: none;                         \n");
+//		w.append("        }                                         \n");
+		
+		
+		w.append("\n");
 		w.append("        .dsr-sub-table-chart {                    \n");
 		w.append("            border: none;                         \n");
 		w.append("        }                                         \n");
@@ -893,64 +929,7 @@ extends DailySummaryReportAbstract
 
 		//--------------------------------------------------
 		// DEBUG - Write time it too to create each report entry
-		String PROPKEY_printExecTime = "DailySummaryReport.report.entry.enabled.printExecTime";
-		boolean printExecTime = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_printExecTime, true);
-		if (printExecTime)
-		{
-			String tocDiv = "sectionTime";
-			String headingName = "Exec/Creation time for each Report Section";
-
-			// Section HEADER
-			if (useBootstrap())
-			{
-				// Bootstrap "card" - BEGIN
-				sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-				sb.append("<div id='").append(tocDiv).append("' class='card border-dark mb-3'>");
-				sb.append("<h5 class='card-header'><b>").append(headingName).append("</b></h5>");
-				sb.append("<div class='card-body'>");
-				sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
-				
-				sb.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
-				sb.append("<h2 id='").append(tocDiv).append("'>").append(headingName).append("</h2> \n");
-				sb.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
-			}
-			else
-			{
-				// Normal HTML - H2 heading
-				sb.append("<h2 id='").append(tocDiv).append("'>").append(headingName).append("</h2> \n");
-			}
-			
-			sb.append("This is a DEBUG Section, just to see how long each Report Section takes. \n");
-			sb.append("<br> \n");
-			sb.append("<table class='sortable'> \n");
-			sb.append("<tr><th>Section Name</th><th>Time HH:MM:SS</th></tr> \n");
-			for (IReportEntry entry : _reportEntries)
-			{
-				String tocSubject = entry.getSubject();
-				String timeStr    = TimeUtils.msToTimeStrDHMS( entry.getExecTime() );
-
-				// Strip off parts that may be details
-				int firstLeftParentheses = tocSubject.indexOf("(");
-				if (firstLeftParentheses != -1)
-					tocSubject = tocSubject.substring(0, firstLeftParentheses - 1).trim();
-
-				// Add the row
-				sb.append("<tr><td>" + tocSubject + "</td><td>" + timeStr + "</td></tr> \n");
-			}
-			sb.append("</table> \n");
-			sb.append("\n<br>");
-			sb.append("<i>To disable this report entry, put the following in the configuration file. <code>" + PROPKEY_printExecTime + " = false</code></i>");
-
-			// Section FOOTER
-			if (useBootstrap())
-			{
-				// Bootstrap "card" - END
-				sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-				sb.append("</div>"); // end: card-body
-				sb.append("</div>"); // end: card
-				sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
-			}
-		}
+		printExecTimeReport(sb, MessageType.FULL_MESSAGE);
 
 		//--------------------------------------------------
 		// END
@@ -1149,6 +1128,10 @@ extends DailySummaryReportAbstract
 		w.append("\n<br>");
 
 		//--------------------------------------------------
+		// DEBUG - Write time it too to create each report entry
+		printExecTimeReport(w, MessageType.SHORT_MESSAGE);
+
+		//--------------------------------------------------
 		// END
 		w.append("\n<br>");
 		w.append("\n<br>");
@@ -1192,4 +1175,93 @@ extends DailySummaryReportAbstract
 	//-------------------------------------------------------------------------------------------
 	// END: Short Message 
 	//-------------------------------------------------------------------------------------------
+	
+	
+	private void printExecTimeReport(Writer w, MessageType messageType) 
+	throws IOException
+	{
+		String PROPKEY_printExecTime_fullMsg  = "DailySummaryReport.report.entry.enabled.printExecTime.fullMessage";
+		String PROPKEY_printExecTime_shortMsg = "DailySummaryReport.report.entry.enabled.printExecTime.shortMessage";
+
+		boolean printExecTime = false;
+
+		String propName = "";
+		if (MessageType.FULL_MESSAGE.equals(messageType))
+		{
+			printExecTime = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_printExecTime_fullMsg, true);
+		}
+		else if (MessageType.SHORT_MESSAGE.equals(messageType))
+		{
+			printExecTime = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_printExecTime_shortMsg, true);
+		}
+
+		if (printExecTime)
+		{
+			long totalExecTime = 0;
+
+			String tocDiv = "sectionTime";
+			String headingName = "Exec/Creation time for each Report Section";
+
+			// Section HEADER
+			if (useBootstrap())
+			{
+				// Bootstrap "card" - BEGIN
+				w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+				w.append("<div id='").append(tocDiv).append("' class='card border-dark mb-3'>");
+				w.append("<h5 class='card-header'><b>").append(headingName).append("</b></h5>");
+				w.append("<div class='card-body'>");
+				w.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+				
+				w.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
+				w.append("<h2 id='").append(tocDiv).append("'>").append(headingName).append("</h2> \n");
+				w.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
+			}
+			else
+			{
+				// Normal HTML - H2 heading
+				w.append("<h2 id='").append(tocDiv).append("'>").append(headingName).append("</h2> \n");
+			}
+
+			SimpleDateFormat sdf_HMS = new SimpleDateFormat("HH:mm:ss");
+
+			w.append("This is a DEBUG Section, just to see how long each Report Section takes. \n");
+			w.append("<br> \n");
+			w.append("<table class='sortable'> \n");
+			w.append("<tr> <th>Section Name</th> <th>Start Time HH:MM:SS</th> <th>Exec Time HH:MM:SS</th> </tr> \n");
+			for (IReportEntry entry : _reportEntries)
+			{
+				totalExecTime += entry.getExecTime();
+
+				String tocSubject   = entry.getSubject();
+				String execTimeStr  = TimeUtils.msToTimeStrDHMS( entry.getExecTime() );
+				String startTimeStr = sdf_HMS.format( new Date(entry.getExecStartTime()) );
+
+				// Strip off parts that may be details
+				int firstLeftParentheses = tocSubject.indexOf("(");
+				if (firstLeftParentheses != -1)
+					tocSubject = tocSubject.substring(0, firstLeftParentheses - 1).trim();
+
+				// Add the row
+				w.append("<tr> <td>" + tocSubject + "</td> <td>" + startTimeStr + "</td> <td>" + execTimeStr + "</td> </tr> \n");
+			}
+
+			// SUMMARY Time
+			w.append("<tr> <td><b>Summary: Create Time</b></td> <td></td> <td><b>" + TimeUtils.msToTimeStrDHMS( totalExecTime ) + "</b></td> </tr> \n");
+//			w.append("<tr> <td><b>Summary: Total Time </b></td> <td><b>" + TimeUtils.msToTimeStrDHMS( TimeUtils.msDiffNow(getInitTime())) + "</b></td> </tr> \n");
+
+			w.append("</table> \n");
+			w.append("\n<br>");
+			w.append("<i>To disable this report entry, put the following in the configuration file. <code>" + propName + " = false</code></i>");
+
+			// Section FOOTER
+			if (useBootstrap())
+			{
+				// Bootstrap "card" - END
+				w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+				w.append("</div>"); // end: card-body
+				w.append("</div>"); // end: card
+				w.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+			}
+		}
+	}
 }

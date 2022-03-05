@@ -24,9 +24,15 @@ package com.asetune.pcs.report.content.sqlserver;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
+import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -35,8 +41,12 @@ import com.asetune.gui.ModelMissmatchException;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.ReportEntryAbstract;
+import com.asetune.sql.SqlObjectName;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.DbUtils;
+import com.asetune.utils.HtmlTableProducer;
+import com.asetune.utils.MathUtils;
+import com.asetune.utils.StringUtil;
 
 public abstract class SqlServerAbstract
 extends ReportEntryAbstract
@@ -201,5 +211,1643 @@ extends ReportEntryAbstract
 		}
 		
 		return planMap;
+	}
+
+
+
+
+
+
+//	/**
+//	 * Parse the passed SQL Text and extract table names<br>
+//	 * Those table names we then get various information about like
+//	 * <ul>
+//	 *    <li>Table estimated RowCount, Size in various formats, Index Size, etc</li>
+//	 *    <li>Each index will have a separate entry, also showing 'index_names', 'keys', sizes etc...</li>
+//	 *    <li>Formatted SQL Text in a separate <i>hover-able</i> tool-tip or dialog pop-up</li>
+//	 * </ul>
+//	 * 
+//	 * @param conn             Connection to the PCS -- Persistent Counter Storage
+//	 * @param sqlText          The SQL Text we will parse for table names (which table names to lookup)
+//	 * @param dbmsVendor       The DBMS Vendor the above SQL Text was executed in (SQL Dialect). If null or "" (a <i>standard</i> SQL type will be used)
+//	 * @return                 HTML Text (table) with detailed information about the Table and Indexes used by the SQL Text
+//	 */
+//	public String getTableInformationFromSqlText(DbxConnection conn, String sqlText, String dbmsVendor)
+//	{
+//		// Possibly get from configuration
+//		boolean parseSqlText = true;
+//		if ( ! parseSqlText )
+//			return "";
+//		
+//		String tableInfo = "";
+//
+//		// Parse the SQL Text to get all tables that are used in the Statement
+//		String problemDesc = "";
+//		Set<String> tableList = SqlParserUtils.getTables(sqlText);
+////		List<String> tableList = Collections.emptyList();
+////		try { tableList = SqlParserUtils.getTables(sqlText, true); }
+////		catch (ParseException pex) { problemDesc = pex + ""; }
+//
+//		// Get information about ALL tables in list 'tableList' from the DDL Storage
+//		Set<SqlServerTableInfo> tableInfoSet = getTableInformationFromMonDdlStorage(conn, tableList);
+//		if (tableInfoSet.isEmpty() && StringUtil.isNullOrBlank(problemDesc))
+//			problemDesc = "&emsp; &bull; No tables was found in the DDL Storage for tables: " + listToHtmlCode(tableList);
+//
+//		// And make it into a HTML table with various information about the table and indexes 
+//		tableInfo = problemDesc + getTableInfoAsHtmlTable(tableInfoSet, tableList, true, "dsr-sub-table-tableinfo");
+//
+//		// Finally make up a message that will be appended to the SQL Text
+//		if (StringUtil.hasValue(tableInfo))
+//		{
+//			// Surround with collapse div
+//			tableInfo = ""
+//					//+ "<!--[if !mso]><!--> \n" // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+//
+//					+ "\n<br>\n"
+//					+ getFormattedSqlAsTooltipDiv(sqlText, dbmsVendor) + "\n"
+////					+ "<br>\n"
+//					+ "<details open> \n"
+//					+ "<summary>Show/Hide Table information for " + tableList.size() + " table(s): " + listToHtmlCode(tableList) + "</summary> \n"
+//					+ tableInfo
+//					+ "</details> \n"
+//
+//					//+ "<!--<![endif]-->    \n" // END: IGNORE THIS SECTION FOR OUTLOOK
+//					+ "";
+//		}
+//		
+//		return tableInfo;
+//	}
+
+	/**
+	 * Get various information from DDL Storage about table and it's indexes
+	 * 
+	 * @param conn
+	 * @param tableList
+	 * @param includeIndexInfo
+	 * @param classname
+	 * @return
+	 */
+	@Override
+	public String getDbmsTableInfoAsHtmlTable(DbxConnection conn, Set<String> tableList, boolean includeIndexInfo, String classname)
+	{
+		// Get tables/indexes
+		Set<SqlServerTableInfo> tableInfoSet = getTableInformationFromMonDdlStorage(conn, tableList);
+		if (tableInfoSet.isEmpty())
+			return "";
+
+		// And make it into a HTML table with various information about the table and indexes 
+		return getTableInfoAsHtmlTable(tableInfoSet, tableList, includeIndexInfo, classname);
+	}
+
+	/**
+	 * 
+	 * @param tableInfoList
+	 * @param tableList
+	 * @param includeIndexInfo
+	 * @param classname
+	 * @return
+	 */
+	public String getTableInfoAsHtmlTable(Set<SqlServerTableInfo> tableInfoSet, Set<String> tableList, boolean includeIndexInfo, String classname)
+	{
+		// Exit early: if no data
+		if (tableInfoSet == null)   return "";
+		if (tableInfoSet.isEmpty()) return "";
+		
+		StringBuilder sb = new StringBuilder();
+
+		// Figure out if we are missing any rows in 'tableInfoList' that existed in 'tableList'
+		if (tableList != null && tableList.size() > tableInfoSet.size())
+		{
+			for(String tabName : tableList)
+			{
+				// Remove any "schema" names from the tableName
+//				SqlObjectName sqlObj = new SqlObjectName(tabName, DbUtils.DB_PROD_NAME_SYBASE_ASE, "\"", false, true);
+//				tabName = sqlObj.getObjectNameOrigin();
+
+				boolean exists = false;
+				for(SqlServerTableInfo ti : tableInfoSet)
+				{
+					if (tabName.equalsIgnoreCase(ti.getTableName()))
+					{
+						exists = true;
+						break;
+					}
+				}
+				if ( ! exists )
+				{
+					sb.append("&emsp; &bull; Table <code>").append(tabName).append("</code> was NOT found in the DDL Storage.<br>\n");
+				}
+			}
+		}
+		
+		String className = "";
+		if (StringUtil.hasValue(classname))
+			className = " class='" + classname + "'";
+		
+		sb.append("<table" + className + "> \n");
+
+		//--------------------------------------------------------------------------
+		// Table Header
+		sb.append("<thead> \n");
+		sb.append("<tr> \n");
+
+		sb.append("  <th>Table Info</th> \n");
+		if (includeIndexInfo)
+			sb.append("  <th>Index Info</th> \n");
+		
+		sb.append("</tr> \n");
+		sb.append("</thead> \n");
+
+		NumberFormat nf = NumberFormat.getInstance();
+
+		//--------------------------------------------------------------------------
+		// Table BODY
+		sb.append("<tbody> \n");
+		for (SqlServerTableInfo entry : tableInfoSet)
+		{
+			LinkedHashMap<String, String> tableInfoMap = new LinkedHashMap<>();
+
+			if (entry.isView())
+			{
+				tableInfoMap.put("Type"       ,            "<b>VIEW</b>"              );
+				tableInfoMap.put("DBName"     ,            entry.getDbName()          );
+				tableInfoMap.put("Schema"     ,            entry.getSchemaName()      );
+				tableInfoMap.put("View"       ,            entry.getTableName()       );
+				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
+//				tableInfoMap.put("References" ,            entry.getViewReferences()+""); // instead show this in the: Index Info section
+			}
+			else // Any table
+			{
+				tableInfoMap.put("DBName"     ,            entry.getDbName()          );
+				tableInfoMap.put("Schema"     ,            entry.getSchemaName()      );
+				tableInfoMap.put("Table"      ,            entry.getTableName()       );
+				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
+				tableInfoMap.put("Rowcount"   , nf.format( entry.getRowTotal()       ));
+				tableInfoMap.put("Partitions" , nf.format( entry.getPartitionCount() ));
+				tableInfoMap.put("Total MB"   , nf.format( entry.getTotalMb()        ));
+				tableInfoMap.put("InRow MB"   , nf.format( entry.getInRowMb()        ));
+				tableInfoMap.put("Lob MB"     , nf.format( entry.getLobMb()          ));
+				tableInfoMap.put("Overflow MB", nf.format( entry.getRowOverflowMb()  ));
+				tableInfoMap.put("Index MB"   , nf.format( entry.getIndexMb()        ));
+				tableInfoMap.put("Index Count", entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>") );
+			}
+
+			String tableInfo = HtmlTableProducer.createHtmlTable(tableInfoMap, "dsr-sub-table-other-info", true);
+			String indexInfo = "";
+
+			if (entry.isView()) 
+			{
+				// Build a bullet list of view references
+				indexInfo = "";
+				if (entry.getViewReferences() != null)
+				{
+					indexInfo += "<ul>";
+					for (String viewRef : entry.getViewReferences())
+					{
+						indexInfo += "<li>" + viewRef + "</li>";
+					}
+					indexInfo += "</ul>";
+				}
+			}
+			else
+			{
+				// Get index information in a separate table
+				indexInfo = getIndexInfoAsHtmlTable(entry, classname);
+			}
+			
+			
+			sb.append("<tr> \n");
+			sb.append("  <td>").append( tableInfo ).append("</td> \n");
+
+			if (includeIndexInfo)
+				sb.append("  <td>").append( indexInfo ).append("</td> \n");
+
+			sb.append("</tr> \n");
+		}
+		sb.append("</tbody> \n");
+		
+		//--------------------------------------------------------------------------
+		// Table Footer
+//		sb.append("<tfoot> \n");
+//		sb.append("<tr> \n");
+//
+//		sb.append("  <td></td> \n"); // first column is empty, which is the "row name"
+//
+//		sb.append("</tr> \n");
+//		sb.append("</tfoot> \n");
+
+		sb.append("</table> \n");
+		
+		return sb.toString();
+	}
+
+//	public String getIndexInfoAsHtmlTable(SqlServerTableInfo tableEntry, String classname)
+//	{
+//		// Exit early: if no data
+//		if (tableEntry == null)   return "";
+//
+//		// Get the index list
+//		List<SqlServerIndexInfo> indexInfoList = tableEntry.getIndexList();
+//
+//		// Exit early: if no data
+//		if (indexInfoList == null)   return "";
+//		if (indexInfoList.isEmpty()) return "";
+//		
+//		StringBuilder sb = new StringBuilder();
+//
+//		String className = "";
+//		if (StringUtil.hasValue(classname))
+//			className = " class='" + classname + "'";
+//		
+//		sb.append("<table" + className + "> \n");
+//
+//		//--------------------------------------------------------------------------
+//		// Table Header
+//		sb.append("<thead> \n");
+//		sb.append("<tr> \n");
+//
+//		sb.append("  <th>Index Name</th> \n");
+//		sb.append("  <th>IndexID</th> \n");
+//		sb.append("  <th>Keys</th> \n");
+//		sb.append("  <th>Desciption</th> \n");
+//		sb.append("  <th>Size MB</th> \n");
+//		sb.append("  <th>Pages</th> \n");
+//		sb.append("  <th title='Calculated Average Rows per Page \nCalculted by: pages/rowcount'>Avg RowsPerPage</th> \n");
+//		sb.append("  <th>Last Update Stats</th> \n");
+////		sb.append("  <th title='Average Bytes used per Row\nCalculted by: SizeBytes/TableRowcount'>Avg RowSize</th> \n");
+////		sb.append("  <th>Reserved MB</th> \n");
+////		sb.append("  <th>Unused MB</th> \n");
+////		sb.append("  <th>DDL</th> \n");
+//
+//
+////		String tt1 = "\nTime span: During the report period.";
+////		sb.append("  <th title='Number of Insert, Update and Deletes that has been done." + tt1                      + "'>RowsInsUpdDel</th> \n");
+////		sb.append("  <th title='Number of times the optimizer selected this index to be used in a query plan." + tt1 + "'>OptSelectCount</th> \n");
+////		sb.append("  <th title='Number of times the object was used in a plan during execution." + tt1               + "'>UsedCount</th> \n");
+////		sb.append("  <th title='Number of times the object was accessed." + tt1                                      + "'>Operations</th> \n");
+//
+////		sb.append("  <th title='Indicates the date and time when the index structure was added to the ASE cache."    + "'>CacheDate</th> \n");
+////		sb.append("  <th title='When was the index created."                                                         + "'>CrDate</th> \n");
+//
+////		String tt2 = "\nTime span: Since object was cached (see CacheDate)."
+////		           + "\nNOTE: This counter is an integer that may/will wrap, if incremeted frequently."
+////		           + "\nUse this to decide if the index has **ever** been used since CacheDate."
+////		           + "\nA low value indicates that the index has NOT been used. And therefor may be an *unused* index.";
+////		sb.append("  <th title='Number of Insert, Update and Deletes that has been done." + tt2                      + "'>AbsRowsInsUpdDel</th> \n");
+////		sb.append("  <th title='Number of times the optimizer selected this index to be used in a query plan." + tt2 + "'>AbsOptSelectCount</th> \n");
+////		sb.append("  <th title='Number of times the object was used in a plan during execution." + tt2               + "'>AbsUsedCount</th> \n");
+////		sb.append("  <th title='Number of times the object was accessed." + tt2                                      + "'>AbsOperations</th> \n");
+//
+//		sb.append("  <th title='Number of seeks by user queries.'                                                        >user_seeks                  </th> \n");
+//		sb.append("  <th title='Number of scans by user queries that did not use -seek- predicate.'                      >user_scans                  </th> \n");
+//		sb.append("  <th title='Number of bookmark lookups by user queries.'                                             >user_lookups                </th> \n");
+//		sb.append("  <th title='Number of updates by user queries. This includes Insert, Delete, and Updates representing number of operations done not the actual rows affected. For example, if you delete 1000 rows in one statement, this count increments by 1'>user_updates                </th> \n");
+//
+//		sb.append("  <th title='Number of seeks by user queries.'                                                        >abs_user_seeks              </th> \n");
+//		sb.append("  <th title='Number of scans by user queries that did not use -seek- predicate.'                      >abs_user_scans              </th> \n");
+//		sb.append("  <th title='Number of bookmark lookups by user queries.'                                             >abs_user_lookups            </th> \n");
+//		sb.append("  <th title='Number of updates by user queries. This includes Insert, Delete, and Updates representing number of operations done not the actual rows affected. For example, if you delete 1000 rows in one statement, this count increments by 1'>abs_user_updates            </th> \n");
+//
+//		sb.append("  <th title='Execution: range and table scans started on the index or heap'                           >range_scan_count            </th> \n");
+//		sb.append("  <th title='Execution: single row retrievals from the index or heap'                                 >singleton_lookup_count      </th> \n");
+////		sb.append("  <th title='Execution: Count of rows that were fetched through a forwarding record'                  >forwarded_fetch_count       </th> \n");
+////		sb.append("  <th title='Execution: Count of large object(LOB) pages retrieved from the LOB_DATA allocation unit' >lob_fetch_in_pages          </th> \n");
+//		sb.append("  <th title='Execution: leaf-level insert + deletes + ghosted-deletes + updates'                      >leaf_crud_count             </th> \n");
+////		sb.append("  <th title='Execution: leaf-level inserts'                                                           >leaf_insert_count           </th> \n");
+////		sb.append("  <th title='Execution: leaf-level deletes'                                                           >leaf_delete_count           </th> \n");
+////		sb.append("  <th title='Execution: leaf-level updates'                                                           >leaf_update_count           </th> \n");
+////		sb.append("  <th title='Execution: leaf-level rows that are marked as deleted, but not yet removed'              >leaf_ghost_count            </th> \n");
+////		sb.append("  <th title='Execution: times the Database Engine waited on an I/O page latch.'                       >page_io_latch_wait_count    </th> \n");
+////		sb.append("  <th title='Execution: number of milliseconds the Database Engine waited on a page I/O latch'        >page_io_latch_wait_in_ms    </th> \n");
+//
+//		sb.append("  <th title='Execution: range and table scans started on the index or heap'                           >abs_range_scan_count        </th> \n");
+//		sb.append("  <th title='Execution: single row retrievals from the index or heap'                                 >abs_singleton_lookup_count  </th> \n");
+////		sb.append("  <th title='Execution: Count of rows that were fetched through a forwarding record'                  >abs_forwarded_fetch_count   </th> \n");
+////		sb.append("  <th title='Execution: Count of large object(LOB) pages retrieved from the LOB_DATA allocation unit' >abs_lob_fetch_in_pages      </th> \n");
+//		sb.append("  <th title='Execution: leaf-level insert + deletes + ghosted-deletes + updates'                      >abs_leaf_crud_count         </th> \n");
+////		sb.append("  <th title='Execution: leaf-level inserts'                                                           >abs_leaf_insert_count       </th> \n");
+////		sb.append("  <th title='Execution: leaf-level deletes'                                                           >abs_leaf_delete_count       </th> \n");
+////		sb.append("  <th title='Execution: leaf-level updates'                                                           >abs_leaf_update_count       </th> \n");
+////		sb.append("  <th title='Execution: leaf-level rows that are marked as deleted, but not yet removed'              >abs_leaf_ghost_count        </th> \n");
+////		sb.append("  <th title='Execution: times the Database Engine waited on an I/O page latch.'                       >abs_page_io_latch_wait_count</th> \n");
+////		sb.append("  <th title='Execution: number of milliseconds the Database Engine waited on a page I/O latch'        >abs_page_io_latch_wait_in_ms</th> \n");
+//
+//		sb.append("</tr> \n");
+//		sb.append("</thead> \n");
+//
+//		NumberFormat nf = NumberFormat.getInstance();
+//
+//		//--------------------------------------------------------------------------
+//		// Table BODY
+//		sb.append("<tbody> \n");
+//		for (SqlServerIndexInfo entry : indexInfoList)
+//		{
+////			long avgBytesPerRow = (entry.getSizeKb() * 1024L) / tableEntry.getRowTotal();
+//
+//			sb.append("<tr> \n");
+//			sb.append("  <td>").append(            entry.getIndexName()            ).append("</td> \n");
+//			sb.append("  <td>").append(            entry.getIndexID()              ).append("</td> \n");
+//			sb.append("  <td>").append(            entry.getKeysStr()              ).append("</td> \n");
+//			sb.append("  <td>").append(            entry.getDescription()          ).append("</td> \n");
+//			sb.append("  <td>").append( nf.format( entry.getIndexSizeMb()         )).append("</td> \n");
+//			sb.append("  <td>").append( nf.format( entry.getIndexPages()          )).append("</td> \n");
+//			sb.append("  <td>").append( nf.format( entry.getRowsPerPage()         )).append("</td> \n");
+//			sb.append("  <td>").append(            entry.getLastUpdateStats()      ).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry.getAvgRowSizeBytes()     )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry.getReservedMb()          )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry.getUnusedMb()            )).append("</td> \n");
+////			sb.append("  <td>").append(            entry.getDdlText()              ).append("</td> \n");
+//                                                                                  
+//			                                                                      
+////			sb.append("  <td>").append( nf.format( entry.getRowsInsUpdDel()       )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry.getOptSelectCount()      )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry.getUsedCount()           )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry.getOperations()          )).append("</td> \n");
+//                                                                                  
+////			sb.append("  <td>").append(            entry.getCacheDateStr()         ).append("</td> \n");
+////			sb.append("  <td>").append(            entry.getCreationDateStr()      ).append("</td> \n");
+//                                                                                  
+////			sb.append("  <td>").append( nf.format( entry.getAbsRowsInsUpdDel()    )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry.getAbsOptSelectCount()   )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry.getAbsUsedCount()        )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry.getAbsOperations()       )).append("</td> \n");
+//			
+//			sb.append("  <td>").append( nf.format( entry._user_seeks                   )).append("</td> \n");
+//			sb.append("  <td>").append( nf.format( entry._user_scans                   )).append("</td> \n");
+//			sb.append("  <td>").append( nf.format( entry._user_lookups                 )).append("</td> \n");
+//			sb.append("  <td>").append( nf.format( entry._user_updates                 )).append("</td> \n");
+//
+//			sb.append("  <td>").append( nf.format( entry._abs_user_seeks               )).append("</td> \n");
+//			sb.append("  <td>").append( nf.format( entry._abs_user_scans               )).append("</td> \n");
+//			sb.append("  <td>").append( nf.format( entry._abs_user_lookups             )).append("</td> \n");
+//			sb.append("  <td>").append( nf.format( entry._abs_user_updates             )).append("</td> \n");
+//
+//			sb.append("  <td>").append( nf.format( entry._range_scan_count             )).append("</td> \n");
+//			sb.append("  <td>").append( nf.format( entry._singleton_lookup_count       )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry._forwarded_fetch_count        )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry._lob_fetch_in_pages           )).append("</td> \n");
+//			sb.append("  <td>").append( nf.format( entry._leaf_crud_count              )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry._leaf_insert_count            )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry._leaf_delete_count            )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry._leaf_update_count            )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry._leaf_ghost_count             )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry._page_io_latch_wait_count     )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry._page_io_latch_wait_in_ms     )).append("</td> \n");
+//
+//			sb.append("  <td>").append( nf.format( entry._abs_range_scan_count         )).append("</td> \n");
+//			sb.append("  <td>").append( nf.format( entry._abs_singleton_lookup_count   )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry._abs_forwarded_fetch_count    )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry._abs_lob_fetch_in_pages       )).append("</td> \n");
+//			sb.append("  <td>").append( nf.format( entry._abs_leaf_crud_count          )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry._abs_leaf_insert_count        )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry._abs_leaf_delete_count        )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry._abs_leaf_update_count        )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry._abs_leaf_ghost_count         )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry._abs_page_io_latch_wait_count )).append("</td> \n");
+////			sb.append("  <td>").append( nf.format( entry._abs_page_io_latch_wait_in_ms )).append("</td> \n");
+//			
+//			sb.append("</tr> \n");
+//		}
+//		sb.append("</tbody> \n");
+//		
+//		//--------------------------------------------------------------------------
+//		// Table Footer
+////		sb.append("<tfoot> \n");
+////		sb.append("<tr> \n");
+////
+////		sb.append("  <td></td> \n"); // first column is empty, which is the "row name"
+////
+////		sb.append("</tr> \n");
+////		sb.append("</tfoot> \n");
+//
+//		sb.append("</table> \n");
+//		
+//		return sb.toString();
+//	}
+	public String getIndexInfoAsHtmlTable(SqlServerTableInfo tableEntry, String classname)
+	{
+		// Exit early: if no data
+		if (tableEntry == null)   return "";
+
+		// Get the index list
+		List<SqlServerIndexInfo> indexInfoList = tableEntry.getIndexList();
+
+		// Exit early: if no data
+		if (indexInfoList == null)   return "";
+		if (indexInfoList.isEmpty()) return "";
+		
+		StringBuilder sb = new StringBuilder();
+
+		String className = "";
+		if (StringUtil.hasValue(classname))
+			className = " class='" + classname + "'";
+		
+		sb.append("<table" + className + "> \n");
+
+		//--------------------------------------------------------------------------
+		// Table Header
+		sb.append("<thead> \n");
+		sb.append("<tr> \n");
+
+		sb.append("  <th>Index Name</th> \n");
+		sb.append("  <th>IndexID</th> \n");
+		sb.append("  <th>Keys</th> \n");
+		sb.append("  <th>Desciption</th> \n");
+		sb.append("  <th>Size MB</th> \n");
+		sb.append("  <th>Pages</th> \n");
+		sb.append("  <th>FillFactor</th> \n");
+		sb.append("  <th title='Calculated Average Rows per Page \nCalculted by: pages/rowcount'>Avg RowsPerPage</th> \n");
+		sb.append("  <th>Last Update Stats</th> \n");
+//		sb.append("  <th title='Average Bytes used per Row\nCalculted by: SizeBytes/TableRowcount'>Avg RowSize</th> \n");
+//		sb.append("  <th>Reserved MB</th> \n");
+//		sb.append("  <th>Unused MB</th> \n");
+//		sb.append("  <th>DDL</th> \n");
+
+
+//		String tt1 = "\nTime span: During the report period.";
+//		sb.append("  <th title='Number of Insert, Update and Deletes that has been done." + tt1                      + "'>RowsInsUpdDel</th> \n");
+//		sb.append("  <th title='Number of times the optimizer selected this index to be used in a query plan." + tt1 + "'>OptSelectCount</th> \n");
+//		sb.append("  <th title='Number of times the object was used in a plan during execution." + tt1               + "'>UsedCount</th> \n");
+//		sb.append("  <th title='Number of times the object was accessed." + tt1                                      + "'>Operations</th> \n");
+
+//		sb.append("  <th title='Indicates the date and time when the index structure was added to the ASE cache."    + "'>CacheDate</th> \n");
+//		sb.append("  <th title='When was the index created."                                                         + "'>CrDate</th> \n");
+
+//		String tt2 = "\nTime span: Since object was cached (see CacheDate)."
+//		           + "\nNOTE: This counter is an integer that may/will wrap, if incremeted frequently."
+//		           + "\nUse this to decide if the index has **ever** been used since CacheDate."
+//		           + "\nA low value indicates that the index has NOT been used. And therefor may be an *unused* index.";
+//		sb.append("  <th title='Number of Insert, Update and Deletes that has been done." + tt2                      + "'>AbsRowsInsUpdDel</th> \n");
+//		sb.append("  <th title='Number of times the optimizer selected this index to be used in a query plan." + tt2 + "'>AbsOptSelectCount</th> \n");
+//		sb.append("  <th title='Number of times the object was used in a plan during execution." + tt2               + "'>AbsUsedCount</th> \n");
+//		sb.append("  <th title='Number of times the object was accessed." + tt2                                      + "'>AbsOperations</th> \n");
+
+		sb.append("  <th title='(diff <- abs) Number of seeks by user queries.'                                                        >user_seeks                  </th> \n");
+		sb.append("  <th title='(diff <- abs) Number of scans by user queries that did not use -seek- predicate.'                      >user_scans                  </th> \n");
+		sb.append("  <th title='(diff <- abs) Number of bookmark lookups by user queries.'                                             >user_lookups                </th> \n");
+		sb.append("  <th title='(diff <- abs) Number of updates by user queries. This includes Insert, Delete, and Updates representing number of operations done not the actual rows affected. For example, if you delete 1000 rows in one statement, this count increments by 1'>user_updates                </th> \n");
+
+//		sb.append("  <th title='Number of seeks by user queries.'                                                        >abs_user_seeks              </th> \n");
+//		sb.append("  <th title='Number of scans by user queries that did not use -seek- predicate.'                      >abs_user_scans              </th> \n");
+//		sb.append("  <th title='Number of bookmark lookups by user queries.'                                             >abs_user_lookups            </th> \n");
+//		sb.append("  <th title='Number of updates by user queries. This includes Insert, Delete, and Updates representing number of operations done not the actual rows affected. For example, if you delete 1000 rows in one statement, this count increments by 1'>abs_user_updates            </th> \n");
+
+		sb.append("  <th title='Execution: (diff <- abs) range and table scans started on the index or heap'                           >range_scan_count            </th> \n");
+		sb.append("  <th title='Execution: (diff <- abs) single row retrievals from the index or heap'                                 >singleton_lookup_count      </th> \n");
+		sb.append("  <th title='Execution: (diff <- abs) Count of rows that were fetched through a forwarding record'                  >forwarded_fetch_count       </th> \n");
+		sb.append("  <th title='Execution: (diff <- abs) Count of large object(LOB) pages retrieved from the LOB_DATA allocation unit' >lob_fetch_in_pages          </th> \n");
+		sb.append("  <th title='Execution: (diff <- abs) leaf-level insert + deletes + ghosted-deletes + updates'                      >leaf_crud_count             </th> \n");
+		sb.append("  <th title='Execution: (diff <- abs) leaf-level inserts'                                                           >leaf_insert_count           </th> \n");
+		sb.append("  <th title='Execution: (diff <- abs) leaf-level deletes'                                                           >leaf_delete_count           </th> \n");
+		sb.append("  <th title='Execution: (diff <- abs) leaf-level updates'                                                           >leaf_update_count           </th> \n");
+		sb.append("  <th title='Execution: (diff <- abs) leaf-level rows that are marked as deleted, but not yet removed'              >leaf_ghost_count            </th> \n");
+		sb.append("  <th title='Execution: (diff <- abs) times the Database Engine waited on an I/O page latch.'                       >page_io_latch_wait_count    </th> \n");
+		sb.append("  <th title='Execution: (diff <- abs) number of milliseconds the Database Engine waited on a page I/O latch'        >page_io_latch_wait_in_ms    </th> \n");
+
+//		sb.append("  <th title='Execution: range and table scans started on the index or heap'                           >abs_range_scan_count        </th> \n");
+//		sb.append("  <th title='Execution: single row retrievals from the index or heap'                                 >abs_singleton_lookup_count  </th> \n");
+////		sb.append("  <th title='Execution: Count of rows that were fetched through a forwarding record'                  >abs_forwarded_fetch_count   </th> \n");
+////		sb.append("  <th title='Execution: Count of large object(LOB) pages retrieved from the LOB_DATA allocation unit' >abs_lob_fetch_in_pages      </th> \n");
+//		sb.append("  <th title='Execution: leaf-level insert + deletes + ghosted-deletes + updates'                      >abs_leaf_crud_count         </th> \n");
+////		sb.append("  <th title='Execution: leaf-level inserts'                                                           >abs_leaf_insert_count       </th> \n");
+////		sb.append("  <th title='Execution: leaf-level deletes'                                                           >abs_leaf_delete_count       </th> \n");
+////		sb.append("  <th title='Execution: leaf-level updates'                                                           >abs_leaf_update_count       </th> \n");
+////		sb.append("  <th title='Execution: leaf-level rows that are marked as deleted, but not yet removed'              >abs_leaf_ghost_count        </th> \n");
+////		sb.append("  <th title='Execution: times the Database Engine waited on an I/O page latch.'                       >abs_page_io_latch_wait_count</th> \n");
+////		sb.append("  <th title='Execution: number of milliseconds the Database Engine waited on a page I/O latch'        >abs_page_io_latch_wait_in_ms</th> \n");
+
+		sb.append("</tr> \n");
+		sb.append("</thead> \n");
+
+		NumberFormat nf = NumberFormat.getInstance();
+
+		//--------------------------------------------------------------------------
+		// Table BODY
+		sb.append("<tbody> \n");
+		for (SqlServerIndexInfo entry : indexInfoList)
+		{
+//			long avgBytesPerRow = (entry.getSizeKb() * 1024L) / tableEntry.getRowTotal();
+
+			String description = entry.getDescription();
+			if (StringUtil.hasValue(description))
+			{
+				if (description.startsWith("clustered, "))
+					description = description.replace("clustered, ", "<b>clustered</b>, ");
+
+				description = description.replace("unique, ", "<b>unique</b>, ");
+			}
+			
+			sb.append("<tr> \n");
+			sb.append("  <td>").append(            entry.getIndexName()            ).append("</td> \n");
+			sb.append("  <td>").append(            entry.getIndexID()              ).append("</td> \n");
+			sb.append("  <td>").append(            entry.getKeysStr()              ).append("</td> \n");
+			sb.append("  <td>").append(            description                     ).append("</td> \n");
+			sb.append("  <td>").append( nf.format( entry.getIndexSizeMb()         )).append("</td> \n");
+			sb.append("  <td>").append( nf.format( entry.getIndexPages()          )).append("</td> \n");
+			sb.append("  <td>").append( nf.format( entry.getFillFactor()          )).append("</td> \n");
+			sb.append("  <td>").append( nf.format( entry.getRowsPerPage()         )).append("</td> \n");
+			sb.append("  <td>").append(            entry.getLastUpdateStats()      ).append("</td> \n");
+//			sb.append("  <td>").append( nf.format( entry.getAvgRowSizeBytes()     )).append("</td> \n");
+//			sb.append("  <td>").append( nf.format( entry.getReservedMb()          )).append("</td> \n");
+//			sb.append("  <td>").append( nf.format( entry.getUnusedMb()            )).append("</td> \n");
+//			sb.append("  <td>").append(            entry.getDdlText()              ).append("</td> \n");
+
+			sb.append("  <td>").append( diffAbsValues(entry._user_seeks              , entry._abs_user_seeks               )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._user_scans              , entry._abs_user_scans               )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._user_lookups            , entry._abs_user_lookups             )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._user_updates            , entry._abs_user_updates             )).append("</td> \n");
+
+			sb.append("  <td>").append( diffAbsValues(entry._range_scan_count        , entry._abs_range_scan_count         )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._singleton_lookup_count  , entry._abs_singleton_lookup_count   )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._forwarded_fetch_count   , entry._abs_forwarded_fetch_count    )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._lob_fetch_in_pages      , entry._abs_lob_fetch_in_pages       )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._leaf_crud_count         , entry._abs_leaf_crud_count          )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._leaf_insert_count       , entry._abs_leaf_insert_count        )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._leaf_delete_count       , entry._abs_leaf_delete_count        )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._leaf_update_count       , entry._abs_leaf_update_count        )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._leaf_ghost_count        , entry._abs_leaf_ghost_count         )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._page_io_latch_wait_count, entry._abs_page_io_latch_wait_count )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._page_io_latch_wait_in_ms, entry._abs_page_io_latch_wait_in_ms )).append("</td> \n");
+
+			sb.append("</tr> \n");
+		}
+		sb.append("</tbody> \n");
+		
+		//--------------------------------------------------------------------------
+		// Table Footer
+//		sb.append("<tfoot> \n");
+//		sb.append("<tr> \n");
+//
+//		sb.append("  <td></td> \n"); // first column is empty, which is the "row name"
+//
+//		sb.append("</tr> \n");
+//		sb.append("</tfoot> \n");
+
+		sb.append("</table> \n");
+		
+		return sb.toString();
+	}
+
+//TODO-GORAN-FIX; Take a look at (or think about) how we can do QuesryStore SQL-Text parse->DDL-Storage... once an hour or similar (should it be in some kind of CM or a separate task/thread in the PCH) 
+	
+	/**
+	 * FIXME
+	 */
+	public Set<SqlServerTableInfo> getTableInformationFromMonDdlStorage(DbxConnection conn, Set<String> tableList)
+	{
+		// Exit early if nothing todo
+		if (tableList == null)   return Collections.emptySet();
+		if (tableList.isEmpty()) return Collections.emptySet();
+
+		// Put all the results back in one list
+		Set<SqlServerTableInfo> combinedReturnSet = new LinkedHashSet<>();
+		
+		for (String tableName : tableList)
+		{
+			try
+			{
+				Set<SqlServerTableInfo> tmp = getTableInformationFromMonDdlStorage(conn, null, null, tableName);
+				
+				if (tmp != null && !tmp.isEmpty())
+					combinedReturnSet.addAll(tmp);
+			}
+			catch(SQLException ignore) 
+			{
+				// this is already logged in getTableInformationFromMonDdlStorage(...)
+				//_logger.error("Problems reading from DDL Storage.");
+			}
+		}
+		return combinedReturnSet;
+	}
+	
+	/**
+	 * Get a list of SqlServerTableInfo (basically sp_spaceused) <br>
+	 * This will get information from the following places
+	 * <ul>
+	 *   <li>CmIndexPhysical / sys.dm_db_index_physical_stats -- Last entry if it can be found!</li>
+	 *   <li></li>
+	 *   <li></li>
+	 *   <li>MonDdlStorage - where sp_help / sys.dm_db_index_physical_stats is stored</li>
+	 * </ul>
+	 * 
+	 * @param conn       The connection to the PCS
+	 * @param dbname     Name of the database the object is in. (can be "" or null; or contains '%' SQL wild-card)
+	 * @param owner      Name of the schema   the object is in. (can be "" or null; or contains '%' SQL wild-card)
+	 * @param table      Name of the table                      (can be "" or null; or contains '%' SQL wild-card), can also contain DBName.schema which will override the parameters dbname and owner
+	 * 
+	 * @return A list of found entries, each as an entry of SqlServerTableInfo.
+	 * 
+	 * @throws SQLException In case of issues.
+	 */
+	public Set<SqlServerTableInfo> getTableInformationFromMonDdlStorage(DbxConnection conn, String dbname, String owner, String table)
+	throws SQLException
+	{
+		Set<SqlServerTableInfo> result = new LinkedHashSet<>();
+
+		// First level of (potential recursion)
+		getTableInformationFromMonDdlStorage(conn, dbname, owner, table, 0, result);
+		
+		// Should we remove any VIEWS ?
+		boolean removeViews = false;
+		if (removeViews)
+		{
+			Set<SqlServerTableInfo> tmp = new LinkedHashSet<>();
+			for (SqlServerTableInfo ti : result)
+			{
+				if (ti.isView())
+					continue;
+
+				tmp.add(ti);
+			}
+			tmp = result;
+		}
+		
+		return result;
+	}
+	/**
+	 * PRIVATE: called from the public getTableInformationFromMonDdlStorage. <br>
+	 * Intention: If it's a view that we lookup, we will do recurse calls until we have found "all" the involved tables (and views)
+	 * 
+	 * @param conn
+	 * @param dbname
+	 * @param owner
+	 * @param table
+	 * @param recursCallCount      Fist call should be 0, then it increments (and we stop at 100 recursive calls)
+	 * @param result               Pass in a (LinkedHash) Set where the information will be stored into. (a outer method will be used to return data to "client" caller) and if desired remove any VIEW objects
+	 * @throws SQLException
+	 */
+	private void getTableInformationFromMonDdlStorage(DbxConnection conn, String dbname, String owner, String table, int recursCallCount, Set<SqlServerTableInfo> result)
+	throws SQLException
+	{
+//		if (StringUtil.isNullOrBlank(dbname))
+//			return null;
+//		if (StringUtil.isNullOrBlank(table))
+//			return null;
+		
+		if (result == null)
+			throw new IllegalArgumentException("The passed Set<SqlServerTableInfo> 'result' can't be null.");
+
+		// Stop recursive calls after X times (so we don't end up in an infinite loop)
+		if (recursCallCount > 100)
+		{
+			_logger.warn("getTableInformationFromMonDdlStorage() infinite recursive call count is at " + recursCallCount + ". STOP doing recursive calls now... ");
+			return;
+		}
+		
+		// Check if 'table' has dbname/schema name specified.
+		SqlObjectName sqlObj = new SqlObjectName(conn, table);
+		if (sqlObj.hasCatalogName()) dbname = sqlObj.getCatalogNameOrigin();
+		if (sqlObj.hasSchemaName() ) owner  = sqlObj.getSchemaNameOrigin();
+		if (sqlObj.hasObjectName() ) table  = sqlObj.getObjectNameOrigin();
+		
+		if ("dbo".equalsIgnoreCase(owner))
+			owner = "";
+
+//		String and_dbname = !StringUtil.hasValue(dbname) ? "" : "  and [dbname]     = " + DbUtils.safeStr(dbname) + " \n";
+//		String and_owner  = !StringUtil.hasValue(owner)  ? "" : "  and [owner]      = " + DbUtils.safeStr(owner)  + " \n";
+//		String and_table  = !StringUtil.hasValue(table)  ? "" : "  and [objectName] = " + DbUtils.safeStr(table)  + " \n";
+		String and_dbname = !StringUtil.hasValue(dbname) ? "" : "  and lower([dbname])     = " + DbUtils.safeStr(dbname.toLowerCase()) + " \n";
+		String and_owner  = !StringUtil.hasValue(owner)  ? "" : "  and lower([owner])      = " + DbUtils.safeStr(owner.toLowerCase())  + " \n";
+		String and_table  = !StringUtil.hasValue(table)  ? "" : "  and lower([objectName]) = " + DbUtils.safeStr(table.toLowerCase())  + " \n";
+
+		if (and_dbname.contains("%")) and_dbname = and_dbname.replace(" = ", " like ");
+		if (and_owner .contains("%")) and_owner  = and_owner .replace(" = ", " like ");
+		if (and_table .contains("%")) and_table  = and_table .replace(" = ", " like ");
+
+		String sql = ""
+			    + "select [dbname], [owner], [objectName], [type], [crdate], [extraInfoText], [objectText] \n"
+			    + "from [MonDdlStorage] \n"
+			    + "where 1 = 1 \n"
+			    + "  and [type] in ('U', 'V') \n"
+			    + and_dbname
+			    + and_owner
+			    + and_table
+			    + "";
+		
+		List<SqlServerTableInfo> tmpList = new ArrayList<>();
+		
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while(rs.next())
+				{
+					SqlServerTableInfo ti = new SqlServerTableInfo();
+					
+					ti._dbName        = rs.getString(1);
+					ti._schemaName    = rs.getString(2);
+					ti._tableName     = rs.getString(3);
+					ti._type          = rs.getString(4);
+					ti._crdate        = rs.getTimestamp(5);
+
+					ti._extraInfoText = rs.getString(6);
+					ti._objectText    = rs.getString(7);
+					
+					tmpList.add(ti);
+				}
+			}
+		}
+		catch(SQLException ex)
+		{
+			//_problem = ex;
+
+			_logger.warn("Problems getting Table Information for dbname='" + dbname + "', owner='" + owner + "', table='" + table + "': " + ex);
+			throw ex;
+		}
+
+		// Create an OUTPUT LIST
+//		List<SqlServerTableInfo> retList = new ArrayList<>();
+//		Set<SqlServerTableInfo> retSet = new LinkedHashSet<>();
+		
+		// Loop the record we just found in MonDdlStorage
+		for (SqlServerTableInfo ti : tmpList)
+		{
+			// If the TableInforation has already been added, just grab next one.
+			if (result.contains(ti))
+				continue;
+
+			// For views, go and get referenced tables (stored in table 'MonDdlStorage', column 'extraInfoText' (with prefix 'TableList: t1, t2, t3'
+			// Then read table information for those tables.
+			if (ti.isView())
+			{
+				if (StringUtil.hasValue(ti._extraInfoText))
+				{
+					// Add to the result (even for VIEWS)
+					// NOTE: if we restrict this to only TABLES, then we might get an infinite loop on recursion when traversing DEPENDENT VIEWS
+					result.add(ti);
+					
+					List<String> lines = StringUtil.readLines(ti._extraInfoText);
+					for (String row : lines)
+					{
+						if (row.startsWith("TableList: "))
+						{
+							row = row.substring("TableList: ".length()).trim();
+							List<String> viewReferences = StringUtil.parseCommaStrToList(row, true);
+
+							// What "tables" do this view reference
+							ti._viewReferences = viewReferences;
+System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recursCallCount+"): ti='"+ti.getFullTableName()+"', is a VIEW, the following references will also be fetched: " + viewReferences);
+							// Loop the list
+							for (String tableName : viewReferences)
+							{
+								recursCallCount++;
+
+								// Just call "this" method recursively... and the table lookups will be done
+								getTableInformationFromMonDdlStorage(conn, dbname, null, tableName, recursCallCount, result);
+							}
+						}
+					}
+				}
+				continue;
+			} // end: VIEW
+
+			// For User Tables get **VARIOUS** information
+			if (ti.isUserTable())
+			{
+				if (StringUtil.hasValue(ti._objectText) && StringUtil.hasValue(ti._extraInfoText))
+				{
+					if (getTableAndIndexInfo(ti))
+					{
+						// Add to the result
+						result.add(ti);
+						
+						//-------------------------------------------------------------------------------------------
+						// also get Statistics how often the indexes was used/accessed during the report period
+						// This is "optional", if the Counter Model Tables are not there, the info wont be filled in.
+						//-------------------------------------------------------------------------------------------
+
+						// get optimizer info: CmIndexUsage  -- sys.dm_db_index_usage_stats          (user_seeks, user_scans, user_lookups, user_updates)
+						getOptimizerCounterInfo(conn, ti);
+
+						// get execution info: CmIndexOpStat -- sys.dm_db_index_operational_stats    (range_scan_count, singleton_lookup_count) and (forwarded_fetch_count, lob_fetch_in_pages) possibly to get CrudCount (leaf_insert_count, leaf_delete_count, leaf_update_count)
+						getExecutionCounterInfo(conn, ti);
+					}
+
+				} // end: has: _objectText && _extraInfoText 
+			}
+
+		} // end: loop SqlServerTableInfo
+		
+		// Remove any "duplicates" from the OUTPUT List ??? (since we do recursive calls for VIEW's we probably need to do this.)
+		// possibly convert it to a "set" and then back to a list again!
+//		retList = new ArrayList<>( new LinkedHashSet<>(retList) );
+		
+//		return retSet;
+	}
+
+	/**
+	 * Parse the information from the DdlStorage columns 'objectText' and 'extraInfoText' where various information is stored in.
+	 * @param ti
+	 * @return
+	 */
+	private boolean getTableAndIndexInfo(SqlServerTableInfo ti)
+	{
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Below is how column 'objectText' typically looks like
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//   +--------------------------------+-----+----------+-----------------------+                                                                                                                           
+		//   |Name                            |Owner|Type      |Created_datetime       |                                                                                                                           
+		//   +--------------------------------+-----+----------+-----------------------+                                                                                                                           
+		//   |Kund_till_Kontaktperson_relation|dbo  |user table|2020-06-12 14:15:07.023|                                                                                                                           
+		//   +--------------------------------+-----+----------+-----------------------+                                                                                                                           
+		//   Rows 1                                                                                                                                                                                                
+		//                                                                                                                                                                                                         
+		//                                                                                                                                                                                                         
+		//   +----------------------------------------+-------+--------+------+----+-----+--------+------------------+--------------------+--------------------------------+                                       
+		//   |Column_name                             |Type   |Computed|Length|Prec|Scale|Nullable|TrimTrailingBlanks|FixedLenNullInSource|Collation                       |                                       
+		//   +----------------------------------------+-------+--------+------+----+-----+--------+------------------+--------------------+--------------------------------+                                       
+		//   |Behorig_foretradare                     |bit    |no      |     1|    |     |yes     |(n/a)             |(n/a)               |(NULL)                          |                                       
+		//   |Metod_att_styrka_foretradares_behorighet|varchar|no      |   255|    |     |yes     |no                |yes                 |Latin1_General_100_CI_AS_SC_UTF8|                                       
+		//   |Fullmakt_registrerad                    |bit    |no      |     1|    |     |yes     |(n/a)             |(n/a)               |(NULL)                          |                                       
+		//   |Kontaktperson_ref                       |varchar|no      |   255|    |     |no      |no                |no                  |Latin1_General_100_CI_AS_SC_UTF8|                                       
+		//   |Kund_ref                                |varchar|no      |   255|    |     |no      |no                |no                  |Latin1_General_100_CI_AS_SC_UTF8|                                       
+		//   |Email                                   |varchar|no      |   255|    |     |yes     |no                |yes                 |Latin1_General_100_CI_AS_SC_UTF8|                                       
+		//   |Metod_att_styrka_foretradares_identitet |varchar|no      |   255|    |     |yes     |no                |yes                 |Latin1_General_100_CI_AS_SC_UTF8|                                       
+		//   |ID_handlingens_nummer                   |varchar|no      |   255|    |     |yes     |no                |yes                 |Latin1_General_100_CI_AS_SC_UTF8|                                       
+		//   |Typ_av_ID_handling                      |varchar|no      |   255|    |     |yes     |no                |yes                 |Latin1_General_100_CI_AS_SC_UTF8|                                       
+		//   |ID_handlingens_giltighetstid            |date   |no      |     3|10  |0    |yes     |(n/a)             |(n/a)               |(NULL)                          |                                       
+		//   +----------------------------------------+-------+--------+------+----+-----+--------+------------------+--------------------+--------------------------------+                                       
+		//   Rows 10                                                                                                                                                                                               
+		//                                                                                                                                                                                                         
+		//   +---------------------------+------+---------+-------------------+                                                                                                                                    
+		//   |Identity                   |Seed  |Increment|Not For Replication|                                                                                                                                    
+		//   +---------------------------+------+---------+-------------------+                                                                                                                                    
+		//   |No identity column defined.|(NULL)|(NULL)   |(NULL)             |                                                                                                                                    
+		//   +---------------------------+------+---------+-------------------+                                                                                                                                    
+		//   Rows 1                                                                                                                                                                                                
+		//                                                                                                                                                                                                         
+		//   +-----------------------------+                                                                                                                                                                       
+		//   |RowGuidCol                   |                                                                                                                                                                       
+		//   +-----------------------------+                                                                                                                                                                       
+		//   |No rowguidcol column defined.|                                                                                                                                                                       
+		//   +-----------------------------+                                                                                                                                                                       
+		//   Rows 1                                                                                                                                                                                                
+		//                                                                                                                                                                                                         
+		//   +-------------------------+                                                                                                                                                                           
+		//   |Data_located_on_filegroup|                                                                                                                                                                           
+		//   +-------------------------+                                                                                                                                                                           
+		//   |PRIMARY                  |                                                                                                                                                                           
+		//   +-------------------------+                                                                                                                                                                           
+		//   Rows 1                                                                                                                                                                                                
+		//                                                                                                                                                                                                         
+		//   +-------------------------------------------------------------+---------------------------------------------------+---------------------------+                                                       
+		//   |index_name                                                   |index_description                                  |index_keys                 |                                                       
+		//   +-------------------------------------------------------------+---------------------------------------------------+---------------------------+                                                       
+		//   |INDEX_Kund_till_Kontaktperson_relation__Kontaktperson_ref__FK|nonclustered located on PRIMARY                    |Kontaktperson_ref          |                                                       
+		//   |INDEX_Kund_till_Kontaktperson_relation__Kund_ref__FK         |nonclustered located on PRIMARY                    |Kund_ref                   |                                                       
+		//   |UQ__Kund_til__163119BDDC9E2531                               |nonclustered, unique, unique key located on PRIMARY|Kund_ref, Kontaktperson_ref|                                                       
+		//   +-------------------------------------------------------------+---------------------------------------------------+---------------------------+                                                       
+		//   Rows 3                                                                                                                                                                                                
+		//                                                                                                                                                                                                         
+		//   +----------------------+-----------------------------------------------------------------+-------------+-------------+--------------+----------------------+---------------------------------------+  
+		//   |constraint_type       |constraint_name                                                  |delete_action|update_action|status_enabled|status_for_replication|constraint_keys                        |  
+		//   +----------------------+-----------------------------------------------------------------+-------------+-------------+--------------+----------------------+---------------------------------------+  
+		//   |FOREIGN KEY           |CONSTRAINT_Kund_till_Kontaktperson_relation__Kontaktperson_ref_FK|No Action    |No Action    |Enabled       |Is_For_Replication    |Kontaktperson_ref                      |  
+		//   |                      |                                                                 |             |             |              |                      |REFERENCES kyc.dbo.Personuppgifter (Id)|  
+		//   |FOREIGN KEY           |CONSTRAINT_Kund_till_Kontaktperson_relation__Kund_ref_FK         |No Action    |No Action    |Enabled       |Is_For_Replication    |Kund_ref                               |  
+		//   |                      |                                                                 |             |             |              |                      |REFERENCES kyc.dbo.Kund (Id)           |  
+		//   |UNIQUE (non-clustered)|UQ__Kund_til__163119BDDC9E2531                                   |(n/a)        |(n/a)        |(n/a)         |(n/a)                 |Kund_ref, Kontaktperson_ref            |  
+		//   +----------------------+-----------------------------------------------------------------+-------------+-------------+--------------+----------------------+---------------------------------------+  
+		//   Rows 5                                                                                                                                                                                                
+		//                                                                                                                                                                                                         
+		//   No foreign keys reference table 'dbo.Kund_till_Kontaktperson_relation', or you do not have permissions on referencing tables.                                                                         
+		//   No views with schema binding reference table 'dbo.Kund_till_Kontaktperson_relation'.                                                                                                                  
+
+
+		
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Below is how column 'extraInfoText' typically looks like (without a clustered index)
+		// AND with LOB data
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//   +-------------+-----------+-----------------+------------------------+--------+-------------+-----------------------+--------------+-----------+-----------+---------------+---------------+-------------+------------------+---------------+-------------------+----------------------+----------------------+--------------------------+-------------------+-----------------------+----------------------------+--------------------------------+
+		//   |dbname       |schema_name|object_name      |index_name              |index_id|IndexType    |StatsUpdated           |PartitionCount|row_count  |RowsPerPage|TotalUsedSizeMB|InRowUsedSizeMB|LobUsedSizeMB|OverflowUsedSizeMB|used_page_count|reserved_page_count|in_row_used_page_count|in_row_data_page_count|in_row_reserved_page_count|lob_used_page_count|lob_reserved_page_count|row_overflow_used_page_count|row_overflow_reserved_page_count|
+		//   +-------------+-----------+-----------------+------------------------+--------+-------------+-----------------------+--------------+-----------+-----------+---------------+---------------+-------------+------------------+---------------+-------------------+----------------------+----------------------+--------------------------+-------------------+-----------------------+----------------------------+--------------------------------+
+		//   |Datawarehouse|stage      |linda_Benefit_XML|HEAP                    |       0|HEAP         |(NULL)                 |             1|  2,548,485|        2.2|        9,018.8|          198.9|      8,819.9|                 0|      1,154,408|          1,154,423|                25,456|                25,431|                    25,457|          1,128,952|              1,128,966|                           0|                               0|
+		//   |Datawarehouse|stage      |linda_Benefit_XML|idx_Benefit_XML_NK      |       2|NON-CLUSTERED|2022-02-12 08:37:51.07 |             1|  2,548,485|      143.8|          138.5|          138.5|            0|                 0|         17,726|             17,737|                17,726|                17,586|                    17,737|                  0|                      0|                           0|                               0|
+		//   |Datawarehouse|stage      |linda_Benefit_XML|idx_Benefit_XML_policyno|       3|NON-CLUSTERED|2022-02-12 08:37:54.563|             1|  2,548,485|      270.9|           73.5|           73.5|            0|                 0|          9,409|              9,409|                 9,409|                 9,368|                     9,409|                  0|                      0|                           0|                               0|
+		//   |Datawarehouse|stage      |linda_Benefit_XML|idx_Benefit_XML_regno   |       4|NON-CLUSTERED|2022-02-12 08:38:07.59 |             1|  2,548,485|      287.7|           69.2|           69.2|            0|                 0|          8,859|              8,865|                 8,859|                 8,819|                     8,865|                  0|                      0|                           0|                               0|
+		//   |Datawarehouse|stage      |linda_Benefit_XML|idx_Benefit_XML_ssn     |       5|NON-CLUSTERED|2022-02-12 08:38:17.633|             1|  2,548,485|      267.7|           74.4|           74.4|            0|                 0|          9,519|              9,529|                 9,519|                 9,474|                     9,529|                  0|                      0|                           0|                               0|
+		//   +-------------+-----------+-----------------+------------------------+--------+-------------+-----------------------+--------------+-----------+-----------+---------------+---------------+-------------+------------------+---------------+-------------------+----------------------+----------------------+--------------------------+-------------------+-----------------------+----------------------------+--------------------------------+
+		//   Rows 5
+		
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Below is how column 'extraInfoText' typically looks like (WITH a clustered index)
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//   +-------------+-----------+------------+-----------------------------+--------+-------------+-----------------------+--------------+-----------+-----------+---------------+---------------+-------------+------------------+---------------+-------------------+----------------------+----------------------+--------------------------+-------------------+-----------------------+----------------------------+--------------------------------+
+		//   |dbname       |schema_name|object_name |index_name                   |index_id|IndexType    |StatsUpdated           |PartitionCount|row_count  |RowsPerPage|TotalUsedSizeMB|InRowUsedSizeMB|LobUsedSizeMB|OverflowUsedSizeMB|used_page_count|reserved_page_count|in_row_used_page_count|in_row_data_page_count|in_row_reserved_page_count|lob_used_page_count|lob_reserved_page_count|row_overflow_used_page_count|row_overflow_reserved_page_count|
+		//   +-------------+-----------+------------+-----------------------------+--------+-------------+-----------------------+--------------+-----------+-----------+---------------+---------------+-------------+------------------+---------------+-------------------+----------------------+----------------------+--------------------------+-------------------+-----------------------+----------------------------+--------------------------------+
+		//   |Datawarehouse|etl        |FaktaKapital|CI_FaktaKapital              |       1|CLUSTERED    |2022-02-17 06:38:56.827|           356|119,002,563|       57.6|       16,127.6|       16,127.6|            0|                 0|      2,064,330|          2,201,918|             2,064,330|             2,052,983|                 2,201,918|                  0|                      0|                           0|                               0|
+		//   +-------------+-----------+------------+-----------------------------+--------+-------------+-----------------------+--------------+-----------+-----------+---------------+---------------+-------------+------------------+---------------+-------------------+----------------------+----------------------+--------------------------+-------------------+-----------------------+----------------------------+--------------------------------+
+		//   Rows 1
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Below is how column 'extraInfoText' typically looks like (WITH a clustered index that has a couple of NON-CLUSTERED indexes)
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//   +-------------+-----------+-----------+------------------------------+--------+-------------+-----------------------+--------------+-----------+-----------+---------------+---------------+-------------+------------------+---------------+-------------------+----------------------+----------------------+--------------------------+-------------------+-----------------------+----------------------------+--------------------------------+
+		//   |dbname       |schema_name|object_name|index_name                    |index_id|IndexType    |StatsUpdated           |PartitionCount|row_count  |RowsPerPage|TotalUsedSizeMB|InRowUsedSizeMB|LobUsedSizeMB|OverflowUsedSizeMB|used_page_count|reserved_page_count|in_row_used_page_count|in_row_data_page_count|in_row_reserved_page_count|lob_used_page_count|lob_reserved_page_count|row_overflow_used_page_count|row_overflow_reserved_page_count|
+		//   +-------------+-----------+-----------+------------------------------+--------+-------------+-----------------------+--------------+-----------+-----------+---------------+---------------+-------------+------------------+---------------+-------------------+----------------------+----------------------+--------------------------+-------------------+-----------------------+----------------------------+--------------------------------+
+		//   |Datawarehouse|dimen      |Radgivare  |UCI_Radgivare                 |       1|CLUSTERED    |2021-08-25 16:18:05.5  |             1|      1,938|       21.3|            0.7|            0.7|            0|                 0|             91|                127|                    91|                    83|                       127|                  0|                      0|                           0|                               0|
+		//   |Datawarehouse|dimen      |Radgivare  |PK_Radgivare                  |       2|NON-CLUSTERED|2021-08-25 16:18:05.503|             1|      1,938|      242.3|            0.1|            0.1|            0|                 0|              8|                 25|                     8|                     6|                        25|                  0|                      0|                           0|                               0|
+		//   |Datawarehouse|dimen      |Radgivare  |UNI BK_RadgivareKod_Aktuell1  |       4|NON-CLUSTERED|2022-02-17 06:23:40.817|             1|      1,641|      273.5|              0|              0|            0|                 0|              6|                 25|                     6|                     4|                        25|                  0|                      0|                           0|                               0|
+		//   |Datawarehouse|dimen      |Radgivare  |NI BK_RadgivareKod            |      10|NON-CLUSTERED|2022-02-17 06:22:59.187|             1|      1,938|      276.9|            0.1|            0.1|            0|                 0|              7|                 25|                     7|                     5|                        25|                  0|                      0|                           0|                               0|
+		//   |Datawarehouse|dimen      |Radgivare  |NCI_BK_Akt1                   |      11|NON-CLUSTERED|2021-08-25 16:18:06.98 |             1|      1,641|      182.3|            0.1|            0.1|            0|                 0|              9|                 25|                     9|                     7|                        25|                  0|                      0|                           0|                               0|
+		//   +-------------+-----------+-----------+------------------------------+--------+-------------+-----------------------+--------------+-----------+-----------+---------------+---------------+-------------+------------------+---------------+-------------------+----------------------+----------------------+--------------------------+-------------------+-----------------------+----------------------------+--------------------------------+
+		//   Rows 5
+
+		// RS> Col# Label                            JDBC Type Name           Guessed DBMS type Source Table
+		// RS> ---- -------------------------------- ------------------------ ----------------- ------------
+		// RS> 1    dbname                           java.sql.Types.NVARCHAR  nvarchar(128)     -none-      
+		// RS> 2    schema_name                      java.sql.Types.NVARCHAR  nvarchar(128)     -none-      
+		// RS> 3    object_name                      java.sql.Types.NVARCHAR  nvarchar(128)     -none-      
+		// RS> 4    index_name                       java.sql.Types.NVARCHAR  nvarchar(128)     -none-      
+		// RS> 5    index_id                         java.sql.Types.INTEGER   int               -none-      
+		// RS> 6    IndexType                        java.sql.Types.VARCHAR   varchar(13)       -none-      
+		// RS> 7    StatsUpdated                     java.sql.Types.TIMESTAMP datetime          -none-      
+		// RS> 8    PartitionCount                   java.sql.Types.INTEGER   int               -none-      
+		// RS> 9    row_count                        java.sql.Types.BIGINT    bigint            -none-      
+		// RS> 10   RowsPerPage                      java.sql.Types.DECIMAL   decimal(12,1)     -none-      
+		// RS> 11   TotalUsedSizeMB                  java.sql.Types.DECIMAL   decimal(12,1)     -none-      
+		// RS> 12   InRowUsedSizeMB                  java.sql.Types.DECIMAL   decimal(12,1)     -none-      
+		// RS> 13   LobUsedSizeMB                    java.sql.Types.DECIMAL   decimal(12,1)     -none-      
+		// RS> 14   OverflowUsedSizeMB               java.sql.Types.DECIMAL   decimal(12,1)     -none-      
+		// RS> 15   used_page_count                  java.sql.Types.BIGINT    bigint            -none-      
+		// RS> 16   reserved_page_count              java.sql.Types.BIGINT    bigint            -none-      
+		// RS> 17   in_row_used_page_count           java.sql.Types.BIGINT    bigint            -none-      
+		// RS> 18   in_row_data_page_count           java.sql.Types.BIGINT    bigint            -none-      
+		// RS> 19   in_row_reserved_page_count       java.sql.Types.BIGINT    bigint            -none-      
+		// RS> 20   lob_used_page_count              java.sql.Types.BIGINT    bigint            -none-      
+		// RS> 21   lob_reserved_page_count          java.sql.Types.BIGINT    bigint            -none-      
+		// RS> 22   row_overflow_used_page_count     java.sql.Types.BIGINT    bigint            -none-      
+		// RS> 23   row_overflow_reserved_page_count java.sql.Types.BIGINT    bigint            -none-      		
+
+		
+		// Get table with column names: index_name, index_description, index_keys                                                       
+		ResultSetTableModel rstmIndexKeys = ResultSetTableModel.getTableWithColumnNames(ResultSetTableModel.parseTextTables(ti._objectText), true, "index_name");
+		
+		// Get table with: various index information                                                       
+		ResultSetTableModel rstmIndexInfo = ResultSetTableModel.parseTextTable(ti._extraInfoText);
+
+		if (rstmIndexInfo != null && !rstmIndexInfo.isEmpty())
+		{
+			rstmIndexKeys.setHandleColumnNotFoundAsNullValueInGetValues(true);
+			rstmIndexInfo.setHandleColumnNotFoundAsNullValueInGetValues(true);
+
+//			int indexCount = 0;
+//			List<SqlServerIndexInfo> indexInfoList = new ArrayList<>();
+
+			for (int r=0; r<rstmIndexInfo.getRowCount(); r++)
+			{
+				int indexId = rstmIndexInfo.getValueAsInteger(r, "index_id");
+
+				// BASE TABLE INFORMATION
+				// 0 == No clustered index -- a HEAP table
+				// 1 == table WITH Clustered index
+				if (indexId == 0 || indexId == 1) 
+				{
+					ti._rowtotal            = rstmIndexInfo.getValueAsLong(r, "row_count"                   , true, -1L);
+					ti._totalPages          = rstmIndexInfo.getValueAsLong(r, "used_page_count"             , true, -1L);
+					ti._inRowPages          = rstmIndexInfo.getValueAsLong(r, "in_row_used_page_count"      , true, -1L);
+					ti._lobPages            = rstmIndexInfo.getValueAsLong(r, "lob_used_page_count"         , true, -1L);
+					ti._rowOverflowPages    = rstmIndexInfo.getValueAsLong(r, "row_overflow_used_page_count", true, -1L);
+				}
+
+				// INDEX INFORMATION (and a record for DATA/HEAP)
+				// Clustered and Non-Clustered indexes
+				{
+					SqlServerIndexInfo ii = new SqlServerIndexInfo();
+					ii._indexID     = indexId;
+					ii._indexName   = rstmIndexInfo.getValueAsString (r, "index_name"            , true, null);
+					ii._indexPages  = rstmIndexInfo.getValueAsLong   (r, "in_row_used_page_count", true, -1L);
+					ii._desc        = rstmIndexInfo.getValueAsString (r, "IndexType"             , true, null);
+					ii._fillFactor  = rstmIndexInfo.getValueAsInteger(r, "IndexFillFactor"       , true, -1);
+					ii._rowsPerPage = rstmIndexInfo.getValueAsDouble (r, "RowsPerPage"           , true, -1D);
+
+					// For everything else than HEAP
+					if (indexId != 0)
+					{
+						ti._indexCount++;
+
+						ii._lastUpdateStats = rstmIndexInfo.getValueAsTimestamp(r, "StatsUpdated", true, null);
+					
+						// Fill in SqlServerIndexInfo: _keysStr, _keys, _desc, 
+						scrapeIndexInfo(ii._indexName, rstmIndexKeys, ii);
+					}
+
+					// Add index to table list
+					ti._indexList.add(ii);
+				}
+			}
+			
+			// Calculate IndexSize SUMMARY at the table level
+			if (ti._indexList != null)
+			{
+				for (SqlServerIndexInfo ii : ti._indexList)
+				{
+					ti._indexPages += ii._indexPages;
+				}
+			}
+
+			// finally add the entry to the output list
+			return true;
+			//retList.add(ti);
+
+		} // end: rstmIndexInfo
+
+		return false;
+	}
+
+	private void getOptimizerCounterInfo(DbxConnection conn, SqlServerTableInfo ti)
+	{
+		String dbname     = ti._dbName;
+		String schemaName = ti._schemaName;
+		String tableName  = ti._tableName;
+
+		// Check if table(s) exists, if not... just exit...
+		if ( ! DbUtils.checkIfTableExistsNoThrow(conn, null, null, "CmIndexUsage_diff") )
+		{
+			_logger.warn("Table 'CmIndexUsage_diff' did not exists, skip reading 'optimizer information'.");
+			return;
+		}
+
+		if ( ! DbUtils.checkIfTableExistsNoThrow(conn, null, null, "CmIndexUsage_abs") )
+		{
+			_logger.warn("Table 'CmIndexUsage_abs' did not exists, skip reading 'optimizer information'.");
+			return;
+		}
+		
+		// TODO: Possibly create an index...
+//		// As the index 'ix_DSR_CmObjectActivity_diff_DBName_ObjectName_IndexName' exists, this is a pretty cheap operation (if NOT exists, should we create one?)
+//		if ( ! DbUtils.checkIfIndexExists(conn, null, null, "CmObjectActivity_diff", "ix_DSR_CmObjectActivity_diff_DBName_ObjectName_IndexName") )
+//		{
+//			sql = conn.quotifySqlString("create index [ix_DSR_CmObjectActivity_diff_DBName_ObjectName_IndexName] on [CmObjectActivity_diff] ([DBName], [ObjectName], [IndexName])");
+//
+//			long startTime = System.currentTimeMillis();
+//			try (Statement stmnt = conn.createStatement())
+//			{
+//				stmnt.executeUpdate(sql);
+//				_logger.info("ReportEntry '" + this.getClass().getSimpleName() + "'. Created helper index to support Daily Summary Report. SQL='" + sql + "' ExecTime=" + TimeUtils.msDiffNowToTimeStr(startTime));
+//			}
+//			catch (SQLException ex)
+//			{
+//				_logger.warn("Problems index to help ReportEntry '" + this.getClass().getSimpleName() + "'. SQL='" + sql + "'. Continuing without the index. Caught: " + ex);
+//			}
+//		}
+		
+		// get optimizer info: CmIndexUsage  -- sys.dm_db_index_usage_stats          (user_seeks, user_scans, user_lookups, user_updates)
+		String sql = ""
+			+ "WITH diff as \n"
+			+ "( \n"
+			+ "    select \n"
+			+ "         [DbName] \n"
+			+ "        ,[SchemaName] \n"
+			+ "        ,[TableName] \n"
+			+ "        ,[IndexName] \n"
+			+ "        ,[index_id] \n"
+			+ "        ,sum([user_seeks])    as [user_seeks] \n"
+			+ "        ,sum([user_scans])    as [user_scans] \n"
+			+ "        ,sum([user_lookups])  as [user_lookups] \n"
+			+ "        ,sum([user_updates])  as [user_updates] \n"
+			+ "    from [CmIndexUsage_diff] \n"
+			+ "    where 1 = 1 \n"
+			+ "      and [DbName]     = " + DbUtils.safeStr(dbname    ) + " \n"
+			+ "      and [SchemaName] = " + DbUtils.safeStr(schemaName) + " \n"
+			+ "      and [TableName]  = " + DbUtils.safeStr(tableName ) + " \n"
+			+ "    group by [DbName], [SchemaName], [TableName], [IndexName], [index_id] \n"
+			+ ") \n"
+			+ ", abs as \n"
+			+ "( \n"
+			+ "    select \n"
+			+ "         [DbName] \n"
+			+ "        ,[SchemaName] \n"
+			+ "        ,[TableName] \n"
+			+ "        ,[IndexName] \n"
+			+ "        ,[index_id] \n"
+			+ "        ,[user_seeks]    as [abs_user_seeks] \n"
+			+ "        ,[user_scans]    as [abs_user_scans] \n"
+			+ "        ,[user_lookups]  as [abs_user_lookups] \n"
+			+ "        ,[user_updates]  as [abs_user_updates] \n"
+			+ "    from [CmIndexUsage_abs] \n"
+			+ "    where [SessionSampleTime] = (select max([SessionSampleTime]) from [CmIndexUsage_abs]) \n"
+			+ "      and [DbName]     = " + DbUtils.safeStr(dbname    ) + " \n"
+			+ "      and [SchemaName] = " + DbUtils.safeStr(schemaName) + " \n"
+			+ "      and [TableName]  = " + DbUtils.safeStr(tableName ) + " \n"
+			+ ") \n"
+			+ "select \n"
+			+ "     diff.[DbName] \n"
+			+ "    ,diff.[SchemaName] \n"
+			+ "    ,diff.[TableName] \n"
+			+ "    ,diff.[IndexName] \n"
+			+ "    ,diff.[index_id] \n"
+			+ " \n"
+			+ "    ,diff.[user_seeks] \n"
+			+ "    ,diff.[user_scans] \n"
+			+ "    ,diff.[user_lookups] \n"
+			+ "    ,diff.[user_updates] \n"
+			+ " \n"
+			+ "    ,abs. [abs_user_seeks] \n"
+			+ "    ,abs. [abs_user_scans] \n"
+			+ "    ,abs. [abs_user_lookups] \n"
+			+ "    ,abs. [abs_user_updates] \n"
+			+ "from diff \n"
+			+ "left outer join abs on diff.[DbName]     = abs.[DbName] \n"
+			+ "                   and diff.[SchemaName] = abs.[SchemaName] \n"
+			+ "                   and diff.[TableName]  = abs.[TableName] \n"
+			+ "                   and diff.[IndexName]  = abs.[IndexName] \n"
+			+ "order by diff.[index_id] \n"
+			+ "";
+
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// set some timeout
+			stmnt.setQueryTimeout(10);
+			
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while(rs.next())
+				{
+				//	String    DbName             = rs.getString   (1);
+				//	String    SchemaName         = rs.getString   (2);
+				//	String    TableName          = rs.getString   (3);
+					String    IndexName          = rs.getString   (4);
+				//	int       IndexID            = rs.getInt      (5);
+					
+					long      user_seeks         = rs.getLong     (6);
+					long      user_scans         = rs.getLong     (7);
+					long      user_lookups       = rs.getLong     (8);
+					long      user_updates       = rs.getLong     (9);
+					
+					long      abs_user_seeks     = rs.getLong     (10);
+					long      abs_user_scans     = rs.getLong     (11);
+					long      abs_user_lookups   = rs.getLong     (12);
+					long      abs_user_updates   = rs.getLong     (13);
+					
+					SqlServerIndexInfo indexEntry = ti.getIndexInfoForName(IndexName);
+					if (indexEntry != null)
+					{
+						indexEntry._user_seeks       = user_seeks;
+						indexEntry._user_scans       = user_scans;
+						indexEntry._user_lookups     = user_lookups;
+						indexEntry._user_updates     = user_updates;
+
+						indexEntry._abs_user_seeks   = abs_user_seeks;
+						indexEntry._abs_user_scans   = abs_user_scans;
+						indexEntry._abs_user_lookups = abs_user_lookups;
+						indexEntry._abs_user_updates = abs_user_updates;
+					}
+				}
+			}
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems getting INDEX Information for dbname='" + dbname + "', schema='" + schemaName + "', table='" + tableName + "'. Skipping and continuing.", ex);
+		}
+	}
+
+	private void getExecutionCounterInfo(DbxConnection conn, SqlServerTableInfo ti)
+	{
+		String dbname     = ti._dbName;
+		String schemaName = ti._schemaName;
+		String tableName  = ti._tableName;
+
+		// Check if table(s) exists, if not... just exit...
+		if ( ! DbUtils.checkIfTableExistsNoThrow(conn, null, null, "CmIndexOpStat_diff") )
+		{
+			_logger.warn("Table 'CmIndexOpStat_diff' did not exists, skip reading 'execution information'.");
+			return;
+		}
+
+		if ( ! DbUtils.checkIfTableExistsNoThrow(conn, null, null, "CmIndexOpStat_abs") )
+		{
+			_logger.warn("Table 'CmIndexOpStat_abs' did not exists, skip reading 'execution information'.");
+			return;
+		}
+		
+		// get optimizer info: CmIndexUsage  -- sys.dm_db_index_usage_stats          (user_seeks, user_scans, user_lookups, user_updates)
+		String sql = ""
+			+ "WITH diff as \n"
+			+ "( \n"
+			+ "    select \n"
+			+ "         [DbName] \n"
+			+ "        ,[SchemaName] \n"
+			+ "        ,[TableName] \n"
+			+ "        ,[IndexName] \n"
+			+ "        ,[index_id] \n"
+			+ "        ,sum([range_scan_count])         as [range_scan_count] \n"
+			+ "        ,sum([singleton_lookup_count])   as [singleton_lookup_count] \n"
+			+ "        ,sum([forwarded_fetch_count])    as [forwarded_fetch_count] \n"
+			+ "        ,sum([lob_fetch_in_pages])       as [lob_fetch_in_pages] \n"
+			+ "        ,sum([leaf_insert_count])        as [leaf_insert_count] \n"
+			+ "        ,sum([leaf_delete_count])        as [leaf_delete_count] \n"
+			+ "        ,sum([leaf_update_count])        as [leaf_update_count] \n"
+			+ "        ,sum([leaf_ghost_count])         as [leaf_ghost_count] \n"
+			+ "        ,sum([leaf_insert_count]) + sum([leaf_delete_count]) + sum([leaf_update_count]) + sum([leaf_ghost_count]) as [leaf_crud_count] \n"
+			+ "        ,sum([page_io_latch_wait_count]) as [page_io_latch_wait_count] \n"
+			+ "        ,sum([page_io_latch_wait_in_ms]) as [page_io_latch_wait_in_ms] \n"
+			+ "    from [CmIndexOpStat_diff] \n"
+			+ "    where 1 = 1 \n"
+			+ "      and [DbName]     = " + DbUtils.safeStr(dbname    ) + " \n"
+			+ "      and [SchemaName] = " + DbUtils.safeStr(schemaName) + " \n"
+			+ "      and [TableName]  = " + DbUtils.safeStr(tableName ) + " \n"
+			+ "    group by [DbName], [SchemaName], [TableName], [IndexName], [index_id] \n"
+			+ ") \n"
+			+ ", abs as \n"
+			+ "( \n"
+			+ "    select \n"
+			+ "         [DbName] \n"
+			+ "        ,[SchemaName] \n"
+			+ "        ,[TableName] \n"
+			+ "        ,[IndexName] \n"
+			+ "        ,[index_id] \n"
+			+ "        ,[range_scan_count]         as [abs_range_scan_count] \n"
+			+ "        ,[singleton_lookup_count]   as [abs_singleton_lookup_count] \n"
+			+ "        ,[forwarded_fetch_count]    as [abs_forwarded_fetch_count] \n"
+			+ "        ,[lob_fetch_in_pages]       as [abs_lob_fetch_in_pages] \n"
+			+ "        ,[leaf_insert_count] + [leaf_delete_count] + [leaf_update_count] + [leaf_ghost_count] as [abs_leaf_crud_count] \n"
+			+ "        ,[leaf_insert_count]        as [abs_leaf_insert_count] \n"
+			+ "        ,[leaf_delete_count]        as [abs_leaf_delete_count] \n"
+			+ "        ,[leaf_update_count]        as [abs_leaf_update_count] \n"
+			+ "        ,[leaf_ghost_count]         as [abs_leaf_ghost_count] \n"
+			+ "        ,[page_io_latch_wait_count] as [abs_page_io_latch_wait_count] \n"
+			+ "        ,[page_io_latch_wait_in_ms] as [abs_page_io_latch_wait_in_ms] \n"
+			+ "    from [CmIndexOpStat_abs] \n"
+			+ "    where [SessionSampleTime] = (select max([SessionSampleTime]) from [CmIndexOpStat_abs]) \n"
+			+ "      and [DbName]     = " + DbUtils.safeStr(dbname    ) + " \n"
+			+ "      and [SchemaName] = " + DbUtils.safeStr(schemaName) + " \n"
+			+ "      and [TableName]  = " + DbUtils.safeStr(tableName ) + " \n"
+			+ ") \n"
+			+ "select \n"
+			+ "     diff.[DbName] \n"
+			+ "    ,diff.[SchemaName] \n"
+			+ "    ,diff.[TableName] \n"
+			+ "    ,diff.[IndexName] \n"
+			+ "    ,diff.[index_id] \n"
+			+ " \n"
+			+ "    ,diff.[range_scan_count] \n"
+			+ "    ,diff.[singleton_lookup_count] \n"
+			+ "    ,diff.[forwarded_fetch_count] \n"
+			+ "    ,diff.[lob_fetch_in_pages] \n"
+			+ "    ,diff.[leaf_crud_count] \n"
+			+ "    ,diff.[leaf_insert_count] \n"
+			+ "    ,diff.[leaf_delete_count] \n"
+			+ "    ,diff.[leaf_update_count] \n"
+			+ "    ,diff.[leaf_ghost_count] \n"
+			+ "    ,diff.[page_io_latch_wait_count] \n"
+			+ "    ,diff.[page_io_latch_wait_in_ms] \n"
+			+ " \n"
+			+ "    ,abs. [abs_range_scan_count] \n"
+			+ "    ,abs. [abs_singleton_lookup_count] \n"
+			+ "    ,abs. [abs_forwarded_fetch_count] \n"
+			+ "    ,abs. [abs_lob_fetch_in_pages] \n"
+			+ "    ,abs. [abs_leaf_crud_count] \n"
+			+ "    ,abs. [abs_leaf_insert_count] \n"
+			+ "    ,abs. [abs_leaf_delete_count] \n"
+			+ "    ,abs. [abs_leaf_update_count] \n"
+			+ "    ,abs. [abs_leaf_ghost_count] \n"
+			+ "    ,abs. [abs_page_io_latch_wait_count] \n"
+			+ "    ,abs. [abs_page_io_latch_wait_in_ms] \n"
+			+ " \n"
+			+ "from diff \n"
+			+ "left outer join abs on diff.[DbName]     = abs.[DbName] \n"
+			+ "                   and diff.[SchemaName] = abs.[SchemaName] \n"
+			+ "                   and diff.[TableName]  = abs.[TableName] \n"
+			+ "                   and diff.[IndexName]  = abs.[IndexName] \n"
+			+ "order by diff.[index_id] \n"
+			+ "";
+
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// set some timeout
+			stmnt.setQueryTimeout(10);
+			
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while(rs.next())
+				{
+				//	String    DbName                       = rs.getString   (1);
+				//	String    SchemaName                   = rs.getString   (2);
+				//	String    TableName                    = rs.getString   (3);
+					String    IndexName                    = rs.getString   (4);
+				//	int       IndexID                      = rs.getInt      (5);
+					
+					long      range_scan_count             = rs.getLong     (6);
+					long      singleton_lookup_count       = rs.getLong     (7);
+					long      forwarded_fetch_count        = rs.getLong     (8);
+					long      lob_fetch_in_pages           = rs.getLong     (9);
+					long      leaf_crud_count              = rs.getLong     (10);
+					long      leaf_insert_count            = rs.getLong     (11);
+					long      leaf_delete_count            = rs.getLong     (12);
+					long      leaf_update_count            = rs.getLong     (13);
+					long      leaf_ghost_count             = rs.getLong     (14);
+					long      page_io_latch_wait_count     = rs.getLong     (15);
+					long      page_io_latch_wait_in_ms     = rs.getLong     (16);
+					
+					long      abs_range_scan_count         = rs.getLong     (17);
+					long      abs_singleton_lookup_count   = rs.getLong     (18);
+					long      abs_forwarded_fetch_count    = rs.getLong     (19);
+					long      abs_lob_fetch_in_pages       = rs.getLong     (20);
+					long      abs_leaf_crud_count          = rs.getLong     (21);
+					long      abs_leaf_insert_count        = rs.getLong     (22);
+					long      abs_leaf_delete_count        = rs.getLong     (23);
+					long      abs_leaf_update_count        = rs.getLong     (24);
+					long      abs_leaf_ghost_count         = rs.getLong     (25);
+					long      abs_page_io_latch_wait_count = rs.getLong     (26);
+					long      abs_page_io_latch_wait_in_ms = rs.getLong     (27);
+					
+					SqlServerIndexInfo indexEntry = ti.getIndexInfoForName(IndexName);
+					if (indexEntry != null)
+					{
+						indexEntry._range_scan_count             = range_scan_count;
+						indexEntry._singleton_lookup_count       = singleton_lookup_count;
+						indexEntry._forwarded_fetch_count        = forwarded_fetch_count;
+						indexEntry._lob_fetch_in_pages           = lob_fetch_in_pages;
+						indexEntry._leaf_crud_count              = leaf_crud_count;
+						indexEntry._leaf_insert_count            = leaf_insert_count;
+						indexEntry._leaf_delete_count            = leaf_delete_count;
+						indexEntry._leaf_update_count            = leaf_update_count;
+						indexEntry._leaf_ghost_count             = leaf_ghost_count;
+						indexEntry._page_io_latch_wait_count     = page_io_latch_wait_count;
+						indexEntry._page_io_latch_wait_in_ms     = page_io_latch_wait_in_ms;
+
+						indexEntry._abs_range_scan_count         = abs_range_scan_count;
+						indexEntry._abs_singleton_lookup_count   = abs_singleton_lookup_count;
+						indexEntry._abs_forwarded_fetch_count    = abs_forwarded_fetch_count;
+						indexEntry._abs_lob_fetch_in_pages       = abs_lob_fetch_in_pages;
+						indexEntry._abs_leaf_crud_count          = abs_leaf_crud_count;
+						indexEntry._abs_leaf_insert_count        = abs_leaf_insert_count;
+						indexEntry._abs_leaf_delete_count        = abs_leaf_delete_count;
+						indexEntry._abs_leaf_update_count        = abs_leaf_update_count;
+						indexEntry._abs_leaf_ghost_count         = abs_leaf_ghost_count;
+						indexEntry._abs_page_io_latch_wait_count = abs_page_io_latch_wait_count;
+						indexEntry._abs_page_io_latch_wait_in_ms = abs_page_io_latch_wait_in_ms;
+					}
+				}
+			}
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems getting INDEX Information for dbname='" + dbname + "', schema='" + schemaName + "', table='" + tableName + "'. Skipping and continuing.", ex);
+		}
+	}
+
+	
+	private static void scrapeIndexInfo(String indexName, ResultSetTableModel rstm, SqlServerIndexInfo indexInfo)
+	{
+		if (rstm == null)
+			return;
+
+		if (rstm.isEmpty())
+			return;
+
+		if (indexInfo == null)
+			throw new IllegalArgumentException("scrapeIndexInfo(): indexInfo can't be null.");
+
+		if (StringUtil.isNullOrBlank(indexName))
+			throw new IllegalArgumentException("scrapeIndexInfo(): indexName can't be null or ''.");
+
+		// possible columns:  index_name, index_description, index_keys
+		List<Integer> rowIds = rstm.getRowIdsWhere("index_name", indexName);
+		if ( rowIds.size() == 1 )
+		{
+			int row = rowIds.get(0);
+			
+			String xIndexKeys = rstm.getValueAsString(row, "index_keys");
+			String xIndexDesc = rstm.getValueAsString(row, "index_description");
+			
+			// Set the values in the passed SqlServerIndexInfo
+			indexInfo._keysStr      = xIndexKeys;
+			indexInfo._keys         = StringUtil.commaStrToList(xIndexKeys, true);
+			indexInfo._desc         = xIndexDesc;
+		}
+	}
+	
+	
+	public static class SqlServerIndexInfo
+	{
+		private String       _indexName;
+		private long         _indexPages;
+//		private int          _sizeKb            = -1;
+//		private int          _reservedKb        = -1;
+//		private int          _unusedKb          = -1;
+		private String       _keysStr;
+		private List<String> _keys;
+		private String       _desc;
+		private String       _ddlTxt;
+		private int          _indexID           = -1;
+		private int          _fillFactor        = -1;
+		private double       _rowsPerPage       = -1;
+		private long         _rowcount;
+		private Timestamp    _lastUpdateStats;
+//		private Timestamp    _CreationDate;
+//		private Timestamp    _ObjectCacheDate;
+//		private long         _RowsInsUpdDel     = -1;
+//		private long         _OptSelectCount    = -1;
+//		private long         _UsedCount         = -1;
+//		private long         _Operations        = -1;
+//		private long         _AbsRowsInsUpdDel  = -1;
+//		private long         _AbsOptSelectCount = -1;
+//		private long         _AbsUsedCount      = -1;
+//		private long         _AbsOperations     = -1;
+
+//		public int    _avgRowSizeInBytes;
+//		public Double _avgPgSpaceUsedInPct;
+		
+		// Optimizer Counters
+		private long _user_seeks                   = -1;
+		private long _user_scans                   = -1;
+		private long _user_lookups                 = -1;
+		private long _user_updates                 = -1;
+
+		private long _abs_user_seeks               = -1;
+		private long _abs_user_scans               = -1;
+		private long _abs_user_lookups             = -1;
+		private long _abs_user_updates             = -1;
+
+		// Execution Counters
+		private long _range_scan_count             = -1;
+		private long _singleton_lookup_count       = -1;
+		private long _forwarded_fetch_count        = -1;
+		private long _lob_fetch_in_pages           = -1;
+		private long _leaf_crud_count              = -1;
+		private long _leaf_insert_count            = -1;
+		private long _leaf_delete_count            = -1;
+		private long _leaf_update_count            = -1;
+		private long _leaf_ghost_count             = -1;
+		private long _page_io_latch_wait_count     = -1;
+		private long _page_io_latch_wait_in_ms     = -1;
+
+		private long _abs_range_scan_count         = -1;
+		private long _abs_singleton_lookup_count   = -1;
+		private long _abs_forwarded_fetch_count    = -1;
+		private long _abs_lob_fetch_in_pages       = -1;
+		private long _abs_leaf_crud_count          = -1;
+		private long _abs_leaf_insert_count        = -1;
+		private long _abs_leaf_delete_count        = -1;
+		private long _abs_leaf_update_count        = -1;
+		private long _abs_leaf_ghost_count         = -1;
+		private long _abs_page_io_latch_wait_count = -1;
+		private long _abs_page_io_latch_wait_in_ms = -1;
+
+
+		public String       getIndexName         () { return _indexName; }
+		public long         getIndexPages        () { return _indexPages; }
+		public long         getIndexSizeKb       () { return _indexPages * 8; }
+		public double       getIndexSizeMb       () { return MathUtils.round(getIndexSizeKb() / 1024.0, 1); }
+//		public int          getReservedKb        () { return _reservedKb; }
+//		public int          getUnusedKb          () { return _unusedKb; }
+		public String       getKeysStr           () { return _keysStr; }
+		public List<String> getKeys              () { return _keys; }
+		public String       getDescription       () { return _desc; }
+		public String       getDdlText           () { return _ddlTxt; }
+                                                 
+		public int          getIndexID           () { return _indexID;            }
+		public long         getRowCount          () { return _rowcount;           }
+		public Timestamp    getLastUpdateStats   () { return _lastUpdateStats;    }
+		public int          getFillFactor        () { return _fillFactor; }
+		public double       getRowsPerPage       () { return _rowsPerPage; }
+		
+		
+		
+//		public Timestamp    getCreationDate      () { return _CreationDate;       }
+//		public String       getCreationDateStr   () { return _CreationDate    == null ? "--not-found--" : _CreationDate.toString(); }
+//		public Timestamp    getCacheDate         () { return _ObjectCacheDate;    }
+//		public String       getCacheDateStr      () { return _ObjectCacheDate == null ? "--not-found--" : _ObjectCacheDate.toString(); }
+//		public long         getRowsInsUpdDel     () { return _RowsInsUpdDel;     }
+//		public long         getOptSelectCount    () { return _OptSelectCount;     }
+//		public long         getUsedCount         () { return _UsedCount;          }
+//		public long         getOperations        () { return _Operations;         }
+//		public long         getAbsRowsInsUpdDel  () { return _AbsRowsInsUpdDel;   }
+//		public long         getAbsOptSelectCount () { return _AbsOptSelectCount;  }
+//		public long         getAbsUsedCount      () { return _AbsUsedCount;       }
+//		public long         getAbsOperations     () { return _AbsOperations;      }
+
+//		public int       getAvgRowSizeBytes()     { return _avgRowSizeInBytes; }
+//		public Double    getAvgPageSpaceUsedPct() { return _avgPgSpaceUsedInPct; }
+		
+//		public double getReservedMb() { return MathUtils.round(getReservedKb() / 1024.0, 1); }
+//		public double getUnusedMb()   { return MathUtils.round(getUnusedKb()   / 1024.0, 1); }
+	}
+
+
+	public static class SqlServerTableInfo
+	{
+		private int    _partitionCount;
+		private long   _totalPages;
+		private long   _inRowPages;
+		private long   _lobPages;
+		private long   _rowOverflowPages;
+//		private long   _compressedPageCount;
+//		private long   _forwardedRowCount;
+//		private long   _ghostRowCount;
+//		private long   _dataPages;
+		private long   _indexPages;
+		
+		private String   _dbName;
+		private String   _schemaName;
+		private String   _tableName;
+		public String    _type;
+		public Timestamp _crdate;
+		private String   _extraInfoText;  // sys.dm_db_index_physical_stats
+		private String   _objectText;     // sp_help tabname
+		private long     _rowtotal;
+//		private int      _reservedKb;
+//		private int      _dataKb;
+//		private int      _indexKb;
+//		private int      _unusedKb;
+//		private String   _lockSchema;
+		private int      _indexCount;
+		private List<SqlServerIndexInfo> _indexList = new ArrayList<>();
+
+		public List<String> _viewReferences; // if _type == "V", this this will hold; table/views this view references
+		
+		public SqlServerIndexInfo getIndexInfoForName(String indexName)
+		{
+			if (StringUtil.isNullOrBlank(indexName))
+				return null;
+
+			for (SqlServerIndexInfo e : _indexList)
+				if (indexName.equals(e._indexName))
+					return e;
+			return null;
+		}
+		
+		public String getFullTableName()
+		{
+			String prefix = "";
+			if (StringUtil.hasValue(_dbName))     prefix += _dbName     + ".";
+			if (StringUtil.hasValue(_schemaName)) prefix += _schemaName + ".";
+			return prefix + _tableName;
+		}
+		
+		public String    getDbName()              { return _dbName; }
+		public String    getSchemaName()          { return _schemaName; }
+		public String    getTableName()           { return _tableName; }
+		public String    getType()                { return _type; }
+		public Timestamp getCrDate()              { return _crdate; }
+
+//		public long      getCompressedPageCount() { return _compressedPageCount; }
+//		public long      getForwardedRowCount()   { return _forwardedRowCount; }
+//		public long      getGhostRowCount()       { return _ghostRowCount; }
+
+		public long      getPartitionCount()      { return _partitionCount; }
+		public long      getRowTotal()            { return _rowtotal; }
+                                                  
+//		public long      getSizePages()           { return getDataPages() + getIndexPages() + getLobPages() + getRowOverflowPages(); }
+//		public long      getSizeKb()              { return getSizePages() * 8; }
+//		public double    getSizeMb()              { return MathUtils.round(getSizeKb() / 1024.0, 1); }
+                                                  
+		public long      getTotalPages()          { return _totalPages; }
+		public long      getTotalKb()             { return _totalPages * 8; }
+		public double    getTotalMb()             { return MathUtils.round(getTotalKb() / 1024.0, 1); }
+		                                          
+		public long      getInRowPages()          { return _inRowPages; }
+		public long      getInRowKb()             { return _inRowPages * 8; }
+		public double    getInRowMb()             { return MathUtils.round(getInRowKb()     / 1024.0, 1); }
+		                                          
+		public long      getLobPages()            { return _lobPages; }
+		public long      getLobKb()               { return _lobPages * 8; }
+		public double    getLobMb()               { return MathUtils.round(getLobKb() / 1024.0, 1); }
+
+		public long      getRowOverflowPages()    { return _rowOverflowPages; }
+		public long      getRowOverflowKb()       { return _rowOverflowPages * 8; }
+		public double    getRowOverflowMb()       { return MathUtils.round(getRowOverflowKb() / 1024.0, 1); }
+
+		public long      getIndexPages()          { return _indexPages; }
+		public long      getIndexKb()             { return _indexPages * 8; }
+		public double    getIndexMb()             { return MathUtils.round(getIndexKb()    / 1024.0, 1); }
+                                                  
+		public int       getIndexCount()          { return _indexCount; }
+		public List<SqlServerIndexInfo> getIndexList()  { return _indexList == null ? Collections.emptyList() : _indexList; }
+
+		public boolean      isUserTable()         { return "U".equals(_type); }
+		public boolean      isView()              { return "V".equals(_type); }
+		public List<String> getViewReferences()   { return _viewReferences; }
+
+		
+		/////////////////////////////////////////////////////////////////////////////////
+		// hashCode() & equals() so we can use Set/Map and sorting...
+		/////////////////////////////////////////////////////////////////////////////////
+		@Override
+		public int hashCode()
+		{
+			return Objects.hash(_dbName, _schemaName, _tableName);
+		}
+
+		@Override
+		public boolean equals(Object obj)
+		{
+			if ( this == obj ) return true;
+			if ( obj == null ) return false;
+			if ( getClass() != obj.getClass() ) return false;
+
+			SqlServerTableInfo other = (SqlServerTableInfo) obj;
+			return Objects.equals(_dbName    , other._dbName) 
+			    && Objects.equals(_schemaName, other._schemaName) 
+			    && Objects.equals(_tableName , other._tableName);
+		}
 	}
 }

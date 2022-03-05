@@ -369,6 +369,7 @@ set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\javax.servlet-api-3.1.0.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\cron4j-2.2.5.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\cron-utils-7.0.6.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\schemacrawler-16.2.4.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\sql-formatter-2.0.3.jar
 
 rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\tomcat\*
 

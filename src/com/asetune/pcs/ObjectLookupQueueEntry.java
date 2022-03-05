@@ -20,6 +20,8 @@
  ******************************************************************************/
 package com.asetune.pcs;
 
+import java.util.Objects;
+
 public class ObjectLookupQueueEntry
 {
 	public String _dbname;
@@ -28,6 +30,12 @@ public class ObjectLookupQueueEntry
 	public String _dependParent;
 	public int    _dependLevel;
 
+	// Special option that might be set 
+	boolean _isStatementCacheEntry = false;
+
+	public boolean isStatementCacheEntry()           { return _isStatementCacheEntry; }
+	public void    setStatementCacheEntry(boolean b) { _isStatementCacheEntry = b; }
+	
 	public ObjectLookupQueueEntry(String dbname, String objectName, String source, String dependParent, int dependLevel)
 	{
 		_dbname       = dbname;
@@ -43,5 +51,24 @@ public class ObjectLookupQueueEntry
 		StringBuilder sb = new StringBuilder();
 		sb.append(_dbname).append(":").append(_objectName);
 		return sb.toString(); 
+	}
+
+	
+	
+	@Override
+	public int hashCode()
+	{
+		return Objects.hash(_dbname, _objectName);
+	}
+
+	@Override
+	public boolean equals(Object obj)
+	{
+		if ( this == obj ) return true;
+		if ( obj == null ) return false;
+		if ( getClass() != obj.getClass() ) return false;
+
+		ObjectLookupQueueEntry other = (ObjectLookupQueueEntry) obj;
+		return Objects.equals(_dbname, other._dbname) && Objects.equals(_objectName, other._objectName);
 	}
 }

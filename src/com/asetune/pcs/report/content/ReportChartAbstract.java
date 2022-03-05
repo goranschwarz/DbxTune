@@ -101,6 +101,7 @@ public abstract class ReportChartAbstract implements IReportChart
 	private String        _cmName;
 	private String        _graphName;
 	private String        _graphTitle;
+	private int           _maxValue;
 	private String        _chartId;  // used to create 
 	private static long   _chartIdCounter = 0; // incremented in the constructor for every creation.
 	
@@ -132,7 +133,7 @@ public abstract class ReportChartAbstract implements IReportChart
 	public void setPreComment         (String              preComment ) { _preComment          = preComment;  }
 	public void setPostComment        (String              postComment) { _postComment         = postComment; }
 
-	public ReportChartAbstract(ReportEntryAbstract reportEntry, DbxConnection conn, ChartType chartType, String cmName, String graphName, String graphTitle)
+	public ReportChartAbstract(ReportEntryAbstract reportEntry, DbxConnection conn, ChartType chartType, String cmName, String graphName, String graphTitle, int maxValue)
 	{
 		_reportEntry     = reportEntry;
 		_conn            = conn;
@@ -140,6 +141,7 @@ public abstract class ReportChartAbstract implements IReportChart
 		_cmName          = cmName;
 		_graphName       = graphName; 
 		_graphTitle      = graphTitle;
+		_maxValue        = maxValue;
 		
 		_chartIdCounter++;
 		_chartId         = _cmName + "_" + _chartIdCounter;
@@ -664,8 +666,13 @@ public abstract class ReportChartAbstract implements IReportChart
 		{
 			writer.append("                stacked: true, \n");
 		}
+		if (_maxValue > 0)
+		{
+    		writer.append("                suggestedMax: " + _maxValue + ", \n");
+    		writer.append("                suggestedMin: 0, \n");
+		}
 		writer.append("                ticks: { \n");
-		writer.append("                    beginAtZero: true \n");
+		writer.append("                    beginAtZero: true, \n");
 		writer.append("                }, \n");
 		writer.append("                gridLines: { \n");
 		writer.append("                    color: 'rgba(0, 0, 0, 0.1)', \n");

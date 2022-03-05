@@ -30,6 +30,7 @@ import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -38,6 +39,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 
 import org.apache.commons.text.StringEscapeUtils;
@@ -53,6 +55,7 @@ import com.asetune.sql.SqlObjectName;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
+import com.asetune.utils.HtmlTableProducer;
 import com.asetune.utils.MathUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
@@ -138,6 +141,19 @@ extends ReportEntryAbstract
 		return set;
 	}
 
+	/** 
+	 * get ASE Page Size as bytes.
+	 * <ul>
+	 *   <li>2k  = <b> 2048  </b></li>
+	 *   <li>4k  = <b> 4096  </b></li>
+	 *   <li>8k  = <b> 8192  </b></li>
+	 *   <li>16k = <b> 16384 </b></li>
+	 * </ul>
+	 * 
+	 * @param conn
+	 * @return
+	 * @throws SQLException
+	 */
 	public int getAsePageSizeFromMonDdlStorage(DbxConnection conn)
 	throws SQLException
 	{
@@ -169,7 +185,28 @@ extends ReportEntryAbstract
 		}
 	}
 
-	public String getTableInfoAsHtmlTable(List<AseTableInfo> tableInfoList, List<String> tableList, boolean includeIndexInfo, String classname)
+	/**
+	 * Get various information from DDL Storage about table and it's indexes
+	 * 
+	 * @param conn
+	 * @param tableList
+	 * @param includeIndexInfo
+	 * @param classname
+	 * @return
+	 */
+	@Override
+	public String getDbmsTableInfoAsHtmlTable(DbxConnection conn, Set<String> tableList, boolean includeIndexInfo, String classname)
+	{
+		// Get tables/indexes
+		Set<AseTableInfo> tableInfoSet = getTableInformationFromMonDdlStorage(conn, tableList);
+		if (tableInfoSet.isEmpty())
+			return "";
+
+		// And make it into a HTML table with various information about the table and indexes 
+		return getTableInfoAsHtmlTable(tableInfoSet, tableList, includeIndexInfo, classname);
+	}
+
+	public String getTableInfoAsHtmlTable(Set<AseTableInfo> tableInfoList, Set<String> tableList, boolean includeIndexInfo, String classname)
 	{
 		// Exit early: if no data
 		if (tableInfoList == null)   return "";
@@ -189,7 +226,7 @@ extends ReportEntryAbstract
 				boolean exists = false;
 				for(AseTableInfo ti : tableInfoList)
 				{
-					if (tabName.equals(ti.getTableName()))
+					if (tabName.equalsIgnoreCase(ti.getTableName()))
 					{
 						exists = true;
 						break;
@@ -197,7 +234,7 @@ extends ReportEntryAbstract
 				}
 				if ( ! exists )
 				{
-					sb.append("&emsp; &bull; Table '").append(tabName).append("' was NOT found in the DDL Storage.<br>\n");
+					sb.append("&emsp; &bull; Table <code>").append(tabName).append("</code> was NOT found in the DDL Storage.<br>\n");
 				}
 			}
 		}
@@ -213,19 +250,10 @@ extends ReportEntryAbstract
 		sb.append("<thead> \n");
 		sb.append("<tr> \n");
 
-		sb.append("  <th>DBName</th> \n");
-		sb.append("  <th>Schema</th> \n");
-		sb.append("  <th>Table</th> \n");
-		sb.append("  <th>Rowcount</th> \n");
-		sb.append("  <th>Used MB</th> \n");
-		sb.append("  <th>Data MB</th> \n");
-		sb.append("  <th>Index MB</th> \n");
-		sb.append("  <th>Lock Scheme</th> \n");
-		sb.append("  <th>Index Count</th> \n");
-		
+		sb.append("  <th>Table Info</th> \n");
 		if (includeIndexInfo)
-			sb.append("  <th>Index Information</th> \n");
-
+			sb.append("  <th>Index Info</th> \n");
+		
 		sb.append("</tr> \n");
 		sb.append("</thead> \n");
 
@@ -236,18 +264,62 @@ extends ReportEntryAbstract
 		sb.append("<tbody> \n");
 		for (AseTableInfo entry : tableInfoList)
 		{
+			LinkedHashMap<String, String> tableInfoMap = new LinkedHashMap<>();
+
+			if (entry.isView())
+			{
+				tableInfoMap.put("Type"       ,            "<b>VIEW</b>"              );
+				tableInfoMap.put("DBName"     ,            entry.getDbName()          );
+				tableInfoMap.put("Schema"     ,            entry.getSchemaName()      );
+				tableInfoMap.put("View"       ,            entry.getTableName()       );
+				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
+//				tableInfoMap.put("References" ,            entry.getViewReferences()+""); // instead show this in the: Index Info section
+			}
+			else // Any table
+			{
+				tableInfoMap.put("DBName"     ,            entry.getDbName()     );
+				tableInfoMap.put("Schema"     ,            entry.getSchemaName() );
+				tableInfoMap.put("Table"      ,            entry.getTableName()  );
+				tableInfoMap.put("Rowcount"   , nf.format( entry.getRowTotal()  ));
+				tableInfoMap.put("Total MB"   , nf.format( entry.getSizeMb()    ));
+				tableInfoMap.put("Data MB"    , nf.format( entry.getDataMb()    ));
+				tableInfoMap.put("Data Pages" , nf.format( entry.getDataPages() ));
+				tableInfoMap.put("Index MB"   , nf.format( entry.getIndexMb()   ));
+				tableInfoMap.put("LOB MB"     , entry.getLobMb() == -1 ? "-no-lob-" : nf.format( entry.getLobMb() ));
+				tableInfoMap.put("Lock Scheme",            entry.getLockScheme() );
+				tableInfoMap.put("Index Count", entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>") );
+			}
+			
+			String tableInfo = HtmlTableProducer.createHtmlTable(tableInfoMap, "dsr-sub-table-other-info", true);
+			String indexInfo = "";
+
+			if (entry.isView()) 
+			{
+				// Build a bullet list of view references
+				indexInfo = "";
+				if (entry.getViewReferences() != null)
+				{
+					indexInfo += "View references the following tables:";
+					indexInfo += "<ul>";
+					for (String viewRef : entry.getViewReferences())
+					{
+						indexInfo += "<li>" + viewRef + "</li>";
+					}
+					indexInfo += "</ul>";
+				}
+			}
+			else
+			{
+				// Get index information in a separate table
+				indexInfo = getIndexInfoAsHtmlTable(entry, classname);
+			}
+			
+			
 			sb.append("<tr> \n");
-			sb.append("  <td>").append( entry.getDbName()                ).append("</td> \n");
-			sb.append("  <td>").append( entry.getSchemaName()            ).append("</td> \n");
-			sb.append("  <td>").append( entry.getTableName()             ).append("</td> \n");
-			sb.append("  <td>").append( nf.format( entry.getRowTotal()  )).append("</td> \n");
-			sb.append("  <td>").append( nf.format( entry.getSizeMb()    )).append("</td> \n");
-			sb.append("  <td>").append( nf.format( entry.getDataMb()    )).append("</td> \n");
-			sb.append("  <td>").append( nf.format( entry.getIndexMb()   )).append("</td> \n");
-			sb.append("  <td>").append( entry.getLockScheme()            ).append("</td> \n");
-			sb.append("  <td>").append( entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>"   )).append("</td> \n");
+			sb.append("  <td>").append( tableInfo ).append("</td> \n");
+
 			if (includeIndexInfo)
-				sb.append("  <td>").append( getIndexInfoAsHtmlTable(entry, classname) ).append("</td> \n");
+				sb.append("  <td>").append( indexInfo ).append("</td> \n");
 
 			sb.append("</tr> \n");
 		}
@@ -295,32 +367,33 @@ extends ReportEntryAbstract
 
 		sb.append("  <th>Index Name</th> \n");
 		sb.append("  <th>Keys</th> \n");
+		sb.append("  <th>IndexID</th> \n");
 		sb.append("  <th>Desciption</th> \n");
 		sb.append("  <th>Size MB</th> \n");
+		sb.append("  <th>Size Pages</th> \n");
 		sb.append("  <th title='Average Bytes used per Row\nCalculted by: SizeBytes/TableRowcount'>Avg RowSize</th> \n");
 		sb.append("  <th>Reserved MB</th> \n");
 		sb.append("  <th>Unused MB</th> \n");
 //		sb.append("  <th>DDL</th> \n");
-
-		sb.append("  <th>IndexID</th> \n");
 
 		String tt1 = "\nTime span: During the report period.";
 		sb.append("  <th title='Number of Insert, Update and Deletes that has been done." + tt1                      + "'>RowsInsUpdDel</th> \n");
 		sb.append("  <th title='Number of times the optimizer selected this index to be used in a query plan." + tt1 + "'>OptSelectCount</th> \n");
 		sb.append("  <th title='Number of times the object was used in a plan during execution." + tt1               + "'>UsedCount</th> \n");
 		sb.append("  <th title='Number of times the object was accessed." + tt1                                      + "'>Operations</th> \n");
+		sb.append("  <th title='Number of scans performed on this object." + tt1                                     + "'>Scans</th> \n");
 
 		sb.append("  <th title='Indicates the date and time when the index structure was added to the ASE cache."    + "'>CacheDate</th> \n");
 		sb.append("  <th title='When was the index created."                                                         + "'>CrDate</th> \n");
 
-		String tt2 = "\nTime span: Since object was cached (see CacheDate)."
-		           + "\nNOTE: This counter is an integer that may/will wrap, if incremeted frequently."
-		           + "\nUse this to decide if the index has **ever** been used since CacheDate."
-		           + "\nA low value indicates that the index has NOT been used. And therefor may be an *unused* index.";
-		sb.append("  <th title='Number of Insert, Update and Deletes that has been done." + tt2                      + "'>AbsRowsInsUpdDel</th> \n");
-		sb.append("  <th title='Number of times the optimizer selected this index to be used in a query plan." + tt2 + "'>AbsOptSelectCount</th> \n");
-		sb.append("  <th title='Number of times the object was used in a plan during execution." + tt2               + "'>AbsUsedCount</th> \n");
-		sb.append("  <th title='Number of times the object was accessed." + tt2                                      + "'>AbsOperations</th> \n");
+//		String tt2 = "\nTime span: Since object was cached (see CacheDate)."
+//		           + "\nNOTE: This counter is an integer that may/will wrap, if incremeted frequently."
+//		           + "\nUse this to decide if the index has **ever** been used since CacheDate."
+//		           + "\nA low value indicates that the index has NOT been used. And therefor may be an *unused* index.";
+//		sb.append("  <th title='Number of Insert, Update and Deletes that has been done." + tt2                      + "'>AbsRowsInsUpdDel</th> \n");
+//		sb.append("  <th title='Number of times the optimizer selected this index to be used in a query plan." + tt2 + "'>AbsOptSelectCount</th> \n");
+//		sb.append("  <th title='Number of times the object was used in a plan during execution." + tt2               + "'>AbsUsedCount</th> \n");
+//		sb.append("  <th title='Number of times the object was accessed." + tt2                                      + "'>AbsOperations</th> \n");
 
 		sb.append("</tr> \n");
 		sb.append("</thead> \n");
@@ -337,27 +410,23 @@ extends ReportEntryAbstract
 			sb.append("<tr> \n");
 			sb.append("  <td>").append(            entry.getIndexName()          ).append("</td> \n");
 			sb.append("  <td>").append(            entry.getKeysStr()            ).append("</td> \n");
+			sb.append("  <td>").append(            entry.getIndexID()            ).append("</td> \n");
 			sb.append("  <td>").append(            entry.getDescription()        ).append("</td> \n");
 			sb.append("  <td>").append( nf.format( entry.getSizeMb()            )).append("</td> \n");
+			sb.append("  <td>").append( nf.format( entry.getSizePages()         )).append("</td> \n");
 			sb.append("  <td>").append( nf.format( avgBytesPerRow               )).append("</td> \n");
 			sb.append("  <td>").append( nf.format( entry.getReservedMb()        )).append("</td> \n");
 			sb.append("  <td>").append( nf.format( entry.getUnusedMb()          )).append("</td> \n");
 //			sb.append("  <td>").append(            entry.getDdlText()            ).append("</td> \n");
 
-			sb.append("  <td>").append(            entry.getIndexID()            ).append("</td> \n");
-			
-			sb.append("  <td>").append( nf.format( entry.getRowsInsUpdDel()     )).append("</td> \n");
-			sb.append("  <td>").append( nf.format( entry.getOptSelectCount()    )).append("</td> \n");
-			sb.append("  <td>").append( nf.format( entry.getUsedCount()         )).append("</td> \n");
-			sb.append("  <td>").append( nf.format( entry.getOperations()        )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry.getRowsInsUpdDel() , entry.getAbsRowsInsUpdDel()  ) ).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry.getOptSelectCount(), entry.getAbsOptSelectCount() ) ).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry.getUsedCount()     , entry.getAbsUsedCount()      ) ).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry.getOperations()    , entry.getAbsOperations()     ) ).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry.getScans()         , entry.getAbsScans()          ) ).append("</td> \n");
 
 			sb.append("  <td>").append(            entry.getCacheDateStr()       ).append("</td> \n");
 			sb.append("  <td>").append(            entry.getCreationDateStr()    ).append("</td> \n");
-
-			sb.append("  <td>").append( nf.format( entry.getAbsRowsInsUpdDel()  )).append("</td> \n");
-			sb.append("  <td>").append( nf.format( entry.getAbsOptSelectCount() )).append("</td> \n");
-			sb.append("  <td>").append( nf.format( entry.getAbsUsedCount()      )).append("</td> \n");
-			sb.append("  <td>").append( nf.format( entry.getAbsOperations()     )).append("</td> \n");
 			sb.append("</tr> \n");
 		}
 		sb.append("</tbody> \n");
@@ -380,23 +449,23 @@ extends ReportEntryAbstract
 	/**
 	 * FIXME
 	 */
-	public List<AseTableInfo> getTableInformationFromMonDdlStorage(DbxConnection conn, List<String> tableList)
+	public Set<AseTableInfo> getTableInformationFromMonDdlStorage(DbxConnection conn, Set<String> tableList)
 	{
 		// Exit early if nothing todo
-		if (tableList == null)   return Collections.emptyList();
-		if (tableList.isEmpty()) return Collections.emptyList();
+		if (tableList == null)   return Collections.emptySet();
+		if (tableList.isEmpty()) return Collections.emptySet();
 
 		// Put all the results back in one list
-		List<AseTableInfo> combinedReturnList = new ArrayList<>();
+		Set<AseTableInfo> combinedReturnList = new LinkedHashSet<>();
 		
 		for (String tableName : tableList)
 		{
 			try
 			{
-				List<AseTableInfo> tmpList = getTableInformationFromMonDdlStorage(conn, null, null, tableName);
+				Set<AseTableInfo> tmp = getTableInformationFromMonDdlStorage(conn, null, null, tableName);
 				
-				if (tmpList != null && !tmpList.isEmpty())
-					combinedReturnList.addAll(tmpList);
+				if (tmp != null && !tmp.isEmpty())
+					combinedReturnList.addAll(tmp);
 			}
 			catch(SQLException ignore) 
 			{
@@ -419,7 +488,45 @@ extends ReportEntryAbstract
 	 * 
 	 * @throws SQLException In case of issues.
 	 */
-	public List<AseTableInfo> getTableInformationFromMonDdlStorage(DbxConnection conn, String dbname, String owner, String table)
+	public Set<AseTableInfo> getTableInformationFromMonDdlStorage(DbxConnection conn, String dbname, String owner, String table)
+	throws SQLException
+	{
+		Set<AseTableInfo> result = new LinkedHashSet<>();
+
+		// First level of (potential recursion)
+		getTableInformationFromMonDdlStorage(conn, dbname, owner, table, 0, result);
+		
+		// Should we remove any VIEWS ?
+		boolean removeViews = false;
+		if (removeViews)
+		{
+			Set<AseTableInfo> tmp = new LinkedHashSet<>();
+			for (AseTableInfo ti : result)
+			{
+				if (ti.isView())
+					continue;
+
+				tmp.add(ti);
+			}
+			tmp = result;
+		}
+		
+		return result;
+	}
+
+	/**
+	 * PRIVATE: called from the public getTableInformationFromMonDdlStorage. <br>
+	 * Intention: If it's a view that we lookup, we will do recurse calls until we have found "all" the involved tables (and views)
+	 * 
+	 * @param conn
+	 * @param dbname
+	 * @param owner
+	 * @param table
+	 * @param recursCallCount      Fist call should be 0, then it increments (and we stop at 100 recursive calls)
+	 * @param result               Pass in a (LinkedHash) Set where the information will be stored into. (a outer method will be used to return data to "client" caller) and if desired remove any VIEW objects
+	 * @throws SQLException
+	 */
+	private void getTableInformationFromMonDdlStorage(DbxConnection conn, String dbname, String owner, String table, int recursCallCount, Set<AseTableInfo> result)
 	throws SQLException
 	{
 //		if (StringUtil.isNullOrBlank(dbname))
@@ -427,8 +534,19 @@ extends ReportEntryAbstract
 //		if (StringUtil.isNullOrBlank(table))
 //			return null;
 
+		if (result == null)
+			throw new IllegalArgumentException("The passed Set<SqlServerTableInfo> 'result' can't be null.");
+
+		// Stop recursive calls after X times (so we don't end up in an infinite loop)
+		if (recursCallCount > 100)
+		{
+			_logger.warn("getTableInformationFromMonDdlStorage() infinite recursive call count is at " + recursCallCount + ". STOP doing recursive calls now... ");
+			return;
+		}
+		
 		// Check if 'table' has dbname/schema name specified.
-		SqlObjectName sqlObj = new SqlObjectName(table, DbUtils.DB_PROD_NAME_SYBASE_ASE, "\"", false, true);
+//		SqlObjectName sqlObj = new SqlObjectName(table, DbUtils.DB_PROD_NAME_SYBASE_ASE, "\"", false, false, true);
+		SqlObjectName sqlObj = new SqlObjectName(conn, table);
 		if (sqlObj.hasCatalogName()) dbname = sqlObj.getCatalogNameOrigin();
 		if (sqlObj.hasSchemaName() ) owner  = sqlObj.getSchemaNameOrigin();
 		if (sqlObj.hasObjectName() ) table  = sqlObj.getObjectNameOrigin();
@@ -436,19 +554,22 @@ extends ReportEntryAbstract
 		if ("dbo".equalsIgnoreCase(owner))
 			owner = "";
 
-		String and_dbname = !StringUtil.hasValue(dbname) ? "" : "  and [dbname]     = " + DbUtils.safeStr(dbname) + " \n";
-		String and_owner  = !StringUtil.hasValue(owner)  ? "" : "  and [owner]      = " + DbUtils.safeStr(owner)  + " \n";
-		String and_table  = !StringUtil.hasValue(table)  ? "" : "  and [objectName] = " + DbUtils.safeStr(table)  + " \n";
+//		String and_dbname = !StringUtil.hasValue(dbname) ? "" : "  and [dbname]     = " + DbUtils.safeStr(dbname) + " \n";
+//		String and_owner  = !StringUtil.hasValue(owner)  ? "" : "  and [owner]      = " + DbUtils.safeStr(owner)  + " \n";
+//		String and_table  = !StringUtil.hasValue(table)  ? "" : "  and [objectName] = " + DbUtils.safeStr(table)  + " \n";
+		String and_dbname = !StringUtil.hasValue(dbname) ? "" : "  and lower([dbname])     = " + DbUtils.safeStr(dbname.toLowerCase()) + " \n";
+		String and_owner  = !StringUtil.hasValue(owner)  ? "" : "  and lower([owner])      = " + DbUtils.safeStr(owner.toLowerCase())  + " \n";
+		String and_table  = !StringUtil.hasValue(table)  ? "" : "  and lower([objectName]) = " + DbUtils.safeStr(table.toLowerCase())  + " \n";
 
 		if (and_dbname.contains("%")) and_dbname = and_dbname.replace(" = ", " like ");
 		if (and_owner .contains("%")) and_owner  = and_owner .replace(" = ", " like ");
 		if (and_table .contains("%")) and_table  = and_table .replace(" = ", " like ");
 
 		String sql = ""
-			    + "select [dbname], [owner], [objectName], [extraInfoText], [objectText] \n"
+			    + "select [dbname], [owner], [objectName], [type], [crdate], [extraInfoText], [objectText] \n"
 			    + "from [MonDdlStorage] \n"
 			    + "where 1 = 1 \n"
-			    + "  and [type] = 'U' \n"
+			    + "  and [type] in ('U', 'V') \n"
 			    + and_dbname
 			    + and_owner
 			    + and_table
@@ -470,8 +591,11 @@ extends ReportEntryAbstract
 					ti._dbName        = rs.getString(1);
 					ti._schemaName    = rs.getString(2);
 					ti._tableName     = rs.getString(3);
-					ti._extraInfoText = rs.getString(4);
-					ti._objectText    = rs.getString(5);
+					ti._type          = rs.getString(4);
+					ti._crdate        = rs.getTimestamp(5);
+
+					ti._extraInfoText = rs.getString(6);
+					ti._objectText    = rs.getString(7);
 					
 					tmpList.add(ti);
 				}
@@ -485,6 +609,81 @@ extends ReportEntryAbstract
 			throw ex;
 		}
 
+		// Create an OUTPUT LIST
+//		Set<AseTableInfo> retList = new LinkedHashSet<>();
+		
+		// Loop the record we just found in MonDdlStorage
+		for (AseTableInfo ti : tmpList)
+		{
+			// If the TableInforation has already been added, just grab next one.
+			if (result.contains(ti))
+				continue;
+
+			// For views, go and get referenced tables (stored in table 'MonDdlStorage', column 'extraInfoText' (with prefix 'TableList: t1, t2, t3'
+			// Then read table information for those tables.
+			if (ti.isView())
+			{
+				if (StringUtil.hasValue(ti._extraInfoText))
+				{
+					// Add to the result (even for VIEWS)
+					// NOTE: if we restrict this to only TABLES, then we might get an infinite loop on recursion when traversing DEPENDENT VIEWS
+					result.add(ti);
+					
+					List<String> lines = StringUtil.readLines(ti._extraInfoText);
+					for (String row : lines)
+					{
+						if (row.startsWith("TableList: "))
+						{
+							row = row.substring("TableList: ".length()).trim();
+							List<String> viewReferences = StringUtil.parseCommaStrToList(row, true);
+							
+							// What "tables" do this view reference
+							ti._viewReferences = viewReferences;
+System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recursCallCount+"): ti='"+ti.getFullTableName()+"', is a VIEW, the following references will also be fetched: " + viewReferences);
+							// Loop the list
+							for (String tableName : viewReferences)
+							{
+								recursCallCount++;
+
+								// Just call "this" method recursively... and the table lookups will be done
+								getTableInformationFromMonDdlStorage(conn, dbname, null, tableName, recursCallCount, result);
+							}
+						}
+					}
+				}
+				continue;
+			} // end: VIEW
+
+			// For User Tables get **VARIOUS** information
+			if (ti.isUserTable())
+			{
+//				if (StringUtil.hasValue(ti._objectText) && StringUtil.hasValue(ti._extraInfoText))
+				if (StringUtil.hasValue(ti._extraInfoText))
+				{
+					if (getTableAndIndexInfo(conn, ti))
+					{
+						// Add to the result
+						result.add(ti);
+
+						// Append any more information?
+					}
+
+				} // end: has: _objectText && _extraInfoText 
+				
+			} // end: USER Table
+
+		} // end: loop AseTableInfo
+		
+//		return retList;
+	}
+	
+	/**
+	 * Parse the information from the DdlStorage columns 'objectText' and 'extraInfoText' where various information is stored in.
+	 * @param ti
+	 * @return
+	 */
+	private boolean getTableAndIndexInfo(DbxConnection conn, AseTableInfo ti)
+	{
 		// Parse the values from "sp_spaceused" looking like below (between the ### lines)
 		//####################################################################################
 		//     index_name size    reserved unused
@@ -515,82 +714,102 @@ extends ReportEntryAbstract
 		//   |No defined keys for this object.
 
 
-		List<AseTableInfo> retList = new ArrayList<>();
-		
-		for (AseTableInfo ti : tmpList)
+		boolean doAdd = false;
+
+		int asePageSize = -1; 
+		try { asePageSize = getAsePageSizeFromMonDdlStorage(conn) / 1024; }
+		catch(SQLException ignore) {}
+
+		if (StringUtil.hasValue(ti._extraInfoText))
 		{
-			if (StringUtil.hasValue(ti._extraInfoText))
+			// Read the content line by line
+			List<String> extraInfoList  = StringUtil.readLines(ti._extraInfoText);
+//			List<String> objectInfoList = StringUtil.readLines(ti._objectText);
+
+			int indexCount = 0;
+			List<AseIndexInfo> indexInfoList = new ArrayList<>();
+
+			for (String line : extraInfoList)
 			{
-				// Read the content line by line
-				List<String> extraInfoList  = StringUtil.readLines(ti._extraInfoText);
-//				List<String> objectInfoList = StringUtil.readLines(ti._objectText);
+				if (_logger.isDebugEnabled())
+					_logger.debug("############## line=|" + line + "|, for dbname='" + ti._dbName + "', schema='" + ti._schemaName + "', table='" + ti._tableName + "'");
 
-				int indexCount = 0;
-				List<AseIndexInfo> indexInfoList = new ArrayList<>();
-
-				for (String line : extraInfoList)
+				if (line.endsWith(" KB"))
 				{
-					if (_logger.isDebugEnabled())
-						_logger.debug("############## line=|" + line + "|, for dbname='" + ti._dbName + "', schema='" + ti._schemaName + "', table='" + ti._tableName + "'");
+					String[] sa = line.split("[ \t\n\f\r]+");
 
-					if (line.endsWith(" KB"))
+					if (_logger.isDebugEnabled())
+						_logger.debug("####### >>>>>> sa.length=" + sa.length + ". sa[]=" + StringUtil.toCommaStrQuoted(sa) + ", line=|" + line + "|");
+
+					//INDEX entry
+					if (sa.length == 7)
 					{
-						String[] sa = line.split("[ \t\n\f\r]+");
+						indexCount++;
+
+						AseIndexInfo indexInfo = new AseIndexInfo();
+						indexInfo._indexName  = sa[0];
+						indexInfo._sizeKb     = StringUtil.parseInt(sa[1], -1);
+						indexInfo._sizePages  = indexInfo._sizeKb / asePageSize;
+						indexInfo._reservedKb = StringUtil.parseInt(sa[3], -1);
+						indexInfo._unusedKb   = StringUtil.parseInt(sa[5], -1);
+
+						// Set indexInfo fields: _keysStr, _keys, _desc, _CreationDate, _ddlTxt
+						scrapeIndexInfo(ti.getFullTableName(), indexInfo._indexName, ti._objectText, indexInfo);
 
 						if (_logger.isDebugEnabled())
-							_logger.debug("####### >>>>>> sa.length=" + sa.length + ". sa[]=" + StringUtil.toCommaStrQuoted(sa) + ", line=|" + line + "|");
+							_logger.debug("####### >>>>>> INDEX tab=|" + ti.getFullTableName() + "|, index='" + indexInfo._indexName + "', DDL=|" + indexInfo._ddlTxt + "|.");
+						
+						indexInfoList.add(indexInfo);
+					}
 
-						//INDEX entry
-						if (sa.length == 7)
-						{
-							indexCount++;
+					// TABLE entry
+					if (sa.length == 10)
+					{
+//						AseTableInfo ti = new AseTableInfo();
+						ti._tableName  = sa[0];
+						ti._rowtotal   = StringUtil.parseInt(sa[1], -1);
+						ti._reservedKb = StringUtil.parseInt(sa[2], -1);
+						ti._dataKb     = StringUtil.parseInt(sa[4], -1);
+						ti._dataPages  = ti._dataKb / asePageSize;
+						ti._indexKb    = StringUtil.parseInt(sa[6], -1);
+						ti._unusedKb   = StringUtil.parseInt(sa[8], -1);
+						ti._indexPages = ti._indexKb / asePageSize;
 
-							AseIndexInfo indexInfo = new AseIndexInfo();
-							indexInfo._indexName  = sa[0];
-							indexInfo._sizeKb     = StringUtil.parseInt(sa[1], -1);
-							indexInfo._reservedKb = StringUtil.parseInt(sa[3], -1);
-							indexInfo._unusedKb   = StringUtil.parseInt(sa[5], -1);
+						ti._indexCount = indexCount;
+						ti._indexList  = indexInfoList;
 
-							// Set indexInfo fields: _keysStr, _keys, _desc, _CreationDate, _ddlTxt
-							scrapeIndexInfo(ti.getFullTableName(), indexInfo._indexName, ti._objectText, indexInfo);
+						indexCount = 0;
+						indexInfoList = new ArrayList<>();
 
-							if (_logger.isDebugEnabled())
-								_logger.debug("####### >>>>>> INDEX tab=|" + ti.getFullTableName() + "|, index='" + indexInfo._indexName + "', DDL=|" + indexInfo._ddlTxt + "|.");
-							
-							indexInfoList.add(indexInfo);
-						}
+						// get Lock Schema: "allpages", "datapages", "datarows"
+						ti._lockSchema = scrapeObjectText("^Lock scheme .*", 2, ti._objectText);
 
-						// TABLE entry
-						if (sa.length == 10)
-						{
-//							AseTableInfo ti = new AseTableInfo();
-							ti._tableName  = sa[0];
-							ti._rowtotal   = StringUtil.parseInt(sa[1], -1);
-							ti._reservedKb = StringUtil.parseInt(sa[2], -1);
-							ti._dataKb     = StringUtil.parseInt(sa[4], -1);
-							ti._indexKb    = StringUtil.parseInt(sa[6], -1);
-							ti._unusedKb   = StringUtil.parseInt(sa[8], -1);
-
-							ti._indexCount = indexCount;
-							ti._indexList  = indexInfoList;
-
-							indexCount = 0;
-							indexInfoList = new ArrayList<>();
-
-							// get Lock Schema: "allpages", "datapages", "datarows"
-							ti._lockSchema = scrapeObjectText("^Lock scheme .*", 2, ti._objectText);
-
-							retList.add(ti);
-						}
-					} // end: line.endsWith(" KB")
-				} // end: loop lines
-			} // end: has _extraInfoText
+						//retList.add(ti);
+						doAdd = true;
+					}
+				} // end: line.endsWith(" KB")
+			} // end: loop lines
 			
-			// also get Statistics how often the indexes was used/accessed during the report period
-			// As the index 'ix_DSR_CmObjectActivity_diff_DBName_ObjectName_IndexName' exists, this is a pretty cheap operation (if NOT exists, should we create one?)
+			// Check for LOB, which is named 't<tablename>'
+			AseIndexInfo ii = ti.getIndexInfoForName("t" + ti._tableName);
+			if (ii != null)
+			{
+				ti._lobKb    = ii.getSizeKb();
+				ti._lobPages = ti._lobKb / asePageSize;
+
+				ii._desc     = "LOB - Large Object (text/image)";
+				ii._keysStr  = "-lob-data-";
+				ii._keys     = Arrays.asList("-lob-data-");
+			}
+		} // end: has _extraInfoText
+		
+		// also get Statistics how often the indexes was used/accessed during the report period
+		// As the index 'ix_DSR_CmObjectActivity_diff_DBName_ObjectName_IndexName' exists, this is a pretty cheap operation (if NOT exists, should we create one?)
+		try
+		{
 			if ( ! DbUtils.checkIfIndexExists(conn, null, null, "CmObjectActivity_diff", "ix_DSR_CmObjectActivity_diff_DBName_ObjectName_IndexName") )
 			{
-				sql = conn.quotifySqlString("create index [ix_DSR_CmObjectActivity_diff_DBName_ObjectName_IndexName] on [CmObjectActivity_diff] ([DBName], [ObjectName], [IndexName])");
+				String sql = conn.quotifySqlString("create index [ix_DSR_CmObjectActivity_diff_DBName_ObjectName_IndexName] on [CmObjectActivity_diff] ([DBName], [ObjectName], [IndexName])");
 
 				long startTime = System.currentTimeMillis();
 				try (Statement stmnt = conn.createStatement())
@@ -603,177 +822,213 @@ extends ReportEntryAbstract
 					_logger.warn("Problems index to help ReportEntry '" + this.getClass().getSimpleName() + "'. SQL='" + sql + "'. Continuing without the index. Caught: " + ex);
 				}
 			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems checking if index exists to help ReportEntry '" + this.getClass().getSimpleName() + "'. Continuing without the index. Caught: " + ex);
+		}
 
-			// create SQL Statement to get ...
-//			sql = ""
-//				+ "select \n"
-//				+ "     [DBName] \n"
-//				+ "    ,[ObjectName] \n"
-//				+ "    ,[IndexName] \n"
-//				+ "    ,[IndexID] \n"
-//				+ "    ,sum([OptSelectCount])  as [OptSelectCount] \n"
-//				+ "    ,sum([UsedCount])       as [UsedCount] \n"
-//				+ "    ,sum([Operations])      as [Operations] \n"
-//				+ "    ,max([ObjectCacheDate]) as [ObjectCacheDate] \n"
-//				+ "from [CmObjectActivity_diff] \n"
-//				+ "where [DBName]     = " + DbUtils.safeStr(ti._dbName)    + " \n"
-//				+ "  and [ObjectName] = " + DbUtils.safeStr(ti._tableName) + " \n"
-//				+ "group by [DBName], [ObjectName], [IndexName], [IndexID] \n"
-//				+ "order by [IndexID] \n"
-//				+ "";
+		
+		// just to get Column names
+		String dummySql = "select * from [CmObjectActivity_diff] where 1 = 2";
+		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, false, "metadata");
+		if (dummyRstm == null)
+		{
+			return false;
+		}
 
-			sql = ""
-				+ "WITH diff as \n"
-				+ "( \n"
-				+ "    select \n"
-				+ "         [DBName] \n"
-				+ "        ,[ObjectName] \n"
-				+ "        ,[IndexName] \n"
-				+ "        ,[IndexID] \n"
-				+ "        ,max([ObjectCacheDate]) as [ObjectCacheDate] \n"
-				+ "        ,sum([RowsInsUpdDel])   as [RowsInsUpdDel] \n"
-				+ "        ,sum([OptSelectCount])  as [OptSelectCount] \n"
-				+ "        ,sum([UsedCount])       as [UsedCount] \n"
-				+ "        ,sum([Operations])      as [Operations] \n"
-				+ "    from [CmObjectActivity_diff] \n"
-				+ "    where [DBName]     = " + DbUtils.safeStr(ti._dbName)    + " \n"
-				+ "      and [ObjectName] = " + DbUtils.safeStr(ti._tableName) + " \n"
-				+ "    group by [DBName], [ObjectName], [IndexName], [IndexID] \n"
-				+ ") \n"
-				+ ", abs as \n"
-				+ "( \n"
-				+ "    select \n"
-				+ "         [DBName] \n"
-				+ "        ,[ObjectName] \n"
-				+ "        ,[IndexName] \n"
-				+ "        ,max([RowsInsUpdDel])   as [AbsRowsInsUpdDel] \n"
-				+ "        ,max([OptSelectCount])  as [AbsOptSelectCount] \n"
-				+ "        ,max([UsedCount])       as [AbsUsedCount] \n"
-				+ "        ,max([Operations])      as [AbsOperations] \n"
-				+ "    from [CmObjectActivity_abs] \n"
-				+ "    where [SessionSampleTime] = (select max([SessionSampleTime]) from [CmObjectActivity_abs]) \n"
-				+ "      and [DBName]     = " + DbUtils.safeStr(ti._dbName)    + " \n"
-				+ "      and [ObjectName] = " + DbUtils.safeStr(ti._tableName) + " \n"
-				+ "    group by [DBName], [ObjectName], [IndexName] \n"
-				+ ") \n"
-				+ "select \n"
-				+ "     diff.[DBName] \n"
-				+ "    ,diff.[ObjectName] \n"
-				+ "    ,diff.[IndexName] \n"
-				+ "    ,diff.[IndexID] \n"
-				+ "    ,diff.[RowsInsUpdDel] \n"
-				+ "    ,diff.[OptSelectCount] \n"
-				+ "    ,diff.[UsedCount] \n"
-				+ "    ,diff.[Operations] \n"
-				+ "    ,diff.[ObjectCacheDate] \n"
-				+ "    ,abs. [AbsRowsInsUpdDel] \n"
-				+ "    ,abs. [AbsOptSelectCount] \n"
-				+ "    ,abs. [AbsUsedCount] \n"
-				+ "    ,abs. [AbsOperations] \n"
-				+ "from diff \n"
-				+ "left outer join abs on diff.[DBName]     = abs.[DBName] \n"
-				+ "                   and diff.[ObjectName] = abs.[ObjectName] \n"
-				+ "                   and diff.[IndexName]  = abs.[IndexName] \n"
-				+ "order by diff.[IndexID] \n"
-				+ "";
-			
-			sql = conn.quotifySqlString(sql);
-			try ( Statement stmnt = conn.createStatement() )
+		
+		// Some columns do not exists in some versions...
+		// Lets simulate that they exists, but with some "default" value
+		String col_with_diff__Scans = "        ,-1 as [Scans] \n";
+		String col_with_abs__Scans  = "        ,-1 as [AbsScans] \n";
+		
+		if (dummyRstm.hasColumnNoCase("Scans"))
+		{
+			col_with_diff__Scans = "        ,sum([Scans]) as [Scans] \n"; 
+			col_with_abs__Scans  = "        ,[Scans] as [AbsScans] \n"; 
+		}
+		
+		// If we want we could probably add the following columns as well
+		//  * LogicalReads          -- Total number of times a buffer for this object has been retrieved from a buffer cache without requiring a read from disk.
+		//  * PhysicalReads         -- Number of buffers read from disk.
+		//  * APFReads              -- Number of APF buffers read from disk.
+		//  * (PagesRead)           -- Total number of pages read.
+		//  * (PhysicalWrites)      -- Total number of buffers written to disk.
+		//  * (PagesWritten)        -- Total number of pages written to disk.
+		//  * LockRequests          -- Number of requests for a lock on the object.
+		//  * LockWaits             -- Number of times a task waited for an object lock.
+		//  * SharedLockWaitTime    -- The total amount of time, in milliseconds, that all tasks spent waiting for a shared lock.
+		//  * ExclusiveLockWaitTime -- The total amount of time, in milliseconds, that all tasks spent waiting for an exclusive lock.
+		//  * UpdateLockWaitTime    -- The total amount of time, in milliseconds, that all tasks spent waiting for an update lock.
+		//  * Updates               -- Number of updates (operations) performed on this object.
+		//  * Inserts               -- Number of inserts (operations) performed on this object.
+		//  * Deletes               -- Number of deletes (operations) performed on this object.
+
+		
+		// create SQL Statement to get ...
+		String sql = ""
+			+ "WITH diff as \n"
+			+ "( \n"
+			+ "    select \n"
+			+ "         [DBName] \n"
+			+ "        ,[ObjectName] \n"
+			+ "        ,[IndexName] \n"
+			+ "        ,[IndexID] \n"
+			+ "        ,max([ObjectCacheDate]) as [ObjectCacheDate] \n"
+			+ "        ,sum([RowsInsUpdDel])   as [RowsInsUpdDel] \n"
+			+ "        ,sum([OptSelectCount])  as [OptSelectCount] \n"
+			+ "        ,sum([UsedCount])       as [UsedCount] \n"
+			+ "        ,sum([Operations])      as [Operations] \n"
+			+          col_with_diff__Scans  // "        ,sum([Scans]) as [Scans] \n"
+			+ "    from [CmObjectActivity_diff] \n"
+			+ "    where [DBName]     = " + DbUtils.safeStr(ti._dbName)    + " \n"
+			+ "      and [ObjectName] = " + DbUtils.safeStr(ti._tableName) + " \n"
+			+ "    group by [DBName], [ObjectName], [IndexName], [IndexID] \n"
+			+ ") \n"
+			+ ", abs as \n"
+			+ "( \n"
+			+ "    select \n"
+			+ "         [DBName] \n"
+			+ "        ,[ObjectName] \n"
+			+ "        ,[IndexName] \n"
+			+ "        ,[RowsInsUpdDel]   as [AbsRowsInsUpdDel] \n"
+			+ "        ,[OptSelectCount]  as [AbsOptSelectCount] \n"
+			+ "        ,[UsedCount]       as [AbsUsedCount] \n"
+			+ "        ,[Operations]      as [AbsOperations] \n"
+			+          col_with_abs__Scans // "        ,[Scans] as [AbsScans] \n"
+			+ "    from [CmObjectActivity_abs] \n"
+			+ "    where [SessionSampleTime] = (select max([SessionSampleTime]) from [CmObjectActivity_abs]) \n"
+			+ "      and [DBName]     = " + DbUtils.safeStr(ti._dbName)    + " \n"
+			+ "      and [ObjectName] = " + DbUtils.safeStr(ti._tableName) + " \n"
+			+ ") \n"
+			+ "select \n"
+			+ "     diff.[DBName] \n"
+			+ "    ,diff.[ObjectName] \n"
+			+ "    ,diff.[IndexName] \n"
+			+ "    ,diff.[IndexID] \n"
+			+ "    ,diff.[RowsInsUpdDel] \n"
+			+ "    ,diff.[OptSelectCount] \n"
+			+ "    ,diff.[UsedCount] \n"
+			+ "    ,diff.[Operations] \n"
+			+ "    ,diff.[Scans] \n"
+			+ "    ,diff.[ObjectCacheDate] \n"
+			+ "    ,abs. [AbsRowsInsUpdDel] \n"
+			+ "    ,abs. [AbsOptSelectCount] \n"
+			+ "    ,abs. [AbsUsedCount] \n"
+			+ "    ,abs. [AbsOperations] \n"
+			+ "    ,abs. [AbsScans] \n"
+			+ "from diff \n"
+			+ "left outer join abs on diff.[DBName]     = abs.[DBName] \n"
+			+ "                   and diff.[ObjectName] = abs.[ObjectName] \n"
+			+ "                   and diff.[IndexName]  = abs.[IndexName] \n"
+			+ "order by diff.[IndexID] \n"
+			+ "";
+		
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
 			{
-				// Unlimited execution time
-				stmnt.setQueryTimeout(0);
-				try ( ResultSet rs = stmnt.executeQuery(sql) )
+				while(rs.next())
 				{
-					while(rs.next())
+				//	String    DBName             = rs.getString   (1);
+				//	String    ObjectName         = rs.getString   (2);
+					String    IndexName          = rs.getString   (3);
+					int       IndexID            = rs.getInt      (4);
+					long      RowsInsUpdDel      = rs.getLong     (5);
+					long      OptSelectCount     = rs.getLong     (6);
+					long      UsedCount          = rs.getLong     (7);
+					long      Operations         = rs.getLong     (8);
+					long      Scans              = rs.getLong     (9);
+					Timestamp ObjectCacheDate    = rs.getTimestamp(10);
+					long      AbsRowsInsUpdDel   = rs.getLong     (11);
+					long      AbsOptSelectCount  = rs.getLong     (12);
+					long      AbsUsedCount       = rs.getLong     (13);
+					long      AbsOperations      = rs.getLong     (14);
+					long      AbsScans           = rs.getLong     (15);
+					
+					AseIndexInfo indexEntry = ti.getIndexInfoForName(IndexName);
+
+					if (indexEntry != null)
 					{
-					//	String    DBName             = rs.getString   (1);
-					//	String    ObjectName         = rs.getString   (2);
-						String    IndexName          = rs.getString   (3);
-						int       IndexID            = rs.getInt      (4);
-						long      RowsInsUpdDel      = rs.getLong     (5);
-						long      OptSelectCount     = rs.getLong     (6);
-						long      UsedCount          = rs.getLong     (7);
-						long      Operations         = rs.getLong     (8);
-						Timestamp ObjectCacheDate    = rs.getTimestamp(9);
-						long      AbsRowsInsUpdDel   = rs.getLong     (10);
-						long      AbsOptSelectCount  = rs.getLong     (11);
-						long      AbsUsedCount       = rs.getLong     (12);
-						long      AbsOperations      = rs.getLong     (13);
-						
-						AseIndexInfo indexEntry = ti.getIndexInfoForName(IndexName);
+						indexEntry._IndexID            = IndexID;
+						indexEntry._ObjectCacheDate    = ObjectCacheDate;
+						indexEntry._RowsInsUpdDel      = RowsInsUpdDel;
+						indexEntry._OptSelectCount     = OptSelectCount;
+						indexEntry._UsedCount          = UsedCount;
+						indexEntry._Operations         = Operations;
+						indexEntry._Scans              = Scans;
 
-						if (indexEntry != null)
+						indexEntry._AbsRowsInsUpdDel   = AbsRowsInsUpdDel;
+						indexEntry._AbsOptSelectCount  = AbsOptSelectCount;
+						indexEntry._AbsUsedCount       = AbsUsedCount;
+						indexEntry._AbsOperations      = AbsOperations;
+						indexEntry._AbsScans           = AbsScans;
+					}
+					else
+					{
+						indexEntry = new AseIndexInfo();
+
+						indexEntry._indexName          = IndexName;
+						indexEntry._sizeKb             = -1;
+						indexEntry._reservedKb         = -1;
+						indexEntry._unusedKb           = -1;
+						indexEntry._keysStr            = "-unknown-";
+					//	indexEntry._keys               = null;
+						indexEntry._desc               = "-unknown-";
+						indexEntry._ddlTxt             = "";
+
+						indexEntry._IndexID            = IndexID;
+						indexEntry._ObjectCacheDate    = ObjectCacheDate;
+						indexEntry._RowsInsUpdDel      = RowsInsUpdDel;
+						indexEntry._OptSelectCount     = OptSelectCount;
+						indexEntry._UsedCount          = UsedCount;
+						indexEntry._Operations         = Operations;
+						indexEntry._Scans              = Scans;
+
+						indexEntry._AbsRowsInsUpdDel   = AbsRowsInsUpdDel;
+						indexEntry._AbsOptSelectCount  = AbsOptSelectCount;
+						indexEntry._AbsUsedCount       = AbsUsedCount;
+						indexEntry._AbsOperations      = AbsOperations;
+						indexEntry._AbsScans           = AbsScans;
+
+						// Copy some "stuff" from current Table Information
+						if ("DATA".equals(indexEntry._indexName))
 						{
-							indexEntry._IndexID            = IndexID;
-							indexEntry._ObjectCacheDate    = ObjectCacheDate;
-							indexEntry._RowsInsUpdDel      = RowsInsUpdDel;
-							indexEntry._OptSelectCount     = OptSelectCount;
-							indexEntry._UsedCount          = UsedCount;
-							indexEntry._Operations         = Operations;
+							indexEntry._sizeKb          = ti._dataKb;
+							indexEntry._sizePages       = ti._dataKb / asePageSize;
 
-							indexEntry._AbsRowsInsUpdDel   = AbsRowsInsUpdDel;
-							indexEntry._AbsOptSelectCount  = AbsOptSelectCount;
-							indexEntry._AbsUsedCount       = AbsUsedCount;
-							indexEntry._AbsOperations      = AbsOperations;
+							indexEntry._reservedKb      = ti._reservedKb;
+							indexEntry._unusedKb        = ti._unusedKb;
+
+							indexEntry._keysStr         = "-data-";
+							indexEntry._desc            = "-data-";
 						}
-						else
-						{
-							indexEntry = new AseIndexInfo();
 
-							indexEntry._indexName          = IndexName;
-							indexEntry._sizeKb             = -1;
-							indexEntry._reservedKb         = -1;
-							indexEntry._unusedKb           = -1;
-							indexEntry._keysStr            = "-unknown-";
-						//	indexEntry._keys               = null;
-							indexEntry._desc               = "-unknown-";
-							indexEntry._ddlTxt             = "";
-
-							indexEntry._IndexID            = IndexID;
-							indexEntry._ObjectCacheDate    = ObjectCacheDate;
-							indexEntry._RowsInsUpdDel      = RowsInsUpdDel;
-							indexEntry._OptSelectCount     = OptSelectCount;
-							indexEntry._UsedCount          = UsedCount;
-							indexEntry._Operations         = Operations;
-
-							indexEntry._AbsRowsInsUpdDel   = AbsRowsInsUpdDel;
-							indexEntry._AbsOptSelectCount  = AbsOptSelectCount;
-							indexEntry._AbsUsedCount       = AbsUsedCount;
-							indexEntry._AbsOperations      = AbsOperations;
-
-							// Copy some "stuff" from current Table Information
-							if ("DATA".equals(indexEntry._indexName))
-							{
-								indexEntry._sizeKb          = ti._dataKb;
-								indexEntry._reservedKb      = ti._reservedKb;
-								indexEntry._unusedKb        = ti._unusedKb;
-
-								indexEntry._keysStr         = "-data-";
-								indexEntry._desc            = "-data-";
-							}
-
-							ti._indexList.add(indexEntry);
-						}
+						ti._indexList.add(indexEntry);
 					}
 				}
 			}
-			catch(SQLException ex)
-			{
-				_logger.warn("Problems getting INDEX Information for dbname='" + dbname + "', owner='" + owner + "', table='" + table + "'.", ex);
-				//throw ex;
-			}
-
-		} // end: loop AseTableInfo
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems getting INDEX Information for dbname='" + ti._dbName + "', owner='" + ti._schemaName + "', table='" + ti._tableName + "'.", ex);
+			//throw ex;
+		}
 		
-		return retList;
+		return doAdd;
 	}
+
 	private static String scrapeIndexInfo(String tableName, String indexName, String objectInfoStr, AseIndexInfo indexInfo)
 	{
 		if (StringUtil.isNullOrBlank(objectInfoStr))
 			return "";
 
 		if (StringUtil.isNullOrBlank(indexName))
-			throw new IllegalArgumentException("parseIndexDll(): indexName can't be null or ''.");
+			throw new IllegalArgumentException("scrapeIndexInfo(): indexName can't be null or ''.");
 		
 		List<String> objectInfoList = StringUtil.readLines(objectInfoStr);
 
@@ -1010,6 +1265,7 @@ extends ReportEntryAbstract
 	{
 		private String       _indexName;
 		private int          _sizeKb            = -1;
+		private int          _sizePages         = -1;
 		private int          _reservedKb        = -1;
 		private int          _unusedKb          = -1;
 		private String       _keysStr;
@@ -1023,13 +1279,16 @@ extends ReportEntryAbstract
 		private long         _OptSelectCount    = -1;
 		private long         _UsedCount         = -1;
 		private long         _Operations        = -1;
+		private long         _Scans             = -1;
 		private long         _AbsRowsInsUpdDel  = -1;
 		private long         _AbsOptSelectCount = -1;
 		private long         _AbsUsedCount      = -1;
 		private long         _AbsOperations     = -1;
+		private long         _AbsScans          = -1;
 
 		public String       getIndexName         () { return _indexName; }
 		public int          getSizeKb            () { return _sizeKb; }
+		public int          getSizePages         () { return _sizePages; }
 		public int          getReservedKb        () { return _reservedKb; }
 		public int          getUnusedKb          () { return _unusedKb; }
 		public String       getKeysStr           () { return _keysStr; }
@@ -1046,32 +1305,42 @@ extends ReportEntryAbstract
 		public long         getOptSelectCount    () { return _OptSelectCount;     }
 		public long         getUsedCount         () { return _UsedCount;          }
 		public long         getOperations        () { return _Operations;         }
+		public long         getScans             () { return _Scans;              }
 		public long         getAbsRowsInsUpdDel  () { return _AbsRowsInsUpdDel;   }
 		public long         getAbsOptSelectCount () { return _AbsOptSelectCount;  }
 		public long         getAbsUsedCount      () { return _AbsUsedCount;       }
 		public long         getAbsOperations     () { return _AbsOperations;      }
+		public long         getAbsScans          () { return _AbsScans;           }
 
-		
 		public double getSizeMb()     { return MathUtils.round(getSizeKb()     / 1024.0, 1); }
 		public double getReservedMb() { return MathUtils.round(getReservedKb() / 1024.0, 1); }
 		public double getUnusedMb()   { return MathUtils.round(getUnusedKb()   / 1024.0, 1); }
 	}
+
 	public static class AseTableInfo
 	{
-		private String _dbName;
-		private String _schemaName;
-		private String _tableName;
-		private String _extraInfoText;  // sp_spaceused tabname, 1
-		private String _objectText;     // sp_help tabname
-		private int    _rowtotal;
-		private int    _reservedKb;
-		private int    _dataKb;
-		private int    _indexKb;
-		private int    _unusedKb;
-		private String _lockSchema;
-		private int    _indexCount;
+		private String   _dbName;
+		private String   _schemaName;
+		private String   _tableName;
+		public String    _type;
+		public Timestamp _crdate;
+		private String   _extraInfoText;  // sp_spaceused tabname, 1
+		private String   _objectText;     // sp_help tabname
+		private int      _rowtotal;
+		private int      _reservedKb;
+		private int      _dataKb;
+		private int      _indexKb;
+		private int      _lobKb = -1;
+		private int      _dataPages;
+		private int      _indexPages;
+		private int      _lobPages;
+		private int      _unusedKb;
+		private String   _lockSchema;
+		private int      _indexCount;
 		private List<AseIndexInfo> _indexList = new ArrayList<>();
 
+		public List<String> _viewReferences; // if _type == "V", this this will hold; table/views this view references
+		
 		public AseIndexInfo getIndexInfoForName(String indexName)
 		{
 			if (StringUtil.isNullOrBlank(indexName))
@@ -1091,25 +1360,60 @@ extends ReportEntryAbstract
 			return prefix + _tableName;
 		}
 		
-		public String getDbName()     { return _dbName; }
-		public String getSchemaName() { return _schemaName; }
-		public String getTableName()  { return _tableName; }
-		public int    getRowTotal()   { return _rowtotal; }
-		public int    getReservedKb() { return _reservedKb; }
-		public int    getDataKb()     { return _dataKb; }
-		public int    getIndexKb()    { return _indexKb; }
-		public int    getUnusedKb()   { return _unusedKb; }
+		public String    getDbName()     { return _dbName; }
+		public String    getSchemaName() { return _schemaName; }
+		public String    getTableName()  { return _tableName; }
+		public String    getType()       { return _type; }
+		public Timestamp getCrDate()     { return _crdate; }
 
-		public int    getSizeKb()     { return _reservedKb - _unusedKb; }
-		public double getSizeMb()     { return MathUtils.round(getSizeKb() / 1024.0, 1); }
+		public int       getRowTotal()   { return _rowtotal; }
+		public int       getReservedKb() { return _reservedKb; }
+		public int       getDataKb()     { return _dataKb; }
+		public int       getDataPages()  { return _dataPages; }
+		public int       getIndexKb()    { return _indexKb; }
+		public int       getIndexPages() { return _indexPages; }
+		public int       getLobKb()      { return _lobKb; }
+		public int       getLobPages()   { return _lobPages; }
+		public int       getUnusedKb()   { return _unusedKb; }
 
-		public double getReservedMb() { return MathUtils.round(getReservedKb() / 1024.0, 1); }
-		public double getDataMb()     { return MathUtils.round(getDataKb()     / 1024.0, 1); }
-		public double getIndexMb()    { return MathUtils.round(getIndexKb()    / 1024.0, 1); }
-		public double getUnusedMb()   { return MathUtils.round(getUnusedKb()   / 1024.0, 1); }
-		public String getLockScheme() { return _lockSchema; }
-		public int    getIndexCount() { return _indexCount; }
+		public int       getSizeKb()     { return _reservedKb - _unusedKb; }
+		public double    getSizeMb()     { return MathUtils.round(getSizeKb() / 1024.0, 1); }
+
+		public double    getReservedMb() { return MathUtils.round(getReservedKb() / 1024.0, 1); }
+		public double    getDataMb()     { return MathUtils.round(getDataKb()     / 1024.0, 1); }
+		public double    getLobMb()      { return getLobKb() == -1 ? -1d : MathUtils.round(getLobKb() / 1024.0, 1); }
+		public double    getIndexMb()    { return MathUtils.round(getIndexKb()    / 1024.0, 1); }
+		public double    getUnusedMb()   { return MathUtils.round(getUnusedKb()   / 1024.0, 1); }
+		public String    getLockScheme() { return _lockSchema; }
+		public int       getIndexCount() { return _indexCount; }
 		public List<AseIndexInfo> getIndexList()  { return _indexList == null ? Collections.emptyList() : _indexList; }
+
+		public boolean      isUserTable()         { return "U".equals(_type); }
+		public boolean      isView()              { return "V".equals(_type); }
+		public List<String> getViewReferences()   { return _viewReferences; }
+
+		
+		/////////////////////////////////////////////////////////////////////////////////
+		// hashCode() & equals() so we can use Set/Map and sorting...
+		/////////////////////////////////////////////////////////////////////////////////
+		@Override
+		public int hashCode()
+		{
+			return Objects.hash(_dbName, _schemaName, _tableName);
+		}
+
+		@Override
+		public boolean equals(Object obj)
+		{
+			if ( this == obj ) return true;
+			if ( obj == null ) return false;
+			if ( getClass() != obj.getClass() ) return false;
+
+			AseTableInfo other = (AseTableInfo) obj;
+			return Objects.equals(_dbName    , other._dbName) 
+			    && Objects.equals(_schemaName, other._schemaName) 
+			    && Objects.equals(_tableName , other._tableName);
+		}
 	}
 
 
@@ -1356,7 +1660,7 @@ extends ReportEntryAbstract
 			BigDecimal avgRowsAffected  = new BigDecimal((entry.rowsAffected *1.0)/(entry.execCount*1.0)).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 			BigDecimal avgMemUsageKB    = new BigDecimal((entry.memUsageKB   *1.0)/(entry.execCount*1.0)).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 
-			BigDecimal waitTimePct      = new BigDecimal(((entry.waitTime*1.0)/(entry.elapsed_ms*1.0)) * 100.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+			BigDecimal waitTimePct      = entry.elapsed_ms == 0 ? new BigDecimal(0) : new BigDecimal(((entry.waitTime*1.0)/(entry.elapsed_ms*1.0)) * 100.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 			
 			sb.append(sep);
 			sb.append("-------- SQL Text [" + row + "] --------------------------------------------------\n");

@@ -24,10 +24,12 @@ package com.asetune.pcs.report.content.sqlserver;
 import java.io.IOException;
 import java.io.Writer;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.h2.tools.SimpleResultSet;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.DictCompression;
@@ -38,6 +40,11 @@ import com.asetune.pcs.report.content.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.HtmlTableProducer;
+import com.asetune.utils.HtmlTableProducer.ColumnCopyDef;
+import com.asetune.utils.HtmlTableProducer.ColumnCopyRender;
+import com.asetune.utils.HtmlTableProducer.ColumnCopyRow;
+import com.asetune.utils.HtmlTableProducer.ColumnStatic;
 import com.asetune.utils.StringUtil;
 
 public class SqlServerTopCmExecProcedureStats
@@ -46,6 +53,7 @@ extends SqlServerAbstract
 	private static Logger _logger = Logger.getLogger(SqlServerTopCmExecProcedureStats.class);
 
 	private ResultSetTableModel _shortRstm;
+	private ResultSetTableModel _sparklinesRstm;
 	private ExecutionPlanCollection _planCollection;
 	private List<String>        _miniChartJsList = new ArrayList<>();
 
@@ -60,28 +68,35 @@ extends SqlServerAbstract
 		return true;
 	}
 
-//	@Override
-//	public void writeShortMessageText(Writer w)
-//	throws IOException
-//	{
-//	}
-
 	@Override
 	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
-		// Get a description of this section, and column names
-		sb.append(getSectionDescriptionHtml(_shortRstm, true));
-
-//		sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
-		sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
-		sb.append(toHtmlTable(_shortRstm));
-
-		// Write HTML/JavaScript Code for the Execution Plan...
 		if (isFullMessageType())
 		{
+			// Get a description of this section, and column names
+			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+
+			sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
+			sb.append(toHtmlTable(_shortRstm));
+
+			// Write HTML/JavaScript Code for the Execution Plan...
 			if (_planCollection != null)
 				_planCollection.writeMessageText(sb);
+		}
+
+		if (_sparklinesRstm != null)
+		{
+			sb.append("<br>\n");
+			sb.append("<details open> \n");
+			sb.append("<summary>Details for above Procedures (click to collapse) </summary> \n");
+			
+			sb.append("<br>\n");
+			sb.append("Details by 'procedure', Row Count: " + _sparklinesRstm.getRowCount() + "\n");
+			sb.append(toHtmlTable(_sparklinesRstm));
+
+			sb.append("\n");
+			sb.append("</details> \n");
 		}
 
 		// Write JavaScript code for CPU SparkLine
@@ -172,6 +187,7 @@ extends SqlServerAbstract
 		String col_total_physical_reads__sum            = !dummyRstm.hasColumnNoCase("total_physical_reads"           ) ? "" : "    ,sum([total_physical_reads])            as [total_physical_reads__sum]            \n"; 
 		String col_total_logical_writes__sum            = !dummyRstm.hasColumnNoCase("total_logical_writes"           ) ? "" : "    ,sum([total_logical_writes])            as [total_logical_writes__sum]            \n"; 
 		String col_total_logical_reads__sum             = !dummyRstm.hasColumnNoCase("total_logical_reads"            ) ? "" : "    ,sum([total_logical_reads])             as [total_logical_reads__sum]             \n"; 
+		String col_total_logical_reads_mb__sum          = !dummyRstm.hasColumnNoCase("total_logical_reads"            ) ? "" : "    ,cast(sum([total_logical_reads])/128 as bigint) as [total_logical_reads_mb__sum]  \n"; 
 //		String col_total_clr_time_ms__sum               = !dummyRstm.hasColumnNoCase("total_clr_time"                 ) ? "" : "    ,sum([total_clr_time]/1000.0)           as [total_clr_time_ms__sum]               \n"; 
 //		String col_total_rows__sum                      = !dummyRstm.hasColumnNoCase("total_rows"                     ) ? "" : "    ,sum([total_rows])                      as [total_rows__sum]                      \n"; 
 //		String col_total_dop__sum                       = !dummyRstm.hasColumnNoCase("total_dop"                      ) ? "" : "    ,sum([total_dop])                       as [total_dop__sum]                       \n"; 
@@ -208,6 +224,7 @@ extends SqlServerAbstract
 		String col_AvgPhysicalReads                     = !dummyRstm.hasColumnNoCase("total_physical_reads"           ) ? "" : "    ,cast( sum([total_physical_reads])                           * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgPhysicalReads]           \n";
 		String col_AvgLogicalWrites                     = !dummyRstm.hasColumnNoCase("total_logical_writes"           ) ? "" : "    ,cast( sum([total_logical_writes])                           * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgLogicalWrites]           \n";
 		String col_AvgLogicalReads                      = !dummyRstm.hasColumnNoCase("total_logical_reads"            ) ? "" : "    ,cast( sum([total_logical_reads])                            * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgLogicalReads]            \n";
+		String col_AvgLogicalReadsMb                    = !dummyRstm.hasColumnNoCase("total_logical_reads"            ) ? "" : "    ,cast( sum([total_logical_reads])/128.0                      * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgLogicalReadsMb]            \n";
 //		String col_AvgClrTimeMs                         = !dummyRstm.hasColumnNoCase("total_clr_time"                 ) ? "" : "    ,cast( sum([total_clr_time]/1000.0)                          * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgClrTimeMs]               \n";
 //		String col_AvgRows                              = !dummyRstm.hasColumnNoCase("total_rows"                     ) ? "" : "    ,cast( sum([total_rows])                                     * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgRows]                    \n";
 //		String col_AvgDop                               = !dummyRstm.hasColumnNoCase("total_dop"                      ) ? "" : "    ,cast( sum([total_dop])                                      * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgDop]                     \n";
@@ -225,6 +242,7 @@ extends SqlServerAbstract
 		String col_worker_time__chart                   = !dummyRstm.hasColumnNoCase("total_worker_time"              ) ? "" : "    ,cast('' as varchar(512))  as [worker_time__chart]    \n"; 
 		String col_physical_reads__chart                = !dummyRstm.hasColumnNoCase("total_physical_reads"           ) ? "" : "    ,cast('' as varchar(512))  as [physical_reads__chart] \n"; 
 		String col_logical_reads__chart                 = !dummyRstm.hasColumnNoCase("total_logical_reads"            ) ? "" : "    ,cast('' as varchar(512))  as [logical_reads__chart]  \n"; 
+		String col_logical_reads_mb__chart              = !dummyRstm.hasColumnNoCase("total_logical_reads"            ) ? "" : "    ,cast('' as varchar(512))  as [logical_reads_mb__chart] \n"; 
 //		String col_dop__chart                           = !dummyRstm.hasColumnNoCase("total_dop"                      ) ? "" : "    ,cast('' as varchar(512))  as [dop__chart]            \n"; 
 //		String col_grant_kb__chart                      = !dummyRstm.hasColumnNoCase("total_grant_kb"                 ) ? "" : "    ,cast('' as varchar(512))  as [grant_kb__chart]       \n"; 
 		String col_spills__chart                        = !dummyRstm.hasColumnNoCase("total_spills"                   ) ? "" : "    ,cast('' as varchar(512))  as [spills__chart]         \n"; 
@@ -245,11 +263,6 @@ extends SqlServerAbstract
 			_logger.error("Problems checking for Dictionary Compressed Columns in table 'CmExecProcedureStats_diff'.", ex);
 		}
 		
-		String col_SqlText = "SqlText";
-		if (hasDictCompCols)
-			col_SqlText = "SqlText$dcc$";
-
-
 		String sql = getCmDiffColumnsAsSqlComment("CmExecProcedureStats")
 			    + "select top " + topRows + " \n"
 			    + "     [DbName] \n"
@@ -265,13 +278,20 @@ extends SqlServerAbstract
 			    + "    \n"
 			    + col_elapsed_time__chart
 			    + col_total_elapsed_time_ms__sum           + col_AvgElapsedTimeMs           
+
 			    + col_worker_time__chart            
 			    + col_total_worker_time_ms__sum            + col_AvgWorkerTimeMs            
+
 			    + col_physical_reads__chart
 			    + col_total_physical_reads__sum            + col_AvgPhysicalReads           
 			    + col_total_logical_writes__sum            + col_AvgLogicalWrites           
+
 			    + col_logical_reads__chart
 			    + col_total_logical_reads__sum             + col_AvgLogicalReads            
+
+			    + col_logical_reads_mb__chart
+			    + col_total_logical_reads_mb__sum          + col_AvgLogicalReadsMb
+
 //			    + col_total_clr_time_ms__sum               + col_AvgClrTimeMs               
 //			    + col_total_rows__sum                      + col_AvgRows                    
 //			    + col_max_dop__chart
@@ -284,9 +304,11 @@ extends SqlServerAbstract
 //			    + col_total_used_threads__sum              + col_AvgUsedThreads             
 //			    + col_total_columnstore_segment_reads__sum + col_AvgColumnstoreSegmentReads 
 //			    + col_total_columnstore_segment_skips__sum + col_AvgColumnstoreSegmentSkips 
+
 			    + col_spills__chart
 			    + col_total_spills__sum                    + col_AvgSpills                  
 //			    + col_total_page_server_reads__sum         + col_AvgPageServerReads         
+
 			    + "    \n"
 			    
 			    + "    ,max([plan_handle])                     as [plan_handle] \n"
@@ -420,6 +442,21 @@ extends SqlServerAbstract
 					.validate()));
 			}
 
+			if (StringUtil.hasValue(col_logical_reads__chart))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("logical_reads_mb__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmExecProcedureStats_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+//					.setDbmsDataValueColumnName  ("total_logical_reads")   
+					.setDbmsDataValueColumnName  ("sum([total_logical_reads])/128.0 / nullif(sum([execution_count]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1) // MB
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Average of 'logical_reads' in below period")
+					.validate()));
+			}
+
 //			if (StringUtil.hasValue(col_dop__chart))
 //			{
 //				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
@@ -462,63 +499,73 @@ extends SqlServerAbstract
 					.setSparklineTooltipPostfix  ("Average of 'spills' in below period")
 					.validate()));
 			}
-		}
-	}
 
-//	private void calculateAvg(ResultSetTableModel rstm)
-//	{
-//		for (int r=0; r<rstm.getRowCount(); r++)
-//		{
-//			calculateAvg(rstm, r, "execution_count__sum", "total_elapsed_time_ms__sum"          , "AvgElapsedTimeMs");          
-//			calculateAvg(rstm, r, "execution_count__sum", "total_worker_time_ms__sum"           , "AvgWorkerTimeMs");           
-//			calculateAvg(rstm, r, "execution_count__sum", "total_physical_reads__sum"           , "AvgPhysicalReads");          
-//			calculateAvg(rstm, r, "execution_count__sum", "total_logical_writes__sum"           , "AvgLogicalWrites");          
-//			calculateAvg(rstm, r, "execution_count__sum", "total_logical_reads__sum"            , "AvgLogicalReads");           
-//			calculateAvg(rstm, r, "execution_count__sum", "total_clr_time_ms__sum"              , "AvgClrTimeMs");              
-//			calculateAvg(rstm, r, "execution_count__sum", "total_rows__sum"                     , "AvgRows");                   
-//			calculateAvg(rstm, r, "execution_count__sum", "total_dop__sum"                      , "AvgDop");                    
-//			calculateAvg(rstm, r, "execution_count__sum", "total_grant_kb__sum"                 , "AvgGrantKb");                
-//			calculateAvg(rstm, r, "execution_count__sum", "total_used_grant_kb__sum"            , "AvgUsedGrantKb");            
-//			calculateAvg(rstm, r, "execution_count__sum", "total_ideal_grant_kb__sum"           , "AvgIdealGrantKb");           
-//			calculateAvg(rstm, r, "execution_count__sum", "total_reserved_threads__sum"         , "AvgReservedThreads");        
-//			calculateAvg(rstm, r, "execution_count__sum", "total_used_threads__sum"             , "AvgUsedThreads");            
-//			calculateAvg(rstm, r, "execution_count__sum", "total_columnstore_segment_reads__sum", "AvgColumnstoreSegmentReads");
-//			calculateAvg(rstm, r, "execution_count__sum", "total_columnstore_segment_skips__sum", "AvgColumnstoreSegmentSkips");
-//			calculateAvg(rstm, r, "execution_count__sum", "total_spills__sum"                   , "AvgSpills");                 
-//			calculateAvg(rstm, r, "execution_count__sum", "total_page_server_reads__sum"        , "AvgPageServerReads");        
-//		}
-//	}
-//
-//	private void calculateAvg(ResultSetTableModel rstm, int r, String cntColName, String srcColName, String destColName)
-//	{
-//		int pos_cnt  = rstm.findColumnNoCase(cntColName);
-//		int pos_src  = rstm.findColumnNoCase(srcColName);
-//		int pos_dest = rstm.findColumnNoCase(destColName);
-//		
-//		// Any of the columns was NOT found
-//		if (pos_cnt == -1 || pos_src == -1 || pos_dest == -1)
-//		{
-//			if (_logger.isDebugEnabled())
-//				_logger.debug("calculateAvg(): Some columns was NOT Found when calculation average value for: row="+r+", cntColName["+cntColName+"]="+pos_cnt+", srcColName["+srcColName+"]="+pos_src+", destColName["+destColName+"]="+pos_dest+"."); 
-//			return;
-//		}
-//
-//		long cnt = rstm.getValueAsLong(r, pos_cnt);
-//		long src = rstm.getValueAsLong(r, pos_src);
-//
-//		BigDecimal calc;
-//		if (cnt > 0)
-//		{
-//			calc = new BigDecimal( (src*1.0) / (cnt*1.0) ).setScale(1, RoundingMode.HALF_EVEN);
-//		}
-//		else
-//		{
-//			calc = new BigDecimal(-1);
-//		}
-//		
-//		rstm.setValueAtWithOverride(calc, r, pos_dest);
-//	}
-	
+			// Details (sparlines)
+			if (true)
+			{
+				SimpleResultSet srs = new SimpleResultSet();
+
+				srs.addColumn("DbName"     , Types.VARCHAR,       60, 0);
+				srs.addColumn("SchemaName" , Types.VARCHAR,       60, 0);
+				srs.addColumn("ObjectName" , Types.VARCHAR,       60, 0);
+				srs.addColumn("sparklines" , Types.VARCHAR,      512, 0); 
+//				srs.addColumn("query"      , Types.VARCHAR, 1024*128, 0); // this is 'text' in the origin table
+
+				// Position in the "source" _shortRstm table (values we will fetch)
+				int pos_dbname     = _shortRstm.findColumn("DbName");
+				int pos_SchemaName = _shortRstm.findColumn("SchemaName");
+				int pos_ObjectName = _shortRstm.findColumn("ObjectName");
+//				int pos_query      = _shortRstm.findColumn("SqlText");
+
+				ColumnCopyRender msToHMS    = HtmlTableProducer.MS_TO_HMS;
+				ColumnCopyRender oneDecimal = HtmlTableProducer.ONE_DECIMAL;
+				
+				HtmlTableProducer htp = new HtmlTableProducer(_shortRstm, "dsr-sub-table-chart");
+				htp.setTableHeaders("Charts at 10 minute interval", "Total;style='text-align:right!important'", "Avg per exec;style='text-align:right!important'", "");
+				                                                       htp.add("exec-cnt" , new ColumnCopyRow().add( new ColumnCopyDef("execution_count__chart" ) ).add(new ColumnCopyDef("execution_count__sum").setColBold()).addEmptyCol()                                                         .addEmptyCol() );
+				if (StringUtil.hasValue(col_elapsed_time__chart     )) htp.add("exec-time", new ColumnCopyRow().add( new ColumnCopyDef("elapsed_time__chart"    ) ).add(new ColumnCopyDef("total_elapsed_time_ms__sum", msToHMS) ).add(new ColumnCopyDef("AvgElapsedTimeMs"   , oneDecimal).setColBold()).add(new ColumnStatic("ms"  )) );
+				if (StringUtil.hasValue(col_worker_time__chart      )) htp.add("cpu-time" , new ColumnCopyRow().add( new ColumnCopyDef("worker_time__chart"     ) ).add(new ColumnCopyDef("total_worker_time_ms__sum" , msToHMS) ).add(new ColumnCopyDef("AvgWorkerTimeMs"    , oneDecimal).setColBold()).add(new ColumnStatic("ms"  )) );
+				if (StringUtil.hasValue(col_logical_reads__chart    )) htp.add("l-read"   , new ColumnCopyRow().add( new ColumnCopyDef("logical_reads__chart"   ) ).add(new ColumnCopyDef("total_logical_reads__sum"           ) ).add(new ColumnCopyDef("AvgLogicalReads"    , oneDecimal).setColBold()).add(new ColumnStatic("pgs" )) );
+				if (StringUtil.hasValue(col_logical_reads_mb__chart )) htp.add("l-read-mb", new ColumnCopyRow().add( new ColumnCopyDef("logical_reads_mb__chart") ).add(new ColumnCopyDef("total_logical_reads_mb__sum"        ) ).add(new ColumnCopyDef("AvgLogicalReadsMb"  , oneDecimal).setColBold()).add(new ColumnStatic("mb"  )) );
+				if (StringUtil.hasValue(col_physical_reads__chart   )) htp.add("p-read"   , new ColumnCopyRow().add( new ColumnCopyDef("physical_reads__chart"  ) ).add(new ColumnCopyDef("total_physical_reads__sum"          ) ).add(new ColumnCopyDef("AvgPhysicalReads"   , oneDecimal).setColBold()).add(new ColumnStatic("pgs" )) );
+//				if (StringUtil.hasValue(col_logical_writes__chart   )) htp.add("l-write"  , new ColumnCopyRow().add( new ColumnCopyDef("logical_writes__chart"  ) ).add(new ColumnCopyDef("total_logical_writes__sum"          ) ).add(new ColumnCopyDef("AvgLogicalWrites"   , oneDecimal).setColBold()).add(new ColumnStatic("pgs" )) );
+				if (StringUtil.hasValue(col_spills__chart           )) htp.add("spills"   , new ColumnCopyRow().add( new ColumnCopyDef("spills__chart"          ) ).add(new ColumnCopyDef("total_spills__sum"                  ) ).add(new ColumnCopyDef("AvgSpills"          , oneDecimal).setColBold()).add(new ColumnStatic("#"   )) );
+//				if (StringUtil.hasValue(col_grant_kb__chart         )) htp.add("mem-grant", new ColumnCopyRow().add( new ColumnCopyDef("grant_kb__chart"        ) ).add(new ColumnCopyDef("total_grant_kb__sum"                ) ).add(new ColumnCopyDef("AvgGrantKb"         , oneDecimal).setColBold()).add(new ColumnStatic("kb"  )) );
+				htp.validate();
+				
+				
+				if (pos_dbname >= 0 && pos_SchemaName >= 0 && pos_ObjectName >= 0)
+				{
+					for (int r=0; r<_shortRstm.getRowCount(); r++)
+					{
+						String     dbname     = _shortRstm.getValueAsString    (r, pos_dbname);
+						String     SchemaName = _shortRstm.getValueAsString    (r, pos_SchemaName);
+						String     ObjectName = _shortRstm.getValueAsString    (r, pos_ObjectName);
+						
+						String sparklines = htp.getHtmlTextForRow(r);
+
+						// add record to SimpleResultSet
+						srs.addRow(dbname, SchemaName, ObjectName, sparklines); //, "<xmp>" + query + "</xmp>");
+					}
+				}
+
+				// GET SQLTEXT (only)
+				try
+				{
+					// Note the 'srs' is populated when reading above ResultSet from query
+					_sparklinesRstm = createResultSetTableModel(srs, "Top Procedures", null, false); // DO NOT TRUNCATE COLUMNS
+					srs.close();
+				}
+				catch (SQLException ex)
+				{
+					setProblemException(ex);
+		
+					_sparklinesRstm = ResultSetTableModel.createEmpty("Top Procedures");
+					_logger.warn("Problems getting Top Procedures: " + ex);
+				}
+			} // end: sparkline
+		} // end: has data
+	} // end: method
 
 	/**
 	 * Set descriptions for the table, and the columns

@@ -1504,9 +1504,13 @@ public class ConnectionDialog
 //		if (cpRoot != null && cpRoot.getChildCount() > 0)
 //			root = cpRoot;
 
+		boolean showRootNode = Configuration.getCombinedConfiguration().getBooleanProperty(ConnectionProfileManager.PROPKEY_connProfile_show_rootNode, ConnectionProfileManager.DEFAULT_connProfile_show_rootNode);
+		
 //		_connProfileTree = new JTree(root);
 		_connProfileTree = new GTree(ConnectionProfileManager.getInstance().getConnectionProfileTreeModel(_desiredProductName));
 		_connProfileTree.setRootVisible(false);
+//		_connProfileTree.setRootVisible(showRootNode);
+		_connProfileTree.setShowsRootHandles(showRootNode);
 		_connProfileTree.setDragEnabled(true);  
 		_connProfileTree.setDropMode(DropMode.ON_OR_INSERT);
 		_connProfileTree.setTransferHandler(new TreeTransferHandler());
@@ -1531,12 +1535,14 @@ public class ConnectionDialog
 		final AbstractAction connProfileShowAddIFile           = new ConnProfileShowAddIFileAction();
 		final AbstractAction connProfileShowSaveChanges        = new ConnProfileShowSaveChangesAction();
 		final AbstractAction connProfileDefaultSaveChanges     = new ConnProfileDefaultSaveChangesAction();
+		final AbstractAction connProfileShowTreeRoot           = new ConnProfileShowTreeRootAction();
 		
 		final JCheckBoxMenuItem connProfileLoadOnNodeSelect_mi   = new JCheckBoxMenuItem(connProfileLoadOnNodeSelectAction);
 		final JCheckBoxMenuItem connProfileShowAddProfile_mi     = new JCheckBoxMenuItem(connProfileShowAddProfile);
 		final JCheckBoxMenuItem connProfileShowAddIFile_mi       = new JCheckBoxMenuItem(connProfileShowAddIFile);
 		final JCheckBoxMenuItem connProfileShowSaveChanges_mi    = new JCheckBoxMenuItem(connProfileShowSaveChanges);
 		final JCheckBoxMenuItem connProfileDefaultSaveChanges_mi = new JCheckBoxMenuItem(connProfileDefaultSaveChanges);
+		final JCheckBoxMenuItem connProfileShowTreeRoot_mi       = new JCheckBoxMenuItem(connProfileShowTreeRoot);
 
 		popup.add(new JMenuItem(connProfileLoadAction));
 		popup.add(connProfileLoadOnNodeSelect_mi);
@@ -1556,6 +1562,7 @@ public class ConnectionDialog
 		popup.add(connProfileShowAddIFile_mi);
 		popup.add(connProfileShowSaveChanges_mi);
 		popup.add(connProfileDefaultSaveChanges_mi);
+		popup.add(connProfileShowTreeRoot_mi);
 		
 		popup.addPopupMenuListener(new PopupMenuListener()
 		{
@@ -1606,13 +1613,14 @@ public class ConnectionDialog
 				boolean showAddIFile       = conf.getBooleanProperty(ConnectionProfileManager.PROPKEY_ifile_serverAdd_showDialog,       ConnectionProfileManager.DEFAULT_ifile_serverAdd_showDialog);
 				boolean showSaveChanges    = conf.getBooleanProperty(ConnectionProfileManager.PROPKEY_connProfile_changed_showDialog,   ConnectionProfileManager.DEFAULT_connProfile_changed_showDialog);
 				boolean defaultSaveChanges = conf.getBooleanProperty(ConnectionProfileManager.PROPKEY_connProfile_changed_alwaysSave,   ConnectionProfileManager.DEFAULT_connProfile_changed_alwaysSave);
+				boolean showRootNode       = conf.getBooleanProperty(ConnectionProfileManager.PROPKEY_connProfile_show_rootNode,        ConnectionProfileManager.DEFAULT_connProfile_show_rootNode);
 				
 				connProfileLoadOnNodeSelect_mi  .setSelected(loadOnNodeSelect);
 				connProfileShowAddProfile_mi    .setSelected(showAddProfile);
 				connProfileShowAddIFile_mi      .setSelected(showAddIFile);
 				connProfileShowSaveChanges_mi   .setSelected(showSaveChanges);
 				connProfileDefaultSaveChanges_mi.setSelected(defaultSaveChanges);
-
+				connProfileShowTreeRoot_mi      .setSelected(showRootNode);
 			}
 		});
 		_connProfileTree.setComponentPopupMenu(popup);
@@ -9869,6 +9877,42 @@ if ( ! jdbcSshTunnelUse )
 				return;
 			
 			conf.setProperty(ConnectionProfileManager.PROPKEY_connProfile_changed_alwaysSave, ((JCheckBoxMenuItem)e.getSource()).isSelected());
+			conf.save();
+		}
+	}
+
+	private class ConnProfileShowTreeRootAction
+	extends AbstractAction
+	{
+		private static final long serialVersionUID = 1L;
+
+		private static final String NAME = "Show 'Root Handlers' (+) in the tree view.";
+//		private static final String ICON = "images/conn_profile_tree_saveChanges.png";
+		private static final String ICON = "";
+
+		public ConnProfileShowTreeRootAction()
+		{
+			super(NAME, SwingUtils.readImageIcon(Version.class, ICON));
+
+			putValue(SHORT_DESCRIPTION, 
+					"<html>"
+					+ "In the Connection Profiles, do you want the 'root handler' (+) signs at the root level to be visible.<br>"
+					+ "</html>");
+			//putValue(MNEMONIC_KEY, mnemonic);
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+			if (conf == null)
+				return;
+			
+			boolean isSelected = ((JCheckBoxMenuItem)e.getSource()).isSelected();
+//			_connProfileTree.setRootVisible(isSelected);
+			_connProfileTree.setShowsRootHandles(isSelected);
+
+			conf.setProperty(ConnectionProfileManager.PROPKEY_connProfile_show_rootNode, isSelected);
 			conf.save();
 		}
 	}

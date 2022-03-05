@@ -33,6 +33,7 @@ import com.asetune.config.dict.MonTablesDictionaryPostgres;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.MainFramePostgres;
 import com.asetune.pcs.inspection.IObjectLookupInspector;
+import com.asetune.pcs.inspection.ObjectLookupInspectorPostgres;
 import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.asetune.sql.DbmsVersionHelperSimple;
 import com.asetune.sql.IDbmsVersionHelper;
@@ -113,7 +114,7 @@ extends DbxTune
 	@Override
 	public IObjectLookupInspector createPcsObjectLookupInspector()
 	{
-		return null;
+		return new ObjectLookupInspectorPostgres();
 	}
 
 	@Override

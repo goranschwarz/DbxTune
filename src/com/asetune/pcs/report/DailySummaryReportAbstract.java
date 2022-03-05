@@ -76,6 +76,8 @@ implements IDailySummaryReport
 
 	private Map<String, String> _dbmsOtherInfoMap = null;
 
+	private long _initTime;
+
 	@Override
 	public void          setConnection(DbxConnection conn) { _conn = conn; }
 	public DbxConnection getConnection()                   { return _conn; }
@@ -87,6 +89,8 @@ implements IDailySummaryReport
 	@Override public void                      setReportContent(DailySummaryReportContent content) { _reportContent = content; }
 	@Override public DailySummaryReportContent getReportContent()                                  { return _reportContent; }
 
+	@Override public long getInitTime() { return _initTime; }
+	
 	@Override
 	public void close()
 	{
@@ -127,6 +131,8 @@ implements IDailySummaryReport
 		if (_sender == null)
 			throw new RuntimeException("Can't send Daily Summary Report. The sender class is null.");
 
+		_initTime = System.currentTimeMillis();
+		
 		_sender.init();
 		_sender.printConfig();
 

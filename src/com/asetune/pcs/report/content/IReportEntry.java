@@ -229,6 +229,18 @@ public interface IReportEntry
 	 * Get how long it took to create/execute this report
 	 */
 	long getExecTime();
+
+	/** Set the Start time */
+	void setExecStartTime();
+	
+	/** Set the End time, also calculates and does: setExecTime() */
+	void setExecEndTime();
+
+	/** Get the Start time */
+	long getExecStartTime();
+	
+	/** Get the End time */
+	long getExecEndTime();
 	
 
 //	/**

@@ -154,6 +154,7 @@ extends CompletionProviderAbstract
 //	protected String  _dbIdentifierQuoteStringEnd   = "\""; // FIXME Implement this EVERYWHERE (for SQL_Server and Sybase it should be ']') so we do not have to relay on "set quoted identifier on"
 //	protected String[] _dbIdentifierQuoteString     = new String[] {"\"", "\""}; // Or we can use an ARRAY with 2 fields
 	protected boolean _dbStoresUpperCaseIdentifiers = false;
+	protected boolean _dbStoresLowerCaseIdentifiers = false;
 	protected boolean _dbSupportsSchema             = true; // so far it's only MySQL that do not support schema it uses the catalog as schemas...
 	
 	protected String _currentCatalog                = null;
@@ -175,6 +176,7 @@ extends CompletionProviderAbstract
 		_dbExtraNameCharacters        = "";
 		_dbIdentifierQuoteString      = "\"";
 		_dbStoresUpperCaseIdentifiers = false;
+		_dbStoresLowerCaseIdentifiers = false;
 		_dbSupportsSchema             = true;
 
 		_currentCatalog          = null;
@@ -371,6 +373,10 @@ extends CompletionProviderAbstract
 	public boolean getDbStoresUpperCaseIdentifiers()
 	{
 		return _dbStoresUpperCaseIdentifiers;
+	}
+	public boolean getDbStoresLowerCaseIdentifiers()
+	{
+		return _dbStoresLowerCaseIdentifiers;
 	}
 	public boolean getDbSupportsSchema()
 	{
@@ -1026,7 +1032,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 			_logger.debug("START: currentWord='"+currentWord+"'.");
 		}
 
-		SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, _dbSupportsSchema, false);
+		SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, _dbStoresLowerCaseIdentifiers, _dbSupportsSchema, false);
 		//SqlObjectName cwId = new SqlObjectName(currentWord);
 
 		if (_logger.isDebugEnabled())
@@ -1562,7 +1568,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 				// If we find it, display columns for the table (alias)
 //				String tabName = getTableNameForAlias(comp, tabAliasName, true);
 				String        aliasTabName     = getTableNameForAlias(comp, tabAliasName, false);
-				SqlObjectName aliasFullTabName = new SqlObjectName( aliasTabName, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, _dbSupportsSchema);
+				SqlObjectName aliasFullTabName = new SqlObjectName( aliasTabName, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, _dbStoresLowerCaseIdentifiers, _dbSupportsSchema);
 
 				if (_logger.isDebugEnabled())
 					_logger.debug("XXXX NOT-IN LOCAL SCHEMA: aliasTabName='"+aliasTabName+"', aliasFullTabName='"+aliasFullTabName+"'.");
@@ -2303,7 +2309,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			// If we found a table name, lookup it's columns
 			if (StringUtil.hasValue(fullTableName))
 			{
-				SqlObjectName tabNameObj = new SqlObjectName(fullTableName, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, _dbSupportsSchema, false);
+				SqlObjectName tabNameObj = new SqlObjectName(fullTableName, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, _dbStoresLowerCaseIdentifiers, _dbSupportsSchema, false);
 
 //				System.out.println("LOOKUP for "+foundOp+" -- fullTableName ='" + fullTableName + "', enteredText='" + enteredText + "', tabNameObj="+tabNameObj);
 
@@ -2495,6 +2501,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		try { _dbExtraNameCharacters        = dbmd.getExtraNameCharacters();     } catch(SQLException ignore) {}
 		try { _dbIdentifierQuoteString      = dbmd.getIdentifierQuoteString();   } catch(SQLException ignore) {}
 		try { _dbStoresUpperCaseIdentifiers = dbmd.storesUpperCaseIdentifiers(); } catch(SQLException ignore) {}
+		try { _dbStoresLowerCaseIdentifiers = dbmd.storesLowerCaseIdentifiers(); } catch(SQLException ignore) {}
 
 		// Note: this is also implemented in: DbUtils.isSchemaSupported(_conn);
 		String schemaTerm       = "";
@@ -2518,14 +2525,15 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			} catch (SQLException ignore) {} 
 		}
 
-		_logger.info("JDBC DatabaseMetaData.getDatabaseProductName()     is '"+_dbProductName+"'.");
-		_logger.info("JDBC DatabaseMetaData.getExtraNameCharacters()     is '"+_dbExtraNameCharacters+"'.");
-		_logger.info("JDBC DatabaseMetaData.getIdentifierQuoteString()   is '"+_dbIdentifierQuoteString+"'.");
-		_logger.info("JDBC DatabaseMetaData.storesUpperCaseIdentifiers() is '"+_dbStoresUpperCaseIdentifiers+"'.");
-		_logger.info("JDBC DatabaseMetaData.getSchemaTerm()              is '"+schemaTerm       + "' (dbSupportsSchema = "+_dbSupportsSchema+").");
-		_logger.info("JDBC DatabaseMetaData.getMaxSchemaNameLength()     is " +maxSchemaNameLen + " (dbSupportsSchema = "+_dbSupportsSchema+").");
-		_logger.info("JDBC _dbSupportsSchema                             is " +_dbSupportsSchema);
-		_logger.info("JDBC _currentCatalog                               is " +_currentCatalog);
+		_logger.info("JDBC DatabaseMetaData.getDatabaseProductName()     is '" + _dbProductName                + "'.");
+		_logger.info("JDBC DatabaseMetaData.getExtraNameCharacters()     is '" + _dbExtraNameCharacters        + "'.");
+		_logger.info("JDBC DatabaseMetaData.getIdentifierQuoteString()   is '" + _dbIdentifierQuoteString      + "'.");
+		_logger.info("JDBC DatabaseMetaData.storesUpperCaseIdentifiers() is '" + _dbStoresUpperCaseIdentifiers + "'.");
+		_logger.info("JDBC DatabaseMetaData.storesLowerCaseIdentifiers() is '" + _dbStoresLowerCaseIdentifiers + "'.");
+		_logger.info("JDBC DatabaseMetaData.getSchemaTerm()              is '" + schemaTerm       + "' (dbSupportsSchema = " + _dbSupportsSchema + ").");
+		_logger.info("JDBC DatabaseMetaData.getMaxSchemaNameLength()     is "  + maxSchemaNameLen + " (dbSupportsSchema = "  + _dbSupportsSchema + ").");
+		_logger.info("JDBC _dbSupportsSchema                             is "  + _dbSupportsSchema);
+		_logger.info("JDBC _currentCatalog                               is "  + _currentCatalog);
 
 		if (false || _logger.isDebugEnabled())
 		{
@@ -5574,7 +5582,7 @@ if (_guiOwner == null)
 		if (needRefresh())
 			refresh();
 
-		SqlObjectName sqlObj = new SqlObjectName(word, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, _dbSupportsSchema);
+		SqlObjectName sqlObj = new SqlObjectName(word, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, _dbStoresLowerCaseIdentifiers, _dbSupportsSchema);
 
 		// For completion, lets not assume "dbo"
 		String schemaName = sqlObj.getSchemaName();
@@ -5700,7 +5708,7 @@ if (_guiOwner == null)
 		if (needRefresh())
 			refresh();
 
-		SqlObjectName sqlObj = new SqlObjectName(word, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, _dbSupportsSchema);
+		SqlObjectName sqlObj = new SqlObjectName(word, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, _dbStoresLowerCaseIdentifiers, _dbSupportsSchema);
 
 		// For completion, lets not assume "dbo"
 		String schemaName = sqlObj.getSchemaName();

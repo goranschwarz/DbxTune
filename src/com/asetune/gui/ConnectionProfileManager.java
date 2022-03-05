@@ -144,6 +144,9 @@ public class ConnectionProfileManager
 	public static final String   PROPKEY_connProfile_load_onNodeSelection = "ConnectionProfileManager.connProfile.load.onNodeSelection";
 	public static final boolean  DEFAULT_connProfile_load_onNodeSelection = true;
 
+	public static final String   PROPKEY_connProfile_show_rootNode        = "ConnectionProfileManager.connProfile.show.rootNode";
+	public static final boolean  DEFAULT_connProfile_show_rootNode        = false;
+
 	
 	//---------------------------------------------
 	// 16 pixel icons

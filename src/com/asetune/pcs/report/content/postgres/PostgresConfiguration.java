@@ -26,11 +26,11 @@ import java.io.Writer;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
-import com.asetune.pcs.report.content.ase.AseAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
-public class PostgresConfiguration extends AseAbstract
+public class PostgresConfiguration 
+extends PostgresAbstract
 {
 //	private static Logger _logger = Logger.getLogger(SqlServerConfiguration.class);
 

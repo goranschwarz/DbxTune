@@ -565,13 +565,16 @@ public class CounterControllerAse extends CounterControllerAbstract
 			}
 			if (aseInShutdown)
 			{
-				String msgShort = "ASE in SHUTDOWN mode...";
-				String msgLong  = "The ASE Server is waiting for a SHUTDOWN, data collection is put on hold...";
+				if (hasGui())
+				{
+					String msgShort = "ASE in SHUTDOWN mode...";
+					String msgLong  = "The ASE Server is waiting for a SHUTDOWN, data collection is put on hold...";
 
-				_logger.info(msgLong);
-				MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, msgLong);
-//				SummaryPanel.getInstance().setWatermarkText(msgShort);
-				CounterController.getSummaryPanel().setWatermarkText(msgShort);
+					_logger.info(msgLong);
+					MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, msgLong);
+//					SummaryPanel.getInstance().setWatermarkText(msgShort);
+					CounterController.getSummaryPanel().setWatermarkText(msgShort);
+				}
 
 				for (CountersModel cm : getCmList())
 				{

@@ -29,6 +29,7 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
@@ -859,6 +860,7 @@ public class AseTopCmObjectActivity extends AseAbstract
 			srs.addColumn("IndexName",  Types.VARCHAR,       60, 0);
 			srs.addColumn("sparklines", Types.VARCHAR,      512, 0); 
 			srs.addColumn("otherInfo",  Types.VARCHAR,      512, 0); 
+			srs.addColumn("indexInfo",  Types.VARCHAR,      512, 0); 
 
 			// Position in the "source" _shortRstm table (values we will fetch)
 			int pos_DBName     = _shortRstm.findColumn("DBName");
@@ -951,16 +953,17 @@ public class AseTopCmObjectActivity extends AseAbstract
 					String otherInfo = "--not-found-in-ddl-storage--";
 					NumberFormat nf = NumberFormat.getInstance();
 
-					List<AseTableInfo> aseTableInfoList = null;
-					try	{ aseTableInfoList = getTableInformationFromMonDdlStorage(conn, DBName, null, ObjectName); }
+					Set<AseTableInfo> aseTableInfoSet = null;
+					try	{ aseTableInfoSet = getTableInformationFromMonDdlStorage(conn, DBName, null, ObjectName); }
 					catch (SQLException ex) { otherInfo = "Mon DDL Storage lookup, ERROR: " + ex.getMessage(); }
 					
-					if (aseTableInfoList != null && !aseTableInfoList.isEmpty())
+					if (aseTableInfoSet != null && !aseTableInfoSet.isEmpty())
 					{
-						AseTableInfo aseTableInfo = aseTableInfoList.get(0);
+						AseTableInfo aseTableInfo = aseTableInfoSet.iterator().next(); // Get first entry from iterator (simulating: list.get(0))
 						if (asePageSize != -1)
 							otherInfoMap.put("ASE Page Size"  , "" + asePageSize);
 
+//						otherInfoMap.put("DB Name"        ,            DBName  );
 						otherInfoMap.put("Table Name"     ,            aseTableInfo.getFullTableName()  );
 						otherInfoMap.put("Table Rowcount" , nf.format( aseTableInfo.getRowTotal()      ));
 						otherInfoMap.put("Table Used MB"  , nf.format( aseTableInfo.getSizeMb()        ));
@@ -998,13 +1001,13 @@ public class AseTopCmObjectActivity extends AseAbstract
 
 					if ( ! otherInfoMap.isEmpty() )
 					{
-						otherInfo = HtmlTableProducer.createHtmlTable(otherInfoMap, "dsr-sub-table-other-info");
-						otherInfo += otherIndexInfoTable;
+						otherInfo = HtmlTableProducer.createHtmlTable(otherInfoMap, "dsr-sub-table-other-info", true);
+//						otherInfo += otherIndexInfoTable;
 					}
 
 					
 					// add record to SimpleResultSet
-					srs.addRow(DBName, ObjectName, IndexName, sparklines, otherInfo);
+					srs.addRow(DBName, ObjectName, IndexName, sparklines, otherInfo, otherIndexInfoTable);
 				}
 			}
 
@@ -1012,7 +1015,7 @@ public class AseTopCmObjectActivity extends AseAbstract
 			try
 			{
 				// Note the 'srs' is populated when reading above ResultSet from query
-				_sparklineRstm = createResultSetTableModel(srs, "Sparkline info", null);
+				_sparklineRstm = createResultSetTableModel(srs, "Sparkline info", null, false); // DO NOT TRUNCATE COLUMNS
 				srs.close();
 			}
 			catch (SQLException ex)

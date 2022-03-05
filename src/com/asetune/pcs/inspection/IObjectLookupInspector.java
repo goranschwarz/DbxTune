@@ -21,6 +21,7 @@
 package com.asetune.pcs.inspection;
 
 import java.sql.SQLException;
+import java.util.List;
 
 import com.asetune.pcs.DdlDetails;
 import com.asetune.pcs.ObjectLookupQueueEntry;
@@ -52,7 +53,7 @@ public interface IObjectLookupInspector
 	 * 
 	 * @return an DdlDetails object which is filled in or NULL if you want to skip this lookup 
 	 */
-	public DdlDetails doObjectInfoLookup(DbxConnection conn, ObjectLookupQueueEntry qe, PersistentCounterHandler pch);
+	public List<DdlDetails> doObjectInfoLookup(DbxConnection conn, ObjectLookupQueueEntry qe, PersistentCounterHandler pch);
 
 	/**
 	 * Called after a connection has been made<br>

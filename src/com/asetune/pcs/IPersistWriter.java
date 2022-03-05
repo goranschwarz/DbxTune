@@ -121,6 +121,12 @@ public interface IPersistWriter
 	/** Put the dbname, objectname in a structure/cache which isDdlDetailsStored() can check for */
 	public void markDdlDetailsAsStored(String dbname, String objectName);
 
+	/** check if this DDL is discarded (not found in the DBMS or similar), implementer should hold all discarded DDL's in a cache */
+	public boolean isDdlDetailsDiscarded(String dbname, String objectName);
+
+	/** Put the dbname, objectname in a structure/cache which isDdlDetailsDiscarded() can check for */
+	public void markDdlDetailsAsDiscarded(String dbname, String objectName);
+
 	/** Clear the structure/cache holding markers for what has been saved. This should be called if the database is recreated during runtime, this so we can store new DDL Storage requests */
 	public void clearDdlDetailesCache();
 	

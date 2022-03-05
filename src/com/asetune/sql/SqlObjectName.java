@@ -425,6 +425,7 @@ public class SqlObjectName
 	public String  _dbProductName                = null;
 	public String  _dbIdentifierQuoteString      = null;
 	public boolean _dbStoresUpperCaseIdentifiers = false;
+	public boolean _dbStoresLowerCaseIdentifiers = false;
 	public boolean _dbSupportsSchema             = true;
 
 	private boolean _autoAddDboForSybaseAndSqlServer = true;
@@ -437,6 +438,7 @@ public class SqlObjectName
 		String  dbProductName                = null;
 		String  dbIdentifierQuoteString      = null;
 		boolean dbStoresUpperCaseIdentifiers = true;
+		boolean dbStoresLowerCaseIdentifiers = false;
 		boolean dbSupportsSchema             = true;
 		String  dbExtraNameCharacters        = null;
 		
@@ -446,6 +448,7 @@ public class SqlObjectName
 			try { dbProductName                = dbxconn.getDatabaseProductName();                   } catch (SQLException ex) { _logger.error("Problems executing MetaData: getDatabaseProductName()"); }
 			      dbIdentifierQuoteString      = dbxconn.getDbQuotedIdentifierChar();
 			try { dbStoresUpperCaseIdentifiers = dbxconn.getMetaData().storesUpperCaseIdentifiers(); } catch (SQLException ex) { _logger.error("Problems executing MetaData: storesUpperCaseIdentifiers()"); }
+			try { dbStoresLowerCaseIdentifiers = dbxconn.getMetaData().storesLowerCaseIdentifiers(); } catch (SQLException ex) { _logger.error("Problems executing MetaData: storesLowerCaseIdentifiers()"); }
 			try { dbSupportsSchema             = DbUtils.isSchemaSupported(dbxconn);                 } catch (SQLException ex) { _logger.error("Problems executing DbUtils.isSchemaSupported(conn)"); }
 			      dbExtraNameCharacters        = dbxconn.getDbExtraNameCharacters();
 
@@ -460,6 +463,7 @@ public class SqlObjectName
 			try { dbProductName                = conn.getMetaData().getDatabaseProductName();     } catch (SQLException ex) { _logger.error("Problems executing MetaData: getDatabaseProductName()"); }
 			try { dbIdentifierQuoteString      = conn.getMetaData().getIdentifierQuoteString();   } catch (SQLException ex) { _logger.error("Problems executing MetaData: getIdentifierQuoteString()"); }
 			try { dbStoresUpperCaseIdentifiers = conn.getMetaData().storesUpperCaseIdentifiers(); } catch (SQLException ex) { _logger.error("Problems executing MetaData: storesUpperCaseIdentifiers()"); }
+			try { dbStoresLowerCaseIdentifiers = conn.getMetaData().storesLowerCaseIdentifiers(); } catch (SQLException ex) { _logger.error("Problems executing MetaData: storesLowerCaseIdentifiers()"); }
 			try { dbSupportsSchema             = DbUtils.isSchemaSupported(conn);                 } catch (SQLException ex) { _logger.error("Problems executing DbUtils.isSchemaSupported(conn)"); }
 			try { dbExtraNameCharacters        = conn.getMetaData().getExtraNameCharacters();     } catch (SQLException ex) { _logger.error("Problems executing MetaData: getExtraNameCharacters()"); }
 		}
@@ -470,6 +474,7 @@ public class SqlObjectName
 		_dbProductName                = dbProductName;
 		_dbIdentifierQuoteString      = dbIdentifierQuoteString;
 		_dbStoresUpperCaseIdentifiers = dbStoresUpperCaseIdentifiers;
+		_dbStoresLowerCaseIdentifiers = dbStoresLowerCaseIdentifiers;
 		_dbSupportsSchema             = dbSupportsSchema;
 		_dbExtraNameCharacters        = dbExtraNameCharacters;
 		
@@ -481,11 +486,12 @@ public class SqlObjectName
 	/** 
 	 * constructor using full name [catalog.][schema.][object] 
 	 */
-	public SqlObjectName(final String name, String dbProductName, String dbIdentifierQuoteString, boolean dbStoresUpperCaseIdentifiers, boolean dbSupportsSchema)
+	public SqlObjectName(final String name, String dbProductName, String dbIdentifierQuoteString, boolean dbStoresUpperCaseIdentifiers, boolean dbStoresLowerCaseIdentifiers, boolean dbSupportsSchema)
 	{
 		_dbProductName                = dbProductName;
 		_dbIdentifierQuoteString      = dbIdentifierQuoteString;
 		_dbStoresUpperCaseIdentifiers = dbStoresUpperCaseIdentifiers;
+		_dbStoresLowerCaseIdentifiers = dbStoresLowerCaseIdentifiers;
 		_dbSupportsSchema             = dbSupportsSchema;
 		
 		_autoAddDboForSybaseAndSqlServer = true;
@@ -496,11 +502,12 @@ public class SqlObjectName
 	/** 
 	 * constructor using full name [catalog.][schema.][object] 
 	 */
-	public SqlObjectName(final String name, String dbProductName, String dbIdentifierQuoteString, boolean dbStoresUpperCaseIdentifiers, boolean dbSupportsSchema, boolean autoAddDboForSybaseAndSqlServer)
+	public SqlObjectName(final String name, String dbProductName, String dbIdentifierQuoteString, boolean dbStoresUpperCaseIdentifiers, boolean dbStoresLowerCaseIdentifiers, boolean dbSupportsSchema, boolean autoAddDboForSybaseAndSqlServer)
 	{
 		_dbProductName                = dbProductName;
 		_dbIdentifierQuoteString      = dbIdentifierQuoteString;
 		_dbStoresUpperCaseIdentifiers = dbStoresUpperCaseIdentifiers;
+		_dbStoresLowerCaseIdentifiers = dbStoresLowerCaseIdentifiers;
 		_dbSupportsSchema             = dbSupportsSchema;
 		
 		_autoAddDboForSybaseAndSqlServer = autoAddDboForSybaseAndSqlServer;
@@ -586,6 +593,9 @@ public class SqlObjectName
 		if (_catName != null && _dbStoresUpperCaseIdentifiers)
 			_catName = _catName.toUpperCase();
 
+		if (_catName != null && _dbStoresLowerCaseIdentifiers)
+			_catName = _catName.toLowerCase();
+
 		if (_catName != null && _catName.equalsIgnoreCase("null"))
 			_catName = null;
 	}
@@ -609,6 +619,9 @@ public class SqlObjectName
 		if (_schName != null && _dbStoresUpperCaseIdentifiers)
 			_schName = _schName.toUpperCase();
 
+		if (_schName != null && _dbStoresLowerCaseIdentifiers)
+			_schName = _schName.toLowerCase();
+
 		if (_schName != null && _schName.equalsIgnoreCase("null"))
 			_schName = null;
 	}
@@ -631,6 +644,9 @@ public class SqlObjectName
 
 		if (_objName != null && _dbStoresUpperCaseIdentifiers)
 			_objName = _objName.toUpperCase();
+
+		if (_objName != null && _dbStoresLowerCaseIdentifiers)
+			_objName = _objName.toLowerCase();
 
 		if (_objName != null && _objName.equalsIgnoreCase("null"))
 			_objName = null;

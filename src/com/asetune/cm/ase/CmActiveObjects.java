@@ -165,8 +165,6 @@ extends CountersModel
 		pkCols.add("ObjectID");
 		pkCols.add("IndexID");
 
-//		if (srvVersion >= 15000)
-//		if (srvVersion >= 1500000)
 		if (srvVersion >= Ver.ver(15,0))
 			pkCols.add("PartitionID");
 
@@ -192,13 +190,9 @@ extends CountersModel
 		if (isClusterEnabled)
 			InstanceID = "InstanceID, ";
 
-//		if (srvVersion >= 12520)
-//		if (srvVersion >= 1252000)
 		if (srvVersion >= Ver.ver(12,5,2))
 			TableSize = "TableSize, \n";
 
-//		if (srvVersion >= 15000)
-//		if (srvVersion >= 1500000)
 		if (srvVersion >= Ver.ver(15,0))
 		{
 			TableSize = "";
@@ -207,12 +201,10 @@ extends CountersModel
 			PartitionID   = ", PartitionID";
 		}
 
-//		if (srvVersion >= 15020)
-//		if (srvVersion >= 1502000)
 		if (srvVersion >= Ver.ver(15,0,2))
 		{
-			IndexName = "IndexName = CASE WHEN IndexID=0 THEN convert(varchar(30),'DATA') \n" +
-				        "                 ELSE convert(varchar(30), isnull(index_name(DBID, ObjectID, IndexID), '-unknown-')) \n" +
+			IndexName = "IndexName = CASE WHEN IndexID=0 THEN convert(varchar(255),'DATA') \n" +
+				        "                 ELSE convert(varchar(255), isnull(index_name(DBID, ObjectID, IndexID), '-unknown-')) \n" +
 				        "            END, \n";
 		}
 
@@ -228,8 +220,6 @@ extends CountersModel
 		// in 12.5.4 (esd#9) will produce an "empty" resultset using "S.SPID != @@spid"
 		//                   so this will be a workaround for those releses below 15.0.0
 		String whereSpidNotMe = "SPID != @@spid";
-//		if (srvVersion < 15000)
-//		if (srvVersion < 1500000)
 		if (srvVersion < Ver.ver(15,0))
 		{
 			whereSpidNotMe = "SPID != convert(int,@@spid)";

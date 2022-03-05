@@ -100,12 +100,28 @@ public class StatementNormalizer
 			}
 			sb.append(" IN ");
 
+//System.out.println("---->>>> VISIT >> IN (xxx  xxx) ==== " + sb.toString());
+
 			inExpression.getRightItemsList().accept(this);
 
-			// Replace: "IN (?, ?, ?)" with "IN (...)" 
-			int start = sb.lastIndexOf(" IN (");
-			int end   = sb.lastIndexOf(")") + 1;
-			sb.replace(start, end, " IN (...)");
+			// Get the just produced SQL... to decide if it's a SUB-SELECT or just static values, which can be normalized to '...'
+			int start = sb.lastIndexOf(" IN ("); 
+			int end   = start + " IN (".length();
+			while (end < sb.length()) // Loop until we find the first end ')'  QUESTION: Should we keep track of "embedded ()" or is it enough to find next ')'
+			{
+				String ch = sb.substring(end, end + 1);
+//System.out.println("xxxxxxxxxxxxxxxxxxxxxxxxxxx: end=" + end + ", ch=|" + ch + "|");
+				end++;
+				if (")".equals(ch))
+					break;
+			}
+
+			// if it's NOT a sub-select... then: replace: "IN (?, ?, ?)" with "IN (...)" 
+			// but KEEP all sub-selects
+			String inSql = sb.substring(start, end);
+//System.out.println("<<<<---- VISIT >> IN (near-end) >>>> [start=" + start + ", end=" + end + "]: lastInSql=|" + inSql + "| ==== " + sb.toString());
+			if ( ! inSql.contains("SELECT ") )
+				sb.replace(start, end, " IN (...)");
 		}
 
 		@Override
@@ -629,6 +645,9 @@ public class StatementNormalizer
 		test(sn, "sp_who '1'");
 		test(sn, "xxx \"a\", \"b\", \"c\"");
 		test(sn, "nti_sel_dup_tic_gac 5,'20210121'");
+		test(sn, "select T1.M_NB from ACG_ENTRY_VIEW_DBF T1  where ((((1 > 0) and (T1.M_EN_DATE<='20211231')) and T1.M_ENTITY in ('SEK AB','SEK S-SECT')) and (M_NB in ( select AE.M_NB from ACG_ENTRY_DBF AE where AE.M_NB > ( select max(M_NB) from ACCTOXOR_ID_DBF where M_SYS_DATE < (select M_ACC_DATE from TRN_ENTD_DBF where M_LABEL='SEK AB'     ))) ))");
+		test(sn, "delete MPAUD_BD_DBF where MPAUD_BD_DBF.M_LINK IN ( select MPAUD_HD_DBF.M_LINK from MPAUD_HD_DBF where MPAUD_HD_DBF.M_PARAMDATE = '20150107' )");
+		test(sn, "select * from t1 where c1 in (select c2 from t2 where c2 in (select c3 from t3 where c3 in ('val-3-1', 'val-3-2') or c3 in (select c4 from t4 where c4 in ('val-4-1', 'val-4-2') ) )) or c1 in ('val-1-1')");
 	}
 
 	private static String test(StatementNormalizer sn, String sql)

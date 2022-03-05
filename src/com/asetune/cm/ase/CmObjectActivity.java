@@ -338,7 +338,7 @@ extends CountersModel
 		String NumUsedPages = "";
 		String RowsPerPage  = "";
 		String DBName       = "DBName=db_name(A.DBID), \n";
-		String ObjectName   = "ObjectName=isnull(object_name(A.ObjectID, A.DBID), 'ObjId='+convert(varchar(30),A.ObjectID)), \n"; // if user is not a valid user in A.DBID, then object_name() will return null
+		String ObjectName   = "ObjectName=isnull(object_name(A.ObjectID, A.DBID), 'ObjId='+convert(varchar(255),A.ObjectID)), \n"; // if user is not a valid user in A.DBID, then object_name() will return null
 		String IndexName    = "";
 
 		// ASE 15.7
@@ -362,8 +362,8 @@ extends CountersModel
 			DBName       = "A.DBName, \n";
 //			ObjectName   = "A.ObjectName, \n";
 			ObjectName   = "ObjectName = isnull(object_name(A.ObjectID, A.DBID), 'Obj='+A.ObjectName), \n"; // if user is not a valid user in A.DBID, then object_name() will return null
-			IndexName    = "IndexName = CASE WHEN IndexID=0 THEN convert(varchar(30),'DATA') \n" +
-			               "                 ELSE convert(varchar(30), isnull(index_name(DBID, ObjectID, IndexID), '-unknown-')) \n" +
+			IndexName    = "IndexName = CASE WHEN IndexID=0 THEN convert(varchar(255),'DATA') \n" +
+			               "                 ELSE convert(varchar(255), isnull(index_name(DBID, ObjectID, IndexID), '-unknown-')) \n" +
 			               "            END, \n";
 
 			// debug/trace
@@ -686,7 +686,7 @@ extends CountersModel
 		{
 			String wt_DBName       = "DBName, \n";
 			String wt_ObjectName   = "ObjectName = ObjectName + ' [SPID=' + convert(varchar(10),SPID)+']', ";
-			String wt_IndexName    = "IndexName  = convert(varchar(30),'WORK-TABLE-DATA'), ";
+			String wt_IndexName    = "IndexName  = convert(varchar(255),'WORK-TABLE-DATA'), ";
 
 			String wt_TabRowCount  = "TabRowCount  = -1, \n";
 //			String wt_UsageInMb    = "UsageInMb    = -1, \n";

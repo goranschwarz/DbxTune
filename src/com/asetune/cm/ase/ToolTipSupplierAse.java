@@ -134,18 +134,22 @@ extends CmToolTipSupplierDefault
 
 						String dbName       = _cm.getAbsString(modelRow, "DBName");
 						String tabObjId     = _cm.getAbsString(modelRow, "ObjectID");
-						String tabOwnerName = AseConnectionUtils.getObjectOwner(conn, dbName, tabObjId);
 						
-						List<Completion> list = _complProvider.getTableListWithGuiProgress(conn, dbName, tabOwnerName, objectName);
-
-						if (_logger.isDebugEnabled())
-							_logger.debug("ToolTipSupplierAse.getToolTipTextOnTableCell(ObjectName): dbName='"+dbName+"', ownerName='"+tabOwnerName+"', objectName='"+objectName+"', cm='"+_cm.getName()+"'. list.size()="+(list==null?"-null-":list.size())+".");
-
-						if ( list != null )
+						if (StringUtil.hasValue(dbName) && StringUtil.hasValue(tabObjId))
 						{
-							if      (list.size() == 0) return "No table information found for table '"+tabOwnerName+"."+objectName+"' in database '"+dbName+"'.";
-							else if (list.size() == 1) return list.get(0).getSummary();
-							else                       return "Found table information, but I found MORE than 1 table, count="+list.size()+". I can only show info for 1 table. (database='"+dbName+"', table='"+tabOwnerName+"."+objectName+"')";
+							String tabOwnerName = AseConnectionUtils.getObjectOwner(conn, dbName, tabObjId);
+							
+							List<Completion> list = _complProvider.getTableListWithGuiProgress(conn, dbName, tabOwnerName, objectName);
+
+							if (_logger.isDebugEnabled())
+								_logger.debug("ToolTipSupplierAse.getToolTipTextOnTableCell(ObjectName): dbName='"+dbName+"', ownerName='"+tabOwnerName+"', objectName='"+objectName+"', cm='"+_cm.getName()+"'. list.size()="+(list==null?"-null-":list.size())+".");
+
+							if ( list != null )
+							{
+								if      (list.size() == 0) return "No table information found for table '"+tabOwnerName+"."+objectName+"' in database '"+dbName+"'.";
+								else if (list.size() == 1) return list.get(0).getSummary();
+								else                       return "Found table information, but I found MORE than 1 table, count="+list.size()+". I can only show info for 1 table. (database='"+dbName+"', table='"+tabOwnerName+"."+objectName+"')";
+							}
 						}
 					}
 				}

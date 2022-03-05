@@ -585,7 +585,7 @@ public class HtmlTableProducer
 //	}
 
 
-	public static String createHtmlTable(LinkedHashMap<String, String> map, String classname)
+	public static String createHtmlTable(LinkedHashMap<String, String> map, String classname, boolean formatKeyValueAsRowHead)
 	{
 		StringBuilder sb = new StringBuilder();
 
@@ -595,12 +595,18 @@ public class HtmlTableProducer
 		
 		sb.append("<table" + className + "> \n");
 
+		String keyColStyle = "";
+		if (formatKeyValueAsRowHead)
+		{
+			keyColStyle=" style='background-color: gray; color: white;'";
+		}
+		
 		sb.append("<tbody> \n");
 		for (Entry<String, String> entry : map.entrySet())
 		{
 			sb.append("<tr> \n");
-			sb.append("  <td><b>").append( entry.getKey()   ).append("</b></td> \n");
-			sb.append("  <td>")   .append( entry.getValue() ).append(    "</td> \n");
+			sb.append("  <td" + keyColStyle+ "><b>").append( entry.getKey()   ).append("</b></td> \n");
+			sb.append("  <td>")                     .append( entry.getValue() ).append(    "</td> \n");
 			sb.append("</tr> \n");
 		}
 		sb.append("</tbody> \n");

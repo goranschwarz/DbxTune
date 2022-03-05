@@ -35,6 +35,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
@@ -83,8 +84,11 @@ implements Runnable
 	public static final String  PROPKEY_ddl_afterDdlLookupSleepTimeInMs          = "PersistentCounterHandler.ddl.afterDdlLookupSleepTimeInMs";
 	public static final int     DEFAULT_ddl_afterDdlLookupSleepTimeInMs          = 250;
                                                                                  
+	public static final String  PROPKEY_ddl_doGetStatistics                      = "PersistentCounterHandler.ddl.doGetStatistics";
+	public static final boolean DEFAULT_ddl_doGetStatistics                      = false;
+
 	public static final String  PROPKEY_ddl_doSpDepends                          = "PersistentCounterHandler.ddl.doSpDepends";
-	public static final boolean DEFAULT_ddl_doSpDepends                          = true;
+	public static final boolean DEFAULT_ddl_doSpDepends                          = false;
 
 	public static final String  PROPKEY_ddl_addDependantObjectsToDdlInQueue      = "PersistentCounterHandler.ddl.addDependantObjectsToDdlInQueue";
 	public static final boolean DEFAULT_ddl_addDependantObjectsToDdlInQueue      = true;
@@ -167,6 +171,7 @@ implements Runnable
 		Configuration.registerDefaultValue(PROPKEY_ddl_warnDdlInputQueueSizeThresh,          DEFAULT_ddl_warnDdlInputQueueSizeThresh);
 		Configuration.registerDefaultValue(PROPKEY_ddl_warnDdlStoreQueueSizeThresh,          DEFAULT_ddl_warnDdlStoreQueueSizeThresh);
 		Configuration.registerDefaultValue(PROPKEY_ddl_afterDdlLookupSleepTimeInMs,          DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
+		Configuration.registerDefaultValue(PROPKEY_ddl_doGetStatistics,                      DEFAULT_ddl_doGetStatistics);
 		Configuration.registerDefaultValue(PROPKEY_ddl_doSpDepends,                          DEFAULT_ddl_doSpDepends);
 		Configuration.registerDefaultValue(PROPKEY_ddl_addDependantObjectsToDdlInQueue,      DEFAULT_ddl_addDependantObjectsToDdlInQueue);
 		Configuration.registerDefaultValue(PROPKEY_warnQueueSizeThresh,                      DEFAULT_warnQueueSizeThresh);
@@ -188,6 +193,9 @@ implements Runnable
 		Configuration.registerDefaultValue(PROPKEY_sqlCap_clearBeforeFirstPoll,              DEFAULT_sqlCap_clearBeforeFirstPoll);
 		Configuration.registerDefaultValue(PROPKEY_sqlCap_warnStoreQueueSizeThresh,          DEFAULT_sqlCap_warnStoreQueueSizeThresh);
 		Configuration.registerDefaultValue(PROPKEY_sqlCap_isNonConfiguredMonitoringAllowed,  DEFAULT_sqlCap_isNonConfiguredMonitoringAllowed);
+
+		// During development we might want to have debug enabled in this class
+		//_logger.setLevel(Level.DEBUG);
 	}
 
 	/*---------------------------------------------------
@@ -278,6 +286,7 @@ implements Runnable
 	private int _afterDdlLookupSleepTimeInMs = DEFAULT_ddl_afterDdlLookupSleepTimeInMs;
 	
 	/** */
+	private boolean _doGetStatistics                 = DEFAULT_ddl_doGetStatistics;
 	private boolean _doSpDepends                     = DEFAULT_ddl_doSpDepends;
 	private boolean _addDependantObjectsToDdlInQueue = DEFAULT_ddl_addDependantObjectsToDdlInQueue;
 
@@ -334,6 +343,8 @@ implements Runnable
 		return configStr;
 	}
 	
+	
+	public boolean getConfig_doGetStatistics()                 { return _doGetStatistics; }
 	public boolean getConfig_doSpDepends()                     { return _doSpDepends; }
 	public boolean getConfig_addDependantObjectsToDdlInQueue() { return _addDependantObjectsToDdlInQueue; }
 
@@ -342,15 +353,15 @@ implements Runnable
 	throws Exception
 	{
 		_props = props; 
-//System.out.println("PersistanceCounterHandler.init(): props="+StringUtil.toCommaStr(props));
+//System.out.println("PersistanceCounterHandler.init(): props=" + StringUtil.toCommaStr(props));
 //if (props != null)
 //{
 //	SortedSet<Object> keys = new TreeSet<Object>(props.keySet());
 //	for (Object key : keys)
-//		System.out.println("----- key="+StringUtil.left("'"+key+"'", 100)+", value='"+props.getProperty(key.toString())+"'");
+//		System.out.println("----- key=" + StringUtil.left("'" + key + "'", 100) + ", value='" + props.getProperty(key.toString()) + "'");
 //
-//	System.out.println("===== PROPKEY_ddl_doDdlLookupAndStore:     '"+PROPKEY_ddl_doDdlLookupAndStore+"'    : "+props.getProperty(PROPKEY_ddl_doDdlLookupAndStore));
-//	System.out.println("===== PROPKEY_sqlCap_doSqlCaptureAndStore: '"+PROPKEY_sqlCap_doSqlCaptureAndStore+"': "+props.getProperty(PROPKEY_sqlCap_doSqlCaptureAndStore));
+//	System.out.println("===== PROPKEY_ddl_doDdlLookupAndStore:     '" + PROPKEY_ddl_doDdlLookupAndStore + "'    : " + props.getProperty(PROPKEY_ddl_doDdlLookupAndStore));
+//	System.out.println("===== PROPKEY_sqlCap_doSqlCaptureAndStore: '" + PROPKEY_sqlCap_doSqlCaptureAndStore + "': " + props.getProperty(PROPKEY_sqlCap_doSqlCaptureAndStore));
 //}
 		
 		_logger.info("Initializing the Persistent Counter Handler functionality.");
@@ -362,6 +373,7 @@ implements Runnable
 		_warnDdlStoreQueueSizeThresh         = _props.getIntProperty    (PROPKEY_ddl_warnDdlStoreQueueSizeThresh,     DEFAULT_ddl_warnDdlStoreQueueSizeThresh);
 
 		_afterDdlLookupSleepTimeInMs         = _props.getIntProperty    (PROPKEY_ddl_afterDdlLookupSleepTimeInMs,     DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
+		_doGetStatistics                     = _props.getBooleanProperty(PROPKEY_ddl_doGetStatistics,                 DEFAULT_ddl_doGetStatistics);
 		_doSpDepends                         = _props.getBooleanProperty(PROPKEY_ddl_doSpDepends,                     DEFAULT_ddl_doSpDepends);
 		_addDependantObjectsToDdlInQueue     = _props.getBooleanProperty(PROPKEY_ddl_addDependantObjectsToDdlInQueue, DEFAULT_ddl_addDependantObjectsToDdlInQueue);
 		
@@ -380,51 +392,52 @@ implements Runnable
 		String writerClasses = _props.getProperty(PROPKEY_WriterClass);
 
 		_logger.info("Configuration for PersistentCounterHandler");
-		_logger.info("                  "+PROPKEY_WriterClass+"                              = "+writerClasses);
-		_logger.info("                  "+PROPKEY_warnQueueSizeThresh+"                      = "+_warnQueueSizeThresh);
+		_logger.info("                  " + PROPKEY_WriterClass + "                              = " + writerClasses);
+		_logger.info("                  " + PROPKEY_warnQueueSizeThresh + "                      = " + _warnQueueSizeThresh);
 		
-		_logger.info("                  "+PROPKEY_ddl_doDdlLookupAndStore+"                  = "+_doDdlLookupAndStore);
+		_logger.info("                  " + PROPKEY_ddl_doDdlLookupAndStore + "                  = " + _doDdlLookupAndStore);
 		if ( ! _doDdlLookupAndStore )
 		_logger.info("             ---- ObjectLookup is DISABLED");
 		else
 		{
-		_logger.info("             ---- ObjectLookupInspector ClassName                      = "+( _objectLookupInspector == null ? "null" : _objectLookupInspector.getClass().getName()));
-		_logger.info("                  "+PROPKEY_ddl_enabledForDatabaseObjects+"            = "+_ddlLookup_enabledForDatabaseObjects);
-		_logger.info("                  "+PROPKEY_ddl_enabledForStatementCache+"             = "+_ddlLookup_enabledForStatementCache);
-		_logger.info("                  "+PROPKEY_ddl_doSpDepends+"                          = "+_doSpDepends);
-		_logger.info("                  "+PROPKEY_ddl_addDependantObjectsToDdlInQueue+"      = "+_addDependantObjectsToDdlInQueue);
-		_logger.info("                  "+PROPKEY_ddl_afterDdlLookupSleepTimeInMs+"          = "+_afterDdlLookupSleepTimeInMs);
-		_logger.info("                  "+PROPKEY_ddl_warnDdlInputQueueSizeThresh+"          = "+_warnDdlInputQueueSizeThresh);
-		_logger.info("                  "+PROPKEY_ddl_warnDdlStoreQueueSizeThresh+"          = "+_warnDdlStoreQueueSizeThresh);
+		_logger.info("             ---- ObjectLookupInspector ClassName                      = " + ( _objectLookupInspector == null ? "null" : _objectLookupInspector.getClass().getName()));
+		_logger.info("                  " + PROPKEY_ddl_enabledForDatabaseObjects + "            = " + _ddlLookup_enabledForDatabaseObjects);
+		_logger.info("                  " + PROPKEY_ddl_enabledForStatementCache + "             = " + _ddlLookup_enabledForStatementCache);
+		_logger.info("                  " + PROPKEY_ddl_doGetStatistics + "                      = " + _doGetStatistics);
+		_logger.info("                  " + PROPKEY_ddl_doSpDepends + "                          = " + _doSpDepends);
+		_logger.info("                  " + PROPKEY_ddl_addDependantObjectsToDdlInQueue + "      = " + _addDependantObjectsToDdlInQueue);
+		_logger.info("                  " + PROPKEY_ddl_afterDdlLookupSleepTimeInMs + "          = " + _afterDdlLookupSleepTimeInMs);
+		_logger.info("                  " + PROPKEY_ddl_warnDdlInputQueueSizeThresh + "          = " + _warnDdlInputQueueSizeThresh);
+		_logger.info("                  " + PROPKEY_ddl_warnDdlStoreQueueSizeThresh + "          = " + _warnDdlStoreQueueSizeThresh);
 		}
 
-		_logger.info("                  "+PROPKEY_sqlCap_doSqlCaptureAndStore    +"          = "+_doSqlCaptureAndStore);
+		_logger.info("                  " + PROPKEY_sqlCap_doSqlCaptureAndStore     + "          = " + _doSqlCaptureAndStore);
 		if ( ! _doSqlCaptureAndStore)
 		_logger.info("             ---- SqlCapture is DISABLED");
 		else
 		{
-		_logger.info("             ---- SqlCaptureBroker ClassName                           = "+( _sqlCaptureBroker == null ? "null" : _sqlCaptureBroker.getClass().getName()));
-		_logger.info("                  "+PROPKEY_sqlCap_doSqlText+"                         = "+_props.getProperty(PROPKEY_sqlCap_doSqlText));
-		_logger.info("                  "+PROPKEY_sqlCap_doStatementInfo+"                   = "+_props.getProperty(PROPKEY_sqlCap_doStatementInfo));
-		_logger.info("                  "+PROPKEY_sqlCap_doPlanText+"                        = "+_props.getProperty(PROPKEY_sqlCap_doPlanText));
-		_logger.info("                  "+PROPKEY_sqlCap_sleepTimeInMs+"                     = "+_props.getProperty(PROPKEY_sqlCap_sleepTimeInMs));
-		_logger.info("                  "+PROPKEY_sqlCap_saveStatement_whereClause +"        = "+_props.getProperty(PROPKEY_sqlCap_saveStatement_whereClause));
-		_logger.info("                  "+PROPKEY_sqlCap_saveStatement_gt_execTime+"         = "+_props.getProperty(PROPKEY_sqlCap_saveStatement_gt_execTime));
-		_logger.info("                  "+PROPKEY_sqlCap_saveStatement_gt_logicalReads+"     = "+_props.getProperty(PROPKEY_sqlCap_saveStatement_gt_logicalReads));
-		_logger.info("                  "+PROPKEY_sqlCap_saveStatement_gt_physicalReads+"    = "+_props.getProperty(PROPKEY_sqlCap_saveStatement_gt_physicalReads));
-		_logger.info("                  "+PROPKEY_sqlCap_sendDdlForLookup+"                  = "+_props.getProperty(PROPKEY_sqlCap_sendDdlForLookup));
-		_logger.info("                  "+PROPKEY_sqlCap_sendDdlForLookup_gt_execTime+"      = "+_props.getProperty(PROPKEY_sqlCap_sendDdlForLookup_gt_execTime));
-		_logger.info("                  "+PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads+"  = "+_props.getProperty(PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads));
-		_logger.info("                  "+PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads+" = "+_props.getProperty(PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads));
-		_logger.info("                  "+PROPKEY_sqlCap_sendSizeThreshold+"                 = "+_props.getProperty(PROPKEY_sqlCap_sendSizeThreshold));
-		_logger.info("                  "+PROPKEY_sqlCap_clearBeforeFirstPoll+"              = "+_props.getProperty(PROPKEY_sqlCap_clearBeforeFirstPoll));
-		_logger.info("                  "+PROPKEY_sqlCap_warnStoreQueueSizeThresh+"          = "+_props.getProperty(PROPKEY_sqlCap_warnStoreQueueSizeThresh));
-		_logger.info("                  "+PROPKEY_sqlCap_isNonConfiguredMonitoringAllowed+"  = "+_props.getProperty(PROPKEY_sqlCap_isNonConfiguredMonitoringAllowed));
+		_logger.info("             ---- SqlCaptureBroker ClassName                           = " + ( _sqlCaptureBroker == null ? "null" : _sqlCaptureBroker.getClass().getName()));
+		_logger.info("                  " + PROPKEY_sqlCap_doSqlText + "                         = " + _props.getProperty(PROPKEY_sqlCap_doSqlText));
+		_logger.info("                  " + PROPKEY_sqlCap_doStatementInfo + "                   = " + _props.getProperty(PROPKEY_sqlCap_doStatementInfo));
+		_logger.info("                  " + PROPKEY_sqlCap_doPlanText + "                        = " + _props.getProperty(PROPKEY_sqlCap_doPlanText));
+		_logger.info("                  " + PROPKEY_sqlCap_sleepTimeInMs + "                     = " + _props.getProperty(PROPKEY_sqlCap_sleepTimeInMs));
+		_logger.info("                  " + PROPKEY_sqlCap_saveStatement_whereClause  + "        = " + _props.getProperty(PROPKEY_sqlCap_saveStatement_whereClause));
+		_logger.info("                  " + PROPKEY_sqlCap_saveStatement_gt_execTime + "         = " + _props.getProperty(PROPKEY_sqlCap_saveStatement_gt_execTime));
+		_logger.info("                  " + PROPKEY_sqlCap_saveStatement_gt_logicalReads + "     = " + _props.getProperty(PROPKEY_sqlCap_saveStatement_gt_logicalReads));
+		_logger.info("                  " + PROPKEY_sqlCap_saveStatement_gt_physicalReads + "    = " + _props.getProperty(PROPKEY_sqlCap_saveStatement_gt_physicalReads));
+		_logger.info("                  " + PROPKEY_sqlCap_sendDdlForLookup + "                  = " + _props.getProperty(PROPKEY_sqlCap_sendDdlForLookup));
+		_logger.info("                  " + PROPKEY_sqlCap_sendDdlForLookup_gt_execTime + "      = " + _props.getProperty(PROPKEY_sqlCap_sendDdlForLookup_gt_execTime));
+		_logger.info("                  " + PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads + "  = " + _props.getProperty(PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads));
+		_logger.info("                  " + PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads + " = " + _props.getProperty(PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads));
+		_logger.info("                  " + PROPKEY_sqlCap_sendSizeThreshold + "                 = " + _props.getProperty(PROPKEY_sqlCap_sendSizeThreshold));
+		_logger.info("                  " + PROPKEY_sqlCap_clearBeforeFirstPoll + "              = " + _props.getProperty(PROPKEY_sqlCap_clearBeforeFirstPoll));
+		_logger.info("                  " + PROPKEY_sqlCap_warnStoreQueueSizeThresh + "          = " + _props.getProperty(PROPKEY_sqlCap_warnStoreQueueSizeThresh));
+		_logger.info("                  " + PROPKEY_sqlCap_isNonConfiguredMonitoringAllowed + "  = " + _props.getProperty(PROPKEY_sqlCap_isNonConfiguredMonitoringAllowed));
 		}
 
 
 		if (_doDdlLookupAndStore)
-			_logger.info("The most active objects/statements/etc, "+Version.getAppName()+" will do DDL Lookup and Store information about them. To turn this off, set the property 'PersistentCounterHandler.doDdlLookupAndStore' to 'false' in configuration for the PersistentCounterHandler module.");
+			_logger.info("The most active objects/statements/etc, " + Version.getAppName() + " will do DDL Lookup and Store information about them. To turn this off, set the property 'PersistentCounterHandler.doDdlLookupAndStore' to 'false' in configuration for the PersistentCounterHandler module.");
 		else
 			_logger.info("No DDL Lookup and Store will be done. The property 'PersistentCounterHandler.doDdlLookupAndStore' is set to 'false' in configuration for the PersistentCounterHandler module.");
 
@@ -455,7 +468,7 @@ implements Runnable
 				String writerClassName = writerClassArray[i];
 				IPersistWriter writerClass;
 	
-				_logger.debug("Instantiating and Initializing WriterClass='"+writerClassName+"'.");
+				_logger.debug("Instantiating and Initializing WriterClass='" + writerClassName + "'.");
 				try
 				{
 					Class<?> c = Class.forName( writerClassName );
@@ -464,11 +477,11 @@ implements Runnable
 				}
 				catch (ClassCastException e)
 				{
-					throw new ClassCastException("When trying to load writerWriter class '"+writerClassName+"'. The writerWriter do not seem to follow the interface 'com.asetune.pcs.IPersistWriter'");
+					throw new ClassCastException("When trying to load writerWriter class '" + writerClassName + "'. The writerWriter do not seem to follow the interface 'com.asetune.pcs.IPersistWriter'");
 				}
 				catch (ClassNotFoundException e)
 				{
-					throw new ClassNotFoundException("Tried to load writerWriter class '"+writerClassName+"'.", e);
+					throw new ClassNotFoundException("Tried to load writerWriter class '" + writerClassName + "'.", e);
 				}
 	
 				// Now initialize the User Defined AlarmWriter
@@ -521,7 +534,7 @@ implements Runnable
 		_lowOnMemoryHandlerCalls++;
 		if (_lowOnMemoryHandlerCalls > _lowOnMemoryHandlerCallsThreshold)
 		{
-			_logger.warn("Persistant Counter Handler, lowOnMemoryHandler() has now been called "+_lowOnMemoryHandlerCalls+" times, decided to call outOfMemoryHandler() to do more extensive cleanup.");
+			_logger.warn("Persistant Counter Handler, lowOnMemoryHandler() has now been called " + _lowOnMemoryHandlerCalls + " times, decided to call outOfMemoryHandler() to do more extensive cleanup.");
 			outOfMemoryHandler();
 			_lowOnMemoryHandlerCalls = 0;
 			return;
@@ -532,13 +545,13 @@ implements Runnable
 		// Clear the DDL queues
 		if (_ddlInputQueue.size() > 0)
 		{
-			_logger.warn("Persistant Counter Handler, lowOnMemoryHandler() was called. Emtying the DDL Lookup Input queue, which has "+_ddlInputQueue.size()+" entries.");
+			_logger.warn("Persistant Counter Handler, lowOnMemoryHandler() was called. Emtying the DDL Lookup Input queue, which has " + _ddlInputQueue.size() + " entries.");
 			_ddlInputQueue.clear();
 			fire = true;
 		}
 		if (_ddlStoreQueue.size() > 0)
 		{
-			_logger.warn("Persistant Counter Handler, lowOnMemoryHandler() was called. Emtying the DDL Store/Write queue, which has "+_ddlStoreQueue.size()+" entries.");
+			_logger.warn("Persistant Counter Handler, lowOnMemoryHandler() was called. Emtying the DDL Store/Write queue, which has " + _ddlStoreQueue.size() + " entries.");
 			_ddlStoreQueue.clear();
 			fire = true;
 		}
@@ -546,7 +559,7 @@ implements Runnable
 		// SQL Capture queues
 		if (_sqlCaptureStoreQueue.size() > 0)
 		{
-			_logger.warn("Persistant Counter Handler, lowOnMemoryHandler() was called. Emtying the SQL Capture Store/Write queue, which has "+_sqlCaptureStoreQueue.size()+" entries.");
+			_logger.warn("Persistant Counter Handler, lowOnMemoryHandler() was called. Emtying the SQL Capture Store/Write queue, which has " + _sqlCaptureStoreQueue.size() + " entries.");
 			_sqlCaptureStoreQueue.clear();
 			fire = true;
 		}
@@ -567,20 +580,20 @@ implements Runnable
 	public void outOfMemoryHandler()
 	{
 		_outOfMemoryHandlerCallCount++;
-		_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. callCount="+_outOfMemoryHandlerCallCount+".");
+		_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. callCount=" + _outOfMemoryHandlerCallCount + ".");
 
 		boolean fire = false;
 
 		// Clear the DDL queues
 		if (_ddlInputQueue.size() > 0)
 		{
-			_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. Emtying the DDL Lookup Input queue, which has "+_ddlInputQueue.size()+" entries.");
+			_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. Emtying the DDL Lookup Input queue, which has " + _ddlInputQueue.size() + " entries.");
 			_ddlInputQueue.clear();
 			fire = true;
 		}
 		if (_ddlStoreQueue.size() > 0)
 		{
-			_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. Emtying the DDL Store/Write queue, which has "+_ddlStoreQueue.size()+" entries.");
+			_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. Emtying the DDL Store/Write queue, which has " + _ddlStoreQueue.size() + " entries.");
 			_ddlStoreQueue.clear();
 			fire = true;
 		}
@@ -588,7 +601,7 @@ implements Runnable
 		// SQL Capture queues
 		if (_sqlCaptureStoreQueue.size() > 0)
 		{
-			_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. Emtying the SQL Capture Store/Write queue, which has "+_sqlCaptureStoreQueue.size()+" entries.");
+			_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. Emtying the SQL Capture Store/Write queue, which has " + _sqlCaptureStoreQueue.size() + " entries.");
 			_sqlCaptureStoreQueue.clear();
 			fire = true;
 		}
@@ -603,7 +616,7 @@ implements Runnable
 		// Clear the PCS queues if the outOfMemoryHandler() has been called more that X number of times since we last emptied the queue
 		if (_outOfMemoryHandlerCallCount > 3)
 		{
-			_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. Emtying the Counter Store/Write queue, which has "+_containerQueue.size()+" entries.");
+			_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. Emtying the Counter Store/Write queue, which has " + _containerQueue.size() + " entries.");
 			_containerQueue.clear();
 			_outOfMemoryHandlerCallCount = 0;
 			fire = true;
@@ -638,7 +651,7 @@ implements Runnable
 
 			String h2WriterStat = H2WriterStat.getInstance().refreshCounters().getStatString();
 			
-			_logger.warn("The persistent queue has "+qsize+" entries. The persistent writer might not keep in pace. " + currentConsumeTimeStr + h2WriterStat);
+			_logger.warn("The persistent queue has " + qsize + " entries. The persistent writer might not keep in pace. " + currentConsumeTimeStr + h2WriterStat);
 
 			// call each writes to let them know about this.
 			for (IPersistWriter pw : _writerClasses)
@@ -679,7 +692,7 @@ implements Runnable
 	public void addDdl(String dbname, String objectName, String source, String dependParent, int dependLevel)
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("addDdl(): dbname="+dbname+", objectName="+objectName+", source="+source+", dependParent="+dependParent+", dependLevel="+dependLevel+". EXTRA_INFO: _doDdlLookupAndStore="+_doDdlLookupAndStore+", _writerClasses.size()="+_writerClasses.size());
+			_logger.debug("addDdl(): dbname=" + dbname + ", objectName=" + objectName + ", source=" + source + ", dependParent=" + dependParent + ", dependLevel=" + dependLevel + ". EXTRA_INFO: _doDdlLookupAndStore=" + _doDdlLookupAndStore + ", _writerClasses.size()=" + _writerClasses.size());
 
 		if ( ! _doDdlLookupAndStore )
 			return;
@@ -697,7 +710,7 @@ implements Runnable
 			if (dbname.equals(entry._dbname) && objectName.equals(entry._objectName))
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<- Already in the 'DDL Input Queue', addDdl() exiting early. dbname='"+dbname+"', objectName='"+objectName+"'.");
+					_logger.debug("-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<- Already in the 'DDL Input Queue', addDdl() exiting early. dbname='" + dbname + "', objectName='" + objectName + "'.");
 				return;
 			}
 		}
@@ -709,14 +722,14 @@ implements Runnable
 		{
 			boolean allowLookup = _objectLookupInspector.allowInspection(entry);
 			if (_logger.isDebugEnabled())
-				_logger.debug("addDdl(): _objectLookupInspector.allowInspection(entry) retuned: "+allowLookup);
+				_logger.debug("addDdl(): _objectLookupInspector.allowInspection(entry) retuned: " + allowLookup);
 			
 			// Inspector said: DISCARD, so we can exit early
 			if ( ! allowLookup )
 				return;
 
 			// Configuration: Should we allow: StatementCache Entries
-			if ( PersistentCounterHandler.STATEMENT_CACHE_NAME.equals(entry._dbname) )
+			if ( entry.isStatementCacheEntry() || PersistentCounterHandler.STATEMENT_CACHE_NAME.equals(entry._dbname) )
 			{
 				allowLookup = _ddlLookup_enabledForStatementCache;
 			}
@@ -727,7 +740,7 @@ implements Runnable
 			}
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("addDdl(): allowLookup-2="+allowLookup+", entry._dbname="+entry._dbname+", _ddlLookup_enabledForStatementCache="+_ddlLookup_enabledForStatementCache+", _ddlLookup_enabledForDatabaseObjects="+_ddlLookup_enabledForDatabaseObjects);
+				_logger.debug("addDdl(): allowLookup-2=" + allowLookup + ", entry._dbname=" + entry._dbname + ", _ddlLookup_enabledForStatementCache=" + _ddlLookup_enabledForStatementCache + ", _ddlLookup_enabledForDatabaseObjects=" + _ddlLookup_enabledForDatabaseObjects);
 
 			// exit if we do NOT allow lookup
 			if ( ! allowLookup )
@@ -751,7 +764,7 @@ implements Runnable
 		{
 			// DEBUG
 			if (_logger.isDebugEnabled())
-				_logger.debug("-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#- The DDL for dbname '"+dbname+"', objectName '"+objectName+"' has already been stored by all the writers.");
+				_logger.debug("-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#- The DDL for dbname '" + dbname + "', objectName '" + objectName + "' has already been stored by all the writers.");
 			return;
 		}
 
@@ -759,12 +772,16 @@ implements Runnable
 		if (qsize > _warnDdlInputQueueSizeThresh)
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug("The DDL request Input queue has "+qsize+" entries. The persistent writer might not keep in pace.");
+				_logger.debug("The DDL request Input queue has " + qsize + " entries. The persistent writer might not keep in pace.");
 		}
 
+		//-------------------------------------------
+		// ADD it to the queue
+		//-------------------------------------------
 		_ddlInputQueue.add(entry);
+		
 		if (_logger.isDebugEnabled())
-			_logger.debug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> add lookup  dbname '"+dbname+"', objectName '"+objectName+"' Current queue size = "+_ddlInputQueue.size());
+			_logger.debug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> add lookup  dbname '" + dbname + "', objectName '" + objectName + "' Current queue size = " + _ddlInputQueue.size());
 		fireQueueSizeChange();
 	}
 
@@ -812,7 +829,7 @@ implements Runnable
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems Checking DDL Lookup Connection. The DDL Lookup Connection will be CLOSED. Caught: "+ex, ex);
+			_logger.error("Problems Checking DDL Lookup Connection. The DDL Lookup Connection will be CLOSED. Caught: " + ex, ex);
 
 			// Close the connection and let the DBMS handle any eventual rollbacks and cleanups
 			conn.closeNoThrow();
@@ -852,7 +869,7 @@ implements Runnable
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems Checking SQL Capture Connection. The SQL Capture Connection will be CLOSED. Caught: "+ex, ex);
+			_logger.error("Problems Checking SQL Capture Connection. The SQL Capture Connection will be CLOSED. Caught: " + ex, ex);
 
 			// Close the connection and let the DBMS handle any eventual rollbacks and cleanups
 			conn.closeNoThrow();
@@ -901,15 +918,23 @@ implements Runnable
 				break;
 			}
 		}
+		for (IPersistWriter pw : _writerClasses)
+		{
+			if ( pw.isDdlDetailsDiscarded(dbname, objectName) )
+			{
+				doLookup = false;
+				break;
+			}
+		}
 		if ( ! doLookup )
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug("doObjectInfoLookup(): The DDL for dbname '"+dbname+"', objectName '"+objectName+"' has already been stored by all the writers.");
+				_logger.debug("doObjectInfoLookup(): The DDL for dbname '" + dbname + "', objectName '" + objectName + "' has already been stored/discarded by all the writers.");
 			return false;
 		}
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("Getting DDL information about object '"+dbname+"."+objectName+"', InputQueueSize="+_ddlInputQueue.size()+", StoreQueueSize="+_ddlStoreQueue.size());
+			_logger.debug("Getting DDL information about object '" + dbname + "." + objectName + "', InputQueueSize=" + _ddlInputQueue.size() + ", StoreQueueSize=" + _ddlStoreQueue.size());
 
 		// Print INFO message if IN-QUEUE is above X and a certain time has passed
 		if (_ddlInputQueue.size() > _ddlLookup_infoMessage_queueSize)
@@ -917,7 +942,7 @@ implements Runnable
 			long howLongAgo = System.currentTimeMillis() - _ddlLookup_infoMessage_last;
 			if (howLongAgo > _ddlLookup_infoMessage_period)
 			{
-				_logger.info("DDL Lookup: InputQueueSize="+_ddlInputQueue.size()+", StoreQueueSize="+_ddlStoreQueue.size()+". Now getting DDL information about object '"+dbname+"."+objectName+"',");
+				_logger.info("DDL Lookup: InputQueueSize=" + _ddlInputQueue.size() + ", StoreQueueSize=" + _ddlStoreQueue.size() + ". Now getting DDL information about object '" + dbname + "." + objectName + "',");
 				_ddlLookup_infoMessage_last = System.currentTimeMillis();
 			}
 		}
@@ -925,507 +950,72 @@ implements Runnable
 		// use the installed ObjectLookupInspector to get data
 		// If the lookup produced a result, add it to the StorageQueue, which writes it to the database
 		if (_logger.isDebugEnabled())
-			_logger.debug("######################################################## DO LOOKUP: "+qe);
+			_logger.debug("######################################################## DO LOOKUP: " + qe);
 
-		DdlDetails lookupEntry = _objectLookupInspector.doObjectInfoLookup(conn, qe, this);
+		boolean debugPrintConsole = Configuration.getCombinedConfiguration().getBooleanProperty("PersistentCounterHandler.doObjectInfoLookup.print.console", false); 
+		if (debugPrintConsole)
+			System.out.println("######################################################## DO LOOKUP >>>>: " + qe);
+
+		//-----------------------------------------------------------------------------------
+		// Do object lookup
+		//-----------------------------------------------------------------------------------
+		List<DdlDetails> lookupEntryList = _objectLookupInspector.doObjectInfoLookup(conn, qe, this);
 		
+		if (debugPrintConsole)
+			System.out.println("######################################################## DO LOOKUP <<<<: " + lookupEntryList);
+
 		if (_logger.isDebugEnabled())
-			_logger.debug("LOOKUP RETURNED: "+ lookupEntry);
+			_logger.debug("LOOKUP RETURNED: " +  lookupEntryList);
 
-		if (lookupEntry != null)
+		if (lookupEntryList != null && !lookupEntryList.isEmpty())
 		{
-//System.out.println("LOOKUP RETURNED DETAILS: "+ lookupEntry.toStringDebug());
+			boolean isSleepOptionSet = true;
 
-			int qsize = _ddlStoreQueue.size();
-			if (qsize > _warnDdlStoreQueueSizeThresh)
+			for (DdlDetails lookupEntry : lookupEntryList)
 			{
-				long lastMessagePrint = System.currentTimeMillis() - _warnDdlStoreQueueSizeThreshPrintLastTime;
-				if (lastMessagePrint > _warnDdlStoreQueueSizeThreshPrintEveryXms)
+				//System.out.println("LOOKUP RETURNED DETAILS: " +  lookupEntry.toStringDebug());
+
+				int qsize = _ddlStoreQueue.size();
+				if (qsize > _warnDdlStoreQueueSizeThresh)
 				{
-					_logger.warn("The DDL Storage queue has "+qsize+" entries. The persistent writer might not keep in pace.");
-					_warnDdlStoreQueueSizeThreshPrintLastTime = System.currentTimeMillis();
+					long lastMessagePrint = System.currentTimeMillis() - _warnDdlStoreQueueSizeThreshPrintLastTime;
+					if (lastMessagePrint > _warnDdlStoreQueueSizeThreshPrintEveryXms)
+					{
+						_logger.warn("The DDL Storage queue has " + qsize + " entries. The persistent writer might not keep in pace.");
+						_warnDdlStoreQueueSizeThreshPrintLastTime = System.currentTimeMillis();
+					}
 				}
+				
+				//-----------------------------------------------------------------------------------
+				// Add to "storage" queue
+				//-----------------------------------------------------------------------------------
+				_ddlStoreQueue.add(lookupEntry);
+				
+				if ( ! lookupEntry.isSleepOptionSet() )
+					isSleepOptionSet = false;
 			}
-			_ddlStoreQueue.add(lookupEntry);
 			fireQueueSizeChange();
 			
-			return lookupEntry.isSleepOptionSet();
+			return isSleepOptionSet;
 		}
 		return false;
 	}
 
+	/**
+	 * Mark the object as "discarded" in all writers
+	 * 
+	 * @param dbname      
+	 * @param objectName  
+	 */
+	public void markDdlDetailsAsDiscarded(String dbname, String objectName)
+	{
+		// loop all writer classes
+		for (IPersistWriter pw : _writerClasses)
+		{
+			pw.markDdlDetailsAsDiscarded(dbname, objectName);
+		}
+	}
 
-//	private boolean XXXXXXXXX_DELETEME_XXXXXXXXXXXXX_doObjectInfoLookup(ObjectLookupQueueEntry qe, long prevLookupTimeMs)
-//	{
-//		String dbname       = qe._dbname;
-//		String objectName   = qe._objectName;
-//		String source       = qe._source;
-//		String dependParent = qe._dependParent;
-//		int    dependLevel  = qe._dependLevel;
-//
-//		// FIXME: dbname  can be a Integer
-//		// FIXME: objName can be a Integer
-//		// Do the lookup, then check _ddlCache if it has been stored.
-//
-//		// Statement Cache object
-//		boolean isStatementCache = false;
-//		String  ssqlid = null;
-//		if (objectName.startsWith("*ss") || objectName.startsWith("*sq") ) // *sq in ASE 15.7 esd#2, DynamicSQL can/will end up in statement cache
-//		{
-//			isStatementCache = true;
-//			dbname           = STATEMENT_CACHE_NAME;
-//			int sep = objectName.indexOf('_');
-//			ssqlid = objectName.substring(3, sep);
-//			//haskey = objectName.substring(sep+1, objectName.length()-3);
-//		}
-//
-//		// check AGAIN if DDL has NOT been saved in any writer class
-//		boolean doLookup = false;
-//		for (IPersistWriter pw : _writerClasses)
-//		{
-//			if ( ! pw.isDdlDetailsStored(dbname, objectName) )
-//			{
-//				doLookup = true;
-//				break;
-//			}
-//		}
-//		if ( ! doLookup )
-//		{
-//			_logger.debug("doObjectInfoLookup(): The DDL for dbname '"+dbname+"', objectName '"+objectName+"' has already been stored by all the writers.");
-//			return false;
-//		}
-//
-//		if (_logger.isDebugEnabled())
-//			_logger.debug("Getting DDL information about object '"+dbname+"."+objectName+"', InputQueueSize="+_ddlInputQueue.size()+", StoreQueueSize="+_ddlStoreQueue.size());
-//
-//		// Print INFO message if IN-QUEUE is above X and a certain time has passed
-//		if (_ddlInputQueue.size() > _ddlLookup_infoMessage_queueSize)
-//		{
-//			long howLongAgo = System.currentTimeMillis() - _ddlLookup_infoMessage_last;
-//			if (howLongAgo > _ddlLookup_infoMessage_period)
-//			{
-//				_logger.info("DDL Lookup: InputQueueSize="+_ddlInputQueue.size()+", StoreQueueSize="+_ddlStoreQueue.size()+". Now getting DDL information about object '"+dbname+"."+objectName+"',");
-//				_ddlLookup_infoMessage_last = System.currentTimeMillis();
-//			}
-//		}
-//
-//		// Statement Cache objects
-//		if (isStatementCache)
-//		{
-//			DdlDetails entry = new DdlDetails(dbname, objectName);
-//			entry.setCrdate( new Timestamp(System.currentTimeMillis()) );
-//			entry.setSource( source );
-//			entry.setDependLevel( dependLevel );
-//			entry.setOwner("ssql");
-//			entry.setType("SS");
-//			entry.setSampleTime( new Timestamp(System.currentTimeMillis()) );
-//			String sql = 
-//				"set switch on 3604 with no_info \n" +
-//				"dbcc prsqlcache("+ssqlid+", 1) "; // 1 = also prints showplan"
-//			
-//			AseSqlScript ss = new AseSqlScript(conn, 10);
-//			try	{ 
-//				entry.setObjectText( ss.executeSqlStr(sql, true) ); 
-//			} catch (SQLException e) { 
-//				entry.setObjectText( e.toString() ); 
-//			} finally {
-//				ss.close();
-//			}
-//			
-////			if (_dbmsVersion >= 15700)
-////			if (_dbmsVersion >= 1570000)
-//			if (_dbmsVersion >= Ver.ver(15,7))
-//			{
-//				//-----------------------------------------------------------
-//				// From Documentation on: show_cached_plan_in_xml(statement_id, plan_id, level_of_detail)
-//				//-----------------------------------------------------------
-//				// statement_id
-//				//			     is the object ID of the lightweight procedure (A procedure that can be created and invoked 
-//				//			     internally by Adaptive Server). This is the SSQLID from monCachedStatement.
-//				// 
-//				// plan_id
-//				//			     is the unique identifier for the plan. This is the PlanID from monCachedProcedures. 
-//				//			     A value of zero for plan_id displays the showplan output for all cached plans for the indicated SSQLID.
-//				// 
-//				// level_of_detail
-//				//			     is a value from 0 - 6 indicating the amount of detail show_cached_plan_in_xml returns (see Table 2-6). 
-//				//			     level_of_detail determines which sections of showplan are returned by show_cached_plan_in_xml. 
-//				//			     The default value is 0.
-//				// 
-//				//			     The output of show_cached_plan_in_xml includes the plan_id and these sections:
-//				// 
-//				//			         parameter - contains the parameter values used to compile the query and the parameter values 
-//				//			                     that caused the slowest performance. The compile parameters are indicated with the 
-//				//			                     <compileParameters> and </compileParameters> tags. The slowest parameter values are 
-//				//			                     indicated with the <execParameters> and </execParameters> tags. 
-//				//			                     For each parameter, show_cached_plan_in_xml displays the:
-//				//			                        Number
-//				//			                        Datatype
-//				//			                        Value:    values that are larger than 500 bytes and values for insert-value statements 
-//				//			                                  do not appear. The total memory used to store the values for all parameters 
-//				//			                                  is 2KB for each of the two parameter sets.
-//				// 
-//				//			         opTree    - contains the query plan and the optimizer estimates. 
-//				//			                     The opTree section is delineated by the <opTree> and </opTree> tags.
-//				// 
-//				//			         execTree  - contains the query plan with the lava operator details. 
-//				//			                     The execTree section is identified by the tags <execTree> and </execTree>.
-//				//
-//				// level_of_detail parameter opTree execTree
-//				// --------------- --------- ------ --------
-//				// 0 (the default)       YES    YES         
-//				// 1                     YES                
-//				// 2                            YES         
-//				// 3                                     YES
-//				// 4                            YES      YES
-//				// 5                     YES             YES
-//				// 6                     YES    YES      YES
-//				//-----------------------------------------------------------
-//
-//				sql = "select show_cached_plan_in_xml("+ssqlid+", 0, 0)";
-//
-////				ss = new AseSqlScript(conn, 10);
-////				try	{
-////					entry.setExtraInfoText( ss.executeSqlStr(sql, true) );
-////				} catch (SQLException e) {
-////					entry.setExtraInfoText( e.toString() );
-////				} finally {
-////					ss.close();
-////				}
-//				try
-//				{
-//					Statement stmnt = conn.createStatement();
-//					stmnt.setQueryTimeout(10);
-//					
-//					ResultSet rs = stmnt.executeQuery(sql);
-//
-//					StringBuilder sb = new StringBuilder();
-//					sb.append(sql).append("\n");
-//					sb.append("------------------------------------------------------------------\n");
-//					while (rs.next())
-//					{
-//						sb.append(rs.getString(1));
-//					}
-//					rs.close();
-//					stmnt.close();
-//
-//					entry.setExtraInfoText( sb.toString().trim() );
-//				}
-//				catch(SQLException e)
-//				{
-//					String msg = "Problems getting text from Statement Cache about '"+objectName+"'. Msg="+e.getErrorCode()+", Text='" + e.getMessage() + "'. Caught: "+e;
-//					_logger.warn(msg); 
-//					entry.setExtraInfoText( msg );
-//				}
-//			}
-//			_ddlStoreQueue.add(entry);
-//			fireQueueSizeChange();
-//		}
-//		else // all other tables
-//		{
-//			// Keep a list of objects we need to work with
-//			// because: if we get more than one proc/table with different owners
-//			ArrayList<DdlDetails> objectList = new ArrayList<DdlDetails>();
-//			
-//			// GET type and creation time
-//			String sql = 
-//				"select o.type, u.name, o.crdate \n" +
-//				"from ["+dbname+"]..sysobjects o, ["+dbname+"]..sysusers u \n" +
-//				"where o.name = '"+objectName+"' \n" +
-//				"  and o.uid = u.uid ";
-//			try
-//			{
-//				Statement statement = conn.createStatement();
-//				ResultSet rs = statement.executeQuery(sql);
-//				while(rs.next())
-//				{
-//					DdlDetails entry = new DdlDetails();
-//					
-//					entry.setDbname      ( dbname );
-//					entry.setObjectName  ( objectName );
-//					entry.setSource      ( source );
-//					entry.setDependParent( dependParent );
-//					entry.setDependLevel ( dependLevel );
-//					entry.setSampleTime  ( new Timestamp(System.currentTimeMillis()) );
-//
-//					entry.setType       ( rs.getString   (1) );
-//					entry.setOwner      ( rs.getString   (2) );
-//					entry.setCrdate     ( rs.getTimestamp(3) );
-//					
-//					objectList.add(entry);
-//				}
-//			}
-//			catch (SQLException e)
-//			{
-//				_logger.error("Problems Getting basic information about DDL for dbname='"+dbname+"', objectName='"+objectName+"', source='"+source+"', dependLevel="+dependLevel+". Skipping DDL Storage of this object. Caught: "+e);
-//				return false;
-//			}
-//	
-//			// The object was NOT found
-//			if (objectList.size() == 0)
-//			{
-//				_logger.info("DDL Lookup. Can't find any information for dbname='"+dbname+"', objectName='"+objectName+"', source='"+source+"', dependLevel="+dependLevel+". Skipping DDL Storage of this object.");
-//				return false;
-//			}
-//	
-//	
-//			for (DdlDetails entry : objectList)
-//			{
-//				String type = entry.getType();
-//				// Type definition from ASE 15.7, manual
-//				//   C  - computed column
-//				//   D  - default
-//				//   DD - decrypt default
-//				//   F  - SQLJ function
-//				//   N  - partition condition
-//				//   P  - Transact-SQL or SQLJ procedure
-//				//   PP - the predicate of a privilege
-//				//   PR - prepare objects (created by Dynamic SQL)
-//				//   R  - rule
-//				//   RI - referential constraint
-//				//   S  - system table
-//				//   TR - trigger
-//				//   U  - user table
-//				//   V  - view
-//				//   XP - extended stored procedure.
-//				AseSqlScript ss;
-//	
-//				if ( "U".equals(type) || "S".equals(type) )
-//				{
-//					//--------------------------------------------
-//					// Just do sp_help, or use ddlgen.jar to get info
-//					sql = "exec "+entry.getDbname()+"..sp_help '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
-//	
-//					ss = new AseSqlScript(conn, 10);
-//					try	{ 
-//						entry.setObjectText( ss.executeSqlStr(sql, true) ); 
-//					} catch (SQLException e) { 
-//						entry.setObjectText( e.toString() ); 
-//					} finally {
-//						ss.close();
-//					}
-//	
-//					//--------------------------------------------
-//					// GET sp__optdiag
-////					if (_dbmsVersion >= 15700)
-////					if (_dbmsVersion >= 1570000)
-//					if (_dbmsVersion >= Ver.ver(15,7))
-//					{
-//						sql = "exec "+entry.getDbname()+"..sp_showoptstats '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
-//
-//						try
-//						{
-//							Statement stmnt = conn.createStatement();
-//							stmnt.setQueryTimeout(10);
-//							
-//							ResultSet rs = stmnt.executeQuery(sql);
-//
-//							StringBuilder sb = new StringBuilder();
-//							sb.append(sql).append("\n");
-//							sb.append("------------------------------------------------------------------\n");
-//							while (rs.next())
-//							{
-//								sb.append(rs.getString(1));
-//							}
-//							rs.close();
-//							stmnt.close();
-//
-//							entry.setOptdiagText( sb.toString().trim() );
-//						}
-//						catch(SQLException e)
-//						{
-//							String msg = "Problems getting sp_showoptstats, using sql '"+sql+"'. Msg="+e.getErrorCode()+", Text='" + e.getMessage() + "'. Caught: "+e;
-//							//_logger.warn(msg); 
-//							entry.setOptdiagText( msg );
-//						}
-//					}
-//					else
-//					{
-//						// do SP_OPTDIAG, but only on UNPARTITIONED tables
-//						sql="declare @partitions int \n" +
-//							"select @partitions = count(*) \n" +
-//							"from "+entry.getDbname()+"..sysobjects o, "+entry.getDbname()+"..sysusers u, "+entry.getDbname()+"..syspartitions p \n" +
-//							"where o.name = '"+entry.getObjectName()+"' \n" +
-//							"  and u.name = '"+entry.getOwner()+"' \n" +
-//							"  and o.id  = p.id \n" +
-//							"  and o.uid = o.uid \n" +
-//							"  and p.indid = 0 \n" +
-//							"                  \n" +
-//							"if (@partitions > 1) \n" +
-//							"    print 'Table is partitioned, and this is not working so well with sp__optdiag, sorry.' \n" +
-//							"else \n" +
-//							"    exec "+entry.getDbname()+"..sp__optdiag '"+entry.getOwner()+"."+entry.getObjectName()+"' \n" +
-//							"";
-//
-//						ss = new AseSqlScript(conn, 10);
-//						try	{ 
-//							entry.setOptdiagText( ss.executeSqlStr(sql, true) ); 
-//						} catch (SQLException e) { 
-//							entry.setOptdiagText( e.toString() ); 
-//						} finally {
-//							ss.close();
-//						}
-//				}
-//		
-//					//--------------------------------------------
-//					// GET SOME OTHER STATISTICS
-//					sql = "exec "+entry.getDbname()+"..sp_spaceused '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
-//	
-//					ss = new AseSqlScript(conn, 10);
-//					try	{ 
-//						entry.setExtraInfoText( ss.executeSqlStr(sql, true) ); 
-//					} catch (SQLException e) { 
-//						entry.setExtraInfoText( e.toString() ); 
-//					} finally {
-//						ss.close();
-//					}
-//					// TODO: more info to save
-//					// - datachange(table_name, partition_name, column_name)
-//					// - can we get some other statistics from sysstatistics
-//					//   like when was statistics updated for this table
-//					// - function: derived_stats(objnamme|id, indexname|indexid, [ptn_name|ptn_id], 'stats')
-//					//             stats = dpcr | data page cluster ratio
-//					//                     ipcr | index page cluster ratio
-//					//                     drcr | data row cluster ratio
-//					//                     lgio | large io efficiency
-//					//                     sput | space utilization
-//					//             to get Cluster Ratio etc...
-//					// - try to calculate "if tab has a lot of unused space / fragmented"
-//				}
-//				if (   "P" .equals(type) 
-//				    || "TR".equals(type) 
-//				    || "V" .equals(type) 
-//				    || "D" .equals(type) 
-//				    || "R" .equals(type) 
-//				    || "XP".equals(type))
-//				{
-//					//--------------------------------------------
-//					// GET OBJECT TEXT
-//					sql = " select c.text "
-//						+ " from "+entry.getDbname()+"..sysobjects o, "+entry.getDbname()+"..syscomments c, "+entry.getDbname()+"..sysusers u \n"
-//						+ " where o.name = '"+entry.getObjectName()+"' \n"
-//						+ "   and u.name = '"+entry.getOwner()+"' \n" 
-//						+ "   and o.id   = c.id \n"
-//						+ "   and o.uid  = u.uid \n"
-//						+ " order by c.number, c.colid2, c.colid ";
-//	
-//					try
-//					{
-//						StringBuilder sb = new StringBuilder();
-//	
-//						Statement statement = conn.createStatement();
-//						ResultSet rs = statement.executeQuery(sql);
-//						while(rs.next())
-//						{
-//							String textPart = rs.getString(1);
-//							sb.append(textPart);
-//						}
-//						rs.close();
-//						statement.close();
-//	
-//						entry.setObjectText( sb.toString() );
-//					}
-//					catch (SQLException e)
-//					{
-//						entry.setObjectText( e.toString() );
-//					}
-//				}
-//				else
-//				{
-//					// Unknown type
-//				}
-//	
-//				//--------------------------------------------
-//				// GET sp_depends
-//				sql = "exec "+entry.getDbname()+"..sp_depends '"+entry.getOwner()+"."+entry.getObjectName()+"' "; 
-//	
-//				ss = new AseSqlScript(conn, 10);
-//				try	{ 
-//					entry.setDependsText( ss.executeSqlStr(sql, true) ); 
-//				} catch (SQLException e) { 
-//					entry.setDependsText( e.toString() ); 
-//				} finally {
-//					ss.close();
-//				}
-//	
-//				if (_addDependantObjectsToDdlInQueue)
-//				{
-//					sql = "exec "+entry.getDbname()+"..sp_depends '"+entry.getOwner()+"."+entry.getObjectName()+"' "; 
-//	
-//					ArrayList<String> dependList = new ArrayList<String>();
-//					try
-//					{
-//						Statement statement = conn.createStatement();
-//						ResultSet rs = statement.executeQuery(sql);
-//						ResultSetMetaData rsmd = rs.getMetaData();
-//	
-//						// lets search for 'object' column, in no case, if it changes...
-//						int object_pos = -1;
-//						for (int c=1; c<=rsmd.getColumnCount(); c++)
-//						{
-//							if (rsmd.getColumnLabel(c).toLowerCase().equals("object"))
-//							{
-//								object_pos = c;
-//								break;
-//							}
-//						}
-//						if (object_pos > 0)
-//						{
-//							while(rs.next())
-//							{
-//								// Get the dependent object name
-//								String depOnObjectName = rs.getString(object_pos);
-//	
-//								// Strip off the beginning of the string, which holds the owner
-//								// example: "dbo.sp_addmessage"
-//								int beginIndex = depOnObjectName.indexOf('.') + 1;
-//								if (beginIndex < 0)
-//									beginIndex = 0;
-//								String shortObjName = depOnObjectName.substring(beginIndex);
-//
-//								dependList.add(shortObjName);
-//
-//								// Don't add SystemProcedure/systemTables dependencies
-//								if ( ! shortObjName.startsWith("sp_") && ! shortObjName.startsWith("sys"))
-//								{
-//									addDdl(entry.getDbname(), shortObjName, source, objectName, dependLevel + 1);
-//								}
-//							}
-//						}
-//						else
-//						{
-//							_logger.debug("When getting dependent objects using 'sp_depends', I was expecting a column named 'object'. But it wasn't found. The result set had "+rsmd.getColumnCount()+" columns. Skipping lookup for dependent object for '"+entry.getFullObjectName()+"'.");
-//						}
-//						rs.close();
-//						statement.close();
-//					}
-//					catch (SQLException e)
-//					{
-//						// If we didn't have any results for the table, then:
-//						// java.sql.SQLException: JZ0R2: No result set for this query.
-//						if ( ! "JZ0R2".equals(e.getSQLState()) )
-//						{
-//							_logger.warn("Problems getting 'sp_depends' for table '"+entry.getFullObjectName()+"'. SqlState='"+e.getSQLState()+"', Caught: "+e);
-//						}
-//					}
-//					if (dependList.size() > 0)
-//						entry.setDependList(dependList);
-//				}
-//	
-//				int qsize = _ddlStoreQueue.size();
-//				if (qsize > _warnDdlStoreQueueSizeThresh)
-//				{
-//					_logger.warn("The DDL Storage queue has "+qsize+" entries. The persistent writer might not keep in pace.");
-//				}
-//				_ddlStoreQueue.add(entry);
-//				fireQueueSizeChange();
-//	
-//			} // end: for (DdlDetails entry : objectList)
-//
-//		} // end: isStatementCache == false
-//		
-//		return true;
-//	}
 
 	/**
 	 * Use all installed writers to store the DDL information
@@ -1449,7 +1039,7 @@ implements Runnable
 			}
 			catch (Throwable t)
 			{
-				_logger.error("The Persistent Writer got runtime error in consumeDdl() in Persistent Writer named '"+pw.getName()+"'. Continuing with next Writer...", t);
+				_logger.error("The Persistent Writer got runtime error in consumeDdl() in Persistent Writer named '" + pw.getName() + "'. Continuing with next Writer...", t);
 			}
 		}
 	}
@@ -1492,7 +1082,7 @@ implements Runnable
 			// AND catch all runtime errors that might come
 			try 
 			{
-//				_logger.info("Persisting Counters using '"+pw.getName()+"' for sessionStartTime='"+cont.getSessionStartTime()+"', mainSampleTime='"+cont.getMainSampleTime()+"'. Previous persist took "+prevConsumeTimeMs+" ms. inserts="+pw.getInserts()+", updates="+pw.getUpdates()+", deletes="+pw.getDeletes()+", createTables="+pw.getCreateTables()+", alterTables="+pw.getAlterTables()+", dropTables="+pw.getDropTables()+".");
+//				_logger.info("Persisting Counters using '" + pw.getName() + "' for sessionStartTime='" + cont.getSessionStartTime() + "', mainSampleTime='" + cont.getMainSampleTime() + "'. Previous persist took " + prevConsumeTimeMs + " ms. inserts=" + pw.getInserts() + ", updates=" + pw.getUpdates() + ", deletes=" + pw.getDeletes() + ", createTables=" + pw.getCreateTables() + ", alterTables=" + pw.getAlterTables() + ", dropTables=" + pw.getDropTables() + ".");
 
 				// BEGIN-OF-SAMPLE If we want to do anything in here
 				pw.beginOfSample(cont);
@@ -1553,7 +1143,7 @@ implements Runnable
 			}
 			catch (Throwable t)
 			{
-				_logger.error("The Persistent Writer got runtime error in consume() in Persistent Writer named '"+pw.getName()+"'. Continuing with next Writer...", t);
+				_logger.error("The Persistent Writer got runtime error in consume() in Persistent Writer named '" + pw.getName() + "'. Continuing with next Writer...", t);
 				pw.endOfSample(cont, true);
 			}
 		}
@@ -1605,13 +1195,13 @@ implements Runnable
 			// AND catch all runtime errors that might come
 			try 
 			{
-				_logger.info("Starting Counters Storage Session '"+pw.getName()+"' for sessionStartTime='"+cont.getSessionStartTime()+"', server='"+cont.getServerName()+"', with serverAlias='"+cont.getServerNameAlias()+"'.");
+				_logger.info("Starting Counters Storage Session '" + pw.getName() + "' for sessionStartTime='" + cont.getSessionStartTime() + "', server='" + cont.getServerName() + "', with serverAlias='" + cont.getServerNameAlias() + "'.");
 
 				pw.startSession(cont);
 			}
 			catch (Throwable t)
 			{
-				_logger.error("The Persistent Writer got runtime error when calling the method startSession() in Persistent Writer named '"+pw.getName()+"'. Continuing with next Writer...", t);
+				_logger.error("The Persistent Writer got runtime error when calling the method startSession() in Persistent Writer named '" + pw.getName() + "'. Continuing with next Writer...", t);
 			}
 		}
 	}
@@ -1629,7 +1219,7 @@ implements Runnable
 			boolean doDdlLookupAndStore = _props.getBooleanProperty(PROPKEY_ddl_doDdlLookupAndStore, DEFAULT_ddl_doDdlLookupAndStore);
 			if (doDdlLookupAndStore != _doDdlLookupAndStore)
 			{
-				_logger.info("DdlLookupQueueHandler: Discovered a config change in _doDdlLookupAndStore from '"+_doDdlLookupAndStore+"', to '"+doDdlLookupAndStore+"'.");
+				_logger.info("DdlLookupQueueHandler: Discovered a config change in _doDdlLookupAndStore from '" + _doDdlLookupAndStore + "', to '" + doDdlLookupAndStore + "'.");
 				_doDdlLookupAndStore = doDdlLookupAndStore;
 			}
 
@@ -1637,7 +1227,7 @@ implements Runnable
 			boolean ddlLookup_enabledForDatabaseObjects = _props.getBooleanProperty(PROPKEY_ddl_enabledForDatabaseObjects, DEFAULT_ddl_enabledForDatabaseObjects);
 			if (ddlLookup_enabledForDatabaseObjects != _ddlLookup_enabledForDatabaseObjects)
 			{
-				_logger.info("DdlLookupQueueHandler: Discovered a config change in _ddlLookup_enabledForDatabaseObjects from '"+_ddlLookup_enabledForDatabaseObjects+"', to '"+ddlLookup_enabledForDatabaseObjects+"'.");
+				_logger.info("DdlLookupQueueHandler: Discovered a config change in _ddlLookup_enabledForDatabaseObjects from '" + _ddlLookup_enabledForDatabaseObjects + "', to '" + ddlLookup_enabledForDatabaseObjects + "'.");
 				_ddlLookup_enabledForDatabaseObjects = ddlLookup_enabledForDatabaseObjects;
 			}
 
@@ -1645,7 +1235,7 @@ implements Runnable
 			boolean ddlLookup_enabledForStatementCache = _props.getBooleanProperty(PROPKEY_ddl_enabledForStatementCache, DEFAULT_ddl_enabledForStatementCache);
 			if (ddlLookup_enabledForStatementCache != _ddlLookup_enabledForStatementCache)
 			{
-				_logger.info("DdlLookupQueueHandler: Discovered a config change in _ddlLookup_enabledForStatementCache from '"+_ddlLookup_enabledForStatementCache+"', to '"+ddlLookup_enabledForStatementCache+"'.");
+				_logger.info("DdlLookupQueueHandler: Discovered a config change in _ddlLookup_enabledForStatementCache from '" + _ddlLookup_enabledForStatementCache + "', to '" + ddlLookup_enabledForStatementCache + "'.");
 				_ddlLookup_enabledForStatementCache = ddlLookup_enabledForStatementCache;
 			}
 
@@ -1653,15 +1243,23 @@ implements Runnable
 			int afterDdlLookupSleepTimeInMs = _props.getIntProperty(PROPKEY_ddl_afterDdlLookupSleepTimeInMs, DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
 			if (afterDdlLookupSleepTimeInMs != _afterDdlLookupSleepTimeInMs)
 			{
-				_logger.info("DdlLookupQueueHandler: Discovered a config change in sleep time 'after persist' from '"+_sqlCaptureSleepTimeInMs+"', to '"+afterDdlLookupSleepTimeInMs+"'.");
+				_logger.info("DdlLookupQueueHandler: Discovered a config change in sleep time 'after persist' from '" + _sqlCaptureSleepTimeInMs + "', to '" + afterDdlLookupSleepTimeInMs + "'.");
 				_afterDdlLookupSleepTimeInMs = afterDdlLookupSleepTimeInMs;
+			}
+
+			// 
+			boolean doGetStatistics = _props.getBooleanProperty(PROPKEY_ddl_doGetStatistics, DEFAULT_ddl_doGetStatistics);
+			if (doGetStatistics != _doGetStatistics)
+			{
+				_logger.info("DdlLookupQueueHandler: Discovered a config change in _doGetStatistics from '" + _doGetStatistics + "', to '" + doGetStatistics + "'.");
+				_doGetStatistics = doGetStatistics;
 			}
 
 			// 
 			boolean doSpDepends = _props.getBooleanProperty(PROPKEY_ddl_doSpDepends, DEFAULT_ddl_doSpDepends);
 			if (doSpDepends != _doSpDepends)
 			{
-				_logger.info("DdlLookupQueueHandler: Discovered a config change in _doSpDepends from '"+_doSpDepends+"', to '"+doSpDepends+"'.");
+				_logger.info("DdlLookupQueueHandler: Discovered a config change in _doSpDepends from '" + _doSpDepends + "', to '" + doSpDepends + "'.");
 				_doSpDepends = doSpDepends;
 			}
 
@@ -1669,7 +1267,7 @@ implements Runnable
 			boolean addDependantObjectsToDdlInQueue = _props.getBooleanProperty(PROPKEY_ddl_addDependantObjectsToDdlInQueue, DEFAULT_ddl_addDependantObjectsToDdlInQueue);
 			if (addDependantObjectsToDdlInQueue != _addDependantObjectsToDdlInQueue)
 			{
-				_logger.info("DdlLookupQueueHandler: Discovered a config change in _addDependantObjectsToDdlInQueue from '"+_addDependantObjectsToDdlInQueue+"', to '"+addDependantObjectsToDdlInQueue+"'.");
+				_logger.info("DdlLookupQueueHandler: Discovered a config change in _addDependantObjectsToDdlInQueue from '" + _addDependantObjectsToDdlInQueue + "', to '" + addDependantObjectsToDdlInQueue + "'.");
 				_addDependantObjectsToDdlInQueue = addDependantObjectsToDdlInQueue;
 			}
 		}
@@ -1678,7 +1276,7 @@ implements Runnable
 		public void run()
 		{
 			String threadName = Thread.currentThread().getName();
-			_logger.info("Starting a thread for the module '"+threadName+"'.");
+			_logger.info("Starting a thread for the module '" + threadName + "'.");
 	
 			isInitialized();
 	
@@ -1687,13 +1285,13 @@ implements Runnable
 	
 			while(isRunning())
 			{
-//System.out.println("DdlLookupQueueHandler... at TOP: isRunning()="+isRunning());
-				//_logger.info("Thread '"+_thread.getName()+"', SLEEPS...");
+//System.out.println("DdlLookupQueueHandler... at TOP: isRunning()=" + isRunning());
+				//_logger.info("Thread '" + _thread.getName() + "', SLEEPS...");
 				//try { Thread.sleep(5 * 1000); }
 				//catch (InterruptedException ignore) {}
 				
 				if (_logger.isDebugEnabled())
-					_logger.debug("Thread '"+threadName+"', waiting on queue...");
+					_logger.debug("Thread '" + threadName + "', waiting on queue...");
 	
 				try 
 				{
@@ -1728,16 +1326,16 @@ implements Runnable
 	
 					prevLookupTimeMs = stopTime-startTime;
 					if (_logger.isDebugEnabled())
-						_logger.debug("It took "+prevLookupTimeMs+" ms to lookup the DDL "+qe+".");
+						_logger.debug("It took " + prevLookupTimeMs + " ms to lookup the DDL " + qe + ".");
 
 					// Check the ObjectInfoLookup Connection and see that it's healty... 
 					// Meaning no open transaction left etc...
-//System.out.println("DdlLookupQueueHandler... AFTER:doObjectInfoLookup()... prevLookupTimeMs="+prevLookupTimeMs+", didLookup="+didLookup);
+//System.out.println("DdlLookupQueueHandler... AFTER:doObjectInfoLookup()... prevLookupTimeMs=" + prevLookupTimeMs + ", didLookup=" + didLookup);
 					if (didLookup)
 					{
 						// Only check every X minute
 						long howLongAgo = System.currentTimeMillis() - _ddlLookup_checkConn_last;
-//System.out.println("DdlLookupQueueHandler... AFTER:doObjectInfoLookup()... prevLookupTimeMs="+prevLookupTimeMs+", didLookup="+didLookup+", _ddlLookup_checkConn_period="+_ddlLookup_checkConn_period+", howLongAgo="+howLongAgo);
+//System.out.println("DdlLookupQueueHandler... AFTER:doObjectInfoLookup()... prevLookupTimeMs=" + prevLookupTimeMs + ", didLookup=" + didLookup + ", _ddlLookup_checkConn_period=" + _ddlLookup_checkConn_period + ", howLongAgo=" + howLongAgo);
 						if (howLongAgo > _ddlLookup_checkConn_period)
 						{
 							checkObjectInfoLookupConnection();
@@ -1755,14 +1353,14 @@ implements Runnable
 				}
 			}
 	
-			_logger.info("Emptying the DDL Input queue for module '"+threadName+"', which had "+_ddlInputQueue.size()+" entries.");
+			_logger.info("Emptying the DDL Input queue for module '" + threadName + "', which had " + _ddlInputQueue.size() + " entries.");
 			_ddlInputQueue.clear();
 			fireQueueSizeChange();
 
 			// Close the Lookup Connection
 			closeDdlLookupConnection();
 			
-			_logger.info("Thread '"+threadName+"' was stopped.");
+			_logger.info("Thread '" + threadName + "' was stopped.");
 		}
 	}
 
@@ -1776,7 +1374,7 @@ implements Runnable
 		public void run()
 		{
 			String threadName = Thread.currentThread().getName();
-			_logger.info("Starting a thread for the module '"+threadName+"'.");
+			_logger.info("Starting a thread for the module '" + threadName + "'.");
 	
 			isInitialized();
 	
@@ -1785,12 +1383,12 @@ implements Runnable
 	
 			while(isRunning())
 			{
-				//_logger.info("Thread '"+_thread.getName()+"', SLEEPS...");
+				//_logger.info("Thread '" + _thread.getName() + "', SLEEPS...");
 				//try { Thread.sleep(5 * 1000); }
 				//catch (InterruptedException ignore) {}
 				
 				if (_logger.isDebugEnabled())
-					_logger.debug("Thread '"+threadName+"', waiting on queue...");
+					_logger.debug("Thread '" + threadName + "', waiting on queue...");
 	
 				try 
 				{
@@ -1816,13 +1414,15 @@ implements Runnable
 					}
 
 
+					//-----------------------------------------------------------------------------------
 					// Go and store or consume the in-data/container
+					//-----------------------------------------------------------------------------------
 					long startTime = System.currentTimeMillis();
 					saveDdl( ddlDetails, prevConsumeTimeMs );
 					long stopTime = System.currentTimeMillis();
 	
 					prevConsumeTimeMs = stopTime-startTime;
-					_logger.debug("It took "+prevConsumeTimeMs+" ms to persist the above DDL information (using all writers).");
+					_logger.debug("It took " + prevConsumeTimeMs + " ms to persist the above DDL information (using all writers).");
 					
 				} 
 				catch (InterruptedException ex) 
@@ -1831,11 +1431,11 @@ implements Runnable
 				}
 			}
 	
-			_logger.info("Emptying the DDL Input queue for module '"+threadName+"', which had "+_ddlInputQueue.size()+" entries.");
+			_logger.info("Emptying the DDL Input queue for module '" + threadName + "', which had " + _ddlInputQueue.size() + " entries.");
 			_ddlInputQueue.clear();
 			fireQueueSizeChange();
 	
-			_logger.info("Thread '"+threadName+"' was stopped.");
+			_logger.info("Thread '" + threadName + "' was stopped.");
 		}
 	}
 
@@ -1846,7 +1446,7 @@ implements Runnable
 	public void run()
 	{
 		String threadName = _thread.getName();
-		_logger.info("Starting a thread for the module '"+threadName+"'.");
+		_logger.info("Starting a thread for the module '" + threadName + "'.");
 
 		isInitialized();
 
@@ -1855,12 +1455,12 @@ implements Runnable
 
 		while(isRunning())
 		{
-			//_logger.info("Thread '"+_thread.getName()+"', SLEEPS...");
+			//_logger.info("Thread '" + _thread.getName() + "', SLEEPS...");
 			//try { Thread.sleep(5 * 1000); }
 			//catch (InterruptedException ignore) {}
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("Thread '"+threadName+"', waiting on queue...");
+				_logger.debug("Thread '" + threadName + "', waiting on queue...");
 
 			try 
 			{
@@ -1886,7 +1486,7 @@ implements Runnable
 				_currentConsumeStartTime = 0;
 
 				prevConsumeTimeMs = stopTime-startTime;
-				_logger.debug("It took "+prevConsumeTimeMs+" ms to persist the above information (using all writers).");
+				_logger.debug("It took " + prevConsumeTimeMs + " ms to persist the above information (using all writers).");
 				
 				// Clear some stuff after each container.
 				if ( AlarmWriterToPcsJdbc.hasInstance() ) 
@@ -1898,11 +1498,11 @@ implements Runnable
 			}
 		}
 
-		_logger.info("Emptying the queue for module '"+threadName+"', which had "+_containerQueue.size()+" entries.");
+		_logger.info("Emptying the queue for module '" + threadName + "', which had " + _containerQueue.size() + " entries.");
 		_containerQueue.clear();
 		fireQueueSizeChange();
 
-		_logger.info("Thread '"+threadName+"' was stopped.");
+		_logger.info("Thread '" + threadName + "' was stopped.");
 	}
 
 	/**
@@ -2084,8 +1684,8 @@ implements Runnable
 		// Lets grab a new connection then...
 		try
 		{
-//			DbxConnection conn = _connProvider.getNewConnection(Version.getAppName()+"-ObjInfoLookup");
-//			Connection    conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-DdlLookup", null);
+//			DbxConnection conn = _connProvider.getNewConnection(Version.getAppName() + "-ObjInfoLookup");
+//			Connection    conn = AseConnectionFactory.getConnection(null, Version.getAppName() + "-DdlLookup", null);
 
 			if (_objectLookupInspector != null)
 			{
@@ -2097,7 +1697,7 @@ implements Runnable
 		}
 		catch (Exception e)
 		{
-			_logger.error("Problems Getting DDL Lookup Connection. Caught: "+e);
+			_logger.error("Problems Getting DDL Lookup Connection. Caught: " + e);
 			setDdlLookupConnection(null);
 		}
 		
@@ -2180,7 +1780,7 @@ implements Runnable
 			long diff = System.currentTimeMillis() - _lastIsClosedCheck;
 			if ( diff < _lastIsClosedRefreshTime)
 			{
-				_logger.debug("    <<--- isDdlLookupConnected(): not time for refresh. diff='"+diff+"', _lastIsClosedRefreshTime='"+_lastIsClosedRefreshTime+"'.");
+				_logger.debug("    <<--- isDdlLookupConnected(): not time for refresh. diff='" + diff + "', _lastIsClosedRefreshTime='" + _lastIsClosedRefreshTime + "'.");
 				return true;
 			}
 		}
@@ -2317,12 +1917,12 @@ implements Runnable
 		_maxLenPersistWriterName = Math.max(_maxLenPersistWriterName, persistWriterName.length());
 		_maxLenServerName        = Math.max(_maxLenServerName,        serverName       .length());
 
-		_logger.info("Persisting Counters using " + StringUtil.left("'"+persistWriterName+"', ", _maxLenPersistWriterName+4)
-				+ "for serverName="               + StringUtil.left("'"+serverName       +"', ", _maxLenServerName+4)
-				+ "sessionStartTime='"            + StringUtil.left(sessionStartTime+"",23)     + "', "
-				+ "mainSampleTime='"              + StringUtil.left(mainSampleTime  +"",23)     + "'. "
+		_logger.info("Persisting Counters using " + StringUtil.left("'" + persistWriterName + "', ", _maxLenPersistWriterName+4)
+				+ "for serverName="               + StringUtil.left("'" + serverName        + "', ", _maxLenServerName+4)
+				+ "sessionStartTime='"            + StringUtil.left(sessionStartTime + "",23)     + "', "
+				+ "mainSampleTime='"              + StringUtil.left(mainSampleTime   + "",23)     + "'. "
 				+ "This persist took ["           + TimeUtils.msToTimeStrShort(persistTimeInMs) + "] " + StringUtil.left(persistTimeInMs + " ms. ", 10)
-				+ "qs="                           + StringUtil.left(pcsQueueSize+".", 4) // ###.
+				+ "qs="                           + StringUtil.left(pcsQueueSize + ".", 4) // ###.
 				+ "jvmMemoryLeftInMB="            + Memory.getMemoryLeftInMB() + ". " 
 				+ h2WriterStat 
 				+ writerStatistics.getStatisticsString() );
@@ -2377,8 +1977,8 @@ implements Runnable
 		// Lets grab a new connection then...
 		try
 		{
-//			DbxConnection conn = _connProvider.getNewConnection(Version.getAppName()+"-ObjInfoLookup");
-//			Connection    conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-DdlLookup", null);
+//			DbxConnection conn = _connProvider.getNewConnection(Version.getAppName() + "-ObjInfoLookup");
+//			Connection    conn = AseConnectionFactory.getConnection(null, Version.getAppName() + "-DdlLookup", null);
 
 			if (_sqlCaptureBroker != null)
 			{
@@ -2390,7 +1990,7 @@ implements Runnable
 		}
 		catch (Exception e)
 		{
-			_logger.error("Problems Getting SQL Capture Connection. Caught: "+e);
+			_logger.error("Problems Getting SQL Capture Connection. Caught: " + e);
 			setSqlCaptureConnection(null);
 		}
 		
@@ -2449,7 +2049,7 @@ implements Runnable
 			long diff = System.currentTimeMillis() - _lastSqlCaptureIsClosedCheck;
 			if ( diff < _lastSqlCaptureIsClosedRefreshTime)
 			{
-				_logger.debug("    <<--- isSqlCaptureConnected(): not time for refresh. diff='"+diff+"', _lastSqlCaptureIsClosedRefreshTime='"+_lastSqlCaptureIsClosedRefreshTime+"'.");
+				_logger.debug("    <<--- isSqlCaptureConnected(): not time for refresh. diff='" + diff + "', _lastSqlCaptureIsClosedRefreshTime='" + _lastSqlCaptureIsClosedRefreshTime + "'.");
 				return true;
 			}
 		}
@@ -2486,7 +2086,7 @@ implements Runnable
 			boolean doSqlCaptureAndStore = _props.getBooleanProperty(PROPKEY_sqlCap_doSqlCaptureAndStore, DEFAULT_sqlCap_doSqlCaptureAndStore);
 			if (doSqlCaptureAndStore != _doSqlCaptureAndStore)
 			{
-				_logger.info("SqlCaptureHandler: Discovered a config change in _doSqlCaptureAndStore from '"+_doSqlCaptureAndStore+"', to '"+doSqlCaptureAndStore+"'.");
+				_logger.info("SqlCaptureHandler: Discovered a config change in _doSqlCaptureAndStore from '" + _doSqlCaptureAndStore + "', to '" + doSqlCaptureAndStore + "'.");
 				_doSqlCaptureAndStore = doSqlCaptureAndStore;
 			}
 
@@ -2494,7 +2094,7 @@ implements Runnable
 			int sqlCaptureSleepTimeInMs = _props.getIntProperty(PROPKEY_sqlCap_sleepTimeInMs, DEFAULT_sqlCap_sleepTimeInMs);
 			if (sqlCaptureSleepTimeInMs != _sqlCaptureSleepTimeInMs)
 			{
-				_logger.info("SqlCaptureHandler: Discovered a config change in sleep time from '"+_sqlCaptureSleepTimeInMs+"', to '"+sqlCaptureSleepTimeInMs+"'.");
+				_logger.info("SqlCaptureHandler: Discovered a config change in sleep time from '" + _sqlCaptureSleepTimeInMs + "', to '" + sqlCaptureSleepTimeInMs + "'.");
 				_sqlCaptureSleepTimeInMs = sqlCaptureSleepTimeInMs;
 			}
 		}
@@ -2503,7 +2103,7 @@ implements Runnable
 		public void run()
 		{
 			String threadName = Thread.currentThread().getName();
-			_logger.info("Starting a thread for the module '"+threadName+"'.");
+			_logger.info("Starting a thread for the module '" + threadName + "'.");
 	
 			isInitialized();
 	
@@ -2512,7 +2112,7 @@ implements Runnable
 	
 			while(isRunning())
 			{
-//System.out.println("SqlCaptureHandler... at TOP: isRunning()="+isRunning());
+//System.out.println("SqlCaptureHandler... at TOP: isRunning()=" + isRunning());
 				try 
 				{
 					checkForConfigChanges();
@@ -2538,13 +2138,13 @@ implements Runnable
 					long stopTime = System.currentTimeMillis();
 	
 					timeMs = stopTime-startTime;
-//System.out.println("It took "+timeMs+" ms to Capture SQL Text/Statements.");
+//System.out.println("It took " + timeMs + " ms to Capture SQL Text/Statements.");
 					if (_logger.isDebugEnabled())
-						_logger.debug("It took "+timeMs+" ms to Capture SQL Text/Statements.");
+						_logger.debug("It took " + timeMs + " ms to Capture SQL Text/Statements.");
 					
 					// Only check every X minute
 					long howLongAgo = System.currentTimeMillis() - _sqlCapture_checkConn_last;
-//System.out.println("SqlCaptureHandler... doSqlCapture()... timeMs="+timeMs+", _sqlCapture_checkConn_period="+_sqlCapture_checkConn_period+", howLongAgo="+howLongAgo);
+//System.out.println("SqlCaptureHandler... doSqlCapture()... timeMs=" + timeMs + ", _sqlCapture_checkConn_period=" + _sqlCapture_checkConn_period + ", howLongAgo=" + howLongAgo);
 					if (howLongAgo > _sqlCapture_checkConn_period)
 					{
 						checkSqlCaptureConnection();
@@ -2570,14 +2170,14 @@ implements Runnable
 				}
 			}
 	
-			_logger.info("Emptying the DDL Input queue for module '"+threadName+"', which had "+_sqlCaptureStoreQueue.size()+" entries.");
+			_logger.info("Emptying the DDL Input queue for module '" + threadName + "', which had " + _sqlCaptureStoreQueue.size() + " entries.");
 			_sqlCaptureStoreQueue.clear();
 			fireQueueSizeChange();
 
 			// Close the Lookup Connection
 			closeSqlCaptureConnection();
 			
-			_logger.info("Thread '"+threadName+"' was stopped.");
+			_logger.info("Thread '" + threadName + "' was stopped.");
 		}
 	}
 
@@ -2591,7 +2191,7 @@ implements Runnable
 		public void run()
 		{
 			String threadName = Thread.currentThread().getName();
-			_logger.info("Starting a thread for the module '"+threadName+"'.");
+			_logger.info("Starting a thread for the module '" + threadName + "'.");
 	
 			isInitialized();
 	
@@ -2600,12 +2200,12 @@ implements Runnable
 	
 			while(isRunning())
 			{
-				//_logger.info("Thread '"+_thread.getName()+"', SLEEPS...");
+				//_logger.info("Thread '" + _thread.getName() + "', SLEEPS...");
 				//try { Thread.sleep(5 * 1000); }
 				//catch (InterruptedException ignore) {}
 				
 				if (_logger.isDebugEnabled())
-					_logger.debug("Thread '"+threadName+"', waiting on queue...");
+					_logger.debug("Thread '" + threadName + "', waiting on queue...");
 	
 				try 
 				{
@@ -2642,8 +2242,8 @@ implements Runnable
 //	avgBatchSize += capDet.size();
 //if (_sqlCaptureStoreQueue.size() > 0)
 //	avgBatchSize = avgBatchSize / _sqlCaptureStoreQueue.size();
-//System.out.println("saveSqlCapture(): ms="+prevConsumeTimeMs+", sqlCaptureDetails.size="+sqlCaptureDetails.size()+", _sqlCaptureStoreQueue.size="+_sqlCaptureStoreQueue.size()+", avgBatchSize="+avgBatchSize);
-					_logger.debug("It took "+prevConsumeTimeMs+" ms to persist the above SQL Capture information (using all writers).");
+//System.out.println("saveSqlCapture(): ms=" + prevConsumeTimeMs + ", sqlCaptureDetails.size=" + sqlCaptureDetails.size() + ", _sqlCaptureStoreQueue.size=" + _sqlCaptureStoreQueue.size() + ", avgBatchSize=" + avgBatchSize);
+					_logger.debug("It took " + prevConsumeTimeMs + " ms to persist the above SQL Capture information (using all writers).");
 					
 				} 
 				catch (InterruptedException ex) 
@@ -2656,11 +2256,11 @@ implements Runnable
 				}
 			}
 	
-			_logger.info("Emptying the SQL Capture Input queue for module '"+threadName+"', which had "+_sqlCaptureStoreQueue.size()+" entries.");
+			_logger.info("Emptying the SQL Capture Input queue for module '" + threadName + "', which had " + _sqlCaptureStoreQueue.size() + " entries.");
 			_sqlCaptureStoreQueue.clear();
 			fireQueueSizeChange();
 	
-			_logger.info("Thread '"+threadName+"' was stopped.");
+			_logger.info("Thread '" + threadName + "' was stopped.");
 		}
 	}
 
@@ -2685,17 +2285,17 @@ implements Runnable
 		
 //System.out.println("doSqlCapture(): START");
 		int entries = _sqlCaptureBroker.doSqlCapture(conn, this);
-//System.out.println("doSqlCapture(): END - entries="+entries);
+//System.out.println("doSqlCapture(): END - entries=" + entries);
 		
 		if (_logger.isDebugEnabled())
-			_logger.debug("SQL Capture Broker returned: "+ entries);
+			_logger.debug("SQL Capture Broker returned: " +  entries);
 
 		if (entries > 0)
 		{
 //			int qsize = _sqlCaptureStoreQueue.size();
 //			if (qsize > _warnSqlCaptureStoreQueueSizeThresh)
 //			{
-//				_logger.warn("The SQL Capture Storage queue has "+qsize+" entries. The persistent writer might not keep in pace.");
+//				_logger.warn("The SQL Capture Storage queue has " + qsize + " entries. The persistent writer might not keep in pace.");
 //			}
 			fireQueueSizeChange();
 			
@@ -2726,7 +2326,7 @@ implements Runnable
 			}
 			catch (Throwable t)
 			{
-				_logger.error("The Persistent Writer got runtime error in consumeDdl() in Persistent Writer named '"+pw.getName()+"'. Continuing with next Writer...", t);
+				_logger.error("The Persistent Writer got runtime error in consumeDdl() in Persistent Writer named '" + pw.getName() + "'. Continuing with next Writer...", t);
 			}
 		}
 	}

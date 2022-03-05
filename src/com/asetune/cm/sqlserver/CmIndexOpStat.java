@@ -395,7 +395,8 @@ extends CountersModel
 	@Override
 	public String[] getDdlDetailsColNames()
 	{
-		String[] sa = {"DbName", "SchemaName", "TableName"};
+//		String[] sa = {"DbName", "SchemaName", "TableName"};
+		String[] sa = {"DbName", "TableName"};
 		return sa;
 	}
 	/**

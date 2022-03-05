@@ -52,7 +52,7 @@ import com.sybase.jdbcx.SybConnection;
 import com.sybase.jdbcx.SybMessageHandler;
 
 public class AseSqlScript
-implements SybMessageHandler
+implements SybMessageHandler, AutoCloseable
 {
 	private static Logger _logger = Logger.getLogger(AseSqlScript.class);
 
@@ -76,8 +76,8 @@ implements SybMessageHandler
 	private String             _currentSqlStatement        = null;
 	private boolean            _rsAsciiTable               = false;
 
-	public boolean getRsAsAsciiTable()          { return _rsAsciiTable; }
-	public void    setRsAsAsciiTable(boolean b) { _rsAsciiTable = b; }
+	public boolean       getRsAsAsciiTable()          { return _rsAsciiTable; }
+	public AseSqlScript  setRsAsAsciiTable(boolean b) { _rsAsciiTable = b; return this; }
 
 	/** 
 	 * On open current database and message handler are saved, which is restored by close()
@@ -143,9 +143,10 @@ implements SybMessageHandler
 	}
 
 	/** SQL Timeout in seconds, 0 = no timeout */
-	public void setQueryTimeout(int queryTimeout)
+	public AseSqlScript setQueryTimeout(int queryTimeout)
 	{
 		_queryTimeout = queryTimeout;
+		return this;
 	}
 
 	/** SQL Timeout in seconds, 0 = no timeout */

@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -187,6 +188,8 @@ public class ResultSetTableModel
 	private String                       _dbmsProductName = "-unknown-";
 	private ResultSetMetaDataCached      _rsmdCached;
 //	private IDbmsDdlResolver             _dbmsDdlResolver;
+	
+	private boolean _handleColumnNotFoundAsNullValueInGetValues = false;
 
 	/** Set the name of this table model, could be used for debugging or other tracking purposes */
 	public void setName(String name) { _name = name; }
@@ -206,6 +209,10 @@ public class ResultSetTableModel
 	public ResultSetMetaDataCached getResultSetMetaDataCached() { return _rsmdCached; }
 	public String                  getOriginDbmsProductName()   { return _dbmsProductName; }
 
+	public void    setHandleColumnNotFoundAsNullValueInGetValues(boolean b) { _handleColumnNotFoundAsNullValueInGetValues = b; }
+	public boolean isHandleColumnNotFoundAsNullValueInGetValues()           { return _handleColumnNotFoundAsNullValueInGetValues; }
+	
+	
 	/**
 	 * INTERNAL: used by: <code>public static String getResultSetInfo(ResultSetTableModel rstm)</code>
 	 * @param rsmd
@@ -3268,8 +3275,15 @@ public class ResultSetTableModel
 		}
 		catch(NumberFormatException e)
 		{
-			_logger.warn("Problem reading Short value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
-			return null;
+			try
+			{
+				return NumberFormat.getInstance().parse(o.toString()).shortValue();
+			}
+			catch (ParseException pe)
+			{
+				_logger.warn("Problem reading Short value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				return null;
+			}
 		}
 	}
 	public Short getValueAsShort(int mrow, int mcol)
@@ -3292,8 +3306,15 @@ public class ResultSetTableModel
 		}
 		catch(NumberFormatException e)
 		{
-			_logger.warn("Problem reading Short value for mrow="+mrow+", mcol='"+mcol+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
-			return null;
+			try
+			{
+				return NumberFormat.getInstance().parse(o.toString()).shortValue();
+			}
+			catch (ParseException pe)
+			{
+				_logger.warn("Problem reading Short value for mrow="+mrow+", mcol='"+mcol+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				return null;
+			}
 		}
 	}
 
@@ -3324,8 +3345,15 @@ public class ResultSetTableModel
 		}
 		catch(NumberFormatException e)
 		{
-			_logger.warn("Problem reading Integer value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
-			return null;
+			try
+			{
+				return NumberFormat.getInstance().parse(o.toString()).intValue();
+			}
+			catch (ParseException pe)
+			{
+				_logger.warn("Problem reading Integer value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				return null;
+			}
 		}
 	}
 	public Integer getValueAsInteger(int mrow, int mcol)
@@ -3348,8 +3376,15 @@ public class ResultSetTableModel
 		}
 		catch(NumberFormatException e)
 		{
-			_logger.warn("Problem reading Integer value for mrow="+mrow+", mcol='"+mcol+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
-			return null;
+			try
+			{
+				return NumberFormat.getInstance().parse(o.toString()).intValue();
+			}
+			catch (ParseException pe)
+			{
+				_logger.warn("Problem reading Integer value for mrow="+mrow+", mcol='"+mcol+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				return null;
+			}
 		}
 	}
 
@@ -3380,8 +3415,15 @@ public class ResultSetTableModel
 		}
 		catch(NumberFormatException e)
 		{
-			_logger.warn("Problem reading Long value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
-			return null;
+			try
+			{
+				return NumberFormat.getInstance().parse(o.toString()).longValue();
+			}
+			catch (ParseException pe)
+			{
+				_logger.warn("Problem reading Long value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				return null;
+			}
 		}
 	}
 	public Long getValueAsLong(int mrow, int mcol)
@@ -3404,8 +3446,15 @@ public class ResultSetTableModel
 		}
 		catch(NumberFormatException e)
 		{
-			_logger.warn("Problem reading Long value for mrow="+mrow+", mcol='"+mcol+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
-			return null;
+			try
+			{
+				return NumberFormat.getInstance().parse(o.toString()).longValue();
+			}
+			catch (ParseException pe)
+			{
+				_logger.warn("Problem reading Long value for mrow="+mrow+", mcol='"+mcol+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				return null;
+			}
 		}
 	}
 
@@ -3469,6 +3518,76 @@ public class ResultSetTableModel
 	//-------------------------
 	//---- BIG DECIMAL
 	//-------------------------
+	public Double getValueAsDouble(int mrow, String colName)
+	{
+		return getValueAsDouble(mrow, colName, true);
+	}
+	public Double getValueAsDouble(int mrow, String colName, boolean caseSensitive)
+	{
+		return getValueAsDouble(mrow, colName, caseSensitive, null);
+	}
+	public Double getValueAsDouble(int mrow, String colName, boolean caseSensitive, Double defaultNullValue)
+	{
+		Object o = getValueAsObject(mrow, colName, caseSensitive);
+
+		if (o == null)
+			return _nullValuesAsEmptyInGetValueAsType ? new Double(0) : defaultNullValue;
+
+		if (o instanceof Double)
+			return ((Double)o);
+
+		try
+		{
+			return new Double(o.toString());
+		}
+		catch(NumberFormatException e)
+		{
+			try
+			{
+				return NumberFormat.getInstance().parse(o.toString()).doubleValue();
+			}
+			catch (ParseException pe)
+			{
+				_logger.warn("Problem reading Double value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				return null;
+			}
+		}
+	}
+	public Double getValueAsDouble(int mrow, int mcol)
+	{
+		return getValueAsDouble(mrow, mcol, null);
+	}
+	public Double getValueAsDouble(int mrow, int mcol, Double defaultNullValue)
+	{
+		Object o = getValueAsObject(mrow, mcol);
+
+		if (o == null)
+			return _nullValuesAsEmptyInGetValueAsType ? new Double(0) : defaultNullValue;
+
+		if (o instanceof Double)
+			return ((Double)o);
+
+		try
+		{
+			return new Double(o.toString());
+		}
+		catch(NumberFormatException e)
+		{
+			try
+			{
+				return NumberFormat.getInstance().parse(o.toString()).doubleValue();
+			}
+			catch (ParseException pe)
+			{
+				_logger.warn("Problem reading Double value for mrow="+mrow+", mcol='"+mcol+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				return null;
+			}
+		}
+	}
+
+	//-------------------------
+	//---- BIG DECIMAL
+	//-------------------------
 	public BigDecimal getValueAsBigDecimal(int mrow, String colName)
 	{
 		return getValueAsBigDecimal(mrow, colName, true);
@@ -3493,8 +3612,15 @@ public class ResultSetTableModel
 		}
 		catch(NumberFormatException e)
 		{
-			_logger.warn("Problem reading BigDecimal value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
-			return null;
+			try
+			{
+				return new BigDecimal(NumberFormat.getInstance().parse(o.toString()).doubleValue());
+			}
+			catch (ParseException pe)
+			{
+				_logger.warn("Problem reading BigDecimal value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				return null;
+			}
 		}
 	}
 	public BigDecimal getValueAsBigDecimal(int mrow, int mcol)
@@ -3517,8 +3643,15 @@ public class ResultSetTableModel
 		}
 		catch(NumberFormatException e)
 		{
-			_logger.warn("Problem reading BigDecimal value for mrow="+mrow+", mcol='"+mcol+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
-			return null;
+			try
+			{
+				return new BigDecimal(NumberFormat.getInstance().parse(o.toString()).doubleValue());
+			}
+			catch (ParseException pe)
+			{
+				_logger.warn("Problem reading BigDecimal value for mrow="+mrow+", mcol='"+mcol+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				return null;
+			}
 		}
 	}
 
@@ -3550,7 +3683,11 @@ public class ResultSetTableModel
 			}
 		}
 		if (mcol < 0)
+		{
+			if (_handleColumnNotFoundAsNullValueInGetValues)
+				return null;
 			throw new RuntimeException("Can't find column '"+colName+"' in TableModel named '"+getName()+"'.");
+		}
 		
 //System.out.println("getValueAsObject(mrow="+mrow+", colName='"+colName+"'): col_pos="+col_pos+", mrow="+mrow+", mcol="+mcol+".");
 		Object o = tm.getValueAt(mrow, mcol);
@@ -3584,6 +3721,22 @@ public class ResultSetTableModel
 	//------------------------------------------------------------
 	//-- END: getValueAsXXXXX using column name
 	//------------------------------------------------------------
+
+	/**
+	 * Get all values that matches
+	 * 
+	 * @param colName  column name to search for
+	 * @param value    value to search for
+	 * @return            List of row numbers.   empty if no rows was found.
+	 * @throws NoColumnNameWasFound if any of the column names you searched for was not part of the ResultSet
+	 */
+	public List<Integer> getRowIdsWhere(String colName, Object value)
+	{
+		Map<String, Object> nameVal = new HashMap<>();
+		nameVal.put(colName, value);
+		
+		return getRowIdsWhere(nameVal);
+	}
 
 	/**
 	 * Get all values that matches
@@ -3742,7 +3895,13 @@ public class ResultSetTableModel
 					String cellStr = (String) cell;
 					int cellLength = cellStr.length();
 					
-					if (cellLength > overKb*1024)
+					boolean doTruncate = cellLength > overKb*1024;
+
+					// If the value starts with some kind of "tag" HTML or XML... do NOT truncate
+					if (cellStr.startsWith("<"))
+						doTruncate = false;
+					
+					if (doTruncate)
 					{
 						_logger.info("Truncating row=" + r + ", column=" + c + " (colName='" + getColumnName(c) + "'), after " + overKb + " KB, origin size was " + (cellLength/1024) + " KB, in rstm named '" + getName() + "' ");
 						String truncCellStr = cellStr.substring(0, overKb*1024) + "... NOTE: [truncated after " + overKb + " KB, originSize=" + (cellLength/1024) + " KB].";
@@ -4031,6 +4190,312 @@ public class ResultSetTableModel
 		}
 	}
 
+	
+	
+	//-------------------------------------------------------------------------------------------------------------
+	// BEGIN: Parse text table (produced by method xxx) and create a ResultSetTableModel (without data types)
+	//-------------------------------------------------------------------------------------------------------------
+	
+	/**
+	 * Get the first ResultSetTableModel which contains the passed column names from the passed List of ResultSetTableModels
+	 * 
+	 * @param rstmList         List of ResultSetTableModels that we want to find a specififc table in.
+	 * @param inExactOrder     <br>&emsp; &emsp; true  = The passed 'colNames' must be in <b>exact order</b> and position as the ResultSetTableModel
+	 *                         <br>&emsp; &emsp; false = The passed 'colNames' can be in <b>any order</b>, just as long as any ResultSetTableModel has the names.
+	 * @param colNames         The column names that we are looking for
+	 * @return null if not found
+	 */
+	public static ResultSetTableModel getTableWithColumnNames(List<ResultSetTableModel> rstmList, boolean inExactOrder, String... colNames)
+	{
+		if (rstmList == null)
+			return null;
+
+		if (rstmList.isEmpty())
+			return null;
+		
+		for (ResultSetTableModel entry : rstmList)
+		{
+			// If rstm columns is smaller than passed colNames... continue
+			if (entry.getColumnCount() < colNames.length)
+				continue;
+
+			int foundCount = 0;
+			if (inExactOrder)
+			{
+				for (int c=0; c<colNames.length; c++)
+				{
+					String colName = colNames[c];
+					int    colPos  = entry.findColumn(colName);
+
+					if (c == colPos)
+						foundCount++;
+				}
+			}
+			else
+			{
+				for (String colName : colNames)
+				{
+					if (entry.hasColumn(colName))
+						foundCount++;
+				}
+			}
+			
+			// Did we find all the columns
+			if (foundCount == colNames.length)
+				return entry;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Parse a Text Table into a ResultSetTableModel
+	 * <p>
+	 * A Text table input looks like
+	 * <pre>
+     * +------+----------------+-----------------------------------+-----+-------------------+----------------+
+     * |dbname|configuration_id|name                               |value|value_for_secondary|is_value_default|
+     * +------+----------------+-----------------------------------+-----+-------------------+----------------+
+     * |db1   |               1|MAXDOP                             |0    |(NULL)             |true            |
+     * |db1   |               2|LEGACY_CARDINALITY_ESTIMATION      |0    |(NULL)             |true            |
+     * |db1   |               3|PARAMETER_SNIFFING                 |1    |(NULL)             |true            |
+     * +------+----------------+-----------------------------------+-----+-------------------+----------------+
+     * Rows 3
+	 * </pre>
+	 * 
+	 * If there are several Tables in the text, only the first will be returned.
+	 * 
+	 * @param textTable 
+	 * @return a ResultSetTableModel
+	 * @throws IllegalArgumentException in case of problems with input or parsing
+	 */
+	public static ResultSetTableModel parseTextTable(String textTable)
+	throws IllegalArgumentException
+	{
+		if (StringUtil.isNullOrBlank(textTable))
+			throw new IllegalArgumentException("textTable can't be null or empty.");
+
+//		if (! StringUtil.startsWithIgnoreBlankIgnoreCase(textTable, "+-"))
+//			throw new IllegalArgumentException("textTable must start with '+-'.");
+		
+		List<ResultSetTableModel> rstmList = parseTextTables( StringUtil.readLines(textTable) );
+
+		if (rstmList == null)
+			return null;
+		
+		if (rstmList.isEmpty())
+			return null;
+
+		return rstmList.get(0);
+	}
+
+	/**
+	 * Parse a Text Table into a ResultSetTableModel
+	 * <p>
+	 * A Text table input looks like
+	 * <pre>
+     * +------+----------------+-----------------------------------+-----+-------------------+----------------+
+     * |dbname|configuration_id|name                               |value|value_for_secondary|is_value_default|
+     * +------+----------------+-----------------------------------+-----+-------------------+----------------+
+     * |db1   |               1|MAXDOP                             |0    |(NULL)             |true            |
+     * |db1   |               2|LEGACY_CARDINALITY_ESTIMATION      |0    |(NULL)             |true            |
+     * |db1   |               3|PARAMETER_SNIFFING                 |1    |(NULL)             |true            |
+     * +------+----------------+-----------------------------------+-----+-------------------+----------------+
+     * Rows 3
+	 * </pre>
+	 * 
+	 * If there are several Tables in the text, only the first will be returned.
+	 * 
+	 * @param textTableList  and since it's a list, one row for each line
+	 * @return a ResultSetTableModel
+	 * @throws IllegalArgumentException in case of problems with input or parsing
+	 */
+	public static ResultSetTableModel parseTextTable(List<String> textTableList)
+	throws IllegalArgumentException
+	{
+		List<ResultSetTableModel> rstmList = parseTextTables( textTableList );
+
+		if (rstmList == null)
+			return null;
+		
+		if (rstmList.isEmpty())
+			return null;
+
+		return rstmList.get(0);
+	}
+
+
+
+	/**
+	 * Parse a Text Table into a ResultSetTableModel
+	 * <p>
+	 * A Text table input looks like
+	 * <pre>
+     * +------+----------------+-----------------------------------+-----+-------------------+----------------+
+     * |dbname|configuration_id|name                               |value|value_for_secondary|is_value_default|
+     * +------+----------------+-----------------------------------+-----+-------------------+----------------+
+     * |db1   |               1|MAXDOP                             |0    |(NULL)             |true            |
+     * |db1   |               2|LEGACY_CARDINALITY_ESTIMATION      |0    |(NULL)             |true            |
+     * |db1   |               3|PARAMETER_SNIFFING                 |1    |(NULL)             |true            |
+     * +------+----------------+-----------------------------------+-----+-------------------+----------------+
+     * Rows 3
+     * 
+     * +------+----------------+
+     * |dbname|configuration_id|
+     * +------+----------------+
+     * |db2   |               1|
+     * |db2   |               2|
+     * +------+----------------+
+     * Rows 2
+	 * </pre>
+	 * 
+	 * @param textTable 
+	 * @return a list of ResultSetTableModel
+	 * @throws IllegalArgumentException in case of problems with input or parsing
+	 */
+	public static List<ResultSetTableModel> parseTextTables(String textTable)
+	throws IllegalArgumentException
+	{
+		if (StringUtil.isNullOrBlank(textTable))
+			throw new IllegalArgumentException("textTable can't be null or empty.");
+
+//		if (! StringUtil.startsWithIgnoreBlankIgnoreCase(textTable, "+-"))
+//			throw new IllegalArgumentException("textTable must start with '+-'.");
+		
+		return parseTextTables( StringUtil.readLines(textTable));
+	}
+
+	/**
+	 * Parse a Text Table into a ResultSetTableModel
+	 * <p>
+	 * A Text table input looks like
+	 * <pre>
+     * +------+----------------+-----------------------------------+-----+-------------------+----------------+
+     * |dbname|configuration_id|name                               |value|value_for_secondary|is_value_default|
+     * +------+----------------+-----------------------------------+-----+-------------------+----------------+
+     * |db1   |               1|MAXDOP                             |0    |(NULL)             |true            |
+     * |db1   |               2|LEGACY_CARDINALITY_ESTIMATION      |0    |(NULL)             |true            |
+     * |db1   |               3|PARAMETER_SNIFFING                 |1    |(NULL)             |true            |
+     * +------+----------------+-----------------------------------+-----+-------------------+----------------+
+     * Rows 3
+     * 
+     * +------+----------------+
+     * |dbname|configuration_id|
+     * +------+----------------+
+     * |db2   |               1|
+     * |db2   |               2|
+     * +------+----------------+
+     * Rows 2
+	 * </pre>
+	 * 
+	 * @param textTableList  and since it's a list, one row for each line
+	 * @return a list of ResultSetTableModel
+	 * @throws IllegalArgumentException in case of problems with input or parsing
+	 */
+	public static List<ResultSetTableModel> parseTextTables(List<String> textTableList)
+	throws IllegalArgumentException
+	{
+		if (textTableList == null)   throw new IllegalArgumentException("textTableList can't be null.");
+		if (textTableList.isEmpty()) throw new IllegalArgumentException("textTableList can't be empty.");
+
+		List<ResultSetTableModel> rstmList = new ArrayList<>();
+		ResultSetTableModel rstm = null;
+		
+		int rstmCount = 0;
+		int hrCount = 0;
+		for (int l=0; l<textTableList.size(); l++)
+		{
+			String line = textTableList.get(l);
+			
+			// Skip empty lines
+			if (StringUtil.isNullOrBlank(line))
+				continue;
+
+			// Any "Horizontal Rule/Row" 
+			if (line.startsWith("+-"))
+			{
+				hrCount++;
+
+				// End of table
+				if (hrCount == 3)
+				{
+					hrCount = 0;
+					rstmList.add(rstm);
+					rstm = null;
+				}
+				continue;
+			}
+
+			// We have read FIRST Horizontal Row Separator, then we need to read ColumnNames
+			if (hrCount == 1)
+			{
+				rstmCount++;
+				rstm = new ResultSetTableModel("rstm-" + rstmCount);
+
+				// Read the column headers
+				String[] sa = line.split("\\|");
+
+				// Add columns (skip first, since it's empty)
+				for (int c=1; c<sa.length; c++)
+					rstm.addColumn(sa[c].trim(), c-1, Types.VARCHAR, "varchar", "varchar(16389)", 16389, -1, "", String.class);
+
+				continue;
+			}
+			// Read data
+			else if (hrCount == 2)
+			{
+				if ( ! line.startsWith("|") )
+				{
+					if (_logger.isDebugEnabled())
+						_logger.debug("parseTextTable(): skipping line[" + l + "] '" + line + "'. Reason: a 'data' line should start with '|'.");
+					continue;
+				}
+				
+				if (rstm == null)
+					throw new IllegalArgumentException("rstm==null. Reason: Column headers has not yet been read.");
+
+				// Read data and add it to RSTM
+				String[] sa = line.split("\\|");
+				if (rstm.getColumnCount() != sa.length-1) // -1 to skip slot 0, since it will be blank
+				{
+					_logger.warn("parseTextTable(): skipping line[" + l + "] '" + line + "'. Reason: rstm.getColumnCount=" + rstm.getColumnCount() + " is NOT equal parsedColumns=" + sa.length);
+					continue;
+				}
+
+				// Create a row, and add it to the RSTM
+				ArrayList<Object> row = new ArrayList<>(sa.length);
+				for (int c=1; c<sa.length; c++)
+				{
+					String str = sa[c].trim();
+					if (NULL_REPLACE.equals(str))
+						str = null;
+					row.add( str );
+				}
+				rstm.addRow( row );
+				
+//				ArrayList<Object> row = new ArrayList<>( Arrays.asList( (Object[]) sa ) );
+//				rstm.addRow( row );
+			}
+			else
+			{
+				if (line.startsWith("Rows "))
+				{
+					// Should we compare last Produced ResultSetTableModel rowcount and the value in "Rows ##"
+				}
+				else
+				{
+					if (_logger.isDebugEnabled())
+						_logger.debug("parseTextTable(): skipping line[" + l + "] '" + line + "'. No column definition has yet been read, skipping row.");
+				}
+			}
+		}
+		
+		return rstmList;
+	}
+	//-------------------------------------------------------------------------------------------------------------
+	// END: Parse text table (produced by method xxx) and create a ResultSetTableModel (without data types)
+	//-------------------------------------------------------------------------------------------------------------
+	
 	public static void main(String[] args)
 	{
 		Properties log4jProps = new Properties();
@@ -4040,23 +4505,63 @@ public class ResultSetTableModel
 		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
 		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
 		PropertyConfigurator.configure(log4jProps);
+
+		String str = ""
+    		+ "+------+----------------+-----------------------------------+-----+-------------------+----------------+\n"
+    		+ "|dbname|configuration_id|name                               |value|value_for_secondary|is_value_default|\n"
+    		+ "+------+----------------+-----------------------------------+-----+-------------------+----------------+\n"
+    		+ "|db1   |               1|MAXDOP                             |0    |(NULL)             |true            |\n"
+    		+ "|db1   |               2|LEGACY_CARDINALITY_ESTIMATION      |0    |(NULL)             |true            |\n"
+    		+ "|db1   |               3|PARAMETER_SNIFFING                 |1    |(NULL)             |true            |\n"
+    		+ "+------+----------------+-----------------------------------+-----+-------------------+----------------+\n"
+    		+ "Rows 3\n"
+    		+ "\n"
+    		+ "+------+----------------+\n"
+    		+ "|dbname|configuration_id|\n"
+    		+ "+------+----------------+\n"
+    		+ "|db2   |               1|\n"
+    		+ "|db2   |               2|\n"
+    		+ "+------+----------------+\n"
+    		+ "Rows 2\n"
+    		+"";
+		List<ResultSetTableModel> rstmList = parseTextTables(str);
+		System.out.println("rstmList.size=" + rstmList.size());
+
+		for (ResultSetTableModel rstm : rstmList)
+		{
+			System.out.println("name='" + rstm.getName() + "', colCount=" + rstm.getColumnCount() + ", rowCount=" + rstm.getRowCount() + ", columns=" + rstm.getColumnNames() + ".");
+			for (int r=0; r<rstm.getRowCount(); r++)
+				System.out.println("    ROW[" + r + "] >> " + rstm.getRowList(r));
+		}
 		
-		try
-		{
-			Connection conn = DriverManager.getConnection("jdbc:sybase:Tds:192.168.0.110:1600", "sa", "sybase");
-			
-			Statement stmnt = conn.createStatement();
-			ResultSet rs = stmnt.executeQuery("select top 5 * from sysobjects");
-			
-			ResultSetTableModel rstm = new ResultSetTableModel(rs, "dummy");
-//			System.out.println(rstm.toHtmlTablesVerticalString());
-			System.out.println(rstm.toAsciiTableString());
-			System.out.println(rstm.toAsciiTablesVerticalString());
-			
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-		}
 	}
+
+//	public static void main(String[] args)
+//	{
+//		Properties log4jProps = new Properties();
+//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
+//		//log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
+//		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
+//		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
+//		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
+//		PropertyConfigurator.configure(log4jProps);
+//		
+//		try
+//		{
+//			Connection conn = DriverManager.getConnection("jdbc:sybase:Tds:192.168.0.110:1600", "sa", "sybase");
+//			
+//			Statement stmnt = conn.createStatement();
+//			ResultSet rs = stmnt.executeQuery("select top 5 * from sysobjects");
+//			
+//			ResultSetTableModel rstm = new ResultSetTableModel(rs, "dummy");
+////			System.out.println(rstm.toHtmlTablesVerticalString());
+//			System.out.println(rstm.toAsciiTableString());
+//			System.out.println(rstm.toAsciiTablesVerticalString());
+//			
+//		}
+//		catch(Exception ex)
+//		{
+//			ex.printStackTrace();
+//		}
+//	}
 }

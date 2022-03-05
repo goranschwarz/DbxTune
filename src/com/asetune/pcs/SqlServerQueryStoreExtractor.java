@@ -368,6 +368,11 @@ public class SqlServerQueryStoreExtractor
 		// EXEC sp_query_store_flush_db;
 		doQueryStoreFlush();
 
+		// Start with -- Extract TOP ## SQL Text by "avg_duration" for today!
+		// Then extract Table names from those SQL
+		// Lookup those tables and store them in the DDL Storage
+//		extractTopTablesForDdlStorage();
+		
 		// Should we do everything in a transaction??? (to get less transaction log entries)
 		
 		// Create a SCHEMA on the PCS
@@ -423,6 +428,81 @@ public class SqlServerQueryStoreExtractor
 			}
 		}
 	}
+
+//	private void extractTopTablesForDdlStorage()
+//	{
+//		if ( ! PersistentCounterHandler.hasInstance() )
+//		{
+//			_logger.info("No Persistent Counter Handler was found. exiting early in extractTopTablesForDdlStorage()");
+//			return;
+//		}
+//
+//		String sql = ""
+//			    + "SELECT top 20 \n"
+//			    + "     DB_NAME() AS dbname \n"
+//			    + "    ,q.query_id \n"
+//			    + "    ,p.plan_id \n"
+//			    + "    ,qt.query_text_id \n"
+//			    + "    ,qt.query_sql_text \n"
+//			    + "FROM sys.query_store_query_text qt \n"
+//			    + "INNER JOIN sys.query_store_query q ON qt.query_text_id = q.query_text_id \n"
+//			    + "INNER JOIN sys.query_store_plan  p ON q.query_id       = p.query_id \n"
+//			    + "WHERE p.plan_id IN ( \n"
+//			    + "    SELECT top 200 rs.plan_id \n"   // note: top 200 since plan_id can exists in many intervals (and we cant do distinct and order on avg_duration)
+//			    + "    FROM sys.query_store_runtime_stats rs \n"
+////			    + "    WHERE rs.runtime_stats_interval_id = (SELECT max(runtime_stats_interval_id) FROM sys.query_store_runtime_stats_interval) \n"
+//			    + "    ORDER BY rs.avg_duration DESC \n"
+//			    + ") \n"
+//			    + "AND qt.query_sql_text NOT LIKE '%/* SqlServerTune:%' \n"
+//			    + "";
+//		
+//		Set<String> tableSet = new HashSet<>();
+//
+//		try (Statement stmnt = _pcsConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+//		{
+//			while (rs.next())
+//			{
+//				String sqlText = rs.getString(5);
+//				
+//				// Get list of tables in the SQL Text and add them to a SET
+//				tableSet.addAll( SqlParserUtils.getTables(sqlText) );
+//			}
+//		}
+//		catch (SQLException ex)
+//		{
+//			_logger.warn("[" + _monDbName + "] Problems extracting SQL Text for top 'avg_duration' in QueryStore. Simply skipping this.", ex);
+//		}
+//
+////		if ( ! tableSet.isEmpty() )
+////		{
+////			IObjectLookupInspector objectLookupInspector = new ObjectLookupInspectorSqlServer();
+////
+////			for (String tableName : tableSet)
+////			{
+////				ObjectLookupQueueEntry qe = new ObjectLookupQueueEntry(_monDbName, tableName, "QueryStoreExtractor.parsedTables", "", 0);
+////
+////				// NOTE: This wont work since doObjectInfoLookup(...) will send defendant objects like VIEWS to "itself"
+////				//       and since this is done AFTER a YYYY-MM-DD roll-over those entries will end up in the NEW database and not the one we want
+////				List<DdlDetails> ddlStoreList = objectLookupInspector.doObjectInfoLookup(_monConn, qe, null); // NOTE: we can't send NULL for PCH
+////				if (ddlStoreList != null)
+////				{
+////					for (DdlDetails ddlDetail : ddlStoreList)
+////					{
+////						
+////					}
+////				}
+////			}
+////		}
+//
+//		if ( ! tableSet.isEmpty() )
+//		{
+//			// Send all the tables for DDL Store (it will probably end up in the NEW database since a YYYY-MM-DD roll-over has occurred, but then we will hopefully be able to se them "next day") 
+//			for (String tableName : tableSet)
+//			{
+//				PersistentCounterHandler.getInstance().addDdl(_monDbName, tableName, "QueryStoreExtractor.parsedTables");
+//			}
+//		}
+//	}
 
 	private void createTempTables()
 	{

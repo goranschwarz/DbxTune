@@ -26,11 +26,10 @@ import java.io.Writer;
 
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.IReportChart;
-import com.asetune.pcs.report.content.ase.AseAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
-public class OsSpaceUsageOverview extends AseAbstract
+public class OsSpaceUsageOverview extends OsAbstract
 {
 //	private static Logger _logger = Logger.getLogger(OsCpuUsageOverview.class);
 

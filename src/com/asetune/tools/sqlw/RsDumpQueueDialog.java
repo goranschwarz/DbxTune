@@ -248,8 +248,8 @@ implements ActionListener
 	private JDialog           _jdialog         = null;
 	private String            _titlePrefix     = null;
                               
-	private JButton           _connect_but     = SwingUtils.makeToolbarButton(Version.class, "images/connect_16.png",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
-	private JButton           _disconnect_but  = SwingUtils.makeToolbarButton(Version.class, "images/disconnect_16.png", ACTION_DISCONNECT, this, "Close the ASE Connection", "Disconnect");
+	private JButton           _connect_but     = SwingUtils.makeToolbarButton(Version.class, "images/connect_16.png",    ACTION_CONNECT,    this, "Connect to a DBMS",         "Connect");
+	private JButton           _disconnect_but  = SwingUtils.makeToolbarButton(Version.class, "images/disconnect_16.png", ACTION_DISCONNECT, this, "Close the DBMS Connection", "Disconnect");
 
 	private JMenuBar          _main_mb                = new JMenuBar();
 	private JToolBar          _toolbar                = new JToolBar();
@@ -553,8 +553,8 @@ implements ActionListener
 			_fSaveAs_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
 
 			// TOOLBAR
-//			_connect_but    = SwingUtils.makeToolbarButton(Version.class, "images/connect_16.png",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
-//			_disConnect_but = SwingUtils.makeToolbarButton(Version.class, "images/disconnect_16.png", ACTION_DISCONNECT, this, "Close the ASE Connection", "Disconnect");
+//			_connect_but    = SwingUtils.makeToolbarButton(Version.class, "images/connect_16.png",    ACTION_CONNECT,    this, "Connect to a DBMS",         "Connect");
+//			_disConnect_but = SwingUtils.makeToolbarButton(Version.class, "images/disconnect_16.png", ACTION_DISCONNECT, this, "Close the DBMS Connection", "Disconnect");
 
 			_toolbar.setLayout(new MigLayout("insets 0 0 0 3", "", "")); // insets Top Left Bottom Right
 			_toolbar.add(_connect_but);

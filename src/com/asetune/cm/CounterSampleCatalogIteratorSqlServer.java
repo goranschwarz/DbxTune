@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import com.asetune.Version;
 import com.asetune.utils.StringUtil;
 
 public class CounterSampleCatalogIteratorSqlServer 
@@ -110,7 +111,8 @@ extends CounterSampleCatalogIterator
 
 		// The below SQL is grabbed from sp_msforachdb
 		String sql = ""
-    		+ "select d.name \n"
+    		+ "select /* " + Version.getAppName() + ":" + this.getClass().getSimpleName() + " */ \n"
+    		+ "    d.name \n"
     		+ "from sysdatabases d \n"
     		+ "where 1 = 1 \n"
 			+ skipDbNames

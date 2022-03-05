@@ -2574,7 +2574,7 @@ extends SqlCaptureBrokerAbstract
 									
 									// Now add the ProcName/StatementCacheEntryName to the DDL Lookup handler
 									if (pch != null)
-										pch.addDdl(DBName, procName, "SqlCapture");
+										pch.addDdl(DBName, procName, "SqlCapture.gt.threshold");
 								}
 							}
 						} //end: sendDdlForLookup
@@ -3079,10 +3079,10 @@ extends SqlCaptureBrokerAbstract
 					normalizedSqlText = StatementNormalizer.getInstance().normalizeSqlText(sqlText, normalizeParameters, tableNamesInStatement);
 
 					// Send any table names the Statement was referencing to the Persistence Counter Handler for further lookup and storage
-					if (tableNamesInStatement != null && !tableNamesInStatement.isEmpty())
+					if (pch != null && tableNamesInStatement != null && !tableNamesInStatement.isEmpty())
 					{
 						for (String tableName : tableNamesInStatement)
-							pch.addDdl(stRec.DBName, tableName, this.getClass().getSimpleName());
+							pch.addDdl(stRec.DBName, tableName, this.getClass().getSimpleName() + ".normalized.sql");
 					}
 
 					stRec.AddStatus = normalizeParameters.addStatus.getIntValue();

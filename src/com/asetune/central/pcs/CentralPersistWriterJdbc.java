@@ -2472,7 +2472,7 @@ extends CentralPersistWriterBase
 					sbSql.append(" values(");
 					sbSql.append("  ").append(safeStr( ae.getAlarmClassAbriviated() , 80  ));
 					sbSql.append(", ").append(safeStr( ae.getServiceType()          , 80  ));
-					sbSql.append(", ").append(safeStr( ae.getServiceName()          , 30  ));
+					sbSql.append(", ").append(safeStr( ae.getServiceName()          , 80  ));
 					sbSql.append(", ").append(safeStr( ae.getServiceInfo()          , 80  ));
 					sbSql.append(", ").append(safeStr( ae.getExtraInfo()            , 80  ));
 					sbSql.append(", ").append(safeStr( ae.getCategory()             , 20  ));
@@ -2589,7 +2589,7 @@ extends CentralPersistWriterBase
 
 						sbSql.append(", ").append(safeStr( ae.getAlarmClassAbriviated() , 80  ));
 						sbSql.append(", ").append(safeStr( ae.getServiceType()          , 80  ));
-						sbSql.append(", ").append(safeStr( ae.getServiceName()          , 30  ));
+						sbSql.append(", ").append(safeStr( ae.getServiceName()          , 80  ));
 						sbSql.append(", ").append(safeStr( ae.getServiceInfo()          , 80  ));
 						sbSql.append(", ").append(safeStr( ae.getExtraInfo()            , 80  ));
 						sbSql.append(", ").append(safeStr( ae.getCategory()             , 20  ));

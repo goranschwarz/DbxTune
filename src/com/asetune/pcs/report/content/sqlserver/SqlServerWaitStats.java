@@ -120,7 +120,7 @@ extends SqlServerAbstract
 	public static final int    DEFAULT_TopCount              = 20;
 
 	public static final String PROPKEY_Selected              = "DailySummaryReport.SqlServerWaitStats.selected.wait_types";
-	public static final String DEFAULT_Selected              = "ASYNC_NETWORK_IO, LCK_M_IX, LCK_M_X, LATCH_SH, LATCH_EX, PAGEIOLATCH_SH, PAGEIOLATCH_EX, SOS_SCHEDULER_YIELD, ASYNC_IO_COMPLETION, WRITELOG, TDC, OLEDB";
+	public static final String DEFAULT_Selected              = "ASYNC_NETWORK_IO, LCK_M_S, LCK_M_U, LCK_M_IX, LCK_M_X, LATCH_SH, LATCH_EX, PAGEIOLATCH_SH, PAGEIOLATCH_EX, PAGELATCH_SH, PAGELATCH_EX, SOS_SCHEDULER_YIELD, ASYNC_IO_COMPLETION, WRITELOG, TDC, OLEDB, RESOURCE_SEMAPHORE";
 
 	@Override
 	public String[] getMandatoryTables()

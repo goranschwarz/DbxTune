@@ -27,6 +27,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -36,6 +37,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
@@ -45,12 +47,14 @@ import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.DailySummaryReportFactory;
 import com.asetune.pcs.report.content.ReportChartTimeSeriesStackedBar.TopGroupCountReport;
+import com.asetune.sql.SqlParserUtils;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.ddl.model.Index;
 import com.asetune.sql.ddl.model.Table;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.HtmlQueryString;
+import com.asetune.utils.SqlUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
@@ -69,9 +73,16 @@ implements IReportEntry
 	private   MessageType _currentMessageType;
 
 	private   long _execTime;
+	private   long _execStartTime;
+	private   long _execEndTime;
 
 	@Override public void setExecTime(long ms) { _execTime = ms;}
+	@Override public void setExecStartTime()   { _execStartTime = System.currentTimeMillis(); }
+	@Override public void setExecEndTime()     { _execEndTime   = System.currentTimeMillis(); setExecTime(_execEndTime - _execStartTime); }
+
 	@Override public long getExecTime()        { return _execTime; }
+	@Override public long getExecStartTime()   { return _execStartTime; }
+	@Override public long getExecEndTime()     { return _execEndTime; }
 
 	@Override public boolean isShortMessageType() { return MessageType.SHORT_MESSAGE.equals(getCurrentMessageType()); }
 	@Override public boolean isFullMessageType() { return MessageType.FULL_MESSAGE.equals(getCurrentMessageType()); }
@@ -167,7 +178,7 @@ implements IReportEntry
 		{
 			String attr = ResultSetTableModel.TableStringRenderer.super.tagThAttr(rstm, col, colName, nowrapPreferred);
 
-			if ("Sparklines".equals(colName))
+			if ("Sparklines".equalsIgnoreCase(colName))
 			{
 				// This is to make the "Sparklines" columns not to *shrink* in Outlook Mail (since it uses "Word" to render HTML)
 //				attr = "class='sparkline-td'";                  // did NOT work; This class has "width: 1100;" but only for outlook "<!--[if mso]>...<![endif]-->"
@@ -191,10 +202,20 @@ implements IReportEntry
 		{
 			String attr = ResultSetTableModel.TableStringRenderer.super.tagTdAttr(rstm, row, col, colName, objVal, strVal, nowrapPreferred);
 
-			if ("Sparklines".equals(colName))
+			if ("Sparklines".equalsIgnoreCase(colName))
 			{
 				// This is to make the "Sparklines" columns not to *shrink* in Outlook Mail (since it uses "Word" to render HTML)
-				attr = "style='width:1100;'";
+//				attr = "class='sparkline-td'";                  // did NOT work; This class has "width: 1100;" but only for outlook "<!--[if mso]>...<![endif]-->"
+//				attr = "width='1100'";                          // This is the best so far but it breaks IOS a bit, Outloook=OK, Chrome=OK, iPhone=Leaves a gap (to big for being 100% OK)
+//				attr = "mso-width='1100'";                      // did NOT work at all
+				attr = "style='width:1100;'";                   // BEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+//				attr = "mso-width-alt='1100'";                  // 
+//				attr = "style='mso-width-alt:1100;'";           // did NOT work at all
+//				attr = "<!--[if mso]>width='1100'<![endif]-->"; // This did NOT work... possibly I can try: "\n<!--[if mso]>\nwidth='1100'\n<![endif]-->\n" ... but does ALL the HTML Browsers accept that ???
+//				attr = "\n"                                     // Width... but only for MS Outlook (this left some strange chars in Outlook)
+//						+ "<!--[if mso]>\n"
+//						+ "width='1100'\n"
+//						+ "<![endif]-->\n";
 			}
 
 			return attr;
@@ -220,6 +241,22 @@ implements IReportEntry
 		}
 	}
 	
+	/**
+	 * Produce a String looking like '&lt;code>tab1&gt;/code&gt;, &lt;code>tab2&gt;/code&gt;, &lt;code>tab3&gt;/code&gt;'
+	 * @param tableList A list of (table) names
+	 * @return
+	 */
+	public String listToHtmlCode(Collection<String> tableList)
+	{
+		String out = "";
+		String comma = "";
+		for (String table : tableList)
+		{
+			out += comma + "<code>" + table + "</code>";
+			comma = ", ";
+		}
+		return out;
+	}
 	/**
 	 * More or less same as ResultSetTableModel.toHtmlTableString(...) but a default renderer that has column names like '*Time*', '*_ms*' or '*Ms*' a tool tip with the milliseconds transformed to HH:MM:SS.ms 
 	 * @param rstm   The ResultSet to create a HTML table for
@@ -1146,7 +1183,7 @@ implements IReportEntry
 	{
 		return (getReportingInstance().getReportPeriodBeginTime() != null || getReportingInstance().getReportPeriodEndTime() != null);
 	}
-	
+
 
 
 	//--------------------------------------------------------------------------------
@@ -1392,58 +1429,251 @@ implements IReportEntry
 			return _indexColumns;
 		}
 	}
+
+
+
+
+
+
+
+
+
+//	/**
+//	 * Parse the passed SQL Text and extract table names<br>
+//	 * Those table names we then get various information about like
+//	 * <ul>
+//	 *    <li>Table estimated RowCount, Size in various formats, Index Size, etc</li>
+//	 *    <li>Each index will have a separate entry, also showing 'index_names', 'keys', sizes etc...</li>
+//	 *    <li>Formatted SQL Text in a separate <i>hover-able</i> tool-tip or dialog pop-up</li>
+//	 * </ul>
+//	 * 
+//	 * @param conn             Connection to the PCS -- Persistent Counter Storage
+//	 * @param sqlText          The SQL Text we will parse for table names (which table names to lookup)
+//	 * @param dbmsVendor       The DBMS Vendor the above SQL Text was executed in (SQL Dialect). If null or "" (a <i>standard</i> SQL type will be used)
+//	 * @return                 HTML Text (table) with detailed information about the Table and Indexes used by the SQL Text
+//	 */
+//	public String getTableInformationFromSqlText(DbxConnection conn, String sqlText, String dbmsVendor)
+//	{
+//		// Possibly get from configuration
+//		boolean parseSqlText = true;
+//		if ( ! parseSqlText )
+//			return "";
+//		
+//		String tableInfo = "";
+//
+//		// Parse the SQL Text to get all tables that are used in the Statement
+//		String problemDesc = "";
+//		Set<String> tableList = SqlParserUtils.getTables(sqlText);
+////		List<String> tableList = Collections.emptyList();
+////		try { tableList = SqlParserUtils.getTables(sqlText, true); }
+////		catch (ParseException pex) { problemDesc = pex + ""; }
+//
+//		// Get information about ALL tables in list 'tableList' from the DDL Storage
+//		Set<GenericTableInfo> tableInfoSet = getTableInformationFromMonDdlStorage(conn, tableList);
+//		if (tableInfoSet.isEmpty() && StringUtil.isNullOrBlank(problemDesc))
+//			problemDesc = "&emsp; &bull; No tables was found in the DDL Storage for tables: " + listToHtmlCode(tableList);
+//
+//		// And make it into a HTML table with various information about the table and indexes 
+//		tableInfo = problemDesc + getTableInfoAsHtmlTable(tableInfoSet, tableList, true, "dsr-sub-table-tableinfo");
+//
+//		// Finally make up a message that will be appended to the SQL Text
+//		if (StringUtil.hasValue(tableInfo))
+//		{
+//			// Surround with collapse div
+//			tableInfo = ""
+//					//+ "<!--[if !mso]><!--> \n" // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+//
+//					+ "\n<br>\n"
+//					+ getFormattedSqlAsTooltipDiv(sqlText, dbmsVendor) + "\n"
+////					+ "<br>\n"
+//					+ "<details open> \n"
+//					+ "<summary>Show/Hide Table information for " + tableList.size() + " table(s): " + listToHtmlCode(tableList) + "</summary> \n"
+//					+ tableInfo
+//					+ "</details> \n"
+//
+//					//+ "<!--<![endif]-->    \n" // END: IGNORE THIS SECTION FOR OUTLOOK
+//					+ "";
+//		}
+//		
+//		return tableInfo;
+//	}
+//
+//	public static class GenericTableInfo {}
+//	
+////	protected abstract Set<GenericTableInfo> getTableInformationFromMonDdlStorage(DbxConnection conn, Set<String> tableList);
+////	protected abstract String getTableInfoAsHtmlTable(Set<GenericTableInfo> tableInfoSet, Set<String> tableList, boolean b, String string);
+//	protected abstract <T extends GenericTableInfo> Set<T> getTableInformationFromMonDdlStorage(DbxConnection conn, Set<String> tableList);
+//	protected abstract <T extends GenericTableInfo> String getTableInfoAsHtmlTable(Set<T> tableInfoSet, Set<String> tableList, boolean b, String string);
+	
+	/**
+	 * Parse the passed SQL Text and extract table names<br>
+	 * Those table names we then get various information about like
+	 * <ul>
+	 *    <li>Table estimated RowCount, Size in various formats, Index Size, etc</li>
+	 *    <li>Each index will have a separate entry, also showing 'index_names', 'keys', sizes etc...</li>
+	 *    <li>Formatted SQL Text in a separate <i>hover-able</i> tool-tip or dialog pop-up</li>
+	 * </ul>
+	 * 
+	 * NOTE: This is a wrapper for any *real* implementation, which uses: {@link #getDbmsTableInfoAsHtmlTable(DbxConnection, Set<String>, boolean, String)}
+	 * 
+	 * @param conn             Connection to the PCS -- Persistent Counter Storage
+	 * @param sqlText          The SQL Text we will parse for table names (which table names to lookup)
+	 * @param dbmsVendor       The DBMS Vendor the above SQL Text was executed in (SQL Dialect). If null or "" (a <i>standard</i> SQL type will be used)
+	 * @return                 HTML Text (table) with detailed information about the Table and Indexes used by the SQL Text
+	 */
+	public String getDbmsTableInformationFromSqlText(DbxConnection conn, String sqlText, String dbmsVendor)
+	{
+		// Possibly get from configuration
+		boolean parseSqlText = true;
+		if ( ! parseSqlText )
+			return "";
+		
+		String tableInfo = "";
+
+		// Parse the SQL Text to get all tables that are used in the Statement
+//		String problemDesc = "";
+		Set<String> tableList = SqlParserUtils.getTables(sqlText);
+//		List<String> tableList = Collections.emptyList();
+//		try { tableList = SqlParserUtils.getTables(sqlText, true); }
+//		catch (ParseException pex) { problemDesc = pex + ""; }
+
+//-------------------------------------------------
+//		// Get information about ALL tables in list 'tableList' from the DDL Storage
+//		Set<PgTableInfo> tableInfoSet = getTableInformationFromMonDdlStorage(conn, tableList);
+//		if (tableInfoSet.isEmpty() && StringUtil.isNullOrBlank(problemDesc))
+//			problemDesc = "&emsp; &bull; No tables was found in the DDL Storage for tables: " + listToHtmlCode(tableList);
+//
+//		// And make it into a HTML table with various information about the table and indexes 
+//		tableInfo = problemDesc + getTableInfoAsHtmlTable(tableInfoSet, tableList, true, "dsr-sub-table-tableinfo");
+//-------------------------------------------------
+// The above calls was collapsed and put in a method 'getDbmsTableInfoAsHtmlTable' 
+// which is implemented by any subclass... because I couldn't in a easy way make it Generic (or I'm to inexperienced with Java Generic's to make it work)
+//-------------------------------------------------
+
+		// Get information about ALL tables in list 'tableList' from the DDL Storage
+		tableInfo = getDbmsTableInfoAsHtmlTable(conn, tableList, true, "dsr-sub-table-tableinfo");
+		if (StringUtil.isNullOrBlank(tableInfo))
+		{
+			for (String tabName : tableList)
+			{
+				tableInfo += "&emsp; &bull; Table <code>" + tabName + "</code> was NOT found in the DDL Storage.<br>\n";
+			}
+		}
+		
+		
+		// Finally make up a message that will be appended to the SQL Text
+		if (StringUtil.hasValue(tableInfo))
+		{
+			// Surround with collapse div
+			tableInfo = ""
+					//+ "<!--[if !mso]><!--> \n" // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+
+					+ "\n<br>\n"
+					+ getFormattedSqlAsTooltipDiv(sqlText, dbmsVendor) + "\n"
+//					+ "<br>\n"
+					+ "<details open> \n"
+					+ "<summary>Show/Hide Table information for " + tableList.size() + " table(s): " + listToHtmlCode(tableList) + "</summary> \n"
+					+ tableInfo
+					+ "</details> \n"
+
+					//+ "<!--<![endif]-->    \n" // END: IGNORE THIS SECTION FOR OUTLOOK
+					+ "";
+		}
+		
+		return tableInfo;
+	}
+
+	/**
+	 * Get various information from DDL Storage about table and it's indexes
+	 * 
+	 * @param conn
+	 * @param tableList
+	 * @param includeIndexInfo
+	 * @param classname
+	 * @return
+	 */
+	protected String getDbmsTableInfoAsHtmlTable(DbxConnection conn, Set<String> tableList, boolean includeIndexInfo, String classname)
+	{
+		throw new RuntimeException("getDbmsTableInfoAsHtmlTable(DbxConnection conn, Set<String> tableList, boolean includeIndexInfo, String classname) -- Must be implemented by any subclass.");
+	}
+
+	public String getFormattedSqlAsTooltipDiv(String sql, String vendor)
+	{
+		String displayText = ""
+				+ "------------------------------------------------------------------------------------------------------------------------- \n"
+				+ "-- Formatted SQL Text \n"
+				+ "------------------------------------------------------------------------------------------------------------------------- \n"
+				+ SqlUtils.format(sql, vendor) 
+				+ "\n"
+				+ "\n"
+				+ "\n"
+				+ "------------------------------------------------------------------------------------------------------------------------- \n"
+				+ "-- Origin SQL Text \n"
+				+ "------------------------------------------------------------------------------------------------------------------------- \n"
+				+ sql
+				+ "\n"
+				+ "\n"
+				+ "";
+
+		displayText = StringEscapeUtils.escapeHtml4(displayText);
+
+		
+		// Put the "Actual Executed SQL Text" as a "tooltip"
+		return "<div title='Click to see Formatted SQL Text' "
+				+ "data-toggle='modal' "
+				+ "data-target='#dbx-view-sqltext-dialog' "
+//				+ "data-objectname='" + Hashkey + "' "
+				+ "data-tooltip=\""   + displayText     + "\" "
+				+ ">&#x1F4AC; Hover or Click to see formatted SQL Text...</div>"; // &#x1F4AC; ==>> symbol popup with "..."
+	}
+
+
+	/**
+	 * Write a HTML "TH" with plain old tooltip
+	 * 
+	 * @param colName   Name of the column
+	 * @param tooltip   tooltip (can be null)
+	 * @return
+	 */
+	public String createHtmlTh(String colName, String tooltip)
+	{
+		if (StringUtil.hasValue(tooltip))
+		{
+			tooltip = tooltip.replace("'", "&#39;");
+			return "  <th title='" + tooltip + "'>" + colName +"</th> \n";
+		}
+
+		return "  <th>" + colName +"</th> \n";
+	}
+
+	/**
+	 * Write DIFF and ABS values as a "formatted String": <code><b>diffValue</b> &#9887; <i>absValue</i></code><br>
+	 * If both diff and abs values are -1, the we write <code>-not-found-</code>
+	 * 
+	 * @param diff
+	 * @param abs
+	 * @return A formatted string
+	 */
+	public String diffAbsValues(Object diff, Object abs)
+	{
+		String notAvaliable = "--not-found--";
+		String sepStr       = " &#9887; ";
+		
+		if (diff == null || abs == null)
+			return notAvaliable;
+
+		if (diff instanceof Number && abs instanceof Number)
+		{
+			if (((Number)diff).intValue() == -1 && ((Number)abs).intValue() == -1)
+				return notAvaliable;
+			
+			NumberFormat nf = NumberFormat.getInstance();
+			return "<b>" + nf.format(diff) + "</b>" + sepStr + "<i>" + nf.format( abs ) + "</i>";
+		}
+		else
+		{
+			return "<b>" + diff + "</b>" + sepStr + "<i>" + abs + "</i>";
+		}
+	}
 }
 
-//// Create a helper index in the DBMS (if it doesnt already exists)
-//// The index will be called "ix_DSR_SL_" + "tableName"
-//// Columns will be: "all columns in the DBMS where clause" and the "SampleTime" column
-//String indexDdl = "";
-//try
-//{
-//	String tableName = params.getDbmsTableName();
-//	String indexName = "ix_DSR_" + tableName;
-//	String colNames  = "";
-//	String ixPostFix = "";
-//
-//	for (String colName : StringUtil.parseCommaStrToList(params.getDbmsWhereKeyColumnName()))
-//	{
-//		colNames += "[" + colName + "], ";
-//		ixPostFix += "_" + colName.replaceAll("[^a-zA-Z0-9]", ""); // remove anything suspect chars keep onle: a-z and numbers
-//	}
-//	colNames += "[" + params.getDbmsSampleTimeColumnName() + "]";
-//
-//	// add "column names" as a "postfix" at the end of the index name (there might be more than one index)
-//	indexName += ixPostFix;
-//
-//	// Check if index already exists
-//	boolean indexExists = false;
-//	try (ResultSet rs = conn.getMetaData().getIndexInfo(null, null, tableName, false, false))
-//	{
-//		while(rs.next())
-//		{
-//			String ixName = rs.getString("INDEX_NAME");
-//			if (indexName.equalsIgnoreCase(ixName))
-//			{
-//				indexExists = true;
-//				break;
-//			}
-//		}
-//	}
-//	
-//	// Create the index
-//	if ( ! indexExists )
-//	{
-//		indexDdl = conn.quotifySqlString("create index [" + indexName + "] on [" + tableName + "] (" + colNames + ")");
-//		
-//		long startTime = System.currentTimeMillis();
-//		try (Statement stmnt = conn.createStatement())
-//		{
-//			stmnt.executeUpdate(indexDdl);
-//		}
-//		_logger.info("ReportEntry '" + reportEntry.getClass().getSimpleName() + "'. Created helper index to support Daily Summary Report. SQL='" + indexDdl + "' ExecTime=" + TimeUtils.msDiffNowToTimeStr(startTime));
-//	}
-//}
-//catch (SQLException ex)
-//{
-//	_logger.error("ReportEntry '" + reportEntry.getClass().getSimpleName() + "'. Problems creating a helper index, skipping the error and continuing... SQL=|" + indexDdl + "|.", ex);
-//}

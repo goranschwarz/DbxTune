@@ -32,11 +32,11 @@ import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.pcs.report.content.SparklineHelper;
 import com.asetune.pcs.report.content.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.SparklineHelper.SparkLineParams;
-import com.asetune.pcs.report.content.ase.AseAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
-public class PostgresTopDeadRows extends AseAbstract
+public class PostgresTopDeadRows
+extends PostgresAbstract
 {
 //	private static Logger _logger = Logger.getLogger(PostgresDbSize.class);
 

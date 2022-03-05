@@ -407,9 +407,10 @@ public class SqlObjectNameTest
 		String dbProductName                    = DbUtils.DB_PROD_NAME_H2;
 		String dbIdentifierQuoteString          = "\"";
 		boolean dbStoresUpperCaseIdentifiers    = true;
+		boolean dbStoresLowerCaseIdentifiers    = false;
 		boolean dbSupportsSchema                = true;
 		
-		SqlObjectName sqlObj = new SqlObjectName("tab1", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbSupportsSchema);
+		SqlObjectName sqlObj = new SqlObjectName("tab1", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbStoresLowerCaseIdentifiers, dbSupportsSchema);
 		
 		// Catalog
 		assertEquals( "",   sqlObj.getCatalogName());

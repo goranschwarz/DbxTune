@@ -29,12 +29,11 @@ import com.asetune.cm.os.CmOsIostat;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.IReportChart;
-import com.asetune.pcs.report.content.ReportEntryAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
-public class OsIoStatSlowIo extends ReportEntryAbstract
+public class OsIoStatSlowIo extends OsAbstract
 {
 //	private static Logger _logger = Logger.getLogger(OsIoStatSlowIo.class);
 

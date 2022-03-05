@@ -36,6 +36,7 @@ import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecCursors;
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecFunctionStats;
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecProcedureStats;
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecQueryStats;
+import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecQueryStatsDb;
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecTriggerStats;
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmIndexOpStat;
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmIndexPhysicalAvgPageUsedPct;
@@ -59,16 +60,17 @@ extends DailySummaryReportDefault
 		addReportEntry( new OsCpuUsageOverview(this)          );
 		
 		// SQL
-		addReportEntry( new SqlServerPlanCacheHistory(this));        // Check if the Plan Cache can be trusted... https://www.brentozar.com/archive/2018/07/tsql2sday-how-much-plan-cache-history-do-you-have/
-		addReportEntry( new SqlServerTopCmExecQueryStats(this, SqlServerTopCmExecQueryStats.ReportType.CPU_TIME));
-//		addReportEntry( new SqlServerTopCmExecQueryStats(this, SqlServerTopCmExecQueryStats.ReportType.WAIT_TIME));
-		addReportEntry( new SqlServerTopCmExecQueryStats(this, SqlServerTopCmExecQueryStats.ReportType.TEMPDB_SPILLS));
-		addReportEntry( new SqlServerTopCmExecQueryStats(this, SqlServerTopCmExecQueryStats.ReportType.LOGICAL_READS));
-		addReportEntry( new SqlServerTopCmExecQueryStats(this, SqlServerTopCmExecQueryStats.ReportType.LOGICAL_WRITES));
-		addReportEntry( new SqlServerTopCmExecQueryStats(this, SqlServerTopCmExecQueryStats.ReportType.PHYSICAL_READS));
-		addReportEntry( new SqlServerTopCmExecQueryStats(this, SqlServerTopCmExecQueryStats.ReportType.EXECUTION_COUNT));
-//		addReportEntry( new SqlServerTopCmExecQueryStats(this, SqlServerTopCmExecQueryStats.ReportType.RECENTLY_COMPILED));
-		addReportEntry( new SqlServerTopCmExecQueryStats(this, SqlServerTopCmExecQueryStats.ReportType.MEMORY_GRANTS));
+		addReportEntry( new SqlServerPlanCacheHistory       (this));        // Check if the Plan Cache can be trusted... https://www.brentozar.com/archive/2018/07/tsql2sday-how-much-plan-cache-history-do-you-have/
+		addReportEntry( new SqlServerTopCmExecQueryStatsDb  (this));
+		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.CPU_TIME));
+//		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.WAIT_TIME));
+		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.TEMPDB_SPILLS));
+		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.LOGICAL_READS));
+		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.LOGICAL_WRITES));
+		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.PHYSICAL_READS));
+		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.EXECUTION_COUNT));
+//		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.RECENTLY_COMPILED));
+		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.MEMORY_GRANTS));
 		addReportEntry( new SqlServerTopCmExecProcedureStats(this));	// Part of mail-message
 		addReportEntry( new SqlServerTopCmExecFunctionStats (this));
 		addReportEntry( new SqlServerTopCmExecTriggerStats  (this));

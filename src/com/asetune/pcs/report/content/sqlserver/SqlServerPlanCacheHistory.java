@@ -44,7 +44,7 @@ public class SqlServerPlanCacheHistory extends AseAbstract
 	@Override
 	public boolean hasShortMessageText()
 	{
-		return false;
+		return true;
 	}
 
 	@Override
@@ -89,10 +89,10 @@ public class SqlServerPlanCacheHistory extends AseAbstract
 	{
 		// Get 'statement cache size' from saved configuration 
 		String sql = "" 
-			+ "select [creation_date], \n"
-			+ "      ,[creation_hour]  \n"
-			+ "      ,max([plan_count])      as [plan_count]\n"
-			+ "      ,sum([exec_count_diff]) as [exec_count]\n"
+			+ "select [creation_date] \n"
+			+ "      ,[creation_hour] \n"
+			+ "      ,max([plan_count])      as [plan_count] \n"
+			+ "      ,sum([exec_count_diff]) as [exec_count] \n"
 			+ "from [CmPlanCacheHistory_diff] \n"
 			+ "group by [creation_date], [creation_hour] \n"
 //			+ "where [SessionStartTime] = (select max([SessionStartTime]) from [CmPlanCacheHistory_abs]) \n"

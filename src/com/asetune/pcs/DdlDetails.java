@@ -27,23 +27,25 @@ import com.asetune.utils.StringUtil;
 
 public class DdlDetails
 {
-	private String    _searchDbname  = null;
-	private String    _dbname        = null;
-	private String    _owner         = null;
-	private String    _objectName    = null;
-	private String    _type          = null;
-	private Timestamp _crdate        = null;
-	private Timestamp _sampleTime    = null;
-	private String    _source        = null; // Subsystem Source
-	private String    _dependParent  = null; // if _dependLevel is above 0, then I want to trace back... 
-	private int       _dependLevel   = 0;    // 0=First level, 1=second level etc...
-	private List<String> _dependList = null;
-	private String    _objectText    = null;
-	private String    _dependsText   = null;
-	private String    _optdiagText   = null;
-	private String    _extraInfoText = null;
-
-	private boolean   _doSleepOption = true;
+	private String    _searchDbname     = null;
+	private String    _searchObjectName = null; // the object name send for lookup, may contain schemaName before the objectName NOT STORED in the DDL Storage
+	private String    _dbname           = null;
+	private String    _owner            = null; // schema or owner name
+	private String    _objectName       = null; // the object name "stripped" from any schemaName
+	private int       _objectId         = -1;   // possibly used
+	private String    _type             = null;
+	private Timestamp _crdate           = null;
+	private Timestamp _sampleTime       = null;
+	private String    _source           = null; // Subsystem Source
+	private String    _dependParent     = null; // if _dependLevel is above 0, then I want to trace back... 
+	private int       _dependLevel      = 0;    // 0=First level, 1=second level etc...
+	private List<String> _dependList    = null;
+	private String    _objectText       = null;
+	private String    _dependsText      = null;
+	private String    _optdiagText      = null;
+	private String    _extraInfoText    = null;
+                                        
+	private boolean   _doSleepOption    = true;
 
 	public DdlDetails()
 	{
@@ -55,44 +57,55 @@ public class DdlDetails
 		_objectName   = objectName;
 	}
 
-	public String    getSearchDbname()  { return _searchDbname != null ? _searchDbname : _dbname; }
-	public String    getDbname()        { return _dbname; }
-	public String    getOwner()         { return _owner; }
-	public String    getObjectName()    { return _objectName; }
-	public String    getType()          { return _type; }
-	public Timestamp getCrdate()        { return _crdate; }
-	public Timestamp getSampleTime()    { return _sampleTime; }
-	public String    getSource()        { return _source; }
-	public String    getDependParent()  { return _dependParent; }
-	public int       getDependLevel()   { return _dependLevel; }
-	public List<String> getDependList() { return _dependList; }
-	public String    getObjectText()    { return _objectText; }
-	public String    getDependsText()   { return _dependsText; }
-	public String    getOptdiagText()   { return _optdiagText; }
-	public String    getExtraInfoText() { return _extraInfoText; }
+	public String    getSearchDbname()     { return _searchDbname     != null ? _searchDbname     : _dbname; }
+	public String    getSearchObjectName() { return _searchObjectName != null ? _searchObjectName : _objectName; }
+	public String    getDbname()           { return _dbname; }
+	public String    getOwner()            { return _owner; } // same as getSchemaName()
+	public String    getSchemaName()       { return _owner; } // same as getOwner()
+	public String    getObjectName()       { return _objectName; }
+	public int       getObjectId()         { return _objectId; }
+	public String    getType()             { return _type; }
+	public Timestamp getCrdate()           { return _crdate; }
+	public Timestamp getSampleTime()       { return _sampleTime; }
+	public String    getSource()           { return _source; }
+	public String    getDependParent()     { return _dependParent; }
+	public int       getDependLevel()      { return _dependLevel; }
+	public List<String> getDependList()    { return _dependList; }
+	public String    getObjectText()       { return _objectText; }
+	public String    getDependsText()      { return _dependsText; }
+	public String    getOptdiagText()      { return _optdiagText; }
+	public String    getExtraInfoText()    { return _extraInfoText; }
+                                           
+	public boolean   hasObjectText()       { return _objectText    != null; }
+	public boolean   hasDependsText()      { return _dependsText   != null; }
+	public boolean   hasOptdiagText()      { return _optdiagText   != null; }
+	public boolean   hasExtraInfoText()    { return _extraInfoText != null; }
+	public boolean   isSleepOptionSet()    { return _doSleepOption; }
 
-	public boolean   hasObjectText()    { return _objectText    != null; }
-	public boolean   hasDependsText()   { return _dependsText   != null; }
-	public boolean   hasOptdiagText()   { return _optdiagText   != null; }
-	public boolean   hasExtraInfoText() { return _extraInfoText != null; }
-	public boolean   isSleepOptionSet() { return _doSleepOption; }
+	public void setSearchDbname    (String    searchDbname)    { _searchDbname      = searchDbname     == null ? null : searchDbname    .trim(); }
+	public void setSearchObjectName(String    searchObjectName){ _searchObjectName  = searchObjectName == null ? null : searchObjectName.trim(); }
+	public void setDbname          (String    dbname)          { _dbname            = dbname           == null ? null : dbname          .trim(); }
+	public void setOwner           (String    owner)           { _owner             = owner            == null ? null : owner           .trim(); } // same as setSchemaName()
+	public void setSchemaName      (String    owner)           { _owner             = owner            == null ? null : owner           .trim(); } // same as setOwner()
+	public void setObjectName      (String    objectName)      { _objectName        = objectName       == null ? null : objectName      .trim(); }
+	public void setObjectId        (int       objectId)        { _objectId          = objectId; }
+	public void setType            (String    type)            { _type              = type             == null ? null : type            .trim(); }
+	public void setCrdate          (Timestamp crdate)          { _crdate            = crdate; }
+	public void setSampleTime      (Timestamp sampleTime)      { _sampleTime        = sampleTime; }
+	public void setSource          (String    source)          { _source            = source; }
+	public void setDependParent    (String    dependParent)    { _dependParent      = dependParent; }
+	public void setDependLevel     (int       dependLevel)     { _dependLevel       = dependLevel; }
+	public void setDependList   (List<String> dependList)      { _dependList        = dependList; }
+	public void setObjectText      (String    objectText)      { _objectText        = objectText; }
+	public void setDependsText     (String    dependsText)     { _dependsText       = dependsText; }
+	public void setOptdiagText     (String    optdiagText)     { _optdiagText       = optdiagText; }
+	public void setExtraInfoText   (String  extraInfoText)     { _extraInfoText     = extraInfoText; }
+	public void setSleepOption     (boolean doSleepOption)     { _doSleepOption     = doSleepOption; }
 
-	public void setSearchDbname (String    searchDbname){ _searchDbname  = searchDbname == null ? null : searchDbname.trim(); }
-	public void setDbname       (String    dbname)      { _dbname        = dbname       == null ? null : dbname      .trim(); }
-	public void setOwner        (String    owner)       { _owner         = owner        == null ? null : owner       .trim(); }
-	public void setObjectName   (String    objectName)  { _objectName    = objectName   == null ? null : objectName  .trim(); }
-	public void setType         (String    type)        { _type          = type         == null ? null : type        .trim(); }
-	public void setCrdate       (Timestamp crdate)      { _crdate        = crdate; }
-	public void setSampleTime   (Timestamp sampleTime)  { _sampleTime    = sampleTime; }
-	public void setSource       (String    source)      { _source        = source; }
-	public void setDependParent (String    dependParent){ _dependParent  = dependParent; }
-	public void setDependLevel  (int       dependLevel) { _dependLevel   = dependLevel; }
-	public void setDependList(List<String> dependList)  { _dependList    = dependList; }
-	public void setObjectText   (String    objectText)  { _objectText    = objectText; }
-	public void setDependsText  (String    dependsText) { _dependsText   = dependsText; }
-	public void setOptdiagText  (String    optdiagText) { _optdiagText   = optdiagText; }
-	public void setExtraInfoText(String  extraInfoText) { _extraInfoText = extraInfoText; }
-	public void setSleepOption  (boolean doSleepOption) { _doSleepOption = doSleepOption; }
+	public String getSchemaAndObjectName()
+	{
+		return getOwner() + "." + getObjectName();
+	}
 
 	public String getFullObjectName()
 	{
@@ -125,7 +138,7 @@ public class DdlDetails
 		sb.append("\n");
 		sb.append("====BEGIN==================================================").append("\n");
 		sb.append(" Dbname      = '").append( getDbname()      ).append("'\n");
-		sb.append(" Owner       = '").append( getOwner()       ).append("'\n");
+		sb.append(" Owner/Schema= '").append( getOwner()       ).append("'\n");
 		sb.append(" ObjectName  = '").append( getObjectName()  ).append("'\n");
 		sb.append(" Type        = '").append( getType()        ).append("'\n");
 		sb.append(" CrDate      = '").append( getCrdate()      ).append("'\n");

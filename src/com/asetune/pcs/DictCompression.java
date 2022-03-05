@@ -955,7 +955,11 @@ public class DictCompression
 			tmpBatchQueue = _batchQueue;
 			_batchQueue = null;
 		}
-		
+
+		// This shouldn't really happen, but lets test anyway!
+		if (tmpBatchQueue == null)
+			return 0;
+
 		// Loop cmName(s)
 		for (String cmName : tmpBatchQueue.keySet())
 		{

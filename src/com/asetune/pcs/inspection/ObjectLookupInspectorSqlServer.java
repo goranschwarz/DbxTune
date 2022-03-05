@@ -26,40 +26,70 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.Version;
 import com.asetune.pcs.DdlDetails;
 import com.asetune.pcs.ObjectLookupQueueEntry;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.sql.SqlObjectName;
+import com.asetune.sql.SqlParserUtils;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseSqlScript;
+import com.asetune.utils.Configuration;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.SqlServerUtils;
+import com.asetune.utils.StringUtil;
 
 public class ObjectLookupInspectorSqlServer
 extends ObjectLookupInspectorAbstract
 {
 	private static Logger _logger = Logger.getLogger(ObjectLookupInspectorSqlServer.class);
 
+//	private long _parserExceptionCount = 0;
+//	private ConcurrentHashMap<String, Integer> _parserFailCache = new ConcurrentHashMap<>();
+	
+	public static final String  PROPKEY_xmlPlan_parseAndSendTables = Version.getAppName() + "." + ObjectLookupInspectorSqlServer.class.getSimpleName() + ".xmlPlan.parse.send.tables";
+	public static final boolean DEFAULT_xmlPlan_parseAndSendTables = true;
+
+	public static final String  PROPKEY_view_parseAndSendTables    = Version.getAppName() + "." + ObjectLookupInspectorSqlServer.class.getSimpleName() + ".view.parse.send.tables";
+	public static final boolean DEFAULT_view_parseAndSendTables    = true;
+
 	@Override
-	public boolean allowInspection(ObjectLookupQueueEntry entry)
+	public boolean allowInspection(ObjectLookupQueueEntry lookupEntry)
 	{
-		if (entry == null)
+		if (lookupEntry == null)
 			return false;
 
-		if (entry._dbname == null || entry._objectName == null)
+		if (lookupEntry._dbname == null || lookupEntry._objectName == null)
 			return false;
 
 		// dbname 32767 
-		if (entry._dbname.equals("32767"))
+		if (lookupEntry._dbname.equals("32767"))
 			return false;
+
 		
-		// Change the first parameter, which is probably the sql_handle, to some static value, so we can look it up...
-		// meaning if it has already been stored or not...
-//		if (entry._dbname.startsWith("0x") && entry._objectName.startsWith("0x"))
-		if (entry._objectName.startsWith("0x"))
+		SqlObjectName sqlObj = new SqlObjectName(lookupEntry._objectName, DbUtils.DB_PROD_NAME_MSSQL, "\"", false, false, true);
+		String schemaName = sqlObj.getSchemaName();
+		String objectName = sqlObj.getObjectName();
+
+		// Discard a bunch of entries
+		if (objectName.startsWith("sys"))       return false;
+		if (objectName.startsWith("SYS"))       return false;
+		if (objectName.startsWith("#"))         return false;
+		if ("sys".equalsIgnoreCase(schemaName)) return false;
+
+
+		// Mark this as a "StatementCacheEntry"
+		if (lookupEntry._objectName.startsWith("0x"))
 		{
-			entry._dbname = PersistentCounterHandler.STATEMENT_CACHE_NAME;
+			lookupEntry.setStatementCacheEntry(true);
+			//entry._dbname = PersistentCounterHandler.STATEMENT_CACHE_NAME;
 		}
 			
 		
@@ -75,13 +105,14 @@ extends ObjectLookupInspectorAbstract
 	}
 
 	@Override
-	public DdlDetails doObjectInfoLookup(DbxConnection conn, ObjectLookupQueueEntry qe, PersistentCounterHandler pch)
+	public List<DdlDetails> doObjectInfoLookup(DbxConnection conn, ObjectLookupQueueEntry qe, PersistentCounterHandler pch)
 	{
-		String dbname       = qe._dbname;
-		String objectName   = qe._objectName;
-		String source       = qe._source;
-		String dependParent = qe._dependParent;
-		int    dependLevel  = qe._dependLevel;
+		final String dbname           = qe._dbname;
+		final String originObjectName = qe._objectName;
+		      String objectName       = qe._objectName;
+		final String source           = qe._source;
+		final String dependParent     = qe._dependParent;
+		final int    dependLevel      = qe._dependLevel;
 
 		// FIXME: dbname  can be a Integer
 		// FIXME: objName can be a Integer
@@ -89,31 +120,32 @@ extends ObjectLookupInspectorAbstract
 
 		// Check if the input is a: ExecutionPlan
 		boolean isExecutionPlan = false;
-		if (objectName.startsWith("0x"))
+		if (qe.isStatementCacheEntry() || objectName.startsWith("0x"))
 		{
 			isExecutionPlan = true;
-			dbname           = PersistentCounterHandler.STATEMENT_CACHE_NAME;
 		}
 
 
 		// Statement Cache objects
 		if (isExecutionPlan)
 		{
-			DdlDetails entry = new DdlDetails(dbname, objectName);
-			entry.setCrdate( new Timestamp(System.currentTimeMillis()) );
-			entry.setSource( source );
-			entry.setDependLevel( dependLevel );
+			//dbname          = PersistentCounterHandler.STATEMENT_CACHE_NAME;
+
+			DdlDetails storeEntry = new DdlDetails(PersistentCounterHandler.STATEMENT_CACHE_NAME, objectName);
+			storeEntry.setCrdate( new Timestamp(System.currentTimeMillis()) );
+			storeEntry.setSource( source );
+			storeEntry.setDependLevel( dependLevel );
 //			entry.setOwner("ssql");
-			entry.setOwner(qe._dbname);
-			entry.setType("SS");
-			entry.setSampleTime( new Timestamp(System.currentTimeMillis()) );
+			storeEntry.setOwner(dbname);
+			storeEntry.setType("SS");
+			storeEntry.setSampleTime( new Timestamp(System.currentTimeMillis()) );
 
 			try
 			{
 				String xmlPlan = SqlServerUtils.getXmlQueryPlan(conn, objectName);
 //System.out.println("ObjectLookupInspectorSqlServer.doObjectInfoLookup(): ExecPlanHandle='" + objectName + "', getXmlQueryPlan returned: " + xmlPlan);
 //				entry.setObjectText( xmlPlan );
-				entry.setExtraInfoText( xmlPlan ); // AseTune uses setExtraInfoText(), so lets stick with that
+				storeEntry.setExtraInfoText( xmlPlan ); // AseTune uses setExtraInfoText(), so lets stick with that
 				
 				// Look for specific texts in the XML plan and setExtraInfoText() if found! 
 				if (xmlPlan != null)
@@ -141,235 +173,269 @@ extends ObjectLookupInspectorAbstract
 					
 					if ( cnt > 0 )
 					{
-						// Build a JSON String withe the info, it might be easier to parse if we add many different options here.
+						// Build a JSON String with the info, it might be easier to parse if we add many different options here.
 						StringBuilder sb = new StringBuilder();
+						String comma = "";
 						// BEGIN JSON
 						sb.append("{");
 
 						if (hasMissingIndexes)
-							sb.append("\"hasMissingIndexes\": true");
+						{
+							sb.append(comma).append("\"hasMissingIndexes\": true");
+							comma = ", ";
+						}
 
 						if (hasWarnings)
-							sb.append("\"hasWarnings\": true");
+						{
+							sb.append(comma).append("\"hasWarnings\": true");
+							comma = ", ";
+						}
 
 						// END JSON
 						sb.append("}");
 
 						// Set the JSON to ExtraInfoText
 						//entry.setExtraInfoText(sb.toString()); // AseTune uses setExtraInfoText(), so: use some of the other fields: objectText, dependsText, optdiagText
-						entry.setObjectText(sb.toString());
+						storeEntry.setObjectText(sb.toString());
 					}
-				}
+					
+					// Get SQL Text from the XML Plan
+					// Then parse the SQL Text, and get tables... Then send of those table to a new DDL Lookup
+// Not sure if the below is ready YET, the SqlParserUtils.getTables() probably needs a bit more work...
+					if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_xmlPlan_parseAndSendTables, DEFAULT_xmlPlan_parseAndSendTables))
+					{
+						String sqlText = SqlServerUtils.getSqlTextFromXmlPlan(xmlPlan);
+
+						// Get list of tables in the SQL Text and add them for a DDL Lookup/Store
+						Set<String> tableList = SqlParserUtils.getTables(sqlText);
+						for (String tableName : tableList)
+							pch.addDdl(dbname, tableName, this.getClass().getSimpleName() + ".xmlPlan.sql");
+						
+//						if ( ! StringUtil.startsWithIgnoreBlankIgnoreCase(sqlText, "create ") )
+//						{
+//							// NOT in failed cache
+//							if ( ! _parserFailCache.contains(sqlText) )
+//							{
+//								try 
+//								{
+//									List<String> tableList = SqlParserUtils.getTables(sqlText, true);
+//									for (String tableName : tableList)
+//										pch.addDdl(originDbname, tableName, this.getClass().getSimpleName() + ".xmlPlan.sql");
+//								}
+//								catch (Exception pex) 
+//								{ 
+//									if (Configuration.getCombinedConfiguration().getBooleanProperty(this.getClass().getSimpleName() + ".log.parse.errors", false))
+//										_logger.warn("Problems parsing SQL=|" + sqlText + "|. Skipping this and just continuing. Caught: " + pex, pex);
+//
+//									_parserExceptionCount++;
+//									
+//									// Cache FAILED statements
+//									int count = _parserFailCache.contains(sqlText) ? _parserFailCache.get(sqlText) : 1;
+//									_parserFailCache.put(sqlText, count);
+//
+//									// check that the cache isn't to big 
+//									while (_parserFailCache.size() > 500)
+//									{
+//										// Get a entry from the cache to remove (well, this isn't random... but anyway hopefully it's not the one we just added)
+//										String cachedSqlText = null;
+//										for (String tmp : _parserFailCache.keySet())
+//										{
+//											cachedSqlText = tmp;
+//											break;
+//										}
+//										if (cachedSqlText != null)
+//											_parserFailCache.remove(cachedSqlText);
+//									}
+//								}
+//							}
+//						}
+					} // end: config
+				} // end: xmlPlan
 			}
 			catch(SQLException e)
 			{
-				String msg = "Problems getting text from sys.dm_exec_query_plan, about '"+objectName+"'. Msg="+e.getErrorCode()+", Text='" + e.getMessage() + "'. Caught: "+e;
+				String msg = "Problems getting text from sys.dm_exec_query_plan, about '" + objectName + "'. Msg=" + e.getErrorCode() + ", Text='" + e.getMessage() + "'. Caught: " + e;
 				_logger.warn(msg); 
-//				entry.setExtraInfoText( msg );
-				entry.setObjectText( msg );
+				storeEntry.setObjectText( msg );
 			}
-//System.out.println("ObjectLookupInspectorSqlServer.doObjectInfoLookup(): <<<--- " + entry.toStringDebug());
-			return entry;
-			
-////			String sql = "select * from sys.dm_exec_query_plan("+objectName+") \n";
-//			String sql = "select * from sys.dm_exec_query_plan( convert(varbinary(64), ?, 1) ) \n"; // convert(varbinary(64), '0x...', 1) in SQL-Server 2008, convert with style 1 (last param) is supported
-//
-////			RS> Col# Label      JDBC Type Name              Guessed DBMS type Source Table
-////			RS> ---- ---------- --------------------------- ----------------- ------------
-////			RS> 1    dbid       java.sql.Types.SMALLINT     smallint          -none-      
-////			RS> 2    objectid   java.sql.Types.INTEGER      int               -none-      
-////			RS> 3    number     java.sql.Types.SMALLINT     smallint          -none-      
-////			RS> 4    encrypted  java.sql.Types.BIT          bit               -none-      
-////			RS> 5    query_plan java.sql.Types.LONGNVARCHAR xml               -none-      
-//
-//			try
-//			{
-////				Statement stmnt = conn.createStatement();
-//				PreparedStatement stmnt = conn.prepareStatement(sql);
-//				stmnt.setQueryTimeout(10);
-//				
-////				ResultSet rs = stmnt.executeQuery(sql);
-//				stmnt.setString(1, objectName);
-//				ResultSet rs = stmnt.executeQuery();
-//
-//				while (rs.next())
-//				{
-//					String str = rs.getString(5);
-//
-////					entry.setExtraInfoText( str );
-//					entry.setObjectText( str );
-//				}
-//				rs.close();
-//				stmnt.close();
-//			}
-//			catch(SQLException e)
-//			{
-//				String msg = "Problems getting text from sys.dm_exec_query_plan, about '"+objectName+"'. Msg="+e.getErrorCode()+", Text='" + e.getMessage() + "'. Caught: "+e;
-//				_logger.warn(msg); 
-////				entry.setExtraInfoText( msg );
-//				entry.setObjectText( msg );
-//			}
-//			return entry;
-		}
-		else // all other tables
-		{
-			// Keep a list of objects we need to work with
-			// because: if we get more than one proc/table with different owners
-			ArrayList<DdlDetails> objectList = new ArrayList<DdlDetails>();
-			
-			// GET type and creation time
-			String sql = 
-				"select o.type, u.name, o.crdate \n" +
-				"from ["+dbname+"]..sysobjects o, ["+dbname+"]..sysusers u \n" +
-				"where o.name = '"+objectName+"' \n" +
-				"  and o.uid = u.uid ";
-			try
-			{
-				Statement statement = conn.createStatement();
-				ResultSet rs = statement.executeQuery(sql);
-				while(rs.next())
-				{
-					DdlDetails entry = new DdlDetails();
-					
-					entry.setDbname      ( dbname );
-					entry.setObjectName  ( objectName );
-					entry.setSource      ( source );
-					entry.setDependParent( dependParent );
-					entry.setDependLevel ( dependLevel );
-					entry.setSampleTime  ( new Timestamp(System.currentTimeMillis()) );
 
-					entry.setType       ( rs.getString   (1) );
-					entry.setOwner      ( rs.getString   (2) );
-					entry.setCrdate     ( rs.getTimestamp(3) );
-					
-					objectList.add(entry);
-				}
-				rs.close();
-			}
-			catch (SQLException e)
-			{
-				_logger.error("Problems Getting basic information about DDL for dbname='"+dbname+"', objectName='"+objectName+"', source='"+source+"', dependLevel="+dependLevel+". Skipping DDL Storage of this object. Caught: "+e);
-				return null;
-			}
-	
+			// Return the list of objects to be STORED in DDL Storage
+			return Arrays.asList(storeEntry);  // <<<<<<<<<<------------<<<<<<<<<<------------<<<<<<<<<<------------
+			
+		} // end: isExecutionPlan
+		else // all other "objects"
+		{
+			// Get a list of DBMS Object we want to get information for!
+			List<DdlDetails> objectList = getDbmsObjectList(conn, dbname, objectName, source, dependParent, dependLevel);
+			
 			// The object was NOT found
-			if (objectList.size() == 0)
+			if (objectList.isEmpty())
 			{
-				_logger.info("DDL Lookup. Can't find any information for dbname='"+dbname+"', objectName='"+objectName+"', source='"+source+"', dependLevel="+dependLevel+". Skipping DDL Storage of this object.");
+				// If the future, do NOT do lookup of this table.
+				pch.markDdlDetailsAsDiscarded(dbname, originObjectName);
+
+				_logger.info("DDL Lookup: Can't find any information for dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Skipping DDL Storage of this object. Also adding it to the 'discard' list.");
 				return null;
 			}
 	
-	
-			for (DdlDetails entry : objectList)
+
+			// Add entries that should be stored to this list
+			List<DdlDetails> returnList = new ArrayList<>();
+
+			//----------------------------------------------------------------------------------
+			// Do lookups of the entries found in the DBMS Dictionary
+			//----------------------------------------------------------------------------------
+			for (DdlDetails storeEntry : objectList)
 			{
-				String type = entry.getType();
-				// Type definition from ASE 15.7, manual... NOTE: WARNING: SQL-Server probably has different stuff, but we can look at that later
-				//
-				//   C  - computed column
-				//   D  - default
-				//   DD - decrypt default
-				//   F  - SQLJ function
-				//   N  - partition condition
-				//   P  - Transact-SQL or SQLJ procedure
-				//   PP - the predicate of a privilege
-				//   PR - prepare objects (created by Dynamic SQL)
-				//   R  - rule
-				//   RI - referential constraint
-				//   S  - system table
-				//   TR - trigger
-				//   U  - user table
-				//   V  - view
-				//   XP - extended stored procedure.
-				AseSqlScript ss;
-	
+				String type = storeEntry.getType();
+
+				// https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-objects-transact-sql?view=sql-server-ver15
+                // 
+				//   AF = Aggregate function (CLR)
+				//   C  = CHECK constraint
+				//   D  = DEFAULT (constraint or stand-alone)
+				//   F  = FOREIGN KEY constraint
+				//   FN = SQL scalar function
+				//   FS = Assembly (CLR) scalar-function
+				//   FT = Assembly (CLR) table-valued function
+				//   IF = SQL inline table-valued function
+				//   IT = Internal table
+				//   P  = SQL Stored Procedure
+				//   PC = Assembly (CLR) stored-procedure
+				//   PG = Plan guide
+				//   PK = PRIMARY KEY constraint
+				//   R  = Rule (old-style, stand-alone)
+				//   RF = Replication-filter-procedure
+				//   S  = System base table
+				//   SN = Synonym
+				//   SO = Sequence object
+				//   U  = Table (user-defined)
+				//   V  = View
+				//   EC = Edge constraint
+                //   
+				//   ---- Applies to: SQL Server 2012 (11.x) and later.
+				//   SQ = Service queue
+				//   TA = Assembly (CLR) DML trigger
+				//   TF = SQL table-valued-function
+				//   TR = SQL DML trigger
+				//   TT = Table type
+				//   UQ = UNIQUE constraint
+				//   X = Extended stored procedure
+                //   
+				//   ---- Applies to: SQL Server 2014 (12.x) and later, Azure SQL Database, Azure Synapse Analytics, Analytics Platform System (PDW).
+				//   ST = STATS_TREE
+                //   
+				//   ---- Applies to: SQL Server 2016 (13.x) and later, Azure SQL Database, Azure Synapse Analytics, Analytics Platform System (PDW).
+				//   ET = External Table
+				
 				if ( "U".equals(type) || "S".equals(type) )
 				{
+					// This should be stored
+					returnList.add(storeEntry);
+
 					//--------------------------------------------
-					// Just do sp_help, or use ddlgen.jar to get info
-					sql = "exec "+entry.getDbname()+"..sp_help '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
-	
-					ss = new AseSqlScript(conn, 10);
-					try	{ 
-						entry.setObjectText( ss.executeSqlStr(sql, true) ); 
-					} catch (SQLException e) { 
-						entry.setObjectText( e.toString() ); 
-					} finally {
-						ss.close();
+					// Just do sp_help to get info (which will include index key information)
+					String sql = "exec " + storeEntry.getDbname() + "..sp_help '" + storeEntry.getSchemaAndObjectName() + "' ";
+
+					try	(AseSqlScript ss = new AseSqlScript(conn, 10)) 
+					{
+						ss.setRsAsAsciiTable(true);
+						storeEntry.setObjectText( ss.executeSqlStr(sql, true) ); 
+					} 
+					catch (SQLException e) 
+					{ 
+						storeEntry.setObjectText( e.toString() ); 
 					}
 	
-//					//--------------------------------------------
-//					// GET sp__optdiag
-//					if (_dbmsVersion >= Ver.ver(15,7))
-//					{
-//						sql = "exec "+entry.getDbname()+"..sp_showoptstats '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
-//
-//						try
-//						{
-//							Statement stmnt = conn.createStatement();
-//							stmnt.setQueryTimeout(10);
-//							
-//							ResultSet rs = stmnt.executeQuery(sql);
-//
-//							StringBuilder sb = new StringBuilder();
-//							sb.append(sql).append("\n");
-//							sb.append("------------------------------------------------------------------\n");
-//							while (rs.next())
-//							{
-//								sb.append(rs.getString(1));
-//							}
-//							rs.close();
-//							stmnt.close();
-//
-//							entry.setOptdiagText( sb.toString().trim() );
-//						}
-//						catch(SQLException e)
-//						{
-//							String msg = "Problems getting sp_showoptstats, using sql '"+sql+"'. Msg="+e.getErrorCode()+", Text='" + e.getMessage() + "'. Caught: "+e;
-//							//_logger.warn(msg); 
-//							entry.setOptdiagText( msg );
-//						}
-//					}
-//					else
-//					{
-//						// do SP_OPTDIAG, but only on UNPARTITIONED tables
-//						sql="declare @partitions int \n" +
-//							"select @partitions = count(*) \n" +
-//							"from "+entry.getDbname()+"..sysobjects o, "+entry.getDbname()+"..sysusers u, "+entry.getDbname()+"..syspartitions p \n" +
-//							"where o.name = '"+entry.getObjectName()+"' \n" +
-//							"  and u.name = '"+entry.getOwner()+"' \n" +
-//							"  and o.id  = p.id \n" +
-//							"  and o.uid = o.uid \n" +
-//							"  and p.indid = 0 \n" +
-//							"                  \n" +
-//							"if (@partitions > 1) \n" +
-//							"    print 'Table is partitioned, and this is not working so well with sp__optdiag, sorry.' \n" +
-//							"else \n" +
-//							"    exec "+entry.getDbname()+"..sp__optdiag '"+entry.getOwner()+"."+entry.getObjectName()+"' \n" +
-//							"";
-//
-//						ss = new AseSqlScript(conn, 10);
-//						try	{ 
-//							entry.setOptdiagText( ss.executeSqlStr(sql, true) ); 
-//						} catch (SQLException e) { 
-//							entry.setOptdiagText( e.toString() ); 
-//						} finally {
-//							ss.close();
-//						}
-//					}
+					//--------------------------------------------
+					// GET sp__optdiag
+					if (pch.getConfig_doGetStatistics())
+					{
+						// get table statistics -- not yet implemented
+						//entry.setOptdiagText(...);
+					}
 		
 					//--------------------------------------------
 					// GET SOME OTHER STATISTICS
-					sql = "exec "+entry.getDbname()+"..sp_spaceused '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
-	
-					ss = new AseSqlScript(conn, 10);
-					try	{ 
-						entry.setExtraInfoText( ss.executeSqlStr(sql, true) ); 
-					} catch (SQLException e) { 
-						entry.setExtraInfoText( e.toString() ); 
-					} finally {
-						ss.close();
+					// - Table size 
+					// - Index size 
+					
+//					sql = "exec " + entry.getDbname() + "..sp_spaceused '" + entry.getOwner() + "." + entry.getObjectName() + "' ";
+//					sql = "select * from sys.dm_db_index_physical_stats(db_id('" + entry.getDbname() + "'), " + entry.getObjectId() + ", DEFAULT, DEFAULT, 'SAMPLED')";
+//					sql = "SELECT /* " + Version.getAppName() + ":ObjectLookupInspector */ \n"
+//					    + "     db_name(s.database_id) AS dbname \n"
+//						+ "    ,sc.name                AS schema_name \n"
+//						+ "    ,o.name                 AS object_name \n"
+//						+ "    ,i.name                 AS index_name \n"
+//						+ "    ,s.* \n"
+//					    + "FROM sys.dm_db_index_physical_stats(db_id('" + entry.getDbname() + "'), " + entry.getObjectId() + ", DEFAULT, DEFAULT, 'SAMPLED') s \n"
+//					    + "LEFT OUTER JOIN [" +  entry.getDbname() + "].sys.indexes  i ON s.object_id = i.object_id and s.index_id = i.index_id \n"
+//					    + "LEFT OUTER JOIN [" +  entry.getDbname() + "].sys.objects  o ON s.object_id = o.object_id \n"
+//					    + "LEFT OUTER JOIN [" +  entry.getDbname() + "].sys.schemas sc ON o.schema_id = sc.schema_id \n"
+//						+ "";
+					sql = ""
+						+ "SELECT /* " + Version.getAppName() + ":" + this.getClass().getSimpleName() + " */ \n"
+						+ "     dbname                           = db_name() \n"
+						+ "    ,schema_name                      = sc.name \n"
+						+ "    ,object_name                      = o.name \n"
+						+ "    ,index_name                       = ISNULL(i.name, 'HEAP') \n"
+						+ "    ,s.index_id \n"
+					//	+ "    ,object_id                        = max(s.object_id) \n"
+						+ " \n"
+//						+ "    ,IndexType                        = CASE s.index_id WHEN 0 THEN 'HEAP' WHEN 1 THEN 'CLUSTERED' ELSE 'NON-CLUSTERED' END \n"
+						+ "    ,IndexType                        = i.type_desc \n"
+						+ "    ,IndexFillFactor                  = i.fill_factor \n"
+						+ "    ,IndexIsDisabled                  = i.is_disabled \n"
+						+ "    ,IndexIsFiltered                  = i.has_filter \n"
+						+ "    ,StatsUpdated                     = NULLIF( MAX(ISNULL(STATS_DATE(s.object_id, s.index_id), '2000-01-01')), '2000-01-01') -- this to get rid of: Warning: Null value is eliminated by an aggregate or other SET operation. \n"
+						+ "    ,PartitionCount                   = MAX(s.partition_number) \n"
+						+ "    ,row_count                        = SUM(s.row_count) \n"
+						+ "    ,RowsPerPage                      = CAST(SUM(s.row_count)*1.0 / NULLIF(SUM(s.used_page_count), 0) as DECIMAL(12,1)) \n"
+					//	+ "    ,AvgCalcBytesPerRow               = (SUM(s.in_row_used_page_count)+SUM(s.row_overflow_used_page_count))*8*1024 / NULLIF(SUM(s.row_count), 0) \n"
+						+ " \n"
+						+ "    ,TotalUsedSizeMB                  = CAST(SUM(s.used_page_count)              / 128.0 AS DECIMAL(12,1)) \n"
+						+ "    ,InRowUsedSizeMB                  = CAST(SUM(s.in_row_used_page_count)       / 128.0 AS DECIMAL(12,1)) \n"
+						+ "    ,LobUsedSizeMB                    = CAST(SUM(s.lob_used_page_count)          / 128.0 AS DECIMAL(12,1)) \n"
+						+ "    ,OverflowUsedSizeMB               = CAST(SUM(s.row_overflow_used_page_count) / 128.0 AS DECIMAL(12,1)) \n"
+						+ " \n"
+						+ "    ,used_page_count                  = SUM(s.used_page_count) \n"
+						+ "    ,reserved_page_count              = SUM(s.reserved_page_count) \n"
+						+ " \n"
+						+ "    ,in_row_used_page_count           = SUM(s.in_row_used_page_count) \n"
+						+ "    ,in_row_data_page_count           = SUM(s.in_row_data_page_count) \n"
+						+ "    ,in_row_reserved_page_count       = SUM(s.in_row_reserved_page_count) \n"
+						+ " \n"
+						+ "    ,lob_used_page_count              = SUM(s.lob_used_page_count) \n"
+						+ "    ,lob_reserved_page_count          = SUM(s.lob_reserved_page_count) \n"
+						+ " \n"
+						+ "    ,row_overflow_used_page_count     = SUM(s.row_overflow_used_page_count) \n"
+						+ "    ,row_overflow_reserved_page_count = SUM(s.row_overflow_reserved_page_count) \n"
+						+ " \n"
+						+ "FROM [" +  storeEntry.getDbname() + "].sys.dm_db_partition_stats s \n"
+						+ "LEFT OUTER JOIN [" +  storeEntry.getDbname() + "].sys.indexes  i WITH (READUNCOMMITTED) ON s.object_id = i.object_id AND s.index_id = i.index_id \n"
+						+ "LEFT OUTER JOIN [" +  storeEntry.getDbname() + "].sys.objects  o WITH (READUNCOMMITTED) ON s.object_id = o.object_id \n"
+						+ "LEFT OUTER JOIN [" +  storeEntry.getDbname() + "].sys.schemas sc WITH (READUNCOMMITTED) ON o.schema_id = sc.schema_id \n"
+						+ "WHERE 1=1 \n"
+						+ "  AND o.object_id = " + storeEntry.getObjectId() + " \n"
+						+ "  AND o.is_ms_shipped = 0 \n"
+					//	+ "  AND s.row_count > 0 \n"
+						+ "GROUP BY sc.name, o.name, i.name, s.index_id \n"
+						+ "ORDER BY s.index_id \n"
+//						+ "ORDER BY sc.name, o.name, s.index_id \n"
+						+ "";
+
+					
+					try	(AseSqlScript ss = new AseSqlScript(conn, 10)) 
+					{
+						ss.setRsAsAsciiTable(true);
+						storeEntry.setExtraInfoText( ss.executeSqlStr(sql, true) ); 
 					}
-					// TODO: more info to save
+					catch (SQLException e) 
+					{ 
+						storeEntry.setExtraInfoText( e.toString() ); 
+					}
+
+					// TODO: more info to save (this is from ASE)
 					// - datachange(table_name, partition_name, column_name)
 					// - can we get some other statistics from sysstatistics
 					//   like when was statistics updated for this table
@@ -382,634 +448,244 @@ extends ObjectLookupInspectorAbstract
 					//             to get Cluster Ratio etc...
 					// - try to calculate "if tab has a lot of unused space / fragmented"
 				}
-				if (   "P" .equals(type) 
-				    || "TR".equals(type) 
-				    || "V" .equals(type) 
-				    || "D" .equals(type) 
-				    || "R" .equals(type) 
-				    || "XP".equals(type))
+
+				else if (   
+				       "P" .equals(type)  // Stored procedure
+				    || "TR".equals(type)  // SQL DML Trigger
+				    || "V" .equals(type)  // View
+				    || "C" .equals(type)  // CHECK constraint
+				    || "D" .equals(type)  // Default or DEFAULT constraint
+				    || "R" .equals(type)  // Rule
+				    || "X" .equals(type)) // Extended stored procedure
 				{
+					// This should be stored
+					returnList.add(storeEntry);
+
 					//--------------------------------------------
 					// GET OBJECT TEXT
-					sql = " select c.text "
-						+ " from "+entry.getDbname()+"..sysobjects o, "+entry.getDbname()+"..syscomments c, "+entry.getDbname()+"..sysusers u \n"
-						+ " where o.name = '"+entry.getObjectName()+"' \n"
-						+ "   and u.name = '"+entry.getOwner()+"' \n" 
+					String sql = " select c.text "
+						+ " from " + storeEntry.getDbname() + "..sysobjects o, " + storeEntry.getDbname() + "..syscomments c, " + storeEntry.getDbname() + "..sysusers u \n"
+						+ " where o.name = '" + storeEntry.getObjectName() + "' \n"
+						+ "   and u.name = '" + storeEntry.getOwner() + "' \n" 
 						+ "   and o.id   = c.id \n"
 						+ "   and o.uid  = u.uid \n"
 						//+ " order by c.number, c.colid2, c.colid ";
 						+ " order by c.number, c.colid ";
-	
-					try
+
+					String sqlText = "";
+
+					try (Statement statement = conn.createStatement(); ResultSet rs = statement.executeQuery(sql) )
 					{
-						StringBuilder sb = new StringBuilder();
-	
-						Statement statement = conn.createStatement();
-						ResultSet rs = statement.executeQuery(sql);
 						while(rs.next())
 						{
-							String textPart = rs.getString(1);
-							sb.append(textPart);
+							sqlText += rs.getString(1);
 						}
-						rs.close();
-						statement.close();
-	
-						entry.setObjectText( sb.toString() );
+
+						storeEntry.setObjectText( sqlText );
 					}
 					catch (SQLException e)
 					{
-						entry.setObjectText( e.toString() );
+						storeEntry.setObjectText( e.toString() );
+					}
+						
+						
+					//--------------------------------------------
+					// if VIEW: Possibly parse the SQL statement and extract Tables, send those tables to 'DDL Storage'...
+					// This so we can lookup size etc of those tables...
+					// LATER: net.sf.jsqlparser.util.TablesNamesFinder didn't yet support 'create view...'
+					// So we have to view with implementing this!
+					if ("V".equals(type) && StringUtil.hasValue(sqlText))
+					{
+						if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_view_parseAndSendTables, DEFAULT_view_parseAndSendTables))
+						{
+//							List<String> tableList = Collections.emptyList();
+//							try
+//							{
+//								tableList = SqlParserUtils.getTables(sqlText, true); 
+//							}
+//							catch (ParseException pex) 
+//							{ 
+//								_logger.warn("Problems Parsing VIEW '" + storeEntry.getObjectName() + "' to get table names. SqlText=|" + sqlText + "|. Skipping and continuing...", pex);
+//							}
+
+							// Get list of tables in the SQL Text and add them for a DDL Lookup/Store
+							Set<String> tableList = SqlParserUtils.getTables(sqlText);
+							
+							// Post to DDL Storage, for lookup
+							for (String tableName : tableList)
+							{
+								pch.addDdl(dbname, tableName, this.getClass().getSimpleName() + ".resolve.view");
+							}
+							
+							// Add table list to the saved entry
+							storeEntry.setExtraInfoText( "TableList: " + StringUtil.toCommaStr(tableList) ); 
+						}
 					}
 				}
 				else
 				{
 					// Unknown type
+					// DO NOT STORE --- returnList.add(entry);
+					continue;
 				}
 	
 				//--------------------------------------------
 				// GET sp_depends
-				sql = "exec "+entry.getDbname()+"..sp_depends '"+entry.getOwner()+"."+entry.getObjectName()+"' "; 
-	
-				ss = new AseSqlScript(conn, 10);
-				try	{ 
-					entry.setDependsText( ss.executeSqlStr(sql, true) ); 
-				} catch (SQLException e) { 
-					entry.setDependsText( e.toString() ); 
-				} finally {
-					ss.close();
-				}
-	
-				if (pch.getConfig_addDependantObjectsToDdlInQueue())
+				if (pch.getConfig_doSpDepends())
 				{
-					sql = "exec "+entry.getDbname()+"..sp_depends '"+entry.getOwner()+"."+entry.getObjectName()+"' "; 
-	
-					ArrayList<String> dependList = new ArrayList<String>();
-					try
+					String sql = "exec " + storeEntry.getDbname() + "..sp_depends '" + storeEntry.getOwner() + "." + storeEntry.getObjectName() + "' "; 
+					
+					try	(AseSqlScript ss = new AseSqlScript(conn, 10)) 
 					{
-						Statement statement = conn.createStatement();
-						ResultSet rs = statement.executeQuery(sql);
-						ResultSetMetaData rsmd = rs.getMetaData();
-	
-						// lets search for 'object' column, in no case, if it changes...
-						int objectname_pos = -1;
-						for (int c=1; c<=rsmd.getColumnCount(); c++)
+						ss.setRsAsAsciiTable(true);
+						storeEntry.setDependsText( ss.executeSqlStr(sql, true) ); 
+					} 
+					catch (SQLException e) 
+					{ 
+						storeEntry.setDependsText( e.toString() ); 
+					}
+		
+					if (pch.getConfig_addDependantObjectsToDdlInQueue())
+					{
+						sql = "exec " + storeEntry.getDbname() + "..sp_depends '" + storeEntry.getSchemaAndObjectName() + "' "; 
+		
+						ArrayList<String> dependList = new ArrayList<String>();
+						try
 						{
-							if (rsmd.getColumnLabel(c).toLowerCase().equals("name"))
+							Statement statement = conn.createStatement();
+							ResultSet rs = statement.executeQuery(sql);
+							ResultSetMetaData rsmd = rs.getMetaData();
+		
+							// lets search for 'object' column, in no case, if it changes...
+							int objectname_pos = -1;
+							for (int c=1; c<=rsmd.getColumnCount(); c++)
 							{
-								objectname_pos = c;
-								break;
-							}
-						}
-						if (objectname_pos > 0)
-						{
-							String objNamePrev = ""; // Used to check if next row is a "new" object
-							while(rs.next())
-							{
-								// Get the dependent object name
-								String depOnObjectName = rs.getString(objectname_pos);
-
-								// get next row if we are not interested in this one.
-								if (depOnObjectName == null)
-									continue;
-								if (depOnObjectName.equals(objNamePrev))
-									continue;
-
-								// Strip off the beginning of the string, which holds the owner
-								// example: "dbo.sp_addmessage"
-								int beginIndex = depOnObjectName.indexOf('.') + 1;
-								if (beginIndex < 0)
-									beginIndex = 0;
-								String shortObjName = depOnObjectName.substring(beginIndex);
-
-								dependList.add(shortObjName);
-
-								// Don't add SystemProcedure/systemTables dependencies
-								if ( ! shortObjName.startsWith("sp_") && ! shortObjName.startsWith("sys"))
+								if (rsmd.getColumnLabel(c).toLowerCase().equals("name"))
 								{
-									pch.addDdl(entry.getDbname(), shortObjName, source, objectName, dependLevel + 1);
+									objectname_pos = c;
+									break;
 								}
-								
-								// remember last record, so we can filter out if we see same record on next row
-								objNamePrev = depOnObjectName;
+							}
+							if (objectname_pos > 0)
+							{
+								String objNamePrev = ""; // Used to check if next row is a "new" object
+								while(rs.next())
+								{
+									// Get the dependent object name
+									String depOnObjectName = rs.getString(objectname_pos);
+
+									// get next row if we are not interested in this one.
+									if (depOnObjectName == null)
+										continue;
+									if (depOnObjectName.equals(objNamePrev))
+										continue;
+
+									// Strip off the beginning of the string, which holds the owner
+									// example: "dbo.sp_addmessage"
+									int beginIndex = depOnObjectName.indexOf('.') + 1;
+									if (beginIndex < 0)
+										beginIndex = 0;
+									String shortObjName = depOnObjectName.substring(beginIndex);
+
+									dependList.add(shortObjName);
+
+									// Don't add SystemProcedure/systemTables dependencies
+									if ( ! shortObjName.startsWith("sp_") && ! shortObjName.startsWith("sys"))
+									{
+										pch.addDdl(storeEntry.getDbname(), shortObjName, source, objectName, dependLevel + 1);
+									}
+									
+									// remember last record, so we can filter out if we see same record on next row
+									objNamePrev = depOnObjectName;
+								}
+							}
+							else
+							{
+								_logger.debug("When getting dependent objects using 'sp_depends', I was expecting a column named 'name'. But it wasn't found. The result set had " + rsmd.getColumnCount() + " columns. Skipping lookup for dependent object for '" + storeEntry.getFullObjectName() + "'.");
+							}
+							rs.close();
+							statement.close();
+						}
+						catch (SQLException e)
+						{
+							// If we didn't have any results for the table, then:
+							// java.sql.SQLException: JZ0R2: No result set for this query.
+							if ( ! "JZ0R2".equals(e.getSQLState()) )
+							{
+								_logger.warn("Problems getting 'sp_depends' for table '" + storeEntry.getFullObjectName() + "'. SqlState='" + e.getSQLState() + "', Caught: " + e);
 							}
 						}
-						else
-						{
-							_logger.debug("When getting dependent objects using 'sp_depends', I was expecting a column named 'name'. But it wasn't found. The result set had "+rsmd.getColumnCount()+" columns. Skipping lookup for dependent object for '"+entry.getFullObjectName()+"'.");
-						}
-						rs.close();
-						statement.close();
+						if (dependList.size() > 0)
+							storeEntry.setDependList(dependList);
 					}
-					catch (SQLException e)
-					{
-						// If we didn't have any results for the table, then:
-						// java.sql.SQLException: JZ0R2: No result set for this query.
-						if ( ! "JZ0R2".equals(e.getSQLState()) )
-						{
-							_logger.warn("Problems getting 'sp_depends' for table '"+entry.getFullObjectName()+"'. SqlState='"+e.getSQLState()+"', Caught: "+e);
-						}
-					}
-					if (dependList.size() > 0)
-						entry.setDependList(dependList);
 				}
 
-				return entry;
-	
 			} // end: for (DdlDetails entry : objectList)
 
-		} // end: isStatementCache == false
-		
-		return null;
+			// Return the list of objects to be STORED in DDL Storage
+			return returnList;
+			
+		} // end: other objects than Statement Cache
 	}
 
 
-	
-//	/**
-//	 * Get DDL information from the database and pass it on to the storage thread
-//	 * 
-//	 * @param qe
-//	 * @param prevLookupTimeMs
-//	 * @return true if it did a lookup, false the lookup was discarded
-//	 */
-//	private boolean doObjectInfoLookup(ObjectLookupQueueEntry qe, long prevLookupTimeMs)
-//	{
-//		DbxConnection conn = getLookupConnection();
-//		if (conn == null)
-//			return false;
-//
-//		_objectLookupInspector.doObjectInfoLookup(conn, qe, prevLookupTimeMs);
-//		
-////The below should be moved into an DbmsObjectInfoLookup class that is implemented differently for the various DBMS we should monitor
-//
-//
-//		String dbname       = qe._dbname;
-//		String objectName   = qe._objectName;
-//		String source       = qe._source;
-//		String dependParent = qe._dependParent;
-//		int    dependLevel  = qe._dependLevel;
-//
-//		// FIXME: dbname  can be a Integer
-//		// FIXME: objName can be a Integer
-//		// Do the lookup, then check _ddlCache if it has been stored.
-//
-//		// Statement Cache object
-//		boolean isStatementCache = false;
-//		String  ssqlid = null;
-//		if (objectName.startsWith("*ss") || objectName.startsWith("*sq") ) // *sq in ASE 15.7 esd#2, DynamicSQL can/will end up in statement cache
-//		{
-//			isStatementCache = true;
-//			dbname           = STATEMENT_CACHE_NAME;
-//			int sep = objectName.indexOf('_');
-//			ssqlid = objectName.substring(3, sep);
-//			//haskey = objectName.substring(sep+1, objectName.length()-3);
-//		}
-//
-//		// check AGAIN if DDL has NOT been saved in any writer class
-//		boolean doLookup = false;
-//		for (IPersistWriter pw : _writerClasses)
-//		{
-//			if ( ! pw.isDdlDetailsStored(dbname, objectName) )
-//			{
-//				doLookup = true;
-//				break;
-//			}
-//		}
-//		if ( ! doLookup )
-//		{
-//			_logger.debug("doObjectInfoLookup(): The DDL for dbname '"+dbname+"', objectName '"+objectName+"' has already been stored by all the writers.");
-//			return false;
-//		}
-//
-//		if (_logger.isDebugEnabled())
-//			_logger.debug("Getting DDL information about object '"+dbname+"."+objectName+"', InputQueueSize="+_ddlInputQueue.size()+", StoreQueueSize="+_ddlStoreQueue.size());
-//
-//		// Print INFO message if IN-QUEUE is above X and a certain time has pased
-//		if (_ddlInputQueue.size() > _ddlLookup_infoMessage_queueSize)
-//		{
-//			long howLongAgo = System.currentTimeMillis() - _ddlLookup_infoMessage_last;
-//			if (howLongAgo > _ddlLookup_infoMessage_period)
-//			{
-//				_logger.info("DDL Lookup: InputQueueSize="+_ddlInputQueue.size()+", StoreQueueSize="+_ddlStoreQueue.size()+". Now getting DDL information about object '"+dbname+"."+objectName+"',");
-//				_ddlLookup_infoMessage_last = System.currentTimeMillis();
-//			}
-//		}
-//
-//		// Statement Cache objects
-//		if (isStatementCache)
-//		{
-//			DdlDetails entry = new DdlDetails(dbname, objectName);
-//			entry.setCrdate( new Timestamp(System.currentTimeMillis()) );
-//			entry.setSource( source );
-//			entry.setDependLevel( dependLevel );
-//			entry.setOwner("ssql");
-//			entry.setType("SS");
-//			entry.setSampleTime( new Timestamp(System.currentTimeMillis()) );
-//			String sql = 
-//				"set switch on 3604 with no_info \n" +
-//				"dbcc prsqlcache("+ssqlid+", 1) "; // 1 = also prints showplan"
-//			
-//			AseSqlScript ss = new AseSqlScript(conn, 10);
-//			try	{ 
-//				entry.setObjectText( ss.executeSqlStr(sql, true) ); 
-//			} catch (SQLException e) { 
-//				entry.setObjectText( e.toString() ); 
-//			} finally {
-//				ss.close();
-//			}
-//			
-////			if (_dbmsVersion >= 15700)
-////			if (_dbmsVersion >= 1570000)
-//			if (_dbmsVersion >= Ver.ver(15,7))
-//			{
-//				//-----------------------------------------------------------
-//				// From Documentation on: show_cached_plan_in_xml(statement_id, plan_id, level_of_detail)
-//				//-----------------------------------------------------------
-//				// statement_id
-//				//			     is the object ID of the lightweight procedure (A procedure that can be created and invoked 
-//				//			     internally by Adaptive Server). This is the SSQLID from monCachedStatement.
-//				// 
-//				// plan_id
-//				//			     is the unique identifier for the plan. This is the PlanID from monCachedProcedures. 
-//				//			     A value of zero for plan_id displays the showplan output for all cached plans for the indicated SSQLID.
-//				// 
-//				// level_of_detail
-//				//			     is a value from 0 - 6 indicating the amount of detail show_cached_plan_in_xml returns (see Table 2-6). 
-//				//			     level_of_detail determines which sections of showplan are returned by show_cached_plan_in_xml. 
-//				//			     The default value is 0.
-//				// 
-//				//			     The output of show_cached_plan_in_xml includes the plan_id and these sections:
-//				// 
-//				//			         parameter - contains the parameter values used to compile the query and the parameter values 
-//				//			                     that caused the slowest performance. The compile parameters are indicated with the 
-//				//			                     <compileParameters> and </compileParameters> tags. The slowest parameter values are 
-//				//			                     indicated with the <execParameters> and </execParameters> tags. 
-//				//			                     For each parameter, show_cached_plan_in_xml displays the:
-//				//			                        Number
-//				//			                        Datatype
-//				//			                        Value:    values that are larger than 500 bytes and values for insert-value statements 
-//				//			                                  do not appear. The total memory used to store the values for all parameters 
-//				//			                                  is 2KB for each of the two parameter sets.
-//				// 
-//				//			         opTree    - contains the query plan and the optimizer estimates. 
-//				//			                     The opTree section is delineated by the <opTree> and </opTree> tags.
-//				// 
-//				//			         execTree  - contains the query plan with the lava operator details. 
-//				//			                     The execTree section is identified by the tags <execTree> and </execTree>.
-//				//
-//				// level_of_detail parameter opTree execTree
-//				// --------------- --------- ------ --------
-//				// 0 (the default)       YES    YES         
-//				// 1                     YES                
-//				// 2                            YES         
-//				// 3                                     YES
-//				// 4                            YES      YES
-//				// 5                     YES             YES
-//				// 6                     YES    YES      YES
-//				//-----------------------------------------------------------
-//
-//				sql = "select show_cached_plan_in_xml("+ssqlid+", 0, 0)";
-//
-////				ss = new AseSqlScript(conn, 10);
-////				try	{
-////					entry.setExtraInfoText( ss.executeSqlStr(sql, true) );
-////				} catch (SQLException e) {
-////					entry.setExtraInfoText( e.toString() );
-////				} finally {
-////					ss.close();
-////				}
-//				try
-//				{
-//					Statement stmnt = conn.createStatement();
-//					stmnt.setQueryTimeout(10);
-//					
-//					ResultSet rs = stmnt.executeQuery(sql);
-//
-//					StringBuilder sb = new StringBuilder();
-//					sb.append(sql).append("\n");
-//					sb.append("------------------------------------------------------------------\n");
-//					while (rs.next())
-//					{
-//						sb.append(rs.getString(1));
-//					}
-//					rs.close();
-//					stmnt.close();
-//
-//					entry.setExtraInfoText( sb.toString().trim() );
-//				}
-//				catch(SQLException e)
-//				{
-//					String msg = "Problems getting text from Statement Cache about '"+objectName+"'. Msg="+e.getErrorCode()+", Text='" + e.getMessage() + "'. Caught: "+e;
-//					_logger.warn(msg); 
-//					entry.setExtraInfoText( msg );
-//				}
-//			}
-//			_ddlStoreQueue.add(entry);
-//			fireQueueSizeChange();
-//		}
-//		else // all other tables
-//		{
-//			// Keep a list of objects we need to work with
-//			// because: if we get more than one proc/table with different owners
-//			ArrayList<DdlDetails> objectList = new ArrayList<DdlDetails>();
-//			
-//			// GET type and creation time
-//			String sql = 
-//				"select o.type, u.name, o.crdate \n" +
-//				"from ["+dbname+"]..sysobjects o, ["+dbname+"]..sysusers u \n" +
-//				"where o.name = '"+objectName+"' \n" +
-//				"  and o.uid = u.uid ";
-//			try
-//			{
-//				Statement statement = conn.createStatement();
-//				ResultSet rs = statement.executeQuery(sql);
-//				while(rs.next())
-//				{
-//					DdlDetails entry = new DdlDetails();
-//					
-//					entry.setDbname      ( dbname );
-//					entry.setObjectName  ( objectName );
-//					entry.setSource      ( source );
-//					entry.setDependParent( dependParent );
-//					entry.setDependLevel ( dependLevel );
-//					entry.setSampleTime  ( new Timestamp(System.currentTimeMillis()) );
-//
-//					entry.setType       ( rs.getString   (1) );
-//					entry.setOwner      ( rs.getString   (2) );
-//					entry.setCrdate     ( rs.getTimestamp(3) );
-//					
-//					objectList.add(entry);
-//				}
-//			}
-//			catch (SQLException e)
-//			{
-//				_logger.error("Problems Getting basic information about DDL for dbname='"+dbname+"', objectName='"+objectName+"', source='"+source+"', dependLevel="+dependLevel+". Skipping DDL Storage of this object. Caught: "+e);
-//				return false;
-//			}
-//	
-//			// The object was NOT found
-//			if (objectList.size() == 0)
-//			{
-//				_logger.info("DDL Lookup. Can't find any information for dbname='"+dbname+"', objectName='"+objectName+"', source='"+source+"', dependLevel="+dependLevel+". Skipping DDL Storage of this object.");
-//				return false;
-//			}
-//	
-//	
-//			for (DdlDetails entry : objectList)
-//			{
-//				String type = entry.getType();
-//				// Type definition from ASE 15.7, manual
-//				//   C  - computed column
-//				//   D  - default
-//				//   DD - decrypt default
-//				//   F  - SQLJ function
-//				//   N  - partition condition
-//				//   P  - Transact-SQL or SQLJ procedure
-//				//   PP - the predicate of a privilege
-//				//   PR - prepare objects (created by Dynamic SQL)
-//				//   R  - rule
-//				//   RI - referential constraint
-//				//   S  - system table
-//				//   TR - trigger
-//				//   U  - user table
-//				//   V  - view
-//				//   XP - extended stored procedure.
-//				AseSqlScript ss;
-//	
-//				if ( "U".equals(type) || "S".equals(type) )
-//				{
-//					//--------------------------------------------
-//					// Just do sp_help, or use ddlgen.jar to get info
-//					sql = "exec "+entry.getDbname()+"..sp_help '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
-//	
-//					ss = new AseSqlScript(conn, 10);
-//					try	{ 
-//						entry.setObjectText( ss.executeSqlStr(sql, true) ); 
-//					} catch (SQLException e) { 
-//						entry.setObjectText( e.toString() ); 
-//					} finally {
-//						ss.close();
-//					}
-//	
-//					//--------------------------------------------
-//					// GET sp__optdiag
-////					if (_dbmsVersion >= 15700)
-////					if (_dbmsVersion >= 1570000)
-//					if (_dbmsVersion >= Ver.ver(15,7))
-//					{
-//						sql = "exec "+entry.getDbname()+"..sp_showoptstats '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
-//
-//						try
-//						{
-//							Statement stmnt = conn.createStatement();
-//							stmnt.setQueryTimeout(10);
-//							
-//							ResultSet rs = stmnt.executeQuery(sql);
-//
-//							StringBuilder sb = new StringBuilder();
-//							sb.append(sql).append("\n");
-//							sb.append("------------------------------------------------------------------\n");
-//							while (rs.next())
-//							{
-//								sb.append(rs.getString(1));
-//							}
-//							rs.close();
-//							stmnt.close();
-//
-//							entry.setOptdiagText( sb.toString().trim() );
-//						}
-//						catch(SQLException e)
-//						{
-//							String msg = "Problems getting sp_showoptstats, using sql '"+sql+"'. Msg="+e.getErrorCode()+", Text='" + e.getMessage() + "'. Caught: "+e;
-//							//_logger.warn(msg); 
-//							entry.setOptdiagText( msg );
-//						}
-//					}
-//					else
-//					{
-//						// do SP_OPTDIAG, but only on UNPARTITIONED tables
-//						sql="declare @partitions int \n" +
-//							"select @partitions = count(*) \n" +
-//							"from "+entry.getDbname()+"..sysobjects o, "+entry.getDbname()+"..sysusers u, "+entry.getDbname()+"..syspartitions p \n" +
-//							"where o.name = '"+entry.getObjectName()+"' \n" +
-//							"  and u.name = '"+entry.getOwner()+"' \n" +
-//							"  and o.id  = p.id \n" +
-//							"  and o.uid = o.uid \n" +
-//							"  and p.indid = 0 \n" +
-//							"                  \n" +
-//							"if (@partitions > 1) \n" +
-//							"    print 'Table is partitioned, and this is not working so well with sp__optdiag, sorry.' \n" +
-//							"else \n" +
-//							"    exec "+entry.getDbname()+"..sp__optdiag '"+entry.getOwner()+"."+entry.getObjectName()+"' \n" +
-//							"";
-//
-//						ss = new AseSqlScript(conn, 10);
-//						try	{ 
-//							entry.setOptdiagText( ss.executeSqlStr(sql, true) ); 
-//						} catch (SQLException e) { 
-//							entry.setOptdiagText( e.toString() ); 
-//						} finally {
-//							ss.close();
-//						}
-//				}
-//		
-//					//--------------------------------------------
-//					// GET SOME OTHER STATISTICS
-//					sql = "exec "+entry.getDbname()+"..sp_spaceused '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
-//	
-//					ss = new AseSqlScript(conn, 10);
-//					try	{ 
-//						entry.setExtraInfoText( ss.executeSqlStr(sql, true) ); 
-//					} catch (SQLException e) { 
-//						entry.setExtraInfoText( e.toString() ); 
-//					} finally {
-//						ss.close();
-//					}
-//					// TODO: more info to save
-//					// - datachange(table_name, partition_name, column_name)
-//					// - can we get some other statistics from sysstatistics
-//					//   like when was statistics updated for this table
-//					// - function: derived_stats(objnamme|id, indexname|indexid, [ptn_name|ptn_id], 'stats')
-//					//             stats = dpcr | data page cluster ratio
-//					//                     ipcr | index page cluster ratio
-//					//                     drcr | data row cluster ratio
-//					//                     lgio | large io efficiency
-//					//                     sput | space utilization
-//					//             to get Cluster Ratio etc...
-//					// - try to calculate "if tab has a lot of unused space / fragmented"
-//				}
-//				if (   "P" .equals(type) 
-//				    || "TR".equals(type) 
-//				    || "V" .equals(type) 
-//				    || "D" .equals(type) 
-//				    || "R" .equals(type) 
-//				    || "XP".equals(type))
-//				{
-//					//--------------------------------------------
-//					// GET OBJECT TEXT
-//					sql = " select c.text "
-//						+ " from "+entry.getDbname()+"..sysobjects o, "+entry.getDbname()+"..syscomments c, "+entry.getDbname()+"..sysusers u \n"
-//						+ " where o.name = '"+entry.getObjectName()+"' \n"
-//						+ "   and u.name = '"+entry.getOwner()+"' \n" 
-//						+ "   and o.id   = c.id \n"
-//						+ "   and o.uid  = u.uid \n"
-//						+ " order by c.number, c.colid2, c.colid ";
-//	
-//					try
-//					{
-//						StringBuilder sb = new StringBuilder();
-//	
-//						Statement statement = conn.createStatement();
-//						ResultSet rs = statement.executeQuery(sql);
-//						while(rs.next())
-//						{
-//							String textPart = rs.getString(1);
-//							sb.append(textPart);
-//						}
-//						rs.close();
-//						statement.close();
-//	
-//						entry.setObjectText( sb.toString() );
-//					}
-//					catch (SQLException e)
-//					{
-//						entry.setObjectText( e.toString() );
-//					}
-//				}
-//				else
-//				{
-//					// Unknown type
-//				}
-//	
-//				//--------------------------------------------
-//				// GET sp_depends
-//				sql = "exec "+entry.getDbname()+"..sp_depends '"+entry.getOwner()+"."+entry.getObjectName()+"' "; 
-//	
-//				ss = new AseSqlScript(conn, 10);
-//				try	{ 
-//					entry.setDependsText( ss.executeSqlStr(sql, true) ); 
-//				} catch (SQLException e) { 
-//					entry.setDependsText( e.toString() ); 
-//				} finally {
-//					ss.close();
-//				}
-//	
-//				if (_addDependantObjectsToDdlInQueue)
-//				{
-//					sql = "exec "+entry.getDbname()+"..sp_depends '"+entry.getOwner()+"."+entry.getObjectName()+"' "; 
-//	
-//					ArrayList<String> dependList = new ArrayList<String>();
-//					try
-//					{
-//						Statement statement = conn.createStatement();
-//						ResultSet rs = statement.executeQuery(sql);
-//						ResultSetMetaData rsmd = rs.getMetaData();
-//	
-//						// lets search for 'object' column, in no case, if it changes...
-//						int object_pos = -1;
-//						for (int c=1; c<=rsmd.getColumnCount(); c++)
-//						{
-//							if (rsmd.getColumnLabel(c).toLowerCase().equals("object"))
-//							{
-//								object_pos = c;
-//								break;
-//							}
-//						}
-//						if (object_pos > 0)
-//						{
-//							while(rs.next())
-//							{
-//								// Get the dependent object name
-//								String depOnObjectName = rs.getString(object_pos);
-//	
-//								// Strip off the beginning of the string, which holds the owner
-//								// example: "dbo.sp_addmessage"
-//								int beginIndex = depOnObjectName.indexOf('.') + 1;
-//								if (beginIndex < 0)
-//									beginIndex = 0;
-//								String shortObjName = depOnObjectName.substring(beginIndex);
-//
-//								dependList.add(shortObjName);
-//
-//								// Don't add SystemProcedure/systemTables dependencies
-//								if ( ! shortObjName.startsWith("sp_") && ! shortObjName.startsWith("sys"))
-//								{
-//									addDdl(entry.getDbname(), shortObjName, source, objectName, dependLevel + 1);
-//								}
-//							}
-//						}
-//						else
-//						{
-//							_logger.debug("When getting dependent objects using 'sp_depends', I was expecting a column named 'object'. But it wasn't found. The result set had "+rsmd.getColumnCount()+" columns. Skipping lookup for dependent object for '"+entry.getFullObjectName()+"'.");
-//						}
-//						rs.close();
-//						statement.close();
-//					}
-//					catch (SQLException e)
-//					{
-//						// If we didn't have any results for the table, then:
-//						// java.sql.SQLException: JZ0R2: No result set for this query.
-//						if ( ! "JZ0R2".equals(e.getSQLState()) )
-//						{
-//							_logger.warn("Problems getting 'sp_depends' for table '"+entry.getFullObjectName()+"'. SqlState='"+e.getSQLState()+"', Caught: "+e);
-//						}
-//					}
-//					if (dependList.size() > 0)
-//						entry.setDependList(dependList);
-//				}
-//	
-//				int qsize = _ddlStoreQueue.size();
-//				if (qsize > _warnDdlStoreQueueSizeThresh)
-//				{
-//					_logger.warn("The DDL Storage queue has "+qsize+" entries. The persistent writer might not keep in pace.");
-//				}
-//				_ddlStoreQueue.add(entry);
-//				fireQueueSizeChange();
-//	
-//			} // end: for (DdlDetails entry : objectList)
-//
-//		} // end: isStatementCache == false
-//		
-//		return true;
-//	}
-	
+	private List<DdlDetails> getDbmsObjectList(DbxConnection conn, String dbname, String objectName, String source, String dependParent, int dependLevel)
+	{
+		String originObjectName = objectName;
+
+		// Keep a list of objects we need to work with
+		// because: if we get more than one proc/table with different owners
+		ArrayList<DdlDetails> objectList = new ArrayList<DdlDetails>();
+		
+		// Remove any "dbname" or "schemaName" from the objectName if it has any
+		// The lookup below will add entries for ALL tables with the name (if there are several tables with same name, the lookup will add ALL tables)
+		SqlObjectName sqlObjectName = new SqlObjectName(conn, objectName);
+		objectName = sqlObjectName.getObjectName();
+		
+		// GET type and creation time
+		String sql = ""
+			    + "SELECT o.object_id, \n"  // Object id
+			    + "       o.type, \n"       // UserTable, view etc...
+			    + "       s.name, \n"       // Schema name
+			    + "       o.name, \n"       // Object name
+			    + "       o.create_date \n" // Creation date
+			    + "FROM [" + dbname + "].sys.objects o \n"
+			    + "INNER JOIN [" + dbname + "].sys.schemas s ON o.schema_id = s.schema_id \n"
+			    + "WHERE o.name = '" + objectName + "' \n"  // Trust that the DBMS will handle Case Sensitivity
+			    + "  AND o.is_ms_shipped = 0 \n"
+			    + "";
+
+		try ( Statement statement = conn.createStatement(); ResultSet rs = statement.executeQuery(sql) )
+		{
+			while(rs.next())
+			{
+				DdlDetails entry = new DdlDetails();
+				
+				entry.setDbname          ( dbname );
+				entry.setSearchDbname    ( dbname );
+				entry.setObjectName      ( objectName );
+				entry.setSearchObjectName( originObjectName ); // NOT Stored in DDL Store, used for: isDdlDetailsStored(), markDdlDetailsAsStored()
+				entry.setSource          ( source );
+				entry.setDependParent    ( dependParent );
+				entry.setDependLevel     ( dependLevel );
+				entry.setSampleTime      ( new Timestamp(System.currentTimeMillis()) );
+
+				entry.setObjectId        ( rs.getInt      (1) );
+				entry.setType            ( rs.getString   (2) );
+				entry.setSchemaName      ( rs.getString   (3) ); // setOwner() and setSchemaName() is the same
+				entry.setObjectName      ( rs.getString   (4) ); // Use the object name stored in the DBMS (for MS SQL-Server ASE it will always be stored as it was originally created)
+				entry.setCrdate          ( rs.getTimestamp(5) );
+				
+				objectList.add(entry);
+			}
+
+			return objectList;
+		}
+		catch (SQLException e)
+		{
+			_logger.error("Problems Getting basic information about DDL for dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Skipping DDL Storage of this object. Caught: " + e);
+			return Collections.emptyList();
+			//return null;
+		}
+	}
 }

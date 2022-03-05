@@ -365,6 +365,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/javax.servlet-api-3.1.0.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/cron4j-2.2.5.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/cron-utils-7.0.6.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/schemacrawler-16.2.4.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/sql-formatter-2.0.3.jar
 
 #export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/tomcat/*
 

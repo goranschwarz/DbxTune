@@ -57,9 +57,13 @@ import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
+import com.asetune.utils.CronUtils;
 import com.asetune.utils.H2UrlHelper;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
+
+import it.sauronsoftware.cron4j.InvalidPatternException;
+import it.sauronsoftware.cron4j.SchedulingPattern;
 
 /**
  * Small dummy implementation to keep track of H2 counter statistics
@@ -192,6 +196,8 @@ public class H2WriterStat
 	public H2WriterStat(ConnectionProvider connProvider)
 	{
 		_connProvider = connProvider;
+		
+		printAlarmConfig();
 	}
 
 	/**
@@ -553,7 +559,7 @@ public class H2WriterStat
 
 		// 1 minute
 		threshold = loadAverage_1m_threshold;
-		if (_osLoadAverage1min > threshold)
+		if (_osLoadAverage1min > threshold && isSystemAlarmsForColumnEnabledAndInTimeRange("osLoadAverage1min"))
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_1_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
 			ae.setTimeToLive(timeToLive);
@@ -562,7 +568,7 @@ public class H2WriterStat
 
 		// 5 minute
 		threshold = loadAverage_5m_threshold;
-		if (_osLoadAverage5min > threshold)
+		if (_osLoadAverage5min > threshold && isSystemAlarmsForColumnEnabledAndInTimeRange("osLoadAverage5min"))
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_5_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
 			ae.setTimeToLive(timeToLive);
@@ -571,7 +577,7 @@ public class H2WriterStat
 
 		// 15 minute
 		threshold = loadAverage_15m_threshold;
-		if (_osLoadAverage15min > threshold)
+		if (_osLoadAverage15min > threshold && isSystemAlarmsForColumnEnabledAndInTimeRange("osLoadAverage15min"))
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_15_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
 			ae.setTimeToLive(timeToLive);
@@ -580,7 +586,7 @@ public class H2WriterStat
 
 		// 30 minute
 		threshold = loadAverage_30m_threshold;
-		if (_osLoadAverage30min > threshold)
+		if (_osLoadAverage30min > threshold && isSystemAlarmsForColumnEnabledAndInTimeRange("osLoadAverage30min"))
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_30_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
 			ae.setTimeToLive(timeToLive);
@@ -589,7 +595,7 @@ public class H2WriterStat
 
 		// 60 minute
 		threshold = loadAverage_60m_threshold;
-		if (_osLoadAverage60min > threshold)
+		if (_osLoadAverage60min > threshold && isSystemAlarmsForColumnEnabledAndInTimeRange("osLoadAverage60min"))
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_60_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
 			ae.setTimeToLive(timeToLive);
@@ -604,7 +610,7 @@ public class H2WriterStat
 		
 		// 1 minute
 		threshold = loadAverageAdjusted_1m_threshold;
-		if (_osLoadAverageAdjusted1min > threshold)
+		if (_osLoadAverageAdjusted1min > threshold && isSystemAlarmsForColumnEnabledAndInTimeRange("osLoadAverageAdjusted1min"))
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverageAdjusted(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverageAdjusted.RangeType.RANGE_1_MINUTE, _osLoadAverageAdjusted1min, _osLoadAverageAdjusted5min, _osLoadAverageAdjusted15min, _osLoadAverageAdjusted30min, _osLoadAverageAdjusted60min);
 			ae.setTimeToLive(timeToLive);
@@ -613,7 +619,7 @@ public class H2WriterStat
 
 		// 5 minute
 		threshold = loadAverageAdjusted_5m_threshold;
-		if (_osLoadAverageAdjusted5min > threshold)
+		if (_osLoadAverageAdjusted5min > threshold && isSystemAlarmsForColumnEnabledAndInTimeRange("osLoadAverageAdjusted5min"))
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverageAdjusted(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverageAdjusted.RangeType.RANGE_5_MINUTE, _osLoadAverageAdjusted1min, _osLoadAverageAdjusted5min, _osLoadAverageAdjusted15min, _osLoadAverageAdjusted30min, _osLoadAverageAdjusted60min);
 			ae.setTimeToLive(timeToLive);
@@ -622,7 +628,7 @@ public class H2WriterStat
 
 		// 15 minute
 		threshold = loadAverageAdjusted_15m_threshold;
-		if (_osLoadAverageAdjusted15min > threshold)
+		if (_osLoadAverageAdjusted15min > threshold && isSystemAlarmsForColumnEnabledAndInTimeRange("osLoadAverageAdjusted15min"))
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverageAdjusted(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverageAdjusted.RangeType.RANGE_15_MINUTE, _osLoadAverageAdjusted1min, _osLoadAverageAdjusted5min, _osLoadAverageAdjusted15min, _osLoadAverageAdjusted30min, _osLoadAverageAdjusted60min);
 			ae.setTimeToLive(timeToLive);
@@ -631,7 +637,7 @@ public class H2WriterStat
 
 		// 30 minute
 		threshold = loadAverageAdjusted_30m_threshold;
-		if (_osLoadAverageAdjusted30min > threshold)
+		if (_osLoadAverageAdjusted30min > threshold && isSystemAlarmsForColumnEnabledAndInTimeRange("osLoadAverageAdjusted30min"))
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverageAdjusted(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverageAdjusted.RangeType.RANGE_30_MINUTE, _osLoadAverageAdjusted1min, _osLoadAverageAdjusted5min, _osLoadAverageAdjusted15min, _osLoadAverageAdjusted30min, _osLoadAverageAdjusted60min);
 			ae.setTimeToLive(timeToLive);
@@ -640,7 +646,7 @@ public class H2WriterStat
 
 		// 60 minute
 		threshold = loadAverageAdjusted_60m_threshold;
-		if (_osLoadAverageAdjusted60min > threshold)
+		if (_osLoadAverageAdjusted60min > threshold && isSystemAlarmsForColumnEnabledAndInTimeRange("osLoadAverageAdjusted60min"))
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverageAdjusted(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverageAdjusted.RangeType.RANGE_60_MINUTE, _osLoadAverageAdjusted1min, _osLoadAverageAdjusted5min, _osLoadAverageAdjusted15min, _osLoadAverageAdjusted30min, _osLoadAverageAdjusted60min);
 			ae.setTimeToLive(timeToLive);
@@ -648,6 +654,92 @@ public class H2WriterStat
 		}
 	}
 
+
+	public static final String  PROPKEY_ALARM_isSystemAlarmsForColumnEnabled = "H2Writer.alarm.system.enabled.<COLNAME>";
+	public static final boolean DEFAULT_ALARM_isSystemAlarmsForColumnEnabled = true;
+
+	public static final String  PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange = "H2Writer.alarm.system.enabled.<COLNAME>.timeRange.cron";
+//	public static final String  DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange = "* * * * *";
+	public static final String  DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange = "!* 00-02 * * *";   // always allowed (except between 00:00 - 02:00, or first 2 hours on the day where a lot of Daily Summary Reports will be created)
+
+	/** Is Alarms enabled or disabled */
+	private boolean isSystemAlarmsForColumnEnabledAndInTimeRange(String colname)
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+		// Is it configured at all for this "name"
+		String propNameIsEnabled = PROPKEY_ALARM_isSystemAlarmsForColumnEnabled.replace("<COLNAME>", colname);
+		boolean enabled = conf.getBooleanProperty(propNameIsEnabled, DEFAULT_ALARM_isSystemAlarmsForColumnEnabled);
+		if ( ! enabled )
+			return enabled;
+
+		// Is it "within time" for this "name"
+		String propName = PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange.replace("<COLNAME>", colname);
+		String cronStr = conf.getProperty(propName, DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange);
+
+		// Uncomment if the default is "* * * * *" or *ALWAYS* allowed, otherwise we need to evaluate the crontab entry
+		//if (DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange.equals(cronStr))
+		//	return enabled;
+
+		// is this a negation/not within time period...
+		boolean negation = false;
+		if (cronStr.startsWith("!"))
+		{
+			negation = true;
+			cronStr  = cronStr.substring(1);
+		}
+
+		try
+		{
+			SchedulingPattern sp = new SchedulingPattern(cronStr);
+			enabled = sp.match(System.currentTimeMillis());
+
+			// if cron started with a '!' then invert the boolean
+			if (negation)
+				enabled = ! enabled;
+		}
+		catch(InvalidPatternException ex)
+		{
+			_logger.error("The specified 'cron' value '" + cronStr + "' for property '" + propName + "' is not a valid cron-pattern. This will be disregarded. Caught: " + ex);
+		}
+
+		return enabled;
+	}
+
+	private void printAlarmConfig()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+		_logger.info("System Defined Alarms properties are listed below for 'H2WriterStat'.");
+		String  prefix = "       ";
+
+		String[] names = {"osLoadAverage1min"        , "osLoadAverage5min"        , "osLoadAverage15min"        , "osLoadAverage30min"        , "osLoadAverage60min", 
+		                  "osLoadAverageAdjusted1min", "osLoadAverageAdjusted5min", "osLoadAverageAdjusted15min", "osLoadAverageAdjusted30min", "osLoadAverageAdjusted60min"};
+
+		for (String colname : names)
+		{
+			String propName = PROPKEY_ALARM_isSystemAlarmsForColumnEnabled.replace("<COLNAME>", colname);
+			String propVal = conf.getProperty(propName, DEFAULT_ALARM_isSystemAlarmsForColumnEnabled+"");
+
+			// At what times can the alarms be triggered
+			String cronProp = PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange.replace("<COLNAME>", colname);
+			String cronPat = conf.getProperty(propName, DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange);
+
+			// Check that the 'cron' scheduling pattern is valid...
+			String cronPatStr = cronPat;
+			if (cronPatStr.startsWith("!"))
+			{
+				cronPatStr = cronPatStr.substring(1);
+			}
+			if ( ! SchedulingPattern.validate(cronPatStr) )
+				_logger.error("The cron scheduling pattern '"+cronPatStr+"' is NOT VALID. for the property '" + cronProp + "', this will not be used at runtime, furter warnings will also be issued.");
+
+			String cronPatDesc = CronUtils.getCronExpressionDescriptionForAlarms(cronPat);
+
+			_logger.info(prefix + propName + " = " + propVal);
+			_logger.info(prefix + cronProp + " = " + cronPat + "   #-- desc: " + cronPatDesc);
+		}
+	}
 
 	public String getH2FileName()
 	{

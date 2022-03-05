@@ -3321,7 +3321,7 @@ public class PersistWriterJdbc
 					sbSql.append(" values(");
 					sbSql.append("  ").append(safeStr( ae.getAlarmClassAbriviated()                                         ,80  )); // "alarmClass"              varchar(80)   null false   - 1
 					sbSql.append(", ").append(safeStr( ae.getServiceType()                                                  ,80  )); // "serviceType"             varchar(80)   null false   - 2
-					sbSql.append(", ").append(safeStr( ae.getServiceName()                                                  ,30  )); // "serviceName"             varchar(30)   null false   - 3
+					sbSql.append(", ").append(safeStr( ae.getServiceName()                                                  ,80  )); // "serviceName"             varchar(30)   null false   - 3
 					sbSql.append(", ").append(safeStr( ae.getServiceInfo()                                                  ,80  )); // "serviceInfo"             varchar(80)   null false   - 4
 					sbSql.append(", ").append(safeStr( ae.getExtraInfo()                                                    ,80  )); // "extraInfo"               varchar(80)   null true    - 5
 					sbSql.append(", ").append(safeStr( ae.getCategory()                                                     ,20  )); // "category"                varchar(20)   null false   - 6
@@ -3412,7 +3412,7 @@ public class PersistWriterJdbc
 //				pst.setBoolean  (i++, ae.isActive()                                                        ); // isActive                - bit         , Nullable = false
 				pst.setString   (i++, ae.getAlarmClassAbriviated()                                         ); // alarmClass              - varchar(80) , Nullable = false
 				pst.setString   (i++, ae.getServiceType()                                                  ); // serviceType             - varchar(80) , Nullable = false
-				pst.setString   (i++, ae.getServiceName()                                                  ); // serviceName             - varchar(30) , Nullable = false
+				pst.setString   (i++, ae.getServiceName()                                                  ); // serviceName             - varchar(80) , Nullable = false
 				pst.setString   (i++, ae.getServiceInfo()                                                  ); // serviceInfo             - varchar(80) , Nullable = false
 				pst.setString   (i++, ae.getExtraInfo() == null ? null : ae.getExtraInfo().toString()      ); // extraInfo               - varchar(80) , Nullable = true 
 				pst.setString   (i++, ae.getCategory()+""                                                  ); // category                - varchar(20) , Nullable = false
@@ -4334,20 +4334,36 @@ public class PersistWriterJdbc
 	//---------------------------------------------
 	/** what entries has already been stored in the back-end, this so we can sort out fast if wee need to store or not */
 	// TODO: maybe as HashMap<String(dbname), HasSet<String(objectName)>>, which would be faster.
-	private Set<String> _ddlDetailsCache = Collections.synchronizedSet(new HashSet<String>());
+	private Set<String> _ddlDetailsCache        = Collections.synchronizedSet(new HashSet<String>());
+	private Set<String> _ddlDetailsDiscardCache = Collections.synchronizedSet(new HashSet<String>());
+
+	/** internal to create the "key" to check if object has previously been stored */
+	private String key(String dbname, String objectName)
+	{
+		if (dbname     == null) dbname     = "";
+		if (objectName == null) objectName = "";
+
+		// Make it case IN-SENSITIVE
+		return dbname.toLowerCase() + ":" + objectName.toLowerCase();
+
+		// Or if we want to have it case sensitive... which in that case should be *checked* if the DBMS is case Sensitive or case InSensitive
+		//return dbname + ":" + objectName;
+	}
 
 	/** check if this DDL is stored in the DDL storage, implementer should hold all stored DDL's in a cache */
 	@Override
 	public boolean isDdlDetailsStored(String dbname, String objectName)
 	{
-		String key = dbname + ":" + objectName;
+//		String key = dbname + ":" + objectName;
+		String key = key(dbname, objectName);
 		return _ddlDetailsCache.contains(key);
 	}
 
 	@Override
 	public void markDdlDetailsAsStored(String dbname, String objectName)
 	{
-		String key = dbname + ":" + objectName;
+//		String key = dbname + ":" + objectName;
+		String key = key(dbname, objectName);
 		_ddlDetailsCache.add(key);
 		
 //		System.out.println("markDdlDetailsAsStored(): "+dbname+"."+objectName+"    TOTAL MARKED SIZE IS NOW: "+_ddlDetailsCache.size());
@@ -4367,9 +4383,26 @@ public class PersistWriterJdbc
 	}
 
 	@Override
+	public boolean isDdlDetailsDiscarded(String dbname, String objectName)
+	{
+//		String key = dbname + ":" + objectName;
+		String key = key(dbname, objectName);
+		return _ddlDetailsDiscardCache.contains(key);
+	}
+
+	@Override
+	public void markDdlDetailsAsDiscarded(String dbname, String objectName)
+	{
+//		String key = dbname + ":" + objectName;
+		String key = key(dbname, objectName);
+		_ddlDetailsDiscardCache.add(key);
+	}
+
+	@Override
 	public void clearDdlDetailesCache()
 	{
-		_ddlDetailsCache.clear();
+		_ddlDetailsCache       .clear();
+		_ddlDetailsDiscardCache.clear();
 	}
 
 	@Override
@@ -4385,7 +4418,7 @@ public class PersistWriterJdbc
 		String tabName = getTableName(conn, DDL_STORAGE, null, false);
 
 		String sql = 
-			" select [dbname], [objectName] " +
+			" select [dbname], [owner], [objectName] " +
 			" from " + tabName;
 
 		// replace all '[' and ']' into DBMS Vendor Specific Chars
@@ -4409,9 +4442,12 @@ public class PersistWriterJdbc
 				{
 					rows++;
 					String dbname     = rs.getString(1);
-					String objectName = rs.getString(2);
+					String owner      = rs.getString(2);
+					String objectName = rs.getString(3);
 
+					// Mark both the: object and the schema.object combination as "stored"
 					markDdlDetailsAsStored(dbname, objectName);
+					markDdlDetailsAsStored(dbname, owner + "." + objectName);
 				}
 				rs.close();
 				stmt.close();
@@ -4558,6 +4594,8 @@ public class PersistWriterJdbc
 
 			int col = 1;
 
+			// NOTE: ddlDetails.getSearchDbname() & ddlDetails.getSearchObjectName() is/should NOT be stored
+			
 			pstmt.setString(col++, ddlDetails.getDbname());
 			pstmt.setString(col++, ddlDetails.getOwner());
 			pstmt.setString(col++, ddlDetails.getObjectName());
@@ -4580,8 +4618,10 @@ public class PersistWriterJdbc
 			getStatistics().incDdlSaveCount();
 
 			// ADD IT TO HE CACHE AS SAVED, no need to save again.
-			markDdlDetailsAsStored(ddlDetails.getSearchDbname(), ddlDetails.getObjectName());
-			markDdlDetailsAsStored(ddlDetails.getDbname(),       ddlDetails.getObjectName());
+			markDdlDetailsAsStored(ddlDetails.getSearchDbname(), ddlDetails.getObjectName());           // The objectName stripped of any schema
+			markDdlDetailsAsStored(ddlDetails.getDbname(),       ddlDetails.getObjectName());           // The objectName stripped of any schema
+			markDdlDetailsAsStored(ddlDetails.getSearchDbname(), ddlDetails.getSearchObjectName());     // The objectName *passed* to the DDL Lookup (may or may not have schemaName)
+			markDdlDetailsAsStored(ddlDetails.getDbname(),       ddlDetails.getSchemaAndObjectName());  // The schema and object name (schemaName.objectName)
 
 //			return rowsCount;
 		}

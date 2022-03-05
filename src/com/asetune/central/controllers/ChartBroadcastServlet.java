@@ -87,7 +87,7 @@ extends EventSourceServlet
 //		{
 //			Emitter sse = sseMap.get(key);
 //
-//			System.out.println("fireGraphData(key='"+key+"', emitter='"+sse+"'): name=|"+name+"|, payload=|"+payload+"|.");
+//			System.out.println("fireGraphData(key='" + key + "', emitter='" + sse + "'): name=|" + name + "|, payload=|" + payload + "|.");
 //
 //			try
 //			{
@@ -97,7 +97,7 @@ extends EventSourceServlet
 //			catch (IOException e)
 //			{
 //				e.printStackTrace();
-//				System.out.println("Removing key='"+key+"' from client map.");
+//				System.out.println("Removing key='" + key + "' from client map.");
 //				sseMap.remove(key);
 //			}
 //		};
@@ -118,7 +118,7 @@ extends EventSourceServlet
 				String graphList  = request.getParameter("graphList");
 				String remoteHost = request.getRemoteHost();
 
-				_logger.info("Adding a Web Subscriber. remoteHost='"+remoteHost+"', serverList='"+serverList+"', graphList='"+graphList+"', uuid='"+_uuid+"'.");
+				_logger.info("Adding a Web Subscriber. remoteHost='" + remoteHost + "', serverList='" + serverList + "', graphList='" + graphList + "', uuid='" + _uuid + "'.");
 				
 				_subsMap.put(_uuid, new ClientSubscription(serverList, graphList, remoteHost, emitter));
 			}
@@ -126,7 +126,7 @@ extends EventSourceServlet
 			@Override
 			public void onClose()
 			{
-				_logger.debug("ChartBroadcastServlet.newEventSource(): onClose(): REMOVING - uuid='"+_uuid+"'");
+				_logger.debug("ChartBroadcastServlet.newEventSource(): onClose(): REMOVING - uuid='" + _uuid + "'");
 				_subsMap.remove(_uuid);
 			}
 		};
@@ -155,13 +155,13 @@ extends EventSourceServlet
 			Emitter      emitter       = cs._emitter;
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("fireGraphData(key='"+key+"', remoteHost='"+cs._remoteHost+"', srvNameList='"+srvNameList+"', graphNameList='"+graphNameList+"', emitter='"+cs._emitter+"'): name=|"+sample.getServerName()+"|.");
+				_logger.debug("fireGraphData(key='" + key + "', remoteHost='" + cs._remoteHost + "', srvNameList='" + srvNameList + "', graphNameList='" + graphNameList + "', emitter='" + cs._emitter + "'): name=|" + sample.getServerName() + "|.");
 
 			// If we are NOT subscribing on this server... -get-out-of-here-
 			if ( ! srvNameList.contains(sample.getServerName()) )
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("<<<<<----fireGraphData -NOT-A-SUBSCRIBER----DO-RETURN---- sample.getServerName()='"+sample.getServerName()+"': (key='"+key+"', srvNameList='"+srvNameList+"', graphNameList='"+graphNameList+"'.");
+					_logger.debug("<<<<<----fireGraphData -NOT-A-SUBSCRIBER----DO-RETURN---- sample.getServerName()='" + sample.getServerName() + "': (key='" + key + "', srvNameList='" + srvNameList + "', graphNameList='" + graphNameList + "'.");
 				continue;
 			}
 			
@@ -191,13 +191,13 @@ extends EventSourceServlet
 			}
 			catch (IOException e)
 			{
-				_logger.error("Problems sending data to subscriber '"+key+"'.", e);
+				_logger.error("Problems sending data to subscriber '" + key + "'.", e);
 				_subsMap.remove(key);
 			}
 		}
 
-		_logger.info("Sent subscription data for server '"+sample.getServerName()+"' to "+subsSentList.size()+" Web Subscribers "+subsSentList+". subsMap.size="+_subsMap.size());
-
+		if ( subsSentList.size() > 0 )
+			_logger.info("Sent subscription data for server '" + sample.getServerName() + "' to " + subsSentList.size() + " Web Subscribers " + subsSentList + ". subsMap.size=" + _subsMap.size());
 	}
 
 }

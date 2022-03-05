@@ -1144,9 +1144,9 @@ public abstract class MonTablesDictionary
 		{
 			entry = new MonTableColumnsEntry();
 
-			entry._tableName    = StringUtil.truncate(tabName, MonTableColumnsEntry.TABLE_NAME_MAXLEN , true, "addColumn(): MonTableColumnsEntry._tableName");
-			entry._columnName   = StringUtil.truncate(colName, MonTableColumnsEntry.COLUMN_NAME_MAXLEN, true, "addColumn(): MonTableColumnsEntry._columnName");
-			entry._description  = StringUtil.truncate(desc   , MonTableColumnsEntry.DESCRIPTION_MAXLEN, true, "addColumn(): MonTableColumnsEntry._description");
+			entry._tableName    = StringUtil.truncate(tabName, MonTableColumnsEntry.TABLE_NAME_MAXLEN , true, "addColumn(): MonTableColumnsEntry._tableName, for table='" + tabName + "', column='" + colName + "'.");
+			entry._columnName   = StringUtil.truncate(colName, MonTableColumnsEntry.COLUMN_NAME_MAXLEN, true, "addColumn(): MonTableColumnsEntry._columnName, for table='" + tabName + "', column='" + colName + "'.");
+			entry._description  = StringUtil.truncate(desc   , MonTableColumnsEntry.DESCRIPTION_MAXLEN, true, "addColumn(): MonTableColumnsEntry._description, for table='" + tabName + "', column='" + colName + "'.");
 
 			monTableEntry._monTableColumns.put(entry._columnName, entry);
 		}
