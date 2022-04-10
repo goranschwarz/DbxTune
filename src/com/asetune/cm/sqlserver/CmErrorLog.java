@@ -20,7 +20,6 @@
  ******************************************************************************/
 package com.asetune.cm.sqlserver;
 
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -135,13 +134,13 @@ extends CountersModelAppend
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return "exec master.dbo.xp_readerrorlog 0, 1, NULL, NULL, ${prevSampleTs}, NULL"; 
 	}

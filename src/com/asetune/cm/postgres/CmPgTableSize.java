@@ -20,7 +20,6 @@
  ******************************************************************************/
 package com.asetune.cm.postgres;
 
-import java.sql.Connection;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -33,6 +32,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
+import com.asetune.sql.conn.DbxConnection;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -139,7 +139,7 @@ extends CountersModel
 //	}
 	
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -161,7 +161,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		// below is grabbed from https://wiki.postgresql.org/wiki/Disk_Usage
 		// and then changed a bit

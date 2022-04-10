@@ -129,7 +129,7 @@ rem set classpath=%classpath%;%SQLW_HOME%\lib\SybaseParser_0.5.1.121_alpha.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\ngdbc.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\gsp.jar
 rem set classpath=%classpath%;%SQLW_HOME%\lib\jsqlparser.jar
-set classpath=%classpath%;%SQLW_HOME%\lib\jsqlparser-3.2.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\jsqlparser-4.3.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\antlr-4.0-complete.jar
 
 set classpath=%classpath%;%USERPROFILE%\.asetune\jdbc_drivers\*

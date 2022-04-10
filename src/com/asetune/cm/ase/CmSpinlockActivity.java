@@ -22,7 +22,6 @@ package com.asetune.cm.ase;
 
 import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -85,7 +84,7 @@ extends CountersModel
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
 
-	/** Keep a local list of all cache names, used in method doSqlInit(Connection conn) */
+	/** Keep a local list of all cache names, used in method doSqlInit(DbxConnection conn) */
 	private List<String> _aseCacheNames = new ArrayList<String>();
 
 	
@@ -147,13 +146,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -168,7 +167,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 //		String sql = 
 //			"select " + InstanceID + "SpinlockName, OwnerPID, LastOwnerPID, Grabs, Spins, Waits, Contention, \n" +

@@ -65,6 +65,7 @@ implements ActionListener, FocusListener
 //	private JCheckBox            _cc_pp_chk        = new JCheckBox("Get Procedure Parameter Info");
 //	private JCheckBox            _cc_spn_chk       = new JCheckBox("Get System Procedure Info");
 //	private JCheckBox            _cc_spp_chk       = new JCheckBox("Get System Procedure Parameter Info");
+	private JCheckBox            _cc_qisb_chk      = new JCheckBox("<html>Use [SquareBrackets] for Quoted Identifiers - <i>[] will later on be transforment into DBMS Specififc chars</i> </html>");
 	private JCheckBox            _cc_stat_chk      = new JCheckBox("<html>Static Commands                 - <i>Get Static Commands or Templates that can be used </i> <code><b>Ctrl+Space   </b><code/> </html>");
 	private JCheckBox            _cc_misc_chk      = new JCheckBox("<html>Miscelanious                    - <i>Get Miscelanious Info, like ASE Monitoring tables </i> </html>");
 	private JCheckBox            _cc_db_chk        = new JCheckBox("<html>Database Info                   - <i>Get Database Info, prev word is                   </i> <code><b>use          </b><code/> </html>");
@@ -123,6 +124,7 @@ implements ActionListener, FocusListener
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout());   // insets Top Left Bottom Right
 
+		_cc_qisb_chk.setToolTipText("<html>When using the option 'Replace Fake Quoted Identifiers' then all [xxx] will be replaced with the DBMS Specififc Quoted Identifier, for example \"xxx\" on execution.</html>");
 		_cc_stat_chk.setToolTipText("<html>Get Static Commands or Templates that can be used <code><b>Ctrl+Space</b><code/></html>");
 		_cc_misc_chk.setToolTipText("<html>Get Miscelanious Info, like ASE Monitoring tables</html>");
 		_cc_db_chk  .setToolTipText("<html>Get Database Info, prev word is <code><b>use</b><code/></html>");
@@ -147,6 +149,7 @@ implements ActionListener, FocusListener
 		subPanel.add(_serialize_lbl,       "wrap");
 		subPanel.add(_saveQuestion_chk,    "gapleft 20, wrap 15");
 		
+		subPanel.add(_cc_qisb_chk,         "wrap");
 		subPanel.add(_cc_stat_chk,         "wrap");
 		subPanel.add(_cc_misc_chk,         "wrap");
 		panel.add(subPanel,                "growx, pushx, wrap");
@@ -198,6 +201,15 @@ implements ActionListener, FocusListener
 		setContentPane(panel);
 
 		// Fill in some start values
+		if (_completionProviderAbstract instanceof CompletionProviderAbstractSql)
+		{
+			_cc_qisb_chk.setSelected( ((CompletionProviderAbstractSql)_completionProviderAbstract).isQuoteAlwaysUseSquareBrackets());
+			_cc_qisb_chk.setEnabled(true);
+		}
+		else
+		{
+			_cc_qisb_chk.setEnabled(false);
+		}
 		_cc_stat_chk.setSelected(_completionProviderAbstract.isLookupStaticCmds());
 		_cc_misc_chk.setSelected(_completionProviderAbstract.isLookupMisc());
 		_cc_db_chk  .setSelected(_completionProviderAbstract.isLookupDb());
@@ -246,6 +258,11 @@ implements ActionListener, FocusListener
 		// --- BUTTON: OK ---
 		if (_ok.equals(source))
 		{
+			if (_completionProviderAbstract instanceof CompletionProviderAbstractSql)
+			{
+				((CompletionProviderAbstractSql)_completionProviderAbstract).setQuoteAlwaysUseSquareBrackets(_cc_qisb_chk.isSelected());
+			}
+
 			_completionProviderAbstract.setLookupStaticCmds            (_cc_stat_chk.isSelected());
 			_completionProviderAbstract.setLookupMisc                  (_cc_misc_chk.isSelected());
 			_completionProviderAbstract.setLookupDb                    (_cc_db_chk  .isSelected());

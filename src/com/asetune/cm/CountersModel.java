@@ -32,7 +32,6 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.sql.Connection;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLTimeoutException;
@@ -2714,11 +2713,18 @@ implements Cloneable, ITableTooltip
 
 		for (TrendGraphDataPoint tgdp : _trendGraphsData.values()) 
 		{
-			updateGraphData(tgdp);
-			
-			//System.out.println("cm='"+StringUtil.left(this.getName(),25)+"', _trendGraphData="+tgdp);
-			if (_logger.isDebugEnabled())
-				_logger.debug("cm='"+StringUtil.left(this.getName(),25)+"', _trendGraphData="+tgdp);
+			try
+			{
+				updateGraphData(tgdp);
+				
+				//System.out.println("cm='"+StringUtil.left(this.getName(),25)+"', _trendGraphData="+tgdp);
+				if (_logger.isDebugEnabled())
+					_logger.debug("cm='"+StringUtil.left(this.getName(),25)+"', _trendGraphData="+tgdp);
+			}
+			catch (Exception ex)
+			{
+				_logger.warn("Problems in updateGraphData() for CM='" + getName() + "', graphName='" + tgdp.getName() + "'.", ex);
+			}
 		}
 	}
 
@@ -2971,7 +2977,7 @@ implements Cloneable, ITableTooltip
 	 * If getSql() shows NULL or empty SQL statement, this method will be called
 	 * to compose a new SQL statement. 
 	 */
-	public void initSql(Connection conn)
+	public void initSql(DbxConnection conn)
 	{
 		// Get what version we are connected to.
 		long    srvVersion       = getServerVersion();
@@ -3104,17 +3110,17 @@ implements Cloneable, ITableTooltip
 	 */
 	// FIXME: maybe declare this method and class as abstract, instead of throwing the exception.
 //	public abstract String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled);
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		throw new UnsupportedOperationException("The method CountersModel.getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
 	}
 
-	public String getSqlInitForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlInitForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return null;
 	}
 
-	public String getSqlCloseForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlCloseForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return null;
 	}
@@ -3131,17 +3137,17 @@ implements Cloneable, ITableTooltip
 	 */
 	// FIXME: maybe declare this method and class as abstract, instead of throwing the exception.
 //	public abstract List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled);
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		throw new UnsupportedOperationException("The method CountersModel.getPkForVersion(long srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
 	}
 
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return null;
 	}
 
-	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 	}
 
@@ -3506,7 +3512,7 @@ implements Cloneable, ITableTooltip
 
 	
 	/** Check a specific configuration parameter */
-	public boolean checkDependsOnConfig(Connection conn, String configNameVal)
+	public boolean checkDependsOnConfig(DbxConnection conn, String configNameVal)
 	{
 		if (configNameVal == null || (configNameVal != null && configNameVal.equals("")) )
 			throw new IllegalArgumentException("checkDependsOnConfig(): configNameVal='"+configNameVal+"' must be a value.");
@@ -3604,7 +3610,7 @@ implements Cloneable, ITableTooltip
 	}
 
 	/** Check all configuration parameters assigned, using getDependsOnConfig to get configurations */
-	public boolean checkDependsOnConfig(Connection conn)
+	public boolean checkDependsOnConfig(DbxConnection conn)
 	{
 		String[] dependsOnConfig = getDependsOnConfig();
 
@@ -3627,7 +3633,7 @@ implements Cloneable, ITableTooltip
 	/** get a list of all the missing configuration for this CM
 	 * @return null if nothing is missing, or a comma separated string with the missing configs
 	 */
-	public String getMissigConfig(Connection conn)
+	public String getMissigConfig(DbxConnection conn)
 	{
 		String[] dependsOnConfig = getDependsOnConfig();
 
@@ -3815,7 +3821,7 @@ implements Cloneable, ITableTooltip
 		_dependsOnStoredProc.add(spc);
 	}
 	
-	public boolean checkDependsOnStoredProc(Connection conn, String dbname, String procName, Date procDateThreshold, Class<?> scriptLocation, String scriptName, String needsRoleToRecreate, long needSrvVersion)
+	public boolean checkDependsOnStoredProc(DbxConnection conn, String dbname, String procName, Date procDateThreshold, Class<?> scriptLocation, String scriptName, String needsRoleToRecreate, long needSrvVersion)
 	{
 		long srvVersion = AseConnectionUtils.getAseVersionNumber(conn);
 		if (srvVersion < needSrvVersion)
@@ -3893,7 +3899,7 @@ implements Cloneable, ITableTooltip
 		}
 		return true;
 	}
-	public boolean checkDependsOnStoredProc(Connection conn)
+	public boolean checkDependsOnStoredProc(DbxConnection conn)
 	{
 		if (_dependsOnStoredProc == null)
 			return true;

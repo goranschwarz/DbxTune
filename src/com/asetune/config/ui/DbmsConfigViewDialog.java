@@ -129,7 +129,7 @@ implements ActionListener, ConnectionProvider
 					b = false;
 
 			_refresh             .setEnabled(b);
-			_showIssues          .setEnabled(b);
+//			_showIssues          .setEnabled(b);
 
 			_doExternalConfigDiff.setVisible(b);
 		}

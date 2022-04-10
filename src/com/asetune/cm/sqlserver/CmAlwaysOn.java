@@ -24,7 +24,6 @@ import java.awt.Window;
 import java.awt.event.MouseEvent;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -402,7 +401,7 @@ extends CountersModel
 	}
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		try 
 		{
@@ -558,13 +557,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -1076,7 +1075,7 @@ extends CountersModel
 	private long _lastUpdateOfActive = 0;
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 //System.out.println("CmAlwaysOn: getSqlForVersion(): srvVersion="+srvVersion+", isAzure="+isAzure);
 //System.out.println("CmAlwaysOn: Ver.ver(2019)="+Ver.ver(2019));

@@ -442,6 +442,11 @@ extends SqlServerAbstract
 
 			_planCollectionCpu .addShowplanMap(entry._planCollectionCpu .getShowplanAsMap());
 			_planCollectionWait.addShowplanMap(entry._planCollectionWait.getShowplanAsMap());
+
+			//-----------------------------------------------------
+			// Copy: SparkLine - JavaScript code
+			//-----------------------------------------------------
+			_miniChartJsList.addAll(entry._miniChartJsList);
 		}
 
 		public void sort()
@@ -499,7 +504,7 @@ extends SqlServerAbstract
 		Map<Map<String, Object>, QsSqlTextEntry> _keyToSqlText;
 		Map<Map<String, Object>, QsWaitEntry>    _keyToWaitTime;
 		
-		private List<String> _miniChartJsList = new ArrayList<>();
+		List<String> _miniChartJsList = new ArrayList<>();
 
 		public QsDbReport(String schemaName, String dbname)
 		{

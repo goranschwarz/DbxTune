@@ -39,6 +39,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.cache.DbmsObjectIdCache;
 import com.asetune.cache.DbmsObjectIdCacheSqlServer;
+import com.asetune.central.cleanup.DataDirectoryCleaner;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.os.CmOsDiskSpace;
 import com.asetune.cm.os.CmOsIostat;
@@ -91,16 +92,20 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
+import com.asetune.pcs.SqlServerQueryStoreDdlExtractor;
 import com.asetune.pcs.SqlServerQueryStoreExtractor;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
+import com.asetune.utils.CronUtils;
 import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.Ver;
+
+import it.sauronsoftware.cron4j.Scheduler;
 
 
 public class CounterControllerSqlServer 
@@ -944,7 +949,7 @@ extends CounterControllerAbstract
 		DbxConnection conn = null;
 		try
 		{
-			_logger.info("On PCS Database Rollover: Creating a new connection to server '" + srvName+ "' for extracting 'Query Store'.");
+			_logger.info("On PCS Database Rollover: Creating a new connection to server '" + srvName + "' for extracting 'Query Store'.");
 			conn = DbxConnection.connect(null, connProp);
 		}
 		catch (Exception ex)
@@ -1054,5 +1059,31 @@ extends CounterControllerAbstract
 		{
 			throw new Exception("The error message suggest that the wrong USER '" + dbmsUsername + "' or PASSWORD '" + dbmsPassword + "' to DBMS server '" + dbmsServer + "' was entered. This is a non-recovarable error. DBMS Error Message='" + ex.getMessage() + "'.", ex);
 		}
+	}
+
+
+	@Override
+	public Scheduler createScheduler(boolean hasGui)
+	{
+		if (hasGui)
+			return null;
+
+		Scheduler scheduler = null;
+
+		//--------------------------------------------
+		// Get top ## SQL Statements, extract Table Names and send those for DDL Lookup/Storage
+		//--------------------------------------------
+		boolean queryStoreDdlExtractionStart = Configuration.getCombinedConfiguration().getBooleanProperty(DataDirectoryCleaner.PROPKEY_start, DataDirectoryCleaner.DEFAULT_start);
+		if (queryStoreDdlExtractionStart)
+		{
+			if (scheduler == null)
+				scheduler = new Scheduler();
+
+			String cron  = Configuration.getCombinedConfiguration().getProperty(SqlServerQueryStoreDdlExtractor.PROPKEY_cron,  SqlServerQueryStoreDdlExtractor.DEFAULT_cron);
+			_logger.info("Adding 'Query Store Extract Table Names from Top SQL Statements' scheduling with cron entry '" + cron + "', human readable '" + CronUtils.getCronExpressionDescription(cron) + "'.");
+			scheduler.schedule(cron, new SqlServerQueryStoreDdlExtractor());
+		}
+
+		return scheduler;
 	}
 }

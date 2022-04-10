@@ -20,7 +20,6 @@
  ******************************************************************************/
 package com.asetune.cm.sqlserver;
 
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -37,6 +36,7 @@ import com.asetune.cm.SortOptions.ColumnNameSensitivity;
 import com.asetune.cm.SortOptions.DataSortSensitivity;
 import com.asetune.cm.SortOptions.SortOrder;
 import com.asetune.gui.MainFrame;
+import com.asetune.sql.conn.DbxConnection;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -137,13 +137,13 @@ extends CountersModel
 //	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -182,7 +182,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		String dm_db_index_usage_stats = "sys.dm_db_index_usage_stats";
 		String dm_db_partition_stats   = "sys.dm_db_partition_stats";
@@ -270,51 +270,106 @@ extends CountersModel
 //			    + "";
 
 		String sql = ""
-			    + "-- Note: Below SQL Statement is executed in every database that is 'online', more or less like: sp_msforeachdb \n"
-			    + "SELECT /* ${cmCollectorName} */ \n"
-			    + "       DbName     = db_name(u.database_id) \n"
-			    + "     , SchemaName = object_schema_name(u.object_id, u.database_id) \n"
-			    + "     , TableName  = o.name \n"
-			    + "     , IndexName  = i.name \n"
-			    + "     , o.create_date \n"
-			    + "     , i.index_id \n"
-			    + "     , u.user_seeks \n"
-			    + "     , u.user_scans \n"
-			    + "     , u.user_lookups \n"
-			    + "     , u.user_updates \n"
-			    + "     , p.IndexSizeMB \n"
-			    + "     , p.TableRows \n"
-			    + "     , TableSizeMB  = (select CAST(ROUND(((SUM(ps2.used_page_count) * 8) / 1024.00), 1) AS NUMERIC(18, 1)) \n"
-			    + "                       from " + dm_db_partition_stats + " ps2 \n"
-			    + "                       where ps2.object_id = u.object_id \n"
-			    + "                         and ps2.index_id in(0,1) \n"
-			    + "                       group by ps2.object_id, ps2.index_id \n"
-			    + "                      ) \n"
-			    + "     , DropStatement = cast('DROP INDEX [' + i.name + '] ON [' + db_name(u.database_id) + '].[' + object_schema_name(u.object_id, u.database_id) + '].[' + o.name + ']' as varchar(1024)) \n"
-			    + "FROM " + dm_db_index_usage_stats + " u \n"
-			    + "INNER JOIN sys.indexes i WITH (READUNCOMMITTED) ON i.index_id = u.index_id 	AND u.object_id = i.object_id \n"
-			    + "INNER JOIN sys.objects o WITH (READUNCOMMITTED) ON u.object_id = o.object_id \n"
-			    + "INNER JOIN (SELECT \n"
-			    + "                 ps.index_id \n"
-			    + "               , ps.object_id \n"
-			    + "               , max(ps.row_count) AS TableRows \n"
-			    + "               , CAST(ROUND(((SUM(ps.used_page_count) * 8) / 1024.00), 1) AS NUMERIC(18, 1)) AS IndexSizeMB \n"
-			    + "            FROM " + dm_db_partition_stats + " ps \n"
-			    + "            GROUP BY ps.index_id, ps.object_id \n"
-			    + "           ) p	ON p.index_id = u.index_id AND p.object_id = u.object_id \n"
-			    + "WHERE OBJECTPROPERTY(u.object_id,'IsUserTable') = 1 \n"
-			    + "  AND u.database_id          = DB_ID() \n"
-			    + "  AND i.type_desc            ='nonclustered' \n"
-			    + "  AND i.is_primary_key       = 0 \n"
-			    + "  AND i.is_unique_constraint = 0 \n"
-			    + "  AND o.is_ms_shipped       != 1 \n"
-			    + " \n"
-			    + "  AND u.user_seeks   = 0 \n"
-			    + "  AND u.user_scans   = 0 \n"
-			    + "  AND u.user_lookups = 0 \n"
-			    + "ORDER BY u.user_updates desc \n"
-			    + " \n"
-			    + "";
+				+ "-- Note: Below SQL Statement is executed in every database that is 'online', more or less like: sp_msforeachdb \n"
+				+ "WITH \n"
+				+ "key_cols AS \n"
+				+ "( \n"
+				+ "      SELECT IC2.object_id, /* ${cmCollectorName} */ \n"
+				+ "             IC2.index_id, \n"
+				+ "             STUFF( ( \n"
+				+ "                     SELECT ', [' + C.name + ']' + CASE WHEN MAX(CONVERT(INT, IC1.is_descending_key)) = 1 THEN ' DESC' ELSE '' END \n"
+				+ "                     FROM sys.index_columns IC1 \n"
+				+ "                     JOIN sys.columns C ON  C.object_id = IC1.object_id AND C.column_id = IC1.column_id AND IC1.is_included_column = 0 \n"
+				+ "                     WHERE  IC1.object_id = IC2.object_id \n"
+				+ "                       AND IC1.index_id = IC2.index_id \n"
+				+ "                     GROUP BY IC1.object_id, C.name, index_id \n"
+				+ "                     ORDER BY MAX(IC1.key_ordinal) \n"
+				+ "                     FOR XML PATH('') \n"
+				+ "                 ), 1, 2, '') AS KeyColumns \n"
+				+ "      FROM .sys.index_columns IC2 \n"
+				+ "      GROUP BY IC2.object_id, IC2.index_id \n"
+				+ "), \n"
+				+ "include_cols AS \n"
+				+ "( \n"
+				+ "      SELECT IC2.object_id, /* ${cmCollectorName} */ \n"
+				+ "             IC2.index_id, \n"
+				+ "             STUFF( ( \n"
+				+ "                     SELECT ', [' + C.name + ']' \n"
+				+ "                     FROM sys.index_columns IC1 \n"
+				+ "                     JOIN sys.columns C ON  C.object_id = IC1.object_id AND C.column_id = IC1.column_id AND IC1.is_included_column = 1 \n"
+				+ "                     WHERE  IC1.object_id = IC2.object_id \n"
+				+ "                       AND IC1.index_id = IC2.index_id \n"
+				+ "                     GROUP BY IC1.object_id, C.name, index_id \n"
+				+ "                     FOR XML PATH('') \n"
+				+ "                 ), 1, 2, '') AS IncludedColumns \n"
+				+ "      FROM sys.index_columns IC2 \n"
+				+ "      GROUP BY IC2.object_id, IC2.index_id \n"
+				+ ") \n"
+				
+				+ "SELECT /* ${cmCollectorName} */ \n"
+				+ "       DbName     = db_name(u.database_id) \n"
+				+ "     , SchemaName = object_schema_name(u.object_id, u.database_id) \n"
+				+ "     , TableName  = o.name \n"
+				+ "     , IndexName  = i.name \n"
+				+ "     , o.create_date \n"
+				+ "     , i.index_id \n"
+				+ "     , u.user_seeks \n"
+				+ "     , u.user_scans \n"
+				+ "     , u.user_lookups \n"
+				+ "     , u.user_updates \n"
+				+ "     , p.IndexSizeMB \n"
+				+ "     , p.TableRows \n"
+				+ "     , TableSizeMB  = (select CAST(ROUND(((SUM(ps2.used_page_count) * 8) / 1024.00), 1) AS NUMERIC(18, 1)) \n"
+				+ "                       from " + dm_db_partition_stats + " ps2 \n"
+				+ "                       where ps2.object_id = u.object_id \n"
+				+ "                         and ps2.index_id in(0,1) \n"
+				+ "                       group by ps2.object_id, ps2.index_id \n"
+				+ "                      ) \n"
+				+ "     , DropStatement   = cast('DROP INDEX [' + i.name + '] ON [' + db_name(u.database_id) + '].[' + object_schema_name(u.object_id, u.database_id) + '].[' + o.name + ']' as varchar(1024)) \n"
+				+ "     , CreateStatement = cast('CREATE ' + CASE WHEN i.is_unique = 1 THEN ' UNIQUE ' ELSE '' END + i.type_desc COLLATE DATABASE_DEFAULT + ' INDEX ' \n"
+				+ "           + '[' + i.name + '] ON [' + db_name(u.database_id) + '].[' + sc.name + '].[' + o.name + '](' + kc.KeyColumns + ')' \n"
+				+ "           + ISNULL(' INCLUDE (' + ic.IncludedColumns + ' ) ', '') \n"
+				+ "           + ISNULL(' WHERE ' + i.filter_definition, '') \n"
+				+ "           + ' WITH (' \n"
+				+ "           + CASE WHEN i.is_padded = 1 THEN 'PAD_INDEX = ON, ' ELSE '' END \n"
+				+ "           + 'FILLFACTOR = ' + CAST( CASE WHEN i.fill_factor = 0 THEN 100 ELSE i.fill_factor END as varchar(10)) + ', ' \n"
+				+ "           + 'SORT_IN_TEMPDB = OFF, ' \n"
+				+ "           + CASE WHEN i.ignore_dup_key              = 0 THEN '' ELSE 'IGNORE_DUP_KEY = ON, ' END \n"
+				+ "           + CASE WHEN i.allow_row_locks             = 1 THEN '' ELSE 'ALLOW_ROW_LOCKS = OFF, '  END \n"
+				+ "           + CASE WHEN i.allow_page_locks            = 1 THEN '' ELSE 'ALLOW_PAGE_LOCKS = OFF, ' END \n"
+				+ "           + CASE WHEN i.optimize_for_sequential_key = 0 THEN '' ELSE 'OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF, ' END \n"
+				+ "           + 'DATA_COMPRESSION = ?, ' \n"
+				+ "           + 'MAXDOP = 0, ' \n"
+				+ "           + 'ONLINE = OFF' \n"
+				+ "           + ')' as varchar(2048)) \n"
+				+ "\n"
+				+ "FROM " + dm_db_index_usage_stats + " u \n"
+				+ "INNER JOIN sys.indexes i WITH (READUNCOMMITTED) ON i.index_id = u.index_id 	AND u.object_id = i.object_id \n"
+				+ "INNER JOIN sys.objects o WITH (READUNCOMMITTED) ON u.object_id = o.object_id \n"
+				+ "INNER JOIN (SELECT \n"
+				+ "                 ps.index_id \n"
+				+ "               , ps.object_id \n"
+				+ "               , max(ps.row_count) AS TableRows \n"
+				+ "               , CAST(ROUND(((SUM(ps.used_page_count) * 8) / 1024.00), 1) AS NUMERIC(18, 1)) AS IndexSizeMB \n"
+				+ "            FROM " + dm_db_partition_stats + " ps \n"
+				+ "            GROUP BY ps.index_id, ps.object_id \n"
+				+ "           ) p	ON p.index_id = u.index_id AND p.object_id = u.object_id \n"
+				+ "LEFT OUTER JOIN sys.schemas  sc ON o.schema_id = sc.schema_id \n"
+				+ "LEFT OUTER JOIN key_cols     kc ON o.object_id = kc.object_id and i.index_id = kc.index_id \n"
+				+ "LEFT OUTER JOIN include_cols ic ON o.object_id = ic.object_id and i.index_id = ic.index_id \n"
+				+ "WHERE OBJECTPROPERTY(u.object_id,'IsUserTable') = 1 \n"
+				+ "  AND u.database_id          = DB_ID() \n"
+				+ "  AND i.type_desc            ='nonclustered' \n"
+				+ "  AND i.is_primary_key       = 0 \n"
+				+ "  AND i.is_unique_constraint = 0 \n"
+				+ "  AND o.is_ms_shipped       != 1 \n"
+				+ " \n"
+				+ "  AND u.user_seeks   = 0 \n"
+				+ "  AND u.user_scans   = 0 \n"
+				+ "  AND u.user_lookups = 0 \n"
+				+ "ORDER BY u.user_updates desc \n"
+				+ " \n"
+				+ "";
 		
 		return sql;
 	}

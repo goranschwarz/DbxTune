@@ -27,7 +27,6 @@ package com.asetune.gui;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Date;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -70,6 +69,7 @@ import com.asetune.cm.SortOptions.DataSortSensitivity;
 import com.asetune.cm.SortOptions.SortOrder;
 import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.SqlProgressDialog;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.pipe.PipeCommand;
 import com.asetune.sql.pipe.PipeCommandConvert;
 import com.asetune.sql.pipe.PipeCommandGrep;
@@ -1645,6 +1645,12 @@ public class ResultSetTableModel
 	public boolean isEmpty()
 	{
 		return _rows.size() == 0;
+	}
+
+	/** @return true if number of rows is greater than 0 */
+	public boolean hasRows()
+	{
+		return _rows.size() > 0;
 	}
 
 	@Override
@@ -4494,6 +4500,140 @@ public class ResultSetTableModel
 	}
 	//-------------------------------------------------------------------------------------------------------------
 	// END: Parse text table (produced by method xxx) and create a ResultSetTableModel (without data types)
+	//-------------------------------------------------------------------------------------------------------------
+	
+	
+	//-------------------------------------------------------------------------------------------------------------
+	// BEGIN: Some static methods to execute sql etc
+	//-------------------------------------------------------------------------------------------------------------
+	public static ResultSetTableModel createResultSetTableModel(ResultSet rs, String name, String sql)
+	throws SQLException
+	{
+		return createResultSetTableModel(rs, name, sql, false);
+	}
+	
+	private static ResultSetTableModel createResultSetTableModel(ResultSet rs, String name, String sql, boolean doTruncate)
+	throws SQLException
+	{
+		ResultSetTableModel rstm = new ResultSetTableModel(rs, name, sql);
+
+		// Set toString format for Timestamp to "yyyy-MM-dd HH:mm:ss"
+		rstm.setToStringTimestampFormat_YMD_HMS();
+
+		// use localized numbers to easier see big numbers (for example: 12345 -> 12,345)
+		rstm.setToStringNumberFormat(true);
+
+//		// Truncate *long* columns
+//		if (doTruncate)
+//		{
+//			int truncLongCellSize = Configuration.getCombinedConfiguration().getIntProperty(DailySummaryReportFactory.PROPKEY_maxTableCellSizeKb, DailySummaryReportFactory.DEFAULT_maxTableCellSizeKb);
+//			rstm.truncateColumnsWithSizeInKbOver(truncLongCellSize);
+//		}
+
+		return rstm;
+	}
+
+	/**
+	 * Execute a SQL Query and return the Results as a ResultSetTableModel
+	 * <p>
+	 * NOTE: All Square Bracket Quoted Identifiers will be translated to DBMS specific quotes.<br>
+	 * So SQL <code>select [c1] from [dbo].[t1]</code> will be translated into <code>select "c1" from "dbo"."t1"</code> if the Quote char for the DBMS is " (double quote)
+	 * 
+	 * @param conn      The JDBC Connection
+	 * @param sql       SQL Statement to execute
+	 * @param name      If you want to give the "table" a name!
+	 * 
+	 * @return a ResultSetTableModel 
+	 * @throws SQLException on errors
+	 */
+	public static ResultSetTableModel executeQuery(DbxConnection conn, String sql, String name)
+	throws SQLException
+	{
+		// transform all "[" and "]" to DBMS Vendor Quoted Identifier Chars 
+		sql = conn.quotifySqlString(sql);
+
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				ResultSetTableModel rstm = createResultSetTableModel(rs, name, sql, false);
+				
+				if (_logger.isDebugEnabled())
+					_logger.debug(name + "rstm.getRowCount()="+ rstm.getRowCount());
+				
+				return rstm;
+			}
+		}
+	}
+	
+	/**
+	 * Execute a SQL Query and return the Results as a ResultSetTableModel
+	 * <p>
+	 * NOTE: All Square Bracket Quoted Identifiers will be translated to DBMS specific quotes.<br>
+	 * So SQL <code>select [c1] from [dbo].[t1]</code> will be translated into <code>select "c1" from "dbo"."t1"</code> if the Quote char for the DBMS is " (double quote)
+	 * 
+	 * @param conn                         The JDBC Connection
+	 * @param sql                          SQL Statement to execute
+	 * @param onErrorCreateEmptyRstm       If there are errors still return an "empty" ResultSetTableModel... If this is FALSE, then a null will be returned on errors
+	 * @param name                         If you want to give the "table" a name!
+	 * 
+	 * @return a ResultSetTableModel (or null if statement fail <b>and</b> onErrorCreateEmptyRstm=false)
+	 */
+	public static ResultSetTableModel executeQuery(DbxConnection conn, String sql, boolean onErrorCreateEmptyRstm, String name)
+	{
+		return executeQuery(conn, sql, onErrorCreateEmptyRstm, name, false);
+	}
+
+	/**
+	 * Execute a SQL Query and return the Results as a ResultSetTableModel
+	 * <p>
+	 * NOTE: All Square Bracket Quoted Identifiers will be translated to DBMS specific quotes.<br>
+	 * So SQL <code>select [c1] from [dbo].[t1]</code> will be translated into <code>select "c1" from "dbo"."t1"</code> if the Quote char for the DBMS is " (double quote)
+	 * 
+	 * @param conn                         The JDBC Connection
+	 * @param sql                          SQL Statement to execute
+	 * @param onErrorCreateEmptyRstm       If there are errors still return an "empty" ResultSetTableModel... If this is FALSE, then a null will be returned on errors
+	 * @param name                         If you want to give the "table" a name!
+	 * @param doTruncate                   Truncate String column content if they are longer than #### characters
+	 * 
+	 * @return a ResultSetTableModel (or null if statement fail <b>and</b> onErrorCreateEmptyRstm=false)
+	 */
+	public static ResultSetTableModel executeQuery(DbxConnection conn, String sql, boolean onErrorCreateEmptyRstm, String name, boolean doTruncate)
+	{
+		// transform all "[" and "]" to DBMS Vendor Quoted Identifier Chars 
+		sql = conn.quotifySqlString(sql);
+
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				ResultSetTableModel rstm = createResultSetTableModel(rs, name, sql, doTruncate);
+				
+				if (_logger.isDebugEnabled())
+					_logger.debug(name + "rstm.getRowCount()="+ rstm.getRowCount());
+				
+				return rstm;
+			}
+		}
+		catch(SQLException ex)
+		{
+//			setProblemException(ex);
+			
+			//_fullRstm = ResultSetTableModel.createEmpty(name);
+			_logger.warn("Problems getting '" + name + "': " + ex);
+			
+			if (onErrorCreateEmptyRstm)
+				return ResultSetTableModel.createEmpty(name);
+			else
+				return null;
+		}
+	}
+	//-------------------------------------------------------------------------------------------------------------
+	// END: Some static methods to execute sql etc
 	//-------------------------------------------------------------------------------------------------------------
 	
 	public static void main(String[] args)

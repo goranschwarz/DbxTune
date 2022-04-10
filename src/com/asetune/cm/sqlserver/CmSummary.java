@@ -21,7 +21,6 @@
 package com.asetune.cm.sqlserver;
 
 import java.math.BigDecimal;
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -45,6 +44,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.gui.CmSummaryPanel;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
@@ -284,20 +284,20 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzureAnalytics)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzureAnalytics)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzureAnalytics)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzureAnalytics)
 	{
 		List <String> pkCols = new LinkedList<String>();
 		return pkCols;
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzureAnalytics)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzureAnalytics)
 	{
 		String dm_tran_active_transactions   = "dm_tran_active_transactions";
 		String dm_tran_database_transactions = "dm_tran_database_transactions";

@@ -20,7 +20,6 @@
  ******************************************************************************/
 package com.asetune.cm.rs;
 
-import java.sql.Connection;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -28,6 +27,7 @@ import com.asetune.ICounterController;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.rs.RsStatCounterDictionary.StatCounterEntry;
+import com.asetune.sql.conn.DbxConnection;
 
 public abstract class CmAdminStatsAbstract 
 extends CountersModel
@@ -59,7 +59,7 @@ extends CountersModel
 //	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -69,7 +69,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return "";
 	}

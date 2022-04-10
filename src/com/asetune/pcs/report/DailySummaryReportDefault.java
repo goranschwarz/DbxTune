@@ -44,6 +44,7 @@ import com.asetune.pcs.report.content.AlarmsActive;
 import com.asetune.pcs.report.content.AlarmsHistory;
 import com.asetune.pcs.report.content.DailySummaryReportContent;
 import com.asetune.pcs.report.content.DbxTuneErrors;
+import com.asetune.pcs.report.content.DbxTunePcsTablesSize;
 import com.asetune.pcs.report.content.IReportEntry;
 import com.asetune.pcs.report.content.IReportEntry.MessageType;
 import com.asetune.pcs.report.content.RecordingInfo;
@@ -226,6 +227,7 @@ extends DailySummaryReportAbstract
 	public void addReportEntriesBottom()
 	{
 		addReportEntry( new DbxTuneErrors(this) );
+		addReportEntry( new DbxTunePcsTablesSize(this) );
 	}
 
 	@Override

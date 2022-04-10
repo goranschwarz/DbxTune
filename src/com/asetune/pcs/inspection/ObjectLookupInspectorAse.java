@@ -47,6 +47,7 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
@@ -88,7 +89,13 @@ extends ObjectLookupInspectorAbstract
 			return false;
 
 //		String dbname     = entry._dbname;
-		String objectName = entry._objectName;
+//		String objectName = entry._objectName;
+
+		SqlObjectName sqlObj = new SqlObjectName(entry._objectName, DbUtils.DB_PROD_NAME_SYBASE_ASE, "\"", false, false, true);
+		entry._sqlObject = sqlObj;
+
+//		String schemaName = sqlObj.getSchemaName();
+		String objectName = sqlObj.getObjectName();
 		
 		// Discard a bunch of entries
 		if (objectName.indexOf("temp worktable") >= 0 ) return false;
@@ -230,20 +237,23 @@ extends ObjectLookupInspectorAbstract
 				}
 			}
 			
-			String sql = 
-				"set switch on 3604 with no_info \n" +
-				"dbcc prsqlcache(" + ssqlid + ", 1) "; // 1 = also prints showplan"
-
-			try	(AseSqlScript ss = new AseSqlScript(conn, 10, false)) 
+			if (_dbmsVersion < Ver.ver(15,7))
 			{
-				ss.setUseGlobalMsgHandler(false);
-				ss.setMsgPrefix("dbcc prsqlcache:" + dbname + "." + objectName + ": ");
-				
-				entry.setObjectText( ss.executeSqlStr(sql, true) ); 
-			}
-			catch (SQLException e) 
-			{ 
-				entry.setObjectText( e.toString() ); 
+				String sql = 
+						"set switch on 3604 with no_info \n" +
+						"dbcc prsqlcache(" + ssqlid + ", 1) "; // 1 = also prints showplan"
+
+					try	(AseSqlScript ss = new AseSqlScript(conn, 10, false)) 
+					{
+						ss.setUseGlobalMsgHandler(false);
+						ss.setMsgPrefix("dbcc prsqlcache:" + dbname + "." + objectName + ": ");
+						
+						entry.setObjectText( ss.executeSqlStr(sql, true) ); 
+					}
+					catch (SQLException e) 
+					{ 
+						entry.setObjectText( e.toString() ); 
+					}
 			}
 			
 			if (_dbmsVersion >= Ver.ver(15,7))
@@ -294,7 +304,7 @@ extends ObjectLookupInspectorAbstract
 				// 6                     YES    YES      YES
 				//-----------------------------------------------------------
 
-				sql = "select show_cached_plan_in_xml(" + ssqlid + ", 0, 0)";
+				String sql = "select show_cached_plan_in_xml(" + ssqlid + ", 0, 0)";
 
 				boolean rejectPlan = false;
 				String xmlPlan = "";
@@ -702,11 +712,11 @@ extends ObjectLookupInspectorAbstract
 						ss.setMsgPrefix("sp_depends:" + entry.getFullObjectName() + ": ");
 						//ss.setSybMessageNumberDebug(true);
 
-						entry.setDependsText( ss.executeSqlStr(sql, true) ); 
+						entry.addDependsText( ss.executeSqlStr(sql, true) ); 
 					} 
 					catch (SQLException e) 
 					{ 
-						entry.setDependsText( e.toString() ); 
+						entry.addDependsText( e.toString() ); 
 					}
 		
 					if (pch.getConfig_addDependantObjectsToDdlInQueue())
@@ -770,7 +780,7 @@ extends ObjectLookupInspectorAbstract
 							}
 						}
 						if (dependList.size() > 0)
-							entry.setDependList(dependList);
+							entry.addDependList(dependList);
 					}
 				} // end: doSpDepends
 
@@ -853,8 +863,6 @@ extends ObjectLookupInspectorAbstract
 
 				objectList.add(entry);
 			}
-
-			return objectList;
 		}
 		catch (SQLException e)
 		{
@@ -862,5 +870,72 @@ extends ObjectLookupInspectorAbstract
 			return Collections.emptyList();
 			//return null;
 		}
+
+		//-------------------------------------------------------------
+		// Do some extra lookups... to get triggers for USER Tables
+		// Store TRIGGER name in UserTable dependsList
+		// and ADD the trigger name to the List of things that needs to be extracted
+		ArrayList<DdlDetails> triggerList = null;
+		for (DdlDetails lookupEntry : objectList)
+		{
+			if ("U".equals(lookupEntry.getType()))
+			{
+				// Get TRIGGERS
+				sql = ""
+						+ "    select o.name \n"           // Object Name
+						+ "          ,o.id \n"             // ID
+						+ "          ,o.crdate \n"         // Creation Date
+						+ "    from " + dbname + ".dbo.sysobjects o \n"
+						+ "    where 1 = 1 \n"
+						+ "      and o.type    = 'TR' \n"
+						+ "      and o.deltrig = " + lookupEntry.getObjectId() + " \n" // "deltrig" holds "parent-objectid" for triggers (from version 15.7, we can have multiple ins/upd/del triggers)
+						+ "";
+				
+				try ( Statement statement = conn.createStatement(); ResultSet rs = statement.executeQuery(sql) )
+				{
+					while(rs.next())
+					{
+						DdlDetails addEntry = new DdlDetails();
+
+						String    triggerName   =  rs.getString   (1);
+						int       triggerObjId  =  rs.getInt      (2);
+						Timestamp triggerCrDate =  rs.getTimestamp(3);
+						
+						addEntry.setSearchDbname    ( dbname );
+						addEntry.setObjectName      ( triggerName );
+						addEntry.setSearchObjectName( triggerName ); // NOT Stored in DDL Store, used for: isDdlDetailsStored(), markDdlDetailsAsStored()
+						addEntry.setSource          ( source );
+						addEntry.setDependParent    ( dependParent );
+						addEntry.setDependLevel     ( dependLevel );
+						addEntry.setSampleTime      ( new Timestamp(System.currentTimeMillis()) );
+
+						addEntry.setType            ( "TR" );
+						addEntry.setOwner           ( lookupEntry.getOwner() );
+						addEntry.setObjectName      ( triggerName ); // Use the object name stored in the DBMS (for Sybase ASE it will always be stored as it was originally created)
+						addEntry.setObjectId        ( triggerObjId );
+						addEntry.setCrdate          ( triggerCrDate );
+						addEntry.setDbname          ( dbname );
+
+						// Add triggerName to >>>> TABLE's <<<< depends list
+						lookupEntry.addDependList("TR:" + triggerName);
+
+						if (triggerList == null)
+							triggerList = new ArrayList<DdlDetails>();
+						triggerList.add(addEntry);
+					}
+				}
+				catch (SQLException e)
+				{
+					_logger.error("Problems Getting Table TRIGGER information about DDL for dbname='" + dbname + "', objectName='" + lookupEntry.getObjectName() + "'. Skipping TRIGGER information. Caught: " + e);
+				}
+				
+				// Get VIEWS depends on this table...
+				// Should we do this or NOT... (lets skip this now)
+			}
+		}
+		if (triggerList != null)
+			objectList.addAll(triggerList);
+
+		return objectList;
 	}
 }

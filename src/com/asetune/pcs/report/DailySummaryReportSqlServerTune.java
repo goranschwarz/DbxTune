@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import com.asetune.pcs.report.content.DbmsConfigIssues;
 import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
 import com.asetune.pcs.report.content.os.OsIoStatOverview;
 import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
@@ -63,7 +64,7 @@ extends DailySummaryReportDefault
 		addReportEntry( new SqlServerPlanCacheHistory       (this));        // Check if the Plan Cache can be trusted... https://www.brentozar.com/archive/2018/07/tsql2sday-how-much-plan-cache-history-do-you-have/
 		addReportEntry( new SqlServerTopCmExecQueryStatsDb  (this));
 		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.CPU_TIME));
-//		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.WAIT_TIME));
+		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.EST_WAIT_TIME));
 		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.TEMPDB_SPILLS));
 		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.LOGICAL_READS));
 		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.LOGICAL_WRITES));
@@ -104,5 +105,6 @@ extends DailySummaryReportDefault
 
 		// Configuration
 		addReportEntry( new SqlServerConfiguration(this)      );
+		addReportEntry( new DbmsConfigIssues(this)            );
 	}
 }

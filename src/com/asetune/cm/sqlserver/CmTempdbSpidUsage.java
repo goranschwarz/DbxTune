@@ -20,16 +20,21 @@
  ******************************************************************************/
 package com.asetune.cm.sqlserver;
 
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.sqlserver.AlarmEventTempdbSpidUsage;
 import com.asetune.cm.CmSettingsHelper;
+import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -38,7 +43,9 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
 /**
@@ -47,7 +54,7 @@ import com.asetune.utils.Ver;
 public class CmTempdbSpidUsage
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmTempdbSpidUsage.class);
+	private static Logger        _logger          = Logger.getLogger(CmTempdbSpidUsage.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmTempdbSpidUsage.class.getSimpleName();
@@ -191,6 +198,9 @@ extends CountersModel
 	public static final String  PROPKEY_sample_sqlText             = PROP_PREFIX + ".sample.sqlText";
 	public static final boolean DEFAULT_sample_sqlText             = false;
 
+	public static final String  PROPKEY_sample_TotalUsageMb_includeInternalObjects = PROP_PREFIX + ".sample.TotalUsageMb.includeInternalObjects";
+	public static final boolean DEFAULT_sample_TotalUsageMb_includeInternalObjects = false;
+
 	@Override
 	protected void registerDefaultValues()
 	{
@@ -207,8 +217,9 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("Sample System Threads", PROPKEY_sample_systemThreads , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemThreads  , DEFAULT_sample_systemThreads  ), DEFAULT_sample_systemThreads, CmTempdbSpidUsagePanel.TOOLTIP_sample_systemThreads ));
-		list.add(new CmSettingsHelper("Sample System Threads", PROPKEY_sample_sqlText       , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_sqlText        , DEFAULT_sample_sqlText        ), DEFAULT_sample_sqlText      , CmTempdbSpidUsagePanel.TOOLTIP_sample_sqlText ));
+		list.add(new CmSettingsHelper("Sample System Threads"                     , PROPKEY_sample_systemThreads                      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemThreads                      , DEFAULT_sample_systemThreads                      ), DEFAULT_sample_systemThreads                      , CmTempdbSpidUsagePanel.TOOLTIP_sample_systemThreads ));
+		list.add(new CmSettingsHelper("Sample SQL Text"                           , PROPKEY_sample_sqlText                            , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_sqlText                            , DEFAULT_sample_sqlText                            ), DEFAULT_sample_sqlText                            , CmTempdbSpidUsagePanel.TOOLTIP_sample_sqlText ));
+		list.add(new CmSettingsHelper("Include 'InternalObject' in 'TotalUsageMb'", PROPKEY_sample_TotalUsageMb_includeInternalObjects, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_TotalUsageMb_includeInternalObjects, DEFAULT_sample_TotalUsageMb_includeInternalObjects), DEFAULT_sample_TotalUsageMb_includeInternalObjects, CmTempdbSpidUsagePanel.TOOLTIP_sample_TotalUsageMb_includeInternalObjects ));
 
 		return list;
 	}
@@ -225,7 +236,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
@@ -249,7 +260,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -260,7 +271,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		String dm_db_task_space_usage    = "dm_db_task_space_usage";
 		String dm_db_session_space_usage = "dm_db_session_space_usage";
@@ -278,8 +289,9 @@ extends CountersModel
 		}
 
 		Configuration conf = Configuration.getCombinedConfiguration();
-		boolean sample_systemThreads  = conf.getBooleanProperty(PROPKEY_sample_systemThreads, DEFAULT_sample_systemThreads);
-		boolean sample_sqlText        = conf.getBooleanProperty(PROPKEY_sample_sqlText      , DEFAULT_sample_sqlText);
+		boolean sample_systemThreads          = conf.getBooleanProperty(PROPKEY_sample_systemThreads                      , DEFAULT_sample_systemThreads);
+		boolean sample_sqlText                = conf.getBooleanProperty(PROPKEY_sample_sqlText                            , DEFAULT_sample_sqlText);
+		boolean sample_includeInternalObjects = conf.getBooleanProperty(PROPKEY_sample_TotalUsageMb_includeInternalObjects, DEFAULT_sample_TotalUsageMb_includeInternalObjects);
 
 
 		String user_objects_deferred_dealloc_page_count = "0";
@@ -288,6 +300,15 @@ extends CountersModel
 			user_objects_deferred_dealloc_page_count = "user_objects_deferred_dealloc_page_count";
 		}
 
+		// TotalUsageMb, TotalUsageMb_abs
+		String TotalUsageMb     = "    ,TotalUsageMb         = isnull(s_user_objects_MB,0) + isnull(t_user_objects_MB,0) \n";
+		String TotalUsageMb_abs = "    ,TotalUsageMb_abs     = isnull(s_user_objects_MB,0) + isnull(t_user_objects_MB,0) \n";
+		if (sample_includeInternalObjects)
+		{
+			TotalUsageMb     = "    ,TotalUsageMb         = isnull(s_user_objects_MB,0) + isnull(s_internal_objects_MB,0) + isnull(t_user_objects_MB,0) + isnull(t_internal_objects_MB,0) \n";
+			TotalUsageMb_abs = "    ,TotalUsageMb_abs     = isnull(s_user_objects_MB,0) + isnull(s_internal_objects_MB,0) + isnull(t_user_objects_MB,0) + isnull(t_internal_objects_MB,0) \n";
+		}
+		                                                                                                                                                                                                         
 		String sql = ""
 			    + "; \n"
 			    + "WITH \n"
@@ -330,8 +351,8 @@ extends CountersModel
 			    + ") \n"
 			    + "SELECT /* ${cmCollectorName} */ \n"
 			    + "     COALESCE(s.session_id, t.session_id) as [session_id] \n"
-			    + "    ,TotalUsageMb_abs     = isnull(s_user_objects_MB,0) + isnull(s_internal_objects_MB,0) + isnull(t_user_objects_MB,0) + isnull(t_internal_objects_MB,0) \n"
-			    + "    ,TotalUsageMb         = isnull(s_user_objects_MB,0) + isnull(s_internal_objects_MB,0) + isnull(t_user_objects_MB,0) + isnull(t_internal_objects_MB,0) \n"
+			    + TotalUsageMb_abs
+			    + TotalUsageMb
 			    + "    ,SessUserObjectMb     = isnull(s_user_objects_MB,0) \n"
 			    + "    ,SessInternalObjectMb = isnull(s_internal_objects_MB,0) \n"
 			    + "    ,TaskUserObjectMb     = isnull(t_user_objects_MB,0) \n"
@@ -380,5 +401,122 @@ extends CountersModel
 			    + "";
 
 		return sql;
+	}
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! hasDiffData() )
+			return;
+		
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+		
+		// EXIT EARLY if no alarm properties has been specified (since there can be *many* logins)
+		boolean isAnyAlarmEnabled = false;
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("TotalUsageMb_abs")) isAnyAlarmEnabled = true;
+//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("xxxxxxxxxxx"     )) isAnyAlarmEnabled = true;
+
+		if (isAnyAlarmEnabled == false)
+			return;
+
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
+
+		AlarmHandler alarmHandler = AlarmHandler.getInstance();
+		
+		CountersModel cm = this;
+
+		for (int r=0; r<cm.getDiffRowCount(); r++)
+		{
+			//-------------------------------------------------------
+			// StatementExecInSec 
+			// --->>> possibly move/copy this to CmActiveStatements
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("TotalUsageMb_abs"))
+			{
+				Object o_TotalUsageMb_abs = cm.getAbsValue(r, "TotalUsageMb_abs");
+				if (o_TotalUsageMb_abs != null && o_TotalUsageMb_abs instanceof Number)
+				{
+					int TotalUsageMb_abs = ((Number)o_TotalUsageMb_abs).intValue();
+					
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_TotalUsageMb_abs, DEFAULT_alarm_TotalUsageMb_abs);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", TotalUsageMb_abs='"+TotalUsageMb_abs+"'.");
+
+					if (TotalUsageMb_abs > threshold)
+					{
+						// Get config 'skip some known values'
+						String skipLoginRegExp    = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_TotalUsageMb_abs_SkipLogin,    DEFAULT_alarm_TotalUsageMb_abs_SkipLogin);
+						String skipProgramRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_TotalUsageMb_abs_SkipProgram,  DEFAULT_alarm_TotalUsageMb_abs_SkipProgram);
+//						String skipCmdRegExp      = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_TotalUsageMb_abs_SkipCmd,      DEFAULT_alarm_TotalUsageMb_abs_SkipCmd);
+//						String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_TotalUsageMb_abs_SkipTranName, DEFAULT_alarm_TotalUsageMb_abs_SkipTranName);
+
+						String session_id              = cm.getAbsValue(r, "session_id")              + "";
+						String last_request_start_time = cm.getAbsValue(r, "last_request_start_time") + "";
+						String last_request_in_sec     = cm.getAbsValue(r, "last_request_in_sec") + "";
+//						String StatementStartTime      = cm.getAbsValue(r, "exec_start_time")         + "";
+						String login_name              = cm.getAbsValue(r, "login_name")              + "";
+						String program_name            = cm.getAbsValue(r, "program_name")            + "";
+//						String Command                 = cm.getAbsValue(r, "command")                 + "";
+//						String tran_name               = cm.getAbsValue(r, "transaction_name")        + "";
+						
+						// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+						boolean doAlarm = true;
+
+						// The below could have been done with nested if(!skipXxx), if(!skipYyy) doAlarm=true; 
+						// Below is more readable, from a variable context point-of-view, but HARDER to understand
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipLoginRegExp)    || ! login_name  .matches(skipLoginRegExp   ))); // NO match in the SKIP Cmd          regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipProgramRegExp)  || ! program_name.matches(skipProgramRegExp ))); // NO match in the SKIP program_name regexp
+//						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipCmdRegExp)      || ! Command     .matches(skipCmdRegExp     ))); // NO match in the SKIP Cmd      regexp
+//						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranNameRegExp) || ! tran_name   .matches(skipTranNameRegExp))); // NO match in the SKIP TranName regexp
+
+						// NO match in the SKIP regEx
+						if (doAlarm)
+						{
+							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+													
+							AlarmEvent ae = new AlarmEventTempdbSpidUsage(cm, threshold, session_id, TotalUsageMb_abs, last_request_start_time, last_request_in_sec, login_name, program_name);
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+							alarmHandler.addAlarm( ae );
+						}
+					} // end: above threshold
+				} // end: is number
+			} // end: StatementExecInSec
+
+		} // end: loop rows
+	}
+
+	public static final String  PROPKEY_alarm_TotalUsageMb_abs               = CM_NAME + ".alarm.system.if.TotalUsageMb_abs.gt";
+	public static final int     DEFAULT_alarm_TotalUsageMb_abs               = 20 * 1024; // 20 GB
+
+	public static final String  PROPKEY_alarm_TotalUsageMb_abs_SkipLogin    = CM_NAME + ".alarm.system.if.TotalUsageMb_abs.skip.login";
+	public static final String  DEFAULT_alarm_TotalUsageMb_abs_SkipLogin    = "";
+
+	public static final String  PROPKEY_alarm_TotalUsageMb_abs_SkipProgram  = CM_NAME + ".alarm.system.if.TotalUsageMb_abs.skip.program_name";
+	public static final String  DEFAULT_alarm_TotalUsageMb_abs_SkipProgram  = "";
+
+//	public static final String  PROPKEY_alarm_TotalUsageMb_abs_SkipCmd      = CM_NAME + ".alarm.system.if.TotalUsageMb_abs.skip.cmd";
+//	public static final String  DEFAULT_alarm_TotalUsageMb_abs_SkipCmd      = "";
+//
+//	public static final String  PROPKEY_alarm_TotalUsageMb_abs_SkipTranName = CM_NAME + ".alarm.system.if.TotalUsageMb_abs.skip.tranName";
+//	public static final String  DEFAULT_alarm_TotalUsageMb_abs_SkipTranName = "";
+
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+
+		list.add(new CmSettingsHelper("TotalUsageMb_abs",           isAlarmSwitch, PROPKEY_alarm_TotalUsageMb_abs             , Integer.class, conf.getIntProperty    (PROPKEY_alarm_TotalUsageMb_abs             , DEFAULT_alarm_TotalUsageMb_abs             ), DEFAULT_alarm_TotalUsageMb_abs             , "If any SPID's is using TotalUsageMb_abs more than #### MB, then send alarm 'AlarmEventTempdbSpidUsage'." ));
+		list.add(new CmSettingsHelper("TotalUsageMb_abs SkipLogins",               PROPKEY_alarm_TotalUsageMb_abs_SkipLogin   , String .class, conf.getProperty       (PROPKEY_alarm_TotalUsageMb_abs_SkipLogin   , DEFAULT_alarm_TotalUsageMb_abs_SkipLogin   ), DEFAULT_alarm_TotalUsageMb_abs_SkipLogin   , "If 'TotalUsageMb_abs' is true; Discard Logins listed (regexp is used)."         , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("TotalUsageMb_abs SkipCommands",             PROPKEY_alarm_TotalUsageMb_abs_SkipProgram , String .class, conf.getProperty       (PROPKEY_alarm_TotalUsageMb_abs_SkipProgram , DEFAULT_alarm_TotalUsageMb_abs_SkipProgram ), DEFAULT_alarm_TotalUsageMb_abs_SkipProgram , "If 'TotalUsageMb_abs' is true; Discard program_name's listed (regexp is used)." , new RegExpInputValidator()));
+//		list.add(new CmSettingsHelper("TotalUsageMb_abs SkipCommands",             PROPKEY_alarm_TotalUsageMb_abs_SkipCmd     , String .class, conf.getProperty       (PROPKEY_alarm_TotalUsageMb_abs_SkipCmd     , DEFAULT_alarm_TotalUsageMb_abs_SkipCmd     ), DEFAULT_alarm_TotalUsageMb_abs_SkipCmd     , "If 'TotalUsageMb_abs' is true; Discard Commands listed (regexp is used)." , new RegExpInputValidator()));
+//		list.add(new CmSettingsHelper("TotalUsageMb_abs SkipTranNames",            PROPKEY_alarm_TotalUsageMb_abs_SkipTranName, String .class, conf.getProperty       (PROPKEY_alarm_TotalUsageMb_abs_SkipTranName, DEFAULT_alarm_TotalUsageMb_abs_SkipTranName), DEFAULT_alarm_TotalUsageMb_abs_SkipTranName, "If 'TotalUsageMb_abs' is true; Discard TranName listed (regexp is used)." , new RegExpInputValidator()));
+
+		return list;
 	}
 }

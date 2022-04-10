@@ -114,10 +114,13 @@ extends CompletionProviderAbstract
 	
 	
 	public final static String  PROPKEY_PREFIX_alwaysQuoteTableNames  = "sqlw.CompletionProviderAbstractSql.always.quote.table.names.";
-	public final static boolean DEFAULT_alwaysQuoteTableNames         = false;
+	public final static boolean        DEFAULT_alwaysQuoteTableNames  = false;
 	
 	public final static String  PROPKEY_PREFIX_alwaysQuoteColumnNames = "sqlw.CompletionProviderAbstractSql.always.quote.column.names.";
-	public final static boolean DEFAULT_alwaysQuoteColumnNames        = false;
+	public final static boolean        DEFAULT_alwaysQuoteColumnNames = false;
+
+	public final static String  PROPKEY_PREFIX_alwaysQuoteUsingSquareBrackets = "sqlw.CompletionProviderAbstractSql.always.quote.using.square.brackets.";
+	public final static boolean        DEFAULT_alwaysQuoteUsingSquareBrackets = true;
 
 
 	public CompletionProviderAbstractSql(Window owner, ConnectionProvider connectionProvider)
@@ -145,6 +148,7 @@ extends CompletionProviderAbstract
 	/** put quotes around the "tableNames" */
 	protected boolean _quoteTableNames              = DEFAULT_alwaysQuoteTableNames;
 	protected boolean _quoteColumnNames             = DEFAULT_alwaysQuoteColumnNames;
+	protected boolean _quoteAlwaysUseSquareBrackets = DEFAULT_alwaysQuoteUsingSquareBrackets;
 	protected boolean _addSchemaName                = true;
 
 	protected String  _dbProductName                = "";
@@ -156,7 +160,8 @@ extends CompletionProviderAbstract
 	protected boolean _dbStoresUpperCaseIdentifiers = false;
 	protected boolean _dbStoresLowerCaseIdentifiers = false;
 	protected boolean _dbSupportsSchema             = true; // so far it's only MySQL that do not support schema it uses the catalog as schemas...
-	
+	protected String  _dbDefaultSchemaName          = "";
+
 	protected String _currentCatalog                = null;
 	protected String _currentServerName             = null;
 
@@ -168,9 +173,10 @@ extends CompletionProviderAbstract
 	{
 		super.disconnect();
 
-		_quoteTableNames         = DEFAULT_alwaysQuoteTableNames;
-		_quoteColumnNames        = DEFAULT_alwaysQuoteColumnNames;
-		_addSchemaName           = true;
+		_quoteTableNames              = DEFAULT_alwaysQuoteTableNames;
+		_quoteColumnNames             = DEFAULT_alwaysQuoteColumnNames;
+		_quoteAlwaysUseSquareBrackets = DEFAULT_alwaysQuoteUsingSquareBrackets;
+		_addSchemaName                = true;
 
 		_dbProductName                = "";
 		_dbExtraNameCharacters        = "";
@@ -178,6 +184,7 @@ extends CompletionProviderAbstract
 		_dbStoresUpperCaseIdentifiers = false;
 		_dbStoresLowerCaseIdentifiers = false;
 		_dbSupportsSchema             = true;
+		_dbDefaultSchemaName          = "";
 
 		_currentCatalog          = null;
 		_currentServerName       = null;
@@ -366,21 +373,67 @@ extends CompletionProviderAbstract
 	{
 		return _dbExtraNameCharacters;
 	}
-	public String getDbIdentifierQuoteString()
+
+	public void setQuoteAlwaysUseSquareBrackets(boolean b)
 	{
+		_quoteAlwaysUseSquareBrackets = b;
+		
+		Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP);
+		if (tmp != null) 
+		{ 
+			tmp.setProperty(PROPKEY_PREFIX_alwaysQuoteColumnNames, _quoteAlwaysUseSquareBrackets); 
+			tmp.save(); 
+		}
+	}
+	public boolean isQuoteAlwaysUseSquareBrackets()
+	{
+		return _quoteAlwaysUseSquareBrackets;
+	}
+
+//	public String getDbIdentifierQuoteString()
+//	{
+//		return _dbIdentifierQuoteString;
+//	}
+
+	public String getDbIdentifierQuoteStringStart()
+	{
+		if (isQuoteAlwaysUseSquareBrackets())
+			return "[";
 		return _dbIdentifierQuoteString;
 	}
+
+	public String getDbIdentifierQuoteStringEnd()
+	{
+		if (isQuoteAlwaysUseSquareBrackets())
+			return "]";
+		return _dbIdentifierQuoteString;
+	}
+
 	public boolean getDbStoresUpperCaseIdentifiers()
 	{
 		return _dbStoresUpperCaseIdentifiers;
 	}
+
 	public boolean getDbStoresLowerCaseIdentifiers()
 	{
 		return _dbStoresLowerCaseIdentifiers;
 	}
+
 	public boolean getDbSupportsSchema()
 	{
 		return _dbSupportsSchema;
+	}
+
+	public String getDbDefaultSchemaName()
+	{
+		if (DbUtils.isProductName(_dbProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE, 
+				                                  DbUtils.DB_PROD_NAME_SYBASE_ASA, 
+				                                  DbUtils.DB_PROD_NAME_SYBASE_IQ, 
+				                                  DbUtils.DB_PROD_NAME_MSSQL        )) return "dbo";
+		if (DbUtils.isProductName(_dbProductName, DbUtils.DB_PROD_NAME_POSTGRES     )) return "public";
+		if (DbUtils.isProductName(_dbProductName, DbUtils.DB_PROD_NAME_H2           )) return "PUBLIC";
+
+		return _dbDefaultSchemaName;
 	}
 
 
@@ -1057,6 +1110,13 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 
 //		System.out.println("getCurrentWord()='"+currentWord+"'.");
 //		System.out.println("getAlreadyEnteredText()='"+enteredText+"'.");
+
+		// Strip off any begin/end character that is a SQL Quoted Identifier
+		// NOTE: Not sure if this is the right place to do it or if we should do it LATER on, but lets start here
+		if (enteredText.startsWith(getDbIdentifierQuoteStringStart() ))  enteredText = enteredText.substring(getDbIdentifierQuoteStringStart().length());
+		if (currentWord.startsWith(getDbIdentifierQuoteStringStart() ))  currentWord = currentWord.substring(getDbIdentifierQuoteStringStart().length());
+		if (enteredText.endsWith  (getDbIdentifierQuoteStringEnd  () ))  enteredText = enteredText.substring(0, enteredText.length() - getDbIdentifierQuoteStringEnd().length());
+		if (currentWord.endsWith  (getDbIdentifierQuoteStringEnd  () ))  currentWord = currentWord.substring(0, currentWord.length() - getDbIdentifierQuoteStringEnd().length());
 
 
 		// Code Completion Refresh
@@ -2479,7 +2539,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 	 * @return
 	 * @throws SQLException
 	 */
-	protected void refreshCompletionForMandatory(Connection conn, WaitForExecDialog waitDialog)
+	protected void refreshCompletionForMandatory(DbxConnection conn, WaitForExecDialog waitDialog)
 	throws SQLException
 	{
 		if (waitDialog != null && waitDialog.wasCancelPressed())
@@ -2560,10 +2620,12 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 
 		// ALWAYS Quote Table and Column Names
 		Configuration conf = Configuration.getCombinedConfiguration();
-		String PROPKEY_alwaysQuoteTableNames  = PROPKEY_PREFIX_alwaysQuoteTableNames  + _dbProductName;
-		String PROPKEY_alwaysQuoteColumnNames = PROPKEY_PREFIX_alwaysQuoteColumnNames + _dbProductName;
-		if (conf.hasProperty(PROPKEY_alwaysQuoteTableNames))  _quoteTableNames  = conf.getBooleanProperty(PROPKEY_alwaysQuoteTableNames,  DEFAULT_alwaysQuoteTableNames);
-		if (conf.hasProperty(PROPKEY_alwaysQuoteColumnNames)) _quoteColumnNames = conf.getBooleanProperty(PROPKEY_alwaysQuoteColumnNames, DEFAULT_alwaysQuoteColumnNames);
+		String PROPKEY_alwaysQuoteTableNames          = PROPKEY_PREFIX_alwaysQuoteTableNames          + _dbProductName;
+		String PROPKEY_alwaysQuoteColumnNames         = PROPKEY_PREFIX_alwaysQuoteColumnNames         + _dbProductName;
+		String PROPKEY_alwaysQuoteUsingSquareBrackets = PROPKEY_PREFIX_alwaysQuoteUsingSquareBrackets + _dbProductName;
+		if (conf.hasProperty(PROPKEY_alwaysQuoteTableNames         )) _quoteTableNames              = conf.getBooleanProperty(PROPKEY_alwaysQuoteTableNames         , DEFAULT_alwaysQuoteTableNames);
+		if (conf.hasProperty(PROPKEY_alwaysQuoteColumnNames        )) _quoteColumnNames             = conf.getBooleanProperty(PROPKEY_alwaysQuoteColumnNames        , DEFAULT_alwaysQuoteColumnNames);
+		if (conf.hasProperty(PROPKEY_alwaysQuoteUsingSquareBrackets)) _quoteAlwaysUseSquareBrackets = conf.getBooleanProperty(PROPKEY_alwaysQuoteUsingSquareBrackets, DEFAULT_alwaysQuoteUsingSquareBrackets);
 
 		// For some DBMS go and check stuff and "override" defaults
 		if (DbUtils.DB_PROD_NAME_H2.equals(_dbProductName))
@@ -2573,7 +2635,8 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 
 			// if 'DATABASE_TO_UPPER' is true, then table names must be quoted
 		//	String sql = "select VALUE from INFORMATION_SCHEMA.SETTINGS where NAME = 'DATABASE_TO_UPPER'";
-			String sql = "select #NAME#, #VALUE# from #INFORMATION_SCHEMA#.#SETTINGS#".replace('#', '"');
+		//	String sql = "select #NAME#, #VALUE# from #INFORMATION_SCHEMA#.#SETTINGS#".replace('#', '"');
+			String sql = conn.quotifySqlString("select [NAME], [VALUE] from [INFORMATION_SCHEMA].[SETTINGS]");
 			try
 			{
 				Statement stmnt = conn.createStatement();
@@ -2595,6 +2658,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 						//_quoteTableNames  = value.trim().equalsIgnoreCase("false");
 						_quoteColumnNames = _quoteTableNames;
 					}
+					// Also consider: IGNORECASE and CASE_INSENSITIVE_IDENTIFIERS
 
 					//--------------------------------------------------------------------------
 					// When I checked my DATABASE it's not part of the INFORMATION_SCHEMA.SETTINGS
@@ -4714,9 +4778,10 @@ if (_guiOwner == null)
 		}
 
 		if (allowSquareBracketsAroundIdentifiers(_dbProductName))
-			return normalChars ? name : "["+name+"]";
+			return normalChars ? name : "[" + name + "]";
 		else
-			return normalChars ? name : _dbIdentifierQuoteString + name + _dbIdentifierQuoteString;
+//			return normalChars ? name : _dbIdentifierQuoteString + name + _dbIdentifierQuoteString;
+			return normalChars ? name : getDbIdentifierQuoteStringStart() + name + getDbIdentifierQuoteStringEnd();
 	}
 	
 	protected static boolean allowSquareBracketsAroundIdentifiers(String productName)
@@ -5586,7 +5651,7 @@ if (_guiOwner == null)
 
 		// For completion, lets not assume "dbo"
 		String schemaName = sqlObj.getSchemaName();
-		if ("dbo".equals(schemaName))
+		if (StringUtil.hasValue(getDbDefaultSchemaName()) && getDbDefaultSchemaName().equals(schemaName))
 			schemaName = "";
 
 		DbInfo        dbInfo    = getDbInfo(             sqlObj.getObjectName());
@@ -5712,7 +5777,7 @@ if (_guiOwner == null)
 
 		// For completion, lets not assume "dbo"
 		String schemaName = sqlObj.getSchemaName();
-		if ("dbo".equals(schemaName))
+		if (StringUtil.hasValue(getDbDefaultSchemaName()) && getDbDefaultSchemaName().equals(schemaName))
 			schemaName = "";
 
 //		DbInfo        dbInfo    = getDbInfo(             sqlObj.getObjectName());

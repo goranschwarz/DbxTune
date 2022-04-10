@@ -703,12 +703,20 @@ implements Runnable
 		// Don't do empty ones...
 		if (StringUtil.isNullOrBlank(dbname) || StringUtil.isNullOrBlank(objectName))
 			return;
+		
+		boolean doPrintInfo = false;
+		if ("PcsAddDdlObjectDialog".equals(source))
+			doPrintInfo = true;
 
 		// Check the input queue if it already exists
 		for (ObjectLookupQueueEntry entry : _ddlInputQueue)
 		{
 			if (dbname.equals(entry._dbname) && objectName.equals(entry._objectName))
 			{
+				if (doPrintInfo)
+					_logger.info("DEBUG: -<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<- Already in the 'DDL Input Queue', addDdl() exiting early. dbname='" + dbname + "', objectName='" + objectName + "'.");
+					
+//System.out.println("-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<- Already in the 'DDL Input Queue', addDdl() exiting early. dbname='" + dbname + "', objectName='" + objectName + "'.");
 				if (_logger.isDebugEnabled())
 					_logger.debug("-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<- Already in the 'DDL Input Queue', addDdl() exiting early. dbname='" + dbname + "', objectName='" + objectName + "'.");
 				return;
@@ -726,7 +734,12 @@ implements Runnable
 			
 			// Inspector said: DISCARD, so we can exit early
 			if ( ! allowLookup )
+			{
+				if (doPrintInfo)
+					_logger.info("DEBUG: addDdl(): <<<<<<<<<<----- _objectLookupInspector.allowInspection(entry) retuned: " + allowLookup);
+//System.out.println("addDdl(): <<<<<<<<<<----- _objectLookupInspector.allowInspection(entry) retuned: " + allowLookup);
 				return;
+			}
 
 			// Configuration: Should we allow: StatementCache Entries
 			if ( entry.isStatementCacheEntry() || PersistentCounterHandler.STATEMENT_CACHE_NAME.equals(entry._dbname) )
@@ -739,9 +752,14 @@ implements Runnable
 				allowLookup = _ddlLookup_enabledForDatabaseObjects;
 			}
 			
+			if (doPrintInfo)
+				_logger.info("DEBUG: addDdl(): allowLookup-2=" + allowLookup + ", entry._dbname=" + entry._dbname + ", _ddlLookup_enabledForStatementCache=" + _ddlLookup_enabledForStatementCache + ", _ddlLookup_enabledForDatabaseObjects=" + _ddlLookup_enabledForDatabaseObjects);
+
 			if (_logger.isDebugEnabled())
 				_logger.debug("addDdl(): allowLookup-2=" + allowLookup + ", entry._dbname=" + entry._dbname + ", _ddlLookup_enabledForStatementCache=" + _ddlLookup_enabledForStatementCache + ", _ddlLookup_enabledForDatabaseObjects=" + _ddlLookup_enabledForDatabaseObjects);
 
+//if ( ! allowLookup )
+//	System.out.println("addDdl(): <<<<<<<<<----- allowLookup-2=" + allowLookup + ", entry._dbname=" + entry._dbname + ", _ddlLookup_enabledForStatementCache=" + _ddlLookup_enabledForStatementCache + ", _ddlLookup_enabledForDatabaseObjects=" + _ddlLookup_enabledForDatabaseObjects);
 			// exit if we do NOT allow lookup
 			if ( ! allowLookup )
 				return;
@@ -749,22 +767,41 @@ implements Runnable
 		dbname     = entry._dbname;
 		objectName = entry._objectName;
 
+		if (doPrintInfo)
+			entry.setPrintInfo(true);
+
 		// check if DDL has NOT been saved in any writer class
 		boolean doLookup = false;
 		for (IPersistWriter pw : _writerClasses)
 		{
-			if ( ! pw.isDdlDetailsStored(dbname, objectName) )
+			// Use special database name for -- PlanCache (SQL-Server) or StataementCache (ASE)
+			if (entry.isStatementCacheEntry())
 			{
-				doLookup = true;
-				break;
+				if ( ! pw.isDdlDetailsStored(PersistentCounterHandler.STATEMENT_CACHE_NAME, objectName) )
+				{
+					doLookup = true;
+					break;
+				}
+			}
+			else
+			{
+				if ( ! pw.isDdlDetailsStored(dbname, objectName) )
+				{
+					doLookup = true;
+					break;
+				}
 			}
 		}
 
 		if ( ! doLookup )
 		{
+//System.out.println("-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#- The DDL for dbname '" + dbname + "', objectName '" + objectName + "', isStatementCacheEntry=" + entry.isStatementCacheEntry() + ". has already been stored by all the writers.");
+			if (doPrintInfo)
+				_logger.info("DEBUG: -#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#- The DDL for dbname '" + dbname + "', objectName '" + objectName + "', isStatementCacheEntry=" + entry.isStatementCacheEntry() + ". has already been stored by all the writers.");
+
 			// DEBUG
 			if (_logger.isDebugEnabled())
-				_logger.debug("-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#- The DDL for dbname '" + dbname + "', objectName '" + objectName + "' has already been stored by all the writers.");
+				_logger.debug("-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#- The DDL for dbname '" + dbname + "', objectName '" + objectName + "', isStatementCacheEntry=" + entry.isStatementCacheEntry() + ". has already been stored by all the writers.");
 			return;
 		}
 
@@ -780,8 +817,13 @@ implements Runnable
 		//-------------------------------------------
 		_ddlInputQueue.add(entry);
 		
+		if (doPrintInfo)
+			_logger.info("DEBUG: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> add to LOOKUP_input_QUEUE  dbname '" + dbname + "', objectName '" + objectName + "', isStatementCacheEntry=" + entry.isStatementCacheEntry() + ". Current (_ddlInputQueue) queue size = " + _ddlInputQueue.size());
+
+//System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> add to LOOKUP_input_QUEUE  dbname '" + dbname + "', objectName '" + objectName + "', isStatementCacheEntry=" + entry.isStatementCacheEntry() + ". Current (_ddlInputQueue) queue size = " + _ddlInputQueue.size());
+		
 		if (_logger.isDebugEnabled())
-			_logger.debug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> add lookup  dbname '" + dbname + "', objectName '" + objectName + "' Current queue size = " + _ddlInputQueue.size());
+			_logger.debug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> add to LOOKUP_input_QUEUE  dbname '" + dbname + "', objectName '" + objectName + "', isStatementCacheEntry=" + entry.isStatementCacheEntry() + ". Current (_ddlInputQueue) queue size = " + _ddlInputQueue.size());
 		fireQueueSizeChange();
 	}
 
@@ -910,6 +952,7 @@ implements Runnable
 
 		// check AGAIN if DDL has NOT been saved in any writer class
 		boolean doLookup = false;
+		// Check if NOT STORED by any writer -->>> doLookup <<== TRUE
 		for (IPersistWriter pw : _writerClasses)
 		{
 			if ( ! pw.isDdlDetailsStored(dbname, objectName) )
@@ -918,6 +961,7 @@ implements Runnable
 				break;
 			}
 		}
+		// Check for DISCARDED by any writer -->>> doLookup <<== FALSE
 		for (IPersistWriter pw : _writerClasses)
 		{
 			if ( pw.isDdlDetailsDiscarded(dbname, objectName) )
@@ -928,10 +972,17 @@ implements Runnable
 		}
 		if ( ! doLookup )
 		{
+			if (qe.isPrintInfo())
+				_logger.info("DEBUG: doObjectInfoLookup(): <<<<<<< ---return---- The DDL for dbname '" + dbname + "', objectName '" + objectName + "' has already been stored/discarded by all the writers.");
+
+//System.out.println("doObjectInfoLookup(): <<<<<<< ---return---- The DDL for dbname '" + dbname + "', objectName '" + objectName + "' has already been stored/discarded by all the writers.");
 			if (_logger.isDebugEnabled())
 				_logger.debug("doObjectInfoLookup(): The DDL for dbname '" + dbname + "', objectName '" + objectName + "' has already been stored/discarded by all the writers.");
 			return false;
 		}
+
+		if (qe.isPrintInfo())
+			_logger.info("DEBUG: Getting DDL information about object '" + dbname + "." + objectName + "', InputQueueSize=" + _ddlInputQueue.size() + ", StoreQueueSize=" + _ddlStoreQueue.size());
 
 		if (_logger.isDebugEnabled())
 			_logger.debug("Getting DDL information about object '" + dbname + "." + objectName + "', InputQueueSize=" + _ddlInputQueue.size() + ", StoreQueueSize=" + _ddlStoreQueue.size());
@@ -956,16 +1007,24 @@ implements Runnable
 		if (debugPrintConsole)
 			System.out.println("######################################################## DO LOOKUP >>>>: " + qe);
 
+		if (qe.isPrintInfo())
+			_logger.info("DEBUG: ######################################################## DO LOOKUP >>>>: " + qe);
+		
 		//-----------------------------------------------------------------------------------
 		// Do object lookup
 		//-----------------------------------------------------------------------------------
 		List<DdlDetails> lookupEntryList = _objectLookupInspector.doObjectInfoLookup(conn, qe, this);
-		
+
+		if (qe.isPrintInfo())
+			_logger.info("DEBUG: ######################################################## DO LOOKUP <<<<: " + lookupEntryList);
+
 		if (debugPrintConsole)
 			System.out.println("######################################################## DO LOOKUP <<<<: " + lookupEntryList);
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("LOOKUP RETURNED: " +  lookupEntryList);
+			_logger.debug("LOOKUP RETURNED: count=" + (lookupEntryList == null ? "-null-" : lookupEntryList.size()) + "  (which will be sent to _ddl***Store***Queue): " +  lookupEntryList);
+
+//System.out.println("LOOKUP RETURNED: count=" + (lookupEntryList == null ? "-null-" : lookupEntryList.size()) + " (which will be sent to _ddl***Store***Queue): " +  lookupEntryList);
 
 		if (lookupEntryList != null && !lookupEntryList.isEmpty())
 		{
@@ -973,7 +1032,14 @@ implements Runnable
 
 			for (DdlDetails lookupEntry : lookupEntryList)
 			{
-				//System.out.println("LOOKUP RETURNED DETAILS: " +  lookupEntry.toStringDebug());
+				if (qe.isPrintInfo())
+				{
+					lookupEntry.setPrintInfo(true);
+					_logger.info("DEBUG: LOOKUP RETURNED DETAILS: " +  lookupEntry.toStringDebug(1024));
+				}
+				
+//System.out.println("LOOKUP RETURNED DETAILS: " +  lookupEntry.toStringDebug(1024));
+				//System.out.println("LOOKUP RETURNED DETAILS: " +  lookupEntry.toStringDebug(1024));
 
 				int qsize = _ddlStoreQueue.size();
 				if (qsize > _warnDdlStoreQueueSizeThresh)
@@ -990,7 +1056,11 @@ implements Runnable
 				// Add to "storage" queue
 				//-----------------------------------------------------------------------------------
 				_ddlStoreQueue.add(lookupEntry);
+//System.out.println("AFTER ADD TO: _ddlStoreQueue. size is: " + _ddlStoreQueue.size());
 				
+				if (qe.isPrintInfo())
+					_logger.info("DEBUG: AFTER ADD TO: _ddlStoreQueue. size is: " + _ddlStoreQueue.size());
+
 				if ( ! lookupEntry.isSleepOptionSet() )
 					isSleepOptionSet = false;
 			}
@@ -1393,6 +1463,7 @@ implements Runnable
 				try 
 				{
 					DdlDetails ddlDetails = _ddlStoreQueue.take();
+//System.out.println("DdlStorageConsumer._ddlStoreQueue.take() ... afterTake: size=" + _ddlStoreQueue.size() + ", takenObject: " + ddlDetails);
 					fireQueueSizeChange();
 
 					// this should not happen, but just in case
@@ -1404,7 +1475,10 @@ implements Runnable
 						continue;
 
 					if (ddlDetails.isEmpty())
+					{
+						_logger.info("Skipping DDL Storage, it seems to be 'empty'. ddlDetails=" + ddlDetails);
 						continue;
+					}
 					
 					// if we are about to STOP the service
 					if ( ! isRunning() )

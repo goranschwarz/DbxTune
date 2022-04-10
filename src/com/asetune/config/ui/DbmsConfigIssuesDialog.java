@@ -616,12 +616,13 @@ implements ActionListener //, ConnectionProvider
 
 	}
 		
-	protected static final String[] TAB_HEADER = {"Discarded", "Config Name", "Description", "Resolution", "Key"};
+	protected static final String[] TAB_HEADER = {"Discarded", "Config Name", "Severity", "Description", "Resolution", "Key"};
 	protected static final int TAB_POS_DISCARDED        = 0;
 	protected static final int TAB_POS_CONFIG_NAME      = 1;
-	protected static final int TAB_POS_DESCRIPTION      = 2;
-	protected static final int TAB_POS_RESOLUTION       = 3;
-	protected static final int TAB_POS_PROPERTY_KEY     = 4;
+	protected static final int TAB_POS_SEVERITY         = 2;
+	protected static final int TAB_POS_DESCRIPTION      = 3;
+	protected static final int TAB_POS_RESOLUTION       = 4;
+	protected static final int TAB_POS_PROPERTY_KEY     = 5;
 
 	private class LocalTableModel
 	extends AbstractTableModel
@@ -635,6 +636,7 @@ implements ActionListener //, ConnectionProvider
 			{
 			case TAB_POS_DISCARDED:    return "If this issue is discarded at connect time";
 			case TAB_POS_CONFIG_NAME:  return "Configuration Name";
+			case TAB_POS_SEVERITY:     return "Severity of the Issue";
 			case TAB_POS_DESCRIPTION:  return "What does this issue mean";
 			case TAB_POS_RESOLUTION:   return "A proposed resolution to this issue";
 			case TAB_POS_PROPERTY_KEY: return "Property key used to store information about this issue.";
@@ -664,8 +666,8 @@ implements ActionListener //, ConnectionProvider
 		@Override
 		public boolean isCellEditable(int row, int col)
 		{
-			if (col == 0)
-				return true;
+			if (col == TAB_POS_DISCARDED)  return true;
+			if (col == TAB_POS_RESOLUTION) return true;  // Just so we can COPY the resolution (if it for example, contains DDL that we want to copy)
 
 			return false;
 		}
@@ -685,6 +687,7 @@ implements ActionListener //, ConnectionProvider
 			{
 			case TAB_POS_DISCARDED:    return issue.isDiscarded();
 			case TAB_POS_CONFIG_NAME:  return issue.getConfigName();
+			case TAB_POS_SEVERITY:     return issue.getSeverity();
 			case TAB_POS_DESCRIPTION:  return issue.getDescription();
 			case TAB_POS_RESOLUTION:   return issue.getResolution();
 			case TAB_POS_PROPERTY_KEY: return issue.getPropKey();
@@ -718,7 +721,8 @@ implements ActionListener //, ConnectionProvider
 
 			String tip = "";
 			tip += "<b>Configuration</b>: " + issue.getConfigName() + "<br>";
-			tip += "<b>Discarded</b>: " + issue.isDiscarded() + "<br>";
+			tip += "<b>Discarded</b>: "     + issue.isDiscarded()   + "<br>";
+			tip += "<b>Severity</b>: "      + issue.getSeverity()   + "<br>";
 			tip += "<hr>";
 			tip += "<h3>Description</h3>";
 			tip += issue.getDescription().replace("\n", "<br>");

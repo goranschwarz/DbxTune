@@ -64,8 +64,11 @@ import org.apache.log4j.Logger;
 
 import com.asetune.Version;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.pcs.IPersistWriter;
 import com.asetune.pcs.MonRecordingInfo;
 import com.asetune.pcs.PersistReader;
+import com.asetune.pcs.PersistWriterJdbc;
+import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.pcs.report.content.DailySummaryReportContent;
 import com.asetune.pcs.report.content.IReportEntry;
 import com.asetune.sql.conn.ConnectionProp;
@@ -98,6 +101,7 @@ implements ActionListener, FocusListener, KeyListener, ChangeListener
 	private Window                 _owner           = null;
 	private ConnectionProvider     _connProvider    = null;
 	private boolean                _isOfflineConnected = false;
+	private ConnectionProp         _pcsJdbcWriterConnProps;  // has value if we has connection INFO to the Persistence Counter Storage
 	
 	private ReportSwingWorker      _bgWorker;
 	private boolean                _bgWorkerIsExecuting = false;
@@ -242,18 +246,31 @@ implements ActionListener, FocusListener, KeyListener, ChangeListener
 		// Refresh only enabled if connected to ASE, not offline for the moment
 		if (visible)
 		{
-			if ( ! _isOfflineConnected)
+			if (PersistentCounterHandler.hasInstance())
 			{
-				_tabPane.setSelectedTitle(TAB_NOT_CONNECTED);
-				_tabPane.setEnabledAtTitle(TAB_CONNECTED, false);
-			}
-				
-//			boolean b = true;
-//			if (PersistReader.hasInstance())
-//				if (PersistReader.getInstance().isConnected())
-//					b = false;
+				for (IPersistWriter writer : PersistentCounterHandler.getInstance().getWriters())
+				{
+					if (writer instanceof PersistWriterJdbc)
+					{
+						PersistWriterJdbc pcsJdbcWriter = (PersistWriterJdbc) writer;
 
-//			_refresh.setEnabled(b);
+						DbxConnection tmpConn = pcsJdbcWriter.getStorageConnection();
+						if (tmpConn != null)
+						{
+							_pcsJdbcWriterConnProps = tmpConn.getConnPropOrDefault();
+						}
+					}
+				} 
+				
+			}
+			else
+			{
+				if ( ! _isOfflineConnected)
+				{
+					_tabPane.setSelectedTitle(TAB_NOT_CONNECTED);
+					_tabPane.setEnabledAtTitle(TAB_CONNECTED, false);
+				}
+			}
 
 			SwingUtilities.invokeLater(new Runnable()
 			{
@@ -1094,10 +1111,30 @@ implements ActionListener, FocusListener, KeyListener, ChangeListener
 
 			String inTabName = _dsrd._tabPane.getSelectedTitle(false);
 			String jdbcUrl  = null;
+			boolean createdConnection = false;
 
 			if (DailySummaryReportDialog.TAB_CONNECTED.equals(inTabName))
 			{
-				conn = _dsrd._connProvider.getConnection();
+				if (_dsrd._pcsJdbcWriterConnProps == null)
+				{
+					// Get a OFFLINE connection using ConnectionProvider
+					conn = _dsrd._connProvider.getConnection();
+				}
+				else
+				{
+					jdbcUrl = _dsrd._pcsJdbcWriterConnProps.getUrl();
+
+					// Create a new connection to the PCS 
+					_logger.info("Connecting to Current - Persistence Counter Storage - URL: " + jdbcUrl);
+					publish(new ProgressEntry(null, "Connecting to Current - Persistence Counter Storage - URL: " + jdbcUrl, 0));
+
+					conn = DbxConnection.connect(null, _dsrd._pcsJdbcWriterConnProps);
+					createdConnection = true;
+
+					// - Check if it's a PCS database
+					if ( ! PersistReader.isOfflineDb(conn) )
+						throw new RuntimeException("This do NOT look like a DbxTune recording... can't continue.");
+				}
 			}
 			else
 			{
@@ -1116,6 +1153,7 @@ implements ActionListener, FocusListener, KeyListener, ChangeListener
 				publish(new ProgressEntry(null, "Connecting to URL: " + jdbcUrl, 0));
 
 				conn = DbxConnection.connect(null, cp);
+				createdConnection = true;
 				
 				// - Check if it's a PCS database
 				// - get DbxTune TYPE (AseTune, RsTune, SqlServerTune, etc...)
@@ -1251,11 +1289,16 @@ implements ActionListener, FocusListener, KeyListener, ChangeListener
 //				_logger.error("Problems writing Daily Report to file '" + saveToFile + "'. Caught: "+ex, ex);
 //			}
 			
-			if (DailySummaryReportDialog.TAB_NOT_CONNECTED.equals(inTabName))
+			if (createdConnection)
 			{
 				_logger.info("Closing DBMS Connection to url='" + jdbcUrl + "'. conn=" + conn);
 				conn.closeNoThrow();
 			}
+//			if (DailySummaryReportDialog.TAB_NOT_CONNECTED.equals(inTabName))
+//			{
+//				_logger.info("Closing DBMS Connection to url='" + jdbcUrl + "'. conn=" + conn);
+//				conn.closeNoThrow();
+//			}
 
 			_logger.info("End of Create Dialy Summary Report for server '" + reportSrvName + "', report file was written to '" + _outputFile + "'.");
 

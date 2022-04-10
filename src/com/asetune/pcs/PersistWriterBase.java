@@ -62,26 +62,27 @@ public abstract class PersistWriterBase
 	** DEFINITIONS/STATIC variables
 	**---------------------------------------------------
 	*/
-	public static final int VERSION_INFO             = 0;
-	public static final int SESSIONS                 = 1;
-	public static final int SESSION_PARAMS           = 2;
-	public static final int SESSION_SAMPLES          = 3;
-	public static final int SESSION_SAMPLE_SUM       = 4;
-	public static final int SESSION_SAMPLE_DETAILES  = 5;
-	public static final int SESSION_MON_TAB_DICT     = 6;
-	public static final int SESSION_MON_TAB_COL_DICT = 7;
-	public static final int SESSION_DBMS_CONFIG      = 8;
-	public static final int SESSION_DBMS_CONFIG_TEXT = 9;
-//	public static final int RECORDING_OPTIONS        = 10;
-	public static final int DDL_STORAGE              = 50;
-//	public static final int SQL_CAPTURE_SQLTEXT      = 60;
-	public static final int SQL_CAPTURE_STATEMENTS   = 61;
-//	public static final int SQL_CAPTURE_PLANS        = 62;
-	public static final int ALARM_ACTIVE             = 90;
-	public static final int ALARM_HISTORY            = 91;
-	public static final int ABS                      = 100;
-	public static final int DIFF                     = 101;
-	public static final int RATE                     = 102;
+	public static final int VERSION_INFO               = 0;
+	public static final int SESSIONS                   = 1;
+	public static final int SESSION_PARAMS             = 2;
+	public static final int SESSION_SAMPLES            = 3;
+	public static final int SESSION_SAMPLE_SUM         = 4;
+	public static final int SESSION_SAMPLE_DETAILES    = 5;
+	public static final int SESSION_MON_TAB_DICT       = 6;
+	public static final int SESSION_MON_TAB_COL_DICT   = 7;
+	public static final int SESSION_DBMS_CONFIG        = 8;
+	public static final int SESSION_DBMS_CONFIG_TEXT   = 9;
+	public static final int SESSION_DBMS_CONFIG_ISSUES = 10;
+//	public static final int RECORDING_OPTIONS          = 10;
+	public static final int DDL_STORAGE                = 50;
+//	public static final int SQL_CAPTURE_SQLTEXT        = 60;
+	public static final int SQL_CAPTURE_STATEMENTS     = 61;
+//	public static final int SQL_CAPTURE_PLANS          = 62;
+	public static final int ALARM_ACTIVE               = 90;
+	public static final int ALARM_HISTORY              = 91;
+	public static final int ABS                        = 100;
+	public static final int DIFF                       = 101;
+	public static final int RATE                       = 102;
 	
 	public static final int SESSION_PARAMS_VAL_MAXLEN = 4096;
 
@@ -675,26 +676,27 @@ public abstract class PersistWriterBase
 		
 		switch (type)
 		{
-		case VERSION_INFO:             return lq + "MonVersionInfo"              + rq;
-		case SESSIONS:                 return lq + "MonSessions"                 + rq;
-		case SESSION_PARAMS:           return lq + "MonSessionParams"            + rq;
-		case SESSION_SAMPLES:          return lq + "MonSessionSamples"           + rq;
-		case SESSION_SAMPLE_SUM:       return lq + "MonSessionSampleSum"         + rq;
-		case SESSION_SAMPLE_DETAILES:  return lq + "MonSessionSampleDetailes"    + rq;
-		case SESSION_MON_TAB_DICT:     return lq + "MonSessionMonTablesDict"     + rq;
-		case SESSION_MON_TAB_COL_DICT: return lq + "MonSessionMonTabColumnsDict" + rq;
-		case SESSION_DBMS_CONFIG:      return lq + "MonSessionDbmsConfig"        + rq; // old name MonSessionAseConfig,     so AseTune needs to backward compatible
-		case SESSION_DBMS_CONFIG_TEXT: return lq + "MonSessionDbmsConfigText"    + rq; // old name MonSessionAseConfigText, so AseTune needs to backward compatible
-//		case RECORDING_OPTIONS:        return lq + "MonRecordingOptions"         + rq;
-		case DDL_STORAGE:              return lq + "MonDdlStorage"               + rq;
-//		case SQL_CAPTURE_SQLTEXT:      return lq + "MonSqlCapSqlText"            + rq;
-		case SQL_CAPTURE_STATEMENTS:   return lq + "MonSqlCapStatements"         + rq;
-//		case SQL_CAPTURE_PLANS:        return lq + "MonSqlCapPlans"              + rq;
-		case ALARM_ACTIVE:             return lq + "MonAlarmActive"              + rq;
-		case ALARM_HISTORY:            return lq + "MonAlarmHistory"             + rq;
-		case ABS:                      return lq + cm.getName() + "_abs"         + rq;
-		case DIFF:                     return lq + cm.getName() + "_diff"        + rq;
-		case RATE:                     return lq + cm.getName() + "_rate"        + rq;
+		case VERSION_INFO:               return lq + "MonVersionInfo"              + rq;
+		case SESSIONS:                   return lq + "MonSessions"                 + rq;
+		case SESSION_PARAMS:             return lq + "MonSessionParams"            + rq;
+		case SESSION_SAMPLES:            return lq + "MonSessionSamples"           + rq;
+		case SESSION_SAMPLE_SUM:         return lq + "MonSessionSampleSum"         + rq;
+		case SESSION_SAMPLE_DETAILES:    return lq + "MonSessionSampleDetailes"    + rq;
+		case SESSION_MON_TAB_DICT:       return lq + "MonSessionMonTablesDict"     + rq;
+		case SESSION_MON_TAB_COL_DICT:   return lq + "MonSessionMonTabColumnsDict" + rq;
+		case SESSION_DBMS_CONFIG:        return lq + "MonSessionDbmsConfig"        + rq; // old name MonSessionAseConfig,     so AseTune needs to backward compatible
+		case SESSION_DBMS_CONFIG_TEXT:   return lq + "MonSessionDbmsConfigText"    + rq; // old name MonSessionAseConfigText, so AseTune needs to backward compatible
+		case SESSION_DBMS_CONFIG_ISSUES: return lq + "MonSessionDbmsConfigIssues"  + rq;
+//		case RECORDING_OPTIONS:          return lq + "MonRecordingOptions"         + rq;
+		case DDL_STORAGE:                return lq + "MonDdlStorage"               + rq;
+//		case SQL_CAPTURE_SQLTEXT:        return lq + "MonSqlCapSqlText"            + rq;
+		case SQL_CAPTURE_STATEMENTS:     return lq + "MonSqlCapStatements"         + rq;
+//		case SQL_CAPTURE_PLANS:          return lq + "MonSqlCapPlans"              + rq;
+		case ALARM_ACTIVE:               return lq + "MonAlarmActive"              + rq;
+		case ALARM_HISTORY:              return lq + "MonAlarmHistory"             + rq;
+		case ABS:                        return lq + cm.getName() + "_abs"         + rq;
+		case DIFF:                       return lq + cm.getName() + "_diff"        + rq;
+		case RATE:                       return lq + cm.getName() + "_rate"        + rq;
 		default:
 			throw new RuntimeException("Unknown type of '"+type+"' in getTableName()."); 
 		}
@@ -929,6 +931,24 @@ public abstract class PersistWriterBase
 				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP  ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"configName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"configText"       +rq,40)+" "+fill(getDatatype(conn, Types.CLOB       ),20)+" "+getNullable(true )+"\n");
+				sbSql.append(") \n");
+
+				ddlList.add(sbSql.toString());
+			}
+			else if (type == SESSION_DBMS_CONFIG_ISSUES)
+			{
+				StringBuffer sbSql = new StringBuffer();
+
+				sbSql.append("create table " + tabName + "\n");
+				sbSql.append("( \n");
+				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP   ),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"SrvRestartDate"   +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP   ),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(lq+"Discarded"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER     ),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"ConfigName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  80),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"Severity"         +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  30),20)+" "+getNullable(true) +"\n");
+				sbSql.append("   ,"+fill(lq+"Description"      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 512),20)+" "+getNullable(true) +"\n");
+				sbSql.append("   ,"+fill(lq+"Resolution"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,2048),20)+" "+getNullable(true) +"\n");
+				sbSql.append("   ,"+fill(lq+"PropertyName"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 256),20)+" "+getNullable(true )+"\n");
 				sbSql.append(") \n");
 
 				ddlList.add(sbSql.toString());
@@ -1426,6 +1446,22 @@ public abstract class PersistWriterBase
 			if (addPrepStatementQuestionMarks)
 				sbSql.append("values(?, ?, ?) \n");
 		}
+		else if (type == SESSION_DBMS_CONFIG_ISSUES)
+		{
+			sbSql.append("insert into ").append(tabName).append(" (");
+			sbSql.append(lq).append("SessionStartTime").append(rq).append(", "); // 1
+			sbSql.append(lq).append("SrvRestartDate")  .append(rq).append(", "); // 2
+			sbSql.append(lq).append("Discarded")       .append(rq).append(", "); // 3
+			sbSql.append(lq).append("ConfigName")      .append(rq).append(", "); // 4
+			sbSql.append(lq).append("Severity")        .append(rq).append(", "); // 5
+			sbSql.append(lq).append("Description")     .append(rq).append(", "); // 6
+			sbSql.append(lq).append("Resolution")      .append(rq).append(", "); // 7
+			sbSql.append(lq).append("PropertyName")    .append(rq).append("");   // 8
+			sbSql.append(") \n");
+			if (addPrepStatementQuestionMarks)
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?) \n");
+			//                       1  2  3  4  5  6  7  8
+		}
 //		else if (type == RECORDING_OPTIONS)
 //		{
 //			sbSql.append("insert into ").append(tabName).append(" (");
@@ -1692,6 +1728,10 @@ public abstract class PersistWriterBase
 			return null;
 		}
 		else if (type == SESSION_DBMS_CONFIG_TEXT)
+		{
+			return null;
+		}
+		else if (type == SESSION_DBMS_CONFIG_ISSUES)
 		{
 			return null;
 		}

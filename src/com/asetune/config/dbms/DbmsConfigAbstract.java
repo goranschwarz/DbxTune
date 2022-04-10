@@ -20,6 +20,10 @@
  ******************************************************************************/
 package com.asetune.config.dbms;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +33,7 @@ import javax.swing.table.AbstractTableModel;
 import org.apache.log4j.Logger;
 
 import com.asetune.pcs.MonRecordingInfo;
+import com.asetune.pcs.PersistWriterBase;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 
@@ -61,7 +66,7 @@ implements IDbmsConfig
 		boolean markedAsDiscarded = issue.isDiscarded();
 
 		String type = markedAsDiscarded ? "discarded" : "added";
-		_logger.warn("Received a DBMS Config Issue ["+type+"]. configName='"+issue.getConfigName()+"', severity="+issue.getSeverity()+", key='"+issue.getPropKey()+"', description='"+issue.getDescription().replace('\n', ' ')+"'.");
+		_logger.warn("Received a DBMS Config Issue [" + type + "]. configName='" + issue.getConfigName() + "', severity=" + issue.getSeverity() + ", key='" + issue.getPropKey() + "', description='" + issue.getDescription().replace('\n', ' ') + "'.");
 		
 //		if ( markedAsDiscarded )
 //			return;
@@ -91,6 +96,71 @@ implements IDbmsConfig
 		return count > 0;
 //		return _configIssueList.size() > 0;
 	}
+	
+	public void getOfflineConfigIssues(DbxConnection conn)
+	{
+		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SESSION_DBMS_CONFIG_ISSUES, null, false);
+		String sql = ""
+				+ "select \n"
+				+ "     [SessionStartTime] \n"
+				+ "    ,[SrvRestartDate]   \n"
+				+ "    ,[Discarded]        \n"
+				+ "    ,[ConfigName]       \n"
+				+ "    ,[Severity]         \n"
+				+ "    ,[Description]      \n"
+				+ "    ,[Resolution]       \n"
+				+ "    ,[PropertyName]     \n"
+				+ "from [" + tabName + "]  \n"
+				+ "where [SessionStartTime] = (select max(SessionStartTime) from [" + tabName + "] ) \n"
+				+ "";
+		
+		// Translate '[' and ']' into real Quoted Identifier Character
+		sql = conn.quotifySqlString(sql);
+		
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			Timestamp SessionStartTime = null;
+			int rowCount = 0;
+			
+			while (rs.next())
+			{
+				rowCount++;
+
+				          SessionStartTime = rs.getTimestamp(1);
+				Timestamp SrvRestartDate   = rs.getTimestamp(2);
+				boolean   discarded        = rs.getInt      (3) != 0;
+				String    ConfigName       = rs.getString   (4);
+				String    SeverityStr      = rs.getString   (5);
+				String    Description      = rs.getString   (6);
+				String    Resolution       = rs.getString   (7);
+				String    PropertyName     = rs.getString   (8);
+				
+				DbmsConfigIssue.Severity severity = DbmsConfigIssue.Severity.valueOf(SeverityStr);
+
+//				public DbmsConfigIssue(Timestamp srvRestart, String propKey, String configName, Severity severity, String description, String resolution)
+				DbmsConfigIssue issue = new DbmsConfigIssue(
+						SrvRestartDate,
+						PropertyName,
+						ConfigName,
+						severity,
+						Description,
+						Resolution
+						);
+
+				issue.setOfflineEntry();;
+				issue.setOfflineEntryDiscarded(discarded);
+				
+				_configIssueList.add(issue);
+			}
+
+			_logger.info("Read " + rowCount + " Configuration ISSUES from the offline storage with SessionStartTime='" + SessionStartTime + "'.");
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems reading 'DBMS Configuration ISSUES' from the offline storage. SQL=|" + sql + "|.", ex);
+		}
+	}
+	
 	//--------------------------------------------------------------------------------
 	// END: issues methods
 	//--------------------------------------------------------------------------------

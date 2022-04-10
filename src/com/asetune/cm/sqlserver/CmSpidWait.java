@@ -23,7 +23,6 @@ package com.asetune.cm.sqlserver;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.math.BigDecimal;
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -50,6 +49,7 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
@@ -173,13 +173,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -199,7 +199,7 @@ extends CountersModel
 //	RS> 6    signal_wait_time_ms java.sql.Types.BIGINT   bigint            -none-
 	
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		String dm_exec_session_wait_stats = "sys.dm_exec_session_wait_stats";
 //		String dm_exec_connections        = "sys.dm_exec_connections";

@@ -21,7 +21,6 @@
 package com.asetune.cm;
 
 import java.math.BigDecimal;
-import java.sql.Connection;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -1129,7 +1128,7 @@ extends CountersModel
 	 * SQL is not used here, so simply override this method with "nothing"
 	 */
 	@Override
-	public void initSql(Connection conn)
+	public void initSql(DbxConnection conn)
 	{
 	}
 

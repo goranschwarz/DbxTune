@@ -375,6 +375,7 @@ extends ReportEntryAbstract
 				tableInfoMap.put("View"       ,            entry.getTableName()       );
 				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
 //				tableInfoMap.put("References" ,            entry.getViewReferences()+""); // instead show this in the: Index Info section
+				tableInfoMap.put("DDL"        ,            getFormattedSqlAsTooltipDiv(entry._objectText, "View DDL", DbUtils.DB_PROD_NAME_MSSQL));
 			}
 			else // Any table
 			{
@@ -389,11 +390,17 @@ extends ReportEntryAbstract
 				tableInfoMap.put("Lob MB"     , nf.format( entry.getLobMb()          ));
 				tableInfoMap.put("Overflow MB", nf.format( entry.getRowOverflowMb()  ));
 				tableInfoMap.put("Index MB"   , nf.format( entry.getIndexMb()        ));
+				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
+				tableInfoMap.put("Sampled"    ,            entry.getSampleTime()+""   );
 				tableInfoMap.put("Index Count", entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>") );
+				tableInfoMap.put("DDL Info"   , entry._objectText   == null ? "-"             : getTextAsTooltipDiv(entry._objectText, "Table Info"));
+//				tableInfoMap.put("Triggers"   , "-not-yet-impl-");
+				tableInfoMap.put("Triggers"   , entry._triggersText == null ? "-no-triggers-" : getTextAsTooltipDiv(entry._triggersText, "Trigger Info"));
 			}
 
 			String tableInfo = HtmlTableProducer.createHtmlTable(tableInfoMap, "dsr-sub-table-other-info", true);
 			String indexInfo = "";
+			String missingIndexInfo = "";
 
 			if (entry.isView()) 
 			{
@@ -413,6 +420,9 @@ extends ReportEntryAbstract
 			{
 				// Get index information in a separate table
 				indexInfo = getIndexInfoAsHtmlTable(entry, classname);
+
+				// Get missing index information
+				missingIndexInfo = getMissingIndexInfoAsHtmlTable(entry, classname);
 			}
 			
 			
@@ -420,7 +430,7 @@ extends ReportEntryAbstract
 			sb.append("  <td>").append( tableInfo ).append("</td> \n");
 
 			if (includeIndexInfo)
-				sb.append("  <td>").append( indexInfo ).append("</td> \n");
+				sb.append("  <td>").append( indexInfo ).append( missingIndexInfo ).append("</td> \n");
 
 			sb.append("</tr> \n");
 		}
@@ -441,189 +451,6 @@ extends ReportEntryAbstract
 		return sb.toString();
 	}
 
-//	public String getIndexInfoAsHtmlTable(SqlServerTableInfo tableEntry, String classname)
-//	{
-//		// Exit early: if no data
-//		if (tableEntry == null)   return "";
-//
-//		// Get the index list
-//		List<SqlServerIndexInfo> indexInfoList = tableEntry.getIndexList();
-//
-//		// Exit early: if no data
-//		if (indexInfoList == null)   return "";
-//		if (indexInfoList.isEmpty()) return "";
-//		
-//		StringBuilder sb = new StringBuilder();
-//
-//		String className = "";
-//		if (StringUtil.hasValue(classname))
-//			className = " class='" + classname + "'";
-//		
-//		sb.append("<table" + className + "> \n");
-//
-//		//--------------------------------------------------------------------------
-//		// Table Header
-//		sb.append("<thead> \n");
-//		sb.append("<tr> \n");
-//
-//		sb.append("  <th>Index Name</th> \n");
-//		sb.append("  <th>IndexID</th> \n");
-//		sb.append("  <th>Keys</th> \n");
-//		sb.append("  <th>Desciption</th> \n");
-//		sb.append("  <th>Size MB</th> \n");
-//		sb.append("  <th>Pages</th> \n");
-//		sb.append("  <th title='Calculated Average Rows per Page \nCalculted by: pages/rowcount'>Avg RowsPerPage</th> \n");
-//		sb.append("  <th>Last Update Stats</th> \n");
-////		sb.append("  <th title='Average Bytes used per Row\nCalculted by: SizeBytes/TableRowcount'>Avg RowSize</th> \n");
-////		sb.append("  <th>Reserved MB</th> \n");
-////		sb.append("  <th>Unused MB</th> \n");
-////		sb.append("  <th>DDL</th> \n");
-//
-//
-////		String tt1 = "\nTime span: During the report period.";
-////		sb.append("  <th title='Number of Insert, Update and Deletes that has been done." + tt1                      + "'>RowsInsUpdDel</th> \n");
-////		sb.append("  <th title='Number of times the optimizer selected this index to be used in a query plan." + tt1 + "'>OptSelectCount</th> \n");
-////		sb.append("  <th title='Number of times the object was used in a plan during execution." + tt1               + "'>UsedCount</th> \n");
-////		sb.append("  <th title='Number of times the object was accessed." + tt1                                      + "'>Operations</th> \n");
-//
-////		sb.append("  <th title='Indicates the date and time when the index structure was added to the ASE cache."    + "'>CacheDate</th> \n");
-////		sb.append("  <th title='When was the index created."                                                         + "'>CrDate</th> \n");
-//
-////		String tt2 = "\nTime span: Since object was cached (see CacheDate)."
-////		           + "\nNOTE: This counter is an integer that may/will wrap, if incremeted frequently."
-////		           + "\nUse this to decide if the index has **ever** been used since CacheDate."
-////		           + "\nA low value indicates that the index has NOT been used. And therefor may be an *unused* index.";
-////		sb.append("  <th title='Number of Insert, Update and Deletes that has been done." + tt2                      + "'>AbsRowsInsUpdDel</th> \n");
-////		sb.append("  <th title='Number of times the optimizer selected this index to be used in a query plan." + tt2 + "'>AbsOptSelectCount</th> \n");
-////		sb.append("  <th title='Number of times the object was used in a plan during execution." + tt2               + "'>AbsUsedCount</th> \n");
-////		sb.append("  <th title='Number of times the object was accessed." + tt2                                      + "'>AbsOperations</th> \n");
-//
-//		sb.append("  <th title='Number of seeks by user queries.'                                                        >user_seeks                  </th> \n");
-//		sb.append("  <th title='Number of scans by user queries that did not use -seek- predicate.'                      >user_scans                  </th> \n");
-//		sb.append("  <th title='Number of bookmark lookups by user queries.'                                             >user_lookups                </th> \n");
-//		sb.append("  <th title='Number of updates by user queries. This includes Insert, Delete, and Updates representing number of operations done not the actual rows affected. For example, if you delete 1000 rows in one statement, this count increments by 1'>user_updates                </th> \n");
-//
-//		sb.append("  <th title='Number of seeks by user queries.'                                                        >abs_user_seeks              </th> \n");
-//		sb.append("  <th title='Number of scans by user queries that did not use -seek- predicate.'                      >abs_user_scans              </th> \n");
-//		sb.append("  <th title='Number of bookmark lookups by user queries.'                                             >abs_user_lookups            </th> \n");
-//		sb.append("  <th title='Number of updates by user queries. This includes Insert, Delete, and Updates representing number of operations done not the actual rows affected. For example, if you delete 1000 rows in one statement, this count increments by 1'>abs_user_updates            </th> \n");
-//
-//		sb.append("  <th title='Execution: range and table scans started on the index or heap'                           >range_scan_count            </th> \n");
-//		sb.append("  <th title='Execution: single row retrievals from the index or heap'                                 >singleton_lookup_count      </th> \n");
-////		sb.append("  <th title='Execution: Count of rows that were fetched through a forwarding record'                  >forwarded_fetch_count       </th> \n");
-////		sb.append("  <th title='Execution: Count of large object(LOB) pages retrieved from the LOB_DATA allocation unit' >lob_fetch_in_pages          </th> \n");
-//		sb.append("  <th title='Execution: leaf-level insert + deletes + ghosted-deletes + updates'                      >leaf_crud_count             </th> \n");
-////		sb.append("  <th title='Execution: leaf-level inserts'                                                           >leaf_insert_count           </th> \n");
-////		sb.append("  <th title='Execution: leaf-level deletes'                                                           >leaf_delete_count           </th> \n");
-////		sb.append("  <th title='Execution: leaf-level updates'                                                           >leaf_update_count           </th> \n");
-////		sb.append("  <th title='Execution: leaf-level rows that are marked as deleted, but not yet removed'              >leaf_ghost_count            </th> \n");
-////		sb.append("  <th title='Execution: times the Database Engine waited on an I/O page latch.'                       >page_io_latch_wait_count    </th> \n");
-////		sb.append("  <th title='Execution: number of milliseconds the Database Engine waited on a page I/O latch'        >page_io_latch_wait_in_ms    </th> \n");
-//
-//		sb.append("  <th title='Execution: range and table scans started on the index or heap'                           >abs_range_scan_count        </th> \n");
-//		sb.append("  <th title='Execution: single row retrievals from the index or heap'                                 >abs_singleton_lookup_count  </th> \n");
-////		sb.append("  <th title='Execution: Count of rows that were fetched through a forwarding record'                  >abs_forwarded_fetch_count   </th> \n");
-////		sb.append("  <th title='Execution: Count of large object(LOB) pages retrieved from the LOB_DATA allocation unit' >abs_lob_fetch_in_pages      </th> \n");
-//		sb.append("  <th title='Execution: leaf-level insert + deletes + ghosted-deletes + updates'                      >abs_leaf_crud_count         </th> \n");
-////		sb.append("  <th title='Execution: leaf-level inserts'                                                           >abs_leaf_insert_count       </th> \n");
-////		sb.append("  <th title='Execution: leaf-level deletes'                                                           >abs_leaf_delete_count       </th> \n");
-////		sb.append("  <th title='Execution: leaf-level updates'                                                           >abs_leaf_update_count       </th> \n");
-////		sb.append("  <th title='Execution: leaf-level rows that are marked as deleted, but not yet removed'              >abs_leaf_ghost_count        </th> \n");
-////		sb.append("  <th title='Execution: times the Database Engine waited on an I/O page latch.'                       >abs_page_io_latch_wait_count</th> \n");
-////		sb.append("  <th title='Execution: number of milliseconds the Database Engine waited on a page I/O latch'        >abs_page_io_latch_wait_in_ms</th> \n");
-//
-//		sb.append("</tr> \n");
-//		sb.append("</thead> \n");
-//
-//		NumberFormat nf = NumberFormat.getInstance();
-//
-//		//--------------------------------------------------------------------------
-//		// Table BODY
-//		sb.append("<tbody> \n");
-//		for (SqlServerIndexInfo entry : indexInfoList)
-//		{
-////			long avgBytesPerRow = (entry.getSizeKb() * 1024L) / tableEntry.getRowTotal();
-//
-//			sb.append("<tr> \n");
-//			sb.append("  <td>").append(            entry.getIndexName()            ).append("</td> \n");
-//			sb.append("  <td>").append(            entry.getIndexID()              ).append("</td> \n");
-//			sb.append("  <td>").append(            entry.getKeysStr()              ).append("</td> \n");
-//			sb.append("  <td>").append(            entry.getDescription()          ).append("</td> \n");
-//			sb.append("  <td>").append( nf.format( entry.getIndexSizeMb()         )).append("</td> \n");
-//			sb.append("  <td>").append( nf.format( entry.getIndexPages()          )).append("</td> \n");
-//			sb.append("  <td>").append( nf.format( entry.getRowsPerPage()         )).append("</td> \n");
-//			sb.append("  <td>").append(            entry.getLastUpdateStats()      ).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry.getAvgRowSizeBytes()     )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry.getReservedMb()          )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry.getUnusedMb()            )).append("</td> \n");
-////			sb.append("  <td>").append(            entry.getDdlText()              ).append("</td> \n");
-//                                                                                  
-//			                                                                      
-////			sb.append("  <td>").append( nf.format( entry.getRowsInsUpdDel()       )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry.getOptSelectCount()      )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry.getUsedCount()           )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry.getOperations()          )).append("</td> \n");
-//                                                                                  
-////			sb.append("  <td>").append(            entry.getCacheDateStr()         ).append("</td> \n");
-////			sb.append("  <td>").append(            entry.getCreationDateStr()      ).append("</td> \n");
-//                                                                                  
-////			sb.append("  <td>").append( nf.format( entry.getAbsRowsInsUpdDel()    )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry.getAbsOptSelectCount()   )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry.getAbsUsedCount()        )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry.getAbsOperations()       )).append("</td> \n");
-//			
-//			sb.append("  <td>").append( nf.format( entry._user_seeks                   )).append("</td> \n");
-//			sb.append("  <td>").append( nf.format( entry._user_scans                   )).append("</td> \n");
-//			sb.append("  <td>").append( nf.format( entry._user_lookups                 )).append("</td> \n");
-//			sb.append("  <td>").append( nf.format( entry._user_updates                 )).append("</td> \n");
-//
-//			sb.append("  <td>").append( nf.format( entry._abs_user_seeks               )).append("</td> \n");
-//			sb.append("  <td>").append( nf.format( entry._abs_user_scans               )).append("</td> \n");
-//			sb.append("  <td>").append( nf.format( entry._abs_user_lookups             )).append("</td> \n");
-//			sb.append("  <td>").append( nf.format( entry._abs_user_updates             )).append("</td> \n");
-//
-//			sb.append("  <td>").append( nf.format( entry._range_scan_count             )).append("</td> \n");
-//			sb.append("  <td>").append( nf.format( entry._singleton_lookup_count       )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry._forwarded_fetch_count        )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry._lob_fetch_in_pages           )).append("</td> \n");
-//			sb.append("  <td>").append( nf.format( entry._leaf_crud_count              )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry._leaf_insert_count            )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry._leaf_delete_count            )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry._leaf_update_count            )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry._leaf_ghost_count             )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry._page_io_latch_wait_count     )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry._page_io_latch_wait_in_ms     )).append("</td> \n");
-//
-//			sb.append("  <td>").append( nf.format( entry._abs_range_scan_count         )).append("</td> \n");
-//			sb.append("  <td>").append( nf.format( entry._abs_singleton_lookup_count   )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry._abs_forwarded_fetch_count    )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry._abs_lob_fetch_in_pages       )).append("</td> \n");
-//			sb.append("  <td>").append( nf.format( entry._abs_leaf_crud_count          )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry._abs_leaf_insert_count        )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry._abs_leaf_delete_count        )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry._abs_leaf_update_count        )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry._abs_leaf_ghost_count         )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry._abs_page_io_latch_wait_count )).append("</td> \n");
-////			sb.append("  <td>").append( nf.format( entry._abs_page_io_latch_wait_in_ms )).append("</td> \n");
-//			
-//			sb.append("</tr> \n");
-//		}
-//		sb.append("</tbody> \n");
-//		
-//		//--------------------------------------------------------------------------
-//		// Table Footer
-////		sb.append("<tfoot> \n");
-////		sb.append("<tr> \n");
-////
-////		sb.append("  <td></td> \n"); // first column is empty, which is the "row name"
-////
-////		sb.append("</tr> \n");
-////		sb.append("</tfoot> \n");
-//
-//		sb.append("</table> \n");
-//		
-//		return sb.toString();
-//	}
 	public String getIndexInfoAsHtmlTable(SqlServerTableInfo tableEntry, String classname)
 	{
 		// Exit early: if no data
@@ -649,74 +476,53 @@ extends ReportEntryAbstract
 		sb.append("<thead> \n");
 		sb.append("<tr> \n");
 
-		sb.append("  <th>Index Name</th> \n");
-		sb.append("  <th>IndexID</th> \n");
-		sb.append("  <th>Keys</th> \n");
-		sb.append("  <th>Desciption</th> \n");
-		sb.append("  <th>Size MB</th> \n");
-		sb.append("  <th>Pages</th> \n");
-		sb.append("  <th>FillFactor</th> \n");
-		sb.append("  <th title='Calculated Average Rows per Page \nCalculted by: pages/rowcount'>Avg RowsPerPage</th> \n");
-		sb.append("  <th>Last Update Stats</th> \n");
-//		sb.append("  <th title='Average Bytes used per Row\nCalculted by: SizeBytes/TableRowcount'>Avg RowSize</th> \n");
-//		sb.append("  <th>Reserved MB</th> \n");
-//		sb.append("  <th>Unused MB</th> \n");
-//		sb.append("  <th>DDL</th> \n");
+		sb.append(createHtmlTh("Index Name"               , ""));
+		sb.append(createHtmlTh("IndexID"                  , ""));
+		sb.append(createHtmlTh("Keys"                     , ""));
+		sb.append(createHtmlTh("Include"                  , "Columns included on the leafe index page... create index... on(c1,c2) INCLUDE(c3,c4,c5)"));
+		sb.append(createHtmlTh("Filter"                   , "Filter Expression used to create the index... create index... on(c1,c2) WHERE colName='someValue'"));
+		sb.append(createHtmlTh("Desciption"               , ""));
+		sb.append(createHtmlTh("Size MB"                  , ""));
+		sb.append(createHtmlTh("Pages"                    , ""));
+		sb.append(createHtmlTh("FillFactor"               , ""));
+		sb.append(createHtmlTh("Avg RowsPerPage"          , "Calculated Average Rows per Page \nCalculted by: pages/rowcount"));
+		sb.append(createHtmlTh("Last Update Stats"        , ""));
+//		sb.append(createHtmlTh("Avg RowSize"              , "Average Bytes used per Row\nCalculted by: SizeBytes/TableRowcount"));
+//		sb.append(createHtmlTh("Reserved MB"              , ""));
+//		sb.append(createHtmlTh("Unused MB"                , ""));
 
+		sb.append(createHtmlTh("READS"                             , "(diff <- abs) Number of READS by queries\nNote: This is just: user_seeks + user_scans + user_lookups'"));
+		sb.append(createHtmlTh("WRITES"                            , "(diff <- abs) Number of WRITES by statemenst.\nNote: This is just: user_updates as another-name"));
+		sb.append(createHtmlTh("user_seeks"                        , "(diff <- abs) Number of seeks by user queries."));
+		sb.append(createHtmlTh("user_scans"                        , "(diff <- abs) Number of scans by user queries that did not use -seek- predicate."));
+		sb.append(createHtmlTh("user_lookups"                      , "(diff <- abs) Number of bookmark lookups by user queries."));
+		sb.append(createHtmlTh("user_updates"                      , "(diff <- abs) Number of updates by user queries. This includes Insert, Delete, and Updates representing number of operations done not the actual rows affected. For example, if you delete 1000 rows in one statement, this count increments by 1'"));
+                                                                   
+		sb.append(createHtmlTh("range_scan_count"                  , "Execution: (diff <- abs) range and table scans started on the index or heap"));
+		sb.append(createHtmlTh("singleton_lookup_count"            , "Execution: (diff <- abs) single row retrievals from the index or heap"));
+		sb.append(createHtmlTh("forwarded_fetch_count"             , "Execution: (diff <- abs) Count of rows that were fetched through a forwarding record"));
+		sb.append(createHtmlTh("lob_fetch_in_pages"                , "Execution: (diff <- abs) Count of large object(LOB) pages retrieved from the LOB_DATA allocation unit"));
+		sb.append(createHtmlTh("leaf_crud_count"                   , "Execution: (diff <- abs) leaf-level insert + deletes + ghosted-deletes + updates"));
+		sb.append(createHtmlTh("leaf_insert_count"                 , "Execution: (diff <- abs) leaf-level inserts"));
+		sb.append(createHtmlTh("leaf_delete_count"                 , "Execution: (diff <- abs) leaf-level deletes"));
+		sb.append(createHtmlTh("leaf_update_count"                 , "Execution: (diff <- abs) leaf-level updates"));
+		sb.append(createHtmlTh("leaf_ghost_count"                  , "Execution: (diff <- abs) leaf-level rows that are marked as deleted, but not yet removed"));
+        sb.append(createHtmlTh("page_latch_wait_count"             , "Execution: (diff <- abs) number of times the Database Engine waited, because of latch contention."));
+        sb.append(createHtmlTh("page_latch_wait_in_ms"             , "Execution: (diff <- abs) number of milliseconds the Database Engine waited, because of latch contention."));
+		sb.append(createHtmlTh("page_io_latch_wait_count"          , "Execution: (diff <- abs) times the Database Engine waited on an I/O page latch."));
+		sb.append(createHtmlTh("page_io_latch_wait_in_ms"          , "Execution: (diff <- abs) number of milliseconds the Database Engine waited on a page I/O latch"));
+        sb.append(createHtmlTh("row_lock_count"                    , "Execution: (diff <- abs) number of row locks requested."));
+        sb.append(createHtmlTh("row_lock_wait_count"               , "Execution: (diff <- abs) number of times the Database Engine waited on a row lock."));
+        sb.append(createHtmlTh("row_lock_wait_in_ms"               , "Execution: (diff <- abs) Total number of milliseconds the Database Engine waited on a row lock."));
+        sb.append(createHtmlTh("page_lock_count"                   , "Execution: (diff <- abs) number of page locks requested."));
+        sb.append(createHtmlTh("page_lock_wait_count"              , "Execution: (diff <- abs) number of times the Database Engine waited on a page lock."));
+        sb.append(createHtmlTh("page_lock_wait_in_ms"              , "Execution: (diff <- abs) Total number of milliseconds the Database Engine waited on a page lock."));
+        sb.append(createHtmlTh("index_lock_promotion_attempt_count", "Execution: (diff <- abs) number of times the Database Engine tried to escalate locks."));
+        sb.append(createHtmlTh("index_lock_promotion_count"        , "Execution: (diff <- abs) number of times the Database Engine escalated locks."));
+		
+		sb.append(createHtmlTh("DDL"                               , ""));
 
-//		String tt1 = "\nTime span: During the report period.";
-//		sb.append("  <th title='Number of Insert, Update and Deletes that has been done." + tt1                      + "'>RowsInsUpdDel</th> \n");
-//		sb.append("  <th title='Number of times the optimizer selected this index to be used in a query plan." + tt1 + "'>OptSelectCount</th> \n");
-//		sb.append("  <th title='Number of times the object was used in a plan during execution." + tt1               + "'>UsedCount</th> \n");
-//		sb.append("  <th title='Number of times the object was accessed." + tt1                                      + "'>Operations</th> \n");
-
-//		sb.append("  <th title='Indicates the date and time when the index structure was added to the ASE cache."    + "'>CacheDate</th> \n");
-//		sb.append("  <th title='When was the index created."                                                         + "'>CrDate</th> \n");
-
-//		String tt2 = "\nTime span: Since object was cached (see CacheDate)."
-//		           + "\nNOTE: This counter is an integer that may/will wrap, if incremeted frequently."
-//		           + "\nUse this to decide if the index has **ever** been used since CacheDate."
-//		           + "\nA low value indicates that the index has NOT been used. And therefor may be an *unused* index.";
-//		sb.append("  <th title='Number of Insert, Update and Deletes that has been done." + tt2                      + "'>AbsRowsInsUpdDel</th> \n");
-//		sb.append("  <th title='Number of times the optimizer selected this index to be used in a query plan." + tt2 + "'>AbsOptSelectCount</th> \n");
-//		sb.append("  <th title='Number of times the object was used in a plan during execution." + tt2               + "'>AbsUsedCount</th> \n");
-//		sb.append("  <th title='Number of times the object was accessed." + tt2                                      + "'>AbsOperations</th> \n");
-
-		sb.append("  <th title='(diff <- abs) Number of seeks by user queries.'                                                        >user_seeks                  </th> \n");
-		sb.append("  <th title='(diff <- abs) Number of scans by user queries that did not use -seek- predicate.'                      >user_scans                  </th> \n");
-		sb.append("  <th title='(diff <- abs) Number of bookmark lookups by user queries.'                                             >user_lookups                </th> \n");
-		sb.append("  <th title='(diff <- abs) Number of updates by user queries. This includes Insert, Delete, and Updates representing number of operations done not the actual rows affected. For example, if you delete 1000 rows in one statement, this count increments by 1'>user_updates                </th> \n");
-
-//		sb.append("  <th title='Number of seeks by user queries.'                                                        >abs_user_seeks              </th> \n");
-//		sb.append("  <th title='Number of scans by user queries that did not use -seek- predicate.'                      >abs_user_scans              </th> \n");
-//		sb.append("  <th title='Number of bookmark lookups by user queries.'                                             >abs_user_lookups            </th> \n");
-//		sb.append("  <th title='Number of updates by user queries. This includes Insert, Delete, and Updates representing number of operations done not the actual rows affected. For example, if you delete 1000 rows in one statement, this count increments by 1'>abs_user_updates            </th> \n");
-
-		sb.append("  <th title='Execution: (diff <- abs) range and table scans started on the index or heap'                           >range_scan_count            </th> \n");
-		sb.append("  <th title='Execution: (diff <- abs) single row retrievals from the index or heap'                                 >singleton_lookup_count      </th> \n");
-		sb.append("  <th title='Execution: (diff <- abs) Count of rows that were fetched through a forwarding record'                  >forwarded_fetch_count       </th> \n");
-		sb.append("  <th title='Execution: (diff <- abs) Count of large object(LOB) pages retrieved from the LOB_DATA allocation unit' >lob_fetch_in_pages          </th> \n");
-		sb.append("  <th title='Execution: (diff <- abs) leaf-level insert + deletes + ghosted-deletes + updates'                      >leaf_crud_count             </th> \n");
-		sb.append("  <th title='Execution: (diff <- abs) leaf-level inserts'                                                           >leaf_insert_count           </th> \n");
-		sb.append("  <th title='Execution: (diff <- abs) leaf-level deletes'                                                           >leaf_delete_count           </th> \n");
-		sb.append("  <th title='Execution: (diff <- abs) leaf-level updates'                                                           >leaf_update_count           </th> \n");
-		sb.append("  <th title='Execution: (diff <- abs) leaf-level rows that are marked as deleted, but not yet removed'              >leaf_ghost_count            </th> \n");
-		sb.append("  <th title='Execution: (diff <- abs) times the Database Engine waited on an I/O page latch.'                       >page_io_latch_wait_count    </th> \n");
-		sb.append("  <th title='Execution: (diff <- abs) number of milliseconds the Database Engine waited on a page I/O latch'        >page_io_latch_wait_in_ms    </th> \n");
-
-//		sb.append("  <th title='Execution: range and table scans started on the index or heap'                           >abs_range_scan_count        </th> \n");
-//		sb.append("  <th title='Execution: single row retrievals from the index or heap'                                 >abs_singleton_lookup_count  </th> \n");
-////		sb.append("  <th title='Execution: Count of rows that were fetched through a forwarding record'                  >abs_forwarded_fetch_count   </th> \n");
-////		sb.append("  <th title='Execution: Count of large object(LOB) pages retrieved from the LOB_DATA allocation unit' >abs_lob_fetch_in_pages      </th> \n");
-//		sb.append("  <th title='Execution: leaf-level insert + deletes + ghosted-deletes + updates'                      >abs_leaf_crud_count         </th> \n");
-////		sb.append("  <th title='Execution: leaf-level inserts'                                                           >abs_leaf_insert_count       </th> \n");
-////		sb.append("  <th title='Execution: leaf-level deletes'                                                           >abs_leaf_delete_count       </th> \n");
-////		sb.append("  <th title='Execution: leaf-level updates'                                                           >abs_leaf_update_count       </th> \n");
-////		sb.append("  <th title='Execution: leaf-level rows that are marked as deleted, but not yet removed'              >abs_leaf_ghost_count        </th> \n");
-////		sb.append("  <th title='Execution: times the Database Engine waited on an I/O page latch.'                       >abs_page_io_latch_wait_count</th> \n");
-////		sb.append("  <th title='Execution: number of milliseconds the Database Engine waited on a page I/O latch'        >abs_page_io_latch_wait_in_ms</th> \n");
-
-		sb.append("</tr> \n");
+        sb.append("</tr> \n");
 		sb.append("</thead> \n");
 
 		NumberFormat nf = NumberFormat.getInstance();
@@ -741,6 +547,8 @@ extends ReportEntryAbstract
 			sb.append("  <td>").append(            entry.getIndexName()            ).append("</td> \n");
 			sb.append("  <td>").append(            entry.getIndexID()              ).append("</td> \n");
 			sb.append("  <td>").append(            entry.getKeysStr()              ).append("</td> \n");
+			sb.append("  <td>").append(            entry.getIncludeStr()           ).append("</td> \n");
+			sb.append("  <td>").append(            entry.getFilterExpression()     ).append("</td> \n");
 			sb.append("  <td>").append(            description                     ).append("</td> \n");
 			sb.append("  <td>").append( nf.format( entry.getIndexSizeMb()         )).append("</td> \n");
 			sb.append("  <td>").append( nf.format( entry.getIndexPages()          )).append("</td> \n");
@@ -750,24 +558,37 @@ extends ReportEntryAbstract
 //			sb.append("  <td>").append( nf.format( entry.getAvgRowSizeBytes()     )).append("</td> \n");
 //			sb.append("  <td>").append( nf.format( entry.getReservedMb()          )).append("</td> \n");
 //			sb.append("  <td>").append( nf.format( entry.getUnusedMb()            )).append("</td> \n");
-//			sb.append("  <td>").append(            entry.getDdlText()              ).append("</td> \n");
 
-			sb.append("  <td>").append( diffAbsValues(entry._user_seeks              , entry._abs_user_seeks               )).append("</td> \n");
-			sb.append("  <td>").append( diffAbsValues(entry._user_scans              , entry._abs_user_scans               )).append("</td> \n");
-			sb.append("  <td>").append( diffAbsValues(entry._user_lookups            , entry._abs_user_lookups             )).append("</td> \n");
-			sb.append("  <td>").append( diffAbsValues(entry._user_updates            , entry._abs_user_updates             )).append("</td> \n");
-
-			sb.append("  <td>").append( diffAbsValues(entry._range_scan_count        , entry._abs_range_scan_count         )).append("</td> \n");
-			sb.append("  <td>").append( diffAbsValues(entry._singleton_lookup_count  , entry._abs_singleton_lookup_count   )).append("</td> \n");
-			sb.append("  <td>").append( diffAbsValues(entry._forwarded_fetch_count   , entry._abs_forwarded_fetch_count    )).append("</td> \n");
-			sb.append("  <td>").append( diffAbsValues(entry._lob_fetch_in_pages      , entry._abs_lob_fetch_in_pages       )).append("</td> \n");
-			sb.append("  <td>").append( diffAbsValues(entry._leaf_crud_count         , entry._abs_leaf_crud_count          )).append("</td> \n");
-			sb.append("  <td>").append( diffAbsValues(entry._leaf_insert_count       , entry._abs_leaf_insert_count        )).append("</td> \n");
-			sb.append("  <td>").append( diffAbsValues(entry._leaf_delete_count       , entry._abs_leaf_delete_count        )).append("</td> \n");
-			sb.append("  <td>").append( diffAbsValues(entry._leaf_update_count       , entry._abs_leaf_update_count        )).append("</td> \n");
-			sb.append("  <td>").append( diffAbsValues(entry._leaf_ghost_count        , entry._abs_leaf_ghost_count         )).append("</td> \n");
-			sb.append("  <td>").append( diffAbsValues(entry._page_io_latch_wait_count, entry._abs_page_io_latch_wait_count )).append("</td> \n");
-			sb.append("  <td>").append( diffAbsValues(entry._page_io_latch_wait_in_ms, entry._abs_page_io_latch_wait_in_ms )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._READS                             , entry._abs_READS                              )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._WRITES                            , entry._abs_WRITES                             )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._user_seeks                        , entry._abs_user_seeks                         )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._user_scans                        , entry._abs_user_scans                         )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._user_lookups                      , entry._abs_user_lookups                       )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._user_updates                      , entry._abs_user_updates                       )).append("</td> \n");
+                                                                                                                                               
+			sb.append("  <td>").append( diffAbsValues(entry._range_scan_count                  , entry._abs_range_scan_count                   )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._singleton_lookup_count            , entry._abs_singleton_lookup_count             )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._forwarded_fetch_count             , entry._abs_forwarded_fetch_count              )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._lob_fetch_in_pages                , entry._abs_lob_fetch_in_pages                 )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._leaf_crud_count                   , entry._abs_leaf_crud_count                    )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._leaf_insert_count                 , entry._abs_leaf_insert_count                  )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._leaf_delete_count                 , entry._abs_leaf_delete_count                  )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._leaf_update_count                 , entry._abs_leaf_update_count                  )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._leaf_ghost_count                  , entry._abs_leaf_ghost_count                   )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._page_latch_wait_count             , entry._abs_page_latch_wait_count              )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._page_latch_wait_in_ms             , entry._abs_page_latch_wait_in_ms              )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._page_io_latch_wait_count          , entry._abs_page_io_latch_wait_count           )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._page_io_latch_wait_in_ms          , entry._abs_page_io_latch_wait_in_ms           )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._row_lock_count                    , entry._abs_row_lock_count                     )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._row_lock_wait_count               , entry._abs_row_lock_wait_count                )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._row_lock_wait_in_ms               , entry._abs_row_lock_wait_in_ms                )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._page_lock_count                   , entry._abs_page_lock_count                    )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._page_lock_wait_count              , entry._abs_page_lock_wait_count               )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._page_lock_wait_in_ms              , entry._abs_page_lock_wait_in_ms               )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._index_lock_promotion_attempt_count, entry._abs_index_lock_promotion_attempt_count )).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry._index_lock_promotion_count        , entry._abs_index_lock_promotion_count         )).append("</td> \n");
+			
+			sb.append("  <td>").append( entry.getDdlText() ).append("</td> \n");
 
 			sb.append("</tr> \n");
 		}
@@ -788,7 +609,32 @@ extends ReportEntryAbstract
 		return sb.toString();
 	}
 
-//TODO-GORAN-FIX; Take a look at (or think about) how we can do QuesryStore SQL-Text parse->DDL-Storage... once an hour or similar (should it be in some kind of CM or a separate task/thread in the PCH) 
+	public String getMissingIndexInfoAsHtmlTable(SqlServerTableInfo tableEntry, String classname)
+	{
+		// Exit early: if no data
+		if (tableEntry == null)                   return "";
+		if (tableEntry._missingIndexInfo == null) return "";
+			
+		StringBuilder sb = new StringBuilder();
+
+		sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+
+		sb.append("<br> \n");
+//		sb.append("<details open> \n");
+		sb.append("<details> \n");
+		sb.append("<summary>Show/Hide: " + tableEntry._missingIndexInfo.getRowCount() + " Missing Index Recomendations from SQL Server: sys.dm_db_missing_index_*</summary> \n");
+
+		if ( tableEntry._missingIndexInfo.isEmpty() )
+			sb.append("&emsp; &bull; <b>No</b> Missing Index Recomendations was found.");
+		else
+			sb.append(toHtmlTable(tableEntry._missingIndexInfo));
+
+		sb.append("</details> \n");
+
+		sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+
+		return sb.toString();
+	}
 	
 	/**
 	 * FIXME
@@ -895,10 +741,11 @@ extends ReportEntryAbstract
 		}
 		
 		// Check if 'table' has dbname/schema name specified.
-		SqlObjectName sqlObj = new SqlObjectName(conn, table);
-		if (sqlObj.hasCatalogName()) dbname = sqlObj.getCatalogNameOrigin();
-		if (sqlObj.hasSchemaName() ) owner  = sqlObj.getSchemaNameOrigin();
-		if (sqlObj.hasObjectName() ) table  = sqlObj.getObjectNameOrigin();
+		SqlObjectName sqlObj = new SqlObjectName(table, DbUtils.DB_PROD_NAME_MSSQL, "\"", false, false, true);
+//		SqlObjectName sqlObj = new SqlObjectName(conn, table);
+		if (sqlObj.hasCatalogName()) dbname = sqlObj.getCatalogName();
+		if (sqlObj.hasSchemaName() ) owner  = sqlObj.getSchemaName();
+		if (sqlObj.hasObjectName() ) table  = sqlObj.getObjectName();
 		
 		if ("dbo".equalsIgnoreCase(owner))
 			owner = "";
@@ -915,7 +762,7 @@ extends ReportEntryAbstract
 		if (and_table .contains("%")) and_table  = and_table .replace(" = ", " like ");
 
 		String sql = ""
-			    + "select [dbname], [owner], [objectName], [type], [crdate], [extraInfoText], [objectText] \n"
+			    + "select [dbname], [owner], [objectName], [type], [crdate], [sampleTime], [extraInfoText], [objectText], [dependList] \n"  // possibly also: [dependsText]
 			    + "from [MonDdlStorage] \n"
 			    + "where 1 = 1 \n"
 			    + "  and [type] in ('U', 'V') \n"
@@ -942,9 +789,11 @@ extends ReportEntryAbstract
 					ti._tableName     = rs.getString(3);
 					ti._type          = rs.getString(4);
 					ti._crdate        = rs.getTimestamp(5);
+					ti._sampleTime    = rs.getTimestamp(6);
 
-					ti._extraInfoText = rs.getString(6);
-					ti._objectText    = rs.getString(7);
+					ti._extraInfoText = rs.getString(7);
+					ti._objectText    = rs.getString(8);
+					ti._childObjects  = rs.getString(9);
 					
 					tmpList.add(ti);
 				}
@@ -957,6 +806,7 @@ extends ReportEntryAbstract
 			_logger.warn("Problems getting Table Information for dbname='" + dbname + "', owner='" + owner + "', table='" + table + "': " + ex);
 			throw ex;
 		}
+//System.out.println("getTableInformationFromMonDdlStorage(): table='" + table + "', rowcount=" + rowcount + ", dbname='" + dbname + "', schema='" + owner + "', table='" + table + "'.");
 
 		// Create an OUTPUT LIST
 //		List<SqlServerTableInfo> retList = new ArrayList<>();
@@ -989,7 +839,7 @@ extends ReportEntryAbstract
 
 							// What "tables" do this view reference
 							ti._viewReferences = viewReferences;
-System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recursCallCount+"): ti='"+ti.getFullTableName()+"', is a VIEW, the following references will also be fetched: " + viewReferences);
+//System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recursCallCount+"): ti='"+ti.getFullTableName()+"', is a VIEW, the following references will also be fetched: " + viewReferences);
 							// Loop the list
 							for (String tableName : viewReferences)
 							{
@@ -1024,6 +874,12 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 
 						// get execution info: CmIndexOpStat -- sys.dm_db_index_operational_stats    (range_scan_count, singleton_lookup_count) and (forwarded_fetch_count, lob_fetch_in_pages) possibly to get CrudCount (leaf_insert_count, leaf_delete_count, leaf_update_count)
 						getExecutionCounterInfo(conn, ti);
+						
+						// get Missing index recommendations for THIS table
+						getMissingIndexInfo(conn, ti);
+						
+						// get TRIGGER information for this table
+						getTriggerInfo(conn, ti); // type='TR'
 					}
 
 				} // end: has: _objectText && _extraInfoText 
@@ -1192,8 +1048,8 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 
 		if (rstmIndexInfo != null && !rstmIndexInfo.isEmpty())
 		{
-			rstmIndexKeys.setHandleColumnNotFoundAsNullValueInGetValues(true);
-			rstmIndexInfo.setHandleColumnNotFoundAsNullValueInGetValues(true);
+			if (rstmIndexKeys != null) rstmIndexKeys.setHandleColumnNotFoundAsNullValueInGetValues(true);
+			if (rstmIndexInfo != null) rstmIndexInfo.setHandleColumnNotFoundAsNullValueInGetValues(true);
 
 //			int indexCount = 0;
 //			List<SqlServerIndexInfo> indexInfoList = new ArrayList<>();
@@ -1234,6 +1090,14 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 					
 						// Fill in SqlServerIndexInfo: _keysStr, _keys, _desc, 
 						scrapeIndexInfo(ii._indexName, rstmIndexKeys, ii);
+						
+						ii._keysStr          = rstmIndexInfo.getValueAsString (r, "IndexKeys"   , true, ii._keysStr);
+						ii._includeColsStr   = rstmIndexInfo.getValueAsString (r, "IndexInclude", true, null);
+						ii._filterExpression = rstmIndexInfo.getValueAsString (r, "IndexFilter" , true, null);
+						ii._ddlTxt           = rstmIndexInfo.getValueAsString (r, "DDL"         , true, null);
+
+						ii._keys             = StringUtil.commaStrToList(ii._keysStr, true);
+						ii._includeCols      = StringUtil.commaStrToList(ii._includeColsStr, true);
 					}
 
 					// Add index to table list
@@ -1306,6 +1170,8 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 			+ "        ,[TableName] \n"
 			+ "        ,[IndexName] \n"
 			+ "        ,[index_id] \n"
+			+ "        ,sum([user_seeks]) + sum([user_seeks]) + sum([user_scans]) as [READS] \n"
+			+ "        ,sum([user_updates])  as [WRITES] \n"
 			+ "        ,sum([user_seeks])    as [user_seeks] \n"
 			+ "        ,sum([user_scans])    as [user_scans] \n"
 			+ "        ,sum([user_lookups])  as [user_lookups] \n"
@@ -1325,6 +1191,8 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 			+ "        ,[TableName] \n"
 			+ "        ,[IndexName] \n"
 			+ "        ,[index_id] \n"
+			+ "        ,[user_seeks] + [user_seeks] + [user_scans] as [abs_READS] \n"
+			+ "        ,[user_updates]  as [abs_WRITES] \n"
 			+ "        ,[user_seeks]    as [abs_user_seeks] \n"
 			+ "        ,[user_scans]    as [abs_user_scans] \n"
 			+ "        ,[user_lookups]  as [abs_user_lookups] \n"
@@ -1342,11 +1210,15 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 			+ "    ,diff.[IndexName] \n"
 			+ "    ,diff.[index_id] \n"
 			+ " \n"
+			+ "    ,diff.[READS] \n"
+			+ "    ,diff.[WRITES] \n"
 			+ "    ,diff.[user_seeks] \n"
 			+ "    ,diff.[user_scans] \n"
 			+ "    ,diff.[user_lookups] \n"
 			+ "    ,diff.[user_updates] \n"
 			+ " \n"
+			+ "    ,abs .[abs_READS] \n"
+			+ "    ,abs .[abs_WRITES] \n"
 			+ "    ,abs. [abs_user_seeks] \n"
 			+ "    ,abs. [abs_user_scans] \n"
 			+ "    ,abs. [abs_user_lookups] \n"
@@ -1375,24 +1247,32 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 					String    IndexName          = rs.getString   (4);
 				//	int       IndexID            = rs.getInt      (5);
 					
-					long      user_seeks         = rs.getLong     (6);
-					long      user_scans         = rs.getLong     (7);
-					long      user_lookups       = rs.getLong     (8);
-					long      user_updates       = rs.getLong     (9);
+					long      READS              = rs.getLong     (6);
+					long      WRITES             = rs.getLong     (7);
+					long      user_seeks         = rs.getLong     (8);
+					long      user_scans         = rs.getLong     (9);
+					long      user_lookups       = rs.getLong     (10);
+					long      user_updates       = rs.getLong     (11);
 					
-					long      abs_user_seeks     = rs.getLong     (10);
-					long      abs_user_scans     = rs.getLong     (11);
-					long      abs_user_lookups   = rs.getLong     (12);
-					long      abs_user_updates   = rs.getLong     (13);
+					long      abs_READS          = rs.getLong     (12);
+					long      abs_WRITES         = rs.getLong     (13);
+					long      abs_user_seeks     = rs.getLong     (14);
+					long      abs_user_scans     = rs.getLong     (15);
+					long      abs_user_lookups   = rs.getLong     (16);
+					long      abs_user_updates   = rs.getLong     (17);
 					
 					SqlServerIndexInfo indexEntry = ti.getIndexInfoForName(IndexName);
 					if (indexEntry != null)
 					{
+						indexEntry._READS            = READS;
+						indexEntry._WRITES           = WRITES;
 						indexEntry._user_seeks       = user_seeks;
 						indexEntry._user_scans       = user_scans;
 						indexEntry._user_lookups     = user_lookups;
 						indexEntry._user_updates     = user_updates;
 
+						indexEntry._abs_READS        = abs_READS;
+						indexEntry._abs_WRITES       = abs_WRITES;
 						indexEntry._abs_user_seeks   = abs_user_seeks;
 						indexEntry._abs_user_scans   = abs_user_scans;
 						indexEntry._abs_user_lookups = abs_user_lookups;
@@ -1436,17 +1316,27 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 			+ "        ,[TableName] \n"
 			+ "        ,[IndexName] \n"
 			+ "        ,[index_id] \n"
-			+ "        ,sum([range_scan_count])         as [range_scan_count] \n"
-			+ "        ,sum([singleton_lookup_count])   as [singleton_lookup_count] \n"
-			+ "        ,sum([forwarded_fetch_count])    as [forwarded_fetch_count] \n"
-			+ "        ,sum([lob_fetch_in_pages])       as [lob_fetch_in_pages] \n"
-			+ "        ,sum([leaf_insert_count])        as [leaf_insert_count] \n"
-			+ "        ,sum([leaf_delete_count])        as [leaf_delete_count] \n"
-			+ "        ,sum([leaf_update_count])        as [leaf_update_count] \n"
-			+ "        ,sum([leaf_ghost_count])         as [leaf_ghost_count] \n"
+			+ "        ,sum([range_scan_count])                   as [range_scan_count] \n"
+			+ "        ,sum([singleton_lookup_count])             as [singleton_lookup_count] \n"
+			+ "        ,sum([forwarded_fetch_count])              as [forwarded_fetch_count] \n"
+			+ "        ,sum([lob_fetch_in_pages])                 as [lob_fetch_in_pages] \n"
+			+ "        ,sum([leaf_insert_count])                  as [leaf_insert_count] \n"
+			+ "        ,sum([leaf_delete_count])                  as [leaf_delete_count] \n"
+			+ "        ,sum([leaf_update_count])                  as [leaf_update_count] \n"
+			+ "        ,sum([leaf_ghost_count])                   as [leaf_ghost_count] \n"
 			+ "        ,sum([leaf_insert_count]) + sum([leaf_delete_count]) + sum([leaf_update_count]) + sum([leaf_ghost_count]) as [leaf_crud_count] \n"
-			+ "        ,sum([page_io_latch_wait_count]) as [page_io_latch_wait_count] \n"
-			+ "        ,sum([page_io_latch_wait_in_ms]) as [page_io_latch_wait_in_ms] \n"
+			+ "        ,sum([page_latch_wait_count])              as [page_latch_wait_count] \n"
+			+ "        ,sum([page_latch_wait_in_ms])              as [page_latch_wait_in_ms] \n"
+			+ "        ,sum([page_io_latch_wait_count])           as [page_io_latch_wait_count] \n"
+			+ "        ,sum([page_io_latch_wait_in_ms])           as [page_io_latch_wait_in_ms] \n"
+			+ "        ,sum([row_lock_count])                     as [row_lock_count] \n"
+			+ "        ,sum([row_lock_wait_count])                as [row_lock_wait_count] \n"
+			+ "        ,sum([row_lock_wait_in_ms])                as [row_lock_wait_in_ms] \n"
+			+ "        ,sum([page_lock_count])                    as [page_lock_count] \n"
+			+ "        ,sum([page_lock_wait_count])               as [page_lock_wait_count] \n"
+			+ "        ,sum([page_lock_wait_in_ms])               as [page_lock_wait_in_ms] \n"
+			+ "        ,sum([index_lock_promotion_attempt_count]) as [index_lock_promotion_attempt_count] \n"
+			+ "        ,sum([index_lock_promotion_count])         as [index_lock_promotion_count] \n"
 			+ "    from [CmIndexOpStat_diff] \n"
 			+ "    where 1 = 1 \n"
 			+ "      and [DbName]     = " + DbUtils.safeStr(dbname    ) + " \n"
@@ -1462,17 +1352,27 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 			+ "        ,[TableName] \n"
 			+ "        ,[IndexName] \n"
 			+ "        ,[index_id] \n"
-			+ "        ,[range_scan_count]         as [abs_range_scan_count] \n"
-			+ "        ,[singleton_lookup_count]   as [abs_singleton_lookup_count] \n"
-			+ "        ,[forwarded_fetch_count]    as [abs_forwarded_fetch_count] \n"
-			+ "        ,[lob_fetch_in_pages]       as [abs_lob_fetch_in_pages] \n"
+			+ "        ,[range_scan_count]                   as [abs_range_scan_count] \n"
+			+ "        ,[singleton_lookup_count]             as [abs_singleton_lookup_count] \n"
+			+ "        ,[forwarded_fetch_count]              as [abs_forwarded_fetch_count] \n"
+			+ "        ,[lob_fetch_in_pages]                 as [abs_lob_fetch_in_pages] \n"
 			+ "        ,[leaf_insert_count] + [leaf_delete_count] + [leaf_update_count] + [leaf_ghost_count] as [abs_leaf_crud_count] \n"
-			+ "        ,[leaf_insert_count]        as [abs_leaf_insert_count] \n"
-			+ "        ,[leaf_delete_count]        as [abs_leaf_delete_count] \n"
-			+ "        ,[leaf_update_count]        as [abs_leaf_update_count] \n"
-			+ "        ,[leaf_ghost_count]         as [abs_leaf_ghost_count] \n"
-			+ "        ,[page_io_latch_wait_count] as [abs_page_io_latch_wait_count] \n"
-			+ "        ,[page_io_latch_wait_in_ms] as [abs_page_io_latch_wait_in_ms] \n"
+			+ "        ,[leaf_insert_count]                  as [abs_leaf_insert_count] \n"
+			+ "        ,[leaf_delete_count]                  as [abs_leaf_delete_count] \n"
+			+ "        ,[leaf_update_count]                  as [abs_leaf_update_count] \n"
+			+ "        ,[leaf_ghost_count]                   as [abs_leaf_ghost_count] \n"
+			+ "        ,[page_latch_wait_count]              as [abs_page_latch_wait_count] \n"
+			+ "        ,[page_latch_wait_in_ms]              as [abs_page_latch_wait_in_ms] \n"
+			+ "        ,[page_io_latch_wait_count]           as [abs_page_io_latch_wait_count] \n"
+			+ "        ,[page_io_latch_wait_in_ms]           as [abs_page_io_latch_wait_in_ms] \n"
+			+ "        ,[row_lock_count]                     as [abs_row_lock_count] \n"
+			+ "        ,[row_lock_wait_count]                as [abs_row_lock_wait_count] \n"
+			+ "        ,[row_lock_wait_in_ms]                as [abs_row_lock_wait_in_ms] \n"
+			+ "        ,[page_lock_count]                    as [abs_page_lock_count] \n"
+			+ "        ,[page_lock_wait_count]               as [abs_page_lock_wait_count] \n"
+			+ "        ,[page_lock_wait_in_ms]               as [abs_page_lock_wait_in_ms] \n"
+			+ "        ,[index_lock_promotion_attempt_count] as [abs_index_lock_promotion_attempt_count] \n"
+			+ "        ,[index_lock_promotion_count]         as [abs_index_lock_promotion_count] \n"
 			+ "    from [CmIndexOpStat_abs] \n"
 			+ "    where [SessionSampleTime] = (select max([SessionSampleTime]) from [CmIndexOpStat_abs]) \n"
 			+ "      and [DbName]     = " + DbUtils.safeStr(dbname    ) + " \n"
@@ -1480,13 +1380,13 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 			+ "      and [TableName]  = " + DbUtils.safeStr(tableName ) + " \n"
 			+ ") \n"
 			+ "select \n"
-			+ "     diff.[DbName] \n"
+			+ "     diff.[DbName] \n"                     // pos=1
 			+ "    ,diff.[SchemaName] \n"
 			+ "    ,diff.[TableName] \n"
 			+ "    ,diff.[IndexName] \n"
 			+ "    ,diff.[index_id] \n"
 			+ " \n"
-			+ "    ,diff.[range_scan_count] \n"
+			+ "    ,diff.[range_scan_count] \n"           // pos=6
 			+ "    ,diff.[singleton_lookup_count] \n"
 			+ "    ,diff.[forwarded_fetch_count] \n"
 			+ "    ,diff.[lob_fetch_in_pages] \n"
@@ -1495,10 +1395,20 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 			+ "    ,diff.[leaf_delete_count] \n"
 			+ "    ,diff.[leaf_update_count] \n"
 			+ "    ,diff.[leaf_ghost_count] \n"
+			+ "    ,diff.[page_latch_wait_count] \n"
+			+ "    ,diff.[page_latch_wait_in_ms] \n"
 			+ "    ,diff.[page_io_latch_wait_count] \n"
 			+ "    ,diff.[page_io_latch_wait_in_ms] \n"
+			+ "    ,diff.[row_lock_count] \n"
+			+ "    ,diff.[row_lock_wait_count] \n"
+			+ "    ,diff.[row_lock_wait_in_ms] \n"
+			+ "    ,diff.[page_lock_count] \n"
+			+ "    ,diff.[page_lock_wait_count] \n"
+			+ "    ,diff.[page_lock_wait_in_ms] \n"
+			+ "    ,diff.[index_lock_promotion_attempt_count] \n"
+			+ "    ,diff.[index_lock_promotion_count] \n"
 			+ " \n"
-			+ "    ,abs. [abs_range_scan_count] \n"
+			+ "    ,abs. [abs_range_scan_count] \n"            // pos=27
 			+ "    ,abs. [abs_singleton_lookup_count] \n"
 			+ "    ,abs. [abs_forwarded_fetch_count] \n"
 			+ "    ,abs. [abs_lob_fetch_in_pages] \n"
@@ -1507,8 +1417,18 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 			+ "    ,abs. [abs_leaf_delete_count] \n"
 			+ "    ,abs. [abs_leaf_update_count] \n"
 			+ "    ,abs. [abs_leaf_ghost_count] \n"
+			+ "    ,abs. [abs_page_latch_wait_count] \n"
+			+ "    ,abs. [abs_page_latch_wait_in_ms] \n"
 			+ "    ,abs. [abs_page_io_latch_wait_count] \n"
 			+ "    ,abs. [abs_page_io_latch_wait_in_ms] \n"
+			+ "    ,abs. [abs_row_lock_count] \n"
+			+ "    ,abs. [abs_row_lock_wait_count] \n"
+			+ "    ,abs. [abs_row_lock_wait_in_ms] \n"
+			+ "    ,abs. [abs_page_lock_count] \n"
+			+ "    ,abs. [abs_page_lock_wait_count] \n"
+			+ "    ,abs. [abs_page_lock_wait_in_ms] \n"
+			+ "    ,abs. [abs_index_lock_promotion_attempt_count] \n"
+			+ "    ,abs. [abs_index_lock_promotion_count] \n"          // pos=47
 			+ " \n"
 			+ "from diff \n"
 			+ "left outer join abs on diff.[DbName]     = abs.[DbName] \n"
@@ -1528,62 +1448,102 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 			{
 				while(rs.next())
 				{
-				//	String    DbName                       = rs.getString   (1);
-				//	String    SchemaName                   = rs.getString   (2);
-				//	String    TableName                    = rs.getString   (3);
-					String    IndexName                    = rs.getString   (4);
-				//	int       IndexID                      = rs.getInt      (5);
-					
-					long      range_scan_count             = rs.getLong     (6);
-					long      singleton_lookup_count       = rs.getLong     (7);
-					long      forwarded_fetch_count        = rs.getLong     (8);
-					long      lob_fetch_in_pages           = rs.getLong     (9);
-					long      leaf_crud_count              = rs.getLong     (10);
-					long      leaf_insert_count            = rs.getLong     (11);
-					long      leaf_delete_count            = rs.getLong     (12);
-					long      leaf_update_count            = rs.getLong     (13);
-					long      leaf_ghost_count             = rs.getLong     (14);
-					long      page_io_latch_wait_count     = rs.getLong     (15);
-					long      page_io_latch_wait_in_ms     = rs.getLong     (16);
-					
-					long      abs_range_scan_count         = rs.getLong     (17);
-					long      abs_singleton_lookup_count   = rs.getLong     (18);
-					long      abs_forwarded_fetch_count    = rs.getLong     (19);
-					long      abs_lob_fetch_in_pages       = rs.getLong     (20);
-					long      abs_leaf_crud_count          = rs.getLong     (21);
-					long      abs_leaf_insert_count        = rs.getLong     (22);
-					long      abs_leaf_delete_count        = rs.getLong     (23);
-					long      abs_leaf_update_count        = rs.getLong     (24);
-					long      abs_leaf_ghost_count         = rs.getLong     (25);
-					long      abs_page_io_latch_wait_count = rs.getLong     (26);
-					long      abs_page_io_latch_wait_in_ms = rs.getLong     (27);
+				//	String    DbName                                 = rs.getString   (1);
+				//	String    SchemaName                             = rs.getString   (2);
+				//	String    TableName                              = rs.getString   (3);
+					String    IndexName                              = rs.getString   (4);
+				//	int       IndexID                                = rs.getInt      (5);
+					                                                 
+					long      range_scan_count                       = rs.getLong     (6);
+					long      singleton_lookup_count                 = rs.getLong     (7);
+					long      forwarded_fetch_count                  = rs.getLong     (8);
+					long      lob_fetch_in_pages                     = rs.getLong     (9);
+					long      leaf_crud_count                        = rs.getLong     (10);
+					long      leaf_insert_count                      = rs.getLong     (11);
+					long      leaf_delete_count                      = rs.getLong     (12);
+					long      leaf_update_count                      = rs.getLong     (13);
+					long      leaf_ghost_count                       = rs.getLong     (14);
+					long      page_latch_wait_count                  = rs.getLong     (15);
+					long      page_latch_wait_in_ms                  = rs.getLong     (16);
+					long      page_io_latch_wait_count               = rs.getLong     (17);
+					long      page_io_latch_wait_in_ms               = rs.getLong     (18);
+					long      row_lock_count                         = rs.getLong     (19);
+					long      row_lock_wait_count                    = rs.getLong     (20);
+					long      row_lock_wait_in_ms                    = rs.getLong     (21);
+					long      page_lock_count                        = rs.getLong     (22);
+					long      page_lock_wait_count                   = rs.getLong     (23);
+					long      page_lock_wait_in_ms                   = rs.getLong     (24);
+					long      index_lock_promotion_attempt_count     = rs.getLong     (25);
+					long      index_lock_promotion_count             = rs.getLong     (26);
+
+					long      abs_range_scan_count                   = rs.getLong     (27);
+					long      abs_singleton_lookup_count             = rs.getLong     (28);
+					long      abs_forwarded_fetch_count              = rs.getLong     (29);
+					long      abs_lob_fetch_in_pages                 = rs.getLong     (30);
+					long      abs_leaf_crud_count                    = rs.getLong     (31);
+					long      abs_leaf_insert_count                  = rs.getLong     (32);
+					long      abs_leaf_delete_count                  = rs.getLong     (33);
+					long      abs_leaf_update_count                  = rs.getLong     (34);
+					long      abs_leaf_ghost_count                   = rs.getLong     (35);
+					long      abs_page_latch_wait_count              = rs.getLong     (36);
+					long      abs_page_latch_wait_in_ms              = rs.getLong     (37);
+					long      abs_page_io_latch_wait_count           = rs.getLong     (38);
+					long      abs_page_io_latch_wait_in_ms           = rs.getLong     (39);
+					long      abs_row_lock_count                     = rs.getLong     (40);
+					long      abs_row_lock_wait_count                = rs.getLong     (41);
+					long      abs_row_lock_wait_in_ms                = rs.getLong     (42);
+					long      abs_page_lock_count                    = rs.getLong     (43);
+					long      abs_page_lock_wait_count               = rs.getLong     (44);
+					long      abs_page_lock_wait_in_ms               = rs.getLong     (45);
+					long      abs_index_lock_promotion_attempt_count = rs.getLong     (46);
+					long      abs_index_lock_promotion_count         = rs.getLong     (47);
 					
 					SqlServerIndexInfo indexEntry = ti.getIndexInfoForName(IndexName);
 					if (indexEntry != null)
 					{
-						indexEntry._range_scan_count             = range_scan_count;
-						indexEntry._singleton_lookup_count       = singleton_lookup_count;
-						indexEntry._forwarded_fetch_count        = forwarded_fetch_count;
-						indexEntry._lob_fetch_in_pages           = lob_fetch_in_pages;
-						indexEntry._leaf_crud_count              = leaf_crud_count;
-						indexEntry._leaf_insert_count            = leaf_insert_count;
-						indexEntry._leaf_delete_count            = leaf_delete_count;
-						indexEntry._leaf_update_count            = leaf_update_count;
-						indexEntry._leaf_ghost_count             = leaf_ghost_count;
-						indexEntry._page_io_latch_wait_count     = page_io_latch_wait_count;
-						indexEntry._page_io_latch_wait_in_ms     = page_io_latch_wait_in_ms;
+						indexEntry._range_scan_count                       = range_scan_count;
+						indexEntry._singleton_lookup_count                 = singleton_lookup_count;
+						indexEntry._forwarded_fetch_count                  = forwarded_fetch_count;
+						indexEntry._lob_fetch_in_pages                     = lob_fetch_in_pages;
+						indexEntry._leaf_crud_count                        = leaf_crud_count;
+						indexEntry._leaf_insert_count                      = leaf_insert_count;
+						indexEntry._leaf_delete_count                      = leaf_delete_count;
+						indexEntry._leaf_update_count                      = leaf_update_count;
+						indexEntry._leaf_ghost_count                       = leaf_ghost_count;
+						indexEntry._page_latch_wait_count                  = page_latch_wait_count;
+						indexEntry._page_latch_wait_in_ms                  = page_latch_wait_in_ms;
+						indexEntry._page_io_latch_wait_count               = page_io_latch_wait_count;
+						indexEntry._page_io_latch_wait_in_ms               = page_io_latch_wait_in_ms;
+						indexEntry._row_lock_count                         = row_lock_count;
+						indexEntry._row_lock_wait_count                    = row_lock_wait_count;
+						indexEntry._row_lock_wait_in_ms                    = row_lock_wait_in_ms;
+						indexEntry._page_lock_count                        = page_lock_count;
+						indexEntry._page_lock_wait_count                   = page_lock_wait_count;
+						indexEntry._page_lock_wait_in_ms                   = page_lock_wait_in_ms;
+						indexEntry._index_lock_promotion_attempt_count     = index_lock_promotion_attempt_count;
+						indexEntry._index_lock_promotion_count             = index_lock_promotion_count;
 
-						indexEntry._abs_range_scan_count         = abs_range_scan_count;
-						indexEntry._abs_singleton_lookup_count   = abs_singleton_lookup_count;
-						indexEntry._abs_forwarded_fetch_count    = abs_forwarded_fetch_count;
-						indexEntry._abs_lob_fetch_in_pages       = abs_lob_fetch_in_pages;
-						indexEntry._abs_leaf_crud_count          = abs_leaf_crud_count;
-						indexEntry._abs_leaf_insert_count        = abs_leaf_insert_count;
-						indexEntry._abs_leaf_delete_count        = abs_leaf_delete_count;
-						indexEntry._abs_leaf_update_count        = abs_leaf_update_count;
-						indexEntry._abs_leaf_ghost_count         = abs_leaf_ghost_count;
-						indexEntry._abs_page_io_latch_wait_count = abs_page_io_latch_wait_count;
-						indexEntry._abs_page_io_latch_wait_in_ms = abs_page_io_latch_wait_in_ms;
+						indexEntry._abs_range_scan_count                   = abs_range_scan_count;
+						indexEntry._abs_singleton_lookup_count             = abs_singleton_lookup_count;
+						indexEntry._abs_forwarded_fetch_count              = abs_forwarded_fetch_count;
+						indexEntry._abs_lob_fetch_in_pages                 = abs_lob_fetch_in_pages;
+						indexEntry._abs_leaf_crud_count                    = abs_leaf_crud_count;
+						indexEntry._abs_leaf_insert_count                  = abs_leaf_insert_count;
+						indexEntry._abs_leaf_delete_count                  = abs_leaf_delete_count;
+						indexEntry._abs_leaf_update_count                  = abs_leaf_update_count;
+						indexEntry._abs_leaf_ghost_count                   = abs_leaf_ghost_count;
+						indexEntry._abs_page_latch_wait_count              = abs_page_latch_wait_count;
+						indexEntry._abs_page_latch_wait_in_ms              = abs_page_latch_wait_in_ms;
+						indexEntry._abs_page_io_latch_wait_count           = abs_page_io_latch_wait_count;
+						indexEntry._abs_page_io_latch_wait_in_ms           = abs_page_io_latch_wait_in_ms;
+						indexEntry._abs_row_lock_count                     = abs_row_lock_count;
+						indexEntry._abs_row_lock_wait_count                = abs_row_lock_wait_count;
+						indexEntry._abs_row_lock_wait_in_ms                = abs_row_lock_wait_in_ms;
+						indexEntry._abs_page_lock_count                    = abs_page_lock_count;
+						indexEntry._abs_page_lock_wait_count               = abs_page_lock_wait_count;
+						indexEntry._abs_page_lock_wait_in_ms               = abs_page_lock_wait_in_ms;
+						indexEntry._abs_index_lock_promotion_attempt_count = abs_index_lock_promotion_attempt_count;
+						indexEntry._abs_index_lock_promotion_count         = abs_index_lock_promotion_count;
 					}
 				}
 			}
@@ -1619,12 +1579,195 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 			String xIndexDesc = rstm.getValueAsString(row, "index_description");
 			
 			// Set the values in the passed SqlServerIndexInfo
-			indexInfo._keysStr      = xIndexKeys;
-			indexInfo._keys         = StringUtil.commaStrToList(xIndexKeys, true);
-			indexInfo._desc         = xIndexDesc;
+			indexInfo._keysStr        = xIndexKeys;
+			indexInfo._keys           = StringUtil.commaStrToList(xIndexKeys, true);
+			indexInfo._includeColsStr = "-not-impl-";
+			indexInfo._includeCols    = StringUtil.commaStrToList(indexInfo._includeColsStr, true);
+			indexInfo._desc           = xIndexDesc;
 		}
 	}
 	
+	private void getMissingIndexInfo(DbxConnection conn, SqlServerTableInfo ti)
+	{
+		if (ti == null)
+			return;
+
+		String dbname     = ti._dbName;
+		String schemaName = ti._schemaName;
+		String tableName  = ti._tableName;
+
+		// Check if table(s) exists, if not... just exit...
+		if ( ! DbUtils.checkIfTableExistsNoThrow(conn, null, null, "CmIndexMissing_abs") )
+		{
+			_logger.warn("Table 'CmIndexMissing_abs' did not exists, skip reading 'execution information'.");
+			return;
+		}
+
+		String sql = ""
+				+ "select \n"
+				+ "     [index_handle] \n"
+				+ "    ,[Impact] \n"
+				+ "    ,[user_scans] \n"
+				+ "    ,[user_seeks] \n"
+				+ "    ,[last_user_scan] \n"
+				+ "    ,[last_user_seek] \n"
+				+ "    ,[avg_total_user_cost] \n"
+				+ "    ,[avg_user_impact] \n"
+
+				+ "    ,[equality_columns] \n"
+				+ "    ,[inequality_columns] \n"
+				+ "    ,[included_columns] \n"
+				+ "    ,[CreateIndexStatement] \n"
+				
+				+ "from [CmIndexMissing_abs] x \n"
+				+ "where [SessionSampleTime] = (select max([SessionSampleTime]) from [CmIndexMissing_abs]) \n"
+				+ "  and [DbName]     = '" + dbname     + "' \n"
+				+ "  and [SchemaName] = '" + schemaName + "' \n"
+				+ "  and [TableName]  = '" + tableName  + "' \n"
+				+ "order by [Impact] desc \n"
+				+ "";
+		try
+		{
+			ti._missingIndexInfo = executeQuery(conn, sql, "MissingIndexInfo");
+		}
+		catch (SQLException ex) 
+		{
+			_logger.error("Problems getting 'missing index' information for: dbname='" + dbname + "', schema='" + schemaName + "', table='" + tableName + "'.", ex);
+		}
+	}
+		
+	private void getTriggerInfo(DbxConnection conn, SqlServerTableInfo tableInfo)
+	{
+		if (tableInfo == null)
+			return;
+
+		// Get triggers from a list of: childObjects
+		List<String> triggerNames = new ArrayList<>();
+		for (String coe : StringUtil.parseCommaStrToList(tableInfo._childObjects, true))
+		{
+			if (coe.startsWith("TR:"))
+			{
+				triggerNames.add(coe.substring("TR:".length()));
+			}
+		}
+
+		if (triggerNames.isEmpty())
+			return;
+
+		String fullObjName = tableInfo._dbName +  "." + tableInfo._schemaName + "." + tableInfo._tableName;
+		String header = ""
+				+ "------------------------------------------------------------------------------------------------\n"
+				+ "-- Found " + triggerNames.size() + " Trigger(s) on table: " + fullObjName + "\n"
+				+ "-- List: " + StringUtil.toCommaStr(triggerNames) + "\n"
+				+ "------------------------------------------------------------------------------------------------\n"
+				+ "\n"
+				+ "";
+		tableInfo._triggersText = header;
+
+		// Get DDL text for ALL triggers in the above List
+		for (String trName : triggerNames)
+		{
+			String trStr = getTriggerDdlText(conn, tableInfo._dbName, tableInfo._schemaName, tableInfo._tableName, trName);
+			
+			if (StringUtil.hasValue(trStr))
+			{
+				if (tableInfo._triggersText == null)
+					tableInfo._triggersText = "";
+				
+				tableInfo._triggersText += trStr;
+			}
+		}
+	}
+
+	private String getTriggerDdlText(DbxConnection conn, String dbname, String schemaName, String tableName, String triggerName)
+	{
+//		String dbname = dbname;
+		String owner  = schemaName;
+		String table  = tableName;
+		String trName = triggerName;
+
+		String and_dbname = !StringUtil.hasValue(dbname) ? "" : "  and lower([dbname])     = " + DbUtils.safeStr(dbname.toLowerCase()) + " \n";
+		String and_owner  = !StringUtil.hasValue(owner)  ? "" : "  and lower([owner])      = " + DbUtils.safeStr(owner .toLowerCase()) + " \n";
+//		String and_table  = !StringUtil.hasValue(table)  ? "" : "  and lower([objectName]) = " + DbUtils.safeStr(table .toLowerCase()) + " \n";
+		String and_trName = !StringUtil.hasValue(trName) ? "" : "  and lower([objectName]) = " + DbUtils.safeStr(trName.toLowerCase()) + " \n";
+
+//		if (and_dbname.contains("%")) and_dbname = and_dbname.replace(" = ", " like ");
+//		if (and_owner .contains("%")) and_owner  = and_owner .replace(" = ", " like ");
+////		if (and_table .contains("%")) and_table  = and_table .replace(" = ", " like ");
+//		if (and_trName.contains("%")) and_trName = and_trName.replace(" = ", " like ");
+
+		String sql = ""
+			    + "select [dbname], [owner], [objectName], [type], [crdate], [sampleTime], [extraInfoText], [objectText] \n"
+			    + "from [MonDdlStorage] \n"
+			    + "where 1 = 1 \n"
+			    + "  and [type] = 'TR' \n"
+			    + and_dbname
+			    + and_owner
+//			    + and_table
+			    + and_trName
+			    + "";
+		
+		List<SqlServerTableInfo> tmpList = new ArrayList<>();
+		
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while(rs.next())
+				{
+					SqlServerTableInfo ti = new SqlServerTableInfo();
+					
+					ti._dbName        = rs.getString(1);
+					ti._schemaName    = rs.getString(2);
+					ti._tableName     = rs.getString(3);
+					ti._type          = rs.getString(4);
+					ti._crdate        = rs.getTimestamp(5);
+					ti._sampleTime    = rs.getTimestamp(6);
+
+					ti._extraInfoText = rs.getString(7);
+					ti._objectText    = rs.getString(8);
+					
+					tmpList.add(ti);
+				}
+			}
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems getting Trigger Information for dbname='" + dbname + "', owner='" + owner + "', table='" + table + "', trName='" + trName + "': " + ex);
+		}
+
+		if (tmpList.isEmpty())
+			return "";
+
+		if (tmpList.size() > 1)
+			_logger.warn("Getting DDL Text for trigger: dbname='" + dbname + "', owner='" + owner + "', table='" + table + "', trName='" + trName + "': Found more that 1 row. they will also be added but... tmpList.size()=" + tmpList.size());
+
+		// Output
+		StringBuilder sb = new StringBuilder();
+		
+		// Loop the record we just found in MonDdlStorage
+		for (SqlServerTableInfo ti : tmpList)
+		{
+			if (StringUtil.hasValue(ti._objectText))
+			{
+				sb.append("\n");
+				sb.append("--##############################################################################################\n");
+				sb.append("-- Trigger Name:   ").append(ti._tableName).append("\n");
+				sb.append("-- Trigger CrDate: ").append(ti._crdate).append("\n");
+				sb.append("--##############################################################################################\n");
+				sb.append(ti._objectText);
+				sb.append("--##############################################################################################\n");
+				sb.append("\n");
+			}
+		} // end: loop SqlServerTableInfo
+
+		// Set the text
+		return sb.toString();
+	}
+		
 	
 	public static class SqlServerIndexInfo
 	{
@@ -1635,6 +1778,9 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 //		private int          _unusedKb          = -1;
 		private String       _keysStr;
 		private List<String> _keys;
+		private String       _includeColsStr;
+		private List<String> _includeCols;
+		private String       _filterExpression;
 		private String       _desc;
 		private String       _ddlTxt;
 		private int          _indexID           = -1;
@@ -1657,40 +1803,64 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 //		public Double _avgPgSpaceUsedInPct;
 		
 		// Optimizer Counters
-		private long _user_seeks                   = -1;
-		private long _user_scans                   = -1;
-		private long _user_lookups                 = -1;
-		private long _user_updates                 = -1;
-
-		private long _abs_user_seeks               = -1;
-		private long _abs_user_scans               = -1;
-		private long _abs_user_lookups             = -1;
-		private long _abs_user_updates             = -1;
+		private long _READS                                  = -1;
+		private long _WRITES                                 = -1;
+		private long _user_seeks                             = -1;
+		private long _user_scans                             = -1;
+		private long _user_lookups                           = -1;
+		private long _user_updates                           = -1;
+                                                             
+		private long _abs_READS                              = -1;
+		private long _abs_WRITES                             = -1;
+		private long _abs_user_seeks                         = -1;
+		private long _abs_user_scans                         = -1;
+		private long _abs_user_lookups                       = -1;
+		private long _abs_user_updates                       = -1;
 
 		// Execution Counters
-		private long _range_scan_count             = -1;
-		private long _singleton_lookup_count       = -1;
-		private long _forwarded_fetch_count        = -1;
-		private long _lob_fetch_in_pages           = -1;
-		private long _leaf_crud_count              = -1;
-		private long _leaf_insert_count            = -1;
-		private long _leaf_delete_count            = -1;
-		private long _leaf_update_count            = -1;
-		private long _leaf_ghost_count             = -1;
-		private long _page_io_latch_wait_count     = -1;
-		private long _page_io_latch_wait_in_ms     = -1;
+		private long _range_scan_count                       = -1;
+		private long _singleton_lookup_count                 = -1;
+		private long _forwarded_fetch_count                  = -1;
+		private long _lob_fetch_in_pages                     = -1;
+		private long _leaf_crud_count                        = -1;
+		private long _leaf_insert_count                      = -1;
+		private long _leaf_delete_count                      = -1;
+		private long _leaf_update_count                      = -1;
+		private long _leaf_ghost_count                       = -1;
+		private long _page_latch_wait_count                  = -1;
+		private long _page_latch_wait_in_ms                  = -1;
+		private long _page_io_latch_wait_count               = -1;
+		private long _page_io_latch_wait_in_ms               = -1;
+		private long _row_lock_count                         = -1;
+		private long _row_lock_wait_count                    = -1;
+		private long _row_lock_wait_in_ms                    = -1;
+		private long _page_lock_count                        = -1;
+		private long _page_lock_wait_count                   = -1;
+		private long _page_lock_wait_in_ms                   = -1;
+		private long _index_lock_promotion_attempt_count     = -1;
+		private long _index_lock_promotion_count             = -1;
 
-		private long _abs_range_scan_count         = -1;
-		private long _abs_singleton_lookup_count   = -1;
-		private long _abs_forwarded_fetch_count    = -1;
-		private long _abs_lob_fetch_in_pages       = -1;
-		private long _abs_leaf_crud_count          = -1;
-		private long _abs_leaf_insert_count        = -1;
-		private long _abs_leaf_delete_count        = -1;
-		private long _abs_leaf_update_count        = -1;
-		private long _abs_leaf_ghost_count         = -1;
-		private long _abs_page_io_latch_wait_count = -1;
-		private long _abs_page_io_latch_wait_in_ms = -1;
+		private long _abs_range_scan_count                   = -1;
+		private long _abs_singleton_lookup_count             = -1;
+		private long _abs_forwarded_fetch_count              = -1;
+		private long _abs_lob_fetch_in_pages                 = -1;
+		private long _abs_leaf_crud_count                    = -1;
+		private long _abs_leaf_insert_count                  = -1;
+		private long _abs_leaf_delete_count                  = -1;
+		private long _abs_leaf_update_count                  = -1;
+		private long _abs_leaf_ghost_count                   = -1;
+		private long _abs_page_latch_wait_count              = -1;
+		private long _abs_page_latch_wait_in_ms              = -1;
+		private long _abs_page_io_latch_wait_count           = -1;
+		private long _abs_page_io_latch_wait_in_ms           = -1;
+		private long _abs_row_lock_count                     = -1;
+		private long _abs_row_lock_wait_count                = -1;
+		private long _abs_row_lock_wait_in_ms                = -1;
+		private long _abs_page_lock_count                    = -1;
+		private long _abs_page_lock_wait_count               = -1;
+		private long _abs_page_lock_wait_in_ms               = -1;
+		private long _abs_index_lock_promotion_attempt_count = -1;
+		private long _abs_index_lock_promotion_count         = -1;
 
 
 		public String       getIndexName         () { return _indexName; }
@@ -1699,8 +1869,11 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 		public double       getIndexSizeMb       () { return MathUtils.round(getIndexSizeKb() / 1024.0, 1); }
 //		public int          getReservedKb        () { return _reservedKb; }
 //		public int          getUnusedKb          () { return _unusedKb; }
-		public String       getKeysStr           () { return _keysStr; }
+		public String       getKeysStr           () { return _keysStr          == null ? "-" : _keysStr; }
 		public List<String> getKeys              () { return _keys; }
+		public String       getIncludeStr        () { return _includeColsStr   == null ? "-" : _includeColsStr; }
+		public List<String> getIncludeCols       () { return _includeCols; }
+		public String       getFilterExpression  () { return _filterExpression == null ? "-" : _filterExpression; }
 		public String       getDescription       () { return _desc; }
 		public String       getDdlText           () { return _ddlTxt; }
                                                  
@@ -1751,8 +1924,11 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 		private String   _tableName;
 		public String    _type;
 		public Timestamp _crdate;
+		private Timestamp _sampleTime;
 		private String   _extraInfoText;  // sys.dm_db_index_physical_stats
 		private String   _objectText;     // sp_help tabname
+		private String   _childObjects;   // Type:name, Type:name, Type:name
+		private String   _triggersText;   // Text of any trigger definitions
 		private long     _rowtotal;
 //		private int      _reservedKb;
 //		private int      _dataKb;
@@ -1763,6 +1939,8 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 		private List<SqlServerIndexInfo> _indexList = new ArrayList<>();
 
 		public List<String> _viewReferences; // if _type == "V", this this will hold; table/views this view references
+
+		public ResultSetTableModel _missingIndexInfo;
 		
 		public SqlServerIndexInfo getIndexInfoForName(String indexName)
 		{
@@ -1788,6 +1966,7 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 		public String    getTableName()           { return _tableName; }
 		public String    getType()                { return _type; }
 		public Timestamp getCrDate()              { return _crdate; }
+		public Timestamp getSampleTime()          { return _sampleTime; }
 
 //		public long      getCompressedPageCount() { return _compressedPageCount; }
 //		public long      getForwardedRowCount()   { return _forwardedRowCount; }

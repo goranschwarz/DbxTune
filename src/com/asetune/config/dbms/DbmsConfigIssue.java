@@ -29,9 +29,26 @@ public class DbmsConfigIssue
 {
 	public enum Severity
 	{
-		WARNING,
-		ERROR
+		INFO    ("Information"),
+		WARNING ("Warning"),
+		ERROR   ("Error");
+
+		private final String _displayName;
+		private Severity(String displayName)
+		{
+			_displayName = displayName;
+		}
+		@Override
+		public String toString()
+		{
+			return _displayName;
+		}
 	};
+	
+	private boolean _isOfflineEntryDiscarded = false;
+	private boolean _isOfflineEntry = false;
+	public void setOfflineEntry() { _isOfflineEntry = true; }
+	public void setOfflineEntryDiscarded(boolean b) { _isOfflineEntryDiscarded = b; }
 	
 	private Timestamp _srvRestart;
 	private String    _propKey;
@@ -50,6 +67,7 @@ public class DbmsConfigIssue
 		_resolution  = resolution;
 	}
 	
+	public Timestamp getSrvRestartTs() { return _srvRestart; }
 	
 	public String   getPropKey()     { return _propKey; }
 	public String   getConfigName()  { return _configName; }
@@ -76,7 +94,14 @@ public class DbmsConfigIssue
 	
 	public boolean isDiscarded()
 	{
-		return Configuration.getCombinedConfiguration().getBooleanProperty(getDiscardPropKey(), false);
+		if (_isOfflineEntry)
+		{
+			return _isOfflineEntryDiscarded;
+		}
+		else
+		{
+			return Configuration.getCombinedConfiguration().getBooleanProperty(getDiscardPropKey(), false);
+		}
 	}
 
 	public void setDiscarded(boolean discard)

@@ -66,6 +66,7 @@ import com.asetune.central.controllers.ud.chart.IUserDefinedChart;
 import com.asetune.central.controllers.ud.chart.UserDefinedChartManager;
 import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.central.pcs.objects.DbxCentralSessions;
+import com.asetune.pcs.report.DailySummaryReportFactory;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.FileUtils;
@@ -1324,6 +1325,11 @@ public class OverviewServlet extends HttpServlet
 			out.println("<p>File name is in the format: <i>srv</i>.<i>date(YYYY-MM-DD)</i>_<i>time(HHMM)</i>[.-NTR-].html<br>");
 			out.println("Note: The file is created after midnight and reflects the <b>previous</b> day...<br>");
 			out.println("Note: The <code>-NTR-</code> mark is just that it has 'Nothing To Report' and is only appended if so.<br>");
+			out.println("</p>");
+
+			int removeAfterDays = Configuration.getCombinedConfiguration().getIntProperty(DailySummaryReportFactory.PROPKEY_removeReportsAfterDays, DailySummaryReportFactory.DEFAULT_removeReportsAfterDays);
+			out.println("<p>");
+			out.println("Report files will be removed after " + removeAfterDays + " days. Which can be changed with property <code>" + DailySummaryReportFactory.PROPKEY_removeReportsAfterDays + " = ##</code>");
 			out.println("</p>");
 
 			// Create a Link to "latest" report for each SERVER

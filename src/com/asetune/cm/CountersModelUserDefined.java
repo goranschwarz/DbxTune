@@ -24,13 +24,13 @@
  */
 package com.asetune.cm;
 
-import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Ver;
 
 
@@ -77,7 +77,7 @@ public class CountersModelUserDefined
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		// Treat version specific SQL
 		if (_sqlVerStr != null)
@@ -122,25 +122,25 @@ public class CountersModelUserDefined
 	}
 
 //	@Override
-//	public String getSqlInitForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+//	public String getSqlInitForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 //	{
 //		return getSqlInit();
 //	}
 
 //	@Override
-//	public String getSqlCloseForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+//	public String getSqlCloseForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 //	{
 //		return getSqlClose();
 //	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return _pkList;
 	}
 
 //	@Override
-//	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+//	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 //	{
 //		return getDependsOnConfig();
 //	}

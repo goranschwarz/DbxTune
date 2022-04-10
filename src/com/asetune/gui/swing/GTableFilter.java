@@ -63,13 +63,15 @@ import com.asetune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
 import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.expression.AllComparisonExpression;
+import net.sf.jsqlparser.expression.AllValue;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.AnyComparisonExpression;
+import net.sf.jsqlparser.expression.ArrayConstructor;
 import net.sf.jsqlparser.expression.ArrayExpression;
 import net.sf.jsqlparser.expression.CaseExpression;
 import net.sf.jsqlparser.expression.CastExpression;
 import net.sf.jsqlparser.expression.CollateExpression;
+import net.sf.jsqlparser.expression.ConnectByRootOperator;
 import net.sf.jsqlparser.expression.DateTimeLiteralExpression;
 import net.sf.jsqlparser.expression.DateValue;
 import net.sf.jsqlparser.expression.DoubleValue;
@@ -81,7 +83,9 @@ import net.sf.jsqlparser.expression.HexValue;
 import net.sf.jsqlparser.expression.IntervalExpression;
 import net.sf.jsqlparser.expression.JdbcNamedParameter;
 import net.sf.jsqlparser.expression.JdbcParameter;
+import net.sf.jsqlparser.expression.JsonAggregateFunction;
 import net.sf.jsqlparser.expression.JsonExpression;
+import net.sf.jsqlparser.expression.JsonFunction;
 import net.sf.jsqlparser.expression.KeepExpression;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.MySQLGroupConcat;
@@ -91,16 +95,22 @@ import net.sf.jsqlparser.expression.NullValue;
 import net.sf.jsqlparser.expression.NumericBind;
 import net.sf.jsqlparser.expression.OracleHierarchicalExpression;
 import net.sf.jsqlparser.expression.OracleHint;
+import net.sf.jsqlparser.expression.OracleNamedFunctionParameter;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.RowConstructor;
+import net.sf.jsqlparser.expression.RowGetExpression;
 import net.sf.jsqlparser.expression.SignedExpression;
 import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.TimeKeyExpression;
 import net.sf.jsqlparser.expression.TimeValue;
 import net.sf.jsqlparser.expression.TimestampValue;
+import net.sf.jsqlparser.expression.TimezoneExpression;
+import net.sf.jsqlparser.expression.TryCastExpression;
 import net.sf.jsqlparser.expression.UserVariable;
 import net.sf.jsqlparser.expression.ValueListExpression;
+import net.sf.jsqlparser.expression.VariableAssignment;
 import net.sf.jsqlparser.expression.WhenClause;
+import net.sf.jsqlparser.expression.XMLSerializeExpr;
 //import net.sf.jsqlparser.expression.WithinGroupExpression;   // removed when we upgraded from 1.1 to 3.2
 import net.sf.jsqlparser.expression.operators.arithmetic.Addition;
 import net.sf.jsqlparser.expression.operators.arithmetic.BitwiseAnd;
@@ -116,6 +126,7 @@ import net.sf.jsqlparser.expression.operators.arithmetic.Multiplication;
 import net.sf.jsqlparser.expression.operators.arithmetic.Subtraction;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
+import net.sf.jsqlparser.expression.operators.conditional.XorExpression;
 import net.sf.jsqlparser.expression.operators.relational.Between;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.ExistsExpression;
@@ -143,6 +154,8 @@ import net.sf.jsqlparser.parser.CCJSqlParserTokenManager;
 import net.sf.jsqlparser.parser.ParseException;
 import net.sf.jsqlparser.parser.StringProvider;
 import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.statement.select.AllColumns;
+import net.sf.jsqlparser.statement.select.AllTableColumns;
 import net.sf.jsqlparser.statement.select.SubSelect;
 
 public class GTableFilter 
@@ -1024,10 +1037,10 @@ extends JPanel
 			{
 				expr.getLeftExpression().accept(this);
 			}
-			else if ( expr.getLeftItemsList() != null )
-			{
-				expr.getLeftItemsList().accept(ilv);
-			}
+//			else if ( expr.getLeftItemsList() != null ) // REMOVED IN JSqlParser version ???? CHECK if this any side effect... DO: expr.getLeftExpression().accept(this); handle this removed method???
+//			{
+//				expr.getLeftItemsList().accept(ilv);
+//			}
 			expr.getRightItemsList().accept(ilv);
 			if (_logger.isDebugEnabled()) in("<--- InExpression-visitor: "+expr);
 			
@@ -1219,7 +1232,7 @@ extends JPanel
 		@Override public void visit(Matches expr)                      { throw new FilterParserException("Operation 'Matches' not yet implemeted."); }
 		@Override public void visit(Concat expr)                       { throw new FilterParserException("Operation 'Concat' not yet implemeted."); }
 		@Override public void visit(AnyComparisonExpression expr)      { throw new FilterParserException("Operation 'AnyComparisonExpression' not yet implemeted."); }
-		@Override public void visit(AllComparisonExpression expr)      { throw new FilterParserException("Operation 'AllComparisonExpression' not yet implemeted."); }
+//		@Override public void visit(AllComparisonExpression expr)      { throw new FilterParserException("Operation 'AllComparisonExpression' not yet implemeted."); } // REMOVED in version between  3.2 -->> 4.3
 		@Override public void visit(ExistsExpression expr)             { throw new FilterParserException("Operation 'ExistsExpression' not yet implemeted."); }
 		@Override public void visit(WhenClause expr)                   { throw new FilterParserException("Operation 'WhenClause' not yet implemeted."); }
 		@Override public void visit(CaseExpression expr)               { throw new FilterParserException("Operation 'CaseExpression' not yet implemeted."); }
@@ -1268,6 +1281,22 @@ extends JPanel
 		@Override public void visit(CollateExpression expr)            { throw new FilterParserException("Operation 'CollateExpression' not yet implemeted."); }
 		@Override public void visit(SimilarToExpression expr)          { throw new FilterParserException("Operation 'SimilarToExpression' not yet implemeted."); }
 		@Override public void visit(ArrayExpression expr)              { throw new FilterParserException("Operation 'ArrayExpression' not yet implemeted."); }
+
+		// Going from version 3.2 to 4.3 we needed the below methods
+		@Override public void visit(XorExpression expr)                { throw new FilterParserException("Operation 'XorExpression' not yet implemeted."); }
+		@Override public void visit(TryCastExpression expr)            { throw new FilterParserException("Operation 'TryCastExpression' not yet implemeted."); }
+		@Override public void visit(RowGetExpression expr)             { throw new FilterParserException("Operation 'RowGetExpression' not yet implemeted."); }
+		@Override public void visit(ArrayConstructor expr)             { throw new FilterParserException("Operation 'ArrayConstructor' not yet implemeted."); }
+		@Override public void visit(VariableAssignment expr)           { throw new FilterParserException("Operation 'VariableAssignment' not yet implemeted."); }
+		@Override public void visit(XMLSerializeExpr expr)             { throw new FilterParserException("Operation 'XMLSerializeExpr' not yet implemeted."); }
+		@Override public void visit(TimezoneExpression expr)           { throw new FilterParserException("Operation 'TimezoneExpression' not yet implemeted."); }
+		@Override public void visit(JsonAggregateFunction expr)        { throw new FilterParserException("Operation 'JsonAggregateFunction' not yet implemeted."); }
+		@Override public void visit(JsonFunction expr)                 { throw new FilterParserException("Operation 'JsonFunction' not yet implemeted."); }
+		@Override public void visit(ConnectByRootOperator expr)        { throw new FilterParserException("Operation 'ConnectByRootOperator' not yet implemeted."); }
+		@Override public void visit(OracleNamedFunctionParameter expr) { throw new FilterParserException("Operation 'OracleNamedFunctionParameter' not yet implemeted."); }
+		@Override public void visit(AllColumns expr)                   { throw new FilterParserException("Operation 'AllColumns' not yet implemeted."); }
+		@Override public void visit(AllTableColumns expr)              { throw new FilterParserException("Operation 'AllTableColumns' not yet implemeted."); }
+		@Override public void visit(AllValue expr)                     { throw new FilterParserException("Operation 'AllValue' not yet implemeted."); }
 	};
 	
 	

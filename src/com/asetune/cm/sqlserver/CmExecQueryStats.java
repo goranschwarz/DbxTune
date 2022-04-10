@@ -20,7 +20,6 @@
  ******************************************************************************/
 package com.asetune.cm.sqlserver;
 
-import java.sql.Connection;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -40,6 +39,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.swing.ColumnHeaderPropsEntry;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
@@ -264,13 +264,13 @@ extends CountersModel
 
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -302,7 +302,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		int c = 0;
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("plan_handle",            c++));
@@ -352,12 +352,30 @@ extends CountersModel
 				"    ,(select isnull(db_name(CONVERT(int, value)),CONVERT(nvarchar(10), value)) from sys.dm_exec_plan_attributes(qs.plan_handle) where attribute = N'dbid') AS dbname \n" +
 				"    ,txt.objectid \n" +
 				"    ,CASE WHEN txt.objectid IS NOT NULL and txt.dbid IS NOT NULL THEN object_name(txt.objectid, txt.dbid) ELSE NULL END AS object_name \n" +
+				"    ,CAST(ecp.size_in_bytes / 1024.0 AS numeric(12,1)) AS [PlanSizeKB] \n" +
+				"    ,ecp.cacheobjtype \n" +
+				"    ,ecp.objtype \n" +
 				"    ,qs.* \n" +
 				"FROM sys." + dm_exec_query_stats + " qs \n" +
+				"LEFT OUTER JOIN sys.dm_exec_cached_plans ecp ON qs.plan_handle = ecp.plan_handle \n" +
 				"OUTER APPLY sys.dm_exec_sql_text(qs.sql_handle) txt \n" +
 				"WHERE 1 = 1 -- to make extra where clauses easier \n" +
 				sql_sample_extraWhereClause +
 				sql_sample_lastXminutes;
+
+//		String sql = 
+//				"SELECT /* ${cmCollectorName} */ \n" +
+//				"     SUBSTRING(txt.text, (qs.statement_start_offset/2)+1, ((CASE WHEN qs.statement_end_offset = -1 THEN DATALENGTH(txt.text) ELSE qs.statement_end_offset END - qs.statement_start_offset)/2) + 1) AS [SqlText] \n" +
+////				"    ,db_name(txt.dbid) AS dbname \n" + // NOTE: dm_exec_sql_text.dbid is NULL in many cases, so using dm_exec_plan_attributes.dbid seems a lot better
+//				"    ,(select isnull(db_name(CONVERT(int, value)),CONVERT(nvarchar(10), value)) from sys.dm_exec_plan_attributes(qs.plan_handle) where attribute = N'dbid') AS dbname \n" +
+//				"    ,txt.objectid \n" +
+//				"    ,CASE WHEN txt.objectid IS NOT NULL and txt.dbid IS NOT NULL THEN object_name(txt.objectid, txt.dbid) ELSE NULL END AS object_name \n" +
+//				"    ,qs.* \n" +
+//				"FROM sys." + dm_exec_query_stats + " qs \n" +
+//				"OUTER APPLY sys.dm_exec_sql_text(qs.sql_handle) txt \n" +
+//				"WHERE 1 = 1 -- to make extra where clauses easier \n" +
+//				sql_sample_extraWhereClause +
+//				sql_sample_lastXminutes;
 		
 		// Possible SQL if we want to use CROSS APPLY to get the DBID in dm_exec_plan_attributes
         //    SELECT

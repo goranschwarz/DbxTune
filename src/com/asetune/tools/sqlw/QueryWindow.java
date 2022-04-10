@@ -10131,7 +10131,9 @@ checkPanelSize(_resPanel, comp);
 		if (errorInfo == null)
 			errorInfo = new ArrayList<JAseMessage>();
 
+		//-------------------------------------------------------------
 		// HANA
+		//-------------------------------------------------------------
 //		if (DbUtils.DB_PROD_NAME_HANA.equals(_connectedToProductName))
 		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_HANA))
 		{
@@ -10193,7 +10195,9 @@ checkPanelSize(_resPanel, comp);
 			errorInfo.add(exMsg);
 			resultCompList.add(exMsg);
 		} // end HANA
+		//-------------------------------------------------------------
 		// Get Oracle ERROR Messages
+		//-------------------------------------------------------------
 		else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE))
 		{
 			int    line       = startRowInSelection + scriptReaderSqlBatchStartLine + DbUtils.getLineForFirstStatement(originSql);
@@ -10226,6 +10230,55 @@ checkPanelSize(_resPanel, comp);
 			errorInfo.add(exMsg);
 			resultCompList.add(exMsg);
 		} // end ORACLE
+		//-------------------------------------------------------------
+		// Get Postgres ERROR Messages
+		//-------------------------------------------------------------
+		else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_POSTGRES))
+		{
+			int line = startRowInSelection + scriptReaderSqlBatchStartLine + DbUtils.getLineForFirstStatement(originSql);
+			int col  = -1;
+			
+			//----------------- The below is a typical error message
+			// PostgreSQL: ErrorCode 0, SQLState 42601, ExceptionClass: org.postgresql.util.PSQLException
+			// ERROR: syntax error at or near "xxx"
+			//  Position: 909
+			//-----------------
+			String msg = ex.getMessage();
+			int tmpPos = msg.indexOf(" Position: ");
+			if (tmpPos > 0)
+			{
+				String tmp = msg.substring(tmpPos + " Position: ".length());
+				int errorPosition = StringUtil.parseInt( StringUtil.word(tmp, 0), -1);
+
+				// translate the "Position: ###" into a "line" and "column" 
+				if (errorPosition != -1)
+				{
+					// Take away 1 (since "Position: 1" really means position=0) 
+					errorPosition--;
+					
+					String firstPartOfSql = originSql.substring(0, errorPosition);
+					String[] sa = firstPartOfSql.split("\n");
+
+					if (sa.length > 0)
+					{
+						// The column where the error is are at the LAST LINE, and the END OF the String (thats all we have copied with substring(0,errorPosition) on originSql)
+						col = sa[sa.length-1].length();
+
+						// And Line at at LAST line of the substring(0,errorPosition) on originSql
+						line += sa.length - 1;
+					}
+				}
+			}
+
+
+			JSQLExceptionMessage exMsg = new JSQLExceptionMessage(ex, _connectedToProductName, line, col, originSql, null, _query_txt);
+
+			errorInfo.add(exMsg);
+			resultCompList.add(exMsg);
+		} // end Postgres
+		//-------------------------------------------------------------
+		// OTHER ERROR Messages
+		//-------------------------------------------------------------
 		else
 		{
 			while (ex != null)

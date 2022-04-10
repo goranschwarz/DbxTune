@@ -20,7 +20,7 @@
 			<attribute name="javadoc_location" value="http://logging.apache.org/log4j/1.2/apidocs"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/rsyntaxtextarea.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1601812661562/source/rsyntaxtextarea-3.0.2-sources-1602004979137.jar">
+	<classpathentry kind="lib" path="lib/rsyntaxtextarea.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1649280674177/source/rsyntaxtextarea-3.0.2-sources-1649285397030.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="http://javadoc.fifesoft.com/rsyntaxtextarea"/>
 		</attributes>
@@ -121,7 +121,6 @@
 	<classpathentry kind="lib" path="lib/jul-to-slf4j-1.7.29.jar"/>
 	<classpathentry kind="lib" path="lib/schemacrawler-16.2.4.jar" sourcepath="3pp/SchemaCrawler-16.2.4.zip"/>
 	<classpathentry kind="lib" path="lib/h2-SNAPSHOT.jar"/>
-	<classpathentry kind="lib" path="lib/jsqlparser-3.2.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1644246644604/source/jsqlparser-3.2-sources-1644269466195.jar"/>
 	<classpathentry kind="lib" path="lib/jfreechart-1.5.1.jar" sourcepath="3pp/jfreechart-1.5.1-sources.jar"/>
 	<classpathentry kind="lib" path="lib/commons-text-1.9.jar" sourcepath="3pp/commons-text-1.9-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-9.2.0.jre8.jar"/>
@@ -132,5 +131,6 @@
 	<classpathentry kind="lib" path="lib/jconn42.jar"/>
 	<classpathentry kind="lib" path="lib/ganymed-ssh2-263.jar" sourcepath="3pp/ganymed-ssh2-263-sources.jar"/>
 	<classpathentry kind="lib" path="lib/sql-formatter-2.0.3.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1645375698757/source/sql-formatter-2.0.3-sources.jar"/>
+	<classpathentry kind="lib" path="lib/jsqlparser-4.3.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>

@@ -20,14 +20,13 @@
  ******************************************************************************/
 package com.asetune.cm.rs;
 
-import java.sql.Connection;
-
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrameRs;
+import com.asetune.sql.conn.DbxConnection;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -114,7 +113,7 @@ extends CmAdminStatsAbstract
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}

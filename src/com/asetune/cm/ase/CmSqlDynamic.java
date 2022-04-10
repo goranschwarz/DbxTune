@@ -20,7 +20,6 @@
  ******************************************************************************/
 package com.asetune.cm.ase;
 
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -248,7 +247,7 @@ extends CountersModel
 //	}
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		try 
 		{
@@ -288,13 +287,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public boolean checkDependsOnConfig(Connection conn)
+	public boolean checkDependsOnConfig(DbxConnection conn)
 	{
 		boolean ok =  super.checkDependsOnConfig(conn);
 		if (ok)
@@ -329,13 +328,13 @@ extends CountersModel
 	}
 	
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return "-- grabed from AseTune internally: PersistentCounterHandler.getInstance().getSqlCaptureBroker().getSqlTextStats(false)";
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 

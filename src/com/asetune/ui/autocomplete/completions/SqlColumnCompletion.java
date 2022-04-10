@@ -40,9 +40,10 @@ extends SqlCompletion
 	//-------------------------
 	public static String createReplacementText(CompletionProviderAbstractSql provider, String tabAliasName, String colname, TableInfo tableInfo, boolean quoteNames)
 	{
-		String q = provider.getDbIdentifierQuoteString();
+		String q1 = provider.getDbIdentifierQuoteStringStart();
+		String q2 = provider.getDbIdentifierQuoteStringEnd();
 
-		String finalColName = quoteNames ? q+colname+q : provider.fixStrangeNames(colname);
+		String finalColName = quoteNames ? q1 + colname + q2 : provider.fixStrangeNames(colname);
 		
 		if (StringUtil.isNullOrBlank(tabAliasName))
 			return finalColName;

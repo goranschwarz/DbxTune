@@ -82,18 +82,63 @@ public class StatementNormalizer
 
 	static class ReplaceConstantValues extends ExpressionDeParser
 	{
+// Changed 'InExpression' when upgarding from JSqlParser version 3.2 -->> 4.3
+//		@Override
+//		public void visit(InExpression inExpression) 
+//		{
+//			StringBuilder sb = getBuffer();
+//			
+//// getLeftItemsList() ... REMOVED IN JSqlParser version ???? CHECK if this any side effect... DO: expr.getLeftExpression().accept(this); handle this removed method???
+////			if (inExpression.getLeftExpression() == null) { 
+////				inExpression.getLeftItemsList().accept(this);
+////			} else {
+////				inExpression.getLeftExpression().accept(this);
+////				if (inExpression.getOldOracleJoinSyntax() == SupportsOldOracleJoinSyntax.ORACLE_JOIN_RIGHT) {
+////					sb.append("(+)");
+////				}
+////			}
+//// Below code was grabbed from: https://github.com/JSQLParser/JSqlParser/blob/master/src/main/java/net/sf/jsqlparser/util/deparser/ExpressionDeParser.java
+//			inExpression.getLeftExpression().accept(this);
+//			if (inExpression.getOldOracleJoinSyntax() == SupportsOldOracleJoinSyntax.ORACLE_JOIN_RIGHT) {
+//				buffer.append("(+)");
+//			}
+//			if (inExpression.isNot()) {
+//				sb.append(" NOT");
+//			}
+//			sb.append(" IN ");
+//
+////System.out.println("---->>>> VISIT >> IN (xxx  xxx) ==== " + sb.toString());
+//
+//			inExpression.getRightItemsList().accept(this);
+//
+//			// Get the just produced SQL... to decide if it's a SUB-SELECT or just static values, which can be normalized to '...'
+//			int start = sb.lastIndexOf(" IN ("); 
+//			int end   = start + " IN (".length();
+//			while (end < sb.length()) // Loop until we find the first end ')'  QUESTION: Should we keep track of "embedded ()" or is it enough to find next ')'
+//			{
+//				String ch = sb.substring(end, end + 1);
+////System.out.println("xxxxxxxxxxxxxxxxxxxxxxxxxxx: end=" + end + ", ch=|" + ch + "|");
+//				end++;
+//				if (")".equals(ch))
+//					break;
+//			}
+//
+//			// if it's NOT a sub-select... then: replace: "IN (?, ?, ?)" with "IN (...)" 
+//			// but KEEP all sub-selects
+//			String inSql = sb.substring(start, end);
+////System.out.println("<<<<---- VISIT >> IN (near-end) >>>> [start=" + start + ", end=" + end + "]: lastInSql=|" + inSql + "| ==== " + sb.toString());
+//			if ( ! inSql.contains("SELECT ") )
+//				sb.replace(start, end, " IN (...)");
+//		}
+//
 		@Override
 		public void visit(InExpression inExpression) 
 		{
 			StringBuilder sb = getBuffer();
 			
-			if (inExpression.getLeftExpression() == null) {
-				inExpression.getLeftItemsList().accept(this);
-			} else {
-				inExpression.getLeftExpression().accept(this);
-				if (inExpression.getOldOracleJoinSyntax() == SupportsOldOracleJoinSyntax.ORACLE_JOIN_RIGHT) {
-					sb.append("(+)");
-				}
+			inExpression.getLeftExpression().accept(this);
+			if (inExpression.getOldOracleJoinSyntax() == SupportsOldOracleJoinSyntax.ORACLE_JOIN_RIGHT) {
+				buffer.append("(+)");
 			}
 			if (inExpression.isNot()) {
 				sb.append(" NOT");
@@ -102,7 +147,11 @@ public class StatementNormalizer
 
 //System.out.println("---->>>> VISIT >> IN (xxx  xxx) ==== " + sb.toString());
 
-			inExpression.getRightItemsList().accept(this);
+			if (inExpression.getRightExpression() != null) {
+				inExpression.getRightExpression().accept(this);
+			} else {
+				inExpression.getRightItemsList().accept(this);
+			}
 
 			// Get the just produced SQL... to decide if it's a SUB-SELECT or just static values, which can be normalized to '...'
 			int start = sb.lastIndexOf(" IN ("); 
@@ -636,6 +685,8 @@ public class StatementNormalizer
 		StatementNormalizer sn = new StatementNormalizer();
 
 		test(sn, "SELECT 'abc', 5 FROM mytable WHERE col='test'");
+		test(sn, "SELECT 'abc' as test_abc_col");
+		test(sn, "SELECT test_abc_col = 'abc'");
 		test(sn, "exec xxx 1,2,3");
 		test(sn, "exec xxx 'a', 'b', 'c'");
 		test(sn, "exec xxx \"a\", \"b\", \"c\"");

@@ -34,6 +34,8 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.utils.Configuration;
 
+import it.sauronsoftware.cron4j.Scheduler;
+
 public interface ICounterController
 {
 	public enum DbmsOption
@@ -306,4 +308,23 @@ public interface ICounterController
 	 * @param recordingDbConn Connection to the recording database!
 	 */
 	void doLastRecordingActionBeforeDatabaseRollover(DbxConnection recordingDbConn);
+
+	/**
+	 * Create any cron4j.Scheduler
+	 * @param hasGui
+	 * @return
+	 */
+	Scheduler createScheduler(boolean hasGui);
+
+	/** Get the installed scheduler instance */
+	Scheduler getScheduler();
+
+	/** Set the installed scheduler instance */
+	void setScheduler(Scheduler scheduler);
+
+	/** Starts the installed scheduler, if we have any installed */
+	void startScheduler();
+
+	/** Stop the installed scheduler, if we have any installed */
+	void stopScheduler();
 }

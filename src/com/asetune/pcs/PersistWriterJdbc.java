@@ -68,6 +68,7 @@ import com.asetune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
 import com.asetune.central.pcs.H2WriterStat;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelAppend;
+import com.asetune.config.dbms.DbmsConfigIssue;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.DbmsConfigTextManager;
 import com.asetune.config.dbms.IDbmsConfig;
@@ -1577,6 +1578,7 @@ public class PersistWriterJdbc
 					_logger.info("H2 URL add option: DATABASE_TO_UPPER=false");
 					urlMap.put("DATABASE_TO_UPPER", "false");
 				}
+				// Also consider: IGNORECASE and CASE_INSENSITIVE_IDENTIFIERS
 
 				// This is a test to see if H2 behaves better with AseTune
 				// Since AseTune only *writes* to the database... we do not need to ReUseSpace (nothing gets deleted)
@@ -2627,6 +2629,9 @@ public class PersistWriterJdbc
 		if (key  != null) key  = key .trim();
 		if (val  != null) val  = val .trim();
 
+		if (StringUtil.isNullOrBlank(key))
+			return;
+
 		try
 		{
 			// Get the SQL statement
@@ -2775,6 +2780,7 @@ public class PersistWriterJdbc
 			checkAndCreateTable(conn, SESSION_MON_TAB_COL_DICT);
 			checkAndCreateTable(conn, SESSION_DBMS_CONFIG);
 			checkAndCreateTable(conn, SESSION_DBMS_CONFIG_TEXT);
+			checkAndCreateTable(conn, SESSION_DBMS_CONFIG_ISSUES);
 //			checkAndCreateTable(conn, RECORDING_OPTIONS);
 			checkAndCreateTable(conn, DDL_STORAGE);
 //			checkAndCreateTable(conn, SQL_CAPTURE_SQLTEXT);
@@ -2950,6 +2956,9 @@ public class PersistWriterJdbc
    			if (DbmsConfigTextManager.hasInstances())
    				saveDbmsConfigText(conn, cont._sessionStartTime);
 
+   			if (DbmsConfigManager.hasInstance())
+   				saveDbmsConfigIssues(conn, cont._sessionStartTime);
+
 			// Mark that this session HAS been started.
 			_logger.info("Marking the session as STARTED.");
 			setSessionStarted(true);
@@ -2966,6 +2975,82 @@ public class PersistWriterJdbc
 		
 		// Close connection to db
 		close();
+	}
+
+	public void saveDbmsConfigIssues(DbxConnection conn, Timestamp sessionStartTime)
+	{
+		_logger.info("Storing Various DBMS Configuration Issues in table " + getTableName(conn, SESSION_DBMS_CONFIG_ISSUES, null, false));
+
+		if (conn == null)
+		{
+			_logger.error("No database connection to Persistent Storage DB.'");
+			return;
+		}
+
+		if ( ! DbmsConfigManager.hasInstance() )
+		{
+			_logger.info("No DBMS Configuration Manager was avaibale in saveDbmsConfigIssues()");
+			return;
+		}
+
+		if ( ! DbmsConfigManager.getInstance().hasConfigIssues() )
+		{
+			_logger.info("No DBMS Configuration ISSUES was found... in saveDbmsConfigIssues()");
+			return;
+		}
+
+		StringBuffer sbSql = null;
+
+		try
+		{
+			// START a transaction
+			// This will lower number of IO's to the transaction log
+			if (conn.getAutoCommit() == true)
+				conn.setAutoCommit(false);
+
+			//
+			// Save all Issues
+			//
+			for (DbmsConfigIssue dbmsConfigIssue : DbmsConfigManager.getInstance().getConfigIssues())
+			{
+				_logger.info("Storing DBMS Configuration Issue with key '" + dbmsConfigIssue.getPropKey() + "' in table " + getTableName(conn, SESSION_DBMS_CONFIG_ISSUES, null, false));
+
+				sbSql = new StringBuffer();
+				sbSql.append(getTableInsertStr(conn, SESSION_DBMS_CONFIG_ISSUES, null, false));
+				sbSql.append(" values(").append(safeStr( sessionStartTime                     )).append(" \n"); // 1
+				sbSql.append("       ,").append(safeStr( dbmsConfigIssue.getSrvRestartTs()    )).append(" \n"); // 2
+				sbSql.append("       ,").append(safeStr( dbmsConfigIssue.isDiscarded() ? 1:0  )).append(" \n"); // 3
+				sbSql.append("       ,").append(safeStr( dbmsConfigIssue.getConfigName()      )).append(" \n"); // 4
+				sbSql.append("       ,").append(safeStr( dbmsConfigIssue.getSeverity().name() )).append(" \n"); // 5
+				sbSql.append("       ,").append(safeStr( dbmsConfigIssue.getDescription()     )).append(" \n"); // 6
+				sbSql.append("       ,").append(safeStr( dbmsConfigIssue.getResolution()      )).append(" \n"); // 7
+				sbSql.append("       ,").append(safeStr( dbmsConfigIssue.getPropKey()         )).append(" \n"); // 8
+				sbSql.append("       )\n");
+
+				dbExec(conn, sbSql.toString());
+				getStatistics().incInserts();
+			}
+
+			// CLOSE the transaction
+			conn.commit();
+		}
+		catch (SQLException e)
+		{
+			try 
+			{
+				if (conn.getAutoCommit() == true)
+					conn.rollback();
+			}
+			catch (SQLException e2) {}
+
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+			isSevereProblem(conn, e);
+		}
+		finally
+		{
+			try { conn.setAutoCommit(true); }
+			catch (SQLException e2) { _logger.error("Problems when setting AutoCommit to true.", e2); }
+		}
 	}
 
 	public void saveDbmsConfigText(DbxConnection conn, Timestamp sessionStartTime)
@@ -4365,8 +4450,8 @@ public class PersistWriterJdbc
 //		String key = dbname + ":" + objectName;
 		String key = key(dbname, objectName);
 		_ddlDetailsCache.add(key);
-		
-//		System.out.println("markDdlDetailsAsStored(): "+dbname+"."+objectName+"    TOTAL MARKED SIZE IS NOW: "+_ddlDetailsCache.size());
+
+//System.out.println("markDdlDetailsAsStored(): dbname='" + dbname+"', objectName=" + objectName + ", using key='" + key + "'.    TOTAL MARKED SIZE IS NOW: " + _ddlDetailsCache.size());
 
 //System.out.println("========== markDdlDetailsAsStored() ===============================");
 //System.out.println("dbname                        objectname");
@@ -4567,20 +4652,34 @@ public class PersistWriterJdbc
 		}
 
 		// check AGAIN if DDL has NOT been saved in any writer class
-		if ( isDdlDetailsStored(ddlDetails.getDbname(), ddlDetails.getObjectName()) )
+//		if ( isDdlDetailsStored(ddlDetails.getDbname(), ddlDetails.getObjectName()) )
+		if ( isDdlDetailsStored(ddlDetails.getDbname(), ddlDetails.getSchemaAndObjectName()) )
 		{
-			_logger.debug("saveDdlDetails(): The DDL for dbname '"+ddlDetails.getDbname()+"', objectName '"+ddlDetails.getObjectName()+"' has already been stored by all the writers.");
+			if (ddlDetails.isPrintInfo())
+				_logger.info("DEBUG: saveDdlDetails(): The DDL for dbname '"+ddlDetails.getDbname()+"', objectName '"+ddlDetails.getSchemaAndObjectName()+"' has already been stored by all the writers.");
+			
+//System.out.println("saveDdlDetails(): The DDL for dbname '"+ddlDetails.getDbname()+"', objectName '"+ddlDetails.getSchemaAndObjectName()+"' has already been stored by all the writers.");
+			_logger.debug("saveDdlDetails(): The DDL for dbname '"+ddlDetails.getDbname()+"', objectName '"+ddlDetails.getSchemaAndObjectName()+"' has already been stored by all the writers.");
 			return;
 		}
-		if ( isDdlDetailsStored(ddlDetails.getSearchDbname(), ddlDetails.getObjectName()) )
+//		if ( isDdlDetailsStored(ddlDetails.getSearchDbname(), ddlDetails.getObjectName()) )
+		if ( isDdlDetailsStored(ddlDetails.getSearchDbname(), ddlDetails.getSchemaAndObjectName()) )
 		{
-			_logger.debug("saveDdlDetails(): The DDL for searchDbname '"+ddlDetails.getSearchDbname()+"', objectName '"+ddlDetails.getObjectName()+"' has already been stored by all the writers.");
+			if (ddlDetails.isPrintInfo())
+				_logger.info("DEBUG: saveDdlDetails(): The DDL for searchDbname '"+ddlDetails.getSearchDbname()+"', objectName '"+ddlDetails.getSchemaAndObjectName()+"' has already been stored by all the writers.");
+			
+//System.out.println("saveDdlDetails(): The DDL for searchDbname '"+ddlDetails.getSearchDbname()+"', objectName '"+ddlDetails.getSchemaAndObjectName()+"' has already been stored by all the writers.");
+			_logger.debug("saveDdlDetails(): The DDL for searchDbname '"+ddlDetails.getSearchDbname()+"', objectName '"+ddlDetails.getSchemaAndObjectName()+"' has already been stored by all the writers.");
 			return;
 		}
 
 		try
 		{
-			_logger.debug("DEBUG: saveDdlDetails() SAVING " + ddlDetails.getFullObjectName());
+			if (ddlDetails.isPrintInfo())
+				_logger.info("DEBUG: saveDdlDetails() SAVING " + ddlDetails.getFullObjectName());
+			
+			if (_logger.isDebugEnabled())
+				_logger.debug("DEBUG: saveDdlDetails() SAVING " + ddlDetails.getFullObjectName());
 
 			String sql = getTableInsertStr(conn, DDL_STORAGE, null, true);
 //			PreparedStatement pstmt = conn.prepareStatement(sql);
@@ -4611,9 +4710,14 @@ public class PersistWriterJdbc
 			pstmt.setString(col++, ddlDetails.getOptdiagText());
 			pstmt.setString(col++, ddlDetails.getExtraInfoText());
 
-			pstmt.executeUpdate();
+			int rowcount = pstmt.executeUpdate();
 			pstmt.close();
-			
+
+//System.out.println("PersistWriterJdb.saveDdlDetails(): rowcount=" + rowcount + ", dbname='" + ddlDetails.getDbname() + "', schema='" + ddlDetails.getOwner() + "', objectName='" + ddlDetails.getObjectName() + "', source='" + ddlDetails.getSource() + "'.");
+
+			if (ddlDetails.isPrintInfo())
+				_logger.info("DEBUG: PersistWriterJdb.saveDdlDetails(): rowcount=" + rowcount + ", dbname='" + ddlDetails.getDbname() + "', schema='" + ddlDetails.getOwner() + "', objectName='" + ddlDetails.getObjectName() + "', source='" + ddlDetails.getSource() + "'.");
+
 			// update statistics that we have stored a DDL entry
 			getStatistics().incDdlSaveCount();
 

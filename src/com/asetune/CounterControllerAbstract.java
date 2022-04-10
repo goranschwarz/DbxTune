@@ -67,6 +67,7 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
+import it.sauronsoftware.cron4j.Scheduler;
 import net.miginfocom.swing.MigLayout;
 
 public abstract class CounterControllerAbstract
@@ -2451,4 +2452,63 @@ implements ICounterController
 	{
 		// override this if thsi Vendor needs to save anything...
 	}
+
+
+	//==================================================================
+	// BEGIN: Scheduler
+	//==================================================================
+    private Scheduler _scheduler = null;
+
+    /**
+	 * Create any cron4j.Scheduler
+	 * @param hasGui
+	 * @return
+	 */
+	@Override
+	public Scheduler createScheduler(boolean hasGui)
+	{
+		return null;
+	}
+
+	/** Get the installed scheduler instance */
+	@Override
+	public Scheduler getScheduler()
+	{
+		return _scheduler;
+	}
+
+	/** Set the installed scheduler instance */
+	@Override
+	public void setScheduler(Scheduler scheduler)
+	{
+		_scheduler = scheduler;
+	}
+
+	/** Starts the installed scheduler, if we have any installed */
+	@Override
+	public void startScheduler()
+	{
+		Scheduler scheduler = getScheduler();
+		if (scheduler != null)
+		{
+			_logger.info("Starting scheduler thread.");
+			//_scheduler.setName("cron4j-sched"); // this would have been nice...
+			_scheduler.setDaemon(true);
+			_scheduler.start();
+		}
+	}
+
+	@Override
+	public void stopScheduler()
+	{
+		Scheduler scheduler = getScheduler();
+		if (scheduler != null)
+		{
+			_logger.info("Stopping scheduler thread.");
+			scheduler.stop();
+		}
+	}
+	//==================================================================
+	// END: Scheduler
+	//==================================================================
 }

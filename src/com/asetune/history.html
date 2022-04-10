@@ -75,6 +75,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>osLoadAverage Alarms is disabled between 00:00 and 02:00, when the Daily Summary Reports is created</LI>
 		<LI>PCS: do not call "sp_depends" on objects during DDL Lookup </LI>
 		<LI>SQL Inspector, if it sees a view, it tries to parse the view, and sent the referenced tables into the DDL Storage</LI>
+		<LI>Added scheduling capabilities using 'cron4j'</LI>
+		<LI>DBMS Configuration. Config Issues are now stored in PCS. And when loading a database the Issues are also available!</LI>
+		<LI>Debug option for PCS DDL Storage. If property/EnvVar 'PcsAddDdlObjectDialog.show' is set to 'true' then a menu option "Add 'Object' for PCS DDL Lookup..." will be visible.</LI>
 
 		<LI>OS Monitoring now also handles Windows, via a SHH Connection executing typeperf (not a OpenSSH Server needs to be installed on the Windows Server, supported modules
 			<UL>
@@ -115,6 +118,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>New section at the end: Tracing how long the various sections took to produce. (more or less debugging)</LI>
 				<LI>Highligtning (in bold) what culumns we are sorting on (when the report was created)</LI>
 				<LI>new section to track how long time each Report Section takes</LI>
+				<LI>The GUI Version can now create a report on the current recording</LI>
+				<LI>Added section to see how large the PCS Tables are (mostly used by me for debugging)</LI>
 			</UL>
 		</LI>
 
@@ -122,7 +127,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<b>Upgraded some of the third party libraries/jars</b><br>
 			<ul>
 	 			<li>To version 1.5.1          Component: JfreeChart</li>
-	 			<li>To version 3.2            Component: jsqlparser</li>
+	 			<li>To version 4.3            Component: JSqlParser</li>
 	 			<li>To version 21.1           Component: Oracle JDBC Driver</li>
 	 			<li>To version 9.2.0          Component: Microsoft JDBC Driver</li>
 	 			<li>To version 9.4.38         Component: Jetty Embedded WebServer</li>
@@ -289,6 +294,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>When parsing/normalizing the SQL text, also extract Table names, and send them of to DDL Storage</li>
 			<li>DDL Lookup: extract SQL Text from XML Plan, extract table names and send those to DDL Storage</li>
 			<li>DDL Lookup: If DDL Stored object are views... extract table names and send those to DDL Storage</li>
+			<li>DDL Lookup: Extract trigger dependencies even if the full dependant 'sp_depends' option is enabled.</li>
 		</ul>
 		</LI>
 
@@ -312,6 +318,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>Object Activity -- More miniCharts/Sparklines also a "summary" section for every table, where important info is placed</li>
 			<li>Recording Information -- Now also contains ASE: PageSize, SortOrder, Charset, LicenseInfo</li>
 			<li>Added a "summary" table for most active SQL Statements: with sparklines, SQL Text and Table information (Table and Index Sizes etc)</li>
+			<li>For table information VIEW added: 'DDL Definition'</li>
+			<li>For table information TABLE added: 'Created', 'Sample Time', 'DDL Info', 'Triggers DDL'</li>
+			<li>For table information INDEX/DATA added: 'RowsInserted', 'RowsUpdated', 'RowsDeleted', 'LogicalReads', 'PhysicalReads', 'APFReads', 'LockWaits', 'SharedLockWaitTime', 'ExclusiveLockWaitTime', 'UpdateLockWaitTime'.</li>
 		</ul>
 		</LI>
 
@@ -389,6 +398,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added Alarm: <b>AlarmEventQueryStoreLowFreeSpace    </b> -- If querey Store Space starts to get low </LI>
 		<LI>Added Alarm: <b>AlarmEventQueryStoreUnexpectedState </b> -- If Query Store 'state' is not the expected/desired state</LI>
 		<LI>Added Alarm: <b>AlarmEventPerfCounter               </b> -- may be used for all PerfCounter Alarms (the Severity is passed by the CM depending on what it think is appropriate)</LI>
+		<LI>Added Alarm: <b>AlarmEventTempdbSpidUsage           </b> -- When a SPID uses a lot of tempdb space</LI>
 
 		<LI>Added CM: <b>CmIndexMissing </b> - Take information from 'dm_db_missing_index_*' and display them, in a prioritized way... NOTE: as always take the recommendations with 'a grain of salt'</LI>
 		<LI>Added CM: <b>CmIndexUnused  </b> - Unused Indexes - ordered by 'user_updates desc' so the undex with most updates will be "first"</LI>
@@ -450,15 +460,22 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmExecQueryStat    </b> - Long running statements was sometimes missing, if 'sample_lastXminutes' was enabled.</LI>
 		<LI><b>CmExecQueryStat    </b> - using OUTER apply instead of CROSS apply to *not* miss records with no query or query plan </LI>
 		<LI><b>CmExecQueryStat    </b> - Changed Default 'postpone time' to 10 minutes... sample this less often </LI>
+		<LI><b>CmExecQueryStat    </b> - Added columns 'PlanSizeKB', 'cacheobjtype', 'objtype' </LI>
 
 		<LI><b>CmIndexOpStat      </b> - new postpone value of 300 seconds (5 minutes) </LI>
 		<LI><b>CmIndexOpStat      </b> - using the DbmsObjectIdCache to lookup database_id-&gt;DbName, object_id-&gt;(TableName, SchemaName), index_id-&gt;IndexName </LI>
 
 		<LI><b>CmIndexPhysical    </b> - using the DbmsObjectIdCache to lookup database_id-&gt;DbName, object_id-&gt;(TableName, SchemaName), index_id-&gt;IndexName </LI>
 
+		<LI><b>CmIndexUnused      </b> - Added column 'CreateStatement' so that it will be easier to create documentation for "undo" actions </LI>
+
 		<LI><b>CmIndexUsage       </b> - new postpone value of 300 seconds (5 minutes) </LI>
 		<LI><b>CmIndexUsage       </b> - using the DbmsObjectIdCache to lookup database_id-&gt;DbName, object_id-&gt;(TableName, SchemaName), index_id-&gt;IndexName </LI>
 		
+		<LI><b>CmMemoryClearks    </b> - Added columns 'name', 'virtual_memory_reserved_MB', 'virtual_memory_committed_MB', 'awe_allocated_MB', 'shared_memory_reserved_MB', 'shared_memory_committed_MB'. </LI>
+		<LI><b>CmMemoryClearks    </b> - Added graph 'Top 10 Memory Clerks, in MB' </LI>
+		<LI><b>CmMemoryClearks    </b> - Added local "tab" pie chart, how the memory is distributed between the modules </LI>
+
 		<LI><b>CmMemoryGrants     </b> - using OUTER apply instead of CROSS apply to *not* miss records with no query or query plan </LI>
 
 		<LI><b>CmOpenTransactions </b> - Removed Primary Key &amp; Query Plans: get actual execution plans if the server supports it (2019 &amp; traceflag 2451 or Database Scoped Configuration LAST_QUERY_PLAN_STATS) </LI>
@@ -474,7 +491,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmPerfCounters     </b> - Added 5 graphs for Query Store Usage. 'QsTotal', 'QsDbCpu', 'QsDbPhysRead', 'QsDbLogiRead', 'QsDbLogiWrite' </LI>
 		<LI><b>CmPerfCounters     </b> - Alarm: for 'Lazy writes/sec': Changed from Severity WARNING to INFO </LI>
 
-		<LI><b>CmPlanCacheHistory </b> - New collector: To check how old entries in the Plan Cahe are (can we trust the values or is the Plan cache "stable") </LI>
+		<LI><b>CmPlanCacheHistory </b> - New collector: To check how old entries in the Plan Cache are (can we trust the values or is the Plan cache "stable") </LI>
 
 		<LI><b>CmSchedulers       </b> - added 'diff' calculations for columns 'total_cpu_usage_ms', 'total_cpu_idle_capped_ms' and 'total_scheduler_delay_ms'</LI>
 		<LI><b>CmSchedulers       </b> - New Graph: CPU Usage in Percent, ALL Schedulers (using dm_os_schedulers.total_cpu_usage_ms)</LI>
@@ -506,6 +523,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI><b>CmTempdbSpidUsage  </b> - Completely rewritten, hopefully this one will work better</LI>
 		<LI><b>CmTempdbSpidUsage  </b> - better version handling (older versions of SQL-Server, then we skip more columns, not yet invented)</LI>
+		<LI><b>CmTempdbSpidUsage  </b> - Added option to include/exclude 'InternalObject' in 'TotalUsageMb'. The internal objects seems to show strange values in some/most cases. This can be changed with the GUI or property 'CmTempdbSpidUsage.sample.TotalUsageMb.includeInternalObjects', where the default is false.</LI>
+		<LI><b>CmTempdbSpidUsage  </b> - Added Alarm 'TempdbSpidUsage', when a specific SPID is using to much space. Property: 'CmTempdbSpidUsage.alarm.system.if.TotalUsageMb_abs.gt' with a default of 20GB or 20480MB, there are properties to skipp some logins and progran_names</LI>
 		
 		<LI><b>CmTempdbUsage      </b> - added 2 new graphs 'Tempdb Usage by Object Type, in MB, {All|Subset}' -- Shows "Version Store", "Internal Objects", "User Objects", "Mixed Extents", "Allocated Space", "Free Space", "Total Space"</LI>
 		<LI><b>CmTempdbUsage      </b> - better version handling (older versions of SQL-Server, then we skip more columns, not yet invented)</LI>
@@ -548,9 +567,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Changed how to detect if the SQL-Server is a 'Azure Synapse Analytics' or 'Parallel Data Warehouse'. now using: select ServerProperty('EngineEdition')</LI>
 		<LI>Tooltip and Alarm with ShowPlanXML content... show a simplified plan with a Unordered List (that is indented to show children)</LI>
 		<LI>DBMS Config: added capture for Resource Governor</LI>
+		<LI>DBMS Config: Added new checks/issues for 'optimize for ad hoc workloads', 'max server memory (MB)', 'remote admin connections', 'cost threshold for parallelism'</LI>
+		<LI>DBMS Config: Added tab for tempdb. Also with checking issues for 'temdb files &lt; cores', 'datafiles_equal_size', 'datafiles_equal_grow_size'</LI>
 		<LI>all collectors had a SQL change. the Collector name is injected *after* the select statement (for easier identification when monitoring)</LI>
 		<LI>DDL Lookup: extract SQL Text from XML Plan, extract table names and send those to DDL Storage</LI>
 		<LI>DDL Lookup: If DDL Stored object are views... extract table names and send those to DDL Storage</LI>
+		<LI>DDL Lookup: Extract trigger dependencies on inspected/saved tables</LI>
+		<LI>DDL Lookup: If it's an execution plan. check for 'hasWarnings', 'hasImplicitConvertions', 'hasImplicitConvCardinality', 'hasKeyOrRidLookups', 'hasMissingIndexes', 'hasCursor', 'hasUserDefinedFunction'. Store those as a JSON in column 'object_text'</LI>
+		<LI>DDL Lookup: For tables, extract save a bit more information about the tables, which is later on used by the Daily Summary Reports</LI>
+		<LI>Added scheduler work to examen Query Store, to get top collected SQL Statement, parse them for table names and send them to the DDL Storage in the PCS (for later use by Daily Summary Reports)</LI>
 		
 		<!-- ~~~~~ Daily Report ~~~~~ -->
 		<LI>
@@ -578,6 +603,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>new section in Query Store: A Summary of ALL databases sorted by CPU also a section for every SQL, where important info/Sparklines is placed</li>
 			<li>Added a "summary" table for most active SQL Statements: with sparklines, SQL Text and Table information (Table and Index Sizes etc)</li>
 			<li>Wait Statistics: Added LCK_M_U, LCK_M_IX, PAGELATCH_SH, PAGELATCH_EX, RESOURCE_SEMAPHORE to the most common wait types</li>
+			<li>new section: DBMS Configuration Issues</li>
+			<li>new section: Estimated Wait Time, Only serial executions will be reflected here (since "estimated" is calculated by "elapsed_time - worker_time", which will be *faulty* in a parallel plan)</li>
+			<li>For table information VIEW added: 'DDL Definition'</li>
+			<li>For table information TABLE added: 'Created', 'Sample Time', 'DDL Info', 'Triggers DDL'</li>
+			<li>For table information INDEX added: 'Included Columns', 'Index Filters', 'READS', 'WRITES', 'page_latch_wait_count', 'page_latch_wait_in_ms', 'row_lock_count', 'row_lock_wait_count', 'row_lock_wait_in_ms', 'page_lock_count', 'page_lock_wait_count', 'page_lock_wait_in_ms', 'index_lock_promotion_attempt_count', 'index_lock_promotion_count'</li>
+			<li>Plan Cache History, added some columns (as information), like: 'PlanSizeKB', 'ObjType_Proc_Pct', 'ObjType_Prepared_Pct', 'ObjType_Adhoc_Pct', 'CacheObjType_CompiledPlan_Pct', 'CacheObjType_CompiledPlanStub_Pct', 'total_elapsed_time_ms', 'total_worker_time_ms', 'total_logical_reads', 'total_logical_writes', 'total_physical_reads', 'total_rows'.</li>
 		</ul>                                                              
 		</LI>
 	</UL>
@@ -592,6 +623,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>onConnect, execute: set session work_mem = '128MB'       Can be changed by config: PostgresTune.onMonConnect.set.dbms.option.work_mem=SOME_VALUE|DEFAULT</LI>
 		<LI>onConnect, execute: set session temp_buffers = '128MB'   Can be changed by config: PostgresTune.onMonConnect.set.dbms.option.temp_buffers=SOME_VALUE|DEFAULT</LI>
 		<LI>Change how we collect current time from: CURRENT_TIMESTAMP to CLOCK_TIMESTAMP()</LI>
+		<LI><b>CmPgDatabase         </b> - Added columns 'total_reads', 'cache_hit_pct', 'db_conn_limit', 'db_owner', 'db_collation', 'db_access_privileges'</LI>
+		<LI><b>CmPgDatabase         </b> - Added graphs 'CacheHitPct' and 'TotalReads'</LI>
 		<LI><b>CmPgStatements       </b> - Now works with Postgres 9.3 (and possibly versions below that), where I "fake" the 'queryid' by taking a md5 checksum (first 16 chars) and converting that to an bigint</LI>
 		<LI><b>CmPgStatements       </b> - new columns for later versions (up to version 14)</LI>
 		<LI><b>CmPgStatements       </b> - Parse SQL Text and send of tables for top ## statements to DDL Store</LI>
@@ -600,11 +633,18 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmSummary            </b> - added columns 'oldest_running_xact_age', 'oldest_prepared_xact_age', 'oldest_replication_slot_age', 'oldest_replica_xact_age' to check if we will exceed the MAX Transaction ID in some "near" future!</LI>
 		<LI><b>CmSummary            </b> - Also a Graph on columns 'oldest_running_xact_age', 'oldest_prepared_xact_age', 'oldest_replication_slot_age', 'oldest_replica_xact_age'</LI>
 		<LI><b>CmPgTables           </b> - New chart 'DeadRows' so we can follow number of dead rows for each database</LI>
+		<LI><b>CmPgTablesIo         </b> - Added columns 'cache_hit_pct', 'total_reads', 'all_blks_read', 'all_blks_hit'.</LI>
+		<LI><b>CmPgTablesIo         </b> - Added graphs 'CacheHit' and 'CacheReads'</LI>
 		<LI><b>View Configuration   </b> - added one extra, calculated column: "ValueInMb"</LI> 
+		<LI><b>DDL Lookup/Store     </b> - Extract trigger dependencies on inspected/saved tables</LI> 
 		<LI><b>Daily Summary Report </b> - Statements - tooltip and popup with the SQL Text</LI>
 		<LI><b>Daily Summary Report </b> - New section for 'DeadRows', also printing configuration that has to do with Autovacuum.</LI>
 		<LI><b>Daily Summary Report </b> - Top SQL -- More miniCharts/Sparklines also a "summary" section for every table, where important info is placed.</LI>
 		<LI><b>Daily Summary Report </b> - Added a "summary" table for most active SQL Statements: with sparklines, SQL Text and Table information (Table and Index Sizes etc)</LI>
+		<LI><b>Daily Summary Report </b> - Added new section - DBMS Configuration Issues</LI>
+		<LI><b>Daily Summary Report </b> - For table information VIEW added: 'DDL Definition'</LI>
+		<LI><b>Daily Summary Report </b> - For table information TABLE added: 'Sample Time', 'DDL Info', 'Triggers DDL'</LI>
+		<LI><b>Daily Summary Report </b> - For table information INDEX added: 'Included Columns'</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -647,6 +687,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>new 'go foreachdb' to execute the command in every database (variable ${dbname} will be set, and can be used in the SQL Text)</LI>
 		<LI>new 'go filter xxx' to fill in the "filter" text </LI>
 		<LI>new 'go mrs' -- Merge ResultSets. Like a union, when you can't do union in SQL</LI>
+		<LI>Better positioning for Postgres Error message. Postgres says 'Position: ###' where ### is offset in the text. So Translate the offset into Row/column so the "red snivle line" points out where the error is.</LI>
+		<LI>Code Compleation. By default add Square Brackets instead of DBMS Specific chars, which later will be translated in the "correct" char for that DBMS Type upon execution (this can be changed in the Code Completion Settings Dialog)</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

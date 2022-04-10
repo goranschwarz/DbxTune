@@ -20,7 +20,6 @@
  ******************************************************************************/
 package com.asetune.cm.sqlserver;
 
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,6 +36,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.gui.CmMemoryGrantsPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.StringUtil;
@@ -168,13 +168,13 @@ extends CountersModel
 
 	
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 //		List <String> pkCols = new LinkedList<String>();
 
@@ -185,7 +185,7 @@ extends CountersModel
 	}
 
 //	@Override
-//	public String getSqlInitForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+//	public String getSqlInitForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 //	{
 //		Configuration conf = Configuration.getCombinedConfiguration();
 //		boolean getLiveQueryPlan  = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan,  DEFAULT_sample_liveQueryPlan);
@@ -200,7 +200,7 @@ extends CountersModel
 //	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		String dm_exec_query_plan = "dm_exec_query_plan";
 

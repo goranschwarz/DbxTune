@@ -21,7 +21,6 @@
 package com.asetune.cm.sqlserver;
 
 import java.math.BigDecimal;
-import java.sql.Connection;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -36,6 +35,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
+import com.asetune.sql.conn.DbxConnection;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -131,7 +131,7 @@ extends CountersModel
 //	}
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public void addMonTableDictForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		try 
 		{
@@ -152,13 +152,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -168,7 +168,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		String dm_os_spinlock_stats = "dm_os_spinlock_stats";
 		

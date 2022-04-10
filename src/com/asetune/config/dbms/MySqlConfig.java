@@ -388,9 +388,17 @@ extends DbmsConfigAbstract
 			return;
 		}
 
-		// Check if we got any strange in the configuration
-		// in cese it does: report that...
-		checkConfig(conn);
+		if ( _offline )
+		{
+			// Load saved Configuration Issues from the offline database
+			getOfflineConfigIssues(conn);
+		}
+		else
+		{
+			// Check if we got any strange in the configuration
+			// in case it does: report that...
+			checkConfig(conn);
+		}
 		
 		// notify change
 		fireTableDataChanged();

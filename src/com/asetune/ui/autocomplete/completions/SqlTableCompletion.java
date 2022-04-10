@@ -40,10 +40,12 @@ extends SqlCompletion
 	//-------------------------
 	public static String createReplacementText(CompletionProviderAbstractSql provider, TableInfo ti, boolean addCatalog, boolean addSchema, boolean quoteNames)
 	{
-		String q = provider.getDbIdentifierQuoteString();
-		String catalogName = quoteNames ? q+ti._tabCat+q    : provider.fixStrangeNames(ti._tabCat);
-		String schemaName  = quoteNames ? q+ti._tabSchema+q : provider.fixStrangeNames(ti._tabSchema);
-		String tableName   = quoteNames ? q+ti._tabName+q   : provider.fixStrangeNames(ti._tabName);
+		String q1 = provider.getDbIdentifierQuoteStringStart();
+		String q2 = provider.getDbIdentifierQuoteStringEnd();
+
+		String catalogName = quoteNames ? q1 + ti._tabCat    + q2 : provider.fixStrangeNames(ti._tabCat);
+		String schemaName  = quoteNames ? q1 + ti._tabSchema + q2 : provider.fixStrangeNames(ti._tabSchema);
+		String tableName   = quoteNames ? q1 + ti._tabName   + q2 : provider.fixStrangeNames(ti._tabName);
 
 		// If the schemaname/owner is 'dbo', do not prefix it with 'dbo.'
 //		if ("dbo".equalsIgnoreCase(ti._tabSchema))
@@ -52,6 +54,10 @@ extends SqlCompletion
 //			addSchema = addCatalog; // if catalog is true, we need to add a simple '.'
 //		}
 
+		String dbmsDefaultSchemaName = provider.getDbDefaultSchemaName();
+		if (StringUtil.hasValue(dbmsDefaultSchemaName) && dbmsDefaultSchemaName.equals(ti._tabSchema))
+			addSchema = false;
+		
 		String out = "";
 		if (addCatalog) out += catalogName + ".";
 		if (addSchema)  out += schemaName  + ".";

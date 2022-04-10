@@ -311,6 +311,7 @@ public abstract class MainFrame
 	public static final String ACTION_OPEN_WIZARD_OFFLINE               = "OPEN_WIZARD_OFFLINE";
 	public static final String ACTION_OPEN_WIZARD_UDCM                  = "OPEN_WIZARD_UDCM";
 	public static final String ACTION_GARBAGE_COLLECT                   = "GARBAGE_COLLECT";
+	public static final String ACTION_OPEN_PCS_ADD_DDL_OBJECT           = "OPEN_PCS_ADD_DDL_OBJECT";
 
 	public static final String ACTION_OPEN_ABOUT                        = "OPEN_ABOUT";
 	
@@ -472,6 +473,7 @@ public abstract class MainFrame
 	private JMenuItem           _createOffline_mi;
 	private JMenuItem           _wizardCrUdCm_mi;
 	private JMenuItem           _doGc_mi;
+	private JMenuItem           _pcsAddDdlObject_mi;
 
 	// Help
 	private JMenu               _help_m;
@@ -1841,6 +1843,7 @@ public abstract class MainFrame
 		_createOffline_mi              = new JMenuItem("Create 'Record Session - Template file' Wizard...");
 		_wizardCrUdCm_mi               = new JMenuItem("Create 'User Defined Counter' Wizard...");
 		_doGc_mi                       = new JMenuItem("Java Garbage Collection");
+		_pcsAddDdlObject_mi            = new JMenuItem("Add 'Object' for PCS DDL Lookup...");
 
 		_viewSrvLogFile_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/tail_logfile.png"));
 //		_aseConfMon_mi                .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_mon.png"));
@@ -1867,6 +1870,7 @@ public abstract class MainFrame
 		_createOffline_mi             .setActionCommand(ACTION_OPEN_WIZARD_OFFLINE);
 		_wizardCrUdCm_mi              .setActionCommand(ACTION_OPEN_WIZARD_UDCM);
 		_doGc_mi                      .setActionCommand(ACTION_GARBAGE_COLLECT);
+		_pcsAddDdlObject_mi           .setActionCommand(ACTION_OPEN_PCS_ADD_DDL_OBJECT);
 
 		_viewSrvLogFile_mi            .addActionListener(this);
 //		_aseConfMon_mi                .addActionListener(this);
@@ -1880,6 +1884,7 @@ public abstract class MainFrame
 		_createOffline_mi             .addActionListener(this);
 		_wizardCrUdCm_mi              .addActionListener(this);
 		_doGc_mi                      .addActionListener(this);
+		_pcsAddDdlObject_mi           .addActionListener(this);
 
 		_sqlQuery_mi                 .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
 //		_aseConfMon_mi               .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
@@ -1897,6 +1902,7 @@ public abstract class MainFrame
 		menu.add(_createOffline_mi);
 		menu.add(_wizardCrUdCm_mi);
 		menu.add(_doGc_mi);
+		menu.add(_pcsAddDdlObject_mi);
 		
 		return menu;
 	}
@@ -2315,6 +2321,11 @@ public abstract class MainFrame
 			setStatus(MainFrame.ST_MEMORY);
 		}
 
+		if (ACTION_OPEN_PCS_ADD_DDL_OBJECT.equals(actionCmd))
+		{
+			PcsAddDdlObjectDialog.showDialog(this);
+		}
+
 		if (ACTION_OPEN_ABOUT.equals(actionCmd))
 			action_about(e);
 
@@ -2681,6 +2692,15 @@ public abstract class MainFrame
 		if (ACTION_SLIDER_LEFT_NEXT  .equals(actionCmd)) action_sliderKeyLeftNext(e);
 		if (ACTION_SLIDER_RIGHT_NEXT .equals(actionCmd)) action_sliderKeyRightNext(e);
 
+		
+		// Should the DEBUG -- PCS -- Send DDL Object for DDL Lookup
+		_pcsAddDdlObject_mi.setVisible(false);
+		if (_logger.isDebugEnabled() || Configuration.getCombinedConfiguration().getBooleanProperty("PcsAddDdlObjectDialog.show", false))
+		{
+			_pcsAddDdlObject_mi.setVisible(true);
+		}
+		
+		
 		// Call any subclass/implementors
 		actionPerformed(e, source, actionCmd);
 

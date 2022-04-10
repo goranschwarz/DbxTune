@@ -39,6 +39,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.central.DbxTuneCentral;
@@ -630,6 +631,9 @@ public class DbxTuneLogServlet extends HttpServlet
 		else if (line.indexOf(" - DEBUG - " ) >= 0) { prefix = "<span style='background-color:rgb(240, 240, 240);'>"; postfix = "</span>"; }
 		else if (line.indexOf(" - FATAL - " ) >= 0) { prefix = "<span style='background-color:rgb(255,  51,  51);'>"; postfix = "</span>"; }
 
+		// Escape HTML Chars
+		line = StringEscapeUtils.escapeHtml4(line);
+		
 		return prefix + line + postfix;
 	}
 

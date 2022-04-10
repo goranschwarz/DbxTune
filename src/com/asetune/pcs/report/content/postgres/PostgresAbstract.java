@@ -34,14 +34,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.ReportEntryAbstract;
-import com.asetune.pcs.report.content.postgres.PostgresAbstract.PgTableInfo;
 import com.asetune.sql.SqlObjectName;
-import com.asetune.sql.SqlParserUtils;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.HtmlTableProducer;
@@ -270,6 +269,7 @@ extends ReportEntryAbstract
 				tableInfoMap.put("View"       ,            entry.getTableName()       );
 				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
 //				tableInfoMap.put("References" ,            entry.getViewReferences()+""); // instead show this in the: Index Info section
+				tableInfoMap.put("DDL"        ,            getFormattedSqlAsTooltipDiv(entry._objectText, "View DDL", DbUtils.DB_PROD_NAME_POSTGRES));
 			}
 			else // Any table
 			{
@@ -286,7 +286,10 @@ extends ReportEntryAbstract
 				tableInfoMap.put("Data Pages"  , nf.format( entry.getDataPages() ));
 				tableInfoMap.put("Index MB"    , nf.format( entry.getIndexMb()   ));
 				tableInfoMap.put("Toast/LOB MB", entry.getToastMb() == -1 ? "-no-toast-" : nf.format( entry.getToastMb()   ));
+				tableInfoMap.put("Sampled"     , entry.getSampleTime()+""   );
 				tableInfoMap.put("Index Count" , entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>") );
+				tableInfoMap.put("DDL Info"    , getTextAsTooltipDiv(entry._objectText, "Table Info"));
+				tableInfoMap.put("Triggers"    , entry._triggersText == null ? "-no-triggers-" : getTextAsTooltipDiv(entry._triggersText, "Trigger Info"));
 			}
 			
 			String tableInfo = HtmlTableProducer.createHtmlTable(tableInfoMap, "dsr-sub-table-other-info", true);
@@ -363,41 +366,28 @@ extends ReportEntryAbstract
 		sb.append("<thead> \n");
 		sb.append("<tr> \n");
 
-		sb.append("  <th>Index Name</th> \n");
-		sb.append("  <th>Keys</th> \n");
-		sb.append("  <th>Desciption</th> \n");
-		sb.append("  <th>RowCount</th> \n");
-		sb.append("  <th>Size Pages</th> \n");
-		sb.append("  <th>Size MB</th> \n");
-		sb.append("  <th title='Average Bytes used per Row\nCalculted by: Pages*8192/RowCount'>Avg RowSize</th> \n");
+		sb.append(createHtmlTh("Index Name"           , ""));
+		sb.append(createHtmlTh("Keys"                 , ""));
+		sb.append(createHtmlTh("Include"              , "Columns included on the leafe index page... create index... on(c1,c2) INCLUDE(c3,c4,c5)"));
+		sb.append(createHtmlTh("Desciption"           , ""));
+		sb.append(createHtmlTh("RowCount"             , ""));
+		sb.append(createHtmlTh("Size Pages"           , ""));
+		sb.append(createHtmlTh("Size MB"              , ""));
+//		sb.append(createHtmlTh("Avg RowsPerPage"      , "Average Rows Per Page\nCalculted by: RowCount/Pages"));
+		sb.append(createHtmlTh("Avg RowSize"          , "Average Bytes used per Row\nCalculted by: Pages*8192/RowCount"));
 
-//		String tt1 = "\nTime span: During the report period.";
-//		sb.append("  <th title='Number of Insert, Update and Deletes that has been done." + tt1                      + "'>RowsInsUpdDel</th> \n");
-//		sb.append("  <th title='Number of times the optimizer selected this index to be used in a query plan." + tt1 + "'>OptSelectCount</th> \n");
-//		sb.append("  <th title='Number of times the object was used in a plan during execution." + tt1               + "'>UsedCount</th> \n");
-//		sb.append("  <th title='Number of times the object was accessed." + tt1                                      + "'>Operations</th> \n");
+		sb.append(createHtmlTh("Index Scans"          , ""));
+		sb.append(createHtmlTh("Rows Fetched"         , ""));
+		sb.append(createHtmlTh("Rows Read"            , ""));
+		sb.append(createHtmlTh("Fetch/Read Efficiency", ""));
 
-//		sb.append("  <th title='When was the index created."                                                         + "'>CrDate</th> \n");
-//		String tt2 = "\nTime span: Since object was cached (see CacheDate)."
-//		           + "\nNOTE: This counter is an integer that may/will wrap, if incremeted frequently."
-//		           + "\nUse this to decide if the index has **ever** been used since CacheDate."
-//		           + "\nA low value indicates that the index has NOT been used. And therefor may be an *unused* index.";
-//		sb.append("  <th title='Number of Insert, Update and Deletes that has been done." + tt2                      + "'>AbsRowsInsUpdDel</th> \n");
-//		sb.append("  <th title='Number of times the optimizer selected this index to be used in a query plan." + tt2 + "'>AbsOptSelectCount</th> \n");
-//		sb.append("  <th title='Number of times the object was used in a plan during execution." + tt2               + "'>AbsUsedCount</th> \n");
-//		sb.append("  <th title='Number of times the object was accessed." + tt2                                      + "'>AbsOperations</th> \n");
+		sb.append(createHtmlTh("Total Reads"          , ""));
+		sb.append(createHtmlTh("Physical Reads"       , ""));
+		sb.append(createHtmlTh("Cache Hit Percent"    , ""));
 
-		sb.append("  <th>Index Scans</th> \n");
-		sb.append("  <th>Rows Fetched</th> \n");
-		sb.append("  <th>Rows Read</th> \n");
-		sb.append("  <th>Fetch/Read Efficiency</th> \n");
+		sb.append(createHtmlTh("Table Space"          , ""));
+		sb.append(createHtmlTh("DDL"                  , ""));
 
-		sb.append("  <th>Total Reads</th> \n");
-		sb.append("  <th>Physical Reads</th> \n");
-		sb.append("  <th>Cache Hit Percent</th> \n");
-		
-		sb.append("  <th>Table Space</th> \n");
-		sb.append("  <th>DDL</th> \n");
 		sb.append("</tr> \n");
 		sb.append("</thead> \n");
 
@@ -413,6 +403,7 @@ extends ReportEntryAbstract
 			sb.append("<tr> \n");
 			sb.append("  <td>").append(            entry.getIndexName()          ).append("</td> \n");
 			sb.append("  <td>").append(            entry.getKeysStr()            ).append("</td> \n");
+			sb.append("  <td>").append(            entry.getIncludeStr()         ).append("</td> \n");
 			sb.append("  <td>").append(            entry.getDescription()        ).append("</td> \n");
 			sb.append("  <td>").append( nf.format( entry.getRowCount()          )).append("</td> \n");
 			sb.append("  <td>").append( nf.format( entry.getSizePages()         )).append("</td> \n");
@@ -707,10 +698,11 @@ extends ReportEntryAbstract
 		}
 		
 		// Check if 'table' has dbname/schema name specified.
-		SqlObjectName sqlObj = new SqlObjectName(conn, table);
-		if (sqlObj.hasCatalogName()) dbname = sqlObj.getCatalogNameOrigin();
-		if (sqlObj.hasSchemaName() ) owner  = sqlObj.getSchemaNameOrigin();
-		if (sqlObj.hasObjectName() ) table  = sqlObj.getObjectNameOrigin();
+		SqlObjectName sqlObj = new SqlObjectName(table, DbUtils.DB_PROD_NAME_POSTGRES, "\"", false, true, true);
+//		SqlObjectName sqlObj = new SqlObjectName(conn, table);
+		if (sqlObj.hasCatalogName()) dbname = sqlObj.getCatalogName();
+		if (sqlObj.hasSchemaName() ) owner  = sqlObj.getSchemaName();
+		if (sqlObj.hasObjectName() ) table  = sqlObj.getObjectName();
 		
 		if ("dbo".equalsIgnoreCase(owner))
 			owner = "";
@@ -727,7 +719,7 @@ extends ReportEntryAbstract
 		if (and_table .contains("%")) and_table  = and_table .replace(" = ", " like ");
 
 		String sql = ""
-			    + "select [dbname], [owner], [objectName], [type], [crdate], [extraInfoText], [objectText] \n"
+			    + "select [dbname], [owner], [objectName], [type], [crdate], [sampleTime], [extraInfoText], [objectText], [dependList] \n"
 			    + "from [MonDdlStorage] \n"
 			    + "where 1 = 1 \n"
 			    + "  and [type] in ('r', 'v') \n" // Possibly also for m=Materialized view
@@ -754,9 +746,11 @@ extends ReportEntryAbstract
 					ti._tableName     = rs.getString(3);
 					ti._type          = rs.getString(4);
 					ti._crdate        = rs.getTimestamp(5);
+					ti._sampleTime    = rs.getTimestamp(6);
 
-					ti._extraInfoText = rs.getString(6);
-					ti._objectText    = rs.getString(7);
+					ti._extraInfoText = rs.getString(7);
+					ti._objectText    = rs.getString(8);
+					ti._childObjects  = rs.getString(9);
 					
 					tmpList.add(ti);
 				}
@@ -769,6 +763,7 @@ extends ReportEntryAbstract
 			_logger.warn("Problems getting Table Information for dbname='" + dbname + "', owner='" + owner + "', table='" + table + "': " + ex);
 			throw ex;
 		}
+//System.out.println("getTableInformationFromMonDdlStorage(): table='" + table + "', rowcount=" + rowcount + ", dbname='" + dbname + "', schema='" + owner + "', table='" + table + "'.");
 
 		// Loop the record we just found in MonDdlStorage
 		for (PgTableInfo ti : tmpList)
@@ -797,7 +792,7 @@ extends ReportEntryAbstract
 							
 							// What "tables" do this view reference
 							ti._viewReferences = viewReferences;
-System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recursCallCount+"): ti='"+ti.getFullTableName()+"', is a VIEW, the following references will also be fetched: " + viewReferences);
+//System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recursCallCount+"): ti='"+ti.getFullTableName()+"', is a VIEW, the following references will also be fetched: " + viewReferences);
 							// Loop the list
 							for (String tableName : viewReferences)
 							{
@@ -876,6 +871,9 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 						//  - idx_blks_read -- Number of disk blocks read from this index
 						//  - idx_blks_hit  -- Number of buffer hits in this index
 						getPgIndexesIo(conn, ti);
+						
+						// get TRIGGER information for this table
+						getTriggerInfo(conn, ti);
 					}
 
 				} // end: has: _objectText && _extraInfoText 
@@ -974,16 +972,22 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 				{
 					PgIndexInfo ii = new PgIndexInfo();
 
-					ii._indexName  = indexSizeInfo.getValueAsString(r, "index_name"); 
-					ii._rowcount   = indexSizeInfo.getValueAsLong  (r, "row_estimate", true, -1L);
-					ii._IndexID    = indexSizeInfo.getValueAsLong  (r, "oid"         , true, -1L);
-					ii._sizePages  = indexSizeInfo.getValueAsLong  (r, "size_pages"  , true, -1L);
-					ii._sizeMb     = indexSizeInfo.getValueAsDouble(r, "size_mb"     , true, -1D);
-					ii._tablespace = indexSizeInfo.getValueAsString(r, "tablespace");
-					ii._desc       = indexSizeInfo.getValueAsString(r, "description");
-					ii._keysStr    = indexSizeInfo.getValueAsString (r, "index_keys");
-					ii._keys       = StringUtil.parseCommaStrToList(ii._keysStr, true);
-					ii._ddlTxt     = indexSizeInfo.getValueAsString(r, "ddl");
+					ii._indexName   = indexSizeInfo.getValueAsString(r, "index_name"); 
+					ii._rowcount    = indexSizeInfo.getValueAsLong  (r, "row_estimate", true, -1L);
+					ii._IndexID     = indexSizeInfo.getValueAsLong  (r, "oid"         , true, -1L);
+					ii._sizePages   = indexSizeInfo.getValueAsLong  (r, "size_pages"  , true, -1L);
+					ii._sizeMb      = indexSizeInfo.getValueAsDouble(r, "size_mb"     , true, -1D);
+					ii._tablespace  = indexSizeInfo.getValueAsString(r, "tablespace");
+					ii._desc        = indexSizeInfo.getValueAsString(r, "description");
+					ii._keysStr     = indexSizeInfo.getValueAsString (r, "index_keys");
+					ii._keys        = StringUtil.parseCommaStrToList(ii._keysStr, true);
+					ii._ddlTxt      = indexSizeInfo.getValueAsString(r, "ddl");
+
+					if (StringUtil.hasValue(ii._ddlTxt))
+					{
+						ii._includeColsStr = StringUtils.substringBetween(ii._ddlTxt, "INCLUDE (", ")");
+						ii._includeCols    = StringUtil.parseCommaStrToList(ii._includeColsStr, true);
+					}
 					
 					// Add index to table list
 					ti._indexList.add(ii);
@@ -1702,6 +1706,138 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 		}
 	}
 
+	private void getTriggerInfo(DbxConnection conn, PgTableInfo tableInfo)
+	{
+		if (tableInfo == null)
+			return;
+
+		// Get triggers from a list of: childObjects
+		List<String> triggerNames = new ArrayList<>();
+		for (String coe : StringUtil.parseCommaStrToList(tableInfo._childObjects, true))
+		{
+			if (coe.startsWith("TR:"))
+			{
+				triggerNames.add(coe.substring("TR:".length()));
+			}
+		}
+
+		if (triggerNames.isEmpty())
+			return;
+
+		String fullObjName = tableInfo._dbName +  "." + tableInfo._schemaName + "." + tableInfo._tableName;
+		String header = ""
+				+ "------------------------------------------------------------------------------------------------\n"
+				+ "-- Found " + triggerNames.size() + " Trigger(s) on table: " + fullObjName + "\n"
+				+ "-- List: " + StringUtil.toCommaStr(triggerNames) + "\n"
+				+ "------------------------------------------------------------------------------------------------\n"
+				+ "\n"
+				+ "";
+		tableInfo._triggersText = header;
+
+		// Get DDL text for ALL triggers in the above List
+		for (String trName : triggerNames)
+		{
+			String trStr = getTriggerDdlText(conn, tableInfo._dbName, tableInfo._schemaName, tableInfo._tableName, trName);
+			
+			if (StringUtil.hasValue(trStr))
+			{
+				if (tableInfo._triggersText == null)
+					tableInfo._triggersText = "";
+				
+				tableInfo._triggersText += trStr;
+			}
+		}
+	}
+
+	private String getTriggerDdlText(DbxConnection conn, String dbname, String schemaName, String tableName, String triggerName)
+	{
+//		String dbname = dbname;
+		String owner  = schemaName;
+		String table  = tableName;
+		String trName = triggerName;
+
+		String and_dbname = !StringUtil.hasValue(dbname) ? "" : "  and lower([dbname])     = " + DbUtils.safeStr(dbname.toLowerCase()) + " \n";
+		String and_owner  = !StringUtil.hasValue(owner)  ? "" : "  and lower([owner])      = " + DbUtils.safeStr(owner .toLowerCase()) + " \n";
+//		String and_table  = !StringUtil.hasValue(table)  ? "" : "  and lower([objectName]) = " + DbUtils.safeStr(table .toLowerCase()) + " \n";
+		String and_trName = !StringUtil.hasValue(trName) ? "" : "  and lower([objectName]) = " + DbUtils.safeStr(trName.toLowerCase()) + " \n";
+
+//		if (and_dbname.contains("%")) and_dbname = and_dbname.replace(" = ", " like ");
+//		if (and_owner .contains("%")) and_owner  = and_owner .replace(" = ", " like ");
+////		if (and_table .contains("%")) and_table  = and_table .replace(" = ", " like ");
+//		if (and_trName.contains("%")) and_trName = and_trName.replace(" = ", " like ");
+
+		String sql = ""
+			    + "select [dbname], [owner], [objectName], [type], [crdate], [sampleTime], [extraInfoText], [objectText] \n"
+			    + "from [MonDdlStorage] \n"
+			    + "where 1 = 1 \n"
+			    + "  and [type] = 'TR' \n"
+			    + and_dbname
+			    + and_owner
+//			    + and_table
+			    + and_trName
+			    + "";
+
+		List<PgTableInfo> tmpList = new ArrayList<>();
+		
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while(rs.next())
+				{
+					PgTableInfo ti = new PgTableInfo();
+					
+					ti._dbName        = rs.getString(1);
+					ti._schemaName    = rs.getString(2);
+					ti._tableName     = rs.getString(3);
+					ti._type          = rs.getString(4);
+					ti._crdate        = rs.getTimestamp(5);
+					ti._sampleTime    = rs.getTimestamp(6);
+
+					ti._extraInfoText = rs.getString(7);
+					ti._objectText    = rs.getString(8);
+					
+					tmpList.add(ti);
+				}
+			}
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems getting Trigger Information for dbname='" + dbname + "', owner='" + owner + "', table='" + table + "', trName='" + trName + "': " + ex);
+		}
+
+		if (tmpList.isEmpty())
+			return "";
+
+		if (tmpList.size() > 1)
+			_logger.warn("Getting DDL Text for trigger: dbname='" + dbname + "', owner='" + owner + "', table='" + table + "', trName='" + trName + "': Found more that 1 row. they will also be added but... tmpList.size()=" + tmpList.size());
+
+		// Output
+		StringBuilder sb = new StringBuilder();
+		
+		// Loop the record we just found in MonDdlStorage
+		for (PgTableInfo ti : tmpList)
+		{
+			if (StringUtil.hasValue(ti._objectText))
+			{
+				sb.append("\n");
+				sb.append("--##############################################################################################\n");
+				sb.append("-- Trigger Name:   ").append(ti._tableName).append("\n");
+				sb.append("-- Trigger CrDate: ").append(ti._crdate).append("\n");
+				sb.append("--##############################################################################################\n");
+				sb.append(ti._objectText);
+				sb.append("--##############################################################################################\n");
+				sb.append("\n");
+			}
+		} // end: loop PgTableInfo
+
+		// Set the text
+		return sb.toString();
+	}
+	
 	
 	public static class PgIndexInfo
 	{
@@ -1713,6 +1849,8 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 		private double       _sizeMb            = -1;
 		private String       _keysStr;
 		private List<String> _keys;
+		private String       _includeColsStr;
+		private List<String> _includeCols;
 		private String       _desc;
 		private String       _ddlTxt;
 		private Timestamp    _CreationDate;
@@ -1753,6 +1891,8 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 		public double       getSizeMb            () { return MathUtils.round(_sizeMb, 1); }
 		public String       getKeysStr           () { return _keysStr; }
 		public List<String> getKeys              () { return _keys; }
+		public String       getIncludeStr        () { return _includeColsStr == null ? "" : _includeColsStr; }
+		public List<String> getIncludeCols       () { return _includeCols; }
 		public String       getOriginDescription () { return _desc; }
 		public String       getDdlText           () { return _ddlTxt == null ? "" : _ddlTxt; }
                                                  
@@ -1784,8 +1924,11 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 		private String    _tableName;
 		private String    _type;
 		private Timestamp _crdate;
+		private Timestamp _sampleTime;
 		private String    _extraInfoText;  // sp_spaceused tabname, 1
 		private String    _objectText;     // sp_help tabname
+		private String    _childObjects;   // Type:name, Type:name, Type:name
+		private String    _triggersText;   // Text of any trigger definitions
 		private long      _rowtotal;
 		private long      _object_id;
 		private int       _partitionCount;
@@ -1916,6 +2059,7 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 		public String    getTableName()          { return _tableName; }
 		public String    getType()               { return _type; }
 		public Timestamp getCrDate()             { return _crdate; }
+		public Timestamp getSampleTime()         { return _sampleTime; }
 
 		public long      getObjectId()           { return _object_id; }
 		public int       getPartitionCount()     { return _partitionCount; }

@@ -20,7 +20,6 @@
  ******************************************************************************/
 package com.asetune.tools.sqlcapture2;
 
-import java.sql.Connection;
 import java.util.List;
 
 import javax.swing.JPanel;
@@ -29,6 +28,7 @@ import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.tools.sqlcapture.CmLocks;
 
 public class CmSpidDetails
@@ -121,19 +121,19 @@ extends CountersModel
 
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return null;
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String whereSpidKpid = "";
 		if (_spid > 0) whereSpidKpid += "  and P.spid=" + _spid + "\n";

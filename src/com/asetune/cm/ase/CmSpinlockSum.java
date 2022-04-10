@@ -22,7 +22,6 @@ package com.asetune.cm.ase;
 
 import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -42,6 +41,7 @@ import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
@@ -387,7 +387,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
@@ -408,7 +408,7 @@ extends CountersModel
 
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -421,7 +421,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		boolean sample_resetAfter = conf.getBooleanProperty(PROPKEY_sample_resetAfter, DEFAULT_sample_resetAfter);
@@ -658,7 +658,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlInitForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlInitForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		//---------------------------------------------
 		// SQL INIT (executed first time only)
@@ -684,7 +684,7 @@ extends CountersModel
 		return sqlInit;
 	}
 	@Override
-	public String getSqlCloseForVersion(Connection conn, long srvVersion, boolean isClusterEnabled) 
+	public String getSqlCloseForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled) 
 	{
 		String sqlClose = 
 			"--DBCC monitor('select', 'all',        'off') \n" +

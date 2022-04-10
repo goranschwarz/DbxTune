@@ -5138,6 +5138,7 @@ public class ConnectionDialog
 				_logger.info("H2 URL add option: DATABASE_TO_UPPER=false");
 				urlMap.put("DATABASE_TO_UPPER", "false");
 			}
+			// Also consider: IGNORECASE and CASE_INSENSITIVE_IDENTIFIERS
 
 //			// The maximum time in milliseconds used to compact a database when closing.
 //			if ( ! urlMap.containsKey("MAX_COMPACT_TIME") )

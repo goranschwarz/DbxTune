@@ -24,6 +24,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
@@ -42,6 +44,7 @@ public abstract class SqlServerConfigText
 	{
 		 SqlServerHelpDb
 		,SqlServerSysDatabases
+		,SqlServerTempdb
 		,SqlServerTraceflags
 		,SqlServerLinkedServers
 		,SqlServerHelpSort
@@ -59,6 +62,7 @@ public abstract class SqlServerConfigText
 	{
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.HelpDb());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SysDatabases());
+		DbmsConfigTextManager.addInstance(new SqlServerConfigText.Tempdb());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.Traceflags());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.LinkedServers());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.HelpSort());
@@ -123,7 +127,7 @@ public abstract class SqlServerConfigText
 					
 					DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "compatibility_level", Severity.WARNING, 
 							"The 'compatibility_level=" + dbCompatlevel + "' for database '" + dbname + "' is lower than the SQL-Servers default level (" + srvCompatLevel + "). New performance improvements will NOT be used.", 
-							"Fix this using: ALTER DATABASE " + dbname + " SET COMPATIBILITY_LEVEL = " + srvCompatLevel);
+							"Fix this using: ALTER DATABASE [" + dbname + "] SET COMPATIBILITY_LEVEL = " + srvCompatLevel);
 
 					DbmsConfigManager.getInstance().addConfigIssue(issue);
 				}
@@ -157,6 +161,337 @@ public abstract class SqlServerConfigText
 					"go \n" +
 					"";
 			return sql; 
+			
+			// Should we somewhere indicate DEFAILT values
+			// NOTE: Table 'database_scoped_configurations' has a column 'is_value_default' which does this for us :)
+			// 
+			//  id ConfigName                           defVal    defValOnSecondary
+			//  -- ------------------------------------ --------- -------------------
+			//   1 MAXDOP                               0         NULL
+			//   2 LEGACY_CARDINALITY_ESTIMATION        0         NULL
+			//   3 PARAMETER_SNIFFING                   1         NULL
+			//   4 QUERY_OPTIMIZER_HOTFIXES             0         NULL
+			//   6 IDENTITY_CACHE                       1         NULL
+			//   7 INTERLEAVED_EXECUTION_TVF            1         NULL
+			//   8 BATCH_MODE_MEMORY_GRANT_FEEDBACK     1         NULL
+			//   9 BATCH_MODE_ADAPTIVE_JOINS            1         NULL
+			//  10 TSQL_SCALAR_UDF_INLINING             1         NULL
+			//  11 ELEVATE_ONLINE                       OFF       NULL
+			//  12 ELEVATE_RESUMABLE                    OFF       NULL
+			//  13 OPTIMIZE_FOR_AD_HOC_WORKLOADS        0         NULL
+			//  14 XTP_PROCEDURE_EXECUTION_STATISTICS   0         NULL
+			//  15 XTP_QUERY_EXECUTION_STATISTICS       0         NULL
+			//  16 ROW_MODE_MEMORY_GRANT_FEEDBACK       1         NULL
+			//  17 ISOLATE_SECURITY_POLICY_CARDINALITY  0         NULL
+			//  18 BATCH_MODE_ON_ROWSTORE               1         NULL
+			//  19 DEFERRED_COMPILATION_TV              1         NULL
+			//  20 ACCELERATED_PLAN_FORCING             1         NULL
+			//  21 GLOBAL_TEMPORARY_TABLE_AUTO_DROP     1         NULL
+			//  22 LIGHTWEIGHT_QUERY_PROFILING          1         NULL
+			//  23 VERBOSE_TRUNCATION_WARNINGS          1         NULL
+			//  24 LAST_QUERY_PLAN_STATS                0         NULL
+		}
+	}
+
+	public static class Tempdb extends DbmsConfigTextAbstract
+	{
+		@Override public    String     getTabLabel()                        { return "tempdb"; }
+		@Override public    String     getName()                            { return ConfigType.SqlServerTempdb.toString(); }
+		@Override public    String     getConfigType()                      { return getName(); }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) 
+		{
+			// ---------------------------------------------------------
+			// WARNING: do not use 'sys.master_files' instead use 'tempdb.sys.database_files'
+			//          master_files only shows INITIAL SIZE and not the "actual" to which it has been grown to
+			// ---------------------------------------------------------
+			String sql = ""
+					+ "print '--#######################################' \n"
+					+ "print '--## sp_helpdb tempdb' \n"
+					+ "print '--#######################################' \n"
+				    + "exec sp_helpdb tempdb \n"
+				    + "go \n"
+
+					+ "print '' \n"
+				    + "print '--#######################################' \n"
+					+ "print '--## Summary Pages and MB' \n"
+					+ "print '--#######################################' \n"
+				    + "SELECT \n"
+				    + "      type     = ISNULL(type_desc, 'TOTAL_SIZE') \n"
+				    + "     ,size_mb  = cast(SUM(size) / 128.0 as numeric(12,1)) \n"
+				    + "     ,size_pgs = SUM(size) \n"
+				    + "FROM tempdb.sys.database_files \n"
+				    + "GROUP BY GROUPING SETS ( (type_desc), () ) \n"
+				    + "go \n"
+
+					+ "print '' \n"
+					+ "print '--#######################################' \n"
+					+ "print '--## tempdb LOG files. There should be 1 transaction log file in total.' \n"
+					+ "print '--#######################################' \n"
+				    + "SELECT \n"
+				    + "      file_id \n"
+				    + "     ,type_desc \n"
+				    + "     ,data_space_id \n"
+				    + "     ,name \n"
+				    + "     ,physical_name \n"
+				    + "     ,size_pgs     = size \n"
+				    + "     ,size_mb      = cast(size / 128.0 as numeric(12,1)) \n"
+				    + "     ,max_size_pgs = max_size \n"
+				    + "     ,max_size_mb  = cast(nullif(max_size, -1) / 128.0 as numeric(12,1)) \n"
+				    + "     ,growth_pgs   = growth \n"
+				    + "     ,growth_mb    = cast(growth / 128.0 as numeric(12,1)) \n"
+				    + "FROM tempdb.sys.database_files \n"
+				    + "WHERE type_desc = 'LOG' \n"
+					+ "go \n"
+
+					+ "print '' \n"
+					+ "print '--#######################################' \n"
+					+ "print '--## tempdb DATA files. There should be 1 data file per scheduler/core, so 4 schedulers 4 tempdb data files.' \n"
+					+ "print '--#######################################' \n"
+				    + "SELECT \n"
+				    + "      file_id \n"
+				    + "     ,type_desc \n"
+				    + "     ,data_space_id \n"
+				    + "     ,name \n"
+				    + "     ,physical_name \n"
+				    + "     ,size_pgs     = size \n"
+				    + "     ,size_mb      = cast(size / 128.0 as numeric(12,1)) \n"
+				    + "     ,max_size_pgs = max_size \n"
+				    + "     ,max_size_mb  = cast(nullif(max_size, -1) / 128.0 as numeric(12,1)) \n"
+				    + "     ,growth_pgs   = growth \n"
+				    + "     ,growth_mb    = cast(growth / 128.0 as numeric(12,1)) \n"
+				    + "FROM tempdb.sys.database_files \n"
+				    + "WHERE type_desc = 'ROWS' \n"
+					+ "go \n"
+					+ "\n"
+
+					+ "print '' \n"
+					+ "print '--#######################################' \n"
+					+ "print '--## Scheduler count from: sys.dm_os_schedulers' \n"
+					+ "print '--#######################################' \n"
+					+ "select scheduler_count = count(*) from sys.dm_os_schedulers where status = 'VISIBLE ONLINE' \n"
+					+ "go \n"
+
+					+ "print '' \n"
+					+ "print '--#######################################' \n"
+					+ "print '--## Core count from: sys.dm_os_sys_info' \n"
+					+ "print '--#######################################' \n"
+					+ "select cpu_count from sys.dm_os_sys_info \n"
+					+ "go \n"
+					+ "";
+
+			if (srvVersion < Ver.ver(2019))
+			{
+				sql += ""
+					+ "\n"
+					+ "print '' \n"
+					+ "print '--#######################################' \n"
+					+ "print '--## Traceflags - that is good to enable in PRE SQL Server 2019.' \n"
+					+ "print '--## 1118 - Full Extents Only' \n"
+					+ "print '--## 1117 - Grow All Files in a FileGroup Equally' \n"
+					+ "print '--## 2453 - Improve Table Variable Performance -- Allows table variables to trigger recompile (above: 2012 SP2, 2014 CU3, 2016 RTM)' \n"
+					+ "print '--#######################################' \n"
+					+ "go \n"
+					+ "DBCC TRACESTATUS (1118, -1) WITH NO_INFOMSGS -- Full Extents Only (in PRE 2019) \n"
+					+ "go \n"
+					+ "DBCC TRACESTATUS (1117, -1) WITH NO_INFOMSGS -- Grow All Files in a FileGroup Equally (in PRE 2019) \n"
+					+ "go \n"
+					+ "DBCC TRACESTATUS (2453, -1) WITH NO_INFOMSGS -- Improve Table Variable Performance -- Allows table variables to trigger recompile (in PRE 2019) \n"
+					+ "go \n"
+					+ "";
+			}
+
+			return sql; 
+		}
+
+		/** 
+		 * Check: 
+		 *  - Number of tempdb files (LOG) 
+		 *  - Number of tempdb files (ROW) 
+		 *  - Number of cores (or schedulers ONLINE)
+		 *  - compare cores and number or ROW - files
+		 *  - Trace flags: 1117, 1118 (if version is below 2019) 
+		 * */
+		@Override
+		public void checkConfig(DbxConnection conn)
+		{
+			// no nothing, if we havnt got an instance
+			if ( ! DbmsConfigManager.hasInstance() )
+				return;
+
+			int numOfOnlineSchedulers = -1;
+			int tempdbRowsFileCount   = -1;
+		//	int tempdbLogFileCount    = -1;
+			
+			String    srvName    = "-UNKNOWN-";
+			Timestamp srvRestart = null;
+			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
+			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+
+			//---------------------------------------------------------------------------
+			// Check for match of "data file count" and "cores"
+			//---------------------------------------------------------------------------
+			String sql = ""
+					+ "DECLARE @numOfOnlineSchedulers int \n"
+					+ "DECLARE @tempdbRowsFileCount   int \n"
+					+ "DECLARE @tempdbLogFileCount    int \n"
+
+					// get: cores OR online-schedulers
+					+ "SELECT @numOfOnlineSchedulers = COUNT(*) FROM sys.dm_os_schedulers WHERE status = 'VISIBLE ONLINE' \n"
+					
+					// get: tempdb files
+					+ "SELECT @tempdbRowsFileCount = COUNT(*) FROM tempdb.sys.database_files WHERE type_desc = 'ROWS' \n"
+					+ "SELECT @tempdbLogFileCount  = COUNT(*) FROM tempdb.sys.database_files WHERE type_desc = 'LOG' \n"
+					
+					  // get what databases that are below the servers default, exclude some system databases 
+					+ "SELECT  \n"
+					+ "     numOfOnlineSchedulers = @numOfOnlineSchedulers \n"
+					+ "    ,tempdbRowsFileCount   = @tempdbRowsFileCount \n"
+					+ "    ,tempdbLogFileCount    = @tempdbLogFileCount \n"
+					+ "";
+
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while(rs.next())
+				{
+					numOfOnlineSchedulers = rs.getInt(1);
+					tempdbRowsFileCount   = rs.getInt(2);
+				//	tempdbLogFileCount    = rs.getInt(3);
+
+//					if (tempdbRowsFileCount < numOfOnlineSchedulers && tempdbRowsFileCount <= 8)
+					if (tempdbRowsFileCount < Math.min(8, numOfOnlineSchedulers)) // 8 should be considered as MAX (if we got more than 8 cores, the file count do not really matter)
+					{
+						String key = "DbmsConfigIssue." + srvName + ".tempdb.filecount_vs_schedulers";
+						
+						DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "tempdb_data_files", Severity.INFO, 
+								"SQL Server 'tempdb' number of data files (" + tempdbRowsFileCount + ") is lower than schedulers/cores (" + numOfOnlineSchedulers + "). This may lead to latch contention on PFS/GAM/SGAM pages and improper tempdb performance.", 
+								"Fix this using: google 'sql server tempdb multiple files'");
+
+						DbmsConfigManager.getInstance().addConfigIssue(issue);
+					}
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("Problems getting SQL-Server 'tempdb' settings, using sql '"+sql+"'. Caught: "+ex, ex);
+			}
+
+			//---------------------------------------------------------------------------
+			// If we HAVE multiple tempdb files, they should all be of the same size
+			//---------------------------------------------------------------------------
+			if (tempdbRowsFileCount > 1)
+			{
+				sql = ""
+						+ "SELECT \n"
+						+ "      file_id \n"
+						+ "     ,type_desc \n"
+						+ "     ,data_space_id \n"
+						+ "     ,name \n"
+						+ "     ,physical_name \n"
+						+ "     ,size \n"
+						+ "     ,size_mb = size / 128 \n"
+						+ "     ,max_size \n"
+						+ "     ,growth \n"
+						+ "FROM tempdb.sys.database_files \n"
+						+ "WHERE type_desc = 'ROWS' \n"
+						+ "";
+
+				try
+				{
+					int prevFileSizeMb = -1;
+					int prevGrowth     = -1;
+
+					int diffCountFileSize = 0;
+					int diffCountGrowth = 0;
+
+					ResultSetTableModel tempdbRowsRstm = ResultSetTableModel.executeQuery(conn, sql, "tempdb data files");
+					if ( tempdbRowsRstm.hasRows() )
+					{
+						for (int r=0; r<tempdbRowsRstm.getRowCount(); r++)
+						{
+							int fileSize = tempdbRowsRstm.getValueAsInteger(r, "size_mb");
+							int growth   = tempdbRowsRstm.getValueAsInteger(r, "growth");
+
+							// No need to check FIRST row
+							if (prevFileSizeMb != -1)
+							{
+								if (prevFileSizeMb != fileSize) diffCountFileSize++;
+								if (prevGrowth     != growth  ) diffCountGrowth++;
+							}
+
+							prevFileSizeMb = fileSize;
+							prevGrowth     = growth;
+						}
+					}
+					
+					if (diffCountFileSize > 0)
+					{
+						int maxSizeMb = 0;
+						String ddlFix = "";
+						
+						List<String> list = new ArrayList<>();
+						for (int r=0; r<tempdbRowsRstm.getRowCount(); r++)
+						{
+							String name = tempdbRowsRstm.getValueAsString(r, "name");
+							int    val  = tempdbRowsRstm.getValueAsInteger(r, "size_mb");
+							
+							maxSizeMb = Math.max(val, maxSizeMb);
+
+							list.add(name + "=" + val + " MB");
+						}
+
+						// Compose DDL statement to set all tempdb files to same size
+						int smallestMbUnit = 1024; // 1GB
+						int newSizeMb = smallestMbUnit - (maxSizeMb % smallestMbUnit) + maxSizeMb;
+						for (int r=0; r<tempdbRowsRstm.getRowCount(); r++)
+						{
+							String name = tempdbRowsRstm.getValueAsString(r, "name");
+							
+							ddlFix += "ALTER DATABASE tempdb MODIFY FILE (NAME = " + name + ", SIZE = " + newSizeMb + "MB); ";
+						}
+
+						String key = "DbmsConfigIssue." + srvName + ".tempdb.datafiles_equal_size";
+						
+						DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "tempdb_datafiles_equal_size", Severity.INFO, 
+								"SQL Server 'tempdb' datafiles are NOT equally sized. This will lead to un-evenly usage or 'monopolizing' the largest datafile(s) and therefore may lead to latch contention on PFS/GAM/SGAM pages and improper tempdb performance. FileSizes=" + list, 
+								ddlFix);
+
+						DbmsConfigManager.getInstance().addConfigIssue(issue);
+					}
+
+					if (diffCountGrowth > 0)
+					{
+						List<String> list = new ArrayList<>();
+						for (int r=0; r<tempdbRowsRstm.getRowCount(); r++)
+						{
+							String name = tempdbRowsRstm.getValueAsString(r, "name");
+							int    val  = tempdbRowsRstm.getValueAsInteger(r, "growth");
+
+							list.add(name + "=" + val);
+						}
+
+						String key = "DbmsConfigIssue." + srvName + ".tempdb.datafiles_equal_grow_size";
+						
+						DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "tempdb_datafiles_equal_grow_size", Severity.INFO, 
+								"SQL Server 'tempdb' datafiles 'auto grow size' are NOT equally sized. This will lead to un-evenly usage or 'monopolizing' the largest datafile(s) and therefore may lead to latch contention on PFS/GAM/SGAM pages and improper tempdb performance. GrowSizes=" + list, 
+								"Fix this using: google 'sql server tempdb multiple files'");
+
+						DbmsConfigManager.getInstance().addConfigIssue(issue);
+					}
+				}
+				catch (Exception ex)
+				{
+					_logger.error("Problems getting SQL-Server 'tempdb data files', using sql '"+sql+"'. Caught: "+ex, ex);
+				}
+			}
+
+			//---------------------------------------------------------------------------
+			// If we HAVE multiple tempdb files, check for traceflag: 1117 & 1118 (if Version is below 2019)
+			// 1118 (Full Extents Only), 1117 (Grow All Files in a FileGroup Equally)
+			//---------------------------------------------------------------------------
+			if (tempdbRowsFileCount > 1)
+			{
+				// FIXME: 
+			}
 		}
 	}
 

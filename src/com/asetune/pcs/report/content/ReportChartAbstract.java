@@ -400,15 +400,13 @@ public abstract class ReportChartAbstract implements IReportChart
 		}
 	}
 
-	private static boolean _chartJs_writeOnce = false;
-
 	public void writeAsChartJs(Writer writer)
 	throws IOException
 	{
-		// Only write this once
-		if (_chartJs_writeOnce == false)
+		// Only write this once (keep the status field in the "head" report)
+		if (getReportEntry().hasStatusEntry("chartJs_writeOnce") == false)
 		{
-			_chartJs_writeOnce = true;
+			getReportEntry().setStatusEntry("chartJs_writeOnce");
 
 			String name = "chartJs";
 			String label = "Initializing Chart Info: ";

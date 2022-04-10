@@ -20,7 +20,6 @@
  ******************************************************************************/
 package com.asetune.cm.iq;
 
-import java.sql.Connection;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -749,7 +748,7 @@ System.out.println("Entering refresh() method for " + getName());
 	 * SQL is not used here, so simply override this method with "nothing"
 	 */
 	@Override
-	public void initSql(Connection conn)
+	public void initSql(DbxConnection conn)
 	{
 	}
 

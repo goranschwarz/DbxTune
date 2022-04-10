@@ -78,6 +78,10 @@ implements IDailySummaryReport
 
 	private long _initTime;
 
+	// Map of various values, used by: hasStatusEntry(), setStatusEntry(), getStatusEntry()
+	private Map<String, Object> _statusMap = new HashMap<>();
+
+	
 	@Override
 	public void          setConnection(DbxConnection conn) { _conn = conn; }
 	public DbxConnection getConnection()                   { return _conn; }
@@ -116,6 +120,45 @@ implements IDailySummaryReport
 		_sender = reportSender;
 	}
 
+
+	/**
+	 * Check if status entry in the report exists 
+	 * @param statusKey
+	 * @return if the value has previously been set or not
+	 */
+	public boolean hasStatusEntry(String statusKey)
+	{
+		return _statusMap.containsKey(statusKey);
+	}
+	/**
+	 * Set status entry in the report (value in the "exists map" will be set to "" a blank string)
+	 * 
+	 * @param statusKey    name of the status
+	 */
+	public Object setStatusEntry(String statusKey)
+	{
+		return setStatusEntry(statusKey, "");
+	}
+	/**
+	 * Set status entry in the report 
+	 * 
+	 * @param statusKey    name of the status
+	 * @param statusValue  Value
+	 */
+	public Object setStatusEntry(String statusKey, Object statusValue)
+	{
+		return _statusMap.put(statusKey, statusValue);
+	}
+	/**
+	 * Get status entry in the report 
+	 * 
+	 * @param statusKey    name of the status
+	 * @return The value (null if not found in the Map)
+	 */
+	public Object getStatusEntry(String statusKey)
+	{
+		return _statusMap.get(statusKey);
+	}
 
 //	@Override
 //	public MonTablesDictionary createMonTablesDictionary()

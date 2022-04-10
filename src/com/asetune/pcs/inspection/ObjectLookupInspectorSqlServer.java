@@ -28,6 +28,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
@@ -75,14 +76,19 @@ extends ObjectLookupInspectorAbstract
 
 		
 		SqlObjectName sqlObj = new SqlObjectName(lookupEntry._objectName, DbUtils.DB_PROD_NAME_MSSQL, "\"", false, false, true);
+		lookupEntry._sqlObject = sqlObj;
 		String schemaName = sqlObj.getSchemaName();
 		String objectName = sqlObj.getObjectName();
 
-		// Discard a bunch of entries
+		// discard all lookups to 'sys' schema
+		if ("sys".equalsIgnoreCase(schemaName)) return false;
+
+		// Discard tables for the old system tables
 		if (objectName.startsWith("sys"))       return false;
 		if (objectName.startsWith("SYS"))       return false;
+
+		// Discard temp tables
 		if (objectName.startsWith("#"))         return false;
-		if ("sys".equalsIgnoreCase(schemaName)) return false;
 
 
 		// Mark this as a "StatementCacheEntry"
@@ -152,18 +158,56 @@ extends ObjectLookupInspectorAbstract
 				{
 					int cnt = 0;
 
-					boolean hasMissingIndexes = false;
-					boolean hasWarnings       = false;
-					if (xmlPlan.contains("<MissingIndexes>"))
-					{
-						cnt++;
-						hasMissingIndexes = true;
-					}
+					boolean hasWarnings                = false;
+					boolean hasImplicitConvertions     = false;
+					boolean hasImplicitConvCardinality = false;
+					boolean hasKeyOrRidLookups         = false;
+					boolean hasMissingIndexes          = false;
+					boolean hasCursor                  = false;
+					boolean hasUserDefinedFunction     = false;
+
 					if (xmlPlan.contains("<Warnings>"))
 					{
 						cnt++;
 						hasWarnings = true;
 					}
+
+					if (xmlPlan.contains("CONVERT_IMPLICIT") && xmlPlan.contains("%PhysicalOp=\"Index Scan\""))
+					{
+						cnt++;
+						hasImplicitConvertions = true;
+					}
+
+					if (xmlPlan.contains("<PlanAffectingConvert ConvertIssue=\"Cardinality Estimate\" Expression=\"CONVERT_IMPLICIT"))
+					{
+						cnt++;
+						hasImplicitConvCardinality = true;
+					}
+
+					if (xmlPlan.contains("Lookup=\"1\""))
+					{
+						cnt++;
+						hasKeyOrRidLookups = true;
+					}
+
+					if (xmlPlan.contains("<MissingIndexes>") || xmlPlan.contains("MissingIndexGroup"))
+					{
+						cnt++;
+						hasMissingIndexes = true;
+					}
+
+					if (xmlPlan.contains("<StmtCursor"))
+					{
+						cnt++;
+						hasCursor = true;
+					}
+
+					if (xmlPlan.contains("<UserDefinedFunction"))
+					{
+						cnt++;
+						hasUserDefinedFunction = true;
+					}
+					
 
 					// Others we might want to look for: 
 					//  -- Queries_with_Index_Scans_Due_to_Implicit_Conversions
@@ -174,10 +218,34 @@ extends ObjectLookupInspectorAbstract
 					if ( cnt > 0 )
 					{
 						// Build a JSON String with the info, it might be easier to parse if we add many different options here.
-						StringBuilder sb = new StringBuilder();
+						StringBuilder sb = new StringBuilder();  // OR: use a HashMap and convert that into JSON
 						String comma = "";
 						// BEGIN JSON
 						sb.append("{");
+
+						if (hasWarnings)
+						{
+							sb.append(comma).append("\"hasWarnings\": true");
+							comma = ", ";
+						}
+
+						if (hasImplicitConvertions)
+						{
+							sb.append(comma).append("\"hasImplicitConvertions\": true");
+							comma = ", ";
+						}
+
+						if (hasImplicitConvCardinality)
+						{
+							sb.append(comma).append("\"hasImplicitConvCardinality\": true");
+							comma = ", ";
+						}
+
+						if (hasKeyOrRidLookups)
+						{
+							sb.append(comma).append("\"hasKeyOrRidLookups\": true");
+							comma = ", ";
+						}
 
 						if (hasMissingIndexes)
 						{
@@ -185,9 +253,15 @@ extends ObjectLookupInspectorAbstract
 							comma = ", ";
 						}
 
-						if (hasWarnings)
+						if (hasCursor)
 						{
-							sb.append(comma).append("\"hasWarnings\": true");
+							sb.append(comma).append("\"hasCursor\": true");
+							comma = ", ";
+						}
+
+						if (hasUserDefinedFunction)
+						{
+							sb.append(comma).append("\"hasUserDefinedFunction\": true");
 							comma = ", ";
 						}
 
@@ -209,7 +283,10 @@ extends ObjectLookupInspectorAbstract
 						// Get list of tables in the SQL Text and add them for a DDL Lookup/Store
 						Set<String> tableList = SqlParserUtils.getTables(sqlText);
 						for (String tableName : tableList)
+						{
+//System.out.println("doObjectInfoLookup(): ---->>>> pch.addDdl ---->>>> dbname='" + dbname + "', tableName='" + tableName + "', source='"+this.getClass().getSimpleName() + ".xmlPlan.sql'");
 							pch.addDdl(dbname, tableName, this.getClass().getSimpleName() + ".xmlPlan.sql");
+						}
 						
 //						if ( ! StringUtil.startsWithIgnoreBlankIgnoreCase(sqlText, "create ") )
 //						{
@@ -345,12 +422,19 @@ extends ObjectLookupInspectorAbstract
 					catch (SQLException e) 
 					{ 
 						storeEntry.setObjectText( e.toString() ); 
+						_logger.warn("DDL Lookup. Problems Getting TABLE BASIC information for: TableName='" + storeEntry.getObjectName() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + e);
 					}
 	
 					//--------------------------------------------
 					// GET sp__optdiag
 					if (pch.getConfig_doGetStatistics())
 					{
+						// possibly use: https://docs.microsoft.com/en-us/sql/t-sql/database-console-commands/dbcc-show-statistics-transact-sql?view=sql-server-ver15
+						//         DBCC SHOW_STATISTICS ( table_or_indexed_view_name , target )   
+						//         [ WITH [ NO_INFOMSGS ] < option > [ , n ] ]  
+						// 	       < option > :: =  
+						// 	           STAT_HEADER | DENSITY_VECTOR | HISTOGRAM | STATS_STREAM  
+
 						// get table statistics -- not yet implemented
 						//entry.setOptdiagText(...);
 					}
@@ -373,57 +457,193 @@ extends ObjectLookupInspectorAbstract
 //					    + "LEFT OUTER JOIN [" +  entry.getDbname() + "].sys.objects  o ON s.object_id = o.object_id \n"
 //					    + "LEFT OUTER JOIN [" +  entry.getDbname() + "].sys.schemas sc ON o.schema_id = sc.schema_id \n"
 //						+ "";
-					sql = ""
-						+ "SELECT /* " + Version.getAppName() + ":" + this.getClass().getSimpleName() + " */ \n"
-						+ "     dbname                           = db_name() \n"
-						+ "    ,schema_name                      = sc.name \n"
-						+ "    ,object_name                      = o.name \n"
-						+ "    ,index_name                       = ISNULL(i.name, 'HEAP') \n"
-						+ "    ,s.index_id \n"
-					//	+ "    ,object_id                        = max(s.object_id) \n"
-						+ " \n"
-//						+ "    ,IndexType                        = CASE s.index_id WHEN 0 THEN 'HEAP' WHEN 1 THEN 'CLUSTERED' ELSE 'NON-CLUSTERED' END \n"
-						+ "    ,IndexType                        = i.type_desc \n"
-						+ "    ,IndexFillFactor                  = i.fill_factor \n"
-						+ "    ,IndexIsDisabled                  = i.is_disabled \n"
-						+ "    ,IndexIsFiltered                  = i.has_filter \n"
-						+ "    ,StatsUpdated                     = NULLIF( MAX(ISNULL(STATS_DATE(s.object_id, s.index_id), '2000-01-01')), '2000-01-01') -- this to get rid of: Warning: Null value is eliminated by an aggregate or other SET operation. \n"
-						+ "    ,PartitionCount                   = MAX(s.partition_number) \n"
-						+ "    ,row_count                        = SUM(s.row_count) \n"
-						+ "    ,RowsPerPage                      = CAST(SUM(s.row_count)*1.0 / NULLIF(SUM(s.used_page_count), 0) as DECIMAL(12,1)) \n"
-					//	+ "    ,AvgCalcBytesPerRow               = (SUM(s.in_row_used_page_count)+SUM(s.row_overflow_used_page_count))*8*1024 / NULLIF(SUM(s.row_count), 0) \n"
-						+ " \n"
-						+ "    ,TotalUsedSizeMB                  = CAST(SUM(s.used_page_count)              / 128.0 AS DECIMAL(12,1)) \n"
-						+ "    ,InRowUsedSizeMB                  = CAST(SUM(s.in_row_used_page_count)       / 128.0 AS DECIMAL(12,1)) \n"
-						+ "    ,LobUsedSizeMB                    = CAST(SUM(s.lob_used_page_count)          / 128.0 AS DECIMAL(12,1)) \n"
-						+ "    ,OverflowUsedSizeMB               = CAST(SUM(s.row_overflow_used_page_count) / 128.0 AS DECIMAL(12,1)) \n"
-						+ " \n"
-						+ "    ,used_page_count                  = SUM(s.used_page_count) \n"
-						+ "    ,reserved_page_count              = SUM(s.reserved_page_count) \n"
-						+ " \n"
-						+ "    ,in_row_used_page_count           = SUM(s.in_row_used_page_count) \n"
-						+ "    ,in_row_data_page_count           = SUM(s.in_row_data_page_count) \n"
-						+ "    ,in_row_reserved_page_count       = SUM(s.in_row_reserved_page_count) \n"
-						+ " \n"
-						+ "    ,lob_used_page_count              = SUM(s.lob_used_page_count) \n"
-						+ "    ,lob_reserved_page_count          = SUM(s.lob_reserved_page_count) \n"
-						+ " \n"
-						+ "    ,row_overflow_used_page_count     = SUM(s.row_overflow_used_page_count) \n"
-						+ "    ,row_overflow_reserved_page_count = SUM(s.row_overflow_reserved_page_count) \n"
-						+ " \n"
-						+ "FROM [" +  storeEntry.getDbname() + "].sys.dm_db_partition_stats s \n"
-						+ "LEFT OUTER JOIN [" +  storeEntry.getDbname() + "].sys.indexes  i WITH (READUNCOMMITTED) ON s.object_id = i.object_id AND s.index_id = i.index_id \n"
-						+ "LEFT OUTER JOIN [" +  storeEntry.getDbname() + "].sys.objects  o WITH (READUNCOMMITTED) ON s.object_id = o.object_id \n"
-						+ "LEFT OUTER JOIN [" +  storeEntry.getDbname() + "].sys.schemas sc WITH (READUNCOMMITTED) ON o.schema_id = sc.schema_id \n"
-						+ "WHERE 1=1 \n"
-						+ "  AND o.object_id = " + storeEntry.getObjectId() + " \n"
-						+ "  AND o.is_ms_shipped = 0 \n"
-					//	+ "  AND s.row_count > 0 \n"
-						+ "GROUP BY sc.name, o.name, i.name, s.index_id \n"
-						+ "ORDER BY s.index_id \n"
-//						+ "ORDER BY sc.name, o.name, s.index_id \n"
-						+ "";
 
+//					sql = ""
+//						+ "SELECT /* " + Version.getAppName() + ":" + this.getClass().getSimpleName() + " */ \n"
+//						+ "     dbname                           = db_name() \n"
+//						+ "    ,schema_name                      = sc.name \n"
+//						+ "    ,object_name                      = o.name \n"
+//						+ "    ,index_name                       = ISNULL(i.name, 'HEAP') \n"
+//						+ "    ,s.index_id \n"
+//					//	+ "    ,object_id                        = max(s.object_id) \n"
+//						+ " \n"
+////						+ "    ,IndexType                        = CASE s.index_id WHEN 0 THEN 'HEAP' WHEN 1 THEN 'CLUSTERED' ELSE 'NON-CLUSTERED' END \n"
+//						+ "    ,IndexType                        = MAX(i.type_desc) \n"
+//						+ "    ,IndexFillFactor                  = MAX(i.fill_factor) \n"
+//						+ "    ,IndexIsDisabled                  = MAX(CAST(i.is_disabled AS INT)) \n"
+//						+ "    ,IndexIsFiltered                  = MAX(CAST(i.has_filter AS INT)) \n"
+//						+ "    ,StatsUpdated                     = NULLIF( MAX(ISNULL(STATS_DATE(s.object_id, s.index_id), '2000-01-01')), '2000-01-01') -- this to get rid of: Warning: Null value is eliminated by an aggregate or other SET operation. \n"
+//						+ "    ,PartitionCount                   = MAX(s.partition_number) \n"
+//						+ "    ,row_count                        = SUM(s.row_count) \n"
+//						+ "    ,RowsPerPage                      = CAST(SUM(s.row_count)*1.0 / NULLIF(SUM(s.used_page_count), 0) as DECIMAL(12,1)) \n"
+//					//	+ "    ,AvgCalcBytesPerRow               = (SUM(s.in_row_used_page_count)+SUM(s.row_overflow_used_page_count))*8*1024 / NULLIF(SUM(s.row_count), 0) \n"
+//						+ " \n"
+//						+ "    ,TotalUsedSizeMB                  = CAST(SUM(s.used_page_count)              / 128.0 AS DECIMAL(12,1)) \n"
+//						+ "    ,InRowUsedSizeMB                  = CAST(SUM(s.in_row_used_page_count)       / 128.0 AS DECIMAL(12,1)) \n"
+//						+ "    ,LobUsedSizeMB                    = CAST(SUM(s.lob_used_page_count)          / 128.0 AS DECIMAL(12,1)) \n"
+//						+ "    ,OverflowUsedSizeMB               = CAST(SUM(s.row_overflow_used_page_count) / 128.0 AS DECIMAL(12,1)) \n"
+//						+ " \n"
+//						+ "    ,used_page_count                  = SUM(s.used_page_count) \n"
+//						+ "    ,reserved_page_count              = SUM(s.reserved_page_count) \n"
+//						+ " \n"
+//						+ "    ,in_row_used_page_count           = SUM(s.in_row_used_page_count) \n"
+//						+ "    ,in_row_data_page_count           = SUM(s.in_row_data_page_count) \n"
+//						+ "    ,in_row_reserved_page_count       = SUM(s.in_row_reserved_page_count) \n"
+//						+ " \n"
+//						+ "    ,lob_used_page_count              = SUM(s.lob_used_page_count) \n"
+//						+ "    ,lob_reserved_page_count          = SUM(s.lob_reserved_page_count) \n"
+//						+ " \n"
+//						+ "    ,row_overflow_used_page_count     = SUM(s.row_overflow_used_page_count) \n"
+//						+ "    ,row_overflow_reserved_page_count = SUM(s.row_overflow_reserved_page_count) \n"
+//						+ " \n"
+//						+ "FROM [" +  storeEntry.getDbname() + "].sys.dm_db_partition_stats s \n"
+//						+ "LEFT OUTER JOIN [" +  storeEntry.getDbname() + "].sys.indexes  i WITH (READUNCOMMITTED) ON s.object_id = i.object_id AND s.index_id = i.index_id \n"
+//						+ "LEFT OUTER JOIN [" +  storeEntry.getDbname() + "].sys.objects  o WITH (READUNCOMMITTED) ON s.object_id = o.object_id \n"
+//						+ "LEFT OUTER JOIN [" +  storeEntry.getDbname() + "].sys.schemas sc WITH (READUNCOMMITTED) ON o.schema_id = sc.schema_id \n"
+//						+ "WHERE 1=1 \n"
+//						+ "  AND o.object_id = " + storeEntry.getObjectId() + " \n"
+//						+ "  AND o.is_ms_shipped = 0 \n"
+//					//	+ "  AND s.row_count > 0 \n"
+//						+ "GROUP BY sc.name, o.name, i.name, s.index_id \n"
+//						+ "ORDER BY s.index_id \n"
+////						+ "ORDER BY sc.name, o.name, s.index_id \n"
+//						+ "";
+
+					// Include more info: IndexIncludes, IndexFilter, DDL etc
+					sql = ""
+						    + "WITH part_stat AS /* " + Version.getAppName() + ":" + this.getClass().getSimpleName() + " */ \n"
+						    + "( \n"
+						    + "    SELECT \n"
+						    + "         s.object_id \n"
+						    + "        ,s.index_id \n"
+						    + "        ,PartitionCount                   = MAX(s.partition_number) \n"
+						    + "        ,row_count                        = SUM(s.row_count) \n"
+						    + "        ,RowsPerPage                      = CAST(SUM(s.row_count)*1.0 / NULLIF(SUM(s.used_page_count), 0) as DECIMAL(12,1)) \n"
+						    + " \n"
+						    + "        ,TotalUsedSizeMB                  = CAST(SUM(s.used_page_count)              / 128.0 AS DECIMAL(12,1)) \n"
+						    + "        ,InRowUsedSizeMB                  = CAST(SUM(s.in_row_used_page_count)       / 128.0 AS DECIMAL(12,1)) \n"
+						    + "        ,LobUsedSizeMB                    = CAST(SUM(s.lob_used_page_count)          / 128.0 AS DECIMAL(12,1)) \n"
+						    + "        ,OverflowUsedSizeMB               = CAST(SUM(s.row_overflow_used_page_count) / 128.0 AS DECIMAL(12,1)) \n"
+						    + " \n"
+						    + "        ,used_page_count                  = SUM(s.used_page_count) \n"
+						    + "        ,reserved_page_count              = SUM(s.reserved_page_count) \n"
+						    + " \n"
+						    + "        ,in_row_used_page_count           = SUM(s.in_row_used_page_count) \n"
+						    + "        ,in_row_data_page_count           = SUM(s.in_row_data_page_count) \n"
+						    + "        ,in_row_reserved_page_count       = SUM(s.in_row_reserved_page_count) \n"
+						    + " \n"
+						    + "        ,lob_used_page_count              = SUM(s.lob_used_page_count) \n"
+						    + "        ,lob_reserved_page_count          = SUM(s.lob_reserved_page_count) \n"
+						    + " \n"
+						    + "        ,row_overflow_used_page_count     = SUM(s.row_overflow_used_page_count) \n"
+						    + "        ,row_overflow_reserved_page_count = SUM(s.row_overflow_reserved_page_count) \n"
+						    + " \n"
+						    + "    FROM [" + storeEntry.getDbname() + "].sys.dm_db_partition_stats s \n"
+//						    + "--    WHERE s.object_id = " + storeEntry.getObjectId() + " \n"
+						    + "    GROUP BY s.object_id, s.index_id \n"
+						    + "), \n"
+						    + "key_cols AS \n"
+						    + "( \n"
+						    + "       SELECT IC2.object_id, \n"
+						    + "              IC2.index_id, \n"
+						    + "              STUFF( ( \n"
+						    + "                      SELECT ', [' + C.name + ']' + CASE WHEN MAX(CONVERT(INT, IC1.is_descending_key)) = 1 THEN ' DESC' ELSE '' END \n"
+						    + "                      FROM [" + storeEntry.getDbname() + "].sys.index_columns IC1 \n"
+						    + "                      JOIN [" + storeEntry.getDbname() + "].sys.columns C ON  C.object_id = IC1.object_id AND C.column_id = IC1.column_id AND IC1.is_included_column = 0 \n"
+						    + "                      WHERE  IC1.object_id = IC2.object_id \n"
+						    + "                        AND IC1.index_id = IC2.index_id \n"
+						    + "                      GROUP BY IC1.object_id, C.name, index_id \n"
+						    + "                      ORDER BY MAX(IC1.key_ordinal) \n"
+						    + "                      FOR XML PATH('') \n"
+						    + "                  ), 1, 2, '') AS KeyColumns \n"
+						    + "       FROM [" + storeEntry.getDbname() + "].sys.index_columns IC2 \n"
+//						    + "--       WHERE IC2.object_id = " + storeEntry.getObjectId() + " \n"
+						    + "       GROUP BY IC2.object_id, IC2.index_id \n"
+						    + "), \n"
+						    + "include_cols AS \n"
+						    + "( \n"
+						    + "       SELECT IC2.object_id, \n"
+						    + "              IC2.index_id, \n"
+						    + "              STUFF( ( \n"
+						    + "                      SELECT ', [' + C.name + ']' \n"
+						    + "                      FROM [" + storeEntry.getDbname() + "].sys.index_columns IC1 \n"
+						    + "                      JOIN [" + storeEntry.getDbname() + "].sys.columns C ON  C.object_id = IC1.object_id AND C.column_id = IC1.column_id AND IC1.is_included_column = 1 \n"
+						    + "                      WHERE  IC1.object_id = IC2.object_id \n"
+						    + "                        AND IC1.index_id = IC2.index_id \n"
+						    + "                      GROUP BY IC1.object_id, C.name, index_id \n"
+						    + "                      FOR XML PATH('') \n"
+						    + "                  ), 1, 2, '') AS IncludedColumns \n"
+						    + "       FROM [" + storeEntry.getDbname() + "].sys.index_columns IC2 \n"
+//						    + "--       WHERE IC2.Object_id = " + storeEntry.getObjectId() + " \n"
+						    + "       GROUP BY IC2.object_id, IC2.index_id \n"
+						    + ") \n"
+						    + "SELECT \n"
+//						    + "     dbname          = db_name() \n"
+						    + "     dbname          = cast('" + storeEntry.getDbname() + "' as varchar(128)) \n"
+						    + "    ,schema_name     = sc.name \n"
+						    + "    ,object_name     = o.name \n"
+						    + "    ,index_name      = ISNULL(i.name, 'HEAP') \n"
+						    + "    ,s.index_id \n"
+						    + "    ,IndexKeys       = kc.KeyColumns \n"
+						    + "    ,IndexInclude    = ic.IncludedColumns \n"
+						    + "    ,IndexFilter     = i.filter_definition \n"
+						    + "    ,IndexType       = i.type_desc \n"
+						    + "    ,IndexFillFactor = i.fill_factor \n"
+						    + "    ,IndexIsDisabled = i.is_disabled \n"
+						    + "    ,IndexIsFiltered = i.has_filter \n"
+						    + "    ,StatsUpdated    = STATS_DATE(s.object_id, s.index_id) \n"
+						    + "    ,s.PartitionCount \n"
+						    + "    ,s.row_count \n"
+						    + "    ,s.RowsPerPage \n"
+						    + " \n"
+						    + "    ,s.TotalUsedSizeMB \n"
+						    + "    ,s.InRowUsedSizeMB \n"
+						    + "    ,s.LobUsedSizeMB \n"
+						    + "    ,s.OverflowUsedSizeMB \n"
+						    + " \n"
+						    + "    ,s.used_page_count \n"
+						    + "    ,s.reserved_page_count \n"
+						    + " \n"
+						    + "    ,s.in_row_used_page_count \n"
+						    + "    ,s.in_row_data_page_count \n"
+						    + "    ,s.in_row_reserved_page_count \n"
+						    + " \n"
+						    + "    ,s.lob_used_page_count \n"
+						    + "    ,s.lob_reserved_page_count \n"
+						    + " \n"
+						    + "    ,s.row_overflow_used_page_count \n"
+						    + "    ,s.row_overflow_reserved_page_count \n"
+						    + " \n"
+						    + "    ,DropIndex = 'DROP INDEX [' + i.name + '] ON [" + storeEntry.getDbname() + "].[' + sc.name + '].[' + o.name + ']'\n"
+						    + "    ,DDL = 'CREATE ' + CASE WHEN i.is_unique = 1 THEN ' UNIQUE ' ELSE '' END + i.type_desc COLLATE DATABASE_DEFAULT + ' INDEX ' \n"
+						    + "         + '[' + i.name + '] ON [" + storeEntry.getDbname() + "].[' + sc.name + '].[' + o.name + '](' + kc.KeyColumns + ')' \n"
+						    + "         + ISNULL(' INCLUDE (' + ic.IncludedColumns + ' ) ', '') \n"
+						    + "         + ISNULL(' WHERE ' + i.filter_definition, '') \n"
+						    + "         + ' WITH (' \n"
+						    + "         + CASE WHEN i.is_padded = 1 THEN 'PAD_INDEX = ON, ' ELSE '' END \n"
+						    + "         + 'FILLFACTOR = ' + CAST( CASE WHEN i.fill_factor = 0 THEN 100 ELSE i.fill_factor END as varchar(10)) + ', ' \n"
+						    + "         + 'SORT_IN_TEMPDB = OFF, ' \n"
+						    + "         + CASE WHEN i.ignore_dup_key              = 0 THEN '' ELSE 'IGNORE_DUP_KEY = ON, ' END \n"
+						    + "         + CASE WHEN i.allow_row_locks             = 1 THEN '' ELSE 'ALLOW_ROW_LOCKS = OFF, '  END \n"
+						    + "         + CASE WHEN i.allow_page_locks            = 1 THEN '' ELSE 'ALLOW_PAGE_LOCKS = OFF, ' END \n"
+						    + "         + CASE WHEN i.optimize_for_sequential_key = 0 THEN '' ELSE 'OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF, ' END \n"
+						    + "         + 'DATA_COMPRESSION = ?, ' \n"
+						    + "         + 'MAXDOP = 0, ' \n"
+						    + "         + 'ONLINE = OFF' \n"
+						    + "         + ')' \n"
+						    + " \n"
+						    + "FROM part_stat s \n"
+						    + "LEFT OUTER JOIN [" + storeEntry.getDbname() + "].sys.indexes   i ON s.object_id = i.object_id AND s.index_id = i.index_id \n"
+						    + "LEFT OUTER JOIN [" + storeEntry.getDbname() + "].sys.objects   o ON s.object_id = o.object_id \n"
+						    + "LEFT OUTER JOIN [" + storeEntry.getDbname() + "].sys.schemas  sc ON o.schema_id = sc.schema_id \n"
+						    + "LEFT OUTER JOIN key_cols     kc ON o.object_id = kc.object_id and i.index_id = kc.index_id \n"
+						    + "LEFT OUTER JOIN include_cols ic ON o.object_id = ic.object_id and i.index_id = ic.index_id \n"
+						    + "WHERE 1=1 \n"
+						    + "  AND o.object_id = " + storeEntry.getObjectId() + " \n"
+						    + "  AND o.is_ms_shipped = 0 \n"
+						    + "ORDER BY s.index_id \n"
+						    + "";
+					
 					
 					try	(AseSqlScript ss = new AseSqlScript(conn, 10)) 
 					{
@@ -433,20 +653,8 @@ extends ObjectLookupInspectorAbstract
 					catch (SQLException e) 
 					{ 
 						storeEntry.setExtraInfoText( e.toString() ); 
+						_logger.warn("DDL Lookup. Problems Getting TABLE SIZE information for: TableName='" + storeEntry.getObjectName() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + e);
 					}
-
-					// TODO: more info to save (this is from ASE)
-					// - datachange(table_name, partition_name, column_name)
-					// - can we get some other statistics from sysstatistics
-					//   like when was statistics updated for this table
-					// - function: derived_stats(objnamme|id, indexname|indexid, [ptn_name|ptn_id], 'stats')
-					//             stats = dpcr | data page cluster ratio
-					//                     ipcr | index page cluster ratio
-					//                     drcr | data row cluster ratio
-					//                     lgio | large io efficiency
-					//                     sput | space utilization
-					//             to get Cluster Ratio etc...
-					// - try to calculate "if tab has a lot of unused space / fragmented"
 				}
 
 				else if (   
@@ -463,14 +671,15 @@ extends ObjectLookupInspectorAbstract
 
 					//--------------------------------------------
 					// GET OBJECT TEXT
-					String sql = " select c.text "
-						+ " from " + storeEntry.getDbname() + "..sysobjects o, " + storeEntry.getDbname() + "..syscomments c, " + storeEntry.getDbname() + "..sysusers u \n"
-						+ " where o.name = '" + storeEntry.getObjectName() + "' \n"
-						+ "   and u.name = '" + storeEntry.getOwner() + "' \n" 
-						+ "   and o.id   = c.id \n"
-						+ "   and o.uid  = u.uid \n"
-						//+ " order by c.number, c.colid2, c.colid ";
-						+ " order by c.number, c.colid ";
+					String sql = ""
+						    + "select c.text \n"
+						    + "from [" + storeEntry.getDbname() + "].sys.objects o, " + storeEntry.getDbname() + ".dbo.syscomments c, [" + storeEntry.getDbname() + "].sys.schemas s \n"
+						    + "where o.name = '" + storeEntry.getObjectName() + "' \n"
+						    + "  and s.name = '" + storeEntry.getOwner()      + "' \n"
+						    + "  and o.object_id   = c.id \n"
+						    + "  and o.schema_id  = s.schema_id \n"
+						    + "order by c.number, c.colid \n"
+						    + "";
 
 					String sqlText = "";
 
@@ -486,6 +695,7 @@ extends ObjectLookupInspectorAbstract
 					catch (SQLException e)
 					{
 						storeEntry.setObjectText( e.toString() );
+						_logger.warn("DDL Lookup. Problems Getting OBJECT TEXT information for: Type='" + storeEntry.getType() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + e);
 					}
 						
 						
@@ -514,6 +724,7 @@ extends ObjectLookupInspectorAbstract
 							// Post to DDL Storage, for lookup
 							for (String tableName : tableList)
 							{
+//System.out.println("doObjectInfoLookup(): ---->>>> pch.addDdl ---->>>> dbname='" + dbname + "', tableName='" + tableName + "', source='"+this.getClass().getSimpleName() + ".resolve.view'");
 								pch.addDdl(dbname, tableName, this.getClass().getSimpleName() + ".resolve.view");
 							}
 							
@@ -538,11 +749,11 @@ extends ObjectLookupInspectorAbstract
 					try	(AseSqlScript ss = new AseSqlScript(conn, 10)) 
 					{
 						ss.setRsAsAsciiTable(true);
-						storeEntry.setDependsText( ss.executeSqlStr(sql, true) ); 
+						storeEntry.addDependsText( ss.executeSqlStr(sql, true) ); 
 					} 
 					catch (SQLException e) 
 					{ 
-						storeEntry.setDependsText( e.toString() ); 
+						storeEntry.addDependsText( e.toString() ); 
 					}
 		
 					if (pch.getConfig_addDependantObjectsToDdlInQueue())
@@ -616,7 +827,7 @@ extends ObjectLookupInspectorAbstract
 							}
 						}
 						if (dependList.size() > 0)
-							storeEntry.setDependList(dependList);
+							storeEntry.addDependList(dependList);
 					}
 				}
 
@@ -642,24 +853,98 @@ extends ObjectLookupInspectorAbstract
 		SqlObjectName sqlObjectName = new SqlObjectName(conn, objectName);
 		objectName = sqlObjectName.getObjectName();
 		
+
 		// GET type and creation time
+//		String sql = ""
+//			    + "SELECT o.object_id, \n"  // Object id
+//	            + "       -1,     \n"       // dummy column for "parent_object_id"
+//			    + "       o.type, \n"       // UserTable, view etc...
+//			    + "       s.name, \n"       // Schema name
+//			    + "       o.name, \n"       // Object name
+//			    + "       o.create_date \n" // Creation date
+//			    + "FROM [" + dbname + "].sys.objects o \n"
+//			    + "INNER JOIN [" + dbname + "].sys.schemas s ON o.schema_id = s.schema_id \n"
+//			    + "WHERE o.name = '" + objectName + "' \n"  // Trust that the DBMS will handle Case Sensitivity
+//			    + "  AND o.is_ms_shipped = 0 \n"
+//			    + "";
+
+		// Same as ABOVE, but this one also gets: Triggers, PK, Defaults, etc (for this table)
+		// Note: We can't just have a variable for object_id, because there might be many tables under different schemas (hence the table variable)
+		//       and if we just get the table name we can't be sure of what table it is (so grab all tables from different schemas)
 		String sql = ""
-			    + "SELECT o.object_id, \n"  // Object id
-			    + "       o.type, \n"       // UserTable, view etc...
-			    + "       s.name, \n"       // Schema name
-			    + "       o.name, \n"       // Object name
-			    + "       o.create_date \n" // Creation date
+			    + "DECLARE @obj_ids TABLE (object_id INT) \n"
+			    + "INSERT INTO @obj_ids \n"
+			    + "    SELECT object_id \n"
+			    + "    FROM [" + dbname + "].sys.objects \n"
+			    + "    WHERE name = '" + objectName + "' \n"
+			    + "      AND is_ms_shipped = 0 \n"
+			    + " \n"
+			    + "SELECT o.object_id, \n"
+			    + "       o.parent_object_id, \n"
+			    + "       o.type, \n"
+			    + "       s.name, \n"
+			    + "       o.name, \n"
+			    + "       o.create_date \n"
 			    + "FROM [" + dbname + "].sys.objects o \n"
 			    + "INNER JOIN [" + dbname + "].sys.schemas s ON o.schema_id = s.schema_id \n"
-			    + "WHERE o.name = '" + objectName + "' \n"  // Trust that the DBMS will handle Case Sensitivity
-			    + "  AND o.is_ms_shipped = 0 \n"
+			    + "WHERE o.object_id        IN (SELECT object_id FROM @obj_ids) -- get object \n"
+			    + "   or o.parent_object_id IN (SELECT object_id FROM @obj_ids) -- and all: triggers, PK, Defaults, etc (for this table) \n"
+			    + "ORDER BY o.parent_object_id DESC, o.type"
 			    + "";
-
+		
 		try ( Statement statement = conn.createStatement(); ResultSet rs = statement.executeQuery(sql) )
 		{
+			// Hold "child" objects in a map to tie in to the 'U' User-table. 
+			HashMap<Integer, List<String>> childObjects = null;
+
 			while(rs.next())
 			{
 				DdlDetails entry = new DdlDetails();
+				
+				int       objectId       = rs.getInt      (1);
+				int       parentObjectId = rs.getInt      (2);
+				String    type           = rs.getString   (3); // needs to be trimmed: it's a CHAR(2)
+				String    schemaName     = rs.getString   (4);
+				String    objName        = rs.getString   (5);
+				Timestamp crdate         = rs.getTimestamp(6);
+
+				if (type != null)
+					type = type.trim();
+				
+				// Add all CHILD objects to a Linked List... which has an outer HashMap with "parentObjectId" as the key!
+				if (parentObjectId != 0)
+				{
+					if (childObjects == null)
+						childObjects = new HashMap<>();
+
+					List<String> valList = childObjects.get(parentObjectId); // parentObjectId == The objectId of the USER-TABLE
+					if (valList == null)
+					{
+						valList = new ArrayList<>();
+						childObjects.put(parentObjectId, valList);
+					}
+					
+					valList.add( type + ":" + objName);
+				}
+
+				// parentObjectId will come LAST (ORDER BY o.parent_object_id DESC)
+				// So all child objects should be in the list by now.
+				if (parentObjectId == 0)
+				{
+					if ("U".equals(type))
+					{
+						if (childObjects != null) // yes we have child objects
+						{
+							List<String> valList = childObjects.get(objectId);
+							
+							if (valList != null)
+							{
+								entry.addDependsText("CHILD_OBJECTS: " + StringUtil.toCommaStr(valList) + "\n");
+								entry.addDependList(valList);
+							}
+						}
+					}
+				}
 				
 				entry.setDbname          ( dbname );
 				entry.setSearchDbname    ( dbname );
@@ -670,11 +955,11 @@ extends ObjectLookupInspectorAbstract
 				entry.setDependLevel     ( dependLevel );
 				entry.setSampleTime      ( new Timestamp(System.currentTimeMillis()) );
 
-				entry.setObjectId        ( rs.getInt      (1) );
-				entry.setType            ( rs.getString   (2) );
-				entry.setSchemaName      ( rs.getString   (3) ); // setOwner() and setSchemaName() is the same
-				entry.setObjectName      ( rs.getString   (4) ); // Use the object name stored in the DBMS (for MS SQL-Server ASE it will always be stored as it was originally created)
-				entry.setCrdate          ( rs.getTimestamp(5) );
+				entry.setObjectId        ( objectId   );
+				entry.setType            ( type       );
+				entry.setSchemaName      ( schemaName ); // setOwner() and setSchemaName() is the same
+				entry.setObjectName      ( objName    ); // Use the object name stored in the DBMS (for MS SQL-Server ASE it will always be stored as it was originally created)
+				entry.setCrdate          ( crdate     );
 				
 				objectList.add(entry);
 			}

@@ -385,6 +385,7 @@ extends TabularCntrPanel
 //					plot.setBackgroundPaint(Color.white);
 //					plot.setOutlineStroke(new BasicStroke(1.0f));
 			plot.setLimit(0.05); // 5% or less goes to "Others"
+//			plot.setLimit(0.01); // 1% or less goes to "Others"
 
 			// Set the sub-charts TITLES FONT and position (stolen from jfreechart, MultiplePiePlot.java, constructor)
 			final JFreeChart subchart = plot.getPieChart();

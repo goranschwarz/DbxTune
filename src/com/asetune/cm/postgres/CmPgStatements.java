@@ -21,7 +21,6 @@
 package com.asetune.cm.postgres;
 
 import java.awt.event.MouseEvent;
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -318,7 +317,7 @@ extends CountersModel
 
 	
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -330,7 +329,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		// 'queryid' was introduced in 9.4 so lets simulate a query id in earlier versions
 		String queryid = "";
@@ -531,6 +530,15 @@ extends CountersModel
 	}
 
 	@Override
+	public void prepareForPcsDatabaseRollover()
+	{
+		_logger.info("Clearing 'alreadyParsedQueryId_cache' due to 'PCS database rollover'.");
+
+		// Clear any local caches
+		_alreadyParsedQueryId_cache = new HashSet<>();
+	}
+
+	@Override
 	public void reset()
 	{
 		// IMPORTANT: call super
@@ -681,7 +689,7 @@ extends CountersModel
 	}	
 
 //	@Override
-//	public boolean checkDependsOnOther(Connection conn)
+//	public boolean checkDependsOnOther(DbxConnection conn)
 //	{
 //		// Check if the table exists, since it's optional and needs to be installed
 //		try( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery("SELECT * FROM pg_stat_statements where dbid = -999"); )

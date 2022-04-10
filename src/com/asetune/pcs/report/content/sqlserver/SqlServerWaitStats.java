@@ -205,7 +205,7 @@ extends SqlServerAbstract
 							
 							// Create JavaScript code to initialize all SparkLines with a specific class name
 							if (StringUtil.isNullOrBlank(sparklineJavaScriptInitCode_ms))
-								sparklineJavaScriptInitCode_ms = SparklineHelper.getJavaScriptInitCode(result, sparklineClassName, sparklineTooltipPostfix);
+								sparklineJavaScriptInitCode_ms = SparklineHelper.getJavaScriptInitCode(SqlServerWaitStats.this, result, sparklineClassName, sparklineTooltipPostfix);
 						}
 						catch (SQLException ex)
 						{
@@ -248,7 +248,7 @@ extends SqlServerAbstract
 							
 							// Create JavaScript code to initialize all SparkLines with a specific class name
 							if (StringUtil.isNullOrBlank(sparklineJavaScriptInitCode_wtpc))
-								sparklineJavaScriptInitCode_wtpc = SparklineHelper.getJavaScriptInitCode(result, sparklineClassName, sparklineTooltipPostfix);
+								sparklineJavaScriptInitCode_wtpc = SparklineHelper.getJavaScriptInitCode(SqlServerWaitStats.this, result, sparklineClassName, sparklineTooltipPostfix);
 						}
 						catch (SQLException ex)
 						{
@@ -270,8 +270,8 @@ extends SqlServerAbstract
 				}
 				sb.append("</table> \n");
 				
-				sb.append(sparklineJavaScriptInitCode_wtpc);
 				sb.append(sparklineJavaScriptInitCode_ms);
+				sb.append(sparklineJavaScriptInitCode_wtpc);
 				
 				return sb.toString();
 			}

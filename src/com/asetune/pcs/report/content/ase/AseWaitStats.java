@@ -240,7 +240,7 @@ extends AseAbstract
 							
 							// Create JavaScript code to initialize all SparkLines with a specific class name
 							if (StringUtil.isNullOrBlank(sparklineJavaScriptInitCode_wt))
-								sparklineJavaScriptInitCode_wt = SparklineHelper.getJavaScriptInitCode(result, sparklineClassName, sparklineTooltipPostfix);
+								sparklineJavaScriptInitCode_wt = SparklineHelper.getJavaScriptInitCode(AseWaitStats.this, result, sparklineClassName, sparklineTooltipPostfix);
 						}
 						catch (SQLException ex)
 						{
@@ -284,7 +284,7 @@ extends AseAbstract
 							
 							// Create JavaScript code to initialize all SparkLines with a specific class name
 							if (StringUtil.isNullOrBlank(sparklineJavaScriptInitCode_wtpc))
-								sparklineJavaScriptInitCode_wtpc = SparklineHelper.getJavaScriptInitCode(result, sparklineClassName, sparklineTooltipPostfix);
+								sparklineJavaScriptInitCode_wtpc = SparklineHelper.getJavaScriptInitCode(AseWaitStats.this, result, sparklineClassName, sparklineTooltipPostfix);
 						}
 						catch (SQLException ex)
 						{

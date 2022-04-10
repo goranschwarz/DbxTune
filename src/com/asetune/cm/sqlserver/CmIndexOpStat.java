@@ -20,7 +20,6 @@
  ******************************************************************************/
 package com.asetune.cm.sqlserver;
 
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -41,6 +40,7 @@ import com.asetune.cm.SortOptions.DataSortSensitivity;
 import com.asetune.cm.SortOptions.SortOrder;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.swing.ColumnHeaderPropsEntry;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Ver;
 
 /**
@@ -225,13 +225,13 @@ extends CountersModel
 //	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -278,7 +278,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{
 //		RS> 29   row_lock_count                     java.sql.Types.BIGINT   bigint           
 //		RS> 30   row_lock_wait_count                java.sql.Types.BIGINT   bigint           

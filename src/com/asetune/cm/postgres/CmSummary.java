@@ -20,7 +20,6 @@
  ******************************************************************************/
 package com.asetune.cm.postgres;
 
-import java.sql.Connection;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -37,6 +36,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.postgres.gui.CmSummaryPanel;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Ver;
 
 /**
@@ -162,20 +162,20 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 		return pkCols;
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String oldest_running_xact_age     = "";
 		String oldest_prepared_xact_age    = "";

@@ -22,6 +22,8 @@ package com.asetune.pcs;
 
 import java.util.Objects;
 
+import com.asetune.sql.SqlObjectName;
+
 public class ObjectLookupQueueEntry
 {
 	public String _dbname;
@@ -30,11 +32,18 @@ public class ObjectLookupQueueEntry
 	public String _dependParent;
 	public int    _dependLevel;
 
+	public SqlObjectName    _sqlObject; // set this in the ObjectLookupInspector.
+	
 	// Special option that might be set 
 	boolean _isStatementCacheEntry = false;
 
 	public boolean isStatementCacheEntry()           { return _isStatementCacheEntry; }
 	public void    setStatementCacheEntry(boolean b) { _isStatementCacheEntry = b; }
+
+	// Used for debugging or print extra information
+	private boolean _isPrintInfo = false;
+	public void    setPrintInfo(boolean b)	{ _isPrintInfo = b; }
+	public boolean isPrintInfo()	        { return _isPrintInfo; }
 	
 	public ObjectLookupQueueEntry(String dbname, String objectName, String source, String dependParent, int dependLevel)
 	{

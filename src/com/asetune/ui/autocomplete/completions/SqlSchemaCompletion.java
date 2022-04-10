@@ -38,9 +38,11 @@ extends SqlCompletion
 	//-------------------------
 	public static String createReplacementText(CompletionProviderAbstractSql provider, SchemaInfo si, String catName, boolean quoteNames)
 	{
-		String q = provider.getDbIdentifierQuoteString();
-		String catalogName = quoteNames ? q+si._cat+q  : provider.fixStrangeNames(si._cat);
-		String schemaName  = quoteNames ? q+si._name+q : provider.fixStrangeNames(si._name);
+		String q1 = provider.getDbIdentifierQuoteStringStart();
+		String q2 = provider.getDbIdentifierQuoteStringEnd();
+
+		String catalogName = quoteNames ? q1 + si._cat  + q2 : provider.fixStrangeNames(si._cat);
+		String schemaName  = quoteNames ? q1 + si._name + q2 : provider.fixStrangeNames(si._name);
 
 		String out = "";
 		out += ((catName == null) ? catalogName : catName) + ".";

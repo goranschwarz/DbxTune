@@ -331,6 +331,9 @@ public class SqlParserUtils
 		TableNameParser tableNameParser = new TableNameParser(sql);
 		Collection<String> tables = tableNameParser.tables();
 
+		// Remove some stuff that the 'TableNameParser' don't get "right"
+		tables.removeIf(t -> t.startsWith("@") || t.startsWith("#") || t.equalsIgnoreCase("ROW_NUMBER"));
+
 		// CheckTheTables; if they typically is "@xxxx" or "declare" or similar... then remove them from the list.
 		// Solved with another workaround: The caller can store "faulty" entries in a "discarded" Set ... (thats how I solved it in DDL Storage) 
 		return new LinkedHashSet<>(tables);

@@ -23,18 +23,31 @@ package com.asetune.pcs.report.content.sqlserver;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.text.NumberFormat;
+import java.util.LinkedHashMap;
+
+import org.apache.log4j.Logger;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.ase.AseAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.HtmlTableProducer;
 
 public class SqlServerPlanCacheHistory extends AseAbstract
 {
-//	private static Logger _logger = Logger.getLogger(SqlServerPlanCacheHistory.class);
+	private static Logger _logger = Logger.getLogger(SqlServerPlanCacheHistory.class);
 
-	ResultSetTableModel _shortRstm;
+	public static final String PROPKEY_top = "DailySummaryReport.SqlServerPlanCacheHistory.top.rows";
+	public static final int    DEFAULT_top = 50;
+
+	private ResultSetTableModel _shortRstm;
+	private ResultSetTableModel _planCacheSummary;
+	private int _planCacheDayCount = -1;
 
 	public SqlServerPlanCacheHistory(DailySummaryReportAbstract reportingInstance)
 	{
@@ -60,11 +73,43 @@ public class SqlServerPlanCacheHistory extends AseAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
+			sb.append("<b>Total number of days in the Plan Cache:</b> " + _planCacheDayCount + " <br>\n");
+			sb.append("<br>\n");
+			
+			if (_planCacheSummary != null && !_planCacheSummary.isEmpty())
+			{
+				LinkedHashMap<String, String> summaryTable = new LinkedHashMap<>();
+				NumberFormat nf = NumberFormat.getInstance();
+				
+				summaryTable.put("plan_count"                       , nf.format(_planCacheSummary.getValueAsLong(0, "plan_count", true, -1L)));
+				summaryTable.put("exec_count"                       , nf.format(_planCacheSummary.getValueAsLong(0, "exec_count", true, -1L)));
+				summaryTable.put("PlanSizeKB"                       , nf.format(_planCacheSummary.getValueAsLong(0, "PlanSizeKB", true, -1L)));
+
+				summaryTable.put("ObjType_Proc_Pct"                 , nf.format(_planCacheSummary.getValueAsDouble(0, "ObjType_Proc_Pct"                 , true, -1d)));
+				summaryTable.put("ObjType_Prepared_Pct"             , nf.format(_planCacheSummary.getValueAsDouble(0, "ObjType_Prepared_Pct"             , true, -1d)));
+				summaryTable.put("ObjType_Adhoc_Pct"                , nf.format(_planCacheSummary.getValueAsDouble(0, "ObjType_Adhoc_Pct"                , true, -1d)));
+				summaryTable.put("CacheObjType_CompiledPlan_Pct"    , nf.format(_planCacheSummary.getValueAsDouble(0, "CacheObjType_CompiledPlan_Pct"    , true, -1d)));
+				summaryTable.put("CacheObjType_CompiledPlanStub_Pct", nf.format(_planCacheSummary.getValueAsDouble(0, "CacheObjType_CompiledPlanStub_Pct", true, -1d)));
+				
+				summaryTable.put("total_logical_reads"              , nf.format(_planCacheSummary.getValueAsLong(0, "total_logical_reads" , true, -1L)));
+				summaryTable.put("total_logical_writes"             , nf.format(_planCacheSummary.getValueAsLong(0, "total_logical_writes", true, -1L)));
+				summaryTable.put("total_physical_reads"             , nf.format(_planCacheSummary.getValueAsLong(0, "total_physical_reads", true, -1L)));
+				summaryTable.put("total_rows"                       , nf.format(_planCacheSummary.getValueAsLong(0, "total_rows")));
+
+				sb.append("<b>Summary for the full available history (for what's in the Plan Cache).</b> <br>\n");
+				sb.append(HtmlTableProducer.createHtmlTable(summaryTable, "", true));
+				sb.append("<br>\n");
+			}
+
+			// Remove all rows except the first # rows 
+			int topRows = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_top, DEFAULT_top);
+			_shortRstm.setRowCount(topRows);
+			
+			sb.append("Showing only " + _shortRstm.getRowCount() + " first rows. To change this number, set configuration <code>" + PROPKEY_top + " = ###</code><br>\n");
 			sb.append(toHtmlTable(_shortRstm));
 		}
 	}
-
+	
 	@Override
 	public String getSubject()
 	{
@@ -89,13 +134,29 @@ public class SqlServerPlanCacheHistory extends AseAbstract
 	{
 		// Get 'statement cache size' from saved configuration 
 		String sql = "" 
-			+ "select [creation_date] \n"
+			+ "select  \n"
+			+ "       [creation_date] \n"
 			+ "      ,[creation_hour] \n"
-			+ "      ,max([plan_count])      as [plan_count] \n"
-			+ "      ,sum([exec_count_diff]) as [exec_count] \n"
-			+ "from [CmPlanCacheHistory_diff] \n"
-			+ "group by [creation_date], [creation_hour] \n"
+			+ "      ,max([plan_count])                         as [plan_count] \n"
+//			+ "      ,'------>>>>>------'                       as [details-to-right] \n"
+			+ "      ,'&empsp;&empsp;>>>>>&empsp;&empsp;'       as [details-to-right] \n"
+			+ "      ,sum([exec_count_diff])                    as [exec_count] \n"
+			+ "      ,max([PlanSizeKB])                         as [PlanSizeKB] \n"
+			+ "      ,max([ObjType_Proc_Pct])                   as [ObjType_Proc_Pct] \n"
+			+ "      ,max([ObjType_Prepared_Pct])               as [ObjType_Prepared_Pct] \n"
+			+ "      ,max([ObjType_Adhoc_Pct])                  as [ObjType_Adhoc_Pct] \n"
+			+ "      ,max([CacheObjType_CompiledPlan_Pct])      as [CacheObjType_CompiledPlan_Pct] \n"
+			+ "      ,max([CacheObjType_CompiledPlanStub_Pct])  as [CacheObjType_CompiledPlanStub_Pct] \n"
+			+ "      ,sum([total_elapsed_time_ms])              as [total_elapsed_time_ms] \n"
+			+ "      ,sum([total_worker_time_ms])               as [total_worker_time_ms] \n"
+			+ "      ,sum([total_logical_reads])                as [total_logical_reads] \n"
+			+ "      ,sum([total_logical_writes])               as [total_logical_writes] \n"
+			+ "      ,sum([total_physical_reads])               as [total_physical_reads] \n"
+			+ "      ,sum([total_rows])                         as [total_rows] \n"
+			+ "from [CmPlanCacheHistory_diff] \n" 
+			+ "where [creation_date] < '9999-12-31' \n" // do not include the SUMMARY record
 //			+ "where [SessionStartTime] = (select max([SessionStartTime]) from [CmPlanCacheHistory_abs]) \n"
+			+ "group by [creation_date], [creation_hour] \n"
 			+ "order by [creation_date] desc, [creation_hour] desc";
 
 		_shortRstm = executeQuery(conn, sql, false, "PlanCacheHistory");
@@ -107,6 +168,23 @@ public class SqlServerPlanCacheHistory extends AseAbstract
 		}
 		else
 		{
+			// Get TOTAL days
+			sql = conn.quotifySqlString("select count(distinct [creation_date]) as [days_count] from [CmPlanCacheHistory_abs] where [creation_date] < '9999-12-31'");
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while(rs.next())
+					_planCacheDayCount = rs.getInt(1);
+			}
+			catch(SQLException ex)
+			{
+				_logger.warn("Problems when getting Number of DYA in the Plan Cache using SQL=|" + sql + "|.", ex);
+			}
+
+			// Get TOTAL SUMMARY of things (total sum is represented as day '9999-12-31')
+			sql = "select * from [CmPlanCacheHistory_abs] where [creation_date] = '9999-12-31'";
+			_planCacheSummary = ResultSetTableModel.executeQuery(conn, sql, false, "");
+			
+			// describe things
 			setSectionDescription(_shortRstm);
 		}
 	}

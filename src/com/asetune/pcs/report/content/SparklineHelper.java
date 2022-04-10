@@ -450,7 +450,7 @@ public class SparklineHelper
 		}
 
 		// Return init code for JavaScript
-		return getJavaScriptInitCode(result, params.getSparklineClassName(), params.getSparklineTooltipPostfix());
+		return getJavaScriptInitCode(reportEntry, result, params.getSparklineClassName(), params.getSparklineTooltipPostfix());
 	}
 
 	public static String getSparklineDiv(SparklineResult result, String sparklineClassName, String noBrowserText)
@@ -465,16 +465,14 @@ public class SparklineHelper
 		return sparkline;
 	}
 
-	private static boolean _jsLoadSparkline_writeOnce = false;
-
-	public static String getJavaScriptInitCode(SparklineResult result, String sparklineClassName, String tooltipPostfix)
+	public static String getJavaScriptInitCode(IReportEntry reportEntry, SparklineResult result, String sparklineClassName, String tooltipPostfix)
 	{
 		StringBuilder sb = new StringBuilder();
 
-		// Only write this once
-		if (_jsLoadSparkline_writeOnce == false)
+		// Only write this once (keep the status field in the "head" report)
+		if (reportEntry.hasStatusEntry("jsLoadSparkline_writeOnce") == false)
 		{
-			_jsLoadSparkline_writeOnce = true;
+			reportEntry.setStatusEntry("jsLoadSparkline_writeOnce");
 
 			String name = "sparkline";
 			String label = "Initializing Sparklines: ";

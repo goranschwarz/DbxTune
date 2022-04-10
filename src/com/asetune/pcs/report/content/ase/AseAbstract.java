@@ -274,6 +274,7 @@ extends ReportEntryAbstract
 				tableInfoMap.put("View"       ,            entry.getTableName()       );
 				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
 //				tableInfoMap.put("References" ,            entry.getViewReferences()+""); // instead show this in the: Index Info section
+				tableInfoMap.put("DDL"        ,            getFormattedSqlAsTooltipDiv(entry._objectText, "View DDL", DbUtils.DB_PROD_NAME_SYBASE_ASE));
 			}
 			else // Any table
 			{
@@ -286,8 +287,12 @@ extends ReportEntryAbstract
 				tableInfoMap.put("Data Pages" , nf.format( entry.getDataPages() ));
 				tableInfoMap.put("Index MB"   , nf.format( entry.getIndexMb()   ));
 				tableInfoMap.put("LOB MB"     , entry.getLobMb() == -1 ? "-no-lob-" : nf.format( entry.getLobMb() ));
+				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
+				tableInfoMap.put("Sampled"    ,            entry.getSampleTime()+""   );
 				tableInfoMap.put("Lock Scheme",            entry.getLockScheme() );
 				tableInfoMap.put("Index Count", entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>") );
+				tableInfoMap.put("DDL Info"   ,            getTextAsTooltipDiv(entry._objectText, "Table Info"));
+				tableInfoMap.put("Triggers"   , entry._triggersText == null ? "-no-triggers-" : getTextAsTooltipDiv(entry._triggersText, "Trigger Info"));
 			}
 			
 			String tableInfo = HtmlTableProducer.createHtmlTable(tableInfoMap, "dsr-sub-table-other-info", true);
@@ -365,26 +370,65 @@ extends ReportEntryAbstract
 		sb.append("<thead> \n");
 		sb.append("<tr> \n");
 
-		sb.append("  <th>Index Name</th> \n");
-		sb.append("  <th>Keys</th> \n");
-		sb.append("  <th>IndexID</th> \n");
-		sb.append("  <th>Desciption</th> \n");
-		sb.append("  <th>Size MB</th> \n");
-		sb.append("  <th>Size Pages</th> \n");
-		sb.append("  <th title='Average Bytes used per Row\nCalculted by: SizeBytes/TableRowcount'>Avg RowSize</th> \n");
-		sb.append("  <th>Reserved MB</th> \n");
-		sb.append("  <th>Unused MB</th> \n");
-//		sb.append("  <th>DDL</th> \n");
+//		sb.append("  <th>Index Name</th> \n");
+//		sb.append("  <th>Keys</th> \n");
+//		sb.append("  <th>IndexID</th> \n");
+//		sb.append("  <th>Desciption</th> \n");
+//		sb.append("  <th>Size MB</th> \n");
+//		sb.append("  <th>Size Pages</th> \n");
+//		sb.append("  <th title='Average Bytes used per Row\nCalculted by: SizeBytes/TableRowcount'>Avg RowSize</th> \n");
+//		sb.append("  <th>Reserved MB</th> \n");
+//		sb.append("  <th>Unused MB</th> \n");
+////		sb.append("  <th>DDL</th> \n");
+//
+//		String tt1 = "\nTime span: During the report period.";
+//		sb.append("  <th title='Number of Insert, Update and Deletes that has been done." + tt1                      + "'>RowsInsUpdDel</th> \n");
+//		sb.append("  <th title='Number of times the optimizer selected this index to be used in a query plan." + tt1 + "'>OptSelectCount</th> \n");
+//		sb.append("  <th title='Number of times the object was used in a plan during execution." + tt1               + "'>UsedCount</th> \n");
+//		sb.append("  <th title='Number of times the object was accessed." + tt1                                      + "'>Operations</th> \n");
+//		sb.append("  <th title='Number of scans performed on this object." + tt1                                     + "'>Scans</th> \n");
+//
+//		sb.append("  <th title='Indicates the date and time when the index structure was added to the ASE cache."    + "'>CacheDate</th> \n");
+//		sb.append("  <th title='When was the index created."                                                         + "'>CrDate</th> \n");
 
-		String tt1 = "\nTime span: During the report period.";
-		sb.append("  <th title='Number of Insert, Update and Deletes that has been done." + tt1                      + "'>RowsInsUpdDel</th> \n");
-		sb.append("  <th title='Number of times the optimizer selected this index to be used in a query plan." + tt1 + "'>OptSelectCount</th> \n");
-		sb.append("  <th title='Number of times the object was used in a plan during execution." + tt1               + "'>UsedCount</th> \n");
-		sb.append("  <th title='Number of times the object was accessed." + tt1                                      + "'>Operations</th> \n");
-		sb.append("  <th title='Number of scans performed on this object." + tt1                                     + "'>Scans</th> \n");
+		String tt = "\n(in bold) Time span: During the report period."
+		          + "\n"
+		          + "\n(in italic): Since object was cached (see CacheDate)."
+		          + "\nNOTE: This counter is an integer that may/will wrap, if incremeted frequently."
+		          + "\nUse this to decide if the index has **ever** been used since CacheDate."
+		          + "\nA low value indicates that the index has NOT been used. And therefor may be an *unused* index.";
 
-		sb.append("  <th title='Indicates the date and time when the index structure was added to the ASE cache."    + "'>CacheDate</th> \n");
-		sb.append("  <th title='When was the index created."                                                         + "'>CrDate</th> \n");
+		sb.append(createHtmlTh("Index Name"     , ""));
+		sb.append(createHtmlTh("Keys"           , ""));
+		sb.append(createHtmlTh("IndexID"        , ""));
+		sb.append(createHtmlTh("Desciption"     , ""));
+		sb.append(createHtmlTh("Size MB"        , ""));
+		sb.append(createHtmlTh("Size Pages"     , ""));
+		sb.append(createHtmlTh("Avg RowSize"    , "Average Bytes used per Row\nCalculted by: SizeBytes/TableRowcount"));
+		sb.append(createHtmlTh("Reserved MB"    , ""));
+		sb.append(createHtmlTh("Unused MB"      , ""));
+//		sb.append(createHtmlTh("DDL"            , ""));
+
+		sb.append(createHtmlTh("RowsInsUpdDel"  , "Number of Insert, Update and Deletes that has been done." + tt));
+		sb.append(createHtmlTh("OptSelectCount" , "Number of times the optimizer selected this index to be used in a query plan." + tt));
+		sb.append(createHtmlTh("UsedCount"      , "Number of times the object was used in a plan during execution." + tt));
+		sb.append(createHtmlTh("Operations"     , "Number of times the object was accessed." + tt));
+		sb.append(createHtmlTh("Scans"          , "Number of scans performed on this object." + tt));
+
+		sb.append(createHtmlTh("CacheDate"      , "Indicates the date and time when the index structure was added to the ASE cache"));
+		sb.append(createHtmlTh("CrDate"         , "When was the index created"));
+
+		sb.append(createHtmlTh("RowsInserted"         , ""));
+		sb.append(createHtmlTh("RowsUpdated"          , ""));
+		sb.append(createHtmlTh("RowsDeleted"          , ""));
+		sb.append(createHtmlTh("LogicalReads"         , ""));
+		sb.append(createHtmlTh("PhysicalReads"        , ""));
+		sb.append(createHtmlTh("APFReads"             , "Physical disk IO, but issued as a Prefetch, or read-ahead-of-time-when-we-need-it..."));
+		sb.append(createHtmlTh("LockWaits"            , "Number of times we had to wait for a lock"));
+		sb.append(createHtmlTh("SharedLockWaitTime"   , "Wait time in milliseconds"));
+		sb.append(createHtmlTh("ExclusiveLockWaitTime", "Wait time in milliseconds"));
+		sb.append(createHtmlTh("UpdateLockWaitTime"   , "Wait time in milliseconds"));
+		
 
 //		String tt2 = "\nTime span: Since object was cached (see CacheDate)."
 //		           + "\nNOTE: This counter is an integer that may/will wrap, if incremeted frequently."
@@ -427,6 +471,19 @@ extends ReportEntryAbstract
 
 			sb.append("  <td>").append(            entry.getCacheDateStr()       ).append("</td> \n");
 			sb.append("  <td>").append(            entry.getCreationDateStr()    ).append("</td> \n");
+
+			sb.append("  <td>").append( diffAbsValues(entry.getRowsInserted         (), entry.getAbsRowsInserted         () ) ).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry.getRowsUpdated          (), entry.getAbsRowsUpdated          () ) ).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry.getRowsDeleted          (), entry.getAbsRowsDeleted          () ) ).append("</td> \n");
+			
+			sb.append("  <td>").append( diffAbsValues(entry.getLogicalReads         (), entry.getAbsLogicalReads         () ) ).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry.getPhysicalReads        (), entry.getAbsPhysicalReads        () ) ).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry.getAPFReads             (), entry.getAbsAPFReads             () ) ).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry.getLockWaits            (), entry.getAbsLockWaits            () ) ).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry.getSharedLockWaitTime   (), entry.getAbsSharedLockWaitTime   () ) ).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry.getExclusiveLockWaitTime(), entry.getAbsExclusiveLockWaitTime() ) ).append("</td> \n");
+			sb.append("  <td>").append( diffAbsValues(entry.getUpdateLockWaitTime   (), entry.getAbsUpdateLockWaitTime   () ) ).append("</td> \n");
+
 			sb.append("</tr> \n");
 		}
 		sb.append("</tbody> \n");
@@ -545,11 +602,11 @@ extends ReportEntryAbstract
 		}
 		
 		// Check if 'table' has dbname/schema name specified.
-//		SqlObjectName sqlObj = new SqlObjectName(table, DbUtils.DB_PROD_NAME_SYBASE_ASE, "\"", false, false, true);
-		SqlObjectName sqlObj = new SqlObjectName(conn, table);
-		if (sqlObj.hasCatalogName()) dbname = sqlObj.getCatalogNameOrigin();
-		if (sqlObj.hasSchemaName() ) owner  = sqlObj.getSchemaNameOrigin();
-		if (sqlObj.hasObjectName() ) table  = sqlObj.getObjectNameOrigin();
+		SqlObjectName sqlObj = new SqlObjectName(table, DbUtils.DB_PROD_NAME_SYBASE_ASE, "\"", false, false, true);
+//		SqlObjectName sqlObj = new SqlObjectName(conn, table);
+		if (sqlObj.hasCatalogName()) dbname = sqlObj.getCatalogName();
+		if (sqlObj.hasSchemaName() ) owner  = sqlObj.getSchemaName();
+		if (sqlObj.hasObjectName() ) table  = sqlObj.getObjectName();
 		
 		if ("dbo".equalsIgnoreCase(owner))
 			owner = "";
@@ -566,7 +623,7 @@ extends ReportEntryAbstract
 		if (and_table .contains("%")) and_table  = and_table .replace(" = ", " like ");
 
 		String sql = ""
-			    + "select [dbname], [owner], [objectName], [type], [crdate], [extraInfoText], [objectText] \n"
+			    + "select [dbname], [owner], [objectName], [type], [crdate], [sampleTime], [extraInfoText], [objectText], [dependList] \n"
 			    + "from [MonDdlStorage] \n"
 			    + "where 1 = 1 \n"
 			    + "  and [type] in ('U', 'V') \n"
@@ -593,9 +650,11 @@ extends ReportEntryAbstract
 					ti._tableName     = rs.getString(3);
 					ti._type          = rs.getString(4);
 					ti._crdate        = rs.getTimestamp(5);
+					ti._sampleTime    = rs.getTimestamp(6);
 
-					ti._extraInfoText = rs.getString(6);
-					ti._objectText    = rs.getString(7);
+					ti._extraInfoText = rs.getString(7);
+					ti._objectText    = rs.getString(8);
+					ti._childObjects  = rs.getString(9);
 					
 					tmpList.add(ti);
 				}
@@ -608,6 +667,7 @@ extends ReportEntryAbstract
 			_logger.warn("Problems getting Table Information for dbname='" + dbname + "', owner='" + owner + "', table='" + table + "': " + ex);
 			throw ex;
 		}
+//System.out.println("getTableInformationFromMonDdlStorage(): table='" + table + "', rowcount=" + rowcount + ", dbname='" + dbname + "', schema='" + owner + "', table='" + table + "'.");
 
 		// Create an OUTPUT LIST
 //		Set<AseTableInfo> retList = new LinkedHashSet<>();
@@ -639,7 +699,7 @@ extends ReportEntryAbstract
 							
 							// What "tables" do this view reference
 							ti._viewReferences = viewReferences;
-System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recursCallCount+"): ti='"+ti.getFullTableName()+"', is a VIEW, the following references will also be fetched: " + viewReferences);
+//System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recursCallCount+"): ti='"+ti.getFullTableName()+"', is a VIEW, the following references will also be fetched: " + viewReferences);
 							// Loop the list
 							for (String tableName : viewReferences)
 							{
@@ -666,6 +726,9 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 						result.add(ti);
 
 						// Append any more information?
+
+						// get TRIGGER information for this table
+						getTriggerInfo(conn, ti); // type='TR'
 					}
 
 				} // end: has: _objectText && _extraInfoText 
@@ -800,6 +863,7 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 				ii._desc     = "LOB - Large Object (text/image)";
 				ii._keysStr  = "-lob-data-";
 				ii._keys     = Arrays.asList("-lob-data-");
+				ii._CreationDate = ti._crdate;
 			}
 		} // end: has _extraInfoText
 		
@@ -840,13 +904,43 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 		
 		// Some columns do not exists in some versions...
 		// Lets simulate that they exists, but with some "default" value
-		String col_with_diff__Scans = "        ,-1 as [Scans] \n";
-		String col_with_abs__Scans  = "        ,-1 as [AbsScans] \n";
+		String col_with_diff__Scans                 = "        ,-1 as [Scans] \n";
+		String col_with_diff__LockWaits             = "        ,-1 as [LockWaits] \n";
+		String col_with_diff__SharedLockWaitTime    = "        ,-1 as [SharedLockWaitTime] \n";
+		String col_with_diff__ExclusiveLockWaitTime = "        ,-1 as [ExclusiveLockWaitTime] \n";
+		String col_with_diff__UpdateLockWaitTime    = "        ,-1 as [UpdateLockWaitTime] \n";
+
+		String col_with_abs__Scans                  = "        ,-1 as [AbsScans] \n";
+		String col_with_abs__LockWaits              = "        ,-1 as [AbsLockWaits] \n";
+		String col_with_abs__SharedLockWaitTime     = "        ,-1 as [AbsSharedLockWaitTime] \n";
+		String col_with_abs__ExclusiveLockWaitTime  = "        ,-1 as [AbsExclusiveLockWaitTime] \n";
+		String col_with_abs__UpdateLockWaitTime     = "        ,-1 as [AbsUpdateLockWaitTime] \n";
 		
 		if (dummyRstm.hasColumnNoCase("Scans"))
 		{
-			col_with_diff__Scans = "        ,sum([Scans]) as [Scans] \n"; 
-			col_with_abs__Scans  = "        ,[Scans] as [AbsScans] \n"; 
+			col_with_diff__Scans                 = "        ,sum([Scans]) as [Scans] \n"; 
+			col_with_abs__Scans                  = "        ,[Scans] as [AbsScans] \n"; 
+		}
+
+		if (dummyRstm.hasColumnNoCase("LockWaits"))
+		{
+			col_with_diff__LockWaits             = "        ,sum([LockWaits]) as [LockWaits] \n"; 
+			col_with_abs__LockWaits              = "        ,[LockWaits] as [AbsLockWaits] \n"; 
+		}
+		if (dummyRstm.hasColumnNoCase("SharedLockWaitTime"))
+		{
+			col_with_diff__SharedLockWaitTime    = "        ,sum([SharedLockWaitTime]) as [SharedLockWaitTime] \n"; 
+			col_with_abs__SharedLockWaitTime     = "        ,[SharedLockWaitTime] as [AbsSharedLockWaitTime] \n"; 
+		}
+		if (dummyRstm.hasColumnNoCase("ExclusiveLockWaitTime"))
+		{
+			col_with_diff__ExclusiveLockWaitTime = "        ,sum([ExclusiveLockWaitTime]) as [ExclusiveLockWaitTime] \n"; 
+			col_with_abs__ExclusiveLockWaitTime  = "        ,[ExclusiveLockWaitTime] as [AbsExclusiveLockWaitTime] \n"; 
+		}
+		if (dummyRstm.hasColumnNoCase("UpdateLockWaitTime"))
+		{
+			col_with_diff__UpdateLockWaitTime    = "        ,sum([UpdateLockWaitTime]) as [UpdateLockWaitTime] \n"; 
+			col_with_abs__UpdateLockWaitTime     = "        ,[UpdateLockWaitTime] as [AbsUpdateLockWaitTime] \n"; 
 		}
 		
 		// If we want we could probably add the following columns as well
@@ -865,7 +959,6 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 		//  * Inserts               -- Number of inserts (operations) performed on this object.
 		//  * Deletes               -- Number of deletes (operations) performed on this object.
 
-		
 		// create SQL Statement to get ...
 		String sql = ""
 			+ "WITH diff as \n"
@@ -875,12 +968,22 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 			+ "        ,[ObjectName] \n"
 			+ "        ,[IndexName] \n"
 			+ "        ,[IndexID] \n"
-			+ "        ,max([ObjectCacheDate]) as [ObjectCacheDate] \n"
-			+ "        ,sum([RowsInsUpdDel])   as [RowsInsUpdDel] \n"
-			+ "        ,sum([OptSelectCount])  as [OptSelectCount] \n"
-			+ "        ,sum([UsedCount])       as [UsedCount] \n"
-			+ "        ,sum([Operations])      as [Operations] \n"
-			+          col_with_diff__Scans  // "        ,sum([Scans]) as [Scans] \n"
+			+ "        ,max([ObjectCacheDate])       as [ObjectCacheDate] \n"
+			+ "        ,sum([RowsInsUpdDel])         as [RowsInsUpdDel] \n"
+			+ "        ,sum([RowsInserted])          as [RowsInserted] \n"
+			+ "        ,sum([RowsUpdated])           as [RowsUpdated] \n"
+			+ "        ,sum([RowsDeleted])           as [RowsDeleted] \n"
+			+ "        ,sum([OptSelectCount])        as [OptSelectCount] \n"
+			+ "        ,sum([UsedCount])             as [UsedCount] \n"
+			+ "        ,sum([Operations])            as [Operations] \n"
+			+          col_with_diff__Scans                   // "        ,sum([Scans]) as [Scans] \n"
+			+ "        ,sum([LogicalReads])          as [LogicalReads] \n"
+			+ "        ,sum([PhysicalReads])         as [PhysicalReads] \n"
+			+ "        ,sum([APFReads])              as [APFReads] \n"
+			+          col_with_diff__LockWaits               // "        ,sum([LockWaits])             as [LockWaits] \n"
+			+          col_with_diff__SharedLockWaitTime      // "        ,sum([SharedLockWaitTime])    as [SharedLockWaitTime] \n"
+			+          col_with_diff__ExclusiveLockWaitTime   // "        ,sum([ExclusiveLockWaitTime]) as [ExclusiveLockWaitTime] \n"
+			+          col_with_diff__UpdateLockWaitTime      // "        ,sum([UpdateLockWaitTime])    as [UpdateLockWaitTime] \n"
 			+ "    from [CmObjectActivity_diff] \n"
 			+ "    where [DBName]     = " + DbUtils.safeStr(ti._dbName)    + " \n"
 			+ "      and [ObjectName] = " + DbUtils.safeStr(ti._tableName) + " \n"
@@ -892,11 +995,21 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 			+ "         [DBName] \n"
 			+ "        ,[ObjectName] \n"
 			+ "        ,[IndexName] \n"
-			+ "        ,[RowsInsUpdDel]   as [AbsRowsInsUpdDel] \n"
-			+ "        ,[OptSelectCount]  as [AbsOptSelectCount] \n"
-			+ "        ,[UsedCount]       as [AbsUsedCount] \n"
-			+ "        ,[Operations]      as [AbsOperations] \n"
-			+          col_with_abs__Scans // "        ,[Scans] as [AbsScans] \n"
+			+ "        ,[RowsInsUpdDel]         as [AbsRowsInsUpdDel] \n"
+			+ "        ,[RowsInserted]          as [AbsRowsInserted] \n"
+			+ "        ,[RowsUpdated]           as [AbsRowsUpdated] \n"
+			+ "        ,[RowsDeleted]           as [AbsRowsDeleted] \n"
+			+ "        ,[OptSelectCount]        as [AbsOptSelectCount] \n"
+			+ "        ,[UsedCount]             as [AbsUsedCount] \n"
+			+ "        ,[Operations]            as [AbsOperations] \n"
+			+          col_with_abs__Scans                 // "        ,[Scans] as [AbsScans] \n"
+			+ "        ,[LogicalReads]          as [AbsLogicalReads] \n"
+			+ "        ,[PhysicalReads]         as [AbsPhysicalReads] \n"
+			+ "        ,[APFReads]              as [AbsAPFReads] \n"
+			+          col_with_abs__LockWaits             // "        ,[LockWaits]             as [AbsLockWaits] \n"
+			+          col_with_abs__SharedLockWaitTime    // "        ,[SharedLockWaitTime]    as [AbsSharedLockWaitTime] \n"
+			+          col_with_abs__ExclusiveLockWaitTime // "        ,[ExclusiveLockWaitTime] as [AbsExclusiveLockWaitTime] \n"
+			+          col_with_abs__UpdateLockWaitTime    // "        ,[UpdateLockWaitTime]    as [AbsUpdateLockWaitTime] \n"
 			+ "    from [CmObjectActivity_abs] \n"
 			+ "    where [SessionSampleTime] = (select max([SessionSampleTime]) from [CmObjectActivity_abs]) \n"
 			+ "      and [DBName]     = " + DbUtils.safeStr(ti._dbName)    + " \n"
@@ -907,17 +1020,39 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 			+ "    ,diff.[ObjectName] \n"
 			+ "    ,diff.[IndexName] \n"
 			+ "    ,diff.[IndexID] \n"
+
 			+ "    ,diff.[RowsInsUpdDel] \n"
+			+ "    ,diff.[RowsInserted] \n"
+			+ "    ,diff.[RowsUpdated] \n"
+			+ "    ,diff.[RowsDeleted] \n"
 			+ "    ,diff.[OptSelectCount] \n"
 			+ "    ,diff.[UsedCount] \n"
 			+ "    ,diff.[Operations] \n"
 			+ "    ,diff.[Scans] \n"
 			+ "    ,diff.[ObjectCacheDate] \n"
+			+ "    ,diff.[LogicalReads] \n"
+			+ "    ,diff.[PhysicalReads] \n"
+			+ "    ,diff.[APFReads] \n"
+			+ "    ,diff.[LockWaits] \n"
+			+ "    ,diff.[SharedLockWaitTime] \n"
+			+ "    ,diff.[ExclusiveLockWaitTime] \n"
+			+ "    ,diff.[UpdateLockWaitTime] \n"
+
 			+ "    ,abs. [AbsRowsInsUpdDel] \n"
+			+ "    ,abs. [AbsRowsInserted] \n"
+			+ "    ,abs. [AbsRowsUpdated] \n"
+			+ "    ,abs. [AbsRowsDeleted] \n"
 			+ "    ,abs. [AbsOptSelectCount] \n"
 			+ "    ,abs. [AbsUsedCount] \n"
 			+ "    ,abs. [AbsOperations] \n"
 			+ "    ,abs. [AbsScans] \n"
+			+ "    ,abs .[AbsLogicalReads] \n"
+			+ "    ,abs .[AbsPhysicalReads] \n"
+			+ "    ,abs .[AbsAPFReads] \n"
+			+ "    ,abs .[AbsLockWaits] \n"
+			+ "    ,abs .[AbsSharedLockWaitTime] \n"
+			+ "    ,abs .[AbsExclusiveLockWaitTime] \n"
+			+ "    ,abs .[AbsUpdateLockWaitTime] \n"
 			+ "from diff \n"
 			+ "left outer join abs on diff.[DBName]     = abs.[DBName] \n"
 			+ "                   and diff.[ObjectName] = abs.[ObjectName] \n"
@@ -934,39 +1069,81 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 			{
 				while(rs.next())
 				{
-				//	String    DBName             = rs.getString   (1);
-				//	String    ObjectName         = rs.getString   (2);
-					String    IndexName          = rs.getString   (3);
-					int       IndexID            = rs.getInt      (4);
-					long      RowsInsUpdDel      = rs.getLong     (5);
-					long      OptSelectCount     = rs.getLong     (6);
-					long      UsedCount          = rs.getLong     (7);
-					long      Operations         = rs.getLong     (8);
-					long      Scans              = rs.getLong     (9);
-					Timestamp ObjectCacheDate    = rs.getTimestamp(10);
-					long      AbsRowsInsUpdDel   = rs.getLong     (11);
-					long      AbsOptSelectCount  = rs.getLong     (12);
-					long      AbsUsedCount       = rs.getLong     (13);
-					long      AbsOperations      = rs.getLong     (14);
-					long      AbsScans           = rs.getLong     (15);
+				//	String    DBName                   = rs.getString   (1);
+				//	String    ObjectName               = rs.getString   (2);
+					String    IndexName                = rs.getString   (3);
+					int       IndexID                  = rs.getInt      (4);
+					
+					long      RowsInsUpdDel            = rs.getLong     (5);
+					long      RowsInserted             = rs.getLong     (6);
+					long      RowsUpdated              = rs.getLong     (7);
+					long      RowsDeleted              = rs.getLong     (8);
+					long      OptSelectCount           = rs.getLong     (9);
+					long      UsedCount                = rs.getLong     (10);
+					long      Operations               = rs.getLong     (11);
+					long      Scans                    = rs.getLong     (12);
+					Timestamp ObjectCacheDate          = rs.getTimestamp(13);
+					long      LogicalReads             = rs.getLong     (14);
+					long      PhysicalReads            = rs.getLong     (15);
+					long      APFReads                 = rs.getLong     (16);
+					long      LockWaits                = rs.getLong     (17);
+					long      SharedLockWaitTime       = rs.getLong     (18);
+					long      ExclusiveLockWaitTime    = rs.getLong     (19);
+					long      UpdateLockWaitTime       = rs.getLong     (20);
+
+					long      AbsRowsInsUpdDel         = rs.getLong     (21);
+					long      AbsRowsInserted          = rs.getLong     (22);
+					long      AbsRowsUpdated           = rs.getLong     (23);
+					long      AbsRowsDeleted           = rs.getLong     (24);
+					long      AbsOptSelectCount        = rs.getLong     (25);
+					long      AbsUsedCount             = rs.getLong     (26);
+					long      AbsOperations            = rs.getLong     (27);
+					long      AbsScans                 = rs.getLong     (28);
+					long      AbsLogicalReads          = rs.getLong     (29);
+					long      AbsPhysicalReads         = rs.getLong     (30);
+					long      AbsAPFReads              = rs.getLong     (31);
+					long      AbsLockWaits             = rs.getLong     (32);
+					long      AbsSharedLockWaitTime    = rs.getLong     (33);
+					long      AbsExclusiveLockWaitTime = rs.getLong     (34);
+					long      AbsUpdateLockWaitTime    = rs.getLong     (35);
 					
 					AseIndexInfo indexEntry = ti.getIndexInfoForName(IndexName);
 
 					if (indexEntry != null)
 					{
-						indexEntry._IndexID            = IndexID;
-						indexEntry._ObjectCacheDate    = ObjectCacheDate;
-						indexEntry._RowsInsUpdDel      = RowsInsUpdDel;
-						indexEntry._OptSelectCount     = OptSelectCount;
-						indexEntry._UsedCount          = UsedCount;
-						indexEntry._Operations         = Operations;
-						indexEntry._Scans              = Scans;
+						indexEntry._IndexID                  = IndexID;
+						indexEntry._ObjectCacheDate          = ObjectCacheDate;
+						indexEntry._RowsInsUpdDel            = RowsInsUpdDel;
+						indexEntry._RowsInserted             = RowsInserted;
+						indexEntry._RowsUpdated              = RowsUpdated;
+						indexEntry._RowsDeleted              = RowsDeleted;
+						indexEntry._OptSelectCount           = OptSelectCount;
+						indexEntry._UsedCount                = UsedCount;
+						indexEntry._Operations               = Operations;
+						indexEntry._Scans                    = Scans;
+						indexEntry._LogicalReads             = LogicalReads         ;
+						indexEntry._PhysicalReads            = PhysicalReads        ;
+						indexEntry._APFReads                 = APFReads             ;
+						indexEntry._LockWaits                = LockWaits            ;
+						indexEntry._SharedLockWaitTime       = SharedLockWaitTime   ;
+						indexEntry._ExclusiveLockWaitTime    = ExclusiveLockWaitTime;
+						indexEntry._UpdateLockWaitTime       = UpdateLockWaitTime   ;
 
-						indexEntry._AbsRowsInsUpdDel   = AbsRowsInsUpdDel;
-						indexEntry._AbsOptSelectCount  = AbsOptSelectCount;
-						indexEntry._AbsUsedCount       = AbsUsedCount;
-						indexEntry._AbsOperations      = AbsOperations;
-						indexEntry._AbsScans           = AbsScans;
+						indexEntry._AbsRowsInsUpdDel         = AbsRowsInsUpdDel;
+						indexEntry._AbsRowsInserted          = AbsRowsInserted;
+						indexEntry._AbsRowsUpdated           = AbsRowsUpdated;
+						indexEntry._AbsRowsDeleted           = AbsRowsDeleted;
+						indexEntry._AbsOptSelectCount        = AbsOptSelectCount;
+						indexEntry._AbsUsedCount             = AbsUsedCount;
+						indexEntry._AbsOperations            = AbsOperations;
+						indexEntry._AbsScans                 = AbsScans;
+						indexEntry._AbsLogicalReads          = AbsLogicalReads         ;
+						indexEntry._AbsPhysicalReads         = AbsPhysicalReads        ;
+						indexEntry._AbsAPFReads              = AbsAPFReads             ;
+						indexEntry._AbsLockWaits             = AbsLockWaits            ;
+						indexEntry._AbsSharedLockWaitTime    = AbsSharedLockWaitTime   ;
+						indexEntry._AbsExclusiveLockWaitTime = AbsExclusiveLockWaitTime;
+						indexEntry._AbsUpdateLockWaitTime    = AbsUpdateLockWaitTime   ;
 					}
 					else
 					{
@@ -981,19 +1158,40 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 						indexEntry._desc               = "-unknown-";
 						indexEntry._ddlTxt             = "";
 
-						indexEntry._IndexID            = IndexID;
-						indexEntry._ObjectCacheDate    = ObjectCacheDate;
-						indexEntry._RowsInsUpdDel      = RowsInsUpdDel;
-						indexEntry._OptSelectCount     = OptSelectCount;
-						indexEntry._UsedCount          = UsedCount;
-						indexEntry._Operations         = Operations;
-						indexEntry._Scans              = Scans;
+						indexEntry._IndexID                  = IndexID;
+						indexEntry._ObjectCacheDate          = ObjectCacheDate;
 
-						indexEntry._AbsRowsInsUpdDel   = AbsRowsInsUpdDel;
-						indexEntry._AbsOptSelectCount  = AbsOptSelectCount;
-						indexEntry._AbsUsedCount       = AbsUsedCount;
-						indexEntry._AbsOperations      = AbsOperations;
-						indexEntry._AbsScans           = AbsScans;
+						indexEntry._RowsInsUpdDel            = RowsInsUpdDel        ;
+						indexEntry._RowsInserted             = RowsInserted         ;
+						indexEntry._RowsUpdated              = RowsUpdated          ;
+						indexEntry._RowsDeleted              = RowsDeleted          ;
+						indexEntry._OptSelectCount           = OptSelectCount       ;
+						indexEntry._UsedCount                = UsedCount            ;
+						indexEntry._Operations               = Operations           ;
+						indexEntry._Scans                    = Scans                ;
+						indexEntry._LogicalReads             = LogicalReads         ;
+						indexEntry._PhysicalReads            = PhysicalReads        ;
+						indexEntry._APFReads                 = APFReads             ;
+						indexEntry._LockWaits                = LockWaits            ;
+						indexEntry._SharedLockWaitTime       = SharedLockWaitTime   ;
+						indexEntry._ExclusiveLockWaitTime    = ExclusiveLockWaitTime;
+						indexEntry._UpdateLockWaitTime       = UpdateLockWaitTime   ;
+
+						indexEntry._AbsRowsInsUpdDel         = AbsRowsInsUpdDel        ;
+						indexEntry._AbsRowsInserted          = RowsInserted            ;
+						indexEntry._AbsRowsUpdated           = RowsUpdated             ;
+						indexEntry._AbsRowsDeleted           = RowsDeleted             ;
+						indexEntry._AbsOptSelectCount        = AbsOptSelectCount       ;
+						indexEntry._AbsUsedCount             = AbsUsedCount            ;
+						indexEntry._AbsOperations            = AbsOperations           ;
+						indexEntry._AbsScans                 = AbsScans                ;
+						indexEntry._AbsLogicalReads          = AbsLogicalReads         ;
+						indexEntry._AbsPhysicalReads         = AbsPhysicalReads        ;
+						indexEntry._AbsAPFReads              = AbsAPFReads             ;
+						indexEntry._AbsLockWaits             = AbsLockWaits            ;
+						indexEntry._AbsSharedLockWaitTime    = AbsSharedLockWaitTime   ;
+						indexEntry._AbsExclusiveLockWaitTime = AbsExclusiveLockWaitTime;
+						indexEntry._AbsUpdateLockWaitTime    = AbsUpdateLockWaitTime   ;
 
 						// Copy some "stuff" from current Table Information
 						if ("DATA".equals(indexEntry._indexName))
@@ -1006,6 +1204,8 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 
 							indexEntry._keysStr         = "-data-";
 							indexEntry._desc            = "-data-";
+
+							indexEntry._CreationDate    = ti._crdate;
 						}
 
 						ti._indexList.add(indexEntry);
@@ -1021,7 +1221,82 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 		
 		return doAdd;
 	}
-
+// select * from "PUBLIC"."CmObjectActivity_diff" where 1=2
+// go prsi
+//	RS> Col# Label                 JDBC Type Name           Guessed DBMS type Source Table                                       
+//	RS> ---- --------------------- ------------------------ ----------------- ---------------------------------------------------
+//	RS> 1    SessionStartTime      java.sql.Types.TIMESTAMP TIMESTAMP         PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 2    SessionSampleTime     java.sql.Types.TIMESTAMP TIMESTAMP         PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 3    CmSampleTime          java.sql.Types.TIMESTAMP TIMESTAMP         PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 4    CmSampleMs            java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 5    CmNewDiffRateRow      java.sql.Types.TINYINT   TINYINT           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 6    DBID                  java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 7    ObjectID              java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 8    DBName                java.sql.Types.VARCHAR   VARCHAR(30)       PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 9    ObjectName            java.sql.Types.VARCHAR   VARCHAR(259)      PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 10   IndexID               java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 11   IndexName             java.sql.Types.VARCHAR   VARCHAR(30)       PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 12   LockScheme            java.sql.Types.VARCHAR   VARCHAR(30)       PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 13   Remark                java.sql.Types.VARCHAR   VARCHAR(60)       PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 14   Scans                 java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 15   LastScanDate          java.sql.Types.TIMESTAMP TIMESTAMP         PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 16   LastScanDateDiff      java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 17   LockRequests          java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 18   LockWaits             java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 19   LockContPct           java.sql.Types.DECIMAL   DECIMAL(10,1)     PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 20   SharedLockWaitTime    java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 21   ExclusiveLockWaitTime java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 22   UpdateLockWaitTime    java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 23   NumLevel0Waiters      java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 24   AvgLevel0WaitTime     java.sql.Types.REAL      REAL              PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 25   LrPerScan             java.sql.Types.DECIMAL   DECIMAL(14,1)     PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 26   LogicalReads          java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 27   PhysicalReads         java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 28   APFReads              java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 29   PagesRead             java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 30   IOSize1Page           java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 31   IOSize2Pages          java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 32   IOSize4Pages          java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 33   IOSize8Pages          java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 34   PhysicalWrites        java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 35   PagesWritten          java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 36   UsedCount             java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 37   Operations            java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 38   TabRowCount           java.sql.Types.BIGINT    BIGINT            PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 39   UsageInMb             java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 40   UsageInKb             java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 41   NumUsedPages          java.sql.Types.BIGINT    BIGINT            PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 42   RowsPerPage           java.sql.Types.DECIMAL   DECIMAL(11,1)     PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 43   RowsInsUpdDel         java.sql.Types.BIGINT    BIGINT            PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 44   RowsInserted          java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 45   RowsDeleted           java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 46   RowsUpdated           java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 47   OptSelectCount        java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 48   MaxInsRowsInXact      java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 49   MaxUpdRowsInXact      java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 50   MaxDelRowsInXact      java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 51   Inserts               java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 52   Updates               java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 53   Deletes               java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 54   LastInsertDateDiff    java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 55   LastUpdateDateDiff    java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 56   LastDeleteDateDiff    java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 57   LastInsertDate        java.sql.Types.TIMESTAMP TIMESTAMP         PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 58   LastUpdateDate        java.sql.Types.TIMESTAMP TIMESTAMP         PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 59   LastDeleteDate        java.sql.Types.TIMESTAMP TIMESTAMP         PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 60   HkgcRequests          java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 61   HkgcPending           java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 62   HkgcOverflows         java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 63   HkgcRequestsDcomp     java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 64   HkgcPendingDcomp      java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 65   HkgcOverflowsDcomp    java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 66   PRSSelectCount        java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 67   LastPRSSelectDate     java.sql.Types.TIMESTAMP TIMESTAMP         PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 68   PRSRewriteCount       java.sql.Types.INTEGER   INTEGER           PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 69   LastPRSRewriteDate    java.sql.Types.TIMESTAMP TIMESTAMP         PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 70   ObjectCacheDate       java.sql.Types.TIMESTAMP TIMESTAMP         PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 71   LastOptSelectDate     java.sql.Types.TIMESTAMP TIMESTAMP         PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
+//	RS> 72   LastUsedDate          java.sql.Types.TIMESTAMP TIMESTAMP         PROD_A1_ASE_2022-03-03.PUBLIC.CmObjectActivity_diff
 	private static String scrapeIndexInfo(String tableName, String indexName, String objectInfoStr, AseIndexInfo indexInfo)
 	{
 		if (StringUtil.isNullOrBlank(objectInfoStr))
@@ -1261,6 +1536,139 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 		return "";
 	}
 	
+	private void getTriggerInfo(DbxConnection conn, AseTableInfo tableInfo)
+	{
+		if (tableInfo == null)
+			return;
+
+		// Get triggers from a list of: childObjects
+		List<String> triggerNames = new ArrayList<>();
+		for (String coe : StringUtil.parseCommaStrToList(tableInfo._childObjects, true))
+		{
+			if (coe.startsWith("TR:"))
+			{
+				triggerNames.add(coe.substring("TR:".length()));
+			}
+		}
+
+		if (triggerNames.isEmpty())
+			return;
+
+		String fullObjName = tableInfo._dbName +  "." + tableInfo._schemaName + "." + tableInfo._tableName;
+		String header = ""
+				+ "------------------------------------------------------------------------------------------------\n"
+				+ "-- Found " + triggerNames.size() + " Trigger(s) on table: " + fullObjName + "\n"
+				+ "-- List: " + StringUtil.toCommaStr(triggerNames) + "\n"
+				+ "------------------------------------------------------------------------------------------------\n"
+				+ "\n"
+				+ "";
+		tableInfo._triggersText = header;
+
+		// Get DDL text for ALL triggers in the above List
+		for (String trName : triggerNames)
+		{
+			String trStr = getTriggerDdlText(conn, tableInfo._dbName, tableInfo._schemaName, tableInfo._tableName, trName);
+			
+			if (StringUtil.hasValue(trStr))
+			{
+				if (tableInfo._triggersText == null)
+					tableInfo._triggersText = "";
+				
+				tableInfo._triggersText += trStr;
+			}
+		}
+	}
+
+	private String getTriggerDdlText(DbxConnection conn, String dbname, String schemaName, String tableName, String triggerName)
+	{
+//		String dbname = dbname;
+		String owner  = schemaName;
+		String table  = tableName;
+		String trName = triggerName;
+
+		String and_dbname = !StringUtil.hasValue(dbname) ? "" : "  and lower([dbname])     = " + DbUtils.safeStr(dbname.toLowerCase()) + " \n";
+		String and_owner  = !StringUtil.hasValue(owner)  ? "" : "  and lower([owner])      = " + DbUtils.safeStr(owner .toLowerCase()) + " \n";
+//		String and_table  = !StringUtil.hasValue(table)  ? "" : "  and lower([objectName]) = " + DbUtils.safeStr(table .toLowerCase()) + " \n";
+		String and_trName = !StringUtil.hasValue(trName) ? "" : "  and lower([objectName]) = " + DbUtils.safeStr(trName.toLowerCase()) + " \n";
+
+//		if (and_dbname.contains("%")) and_dbname = and_dbname.replace(" = ", " like ");
+//		if (and_owner .contains("%")) and_owner  = and_owner .replace(" = ", " like ");
+////		if (and_table .contains("%")) and_table  = and_table .replace(" = ", " like ");
+//		if (and_trName.contains("%")) and_trName = and_trName.replace(" = ", " like ");
+
+		String sql = ""
+			    + "select [dbname], [owner], [objectName], [type], [crdate], [sampleTime], [extraInfoText], [objectText] \n"
+			    + "from [MonDdlStorage] \n"
+			    + "where 1 = 1 \n"
+			    + "  and [type] = 'TR' \n"
+			    + and_dbname
+			    + and_owner
+//			    + and_table
+			    + and_trName
+			    + "";
+		
+		List<AseTableInfo> tmpList = new ArrayList<>();
+		
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while(rs.next())
+				{
+					AseTableInfo ti = new AseTableInfo();
+					
+					ti._dbName        = rs.getString(1);
+					ti._schemaName    = rs.getString(2);
+					ti._tableName     = rs.getString(3);
+					ti._type          = rs.getString(4);
+					ti._crdate        = rs.getTimestamp(5);
+					ti._sampleTime    = rs.getTimestamp(6);
+
+					ti._extraInfoText = rs.getString(7);
+					ti._objectText    = rs.getString(8);
+					
+					tmpList.add(ti);
+				}
+			}
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems getting Trigger Information for dbname='" + dbname + "', owner='" + owner + "', table='" + table + "', trName='" + trName + "': " + ex);
+		}
+
+		if (tmpList.isEmpty())
+			return "";
+
+		if (tmpList.size() > 1)
+			_logger.warn("Getting DDL Text for trigger: dbname='" + dbname + "', owner='" + owner + "', table='" + table + "', trName='" + trName + "': Found more that 1 row. they will also be added but... tmpList.size()=" + tmpList.size());
+
+		// Output
+		StringBuilder sb = new StringBuilder();
+		
+		// Loop the record we just found in MonDdlStorage
+		for (AseTableInfo ti : tmpList)
+		{
+			if (StringUtil.hasValue(ti._objectText))
+			{
+				sb.append("\n");
+				sb.append("--##############################################################################################\n");
+				sb.append("-- Trigger Name:   ").append(ti._tableName).append("\n");
+				sb.append("-- Trigger CrDate: ").append(ti._crdate).append("\n");
+				sb.append("--##############################################################################################\n");
+				sb.append(ti._objectText);
+				sb.append("--##############################################################################################\n");
+				sb.append("\n");
+			}
+		} // end: loop AseTableInfo
+
+		// Set the text
+		return sb.toString();
+	}
+		
+	
 	public static class AseIndexInfo
 	{
 		private String       _indexName;
@@ -1275,42 +1683,86 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 		private int          _IndexID           = -1;
 		private Timestamp    _CreationDate;
 		private Timestamp    _ObjectCacheDate;
-		private long         _RowsInsUpdDel     = -1;
-		private long         _OptSelectCount    = -1;
-		private long         _UsedCount         = -1;
-		private long         _Operations        = -1;
-		private long         _Scans             = -1;
-		private long         _AbsRowsInsUpdDel  = -1;
-		private long         _AbsOptSelectCount = -1;
-		private long         _AbsUsedCount      = -1;
-		private long         _AbsOperations     = -1;
-		private long         _AbsScans          = -1;
+		private long         _RowsInsUpdDel         = -1;
+		private long         _OptSelectCount        = -1;
+		private long         _UsedCount             = -1;
+		private long         _Operations            = -1;
+		private long         _Scans                 = -1;
+		private long         _RowsInserted          = -1;
+		private long         _RowsUpdated           = -1;
+		private long         _RowsDeleted           = -1;
+		private long         _LogicalReads          = -1;
+		private long         _PhysicalReads         = -1;
+		private long         _APFReads              = -1;
+		private long         _LockWaits             = -1;
+		private long         _SharedLockWaitTime    = -1;
+		private long         _ExclusiveLockWaitTime = -1;
+		private long         _UpdateLockWaitTime    = -1;
+		
+		
+		private long         _AbsRowsInsUpdDel         = -1;
+		private long         _AbsOptSelectCount        = -1;
+		private long         _AbsUsedCount             = -1;
+		private long         _AbsOperations            = -1;
+		private long         _AbsScans                 = -1;
+		private long         _AbsRowsInserted          = -1;
+		private long         _AbsRowsUpdated           = -1;
+		private long         _AbsRowsDeleted           = -1;
+		private long         _AbsLogicalReads          = -1;
+		private long         _AbsPhysicalReads         = -1;
+		private long         _AbsAPFReads              = -1;
+		private long         _AbsLockWaits             = -1;
+		private long         _AbsSharedLockWaitTime    = -1;
+		private long         _AbsExclusiveLockWaitTime = -1;
+		private long         _AbsUpdateLockWaitTime    = -1;
 
-		public String       getIndexName         () { return _indexName; }
-		public int          getSizeKb            () { return _sizeKb; }
-		public int          getSizePages         () { return _sizePages; }
-		public int          getReservedKb        () { return _reservedKb; }
-		public int          getUnusedKb          () { return _unusedKb; }
-		public String       getKeysStr           () { return _keysStr; }
-		public List<String> getKeys              () { return _keys; }
-		public String       getDescription       () { return _desc; }
-		public String       getDdlText           () { return _ddlTxt; }
-                                                 
-		public int          getIndexID           () { return _IndexID;            }
-		public Timestamp    getCreationDate      () { return _CreationDate;       }
-		public String       getCreationDateStr   () { return _CreationDate    == null ? "--not-found--" : _CreationDate.toString(); }
-		public Timestamp    getCacheDate         () { return _ObjectCacheDate;    }
-		public String       getCacheDateStr      () { return _ObjectCacheDate == null ? "--not-found--" : _ObjectCacheDate.toString(); }
-		public long         getRowsInsUpdDel     () { return _RowsInsUpdDel;     }
-		public long         getOptSelectCount    () { return _OptSelectCount;     }
-		public long         getUsedCount         () { return _UsedCount;          }
-		public long         getOperations        () { return _Operations;         }
-		public long         getScans             () { return _Scans;              }
-		public long         getAbsRowsInsUpdDel  () { return _AbsRowsInsUpdDel;   }
-		public long         getAbsOptSelectCount () { return _AbsOptSelectCount;  }
-		public long         getAbsUsedCount      () { return _AbsUsedCount;       }
-		public long         getAbsOperations     () { return _AbsOperations;      }
-		public long         getAbsScans          () { return _AbsScans;           }
+		public String       getIndexName             () { return _indexName; }
+		public int          getSizeKb                () { return _sizeKb; }
+		public int          getSizePages             () { return _sizePages; }
+		public int          getReservedKb            () { return _reservedKb; }
+		public int          getUnusedKb              () { return _unusedKb; }
+		public String       getKeysStr               () { return _keysStr; }
+		public List<String> getKeys                  () { return _keys; }
+		public String       getDescription           () { return _desc; }
+		public String       getDdlText               () { return _ddlTxt; }
+                                                     
+		public int          getIndexID               () { return _IndexID;            }
+		public Timestamp    getCreationDate          () { return _CreationDate;       }
+		public String       getCreationDateStr       () { return _CreationDate    == null ? "--not-found--" : _CreationDate.toString(); }
+		public Timestamp    getCacheDate             () { return _ObjectCacheDate;    }
+		public String       getCacheDateStr          () { return _ObjectCacheDate == null ? "--not-found--" : _ObjectCacheDate.toString(); }
+		                                             
+		public long         getRowsInsUpdDel         () { return _RowsInsUpdDel;     }
+		public long         getOptSelectCount        () { return _OptSelectCount;     }
+		public long         getUsedCount             () { return _UsedCount;          }
+		public long         getOperations            () { return _Operations;         }
+		public long         getScans                 () { return _Scans;              }
+		public long         getRowsInserted          () { return _RowsInserted         ; }
+		public long         getRowsUpdated           () { return _RowsUpdated          ; }
+		public long         getRowsDeleted           () { return _RowsDeleted          ; }
+		public long         getLogicalReads          () { return _LogicalReads         ; }
+		public long         getPhysicalReads         () { return _PhysicalReads        ; }
+		public long         getAPFReads              () { return _APFReads             ; }
+		public long         getLockWaits             () { return _LockWaits            ; }
+		public long         getSharedLockWaitTime    () { return _SharedLockWaitTime   ; }
+		public long         getExclusiveLockWaitTime () { return _ExclusiveLockWaitTime; }
+		public long         getUpdateLockWaitTime    () { return _UpdateLockWaitTime   ; }
+
+		public long         getAbsRowsInsUpdDel         () { return _AbsRowsInsUpdDel;   }
+		public long         getAbsOptSelectCount        () { return _AbsOptSelectCount;  }
+		public long         getAbsUsedCount             () { return _AbsUsedCount;       }
+		public long         getAbsOperations            () { return _AbsOperations;      }
+		public long         getAbsScans                 () { return _AbsScans;           }
+		public long         getAbsRowsInserted          () { return _AbsRowsInserted         ; }
+		public long         getAbsRowsUpdated           () { return _AbsRowsUpdated          ; }
+		public long         getAbsRowsDeleted           () { return _AbsRowsDeleted          ; }
+		public long         getAbsLogicalReads          () { return _AbsLogicalReads         ; }
+		public long         getAbsPhysicalReads         () { return _AbsPhysicalReads        ; }
+		public long         getAbsAPFReads              () { return _AbsAPFReads             ; }
+		public long         getAbsLockWaits             () { return _AbsLockWaits            ; }
+		public long         getAbsSharedLockWaitTime    () { return _AbsSharedLockWaitTime   ; }
+		public long         getAbsExclusiveLockWaitTime () { return _AbsExclusiveLockWaitTime; }
+		public long         getAbsUpdateLockWaitTime    () { return _AbsUpdateLockWaitTime   ; }
 
 		public double getSizeMb()     { return MathUtils.round(getSizeKb()     / 1024.0, 1); }
 		public double getReservedMb() { return MathUtils.round(getReservedKb() / 1024.0, 1); }
@@ -1324,8 +1776,11 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 		private String   _tableName;
 		public String    _type;
 		public Timestamp _crdate;
+		private Timestamp _sampleTime;
 		private String   _extraInfoText;  // sp_spaceused tabname, 1
 		private String   _objectText;     // sp_help tabname
+		private String   _childObjects;   // Type:name, Type:name, Type:name
+		private String   _triggersText;   // Text of any trigger definitions
 		private int      _rowtotal;
 		private int      _reservedKb;
 		private int      _dataKb;
@@ -1365,6 +1820,7 @@ System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recur
 		public String    getTableName()  { return _tableName; }
 		public String    getType()       { return _type; }
 		public Timestamp getCrDate()     { return _crdate; }
+		public Timestamp getSampleTime() { return _sampleTime; }
 
 		public int       getRowTotal()   { return _rowtotal; }
 		public int       getReservedKb() { return _reservedKb; }

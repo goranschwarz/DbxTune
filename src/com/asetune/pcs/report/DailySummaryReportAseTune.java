@@ -28,6 +28,7 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.pcs.report.content.DbmsConfigIssues;
 import com.asetune.pcs.report.content.ase.AseCmDeviceIo;
 import com.asetune.pcs.report.content.ase.AseCmSqlStatement;
 import com.asetune.pcs.report.content.ase.AseConfiguration;
@@ -105,6 +106,7 @@ extends DailySummaryReportDefault
 
 		// ASE Configuration
 		addReportEntry( new AseConfiguration(this)          );
+		addReportEntry( new DbmsConfigIssues(this)          );
 		addReportEntry( new AseSpMonitorConfig(this)        );
 	}
 	

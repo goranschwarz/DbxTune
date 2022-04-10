@@ -41,6 +41,7 @@ import com.asetune.sql.SqlParserUtils;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 
 public class ObjectLookupInspectorPostgres
@@ -62,21 +63,21 @@ extends ObjectLookupInspectorAbstract
 		if (entry == null)
 			return false;
 
+		SqlObjectName sqlObj = new SqlObjectName(entry._objectName, DbUtils.DB_PROD_NAME_POSTGRES, "\"", false, true, true);
+		entry._sqlObject = sqlObj;
+
+		String schemaName = sqlObj.getSchemaName();
+		String objectName = sqlObj.getObjectName();
+
+		// schema 'pg_catalog' or 'information_schema' do not lookup
+		if ("pg_catalog"        .equalsIgnoreCase(schemaName)) return false;
+		if ("information_schema".equalsIgnoreCase(schemaName)) return false;
+
 		// All tables starting with "pg_" must be a Postgres System table... 
 		// so do not bother to look this up.
-		if (entry._objectName.startsWith("pg_"))
+		if (StringUtil.startsWithIgnoreBlankIgnoreCase(objectName, "pg_"))
 			return false;
-
 		
-//		String dbname     = entry._dbname;
-//		String objectName = entry._objectName;
-		
-		// Discard a bunch of entries
-//		if (objectName.indexOf("temp worktable") >= 0 ) return false;
-//		if (objectName.startsWith("#"))                 return false;
-//		if (objectName.startsWith("ObjId:"))            return false;
-//		if (objectName.startsWith("Obj="))              return false;
-
 		// allow inspection
 		return true;
 	}
@@ -125,7 +126,7 @@ extends ObjectLookupInspectorAbstract
 		final String dependParent = qe._dependParent;
 		final int    dependLevel  = qe._dependLevel;
 
-System.out.println("doObjectInfoLookup_doWork: dbname='"+dbname+"', objectName='"+objectName+"', source='"+source+"'.");
+//System.out.println("doObjectInfoLookup_doWork: dbname='"+dbname+"', objectName='"+objectName+"', source='"+source+"'.");
 //boolean notYetImplemented = true;
 //if (notYetImplemented)
 //	return Collections.emptyList();   // <<<<<<<<<<------------<<<<<<<<<<------------<<<<<<<<<<------------
@@ -156,6 +157,7 @@ System.out.println("doObjectInfoLookup_doWork: dbname='"+dbname+"', objectName='
 		for (DdlDetails storeEntry : objectList)
 		{
 			// from https://www.postgresql.org/docs/14/catalog-pg-class.html
+			//--------------------------------------------------
 			//   r = ordinary table, 
 			//   i = index, 
 			//   S = sequence, 
@@ -166,6 +168,9 @@ System.out.println("doObjectInfoLookup_doWork: dbname='"+dbname+"', objectName='
 			//   f = foreign table, 
 			//   p = partitioned table, 
 			//   I = partitioned index
+			//--------------------------------------------------
+			//  TR = Trigger --- added in method: getDbmsObjectList
+			//--------------------------------------------------
 			String type = storeEntry.getType();
 
 			if ( "r".equals(type) || "p".equals(type) )
@@ -200,9 +205,10 @@ System.out.println("doObjectInfoLookup_doWork: dbname='"+dbname+"', objectName='
 				catch (SQLException e) 
 				{ 
 					storeEntry.setObjectText( e.toString() ); 
+					_logger.warn("DDL Lookup. Problems Getting TABLE BASIC INFO information for: TableName='" + storeEntry.getObjectName() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + e);
 				}
 
-				
+
 				//--------------------------------------------
 				// get Table and Index SIZE (and index columns/DDL)
 				String sql_tableSize = ""
@@ -262,9 +268,10 @@ System.out.println("doObjectInfoLookup_doWork: dbname='"+dbname+"', objectName='
 				catch (SQLException e) 
 				{ 
 					storeEntry.setExtraInfoText( e.toString() ); 
+					_logger.warn("DDL Lookup. Problems Getting TABLE EXTRA INFO information for: TableName='" + storeEntry.getObjectName() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + e);
 				}
-				
 
+				
 				//--------------------------------------------
 				// GET sp__optdiag
 				if (pch.getConfig_doGetStatistics())
@@ -279,6 +286,7 @@ System.out.println("doObjectInfoLookup_doWork: dbname='"+dbname+"', objectName='
 			       "v" .equals(type) // view 
 			    || "m" .equals(type) // materialized view 
 			    || "S" .equals(type) // sequence 
+			    || "TR".equals(type) // TRIGGER (added by method: getDbmsObjectList) 
 			   )
 			{
 				// This should be stored
@@ -304,6 +312,7 @@ System.out.println("doObjectInfoLookup_doWork: dbname='"+dbname+"', objectName='
 					catch (SQLException e)
 					{
 						storeEntry.setObjectText( e.toString() );
+						_logger.warn("DDL Lookup. Problems Getting VIEW information for: ViewName='" + storeEntry.getObjectName() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + e);
 					}
 
 					//--------------------------------------------
@@ -324,6 +333,49 @@ System.out.println("doObjectInfoLookup_doWork: dbname='"+dbname+"', objectName='
 							storeEntry.setExtraInfoText( "TableList: " + StringUtil.toCommaStr(tableList) ); 
 						}
 					}
+				}
+				if ("TR".equals(type))
+				{
+					String sqlText = "";
+					String sql = ""
+						    + "select \n"
+						    + "    pg_get_triggerdef(t.oid, true) AS trigger_ddl \n"
+						    + "   ,pg_get_functiondef(t.tgfoid)   AS function_ddl \n"
+						    + "from pg_trigger t \n"
+						    + "where t.oid = " + storeEntry.getObjectId() + " \n"
+						    + "";
+
+					try (Statement statement = conn.createStatement(); ResultSet rs = statement.executeQuery(sql) )
+					{
+						while(rs.next())
+						{
+							String trigger_ddl  = rs.getString(1);
+							String function_ddl = rs.getString(2);
+
+							sqlText += (""
+									+ "---------------------- \n"
+									+ "-- TRIGGER-DDL: \n"
+									+ "---------------------- \n"
+									+ trigger_ddl + "\n"
+									+ "\n"
+									+ "---------------------- \n"
+									+ "-- FUNCTION-DDL: \n"
+									+ "---------------------- \n"
+									+ function_ddl + "\n"
+									+ "\n"
+									+ "");
+						}
+
+						storeEntry.setObjectText( sqlText );
+					}
+					catch (SQLException e)
+					{
+						storeEntry.setObjectText( e.toString() );
+						_logger.warn("DDL Lookup. Problems Getting TRIGGER information for: triggerName='" + storeEntry.getObjectName() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + e);
+					}
+
+					//--------------------------------------------
+					// if TRIGGER: Possibly parse the SQL statement and extract Tables, send those tables to 'DDL Storage'...
 				}
 				
 				// If it's a view, parse the view definition, and extract tables... which is post again to the DDL Storage
@@ -400,14 +452,77 @@ System.out.println("doObjectInfoLookup_doWork: dbname='"+dbname+"', objectName='
 
 				objectList.add(entry);
 			}
-
-			return objectList;
 		}
 		catch (SQLException e)
 		{
 			_logger.error("Problems Getting basic information about DDL for dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Skipping DDL Storage of this object. Caught: " + e);
 			return Collections.emptyList();
-			//return null;
 		}
+
+		//-------------------------------------------------------------
+		// Do some extra lookups... to get triggers for USER Tables
+		// Store TRIGGER name in UserTable dependsList
+		// and ADD the trigger name to the List of things that needs to be extracted
+		ArrayList<DdlDetails> triggerList = null;
+		for (DdlDetails lookupEntry : objectList)
+		{
+			// r=ordinary table, p=partitioned table
+			if ("r".equals(lookupEntry.getType()) || "p".equals(lookupEntry.getType()))
+			{
+				// Get TRIGGERS
+				sql = ""
+					    + "SELECT \n"
+					    + "     t.tgname AS trigger_name \n"
+					    + "    ,t.oid    AS trigger_object_id \n"
+					    + "FROM pg_trigger t \n"
+					    + "WHERE t.tgrelid = " + lookupEntry.getObjectId() + " \n"
+					    + "";
+				
+				try ( Statement statement = conn.createStatement(); ResultSet rs = statement.executeQuery(sql) )
+				{
+					while(rs.next())
+					{
+						DdlDetails addEntry = new DdlDetails();
+
+						String    triggerName   =  rs.getString   (1);
+						int       triggerObjId  =  rs.getInt      (2);
+						Timestamp triggerCrDate =  null;
+						
+						addEntry.setSearchDbname    ( dbname );
+						addEntry.setObjectName      ( triggerName );
+						addEntry.setSearchObjectName( triggerName ); // NOT Stored in DDL Store, used for: isDdlDetailsStored(), markDdlDetailsAsStored()
+						addEntry.setSource          ( source );
+						addEntry.setDependParent    ( dependParent );
+						addEntry.setDependLevel     ( dependLevel );
+						addEntry.setSampleTime      ( new Timestamp(System.currentTimeMillis()) );
+
+						addEntry.setType            ( "TR" );
+						addEntry.setOwner           ( lookupEntry.getOwner() );
+						addEntry.setObjectName      ( triggerName ); // Use the object name stored in the DBMS (for Sybase ASE it will always be stored as it was originally created)
+						addEntry.setObjectId        ( triggerObjId );
+						addEntry.setCrdate          ( triggerCrDate );
+						addEntry.setDbname          ( dbname );
+
+						// Add triggerName to >>>> TABLE's <<<< depends list
+						lookupEntry.addDependList("TR:" + triggerName);
+
+						if (triggerList == null)
+							triggerList = new ArrayList<DdlDetails>();
+						triggerList.add(addEntry);
+					}
+				}
+				catch (SQLException e)
+				{
+					_logger.error("Problems Getting Table TRIGGER information about DDL for dbname='" + dbname + "', objectName='" + lookupEntry.getObjectName() + "'. Skipping TRIGGER information. Caught: " + e);
+				}
+				
+				// Get VIEWS depends on this table...
+				// Should we do this or NOT... (lets skip this now)
+			}
+		}
+		if (triggerList != null)
+			objectList.addAll(triggerList);
+
+		return objectList;
 	}
 }

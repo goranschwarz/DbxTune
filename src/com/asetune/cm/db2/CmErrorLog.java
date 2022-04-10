@@ -20,7 +20,6 @@
  ******************************************************************************/
 package com.asetune.cm.db2;
 
-import java.sql.Connection;
 import java.sql.Timestamp;
 
 import com.asetune.ICounterController;
@@ -32,6 +31,7 @@ import com.asetune.cm.CountersModelAppend;
 import com.asetune.cm.db2.gui.CmErrorLogPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.sql.conn.DbxConnection;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -116,13 +116,13 @@ extends CountersModelAppend
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String sql = ""
 			    + "SELECT \n"

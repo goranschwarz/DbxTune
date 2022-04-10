@@ -254,4 +254,20 @@ public interface IReportEntry
 //	 * Any exceptions when getting data?
 //	 */
 //	Exception getExecption();
+	
+	
+	/**
+	 * Check if status entry in the "head" report exists 
+	 * @param statusKey
+	 * @return if the value has previously been set or not
+	 */
+	boolean hasStatusEntry(String statusKey);
+
+	/**
+	 * Set status entry in the "head" report 
+	 * 
+	 * @param statusKey    name of the status
+	 * @return The previous value, if not previously set it will be null
+	 */
+	Object setStatusEntry(String statusKey);
 }

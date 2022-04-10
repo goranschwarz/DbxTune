@@ -21,6 +21,7 @@
 package com.asetune.pcs;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.asetune.utils.StringUtil;
@@ -46,6 +47,11 @@ public class DdlDetails
 	private String    _extraInfoText    = null;
                                         
 	private boolean   _doSleepOption    = true;
+
+	// Used for debugging or print extra information
+	private boolean _isPrintInfo = false;
+	public void    setPrintInfo(boolean b)	{ _isPrintInfo = b; }
+	public boolean isPrintInfo()	        { return _isPrintInfo; }
 
 	public DdlDetails()
 	{
@@ -76,10 +82,10 @@ public class DdlDetails
 	public String    getOptdiagText()      { return _optdiagText; }
 	public String    getExtraInfoText()    { return _extraInfoText; }
                                            
-	public boolean   hasObjectText()       { return _objectText    != null; }
-	public boolean   hasDependsText()      { return _dependsText   != null; }
-	public boolean   hasOptdiagText()      { return _optdiagText   != null; }
-	public boolean   hasExtraInfoText()    { return _extraInfoText != null; }
+	public boolean   hasObjectText()       { return StringUtil.hasValue( _objectText    ); }
+	public boolean   hasDependsText()      { return StringUtil.hasValue( _dependsText   ); }
+	public boolean   hasOptdiagText()      { return StringUtil.hasValue( _optdiagText   ); }
+	public boolean   hasExtraInfoText()    { return StringUtil.hasValue( _extraInfoText ); }
 	public boolean   isSleepOptionSet()    { return _doSleepOption; }
 
 	public void setSearchDbname    (String    searchDbname)    { _searchDbname      = searchDbname     == null ? null : searchDbname    .trim(); }
@@ -95,13 +101,44 @@ public class DdlDetails
 	public void setSource          (String    source)          { _source            = source; }
 	public void setDependParent    (String    dependParent)    { _dependParent      = dependParent; }
 	public void setDependLevel     (int       dependLevel)     { _dependLevel       = dependLevel; }
-	public void setDependList   (List<String> dependList)      { _dependList        = dependList; }
+	public void setDependList      (List<String> dependList)   { _dependList        = dependList; }
 	public void setObjectText      (String    objectText)      { _objectText        = objectText; }
 	public void setDependsText     (String    dependsText)     { _dependsText       = dependsText; }
 	public void setOptdiagText     (String    optdiagText)     { _optdiagText       = optdiagText; }
 	public void setExtraInfoText   (String  extraInfoText)     { _extraInfoText     = extraInfoText; }
 	public void setSleepOption     (boolean doSleepOption)     { _doSleepOption     = doSleepOption; }
 
+	public void addDependList(String depends)
+	{
+		if (StringUtil.isNullOrBlank(depends))
+			return;
+
+		if (_dependList == null)
+			_dependList = new ArrayList<>();
+
+		_dependList.add(depends);
+	}
+	public void addDependList(List<String> dependList)
+	{
+		if (dependList == null)
+			return;
+
+		if (_dependList == null)
+			_dependList = new ArrayList<>();
+
+		_dependList.addAll(dependList); 
+	}
+	public void addDependsText(String dependsText)
+	{
+		if (dependsText == null)
+			return;
+
+		if (_dependsText == null)
+			_dependsText = "";
+
+		_dependsText += dependsText; 
+	}
+	
 	public String getSchemaAndObjectName()
 	{
 		return getOwner() + "." + getObjectName();
@@ -131,7 +168,7 @@ public class DdlDetails
 		return sb.toString();
 	}
 	
-	public String toStringDebug()
+	public String toStringDebug(int maxWidth)
 	{
 		StringBuilder sb = new StringBuilder();
 
@@ -148,13 +185,13 @@ public class DdlDetails
 		sb.append(" DependLevel = ") .append( getDependLevel() ).append("\n");
 		sb.append(" DependList  = '").append( getDependList()  ).append("'\n");
 		sb.append("-----ObjectText--------------------------------------------").append("\n");
-		sb.append(" ").append( getObjectText() ).append("\n");
+		sb.append(" ").append( StringUtil.truncate(getObjectText(), maxWidth, true, null) ).append("\n");
 		sb.append("-----DependsText-------------------------------------------").append("\n");
-		sb.append("").append( getDependsText() ).append("\n");
+		sb.append("").append( StringUtil.truncate(getDependsText(), maxWidth, true, null) ).append("\n");
 		sb.append("-----OptDiagText-------------------------------------------").append("\n");
-		sb.append("").append( getOptdiagText() ).append("\n");
+		sb.append("").append( StringUtil.truncate(getOptdiagText(), maxWidth, true, null) ).append("\n");
 		sb.append("-----ExtraInfoText-----------------------------------------").append("\n");
-		sb.append("").append( getExtraInfoText() ).append("\n");
+		sb.append("").append( StringUtil.truncate(getExtraInfoText(), maxWidth, true, null) ).append("\n");
 		sb.append("____END____________________________________________________").append("\n");
 		
 		return sb.toString();

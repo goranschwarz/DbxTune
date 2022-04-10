@@ -57,15 +57,20 @@ implements Comparator<List<Object>>
 
 		for (SortOptions so : _sortOptions)
 		{
-			String  colName                  = so.getColumnName();
-			boolean isColNameCaseInSensitive = so.isColumnNameCaseInSensitive();
+			String  colName                = so.getColumnName();
+			boolean isColNameCaseSensitive = so.isColumnNameCaseSensitive();
 
-			boolean isAscending              = so.isAscending();
-			boolean isCaseInSensitive        = so.isCaseInSensitive();
+			boolean isAscending            = so.isAscending();
+			boolean isCaseInSensitive      = so.isCaseInSensitive();
 			
-			int colPos = findColumn(colName, isColNameCaseInSensitive);
+			int colPos = findColumn(colName, isColNameCaseSensitive);
 			if (colPos == -1)
-				throw new RuntimeException("Sorting '" + _name + "', cant find column name '" + colName + "'.");
+			{
+				// Dismissing the "case sensitivity" and use case IN-SENSITIVE as a "backup"
+				colPos = findColumn(colName, false); 
+				if (colPos == -1)
+					throw new RuntimeException("Sorting '" + _name + "', cant find column name '" + colName + "'.");
+			}
 
 			result = compare(colName, colPos, isAscending, isCaseInSensitive, leftList, rightList);
 			if (result != 0)

@@ -37,10 +37,16 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 import com.asetune.SqlServerTune;
+import com.asetune.config.dbms.DbmsConfigIssue.Severity;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.MonRecordingInfo;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.Configuration;
+import com.asetune.utils.MathUtils;
+import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.Ver;
 
 
 public class SqlServerConfig
@@ -55,6 +61,8 @@ extends DbmsConfigAbstract
 	private boolean   _hasGui    = false;
 	private Timestamp _timestamp = null;
 
+	private long _sqlServerVersion = 0;
+	
 	
 	public static final String NON_DEFAULT          = "NonDefault";
 	public static final String CONFIG_NAME          = "Name";
@@ -119,6 +127,14 @@ extends DbmsConfigAbstract
 		" ) ";
 
 
+
+	public static final String PROPKEY_memory_warning_threshold_lt_percentOfPhysicalMemory = "DbmsConfigIssue.memory.warning.threshold.lt.percentOfPhysicalMemory";
+	public static final double DEFAULT_memory_warning_threshold_lt_percentOfPhysicalMemory = 70.0;
+
+	public static final String PROPKEY_memory_warning_threshold_gt_percentOfPhysicalMemory = "DbmsConfigIssue.memory.warning.threshold.gt.percentOfPhysicalMemory";
+	public static final double DEFAULT_memory_warning_threshold_gt_percentOfPhysicalMemory = 95.0;
+
+	
 //	@Override
 //	public String getSqlForDiff(boolean isOffline)
 //	{
@@ -266,10 +282,12 @@ extends DbmsConfigAbstract
 		_configMap         = new HashMap<String,SqlServerConfigEntry>();
 		_configList        = new ArrayList<SqlServerConfigEntry>();
 		_configSectionList = new ArrayList<String>();
+
+		_sqlServerVersion  = conn.getDbmsVersionNumber();
 		
 		try { setDbmsServerName(conn.getDbmsServerName()); } catch (SQLException ex) { setDbmsServerName(ex.getMessage()); };
 		try { setDbmsVersionStr(conn.getDbmsVersionStr()); } catch (SQLException ex) { setDbmsVersionStr(ex.getMessage()); };
-
+		
 		try { setLastUsedUrl( conn.getMetaData().getURL() ); } catch(SQLException ignore) { }
 		setLastUsedConnProp(conn.getConnPropOrDefault());
 
@@ -319,7 +337,8 @@ extends DbmsConfigAbstract
 					entry.sectionName        = getSectionName       (entry.configName);
 					entry.comment            = getConfigComment     (entry.configName);
 					entry.isPending          = entry.runValue != entry.configValue;
-					entry.isNonDefault       = entry.runValue != entry.defaultValue;
+//					entry.isNonDefault       = entry.runValue != entry.defaultValue;
+					entry.isNonDefault       = ! isDefaultConfigValue(entry.configName, entry.runValue);
 
 					// Add
 					_configMap .put(entry.configName, entry);
@@ -417,15 +436,189 @@ extends DbmsConfigAbstract
 			return;
 		}
 
-		// Check if we got any strange in the configuration
-		// in case it does: report that...
-		if ( ! _offline )
+		if ( _offline )
 		{
+			// Load saved Configuration Issues from the offline database
+			getOfflineConfigIssues(conn);
+		}
+		else
+		{
+			// Check if we got any strange in the configuration
+			// in case it does: report that...
 			checkConfig(conn);
 		}
 
 		// notify change
 		fireTableDataChanged();
+	}
+
+	@Override
+	public void checkConfig(DbxConnection conn)
+	{
+		if (_configMap == null)
+			return;
+
+		SqlServerConfigEntry entry = null;
+		String cfgName;
+
+		String    srvName    = "-UNKNOWN-";
+		Timestamp srvRestart = null;
+		try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
+		try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+
+		
+		//-------------------------------------------------------
+		cfgName = "optimize for ad hoc workloads";
+		entry = _configMap.get(cfgName);
+		if (entry != null)
+		{
+			if (entry.runValue == 1)
+			{
+				String key = "DbmsConfigIssue." + srvName + ".sp_configure." + cfgToPropName(cfgName) + ".isEnabled";
+
+				DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, cfgName, Severity.WARNING, 
+						"The Server Level Configuration '" + cfgName + "' is enabled. This will make it harder to find Performance Issues in the Plan Cache.", 
+						"Fix this using: exec sp_configure '" + cfgName + "', 0");
+
+				DbmsConfigManager.getInstance().addConfigIssue(issue);
+			}
+		}
+
+		//-------------------------------------------------------
+		cfgName = "max server memory (MB)";
+		entry = _configMap.get(cfgName);
+		if (entry != null)
+		{
+			// check if 'max server memory (MB)' is DEFAULT configured
+			if (entry.runValue == Integer.MAX_VALUE)
+			{
+				String key = "DbmsConfigIssue." + srvName + ".sp_configure." + cfgToPropName(cfgName) + ".isDefault";
+
+				DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, cfgName, Severity.INFO, 
+						"The Server Level Configuration '" + cfgName + "' is set to DEFAULT. This will/may eventually cause memeory issues like swapping etc.", 
+						"Fix this using: exec sp_configure '" + cfgName + "', /*80-90% of srv memory*/");
+
+				DbmsConfigManager.getInstance().addConfigIssue(issue);
+
+				_logger.info("Checking SQL Server Configuration '" + cfgName + "'. The default value '" + entry.runValue + "' is configured. This may cause issues in the future.");
+			}
+			else
+			{
+				// check if 'max server memory (MB)' is to LOW (below 70% of physical memory)
+				ResultSetTableModel rstm = ResultSetTableModel.executeQuery(conn, "select * from sys.dm_os_sys_memory", true, "dm_os_sys_memory");
+				if ( ! rstm.isEmpty() )
+				{
+					int total_physical_memory_kb = rstm.getValueAsInteger(0, "total_physical_memory_kb", true, -1);
+					if (total_physical_memory_kb != -1)
+					{
+						int    totalPhysicalMemoryMb = total_physical_memory_kb / 1024;
+						int    cfgMaxMemoryMb        = entry.runValue;
+						double pctOfPhysicalMemory   = MathUtils.round( (cfgMaxMemoryMb*1.0) / (totalPhysicalMemoryMb*1.0) * 100.0, 1);
+
+						double pctLtThreshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_memory_warning_threshold_lt_percentOfPhysicalMemory, DEFAULT_memory_warning_threshold_lt_percentOfPhysicalMemory);
+						double pctGtThreshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_memory_warning_threshold_gt_percentOfPhysicalMemory, DEFAULT_memory_warning_threshold_gt_percentOfPhysicalMemory);
+
+						_logger.info("Checking SQL Server Configuration '" + cfgName + "'. Found that '" + pctOfPhysicalMemory + "%' of the Physical Memory was configured. SqlServerConfigMb=" + cfgMaxMemoryMb + ", totalPhysicalMemoryMb=" + totalPhysicalMemoryMb + ". Thresholds for warnings: low=" + pctLtThreshold + "%, high=" + pctGtThreshold + "%");
+
+// NOTE: 'total_physical_memory_kb' from 'sys.dm_os_sys_memory' seems to be WRONG, it's LESS than the INSTALLED Memory
+//       - for instance in Linux: /proc/meminfo, MemTotal: 65,772,456 kB
+//         and in dm_os_sys_memory.total_physical_memory_kb = 52,617,216
+//       IF this is the same on Windows, then we need to DISABLE this check
+//       AND how should we do with Linux... Allow or "adjust" in some way!
+
+						if (pctOfPhysicalMemory < pctLtThreshold)
+						{
+							String key = "DbmsConfigIssue." + srvName + ".sp_configure." + cfgToPropName(cfgName) + ".may_be_to_low";
+
+							DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, cfgName, Severity.INFO, 
+									"The Server Level Configuration '" + cfgName + "' is probably a bit LOW. SQL-Server-Percent-of-Physical-Memory '" + pctOfPhysicalMemory + "%', SqlServerConfig=" + cfgMaxMemoryMb + ", TotalPhysicalMemoryMb=" + totalPhysicalMemoryMb + ".", 
+									"Fix this using: exec sp_configure '" + cfgName + "', /*80-90% of srv memory*/");
+
+							DbmsConfigManager.getInstance().addConfigIssue(issue);
+						}
+
+						if (pctOfPhysicalMemory > pctGtThreshold)
+						{
+							String key = "DbmsConfigIssue." + srvName + ".sp_configure." + cfgToPropName(cfgName) + ".may_be_to_high";
+
+							DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, cfgName, Severity.ERROR, 
+									"The Server Level Configuration '" + cfgName + "' is probably a bit HIGH. SQL-Server-Percent-of-Physical-Memory '" + pctOfPhysicalMemory + "%', SqlServerConfig=" + cfgMaxMemoryMb + ", TotalPhysicalMemoryMb=" + totalPhysicalMemoryMb + ".", 
+									"Fix this using: exec sp_configure '" + cfgName + "', /*80-90% of srv memory*/");
+
+							DbmsConfigManager.getInstance().addConfigIssue(issue);
+						}
+					}
+				}
+			}
+			
+			// check if 'max server memory (MB)' is to HIGH... how can we do that?
+			// FIXME: possibly use Perfmon(sys.dm_os_performance_counters): 'Target Server Memory (KB)' and 'Total Server Memory (KB)'
+		}
+		//-------------------------------------------------------
+		cfgName = "remote admin connections";
+		entry = _configMap.get(cfgName);
+		if (entry != null)
+		{
+			if (entry.runValue == 0)
+			{
+				String key = "DbmsConfigIssue." + srvName + ".sp_configure." + cfgToPropName(cfgName) + ".isDisabled";
+
+				DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, cfgName, Severity.WARNING, 
+						"The Server Level Configuration '" + cfgName + "' is NOT enabled. Enable this to be able to connect to SQL Server in an overload/emergency situation.", 
+						"Fix this using: exec sp_configure '" + cfgName + "', 1");
+
+				DbmsConfigManager.getInstance().addConfigIssue(issue);
+			}
+		}
+
+		//-------------------------------------------------------
+		cfgName = "cost threshold for parallelism";
+		entry = _configMap.get(cfgName);
+		if (entry != null)
+		{
+			if (entry.runValue == 5)
+			{
+				String key = "DbmsConfigIssue." + srvName + ".sp_configure." + cfgToPropName(cfgName) + ".isDefault";
+
+				DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, cfgName, Severity.WARNING, 
+						"The Server Level Configuration '" + cfgName + "' is set to DEFAULT. Make this a bit higher 50-100, then we wont use unnecessary resources on 'cheap' SQL Statements.", 
+						"Fix this using: exec sp_configure '" + cfgName + "', 50 /* or 100 */");
+
+				DbmsConfigManager.getInstance().addConfigIssue(issue);
+			}
+		}
+
+		// FIXME: Add more configuration checks
+		// 'max memory' ... should be (at least not) the MAX value... 2147483647  (go and check 'sys.dm_os_sys_info' and column ***_memory_kb)
+		// ... surf on more "preferred options" or other "sanity" checks...
+//-		Tempdb; SqlServerConfigText >>> Tempdb
+//			* Number of tempdb files, and SIZE should be the same (and autogrow size)... 
+//			* trace flags on earlier versions pre 2019: 1118 (Full Extents Only), 1117 (Grow All Files in a FileGroup Equally)
+//			* 2016 SP1 CU8 & 2017 CU5  solves Heavy Contention in Metadata
+//			* 1 file per core (up to 8 files)
+//			* MDF and LDF on same disk
+//			* waits: PAGELATCH, CMEMTHREAD (spinlock: SOS_CACHESTORE)
+//			* what LATCHES should I look at ???
+//				* PFS Page Waits
+//				* GAM Page Waits
+//				* SGAM Page Waits
+//			* temp Table Variable... workaround for 1 row "statistics"... Tracefalg: 2453 -- Allows table variables to trigger recompile (in PRE 2019) 
+//-		Stuff to look at;   "https://docs.microsoft.com/en-us/archive/blogs/sql_server_team/tempdb-files-and-trace-flags-and-updates-oh-my"
+//			* sys.dm_tran_active_snapshot_database_transactions, sys.dm_tran_version_store    (for ALLOW_SNAPSHOT_ISOLATION & READ_COMMITTED_SNAPSHOT)
+//			* verify my "Tempdb SPID Usage" with: https://www.littlekendra.com/2009/08/27/whos-using-all-that-space-in-tempdb-and-whats-their-plan/ 
+///-		implement; as right click menu (for Tempdb... somewhere)
+//			* tempdb **shrink** (checkpoint, dbcc shrinkfile; FAIL: dbcc dropcleanbuffers, dbcc freeproccache, dbcc shrinkfile; FAIL: dbcc freesessioncahce, dbcc freesystemcache, dbcc shrinkfile)
+//-		new Perf Tab;
+//			* SQL Agent Jobs ????
+	}
+
+	private static String cfgToPropName(String cfgName)
+	{
+		cfgName = cfgName.replace(" ", "_");
+		cfgName = cfgName.replace("(", "");
+		cfgName = cfgName.replace(")", "");
+
+		return cfgName;
 	}
 
 	/**
@@ -496,6 +689,29 @@ extends DbmsConfigAbstract
 		CONFIG_COMMENT_MAP = createConfigCommentMap();
 	}
 	
+	private boolean isDefaultConfigValue(String configName, int runValue)
+	{
+		if ("min server memory (MB)".equals(configName))
+		{
+			return runValue == 0 || runValue == 16;
+		}
+		else if ("remote login timeout (s)".equals(configName))
+		{
+			// SQL Server 2012 changes a configuration default
+			// below 2012:     20 seconds
+			// 2012 and above: 10 seconds
+			if (_sqlServerVersion >= Ver.ver(2012))
+				return runValue == 10;
+			else
+				return runValue == 20;
+		}
+		else
+		{
+			int defaultValue = getDefaultConfigValue(configName);
+			return defaultValue == runValue;
+		}
+	}
+
 	private int getDefaultConfigValue(String configName)
 	{
 		return getDefaultConfigValue(configName, -999);
@@ -588,6 +804,8 @@ extends DbmsConfigAbstract
 		map.put("user instances enabled",             0);
 		map.put("user options",                       0);
 		map.put("xp_cmdshell",                        0);
+		map.put("RPC parameter data validation",      0);
+		map.put("Web Assistant Procedures",           0);
 		
 		// SQL-Server 2017 (probably earlier as well)
 		map.put("backup checksum default",            0);
@@ -792,6 +1010,8 @@ extends DbmsConfigAbstract
 		map.put("user instances enabled",             SECTION_UNSPECIFIED);
 		map.put("user options",                       SECTION_UNSPECIFIED);
 		map.put("xp_cmdshell",                        SECTION_UNSPECIFIED);
+		map.put("RPC parameter data validation",      SECTION_UNSPECIFIED);
+		map.put("Web Assistant Procedures",           SECTION_UNSPECIFIED);
 
 		// SQL-Server 2017 (probably earlier as well)
 		map.put("backup checksum default",            SECTION_UNSPECIFIED);
@@ -915,6 +1135,8 @@ extends DbmsConfigAbstract
 		map.put("user instances enabled",             NO_COMMENT);
 		map.put("user options",                       NO_COMMENT);
 		map.put("xp_cmdshell",                        NO_COMMENT);
+		map.put("RPC parameter data validation",      NO_COMMENT);
+		map.put("Web Assistant Procedures",           NO_COMMENT);
 		
 		// SQL-Server 2017 (probably earlier as well)
 		map.put("backup checksum default",            NO_COMMENT);

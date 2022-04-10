@@ -1569,7 +1569,7 @@ implements IReportEntry
 					//+ "<!--[if !mso]><!--> \n" // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
 
 					+ "\n<br>\n"
-					+ getFormattedSqlAsTooltipDiv(sqlText, dbmsVendor) + "\n"
+					+ getFormattedSqlAsTooltipDiv(sqlText, "Hover or Click to see formatted SQL Text...", dbmsVendor) + "\n"
 //					+ "<br>\n"
 					+ "<details open> \n"
 					+ "<summary>Show/Hide Table information for " + tableList.size() + " table(s): " + listToHtmlCode(tableList) + "</summary> \n"
@@ -1597,7 +1597,7 @@ implements IReportEntry
 		throw new RuntimeException("getDbmsTableInfoAsHtmlTable(DbxConnection conn, Set<String> tableList, boolean includeIndexInfo, String classname) -- Must be implemented by any subclass.");
 	}
 
-	public String getFormattedSqlAsTooltipDiv(String sql, String vendor)
+	public String getFormattedSqlAsTooltipDiv(String sql, String labelText, String vendor)
 	{
 		String displayText = ""
 				+ "------------------------------------------------------------------------------------------------------------------------- \n"
@@ -1619,14 +1619,27 @@ implements IReportEntry
 
 		
 		// Put the "Actual Executed SQL Text" as a "tooltip"
-		return "<div title='Click to see Formatted SQL Text' "
+		return "<div title='" + labelText + "' "
 				+ "data-toggle='modal' "
 				+ "data-target='#dbx-view-sqltext-dialog' "
 //				+ "data-objectname='" + Hashkey + "' "
 				+ "data-tooltip=\""   + displayText     + "\" "
-				+ ">&#x1F4AC; Hover or Click to see formatted SQL Text...</div>"; // &#x1F4AC; ==>> symbol popup with "..."
+				+ ">&#x1F4AC; " + labelText + "</div>"; // &#x1F4AC; ==>> symbol popup with "..."
 	}
 
+	public String getTextAsTooltipDiv(String displayText, String labelText)
+	{
+		displayText = StringEscapeUtils.escapeHtml4(displayText);
+		
+		// Put the "Actual Executed SQL Text" as a "tooltip"
+		return "<div title='" + labelText + "' "
+				+ "data-toggle='modal' "
+				+ "data-target='#dbx-view-sqltext-dialog' "
+//				+ "data-objectname='" + Hashkey + "' "
+				+ "data-tooltip=\""   + displayText     + "\" "
+				+ ">&#x1F4AC; " + labelText + "</div>"; // &#x1F4AC; ==>> symbol popup with "..."
+	}
+	
 
 	/**
 	 * Write a HTML "TH" with plain old tooltip
@@ -1674,6 +1687,29 @@ implements IReportEntry
 		{
 			return "<b>" + diff + "</b>" + sepStr + "<i>" + abs + "</i>";
 		}
+	}
+
+	/**
+	 * Check if status entry in the "head" report exists 
+	 * @param statusKey
+	 * @return if the value has previously been set or not
+	 */
+	@Override
+	public boolean hasStatusEntry(String statusKey)
+	{
+		return getReportingInstance().hasStatusEntry(statusKey);
+	}
+
+	/**
+	 * Set status entry in the "head" report 
+	 * 
+	 * @param statusKey    name of the status
+	 * @return The previous value, if not previously set it will be null
+	 */
+	@Override
+	public Object setStatusEntry(String statusKey)
+	{
+		return getReportingInstance().setStatusEntry(statusKey);
 	}
 }
 

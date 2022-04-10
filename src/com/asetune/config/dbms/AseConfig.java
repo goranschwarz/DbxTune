@@ -529,10 +529,15 @@ extends DbmsConfigAbstract
 			return;
 		}
 
-		// Check if we got any strange in the configuration
-		// in case it does: report that...
-		if ( ! _offline )
+		if ( _offline )
 		{
+			// Load saved Configuration Issues from the offline database
+			getOfflineConfigIssues(conn);
+		}
+		else
+		{
+			// Check if we got any strange in the configuration
+			// in case it does: report that...
 			checkConfig(conn);
 		}
 		

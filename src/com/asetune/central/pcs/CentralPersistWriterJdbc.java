@@ -322,6 +322,7 @@ extends CentralPersistWriterBase
 					_logger.info("H2 URL add option: DATABASE_TO_UPPER=false");
 					urlMap.put("DATABASE_TO_UPPER", "false");
 				}
+				// Also consider: IGNORECASE and CASE_INSENSITIVE_IDENTIFIERS
 
 				// This is a test to see if H2 behaves better with AseTune
 				// Since AseTune only *writes* to the database... we do not need to ReUseSpace (nothing gets deleted)

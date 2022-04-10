@@ -48,15 +48,16 @@ extends SqlCompletion
 			addCatalog = true;
 		}
 			
-		String q = provider.getDbIdentifierQuoteString();
+		String q1 = provider.getDbIdentifierQuoteStringStart();
+		String q2 = provider.getDbIdentifierQuoteStringEnd();
 
-		String catalogName = quoteNames ? q+tmpCatalogName+q : provider.fixStrangeNames(tmpCatalogName);
-		String schemaName  = quoteNames ? q+pi._procSchema+q : provider.fixStrangeNames(pi._procSchema);
-		String tableName   = quoteNames ? q+pi._procName+q   : provider.fixStrangeNames(pi._procName);
+		String catalogName = quoteNames ? q1 + tmpCatalogName + q2 : provider.fixStrangeNames(tmpCatalogName);
+		String schemaName  = quoteNames ? q1 + pi._procSchema + q2 : provider.fixStrangeNames(pi._procSchema);
+		String tableName   = quoteNames ? q1 + pi._procName   + q2 : provider.fixStrangeNames(pi._procName);
 		
 		if (pi._oraPackageName != null)
 		{
-			String pkgName = quoteNames ? q+pi._oraPackageName+q : provider.fixStrangeNames(pi._oraPackageName);
+			String pkgName = quoteNames ? q1 + pi._oraPackageName + q2 : provider.fixStrangeNames(pi._oraPackageName);
 			tableName = tableName + "." + pkgName;
 		}
 			
@@ -67,6 +68,10 @@ extends SqlCompletion
 //			schemaName = "";
 //			addSchema = addCatalog; // if catalog is true, we need to add a simple '.'
 //		}
+
+		String dbmsDefaultSchemaName = provider.getDbDefaultSchemaName();
+		if (StringUtil.hasValue(dbmsDefaultSchemaName) && dbmsDefaultSchemaName.equals(pi._procSchema))
+			addSchema = false;
 
 		String out = "";
 		if (addCatalog) out += catalogName + ".";

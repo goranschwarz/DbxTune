@@ -21,7 +21,6 @@
 package com.asetune.cm.postgres;
 
 import java.math.BigDecimal;
-import java.sql.Connection;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -48,7 +47,9 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.MathUtils;
 import com.asetune.utils.TimeUtils;
 
 /**
@@ -81,11 +82,16 @@ extends CountersModel
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
-	public static final String[] PCT_COLUMNS      = new String[] { "fetch_efficency_pct", "fetch_efficency_slide_pct" };
+	public static final String[] PCT_COLUMNS      = new String[] { 
+			"fetch_efficency_pct", 
+			"fetch_efficency_slide_pct",
+			"cache_hit_pct"
+	};
 	public static final String[] DIFF_COLUMNS     = new String[] {
 			"numbackends",
 			"xact_commit",
 			"xact_rollback",
+			"total_reads",
 			"blks_read",
 			"blks_hit",
 			"tup_returned",
@@ -190,6 +196,8 @@ extends CountersModel
 	public static final String GRAPH_NAME_CONNECTIONS_SUM           = "ConnectionsSum";
 	public static final String GRAPH_NAME_COMMITS                   = "Commits";
 	public static final String GRAPH_NAME_ROLLBACKS                 = "Rollbacks";
+	public static final String GRAPH_NAME_CACHE_HIT_PCT             = "CacheHitPct";
+	public static final String GRAPH_NAME_TOTAL_READS               = "TotalReads";
 	public static final String GRAPH_NAME_READS                     = "Reads";
 	public static final String GRAPH_NAME_CACHE_HITS                = "CacheHits";
 	public static final String GRAPH_NAME_ROWS_RETURNED             = "RowsReturned";
@@ -212,7 +220,7 @@ extends CountersModel
 	}
 	
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -222,19 +230,29 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
-		return "select \n"
-			+ "    * \n"
-			+ "    , pg_database_size(datname) / 1024 /1024 as dbsize_mb \n"
-			+ "    , cast( CASE WHEN tup_returned > 0 THEN (tup_fetched*1.0)/(tup_returned*1.0)*100.0 ELSE null END as numeric(10,2)) as fetch_efficency_pct \n"
-			+ "    , cast( 0.0   as numeric(10,2)) as fetch_efficency_slide_pct \n"
-			+ "    , cast( 0     as bigint)        as tup_fetched_in_slide \n"
-			+ "    , cast( 0     as bigint)        as tup_returned_in_slide \n"
-			+ "    , cast( 'n/a' as varchar(30))   as slide_time \n"
-			+ "    , (select setting::int from pg_settings where name='max_connections') as srv_cfg_max_connections \n"
-			+ "from pg_catalog.pg_stat_database \n"
-			+ "where datname not like 'template%' \n"
+		return ""
+			+ "SELECT \n"
+			+ "     sd.* \n"
+			+ "    ,(sd.blks_hit + sd.blks_read)   AS total_reads \n"
+			+ "    ,100.0 * (sd.blks_hit*1.0) / NULLIF((sd.blks_hit + sd.blks_read), 0)   AS cache_hit_pct \n"
+			+ "    ,pg_database_size(sd.datname) / 1024 /1024                             AS dbsize_mb \n"
+			+ "    ,CAST( CASE WHEN sd.tup_returned > 0 THEN (sd.tup_fetched*1.0)/(sd.tup_returned*1.0)*100.0 ELSE null END as numeric(10,2)) AS fetch_efficency_pct \n"
+			+ "    ,CAST( 0.0   as numeric(10,2))  AS fetch_efficency_slide_pct \n"
+			+ "    ,CAST( 0     as bigint)         AS tup_fetched_in_slide \n"
+			+ "    ,CAST( 0     as bigint)         AS tup_returned_in_slide \n"
+			+ "    ,CAST( 'n/a' as varchar(30))    AS slide_time \n"
+			+ "    ,(SELECT setting::int FROM pg_settings WHERE name = 'max_connections') AS srv_cfg_max_connections \n"
+			+ "    ,d.datconnlimit                 AS db_conn_limit \n"
+			+ "    ,a.rolname                      AS db_owner \n"
+			+ "    ,d.datcollate                   AS db_collation \n" 
+			+ "    ,CAST(d.datacl as varchar(512)) AS db_access_privileges \n" 
+			+ "FROM pg_stat_database sd \n"
+			+ "INNER JOIN pg_database d ON sd.datid = d.oid \n"
+			+ "INNER JOIN pg_authid   a ON d.datdba = a.oid \n"
+//			+ "WHERE sd.datname NOT LIKE 'template%' \n"
+			+ "WHERE NOT d.datistemplate \n"
 			+ "";
 	}
 
@@ -259,7 +277,7 @@ extends CountersModel
 	}
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		try 
 		{
@@ -339,6 +357,9 @@ extends CountersModel
 		int tup_returned_in_slide_pos     = -1;
 		int slide_time_pos                = -1;
 
+		int blks_hit_pos                  = -1;
+		int total_reads_pos               = -1;
+		int cache_hit_pct_pos             = -1;
 
 		// Find column Id's
 		List<String> colNames = diffData.getColNames();
@@ -355,6 +376,10 @@ extends CountersModel
 			else if (colName.equals("tup_fetched_in_slide"))      tup_fetched_in_slide_pos      = colId;
 			else if (colName.equals("tup_returned_in_slide"))     tup_returned_in_slide_pos     = colId;
 			else if (colName.equals("slide_time"))                slide_time_pos                = colId;
+
+			else if (colName.equals("blks_hit"))                  blks_hit_pos                  = colId;
+			else if (colName.equals("total_reads"))               total_reads_pos               = colId;
+			else if (colName.equals("cache_hit_pct"))             cache_hit_pct_pos             = colId;
 		}
 
 		// Loop on all diffData rows
@@ -363,6 +388,21 @@ extends CountersModel
 			tup_fetched  = ((Number)diffData.getValueAt(rowId, tup_fetched_pos )).longValue();
 			tup_returned = ((Number)diffData.getValueAt(rowId, tup_returned_pos)).longValue();
 
+			Long blks_hit    = ((Number)diffData.getValueAt(rowId, blks_hit_pos   )).longValue();
+			Long total_reads = ((Number)diffData.getValueAt(rowId, total_reads_pos)).longValue();
+
+			// COLUMN: cache_hit_pct
+			if (blks_hit != null && total_reads != null)
+			{
+				Double cache_hit_pct = null;
+				if (total_reads > 0)
+				{
+					cache_hit_pct = 100.0 * ((blks_hit*1.0) / (total_reads*1.0));
+					cache_hit_pct = MathUtils.round(cache_hit_pct, 3);
+				}
+				diffData.setValueAt(cache_hit_pct, rowId, cache_hit_pct_pos);
+			}
+			
 			// COLUMN: fetch_efficency_pct
 			if (tup_returned > 0)
 			{
@@ -553,9 +593,31 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
+		addTrendGraph(GRAPH_NAME_CACHE_HIT_PCT,
+			"Data Cache Hit Percent", 	                          // Menu CheckBox text
+			"Data Cache Hit Percent ("+SHORT_NAME+")",            // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			null, LabelType.Dynamic, 
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			true, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_TOTAL_READS,
+			"Cache Total Reads (blks_read+blks_hit)", 	                           // Menu CheckBox text
+			"Cache Total Reads (blks_read+blks_hit) Per Second ("+SHORT_NAME+")",  // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			null, LabelType.Dynamic, 
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			true, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
 		addTrendGraph(GRAPH_NAME_READS,
-			"Reads", 	                         // Menu CheckBox text
-			"Reads per second ("+SHORT_NAME+")", // Graph Label 
+			"Physical Reads (blks_read)", 	                          // Menu CheckBox text
+			"Physical Reads (blks_read) per second ("+SHORT_NAME+")", // Graph Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
@@ -565,8 +627,8 @@ extends CountersModel
 			-1);   // minimum height
 
 		addTrendGraph(GRAPH_NAME_CACHE_HITS,
-			"Cache Hits", 	                         // Menu CheckBox text
-			"Cache Hits per second ("+SHORT_NAME+")", // Graph Label 
+			"Cache Read Hits (blks_hit)", 	                          // Menu CheckBox text
+			"Cache Read Hits (blks_hit) per second ("+SHORT_NAME+")", // Graph Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CACHE,
@@ -576,8 +638,8 @@ extends CountersModel
 			-1);   // minimum height
 
 		addTrendGraph(GRAPH_NAME_ROWS_RETURNED,
-			"Rows Returned", 	                         // Menu CheckBox text
-			"Rows Returned per second ("+SHORT_NAME+")", // Graph Label 
+			"Rows Returned (rows used after filtering)", 	                         // Menu CheckBox text
+			"Rows Returned (rows used after filtering) per second ("+SHORT_NAME+")", // Graph Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CPU,
@@ -587,8 +649,8 @@ extends CountersModel
 			-1);   // minimum height
 
 		addTrendGraph(GRAPH_NAME_ROWS_FETCHED,
-			"Rows Fetched", 	                         // Menu CheckBox text
-			"Rows Fetched per second ("+SHORT_NAME+")", // Graph Label 
+			"Rows Fetched (rows read before filter)", 	                          // Menu CheckBox text
+			"Rows Fetched (rows read before filter) per second ("+SHORT_NAME+")", // Graph Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CPU,
@@ -709,7 +771,7 @@ extends CountersModel
 	}
 
 
-	private void localUpdateGraphData(TrendGraphDataPoint tgdp, int dataType, String colname)
+	private void localUpdateGraphData(TrendGraphDataPoint tgdp, int dataType, boolean addSummaryRow, boolean doAverageSum, String colname)
 	{
 //		// Get database count (do dot include template databases)
 //		int size = 0;
@@ -720,12 +782,16 @@ extends CountersModel
 //				size++;
 //		}
 			
-		
+//System.out.println("localUpdateGraphData(): rowCount="+getRowCount()+", size="+(this.size())+", adjSize="+(addSummaryRow ? this.size()+1 : this.size())+", name='"+tgdp.getName()+"', addSummaryRow="+addSummaryRow+", colname='"+colname+"'.");
+
 		// Write 1 "line" for every db (except for 'template*' databases)
-		Double[] dArray = new Double[this.size()];
+		Double[] dArray = new Double[ addSummaryRow ? this.size()+1 : this.size()];
 		String[] lArray = new String[dArray.length];
-		int ap = 0;
-		for (int r = 0; r < dArray.length; r++) // we still need to loop all rows...
+		int ap = addSummaryRow ? 1 : 0;
+		double sum = 0;
+
+		int rc = this.size();
+		for (int r = 0; r < rc; r++) // we still need to loop all rows...
 		{
 			String dbname = this.getAbsString(r, "datname");
 			if (dbname != null && !dbname.startsWith("template"))
@@ -736,10 +802,27 @@ extends CountersModel
 				else if (dataType == CountersModel.DATA_RATE) data = this.getRateValueAsDouble(r, colname);
 				else throw new RuntimeException("dataType(tgName="+tgdp.getName()+"): Unsupported dataType="+dataType);
 				
+				if (data != null)
+					sum += data;
+
+//System.out.println("     xxx: r="+r+", rc="+rc+", ap="+ap+", size()="+size()+", lArray.length="+lArray.length+", dArray.length="+dArray.length+", dbname='"+dbname+"'.");
 				lArray[ap] = dbname;
 				dArray[ap] = data;
 				ap++;
 			}
+		}
+
+		if (addSummaryRow && this.size() > 0)
+		{
+			String sumLabel = "ALL-DBs";
+			if (doAverageSum)
+			{
+				sumLabel = "AVG-ALL-DBs";
+				sum = sum / (this.size() * 1.0);
+			}
+				
+			lArray[0] = sumLabel;
+			dArray[0] = sum;
 		}
 
 		// Set the values
@@ -749,26 +832,28 @@ extends CountersModel
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
-		if (GRAPH_NAME_FETCH_EFFECIENT_PCT      .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "fetch_efficency_pct");
-		if (GRAPH_NAME_FETCH_EFFECIENT_SLIDE_PCT.equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "fetch_efficency_slide_pct");
-		if (GRAPH_NAME_FETCH_EFFECIENT_ABS_PCT  .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_ABS,  "fetch_efficency_pct");
-		if (GRAPH_NAME_CONNECTIONS              .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_ABS,  "numbackends");
-		if (GRAPH_NAME_COMMITS                  .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "xact_commit");
-		if (GRAPH_NAME_ROLLBACKS                .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "xact_rollback");
-		if (GRAPH_NAME_READS                    .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "blks_read");
-		if (GRAPH_NAME_CACHE_HITS               .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "blks_hit");
-		if (GRAPH_NAME_ROWS_RETURNED            .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "tup_returned");
-		if (GRAPH_NAME_ROWS_FETCHED             .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "tup_fetched");
-		if (GRAPH_NAME_ROWS_INSERTS             .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "tup_inserted");
-		if (GRAPH_NAME_ROWS_UPDATED             .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "tup_updated");
-		if (GRAPH_NAME_ROWS_DELETED             .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "tup_deleted");
-		if (GRAPH_NAME_ROWS_CONFLICTS           .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "conflicts");
-		if (GRAPH_NAME_TEMP_FILES               .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "temp_files");
-		if (GRAPH_NAME_TEMP_BYTES               .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "temp_bytes");
-		if (GRAPH_NAME_DEADLOCKS                .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "deadlocks");
-		if (GRAPH_NAME_READ_TIME                .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "blk_read_time");
-		if (GRAPH_NAME_WRITE_TIME               .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "blk_write_time");
-		if (GRAPH_NAME_DBSIZE_MB                .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_ABS,  "dbsize_mb");
+		if (GRAPH_NAME_FETCH_EFFECIENT_PCT      .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , true , "fetch_efficency_pct");
+		if (GRAPH_NAME_FETCH_EFFECIENT_SLIDE_PCT.equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , true , "fetch_efficency_slide_pct");
+		if (GRAPH_NAME_FETCH_EFFECIENT_ABS_PCT  .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_ABS,  true , true , "fetch_efficency_pct");
+		if (GRAPH_NAME_CONNECTIONS              .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_ABS,  false, false, "numbackends");
+		if (GRAPH_NAME_COMMITS                  .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "xact_commit");
+		if (GRAPH_NAME_ROLLBACKS                .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "xact_rollback");
+		if (GRAPH_NAME_CACHE_HIT_PCT            .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , true , "cache_hit_pct");
+		if (GRAPH_NAME_TOTAL_READS              .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "total_reads");
+		if (GRAPH_NAME_READS                    .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "blks_read");
+		if (GRAPH_NAME_CACHE_HITS               .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "blks_hit");
+		if (GRAPH_NAME_ROWS_RETURNED            .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "tup_returned");
+		if (GRAPH_NAME_ROWS_FETCHED             .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "tup_fetched");
+		if (GRAPH_NAME_ROWS_INSERTS             .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "tup_inserted");
+		if (GRAPH_NAME_ROWS_UPDATED             .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "tup_updated");
+		if (GRAPH_NAME_ROWS_DELETED             .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "tup_deleted");
+		if (GRAPH_NAME_ROWS_CONFLICTS           .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "conflicts");
+		if (GRAPH_NAME_TEMP_FILES               .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "temp_files");
+		if (GRAPH_NAME_TEMP_BYTES               .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "temp_bytes");
+		if (GRAPH_NAME_DEADLOCKS                .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "deadlocks");
+		if (GRAPH_NAME_READ_TIME                .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "blk_read_time");
+		if (GRAPH_NAME_WRITE_TIME               .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "blk_write_time");
+		if (GRAPH_NAME_DBSIZE_MB                .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_ABS,  true , false, "dbsize_mb");
 
 		if (GRAPH_NAME_CONNECTIONS_SUM.equals(tgdp.getName()))
 		{

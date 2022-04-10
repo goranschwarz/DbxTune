@@ -20,7 +20,6 @@
  ******************************************************************************/
 package com.asetune.tools.sqlcapture;
 
-import java.sql.Connection;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -28,6 +27,7 @@ import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Ver;
 
 /**
@@ -114,13 +114,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -138,7 +138,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String cols1 = "";
 		String cols2 = "";

@@ -22,7 +22,6 @@ package com.asetune.cm.ase;
 
 import java.awt.Component;
 import java.math.BigDecimal;
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -53,6 +52,7 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -616,20 +616,20 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 		return pkCols;
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		boolean hasMonRole = false;
 		boolean isMonitoringEnabled = false;
@@ -803,7 +803,7 @@ extends CountersModel
 			cols1 += ", CheckPoints         = sum(CheckPoints) \n";
 			cols1 += ", NumDeadlocks        = sum(NumDeadlocks) \n";
 			cols1 += ", DiagnosticDumps     = sum(DiagnosticDumps) \n";
-			cols1 += ", Connections         = sum(Connections) \n";
+			cols1 += ", Connections         = sum(DbxConnections) \n";
 			cols1 += ", MaxRecovery         = avg(MaxRecovery) \n";
 			cols1 += ", Transactions        = sum(Transactions) \n";
 			cols1 += ", StartDate           = min(StartDate) \n";
@@ -1420,7 +1420,7 @@ extends CountersModel
 			arr[1] = this.getAbsValueAsDouble (0, "distinctLogins");
 			arr[2] = this.getDiffValueAsDouble(0, "aaConnections");
 			arr[3] = this.getRateValueAsDouble(0, "aaConnections");
-			_logger.debug("updateGraphData(ConnectionsGraph): Connections(Abs)='"+arr[0]+"', distinctLogins(Abs)='"+arr[1]+"', aaConnections(Diff)='"+arr[2]+"', aaConnections(Rate)='"+arr[3]+"'.");
+			_logger.debug("updateGraphData(DbxConnectionsGraph): Connections(Abs)='"+arr[0]+"', distinctLogins(Abs)='"+arr[1]+"', aaConnections(Diff)='"+arr[2]+"', aaConnections(Rate)='"+arr[3]+"'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

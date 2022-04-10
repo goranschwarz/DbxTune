@@ -48,6 +48,7 @@ extends TabularCntrPanel
 
 	public static final String  TOOLTIP_sample_systemThreads = "<html>Sample System SPID's that executes in the SQL Server.<br><b>Note</b>: This is not a filter, you will have to wait for next sample time for this option to take effect.</html>";
 	public static final String  TOOLTIP_sample_sqlText       = "<html>Sample last executed SQL Text from the client.<br><b>Note</b>: This may NOT be the SQL Statement that is responsible for the tempdb usage, it's just the lastest SQL text executed by the session_id.</html>";
+	public static final String  TOOLTIP_sample_TotalUsageMb_includeInternalObjects = "<html>The <i>Sess/TaskInternalObjectMb</i> columns seems to be a bit strange (not trustworthy). So this option is if the columns 'SessInternalObjectMb' and 'TaskInternalObjectMb' should be <b>included</b> in the column 'TotalUsageMb'.</html>";
 
 	public CmTempdbSpidUsagePanel(CountersModel cm)
 	{
@@ -112,8 +113,9 @@ extends TabularCntrPanel
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();
-		JCheckBox sampleSystemThreads_chk = new JCheckBox("Show system processes",         conf == null ? CmTempdbSpidUsage.DEFAULT_sample_systemThreads : conf.getBooleanProperty(CmTempdbSpidUsage.PROPKEY_sample_systemThreads, CmTempdbSpidUsage.DEFAULT_sample_systemThreads));
-		JCheckBox sampleSqlText_chk       = new JCheckBox("Sample Last Executed SQL Text", conf == null ? CmTempdbSpidUsage.DEFAULT_sample_sqlText       : conf.getBooleanProperty(CmTempdbSpidUsage.PROPKEY_sample_sqlText      , CmTempdbSpidUsage.DEFAULT_sample_sqlText));
+		JCheckBox sampleSystemThreads_chk = new JCheckBox("Show system processes",                                 conf == null ? CmTempdbSpidUsage.DEFAULT_sample_systemThreads                       : conf.getBooleanProperty(CmTempdbSpidUsage.PROPKEY_sample_systemThreads                      , CmTempdbSpidUsage.DEFAULT_sample_systemThreads));
+		JCheckBox sampleSqlText_chk       = new JCheckBox("Sample Last Executed SQL Text",                         conf == null ? CmTempdbSpidUsage.DEFAULT_sample_sqlText                             : conf.getBooleanProperty(CmTempdbSpidUsage.PROPKEY_sample_sqlText                            , CmTempdbSpidUsage.DEFAULT_sample_sqlText));
+		JCheckBox sampleIntObj_chk        = new JCheckBox("Include 'Sess/TaskInternalObjectMb' in 'TotalUsageMb'", conf == null ? CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_includeInternalObjects : conf.getBooleanProperty(CmTempdbSpidUsage.PROPKEY_sample_TotalUsageMb_includeInternalObjects, CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_includeInternalObjects));
 
 		sampleSystemThreads_chk.setName(CmTempdbSpidUsage.PROPKEY_sample_systemThreads);
 		sampleSystemThreads_chk.setToolTipText(TOOLTIP_sample_systemThreads);
@@ -121,8 +123,12 @@ extends TabularCntrPanel
 		sampleSqlText_chk.setName(CmTempdbSpidUsage.PROPKEY_sample_sqlText);
 		sampleSqlText_chk.setToolTipText(TOOLTIP_sample_sqlText);
 
+		sampleIntObj_chk.setName(CmTempdbSpidUsage.PROPKEY_sample_TotalUsageMb_includeInternalObjects);
+		sampleIntObj_chk.setToolTipText(TOOLTIP_sample_TotalUsageMb_includeInternalObjects);
+
 		panel.add(sampleSystemThreads_chk, "wrap");
 		panel.add(sampleSqlText_chk      , "wrap");
+		panel.add(sampleIntObj_chk       , "wrap");
 
 		sampleSystemThreads_chk.addActionListener(new ActionListener()
 		{
@@ -149,6 +155,22 @@ extends TabularCntrPanel
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
 				conf.setProperty(CmTempdbSpidUsage.PROPKEY_sample_sqlText, ((JCheckBox)e.getSource()).isSelected());
+				conf.save();
+				
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+		
+		sampleIntObj_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				conf.setProperty(CmTempdbSpidUsage.PROPKEY_sample_TotalUsageMb_includeInternalObjects, ((JCheckBox)e.getSource()).isSelected());
 				conf.save();
 				
 				// ReInitialize the SQL

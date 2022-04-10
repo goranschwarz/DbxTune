@@ -804,6 +804,7 @@ implements Memory.MemoryListener
 
 	}
 	
+	
 	/*---------------------------------------------------
 	** BEGIN: implementing Memory.MemoryListener
 	**---------------------------------------------------
@@ -1115,6 +1116,15 @@ implements Memory.MemoryListener
 		{
 			_logger.error("No writers installed to the PersistentCounterHandler, this is NO-GUI... So I do not see the need for me to start.");
 			return;
+		}
+
+		//---------------------------
+		// START Scheduler if the implementing CounterController needs it
+		//---------------------------
+		getCounterController().setScheduler( getCounterController().createScheduler(false) );
+		if (getCounterController().getScheduler() != null)
+		{
+			getCounterController().startScheduler();
 		}
 
 		//---------------------------
@@ -1707,6 +1717,14 @@ implements Memory.MemoryListener
 			int maxWaitTimeInMs = 10 * 1000;
 			_logger.info("Stopping the PCS Thread (and it's sub threads). maxWaitTimeInMs="+maxWaitTimeInMs);
 			pch.stop(true, maxWaitTimeInMs);
+		}
+
+		//---------------------------
+		// STOP Scheduler if any is installed
+		//---------------------------
+		if (getCounterController().getScheduler() != null)
+		{
+			getCounterController().stopScheduler();
 		}
 
 		_logger.info("Thread '"+Thread.currentThread().getName()+"' ending, this should lead to a server STOP.");

@@ -25,7 +25,6 @@ import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.sql.Connection;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -46,6 +45,7 @@ import org.fife.ui.rtextarea.SearchEngine;
 
 import com.asetune.IGuiController;
 import com.asetune.cm.CountersModel;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
@@ -592,7 +592,7 @@ extends JDialog implements ActionListener, ChangeListener
 	{
 //		Connection conn = AseTune.getCounterCollector().getMonConnection();
 //		Connection conn = CounterController.getInstance().getMonConnection();
-		Connection conn = _cm.getCounterController().getMonConnection();
+		DbxConnection conn = _cm.getCounterController().getMonConnection();
 
 		String sqlInit  = _cm.getSqlInitForVersion (conn, srvVersion, isCeEnabled);
 		String sqlExec  = _cm.getSqlForVersion     (conn, srvVersion, isCeEnabled);

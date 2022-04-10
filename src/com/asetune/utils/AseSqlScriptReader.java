@@ -895,7 +895,7 @@ public class AseSqlScriptReader
 											error = "Sub command 'wait #' The parameter '"+word2+"' is not a number.";
 										}
 									}
-									if ("foreachdb".equalsIgnoreCase(word1))
+									else if ("foreachdb".equalsIgnoreCase(word1))
 									{
 										_foreachdb = new ArrayList<>();
 										

@@ -60,7 +60,7 @@ extends SqlServerAbstract
 	public enum ReportType
 	{
 		CPU_TIME, 
-//		WAIT_TIME,
+		EST_WAIT_TIME,
 		TEMPDB_SPILLS,
 		LOGICAL_READS,
 		LOGICAL_WRITES,
@@ -86,7 +86,7 @@ extends SqlServerAbstract
 		_reportType = reportType;
 
 		if      (ReportType.CPU_TIME            .equals(_reportType)) { _sqlOrderByCol = "[total_worker_time_ms__sum]";   _sqlHaving = ""; }
-//		else if (ReportType.WAIT_TIME           .equals(_reportType)) { _sqlOrderByCol = "[total_wait_time_ms__sum]";     _sqlHaving = ""; }
+		else if (ReportType.EST_WAIT_TIME       .equals(_reportType)) { _sqlOrderByCol = "[total_est_wait_time_ms__sum]"; _sqlHaving = ""; }
 		else if (ReportType.TEMPDB_SPILLS       .equals(_reportType)) { _sqlOrderByCol = "[total_spills__sum]";           _sqlHaving = "having sum([total_spills]) > 0 \n"; }
 		else if (ReportType.LOGICAL_READS       .equals(_reportType)) { _sqlOrderByCol = "[total_logical_reads__sum]";    _sqlHaving = ""; }
 		else if (ReportType.LOGICAL_WRITES      .equals(_reportType)) { _sqlOrderByCol = "[total_logical_writes__sum]";   _sqlHaving = ""; }
@@ -170,8 +170,12 @@ extends SqlServerAbstract
 //			sb.append("SQL Text by queryid, Row Count: " + _sqTextRstm.getRowCount() + " (This is the same SQL Text as the in the above table, but without all counter details).<br>\n");
 //			sb.append(toHtmlTable(_sqTextRstm));
 
+			String detailsOpen = ""; // closed is the default
+			if (ReportType.CPU_TIME     .equals(_reportType)) detailsOpen = "open";  // open
+			if (ReportType.EST_WAIT_TIME.equals(_reportType)) detailsOpen = "";      // closed
+
 			sb.append("<br>\n");
-			sb.append("<details open> \n");
+			sb.append("<details " + detailsOpen + "> \n");
 			sb.append("<summary>Details for above Statements, including SQL Text (click to collapse) </summary> \n");
 			
 			sb.append("<br>\n");
@@ -207,25 +211,25 @@ extends SqlServerAbstract
 		sb.append("-- creation_time__min:         ").append( rstm.getValueAsString(row, "creation_time__min"       ) ).append("\n");
 		sb.append("-- last_execution_time__max:   ").append( rstm.getValueAsString(row, "last_execution_time__max" ) ).append("\n");
 
-		sb.append("-- execution_count__sum:       ").append( nf.format(rstm.getValueAsBigDecimal(row, "execution_count__sum"      ))).append("\n");
-		sb.append("-- total_elapsed_time_ms__sum: ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_elapsed_time_ms__sum"))).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "total_elapsed_time_ms__sum"))).append(" \n");
-		sb.append(">> AvgElapsedTimeMs:           ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgElapsedTimeMs"          ))).append("\n");
-		sb.append("-- total_worker_time_ms__sum:  ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_worker_time_ms__sum" ))).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "total_worker_time_ms__sum"))).append(" \n");
-		sb.append(">> AvgWorkerTimeMs:            ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgWorkerTimeMs"           ))).append("\n");
-//		sb.append("-- total_wait_time_ms__sum:    ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_wait_time_ms__sum"   ))).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "total_wait_time_ms__sum"))).append(" \n");
-//		sb.append("-- AvgWaitTimeMs:              ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgWaitTimeMs"             ))).append("\n");
-		sb.append("-- total_physical_reads__sum:  ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_physical_reads__sum" ))).append("\n");
-		sb.append("-- AvgPhysicalReads:           ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgPhysicalReads"          ))).append("\n");
-		sb.append("-- total_logical_writes__sum:  ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_logical_writes__sum" ))).append("\n");
-		sb.append("-- AvgLogicalWrites:           ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgLogicalWrites"          ))).append("\n");
-		sb.append("-- total_logical_reads__sum:   ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_logical_reads__sum"  ))).append("\n");
-		sb.append("-- AvgLogicalReads:            ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgLogicalReads"           ))).append("\n");
-		sb.append("-- total_rows__sum:            ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_rows__sum"           ))).append("\n");
-		sb.append("-- AvgRows:                    ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgRows"                   ))).append("\n");
-		sb.append("-- total_dop__sum:             ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_dop__sum"            ))).append("\n");
-		sb.append("-- AvgDop:                     ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgDop"                    ))).append("\n");
-		sb.append("-- total_grant_kb__sum:        ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_grant_kb__sum"       ))).append("\n");
-		sb.append("-- AvgGrantKb:                 ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgGrantKb"                ))).append("\n");
+		sb.append("-- execution_count__sum:       ").append( nf.format(rstm.getValueAsBigDecimal(row, "execution_count__sum"       ))).append("\n");
+		sb.append("-- total_elapsed_time_ms__sum: ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_elapsed_time_ms__sum" ))).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "total_elapsed_time_ms__sum"))).append(" \n");
+		sb.append(">> AvgElapsedTimeMs:           ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgElapsedTimeMs"           ))).append("\n");
+		sb.append("-- total_worker_time_ms__sum:  ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_worker_time_ms__sum"  ))).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "total_worker_time_ms__sum"))).append(" \n");
+		sb.append(">> AvgWorkerTimeMs:            ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgWorkerTimeMs"            ))).append("\n");
+//		sb.append("-- total_est_wait_time_ms__sum:").append( nf.format(rstm.getValueAsBigDecimal(row, "total_ets_wait_time_ms__sum"))).append("  (in milli seconds), and in (HH:MM:SS.sss) ").append(TimeUtils.msToTimeStrLong(rstm.getValueAsLong(row, "total_wait_time_ms__sum"))).append(" \n");
+//		sb.append("-- AvgWaitTimeMs:              ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgWaitTimeMs"              ))).append("\n");
+		sb.append("-- total_physical_reads__sum:  ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_physical_reads__sum"  ))).append("\n");
+		sb.append("-- AvgPhysicalReads:           ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgPhysicalReads"           ))).append("\n");
+		sb.append("-- total_logical_writes__sum:  ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_logical_writes__sum"  ))).append("\n");
+		sb.append("-- AvgLogicalWrites:           ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgLogicalWrites"           ))).append("\n");
+		sb.append("-- total_logical_reads__sum:   ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_logical_reads__sum"   ))).append("\n");
+		sb.append("-- AvgLogicalReads:            ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgLogicalReads"            ))).append("\n");
+		sb.append("-- total_rows__sum:            ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_rows__sum"            ))).append("\n");
+		sb.append("-- AvgRows:                    ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgRows"                    ))).append("\n");
+		sb.append("-- total_dop__sum:             ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_dop__sum"             ))).append("\n");
+		sb.append("-- AvgDop:                     ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgDop"                     ))).append("\n");
+		sb.append("-- total_grant_kb__sum:        ").append( nf.format(rstm.getValueAsBigDecimal(row, "total_grant_kb__sum"        ))).append("\n");
+		sb.append("-- AvgGrantKb:                 ").append( nf.format(rstm.getValueAsBigDecimal(row, "AvgGrantKb"                 ))).append("\n");
 		sb.append("-----------------------------------------------------------------------------------------------\n");
 		sb.append(StringEscapeUtils.escapeHtml4(rstm.getValueAsString(row, "SqlText")));
 
@@ -270,7 +274,7 @@ extends SqlServerAbstract
 
 		String col_total_elapsed_time_ms__sum           = !dummyRstm.hasColumnNoCase("total_elapsed_time"             ) ? "" : "    ,sum([total_elapsed_time]/1000.0)       as [total_elapsed_time_ms__sum]           \n"; 
 		String col_total_worker_time_ms__sum            = !dummyRstm.hasColumnNoCase("total_worker_time"              ) ? "" : "    ,sum([total_worker_time]/1000.0)        as [total_worker_time_ms__sum]            \n"; 
-//		String col_total_wait_time_ms__sum              = !dummyRstm.hasColumnNoCase("total_elapsed_time"             ) ? "" : "    ,sum([total_elapsed_time]/1000.0) - sum([total_worker_time]/1000.0) as [total_wait_time__sum]   \n"; 
+		String col_total_est_wait_time_ms__sum          = !dummyRstm.hasColumnNoCase("total_elapsed_time"             ) ? "" : "    ,sum([total_elapsed_time]/1000.0) - sum([total_worker_time]/1000.0) as [total_est_wait_time_ms__sum]   \n"; 
 		String col_total_physical_reads__sum            = !dummyRstm.hasColumnNoCase("total_physical_reads"           ) ? "" : "    ,sum([total_physical_reads])            as [total_physical_reads__sum]            \n"; 
 		String col_total_logical_writes__sum            = !dummyRstm.hasColumnNoCase("total_logical_writes"           ) ? "" : "    ,sum([total_logical_writes])            as [total_logical_writes__sum]            \n"; 
 		String col_total_logical_reads__sum             = !dummyRstm.hasColumnNoCase("total_logical_reads"            ) ? "" : "    ,sum([total_logical_reads])             as [total_logical_reads__sum]             \n"; 
@@ -310,7 +314,7 @@ extends SqlServerAbstract
 
 		String col_AvgElapsedTimeMs                     = !dummyRstm.hasColumnNoCase("total_elapsed_time"             ) ? "" : "    ,cast( sum([total_elapsed_time]/1000.0)                      * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgElapsedTimeMs]           \n";
 		String col_AvgWorkerTimeMs                      = !dummyRstm.hasColumnNoCase("total_worker_time"              ) ? "" : "    ,cast( sum([total_worker_time]/1000.0)                       * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgWorkerTimeMs]            \n";
-//		String col_AvgWaitTimeMs                        = !dummyRstm.hasColumnNoCase("total_elapsed_time"             ) ? "" : "    ,cast( sum([total_elapsed_time/1000.0]) - sum([total_elapsed_time/1000.0]) * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgWaitTimeMs]              \n";
+		String col_AvgEstWaitTimeMs                     = !dummyRstm.hasColumnNoCase("total_elapsed_time"             ) ? "" : "    ,cast((sum([total_elapsed_time]/1000.0) - sum([total_worker_time]/1000.0)) * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgEstWaitTimeMs]              \n";
 		String col_AvgPhysicalReads                     = !dummyRstm.hasColumnNoCase("total_physical_reads"           ) ? "" : "    ,cast( sum([total_physical_reads])                           * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgPhysicalReads]           \n";
 		String col_AvgLogicalWrites                     = !dummyRstm.hasColumnNoCase("total_logical_writes"           ) ? "" : "    ,cast( sum([total_logical_writes])                           * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgLogicalWrites]           \n";
 		String col_AvgLogicalReads                      = !dummyRstm.hasColumnNoCase("total_logical_reads"            ) ? "" : "    ,cast( sum([total_logical_reads])                            * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgLogicalReads]            \n";
@@ -331,7 +335,7 @@ extends SqlServerAbstract
 
 		String col_elapsed_time__chart                  = !dummyRstm.hasColumnNoCase("total_elapsed_time"             ) ? "" : "    ,cast('' as varchar(512))  as [elapsed_time__chart]   \n"; 
 		String col_worker_time__chart                   = !dummyRstm.hasColumnNoCase("total_worker_time"              ) ? "" : "    ,cast('' as varchar(512))  as [worker_time__chart]    \n"; 
-//		String col_wait_time__chart                     = !dummyRstm.hasColumnNoCase("total_elapsed_time"             ) ? "" : "    ,cast('' as varchar(512))  as [wait_time__chart]      \n"; 
+		String col_est_wait_time__chart                 = !dummyRstm.hasColumnNoCase("total_elapsed_time"             ) ? "" : "    ,cast('' as varchar(512))  as [est_wait_time__chart]  \n"; 
 		String col_physical_reads__chart                = !dummyRstm.hasColumnNoCase("total_physical_reads"           ) ? "" : "    ,cast('' as varchar(512))  as [physical_reads__chart] \n"; 
 		String col_logical_reads__chart                 = !dummyRstm.hasColumnNoCase("total_logical_reads"            ) ? "" : "    ,cast('' as varchar(512))  as [logical_reads__chart]  \n"; 
 		String col_logical_reads_mb__chart              = !dummyRstm.hasColumnNoCase("total_logical_reads"            ) ? "" : "    ,cast('' as varchar(512))  as [logical_reads_mb__chart] \n"; 
@@ -435,8 +439,8 @@ extends SqlServerAbstract
 			    + col_worker_time__chart            
 			    + col_total_worker_time_ms__sum            + col_AvgWorkerTimeMs
 
-//			    + col_total_wait_time__chart
-//			    + col_total_wait_time__sum                 + col_AvgWaitTimeUs            
+			    + col_est_wait_time__chart
+			    + col_total_est_wait_time_ms__sum          + col_AvgEstWaitTimeMs            
 
 			    + col_physical_reads__chart
 			    + col_total_physical_reads__sum            + col_AvgPhysicalReads           
@@ -768,20 +772,19 @@ extends SqlServerAbstract
 					.validate()));
 			}
 
-//			if (StringUtil.hasValue(col_wait_time__chart))
-//			{
-//				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
-//					SparkLineParams.create       (DataSource.CounterModel)
-//					.setHtmlChartColumnName      ("wait_time__chart")
-//					.setHtmlWhereKeyColumnName   (whereKeyColumn)
-//					.setDbmsTableName            ("CmExecQueryStats_diff")
-//					.setDbmsSampleTimeColumnName ("SessionSampleTime")
-////					.setDbmsDataValueColumnName  ("sum([total_elapsed_time]) - sum([total_worker_time])").setGroupDataAggregationType(AggType.USER_PROVIDED)
-//					.setDbmsDataValueColumnName  ("sum(1.0*[total_elapsed_time]) - sum([total_worker_time]) / nullif(sum([execution_count]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
-//					.setDbmsWhereKeyColumnName   (whereKeyColumn)
-//					.setSparklineTooltipPostfix  ("Average 'wait_time' in below period")
-//					.validate()));
-//			}
+			if (StringUtil.hasValue(col_est_wait_time__chart))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("est_wait_time__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmExecQueryStats_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("(sum([total_elapsed_time]/1000.0) - sum([total_worker_time]/1000.0)) / nullif(sum([execution_count]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Average 'ESTIMATED wait_time' in below period")
+					.validate()));
+			}
 			
 			if (StringUtil.hasValue(col_physical_reads__chart))
 			{
@@ -937,7 +940,9 @@ extends SqlServerAbstract
 			//----------------------------------------------------
 			// Create a SQL-Details ResultSet based on values in _shortRstm
 			//----------------------------------------------------
-			if ( ReportType.CPU_TIME.equals(_reportType) )
+			if (   ReportType.CPU_TIME     .equals(_reportType) 
+				|| ReportType.EST_WAIT_TIME.equals(_reportType) 
+			   )
 			{
 				SimpleResultSet srs = new SimpleResultSet();
 
@@ -957,20 +962,35 @@ extends SqlServerAbstract
 				
 				HtmlTableProducer htp = new HtmlTableProducer(_shortRstm, "dsr-sub-table-chart");
 				htp.setTableHeaders("Charts at 10 minute interval", "Total;style='text-align:right!important'", "Avg per exec;style='text-align:right!important'", "");
-				                                                       htp.add("exec-cnt" , new ColumnCopyRow().add( new ColumnCopyDef("execution_count__chart" ) ).add(new ColumnCopyDef("execution_count__sum").setColBold()).addEmptyCol()                                                         .addEmptyCol() );
-				if (StringUtil.hasValue(col_elapsed_time__chart     )) htp.add("exec-time", new ColumnCopyRow().add( new ColumnCopyDef("elapsed_time__chart"    ) ).add(new ColumnCopyDef("total_elapsed_time_ms__sum", msToHMS) ).add(new ColumnCopyDef("AvgElapsedTimeMs"   , oneDecimal).setColBold()).add(new ColumnStatic("ms"  )) );
-				if (StringUtil.hasValue(col_worker_time__chart      )) htp.add("cpu-time" , new ColumnCopyRow().add( new ColumnCopyDef("worker_time__chart"     ) ).add(new ColumnCopyDef("total_worker_time_ms__sum" , msToHMS) ).add(new ColumnCopyDef("AvgWorkerTimeMs"    , oneDecimal).setColBold()).add(new ColumnStatic("ms"  )) );
-//				if (StringUtil.hasValue(col_wait_time__chart        )) htp.add("wait"     , new ColumnCopyRow().add( new ColumnCopyDef("wait_time__chart"       ) ).add(new ColumnCopyDef("total_wait_time_ms__sum"   , msToHMS) ).add(new ColumnCopyDef("AvgWaitTimeMs"      , oneDecimal).setColBold()).add(new ColumnStatic("ms"  )) );   // This will ONLY work for SERIAL Statements
-				if (StringUtil.hasValue(col_dop__chart              )) htp.add("dop"      , new ColumnCopyRow().add( new ColumnCopyDef("dop__chart"             ) ).addEmptyCol()                                                 .add(new ColumnCopyDef("AvgDop"             , oneDecimal).setColBold()).add(new ColumnStatic("#"   )) );
-				if (StringUtil.hasValue(col_rows__chart             )) htp.add("rows"     , new ColumnCopyRow().add( new ColumnCopyDef("rows__chart"            ) ).add(new ColumnCopyDef("total_rows__sum"                    ) ).add(new ColumnCopyDef("AvgRows"            , oneDecimal).setColBold()).add(new ColumnStatic("rows")) );
-				if (StringUtil.hasValue(col_logical_reads__chart    )) htp.add("l-read"   , new ColumnCopyRow().add( new ColumnCopyDef("logical_reads__chart"   ) ).add(new ColumnCopyDef("total_logical_reads__sum"           ) ).add(new ColumnCopyDef("AvgLogicalReads"    , oneDecimal).setColBold()).add(new ColumnStatic("pgs" )) );
-				if (StringUtil.hasValue(col_logical_reads_mb__chart )) htp.add("l-read-mb", new ColumnCopyRow().add( new ColumnCopyDef("logical_reads_mb__chart") ).add(new ColumnCopyDef("total_logical_reads_mb__sum"        ) ).add(new ColumnCopyDef("AvgLogicalReadsMb"  , oneDecimal).setColBold()).add(new ColumnStatic("mb"  )) );
-				if (StringUtil.hasValue(col_physical_reads__chart   )) htp.add("p-read"   , new ColumnCopyRow().add( new ColumnCopyDef("physical_reads__chart"  ) ).add(new ColumnCopyDef("total_physical_reads__sum"          ) ).add(new ColumnCopyDef("AvgPhysicalReads"   , oneDecimal).setColBold()).add(new ColumnStatic("pgs" )) );
-				if (StringUtil.hasValue(col_logical_writes__chart   )) htp.add("l-write"  , new ColumnCopyRow().add( new ColumnCopyDef("logical_writes__chart"  ) ).add(new ColumnCopyDef("total_logical_writes__sum"          ) ).add(new ColumnCopyDef("AvgLogicalWrites"   , oneDecimal).setColBold()).add(new ColumnStatic("pgs" )) );
-				if (StringUtil.hasValue(col_spills__chart           )) htp.add("spills"   , new ColumnCopyRow().add( new ColumnCopyDef("spills__chart"          ) ).add(new ColumnCopyDef("total_spills__sum"                  ) ).add(new ColumnCopyDef("AvgSpills"          , oneDecimal).setColBold()).add(new ColumnStatic("#"   )) );
-				if (StringUtil.hasValue(col_grant_kb__chart         )) htp.add("mem-grant", new ColumnCopyRow().add( new ColumnCopyDef("grant_kb__chart"        ) ).add(new ColumnCopyDef("total_grant_kb__sum"                ) ).add(new ColumnCopyDef("AvgGrantKb"         , oneDecimal).setColBold()).add(new ColumnStatic("kb"  )) );
+				                                                       htp.add("exec-cnt" , new ColumnCopyRow().add( new ColumnCopyDef("execution_count__chart" ) ).add(new ColumnCopyDef("execution_count__sum").setColBold())    .addEmptyCol()                                                         .addEmptyCol() );
+				if (StringUtil.hasValue(col_elapsed_time__chart     )) htp.add("exec-time", new ColumnCopyRow().add( new ColumnCopyDef("elapsed_time__chart"    ) ).add(new ColumnCopyDef("total_elapsed_time_ms__sum" , msToHMS) ).add(new ColumnCopyDef("AvgElapsedTimeMs"   , oneDecimal).setColBold()).add(new ColumnStatic("ms"  )) );
+				if (StringUtil.hasValue(col_worker_time__chart      )) htp.add("cpu-time" , new ColumnCopyRow().add( new ColumnCopyDef("worker_time__chart"     ) ).add(new ColumnCopyDef("total_worker_time_ms__sum"  , msToHMS) ).add(new ColumnCopyDef("AvgWorkerTimeMs"    , oneDecimal).setColBold()).add(new ColumnStatic("ms"  )) );
+				if (StringUtil.hasValue(col_est_wait_time__chart    )) htp.add("est-wait" , new ColumnCopyRow().add( new ColumnCopyDef("est_wait_time__chart"   ) ).add(new ColumnCopyDef("total_est_wait_time_ms__sum", msToHMS) ).add(new ColumnCopyDef("AvgEstWaitTimeMs"   , oneDecimal).setColBold()).add(new ColumnStatic("ms"  )) );   // This will ONLY work for SERIAL Statements
+				if (StringUtil.hasValue(col_dop__chart              )) htp.add("dop"      , new ColumnCopyRow().add( new ColumnCopyDef("dop__chart"             ) ).addEmptyCol()                                                  .add(new ColumnCopyDef("AvgDop"             , oneDecimal).setColBold()).add(new ColumnStatic("#"   )) );
+				if (StringUtil.hasValue(col_rows__chart             )) htp.add("rows"     , new ColumnCopyRow().add( new ColumnCopyDef("rows__chart"            ) ).add(new ColumnCopyDef("total_rows__sum"                     ) ).add(new ColumnCopyDef("AvgRows"            , oneDecimal).setColBold()).add(new ColumnStatic("rows")) );
+				if (StringUtil.hasValue(col_logical_reads__chart    )) htp.add("l-read"   , new ColumnCopyRow().add( new ColumnCopyDef("logical_reads__chart"   ) ).add(new ColumnCopyDef("total_logical_reads__sum"            ) ).add(new ColumnCopyDef("AvgLogicalReads"    , oneDecimal).setColBold()).add(new ColumnStatic("pgs" )) );
+				if (StringUtil.hasValue(col_logical_reads_mb__chart )) htp.add("l-read-mb", new ColumnCopyRow().add( new ColumnCopyDef("logical_reads_mb__chart") ).add(new ColumnCopyDef("total_logical_reads_mb__sum"         ) ).add(new ColumnCopyDef("AvgLogicalReadsMb"  , oneDecimal).setColBold()).add(new ColumnStatic("mb"  )) );
+				if (StringUtil.hasValue(col_physical_reads__chart   )) htp.add("p-read"   , new ColumnCopyRow().add( new ColumnCopyDef("physical_reads__chart"  ) ).add(new ColumnCopyDef("total_physical_reads__sum"           ) ).add(new ColumnCopyDef("AvgPhysicalReads"   , oneDecimal).setColBold()).add(new ColumnStatic("pgs" )) );
+				if (StringUtil.hasValue(col_logical_writes__chart   )) htp.add("l-write"  , new ColumnCopyRow().add( new ColumnCopyDef("logical_writes__chart"  ) ).add(new ColumnCopyDef("total_logical_writes__sum"           ) ).add(new ColumnCopyDef("AvgLogicalWrites"   , oneDecimal).setColBold()).add(new ColumnStatic("pgs" )) );
+				if (StringUtil.hasValue(col_spills__chart           )) htp.add("spills"   , new ColumnCopyRow().add( new ColumnCopyDef("spills__chart"          ) ).add(new ColumnCopyDef("total_spills__sum"                   ) ).add(new ColumnCopyDef("AvgSpills"          , oneDecimal).setColBold()).add(new ColumnStatic("#"   )) );
+				if (StringUtil.hasValue(col_grant_kb__chart         )) htp.add("mem-grant", new ColumnCopyRow().add( new ColumnCopyDef("grant_kb__chart"        ) ).add(new ColumnCopyDef("total_grant_kb__sum"                 ) ).add(new ColumnCopyDef("AvgGrantKb"         , oneDecimal).setColBold()).add(new ColumnStatic("kb"  )) );
 				htp.validate();
-				
+
+				// Filter out some rows...
+				htp.setRowFilter(new HtmlTableProducer.RowFilter()
+				{
+					@Override
+					public boolean include(ResultSetTableModel rstm, int rstmRow, String rowKey)
+					{
+						// Only show "est-wait" if the query is "single threaded"
+						if ("est-wait".equals(rowKey))
+						{
+							return rstm.hasColumn("AvgDop") && rstm.getValueAsInteger(rstmRow, "AvgDop") == 1;
+						}
+						return true;
+					}
+				});
+
 				
 				if (pos_dbname >= 0 && pos_query_hash >= 0 && pos_query >= 0)
 				{

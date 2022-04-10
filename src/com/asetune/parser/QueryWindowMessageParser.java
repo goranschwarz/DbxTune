@@ -90,6 +90,7 @@ extends AbstractParser
 							offset = -1;
 						}
 					}
+//System.out.println("parse(RSyntaxDocument): line="+line+", col="+col+", offset="+offset+", length="+length+"... getLineStartOffset="+getLineStartOffset(doc, line)+", getLineEndOffset="+getLineEndOffset(doc, line));
 	
 					DefaultParserNotice pn = new DefaultParserNotice(this, msg.getFullMsgTextHtml(), line, offset, length);
 					_result.addNotice(pn);

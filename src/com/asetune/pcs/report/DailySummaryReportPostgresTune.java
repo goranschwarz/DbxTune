@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import com.asetune.pcs.report.content.DbmsConfigIssues;
 import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
 import com.asetune.pcs.report.content.os.OsIoStatOverview;
 import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
@@ -59,5 +60,6 @@ extends DailySummaryReportDefault
 
 		// Configuration
 		addReportEntry( new PostgresConfiguration(this) );
+		addReportEntry( new DbmsConfigIssues(this)      );
 	}
 }
