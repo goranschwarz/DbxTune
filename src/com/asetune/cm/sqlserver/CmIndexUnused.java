@@ -337,7 +337,7 @@ extends CountersModel
 				+ "           + CASE WHEN i.ignore_dup_key              = 0 THEN '' ELSE 'IGNORE_DUP_KEY = ON, ' END \n"
 				+ "           + CASE WHEN i.allow_row_locks             = 1 THEN '' ELSE 'ALLOW_ROW_LOCKS = OFF, '  END \n"
 				+ "           + CASE WHEN i.allow_page_locks            = 1 THEN '' ELSE 'ALLOW_PAGE_LOCKS = OFF, ' END \n"
-				+ "           + CASE WHEN i.optimize_for_sequential_key = 0 THEN '' ELSE 'OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF, ' END \n"
+//				+ "           + CASE WHEN i.optimize_for_sequential_key = 0 THEN '' ELSE 'OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF, ' END \n" // NOTE: this is new in 2019
 				+ "           + 'DATA_COMPRESSION = ?, ' \n"
 				+ "           + 'MAXDOP = 0, ' \n"
 				+ "           + 'ONLINE = OFF' \n"

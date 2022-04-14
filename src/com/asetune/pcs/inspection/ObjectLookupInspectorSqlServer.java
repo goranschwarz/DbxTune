@@ -412,7 +412,7 @@ extends ObjectLookupInspectorAbstract
 
 					//--------------------------------------------
 					// Just do sp_help to get info (which will include index key information)
-					String sql = "exec " + storeEntry.getDbname() + "..sp_help '" + storeEntry.getSchemaAndObjectName() + "' ";
+					String sql = "exec [" + storeEntry.getDbname() + "]..sp_help '" + storeEntry.getSchemaAndObjectName() + "' ";
 
 					try	(AseSqlScript ss = new AseSqlScript(conn, 10)) 
 					{
@@ -626,7 +626,7 @@ extends ObjectLookupInspectorAbstract
 						    + "         + CASE WHEN i.ignore_dup_key              = 0 THEN '' ELSE 'IGNORE_DUP_KEY = ON, ' END \n"
 						    + "         + CASE WHEN i.allow_row_locks             = 1 THEN '' ELSE 'ALLOW_ROW_LOCKS = OFF, '  END \n"
 						    + "         + CASE WHEN i.allow_page_locks            = 1 THEN '' ELSE 'ALLOW_PAGE_LOCKS = OFF, ' END \n"
-						    + "         + CASE WHEN i.optimize_for_sequential_key = 0 THEN '' ELSE 'OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF, ' END \n"
+//						    + "         + CASE WHEN i.optimize_for_sequential_key = 0 THEN '' ELSE 'OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF, ' END \n" // NOTE: this is new in 2019
 						    + "         + 'DATA_COMPRESSION = ?, ' \n"
 						    + "         + 'MAXDOP = 0, ' \n"
 						    + "         + 'ONLINE = OFF' \n"
@@ -673,10 +673,12 @@ extends ObjectLookupInspectorAbstract
 					// GET OBJECT TEXT
 					String sql = ""
 						    + "select c.text \n"
-						    + "from [" + storeEntry.getDbname() + "].sys.objects o, " + storeEntry.getDbname() + ".dbo.syscomments c, [" + storeEntry.getDbname() + "].sys.schemas s \n"
+						    + "from [" + storeEntry.getDbname() + "].sys.objects o \n"
+						    + "   , [" + storeEntry.getDbname() + "].dbo.syscomments c \n"
+						    + "   , [" + storeEntry.getDbname() + "].sys.schemas s \n"
 						    + "where o.name = '" + storeEntry.getObjectName() + "' \n"
 						    + "  and s.name = '" + storeEntry.getOwner()      + "' \n"
-						    + "  and o.object_id   = c.id \n"
+						    + "  and o.object_id  = c.id \n"
 						    + "  and o.schema_id  = s.schema_id \n"
 						    + "order by c.number, c.colid \n"
 						    + "";
@@ -744,7 +746,7 @@ extends ObjectLookupInspectorAbstract
 				// GET sp_depends
 				if (pch.getConfig_doSpDepends())
 				{
-					String sql = "exec " + storeEntry.getDbname() + "..sp_depends '" + storeEntry.getOwner() + "." + storeEntry.getObjectName() + "' "; 
+					String sql = "exec [" + storeEntry.getDbname() + "]..sp_depends '" + storeEntry.getOwner() + "." + storeEntry.getObjectName() + "' "; 
 					
 					try	(AseSqlScript ss = new AseSqlScript(conn, 10)) 
 					{
@@ -758,7 +760,7 @@ extends ObjectLookupInspectorAbstract
 		
 					if (pch.getConfig_addDependantObjectsToDdlInQueue())
 					{
-						sql = "exec " + storeEntry.getDbname() + "..sp_depends '" + storeEntry.getSchemaAndObjectName() + "' "; 
+						sql = "exec [" + storeEntry.getDbname() + "]..sp_depends '" + storeEntry.getSchemaAndObjectName() + "' "; 
 		
 						ArrayList<String> dependList = new ArrayList<String>();
 						try

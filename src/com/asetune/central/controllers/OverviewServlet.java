@@ -1112,7 +1112,10 @@ public class OverviewServlet extends HttpServlet
 					if (shortcutEntry.startsWith("*."))
 						shortcutEntry = shortcutEntry.substring(1);
 
-					out.println("<b>Shortcuts for files ending with '" + shortcutEntry + "'</b>");
+//					out.println("<b>Shortcuts for files ending with '" + shortcutEntry + "'</b>");
+					out.println("<b>Shortcuts for files ending with '" + shortcutEntry + "'</b>. Or click <a href='javascript:openTailOnAllConsoleFiles()'>here</a> to open ALL below '" + shortcutEntry + "' files in tail mode. (a new tab for each file)");
+
+					List<String> listOfFiles = new ArrayList<>();
 
 					out.println("<table>");
 					out.println("<table>");
@@ -1138,6 +1141,8 @@ public class OverviewServlet extends HttpServlet
 						if ( ! f.getName().endsWith(shortcutEntry) )
 							continue;
 						
+						listOfFiles.add(f.getName());
+						
 						String sizeInGB = String.format("%.1f GB", f.length() / 1024.0 / 1024.0 / 1024.0);
 						String sizeInMB = String.format("%.1f MB", f.length() / 1024.0 / 1024.0);
 						String sizeInKB = String.format("%.1f KB", f.length() / 1024.0);
@@ -1162,6 +1167,33 @@ public class OverviewServlet extends HttpServlet
 					out.println("</tbody>");
 					out.println("</table>");
 					out.println("<br>");
+
+					// Build function that will open all files in tail mode
+					out.println("");
+					out.println("<script type='text/javascript'>");
+//					out.println("    function openTailOnAllConsoleFiles() ");
+//					out.println("    { ");
+//					for (String fname : listOfFiles)
+//						out.println("        window.open('/log?name=" + fname + "&tail=5000'); ");
+//					out.println("    } ");
+					out.println("    function openTailOnAllConsoleFiles() ");
+					out.println("    { ");
+					out.println("        let tmpArray = [];");
+
+					for (String fname : listOfFiles)
+						out.println("        tmpArray.push('" + fname + "'); ");
+
+					out.println("");
+					out.println("        for (let i = 0; i < tmpArray.length; i++) ");
+					out.println("        { ");
+					out.println("            setTimeout(function() ");
+					out.println("            { ");
+					out.println("                window.open('/log?name=' + tmpArray[i] + '&tail=5000'); ");
+					out.println("            }, i * 500); ");
+					out.println("        } ");
+					out.println("    } ");
+					out.println("</script>");
+					out.println("");
 				}
 			}
 

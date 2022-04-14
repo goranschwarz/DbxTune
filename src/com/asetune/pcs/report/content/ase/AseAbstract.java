@@ -449,7 +449,7 @@ extends ReportEntryAbstract
 		sb.append("<tbody> \n");
 		for (AseIndexInfo entry : indexInfoList)
 		{
-			long avgBytesPerRow = (entry.getSizeKb() * 1024L) / tableEntry.getRowTotal();
+			long avgBytesPerRow = tableEntry.getRowTotal() == 0 ? -1 : (entry.getSizeKb() * 1024L) / tableEntry.getRowTotal();
 
 			sb.append("<tr> \n");
 			sb.append("  <td>").append(            entry.getIndexName()          ).append("</td> \n");

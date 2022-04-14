@@ -480,6 +480,10 @@ extends CounterModelHostMonitor
 		//-------------------------------------------------------
 		if (isConnectedToVendor(OsVendor.Windows) && isSystemAlarmsForColumnEnabledAndInTimeRange("swapping"))
 		{
+			int    threshold        = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_swap, DEFAULT_alarm_swap);
+			double maxCapMultiplier = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_swap_maxCap_multiplier, DEFAULT_alarm_swap_maxCap_multiplier);
+			double maxCap = threshold * maxCapMultiplier; // default: 500 * 1.5
+
 			// Get data
 			Double swapIn_tmp  = this.getAbsValueAsDouble(0, "Pages Input/sec");
 			Double swapOut_tmp = this.getAbsValueAsDouble(0, "Pages Output/sec");
@@ -487,11 +491,11 @@ extends CounterModelHostMonitor
 			int swapIn  = (swapIn_tmp  == null) ? 0 : swapIn_tmp .intValue();
 			int swapOut = (swapOut_tmp == null) ? 0 : swapOut_tmp.intValue();
 
-			int swapIn_5mAvg  = (int) MovingAverageCounterManager.getInstance("swapIn",  5).add(swapIn) .getAvg(0, true);
-			int swapOut_5mAvg = (int) MovingAverageCounterManager.getInstance("swapOut", 5).add(swapOut).getAvg(0, true);
+			int swapIn_5mAvg  = (int) MovingAverageCounterManager.getInstance("swapIn",  5).add(swapIn) .getAvg(0, true, maxCap);
+			int swapOut_5mAvg = (int) MovingAverageCounterManager.getInstance("swapOut", 5).add(swapOut).getAvg(0, true, maxCap);
 
-			int swapIn_15mAvg  = (int) MovingAverageCounterManager.getInstance("swapIn",  15).add(swapIn) .getAvg(0, true);
-			int swapOut_15mAvg = (int) MovingAverageCounterManager.getInstance("swapOut", 15).add(swapOut).getAvg(0, true);
+			int swapIn_15mAvg  = (int) MovingAverageCounterManager.getInstance("swapIn",  15).add(swapIn) .getAvg(0, true, maxCap);
+			int swapOut_15mAvg = (int) MovingAverageCounterManager.getInstance("swapOut", 15).add(swapOut).getAvg(0, true, maxCap);
 			
 			if (debugPrint || _logger.isDebugEnabled())
 				System.out.println("##### sendAlarmRequest("+cm.getName()+"): swapping: in=" + swapIn + ", out=" + swapOut + ". swapIn_5mAvg=" + swapIn_5mAvg + ", swapOut_5mAvg=" + swapOut_5mAvg);
@@ -503,7 +507,6 @@ extends CounterModelHostMonitor
 //				alarmHandler.addAlarm( alarm );
 //			}
 
-			int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_swap, DEFAULT_alarm_swap);
 			if (swapIn_5mAvg > threshold || swapOut_5mAvg > threshold)
 			{
 				Timestamp swapIn_peakTs      = MovingAverageCounterManager.getInstance("swapIn",  5).getPeakTimestamp();
@@ -516,7 +519,7 @@ extends CounterModelHostMonitor
 						MovingAverageCounterManager.getInstance("swapIn",  15),  // Note make the chart on 15 minutes to see more info
 						MovingAverageCounterManager.getInstance("swapOut", 15)); // Note make the chart on 15 minutes to see more info
 				
-				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, hostname, "over 5 minute moving average", 
+				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, maxCap, hostname, "over 5 minute moving average", 
 						swapIn_5mAvg,  swapIn_peakTs,  swapIn_peakNumber,
 						swapOut_5mAvg, swapOut_peakTs, swapOut_peakNumber);
 				
@@ -529,6 +532,9 @@ extends CounterModelHostMonitor
 
 	public static final String  PROPKEY_alarm_swap = CM_NAME + ".alarm.system.if.swap.gt";
 	public static final int     DEFAULT_alarm_swap = 500;
+
+	public static final String  PROPKEY_alarm_swap_maxCap_multiplier = CM_NAME + ".alarm.system.swap.maxCap.multiplier";
+	public static final double  DEFAULT_alarm_swap_maxCap_multiplier = 1.5d;
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()

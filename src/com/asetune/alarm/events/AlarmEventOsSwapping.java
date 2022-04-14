@@ -30,7 +30,7 @@ extends AlarmEvent
 {
 	private static final long serialVersionUID = 1L;
 
-	public AlarmEventOsSwapping(CountersModel cm, int threshold, String hostname, String note, int swapIn_avg, int swapOut_avg)
+	public AlarmEventOsSwapping(CountersModel cm, int threshold, double maxCap, String hostname, String note, int swapIn_avg, int swapOut_avg)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -40,7 +40,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Extensive Usage of OS Swapping on hostname '" + hostname + "' " + note + ". Time to increase memory or move some processes. swapInAvg=" + swapIn_avg + ", swapOutAvg=" + swapOut_avg + ". (threshold="+threshold+")",
+				"Extensive Usage of OS Swapping on hostname '" + hostname + "' " + note + ", maxCap=" + maxCap + ". Time to increase memory or move some processes. swapInAvg=" + swapIn_avg + ", swapOutAvg=" + swapOut_avg + ". (threshold="+threshold+")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled
@@ -50,7 +50,7 @@ extends AlarmEvent
 		setData("swapInAvg=" + swapIn_avg + ", swapOutAvg=" + swapOut_avg);
 	}
 
-	public AlarmEventOsSwapping(CountersModel cm, int threshold, String hostname, String note, int swapIn_avg, Timestamp swapIn_peakTimestamp, double swapIn_peakVal, int swapOut_avg, Timestamp swapOut_peakTimestamp, double swapOut_peakVal)
+	public AlarmEventOsSwapping(CountersModel cm, int threshold, double maxCap, String hostname, String note, int swapIn_avg, Timestamp swapIn_peakTimestamp, double swapIn_peakVal, int swapOut_avg, Timestamp swapOut_peakTimestamp, double swapOut_peakVal)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -60,7 +60,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Extensive Usage of OS Swapping on hostname '" + hostname + "' " + note + ". Time to increase memory or move some processes. swapIn=[avgVal=" + swapIn_avg + ", PeakTs='" + swapIn_peakTimestamp + "', peakVal=" + swapIn_peakVal + "], swapOut=[avgVal=" + swapIn_avg + ", peakTs='" + swapOut_peakTimestamp + "', peakVal=" + swapOut_peakVal + "]. (threshold="+threshold+")",
+				"Extensive Usage of OS Swapping on hostname '" + hostname + "' " + note + ", maxCap=" + maxCap + ". Time to increase memory or move some processes. swapIn=[avgVal=" + swapIn_avg + ", PeakTs='" + swapIn_peakTimestamp + "', peakVal=" + swapIn_peakVal + "], swapOut=[avgVal=" + swapIn_avg + ", peakTs='" + swapOut_peakTimestamp + "', peakVal=" + swapOut_peakVal + "]. (threshold="+threshold+")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled

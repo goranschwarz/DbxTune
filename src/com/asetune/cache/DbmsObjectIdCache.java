@@ -543,7 +543,7 @@ public abstract class DbmsObjectIdCache
 		_statLogicalRead++;
 		
 		Map<Integer, ObjectInfo> map = _dbid_objectId.get(dbid);
-		ObjectInfo entry = map == null ? null : map.get(objectid);
+		ObjectInfo entry = (map == null) ? null : map.get(objectid);
 
 		if (entry == null)
 		{
@@ -570,7 +570,7 @@ public abstract class DbmsObjectIdCache
 		_statLogicalRead++;
 		
 		Map<Long, ObjectInfo> map = _dbid_partitionId.get(dbid);
-		ObjectInfo entry = map == null ? null : map.get(partitionId);
+		ObjectInfo entry = (map == null) ? null : map.get(partitionId);
 
 		if (entry == null)
 		{
@@ -590,7 +590,7 @@ public abstract class DbmsObjectIdCache
 		_statLogicalRead++;
 		
 		Map<Long, ObjectInfo> map = _dbid_hobtId.get(dbid);
-		ObjectInfo entry = map == null ? null : map.get(hobtId);
+		ObjectInfo entry = (map == null) ? null : map.get(hobtId);
 
 		if (entry == null)
 		{

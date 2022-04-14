@@ -22,8 +22,11 @@
 package com.asetune.cm.sqlserver;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.naming.NameNotFoundException;
 
@@ -36,6 +39,7 @@ import com.asetune.alarm.AlarmHelper;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventLongRunningStatement;
 import com.asetune.alarm.events.sqlserver.AlarmEventDacInUse;
+import com.asetune.alarm.events.sqlserver.AlarmEventDebugWaitInfo;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterSample;
@@ -610,8 +614,6 @@ extends CountersModel
 
 
 
-
-
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -642,6 +644,10 @@ extends CountersModel
 		AlarmHandler alarmHandler = AlarmHandler.getInstance();
 		
 		CountersModel cm = this;
+
+		// Map to store all unique values in "wait_resources"
+//		Map<String, List<SpidWaitInfo>> waitResourceMap = null;
+		WaitInfo waitInfo = null;
 
 		for (int r=0; r<cm.getDiffRowCount(); r++)
 		{
@@ -682,6 +688,30 @@ extends CountersModel
 								if (debugPrint || _logger.isDebugEnabled())
 									System.out.println("##### sendAlarmRequest("+cm.getName()+"): SKIPPING record: executing_managed_code="+executing_managed_code+", wait_type='"+wait_type+"', last_wait_type='"+last_wait_type+"'.");
 								isValidRow = false;
+							}
+						}
+					}
+
+					if (o_wait_type != null)
+					{
+						String wait_type = o_wait_type.toString();
+						if (StringUtil.hasValue(wait_type))
+						{
+							Object o_wait_resource = cm.getDiffValue(r, "wait_resource");
+
+							if (o_wait_resource != null && StringUtil.hasValue(o_wait_resource.toString()))
+							{
+								if (waitInfo == null)
+									waitInfo = new WaitInfo(this);
+								
+								Object o_session_id    = cm.getDiffValue(r, "session_id");
+								Object o_wait_time     = cm.getDiffValue(r, "wait_time");
+
+								String wait_resource = o_wait_resource.toString();
+								int    session_id    = (o_session_id instanceof Number) ? ((Number)o_session_id).intValue() : -1;
+								int    wait_time     = (o_wait_time  instanceof Number) ? ((Number)o_wait_time ).intValue() : -1;
+								
+								waitInfo.add(session_id, wait_type, wait_time, wait_resource);
 							}
 						}
 					}
@@ -761,6 +791,12 @@ extends CountersModel
 				}
 			}
 		} // end: loop rows
+		
+		// check waitResourceMap
+		if (waitInfo != null)
+		{
+			waitInfo.checkAndSendAlarm();
+		}
 	}
 
 	public static final String  PROPKEY_alarm_StatementExecInSec             = CM_NAME + ".alarm.system.if.StatementExecInSec.gt";
@@ -802,4 +838,207 @@ extends CountersModel
 
 		return list;
 	}
+
+
+
+
+	// TODO: search for: last-page insert PAGELATCH_EX contention in SQL Server
+	//       https://docs.microsoft.com/en-US/troubleshoot/sql/performance/resolve-pagelatch-ex-contention
+	//       https://techcommunity.microsoft.com/t5/sql-server-blog/pagelatch-ex-waits-and-heavy-inserts/ba-p/384289
+	// how to implement
+	//   - loop all rows
+	//   - look for 'wait_type' of 'PAGELATCH_EX'
+	//     -->> Add records to a list, which we can check *after* the loop of all rows
+	//          key: 'wait_resource' -- value: session_id, wait_type, wait_time, wait_resource
+	//   - check after loop
+	//     if we got "many" threads (say 5) that are waiting on the same resource, and that the SUM wait_time is above "some value", then:
+	//        * get more information about the page in the "wait_resource" (by dbcc page or similar)
+	//        * Send some ALARM on it
+	// POSIBLY:
+	//   - The above will also work for "tempdb contention" PFS, GAM and SGAM pages.
+
+	private static class SpidWaitInfo
+	{
+		int    _session_id;
+		String _wait_type;
+		int    _wait_time;
+		String _wait_resource;
+		
+		public SpidWaitInfo(int session_id, String wait_type, int wait_time, String wait_resource)
+		{
+			_session_id    = session_id;   
+			_wait_type     = wait_type;    
+			_wait_time     = wait_time;    
+			_wait_resource = wait_resource;
+		}
+		@Override
+		public String toString()
+		{
+			return "session_id=" + _session_id + ", wait_type='" + _wait_type + "', wait_time=" + _wait_time + ", wait_resource='" + _wait_resource + "'.";
+		}
+	}
+	
+
+	private static class WaitInfo
+	{
+		private CountersModel _cm;
+		private Map<String, List<SpidWaitInfo>> _waitResourceMap = new HashMap<>();
+		private Map<String, Integer>            _waitResourceTime = new HashMap<>();
+
+		private Map<String, List<SpidWaitInfo>> _waitTypeMap     = new HashMap<>();
+		private Map<String, Integer>            _waitTypeTime    = new HashMap<>();
+
+		public WaitInfo(CountersModel cm)
+		{
+			_cm = cm;
+		}
+		
+		public void add(int session_id, String wait_type, int wait_time, String wait_resource)
+		{
+			SpidWaitInfo wi = new SpidWaitInfo(session_id, wait_type, wait_time, wait_resource);
+
+			// Add: _waitResourceMap
+			List<SpidWaitInfo> list = _waitResourceMap.get(wait_resource);
+			if (list == null)
+			{
+				list = new ArrayList<>();
+				_waitResourceMap.put(wait_resource, list);
+			}
+			list.add(wi);
+
+			// Add: _waitResourceTime
+			Integer currentTime = _waitResourceTime.get(wait_resource);
+			if (currentTime == null)
+				currentTime = 0;
+			_waitResourceTime.put(wait_resource, currentTime + wait_time);
+			
+			
+
+			// Add: _waitTypeMap
+			list = _waitResourceMap.get(wait_type);
+			if (list == null)
+			{
+				list = new ArrayList<>();
+				_waitTypeMap.put(wait_type, list);
+			}
+			list.add(wi);
+
+			// Add: _waitResourceTime
+			currentTime = _waitTypeTime.get(wait_type);
+			if (currentTime == null)
+				currentTime = 0;
+			_waitTypeTime.put(wait_type, currentTime + wait_time);
+			
+
+			// Decode the 'wait_resource'
+			if (wait_resource.startsWith("KEY: "))   // example='KEY: 6:72057594044153856 (7b4f7e19e103)' -- Database_Id, HOBT_Id ( Magic hash that you can decode with %%lockres%% if you really want)
+			{
+				
+			}
+			else if (wait_resource.startsWith("PAGE: "))   // example='PAGE: 6:1:70133' -- Database_Id : FileId : PageNumber
+			{
+			
+// https://social.msdn.microsoft.com/Forums/sqlserver/en-US/b98a7841-69a4-47d3-8856-deb310b3ccc7/how-to-identify-if-tempdb-contention-on-page-is-pfsgam-or-sgam?forum=sqldatabaseengine
+// https://ramblingsofraju.com/sql-server/breaking-down-tempdb-contention-2/
+// http://whoisactive.com/docs/21_tempdb/ -- check the code how it decode page values
+//				SELECT 
+//					session_id,
+//					wait_type,
+//					wait_duration_ms,
+//					blocking_session_id,
+//					resource_description,
+//					ResourceType = 
+//					CASE
+//						WHEN CAST(right(resource_description, len(resource_description) - charindex(':', resource_description, 3)) AS int) - 1 % 8088   = 0 THEN 'Is PFS Page'
+//						WHEN CAST(right(resource_description, len(resource_description) - charindex(':', resource_description, 3)) AS int) - 2 % 511232 = 0 THEN 'Is GAM Page'
+//						WHEN CAST(right(resource_description, len(resource_description) - charindex(':', resource_description, 3)) AS int) - 3 % 511232 = 0 THEN 'Is SGAM Page'
+//						ELSE 'Is Not PFS, GAM, or SGAM page'
+//					END
+//				FROM  sys.dm_os_waiting_tasks
+//				WHERE wait_type LIKE 'PAGE%LATCH_%'
+//				  AND resource_description LIKE '2:%'
+				
+				// NOTE: Double check the below DECODE again...
+//				int pageid = StringUtil.parseInt (keyVal.get("pageid"), -1);
+//				if (pageid != -1)
+//				{
+//					// The below algorithm is reused from 'sp_whoIsActive'
+//					if      (pageid == 1 ||       pageid % 8088   == 0) decodeKeyVal.put("pageType", "PFS");
+//					else if (pageid == 2 ||       pageid % 511232 == 0) decodeKeyVal.put("pageType", "GAM");
+//					else if (pageid == 3 || (pageid - 1) % 511232 == 0) decodeKeyVal.put("pageType", "SGAM");
+//					else if (pageid == 6 || (pageid - 6) % 511232 == 0) decodeKeyVal.put("pageType", "DCM");
+//					else if (pageid == 7 || (pageid - 7) % 511232 == 0) decodeKeyVal.put("pageType", "BCM");
+//				}
+				
+			}
+
+		}
+		
+		public void checkAndSendAlarm()
+		{
+			if ( ! AlarmHandler.hasInstance() )
+				return;
+			
+			String infoStr = getInfoString();
+			System.out.println(infoStr);
+
+			if (Configuration.getCombinedConfiguration().getBooleanProperty("CmSessions.sendAlarm.AlarmEventDebugWaitInfo.send", true)) 
+			{
+				int alarmOnMaxCountGt = Configuration.getCombinedConfiguration().getIntProperty("CmSessions.sendAlarm.AlarmEventDebugWaitInfo.maxCount.gt", 2);
+				
+				if (getMaxCount() > alarmOnMaxCountGt)
+				{
+					AlarmEvent alarm = new AlarmEventDebugWaitInfo(_cm, infoStr);
+					AlarmHandler.getInstance().addAlarm(alarm);
+				}
+			}
+		}
+		
+		public int getMaxCount()
+		{
+			int maxCount = 0;
+			
+			for (Entry<String, List<SpidWaitInfo>> entry : _waitResourceMap.entrySet())
+			{
+				maxCount = Math.max(maxCount, entry.getValue().size());
+			}
+
+			return maxCount;
+		}
+
+		public String getInfoString()
+		{
+			StringBuilder sb = new StringBuilder();
+			
+			sb.append("CmSessions: ================= WaitInfo ====================== \n");
+			sb.append("CmSessions: WaitResources(" + _waitResourceMap.size() + "): " + _waitResourceMap.keySet() + " \n");
+			sb.append("CmSessions: WaitTypes    (" + _waitTypeMap    .size() + "): " + _waitTypeMap    .keySet() + " \n");
+
+			sb.append("CmSessions: \n");
+			sb.append("CmSessions: Wait Resources -- Count: \n");
+			for (Entry<String, List<SpidWaitInfo>> entry : _waitResourceMap.entrySet())
+			{
+				sb.append("CmSessions:   - count=" + entry.getValue().size() + " -- WaitResource='" + entry.getKey() + "' \n");
+			}
+
+			sb.append("CmSessions: \n");
+			sb.append("CmSessions: Wait Resources -- Sum WaitTime: \n");
+			for (Entry<String, Integer> entry : _waitResourceTime.entrySet())
+			{
+				sb.append("CmSessions:   - waitTime=" + entry.getValue() + " ms -- WaitResource='" + entry.getKey() + "' \n");
+			}
+
+			sb.append("CmSessions: \n");
+			sb.append("CmSessions: Wait Types -- Sum WaitTime: \n");
+			for (Entry<String, Integer> entry : _waitTypeTime.entrySet())
+			{
+				sb.append("CmSessions:   - waitTime=" + entry.getValue() + " ms -- WaitType='" + entry.getKey() + "' \n");
+			}
+			sb.append("CmSessions: ================================================= \n");
+
+			return sb.toString();
+		}
+	}
+
+
 }

@@ -825,6 +825,7 @@ extends CountersModel
 		
 		// Should we use the same SQL statement as we executed locally
 		String sql = getSql();
+		String atStep = null;
 		
 		for (String srvName : secondaryServerSet)
 		{
@@ -832,9 +833,11 @@ extends CountersModel
 			try
 			{
 				// Grab a connection (from the connection pool)
+				atStep = "getConnection()";
 				dbConn = getConnection(this, templateConn, srvName);
 				
 				// set context to the correct database
+				atStep = "setCatalog(master)";
 				dbConn.setCatalog("master");
 				if (_logger.isDebugEnabled())
 					_logger.debug("Setting database context to 'master'.");
@@ -848,6 +851,7 @@ extends CountersModel
 				if (_logger.isDebugEnabled())
 					_logger.debug("QUERY_TIMEOUT="+queryTimeout+", for Cm='"+getName()+"' and remoteServerName = '"+srvName+"'.");
 
+				atStep = "executeQuery(sql=|" + sql + "|)";
 				ResultSet rs = stmnt.executeQuery(sql);
 
 				ResultSetTableModel rstm = new ResultSetTableModel(rs, getName()+"-remote-"+srvName);
@@ -932,7 +936,7 @@ extends CountersModel
 			}
 			catch (SQLException ex)
 			{
-				_logger.error("When trying to get real-time data from 'REMOTE' server '"+srvName+"', there was a problem. Caught: Error=" + ex.getErrorCode() + ", Message=" + ex);
+				_logger.error("When trying to get real-time data from 'REMOTE' server '" + srvName + "', there was a problem. atStep='" + atStep + "'. Caught: Error=" + ex.getErrorCode() + ", Message=" + ex);
 			}
 			finally 
 			{

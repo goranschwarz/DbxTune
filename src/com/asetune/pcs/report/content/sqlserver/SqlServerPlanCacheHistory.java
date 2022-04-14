@@ -81,6 +81,8 @@ public class SqlServerPlanCacheHistory extends AseAbstract
 				LinkedHashMap<String, String> summaryTable = new LinkedHashMap<>();
 				NumberFormat nf = NumberFormat.getInstance();
 				
+				summaryTable.put("Total Days in Plan Cache"         , nf.format(_planCacheDayCount));
+
 				summaryTable.put("plan_count"                       , nf.format(_planCacheSummary.getValueAsLong(0, "plan_count", true, -1L)));
 				summaryTable.put("exec_count"                       , nf.format(_planCacheSummary.getValueAsLong(0, "exec_count", true, -1L)));
 				summaryTable.put("PlanSizeKB"                       , nf.format(_planCacheSummary.getValueAsLong(0, "PlanSizeKB", true, -1L)));
@@ -139,7 +141,7 @@ public class SqlServerPlanCacheHistory extends AseAbstract
 			+ "      ,[creation_hour] \n"
 			+ "      ,max([plan_count])                         as [plan_count] \n"
 //			+ "      ,'------>>>>>------'                       as [details-to-right] \n"
-			+ "      ,'&empsp;&empsp;>>>>>&empsp;&empsp;'       as [details-to-right] \n"
+			+ "      ,'&emsp;&emsp;>>>>>&emsp;&emsp;'           as [details-to-right] \n"
 			+ "      ,sum([exec_count_diff])                    as [exec_count] \n"
 			+ "      ,max([PlanSizeKB])                         as [PlanSizeKB] \n"
 			+ "      ,max([ObjType_Proc_Pct])                   as [ObjType_Proc_Pct] \n"

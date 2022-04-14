@@ -666,10 +666,11 @@ implements ActionListener //, ConnectionProvider
 		@Override
 		public boolean isCellEditable(int row, int col)
 		{
-			if (col == TAB_POS_DISCARDED)  return true;
-			if (col == TAB_POS_RESOLUTION) return true;  // Just so we can COPY the resolution (if it for example, contains DDL that we want to copy)
-
-			return false;
+//			if (col == TAB_POS_DISCARDED)  return true;
+//			if (col == TAB_POS_RESOLUTION) return true;  // Just so we can COPY the resolution (if it for example, contains DDL that we want to copy)
+//
+//			return false;
+			return true;
 		}
 		
 		@Override

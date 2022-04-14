@@ -276,9 +276,11 @@ extends Throwable
 	public String       getDescription()                    { return !hasRaiseDelay() ? _description : _description + " [raiseDelay="+getRaiseDelayInSec()+"]"; }
 	public String       getReRaiseDescription()             { return _reRaiseDesc; }
 	public String       getExtendedDescription()            { return _extendedDesc; }
-	public String       getExtendedDescriptionHtml()        { return StringUtil.hasValue(_extendedDescHtml) ? _extendedDescHtml : StringUtil.toHtmlString(_extendedDesc); }
+//	public String       getExtendedDescriptionHtml()        { return StringUtil.hasValue(_extendedDescHtml) ? _extendedDescHtml : StringUtil.toHtmlString(_extendedDesc); }
+	public String       getExtendedDescriptionHtml()        { return StringUtil.hasValue(_extendedDescHtml) ? _extendedDescHtml : "<pre>" + _extendedDesc + "</pre>"; }
 	public String       getReRaiseExtendedDescription()     { return _reRaiseExtendedDesc; }
-	public String       getReRaiseExtendedDescriptionHtml() { return StringUtil.hasValue(_reRaiseExtendedDescHtml) ? _reRaiseExtendedDescHtml : StringUtil.toHtmlString(_reRaiseExtendedDesc); }
+//	public String       getReRaiseExtendedDescriptionHtml() { return StringUtil.hasValue(_reRaiseExtendedDescHtml) ? _reRaiseExtendedDescHtml : StringUtil.toHtmlString(_reRaiseExtendedDesc); }
+	public String       getReRaiseExtendedDescriptionHtml() { return StringUtil.hasValue(_reRaiseExtendedDescHtml) ? _reRaiseExtendedDescHtml : "<pre>" + _reRaiseExtendedDesc + "</pre>"; }
 	public Object       getData()                           { return _data; }
 	public Object       getReRaiseData()                    { return _reRaiseData; }
 

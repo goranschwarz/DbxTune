@@ -40,9 +40,11 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 import com.asetune.PostgresTune;
+import com.asetune.config.dbms.DbmsConfigIssue.Severity;
 import com.asetune.pcs.MonRecordingInfo;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.PostgresUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
@@ -724,6 +726,128 @@ extends DbmsConfigAbstract
 		
 		// notify change
 		fireTableDataChanged();
+	}
+
+
+	@Override
+	public void checkConfig(DbxConnection conn)
+	{
+		if (_configMap == null)
+			return;
+
+		PostgresConfigEntry entry = null;
+		String cfgName;
+
+		String    srvName    = "-UNKNOWN-";
+		Timestamp srvRestart = null;
+		try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting Postgres instance name. ex="+ex);}
+		try { srvRestart = PostgresUtils.getStartDate(conn);  } catch (SQLException ex) { _logger.info("Problems getting Postgres start date. ex="+ex);}
+
+		
+		//-------------------------------------------------------
+		cfgName = "synchronous_commit";
+		entry = _configMap.get(cfgName);
+		if (entry != null)
+		{
+			if ("off".equalsIgnoreCase(entry.configValue))
+			{
+				String key = "DbmsConfigIssue." + srvName + ".pg_settings." + cfgToPropName(cfgName) + ".off";
+
+				DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, cfgName, Severity.WARNING, 
+						"The Server Level Configuration '" + cfgName + "' is 'OFF'. You may loose data in case of a power failure.", 
+						"Fix this using: Set configuration '" + cfgName + "' to '{on|remote_apply|remote_write|local}'.");
+
+				DbmsConfigManager.getInstance().addConfigIssue(issue);
+			}
+		}
+
+		//-------------------------------------------------------
+		cfgName = "shared_buffers"; // default value '???' but if it's less than 25% of the memory on the HW. 
+		// This extension might be useful to get OS Memory --->>>> https://github.com/EnterpriseDB/system_stats
+		entry = _configMap.get(cfgName);
+		if (entry != null)
+		{
+			double mb_configured = StringUtil.parseDouble(entry.configValueMb, -1);
+			double mb_threshold  = 128;
+			
+			if (mb_configured != -1 && mb_configured <= mb_threshold)
+			{
+				String key = "DbmsConfigIssue." + srvName + ".pg_settings." + cfgToPropName(cfgName) + ".is.lt." + mb_threshold + "mb";
+
+				DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, cfgName, Severity.INFO, 
+						"The Server Level Configuration '" + cfgName + "' is less-or-equal than " + mb_threshold + " MB (" + mb_configured + "). This is a memory area where (data/index) Pages are cached in memory. The OS probably has a LOT more memory (I guess you have more than 1GB memory), see https://www.postgresql.org/docs/current/runtime-config-resource.html", 
+						"Fix this using: Set configuration '" + cfgName + "' to '25-40%' of the hosts memory. But leave some for the OS and FileSystem Caches etc.");
+
+				DbmsConfigManager.getInstance().addConfigIssue(issue);
+			}
+		}
+
+		
+		//-------------------------------------------------------
+		cfgName = "effective_cache_size"; // default value '4G' should be approc 75% of physical memory (or: shared_buffers + filesystem-cache) 
+		// This extension might be useful to get OS Memory --->>>> https://github.com/EnterpriseDB/system_stats
+		entry = _configMap.get(cfgName);
+		if (entry != null)
+		{
+			double mb_configured = StringUtil.parseDouble(entry.configValueMb, -1);
+			double mb_threshold  = 4096;
+			
+			if (mb_configured != -1 && mb_configured <= mb_threshold)
+			{
+				String key = "DbmsConfigIssue." + srvName + ".pg_settings." + cfgToPropName(cfgName) + ".is.lt." + mb_threshold + "mb";
+
+				DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, cfgName, Severity.INFO, 
+						"The Server Level Configuration '" + cfgName + "' is less-or-equal than " + mb_threshold + " MB (" + mb_configured + "). This is a optimzer only parameter, it do NOT allocate memory. see https://www.postgresql.org/docs/current/runtime-config-query.html", 
+						"Fix this using: Set configuration '" + cfgName + "' to '75%' of the hosts memory. Or shared_buffers + os-filesystem-cache.");
+
+				DbmsConfigManager.getInstance().addConfigIssue(issue);
+			}
+		}
+
+		
+		//-------------------------------------------------------
+		cfgName = "shared_preload_libraries"; // pg_stat_statements is good to have *especially* if you are using PostgresTune
+		entry = _configMap.get(cfgName);
+		if (entry != null)
+		{
+			if ( ! entry.configName.contains("pg_stat_statements") )
+			{
+				String key = "DbmsConfigIssue." + srvName + ".pg_settings." + cfgToPropName(cfgName) + ".not_available";
+
+				DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, cfgName, Severity.INFO, 
+						"The Server Level Configuration '" + cfgName + "' does NOT contain 'pg_stat_statements'. This is an important option for PostgresTune, it's used to see what SQL Statements are expensive.", 
+						"Fix this using: 'CREATE EXTENSION pg_stat_statements', for more details check: https://www.postgresql.org/docs/current/static/pgstatstatements.html");
+
+				DbmsConfigManager.getInstance().addConfigIssue(issue);
+			}
+		}
+		
+
+		//-------------------------------------------------------
+		cfgName = "random_page_cost"; // if the default of 4.0, and you have fast disks (probably SSD), then 1.1 would be a better choice  
+		entry = _configMap.get(cfgName);
+		if (entry != null)
+		{
+			double cfg_val = StringUtil.parseDouble(entry.configValue, -1);
+			double cfg_def = 4.0;
+			
+			if (cfg_val != -1 && cfg_val == cfg_def)
+			{
+				String key = "DbmsConfigIssue." + srvName + ".pg_settings." + cfgToPropName(cfgName) + ".is_default_configured";
+
+				DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, cfgName, Severity.INFO, 
+						"The Server Level Configuration '" + cfgName + "' is default configured (" + cfg_def + "). If you are using fast disk (SSD), my suggestion is 1.1, otherwise Postgres in some cases falls back on doing table scans, instead of index lookups.",
+						"Fix this using: Set configuration '" + cfgName + "' to '1.1'. for more details check: https://www.postgresql.org/docs/current/runtime-config-query.html");
+
+				DbmsConfigManager.getInstance().addConfigIssue(issue);
+			}
+		}
+
+		//-------------------------------------------------------
+		// TODO in the future
+		cfgName = "min_parallel_table_scan_size"; // is probably set to low  
+		cfgName = "min_parallel_index_scan_size"; // is probably set to low  
+
 	}
 
 

@@ -248,6 +248,21 @@ implements IDbmsConfig
 		return map.get(name);
 	}
 
+
+	/**
+	 * Replace/Remove some characters from the 'cfgName' 
+	 * @param cfgName
+	 * @return
+	 */
+	public String cfgToPropName(String cfgName)
+	{
+		cfgName = cfgName.replace(" ", "_");
+		cfgName = cfgName.replace("(", "");
+		cfgName = cfgName.replace(")", "");
+
+		return cfgName;
+	}
+
 	
 	//--------------------------------------------------------------------------------
 	// BEGIN implement: AbstractTableModel

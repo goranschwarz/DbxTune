@@ -53,6 +53,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>Changed: AlarmEventLongRunningTransaction    -- Changed from Severity WARNING to INFO</LI>
 				<LI>Changed: AlarmEventHttpDestinationDown       -- bugfix: was never canceled (it was kept due to 'hasUndergoneAlarmDetection' checks)</LI>
 				<LI>Changed: AlarmEventBlockingLockAlarm         -- Added SPID to key, so we can have multiple alarms on blocking locks</LI>
+				<LI>Changed: AlarmEventOsSwapping                -- Have a Max value where we "cap" off at, so that peaks will be removed and we see a Average without peeaks (the calculation is 1.5 of the threshold value)</LI>
 			</UL>
 		</LI>
 		<LI>AlarmWriterToMail: Changed temple for Subject to include ${severity}, also changed encoding to UTF-8</LI>
@@ -152,6 +153,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>In the tab 'Server', and section 'All file(s) in the LOG Directory', added a shortcut section where you can add file endings that you want to list here. <code>logfiles.shortcuts=*.console</code> </LI>
 		<LI>Changed number of lines in file tail from 500 to 5000</LI>
 		<LI>changed default retention time from 12 months to 14 months (so we can see any "end-of-year" statistics)</LI>
+		<LI>servier view, added link to open ALL console files in tail mode</LI>
  	</UL>
 
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -433,6 +435,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmActiveStatements </b> - alarm HoldingLocksWhileWaitForClientInput, new option to only send alarm if it hold exclusive locks (CmActiveStatements.alarm.system.if.HoldingLocksWhileWaitForClientInputInSec.exclusiveLocksOnly=true|false) default=true</LI>
 
 		<LI><b>CmAlwaysOn         </b> - Granting select,insert,update,delete on table 'sqlserverTune_ag_dummy_update' was enhanced (note: this will still fail if the connection do not have authorization to create the table in the database. </LI>
+		<LI><b>CmAlwaysOn         </b> - Added some debug info, when remote queries goes "bad"</LI>
 
 		<LI><b>CmDatabases        </b> - Added 'OldestTranName' and 'OldestTranId' - Now shows the transaction name and id (watch out for OldestTranName 'implicit_transaction', which indicates that AotoCommit is FALSE, which introduces more blocking locks)</LI>
 		<LI><b>CmDatabases        </b> - fixed bug: LowDbFreeSpaceInMb and LowLogFreeSpaceInMb sometimes didn't fire correctly</LI>

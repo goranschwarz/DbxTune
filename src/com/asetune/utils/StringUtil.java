@@ -2026,6 +2026,24 @@ public class StringUtil
 	}
 
 	/**
+	 * Simply do Double.parseDouble(str), but if it fails (NumberFormatException), then return the default value
+	 * @param str           String to be converted
+	 * @param defaultValue  if "str" can't be converted (NumberFormatException), then return this value
+	 * @return a long value
+	 */
+	public static double parseDouble(String str, double defaultValue)
+	{
+		try
+		{
+			return Double.parseDouble(str);
+		}
+		catch (NumberFormatException nfe)
+		{
+			return defaultValue;
+		}
+	}
+
+	/**
 	 * returns a "safe" SQL String for column or table names
 	 * <p>
 	 * This is simple for the moment, and will just do [colname]
@@ -3192,7 +3210,8 @@ public class StringUtil
 		str = str.replace("&", "&amp;");
 		str = str.replace("<", "&lt;");
 		str = str.replace(">", "&gt;");
-		str = str.replace("\\n", "<br>");
+//		str = str.replace("\\n", "<br>");
+		str = str.replace("\n", "<br>");
 
 		return str;
 	}

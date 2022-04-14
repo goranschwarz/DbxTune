@@ -612,15 +612,6 @@ extends DbmsConfigAbstract
 //			* SQL Agent Jobs ????
 	}
 
-	private static String cfgToPropName(String cfgName)
-	{
-		cfgName = cfgName.replace(" ", "_");
-		cfgName = cfgName.replace("(", "");
-		cfgName = cfgName.replace(")", "");
-
-		return cfgName;
-	}
-
 	/**
 	 * Get description for the configuration name
 	 * @param colfigName
