@@ -579,6 +579,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>DDL Lookup: If it's an execution plan. check for 'hasWarnings', 'hasImplicitConvertions', 'hasImplicitConvCardinality', 'hasKeyOrRidLookups', 'hasMissingIndexes', 'hasCursor', 'hasUserDefinedFunction'. Store those as a JSON in column 'object_text'</LI>
 		<LI>DDL Lookup: For tables, extract save a bit more information about the tables, which is later on used by the Daily Summary Reports</LI>
 		<LI>Added scheduler work to examen Query Store, to get top collected SQL Statement, parse them for table names and send them to the DDL Storage in the PCS (for later use by Daily Summary Reports)</LI>
+		<LI>DDL extract in SqlServer removed 'OPTIMIZE_FOR_SEQUENTIAL_KEY', since it's only for SQL Server 2019 (might be added in at a later stage)</LI>
+		<LI>ObjectLookupInspecor: added some [qutedIdentifiers] around dbname... to handle databases with spaces in them</LI>
 		
 		<!-- ~~~~~ Daily Report ~~~~~ -->
 		<LI>
@@ -648,6 +650,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>Daily Summary Report </b> - For table information VIEW added: 'DDL Definition'</LI>
 		<LI><b>Daily Summary Report </b> - For table information TABLE added: 'Sample Time', 'DDL Info', 'Triggers DDL'</LI>
 		<LI><b>Daily Summary Report </b> - For table information INDEX added: 'Included Columns'</LI>
+		<LI><b>DBMS Configurations  </b> - Added sanity checks for 'synchronous_commit', 'shared_buffers', 'effective_cache_size', 'shared_preload_libraries', 'random_page_cost'</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
