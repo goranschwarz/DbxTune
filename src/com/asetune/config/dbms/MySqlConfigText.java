@@ -20,6 +20,8 @@
  ******************************************************************************/
 package com.asetune.config.dbms;
 
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+
 public abstract class MySqlConfigText
 {
 	/** What sub types exists */
@@ -50,26 +52,29 @@ public abstract class MySqlConfigText
 	*/
 	public static class SqlMode extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                       { return "SQL Mode"; }
-		@Override public    String     getName()                           { return ConfigType.SqlMode.toString(); }
-		@Override public    String     getConfigType()                     { return getName(); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "SELECT @@GLOBAL.sql_mode"; }
+		@Override public    String     getTabLabel()                          { return "SQL Mode"; }
+		@Override public    String     getName()                              { return ConfigType.SqlMode.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "SELECT @@GLOBAL.sql_mode"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "SELECT @@GLOBAL.sql_mode"; }
 	}
 
 	public static class HelpDb extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                       { return "Databases"; }
-		@Override public    String     getName()                           { return ConfigType.HelpDb.toString(); }
-		@Override public    String     getConfigType()                     { return getName(); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "SHOW DATABASES"; }
+		@Override public    String     getTabLabel()                          { return "Databases"; }
+		@Override public    String     getName()                              { return ConfigType.HelpDb.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "SHOW DATABASES"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "SHOW DATABASES"; }
 	}
 
 	public static class Replicas extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                       { return "Replicas"; }
-		@Override public    String     getName()                           { return ConfigType.Replicas.toString(); }
-		@Override public    String     getConfigType()                     { return getName(); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "SHOW SLAVE HOSTS"; }
+		@Override public    String     getTabLabel()                          { return "Replicas"; }
+		@Override public    String     getName()                              { return ConfigType.Replicas.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "SHOW SLAVE HOSTS"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "SHOW SLAVE HOSTS"; }
 	}
 
 }

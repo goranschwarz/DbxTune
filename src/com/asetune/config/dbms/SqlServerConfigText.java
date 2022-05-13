@@ -33,6 +33,8 @@ import com.asetune.config.dbms.DbmsConfigIssue.Severity;
 import com.asetune.config.dict.SqlServerTraceFlagsDictionary;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
@@ -83,11 +85,23 @@ public abstract class SqlServerConfigText
 	*/
 	public static class HelpDb extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                        { return "sp_helpdb"; }
-		@Override public    String     getName()                            { return ConfigType.SqlServerHelpDb.toString(); }
-		@Override public    String     getConfigType()                      { return getName(); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_helpdb"; }
+		@Override public    String     getTabLabel()                          { return "sp_helpdb"; }
+		@Override public    String     getName()                              { return ConfigType.SqlServerHelpDb.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "exec sp_helpdb"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "exec sp_helpdb"; }
 		
+		@Override
+		public String checkRequirements(DbxConnection conn)
+		{
+			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+
+			// In Azure Database, skip this 
+			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+				return "sp_helpdb: is NOT supported in Azure SQL Database.";
+
+			return super.checkRequirements(conn);
+		}
 		
 		/** Check 'compatibility_level' for all databases */
 		@Override
@@ -144,8 +158,11 @@ public abstract class SqlServerConfigText
 		@Override public    String     getTabLabel()                        { return "sys.databases"; }
 		@Override public    String     getName()                            { return ConfigType.SqlServerSysDatabases.toString(); }
 		@Override public    String     getConfigType()                      { return getName(); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) 
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) 
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v)
 		{
+			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) v;
+
 			String sql = 
 					"select has_dbaccess(name) AS has_dbaccess, * from sys.databases \n" +
 					"go \n" + 
@@ -156,10 +173,23 @@ public abstract class SqlServerConfigText
 					"print ' Below are: Database Scoped Configurations for each database in the SQL-Server' \n" + 
 					"print '-------------------------------------------------------------------------------' \n" + 
 					"print '' \n" + 
-					"go \n" + 
+					"go \n" +
+					"";
+
+			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+			{
+				sql += "" +
+						"select db_name() as dbname, * from sys.database_scoped_configurations \n" +
+						"go \n" +
+						"";
+			}
+			else
+			{
+				sql += "" +
 					"exec sys.sp_MSforeachdb 'select convert(varchar(60),''?'') as dbname, * from sys.database_scoped_configurations' \n" +
 					"go \n" +
 					"";
+			}
 			return sql; 
 			
 			// Should we somewhere indicate DEFAILT values
@@ -198,106 +228,129 @@ public abstract class SqlServerConfigText
 		@Override public    String     getTabLabel()                        { return "tempdb"; }
 		@Override public    String     getName()                            { return ConfigType.SqlServerTempdb.toString(); }
 		@Override public    String     getConfigType()                      { return getName(); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) 
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) 
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v)
 		{
+			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) v;
+
 			// ---------------------------------------------------------
 			// WARNING: do not use 'sys.master_files' instead use 'tempdb.sys.database_files'
 			//          master_files only shows INITIAL SIZE and not the "actual" to which it has been grown to
 			// ---------------------------------------------------------
-			String sql = ""
+			String sql = "";
+			
+			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+			{
+				// Should we do something special here...
+			}
+			else
+			{
+				sql += ""
 					+ "print '--#######################################' \n"
 					+ "print '--## sp_helpdb tempdb' \n"
 					+ "print '--#######################################' \n"
 				    + "exec sp_helpdb tempdb \n"
 				    + "go \n"
+				    + "";
+			}
 
-					+ "print '' \n"
-				    + "print '--#######################################' \n"
-					+ "print '--## Summary Pages and MB' \n"
-					+ "print '--#######################################' \n"
-				    + "SELECT \n"
-				    + "      type     = ISNULL(type_desc, 'TOTAL_SIZE') \n"
-				    + "     ,size_mb  = cast(SUM(size) / 128.0 as numeric(12,1)) \n"
-				    + "     ,size_pgs = SUM(size) \n"
-				    + "FROM tempdb.sys.database_files \n"
-				    + "GROUP BY GROUPING SETS ( (type_desc), () ) \n"
-				    + "go \n"
+			// For all versions
+			sql += ""
+				+ "print '' \n"
+			    + "print '--#######################################' \n"
+				+ "print '--## Summary Pages and MB' \n"
+				+ "print '--#######################################' \n"
+			    + "SELECT \n"
+			    + "      type     = ISNULL(type_desc, 'TOTAL_SIZE') \n"
+			    + "     ,size_mb  = cast(SUM(size) / 128.0 as numeric(12,1)) \n"
+			    + "     ,size_pgs = SUM(size) \n"
+			    + "FROM tempdb.sys.database_files \n"
+			    + "GROUP BY GROUPING SETS ( (type_desc), () ) \n"
+			    + "go \n"
 
-					+ "print '' \n"
-					+ "print '--#######################################' \n"
-					+ "print '--## tempdb LOG files. There should be 1 transaction log file in total.' \n"
-					+ "print '--#######################################' \n"
-				    + "SELECT \n"
-				    + "      file_id \n"
-				    + "     ,type_desc \n"
-				    + "     ,data_space_id \n"
-				    + "     ,name \n"
-				    + "     ,physical_name \n"
-				    + "     ,size_pgs     = size \n"
-				    + "     ,size_mb      = cast(size / 128.0 as numeric(12,1)) \n"
-				    + "     ,max_size_pgs = max_size \n"
-				    + "     ,max_size_mb  = cast(nullif(max_size, -1) / 128.0 as numeric(12,1)) \n"
-				    + "     ,growth_pgs   = growth \n"
-				    + "     ,growth_mb    = cast(growth / 128.0 as numeric(12,1)) \n"
-				    + "FROM tempdb.sys.database_files \n"
-				    + "WHERE type_desc = 'LOG' \n"
-					+ "go \n"
+				+ "print '' \n"
+				+ "print '--#######################################' \n"
+				+ "print '--## tempdb LOG files. There should be 1 transaction log file in total.' \n"
+				+ "print '--#######################################' \n"
+			    + "SELECT \n"
+			    + "      file_id \n"
+			    + "     ,type_desc \n"
+			    + "     ,data_space_id \n"
+			    + "     ,name \n"
+			    + "     ,physical_name \n"
+			    + "     ,size_pgs     = size \n"
+			    + "     ,size_mb      = cast(size / 128.0 as numeric(12,1)) \n"
+			    + "     ,max_size_pgs = max_size \n"
+			    + "     ,max_size_mb  = cast(nullif(max_size, -1) / 128.0 as numeric(12,1)) \n"
+			    + "     ,growth_pgs   = growth \n"
+			    + "     ,growth_mb    = cast(growth / 128.0 as numeric(12,1)) \n"
+			    + "FROM tempdb.sys.database_files \n"
+			    + "WHERE type_desc = 'LOG' \n"
+				+ "go \n"
 
-					+ "print '' \n"
-					+ "print '--#######################################' \n"
-					+ "print '--## tempdb DATA files. There should be 1 data file per scheduler/core, so 4 schedulers 4 tempdb data files.' \n"
-					+ "print '--#######################################' \n"
-				    + "SELECT \n"
-				    + "      file_id \n"
-				    + "     ,type_desc \n"
-				    + "     ,data_space_id \n"
-				    + "     ,name \n"
-				    + "     ,physical_name \n"
-				    + "     ,size_pgs     = size \n"
-				    + "     ,size_mb      = cast(size / 128.0 as numeric(12,1)) \n"
-				    + "     ,max_size_pgs = max_size \n"
-				    + "     ,max_size_mb  = cast(nullif(max_size, -1) / 128.0 as numeric(12,1)) \n"
-				    + "     ,growth_pgs   = growth \n"
-				    + "     ,growth_mb    = cast(growth / 128.0 as numeric(12,1)) \n"
-				    + "FROM tempdb.sys.database_files \n"
-				    + "WHERE type_desc = 'ROWS' \n"
-					+ "go \n"
-					+ "\n"
+				+ "print '' \n"
+				+ "print '--#######################################' \n"
+				+ "print '--## tempdb DATA files. There should be 1 data file per scheduler/core, so 4 schedulers 4 tempdb data files.' \n"
+				+ "print '--#######################################' \n"
+			    + "SELECT \n"
+			    + "      file_id \n"
+			    + "     ,type_desc \n"
+			    + "     ,data_space_id \n"
+			    + "     ,name \n"
+			    + "     ,physical_name \n"
+			    + "     ,size_pgs     = size \n"
+			    + "     ,size_mb      = cast(size / 128.0 as numeric(12,1)) \n"
+			    + "     ,max_size_pgs = max_size \n"
+			    + "     ,max_size_mb  = cast(nullif(max_size, -1) / 128.0 as numeric(12,1)) \n"
+			    + "     ,growth_pgs   = growth \n"
+			    + "     ,growth_mb    = cast(growth / 128.0 as numeric(12,1)) \n"
+			    + "FROM tempdb.sys.database_files \n"
+			    + "WHERE type_desc = 'ROWS' \n"
+				+ "go \n"
+				+ "\n"
 
-					+ "print '' \n"
-					+ "print '--#######################################' \n"
-					+ "print '--## Scheduler count from: sys.dm_os_schedulers' \n"
-					+ "print '--#######################################' \n"
-					+ "select scheduler_count = count(*) from sys.dm_os_schedulers where status = 'VISIBLE ONLINE' \n"
-					+ "go \n"
+				+ "print '' \n"
+				+ "print '--#######################################' \n"
+				+ "print '--## Scheduler count from: sys.dm_os_schedulers' \n"
+				+ "print '--#######################################' \n"
+				+ "select scheduler_count = count(*) from sys.dm_os_schedulers where status = 'VISIBLE ONLINE' \n"
+				+ "go \n"
 
-					+ "print '' \n"
-					+ "print '--#######################################' \n"
-					+ "print '--## Core count from: sys.dm_os_sys_info' \n"
-					+ "print '--#######################################' \n"
-					+ "select cpu_count from sys.dm_os_sys_info \n"
-					+ "go \n"
-					+ "";
+				+ "print '' \n"
+				+ "print '--#######################################' \n"
+				+ "print '--## Core count from: sys.dm_os_sys_info' \n"
+				+ "print '--#######################################' \n"
+				+ "select cpu_count from sys.dm_os_sys_info \n"
+				+ "go \n"
+				+ "";
 
-			if (srvVersion < Ver.ver(2019))
+			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
 			{
-				sql += ""
-					+ "\n"
-					+ "print '' \n"
-					+ "print '--#######################################' \n"
-					+ "print '--## Traceflags - that is good to enable in PRE SQL Server 2019.' \n"
-					+ "print '--## 1118 - Full Extents Only' \n"
-					+ "print '--## 1117 - Grow All Files in a FileGroup Equally' \n"
-					+ "print '--## 2453 - Improve Table Variable Performance -- Allows table variables to trigger recompile (above: 2012 SP2, 2014 CU3, 2016 RTM)' \n"
-					+ "print '--#######################################' \n"
-					+ "go \n"
-					+ "DBCC TRACESTATUS (1118, -1) WITH NO_INFOMSGS -- Full Extents Only (in PRE 2019) \n"
-					+ "go \n"
-					+ "DBCC TRACESTATUS (1117, -1) WITH NO_INFOMSGS -- Grow All Files in a FileGroup Equally (in PRE 2019) \n"
-					+ "go \n"
-					+ "DBCC TRACESTATUS (2453, -1) WITH NO_INFOMSGS -- Improve Table Variable Performance -- Allows table variables to trigger recompile (in PRE 2019) \n"
-					+ "go \n"
-					+ "";
+				// Should we do something special here...
+			}
+			else
+			{
+//				if (srvVersion < Ver.ver(2019))
+				if (versionInfo.getLongVersion() < Ver.ver(2019))
+				{
+					sql += ""
+						+ "\n"
+						+ "print '' \n"
+						+ "print '--#######################################' \n"
+						+ "print '--## Traceflags - that is good to enable in PRE SQL Server 2019.' \n"
+						+ "print '--## 1118 - Full Extents Only' \n"
+						+ "print '--## 1117 - Grow All Files in a FileGroup Equally' \n"
+						+ "print '--## 2453 - Improve Table Variable Performance -- Allows table variables to trigger recompile (above: 2012 SP2, 2014 CU3, 2016 RTM)' \n"
+						+ "print '--#######################################' \n"
+						+ "go \n"
+						+ "DBCC TRACESTATUS (1118, -1) WITH NO_INFOMSGS -- Full Extents Only (in PRE 2019) \n"
+						+ "go \n"
+						+ "DBCC TRACESTATUS (1117, -1) WITH NO_INFOMSGS -- Grow All Files in a FileGroup Equally (in PRE 2019) \n"
+						+ "go \n"
+						+ "DBCC TRACESTATUS (2453, -1) WITH NO_INFOMSGS -- Improve Table Variable Performance -- Allows table variables to trigger recompile (in PRE 2019) \n"
+						+ "go \n"
+						+ "";
+				}
 			}
 
 			return sql; 
@@ -321,7 +374,12 @@ public abstract class SqlServerConfigText
 			int numOfOnlineSchedulers = -1;
 			int tempdbRowsFileCount   = -1;
 		//	int tempdbLogFileCount    = -1;
-			
+
+			// Do not do this check for Azure SQL Database
+//			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+//			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+//				return;
+
 			String    srvName    = "-UNKNOWN-";
 			Timestamp srvRestart = null;
 			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
@@ -497,10 +555,11 @@ public abstract class SqlServerConfigText
 
 	public static class Traceflags extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                        { return "traceflags"; }
-		@Override public    String     getName()                            { return ConfigType.SqlServerTraceflags.toString(); }
-		@Override public    String     getConfigType()                      { return getName(); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "DBCC TRACESTATUS(-1) WITH NO_INFOMSGS"; }
+		@Override public    String     getTabLabel()                          { return "traceflags"; }
+		@Override public    String     getName()                              { return ConfigType.SqlServerTraceflags.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "DBCC TRACESTATUS(-1) WITH NO_INFOMSGS"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "DBCC TRACESTATUS(-1) WITH NO_INFOMSGS"; }
 
 		@Override
 		public void refresh(DbxConnection conn, Timestamp ts)
@@ -596,36 +655,61 @@ public abstract class SqlServerConfigText
 
 	public static class LinkedServers extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                        { return "sp_linkedservers"; }
-		@Override public    String     getName()                            { return ConfigType.SqlServerLinkedServers.toString(); }
-		@Override public    String     getConfigType()                      { return getName(); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_linkedservers"; }
+		@Override public    String     getTabLabel()                          { return "sp_linkedservers"; }
+		@Override public    String     getName()                              { return ConfigType.SqlServerLinkedServers.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "exec sp_linkedservers"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "exec sp_linkedservers"; }
+		@Override
+		public String checkRequirements(DbxConnection conn)
+		{
+			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+
+			// In Azure Database, skip this 
+			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+				return "sp_linkedservers: is NOT supported in Azure SQL Database.";
+
+			return super.checkRequirements(conn);
+		}
 	}
 
 	public static class HelpSort extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                        { return "sp_helpsort"; }
-		@Override public    String     getName()                            { return ConfigType.SqlServerHelpSort.toString(); }
-		@Override public    String     getConfigType()                      { return getName(); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_helpsort   SELECT SERVERPROPERTY_Collation = convert(varchar(255), SERVERPROPERTY('Collation'))"; }
+		@Override public    String     getTabLabel()                          { return "sp_helpsort"; }
+		@Override public    String     getName()                              { return ConfigType.SqlServerHelpSort.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "exec sp_helpsort   SELECT SERVERPROPERTY_Collation = convert(varchar(255), SERVERPROPERTY('Collation'))"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "exec sp_helpsort   SELECT SERVERPROPERTY_Collation = convert(varchar(255), SERVERPROPERTY('Collation'))"; }
 	}
 
 	public static class HostInfo extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                        { return "Host Info"; }
-		@Override public    String     getName()                            { return ConfigType.SqlServerHostInfo.toString(); }
-		@Override public    String     getConfigType()                      { return getName(); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from sys.dm_os_host_info"; }
-		@Override public    long       needVersion()                        { return Ver.ver(2017); }
-//		@Override public    long       needVersion()                        { return Ver.ver(14,0); } // 14 == 2017
+		@Override public    String     getTabLabel()                          { return "Host Info"; }
+		@Override public    String     getName()                              { return ConfigType.SqlServerHostInfo.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "select * from sys.dm_os_host_info"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from sys.dm_os_host_info"; }
+		@Override public    long       needVersion()                          { return Ver.ver(2017); }
+		@Override
+		public String checkRequirements(DbxConnection conn)
+		{
+			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+
+			// In Azure Database, skip this 
+			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+				return "sys.dm_os_host_info: is NOT supported in Azure SQL Database.";
+
+			return super.checkRequirements(conn);
+		}
 	}
 
 	public static class SysInfo extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                        { return "System Info"; }
-		@Override public    String     getName()                            { return ConfigType.SqlServerSysInfo.toString(); }
-		@Override public    String     getConfigType()                      { return getName(); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from sys.dm_os_sys_info"; }
+		@Override public    String     getTabLabel()                          { return "System Info"; }
+		@Override public    String     getName()                              { return ConfigType.SqlServerSysInfo.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "select * from sys.dm_os_sys_info"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from sys.dm_os_sys_info"; }
 	}
 
 	public static class ResourceGovernor extends DbmsConfigTextAbstract
@@ -633,7 +717,8 @@ public abstract class SqlServerConfigText
 		@Override public    String     getTabLabel()                        { return "Resource Governor"; }
 		@Override public    String     getName()                            { return ConfigType.SqlServerResourceGovernor.toString(); }
 		@Override public    String     getConfigType()                      { return getName(); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) 
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) 
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v)
 		{
 			String sql = ""
 				    + "print '' \n"
@@ -667,18 +752,42 @@ public abstract class SqlServerConfigText
 
 	public static class ServerRegistry extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                        { return "Server Registry"; }
-		@Override public    String     getName()                            { return ConfigType.SqlServerServerRegistry.toString(); }
-		@Override public    String     getConfigType()                      { return getName(); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from sys.dm_server_registry"; }
+		@Override public    String     getTabLabel()                          { return "Server Registry"; }
+		@Override public    String     getName()                              { return ConfigType.SqlServerServerRegistry.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "select * from sys.dm_server_registry"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from sys.dm_server_registry"; }
+		@Override
+		public String checkRequirements(DbxConnection conn)
+		{
+			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+
+			// In Azure Database, skip this 
+			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+				return "sys.dm_server_registry: is NOT supported in Azure SQL Database.";
+
+			return super.checkRequirements(conn);
+		}
 	}
 
 	public static class ClusterNodes extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                        { return "Cluster Nodes"; }
-		@Override public    String     getName()                            { return ConfigType.SqlServerClusterNodes.toString(); }
-		@Override public    String     getConfigType()                      { return getName(); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from sys.dm_os_cluster_nodes"; }
+		@Override public    String     getTabLabel()                          { return "Cluster Nodes"; }
+		@Override public    String     getName()                              { return ConfigType.SqlServerClusterNodes.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "select * from sys.dm_os_cluster_nodes"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from sys.dm_os_cluster_nodes"; }
+		@Override
+		public String checkRequirements(DbxConnection conn)
+		{
+			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+
+			// In Azure Database, skip this 
+			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+				return "sys.dm_os_cluster_nodes: is NOT supported in Azure SQL Database.";
+
+			return super.checkRequirements(conn);
+		}
 	}
 
 }

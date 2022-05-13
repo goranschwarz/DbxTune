@@ -96,6 +96,7 @@ import com.asetune.pcs.SqlServerQueryStoreDdlExtractor;
 import com.asetune.pcs.SqlServerQueryStoreExtractor;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
@@ -339,7 +340,7 @@ extends CounterControllerAbstract
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems geting SQL-Server 'Edition', using sql='"+sql+"'. Caught: "+ex);
+			_logger.warn("Problems getting SQL-Server 'Edition', using sql='"+sql+"'. Caught: "+ex);
 		}
 
 		//------------------------------------------------
@@ -372,7 +373,17 @@ extends CounterControllerAbstract
 			_logger.warn("Problems getting @@version, using sql='"+sql+"'. Caught: "+ex);
 		}
 
+		//------------------------------------------------
+		// If we are running some AZURE we can drop out of here!
+		// In the future there might be things we want to check
+		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics() || versionInfo.isAzureManagedInstance())
+		{
+			_logger.info("Skipping checking/initialize DbmsProperties since we connected to some Azure instance and we dont want to check for various traceflags/settings/etc. This since we can't change them in an Azure Managed environment.");
+			return;
+		}
 
+		
 		//------------------------------------------------
 		// Get Global Trace Flags
 		List<Integer> activeGlobalTraceFlagList = Collections.emptyList(); 
@@ -678,14 +689,36 @@ extends CounterControllerAbstract
 		Timestamp counterClearTime = null;
 
 //		String sql = "select getdate(), @@servername, @@servername, CountersCleared='2000-01-01 00:00:00'";
-		String sql = "select getdate(), convert(varchar(100),isnull(SERVERPROPERTY('InstanceName'), @@servername)), convert(varchar(100),SERVERPROPERTY('MachineName')), CountersCleared='2000-01-01 00:00:00'";
+		String sql = ""
+				+ "select \n"
+				+ "     getdate() \n"
+				+ "    ,convert(varchar(100),isnull(SERVERPROPERTY('InstanceName'), @@servername)) \n"
+				+ "    ,convert(varchar(100),SERVERPROPERTY('MachineName')) \n"
+				+ "    ,CountersCleared='2000-01-01 00:00:00' \n"
+				+ "";
 
 		try
 		{
 			if ( ! isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
 				return null;
 				
-			Statement stmt = getMonConnection().createStatement();
+			DbxConnection conn = getMonConnection();
+
+			// Azure SQL (Database / ManagedInstance and possibly SynapsAnalytics) do NOT support 'SERVERPROPERTY('MachineName')'
+			// so lets use the @@servername + __azure ...
+			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics() || versionInfo.isAzureManagedInstance())
+			{
+				sql = ""
+						+ "select \n"
+						+ "     getdate() \n"
+						+ "    ,convert(varchar(100),isnull(SERVERPROPERTY('InstanceName'), @@servername)) \n"
+						+ "    ,convert(varchar(100), @@servername + '__azure' ) \n"
+						+ "    ,CountersCleared='2000-01-01 00:00:00' \n"
+						+ "";
+			}
+			
+			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next())
 			{
@@ -881,6 +914,9 @@ extends CounterControllerAbstract
 	 */
 	public static String resolvFileNameToDirectory(String osFileName)
 	{
+		if (StringUtil.isNullOrBlank(osFileName))
+			return "";
+
 		if (CounterController.hasInstance())
 		{
 			CounterControllerSqlServer instance = (CounterControllerSqlServer) CounterController.getInstance();

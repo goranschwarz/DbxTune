@@ -38,6 +38,7 @@ import com.asetune.alarm.events.AlarmEventFullTranLog;
 import com.asetune.alarm.events.AlarmEventProcessInfected;
 import com.asetune.alarm.events.AlarmEventProcessStackTrace;
 import com.asetune.alarm.events.AlarmEventProcessTimeSliceError;
+import com.asetune.alarm.events.ase.AlarmEventBackgroundMessage;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -664,6 +665,23 @@ extends CountersModelAppend
 //					if (timesliceError)
 				}
 			}
+			
+			//-------------------------------------------------------
+			// BackgroundMessage
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("BackgroundMessage"))
+			{
+				if (ErrorMessage.startsWith("background task message: "))
+				{
+					String extendedDescText = ErrorMessage;
+					String extendedDescHtml = "<pre>\n" + ErrorMessage + "\n</pre>";
+
+					AlarmEvent ae = new AlarmEventBackgroundMessage(this, ErrorMessage);
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					alarmHandler.addAlarm( ae );
+				}
+			}
 		}
 	}
 
@@ -749,6 +767,9 @@ extends CountersModelAppend
 	public static final String  PROPKEY_alarm_ProcessTimesliceError = CM_NAME + ".alarm.system.on.ProcessTimesliceError";
 	public static final boolean DEFAULT_alarm_ProcessTimesliceError = true;
 
+	public static final String  PROPKEY_alarm_BackgroundMessage     = CM_NAME + ".alarm.system.on.BackgroundMessage";
+	public static final boolean DEFAULT_alarm_BackgroundMessage     = true;
+
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
@@ -763,6 +784,7 @@ extends CountersModelAppend
 		list.add(new CmSettingsHelper("ProcessStackTrace"      , isAlarmSwitch, PROPKEY_alarm_ProcessStackTrace    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessStackTrace    , DEFAULT_alarm_ProcessStackTrace    ), DEFAULT_alarm_ProcessStackTrace    , "On error log message 'end of stack trace, spid .*, kpid .*, suid .*', send 'AlarmEventProcessStackTrace'." ));
 		list.add(new CmSettingsHelper("ProcessInfected"        , isAlarmSwitch, PROPKEY_alarm_ProcessInfected      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessInfected      , DEFAULT_alarm_ProcessInfected      ), DEFAULT_alarm_ProcessInfected      , "On error log message 'Current process .* infected with signal', send 'AlarmEventProcessInfected'." ));
 		list.add(new CmSettingsHelper("ProcessTimeSliceError"  , isAlarmSwitch, PROPKEY_alarm_ProcessTimesliceError, Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessTimesliceError, DEFAULT_alarm_ProcessTimesliceError), DEFAULT_alarm_ProcessTimesliceError, "On error log message 'timeslice .*, current process infected at', send 'AlarmEventProcessTimeSliceError'." ));
+		list.add(new CmSettingsHelper("BackgroundMessage"      , isAlarmSwitch, PROPKEY_alarm_BackgroundMessage    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_BackgroundMessage    , DEFAULT_alarm_BackgroundMessage    ), DEFAULT_alarm_BackgroundMessage    , "On messages starting with 'background task message:', send 'AlarmEventBackgroundMessage'." ));
 
 		list.add(new CmSettingsHelper("Severity"               , isAlarmSwitch, PROPKEY_alarm_Severity             , Integer.class, conf.getIntProperty    (PROPKEY_alarm_Severity             , DEFAULT_alarm_Severity             ), DEFAULT_alarm_Severity             , "If 'Severity' is greater than ## then send 'AlarmEventErrorLogEntry'." ));
 		list.add(new CmSettingsHelper("SkipList ErrorNumber(s)"               , PROPKEY_alarm_ErrorNumberSkipList  , String .class, conf.getProperty       (PROPKEY_alarm_ErrorNumberSkipList  , DEFAULT_alarm_ErrorNumberSkipList  ), DEFAULT_alarm_ErrorNumberSkipList  , "Skip errors number in this list, that is if Severity is above that rule. format(comma separated list of numbers): 123, 321, 231" ));

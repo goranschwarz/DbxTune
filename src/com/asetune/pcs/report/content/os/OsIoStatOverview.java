@@ -338,6 +338,10 @@ public class OsIoStatOverview extends OsAbstract
 			String r_await__avg = !dummyRstm.hasColumnNoCase("r_await") ? "" : "    ,cast(avg([r_await])         as numeric(10,1)) as [r_await__avg] \n";
 			String w_await__avg = !dummyRstm.hasColumnNoCase("w_await") ? "" : "    ,cast(avg([w_await])         as numeric(10,1)) as [w_await__avg] \n";
 
+// FIXME: do the below
+//Error; Column 'avgrq-sz' not found... 
+//sync this with; com/asetune/hostmon/MonitorIoLinux.java
+//There can/will be different number of columns (depem´nding on what OS (version) we monitor)
 			String sql = ""
 				    + "select \n"
 				    + "     [device] \n"

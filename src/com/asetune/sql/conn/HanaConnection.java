@@ -25,6 +25,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoHana;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
 import com.asetune.utils.Ver;
@@ -37,6 +39,12 @@ public class HanaConnection extends DbxConnection
 		super(conn);
 		Ver.majorVersion_mustBeTenOrAbove = false;
 //System.out.println("constructor::HanaConnection(conn): conn="+conn);
+	}
+
+	@Override
+	public DbmsVersionInfo createDbmsVersionInfo()
+	{
+		return new DbmsVersionInfoHana(this);
 	}
 
 	@Override

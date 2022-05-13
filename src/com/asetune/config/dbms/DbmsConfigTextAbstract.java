@@ -33,6 +33,7 @@ import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import com.asetune.Version;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.Configuration;
@@ -91,9 +92,19 @@ implements IDbmsConfigText
 	/** What type is this specific Configuration of */
 	abstract public String getConfigType();
 	
+//	/** get SQL statement to be executed to GET current configuration string 
+//	 * @param srvVersion */
+//	abstract protected String getSqlCurrentConfig(long srvVersion);
+//
+//	/** get SQL statement to be executed to GET current configuration string 
+//	 * @param srvVersion */
+//	public String getSqlCurrentConfig(DbmsVersionInfo versionInfo)
+//	{
+//		return getSqlCurrentConfig(versionInfo.getLongVersion());
+//	}
 	/** get SQL statement to be executed to GET current configuration string 
-	 * @param srvVersion */
-	abstract protected String getSqlCurrentConfig(long srvVersion);
+	 * @param versionInfo */
+	abstract protected String getSqlCurrentConfig(DbmsVersionInfo versionInfo);
 
 	/**
 	 * get SQL Statement used to get information from the offline storage
@@ -244,6 +255,104 @@ implements IDbmsConfigText
 		return isEnabled;
 	}
 
+//	/**
+//	 * Like 'isEnabled()' but in here we can check for various things on the DbxConnection and return a message why this was skipped if ww can't do the check!
+//	 * @param conn
+//	 * @return null or empty string if we should proceed, otherwise a message why this config check cant be done.
+//	 */
+//	@Override
+//	public String getSkipReason(DbxConnection conn)
+//	{
+//		return null;
+//	}
+
+	/**
+	 * Checks if we meet all the requirements for this configuration check
+	 * <p>
+	 * This typically does
+	 * <ul>
+	 *   <li>Check if we can get the configuration, due to compatible version</li>
+	 *   <li>Check if we can get the configuration, due to cluster</li>
+	 *   <li>Check if we can get the configuration, due to enough rights/role based.</li>
+	 *   <li>etc</li>
+	 * </ul>
+	 * 
+	 * Override this if you have special needs...
+	 * 
+	 * @param conn
+	 * @return null or empty string if we should proceed, otherwise a message why this configuration check can't be checked.
+	 */
+	@Override
+	public String checkRequirements(DbxConnection conn)
+	{
+//		DbmsVersionInfo dbmsVersionInfo = conn.getDbmsVersionInfo();
+
+		long         srvVersion = conn.getDbmsVersionNumber();
+		boolean      isCluster  = conn.isDbmsClusterEnabled();
+
+		long         needVersion = needVersion();
+		boolean      needCluster = needCluster();
+		List<String> needRole    = needRole();
+		List<String> needConfig  = needConfig();
+
+		// Check if we can get the configuration, due to compatible version.
+		if (needVersion > 0 && srvVersion < needVersion)
+		{
+			return "This info is only available if the Server Version is above " + Ver.versionNumToStr(needVersion);
+		}
+
+		// Check if we can get the configuration, due to cluster.
+		if (needCluster && ! isCluster)
+		{
+			return "This info is only available if the Server is Cluster Enabled.";
+		}
+
+		// Check if we can get the configuration, due to enough rights/role based.
+		if (needRole != null)
+		{
+			List<String> hasRoles = AseConnectionUtils.getActiveSystemRoles(conn);
+
+			boolean haveRole = false;
+			for (String role : needRole)
+			{
+				if (hasRoles.contains(role))
+					haveRole = true;
+			}
+			if ( ! haveRole )
+			{
+				return "This info is only available if you have been granted any of the following role(s) '"+needRole+"'.";
+			}
+		}
+
+		// Check if we can get the configuration, due to enough rights/role based.
+		if (needConfig != null)
+		{
+			List<String> missingConfigs = new ArrayList<String>();
+			
+			for (String configName : needConfig)
+			{
+				boolean isConfigured = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, configName);
+				if ( ! isConfigured )
+					missingConfigs.add(configName);
+			}
+			
+			if (missingConfigs.size() > 0)
+			{
+				String configStr;
+				configStr  = "This info is only available if the following configuration(s) has been enabled '"+needConfig+"'.\n";
+				configStr += "\n";
+				configStr += "The following configuration(s) is missing:\n";
+				for (String str : missingConfigs)
+					configStr += "     exec sp_configure '" + str + "', 1\n";
+
+				return configStr;
+			}
+		}
+		
+		// All requirements are met
+		return null;
+	}
+
 	@Override
 	public String getSyntaxEditingStyle()
 	{
@@ -267,19 +376,10 @@ implements IDbmsConfigText
 
 		if ( ! _offline )
 		{
-//			int          srvVersion = AseConnectionUtils.getAseVersionNumber(conn);
-//			boolean      isCluster  = AseConnectionUtils.isClusterEnabled(conn);
-			long         srvVersion = conn.getDbmsVersionNumber();
-			boolean      isCluster  = conn.isDbmsClusterEnabled();
-
-			long         needVersion = needVersion();
-			boolean      needCluster = needCluster();
-			List<String> needRole    = needRole();
-			List<String> needConfig  = needConfig();
-			boolean      isEnabled   = isEnabled();
-
+			DbmsVersionInfo dbmsVersionInfo = conn.getDbmsVersionInfo();
+			
 			// Check if it's enabled, or should we go ahead and try to get the configuration
-			if ( ! isEnabled )
+			if ( ! isEnabled() )
 			{
 				setConfig("This configuration check is disabled. \n"
 						+ "To enable it: change the property 'dbms.config.text."+getName()+".enabled=false', to true. Or simply remove it.\n"
@@ -294,65 +394,109 @@ implements IDbmsConfigText
 				return;
 			}
 
-			// Check if we can get the configuration, due to compatible version.
-			if (needVersion > 0 && srvVersion < needVersion)
+			// Check if we meet all the requirements
+			String requirements  = checkRequirements(conn); // return null/empty-string on OK, otherwise a message why we didn't meet the requirements 
+			if (StringUtil.hasValue(requirements))
 			{
-				setConfig("This info is only available if the Server Version is above " + Ver.versionNumToStr(needVersion));
+				setConfig(requirements);
 				return;
 			}
 
-			// Check if we can get the configuration, due to cluster.
-			if (needCluster && ! isCluster)
-			{
-				setConfig("This info is only available if the Server is Cluster Enabled.");
-				return;
-			}
-
-			// Check if we can get the configuration, due to enough rights/role based.
-			if (needRole != null)
-			{
-				List<String> hasRoles = AseConnectionUtils.getActiveSystemRoles(conn);
-
-				boolean haveRole = false;
-				for (String role : needRole)
-				{
-					if (hasRoles.contains(role))
-						haveRole = true;
-				}
-				if ( ! haveRole )
-				{
-					setConfig("This info is only available if you have been granted any of the following role(s) '"+needRole+"'.");
-					return;
-				}
-			}
-
-			// Check if we can get the configuration, due to enough rights/role based.
-			if (needConfig != null)
-			{
-				List<String> missingConfigs = new ArrayList<String>();
-				
-				for (String configName : needConfig)
-				{
-					boolean isConfigured = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, configName);
-					if ( ! isConfigured )
-						missingConfigs.add(configName);
-				}
-				
-				if (missingConfigs.size() > 0)
-				{
-					String configStr;
-					configStr  = "This info is only available if the following configuration(s) has been enabled '"+needConfig+"'.\n";
-					configStr += "\n";
-					configStr += "The following configuration(s) is missing:\n";
-					for (String str : missingConfigs)
-						configStr += "     exec sp_configure '" + str + "', 1\n";
-					setConfig(configStr);
-					return;
-				}
-			}
+//			DbmsVersionInfo dbmsVersionInfo = conn.getDbmsVersionInfo();
+//
+//			long         srvVersion = conn.getDbmsVersionNumber();
+//			boolean      isCluster  = conn.isDbmsClusterEnabled();
+//
+//			long         needVersion = needVersion();
+//			boolean      needCluster = needCluster();
+//			List<String> needRole    = needRole();
+//			List<String> needConfig  = needConfig();
+//			boolean      isEnabled   = isEnabled();
+//			String       skipReason  = getSkipReason(conn); // return null/empty-string on OK, otherwise a message why it should be SKIPPED 
+//
+//			// Check if it's enabled, or should we go ahead and try to get the configuration
+//			if ( ! isEnabled )
+//			{
+//				setConfig("This configuration check is disabled. \n"
+//						+ "To enable it: change the property 'dbms.config.text."+getName()+".enabled=false', to true. Or simply remove it.\n"
+//						+ "\n"
+//						+ "The different properties files you can change it in is:\n"
+//						+ "  - USER_TEMP:   " + Configuration.getInstance(Configuration.USER_TEMP).getFilename() + "\n"
+//						+ "  - USER_CONF:   " + Configuration.getInstance(Configuration.USER_CONF).getFilename() + "\n"
+//						+ "  - SYSTEM_CONF: " + Configuration.getInstance(Configuration.SYSTEM_CONF).getFilename() + "\n"
+//						+ Version.getAppName() + " reads the config files in the above order. So USER_TEMP overrides the other files, etc...\n"
+//						+ "Preferable change it in *USER_CONF* or USER_TEMP. SYSTEM_CONF is overwritten when a new version of "+Version.getAppName()+" is installed.\n"
+//						+ "If USER_CONF, do not exist: simply create it.");
+//				return;
+//			}
+//
+//			// Check if this should be SKIPPED or not
+//			if (StringUtil.hasValue(skipReason))
+//			{
+//				setConfig(skipReason);
+//				return;
+//			}
+//
+//			// Check if we can get the configuration, due to compatible version.
+//			if (needVersion > 0 && srvVersion < needVersion)
+//			{
+//				setConfig("This info is only available if the Server Version is above " + Ver.versionNumToStr(needVersion));
+//				return;
+//			}
+//
+//			// Check if we can get the configuration, due to cluster.
+//			if (needCluster && ! isCluster)
+//			{
+//				setConfig("This info is only available if the Server is Cluster Enabled.");
+//				return;
+//			}
+//
+//			// Check if we can get the configuration, due to enough rights/role based.
+//			if (needRole != null)
+//			{
+//				List<String> hasRoles = AseConnectionUtils.getActiveSystemRoles(conn);
+//
+//				boolean haveRole = false;
+//				for (String role : needRole)
+//				{
+//					if (hasRoles.contains(role))
+//						haveRole = true;
+//				}
+//				if ( ! haveRole )
+//				{
+//					setConfig("This info is only available if you have been granted any of the following role(s) '"+needRole+"'.");
+//					return;
+//				}
+//			}
+//
+//			// Check if we can get the configuration, due to enough rights/role based.
+//			if (needConfig != null)
+//			{
+//				List<String> missingConfigs = new ArrayList<String>();
+//				
+//				for (String configName : needConfig)
+//				{
+//					boolean isConfigured = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, configName);
+//					if ( ! isConfigured )
+//						missingConfigs.add(configName);
+//				}
+//				
+//				if (missingConfigs.size() > 0)
+//				{
+//					String configStr;
+//					configStr  = "This info is only available if the following configuration(s) has been enabled '"+needConfig+"'.\n";
+//					configStr += "\n";
+//					configStr += "The following configuration(s) is missing:\n";
+//					for (String str : missingConfigs)
+//						configStr += "     exec sp_configure '" + str + "', 1\n";
+//					setConfig(configStr);
+//					return;
+//				}
+//			}
 
 			// Get the SQL to execute.
-			String sql = getSqlCurrentConfig(srvVersion);
+//			String sql = getSqlCurrentConfig(srvVersion);
+			String sql = getSqlCurrentConfig(dbmsVersionInfo);
 			
 			AseSqlScript script = null;
 			try

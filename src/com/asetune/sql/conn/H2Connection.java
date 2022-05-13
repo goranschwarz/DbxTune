@@ -29,6 +29,8 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoH2;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
 import com.asetune.ui.autocomplete.completions.TableExtraInfo;
@@ -44,6 +46,12 @@ public class H2Connection extends DbxConnection
 		super(conn);
 		Ver.majorVersion_mustBeTenOrAbove = false;
 //System.out.println("constructor::H2Connection(conn): conn="+conn);
+	}
+
+	@Override
+	public DbmsVersionInfo createDbmsVersionInfo()
+	{
+		return new DbmsVersionInfoH2(this);
 	}
 
 	@Override

@@ -23,6 +23,8 @@ package com.asetune.sql.conn;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoDerby;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
 import com.asetune.utils.Ver;
@@ -35,6 +37,12 @@ public class DerbyConnection extends DbxConnection
 		super(conn);
 		Ver.majorVersion_mustBeTenOrAbove = true;
 //System.out.println("constructor::DerbyConnection(conn): conn="+conn);
+	}
+
+	@Override
+	public DbmsVersionInfo createDbmsVersionInfo()
+	{
+		return new DbmsVersionInfoDerby(this);
 	}
 
 	@Override

@@ -22,6 +22,7 @@ package com.asetune.cm.sqlserver;
 
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -49,7 +50,9 @@ import com.asetune.alarm.events.AlarmEventLowDbFreeSpace;
 import com.asetune.alarm.events.AlarmEventLowLogFreeSpace;
 import com.asetune.alarm.events.AlarmEventLowOsDiskFreeSpace;
 import com.asetune.alarm.events.AlarmEventOldBackup;
+import com.asetune.alarm.events.AlarmEventOldIncrementalBackup;
 import com.asetune.alarm.events.AlarmEventOldTranLogBackup;
+import com.asetune.alarm.events.sqlserver.AlarmEventDbNotInHadr;
 import com.asetune.alarm.events.sqlserver.AlarmEventDbccCheckdbAge;
 import com.asetune.alarm.events.sqlserver.AlarmEventQueryStoreLowFreeSpace;
 import com.asetune.alarm.events.sqlserver.AlarmEventQueryStoreUnexpectedState;
@@ -71,6 +74,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.CollectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SqlServerUtils;
@@ -777,10 +781,12 @@ extends CountersModel
 			mtd.addColumn(cmName, "OldestTranHasSqlText"    ,"<html>SQL Text of the oldest open transaction</html>");                                                              //   = CASE WHEN oti.most_recent_sql_text is not null THEN convert(bit,1) ELSE convert(bit,0) END 
 			mtd.addColumn(cmName, "OldestTranHasShowPlan"   ,"<html>Showplan Text of the oldest open transaction</html>");                                                         //   = CASE WHEN oti.plan_text            is not null THEN convert(bit,1) ELSE convert(bit,0) END 
 
-			mtd.addColumn(cmName, "LastDbBackupTime"        ,"<html>Last Date/time a backup was done.</html>");                                                                    //   =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D') 
-			mtd.addColumn(cmName, "LastDbBackupAgeInHours"  ,"<html>How many hours ago was the last backup taken.</html>");                                                        //   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) 
-			mtd.addColumn(cmName, "LastLogBackupTime"       ,"<html>Last Date/time a LOG backup was done.</html>");                                                                //   =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L') 
-			mtd.addColumn(cmName, "LastLogBackupAgeInHours" ,"<html>How many hours ago was the last LOG backup taken.</html>");                                                    //   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L'), -1) 
+			mtd.addColumn(cmName, "LastDbBackupTime"         ,"<html>Last Date/time a backup was done.</html>");                                                                    //   =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D') 
+			mtd.addColumn(cmName, "LastDbBackupAgeInHours"   ,"<html>How many hours ago was the last backup taken.</html>");                                                        //   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) 
+			mtd.addColumn(cmName, "LastIncDbBackupTime"      ,"<html>Last Date/time a incremental backup was done.</html>");                                                                    //   =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D') 
+			mtd.addColumn(cmName, "LastIncDbBackupAgeInHours","<html>How many hours ago was the last incremental backup taken.</html>");                                                        //   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) 
+			mtd.addColumn(cmName, "LastLogBackupTime"        ,"<html>Last Date/time a LOG backup was done.</html>");                                                                //   =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L') 
+			mtd.addColumn(cmName, "LastLogBackupAgeInHours"  ,"<html>How many hours ago was the last LOG backup taken.</html>");                                                    //   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L'), -1) 
 
 			mtd.addColumn(cmName, "QsIsEnabled"             ,"<html>If the Query Store is enabled on not for this database</html>"); 
 			mtd.addColumn(cmName, "QsIsOk"                  ,"<html>If column '' and '' is in the same state, then this is true/yes, if it's NULL means that no entry was found in the table <i>dbname</i>.sys.database_query_store_options</html>"); 
@@ -857,133 +863,428 @@ extends CountersModel
 	}
 
 
-	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
-	{
-		// Table names are probably different in Normal SQL-Server and Azure SQL-Server
-		String dm_db_file_space_usage        = "sys.dm_db_file_space_usage";
-		String dm_db_log_space_usage         = "sys.dm_db_log_space_usage";
-		String dm_exec_sessions              = "sys.dm_exec_sessions";
-		String dm_exec_connections           = "sys.dm_exec_connections";
-		String dm_exec_requests              = "sys.dm_exec_requests";
-		String dm_tran_database_transactions = "sys.dm_tran_database_transactions";
-		String dm_tran_session_transactions  = "sys.dm_tran_session_transactions";
-		String dm_tran_active_transactions   = "sys.dm_tran_active_transactions";
-		String dm_exec_sql_text              = "sys.dm_exec_sql_text";
-		String dm_exec_query_plan            = "sys.dm_exec_query_plan";
-		String master_files                  = "sys.master_files";
-		String dm_os_volume_stats            = "sys.dm_os_volume_stats";
-		String databases                     = "sys.databases";
-		String backupset                     = "msdb.dbo.backupset";
+//	@Override
+//	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+//	{
+//		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+//		
+//		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+//		{
+//			return getSqlForVersion_azure(conn, versionInfo);
+//		}
+//		else
+//		{
+//			return getSqlForVersion_onPrem(conn, srvVersion, isAzure);
+//		}
+//	}
+//
+//	private String getSqlForVersion_azure(DbxConnection conn, DbmsVersionInfoSqlServer versionInfo)
+//	{
+//		return "not-yet-implemented";
+//	}
+//
+//	private String getSqlForVersion_onPrem(DbxConnection conn, long srvVersion, boolean isAzure)
+//	{
+//		return "not-yet-implemented";
+//	}
 
-		// get Actual-Query-Plan instead of Estimated-QueryPlan
-		if (isDbmsOptionEnabled(DbmsOption.SQL_SERVER__LAST_QUERY_PLAN_STATS))
-		{
-			dm_exec_query_plan = "sys.dm_exec_query_plan_stats";
-		}
-
-		if (isAzure)
-		{
-			dm_db_file_space_usage       = "sys.dm_pdw_nodes_db_file_space_usage";
-			dm_db_log_space_usage        = "sys.dm_db_log_space_usage";               // same as Normal SQL-Server
-			dm_exec_sessions             = "sys.dm_pdw_nodes_exec_sessions";
-			dm_exec_connections          = "sys.dm_pdw_exec_connections";
-			dm_exec_requests             = "sys.dm_exec_requests";                    // same as Normal SQL-Server
-			dm_tran_session_transactions = "sys.dm_pdw_nodes_tran_session_transactions";
-			dm_tran_active_transactions  = "sys.dm_pdw_nodes_tran_active_transactions";
-			dm_exec_sql_text             = "sys.dm_exec_sql_text";                    // same as Normal SQL-Server
-			dm_exec_query_plan           = "sys.dm_exec_query_plan";                  // same as Normal SQL-Server
-			master_files                 = "sys.master_files";                        // same as Normal SQL-Server
-			dm_os_volume_stats           = "sys.dm_os_volume_stats";                  // same as Normal SQL-Server
-			databases                    = "sys.databases";                           // same as Normal SQL-Server
-			backupset                    = "msdb.dbo.backupset";                      // same as Normal SQL-Server
-		}
-
-		// ----- SQL-Server 2012 and above
-		String availabilityGroupName          = "";
-		String availabilityGroupRole          = "";
-		String availabilityGroupPrimaryServer = "";
-		String whereAvailabilityGroup         = "";
-		
-		if (srvVersion >= Ver.ver(2012) || isAzure)
-		{
-			availabilityGroupName          = "    ,ag_name                  = (SELECT ag.name             FROM sys.availability_replicas ar JOIN sys.availability_groups                ag ON ar.group_id = ag.group_id  WHERE ar.replica_id  = d.replica_id) \n"; 
-			availabilityGroupRole          = "    ,ag_role                  = (SELECT ars.role_desc       FROM sys.dm_hadr_availability_replica_states ars                                                               WHERE ars.replica_id = d.replica_id) \n";
-			availabilityGroupPrimaryServer = "    ,ag_primary_server        = (SELECT ags.primary_replica FROM sys.availability_replicas ar JOIN sys.dm_hadr_availability_group_states ags ON ar.group_id = ags.group_id WHERE ar.replica_id  = d.replica_id) \n";
-			whereAvailabilityGroup         = "  OR d.replica_id is not null \n";
-		}
-
-		// ----- SQL-Server 2014 and above
-		String user_objects_deferred_dealloc_page_count = "0";
-		if (srvVersion >= Ver.ver(2014))
-		{
-			user_objects_deferred_dealloc_page_count = "user_objects_deferred_dealloc_page_count";
-		}
-
-		// ----- SQL-Server 2016 and above
-		String queryStoreCreateTempTable   = "";
-		String queryStoreColumns           = "";
-		String queryStoreJoin              = "";
-		String queryStoreDropTempTable1    = "";
-		String queryStoreDropTempTable2    = "";
-
-		if (srvVersion >= Ver.ver(2016))
-		{
-			queryStoreCreateTempTable   = "--------------------------- \n"
-			                            + "-- Query Store \n"
-			                            + "--------------------------- \n"
-			                            + "CREATE TABLE #queryStore (database_id int, is_enabled bit, state_is_ok varchar(3), desired_state_desc varchar(60), actual_state_desc varchar(60), max_storage_size_mb bigint, current_storage_size_mb bigint, usedPct numeric(10,1), readonly_reason int) \n"
-			                            + "INSERT INTO #queryStore \n"
-			                            + "EXEC sp_MSforeachdb ' \n"
-			                            + "SELECT /* ${cmCollectorName} */ \n"
-			                            + "     DB_ID(''?'')   as database_id \n"
-			                            + "    ,CASE WHEN (desired_state = 0 /*0=OFF*/ ) THEN cast(0 as bit) ELSE cast(1 as bit) END as is_enabled \n"
-			                            + "    ,CASE WHEN (desired_state = actual_state) THEN ''YES''        ELSE ''NO''         END as state_is_ok \n"
-			                            + "    ,desired_state_desc \n"
-			                            + "    ,actual_state_desc \n"
-			                            + "    ,max_storage_size_mb \n"
-			                            + "    ,current_storage_size_mb \n"
-			                            + "    ,cast(((current_storage_size_mb*1.0)/(max_storage_size_mb*1.0))*100.0 as numeric(10,1)) as usedPct \n"
-			                            + "    ,readonly_reason \n"
-			                            + "FROM [?].sys.database_query_store_options' \n"
-			                            + " \n";
-
-			queryStoreColumns           = "    ,QsIsEnabled              = qs.is_enabled \n"
-			                            + "    ,QsIsOk                   = qs.state_is_ok \n"
-			                            + "    ,QsDesiredState           = qs.desired_state_desc \n"
-			                            + "    ,QsActualState            = qs.actual_state_desc \n"
-			                            + "    ,QsMaxSizeInMb            = qs.max_storage_size_mb \n"
-			                            + "    ,QsUsedSpaceInMb          = qs.current_storage_size_mb \n"
-			                            + "    ,QsFreeSpaceInMb          = qs.max_storage_size_mb - qs.current_storage_size_mb \n"
-			                            + "    ,QsUsedPct                = qs.usedPct \n"
-			                            + "    ,QsReadOnlyReason         = qs.readonly_reason \n"
-			                            + "\n";
-
-			queryStoreJoin              = "LEFT OUTER JOIN #queryStore  qs     ON d.database_id = qs     .database_id \n";
-			queryStoreDropTempTable1    = "if (object_id('tempdb..#queryStore') is not null) drop table #queryStore \n";
-			queryStoreDropTempTable2    = "drop table #queryStore \n";
-		}
-
-		// ----- SQL-Server 2016, SP2 and above
-		String lastGoodCheckDbTime   = "";
-		String lastGoodCheckDbDays   = "";
-		if (srvVersion >= Ver.ver(2016,0,0, 2)) // 2016 SP2
-		{
-			lastGoodCheckDbTime += "\n";
-			lastGoodCheckDbTime += "    ,LastGoodCheckDbTime      = convert(datetime, DATABASEPROPERTYEX(d.Name, 'LastGoodCheckDbTime')) \n";
-			lastGoodCheckDbDays  = "    ,LastGoodCheckDbDays      = datediff(day, convert(datetime, DATABASEPROPERTYEX(d.Name, 'LastGoodCheckDbTime')), getdate()) \n";
-		}
-
-
-		//		String sql = ""
+//	@Override
+//	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+//	{
+//		// Table names are probably different in Normal SQL-Server and Azure SQL-Server
+//		String dm_db_file_space_usage        = "sys.dm_db_file_space_usage";
+//		String dm_db_log_space_usage         = "sys.dm_db_log_space_usage";
+//		String dm_exec_sessions              = "sys.dm_exec_sessions";
+//		String dm_exec_connections           = "sys.dm_exec_connections";
+//		String dm_exec_requests              = "sys.dm_exec_requests";
+//		String dm_tran_database_transactions = "sys.dm_tran_database_transactions";
+//		String dm_tran_session_transactions  = "sys.dm_tran_session_transactions";
+//		String dm_tran_active_transactions   = "sys.dm_tran_active_transactions";
+//		String dm_exec_sql_text              = "sys.dm_exec_sql_text";
+//		String dm_exec_query_plan            = "sys.dm_exec_query_plan";
+//		String master_files                  = "sys.master_files";
+//		String dm_os_volume_stats            = "sys.dm_os_volume_stats";
+//		String databases                     = "sys.databases";
+//		String backupset                     = "msdb.dbo.backupset";
+//
+//		// get Actual-Query-Plan instead of Estimated-QueryPlan
+//		if (isDbmsOptionEnabled(DbmsOption.SQL_SERVER__LAST_QUERY_PLAN_STATS))
+//		{
+//			dm_exec_query_plan = "sys.dm_exec_query_plan_stats";
+//		}
+//
+//		if (isAzure)
+//		{
+//			dm_db_file_space_usage       = "sys.dm_pdw_nodes_db_file_space_usage";
+//			dm_db_log_space_usage        = "sys.dm_db_log_space_usage";               // same as Normal SQL-Server
+//			dm_exec_sessions             = "sys.dm_pdw_nodes_exec_sessions";
+//			dm_exec_connections          = "sys.dm_pdw_exec_connections";
+//			dm_exec_requests             = "sys.dm_exec_requests";                    // same as Normal SQL-Server
+//			dm_tran_session_transactions = "sys.dm_pdw_nodes_tran_session_transactions";
+//			dm_tran_active_transactions  = "sys.dm_pdw_nodes_tran_active_transactions";
+//			dm_exec_sql_text             = "sys.dm_exec_sql_text";                    // same as Normal SQL-Server
+//			dm_exec_query_plan           = "sys.dm_exec_query_plan";                  // same as Normal SQL-Server
+//			master_files                 = "sys.master_files";                        // same as Normal SQL-Server
+//			dm_os_volume_stats           = "sys.dm_os_volume_stats";                  // same as Normal SQL-Server
+//			databases                    = "sys.databases";                           // same as Normal SQL-Server
+//			backupset                    = "msdb.dbo.backupset";                      // same as Normal SQL-Server
+//		}
+//
+//		// Special thing for Azure SQL Database
+//		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+//		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+//		{
+//			// NOTE: for Azure SQL Database, tempdb will have faulty 'devicename' and 'physical_name' (but lets fix that LATER)
+//		}
+//
+//		// ----- SQL-Server 2012 and above
+//		String availabilityGroupName          = "";
+//		String availabilityGroupRole          = "";
+//		String availabilityGroupPrimaryServer = "";
+//		String whereAvailabilityGroup         = "";
+//		
+//		if (srvVersion >= Ver.ver(2012) || isAzure)
+//		{
+//			availabilityGroupName          = "    ,ag_name                  = (SELECT ag.name             FROM sys.availability_replicas ar JOIN sys.availability_groups                ag ON ar.group_id = ag.group_id  WHERE ar.replica_id  = d.replica_id) \n"; 
+//			availabilityGroupRole          = "    ,ag_role                  = (SELECT ars.role_desc       FROM sys.dm_hadr_availability_replica_states ars                                                               WHERE ars.replica_id = d.replica_id) \n";
+//			availabilityGroupPrimaryServer = "    ,ag_primary_server        = (SELECT ags.primary_replica FROM sys.availability_replicas ar JOIN sys.dm_hadr_availability_group_states ags ON ar.group_id = ags.group_id WHERE ar.replica_id  = d.replica_id) \n";
+//			whereAvailabilityGroup         = "  OR d.replica_id is not null \n";
+//		}
+//
+//		// ----- SQL-Server 2014 and above
+//		String user_objects_deferred_dealloc_page_count = "0";
+//		if (srvVersion >= Ver.ver(2014))
+//		{
+//			user_objects_deferred_dealloc_page_count = "user_objects_deferred_dealloc_page_count";
+//		}
+//
+//		// ----- SQL-Server 2016 and above
+//		String queryStoreCreateTempTable   = "";
+//		String queryStoreColumns           = "";
+//		String queryStoreJoin              = "";
+//		String queryStoreDropTempTable1    = "";
+//		String queryStoreDropTempTable2    = "";
+//
+//		if (srvVersion >= Ver.ver(2016))
+//		{
+//			queryStoreCreateTempTable   = "--------------------------- \n"
+//			                            + "-- Query Store \n"
+//			                            + "--------------------------- \n"
+//			                            + "CREATE TABLE #queryStore (database_id int, is_enabled bit, state_is_ok varchar(3), desired_state_desc varchar(60), actual_state_desc varchar(60), max_storage_size_mb bigint, current_storage_size_mb bigint, usedPct numeric(10,1), readonly_reason int) \n"
+//			                            + "INSERT INTO #queryStore \n"
+//			                            + "EXEC sp_MSforeachdb ' \n"
+//			                            + "SELECT /* ${cmCollectorName} */ \n"
+//			                            + "     DB_ID(''?'')   as database_id \n"
+//			                            + "    ,CASE WHEN (desired_state = 0 /*0=OFF*/ ) THEN cast(0 as bit) ELSE cast(1 as bit) END as is_enabled \n"
+//			                            + "    ,CASE WHEN (desired_state = actual_state) THEN ''YES''        ELSE ''NO''         END as state_is_ok \n"
+//			                            + "    ,desired_state_desc \n"
+//			                            + "    ,actual_state_desc \n"
+//			                            + "    ,max_storage_size_mb \n"
+//			                            + "    ,current_storage_size_mb \n"
+//			                            + "    ,cast(((current_storage_size_mb*1.0)/(max_storage_size_mb*1.0))*100.0 as numeric(10,1)) as usedPct \n"
+//			                            + "    ,readonly_reason \n"
+//			                            + "FROM [?].sys.database_query_store_options' \n"
+//			                            + " \n";
+//
+//			queryStoreColumns           = "    ,QsIsEnabled              = qs.is_enabled \n"
+//			                            + "    ,QsIsOk                   = qs.state_is_ok \n"
+//			                            + "    ,QsDesiredState           = qs.desired_state_desc \n"
+//			                            + "    ,QsActualState            = qs.actual_state_desc \n"
+//			                            + "    ,QsMaxSizeInMb            = qs.max_storage_size_mb \n"
+//			                            + "    ,QsUsedSpaceInMb          = qs.current_storage_size_mb \n"
+//			                            + "    ,QsFreeSpaceInMb          = qs.max_storage_size_mb - qs.current_storage_size_mb \n"
+//			                            + "    ,QsUsedPct                = qs.usedPct \n"
+//			                            + "    ,QsReadOnlyReason         = qs.readonly_reason \n"
+//			                            + "\n";
+//
+//			queryStoreJoin              = "LEFT OUTER JOIN #queryStore  qs     ON d.database_id = qs     .database_id \n";
+//			queryStoreDropTempTable1    = "if (object_id('tempdb..#queryStore') is not null) drop table #queryStore \n";
+//			queryStoreDropTempTable2    = "drop table #queryStore \n";
+//		}
+//
+//		// ----- SQL-Server 2016, SP2 and above
+//		String lastGoodCheckDbTime   = "";
+//		String lastGoodCheckDbDays   = "";
+//		if (srvVersion >= Ver.ver(2016,0,0, 2)) // 2016 SP2
+//		{
+//			lastGoodCheckDbTime += "\n";
+//			lastGoodCheckDbTime += "    ,LastGoodCheckDbTime      = convert(datetime, DATABASEPROPERTYEX(d.Name, 'LastGoodCheckDbTime')) \n";
+//			lastGoodCheckDbDays  = "    ,LastGoodCheckDbDays      = datediff(day, convert(datetime, DATABASEPROPERTYEX(d.Name, 'LastGoodCheckDbTime')), getdate()) \n";
+//		}
+//
+//
+//		//		String sql = ""
+////			    + " \n"
+////			    + "--------------------------- \n"
+////			    + "-- DATA SIZE MB \n"
+////			    + "--------------------------- \n"
+////			    + "DECLARE @dataSizeMb TABLE (database_id int, fileGroupCount int, totalDataSizeMb numeric(12,1), usedDataMb numeric(12,1), freeDataMb numeric(12,1), usedDataPct numeric(5,1), freeDataPct numeric(5,1)) \n"
+////			    + "INSERT INTO @dataSizeMb \n"
+////			    + "EXEC sp_MSforeachdb ' \n"
+////			    + "SELECT \n"
+////			    + "     database_id \n"
+////			    + "    ,fileGroupCount = count(*) \n"
+////			    + "    ,totalMb        = sum(total_page_count) / 128.0 \n"
+////			    + "    ,allocatedMb    = sum(allocated_extent_page_count) / 128.0 \n"
+////			    + "    ,unallocatedMb  = sum(unallocated_extent_page_count) / 128.0 \n"
+////			    + "    ,usedPct        = (sum(allocated_extent_page_count)  *1.0) / (sum(total_page_count)*1.0) * 100.0 \n"
+////			    + "    ,freePct        = (sum(unallocated_extent_page_count)*1.0) / (sum(total_page_count)*1.0) * 100.0 \n"
+////			    + "FROM [?]." + dm_db_file_space_usage + " GROUP BY database_id' \n"
+////			    + " \n"
+////			    + "--------------------------- \n"
+////			    + "-- LOG SIZE MB \n"
+////			    + "--------------------------- \n"
+////			    + "DECLARE @logSizeMb TABLE (database_id int, totalLogSizeMb int, usedLogSpaceInMb int, usedLogSpaceInPct numeric(5,1), logSpaceInMbSinceLastBackup int) \n"
+////			    + "INSERT INTO @logSizeMb \n"
+////			    + "EXEC sp_MSforeachdb ' \n"
+////			    + "SELECT \n"
+////			    + "     database_id \n"
+////			    + "    ,total_log_size_in_bytes/1024/1024 \n"
+////			    + "    ,used_log_space_in_bytes/1024/1024 \n"
+////			    + "    ,used_log_space_in_percent \n"
+////			    + "    ,log_space_in_bytes_since_last_backup/1024/1024 \n"
+////			    + "FROM [?]." + dm_db_log_space_usage + "' \n"
+////			    + " \n"
+////			    + "--------------------------- \n"
+////			    + "-- Backup Info \n"
+////			    + "--------------------------- \n"
+////			    + "DECLARE @backupInfo TABLE (database_name nvarchar(128), type char(2), last_backup_finish_date datetime) \n"
+////			    + "INSERT INTO @backupInfo \n"
+////			    + "    SELECT \n"
+////			    + "         bus.database_name \n"
+////			    + "        ,bus.type \n"
+////			    + "        ,last_backup_finish_date = MAX(bus.backup_finish_date) \n"
+////			    + "    FROM msdb.dbo.backupset bus \n"
+////			    + "    GROUP BY bus.database_name, bus.type \n"
+////			    + "; --- we need a ';' here for SQL-Server to use the Table Variables in the below Statement \n"
+////			    + " \n"
+////			    + " \n"
+////			    + "WITH \n"
+//////			    + "--------------------------- \n"
+//////			    + "-- Backup Info \n"
+//////			    + "--------------------------- \n"
+//////			    + "bi AS ( \n"
+//////			    + "    SELECT \n"
+//////			    + "         bus.database_name \n"
+//////			    + "        ,bus.type \n"
+//////			    + "        ,last_backup_finish_date = MAX(bus.backup_finish_date) \n"
+//////			    + "    FROM " + backupset + " bus \n"
+//////			    + "    GROUP BY bus.database_name, bus.type \n"
+//////			    + "), \n"
+////			    + "--------------------------- \n"
+////			    + "-- Open Transaction Info \n"
+////			    + "--------------------------- \n"
+////			    + "oti AS ( \n"
+////			    + "    SELECT --top 1 \n"
+////			    + "         es.session_id \n"
+////			    + "        ,es.database_id \n"
+////			    + "        ,es.status \n"
+////			    + "        ,es.program_name \n"
+////			    + "        ,es.login_name \n"
+////			    + "        ,es.host_name \n"
+////			    + "        ,es.open_transaction_count \n"
+////			    + "        ,es.last_request_start_time \n"
+////			    + "        ,es.last_request_end_time \n"
+////			    + "        ,er.statement_start_offset \n"
+////			    + "        ,er.statement_end_offset \n"
+////			    + "        ,er.wait_type \n"
+////			    + "        ,er.estimated_completion_time \n"
+//////			    + ",at.transaction_id \n"           // possibly to get active transaction, needs to be tested/investigated
+//////			    + ",at.name AS tran_name \n"        // possibly to get active transaction, needs to be tested/investigated
+//////			    + ",at.transaction_begin_time \n"   // possibly to get active transaction, needs to be tested/investigated
+////				+ "        ,SUBSTRING(sql_text.text, er.statement_start_offset / 2,  \n"
+////				+ "             ( CASE WHEN er.statement_end_offset = -1  \n"
+////				+ "                    THEN DATALENGTH(sql_text.text)  \n"
+////				+ "                    ELSE er.statement_end_offset  \n"
+////				+ "               END - er.statement_start_offset ) / 2) AS most_recent_sql_text \n"
+////			    + "        ,plan_text.query_plan as plan_text \n"
+////			    + "        ,ROW_NUMBER() OVER (PARTITION BY es.database_id ORDER BY es.last_request_start_time) AS row_num \n"
+////			    + "    FROM " + dm_exec_sessions + " es \n"
+////			    + "    JOIN " + dm_exec_connections + " ec            ON es.session_id = ec.session_id \n"
+////			    + "    LEFT OUTER JOIN " + dm_exec_requests + " er    ON er.session_id = es.session_id \n"
+//////			    + "LEFT OUTER JOIN " + dm_tran_active_transactions + " at ON er.transaction_id = at.transaction_id \n"  // possibly to get active transaction, needs to be tested/investigated
+////			    + "    OUTER APPLY " + dm_exec_sql_text + " (ec.most_recent_sql_handle) AS sql_text \n"
+////			    + "    OUTER APPLY " + dm_exec_query_plan + " (er.plan_handle)          AS plan_text \n"
+////			    + "    WHERE es.open_transaction_count > 0 \n"
+////			    + "    --AND es.status = 'sleeping' \n"
+////			    + "      AND es.is_user_process = 1 \n"
+////			    + "), \n"
+////			    + "--------------------------- \n"
+////			    + "-- Operating System Volume DATA \n"
+////			    + "--------------------------- \n"
+////			    + "osvData as ( \n"
+////			    + "    SELECT \n"
+////			    + "         mf.database_id \n"
+////			    + "        ,mf.file_id \n"
+////			    + "        ,mf.size  as sizePg \n"
+////			    + "        ,mf.size / 128 as sizeMb \n"
+////			    + "        ,mf.max_size \n"
+////			    + "        ,mf.growth \n"
+////			    + "        ,mf.is_percent_growth \n"
+////			    + "        , CASE WHEN mf.max_size = -1 AND mf.is_percent_growth = 1 THEN mf.size * (mf.growth / 100.0) / 128 --'PCT_GROW' \n"
+////			    + "               WHEN mf.max_size = -1 AND mf.is_percent_growth = 0 THEN mf.growth / 128                     --'FIXED_GROW' \n"
+////			    + "               WHEN mf.max_size > 0  AND mf.size < mf.max_size AND mf.is_percent_growth = 1 THEN mf.size * (mf.growth / 100.0) / 128 --'PCT_GROW   OK for MAX_SIZE' \n"
+////			    + "               WHEN mf.max_size > 0  AND mf.size < mf.max_size AND mf.is_percent_growth = 0 THEN mf.growth / 128                     --'FIXED_GROW OK for MAX_SIZE' \n"
+////			    + "               ELSE 0 \n"
+////			    + "          END AS nextGrowSizeMb \n"
+////			    + "        ,mf.type \n"
+////			    + "        ,mf.type_desc \n"
+////			    + "        ,mf.name \n"
+////			    + "        ,mf.physical_name \n"
+////			    + "        ,osv.volume_mount_point \n"
+////			    + "        ,osv.logical_volume_name \n"
+////			    + "        ,osv.total_bytes / 1024 / 1024                         AS osTotalMb \n"
+////			    + "        ,osv.available_bytes / 1024 / 1024                     AS osFreeMb \n"
+////			    + "        ,(osv.total_bytes - osv.available_bytes) / 1024 / 1024 AS osUsedMb \n" 
+////			    + "        ,convert(numeric(5,1), (osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)           AS osFreePct \n"
+////			    + "        ,convert(numeric(5,1), 100.0 - ((osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)) AS osUsedPct \n" 
+////			    + "        ,ROW_NUMBER() OVER (PARTITION BY mf.database_id ORDER BY osv.available_bytes)               AS row_num \n"
+////			    + "    FROM " + master_files + " AS mf \n"
+////			    + "    CROSS APPLY " + dm_os_volume_stats + " (mf.database_id, mf.file_id) AS osv \n"
+////			    + "    WHERE mf.type IN (0) /*0=ROWS, 0=LOG*/ \n"
+////			    + "), \n"
+////			    + "--------------------------- \n"
+////			    + "-- Operating System Volume LOG \n"
+////			    + "--------------------------- \n"
+////			    + "osvLog as ( \n"
+////			    + "    SELECT \n"
+////			    + "         mf.database_id \n"
+////			    + "        ,mf.file_id \n"
+////			    + "        ,mf.size  as sizePg \n"
+////			    + "        ,mf.size / 128 as sizeMb \n"
+////			    + "        ,mf.max_size \n"
+////			    + "        ,mf.growth \n"
+////			    + "        ,mf.is_percent_growth \n"
+////			    + "        , CASE WHEN mf.max_size = -1 AND mf.is_percent_growth = 1 THEN mf.size * (mf.growth / 100.0) / 128 --'PCT_GROW' \n"
+////			    + "               WHEN mf.max_size = -1 AND mf.is_percent_growth = 0 THEN mf.growth / 128                     --'FIXED_GROW' \n"
+////			    + "               WHEN mf.max_size > 0  AND mf.size < mf.max_size AND mf.is_percent_growth = 1 THEN mf.size * (mf.growth / 100.0) / 128 --'PCT_GROW   OK for MAX_SIZE' \n"
+////			    + "               WHEN mf.max_size > 0  AND mf.size < mf.max_size AND mf.is_percent_growth = 0 THEN mf.growth / 128                     --'FIXED_GROW OK for MAX_SIZE' \n"
+////			    + "               ELSE 0 \n"
+////			    + "          END AS nextGrowSizeMb \n"
+////			    + "        ,mf.type \n"
+////			    + "        ,mf.type_desc \n"
+////			    + "        ,mf.name \n"
+////			    + "        ,mf.physical_name \n"
+////			    + "        ,osv.volume_mount_point \n"
+////			    + "        ,osv.logical_volume_name \n"
+////			    + "        ,osv.total_bytes / 1024 / 1024                         AS osTotalMb \n"
+////			    + "        ,osv.available_bytes / 1024 / 1024                     AS osFreeMb \n"
+////			    + "        ,(osv.total_bytes - osv.available_bytes) / 1024 / 1024 AS osUsedMb \n" 
+////			    + "        ,convert(numeric(5,1), (osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)           AS osFreePct \n"
+////			    + "        ,convert(numeric(5,1), 100.0 - ((osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)) AS osUsedPct \n" 
+////			    + "        ,ROW_NUMBER() OVER (PARTITION BY mf.database_id ORDER BY osv.available_bytes)               AS row_num \n"
+////			    + "    FROM " + master_files + " AS mf \n"
+////			    + "    CROSS APPLY " + dm_os_volume_stats + " (mf.database_id, mf.file_id) AS osv \n"
+////			    + "    WHERE mf.type IN (1) /*0=ROWS, 0=LOG*/ \n"
+////			    + ") \n"
+////			    + "------------------------------- \n"
+////			    + "-- The final select statement   \n"
+////			    + "------------------------------- \n"
+////			    + "SELECT \n"
+////			    + "     DBName                   = d.Name \n"
+////			    + "    ,d.database_id \n"
+////			    + "    ,compatibility_level      = convert(int, d.compatibility_level) \n"
+////			    + "    ,d.user_access_desc \n"
+////			    + "    ,d.state_desc \n"
+////			    + "    ,d.recovery_model_desc \n"
+////			    + availabilityGroupName
+////			    + availabilityGroupRole
+////			    + availabilityGroupPrimaryServer
+////			    + "    ,DataFileGroupCount       = data.fileGroupCount \n"
+////			    + "    ,DBOwner                  = suser_name(d.owner_sid) \n"
+////			    + "    ,d.log_reuse_wait \n"
+////			    + "    ,d.log_reuse_wait_desc \n"
+////			    + " \n"
+////			    + "    ,DbSizeInMb               = data.totalDataSizeMb + log.totalLogSizeMb \n"
+////			    + "    ,LogSizeInMb              = log.totalLogSizeMb \n"
+////			    + "    ,DataSizeInMb             = data.totalDataSizeMb \n"
+////			    + "    ,LogSizeUsedPct           = log.usedLogSpaceInPct \n"
+////			    + "    ,DataSizeUsedPct          = data.usedDataPct \n"
+//////			    + "    ,LogOsDiskUsedPct         = osvLog.osUsedPct \n"
+//////			    + "    ,DataOsDiskUsedPct        = osvData.osUsedPct \n"
+////			    + " \n"
+////			    + "    ,LogSizeUsedInMb          = log.usedLogSpaceInMb \n"
+////			    + "    ,LogSizeFreeInMb          = log.totalLogSizeMb - log.usedLogSpaceInMb \n"
+////			    + "    ,LogSizeUsedInMbDiff      = log.usedLogSpaceInMb \n"
+////			    + "    ,LogSizeFreeInMbDiff      = log.totalLogSizeMb - log.usedLogSpaceInMb \n"
+////			    + " \n"
+////			    + "    ,LogOsDisk                = osvLog.volume_mount_point \n"
+////			    + "    ,LogOsDiskUsedPct         = osvLog.osUsedPct \n"
+////			    + "    ,LogOsDiskFreePct         = osvLog.osFreePct \n"
+////			    + "    ,LogOsFileName            = osvLog.physical_name \n"
+////			    + "    ,LogFileName              = osvLog.name \n"
+////			    + "    ,logFileId                = osvLog.file_id \n"
+////			    + "    ,LogOsDiskUsedMb          = osvLog.osUsedMb \n"
+////			    + "    ,LogOsDiskFreeMb          = osvLog.osFreeMb \n"
+////			    + "    ,LogNextGrowthSizeMb      = osvLog.nextGrowSizeMb \n"
+////			    + " \n"
+////			    + "    ,DataSizeUsedInMb         = data.usedDataMb \n"
+////			    + "    ,DataSizeFreeInMb         = data.freeDataMb \n"
+////			    + "    ,DataSizeUsedInMbDiff     = data.usedDataMb \n"
+////			    + "    ,DataSizeFreeInMbDiff     = data.freeDataMb \n"
+////			    + " \n"
+////			    + "    ,DataOsDisk               = osvData.volume_mount_point \n"
+////			    + "    ,DataOsDiskUsedPct        = osvData.osUsedPct \n"
+////			    + "    ,DataOsDiskFreePct        = osvData.osFreePct \n"
+////			    + "    ,DataOsFileName           = osvData.physical_name \n"
+////			    + "    ,DataFileName             = osvData.name \n"
+////			    + "    ,DataFileId               = osvData.file_id \n"
+////			    + "    ,DataOsDiskUsedMb         = osvData.osUsedMb \n"
+////			    + "    ,DataOsDiskFreeMb         = osvData.osFreeMb \n"
+////			    + "    ,DataNextGrowthSizeMb     = osvData.nextGrowSizeMb \n"
+////			    + " \n"
+//////			    + "--	,TransactionLogFull = -1 \n"
+//////			    + " \n"
+////			    + "    ,OldestTranStartTime      = oti.last_request_start_time \n"
+////			    + "    ,OldestTranWaitType       = oti.wait_type \n"
+////			    + "    ,OldestTranECT            = oti.estimated_completion_time \n"
+////			    + "    ,OldestTranInSeconds      = datediff(second, oti.last_request_start_time, getdate()) \n"
+////			    + "    ,OldestTranName           = -1 \n"
+////			    + "    ,OldestTranSpid           = oti.session_id \n"
+////			    + "    ,OldestTranProg           = oti.program_name \n"
+////			    + "    ,OldestTranUser           = oti.login_name \n"
+////			    + "    ,OldestTranHost           = oti.host_name \n"
+//////			    + "--  ,OldestTranPage           = -1 \n"
+//////			    + "--  ,OldestTranProcName       = -1 \n"
+////			    + "    ,OldestTranHasSqlText     = CASE WHEN oti.most_recent_sql_text is not null THEN convert(bit,1) ELSE convert(bit,0) END \n"
+////			    + "    ,OldestTranHasShowPlan    = CASE WHEN oti.plan_text            is not null THEN convert(bit,1) ELSE convert(bit,0) END \n"
+////			    + " \n"
+////				+ "    ,LastDbBackupTime         =         (SELECT bi.last_backup_finish_date                            FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D') \n"
+////				+ "    ,LastDbBackupAgeInHours   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) \n"
+////				+ "    ,LastLogBackupTime        =         (SELECT bi.last_backup_finish_date                            FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L') \n"
+////				+ "    ,LastLogBackupAgeInHours  = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L'), -1) \n"
+////			    + " \n"
+////			    + "    ,OldestTranSqlText        = oti.most_recent_sql_text \n"
+////			    + "    ,OldestTranShowPlanText   = oti.plan_text \n"
+////			    + "FROM " + databases + " d \n"
+////			    + "LEFT OUTER JOIN oti              ON d.database_id = oti    .database_id and oti.row_num = 1 \n"
+////			    + "LEFT OUTER JOIN @dataSizeMb data ON d.database_id = data   .database_id \n"
+////			    + "LEFT OUTER JOIN @logSizeMb   log ON d.database_id = log    .database_id \n"
+////			    + "LEFT OUTER JOIN osvData          ON d.database_id = osvData.database_id and osvData.row_num = 1 \n"
+////			    + "LEFT OUTER JOIN osvLog           ON d.database_id = osvLog .database_id and osvLog .row_num = 1 \n"
+////			    + "WHERE has_dbaccess(d.name) != 0 \n"
+////			    + whereAvailabilityGroup
+////			    + " \n"
+////			    + "";
+//
+//		String sql = ""
+//			    + "-- Drop any of the old temporary tables if they still exists \n" 
+//			    + "if (object_id('tempdb..#dataSizeMb') is not null) drop table #dataSizeMb \n" 
+//			    + "if (object_id('tempdb..#logSizeMb')  is not null) drop table #logSizeMb  \n"
+//			    + "if (object_id('tempdb..#backupInfo') is not null) drop table #backupInfo  \n"
+//			    + "if (object_id('tempdb..#oti')        is not null) drop table #oti  \n"
+//			    + "if (object_id('tempdb..#osvData')    is not null) drop table #osvData  \n"
+//			    + "if (object_id('tempdb..#osvLog')     is not null) drop table #osvLog  \n"
+//			    + queryStoreDropTempTable1
+//			    + "go \n"
 //			    + " \n"
 //			    + "--------------------------- \n"
 //			    + "-- DATA SIZE MB \n"
 //			    + "--------------------------- \n"
-//			    + "DECLARE @dataSizeMb TABLE (database_id int, fileGroupCount int, totalDataSizeMb numeric(12,1), usedDataMb numeric(12,1), freeDataMb numeric(12,1), usedDataPct numeric(5,1), freeDataPct numeric(5,1)) \n"
-//			    + "INSERT INTO @dataSizeMb \n"
+//			    + "CREATE TABLE #dataSizeMb (database_id int, fileGroupCount int, totalDataSizeMb numeric(12,1), usedDataMb numeric(12,1), freeDataMb numeric(12,1), usedDataPct numeric(5,1), freeDataPct numeric(5,1)) \n"
+//			    + "INSERT INTO #dataSizeMb \n"
 //			    + "EXEC sp_MSforeachdb ' \n"
-//			    + "SELECT \n"
+//			    + "SELECT /* ${cmCollectorName} */ \n"
 //			    + "     database_id \n"
 //			    + "    ,fileGroupCount = count(*) \n"
 //			    + "    ,totalMb        = sum(total_page_count) / 128.0 \n"
@@ -996,10 +1297,10 @@ extends CountersModel
 //			    + "--------------------------- \n"
 //			    + "-- LOG SIZE MB \n"
 //			    + "--------------------------- \n"
-//			    + "DECLARE @logSizeMb TABLE (database_id int, totalLogSizeMb int, usedLogSpaceInMb int, usedLogSpaceInPct numeric(5,1), logSpaceInMbSinceLastBackup int) \n"
-//			    + "INSERT INTO @logSizeMb \n"
+//			    + "CREATE TABLE #logSizeMb (database_id int, totalLogSizeMb int, usedLogSpaceInMb int, usedLogSpaceInPct numeric(5,1), logSpaceInMbSinceLastBackup int) \n"
+//			    + "INSERT INTO #logSizeMb \n"
 //			    + "EXEC sp_MSforeachdb ' \n"
-//			    + "SELECT \n"
+//			    + "SELECT /* ${cmCollectorName} */ \n"
 //			    + "     database_id \n"
 //			    + "    ,total_log_size_in_bytes/1024/1024 \n"
 //			    + "    ,used_log_space_in_bytes/1024/1024 \n"
@@ -1007,75 +1308,124 @@ extends CountersModel
 //			    + "    ,log_space_in_bytes_since_last_backup/1024/1024 \n"
 //			    + "FROM [?]." + dm_db_log_space_usage + "' \n"
 //			    + " \n"
+//			    
+//			    // Query Store (if 2016 or above)
+//			    + queryStoreCreateTempTable
+//			    
 //			    + "--------------------------- \n"
 //			    + "-- Backup Info \n"
 //			    + "--------------------------- \n"
-//			    + "DECLARE @backupInfo TABLE (database_name nvarchar(128), type char(2), last_backup_finish_date datetime) \n"
-//			    + "INSERT INTO @backupInfo \n"
-//			    + "    SELECT \n"
+//			    + "    SELECT /* ${cmCollectorName} */ \n"
 //			    + "         bus.database_name \n"
 //			    + "        ,bus.type \n"
 //			    + "        ,last_backup_finish_date = MAX(bus.backup_finish_date) \n"
-//			    + "    FROM msdb.dbo.backupset bus \n"
+//			    + "    INTO #backupInfo \n"
+//			    + "    FROM " + backupset + " bus \n"
 //			    + "    GROUP BY bus.database_name, bus.type \n"
-//			    + "; --- we need a ';' here for SQL-Server to use the Table Variables in the below Statement \n"
 //			    + " \n"
 //			    + " \n"
-//			    + "WITH \n"
-////			    + "--------------------------- \n"
-////			    + "-- Backup Info \n"
-////			    + "--------------------------- \n"
-////			    + "bi AS ( \n"
-////			    + "    SELECT \n"
-////			    + "         bus.database_name \n"
-////			    + "        ,bus.type \n"
-////			    + "        ,last_backup_finish_date = MAX(bus.backup_finish_date) \n"
-////			    + "    FROM " + backupset + " bus \n"
-////			    + "    GROUP BY bus.database_name, bus.type \n"
-////			    + "), \n"
 //			    + "--------------------------- \n"
 //			    + "-- Open Transaction Info \n"
 //			    + "--------------------------- \n"
-//			    + "oti AS ( \n"
-//			    + "    SELECT --top 1 \n"
-//			    + "         es.session_id \n"
-//			    + "        ,es.database_id \n"
+////add the below "somhow" to get TempdbUsageMb
+////				"    ,TempdbUsageMb       = (select \n" + 
+////				"                            CAST( ( \n" + // The below calculations also used in: CmTempdbSpidUsage
+////				"                                        (user_objects_alloc_page_count - user_objects_dealloc_page_count - " + user_objects_deferred_dealloc_page_count + ") \n" + 
+////				"                                      + (internal_objects_alloc_page_count - internal_objects_dealloc_page_count) \n" + 
+////				"                                  ) / 128.0 AS decimal(12,1) \n" + 
+////				"                                ) \n" + 
+////				"                            from tempdb.sys.dm_db_session_space_usage ts \n" + 
+////				"                            where ts.session_id = des.session_id \n" +
+////				"                           ) \n" +
+//			    
+////			    + "    SELECT --top 1 \n"
+////			    + "         es.session_id \n"
+////			    + "        ,es.database_id \n"
+////			    + "        ,es.status \n"
+////			    + "        ,es.program_name \n"
+////			    + "        ,es.login_name \n"
+////			    + "        ,es.host_name \n"
+////			    + "        ,es.open_transaction_count \n"
+////			    
+////			    + "        ,tat.transaction_id \n"
+////			    + "        ,tat.name AS transaction_name  \n"
+////			    + "        ,tat.transaction_begin_time \n"
+////
+////			    + "        ,es.last_request_start_time \n"
+////			    + "        ,es.last_request_end_time \n"
+////			    + "        ,er.statement_start_offset \n"
+////			    + "        ,er.statement_end_offset \n"
+////			    + "        ,er.wait_type \n"
+////			    + "        ,er.estimated_completion_time \n"
+////				+ "        ,SUBSTRING(sql_text.text, er.statement_start_offset / 2,  \n"
+////				+ "             ( CASE WHEN er.statement_end_offset = -1  \n"
+////				+ "                    THEN DATALENGTH(sql_text.text)  \n"
+////				+ "                    ELSE er.statement_end_offset  \n"
+////				+ "               END - er.statement_start_offset ) / 2 +2) AS most_recent_sql_text \n"
+////			    + "        ,plan_text.query_plan as plan_text \n"
+//////			    + "        ,ROW_NUMBER() OVER (PARTITION BY es.database_id ORDER BY es.last_request_start_time) AS row_num \n"
+////			    + "        ,ROW_NUMBER() OVER (PARTITION BY es.database_id ORDER BY tat.transaction_begin_time) AS row_num \n"
+////			    + "    INTO #oti \n"
+////			    + "    FROM " + dm_exec_sessions + " es \n"
+////			    + "    JOIN " + dm_exec_connections + " ec            ON es.session_id = ec.session_id \n"
+////			    + "    LEFT OUTER JOIN " + dm_exec_requests + " er    ON er.session_id = es.session_id \n"
+////			    + "    LEFT OUTER JOIN " + dm_tran_session_transactions + " tst ON es.session_id = tst.session_id \n"
+////			    + "    LEFT OUTER JOIN " + dm_tran_active_transactions  + " tat ON tst.transaction_id = tat.transaction_id \n"
+////			    + "    OUTER APPLY " + dm_exec_sql_text + " (ec.most_recent_sql_handle) AS sql_text \n"
+////			    + "    OUTER APPLY " + dm_exec_query_plan + " (er.plan_handle)          AS plan_text \n"
+////			    + "    WHERE es.open_transaction_count > 0 \n"
+////			    + "    --AND es.status = 'sleeping' \n"
+////			    + "      AND es.is_user_process = 1 \n"
+////			    + "      AND es.session_id != @@spid \n"
+////			    + "\n"
+//			    + "    SELECT /* ${cmCollectorName} */ \n"
+//			    + "         tst.session_id \n"
+//			    + "        ,tdt.database_id \n"
 //			    + "        ,es.status \n"
 //			    + "        ,es.program_name \n"
 //			    + "        ,es.login_name \n"
 //			    + "        ,es.host_name \n"
 //			    + "        ,es.open_transaction_count \n"
+//			    + "\n"
+//			    + "        ,tat.transaction_id \n"
+//			    + "        ,tat.name AS transaction_name \n"
+//			    + "        ,tat.transaction_begin_time \n"
+//			    + "        ,tdt.database_transaction_begin_time \n"
+//			    + "\n"
 //			    + "        ,es.last_request_start_time \n"
 //			    + "        ,es.last_request_end_time \n"
 //			    + "        ,er.statement_start_offset \n"
 //			    + "        ,er.statement_end_offset \n"
 //			    + "        ,er.wait_type \n"
 //			    + "        ,er.estimated_completion_time \n"
-////			    + ",at.transaction_id \n"           // possibly to get active transaction, needs to be tested/investigated
-////			    + ",at.name AS tran_name \n"        // possibly to get active transaction, needs to be tested/investigated
-////			    + ",at.transaction_begin_time \n"   // possibly to get active transaction, needs to be tested/investigated
-//				+ "        ,SUBSTRING(sql_text.text, er.statement_start_offset / 2,  \n"
-//				+ "             ( CASE WHEN er.statement_end_offset = -1  \n"
-//				+ "                    THEN DATALENGTH(sql_text.text)  \n"
-//				+ "                    ELSE er.statement_end_offset  \n"
-//				+ "               END - er.statement_start_offset ) / 2) AS most_recent_sql_text \n"
+//			    + "        ,SUBSTRING(sql_text.text, er.statement_start_offset / 2, \n"
+//			    + "             ( CASE WHEN er.statement_end_offset = -1 \n"
+//			    + "                    THEN DATALENGTH(sql_text.text) \n"
+//			    + "                    ELSE er.statement_end_offset \n"
+//			    + "               END - er.statement_start_offset ) / 2 +2) AS most_recent_sql_text \n"
 //			    + "        ,plan_text.query_plan as plan_text \n"
-//			    + "        ,ROW_NUMBER() OVER (PARTITION BY es.database_id ORDER BY es.last_request_start_time) AS row_num \n"
-//			    + "    FROM " + dm_exec_sessions + " es \n"
-//			    + "    JOIN " + dm_exec_connections + " ec            ON es.session_id = ec.session_id \n"
-//			    + "    LEFT OUTER JOIN " + dm_exec_requests + " er    ON er.session_id = es.session_id \n"
-////			    + "LEFT OUTER JOIN " + dm_tran_active_transactions + " at ON er.transaction_id = at.transaction_id \n"  // possibly to get active transaction, needs to be tested/investigated
-//			    + "    OUTER APPLY " + dm_exec_sql_text + " (ec.most_recent_sql_handle) AS sql_text \n"
-//			    + "    OUTER APPLY " + dm_exec_query_plan + " (er.plan_handle)          AS plan_text \n"
-//			    + "    WHERE es.open_transaction_count > 0 \n"
-//			    + "    --AND es.status = 'sleeping' \n"
-//			    + "      AND es.is_user_process = 1 \n"
-//			    + "), \n"
+//			    + "        ,ROW_NUMBER() OVER (PARTITION BY tdt.database_id ORDER BY tdt.database_transaction_begin_time) AS row_num \n"
+//			    + "        ,COUNT(*)     OVER (PARTITION BY tdt.database_id)                                              AS active_tran_count \n"
+//			    + "    INTO #oti \n"
+//			    + "    FROM " + dm_tran_database_transactions + "            tdt \n"
+//			    + "    INNER JOIN      " + dm_tran_session_transactions + "             tst ON tdt.transaction_id = tst.transaction_id \n"
+//			    + "    INNER JOIN      " + dm_tran_active_transactions  + "             tat ON tst.transaction_id = tat.transaction_id \n"
+//			    + "    LEFT OUTER JOIN " + dm_exec_sessions             + "              es ON tst.session_id     =  es.session_id \n"
+//			    + "    LEFT OUTER JOIN " + dm_exec_connections          + "              ec ON tst.session_id     =  ec.session_id \n"
+//			    + "    LEFT OUTER JOIN " + dm_exec_requests             + "              er ON tst.session_id     =  er.session_id \n"
+//			    + "    OUTER APPLY     " + dm_exec_sql_text   + "(ec.most_recent_sql_handle) AS sql_text \n"
+//			    + "    OUTER APPLY     " + dm_exec_query_plan + "(er.plan_handle)            AS plan_text \n"
+//			    + "\n"
+//			    + "    WHERE tdt.database_transaction_begin_time IS NOT NULL \n"
+//			    + "      AND tdt.database_transaction_type  = 1 /* 1=read/write transaction, 2=Read-only transaction, 3=System transaction */ \n"
+//			    + "      AND tdt.database_transaction_log_record_count > 0 \n"
+//			    + "      AND tst.session_id != @@spid \n"
+//			    + "\n"
+//
 //			    + "--------------------------- \n"
 //			    + "-- Operating System Volume DATA \n"
 //			    + "--------------------------- \n"
-//			    + "osvData as ( \n"
-//			    + "    SELECT \n"
+//			    + "    SELECT /* ${cmCollectorName} */ \n"
 //			    + "         mf.database_id \n"
 //			    + "        ,mf.file_id \n"
 //			    + "        ,mf.size  as sizePg \n"
@@ -1101,15 +1451,16 @@ extends CountersModel
 //			    + "        ,convert(numeric(5,1), (osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)           AS osFreePct \n"
 //			    + "        ,convert(numeric(5,1), 100.0 - ((osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)) AS osUsedPct \n" 
 //			    + "        ,ROW_NUMBER() OVER (PARTITION BY mf.database_id ORDER BY osv.available_bytes)               AS row_num \n"
+//			    + "        ,COUNT(*)     OVER (PARTITION BY mf.database_id)                                            AS file_count \n"
+//			    + "    INTO #osvData \n"
 //			    + "    FROM " + master_files + " AS mf \n"
 //			    + "    CROSS APPLY " + dm_os_volume_stats + " (mf.database_id, mf.file_id) AS osv \n"
-//			    + "    WHERE mf.type IN (0) /*0=ROWS, 0=LOG*/ \n"
-//			    + "), \n"
+//			    + "    WHERE mf.type IN (0)   /* 0=ROWS, 1=LOG, 2=FILESTREAM */ \n"
+//			    + "\n"
 //			    + "--------------------------- \n"
 //			    + "-- Operating System Volume LOG \n"
 //			    + "--------------------------- \n"
-//			    + "osvLog as ( \n"
-//			    + "    SELECT \n"
+//			    + "    SELECT /* ${cmCollectorName} */ \n"
 //			    + "         mf.database_id \n"
 //			    + "        ,mf.file_id \n"
 //			    + "        ,mf.size  as sizePg \n"
@@ -1135,14 +1486,17 @@ extends CountersModel
 //			    + "        ,convert(numeric(5,1), (osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)           AS osFreePct \n"
 //			    + "        ,convert(numeric(5,1), 100.0 - ((osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)) AS osUsedPct \n" 
 //			    + "        ,ROW_NUMBER() OVER (PARTITION BY mf.database_id ORDER BY osv.available_bytes)               AS row_num \n"
+//			    + "        ,COUNT(*)     OVER (PARTITION BY mf.database_id)                                            AS file_count \n"
+//			    + "    INTO #osvLog \n"
 //			    + "    FROM " + master_files + " AS mf \n"
 //			    + "    CROSS APPLY " + dm_os_volume_stats + " (mf.database_id, mf.file_id) AS osv \n"
-//			    + "    WHERE mf.type IN (1) /*0=ROWS, 0=LOG*/ \n"
-//			    + ") \n"
+//			    + "    WHERE mf.type IN (1)   /* 0=ROWS, 1=LOG, 2=FILESTREAM */ \n"
+//			    + "go\n"
+//			    + "\n"
 //			    + "------------------------------- \n"
 //			    + "-- The final select statement   \n"
 //			    + "------------------------------- \n"
-//			    + "SELECT \n"
+//			    + "SELECT /* ${cmCollectorName} */ \n"
 //			    + "     DBName                   = d.Name \n"
 //			    + "    ,d.database_id \n"
 //			    + "    ,compatibility_level      = convert(int, d.compatibility_level) \n"
@@ -1175,7 +1529,8 @@ extends CountersModel
 //			    + "    ,LogOsDiskFreePct         = osvLog.osFreePct \n"
 //			    + "    ,LogOsFileName            = osvLog.physical_name \n"
 //			    + "    ,LogFileName              = osvLog.name \n"
-//			    + "    ,logFileId                = osvLog.file_id \n"
+//			    + "    ,LogFileId                = osvLog.file_id \n"
+//			    + "    ,LogFileCount             = osvLog.file_count \n"
 //			    + "    ,LogOsDiskUsedMb          = osvLog.osUsedMb \n"
 //			    + "    ,LogOsDiskFreeMb          = osvLog.osFreeMb \n"
 //			    + "    ,LogNextGrowthSizeMb      = osvLog.nextGrowSizeMb \n"
@@ -1191,43 +1546,382 @@ extends CountersModel
 //			    + "    ,DataOsFileName           = osvData.physical_name \n"
 //			    + "    ,DataFileName             = osvData.name \n"
 //			    + "    ,DataFileId               = osvData.file_id \n"
+//			    + "    ,DataFileCount            = osvData.file_count \n"
 //			    + "    ,DataOsDiskUsedMb         = osvData.osUsedMb \n"
 //			    + "    ,DataOsDiskFreeMb         = osvData.osFreeMb \n"
 //			    + "    ,DataNextGrowthSizeMb     = osvData.nextGrowSizeMb \n"
 //			    + " \n"
 ////			    + "--	,TransactionLogFull = -1 \n"
 ////			    + " \n"
-//			    + "    ,OldestTranStartTime      = oti.last_request_start_time \n"
+////			    + "    ,OldestTranStartTime      = oti.last_request_start_time \n"
+//			    + "    ,OldestTranStartTime      = oti.transaction_begin_time \n"
 //			    + "    ,OldestTranWaitType       = oti.wait_type \n"
 //			    + "    ,OldestTranECT            = oti.estimated_completion_time \n"
-//			    + "    ,OldestTranInSeconds      = datediff(second, oti.last_request_start_time, getdate()) \n"
-//			    + "    ,OldestTranName           = -1 \n"
+////			    + "    ,OldestTranInSeconds      = datediff(second, oti.last_request_start_time, getdate()) \n"
+//			    + "    ,OldestTranInSeconds      = datediff(second, oti.transaction_begin_time, getdate()) \n"
+//			    + "    ,OldestTranName           = oti.transaction_name \n"
+//			    + "    ,OldestTranId             = oti.transaction_id \n"
 //			    + "    ,OldestTranSpid           = oti.session_id \n"
+//				+ "    ,OldestTranTempdbUsageMb  = (select \n" 
+//				+ "                                 CAST( ( \n"  // The below calculations also used in: CmTempdbSpidUsage
+//				+ "                                             (ts.user_objects_alloc_page_count - ts.user_objects_dealloc_page_count - " + user_objects_deferred_dealloc_page_count + ") \n"  
+//				+ "                                           + (ts.internal_objects_alloc_page_count - ts.internal_objects_dealloc_page_count) \n" 
+//				+ "                                       ) / 128.0 AS decimal(12,1) \n" 
+//				+ "                                     ) \n" 
+//				+ "                                 from tempdb.sys.dm_db_session_space_usage ts \n" 
+//				+ "                                 where ts.session_id = oti.session_id \n"
+//				+ "                                ) \n"
+////Possibly move above (OldestTranTempdbUsageMb) to section; "oti"
 //			    + "    ,OldestTranProg           = oti.program_name \n"
 //			    + "    ,OldestTranUser           = oti.login_name \n"
 //			    + "    ,OldestTranHost           = oti.host_name \n"
 ////			    + "--  ,OldestTranPage           = -1 \n"
 ////			    + "--  ,OldestTranProcName       = -1 \n"
 //			    + "    ,OldestTranHasSqlText     = CASE WHEN oti.most_recent_sql_text is not null THEN convert(bit,1) ELSE convert(bit,0) END \n"
+//			    + "    ,OldestTranHasLocks       = convert(bit,0) \n"
 //			    + "    ,OldestTranHasShowPlan    = CASE WHEN oti.plan_text            is not null THEN convert(bit,1) ELSE convert(bit,0) END \n"
 //			    + " \n"
-//				+ "    ,LastDbBackupTime         =         (SELECT bi.last_backup_finish_date                            FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D') \n"
-//				+ "    ,LastDbBackupAgeInHours   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) \n"
-//				+ "    ,LastLogBackupTime        =         (SELECT bi.last_backup_finish_date                            FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L') \n"
-//				+ "    ,LastLogBackupAgeInHours  = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L'), -1) \n"
+//				+ "    ,LastDbBackupTime          =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D') \n"
+//				+ "    ,LastDbBackupAgeInHours    = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) \n"
+//				+ "    ,LastIncDbBackupTime       =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'I') \n"
+//				+ "    ,LastIncDbBackupAgeInHours = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'I'), -1) \n"
+//				+ "    ,LastLogBackupTime         =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L') \n"
+//				+ "    ,LastLogBackupAgeInHours   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L'), -1) \n"
+//			    + lastGoodCheckDbTime
+//			    + lastGoodCheckDbDays
 //			    + " \n"
+//			    + queryStoreColumns
 //			    + "    ,OldestTranSqlText        = oti.most_recent_sql_text \n"
+//			    + "    ,OldestTranLocks          = convert(varchar(max), null) \n" // NOTE: This will be deferred and fetched at: localCalculation()
 //			    + "    ,OldestTranShowPlanText   = oti.plan_text \n"
 //			    + "FROM " + databases + " d \n"
-//			    + "LEFT OUTER JOIN oti              ON d.database_id = oti    .database_id and oti.row_num = 1 \n"
-//			    + "LEFT OUTER JOIN @dataSizeMb data ON d.database_id = data   .database_id \n"
-//			    + "LEFT OUTER JOIN @logSizeMb   log ON d.database_id = log    .database_id \n"
-//			    + "LEFT OUTER JOIN osvData          ON d.database_id = osvData.database_id and osvData.row_num = 1 \n"
-//			    + "LEFT OUTER JOIN osvLog           ON d.database_id = osvLog .database_id and osvLog .row_num = 1 \n"
+//			    + "LEFT OUTER JOIN #oti            oti ON d.database_id = oti    .database_id and oti.row_num = 1 \n"
+//			    + "LEFT OUTER JOIN #dataSizeMb    data ON d.database_id = data   .database_id \n"
+//			    + "LEFT OUTER JOIN #logSizeMb      log ON d.database_id = log    .database_id \n"
+//			    + "LEFT OUTER JOIN #osvData    osvData ON d.database_id = osvData.database_id and osvData.row_num = 1 \n"
+//			    + "LEFT OUTER JOIN #osvLog      osvLog ON d.database_id = osvLog .database_id and osvLog .row_num = 1 \n"
+//			    + queryStoreJoin
 //			    + "WHERE has_dbaccess(d.name) != 0 \n"
 //			    + whereAvailabilityGroup
+//			    + "go \n"
 //			    + " \n"
+//			    + "-- Drop temporary tables \n" 
+//			    + "drop table #dataSizeMb \n" 
+//			    + "drop table #logSizeMb  \n"
+//			    + "drop table #backupInfo  \n"
+//			    + "drop table #oti  \n"
+//			    + "drop table #osvData  \n"
+//			    + "drop table #osvLog  \n"
+//			    + queryStoreDropTempTable2
+//			    + "go \n"
 //			    + "";
+//
+//		return sql;
+//	}
+
+	@Override
+	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	{
+		// Table names are probably different in Normal SQL-Server and Azure SQL-Server
+		String dm_db_file_space_usage        = "sys.dm_db_file_space_usage";
+		String dm_db_log_space_usage         = "sys.dm_db_log_space_usage";
+		String dm_exec_sessions              = "sys.dm_exec_sessions";
+		String dm_exec_connections           = "sys.dm_exec_connections";
+		String dm_exec_requests              = "sys.dm_exec_requests";
+		String dm_tran_database_transactions = "sys.dm_tran_database_transactions";
+		String dm_tran_session_transactions  = "sys.dm_tran_session_transactions";
+		String dm_tran_active_transactions   = "sys.dm_tran_active_transactions";
+		String dm_exec_sql_text              = "sys.dm_exec_sql_text";
+		String dm_exec_query_plan            = "sys.dm_exec_query_plan";
+		String master_files                  = "sys.master_files";
+		String dm_os_volume_stats            = "sys.dm_os_volume_stats";
+		String databases                     = "sys.databases";
+		String backupset                     = "msdb.dbo.backupset";
+
+		// get Actual-Query-Plan instead of Estimated-QueryPlan
+		if (isDbmsOptionEnabled(DbmsOption.SQL_SERVER__LAST_QUERY_PLAN_STATS))
+		{
+			dm_exec_query_plan = "sys.dm_exec_query_plan_stats";
+		}
+
+//		if (isAzure)
+//		{
+//			dm_db_file_space_usage       = "sys.dm_pdw_nodes_db_file_space_usage";
+//			dm_db_log_space_usage        = "sys.dm_db_log_space_usage";               // same as Normal SQL-Server
+//			dm_exec_sessions             = "sys.dm_pdw_nodes_exec_sessions";
+//			dm_exec_connections          = "sys.dm_pdw_exec_connections";
+//			dm_exec_requests             = "sys.dm_exec_requests";                    // same as Normal SQL-Server
+//			dm_tran_session_transactions = "sys.dm_pdw_nodes_tran_session_transactions";
+//			dm_tran_active_transactions  = "sys.dm_pdw_nodes_tran_active_transactions";
+//			dm_exec_sql_text             = "sys.dm_exec_sql_text";                    // same as Normal SQL-Server
+//			dm_exec_query_plan           = "sys.dm_exec_query_plan";                  // same as Normal SQL-Server
+//			master_files                 = "sys.master_files";                        // same as Normal SQL-Server
+//			dm_os_volume_stats           = "sys.dm_os_volume_stats";                  // same as Normal SQL-Server
+//			databases                    = "sys.databases";                           // same as Normal SQL-Server
+//			backupset                    = "msdb.dbo.backupset";                      // same as Normal SQL-Server
+//		}
+
+		String foreachDbBegin = "EXEC sp_MSforeachdb ' \n";
+		String foreachDbEnd   = "FROM [?].${TABLE_NAME}' \n";
+
+		
+		// Special thing for Azure SQL Database
+		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+//		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+		if (isAzure || versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+// FIXME: remove isAzure... which is a temporary fix
+		{
+isAzure = true;
+srvVersion = Ver.ver(9999);
+			// NOTE: for Azure SQL Database, tempdb will have faulty 'devicename' and 'physical_name' (but lets fix that LATER)
+
+			foreachDbBegin = "";
+			foreachDbEnd   = "FROM ${TABLE_NAME} \n";
+		}
+
+		// ----- SQL-Server 2012 and above
+		String availabilityGroupName          = "";
+		String availabilityGroupRole          = "";
+		String availabilityGroupPrimaryServer = "";
+		String whereAvailabilityGroup         = "";
+
+		if (srvVersion >= Ver.ver(2012) && !isAzure) // FIXME: remove isAzure... which is a temporary fix
+		{
+			availabilityGroupName          = "    ,ag_name                  = (SELECT ag.name             FROM sys.availability_replicas ar JOIN sys.availability_groups                ag ON ar.group_id = ag.group_id  WHERE ar.replica_id  = d.replica_id) \n"; 
+			availabilityGroupRole          = "    ,ag_role                  = (SELECT ars.role_desc       FROM sys.dm_hadr_availability_replica_states ars                                                               WHERE ars.replica_id = d.replica_id) \n";
+			availabilityGroupPrimaryServer = "    ,ag_primary_server        = (SELECT ags.primary_replica FROM sys.availability_replicas ar JOIN sys.dm_hadr_availability_group_states ags ON ar.group_id = ags.group_id WHERE ar.replica_id  = d.replica_id) \n";
+			whereAvailabilityGroup         = "  OR d.replica_id is not null \n";
+		}
+
+		// ----- SQL-Server 2014 and above
+		String user_objects_deferred_dealloc_page_count = "0";
+		if (srvVersion >= Ver.ver(2014))
+		{
+			user_objects_deferred_dealloc_page_count = "user_objects_deferred_dealloc_page_count";
+		}
+
+		// ----- SQL-Server 2016 and above
+		String queryStoreCreateTempTable   = "";
+		String queryStoreColumns           = "";
+		String queryStoreJoin              = "";
+		String queryStoreDropTempTable1    = "";
+		String queryStoreDropTempTable2    = "";
+
+		if (srvVersion >= Ver.ver(2016))
+		{
+			String foreachDbId = "     DB_ID(''?'')   as database_id \n";
+			String foreachDbSq = "''"; // sq == SingleQuote
+			if (isAzure || versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics()) // FIXME: remove isAzure... which is a temporary fix
+			{
+				foreachDbId = "     DB_ID()   as database_id \n";
+				foreachDbSq = "'";
+			}
+
+			queryStoreCreateTempTable   = "--------------------------- \n"
+			                            + "-- Query Store \n"
+			                            + "--------------------------- \n"
+			                            + "CREATE TABLE #queryStore (database_id int, is_enabled bit, state_is_ok varchar(3), desired_state_desc varchar(60), actual_state_desc varchar(60), max_storage_size_mb bigint, current_storage_size_mb bigint, usedPct numeric(10,1), readonly_reason int) \n"
+			                            + "INSERT INTO #queryStore \n"
+			                            + foreachDbBegin
+			                            + "SELECT /* ${cmCollectorName} */ \n"
+			                            + foreachDbId
+			                            + "    ,CASE WHEN (desired_state = 0 /*0=OFF*/ ) THEN cast(0 as bit) ELSE cast(1 as bit) END as is_enabled \n"
+			                            + "    ,CASE WHEN (desired_state = actual_state) THEN #YES#        ELSE #NO#         END as state_is_ok \n".replace("#", foreachDbSq)
+			                            + "    ,desired_state_desc \n"
+			                            + "    ,actual_state_desc \n"
+			                            + "    ,max_storage_size_mb \n"
+			                            + "    ,current_storage_size_mb \n"
+			                            + "    ,cast(((current_storage_size_mb*1.0)/(max_storage_size_mb*1.0))*100.0 as numeric(10,1)) as usedPct \n"
+			                            + "    ,readonly_reason \n"
+			                            + foreachDbEnd.replace("${TABLE_NAME}", "sys.database_query_store_options")
+			                            + " \n";
+
+			queryStoreColumns           = "    ,QsIsEnabled              = qs.is_enabled \n"
+			                            + "    ,QsIsOk                   = qs.state_is_ok \n"
+			                            + "    ,QsDesiredState           = qs.desired_state_desc \n"
+			                            + "    ,QsActualState            = qs.actual_state_desc \n"
+			                            + "    ,QsMaxSizeInMb            = qs.max_storage_size_mb \n"
+			                            + "    ,QsUsedSpaceInMb          = qs.current_storage_size_mb \n"
+			                            + "    ,QsFreeSpaceInMb          = qs.max_storage_size_mb - qs.current_storage_size_mb \n"
+			                            + "    ,QsUsedPct                = qs.usedPct \n"
+			                            + "    ,QsReadOnlyReason         = qs.readonly_reason \n"
+			                            + "\n";
+
+			queryStoreJoin              = "LEFT OUTER JOIN #queryStore  qs     ON d.database_id = qs     .database_id \n";
+			queryStoreDropTempTable1    = "if (object_id('tempdb..#queryStore') is not null) drop table #queryStore \n";
+			queryStoreDropTempTable2    = "drop table #queryStore \n";
+		}
+
+		// ----- SQL-Server 2016, SP2 and above
+		String lastGoodCheckDbTime   = "";
+		String lastGoodCheckDbDays   = "";
+		if (srvVersion >= Ver.ver(2016,0,0, 2)) // 2016 SP2
+		{
+			lastGoodCheckDbTime += "\n";
+			lastGoodCheckDbTime += "    ,LastGoodCheckDbTime      = convert(datetime, DATABASEPROPERTYEX(d.Name, 'LastGoodCheckDbTime')) \n";
+			lastGoodCheckDbDays  = "    ,LastGoodCheckDbDays      = datediff(day, convert(datetime, DATABASEPROPERTYEX(d.Name, 'LastGoodCheckDbTime')), getdate()) \n";
+		}
+
+		
+		// ---- BACKUP INFORMATION
+		String backupInfo = ""
+				+ "--------------------------- \n"
+				+ "-- Backup Info \n"
+				+ "--------------------------- \n"
+				+ "    SELECT /* ${cmCollectorName} */ \n"
+				+ "         bus.database_name \n"
+				+ "        ,backup_type             = bus.type \n"
+				+ "        ,last_backup_finish_date = MAX(bus.backup_finish_date) \n"
+				+ "    INTO #backupInfo \n"
+				+ "    FROM " + backupset + " bus \n"
+				+ "    GROUP BY bus.database_name, bus.type \n"
+				+ " \n"
+				+ " \n"
+				+ "";
+
+		if (isAzure || versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics()) // FIXME: remove isAzure... which is a temporary fix
+		{
+			// Azure SQL Database
+			backupInfo = ""
+					+ "--------------------------- \n"
+					+ "-- Backup Info \n"
+					+ "--------------------------- \n"
+					+ "    SELECT /* ${cmCollectorName} */ \n"
+					+ "            db_name() as database_name \n"
+					+ "           ,backup_type \n"
+					+ "           ,last_backup_finish_date = MAX(bus.backup_finish_date) \n"
+					+ "    INTO #backupInfo \n"
+					+ "    FROM sys.dm_database_backups bus \n"
+					+ "    GROUP BY bus.backup_type \n"
+					+ " \n"
+					+ " \n"
+					+ "";
+		}
+
+		
+		// Add: OS DATA disk information (not available in Azure)
+		String osvDataCreateTempTable = ""
+			    + "--------------------------- \n"
+			    + "-- Operating System Volume DATA \n"
+			    + "--------------------------- \n"
+			    + "    SELECT /* ${cmCollectorName} */ \n"
+			    + "         mf.database_id \n"
+			    + "        ,mf.file_id \n"
+			    + "        ,mf.size  as sizePg \n"
+			    + "        ,mf.size / 128 as sizeMb \n"
+			    + "        ,mf.max_size \n"
+			    + "        ,mf.growth \n"
+			    + "        ,mf.is_percent_growth \n"
+			    + "        , CASE WHEN mf.max_size = -1 AND mf.is_percent_growth = 1 THEN mf.size * (mf.growth / 100.0) / 128 --'PCT_GROW' \n"
+			    + "               WHEN mf.max_size = -1 AND mf.is_percent_growth = 0 THEN mf.growth / 128                     --'FIXED_GROW' \n"
+			    + "               WHEN mf.max_size > 0  AND mf.size < mf.max_size AND mf.is_percent_growth = 1 THEN mf.size * (mf.growth / 100.0) / 128 --'PCT_GROW   OK for MAX_SIZE' \n"
+			    + "               WHEN mf.max_size > 0  AND mf.size < mf.max_size AND mf.is_percent_growth = 0 THEN mf.growth / 128                     --'FIXED_GROW OK for MAX_SIZE' \n"
+			    + "               ELSE 0 \n"
+			    + "          END AS nextGrowSizeMb \n"
+			    + "        ,mf.type \n"
+			    + "        ,mf.type_desc \n"
+			    + "        ,mf.name \n"
+			    + "        ,mf.physical_name \n"
+			    + "        ,osv.volume_mount_point \n"
+			    + "        ,osv.logical_volume_name \n"
+			    + "        ,osv.total_bytes / 1024 / 1024                         AS osTotalMb \n"
+			    + "        ,osv.available_bytes / 1024 / 1024                     AS osFreeMb \n"
+			    + "        ,(osv.total_bytes - osv.available_bytes) / 1024 / 1024 AS osUsedMb \n" 
+			    + "        ,convert(numeric(5,1), (osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)           AS osFreePct \n"
+			    + "        ,convert(numeric(5,1), 100.0 - ((osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)) AS osUsedPct \n" 
+			    + "        ,ROW_NUMBER() OVER (PARTITION BY mf.database_id ORDER BY osv.available_bytes)               AS row_num \n"
+			    + "        ,COUNT(*)     OVER (PARTITION BY mf.database_id)                                            AS file_count \n"
+			    + "    INTO #osvData \n"
+			    + "    FROM " + master_files + " AS mf \n"
+			    + "    CROSS APPLY " + dm_os_volume_stats + " (mf.database_id, mf.file_id) AS osv \n"
+			    + "    WHERE mf.type IN (0)   /* 0=ROWS, 1=LOG, 2=FILESTREAM */ \n"
+			    + "\n"
+			    + "";
+		String osvDataColumns = " \n"
+			    + "    ,DataOsDisk               = osvData.volume_mount_point \n"
+			    + "    ,DataOsDiskUsedPct        = osvData.osUsedPct \n"
+			    + "    ,DataOsDiskFreePct        = osvData.osFreePct \n"
+			    + "    ,DataOsFileName           = osvData.physical_name \n"
+			    + "    ,DataFileName             = osvData.name \n"
+			    + "    ,DataFileId               = osvData.file_id \n"
+			    + "    ,DataFileCount            = osvData.file_count \n"
+			    + "    ,DataOsDiskUsedMb         = osvData.osUsedMb \n"
+			    + "    ,DataOsDiskFreeMb         = osvData.osFreeMb \n"
+			    + "    ,DataNextGrowthSizeMb     = osvData.nextGrowSizeMb \n"
+			    + "";
+		String osvDataJoin              = "LEFT OUTER JOIN #osvData    osvData ON d.database_id = osvData.database_id and osvData.row_num = 1 \n";
+		String osvDataDropTempTable1    = "if (object_id('tempdb..#osvData')    is not null) drop table #osvData  \n";
+		String osvDataDropTempTable2    = "drop table #osvData  \n";
+
+		// Add: OS LOG disk information (not available in Azure)
+		String osvLogCreateTempTable = ""
+			    + "--------------------------- \n"
+			    + "-- Operating System Volume LOG \n"
+			    + "--------------------------- \n"
+			    + "    SELECT /* ${cmCollectorName} */ \n"
+			    + "         mf.database_id \n"
+			    + "        ,mf.file_id \n"
+			    + "        ,mf.size  as sizePg \n"
+			    + "        ,mf.size / 128 as sizeMb \n"
+			    + "        ,mf.max_size \n"
+			    + "        ,mf.growth \n"
+			    + "        ,mf.is_percent_growth \n"
+			    + "        , CASE WHEN mf.max_size = -1 AND mf.is_percent_growth = 1 THEN mf.size * (mf.growth / 100.0) / 128 --'PCT_GROW' \n"
+			    + "               WHEN mf.max_size = -1 AND mf.is_percent_growth = 0 THEN mf.growth / 128                     --'FIXED_GROW' \n"
+			    + "               WHEN mf.max_size > 0  AND mf.size < mf.max_size AND mf.is_percent_growth = 1 THEN mf.size * (mf.growth / 100.0) / 128 --'PCT_GROW   OK for MAX_SIZE' \n"
+			    + "               WHEN mf.max_size > 0  AND mf.size < mf.max_size AND mf.is_percent_growth = 0 THEN mf.growth / 128                     --'FIXED_GROW OK for MAX_SIZE' \n"
+			    + "               ELSE 0 \n"
+			    + "          END AS nextGrowSizeMb \n"
+			    + "        ,mf.type \n"
+			    + "        ,mf.type_desc \n"
+			    + "        ,mf.name \n"
+			    + "        ,mf.physical_name \n"
+			    + "        ,osv.volume_mount_point \n"
+			    + "        ,osv.logical_volume_name \n"
+			    + "        ,osv.total_bytes / 1024 / 1024                         AS osTotalMb \n"
+			    + "        ,osv.available_bytes / 1024 / 1024                     AS osFreeMb \n"
+			    + "        ,(osv.total_bytes - osv.available_bytes) / 1024 / 1024 AS osUsedMb \n" 
+			    + "        ,convert(numeric(5,1), (osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)           AS osFreePct \n"
+			    + "        ,convert(numeric(5,1), 100.0 - ((osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)) AS osUsedPct \n" 
+			    + "        ,ROW_NUMBER() OVER (PARTITION BY mf.database_id ORDER BY osv.available_bytes)               AS row_num \n"
+			    + "        ,COUNT(*)     OVER (PARTITION BY mf.database_id)                                            AS file_count \n"
+			    + "    INTO #osvLog \n"
+			    + "    FROM " + master_files + " AS mf \n"
+			    + "    CROSS APPLY " + dm_os_volume_stats + " (mf.database_id, mf.file_id) AS osv \n"
+			    + "    WHERE mf.type IN (1)   /* 0=ROWS, 1=LOG, 2=FILESTREAM */ \n"
+			    + "go\n"
+			    + "\n"
+			    + "";
+		String osvLogColumns = " \n"
+			    + "    ,LogOsDisk                = osvLog.volume_mount_point \n"
+			    + "    ,LogOsDiskUsedPct         = osvLog.osUsedPct \n"
+			    + "    ,LogOsDiskFreePct         = osvLog.osFreePct \n"
+			    + "    ,LogOsFileName            = osvLog.physical_name \n"
+			    + "    ,LogFileName              = osvLog.name \n"
+			    + "    ,LogFileId                = osvLog.file_id \n"
+			    + "    ,LogFileCount             = osvLog.file_count \n"
+			    + "    ,LogOsDiskUsedMb          = osvLog.osUsedMb \n"
+			    + "    ,LogOsDiskFreeMb          = osvLog.osFreeMb \n"
+			    + "    ,LogNextGrowthSizeMb      = osvLog.nextGrowSizeMb \n"
+			    + "";
+		String osvLogJoin               = "LEFT OUTER JOIN #osvLog      osvLog ON d.database_id = osvLog .database_id and osvLog .row_num = 1 \n";
+		String osvLogDropTempTable1     = "if (object_id('tempdb..#osvLog')     is not null) drop table #osvLog  \n";
+		String osvLogDropTempTable2     = "drop table #osvLog  \n";
+
+		if (isAzure || versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics()) // FIXME: remove isAzure... which is a temporary fix
+		{
+			osvDataCreateTempTable   = "";
+			osvDataColumns           = "";
+			osvDataJoin              = "";
+			osvDataDropTempTable1    = "";
+			osvDataDropTempTable2    = "";
+			
+			osvLogCreateTempTable    = "";
+			osvLogColumns            = "";
+			osvLogJoin               = "";
+			osvLogDropTempTable1     = "";
+			osvLogDropTempTable2     = "";
+		}
 
 		String sql = ""
 			    + "-- Drop any of the old temporary tables if they still exists \n" 
@@ -1235,8 +1929,8 @@ extends CountersModel
 			    + "if (object_id('tempdb..#logSizeMb')  is not null) drop table #logSizeMb  \n"
 			    + "if (object_id('tempdb..#backupInfo') is not null) drop table #backupInfo  \n"
 			    + "if (object_id('tempdb..#oti')        is not null) drop table #oti  \n"
-			    + "if (object_id('tempdb..#osvData')    is not null) drop table #osvData  \n"
-			    + "if (object_id('tempdb..#osvLog')     is not null) drop table #osvLog  \n"
+			    + osvDataDropTempTable1
+			    + osvLogDropTempTable1
 			    + queryStoreDropTempTable1
 			    + "go \n"
 			    + " \n"
@@ -1245,7 +1939,7 @@ extends CountersModel
 			    + "--------------------------- \n"
 			    + "CREATE TABLE #dataSizeMb (database_id int, fileGroupCount int, totalDataSizeMb numeric(12,1), usedDataMb numeric(12,1), freeDataMb numeric(12,1), usedDataPct numeric(5,1), freeDataPct numeric(5,1)) \n"
 			    + "INSERT INTO #dataSizeMb \n"
-			    + "EXEC sp_MSforeachdb ' \n"
+			    + foreachDbBegin
 			    + "SELECT /* ${cmCollectorName} */ \n"
 			    + "     database_id \n"
 			    + "    ,fileGroupCount = count(*) \n"
@@ -1254,92 +1948,33 @@ extends CountersModel
 			    + "    ,unallocatedMb  = sum(unallocated_extent_page_count) / 128.0 \n"
 			    + "    ,usedPct        = (sum(allocated_extent_page_count)  *1.0) / (sum(total_page_count)*1.0) * 100.0 \n"
 			    + "    ,freePct        = (sum(unallocated_extent_page_count)*1.0) / (sum(total_page_count)*1.0) * 100.0 \n"
-			    + "FROM [?]." + dm_db_file_space_usage + " GROUP BY database_id' \n"
+			    + foreachDbEnd.replace("${TABLE_NAME}", dm_db_file_space_usage + " GROUP BY database_id")
 			    + " \n"
 			    + "--------------------------- \n"
 			    + "-- LOG SIZE MB \n"
 			    + "--------------------------- \n"
 			    + "CREATE TABLE #logSizeMb (database_id int, totalLogSizeMb int, usedLogSpaceInMb int, usedLogSpaceInPct numeric(5,1), logSpaceInMbSinceLastBackup int) \n"
 			    + "INSERT INTO #logSizeMb \n"
-			    + "EXEC sp_MSforeachdb ' \n"
+			    + foreachDbBegin
 			    + "SELECT /* ${cmCollectorName} */ \n"
 			    + "     database_id \n"
 			    + "    ,total_log_size_in_bytes/1024/1024 \n"
 			    + "    ,used_log_space_in_bytes/1024/1024 \n"
 			    + "    ,used_log_space_in_percent \n"
 			    + "    ,log_space_in_bytes_since_last_backup/1024/1024 \n"
-			    + "FROM [?]." + dm_db_log_space_usage + "' \n"
+			    + foreachDbEnd.replace("${TABLE_NAME}", dm_db_log_space_usage)
 			    + " \n"
 			    
 			    // Query Store (if 2016 or above)
 			    + queryStoreCreateTempTable
-			    
-			    + "--------------------------- \n"
-			    + "-- Backup Info \n"
-			    + "--------------------------- \n"
-			    + "    SELECT /* ${cmCollectorName} */ \n"
-			    + "         bus.database_name \n"
-			    + "        ,bus.type \n"
-			    + "        ,last_backup_finish_date = MAX(bus.backup_finish_date) \n"
-			    + "    INTO #backupInfo \n"
-			    + "    FROM " + backupset + " bus \n"
-			    + "    GROUP BY bus.database_name, bus.type \n"
-			    + " \n"
-			    + " \n"
+
+			    // Backup information
+			    + backupInfo
+
+			    // Add: Open Transaction Info
 			    + "--------------------------- \n"
 			    + "-- Open Transaction Info \n"
 			    + "--------------------------- \n"
-//add the below "somhow" to get TempdbUsageMb
-//				"    ,TempdbUsageMb       = (select \n" + 
-//				"                            CAST( ( \n" + // The below calculations also used in: CmTempdbSpidUsage
-//				"                                        (user_objects_alloc_page_count - user_objects_dealloc_page_count - " + user_objects_deferred_dealloc_page_count + ") \n" + 
-//				"                                      + (internal_objects_alloc_page_count - internal_objects_dealloc_page_count) \n" + 
-//				"                                  ) / 128.0 AS decimal(12,1) \n" + 
-//				"                                ) \n" + 
-//				"                            from tempdb.sys.dm_db_session_space_usage ts \n" + 
-//				"                            where ts.session_id = des.session_id \n" +
-//				"                           ) \n" +
-			    
-//			    + "    SELECT --top 1 \n"
-//			    + "         es.session_id \n"
-//			    + "        ,es.database_id \n"
-//			    + "        ,es.status \n"
-//			    + "        ,es.program_name \n"
-//			    + "        ,es.login_name \n"
-//			    + "        ,es.host_name \n"
-//			    + "        ,es.open_transaction_count \n"
-//			    
-//			    + "        ,tat.transaction_id \n"
-//			    + "        ,tat.name AS transaction_name  \n"
-//			    + "        ,tat.transaction_begin_time \n"
-//
-//			    + "        ,es.last_request_start_time \n"
-//			    + "        ,es.last_request_end_time \n"
-//			    + "        ,er.statement_start_offset \n"
-//			    + "        ,er.statement_end_offset \n"
-//			    + "        ,er.wait_type \n"
-//			    + "        ,er.estimated_completion_time \n"
-//				+ "        ,SUBSTRING(sql_text.text, er.statement_start_offset / 2,  \n"
-//				+ "             ( CASE WHEN er.statement_end_offset = -1  \n"
-//				+ "                    THEN DATALENGTH(sql_text.text)  \n"
-//				+ "                    ELSE er.statement_end_offset  \n"
-//				+ "               END - er.statement_start_offset ) / 2 +2) AS most_recent_sql_text \n"
-//			    + "        ,plan_text.query_plan as plan_text \n"
-////			    + "        ,ROW_NUMBER() OVER (PARTITION BY es.database_id ORDER BY es.last_request_start_time) AS row_num \n"
-//			    + "        ,ROW_NUMBER() OVER (PARTITION BY es.database_id ORDER BY tat.transaction_begin_time) AS row_num \n"
-//			    + "    INTO #oti \n"
-//			    + "    FROM " + dm_exec_sessions + " es \n"
-//			    + "    JOIN " + dm_exec_connections + " ec            ON es.session_id = ec.session_id \n"
-//			    + "    LEFT OUTER JOIN " + dm_exec_requests + " er    ON er.session_id = es.session_id \n"
-//			    + "    LEFT OUTER JOIN " + dm_tran_session_transactions + " tst ON es.session_id = tst.session_id \n"
-//			    + "    LEFT OUTER JOIN " + dm_tran_active_transactions  + " tat ON tst.transaction_id = tat.transaction_id \n"
-//			    + "    OUTER APPLY " + dm_exec_sql_text + " (ec.most_recent_sql_handle) AS sql_text \n"
-//			    + "    OUTER APPLY " + dm_exec_query_plan + " (er.plan_handle)          AS plan_text \n"
-//			    + "    WHERE es.open_transaction_count > 0 \n"
-//			    + "    --AND es.status = 'sleeping' \n"
-//			    + "      AND es.is_user_process = 1 \n"
-//			    + "      AND es.session_id != @@spid \n"
-//			    + "\n"
 			    + "    SELECT /* ${cmCollectorName} */ \n"
 			    + "         tst.session_id \n"
 			    + "        ,tdt.database_id \n"
@@ -1383,78 +2018,12 @@ extends CountersModel
 			    + "      AND tdt.database_transaction_log_record_count > 0 \n"
 			    + "      AND tst.session_id != @@spid \n"
 			    + "\n"
+			    + ""
 
-			    + "--------------------------- \n"
-			    + "-- Operating System Volume DATA \n"
-			    + "--------------------------- \n"
-			    + "    SELECT /* ${cmCollectorName} */ \n"
-			    + "         mf.database_id \n"
-			    + "        ,mf.file_id \n"
-			    + "        ,mf.size  as sizePg \n"
-			    + "        ,mf.size / 128 as sizeMb \n"
-			    + "        ,mf.max_size \n"
-			    + "        ,mf.growth \n"
-			    + "        ,mf.is_percent_growth \n"
-			    + "        , CASE WHEN mf.max_size = -1 AND mf.is_percent_growth = 1 THEN mf.size * (mf.growth / 100.0) / 128 --'PCT_GROW' \n"
-			    + "               WHEN mf.max_size = -1 AND mf.is_percent_growth = 0 THEN mf.growth / 128                     --'FIXED_GROW' \n"
-			    + "               WHEN mf.max_size > 0  AND mf.size < mf.max_size AND mf.is_percent_growth = 1 THEN mf.size * (mf.growth / 100.0) / 128 --'PCT_GROW   OK for MAX_SIZE' \n"
-			    + "               WHEN mf.max_size > 0  AND mf.size < mf.max_size AND mf.is_percent_growth = 0 THEN mf.growth / 128                     --'FIXED_GROW OK for MAX_SIZE' \n"
-			    + "               ELSE 0 \n"
-			    + "          END AS nextGrowSizeMb \n"
-			    + "        ,mf.type \n"
-			    + "        ,mf.type_desc \n"
-			    + "        ,mf.name \n"
-			    + "        ,mf.physical_name \n"
-			    + "        ,osv.volume_mount_point \n"
-			    + "        ,osv.logical_volume_name \n"
-			    + "        ,osv.total_bytes / 1024 / 1024                         AS osTotalMb \n"
-			    + "        ,osv.available_bytes / 1024 / 1024                     AS osFreeMb \n"
-			    + "        ,(osv.total_bytes - osv.available_bytes) / 1024 / 1024 AS osUsedMb \n" 
-			    + "        ,convert(numeric(5,1), (osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)           AS osFreePct \n"
-			    + "        ,convert(numeric(5,1), 100.0 - ((osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)) AS osUsedPct \n" 
-			    + "        ,ROW_NUMBER() OVER (PARTITION BY mf.database_id ORDER BY osv.available_bytes)               AS row_num \n"
-			    + "        ,COUNT(*)     OVER (PARTITION BY mf.database_id)                                            AS file_count \n"
-			    + "    INTO #osvData \n"
-			    + "    FROM " + master_files + " AS mf \n"
-			    + "    CROSS APPLY " + dm_os_volume_stats + " (mf.database_id, mf.file_id) AS osv \n"
-			    + "    WHERE mf.type IN (0)   /* 0=ROWS, 1=LOG, 2=FILESTREAM */ \n"
-			    + "\n"
-			    + "--------------------------- \n"
-			    + "-- Operating System Volume LOG \n"
-			    + "--------------------------- \n"
-			    + "    SELECT /* ${cmCollectorName} */ \n"
-			    + "         mf.database_id \n"
-			    + "        ,mf.file_id \n"
-			    + "        ,mf.size  as sizePg \n"
-			    + "        ,mf.size / 128 as sizeMb \n"
-			    + "        ,mf.max_size \n"
-			    + "        ,mf.growth \n"
-			    + "        ,mf.is_percent_growth \n"
-			    + "        , CASE WHEN mf.max_size = -1 AND mf.is_percent_growth = 1 THEN mf.size * (mf.growth / 100.0) / 128 --'PCT_GROW' \n"
-			    + "               WHEN mf.max_size = -1 AND mf.is_percent_growth = 0 THEN mf.growth / 128                     --'FIXED_GROW' \n"
-			    + "               WHEN mf.max_size > 0  AND mf.size < mf.max_size AND mf.is_percent_growth = 1 THEN mf.size * (mf.growth / 100.0) / 128 --'PCT_GROW   OK for MAX_SIZE' \n"
-			    + "               WHEN mf.max_size > 0  AND mf.size < mf.max_size AND mf.is_percent_growth = 0 THEN mf.growth / 128                     --'FIXED_GROW OK for MAX_SIZE' \n"
-			    + "               ELSE 0 \n"
-			    + "          END AS nextGrowSizeMb \n"
-			    + "        ,mf.type \n"
-			    + "        ,mf.type_desc \n"
-			    + "        ,mf.name \n"
-			    + "        ,mf.physical_name \n"
-			    + "        ,osv.volume_mount_point \n"
-			    + "        ,osv.logical_volume_name \n"
-			    + "        ,osv.total_bytes / 1024 / 1024                         AS osTotalMb \n"
-			    + "        ,osv.available_bytes / 1024 / 1024                     AS osFreeMb \n"
-			    + "        ,(osv.total_bytes - osv.available_bytes) / 1024 / 1024 AS osUsedMb \n" 
-			    + "        ,convert(numeric(5,1), (osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)           AS osFreePct \n"
-			    + "        ,convert(numeric(5,1), 100.0 - ((osv.available_bytes*1.0) / (osv.total_bytes*1.0) * 100.0)) AS osUsedPct \n" 
-			    + "        ,ROW_NUMBER() OVER (PARTITION BY mf.database_id ORDER BY osv.available_bytes)               AS row_num \n"
-			    + "        ,COUNT(*)     OVER (PARTITION BY mf.database_id)                                            AS file_count \n"
-			    + "    INTO #osvLog \n"
-			    + "    FROM " + master_files + " AS mf \n"
-			    + "    CROSS APPLY " + dm_os_volume_stats + " (mf.database_id, mf.file_id) AS osv \n"
-			    + "    WHERE mf.type IN (1)   /* 0=ROWS, 1=LOG, 2=FILESTREAM */ \n"
-			    + "go\n"
-			    + "\n"
+			    // Add: OS Data/Log info (not available in Azure)
+			    + osvDataCreateTempTable
+			    + osvLogCreateTempTable
+			    
 			    + "------------------------------- \n"
 			    + "-- The final select statement   \n"
 			    + "------------------------------- \n"
@@ -1478,40 +2047,18 @@ extends CountersModel
 			    + "    ,DataSizeInMb             = data.totalDataSizeMb \n"
 			    + "    ,LogSizeUsedPct           = log.usedLogSpaceInPct \n"
 			    + "    ,DataSizeUsedPct          = data.usedDataPct \n"
-//			    + "    ,LogOsDiskUsedPct         = osvLog.osUsedPct \n"
-//			    + "    ,DataOsDiskUsedPct        = osvData.osUsedPct \n"
 			    + " \n"
 			    + "    ,LogSizeUsedInMb          = log.usedLogSpaceInMb \n"
 			    + "    ,LogSizeFreeInMb          = log.totalLogSizeMb - log.usedLogSpaceInMb \n"
 			    + "    ,LogSizeUsedInMbDiff      = log.usedLogSpaceInMb \n"
 			    + "    ,LogSizeFreeInMbDiff      = log.totalLogSizeMb - log.usedLogSpaceInMb \n"
-			    + " \n"
-			    + "    ,LogOsDisk                = osvLog.volume_mount_point \n"
-			    + "    ,LogOsDiskUsedPct         = osvLog.osUsedPct \n"
-			    + "    ,LogOsDiskFreePct         = osvLog.osFreePct \n"
-			    + "    ,LogOsFileName            = osvLog.physical_name \n"
-			    + "    ,LogFileName              = osvLog.name \n"
-			    + "    ,LogFileId                = osvLog.file_id \n"
-			    + "    ,LogFileCount             = osvLog.file_count \n"
-			    + "    ,LogOsDiskUsedMb          = osvLog.osUsedMb \n"
-			    + "    ,LogOsDiskFreeMb          = osvLog.osFreeMb \n"
-			    + "    ,LogNextGrowthSizeMb      = osvLog.nextGrowSizeMb \n"
+			    + osvLogColumns
 			    + " \n"
 			    + "    ,DataSizeUsedInMb         = data.usedDataMb \n"
 			    + "    ,DataSizeFreeInMb         = data.freeDataMb \n"
 			    + "    ,DataSizeUsedInMbDiff     = data.usedDataMb \n"
 			    + "    ,DataSizeFreeInMbDiff     = data.freeDataMb \n"
-			    + " \n"
-			    + "    ,DataOsDisk               = osvData.volume_mount_point \n"
-			    + "    ,DataOsDiskUsedPct        = osvData.osUsedPct \n"
-			    + "    ,DataOsDiskFreePct        = osvData.osFreePct \n"
-			    + "    ,DataOsFileName           = osvData.physical_name \n"
-			    + "    ,DataFileName             = osvData.name \n"
-			    + "    ,DataFileId               = osvData.file_id \n"
-			    + "    ,DataFileCount            = osvData.file_count \n"
-			    + "    ,DataOsDiskUsedMb         = osvData.osUsedMb \n"
-			    + "    ,DataOsDiskFreeMb         = osvData.osFreeMb \n"
-			    + "    ,DataNextGrowthSizeMb     = osvData.nextGrowSizeMb \n"
+			    + osvDataColumns
 			    + " \n"
 //			    + "--	,TransactionLogFull = -1 \n"
 //			    + " \n"
@@ -1524,15 +2071,15 @@ extends CountersModel
 			    + "    ,OldestTranName           = oti.transaction_name \n"
 			    + "    ,OldestTranId             = oti.transaction_id \n"
 			    + "    ,OldestTranSpid           = oti.session_id \n"
-				+ "    ,OldestTranTempdbUsageMb  = (select \n" 
-				+ "                                 CAST( ( \n"  // The below calculations also used in: CmTempdbSpidUsage
-				+ "                                             (ts.user_objects_alloc_page_count - ts.user_objects_dealloc_page_count - " + user_objects_deferred_dealloc_page_count + ") \n"  
-				+ "                                           + (ts.internal_objects_alloc_page_count - ts.internal_objects_dealloc_page_count) \n" 
-				+ "                                       ) / 128.0 AS decimal(12,1) \n" 
-				+ "                                     ) \n" 
-				+ "                                 from tempdb.sys.dm_db_session_space_usage ts \n" 
-				+ "                                 where ts.session_id = oti.session_id \n"
-				+ "                                ) \n"
+			    + "    ,OldestTranTempdbUsageMb  = (select \n" 
+			    + "                                 CAST( ( \n"  // The below calculations also used in: CmTempdbSpidUsage
+			    + "                                             (ts.user_objects_alloc_page_count - ts.user_objects_dealloc_page_count - " + user_objects_deferred_dealloc_page_count + ") \n"  
+			    + "                                           + (ts.internal_objects_alloc_page_count - ts.internal_objects_dealloc_page_count) \n" 
+			    + "                                       ) / 128.0 AS decimal(12,1) \n" 
+			    + "                                     ) \n" 
+			    + "                                 from tempdb.sys.dm_db_session_space_usage ts \n" 
+			    + "                                 where ts.session_id = oti.session_id \n"
+			    + "                                ) \n"
 //Possibly move above (OldestTranTempdbUsageMb) to section; "oti"
 			    + "    ,OldestTranProg           = oti.program_name \n"
 			    + "    ,OldestTranUser           = oti.login_name \n"
@@ -1543,10 +2090,12 @@ extends CountersModel
 			    + "    ,OldestTranHasLocks       = convert(bit,0) \n"
 			    + "    ,OldestTranHasShowPlan    = CASE WHEN oti.plan_text            is not null THEN convert(bit,1) ELSE convert(bit,0) END \n"
 			    + " \n"
-				+ "    ,LastDbBackupTime         =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D') \n"
-				+ "    ,LastDbBackupAgeInHours   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) \n"
-				+ "    ,LastLogBackupTime        =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L') \n"
-				+ "    ,LastLogBackupAgeInHours  = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L'), -1) \n"
+			    + "    ,LastDbBackupTime          =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.backup_type = 'D') \n"
+			    + "    ,LastDbBackupAgeInHours    = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.backup_type = 'D'), -1) \n"
+			    + "    ,LastIncDbBackupTime       =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.backup_type = 'I') \n"
+			    + "    ,LastIncDbBackupAgeInHours = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.backup_type = 'I'), -1) \n"
+			    + "    ,LastLogBackupTime         =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.backup_type = 'L') \n"
+			    + "    ,LastLogBackupAgeInHours   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.backup_type = 'L'), -1) \n"
 			    + lastGoodCheckDbTime
 			    + lastGoodCheckDbDays
 			    + " \n"
@@ -1558,8 +2107,8 @@ extends CountersModel
 			    + "LEFT OUTER JOIN #oti            oti ON d.database_id = oti    .database_id and oti.row_num = 1 \n"
 			    + "LEFT OUTER JOIN #dataSizeMb    data ON d.database_id = data   .database_id \n"
 			    + "LEFT OUTER JOIN #logSizeMb      log ON d.database_id = log    .database_id \n"
-			    + "LEFT OUTER JOIN #osvData    osvData ON d.database_id = osvData.database_id and osvData.row_num = 1 \n"
-			    + "LEFT OUTER JOIN #osvLog      osvLog ON d.database_id = osvLog .database_id and osvLog .row_num = 1 \n"
+			    + osvDataJoin
+			    + osvLogJoin
 			    + queryStoreJoin
 			    + "WHERE has_dbaccess(d.name) != 0 \n"
 			    + whereAvailabilityGroup
@@ -1570,8 +2119,8 @@ extends CountersModel
 			    + "drop table #logSizeMb  \n"
 			    + "drop table #backupInfo  \n"
 			    + "drop table #oti  \n"
-			    + "drop table #osvData  \n"
-			    + "drop table #osvLog  \n"
+			    + osvDataDropTempTable2
+			    + osvLogDropTempTable2
 			    + queryStoreDropTempTable2
 			    + "go \n"
 			    + "";
@@ -1811,8 +2360,10 @@ extends CountersModel
 		int DataColName_pos         = this.findColumn(dataColName);
 
 		// Error checking if columns exists
-		if (LogOsDisk_pos  == -1 || LogOsFileName_pos  == -1 || LogColName_pos  == -1) { _logger.error(tgdp.getName() + ": Cant find some columns in dataset. LogOsDisk="  + LogOsDisk_pos  + ", LogOsFileName="  + LogOsFileName_pos  + ", " + logColName  + "=" + LogColName_pos ); return; }
-		if (DataOsDisk_pos == -1 || DataOsFileName_pos == -1 || DataColName_pos == -1) { _logger.error(tgdp.getName() + ": Cant find some columns in dataset. DataOsDisk=" + DataOsDisk_pos + ", DataOsFileName=" + DataOsFileName_pos + ", " + dataColName + "=" + DataColName_pos); return; }
+//		if (LogOsDisk_pos  == -1 || LogOsFileName_pos  == -1 || LogColName_pos  == -1) { _logger.error(tgdp.getName() + ": Cant find some columns in dataset. LogOsDisk="  + LogOsDisk_pos  + ", LogOsFileName="  + LogOsFileName_pos  + ", " + logColName  + "=" + LogColName_pos ); return; }
+//		if (DataOsDisk_pos == -1 || DataOsFileName_pos == -1 || DataColName_pos == -1) { _logger.error(tgdp.getName() + ": Cant find some columns in dataset. DataOsDisk=" + DataOsDisk_pos + ", DataOsFileName=" + DataOsFileName_pos + ", " + dataColName + "=" + DataColName_pos); return; }
+		if (LogOsDisk_pos  == -1 || LogOsFileName_pos  == -1 || LogColName_pos  == -1) { return; } // Azure do NOT have OS Data/Log information
+		if (DataOsDisk_pos == -1 || DataOsFileName_pos == -1 || DataColName_pos == -1) { return; } // Azure do NOT have OS Data/Log information
 
 		// Loop all rows and store values (duplicates will be discarded) in a MAP
 		for (int r=0; r<this.size(); r++)
@@ -2033,6 +2584,34 @@ extends CountersModel
 
 		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
 
+		
+		
+		// Lists used by Availability Group checks
+		List<String> agMandaroryDbnamesList           = Collections.emptyList();
+		List<String> agMandaroryDbnamesSkipList       = Collections.emptyList();
+		List<String> agMandaroryDbnamesSkipSystemList = Collections.emptyList();
+
+		int dbCountWithAg = 0; // Count number of databases that IS PART of a Availability Group
+		if (hasColumn("ag_name"))
+		{
+			for (int r=0; r<cm.getDiffRowCount(); r++)
+			{
+				String ag_name = cm.getAbsString(r, "ag_name");
+				if (StringUtil.hasValue(ag_name))
+					dbCountWithAg++;
+			}
+
+			// Get list of Availability Group -- database names which might be "Mandatory" or part of the "SkipList"
+			if (dbCountWithAg > 0)
+			{
+				agMandaroryDbnamesList           = StringUtil.parseCommaStrToList(Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_AgMandatoryDbnames          , DEFAULT_alarm_AgMandatoryDbnames          ), true);
+				agMandaroryDbnamesSkipList       = StringUtil.parseCommaStrToList(Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_AgMandatoryDbnamesSkip      , DEFAULT_alarm_AgMandatoryDbnamesSkip      ), true);
+				agMandaroryDbnamesSkipSystemList = StringUtil.parseCommaStrToList(Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_AgMandatoryDbnamesSkipSystem, DEFAULT_alarm_AgMandatoryDbnamesSkipSystem), true);
+			}
+		}
+		
+		
+		
 		// If some databases (in Db/Log dump) is not available... we may still want to alarm, due to "any" reason
 		// So add those databases to the below list, and make decitions after looping all databases
 		List<String> examedDbList  = new ArrayList<>();
@@ -2210,6 +2789,57 @@ extends CountersModel
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 						AlarmEvent ae = new AlarmEventOldBackup(cm, threshold, dbname, lastBackupDate, val.intValue());
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
+					}
+				}
+			}
+
+			//-------------------------------------------------------
+			// LastDbBackupAgeInHours
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("LastIncDbBackupAgeInHours"))
+			{
+				Double val = cm.getAbsValueAsDouble(r, "LastIncDbBackupAgeInHours");
+				if (val == null)
+					val = -1.0;
+				
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastIncDbBackupAgeInHours, DEFAULT_alarm_LastIncDbBackupAgeInHours);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): LastIncDbBackupAgeInHours -- dbname='"+dbname+"', threshold="+threshold+", val='"+val+"'.");
+
+				if (val.intValue() > threshold || val.intValue() < 0)
+				{
+					// Get config 'skip some transaction names'
+					String keepDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastIncDbBackupAgeInHoursForDbs,  DEFAULT_alarm_LastIncDbBackupAgeInHoursForDbs);
+					String skipDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastIncDbBackupAgeInHoursSkipDbs, DEFAULT_alarm_LastIncDbBackupAgeInHoursSkipDbs);
+					String keepSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastIncDbBackupAgeInHoursForSrv,  DEFAULT_alarm_LastIncDbBackupAgeInHoursForSrv);
+					String skipSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastIncDbBackupAgeInHoursSkipSrv, DEFAULT_alarm_LastIncDbBackupAgeInHoursSkipSrv);
+
+					// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+					boolean doAlarm = true;
+
+					// if -1 (LastTranLogDumpTime=NULL), only alarm if we have anything in the keep* or skip* rules
+					if (val.intValue() < 0 && StringUtil.isNullOrBlankForAll(keepDbRegExp, skipDbRegExp, keepSrvRegExp, skipSrvRegExp))
+						doAlarm = false;
+					
+					// The below could have been done with nested if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
+					// Below is more readable, from a variable context point-of-view, but HARDER to understand
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepSrvRegExp) ||   dbmsSrvName.matches(keepSrvRegExp))); //     matches the KEEP Srv regexp
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbRegExp)  || ! dbname     .matches(skipDbRegExp ))); // NO match in the SKIP Db  regexp
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipSrvRegExp) || ! dbmsSrvName.matches(skipSrvRegExp))); // NO match in the SKIP Srv regexp
+
+					// NO match in the SKIP regexp
+					if (doAlarm)
+					{
+						String lastBackupDate = cm.getAbsValue(r, "LastIncDbBackupTime") + "";
+						
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						AlarmEvent ae = new AlarmEventOldIncrementalBackup(cm, threshold, dbname, lastBackupDate, val.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
 						alarmHandler.addAlarm( ae );
@@ -2629,16 +3259,20 @@ extends CountersModel
 
 					Double QsMaxSizeInMb    = cm.getAbsValueAsDouble(r, "QsMaxSizeInMb");
 					Double QsUsedSpaceInMb  = cm.getAbsValueAsDouble(r, "QsUsedSpaceInMb");
-					Double QsUsedSpaceInPct = cm.getAbsValueAsDouble(r, "QsUsedSpaceInPct");
-					
-					if (QsFreeSpaceInMb < threshold.doubleValue())
+					Double QsUsedSpaceInPct = cm.getAbsValueAsDouble(r, "QsUsedPct");
+
+					// Only check this if the MAX size is well above the threshold (otherwise if Query Store is SMALL then we will always get this alarm)  
+					if (QsMaxSizeInMb > (threshold * 2))
 					{
-						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-						AlarmEvent ae = new AlarmEventQueryStoreLowFreeSpace(cm, dbname, QsUsedSpaceInPct, QsMaxSizeInMb, QsUsedSpaceInMb, QsFreeSpaceInMb, AlarmEventQueryStoreLowFreeSpace.Type.MB, threshold);
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-						
-						alarmHandler.addAlarm( ae );
+						if (QsFreeSpaceInMb < threshold.doubleValue())
+						{
+							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+							AlarmEvent ae = new AlarmEventQueryStoreLowFreeSpace(cm, dbname, QsUsedSpaceInPct, QsMaxSizeInMb, QsUsedSpaceInMb, QsFreeSpaceInMb, AlarmEventQueryStoreLowFreeSpace.Type.MB, threshold);
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							
+							alarmHandler.addAlarm( ae );
+						}
 					}
 				}
 			}
@@ -2677,6 +3311,50 @@ extends CountersModel
 				}
 			} // end: LastGoodCheckDbDays
 			
+			//-------------------------------------------------------
+			// AgMandatoryDbnames
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("AgMandatoryDbnames") && dbCountWithAg > 0)
+			{
+				String ag_name = cm.getAbsString(r, "ag_name");
+				if (StringUtil.isNullOrBlank(ag_name))
+				{
+					if ( StringUtil.matchesAny(dbname, agMandaroryDbnamesList) )
+					{
+						String info = "part-of-mandatory-list=" + agMandaroryDbnamesList;
+						AlarmEvent ae = new AlarmEventDbNotInHadr(cm, dbname, info);
+
+						alarmHandler.addAlarm( ae );
+					}
+				}
+			} // end: MandatoryDbnames
+
+			//-------------------------------------------------------
+			// AgMandatoryDbnamesSkip
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("AgMandatoryDbnamesSkip") && dbCountWithAg > 0)
+			{
+				// Skip System databases like: master, tempdb, model, msdb, SSISDB, ReportServer, ReportServerTempDB
+				if ( ! StringUtil.matchesAny(dbname, agMandaroryDbnamesSkipSystemList) )
+				{
+					String ag_name = cm.getAbsString(r, "ag_name");
+					if (StringUtil.isNullOrBlank(ag_name))
+					{
+						if ( StringUtil.matchesAny(dbname, agMandaroryDbnamesSkipList) )
+						{
+							_logger.debug("Database '" + dbname + "' does NOT belong to a Availability Group. But NO Alarm since it's part of the SKIP List: " + agMandaroryDbnamesSkipList);
+						}
+						else
+						{
+							String info = "not-part-of-skip-list=" + agMandaroryDbnamesSkipList;
+							AlarmEvent ae = new AlarmEventDbNotInHadr(cm, dbname, info);
+
+							alarmHandler.addAlarm( ae );
+						}
+					}
+				}
+			} // end: MandatoryDbnamesSkip
+
 		} // end: loop dbname(s)
 	}
 
@@ -3177,89 +3855,109 @@ extends CountersModel
 		}
 	}
 
-	public static final String  PROPKEY_alarm_OldestTranInSeconds             = CM_NAME + ".alarm.system.if.OldestTranInSeconds.gt";
-	public static final int     DEFAULT_alarm_OldestTranInSeconds             = 60;
-	
-	public static final String  PROPKEY_alarm_OldestTranInSecondsSkipTranName = CM_NAME + ".alarm.system.if.OldestTranInSeconds.skip.tranName";
-	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranName = "";
+	public static final String  PROPKEY_alarm_OldestTranInSeconds                = CM_NAME + ".alarm.system.if.OldestTranInSeconds.gt";
+	public static final int     DEFAULT_alarm_OldestTranInSeconds                = 60;
 
-	public static final String  PROPKEY_alarm_OldestTranInSecondsSkipTranProg = CM_NAME + ".alarm.system.if.OldestTranInSeconds.skip.tranProg";
-	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranProg = "";
-	
-	public static final String  PROPKEY_alarm_OldestTranInSecondsSkipTranUser = CM_NAME + ".alarm.system.if.OldestTranInSeconds.skip.tranUser";
-	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranUser = "";
-	
-	public static final String  PROPKEY_alarm_OldestTranInSecondsSkipTranHost = CM_NAME + ".alarm.system.if.OldestTranInSeconds.skip.tranHost";
-	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranHost = "";
-	
-//	public static final String  PROPKEY_alarm_TransactionLogFull              = CM_NAME + ".alarm.system.if.TransactionLogFull.gt";
-//	public static final int     DEFAULT_alarm_TransactionLogFull              = 0;
+	public static final String  PROPKEY_alarm_OldestTranInSecondsSkipTranName    = CM_NAME + ".alarm.system.if.OldestTranInSeconds.skip.tranName";
+	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranName    = "";
 
-//	public static final String  PROPKEY_alarm_LastBackupFailed                = CM_NAME + ".alarm.system.if.LastBackupFailed.gt";
-//	public static final int     DEFAULT_alarm_LastBackupFailed                = 0;
+	public static final String  PROPKEY_alarm_OldestTranInSecondsSkipTranProg    = CM_NAME + ".alarm.system.if.OldestTranInSeconds.skip.tranProg";
+	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranProg    = "";
 
-	public static final String  PROPKEY_alarm_LastDbBackupAgeInHours          = CM_NAME + ".alarm.system.if.LastDbBackupAgeInHours.gt";
-	public static final int     DEFAULT_alarm_LastDbBackupAgeInHours          = 999_999; // 114 years; more or less disabled
-	public static final String  PROPKEY_alarm_LastDbBackupAgeInHoursForDbs    = CM_NAME + ".alarm.system.if.LastDbBackupAgeInHours.for.dbs";
-	public static final String  DEFAULT_alarm_LastDbBackupAgeInHoursForDbs    = "";
-	public static final String  PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs   = CM_NAME + ".alarm.system.if.LastDbBackupAgeInHours.skip.dbs";
-	public static final String  DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs   = "";
-	public static final String  PROPKEY_alarm_LastDbBackupAgeInHoursForSrv    = CM_NAME + ".alarm.system.if.LastDbBackupAgeInHours.for.srv";
-	public static final String  DEFAULT_alarm_LastDbBackupAgeInHoursForSrv    = "";
-	public static final String  PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv   = CM_NAME + ".alarm.system.if.LastDbBackupAgeInHours.skip.srv";
-	public static final String  DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv   = "";
+	public static final String  PROPKEY_alarm_OldestTranInSecondsSkipTranUser    = CM_NAME + ".alarm.system.if.OldestTranInSeconds.skip.tranUser";
+	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranUser    = "";
 
-	public static final String  PROPKEY_alarm_LastLogBackupAgeInHours         = CM_NAME + ".alarm.system.if.LastLogBackupAgeInHours.gt";
-	public static final int     DEFAULT_alarm_LastLogBackupAgeInHours         = 999_999; // 114 years; more or less disabled
-	public static final String  PROPKEY_alarm_LastLogBackupAgeInHoursForDbs   = CM_NAME + ".alarm.system.if.LastLogBackupAgeInHours.for.dbs";
-	public static final String  DEFAULT_alarm_LastLogBackupAgeInHoursForDbs   = "";
-	public static final String  PROPKEY_alarm_LastLogBackupAgeInHoursSkipDbs  = CM_NAME + ".alarm.system.if.LastLogBackupAgeInHours.skip.dbs";
-	public static final String  DEFAULT_alarm_LastLogBackupAgeInHoursSkipDbs  = "";
-	public static final String  PROPKEY_alarm_LastLogBackupAgeInHoursForSrv   = CM_NAME + ".alarm.system.if.LastLogBackupAgeInHours.for.srv";
-	public static final String  DEFAULT_alarm_LastLogBackupAgeInHoursForSrv   = "";
-	public static final String  PROPKEY_alarm_LastLogBackupAgeInHoursSkipSrv  = CM_NAME + ".alarm.system.if.LastLogBackupAgeInHours.skip.srv";
-	public static final String  DEFAULT_alarm_LastLogBackupAgeInHoursSkipSrv  = "";
+	public static final String  PROPKEY_alarm_OldestTranInSecondsSkipTranHost    = CM_NAME + ".alarm.system.if.OldestTranInSeconds.skip.tranHost";
+	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranHost    = "";
 
-	public static final String  PROPKEY_alarm_LowDbFreeSpaceInMb              = CM_NAME + ".alarm.system.if.LowDbFreeSpaceInMb.lt";
-//	public static final String  DEFAULT_alarm_LowDbFreeSpaceInMb              = ".*=2, tempdb=100";
-	public static final String  DEFAULT_alarm_LowDbFreeSpaceInMb              = "";
-                                                                              
-	public static final String  PROPKEY_alarm_LowLogFreeSpaceInMb             = CM_NAME + ".alarm.system.if.LowLogFreeSpaceInMb.lt";
-	public static final String  DEFAULT_alarm_LowLogFreeSpaceInMb             = "";
-                                                                              
-	public static final String  PROPKEY_alarm_LowDbFreeSpaceInPct             = CM_NAME + ".alarm.system.if.LowDbFreeSpaceInPct.gt";
-//	public static final String  DEFAULT_alarm_LowDbFreeSpaceInPct             = "tempdb=80";
-	public static final String  DEFAULT_alarm_LowDbFreeSpaceInPct             = "";
-                                                                              
-	public static final String  PROPKEY_alarm_LowLogFreeSpaceInPct            = CM_NAME + ".alarm.system.if.LowLogFreeSpaceInPct.gt";
-	public static final String  DEFAULT_alarm_LowLogFreeSpaceInPct            = "";
+//	public static final String  PROPKEY_alarm_TransactionLogFull                 = CM_NAME + ".alarm.system.if.TransactionLogFull.gt";
+//	public static final int     DEFAULT_alarm_TransactionLogFull                 = 0;
 
-	public static final String  PROPKEY_alarm_LowOsDiskFreeSpaceInMb          = CM_NAME + ".alarm.system.if.LowOsDiskFreeSpaceInMb.lt";
-	public static final String  DEFAULT_alarm_LowOsDiskFreeSpaceInMb          = ".*=500";
-                                                                              
-	public static final String  PROPKEY_alarm_LowOsDiskFreeSpaceInPct         = CM_NAME + ".alarm.system.if.LowOsDiskFreeSpaceInPct.gt";
-	public static final String  DEFAULT_alarm_LowOsDiskFreeSpaceInPct         = ".*=95";
-                                                                              
+//	public static final String  PROPKEY_alarm_LastBackupFailed                   = CM_NAME + ".alarm.system.if.LastBackupFailed.gt";
+//	public static final int     DEFAULT_alarm_LastBackupFailed                   = 0;
+
+	public static final String  PROPKEY_alarm_LastDbBackupAgeInHours             = CM_NAME + ".alarm.system.if.LastDbBackupAgeInHours.gt";
+	public static final int     DEFAULT_alarm_LastDbBackupAgeInHours             = 999_999; // 114 years; more or less disabled
+	public static final String  PROPKEY_alarm_LastDbBackupAgeInHoursForDbs       = CM_NAME + ".alarm.system.if.LastDbBackupAgeInHours.for.dbs";
+	public static final String  DEFAULT_alarm_LastDbBackupAgeInHoursForDbs       = "";
+	public static final String  PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs      = CM_NAME + ".alarm.system.if.LastDbBackupAgeInHours.skip.dbs";
+	public static final String  DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs      = "";
+	public static final String  PROPKEY_alarm_LastDbBackupAgeInHoursForSrv       = CM_NAME + ".alarm.system.if.LastDbBackupAgeInHours.for.srv";
+	public static final String  DEFAULT_alarm_LastDbBackupAgeInHoursForSrv       = "";
+	public static final String  PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv      = CM_NAME + ".alarm.system.if.LastDbBackupAgeInHours.skip.srv";
+	public static final String  DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv      = "";
+
+	public static final String  PROPKEY_alarm_LastIncDbBackupAgeInHours          = CM_NAME + ".alarm.system.if.LastIncDbBackupAgeInHours.gt";
+	public static final int     DEFAULT_alarm_LastIncDbBackupAgeInHours          = 999_999; // 114 years; more or less disabled
+	public static final String  PROPKEY_alarm_LastIncDbBackupAgeInHoursForDbs    = CM_NAME + ".alarm.system.if.LastIncDbBackupAgeInHours.for.dbs";
+	public static final String  DEFAULT_alarm_LastIncDbBackupAgeInHoursForDbs    = "";
+	public static final String  PROPKEY_alarm_LastIncDbBackupAgeInHoursSkipDbs   = CM_NAME + ".alarm.system.if.LastIncDbBackupAgeInHours.skip.dbs";
+	public static final String  DEFAULT_alarm_LastIncDbBackupAgeInHoursSkipDbs   = "";
+	public static final String  PROPKEY_alarm_LastIncDbBackupAgeInHoursForSrv    = CM_NAME + ".alarm.system.if.LastIncDbBackupAgeInHours.for.srv";
+	public static final String  DEFAULT_alarm_LastIncDbBackupAgeInHoursForSrv    = "";
+	public static final String  PROPKEY_alarm_LastIncDbBackupAgeInHoursSkipSrv   = CM_NAME + ".alarm.system.if.LastIncDbBackupAgeInHours.skip.srv";
+	public static final String  DEFAULT_alarm_LastIncDbBackupAgeInHoursSkipSrv   = "";
+
+	public static final String  PROPKEY_alarm_LastLogBackupAgeInHours            = CM_NAME + ".alarm.system.if.LastLogBackupAgeInHours.gt";
+	public static final int     DEFAULT_alarm_LastLogBackupAgeInHours            = 999_999; // 114 years; more or less disabled
+	public static final String  PROPKEY_alarm_LastLogBackupAgeInHoursForDbs      = CM_NAME + ".alarm.system.if.LastLogBackupAgeInHours.for.dbs";
+	public static final String  DEFAULT_alarm_LastLogBackupAgeInHoursForDbs      = "";
+	public static final String  PROPKEY_alarm_LastLogBackupAgeInHoursSkipDbs     = CM_NAME + ".alarm.system.if.LastLogBackupAgeInHours.skip.dbs";
+	public static final String  DEFAULT_alarm_LastLogBackupAgeInHoursSkipDbs     = "";
+	public static final String  PROPKEY_alarm_LastLogBackupAgeInHoursForSrv      = CM_NAME + ".alarm.system.if.LastLogBackupAgeInHours.for.srv";
+	public static final String  DEFAULT_alarm_LastLogBackupAgeInHoursForSrv      = "";
+	public static final String  PROPKEY_alarm_LastLogBackupAgeInHoursSkipSrv     = CM_NAME + ".alarm.system.if.LastLogBackupAgeInHours.skip.srv";
+	public static final String  DEFAULT_alarm_LastLogBackupAgeInHoursSkipSrv     = "";
+
+	public static final String  PROPKEY_alarm_LowDbFreeSpaceInMb                 = CM_NAME + ".alarm.system.if.LowDbFreeSpaceInMb.lt";
+//	public static final String  DEFAULT_alarm_LowDbFreeSpaceInMb                 = ".*=2, tempdb=100";
+	public static final String  DEFAULT_alarm_LowDbFreeSpaceInMb                 = "";
+
+	public static final String  PROPKEY_alarm_LowLogFreeSpaceInMb                = CM_NAME + ".alarm.system.if.LowLogFreeSpaceInMb.lt";
+	public static final String  DEFAULT_alarm_LowLogFreeSpaceInMb                = "";
+
+	public static final String  PROPKEY_alarm_LowDbFreeSpaceInPct                = CM_NAME + ".alarm.system.if.LowDbFreeSpaceInPct.gt";
+//	public static final String  DEFAULT_alarm_LowDbFreeSpaceInPct                = "tempdb=80";
+	public static final String  DEFAULT_alarm_LowDbFreeSpaceInPct                = "";
+
+	public static final String  PROPKEY_alarm_LowLogFreeSpaceInPct               = CM_NAME + ".alarm.system.if.LowLogFreeSpaceInPct.gt";
+	public static final String  DEFAULT_alarm_LowLogFreeSpaceInPct               = "";
+
+	public static final String  PROPKEY_alarm_LowOsDiskFreeSpaceInMb             = CM_NAME + ".alarm.system.if.LowOsDiskFreeSpaceInMb.lt";
+	public static final String  DEFAULT_alarm_LowOsDiskFreeSpaceInMb             = ".*=500";
+
+	public static final String  PROPKEY_alarm_LowOsDiskFreeSpaceInPct            = CM_NAME + ".alarm.system.if.LowOsDiskFreeSpaceInPct.gt";
+	public static final String  DEFAULT_alarm_LowOsDiskFreeSpaceInPct            = ".*=95";
+
 	// A comma separated list of databases that *must* exists, othewise ALARM. (the dbname can be a regexp, but each entry in the list must have a count of 1 after we have looped all records)
 	// TODO: NOT YET IMPLEMENTED... think a bit more about this...
-//	public static final String  PROPKEY_alarm_MandatoryDatabaseList           = CM_NAME + ".alarm.system.MandatoryDatabaseList";
-//	public static final String  DEFAULT_alarm_MandatoryDatabaseList           = "";
-	
-	public static final String  PROPKEY_alarm_DbState                         = CM_NAME + ".alarm.system.if.state.not.in";
-	public static final String  DEFAULT_alarm_DbState                         = ".*=(MULTI_USER|ONLINE)";
-	
-	public static final String  PROPKEY_alarm_QsIsOk                          = CM_NAME + ".alarm.system.if.QsIsOk.ne";
-	public static final String  DEFAULT_alarm_QsIsOk                          = "YES";
+//	public static final String  PROPKEY_alarm_MandatoryDatabaseList              = CM_NAME + ".alarm.system.MandatoryDatabaseList";
+//	public static final String  DEFAULT_alarm_MandatoryDatabaseList              = "";
 
-	public static final String  PROPKEY_alarm_QsUsedSpaceInPct                = CM_NAME + ".alarm.system.if.QsUsedPct.gt";
-	public static final double  DEFAULT_alarm_QsUsedSpaceInPct                = 90.0;
+	public static final String  PROPKEY_alarm_DbState                            = CM_NAME + ".alarm.system.if.state.not.in";
+	public static final String  DEFAULT_alarm_DbState                            = ".*=(MULTI_USER|ONLINE)";
 
-	public static final String  PROPKEY_alarm_QsFreeSpaceInMb                 = CM_NAME + ".alarm.system.if.QsFreeSpaceInMb.lt";
-	public static final int     DEFAULT_alarm_QsFreeSpaceInMb                 = 20;
-	
-	public static final String  PROPKEY_alarm_LastGoodCheckDbDays             = CM_NAME + ".alarm.system.if.LastGoodCheckDbDays.gt";
-	public static final String  DEFAULT_alarm_LastGoodCheckDbDays             = ".*=99999"; // 99_999; // Basically turned OFF
-	
+	public static final String  PROPKEY_alarm_QsIsOk                             = CM_NAME + ".alarm.system.if.QsIsOk.ne";
+	public static final String  DEFAULT_alarm_QsIsOk                             = "YES";
+
+	public static final String  PROPKEY_alarm_QsUsedSpaceInPct                   = CM_NAME + ".alarm.system.if.QsUsedPct.gt";
+	public static final double  DEFAULT_alarm_QsUsedSpaceInPct                   = 90.0;
+
+	public static final String  PROPKEY_alarm_QsFreeSpaceInMb                    = CM_NAME + ".alarm.system.if.QsFreeSpaceInMb.lt";
+	public static final int     DEFAULT_alarm_QsFreeSpaceInMb                    = 20;
+
+	public static final String  PROPKEY_alarm_LastGoodCheckDbDays                = CM_NAME + ".alarm.system.if.LastGoodCheckDbDays.gt";
+	public static final String  DEFAULT_alarm_LastGoodCheckDbDays                = ".*=99999"; // 99_999; // Basically turned OFF
+
+	public static final String  PROPKEY_alarm_AgMandatoryDbnames                 = CM_NAME + ".alarm.system.ag.mandatory.dbnames";
+	public static final String  DEFAULT_alarm_AgMandatoryDbnames                 = "";
+
+	public static final String  PROPKEY_alarm_AgMandatoryDbnamesSkip             = CM_NAME + ".alarm.system.ag.mandatory.dbnames.skip";
+	public static final String  DEFAULT_alarm_AgMandatoryDbnamesSkip             = "";
+
+	public static final String  PROPKEY_alarm_AgMandatoryDbnamesSkipSystem       = CM_NAME + ".alarm.system.ag.mandatory.dbnames.skip.system";
+	public static final String  DEFAULT_alarm_AgMandatoryDbnamesSkipSystem       = "master, tempdb, model, msdb, SSISDB, ReportServer, ReportServerTempDB";
+
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
@@ -3268,45 +3966,55 @@ extends CountersModel
 		
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("OldestTranInSeconds",              isAlarmSwitch, PROPKEY_alarm_OldestTranInSeconds             , Integer.class, conf.getIntProperty   (PROPKEY_alarm_OldestTranInSeconds             , DEFAULT_alarm_OldestTranInSeconds            ), DEFAULT_alarm_OldestTranInSeconds            , "If 'OldestTranInSeconds' is greater than ## then send 'AlarmEventLongRunningTransaction'." ));
-		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranName",                PROPKEY_alarm_OldestTranInSecondsSkipTranName , String .class, conf.getProperty      (PROPKEY_alarm_OldestTranInSecondsSkipTranName , DEFAULT_alarm_OldestTranInSecondsSkipTranName), DEFAULT_alarm_OldestTranInSecondsSkipTranName, "If 'OldestTranInSeconds' is true; then we can filter out transaction names using a Regular expression... if (tranName.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranProg",                PROPKEY_alarm_OldestTranInSecondsSkipTranProg , String .class, conf.getProperty      (PROPKEY_alarm_OldestTranInSecondsSkipTranProg , DEFAULT_alarm_OldestTranInSecondsSkipTranProg), DEFAULT_alarm_OldestTranInSecondsSkipTranProg, "If 'OldestTranInSeconds' is true; then we can filter out transaction names using a Regular expression... if (tranProg.matches('regexp'))... This to remove alarms of 'SQLAgent.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranUser",                PROPKEY_alarm_OldestTranInSecondsSkipTranUser , String .class, conf.getProperty      (PROPKEY_alarm_OldestTranInSecondsSkipTranUser , DEFAULT_alarm_OldestTranInSecondsSkipTranUser), DEFAULT_alarm_OldestTranInSecondsSkipTranUser, "If 'OldestTranInSeconds' is true; then we can filter out transaction names using a Regular expression... if (tranUser.matches('regexp'))... This to remove alarms of '(user1|user2)' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranHost",                PROPKEY_alarm_OldestTranInSecondsSkipTranHost , String .class, conf.getProperty      (PROPKEY_alarm_OldestTranInSecondsSkipTranHost , DEFAULT_alarm_OldestTranInSecondsSkipTranHost), DEFAULT_alarm_OldestTranInSecondsSkipTranHost, "If 'OldestTranInSeconds' is true; then we can filter out transaction names using a Regular expression... if (tranHost.matches('regexp'))... This to remove alarms of '.*-prod-.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("OldestTranInSeconds",              isAlarmSwitch, PROPKEY_alarm_OldestTranInSeconds             , Integer.class, conf.getIntProperty   (PROPKEY_alarm_OldestTranInSeconds             , DEFAULT_alarm_OldestTranInSeconds             ), DEFAULT_alarm_OldestTranInSeconds             , "If 'OldestTranInSeconds' is greater than ## then send 'AlarmEventLongRunningTransaction'." ));
+		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranName",                PROPKEY_alarm_OldestTranInSecondsSkipTranName , String .class, conf.getProperty      (PROPKEY_alarm_OldestTranInSecondsSkipTranName , DEFAULT_alarm_OldestTranInSecondsSkipTranName ), DEFAULT_alarm_OldestTranInSecondsSkipTranName , "If 'OldestTranInSeconds' is true; then we can filter out transaction names using a Regular expression... if (tranName.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranProg",                PROPKEY_alarm_OldestTranInSecondsSkipTranProg , String .class, conf.getProperty      (PROPKEY_alarm_OldestTranInSecondsSkipTranProg , DEFAULT_alarm_OldestTranInSecondsSkipTranProg ), DEFAULT_alarm_OldestTranInSecondsSkipTranProg , "If 'OldestTranInSeconds' is true; then we can filter out transaction names using a Regular expression... if (tranProg.matches('regexp'))... This to remove alarms of 'SQLAgent.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranUser",                PROPKEY_alarm_OldestTranInSecondsSkipTranUser , String .class, conf.getProperty      (PROPKEY_alarm_OldestTranInSecondsSkipTranUser , DEFAULT_alarm_OldestTranInSecondsSkipTranUser ), DEFAULT_alarm_OldestTranInSecondsSkipTranUser , "If 'OldestTranInSeconds' is true; then we can filter out transaction names using a Regular expression... if (tranUser.matches('regexp'))... This to remove alarms of '(user1|user2)' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranHost",                PROPKEY_alarm_OldestTranInSecondsSkipTranHost , String .class, conf.getProperty      (PROPKEY_alarm_OldestTranInSecondsSkipTranHost , DEFAULT_alarm_OldestTranInSecondsSkipTranHost ), DEFAULT_alarm_OldestTranInSecondsSkipTranHost , "If 'OldestTranInSeconds' is true; then we can filter out transaction names using a Regular expression... if (tranHost.matches('regexp'))... This to remove alarms of '.*-prod-.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
 
-//		list.add(new CmSettingsHelper("TransactionLogFull",               isAlarmSwitch, PROPKEY_alarm_TransactionLogFull              , Integer.class, conf.getIntProperty   (PROPKEY_alarm_TransactionLogFull              , DEFAULT_alarm_TransactionLogFull             ), DEFAULT_alarm_TransactionLogFull             , "If 'TransactionLogFull' is greater than ## then send 'AlarmEventFullTranLog'." ));
-                                                                                                                                                                              
-//		list.add(new CmSettingsHelper("LastBackupFailed",                 isAlarmSwitch, PROPKEY_alarm_LastBackupFailed                , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LastBackupFailed                , DEFAULT_alarm_LastBackupFailed               ), DEFAULT_alarm_LastBackupFailed               , "If 'LastBackupFailed' is greater than ## then send 'AlarmEventLastBackupFailed'." ));
+//		list.add(new CmSettingsHelper("TransactionLogFull",               isAlarmSwitch, PROPKEY_alarm_TransactionLogFull              , Integer.class, conf.getIntProperty   (PROPKEY_alarm_TransactionLogFull              , DEFAULT_alarm_TransactionLogFull              ), DEFAULT_alarm_TransactionLogFull              , "If 'TransactionLogFull' is greater than ## then send 'AlarmEventFullTranLog'." ));
 
-		list.add(new CmSettingsHelper("LastDbBackupAgeInHours",           isAlarmSwitch, PROPKEY_alarm_LastDbBackupAgeInHours          , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LastDbBackupAgeInHours          , DEFAULT_alarm_LastDbBackupAgeInHours         ), DEFAULT_alarm_LastDbBackupAgeInHours         , "If 'LastDbBackupAgeInHours' is greater than ## then send 'AlarmEventOldBackup'." ));
-		list.add(new CmSettingsHelper("LastDbBackupAgeInHours ForDbs",                   PROPKEY_alarm_LastDbBackupAgeInHoursForDbs    , String .class, conf.getProperty      (PROPKEY_alarm_LastDbBackupAgeInHoursForDbs    , DEFAULT_alarm_LastDbBackupAgeInHoursForDbs   ), DEFAULT_alarm_LastDbBackupAgeInHoursForDbs   , "If 'LastDbBackupAgeInHours' is true; Only for the databases listed (regexp is used, blank=for-all-dbs). After this rule the 'skip' rule is evaluated.", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("LastDbBackupAgeInHours SkipDbs",                  PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs   , String .class, conf.getProperty      (PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs   , DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs  ), DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs  , "If 'LastDbBackupAgeInHours' is true; Discard databases listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                     new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("LastDbBackupAgeInHours ForSrv",                   PROPKEY_alarm_LastDbBackupAgeInHoursForSrv    , String .class, conf.getProperty      (PROPKEY_alarm_LastDbBackupAgeInHoursForSrv    , DEFAULT_alarm_LastDbBackupAgeInHoursForSrv   ), DEFAULT_alarm_LastDbBackupAgeInHoursForSrv   , "If 'LastDbBackupAgeInHours' is true; Only for the servers listed (regexp is used, blank=for-all-srv). After this rule the 'skip' rule is evaluated.",   new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("LastDbBackupAgeInHours SkipSrv",                  PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv   , String .class, conf.getProperty      (PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv   , DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv  ), DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv  , "If 'LastDbBackupAgeInHours' is true; Discard servers listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                       new RegExpInputValidator()));
-                                                                                                                                                                              
-		list.add(new CmSettingsHelper("LastLogBackupAgeInHours",          isAlarmSwitch, PROPKEY_alarm_LastLogBackupAgeInHours         , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LastLogBackupAgeInHours         , DEFAULT_alarm_LastLogBackupAgeInHours        ), DEFAULT_alarm_LastLogBackupAgeInHours        , "If 'LastLogBackupAgeInHours' is greater than ## then send 'AlarmEventOldBackup'." ));
-		list.add(new CmSettingsHelper("LastLogBackupAgeInHours ForDbs",                  PROPKEY_alarm_LastLogBackupAgeInHoursForDbs   , String .class, conf.getProperty      (PROPKEY_alarm_LastLogBackupAgeInHoursForDbs   , DEFAULT_alarm_LastLogBackupAgeInHoursForDbs  ), DEFAULT_alarm_LastLogBackupAgeInHoursForDbs  , "If 'LastLogBackupAgeInHours' is true; Only for the databases listed (regexp is used, blank=skip-no-dbs). After this rule the 'skip' rule is evaluated.", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("LastLogBackupAgeInHours SkipDbs",                 PROPKEY_alarm_LastLogBackupAgeInHoursSkipDbs  , String .class, conf.getProperty      (PROPKEY_alarm_LastLogBackupAgeInHoursSkipDbs  , DEFAULT_alarm_LastLogBackupAgeInHoursSkipDbs ), DEFAULT_alarm_LastLogBackupAgeInHoursSkipDbs , "If 'LastLogBackupAgeInHours' is true; Discard databases listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                     new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("LastLogBackupAgeInHours ForSrv",                  PROPKEY_alarm_LastLogBackupAgeInHoursForSrv   , String .class, conf.getProperty      (PROPKEY_alarm_LastLogBackupAgeInHoursForSrv   , DEFAULT_alarm_LastLogBackupAgeInHoursForSrv  ), DEFAULT_alarm_LastLogBackupAgeInHoursForSrv  , "If 'LastLogBackupAgeInHours' is true; Only for the servers listed (regexp is used, blank=skip-no-srv). After this rule the 'skip' rule is evaluated.",   new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("LastLogBackupAgeInHours SkipSrv",                 PROPKEY_alarm_LastLogBackupAgeInHoursSkipSrv  , String .class, conf.getProperty      (PROPKEY_alarm_LastLogBackupAgeInHoursSkipSrv  , DEFAULT_alarm_LastLogBackupAgeInHoursSkipSrv ), DEFAULT_alarm_LastLogBackupAgeInHoursSkipSrv , "If 'LastLogBackupAgeInHours' is true; Discard servers listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                       new RegExpInputValidator()));
+//		list.add(new CmSettingsHelper("LastBackupFailed",                 isAlarmSwitch, PROPKEY_alarm_LastBackupFailed                , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LastBackupFailed                , DEFAULT_alarm_LastBackupFailed                ), DEFAULT_alarm_LastBackupFailed                , "If 'LastBackupFailed' is greater than ## then send 'AlarmEventLastBackupFailed'." ));
 
-		list.add(new CmSettingsHelper("LowDbFreeSpaceInMb",               isAlarmSwitch, PROPKEY_alarm_LowDbFreeSpaceInMb              , String .class, conf.getProperty      (PROPKEY_alarm_LowDbFreeSpaceInMb              , DEFAULT_alarm_LowDbFreeSpaceInMb             ), DEFAULT_alarm_LowDbFreeSpaceInMb             , "If 'LowDbFreeSpaceInMb' is greater than ## MB then send 'AlarmEventLowDbFreeSpace'. format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"     , new MapNumberValidator()));
-		list.add(new CmSettingsHelper("LowLogFreeSpaceInMb",              isAlarmSwitch, PROPKEY_alarm_LowLogFreeSpaceInMb             , String .class, conf.getProperty      (PROPKEY_alarm_LowLogFreeSpaceInMb             , DEFAULT_alarm_LowLogFreeSpaceInMb            ), DEFAULT_alarm_LowLogFreeSpaceInMb            , "If 'LowLogFreeSpaceInMb' is greater than ## MB then send 'AlarmEventLowLogFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"    , new MapNumberValidator()));
-		list.add(new CmSettingsHelper("LowDbFreeSpaceInPct",              isAlarmSwitch, PROPKEY_alarm_LowDbFreeSpaceInPct             , String .class, conf.getProperty      (PROPKEY_alarm_LowDbFreeSpaceInPct             , DEFAULT_alarm_LowDbFreeSpaceInPct            ), DEFAULT_alarm_LowDbFreeSpaceInPct            , "If 'LowDbFreeSpaceInPct' is less than ## Percent then send 'AlarmEventLowDbFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"   , new MapNumberValidator()));
-		list.add(new CmSettingsHelper("LowLogFreeSpaceInPct",             isAlarmSwitch, PROPKEY_alarm_LowLogFreeSpaceInPct            , String .class, conf.getProperty      (PROPKEY_alarm_LowLogFreeSpaceInPct            , DEFAULT_alarm_LowLogFreeSpaceInPct           ), DEFAULT_alarm_LowLogFreeSpaceInPct           , "If 'LowLogFreeSpaceInPct' is less than ## Percent then send 'AlarmEventLowLogFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)" , new MapNumberValidator())); 
-                                                                                                                                                                              
-		list.add(new CmSettingsHelper("LowOsDiskFreeSpaceInMb",           isAlarmSwitch, PROPKEY_alarm_LowOsDiskFreeSpaceInMb          , String .class, conf.getProperty      (PROPKEY_alarm_LowOsDiskFreeSpaceInMb          , DEFAULT_alarm_LowOsDiskFreeSpaceInMb         ), DEFAULT_alarm_LowOsDiskFreeSpaceInMb         , "If 'LogOsDiskFreeMb' or 'DataOsDiskFreeMb' is less than ## MB then send 'AlarmEventLowOsDiskFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"        , new MapNumberValidator()));
-		list.add(new CmSettingsHelper("LowOsDiskFreeSpaceInPct",          isAlarmSwitch, PROPKEY_alarm_LowOsDiskFreeSpaceInPct         , String .class, conf.getProperty      (PROPKEY_alarm_LowOsDiskFreeSpaceInPct         , DEFAULT_alarm_LowOsDiskFreeSpaceInPct        ), DEFAULT_alarm_LowOsDiskFreeSpaceInPct        , "If 'LogOsDiskFreePct' or 'DataOsDiskFreePct' is less than ## Percent then send 'AlarmEventLowOsDiskFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)" , new MapNumberValidator()));
-                                                                                                                                                                              
-//		list.add(new CmSettingsHelper("MandatoryDatabaseList",                           PROPKEY_alarm_MandatoryDatabaseList           , String .class, conf.getProperty      (PROPKEY_alarm_MandatoryDatabaseList           , DEFAULT_alarm_MandatoryDatabaseList          ), DEFAULT_alarm_MandatoryDatabaseList          , "A list of databases that needs to be present. This is a comma separated list of databases (each name can contain regex)" ));
-		                                                                                                                                                                      
-		list.add(new CmSettingsHelper("DbState",                          isAlarmSwitch, PROPKEY_alarm_DbState                         , String .class, conf.getProperty      (PROPKEY_alarm_DbState                         , DEFAULT_alarm_DbState                        ), DEFAULT_alarm_DbState                        , "If 'user_access_desc' or 'state_desc' do NOT match the regexp then send 'AlarmEventDatabaseState'. format: db1=(MULTI_USER|RESTRICTED_USER|ONLINE|OFFLINE ), db2=(MULTI_USER|ONLINE|RESTORING)  (Note: the 'dbname' can aslo be a regexp)" , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastDbBackupAgeInHours",           isAlarmSwitch, PROPKEY_alarm_LastDbBackupAgeInHours          , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LastDbBackupAgeInHours          , DEFAULT_alarm_LastDbBackupAgeInHours          ), DEFAULT_alarm_LastDbBackupAgeInHours          , "If 'LastDbBackupAgeInHours' is greater than ## then send 'AlarmEventOldBackup'." ));
+		list.add(new CmSettingsHelper("LastDbBackupAgeInHours ForDbs",                   PROPKEY_alarm_LastDbBackupAgeInHoursForDbs    , String .class, conf.getProperty      (PROPKEY_alarm_LastDbBackupAgeInHoursForDbs    , DEFAULT_alarm_LastDbBackupAgeInHoursForDbs    ), DEFAULT_alarm_LastDbBackupAgeInHoursForDbs    , "If 'LastDbBackupAgeInHours' is true; Only for the databases listed (regexp is used, blank=for-all-dbs). After this rule the 'skip' rule is evaluated.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastDbBackupAgeInHours SkipDbs",                  PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs   , String .class, conf.getProperty      (PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs   , DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs   ), DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs   , "If 'LastDbBackupAgeInHours' is true; Discard databases listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                     new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastDbBackupAgeInHours ForSrv",                   PROPKEY_alarm_LastDbBackupAgeInHoursForSrv    , String .class, conf.getProperty      (PROPKEY_alarm_LastDbBackupAgeInHoursForSrv    , DEFAULT_alarm_LastDbBackupAgeInHoursForSrv    ), DEFAULT_alarm_LastDbBackupAgeInHoursForSrv    , "If 'LastDbBackupAgeInHours' is true; Only for the servers listed (regexp is used, blank=for-all-srv). After this rule the 'skip' rule is evaluated.",   new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastDbBackupAgeInHours SkipSrv",                  PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv   , String .class, conf.getProperty      (PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv   , DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv   ), DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv   , "If 'LastDbBackupAgeInHours' is true; Discard servers listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                       new RegExpInputValidator()));
 
-		list.add(new CmSettingsHelper("QsIsOk ",                          isAlarmSwitch, PROPKEY_alarm_QsIsOk                          , String .class, conf.getProperty      (PROPKEY_alarm_QsIsOk                          , DEFAULT_alarm_QsIsOk                         ), DEFAULT_alarm_QsIsOk                         , "If 'QsIsOk' is not 'YES' (meaning 'QsDesiredState' and 'QsActualState' do not match) then send 'AlarmEventQueryStoreUnexpectedState'. Note: This is not configurabe per database name"));
-		list.add(new CmSettingsHelper("QsUsedPct",                        isAlarmSwitch, PROPKEY_alarm_QsUsedSpaceInPct                , Double .class, conf.getDoubleProperty(PROPKEY_alarm_QsUsedSpaceInPct                , DEFAULT_alarm_QsUsedSpaceInPct               ), DEFAULT_alarm_QsUsedSpaceInPct               , "If 'QsUsedSpaceInPct' more than ## Percent then send 'AlarmEventQueryStoreLowFreeSpace'. Note: This is not configurabe per database name"));
-		list.add(new CmSettingsHelper("QsFreeSpaceInMb",                  isAlarmSwitch, PROPKEY_alarm_QsFreeSpaceInMb                 , Integer.class, conf.getIntProperty   (PROPKEY_alarm_QsFreeSpaceInMb                 , DEFAULT_alarm_QsFreeSpaceInMb                ), DEFAULT_alarm_QsFreeSpaceInMb                , "If 'QsFreeSpaceInMb' is less that ## MB then send 'AlarmEventQueryStoreLowFreeSpace'. Note: This is not configurabe per database name"));
+		list.add(new CmSettingsHelper("LastIncDbBackupAgeInHours",        isAlarmSwitch, PROPKEY_alarm_LastIncDbBackupAgeInHours       , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LastIncDbBackupAgeInHours       , DEFAULT_alarm_LastIncDbBackupAgeInHours       ), DEFAULT_alarm_LastIncDbBackupAgeInHours       , "If 'LastIncDbBackupAgeInHours' is greater than ## then send 'AlarmEventOldIncrementalBackup'." ));
+		list.add(new CmSettingsHelper("LastIncDbBackupAgeInHours ForDbs",                PROPKEY_alarm_LastIncDbBackupAgeInHoursForDbs , String .class, conf.getProperty      (PROPKEY_alarm_LastIncDbBackupAgeInHoursForDbs , DEFAULT_alarm_LastIncDbBackupAgeInHoursForDbs ), DEFAULT_alarm_LastIncDbBackupAgeInHoursForDbs , "If 'LastIncDbBackupAgeInHours' is true; Only for the databases listed (regexp is used, blank=for-all-dbs). After this rule the 'skip' rule is evaluated.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastIncDbBackupAgeInHours SkipDbs",               PROPKEY_alarm_LastIncDbBackupAgeInHoursSkipDbs, String .class, conf.getProperty      (PROPKEY_alarm_LastIncDbBackupAgeInHoursSkipDbs, DEFAULT_alarm_LastIncDbBackupAgeInHoursSkipDbs), DEFAULT_alarm_LastIncDbBackupAgeInHoursSkipDbs, "If 'LastIncDbBackupAgeInHours' is true; Discard databases listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                     new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastIncDbBackupAgeInHours ForSrv",                PROPKEY_alarm_LastIncDbBackupAgeInHoursForSrv , String .class, conf.getProperty      (PROPKEY_alarm_LastIncDbBackupAgeInHoursForSrv , DEFAULT_alarm_LastIncDbBackupAgeInHoursForSrv ), DEFAULT_alarm_LastIncDbBackupAgeInHoursForSrv , "If 'LastIncDbBackupAgeInHours' is true; Only for the servers listed (regexp is used, blank=for-all-srv). After this rule the 'skip' rule is evaluated.",   new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastIncDbBackupAgeInHours SkipSrv",               PROPKEY_alarm_LastIncDbBackupAgeInHoursSkipSrv, String .class, conf.getProperty      (PROPKEY_alarm_LastIncDbBackupAgeInHoursSkipSrv, DEFAULT_alarm_LastIncDbBackupAgeInHoursSkipSrv), DEFAULT_alarm_LastIncDbBackupAgeInHoursSkipSrv, "If 'LastIncDbBackupAgeInHours' is true; Discard servers listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                       new RegExpInputValidator()));
 
-		list.add(new CmSettingsHelper("LastGoodCheckDbDays",              isAlarmSwitch, PROPKEY_alarm_LastGoodCheckDbDays             , String .class, conf.getProperty      (PROPKEY_alarm_LastGoodCheckDbDays             , DEFAULT_alarm_LastGoodCheckDbDays            ), DEFAULT_alarm_LastGoodCheckDbDays            , "If DBCC CHECKDB hasn't been executed for X days... ('LastGoodCheckDbDays' is greater that ## DAYS) then send 'AlarmEventDbccCheckdbAge'. format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)" , new MapNumberValidator()));
+		list.add(new CmSettingsHelper("LastLogBackupAgeInHours",          isAlarmSwitch, PROPKEY_alarm_LastLogBackupAgeInHours         , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LastLogBackupAgeInHours         , DEFAULT_alarm_LastLogBackupAgeInHours         ), DEFAULT_alarm_LastLogBackupAgeInHours         , "If 'LastLogBackupAgeInHours' is greater than ## then send 'AlarmEventOldBackup'." ));
+		list.add(new CmSettingsHelper("LastLogBackupAgeInHours ForDbs",                  PROPKEY_alarm_LastLogBackupAgeInHoursForDbs   , String .class, conf.getProperty      (PROPKEY_alarm_LastLogBackupAgeInHoursForDbs   , DEFAULT_alarm_LastLogBackupAgeInHoursForDbs   ), DEFAULT_alarm_LastLogBackupAgeInHoursForDbs   , "If 'LastLogBackupAgeInHours' is true; Only for the databases listed (regexp is used, blank=skip-no-dbs). After this rule the 'skip' rule is evaluated.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastLogBackupAgeInHours SkipDbs",                 PROPKEY_alarm_LastLogBackupAgeInHoursSkipDbs  , String .class, conf.getProperty      (PROPKEY_alarm_LastLogBackupAgeInHoursSkipDbs  , DEFAULT_alarm_LastLogBackupAgeInHoursSkipDbs  ), DEFAULT_alarm_LastLogBackupAgeInHoursSkipDbs  , "If 'LastLogBackupAgeInHours' is true; Discard databases listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                     new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastLogBackupAgeInHours ForSrv",                  PROPKEY_alarm_LastLogBackupAgeInHoursForSrv   , String .class, conf.getProperty      (PROPKEY_alarm_LastLogBackupAgeInHoursForSrv   , DEFAULT_alarm_LastLogBackupAgeInHoursForSrv   ), DEFAULT_alarm_LastLogBackupAgeInHoursForSrv   , "If 'LastLogBackupAgeInHours' is true; Only for the servers listed (regexp is used, blank=skip-no-srv). After this rule the 'skip' rule is evaluated.",   new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastLogBackupAgeInHours SkipSrv",                 PROPKEY_alarm_LastLogBackupAgeInHoursSkipSrv  , String .class, conf.getProperty      (PROPKEY_alarm_LastLogBackupAgeInHoursSkipSrv  , DEFAULT_alarm_LastLogBackupAgeInHoursSkipSrv  ), DEFAULT_alarm_LastLogBackupAgeInHoursSkipSrv  , "If 'LastLogBackupAgeInHours' is true; Discard servers listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                       new RegExpInputValidator()));
+
+		list.add(new CmSettingsHelper("LowDbFreeSpaceInMb",               isAlarmSwitch, PROPKEY_alarm_LowDbFreeSpaceInMb              , String .class, conf.getProperty      (PROPKEY_alarm_LowDbFreeSpaceInMb              , DEFAULT_alarm_LowDbFreeSpaceInMb              ), DEFAULT_alarm_LowDbFreeSpaceInMb              , "If 'LowDbFreeSpaceInMb' is greater than ## MB then send 'AlarmEventLowDbFreeSpace'. format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"     , new MapNumberValidator()));
+		list.add(new CmSettingsHelper("LowLogFreeSpaceInMb",              isAlarmSwitch, PROPKEY_alarm_LowLogFreeSpaceInMb             , String .class, conf.getProperty      (PROPKEY_alarm_LowLogFreeSpaceInMb             , DEFAULT_alarm_LowLogFreeSpaceInMb             ), DEFAULT_alarm_LowLogFreeSpaceInMb             , "If 'LowLogFreeSpaceInMb' is greater than ## MB then send 'AlarmEventLowLogFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"    , new MapNumberValidator()));
+		list.add(new CmSettingsHelper("LowDbFreeSpaceInPct",              isAlarmSwitch, PROPKEY_alarm_LowDbFreeSpaceInPct             , String .class, conf.getProperty      (PROPKEY_alarm_LowDbFreeSpaceInPct             , DEFAULT_alarm_LowDbFreeSpaceInPct             ), DEFAULT_alarm_LowDbFreeSpaceInPct             , "If 'LowDbFreeSpaceInPct' is less than ## Percent then send 'AlarmEventLowDbFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"   , new MapNumberValidator()));
+		list.add(new CmSettingsHelper("LowLogFreeSpaceInPct",             isAlarmSwitch, PROPKEY_alarm_LowLogFreeSpaceInPct            , String .class, conf.getProperty      (PROPKEY_alarm_LowLogFreeSpaceInPct            , DEFAULT_alarm_LowLogFreeSpaceInPct            ), DEFAULT_alarm_LowLogFreeSpaceInPct            , "If 'LowLogFreeSpaceInPct' is less than ## Percent then send 'AlarmEventLowLogFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)" , new MapNumberValidator())); 
+
+		list.add(new CmSettingsHelper("LowOsDiskFreeSpaceInMb",           isAlarmSwitch, PROPKEY_alarm_LowOsDiskFreeSpaceInMb          , String .class, conf.getProperty      (PROPKEY_alarm_LowOsDiskFreeSpaceInMb          , DEFAULT_alarm_LowOsDiskFreeSpaceInMb          ), DEFAULT_alarm_LowOsDiskFreeSpaceInMb          , "If 'LogOsDiskFreeMb' or 'DataOsDiskFreeMb' is less than ## MB then send 'AlarmEventLowOsDiskFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"        , new MapNumberValidator()));
+		list.add(new CmSettingsHelper("LowOsDiskFreeSpaceInPct",          isAlarmSwitch, PROPKEY_alarm_LowOsDiskFreeSpaceInPct         , String .class, conf.getProperty      (PROPKEY_alarm_LowOsDiskFreeSpaceInPct         , DEFAULT_alarm_LowOsDiskFreeSpaceInPct         ), DEFAULT_alarm_LowOsDiskFreeSpaceInPct         , "If 'LogOsDiskFreePct' or 'DataOsDiskFreePct' is less than ## Percent then send 'AlarmEventLowOsDiskFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)" , new MapNumberValidator()));
+
+//		list.add(new CmSettingsHelper("MandatoryDatabaseList",                           PROPKEY_alarm_MandatoryDatabaseList           , String .class, conf.getProperty      (PROPKEY_alarm_MandatoryDatabaseList           , DEFAULT_alarm_MandatoryDatabaseList           ), DEFAULT_alarm_MandatoryDatabaseList           , "A list of databases that needs to be present. This is a comma separated list of databases (each name can contain regex)" ));
+
+		list.add(new CmSettingsHelper("DbState",                          isAlarmSwitch, PROPKEY_alarm_DbState                         , String .class, conf.getProperty      (PROPKEY_alarm_DbState                         , DEFAULT_alarm_DbState                         ), DEFAULT_alarm_DbState                         , "If 'user_access_desc' or 'state_desc' do NOT match the regexp then send 'AlarmEventDatabaseState'. format: db1=(MULTI_USER|RESTRICTED_USER|ONLINE|OFFLINE ), db2=(MULTI_USER|ONLINE|RESTORING)  (Note: the 'dbname' can aslo be a regexp)" , new RegExpInputValidator()));
+
+		list.add(new CmSettingsHelper("QsIsOk ",                          isAlarmSwitch, PROPKEY_alarm_QsIsOk                          , String .class, conf.getProperty      (PROPKEY_alarm_QsIsOk                          , DEFAULT_alarm_QsIsOk                          ), DEFAULT_alarm_QsIsOk                          , "If 'QsIsOk' is not 'YES' (meaning 'QsDesiredState' and 'QsActualState' do not match) then send 'AlarmEventQueryStoreUnexpectedState'. Note: This is not configurabe per database name"));
+		list.add(new CmSettingsHelper("QsUsedPct",                        isAlarmSwitch, PROPKEY_alarm_QsUsedSpaceInPct                , Double .class, conf.getDoubleProperty(PROPKEY_alarm_QsUsedSpaceInPct                , DEFAULT_alarm_QsUsedSpaceInPct                ), DEFAULT_alarm_QsUsedSpaceInPct                , "If 'QsUsedSpaceInPct' more than ## Percent then send 'AlarmEventQueryStoreLowFreeSpace'. Note: This is not configurabe per database name"));
+		list.add(new CmSettingsHelper("QsFreeSpaceInMb",                  isAlarmSwitch, PROPKEY_alarm_QsFreeSpaceInMb                 , Integer.class, conf.getIntProperty   (PROPKEY_alarm_QsFreeSpaceInMb                 , DEFAULT_alarm_QsFreeSpaceInMb                 ), DEFAULT_alarm_QsFreeSpaceInMb                 , "If 'QsFreeSpaceInMb' is less that ## MB then send 'AlarmEventQueryStoreLowFreeSpace'. Note: This is not configurabe per database name"));
+
+		list.add(new CmSettingsHelper("LastGoodCheckDbDays",              isAlarmSwitch, PROPKEY_alarm_LastGoodCheckDbDays             , String .class, conf.getProperty      (PROPKEY_alarm_LastGoodCheckDbDays             , DEFAULT_alarm_LastGoodCheckDbDays             ), DEFAULT_alarm_LastGoodCheckDbDays             , "If DBCC CHECKDB hasn't been executed for X days... ('LastGoodCheckDbDays' is greater that ## DAYS) then send 'AlarmEventDbccCheckdbAge'. format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)" , new MapNumberValidator()));
+
+		list.add(new CmSettingsHelper("AgMandatoryDbnames",               isAlarmSwitch, PROPKEY_alarm_AgMandatoryDbnames              , String .class, conf.getProperty      (PROPKEY_alarm_AgMandatoryDbnames              , DEFAULT_alarm_AgMandatoryDbnames              ), DEFAULT_alarm_AgMandatoryDbnames              , "If database do NOT belong to an Availability Group and are part of this list, then send 'AlarmEventDbNotInHadr'. format: Comma Separated List (Note: the 'dbname' can use regexp)" , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("AgMandatoryDbnamesSkip",           isAlarmSwitch, PROPKEY_alarm_AgMandatoryDbnamesSkip          , String .class, conf.getProperty      (PROPKEY_alarm_AgMandatoryDbnamesSkip          , DEFAULT_alarm_AgMandatoryDbnamesSkip          ), DEFAULT_alarm_AgMandatoryDbnamesSkip          , "If database do NOT belong to an Availability Group and are NOT part of this list, then send 'AlarmEventDbNotInHadr'. format: Comma Separated List (Note: the 'dbname' can use regexp)" , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("AgMandatoryDbnamesSkipSystem",                    PROPKEY_alarm_AgMandatoryDbnamesSkipSystem    , String .class, conf.getProperty      (PROPKEY_alarm_AgMandatoryDbnamesSkipSystem    , DEFAULT_alarm_AgMandatoryDbnamesSkipSystem    ), DEFAULT_alarm_AgMandatoryDbnamesSkipSystem    , "A list of SQL Server System databases to NOT check for Availability Group. format: Comma Separated List (Note: the 'dbname' can use regexp)" , new RegExpInputValidator()));
 
 		return list;
 	}

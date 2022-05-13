@@ -771,6 +771,37 @@ public class DbUtils
 //	}
 
 	/**
+	 * Simply check if we can do select on a specific table without any errors
+	 * <p>
+	 * SQL Executed <pre>select 1 from <i>tableName</i> where 1=2</pre>
+	 * 
+	 * @param conn          Connection the the DBMS
+	 * @param tableName     Full table name (including schema). Example: schemaName.tableName
+	 * 
+	 * @return 
+	 * <ul>
+	 *   <li><b>true  </b> If NO  Errors or SQLException was thrown</li>
+	 *   <li><b>false </b> If ANY errors or SQLException was thrown</li>
+	 * </ul>
+	 */
+	public static boolean checkIfTableIsSelectable(Connection conn, String tableName)
+	{
+		String sql = "select 1 from " + tableName + " where 1=2";
+		
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql)) 
+		{ 
+			// Just read the results; but there will be none... since: where 1=2
+			while(rs.next())
+				;
+			return true;
+		}
+		catch (SQLException ignore) 
+		{ 
+			return false;
+		}
+	}
+
+	/**
 	 * This checks table if the table name in following order: MixedCase, then UPPER or lower (depending on the metadata)
 	 * <p>
 	 * Simply calls DatabaseMetaData.getMetaData().getTables(cat, schema, tableName) to check if the table exists.

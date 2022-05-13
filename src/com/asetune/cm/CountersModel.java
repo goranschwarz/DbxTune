@@ -101,6 +101,7 @@ import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.TdsConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.showplan.transform.SqlServerShowPlanXmlTransformer;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
@@ -3114,6 +3115,10 @@ implements Cloneable, ITableTooltip
 	{
 		throw new UnsupportedOperationException("The method CountersModel.getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
 	}
+//	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
+//	{
+//		throw new UnsupportedOperationException("The method CountersModel.getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
+//	}
 
 	public String getSqlInitForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
@@ -3161,7 +3166,7 @@ implements Cloneable, ITableTooltip
 	public void init(DbxConnection conn)
 	throws Exception // I think it's OK to do this here
 	{
-		if (checkDependsOnVersion())
+		if (checkDependsOnVersion(conn))
 		{
 			if (checkDependsOnConfig(conn))
 			{
@@ -3179,6 +3184,29 @@ implements Cloneable, ITableTooltip
 			}
 		}
 	}
+	
+//	/**
+//	 * Checks if we meet all the requirements for this CM
+//	 * <p>
+//	 * This typically calls
+//	 * <ul>
+//	 *   <li>checkDependsOnVersion()</li>
+//	 *   <li>checkDependsOnConfig()</li>
+//	 *   <li>checkDependsOnRole()</li>
+//	 *   <li>checkDependsOnStoredProc()</li>
+//	 *   <li>checkDependsOnOther()</li>
+//	 *   <li>etc</li>
+//	 * </ul>
+//	 * 
+//	 * Override this if you have special needs...
+//	 * 
+//	 * @param conn
+//	 * @return null or empty string if we should proceed, otherwise a message why this CM doesn't meet the requirements
+//	 */
+//	public String checkRequirements(DbxConnection conn)
+//	{
+//		FIXME: call this from init() and do good things
+//	}
 
 	public boolean isInitialized()
 	{
@@ -3525,7 +3553,7 @@ implements Cloneable, ITableTooltip
 
 		int configHasValue = AseConnectionUtils.getAseConfigRunValueNoEx(conn, configName);
 		if (_logger.isDebugEnabled()) 
-			_logger.debug("Checking for ASE Configuration '"+configName+"', which has value '"+configHasValue+"'. Option to re-configure to value '"+reConfigValue+"' if not set.");
+			_logger.debug("Checking for DBMS Configuration '"+configName+"', which has value '"+configHasValue+"'. Option to re-configure to value '"+reConfigValue+"' if not set.");
 
 		// In NO_GUI mode, we might want to auto configure monitoring...
 		boolean doReconfigure = false;
@@ -3555,7 +3583,7 @@ implements Cloneable, ITableTooltip
 			}
 			else
 			{
-				_logger.info("ASE Configuration '"+configName+"' for Counters Model '"+getName()+"', named '"+getDisplayName()+"', will be reconfigured from value '"+configHasValue+"' to value '"+reConfigValue+"'.");
+				_logger.info("DBMS Configuration '"+configName+"' for Counters Model '"+getName()+"', named '"+getDisplayName()+"', will be reconfigured from value '"+configHasValue+"' to value '"+reConfigValue+"'.");
 
 				try
 				{
@@ -3563,12 +3591,12 @@ implements Cloneable, ITableTooltip
 				}
 				catch (SQLException e)
 				{
-					_logger.error("Problems setting ASE configuration '"+configName+"' to '"+reConfigValue+"'. Caught: "+AseConnectionUtils.sqlExceptionToString(e));
+					_logger.error("Problems setting DBMS configuration '"+configName+"' to '"+reConfigValue+"'. Caught: "+AseConnectionUtils.sqlExceptionToString(e));
 				}
 
 				configHasValue = AseConnectionUtils.getAseConfigRunValueNoEx(conn, configName);
 				if (_logger.isDebugEnabled()) 
-					_logger.debug("After re-config, the ASE Configuration '"+configName+"', now has value '"+configHasValue+"'.");
+					_logger.debug("After re-config, the DBMS Configuration '"+configName+"', now has value '"+configHasValue+"'.");
 			}
 		}
 
@@ -3582,7 +3610,7 @@ implements Cloneable, ITableTooltip
 		{
 			if (isNonConfiguredMonitoringAllowed())
 			{
-				_logger.warn("Non Configured Monitoring is allowed: When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in ASE Version "+getServerVersionStr()+", I found that '"+configName+"' wasn't configured (which is done with: sp_configure '"+configName+"'), so counters in '"+getDisplayName()+"' may not be relyable.");
+				_logger.warn("Non Configured Monitoring is allowed: When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in DBMS Version "+getServerVersionStr()+", I found that '"+configName+"' wasn't configured (which is done with: sp_configure '"+configName+"'), so counters in '"+getDisplayName()+"' may not be relyable.");
 				return true;
 			}
 
@@ -3591,7 +3619,7 @@ implements Cloneable, ITableTooltip
 			String reconfigOptionStr = " or using the nogui mode: --reconfigure switch";
 			if (reConfigValue == null)
 				reconfigOptionStr = "";
-			_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in ASE Version "+getServerVersionStr()+", I found that '"+configName+"' wasn't configured (which is done with: sp_configure '"+configName+"'"+reconfigOptionStr+"), so monitoring information about '"+getDisplayName()+"' will NOT be enabled.");
+			_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in DBMS Version "+getServerVersionStr()+", I found that '"+configName+"' wasn't configured (which is done with: sp_configure '"+configName+"'"+reconfigOptionStr+"), so monitoring information about '"+getDisplayName()+"' will NOT be enabled.");
 
 			String problemDesc = getProblemDesc();
 			if (problemDesc == null)
@@ -3734,7 +3762,7 @@ implements Cloneable, ITableTooltip
 		_dependsOnCeVersion = version;
 	}
 
-	public boolean checkDependsOnVersion()
+	public boolean checkDependsOnVersion(DbxConnection conn)
 	{
 		if (_dependsOnVersion == 0)
 			return true;
@@ -3755,14 +3783,14 @@ implements Cloneable, ITableTooltip
 		{
 			if (_logger.isDebugEnabled()) 
 				_logger.debug(getName() + ": should be HIDDEN.");
-			_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in ASE Version "+getServerVersionStr()+", I need at least ASE Version "+getDependsOnVersionStr()+" for that.");
+			_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "' in DBMS Version " + getServerVersionStr() + ", I need at least DBMS Version " + getDependsOnVersionStr() + " for that.");
 
-			setActive(false, "This info is only available if ASE Server Version is above " + getDependsOnVersionStr());
+			setActive(false, "This info is only available if DBMS Version is above " + getDependsOnVersionStr());
 
 			TabularCntrPanel tcp = getTabPanel();
 			if (tcp != null)
 			{
-				tcp.setToolTipText("This tab will only be visible if ASE Server Version is over "+getDependsOnVersionStr());
+				tcp.setToolTipText("This tab will only be visible if DBMS Version is over " + getDependsOnVersionStr());
 			}
 			return false;
 		}
@@ -3783,14 +3811,14 @@ implements Cloneable, ITableTooltip
 		{
 			if (_logger.isDebugEnabled())
 				_logger.debug(getName() + ": should be HIDDEN.");
-			_logger.warn("When trying to initialize Counters Model '"+getName()+")', named '"+getDisplayName()+"' in ASE Cluster Edition Version "+getServerVersionStr()+", I need at least ASE Cluster Edition Version "+getDependsOnCeVersionStr()+" for that.");
+			_logger.warn("When trying to initialize Counters Model '" + getName() + ")', named '" + getDisplayName() + "' in DBMS Cluster Edition Version " + getServerVersionStr()+", I need at least DBMS Cluster Edition Version "+getDependsOnCeVersionStr() + " for that.");
 
-			setActive(false, "This info is only available if ASE Cluster Edition Server Version is above " + getDependsOnCeVersionStr());
+			setActive(false, "This info is only available if DBMS Cluster Edition Server Version is above " + getDependsOnCeVersionStr());
 
 			TabularCntrPanel tcp = getTabPanel();
 			if (tcp != null)
 			{
-				tcp.setToolTipText("This tab will only be visible if ASE Cluster Edition Server Version is over "+getDependsOnCeVersionStr());
+				tcp.setToolTipText("This tab will only be visible if DBMS Cluster Edition Server Version is over " + getDependsOnCeVersionStr());
 			}
 			return false;
 		}
@@ -3826,7 +3854,7 @@ implements Cloneable, ITableTooltip
 		long srvVersion = AseConnectionUtils.getAseVersionNumber(conn);
 		if (srvVersion < needSrvVersion)
 		{
-			_logger.warn("When trying to checking stored procedure '"+procName+"' in '"+dbname+"' the Current ASE Version is to low '"+Ver.versionNumToStr(srvVersion)+"', this procedure needs ASE Version '"+Ver.versionNumToStr(needSrvVersion)+"' to install.");
+			_logger.warn("When trying to checking stored procedure '"+procName+"' in '"+dbname+"' the Current DBMS Version is to low '"+Ver.versionNumToStr(srvVersion)+"', this procedure needs DBMS Version '"+Ver.versionNumToStr(needSrvVersion)+"' to install.");
 			return false;
 		}
 
@@ -3883,8 +3911,8 @@ implements Cloneable, ITableTooltip
 
 				if (_logger.isDebugEnabled()) 
 					_logger.debug(getName() + ": should be HIDDEN.");
-//				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in ASE Version "+getServerVersion()+", "+msg+" (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from '$"+DbxTune.getInstance().getAppHomeEnvName()+"/classes' or unzip asetune.jar. under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"').");
-				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in ASE Version "+getServerVersion()+", "+msg+" (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from '$DBXTUNE_HOME/classes' or unzip asetune.jar. under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"').");
+//				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in DBMS Version "+getServerVersion()+", "+msg+" (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from '$"+DbxTune.getInstance().getAppHomeEnvName()+"/classes' or unzip asetune.jar. under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"').");
+				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in DBMS Version "+getServerVersion()+", "+msg+" (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from '$DBXTUNE_HOME/classes' or unzip asetune.jar. under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"').");
 
 				TabularCntrPanel tcp = getTabPanel();
 				if (tcp != null)

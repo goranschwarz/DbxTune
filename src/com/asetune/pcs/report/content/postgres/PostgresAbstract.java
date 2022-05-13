@@ -350,92 +350,101 @@ extends ReportEntryAbstract
 		List<PgIndexInfo> indexInfoList = tableEntry.getIndexList();
 
 		// Exit early: if no data
-		if (indexInfoList == null)   return "";
-		if (indexInfoList.isEmpty()) return "";
+//		if (indexInfoList == null)   return "";
+//		if (indexInfoList.isEmpty()) return "";
 		
 		StringBuilder sb = new StringBuilder();
 
 		String className = "";
 		if (StringUtil.hasValue(classname))
 			className = " class='" + classname + "'";
-		
-		sb.append("<table" + className + "> \n");
 
-		//--------------------------------------------------------------------------
-		// Table Header
-		sb.append("<thead> \n");
-		sb.append("<tr> \n");
-
-		sb.append(createHtmlTh("Index Name"           , ""));
-		sb.append(createHtmlTh("Keys"                 , ""));
-		sb.append(createHtmlTh("Include"              , "Columns included on the leafe index page... create index... on(c1,c2) INCLUDE(c3,c4,c5)"));
-		sb.append(createHtmlTh("Desciption"           , ""));
-		sb.append(createHtmlTh("RowCount"             , ""));
-		sb.append(createHtmlTh("Size Pages"           , ""));
-		sb.append(createHtmlTh("Size MB"              , ""));
-//		sb.append(createHtmlTh("Avg RowsPerPage"      , "Average Rows Per Page\nCalculted by: RowCount/Pages"));
-		sb.append(createHtmlTh("Avg RowSize"          , "Average Bytes used per Row\nCalculted by: Pages*8192/RowCount"));
-
-		sb.append(createHtmlTh("Index Scans"          , ""));
-		sb.append(createHtmlTh("Rows Fetched"         , ""));
-		sb.append(createHtmlTh("Rows Read"            , ""));
-		sb.append(createHtmlTh("Fetch/Read Efficiency", ""));
-
-		sb.append(createHtmlTh("Total Reads"          , ""));
-		sb.append(createHtmlTh("Physical Reads"       , ""));
-		sb.append(createHtmlTh("Cache Hit Percent"    , ""));
-
-		sb.append(createHtmlTh("Table Space"          , ""));
-		sb.append(createHtmlTh("DDL"                  , ""));
-
-		sb.append("</tr> \n");
-		sb.append("</thead> \n");
-
+		// Create a NumberFormatter for better Number printing
 		NumberFormat nf = NumberFormat.getInstance();
 
-		//--------------------------------------------------------------------------
-		// Table BODY
-		sb.append("<tbody> \n");
-		for (PgIndexInfo entry : indexInfoList)
+		// Print Index Information
+		if (indexInfoList != null && !indexInfoList.isEmpty())
 		{
-			long avgBytesPerRow = entry.getSizePages() * 8192L / entry.getRowCount();
+			sb.append("<table" + className + "> \n");
 
+			//--------------------------------------------------------------------------
+			// Table Header
+			sb.append("<thead> \n");
 			sb.append("<tr> \n");
-			sb.append("  <td>").append(            entry.getIndexName()          ).append("</td> \n");
-			sb.append("  <td>").append(            entry.getKeysStr()            ).append("</td> \n");
-			sb.append("  <td>").append(            entry.getIncludeStr()         ).append("</td> \n");
-			sb.append("  <td>").append(            entry.getDescription()        ).append("</td> \n");
-			sb.append("  <td>").append( nf.format( entry.getRowCount()          )).append("</td> \n");
-			sb.append("  <td>").append( nf.format( entry.getSizePages()         )).append("</td> \n");
-			sb.append("  <td>").append( nf.format( entry.getSizeMb()            )).append("</td> \n");
-			sb.append("  <td>").append( nf.format( avgBytesPerRow               )).append("</td> \n");
 
-			sb.append("  <td>").append( diffAbsValues(entry._idx_scan                 , entry._abs_idx_scan                  )).append("</td> \n");
-			sb.append("  <td>").append( diffAbsValues(entry._idx_tup_fetch            , entry._abs_idx_tup_fetch             )).append("</td> \n");
-			sb.append("  <td>").append( diffAbsValues(entry._idx_tup_read             , entry._abs_idx_tup_read              )).append("</td> \n");
-			sb.append("  <td>").append( diffAbsValues(entry._idx_fetch_read_efficiency, entry._abs_idx_fetch_read_efficiency )).append("</td> \n");
+			sb.append(createHtmlTh("Index Name"           , ""));
+			sb.append(createHtmlTh("Keys"                 , ""));
+			sb.append(createHtmlTh("Include"              , "Columns included on the leafe index page... create index... on(c1,c2) INCLUDE(c3,c4,c5)"));
+			sb.append(createHtmlTh("Desciption"           , ""));
+			sb.append(createHtmlTh("RowCount"             , ""));
+			sb.append(createHtmlTh("Size Pages"           , ""));
+			sb.append(createHtmlTh("Size MB"              , ""));
+//			sb.append(createHtmlTh("Avg RowsPerPage"      , "Average Rows Per Page\nCalculted by: RowCount/Pages"));
+			sb.append(createHtmlTh("Avg RowSize"          , "Average Bytes used per Row\nCalculated by: Pages*8192/RowCount"));
 
-			sb.append("  <td>").append( diffAbsValues(entry._idx_total_read           , entry._abs_idx_total_read            )).append("</td> \n");
-			sb.append("  <td>").append( diffAbsValues(entry._idx_physical_read        , entry._abs_idx_physical_read         )).append("</td> \n");
-			sb.append("  <td>").append( diffAbsValues(entry._idx_cacheHitPct          , entry._abs_idx_cacheHitPct           )).append("</td> \n");
-			
-			sb.append("  <td>").append( entry.getTableSpace() == null ? "default" : entry.getTableSpace() ).append("</td> \n");
-			sb.append("  <td>").append(            entry.getDdlText()            ).append("</td> \n");
+			sb.append(createHtmlTh("Index Scans"          , ""));
+			sb.append(createHtmlTh("Rows Fetched"         , ""));
+			sb.append(createHtmlTh("Rows Read"            , ""));
+			sb.append(createHtmlTh("Fetch/Read Efficiency", ""));
+
+			sb.append(createHtmlTh("Total Reads"          , ""));
+			sb.append(createHtmlTh("Physical Reads"       , ""));
+			sb.append(createHtmlTh("Cache Hit Percent"    , ""));
+
+			sb.append(createHtmlTh("Table Space"          , ""));
+			sb.append(createHtmlTh("DDL"                  , ""));
+
 			sb.append("</tr> \n");
-		}
-		sb.append("</tbody> \n");
-		
-		//--------------------------------------------------------------------------
-		// Table Footer
-//		sb.append("<tfoot> \n");
-//		sb.append("<tr> \n");
-//
-//		sb.append("  <td></td> \n"); // first column is empty, which is the "row name"
-//
-//		sb.append("</tr> \n");
-//		sb.append("</tfoot> \n");
+			sb.append("</thead> \n");
 
-		sb.append("</table> \n");
+			//--------------------------------------------------------------------------
+			// Table BODY
+			sb.append("<tbody> \n");
+			for (PgIndexInfo entry : indexInfoList)
+			{
+				long avgBytesPerRow = entry.getSizePages() * 8192L / entry.getRowCount();
+
+				sb.append("<tr> \n");
+				sb.append("  <td>").append(            entry.getIndexName()          ).append("</td> \n");
+				sb.append("  <td>").append(            entry.getKeysStr()            ).append("</td> \n");
+				sb.append("  <td>").append(            entry.getIncludeStr()         ).append("</td> \n");
+				sb.append("  <td>").append(            entry.getDescription()        ).append("</td> \n");
+				sb.append("  <td>").append( nf.format( entry.getRowCount()          )).append("</td> \n");
+				sb.append("  <td>").append( nf.format( entry.getSizePages()         )).append("</td> \n");
+				sb.append("  <td>").append( nf.format( entry.getSizeMb()            )).append("</td> \n");
+				sb.append("  <td>").append( nf.format( avgBytesPerRow               )).append("</td> \n");
+
+				sb.append("  <td>").append( diffAbsValues(entry._idx_scan                 , entry._abs_idx_scan                  )).append("</td> \n");
+				sb.append("  <td>").append( diffAbsValues(entry._idx_tup_fetch            , entry._abs_idx_tup_fetch             )).append("</td> \n");
+				sb.append("  <td>").append( diffAbsValues(entry._idx_tup_read             , entry._abs_idx_tup_read              )).append("</td> \n");
+				sb.append("  <td>").append( diffAbsValues(entry._idx_fetch_read_efficiency, entry._abs_idx_fetch_read_efficiency )).append("</td> \n");
+
+				sb.append("  <td>").append( diffAbsValues(entry._idx_total_read           , entry._abs_idx_total_read            )).append("</td> \n");
+				sb.append("  <td>").append( diffAbsValues(entry._idx_physical_read        , entry._abs_idx_physical_read         )).append("</td> \n");
+				sb.append("  <td>").append( diffAbsValues(entry._idx_cacheHitPct          , entry._abs_idx_cacheHitPct           )).append("</td> \n");
+				
+				sb.append("  <td>").append( entry.getTableSpace() == null ? "default" : entry.getTableSpace() ).append("</td> \n");
+				sb.append("  <td>").append(            entry.getDdlText()            ).append("</td> \n");
+				sb.append("</tr> \n");
+			}
+			sb.append("</tbody> \n");
+			
+			//--------------------------------------------------------------------------
+			// Table Footer
+//			sb.append("<tfoot> \n");
+//			sb.append("<tr> \n");
+	//
+//			sb.append("  <td></td> \n"); // first column is empty, which is the "row name"
+	//
+//			sb.append("</tr> \n");
+//			sb.append("</tfoot> \n");
+
+			sb.append("</table> \n");
+		}
+		else
+		{
+			sb.append("<b>No Index(es) was found</b><br> \n");
+		}
 		
 
 		

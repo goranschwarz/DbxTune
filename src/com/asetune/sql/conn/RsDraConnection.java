@@ -23,6 +23,8 @@ package com.asetune.sql.conn;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoSybaseRsDra;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.utils.Ver;
 
@@ -33,6 +35,12 @@ public class RsDraConnection extends TdsConnection
 		super(conn);
 		Ver.majorVersion_mustBeTenOrAbove = true;
 //System.out.println("constructor::RsDraConnection(conn): conn="+conn);
+	}
+
+	@Override
+	public DbmsVersionInfo createDbmsVersionInfo()
+	{
+		return new DbmsVersionInfoSybaseRsDra(this);
 	}
 
 	@Override

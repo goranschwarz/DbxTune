@@ -42,6 +42,7 @@ import com.asetune.Version;
 import com.asetune.cache.DbmsObjectIdCache;
 import com.asetune.cache.DbmsObjectIdCache.ObjectInfo;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 
 public class SqlServerUtils
 {
@@ -337,6 +338,12 @@ public class SqlServerUtils
 			    + "SELECT * FROM @dbOptions \n"
 			    + "";
 
+		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+		if (versionInfo.isAzureDb())
+		{
+			sql = "select db_name(), name, value from sys.database_scoped_configurations";
+		}
+		
 		return internal_getDatabasesScopedConfig(conn, sql);
 	}
 
@@ -359,6 +366,12 @@ public class SqlServerUtils
 			    + "SELECT * FROM @dbOptions \n"
 			    + "";
 
+		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+		if (versionInfo.isAzureDb())
+		{
+			sql = "select db_name(), name, value from sys.database_scoped_configurations where name = '" + optionName + "'";
+		}
+		
 		return internal_getDatabasesScopedConfig(conn, sql);
 	}
 
@@ -381,6 +394,12 @@ public class SqlServerUtils
 			    + "SELECT * FROM @dbOptions \n"
 			    + "";
 
+		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+		if (versionInfo.isAzureDb())
+		{
+			sql = "select db_name(), name, value from sys.database_scoped_configurations where name = '" + optionName + "' and is_value_default = 0";
+		}
+		
 		return internal_getDatabasesScopedConfig(conn, sql);
 	}
 

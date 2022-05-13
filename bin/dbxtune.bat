@@ -96,7 +96,9 @@ IF "%APP_NAME%" == "ase" (
 	set SPLASH=
 
 ) ELSE IF "%APP_NAME%" == "dbxcdbcopy" (
-	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy2
+rem set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy
+rem	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy2
+	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy3
 	set JAVA_START_PARAMS=
 	set SPLASH=
 
@@ -315,7 +317,8 @@ set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\asetune.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\dsparser.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\log4j-1.2.17.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\h2-SNAPSHOT.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\h2-1.4.200.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\h2-1.4.200.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\h2-2.1.212.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\wizard.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\miglayout-swing-5.2.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\miglayout-core-5.2.jar

@@ -50,6 +50,7 @@ import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
@@ -170,6 +171,16 @@ extends CountersModel
 	protected TabularCntrPanel createGui()
 	{
 		return new CmSpidWaitPanel(this);
+	}
+
+	@Override
+	public boolean checkDependsOnVersion(DbxConnection conn)
+	{
+		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+			return true;
+
+		return super.checkDependsOnVersion(conn);
 	}
 
 	@Override

@@ -142,7 +142,10 @@ public class TimeUtils
 		return System.currentTimeMillis() - startTime;
 	}
 
-	/** simply call msDiffNow(startTime); return msToTimeStr(execTime); */
+	/** 
+	 * simply call msDiffNow(startTime); return msToTimeStr(execTime);
+	 * @return HH:MM:SS.ms 
+	 */
 	public static String msDiffNowToTimeStr(long startTime)
 	{
 		long execTime = msDiffNow(startTime);
@@ -395,6 +398,11 @@ public class TimeUtils
 		return format;
 	}
 
+	/**
+	 * Returns [days] HH:MM:SS.sss
+	 * @param duration
+	 * @return
+	 */
 	public static String msToTimeStrDHMSms(long duration)
 	{
 		String res = ""; // java.util.concurrent.TimeUnit;
@@ -413,6 +421,11 @@ public class TimeUtils
 		return res;
 	}
 
+	/**
+	 * Returns [days] HH:MM:SS
+	 * @param duration
+	 * @return
+	 */
 	public static String msToTimeStrDHMS(long duration)
 	{
 		String res = ""; // java.util.concurrent.TimeUnit;
@@ -431,6 +444,11 @@ public class TimeUtils
 		return res;
 	}
 
+	/**
+	 * Returns [days] HH:MM:SS
+	 * @param duration
+	 * @return
+	 */
 	public static String usToTimeStrDHMS(long duration)
 	{
 		String res = ""; // java.util.concurrent.TimeUnit;

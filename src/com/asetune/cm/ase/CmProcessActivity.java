@@ -476,6 +476,7 @@ extends CountersModel
 		{
 			RowsAffected     = "RowsAffected = isnull(ST.RowsAffected, 0), ";
 			ClientRemotePort = "ClientRemotePort = CASE WHEN SP.suid = 0 THEN null ELSE convert(varchar(15), pssinfo(SP.spid, 'ipport')) END, \n";
+			
 			sp_1254 = "  ";
 		}
 
@@ -517,8 +518,9 @@ extends CountersModel
 		String SqlText             = "";
 		String HasSqlText          = "";
 		String ClientDriverVersion = ""; // The version of the connectivity driver used by the client program
-		String nl_16000           = ""; // NL for this section
-		String sp_16000           = ""; // column Space padding for this section
+		String ClientDriverName    = ""; // The name of the Driver: jConnect. CT-Library... etc (this was introduced in some 16 version, but since we use pssinfo(spid, 'client_progname') to get it, pssinfo will simply return NULL if it's not found)
+		String nl_16000            = ""; // NL for this section
+		String sp_16000            = ""; // column Space padding for this section
 		if (srvVersion >= Ver.ver(16,0,0, 2)) // 16.0 PL1 did not have query_text()... so lets use 16.0 SP2 as base instead
 		{
 			if (sample_sqlText)
@@ -532,6 +534,8 @@ extends CountersModel
     			SqlText         = "SqlText = convert(text, null), ";
 			}
 			ClientDriverVersion = "MP.ClientDriverVersion, ";
+			ClientDriverName    = "ClientDriverName = convert(varchar(30), pssinfo(SP.spid, 'client_progname')), ";
+			
 			nl_16000            = "\n";
 			sp_16000            = "  ";
 		}
@@ -558,6 +562,7 @@ extends CountersModel
 			+ "  MP.BatchID, BatchIdDiff=convert(int,MP.BatchID), \n" // BatchIdDiff diff calculated
 			+ "  procName = isnull(object_name(SP.id, SP.dbid), object_name(SP.id, 2)), \n"
 			+ "  SP.stmtnum, SP.linenum, \n"
+			+ sp_16000 + ClientDriverName    + nl_16000
 			+ sp_16000 + ClientDriverVersion + nl_16000 
 			+ "  MP.Application, SP.clientname, SP.clienthostname, SP.clientapplname, "
 			+ "  SP.hostname, SP.ipaddr, SP.hostprocess, \n"

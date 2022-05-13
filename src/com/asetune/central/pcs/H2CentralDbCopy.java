@@ -22,6 +22,7 @@ package com.asetune.central.pcs;
 
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.nio.charset.Charset;
@@ -39,6 +40,8 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -50,6 +53,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.log4j.Logger;
 import org.h2.tools.Script;
 import org.h2.util.ScriptReader;
@@ -85,6 +89,7 @@ import com.asetune.utils.TimeUtils;
  *
  */
 public class H2CentralDbCopy
+implements AutoCloseable
 {
 	private static final Logger _logger = Logger.getLogger(H2CentralDbCopy.class);
 //	private final Logger _logger = Logger.getLogger(this.getClass().getName());
@@ -206,6 +211,7 @@ public class H2CentralDbCopy
 	public static final boolean DEFAULT_DML_USE_MERGE  = false;
 	
 	boolean _ddlPrintExec  = false;
+//	boolean _ddlPrintExec  = true;
 	boolean _ddlSkipErrors = true;
 
 	int     _dmlBatchSize  = DEFAULT_DML_BATCH_SIZE;
@@ -214,6 +220,10 @@ public class H2CentralDbCopy
 	List<DbTable> _tableList = new ArrayList<>();
 //	List<String> _schemaList = new ArrayList<>();
 	
+	Process _migrationH2Srv;
+	String _sourceH2Jar;
+	File   _sourceH2JarFile;
+
 	String _sourceUser;
 	String _sourcePasswd;
 	String _sourceUrl;
@@ -250,7 +260,12 @@ public class H2CentralDbCopy
 
 		if (StringUtil.isNullOrBlank(_sourceUrl))
 		{
-			_sourceUrl = "jdbc:h2:file:"+sourceDbName+sourceH2UrlOp;
+			_sourceUrl = "jdbc:h2:file:" + sourceDbName + sourceH2UrlOp;
+			
+			if (StringUtil.hasValue(_sourceH2Jar))
+			{
+				_sourceUrl = "jdbc:h2:tcp://localhost/" + sourceDbName + sourceH2UrlOp;
+			}
 		}
 		else
 		{
@@ -263,7 +278,12 @@ public class H2CentralDbCopy
 				
 				targetDbName = dbname + "_NEW";
 				
-				_sourceUrl = "jdbc:h2:file:"+dbname+sourceH2UrlOp;
+				_sourceUrl = "jdbc:h2:file:" + dbname + sourceH2UrlOp;
+
+				if (StringUtil.hasValue(_sourceH2Jar))
+				{
+					_sourceUrl = "jdbc:h2:tcp://localhost/" + dbname + sourceH2UrlOp;
+				}
 			}
 		}
 
@@ -383,6 +403,7 @@ public class H2CentralDbCopy
 		if (cmd.hasOption('U')) _sourceUser   = cmd.getOptionValue('U');
 		if (cmd.hasOption('P')) _sourcePasswd = cmd.getOptionValue('P');
 		if (cmd.hasOption('S')) _sourceUrl    = cmd.getOptionValue('S');
+		if (cmd.hasOption('J')) _sourceH2Jar  = cmd.getOptionValue('J');
 		if (cmd.hasOption('u')) _targetUser   = cmd.getOptionValue('u');
 		if (cmd.hasOption('p')) _targetPasswd = cmd.getOptionValue('p');
 		if (cmd.hasOption('s')) _targetUrl    = cmd.getOptionValue('s');
@@ -456,6 +477,97 @@ public class H2CentralDbCopy
 		}
 		_logger.info("----------------------------------------------------------------------------------------");
 
+
+		// Start a separate JVM with an OLD H2 version (instead of fiddling with class loaders)
+		//   - Get the CLASSPATH and change it to use "_sourceH2Jar" the specified JAR 
+		//   - modify URL (if it points to a FILE, to use a TCP)
+		//   - Start a SUB Processes (remember the PID so we can kill it later, if we can't do a normal shutdown)
+		if (StringUtil.hasValue(_sourceH2Jar))
+		{
+			_logger.info("You specified a H2 JAR to 'migration/upgrade' an old H2 database from.");
+			_logger.info(" *** Starting a separate JVM to hold the old H2 database.");
+
+			startOldH2TcpServer();
+
+			_logger.info("----------------------------------------------------------------------------------------");
+		}
+	}
+	
+	private void startOldH2TcpServer() 
+	throws IOException
+	{
+		String systemClassPath = System.getProperty("java.class.path");
+		systemClassPath = systemClassPath.replace(File.pathSeparatorChar, ',');
+
+		List<String> systemClassPathList = StringUtil.parseCommaStrToList(systemClassPath, true);
+		List<String> newSystemClassPathList = new ArrayList<>();
+		for (String entry : systemClassPathList)
+		{
+			String tmpFilename = FilenameUtils.getName(entry);
+			if (tmpFilename.startsWith("h2-") && tmpFilename.endsWith(".jar"))
+			{
+				newSystemClassPathList.add(_sourceH2Jar);
+				_logger.info("Replacing migration CLASSPATH entry from '" + entry + "' to '" + _sourceH2Jar + "'.");
+			}
+			else
+			{
+				newSystemClassPathList.add(entry);
+			}
+		}
+		
+//		Map<String, String> systemEnvMap = System.getenv(); 
+		
+		// java org.h2.tools.Server -tcp -tcpAllowOthers -ifExists
+//		List<String> cmd = Arrays.asList(new String[]{"java", "org.h2.tools.Server", "-tcp", "-tcpAllowOthers", "-ifExists"});
+		
+//		ProcessBuilder pb = new ProcessBuilder("java", "org.h2.tools.Server", "-tcp", "-tcpAllowOthers", "-ifExists");
+		ProcessBuilder pb = new ProcessBuilder("java", "org.h2.tools.Server", "-tcp", "-ifExists");
+		pb.inheritIO();
+		pb.redirectErrorStream(true);
+
+		Map<String, String> pbEnv = pb.environment();
+		pbEnv.put("CLASSPATH", StringUtil.toCommaStr(newSystemClassPathList, File.pathSeparatorChar + ""));
+
+		
+		_logger.info("About to start, H2 Migration Server (JVM). Using the following comand: " + pb.command());
+		_logger.info("  *** Command:     " + pb.command());
+		_logger.info("  *** CWD:         " + pb.directory());
+//		_logger.info("  *** CLASSPATH:   " + newSystemClassPathList);
+		_logger.info("  *** Environment: ");
+		for (Entry<String, String> e : pb.environment().entrySet())
+		{
+			_logger.info("      * " + StringUtil.left(e.getKey(), 30) + " = " + e.getValue());
+			
+		}
+		_logger.info("  *** CLASSPATH:");
+		List<String> tmpClasspathList = StringUtil.parseCommaStrToList(pb.environment().get("CLASSPATH").replace(File.pathSeparatorChar, ','), true);
+		for (String e : tmpClasspathList)
+		{
+			_logger.info("      * " + e);
+		}
+
+		_logger.info("Starting H2 Migration Server (JVM). Using the following comand: " + pb.command());
+		_migrationH2Srv = pb.start();
+	}
+
+	private void stopOldH2TcpServer()
+	{
+		if (_migrationH2Srv != null)
+		{
+			_logger.info("Stopping H2 Migration Server (JVM).");
+			_migrationH2Srv.destroy();
+
+			_logger.info("Waiting for H2 Migration Server (JVM) to STOP.");
+			try 
+			{ 
+				_migrationH2Srv.wait(); 
+				_logger.info("Stopped for H2 Migration Server.");
+			}
+			catch (InterruptedException ex) 
+			{
+				_logger.info("While waiting for H2 Migration Server, to stop it was interupted.", ex);
+			}
+		}
 	}
 	
 	public void doWork()
@@ -466,12 +578,18 @@ public class H2CentralDbCopy
 		_tableList    = getTables(_sourceConn);
 		List<DbTable> targetPreTableList = getTables(_targetConn);
 		
-		// Count records in the target table
+		// Count records in the target table... 
+		// and SET that in the SOURCE.targetPreRowCount
+		// which will be used at a later stage
 		if (targetPreTableList.size() > 0)
 		{
+//			for (DbTable dbt : targetPreTableList)
+//			{
+//				dbt.targetPreRowCount = getTargetTableRowCount(dbt);
+//			}
 			for (DbTable dbt : targetPreTableList)
 			{
-				dbt.targetPreRowCount = getTargetTableRowCount(dbt);
+				dbt.targetPreRowCount = _targetConn.getRowCountEstimate(dbt.catalog, dbt.schema, dbt.name);
 			}
 
 			// try to find the entry in the SOURCE LIST and update 'targetPreRowCount'
@@ -525,6 +643,25 @@ public class H2CentralDbCopy
 		System.out.println("-------------------------------------------------------------");
 		System.out.println("User Input:");
 		System.out.println("-------------------------------------------------------------");
+		if (StringUtil.hasValue(_sourceH2Jar))
+		{
+			System.out.println("  Source JAR    : '" + _sourceH2Jar + "'");
+			System.out.println("");
+
+			// Check if the JAR exists
+			if (StringUtil.hasValue(_sourceH2Jar))
+			{
+				File f = new File(_sourceH2Jar);
+				if ( ! f.exists() )
+				{
+					System.out.println("  ###########################################################");
+					System.out.println("  #### ERROR #### ERROR #### ERROR #### ERROR #### ERROR ####");
+					System.out.println("  ###########################################################");
+					System.out.println("  >>>>> The specified H2 JAR file '" + _sourceH2Jar + "' DO NOT EXISTS! <<<<<");
+					System.out.println("");
+				}
+			}
+		}
 		System.out.println("  Source User   : '"+_sourceUser   + "'");
 		System.out.println("  Source Passwd : '"+_sourcePasswd + "'");
 		System.out.println("  Source URL    : '"+_sourceUrl    + "'");
@@ -628,9 +765,39 @@ public class H2CentralDbCopy
 		cp.setUrl(url);
 		cp.setAppName(H2CentralDbCopy.class.getSimpleName() + ": "+type);
 		
-		_logger.info("Connecting to '"+type+"', with user '"+user+"', using url '"+url+"'.");
+		_logger.info("Connecting to '" + type + "', with user '" + user + "', using url '" + url + "'.");
 //		return DbxConnection.createDbxConnection( DriverManager.getConnection(url, user, passwd) );
-		return DbxConnection.connect(null, cp);
+		DbxConnection conn = DbxConnection.connect(null, cp);
+		
+		// print the Version
+//		String dbmsVendor  = conn.getDatabaseProductName();
+//		String dbmsVersion = conn.getDatabaseProductVersion();
+//		String dbInfo      = getH2DbInfo(conn);
+//		_logger.info("Connected to DBMS Product '" + dbmsVendor + "', using Version '" + dbmsVersion + "', H2 Info '" + dbInfo + "'.");
+
+		String dbInfo      = getH2DbInfo(conn);
+		_logger.info("Connected to H2 Info '" + dbInfo + "'.");
+
+		return conn;
+	}
+	
+	private String getH2DbInfo(DbxConnection conn) 
+	throws SQLException
+	{
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery("select SESSION_ID(), DATABASE_PATH(), H2VERSION()") )
+		{
+			while (rs.next())
+			{
+				String sid   = rs.getString(1);
+				String path  = rs.getString(2);
+				String h2ver = rs.getString(3);
+//				if (path == null)
+//					path = "-H2-UNKNOWN-DATABASE_PATH-";
+
+				return "H2VERSION()=" + h2ver + ", SESSION_ID()=" + sid + ", DATABASE_PATH()=" + path;
+			}
+		}
+		return "-UNKNOWN-";
 	}
 
 	private void preCheck()
@@ -723,7 +890,7 @@ public class H2CentralDbCopy
 	throws SQLException
 	{
 		// can not close the statement because we return a result set from it
-		Statement stat = conn.createStatement();
+		Statement stmnt = conn.createStatement();
 		ResultSet rs = null;
 		ScriptReader r = new ScriptReader(reader);
 		while (true)
@@ -742,7 +909,7 @@ public class H2CentralDbCopy
 				if (printExecution)
 					_logger.info("ExecuteH2Script: " + sql);
 
-    			boolean resultSet = stat.execute(sql);
+    			boolean resultSet = stmnt.execute(sql);
     			if ( resultSet )
     			{
     				if ( rs != null )
@@ -750,7 +917,7 @@ public class H2CentralDbCopy
     					rs.close();
     					rs = null;
     				}
-    				rs = stat.getResultSet();
+    				rs = stmnt.getResultSet();
     			}
 			}
 			catch (SQLException ex)
@@ -1091,6 +1258,10 @@ public class H2CentralDbCopy
 					
 					if (sourceType != targetType)
 					{
+						// and of course some exceptions from this rule. (NUMERIC & DECIMAL is "same" in most DBMS's)
+//						if ( (sourceType == Types.NUMERIC && targetType == Types.DECIMAL) || (targetType == Types.NUMERIC && sourceType == Types.DECIMAL) )
+//							continue;
+						
 						String sourceJdbcTypeStr = ResultSetTableModel.getColumnJavaSqlTypeName(sourceType);
 						String targetJdbcTypeStr = ResultSetTableModel.getColumnJavaSqlTypeName(targetType);
 
@@ -1713,7 +1884,8 @@ public class H2CentralDbCopy
 		return new DbTable();
 	}
 
-	private void close()
+	@Override
+	public void close()
 	{
 		if (_sourceConn != null)
 		{
@@ -1727,6 +1899,11 @@ public class H2CentralDbCopy
 			_logger.info("Closing Connection to '"+Type.Target+"'.");
 			_targetConn.closeNoThrow();
 			_targetConn = null;
+		}
+		
+		if (_migrationH2Srv != null)
+		{
+			stopOldH2TcpServer();
 		}
 	}
 
@@ -1794,30 +1971,32 @@ public class H2CentralDbCopy
 		pw.println("              [-b]");
 		pw.println("  ");
 		pw.println("options:");
-		pw.println("  -h,--help                 Usage information.");
-		pw.println("  -v,--version              Display "+Version.getAppName()+" and JVM Version.");
-		pw.println("  -x,--debug <dbg1,dbg2>    Debug options: a comma separated string");
-		pw.println("                            To get available option, do -x list");
+		pw.println("  -h,--help                   Usage information.");
+		pw.println("  -v,--version                Display "+Version.getAppName()+" and JVM Version.");
+		pw.println("  -x,--debug <dbg1,dbg2>      Debug options: a comma separated string");
+		pw.println("                              To get available option, do -x list");
 		pw.println("  ");
-		pw.println("  -e,--exec                 Execute... if not specified: it will only list parameters");
+		pw.println("  -e,--exec                   Execute... if not specified: it will only list parameters");
 		pw.println("  ");
-		pw.println("  -U,--fromUser <user>      Source Username when connecting to server.");
-		pw.println("  -P,--fromPasswd <passwd>  Source Password when connecting to server. null=noPasswd");
-		pw.println("  -S,--fromUrl <url>        Source URL");
+		pw.println("  -U,--fromUser <user>        Source Username when connecting to server.");
+		pw.println("  -P,--fromPasswd <passwd>    Source Password when connecting to server. null=noPasswd");
+		pw.println("  -S,--fromUrl <url>          Source URL");
+		pw.println("  -J,--fromOldH2Jar <jarFile> Upgrade/Migrate old H2 database (from old JAR file)");
+		pw.println("                              This will start a separate process, with a H2 tcpSrv to host old H2 DB");
 		pw.println("  ");
-		pw.println("  -u,--toUser <user>        Destination Username when connecting to server.");
-		pw.println("  -p,--toPasswd <passwd>    Destination Password when connecting to server. null=noPasswd");
-		pw.println("  -s,--toUrl <url>          Destination URL");
+		pw.println("  -u,--toUser <user>          Destination Username when connecting to server.");
+		pw.println("  -p,--toPasswd <passwd>      Destination Password when connecting to server. null=noPasswd");
+		pw.println("  -s,--toUrl <url>            Destination URL");
 		pw.println("  ");
-		pw.println("  -b,--dmlBatchSize <num>   How often should we commit in the target db");
-		pw.println("  -m,--dmlUseMerge          If we should use SQL 'merge' instead of 'insert'.");
-		pw.println("                            Note: if H2 target db exists, this is auto-enabled ");
+		pw.println("  -b,--dmlBatchSize <num>     How often should we commit in the target db");
+		pw.println("  -m,--dmlUseMerge            If we should use SQL 'merge' instead of 'insert'.");
+		pw.println("                              Note: if H2 target db exists, this is auto-enabled ");
 		pw.println("  ");
-		pw.println("  -C,--config  <filename>   System Config file.");
-		pw.println("  -L,--logfile <filename>   Name of the logfile where application logging is saved.");
-		pw.println("  -H,--homedir <dirname>    HOME Directory, where all personal files are stored.");
-		pw.println("  -R,--savedir <dirname>    DBXTUNE_SAVE_DIR, where H2 Database recordings are stored.");
-		pw.println("  -D,--javaSystemProp <k=v> set Java System Property, same as java -Dkey=value");
+		pw.println("  -C,--config  <filename>     System Config file.");
+		pw.println("  -L,--logfile <filename>     Name of the logfile where application logging is saved.");
+		pw.println("  -H,--homedir <dirname>      HOME Directory, where all personal files are stored.");
+		pw.println("  -R,--savedir <dirname>      DBXTUNE_SAVE_DIR, where H2 Database recordings are stored.");
+		pw.println("  -D,--javaSystemProp <k=v>   Set Java System Property, same as java -Dkey=value");
 		pw.println("  ");
 		pw.flush();
 	}
@@ -1843,6 +2022,7 @@ public class H2CentralDbCopy
 		options.addOption( Option.builder("U").longOpt("fromUser"      ).hasArg(true ).build() );
 		options.addOption( Option.builder("P").longOpt("fromPasswd"    ).hasArg(true ).build() );
 		options.addOption( Option.builder("S").longOpt("fromUrl"       ).hasArg(true ).build() );
+		options.addOption( Option.builder("J").longOpt("fromOldH2Jar"  ).hasArg(true ).build() );
 
 		options.addOption( Option.builder("u").longOpt("toUser"        ).hasArg(true ).build() );
 		options.addOption( Option.builder("p").longOpt("toPasswd"      ).hasArg(true ).build() );
@@ -1889,7 +2069,7 @@ public class H2CentralDbCopy
 	//---------------------------------------------------
 	public static void main(String[] args)
 	{
-		Version.setAppName("H2CentralDbCopy");
+		Version.setAppName("DbxCentralDbCopy");
 		
 		Options options = buildCommandLineOptions();
 		try
@@ -1926,33 +2106,32 @@ public class H2CentralDbCopy
 			//-------------------------------
 			else
 			{
-				H2CentralDbCopy dbCopy = new H2CentralDbCopy();
-
-				// Initialize some things
-				dbCopy.init(cmd);
-
-				// Connect to SOURCE/Target
-				dbCopy.connect();
-
-				// check some stuff before we: go-to-work
-				dbCopy.preCheck();
-				if (dbCopy._sourceDbxCentralDbVersion <= 0)
+				// Use: auto-close
+				try( H2CentralDbCopy dbCopy = new H2CentralDbCopy() )
 				{
-					throw new Exception("The SOURCE database does not look like a DbxCentral database.");
-				}
-				if (dbCopy._targetDbxCentralDbVersion >= 0)
-				{
-					if (dbCopy._sourceDbxCentralDbVersion != dbCopy._targetDbxCentralDbVersion)
+					// Initialize some things
+					dbCopy.init(cmd);
+	
+					// Connect to SOURCE/Target
+					dbCopy.connect();
+	
+					// check some stuff before we: go-to-work
+					dbCopy.preCheck();
+					if (dbCopy._sourceDbxCentralDbVersion <= 0)
 					{
-						throw new Exception("The SOURCE and TARGET DbxCentral database versions are not the same, this is not supported... sourceDbVersion="+dbCopy._sourceDbxCentralDbVersion+", targetDbVersion="+dbCopy._targetDbxCentralDbVersion);
+						throw new Exception("The SOURCE database does not look like a DbxCentral database.");
 					}
+					if (dbCopy._targetDbxCentralDbVersion >= 0)
+					{
+						if (dbCopy._sourceDbxCentralDbVersion != dbCopy._targetDbxCentralDbVersion)
+						{
+							throw new Exception("The SOURCE and TARGET DbxCentral database versions are not the same, this is not supported... sourceDbVersion="+dbCopy._sourceDbxCentralDbVersion+", targetDbVersion="+dbCopy._targetDbxCentralDbVersion);
+						}
+					}
+	
+					// DO THE WORK
+					dbCopy.doWork();
 				}
-
-				// DO THE WORK
-				dbCopy.doWork();
-
-				// Close resources
-				dbCopy.close();
 			}
 		}
 		catch (ParseException pe)

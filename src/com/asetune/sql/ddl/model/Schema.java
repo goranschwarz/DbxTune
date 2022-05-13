@@ -48,6 +48,8 @@ public class Schema
 	public void addTable(Table table) { _tables.add(table); }
 	public void addView (View  view ) { _views .add(view); }
 
+	public List<Table>  getTables()  { return _tables; }
+	public List<View>   getViews()   { return _views; }
 	
 	
 	

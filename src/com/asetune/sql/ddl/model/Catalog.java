@@ -51,9 +51,12 @@ public class Catalog
 	public void addTable(Table table)    { _tables .add(table); }
 	public void addView (View  view )    { _views  .add(view); }
 	
-	public static Catalog create(DbxConnection conn, String catalogName, CreateFilter filter)
+	public static Catalog create(DbxConnection conn, String catalogName, ICreateFilter filter)
 	throws SQLException
 	{
+		if (filter == null)
+			filter = new ICreateFilter(){};
+
 		Catalog cat = new Catalog();
 
 		// Set what Catalog we are supposed to USE
@@ -84,15 +87,21 @@ public class Catalog
 		// Create TABLE and SCHEMA objects
 		for (String schemaName : schemaTableMap.keySet())
 		{
+			if ( ! filter.includeSchema(conn, catalogName, schemaName) )
+				continue;
+				
 			Schema schema = new Schema(catalogName, schemaName);
 			cat.addSchema(schema);
 			
 			List<String> tables = schemaTableMap.get(schemaName);
 			for (String tableName : tables)
 			{
+				if ( ! filter.includeTable(conn, catalogName, schemaName, tableName) )
+					continue;
+
 				Table table = Table.create(conn, catalogName, schemaName, tableName);
 				
-				cat    .addTable(table);
+				cat   .addTable(table);
 				schema.addTable(table);
 			}
 		}
@@ -100,15 +109,21 @@ public class Catalog
 		// Create VIEW and SCHEMA objects
 		for (String schemaName : schemaViewMap.keySet())
 		{
+			if ( ! filter.includeSchema(conn, catalogName, schemaName) )
+				continue;
+				
 			Schema schema = new Schema(catalogName, schemaName);
 			cat.addSchema(schema);
 
 			List<String> views = schemaViewMap.get(schemaName);
 			for (String viewName : views)
 			{
+				if ( ! filter.includeView(conn, catalogName, schemaName, viewName) )
+					continue;
+
 				View view = View.create(conn, catalogName, schemaName, viewName);
 				
-				cat    .addView(view);
+				cat   .addView(view);
 				schema.addView(view);
 			}
 		}
@@ -169,13 +184,6 @@ public class Catalog
 		return schemaTableMap;
 	}
 	
-	/**
-	 * FIXME: This needs to be extended to hold various filters that can be used in the future
-	 */
-	public static class CreateFilter
-	{
-	}
-
 //	protected List<TableInfo> refreshCompletionForTables(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String tableName)
 //	throws SQLException
 //	{

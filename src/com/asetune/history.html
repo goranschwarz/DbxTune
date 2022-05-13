@@ -44,6 +44,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>new: AlarmEventOsSwapping               -- if IN or OUT is above 5000. For Linux/Unix it's in 'CmOsVmstat', for Windows it's in 'CmOsMeminfo', also include a small chart of last 15 minutes</LI>
 				<LI>new: AlarmEventDbccCheckdbAge           -- for SQL Server, when dbcc checkdb hasn't been executed. </LI>
 				<LI>new: AlarmEventHoldingLocksWhileWaitForClientInput -- When a SPID has started a transaction, but been idle at the Client side for more than X seconds. </LI>
+				<LI>new: AlarmEventBackgroundMessage        -- ASE for errorlog messages starting with 'background task message:', which probably is a threshold procedure output. </LI>
+				<LI>new: AlarmEventOldIncrementalBackup     -- SQL Server, old incremental backups </LI>
+				<LI>new: AlarmEventDbNotInHadr              -- SQL Serverif we have any databases in HADR (Availability Groups) new databases should possibly be in there to... </LI>
 				
 				<LI>Changed: AlarmEventConfigResourceIsLow       -- added "raiseDelay", which is used by 'Statement Cache Hit Rate', and the default was set to 5 minutes below configured value before raising alarm.</LI>
 				<LI>Changed: AlarmEventFullTranLog               -- alwaysSend() is now set to true, so even if we do not "subscribe" for alarms on this server, we will still get message, just like SrvDown </LI>
@@ -102,6 +105,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI>DictCompression - Not storing records as a batch, instead reverting back to single statement, also changed some concurrency issues</LI>
 		<LI>Prepared for some H2 upgrade. ver 2.0.202 or above: JDBC MetaData getTables() new table type 'TABLE' --> 'BASE TABLE'</LI>
+		<LI>H2 Central DB Copy was a bit adapted to be able to handle migration from older H2 versions (1.4) into H2 (2.1), this is mostly implemented in H2CentralDbCopy3</LI>
 
 		<LI>Daily Summary Report Changes
 			<UL>
@@ -260,6 +264,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>
 		<b>CmProcessActivity - tab: Processes</b><br>
 		<ul>
+			<li>added column 'ClientDriverName' (for versions above ASE 16.0)</li>
 			<li>raise AlarmEventLongRunningStatement when a statement has been executed for more than 3 hours (by default), 'skip' can be done on: dbname, login, cmd and tranName</li>
 		</ul>
 		</LI>

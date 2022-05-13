@@ -28,6 +28,8 @@ import java.sql.Statement;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoSybaseRs;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoRs;
 import com.asetune.utils.AseConnectionUtils;
@@ -46,6 +48,12 @@ extends TdsConnection
 		super(conn);
 		Ver.majorVersion_mustBeTenOrAbove = true;
 //System.out.println("constructor::RsConnection(conn): conn="+conn);
+	}
+
+	@Override
+	public DbmsVersionInfo createDbmsVersionInfo()
+	{
+		return new DbmsVersionInfoSybaseRs(this);
 	}
 
 	@Override

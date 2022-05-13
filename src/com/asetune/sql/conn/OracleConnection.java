@@ -32,6 +32,8 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoOracle;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
 import com.asetune.ui.autocomplete.completions.ProcedureInfo;
@@ -49,6 +51,12 @@ extends DbxConnection
 		super(conn);
 		Ver.majorVersion_mustBeTenOrAbove = true;
 //System.out.println("constructor::OracleConnection(conn): conn="+conn);
+	}
+
+	@Override
+	public DbmsVersionInfo createDbmsVersionInfo()
+	{
+		return new DbmsVersionInfoOracle(this);
 	}
 
 	public List<ProcedureInfo> getPackageProcedures(WaitForExecDialog waitDialog, String catalogName, String schemaName, String procName)

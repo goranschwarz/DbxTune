@@ -27,6 +27,8 @@ import java.sql.Statement;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoDb2;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
 import com.asetune.utils.StringUtil;
@@ -42,6 +44,12 @@ extends DbxConnection
 		super(conn);
 		Ver.majorVersion_mustBeTenOrAbove = true;
 //System.out.println("constructor::Db2Connection(conn): conn="+conn);
+	}
+
+	@Override
+	public DbmsVersionInfo createDbmsVersionInfo()
+	{
+		return new DbmsVersionInfoDb2(this);
 	}
 
 	@Override

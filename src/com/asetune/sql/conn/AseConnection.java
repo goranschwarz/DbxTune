@@ -34,6 +34,8 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoSybaseAse;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoAse;
 import com.asetune.ui.autocomplete.completions.TableExtraInfo;
@@ -59,6 +61,12 @@ extends TdsConnection
 		super(conn);
 		Ver.majorVersion_mustBeTenOrAbove = true;
 //System.out.println("constructor::AseConnection(conn): conn="+conn);
+	}
+
+	@Override
+	public DbmsVersionInfo createDbmsVersionInfo()
+	{
+		return new DbmsVersionInfoSybaseAse(this);
 	}
 
 	@Override

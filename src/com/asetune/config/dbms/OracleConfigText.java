@@ -20,6 +20,8 @@
  ******************************************************************************/
 package com.asetune.config.dbms;
 
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+
 public abstract class OracleConfigText
 {
 	/** What sub types exists */
@@ -49,9 +51,10 @@ public abstract class OracleConfigText
 	*/
 	public static class NlsParams extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                       { return "NLS Params"; }
-		@Override public    String     getName()                           { return ConfigType.OraNlsParams.toString(); }
-		@Override public    String     getConfigType()                     { return getName(); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from v$nls_parameters"; }
+		@Override public    String     getTabLabel()                          { return "NLS Params"; }
+		@Override public    String     getName()                              { return ConfigType.OraNlsParams.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "select * from v$nls_parameters"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from v$nls_parameters"; }
 	}
 }

@@ -33,6 +33,8 @@ import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoMySql;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
 import com.asetune.ui.autocomplete.completions.TableExtraInfo;
@@ -48,6 +50,12 @@ public class MySqlConnection extends DbxConnection
 		super(conn);
 		Ver.majorVersion_mustBeTenOrAbove = true;
 //System.out.println("constructor::MySqlConnection(conn): conn="+conn);
+	}
+
+	@Override
+	public DbmsVersionInfo createDbmsVersionInfo()
+	{
+		return new DbmsVersionInfoMySql(this);
 	}
 
 	@Override

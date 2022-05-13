@@ -23,6 +23,8 @@ package com.asetune.sql.conn;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoApacheHive;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
 import com.asetune.utils.Ver;
@@ -85,5 +87,11 @@ extends DbxConnection
 	{
 		// I don't know how to get Session/connection ID... so lets just return -1 for unknown 
 		return -1;
+	}
+
+	@Override
+	public DbmsVersionInfo createDbmsVersionInfo()
+	{
+		return new DbmsVersionInfoApacheHive(this);
 	}
 }

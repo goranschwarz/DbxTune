@@ -48,6 +48,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TabularCntrPanelAppend;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
@@ -133,6 +134,27 @@ extends CountersModelAppend
 		return new TabularCntrPanelAppend(this);
 	}
 
+	@Override
+	public boolean checkDependsOnVersion(DbxConnection conn)
+	{
+		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+		{
+			_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '"+getDisplayName() + "', connected to Azure SQL Database or Analytics, which do NOT support reading the errorlog file via 'xp_readerrorlog'.");
+
+			setActive(false, "This info is NOT available in Azure SQL Database or Azure Synapse/Analytics.");
+
+			TabularCntrPanel tcp = getTabPanel();
+			if (tcp != null)
+			{
+				tcp.setToolTipText("This info is NOT available in Azure SQL Database or Azure Synapse/Analytics.");
+			}
+			return false;
+		}
+
+		return super.checkDependsOnVersion(conn);
+	}
+	
 	@Override
 	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{

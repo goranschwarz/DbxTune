@@ -177,7 +177,9 @@ case "${toolset}" in
 	dbxcdbcopy)
 		shortAppName="dbxcdbcopy"
 		longAppName="DbxCentralDbCopy"
-		javaMainClass="com.asetune.central.pcs.H2CentralDbCopy2"
+#		javaMainClass="com.asetune.central.pcs.H2CentralDbCopy"
+#		javaMainClass="com.asetune.central.pcs.H2CentralDbCopy2"
+		javaMainClass="com.asetune.central.pcs.H2CentralDbCopy3"
 		javaMainParams=""
 		javaSplashScreen=""
 		;;
@@ -314,7 +316,8 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/asetune.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/dsparser.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/log4j-1.2.17.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-SNAPSHOT.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-1.4.200.jar
+#export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-1.4.200.jar
+#export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-2.1.212.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/wizard.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-swing-5.2.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-core-5.2.jar

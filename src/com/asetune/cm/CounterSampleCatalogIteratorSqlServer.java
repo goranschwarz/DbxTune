@@ -29,6 +29,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.asetune.Version;
+import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.StringUtil;
 
 public class CounterSampleCatalogIteratorSqlServer 
@@ -96,6 +98,19 @@ extends CounterSampleCatalogIterator
 	protected List<String> getCatalogList(CountersModel cm, Connection conn)
 	throws SQLException
 	{
+
+		String dbStatus = "  and (d.status & 992 = 0) -- 0x03e0  -- 32=loading, 64=preRecovery, 128=recovering, 256=notRecovered, 512=offline \n";
+		
+		if (conn instanceof DbxConnection)
+		{
+			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) ((DbxConnection)conn).getDbmsVersionInfo();
+			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+			{
+				dbStatus = "";
+			}
+		}
+
+		
 		String skipDbNames = "";
 		if (_skipList != null && !_skipList.isEmpty())
 			skipDbNames = "  and d.name not in (" + StringUtil.toCommaStrQuoted('\'', _skipList) + ") \n";
@@ -113,13 +128,13 @@ extends CounterSampleCatalogIterator
 		String sql = ""
     		+ "select /* " + Version.getAppName() + ":" + this.getClass().getSimpleName() + " */ \n"
     		+ "    d.name \n"
-    		+ "from sysdatabases d \n"
+    		+ "from sys.databases d \n"
     		+ "where 1 = 1 \n"
 			+ skipDbNames
-    		+ "  and (d.status & 992 = 0) -- 0x03e0  -- 32=loading, 64=preRecovery, 128=recovering, 256=notRecovered, 512=offline \n"
+    		+ dbStatus
     		+ "  and DATABASEPROPERTYEX(d.name, 'UserAccess') <> 'SINGLE_USER'  \n"
     		+ "  and has_dbaccess(d.name) = 1 \n"
-    		+ "order by d.dbid  \n"
+    		+ "order by d.database_id  \n"
     		+ "";
 		
 		ArrayList<String> list = new ArrayList<String>();

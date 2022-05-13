@@ -46,6 +46,7 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
@@ -299,6 +300,8 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzureAnalytics)
 	{
+//		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+		
 		String dm_tran_active_transactions   = "dm_tran_active_transactions";
 		String dm_tran_database_transactions = "dm_tran_database_transactions";
 		String dm_tran_session_transactions  = "dm_tran_session_transactions";
@@ -323,6 +326,29 @@ extends CountersModel
 			notInTempdb = "and database_id != 2 ";
 		}
 
+		// Check if we have access to table 'sys.dm_tcp_listener_states', if so, construct a SQL Statement
+		// NOTE: Azure SQL Database (and possibly Azure Analytics) wont have 'sys.dm_tcp_listener_states'
+		String listenerInfo = "select @listeners = '-unknown-' \n";
+		if (DbUtils.checkIfTableIsSelectable(conn, "sys.dm_tcp_listener_states"))
+		{
+			listenerInfo = "" +
+				"/* Get info about Listeners (as a Comma Separated List): TYPE=ipv#[ip;port] */\n" +
+				"select @listeners = coalesce(@listeners + ', ', '') \n" +
+				"    + type_desc \n" +
+				"    + '=' \n" +
+				"    + CASE WHEN is_ipv4 = 1 THEN 'ipv4[' ELSE 'ipv6[' END \n" +
+				"    + ip_address \n" +
+				"    + ';' \n" +
+				"    + convert(varchar(10), port) \n" +
+				"    + ']' \n" +
+				"from sys.dm_tcp_listener_states \n" +
+				"where state_desc = 'ONLINE' \n" +
+			//	"--  and type_desc = 'TSQL' \n" +
+				"order by listener_id \n" +
+				"";
+		}
+		
+		
 		int LockWaitsThresholdSec = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LockWaitsThresholdSec, DEFAULT_alarm_LockWaitsThresholdSec);
 		int oldestOpenTranInSec   = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestOpenTranInSec  , DEFAULT_alarm_oldestOpenTranInSec);
 
@@ -353,19 +379,7 @@ extends CountersModel
 //				"declare @process_kernel_time_ms       bigint = 0\n" +
 //				"declare @process_user_time_ms         bigint = 0\n" +
 //				"\n" +
-				"/* Get info about Listeners (as a Comma Separated List): TYPE=ipv#[ip;port] */\n" +
-				"select @listeners = coalesce(@listeners + ', ', '') \n" +
-				"    + type_desc \n" +
-				"    + '=' \n" +
-				"    + CASE WHEN is_ipv4 = 1 THEN 'ipv4[' ELSE 'ipv6[' END \n" +
-				"    + ip_address \n" +
-				"    + ';' \n" +
-				"    + convert(varchar(10), port) \n" +
-				"    + ']' \n" +
-				"from sys.dm_tcp_listener_states \n" +
-				"where state_desc = 'ONLINE' \n" +
-//				"--  and type_desc = 'TSQL' \n" +
-				"order by listener_id \n" +
+				listenerInfo +
 				"\n" +
 //				"/* CPU time from dm_os_sys_info */\n" +
 //				"select @scheduler_count        = scheduler_count \n" +

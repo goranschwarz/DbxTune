@@ -41,6 +41,7 @@ import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -344,12 +345,20 @@ extends CountersModel
 			master_files             = "master_files";  // SAME NAME IN AZURE ????
 		}
 
+		// Special thing for Azure SQL Database
+		String joinMasterFiles = "JOIN sys." + master_files +" b ON a.file_id = b.file_id AND a.database_id = b.database_id \n";
+		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+		{
+			// NOTE: for Azure SQL Database, tempdb will have faulty 'devicename' and 'physical_name' (but lets fix that LATER)
+			joinMasterFiles = "JOIN sys.database_files b ON a.file_id = b.file_id AND a.database_id in (db_id('tempdb'), db_id()) \n";
+		}
 
 		String cols;
 
 		String TotalIOs = "(a.num_of_reads + a.num_of_writes)";
 
-		cols = "dbname             = db_name(a.database_id), \n" +
+		cols = "dbname             = isnull(db_name(a.database_id), 'unknow-dbid-' + cast(a.database_id as varchar(30))), \n" +
 		       "type               = CASE \n" +
 		       "                         WHEN a.file_id = 2 THEN 'Log' \n" +
 		       "                         ELSE 'Data' \n" +
@@ -392,7 +401,7 @@ extends CountersModel
 			"select /* ${cmCollectorName} */ \n" + 
 			cols +
 			"FROM sys." + dm_io_virtual_file_stats + " (NULL, NULL) a \n" +
-			"JOIN sys." + master_files +" b ON a.file_id = b.file_id AND a.database_id = b.database_id \n" +
+			joinMasterFiles +
 //			"ORDER BY a.io_stall DESC \n";
 			"ORDER BY a.database_id, a.file_id \n";
 

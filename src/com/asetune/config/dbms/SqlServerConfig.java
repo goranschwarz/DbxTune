@@ -29,11 +29,16 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.SqlServerTune;
@@ -42,9 +47,11 @@ import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.MonRecordingInfo;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.MathUtils;
 import com.asetune.utils.SqlServerUtils;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.Ver;
 
@@ -133,6 +140,10 @@ extends DbmsConfigAbstract
 
 	public static final String PROPKEY_memory_warning_threshold_gt_percentOfPhysicalMemory = "DbmsConfigIssue.memory.warning.threshold.gt.percentOfPhysicalMemory";
 	public static final double DEFAULT_memory_warning_threshold_gt_percentOfPhysicalMemory = 95.0;
+
+	public static final String PROPKEY_version_days = "DbmsConfigIssue.version.days";
+//	public static final long   DEFAULT_version_days = 730; // 2 years
+	public static final long   DEFAULT_version_days = 1095; // 3 years
 
 	
 //	@Override
@@ -458,8 +469,11 @@ extends DbmsConfigAbstract
 		if (_configMap == null)
 			return;
 
+		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+		
 		SqlServerConfigEntry entry = null;
-		String cfgName;
+		String  cfgName;
+		boolean doCheck;
 
 		String    srvName    = "-UNKNOWN-";
 		Timestamp srvRestart = null;
@@ -468,9 +482,48 @@ extends DbmsConfigAbstract
 
 		
 		//-------------------------------------------------------
+		// Check for old version string -- just try to grab the date if we can find any
+		String versionStr = getDbmsVersionStr();
+		if (StringUtil.hasValue(versionStr))
+		{
+			// Microsoft SQL Server 2019 (RTM-CU8) (KB4577194) - 15.0.4073.23 (X64) Sep 23 2020 16:03:08 Copyright (C) 2019 Microsoft Corporation Developer Edition (64-bit) on Linux (Red Hat Enterprise Linux)
+			String buildDateStr = StringUtils.trim( StringUtils.substringBetween(versionStr, "(X64)", "Copyright") );
+			if (StringUtil.hasValue(buildDateStr))
+			{
+				try
+				{
+					SimpleDateFormat sdf = new SimpleDateFormat("MMM dd yyyy HH:mm:ss");
+					Date buildDate = sdf.parse(buildDateStr);
+
+					String buildDateYmdStr = new SimpleDateFormat("yyyy-MM-dd").format(buildDate);
+
+					long thresholdDays = Configuration.getCombinedConfiguration().getLongProperty(PROPKEY_version_days, DEFAULT_version_days);
+					ZonedDateTime thresholdDate = ZonedDateTime.now().minusDays(thresholdDays);
+
+					// 
+					if (buildDate.toInstant().isBefore(thresholdDate.toInstant()))
+					{
+						String key = "DbmsConfigIssue." + srvName + ".version.isOld";
+
+						DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "dbms_version", Severity.WARNING, 
+								"SQL Server Version seems a bit old! Build date is '" + buildDateYmdStr + "', which is older than " + thresholdDays + " days.", 
+								"Fix this using: Please update SQL Server to a later Cumulative Update. For example see https://sqlserverbuilds.blogspot.com/ for latest CU");
+
+						DbmsConfigManager.getInstance().addConfigIssue(issue);
+					}
+				}
+				catch (ParseException ex)
+				{
+					_logger.warn("Problem parsing the buildDate='" + buildDateStr + "' from the Version String '" + versionStr + "'. Caught: " + ex);
+				}
+			}
+		}
+
+		//-------------------------------------------------------
 		cfgName = "optimize for ad hoc workloads";
 		entry = _configMap.get(cfgName);
-		if (entry != null)
+		doCheck = true;
+		if (doCheck && entry != null)
 		{
 			if (entry.runValue == 1)
 			{
@@ -487,7 +540,10 @@ extends DbmsConfigAbstract
 		//-------------------------------------------------------
 		cfgName = "max server memory (MB)";
 		entry = _configMap.get(cfgName);
-		if (entry != null)
+		doCheck = true;
+		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+			doCheck = false;
+		if (doCheck && entry != null)
 		{
 			// check if 'max server memory (MB)' is DEFAULT configured
 			if (entry.runValue == Integer.MAX_VALUE)
@@ -557,7 +613,10 @@ extends DbmsConfigAbstract
 		//-------------------------------------------------------
 		cfgName = "remote admin connections";
 		entry = _configMap.get(cfgName);
-		if (entry != null)
+		doCheck = true;
+		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+			doCheck = false;
+		if (doCheck && entry != null)
 		{
 			if (entry.runValue == 0)
 			{
@@ -574,7 +633,10 @@ extends DbmsConfigAbstract
 		//-------------------------------------------------------
 		cfgName = "cost threshold for parallelism";
 		entry = _configMap.get(cfgName);
-		if (entry != null)
+		doCheck = true;
+//		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+//			doCheck = false;
+		if (doCheck && entry != null)
 		{
 			if (entry.runValue == 5)
 			{
@@ -818,6 +880,14 @@ extends DbmsConfigAbstract
 		map.put("allow filesystem enumeration",       1);
 		map.put("polybase enabled",                   0);
 
+		// Azure SQL Database... seems to have the following extra values
+		map.put("Data processed daily limit in TB",   2_147_483_647);
+		map.put("Data processed weekly limit in TB",  2_147_483_647);
+		map.put("Data processed monthly limit in TB", 2_147_483_647);
+		map.put("ADR Cleaner Thread Count",           1);
+		map.put("suppress recovery model errors",     0);
+		map.put("openrowset auto_create_statistics",  1);
+
 		return map;
 	}
 //	-- Server Configuration (find any non-standard settings)
@@ -1025,6 +1095,14 @@ extends DbmsConfigAbstract
 		map.put("allow filesystem enumeration",       SECTION_UNSPECIFIED);
 		map.put("polybase enabled",                   SECTION_UNSPECIFIED);
 		
+		// Azure SQL Database... seems to have the following extra values
+		map.put("Data processed daily limit in TB",   SECTION_UNSPECIFIED);
+		map.put("Data processed weekly limit in TB",  SECTION_UNSPECIFIED);
+		map.put("Data processed monthly limit in TB", SECTION_UNSPECIFIED);
+		map.put("ADR Cleaner Thread Count",           SECTION_UNSPECIFIED);
+		map.put("suppress recovery model errors",     SECTION_UNSPECIFIED);
+		map.put("openrowset auto_create_statistics",  SECTION_UNSPECIFIED);
+
 		return map;
 	}
 	public static final String  SECTION_UNSPECIFIED          = "Unspecified";
@@ -1150,6 +1228,14 @@ extends DbmsConfigAbstract
 		map.put("allow filesystem enumeration",       NO_COMMENT);
 		map.put("polybase enabled",                   NO_COMMENT);
 		
+		// Azure SQL Database... seems to have the following extra values
+		map.put("Data processed daily limit in TB",   NO_COMMENT);
+		map.put("Data processed weekly limit in TB",  NO_COMMENT);
+		map.put("Data processed monthly limit in TB", NO_COMMENT);
+		map.put("ADR Cleaner Thread Count",           NO_COMMENT);
+		map.put("suppress recovery model errors",     NO_COMMENT);
+		map.put("openrowset auto_create_statistics",  NO_COMMENT);
+
 		return map;
 	}
 	public static final String  NO_COMMENT = "";

@@ -2333,6 +2333,12 @@ public class ResultSetTableModel
 			return "border='1'";
 		}
 
+		/** called to create Attributes for any TR-TableData attribute */
+		default String tagTrAttr(ResultSetTableModel rstm, int row)
+		{
+			return null;
+		}
+
 		/** called to create Attributes for any TH-TableHead attribute */
 		default String tagThAttr(ResultSetTableModel rstm, int col, String colName, boolean nowrapPreferred)
 		{
@@ -2447,7 +2453,20 @@ public class ResultSetTableModel
 		sb.append("<tbody>\n");
 		for (int r=0; r<rows; r++)
 		{
-			sb.append("  <tr>\n");
+			// Use renderer to set <td ATTRIBUTES>  ... for example to set the row background: <tr style='background-color:#7f96ff;color:#ffffff;'>
+			//                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+			String trAttr = tsRenderer == null ? "" : tsRenderer.tagTrAttr(this, r);
+			if (trAttr == null)
+				trAttr = "";
+			else
+			{
+				// Add " " (space) if the attribute doesn't start with it!
+				if ( StringUtil.hasValue(trAttr) && ! trAttr.startsWith(" "))
+					trAttr = " " + trAttr;
+			}
+
+//			sb.append("  <tr>\n");
+			sb.append("  <tr").append(trAttr).append("> \n");
 			for (int c=0; c<cols; c++)
 			{
 				Object objVal  = getValueAt(r,c);

@@ -58,6 +58,8 @@ import com.asetune.gui.ConnectionProgressDialog;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.sql.JdbcUrlParser;
 import com.asetune.sql.ResultSetMetaDataCached;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoUnknown;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.ddl.DbmsDdlResolverAnsiSql;
 import com.asetune.sql.ddl.DbmsDdlResolverAsa;
@@ -130,6 +132,8 @@ implements Connection, AutoCloseable
 	protected String _dbIdentifierQuoteString = null;
 	protected String _dbExtraNameCharacters   = null;
 	
+	protected DbmsVersionInfo _dbmsVersionInfo = null;
+
 	/** When did we connect. 
 	 * @return 0 if no connection has been made, otherwise the 'long' from System.currentTimeMillis()
 	 */
@@ -162,6 +166,36 @@ implements Connection, AutoCloseable
 //	public void setDbname  (String dbname)   { _dbname   = dbname; }
 //	public void setDriver  (String driver)   { _driver   = driver; }
 //	public void setUrl     (String url)      { _url      = url; }
+
+	/**
+	 * Get details about the version... typically it should be cast to any specific DbmsVersionInfo  (Sybase*, SqlServer, Postgres, ... etc)
+	 * @return should never be null.
+	 */
+	public DbmsVersionInfo getDbmsVersionInfo()
+	{
+		if (_dbmsVersionInfo == null)
+			setDbmsVersionInfo( createDbmsVersionInfo() );
+
+		return _dbmsVersionInfo;
+	}
+
+	public void setDbmsVersionInfo(DbmsVersionInfo info) 
+	{ 
+		_dbmsVersionInfo = info; 
+	}
+
+	/**
+	 * Any subclasses of DbxConnection MUST override this method, otherwise the ERROR message will be printed. 
+	 * @return 
+	 * @return
+	 */
+	public DbmsVersionInfo createDbmsVersionInfo()
+	{ 
+		String msg = "The createDbmsVersionInfo() has not been implemeted by the DbxConnection class '" + this.getClass().getSimpleName() + "', please do so!";
+		_logger.error(msg, new RuntimeException(msg));
+		
+		return new DbmsVersionInfoUnknown(this);
+	}
 
 	//----------------------------------------------------------------------------------------------
 	//----------------------------------------------------------------------------------------------
@@ -661,30 +695,40 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 			return new UnknownConnection(conn);
 		}
 
-		if      (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASE))   return new AseConnection(conn);
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASA))   return new AsaConnection(conn);
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_IQ))    return new IqConnection(conn);
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RS))    return new RsConnection(conn);
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RAX))   return new RaxConnection(conn);
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RSDRA)) return new RsDraConnection(conn);
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RSDA))  return new RsDaConnection(conn);
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_LUW))      return new Db2Connection(conn);
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS))      return new Db2Connection(conn);
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY))        return new DerbyConnection(conn);
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2))           return new H2Connection(conn);
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HANA))         return new HanaConnection(conn);
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MAXDB))        return new MaxDbConnection(conn);
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL))        return new SqlServerConnection(conn);
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL))        return new MySqlConnection(conn);
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE))       return new OracleConnection(conn);
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_POSTGRES))     return new PostgresConnection(conn);
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_APACHE_HIVE))  return new ApacheHiveConnection(conn);
-//		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_COCKROACHDB))  return new CockroachDbConnection(conn);
+		DbxConnection retConn = null;
+		if      (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASE))   retConn = new AseConnection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASA))   retConn = new AsaConnection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_IQ))    retConn = new IqConnection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RS))    retConn = new RsConnection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RAX))   retConn = new RaxConnection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RSDRA)) retConn = new RsDraConnection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RSDA))  retConn = new RsDaConnection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_LUW))      retConn = new Db2Connection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS))      retConn = new Db2Connection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY))        retConn = new DerbyConnection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2))           retConn = new H2Connection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HANA))         retConn = new HanaConnection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MAXDB))        retConn = new MaxDbConnection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL))        retConn = new MySqlConnection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE))       retConn = new OracleConnection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_POSTGRES))     retConn = new PostgresConnection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL))        retConn = new SqlServerConnection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_APACHE_HIVE))  retConn = new ApacheHiveConnection(conn);
+//		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_COCKROACHDB))  retConn = new CockroachDbConnection(conn);
 		else
 		{
 			_logger.info("Creating a DbxConnection of 'UnknownConnection' for product '" + productName + "'.");
-			return new UnknownConnection(conn);
+			retConn = new UnknownConnection(conn);
 		}
+		
+		// Create the DBMS Version Info object, which holds "specifics" for every DBMS Vendor
+		// for example: 
+		//    * Sybase ASE will have method: isClusterEdition()
+		//    * SQL-Server will have method: isAzudeDatabase(), isXxx(), etc
+//		retConn.setDbmsVersionInfo( retConn.createDbmsVersionInfo() );
+		
+		// Return the connection
+		return retConn;
 	}
 
 
@@ -1128,6 +1172,8 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 	
 	public void clearCachedValues()
 	{
+		_dbmsVersionInfo         = null;
+
 		_databaseProductName     = null;
 		_databaseProductVersion  = null;
 		_databaseServerName      = null;

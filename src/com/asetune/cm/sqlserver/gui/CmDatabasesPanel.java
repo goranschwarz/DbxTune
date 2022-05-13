@@ -365,7 +365,7 @@ extends TabularCntrPanel
 			if (cm == null)
 				cm = getCm();
 
-			if (cm != null)
+			if (cm != null && LogOsDisk_pos != -1 && DataOsDisk_pos != -1) // On Azure the OS Log/Data is unknown
 			{
 				// The databases are PROBABALY SHARING same DISK so...
 				// add stuff to a Map, and later add it to categoryDataset

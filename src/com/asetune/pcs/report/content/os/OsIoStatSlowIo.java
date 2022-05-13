@@ -224,6 +224,11 @@ public class OsIoStatSlowIo extends OsAbstract
 				}
 			}
 
+
+// FIXME: do the below
+//Error; Column 'avgrq-sz' not found... 
+//sync this with; com/asetune/hostmon/MonitorIoLinux.java
+//There can/will be different number of columns (depem´nding on what OS (version) we monitor)
 			sql = "select * \n"
 					+ "from [CmOsIostat_abs] \n"
 					+ "where [await] > " + _aboveServiceTime + " \n"

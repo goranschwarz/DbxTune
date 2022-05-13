@@ -73,8 +73,8 @@ public class SqlServerPlanCacheHistory extends AseAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			sb.append("<b>Total number of days in the Plan Cache:</b> " + _planCacheDayCount + " <br>\n");
-			sb.append("<br>\n");
+//			sb.append("<b>Total number of days in the Plan Cache:</b> " + _planCacheDayCount + " <br>\n");
+//			sb.append("<br>\n");
 			
 			if (_planCacheSummary != null && !_planCacheSummary.isEmpty())
 			{

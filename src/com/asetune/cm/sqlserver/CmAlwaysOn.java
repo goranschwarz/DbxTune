@@ -74,6 +74,7 @@ import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.DbxConnectionPool;
 import com.asetune.sql.conn.DbxConnectionPoolMap;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.JsonUtils;
 import com.asetune.utils.OpenSslAesUtil;
@@ -214,6 +215,27 @@ extends CountersModel
 	public static final String GRAPH_NAME_RECOVERY_QUEUE      = "RecoveryQueue";
 
 
+	@Override
+	public boolean checkDependsOnVersion(DbxConnection conn)
+	{
+		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+		{
+			_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '"+getDisplayName() + "', connected to Azure SQL Database or Analytics, which do NOT support this.");
+
+			setActive(false, "This info is NOT available in Azure SQL Database or Azure Synapse/Analytics.");
+
+			TabularCntrPanel tcp = getTabPanel();
+			if (tcp != null)
+			{
+				tcp.setToolTipText("This info is NOT available in Azure SQL Database or Azure Synapse/Analytics.");
+			}
+			return false;
+		}
+
+		return super.checkDependsOnVersion(conn);
+	}
+	
 	private void addTrendGraphs()
 	{
 		addTrendGraph(GRAPH_NAME_WRITE_TRANS,
@@ -2354,12 +2376,10 @@ extends CountersModel
 						
 						alarmHandler.addAlarm( ae );
 					}
-					
 				}
-				
 			}
 		} // end: loop rows
-	}
+	} // end: method
 
 
 	public static final String  PROPKEY_alarm_RoleChange                      = CM_NAME + ".alarm.system.on.RoleChange";
@@ -2382,7 +2402,6 @@ extends CountersModel
 
 	public static final String  PROPKEY_alarm_SplitBrain                      = CM_NAME + ".alarm.system.on.SplitBrain";
 	public static final boolean DEFAULT_alarm_SplitBrain                      = true;
-
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()

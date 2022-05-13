@@ -151,4 +151,31 @@ public interface IDbmsConfigText
 	 * @return true if it's enabled or false if not
 	 */
 	boolean isEnabled();
+
+
+//	/**
+//	 * Like 'isEnabled()' but in here we can check for various things on the DbxConnection and return a message why this was skipped if ww can't do the check!
+//	 * @param conn
+//	 * @return null or empty string if we should proceed, otherwise a message why this config check cant be done.
+//	 */
+//	String getSkipReason(DbxConnection conn);
+
+
+	/**
+	 * Checks if we meet all the requirements for this configuration check
+	 * <p>
+	 * This typically does
+	 * <ul>
+	 *   <li>Check if we can get the configuration, due to compatible version</li>
+	 *   <li>Check if we can get the configuration, due to cluster</li>
+	 *   <li>Check if we can get the configuration, due to enough rights/role based.</li>
+	 *   <li>etc</li>
+	 * </ul>
+	 * 
+	 * Override this if you have special needs...
+	 * 
+	 * @param conn
+	 * @return null or empty string if we should proceed, otherwise a message why this configuration check can't be checked.
+	 */
+	String checkRequirements(DbxConnection conn);
 }

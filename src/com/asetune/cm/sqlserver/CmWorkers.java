@@ -25,6 +25,8 @@ import java.util.List;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CounterSetTemplates;
@@ -35,7 +37,9 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Ver;
 
 /**
@@ -44,7 +48,7 @@ import com.asetune.utils.Ver;
 public class CmWorkers
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmServiceMemory.class);
+	private static Logger        _logger          = Logger.getLogger(CmWorkers.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmWorkers.class.getSimpleName();
@@ -140,6 +144,27 @@ extends CountersModel
 //		return new CmRaSysmonPanel(this);
 //	}
 
+	@Override
+	public boolean checkDependsOnVersion(DbxConnection conn)
+	{
+		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+		{
+			_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '"+getDisplayName() + "', connected to Azure SQL Database or Analytics, which do NOT support this.");
+
+			setActive(false, "This info is NOT available in Azure SQL Database or Azure Synapse/Analytics.");
+
+			TabularCntrPanel tcp = getTabPanel();
+			if (tcp != null)
+			{
+				tcp.setToolTipText("This info is NOT available in Azure SQL Database or Azure Synapse/Analytics.");
+			}
+			return false;
+		}
+
+		return super.checkDependsOnVersion(conn);
+	}
+	
 	@Override
 	public void addMonTableDictForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
 	{

@@ -3922,6 +3922,30 @@ public class StringUtil
 		return list;
 	}
 
+	
+	/**
+	 * Check a input String if it matches any of the regular expressions in the passed "regExList"
+	 * @param input           String to check
+	 * @param regExList       Collection of Regular Expressions that we want to test if for 
+	 * @return true on match
+	 */
+	public static boolean matchesAny(String input, Collection<String> regExList)
+	{
+		// Early exit on invalid data
+		if (input     == null)   return false;
+		if (regExList == null)   return false;
+		if (regExList.isEmpty()) return false;
+
+		for (String regex : regExList)
+		{
+			if (input.matches(regex))
+				return true;
+		}
+
+		return false;
+	}
+	
+	
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
 	//// TEST CODE

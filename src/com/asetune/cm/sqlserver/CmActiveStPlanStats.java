@@ -35,6 +35,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.swing.ColumnHeaderPropsEntry;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Ver;
 
 /**
@@ -154,6 +155,16 @@ extends CountersModel
 //	{
 //		return new CmActiveStatementsPlanStatsPanel(this);
 //	}
+
+	@Override
+	public boolean checkDependsOnVersion(DbxConnection conn)
+	{
+		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+			return true;
+
+		return super.checkDependsOnVersion(conn);
+	}
 
 	@Override
 	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzure)

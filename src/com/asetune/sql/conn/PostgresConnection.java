@@ -31,6 +31,8 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoPostgres;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoPostgres;
 import com.asetune.ui.autocomplete.completions.TableExtraInfo;
@@ -46,6 +48,12 @@ public class PostgresConnection extends DbxConnection
 		super(conn);
 		Ver.majorVersion_mustBeTenOrAbove = true;
 //System.out.println("constructor::PostgresConnection(conn): conn="+conn);
+	}
+
+	@Override
+	public DbmsVersionInfo createDbmsVersionInfo()
+	{
+		return new DbmsVersionInfoPostgres(this);
 	}
 
 	@Override

@@ -38,6 +38,7 @@ import org.apache.log4j.Logger;
 import com.asetune.config.dbms.DbmsConfigIssue.Severity;
 import com.asetune.config.dict.AseTraceFlagsDictionary;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
@@ -568,8 +569,11 @@ public abstract class AseConfigText
 		}
 
 		@Override
-		protected String getSqlCurrentConfig(long srvVersion)
+//		protected String getSqlCurrentConfig(long srvVersion)
+		protected String getSqlCurrentConfig(DbmsVersionInfo versionInfo)
 		{
+			long srvVersion = versionInfo.getLongVersion();
+
 			String sql = 
 				"select ConfigSnapshotAtDateTime = convert(varchar(30),getdate(),109) \n" +
 
@@ -687,8 +691,12 @@ public abstract class AseConfigText
 		@Override public    String     getConfigType()                     { return getName(); }
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseConfigHistory; }
 		@Override public    long       needVersion()                       { return Ver.ver(16,0); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) 
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) 
+		@Override
+		protected String getSqlCurrentConfig(DbmsVersionInfo versionInfo)
 		{
+//			long srvVersion = versionInfo.getLongVersion();
+
 			return ""
 				+ "-- Check if the database exists... \n"
 				+ "if exists (select * from master.dbo.sysdatabases where name = 'sybsecurity') \n"
@@ -756,39 +764,43 @@ public abstract class AseConfigText
 
 	public static class ThreadPool extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                       { return "Thread Pools"; }
-		@Override public    String     getName()                           { return ConfigType.AseThreadPool.toString(); }
-		@Override public    String     getConfigType()                     { return getName(); }
-//		@Override public    ConfigType getConfigType()                     { return ConfigType.AseThreadPool; }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from master.dbo.monThreadPool"; }
-		@Override public    long       needVersion()                       { return Ver.ver(15,7); }
+		@Override public    String     getTabLabel()                          { return "Thread Pools"; }
+		@Override public    String     getName()                              { return ConfigType.AseThreadPool.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override public    ConfigType getConfigType()                        { return ConfigType.AseThreadPool; }
+		@Override public    long       needVersion()                          { return Ver.ver(15,7); }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "select * from master.dbo.monThreadPool"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from master.dbo.monThreadPool"; }
 	}
 
 	public static class HelpDb extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                       { return "sp_helpdb"; }
-		@Override public    String     getName()                           { return ConfigType.AseHelpDb.toString(); }
-		@Override public    String     getConfigType()                     { return getName(); }
-//		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpDb; }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_helpdb"; }
+		@Override public    String     getTabLabel()                          { return "sp_helpdb"; }
+		@Override public    String     getName()                              { return ConfigType.AseHelpDb.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override public    ConfigType getConfigType()                        { return ConfigType.AseHelpDb; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "exec sp_helpdb"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "exec sp_helpdb"; }
 	}
 
 	public static class Tempdb extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                       { return "tempdb"; }
-		@Override public    String     getName()                           { return ConfigType.AseTempdb.toString(); }
-		@Override public    String     getConfigType()                     { return getName(); }
-//		@Override public    ConfigType getConfigType()                     { return ConfigType.AseTempdb; }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_tempdb 'show'"; }
+		@Override public    String     getTabLabel()                          { return "tempdb"; }
+		@Override public    String     getName()                              { return ConfigType.AseTempdb.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override public    ConfigType getConfigType()                        { return ConfigType.AseTempdb; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "exec sp_tempdb 'show'"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "exec sp_tempdb 'show'"; }
 	}
 
 	public static class HelpDevice extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                       { return "sp_helpdevice"; }
-		@Override public    String     getName()                           { return ConfigType.AseHelpDevice.toString(); }
-		@Override public    String     getConfigType()                     { return getName(); }
-//		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpDevice; }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_helpdevice"; }
+		@Override public    String     getTabLabel()                          { return "sp_helpdevice"; }
+		@Override public    String     getName()                              { return ConfigType.AseHelpDevice.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override public    ConfigType getConfigType()                        { return ConfigType.AseHelpDevice; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "exec sp_helpdevice"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "exec sp_helpdevice"; }
 		
 		@Override
 		public void checkConfig(DbxConnection conn)
@@ -857,21 +869,23 @@ public abstract class AseConfigText
 
 	public static class DeviceFsSpaceUsage extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                       { return "Device FS Usage"; }
-		@Override public    String     getName()                           { return ConfigType.AseDeviceFsSpaceUsage.toString(); }
-		@Override public    String     getConfigType()                     { return getName(); }
-//		@Override public    ConfigType getConfigType()                     { return ConfigType.AseDeviceFsSpaceUsage; }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from master.dbo.monDeviceSpaceUsage"; }
-		@Override public    long       needVersion()                       { return Ver.ver(15,7); }
+		@Override public    String     getTabLabel()                          { return "Device FS Usage"; }
+		@Override public    String     getName()                              { return ConfigType.AseDeviceFsSpaceUsage.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override public    ConfigType getConfigType()                        { return ConfigType.AseDeviceFsSpaceUsage; }
+		@Override public    long       needVersion()                          { return Ver.ver(15,7); }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "select * from master.dbo.monDeviceSpaceUsage"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from master.dbo.monDeviceSpaceUsage"; }
 	}
 
 	public static class HelpServer extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                       { return "sp_helpserver"; }
-		@Override public    String     getName()                           { return ConfigType.AseHelpServer.toString(); }
-		@Override public    String     getConfigType()                     { return getName(); }
-//		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpServer; }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_helpserver"; }
+		@Override public    String     getTabLabel()                          { return "sp_helpserver"; }
+		@Override public    String     getName()                              { return ConfigType.AseHelpServer.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override public    ConfigType getConfigType()                        { return ConfigType.AseHelpServer; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "exec sp_helpserver"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "exec sp_helpserver"; }
 	}
 
 	public static class Traceflags extends DbmsConfigTextAbstract
@@ -893,11 +907,12 @@ public abstract class AseConfigText
 			return needAnyRole;
 		}
 		@Override 
-		protected String getSqlCurrentConfig(long srvVersion) 
+//		protected String getSqlCurrentConfig(long srvVersion) 
+		protected String getSqlCurrentConfig(DbmsVersionInfo versionInfo)
 		{
+			long srvVersion = versionInfo.getLongVersion();
+			
 			// 12.5.4 esd#2 and 15.0.2 supports "show switch", which makes less output in the ASE Errorlog
-//			if (srvVersion >= 15020 || (srvVersion >= 12542 && srvVersion < 15000) )
-//			if (srvVersion >= 1502000 || (srvVersion >= 1254020 && srvVersion < 1500000) )
 			if (srvVersion >= Ver.ver(15,0,2) || (srvVersion >= Ver.ver(12,5,4,2) && srvVersion < Ver.ver(15,0)) )
 				return "show switch"; 
 			else
@@ -1002,21 +1017,23 @@ public abstract class AseConfigText
 
 	public static class SpVersion extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                       { return "sp_version"; }
-		@Override public    String     getName()                           { return ConfigType.AseSpVersion.toString(); }
-		@Override public    String     getConfigType()                     { return getName(); }
-//		@Override public    ConfigType getConfigType()                     { return ConfigType.AseSpVersion; }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_version"; }
-		@Override public    long       needVersion()                       { return Ver.ver(12,5,4); }
+		@Override public    String     getTabLabel()                          { return "sp_version"; }
+		@Override public    String     getName()                              { return ConfigType.AseSpVersion.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override public    ConfigType getConfigType()                        { return ConfigType.AseSpVersion; }
+		@Override public    long       needVersion()                          { return Ver.ver(12,5,4); }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "exec sp_version"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "exec sp_version"; }
 	}
 
 	public static class ShmDumpConfig extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                       { return "sp_shmdumpconfig"; }
-		@Override public    String     getName()                           { return ConfigType.AseShmDumpConfig.toString(); }
-		@Override public    String     getConfigType()                     { return getName(); }
-//		@Override public    ConfigType getConfigType()                     { return ConfigType.AseShmDumpConfig; }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_shmdumpconfig"; }
+		@Override public    String     getTabLabel()                          { return "sp_shmdumpconfig"; }
+		@Override public    String     getName()                              { return ConfigType.AseShmDumpConfig.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override public    ConfigType getConfigType()                        { return ConfigType.AseShmDumpConfig; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "exec sp_shmdumpconfig"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "exec sp_shmdumpconfig"; }
 
 		@Override
 		public void checkConfig(DbxConnection conn)
@@ -1202,11 +1219,12 @@ public abstract class AseConfigText
 
 	public static class MonitorConfig extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                       { return "sp_monitorconfig"; }
-		@Override public    String     getName()                           { return ConfigType.AseMonitorConfig.toString(); }
-		@Override public    String     getConfigType()                     { return getName(); }
-//		@Override public    ConfigType getConfigType()                     { return ConfigType.AseMonitorConfig; }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_monitorconfig 'all'"; }
+		@Override public    String     getTabLabel()                          { return "sp_monitorconfig"; }
+		@Override public    String     getName()                              { return ConfigType.AseMonitorConfig.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override public    ConfigType getConfigType()                        { return ConfigType.AseMonitorConfig; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "exec sp_monitorconfig 'all'"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "exec sp_monitorconfig 'all'"; }
 		@Override public    List<String> needRole()
 		{ 
 			List<String> list = new ArrayList<String>();
@@ -1275,50 +1293,54 @@ public abstract class AseConfigText
 	
 	public static class HelpSort extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                       { return "sp_helpsort"; }
-		@Override public    String     getName()                           { return ConfigType.AseHelpSort.toString(); }
-		@Override public    String     getConfigType()                     { return getName(); }
-//		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpSort; }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_helpsort"; }
+		@Override public    String     getTabLabel()                          { return "sp_helpsort"; }
+		@Override public    String     getName()                              { return ConfigType.AseHelpSort.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override public    ConfigType getConfigType()                        { return ConfigType.AseHelpSort; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "exec sp_helpsort"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "exec sp_helpsort"; }
 	}
 
 	public static class ResourceGovernor extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                       { return "Resource Governor"; }
-		@Override public    String     getName()                           { return ConfigType.AseResourceGovernor.toString(); }
-		@Override public    String     getConfigType()                     { return getName(); }
-//		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpResourceLimit; }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_help_resource_limit"; }
+		@Override public    String     getTabLabel()                          { return "Resource Governor"; }
+		@Override public    String     getName()                              { return ConfigType.AseResourceGovernor.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override public    ConfigType getConfigType()                        { return ConfigType.AseHelpResourceLimit; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "exec sp_help_resource_limit"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "exec sp_help_resource_limit"; }
 	}
 
 	public static class LicenceInfo extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                       { return "ASE License Info"; }
-		@Override public    String     getName()                           { return ConfigType.AseLicenseInfo.toString(); }
-		@Override public    String     getConfigType()                     { return getName(); }
-//		@Override public    ConfigType getConfigType()                     { return ConfigType.AseLicenseInfo; }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from master.dbo.monLicense"; }
-		@Override public    long       needVersion()                       { return Ver.ver(15,0); }
+		@Override public    String     getTabLabel()                          { return "ASE License Info"; }
+		@Override public    String     getName()                              { return ConfigType.AseLicenseInfo.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override public    ConfigType getConfigType()                        { return ConfigType.AseLicenseInfo; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "select * from master.dbo.monLicense"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from master.dbo.monLicense"; }
+		@Override public    long       needVersion()                          { return Ver.ver(15,0); }
 	}
 	
 	public static class ClusterInfo extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                       { return "Cluster Info"; }
-		@Override public    String     getName()                           { return ConfigType.AseClusterInfo.toString(); }
-		@Override public    String     getConfigType()                     { return getName(); }
-//		@Override public    ConfigType getConfigType()                     { return ConfigType.AseClusterInfo; }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_cluster 'logical', 'show', NULL"; }
-		@Override public    long       needVersion()                       { return Ver.ver(15,0,2); }
-		@Override public    boolean    needCluster()                       { return true; }
+		@Override public    String     getTabLabel()                          { return "Cluster Info"; }
+		@Override public    String     getName()                              { return ConfigType.AseClusterInfo.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override public    ConfigType getConfigType()                        { return ConfigType.AseClusterInfo; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "exec sp_cluster 'logical', 'show', NULL"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "exec sp_cluster 'logical', 'show', NULL"; }
+		@Override public    long       needVersion()                          { return Ver.ver(15,0,2); }
+		@Override public    boolean    needCluster()                          { return true; }
 	}
 	
 	public static class ConfigFile extends DbmsConfigTextAbstract
 	{
-		@Override public    String     getTabLabel()                       { return "Config File"; }
-		@Override public    String     getName()                           { return ConfigType.AseConfigFile.toString(); }
-		@Override public    String     getConfigType()                     { return getName(); }
-//		@Override public    ConfigType getConfigType()                     { return ConfigType.AseConfigFile; }
-		@Override public    long       needVersion()                       { return Ver.ver(15,0); }
+		@Override public    String     getTabLabel()                          { return "Config File"; }
+		@Override public    String     getName()                              { return ConfigType.AseConfigFile.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+//		@Override public    ConfigType getConfigType()                        { return ConfigType.AseConfigFile; }
+		@Override public    long       needVersion()                          { return Ver.ver(15,0); }
 		@Override public    List<String> needRole()
 		{ 
 			List<String> list = new ArrayList<String>();
@@ -1331,7 +1353,8 @@ public abstract class AseConfigText
 			list.add("enable file access");
 			return list;
 		}
-		@Override protected String     getSqlCurrentConfig(long srvVersion) 
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) 
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v)
 		{ 
 			return 
 			"declare @cmd      varchar(1024) \n" +

@@ -31,6 +31,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -324,6 +325,15 @@ extends CountersModel
 			master_files             = "master_files";  // SAME NAME IN AZURE ????
 		}
 
+		// Special thing for Azure SQL Database
+		String joinMasterFiles = "JOIN sys." + master_files +" b ON a.file_id = b.file_id AND a.database_id = b.database_id \n";
+		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+		{
+			// NOTE: for Azure SQL Database, tempdb will have faulty 'devicename' and 'physical_name' (but lets fix that LATER)
+			joinMasterFiles = "JOIN sys.database_files b ON a.file_id = b.file_id AND a.database_id in (db_id('tempdb'), db_id()) \n";
+		}
+
 
 		String sql = 
 			"SELECT /* ${cmCollectorName} */ \n"
@@ -371,7 +381,7 @@ extends CountersModel
 			+ "devicename = b.name, \n"
 			+ "b.physical_name \n"
 			+ "FROM sys." + dm_io_virtual_file_stats + " (NULL, NULL) a \n"
-			+ "JOIN sys." + master_files + " b ON a.file_id = b.file_id AND a.database_id = b.database_id \n"
+			+ joinMasterFiles
 //			+ "ORDER BY a.io_stall DESC \n";
 			+ "ORDER BY a.database_id, a.file_id \n";
 		return sql;

@@ -25,7 +25,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.NumberFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -34,9 +39,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoSqlServer;
 import com.asetune.ui.autocomplete.completions.TableExtraInfo;
@@ -65,6 +73,12 @@ extends DbxConnection
 
 	// Cached values
 	private List<String> _getActiveServerRolesOrPermissions = null;
+
+	@Override
+	public DbmsVersionInfo createDbmsVersionInfo()
+	{
+		return new DbmsVersionInfoSqlServer(this);
+	}
 
 	@Override
 	public void clearCachedValues()
@@ -96,7 +110,38 @@ extends DbxConnection
 	{
 		return true;
 	}
-	
+
+	public static String getEngineEdition(int engineEditionInt)
+	{
+		if      (engineEditionInt == 1) return "Personal/Desktop";
+		else if (engineEditionInt == 2) return "Standard";        
+		else if (engineEditionInt == 3) return "Enterprise";      
+		else if (engineEditionInt == 4) return "Express";         
+		else if (engineEditionInt == 5) return "Azure SQL Database";
+		else if (engineEditionInt == 6) return "Azure SQL Data Warehouse";
+	//	else if (engineEditionInt == 7) return "";
+		else if (engineEditionInt == 8) return "Azure Managed Instance";
+		else                            return "-unknown-";
+	}
+
+	public int getEngineEdition()
+	{
+		int engineEditionInt = -1;
+		String sql = "SELECT CAST(SERVERPROPERTY('EngineEdition') as int)";
+		try (Statement stmnt = _conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+			{
+				engineEditionInt = rs.getInt(1);
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("Problem discovering SQL-Server EngineEdition using SQL=|" + sql + "|. Caught: " + ex);
+		}
+		return engineEditionInt;
+	}
+
 	@Override
 	public long getDbmsVersionNumber()
 	{
@@ -105,11 +150,84 @@ extends DbxConnection
 		// version
 		try
 		{
-			String versionStr = "";
+			int engineEditionInt = getEngineEdition();
 
-			versionStr    = getDbmsVersionStr();
-		//	srvVersionNum = VersionSqlServer.parseVersionStringToNumber(versionStr);
-			srvVersionNum = Ver.sqlServerVersionStringToNumber(versionStr);
+			long baseAzureVersion = 0;
+			if      (engineEditionInt == 5) baseAzureVersion = DbmsVersionInfoSqlServer.VERSION_AZURE_SQL_DB;             // "Azure SQL Database";
+			else if (engineEditionInt == 6) baseAzureVersion = DbmsVersionInfoSqlServer.VERSION_AZURE_SYNAPSE_ANALYTICS;  // "Azure SQL Data Warehouse";
+			else if (engineEditionInt == 8) baseAzureVersion = DbmsVersionInfoSqlServer.VERSION_AZURE_MANAGED_INSTANCE;   // "Azure Managed Instance";
+			
+//			DbmsVersionInfoSqlServer dbmsVersion = (DbmsVersionInfoSqlServer) getDbmsVersionInfo();
+			
+			// If any AZURE Instance
+			if (baseAzureVersion != 0)
+			{
+				// 5 == Azure SQL Database
+				if (engineEditionInt == 5) 
+				{
+					srvVersionNum = DbmsVersionInfoSqlServer.VERSION_AZURE_SQL_DB;
+
+					// Azure SQL Database version String looks like this: Microsoft SQL Azure (RTM) - 12.0.2000.8 Feb 23 2022 11:32:53 Copyright (C) 2021 Microsoft Corporation
+					// Lets grab "month day year" and keep that as of what Azure "version" we are connected to 
+					String versionStr = getDbmsVersionStr();
+					
+					if (StringUtil.hasValue(versionStr))
+					{
+						// Microsoft SQL Azure (RTM) - 12.0.2000.8 Feb 23 2022 11:32:53 Copyright (C) 2021 Microsoft Corporation
+						String buildDateStr = StringUtils.trim( StringUtils.substringBetween(versionStr, " - ", "Copyright") );
+						if (StringUtil.hasValue(buildDateStr))
+							buildDateStr = StringUtils.trim( StringUtils.substringAfter(buildDateStr, " ") );
+						if (StringUtil.hasValue(buildDateStr))
+						{
+							try
+							{
+								SimpleDateFormat sdf = new SimpleDateFormat("MMM dd yyyy HH:mm:ss");
+								Date buildDate = sdf.parse(buildDateStr);
+
+								Calendar calendar = new GregorianCalendar();
+								calendar.setTime(buildDate);
+
+								int year  = calendar.get(Calendar.YEAR);
+								int month = calendar.get(Calendar.MONTH);
+								int day   = calendar.get(Calendar.DAY_OF_MONTH);
+								
+								int newVersionNum = 0;
+								newVersionNum += year  * 1_0000;
+								newVersionNum += month * 1_00;
+								newVersionNum += day;
+
+								srvVersionNum = srvVersionNum + newVersionNum;
+								
+								// System.out.println(">>>> ---- AZURE-SQL-DATABASE: buildStr=|"+buildDateStr+"|, year="+year+", month="+month+", day="+day+", newVersionNum="+srvVersionNum);
+							}
+							catch (ParseException ex)
+							{
+								_logger.warn("Problem parsing the buildDate='" + buildDateStr + "' from the Version String '" + versionStr + "'. Caught: " + ex);
+							}
+						}
+					}
+				}
+				
+				// 6 == Azure Synapse Analytics
+				if (engineEditionInt == 6) 
+				{
+					// TODO: parse some more info to build "subversion" (on release date)
+					srvVersionNum = DbmsVersionInfoSqlServer.VERSION_AZURE_SYNAPSE_ANALYTICS;
+				}
+
+				// 8 == Azure SQL Server Managed Instance
+				if (engineEditionInt == 8)
+				{
+					// TODO: parse some more info to build "subversion" (on release date)
+					srvVersionNum = DbmsVersionInfoSqlServer.VERSION_AZURE_MANAGED_INSTANCE;
+				}
+			}
+			else
+			{
+				String versionStr = getDbmsVersionStr();
+			//	srvVersionNum = VersionSqlServer.parseVersionStringToNumber(versionStr);
+				srvVersionNum = Ver.sqlServerVersionStringToNumber(versionStr);
+			}
 		}
 		catch (SQLException ex)
 		{

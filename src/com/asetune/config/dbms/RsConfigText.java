@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.RepServerUtils;
 
 
@@ -83,12 +84,13 @@ public abstract class RsConfigText
 			}
 		}
 
-		@Override public    String        getConfigType()                     { return getName(); }
-		@Override public    String        getName()                           { return "RsConfigAsText"; }
-		@Override public    String        getTabLabel()                       { return "RCL Config (all)"; }
-		@Override protected String        getSqlCurrentConfig(long srvVersion) { return "-- well nothing, since we do it all in refresh()"; }
-		@Override public    boolean       getKeepDbmsState()                  { return false; }
-		@Override public    List<Integer> getDiscardDbmsErrorList()           { return _discardRsMsgNumbers; }
+		@Override public    String        getConfigType()                        { return getName(); }
+		@Override public    String        getName()                              { return "RsConfigAsText"; }
+		@Override public    String        getTabLabel()                          { return "RCL Config (all)"; }
+//		@Override protected String        getSqlCurrentConfig(long srvVersion)   { return "-- well nothing, since we do it all in refresh()"; }
+		@Override protected String        getSqlCurrentConfig(DbmsVersionInfo v) { return "-- well nothing, since we do it all in refresh()"; }
+		@Override public    boolean       getKeepDbmsState()                     { return false; }
+		@Override public    List<Integer> getDiscardDbmsErrorList()              { return _discardRsMsgNumbers; }
 	}
 
 	public static class RsConfigAsTextNonDefault extends DbmsConfigTextAbstract
@@ -108,101 +110,111 @@ public abstract class RsConfigText
 			}
 		}
 
-		@Override public    String        getConfigType()                     { return getName(); }
-		@Override public    String        getName()                           { return "RsConfigAsTextNonDefault"; }
-		@Override public    String        getTabLabel()                       { return "RCL Config (non defaults)"; }
-		@Override protected String        getSqlCurrentConfig(long srvVersion) { return "-- well nothing, since we do it all in refresh()"; }
-		@Override public    boolean       getKeepDbmsState()                  { return false; }
-		@Override public    List<Integer> getDiscardDbmsErrorList()           { return _discardRsMsgNumbers; }
+		@Override public    String        getConfigType()                        { return getName(); }
+		@Override public    String        getName()                              { return "RsConfigAsTextNonDefault"; }
+		@Override public    String        getTabLabel()                          { return "RCL Config (non defaults)"; }
+//		@Override protected String        getSqlCurrentConfig(long srvVersion)   { return "-- well nothing, since we do it all in refresh()"; }
+		@Override protected String        getSqlCurrentConfig(DbmsVersionInfo v) { return "-- well nothing, since we do it all in refresh()"; }
+		@Override public    boolean       getKeepDbmsState()                     { return false; }
+		@Override public    List<Integer> getDiscardDbmsErrorList()              { return _discardRsMsgNumbers; }
 	}
 
 	public static class RsConfig extends DbmsConfigTextAbstract
 	{
-		@Override public    String        getTabLabel()                       { return "rs_config"; }
-		@Override public    String        getName()                           { return "RsConfig"; }
-		@Override public    String        getConfigType()                     { return getName(); }
-		@Override protected String        getSqlCurrentConfig(long srvVersion) { return "connect to rssd\ngo\n select * from rs_config \ngo\ndisconnect"; }
-		@Override public    boolean       getKeepDbmsState()                  { return false; }
-		@Override public    List<Integer> getDiscardDbmsErrorList()           { return _discardRsMsgNumbers; }
+		@Override public    String        getTabLabel()                          { return "rs_config"; }
+		@Override public    String        getName()                              { return "RsConfig"; }
+		@Override public    String        getConfigType()                        { return getName(); }
+//		@Override protected String        getSqlCurrentConfig(long srvVersion)   { return "connect to rssd\ngo\n select * from rs_config \ngo\ndisconnect"; }
+		@Override protected String        getSqlCurrentConfig(DbmsVersionInfo v) { return "connect to rssd\ngo\n select * from rs_config \ngo\ndisconnect"; }
+		@Override public    boolean       getKeepDbmsState()                     { return false; }
+		@Override public    List<Integer> getDiscardDbmsErrorList()              { return _discardRsMsgNumbers; }
 	}
 
 	public static class RsTbConfig extends DbmsConfigTextAbstract
 	{
-		@Override public    String        getTabLabel()                       { return "rs_tbconfig"; }
-		@Override public    String        getName()                           { return "RsTbConfig"; }
-		@Override public    String        getConfigType()                     { return getName(); }
-		@Override protected String        getSqlCurrentConfig(long srvVersion) { return "connect to rssd\ngo\n select * from rs_tbconfig \ngo\ndisconnect"; }
-		@Override public    boolean       getKeepDbmsState()                  { return false; }
-		@Override public    List<Integer> getDiscardDbmsErrorList()           { return _discardRsMsgNumbers; }
+		@Override public    String        getTabLabel()                          { return "rs_tbconfig"; }
+		@Override public    String        getName()                              { return "RsTbConfig"; }
+		@Override public    String        getConfigType()                        { return getName(); }
+//		@Override protected String        getSqlCurrentConfig(long srvVersion)   { return "connect to rssd\ngo\n select * from rs_tbconfig \ngo\ndisconnect"; }
+		@Override protected String        getSqlCurrentConfig(DbmsVersionInfo v) { return "connect to rssd\ngo\n select * from rs_tbconfig \ngo\ndisconnect"; }
+		@Override public    boolean       getKeepDbmsState()                     { return false; }
+		@Override public    List<Integer> getDiscardDbmsErrorList()              { return _discardRsMsgNumbers; }
 	}
 
 	public static class RsLogicalStatus extends DbmsConfigTextAbstract
 	{
-		@Override public    String        getTabLabel()                       { return "Logical Conn"; }
-		@Override public    String        getName()                           { return "RsLogicalStatus"; }
-		@Override public    String        getConfigType()                     { return getName(); }
-		@Override protected String        getSqlCurrentConfig(long srvVersion) { return "admin logical_status"; }
-		@Override public    boolean       getKeepDbmsState()                  { return false; }
-		@Override public    List<Integer> getDiscardDbmsErrorList()           { return _discardRsMsgNumbers; }
+		@Override public    String        getTabLabel()                          { return "Logical Conn"; }
+		@Override public    String        getName()                              { return "RsLogicalStatus"; }
+		@Override public    String        getConfigType()                        { return getName(); }
+//		@Override protected String        getSqlCurrentConfig(long srvVersion)   { return "admin logical_status"; }
+		@Override protected String        getSqlCurrentConfig(DbmsVersionInfo v) { return "admin logical_status"; }
+		@Override public    boolean       getKeepDbmsState()                     { return false; }
+		@Override public    List<Integer> getDiscardDbmsErrorList()              { return _discardRsMsgNumbers; }
 	}
 
 	public static class RsHelpDb extends DbmsConfigTextAbstract
 	{
-		@Override public    String        getTabLabel()                       { return "rs_help-db"; }
-		@Override public    String        getName()                           { return "RsHelpDb"; }
-		@Override public    String        getConfigType()                     { return getName(); }
-		@Override protected String        getSqlCurrentConfig(long srvVersion) { return "connect to rssd\ngo\n exec rs_helpdb \ngo\ndisconnect"; }
-		@Override public    boolean       getKeepDbmsState()                  { return false; }
-		@Override public    List<Integer> getDiscardDbmsErrorList()           { return _discardRsMsgNumbers; }
+		@Override public    String        getTabLabel()                          { return "rs_help-db"; }
+		@Override public    String        getName()                              { return "RsHelpDb"; }
+		@Override public    String        getConfigType()                        { return getName(); }
+//		@Override protected String        getSqlCurrentConfig(long srvVersion)   { return "connect to rssd\ngo\n exec rs_helpdb \ngo\ndisconnect"; }
+		@Override protected String        getSqlCurrentConfig(DbmsVersionInfo v) { return "connect to rssd\ngo\n exec rs_helpdb \ngo\ndisconnect"; }
+		@Override public    boolean       getKeepDbmsState()                     { return false; }
+		@Override public    List<Integer> getDiscardDbmsErrorList()              { return _discardRsMsgNumbers; }
 	}
 
 	public static class RsHelpDbRep extends DbmsConfigTextAbstract
 	{
-		@Override public    String        getTabLabel()                       { return "rs_help-db-rep"; }
-		@Override public    String        getName()                           { return "RsHelpDbRep"; }
-		@Override public    String        getConfigType()                     { return getName(); }
-		@Override protected String        getSqlCurrentConfig(long srvVersion) { return "connect to rssd\ngo\n exec rs_helpdbrep \ngo\ndisconnect"; }
-		@Override public    boolean       getKeepDbmsState()                  { return false; }
-		@Override public    List<Integer> getDiscardDbmsErrorList()           { return _discardRsMsgNumbers; }
+		@Override public    String        getTabLabel()                          { return "rs_help-db-rep"; }
+		@Override public    String        getName()                              { return "RsHelpDbRep"; }
+		@Override public    String        getConfigType()                        { return getName(); }
+//		@Override protected String        getSqlCurrentConfig(long srvVersion)   { return "connect to rssd\ngo\n exec rs_helpdbrep \ngo\ndisconnect"; }
+		@Override protected String        getSqlCurrentConfig(DbmsVersionInfo v) { return "connect to rssd\ngo\n exec rs_helpdbrep \ngo\ndisconnect"; }
+		@Override public    boolean       getKeepDbmsState()                     { return false; }
+		@Override public    List<Integer> getDiscardDbmsErrorList()              { return _discardRsMsgNumbers; }
 	}
 
 	public static class RsHelpDbSub extends DbmsConfigTextAbstract
 	{
-		@Override public    String        getTabLabel()                       { return "rs_help-db-sub"; }
-		@Override public    String        getName()                           { return "RsHelpDbSub"; }
-		@Override public    String        getConfigType()                     { return getName(); }
-		@Override protected String        getSqlCurrentConfig(long srvVersion) { return "connect to rssd\ngo\n exec rs_helpdbsub \ngo\ndisconnect"; }
-		@Override public    boolean       getKeepDbmsState()                  { return false; }
-		@Override public    List<Integer> getDiscardDbmsErrorList()           { return _discardRsMsgNumbers; }
+		@Override public    String        getTabLabel()                          { return "rs_help-db-sub"; }
+		@Override public    String        getName()                              { return "RsHelpDbSub"; }
+		@Override public    String        getConfigType()                        { return getName(); }
+//		@Override protected String        getSqlCurrentConfig(long srvVersion)   { return "connect to rssd\ngo\n exec rs_helpdbsub \ngo\ndisconnect"; }
+		@Override protected String        getSqlCurrentConfig(DbmsVersionInfo v) { return "connect to rssd\ngo\n exec rs_helpdbsub \ngo\ndisconnect"; }
+		@Override public    boolean       getKeepDbmsState()                     { return false; }
+		@Override public    List<Integer> getDiscardDbmsErrorList()              { return _discardRsMsgNumbers; }
 	}
 
 	public static class RsHelpRep extends DbmsConfigTextAbstract
 	{
-		@Override public    String        getTabLabel()                       { return "rs_help-rep"; }
-		@Override public    String        getName()                           { return "RsHelpRep"; }
-		@Override public    String        getConfigType()                     { return getName(); }
-		@Override protected String        getSqlCurrentConfig(long srvVersion) { return "connect to rssd\ngo\n exec rs_helprep \ngo\ndisconnect"; }
-		@Override public    boolean       getKeepDbmsState()                  { return false; }
-		@Override public    List<Integer> getDiscardDbmsErrorList()           { return _discardRsMsgNumbers; }
+		@Override public    String        getTabLabel()                          { return "rs_help-rep"; }
+		@Override public    String        getName()                              { return "RsHelpRep"; }
+		@Override public    String        getConfigType()                        { return getName(); }
+//		@Override protected String        getSqlCurrentConfig(long srvVersion)   { return "connect to rssd\ngo\n exec rs_helprep \ngo\ndisconnect"; }
+		@Override protected String        getSqlCurrentConfig(DbmsVersionInfo v) { return "connect to rssd\ngo\n exec rs_helprep \ngo\ndisconnect"; }
+		@Override public    boolean       getKeepDbmsState()                     { return false; }
+		@Override public    List<Integer> getDiscardDbmsErrorList()              { return _discardRsMsgNumbers; }
 	}
 
 	public static class RsHelpSub extends DbmsConfigTextAbstract
 	{
-		@Override public    String        getTabLabel()                       { return "rs_help-sub"; }
-		@Override public    String        getName()                           { return "RsHelpSub"; }
-		@Override public    String        getConfigType()                     { return getName(); }
-		@Override protected String        getSqlCurrentConfig(long srvVersion) { return "connect to rssd\ngo\n exec rs_helpsub \ngo\ndisconnect"; }
-		@Override public    boolean       getKeepDbmsState()                  { return false; }
-		@Override public    List<Integer> getDiscardDbmsErrorList()           { return _discardRsMsgNumbers; }
+		@Override public    String        getTabLabel()                          { return "rs_help-sub"; }
+		@Override public    String        getName()                              { return "RsHelpSub"; }
+		@Override public    String        getConfigType()                        { return getName(); }
+//		@Override protected String        getSqlCurrentConfig(long srvVersion)   { return "connect to rssd\ngo\n exec rs_helpsub \ngo\ndisconnect"; }
+		@Override protected String        getSqlCurrentConfig(DbmsVersionInfo v) { return "connect to rssd\ngo\n exec rs_helpsub \ngo\ndisconnect"; }
+		@Override public    boolean       getKeepDbmsState()                     { return false; }
+		@Override public    List<Integer> getDiscardDbmsErrorList()              { return _discardRsMsgNumbers; }
 	}
 
 	public static class RsLicenceInfo extends DbmsConfigTextAbstract
 	{
-		@Override public    String        getTabLabel()                       { return "RS License Info"; }
-		@Override public    String        getName()                           { return "RsLicenceInfo"; }
-		@Override public    String        getConfigType()                     { return getName(); }
-		@Override protected String        getSqlCurrentConfig(long srvVersion) { return "sysadmin lmconfig"; }
-		@Override public    boolean       getKeepDbmsState()                  { return false; }
-		@Override public    List<Integer> getDiscardDbmsErrorList()           { return _discardRsMsgNumbers; }
+		@Override public    String        getTabLabel()                          { return "RS License Info"; }
+		@Override public    String        getName()                              { return "RsLicenceInfo"; }
+		@Override public    String        getConfigType()                        { return getName(); }
+//		@Override protected String        getSqlCurrentConfig(long srvVersion)   { return "sysadmin lmconfig"; }
+		@Override protected String        getSqlCurrentConfig(DbmsVersionInfo v) { return "sysadmin lmconfig"; }
+		@Override public    boolean       getKeepDbmsState()                     { return false; }
+		@Override public    List<Integer> getDiscardDbmsErrorList()              { return _discardRsMsgNumbers; }
 	}
 }
