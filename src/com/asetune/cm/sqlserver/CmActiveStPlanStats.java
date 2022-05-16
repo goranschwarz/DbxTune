@@ -35,6 +35,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.swing.ColumnHeaderPropsEntry;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Ver;
 
@@ -167,13 +168,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -186,7 +187,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("index_name",    21));
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("object_name",   21));

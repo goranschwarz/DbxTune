@@ -62,6 +62,7 @@ import com.asetune.hostmon.HostMonitor;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.ssh.SshConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -331,13 +332,16 @@ implements ICounterController
 	 * @return a List of CountersModel objects
 	 */
 	@Override
-//	public List<CountersModel> getCmListDependsOnConfig(String cfgName, Connection conn, long srvVersion, boolean isClusterEnabled)
-	public List<CountersModel> getCmListDependsOnConfig(String cfgName, DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+//	public List<CountersModel> getCmListDependsOnConfig(String cfgName, DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public List<CountersModel> getCmListDependsOnConfig(String cfgName, DbxConnection conn)
 	{
+		DbmsVersionInfo versionInfo = conn.getDbmsVersionInfo();
+		
 		ArrayList<CountersModel> cmList = new ArrayList<CountersModel>();
 		for (CountersModel cm : getCmList())
 		{
-			String[] sa = cm.getDependsOnConfigForVersion(conn, srvVersion, isClusterEnabled);
+//			String[] sa = cm.getDependsOnConfigForVersion(conn, srvVersion, isClusterEnabled);
+			String[] sa = cm.getDependsOnConfigForVersion(conn, versionInfo);
 //			String[] sa = cm.getDependsOnConfig();
 			if ( sa == null )
 				continue;
@@ -354,11 +358,11 @@ implements ICounterController
 		}
 		return cmList; 
 	}
-	/** simply do: return getCmListDependsOnConfig(cfg, null, 0, false); */
-	public List<CountersModel> getCmListDependsOnConfig(String cfg)
-	{
-		return getCmListDependsOnConfig(cfg, null, 0, false);
-	}
+//	/** simply do: return getCmListDependsOnConfig(cfg, null, 0, false); */
+//	public List<CountersModel> getCmListDependsOnConfig(String cfg)
+//	{
+//		return getCmListDependsOnConfig(cfg, null, 0, false);
+//	}
 
 	/** 
 	 * Get <code>CountersModel</code> object for a CM that has the "short" name for example CMprocCallStack 

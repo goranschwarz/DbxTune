@@ -42,6 +42,8 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoSybaseAse;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
@@ -387,7 +389,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
@@ -408,8 +410,12 @@ extends CountersModel
 
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		DbmsVersionInfoSybaseAse aseVersionInfo = (DbmsVersionInfoSybaseAse) versionInfo;
+//		long    srvVersion       = aseVersionInfo.getLongVersion();
+		boolean isClusterEnabled = aseVersionInfo.isClusterEdition();
+
 		List <String> pkCols = new LinkedList<String>();
 
 		if (isClusterEnabled)
@@ -421,8 +427,12 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		DbmsVersionInfoSybaseAse aseVersionInfo = (DbmsVersionInfoSybaseAse) versionInfo;
+		long    srvVersion       = aseVersionInfo.getLongVersion();
+		boolean isClusterEnabled = aseVersionInfo.isClusterEdition();
+
 		Configuration conf = Configuration.getCombinedConfiguration();
 		boolean sample_resetAfter = conf.getBooleanProperty(PROPKEY_sample_resetAfter, DEFAULT_sample_resetAfter);
 
@@ -658,21 +668,19 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlInitForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlInitForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		long srvVersion = versionInfo.getLongVersion();
+
 		//---------------------------------------------
 		// SQL INIT (executed first time only)
 		// AFTER 12.5.2 traceon(8399) is no longer needed
 		//---------------------------------------------
 		String sqlInit = "DBCC traceon(3604) \n";
 
-//		if (srvVersion < 12520)
-//		if (srvVersion < 1252000)
 		if (srvVersion < Ver.ver(12,5,2))
 			sqlInit += "DBCC traceon(8399) \n";
 
-//		if (srvVersion >= 15020 || (srvVersion >= 12541 && srvVersion < 15000) )
-//		if (srvVersion >= 1502000 || (srvVersion >= 1254010 && srvVersion < 1500000) )
 		if (srvVersion >= Ver.ver(15,0,2) || (srvVersion >= Ver.ver(12,5,4,1) && srvVersion < Ver.ver(15,0)) )
 		{
 			sqlInit = "set switch on 3604 with no_info \n";
@@ -684,7 +692,7 @@ extends CountersModel
 		return sqlInit;
 	}
 	@Override
-	public String getSqlCloseForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled) 
+	public String getSqlCloseForVersion(DbxConnection conn, DbmsVersionInfo versionInfo) 
 	{
 		String sqlClose = 
 			"--DBCC monitor('select', 'all',        'off') \n" +

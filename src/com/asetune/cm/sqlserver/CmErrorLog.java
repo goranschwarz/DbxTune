@@ -48,6 +48,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TabularCntrPanelAppend;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -156,13 +157,13 @@ extends CountersModelAppend
 	}
 	
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return "exec master.dbo.xp_readerrorlog 0, 1, NULL, NULL, ${prevSampleTs}, NULL"; 
 	}

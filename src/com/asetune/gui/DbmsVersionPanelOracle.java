@@ -21,10 +21,20 @@
  ******************************************************************************/
 package com.asetune.gui;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+import javax.swing.JCheckBox;
+import javax.swing.JPanel;
+
 import org.apache.log4j.Logger;
 
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoOracle;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
+
+import net.miginfocom.swing.MigLayout;
 
 public class DbmsVersionPanelOracle
 extends DbmsVersionPanelAbstract
@@ -32,6 +42,9 @@ extends DbmsVersionPanelAbstract
 	private static final long serialVersionUID = 1L;
 	private static Logger _logger = Logger.getLogger(DbmsVersionPanelOracle.class);
 
+	protected JCheckBox _versionIsRac_chk = new JCheckBox("RAC", false);
+
+	
 	public DbmsVersionPanelOracle(ShowCmPropertiesDialog propDialog)
 	{
 		super(propDialog);
@@ -42,8 +55,62 @@ extends DbmsVersionPanelAbstract
 		setLabelAndTooltipSp     (true,     0, 0,  9, 1, "Comp",   "<html>The fourth digit identifies a release level specific to a component. Different components can have different numbers in this position depending upon, for example, component patch sets or interim releases. Example: 10.1.0.<b>1</b>.0</html>");
 		setLabelAndTooltipPl     (true,     0, 0,  9, 1, "Platf",  "<html>The fifth digit identifies a platform-specific release. Usually this is a patch set. When different platforms require the equivalent patch set, this digit will be the same across the affected platforms. Example: 10.1.0.1.<b>0</b></html>");
 		
-		setLabelAndTooltipEdition(true,  "RAC", "<html>Generate SQL Information for a RAC Server</html>");
+//		setLabelAndTooltipEdition(true,  "RAC", "<html>Generate SQL Information for a RAC Server</html>");
 	}
+
+	@Override
+	protected JPanel createDbmsPropertiesPanel()
+	{
+		JPanel p = new JPanel(new MigLayout());
+		
+		_versionIsRac_chk  .setToolTipText("<html>Generate SQL Information for a RAC Server</html>");
+
+		p.add(_versionIsRac_chk, "");
+		
+		_versionIsRac_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				DbmsVersionPanelOracle.super.stateChanged(null);
+			}
+		});
+
+		return p;
+	}
+
+	@Override
+	protected DbmsVersionInfo createEmptyDbmsVersionInfo()
+	{
+		return new DbmsVersionInfoOracle(getMinVersion());
+	}
+
+	@Override
+	protected DbmsVersionInfo createDbmsVersionInfo()
+	{
+		// Get long version number from GUI Spinners
+		long ver = getVersionNumberFromSpinners();
+
+		// Create a DBMS Server specific version object
+		DbmsVersionInfoOracle versionInfo = new DbmsVersionInfoOracle(ver);
+
+		// Set Oracle specifics (from any extended GUI fields)
+		versionInfo.setRac(_versionIsRac_chk.isSelected());
+		
+		return versionInfo;
+	}
+
+	@Override
+	public void loadFieldsUsingVersion(DbmsVersionInfo versionInfo)
+	{
+		super.loadFieldsUsingVersion(versionInfo);
+
+		// Set local fields
+		DbmsVersionInfoOracle oraVersionInfo = (DbmsVersionInfoOracle) versionInfo;
+
+		_versionIsRac_chk.setSelected(oraVersionInfo.isRac());
+	}
+	
 
 	@Override
 	public long parseVersionStringToNum(String versionStr)

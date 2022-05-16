@@ -48,6 +48,7 @@ import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.sql.ResultSetMetaDataChangable;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -179,7 +180,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
@@ -199,7 +200,7 @@ extends CountersModel
 	}
 
 	@Override
-	public void addMonTableDictForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		try 
 		{
@@ -250,7 +251,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -262,7 +263,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String  filterStr      = conf.getProperty(       PROPKEY_sample_filter,  DEFAULT_sample_filter);

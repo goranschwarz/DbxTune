@@ -48,6 +48,7 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.Ver;
 
@@ -271,13 +272,13 @@ extends CountersModel
 //	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public void addMonTableDictForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		try 
 		{
@@ -293,8 +294,10 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		long srvVersion = versionInfo.getLongVersion();
+
 		List <String> pkCols = new LinkedList<String>();
 
 		if (srvVersion >= Ver.ver(16,0,0, 3,4)) // 16.0 SP3 PL4 --- NOT Sure in what EXACT version this was introduced, but SAP RefManuals says: SP3 PL4
@@ -310,7 +313,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		String sql = "admin stats, mem_detail_stats";
 		return sql;

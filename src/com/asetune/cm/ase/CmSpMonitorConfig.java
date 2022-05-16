@@ -43,6 +43,7 @@ import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Configuration;
 
 /**
@@ -134,7 +135,7 @@ extends CountersModel
 //	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
@@ -151,7 +152,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 //		// NO PK is needed, because NO diff calc is done.
 //		return null;
@@ -164,7 +165,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		String sql = "exec sp_monitorconfig 'all'";
 		return sql;

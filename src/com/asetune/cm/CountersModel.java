@@ -2978,18 +2978,63 @@ implements Cloneable, ITableTooltip
 	 * If getSql() shows NULL or empty SQL statement, this method will be called
 	 * to compose a new SQL statement. 
 	 */
+//	public void initSql(DbxConnection conn)
+//	{
+//		// Get what version we are connected to.
+//		long    srvVersion       = getServerVersion();
+//		boolean isClusterEnabled = isClusterEnabled();
+//
+//		// Get what configuration we depends on
+//		String[] dependsOnConfig = getDependsOnConfigForVersion(conn, srvVersion, isClusterEnabled);
+//		setDependsOnConfig(dependsOnConfig);
+//		
+//		// Generate the SQL, for the specific ASE version
+//		String sql = getSqlForVersion(conn, srvVersion, isClusterEnabled);
+//
+//		// Replace any "${cmCollectorName}" --> "xxxTune:CmName"
+//		sql = replaceCollectorName(sql);
+//		
+//		// set the SQL to use
+//		if (useSqlPrefix())
+//		{
+//			String sqlPrefix = getSqlPrefix(); 
+//			setSql(sqlPrefix + sql);
+//		}
+//		else
+//		{
+//			setSql(sql);
+//		}
+//
+//		// Generate the SQL INIT, for the specific ASE version
+//		String sqlInit = getSqlInitForVersion(conn, srvVersion, isClusterEnabled);
+//		setSqlInit(sqlInit);
+//
+//		// Generate the SQL CLOSE, for the specific ASE version
+//		String sqlClose = getSqlCloseForVersion(conn, srvVersion, isClusterEnabled);
+//		setSqlClose(sqlClose);
+//
+//		// Generate PrimaryKey, for the specific ASE version
+//		List<String> pkList = getPkForVersion(conn, srvVersion, isClusterEnabled);
+////		if (pkList != null && pkList.isEmpty()) // NOTE: not sure if we can do this here: since "empty" list I think does "diffCalc - but on CM's with a single row"
+////			pkList = null;
+//		setPk(pkList);
+//		
+//		// Set specific column descriptions
+//		addMonTableDictForVersion(conn, srvVersion, isClusterEnabled);
+//	}
 	public void initSql(DbxConnection conn)
 	{
-		// Get what version we are connected to.
-		long    srvVersion       = getServerVersion();
-		boolean isClusterEnabled = isClusterEnabled();
+//		// Get what version we are connected to.
+//		long    srvVersion       = getServerVersion();
+//		boolean isClusterEnabled = isClusterEnabled();
+		DbmsVersionInfo versionInfo = conn.getDbmsVersionInfo();
 
 		// Get what configuration we depends on
-		String[] dependsOnConfig = getDependsOnConfigForVersion(conn, srvVersion, isClusterEnabled);
+		String[] dependsOnConfig = getDependsOnConfigForVersion(conn, versionInfo);
 		setDependsOnConfig(dependsOnConfig);
 		
 		// Generate the SQL, for the specific ASE version
-		String sql = getSqlForVersion(conn, srvVersion, isClusterEnabled);
+		String sql = getSqlForVersion(conn, versionInfo);
 
 		// Replace any "${cmCollectorName}" --> "xxxTune:CmName"
 		sql = replaceCollectorName(sql);
@@ -3006,21 +3051,21 @@ implements Cloneable, ITableTooltip
 		}
 
 		// Generate the SQL INIT, for the specific ASE version
-		String sqlInit = getSqlInitForVersion(conn, srvVersion, isClusterEnabled);
+		String sqlInit = getSqlInitForVersion(conn, versionInfo);
 		setSqlInit(sqlInit);
 
 		// Generate the SQL CLOSE, for the specific ASE version
-		String sqlClose = getSqlCloseForVersion(conn, srvVersion, isClusterEnabled);
+		String sqlClose = getSqlCloseForVersion(conn, versionInfo);
 		setSqlClose(sqlClose);
 
 		// Generate PrimaryKey, for the specific ASE version
-		List<String> pkList = getPkForVersion(conn, srvVersion, isClusterEnabled);
+		List<String> pkList = getPkForVersion(conn, versionInfo);
 //		if (pkList != null && pkList.isEmpty()) // NOTE: not sure if we can do this here: since "empty" list I think does "diffCalc - but on CM's with a single row"
 //			pkList = null;
 		setPk(pkList);
 		
 		// Set specific column descriptions
-		addMonTableDictForVersion(conn, srvVersion, isClusterEnabled);
+		addMonTableDictForVersion(conn, versionInfo);
 	}
 
 	/** 
@@ -3111,21 +3156,29 @@ implements Cloneable, ITableTooltip
 	 */
 	// FIXME: maybe declare this method and class as abstract, instead of throwing the exception.
 //	public abstract String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled);
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
-	{
-		throw new UnsupportedOperationException("The method CountersModel.getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
-	}
-//	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
+//	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 //	{
 //		throw new UnsupportedOperationException("The method CountersModel.getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
 //	}
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
+	{
+		throw new UnsupportedOperationException("The method CountersModel.getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
+	}
 
-	public String getSqlInitForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+//	public String getSqlInitForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+//	{
+//		return null;
+//	}
+	public String getSqlInitForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return null;
 	}
 
-	public String getSqlCloseForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+//	public String getSqlCloseForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+//	{
+//		return null;
+//	}
+	public String getSqlCloseForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return null;
 	}
@@ -3142,17 +3195,28 @@ implements Cloneable, ITableTooltip
 	 */
 	// FIXME: maybe declare this method and class as abstract, instead of throwing the exception.
 //	public abstract List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled);
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+//	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+//	{
+//		throw new UnsupportedOperationException("The method CountersModel.getPkForVersion(long srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
+//	}
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		throw new UnsupportedOperationException("The method CountersModel.getPkForVersion(long srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
 	}
 
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+//	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+//	{
+//		return null;
+//	}
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return null;
 	}
 
-	public void addMonTableDictForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+//	public void addMonTableDictForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+//	{
+//	}
+	public void addMonTableDictForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 	}
 

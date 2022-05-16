@@ -30,6 +30,8 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -138,13 +140,13 @@ extends CountersModel
 //	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -154,11 +156,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		DbmsVersionInfoSqlServer ssVersionInfo = (DbmsVersionInfoSqlServer) versionInfo;
+
 		String dm_exec_query_optimizer_info = "dm_exec_query_transformation_stats";
 		
-		if (isAzure)
+		if (ssVersionInfo.isAzureSynapseAnalytics())
 			dm_exec_query_optimizer_info = "dm_pdw_nodes_exec_query_transformation_stats"; // Just guessed here...
 		
 		String sql = "select *    /* ${cmCollectorName} */ \n" 

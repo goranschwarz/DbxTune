@@ -401,6 +401,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>SqlServerTune - Microsoft SQL-Server</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
+		<LI>First step of monitor Azure SQL Database</LI>
+
 		<LI>Added Alarm: <b>AlarmEventDacInUse                  </b> -- If someone is using te DAC (Dedicated Admin Connection) which normally should be used in emergency cases</LI>
 		<LI>Added Alarm: <b>AlarmEventQueryStoreLowFreeSpace    </b> -- If querey Store Space starts to get low </LI>
 		<LI>Added Alarm: <b>AlarmEventQueryStoreUnexpectedState </b> -- If Query Store 'state' is not the expected/desired state</LI>
@@ -619,6 +621,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>For table information TABLE added: 'Created', 'Sample Time', 'DDL Info', 'Triggers DDL'</li>
 			<li>For table information INDEX added: 'Included Columns', 'Index Filters', 'READS', 'WRITES', 'page_latch_wait_count', 'page_latch_wait_in_ms', 'row_lock_count', 'row_lock_wait_count', 'row_lock_wait_in_ms', 'page_lock_count', 'page_lock_wait_count', 'page_lock_wait_in_ms', 'index_lock_promotion_attempt_count', 'index_lock_promotion_count'</li>
 			<li>Plan Cache History, added some columns (as information), like: 'PlanSizeKB', 'ObjType_Proc_Pct', 'ObjType_Prepared_Pct', 'ObjType_Adhoc_Pct', 'CacheObjType_CompiledPlan_Pct', 'CacheObjType_CompiledPlanStub_Pct', 'total_elapsed_time_ms', 'total_worker_time_ms', 'total_logical_reads', 'total_logical_writes', 'total_physical_reads', 'total_rows'.</li>
+			<li>CPU Usage Overview -- added MemoryClerksTop graph</li>
 		</ul>                                                              
 		</LI>
 	</UL>

@@ -44,6 +44,7 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.Ver;
 
@@ -146,20 +147,21 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		long srvVersion = versionInfo.getLongVersion();
+
 		List <String> pkCols = new LinkedList<String>();
 
 		pkCols.add("InstanceID");
 		pkCols.add("SpinlockName");
 		
-//		if (srvVersion >= 1570100)
 		if (srvVersion >= Ver.ver(15,7,0,100))
 			pkCols.add("SpinlockSlotID");
 
@@ -167,8 +169,10 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		long srvVersion = versionInfo.getLongVersion();
+
 //		String sql = 
 //			"select " + InstanceID + "SpinlockName, OwnerPID, LastOwnerPID, Grabs, Spins, Waits, Contention, \n" +
 //			"       SpinsPerWait = CASE WHEN Waits > 0 \n" +

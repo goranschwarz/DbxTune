@@ -47,6 +47,8 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoSybaseAse;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -201,13 +203,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public void addMonTableDictForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		try 
 		{
@@ -285,8 +287,12 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		DbmsVersionInfoSybaseAse aseVersionInfo = (DbmsVersionInfoSybaseAse) versionInfo;
+//		long    srvVersion       = aseVersionInfo.getLongVersion();
+		boolean isClusterEnabled = aseVersionInfo.isClusterEdition();
+
 		List <String> pkCols = new LinkedList<String>();
 
 		if (isClusterEnabled)
@@ -300,8 +306,12 @@ extends CountersModel
 	}
 	
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		DbmsVersionInfoSybaseAse aseVersionInfo = (DbmsVersionInfoSybaseAse) versionInfo;
+		long    srvVersion       = aseVersionInfo.getLongVersion();
+		boolean isClusterEnabled = aseVersionInfo.isClusterEdition();
+
 		Configuration conf = Configuration.getCombinedConfiguration();
 		boolean sample_freezeMda          = conf.getBooleanProperty(PROPKEY_sample_freezeMda,        DEFAULT_sample_freezeMda);
 		String  sample_extraWhereClause   = conf.getProperty       (PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause);

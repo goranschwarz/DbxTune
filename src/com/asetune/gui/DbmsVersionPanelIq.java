@@ -21,6 +21,10 @@
  ******************************************************************************/
 package com.asetune.gui;
 
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoSybaseIq;
+import com.asetune.utils.Ver;
+
 public class DbmsVersionPanelIq
 extends DbmsVersionPanelTds
 {
@@ -29,5 +33,29 @@ extends DbmsVersionPanelTds
 	public DbmsVersionPanelIq(ShowCmPropertiesDialog propDialog)
 	{
 		super(propDialog);
+	}
+
+	@Override
+	public long getMinVersion()
+	{
+		return Ver.ver(12,6);
+	}
+
+	@Override
+	protected DbmsVersionInfo createEmptyDbmsVersionInfo()
+	{
+		return new DbmsVersionInfoSybaseIq(getMinVersion());
+	}
+
+	@Override
+	protected DbmsVersionInfo createDbmsVersionInfo()
+	{
+		// Get long version number from GUI Spinners
+		long ver = getVersionNumberFromSpinners();
+
+		// Create a DBMS Server specific version object
+		DbmsVersionInfoSybaseIq versionInfo = new DbmsVersionInfoSybaseIq(ver);
+
+		return versionInfo;
 	}
 }

@@ -23,6 +23,8 @@ package com.asetune.gui;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoHana;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
@@ -42,7 +44,7 @@ extends DbmsVersionPanelAbstract
 		setLabelAndTooltipSp     (true,  0,  0, 99,  1, "SP",      "<html>Service Pack. Example: 2.0.<b>0</b>.0</html>");
 		setLabelAndTooltipPl     (true,  0,  0, 99,  1, "PL",      "<html>Patch Level.  Example: 2.0.0.<b>0</b></b></html>");
 
-		setLabelAndTooltipEdition(false, "XXX Edition", "<html>Generate SQL Information for a XXX Edition Server</html>");
+//		setLabelAndTooltipEdition(false, "XXX Edition", "<html>Generate SQL Information for a XXX Edition Server</html>");
 	}
 
 	@Override
@@ -85,5 +87,24 @@ extends DbmsVersionPanelAbstract
 	public long getMinVersion()
 	{
 		return Ver.ver(2,0);
+	}
+
+
+	@Override
+	protected DbmsVersionInfo createEmptyDbmsVersionInfo()
+	{
+		return new DbmsVersionInfoHana(getMinVersion());
+	}
+
+	@Override
+	protected DbmsVersionInfo createDbmsVersionInfo()
+	{
+		// Get long version number from GUI Spinners
+		long ver = getVersionNumberFromSpinners();
+
+		// Create a DBMS Server specific version object
+		DbmsVersionInfoHana versionInfo = new DbmsVersionInfoHana(ver);
+
+		return versionInfo;
 	}
 }

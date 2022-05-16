@@ -44,6 +44,8 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
@@ -236,7 +238,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
@@ -260,7 +262,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -271,15 +273,18 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		DbmsVersionInfoSqlServer ssVersionInfo = (DbmsVersionInfoSqlServer) versionInfo;
+		long srvVersion = ssVersionInfo.getLongVersion();
+
 		String dm_db_task_space_usage    = "dm_db_task_space_usage";
 		String dm_db_session_space_usage = "dm_db_session_space_usage";
 		String dm_exec_sessions          = "dm_exec_sessions";
 		String dm_exec_connections       = "dm_exec_connections";
 		String dm_exec_sql_text          = "dm_exec_sql_text";
 		
-		if (isAzure)
+		if (ssVersionInfo.isAzureSynapseAnalytics())
 		{
 			dm_db_task_space_usage    = "dm_pdw_nodes_db_task_space_usage";
 			dm_db_session_space_usage = "dm_pdw_nodes_db_session_space_usage";

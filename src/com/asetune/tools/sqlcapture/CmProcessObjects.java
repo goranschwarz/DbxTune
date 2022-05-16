@@ -28,6 +28,7 @@ import com.asetune.IGuiController;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Ver;
 
 /**
@@ -114,14 +115,16 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		long srvVersion = versionInfo.getLongVersion();
+
 		List <String> pkCols = new LinkedList<String>();
 
 		pkCols.add("KPID");
@@ -130,7 +133,6 @@ extends CountersModel
 		pkCols.add("IndexID");
 		pkCols.add("OwnerUserID");
 
-//		if (srvVersion >= 1500000)
 		if (srvVersion >= Ver.ver(15,0))
 			pkCols.add("PartitionID");
 
@@ -138,20 +140,20 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		long srvVersion = versionInfo.getLongVersion();
+
 		String cols1 = "";
 		String cols2 = "";
 		String cols3 = "";
 		cols1 = "SPID, KPID, DBName, ObjectID, OwnerUserID, ObjectName, IndexID, ObjectType, \n";
 		cols2 = "LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0) \n";
 		cols3 = "";
-//		if (srvVersion >= 1252000)
 		if (srvVersion >= Ver.ver(12,5,2))
 		{
 			cols3 = ", TableSize";
 		}
-//		if (srvVersion >= 1500000)
 		if (srvVersion >= Ver.ver(15,0))
 		{
 			cols1 += "PartitionID, PartitionName, "; // new cols in 15.0.0

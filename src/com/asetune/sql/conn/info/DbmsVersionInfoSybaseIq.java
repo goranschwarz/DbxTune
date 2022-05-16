@@ -33,6 +33,12 @@ extends DbmsVersionInfoSybase
 		create(conn);
 	}
 
+	public DbmsVersionInfoSybaseIq(long longVersion)
+	{
+		super(null);
+		setLongVersion(longVersion);
+	}
+
 	/**
 	 * Do the work in here
 	 */

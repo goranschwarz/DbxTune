@@ -26,6 +26,7 @@ import com.asetune.sql.conn.DbxConnection;
 public class DbmsVersionInfoOracle
 extends DbmsVersionInfo
 {
+	private boolean _isRac = false;
 
 	public DbmsVersionInfoOracle(DbxConnection conn)
 	{
@@ -33,11 +34,21 @@ extends DbmsVersionInfo
 		create(conn);
 	}
 
+	public DbmsVersionInfoOracle(long longVersion)
+	{
+		super(null);
+		setLongVersion(longVersion);
+	}
+
 	/**
 	 * Do the work in here
 	 */
 	private void create(DbxConnection conn)
 	{
+		// Check if we are connected to a RAC enabled Oracle
+		//FIXME: setRac(OracleConnectionUtils.isRac(conn));
 	}
 
+	public void    setRac(boolean b) { _isRac = b; }
+	public boolean  isRac()          { return _isRac; }
 }

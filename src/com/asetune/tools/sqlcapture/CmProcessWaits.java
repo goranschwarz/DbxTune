@@ -29,6 +29,7 @@ import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Ver;
 
 /**
@@ -130,13 +131,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -147,15 +148,16 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		long srvVersion = versionInfo.getLongVersion();
+
 		String sql = 
 			"select SPID, KPID, Class=C.Description, Event=I.Description, W.WaitEventID, WaitTime, Waits \n" + 
 			"from master..monProcessWaits W, master..monWaitEventInfo I, master..monWaitClassInfo C \n" + 
 			"where W.WaitEventID=I.WaitEventID \n" + 
 			"  and I.WaitClassID=C.WaitClassID \n";
 
-//		if (srvVersion >= 1570000)
 		if (srvVersion >= Ver.ver(15,7))
 		{
 			sql += "  and C.Language = 'en_US' \n";

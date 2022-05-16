@@ -21,16 +21,81 @@
  ******************************************************************************/
 package com.asetune.gui;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+import javax.swing.JCheckBox;
+import javax.swing.JPanel;
+
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoSybaseAse;
 import com.asetune.utils.Ver;
+
+import net.miginfocom.swing.MigLayout;
 
 public class DbmsVersionPanelAse 
 extends DbmsVersionPanelTds
 {
 	private static final long serialVersionUID = 1L;
 
+	protected JCheckBox _versionIsCe_chk = new JCheckBox("Cluster Edition", false);
+
 	public DbmsVersionPanelAse(ShowCmPropertiesDialog propDialog)
 	{
 		super(propDialog);
+	}
+	
+	@Override
+	protected JPanel createDbmsPropertiesPanel()
+	{
+		JPanel p = new JPanel(new MigLayout());
+		
+		_versionIsCe_chk  .setToolTipText("<html>Generate SQL Information for a Cluster Edition Server</html>");
+
+		p.add(_versionIsCe_chk, "");
+		
+		_versionIsCe_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				DbmsVersionPanelAse.super.stateChanged(null);
+			}
+		});
+
+		return p;
+	}
+
+	@Override
+	protected DbmsVersionInfo createEmptyDbmsVersionInfo()
+	{
+		return new DbmsVersionInfoSybaseAse(getMinVersion());
+	}
+
+	@Override
+	protected DbmsVersionInfo createDbmsVersionInfo()
+	{
+		// Get long version number from GUI Spinners
+		long ver = getVersionNumberFromSpinners();
+
+		// Create a SQL Server version object
+		DbmsVersionInfoSybaseAse versionInfo = new DbmsVersionInfoSybaseAse(ver);
+
+		// Set ASE specifics (from any extended GUI fields)
+		versionInfo.setClusterEdition(_versionIsCe_chk.isSelected());
+		
+		return versionInfo;
+	}
+
+	@Override
+	public void loadFieldsUsingVersion(DbmsVersionInfo versionInfo)
+	{
+		super.loadFieldsUsingVersion(versionInfo);
+
+		// Set local fields
+		DbmsVersionInfoSybaseAse aseVersionInfo = (DbmsVersionInfoSybaseAse) versionInfo;
+
+		_versionIsCe_chk.setSelected(aseVersionInfo.isClusterEdition());
 	}
 	
 	@Override

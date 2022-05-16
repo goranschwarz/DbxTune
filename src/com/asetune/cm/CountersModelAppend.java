@@ -29,6 +29,7 @@ import java.util.List;
 
 import com.asetune.ICounterController;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Configuration;
 
 
@@ -191,8 +192,14 @@ public class CountersModelAppend
 	/**
 	 * NO PK is needed, we are NOT going to do DIFF calculations
 	 */
+//	@Override
+//	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+//	{
+//		// NO PK is needed, we are NOT going to do DIFF calculations
+//		return null;
+//	}
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		// NO PK is needed, we are NOT going to do DIFF calculations
 		return null;

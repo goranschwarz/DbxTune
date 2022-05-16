@@ -54,6 +54,8 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.SqlServerUtils.LockRecord;
@@ -222,7 +224,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
@@ -247,7 +249,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -258,8 +260,11 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		DbmsVersionInfoSqlServer ssVersionInfo = (DbmsVersionInfoSqlServer) versionInfo;
+		long srvVersion = ssVersionInfo.getLongVersion();
+
 		boolean showHoldingLocks = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_holdingLocks, DEFAULT_sample_holdingLocks);
 
 		String dm_exec_sessions    = "dm_exec_sessions";
@@ -274,7 +279,7 @@ extends CountersModel
 			dm_exec_query_plan = "dm_exec_query_plan_stats";
 		}
 
-		if (isAzure)
+		if (ssVersionInfo.isAzureSynapseAnalytics())
 		{
 			dm_exec_sessions    = "dm_pdw_nodes_exec_sessions";
 			dm_exec_requests    = "dm_exec_requests";            // SAME NAME IN AZURE ????

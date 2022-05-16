@@ -42,6 +42,7 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrameRs;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.Ver;
 
@@ -183,13 +184,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public void addMonTableDictForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		try 
 		{
@@ -212,7 +213,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -265,7 +266,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		boolean sample_resetAfter = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_resetAfter, DEFAULT_sample_resetAfter);
 
@@ -280,8 +281,10 @@ extends CountersModel
 	}
 	
 	@Override
-	public String getSqlInitForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlInitForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		long srvVersion = versionInfo.getLongVersion();
+
 		String statsOn = 
 			  "--admin stats, cancel -- cancel might crach RS in some cases...\n"
 			+ "go \n"
@@ -302,7 +305,7 @@ String AOBJ = "trace 'on', 'dsi', 'dsi_workload' \n" + "go \n";
 	}
 
 //	@Override
-//	public String getSqlCloseForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+//	public String getSqlCloseForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 //	{
 //		String statsOff = 
 //			  "--admin stats, cancel -- cancel might crach RS in some cases...\n"

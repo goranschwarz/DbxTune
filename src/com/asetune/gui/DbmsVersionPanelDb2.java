@@ -23,6 +23,8 @@ package com.asetune.gui;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoDb2;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
@@ -42,7 +44,7 @@ extends DbmsVersionPanelAbstract
 		setLabelAndTooltipSp     (true,  0,  0, 99,  1, "Patch",   "<html>Patch level, Example: 10.5.0.<b>7</b></html>");
 		setLabelAndTooltipPl     (false, 0,  0, 99,  1, "xxx",     "<html>...</html>");
 
-		setLabelAndTooltipEdition(false, "Cluster Edition", "<html>Generate SQL Information for a Cluster Edition Server</html>");
+//		setLabelAndTooltipEdition(false, "Cluster Edition", "<html>Generate SQL Information for a Cluster Edition Server</html>");
 	}
 
 	@Override
@@ -86,4 +88,23 @@ extends DbmsVersionPanelAbstract
 	{
 		return Ver.ver(10);
 	}
+
+	@Override
+	protected DbmsVersionInfo createEmptyDbmsVersionInfo()
+	{
+		return new DbmsVersionInfoDb2(getMinVersion());
+	}
+
+	@Override
+	protected DbmsVersionInfo createDbmsVersionInfo()
+	{
+		// Get long version number from GUI Spinners
+		long ver = getVersionNumberFromSpinners();
+
+		// Create a DBMS Server specific version object
+		DbmsVersionInfoDb2 versionInfo = new DbmsVersionInfoDb2(ver);
+
+		return versionInfo;
+	}
+
 }

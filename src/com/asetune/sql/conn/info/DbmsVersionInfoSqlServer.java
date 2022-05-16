@@ -41,9 +41,9 @@ extends DbmsVersionInfo
 	public static boolean isAzureManagedInstance (long versionNumber) { return ((versionNumber / 1_0000_0000L)*1_0000_0000L) == VERSION_AZURE_MANAGED_INSTANCE; }
 
 
-//	private boolean _isAzureDb = false;
-//	private boolean _isAzureManagedInstance = false;
-//	private boolean _isAzureSynapseAnalytics = false;
+	private Boolean _isAzureDb               = null;
+	private Boolean _isAzureSynapseAnalytics = null;
+	private Boolean _isAzureManagedInstance  = null;
 
 	public DbmsVersionInfoSqlServer(DbxConnection conn)
 	{
@@ -51,11 +51,22 @@ extends DbmsVersionInfo
 		create(conn);
 	}
 
+	public DbmsVersionInfoSqlServer(long longVersion)
+	{
+		super(null);
+
+		setLongVersion(longVersion);
+		setAzureDb              (false);
+		setAzureSynapseAnalytics(false);
+		setAzureManagedInstance (false);
+	}
+
 	/**
 	 * Do the work in here
 	 */
 	private void create(DbxConnection conn)
 	{
+// The below is now done in SqlServerConnection, method: getDbmsVersionNumber/getEngineEdition
 //		String sql     = null;
 //		String version = null;
 //		String edition = null;
@@ -89,17 +100,18 @@ extends DbmsVersionInfo
 //		}
 	}
 
-//	public void    setAzureDb(boolean b) { _isAzureDb = b; }
-//	public boolean  isAzureDb()          { return _isAzureDb; }
-//
-//	public void    setAzureManagedInstance(boolean b) { _isAzureManagedInstance = b; }
-//	public boolean  isAzureManagedInstance()          { return _isAzureManagedInstance; }
-//
-//	public void    setAzureSynapseAnalytics(boolean b) { _isAzureDb = b; }
-//	public boolean  isAzureSynapseAnalytics()          { return _isAzureDb; }
+	public void    setAzureDb              (Boolean b) { _isAzureDb               = b; }
+	public void    setAzureSynapseAnalytics(Boolean b) { _isAzureSynapseAnalytics = b; }
+	public void    setAzureManagedInstance (Boolean b) { _isAzureManagedInstance  = b; }
 
 
-	public boolean  isAzureDb()               { return isAzureDb              (_conn.getDbmsVersionNumber()); }
-	public boolean  isAzureSynapseAnalytics() { return isAzureSynapseAnalytics(_conn.getDbmsVersionNumber()); }
-	public boolean  isAzureManagedInstance()  { return isAzureManagedInstance (_conn.getDbmsVersionNumber()); }
+	public boolean  isAzureDb()               { return _isAzureDb               != null ? _isAzureDb               : isAzureDb              (_conn.getDbmsVersionNumber()); }
+	public boolean  isAzureSynapseAnalytics() { return _isAzureSynapseAnalytics != null ? _isAzureSynapseAnalytics : isAzureSynapseAnalytics(_conn.getDbmsVersionNumber()); }
+	public boolean  isAzureManagedInstance()  { return _isAzureManagedInstance  != null ? _isAzureManagedInstance  : isAzureManagedInstance (_conn.getDbmsVersionNumber()); }
+
+	@Override
+	public String toString()
+	{
+		return super.toString() + "[longVer=" + getLongVersion() + ", isAzureDb=" + _isAzureDb + ", isAzureSynapseAnalytics=" + _isAzureSynapseAnalytics + ", isAzureManagedInstance=" + _isAzureManagedInstance + "]";
+	}
 }

@@ -45,6 +45,8 @@ import com.asetune.cm.sqlserver.gui.CmSummaryPanel;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
@@ -285,28 +287,29 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzureAnalytics)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzureAnalytics)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		List <String> pkCols = new LinkedList<String>();
 		return pkCols;
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzureAnalytics)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
-//		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+		DbmsVersionInfoSqlServer ssVersionInfo = (DbmsVersionInfoSqlServer) versionInfo;
+		long srvVersion = ssVersionInfo.getLongVersion();
 		
 		String dm_tran_active_transactions   = "dm_tran_active_transactions";
 		String dm_tran_database_transactions = "dm_tran_database_transactions";
 		String dm_tran_session_transactions  = "dm_tran_session_transactions";
 		
-		if (isAzureAnalytics)
+		if (ssVersionInfo.isAzureSynapseAnalytics())
 		{
 			dm_tran_active_transactions   = "dm_pdw_nodes_tran_active_transactions";
 			dm_tran_database_transactions = "dm_pdw_nodes_tran_database_transactions";
@@ -326,12 +329,33 @@ extends CountersModel
 			notInTempdb = "and database_id != 2 ";
 		}
 
-		// Check if we have access to table 'sys.dm_tcp_listener_states', if so, construct a SQL Statement
-		// NOTE: Azure SQL Database (and possibly Azure Analytics) wont have 'sys.dm_tcp_listener_states'
-		String listenerInfo = "select @listeners = '-unknown-' \n";
-		if (DbUtils.checkIfTableIsSelectable(conn, "sys.dm_tcp_listener_states"))
-		{
-			listenerInfo = "" +
+//		// Check if we have access to table 'sys.dm_tcp_listener_states', if so, construct a SQL Statement
+//		// NOTE: Azure SQL Database (and possibly Azure Analytics) wont have 'sys.dm_tcp_listener_states'
+//		String listenerInfo = "select @listeners = '-unknown-' \n";
+//		if (conn != null) // conn can be NULL from the CM->Properties tabs
+//		{
+//			if (DbUtils.checkIfTableIsSelectable(conn, "sys.dm_tcp_listener_states"))
+//			{
+//				listenerInfo = "" +
+//					"/* Get info about Listeners (as a Comma Separated List): TYPE=ipv#[ip;port] */\n" +
+//					"select @listeners = coalesce(@listeners + ', ', '') \n" +
+//					"    + type_desc \n" +
+//					"    + '=' \n" +
+//					"    + CASE WHEN is_ipv4 = 1 THEN 'ipv4[' ELSE 'ipv6[' END \n" +
+//					"    + ip_address \n" +
+//					"    + ';' \n" +
+//					"    + convert(varchar(10), port) \n" +
+//					"    + ']' \n" +
+//					"from sys.dm_tcp_listener_states \n" +
+//					"where state_desc = 'ONLINE' \n" +
+//				//	"--  and type_desc = 'TSQL' \n" +
+//					"order by listener_id \n" +
+//					"";
+//			}
+//		}
+		
+		// SQL For listeners 
+		String listenerInfo = "" +
 				"/* Get info about Listeners (as a Comma Separated List): TYPE=ipv#[ip;port] */\n" +
 				"select @listeners = coalesce(@listeners + ', ', '') \n" +
 				"    + type_desc \n" +
@@ -343,10 +367,13 @@ extends CountersModel
 				"    + ']' \n" +
 				"from sys.dm_tcp_listener_states \n" +
 				"where state_desc = 'ONLINE' \n" +
-			//	"--  and type_desc = 'TSQL' \n" +
+				//	"--  and type_desc = 'TSQL' \n" +
 				"order by listener_id \n" +
 				"";
-		}
+		
+		// Listeners are NOT available in Azure 
+		if (ssVersionInfo.isAzureDb() || ssVersionInfo.isAzureSynapseAnalytics() || ssVersionInfo.isAzureManagedInstance())
+			listenerInfo = "select @listeners = '-unknown-' \n";
 		
 		
 		int LockWaitsThresholdSec = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LockWaitsThresholdSec, DEFAULT_alarm_LockWaitsThresholdSec);

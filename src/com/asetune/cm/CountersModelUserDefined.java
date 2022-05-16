@@ -31,6 +31,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Ver;
 
 
@@ -76,8 +77,52 @@ public class CountersModelUserDefined
 		_pkList   = pkList;
 	}
 
+//	@Override
+//	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+//	{
+//		// Treat version specific SQL
+//		if (_sqlVerStr != null)
+//		{
+//			// Check/get version specific SQL strings
+//			int     sqlVersionHigh = -1;
+//			for (Map.Entry<Integer,String> entry : _sqlVerStr.entrySet()) 
+//			{
+//				Integer key = entry.getKey();
+//				//String val = entry.getValue();
+//				//do stuff here
+//	
+//				int sqlVersionNumInKey = key.intValue();
+//	
+//				// connected srvVersion, go and get the highest/closest sql version string 
+//				if (srvVersion >= sqlVersionNumInKey)
+//				{
+////					if (sqlVersionNumInKey < 12503)
+////					if (sqlVersionNumInKey < 1250030)
+//					if (sqlVersionNumInKey < Ver.ver(12,5,0,3))
+//					{
+//						_logger.warn("Reading User Defined Counter '"+getName()+"' with specialized sql for version number '"+sqlVersionNumInKey+"'. First version number that we support is "+Ver.ver(12,5,0,3)+" (which is Ase Version 12.5.0.3 in a numbered format, ("+Ver.ver(12,5,0,3)+" is new to be able to support ServicePackage, so for version '15.7.0 SP100'="+Ver.ver(15,7,0,100)+", '15.7.0 ESD#4'="+Ver.ver(15,7,0,4)+", '15.7.0 ESD#4.2'="+Ver.ver(12,7,0,4,2)+") ), disregarding this entry.");
+//					}
+//					else
+//					{
+//						if (sqlVersionHigh <= sqlVersionNumInKey)
+//						{
+//							sqlVersionHigh = sqlVersionNumInKey;
+//						}
+//					}
+//				}
+//			}
+//			if (sqlVersionHigh > 0)
+//			{
+//				_logger.info("Initializing User Defined Counter '"+getName()+"' with sql using version number '"+sqlVersionHigh+"'.");
+//	
+//				String val = (String) _sqlVerStr.get( new Integer(sqlVersionHigh) );
+//				return val;
+//			}
+//		}
+//		return _sqlInitial;
+//	}
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		// Treat version specific SQL
 		if (_sqlVerStr != null)
@@ -93,10 +138,8 @@ public class CountersModelUserDefined
 				int sqlVersionNumInKey = key.intValue();
 	
 				// connected srvVersion, go and get the highest/closest sql version string 
-				if (srvVersion >= sqlVersionNumInKey)
+				if (versionInfo.getLongVersion() >= sqlVersionNumInKey)
 				{
-//					if (sqlVersionNumInKey < 12503)
-//					if (sqlVersionNumInKey < 1250030)
 					if (sqlVersionNumInKey < Ver.ver(12,5,0,3))
 					{
 						_logger.warn("Reading User Defined Counter '"+getName()+"' with specialized sql for version number '"+sqlVersionNumInKey+"'. First version number that we support is "+Ver.ver(12,5,0,3)+" (which is Ase Version 12.5.0.3 in a numbered format, ("+Ver.ver(12,5,0,3)+" is new to be able to support ServicePackage, so for version '15.7.0 SP100'="+Ver.ver(15,7,0,100)+", '15.7.0 ESD#4'="+Ver.ver(15,7,0,4)+", '15.7.0 ESD#4.2'="+Ver.ver(12,7,0,4,2)+") ), disregarding this entry.");
@@ -133,8 +176,13 @@ public class CountersModelUserDefined
 //		return getSqlClose();
 //	}
 
+//	@Override
+//	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+//	{
+//		return _pkList;
+//	}
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return _pkList;
 	}

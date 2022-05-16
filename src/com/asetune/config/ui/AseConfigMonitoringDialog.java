@@ -1475,7 +1475,8 @@ public class AseConfigMonitoringDialog
 		{
 			int newConfigVal = newValue ? 1 : 0;
 
-			List<CountersModel> cmList = CounterController.getInstance().getCmListDependsOnConfig(aseConfig, _conn, _srvVersionNum, _isClusterEnabled);
+//			List<CountersModel> cmList = CounterController.getInstance().getCmListDependsOnConfig(aseConfig, _conn, _srvVersionNum, _isClusterEnabled);
+			List<CountersModel> cmList = CounterController.getInstance().getCmListDependsOnConfig(aseConfig, _conn);
 			if (cmList.size() > 0)
 			{
 				// List for info message
@@ -1976,7 +1977,8 @@ public class AseConfigMonitoringDialog
     			String cfg = (String) comp.getClientProperty(ASE_CONFIG);
     			if ( ! StringUtil.isNullOrBlank(cfg) )
     			{
-    				List<CountersModel> cmList = CounterController.getInstance().getCmListDependsOnConfig(cfg, _conn, _srvVersionNum, _isClusterEnabled);
+//    				List<CountersModel> cmList = CounterController.getInstance().getCmListDependsOnConfig(cfg, _conn, _srvVersionNum, _isClusterEnabled);
+    				List<CountersModel> cmList = CounterController.getInstance().getCmListDependsOnConfig(cfg, _conn);
     				if (cmList.size() > 0)
     				{
     					tt += "<br><br>";

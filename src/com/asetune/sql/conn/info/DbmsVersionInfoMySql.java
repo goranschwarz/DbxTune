@@ -33,6 +33,12 @@ extends DbmsVersionInfo
 		create(conn);
 	}
 
+	public DbmsVersionInfoMySql(long longVersion)
+	{
+		super(null);
+		setLongVersion(longVersion);
+	}
+
 	/**
 	 * Do the work in here
 	 */

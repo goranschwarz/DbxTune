@@ -33,6 +33,12 @@ extends DbmsVersionInfo
 		create(conn);
 	}
 
+	public DbmsVersionInfoHana(long longVersion)
+	{
+		super(null);
+		setLongVersion(longVersion);
+	}
+
 	/**
 	 * Do the work in here
 	 */

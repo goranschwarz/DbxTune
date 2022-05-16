@@ -24,7 +24,7 @@ package com.asetune.gui;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
-public class DbmsVersionPanelTds 
+public abstract class DbmsVersionPanelTds 
 extends DbmsVersionPanelAbstract
 {
 	private static final long serialVersionUID = 1L;
@@ -48,12 +48,6 @@ extends DbmsVersionPanelAbstract
 		return version;
 	}
 	
-	@Override
-	public long getMinVersion()
-	{
-		return Ver.ver(12,5,0,3);
-	}
-
 	@Override
 	public String versionNumToString(long srvVersion, int major, int minor, int maint, int sp, int pl)
 	{

@@ -41,6 +41,7 @@ import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 
 /**
@@ -275,13 +276,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public void addMonTableDictForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public void addMonTableDictForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		try 
 		{
@@ -323,7 +324,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -334,12 +335,15 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		DbmsVersionInfoSqlServer ssVersionInfo = (DbmsVersionInfoSqlServer) versionInfo;
+//		long srvVersion = ssVersionInfo.getLongVersion();
+
 		String dm_io_virtual_file_stats = "dm_io_virtual_file_stats";
 		String master_files             = "master_files";
 		
-		if (isAzure)
+		if (ssVersionInfo.isAzureSynapseAnalytics())
 		{
 			dm_io_virtual_file_stats = "dm_pdw_nodes_io_virtual_file_stats";
 			master_files             = "master_files";  // SAME NAME IN AZURE ????
@@ -347,8 +351,7 @@ extends CountersModel
 
 		// Special thing for Azure SQL Database
 		String joinMasterFiles = "JOIN sys." + master_files +" b ON a.file_id = b.file_id AND a.database_id = b.database_id \n";
-		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
-		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+		if (ssVersionInfo.isAzureDb() || ssVersionInfo.isAzureSynapseAnalytics())
 		{
 			// NOTE: for Azure SQL Database, tempdb will have faulty 'devicename' and 'physical_name' (but lets fix that LATER)
 			joinMasterFiles = "JOIN sys.database_files b ON a.file_id = b.file_id AND a.database_id in (db_id('tempdb'), db_id()) \n";

@@ -54,6 +54,8 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoSybaseAse;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoAse.LockRecord;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
@@ -183,7 +185,7 @@ extends CountersModel
 	}
 	
 	@Override
-	public void addMonTableDictForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		try 
 		{
@@ -228,8 +230,10 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		long srvVersion = versionInfo.getLongVersion();
+
 		if (srvVersion >= Ver.ver(15,7))
 			return new String[] {"enable monitoring=1", "statement statistics active=1", "per object statistics active=1", "wait event timing=1"};
 
@@ -262,8 +266,12 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		DbmsVersionInfoSybaseAse aseVersionInfo = (DbmsVersionInfoSybaseAse) versionInfo;
+//		long    srvVersion       = aseVersionInfo.getLongVersion();
+		boolean isClusterEnabled = aseVersionInfo.isClusterEdition();
+
 		List <String> pkCols = new LinkedList<String>();
 
 		if (isClusterEnabled)
@@ -276,10 +284,14 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
+
+		DbmsVersionInfoSybaseAse aseVersionInfo = (DbmsVersionInfoSybaseAse) versionInfo;
+		long    srvVersion       = aseVersionInfo.getLongVersion();
+		boolean isClusterEnabled = aseVersionInfo.isClusterEdition();
 
 		////////////////////////////
 		// NOTE: This Counter Model has 2 separete SQL selects

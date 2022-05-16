@@ -27,7 +27,7 @@ public abstract class DbmsVersionInfo
 {
 	protected DbxConnection _conn          = null;
 //	private   String        _versionString = "";
-//	private   long          _longVersion   = -1;
+	private   long          _longVersion   = -1;
 //	private   int           _shortVersion  = -1;
 
 	public DbmsVersionInfo(DbxConnection conn)
@@ -44,8 +44,15 @@ public abstract class DbmsVersionInfo
 
 //	public abstract long parseVersionString(String versionString);
 
+	public void setLongVersion(long v)
+	{ 
+		_longVersion  = v; 
+	}
 	public long getLongVersion()   
 	{
+		if (_longVersion != -1)
+			return _longVersion;
+
 		// FIXME: move the long version number from DbxConnection to "here"
 		return _conn.getDbmsVersionNumber();   
 	}

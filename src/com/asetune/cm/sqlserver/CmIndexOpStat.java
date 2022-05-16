@@ -41,6 +41,8 @@ import com.asetune.cm.SortOptions.SortOrder;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.swing.ColumnHeaderPropsEntry;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Ver;
 
 /**
@@ -225,14 +227,16 @@ extends CountersModel
 //	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		long srvVersion = versionInfo.getLongVersion();
+
 		List <String> pkCols = new LinkedList<String>();
 
 		pkCols.add("database_id");
@@ -240,7 +244,7 @@ extends CountersModel
 		pkCols.add("index_id");
 		pkCols.add("partition_number");
 		
-		if (srvVersion >= Ver.ver(2016) || isAzure)
+		if (srvVersion >= Ver.ver(2016))
 		{
 			// hobt_id -- Applies to: yesSQL Server 2016 (13.x) and later, Azure SQL Database.
 			// ID of the data heap or B-tree rowset that tracks internal data for a columnstore index.
@@ -278,9 +282,11 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
-//		RS> 29   row_lock_count                     java.sql.Types.BIGINT   bigint           
+		DbmsVersionInfoSqlServer ssVersionInfo = (DbmsVersionInfoSqlServer) versionInfo;
+
+		//		RS> 29   row_lock_count                     java.sql.Types.BIGINT   bigint           
 //		RS> 30   row_lock_wait_count                java.sql.Types.BIGINT   bigint           
 //		RS> 31   row_lock_wait_in_ms                java.sql.Types.BIGINT   bigint           
 //		RS> 32   page_lock_count                    java.sql.Types.BIGINT   bigint           
@@ -301,7 +307,7 @@ extends CountersModel
 
 		String dm_db_index_operational_stats = "dm_db_index_operational_stats";
 		
-		if (isAzure)
+		if (ssVersionInfo.isAzureSynapseAnalytics())
 			dm_db_index_operational_stats = "dm_db_index_operational_stats";   // IS THIS THE SAME NAME IN AZURE ?????
 
 //		String sql = "select \n"

@@ -40,6 +40,8 @@ import com.asetune.gui.swing.ColumnHeaderPropsEntry;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
@@ -264,13 +266,13 @@ extends CountersModel
 
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -302,8 +304,10 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		DbmsVersionInfoSqlServer ssVersionInfo = (DbmsVersionInfoSqlServer) versionInfo;
+
 		int c = 0;
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("plan_handle",            c++));
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("SqlText",                c++));
@@ -314,7 +318,7 @@ extends CountersModel
 
 		String dm_exec_query_stats = "dm_exec_query_stats";
 		
-		if (isAzure)
+		if (ssVersionInfo.isAzureSynapseAnalytics())
 			dm_exec_query_stats = "dm_pdw_nodes_exec_query_stats";
 
 

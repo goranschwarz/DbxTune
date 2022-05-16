@@ -22,6 +22,7 @@
 package com.asetune.sql.conn.info;
 
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.AseConnectionUtils;
 
 public class DbmsVersionInfoSybaseAse
 extends DbmsVersionInfoSybase
@@ -34,11 +35,22 @@ extends DbmsVersionInfoSybase
 		create(conn);
 	}
 
+	public DbmsVersionInfoSybaseAse(long longVersion)
+	{
+		super(null);
+
+		setLongVersion(longVersion);
+		setClusterEdition(false);
+	}
+
 	/**
 	 * Do the work in here
 	 */
 	private void create(DbxConnection conn)
 	{
+		// select @@clustermode
+		// or possibly use: Check if ASE @@version contains "Cluster Edition"
+		setClusterEdition(AseConnectionUtils.isClusterEnabled(conn));
 	}
 
 	public void    setClusterEdition(boolean b) { _isClusterEdition = b; }

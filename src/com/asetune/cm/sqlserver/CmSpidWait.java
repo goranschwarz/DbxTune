@@ -50,6 +50,7 @@ import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -184,13 +185,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -210,12 +211,14 @@ extends CountersModel
 //	RS> 6    signal_wait_time_ms java.sql.Types.BIGINT   bigint            -none-
 	
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		DbmsVersionInfoSqlServer ssVersionInfo = (DbmsVersionInfoSqlServer) versionInfo;
+		
 		String dm_exec_session_wait_stats = "sys.dm_exec_session_wait_stats";
 //		String dm_exec_connections        = "sys.dm_exec_connections";
 		
-		if (isAzure)
+		if (ssVersionInfo.isAzureSynapseAnalytics())
 		{
 			dm_exec_session_wait_stats = "sys.dm_exec_session_wait_stats";                   // Same name in Azure ???
 //			dm_exec_connections        = "sys.dm_pdw_exec_connections";

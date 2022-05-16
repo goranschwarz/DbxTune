@@ -25,7 +25,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import javax.swing.BorderFactory;
-import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
@@ -37,6 +36,7 @@ import javax.swing.event.ChangeListener;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Ver;
 
 import net.miginfocom.swing.MigLayout;
@@ -48,32 +48,33 @@ implements ActionListener, ChangeListener
 	private static final long serialVersionUID = 1L;
 	private static Logger _logger = Logger.getLogger(DbmsVersionPanelAbstract.class);
 	
-	private JLabel             _version_lbl      = new JLabel("Server Version");
-	private JLabel             _versionMajor_lbl = new JLabel("Major");
-	private SpinnerNumberModel _versionMajor_spm = new SpinnerNumberModel(12, 12, 99, 1); // value, min, max, step
-	private JSpinner           _versionMajor_sp  = new JSpinner(_versionMajor_spm);
+	protected JLabel             _version_lbl      = new JLabel("Server Version");
+	protected JLabel             _versionMajor_lbl = new JLabel("Major");
+	protected SpinnerNumberModel _versionMajor_spm = new SpinnerNumberModel(12, 12, 99, 1); // value, min, max, step
+	protected JSpinner           _versionMajor_sp  = new JSpinner(_versionMajor_spm);
 
 	protected JLabel             _versionMinor_lbl = new JLabel("Minor");
 	protected SpinnerNumberModel _versionMinor_spm = new SpinnerNumberModel(5, 0, 9, 1); // value, min, max, step
 	protected JSpinner           _versionMinor_sp  = new JSpinner(_versionMinor_spm);
 
-	private JLabel             _versionMaint_lbl = new JLabel("Maint");
-	private SpinnerNumberModel _versionMaint_spm = new SpinnerNumberModel(0, 0, 9, 1); // value, min, max, step
-	private JSpinner           _versionMaint_sp  = new JSpinner(_versionMaint_spm);
+	protected JLabel             _versionMaint_lbl = new JLabel("Maint");
+	protected SpinnerNumberModel _versionMaint_spm = new SpinnerNumberModel(0, 0, 9, 1); // value, min, max, step
+	protected JSpinner           _versionMaint_sp  = new JSpinner(_versionMaint_spm);
 
-	private JLabel             _versionEsd_lbl   = new JLabel("ESD#/SP");
-	private SpinnerNumberModel _versionEsd_spm   = new SpinnerNumberModel(3, 0, 999, 1); // value, min, max, step
-	private JSpinner           _versionEsd_sp    = new JSpinner(_versionEsd_spm);
+	protected JLabel             _versionEsd_lbl   = new JLabel("ESD#/SP");
+	protected SpinnerNumberModel _versionEsd_spm   = new SpinnerNumberModel(3, 0, 999, 1); // value, min, max, step
+	protected JSpinner           _versionEsd_sp    = new JSpinner(_versionEsd_spm);
 
-	private JLabel             _versionPl_lbl    = new JLabel("Patch Level");
-	private SpinnerNumberModel _versionPl_spm    = new SpinnerNumberModel(0, 0, 99, 1); // value, min, max, step
-	private JSpinner           _versionPl_sp     = new JSpinner(_versionPl_spm);
+	protected JLabel             _versionPl_lbl    = new JLabel("Patch Level");
+	protected SpinnerNumberModel _versionPl_spm    = new SpinnerNumberModel(0, 0, 99, 1); // value, min, max, step
+	protected JSpinner           _versionPl_sp     = new JSpinner(_versionPl_spm);
 
-	private JCheckBox          _versionIsCe_chk  = new JCheckBox("Cluster Edition", false);
+	protected JPanel             _versionPropsPanel = null;
+//	protected JCheckBox          _versionIsCe_chk   = new JCheckBox("Cluster Edition", false);
 
-	private JLabel             _versionShort_lbl   = new JLabel("Server Short Version");
-	private JTextField         _versionShort_txt   = new JTextField();
-	private JTextField         _versionInt_txt     = new JTextField();
+	protected JLabel             _versionShort_lbl   = new JLabel("Server Short Version");
+	protected JTextField         _versionShort_txt   = new JTextField();
+	protected JTextField         _versionInt_txt     = new JTextField();
 
 	private ShowCmPropertiesDialog _propDialog;
 
@@ -98,7 +99,7 @@ implements ActionListener, ChangeListener
 		setLabelAndTooltipMaint  (true,  0,  0, 9,   1, "Maint",           "<html>Mintenance version of the Server, Example: 15.0.<b>3</b></html>");
 		setLabelAndTooltipSp     (true,  3,  0, 999, 1, "ESD#/SP",         "<html>ESD or SP (ESD = Electronic Software Distribution, SP = Service Pack) Level of the Server, Example: 15.0.3 <b>ESD#2</b> or <b>SP100</b><br>SAP is using Service Packs to handle <i>bug fixes</i> and <i>minor enhancements</i>. <br>The Service Pack consist of three numbers. Here I will try to simulate ESD into SP. Example ESD#4 will be SP040 and ESD#4.1 will be SP041<br>In the summer of 2013 Sybase/SAP changed from ESD into SP.</html>");
 		setLabelAndTooltipPl     (true,  0,  0, 99,  1, "Patch Level",     "<html>PL -Patch Level of the Server Version, Example: 16.0 SP01 <b>PL01</b><br>SAP is using Patch Level to handle <i>bug fixes</i> and <i>minor enhancements</i>. <br>Note: This is introduced in ASE 16.0</html>");
-		setLabelAndTooltipEdition(true, "Cluster Edition", "<html>Generate SQL Information for a Cluster Edition Server</html>");
+//		setLabelAndTooltipEdition(true, "Cluster Edition", "<html>Generate SQL Information for a Cluster Edition Server</html>");
 		
 		_version_lbl      .setToolTipText("<html>Specify what Server Version you want to see information about</html>");
 		
@@ -145,11 +146,27 @@ implements ActionListener, ChangeListener
 		add(_versionMaint_sp,  "w 10mm, hidemode 2");
 		add(_versionEsd_sp,    "w 10mm, hidemode 2");
 		add(_versionPl_sp,     "w 10mm, hidemode 2");
-		add(_versionIsCe_chk,  "wrap, hidemode 2");
+//		add(_versionIsCe_chk,  "wrap, hidemode 2");
+
+		_versionPropsPanel = createDbmsPropertiesPanel();
+		if (_versionPropsPanel != null)
+			add(_versionPropsPanel,  "hidemode 2");
+		
+		add(new JLabel(),      "wrap"); // Add empty to get newline after PL or _versionPropsPanel
 
 		add(_versionShort_lbl, "");
 		add(_versionShort_txt, "growx, pushx");
 		add(_versionInt_txt,   "wrap");
+	}
+
+	protected JPanel createDbmsPropertiesPanel()
+	{
+//		JPanel p = new JPanel(new MigLayout());
+//		
+//		p.add(_versionIsCe_chk, "");
+//		
+//		return p;
+		return null;
 	}
 
 	/** Called from ShowCmPropertiesDialog */
@@ -162,7 +179,7 @@ implements ActionListener, ChangeListener
 		_versionPl_spm   .addChangeListener(this);
 
 		_versionShort_txt .addActionListener(this);
-		_versionIsCe_chk  .addActionListener(this);
+//		_versionIsCe_chk  .addActionListener(this);
 	}
 
 	/**
@@ -259,17 +276,17 @@ implements ActionListener, ChangeListener
 		_versionPl_sp .setToolTipText(tooltip);
 	}
 
-	public void setLabelAndTooltipEdition(boolean visible, String label, String tooltip) 
-	{ 
-		_versionIsCe_chk.setVisible(visible);
+//	public void setLabelAndTooltipEdition(boolean visible, String label, String tooltip) 
+//	{ 
+//		_versionIsCe_chk.setVisible(visible);
+//
+//		_versionIsCe_chk.setText(label);
+//
+//		_versionIsCe_chk.setToolTipText(label);
+//	}
 
-		_versionIsCe_chk.setText(label);
 
-		_versionIsCe_chk.setToolTipText(label);
-	}
-
-	@Override
-	public void stateChanged(ChangeEvent e)
+	protected long getVersionNumberFromSpinners()
 	{
 		int major = _versionMajor_spm.getNumber().intValue();
 		int minor = _versionMinor_spm.getNumber().intValue();
@@ -278,20 +295,39 @@ implements ActionListener, ChangeListener
 		int pl    = _versionPl_spm   .getNumber().intValue();
 
 		long ver = Ver.ver(major, minor, maint, esd, pl);
-
-		boolean isCeEnabled = _versionIsCe_chk.isSelected();
-
-		loadFieldsUsingVersion(ver, isCeEnabled);
-		_propDialog.loadFieldsUsingVersion(ver, isCeEnabled);
+		
+		return ver;
 	}
+
+	@Override
+	public void stateChanged(ChangeEvent e)
+	{
+//		long ver = getVersionNumberFromSpinners();
+//		boolean isCeEnabled = _versionIsCe_chk.isSelected();
+
+//		loadFieldsUsingVersion(ver, isCeEnabled);
+//		_propDialog.loadFieldsUsingVersion(ver, isCeEnabled);
+
+		DbmsVersionInfo versionInfo = createDbmsVersionInfo();
+		
+		loadFieldsUsingVersion(versionInfo);
+		_propDialog.loadFieldsUsingVersion(versionInfo);
+	}
+
+	/** 
+	 * The DBMS Vendor implementation should create the version info
+	 * @return
+	 */
+	protected abstract DbmsVersionInfo createDbmsVersionInfo();
+
 
 	@Override
 	public void actionPerformed(ActionEvent e)
 	{
 		Object source = e.getSource();
 
-		if ( _versionIsCe_chk.equals(source) ) 
-			stateChanged(null);
+//		if ( _versionIsCe_chk.equals(source) ) 
+//			stateChanged(null);
 
 		if ( _versionShort_txt.equals(source) )
 		{
@@ -330,28 +366,52 @@ implements ActionListener, ChangeListener
 		_versionInt_txt.setText(versionIntFormatedStr);
 	}
 
-	public void loadFieldsUsingVersion(long srvVersion, boolean isCeEnabled)
+	public void loadFieldsUsingVersion(DbmsVersionInfo versionInfo)
 	{
+//System.out.println("loadFieldsUsingVersion(versionInfo="+versionInfo+")");
+
+		long srvVersion = versionInfo.getLongVersion();
+		
 		int major = Ver.versionNumPart(srvVersion, Ver.VERSION_MAJOR);
 		int minor = Ver.versionNumPart(srvVersion, Ver.VERSION_MINOR);
 		int maint = Ver.versionNumPart(srvVersion, Ver.VERSION_MAINTENANCE);
 		int sp    = Ver.versionNumPart(srvVersion, Ver.VERSION_SERVICE_PACK);
 		int pl    = Ver.versionNumPart(srvVersion, Ver.VERSION_PATCH_LEVEL);
 		
-//		String srvVersionStr = Ver.versionNumToStr(srvVersion);
 		String srvVersionStr = versionNumToString(srvVersion, major, minor, maint, sp, pl);
-
 
 		_logger.debug("loadFieldsUsingVersion(): version="+srvVersion+", srvVersionStr='"+srvVersionStr+"'.");
 		
 		_versionShort_txt.setText(srvVersionStr);
 		parseVersionString(srvVersionStr);
 
-		_versionIsCe_chk.setSelected(isCeEnabled);
+//		_versionIsCe_chk.setSelected(isCeEnabled);
 	}
 
-	public long getMinVersion()
-	{
-		return 0;
-	}
+//	public void loadFieldsUsingVersion(long srvVersion, boolean isCeEnabled)
+//	{
+//		int major = Ver.versionNumPart(srvVersion, Ver.VERSION_MAJOR);
+//		int minor = Ver.versionNumPart(srvVersion, Ver.VERSION_MINOR);
+//		int maint = Ver.versionNumPart(srvVersion, Ver.VERSION_MAINTENANCE);
+//		int sp    = Ver.versionNumPart(srvVersion, Ver.VERSION_SERVICE_PACK);
+//		int pl    = Ver.versionNumPart(srvVersion, Ver.VERSION_PATCH_LEVEL);
+//		
+//		String srvVersionStr = versionNumToString(srvVersion, major, minor, maint, sp, pl);
+//
+//
+//		_logger.debug("loadFieldsUsingVersion(): version="+srvVersion+", srvVersionStr='"+srvVersionStr+"'.");
+//		
+//		_versionShort_txt.setText(srvVersionStr);
+//		parseVersionString(srvVersionStr);
+//
+//		_versionIsCe_chk.setSelected(isCeEnabled);
+//	}
+
+//	public long getMinVersion()
+//	{
+//		return 0;
+//	}
+	public abstract long getMinVersion();
+
+	protected abstract DbmsVersionInfo createEmptyDbmsVersionInfo();
 }

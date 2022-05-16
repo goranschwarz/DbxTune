@@ -53,6 +53,7 @@ import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.SqlParserUtils;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.NumberUtils;
 import com.asetune.utils.StringUtil;
@@ -317,7 +318,7 @@ extends CountersModel
 
 	
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -329,8 +330,10 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		long srvVersion = versionInfo.getLongVersion();
+
 		// 'queryid' was introduced in 9.4 so lets simulate a query id in earlier versions
 		String queryid = "";
 		if (srvVersion < Ver.ver(9,4))

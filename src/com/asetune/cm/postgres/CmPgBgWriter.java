@@ -30,6 +30,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -139,7 +140,7 @@ extends CountersModel
 //	}
 	
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 //		return null;
 		List <String> pkCols = new LinkedList<String>();
@@ -150,7 +151,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 //		return "select *, 1 as PK from pg_catalog.pg_stat_bgwriter";
 		return "select * from pg_catalog.pg_stat_bgwriter";

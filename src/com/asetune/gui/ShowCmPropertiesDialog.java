@@ -46,6 +46,7 @@ import org.fife.ui.rtextarea.SearchEngine;
 import com.asetune.IGuiController;
 import com.asetune.cm.CountersModel;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
@@ -349,12 +350,15 @@ extends JDialog implements ActionListener, ChangeListener
 
 //		long    srvVersion  = Ver.ver(12,5,0,3);
 		long    srvVersion  = _versionPanel == null ? 0 : _versionPanel.getMinVersion();
-		boolean isCeEnabled = false;
+//		boolean isCeEnabled = false;
+
+		DbmsVersionInfo versionInfo = _versionPanel.createEmptyDbmsVersionInfo();
 
 		if (_cm.isRuntimeInitialized())
 		{
-			srvVersion  = _cm.getServerVersion();
-			isCeEnabled = _cm.isClusterEnabled();
+//			srvVersion  = _cm.getServerVersion();
+//			isCeEnabled = _cm.isClusterEnabled();
+			versionInfo = _cm.getCounterController().getMonConnection().getDbmsVersionInfo();
 			_initialized_true_lbl .setVisible(true);
 			_initialized_false_lbl.setVisible(false);
 		}
@@ -479,7 +483,8 @@ extends JDialog implements ActionListener, ChangeListener
 		panel.add(sqlPanel,    "wrap");
 		panel.add(otherPanel,  "growx, pushx, wrap");
 		
-		loadFieldsUsingVersion(srvVersion, isCeEnabled);
+//		loadFieldsUsingVersion(srvVersion, isCeEnabled);
+		loadFieldsUsingVersion(versionInfo);
 
 		
 		_versionPanel.addActionsListeners();
@@ -588,26 +593,109 @@ extends JDialog implements ActionListener, ChangeListener
 //		_testVersionInt_txt  .setText(" " + Long.toString(version) );
 //	}
 
-	public void loadFieldsUsingVersion(long srvVersion, boolean isCeEnabled)
+//	public void loadFieldsUsingVersion(long srvVersion, boolean isCeEnabled)
+//	{
+////		Connection conn = AseTune.getCounterCollector().getMonConnection();
+////		Connection conn = CounterController.getInstance().getMonConnection();
+//		DbxConnection conn = _cm.getCounterController().getMonConnection();
+//
+//		String sqlInit  = _cm.getSqlInitForVersion (conn, srvVersion, isCeEnabled);
+//		String sqlExec  = _cm.getSqlForVersion     (conn, srvVersion, isCeEnabled);
+//		String sqlWhere = _cm.getSqlWhere();
+//		String sqlClose = _cm.getSqlCloseForVersion(conn, srvVersion, isCeEnabled);
+//
+//		if ( sqlInit == null )  sqlInit = "";
+//		if ( sqlExec == null )  sqlExec = "";
+//		if ( sqlWhere == null ) sqlWhere = "";
+//		if ( sqlClose == null )	sqlClose = "";
+//
+//		String pkCols           = StringUtil.toCommaStr(_cm.getPkForVersion(conn, srvVersion, isCeEnabled));
+//		String diffCols         = StringUtil.toCommaStr(_cm.getDiffColumns());
+//		String pctCols          = StringUtil.toCommaStr(_cm.getPctColumns());
+//		String needConfig       = StringUtil.toCommaStr(_cm.getDependsOnConfigForVersion(conn, srvVersion, isCeEnabled));
+//		String needRole         = StringUtil.toCommaStr(_cm.getDependsOnRole());
+//		String needsrvVersion   = _cm.getDependsOnVersionStr();
+//		String needAseCeVersion = _cm.getDependsOnCeVersionStr();
+//		String dependsOnCm      = StringUtil.toCommaStr(_cm.getDependsOnCm());
+//		String toolTipMonTables = StringUtil.toCommaStr(_cm.getMonTablesInQuery());
+//
+//		// If we use SQL Prefix add that to the _sqlExec
+//		if (_cm.useSqlPrefix())
+//		{
+//			String sqlPrefix = _cm.getSqlPrefix(); 
+//			sqlExec = sqlPrefix + sqlExec;
+//		}
+//
+//		// Replace any "${cmCollectorName}" --> "xxxTune:CmName"
+//		sqlExec = _cm.replaceCollectorName(sqlExec);
+//
+//
+//		_sqlInit .setText(sqlInit);
+//		_sqlExec .setText(sqlExec);
+//		_sqlWhere.setText(sqlWhere);
+//		_sqlClose.setText(sqlClose);
+//
+////		String srvVersionStr = Ver.versionNumToStr(srvVersion);
+////System.out.println("loadFieldsUsingVersion(): version="+srvVersion+", srvVersionStr='"+srvVersionStr+"'.");
+////		_testVersionShort_txt.setText(srvVersionStr);
+////		parseVersionString(srvVersionStr);
+////
+////		_testVersionIsCe_chk.setSelected(isCeEnabled);
+//
+//		// Call the version Panel
+//		if (_versionPanel != null)
+//			_versionPanel.loadFieldsUsingVersion(srvVersion, isCeEnabled);
+//		
+//
+//		_pkCols_txt          .setText(pkCols);
+//		_diffCols_txt        .setText(diffCols);
+//		_pctCols_txt         .setText(pctCols);
+//		_needConfig_txt      .setText(needConfig);
+//		_needRole_txt        .setText(needRole);
+//		_needsrvVersion_txt  .setText(needsrvVersion);
+//		_needAseCeVersion_txt.setText(needAseCeVersion);
+//		_dependsOnCm_txt     .setText(dependsOnCm);
+//		_toolTipMonTables_txt.setText(toolTipMonTables);
+//
+//		_pkCols_txt  .setBackground( _pkColsHighlight_chk  .isSelected() ? PK_COLOR   : _needConfig_txt.getBackground() );
+//		_diffCols_txt.setBackground( _diffColsHighlight_chk.isSelected() ? DIFF_COLOR : _needConfig_txt.getBackground() );
+//		_pctCols_txt .setBackground( _pctColsHighlight_chk .isSelected() ? PCT_COLOR  : _needConfig_txt.getBackground() );
+//		
+////		_sqlExec.clearMarkAllHighlights();
+//		SearchContext context = new SearchContext();
+//		context.setMarkAll(false);
+//		SearchEngine.find(_sqlExec, context);
+//
+//		if (_pkColsHighlight_chk  .isSelected()) RTextUtility.markAll(_sqlExec, PK_COLOR,   _cm.getPkForVersion(conn, srvVersion, isCeEnabled));
+//		if (_diffColsHighlight_chk.isSelected()) RTextUtility.markAll(_sqlExec, DIFF_COLOR, _cm.getDiffColumns());
+//		if (_pctColsHighlight_chk .isSelected()) RTextUtility.markAll(_sqlExec, PCT_COLOR,  _cm.getPctColumns());
+//		
+//		scrollToTop();
+//	}
+
+	public void loadFieldsUsingVersion(DbmsVersionInfo versionInfo)
 	{
-//		Connection conn = AseTune.getCounterCollector().getMonConnection();
-//		Connection conn = CounterController.getInstance().getMonConnection();
 		DbxConnection conn = _cm.getCounterController().getMonConnection();
 
-		String sqlInit  = _cm.getSqlInitForVersion (conn, srvVersion, isCeEnabled);
-		String sqlExec  = _cm.getSqlForVersion     (conn, srvVersion, isCeEnabled);
+		if (versionInfo == null)
+		{
+			throw new RuntimeException("versionInfo can't be null");
+		}
+		
+		String sqlInit  = _cm.getSqlInitForVersion (conn, versionInfo);
+		String sqlExec  = _cm.getSqlForVersion     (conn, versionInfo);
 		String sqlWhere = _cm.getSqlWhere();
-		String sqlClose = _cm.getSqlCloseForVersion(conn, srvVersion, isCeEnabled);
+		String sqlClose = _cm.getSqlCloseForVersion(conn, versionInfo);
 
 		if ( sqlInit == null )  sqlInit = "";
 		if ( sqlExec == null )  sqlExec = "";
 		if ( sqlWhere == null ) sqlWhere = "";
 		if ( sqlClose == null )	sqlClose = "";
 
-		String pkCols           = StringUtil.toCommaStr(_cm.getPkForVersion(conn, srvVersion, isCeEnabled));
+		String pkCols           = StringUtil.toCommaStr(_cm.getPkForVersion(conn, versionInfo));
 		String diffCols         = StringUtil.toCommaStr(_cm.getDiffColumns());
 		String pctCols          = StringUtil.toCommaStr(_cm.getPctColumns());
-		String needConfig       = StringUtil.toCommaStr(_cm.getDependsOnConfigForVersion(conn, srvVersion, isCeEnabled));
+		String needConfig       = StringUtil.toCommaStr(_cm.getDependsOnConfigForVersion(conn, versionInfo));
 		String needRole         = StringUtil.toCommaStr(_cm.getDependsOnRole());
 		String needsrvVersion   = _cm.getDependsOnVersionStr();
 		String needAseCeVersion = _cm.getDependsOnCeVersionStr();
@@ -630,16 +718,9 @@ extends JDialog implements ActionListener, ChangeListener
 		_sqlWhere.setText(sqlWhere);
 		_sqlClose.setText(sqlClose);
 
-//		String srvVersionStr = Ver.versionNumToStr(srvVersion);
-//System.out.println("loadFieldsUsingVersion(): version="+srvVersion+", srvVersionStr='"+srvVersionStr+"'.");
-//		_testVersionShort_txt.setText(srvVersionStr);
-//		parseVersionString(srvVersionStr);
-//
-//		_testVersionIsCe_chk.setSelected(isCeEnabled);
-
 		// Call the version Panel
 		if (_versionPanel != null)
-			_versionPanel.loadFieldsUsingVersion(srvVersion, isCeEnabled);
+			_versionPanel.loadFieldsUsingVersion(versionInfo);
 		
 
 		_pkCols_txt          .setText(pkCols);
@@ -661,13 +742,13 @@ extends JDialog implements ActionListener, ChangeListener
 		context.setMarkAll(false);
 		SearchEngine.find(_sqlExec, context);
 
-		if (_pkColsHighlight_chk  .isSelected()) RTextUtility.markAll(_sqlExec, PK_COLOR,   _cm.getPkForVersion(conn, srvVersion, isCeEnabled));
+		if (_pkColsHighlight_chk  .isSelected()) RTextUtility.markAll(_sqlExec, PK_COLOR,   _cm.getPkForVersion(conn, versionInfo));
 		if (_diffColsHighlight_chk.isSelected()) RTextUtility.markAll(_sqlExec, DIFF_COLOR, _cm.getDiffColumns());
 		if (_pctColsHighlight_chk .isSelected()) RTextUtility.markAll(_sqlExec, PCT_COLOR,  _cm.getPctColumns());
 		
 		scrollToTop();
 	}
-
+	
 	private void scrollToTop()
 	{
 		if (_xscroll == null)

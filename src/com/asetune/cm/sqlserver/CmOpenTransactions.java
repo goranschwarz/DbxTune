@@ -42,6 +42,8 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.SqlServerUtils.LockRecord;
@@ -146,7 +148,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
@@ -171,7 +173,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 //		List <String> pkCols = new LinkedList<String>();
 //
@@ -182,8 +184,10 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		DbmsVersionInfoSqlServer ssVersionInfo = (DbmsVersionInfoSqlServer) versionInfo;
+
 		String dm_tran_database_transactions = "sys.dm_tran_database_transactions";
 		String dm_tran_session_transactions  = "sys.dm_tran_session_transactions";
 		String dm_exec_sessions              = "sys.dm_exec_sessions";
@@ -198,7 +202,7 @@ extends CountersModel
 			dm_exec_query_plan = "sys.dm_exec_query_plan_stats";
 		}
 
-		if (isAzure)
+		if (ssVersionInfo.isAzureSynapseAnalytics())
 		{
 			dm_tran_database_transactions = "sys.dm_pdw_nodes_tran_database_transactions";
 			dm_tran_session_transactions  = "sys.dm_pdw_nodes_tran_session_transactions";

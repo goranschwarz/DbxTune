@@ -74,6 +74,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.CollectionUtils;
 import com.asetune.utils.Configuration;
@@ -396,7 +397,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
@@ -706,7 +707,7 @@ extends CountersModel
 //	}
 
 	@Override
-	public void addMonTableDictForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		try 
 		{
@@ -840,7 +841,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -864,7 +865,7 @@ extends CountersModel
 
 
 //	@Override
-//	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+//	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 //	{
 //		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
 //		
@@ -883,13 +884,13 @@ extends CountersModel
 //		return "not-yet-implemented";
 //	}
 //
-//	private String getSqlForVersion_onPrem(DbxConnection conn, long srvVersion, boolean isAzure)
+//	private String getSqlForVersion_onPrem(DbxConnection conn, DbmsVersionInfo versionInfo)
 //	{
 //		return "not-yet-implemented";
 //	}
 
 //	@Override
-//	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+//	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 //	{
 //		// Table names are probably different in Normal SQL-Server and Azure SQL-Server
 //		String dm_db_file_space_usage        = "sys.dm_db_file_space_usage";
@@ -1620,8 +1621,11 @@ extends CountersModel
 //	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isAzure)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		DbmsVersionInfoSqlServer ssVersionInfo = (DbmsVersionInfoSqlServer) versionInfo;
+		long srvVersion = ssVersionInfo.getLongVersion();
+
 		// Table names are probably different in Normal SQL-Server and Azure SQL-Server
 		String dm_db_file_space_usage        = "sys.dm_db_file_space_usage";
 		String dm_db_log_space_usage         = "sys.dm_db_log_space_usage";
@@ -1666,15 +1670,8 @@ extends CountersModel
 
 		
 		// Special thing for Azure SQL Database
-		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
-//		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
-		if (isAzure || versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
-// FIXME: remove isAzure... which is a temporary fix
+		if (ssVersionInfo.isAzureDb() || ssVersionInfo.isAzureSynapseAnalytics())
 		{
-isAzure = true;
-srvVersion = Ver.ver(9999);
-			// NOTE: for Azure SQL Database, tempdb will have faulty 'devicename' and 'physical_name' (but lets fix that LATER)
-
 			foreachDbBegin = "";
 			foreachDbEnd   = "FROM ${TABLE_NAME} \n";
 		}
@@ -1685,7 +1682,7 @@ srvVersion = Ver.ver(9999);
 		String availabilityGroupPrimaryServer = "";
 		String whereAvailabilityGroup         = "";
 
-		if (srvVersion >= Ver.ver(2012) && !isAzure) // FIXME: remove isAzure... which is a temporary fix
+		if (srvVersion >= Ver.ver(2012))
 		{
 			availabilityGroupName          = "    ,ag_name                  = (SELECT ag.name             FROM sys.availability_replicas ar JOIN sys.availability_groups                ag ON ar.group_id = ag.group_id  WHERE ar.replica_id  = d.replica_id) \n"; 
 			availabilityGroupRole          = "    ,ag_role                  = (SELECT ars.role_desc       FROM sys.dm_hadr_availability_replica_states ars                                                               WHERE ars.replica_id = d.replica_id) \n";
@@ -1711,7 +1708,7 @@ srvVersion = Ver.ver(9999);
 		{
 			String foreachDbId = "     DB_ID(''?'')   as database_id \n";
 			String foreachDbSq = "''"; // sq == SingleQuote
-			if (isAzure || versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics()) // FIXME: remove isAzure... which is a temporary fix
+			if (ssVersionInfo.isAzureDb() || ssVersionInfo.isAzureSynapseAnalytics())
 			{
 				foreachDbId = "     DB_ID()   as database_id \n";
 				foreachDbSq = "'";
@@ -1779,7 +1776,7 @@ srvVersion = Ver.ver(9999);
 				+ " \n"
 				+ "";
 
-		if (isAzure || versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics()) // FIXME: remove isAzure... which is a temporary fix
+		if (ssVersionInfo.isAzureDb() || ssVersionInfo.isAzureSynapseAnalytics())
 		{
 			// Azure SQL Database
 			backupInfo = ""
@@ -1908,7 +1905,7 @@ srvVersion = Ver.ver(9999);
 		String osvLogDropTempTable1     = "if (object_id('tempdb..#osvLog')     is not null) drop table #osvLog  \n";
 		String osvLogDropTempTable2     = "drop table #osvLog  \n";
 
-		if (isAzure || versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics()) // FIXME: remove isAzure... which is a temporary fix
+		if (ssVersionInfo.isAzureDb() || ssVersionInfo.isAzureSynapseAnalytics())
 		{
 			osvDataCreateTempTable   = "";
 			osvDataColumns           = "";

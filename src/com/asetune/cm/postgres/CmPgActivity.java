@@ -51,6 +51,7 @@ import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.ResultSetMetaDataCached.Entry;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
@@ -169,7 +170,7 @@ extends CountersModel
 	}
 	
 	@Override
-	public List<String> getPkForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -179,7 +180,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return ""
 				+ "select \n"

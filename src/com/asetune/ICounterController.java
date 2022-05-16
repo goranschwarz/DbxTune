@@ -190,7 +190,8 @@ public interface ICounterController
 
 
 	
-	List<CountersModel> getCmListDependsOnConfig(String srvConfig, DbxConnection conn, long srvVersionNum, boolean isClusterEnabled);
+//	List<CountersModel> getCmListDependsOnConfig(String srvConfig, DbxConnection conn, long srvVersionNum, boolean isClusterEnabled);
+	List<CountersModel> getCmListDependsOnConfig(String srvConfig, DbxConnection conn);
 	void setWaitEvent(String string);
 	void createCounters(boolean hasGui);
 	boolean sleep(int i);
