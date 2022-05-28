@@ -46,6 +46,8 @@ import com.asetune.hostmon.HostMonitor.OsVendor;
 import com.asetune.hostmon.MonitorUpTimeWindows;
 import com.asetune.hostmon.OsTable;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.MovingAverageChart;
+import com.asetune.utils.MovingAverageCounterManager;
 
 public class CmOsUptime
 extends CounterModelHostMonitor
@@ -294,6 +296,17 @@ extends CounterModelHostMonitor
 	}
 
 	@Override
+	public void reset()
+	{
+		// Reset 5 minute average counters
+		MovingAverageCounterManager.getInstance(this.getName(), "1Min" , 60).reset();
+		MovingAverageCounterManager.getInstance(this.getName(), "5Min" , 60).reset();
+		MovingAverageCounterManager.getInstance(this.getName(), "15Min", 60).reset();
+		
+		super.reset();
+	}
+
+	@Override
 	public void sendAlarmRequest()
 	{
 		// Windows do NOT (for the moment) have any localCalculations
@@ -303,6 +316,7 @@ extends CounterModelHostMonitor
 		}
 
 		CountersModel cm = this;
+		String groupName = this.getName();
 
 		if ( ! cm.hasAbsData() )
 			return;
@@ -324,6 +338,12 @@ extends CounterModelHostMonitor
 		Double adjLoadAverage_5Min  = this.getAbsValueAsDouble(0, "adjLoadAverage_5Min");
 		Double adjLoadAverage_15Min = this.getAbsValueAsDouble(0, "adjLoadAverage_15Min");
 
+		// Add counters to a in-memory-storage, so we can "graph" them on Alarms
+		MovingAverageCounterManager.getInstance(groupName, "1Min",  60).add(adjLoadAverage_1Min);
+		MovingAverageCounterManager.getInstance(groupName, "5Min",  60).add(adjLoadAverage_5Min);
+		MovingAverageCounterManager.getInstance(groupName, "15Min", 60).add(adjLoadAverage_15Min);
+		
+
 		if (isSystemAlarmsForColumnEnabledAndInTimeRange("adjLoadAverage_1Min"))
 		{
 			if (adjLoadAverage_1Min != null)
@@ -334,7 +354,18 @@ extends CounterModelHostMonitor
 					System.out.println("##### sendAlarmRequest("+cm.getName()+"): adjLoadAverage_1Min: threshold="+threshold+", 1min=" + adjLoadAverage_1Min + ", 5min=" + adjLoadAverage_5Min + ", 15min=" + adjLoadAverage_15Min + ".");
 
 				if (adjLoadAverage_1Min > threshold)
-					AlarmHandler.getInstance().addAlarm( new AlarmEventOsLoadAverage(cm, threshold, hostname, RangeType.RANGE_1_MINUTE, adjLoadAverage_1Min, adjLoadAverage_5Min, adjLoadAverage_15Min) );
+				{
+					String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("Adjusted Load Average (1 hour)", // Note make the chart on 1 hour to see more info
+							MovingAverageCounterManager.getInstance(groupName, "1Min",  60),
+							MovingAverageCounterManager.getInstance(groupName, "5Min",  60),
+							MovingAverageCounterManager.getInstance(groupName, "15Min", 60));
+					
+					AlarmEventOsLoadAverage alarm = new AlarmEventOsLoadAverage(cm, threshold, hostname, RangeType.RANGE_1_MINUTE, adjLoadAverage_1Min, adjLoadAverage_5Min, adjLoadAverage_15Min);
+
+					alarm.setExtendedDescription(null, htmlChartImage);
+
+					AlarmHandler.getInstance().addAlarm( alarm );
+				}
 			}
 		}
 
@@ -348,7 +379,18 @@ extends CounterModelHostMonitor
 					System.out.println("##### sendAlarmRequest("+cm.getName()+"): adjLoadAverage_5Min: threshold="+threshold+", 1min=" + adjLoadAverage_1Min + ", 5min=" + adjLoadAverage_5Min + ", 15min=" + adjLoadAverage_15Min + ".");
 
 				if (adjLoadAverage_5Min > threshold)
-					AlarmHandler.getInstance().addAlarm( new AlarmEventOsLoadAverage(cm, threshold, hostname, RangeType.RANGE_5_MINUTE, adjLoadAverage_1Min, adjLoadAverage_5Min, adjLoadAverage_15Min) );
+				{
+					String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("Adjusted Load Average (1 hour)", // Note make the chart on 1 hour to see more info
+							MovingAverageCounterManager.getInstance(groupName, "1Min",  60),
+							MovingAverageCounterManager.getInstance(groupName, "5Min",  60),
+							MovingAverageCounterManager.getInstance(groupName, "15Min", 60));
+					
+					AlarmEventOsLoadAverage alarm = new AlarmEventOsLoadAverage(cm, threshold, hostname, RangeType.RANGE_5_MINUTE, adjLoadAverage_1Min, adjLoadAverage_5Min, adjLoadAverage_15Min);			
+
+					alarm.setExtendedDescription(null, htmlChartImage);
+
+					AlarmHandler.getInstance().addAlarm( alarm );
+				}
 			}
 		}
 
@@ -362,7 +404,18 @@ extends CounterModelHostMonitor
 					System.out.println("##### sendAlarmRequest("+cm.getName()+"): adjLoadAverage_15Min: threshold="+threshold+", 1min=" + adjLoadAverage_1Min + ", 5min=" + adjLoadAverage_5Min + ", 15min=" + adjLoadAverage_15Min + ".");
 
 				if (adjLoadAverage_15Min > threshold)
-					AlarmHandler.getInstance().addAlarm( new AlarmEventOsLoadAverage(cm, threshold, hostname, RangeType.RANGE_15_MINUTE, adjLoadAverage_1Min, adjLoadAverage_5Min, adjLoadAverage_15Min) );
+				{
+					String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("Adjusted Load Average (1 hour)", // Note make the chart on 1 hour to see more info
+							MovingAverageCounterManager.getInstance(groupName, "1Min",  60),
+							MovingAverageCounterManager.getInstance(groupName, "5Min",  60),
+							MovingAverageCounterManager.getInstance(groupName, "15Min", 60));
+					
+					AlarmEventOsLoadAverage alarm = new AlarmEventOsLoadAverage(cm, threshold, hostname, RangeType.RANGE_15_MINUTE, adjLoadAverage_1Min, adjLoadAverage_5Min, adjLoadAverage_15Min);
+
+					alarm.setExtendedDescription(null, htmlChartImage);
+
+					AlarmHandler.getInstance().addAlarm( alarm );
+				}
 			}
 		}
 	}

@@ -206,6 +206,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_PLAN_CACHE_OBJ_USE        = "PlanCacheObjUse";
 
 	public static final String GRAPH_NAME_MEMORY_MANAGER            = "MemMgr";
+	public static final String GRAPH_NAME_MEMORY_TARGET_VS_TOTAL    = "MemTargetVsTotal";
 //	public static final String GRAPH_NAME_MEMORY_X2                 = "MemMgr"; xxx
 //	public static final String GRAPH_NAME_MEMORY_X3                 = "MemMgr"; xxx
 
@@ -739,6 +740,20 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
+		//-----
+		addTrendGraph(GRAPH_NAME_MEMORY_TARGET_VS_TOTAL,
+			"Target vs Total Memory", // Menu CheckBox text
+			"Target vs Total Memory ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			new String[] { "Target Server Memory (KB)", "Total Server Memory (KB)" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.MEMORY,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+				
 		//-----
 		addTrendGraph(GRAPH_NAME_QUERY_STORE_TOTAL,
 			"Query Story Total", // Menu CheckBox text
@@ -2049,6 +2064,35 @@ extends CountersModel
 			}
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), larr, darr);
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_MEMORY_TARGET_VS_TOTAL.equals(tgdp.getName()))
+		{
+//			new String[] { "Target Server Memory (KB)", "Total Server Memory (KB)" }, 
+			Double[] arr = new Double[2];
+			
+			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+			String pk1 = createPkStr(":Memory Manager", "Target Server Memory (KB)", "");
+			String pk2 = createPkStr(":Memory Manager", "Total Server Memory (KB)", "");
+			
+			Double val1 = this.getAbsValueAsDouble(pk1, "calculated_value");
+			Double val2 = this.getAbsValueAsDouble(pk2, "calculated_value");
+			
+			if (val1 != null && val2 != null)
+			{
+				arr[0] = val1;
+				arr[1] = val2;
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				TrendGraph tg = getTrendGraph(tgdp.getName());
+				if (tg != null)
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"'.");
+			}
 		}
 
 		// -----------------------------------------------------------------------------------------

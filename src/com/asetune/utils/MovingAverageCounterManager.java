@@ -23,29 +23,72 @@ package com.asetune.utils;
 
 import java.util.HashMap;
 
+import org.apache.log4j.Logger;
+
 public class MovingAverageCounterManager
 {
+	private static Logger _logger = Logger.getLogger(MovingAverageCounterManager.class);
+
 	//---------------------------------------------------
 	// BEGIN: Instance variables and methods
 	//---------------------------------------------------
 	private static HashMap<String, MovingAverageCounter> _map = new HashMap<>(); 
 
-	public static MovingAverageCounter getInstance(String name, int minutes)
+//	public static MovingAverageCounter getInstance(String name, int minutes)
+//	{
+//		String key = createKey("", name, minutes);
+//		
+//		// Get object, if not found create one
+//		MovingAverageCounter val = _map.get(key);
+//		if (val == null)
+//		{
+//			val = new MovingAverageCounter(name, minutes);
+//			_map.put(key, val);
+//		}
+//		return val;
+//	}
+	public static MovingAverageCounter getInstance(String groupName, String counterName, int minutes)
 	{
-		String key = MovingAverageCounter.createName(name, minutes);
-		
+		String key = createKey(groupName, counterName, minutes);
+
 		// Get object, if not found create one
 		MovingAverageCounter val = _map.get(key);
 		if (val == null)
 		{
-			val = new MovingAverageCounter(name, minutes);
+			val = new MovingAverageCounter(counterName, minutes);
 			_map.put(key, val);
 		}
 		return val;
 	}
+	
+
+	public static void outOfMemoryHandler()
+	{
+		// This method is called from CounterCollectorThreadNoGui.outOfMemoryHandler() and MainFrame.ACTION_OUT_OF_MEMORY
+		_logger.info("OutOfMemoryHandler: Clearing all statistics and creating a new Map to hold any new statistics.");
+		_map = new HashMap<>(); 
+	}
+
 	//---------------------------------------------------
 	// END: Instance variables and methods
 	//---------------------------------------------------
+
+	/**
+	 * Create a String to be used as a key in various maps...
+	 * 
+	 * @param groupName
+	 * @param counterName
+	 * @param minutes
+	 * @return name + ":" + minutes
+	 */
+	public static String createKey(String groupName, String counterName, int minutes)
+	{
+		if (StringUtil.hasValue(groupName))
+			return groupName + ":" + counterName + ":" + minutes;
+		else
+			return counterName + ":" + minutes;
+	}
+
 	
 	
 //	//---------------------------------------------------

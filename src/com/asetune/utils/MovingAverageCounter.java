@@ -47,23 +47,23 @@ public class MovingAverageCounter
 		_isPeriodAchieved = false;
 	}
 
-	/**
-	 * Create a String to be used as a key in various maps...
-	 * 
-	 * @param name
-	 * @param minutes
-	 * @return name + ":" + minutes
-	 */
-	public static String createName(String name, int minutes)
-	{
-		return name + ":" + minutes;
-	}
+//	/**
+//	 * Create a String to be used as a key in various maps...
+//	 * 
+//	 * @param counterName
+//	 * @param minutes
+//	 * @return name + ":" + minutes
+//	 */
+//	public static String createKey(String counterName, int minutes)
+//	{
+//		return counterName + ":" + minutes;
+//	}
 
-	/** Get key (or name:minutes) of this entry */
-	public String getKey()
-	{
-		return createName(_name, _minutes);
-	}
+//	/** Get key (or name:minutes) of this entry */
+//	public String getKey()
+//	{
+//		return createKey(_name, _minutes);
+//	}
 
 	/** get name of the entry */
 	public String getName()
@@ -346,8 +346,8 @@ public class MovingAverageCounter
 	 */
 	public static void main(String[] args)
 	{
-		MovingAverageCounter si = MovingAverageCounterManager.getInstance("swapIn",  5);
-		MovingAverageCounter so = MovingAverageCounterManager.getInstance("swapOut", 5);
+		MovingAverageCounter si = MovingAverageCounterManager.getInstance(null, "swapIn",  5);
+		MovingAverageCounter so = MovingAverageCounterManager.getInstance(null, "swapOut", 5);
 
 		int crCnt = 30;
 		long startTime = System.currentTimeMillis() / 1000 - 300;
@@ -367,8 +367,8 @@ public class MovingAverageCounter
 
 		// Create a small chart, that can be used in emails etc.
 		String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("OS Swapping (15 minutes)", 
-				MovingAverageCounterManager.getInstance("swapIn",  5),
-				MovingAverageCounterManager.getInstance("swapOut", 5));
+				MovingAverageCounterManager.getInstance(null, "swapIn",  5),
+				MovingAverageCounterManager.getInstance(null, "swapOut", 5));
 
 		// To check the image, use for example: https://jsfiddle.net/
 		System.out.println(htmlChartImage);

@@ -136,7 +136,8 @@ public class H2UrlHelper
 		if (urlVal.startsWith("~"))
 		{
 			String homeDir = SysProperties.USER_HOME;
-			urlVal = homeDir + SysProperties.FILE_SEPARATOR + urlVal.substring(1);
+//			urlVal = homeDir + SysProperties.FILE_SEPARATOR + urlVal.substring(1);
+			urlVal = homeDir + File.separator + urlVal.substring(1);
 		}
 
 		_extractedFileName = urlVal.trim();

@@ -79,6 +79,7 @@ import com.asetune.utils.HeartbeatMonitor;
 import com.asetune.utils.MandatoryPropertyException;
 import com.asetune.utils.Memory;
 import com.asetune.utils.MemoryWarningSystem;
+import com.asetune.utils.MovingAverageCounterManager;
 import com.asetune.utils.PropPropEntry;
 import com.asetune.utils.ShutdownHandler;
 import com.asetune.utils.StringUtil;
@@ -835,6 +836,9 @@ implements Memory.MemoryListener
 			PersistentCounterHandler.getInstance().outOfMemoryHandler();
 		}
 
+		// MovingAverageCounterManager is a static implementation, so we can call it directly without checking if it has an instance!
+		MovingAverageCounterManager.outOfMemoryHandler();
+
 		System.gc();
 	}
 
@@ -863,6 +867,9 @@ implements Memory.MemoryListener
 			{
 				PersistentCounterHandler.getInstance().lowOnMemoryHandler();
 			}
+
+			// MovingAverageCounterManager does not have: lowOnMemoryHandler(), I added this for clarity
+			//MovingAverageCounterManager.lowOnMemoryHandler();
 
 			System.gc();
 		}

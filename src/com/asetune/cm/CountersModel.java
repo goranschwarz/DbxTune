@@ -8385,52 +8385,55 @@ implements Cloneable, ITableTooltip
 	 * @param type
 	 * @throws IOException
 	 */
-	private void writeJsonCounterSample(JsonWriter w, int type)
-			throws IOException
-	{
-		// Write the TYPE
-		String counterType;
-		if      (type == DATA_ABS)  counterType = "absCounters";
-		else if (type == DATA_DIFF) counterType = "diffCounters";
-		else if (type == DATA_RATE) counterType = "rateCounters";
-		else throw new IOException("Unknown type="+type);
-
-		// Set name
-		w.name(counterType);
-		
-		// Write an array of row objects: [ 
-		//                                  { "c1":"data", "c2":"data", "c3":"data" }, 
-		//                                  { "c1":"data", "c2":"data", "c3":"data" } 
-		//                                ]  
-		w.beginArray();
-		int rowc = getRowCount(type);
-		int colc = getColumnCount(type);
-		for (int r=0; r<rowc; r++)
-		{
-			w.beginObject();
-			for (int c=0; c<colc; c++)
-			{
-				Object obj  = getValue(type, r, c);
-				String name = getColumnName(c);  
-				
-				if (name == null)
-					throw new IOException("When writing JSON CM='"+getName()+"', CounterType="+type+", row="+r+", col="+c+", Column Name was 'null' (not set).");
-
-				w.name(name);
-				if (obj == null)
-					w.nullValue();
-				else
-				{
-					if      (obj instanceof Number)  w.value( (Number)  obj );
-					else if (obj instanceof Boolean) w.value( (Boolean) obj );
-					else                             w.value( obj.toString() );
-				}
-			}
-			w.endObject();
-		}
-		w.endArray();		
-	}
-	private void writeJsonCounterSample(JsonGenerator w, int type)
+//---------------------------------------------------------
+// The below id for GSON Writer
+//---------------------------------------------------------
+//	protected void writeJsonCounterSample(JsonWriter w, int type)
+//			throws IOException
+//	{
+//		// Write the TYPE
+//		String counterType;
+//		if      (type == DATA_ABS)  counterType = "absCounters";
+//		else if (type == DATA_DIFF) counterType = "diffCounters";
+//		else if (type == DATA_RATE) counterType = "rateCounters";
+//		else throw new IOException("Unknown type="+type);
+//
+//		// Set name
+//		w.name(counterType);
+//		
+//		// Write an array of row objects: [ 
+//		//                                  { "c1":"data", "c2":"data", "c3":"data" }, 
+//		//                                  { "c1":"data", "c2":"data", "c3":"data" } 
+//		//                                ]  
+//		w.beginArray();
+//		int rowc = getRowCount(type);
+//		int colc = getColumnCount(type);
+//		for (int r=0; r<rowc; r++)
+//		{
+//			w.beginObject();
+//			for (int c=0; c<colc; c++)
+//			{
+//				Object obj  = getValue(type, r, c);
+//				String name = getColumnName(c);  
+//				
+//				if (name == null)
+//					throw new IOException("When writing JSON CM='"+getName()+"', CounterType="+type+", row="+r+", col="+c+", Column Name was 'null' (not set).");
+//
+//				w.name(name);
+//				if (obj == null)
+//					w.nullValue();
+//				else
+//				{
+//					if      (obj instanceof Number)  w.value( (Number)  obj );
+//					else if (obj instanceof Boolean) w.value( (Boolean) obj );
+//					else                             w.value( obj.toString() );
+//				}
+//			}
+//			w.endObject();
+//		}
+//		w.endArray();		
+//	}
+	protected void writeJsonCounterSample(JsonGenerator w, int type)
 			throws IOException
 	{
 		// Write the TYPE
@@ -8495,7 +8498,8 @@ implements Cloneable, ITableTooltip
 //		}
 	}
 	
-	public void toJson(JsonGenerator w, boolean writeCounters, boolean writeGraphs)
+//	public void toJson(JsonGenerator w, boolean writeCounters, boolean writeGraphs)
+	public void toJson(JsonGenerator w, JsonCmWriterOptions writerOptions)
 	throws IOException
 	{
 //		JsonFactory jfactory = new JsonFactory();
@@ -8505,8 +8509,9 @@ implements Cloneable, ITableTooltip
 		
 //System.out.println(" >>> toJson >>> graph [srvName='"+getServerName()+"', CmName="+StringUtil.left(getName(),30)+"]: writeGraphs="+writeGraphs+", hasTrendGraphData()="+hasTrendGraphData());
 		// Check MANDATORY parameters
-		boolean throwOnMissingMandatoryParams = false;
-		if (throwOnMissingMandatoryParams)
+//		boolean throwOnMissingMandatoryParams = false;
+//		if (throwOnMissingMandatoryParams)
+		if (writerOptions.throwOnMissingMandatoryParams)
 		{
 			if (getSampleTime() == null) throw new NullPointerException("When writing CM '"+getName()+"' to JSON. 'sessionSampleTime' value was NULL, which is mandatory.");
 			if (getTimestamp()  == null) throw new NullPointerException("When writing CM '"+getName()+"' to JSON. 'cmSampleTime' value was NULL, which is mandatory.");
@@ -8530,8 +8535,9 @@ implements Cloneable, ITableTooltip
 		w.writeStringField("type",              isSystemCm() ? "SYSTEM" : "USER_DEFINED");
 
 		// Write some statistical fields
-		boolean writeStats = true;
-		if (writeStats)
+//		boolean writeStats = true;
+//		if (writeStats)
+		if (writerOptions.writeStats)
 		{
 			w.writeFieldName("sampleDetails");
 			w.writeStartObject();
@@ -8556,12 +8562,15 @@ implements Cloneable, ITableTooltip
 			w.writeEndObject(); // END: Counters
 		}
 
-		if (writeCounters)
+//		if (writeCounters)
+		if (writerOptions.writeCounters)
 		{
 			w.writeFieldName("counters");
 			w.writeStartObject();
 
-			if (hasResultSetMetaData())
+//			boolean writeMetaData = true;
+//			if (writeMetaData && hasResultSetMetaData())
+			if (writerOptions.writeMetaData && hasResultSetMetaData())
 			{
 				ResultSetMetaDataCached rsmd = (ResultSetMetaDataCached) getResultSetMetaData();
 				try
@@ -8590,20 +8599,21 @@ implements Cloneable, ITableTooltip
 				}
 			}
 
-			if (hasAbsData())
+			if (hasAbsData() && writerOptions.writeCounters_abs)
 				writeJsonCounterSample(w, DATA_ABS);
 
-			if (hasDiffData())
+			if (hasDiffData() && writerOptions.writeCounters_diff)
 				writeJsonCounterSample(w, DATA_DIFF);
 
-			if (hasRateData())
+			if (hasRateData() && writerOptions.writeCounters_rate)
 				writeJsonCounterSample(w, DATA_RATE);
 
 			w.writeEndObject(); // END: Counters
 		}
 
 //System.out.println("                graph [srvName='"+getServerName()+"', CmName="+StringUtil.left(getName(),30)+"]: writeGraphs="+writeGraphs+", hasTrendGraphData()="+hasTrendGraphData());
-		if (writeGraphs && hasTrendGraphData()) // note use 'hasTrendGraphData()' and NOT 'hasTrendGraph()' which is only true in GUI mode
+//		if (writeGraphs && hasTrendGraphData()) // note use 'hasTrendGraphData()' and NOT 'hasTrendGraph()' which is only true in GUI mode
+		if (writerOptions.writeGraphs && hasTrendGraphData()) // note use 'hasTrendGraphData()' and NOT 'hasTrendGraph()' which is only true in GUI mode
 		{
 			w.writeFieldName("graphs");
 			w.writeStartArray(); 
@@ -8698,106 +8708,112 @@ implements Cloneable, ITableTooltip
 		w.writeEndObject(); // END: this CM
 	}
 
-	public void toJson(JsonWriter w, boolean writeCounters, boolean writeGraphs)
-	throws IOException
-	{
-		w.beginObject();
+//---------------------------------------------------------
+// The below id for GSON Writer
+//---------------------------------------------------------
+//	public void toJson(JsonWriter w, boolean writeCounters, boolean writeGraphs)
+//	throws IOException
+//	{
+//		w.beginObject();
+//
+//		w.name("cmName")           .value(getName());
+//		w.name("cmSampleTime")     .value(TimeUtils.toStringIso8601(getTimestamp()));
+//		w.name("cmSampleMs")       .value(getLastSampleInterval());
+//		w.name("type")             .value(isSystemCm() ? "SYSTEM" : "USER_DEFINED");
+//
+//		if (writeCounters)
+//		{
+//			w.name("counters");
+//			w.beginObject();
+//
+//			if (hasResultSetMetaData())
+//			{
+//				ResultSetMetaDataCached rsmd = (ResultSetMetaDataCached) getResultSetMetaData();
+//				try
+//				{
+//					w.name("metaData");
+//					w.beginArray(); 
+//
+//					// { "colName" : "someColName", "jdbcTypeName" : "java.sql.Types.DECIMAL", "guessedDbmsType" : "decimal(16,1)" }
+//					for (int c=1; c<=rsmd.getColumnCount(); c++) // Note: ResultSetMetaData starts at 1 not 0
+//					{
+//						w.beginObject();
+//						w.name("columnName")     .value(rsmd.getColumnLabel(c));
+//						w.name("jdbcTypeName")   .value(ResultSetTableModel.getColumnJavaSqlTypeName(rsmd.getColumnType(c)));
+//						w.name("javaClassName")  .value(rsmd.getColumnClassName(c));
+//						w.name("guessedDbmsType").value(ResultSetTableModel.getColumnTypeName(rsmd, c));
+//						w.name("isDiffColumn")   .value(isDiffColumn(c-1)); // column pos starts at 0 in the CM
+//						w.name("isPctColumn")    .value(isPctColumn(c-1));  // column pos starts at 0 in the CM
+//						w.endObject();
+//					}
+//					w.endArray();
+//				}
+////				catch (SQLException ex)
+//				catch (Exception ex)
+//				{
+//					_logger.error("Write JSON JDBC MetaData data, for CM='"+getName()+"'. Caught: "+ex, ex);
+//				}
+//			}
+//
+//			if (hasAbsData())
+//				writeJsonCounterSample(w, DATA_ABS);
+//
+//			if (hasDiffData())
+//				writeJsonCounterSample(w, DATA_DIFF);
+//
+//			if (hasRateData())
+//				writeJsonCounterSample(w, DATA_RATE);
+//
+//			w.endObject(); // END: Counters
+//		}
+//
+//		if (writeGraphs && hasTrendGraph())
+//		{
+//			w.name("graphs");
+//			w.beginArray();
+//			for (String graphName : getTrendGraphs().keySet())
+//			{
+//				TrendGraphDataPoint tgdp = getTrendGraphData(graphName);
+//
+//				w.beginObject();
+//				w.name("graphName"       ).value(graphName);
+////				w.name("graphDescription").value(tgdp.getDescription());
+//				w.name("data");
+//				w.beginArray();
+//				// loop all data
+//				Double[] dataArr  = tgdp.getData();
+//				String[] labelArr = tgdp.getLabel();
+////				if (dataArr  == null) throw new IllegalArgumentException("The CM '"+getName()+"', graph '"+tgdp.getName()+"' has a null pointer for it's DATA array.");
+////				if (labelArr == null) throw new IllegalArgumentException("The CM '"+getName()+"', graph '"+tgdp.getName()+"' has a null pointer for it's LABEL array.");
+//				if (dataArr != null && labelArr != null)
+//				{
+//					for (int d=0; d<dataArr.length; d++)
+//					{
+//						w.beginObject();
+//
+//						Double data  = dataArr[d];
+//						String label = null;
+//						if (d < labelArr.length)
+//							label = labelArr[d];
+//
+//						w.name("label")    .value(label);
+//						w.name("dataPoint").value(data);
+//
+//						w.endObject();
+//					}
+//				}
+//				w.endArray();
+//				w.endObject(); // END: GraphName
+//			}
+//			w.endArray();
+//		}
+//
+//		w.endObject(); // END: this CM
+//	}
 
-		w.name("cmName")           .value(getName());
-		w.name("cmSampleTime")     .value(TimeUtils.toStringIso8601(getTimestamp()));
-		w.name("cmSampleMs")       .value(getLastSampleInterval());
-		w.name("type")             .value(isSystemCm() ? "SYSTEM" : "USER_DEFINED");
-
-		if (writeCounters)
-		{
-			w.name("counters");
-			w.beginObject();
-
-			if (hasResultSetMetaData())
-			{
-				ResultSetMetaDataCached rsmd = (ResultSetMetaDataCached) getResultSetMetaData();
-				try
-				{
-					w.name("metaData");
-					w.beginArray(); 
-
-					// { "colName" : "someColName", "jdbcTypeName" : "java.sql.Types.DECIMAL", "guessedDbmsType" : "decimal(16,1)" }
-					for (int c=1; c<=rsmd.getColumnCount(); c++) // Note: ResultSetMetaData starts at 1 not 0
-					{
-						w.beginObject();
-						w.name("columnName")     .value(rsmd.getColumnLabel(c));
-						w.name("jdbcTypeName")   .value(ResultSetTableModel.getColumnJavaSqlTypeName(rsmd.getColumnType(c)));
-						w.name("javaClassName")  .value(rsmd.getColumnClassName(c));
-						w.name("guessedDbmsType").value(ResultSetTableModel.getColumnTypeName(rsmd, c));
-						w.name("isDiffColumn")   .value(isDiffColumn(c-1)); // column pos starts at 0 in the CM
-						w.name("isPctColumn")    .value(isPctColumn(c-1));  // column pos starts at 0 in the CM
-						w.endObject();
-					}
-					w.endArray();
-				}
-//				catch (SQLException ex)
-				catch (Exception ex)
-				{
-					_logger.error("Write JSON JDBC MetaData data, for CM='"+getName()+"'. Caught: "+ex, ex);
-				}
-			}
-
-			if (hasAbsData())
-				writeJsonCounterSample(w, DATA_ABS);
-
-			if (hasDiffData())
-				writeJsonCounterSample(w, DATA_DIFF);
-
-			if (hasRateData())
-				writeJsonCounterSample(w, DATA_RATE);
-
-			w.endObject(); // END: Counters
-		}
-
-		if (writeGraphs && hasTrendGraph())
-		{
-			w.name("graphs");
-			w.beginArray();
-			for (String graphName : getTrendGraphs().keySet())
-			{
-				TrendGraphDataPoint tgdp = getTrendGraphData(graphName);
-
-				w.beginObject();
-				w.name("graphName"       ).value(graphName);
-//				w.name("graphDescription").value(tgdp.getDescription());
-				w.name("data");
-				w.beginArray();
-				// loop all data
-				Double[] dataArr  = tgdp.getData();
-				String[] labelArr = tgdp.getLabel();
-//				if (dataArr  == null) throw new IllegalArgumentException("The CM '"+getName()+"', graph '"+tgdp.getName()+"' has a null pointer for it's DATA array.");
-//				if (labelArr == null) throw new IllegalArgumentException("The CM '"+getName()+"', graph '"+tgdp.getName()+"' has a null pointer for it's LABEL array.");
-				if (dataArr != null && labelArr != null)
-				{
-					for (int d=0; d<dataArr.length; d++)
-					{
-						w.beginObject();
-
-						Double data  = dataArr[d];
-						String label = null;
-						if (d < labelArr.length)
-							label = labelArr[d];
-
-						w.name("label")    .value(label);
-						w.name("dataPoint").value(data);
-
-						w.endObject();
-					}
-				}
-				w.endArray();
-				w.endObject(); // END: GraphName
-			}
-			w.endArray();
-		}
-
-		w.endObject(); // END: this CM
-	}
+//--------------------------------------------------------------
 // How a JSON might look like
+//--------------------------------------------------------------
 //	{
 //		"name" : "CmExample",
 //		"sampleIntervall" : 111111,

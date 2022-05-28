@@ -39,8 +39,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.comparator.NameFileComparator;
@@ -58,6 +63,7 @@ import com.asetune.cm.CmSettingsHelper.Type;
 import com.asetune.cm.CmSettingsHelper.UrlInputValidator;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelAppend;
+import com.asetune.cm.JsonCmWriterOptions;
 import com.asetune.pcs.sqlcapture.SqlCaptureDetails;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.HttpUtils;
@@ -339,8 +345,10 @@ extends PersistWriterBase
 	throws IOException
 	{
 		boolean extAlarmDescAsHtml = cfgSlot._sendAlarmExtDescAsHtml;
-		boolean writeCounters      = cfgSlot._sendCounters;
-		boolean writeGraphs        = cfgSlot._sendGraphs;
+//		boolean writeCounters      = cfgSlot._sendCounters;
+//		boolean writeGraphs        = cfgSlot._sendGraphs;
+		SendConfig sendCounters    = cfgSlot._sendCounters;
+		SendConfig sendGraphs      = cfgSlot._sendGraphs;
 
 
 		StringWriter sw = new StringWriter();
@@ -504,26 +512,66 @@ extends PersistWriterBase
 			if ( ! cm.hasData() && ! cm.hasTrendGraphData() )
 				continue;
 
-			// if we ONLY write graph data, but there is no graphs with data
-			if ( writeCounters == false && (writeGraphs && cm.getTrendGraphCountWithData() == 0))
-				continue;
+			String shortCmName = cm.getName();
 			
-			cm.toJson(w, writeCounters, writeGraphs);
+			// Create Options object that specifies *what* JSON objects to write/produce 
+			JsonCmWriterOptions writeOptions = new JsonCmWriterOptions();
+			writeOptions.writeCounters      = sendCounters.isEnabled(shortCmName);
+			if (writeOptions.writeCounters)
+			{
+				writeOptions.writeCounters_abs  = sendCounters.isAbsEnabled(shortCmName);
+				writeOptions.writeCounters_diff = sendCounters.isDiffEnabled(shortCmName);
+				writeOptions.writeCounters_rate = sendCounters.isRateEnabled(shortCmName);
+			}
+
+			writeOptions.writeGraphs = sendGraphs.isEnabled(shortCmName);
+			
+			// if we ONLY write graph data, but there is no graphs with data
+			// or possibly move this check INTO the cm method: cm.toJson(w, writeOptions);
+			if ( writeOptions.writeCounters == false && (writeOptions.writeGraphs && cm.getTrendGraphCountWithData() == 0))
+				continue;
+
+			// Use the CM method to write JSON
+			cm.toJson(w, writeOptions);
 		}
 
 		w.writeEndArray();
 		w.writeEndObject();
 		w.close();
-		
-////			System.out.println(sw.toString());
-//		File toFileName = new File("c:\\tmp\\PersistWriterToHttpJson.tmp.json");
-//System.out.println("Writing JSON to file: "+toFileName.getAbsolutePath());
-//
+
 		String jsonStr = sw.toString();
-//System.out.println(jsonStr);
-//		FileUtils.writeStringToFile(toFileName, jsonStr);
 		
-//		System.out.println("#### END JSON #######################################################################");
+		// Debug write to a file, if property is set
+		if (Configuration.getCombinedConfiguration().hasProperty("PersistWriterToHttpJson.debug.writeToFile"))
+		{
+			//-------------------------------------------------------------------------------------------------------------------
+			// Property example: PersistWriterToHttpJson.debug.writeToFile = c:\tmp\PersistWriterToHttpJson.tmp.json
+			//-------------------------------------------------------------------------------------------------------------------
+			String debugToFileNameStr = Configuration.getCombinedConfiguration().getProperty("PersistWriterToHttpJson.debug.writeToFile", "");
+			if (StringUtil.hasValue(debugToFileNameStr))
+			{
+				if ("STDOUT".equalsIgnoreCase(debugToFileNameStr))
+				{
+					System.out.println("#### BEGIN JSON #####################################################################");
+					System.out.println(jsonStr);
+					System.out.println("#### END JSON #######################################################################");
+				}
+				else
+				{
+					File debugToFileName = new File(debugToFileNameStr);
+					
+					try
+					{
+						_logger.info("Writing JSON message to DEBUG file '" + debugToFileName.getAbsolutePath() + "'.");
+						FileUtils.writeStringToFile(debugToFileName, jsonStr, StandardCharsets.UTF_8);
+					}
+					catch(Exception ex)
+					{
+						_logger.error("PROBLEMS Writing JSON message to DEBUG file '" + debugToFileName.getAbsolutePath() + "', skipping and continuing.", ex);
+					}
+				}
+			}
+		}
 
 		return jsonStr;
 	}
@@ -748,6 +796,267 @@ extends PersistWriterBase
 		}
 	}
 
+	//------------------------------------------------------------------------------
+	// PRIVATE HELPER CLASS
+	//------------------------------------------------------------------------------
+	public static class SendConfig
+	{
+		private boolean             _sendAll = false;
+		private Map<String, String> _includeMap;
+		private Set<String>         _excludeSet;
+
+		@Override
+		public String toString()
+		{
+//			return super.toString() + ": sendAll=" + _sendAll + ", includeMap=" + _includeMap + ", excludeSet=" + _excludeSet;
+			return "sendAll=" + _sendAll + ", includeMap=" + _includeMap + ", excludeSet=" + _excludeSet;
+		}
+		
+		public enum FilterType 
+		{
+			ABS, DIFF, RATE
+		};
+
+		public SendConfig(boolean sendAll)
+		{
+			_sendAll = sendAll;
+		}
+
+		public SendConfig(Configuration conf, String propName, String defaultValue)
+		throws Exception
+		{
+conf = Configuration.getCombinedConfiguration();
+			String propVal = conf.getProperty(propName, defaultValue);
+
+			// parse the CSV Property into a temporary map
+			Map<String, String> tmpMap = StringUtil.parseCommaStrToMap(propVal);
+//System.out.println(">>>> SendConfig(propName=|"+propName+"|, propVal=|"+propVal+"|): tmpMap="+tmpMap);
+
+			if (tmpMap.isEmpty())
+			{
+				_sendAll = false;
+			}
+			else
+			{
+				// loop ALL entries, add them to _map
+				for (Entry<String, String> entry : tmpMap.entrySet())
+				{
+					String key = entry.getKey();
+					String val = entry.getValue();
+					
+					// Look for "", "none"
+					if ( "".equalsIgnoreCase(key) || "none".equalsIgnoreCase(key) )
+					{
+						_sendAll = false;
+					}
+					// Look for "*", "all"
+					else if ( "*".equalsIgnoreCase(key) || "all".equalsIgnoreCase(key) )
+					{
+						_sendAll = true;
+						// or possibly ADD ALL entries from: CounterController.getInstance().getCmList();
+					}
+					else
+					{
+						// Check for "negative" or "exclusion" entry
+						boolean exlusionEntry = false;
+						if (key.startsWith("!"))
+						{
+							exlusionEntry = true;
+							key = key.substring(1).trim(); // remove the "!"
+						}
+
+						if ("true".equalsIgnoreCase(val))
+							val = "adr";
+
+						if ("false".equalsIgnoreCase(val))
+							exlusionEntry = true;
+
+						String cmName = key;
+
+						// Check if the name exists (if any CM exists with that name)
+						CountersModel cm = CounterController.getInstance().getCmByName(cmName);
+						if (cm == null)
+						{
+							_logger.error("JSON-SendConfig: The CounterModel '" + cmName + "' does not exists. This entry will be discarded!");
+							continue;
+						}
+
+						if (exlusionEntry)
+						{
+							if (_excludeSet == null)
+								_excludeSet = new LinkedHashSet<>();
+
+							_excludeSet.add(cmName);
+						}
+						else
+						{
+							// Do only allow 'adr' chars... 
+							// * a=AbsCounters
+							// * d=DiffCounters
+							// * r=RateCounters 
+							String addType = "";
+							if (StringUtil.hasValue(val))
+							{
+								String unsupportedChar = "";
+								for (int i=0; i<val.length(); i++)
+								{
+									char ch = val.charAt(i);
+									if (ch == 'a' || ch == 'A' || ch == 'd' || ch == 'D' || ch == 'r' || ch == 'R')
+									{
+										addType += Character.toLowerCase(ch);
+									}
+									else
+									{
+										unsupportedChar += ch;
+										_logger.error("JSON-SendConfig: Inproper value for property '" + propName + "'. Found unsupported char(s) '" + unsupportedChar + "', accepted values are 'adr' where: 'a'=AbsoluteCounters, 'd'=DiffCounters, 'r'=RateCounters");
+									}
+								}
+							}
+
+							// Create the mpa if it doesnt exist
+							if (_includeMap == null)
+								_includeMap = new LinkedHashMap<>();
+
+							// finally ADD the entry to the _includeMap
+							_includeMap.put(cmName, addType);
+						}
+					} // end: CM Entry 
+				} // end: loop tmpMap
+			} // end: tmpMap has-values
+
+			// Should we have a second way to enable this via another property (that starts with the CM-NAME)
+			// Check for CM Properties, named: <CmName>.PersistWriterToHttpJson.send.{counters|graphs}
+			boolean checkEnableViaCmName = true;
+			if (checkEnableViaCmName)
+			{
+				for (CountersModel cm : CounterController.getInstance().getCmList())
+				{
+//					public static final String  PROPKEY_sendCounters      = "PersistWriterToHttpJson.{KEY}.send.counters";
+//					public static final String  PROPKEY_sendGraphs        = "PersistWriterToHttpJson.{KEY}.send.graphs";
+					
+					String cmName = cm.getName();
+					String key = null;
+					if (propName.endsWith(".send.counters")) key = cmName + ".PersistWriterToHttpJson.send.counters";
+					if (propName.endsWith(".send.graphs"  )) key = cmName + ".PersistWriterToHttpJson.send.graphs";
+
+					String val = conf.getProperty(key);
+					if (val != null)
+					{
+						// do work
+						// - check if the CM is EXPLICITLY defined, then do NOT override!
+
+						boolean doApply = true;
+						if (_excludeSet != null && _excludeSet.contains(cmName))    doApply = false;
+						if (_includeMap != null && _includeMap.containsKey(cmName)) doApply = false;
+
+						if ( ! doApply )
+						{
+							_logger.info("JSON-SendConfig: NOT Applying setting from property '" + key + "', value '" + val + "'. This due to a higer priority setting '" + propName + "', value '" + propVal + "' has already been applied.");
+						}
+						else
+						{
+							boolean exlusionEntry = false;
+
+							if ("true".equalsIgnoreCase(val))
+								val = "adr";
+
+							if ("false".equalsIgnoreCase(val))
+								exlusionEntry = true;
+
+							if (exlusionEntry)
+							{
+								if (_excludeSet == null)
+									_excludeSet = new LinkedHashSet<>();
+
+								_excludeSet.add(cmName);
+							}
+							else
+							{
+								// Do only allow 'adr' chars... 
+								// * a=AbsCounters
+								// * d=DiffCounters
+								// * r=RateCounters 
+								String addType = "";
+								if (StringUtil.hasValue(val))
+								{
+									String unsupportedChar = "";
+									for (int i=0; i<val.length(); i++)
+									{
+										char ch = val.charAt(i);
+										if (ch == 'a' || ch == 'A' || ch == 'd' || ch == 'D' || ch == 'r' || ch == 'R')
+										{
+											addType += Character.toLowerCase(ch);
+										}
+										else
+										{
+											unsupportedChar += ch;
+											_logger.error("JSON-SendConfig: Inproper value for property '" + key + "'. Found unsupported char(s) '" + unsupportedChar + "', accepted values are 'adr' where: 'a'=AbsoluteCounters, 'd'=DiffCounters, 'r'=RateCounters");
+										}
+									}
+								}
+
+								// Create the mpa if it doesnt exist
+								if (_includeMap == null)
+									_includeMap = new LinkedHashMap<>();
+
+								// finally ADD the entry to the _includeMap
+								_includeMap.put(cmName, addType);
+							}
+						} // end: doApply
+					} // end: hasValue
+				} // end: loop CmList	
+			} // end: checkEnableViaCmName
+
+		} // end: constructor
+
+		public boolean isSendAll() 
+		{ 
+			return _sendAll; 
+		}
+
+		public boolean isEnabled(String name)     { return isEnabled(name, null); }
+		public boolean isAbsEnabled (String name) { return isEnabled(name, FilterType.ABS); }
+		public boolean isDiffEnabled(String name) { return isEnabled(name, FilterType.DIFF); }
+		public boolean isRateEnabled(String name) { return isEnabled(name, FilterType.RATE); }
+
+		private boolean isEnabled(String name, FilterType type) 
+		{
+//			if (type == null)      throw new IllegalArgumentException("type can't be null.");
+//			if (type.length() > 1) throw new IllegalArgumentException("type can't be more than 1 character, you passed '" + type + "'.");
+//			if ( ! ("a".equalsIgnoreCase(type) || "d".equalsIgnoreCase(type) || "r".equalsIgnoreCase(type)) )
+//				throw new IllegalArgumentException("type Can only be 'a', 'd' or 'r'. you passed '" + type + "'.");
+
+			if (isSendAll())
+				return true;
+
+			if (_excludeSet != null && _excludeSet.contains(name))
+			{
+				return false;
+			}
+
+			if (_includeMap != null && _includeMap.containsKey(name))
+			{
+				String adr = _includeMap.get(name);
+				if (StringUtil.isNullOrBlank(adr))
+					return true;
+
+				if (type == null)
+					return true;
+					
+				String typeStr = "";
+				if (FilterType.ABS .equals(type)) typeStr = "a";
+				if (FilterType.DIFF.equals(type)) typeStr = "d";
+				if (FilterType.RATE.equals(type)) typeStr = "r";
+
+				return adr.contains(typeStr);
+			}
+			else
+			{
+				return false;
+			}
+		}
+	}
+	
 	@Override
 	public void init(Configuration conf) throws Exception
 	{
@@ -773,8 +1082,10 @@ extends PersistWriterBase
 		_confSlot0._errorMemQueueSize                 = conf.getIntProperty    (key(PROPKEY_errorMemQueueSize                ), DEFAULT_errorMemQueueSize);
                                                                                                                              
 		_confSlot0._sendAlarmExtDescAsHtml            = conf.getBooleanProperty(key(PROPKEY_sendAlarmExtDescAsHtml           ), DEFAULT_sendAlarmExtDescAsHtml);
-		_confSlot0._sendCounters                      = conf.getBooleanProperty(key(PROPKEY_sendCounters                     ), DEFAULT_sendCounters);
-		_confSlot0._sendGraphs                        = conf.getBooleanProperty(key(PROPKEY_sendGraphs                       ), DEFAULT_sendGraphs);
+//		_confSlot0._sendCounters                      = conf.getBooleanProperty(key(PROPKEY_sendCounters                     ), DEFAULT_sendCounters);
+//		_confSlot0._sendGraphs                        = conf.getBooleanProperty(key(PROPKEY_sendGraphs                       ), DEFAULT_sendGraphs);
+		_confSlot0._sendCounters                      = new SendConfig(conf,    key(PROPKEY_sendCounters                     ), DEFAULT_sendCounters);
+		_confSlot0._sendGraphs                        = new SendConfig(conf,    key(PROPKEY_sendGraphs                       ), DEFAULT_sendGraphs);
                                                                                                                              
 		_confSlot0._header_1                          = conf.getProperty       (key(PROPKEY_header1                          ), DEFAULT_header1);
 		_confSlot0._header_2                          = conf.getProperty       (key(PROPKEY_header2                          ), DEFAULT_header2);
@@ -807,8 +1118,10 @@ extends PersistWriterBase
 			int    errorMemQueueSize                  = conf.getIntProperty    (key(PROPKEY_errorMemQueueSize                , cfgKey), DEFAULT_errorMemQueueSize);
                                                                                                                              
 			boolean sendAlarmExtDescAsHtml            = conf.getBooleanProperty(key(PROPKEY_sendAlarmExtDescAsHtml           , cfgKey), DEFAULT_sendAlarmExtDescAsHtml);
-			boolean sendCounters                      = conf.getBooleanProperty(key(PROPKEY_sendCounters                     , cfgKey), DEFAULT_sendCounters);
-			boolean sendGraphs                        = conf.getBooleanProperty(key(PROPKEY_sendGraphs                       , cfgKey), DEFAULT_sendGraphs  );
+//			boolean sendCounters                      = conf.getBooleanProperty(key(PROPKEY_sendCounters                     , cfgKey), DEFAULT_sendCounters);
+//			boolean sendGraphs                        = conf.getBooleanProperty(key(PROPKEY_sendGraphs                       , cfgKey), DEFAULT_sendGraphs  );
+			SendConfig sendCounters                   = new SendConfig(conf,    key(PROPKEY_sendCounters                     , cfgKey), DEFAULT_sendCounters);
+			SendConfig sendGraphs                     = new SendConfig(conf,    key(PROPKEY_sendGraphs                       , cfgKey), DEFAULT_sendGraphs);
 			                                                                                                                 
 			String header_1                           = conf.getProperty       (key(PROPKEY_header1                          , cfgKey), null);
 			String header_2                           = conf.getProperty       (key(PROPKEY_header2                          , cfgKey), null);
@@ -934,10 +1247,12 @@ extends PersistWriterBase
 	public static final boolean DEFAULT_sendAlarmExtDescAsHtml            = true;
                                                           
 	public static final String  PROPKEY_sendCounters      = "PersistWriterToHttpJson.{KEY}.send.counters";
-	public static final boolean DEFAULT_sendCounters      = false;
+//	public static final boolean DEFAULT_sendCounters      = false;
+	public static final String  DEFAULT_sendCounters      = "none";
                                                           
 	public static final String  PROPKEY_sendGraphs        = "PersistWriterToHttpJson.{KEY}.send.graphs";
-	public static final boolean DEFAULT_sendGraphs        = true;
+//	public static final boolean DEFAULT_sendGraphs        = true;
+	public static final String  DEFAULT_sendGraphs        = "all";
                                                           
 	public static final String  PROPKEY_header1           = "PersistWriterToHttpJson.{KEY}.header.1";
 //	public static final String  DEFAULT_header1           = null;
@@ -1005,9 +1320,11 @@ extends PersistWriterBase
 		int     _errorMemQueueSize = DEFAULT_errorMemQueueSize;
 		LinkedList<String> _errorQueue = new LinkedList<>(); 
 
-		boolean _sendAlarmExtDescAsHtml = DEFAULT_sendAlarmExtDescAsHtml;
-		boolean _sendCounters           = DEFAULT_sendCounters;
-		boolean _sendGraphs             = DEFAULT_sendGraphs;
+		boolean _sendAlarmExtDescAsHtml   = DEFAULT_sendAlarmExtDescAsHtml;
+//		boolean _sendCounters             = DEFAULT_sendCounters;
+//		boolean _sendGraphs               = DEFAULT_sendGraphs;
+		SendConfig _sendCounters = new SendConfig(false);
+		SendConfig _sendGraphs   = new SendConfig(true);
 		
 		String  _header_1 = "";
 		String  _header_2 = "";
@@ -1274,8 +1591,10 @@ extends PersistWriterBase
 		list.add( new CmSettingsHelper("errorMemQueueSize",                 key(PROPKEY_errorMemQueueSize                ), Integer.class, conf.getIntProperty    (key(PROPKEY_errorMemQueueSize                ), DEFAULT_errorMemQueueSize                ), DEFAULT_errorMemQueueSize               , "If send errors, in memory queue size for resend (Only valid if 'errorSaveToDisk' is false)"));
 
 		list.add( new CmSettingsHelper("sendAlarmExtDescAsHtml",            key(PROPKEY_sendAlarmExtDescAsHtml           ), Boolean.class, conf.getBooleanProperty(key(PROPKEY_sendAlarmExtDescAsHtml           ), DEFAULT_sendAlarmExtDescAsHtml           ), DEFAULT_sendAlarmExtDescAsHtml          , "If we have alarms in the Counter Collector, Send the 'Alarm Extended Descriptions' in HTML.)"));
-		list.add( new CmSettingsHelper("sendCounters",                      key(PROPKEY_sendCounters                     ), Boolean.class, conf.getBooleanProperty(key(PROPKEY_sendCounters                     ), DEFAULT_sendCounters                     ), DEFAULT_sendCounters                    , "Send Performance Counters data"));
-		list.add( new CmSettingsHelper("sendGraphs",                        key(PROPKEY_sendGraphs                       ), Boolean.class, conf.getBooleanProperty(key(PROPKEY_sendGraphs                       ), DEFAULT_sendGraphs                       ), DEFAULT_sendGraphs                      , "Send Graph/Chart data"));
+//		list.add( new CmSettingsHelper("sendCounters",                      key(PROPKEY_sendCounters                     ), Boolean.class, conf.getBooleanProperty(key(PROPKEY_sendCounters                     ), DEFAULT_sendCounters                     ), DEFAULT_sendCounters                    , "Send Performance Counters data"));
+//		list.add( new CmSettingsHelper("sendGraphs",                        key(PROPKEY_sendGraphs                       ), Boolean.class, conf.getBooleanProperty(key(PROPKEY_sendGraphs                       ), DEFAULT_sendGraphs                       ), DEFAULT_sendGraphs                      , "Send Graph/Chart data"));
+		list.add( new CmSettingsHelper("sendCounters",                      key(PROPKEY_sendCounters                     ), String .class, conf.getProperty       (key(PROPKEY_sendCounters                     ), DEFAULT_sendCounters                     ), DEFAULT_sendCounters                    , "Send Performance Counters data. CmName of counters to send. '*' or 'all' means all CM's. '' or 'none' means do not send any. Example: 'CmName1, CmName2=adr, CmName3=r'   Note: 'adr' can be specified where a=AbsoluteCounters, d=DiffCounters, r=RateCounters. Default is 'adr'."));
+		list.add( new CmSettingsHelper("sendGraphs",                        key(PROPKEY_sendGraphs                       ), String .class, conf.getProperty       (key(PROPKEY_sendGraphs                       ), DEFAULT_sendGraphs                       ), DEFAULT_sendGraphs                      , "Send Graph/Chart data.          CmName of counters to send. '*' or 'all' means all CM's. '' or 'none' means do not send any.  Example: 'CmName1, CmName2'"));
 
 		list.add( new CmSettingsHelper("http-header-1",                     key(PROPKEY_header1                          ), String .class, conf.getProperty       (key(PROPKEY_header1                          ), DEFAULT_header1                          ), DEFAULT_header1                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
 		list.add( new CmSettingsHelper("http-header-2",                     key(PROPKEY_header2                          ), String .class, conf.getProperty       (key(PROPKEY_header2                          ), DEFAULT_header2                          ), DEFAULT_header2                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));

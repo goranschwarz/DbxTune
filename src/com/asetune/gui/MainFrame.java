@@ -161,6 +161,7 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.Memory;
+import com.asetune.utils.MovingAverageCounterManager;
 import com.asetune.utils.PropPropEntry;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
@@ -2441,6 +2442,9 @@ public abstract class MainFrame
 			{
 				PersistentCounterHandler.getInstance().outOfMemoryHandler();
 			}
+
+			// MovingAverageCounterManager is a static implementation, so we can call it directly without checking if it has an instance!
+			MovingAverageCounterManager.outOfMemoryHandler();
 
 			// While doing GC show GUI
 			if (MainFrame.getInstance().isActive())

@@ -629,10 +629,10 @@ public class StringUtil
 	 * Parse a comma separated key=value string and make it into a Map
 	 * <p>
 	 * FIXME 1: This implementation is way to simple, it doesnt handle ',' or '=' chars inside the key/value strings etc...
-	 * If it finds problems it will just strip the faulty string/chars
+	 * If it finds problems it will just strip the faulty string/chars<br>
 	 * FIXME 2: If the "key" value already exists, a warning message will be written to log, is this enough or do we need to do anything else
 	 * @param source "aaa=111,bbb=222, ccc=333" or "{aaa=111,bbb=222, ccc=333}"
-	 * @return a Map, if nothing was found, the Map will simply be empty. (never returns null)
+	 * @return a Map (LinkedHashMap), if nothing was found, the Map will simply be empty. (never returns null)
 	 */
 	public static Map<String,String> parseCommaStrToMap(String source)
 	{

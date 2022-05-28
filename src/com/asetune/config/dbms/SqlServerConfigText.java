@@ -52,6 +52,7 @@ public abstract class SqlServerConfigText
 		,SqlServerHelpSort
 		,SqlServerHostInfo
 		,SqlServerSysInfo
+		,SqlServerServices
 		,SqlServerResourceGovernor
 		,SqlServerServerRegistry
 		,SqlServerClusterNodes
@@ -70,6 +71,7 @@ public abstract class SqlServerConfigText
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.HelpSort());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.HostInfo());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SysInfo());
+		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SqlServices());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.ResourceGovernor());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.ServerRegistry());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.ClusterNodes());
@@ -710,6 +712,55 @@ public abstract class SqlServerConfigText
 		@Override public    String     getConfigType()                        { return getName(); }
 //		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "select * from sys.dm_os_sys_info"; }
 		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from sys.dm_os_sys_info"; }
+	}
+
+	public static class SqlServices extends DbmsConfigTextAbstract
+	{
+		@Override public    String     getTabLabel()                          { return "SQL Services"; }
+		@Override public    String     getName()                              { return ConfigType.SqlServerServices.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from sys.dm_server_services"; }
+
+		/** 
+		 * Check for 'instant file initialization' 
+		 */
+		@Override
+		public void checkConfig(DbxConnection conn)
+		{
+			// no nothing, if we havnt got an instance
+			if ( ! DbmsConfigManager.hasInstance() )
+				return;
+
+			String    srvName    = "-UNKNOWN-";
+			Timestamp srvRestart = null;
+			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
+			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+
+			String sql = "SELECT instant_file_initialization_enabled FROM sys.dm_server_services WHERE servicename LIKE 'SQL Server (%'";
+			
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while(rs.next())
+				{
+					String instFileInit = rs.getString(1);
+					
+					if ( ! "Y".equalsIgnoreCase(instFileInit) )
+					{
+						String key = "DbmsConfigIssue." + srvName + ".instant_file_initialization";
+
+						DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "instant_file_initialization", Severity.INFO, 
+								"Instant file initialization on the OS is NOT enabled. Growing of database files will be slower.", 
+								"https://docs.microsoft.com/en-us/sql/relational-databases/databases/database-instant-file-initialization");
+
+						DbmsConfigManager.getInstance().addConfigIssue(issue);
+					}
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("Problems getting SQL-Server 'instant_file_initialization', using sql '"+sql+"'. Caught: "+ex, ex);
+			}
+		}
 	}
 
 	public static class ResourceGovernor extends DbmsConfigTextAbstract

@@ -24,6 +24,8 @@ import static org.junit.Assert.assertEquals;
 
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.junit.Test;
 
@@ -115,6 +117,39 @@ public class StringUtilTest
 		assertEquals(true,        StringUtil.hasValueForAll("aValue", "aValue") );
 	}
 
+	@Test
+	public void testCvsToMap()
+	{
+		String mapStr = null;
+		Map<String, String> map = null;
+
+		// Simple
+		mapStr = "aaa=111,bbb=222, ccc=333";
+		map = new LinkedHashMap<>();
+		map.put("aaa", "111");
+		map.put("bbb", "222");
+		map.put("ccc", "333");
+		assertEquals(map, StringUtil.parseCommaStrToMap(mapStr));
+//		System.out.println(map);
+
+		// no value
+		mapStr = "aaa,bbb, ccc";
+		map = new LinkedHashMap<>();
+		map.put("aaa", "");
+		map.put("bbb", "");
+		map.put("ccc", "");
+		assertEquals(map, StringUtil.parseCommaStrToMap(mapStr));
+//		System.out.println(map);
+
+		// value and no value mix
+		mapStr = "aaa,bbb=, ccc=vvv";
+		map = new LinkedHashMap<>();
+		map.put("aaa", "");
+		map.put("bbb", "");
+		map.put("ccc", "vvv");
+		assertEquals(map, StringUtil.parseCommaStrToMap(mapStr));
+//		System.out.println(map);
+	}
 
 
 

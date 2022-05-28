@@ -59,6 +59,8 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.CronUtils;
 import com.asetune.utils.H2UrlHelper;
+import com.asetune.utils.MovingAverageChart;
+import com.asetune.utils.MovingAverageCounterManager;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
@@ -504,6 +506,18 @@ public class H2WriterStat
 		}
 	}
 
+	/** Create a HTML Image, with a chart that shows: 1, 5, 15, 30 and 60 minutes values */
+	private String createChart(String groupName)
+	{
+		String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("Adjusted Load Average (1 hour)", // Note make the chart on 1 hour to see more info
+				MovingAverageCounterManager.getInstance(groupName, "1Min",  60),
+				MovingAverageCounterManager.getInstance(groupName, "5Min",  60),
+				MovingAverageCounterManager.getInstance(groupName, "15Min", 60),
+				MovingAverageCounterManager.getInstance(groupName, "30Min", 60),
+				MovingAverageCounterManager.getInstance(groupName, "60Min", 60));
+		return htmlChartImage;
+	}
+
 	private void checkForAlarms()
 	{
 		if ( ! AlarmHandler.hasInstance() )
@@ -512,6 +526,8 @@ public class H2WriterStat
 		Configuration conf = Configuration.getCombinedConfiguration();
 		AlarmHandler ah = AlarmHandler.getInstance();
 		
+		String groupName = "H2WriterStat";
+
 		double loadAverage_1m_threshold          = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverage1m,          DEFAULT_AlarmOsLoadAverage1m);
 		double loadAverage_5m_threshold          = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverage5m,          DEFAULT_AlarmOsLoadAverage5m);
 		double loadAverage_15m_threshold         = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverage15m,         DEFAULT_AlarmOsLoadAverage15m);
@@ -552,6 +568,12 @@ public class H2WriterStat
 				timeToLive = PersistentCounterHandler.getInstance().getMaxConsumeTime();
 		}
 
+        // Add counters to a in-memory-storage, so we can "graph" them on Alarms
+        MovingAverageCounterManager.getInstance(groupName, "1Min",  60).add(_osLoadAverage1min);
+        MovingAverageCounterManager.getInstance(groupName, "5Min",  60).add(_osLoadAverage5min);
+        MovingAverageCounterManager.getInstance(groupName, "15Min", 60).add(_osLoadAverage15min);
+        MovingAverageCounterManager.getInstance(groupName, "30Min", 60).add(_osLoadAverage30min);
+        MovingAverageCounterManager.getInstance(groupName, "60Min", 60).add(_osLoadAverage60min);
 
 		//---------------------------------------------
 		// Below is NORMAL Load Average, meaning: LoadAverage over ALL CPU's
@@ -563,6 +585,7 @@ public class H2WriterStat
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_1_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
 			ae.setTimeToLive(timeToLive);
+			ae.setExtendedDescription(null, createChart(groupName));
 			ah.addAlarm(ae);
 		}
 
@@ -572,6 +595,7 @@ public class H2WriterStat
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_5_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
 			ae.setTimeToLive(timeToLive);
+			ae.setExtendedDescription(null, createChart(groupName));
 			ah.addAlarm(ae);
 		}
 
@@ -581,6 +605,7 @@ public class H2WriterStat
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_15_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
 			ae.setTimeToLive(timeToLive);
+			ae.setExtendedDescription(null, createChart(groupName));
 			ah.addAlarm(ae);
 		}
 
@@ -590,6 +615,7 @@ public class H2WriterStat
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_30_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
 			ae.setTimeToLive(timeToLive);
+			ae.setExtendedDescription(null, createChart(groupName));
 			ah.addAlarm(ae);
 		}
 
@@ -599,6 +625,7 @@ public class H2WriterStat
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_60_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
 			ae.setTimeToLive(timeToLive);
+			ae.setExtendedDescription(null, createChart(groupName));
 			ah.addAlarm(ae);
 		}
 

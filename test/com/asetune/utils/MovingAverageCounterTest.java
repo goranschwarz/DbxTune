@@ -31,7 +31,7 @@ public class MovingAverageCounterTest
 	@Test
 	public void basic()
 	{
-		MovingAverageCounter avg1m = MovingAverageCounterManager.getInstance("basic-test-1m", 1);
+		MovingAverageCounter avg1m = MovingAverageCounterManager.getInstance("basic", "basic-test-1m", 1);
 		
 		double val = 1;
 		
@@ -54,7 +54,7 @@ public class MovingAverageCounterTest
 	@Test
 	public void noValues()
 	{
-		MovingAverageCounter avg1m = MovingAverageCounterManager.getInstance("noValues-test-1m", 1);
+		MovingAverageCounter avg1m = MovingAverageCounterManager.getInstance(null, "noValues-test-1m", 1);
 		
 		double avg = avg1m.getAvg(); // should return 0
 		
@@ -64,7 +64,7 @@ public class MovingAverageCounterTest
 	@Test
 	public void periodNotReached()
 	{
-		MovingAverageCounter avg1m = MovingAverageCounterManager.getInstance("periodNotReached-test-1m", 1);
+		MovingAverageCounter avg1m = MovingAverageCounterManager.getInstance("", "periodNotReached-test-1m", 1);
 		
 		double val = 1;
 		
@@ -81,7 +81,7 @@ public class MovingAverageCounterTest
 	{
 		System.out.println(">> BEGIN: MovingAverageCounterTest.multi() NOTE: test will take approx 61 seconds");
 
-		MovingAverageCounter avg1m = MovingAverageCounterManager.getInstance("multi-test-1m", 1);
+		MovingAverageCounter avg1m = MovingAverageCounterManager.getInstance("multi", "multi-test-1m", 1);
 
 		//-----------------------------------------
 		// No values

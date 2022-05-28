@@ -148,7 +148,8 @@ public class H2DatabaseEventListener implements DatabaseEventListener
 	 * @param max the highest value
 	 */
 	@Override
-	public void setProgress(int state, String name, int x, int max)
+//	public void setProgress(int state, String name, int x, int max)
+	public void setProgress(int state, String name, long x, long max)
 	{
 //		int STATE_SCAN_FILE          = 0; // This state is used when scanning the database file.
 //		int STATE_CREATE_INDEX       = 1; // This state is used when re-creating an index.

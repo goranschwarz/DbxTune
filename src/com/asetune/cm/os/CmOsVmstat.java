@@ -401,8 +401,8 @@ extends CounterModelHostMonitor
 	public void reset()
 	{
 		// Reset 5 minute average counters
-		MovingAverageCounterManager.getInstance("swapIn",  5).reset();
-		MovingAverageCounterManager.getInstance("swapOut", 5).reset();
+		MovingAverageCounterManager.getInstance(this.getName(), "swapIn",  5).reset();
+		MovingAverageCounterManager.getInstance(this.getName(), "swapOut", 5).reset();
 		
 		super.reset();
 	}
@@ -420,6 +420,7 @@ extends CounterModelHostMonitor
 		AlarmHandler alarmHandler = AlarmHandler.getInstance();
 		
 		CountersModel cm = this;
+		String groupName = this.getName();
 
 		if ( ! cm.hasAbsData() )
 			return;
@@ -452,13 +453,13 @@ extends CounterModelHostMonitor
 			int swapIn  = (swapIn_tmp  == null) ? 0 : swapIn_tmp .intValue();
 			int swapOut = (swapOut_tmp == null) ? 0 : swapOut_tmp.intValue();
 
-			int swapIn_5mAvg  = (int) MovingAverageCounterManager.getInstance("swapIn",  5).add(swapIn) .getAvg(0, true, maxCap);
-			int swapOut_5mAvg = (int) MovingAverageCounterManager.getInstance("swapOut", 5).add(swapOut).getAvg(0, true, maxCap);
+			int swapIn_5mAvg  = (int) MovingAverageCounterManager.getInstance(groupName, "swapIn",  5).add(swapIn) .getAvg(0, true, maxCap);
+			int swapOut_5mAvg = (int) MovingAverageCounterManager.getInstance(groupName, "swapOut", 5).add(swapOut).getAvg(0, true, maxCap);
 
-//			int swapIn_15mAvg  = (int) MovingAverageCounterManager.getInstance("swapIn",  15).add(swapIn) .getAvg(0, true, maxCap);
-//			int swapOut_15mAvg = (int) MovingAverageCounterManager.getInstance("swapOut", 15).add(swapOut).getAvg(0, true, maxCap);
-			int swapIn_60mAvg  = (int) MovingAverageCounterManager.getInstance("swapIn",  60).add(swapIn) .getAvg(0, true, maxCap);
-			int swapOut_60mAvg = (int) MovingAverageCounterManager.getInstance("swapOut", 60).add(swapOut).getAvg(0, true, maxCap);
+//			int swapIn_15mAvg  = (int) MovingAverageCounterManager.getInstance(groupName, "swapIn",  15).add(swapIn) .getAvg(0, true, maxCap);
+//			int swapOut_15mAvg = (int) MovingAverageCounterManager.getInstance(groupName, "swapOut", 15).add(swapOut).getAvg(0, true, maxCap);
+			int swapIn_60mAvg  = (int) MovingAverageCounterManager.getInstance(groupName, "swapIn",  60).add(swapIn) .getAvg(0, true, maxCap);
+			int swapOut_60mAvg = (int) MovingAverageCounterManager.getInstance(groupName, "swapOut", 60).add(swapOut).getAvg(0, true, maxCap);
 			
 			if (debugPrint || _logger.isDebugEnabled())
 				System.out.println("##### sendAlarmRequest("+cm.getName()+"): swapping: in=" + swapIn + ", out=" + swapOut + ". swapIn_5mAvg=" + swapIn_5mAvg + ", swapOut_5mAvg=" + swapOut_5mAvg);
@@ -472,18 +473,18 @@ extends CounterModelHostMonitor
 
 			if (swapIn_5mAvg > threshold || swapOut_5mAvg > threshold)
 			{
-				Timestamp swapIn_peakTs      = MovingAverageCounterManager.getInstance("swapIn",  5).getPeakTimestamp();
-				double    swapIn_peakNumber  = MovingAverageCounterManager.getInstance("swapIn",  5).getPeakNumber();
-				Timestamp swapOut_peakTs     = MovingAverageCounterManager.getInstance("swapOut", 5).getPeakTimestamp();
-				double    swapOut_peakNumber = MovingAverageCounterManager.getInstance("swapOut", 5).getPeakNumber();
+				Timestamp swapIn_peakTs      = MovingAverageCounterManager.getInstance(groupName, "swapIn",  5).getPeakTimestamp();
+				double    swapIn_peakNumber  = MovingAverageCounterManager.getInstance(groupName, "swapIn",  5).getPeakNumber();
+				Timestamp swapOut_peakTs     = MovingAverageCounterManager.getInstance(groupName, "swapOut", 5).getPeakTimestamp();
+				double    swapOut_peakNumber = MovingAverageCounterManager.getInstance(groupName, "swapOut", 5).getPeakNumber();
 
 				// Create a small chart, that can be used in emails etc.
 //				String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("OS Swapping (15 minutes)", 
 //						MovingAverageCounterManager.getInstance("swapIn",  15),  // Note make the chart on 15 minutes to see more info
 //						MovingAverageCounterManager.getInstance("swapOut", 15)); // Note make the chart on 15 minutes to see more info
 				String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("OS Swapping (1 hour)", 
-						MovingAverageCounterManager.getInstance("swapIn",  60),  // Note make the chart on 15 minutes to see more info
-						MovingAverageCounterManager.getInstance("swapOut", 60)); // Note make the chart on 15 minutes to see more info
+						MovingAverageCounterManager.getInstance(groupName, "swapIn",  60),  // Note make the chart on 15 minutes to see more info
+						MovingAverageCounterManager.getInstance(groupName, "swapOut", 60)); // Note make the chart on 15 minutes to see more info
 
 				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, maxCap, hostname, "over 5 minute moving average", 
 						swapIn_5mAvg,  swapIn_peakTs,  swapIn_peakNumber,

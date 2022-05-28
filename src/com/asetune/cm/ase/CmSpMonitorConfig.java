@@ -30,6 +30,7 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventConfigResourceIsLow;
 import com.asetune.alarm.events.AlarmEventConfigResourceIsUsedUp;
 import com.asetune.alarm.events.AlarmEventProcedureCacheLowOnMemory;
@@ -45,6 +46,8 @@ import com.asetune.gui.TrendGraph;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.MovingAverageChart;
+import com.asetune.utils.MovingAverageCounterManager;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -443,6 +446,23 @@ extends CountersModel
 
 
 	@Override
+	public void reset()
+	{
+		MovingAverageCounterManager.getInstance(this.getName(), "procedure cache size"      , KEEP_TIME).reset();
+		MovingAverageCounterManager.getInstance(this.getName(), "number of open objects"    , KEEP_TIME).reset();
+		MovingAverageCounterManager.getInstance(this.getName(), "number of open partitions" , KEEP_TIME).reset();
+		MovingAverageCounterManager.getInstance(this.getName(), "number of open indexes"    , KEEP_TIME).reset();
+		MovingAverageCounterManager.getInstance(this.getName(), "number of open databases"  , KEEP_TIME).reset();
+		MovingAverageCounterManager.getInstance(this.getName(), "number of locks"           , KEEP_TIME).reset();
+		MovingAverageCounterManager.getInstance(this.getName(), "number of user connections", KEEP_TIME).reset();
+		
+		super.reset();
+	}
+	
+	/** How long we should hold entries in the MovingAverageCounterManager cache */
+	private final static int KEEP_TIME = 60;
+
+	@Override
 	public void sendAlarmRequest()
 	{
 		if ( ! hasAbsData() )
@@ -452,6 +472,7 @@ extends CountersModel
 			return;
 
 		CountersModel cm = this;
+		String groupName = this.getName();
 
 		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 //debugPrint = true;
@@ -492,6 +513,9 @@ extends CountersModel
 //			}
 //		}
 		
+		// If we have an alarm, this will be the "Chart Label" for the chart 
+		String chartLabel = "Active Count History (1 hour)";
+		
 		for (int r=0; r<cm.getAbsRowCount(); r++)
 		{
 			boolean didAlarm = false;
@@ -501,11 +525,16 @@ extends CountersModel
 			Double numFree   = cm.getAbsValueAsDouble(r, "Num_free");
 			Double numActive = cm.getAbsValueAsDouble(r, "Num_active");
 
+			// The value that will be used in charts
+			Double chartValue = numActive;
+			
 			if (pctAct == null || numFree == null)
 				continue;
 
 			if ("procedure cache size"           .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("ProcedureCacheUsage"))
 			{
+				MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME).add(chartValue);
+
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ProcedureCacheUsagePct, DEFAULT_alarm_ProcedureCacheUsagePct);
 
 				if (debugPrint || _logger.isDebugEnabled())
@@ -515,12 +544,17 @@ extends CountersModel
 				{
 					Double numFreeMb = numFree / 512.0;
 
-					AlarmHandler.getInstance().addAlarm(new AlarmEventProcedureCacheLowOnMemory(cm, numFreeMb, pctAct, threshold) );
+					AlarmEvent alarm = new AlarmEventProcedureCacheLowOnMemory(cm, numFreeMb, pctAct, threshold);
+					
+					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					AlarmHandler.getInstance().addAlarm(alarm);
 					didAlarm = true;
 				}
 			}
 			else if ("number of open objects"    .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfOpenObjectsPct"))
 			{
+				MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME).add(chartValue);
+
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenObjectsPct, DEFAULT_alarm_NumberOfOpenObjectsPct);
 
 				if (debugPrint || _logger.isDebugEnabled())
@@ -528,12 +562,17 @@ extends CountersModel
 
 				if (pctAct.intValue() > threshold)
 				{
-					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold) );
+					AlarmEvent alarm = new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold);
+
+					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					AlarmHandler.getInstance().addAlarm(alarm);
 					didAlarm = true;
 				}
 			}
 			else if ("number of open partitions" .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfOpenPartitionsPct"))
 			{
+				MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME).add(chartValue);
+
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenPartitionsPct, DEFAULT_alarm_NumberOfOpenPartitionsPct);
 
 				if (debugPrint || _logger.isDebugEnabled())
@@ -541,12 +580,17 @@ extends CountersModel
 
 				if (pctAct.intValue() > threshold)
 				{
-					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold) );
+					AlarmEvent alarm = new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold);
+
+					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					AlarmHandler.getInstance().addAlarm(alarm);
 					didAlarm = true;
 				}
 			}
 			else if ("number of open indexes"    .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfOpenIndexesPct"))
 			{
+				MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME).add(chartValue);
+
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenIndexesPct, DEFAULT_alarm_NumberOfOpenIndexesPct);
 
 				if (debugPrint || _logger.isDebugEnabled())
@@ -554,12 +598,17 @@ extends CountersModel
 
 				if (pctAct.intValue() > threshold)
 				{
-					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold) );
+					AlarmEvent alarm = new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold);
+
+					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					AlarmHandler.getInstance().addAlarm(alarm);
 					didAlarm = true;
 				}
 			}
 			else if ("number of open databases"  .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfOpenDatabasesPct"))
 			{
+				MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME).add(chartValue);
+
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenDatabasesPct, DEFAULT_alarm_NumberOfOpenDatabasesPct);
 
 				if (debugPrint || _logger.isDebugEnabled())
@@ -567,12 +616,17 @@ extends CountersModel
 
 				if (pctAct.intValue() > threshold)
 				{
-					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold) );
+					AlarmEvent alarm = new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold);
+
+					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					AlarmHandler.getInstance().addAlarm(alarm);
 					didAlarm = true;
 				}
 			}
 			else if ("number of locks"           .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfLocksPct"))
 			{
+				MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME).add(chartValue);
+
 				// AlarmEventConfigResourceIsUsedUp: is called from CounterModel.java 
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfLocksPct, DEFAULT_alarm_NumberOfLocksPct);
 
@@ -581,12 +635,17 @@ extends CountersModel
 
 				if (pctAct.intValue() > threshold)
 				{
-					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold) );
+					AlarmEvent alarm = new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold);
+
+					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					AlarmHandler.getInstance().addAlarm(alarm);
 					didAlarm = true;
 				}
 			}
 			else if ("number of user connections".equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfUserConnectionsPct"))
 			{
+				MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME).add(chartValue);
+
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfUserConnectionsPct, DEFAULT_alarm_NumberOfUserConnectionsPct);
 
 				if (debugPrint || _logger.isDebugEnabled())
@@ -594,7 +653,10 @@ extends CountersModel
 
 				if (pctAct.intValue() > threshold)
 				{
-					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold) );
+					AlarmEvent alarm = new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold);
+
+					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					AlarmHandler.getInstance().addAlarm(alarm);
 					didAlarm = true;
 				}
 			}
@@ -609,39 +671,60 @@ extends CountersModel
 				if ("procedure cache size".equals(cfgName))
 				{
 					// EMULATE: Error=701, Severity=17, Text=There is not enough procedure cache to run this procedure, trigger, or SQL batch. Retry later, or ask your SA to reconfigure ASE with more procedure cache.
-					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 701, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). There is not enough procedure cache to run this procedure, trigger, or SQL batch. Retry later, or ask your SA to reconfigure ASE with more procedure cache.") );
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 701, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). There is not enough procedure cache to run this procedure, trigger, or SQL batch. Retry later, or ask your SA to reconfigure ASE with more procedure cache.");
+
+					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					AlarmHandler.getInstance().addAlarm(alarm);
 					didAlarm = true;
 				}
 				else if ("number of open objects".equals(cfgName))
 				{
-					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.") );
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.");
+
+					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					AlarmHandler.getInstance().addAlarm(alarm);
 					didAlarm = true;
 				}
 				else if ("number of open partitions".equals(cfgName))
 				{
-					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.") );
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.");
+
+					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					AlarmHandler.getInstance().addAlarm(alarm);
 					didAlarm = true;
 				}
 				else if ("number of open indexes".equals(cfgName))
 				{
-					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.") );
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.");
+
+					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					AlarmHandler.getInstance().addAlarm(alarm);
 					didAlarm = true;
 				}
 				else if ("number of open databases".equals(cfgName))
 				{
-					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.") );
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.");
+
+					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					AlarmHandler.getInstance().addAlarm(alarm);
 					didAlarm = true;
 				}
 				else if ("number of locks".equals(cfgName))
 				{
 					// EMULATE: Error=1204, Severity=17, Text=ASE has run out of LOCKS. Re-run your command when there are fewer active users, or contact a user with System Administrator (SA) role to reconfigure ASE with more LOCKS.
-					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 1204, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). ASE has run out of LOCKS. Re-run your command when there are fewer active users, or contact a user with System Administrator (SA) role to reconfigure ASE with more LOCKS.") );
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 1204, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). ASE has run out of LOCKS. Re-run your command when there are fewer active users, or contact a user with System Administrator (SA) role to reconfigure ASE with more LOCKS.");
+
+					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					AlarmHandler.getInstance().addAlarm(alarm);
 					didAlarm = true;
 				}
 				else if ("number of user connections".equals(cfgName))
 				{
 					// EMULATE: Error=1601, Severity=21, Text=There are not enough 'user connections' available to start a new process. Retry when there are fewer active users, or ask your System Administrator to reconfigure ASE with more user connections.
-					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 1601, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). There are not enough 'user connections' available to start a new process. Retry when there are fewer active users, or ask your System Administrator to reconfigure ASE with more user connections.") );
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 1601, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). There are not enough 'user connections' available to start a new process. Retry when there are fewer active users, or ask your System Administrator to reconfigure ASE with more user connections.");
+
+					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					AlarmHandler.getInstance().addAlarm(alarm);
 					didAlarm = true;
 				}
 			}

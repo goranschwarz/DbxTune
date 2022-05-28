@@ -28,7 +28,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.Version;
+import com.asetune.cm.sqlserver.CmSchedulers;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.StringUtil;
@@ -36,6 +39,7 @@ import com.asetune.utils.StringUtil;
 public class CounterSampleCatalogIteratorSqlServer 
 extends CounterSampleCatalogIterator
 {
+	private static Logger     _logger          = Logger.getLogger(CounterSampleCatalogIterator.class);
 	private static final long serialVersionUID = 1L;
 
 //	public final static List<String> DEFAULT_SKIP_DB_LIST     = Arrays.asList( new String[]{"master", "model", "tempdb", "msdb", "SSISDB", "ReportServer", "ReportServerTempDB"} );
@@ -99,7 +103,8 @@ extends CounterSampleCatalogIterator
 	throws SQLException
 	{
 
-		String dbStatus = "  and (d.status & 992 = 0) -- 0x03e0  -- 32=loading, 64=preRecovery, 128=recovering, 256=notRecovered, 512=offline \n";
+//		String dbStatus = "  and (d.status & 992 = 0) -- 0x03e0  -- 32=loading, 64=preRecovery, 128=recovering, 256=notRecovered, 512=offline \n";
+		String dbStatus = "  and d.state = 0 -- 0=ONLINE\n"; // 0=ONLINE, 1=RESTORING, 2=RECOVERING, 3=RECOVERY_PENDING, 4=SUSPECT, 5=EMERGENCY, 6=OFFLINE, 7=COPYING, 10=OFFLINE_SECONDARY
 		
 		if (conn instanceof DbxConnection)
 		{
@@ -139,13 +144,27 @@ extends CounterSampleCatalogIterator
 		
 		ArrayList<String> list = new ArrayList<String>();
 
-		Statement stmnt = conn.createStatement();
-		ResultSet rs = stmnt.executeQuery(sql);
-		while(rs.next())
+//		Statement stmnt = conn.createStatement();
+//		ResultSet rs = stmnt.executeQuery(sql);
+//		while(rs.next())
+//		{
+//			String dbname = rs.getString(1);
+//			list.add(dbname);
+//		}
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
-			String dbname = rs.getString(1);
-			list.add(dbname);
+			while(rs.next())
+			{
+				String dbname = rs.getString(1);
+				list.add(dbname);
+			}
 		}
+		catch(SQLException ex)
+		{
+			_logger.error("Problems in " + this.getClass().getSimpleName() + " when executing SQL=|" + sql + "|. DBMS Error=" + ex.getErrorCode() + ", Msg=|" + ex.getMessage() + "|.", ex);
+			throw ex;
+		}
+		
 		
 		// If the above get **no** databases that are in correct state add the "passed" database(s)
 		if (list.isEmpty())

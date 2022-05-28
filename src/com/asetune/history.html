@@ -57,6 +57,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>Changed: AlarmEventHttpDestinationDown       -- bugfix: was never canceled (it was kept due to 'hasUndergoneAlarmDetection' checks)</LI>
 				<LI>Changed: AlarmEventBlockingLockAlarm         -- Added SPID to key, so we can have multiple alarms on blocking locks</LI>
 				<LI>Changed: AlarmEventOsSwapping                -- Have a Max value where we "cap" off at, so that peaks will be removed and we see a Average without peeaks (the calculation is 1.5 of the threshold value)</LI>
+				<LI>Changed: OsLOadAverage                       -- Added a chart that shows what happened in the last hour</LI>
+				<LI>Changed: AlarmEventOsSwapping                -- Added a chart that shows what happened in the last hour</LI>
 			</UL>
 		</LI>
 		<LI>AlarmWriterToMail: Changed temple for Subject to include ${severity}, also changed encoding to UTF-8</LI>
@@ -103,6 +105,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>OS Monitoring: CmOsIostat - Added column 'totalIoPerSec' just readsPerSec+writesPerSec. and 'readPct', 'writePct' which just is a percent calculation of totalIoPerSec</LI>
 		<LI>OS Monitoring: New CmOsPs <i>OS Top Processes(ps)</i> - snapshot top processes on the Server side. Solaris, Aix, Hp: <code>not yet implemented</code>, Linux: <code>ps -e -ww --format pid,ppid,euser,tty,vsz,rss,etimes,cputime,pmem,pcpu,args --sort=-pcpu | head -n ##</code>, for Windows <code>powershell "Get-Process | sort -desc cpu | select -first ##"</code></LI> 
 
+		<LI>on OutOfMemory: clear MovingAverage counters</LI>
+		<LI>PersistWriterToHttpJson: Added the ability to send specific Counter MOdels at a finer grain (for example so we can send: CmActiveStatements)</LI>
 		<LI>DictCompression - Not storing records as a batch, instead reverting back to single statement, also changed some concurrency issues</LI>
 		<LI>Prepared for some H2 upgrade. ver 2.0.202 or above: JDBC MetaData getTables() new table type 'TABLE' --> 'BASE TABLE'</LI>
 		<LI>H2 Central DB Copy was a bit adapted to be able to handle migration from older H2 versions (1.4) into H2 (2.1), this is mostly implemented in H2CentralDbCopy3</LI>
@@ -131,6 +135,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>
 			<b>Upgraded some of the third party libraries/jars</b><br>
 			<ul>
+	 			<li>To version 2.1.212        Component: H2 Database</li>
 	 			<li>To version 1.5.1          Component: JfreeChart</li>
 	 			<li>To version 4.3            Component: JSqlParser</li>
 	 			<li>To version 21.1           Component: Oracle JDBC Driver</li>
@@ -168,6 +173,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<li>On connect: if option 'enable metrics capture' is enabled at server level, then disable it at the monConnection level using 'set metrics_capture off'</li>
 		<li>AsePlanViewer - Fill in 'execParameters' or 'compileParameters' in the SQL Text</li>
 		<li>bugfix: Discard Msg 938 -- Database 'xxx' is unavailable. It is undergoing LOAD TRANSACTION. in createPcsHeaderInfo()</li>
+		<li>Alarm on AlarmEvent: ConfigResourceIsLow, ProcedureCacheLowOnMemory, ConfigResourceIsUsedUp -- added a chart that shows what happened in the last hour</li>
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
@@ -419,6 +425,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>Spaces in dbname   </b> - bugfix: when database names contains spaces. now they are quoted with square brackets. example: [my db name].sys.some_table_name</LI>
 
 		<LI><b>DBMS Configuration </b> - Also get linked servers using 'exec sp_linkedservers'</LI>
+		<LI><b>DBMS Configuration </b> - Added check to check if 'instant file initialization' is enabled at the OS Level</LI>
 
 		<LI><b>CmActiveStatements </b> - For blocking locks (marked as red background) - only the root blocker(s) are marked. logic (ImBlockingOtherSessionIds!="" and ImBlockedBySessionId=0)</LI>
 		<LI><b>CmActiveStatements </b> - added column 'dop - Degree Of Parallelism' if version is above 2016</LI>
@@ -495,6 +502,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmOsLatch          </b> - added columns 'waiting_requests_count_diff', 'wait_time_ms_diff' to make it easier to see both ABS and DIFF value when in 'diff' mode </LI>
 
 		<LI><b>CmPerfCounters     </b> - new graph 'Buffer Cache Data Size in MB'</LI>
+		<LI><b>CmPerfCounters     </b> - new graph 'Target vs Total Memory'</LI>
 		<LI><b>CmPerfCounters     </b> - new alarm: 'FreeListStalls' - Buffer Cache is probably to small... Waiting for memory to become available before a page can be added into the buffer pool. Alarm if 'FreeListStalls' is above 0.5 for 2 minutes</LI>
 		<LI><b>CmPerfCounters     </b> - new alarm: if 'LazyWrites' is above 20 for 3 minutes</LI>
 		<LI><b>CmPerfCounters     </b> - added graph 'Memory Manager', with a line for every entry where object_name is ':Memory Manager'</LI>
