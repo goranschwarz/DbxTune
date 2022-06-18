@@ -195,6 +195,8 @@ public interface ICounterController
 	void setWaitEvent(String string);
 	void createCounters(boolean hasGui);
 	boolean sleep(int i);
+	void setSleeping(boolean b);
+	boolean isSleeping();
 	String getWaitEvent();
 	boolean isRefreshEnabled();
 	boolean isInitialized();

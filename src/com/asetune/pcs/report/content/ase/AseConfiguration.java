@@ -111,7 +111,7 @@ public class AseConfiguration extends AseAbstract
 		String sql = "select * \n"
 				   + "from [MonSessionDbmsConfig] \n"
 				   + "where [SessionStartTime] = (select max([SessionStartTime]) from [MonSessionDbmsConfig]) \n"
-				   + "  and [NonDefault] = 1 \n"
+				   + "  and [NonDefault] = " + conn.toBooleanValueString(true) + " \n"
 				   + "  and [SectionName] != 'Monitoring' \n"
 				   + "order by [ConfigName]";
 		_shortRstm = executeQuery(conn, sql, false, "AseConfig");

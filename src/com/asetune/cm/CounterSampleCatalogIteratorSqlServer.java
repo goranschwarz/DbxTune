@@ -31,7 +31,6 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import com.asetune.Version;
-import com.asetune.cm.sqlserver.CmSchedulers;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.StringUtil;

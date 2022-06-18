@@ -26,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.DatabaseMetaData;
 import java.sql.Driver;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -768,7 +769,7 @@ extends CentralPersistWriterBase
 		// Admin rights are required to execute this command, as it affects all connections. 
 		// This command commits an open transaction. This setting is persistent.
 		// SET COMPRESS_LOB { NO | LZF | DEFLATE }
-		dbExecSetting(conn, "SET COMPRESS_LOB DEFLATE", logExtraInfo);
+//		dbExecSetting(conn, "SET COMPRESS_LOB DEFLATE", logExtraInfo); // This is NOT available in H2 Version: 2.1.x
 
 		// Sets the default lock timeout (in milliseconds) in this database that is used for 
 		// the new sessions. The default value for this setting is 1000 (one second).
@@ -854,7 +855,8 @@ extends CentralPersistWriterBase
 	{
 		Map<String, String> map = new LinkedHashMap<>();
 
-		String sql = "select [NAME], [VALUE] from [INFORMATION_SCHEMA].[SETTINGS] order by [NAME]";
+//		String sql = "select [NAME], [VALUE] from [INFORMATION_SCHEMA].[SETTINGS] order by [NAME]";
+		String sql = "select [SETTING_NAME], [SETTING_VALUE] from [INFORMATION_SCHEMA].[SETTINGS] order by [SETTING_NAME]";
 		sql = conn.quotifySqlString(sql);
 		
 		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
@@ -2031,6 +2033,7 @@ extends CentralPersistWriterBase
 //			checkAndCreateTable(conn, schemaName, Table.SQL_CAPTURE_PLANS);
 			checkAndCreateTable(conn, schemaName, Table.ALARM_ACTIVE);
 			checkAndCreateTable(conn, schemaName, Table.ALARM_HISTORY);
+			checkAndCreateTable(conn, schemaName, Table.CM_LAST_SAMPLE_JSON);
 
 			// Create tables for SQL Capture... they can have more (or less) tables than SQL_CAPTURE_SQLTEXT, SQL_CAPTURE_STATEMENTS, SQL_CAPTURE_PLANS
 //			if (CentralPcsWriterHandler.hasInstance())
@@ -2349,7 +2352,10 @@ extends CentralPersistWriterBase
 			// Save any alarms
 			saveAlarms(conn, schemaName, sessionStartTime, sessionSampleTime, cont);
 
-			// In case the DbxTuneSample/container only contains alarms (which only happends if it's a SrvDown Alarm)
+			// Save COUNTER values for **SOME** CM's
+			saveCmJsonCounters(conn, schemaName, sessionStartTime, sessionSampleTime, cont);
+
+			// In case the DbxTuneSample/container only contains alarms (which only happens if it's a SrvDown Alarm)
 			// Then: the collectors List is EMPTY, so do not try to save stuff
 			// ----
 			// SO: only save "stuff" in the DbxTune MetaData tables if we have any actual data to save...
@@ -2621,6 +2627,75 @@ extends CentralPersistWriterBase
 						isSevereProblem(conn, e);
 					}
 				} //end: ! rowExists
+			}
+		}
+	}
+	
+	private void saveCmJsonCounters(DbxConnection conn, String schemaName, Timestamp sessionStartTime, Timestamp sessionSampleTime, DbxTuneSample cont)
+	throws SQLException
+	{
+//		System.out.println("saveAlarms(schemaName='"+schemaName+"', sessionStartTime='"+sessionStartTime+"', sessionSampleTime='"+sessionSampleTime+"'): ActiveAlarmCnt="+cont.getActiveAlarms().size()+", AlarmEntriesCnt="+cont.getAlarmEntries().size());
+
+//		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+//		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
+		// Delete all previously saved values (only save LAST sample)
+		String sql = "delete from " + getTableName(conn, schemaName, Table.CM_LAST_SAMPLE_JSON, null, true);
+		try
+		{
+			int count = conn.dbExec(sql);
+			getStatistics().incDeletes(count);
+		}
+		catch (SQLException e)
+		{
+			_logger.warn("Error deleting Old CM Sample(s) to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+			// throws Exception if it's a severe problem
+			isSevereProblem(conn, e);
+		}
+
+		// Save ACTIVE Alarms
+		if ( ! cont.getCollectors().isEmpty() )
+		{
+			for (CmEntry cmEntry : cont.getCollectors())
+			{
+				String cmName = cmEntry.getName();
+
+				if ("CmActiveStatements".equals(cmName))   // Move CmActiveStatement into a something else... like a config or global List
+				{
+					// Store some info
+					sql = getTableInsertStr(conn, schemaName, Table.CM_LAST_SAMPLE_JSON, null, true);
+					
+					String json = cmEntry.getJsonCounterData();
+
+//System.out.println("saveCmJsonCounters(): schemaName='"+schemaName+"', sql=|"+sql+"|. json=|"+json+"|");
+					
+					try (PreparedStatement pstmnt = conn.prepareStatement(sql))
+					{
+						pstmnt.setTimestamp(1, sessionSampleTime);
+						pstmnt.setString   (2, cmName);
+						pstmnt.setString   (3, json);
+
+						int rowCount = pstmnt.executeUpdate();
+//System.out.println("saveCmJsonCounters(): schemaName='"+schemaName+"', INSERT ROW-COUNT="+rowCount);
+						getStatistics().incInserts();
+					}
+					catch (SQLException e)
+					{
+						_logger.warn("Error writing LAST Active Counter(s) to Persistent Counter Store. CmName='" + cmName + "', getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+						// throws Exception if it's a severe problem
+						isSevereProblem(conn, e);
+					}
+					
+//					// DEBUG -- Read back the data to check for issues with storage
+//					String storedInDbms = CentralPersistReader.xxxxx_getLastSampleForCm(conn, schemaName, cmName);
+//					System.out.println("saveCmJsonCounters. JSON INPUT.lenth=" + json.length());
+//					System.out.println("saveCmJsonCounters. JSON DBMS .lenth=" + storedInDbms.length());
+//					if (json.length() != storedInDbms.length())
+//					{
+//						System.out.println("INPUT         json=|" + json         + "|");
+//						System.out.println("INPUT storedInDbms=|" + storedInDbms + "|");
+//					}
+				}
 			}
 		}
 	}

@@ -788,6 +788,364 @@ public class CentralPersistReader
 	}
 
 
+	
+	
+//	/**
+//	 * Get a Map(srvName;cmName, jsonText) Last sent/stored JSON text for some CounterModels (not all are saved)
+//	 * @param servername   name of server (if null all schemas will be fetched)
+//	 * @param cmName       name of CounterModel (if null XXXXX)
+//	 * @return
+//	 */
+//	public Map<String, String> getLastSampleForCm(String servername, String cmName)
+//	throws SQLException
+//	{
+//		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
+//		try // block with: finally at end to return the connection to the ConnectionPool
+//		{
+//			Map<String, String> map = new LinkedHashMap<>();
+//
+//			if (StringUtil.hasValue(servername))
+//			{
+//				getLastSampleForCm(conn, map, servername, cmName);
+//			}
+//			else // for ALL SCHEMAS
+//			{
+//				String onlyTabName = CentralPersistWriterBase.getTableName(conn, null, Table.CM_LAST_SAMPLE_JSON, null, false);
+//
+//				// Obtain a DatabaseMetaData object from our current connection
+//				DatabaseMetaData dbmd = conn.getMetaData();
+//		
+//				// Get schemas
+//				Set<String> schemaSet = new LinkedHashSet<>();
+//				ResultSet schemaRs = dbmd.getSchemas();
+//				while (schemaRs.next())
+//					schemaSet.add(schemaRs.getString(1));
+//				schemaRs.close();
+//
+//				// Loop schemas: if table exists, get data
+//				for (String schemaName : schemaSet)
+//				{
+//					ResultSet rs = dbmd.getColumns(null, schemaName, onlyTabName, "%");
+//					boolean tabExists = rs.next();
+//					rs.close();
+//			
+//					if( tabExists )
+//					{
+//						getLastSampleForCm(conn, map, schemaName, cmName);
+//					}
+//				}
+//			}
+//			
+//			return map;
+//		}
+//		finally
+//		{
+//			releaseConnection(conn);
+//		}
+//	}
+//	
+//	private void getLastSampleForCm(DbxConnection conn, Map<String, String> map, String schema, String cmName)
+//	throws SQLException
+//	{
+//		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+//		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+//
+//		String tabName = CentralPersistWriterBase.getTableName(conn, schema, Table.CM_LAST_SAMPLE_JSON, null, true);
+//
+//		String sql = "select "
+//					+ "  '"+schema+"' as " + lq + "srvName" + rq
+//					+ " ," + lq + "SessionSampleTime"       + rq
+//					+ " ," + lq + "CmName"                  + rq
+//					+ " ," + lq + "JsonText"                + rq
+//				+" from " + tabName
+//				+" where " + lq+"CmName"+rq + " = " + DbUtils.safeStr(cmName);
+//
+//		// Change '[' and ']' into DBMS Vendor Specific Identity Quote Chars
+//		sql = conn.quotifySqlString(sql);
+//		
+//		// autoclose: stmnt, rs
+//		try (Statement stmnt = conn.createStatement())
+//		{
+//			// set TIMEOUT
+//			stmnt.setQueryTimeout(_defaultQueryTimeout);
+//
+//			// Execute and read result
+//			try (ResultSet rs = stmnt.executeQuery(sql))
+//			{
+//				while (rs.next())
+//				{
+//					String    srvName           = rs.getString   (1);  // "srvName"
+//				//	Timestamp SessionSampleTime = rs.getTimestamp(2);  // "SessionSampleTime"
+//					String    CmName            = rs.getString   (3);  // "CmName"
+//					String    JsonText          = rs.getString   (4);  // "JsonText"
+//
+//					String key = srvName + ";" + CmName;
+//
+//					map.put(key, JsonText);
+//				}
+//			}
+//		}
+//	}
+
+	/**
+	 * Get a Map(srvName;cmName, jsonText) Last sent/stored JSON text for some CounterModels (not all are saved)
+	 * @param servername   name of server (if null all schemas will be fetched)
+	 * @param cmName       name of CounterModel (if null XXXXX)
+	 * @return
+	 */
+//	public Map<String, Map<String, String>> getLastSampleForCm(String servername, String cmName)
+//	throws SQLException
+//	{
+//		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
+//		try // block with: finally at end to return the connection to the ConnectionPool
+//		{
+//			Map<String, Map<String, String>> map = new LinkedHashMap<>();
+//
+//			if (StringUtil.hasValue(servername))
+//			{
+//				for (String srvName : StringUtil.parseCommaStrToList(servername))
+//				{
+//					getLastSampleForCm(conn, map, srvName, cmName);
+//				}
+//			}
+//			else // for ALL SCHEMAS
+//			{
+//				String onlyTabName = CentralPersistWriterBase.getTableName(conn, null, Table.CM_LAST_SAMPLE_JSON, null, false);
+//
+//				// Obtain a DatabaseMetaData object from our current connection
+//				DatabaseMetaData dbmd = conn.getMetaData();
+//		
+//				// Get schemas
+//				Set<String> schemaSet = new LinkedHashSet<>();
+//				ResultSet schemaRs = dbmd.getSchemas();
+//				while (schemaRs.next())
+//					schemaSet.add(schemaRs.getString(1));
+//				schemaRs.close();
+//
+//				// Loop schemas: if table exists, get data
+//				for (String schemaName : schemaSet)
+//				{
+//					ResultSet rs = dbmd.getColumns(null, schemaName, onlyTabName, "%");
+//					boolean tabExists = rs.next();
+//					rs.close();
+//			
+//					if( tabExists )
+//					{
+//						getLastSampleForCm(conn, map, schemaName, cmName);
+//					}
+//				}
+//			}
+//			
+//			return map;
+//		}
+//		finally
+//		{
+//			releaseConnection(conn);
+//		}
+//	}
+	public Map<String, Map<String, String>> getLastSampleForCm(String servername, String cmName)
+	throws SQLException
+	{
+		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
+		try // block with: finally at end to return the connection to the ConnectionPool
+		{
+			// Store results here
+			Map<String, Map<String, String>> map = new LinkedHashMap<>();
+
+			// Obtain a DatabaseMetaData object from our current connection
+			DatabaseMetaData dbmd = conn.getMetaData();
+	
+			// Get schemas
+			Set<String> schemaSet = new LinkedHashSet<>();
+			ResultSet schemaRs = dbmd.getSchemas();
+			while (schemaRs.next())
+			{
+				String schemaName = schemaRs.getString(1);
+				if ("PUBLIC".equalsIgnoreCase(schemaName) || "INFORMATION_SCHEMA".equalsIgnoreCase(schemaName))
+					continue;
+				schemaSet.add(schemaName);
+			}
+			schemaRs.close();
+
+
+			// What server names do we want to check
+			List<String> srvNameList = new ArrayList<>();
+
+			if (StringUtil.hasValue(servername))
+			{
+				// Check if schema exists
+				for (String srvName : StringUtil.parseCommaStrToList(servername))
+				{
+					if (schemaSet.contains(srvName))
+						srvNameList.add(srvName);
+					else
+						_logger.warn("getLastSampleForCm(): Skipping checking srvName '" + srvName +  "', because it didnt exist. Existing schemas is: " + schemaSet);
+				}
+			}
+			else // for ALL SCHEMAS
+			{
+				srvNameList.addAll(schemaSet);
+			}
+
+			String onlyTabName = CentralPersistWriterBase.getTableName(conn, null, Table.CM_LAST_SAMPLE_JSON, null, false);
+
+			// Now Get from the LIST
+			for (String srvName : srvNameList)
+			{
+				// Loop: if table exists, get data
+				ResultSet rs = dbmd.getColumns(null, srvName, onlyTabName, "%");
+				boolean tabExists = rs.next();
+				rs.close();
+		
+				if( tabExists )
+				{
+					getLastSampleForCm(conn, map, srvName, cmName);
+				}
+				else
+				{
+					_logger.warn("getLastSampleForCm(): Skipping checking srvName '" + srvName +  "', because table '" + onlyTabName + "' didnt exist.");
+				}
+			}
+			
+			return map;
+		}
+		finally
+		{
+			releaseConnection(conn);
+		}
+	}
+	
+	private void getLastSampleForCm(DbxConnection conn, Map<String, Map<String, String>> map, String schema, String cmName)
+	throws SQLException
+	{
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
+		String tabName = CentralPersistWriterBase.getTableName(conn, schema, Table.CM_LAST_SAMPLE_JSON, null, true);
+
+		String sql = "select "
+					+ "  '"+schema+"' as " + lq + "srvName" + rq
+					+ " ," + lq + "SessionSampleTime"       + rq
+					+ " ," + lq + "CmName"                  + rq
+					+ " ," + lq + "JsonText"                + rq
+				+" from " + tabName
+				+" where " + lq+"CmName"+rq + " = " + DbUtils.safeStr(cmName); // Possibly convert to IN (...javaList...)
+
+		// Change '[' and ']' into DBMS Vendor Specific Identity Quote Chars
+		sql = conn.quotifySqlString(sql);
+		
+		// autoclose: stmnt, rs
+		try (Statement stmnt = conn.createStatement())
+		{
+			// set TIMEOUT
+			stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+			// Execute and read result
+			try (ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+				{
+					String    srvName           = rs.getString   (1);  // "srvName"
+				//	Timestamp SessionSampleTime = rs.getTimestamp(2);  // "SessionSampleTime"
+					String    CmName            = rs.getString   (3);  // "CmName"
+					String    JsonText          = rs.getString   (4);  // "JsonText"
+
+//					String key = srvName + ";" + CmName;
+
+					Map<String, String> cmValMap = map.get(srvName);
+					if (cmValMap == null)
+						cmValMap = new LinkedHashMap<>();
+
+					cmValMap.put(CmName, JsonText);
+					map.put(srvName, cmValMap);
+				}
+			}
+		}
+	}
+
+//	// DEBUG: used by CentralPersistWriterJdbc.saveCmJsonCounters() to get data (check if stored data is the same as received data)
+//	public static String xxxxx_getLastSampleForCm(DbxConnection conn, String schema, String cmName)
+//	throws SQLException
+//	{
+//		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+//		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+//
+//		String tabName = CentralPersistWriterBase.getTableName(conn, schema, Table.CM_LAST_SAMPLE_JSON, null, true);
+//
+//		String sql = "select "
+//					+ "  '"+schema+"' as " + lq + "srvName" + rq
+//					+ " ," + lq + "SessionSampleTime"       + rq
+//					+ " ," + lq + "CmName"                  + rq
+//					+ " ," + lq + "JsonText"                + rq
+//				+" from " + tabName
+//				+" where " + lq+"CmName"+rq + " = " + DbUtils.safeStr(cmName);
+//
+//		// Change '[' and ']' into DBMS Vendor Specific Identity Quote Chars
+//		sql = conn.quotifySqlString(sql);
+//		
+//		// autoclose: stmnt, rs
+//		try (Statement stmnt = conn.createStatement())
+//		{
+//			// set TIMEOUT
+////			stmnt.setQueryTimeout(_defaultQueryTimeout);
+//
+//			// Execute and read result
+//			try (ResultSet rs = stmnt.executeQuery(sql))
+//			{
+//				while (rs.next())
+//				{
+//					String    srvName           = rs.getString   (1);  // "srvName"
+//				//	Timestamp SessionSampleTime = rs.getTimestamp(2);  // "SessionSampleTime"
+//					String    CmName            = rs.getString   (3);  // "CmName"
+//					String    JsonText          = rs.getString   (4);  // "JsonText"
+//
+//					return JsonText;
+//				}
+//			}
+//		}
+//		return "";
+//	}
+	
+	/**
+	 * Clear All Active Alarms
+	 * @param servername name of server
+	 * @return
+	 */
+	public int clearLastSampleForCm(String servername, String cmName)
+	throws SQLException
+	{
+		if (StringUtil.isNullOrBlank(servername))
+			throw new RuntimeException("clearLastSampleForCm(): mandatory parameter 'servername' was null or blank.");
+
+		if (StringUtil.isNullOrBlank(cmName))
+			throw new RuntimeException("clearLastSampleForCm(): mandatory parameter 'cmName' was null or blank.");
+
+		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
+		try // block with: finally at end to return the connection to the ConnectionPool
+		{
+			String fullTabName = CentralPersistWriterBase.getTableName(conn, servername, Table.CM_LAST_SAMPLE_JSON, null, true);
+
+			String sql = "delete from " + fullTabName + " where [CmName] = " + DbUtils.safeStr(cmName);
+			sql = conn.quotifySqlString(sql);
+			
+			try (Statement stmnt = conn.createStatement())
+			{
+				return stmnt.executeUpdate(sql);
+			}
+		}
+		finally
+		{
+			releaseConnection(conn);
+		}
+	}
+	
+	
+	
+	
+	
+	
+	
+	
 	/**
 	 * Get LAST Session
 	 * @param conn

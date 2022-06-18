@@ -39,7 +39,7 @@ function getParameter(key, defaultValue)
  * Utility function: Create a HTML Table using a JSON input
  * grabbed from: http://www.encodedna.com/javascript/populate-json-data-to-html-table-using-javascript.htm
  */
-function jsonToTable(json, stripHtmlInCells) 
+function jsonToTable(json, stripHtmlInCells, trCallback, tdCallback, jsonMetaDataArr) 
 {
 	// EXTRACT json VALUES FOR HTML HEADER. 
 	var col = [];
@@ -91,12 +91,12 @@ function jsonToTable(json, stripHtmlInCells)
 
 				var newlink = document.createElement('a');
 				newlink.appendChild(document.createTextNode('Toggle: Compact or Formatted Content'));
-				newlink.setAttribute('href', 'javascript:toggleActiveAlarmsExtendedDesciption();');
+				newlink.setAttribute('href', 'javascript:toggleActiveTableExtendedDesciption();');
 				
 				var originDiv   = document.createElement('div');
 				var strippedDiv = document.createElement('div');
-				originDiv  .setAttribute('class', 'active-alarms-extDesc-origin-class');
-				strippedDiv.setAttribute('class', 'active-alarms-extDesc-stripped-class');
+				originDiv  .setAttribute('class', 'active-table-extDesc-origin-class');
+				strippedDiv.setAttribute('class', 'active-table-extDesc-stripped-class');
 				
 				originDiv  .innerHTML = originTxt;
 				strippedDiv.innerHTML = strippedTxt;
@@ -115,6 +115,21 @@ function jsonToTable(json, stripHtmlInCells)
 				//var cellContent = stripHtmlInCells ? strippedTxt : originTxt;
 				tabCell.innerHTML = originTxt;
 			}
+			
+			// Use callback function to set TD properties
+			if (typeof tdCallback === 'function')
+			{
+				var cellMetaData = jsonMetaDataArr[j];
+
+				tdCallback(tabCell, cellMetaData, originTxt);
+			}
+
+		}
+		
+		// Use callback function to set TR properties
+		if (typeof trCallback === 'function')
+		{
+			trCallback(tr, json[i]);
 		}
 	}
 	return table;
@@ -140,10 +155,10 @@ function isHTML(str) {
 	return false;
 }
 
-function toggleActiveAlarmsExtendedDesciption()
+function toggleActiveTableExtendedDesciption()
 {
-//	var extDesc = document.getElementsByClassName("active-alarms-extDesc-origin-class active-alarms-extDesc-stripped-class");
-	var extDesc = document.querySelectorAll('.active-alarms-extDesc-origin-class,.active-alarms-extDesc-stripped-class')
+//	var extDesc = document.getElementsByClassName("active-table-extDesc-origin-class active-table-extDesc-stripped-class");
+	var extDesc = document.querySelectorAll('.active-table-extDesc-origin-class,.active-table-extDesc-stripped-class')
 
 	// Toggle all elements in the above clases
 	for (let i=0; i<extDesc.length; i++)
@@ -297,6 +312,233 @@ var _showSrvTimer = null;
 //};
 
 //-----------------------------------------------------------
+// ACTIVE STATEMENTS
+//-----------------------------------------------------------
+function openActiveStatementsWindow()
+{
+	console.log('openActiveStatementsWindow()');
+
+	$("#active-statements").toggle();
+}
+function activeStatementsRadioClick(radioBut) 
+{
+	var rVal = typeof(radioBut) == "string" ? radioBut : radioBut.value;
+	console.log('activeStatementsRadioClick(): Active Statement Window Size[RadioBut]: ' + rVal);
+	
+	if (rVal === "hide")
+	{
+		// Hide all Statements
+		$("#active-statements-win").css("display", "none");
+	}
+	else
+	{
+		// Set The OUTER max-size
+		$("#active-statements").css("max-height", rVal);
+
+		// SHOW all Statements
+		$("#active-statements-win").css("display", "block");
+	}
+
+	// Save last known value in "WebBrowser storage"
+	getStorage('dbxtune_checkboxes_').set("active-statements-show-radio", rVal);
+}
+function activeStatementsCounterTypeClick(radioBut)
+{
+	var rVal = typeof(radioBut) == "string" ? radioBut : radioBut.value;
+	console.log('activeStatementsCounterTypeClick(): Active Statement CounterType[RadioBut]: ' + rVal);
+	
+	// Save last known value in "WebBrowser storage"
+	getStorage('dbxtune_checkboxes_').set("active-statements-counter-type", rVal);
+	
+	// get Counters...
+	dbxTuneCheckActiveStatements();
+}
+function activeStatementsPausedChkClick(checkbox) 
+{
+	console.log('activeStatementsPausedChkClick(): Checked: ' + checkbox.checked);
+
+	// Save last known value in "WebBrowser storage"
+	getStorage('dbxtune_checkboxes_').set("active-statements-paused-chk", checkbox.checked ? 'checked' : 'not');
+
+	if ( ! document.getElementById("active-statements-paused-chk").checked )
+	{
+		// When we UN-Pause we need to check for saved/current Active Statements
+		dbxTuneCheckActiveStatements(); 
+	}
+	else
+	{
+		// This will just set the WATERMARK to PAUSED
+		setActiveStatement();
+	}
+}
+function activeStatementsAutoOpenChkClick(checkbox) 
+{
+	console.log('activeStatementsAutoOpenChkClick(): Checked: ' + checkbox.checked);
+
+	// Save last known value in "WebBrowser storage"
+	getStorage('dbxtune_checkboxes_').set("active-statements-auto-open-chk", checkbox.checked ? 'checked' : 'not');
+}
+function activeStatementsSolidChkClick(checkbox) 
+{
+	console.log('activeStatementsSolidChkClick(): Checked: ' + checkbox.checked);
+	if (checkbox.checked)
+	{
+		$("#active-statements").css("background-color", 'rgba(229, 228, 226, 1.0)');
+	}
+	else
+	{
+		$("#active-statements").css("background-color", 'rgba(229, 228, 226, 0.7)');
+	}
+
+	// Save last known value in "WebBrowser storage"
+	getStorage('dbxtune_checkboxes_').set("active-statements-solid-chk", checkbox.checked ? 'checked' : 'not');
+}
+function activeStatementsCompExtDescClick(checkbox) 
+{
+	console.log('activeStatementsCompExtDescClick(): Checked: ' + checkbox.checked);
+
+	// Save last known value in "WebBrowser storage"
+	getStorage('dbxtune_checkboxes_').set("active-statements-compExtDesc-chk", checkbox.checked ? 'checked' : 'not');
+
+	// Reload the page
+	//location.reload();
+	
+	toggleActiveTableExtendedDesciption();
+}
+
+/**
+ * Send a "refresh" request to all collectors
+ */
+function collectorRequestRefresh()
+{
+	console.log('collectorRequestRefresh(): CALLED');
+
+//	const srvName = _serverList[0]; // NOTE: This needs to be improved... check for many etc...
+	const srvName = _serverList.join(','); // to CSV
+
+	$.ajax(
+	{
+		url: "/api/collector-refresh?srv="+srvName,
+		type: 'get',
+		//async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+			
+		success: function(data, status) 
+		{
+			var jsonResp = JSON.parse(data);
+			console.log("RECEIVED DATA[collectorRequestRefresh]: ", jsonResp);
+		},
+		error: function(xhr, desc, err) 
+		{
+			console.log(xhr);
+			console.log("Details: " + desc + "\nError: " + err);
+		}
+	}); // end: ajax call
+} // end: function
+
+// do: deferred (since all DOM elements might not be created yet)
+setTimeout(function()
+{
+	// Restore 'Paused' at the ACTIVE STATEMENTS "window"
+//	var savedVal_activeStatementsPausedChk = getStorage('dbxtune_checkboxes_').get("active-statements-paused-chk");
+//	if (savedVal_activeStatementsPausedChk == 'checked') $("#active-statements-paused-chk").attr('checked', 'checked');
+//	if (savedVal_activeStatementsPausedChk == 'not')     $("#active-statements-paused-chk").removeAttr('checked');
+	//activeStatementsPausedClick( document.getElementById("active-statements-paused-chk") );
+
+	// Restore 'Auto Open' at the ACTIVE STATEMENTS "window"
+	var savedVal_activeStatementsAutoOpenChk = getStorage('dbxtune_checkboxes_').get("active-statements-auto-open-chk");
+	if (savedVal_activeStatementsAutoOpenChk == 'checked') $("#active-statements-auto-open-chk").attr('checked', 'checked');
+	if (savedVal_activeStatementsAutoOpenChk == 'not')     $("#active-statements-auto-open-chk").removeAttr('checked');
+	//activeStatementsAutoOpenChkClick( document.getElementById("active-statements-auto-open-chk") );
+
+	// Restore 'Compact Extended Desc' at the ACTIVE STATEMENTS "window"
+	var savedVal_activeStatementsCompactExtDescChk = getStorage('dbxtune_checkboxes_').get("active-statements-compExtDesc-chk");
+	if (savedVal_activeStatementsCompactExtDescChk == 'checked') $("#active-statements-compExtDesc-chk").attr('checked', 'checked');
+	if (savedVal_activeStatementsCompactExtDescChk == 'not')     $("#active-statements-compExtDesc-chk").removeAttr('checked');
+	//activeStatementsCompExtDescClick( document.getElementById("active-statements-compExtDesc-chk") );
+
+	// Restore 'Solid Background' at the ACTIVE STATEMENTS "window"
+	var savedVal_activeStatementsSolidChk = getStorage('dbxtune_checkboxes_').get("active-statements-solid-chk");
+	if (savedVal_activeStatementsSolidChk == 'checked') $("#active-statements-solid-chk").attr('checked', 'checked');
+	if (savedVal_activeStatementsSolidChk == 'not')     $("#active-statements-solid-chk").removeAttr('checked');
+	activeStatementsSolidChkClick( document.getElementById("active-statements-solid-chk") );
+
+	// Restore 'Window Size' at the ACTIVE STATEMENTS "window"
+	var savedVal_activeStatementsShowRadio = getStorage('dbxtune_checkboxes_').get("active-statements-show-radio");
+	console.log("RESTORE ALARM Window size: savedVal_activeStatementsShowRadio="+savedVal_activeStatementsShowRadio);
+	activeStatementsRadioClick( savedVal_activeStatementsShowRadio );
+	radionButtonGroupSetSelectedValue("active-statements-show-radio", savedVal_activeStatementsShowRadio);
+	
+	// Restore 'CounterType'
+	var savedVal_activeStatementsCounterType = getStorage('dbxtune_checkboxes_').get("active-statements-counter-type");
+	console.log("RESTORE ALARM Window size: savedVal_activeStatementsCounterType="+savedVal_activeStatementsCounterType);
+	activeStatementsCounterTypeClick( savedVal_activeStatementsCounterType );
+	radionButtonGroupSetSelectedValue("active-statements-counter-type", savedVal_activeStatementsCounterType);
+}, 10);
+
+
+/**
+ * Get Active Statements saved in the Central PCS (last known/received values)
+ */
+function dbxTuneCheckActiveStatements()
+{
+	console.log("dbxTuneCheckActiveStatements()");
+
+//	const srvName = _serverList[0]; // NOTE: This needs to be improved... check for many etc...
+	const srvName = _serverList.join(','); // to CSV
+	
+	if (_serverList.length > 1)
+	{
+		console.log("dbxTuneCheckActiveStatements(): Found " + _serverList.length + " entries in the serverlist. ONLY FIRST WILL BE CHECKED. _serverList=" + _serverList);
+	}
+
+	$.ajax(
+	{
+		url: "/api/last-sample?srv="+srvName+"&cm=CmActiveStatements",
+		type: 'get',
+		//async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+			
+		success: function(data, status) 
+		{
+			var jsonResp = JSON.parse(data);
+			console.log("RECEIVED DATA[dbxTuneCheckActiveStatements]: ", jsonResp);
+
+			for (var i=0; i<jsonResp.length; i++) 
+			{
+				var srvName = jsonResp[i].srvName;
+				if (srvName === jsonResp[i].srvName)
+				{
+					var srvEntry = jsonResp[i];
+
+					var srvName = srvEntry.srvName;
+					var appName = srvEntry.appName;
+					
+					for (var j=0; j<srvEntry.cmNames.length; j++) 
+					{
+						var cmNamesEntry = srvEntry.cmNames[j];
+							
+						var cmName = cmNamesEntry.cmName;
+						if (cmName === "CmActiveStatements")
+						{
+							var lastSample = cmNamesEntry.lastSample;
+							var counters = lastSample.counters;
+//							var rateCounters = counters.rateCounters;
+
+							setActiveStatement(appName, srvName, counters);
+						}
+					}
+				}
+			}
+		},
+		error: function(xhr, desc, err) 
+		{
+			console.log(xhr);
+			console.log("Details: " + desc + "\nError: " + err);
+		}
+	}); // end: ajax call
+} // end: function
+
+
+//-----------------------------------------------------------
 // ACTIVE ALARMS
 //-----------------------------------------------------------
 function radionButtonGroupSetSelectedValue(name, selectdValue) 
@@ -352,7 +594,7 @@ function activeAlarmsCompExtDescClick(checkbox)
 	// Reload the page
 	//location.reload();
 	
-	toggleActiveAlarmsExtendedDesciption();
+	toggleActiveTableExtendedDesciption();
 }
 
 // do: deferred (since all DOM elements might not be created yet)
@@ -654,7 +896,13 @@ function dbxTuneGraphSubscribe()
 		let graphHead       = graphJson.head;
 		let graphServerName = graphHead.serverName;
 		let graphCollectors = graphJson.collectors;
-		
+		let dbxtuneAppName  = graphHead.appName;
+
+		let appName     = graphHead.appName;
+					
+		// Reset Active Statements
+		setActiveStatement(appName, graphServerName);
+
 		// TODO:
 		// to let the Browser update it's GUI it would have been nice with a yield() method
 		// but we might be able to do something like:
@@ -666,6 +914,23 @@ function dbxTuneGraphSubscribe()
 		for(let gc=0; gc<graphCollectors.length; gc++) 
 		{
 			let collector = graphCollectors[gc];
+			let cmName    = collector.cmName;
+
+//console.log("DEBUG: addData(): CmName="+cmName);
+			if (cmName === 'CmActiveStatements')
+			{
+//console.log("DEBUG: addData(): ---------------YES-THIS-IS---CmActiveStatements----");
+				if (collector.hasOwnProperty('counters'))
+				{
+//console.log("DEBUG: addData(): ---------------YES-THIS-IS---CmActiveStatements---- AND it has 'counters'");
+					// absCounters
+					// diffCounters
+					// rateCounters
+				//	let counterData = collector.counters.rateCounters;
+				//	setActiveStatement(appName, graphServerName, counterData);
+					setActiveStatement(appName, graphServerName, collector.counters);
+				}
+			}
 
 			// console.log("addDate(): collector="+collector, collector);
 			for(let g=0; g<collector.graphs.length; g++) 
@@ -755,8 +1020,240 @@ function dbxTuneGraphSubscribe()
 			$('#subscribe-feedback-srv').fadeToggle(1000);
 			_showSrvTimer = null;
 		}, 4000); // hide after 4s
-	}
+	} // end: addData()
 } // end: function
+
+
+	/**
+	 * 
+	 */
+	function setActiveStatement(appName, srvName, counters)
+	{
+		if ( document.getElementById("active-statements-paused-chk").checked )
+		{
+			console.log("DEBUG: setActiveStatement() appName='"+appName+"', srvName='"+srvName+"', PAUSED...");
+
+			document.getElementById("active-statements-watermark").innerHTML = "PAUSED";
+			return;
+		}
+		// Set the Watermark
+		document.getElementById("active-statements-watermark").innerHTML = "";
+		
+		if (counters === undefined)
+		{
+			console.log("DEBUG: setActiveStatement() appName='"+appName+"', srvName='"+srvName+"', NO COUNTER PARAMETER --- just do RESET...");
+
+			// Reset floating button: active-statements-btn
+			$("#active-statements-btn").html("&lt;/&gt;");
+//			$("#active-statements-btn").html("SQL");
+			$("#active-statements-btn").css("animation", "");
+			$("#active-statements-btn").css("background", "rgba(32, 32, 32, 0.5)");
+			// Hide: active-statements
+			if ( document.getElementById("active-statements-auto-open-chk").checked )
+				$("#active-statements").css("display", "none");
+			$("#active-statements-win").html("");
+			
+			$("#active-statements-count").html("0");
+
+			return;
+		}
+
+		// Get what Type we want to view: ABS, DIFF or RATE
+		var counterData = counters.rateCounters;
+		var selectedCounterType = document.querySelector('input[name="active-statements-counter-type"]:checked').value;
+//console.log('setActiveStatement(): selectedCounterType: ' + selectedCounterType);
+		if      (selectedCounterType === 'abs' ) counterData = counters.absCounters;
+		else if (selectedCounterType === 'diff') counterData = counters.diffCounters;
+		else if (selectedCounterType === 'rate') counterData = counters.rateCounters;
+		else console.log('setActiveStatement(): Unknown selectedCounterType: ' + selectedCounterType);
+		
+		// Set MetaData
+		var metaDataArr = counters.metaData;
+
+		console.log("DEBUG: setActiveStatement() appName='"+appName+"', srvName='"+srvName+"', counterData.length="+counterData.length);
+
+		// Set count
+		$("#active-statements-count").html(counterData.length);
+		
+		// Create a CALLBACK function to set TableRow Colors
+		var tdCallback = function(td, metaData, cellContent)
+		{
+			if (isNaN(cellContent)) // is NOT a Number
+			{
+				// Set to ABS
+				td.className = "active-statement-cell-abs";
+			}
+			else // is NUMBER
+			{
+				// check if this is a DIFF/RATE or PCT column
+				if (metaData.isDiffColumn === true) 
+				{
+					if (selectedCounterType === 'abs') 
+					{
+						td.innerHTML = cellContent.toLocaleString(undefined);
+						td.className = "active-statement-cell-abs";
+					}
+
+					if (selectedCounterType === 'diff') 
+					{
+						td.innerHTML = cellContent.toLocaleString(undefined);
+						td.className = "active-statement-cell-diff";
+
+						if (cellContent != 0)
+							td.style.fontWeight = "bold";
+					}
+
+					if (selectedCounterType === 'rate') 
+					{
+					//	td.innerHTML = (Math.round(cellContent * 100) / 100).toFixed(1);
+						td.innerHTML = cellContent.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1});
+						td.className = "active-statement-cell-rate";
+
+						if (cellContent != 0)
+							td.style.fontWeight = "bold";
+					}
+				}
+				else if (metaData.isPctColumn === true) 
+				{
+					td.className = "active-statement-cell-pct";
+
+					if (cellContent != 0)
+						td.style.fontWeight = "bold";
+				}
+				else 
+				{
+					td.className = "active-statement-cell-abs";
+				}
+			}
+		};
+
+		// Create a CALLBACK function to set TableRow Colors
+		// This is done per: DbxTune Collector
+		var trCallback = "";
+		var tooltip = "";
+		if ("AseTune" === appName)
+		{
+			trCallback = function(tr, row)
+			{
+//				console.log("AseTune:trCallback(): row:", row)
+
+				// multiSampled
+				if (row.hasOwnProperty('multiSampled') && row.multiSampled !== '')
+					tr.className = "active-statement-row-multi-sampled";
+
+				// HOLDING-LOCKS
+				if (row.hasOwnProperty('monSource') && row.monSource === 'HOLDING-LOCKS')
+					tr.className = "active-statement-row-holding-locks-while-idle";
+				
+				// Blocked by some spid
+				if (row.hasOwnProperty('BlockingSPID') && row.BlockingSPID !== 0)
+					tr.className = "active-statement-row-blocked";
+				
+				// Blocking OTHER Spids
+				if (row.hasOwnProperty('BlockingOtherSpids') && row.BlockingOtherSpids !== '')
+					tr.className = "active-statement-row-blocking";
+				if (row.hasOwnProperty('monSource') && row.monSource === 'BLOCKER')
+					tr.className = "active-statement-row-blocking";
+			};
+			tooltip = "Background colors: \n"
+			        + " * ORANGE: Multi Sampled Statement (has been running for more than 1 sample) \n"
+			        + " * YELLOW: Holding locks, while client has control (poor transaction control) \n"
+			        + " * PINK:   Blocked by some other SPID \n"
+			        + " * RED:    BLOCKING other spid's from working.\n"
+					+ "";
+		}
+		else if ("SqlServerTune" === appName)
+		{
+			trCallback = function(tr, row)
+			{
+//				console.log("SqlServerTune:trCallback(): row:", row)
+
+				// multiSampled
+				if (row.hasOwnProperty('multiSampled') && row.multiSampled !== '')
+					tr.className = "active-statement-row-multi-sampled";
+
+				// HOLDING-LOCKS
+				if (row.hasOwnProperty('monSource') && row.monSource === 'HOLDING-LOCKS')
+					tr.className = "active-statement-row-holding-locks-while-idle";
+				
+				// Blocked by some spid
+				if (row.hasOwnProperty('ImBlockedBySessionId') && row.ImBlockedBySessionId !== 0)
+					tr.className = "active-statement-row-blocked";
+				
+				// Blocking OTHER Spids
+				if (   row.hasOwnProperty('ImBlockingOtherSessionIds') && row.ImBlockingOtherSessionIds !== ''
+				    && row.hasOwnProperty('ImBlockedBySessionId')      && row.ImBlockedBySessionId      !== 0 )
+				{
+					tr.className = "active-statement-row-blocking";
+				}
+			};
+			tooltip = "Background colors: \n"
+			        + " * ORANGE: Multi Sampled Statement (has been running for more than 1 sample) \n"
+			        + " * YELLOW: Holding locks, while client has control (poor transaction control) \n"
+			        + " * PINK:   Blocked by some other SPID \n"
+			        + " * RED:    BLOCKING other spid's from working.\n"
+					+ "";
+		}
+		else if ("PostgresTune" === appName)
+		{
+			// FIXME: both in the CmActiveStatementsPanel and in here
+			trCallback = function(tr, row)
+			{
+//				console.log("SqlServerTune:trCallback(): row:", row)
+
+				// idle in transaction
+				if (row.hasOwnProperty('state') && row.state === 'idle in transaction')
+					tr.className = "active-statement-row-holding-locks-while-idle";
+
+				// Blocked by some spid
+				if (row.hasOwnProperty('im_blocked_by_pids') && row.im_blocked_by_pids !== "")
+					tr.className = "active-statement-row-blocked";
+				
+				// Blocking OTHER Spids
+				if (   row.hasOwnProperty('im_blocking_other_pids') && row.im_blocking_other_pids !== ''
+				    && row.hasOwnProperty('im_blocked_by_pids')     && row.im_blocked_by_pids     === '' )
+				{
+					tr.className = "active-statement-row-blocking";
+				}
+			};
+			tooltip = "Background colors: \n"
+			        + " * YELLOW: In Transaction, while client has control (poor transaction control) \n"
+			        + " * PINK:   Blocked by some other session(s) \n"
+			        + " * RED:    BLOCKING other session(s) from working.\n"
+					+ "";
+		}
+		else
+		{
+			console.log("WARNING: setActiveStatement(): Unknown appName='" + appName + "', no trCallback function will be used.");
+		}
+		// Set tooltip on the DIV
+		document.getElementById('active-statements').title = tooltip;
+		
+		// Create a table and add it to 'active-statements-win'
+		let activeStatementsDiv = document.getElementById("active-statements-win");
+		let stripHtmlInCells = document.getElementById("active-statements-compExtDesc-chk").checked;
+		let tab = jsonToTable(counterData, stripHtmlInCells, trCallback, tdCallback, metaDataArr);
+		activeStatementsDiv.innerHTML = "Active Statements for server: <b>"+srvName+"</b>";
+		activeStatementsDiv.appendChild(tab);
+		activeStatementsDiv.appendChild(document.createElement("br"));
+
+		// Floting button: Set how many ACTIVE Statements we have and make it BLINK
+		$("#active-statements-btn").html("&lt;" + counterData.length + "&gt;");
+//		$("#active-statements-btn").html("SQL<span id='active-statements-btn-badge', class='badge badge-pill badge-warning'>"+counterData.length+"</span>");
+		$("#active-statements-btn").css("animation", "blink 1.5s infinite");
+		$("#active-statements-btn").css("background", "rgba(229, 228, 226, 0.5)");
+
+//		for(let c=0; c<counterData.length; c++)
+//		{
+//			console.log("DEBUG: CmActiveStatements--Column: "+counterData, counterData);
+//		}
+
+		// SHOW all Statements div
+		if ( document.getElementById("active-statements-auto-open-chk").checked )
+		{
+			$("#active-statements").css("display", "block");
+		}
+	}
 
 
 //--------------------------------------------------------------------
@@ -1296,8 +1793,8 @@ class DbxGraph
 
 							// Change/set some parameters
 							params.set('sessionName', srvName);
-							params.set('graphList',   graphName);
 							params.set('gcols',       1);
+							params.set('graphList',   graphName);
 
 							window.open(`${location.pathname}?${params}`, '_blank');
 						}
@@ -2399,7 +2896,7 @@ function dbxTuneLoadCharts(destinationDivId)
 		}
 		else
 		{
-			// Take the imput parameter(s) and put them into global_serverList
+			// Take the input parameter(s) and put them into global_serverList
 			_serverList = sessionName.split(",");
 		}
 	}
@@ -2832,3 +3329,4 @@ function updateNavbarInfo()
 	}
 	// window.dispatchEvent(new Event('resize'));
 }
+

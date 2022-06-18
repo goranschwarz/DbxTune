@@ -804,6 +804,13 @@ extends ObjectLookupInspectorAbstract
 		// The lookup below will add entries for ALL tables with the name (if there are several tables with same name, the lookup will add ALL tables)
 		SqlObjectName sqlObjectName = new SqlObjectName(conn, objectName);
 		objectName = sqlObjectName.getObjectName();
+
+		// Save method parameter input dbname.
+		String paramDbname = dbname;
+
+		// Adjust dbname if 'objectName' is DB pre-qualified. (dbname.schema.objectName)
+		if (sqlObjectName.hasCatalogName())
+			dbname = sqlObjectName.getCatalogName();
 		
 		// get TYPE, OWNER CREATION_TIME and DBNAME where the record(s) was found 
 		String sql = ""
@@ -846,7 +853,7 @@ extends ObjectLookupInspectorAbstract
 			{
 				DdlDetails entry = new DdlDetails();
 
-				entry.setSearchDbname    ( dbname );
+				entry.setSearchDbname    ( paramDbname );
 				entry.setObjectName      ( objectName );
 				entry.setSearchObjectName( originObjectName ); // NOT Stored in DDL Store, used for: isDdlDetailsStored(), markDdlDetailsAsStored()
 				entry.setSource          ( source );

@@ -74,6 +74,7 @@ import com.asetune.utils.TimeUtils;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class PersistWriterToHttpJson 
 extends PersistWriterBase
@@ -354,8 +355,10 @@ extends PersistWriterBase
 		StringWriter sw = new StringWriter();
 
 		JsonFactory jfactory = new JsonFactory();
-		JsonGenerator w = jfactory.createGenerator(sw);
-		w.setPrettyPrinter(new DefaultPrettyPrinter());
+		JsonGenerator gen = jfactory.createGenerator(sw);
+		gen.setPrettyPrinter(new DefaultPrettyPrinter());
+		gen.setCodec(new ObjectMapper(jfactory));
+
 		
 		String collectorHostname = "-unknown-";
 		try
@@ -381,6 +384,37 @@ extends PersistWriterBase
 			collectorInfoFile   = conf.getFilename();
 		}
 
+		// Get List of Cm's with enabled Graphs / Counters
+//		List<String> cmListEnabled         = new ArrayList<>();
+//		List<String> cmListEnabledCounters = new ArrayList<>();
+//		List<String> cmListEnabledGraphs   = new ArrayList<>();
+////		for (CountersModel cm : cont.getCounterObjects())
+//		for (CountersModel cm : CounterController.getInstance().getCmList())
+//		{
+//			// For the moment do not send Append Models
+//			if (cm instanceof CountersModelAppend) 
+//				continue;
+//
+////			if ( ! cm.hasValidSampleData() )
+////				continue;
+//			
+////			if ( ! cm.isPersistCountersEnabled() )
+////				continue;
+//			
+//			if ( ! cm.isActive() )
+//				continue;
+//
+//			String shortCmName = cm.getName();
+//
+//			cmListEnabled.add(shortCmName);
+//
+//			if (sendCounters.isEnabled(shortCmName)) 
+//				cmListEnabledCounters.add(shortCmName);
+//
+//			if (sendGraphs.isEnabled(shortCmName) && cm.hasTrendGraphData())
+//				cmListEnabledGraphs.add(shortCmName);
+//		}
+		
 //		System.out.println();
 //		System.out.println("#### BEGIN JSON #######################################################################");
 //		System.out.println("getSessionStartTime = " + cont.getSessionStartTime());
@@ -388,113 +422,118 @@ extends PersistWriterBase
 //		System.out.println("getServerName       = " + cont.getServerName());
 //		System.out.println("getOnHostname       = " + cont.getOnHostname());
 
-		w.writeStartObject();
+		gen.writeStartObject();
 		
-		w.writeFieldName("head");
-		w.writeStartObject();
-			w.writeNumberField("messageVersion"         , MESSAGE_VERSION);
-			w.writeStringField("appName"                , Version.getAppName());
-			w.writeStringField("appVersion"             , Version.getVersionStr());
-			w.writeStringField("appBuildString"         , Version.getBuildStr());
-			w.writeStringField("collectorHostname"      , collectorHostname);
-			w.writeNumberField("collectorSampleInterval", collectorSampleInterval);
-			w.writeStringField("collectorCurrentUrl"    , collectorCurrentUrl);
-			w.writeStringField("collectorInfoFile"      , collectorInfoFile);
+		gen.writeFieldName("head");
+		gen.writeStartObject();
+			gen.writeNumberField("messageVersion"         , MESSAGE_VERSION);
+			gen.writeStringField("appName"                , Version.getAppName());
+			gen.writeStringField("appVersion"             , Version.getVersionStr());
+			gen.writeStringField("appBuildString"         , Version.getBuildStr());
+			gen.writeStringField("collectorHostname"      , collectorHostname);
+			gen.writeNumberField("collectorSampleInterval", collectorSampleInterval);
+			gen.writeStringField("collectorCurrentUrl"    , collectorCurrentUrl);
+			gen.writeStringField("collectorInfoFile"      , collectorInfoFile);
 
-			w.writeStringField("sessionStartTime"       , TimeUtils.toStringIso8601(cont.getSessionStartTime()));
-			w.writeStringField("sessionSampleTime"      , TimeUtils.toStringIso8601(cont.getMainSampleTime()));
-			w.writeStringField("serverName"             , cont.getServerName());
-			w.writeStringField("onHostname"             , cont.getOnHostname());
-			w.writeStringField("serverNameAlias"        , cont.getServerNameAlias());
-		w.writeEndObject();
+			gen.writeStringField("sessionStartTime"       , TimeUtils.toStringIso8601(cont.getSessionStartTime()));
+			gen.writeStringField("sessionSampleTime"      , TimeUtils.toStringIso8601(cont.getMainSampleTime()));
+			gen.writeStringField("serverName"             , cont.getServerName());
+			gen.writeStringField("onHostname"             , cont.getOnHostname());
+			gen.writeStringField("serverNameAlias"        , cont.getServerNameAlias());
+
+// Make better names...: enabledCmList, enabledCmSendCountersList, enabledCmSendGraphsList
+//			gen.writeObjectField("cmListEnabled"          , cmListEnabled);
+//			gen.writeObjectField("cmListEnabledGraphs"    , cmListEnabledGraphs);
+//			gen.writeObjectField("cmListEnabledCounters"  , cmListEnabledCounters);
+		gen.writeEndObject();
 
 		// Write ACTIVE the alarms
 		List<AlarmEvent> alarmList = cont.getAlarmList();
 		if (alarmList != null && !alarmList.isEmpty())
 		{
-			w.writeFieldName("activeAlarms");
-			w.writeStartArray();
+			gen.writeFieldName("activeAlarms");
+			gen.writeStartArray();
 			for (AlarmEvent ae : alarmList)
 			{
-				w.writeStartObject();
-					w.writeStringField("alarmClass"                 , toString( ae.getAlarmClass()                 ));
-					w.writeStringField("alarmClassAbriviated"       , toString( ae.getAlarmClassAbriviated()       ));
-					w.writeStringField("serviceType"                , toString( ae.getServiceType()                ));
-					w.writeStringField("serviceName"                , toString( ae.getServiceName()                ));
-					w.writeStringField("serviceInfo"                , toString( ae.getServiceInfo()                ));
-					w.writeStringField("extraInfo"                  , toString( ae.getExtraInfo()                  ));
-					w.writeStringField("category"                   , toString( ae.getCategory()                   ));
-					w.writeStringField("severity"                   , toString( ae.getSeverity()                   ));
-					w.writeStringField("state"                      , toString( ae.getState()                      ));
-					w.writeNumberField("repeatCnt"                  ,           ae.getReRaiseCount()                );
-					w.writeStringField("duration"                   , toString( ae.getDuration()                   ));
-					w.writeNumberField("creationAgeInMs"            ,           ae.getCrAgeInMs()                   );
-					w.writeNumberField("creationTime"               ,           ae.getCrTime()                      );
-					w.writeStringField("creationTimeIso8601"        , toString( ae.getCrTimeIso8601()              )); 
-					w.writeNumberField("reRaiseTime"                ,           ae.getReRaiseTime()                 );
-					w.writeStringField("reRaiseTimeIso8601"         , toString( ae.getReRaiseTimeIso8601()         ));
-					w.writeNumberField("cancelTime"                 ,           ae.getCancelTime()                  );
-					w.writeStringField("cancelTimeIso8601"          , toString( ae.getCancelTimeIso8601()          ));
-					w.writeNumberField("TimeToLive"                 ,           ae.getTimeToLive()                  );
-					w.writeNumberField("threshold"                  , toBigDec( ae.getCrossedThreshold()           ));
-					w.writeStringField("data"                       , toString( ae.getData()                       ));
-					w.writeStringField("description"                , toString( ae.getDescription()                ));
-					w.writeStringField("extendedDescription"        , toString( extAlarmDescAsHtml ? ae.getExtendedDescriptionHtml() : ae.getExtendedDescription() ));
-					w.writeStringField("reRaiseData"                , toString( ae.getReRaiseData()                ));
-					w.writeStringField("reRaiseDescription"         , toString( ae.getReRaiseDescription()         ));
-					w.writeStringField("reRaiseExtendedDescription" , toString( extAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() ));
-				w.writeEndObject();
+				gen.writeStartObject();
+					gen.writeStringField("alarmClass"                 , toString( ae.getAlarmClass()                 ));
+					gen.writeStringField("alarmClassAbriviated"       , toString( ae.getAlarmClassAbriviated()       ));
+					gen.writeStringField("serviceType"                , toString( ae.getServiceType()                ));
+					gen.writeStringField("serviceName"                , toString( ae.getServiceName()                ));
+					gen.writeStringField("serviceInfo"                , toString( ae.getServiceInfo()                ));
+					gen.writeStringField("extraInfo"                  , toString( ae.getExtraInfo()                  ));
+					gen.writeStringField("category"                   , toString( ae.getCategory()                   ));
+					gen.writeStringField("severity"                   , toString( ae.getSeverity()                   ));
+					gen.writeStringField("state"                      , toString( ae.getState()                      ));
+					gen.writeNumberField("repeatCnt"                  ,           ae.getReRaiseCount()                );
+					gen.writeStringField("duration"                   , toString( ae.getDuration()                   ));
+					gen.writeNumberField("creationAgeInMs"            ,           ae.getCrAgeInMs()                   );
+					gen.writeNumberField("creationTime"               ,           ae.getCrTime()                      );
+					gen.writeStringField("creationTimeIso8601"        , toString( ae.getCrTimeIso8601()              )); 
+					gen.writeNumberField("reRaiseTime"                ,           ae.getReRaiseTime()                 );
+					gen.writeStringField("reRaiseTimeIso8601"         , toString( ae.getReRaiseTimeIso8601()         ));
+					gen.writeNumberField("cancelTime"                 ,           ae.getCancelTime()                  );
+					gen.writeStringField("cancelTimeIso8601"          , toString( ae.getCancelTimeIso8601()          ));
+					gen.writeNumberField("TimeToLive"                 ,           ae.getTimeToLive()                  );
+					gen.writeNumberField("threshold"                  , toBigDec( ae.getCrossedThreshold()           ));
+					gen.writeStringField("data"                       , toString( ae.getData()                       ));
+					gen.writeStringField("description"                , toString( ae.getDescription()                ));
+					gen.writeStringField("extendedDescription"        , toString( extAlarmDescAsHtml ? ae.getExtendedDescriptionHtml() : ae.getExtendedDescription() ));
+					gen.writeStringField("reRaiseData"                , toString( ae.getReRaiseData()                ));
+					gen.writeStringField("reRaiseDescription"         , toString( ae.getReRaiseDescription()         ));
+					gen.writeStringField("reRaiseExtendedDescription" , toString( extAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() ));
+				gen.writeEndObject();
 			}
-			w.writeEndArray();
+			gen.writeEndArray();
 		}
 
 		// Write HISTORICAL the alarms (things that has happened during last sample: RAISE/RE-RAISE/CANCEL)
 		List<AlarmEventWrapper> alarmEvents = cont.getAlarmEvents();
 		if (alarmEvents != null && !alarmEvents.isEmpty())
 		{
-			w.writeFieldName("alarmEvents");
-			w.writeStartArray();
+			gen.writeFieldName("alarmEvents");
+			gen.writeStartArray();
 			for (AlarmEventWrapper aew : alarmEvents)
 			{
-				w.writeStartObject();
-					w.writeStringField("eventTime"                  , TimeUtils.toStringIso8601(aew.getAddDate()   ));
-					w.writeStringField("action"                     , toString( aew.getAction()                    ));
+				gen.writeStartObject();
+					gen.writeStringField("eventTime"                  , TimeUtils.toStringIso8601(aew.getAddDate()   ));
+					gen.writeStringField("action"                     , toString( aew.getAction()                    ));
 					
 					AlarmEvent ae = aew.getAlarmEvent();
 					
-					w.writeStringField("alarmClass"                 , toString( ae.getAlarmClass()                 ));
-					w.writeStringField("alarmClassAbriviated"       , toString( ae.getAlarmClassAbriviated()       ));
-					w.writeStringField("serviceType"                , toString( ae.getServiceType()                ));
-					w.writeStringField("serviceName"                , toString( ae.getServiceName()                ));
-					w.writeStringField("serviceInfo"                , toString( ae.getServiceInfo()                ));
-					w.writeStringField("extraInfo"                  , toString( ae.getExtraInfo()                  ));
-					w.writeStringField("category"                   , toString( ae.getCategory()                   ));
-					w.writeStringField("severity"                   , toString( ae.getSeverity()                   ));
-					w.writeStringField("state"                      , toString( ae.getState()                      ));
-					w.writeNumberField("repeatCnt"                  ,           ae.getReRaiseCount()                );
-					w.writeStringField("duration"                   , toString( ae.getDuration()                   ));
-					w.writeNumberField("creationAgeInMs"            ,           ae.getCrAgeInMs()                   );
-					w.writeNumberField("creationTime"               ,           ae.getCrTime()                      );
-					w.writeStringField("creationTimeIso8601"        , toString( ae.getCrTimeIso8601()              )); 
-					w.writeNumberField("reRaiseTime"                ,           ae.getReRaiseTime()                 );
-					w.writeStringField("reRaiseTimeIso8601"         , toString( ae.getReRaiseTimeIso8601()         ));
-					w.writeNumberField("cancelTime"                 ,           ae.getCancelTime()                  );
-					w.writeStringField("cancelTimeIso8601"          , toString( ae.getCancelTimeIso8601()          ));
-					w.writeNumberField("TimeToLive"                 ,           ae.getTimeToLive()                  );
-					w.writeNumberField("threshold"                  , toBigDec( ae.getCrossedThreshold()           ));
-					w.writeStringField("data"                       , toString( ae.getData()                       ));
-					w.writeStringField("description"                , toString( ae.getDescription()                ));
-					w.writeStringField("extendedDescription"        , toString( extAlarmDescAsHtml ? ae.getExtendedDescriptionHtml() : ae.getExtendedDescription() ));
-					w.writeStringField("reRaiseData"                , toString( ae.getReRaiseData()                ));
-					w.writeStringField("reRaiseDescription"         , toString( ae.getReRaiseDescription()         ));
-					w.writeStringField("reRaiseExtendedDescription" , toString( extAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() ));
-				w.writeEndObject();
+					gen.writeStringField("alarmClass"                 , toString( ae.getAlarmClass()                 ));
+					gen.writeStringField("alarmClassAbriviated"       , toString( ae.getAlarmClassAbriviated()       ));
+					gen.writeStringField("serviceType"                , toString( ae.getServiceType()                ));
+					gen.writeStringField("serviceName"                , toString( ae.getServiceName()                ));
+					gen.writeStringField("serviceInfo"                , toString( ae.getServiceInfo()                ));
+					gen.writeStringField("extraInfo"                  , toString( ae.getExtraInfo()                  ));
+					gen.writeStringField("category"                   , toString( ae.getCategory()                   ));
+					gen.writeStringField("severity"                   , toString( ae.getSeverity()                   ));
+					gen.writeStringField("state"                      , toString( ae.getState()                      ));
+					gen.writeNumberField("repeatCnt"                  ,           ae.getReRaiseCount()                );
+					gen.writeStringField("duration"                   , toString( ae.getDuration()                   ));
+					gen.writeNumberField("creationAgeInMs"            ,           ae.getCrAgeInMs()                   );
+					gen.writeNumberField("creationTime"               ,           ae.getCrTime()                      );
+					gen.writeStringField("creationTimeIso8601"        , toString( ae.getCrTimeIso8601()              )); 
+					gen.writeNumberField("reRaiseTime"                ,           ae.getReRaiseTime()                 );
+					gen.writeStringField("reRaiseTimeIso8601"         , toString( ae.getReRaiseTimeIso8601()         ));
+					gen.writeNumberField("cancelTime"                 ,           ae.getCancelTime()                  );
+					gen.writeStringField("cancelTimeIso8601"          , toString( ae.getCancelTimeIso8601()          ));
+					gen.writeNumberField("TimeToLive"                 ,           ae.getTimeToLive()                  );
+					gen.writeNumberField("threshold"                  , toBigDec( ae.getCrossedThreshold()           ));
+					gen.writeStringField("data"                       , toString( ae.getData()                       ));
+					gen.writeStringField("description"                , toString( ae.getDescription()                ));
+					gen.writeStringField("extendedDescription"        , toString( extAlarmDescAsHtml ? ae.getExtendedDescriptionHtml() : ae.getExtendedDescription() ));
+					gen.writeStringField("reRaiseData"                , toString( ae.getReRaiseData()                ));
+					gen.writeStringField("reRaiseDescription"         , toString( ae.getReRaiseDescription()         ));
+					gen.writeStringField("reRaiseExtendedDescription" , toString( extAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() ));
+				gen.writeEndObject();
 			}
-			w.writeEndArray();
+			gen.writeEndArray();
 		}
 		
-		w.writeFieldName("collectors");
-		w.writeStartArray();
+		gen.writeFieldName("collectors");
+		gen.writeStartArray();
 
 		//--------------------------------------
 		// COUNTERS
@@ -532,12 +571,12 @@ extends PersistWriterBase
 				continue;
 
 			// Use the CM method to write JSON
-			cm.toJson(w, writeOptions);
+			cm.toJson(gen, writeOptions);
 		}
 
-		w.writeEndArray();
-		w.writeEndObject();
-		w.close();
+		gen.writeEndArray();
+		gen.writeEndObject();
+		gen.close();
 
 		String jsonStr = sw.toString();
 		
@@ -939,6 +978,9 @@ conf = Configuration.getCombinedConfiguration();
 					if (propName.endsWith(".send.counters")) key = cmName + ".PersistWriterToHttpJson.send.counters";
 					if (propName.endsWith(".send.graphs"  )) key = cmName + ".PersistWriterToHttpJson.send.graphs";
 
+//SOMEWHERE; CmActiveStatements should not be hardcoded...
+//SOMEWHERE; also add property to JSON "cmSendCountersList" or similar
+
 					String val = conf.getProperty(key);
 					if (val != null)
 					{
@@ -995,7 +1037,7 @@ conf = Configuration.getCombinedConfiguration();
 									}
 								}
 
-								// Create the mpa if it doesnt exist
+								// Create the Map if it doesn't exist
 								if (_includeMap == null)
 									_includeMap = new LinkedHashMap<>();
 
@@ -1248,12 +1290,13 @@ conf = Configuration.getCombinedConfiguration();
                                                           
 	public static final String  PROPKEY_sendCounters      = "PersistWriterToHttpJson.{KEY}.send.counters";
 //	public static final boolean DEFAULT_sendCounters      = false;
-	public static final String  DEFAULT_sendCounters      = "none";
-                                                          
+//	public static final String  DEFAULT_sendCounters      = "none";
+	public static final String  DEFAULT_sendCounters      = "CmActiveStatements=adr";
+
 	public static final String  PROPKEY_sendGraphs        = "PersistWriterToHttpJson.{KEY}.send.graphs";
 //	public static final boolean DEFAULT_sendGraphs        = true;
 	public static final String  DEFAULT_sendGraphs        = "all";
-                                                          
+
 	public static final String  PROPKEY_header1           = "PersistWriterToHttpJson.{KEY}.header.1";
 //	public static final String  DEFAULT_header1           = null;
 //	public static final String  DEFAULT_header1           = "Content-Type: application/json";

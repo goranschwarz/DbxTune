@@ -2,7 +2,9 @@
 
 
 
-
+html {
+  scroll-padding-top: 70px; /* height of sticky header */
+}
 
 /* Right now this is empty */
 

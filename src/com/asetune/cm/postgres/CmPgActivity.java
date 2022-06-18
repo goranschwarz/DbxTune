@@ -26,9 +26,11 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -39,6 +41,7 @@ import com.asetune.alarm.AlarmHelper;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventLongRunningStatement;
 import com.asetune.cm.CmSettingsHelper;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -54,6 +57,7 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -65,7 +69,7 @@ extends CountersModel
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmPgActivity.class.getSimpleName();
-	public static final String   SHORT_NAME       = "Active Statements";
+	public static final String   SHORT_NAME       = "Processes";
 	public static final String   HTML_DESC        = 
 		"<html>" +
 		"Statemenets that are currently executing in the ASE." +
@@ -75,9 +79,11 @@ extends CountersModel
 		"    <li>GREEN  - active - The backend is executing a query.</li>" +
 //		"    <li>WHITE  - idle - The backend is waiting for a new client command.</li>" +
 		"    <li>YELLOW - idle in transaction -  The backend is in a transaction, but is not currently executing a query.</li>" +
-		"    <li>PINK   - idle in transaction (aborted) -  This state is similar to idle in transaction, except one of the statements in the transaction caused an error.</li>" +
+//		"    <li>PINK   - idle in transaction (aborted) -  This state is similar to idle in transaction, except one of the statements in the transaction caused an error.</li>" +
 //		"    <li>XXX    - fastpath function call -  The backend is executing a fast-path function.</li>" +
 //		"    <li>XXX    - disabled -  This state is reported if track_activities is disabled in this backend.</li>" +
+		"    <li>PINK   - PID is Blocked by another PID from running, this PID is the Victim of a Blocking Lock, which is showned in RED.</li>" +
+		"    <li>RED    - PID is Blocking other PID's from running, this PID is Responslibe or the Root Cause of a Blocking Lock.</li>" +
 		"</ul>" +
 		"</html>";
 
@@ -182,9 +188,19 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		String im_blocked_by_pids     = "";
+		String im_blocking_other_pids = "";
+		if (versionInfo.getLongVersion() >= Ver.ver(9, 6))
+		{
+			im_blocked_by_pids     = "    ,CAST(array_to_string(pg_blocking_pids(pid), ', ') as varchar(512)) AS im_blocked_by_pids \n";
+			im_blocking_other_pids = "    ,CAST('' as varchar(512)) AS im_blocking_other_pids \n";
+		}
+		
 		return ""
 				+ "select \n"
 				+ "     * \n"
+				+       im_blocked_by_pids
+				+       im_blocking_other_pids
 				+ "    ,CASE WHEN state != 'active' THEN NULL \n"
 				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from query_start)) * 1000) as int) \n"
 				+ "     END as \"execTimeInMs\" \n"
@@ -260,6 +276,62 @@ extends CountersModel
 		if (in.indexOf("<html>")>=0 || in.indexOf("<HTML>")>=0)
 			return str;
 		return "<html><pre>" + str + "</pre></html>";
+	}
+	
+
+
+	@Override
+	public void localCalculation(CounterSample newSample)
+	{
+		int pos_pid                    = newSample.findColumn("pid");
+		int pos_im_blocked_by_pids     = newSample.findColumn("im_blocked_by_pids");
+		int pos_im_blocking_other_pids = newSample.findColumn("im_blocking_other_pids");
+
+		
+		if (pos_im_blocked_by_pids != -1 && pos_im_blocking_other_pids != -1)
+		{
+			for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
+			{
+				int pid = newSample.getValueAsInteger(rowId, pos_pid);
+
+				// Get LIST of SPID's that I'm blocking
+				String blockingList = getBlockingListStr(newSample, pid, pos_im_blocked_by_pids, pos_pid);
+				newSample.setValueAt(blockingList, rowId, pos_im_blocking_other_pids);
+			}
+		}
+	}
+	
+	private String getBlockingListStr(CounterSample counters, int pid, int pos_blockingPid, int pos_pid)
+	{
+		Set<Integer> pidSet = null;
+
+		// Loop on all rows
+		int rows = counters.getRowCount();
+		for (int rowId=0; rowId<rows; rowId++)
+		{
+			String str_blockingPid = counters.getValueAsString(rowId, pos_blockingPid);
+			if (StringUtil.hasValue(str_blockingPid))
+			{
+				List<String> list_blockingPids = StringUtil.parseCommaStrToList(str_blockingPid, true);
+				for (String str_blkPid : list_blockingPids)
+				{
+					int blkPid = StringUtil.parseInt(str_blkPid, -1);
+					if (blkPid != -1)
+					{
+						if (blkPid == pid)
+						{
+							if (pidSet == null)
+								pidSet = new LinkedHashSet<Integer>();
+
+							pidSet.add( counters.getValueAsInteger(rowId, pos_pid) );
+						}
+					}
+				}
+			}
+		}
+		if (pidSet == null)
+			return "";
+		return StringUtil.toCommaStr(pidSet);
 	}
 	
 

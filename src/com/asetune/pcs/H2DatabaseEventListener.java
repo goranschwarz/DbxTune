@@ -138,6 +138,12 @@ public class H2DatabaseEventListener implements DatabaseEventListener
 		_logger.debug("H2DatabaseEventListener.exceptionThrown(): SQLException="+ex+", arg1='"+sql+"'.", ex);
 	}
 
+	// temporary backward compatibility for H2 older version: 1.4.*
+	public void setProgress(int state, String name, int x, int max)
+	{
+		setProgress(state, name, (long)x, (long)max);
+	}
+
 	/**
 	 * This method is called for long running events, such as recovering,
 	 * scanning a file or building an index.
@@ -147,8 +153,7 @@ public class H2DatabaseEventListener implements DatabaseEventListener
 	 * @param x the current position
 	 * @param max the highest value
 	 */
-	@Override
-//	public void setProgress(int state, String name, int x, int max)
+//	@Override // temporary removed the @Override when compiling with H2 1.4 & 2.1 in the classpath
 	public void setProgress(int state, String name, long x, long max)
 	{
 //		int STATE_SCAN_FILE          = 0; // This state is used when scanning the database file.

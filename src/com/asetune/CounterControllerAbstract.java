@@ -1493,9 +1493,16 @@ implements ICounterController
 
 	private boolean _isSleeping = false;
 	/** Check if we are sleeping by calling the method sleep() in this class. */
+	@Override
 	public boolean isSleeping()
 	{
 		return _isSleeping;
+	}
+	/** Set the sleeping flag */
+	@Override
+	public void setSleeping(boolean b)
+	{
+		_isSleeping = b;
 	}
 	/**
 	 * Sleep for X ms, should only be used when GUI should be able to be interrupted.

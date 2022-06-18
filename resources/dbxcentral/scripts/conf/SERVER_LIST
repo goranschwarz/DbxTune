@@ -20,8 +20,16 @@
 ## In that script you can specialize how to start the various collectors
 ## You CAN also put everything (all cmdline switches) in here as well, but the row will be very long...
 ##===========================================================================
+## Layout of buttons in the DBX Central Landing page
+## * Servers are laid out in the order they are added in this file
+## However you can add some special "#LABEL; " Comments, which means you can arrange servers in groups etc
+## Syntax: #FORMAT; {GROUP|LABEL}; Some Text; option1=value, option2=value 
+## * #FORMAT; GROUP; Name of The Group; border=false         (note: border=true/false is optional)
+## * #FORMAT; LABEL; Name of The Label
+##===========================================================================
 
 PROD_A1_ASE      ; 1 ; PROD Active Side              ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
+PROD_REP         ; 1 ; PROD Replication Server       ; ${DBXTUNE_CENTRAL_BASE}/bin/start_rstune.sh <SRVNAME>
 PROD_B1_ASE      ; 1 ; PROD Standby Side             ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
 DEV_ASE          ; 1 ; DEV                           ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
 SYS_ASE          ; 0 ; SYS                           ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
@@ -30,3 +38,25 @@ STAGE_ASE        ; 0 ; STAGE                         ; ${DBXTUNE_CENTRAL_BASE}/b
 prod-psql1       ; 1 ; Postgres on default port      ; ${DBXTUNE_CENTRAL_BASE}/bin/start_postgrestune.sh <SRVNAME>
 host-1:1234      ; 1 ; Postgres on non default port  ; ${DBXTUNE_CENTRAL_BASE}/bin/start_postgrestune.sh <SRVNAME> -A prod-1a-pg
 GS-1-WIN\SS_2016 ; 1 ; SQL-Server on dynamic port    ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.sh <SRVNAME> -A GS-1-WIN__SS_2016
+
+
+
+## Example of using a specialized layout
+# >>>       #FORMAT; GROUP; Sybase Servers; border=false
+# >>>       GORAN_UB0_DS       ; 1 ; ASE Version 12.5.4         ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
+# >>>       GORANS_UB1_DS      ; 1 ; ASE Version 15.5           ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
+# >>>       GORAN_UB2_DS       ; 1 ; ASE Version 15.7           ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
+# >>>       GORAN_UB3_DS       ; 1 ; ASE Version 16.0           ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
+# >>>       
+# >>>       #FORMAT; GROUP; Microsoft SQL Servers; border=false
+# >>>       gs-1-win:1433      ; 1 ; SQL-Server 2016 on Windows ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.sh <SRVNAME> -A GS-1-WIN__SS_2016
+# >>>       gorans-ub3:1433    ; 1 ; SQL-Server 2019 on Linux   ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.sh <SRVNAME> -A gorans-ub3-ss
+# >>>       prod-2a-mssql      ; 1 ; SQL-Server 2019 on Linux   ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.sh <SRVNAME>
+# >>>       prod-2b-mssql      ; 1 ; SQL-Server 2019 on Linux   ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.sh <SRVNAME>
+# >>>       
+# >>>       #FORMAT; GROUP; Other Servers; border=false
+# >>>       #FORMAT; LABEL; Postgres
+# >>>       gorans-ub3:5432    ; 1 ; Postgress 12.7              ; ${DBXTUNE_CENTRAL_BASE}/bin/start_postgrestune.sh <SRVNAME>  -A gorans-ub3-pg
+# >>>       #FORMAT; LABEL; MySQL
+# >>>       gorans-ub3:3306    ; 1 ; MySql 8                     ; ${DBXTUNE_CENTRAL_BASE}/bin/start_mysqltune.sh <SRVNAME>     -A gorans-ub3-my
+ 

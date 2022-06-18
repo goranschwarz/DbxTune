@@ -37,8 +37,8 @@ import javax.servlet.ServletException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.asetune.Version;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 import com.fasterxml.jackson.core.JsonFactory;
@@ -66,6 +66,10 @@ public class DbxTuneSample
 	Timestamp _sessionSampleTime;
 	String _serverName;
 	String _onHostname;
+
+//	List<String> _cmListEnabled;
+//	List<String> _cmListEnabledGraphs;
+//	List<String> _cmListEnabledCounters;
 	
 	List<CmEntry>           _collectors   = new ArrayList<>();
 	List<AlarmEntry>        _activeAlarms = new ArrayList<>();
@@ -88,6 +92,10 @@ public class DbxTuneSample
 	public String    getServerName()        { return _serverName;        }
 	public String    getOnHostname()        { return _onHostname;        }
 
+//	public List<String> getCmListEnabled()         { return _cmListEnabled; }
+//	public List<String> getCmListEnabledGraphs()   { return _cmListEnabledGraphs; }
+//	public List<String> getCmListEnabledCounters() { return _cmListEnabledCounters; }
+	
 	public void setAppName                (String appName)        { _appName                 = appName;     }
 	public void setAppVersion             (String appVersion)     { _appVersion              = appVersion;  }
 	public void setAppBuildStr            (String appBuildStr)    { _appBuildString          = appBuildStr; }
@@ -176,6 +184,13 @@ public class DbxTuneSample
 			_isPctColumn     = isPctColumn; 
 		}
 		
+		public String  getColumnName()      { return _columnName; }
+		public String  getJdbcTypeName()    { return _jdbcTypeName; }
+		public int     getJdbcType()        { return _jdbcType; }
+		public String  getJavaClassName()   { return _javaClassName; }
+		public String  getGuessedDbmsType() { return _guessedDbmsType; }
+		public boolean isDiffColumn()       { return _isDiffColumn; }
+		public boolean isPctColumn()        { return _isPctColumn; }
 	}
 	
 	public static class CmEntry
@@ -275,46 +290,51 @@ public class DbxTuneSample
 		public String  getSampleExceptionMsg()                   { return _sampleExceptionMsg                  ; }
 		public String  getSampleExceptionFullText()              { return _sampleExceptionFullText             ; }
 
+		public boolean hasMetaData()    { return _metaData     != null && _metaData    .size()        > 0; }
 		public boolean hasAbsData()     { return _absCounters  != null && _absCounters .getRowCount() > 0; }
 		public boolean hasDiffData()    { return _diffCounters != null && _diffCounters.getRowCount() > 0; }
 		public boolean hasRateData()    { return _rateCounters != null && _rateCounters.getRowCount() > 0; }
 		public boolean hasTrendGraphs() { return _graphMap     != null && _graphMap    .size()        > 0; }
 
-		public void toJsonForGraph(JsonGenerator w, List<String> graphNameList) 
+		public void toJsonForWebSubscribers(JsonGenerator gen, List<String> graphNameList, List<String> countersNameList) 
 		throws IOException
 		{
 			if (! hasTrendGraphs())
-				return;
+			{
+				// ok NO TrendGraphs, but we might want to send some DATA (without Graphs)
+				if (countersNameList != null && !countersNameList.contains(getName()))
+					return;
+			}
 			
 			// TODO: do not write graphs that isn't in the passed graphList  
 			
-			w.writeStartObject();
+			gen.writeStartObject();
 
-			w.writeStringField("cmName",            getName());
-			w.writeStringField("sessionSampleTime", TimeUtils.toStringIso8601(getSessionSampleTime()));
-			w.writeStringField("cmSampleTime",      TimeUtils.toStringIso8601(_cmSampleTime));
-			w.writeNumberField("cmSampleMs",        _cmSampleMs);
-			w.writeStringField("type",              _type);
+			gen.writeStringField("cmName",            getName());
+			gen.writeStringField("sessionSampleTime", TimeUtils.toStringIso8601(getSessionSampleTime()));
+			gen.writeStringField("cmSampleTime",      TimeUtils.toStringIso8601(_cmSampleTime));
+			gen.writeNumberField("cmSampleMs",        _cmSampleMs);
+			gen.writeStringField("type",              _type);
 
-			w.writeFieldName("graphs");
-			w.writeStartArray(); 
+			gen.writeFieldName("graphs");
+			gen.writeStartArray(); 
 			for (String graphName : _graphMap.keySet())
 			{
 				GraphEntry ge = _graphMap.get(graphName);
 
-				w.writeStartObject();  // BEGIN: Graph
-				w.writeStringField ("cmName",            getName());
-				w.writeStringField ("sessionSampleTime", TimeUtils.toStringIso8601(getSessionSampleTime()));
-				w.writeStringField ("graphName" ,        ge.getName());
-				w.writeStringField ("graphLabel",        ge.getGraphLabel());
-				w.writeStringField ("graphProps",        ge.getGraphProps());
-				w.writeStringField ("graphCategory",     ge.getGraphCategory());
-				w.writeBooleanField("percentGraph",      ge.isPercentGraph());
-				w.writeBooleanField("visibleAtStart",    ge.isVisibleAtStart());
+				gen.writeStartObject();  // BEGIN: Graph
+				gen.writeStringField ("cmName",            getName());
+				gen.writeStringField ("sessionSampleTime", TimeUtils.toStringIso8601(getSessionSampleTime()));
+				gen.writeStringField ("graphName" ,        ge.getName());
+				gen.writeStringField ("graphLabel",        ge.getGraphLabel());
+				gen.writeStringField ("graphProps",        ge.getGraphProps());
+				gen.writeStringField ("graphCategory",     ge.getGraphCategory());
+				gen.writeBooleanField("percentGraph",      ge.isPercentGraph());
+				gen.writeBooleanField("visibleAtStart",    ge.isVisibleAtStart());
 
-				w.writeFieldName("data");
+				gen.writeFieldName("data");
 //				w.writeStartArray(); 
-				w.writeStartObject(); // BEGIN: data
+				gen.writeStartObject(); // BEGIN: data
 
 				// loop all data
 				for (String label : ge._labelValue.keySet())
@@ -325,19 +345,156 @@ public class DbxTuneSample
 //					w.writeStringField("label",     label);
 //					w.writeNumberField("dataPoint", data);
 //					w.writeEndObject();
-					w.writeNumberField(label, data);
+					gen.writeNumberField(label, data);
 				}
 				
 //				w.writeEndArray(); 
-				w.writeEndObject(); // END: data
-				w.writeEndObject(); // END: Graph
+				gen.writeEndObject(); // END: data
+				gen.writeEndObject(); // END: Graph
 			}
-			w.writeEndArray(); 
+			gen.writeEndArray(); 
+			
+			// Counters...
+			if (countersNameList != null && countersNameList.contains(getName()))
+			{
+				writeJsonCounterData(gen);
+			}
 
-			w.writeEndObject(); // END: this CM
+			gen.writeEndObject(); // END: this CM
+		}
+
+		protected void writeJsonCounterData(JsonGenerator gen)
+		throws IOException
+		{
+			gen.writeFieldName("counters");
+			gen.writeStartObject();
+
+			boolean writeMetaData = true;
+			if (hasMetaData() && writeMetaData)
+			{
+				gen.writeFieldName("metaData");
+				gen.writeStartArray(); 
+
+				// { "colName" : "someColName", "jdbcTypeName" : "java.sql.Types.DECIMAL", "guessedDbmsType" : "decimal(16,1)" }
+				for (int c=0; c<getMetaData().size(); c++)
+				{
+					MetaDataEntry mde = getMetaData().get(c);
+					
+					gen.writeStartObject();
+					gen.writeStringField ("columnName"     , mde.getColumnName());
+					gen.writeStringField ("jdbcTypeName"   , mde.getJdbcTypeName());
+					gen.writeStringField ("javaClassName"  , mde.getJavaClassName());
+					gen.writeStringField ("guessedDbmsType", mde.getGuessedDbmsType());
+					gen.writeBooleanField("isDiffColumn"   , mde.isDiffColumn()); // column pos starts at 0 in the CM
+					gen.writeBooleanField("isPctColumn"    , mde.isPctColumn());  // column pos starts at 0 in the CM
+					gen.writeEndObject();
+				}
+				gen.writeEndArray(); 
+			}
+
+			// Add ROW Array of ABS/DIFF/RATE data
+			boolean writeCounters_abs  = true;
+			boolean writeCounters_diff = true;
+			boolean writeCounters_rate = true;
+
+			if (hasAbsData() && writeCounters_abs)
+			{
+				writeJsonCounterData(gen, "absCounters", getAbsCounters());
+			}
+
+			if (hasDiffData() && writeCounters_diff)
+			{
+				writeJsonCounterData(gen, "diffCounters", getDiffCounters());
+			}
+
+			if (hasRateData() && writeCounters_rate)
+			{
+				writeJsonCounterData(gen, "rateCounters", getRateCounters());
+			}
+
+			gen.writeEndObject(); // END: "counters"
+		}
+
+		protected void writeJsonCounterData(JsonGenerator gen, String counterType, CounterEntry counterEntry)
+		throws IOException
+		{
+			// Set name
+			gen.writeFieldName(counterType);
+			
+			// Write an array of row objects: [ 
+			//                                  { "c1":"data", "c2":"data", "c3":"data" }, 
+			//                                  { "c1":"data", "c2":"data", "c3":"data" } 
+			//                                ]  
+			gen.writeStartArray();
+
+			int rowc = counterEntry.getRowCount();
+			int colc = counterEntry.getColumnCount();
+			for (int r=0; r<rowc; r++)
+			{
+				gen.writeStartObject();
+				for (int c=0; c<colc; c++)
+				{
+					Object obj  = counterEntry.getValue(r, c);
+					String name = counterEntry.getColumnName(c);  
+					
+					if (name == null)
+						throw new IOException("When writing JSON CM='"+getName()+"', CounterType="+counterType+", row="+r+", col="+c+", Column Name was 'null' (not set).");
+
+//if ("ShowPlanText".equals(name))
+//{
+//	String xxx = obj.toString();
+//	System.out.println("--------- writeJsonCounterData --- '"+counterType+"' --- [ShowPlanText] --------: len="+xxx.length()+", DATA=|"+xxx+"|.");
+//}
+					gen.writeFieldName(name);
+					if (obj == null)
+						gen.writeNull();
+					else
+					{
+						if      (obj instanceof Number)  gen.writeNumber ( obj.toString() );
+						else if (obj instanceof Boolean) gen.writeBoolean( (Boolean) obj  );
+						else                             gen.writeString ( obj.toString() );
+					}
+				}
+				gen.writeEndObject();
+			}
+			gen.writeEndArray();		
+		}
+
+		/**
+		 * Get a JSON String for the COUNTER object
+		 * @return
+		 */
+		public String getJsonCounterData()
+		{
+			try
+			{
+				StringWriter sw = new StringWriter();
+
+				JsonFactory jfactory = new JsonFactory();
+				JsonGenerator gen = jfactory.createGenerator(sw);
+//				w.setPrettyPrinter(new DefaultPrettyPrinter());
+
+				// Write the JSON
+				gen.writeStartObject();
+				writeJsonCounterData(gen); // This is where it happens
+				gen.writeEndObject();
+
+				gen.close();
+				
+				// And output as a String
+				String jsonStr = sw.toString();
+
+//System.out.println("DbxTuneSample.getJsonCounterData(): length=" + jsonStr.length() + ", jsonStr=|" + jsonStr + "|.");
+				return jsonStr;
+			}
+			catch (IOException ex)
+			{
+				_logger.error("getJsonCounterData(): Problems writing Counter JSON data for CounterModel '" + getName() + "'.", ex);
+				return "";
+			}
 		}
 	}
-	
+
 	public static class CounterEntry
 	{
 		int _type;
@@ -373,6 +530,18 @@ public class DbxTuneSample
 		public int getRowCount()
 		{
 			return _rows.size();
+		}
+		public int getColumnCount()
+		{
+			return _colnames.size();
+		}
+		public String getColumnName(int col)
+		{
+			return _colnames.get(col);
+		}
+		public Object getValue(int row, int col)
+		{
+			return _rows.get(row).get(col);
 		}
 	}
 
@@ -601,6 +770,34 @@ public class DbxTuneSample
 		if (n.isNull())
 			return null;
 		return n.asText();
+	}
+
+	/**
+	 * Get String LIST from a node 
+	 * @param node               The node
+	 * @param fieldName          The fields name
+	 * @return                   A List of Strings
+	 * @throws ServletException  When the field name is not found
+	 */
+	private static List<String> getStringList(JsonNode node, String fieldName)
+	throws ServletException
+	{
+		JsonNode n = node.get(fieldName);
+		if (n == null)
+			return null;
+//			throw new ServletException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
+		if (n.isNull())
+			return null;
+		
+		if ( ! n.isArray() )
+			return StringUtil.parseCommaStrToList(n.asText());
+
+		List<String> list = new ArrayList<>();
+		for(JsonNode jsonNode : n) 
+		{
+			list.add(jsonNode.asText());
+		}
+		return list;
 	}
 
 	/**
@@ -844,6 +1041,10 @@ public class DbxTuneSample
 			String    onHostname           = getString   (headNode, "onHostname");
 			String    serverNameAlias      = getString   (headNode, "serverNameAlias", null);
 
+//			List<String> cmListEnabled         = getStringList(headNode, "cmListEnabled");
+//			List<String> cmListEnabledGraphs   = getStringList(headNode, "cmListEnabledGraphs");
+//			List<String> cmListEnabledCounters = getStringList(headNode, "cmListEnabledCounters");
+			
 			String serverNameOrAlias = serverName;
 			// Override the SERVERNAME if "serverNameAlias" is set
 			if (StringUtil.hasValue(serverNameAlias))
@@ -857,8 +1058,18 @@ public class DbxTuneSample
 				return null;
 			}
 
+			boolean debugPrint = false;
+			String debugSrvName = Configuration.getCombinedConfiguration().getProperty("DbxTuneSample.debug.parseJson.srvName", "");
+			if (debugSrvName.equals(serverName))
+				debugPrint = true;
+
+
 			DbxTuneSample sample = new DbxTuneSample(appName, appVersion, appBuildString, collectorHostname, collectorSampleInterval, collectorCurrentUrl, collectorInfoFile, sessionStartTime, sessionSampleTime, serverNameOrAlias, onHostname);
 
+//			sample._cmListEnabled         = cmListEnabled;
+//			sample._cmListEnabledGraphs   = cmListEnabledGraphs;
+//			sample._cmListEnabledCounters = cmListEnabledCounters;
+			
 			if (_logger.isDebugEnabled())
 				_logger.debug("sessionStartTime='"+sessionStartTime+"', sessionSampleTime='"+sessionSampleTime+"', serverName='"+serverName+"', serverNameAlias='"+serverNameAlias+"', onHostname='"+onHostname+"'.");
 
@@ -978,17 +1189,24 @@ public class DbxTuneSample
 					cmEntry.setSampleExceptionFullText(              getString (sampleDetailsNode, "exceptionFullText",                    ""));
 				}
 
-//System.out.println("-------------------------------------------------------------------------------------------------------");
-//System.out.println(" - CmName='"+CmName+"', CmSampleTime='"+CmSampleTime+"', CmSampleMs='"+CmSampleMs+"', Type='"+Type+"'.");
+				if (debugPrint)
+				{
+					System.out.println("-------------------------------------------------------------------------------------------------------");
+					System.out.println(" - SrvName='"+serverName+"', CmName='"+cmName+"', CmSampleTime='"+cmSampleTime+"', CmSampleMs='"+cmSampleMs+"', Type='"+type+"'.");
+				}
 
 				JsonNode countersNode = collector.get("counters"); // NOTE: Counters is an Object
 				if (countersNode != null)
 				{
-//System.out.println(" - COUNTERS: Counters.size='"+Counters.size()+"', Counters.getNodeType()="+Counters.getNodeType()+".");
+					if (debugPrint)
+						System.out.println(" - SrvName='"+serverName+"', COUNTERS: Counters.size='"+countersNode.size()+"', Counters.getNodeType()="+countersNode.getNodeType()+".");
+
 					JsonNode metaDataNode = countersNode.get("metaData");
 					if (metaDataNode != null)
 					{
-//System.out.println(" - - COUNTERS: CmName='"+CmName+"', MetaData.count='"+MetaData.size()+"'.");
+						if (debugPrint)
+							System.out.println(" - - SrvName='"+serverName+"', COUNTERS: CmName='"+cmName+"', metaData.count='"+metaDataNode.size()+"'.");
+
 						for (JsonNode metaData : metaDataNode)
 						{
 							String  columnName       = getString (metaData, "columnName");
@@ -1006,7 +1224,9 @@ public class DbxTuneSample
 					JsonNode absCountersNode = countersNode.get("absCounters");
 					if (absCountersNode != null)
 					{
-//System.out.println(" - - COUNTERS: CmName='"+CmName+"', AbsCounters.count='"+AbsCounters.size()+"'.");
+						if (debugPrint)
+							System.out.println(" - - SrvName='"+serverName+"', COUNTERS: CmName='"+cmName+"', AbsCounters.count='"+absCountersNode.size()+"', absCountersNode="+absCountersNode);
+
 						for (JsonNode absCounters : absCountersNode)
 						{
 							cmEntry.addAbsRow();
@@ -1026,7 +1246,9 @@ public class DbxTuneSample
 					JsonNode diffCountersNode = countersNode.get("diffCounters");
 					if (diffCountersNode != null)
 					{
-//System.out.println(" - - COUNTERS: CmName='"+CmName+"', DiffCounters.count='"+DiffCounters.size()+"'.");
+						if (debugPrint)
+							System.out.println(" - - SrvName='"+serverName+"', COUNTERS: CmName='"+cmName+"', DiffCounters.count='"+diffCountersNode.size()+"', diffCountersNode="+diffCountersNode);
+
 						for (JsonNode diffCounters : diffCountersNode)
 						{
 							cmEntry.addDiffRow();
@@ -1046,7 +1268,9 @@ public class DbxTuneSample
 					JsonNode rateCountersNode = countersNode.get("rateCounters");
 					if (rateCountersNode != null)
 					{
-//System.out.println(" - - COUNTERS: CmName='"+CmName+"', RateCounters.count='"+RateCounters.size()+"'.");
+						if (debugPrint)
+							System.out.println(" - - SrvName='"+serverName+"', COUNTERS: CmName='"+cmName+"', RateCounters.count='"+rateCountersNode.size()+"', rateCountersNode="+rateCountersNode);
+
 						for (JsonNode rateCounters : rateCountersNode)
 						{
 							cmEntry.addRateRow();
@@ -1067,7 +1291,9 @@ public class DbxTuneSample
 				JsonNode graphsNode = collector.get("graphs");
 				if (graphsNode != null)
 				{
-//					System.out.println(" - Graphs.count='"+Graphs.size()+"'.");
+					if (debugPrint)
+						System.out.println(" - SrvName='"+serverName+"', Graphs.count='"+graphsNode.size()+"'.");
+
 //fireGraphData("graph: "+ new Timestamp(System.currentTimeMillis()) + " - - CmName='"+CmName+"', Graphs.count='"+Graphs.size()+"'.");
 //fireGraphData("{\"graph\": \""+ new Timestamp(System.currentTimeMillis()) + " - - CmName='"+CmName+"', Graphs.count='"+Graphs.size()+"'.\"}");
 					for (JsonNode graphs : graphsNode)
@@ -1088,7 +1314,9 @@ public class DbxTuneSample
 //						System.out.println("XXX: GraphsName='"+GraphName+"'. JSON="+graphs);
 						
 						JsonNode dataEntry = graphs.get("data");
-//						System.out.println(" - - CmName='"+CmName+"', GraphName='"+GraphName+"', Data='"+Data+"'.");
+						if (debugPrint)
+							System.out.println(" - - SrvName='"+serverName+"', CmName='"+cmName+"', GraphName='"+graphName+"', Data='"+dataEntry+"'.");
+
 						if (dataEntry != null)
 						{
 //							for (JsonNode data : dataEntry)
@@ -1116,6 +1344,20 @@ public class DbxTuneSample
 			}
 			
 			
+			if (debugPrint)
+			{
+				System.out.println("### The Sample has: "+sample.getCollectors().size()+" collector entries. sessionStartTime="+sample.getSessionStartTime()+", sessionSampleTime="+sample.getSessionSampleTime()+", serverName="+sample.getServerName()+", onHostname="+sample.getOnHostname()+".");
+				for (CmEntry cmEntry : sample.getCollectors())
+				{
+					System.out.println("    -- SrvName='"+serverName+"', The CmEntry '"+cmEntry.getName()+"' has: "
+							+ cmEntry.getGraphMap()    .size()      +" Graph entries, "
+							+ cmEntry.getAbsCounters() .getRowCount()+" Abs rows, "
+							+ cmEntry.getDiffCounters().getRowCount()+" Diff rows, "
+							+ cmEntry.getRateCounters().getRowCount()+" Rate rows, "
+							);
+				}
+			}
+
 //			System.out.println("### The Sample has: "+sample.getCollectors().size()+" collector entries. sessionStartTime="+sample.getSessionStartTime()+", sessionSampleTime="+sample.getSessionSampleTime()+", serverName="+sample.getServerName()+", onHostname="+sample.getOnHostname()+".");
 //			for (CmEntry cmEntry : sample.getCollectors())
 //			{
@@ -1173,30 +1415,38 @@ public class DbxTuneSample
 		return num == null ? null : new BigDecimal(num.toString()); 
 	}
 
-	public String getJsonForGraphs(List<String> graphNameList)
+	public String getJsonForWebSubscribers(List<String> graphNameList, List<String> countersNameList)
 	throws IOException
 	{
 		StringWriter sw = new StringWriter();
 
 		JsonFactory jfactory = new JsonFactory();
-		JsonGenerator w = jfactory.createGenerator(sw);
-		w.setPrettyPrinter(new DefaultPrettyPrinter());
-		
+		JsonGenerator gen = jfactory.createGenerator(sw);
+		gen.setPrettyPrinter(new DefaultPrettyPrinter());
+		gen.setCodec(new ObjectMapper(jfactory));
 
-		w.writeStartObject();
-		
-		w.writeFieldName("head");
-		w.writeStartObject();
-			w.writeStringField("appName"          , Version.getAppName());
-			w.writeStringField("appVersion"       , Version.getVersionStr());
-			w.writeStringField("appBuildString"   , Version.getBuildStr());
 
-			w.writeStringField("sessionStartTime" , getSessionStartTime()  +"");
-			w.writeStringField("sessionSampleTime", getSessionSampleTime() +"");
-			w.writeStringField("serverName"       , getServerName());
-			w.writeStringField("onHostname"       , getOnHostname());
+		gen.writeStartObject();
+		
+		gen.writeFieldName("head");
+		gen.writeStartObject();
+//			gen.writeStringField("appName"          , Version.getAppName());
+//			gen.writeStringField("appVersion"       , Version.getVersionStr());
+//			gen.writeStringField("appBuildString"   , Version.getBuildStr());
+			gen.writeStringField("appName"          , getAppName());
+			gen.writeStringField("appVersion"       , getAppVersion());
+			gen.writeStringField("appBuildString"   , getAppBuildStr());
+
+			gen.writeStringField("sessionStartTime" , getSessionStartTime()  +"");
+			gen.writeStringField("sessionSampleTime", getSessionSampleTime() +"");
+			gen.writeStringField("serverName"       , getServerName());
+			gen.writeStringField("onHostname"       , getOnHostname());
 //			w.writeStringField("serverNameAlias"  , getServerNameAlias());
-		w.writeEndObject();
+
+//			gen.writeObjectField("cmListEnabled"        , getCmListEnabled());
+//			gen.writeObjectField("cmListEnabledGraphs"  , getCmListEnabledGraphs());
+//			gen.writeObjectField("cmListEnabledCounters", getCmListEnabledCounters());
+		gen.writeEndObject();
 
 		
 		//--------------------------------------
@@ -1204,63 +1454,65 @@ public class DbxTuneSample
 		//--------------------------------------
 		if ( ! _activeAlarms.isEmpty() )
 		{
-			w.writeFieldName("activeAlarms");
+			gen.writeFieldName("activeAlarms");
 
-			w.writeStartArray();
+			gen.writeStartArray();
 			for (AlarmEntry ae : _activeAlarms)
 			{
-				w.writeStartObject();
+				gen.writeStartObject();
 
-				w.writeStringField("alarmClass"                 , toString( ae.getAlarmClass()                 ));
-				w.writeStringField("alarmClassAbriviated"       , toString( ae.getAlarmClassAbriviated()       ));
-				w.writeStringField("serviceType"                , toString( ae.getServiceType()                ));
-				w.writeStringField("serviceName"                , toString( ae.getServiceName()                ));
-				w.writeStringField("serviceInfo"                , toString( ae.getServiceInfo()                ));
-				w.writeStringField("extraInfo"                  , toString( ae.getExtraInfo()                  ));
-				w.writeStringField("category"                   , toString( ae.getCategory()                   ));
-				w.writeStringField("severity"                   , toString( ae.getSeverity()                   ));
-				w.writeStringField("state"                      , toString( ae.getState()                      ));
-				w.writeNumberField("repeatCnt"                  ,           ae.getRepeatCnt()                   );
-				w.writeStringField("duration"                   , toString( ae.getDuration()                   ));
-				w.writeNumberField("creationAgeInMs"            ,           ae.getCreationAgeInMs()             );
+				gen.writeStringField("alarmClass"                 , toString( ae.getAlarmClass()                 ));
+				gen.writeStringField("alarmClassAbriviated"       , toString( ae.getAlarmClassAbriviated()       ));
+				gen.writeStringField("serviceType"                , toString( ae.getServiceType()                ));
+				gen.writeStringField("serviceName"                , toString( ae.getServiceName()                ));
+				gen.writeStringField("serviceInfo"                , toString( ae.getServiceInfo()                ));
+				gen.writeStringField("extraInfo"                  , toString( ae.getExtraInfo()                  ));
+				gen.writeStringField("category"                   , toString( ae.getCategory()                   ));
+				gen.writeStringField("severity"                   , toString( ae.getSeverity()                   ));
+				gen.writeStringField("state"                      , toString( ae.getState()                      ));
+				gen.writeNumberField("repeatCnt"                  ,           ae.getRepeatCnt()                   );
+				gen.writeStringField("duration"                   , toString( ae.getDuration()                   ));
+				gen.writeNumberField("creationAgeInMs"            ,           ae.getCreationAgeInMs()             );
 //				w.writeNumberField("creationTime"               ,           ae.getCreationTime()                );
 //				w.writeStringField("creationTimeIso8601"        , toString( ae.getCreationTime()               )); 
-				w.writeStringField("creationTime"               , toString( ae.getCreationTime()               )); 
-				w.writeStringField("reRaiseTime"                , toString( ae.getReRaiseTime()                )); 
+				gen.writeStringField("creationTime"               , toString( ae.getCreationTime()               )); 
+				gen.writeStringField("reRaiseTime"                , toString( ae.getReRaiseTime()                )); 
 //				w.writeNumberField("cancelTime"                 ,           ae.getCancelTime()                  );
 //				w.writeStringField("cancelTimeIso8601"          , toString( ae.getCancelTime()                 ));
-				w.writeStringField("cancelTime"                 , toString( ae.getCancelTime()                 ));
-				w.writeNumberField("TimeToLive"                 ,           ae.getTimeToLive()                  );
-				w.writeNumberField("threshold"                  , toBigDec( ae.getThreshold()                  ));
-				w.writeStringField("data"                       , toString( ae.getData()                       ));
-				w.writeStringField("description"                , toString( ae.getDescription()                ));
-				w.writeStringField("extendedDescription"        , toString( ae.getExtendedDescription()        ));
-				w.writeStringField("reRaiseData"                , toString( ae.getReRaiseData()                ));
-				w.writeStringField("reRaiseDescription"         , toString( ae.getReRaiseDescription()         ));
-				w.writeStringField("reRaiseExtendedDescription" , toString( ae.getReRaiseExtendedDescription() ));
+				gen.writeStringField("cancelTime"                 , toString( ae.getCancelTime()                 ));
+				gen.writeNumberField("TimeToLive"                 ,           ae.getTimeToLive()                  );
+				gen.writeNumberField("threshold"                  , toBigDec( ae.getThreshold()                  ));
+				gen.writeStringField("data"                       , toString( ae.getData()                       ));
+				gen.writeStringField("description"                , toString( ae.getDescription()                ));
+				gen.writeStringField("extendedDescription"        , toString( ae.getExtendedDescription()        ));
+				gen.writeStringField("reRaiseData"                , toString( ae.getReRaiseData()                ));
+				gen.writeStringField("reRaiseDescription"         , toString( ae.getReRaiseDescription()         ));
+				gen.writeStringField("reRaiseExtendedDescription" , toString( ae.getReRaiseExtendedDescription() ));
 				
-				w.writeEndObject();
+				gen.writeEndObject();
 			}
 
-			w.writeEndArray();
+			gen.writeEndArray();
 		}
 
 		
 		
-		w.writeFieldName("collectors");
-		w.writeStartArray();
+		gen.writeFieldName("collectors");
+		gen.writeStartArray();
 
 		//--------------------------------------
 		// COUNTERS
 		//--------------------------------------
 		for (CmEntry cme : _collectors)
 		{
-			cme.toJsonForGraph(w, graphNameList);
+			// Write GRAPH adn possibly some COUNTER entries
+//			cme.toJsonForGraph(w, graphNameList, countersNameList); // "CmActiveStatements"
+			cme.toJsonForWebSubscribers(gen, graphNameList, countersNameList); // "CmActiveStatements"
 		}
 
-		w.writeEndArray();
-		w.writeEndObject();
-		w.close();
+		gen.writeEndArray();
+		gen.writeEndObject();
+		gen.close();
 		
 		String jsonStr = sw.toString();
 		return jsonStr;
@@ -1274,5 +1526,82 @@ public class DbxTuneSample
 	{
 		return getCollectors().isEmpty() && getActiveAlarms().isEmpty() && getAlarmEntries().isEmpty();
 	}
-	
+
+//	public static void main(String[] args)
+//	{
+//		ObjectMapper mapper = new ObjectMapper();
+//		String jsonStr = "{ \n" +
+//			"#head# : { \n" +
+//			"    #messageVersion# : 1, \n" +
+//			"    #appName# : #AseTune#, \n" +
+//			"    #appVersion# : #4.1.0.95.dev#, \n" +
+//			"    #appBuildString# : #2022-05-30/build 425#, \n" +
+//			"    #collectorHostname# : #gorans-ub3#, \n" +
+//			"    #collectorSampleInterval# : 30, \n" +
+//			"    #collectorCurrentUrl# : #jdbc:h2:tcp://127.0.1.1:19094/GORAN_UB0_DS_2022-06-16#, \n" +
+//			"    #collectorInfoFile# : #/home/sybase/.dbxtune/info/GORAN_UB0_DS.dbxtune#, \n" +
+//			"    #sessionStartTime# : #2022-06-15T15:54:56.330+02:00#, \n" +
+//			"    #sessionSampleTime# : #2022-06-16T18:16:48.406+02:00#, \n" +
+//			"    #serverName# : #GORAN_UB0_DS#, \n" +
+//			"    #onHostname# : #GORAN_UB0_DS#, \n" +
+//			"    #serverNameAlias# : null, \n" +
+//			"    #cmListEnabled# : [#a#, #b#, #c#], \n" +
+//			"    #cmListEnabledGraphs# : [#a#, #b#, #c#], \n" +
+////			"    #cmListEnabledCounters# : #y# \n" +
+////			"    #cmListEnabledCounters# : #x, y, z# \n" +
+//			"    #cmListEnabledCounters# : [#x#, #y#] \n" +
+//			"  } \n" +
+//			"} \n" +
+//			"";
+//		jsonStr = jsonStr.replace('#', '"');
+//
+//		try
+//		{
+//			JsonNode root = mapper.readTree(jsonStr);
+//
+//			JsonNode headNode = getNode(root, "head");
+//
+//			int    messageVersion          = getInt   (headNode, "messageVersion");
+//			String appName                 = getString(headNode, "appName");
+//			String appVersion              = getString(headNode, "appVersion");
+//			String appBuildString          = getString(headNode, "appBuildString");
+//			String collectorHostname       = getString(headNode, "collectorHostname");
+//			int    collectorSampleInterval = getInt   (headNode, "collectorSampleInterval", -1);
+//			String collectorCurrentUrl     = getString(headNode, "collectorCurrentUrl", null);
+//			String collectorInfoFile       = getString(headNode, "collectorInfoFile",   null);
+//			
+//			Timestamp sessionStartTime     = getTimestamp(headNode, "sessionStartTime");
+//			Timestamp sessionSampleTime    = getTimestamp(headNode, "sessionSampleTime");
+//			String    serverName           = getString   (headNode, "serverName");
+//			String    onHostname           = getString   (headNode, "onHostname");
+//			String    serverNameAlias      = getString   (headNode, "serverNameAlias", null);
+//
+//			List<String> cmListEnabled         = getStringList(headNode, "cmListEnabled");
+//			List<String> cmListEnabledGraphs   = getStringList(headNode, "cmListEnabledGraphs");
+//			List<String> cmListEnabledCounters = getStringList(headNode, "cmListEnabledCounters");
+//			
+//			System.out.println("messageVersion="          + messageVersion);
+//			System.out.println("appName="                 + appName);
+//			System.out.println("appVersion="              + appVersion);
+//			System.out.println("appBuildString="          + appBuildString);
+//			System.out.println("collectorHostname="       + collectorHostname);
+//			System.out.println("collectorSampleInterval=" + collectorSampleInterval);
+//			System.out.println("collectorCurrentUrl="     + collectorCurrentUrl);
+//			System.out.println("collectorInfoFile="       + collectorInfoFile);
+//                                                            
+//			System.out.println("sessionStartTime="        + sessionStartTime);
+//			System.out.println("sessionSampleTime="       + sessionSampleTime);
+//			System.out.println("serverName="              + serverName);
+//			System.out.println("onHostname="              + onHostname);
+//			System.out.println("serverNameAlias="         + serverNameAlias);
+//                                                            
+//			System.out.println("cmListEnabled="           + cmListEnabled);
+//			System.out.println("cmListEnabledGraphs="     + cmListEnabledGraphs);
+//			System.out.println("cmListEnabledCounters="   + cmListEnabledCounters);
+//		}
+//		catch (Exception ex)
+//		{
+//			ex.printStackTrace();
+//		}
+//	}
 }

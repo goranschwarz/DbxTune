@@ -166,10 +166,10 @@
       <p class="lead">View Trends Graphs for all your Database Systems in one place!</p>
       <!-- <p class="lead">View all your DBMS trends graphs in a centralized console.</p> -->
       <!-- <p class="lead">DbxTune Central is the component where all DbxTune collectors can send summary data so it can be easely viewed...</p> -->
-      <p><img id="example-graph" src="images/dbxcentral_graph_example.png" alt="Example Graph"></p>
-      <p align="right"><font size="-2">Support for: Sybase/SAP: ASE, IQ, <i>RS, RAX, MS SQL-Server, Postgres, MySQL, DB2, Oracle, SAP HANA</i></font></p>
-<!--      <a class="btn btn-lg btn-primary" href="/graph.html" role="button">View charts &raquo;</a>-->
-<!--      <a class="btn btn-lg btn-primary" role="button" data-toggle="modal" data-backdrop="static" data-target="#dbx-choose-graphs-dialog">View charts &raquo;</a>-->
+      <div id="dbx-image">
+        <p><img id="example-graph" src="images/dbxcentral_graph_example.png" alt="Example Graph"></p>
+        <p align="right"><font size="-2">Support for: Sybase/SAP: ASE, IQ, <i>RS, RAX, MS SQL-Server, Postgres, MySQL, DB2, Oracle, SAP HANA</i></font></p>
+      </div>
 
       <div id="x"> <!-- So we can "skip" the top image in an easy way -->
         <button type="button" class="btn btn-lg btn-primary btn-ok" data-toggle="modal" data-backdrop="static" data-target="#dbx-choose-graphs-dialog">View charts &raquo;</button>
@@ -178,22 +178,27 @@
       <p></p>
       <p>
         <input type="checkbox" name="dbx-openInNewTab-chk" id="dbx-openInNewTab-chk" checked> Open Below Graphs in a new Tab &nbsp;&nbsp;&nbsp;
-        <input type="checkbox" name="dbx-graphCsDark-chk"  id="dbx-graphCsDark-chk"  checked> In Dark Theme<br>
+        <input type="checkbox" name="dbx-graphCsDark-chk"  id="dbx-graphCsDark-chk"  checked> In Dark Theme &nbsp;&nbsp;&nbsp;
+        <input type="checkbox" name="dbx-showDbxImage-chk" id="dbx-showDbxImage-chk" checked> <i>Show Above Chart Image</i><br>
         <input type="checkbox" name="dbx-subscribe-chk"    id="dbx-subscribe-chk"    checked> Automatically Update Graphs when new data arrives from Collectors<br>
 		 Display Last <input type="text" name="dbx-hours-txt" id="dbx-hours-txt" style="height:20px;width:30px" size="3" value="2"> Hours when Opening Graphs. &nbsp;&nbsp;&nbsp;
-		 Using <input type="text" name="dbx-gcols-txt" id="dbx-gcols-txt" style="height:20px;width:30px" size="3" value="x" title='default "x" means: Depends on the screen size: small[15"]=1, medium[24"]=2 or large[27"]=3'> Graph Columns<br>
+		 Using <input type="text" name="dbx-gcols-txt" id="dbx-gcols-txt" style="height:20px;width:30px" size="3" value="#" title='default "x" means: Depends on the screen size: small[15"]=1, medium[24"]=2 or large[27"]=3'> Graph Columns<br>
 	  </p>
 	  
-      &#10148; Quick access list (show system selected graphs)
+<!--      &#10148; Quick access list (show system selected graphs)-->
+      &#10148; Choose Action on the Dropdown for each Server
       <div id="dbx-quick-access-server-list">
         <a class="btn btn-sm btn-primary mb-2" href="/graph.html?subscribe=true&startTime=2h&sessionName=DUMMY_ASE" role="button">Loading server list <i class='fa fa-spinner fa-spin '></i></a>
       </div>
 
+<!--
       &#10148; Quick access list (show <b>all</b> available graphs)
       <div id="dbx-quick-access-server-all-list">
         <a class="btn btn-sm btn-primary mb-2" href="/graph.html?subscribe=true&startTime=2h&sessionName=DUMMY_ASE&graphList=all" role="button">Loading server list <i class='fa fa-spinner fa-spin '></i></a>
       </div>
+-->
 
+      <br>
       &#10148; Profiles
       <div id="dbx-quick-access-profile-list">
 <!--        <a class="btn btn-sm btn-primary mb-2" data-toggle="tooltip" title="Open a dialog where you can create 'Profiles', which will be displayed to the left of this button." href="/admin/new-profile" role="button">New Profile...</a>-->
@@ -428,6 +433,7 @@ Active Alarms
 	});
 	resizeExampleImage();
 
+
 	//-----------------------------------------------------------
 	// Store/restore checkbox values
 	//-----------------------------------------------------------
@@ -473,6 +479,19 @@ Active Alarms
 //			$(this).trigger('change');
 //		}
 //	});
+
+
+	// Hide top "example dbx chart"
+	const showExampleImage = $('#dbx-showDbxImage-chk') .is(":checked");
+	if ( ! showExampleImage )
+	{
+		$("#dbx-image").css("display", "none");
+	}
+	// Action: when pressing checkbox
+	$("#dbx-showDbxImage-chk").click(function() 
+	{
+		location.reload();
+	});
 
 
 	//-----------------------------------------------------------
@@ -917,12 +936,265 @@ Active Alarms
 
 
 
+//	//-----------------------------------------------------------
+//	// get SERVERS
+//	//-----------------------------------------------------------
+//	$.ajax(
+//	{
+//		url: "/api/sessions",
+//		type: 'get',
+//		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+//		
+//		success: function(data, status) 
+//		{
+//			// console.log("RECEIVED DATA: "+data);
+//			var jsonResp = JSON.parse(data);
+//			
+//			var htmlDropDown = "";
+////			var html = "";
+////			var htmlAll = "";
+//			for (var i=0; i<jsonResp.length; i++) 
+//			{
+//				var entry = jsonResp[i];
+//
+//				if ((parseInt(entry.status) & 1) === 1) // 1=DISABLED
+//				{
+//					console.log("Skipping server '"+entry.serverName+"', since it's in DISABLED Status (status=1)");
+//					continue;
+//				}
+//
+//				var lastSampleTimeDuration = moment.duration(moment().diff(entry.lastSampleTime));
+//				var lastSampleWarnThresh   = 5; // # minutes
+//
+//				var tt =
+//				  "<table class='table table-sm'>"+
+//				  "  <tr> <th nowrap colspan='2'>"+entry.serverDescription+"</th> </tr>"+
+//				  "  <tr> <td nowrap>DBMS Server Name  </td> <td nowrap>"+ entry.serverName              +"</td> </tr>"+
+//				  "  <tr> <td nowrap>DBMS On Hostname  </td> <td nowrap>"+ entry.onHostname              +"</td> </tr>"+
+//				  "  <tr> <td nowrap>Collector         </td> <td nowrap>"+ entry.productString           +"</td> </tr>"+
+//				  "  <tr> <td nowrap>Collector Hostname</td> <td nowrap>"+ entry.collectorHostname       +"</td> </tr>"+
+//				  "  <tr> <td nowrap>Collector Interval</td> <td nowrap>"+ entry.collectorSampleInterval +"</td> </tr>"+
+//				  "  <tr> <td nowrap>Last Sample       </td> <td nowrap>"+ moment(entry.lastSampleTime).format("YYYY-MM-DD HH:mm:ss") + (lastSampleTimeDuration.asMinutes() < lastSampleWarnThresh ? "" : ", <font color='red'>"+lastSampleTimeDuration.format()+"</font> since last sample" ) + "</td> </tr>"+
+//				  "</table>";
+//				  // The above tooltip didn't render that well (the table was wider than the "popup", which made it unreadable)
+//				  // overide: .tooltip-inner { max-width: 1000px; } in the CSS and it worked better
+//				  // tt = entry.serverDescription;
+//
+//				// set button class depending on how long ago since we got any sample for this server
+//				var btnClass="btn-primary";
+//				if (lastSampleTimeDuration.asMinutes() >= lastSampleWarnThresh)
+//					btnClass="btn-warning";
+//
+//				var dbxButtonImage="dbx-button-image dbx-button-"+entry.productString.toLowerCase();
+//		//		html    += '<a id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="top"    data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.serverName+'">'+entry.serverName+'</a>';
+//		//		htmlAll += '<a id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.serverName+'&graphList=all">'+entry.serverName+'</a>';
+//
+//		//		html    += '<span data-toggle="tooltip" data-placement="top"    data-html="true" title="'+tt+'"><button type="button" id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" onclick=\'return openGraphPage("server-ssp", "'+entry.serverName+'", "")\'>'+entry.serverName+'</button></span>';
+//		//		htmlAll += '<span data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'"><button type="button" id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" onclick=\'return openGraphPage("server-all", "'+entry.serverName+'", "")\'>'+entry.serverName+'</button></span>';
+//
+//				// Below is a LINK Button, so you can both do right click on the link to open, and click to open (using the properties: open-in-{here|tab}, time, subscribe)
+//				const startTime = $('#dbx-hours-txt').val() + "h";
+////				html    += '<a id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="top"    data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+entry.serverName+'"               onclick=\'return openGraphPage("server-ssp", "'+entry.serverName+'", "")\'>'+entry.serverName+'</a>';
+////				htmlAll += '<a id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+entry.serverName+'&graphList=all" onclick=\'return openGraphPage("server-all", "'+entry.serverName+'", "")\'>'+entry.serverName+'</a>';
+//
+//				htmlDropDown += ''
+//				        + '<div class="btn-group">'
+//				        + '  <button id="btn-qa-normal-'+entry.serverName+'" type="button" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2 dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'
+//				        + '    '+entry.serverName
+//				        + '  </button>'
+//				        + '  <div class="dropdown-menu">'
+//				        + '    <a class="dropdown-item" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+entry.serverName+'"               onclick=\'return openGraphPage("server-ssp", "'+entry.serverName+'", "")\'>Show <b>System Selected</b> Graphs</a>'
+//				        + '    <a class="dropdown-item" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+entry.serverName+'&graphList=all" onclick=\'return openGraphPage("server-all", "'+entry.serverName+'", "")\'>Show <b>ALL</b> Available Graphs</a>'
+//				        + '    <div class="dropdown-divider"></div>'
+//				        + '    <a class="dropdown-item" href="/report?op=viewLatest&name='+entry.serverName+'" target="_blank">Open <b>Latest</b> Daily Summary Report</a>'
+//				        + '    <a class="dropdown-item" href="/overview#dsr-srv-'+entry.serverName+'" target="_blank">View <b>List</b> of <b>all</b> Daily Summary Report for this Server</a>'
+//				        + '    <a class="dropdown-item" href="/overview?op=dsr-current-srv&srv='+entry.serverName+'" target="_blank"><b>Create</b> Daily Summary Report on Current Recording</a>'
+//				        + '    <div class="dropdown-divider"></div>'
+//				        + '    <a class="dropdown-item" href="/overview#offline-srv-'+entry.serverName+'" target="_blank">View <b>List</b> of all <b>Recordings</b> for this Server</a>'
+//				        + '    <div class="dropdown-divider"></div>'
+//				        + '    <a class="dropdown-item" href="/log?name='+entry.serverName+'.console&tail=5000" target="_blank"><b>Tail</b> Collector Console File</a>'
+//				        + '    <div class="dropdown-divider"></div>'
+//				        + '    <a class="dropdown-item" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="#">Server <b>Info</b></a>'
+//				        + '  </div>'
+//				        + '</div>';
+//			}
+//			if (htmlDropDown === "")
+//			{
+//				htmlDropDown = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
+////				html    = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
+////				htmlAll = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
+//			}
+////			$('#dbx-quick-access-server-list').html(html);
+////			$('#dbx-quick-access-server-all-list').html(htmlAll);
+//			$('#dbx-quick-access-server-list').html(htmlDropDown);
+//
+//			// Enable bootstrap tooltip...
+//			$('[data-toggle="tooltip"]').tooltip();
+//
+//			// Get ACTIVE Alarms
+//			setTimeout(dbxTuneCheckActiveAlarms, 100);
+//		},
+//		error: function(xhr, desc, err) 
+//		{
+//			console.log(xhr);
+//			console.log("Details: " + desc + "\nError: " + err);
+//		}
+//	}); // end: ajax call
+
+	var global_layoutNeedNewLine = 0;
+	function readServerLayoutEntry(entry) 
+	{
+//		console.log("---------- global_layoutNeedNewLine = '"+global_layoutNeedNewLine);
+//		console.log('readServerLayoutEntry(): entry: ' + entry);
+
+		var html = "";
+
+		if (entry.type === "group")
+		{
+			console.log("INFO: GROUP entry: text='" + entry.text + "'", entry);
+
+			if (global_layoutNeedNewLine)
+			{
+				html += "<br>";
+				global_layoutNeedNewLine = 0;
+			}
+
+			if (entry.hasOwnProperty('options') && entry.options.hasOwnProperty('border') && entry.options.border === "true")
+			{
+				html += "<div class='card border-dark'>";
+				html += "  <div class='card-header' style='padding: .25rem .75rem; background-color: #e2e2e2;'><b>" + entry.text + "</b></div>";
+				html += "  <div class='card-body' style='padding: .75rem .75rem .25rem .75rem; background-color: #e9ecef;'>";
+
+				// CONTENT GOES HERE
+				if (entry.hasOwnProperty('entries'))
+				{
+					// read: entries
+					// read: entries
+					for (var i=0; i<entry.entries.length; i++) 
+					{
+						var localEntry = entry.entries[i];
+						html += readServerLayoutEntry(localEntry);
+					}
+				}
+				
+				html += "  </div>";
+				html += "</div>";
+			}
+			else
+			{
+//				html += "<hr>";
+//				html += "---group--- " + entry.text + "<br>";
+
+				// Add Some chars at the start (that is if the string doesnt start with any "special chars"...
+				var prefix = "";
+//				var regEx = new RegExp("[a-zA-Z]");
+//				if ( regEx.test(entry.text.charAt(0)) )
+//					prefix = "&#8213;&#10148; ";
+
+				html += prefix + "<b>" + entry.text + "</b><br>";
+				
+
+				// CONTENT GOES HERE
+				if (entry.hasOwnProperty('entries'))
+				{
+					// read: entries
+					for (var i=0; i<entry.entries.length; i++) 
+					{
+						var localEntry = entry.entries[i];
+						html += readServerLayoutEntry(localEntry);
+					}
+				}
+			}
+		}
+		else if (entry.type === "label")
+		{
+			console.log("INFO: LABEL entry: text='" + entry.text + "'", entry);
+
+			if (global_layoutNeedNewLine)
+			{
+				html += "<br>";
+				global_layoutNeedNewLine = 0;
+			}
+
+			html += entry.text + "<br>";
+		}
+		else if (entry.type === "server")
+		{
+			console.log("INFO: SERVER entry: text='" + entry.text + "'", entry);
+
+			if (entry.hasOwnProperty('srvSession'))
+			{
+				var srvSession = entry.srvSession;
+				
+				if ((parseInt(srvSession.status) & 1) === 1) // 1=DISABLED
+				{
+					console.log("Skipping server '"+srvSession.serverName+"', since it's in DISABLED Status (status=1)");
+					return html;
+				}
+
+				// Uggly: increment global var
+				global_layoutNeedNewLine = 1;
+
+				var lastSampleTimeDuration = moment.duration(moment().diff(srvSession.lastSampleTime));
+				var lastSampleWarnThresh   = 5; // # minutes
+			
+				var tt =
+				  "<table class='table table-sm'>"+
+				  "  <tr> <th nowrap colspan='2'>"+srvSession.serverDescription+"</th> </tr>"+
+				  "  <tr> <td nowrap>DBMS Server Name  </td> <td nowrap>"+ srvSession.serverName              +"</td> </tr>"+
+				  "  <tr> <td nowrap>DBMS On Hostname  </td> <td nowrap>"+ srvSession.onHostname              +"</td> </tr>"+
+				  "  <tr> <td nowrap>Collector         </td> <td nowrap>"+ srvSession.productString           +"</td> </tr>"+
+				  "  <tr> <td nowrap>Collector Hostname</td> <td nowrap>"+ srvSession.collectorHostname       +"</td> </tr>"+
+				  "  <tr> <td nowrap>Collector Interval</td> <td nowrap>"+ srvSession.collectorSampleInterval +"</td> </tr>"+
+				  "  <tr> <td nowrap>Last Sample       </td> <td nowrap>"+ moment(srvSession.lastSampleTime).format("YYYY-MM-DD HH:mm:ss") + (lastSampleTimeDuration.asMinutes() < lastSampleWarnThresh ? "" : ", <font color='red'>"+lastSampleTimeDuration.format()+"</font> since last sample" ) + "</td> </tr>"+
+				  "</table>";
+				  // The above tooltip didn't render that well (the table was wider than the "popup", which made it unreadable)
+				  // overide: .tooltip-inner { max-width: 1000px; } in the CSS and it worked better
+				  // tt = srvSession.serverDescription;
+			
+				// set button class depending on how long ago since we got any sample for this server
+				var btnClass="btn-primary";
+				if (lastSampleTimeDuration.asMinutes() >= lastSampleWarnThresh)
+					btnClass="btn-warning";
+			
+				var dbxButtonImage="dbx-button-image dbx-button-"+srvSession.productString.toLowerCase();
+			
+				// Below is a LINK Button, so you can both do right click on the link to open, and click to open (using the properties: open-in-{here|tab}, time, subscribe)
+				const startTime = $('#dbx-hours-txt').val() + "h";
+			
+				html += ''
+						+ '<div class="btn-group">'
+						+ '  <button id="btn-qa-normal-'+srvSession.serverName+'" type="button" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2 dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'
+						+ '    '+srvSession.serverName
+						+ '    <span id="btn-qa-normal-alarms-'+srvSession.serverName+'", class="badge badge-pill badge-warning"></span>'
+						+ '  </button>'
+						+ '  <div class="dropdown-menu">'
+						+ '    <a class="dropdown-item" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+srvSession.serverName+'"               onclick=\'return openGraphPage("server-ssp", "'+srvSession.serverName+'", "")\'>Show <b>System Selected</b> Graphs</a>'
+						+ '    <a class="dropdown-item" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+srvSession.serverName+'&graphList=all" onclick=\'return openGraphPage("server-all", "'+srvSession.serverName+'", "")\'>Show <b>ALL</b> Available Graphs</a>'
+						+ '    <div class="dropdown-divider"></div>'
+						+ '    <a class="dropdown-item" href="/report?op=viewLatest&name='+srvSession.serverName+'" target="_blank">Open <b>Latest</b> Daily Summary Report</a>'
+						+ '    <a class="dropdown-item" href="/overview#dsr-srv-'+srvSession.serverName+'" target="_blank">View <b>List</b> of <b>all</b> Daily Summary Report for this Server</a>'
+						+ '    <a class="dropdown-item" href="/overview?op=dsr-current-srv&srv='+srvSession.serverName+'" target="_blank"><b>Create</b> Daily Summary Report on Current Recording</a>'
+						+ '    <div class="dropdown-divider"></div>'
+						+ '    <a class="dropdown-item" href="/overview#offline-srv-'+srvSession.serverName+'" target="_blank">View <b>List</b> of all <b>Recordings</b> for this Server</a>'
+						+ '    <div class="dropdown-divider"></div>'
+						+ '    <a class="dropdown-item" href="/log?name='+srvSession.serverName+'.console&tail=5000" target="_blank"><b>Tail</b> Collector Console File</a>'
+						+ '    <div class="dropdown-divider"></div>'
+						+ '    <a class="dropdown-item" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="#">Server <b>Info</b></a>'
+						+ '  </div>'
+						+ '</div>';
+			}
+		}
+
+		return html;
+	}
+
 	//-----------------------------------------------------------
 	// get SERVERS
 	//-----------------------------------------------------------
 	$.ajax(
 	{
-		url: "/api/sessions",
+		url: "/api/server-layout",
 		type: 'get',
 		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
 		
@@ -932,58 +1204,24 @@ Active Alarms
 			var jsonResp = JSON.parse(data);
 			
 			var html = "";
-			var htmlAll = "";
 			for (var i=0; i<jsonResp.length; i++) 
 			{
 				var entry = jsonResp[i];
 
-				if ((parseInt(entry.status) & 1) === 1) // 1=DISABLED
+				if (entry.hasOwnProperty('type'))
 				{
-					console.log("Skipping server '"+entry.serverName+"', since it's in DISABLED Status (status=1)");
-					continue;
+					html += readServerLayoutEntry(entry);
 				}
-
-				var lastSampleTimeDuration = moment.duration(moment().diff(entry.lastSampleTime));
-				var lastSampleWarnThresh   = 5; // # minutes
-
-				var tt =
-				  "<table class='table table-sm'>"+
-				  "  <tr> <th nowrap colspan='2'>"+entry.serverDescription+"</th> </tr>"+
-				  "  <tr> <td nowrap>DBMS Server Name  </td> <td nowrap>"+ entry.serverName              +"</td> </tr>"+
-				  "  <tr> <td nowrap>DBMS On Hostname  </td> <td nowrap>"+ entry.onHostname              +"</td> </tr>"+
-				  "  <tr> <td nowrap>Collector         </td> <td nowrap>"+ entry.productString           +"</td> </tr>"+
-				  "  <tr> <td nowrap>Collector Hostname</td> <td nowrap>"+ entry.collectorHostname       +"</td> </tr>"+
-				  "  <tr> <td nowrap>Collector Interval</td> <td nowrap>"+ entry.collectorSampleInterval +"</td> </tr>"+
-				  "  <tr> <td nowrap>Last Sample       </td> <td nowrap>"+ moment(entry.lastSampleTime).format("YYYY-MM-DD HH:mm:ss") + (lastSampleTimeDuration.asMinutes() < lastSampleWarnThresh ? "" : ", <font color='red'>"+lastSampleTimeDuration.format()+"</font> since last sample" ) + "</td> </tr>"+
-				  "</table>";
-				  // The above tooltip didn't render that well (the table was wider than the "popup", which made it unreadable)
-				  // overide: .tooltip-inner { max-width: 1000px; } in the CSS and it worked better
-				  // tt = entry.serverDescription;
-
-				// set button class depending on how long ago since we got any sample for this server
-				var btnClass="btn-primary";
-				if (lastSampleTimeDuration.asMinutes() >= lastSampleWarnThresh)
-					btnClass="btn-warning";
-
-				var dbxButtonImage="dbx-button-image dbx-button-"+entry.productString.toLowerCase();
-		//		html    += '<a id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="top"    data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.serverName+'">'+entry.serverName+'</a>';
-		//		htmlAll += '<a id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.serverName+'&graphList=all">'+entry.serverName+'</a>';
-
-		//		html    += '<span data-toggle="tooltip" data-placement="top"    data-html="true" title="'+tt+'"><button type="button" id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" onclick=\'return openGraphPage("server-ssp", "'+entry.serverName+'", "")\'>'+entry.serverName+'</button></span>';
-		//		htmlAll += '<span data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'"><button type="button" id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" onclick=\'return openGraphPage("server-all", "'+entry.serverName+'", "")\'>'+entry.serverName+'</button></span>';
-
-				// Below is a LINK Button, so you can both do right click on the link to open, and click to open (using the properties: open-in-{here|tab}, time, subscribe)
-				const startTime = $('#dbx-hours-txt').val() + "h";
-				html    += '<a id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="top"    data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+entry.serverName+'"               onclick=\'return openGraphPage("server-ssp", "'+entry.serverName+'", "")\'>'+entry.serverName+'</a>';
-				htmlAll += '<a id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+entry.serverName+'&graphList=all" onclick=\'return openGraphPage("server-all", "'+entry.serverName+'", "")\'>'+entry.serverName+'</a>';
 			}
+
+			// If nothing was found... add "dummy" button
 			if (html === "")
 			{
-				html    = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
-				htmlAll = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
+				html = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
 			}
+			
+			// Set HTML in DOM
 			$('#dbx-quick-access-server-list').html(html);
-			$('#dbx-quick-access-server-all-list').html(htmlAll);
 
 			// Enable bootstrap tooltip...
 			$('[data-toggle="tooltip"]').tooltip();
@@ -1128,16 +1366,20 @@ Active Alarms
 				var alarmSrvCount = 0;
 				var alarmSumCount = 0;
 
+				// remove Alarm Count from all server buttons
+				let btnQaNormalAlarms = document.querySelectorAll('*[id^="btn-qa-normal-alarms-"]');
+				btnQaNormalAlarms.forEach( function(item) { item.textContent = ""; } ); 
+
 				// remove 'btn-danger' from all server buttons
 				let btnQaNormal = document.querySelectorAll('*[id^="btn-qa-normal-"]');
-				let btnQaAll    = document.querySelectorAll('*[id^="btn-qa-all-"]');
+//				let btnQaAll    = document.querySelectorAll('*[id^="btn-qa-all-"]');
 				btnQaNormal.forEach( function(item) { item.classList.remove('btn-danger'); } );
-				btnQaAll   .forEach( function(item) { item.classList.remove('btn-danger'); } );
+//				btnQaAll   .forEach( function(item) { item.classList.remove('btn-danger'); } );
 
 				// ADD 'btn-success' from all server buttons (which would be the GOOD STATE)
 				// if we have problems... set it to "danger" if we see errors
 				btnQaNormal.forEach( function(item) { item.classList.add('btn-success'); } );
-				btnQaAll   .forEach( function(item) { item.classList.add('btn-success'); } );
+//				btnQaAll   .forEach( function(item) { item.classList.add('btn-success'); } );
 
 				// remove all old alarms (new/active will be inserted again)
 				let activeAlarmDivs = document.querySelectorAll('*[id^="active-alarms-srv-"]');
@@ -1165,16 +1407,21 @@ Active Alarms
 					// var graphServerName = entry.srvName;
 					var graphServerName = key;
 
+//console.log("dbxTuneCheckActiveAlarms(): graphServerName="+graphServerName+", entry:", entry);
+
 					alarmSrvCount++;
+					var numOfAlarmsForThisServer = entry.length;
 
 					// Set the button to RED if we got an alarm on that server
 					if (document.getElementById("btn-qa-normal-"+graphServerName) != null)
 					{
+						document.getElementById("btn-qa-normal-alarms-"+graphServerName).textContent = numOfAlarmsForThisServer;
+
 						document.getElementById("btn-qa-normal-"+graphServerName).classList.remove('btn-success');
-						document.getElementById("btn-qa-all-"   +graphServerName).classList.remove('btn-success');
+//						document.getElementById("btn-qa-all-"   +graphServerName).classList.remove('btn-success');
 
 						document.getElementById("btn-qa-normal-"+graphServerName).classList.add('btn-danger');
-						document.getElementById("btn-qa-all-"   +graphServerName).classList.add('btn-danger');
+//						document.getElementById("btn-qa-all-"   +graphServerName).classList.add('btn-danger');
 					}
 
 					// if (_serverList.indexOf(graphServerName) == -1)
@@ -1261,7 +1508,8 @@ Active Alarms
 		// do we need to refresh???
 		if (_refresh > 0 && ageInSec >= _refresh)
 		{
-			dbxTuneCheckActiveAlarms();
+			location.reload(true); // Reload the whole window
+			//dbxTuneCheckActiveAlarms();
 			lastUpdateTime = new Date();
 		}
 

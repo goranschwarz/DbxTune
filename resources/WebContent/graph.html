@@ -27,6 +27,143 @@
 			top: 56px; /* navbar is 56px high */
 		}
 		
+		@keyframes blink {  
+			0% { opacity: 1.0; }
+			50% { opacity: 0.0; }
+			100% { opacity: 1.0; }
+		}
+
+		.active-statement-row-multi-sampled {
+			background-color: orange;
+		}
+		.active-statement-row-holding-locks-while-idle {
+			background-color: gold;
+		}
+		.active-statement-row-blocking {
+			background-color: red;
+		}
+		.active-statement-row-blocked {
+			background-color: pink;
+		}
+
+		.active-statement-cell-abs {
+			color: black;
+		}
+		.active-statement-cell-diff {
+			color: blue;
+		}
+		.active-statement-cell-rate {
+			color: blue;
+		}
+		.active-statement-cell-pct {
+			color: red;
+		}
+		
+		#active-statements-win-size {
+			border: 1px solid gray;
+			border-radius: 5px;
+//			padding: 1px;
+			margin-left: 20px;
+			padding-left: 3px;
+		}
+		#active-statements-counter-type {
+			border: 1px solid gray;
+			border-radius: 5px;
+//			padding: 1px;
+			margin-left: 20px;
+			padding-left: 3px;
+		}
+		#active-statements-options {
+			border: 1px solid gray;
+			border-radius: 5px;
+//			padding: 1px;
+			margin-left: 20px;
+			padding-left: 3px;
+		}
+
+		#active-statements-btn {
+/*			width: 40px;*/
+			width: 50px;
+			height: 30px;
+/*			background: rgba(0, 98, 79, 0.5);*/ /*#009879;*/
+			background: rgba(32, 32, 32, 0.5);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			text-decoration: none;
+/*			border-radius: 50%;*/
+			border-radius: 10px 0px 0px 10px;
+			color: #ffffff;
+			font-size: 15px;
+
+			box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.25);
+			position: fixed;
+/*			right: 20px;*/
+			right: 0px;
+			top: 85px;
+			transition: background 0.25s;
+			
+			/* for button */
+			outline: blue;
+			border: none;
+			cursor: pointer;
+		}
+		#active-statements-btn:active {
+			background: rgba(0, 0, 0, 1);
+		}
+/*
+		#active-statements-top {
+			position: fixed; 
+			color: rgba(255, 148, 20, 1.0);
+			top: 10px;
+			font-size: 24px;
+			left: 40%;
+			z-index: 9999;
+			animation: blink 1.5s infinite;
+		}
+*/
+
+		#active-statements-watermark {
+			position: fixed; 
+				/* center the element */
+				right: 0;
+				left: 0;
+				margin-right: auto;
+				margin-left: auto;
+			transform: rotate(-45deg);
+			font-size: 50px;
+			font-weight: bold;
+			z-index: 999;
+			opacity: 0.5;
+			color: gray;
+			text-align: center;
+		}
+
+		#active-statements {
+			position: fixed;
+			top: 115px;
+			left: 25px;
+			max-height: 80%;
+			width: 95%;
+			overflow: auto;
+		/*	background-color: rgba(255, 195, 83, 1); */
+			background-color: rgba(229, 228, 226, 1);
+			border: 2px solid dark-gray;
+			border-radius: 5px;
+
+			padding-top: 10px;
+			padding-bottom: 10px;
+			padding-right: 10px;
+			padding-left: 10px;
+		}
+
+		#active-statements-ctl {
+			position: -webkit-sticky; /* Safari */
+			position: sticky;
+			top: 0;
+			left: 0;
+		}
+
 		#active-alarms-top {
 			position: fixed;
 			color: rgba(255, 148, 20, 1.0);
@@ -35,12 +172,6 @@
 			left: 40%;
 			z-index: 9999;
 			animation: blink 1.5s infinite;
-		}
-
-		@keyframes blink {  
-			0% { opacity: 1.0; }
-			50% { opacity: 0.0; }
-			100% { opacity: 1.0; }
 		}
 
 		#active-alarms {
@@ -214,6 +345,8 @@
 			<div    id="subscribe-feedback-srv"  class="dbx-nav-text"></div>
 			<div    id="subscribe-feedback-time" class="dbx-nav-text mr-1"></div>
 			
+			<button id="dbx-refresh" class="fa fa-refresh btn btn-outline-light mx-2 my-0 my-sm-0" type="button" onclick="collectorRequestRefresh();" title="Send a 'Refresh Request' to the Collector(s)"></button>
+
 			<div id="dbx-report-range" class="dbx-nav-text btn btn-outline-light mr-2">
 				<i class="glyphicon glyphicon-calendar fa fa-calendar"></i>&nbsp;
 				<span>Time Span</span> <b class="caret"></b>
@@ -236,7 +369,8 @@
 			</div>
 			<!-- <div    id="dbx-end-time"            class="dbx-nav-text">2018-??-?? ??:??</div> -->
 <!--		<button id="dbx-filter"              class="btn btn-outline-light mx-2 my-0 my-sm-0" type="button" data-toggle="modal" data-target="#dbx-filter-dialog">Filter</button>-->
-			<button id="dbx-filter"              class="btn btn-outline-light mx-2 my-0 my-sm-0" type="button">Filter</button>
+<!--		<button id="dbx-filter"              class="btn btn-outline-light mx-2 my-0 my-sm-0" type="button">Filter</button>-->
+			<button id="dbx-filter"              class="fa fa-search btn btn-outline-light mx-2 my-0 my-sm-0" type="button" title="Open Search/Filter Dialog, to find any specififc Graph/Chart"></button>
 		</div>
 	</nav>
 
@@ -265,6 +399,47 @@
 		</table>
 	</div>
 
+	<!-- Show Active SQL Statements -->
+	<button id="active-statements-btn" class="active-statements-btn-class" onclick="openActiveStatementsWindow();">&lt;/&gt;</button>
+<!--	<button id="active-statements-btn" class="active-statements-btn-class" onclick="openActiveStatementsWindow()">&lt;<span id="active-statements-btn-cnt" class="badge badge-pill badge-warning">/</span>&gt;</button>-->
+	
+	<div id="active-statements-top" style="display: none;">
+	Active SQL Statements (not used for the moment)
+	</div>
+
+	<div id="active-statements" class="active-statements-class" style="display: none;">
+		<div id="active-statements-ctl" class="active-statements-ctl-class">
+			<span id="active-statements-count" style="color:black">##</span> Active Statements...
+
+			<span id="active-statements-win-size">
+				Window Max Size: 
+<!--				<input type="radio" name="active-statements-show-radio" id="active-statements-show-radio-10" onclick="activeStatementsRadioClick(this);" value="10%"        > 10%-->
+				<input type="radio" name="active-statements-show-radio" id="active-statements-show-radio-30" onclick="activeStatementsRadioClick(this);" value="30%" checked> 30%
+				<input type="radio" name="active-statements-show-radio" id="active-statements-show-radio-60" onclick="activeStatementsRadioClick(this);" value="60%"        > 60%
+				<input type="radio" name="active-statements-show-radio" id="active-statements-show-radio-90" onclick="activeStatementsRadioClick(this);" value="90%"        > 90%
+<!--				<input type="radio" name="active-statements-show-radio" id="active-statements-show-radio-0"  onclick="activeStatementsRadioClick(this);" value="hide"       > Minimize-->
+			</span>
+
+			<span id="active-statements-counter-type">
+				Counter Type: 
+				<input type="radio" name="active-statements-counter-type" id="active-statements-counter-type-abs"  onclick="activeStatementsCounterTypeClick(this);" value="abs"         > Abs
+				<input type="radio" name="active-statements-counter-type" id="active-statements-counter-type-diff" onclick="activeStatementsCounterTypeClick(this);" value="diff"        > <font color="blue">Diff</font>
+				<input type="radio" name="active-statements-counter-type" id="active-statements-counter-type-rate" onclick="activeStatementsCounterTypeClick(this);" value="rate" checked> <font color="blue">Rate</font>
+			</span>
+
+			<span id="active-statements-options">
+				Options: &nbsp;
+				<input type="checkbox" name="active-statements-paused-chk"      id="active-statements-paused-chk"      onclick="activeStatementsPausedChkClick(this);"   title="Pause refresh of Active Statement (so you can read without beeing interupted)" value="paused"> Pause &nbsp;&nbsp;
+				<input type="checkbox" name="active-statements-auto-open-chk"   id="active-statements-auto-open-chk"   onclick="activeStatementsAutoOpenChkClick(this);" title="Auto: Open=Has Active Statements, Close=NO Active Statement"                   value="auto-open" checked> Auto Open &nbsp;&nbsp;
+				<input type="checkbox" name="active-statements-solid-chk"       id="active-statements-solid-chk"       onclick="activeStatementsSolidChkClick(this);"    title="Use Solid background color"                                                    value="solid" checked> Solid Background &nbsp;&nbsp;
+				<input type="checkbox" name="active-statements-compExtDesc-chk" id="active-statements-compExtDesc-chk" onclick="activeStatementsCompExtDescClick(this);" title="Show Extended Descriptions Columns as HTML Formated or as 'Plain Text'"        value="compExtDesc" checked> Extended Descriptions as Plain Text
+			</span>
+		</div>
+		<div id="active-statements-watermark"></div>
+		<div id="active-statements-win" class="active-statements-win-class"></div>
+	</div>
+
+
 	<!-- Show Active alarms -->
 	<div id="active-alarms-top" style="visibility: hidden;">
 	Active Alarms
@@ -272,7 +447,7 @@
 
 	<div id="active-alarms" class="active-alarms-class" style="visibility: hidden;">
 		<div id="active-alarms-ctl" class="active-alarms-ctl-class">
-			There are <span id="active-alarms-count" style="color:red">##</span> Active Alarms...&nbsp;&nbsp;&nbsp; Alarm Window Max Size: 
+			There are <span id="active-alarms-count" style="color:red">##</span> Active Alarms...&nbsp;&nbsp;&nbsp; Window Max Size: 
 			<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-10" onclick="activeAlarmsRadioClick(this);" value="10%"        > 10%
 			<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-30" onclick="activeAlarmsRadioClick(this);" value="30%" checked> 30%
 			<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-60" onclick="activeAlarmsRadioClick(this);" value="60%"        > 60%
@@ -673,6 +848,9 @@
 			 * LOAD DBXTUNE GRAPHS/CHARTS
 			 */
 			dbxTuneLoadCharts("graphs");
+
+			// Check if we got any SQL Statements that are active
+			dbxTuneCheckActiveStatements();
 
 			// Check if we got any alarms that are active
 			dbxTuneCheckActiveAlarms();

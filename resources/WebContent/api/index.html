@@ -71,6 +71,17 @@
 		
 
 		<!-- ############################################################################# -->
+		<div id='/api/server-layout' class='card border-dark mb-5'>
+		<h5 class='card-header'><a href='/api/server-layout'>/api/server-layout</a></h5>
+		<div class='card-body'>
+		What Server/Sessions are available, and how they should be laid out on the landing page (where all Servers are shown).<br>
+		<br>
+		Parameters: none
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+		
+
+		<!-- ############################################################################# -->
 		<div id='/api/graphs' class='card border-dark mb-5'>
 		<h5 class='card-header'><a href='/api/graphs?sessionName=SRVNAME'>/api/graphs</a></h5>
 		<div class='card-body'>
@@ -151,7 +162,45 @@
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->
 
-		
+
+		<!-- ############################################################################# -->
+		<div id='/api/last-sample' class='card border-dark mb-5'>
+		<h5 class='card-header'><a href='/api/last-sample'>/api/last-sample?srv=SRV_NAME&cm=CmActiveStatements</a></h5>
+		<div class='card-body'>
+		Get info about <b>LAST Counters</b> for a specific CmName<br>
+		An empty JSON Map, means that there are no Counters found.<br>
+		<br>
+		Parameters:
+		<table>
+			<!--     ====          =================          =========== -->
+			<tr> <th>Name</th> <th>Mandatory/Default</th> <th>Description</th> </tr>
+			<!--     ====          =================          =========== -->
+			<tr> <td>srv </td> <td>all servers      </td> <td>name of the server we want to get details for</td> </tr>
+			<tr> <td>cm  </td> <td>mandatory        </td> <td>name of the CM (CounterModel) we want to get details for</td> </tr>
+		</table>
+		<br>
+		JSON Output Example:
+		<pre>
+			[ {
+			  "srvName" : "GORAN_UB3_DS",
+			  "appName" : "AseTune",
+			  "cmNames" : [ {
+			    "cmName" : "CmActiveStatements",
+			    "lastSample" : {
+			      "counters" : { 
+			        "metaData" : [ { "columnName" : "xxx", "jdbcTypeName" : "xxx", "javaClassName" : "xxx", "guessedDbmsType" : "xxx", "isDiffColumn" : false, "isPctColumn" : false }, ...moreMetaDataColumns... ],
+			        "absCounters" : [ {row0}, {row1}, ...moreRows... ],
+			        "diffCounters" : [ {row0}, {row1}, ...moreRows... ],
+			        "rateCounters" : [ {row0}, {row1}, ...moreRows... ],
+			      }
+			    }
+			  }, ...moreCmNames... ]
+			}, ...moreSrvNames... ]
+		</pre>
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+
 		<!-- ############################################################################# -->
 		<div id='/api/alarm/active' class='card border-dark mb-5'>
 		<h5 class='card-header'><a href='/api/alarm/active'>/api/alarm/active</a></h5>
@@ -252,6 +301,15 @@
 		<h5 class='card-header'><a href='/api/pcs/queueInfo'>/api/pcs/queueInfo</a></h5>
 		<div class='card-body'>
 		Inbound PCS Queue Size. How many entries are in the Queue waiting to be stored by the Persistence Storage.<br>
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+
+		<!-- ############################################################################# -->
+		<div id='/api/collector-refresh' class='card border-dark mb-5'>
+		<h5 class='card-header'><a href='/api/collector-refresh?srv=SRVNAME'>/api/collector-refresh</a></h5>
+		<div class='card-body'>
+		Send a refresh request to a collector server.<br>
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->
 

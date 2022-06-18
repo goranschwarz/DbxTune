@@ -2027,7 +2027,7 @@ public class PersistWriterJdbc
 		// Admin rights are required to execute this command, as it affects all connections. 
 		// This command commits an open transaction. This setting is persistent.
 		// SET COMPRESS_LOB { NO | LZF | DEFLATE }
-		dbExecSetting(conn, "SET COMPRESS_LOB DEFLATE", logExtraInfo);
+//		dbExecSetting(conn, "SET COMPRESS_LOB DEFLATE", logExtraInfo); // This is NOT available in H2 Version: 2.1.x
 
 		// Sets the default lock timeout (in milliseconds) in this database that is used for 
 		// the new sessions. The default value for this setting is 1000 (one second).
@@ -2113,7 +2113,8 @@ public class PersistWriterJdbc
 	{
 		Map<String, String> map = new LinkedHashMap<>();
 
-		String sql = "select [NAME], [VALUE] from [INFORMATION_SCHEMA].[SETTINGS] order by [NAME]";
+//		String sql = "select [NAME], [VALUE] from [INFORMATION_SCHEMA].[SETTINGS] order by [NAME]";
+		String sql = "select [SETTING_NAME], [SETTING_VALUE] from [INFORMATION_SCHEMA].[SETTINGS] order by [SETTING_NAME]";
 		sql = conn.quotifySqlString(sql);
 		
 		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
@@ -3490,34 +3491,34 @@ public class PersistWriterJdbc
 //System.out.println("saveAlarms(): SQL="+sql);
 				// Set values
 				int i=1;
-				pst.setTimestamp(i++, sessionStartTime                                                     ); // sessionStartTime        - datetime    , Nullable = false
-				pst.setTimestamp(i++, sessionSampleTime                                                    ); // sessionSampleTime       - datetime    , Nullable = false
-				pst.setTimestamp(i++, aew.getAddDate()                                                     ); // eventTime	            - datetime    , Nullable = false
-				pst.setString   (i++, aew.getAction()                                                      ); // action                  - varchar(15) , Nullable = false
-//				pst.setBoolean  (i++, ae.isActive()                                                        ); // isActive                - bit         , Nullable = false
-				pst.setString   (i++, ae.getAlarmClassAbriviated()                                         ); // alarmClass              - varchar(80) , Nullable = false
-				pst.setString   (i++, ae.getServiceType()                                                  ); // serviceType             - varchar(80) , Nullable = false
-				pst.setString   (i++, ae.getServiceName()                                                  ); // serviceName             - varchar(80) , Nullable = false
-				pst.setString   (i++, ae.getServiceInfo()                                                  ); // serviceInfo             - varchar(80) , Nullable = false
-				pst.setString   (i++, ae.getExtraInfo() == null ? null : ae.getExtraInfo().toString()      ); // extraInfo               - varchar(80) , Nullable = true 
-				pst.setString   (i++, ae.getCategory()+""                                                  ); // category                - varchar(20) , Nullable = false
-				pst.setString   (i++, ae.getSeverity()+""                                                  ); // severity                - varchar(10) , Nullable = false
-				pst.setString   (i++, ae.getState()+""                                                     ); // state                   - varchar(10) , Nullable = false
-				pst.setInt      (i++, ae.getReRaiseCount()                                                 ); // repeatCnt               - int         , Nullable = false
-				pst.setString   (i++, ae.getDuration()                                                     ); // duration                - varchar(10) , Nullable = false
-//				pst.setTimestamp(i++, ae.getCrTimeStr()                                                    ); // createTime              - datetime    , Nullable = false
-//				pst.setTimestamp(i++, ae.getCancelTimeStr()                                                ); // cancelTime              - datetime    , Nullable = true 
-				pst.setTimestamp(i++, ae.getCrTime()     == -1 ? null : new Timestamp(ae.getCrTime())      ); // createTime              - datetime    , Nullable = false
-				pst.setTimestamp(i++, ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime())  ); // cancelTime              - datetime    , Nullable = true 
-//				pst.setInt      (i++, ae.getTimeToLive() == -1 ? null : ae.getTimeToLive()                 ); // timeToLive              - int         , Nullable = true 
-				pst.setInt      (i++, ae.getTimeToLive()                                                   ); // timeToLive              - int         , Nullable = true 
-				pst.setString   (i++, ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+""); // threshold      - varchar(15) , Nullable = true 
-				pst.setString   (i++, ae.getData()        == null ? null : ae.getData().toString()         ); // data                    - varchar(512), Nullable = true 
-				pst.setString   (i++, ae.getReRaiseData() == null ? null : ae.getReRaiseData().toString()  ); // lastData                - varchar(512), Nullable = true 
-				pst.setString   (i++, ae.getDescription()                                                  ); // description             - varchar(512), Nullable = false
-				pst.setString   (i++, ae.getReRaiseDescription()                                           ); // lastDescription         - varchar(512), Nullable = false
-				pst.setString   (i++, ae.getExtendedDescription()                                          ); // extendedDescription     - text        , Nullable = true 
-				pst.setString   (i++, ae.getReRaiseExtendedDescription()                                   ); // lastExtendedDescription - text        , Nullable = true 
+				pst.setTimestamp(i++,         sessionStartTime                                                          ); // sessionStartTime        - datetime    , Nullable = false
+				pst.setTimestamp(i++,         sessionSampleTime                                                         ); // sessionSampleTime       - datetime    , Nullable = false
+				pst.setTimestamp(i++,         aew.getAddDate()                                                          ); // eventTime               - datetime    , Nullable = false
+				pst.setString   (i++, safeStr(aew.getAction()                                                      ,15 )); // action                  - varchar(15) , Nullable = false
+//				pst.setBoolean  (i++,         ae.isActive()                                                             ); // isActive                - bit         , Nullable = false
+				pst.setString   (i++, safeStr(ae.getAlarmClassAbriviated()                                         ,80 )); // alarmClass              - varchar(80) , Nullable = false
+				pst.setString   (i++, safeStr(ae.getServiceType()                                                  ,80 )); // serviceType             - varchar(80) , Nullable = false
+				pst.setString   (i++, safeStr(ae.getServiceName()                                                  ,80 )); // serviceName             - varchar(80) , Nullable = false
+				pst.setString   (i++, safeStr(ae.getServiceInfo()                                                  ,80 )); // serviceInfo             - varchar(80) , Nullable = false
+				pst.setString   (i++, safeStr(ae.getExtraInfo() == null ? null : ae.getExtraInfo().toString()      ,80 )); // extraInfo               - varchar(80) , Nullable = true 
+				pst.setString   (i++, safeStr(ae.getCategory()+""                                                  ,20 )); // category                - varchar(20) , Nullable = false
+				pst.setString   (i++, safeStr(ae.getSeverity()+""                                                  ,10 )); // severity                - varchar(10) , Nullable = false
+				pst.setString   (i++, safeStr(ae.getState()+""                                                     ,10 )); // state                   - varchar(10) , Nullable = false
+				pst.setInt      (i++,         ae.getReRaiseCount()                                                      ); // repeatCnt               - int         , Nullable = false
+				pst.setString   (i++, safeStr(ae.getDuration()                                                     ,10 )); // duration                - varchar(10) , Nullable = false
+//				pst.setTimestamp(i++,         ae.getCrTimeStr()                                                         ); // createTime              - datetime    , Nullable = false
+//				pst.setTimestamp(i++,         ae.getCancelTimeStr()                                                     ); // cancelTime              - datetime    , Nullable = true 
+				pst.setTimestamp(i++,         ae.getCrTime()     == -1 ? null : new Timestamp(ae.getCrTime())           ); // createTime              - datetime    , Nullable = false
+				pst.setTimestamp(i++,         ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime())       ); // cancelTime              - datetime    , Nullable = true 
+//				pst.setInt      (i++,         ae.getTimeToLive() == -1 ? null : ae.getTimeToLive()                      ); // timeToLive              - int         , Nullable = true 
+				pst.setInt      (i++,         ae.getTimeToLive()                                                        ); // timeToLive              - int         , Nullable = true 
+				pst.setString   (i++, safeStr(ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+"",15 )); // threshold               - varchar(15) , Nullable = true 
+				pst.setString   (i++, safeStr(ae.getData()        == null ? null : ae.getData().toString()         ,512)); // data                    - varchar(512), Nullable = true 
+				pst.setString   (i++, safeStr(ae.getReRaiseData() == null ? null : ae.getReRaiseData().toString()  ,512)); // lastData                - varchar(512), Nullable = true 
+				pst.setString   (i++, safeStr(ae.getDescription()                                                  ,512)); // description             - varchar(512), Nullable = false
+				pst.setString   (i++, safeStr(ae.getReRaiseDescription()                                           ,512)); // lastDescription         - varchar(512), Nullable = false
+				pst.setString   (i++, safeStr(ae.getExtendedDescription()                                          ,512)); // extendedDescription     - text        , Nullable = true 
+				pst.setString   (i++,         ae.getReRaiseExtendedDescription()                                        ); // lastExtendedDescription - text        , Nullable = true 
 		
 				// EXECUTE
 				pst.executeUpdate();

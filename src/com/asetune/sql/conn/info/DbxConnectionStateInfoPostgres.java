@@ -39,6 +39,9 @@ extends DbxConnectionStateInfoGenericJdbc
 	public String _currentSchema  = "";
 	public int    _backendPid     = -1;
 
+	public int    _lockCount      = -1;
+//	public List<LockRecord> _lockList = new ArrayList<LockRecord>();
+
 	public DbxConnectionStateInfoPostgres(DbxConnection conn)
 	{
 		super(conn);
@@ -63,6 +66,39 @@ extends DbxConnectionStateInfoGenericJdbc
 		{
 			_logger.error("Error in refresh() problems executing sql='"+sql+"'.", ex);
 		}
+
+		
+		_lockCount = 0;
+//		_lockList.clear();
+
+		sql = "SELECT count(*) FROM pg_locks WHERE pid=pg_backend_pid() AND locktype='transactionid' AND mode='ExclusiveLock' AND granted";
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+			{
+				_lockCount = rs.getInt(1);
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("Error in refresh() problems executing sql='"+sql+"'.", ex);
+		}
+
+	}
+
+	@Override
+	public String getWaterMarkText()
+	{
+		String str = null;
+
+		if (_lockCount >= 1)
+		{
+			str = "You are in a TRANSACTION (AutoCommit=false)\n"
+				+ "And you are holding " + _lockCount + " locks in the server\n"
+				+ "Don't forget to commit or rollback!";
+		}
+		
+		return str;
 	}
 
 	@Override

@@ -120,7 +120,7 @@ public class AlarmLogServlet extends HttpServlet
 	throws ServletException, IOException
 	{
 		JsonFactory jfactory = new JsonFactory();
-		JsonGenerator w = jfactory.createGenerator(out);
+		JsonGenerator gen = jfactory.createGenerator(out);
 //		w.setPrettyPrinter(new DefaultPrettyPrinter());
 		
 		// Open file and itterate
@@ -129,7 +129,7 @@ public class AlarmLogServlet extends HttpServlet
 		      BufferedReader  br = new BufferedReader(new InputStreamReader(in)); )
 		{
 			// start array
-			w.writeStartArray();
+			gen.writeStartArray();
 
 			String line;
 			while ((line = br.readLine()) != null)
@@ -206,30 +206,30 @@ public class AlarmLogServlet extends HttpServlet
 				timeStr = TimeUtils.toStringIso8601(ts);
 
 				// Start object
-				w.writeStartObject();
+				gen.writeStartObject();
 
 				// Write fields
-				w.writeStringField("time"      , timeStr   );
-				w.writeStringField("type"      , type      );
-				w.writeStringField("className" , className );
-				w.writeStringField("srvName"   , srvName   );
-				w.writeStringField("cmName"    , cmName    );
-				w.writeStringField("extraInfo" , extraInfo );
-				w.writeStringField("category"  , category  );
-				w.writeStringField("severity"  , severity  );
-				w.writeStringField("state"     , state     );
-				w.writeStringField("duration"  , duration  );
-				w.writeStringField("msgText"   , msgText   );
+				gen.writeStringField("time"      , timeStr   );
+				gen.writeStringField("type"      , type      );
+				gen.writeStringField("className" , className );
+				gen.writeStringField("srvName"   , srvName   );
+				gen.writeStringField("cmName"    , cmName    );
+				gen.writeStringField("extraInfo" , extraInfo );
+				gen.writeStringField("category"  , category  );
+				gen.writeStringField("severity"  , severity  );
+				gen.writeStringField("state"     , state     );
+				gen.writeStringField("duration"  , duration  );
+				gen.writeStringField("msgText"   , msgText   );
 
 				// end object
-				w.writeEndObject();
+				gen.writeEndObject();
 			}
 
 			// end array
-			w.writeEndArray();
+			gen.writeEndArray();
 
 			// close
-			w.close();
+			gen.close();
 		}
 		catch (Exception ex)
 		{

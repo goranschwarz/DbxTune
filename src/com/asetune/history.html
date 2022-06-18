@@ -110,6 +110,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>DictCompression - Not storing records as a batch, instead reverting back to single statement, also changed some concurrency issues</LI>
 		<LI>Prepared for some H2 upgrade. ver 2.0.202 or above: JDBC MetaData getTables() new table type 'TABLE' --> 'BASE TABLE'</LI>
 		<LI>H2 Central DB Copy was a bit adapted to be able to handle migration from older H2 versions (1.4) into H2 (2.1), this is mostly implemented in H2CentralDbCopy3</LI>
+		<LI>PersistWriterToHttpJson: Now writes Counter Data for 'CmActiveStatements' (to support sending/viewig Active SQL Statements in the WebUI</LI>
 
 		<LI>Daily Summary Report Changes
 			<UL>
@@ -135,7 +136,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>
 			<b>Upgraded some of the third party libraries/jars</b><br>
 			<ul>
-	 			<li>To version 2.1.212        Component: H2 Database</li>
+	 			<li>To version 2.1.214        Component: H2 Database</li>
 	 			<li>To version 1.5.1          Component: JfreeChart</li>
 	 			<li>To version 4.3            Component: JSqlParser</li>
 	 			<li>To version 21.1           Component: Oracle JDBC Driver</li>
@@ -162,7 +163,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>In the tab 'Server', and section 'All file(s) in the LOG Directory', added a shortcut section where you can add file endings that you want to list here. <code>logfiles.shortcuts=*.console</code> </LI>
 		<LI>Changed number of lines in file tail from 500 to 5000</LI>
 		<LI>changed default retention time from 12 months to 14 months (so we can see any "end-of-year" statistics)</LI>
-		<LI>servier view, added link to open ALL console files in tail mode</LI>
+		<LI>server view, added link to open ALL console files in tail mode</LI>
+		<LI>index page: Only one button per server, which is now a drop-down box where you can choose: Various Actions</LI>
+		<LI>Layout on the index page can also be controlled with "Grouping" and "Labels". in file '~/.dbxtune/dbxc/conf/SERVER_LIST'. Example: '#FORMAT; GROUP; Production Servers;' or '#FORMAT; LABEL; Some Sub-level text'</LI>
+		<LI>Refresh of DbxTune collectors via the Web Interface (this is primary for refresh of Active SQL Statements)</LI>
  	</UL>
 
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -644,7 +648,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>onConnect, execute: set session work_mem = '128MB'       Can be changed by config: PostgresTune.onMonConnect.set.dbms.option.work_mem=SOME_VALUE|DEFAULT</LI>
 		<LI>onConnect, execute: set session temp_buffers = '128MB'   Can be changed by config: PostgresTune.onMonConnect.set.dbms.option.temp_buffers=SOME_VALUE|DEFAULT</LI>
 		<LI>Change how we collect current time from: CURRENT_TIMESTAMP to CLOCK_TIMESTAMP()</LI>
-		<LI><b>CmPgDatabase         </b> - Added columns 'total_reads', 'cache_hit_pct', 'db_conn_limit', 'db_owner', 'db_collation', 'db_access_privileges'</LI>
+
+		<LI><b>CmActiveStatements   </b> - new collector: CmActiveStatements, view SQL Statements that are active now</LI>
+		<LI><b>CmPgActivity         </b> - added columns: 'im_blocked_by_pids' and 'im_blocking_other_pids'</LI>
 		<LI><b>CmPgDatabase         </b> - Added graphs 'CacheHitPct' and 'TotalReads'</LI>
 		<LI><b>CmPgStatements       </b> - Now works with Postgres 9.3 (and possibly versions below that), where I "fake" the 'queryid' by taking a md5 checksum (first 16 chars) and converting that to an bigint</LI>
 		<LI><b>CmPgStatements       </b> - new columns for later versions (up to version 14)</LI>
@@ -711,6 +717,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>new 'go mrs' -- Merge ResultSets. Like a union, when you can't do union in SQL</LI>
 		<LI>Better positioning for Postgres Error message. Postgres says 'Position: ###' where ### is offset in the text. So Translate the offset into Row/column so the "red snivle line" points out where the error is.</LI>
 		<LI>Code Compleation. By default add Square Brackets instead of DBMS Specific chars, which later will be translated in the "correct" char for that DBMS Type upon execution (this can be changed in the Code Completion Settings Dialog)</LI>
+		<LI>Postgres: Check for open transaction (and we are holding locks), then write a Watermark text 'You are in a TRANSACTION...'</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

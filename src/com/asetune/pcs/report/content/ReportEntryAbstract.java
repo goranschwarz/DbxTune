@@ -1397,6 +1397,10 @@ implements IReportEntry
 					}
 					_logger.info("ReportEntry '" + getClass().getSimpleName() + "'. Created helper index to support Daily Summary Report. SQL='" + indexDdl + "' ExecTime=" + TimeUtils.msDiffNowToTimeStr(startTime));
 				}
+				else
+				{
+					_logger.info("ReportEntry '" + getClass().getSimpleName() + "'. SKIPPED Creating helper index to support Daily Summary Report (it already exists). IndexName='" + indexName + "', SQL='" + indexDdl + "'.");
+				}
 			}
 			catch (SQLException ex)
 			{

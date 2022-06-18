@@ -1599,9 +1599,11 @@ public abstract class DbxTune
 						newValue = "*secret*";
 						oldValue = "*secret*";
 					}
-					_logger.info("COMBINED CONFIG CHANGE[" + instName + "]: propName='" + propName + "', type=" + type + ", newValue='" + newValue + "', oldValue='" + oldValue + "'.");
+					_logger.info("COMBINED CONFIG CHANGE[" + instName + "]: propName='" + propName + "', type=" + Configuration.changeTypeToStr(type) + ", newValue='" + newValue + "', oldValue='" + oldValue + "'.");
 				}
 			});
+			// do not care about keys starting with: "conn." 
+			Configuration.addCombinedConfigurationFileWatcher_SkipKeyPrefix("conn.");
 
 			String appStartupTime = TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - DbxTune.getStartTime());
 			_logger.info("Application startup time "+appStartupTime+" (MM:SS.ms)");
@@ -1763,7 +1765,7 @@ public abstract class DbxTune
 									newValue = "*secret*";
 									oldValue = "*secret*";
 								}
-								_logger.info("COMBINED CONFIG CHANGE[" + instName + "]: propName='" + propName + "', type=" + type + ", newValue='" + newValue + "', oldValue='" + oldValue + "'.");
+								_logger.info("COMBINED CONFIG CHANGE[" + instName + "]: propName='" + propName + "', type=" + Configuration.changeTypeToStr(type) + ", newValue='" + newValue + "', oldValue='" + oldValue + "'.");
 							}
 						});
 					}

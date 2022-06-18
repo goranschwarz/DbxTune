@@ -176,13 +176,14 @@ public class DbxCentralServerDescription
 					if (line.startsWith("#") || line.equals(""))
 						continue;
 					
-					String[] sa = line.split(";"); // FIX NEW "TABLE" LAYOUT
+//					String[] sa = line.split(";");
+					String[] sa = line.split("(?<!\\\\);"); // Split on ';' but NOT on '\;' which allow us to use escaped semicolons
 					if (sa.length > 0)
 					{
 						String  serverName  = sa[0].trim();
-						boolean enabled     = sa.length > 1 ? sa[1].trim().equalsIgnoreCase("1") : false;
-						String  description = sa.length > 2 ? sa[2].trim()                       : "";
-						String  extraInfo   = sa.length > 3 ? sa[3].trim()                       : "";
+						boolean enabled     = sa.length > 1 ? sa[1].replace("\\;", ";").trim().equalsIgnoreCase("1") : false;
+						String  description = sa.length > 2 ? sa[2].replace("\\;", ";").trim()                       : "";
+						String  extraInfo   = sa.length > 3 ? sa[3].replace("\\;", ";").trim()                       : "";
 						
 						DbxCentralServerDescription entry = new DbxCentralServerDescription(serverName, enabled, description, extraInfo);
 //						map.put(entry.getServerName(), entry);
@@ -235,10 +236,11 @@ public class DbxCentralServerDescription
 					continue;
 				}
 				
-				String[] sa = line.split(";");
+//				String[] sa = line.split(";");
+				String[] sa = line.split("(?<!\\\\);"); // Split on ';' but NOT on '\;' which allow us to use escaped semicolons
 				if (sa.length > 0)
 				{
-					String rowServerName  = sa[0].trim();
+					String rowServerName  = sa[0].replace("\\;", ";").trim();
 					// Check both the current-rows-read and the map-entry which was fetched by the aliasName... but instead of the aliasName use the srvName
 					if (rowServerName.equals(removeServerName) || (srvMapEntry != null && rowServerName.equals(srvMapEntry.getServerName())) )
 					{

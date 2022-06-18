@@ -23,6 +23,7 @@ package com.asetune.central.controllers;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -152,6 +153,7 @@ extends EventSourceServlet
 //			String  subscribeToServer = cs._serverName;
 			List<String> srvNameList   = cs._serverNameList;
 			List<String> graphNameList = cs._graphNameList;
+			List<String> countersNameList = Arrays.asList(new String[] {"CmActiveStatements"});
 			Emitter      emitter       = cs._emitter;
 
 			if (_logger.isDebugEnabled())
@@ -168,7 +170,7 @@ extends EventSourceServlet
 			String payload;
 			try
 			{
-				payload = sample.getJsonForGraphs(graphNameList);
+				payload = sample.getJsonForWebSubscribers(graphNameList, countersNameList);
 			}
 			catch (IOException e)
 			{

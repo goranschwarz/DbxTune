@@ -274,6 +274,7 @@ public class SparklineHelper
 		if (rstm == null)
 			return null;
 
+		String htmlChartColumnName = params.getHtmlChartColumnName();
 		int pos_chartColumnName    = rstm.findColumnMandatory(params.getHtmlChartColumnName());
 //		int pos_whereKeyColumnName = rstm.findColumnMandatory(params.getHtmlWhereKeyColumnName());
 
@@ -371,12 +372,16 @@ public class SparklineHelper
 						{
 							stmnt.executeUpdate(indexDdl);
 						}
-						_logger.info("ReportEntry '" + reportEntry.getClass().getSimpleName() + "'. Created helper index to support Daily Summary Report. SQL='" + indexDdl + "' ExecTime=" + TimeUtils.msDiffNowToTimeStr(startTime));
+						_logger.info("ReportEntry '" + reportEntry.getClass().getSimpleName() + "'. Created helper index to support Daily Summary Report. ChartColumnName='" + htmlChartColumnName + "', SQL='" + indexDdl + "' ExecTime=" + TimeUtils.msDiffNowToTimeStr(startTime));
+					}
+					else
+					{
+						_logger.info("ReportEntry '" + reportEntry.getClass().getSimpleName() + "'. SKIPPED Creating helper index to support Daily Summary Report (it already exists). IndexName='" + indexName + "', ChartColumnName='" + htmlChartColumnName + "', SQL='" + indexDdl + "'.");
 					}
 				}
 				catch (SQLException ex)
 				{
-					_logger.error("ReportEntry '" + reportEntry.getClass().getSimpleName() + "'. Problems creating a helper index, skipping the error and continuing... SQL=|" + indexDdl + "|.", ex);
+					_logger.error("ReportEntry '" + reportEntry.getClass().getSimpleName() + "'. Problems creating a helper index, skipping the error and continuing... ChartColumnName='" + htmlChartColumnName + "', SQL=|" + indexDdl + "|.", ex);
 				}
 			}
 

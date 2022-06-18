@@ -64,21 +64,21 @@ public class PcsQueueInfoController extends HttpServlet
 		// Create JSON writer
 		StringWriter sw = new StringWriter();
 		JsonFactory jfactory = new JsonFactory();
-		JsonGenerator w = jfactory.createGenerator(sw);
+		JsonGenerator gen = jfactory.createGenerator(sw);
 		//w.setPrettyPrinter(new DefaultPrettyPrinter());
 
 		// to JSON
-		w.writeStartObject();
+		gen.writeStartObject();
 
-		w.writeNumberField ("queueSize",           pcsQueueSize);
+		gen.writeNumberField ("queueSize",           pcsQueueSize);
 //		w.writeBooleanField("bussy",               pcsIsBussy);
 //		w.writeStringField ("currentServerName",   pcsCurrentServerName);
 //		w.writeNumberField ("currentExecTimeInMs", pcsCurrentExecTimeInMs);
 //		w.writeStringField ("lastServerName",      pcsLastServerName);
 //		w.writeNumberField ("lastExecTimeInMs",    pcsLastExecTimeInMs);
 
-		w.writeEndObject(); // END: this CM
-		w.close();
+		gen.writeEndObject(); // END: this CM
+		gen.close();
 
 		// make it a String
 		String payload = sw.toString();

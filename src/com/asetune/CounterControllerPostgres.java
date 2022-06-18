@@ -38,6 +38,7 @@ import com.asetune.cm.os.CmOsNwInfo;
 import com.asetune.cm.os.CmOsPs;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
+import com.asetune.cm.postgres.CmActiveStatements;
 import com.asetune.cm.postgres.CmPgActivity;
 import com.asetune.cm.postgres.CmPgBgWriter;
 import com.asetune.cm.postgres.CmPgDatabase;
@@ -106,6 +107,7 @@ extends CounterControllerAbstract
 		CmPgBgWriter        .create(counterController, guiController);
 
 		// Object Access
+		CmActiveStatements  .create(counterController, guiController);
 		CmPgTables          .create(counterController, guiController);
 		CmPgTablesIo        .create(counterController, guiController);
 		CmPgIndexes         .create(counterController, guiController);

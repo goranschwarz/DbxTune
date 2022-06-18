@@ -145,7 +145,7 @@ public class DbxTuneLogServlet extends HttpServlet
 	throws ServletException, IOException
 	{
 		JsonFactory jfactory = new JsonFactory();
-		JsonGenerator w = jfactory.createGenerator(out);
+		JsonGenerator gen = jfactory.createGenerator(out);
 //		w.setPrettyPrinter(new DefaultPrettyPrinter());
 
 		// Compile the regexp; if we got any
@@ -162,7 +162,7 @@ public class DbxTuneLogServlet extends HttpServlet
 		      BufferedReader  br = new BufferedReader(new InputStreamReader(in)); )
 		{
 			// start array
-			w.writeStartArray();
+			gen.writeStartArray();
 
 			String line;
 			while ((line = br.readLine()) != null)
@@ -203,24 +203,24 @@ public class DbxTuneLogServlet extends HttpServlet
 				timeStr = TimeUtils.toStringIso8601(ts);
 
 				// Start object
-				w.writeStartObject();
+				gen.writeStartObject();
 
 				// Write fields
-				w.writeStringField("time"       , timeStr   );
-				w.writeStringField("severity"   , severity  );
-				w.writeStringField("threadName" , threadName );
-				w.writeStringField("className"  , className );
-				w.writeStringField("msgText"    , msgText   );
+				gen.writeStringField("time"       , timeStr   );
+				gen.writeStringField("severity"   , severity  );
+				gen.writeStringField("threadName" , threadName );
+				gen.writeStringField("className"  , className );
+				gen.writeStringField("msgText"    , msgText   );
 
 				// end object
-				w.writeEndObject();
+				gen.writeEndObject();
 			}
 
 			// end array
-			w.writeEndArray();
+			gen.writeEndArray();
 
 			// close
-			w.close();
+			gen.close();
 		}
 		catch (Exception ex)
 		{

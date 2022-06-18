@@ -197,9 +197,23 @@ extends Properties
 	public static final int COMBINED_CONFIG_KEY_ADDED = 1;
 	public static final int COMBINED_CONFIG_KEY_CHANGED = 2;
 	public static final int COMBINED_CONFIG_KEY_REMOVED = 3;
+
+	public static String changeTypeToStr(Object objType)
+	{
+		String typeStr = "" + objType;
+		return changeTypeToStr(StringUtil.parseInt(typeStr, -1));
+	}
+	public static String changeTypeToStr(int type)
+	{
+		if (type == COMBINED_CONFIG_KEY_ADDED)   return "ADDED";
+		if (type == COMBINED_CONFIG_KEY_CHANGED) return "CHANGED";
+		if (type == COMBINED_CONFIG_KEY_REMOVED) return "REMOVED";
+		return "-UNKNOWN[" + type + "]-";
+	}
+
 	
 	private static ArrayList<PropertyChangeListener> _combinedConfigPropertyChangeListeners = new ArrayList<>(); 
-	
+
 	public static void addCombinedConfigPropertyChangeListener(PropertyChangeListener listener)
 	{
 		_combinedConfigPropertyChangeListeners.add(listener);
@@ -255,10 +269,84 @@ extends Properties
 		}
 	}
 	
+	public synchronized static void setCombinedConfigurationFileWatcher_SkipKeyPrefix(List<String> list)
+	{
+		if (_combinedConfigurationFileWatcher != null)
+		{
+			_combinedConfigurationFileWatcher.setSkipKeyPrefix(list);
+		}
+	}
+	public synchronized static void addCombinedConfigurationFileWatcher_SkipKeyPrefix(String skipKeyPrefix)
+	{
+		if (_combinedConfigurationFileWatcher != null)
+		{
+			_combinedConfigurationFileWatcher.addSkipKeyPrefix(skipKeyPrefix);
+		}
+	}
+
+//	public interface CombinedConfigPropertyChangeListener 
+//	extends PropertyChangeListener
+//	{
+//		public default boolean allowChange(Configuration conf, int type, String key, String oldVal, String newVal)
+//		{
+//			return true;
+//		}
+//	}
+	
 	public static class FileWatcher extends Thread 
 	{
 		private AtomicBoolean _running = new AtomicBoolean(true);
 
+		private static List<String> _onChange_SkipKeyPrefix;
+
+		/** Set the: Skip Key Prefix List */
+		public void setSkipKeyPrefix(List<String> list)
+		{
+			_onChange_SkipKeyPrefix = list; 
+		}
+
+		/** Add to the: Skip Key Prefix List */
+		public void addSkipKeyPrefix(String skipKeyPrefix)
+		{
+			if (_onChange_SkipKeyPrefix == null)
+				_onChange_SkipKeyPrefix = new ArrayList<>();
+
+			// Check for duplicates, the add
+			if ( ! _onChange_SkipKeyPrefix.contains(skipKeyPrefix) )
+				_onChange_SkipKeyPrefix.add(skipKeyPrefix); 
+		}
+
+		/** 
+		 * Should the changed entry be KEEPED or SKIPPED
+		 *  
+		 * @param conf     Configuration object
+		 * @param type     1=ADDED, 2=CHANGED, 3=REMOVED
+		 * @param key      property name
+		 * @param newVal   new value
+		 * @param oldVal   old value
+		 * 
+		 * @return true=KEEP, false=SKIP 
+		 */
+		public boolean keepFilter(Configuration conf, int type, String key, String oldVal, String newVal)
+		{
+			if (StringUtil.isNullOrBlank(key))
+				return false;
+
+			if (_onChange_SkipKeyPrefix == null)
+				return true;
+				
+			for (String skipKeyPrefix : _onChange_SkipKeyPrefix)
+			{
+				if (key.startsWith(skipKeyPrefix))
+				{
+					_logger.info("Skipping changes COMBINED CONFIG[" + conf.getConfName() + "], due to keepFilter='" + skipKeyPrefix + "' for: propName='" + key + "', type=" + changeTypeToStr(type) + ", newValue='" + newVal + "', oldValue='" + oldVal + "'.");
+					return false;
+				}
+			}
+
+			return true;
+		}
+		
 		/** Check if the thread is running */
 		public boolean isRunning() 
 		{ 
@@ -401,24 +489,30 @@ extends Properties
 
 						if ( ! newVal.equals(oldVal) )
 						{
-							// CHANGED CONFIG VALUE
-							curConfig.setProperty(newKey, newVal);
-							
-							if (_logger.isDebugEnabled())
-								_logger.debug("Combened Config, CHANGED-VALUE. name='" + curConfInstanceName + "', file='" + filename + "', key='" + newKey + "', oldVal='" + oldVal + "', newVal='" + newVal + "'.");
+							if ( keepFilter(curConfig, COMBINED_CONFIG_KEY_CHANGED, newKey, oldVal, newVal) )
+							{
+								// CHANGED CONFIG VALUE
+								curConfig.setProperty(newKey, newVal);
+								
+								if (_logger.isDebugEnabled())
+									_logger.debug("Combened Config, CHANGED-VALUE. name='" + curConfInstanceName + "', file='" + filename + "', key='" + newKey + "', oldVal='" + oldVal + "', newVal='" + newVal + "'.");
 
-							fireCombinedConfigPropertyChangeListener(curConfig, COMBINED_CONFIG_KEY_CHANGED, newKey, oldVal, newVal);
+								fireCombinedConfigPropertyChangeListener(curConfig, COMBINED_CONFIG_KEY_CHANGED, newKey, oldVal, newVal);
+							}
 						}
 					}
 					else
 					{
-						// NEW CONFIG VALUE
-						curConfig.setProperty(newKey, newVal);
+						if ( keepFilter(curConfig, COMBINED_CONFIG_KEY_ADDED, newKey, null, newVal) )
+						{
+							// NEW CONFIG VALUE
+							curConfig.setProperty(newKey, newVal);
 
-						if (_logger.isDebugEnabled())
-							_logger.debug("Combened Config,     NEW-VALUE. name='" + curConfInstanceName + "', file='" + filename + "', key='" + newKey + "', newVal='" + newVal + "'.");
+							if (_logger.isDebugEnabled())
+								_logger.debug("Combened Config,     NEW-VALUE. name='" + curConfInstanceName + "', file='" + filename + "', key='" + newKey + "', newVal='" + newVal + "'.");
 
-						fireCombinedConfigPropertyChangeListener(curConfig, COMBINED_CONFIG_KEY_ADDED, newKey, null, newVal);
+							fireCombinedConfigPropertyChangeListener(curConfig, COMBINED_CONFIG_KEY_ADDED, newKey, null, newVal);
+						}
 					}
 				}
 
@@ -432,13 +526,16 @@ extends Properties
 						String delKey = (String) object;
 						String delVal = curConfig.getProperty(delKey);
 
-						// REMOVED CONFIG KEY
-						curConfig.remove(delKey);
+						if ( keepFilter(curConfig, COMBINED_CONFIG_KEY_REMOVED, delKey, delVal, null) )
+						{
+							// REMOVED CONFIG KEY
+							curConfig.remove(delKey);
 
-						if (_logger.isDebugEnabled())
-							_logger.debug("Combened Config, REMOVED-VALUE. name='" + curConfInstanceName + "', file='" + filename + "', key='" + delKey + "', oldVal='" + delVal + "'.");
+							if (_logger.isDebugEnabled())
+								_logger.debug("Combened Config, REMOVED-VALUE. name='" + curConfInstanceName + "', file='" + filename + "', key='" + delKey + "', oldVal='" + delVal + "'.");
 
-						fireCombinedConfigPropertyChangeListener(curConfig, COMBINED_CONFIG_KEY_REMOVED, delKey, delVal, null);
+							fireCombinedConfigPropertyChangeListener(curConfig, COMBINED_CONFIG_KEY_REMOVED, delKey, delVal, null);
+						}
 					}
 				}
 			}

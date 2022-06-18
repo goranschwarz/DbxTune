@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,6 +37,7 @@ import org.eclipse.jetty.websocket.api.annotations.OnWebSocketMessage;
 import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 
 import com.asetune.central.pcs.DbxTuneSample;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
 
@@ -179,6 +181,7 @@ public class ChartBroadcastWebSocket
 //			String  subscribeToServer = cs._serverName;
 			List<String> srvNameList   = cs._serverNameList;
 			List<String> graphNameList = cs._graphNameList;
+			List<String> countersNameList = Arrays.asList(new String[] {"CmActiveStatements"});
 
 			if (_logger.isDebugEnabled())
 				_logger.debug("fireGraphData(session='"+session+"', remoteHost='"+cs._remoteHost+"', srvNameList='"+srvNameList+"', graphNameList='"+graphNameList+"'): name=|"+sample.getServerName()+"|.");
@@ -194,7 +197,14 @@ public class ChartBroadcastWebSocket
 			String payload;
 			try
 			{
-				payload = sample.getJsonForGraphs(graphNameList);
+				payload = sample.getJsonForWebSubscribers(graphNameList, countersNameList);
+				
+				// DEBUG PRINT
+				String debugSrvName = Configuration.getCombinedConfiguration().getProperty("ChartBroadcastWebSocket.debug.sendJson.srvName", "");
+				if (debugSrvName.equals(sample.getServerName()))
+				{
+					System.out.println("ChartBroadcastWebSocket.debug.sendJson.srvName='" + sample.getServerName() + "', JSON: " + payload);
+				}
 			}
 			catch (IOException e)
 			{

@@ -2636,7 +2636,8 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			// if 'DATABASE_TO_UPPER' is true, then table names must be quoted
 		//	String sql = "select VALUE from INFORMATION_SCHEMA.SETTINGS where NAME = 'DATABASE_TO_UPPER'";
 		//	String sql = "select #NAME#, #VALUE# from #INFORMATION_SCHEMA#.#SETTINGS#".replace('#', '"');
-			String sql = conn.quotifySqlString("select [NAME], [VALUE] from [INFORMATION_SCHEMA].[SETTINGS]");
+//			String sql = conn.quotifySqlString("select [NAME], [VALUE] from [INFORMATION_SCHEMA].[SETTINGS]");
+			String sql = conn.quotifySqlString("select [SETTING_NAME], [SETTING_VALUE] from [INFORMATION_SCHEMA].[SETTINGS]");
 			try
 			{
 				Statement stmnt = conn.createStatement();

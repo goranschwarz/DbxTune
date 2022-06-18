@@ -3411,6 +3411,20 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 		
 		return sb.toString();
 	}
+
+	/**
+	 * The SQL value that the JDBC driver maps boolean values to<br>
+	 * Inspired by Hibernate Dialect: https://appdoc.app/artifact/org.hibernate/hibernate/3.2.0.cr3/org/hibernate/dialect/Dialect.html#toBooleanValueString(boolean)
+	 * <p>
+	 * TODO: This should really be implemented as a Separate class "Dialect", and then we should do conn.getDialect().toBooleanValueString(true|false)
+	 * 
+	 * @param bool    
+	 * @return
+	 */
+	public String toBooleanValueString(boolean bool)
+	{
+		return bool ? "1" : "0";
+	}
 	
 	
 //	/**

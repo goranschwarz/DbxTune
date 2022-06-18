@@ -308,6 +308,7 @@ extends Task
 		String sql = null;
 //		String sql = "delete from "+fullTabName+" where "+q+"SessionSampleTime"+q+" < ?";
 		if      (Table.ALARM_ACTIVE          .equals(table)) return 0; // Do not delete from this
+		else if (Table.CM_LAST_SAMPLE_JSON   .equals(table)) return 0; // Do not delete from this
 		else if (Table.ALARM_HISTORY         .equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionSampleTime"+rq+" < ?";
 		else if (Table.GRAPH_PROPERTIES      .equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionStartTime" +rq+" < ?";
 		else if (Table.SESSION_SAMPLE_DETAILS.equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionSampleTime"+rq+" < ?";

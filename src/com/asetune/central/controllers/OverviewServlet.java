@@ -437,11 +437,13 @@ public class OverviewServlet extends HttpServlet
 //		resp.setCharacterEncoding("UTF-8");
 		
 		// Check for known input parameters
-		if (Helper.hasUnKnownParameters(req, resp, "refresh"))
+		if (Helper.hasUnKnownParameters(req, resp, "refresh", "op", "srv"))
 			return;
 
 		
-		String refreshStr = Helper.getParameter(req, "refresh", "0");
+		String refreshStr   = Helper.getParameter(req, "refresh", "0");
+		String reqOperation = Helper.getParameter(req, "op"     , "");
+		String reqSrvName   = Helper.getParameter(req, "srv"    , "");
 
 		int refresh = StringUtil.parseInt(refreshStr, 0);
 
@@ -1189,7 +1191,7 @@ public class OverviewServlet extends HttpServlet
 					out.println("            setTimeout(function() ");
 					out.println("            { ");
 					out.println("                window.open('/log?name=' + tmpArray[i] + '&tail=5000'); ");
-					out.println("            }, i * 500); ");
+					out.println("            }, i * 1000); ");
 					out.println("        } ");
 					out.println("    } ");
 					out.println("</script>");
@@ -1347,6 +1349,7 @@ public class OverviewServlet extends HttpServlet
 		//----------------------------------------------------
 		// ALL files in REPORTS directory
 		//----------------------------------------------------
+		String firstServerName = null;
 		if (true)
 		{
 			out.println("<div id='reportfiles' class='card border-dark mb-3'>");
@@ -1370,6 +1373,9 @@ public class OverviewServlet extends HttpServlet
 			out.println("<ul>");
 			for (DbxCentralSessions session : centralSessionList)
 			{
+				if (firstServerName == null)
+					firstServerName = session.getServerName();
+
 				out.println("  <li> <a href='/report?op=viewLatest&name=" + session.getServerName() + "'>" + session.getServerName() + "</a> </li>");
 			}
 			out.println("</ul>");
@@ -1377,7 +1383,7 @@ public class OverviewServlet extends HttpServlet
 
 			
 			String tableHead 
-				= "  <tr>"
+				= "  <tr id='dsr-srv-SRVNAME'>"
 				+ "    <th>Server Name</th>"
 				+ "    <th>Report For Date</th>"
 				+ "    <th>DayOfWeek</th>"
@@ -1388,7 +1394,7 @@ public class OverviewServlet extends HttpServlet
 
 			out.println("<table>");
 			out.println("<thead>");
-			out.println(tableHead);
+			out.println(tableHead.replace("SRVNAME", firstServerName));
 			out.println("</thead>");
 			out.println("<tbody>");
 
@@ -1446,7 +1452,7 @@ public class OverviewServlet extends HttpServlet
 					out.println("  <tr>");
 					out.println("    <td nowrap colspan='6' style='background-color:rgb(209, 224, 224);'>&nbsp;</td>");
 					out.println("  </tr>");
-					out.println(tableHead); // Also add new "headers" so we don't have to scroll that much
+					out.println(tableHead.replace("SRVNAME", srvName)); // Also add new "headers" so we don't have to scroll that much
 				}
 				prevSrvName = srvName;
 
@@ -1700,6 +1706,7 @@ public class OverviewServlet extends HttpServlet
 		//----------------------------------------------------
 		// OFFLINE Databases
 		//----------------------------------------------------
+		String dsrCurrentJdbcUrl = "";
 		if (true)
 		{
 	        out.println("<div id='offline' class='card border-dark mb-3'>");
@@ -1755,9 +1762,10 @@ public class OverviewServlet extends HttpServlet
 //				}
 //			}
 			
+//			String firstServerName = "XXXXXXX";
 
 			String tableHead 
-					= "  <tr>"
+					= "  <tr id='offline-srv-SRVNAME'>"
 					+ "    <th>File</th>"
 					+ "    <th>DayOfWeek</th>"
 					+ "    <th>Saved Max GB</th>"
@@ -1770,7 +1778,7 @@ public class OverviewServlet extends HttpServlet
 			
 			out.println("<table>");
 			out.println("<thead>");
-			out.println(tableHead);
+			out.println(tableHead.replace("SRVNAME", firstServerName));
 			out.println("</thead>");
 			out.println("<tbody>");
 			
@@ -1811,7 +1819,7 @@ public class OverviewServlet extends HttpServlet
 					out.println("  <tr>");
 					out.println("    <td nowrap colspan='7' style='background-color:rgb(209, 224, 224);'>&nbsp;</td>");
 					out.println("  </tr>");
-					out.println(tableHead); // Also add new "headers" so we don't have to scroll that much
+					out.println(tableHead.replace("SRVNAME", srvName)); // Also add new "headers" so we don't have to scroll that much
 				}
 				prevSrvName = srvName;
 				
@@ -1847,9 +1855,16 @@ public class OverviewServlet extends HttpServlet
 //				String dsrUrl = "/api/dsr?op=xxx&dbname="+dbName+"&onHost="+collectorHostname;
 //				String dsrJdbcUrl = dbName;
 				String dsrJdbcUrl = url.replace(";DB_CLOSE_ON_EXIT=FALSE", "");
-				String dsrUrl = "'javascript:void(0);' onclick='return dbxOpenDsrDialog(\""+dsrJdbcUrl+"\");'";
+				String dsrUrl = "'javascript:void(0);' onclick='return dbxOpenDsrDialog(\"" + dsrJdbcUrl + "\");'";
 				String dsrTxt = dbName;
-					
+
+				// Save this for later
+				if (reqOperation.equalsIgnoreCase("dsr-current-srv") && reqSrvName.equalsIgnoreCase(srvName))
+				{
+					dsrCurrentJdbcUrl = dsrJdbcUrl;
+				}
+
+				
 				out.println("  <tr>");
 				out.println("    <td "+style+">" + dbName         + "</td>");
 				out.println("    <td "+style+">" + dayOfWeek      + "</td>");
@@ -1919,6 +1934,27 @@ public class OverviewServlet extends HttpServlet
 		
 		// Write some JavaScript code
 		out.println(HtmlStatic.getJavaScriptAtEnd(true));
+
+		// Actions for specific operations
+		if (reqOperation.equalsIgnoreCase("dsr-current-srv") && StringUtil.hasValue(reqSrvName))
+		{
+			out.println("");
+			out.println("<script>");
+//			out.println("document.addEventListener('load', function()");   // or possibly use: document.addEventListener('DOMContentLoaded', function() {});
+			out.println("document.addEventListener('DOMContentLoaded', function()");   // or possibly use: document.addEventListener('DOMContentLoaded', function() {});
+			out.println("{");
+			out.println("    console.log('on-load[DOMContentLoaded] ::: reqSrvName=|" + reqSrvName + "|'); ");
+			out.println("");
+			out.println("    var element = document.getElementById('offline-srv-" + reqSrvName + "'); ");
+			out.println("    if (element === null) ");
+			out.println("        element = document.getElementById('offline'); ");
+			out.println("    element.scrollIntoView(); ");
+			out.println("");
+			out.println("    dbxOpenDsrDialog('" + dsrCurrentJdbcUrl + "');");
+			out.println("});");			
+			out.println("</script>");
+			out.println("");
+		}
 
 		out.println("</body>");
 		out.println("</html>");

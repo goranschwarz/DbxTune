@@ -256,4 +256,10 @@ public class H2Connection extends DbxConnection
 		
 		return spid;
 	}
+
+	@Override
+	public String toBooleanValueString(boolean bool)
+	{
+		return bool ? "TRUE" : "FALSE";
+	}
 }

@@ -113,7 +113,6 @@ import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.google.gson.stream.JsonWriter;
 import com.sybase.jdbcx.SybConnection;
 import com.sybase.jdbcx.SybMessageHandler;
 
@@ -8381,7 +8380,7 @@ implements Cloneable, ITableTooltip
 	 *     }
 	 * ]
 	 * </pre>
-	 * @param w
+	 * @param gen
 	 * @param type
 	 * @throws IOException
 	 */
@@ -8433,7 +8432,7 @@ implements Cloneable, ITableTooltip
 //		}
 //		w.endArray();		
 //	}
-	protected void writeJsonCounterSample(JsonGenerator w, int type)
+	protected void writeJsonCounterSample(JsonGenerator gen, int type)
 			throws IOException
 	{
 		// Write the TYPE
@@ -8444,18 +8443,18 @@ implements Cloneable, ITableTooltip
 		else throw new IOException("Unknown type="+type);
 
 		// Set name
-		w.writeFieldName(counterType);
+		gen.writeFieldName(counterType);
 		
 		// Write an array of row objects: [ 
 		//                                  { "c1":"data", "c2":"data", "c3":"data" }, 
 		//                                  { "c1":"data", "c2":"data", "c3":"data" } 
 		//                                ]  
-		w.writeStartArray();
+		gen.writeStartArray();
 		int rowc = getRowCount(type);
 		int colc = getColumnCount(type);
 		for (int r=0; r<rowc; r++)
 		{
-			w.writeStartObject();
+			gen.writeStartObject();
 			for (int c=0; c<colc; c++)
 			{
 				Object obj  = getValue(type, r, c);
@@ -8464,19 +8463,19 @@ implements Cloneable, ITableTooltip
 				if (name == null)
 					throw new IOException("When writing JSON CM='"+getName()+"', CounterType="+type+", row="+r+", col="+c+", Column Name was 'null' (not set).");
 
-				w.writeFieldName(name);
+				gen.writeFieldName(name);
 				if (obj == null)
-					w.writeNull();
+					gen.writeNull();
 				else
 				{
-					if      (obj instanceof Number)  w.writeNumber ( obj.toString() );
-					else if (obj instanceof Boolean) w.writeBoolean( (Boolean) obj  );
-					else                             w.writeString ( obj.toString() );
+					if      (obj instanceof Number)  gen.writeNumber ( obj.toString() );
+					else if (obj instanceof Boolean) gen.writeBoolean( (Boolean) obj  );
+					else                             gen.writeString ( obj.toString() );
 				}
 			}
-			w.writeEndObject();
+			gen.writeEndObject();
 		}
-		w.writeEndArray();		
+		gen.writeEndArray();		
 	}
 	
 	public static CountersModel parseJson(String json)
@@ -8499,7 +8498,7 @@ implements Cloneable, ITableTooltip
 	}
 	
 //	public void toJson(JsonGenerator w, boolean writeCounters, boolean writeGraphs)
-	public void toJson(JsonGenerator w, JsonCmWriterOptions writerOptions)
+	public void toJson(JsonGenerator gen, JsonCmWriterOptions writerOptions)
 	throws IOException
 	{
 //		JsonFactory jfactory = new JsonFactory();
@@ -8526,73 +8525,71 @@ implements Cloneable, ITableTooltip
 				return;
 		}
 		
-		w.writeStartObject();
+		gen.writeStartObject();
 
-		w.writeStringField("cmName",            getName());
-		w.writeStringField("sessionSampleTime", TimeUtils.toStringIso8601(getSampleTime()));
-		w.writeStringField("cmSampleTime",      TimeUtils.toStringIso8601(getTimestamp()));
-		w.writeNumberField("cmSampleMs",        getLastSampleInterval());
-		w.writeStringField("type",              isSystemCm() ? "SYSTEM" : "USER_DEFINED");
+		gen.writeStringField("cmName",            getName());
+		gen.writeStringField("sessionSampleTime", TimeUtils.toStringIso8601(getSampleTime()));
+		gen.writeStringField("cmSampleTime",      TimeUtils.toStringIso8601(getTimestamp()));
+		gen.writeNumberField("cmSampleMs",        getLastSampleInterval());
+		gen.writeStringField("type",              isSystemCm() ? "SYSTEM" : "USER_DEFINED");
 
 		// Write some statistical fields
 //		boolean writeStats = true;
 //		if (writeStats)
 		if (writerOptions.writeStats)
 		{
-			w.writeFieldName("sampleDetails");
-			w.writeStartObject();
+			gen.writeFieldName("sampleDetails");
+			gen.writeStartObject();
 
-			w.writeNumberField ("graphCount",           getTrendGraphCount());
-			w.writeNumberField ("graphCountWithData",   getTrendGraphCountWithData());
-			w.writeNumberField ("absRows",              getAbsRowCount());
-			w.writeNumberField ("diffRows",             getDiffRowCount());
-			w.writeNumberField ("rateRows",             getRateRowCount());
+			gen.writeNumberField ("graphCount",           getTrendGraphCount());
+			gen.writeNumberField ("graphCountWithData",   getTrendGraphCountWithData());
+			gen.writeNumberField ("absRows",              getAbsRowCount());
+			gen.writeNumberField ("diffRows",             getDiffRowCount());
+			gen.writeNumberField ("rateRows",             getRateRowCount());
 
-			w.writeNumberField ("sqlRefreshTime",       getSqlRefreshTime());
-			w.writeNumberField ("guiRefreshTime",       getGuiRefreshTime());
-			w.writeNumberField ("lcRefreshTime",        getLcRefreshTime());
-			w.writeBooleanField("hasNonConfiguredMonitoringHappened",   hasNonConfiguredMonitoringHappened());
-			w.writeStringField ("nonConfiguredMonitoringMissingParams", getNonConfiguredMonitoringMissingParams());
-			w.writeStringField ("nonConfiguredMonitoringMessage",       getNonConfiguredMonitoringMessage(false));
-			w.writeBooleanField("isCountersCleared",    isCountersCleared());
-			w.writeBooleanField("hasValidSampleData",   hasValidSampleData());
-			w.writeStringField ("exceptionMsg",         getSampleException() == null ? null : getSampleException().toString());
-			w.writeStringField ("exceptionFullText",    StringUtil.exceptionToString(getSampleException()));
+			gen.writeNumberField ("sqlRefreshTime",       getSqlRefreshTime());
+			gen.writeNumberField ("guiRefreshTime",       getGuiRefreshTime());
+			gen.writeNumberField ("lcRefreshTime",        getLcRefreshTime());
+			gen.writeBooleanField("hasNonConfiguredMonitoringHappened",   hasNonConfiguredMonitoringHappened());
+			gen.writeStringField ("nonConfiguredMonitoringMissingParams", getNonConfiguredMonitoringMissingParams());
+			gen.writeStringField ("nonConfiguredMonitoringMessage",       getNonConfiguredMonitoringMessage(false));
+			gen.writeBooleanField("isCountersCleared",    isCountersCleared());
+			gen.writeBooleanField("hasValidSampleData",   hasValidSampleData());
+			gen.writeStringField ("exceptionMsg",         getSampleException() == null ? null : getSampleException().toString());
+			gen.writeStringField ("exceptionFullText",    StringUtil.exceptionToString(getSampleException()));
 			
-			w.writeEndObject(); // END: Counters
+			gen.writeEndObject(); // END: Counters
 		}
 
-//		if (writeCounters)
+		// JSON: counters
 		if (writerOptions.writeCounters)
 		{
-			w.writeFieldName("counters");
-			w.writeStartObject();
+			gen.writeFieldName("counters");
+			gen.writeStartObject();
 
-//			boolean writeMetaData = true;
-//			if (writeMetaData && hasResultSetMetaData())
+			// JSON: metaData
 			if (writerOptions.writeMetaData && hasResultSetMetaData())
 			{
 				ResultSetMetaDataCached rsmd = (ResultSetMetaDataCached) getResultSetMetaData();
 				try
 				{
-					w.writeFieldName("metaData");
-					w.writeStartArray(); 
+					gen.writeFieldName("metaData");
+					gen.writeStartArray(); 
 
 					// { "colName" : "someColName", "jdbcTypeName" : "java.sql.Types.DECIMAL", "guessedDbmsType" : "decimal(16,1)" }
 					for (int c=1; c<=rsmd.getColumnCount(); c++) // Note: ResultSetMetaData starts at 1 not 0
 					{
-						w.writeStartObject();
-						w.writeStringField ("columnName"     , rsmd.getColumnLabel(c));
-						w.writeStringField ("jdbcTypeName"   , ResultSetTableModel.getColumnJavaSqlTypeName(rsmd.getColumnType(c)));
-						w.writeStringField ("javaClassName"  , rsmd.getColumnClassName(c));
-						w.writeStringField ("guessedDbmsType", ResultSetTableModel.getColumnTypeName(rsmd, c));
-						w.writeBooleanField("isDiffColumn"   , isDiffColumn(c-1)); // column pos starts at 0 in the CM
-						w.writeBooleanField("isPctColumn"    , isPctColumn(c-1));  // column pos starts at 0 in the CM
-						w.writeEndObject();
+						gen.writeStartObject();
+						gen.writeStringField ("columnName"     , rsmd.getColumnLabel(c));
+						gen.writeStringField ("jdbcTypeName"   , ResultSetTableModel.getColumnJavaSqlTypeName(rsmd.getColumnType(c)));
+						gen.writeStringField ("javaClassName"  , rsmd.getColumnClassName(c));
+						gen.writeStringField ("guessedDbmsType", ResultSetTableModel.getColumnTypeName(rsmd, c));
+						gen.writeBooleanField("isDiffColumn"   , isDiffColumn(c-1)); // column pos starts at 0 in the CM
+						gen.writeBooleanField("isPctColumn"    , isPctColumn(c-1));  // column pos starts at 0 in the CM
+						gen.writeEndObject();
 					}
-					w.writeEndArray(); 
+					gen.writeEndArray(); 
 				}
-//				catch (SQLException ex)
 				catch (Exception ex)
 				{
 					_logger.error("Write JSON JDBC MetaData data, for CM='"+getName()+"'. Caught: "+ex, ex);
@@ -8600,23 +8597,23 @@ implements Cloneable, ITableTooltip
 			}
 
 			if (hasAbsData() && writerOptions.writeCounters_abs)
-				writeJsonCounterSample(w, DATA_ABS);
+				writeJsonCounterSample(gen, DATA_ABS);
 
 			if (hasDiffData() && writerOptions.writeCounters_diff)
-				writeJsonCounterSample(w, DATA_DIFF);
+				writeJsonCounterSample(gen, DATA_DIFF);
 
 			if (hasRateData() && writerOptions.writeCounters_rate)
-				writeJsonCounterSample(w, DATA_RATE);
+				writeJsonCounterSample(gen, DATA_RATE);
 
-			w.writeEndObject(); // END: Counters
+			gen.writeEndObject(); // END: Counters
 		}
 
 //System.out.println("                graph [srvName='"+getServerName()+"', CmName="+StringUtil.left(getName(),30)+"]: writeGraphs="+writeGraphs+", hasTrendGraphData()="+hasTrendGraphData());
 //		if (writeGraphs && hasTrendGraphData()) // note use 'hasTrendGraphData()' and NOT 'hasTrendGraph()' which is only true in GUI mode
 		if (writerOptions.writeGraphs && hasTrendGraphData()) // note use 'hasTrendGraphData()' and NOT 'hasTrendGraph()' which is only true in GUI mode
 		{
-			w.writeFieldName("graphs");
-			w.writeStartArray(); 
+			gen.writeFieldName("graphs");
+			gen.writeStartArray(); 
 			for (String graphName : getTrendGraphData().keySet())
 			{
 				TrendGraphDataPoint tgdp = getTrendGraphData(graphName);
@@ -8626,17 +8623,17 @@ implements Cloneable, ITableTooltip
 				if ( ! tgdp.hasData() )
 					continue;
 
-				w.writeStartObject();
-				w.writeStringField ("cmName" ,           getName());
-				w.writeStringField ("sessionSampleTime", TimeUtils.toStringIso8601(getSampleTime()));
+				gen.writeStartObject();
+				gen.writeStringField ("cmName" ,           getName());
+				gen.writeStringField ("sessionSampleTime", TimeUtils.toStringIso8601(getSampleTime()));
 
-				w.writeStringField ("graphName" ,     tgdp.getName());
-				w.writeStringField ("graphLabel",     tgdp.getGraphLabel());
-				w.writeStringField ("graphProps",     tgdp.getGraphProps());
-				w.writeStringField ("graphCategory",  tgdp.getCategory().toString());
-				w.writeBooleanField("percentGraph",   tgdp.isPercentGraph());
-				w.writeBooleanField("visibleAtStart", tgdp.isVisibleAtStart());
-				w.writeFieldName("data");
+				gen.writeStringField ("graphName" ,     tgdp.getName());
+				gen.writeStringField ("graphLabel",     tgdp.getGraphLabel());
+				gen.writeStringField ("graphProps",     tgdp.getGraphProps());
+				gen.writeStringField ("graphCategory",  tgdp.getCategory().toString());
+				gen.writeBooleanField("percentGraph",   tgdp.isPercentGraph());
+				gen.writeBooleanField("visibleAtStart", tgdp.isVisibleAtStart());
+				gen.writeFieldName("data");
 //				w.writeStartArray(); 
 //				// loop all data
 //				Double[] dataArr  = tgdp.getData();
@@ -8668,7 +8665,7 @@ implements Cloneable, ITableTooltip
 //				}
 //				w.writeEndArray(); 
 
-				w.writeStartObject(); // BEGIN: data
+				gen.writeStartObject(); // BEGIN: data
 
 				Double[] dataArr  = tgdp.getData();
 				String[] labelArr = tgdp.getLabel();
@@ -8695,17 +8692,17 @@ implements Cloneable, ITableTooltip
 							data = 0d;
 						}
 
-						w.writeNumberField(label, data);
+						gen.writeNumberField(label, data);
 					}
 				}
-				w.writeEndObject(); // END: data
+				gen.writeEndObject(); // END: data
 				
-				w.writeEndObject(); // END: GraphName
+				gen.writeEndObject(); // END: GraphName
 			}
-			w.writeEndArray(); 
+			gen.writeEndArray(); 
 		}
 
-		w.writeEndObject(); // END: this CM
+		gen.writeEndObject(); // END: this CM
 	}
 
 //---------------------------------------------------------

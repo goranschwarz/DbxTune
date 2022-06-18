@@ -134,7 +134,9 @@ public class Helper
 	 * and return true
 	 * 
 	 * @param req
+	 * @param resp
 	 * @param knownParams a list of known parameters
+	 * 
 	 * @return true if any is unknown
 	 * @throws IOException 
 	 */

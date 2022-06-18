@@ -51,6 +51,7 @@ import com.asetune.alarm.writers.AlarmWriterToPcsJdbc;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
 import com.asetune.cache.DbmsObjectIdCache;
 import com.asetune.cache.XmlPlanCache;
+import com.asetune.central.controllers.CollectorRefreshController;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesDbx.DbxConnectInfo;
 import com.asetune.cm.CounterModelHostMonitor;
@@ -1402,7 +1403,6 @@ implements Memory.MemoryListener
 				if (StringUtil.hasValue(_dbmsServerAlias))
 					headerInfo.setServerNameAlias(_dbmsServerAlias);
 
-				
 				// PCS
 				PersistContainer pc = new PersistContainer(headerInfo);
 				if (startNewPcsSession)
@@ -1714,7 +1714,8 @@ implements Memory.MemoryListener
 			if (_scriptWaitForNextSample != null)
 				scriptWaitForNextSample();
 			else
-				getCounterController().sleep(sleepTime * 1000);
+				waitForNextSample(sleepTime * 1000);
+
 
 		} // END: while(_running)
 
@@ -1739,6 +1740,53 @@ implements Memory.MemoryListener
 //		_logger.info("DUMMY WHICH SHOULD BE REMOVED... ONLY FOR TESTING PURPOSES OF ShutdownHook TIMEOUT... sleeping for 99 sec...");
 //		try { Thread.sleep(99 * 1000); }
 //		catch(InterruptedException ex) { ex.printStackTrace(); }
+	}
+
+	/**
+	 * Sleep for some seconds. <br>
+	 * If we find a
+	 *  
+	 * @param sleepTimeMs 
+	 */
+	private void waitForNextSample(int sleepTimeMs)
+	{
+		String serverName = _lastKnownHeaderInfo.getServerNameOrAlias();
+		
+		long startTime = System.currentTimeMillis();
+		String interuptSleepFileName = CollectorRefreshController.REFRESH_REQUEST_FILE_NAME_TEMPLATE.replace(CollectorRefreshController.REFRESH_REQUEST_SERVERNAME_TEMPLATE, serverName);
+		File interuptSleepFile = new File(interuptSleepFileName);
+
+		try
+		{
+			// indicate that we will be sleeping for a while
+			getCounterController().setSleeping(true);
+			
+			do
+			{
+				sleep(1000);
+
+				// Check if file exists; then skip sleep
+				if (_logger.isDebugEnabled())
+					_logger.debug("Checking if 'refresh request' file exists. Filename='" + interuptSleepFile + "'.");
+
+				if (interuptSleepFile.exists())
+				{
+					interuptSleepFile.delete();
+					_logger.info("Found a refresh request. Filename='" + interuptSleepFile + "'.");
+					return;
+				}
+			}
+			while (TimeUtils.msDiffNow(startTime) < sleepTimeMs);
+		}
+		catch (InterruptedException ignore)
+		{
+			// ignore
+		}
+		finally
+		{
+			// No longer in sleep
+			getCounterController().setSleeping(false);
+		}
 	}
 
 	/**

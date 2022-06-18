@@ -471,9 +471,11 @@ public class DbxTuneCentral
 					newValue = "*secret*";
 					oldValue = "*secret*";
 				}
-				_logger.info("COMBINED CONFIG CHANGE[" + instName + "]: propName='" + propName + "', type=" + type + ", newValue='" + newValue + "', oldValue='" + oldValue + "'.");
+				_logger.info("COMBINED CONFIG CHANGE[" + instName + "]: propName='" + propName + "', type=" + Configuration.changeTypeToStr(type) + ", newValue='" + newValue + "', oldValue='" + oldValue + "'.");
 			}
 		});
+		// do not care about keys starting with: "conn."
+		Configuration.addCombinedConfigurationFileWatcher_SkipKeyPrefix("conn.");  
 
         // Start the Persistent Counter Service
 		startCentralPcs();

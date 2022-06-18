@@ -31,6 +31,16 @@
 	</servlet>
 
 	<servlet>
+		<servlet-name>CollectorRefreshController</servlet-name>
+		<servlet-class>com.asetune.central.controllers.CollectorRefreshController</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>LastSampleForCmController</servlet-name>
+		<servlet-class>com.asetune.central.controllers.LastSampleForCmController</servlet-class>
+	</servlet>
+
+	<servlet>
 		<servlet-name>DbxTuneLogServlet</servlet-name>
 		<servlet-class>com.asetune.central.controllers.DbxTuneLogServlet</servlet-class>
 	</servlet>
@@ -104,6 +114,11 @@
 		<servlet-name>ChartBroadcastServlet</servlet-name>
 		<servlet-class>com.asetune.central.controllers.ChartBroadcastServlet</servlet-class>
 		<async-supported>true</async-supported>
+	</servlet>
+
+	<servlet>
+		<servlet-name>ServerLayoutController</servlet-name>
+		<servlet-class>com.asetune.central.controllers.ServerLayoutController</servlet-class>
 	</servlet>
 
 	<servlet>
@@ -252,6 +267,11 @@
 	</servlet-mapping>
  
 	<servlet-mapping>
+		<servlet-name>ServerLayoutController</servlet-name>
+		<url-pattern>/api/server-layout</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
 		<servlet-name>SessionsController</servlet-name>
 		<url-pattern>/api/sessions</url-pattern>
 	</servlet-mapping>
@@ -289,6 +309,16 @@
 	<servlet-mapping>
 		<servlet-name>AlarmHistoryController</servlet-name>
 		<url-pattern>/api/alarm/history</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>CollectorRefreshController</servlet-name>
+		<url-pattern>/api/collector-refresh</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>LastSampleForCmController</servlet-name>
+		<url-pattern>/api/last-sample</url-pattern>
 	</servlet-mapping>
 
 	<servlet-mapping>

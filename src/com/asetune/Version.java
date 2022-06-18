@@ -31,14 +31,14 @@ public class Version
 {
 	public static       String PRODUCT_STRING     = "AseTune";      // Do not have spaces etc in this one
 //	public static final String VERSION_STRING     = "4.1.0";        // Use this for public releases
-	public static final String VERSION_STRING     = "4.1.0.95.dev"; // Use this for early releases
-	public static final String BUILD_STRING       = "2022-05-28/build 425";
+	public static final String VERSION_STRING     = "4.1.0.96.dev"; // Use this for early releases
+	public static final String BUILD_STRING       = "2022-06-18/build 426";
 
-	public static final String GIT_DATE_STRING    = "2022-05-28";  // try to update this
+	public static final String GIT_DATE_STRING    = "2022-06-18";  // try to update this
 	public static final String GIT_REVISION_STR   = "502";         // used by CheckForUpdates --- update this on every check-in (emulates Subversion "Revision:" tag)
 
 	public static final boolean IS_DEVELOPMENT_VERSION  = true; // if true: date expiration will be checked on startup
-	public static final String  DEV_VERSION_EXPIRE_STR  = "2022-11-30";  // "YYYY-MM-DD" 
+	public static final String  DEV_VERSION_EXPIRE_STR  = "2024-11-30";  // "YYYY-MM-DD" 
 	public static       Date    DEV_VERSION_EXPIRE_DATE = null;
 
 	public static final String SOURCE_DATE_STRING = "$Date$";     // Subversion Specific Tag, which GIT do not have

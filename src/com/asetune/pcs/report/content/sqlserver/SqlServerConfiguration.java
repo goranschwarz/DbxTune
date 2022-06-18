@@ -97,7 +97,7 @@ public class SqlServerConfiguration extends AseAbstract
 		String sql = "select * \n"
 				   + "from [MonSessionDbmsConfig] \n"
 				   + "where [SessionStartTime] = (select max([SessionStartTime]) from [MonSessionDbmsConfig]) \n"
-				   + "  and [NonDefault] = 1 \n"
+				   + "  and [NonDefault] = " + conn.toBooleanValueString(true) + " \n"
 				   + "order by [Name]";
 		_shortRstm = executeQuery(conn, sql, false, "SqlServerConfig");
 

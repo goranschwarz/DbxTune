@@ -30,6 +30,7 @@ import org.jdesktop.swingx.decorator.HighlightPredicate;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 public class CmPgActivityPanel
@@ -82,19 +83,55 @@ extends TabularCntrPanel
 			}
 		}, SwingUtils.parseColor(colorStr, Color.YELLOW), null));
 
-		// PINK = idle in transaction (aborted)
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.idle_in_transaction");
+//		// PINK = idle in transaction (aborted)
+//		if (conf != null) colorStr = conf.getProperty(getName()+".color.idle_in_transaction");
+//		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+//		{
+//			@Override
+//			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+//			{
+//				String status = (String) adapter.getValue(adapter.getColumnIndex("state"));
+//				if ( status != null && status.equals("idle in transaction (aborted)") )
+//					return true;
+//				return false;
+//			}
+//		}, SwingUtils.parseColor(colorStr, Color.PINK), null));
+
+		// Mark the row as PINK if this SPID is BLOCKED by another thread
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocked");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
-				String status = (String) adapter.getValue(adapter.getColumnIndex("state"));
-				if ( status != null && status.equals("idle in transaction (aborted)") )
+				if (adapter.getColumnIndex("im_blocking_other_pids") == -1)
+					return false;
+
+				String blockingSpid = adapter.getString(adapter.getColumnIndex("im_blocked_by_pids"));
+				if (StringUtil.hasValue(blockingSpid))
 					return true;
 				return false;
 			}
 		}, SwingUtils.parseColor(colorStr, Color.PINK), null));
+
+		// Mark the row as RED if blocks other users from working
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocking");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				if (adapter.getColumnIndex("im_blocking_other_pids") == -1)
+					return false;
+
+				String listOfBlockedSpids = adapter.getString(adapter.getColumnIndex("im_blocking_other_pids"));
+				String blockedBySessionId = adapter.getString(adapter.getColumnIndex("im_blocked_by_pids"));
+
+				if ( StringUtil.hasValue(listOfBlockedSpids) && StringUtil.isNullOrBlank(blockedBySessionId))
+					return true;
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, Color.RED), null));
 	}
 
 }
