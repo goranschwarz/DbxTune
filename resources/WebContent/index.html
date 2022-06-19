@@ -1116,7 +1116,9 @@ Active Alarms
 				global_layoutNeedNewLine = 0;
 			}
 
-			html += entry.text + "<br>";
+			// if entry is empty, we just need a newline (which we will get by 'global_layoutNeedNewLine')
+			if (entry.text !== "")
+				html += entry.text + "<br>";
 		}
 		else if (entry.type === "server")
 		{

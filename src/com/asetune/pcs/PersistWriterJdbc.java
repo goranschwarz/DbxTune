@@ -3250,6 +3250,10 @@ public class PersistWriterJdbc
 	{
 		return DbUtils.safeStr(obj, maxLen);
 	}
+	public static String strMaxLen(String str, int maxLen, String colName)
+	{
+		return StringUtil.truncate(str, maxLen, true, colName);
+	}
 
 	public void saveMonTablesDictionary(DbxConnection conn, MonTablesDictionary mtd, Timestamp sessionStartTime)
 	{
@@ -3491,34 +3495,34 @@ public class PersistWriterJdbc
 //System.out.println("saveAlarms(): SQL="+sql);
 				// Set values
 				int i=1;
-				pst.setTimestamp(i++,         sessionStartTime                                                          ); // sessionStartTime        - datetime    , Nullable = false
-				pst.setTimestamp(i++,         sessionSampleTime                                                         ); // sessionSampleTime       - datetime    , Nullable = false
-				pst.setTimestamp(i++,         aew.getAddDate()                                                          ); // eventTime               - datetime    , Nullable = false
-				pst.setString   (i++, safeStr(aew.getAction()                                                      ,15 )); // action                  - varchar(15) , Nullable = false
-//				pst.setBoolean  (i++,         ae.isActive()                                                             ); // isActive                - bit         , Nullable = false
-				pst.setString   (i++, safeStr(ae.getAlarmClassAbriviated()                                         ,80 )); // alarmClass              - varchar(80) , Nullable = false
-				pst.setString   (i++, safeStr(ae.getServiceType()                                                  ,80 )); // serviceType             - varchar(80) , Nullable = false
-				pst.setString   (i++, safeStr(ae.getServiceName()                                                  ,80 )); // serviceName             - varchar(80) , Nullable = false
-				pst.setString   (i++, safeStr(ae.getServiceInfo()                                                  ,80 )); // serviceInfo             - varchar(80) , Nullable = false
-				pst.setString   (i++, safeStr(ae.getExtraInfo() == null ? null : ae.getExtraInfo().toString()      ,80 )); // extraInfo               - varchar(80) , Nullable = true 
-				pst.setString   (i++, safeStr(ae.getCategory()+""                                                  ,20 )); // category                - varchar(20) , Nullable = false
-				pst.setString   (i++, safeStr(ae.getSeverity()+""                                                  ,10 )); // severity                - varchar(10) , Nullable = false
-				pst.setString   (i++, safeStr(ae.getState()+""                                                     ,10 )); // state                   - varchar(10) , Nullable = false
-				pst.setInt      (i++,         ae.getReRaiseCount()                                                      ); // repeatCnt               - int         , Nullable = false
-				pst.setString   (i++, safeStr(ae.getDuration()                                                     ,10 )); // duration                - varchar(10) , Nullable = false
-//				pst.setTimestamp(i++,         ae.getCrTimeStr()                                                         ); // createTime              - datetime    , Nullable = false
-//				pst.setTimestamp(i++,         ae.getCancelTimeStr()                                                     ); // cancelTime              - datetime    , Nullable = true 
-				pst.setTimestamp(i++,         ae.getCrTime()     == -1 ? null : new Timestamp(ae.getCrTime())           ); // createTime              - datetime    , Nullable = false
-				pst.setTimestamp(i++,         ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime())       ); // cancelTime              - datetime    , Nullable = true 
-//				pst.setInt      (i++,         ae.getTimeToLive() == -1 ? null : ae.getTimeToLive()                      ); // timeToLive              - int         , Nullable = true 
-				pst.setInt      (i++,         ae.getTimeToLive()                                                        ); // timeToLive              - int         , Nullable = true 
-				pst.setString   (i++, safeStr(ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+"",15 )); // threshold               - varchar(15) , Nullable = true 
-				pst.setString   (i++, safeStr(ae.getData()        == null ? null : ae.getData().toString()         ,512)); // data                    - varchar(512), Nullable = true 
-				pst.setString   (i++, safeStr(ae.getReRaiseData() == null ? null : ae.getReRaiseData().toString()  ,512)); // lastData                - varchar(512), Nullable = true 
-				pst.setString   (i++, safeStr(ae.getDescription()                                                  ,512)); // description             - varchar(512), Nullable = false
-				pst.setString   (i++, safeStr(ae.getReRaiseDescription()                                           ,512)); // lastDescription         - varchar(512), Nullable = false
-				pst.setString   (i++, safeStr(ae.getExtendedDescription()                                          ,512)); // extendedDescription     - text        , Nullable = true 
-				pst.setString   (i++,         ae.getReRaiseExtendedDescription()                                        ); // lastExtendedDescription - text        , Nullable = true 
+				pst.setTimestamp(i++,           sessionStartTime                                                                                ); // sessionStartTime        - datetime    , Nullable = false
+				pst.setTimestamp(i++,           sessionSampleTime                                                                               ); // sessionSampleTime       - datetime    , Nullable = false
+				pst.setTimestamp(i++,           aew.getAddDate()                                                                                ); // eventTime               - datetime    , Nullable = false
+				pst.setString   (i++, strMaxLen(aew.getAction()                                                      ,15 ,"action"             )); // action                  - varchar(15) , Nullable = false
+//				pst.setBoolean  (i++,           ae.isActive()                                                                                   ); // isActive                - bit         , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getAlarmClassAbriviated()                                         ,80 ,"alarmClass"         )); // alarmClass              - varchar(80) , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getServiceType()                                                  ,80 ,"serviceType"        )); // serviceType             - varchar(80) , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getServiceName()                                                  ,80 ,"serviceName"        )); // serviceName             - varchar(80) , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getServiceInfo()                                                  ,80 ,"serviceInfo"        )); // serviceInfo             - varchar(80) , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getExtraInfo() == null ? null : ae.getExtraInfo().toString()      ,80 ,"extraInfo"          )); // extraInfo               - varchar(80) , Nullable = true 
+				pst.setString   (i++, strMaxLen(ae.getCategory()+""                                                  ,20 ,"category"           )); // category                - varchar(20) , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getSeverity()+""                                                  ,10 ,"severity"           )); // severity                - varchar(10) , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getState()+""                                                     ,10 ,"state"              )); // state                   - varchar(10) , Nullable = false
+				pst.setInt      (i++,           ae.getReRaiseCount()                                                                            ); // repeatCnt               - int         , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getDuration()                                                     ,10 ,"duration"           )); // duration                - varchar(10) , Nullable = false
+//				pst.setTimestamp(i++,           ae.getCrTimeStr()                                                                               ); // createTime              - datetime    , Nullable = false
+//				pst.setTimestamp(i++,           ae.getCancelTimeStr()                                                                           ); // cancelTime              - datetime    , Nullable = true 
+				pst.setTimestamp(i++,           ae.getCrTime()     == -1 ? null : new Timestamp(ae.getCrTime())                                 ); // createTime              - datetime    , Nullable = false
+				pst.setTimestamp(i++,           ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime())                             ); // cancelTime              - datetime    , Nullable = true 
+//				pst.setInt      (i++,           ae.getTimeToLive() == -1 ? null : ae.getTimeToLive()                                            ); // timeToLive              - int         , Nullable = true 
+				pst.setInt      (i++,           ae.getTimeToLive()                                                                              ); // timeToLive              - int         , Nullable = true 
+				pst.setString   (i++, strMaxLen(ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+"",15 ,"threshold"          )); // threshold               - varchar(15) , Nullable = true 
+				pst.setString   (i++, strMaxLen(ae.getData()        == null ? null : ae.getData().toString()         ,512,"data"               )); // data                    - varchar(512), Nullable = true 
+				pst.setString   (i++, strMaxLen(ae.getReRaiseData() == null ? null : ae.getReRaiseData().toString()  ,512,"lastData"           )); // lastData                - varchar(512), Nullable = true 
+				pst.setString   (i++, strMaxLen(ae.getDescription()                                                  ,512,"description"        )); // description             - varchar(512), Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getReRaiseDescription()                                           ,512,"lastDescription"    )); // lastDescription         - varchar(512), Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getExtendedDescription()                                          ,512,"extendedDescription")); // extendedDescription     - text        , Nullable = true 
+				pst.setString   (i++,           ae.getReRaiseExtendedDescription()                                                              ); // lastExtendedDescription - text        , Nullable = true 
 		
 				// EXECUTE
 				pst.executeUpdate();

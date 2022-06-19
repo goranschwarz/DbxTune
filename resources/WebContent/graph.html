@@ -137,6 +137,14 @@
 			opacity: 0.5;
 			color: gray;
 			text-align: center;
+			
+			user-select: none; /* Non-prefixed version for chorme, opera and*/
+			-ms-user-select: none; /* Internet Explorer, Edge */
+			-moz-user-select: none; /* Firefox */
+			-khtml-user-select: none; /* Konqueror HTML */
+			-webkit-touch-callout: none; /* iOS Safari */
+			-webkit-user-select: none; /* Safari */
+
 		}
 
 		#active-statements {
@@ -409,7 +417,7 @@
 
 	<div id="active-statements" class="active-statements-class" style="display: none;">
 		<div id="active-statements-ctl" class="active-statements-ctl-class">
-			<span id="active-statements-count" style="color:black">##</span> Active Statements...
+			<span id="active-statements-count" style="color:black; font-weight: bold;">##</span> Active Statements...
 
 			<span id="active-statements-win-size">
 				Window Max Size: 

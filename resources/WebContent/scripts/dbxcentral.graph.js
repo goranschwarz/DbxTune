@@ -502,32 +502,7 @@ function dbxTuneCheckActiveStatements()
 			var jsonResp = JSON.parse(data);
 			console.log("RECEIVED DATA[dbxTuneCheckActiveStatements]: ", jsonResp);
 
-			for (var i=0; i<jsonResp.length; i++) 
-			{
-				var srvName = jsonResp[i].srvName;
-				if (srvName === jsonResp[i].srvName)
-				{
-					var srvEntry = jsonResp[i];
-
-					var srvName = srvEntry.srvName;
-					var appName = srvEntry.appName;
-					
-					for (var j=0; j<srvEntry.cmNames.length; j++) 
-					{
-						var cmNamesEntry = srvEntry.cmNames[j];
-							
-						var cmName = cmNamesEntry.cmName;
-						if (cmName === "CmActiveStatements")
-						{
-							var lastSample = cmNamesEntry.lastSample;
-							var counters = lastSample.counters;
-//							var rateCounters = counters.rateCounters;
-
-							setActiveStatement(appName, srvName, counters);
-						}
-					}
-				}
-			}
+			setActiveStatement(jsonResp); 
 		},
 		error: function(xhr, desc, err) 
 		{
@@ -899,9 +874,9 @@ function dbxTuneGraphSubscribe()
 		let dbxtuneAppName  = graphHead.appName;
 
 		let appName     = graphHead.appName;
-					
-		// Reset Active Statements
-		setActiveStatement(appName, graphServerName);
+
+		// Build a new Active Statements (read data for current servers from DbxCentral)
+		dbxTuneCheckActiveStatements();
 
 		// TODO:
 		// to let the Browser update it's GUI it would have been nice with a yield() method
@@ -914,23 +889,7 @@ function dbxTuneGraphSubscribe()
 		for(let gc=0; gc<graphCollectors.length; gc++) 
 		{
 			let collector = graphCollectors[gc];
-			let cmName    = collector.cmName;
-
-//console.log("DEBUG: addData(): CmName="+cmName);
-			if (cmName === 'CmActiveStatements')
-			{
-//console.log("DEBUG: addData(): ---------------YES-THIS-IS---CmActiveStatements----");
-				if (collector.hasOwnProperty('counters'))
-				{
-//console.log("DEBUG: addData(): ---------------YES-THIS-IS---CmActiveStatements---- AND it has 'counters'");
-					// absCounters
-					// diffCounters
-					// rateCounters
-				//	let counterData = collector.counters.rateCounters;
-				//	setActiveStatement(appName, graphServerName, counterData);
-					setActiveStatement(appName, graphServerName, collector.counters);
-				}
-			}
+//			let cmName    = collector.cmName;
 
 			// console.log("addDate(): collector="+collector, collector);
 			for(let g=0; g<collector.graphs.length; g++) 
@@ -1025,57 +984,25 @@ function dbxTuneGraphSubscribe()
 
 
 	/**
-	 * 
+	 * INTERNAL: buildActiveStatementDiv
 	 */
-	function setActiveStatement(appName, srvName, counters)
+	function buildActiveStatementDiv(appName, srvName, counters)
 	{
-		if ( document.getElementById("active-statements-paused-chk").checked )
-		{
-			console.log("DEBUG: setActiveStatement() appName='"+appName+"', srvName='"+srvName+"', PAUSED...");
-
-			document.getElementById("active-statements-watermark").innerHTML = "PAUSED";
-			return;
-		}
-		// Set the Watermark
-		document.getElementById("active-statements-watermark").innerHTML = "";
-		
-		if (counters === undefined)
-		{
-			console.log("DEBUG: setActiveStatement() appName='"+appName+"', srvName='"+srvName+"', NO COUNTER PARAMETER --- just do RESET...");
-
-			// Reset floating button: active-statements-btn
-			$("#active-statements-btn").html("&lt;/&gt;");
-//			$("#active-statements-btn").html("SQL");
-			$("#active-statements-btn").css("animation", "");
-			$("#active-statements-btn").css("background", "rgba(32, 32, 32, 0.5)");
-			// Hide: active-statements
-			if ( document.getElementById("active-statements-auto-open-chk").checked )
-				$("#active-statements").css("display", "none");
-			$("#active-statements-win").html("");
-			
-			$("#active-statements-count").html("0");
-
-			return;
-		}
-
 		// Get what Type we want to view: ABS, DIFF or RATE
 		var counterData = counters.rateCounters;
 		var selectedCounterType = document.querySelector('input[name="active-statements-counter-type"]:checked').value;
-//console.log('setActiveStatement(): selectedCounterType: ' + selectedCounterType);
+//console.log('buildActiveStatementDiv(): selectedCounterType: ' + selectedCounterType);
 		if      (selectedCounterType === 'abs' ) counterData = counters.absCounters;
 		else if (selectedCounterType === 'diff') counterData = counters.diffCounters;
 		else if (selectedCounterType === 'rate') counterData = counters.rateCounters;
-		else console.log('setActiveStatement(): Unknown selectedCounterType: ' + selectedCounterType);
+		else console.log('buildActiveStatementDiv(): Unknown selectedCounterType: ' + selectedCounterType);
 		
 		// Set MetaData
 		var metaDataArr = counters.metaData;
 
-		console.log("DEBUG: setActiveStatement() appName='"+appName+"', srvName='"+srvName+"', counterData.length="+counterData.length);
+		console.log("DEBUG: buildActiveStatementDiv() appName='"+appName+"', srvName='"+srvName+"', counterData.length="+counterData.length);
 
-		// Set count
-		$("#active-statements-count").html(counterData.length);
-		
-		// Create a CALLBACK function to set TableRow Colors
+		// Create a CALLBACK function to set TD/CELL Colors
 		var tdCallback = function(td, metaData, cellContent)
 		{
 			if (isNaN(cellContent)) // is NOT a Number
@@ -1224,36 +1151,126 @@ function dbxTuneGraphSubscribe()
 		}
 		else
 		{
-			console.log("WARNING: setActiveStatement(): Unknown appName='" + appName + "', no trCallback function will be used.");
+			console.log("WARNING: buildActiveStatementDiv(): Unknown appName='" + appName + "', no trCallback function will be used.");
 		}
-		// Set tooltip on the DIV
-		document.getElementById('active-statements').title = tooltip;
 		
-		// Create a table and add it to 'active-statements-win'
-		let activeStatementsDiv = document.getElementById("active-statements-win");
+		// create a new SrvDiv 
+		var newSrvDiv = document.createElement("div");
+		newSrvDiv.setAttribute("id",    "active-statements-srv-" + srvName);
+		newSrvDiv.setAttribute("class", "active-statements-srv-class");
+		newSrvDiv.setAttribute("title", tooltip);
+		
+		// Hmmm can we do this: just "add" a property to a div the we read later.
+		newSrvDiv.statementsRowCount = counterData.length;
+		
+		// Create a table and add it to 'newSrvDiv'
 		let stripHtmlInCells = document.getElementById("active-statements-compExtDesc-chk").checked;
 		let tab = jsonToTable(counterData, stripHtmlInCells, trCallback, tdCallback, metaDataArr);
-		activeStatementsDiv.innerHTML = "Active Statements for server: <b>"+srvName+"</b>";
-		activeStatementsDiv.appendChild(tab);
-		activeStatementsDiv.appendChild(document.createElement("br"));
+
+		newSrvDiv.innerHTML = "<br><b>" + counterData.length +"</b> Active Statements on server: <b>"+srvName+"</b>";
+		newSrvDiv.appendChild(tab);
+//		newSrvDiv.appendChild(document.createElement("br"));
+
+		return newSrvDiv;
+	}
+
+	function setActiveStatement(allEntries)
+	{
+		if ( document.getElementById("active-statements-paused-chk").checked )
+		{
+			document.getElementById("active-statements-watermark").innerHTML = "PAUSED";
+			return;
+		}
+		// Set the Watermark
+		document.getElementById("active-statements-watermark").innerHTML = "";
+
+		if (allEntries === undefined)
+		{
+			console.log("DEBUG: setActiveStatement() parameter 'allEntries' is not passed, exiting...");
+			return;
+		}
+
+
+		// push 'active statements' for each server on this array
+		var activeStatementsDivArr = [];
+
+		// Keep count on TOTAL active statements (in all servers)
+		var totalActiveStatementsCount = 0;
+
+
+		// Loop all entries
+		// Build a "div" foreach of the servers that has active statements
+		// One entry looks like:
+		//    { appName: xxx, srvName: xxx, cmNames: [ { cmName: CmActiveStatements, lastSample: { counters: { metaData:[], absCounters: [{row},{row}], diffCounters: [{row},{row}], rateCounters: [{row},{row}] } } }... ]
+		for(let e=0; e<allEntries.length; e++)
+		{
+			var entry = allEntries[e];
+			console.log("DEBUG: CmActiveStatements--entry: "+entry, entry);
+
+			var appName = entry.appName;
+			var srvName = entry.srvName;
+			
+			var counters = {};
+			for(let c=0; c<entry.cmNames.length; c++)
+			{
+				var cmNamesEntry = entry.cmNames[c];
+					
+				if (cmNamesEntry.cmName === "CmActiveStatements")
+					counters = cmNamesEntry.lastSample.counters;
+			}
+			
+			var newSrvDiv = buildActiveStatementDiv(appName, srvName, counters);
+			
+			// Push the new div on the array, which will be read later
+			activeStatementsDivArr.push(newSrvDiv);
+		}
+
+		// Emty the Statements Window
+		document.getElementById("active-statements-win").innerHTML = "";
+
+		// Finally add the 'activeStatementsDivArr' to the outer div
+		var activeStatementsWin = document.getElementById("active-statements-win");
+		for (let i=0; i<activeStatementsDivArr.length; i++) 
+		{
+			const srvDiv = activeStatementsDivArr[i];
+			
+			// Add SrvDiv to WinDiv
+			activeStatementsWin.appendChild( srvDiv );
+
+			// Read "user defined" name 'statementsRowCount' from the SrvDiv
+			totalActiveStatementsCount += activeStatementsDivArr[i].statementsRowCount;
+		}
+
+
+		// Set count at the top of the poupup window
+		$("#active-statements-count").html(totalActiveStatementsCount);
 
 		// Floting button: Set how many ACTIVE Statements we have and make it BLINK
-		$("#active-statements-btn").html("&lt;" + counterData.length + "&gt;");
-//		$("#active-statements-btn").html("SQL<span id='active-statements-btn-badge', class='badge badge-pill badge-warning'>"+counterData.length+"</span>");
-		$("#active-statements-btn").css("animation", "blink 1.5s infinite");
-		$("#active-statements-btn").css("background", "rgba(229, 228, 226, 0.5)");
-
-//		for(let c=0; c<counterData.length; c++)
-//		{
-//			console.log("DEBUG: CmActiveStatements--Column: "+counterData, counterData);
-//		}
+		$("#active-statements-btn").html("&lt;" + totalActiveStatementsCount + "&gt;");
+		if ( totalActiveStatementsCount > 0 )
+		{
+			$("#active-statements-btn").html("&lt;" + totalActiveStatementsCount + "&gt;");
+			$("#active-statements-btn").css("animation", "blink 1.5s infinite");
+			$("#active-statements-btn").css("background", "rgba(229, 228, 226, 0.5)");
+		}
+		else
+		{
+			// Reset floating button: active-statements-btn
+			$("#active-statements-btn").html("&lt;/&gt;");
+			$("#active-statements-btn").css("animation", "");
+			$("#active-statements-btn").css("background", "rgba(32, 32, 32, 0.5)");
+		}
 
 		// SHOW all Statements div
 		if ( document.getElementById("active-statements-auto-open-chk").checked )
 		{
-			$("#active-statements").css("display", "block");
+			if ( totalActiveStatementsCount > 0 )
+				$("#active-statements").css("display", "block"); // show
+			else
+				$("#active-statements").css("display", "none"); // hide
 		}
 	}
+
 
 
 //--------------------------------------------------------------------
