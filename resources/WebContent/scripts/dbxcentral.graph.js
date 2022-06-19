@@ -114,6 +114,9 @@ function jsonToTable(json, stripHtmlInCells, trCallback, tdCallback, jsonMetaDat
 			{
 				//var cellContent = stripHtmlInCells ? strippedTxt : originTxt;
 				tabCell.innerHTML = originTxt;
+				
+				if (false === originTxt) tabCell.innerHTML = "&#x2610;";
+				if (true  === originTxt) tabCell.innerHTML = "&#x2611;";
 			}
 			
 			// Use callback function to set TD properties
@@ -322,6 +325,9 @@ function openActiveStatementsWindow()
 }
 function activeStatementsExecTimeClick(textField)
 {
+	if (textField === null)
+		return;
+
 	var val = textField.value;
 	console.log('activeStatementsExecTimeClick(): Active Statement MaxExecTimeInMs[text]: ' + val);
 	
@@ -333,6 +339,9 @@ function activeStatementsExecTimeClick(textField)
 }
 function activeStatementsRadioClick(radioBut) 
 {
+	if (radioBut === null)
+		return;
+
 	var rVal = typeof(radioBut) == "string" ? radioBut : radioBut.value;
 	console.log('activeStatementsRadioClick(): Active Statement Window Size[RadioBut]: ' + rVal);
 	
@@ -355,6 +364,9 @@ function activeStatementsRadioClick(radioBut)
 }
 function activeStatementsCounterTypeClick(radioBut)
 {
+	if (radioBut === null)
+		return;
+
 	var rVal = typeof(radioBut) == "string" ? radioBut : radioBut.value;
 	console.log('activeStatementsCounterTypeClick(): Active Statement CounterType[RadioBut]: ' + rVal);
 	
@@ -366,6 +378,9 @@ function activeStatementsCounterTypeClick(radioBut)
 }
 function activeStatementsPausedChkClick(checkbox) 
 {
+	if (checkbox === null)
+		return;
+
 	console.log('activeStatementsPausedChkClick(): Checked: ' + checkbox.checked);
 
 	// Save last known value in "WebBrowser storage"
@@ -384,6 +399,9 @@ function activeStatementsPausedChkClick(checkbox)
 }
 function activeStatementsAutoOpenChkClick(checkbox) 
 {
+	if (checkbox === null)
+		return;
+
 	console.log('activeStatementsAutoOpenChkClick(): Checked: ' + checkbox.checked);
 
 	// Save last known value in "WebBrowser storage"
@@ -391,6 +409,9 @@ function activeStatementsAutoOpenChkClick(checkbox)
 }
 function activeStatementsSolidChkClick(checkbox) 
 {
+	if (checkbox === null)
+		return;
+
 	console.log('activeStatementsSolidChkClick(): Checked: ' + checkbox.checked);
 	if (checkbox.checked)
 	{
@@ -406,6 +427,9 @@ function activeStatementsSolidChkClick(checkbox)
 }
 function activeStatementsCompExtDescClick(checkbox) 
 {
+	if (checkbox === null)
+		return;
+
 	console.log('activeStatementsCompExtDescClick(): Checked: ' + checkbox.checked);
 
 	// Save last known value in "WebBrowser storage"
@@ -454,6 +478,8 @@ setTimeout(function()
 {
 	// Restore MaxExecTimeInMs
 	var savedVal_activeStatementsExecTime = getStorage('dbxtune_checkboxes_').get("active-statements-execTime-txt");
+	if (savedVal_activeStatementsExecTime === null || savedVal_activeStatementsExecTime === '')
+		savedVal_activeStatementsExecTime = 1000;
 	document.getElementById("active-statements-execTime-txt").value = savedVal_activeStatementsExecTime;
 	console.log("Restored 'active-statements-execTime-txt', value="+savedVal_activeStatementsExecTime);
 	
