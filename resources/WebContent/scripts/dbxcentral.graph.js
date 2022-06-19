@@ -320,6 +320,17 @@ function openActiveStatementsWindow()
 
 	$("#active-statements").toggle();
 }
+function activeStatementsExecTimeClick(textField)
+{
+	var val = textField.value;
+	console.log('activeStatementsExecTimeClick(): Active Statement MaxExecTimeInMs[text]: ' + val);
+	
+	// Save last known value in "WebBrowser storage"
+	getStorage('dbxtune_checkboxes_').set("active-statements-execTime-txt", val);
+	
+	// get Counters...
+	dbxTuneCheckActiveStatements();
+}
 function activeStatementsRadioClick(radioBut) 
 {
 	var rVal = typeof(radioBut) == "string" ? radioBut : radioBut.value;
@@ -406,6 +417,8 @@ function activeStatementsCompExtDescClick(checkbox)
 	toggleActiveTableExtendedDesciption();
 }
 
+
+
 /**
  * Send a "refresh" request to all collectors
  */
@@ -435,9 +448,15 @@ function collectorRequestRefresh()
 	}); // end: ajax call
 } // end: function
 
+
 // do: deferred (since all DOM elements might not be created yet)
 setTimeout(function()
 {
+	// Restore MaxExecTimeInMs
+	var savedVal_activeStatementsExecTime = getStorage('dbxtune_checkboxes_').get("active-statements-execTime-txt");
+	document.getElementById("active-statements-execTime-txt").value = savedVal_activeStatementsExecTime;
+	console.log("Restored 'active-statements-execTime-txt', value="+savedVal_activeStatementsExecTime);
+	
 	// Restore 'Paused' at the ACTIVE STATEMENTS "window"
 //	var savedVal_activeStatementsPausedChk = getStorage('dbxtune_checkboxes_').get("active-statements-paused-chk");
 //	if (savedVal_activeStatementsPausedChk == 'checked') $("#active-statements-paused-chk").attr('checked', 'checked');
@@ -1153,7 +1172,34 @@ function dbxTuneGraphSubscribe()
 		{
 			console.log("WARNING: buildActiveStatementDiv(): Unknown appName='" + appName + "', no trCallback function will be used.");
 		}
-		
+
+
+		//-----------------------------------------------------------
+		// FILTER out rows that has a "to short execution time"
+		let execTimeInMs = 1000;
+		let filteredCounterData = counterData;
+		let execTimeDiv = document.getElementById("active-statements-execTime-txt");
+		if (execTimeDiv)
+			execTimeInMs = execTimeDiv.value;
+
+		// Different AppNames has different Column Names
+		if ("AseTune" === appName)
+		{
+			// Column name is AseTune is 'ExecTimeInMs'
+			filteredCounterData = counterData.filter(row => row.ExecTimeInMs > execTimeInMs);
+		}
+		else if ("SqlServerTune" === appName)
+		{
+			// Column name is SqlServerTune is 'ExecTimeInMs'
+			filteredCounterData = counterData.filter(row => row.ExecTimeInMs > execTimeInMs);
+		}
+		else if ("PostgresTune" === appName)
+		{
+			// Column name is PostgresTune is 'execTimeInMs'
+			filteredCounterData = counterData.filter(row => row.execTimeInMs > execTimeInMs);
+		}
+
+
 		// create a new SrvDiv 
 		var newSrvDiv = document.createElement("div");
 		newSrvDiv.setAttribute("id",    "active-statements-srv-" + srvName);
@@ -1161,13 +1207,13 @@ function dbxTuneGraphSubscribe()
 		newSrvDiv.setAttribute("title", tooltip);
 		
 		// Hmmm can we do this: just "add" a property to a div the we read later.
-		newSrvDiv.statementsRowCount = counterData.length;
+		newSrvDiv.statementsRowCount = filteredCounterData.length;
 		
 		// Create a table and add it to 'newSrvDiv'
 		let stripHtmlInCells = document.getElementById("active-statements-compExtDesc-chk").checked;
-		let tab = jsonToTable(counterData, stripHtmlInCells, trCallback, tdCallback, metaDataArr);
+		let tab = jsonToTable(filteredCounterData, stripHtmlInCells, trCallback, tdCallback, metaDataArr);
 
-		newSrvDiv.innerHTML = "<br><b>" + counterData.length +"</b> Active Statements on server: <b>"+srvName+"</b>";
+		newSrvDiv.innerHTML = "<br><b>" + filteredCounterData.length +"</b> Active Statements on server: <b>" + srvName + "</b>";
 		newSrvDiv.appendChild(tab);
 //		newSrvDiv.appendChild(document.createElement("br"));
 

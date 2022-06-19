@@ -437,9 +437,11 @@
 
 			<span id="active-statements-options">
 				Options: &nbsp;
+				Min Exec Time 
+				<input type="text"     name="active-statements-execTime-txt"    id="active-statements-execTime-txt"    onchange="activeStatementsExecTimeClick(this);"   title='Only show Statements that has been executing for more than #### milliseconds'  value="1000" style="height:20px;width:50px" size="6"> &nbsp;&nbsp;
 				<input type="checkbox" name="active-statements-paused-chk"      id="active-statements-paused-chk"      onclick="activeStatementsPausedChkClick(this);"   title="Pause refresh of Active Statement (so you can read without beeing interupted)" value="paused"> Pause &nbsp;&nbsp;
-				<input type="checkbox" name="active-statements-auto-open-chk"   id="active-statements-auto-open-chk"   onclick="activeStatementsAutoOpenChkClick(this);" title="Auto: Open=Has Active Statements, Close=NO Active Statement"                   value="auto-open" checked> Auto Open &nbsp;&nbsp;
-				<input type="checkbox" name="active-statements-solid-chk"       id="active-statements-solid-chk"       onclick="activeStatementsSolidChkClick(this);"    title="Use Solid background color"                                                    value="solid" checked> Solid Background &nbsp;&nbsp;
+				<input type="checkbox" name="active-statements-auto-open-chk"   id="active-statements-auto-open-chk"   onclick="activeStatementsAutoOpenChkClick(this);" title="Auto: Open=Has Active Statements, Close=NO Active Statement"                   value="auto-open"   checked> Auto Open &nbsp;&nbsp;
+				<input type="checkbox" name="active-statements-solid-chk"       id="active-statements-solid-chk"       onclick="activeStatementsSolidChkClick(this);"    title="Use Solid background color"                                                    value="solid"       checked> Solid Background &nbsp;&nbsp;
 				<input type="checkbox" name="active-statements-compExtDesc-chk" id="active-statements-compExtDesc-chk" onclick="activeStatementsCompExtDescClick(this);" title="Show Extended Descriptions Columns as HTML Formated or as 'Plain Text'"        value="compExtDesc" checked> Extended Descriptions as Plain Text
 			</span>
 		</div>
