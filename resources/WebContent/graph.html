@@ -40,7 +40,8 @@
 			background-color: gold;
 		}
 		.active-statement-row-blocking {
-			background-color: red;
+		/*	background-color: red; */
+			background-color: rgb(220, 20, 60); /* slightly darker red, so RED(blocking) text can be "visible" on the "red" background... possibly 'mix-blend-mode: difference' could be a solution, but I didn't get it to work */
 		}
 		.active-statement-row-blocked {
 			background-color: pink;
@@ -437,8 +438,9 @@
 
 			<span id="active-statements-options">
 				Options: &nbsp;
-				Min Exec Time 
-				<input type="text"     name="active-statements-execTime-txt"    id="active-statements-execTime-txt"    onchange="activeStatementsExecTimeClick(this);"   title='Only show Statements that has been executing for more than #### milliseconds'  value="1000" style="height:20px;width:50px" size="6"> &nbsp;&nbsp;
+<!-- 				Min Exec Time 
+				<input type="text"     name="active-statements-execTime-txt"    id="active-statements-execTime-txt"    onchange="activeStatementsExecTimeClick(this);"   title='Only show Statements that has been executing for more than #### milliseconds'  value="-1" style="height:20px;width:50px" size="6"> &nbsp;&nbsp;
+-->
 				<input type="checkbox" name="active-statements-paused-chk"      id="active-statements-paused-chk"      onclick="activeStatementsPausedChkClick(this);"   title="Pause refresh of Active Statement (so you can read without beeing interupted)" value="paused"> Pause &nbsp;&nbsp;
 				<input type="checkbox" name="active-statements-auto-open-chk"   id="active-statements-auto-open-chk"   onclick="activeStatementsAutoOpenChkClick(this);" title="Auto: Open=Has Active Statements, Close=NO Active Statement"                   value="auto-open"   checked> Auto Open &nbsp;&nbsp;
 				<input type="checkbox" name="active-statements-solid-chk"       id="active-statements-solid-chk"       onclick="activeStatementsSolidChkClick(this);"    title="Use Solid background color"                                                    value="solid"       checked> Solid Background &nbsp;&nbsp;

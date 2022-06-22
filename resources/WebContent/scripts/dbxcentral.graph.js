@@ -114,9 +114,6 @@ function jsonToTable(json, stripHtmlInCells, trCallback, tdCallback, jsonMetaDat
 			{
 				//var cellContent = stripHtmlInCells ? strippedTxt : originTxt;
 				tabCell.innerHTML = originTxt;
-				
-				if (false === originTxt) tabCell.innerHTML = "&#x2610;";
-				if (true  === originTxt) tabCell.innerHTML = "&#x2611;";
 			}
 			
 			// Use callback function to set TD properties
@@ -331,11 +328,11 @@ function activeStatementsExecTimeClick(textField)
 	var val = textField.value;
 	console.log('activeStatementsExecTimeClick(): Active Statement MaxExecTimeInMs[text]: ' + val);
 	
-	// Save last known value in "WebBrowser storage"
-	getStorage('dbxtune_checkboxes_').set("active-statements-execTime-txt", val);
-	
-	// get Counters...
-	dbxTuneCheckActiveStatements();
+//	// Save last known value in "WebBrowser storage"
+//	getStorage('dbxtune_checkboxes_').set("active-statements-execTime-txt", val);
+//	
+//	// get Counters...
+//	dbxTuneCheckActiveStatements();
 }
 function activeStatementsRadioClick(radioBut) 
 {
@@ -477,11 +474,11 @@ function collectorRequestRefresh()
 setTimeout(function()
 {
 	// Restore MaxExecTimeInMs
-	var savedVal_activeStatementsExecTime = getStorage('dbxtune_checkboxes_').get("active-statements-execTime-txt");
-	if (savedVal_activeStatementsExecTime === null || savedVal_activeStatementsExecTime === '')
-		savedVal_activeStatementsExecTime = 1000;
-	document.getElementById("active-statements-execTime-txt").value = savedVal_activeStatementsExecTime;
-	console.log("Restored 'active-statements-execTime-txt', value="+savedVal_activeStatementsExecTime);
+//	var savedVal_activeStatementsExecTime = getStorage('dbxtune_checkboxes_').get("active-statements-execTime-txt");
+//	if (savedVal_activeStatementsExecTime === null || savedVal_activeStatementsExecTime === '')
+//		savedVal_activeStatementsExecTime = 1000;
+//	document.getElementById("active-statements-execTime-txt").value = savedVal_activeStatementsExecTime;
+//	console.log("Restored 'active-statements-execTime-txt', value="+savedVal_activeStatementsExecTime);
 	
 	// Restore 'Paused' at the ACTIVE STATEMENTS "window"
 //	var savedVal_activeStatementsPausedChk = getStorage('dbxtune_checkboxes_').get("active-statements-paused-chk");
@@ -1047,28 +1044,36 @@ function dbxTuneGraphSubscribe()
 
 		console.log("DEBUG: buildActiveStatementDiv() appName='"+appName+"', srvName='"+srvName+"', counterData.length="+counterData.length);
 
-		// Create a CALLBACK function to set TD/CELL Colors
+		// Create a CALLBACK function to set TD/CELL Colors & formatted values
 		var tdCallback = function(td, metaData, cellContent)
 		{
-			if (isNaN(cellContent)) // is NOT a Number
+			if (isNaN(cellContent)) // Typically STRING
 			{
 				// Set to ABS
 				td.className = "active-statement-cell-abs";
 			}
-			else // is NUMBER
+			else if (typeof(cellContent) === typeof(true)) // BOOLEAN ... isNaN(true) is FALSE
+			{
+				// Translate booleans into checkboxes... true=[x], false=[ ]
+				if (false === cellContent) td.innerHTML = "&#x2610;";
+				if (true  === cellContent) td.innerHTML = "&#x2611;";
+			}
+			else // I guss this must be a NUMBER
 			{
 				// check if this is a DIFF/RATE or PCT column
 				if (metaData.isDiffColumn === true) 
 				{
 					if (selectedCounterType === 'abs') 
 					{
-						td.innerHTML = cellContent.toLocaleString(undefined);
+						if (cellContent !== null)
+							td.innerHTML = cellContent.toLocaleString(undefined);
 						td.className = "active-statement-cell-abs";
 					}
 
 					if (selectedCounterType === 'diff') 
 					{
-						td.innerHTML = cellContent.toLocaleString(undefined);
+						if (cellContent !== null)
+							td.innerHTML = cellContent.toLocaleString(undefined);
 						td.className = "active-statement-cell-diff";
 
 						if (cellContent != 0)
@@ -1077,8 +1082,8 @@ function dbxTuneGraphSubscribe()
 
 					if (selectedCounterType === 'rate') 
 					{
-					//	td.innerHTML = (Math.round(cellContent * 100) / 100).toFixed(1);
-						td.innerHTML = cellContent.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1});
+						if (cellContent !== null)
+							td.innerHTML = cellContent.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1});
 						td.className = "active-statement-cell-rate";
 
 						if (cellContent != 0)
@@ -1087,6 +1092,8 @@ function dbxTuneGraphSubscribe()
 				}
 				else if (metaData.isPctColumn === true) 
 				{
+					if (cellContent !== null)
+						td.innerHTML = cellContent.toLocaleString(undefined);
 					td.className = "active-statement-cell-pct";
 
 					if (cellContent != 0)
@@ -1094,6 +1101,8 @@ function dbxTuneGraphSubscribe()
 				}
 				else 
 				{
+					if (cellContent !== null)
+						td.innerHTML = cellContent.toLocaleString(undefined);
 					td.className = "active-statement-cell-abs";
 				}
 			}
@@ -1202,28 +1211,32 @@ function dbxTuneGraphSubscribe()
 
 		//-----------------------------------------------------------
 		// FILTER out rows that has a "to short execution time"
-		let execTimeInMs = 1000;
 		let filteredCounterData = counterData;
-		let execTimeDiv = document.getElementById("active-statements-execTime-txt");
-		if (execTimeDiv)
-			execTimeInMs = execTimeDiv.value;
-
-		// Different AppNames has different Column Names
-		if ("AseTune" === appName)
-		{
-			// Column name is AseTune is 'ExecTimeInMs'
-			filteredCounterData = counterData.filter(row => row.ExecTimeInMs > execTimeInMs);
-		}
-		else if ("SqlServerTune" === appName)
-		{
-			// Column name is SqlServerTune is 'ExecTimeInMs'
-			filteredCounterData = counterData.filter(row => row.ExecTimeInMs > execTimeInMs);
-		}
-		else if ("PostgresTune" === appName)
-		{
-			// Column name is PostgresTune is 'execTimeInMs'
-			filteredCounterData = counterData.filter(row => row.execTimeInMs > execTimeInMs);
-		}
+//		let execTimeInMs = -1;
+//		let execTimeDiv = document.getElementById("active-statements-execTime-txt");
+//		if (execTimeDiv)
+//			execTimeInMs = execTimeDiv.value;
+//
+//		// 0 or Negative number == NO Filtering
+//		if (execTimeInMs > 0)
+//		{
+//			// Different AppNames has different Column Names
+//			if ("AseTune" === appName)
+//			{
+//				// Column name is AseTune is 'ExecTimeInMs'
+//				filteredCounterData = counterData.filter(row => row.ExecTimeInMs > execTimeInMs);
+//			}
+//			else if ("SqlServerTune" === appName)
+//			{
+//				// Column name is SqlServerTune is 'ExecTimeInMs'
+//				filteredCounterData = counterData.filter(row => row.ExecTimeInMs > execTimeInMs);
+//			}
+//			else if ("PostgresTune" === appName)
+//			{
+//				// Column name is PostgresTune is 'execTimeInMs'
+//				filteredCounterData = counterData.filter(row => row.execTimeInMs > execTimeInMs);
+//			}
+//		}
 
 
 		// create a new SrvDiv 

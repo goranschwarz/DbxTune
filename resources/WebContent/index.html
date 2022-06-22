@@ -167,12 +167,16 @@
       <!-- <p class="lead">View all your DBMS trends graphs in a centralized console.</p> -->
       <!-- <p class="lead">DbxTune Central is the component where all DbxTune collectors can send summary data so it can be easely viewed...</p> -->
       <div id="dbx-image">
-        <p><img id="example-graph" src="images/dbxcentral_graph_example.png" alt="Example Graph"></p>
-        <p align="right"><font size="-2">Support for: Sybase/SAP: ASE, IQ, <i>RS, RAX, MS SQL-Server, Postgres, MySQL, DB2, Oracle, SAP HANA</i></font></p>
+        <p>
+			<img id="example-graph" src="images/dbxcentral_graph_example.png" style="height: 200px" alt="Example Graph">
+			<br>
+			<font size="-2">Support for: Sybase/SAP: ASE, IQ, <i>RS, RAX, MS SQL-Server, Postgres, MySQL, DB2, Oracle, SAP HANA</i></font>
+		</p>
+<!--        <p align="right"><font size="-2">Support for: Sybase/SAP: ASE, IQ, <i>RS, RAX, MS SQL-Server, Postgres, MySQL, DB2, Oracle, SAP HANA</i></font></p>-->
       </div>
 
       <div id="x"> <!-- So we can "skip" the top image in an easy way -->
-        <button type="button" class="btn btn-lg btn-primary btn-ok" data-toggle="modal" data-backdrop="static" data-target="#dbx-choose-graphs-dialog">View charts &raquo;</button>
+        <button type="button" class="btn btn-primary btn-ok" data-toggle="modal" data-backdrop="static" data-target="#dbx-choose-graphs-dialog">View charts &raquo;</button>
         &nbsp;&nbsp;&nbsp;<span id="dbx-alarm-cnt">0</span> Active Alams<span id="dbx-alarm-srv-cnt">, in 0 Servers.</span> <span id="dbx-alarm-age">0</span> seconds ago. Click <a href='?refresh=60'>here</a> to refresh every 60 seconds
       </div>
       <p></p>
@@ -418,20 +422,20 @@ Active Alarms
 	console.log("_debug="  +_debug);
 
 
-	function resizeExampleImage() {
-		// Origin size is: 378
-		var exampleImage = document.getElementById("example-graph");
-		// console.log("exampleImageSize="+exampleImage.style.height+", browser.height="+$(window).height());
-		if ($(window).height() >  1152) exampleImage.style.height = '';//'378px';
-		if ($(window).height() <= 1024) exampleImage.style.height = '300px';
-		if ($(window).height() <=  768) exampleImage.style.height = '200px';
-		// console.log("exampleImageSize="+exampleImage.style.height+", browser.height="+$(window).height());
-	}
-
-	window.addEventListener("resize", function() {
-		resizeExampleImage();
-	});
-	resizeExampleImage();
+//	function resizeExampleImage() {
+//		// Origin size is: 378
+//		var exampleImage = document.getElementById("example-graph");
+//		// console.log("exampleImageSize="+exampleImage.style.height+", browser.height="+$(window).height());
+//		if ($(window).height() >  1152) exampleImage.style.height = '';//'378px';
+//		if ($(window).height() <= 1024) exampleImage.style.height = '300px';
+//		if ($(window).height() <=  768) exampleImage.style.height = '200px';
+//		// console.log("exampleImageSize="+exampleImage.style.height+", browser.height="+$(window).height());
+//	}
+//
+//	window.addEventListener("resize", function() {
+//		resizeExampleImage();
+//	});
+//	resizeExampleImage();
 
 
 	//-----------------------------------------------------------

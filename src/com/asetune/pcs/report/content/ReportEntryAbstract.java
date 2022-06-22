@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -1399,7 +1400,9 @@ implements IReportEntry
 				}
 				else
 				{
-					_logger.info("ReportEntry '" + getClass().getSimpleName() + "'. SKIPPED Creating helper index to support Daily Summary Report (it already exists). IndexName='" + indexName + "', SQL='" + indexDdl + "'.");
+					// Write INFO on first "index already existed"
+					if ( writeInfoOnIndexAlreadyExisted(indexName) )
+						_logger.info("ReportEntry '" + getClass().getSimpleName() + "'. SKIPPED Creating helper index to support Daily Summary Report (it already exists). IndexName='" + indexName + "', SQL='" + indexDdl + "'.");
 				}
 			}
 			catch (SQLException ex)
@@ -1434,6 +1437,18 @@ implements IReportEntry
 		}
 	}
 
+	private Map<String, Integer> _writeInfoOnIndexAlreadyExisted_counter = new HashMap<>();
+	public boolean writeInfoOnIndexAlreadyExisted(String indexName)
+	{
+		Integer cnt = _writeInfoOnIndexAlreadyExisted_counter.get(indexName);
+		if (cnt == null)
+			cnt = 0;
+		
+		cnt++;
+		_writeInfoOnIndexAlreadyExisted_counter.put(indexName, cnt);
+
+		return cnt > 1;
+	}
 
 
 

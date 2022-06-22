@@ -376,7 +376,9 @@ public class SparklineHelper
 					}
 					else
 					{
-						_logger.info("ReportEntry '" + reportEntry.getClass().getSimpleName() + "'. SKIPPED Creating helper index to support Daily Summary Report (it already exists). IndexName='" + indexName + "', ChartColumnName='" + htmlChartColumnName + "', SQL='" + indexDdl + "'.");
+						// Write INFO on first "index already existed"
+						if ( reportEntry.writeInfoOnIndexAlreadyExisted(indexName) )
+							_logger.info("ReportEntry '" + reportEntry.getClass().getSimpleName() + "'. SKIPPED Creating helper index to support Daily Summary Report (it already exists). IndexName='" + indexName + "', ChartColumnName='" + htmlChartColumnName + "', SQL='" + indexDdl + "'.");
 					}
 				}
 				catch (SQLException ex)
