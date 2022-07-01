@@ -121,7 +121,7 @@ function jsonToTable(json, stripHtmlInCells, trCallback, tdCallback, jsonMetaDat
 			{
 				var cellMetaData = jsonMetaDataArr[j];
 
-				tdCallback(tabCell, cellMetaData, originTxt);
+				tdCallback(tabCell, cellMetaData, originTxt, json[i]);
 			}
 
 		}
@@ -1025,6 +1025,53 @@ function dbxTuneGraphSubscribe()
 } // end: function
 
 
+	function escapeXml(unsafe) 
+	{
+		return unsafe.replace(/[<>&'"]/g, function (c) 
+		{
+			switch (c) {
+				case '<': return '&lt;';
+				case '>': return '&gt;';
+				case '&': return '&amp;';
+				case '\'': return '&apos;';
+				case '"': return '&quot;';
+			}
+		});
+	}
+	/**
+	 * INTERNAL: createToolTipDiv()
+	 */
+	function createActiveStatementToolTipDiv(data)
+	{
+		//const TT_PREFIX  = "<div title='Click for Detailes' data-toggle='modal' data-target='#dbx-view-sqltext-dialog' data-objectname='' data-tooltip='";
+		//const TT_POSTFIX = "'>&nbsp;</div>";
+		
+		//const ttData = stripHtml(rowData.DbccSqlText);
+		//td.innerHTML = TT_PREFIX + ttData + TT_POSTFIX;
+
+		var doStrip = true;
+		if (typeof data === 'string' || data instanceof String)
+		{
+			if (data.startsWith("<?xml") || data.startsWith("<ShowPlanXML "))
+				doStrip = false;
+		}
+//		if (data.star)
+		
+		// Mabe check if data is XML or similar, then do NOT strip...
+		const dataVal = doStrip ? stripHtml(data) : data;
+//		const dataVal = data;
+
+		const div = document.createElement("div");
+		div.innerHTML = "&nbsp;";
+		div.setAttribute("title"           , "Click to Open Text Dialog... \n-------------------------------\n" + dataVal);
+		div.setAttribute("data-toggle"     , 'modal');
+		div.setAttribute("data-target"     , '#dbx-view-sqltext-dialog');
+		div.setAttribute("data-objectname" , '');
+		div.setAttribute("data-tooltip"    , dataVal);
+	
+		return div;
+	}
+	 
 	/**
 	 * INTERNAL: buildActiveStatementDiv
 	 */
@@ -1045,7 +1092,7 @@ function dbxTuneGraphSubscribe()
 		console.log("DEBUG: buildActiveStatementDiv() appName='"+appName+"', srvName='"+srvName+"', counterData.length="+counterData.length);
 
 		// Create a CALLBACK function to set TD/CELL Colors & formatted values
-		var tdCallback = function(td, metaData, cellContent)
+		var tdCallback = function(td, metaData, cellContent, rowData)
 		{
 			if (isNaN(cellContent)) // Typically STRING
 			{
@@ -1055,8 +1102,12 @@ function dbxTuneGraphSubscribe()
 			else if (typeof(cellContent) === typeof(true)) // BOOLEAN ... isNaN(true) is FALSE
 			{
 				// Translate booleans into checkboxes... true=[x], false=[ ]
-				if (false === cellContent) td.innerHTML = "&#x2610;";
-				if (true  === cellContent) td.innerHTML = "&#x2611;";
+//				if (false === cellContent) td.innerHTML = "&#x2610;";
+//				if (true  === cellContent) td.innerHTML = "&#x2611;";
+
+				if (false === cellContent) { td.innerHTML = ""; td.className = "image-unchecked"; }
+				if (true  === cellContent) { td.innerHTML = ""; td.className = "image-checked"; }
+
 			}
 			else // I guss this must be a NUMBER
 			{
@@ -1106,6 +1157,69 @@ function dbxTuneGraphSubscribe()
 					td.className = "active-statement-cell-abs";
 				}
 			}
+			
+			// Possibly fill in Tooltop for SQL Text etc
+			if ("AseTune" === appName)
+			{
+				if (metaData.columnName === "HasMonSqlText" && rowData.hasOwnProperty('MonSqlText') && cellContent === true)
+				{
+					td.appendChild( createActiveStatementToolTipDiv(rowData.MonSqlText) );
+				}
+				if (metaData.columnName === "HasDbccSqlText" && rowData.hasOwnProperty('DbccSqlText') && cellContent === true)
+				{
+					td.appendChild( createActiveStatementToolTipDiv(rowData.DbccSqlText) );
+				}
+				if (metaData.columnName === "HasProcCallStack" && rowData.hasOwnProperty('ProcCallStack') && cellContent === true)
+				{
+					td.appendChild( createActiveStatementToolTipDiv(rowData.ProcCallStack) );
+				}
+				if (metaData.columnName === "HasShowPlan" && rowData.hasOwnProperty('ShowPlanText') && cellContent === true)
+				{
+					td.appendChild( createActiveStatementToolTipDiv(rowData.ShowPlanText) );
+				}
+				if (metaData.columnName === "HasStackTrace" && rowData.hasOwnProperty('DbccStacktrace') && cellContent === true)
+				{
+					td.appendChild( createActiveStatementToolTipDiv(rowData.DbccStacktrace) );
+				}
+				if (metaData.columnName === "HasCachedPlanInXml" && rowData.hasOwnProperty('CachedPlanInXml') && cellContent === true)
+				{
+					td.appendChild( createActiveStatementToolTipDiv(rowData.CachedPlanInXml) );
+				}
+				if (metaData.columnName === "HasSpidLocks" && rowData.hasOwnProperty('SpidLocks') && cellContent === true)
+				{
+					td.appendChild( createActiveStatementToolTipDiv(rowData.SpidLocks) );
+				}
+				if (metaData.columnName === "HasBlockedSpidsInfo" && rowData.hasOwnProperty('BlockedSpidsInfo') && cellContent === true)
+				{
+					td.appendChild( createActiveStatementToolTipDiv(rowData.BlockedSpidsInfo) );
+				}
+			}
+			else if ("SqlServerTune" === appName)
+			{
+				if (metaData.columnName === "HasSqlText" && rowData.hasOwnProperty('lastKnownSql') && cellContent === true)
+				{
+					td.appendChild( createActiveStatementToolTipDiv(rowData.lastKnownSql) );
+				}
+				if (metaData.columnName === "HasQueryplan" && rowData.hasOwnProperty('query_plan') && cellContent === true)
+				{
+					td.appendChild( createActiveStatementToolTipDiv(rowData.query_plan) );
+				}
+				if (metaData.columnName === "HasLiveQueryplan" && rowData.hasOwnProperty('LiveQueryPlan') && cellContent === true)
+				{
+					td.appendChild( createActiveStatementToolTipDiv(rowData.LiveQueryPlan) );
+				}
+				if (metaData.columnName === "HasSpidLocks" && rowData.hasOwnProperty('SpidLocks') && cellContent === true)
+				{
+					td.appendChild( createActiveStatementToolTipDiv(rowData.SpidLocks) );
+				}
+				if (metaData.columnName === "HasBlockedSpidsInfo" && rowData.hasOwnProperty('BlockedSpidsInfo') && cellContent === true)
+				{
+					td.appendChild( createActiveStatementToolTipDiv(rowData.BlockedSpidsInfo) );
+				}
+			}
+//			else if ("PostgresTune" === appName)
+//			{
+//			}
 		};
 
 		// Create a CALLBACK function to set TableRow Colors
@@ -1163,7 +1277,7 @@ function dbxTuneGraphSubscribe()
 				
 				// Blocking OTHER Spids
 				if (   row.hasOwnProperty('ImBlockingOtherSessionIds') && row.ImBlockingOtherSessionIds !== ''
-				    && row.hasOwnProperty('ImBlockedBySessionId')      && row.ImBlockedBySessionId      !== 0 )
+				    && row.hasOwnProperty('ImBlockedBySessionId')      && row.ImBlockedBySessionId      === 0 )
 				{
 					tr.className = "active-statement-row-blocking";
 				}
@@ -1245,14 +1359,21 @@ function dbxTuneGraphSubscribe()
 		newSrvDiv.setAttribute("class", "active-statements-srv-class");
 		newSrvDiv.setAttribute("title", tooltip);
 		
-		// Hmmm can we do this: just "add" a property to a div the we read later.
+		// "add" a property 'statementsRowCount' to a div the we read later.
 		newSrvDiv.statementsRowCount = filteredCounterData.length;
+		
+		var newSrvInfoDiv = document.createElement("div");
+		newSrvInfoDiv.innerHTML = "<b>" + filteredCounterData.length +"</b> Active Statements on server: <b>" + srvName + "</b>";
+		newSrvInfoDiv.setAttribute("class", "active-statements-srv-info-class");
+
 		
 		// Create a table and add it to 'newSrvDiv'
 		let stripHtmlInCells = document.getElementById("active-statements-compExtDesc-chk").checked;
 		let tab = jsonToTable(filteredCounterData, stripHtmlInCells, trCallback, tdCallback, metaDataArr);
 
-		newSrvDiv.innerHTML = "<br><b>" + filteredCounterData.length +"</b> Active Statements on server: <b>" + srvName + "</b>";
+		// Add stuff to the 'newSrvDiv'
+		newSrvDiv.appendChild(document.createElement("br"));
+		newSrvDiv.appendChild(newSrvInfoDiv);
 		newSrvDiv.appendChild(tab);
 //		newSrvDiv.appendChild(document.createElement("br"));
 
@@ -1679,6 +1800,11 @@ class DbxGraph
 						label: function (tooltipItems, data) {
 							// print numbers localized (typically 1234567.8 -> 1,234,567.8)
 							return data.datasets[tooltipItems.datasetIndex].label + ': ' + tooltipItems.yLabel.toLocaleString();
+						}
+						,title: function (tooltipItems) {
+							//console.log('Tooltip.title: ', tooltipItems);
+							const date = new Date(tooltipItems[0].xLabel);
+							return date.toLocaleString();
 						}
 					}
 				},

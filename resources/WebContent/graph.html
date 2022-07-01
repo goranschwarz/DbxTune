@@ -11,6 +11,8 @@
 	<meta http-equiv="Pragma" content="no-cache" />
 	<meta http-equiv="Expires" content="0" />
 
+	<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.22.0/themes/prism-okaidia.min.css'>
+
 	<style>
 		canvas {
 			user-select: none;
@@ -31,6 +33,22 @@
 			0% { opacity: 1.0; }
 			50% { opacity: 0.0; }
 			100% { opacity: 1.0; }
+		}
+
+		.image-unchecked {
+			width:16px;
+			height:16px;
+			background-repeat: no-repeat;
+			background-position: center;
+			background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYxIDY0LjE0MDk0OSwgMjAxMC8xMi8wNy0xMDo1NzowMSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNS4xIFdpbmRvd3MiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6RTRBMEQyNTU1OUFBMTFFMkIwMERBRDZGM0NFNENENzUiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6RTRBMEQyNTY1OUFBMTFFMkIwMERBRDZGM0NFNENENzUiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpFNEEwRDI1MzU5QUExMUUyQjAwREFENkYzQ0U0Q0Q3NSIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpFNEEwRDI1NDU5QUExMUUyQjAwREFENkYzQ0U0Q0Q3NSIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PotIZFcAAAEoSURBVHjanJNBTgMxDEVtJ3Q9PQMHYYnEEZA4QDcchgUXqLgCYssNukBij8QO1ErAok0c853pMLDphEbKZCZjv9g/Nt/ePayTale0kNH0YEwJQichbBaX5/PoztdXF/TfcbO873wVK0bHjMEv+kPNsEFUSpl0FBFiGb8rYJuUsN0GwMFFx6iji7JLGaJEAKbTQayUNFcx+wjwtsuKRZojcPuBEP0tZUTAgbQB4Hft9gMhskcADWahNAGMenvmXxo4MUMYbdEAN+b2fzUAUWelOQW3pzECrhsZpey3YAcK2m0NBVNT2BNqSeTc94Hx4RT8v+3tf+pAhEmx/fr2DnpDM+HgEAK5XwV8fX48rlbPZ+5sDQQGwSGq+WXozlPM7oh+2uLAp28BBgB476Ywykj6VwAAAABJRU5ErkJggg==);
+		}
+
+		.image-checked {
+			width:16px;
+			height:16px;
+			background-repeat: no-repeat;
+			background-position: center;
+			background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAhVJREFUeNqkUz1oFEEU/uZnf+7iJTGCgkJAgmBAgoUgSVCJjVhcI3hwFlECQVAEBVNZKJjYpEwXEkHFyKmVTbBKFdRYqKXFGYggiBEE4XKX3dnxzeztZrxCFN8yy77hfd/73s8yrTX+x6R5nb31dLW5rUZUkvwVSHCO0Bc/lmcquy2BAa/MVqFbDfxJDzMPY4AfYmzqSW+uQCmTWePz102kFbEOIB0uIZkPwTj2HgihkjQVh4UaS8ApyARyIZxDQBmi6Pdg7VsN51/2ObRtBXlDpERiJeg8SBBhKHbh1ZdHWPxwFSW2U45DYByBYlBCnMQkL4KZjlEUSgJvPMT820kUSO9WnKVzSrCNIbtYK2Kz8YmIuhEGXSgVerBSn8P86wkUKD5pAdeHF1O4dgnaclgETC8fxffGOrq7QiysXsDjtRsIKDYm8JXRBzg5MNHOr3dKyBxPpSQzL4Yw1F/Gm/ozBCaIC0yeuo/RQ+OIVItAPuAqyJzTgxUk2zTWVhPv6s8hidDXDHfPfcSJw+OIdURT0lZz1uZ0jDrdwMtnaqgcv4Noi+6aGh5dT1fr2N83QM1VVqvZQtd457aVR27jWnkJjLp979I69u05aIckBYPvSXieB3fVbA+k+J3n2GAVC3TcNLwjV4axBD7XG2M3l/pjWmmdT4W1m6vzJmcT8wgcePyn9c08aQ+O0Hfwj3+yIuz7XwIMANPJsyJzXkTpAAAAAElFTkSuQmCC);
 		}
 
 		.active-statement-row-multi-sampled {
@@ -59,7 +77,17 @@
 		.active-statement-cell-pct {
 			color: red;
 		}
-		
+
+
+/*
+		.active-statements-srv-info-class {
+//			position: fixed; 
+			position: sticky;
+			left: 10;
+//			scroll-snap-align: start;
+		}
+*/
+
 		#active-statements-win-size {
 			border: 1px solid gray;
 			border-radius: 5px;
@@ -244,6 +272,52 @@
 			overflow-y: auto;
 		}
 
+
+
+
+        /* The below data-tooltip is used to show Actual exected SQL Text, as a tooltip where a normalized text is in a table cell */ 
+        [data-tooltip] {						
+            position: relative;				
+        }									
+        										
+        /* 'tooltip' CSS settings for SQL Text... */ 
+        [data-tooltip]:hover::before {		
+/*            content: attr(data-tooltip);		*/
+            content: 'Click to Open Text Dialog...';
+            position: absolute;				
+            z-index: 103; 					
+            top: 20px;						
+            left: 30px;						
+/*            width: 1800px;					*/
+            width: 220px;					
+            padding: 10px;					
+            background: #454545;				
+            color: #fff;						
+            font-size: 11px;					
+            font-family: Courier;			
+            white-space: pre-wrap;			
+        }									
+        [data-title]:hover::after {			
+            content: '';						
+            position: absolute;				
+            bottom: -12px;					
+            left: 8px;						
+            border: 8px solid transparent;	
+            border-bottom: 8px solid #000;	
+        }									
+
+        /* SQL Text Content in modal view */ 
+        .dbx-view-sqltext-content { 			
+            font-size: 11px;					
+            white-space: pre-wrap;			
+        } 									
+
+        /* Override some 'prism' formatting to be smaller & wrap long lines */ 
+        code[class*=language-], pre[class*=language-] { 			
+            font-size: 11px;										
+            white-space: pre-wrap;								
+        } 														
+
 	</style>
 
 	<!-- 
@@ -293,6 +367,10 @@
 
 	<!-- JS: jquery - contextMenu -->
 	<script type="text/javascript" src="/scripts/jquery-contextmenu/2.7.0/jquery.contextMenu.min.js"></script>
+
+	<!-- SQL Text Area needs this -->
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.22.0/prism.min.js'></script> 
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.22.0/components/prism-sql.min.js'></script> 
 
 	<!-- 
 	  =======================================================================
@@ -555,6 +633,48 @@
 		</div>
 	</div>  
 <!-- -->
+
+	<!-- Modal: View SqlText dialog -->																											
+	<div class='modal fade' id='dbx-view-sqltext-dialog' tabindex='-1' role='dialog' aria-labelledby='dbx-view-sqltext-dialog' aria-hidden='true'>
+		<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>
+			<div class='modal-content'>
+				<div class='modal-header'>
+					<h5 class='modal-title' id='dbx-view-sqltext-dialog-title'><b>Text:</b> <span id='dbx-view-sqltext-objectName'></span></h5>	
+					<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
+						<span aria-hidden='true'>&times;</span>
+					</button>
+				</div>
+				<div class='modal-body' style='overflow-x: auto;'>
+					<div class='scroll-tree' style='width: 3000px;'>
+						<pre><code id='dbx-view-sqltext-content' class='language-sql dbx-view-sqltext-content' ></code></pre>
+					</div>
+				</div>
+				<div class='modal-footer'>
+					<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script> 																			
+	/**																				
+	* ---------------------------------------------------------------------------		
+	* -- View SQL Text																
+	* ---------------------------------------------------------------------------		
+	*/																				
+	$('#dbx-view-sqltext-dialog').on('show.bs.modal', function(e) {
+		var data = $(e.relatedTarget).data();
+
+		console.log('#dbx-view-sqltext-dialog: data: '+data, data);
+
+		$('#dbx-view-sqltext-objectName', this).text(data.objectname);
+		$('#dbx-view-sqltext-content',    this).text(data.tooltip);
+
+		// highlight again, since the dialog DOM wasn't visible earlier
+		Prism.highlightAll();
+	});
+																						
+	</script> 																			
+
 
 	<!-- JAVA SCRIPT - INIT PAGE -->
 	<script type="application/javascript">

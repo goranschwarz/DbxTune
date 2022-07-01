@@ -1440,14 +1440,18 @@ implements IReportEntry
 	private Map<String, Integer> _writeInfoOnIndexAlreadyExisted_counter = new HashMap<>();
 	public boolean writeInfoOnIndexAlreadyExisted(String indexName)
 	{
+		boolean doWrite = false;
 		Integer cnt = _writeInfoOnIndexAlreadyExisted_counter.get(indexName);
 		if (cnt == null)
+		{
+			doWrite = true;
 			cnt = 0;
+		}
 		
 		cnt++;
 		_writeInfoOnIndexAlreadyExisted_counter.put(indexName, cnt);
 
-		return cnt > 1;
+		return doWrite;
 	}
 
 

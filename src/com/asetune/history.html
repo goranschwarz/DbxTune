@@ -650,12 +650,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Change how we collect current time from: CURRENT_TIMESTAMP to CLOCK_TIMESTAMP()</LI>
 
 		<LI><b>CmActiveStatements   </b> - new collector: CmActiveStatements, view SQL Statements that are active now</LI>
+		<LI><b>CmPgActivity         </b> - added column 'StatementExecInSec', and raise AlarmEventLongRunningStatement when a statement has been executed for more than 3 hours (by defualt), 'skip' can be done on: dbname, login, cmd and tranName</LI>
 		<LI><b>CmPgActivity         </b> - added columns: 'im_blocked_by_pids' and 'im_blocking_other_pids'</LI>
 		<LI><b>CmPgDatabase         </b> - Added graphs 'CacheHitPct' and 'TotalReads'</LI>
+		<LI><b>CmPgReplication      </b> - new collector: Check Replication</LI>
 		<LI><b>CmPgStatements       </b> - Now works with Postgres 9.3 (and possibly versions below that), where I "fake" the 'queryid' by taking a md5 checksum (first 16 chars) and converting that to an bigint</LI>
 		<LI><b>CmPgStatements       </b> - new columns for later versions (up to version 14)</LI>
 		<LI><b>CmPgStatements       </b> - Parse SQL Text and send of tables for top ## statements to DDL Store</LI>
-		<LI><b>CmPgActivity         </b> - added column 'StatementExecInSec', and raise AlarmEventLongRunningStatement when a statement has been executed for more than 3 hours (by defualt), 'skip' can be done on: dbname, login, cmd and tranName</LI>
 		<LI><b>CmSummary            </b> - added column 'in_recovery' to check if we connected to the ACTIVE or the STANDBY instance.</LI>
 		<LI><b>CmSummary            </b> - added columns 'oldest_running_xact_age', 'oldest_prepared_xact_age', 'oldest_replication_slot_age', 'oldest_replica_xact_age' to check if we will exceed the MAX Transaction ID in some "near" future!</LI>
 		<LI><b>CmSummary            </b> - Also a Graph on columns 'oldest_running_xact_age', 'oldest_prepared_xact_age', 'oldest_replication_slot_age', 'oldest_replica_xact_age'</LI>
