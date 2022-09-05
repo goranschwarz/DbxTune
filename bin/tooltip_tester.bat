@@ -128,7 +128,7 @@ set classpath=%classpath%;%SQLW_HOME%\lib\SwingBox-bin\*
 rem set classpath=%classpath%;%SQLW_HOME%\lib\SybaseParser_0.5.1.121_alpha.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\ngdbc.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\gsp.jar
-set classpath=%classpath%;%SQLW_HOME%\lib\jsqlparser-4.3.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\jsqlparser-4.5.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\antlr-4.0-complete.jar
 
 set classpath=%classpath%;%USERPROFILE%\.asetune\jdbc_drivers\*

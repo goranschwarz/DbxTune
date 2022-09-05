@@ -132,10 +132,12 @@ import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.ExistsExpression;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.FullTextSearch;
+import net.sf.jsqlparser.expression.operators.relational.GeometryDistance;
 import net.sf.jsqlparser.expression.operators.relational.GreaterThan;
 import net.sf.jsqlparser.expression.operators.relational.GreaterThanEquals;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
 import net.sf.jsqlparser.expression.operators.relational.IsBooleanExpression;
+import net.sf.jsqlparser.expression.operators.relational.IsDistinctExpression;
 import net.sf.jsqlparser.expression.operators.relational.IsNullExpression;
 import net.sf.jsqlparser.expression.operators.relational.ItemsListVisitor;
 import net.sf.jsqlparser.expression.operators.relational.JsonOperator;
@@ -1297,6 +1299,10 @@ extends JPanel
 		@Override public void visit(AllColumns expr)                   { throw new FilterParserException("Operation 'AllColumns' not yet implemeted."); }
 		@Override public void visit(AllTableColumns expr)              { throw new FilterParserException("Operation 'AllTableColumns' not yet implemeted."); }
 		@Override public void visit(AllValue expr)                     { throw new FilterParserException("Operation 'AllValue' not yet implemeted."); }
+
+		// Going from version 4.3 to 4.5we needed the below methods
+		@Override public void visit(IsDistinctExpression expr)         { throw new FilterParserException("Operation 'IsDistinctExpression' not yet implemeted."); }
+		@Override public void visit(GeometryDistance expr)             { throw new FilterParserException("Operation 'GeometryDistance' not yet implemeted."); }
 	};
 	
 	
