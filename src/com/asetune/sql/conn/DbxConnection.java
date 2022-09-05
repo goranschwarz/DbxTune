@@ -3425,6 +3425,27 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 	{
 		return bool ? "1" : "0";
 	}
+
+	/**
+	 * Generate SQL String for bitwise AND operation (Inspired by Hibernate Dialect)
+	 * @param x1   Expression 1 
+	 * @param x2   Expression 1
+	 * @return (x1 & x2)
+	 */
+	public String toBitAnd(String x1, int x2)
+	{
+		return toBitAnd(x1, Integer.toString(x2));
+	}
+	/**
+	 * Generate SQL String for bitwise AND operation (Inspired by Hibernate Dialect)
+	 * @param x1   Expression 1 
+	 * @param x2   Expression 1
+	 * @return (x1 & x2)
+	 */
+	public String toBitAnd(String x1, String x2)
+	{
+		return "(" + x1 + " & " + x2 + ")";
+	}
 	
 	
 //	/**

@@ -1345,7 +1345,7 @@ extends CounterTableModel
 					if (val != null)
 						key.append(val).append(PK_STR_DELIMITER);
 					else
-						_logger.warn(getName()+": Key containes NULL value, rsNum="+rsNum+", row="+rsRowNum+", col="+i+".");
+						_logger.warn(getName() + ": Key containes a NULL value, rsNum=" + rsNum + ", row=" + rsRowNum + ", col=" + i + " colName=" + _colNames.get(i-1) + ". Continuing without adding the NULL value to the key.");
 				}
 			}
 			if (_logger.isTraceEnabled())
@@ -1528,12 +1528,12 @@ extends CounterTableModel
 	 *       replicate the change into method: readResultset
 	 * 
 	 * @param row
-	 * @return
+	 * @return the RowID where the row was inserted. (-1 on failure)
 	 */
-	public boolean addRow(CountersModel cm, List<Object> row)
+	public int addRow(CountersModel cm, List<Object> row)
 	{
 		if (row == null)
-			return false;
+			return -1;
 		
 		int	colCount = getColumnCount();
 
@@ -1587,7 +1587,7 @@ extends CounterTableModel
 				// meaning instead of just returning true|false ... move this up a bit in the logic to also check for "pkDuplicateAction" etc... 
 				if (cm.actionForSampleDuplicateKey(this, keyStr, curRow, row))
 					_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+getName()+"', pk='"+getPkCols(_colIsPk)+"', a row with the key values '"+key+"' already exists. CurrentRow='"+curRow+"'. NewRow='"+row+"'.");
-				return false;
+				return -1;
 				//throw new DuplicateKeyException(key, curRow, row);
 			}
 		}
@@ -1608,7 +1608,7 @@ extends CounterTableModel
 			_rowidToKey.add(keyStr);
 		}
 
-		return true;
+		return rowId;
 	}
 
 	private List<String> getPkCols(boolean[] pkColsArr)

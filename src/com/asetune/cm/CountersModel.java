@@ -36,6 +36,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLTimeoutException;
 import java.sql.Statement;
+import java.sql.Time;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -305,6 +306,12 @@ implements Cloneable, ITableTooltip
 	public static final String 	PROPKEY_aseError_2714_actionThreshold = "CounterModel.ase.error.2714.action.threshold";
 	public static final int     DEFAULT_aseError_2714_actionThreshold = 5;
 
+	// A row can have different states (this should be a BITMAP: 1, 2, 4, 8, 16, 32 .... one bit for each state)
+	public static final int ROW_STATE__IS_DIFF_OR_RATE_ROW = 1; 
+	public static final int ROW_STATE__IS_AGGREGATED_ROW = 2; 
+
+	
+	
 	//-------------------------------------------------------
 	// BEGIN: Graph members
 	//-------------------------------------------------------
@@ -418,6 +425,9 @@ implements Cloneable, ITableTooltip
 
 		// new delta/rate row flag
 		_isNewDeltaOrRateRow = null;
+		
+		// Aggregate
+		private_resetAggregates();
 
 		// reset panel, if we got one
 		if (_tabPanel != null)
@@ -740,6 +750,8 @@ implements Cloneable, ITableTooltip
 		c._lastNonConfiguredMonitoringMessageList = this._lastNonConfiguredMonitoringMessageList; // Should we clone this or not...
 
 		c._isNewDeltaOrRateRow = this._isNewDeltaOrRateRow;
+
+		private_copyAggregates(c);
 
 		return c;
 	}
@@ -4755,7 +4767,7 @@ implements Cloneable, ITableTooltip
 	 * @return true         true = continue and refresh, false = skip refresh 
 	 * @throws Exception    throws if we do not want to continue with refreshGetData(conn)
 	 */
-	protected boolean beforeRefreshGetData(DbxConnection conn) throws Exception
+	public boolean beforeRefreshGetData(DbxConnection conn) throws Exception
 	{
 		return true;
 	}
@@ -5083,6 +5095,23 @@ implements Cloneable, ITableTooltip
 		if (sortOptionsList != null && !sortOptionsList.isEmpty())
 		{
 			tmpNewSample.sort(sortOptionsList);
+		}
+		
+		
+		// Do Column Aggregation.
+		// calculateAggregateRow does: 
+		//  - getAggregateColumns(), which calls createAggregateColumns() if we do not yet have created any aggregates columns
+		//  - note: if createAggregateColumns() returns NULL, calculateAggregateRow() will exit early
+		// Question: Should we call this before or after the above "local sorting"
+		try
+		{
+			// below may end up with data overflow (due to sum may overflow the data-type, and if we want to store the data in PCS we want to keep the origin data-type)
+			// hence the try/catch
+			calculateAggregateRow(tmpNewSample);
+		}
+		catch (RuntimeException ex)
+		{
+			_logger.error(getName() + ": Problems when performing Column Aggregation. Skipping this and continuing.", ex);
 		}
 		
 		// if it's the first time sampling...
@@ -8854,4 +8883,580 @@ implements Cloneable, ITableTooltip
 //			}
 //		]
 //	}
+	
+	
+	
+	//-------------------------------------------------------
+	// BEGIN: Aggregation 
+	//-------------------------------------------------------
+
+	/** MetatData for Aggregated Columns */
+	private Map<String, AggregationType> _aggregateColumns = null;
+
+	/** If we should APPEND the summary row to the CounterModel */
+//	private boolean _aggregatedRowAppend = true;
+
+	/** The actual Aggregated ROW Object */
+	private List<Object> _aggregatedRow = null;
+
+	/** The actual Aggregated ROW ID, or row number */
+	private int _aggregatedRowId = -1;
+
+	private void private_resetAggregates()
+	{
+		_aggregateColumns    = null;
+//		_aggregatedRowAppend = true;
+		_aggregatedRow       = null;
+		_aggregatedRowId     = -1;
+	}
+
+	private void private_copyAggregates(CountersModel copy)
+	{
+		copy._aggregateColumns    = this._aggregateColumns;
+//		copy._aggregatedRowAppend = this._aggregatedRowAppend;
+		copy._aggregatedRow       = this._aggregatedRow;
+		copy._aggregatedRowId     = this._aggregatedRowId;
+	}
+
+
+	/**
+	 * Implemented by any CM that want/needs Column Aggregation
+	 * @return
+	 */
+	public Map<String, AggregationType> createAggregateColumns()
+	{
+		return null;
+	}
+
+	/**
+	 * Get the Map of columns that want/needs Column Aggregation 
+	 * <p>
+	 * If none exists, we will call createAggregateColumns(), which is responsible for creating the columns that any CM want/needs to be aggregated
+	 * @return
+	 */
+	public Map<String, AggregationType> getAggregateColumns()
+	{
+		// Create if we havn't done that yet (and if createSummaryColumns() returns null... we do not have any SUM Columns
+		if (_aggregateColumns == null)
+		{
+			_aggregateColumns = createAggregateColumns();
+		}
+		return _aggregateColumns;
+	}
+
+	/**
+	 * Does the actual aggregation
+	 * 
+	 * @param newSample
+	 */
+	public void calculateAggregateRow(CounterSample newSample)
+	{
+		Map<String, AggregationType> aggCols = getAggregateColumns();
+
+		if (aggCols == null)
+			return;
+		if (aggCols.isEmpty())
+			return;
+
+//System.out.println("");
+//System.out.println(getName() + ": >>> Entring calculateSummaryRow(): pkCols=" + getPk() + ", aggCols=" + aggCols);
+		
+		// loop columns
+		// - if It's part of PK -->> add '_Total' (if it has any String columns)
+		// - if it's a SummaryColumn:
+		//      -> Check for what data type
+		// 
+		//      - Loop rows: and do SUM on all rows
+		int colCount = newSample.getColumnCount();
+		int rowCount = newSample.getRowCount();
+
+		// Create a new List where we will PUT values for ALL columns
+		List<Object> aggRow = new ArrayList<>(colCount);
+
+		// loop columns
+		// If part of PK, do SUM
+		// else add NULL value
+		for (int c = 0; c < colCount; c++)
+		{
+			Object addValue = null;
+			String colName  = newSample.getColumnName(c);
+			int    jdbcType = newSample.getColSqlType(c);
+
+			AggregationType aggType = aggCols.get(colName);
+			if (aggType != null)
+			{
+				Object sumValue = null;
+				int    rowCountForAverageCalculation = 0;
+				AggregationType.Agg aggregationType = aggType.getAggregationType();
+				
+				if (private_isSummarizableForJdbcType(jdbcType))
+				{
+					// Loop all rows and do SUM
+					for (int r = 0; r < rowCount; r++)
+					{
+						Object colVal = newSample.getValueAsObject(r, c);
+						sumValue = private_doSummaryForValue(sumValue, colVal, jdbcType);
+
+						if (colVal != null && AggregationType.Agg.AVG.equals(aggregationType))
+						{
+							if (aggType.isAverageTreatZeroAsNull())
+							{
+								if (colVal instanceof Number)
+								{
+									if (((Number)colVal).floatValue() != 0f)
+										rowCountForAverageCalculation++;
+								}
+							}
+							else
+							{
+								rowCountForAverageCalculation++;
+							}
+						}
+//						System.out.println(getName() + ":     > " + aggregationType + " SUM-ROW-VAL column[row="+r+", col="+c+", name='"+colName+"']: colVal=|" + colVal + "|, aggregationType=|" + aggregationType + "|, rowCountForAverageCalculation=|" + rowCountForAverageCalculation + "|, sumValue=|" + sumValue +"|, JDBC_TYPE=" + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ".");
+					}
+					
+					if (AggregationType.Agg.SUM.equals(aggType.getAggregationType()))
+					{
+						addValue = sumValue;
+//						System.out.println(getName() + ":   - " + aggregationType + ": SUM-COL column[col="+c+", name='"+colName+"']: value=|" + addValue +"|, JDBC_TYPE=" + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ".");
+					}
+					else if (AggregationType.Agg.AVG.equals(aggType.getAggregationType()))
+					{
+						if (aggType.isAverageCalcInMethodLocalCalculation())
+						{
+							addValue = null;
+//							System.out.println(getName() + ":   - " + aggregationType + ": AVG-COL column[col="+c+", name='"+colName+"']: value=|" + addValue +"|, JDBC_TYPE=" + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ". AVERAGE VALUE IS CALCULATED IN METHOD: localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData);");
+						}
+						else
+						{
+							addValue = private_doAverageForValue(sumValue, jdbcType, rowCountForAverageCalculation);
+//							System.out.println(getName() + ":   - " + aggregationType + ": AVG-COL column[col="+c+", name='"+colName+"']: value=|" + addValue +"|, JDBC_TYPE=" + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ".");
+						}
+					}
+					else // UNKNOWN Aggregation type
+					{
+						addValue = null;
+//						System.out.println(getName() + ":   - AGGREGATION: NOT-SUPPORTED-AGGREGATION-TYPE: --" + " + aggregationType + " + "-- column[col="+c+", name='"+colName+"']: value=|" + addValue +"|.");
+					}
+				}
+				else
+				{
+					_logger.error(getName() + ": Problems in calculateSummaryRow(). Column name '" + colName + "' can't be summarized, it's NOT a summarizable data type JDBC_TYPE=" + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ". Adding NULL value instead.");
+
+					// Add NULL value
+					addValue = null;
+//System.out.println(getName() + ":   - SUM: NOT-SUPPORTED_DATATYPE column[col="+c+", name='"+colName+"']: value=|" + addValue +"|.");
+				}
+			}
+			else
+			{
+				List<String> pkList = getPk();
+				if (pkList != null && pkList.contains(colName))
+				{
+					// Add PK VALUE
+					addValue = private_getAggregatePkValueForJdbcType(jdbcType);
+//System.out.println(getName() + ":   - SUM: PK column[col="+c+", name='"+colName+"']: value=|" + addValue +"|.");
+				}
+				else
+				{
+					// Add NULL value
+					addValue = null;
+					addValue = calculateAggregateRow_nonAggregatedColumnDataProvider(newSample, colName, c, jdbcType, addValue);
+//System.out.println(getName() + ":   - SUM: COL-NOT-IN-SUM-LIST column[col="+c+", name='"+colName+"']: value=|" + addValue +"|.");
+				}
+			}
+			
+			// Finally ADD the column value to the list that holds the ROW
+			aggRow.add(addValue);
+		}
+
+		// Sanity check
+		if (colCount != aggRow.size())
+		{
+			_logger.error(getName() + ": Problems in calculateSummaryRow(). Column Count differs in tableColCount=" + colCount + " and sumRow=" + aggRow.size());
+		}
+
+		// Finally ADD the SUMMARY Row
+		setAggregatedRow(aggRow);
+		
+		if (isAggregateRowAppendEnabled())
+			_aggregatedRowId = newSample.addRow(this, aggRow);
+
+//		FIXME; Possibly a parameter(pos) to addRow... so we can add row first, last or at a specific position
+//		       This means we need to rebuild the PK->RowId HashMap... (do we want to do that?)
+
+//System.out.println(getName() + ": <<< ADDING SUM row: AggRowID=" + _aggregatedRowId + ", " + aggRow);
+	}
+
+	/** 
+	 * Checks if the aggregated row should be appended to the Counter Model, or just be available by the method: getAggregatedRow<br>
+	 * Default return: true
+	 * <p>
+	 * Override this in any CM to  
+	 */
+	public boolean isAggregateRowAppendEnabled()
+	{
+		return true;
+	}
+//	/** Checks if the aggregated row should be appended to the Counter Model, or just be available by the method: getAggregatedRow */
+//	public boolean isAggregateRowAppendEnabled()
+//	{
+//		return _aggregatedRowAppend;
+//	}
+//	/** Set if the aggregated row should be appended to the Counter Model, or just be available by the method: getAggregatedRow */
+//	public void setAggregateRowAppendEnabled(boolean enable)
+//	{
+//		_aggregatedRowAppend = enable;
+//	}
+	
+	/** Checks if we have a Aggregated ROW Object */
+	public boolean hasAggregatedRow()
+	{
+		return _aggregatedRow != null;
+	}
+
+	/** Get the Aggregated ROW Object */
+	public List<Object> getAggregatedRow()
+	{
+		return _aggregatedRow;
+	}
+
+	/** Set the Aggregated ROW Object */
+	public void setAggregatedRow(List<Object> aggRow)
+	{
+		_aggregatedRow = aggRow;
+	}
+
+	/** 
+	 * Get the Aggregated ROW ID. 
+	 * @return The RowID where the aggregated row was inserted to the CountersModel (-1 if not any was added to the CountersModel)
+	 */
+	public int getAggregatedRowId()
+	{
+		return _aggregatedRowId;
+	}
+
+	/** Set what ROW ID, that holds any Aggregated Column (used in: PersistReader, when loading data from the PCS) */
+	public void setAggregatedRowId(int mrow)
+	{
+		_aggregatedRowId = mrow;
+	}
+
+	/** Check if the TableModel row is the Aggregated Row */
+	public boolean isAggregateRow(int mrow)
+	{
+//if (mrow == 0)
+//	System.out.println(getName() + " -- isAggregateRow(): << " + (getAggregatedRowId() == mrow) + "     (_aggregatedRowId=" + getAggregatedRowId() + ", mrow=" + mrow + ")");
+		return _aggregatedRowId == mrow;
+	}
+
+	/**
+	 * Simple class to hold any Aggregated Column MetaData
+	 * @author goran
+	 */
+	public static class AggregationType
+	{
+		private Agg _type;
+		private String _colName;
+		private boolean _onAverageTreatZeroAsNull = false;
+		private boolean _doAverageCalcInMethodLocalCalculation = false;
+		public enum Agg
+		{
+			SUM,
+			AVG
+		};
+
+//		public AggregationType(Agg type, String colName, int datatype)
+		public AggregationType(String colName, Agg type)
+		{
+			_colName = colName;
+			_type    = type;
+		}
+		/** Can be used for a AVERAGE to decide if we should discard 0 values in rowCount. avg=sum/rowCount */
+		public AggregationType(String colName, Agg type, boolean onAverageTreatZeroAsNull, boolean doAverageCalcInMethodLocalCalculation)
+		{
+			_colName = colName;
+			_type    = type;
+			_onAverageTreatZeroAsNull = onAverageTreatZeroAsNull;
+			_doAverageCalcInMethodLocalCalculation = doAverageCalcInMethodLocalCalculation;
+		}
+
+		public String getColumnName()
+		{
+			return _colName;
+		}
+		public Agg getAggregationType()
+		{
+			return _type;
+		}
+		public boolean isAverageTreatZeroAsNull()
+		{
+			return _onAverageTreatZeroAsNull;
+		}
+		public boolean isAverageCalcInMethodLocalCalculation()
+		{
+			return _doAverageCalcInMethodLocalCalculation;
+		}
+	}
+
+	/**
+	 * 
+	 * @param newSample
+	 * @param colName       Name of the column
+	 * @param colPos        Starting at 0
+	 * @param jdbcType      JDBC DataType
+	 * @param addValue      The value passed
+	 * @return
+	 */
+	public Object calculateAggregateRow_nonAggregatedColumnDataProvider(CounterSample newSample, String colName, int colPos, int jdbcType, Object addValue)
+	{
+		return null;
+	}
+
+	/**
+	 *  Responsible for doing the SUM aggregation for various data types 
+	 */
+	private Object private_doSummaryForValue(Object sumVal, Object val, int jdbcType)
+	{
+		// No need to SUM, just return "what we got so far"
+		if (val == null)
+			return sumVal;
+
+		boolean dummy = false;
+		if (dummy) 
+		{
+			// dummy just to simplify commenting out of the first if statement
+		}
+//		else if (jdbcType == java.sql.Types.TINYINT)
+//		{
+//		}
+		else if (jdbcType == java.sql.Types.SMALLINT)
+		{
+			if (sumVal == null) 
+				sumVal = new Short((short)0);
+
+//			return new Short( ((Number)sumVal).shortValue() + ((Number)val).shortValue() );
+			return ((Number)sumVal).shortValue() + ((Number)val).shortValue();
+		}
+		else if (jdbcType == java.sql.Types.INTEGER)
+		{
+			if (sumVal == null) 
+				sumVal = new Integer(0);
+
+			return new Integer( ((Number)sumVal).intValue() + ((Number)val).intValue() );
+		}
+		else if (jdbcType == java.sql.Types.BIGINT)
+		{
+			if (sumVal == null) 
+				sumVal = new Long(0);
+
+			return new Long( ((Number)sumVal).longValue() + ((Number)val).longValue() );
+		}
+		else if (jdbcType == java.sql.Types.FLOAT || jdbcType == java.sql.Types.REAL)
+		{
+			if (sumVal == null) 
+				sumVal = new Float(0);
+
+			return new Float( ((Number)sumVal).floatValue() + ((Number)val).floatValue() );
+		}
+		else if (jdbcType == java.sql.Types.DOUBLE)
+		{
+			if (sumVal == null) 
+				sumVal = new Double(0);
+
+			return new Double( ((Number)sumVal).doubleValue() + ((Number)val).doubleValue() );
+		}
+		else if (jdbcType == java.sql.Types.NUMERIC || jdbcType == java.sql.Types.DECIMAL)
+		{
+			if (sumVal == null) 
+				sumVal = new BigDecimal(0);
+
+			return ((BigDecimal)sumVal).add( (BigDecimal) val );
+		}
+		
+		_logger.error(getName() + ": Unhandled JDBC datatype " + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ", in xxx_doSummaryForValue().");
+		return null;
+	}
+	/**
+	 *  Responsible for doing the AVG calculation for various data types 
+	 */
+	private Object private_doAverageForValue(Object val, int jdbcType, int rowCount)
+	{
+		// No need to SUM, just return "what we got so far"
+		if (val == null)
+			return val;
+
+		// No rows (no average), return null
+		if (rowCount <= 0)
+			return null;
+		
+		if ( ! (val instanceof Number) )
+		{
+			System.out.println("private_doAverageForValue(): sumVal must be an instance of Number. The object '" + val + "' is of type " + val.getClass());
+		}
+			
+		boolean dummy = false;
+		if (dummy) 
+		{
+			// dummy just to simplify commenting out of the first if statement
+		}
+//		else if (jdbcType == java.sql.Types.TINYINT)
+//		{
+//		}
+		else if (jdbcType == java.sql.Types.SMALLINT)
+		{
+			return (short) ((Number)val).shortValue() / rowCount; // What data type will this return ???
+		}
+		else if (jdbcType == java.sql.Types.INTEGER)
+		{
+			return (int) ((Number)val).intValue() / rowCount; // What data type will this return ???
+		}
+		else if (jdbcType == java.sql.Types.BIGINT)
+		{
+			return (long) ((Number)val).longValue() / rowCount; // What data type will this return ???
+		}
+		else if (jdbcType == java.sql.Types.FLOAT || jdbcType == java.sql.Types.REAL)
+		{
+			return (float) ((Number)val).floatValue() / rowCount; // What data type will this return ???
+		}
+		else if (jdbcType == java.sql.Types.DOUBLE)
+		{
+			return (double) ((Number)val).doubleValue() / rowCount; // What data type will this return ???
+		}
+		else if (jdbcType == java.sql.Types.NUMERIC || jdbcType == java.sql.Types.DECIMAL)
+		{
+			BigDecimal retVal;
+//			retVal = ((BigDecimal)val).divide( BigDecimal.valueOf(rowCount) );
+			retVal = ((BigDecimal)val).divide( BigDecimal.valueOf(rowCount), RoundingMode.HALF_UP );
+			return retVal;
+		}
+		
+		_logger.error(getName() + ": Unhandled JDBC datatype " + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ", in xxx_doSummaryForValue().");
+		return null;
+	}
+
+
+	/**
+	 * 
+	 * @param jdbcType
+	 * @return
+	 */
+	private Object private_getAggregatePkValueForJdbcType(int jdbcType)
+	{
+		String strVal = "_Total";
+
+		switch (jdbcType)
+		{
+		case java.sql.Types.BIT:                     return new Boolean(false);
+		case java.sql.Types.TINYINT:                 return new Byte(Byte.parseByte("0"));
+		case java.sql.Types.SMALLINT:                return new Short(Short.parseShort("0"));
+		case java.sql.Types.INTEGER:                 return new Integer(0);
+		case java.sql.Types.BIGINT:                  return new Long(0);
+		case java.sql.Types.FLOAT:                   return new Float(0);
+		case java.sql.Types.REAL:                    return new Float(0);
+		case java.sql.Types.DOUBLE:                  return new Double(0);
+		case java.sql.Types.NUMERIC:                 return new BigDecimal(0);
+		case java.sql.Types.DECIMAL:                 return new BigDecimal(0);
+		case java.sql.Types.CHAR:                    return strVal;
+		case java.sql.Types.VARCHAR:                 return strVal;
+		case java.sql.Types.LONGVARCHAR:             return strVal;
+		case java.sql.Types.DATE:                    return new Date(0);
+		case java.sql.Types.TIME:                    return new Time(0);
+		case java.sql.Types.TIMESTAMP:               return new Timestamp(0);
+		case java.sql.Types.BINARY:                  return null;
+		case java.sql.Types.VARBINARY:               return null;
+		case java.sql.Types.LONGVARBINARY:           return null;
+		case java.sql.Types.NULL:                    return null;
+		case java.sql.Types.OTHER:                   return null;
+		case java.sql.Types.JAVA_OBJECT:             return new Object();
+		case java.sql.Types.DISTINCT:                return null;
+		case java.sql.Types.STRUCT:                  return null;
+		case java.sql.Types.ARRAY:                   return null;
+		case java.sql.Types.BLOB:                    return null;
+		case java.sql.Types.CLOB:                    return null;
+		case java.sql.Types.REF:                     return null;
+		case java.sql.Types.DATALINK:                return null;
+		case java.sql.Types.BOOLEAN:                 return new Boolean(false);
+
+	    //------------------------- JDBC 4.0 -----------------------------------
+	    case java.sql.Types.ROWID:                   return null;
+	    case java.sql.Types.NCHAR:                   return strVal;
+	    case java.sql.Types.NVARCHAR:                return strVal;
+	    case java.sql.Types.LONGNVARCHAR:            return strVal;
+	    case java.sql.Types.NCLOB:                   return null;
+	    case java.sql.Types.SQLXML:                  return null;
+
+	    //--------------------------JDBC 4.2 -----------------------------
+	    case java.sql.Types.REF_CURSOR:              return null;
+	    case java.sql.Types.TIME_WITH_TIMEZONE:      return null;
+	    case java.sql.Types.TIMESTAMP_WITH_TIMEZONE: return null;
+
+		default:
+			_logger.error(getName() + ": Unknow JDBC datatype[" + jdbcType + "], in xxx_getAggregatePkValueForJdbcType().");
+			return null;
+		}
+	}
+	
+	/**
+	 * 
+	 * @param jdbcType
+	 * @return
+	 */
+	private boolean private_isSummarizableForJdbcType(int jdbcType)
+	{
+		switch (jdbcType)
+		{
+		case java.sql.Types.BIT:                     return false;
+		case java.sql.Types.TINYINT:                 return true;   // OK
+		case java.sql.Types.SMALLINT:                return true;   // OK
+		case java.sql.Types.INTEGER:                 return true;   // OK
+		case java.sql.Types.BIGINT:                  return true;   // OK
+		case java.sql.Types.FLOAT:                   return true;   // OK
+		case java.sql.Types.REAL:                    return true;   // OK
+		case java.sql.Types.DOUBLE:                  return true;   // OK
+		case java.sql.Types.NUMERIC:                 return true;   // OK
+		case java.sql.Types.DECIMAL:                 return true;   // OK
+		case java.sql.Types.CHAR:                    return false;
+		case java.sql.Types.VARCHAR:                 return false;
+		case java.sql.Types.LONGVARCHAR:             return false;
+		case java.sql.Types.DATE:                    return false;
+		case java.sql.Types.TIME:                    return false;
+		case java.sql.Types.TIMESTAMP:               return false;
+		case java.sql.Types.BINARY:                  return false;
+		case java.sql.Types.VARBINARY:               return false;
+		case java.sql.Types.LONGVARBINARY:           return false;
+		case java.sql.Types.NULL:                    return false;
+		case java.sql.Types.OTHER:                   return false;
+		case java.sql.Types.JAVA_OBJECT:             return false;
+		case java.sql.Types.DISTINCT:                return false;
+		case java.sql.Types.STRUCT:                  return false;
+		case java.sql.Types.ARRAY:                   return false;
+		case java.sql.Types.BLOB:                    return false;
+		case java.sql.Types.CLOB:                    return false;
+		case java.sql.Types.REF:                     return false;
+		case java.sql.Types.DATALINK:                return false;
+		case java.sql.Types.BOOLEAN:                 return false;
+
+	    //------------------------- JDBC 4.0 -----------------------------------
+	    case java.sql.Types.ROWID:                   return false;
+	    case java.sql.Types.NCHAR:                   return false;
+	    case java.sql.Types.NVARCHAR:                return false;
+	    case java.sql.Types.LONGNVARCHAR:            return false;
+	    case java.sql.Types.NCLOB:                   return false;
+	    case java.sql.Types.SQLXML:                  return false;
+
+	    //--------------------------JDBC 4.2 -----------------------------
+	    case java.sql.Types.REF_CURSOR:              return false;
+	    case java.sql.Types.TIME_WITH_TIMEZONE:      return false;
+	    case java.sql.Types.TIMESTAMP_WITH_TIMEZONE: return false;
+
+		default:
+			_logger.error(getName() + ": Unknow JDBC datatype, in xxx_isSummarizableForJdbcType().");
+			return false;
+		}
+	}
+	
+	//-------------------------------------------------------
+	// END: Aggregation 
+	//-------------------------------------------------------
 }

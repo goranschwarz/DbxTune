@@ -4105,9 +4105,21 @@ public class PersistWriterJdbc
 				// How long the sample was for, in Milliseconds
 				pstmt.setInt(col++, cm.getLastSampleInterval());
 
-				// How long the sample was for, in Milliseconds
-				pstmt.setInt(col++, cm.isNewDeltaOrRateRow(r) ? 1 : 0);
+				// is-diff-or-rate row 
+//				pstmt.setInt(col++, cm.isNewDeltaOrRateRow(r) ? 1 : 0);
 
+				// set "CmRowState"
+				int cmRowState = 0;
+
+				if (cm.isNewDeltaOrRateRow(r))
+					cmRowState |= CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW; // == 1  bitwise
+
+				if (cm.isAggregateRow(r))
+					cmRowState |= CountersModel.ROW_STATE__IS_AGGREGATED_ROW; // == 2  bitwise
+
+				pstmt.setInt(col++, cmRowState);
+
+				
 //if (r==0) System.out.println("PersistWriterJdbc: save(): tabName="+StringUtil.left(tabName, 30)+", getLastSampleInterval()="+cm.getLastSampleInterval()+", getSampleInterval()="+cm.getSampleInterval());
 				
 				// loop all columns

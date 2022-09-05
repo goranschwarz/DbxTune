@@ -133,7 +133,8 @@ extends SqlServerAbstract
 			rstm.removeColumnNoCase("SessionStartTime");
 			rstm.removeColumnNoCase("SessionSampleTime");
 			rstm.removeColumnNoCase("CmSampleMs");
-			rstm.removeColumnNoCase("CmNewDiffRateRow");
+			rstm.removeColumnNoCase("CmNewDiffRateRow");  // This was changed into "CmRowState"
+			rstm.removeColumnNoCase("CmRowState");
 			rstm.removeColumnNoCase("pageCountDiff");
 			rstm.removeColumnNoCase("rowCountDiff");
 

@@ -103,6 +103,7 @@ import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.decorator.Highlighter;
 import org.jdesktop.swingx.decorator.HighlighterFactory;
+import org.jdesktop.swingx.decorator.IconHighlighter;
 import org.jdesktop.swingx.decorator.PainterHighlighter;
 import org.jdesktop.swingx.painter.AbstractPainter;
 import org.jdesktop.swingx.renderer.PainterAware;
@@ -113,6 +114,7 @@ import com.asetune.Version;
 import com.asetune.cm.CmToolTipSupplierDefault;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.CountersModel.AggregationType;
 import com.asetune.gui.swing.ColumnHeaderPropsEntry;
 import com.asetune.gui.swing.DockUndockManagement;
 import com.asetune.gui.swing.EmptyTableModel;
@@ -278,6 +280,7 @@ implements
 
 //	private static final Color NEW_DELTA_OR_RATE_ROW_COLOR = new Color(152,251,152); // Pale Green
 	private static final Color NEW_DELTA_OR_RATE_ROW_COLOR = new Color(102,205,170); // Medium Aquamarine
+	private static final Color AGGREGATED_ROW_COLOR        = new Color(222, 246, 250); // Light blue
 
 	// -------------------------------------------------
 
@@ -2719,6 +2722,69 @@ implements
 		_dataTable.addHighlighter(new HighlighterDiffData(_highligtIfDelta)); 
 		_dataTable.addHighlighter(new HighlighterPctData(_highligtIfPct));
 		_dataTable.addHighlighter(new HighlighterNewDeltaOrRateData(_highligtIfNewDeltaOrRateRow));
+
+		if (_cm.getAggregateColumns() != null)
+		{
+			_dataTable.addHighlighter(new HighlighterAggregateRow(_highligtIfAggregateRow));
+
+			// ICON for SUM Aggregated Columns
+			_dataTable.addHighlighter( new IconHighlighter(new HighlightPredicate()
+			{
+				@Override
+				public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+				{
+					CountersModel cm = _cm;
+					if ( !_tailMode )
+						cm = _cmDisplay;
+
+					if ( cm == null )                                return false;
+					if ( !cm.isDataInitialized() )                   return false;
+//					if (  cm.discardDiffHighlighterOnAbsTable() )    return false;
+//					if ( !cm.isAggregateRowEnabled() )               return false;
+					
+					if ( cm.isAggregateRow(adapter.convertRowIndexToModel(adapter.row)) )
+					{
+						Map<String, AggregationType> aggCols = cm.getAggregateColumns();
+						if (aggCols == null)
+							return false;
+						
+						AggregationType aggType = aggCols.get( adapter.getColumnName(adapter.convertColumnIndexToModel(adapter.column)) );
+						if (aggType != null && AggregationType.Agg.SUM.equals(aggType.getAggregationType()))
+							return true;
+					}
+					return false;
+				}
+			}, SwingUtils.readImageIcon(Version.class, "images/highlighter_aggregate_sum.png")));
+			
+			// ICON for AVG Aggregated Columns
+			_dataTable.addHighlighter( new IconHighlighter(new HighlightPredicate()
+			{
+				@Override
+				public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+				{
+					CountersModel cm = _cm;
+					if ( !_tailMode )
+						cm = _cmDisplay;
+
+					if ( cm == null )                                return false;
+					if ( !cm.isDataInitialized() )                   return false;
+//					if (  cm.discardDiffHighlighterOnAbsTable() )    return false;
+//					if ( !cm.isAggregateRowEnabled() )               return false;
+					
+					if ( cm.isAggregateRow(adapter.convertRowIndexToModel(adapter.row)) )
+					{
+						Map<String, AggregationType> aggCols = cm.getAggregateColumns();
+						if (aggCols == null)
+							return false;
+						
+						AggregationType aggType = aggCols.get( adapter.getColumnName(adapter.convertColumnIndexToModel(adapter.column)) );
+						if (aggType != null && AggregationType.Agg.AVG.equals(aggType.getAggregationType()))
+							return true;
+					}
+					return false;
+				}
+			}, SwingUtils.readImageIcon(Version.class, "images/highlighter_aggregate_avg.png")));
+		}
 		
 
 
@@ -4414,6 +4480,22 @@ implements
 			return cm.isNewDeltaOrRateRow(adapter.convertRowIndexToModel(adapter.row));
 		}
 	};
+	private HighlightPredicate _highligtIfAggregateRow = new HighlightPredicate()
+	{
+		@Override
+		public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+		{
+			CountersModel cm = _cm;
+			if ( !_tailMode )
+				cm = _cmDisplay;
+
+			if ( cm == null )                                return false;
+			if ( !cm.isDataInitialized() )                   return false;
+//			if (  cm.discardDiffHighlighterOnAbsTable() )    return false;
+//			if ( !cm.isAggregateRowEnabled() )               return false;
+			return cm.isAggregateRow(adapter.convertRowIndexToModel(adapter.row));
+		}
+	};
 //	private Highlighter[] _highliters = { 
 //			new HighlighterDiffData(_highligtIfDelta), 
 //			new HighlighterPctData(_highligtIfPct)
@@ -4457,6 +4539,22 @@ implements
 			return comp;
 		}
 	}
+	
+	private static class HighlighterAggregateRow extends AbstractHighlighter
+	{
+		public HighlighterAggregateRow(HighlightPredicate predicate)
+		{
+			super(predicate);
+		}
+
+		@Override
+		protected Component doHighlight(Component comp, ComponentAdapter adapter)
+		{
+			comp.setBackground(AGGREGATED_ROW_COLOR);
+			return comp;
+		}
+	}
+	
 
 //	private static class HighlighterPctData extends AbstractHighlighter
 //	{

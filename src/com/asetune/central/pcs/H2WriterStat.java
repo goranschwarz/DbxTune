@@ -508,9 +508,9 @@ public class H2WriterStat
 	}
 
 	/** Create a HTML Image, with a chart that shows: 1, 5, 15, 30 and 60 minutes values */
-	private String createChart(String groupName)
+	private String createChart(String groupName, String label)
 	{
-		String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("Adjusted Load Average (1 hour)", // Note make the chart on 1 hour to see more info
+		String htmlChartImage = MovingAverageChart.getChartAsHtmlImage(label, // Note make the chart on 1 hour to see more info
 				MovingAverageCounterManager.getInstance(groupName, "1Min",  60),
 				MovingAverageCounterManager.getInstance(groupName, "5Min",  60),
 				MovingAverageCounterManager.getInstance(groupName, "15Min", 60),
@@ -527,7 +527,8 @@ public class H2WriterStat
 		Configuration conf = Configuration.getCombinedConfiguration();
 		AlarmHandler ah = AlarmHandler.getInstance();
 		
-		String groupName = "H2WriterStat";
+		String groupName1 = "H2WriterStat";
+		String groupName2 = "H2WriterStat-Adjusted";
 
 		double loadAverage_1m_threshold          = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverage1m,          DEFAULT_AlarmOsLoadAverage1m);
 		double loadAverage_5m_threshold          = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverage5m,          DEFAULT_AlarmOsLoadAverage5m);
@@ -570,12 +571,18 @@ public class H2WriterStat
 		}
 
         // Add counters to a in-memory-storage, so we can "graph" them on Alarms
-        MovingAverageCounterManager.getInstance(groupName, "1Min",  60).add(_osLoadAverage1min);
-        MovingAverageCounterManager.getInstance(groupName, "5Min",  60).add(_osLoadAverage5min);
-        MovingAverageCounterManager.getInstance(groupName, "15Min", 60).add(_osLoadAverage15min);
-        MovingAverageCounterManager.getInstance(groupName, "30Min", 60).add(_osLoadAverage30min);
-        MovingAverageCounterManager.getInstance(groupName, "60Min", 60).add(_osLoadAverage60min);
+        MovingAverageCounterManager.getInstance(groupName1, "1Min",  60).add(_osLoadAverage1min);
+        MovingAverageCounterManager.getInstance(groupName1, "5Min",  60).add(_osLoadAverage5min);
+        MovingAverageCounterManager.getInstance(groupName1, "15Min", 60).add(_osLoadAverage15min);
+        MovingAverageCounterManager.getInstance(groupName1, "30Min", 60).add(_osLoadAverage30min);
+        MovingAverageCounterManager.getInstance(groupName1, "60Min", 60).add(_osLoadAverage60min);
 
+        MovingAverageCounterManager.getInstance(groupName2, "1Min",  60).add(_osLoadAverageAdjusted1min);
+        MovingAverageCounterManager.getInstance(groupName2, "5Min",  60).add(_osLoadAverageAdjusted5min);
+        MovingAverageCounterManager.getInstance(groupName2, "15Min", 60).add(_osLoadAverageAdjusted15min);
+        MovingAverageCounterManager.getInstance(groupName2, "30Min", 60).add(_osLoadAverageAdjusted30min);
+        MovingAverageCounterManager.getInstance(groupName2, "60Min", 60).add(_osLoadAverageAdjusted60min);
+        
 		//---------------------------------------------
 		// Below is NORMAL Load Average, meaning: LoadAverage over ALL CPU's
 		//---------------------------------------------
@@ -586,7 +593,7 @@ public class H2WriterStat
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_1_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
 			ae.setTimeToLive(timeToLive);
-			ae.setExtendedDescription(null, createChart(groupName));
+			ae.setExtendedDescription(null, createChart(groupName1, "Load Average (1 hour)"));
 			ah.addAlarm(ae);
 		}
 
@@ -596,7 +603,7 @@ public class H2WriterStat
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_5_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
 			ae.setTimeToLive(timeToLive);
-			ae.setExtendedDescription(null, createChart(groupName));
+			ae.setExtendedDescription(null, createChart(groupName1, "Load Average (1 hour)"));
 			ah.addAlarm(ae);
 		}
 
@@ -606,7 +613,7 @@ public class H2WriterStat
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_15_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
 			ae.setTimeToLive(timeToLive);
-			ae.setExtendedDescription(null, createChart(groupName));
+			ae.setExtendedDescription(null, createChart(groupName1, "Load Average (1 hour)"));
 			ah.addAlarm(ae);
 		}
 
@@ -616,7 +623,7 @@ public class H2WriterStat
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_30_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
 			ae.setTimeToLive(timeToLive);
-			ae.setExtendedDescription(null, createChart(groupName));
+			ae.setExtendedDescription(null, createChart(groupName1, "Load Average (1 hour)"));
 			ah.addAlarm(ae);
 		}
 
@@ -626,7 +633,7 @@ public class H2WriterStat
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_60_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
 			ae.setTimeToLive(timeToLive);
-			ae.setExtendedDescription(null, createChart(groupName));
+			ae.setExtendedDescription(null, createChart(groupName1, "Load Average (1 hour)"));
 			ah.addAlarm(ae);
 		}
 
@@ -642,6 +649,7 @@ public class H2WriterStat
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverageAdjusted(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverageAdjusted.RangeType.RANGE_1_MINUTE, _osLoadAverageAdjusted1min, _osLoadAverageAdjusted5min, _osLoadAverageAdjusted15min, _osLoadAverageAdjusted30min, _osLoadAverageAdjusted60min);
 			ae.setTimeToLive(timeToLive);
+			ae.setExtendedDescription(null, createChart(groupName2, "Adjusted Load Average (1 hour)"));
 			ah.addAlarm(ae);
 		}
 
@@ -651,6 +659,7 @@ public class H2WriterStat
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverageAdjusted(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverageAdjusted.RangeType.RANGE_5_MINUTE, _osLoadAverageAdjusted1min, _osLoadAverageAdjusted5min, _osLoadAverageAdjusted15min, _osLoadAverageAdjusted30min, _osLoadAverageAdjusted60min);
 			ae.setTimeToLive(timeToLive);
+			ae.setExtendedDescription(null, createChart(groupName2, "Adjusted Load Average (1 hour)"));
 			ah.addAlarm(ae);
 		}
 
@@ -660,6 +669,7 @@ public class H2WriterStat
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverageAdjusted(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverageAdjusted.RangeType.RANGE_15_MINUTE, _osLoadAverageAdjusted1min, _osLoadAverageAdjusted5min, _osLoadAverageAdjusted15min, _osLoadAverageAdjusted30min, _osLoadAverageAdjusted60min);
 			ae.setTimeToLive(timeToLive);
+			ae.setExtendedDescription(null, createChart(groupName2, "Adjusted Load Average (1 hour)"));
 			ah.addAlarm(ae);
 		}
 
@@ -669,6 +679,7 @@ public class H2WriterStat
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverageAdjusted(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverageAdjusted.RangeType.RANGE_30_MINUTE, _osLoadAverageAdjusted1min, _osLoadAverageAdjusted5min, _osLoadAverageAdjusted15min, _osLoadAverageAdjusted30min, _osLoadAverageAdjusted60min);
 			ae.setTimeToLive(timeToLive);
+			ae.setExtendedDescription(null, createChart(groupName2, "Adjusted Load Average (1 hour)"));
 			ah.addAlarm(ae);
 		}
 
@@ -678,6 +689,7 @@ public class H2WriterStat
 		{
 			AlarmEvent ae = new AlarmEventOsLoadAverageAdjusted(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverageAdjusted.RangeType.RANGE_60_MINUTE, _osLoadAverageAdjusted1min, _osLoadAverageAdjusted5min, _osLoadAverageAdjusted15min, _osLoadAverageAdjusted30min, _osLoadAverageAdjusted60min);
 			ae.setTimeToLive(timeToLive);
+			ae.setExtendedDescription(null, createChart(groupName2, "Adjusted Load Average (1 hour)"));
 			ah.addAlarm(ae);
 		}
 	}

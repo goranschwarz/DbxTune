@@ -31,6 +31,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
+import com.asetune.cm.CountersModel;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
@@ -143,6 +144,19 @@ extends SqlServerAbstract
 			return;
 		}
 
+		//  SQL for: only records that has been diff calculations (not first time seen, some ASE Versions has a bug that do not clear counters on reuse)
+		String sql_and_skipNewOrDiffRateRows = "  and [CmNewDiffRateRow] = 0 \n"; // This is the "old" way... and used for backward compatibility
+//		String sql_and_onlyNewOrDiffRateRows = "  and [CmNewDiffRateRow] = 1 \n"; // This is the "old" way... and used for backward compatibility
+		if (dummyRstm.hasColumn("CmRowState")) // New column name for 'CmNewDiffRateRow' (which is a bitwise state column)
+		{
+			// the below will produce for H2:     and  BITAND([CmRowState], 1) = ???   
+			//                        for OTHERS: and  ([CmRowState] & 1) = ???
+			sql_and_skipNewOrDiffRateRows = "  and " + conn.toBitAnd("[CmRowState]", CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW) + " = 0 \n";
+//			sql_and_onlyNewOrDiffRateRows = "  and " + conn.toBitAnd("[CmRowState]", CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW) + " = " + CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW + " \n";
+		}
+//FIXME; double check the code for "CmNewDiffRateRow and CmRowState"
+
+		
 //		RS> Col# Label                JDBC Type Name           Guessed DBMS type Source Table
 //		RS> ---- -------------------- ------------------------ ----------------- ------------
 //		RS> 1    DbName               java.sql.Types.NVARCHAR  nvarchar(128)     -none-      
@@ -322,7 +336,8 @@ extends SqlServerAbstract
 //			    + "    ,max([SqlText])                         as [SqlText] \n"
 //			    + "    ,max([" + col_SqlText +"])                    as [SqlText] \n"
 				+ "from [CmExecProcedureStats_diff] \n"
-				+ "where [CmNewDiffRateRow] = 0 -- only records that has been diff calculations (not first time seen, when it swaps in/out due to execution every x minute) \n"
+				+ "where 1 = 1 \n"
+				+ sql_and_skipNewOrDiffRateRows // [CmNewDiffRateRow] = 0 -- only records that has been diff calculations (not first time seen, when it swaps in/out due to execution every x minute)
 				+ "  and [execution_count] > 0 \n"
 //				+ "  and [AvgServ_ms] > " + _aboveServiceTime + " \n"
 //				+ "  and [TotalIOs]   > " + _aboveTotalIos    + " \n"
@@ -330,7 +345,6 @@ extends SqlServerAbstract
 				+ "group by [DbName], [SchemaName], [ObjectName] \n"
 				+ "order by " + orderByCol + " desc \n"
 			    + "";
-		
 		
 		_shortRstm = executeQuery(conn, sql, false, "CmExecProcedureStats");
 		if (_shortRstm == null)

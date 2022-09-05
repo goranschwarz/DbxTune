@@ -1876,15 +1876,21 @@ implements Runnable, ConnectionProvider
 
 			int     startColPos = 5;
 			boolean hasNewDiffRateRowCol = false;
+			boolean hasCmRowStateCol = false;
 
 			// Backward compatibility... for older recordings...
 			// A new column 'CmNewDiffRateRow' was added to all ABS/RATE/DIFF tables
 			// If this column exists, inrement the start position
 			String checkCol = rsmd.getColumnLabel(startColPos);
-			if ("CmNewDiffRateRow".equalsIgnoreCase(checkCol))
+			if ("CmNewDiffRateRow".equalsIgnoreCase(checkCol)) // old column (but lets be backward compatible 
 			{
 				startColPos++;
 				hasNewDiffRateRowCol = true;
+			}
+			else if ("CmRowState".equalsIgnoreCase(checkCol)) // CmRowState: Contains (bitwise): "DiffRateRow=1", "isAggregatedRow=2"
+			{
+				startColPos++;
+				hasCmRowStateCol = true;
 			}
 			
 			// Get headers / colNames
@@ -1910,6 +1916,7 @@ implements Runnable, ConnectionProvider
 				Timestamp sampleTime        = rs.getTimestamp(3);
 				int       sampleMs          = rs.getInt(4);
 				int       newDiffRateRow    = hasNewDiffRateRowCol ? rs.getInt(5) : 0;
+				int       cmRowState        = hasCmRowStateCol     ? rs.getInt(5) : 0;
 
 //				_lastKnowSessionStartTime = sessionStartTime;
 				
@@ -1917,7 +1924,17 @@ implements Runnable, ConnectionProvider
 				cm.setSampleTimeHead(sessionSampleTime);
 				cm.setSampleTime(sampleTime);
 				cm.setSampleInterval(sampleMs);
-				cm.setNewDeltaOrRateRow(row, newDiffRateRow>0);
+
+				// Set "is-new-ord-delta-row" (the first check "hasNewDiffRateRowCol" is for backward compatibility)
+				if (hasNewDiffRateRowCol)
+					cm.setNewDeltaOrRateRow(row, newDiffRateRow > 0);
+				else if (hasCmRowStateCol)
+					cm.setNewDeltaOrRateRow(row, ((cmRowState & CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW) == CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW));
+				
+				// Set "is-aggregated-row" (there can only be ONE aggregated row)
+				if (hasCmRowStateCol && (cmRowState & CountersModel.ROW_STATE__IS_AGGREGATED_ROW) == CountersModel.ROW_STATE__IS_AGGREGATED_ROW)
+					cm.setAggregatedRowId(row);
+
 				
 				for (int c=startColPos,col=0; c<=cols; c++,col++)
 				{

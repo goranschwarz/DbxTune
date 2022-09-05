@@ -221,7 +221,7 @@ extends CountersModel
 		setCounterController(counterController);
 		setGuiController(guiController);
 		
-		addTrendGraphs();
+//		addTrendGraphs();
 		
 		CounterSetTemplates.register(this);
 	}
@@ -254,37 +254,37 @@ extends CountersModel
 	private Set<String> _alreadyParsedQueryId_cache = new HashSet<>();
 
 
-	public static final String GRAPH_NAME_SQL_STATEMENTS = "SqlStatements";
+//	public static final String GRAPH_NAME_SQL_STATEMENTS = "SqlStatements";
 	
 
-	private void addTrendGraphs()
-	{
-		addTrendGraph(GRAPH_NAME_SQL_STATEMENTS,
-			"SQL Statement Calls", 	                           // Menu CheckBox text
-			"SQL Statement Calls per second ("+SHORT_NAME+")", // Graph Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
-			new String[] {"calls"}, 
-			LabelType.Static, 
-			TrendGraphDataPoint.Category.OPERATIONS,
-			false, // is Percent Graph
-			false, // visible at start
-			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-			-1);   // minimum height
-	}
-
-	@Override
-	public void updateGraphData(TrendGraphDataPoint tgdp)
-	{
-		if (GRAPH_NAME_SQL_STATEMENTS.equals(tgdp.getName()))
-		{
-			Double[] arr = new Double[1];
-
-			arr[0] = this.getRateValueSum("calls");
-
-			// Set the values
-			tgdp.setDataPoint(this.getTimestamp(), arr);
-		}
-	}
+//	private void addTrendGraphs()
+//	{
+//		addTrendGraph(GRAPH_NAME_SQL_STATEMENTS,
+//			"SQL Statement Calls", 	                           // Menu CheckBox text
+//			"SQL Statement Calls per second ("+SHORT_NAME+")", // Graph Label 
+//			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+//			new String[] {"calls"}, 
+//			LabelType.Static, 
+//			TrendGraphDataPoint.Category.OPERATIONS,
+//			false, // is Percent Graph
+//			false, // visible at start
+//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//			-1);   // minimum height
+//	}
+//
+//	@Override
+//	public void updateGraphData(TrendGraphDataPoint tgdp)
+//	{
+//		if (GRAPH_NAME_SQL_STATEMENTS.equals(tgdp.getName()))
+//		{
+//			Double[] arr = new Double[1];
+//
+//			arr[0] = this.getRateValueSum("calls");
+//
+//			// Set the values
+//			tgdp.setDataPoint(this.getTimestamp(), arr);
+//		}
+//	}
 
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
@@ -581,187 +581,132 @@ extends CountersModel
 	 *       We need to check/create the extension before polling data from it!
 	 */
 	@Override
-	protected boolean beforeRefreshGetData(DbxConnection conn) throws Exception
+	public boolean beforeRefreshGetData(DbxConnection conn) throws Exception
 	{
-		String sql = "SELECT 1 FROM pg_catalog.pg_class c WHERE c.relname = 'pg_stat_statements' AND c.relkind = 'v' ";
-		
-		// Check if 'pg_stat_statements' exists... 
-		// and possibly create it...
-		boolean exists = false;
-		try( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
-		{
-			while(rs.next())
-				exists = true;
-		}
-		
-		if ( ! exists )
-		{
-			_logger.warn("When checking Counters Model '"+getName()+"', named '"+getDisplayName()+"' The table 'pg_stat_statements' do not exists.");
-
-			_logger.warn("Possible solution for 'pg_stat_statements': (1: check that file 'PG_INST_DIR/lib/pg_stat_statements.so' exists, if not install postgres contrib package), (2: check that config 'shared_preload_libraries' contains 'pg_stat_statements'), (3: optional: configure 'pg_stat_statements.max=10000', 'pg_stat_statements.track=all' in the config file and restart postgres), (4: execute: CREATE EXTENSION pg_stat_statements), (5: verify with: SELECT * FROM pg_stat_statements). or look at https://www.postgresql.org/docs/current/static/pgstatstatements.html");
-
-			boolean createExtension = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_createExtension, DEFAULT_createExtension);
-			if (createExtension)
-			{
-				_logger.info("AUTO-FIX: The table 'pg_stat_statements' did not exists... Trying to create it, this will simply work if you are authorized. to DISABLE the 'CREATE EXTENSION pg_stat_statements' set config '" + PROPKEY_createExtension + "=false'.");
-
-				try (Statement stmnt = conn.createStatement())
-				{
-					_logger.info("AUTO-FIX: Executing: CREATE EXTENSION pg_stat_statements");
-
-					stmnt.executeUpdate("CREATE EXTENSION pg_stat_statements");
-
-					_logger.info("AUTO-FIX: Success executing: CREATE EXTENSION pg_stat_statements");
-
-					// Check if the table is accessible after 'CREATE EXTENSION pg_stat_statements'
-					try( Statement stmnt2 = conn.createStatement(); ResultSet rs = stmnt.executeQuery("SELECT * FROM pg_stat_statements where dbid = -999"); )
-					{
-						while(rs.next())
-							; // just loop the RS, no rows will be found...
-						exists = true;
-					}
-					catch (SQLException exSelChk)
-					{
-						exists = false;
-						_logger.warn("AUTO-FIX: FAILED when checking table 'pg_stat_statements' after 'CREATE EXTENSION pg_stat_statements'. Caught: " + exSelChk);
-						
-						// Possibly turn off 'AUTO-FIX' since it failed... until next restart (hence the System.setProperty())
-						//System.setProperty(PROPKEY_createExtension, "false"); 
-					}
-				}
-				catch(SQLException exCrExt)
-				{
-					exists = false;
-					_logger.warn("AUTO-FIX: FAILED when executing 'CREATE EXTENSION pg_stat_statements'. Caught: " + exCrExt);
-
-					// Possibly turn off 'AUTO-FIX' since it failed... until next restart (hence the System.setProperty())
-					//System.setProperty(PROPKEY_createExtension, "false"); 
-				}
-			}
-		}
-		
-		return exists;
+		return CmPgStatementsUtils.beforeRefreshGetData(this, conn);
 	}
 
 	@Override
 	public boolean checkDependsOnOther(DbxConnection conn)
 	{
-		boolean isOk = false;
-		String  message = "";
-		
-		// Check if the table exists, since it's optional and needs to be installed
-		try
-		{
-			isOk = beforeRefreshGetData(conn);
-		}
-		catch (Exception ex)
-		{
-			isOk = false;
-			_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' The table 'pg_stat_statements' do not exists. This is an optional component. Caught: "+ex);
-			message = ex.getMessage();
-		}
+		return CmPgStatementsUtils.checkDependsOnOther(this, conn);
+	}
 
-		if (isOk)
-		{
-			_logger.info("Check dependencies SUCCESS: Table 'pg_stat_statements' exists when checking Counters Model '"+getName()+"'.");
-			return true;
-		}
-		
-		setActive(false, 
-				"The table 'pg_stat_statements' do not exists.\n"
-				+ "To enable this see: https://www.postgresql.org/docs/current/static/pgstatstatements.html\n"
-				+ "\n"
-				+ "Or possibly issue: CREATE EXTENSION pg_stat_statements \n"
-				+ "\n"
-				+ message);
-
-		TabularCntrPanel tcp = getTabPanel();
-		if (tcp != null)
-		{
-			tcp.setUseFocusableTips(true);
-			tcp.setToolTipText("<html>"
-					+ "The table 'pg_stat_statements' do not exists.<br>"
-					+ "To enable this see: https://www.postgresql.org/docs/current/static/pgstatstatements.html<br>"
-					+ "<br>"
-					+ "Or possibly issue: CREATE EXTENSION pg_stat_statements <br>"
-					+ "<br>"
-					+ message+"</html>");
-		}
-		
-		return false;
-	}	
+//	/**
+//	 * Called before <code>refreshGetData(conn)</code> where we can make various checks
+//	 * <p>
+//	 * Note: this is a special case since SIX is recreating the Postgres Server 
+//	 *       (every now and then) during the day/night...
+//	 *       We need to check/create the extension before polling data from it!
+//	 */
+//	@Override
+//	public boolean beforeRefreshGetData(DbxConnection conn) throws Exception
+//	{
+//		String sql = "SELECT 1 FROM pg_catalog.pg_class c WHERE c.relname = 'pg_stat_statements' AND c.relkind = 'v' ";
+//		
+//		// Check if 'pg_stat_statements' exists... 
+//		// and possibly create it...
+//		boolean exists = false;
+//		try( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
+//		{
+//			while(rs.next())
+//				exists = true;
+//		}
+//		
+//		if ( ! exists )
+//		{
+//			_logger.warn("When checking Counters Model '"+getName()+"', named '"+getDisplayName()+"' The table 'pg_stat_statements' do not exists.");
+//
+//			_logger.warn("Possible solution for 'pg_stat_statements': (1: check that file 'PG_INST_DIR/lib/pg_stat_statements.so' exists, if not install postgres contrib package), (2: check that config 'shared_preload_libraries' contains 'pg_stat_statements'), (3: optional: configure 'pg_stat_statements.max=10000', 'pg_stat_statements.track=all' in the config file and restart postgres), (4: execute: CREATE EXTENSION pg_stat_statements), (5: verify with: SELECT * FROM pg_stat_statements). or look at https://www.postgresql.org/docs/current/static/pgstatstatements.html");
+//
+//			boolean createExtension = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_createExtension, DEFAULT_createExtension);
+//			if (createExtension)
+//			{
+//				_logger.info("AUTO-FIX: The table 'pg_stat_statements' did not exists... Trying to create it, this will simply work if you are authorized. to DISABLE the 'CREATE EXTENSION pg_stat_statements' set config '" + PROPKEY_createExtension + "=false'.");
+//
+//				try (Statement stmnt = conn.createStatement())
+//				{
+//					_logger.info("AUTO-FIX: Executing: CREATE EXTENSION pg_stat_statements");
+//
+//					stmnt.executeUpdate("CREATE EXTENSION pg_stat_statements");
+//
+//					_logger.info("AUTO-FIX: Success executing: CREATE EXTENSION pg_stat_statements");
+//
+//					// Check if the table is accessible after 'CREATE EXTENSION pg_stat_statements'
+//					try( Statement stmnt2 = conn.createStatement(); ResultSet rs = stmnt.executeQuery("SELECT * FROM pg_stat_statements where dbid = -999"); )
+//					{
+//						while(rs.next())
+//							; // just loop the RS, no rows will be found...
+//						exists = true;
+//					}
+//					catch (SQLException exSelChk)
+//					{
+//						exists = false;
+//						_logger.warn("AUTO-FIX: FAILED when checking table 'pg_stat_statements' after 'CREATE EXTENSION pg_stat_statements'. Caught: " + exSelChk);
+//						
+//						// Possibly turn off 'AUTO-FIX' since it failed... until next restart (hence the System.setProperty())
+//						//System.setProperty(PROPKEY_createExtension, "false"); 
+//					}
+//				}
+//				catch(SQLException exCrExt)
+//				{
+//					exists = false;
+//					_logger.warn("AUTO-FIX: FAILED when executing 'CREATE EXTENSION pg_stat_statements'. Caught: " + exCrExt);
+//
+//					// Possibly turn off 'AUTO-FIX' since it failed... until next restart (hence the System.setProperty())
+//					//System.setProperty(PROPKEY_createExtension, "false"); 
+//				}
+//			}
+//		}
+//		
+//		return exists;
+//	}
 
 //	@Override
 //	public boolean checkDependsOnOther(DbxConnection conn)
 //	{
+//		boolean isOk = false;
+//		String  message = "";
+//		
 //		// Check if the table exists, since it's optional and needs to be installed
-//		try( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery("SELECT * FROM pg_stat_statements where dbid = -999"); )
+//		try
 //		{
-//			while(rs.next())
-//				;
-//			return true; // <<<<<<<---------- RETURN
+//			isOk = beforeRefreshGetData(conn);
 //		}
-//		catch (SQLException ex)
+//		catch (Exception ex)
 //		{
+//			isOk = false;
 //			_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' The table 'pg_stat_statements' do not exists. This is an optional component. Caught: "+ex);
-//
-//			// If the table do NOT exist... try to create it!
-//			if ((ex+"").contains("relation \"pg_stat_statements\" does not exist"))
-//			{
-//				_logger.warn("Possible solution for 'pg_stat_statements' errors: (1: check that file 'PG_INST_DIR/lib/pg_stat_statements.so' exists, if not install postgres contrib package), (2: check that config 'shared_preload_libraries' contains 'pg_stat_statements'), (3: optional: configure 'pg_stat_statements.max=10000', 'pg_stat_statements.track=all' in the config file and restart postgres), (4: execute: CREATE EXTENSION pg_stat_statements), (5: verify with: SELECT * FROM pg_stat_statements). or look at https://www.postgresql.org/docs/current/static/pgstatstatements.html");
-//
-//				boolean createExtension = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_createExtension, DEFAULT_createExtension);
-//				if (createExtension)
-//				{
-//					_logger.info("The table 'pg_stat_statements' did not exists... Trying to create it, this will simply work if you got enough authorization. to DISABLE the set config '" + PROPKEY_createExtension + "=false'.");
-//					try (Statement stmnt = conn.createStatement())
-//					{
-//						_logger.info("Executing: CREATE EXTENSION pg_stat_statements");
-//						stmnt.executeUpdate("CREATE EXTENSION pg_stat_statements");
-//
-//						_logger.info("Success when executing: CREATE EXTENSION pg_stat_statements");
-//
-//						// Check if the table exists, since it's optional and needs to be installed
-//						try( Statement stmnt2 = conn.createStatement(); ResultSet rs2 = stmnt.executeQuery("SELECT * FROM pg_stat_statements where dbid = -999"); )
-//						{
-//							while(rs2.next())
-//								;
-//							return true; // <<<<<<<---------- RETURN
-//						}
-//						catch (SQLException ex3)
-//						{
-//							_logger.warn("FAILED when checking table 'pg_stat_statements' after 'CREATE EXTENSION pg_stat_statements'. Caught: "+ex);
-//						}
-//					}
-//					catch(SQLException ex2)
-//					{
-//						_logger.warn("FAILED when executing 'CREATE EXTENSION pg_stat_statements'. Caught: " + ex2);
-//					}
-//				}
-//			}
-//
-//			setActive(false, 
-//					"The table 'pg_stat_statements' do not exists.\n"
-//					+ "To enable this see: https://www.postgresql.org/docs/current/static/pgstatstatements.html\n"
-//					+ "\n"
-//					+ "Or possibly issue: CREATE EXTENSION pg_stat_statements \n"
-//					+ "\n"
-//					+ ex.getMessage());
-//
-//			TabularCntrPanel tcp = getTabPanel();
-//			if (tcp != null)
-//			{
-//				tcp.setUseFocusableTips(true);
-//				tcp.setToolTipText("<html>"
-//						+ "The table 'pg_stat_statements' do not exists.<br>"
-//						+ "To enable this see: https://www.postgresql.org/docs/current/static/pgstatstatements.html<br>"
-//						+ "<br>"
-//						+ "Or possibly issue: CREATE EXTENSION pg_stat_statements <br>"
-//						+ "<br>"
-//						+ ex.getMessage()+"</html>");
-//			}
-//
-//			return false; // <<<<<<<---------- RETURN
+//			message = ex.getMessage();
 //		}
+//
+//		if (isOk)
+//		{
+//			_logger.info("Check dependencies SUCCESS: Table 'pg_stat_statements' exists when checking Counters Model '"+getName()+"'.");
+//			return true;
+//		}
+//		
+//		setActive(false, 
+//				"The table 'pg_stat_statements' do not exists.\n"
+//				+ "To enable this see: https://www.postgresql.org/docs/current/static/pgstatstatements.html\n"
+//				+ "\n"
+//				+ "Or possibly issue: CREATE EXTENSION pg_stat_statements \n"
+//				+ "\n"
+//				+ message);
+//
+//		TabularCntrPanel tcp = getTabPanel();
+//		if (tcp != null)
+//		{
+//			tcp.setUseFocusableTips(true);
+//			tcp.setToolTipText("<html>"
+//					+ "The table 'pg_stat_statements' do not exists.<br>"
+//					+ "To enable this see: https://www.postgresql.org/docs/current/static/pgstatstatements.html<br>"
+//					+ "<br>"
+//					+ "Or possibly issue: CREATE EXTENSION pg_stat_statements <br>"
+//					+ "<br>"
+//					+ message+"</html>");
+//		}
+//		
+//		return false;
 //	}	
 }

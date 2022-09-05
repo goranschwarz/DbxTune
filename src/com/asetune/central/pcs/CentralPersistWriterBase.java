@@ -840,7 +840,8 @@ implements ICentralPersistWriter
 				sbSql.append("   ,"+fill(rq+"SessionSampleTime"+lq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(rq+"CmSampleTime"     +lq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(rq+"CmSampleMs"       +lq,40)+" "+fill(getDatatype(conn, Types.INTEGER  ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(rq+"CmNewDiffRateRow" +lq,40)+" "+fill(getDatatype(conn, Types.TINYINT  ),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(rq+"CmNewDiffRateRow" +lq,40)+" "+fill(getDatatype(conn, Types.TINYINT  ),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(rq+"CmRowState"       +lq,40)+" "+fill(getDatatype(conn, Types.INTEGER  ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("\n");
 				
 				ResultSetMetaData rsmd = cm.getResultSetMetaData();
@@ -1204,7 +1205,8 @@ implements ICentralPersistWriter
 			sbSql.append(lq).append("SessionSampleTime").append(rq).append(", ");
 			sbSql.append(lq).append("CmSampleTime")     .append(rq).append(", ");
 			sbSql.append(lq).append("CmSampleMs")       .append(rq).append(", ");
-			sbSql.append(lq).append("CmNewDiffRateRow") .append(rq).append(", ");
+//			sbSql.append(lq).append("CmNewDiffRateRow") .append(rq).append(", ");
+			sbSql.append(lq).append("CmRowState")       .append(rq).append(", ");
 			
 			// Get ALL other column names from the CM
 //			int cols = cm.getColumnCount();

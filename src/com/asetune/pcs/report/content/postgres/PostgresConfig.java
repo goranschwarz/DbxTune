@@ -68,7 +68,7 @@ extends PostgresAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Postgres Server Configuration (origin: MonSessionDbmsConfig / pg_settings)";
+		return "File Locations Server Configuration (origin: MonSessionDbmsConfig / pg_settings)";
 	}
 
 	@Override

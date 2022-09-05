@@ -111,6 +111,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Prepared for some H2 upgrade. ver 2.0.202 or above: JDBC MetaData getTables() new table type 'TABLE' --> 'BASE TABLE'</LI>
 		<LI>H2 Central DB Copy was a bit adapted to be able to handle migration from older H2 versions (1.4) into H2 (2.1), this is mostly implemented in H2CentralDbCopy3</LI>
 		<LI>PersistWriterToHttpJson: Now writes Counter Data for 'CmActiveStatements' (to support sending/viewig Active SQL Statements in the WebUI</LI>
+		<LI>Changed PCS column 'CmNewDiffRateRow' to 'CmRowState', which now is a bit state field</LI>
+		<LI>Added the ability for a CM to add an Aggregated row (SUM or AVG)</LI>
+		<LI>Aggregated rows will be highlighted in GUI using a "light blue" background</LI>
+		<LI>On AlarmEventOsLoadAverage added charts for "Adjusted Load Average"</LI>
 
 		<LI>Daily Summary Report Changes
 			<UL>
@@ -663,6 +667,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmPgTables           </b> - New chart 'DeadRows' so we can follow number of dead rows for each database</LI>
 		<LI><b>CmPgTablesIo         </b> - Added columns 'cache_hit_pct', 'total_reads', 'all_blks_read', 'all_blks_hit'.</LI>
 		<LI><b>CmPgTablesIo         </b> - Added graphs 'CacheHit' and 'CacheReads'</LI>
+		<LI><b>CmPgStatementsSumDb  </b> - new collector: Statements by DB, with a bunch of graphs</LI>
 		<LI><b>View Configuration   </b> - added one extra, calculated column: "ValueInMb"</LI> 
 		<LI><b>DDL Lookup/Store     </b> - Extract trigger dependencies on inspected/saved tables</LI> 
 		<LI><b>Daily Summary Report </b> - Statements - tooltip and popup with the SQL Text</LI>
@@ -673,6 +678,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>Daily Summary Report </b> - For table information VIEW added: 'DDL Definition'</LI>
 		<LI><b>Daily Summary Report </b> - For table information TABLE added: 'Sample Time', 'DDL Info', 'Triggers DDL'</LI>
 		<LI><b>Daily Summary Report </b> - For table information INDEX added: 'Included Columns'</LI>
+		<LI><b>Daily Summary Report </b> - PostgresStatementsPerDb to see at a database level</LI>
 		<LI><b>DBMS Configurations  </b> - Added sanity checks for 'synchronous_commit', 'shared_buffers', 'effective_cache_size', 'shared_preload_libraries', 'random_page_cost'</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->

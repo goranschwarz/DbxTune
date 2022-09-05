@@ -172,6 +172,7 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		boolean has_backend_xmin       = false; // This was introduced in 9.4
 		boolean has_column__sent_lsn   = false; // This was introduced in 10.0
 		boolean has_column__reply_time = false; // This was introduced in 12.0 ???
 		
@@ -182,6 +183,7 @@ extends CountersModel
 				String checkSql = "select * from pg_stat_replication where 1=2";
 				ResultSetTableModel dummyRstm = ResultSetTableModel.executeQuery(conn, checkSql, "dummy");
 				
+				has_backend_xmin       = dummyRstm.hasColumn("backend_xmin");
 				has_column__sent_lsn   = dummyRstm.hasColumn("sent_lsn");
 				has_column__reply_time = dummyRstm.hasColumn("reply_time");
 			}
@@ -192,6 +194,9 @@ extends CountersModel
 		}
 		else
 		{
+			if (versionInfo.getLongVersion() >= Ver.ver(9,4))
+				has_backend_xmin = true;
+
 			if (versionInfo.getLongVersion() >= Ver.ver(10))
 				has_column__sent_lsn   = true;
 
@@ -199,7 +204,14 @@ extends CountersModel
 				has_column__reply_time = true;
 		}
 
+		// column: 'backend_xmin'
+		String backend_xmin = "";
+		if (has_backend_xmin)
+		{
+			backend_xmin = "    ,cast(backend_xmin     as varchar(30)) AS backend_xmin \n";
+		}
 		
+		// column: 'reply_time', 'reply_time_seconds'
 		String reply_time = "";
 		String reply_time_seconds = "";
 		if (has_column__reply_time)
@@ -219,7 +231,7 @@ extends CountersModel
 			    + "    ,cast(usesysid         as bigint)      AS usesysid \n"
 			    + "    ,cast(application_name as varchar(80)) AS application_name \n"
 			    + "    ,backend_start \n"
-			    + "    ,cast(backend_xmin     as varchar(30)) AS backend_xmin \n"
+			    + backend_xmin
 			    + "    ,cast(state            as varchar(80)) AS state \n"
 			    + "    ,cast(sync_state       as varchar(80)) AS sync_state \n"
 			    + "    ,(pg_xlog_location_diff(pg_current_xlog_location() ,sent_location   ) / 1024)::bigint as pending_kb \n"

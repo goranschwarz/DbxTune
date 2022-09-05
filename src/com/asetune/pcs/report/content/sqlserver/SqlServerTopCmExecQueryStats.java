@@ -33,6 +33,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
+import com.asetune.cm.CountersModel;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.DictCompression;
@@ -272,6 +273,19 @@ extends SqlServerAbstract
 			return;
 		}
 
+		//  SQL for: only records that has been diff calculations (not first time seen, some ASE Versions has a bug that do not clear counters on reuse)
+		String sql_and_skipNewOrDiffRateRows = "  and [CmNewDiffRateRow] = 0 \n"; // This is the "old" way... and used for backward compatibility
+//		String sql_and_onlyNewOrDiffRateRows = "  and [CmNewDiffRateRow] = 1 \n"; // This is the "old" way... and used for backward compatibility
+		if (dummyRstm.hasColumn("CmRowState")) // New column name for 'CmNewDiffRateRow' (which is a bitwise state column)
+		{
+			// the below will produce for H2:     and  BITAND([CmRowState], 1) = ???   
+			//                        for OTHERS: and  ([CmRowState] & 1) = ???
+			sql_and_skipNewOrDiffRateRows = "  and " + conn.toBitAnd("[CmRowState]", CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW) + " = 0 \n";
+//			sql_and_onlyNewOrDiffRateRows = "  and " + conn.toBitAnd("[CmRowState]", CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW) + " = " + CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW + " \n";
+		}
+//FIXME; double check the code for "CmNewDiffRateRow and CmRowState"
+
+		
 		String col_total_elapsed_time_ms__sum           = !dummyRstm.hasColumnNoCase("total_elapsed_time"             ) ? "" : "    ,sum([total_elapsed_time]/1000.0)       as [total_elapsed_time_ms__sum]           \n"; 
 		String col_total_worker_time_ms__sum            = !dummyRstm.hasColumnNoCase("total_worker_time"              ) ? "" : "    ,sum([total_worker_time]/1000.0)        as [total_worker_time_ms__sum]            \n"; 
 		String col_total_est_wait_time_ms__sum          = !dummyRstm.hasColumnNoCase("total_elapsed_time"             ) ? "" : "    ,sum([total_elapsed_time]/1000.0) - sum([total_worker_time]/1000.0) as [total_est_wait_time_ms__sum]   \n"; 
@@ -487,7 +501,8 @@ extends SqlServerAbstract
 			    + "    ,cast('' as varchar(30))                as [Duration] \n"
 
 				+ "from [CmExecQueryStats_diff] \n"
-				+ "where [CmNewDiffRateRow] = 0 -- only records that has been diff calculations (not first time seen, when it swaps in/out due to execution every x minute) \n"
+				+ "where 1 = 1 \n"
+				+ sql_and_skipNewOrDiffRateRows // [CmNewDiffRateRow] = 0 -- only records that has been diff calculations (not first time seen, when it swaps in/out due to execution every x minute)
 				+ "  and [execution_count] > 0 \n"
 //				+ "  and [AvgServ_ms] > " + _aboveServiceTime + " \n"
 //				+ "  and [TotalIOs]   > " + _aboveTotalIos    + " \n"

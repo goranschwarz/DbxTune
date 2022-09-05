@@ -108,7 +108,8 @@ extends SqlServerAbstract
 		_shortRstm.removeColumnNoCase("SessionSampleTime");
 //		_shortRstm.removeColumnNoCase("CmSampleTime");
 		_shortRstm.removeColumnNoCase("CmSampleMs");
-		_shortRstm.removeColumnNoCase("CmNewDiffRateRow");
+		_shortRstm.removeColumnNoCase("CmNewDiffRateRow");  // This was changed into "CmRowState"
+		_shortRstm.removeColumnNoCase("CmRowState");
 		
 		// Describe the table
 		setSectionDescription(_shortRstm);

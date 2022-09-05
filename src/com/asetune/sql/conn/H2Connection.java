@@ -262,4 +262,16 @@ public class H2Connection extends DbxConnection
 	{
 		return bool ? "TRUE" : "FALSE";
 	}
+
+	@Override
+	/**
+	 * Generate SQL String for bitwise AND operation
+	 * @param x1   Expression 1 
+	 * @param x2   Expression 1
+	 * @return BITAND(x1, x2)
+	 */
+	public String toBitAnd(String x1, String x2)
+	{
+		return "BITAND(" + x1 + ", " + x2 + ")";
+	}
 }

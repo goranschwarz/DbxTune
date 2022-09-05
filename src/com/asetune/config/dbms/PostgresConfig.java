@@ -810,7 +810,7 @@ extends DbmsConfigAbstract
 		entry = _configMap.get(cfgName);
 		if (entry != null)
 		{
-			if ( ! entry.configName.contains("pg_stat_statements") )
+			if ( ! entry.configValue.contains("pg_stat_statements") )
 			{
 				String key = "DbmsConfigIssue." + srvName + ".pg_settings." + cfgToPropName(cfgName) + ".not_available";
 

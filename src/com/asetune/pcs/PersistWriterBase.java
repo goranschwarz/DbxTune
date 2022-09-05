@@ -1071,7 +1071,8 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(lq+"SessionSampleTime"+rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"CmSampleTime"     +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"CmSampleMs"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER  ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"CmNewDiffRateRow" +rq,40)+" "+fill(getDatatype(conn, Types.TINYINT  ),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(lq+"CmNewDiffRateRow" +rq,40)+" "+fill(getDatatype(conn, Types.TINYINT  ),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"CmRowState"       +rq,40)+" "+fill(getDatatype(conn, Types.TINYINT  ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("\n");
 				
 				ResultSetMetaData rsmd = cm.getResultSetMetaData();
@@ -1084,7 +1085,8 @@ public abstract class PersistWriterBase
 				int cols = rsmd.getColumnCount();
 				for (int c=1; c<=cols; c++) 
 				{
-					boolean isDeltaOrPct = false;
+					boolean isAggregatedCol = cm.isAggregateRow(c-1);
+					boolean isDeltaOrPct    = false;
 					if (type == DIFF)
 					{
 						if ( cm.isPctColumn(c-1) )
@@ -1101,7 +1103,7 @@ public abstract class PersistWriterBase
 					String colName = rsmd.getColumnLabel(c);
 
 					// Check if it's a 'Dictionary Compressed Column'
-					if ( DictCompression.isEnabled() && cm.isDictionaryCompressedColumn(colName) &&  ! isDeltaOrPct )
+					if ( DictCompression.isEnabled() && cm.isDictionaryCompressedColumn(colName) &&  ! (isDeltaOrPct || isAggregatedCol) )
 					{
 						DictCompression dcc = DictCompression.getInstance();
 
@@ -1569,7 +1571,8 @@ public abstract class PersistWriterBase
 			sbSql.append(lq).append("SessionSampleTime").append(rq).append(", ");
 			sbSql.append(lq).append("CmSampleTime")     .append(rq).append(", ");
 			sbSql.append(lq).append("CmSampleMs")       .append(rq).append(", ");
-			sbSql.append(lq).append("CmNewDiffRateRow") .append(rq).append(", ");
+//			sbSql.append(lq).append("CmNewDiffRateRow") .append(rq).append(", ");
+			sbSql.append(lq).append("CmRowState")       .append(rq).append(", ");
 			
 			// Get ALL other column names from the CM
 //			int cols = cm.getColumnCount();

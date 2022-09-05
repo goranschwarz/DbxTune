@@ -48,6 +48,7 @@ import com.asetune.cm.postgres.CmPgIndexesIo;
 import com.asetune.cm.postgres.CmPgReplication;
 import com.asetune.cm.postgres.CmPgSequencesIo;
 import com.asetune.cm.postgres.CmPgStatements;
+import com.asetune.cm.postgres.CmPgStatementsSumDb;
 import com.asetune.cm.postgres.CmPgTableSize;
 import com.asetune.cm.postgres.CmPgTables;
 import com.asetune.cm.postgres.CmPgTablesIo;
@@ -117,6 +118,7 @@ extends CounterControllerAbstract
 		CmPgFunctions       .create(counterController, guiController);
 		CmPgSequencesIo     .create(counterController, guiController);
 		CmPgStatements      .create(counterController, guiController);
+		CmPgStatementsSumDb .create(counterController, guiController);
 		CmPgTableSize       .create(counterController, guiController);
 
 		// Cache

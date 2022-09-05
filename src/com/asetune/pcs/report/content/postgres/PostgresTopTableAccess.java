@@ -123,7 +123,7 @@ extends PostgresAbstract
 	@Override
 	public String[] getMandatoryTables()
 	{
-		return new String[] { "CmPgTablesIo_diff" };
+		return new String[] { "CmPgTablesIo_diff", "CmPgTables_diff" };
 	}
 
 	@Override

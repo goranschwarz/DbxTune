@@ -195,7 +195,8 @@ public class AseSlowCmDeviceIo extends AseAbstract
 			
 			_shortRstm.removeColumnNoCase("SessionStartTime");
 			_shortRstm.removeColumnNoCase("SessionSampleTime");
-			_shortRstm.removeColumnNoCase("CmNewDiffRateRow");
+			_shortRstm.removeColumnNoCase("CmNewDiffRateRow");  // This was changed into "CmRowState"
+			_shortRstm.removeColumnNoCase("CmRowState");
 
 //			_shortRstm.setColumnOrder("aaa", "bbb", "ccc", "ddd", "eee");
 

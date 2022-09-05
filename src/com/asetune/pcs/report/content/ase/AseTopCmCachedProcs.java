@@ -36,6 +36,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
+import com.asetune.cm.CountersModel;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
@@ -253,7 +254,26 @@ public class AseTopCmCachedProcs extends AseAbstract
 		try	{ asePageSize = getAsePageSizeFromMonDdlStorage(conn); }
 		catch (SQLException ex) { }
 		int asePageSizeDivider = 1024 * 1024 / asePageSize; // 2k->512, 4k->256, 8k=128, 16k=64
-		
+
+		// Get a dummy "metadata" for the table (so we can check what columns exists)
+		String dummySql = "select * from [CmCachedProcs_diff] where 1 = 2";
+		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, true, "metadata");
+
+		//  SQL for: only records that has been diff calculations (not first time seen, some ASE Versions has a bug that do not clear counters on reuse)
+		String sql_and_skipNewOrDiffRateRows = "  and [CmNewDiffRateRow] = 0 \n"; // This is the "old" way... and used for backward compatibility
+		String sql_and_onlyNewOrDiffRateRows = "  and [CmNewDiffRateRow] = 1 \n"; // This is the "old" way... and used for backward compatibility
+//		String sql_and_skipAggregatedRows    = "";
+		if (dummyRstm.hasColumn("CmRowState")) // New column name for 'CmNewDiffRateRow' (which is a bitwise state column)
+		{
+			// the below will produce for H2:     and  BITAND([CmRowState], 1) = ???   
+			//                        for OTHERS: and  ([CmRowState] & 1) = ???
+			sql_and_skipNewOrDiffRateRows = "  and " + conn.toBitAnd("[CmRowState]", CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW) + " = 0 \n";
+			sql_and_onlyNewOrDiffRateRows = "  and " + conn.toBitAnd("[CmRowState]", CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW) + " = " + CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW + " \n";
+
+//			sql_and_skipAggregatedRows    = "  and " + conn.toBitAnd("[CmRowState]", CountersModel.ROW_STATE__IS_AGGREGATED_ROW) + " = 0 \n";
+		}
+//FIXME; double check the code for "CmNewDiffRateRow and CmRowState"
+
 		// in some versions (ASE 16.0 SP2 I have observed this in) seems to (in some cases) keep the old counter values even if we compile a new PlanID
 		// So DO NOT TRUST NEWLY created PlanID's 
 		// Although this can create statistical problems:
@@ -268,7 +288,8 @@ public class AseTopCmCachedProcs extends AseAbstract
 			String sql = ""
 				    + "select count(*) \n"
 				    + "from [CmCachedProcs_diff] \n"
-				    + "where [CmNewDiffRateRow] = 1 \n"
+				    + "where 1 = 1 \n"
+				    + sql_and_onlyNewOrDiffRateRows
 				    + "  and [ExecutionCount] > " + executionCountThreshold + " \n"
 				    + "  and [ObjectName] NOT like '*ss%' \n" // *ss = Statement Cache
 				    + "  and [ObjectName] NOT like '*sq%' \n" // *sq = Dynamic SQL
@@ -298,9 +319,6 @@ public class AseTopCmCachedProcs extends AseAbstract
 		if (skipNewDiffRateRows)
 			addWarningMessage("Records with the flag 'CmNewDiffRateRow=1' will NOT be part of the Report. This means that the first time a procedure is executed (or recompiled and executed), the first execution counter will NOT be part of the statistics.");
 		
-		
-		String dummySql = "select * from [CmCachedProcs_diff] where 1 = 2"; // just to get Column names
-		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, true, "metadata");
 		
 		//-------------------------------------------------------
 		// DIFF columns from: CmCachedProcs
@@ -438,7 +456,8 @@ public class AseTopCmCachedProcs extends AseAbstract
 		String orderBy               = !dummyRstm.hasColumnNoCase("CPUTime"          ) ? "order by [RequestCntDiff__sum] desc \n" : "order by [CPUTime__sum] desc \n"; 
 		String orderBy_colName       = !dummyRstm.hasColumnNoCase("CPUTime"          ) ? "RequestCntDiff__sum" : "CPUTime__sum"; 
 
-		String whereFilter_skipNewDiffRateRows = !skipNewDiffRateRows ? "" : "  and [CmNewDiffRateRow] = 0 -- only records that has been diff calculations (not first time seen, some ASE Versions has a bug that do not clear counters on reuse) \n";
+//		String whereFilter_skipNewDiffRateRows = !skipNewDiffRateRows ? "" : "  and [CmNewDiffRateRow] = 0 \n";
+		String whereFilter_skipNewDiffRateRows = !skipNewDiffRateRows ? "" : sql_and_skipNewOrDiffRateRows;
 
 		String ObjectName = "    ,[ObjectName] \n";
 		String groupBy    = "group by [DBName], [ObjectName] \n";

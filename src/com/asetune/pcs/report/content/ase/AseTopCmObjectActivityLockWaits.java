@@ -107,7 +107,7 @@ public class AseTopCmObjectActivityLockWaits extends AseAbstract
 	{
 //		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
 		int topRows = getTopRows();
-		int havingAbove = 1000;
+//		int havingAbove = 1000;
 
 		 // just to get Column names
 		String dummySql = "select * from [CmObjectActivity_diff] where 1 = 2";
