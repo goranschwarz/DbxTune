@@ -2405,7 +2405,7 @@ public class PersistWriterJdbc
 		if ( ! isDdlCreated(tabName) )
 		{
 			// Obtain a DatabaseMetaData object from our current connection        
-			DatabaseMetaData dbmd = conn.getMetaData();
+//			DatabaseMetaData dbmd = conn.getMetaData();
 	
 //			ResultSet rs = dbmd.getColumns(null, null, tabName, "%");
 //			boolean tabExists = rs.next();
@@ -3673,7 +3673,7 @@ public class PersistWriterJdbc
 		if( tabExists )
 		{
 			ArrayList<String> missingCols = new ArrayList<String>();
-
+			
 			// Get the CM's columns
 			ResultSetMetaData rsmd = cm.getResultSetMetaData();
 			
@@ -3709,6 +3709,19 @@ public class PersistWriterJdbc
 					missingCols.add(colName);
 			}
 
+			// Special case for "upgrade" table (rename column: CmNewDiffRateRow --> CmRowState
+			if (existingCols.contains("CmNewDiffRateRow"))
+			{
+				// NOTE: This alter probably only works for H2... but this is NOT a COMMON SCENARIO
+				String sqlAlterTable = conn.quotifySqlString("ALTER TABLE [" + tabName + "] ALTER COLUMN [CmNewDiffRateRow] RENAME TO [CmRowState]");
+
+				_logger.info("Persistent Counter DB: Altering table "+StringUtil.left("'"+tabName+"'", 37, true)+" for CounterModel '" + cm.getName() + "'. rename column 'CmNewDiffRateRow' to 'CmRowState'. using SQL: " + sqlAlterTable);
+
+				dbDdlExec(conn, sqlAlterTable);
+
+				getStatistics().incAlterTables();
+			}
+			
 			// Well the storage table are missing some columns
 			// Lets alter the table and add them
 			if (missingCols.size() > 0)

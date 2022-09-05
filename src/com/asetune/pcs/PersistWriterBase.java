@@ -1621,6 +1621,7 @@ public abstract class PersistWriterBase
 		String retStr = sbSql.toString(); 
 		return retStr;
 	}
+	
 
 	/**
 	 * Helper method to generate a: "insert into TABNAME_GRAPH(c1,c2,c3) [values(?,?...)]"
