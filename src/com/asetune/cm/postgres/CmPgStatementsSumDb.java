@@ -27,6 +27,7 @@ import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
@@ -249,6 +250,7 @@ extends CountersModel
 //	private Set<String> _alreadyParsedQueryId_cache = new HashSet<>();
 
 
+	public static final String GRAPH_NAME_NEW_STATEMENTS   = "NewStatements";
 	public static final String GRAPH_NAME_CALL_COUNT       = "CallCnt";
 	public static final String GRAPH_NAME_TOTAL_TIME       = "TotalTime";
 	public static final String GRAPH_NAME_ROWS             = "Rows";
@@ -261,6 +263,18 @@ extends CountersModel
 	
 	private void addTrendGraphs()
 	{
+		addTrendGraph(GRAPH_NAME_NEW_STATEMENTS,
+				"SQL Statements [new_statements] per DB", 	                           // Menu CheckBox text
+				"SQL Statements [new_statements] per DB per second ("+SHORT_NAME+")", // Graph Label 
+				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				null, 
+				LabelType.Dynamic, 
+				TrendGraphDataPoint.Category.OPERATIONS,
+				false, // is Percent Graph
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+
 		addTrendGraph(GRAPH_NAME_CALL_COUNT,
 				"SQL Statements [calls] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [calls] per DB per second ("+SHORT_NAME+")", // Graph Label 
@@ -370,25 +384,80 @@ extends CountersModel
 				-1);   // minimum height
 	}
 
-	private void localUpdateGraphData(TrendGraphDataPoint tgdp, int dataType, boolean addSummaryRow, boolean doAverageSum, String colname)
-	{
-//		// Get database count (do dot include template databases)
-//		int size = 0;
-//		for (int i = 0; i < this.size(); i++)
+//	private void localUpdateGraphData(TrendGraphDataPoint tgdp, int dataType, boolean addSummaryRow, boolean doAverageSum, String colname)
+//	{
+////		// Get database count (do dot include template databases)
+////		int size = 0;
+////		for (int i = 0; i < this.size(); i++)
+////		{
+////			String dbname = this.getAbsString(i, "datname");
+////			if (dbname != null && !dbname.startsWith("template"))
+////				size++;
+////		}
+//			
+////System.out.println("localUpdateGraphData(): rowCount="+getRowCount()+", size="+(this.size())+", adjSize="+(addSummaryRow ? this.size()+1 : this.size())+", name='"+tgdp.getName()+"', addSummaryRow="+addSummaryRow+", colname='"+colname+"'.");
+//
+//		// Write 1 "line" for every db (except for 'template*' databases)
+//		Double[] dArray = new Double[ addSummaryRow ? this.size()+1 : this.size()];
+//		String[] lArray = new String[dArray.length];
+//		int ap = addSummaryRow ? 1 : 0;
+//		double sum = 0;
+//
+//		int rc = this.size();
+//		for (int r = 0; r < rc; r++) // we still need to loop all rows...
 //		{
-//			String dbname = this.getAbsString(i, "datname");
+//			String dbname = this.getAbsString(r, "dbname");
 //			if (dbname != null && !dbname.startsWith("template"))
-//				size++;
+//			{
+//				Double data;
+//				if      (dataType == CountersModel.DATA_ABS)  data = this.getAbsValueAsDouble (r, colname);
+//				else if (dataType == CountersModel.DATA_DIFF) data = this.getDiffValueAsDouble(r, colname);
+//				else if (dataType == CountersModel.DATA_RATE) data = this.getRateValueAsDouble(r, colname);
+//				else throw new RuntimeException("dataType(tgName=" + tgdp.getName() + "): Unsupported dataType=" + dataType);
+//				
+//				if (data != null)
+//					sum += data;
+//
+////System.out.println("     xxx: r=" + r + ", rc=" + rc + ", ap=" + ap + ", size()=" + size() + ", lArray.length=" + lArray.length + ", dArray.length=" + dArray.length + ", dbname='" + dbname + "'.");
+//				lArray[ap] = dbname;
+//				dArray[ap] = data;
+//				ap++;
+//			}
 //		}
-			
-//System.out.println("localUpdateGraphData(): rowCount="+getRowCount()+", size="+(this.size())+", adjSize="+(addSummaryRow ? this.size()+1 : this.size())+", name='"+tgdp.getName()+"', addSummaryRow="+addSummaryRow+", colname='"+colname+"'.");
+//
+//		if (addSummaryRow && this.size() > 0)
+//		{
+//			String sumLabel = "ALL-DBs";
+//			if (doAverageSum)
+//			{
+//				sumLabel = "AVG-ALL-DBs";
+//				sum = sum / (this.size() * 1.0);
+//			}
+//				
+//			lArray[0] = sumLabel;
+//			dArray[0] = sum;
+//		}
+//
+//		// Set the values
+//		tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+//	}
+
+	private void localUpdateGraphData(TrendGraphDataPoint tgdp, int dataType, String colname)
+	{
+		// Get database count (do dot include template databases)
+		int size = 0;
+		for (int i = 0; i < this.size(); i++)
+		{
+			String dbname = this.getAbsString(i, "datname");
+			if (dbname != null && !dbname.startsWith("template"))
+				size++;
+		}
 
 		// Write 1 "line" for every db (except for 'template*' databases)
-		Double[] dArray = new Double[ addSummaryRow ? this.size()+1 : this.size()];
-		String[] lArray = new String[dArray.length];
-		int ap = addSummaryRow ? 1 : 0;
-		double sum = 0;
+		Double[] dArray = new Double[size];
+		String[] lArray = new String[size];
 
+		int ap = 0;
 		int rc = this.size();
 		for (int r = 0; r < rc; r++) // we still need to loop all rows...
 		{
@@ -401,9 +470,6 @@ extends CountersModel
 				else if (dataType == CountersModel.DATA_RATE) data = this.getRateValueAsDouble(r, colname);
 				else throw new RuntimeException("dataType(tgName=" + tgdp.getName() + "): Unsupported dataType=" + dataType);
 				
-				if (data != null)
-					sum += data;
-
 //System.out.println("     xxx: r=" + r + ", rc=" + rc + ", ap=" + ap + ", size()=" + size() + ", lArray.length=" + lArray.length + ", dArray.length=" + dArray.length + ", dbname='" + dbname + "'.");
 				lArray[ap] = dbname;
 				dArray[ap] = data;
@@ -411,17 +477,11 @@ extends CountersModel
 			}
 		}
 
-		if (addSummaryRow && this.size() > 0)
+		// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
+		if (lArray[lArray.length-1].equals("_Total"))
 		{
-			String sumLabel = "ALL-DBs";
-			if (doAverageSum)
-			{
-				sumLabel = "AVG-ALL-DBs";
-				sum = sum / (this.size() * 1.0);
-			}
-				
-			lArray[0] = sumLabel;
-			dArray[0] = sum;
+			ArrayUtils.shift(lArray, 1);
+			ArrayUtils.shift(dArray, 1);
 		}
 
 		// Set the values
@@ -431,6 +491,7 @@ extends CountersModel
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
+//		"stmnt_count_diff",
 //		"calls",
 //		"total_time",
 //		"total_plan_time", // from: 13.0
@@ -454,18 +515,19 @@ extends CountersModel
 
 		long srvVersion = getServerVersion();
 		
-		if (GRAPH_NAME_CALL_COUNT       .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false , "calls");
-		if (GRAPH_NAME_TOTAL_TIME       .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false , "total_time");
-		if (GRAPH_NAME_ROWS             .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false , "rows");
-		if (GRAPH_NAME_SHARED_BLKS_HIT  .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false , "shared_blks_hit");
-		if (GRAPH_NAME_SHARED_BLKS_READ .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false , "shared_blks_read");
-		if (GRAPH_NAME_TEMP_BLK_READ    .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false , "temp_blks_read");
-		if (GRAPH_NAME_TEMP_BLK_WRITTEN .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false , "temp_blks_written");
+		if (GRAPH_NAME_NEW_STATEMENTS   .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "stmnt_count_diff");
+		if (GRAPH_NAME_CALL_COUNT       .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "calls");
+		if (GRAPH_NAME_TOTAL_TIME       .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "total_time");
+		if (GRAPH_NAME_ROWS             .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "rows");
+		if (GRAPH_NAME_SHARED_BLKS_HIT  .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "shared_blks_hit");
+		if (GRAPH_NAME_SHARED_BLKS_READ .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "shared_blks_read");
+		if (GRAPH_NAME_TEMP_BLK_READ    .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "temp_blks_read");
+		if (GRAPH_NAME_TEMP_BLK_WRITTEN .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "temp_blks_written");
 		
 		if (srvVersion >= Ver.ver(13))
 		{
-			if (GRAPH_NAME_WAL_RECORDS  .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false , "wal_records");
-			if (GRAPH_NAME_WAL_BYTES    .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false , "wal_bytes");
+			if (GRAPH_NAME_WAL_RECORDS  .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "wal_records");
+			if (GRAPH_NAME_WAL_BYTES    .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, "wal_bytes");
 		}
 	}
 
