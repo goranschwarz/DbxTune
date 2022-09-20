@@ -299,7 +299,7 @@ extends CountersModel
 				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from query_start)) * 1000) as int) \n"
 				+ "     END as \"execTimeInMs\" \n"
 
-				+ "    ,CASE WHEN state != 'active' OR state IS NULL THEN -1 \n"
+				+ "    ,CASE WHEN xact_start IS NULL THEN -1 \n"
 				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from xact_start)) * 1000) as int) \n"
 				+ "     END as \"xactTimeInMs\" \n"
 
