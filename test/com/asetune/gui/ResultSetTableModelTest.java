@@ -112,4 +112,68 @@ public class ResultSetTableModelTest
 		}
 	}
 
+	@Test
+	public void testCopyAllRows()
+	throws SQLException
+	{
+		// Create ResultSet - 1
+		SimpleResultSet srs1 = new SimpleResultSet();
+		srs1.addColumn("key",     Types.VARCHAR,       30, 0);
+		srs1.addColumn("val",     Types.VARCHAR,      512, 0);
+
+		srs1.addRow("k1", "obj1");
+		srs1.addRow("k2", "obj2");
+		srs1.addRow("k3", "obj3");
+		srs1.addRow("k4", "obj4");
+		srs1.addRow("k5", "obj5");
+		srs1.addRow("k6", "obj6");
+		srs1.addRow("k7", "obj7");
+		srs1.addRow("k8", "obj8");
+		srs1.addRow("k9", "obj9");
+
+		
+		// Turn them into ResultSetTableModel
+		ResultSetTableModel rstm1 = new ResultSetTableModel(srs1, "SRS-1");
+
+		// Copy ALL rows
+		ResultSetTableModel rstm_allRow = rstm1.copy();
+
+//		System.out.println("rstm_allRow (" + rstm_allRow.getName() + ")\n" + rstm_allRow.toAsciiTableString());
+//		System.out.println("rstm_allRow rowcount: " + rstm_allRow.getRowCount());
+
+		assertEquals("expected rowcount should be 9, this is now " + rstm_allRow.getRowCount(), 9, rstm_allRow.getRowCount());
+	}
+
+	@Test
+	public void testCopyFirstRow()
+	throws SQLException
+	{
+		// Create ResultSet - 1
+		SimpleResultSet srs1 = new SimpleResultSet();
+		srs1.addColumn("key",     Types.VARCHAR,       30, 0);
+		srs1.addColumn("val",     Types.VARCHAR,      512, 0);
+
+		srs1.addRow("k1", "obj1");
+		srs1.addRow("k2", "obj2");
+		srs1.addRow("k3", "obj3");
+		srs1.addRow("k4", "obj4");
+		srs1.addRow("k5", "obj5");
+		srs1.addRow("k6", "obj6");
+		srs1.addRow("k7", "obj7");
+		srs1.addRow("k8", "obj8");
+		srs1.addRow("k9", "obj9");
+
+		
+		// Turn them into ResultSetTableModel
+		ResultSetTableModel rstm1 = new ResultSetTableModel(srs1, "SRS-1");
+
+		// Copy first row
+		ResultSetTableModel rstm_firstRow = rstm1.copy(0, 1, null);
+
+		System.out.println("rstm_firstRow (" + rstm_firstRow.getName() + ")\n" + rstm_firstRow.toAsciiTableString());
+		System.out.println("rstm_firstRow rowcount: " + rstm_firstRow.getRowCount());
+
+		assertEquals("expected rowcount should be 1, this is now " + rstm_firstRow.getRowCount(), 1, rstm_firstRow.getRowCount());
+	}
+
 }

@@ -1,4 +1,4 @@
-/*******************************************************************************
+/******************************************************************************
  * Copyright (C) 2010-2020 Goran Schwarz
  * 
  * This file is part of DbxTune
@@ -37,6 +37,7 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -4808,5 +4809,366 @@ public class AseConnectionUtils
 	// +------------+----------------------------------------------------------------------------------------
 	//
 	
+	/**
+	 * Get database statuses
+	 * 
+	 * @param dbname		Name of the database (used only for 'full logging mode'. if "master", the 'full logging for XXX' will be skipped)
+	 * @param status1		sysdatabases.status
+	 * @param status2		sysdatabases.status2
+	 * @param status3		sysdatabases.status3
+	 * @param status4		sysdatabases.status4
+	 * @param status5		sysdatabases.status5 (added in ASE 16.x)
+	 * @param full_logging_mode	    Full logging mode (if "master", the 'full logging for XXX' will be skipped)... This is value is can be fetched with SQL: <code>select object_info1 from master.dbo.sysattributes where class = 38 and attribute = 0 and object_type = 'D' and object = ${dbid} </code>
+	 * @return
+	 */
+	public static List<String> decodeSysDatabasesStatus(String dbname, int status1, int status2, int status3, int status4, int status5, int full_logging_mode)
+	{
+		if (status1 == 0 && status2 == 0 && status3 == 0 && status4 == 0 && status5 == 0)
+			return Collections.emptyList();
+			
+		List<String> list = new ArrayList<>();
+		
+//		+------------------------------------------------+--------------+----+
+//		|name                                            |number        |type|
+//		+------------------------------------------------+--------------+----+
+//		|DATABASE STATUS                                 |            -1|D   |
+//		|text back linked                                |             1|D   |
+//		|allow page signing                              |             2|D   |
+//		|select into/bulkcopy/pllsort                    |             4|D   |
+//		|trunc log on chkpt                              |             8|D   |
+//		|trunc. log on chkpt.                            |             8|D   |
+//		|no chkpt on recovery                            |            16|D   |
+//		|don't recover                                   |            32|D   |
+//		|not recovered                                   |           256|D   |
+//		|ddl in tran                                     |           512|D   |
+//		|read only                                       |         1,024|D   |
+//		|dbo use only                                    |         2,048|D   |
+//		|single user                                     |         4,096|D   |
+//		|allow nulls by default                          |         8,192|D   |
+//		|erase residual data                             |        16,384|D   |
+//		|ALL SETTABLE OPTIONS                            |        32,286|D   |
+//		+------------------------------------------------+--------------+----+
+//		if (status1 != 0)
+		if ( (status1 & 32_286) != 0 ) // ALL SETTABLE OPTIONS
+		{
+			if ((status1 &      1) != 0) list.add("text back linked"); 
+			if ((status1 &      2) != 0) list.add("allow page signing");
+			if ((status1 &      4) != 0) list.add("select into/bulkcopy/pllsort");
+			if ((status1 &      8) != 0) list.add("trunc log on chkpt");
+			if ((status1 &     16) != 0) list.add("no chkpt on recovery");
+			if ((status1 &     32) != 0) list.add("don't recover");
+//			if ((status1 &     64) != 0) list.add("");
+//			if ((status1 &    128) != 0) list.add("");
+			if ((status1 &    256) != 0) list.add("not recovered");
+			if ((status1 &    512) != 0) list.add("ddl in tran");
+			if ((status1 &   1024) != 0) list.add("read only");
+			if ((status1 &   2048) != 0) list.add("dbo use only");
+			if ((status1 &   4096) != 0) list.add("single user");
+			if ((status1 &   8192) != 0) list.add("allow nulls by default");
+			if ((status1 & 16_384) != 0) list.add("erase residual data");
+//			if ((status1 & 32_768) != 0) list.add("");
+		}
+
+//		+------------------------------------------------+--------------+----+
+//		|name                                            |number        |type|
+//		+------------------------------------------------+--------------+----+
+//		|abort tran on log full                          |             1|D2  |
+//		|no free space acctg                             |             2|D2  |
+//		|auto identity                                   |             4|D2  |
+//		|identity in nonunique index                     |             8|D2  |
+//		|offline                                         |            16|D2  |
+//		|unique auto_identity index                      |            64|D2  |
+//		|ALL SETTABLE OPTIONS                            |            79|D2  |
+//		|has suspect pages/objects                       |           128|D2  |
+//		|online for standby access                       |         1,024|D2  |
+//		|mixed log and data                              |        32,768|D2  |
+//		+------------------------------------------------+--------------+----+
+//		if (status2 != 0)
+		if ( (status2 & 79) != 0 || (status2 & 32768) != 0) // ALL SETTABLE OPTIONS  or ismixedlog
+		{
+			if ((status2 &      1) != 0) list.add("abort tran on log full"); 
+			if ((status2 &      2) != 0) list.add("no free space acctg");
+			if ((status2 &      4) != 0) list.add("auto identity");
+			if ((status2 &      8) != 0) list.add("identity in nonunique index");
+			if ((status2 &     16) != 0) list.add("offline");
+//			if ((status2 &     32) != 0) list.add("");
+			if ((status2 &     64) != 0) list.add("unique auto_identity index");
+			if ((status2 &    128) != 0) list.add("has suspect pages/objects");
+//			if ((status2 &    256) != 0) list.add("");
+//			if ((status2 &    512) != 0) list.add("");
+			if ((status2 &   1024) != 0) list.add("online for standby access");
+//			if ((status2 &   2048) != 0) list.add("");
+//			if ((status2 &   4096) != 0) list.add("");
+//			if ((status2 &   8192) != 0) list.add("");
+//			if ((status2 & 16_384) != 0) list.add("");
+			if ((status2 & 32_768) != 0) list.add("mixed log and data");
+		}
+		
+//		+------------------------------------------------+--------------+----+
+//		|name                                            |number        |type|
+//		+------------------------------------------------+--------------+----+
+//		|quiesce database                                |           128|D3  |
+//		|TEMPDB STATUS MASK                              |           256|D3  |
+//		|user created temp db                            |           256|D3  |
+//		|async log service                               |         1,024|D3  |
+//		|delayed commit                                  |         2,048|D3  |
+//		|archive database                                |     4,194,304|D3  |
+//		|compressed data                                 |     8,388,608|D3  |
+//		|scratch database                                |    16,777,216|D3  |
+//		|ALL SETTABLE OPTIONS                            |    16,780,288|D3  |
+//		|compressed log                                  |   268,435,456|D3  |
+//		+------------------------------------------------+--------------+----+
+//		if (status3 != 0)
+		if ( (status3 & 16_780_288) != 0 || (status3 & 256) != 0) // ALL SETTABLE OPTIONS  or "user created temp db"
+		{
+//			if ((status3 &           1) != 0) list.add(""); 
+//			if ((status3 &           2) != 0) list.add("");
+//			if ((status3 &           4) != 0) list.add("");
+//			if ((status3 &           8) != 0) list.add("");
+//			if ((status3 &          16) != 0) list.add("");
+//			if ((status3 &          32) != 0) list.add("");
+//			if ((status3 &          64) != 0) list.add("");
+			if ((status3 &         128) != 0) list.add("quiesce database");
+			if ((status3 &         256) != 0) list.add("user created temp db");
+//			if ((status3 &         512) != 0) list.add("");
+			if ((status3 &        1024) != 0) list.add("async log service");
+			if ((status3 &        2048) != 0) list.add("delayed commit");
+//			if ((status3 &        4096) != 0) list.add("");
+//			if ((status3 &        8192) != 0) list.add("");
+//			if ((status3 &      16_384) != 0) list.add("");
+//			if ((status3 &      32_768) != 0) list.add("");
+
+			if ((status3 &   4_194_304) != 0) list.add("archive database");
+			if ((status3 &   8_388_608) != 0) list.add("compressed data");
+			if ((status3 &  16_777_216) != 0) list.add("scratch database");
+			if ((status3 & 268_435_456) != 0) list.add("compressed log");
+		}
+		
+//		+------------------------------------------------+--------------+----+
+//		|name                                            |number        |type|
+//		+------------------------------------------------+--------------+----+
+//		|deallocate first text page                      |-2,147,483,648|D4  |
+//		|ALL SETTABLE OPTIONS                            |-1,605,861,374|D4  |
+//		|allow db suspect on rollback error              |             2|D4  |
+//		|minimal dml logging                             |           256|D4  |
+//		|template database                               |         1,024|D4  |
+//		|in-memory database                              |         4,096|D4  |
+//		|user-created                                    |         8,192|D4  |
+//		|enhanced performance temp db                    |         8,192|D4  |
+//		|enforce dump tran sequence                      |        32,768|D4  |
+//		|defer_index_recovery auto                       |        65,536|D4  |
+//		|defer_index_recovery manual                     |       131,072|D4  |
+//		|defer_index_recovery none                       |       262,144|D4  |
+//		|allow wide dol rows                             |       524,288|D4  |
+//		|defer_index_recovery parallel                   |     2,097,152|D4  |
+//		|deferred table allocation                       |     4,194,304|D4  |
+//		|page compressed                                 |    16,777,216|D4  |
+//		|row compressed                                  |    33,554,432|D4  |
+//		|allow incremental dumps                         |   536,870,912|D4  |
+//		+------------------------------------------------+--------------+----+
+//		if (status4 != 0)
+		if ( (status4 & -1_605_861_374) != 0 || (status4 & 4096) != 0) // ALL SETTABLE OPTIONS  or isinmemdb
+		{
+//			if ((status4 &           1) != 0) list.add(""); 
+			if ((status4 &           2) != 0) list.add("allow db suspect on rollback error");
+//			if ((status4 &           4) != 0) list.add("");
+//			if ((status4 &           8) != 0) list.add("");
+//			if ((status4 &          16) != 0) list.add("");
+//			if ((status4 &          32) != 0) list.add("");
+//			if ((status4 &          64) != 0) list.add("");
+//			if ((status4 &         128) != 0) list.add("");
+			if ((status4 &         256) != 0) list.add("minimal dml logging");
+//			if ((status4 &         512) != 0) list.add("");
+			if ((status4 &        1024) != 0) list.add("template database");
+//			if ((status4 &        2048) != 0) list.add("");
+			if ((status4 &        4096) != 0) list.add("in-memory database");
+			if ((status4 &        8192) != 0) list.add("enhanced performance temp db");
+//			if ((status4 &      16_384) != 0) list.add("64-bit atomic operations");
+			if ((status4 &      32_768) != 0) list.add("enforce dump tran sequence");
+			if ((status4 &      65_536) != 0) list.add("defer_index_recovery auto");
+			if ((status4 &     131_072) != 0) list.add("defer_index_recovery manual");
+			if ((status4 &     262_144) != 0) list.add("defer_index_recovery none");
+			if ((status4 &     524_288) != 0) list.add("allow wide dol rows");
+			if ((status4 &   2_097_152) != 0) list.add("defer_index_recovery parallel");
+			if ((status4 &   4_194_304) != 0) list.add("deferred table allocation");
+			if ((status4 &  16_777_216) != 0) list.add("page compressed");
+			if ((status4 &  33_554_432) != 0) list.add("row compressed");
+			if ((status4 & 536_870_912) != 0) list.add("allow incremental dumps");
+		}
+		
+//		+------------------------------------------------+--------------+----+
+//		|name                                            |number        |type|
+//		+------------------------------------------------+--------------+----+
+//		|encrypted                                       |             1|D5  |
+//		|encryption in progress                          |             2|D5  |
+//		|decryption in progress                          |             4|D5  |
+//		|encrypted partly                                |             8|D5  |
+//		|decrypted partly                                |            16|D5  |
+//		|index compression                               |            64|D5  |
+//		|in-memory row storage                           |           256|D5  |
+//		|snapshot isolation                              |           512|D5  |
+//		|data row caching                                |         1,024|D5  |
+//		|snapshot isolation using on-disk version storage|         4,096|D5  |
+//		|sqlscript                                       |         8,192|D5  |
+//		|on-disk version storage                         |        16,384|D5  |
+//		|auto imrs partition tuning                      |        65,536|D5  |
+//		|ALL SETTABLE OPTIONS                            |        98,304|D5  |
+//		|latch free index                                |     2,097,152|D5  |
+//		+------------------------------------------------+--------------+----+
+//		if (status5 != 0)
+		if ( (status5 & 98_304) != 0 ) // ALL SETTABLE OPTIONS
+		{
+			if ((status5 &         1) != 0) list.add("encrypted"); 
+			if ((status5 &         2) != 0) list.add("encryption in progress");
+			if ((status5 &         4) != 0) list.add("decryption in progress");
+			if ((status5 &         8) != 0) list.add("encrypted partly");
+			if ((status5 &        16) != 0) list.add("decrypted partly");
+//			if ((status5 &        32) != 0) list.add("");
+			if ((status5 &        64) != 0) list.add("index compression");
+//			if ((status5 &       128) != 0) list.add("");
+			if ((status5 &       256) != 0) list.add("in-memory row storage");
+			if ((status5 &       512) != 0) list.add("snapshot isolation");
+			if ((status5 &      1024) != 0) list.add("data row caching");
+//			if ((status5 &      2048) != 0) list.add("");
+			if ((status5 &      4096) != 0) list.add("snapshot isolation using on-disk version storage");
+			if ((status5 &      8192) != 0) list.add("sqlscript");
+			if ((status5 &    16_384) != 0) list.add("on-disk version storage");
+//			if ((status5 &    32_768) != 0) list.add("");
+
+			if ((status5 &    65_536) != 0) list.add("auto imrs partition tuning");
+			if ((status5 & 2_097_152) != 0) list.add("latch free index");
+		}
+
+		//-------------------------------------------------
+		// FULL LOGGING MODE
+		//-------------------------------------------------
+		/*
+		** The full logging options are stored in master..sysattributes as:
+		**
+		**	- class:	38
+		**	- type:		'D'
+		**
+		**      attribute  char_value    object  object_info1
+		**      ---------- ------------- ------- ----------------
+		**      0          NULL          <dbid>  <bitmap>
+		**      0          all                1  0x0000000f
+		**      1          select into        1  0x00000001
+		**      3          alter table        1  0x00000004
+		**      4          reorg rebuild      1  0x00000008
+		**
+		** The database master stores only the descriptions, so, the
+		** attribute 0 that in other databases stores the database bitmap,
+		** in the case of master it's used just to store the description
+		** 'all' for the bitmap 0xd. This is ok because the full 
+		** logging options cannot be changed in master.
+		** 
+		** If there is an attribute configured, we will update it, otherwise
+		** we will insert a new row.
+		**
+		*/
+		if (full_logging_mode != 0) // SQL: select object_info1 from master.dbo.sysattributes where class = 38 and attribute = 0 and object_type = 'D' and object = <dbid>
+		{
+			// Full logging mode is NOT applicable for the "master" database
+			if ( ! "master".equalsIgnoreCase(dbname))
+			{
+				if (full_logging_mode == 13) // 13 = (1 + 4 + 8) // select object_info1 from master..sysattributes where class = 38 and object = 1 and attribute = 0
+				{
+					list.add("full logging for all");
+				}
+				else
+				{
+					if ((full_logging_mode &  1) != 0) list.add("full logging for select into");
+//					if ((full_logging_mode &  2) != 0) list.add("full logging for XXXXXXX");
+					if ((full_logging_mode &  4) != 0) list.add("full logging for alter table");
+					if ((full_logging_mode &  8) != 0) list.add("full logging for reorg rebuild");
+//					if ((full_logging_mode & 16) != 0) list.add("full logging for XXXXXXX");
+				}
+			}
+		}
+
+		return list;
+	}
+//	1> select v.*
+//	2> from master.dbo.spt_values v
+//	3> where 1=1
+//	4>   and v.type in("D", "D1", "D2", "D3", "D4", "D5")
+//	5> order by v.type, number
+//	+------------------------------------------------+--------------+----+
+//	|name                                            |number        |type|
+//	+------------------------------------------------+--------------+----+
+//	|DATABASE STATUS                                 |            -1|D   |
+//	|text back linked                                |             1|D   |
+//	|allow page signing                              |             2|D   |
+//	|select into/bulkcopy/pllsort                    |             4|D   |
+//	|trunc log on chkpt                              |             8|D   |
+//	|trunc. log on chkpt.                            |             8|D   |
+//	|no chkpt on recovery                            |            16|D   |
+//	|don't recover                                   |            32|D   |
+//	|not recovered                                   |           256|D   |
+//	|ddl in tran                                     |           512|D   |
+//	|read only                                       |         1,024|D   |
+//	|dbo use only                                    |         2,048|D   |
+//	|single user                                     |         4,096|D   |
+//	|allow nulls by default                          |         8,192|D   |
+//	|erase residual data                             |        16,384|D   |
+//	|ALL SETTABLE OPTIONS                            |        32,286|D   |
+//	+------------------------------------------------+--------------+----+
+//	|abort tran on log full                          |             1|D2  |
+//	|no free space acctg                             |             2|D2  |
+//	|auto identity                                   |             4|D2  |
+//	|identity in nonunique index                     |             8|D2  |
+//	|offline                                         |            16|D2  |
+//	|unique auto_identity index                      |            64|D2  |
+//	|ALL SETTABLE OPTIONS                            |            79|D2  |
+//	|has suspect pages/objects                       |           128|D2  |
+//	|online for standby access                       |         1,024|D2  |
+//	|mixed log and data                              |        32,768|D2  |
+//	+------------------------------------------------+--------------+----+
+//	|quiesce database                                |           128|D3  |
+//	|TEMPDB STATUS MASK                              |           256|D3  |
+//	|user created temp db                            |           256|D3  |
+//	|async log service                               |         1,024|D3  |
+//	|delayed commit                                  |         2,048|D3  |
+//	|archive database                                |     4,194,304|D3  |
+//	|compressed data                                 |     8,388,608|D3  |
+//	|scratch database                                |    16,777,216|D3  |
+//	|ALL SETTABLE OPTIONS                            |    16,780,288|D3  |
+//	|compressed log                                  |   268,435,456|D3  |
+//	+------------------------------------------------+--------------+----+
+//	|deallocate first text page                      |-2,147,483,648|D4  |
+//	|ALL SETTABLE OPTIONS                            |-1,605,861,374|D4  |
+//	|allow db suspect on rollback error              |             2|D4  |
+//	|minimal dml logging                             |           256|D4  |
+//	|template database                               |         1,024|D4  |
+//	|in-memory database                              |         4,096|D4  |
+//	|user-created                                    |         8,192|D4  |
+//	|enhanced performance temp db                    |         8,192|D4  |
+//	|enforce dump tran sequence                      |        32,768|D4  |
+//	|defer_index_recovery auto                       |        65,536|D4  |
+//	|defer_index_recovery manual                     |       131,072|D4  |
+//	|defer_index_recovery none                       |       262,144|D4  |
+//	|allow wide dol rows                             |       524,288|D4  |
+//	|defer_index_recovery parallel                   |     2,097,152|D4  |
+//	|deferred table allocation                       |     4,194,304|D4  |
+//	|page compressed                                 |    16,777,216|D4  |
+//	|row compressed                                  |    33,554,432|D4  |
+//	|allow incremental dumps                         |   536,870,912|D4  |
+//	+------------------------------------------------+--------------+----+
+//	|encrypted                                       |             1|D5  |
+//	|encryption in progress                          |             2|D5  |
+//	|decryption in progress                          |             4|D5  |
+//	|encrypted partly                                |             8|D5  |
+//	|decrypted partly                                |            16|D5  |
+//	|index compression                               |            64|D5  |
+//	|in-memory row storage                           |           256|D5  |
+//	|snapshot isolation                              |           512|D5  |
+//	|data row caching                                |         1,024|D5  |
+//	|snapshot isolation using on-disk version storage|         4,096|D5  |
+//	|sqlscript                                       |         8,192|D5  |
+//	|on-disk version storage                         |        16,384|D5  |
+//	|auto imrs partition tuning                      |        65,536|D5  |
+//	|ALL SETTABLE OPTIONS                            |        98,304|D5  |
+//	|latch free index                                |     2,097,152|D5  |
+//	+------------------------------------------------+--------------+----+
 }
 

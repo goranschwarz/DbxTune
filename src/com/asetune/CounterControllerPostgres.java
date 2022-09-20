@@ -59,6 +59,7 @@ import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
 
 
@@ -213,6 +214,11 @@ extends CounterControllerAbstract
 	{
 	}
 
+//	/** If DNS Lookups takes to long, cache the host names in here */
+//	private HashMap<String, String> _ipToHostCache = null;             // key=IP, Value=HostName
+//	private long                    _ipToHostLastLookup    = 0;        // Time stamp when we did last getHostName()
+//	private long                    _ipToHostLastLookupTtl = 3600_000; // 1 hour
+	
 	@Override
 	public PersistContainer.HeaderInfo createPcsHeaderInfo()
 	{
@@ -243,8 +249,20 @@ extends CounterControllerAbstract
 				String hostname = ip;
 				try
 				{
+					long startTime = System.currentTimeMillis();
+
+					// Do the lookup
 					InetAddress addr = InetAddress.getByName(ip);
 					hostname = addr.getHostName();
+					
+					// If this takes to long...
+					long execTimeMs = TimeUtils.msDiffNow(startTime);
+					if (execTimeMs > 2_000)
+					{
+						_logger.warn("createPcsHeaderInfo(): This takes to long time. java.net.InetAddress.getHostName() took " + execTimeMs + " ms to compleate. Check your DNS Reverse Lookup settings.");
+
+						// Possible fix: CACHE the DNS lookup in a HashMap<IP, hostname>, also set a TTL for 1 hour
+					}
 				}
 				catch(UnknownHostException ex)
 				{

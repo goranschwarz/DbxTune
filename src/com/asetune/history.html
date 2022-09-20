@@ -47,6 +47,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>new: AlarmEventBackgroundMessage        -- ASE for errorlog messages starting with 'background task message:', which probably is a threshold procedure output. </LI>
 				<LI>new: AlarmEventOldIncrementalBackup     -- SQL Server, old incremental backups </LI>
 				<LI>new: AlarmEventDbNotInHadr              -- SQL Serverif we have any databases in HADR (Availability Groups) new databases should possibly be in there to... </LI>
+				<LI>new: AlarmEventDatabaseOption           -- When a database option is changed (right now: only for Sybase ASE)</LI>
 				
 				<LI>Changed: AlarmEventConfigResourceIsLow       -- added "raiseDelay", which is used by 'Statement Cache Hit Rate', and the default was set to 5 minutes below configured value before raising alarm.</LI>
 				<LI>Changed: AlarmEventFullTranLog               -- alwaysSend() is now set to true, so even if we do not "subscribe" for alarms on this server, we will still get message, just like SrvDown </LI>
@@ -271,6 +272,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>bug fix: LowDbFreeSpaceInMb and LowLogFreeSpaceInMb sometimes didn't fire correctly</li>
 			<li>for AlarmEventLongRunningTransaction, added filters on 'OldestTranProg', 'OldestTranUser', 'OldestTranHost' so we can filter out known users or programs</li>
 			<li>Added HTML Table with all info to the alarms: AlarmEventLastBackupFailed, AlarmEventOldBackup, AlarmEventOldTranLogBackup</li>
+			<li>New columns 'DBOptions', 'status*' and 'minLogMode' all to support DBOptions</li>
+			<li>New alarm: AlarmEventDatabaseOption when above 'DBOptions' is changed.</li>
 		</ul>
 		</LI>
 
@@ -656,6 +659,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmActiveStatements   </b> - new collector: CmActiveStatements, view SQL Statements that are active now</LI>
 		<LI><b>CmPgActivity         </b> - added column 'StatementExecInSec', and raise AlarmEventLongRunningStatement when a statement has been executed for more than 3 hours (by defualt), 'skip' can be done on: dbname, login, cmd and tranName</LI>
 		<LI><b>CmPgActivity         </b> - added columns: 'im_blocked_by_pids' and 'im_blocking_other_pids'</LI>
+		<LI><b>CmPgActivity         </b> - added columns: 'backend_start_age', 'xact_start_age', 'query_start_age', 'state_change_age' and 'xactTimeInMs'</LI>
 		<LI><b>CmPgDatabase         </b> - Added graphs 'CacheHitPct' and 'TotalReads'</LI>
 		<LI><b>CmPgReplication      </b> - new collector: Check Replication</LI>
 		<LI><b>CmPgStatements       </b> - Now works with Postgres 9.3 (and possibly versions below that), where I "fake" the 'queryid' by taking a md5 checksum (first 16 chars) and converting that to an bigint</LI>

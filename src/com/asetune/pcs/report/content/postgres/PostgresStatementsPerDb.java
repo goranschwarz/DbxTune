@@ -32,6 +32,7 @@ import org.h2.tools.SimpleResultSet;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
+import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.pcs.report.content.SparklineHelper;
 import com.asetune.pcs.report.content.SparklineHelper.AggType;
 import com.asetune.pcs.report.content.SparklineHelper.DataSource;
@@ -54,6 +55,9 @@ extends PostgresAbstract
 	private ResultSetTableModel _miniChartRstm;
 	private List<String>        _miniChartJsList = new ArrayList<>();
 
+	private IReportChart _CmPgStatementsSumDb_CallCnt;
+	private IReportChart _CmPgStatementsSumDb_TotalTime;
+
 	public PostgresStatementsPerDb(DailySummaryReportAbstract reportingInstance)
 	{
 		super(reportingInstance);
@@ -69,6 +73,14 @@ extends PostgresAbstract
 	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
+		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are calls/total_time charts for each Database during the day.",
+				"CmPgStatementsSumDb_CallCnt",
+				"CmPgStatementsSumDb_TotalTime"
+				));
+
+		_CmPgStatementsSumDb_CallCnt  .writeHtmlContent(sb, null, null);
+		_CmPgStatementsSumDb_TotalTime.writeHtmlContent(sb, null, null);
+
 		if (isFullMessageType())
 		{
 			// Get a description of this section, and column names
@@ -82,16 +94,25 @@ extends PostgresAbstract
 		// The "sub table" with pivot info on most mini-charts/sparkline
 		if (_miniChartRstm != null)
 		{
-			sb.append("<br>\n");
-			sb.append("<details open> \n");
-			sb.append("<summary>Details for above Statements (click to collapse) </summary> \n");
-			
-			sb.append("<br>\n");
-			sb.append("Statements by dbname, Row Count: " + _miniChartRstm.getRowCount() + " (This is the dbname as the in the above table, but without all counter details).<br>\n");
-			sb.append(toHtmlTable(_miniChartRstm));
+			if (isFullMessageType())
+			{
+				sb.append("<br>\n");
+				sb.append("<details open> \n");
+				sb.append("<summary>Details for above Statements (click to collapse) </summary> \n");
 
-			sb.append("\n");
-			sb.append("</details> \n");
+				sb.append("<br>\n");
+				sb.append("Statements by dbname, Row Count: " + _miniChartRstm.getRowCount() + " (This is the dbname as the in the above table, but without all counter details).<br>\n");
+				sb.append(toHtmlTable(_miniChartRstm));
+
+				sb.append("\n");
+				sb.append("</details> \n");
+			}
+			else
+			{
+				sb.append("<br>\n");
+				ResultSetTableModel firstRow = _miniChartRstm.copy(0, 1, null);
+				sb.append(toHtmlTable(firstRow));
+			}
 		}
 		
 		// Write JavaScript code for CPU SparkLine
@@ -520,7 +541,13 @@ extends PostgresAbstract
 				_miniChartRstm = ResultSetTableModel.createEmpty("Statements per DB");
 //				_logger.warn("Problems getting Top SQL TEXT: " + ex);
 			}
-		}
+
+			
+			// Create some Overview Charts
+			_CmPgStatementsSumDb_CallCnt   = createTsLineChart(conn, "CmPgStatementsSumDb", "CallCnt"  , -1, null, "SQL Statements [calls] per DB per second (Statements by DB)");
+			_CmPgStatementsSumDb_TotalTime = createTsLineChart(conn, "CmPgStatementsSumDb", "TotalTime", -1, null, "SQL Statements [total_time] per DB per second (Statements by DB)");
+
+		} // end: has data
 	}
 
 	/**

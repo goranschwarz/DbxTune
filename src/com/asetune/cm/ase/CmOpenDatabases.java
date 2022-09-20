@@ -43,6 +43,7 @@ import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEventDatabaseOption;
 import com.asetune.alarm.events.AlarmEventFullTranLog;
 import com.asetune.alarm.events.AlarmEventLastBackupFailed;
 import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
@@ -727,6 +728,15 @@ extends CountersModel
 						"<b>Formula</b>: datediff(hour, x.LastTranLogDumpTime, getdate())<br>" +
 					"</html>");
 
+			mtd.addColumn("monOpenDatabases", "DBOptions",    "<html>Database options for this database. Values are decoded from the columns 'status*' and 'minLogMode'.</html>");
+			mtd.addColumn("monOpenDatabases", "status",       "<html>Integer value saved in master..sysdatabases for keeping various database statuses</html>");
+			mtd.addColumn("monOpenDatabases", "status1",      "<html>Integer value saved in master..sysdatabases for keeping various database statuses</html>");
+			mtd.addColumn("monOpenDatabases", "status2",      "<html>Integer value saved in master..sysdatabases for keeping various database statuses</html>");
+			mtd.addColumn("monOpenDatabases", "status3",      "<html>Integer value saved in master..sysdatabases for keeping various database statuses</html>");
+			mtd.addColumn("monOpenDatabases", "status4",      "<html>Integer value saved in master..sysdatabases for keeping various database statuses</html>");
+			mtd.addColumn("monOpenDatabases", "status5",      "<html>Integer value saved in master..sysdatabases for keeping various database statuses</html>");
+			mtd.addColumn("monOpenDatabases", "minLogMode",   "<html>Integer value saved in master..sysattributes for keeping dboption: 'full logging for {all|select into|alter table|reorg rebuild}'</html>");
+
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -791,8 +801,8 @@ extends CountersModel
 		long    srvVersion       = aseVersionInfo.getLongVersion();
 		boolean isClusterEnabled = aseVersionInfo.isClusterEdition();
 
-		String cols1, cols2, cols3;
-		cols1 = cols2 = cols3 = "";
+		String cols1, cols2, cols3, cols4;
+		cols1 = cols2 = cols3 = cols4 = "";
 
 		boolean sampleSpaceusage = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_spaceusage, DEFAULT_sample_spaceusage);
 		
@@ -1015,16 +1025,24 @@ extends CountersModel
 			cols2 += "od.LastCheckpointTime, ";
 		}
 
-		String cols = cols1 + cols2 + cols3;
+		// 'database option' here, and alarm if it changes... (all status columns from sysdatabases, and decode them in Java code)
+		cols4 = "DBOptions = convert(varchar(255), ''), d.status, d.status2, d.status3, d.status4, \n";
+		if (srvVersion >= Ver.ver(16))
+		{
+			cols4 += "d.status5, minLogMode = (select object_info1 from master.dbo.sysattributes attr where attr.class = 38 and attr.attribute = 0 and attr.object_type = 'D' and attr.object = od.DBID) \n";
+		}
+
+		String cols = cols1 + cols2 + cols3 + cols4;
 		cols = StringUtil.removeLastComma(cols);
 
 		String sql = 
 			"select " + cols + "\n" +
-			"from master.dbo.monOpenDatabases od, master.dbo.syslogshold h \n" +
+			"from master.dbo.monOpenDatabases od, master.dbo.syslogshold h, master.dbo.sysdatabases d readpast \n" +
 			"where od.DBID in (select db.dbid from master.dbo.sysdatabases db readpast \n" + 
-			"                  where (db.status  & 32 != 32) and (db.status  & 256 != 256) \n" +   // 32=Database created with for load option, 256=Database suspect/not-recovered
-			"                    and (db.status2 & 16 != 16) and (db.status2 &  32 != 32)  ) \n" + // 16=Database is offline, 32=Database is offline until recovery completes
+			"                  where (db.status  & 32 != 32) and (db.status  & 256 != 256)   /* 32=created with for load option, 256=suspect/not-recovered */ \n" +
+			"                    and (db.status2 & 16 != 16) and (db.status2 &  32 != 32)  ) /* 16=offline, 32=offline until recovery completes */ \n" +
 			"  and od.DBID *= h.dbid \n" + 
+			"  and od.DBID *= d.dbid \n" + 
 //			"  and h.name != '$replication_truncation_point' \n" + 
 //			"  and h.name not like 'DUMP %' \n" + // DUMP TRANSACTION or DUMP DATABASE
 			"  and h.xactid != 0x0 \n" + // instead of name != ...
@@ -1035,10 +1053,11 @@ extends CountersModel
 		{
 			sql = 
 				"select " + cols + "\n" +
-				"from master.dbo.monOpenDatabases od \n" +
+				"from master.dbo.monOpenDatabases od, master.dbo.sysdatabases d \n" +
 				"where od.DBID in (select db.dbid from master.dbo.sysdatabases db readpast \n" + 
-				"                  where (db.status  & 32 != 32) and (db.status  & 256 != 256) \n" +
-				"                    and (db.status2 & 16 != 16) and (db.status2 &  32 != 32)  ) \n" +
+				"                  where (db.status  & 32 != 32) and (db.status  & 256 != 256)   /* 32=created with for load option, 256=suspect/not-recovered */ \n" +
+				"                    and (db.status2 & 16 != 16) and (db.status2 &  32 != 32)  ) /* 16=offline, 32=offline until recovery completes */ \n" +
+				"  and od.DBID *= d.dbid \n" + 
 				"order by od.DBName \n" +
 				"";
 		}
@@ -1160,6 +1179,15 @@ extends CountersModel
 		int pos_OldestTranShowPlanText = -1;
 		int pos_OldestTranLocks        = -1;
 		
+		int pos_DBName     = -1;
+		int pos_DBOptions  = -1;
+		int pos_status     = -1;
+		int pos_status2    = -1;
+		int pos_status3    = -1;
+		int pos_status4    = -1;
+		int pos_status5    = -1;
+		int pos_minLogMode = -1;
+
 		// Find column Id's
 		List<String> colNames = newSample.getColNames();
 		if (colNames == null)
@@ -1215,6 +1243,15 @@ extends CountersModel
 			else if (colName.equals("OldestTranSqlText"))      pos_OldestTranSqlText      = colId;
 			else if (colName.equals("OldestTranShowPlanText")) pos_OldestTranShowPlanText = colId;
 			else if (colName.equals("OldestTranLocks"))        pos_OldestTranLocks        = colId;
+
+			else if (colName.equals("DBName"))                 pos_DBName         = colId;
+			else if (colName.equals("DBOptions"))              pos_DBOptions      = colId;
+			else if (colName.equals("status"))                 pos_status         = colId;
+			else if (colName.equals("status2"))                pos_status2        = colId;
+			else if (colName.equals("status3"))                pos_status3        = colId;
+			else if (colName.equals("status4"))                pos_status4        = colId;
+			else if (colName.equals("status5"))                pos_status5        = colId;
+			else if (colName.equals("minLogMode"))             pos_minLogMode     = colId;
 		}
 
 		// Loop on all rows
@@ -1450,7 +1487,26 @@ extends CountersModel
 					newSample.setValueAt(sysLocks,       rowId, pos_OldestTranLocks);
 				}
 			}
-		}
+
+			// DB Options
+			if (pos_DBOptions != -1)
+			{
+				String dbname  = newSample.getValueAsString(rowId, pos_DBName);
+				int status     = pos_status      == -1 ? 0 : newSample.getValueAsInteger(rowId, pos_status);
+				int status2    = pos_status2     == -1 ? 0 : newSample.getValueAsInteger(rowId, pos_status2);
+				int status3    = pos_status3     == -1 ? 0 : newSample.getValueAsInteger(rowId, pos_status3);
+				int status4    = pos_status4     == -1 ? 0 : newSample.getValueAsInteger(rowId, pos_status4);
+				int status5    = pos_status5     == -1 ? 0 : newSample.getValueAsInteger(rowId, pos_status5);
+				int minLogMode = pos_minLogMode  == -1 ? 0 : newSample.getValueAsInteger(rowId, pos_minLogMode);
+
+				// Decode "statusX" columns into a List 
+				List<String> dbOptionsList = AseConnectionUtils.decodeSysDatabasesStatus(dbname, status, status2, status3, status4, status5, minLogMode);
+				if (dbOptionsList != null && !dbOptionsList.isEmpty())
+					newSample.setValueAt(StringUtil.toCommaStr(dbOptionsList), rowId, pos_DBOptions);
+			}
+			
+			
+		} // end: Loop on all rows
 	}
 	
 	/** 
@@ -2264,6 +2320,72 @@ extends CountersModel
 					}
 				}
 			}
+
+			//-------------------------------------------------------
+			// DBOptions
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("DBOptions"))
+			{
+				Object o_dbOptions  = cm.getAbsValue(r, "DBOptions");
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', dbOptions='"+o_dbOptions+"'.");
+
+				if (o_dbOptions != null)
+				{
+					String currDbOptions = o_dbOptions.toString();
+					String prevDbOptions = _prevDbOptionsMap.get(dbname);
+					
+//					-- Does this really work: isFirstTimeSample()
+//					-- or should we use: hasDiffData()
+//					-- or do this somehow different
+//					if ( ! cm.isFirstTimeSample() )
+					if ( prevDbOptions != null )
+					{
+						if ( ! currDbOptions.equals(prevDbOptions) )
+						{
+							// Get config 'skip/allow'
+							String keepDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_DBOptionsForDbs,  DEFAULT_alarm_DBOptionsForDbs);
+							String skipDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_DBOptionsSkipDbs, DEFAULT_alarm_DBOptionsSkipDbs);
+							String keepSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_DBOptionsForSrv,  DEFAULT_alarm_DBOptionsForSrv);
+							String skipSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_DBOptionsSkipSrv, DEFAULT_alarm_DBOptionsSkipSrv);
+
+							// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+							boolean doAlarm = true;
+
+							// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
+							// Below is more readable, from a variable context point-of-view, but HARDER to understand
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepSrvRegExp) ||   dbmsSrvName.matches(keepSrvRegExp))); //     matches the KEEP Srv regexp
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbRegExp)  || ! dbname     .matches(skipDbRegExp ))); // NO match in the SKIP Db  regexp
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipSrvRegExp) || ! dbmsSrvName.matches(skipSrvRegExp))); // NO match in the SKIP Srv regexp
+							
+							if (doAlarm)
+							{
+								// Parse the CSV Text into a List, this so we can find out what DBOption that was added or removed
+								List<String> prevDbOptionsList = StringUtil.parseCommaStrToList(prevDbOptions);
+								List<String> currDbOptionsList = StringUtil.parseCommaStrToList(currDbOptions);
+
+								List<String> addedOptions   = new ArrayList<>(currDbOptionsList); 
+								addedOptions  .removeAll(prevDbOptionsList);
+								
+								List<String> removedOptions = new ArrayList<>(prevDbOptionsList); 
+								removedOptions.removeAll(currDbOptionsList);
+
+								String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+								String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+								AlarmEvent ae = new AlarmEventDatabaseOption(cm, dbname, addedOptions, removedOptions, currDbOptionsList);
+								ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+								
+								alarmHandler.addAlarm( ae );
+							}
+						}
+					}
+					
+					// Always set/remember the "last" dboptions so we can compare at/with next sample
+					_prevDbOptionsMap.put(dbname, currDbOptions);
+				}
+			}
 		} // end: loop dbnames
 
 	
@@ -2287,7 +2409,28 @@ extends CountersModel
 //		}
 		
 	}
+	
+	/** Remember DBOptions. key=dbname, val=DBOption, the value will be set at every call to sendAlarmRequest() */
+	private Map<String, String> _prevDbOptionsMap = new HashMap<>();
+	
+	@Override
+	public void reset()
+	{
+		super.reset();
+	
+		// Or should this be done in: clear()
+		_prevDbOptionsMap = new HashMap<>();
+	}
+//	@Override
+//	public void clear()
+//	{
+//		// TODO Auto-generated method stub
+//		super.clear();
+//
+//		_prevDbOptionsMap = new HashMap<>();
+//	}
 
+	
 	/**
 	 * Helper method to get the Threshold for a specific DB, using direct access to map or by check all key values in map with regexp...
 	 * 
@@ -2591,6 +2734,17 @@ extends CountersModel
 	public static final String  PROPKEY_alarm_LowLogFreeSpaceInPct            = CM_NAME + ".alarm.system.if.LowLogFreeSpaceInPct.gt";
 	public static final String  DEFAULT_alarm_LowLogFreeSpaceInPct            = "";
 
+	public static final String  PROPKEY_alarm_DBOptions                       = CM_NAME + ".alarm.system.if.DBOptions.is.changed";
+	public static final boolean DEFAULT_alarm_DBOptions                       = true;
+	public static final String  PROPKEY_alarm_DBOptionsForDbs                 = CM_NAME + ".alarm.system.if.DBOptions.for.dbs";
+	public static final String  DEFAULT_alarm_DBOptionsForDbs                 = "";
+	public static final String  PROPKEY_alarm_DBOptionsSkipDbs                = CM_NAME + ".alarm.system.if.DBOptions.skip.dbs";
+	public static final String  DEFAULT_alarm_DBOptionsSkipDbs                = "";
+	public static final String  PROPKEY_alarm_DBOptionsForSrv                 = CM_NAME + ".alarm.system.if.DBOptions.for.srv";
+	public static final String  DEFAULT_alarm_DBOptionsForSrv                 = "";
+	public static final String  PROPKEY_alarm_DBOptionsSkipSrv                = CM_NAME + ".alarm.system.if.DBOptions.skip.srv";
+	public static final String  DEFAULT_alarm_DBOptionsSkipSrv                = "";
+
 	// A comma separated list of databases that *must* exists, othewise ALARM. (the dbname can be a regexp, but each entry in the list must have a count of 1 after we have looped all records)
 	// TODO: NOT YET IMPLEMENTED... think a bit more about this...
 //	public static final String  PROPKEY_alarm_MandatoryDatabaseList           = CM_NAME + ".alarm.system.MandatoryDatabaseList";
@@ -2633,6 +2787,12 @@ extends CountersModel
 
 //		list.add(new CmSettingsHelper("MandatoryDatabaseList",            PROPKEY_alarm_MandatoryDatabaseList           , String.class, conf.getProperty    (PROPKEY_alarm_MandatoryDatabaseList           , DEFAULT_alarm_MandatoryDatabaseList          ), DEFAULT_alarm_MandatoryDatabaseList          , "A list of databases that needs to be present. This is a comma separated list of databases (each name can contain regex)" ));
 		
+		list.add(new CmSettingsHelper("DBOptions",                        isAlarmSwitch, PROPKEY_alarm_DBOptions                       , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_DBOptions                    , DEFAULT_alarm_DBOptions                     ), DEFAULT_alarm_DBOptions                      , "If 'DBOptions' is changed then send 'AlarmEventDatabaseOption'."));
+		list.add(new CmSettingsHelper("DBOptions ForDbs",                                PROPKEY_alarm_DBOptionsForDbs                 , String .class, conf.getProperty       (PROPKEY_alarm_DBOptionsForDbs              , DEFAULT_alarm_DBOptionsForDbs               ), DEFAULT_alarm_DBOptionsForDbs                , "If 'DBOptions' is changed; Only for the databases listed (regexp is used, blank=for-all-dbs). After this rule the 'skip' rule is evaluated.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("DBOptions SkipDbs",                               PROPKEY_alarm_DBOptionsSkipDbs                , String .class, conf.getProperty       (PROPKEY_alarm_DBOptionsSkipDbs             , DEFAULT_alarm_DBOptionsSkipDbs              ), DEFAULT_alarm_DBOptionsSkipDbs               , "If 'DBOptions' is changed; Discard databases listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                     new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("DBOptions ForSrv",                                PROPKEY_alarm_DBOptionsForSrv                 , String .class, conf.getProperty       (PROPKEY_alarm_DBOptionsForSrv              , DEFAULT_alarm_DBOptionsForSrv               ), DEFAULT_alarm_DBOptionsForSrv                , "If 'DBOptions' is changed; Only for the servers listed (regexp is used, blank=for-all-srv). After this rule the 'skip' rule is evaluated.",   new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("DBOptions SkipSrv",                               PROPKEY_alarm_DBOptionsSkipSrv                , String .class, conf.getProperty       (PROPKEY_alarm_DBOptionsSkipSrv             , DEFAULT_alarm_DBOptionsSkipSrv              ), DEFAULT_alarm_DBOptionsSkipSrv               , "If 'DBOptions' is changed; Discard servers listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                       new RegExpInputValidator()));
+
 		return list;
 	}
 

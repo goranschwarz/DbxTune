@@ -87,7 +87,7 @@
 	<classpathentry kind="lib" path="lib/guava-20.0.jar"/>
 	<classpathentry kind="lib" path="lib/javassist-3.21.0-GA.jar"/>
 	<classpathentry kind="lib" path="lib/syslog-java-client-1.1.0.jar" sourcepath="3pp/syslog-java-client-1.1.0-sources.jar"/>
-	<classpathentry kind="lib" path="lib/javax.mail.jar"/>
+	<classpathentry kind="lib" path="lib/javax.mail.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1663237888408/source/javax.mail-1.5.6-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jsendnsca-2.1.0.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="http://jsendnsca.github.io/jsendnsca/"/>

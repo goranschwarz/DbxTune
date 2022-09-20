@@ -147,6 +147,11 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	private static final String  PROP_PREFIX                = CM_NAME;
+
+	public static final String  PROPKEY_exclude_IdleInTransaction_lt_ms = PROP_PREFIX + ".exclude.idle-in-transaction.lt.ms";
+	public static final int     DEFAULT_exclude_IdleInTransaction_lt_ms = 200; 
+
 	
 	private void addTrendGraphs()
 	{
@@ -186,30 +191,148 @@ extends CountersModel
 		return pkCols;
 	}
 
+//	@Override
+//	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
+//	{
+//		String im_blocked_by_pids     = "";
+//		String im_blocking_other_pids = "";
+//		if (versionInfo.getLongVersion() >= Ver.ver(9, 6))
+//		{
+//			im_blocked_by_pids     = "    ,CAST(array_to_string(pg_blocking_pids(pid), ', ') as varchar(512)) AS im_blocked_by_pids \n";
+//			im_blocking_other_pids = "    ,CAST('' as varchar(512)) AS im_blocking_other_pids \n";
+//		}
+//
+//TODO; add columns; backend_start_AGE, xact_start_AGE, query_start_AGE, state_change_AGE (age would be in HH:MM:SS.ms)
+//-- do: implement version specific SQL on below
+//		return ""
+//				+ "select \n"
+//				+ "     * \n"
+//				+       im_blocked_by_pids
+//				+       im_blocking_other_pids
+//				+ "    ,CASE WHEN state != 'active' THEN NULL \n"
+//				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from query_start)) * 1000) as int) \n"
+//				+ "     END as \"execTimeInMs\" \n"
+//				+ "from pg_catalog.pg_stat_activity \n"
+//				+ "where state != 'idle' \n"
+//				+ "  and pid   != pg_backend_pid() \n"
+//				+ "  and application_name != '" + Version.getAppName() + "' \n"
+//				+ "";
+//	}
+
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		// do NOT include records with status='idle in transaction' with values less than
+		int exclude_idleInTransaction_lt_ms = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_exclude_IdleInTransaction_lt_ms, DEFAULT_exclude_IdleInTransaction_lt_ms);
+		
+		String waiting = "    ,waiting \n";
+
+		// ----- 9.4
+		String backend_xid = "";
+		String backend_xmin = "";
+		if (versionInfo.getLongVersion() >= Ver.ver(9, 4))
+		{
+			backend_xid  = "    ,backend_xid \n";
+			backend_xmin = "    ,backend_xmin \n";
+		}
+
+		// ----- 9.6
 		String im_blocked_by_pids     = "";
 		String im_blocking_other_pids = "";
+		String wait_event_type        = "";
+		String wait_event             = "";
 		if (versionInfo.getLongVersion() >= Ver.ver(9, 6))
 		{
 			im_blocked_by_pids     = "    ,CAST(array_to_string(pg_blocking_pids(pid), ', ') as varchar(512)) AS im_blocked_by_pids \n";
 			im_blocking_other_pids = "    ,CAST('' as varchar(512)) AS im_blocking_other_pids \n";
+
+			waiting         = ""; // Waiting was removed in 9.6 and replaced by wait_event_type and wait_event
+			wait_event_type = "    ,CAST(wait_event_type as varchar(128)) AS wait_event_type \n";
+			wait_event      = "    ,CAST(wait_event      as varchar(128)) AS wait_event \n";
 		}
 		
-		return ""
+		
+		// ----- 10
+		String backend_type = "";
+		if (versionInfo.getLongVersion() >= Ver.ver(10))
+		{
+			backend_type    = "    ,CAST(backend_type    as varchar(128)) AS backend_type \n";
+		}
+
+		// ----- 11: No changes
+		// ----- 12: No changes
+		// ----- 13
+		String leader_pid = "";
+		if (versionInfo.getLongVersion() >= Ver.ver(13))
+		{
+			leader_pid  = "    ,leader_pid \n";
+		}
+
+		// ----- 14
+		String query_id = "";
+		if (versionInfo.getLongVersion() >= Ver.ver(13))
+		{
+			query_id  = "    ,query_id \n";
+		}
+
+		// ----- 15: No changes
+
+		// Construct the SQL Statement
+		String sql = ""
 				+ "select \n"
-				+ "     * \n"
-				+       im_blocked_by_pids
-				+       im_blocking_other_pids
-				+ "    ,CASE WHEN state != 'active' THEN NULL \n"
+				+ "     datid \n"
+				+ "    ,datname \n"
+				+ "    ,pid \n"
+				+ leader_pid
+				+ im_blocked_by_pids
+				+ im_blocking_other_pids
+				+ "    ,usesysid \n"
+				+ "    ,usename \n"
+				+ "    ,CAST(application_name as varchar(128)) AS application_name \n"
+				+ "    ,CAST(age(clock_timestamp(), backend_start) as varchar(30)) AS backend_start_age \n"
+				+ "    ,CAST(age(clock_timestamp(), xact_start)    as varchar(30)) AS xact_start_age \n"
+				+ "    ,CAST(age(clock_timestamp(), query_start)   as varchar(30)) AS query_start_age \n"
+				+ "    ,CAST(age(clock_timestamp(), state_change)  as varchar(30)) AS state_change_age \n"
+				+ "    ,backend_start \n"
+				+ "    ,xact_start \n"
+				+ "    ,query_start \n"
+				+ "    ,state_change \n"
+				+ waiting
+				+ wait_event_type
+				+ wait_event
+				+ "    ,CAST(state            as varchar(128)) AS state \n"
+				+ backend_xid
+				+ backend_xmin
+				+ backend_type
+				+ "    ,CAST(client_addr      as varchar(128)) AS client_addr \n"
+				+ "    ,CAST(client_hostname  as varchar(128)) AS client_hostname \n"
+				+ "    ,client_port \n"
+				+ query_id
+				+ "    ,query \n"
+
+				+ "    ,CASE WHEN state != 'active' OR state IS NULL THEN -1 \n"
 				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from query_start)) * 1000) as int) \n"
 				+ "     END as \"execTimeInMs\" \n"
+
+				+ "    ,CASE WHEN state != 'active' OR state IS NULL THEN -1 \n"
+				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from xact_start)) * 1000) as int) \n"
+				+ "     END as \"xactTimeInMs\" \n"
+
 				+ "from pg_catalog.pg_stat_activity \n"
 				+ "where state != 'idle' \n"
 				+ "  and pid   != pg_backend_pid() \n"
 				+ "  and application_name != '" + Version.getAppName() + "' \n"
 				+ "";
+		
+		if (exclude_idleInTransaction_lt_ms >= 0)
+		{
+			sql += ""
+				+ "  /* for state='idle in transaction', then show 'xact_start' older than " + exclude_idleInTransaction_lt_ms + " ms */ \n"
+				+ "  and ((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from xact_start)) * 1000) > (CASE WHEN state = 'idle in transaction' THEN " + exclude_idleInTransaction_lt_ms + " ELSE -1 END) \n" 
+				+ "";
+		}
+			
+		return sql;
 	}
 
 	/**

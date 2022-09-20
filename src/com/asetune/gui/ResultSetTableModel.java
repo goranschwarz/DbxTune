@@ -4695,6 +4695,46 @@ public class ResultSetTableModel
 		
 	}
 
+	/**
+	 * Copy a ResultSet table 
+	 */
+	public ResultSetTableModel copy()
+	{
+		return copy(-1, -1, null);
+	}
+
+	/**
+	 * Copy a ResultSet table 
+	 * <p>
+	 * To copy first row do: <code>copy(0, 1, "new-name")</code>
+	 * 
+	 * @param firstRowId      Starting row number (0 Indexed. 0 <= means first row)
+	 * @param lastRowId       Last row number (0 Indexed. -1 means last row)
+	 * @param newName         Name of the table (if null, append "-copy" to the current name
+	 * @return
+	 */
+	public ResultSetTableModel copy(int firstRowId, int lastRowId, String newName)
+	{
+		if (newName == null)
+			newName = this.getName() + "-copy";
+
+		// Copy ALL Rows
+		if (firstRowId <= 0 && lastRowId == -1)
+			return new ResultSetTableModel(this, newName, true);
+
+		// Copy only some rows
+		ResultSetTableModel newRstm = new ResultSetTableModel(this, newName, false);
+		for (int r=0; r<this.getRowCount(); r++)
+		{
+			if (r >= firstRowId && (lastRowId == -1 || r < lastRowId))
+			{
+				ArrayList<Object> row = this._rows.get(r);
+				newRstm._rows.add(new ArrayList<>(row));
+			}
+		}
+		return newRstm;
+	}
+
 //	public static void main(String[] args)
 //	{
 //		Properties log4jProps = new Properties();

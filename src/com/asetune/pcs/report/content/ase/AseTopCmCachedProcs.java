@@ -263,6 +263,7 @@ public class AseTopCmCachedProcs extends AseAbstract
 		String sql_and_skipNewOrDiffRateRows = "  and [CmNewDiffRateRow] = 0 \n"; // This is the "old" way... and used for backward compatibility
 		String sql_and_onlyNewOrDiffRateRows = "  and [CmNewDiffRateRow] = 1 \n"; // This is the "old" way... and used for backward compatibility
 //		String sql_and_skipAggregatedRows    = "";
+		String col_newDiffRow_sum            = " ,sum([CmNewDiffRateRow])     as [newDiffRow_sum] \n";
 		if (dummyRstm.hasColumn("CmRowState")) // New column name for 'CmNewDiffRateRow' (which is a bitwise state column)
 		{
 			// the below will produce for H2:     and  BITAND([CmRowState], 1) = ???   
@@ -271,6 +272,8 @@ public class AseTopCmCachedProcs extends AseAbstract
 			sql_and_onlyNewOrDiffRateRows = "  and " + conn.toBitAnd("[CmRowState]", CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW) + " = " + CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW + " \n";
 
 //			sql_and_skipAggregatedRows    = "  and " + conn.toBitAnd("[CmRowState]", CountersModel.ROW_STATE__IS_AGGREGATED_ROW) + " = 0 \n";
+
+			col_newDiffRow_sum = " ,sum(" + conn.toBitAnd("[CmRowState]", CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW) + ")     as [newDiffRow_sum] \n";
 		}
 //FIXME; double check the code for "CmNewDiffRateRow and CmRowState"
 
@@ -627,7 +630,8 @@ public class AseTopCmCachedProcs extends AseAbstract
 			    + "    ,min([SessionSampleTime]) as [SessionSampleTime_min] \n"
 			    + "    ,max([SessionSampleTime]) as [SessionSampleTime_max] \n"
 			    + "    ,cast('' as varchar(30))  as [Duration] \n"
-			    + "    ,sum([CmNewDiffRateRow])  as [newDiffRow_sum] \n"
+//			    + "    ,sum([CmNewDiffRateRow])  as [newDiffRow_sum] \n"
+				+ col_newDiffRow_sum
 			    + "    ,sum([CmSampleMs])        as [CmSampleMs_sum] \n"
 			    + " \n"
 			    + "from [CmCachedProcs_diff] \n"
