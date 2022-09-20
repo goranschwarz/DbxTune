@@ -938,7 +938,8 @@ extends CountersModel
 			// Decode the 'wait_resource'
 			if (wait_resource.startsWith("KEY: "))   // example='KEY: 6:72057594044153856 (7b4f7e19e103)' -- Database_Id, HOBT_Id ( Magic hash that you can decode with %%lockres%% if you really want)
 			{
-				
+				// decode: https://littlekendra.com/2016/10/17/decoding-key-and-page-waitresource-for-deadlocks-and-blocking/
+				//         in this way we can get: dbname, objectname & the row/values for the resource
 			}
 			else if (wait_resource.startsWith("PAGE: "))   // example='PAGE: 6:1:70133' -- Database_Id : FileId : PageNumber
 			{

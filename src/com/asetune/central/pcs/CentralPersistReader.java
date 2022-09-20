@@ -979,7 +979,8 @@ public class CentralPersistReader
 					if (schemaSet.contains(srvName))
 						srvNameList.add(srvName);
 					else
-						_logger.warn("getLastSampleForCm(): Skipping checking srvName '" + srvName +  "', because it didnt exist. Existing schemas is: " + schemaSet);
+						_logger.debug("getLastSampleForCm(): Skipping checking srvName '" + srvName +  "', because it didnt exist. Existing schemas is: " + schemaSet);
+					//	_logger.warn("getLastSampleForCm(): Skipping checking srvName '" + srvName +  "', because it didnt exist. Existing schemas is: " + schemaSet);
 				}
 			}
 			else // for ALL SCHEMAS

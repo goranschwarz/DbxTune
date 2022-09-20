@@ -227,7 +227,8 @@ public class ChartBroadcastWebSocket
 			}
 		}
 
-		_logger.info("Sent subscription data for server '"+sample.getServerName()+"' to "+subsSentList.size()+" Web Subscribers "+subsSentList+". subsMap.size="+_subsMap.size());
+		if ( subsSentList.size() > 0 )
+			_logger.info("Sent subscription data for server '"+sample.getServerName()+"' to "+subsSentList.size()+" Web Subscribers "+subsSentList+". subsMap.size="+_subsMap.size());
 
 	}
 }
