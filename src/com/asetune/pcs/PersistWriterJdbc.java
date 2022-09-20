@@ -3521,7 +3521,7 @@ public class PersistWriterJdbc
 				pst.setString   (i++, strMaxLen(ae.getReRaiseData() == null ? null : ae.getReRaiseData().toString()  ,512,"lastData"           )); // lastData                - varchar(512), Nullable = true 
 				pst.setString   (i++, strMaxLen(ae.getDescription()                                                  ,512,"description"        )); // description             - varchar(512), Nullable = false
 				pst.setString   (i++, strMaxLen(ae.getReRaiseDescription()                                           ,512,"lastDescription"    )); // lastDescription         - varchar(512), Nullable = false
-				pst.setString   (i++, strMaxLen(ae.getExtendedDescription()                                          ,512,"extendedDescription")); // extendedDescription     - text        , Nullable = true 
+				pst.setString   (i++,           ae.getExtendedDescription()                                                                     ); // extendedDescription     - text        , Nullable = true 
 				pst.setString   (i++,           ae.getReRaiseExtendedDescription()                                                              ); // lastExtendedDescription - text        , Nullable = true 
 		
 				// EXECUTE
