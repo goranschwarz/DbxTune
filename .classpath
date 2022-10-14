@@ -122,7 +122,6 @@
 	<classpathentry kind="lib" path="lib/schemacrawler-16.2.4.jar" sourcepath="3pp/SchemaCrawler-16.2.4.zip"/>
 	<classpathentry kind="lib" path="lib/jfreechart-1.5.1.jar" sourcepath="3pp/jfreechart-1.5.1-sources.jar"/>
 	<classpathentry kind="lib" path="lib/commons-text-1.9.jar" sourcepath="3pp/commons-text-1.9-sources.jar"/>
-	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-9.2.0.jre8.jar"/>
 	<classpathentry kind="lib" path="lib/jetty/geronimo-jaspi-2.0.0.jar"/>
 	<classpathentry kind="lib" path="lib/jetty/javax.security.auth.message-1.0.0.v201108011116.jar"/>
 	<classpathentry kind="lib" path="lib/jetty/jetty-all-9.4.38.v20210224-uber.jar"/>
@@ -132,5 +131,6 @@
 	<classpathentry kind="lib" path="lib/sql-formatter-2.0.3.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1645375698757/source/sql-formatter-2.0.3-sources.jar"/>
 	<classpathentry kind="lib" path="lib/h2-2.1.214.jar"/>
 	<classpathentry kind="lib" path="lib/jsqlparser-4.5.jar"/>
+	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-11.2.1.jre8.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>

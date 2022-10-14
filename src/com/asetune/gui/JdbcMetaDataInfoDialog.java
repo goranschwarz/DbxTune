@@ -209,7 +209,7 @@ extends JDialog
 	private JLabel                 _ix_val_lbl = new JLabel("Table Name: ");
 	private JTextField             _ix_val_txt = new JTextField("");
 	private JCheckBox              _ix_unique_chk = new JCheckBox("When true, return only indices for unique values; when false, return indices regardless of whether unique or not");
-	private JCheckBox              _ix_approx_chk = new JCheckBox("When true, result is allowed to reflect approximate or out of data values; when false, results are requested to be accurate");
+	private JCheckBox              _ix_approx_chk = new JCheckBox("When true, result is allowed to reflect approximate or out of data values; when false, results are requested to be accurate", true);
 	private JLabel                 _ix_api_lbl = new JLabel("Press button to call getIndexInfo(catalog, schemaPattern, tableNamePattern, unique, approximate)");
 
 	private JLabel                 _ik_cat_lbl = new JLabel("Catalog: ");

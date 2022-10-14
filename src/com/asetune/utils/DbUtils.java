@@ -906,7 +906,7 @@ public class DbUtils
 		DatabaseMetaData dbmd = conn.getMetaData();
 
 		// First try with *original* name
-		try (ResultSet rs = dbmd.getIndexInfo(cat, schema, tableName, false, false))
+		try (ResultSet rs = dbmd.getIndexInfo(cat, schema, tableName, false, true))
 		{
 			while(rs.next())
 			{
@@ -925,7 +925,7 @@ public class DbUtils
 			try ( ResultSet rs = dbmd.getIndexInfo(cat       == null ? null : cat      .toUpperCase(), 
 			                                       schema    == null ? null : schema   .toUpperCase(), 
 			                                       tableName == null ? null : tableName.toUpperCase(), 
-			                                       false, false) )
+			                                       false, true) )
 			{
 				while(rs.next())
 				{
@@ -945,7 +945,7 @@ public class DbUtils
 			try ( ResultSet rs = dbmd.getIndexInfo(cat       == null ? null : cat      .toLowerCase(), 
 			                                       schema    == null ? null : schema   .toLowerCase(), 
 			                                       tableName == null ? null : tableName.toLowerCase(), 
-			                                       false, false) )
+			                                       false, true) )
 			{
 				while(rs.next())
 				{

@@ -202,7 +202,13 @@ public class ConnectionDialog
 	
 	public  static final String  PROPKEY_CONN_SQLSERVER_WIN_AUTH     = "conn.jdbc.sqlserver.windows.authentication";
 	public  static final boolean DEFAULT_CONN_SQLSERVER_WIN_AUTH     = false;
+	
+	public  static final String  PROPKEY_CONN_SQLSERVER_ENCRYPT      = "conn.jdbc.sqlserver.encrypt";
+	public  static final boolean DEFAULT_CONN_SQLSERVER_ENCRYPT      = true;
 
+	public  static final String  PROPKEY_CONN_SQLSERVER_TRUST_CERT   = "conn.jdbc.sqlserver.trustServerCertificate";
+	public  static final boolean DEFAULT_CONN_SQLSERVER_TRUST_CERT   = true;
+	
 	static
 	{
 		Configuration.registerDefaultValue(PROPKEY_RECONNECT_ON_FAILURE,       DEFAULT_RECONNECT_ON_FAILURE);
@@ -530,7 +536,9 @@ public class ConnectionDialog
 	private JButton              _jdbcSshTunnel_but       = new JButton("SSH Settings...");
 
 	//---- JDBC proprietary fields
-	private JCheckBox            _jdbcSqlServerUseWindowsAuthentication_chk = new JCheckBox("Use Windows Authentication", DEFAULT_CONN_SQLSERVER_WIN_AUTH);
+	private JCheckBox            _jdbcSqlServerUseWindowsAuthentication_chk  = new JCheckBox("Use Windows Authentication", DEFAULT_CONN_SQLSERVER_WIN_AUTH);
+	private JCheckBox            _jdbcSqlServerUseEncrypt_chk                = new JCheckBox("Encrypt"                   , DEFAULT_CONN_SQLSERVER_ENCRYPT);
+	private JCheckBox            _jdbcSqlServerUseTrustServerCertificate_chk = new JCheckBox("Trust Certificate"         , DEFAULT_CONN_SQLSERVER_TRUST_CERT);
 
 	//---- JDBC Driver Info panel
 	private JPanel               _jdbcDriverInfoPanel      = null;
@@ -3427,7 +3435,9 @@ public class ConnectionDialog
 		_jdbcUsername_txt  .setToolTipText("User name to be used when creating the connection");
 		_jdbcPassword_lbl  .setToolTipText("Password to be used when creating the connection");
 		_jdbcPassword_txt  .setToolTipText("Password to be used when creating the connection");
-		_jdbcSqlServerUseWindowsAuthentication_chk.setToolTipText("Use Windows Authentication subsystem when connecting.");
+		_jdbcSqlServerUseWindowsAuthentication_chk .setToolTipText("Use Windows Authentication subsystem when connecting.");
+		_jdbcSqlServerUseEncrypt_chk               .setToolTipText("<html>Encrypt all data over the network (between client and server) via SSL/TLS.<br>JDBC Option 'encrypt=true'<br>Note: This is the default in MS SQL Server JDBC Version 10.1 and above. </html>");
+		_jdbcSqlServerUseTrustServerCertificate_chk.setToolTipText("<html>If 'encrypt=true' via SSL/TLS is enabled, then: trust 'self-signed' certificates, which is common in test environments.<br>In MS SQL Server JDBC Version 10.1 and above 'encrypt=true' is the default.</html>");
 		_jdbcSqlInit_lbl   .setToolTipText("<html>Send this SQL Statement after the connection has been established.<br>If you want to send several statements, use ';' as a teminator for each statement.</html>");
 		_jdbcSqlInit_txt   .setToolTipText("<html>Send this SQL Statement after the connection has been established.<br>If you want to send several statements, use ';' as a teminator for each statement.</html>");
 		_jdbcUrlOptions_lbl.setToolTipText("<html>If the current Driver supports <code>driver.getPropertyInfo()</code>, show available Options.<br><b>NOTE</b>: You still have to copy the Option into the URL field yourself...</html>");
@@ -3491,7 +3501,9 @@ public class ConnectionDialog
 
 //		panel.add(_jdbcSavePassword_chk, "skip, split, growx, pushx");
 //		panel.add(_jdbcTestConn_lbl,     "");
-		panel.add(new JLabel(),          "skip, split, growx, pushx"); // dummy to push next to the right
+		panel.add(_jdbcSqlServerUseEncrypt_chk               , "skip, split, hidemode 2");
+		panel.add(_jdbcSqlServerUseTrustServerCertificate_chk, "hidemode 2");
+		panel.add(new JLabel(),          "growx, pushx"); // dummy to push next to the right
 		panel.add(_jdbcDriverInfo_but,   "hidemode 2");
 		panel.add(_jdbcTestConn_but,     "wrap");
 
@@ -3508,6 +3520,8 @@ public class ConnectionDialog
 		
 //		_jdbcSqlServerUseWindowsAuthentication_chk.setVisible(false);
 		setSqlServerUseWindowsAuthenticationVisible(false);
+		setSqlServerUseEncryptVisible(false);
+		setSqlServerUseTrustServerCertificateVisible(false);
 
 		// NOTE: initialization of the getAvailableDriverList() is now asynchronous (since it takes a long time)
 		//       So therefore: I added the _jdbcDriver_cbx.addPopupMenuListener() which will add the JDBC Drivers at a later time.
@@ -3561,7 +3575,9 @@ public class ConnectionDialog
 		_jdbcUrl_cbx        .getEditor().getEditorComponent().addKeyListener(this);
 		_jdbcUrl_cbx        .addActionListener(this);
 		_jdbcPassword_txt   .addActionListener(this);
-		_jdbcSqlServerUseWindowsAuthentication_chk.addActionListener(this);
+		_jdbcSqlServerUseWindowsAuthentication_chk .addActionListener(this);
+		_jdbcSqlServerUseEncrypt_chk               .addActionListener(this);
+		_jdbcSqlServerUseTrustServerCertificate_chk.addActionListener(this);
 		_jdbcUrl_but        .addActionListener(this);
 		_jdbcUrlOptions_txt .addActionListener(this);
 		_jdbcUrlOptions_but .addActionListener(this);
@@ -6348,7 +6364,9 @@ if ( ! jdbcSshTunnelUse )
 
 			// Show or hide the MS SQL-Server Windows Authentication CheckBox
 			//_jdbcSqlServerUseWindowsAuthentication_chk.setVisible(url.startsWith("jdbc:sqlserver:"));
-			setSqlServerUseWindowsAuthenticationVisible(url.startsWith("jdbc:sqlserver:"));
+			setSqlServerUseWindowsAuthenticationVisible (url.startsWith("jdbc:sqlserver:"));
+			setSqlServerUseEncryptVisible               (url.startsWith("jdbc:sqlserver:"));
+			setSqlServerUseTrustServerCertificateVisible(url.startsWith("jdbc:sqlserver:"));
 		}
 		
 		// --- JDBC: CHECKBOX: "Windows Authentication" 
@@ -6362,6 +6380,40 @@ if ( ! jdbcSshTunnelUse )
 				optionsMap.put("integratedSecurity", "true");
 			else
 				optionsMap.remove("integratedSecurity");
+
+			setJdbcUrlOptions(optionsMap);
+		}
+
+
+		// --- JDBC: CHECKBOX: "Encryption" 
+		if (_jdbcSqlServerUseEncrypt_chk.equals(source))
+		{
+			boolean useEncryption = _jdbcSqlServerUseEncrypt_chk.isSelected();
+			
+			Map<String,String> optionsMap  = StringUtil.parseCommaStrToMap(_jdbcUrlOptions_txt.getText());
+
+			if (useEncryption)
+				optionsMap.put("encrypt", "true");
+			else
+			//	optionsMap.remove("encrypt");
+				optionsMap.put("encrypt", "false");
+
+			setJdbcUrlOptions(optionsMap);
+		}
+
+
+		// --- JDBC: CHECKBOX: "Trust Server Certificate" 
+		if (_jdbcSqlServerUseTrustServerCertificate_chk.equals(source))
+		{
+			boolean useTrustServerCert = _jdbcSqlServerUseTrustServerCertificate_chk.isSelected();
+			
+			Map<String,String> optionsMap  = StringUtil.parseCommaStrToMap(_jdbcUrlOptions_txt.getText());
+
+			if (useTrustServerCert)
+				optionsMap.put("trustServerCertificate", "true");
+			else
+			//	optionsMap.remove("trustServerCertificate");
+				optionsMap.put("trustServerCertificate", "false");
 
 			setJdbcUrlOptions(optionsMap);
 		}
@@ -6784,8 +6836,14 @@ if ( ! jdbcSshTunnelUse )
 
 		// Show or hide the MS SQL-Server Windows Authentication CheckBox
 		//_jdbcSqlServerUseWindowsAuthentication_chk.setVisible(StringUtil.getSelectedItemString(_jdbcUrl_cbx).startsWith("jdbc:sqlserver:"));
-		setSqlServerUseWindowsAuthenticationVisible(StringUtil.getSelectedItemString(_jdbcUrl_cbx).startsWith("jdbc:sqlserver:"));
-
+		setSqlServerUseWindowsAuthenticationVisible (StringUtil.getSelectedItemString(_jdbcUrl_cbx).startsWith("jdbc:sqlserver:"));
+		setSqlServerUseEncryptVisible               (StringUtil.getSelectedItemString(_jdbcUrl_cbx).startsWith("jdbc:sqlserver:"));
+		setSqlServerUseTrustServerCertificateVisible(StringUtil.getSelectedItemString(_jdbcUrl_cbx).startsWith("jdbc:sqlserver:"));
+		// Set some default values... for SQL Server
+		if (StringUtil.getSelectedItemString(_jdbcUrl_cbx).startsWith("jdbc:sqlserver:"))
+		{
+			setJdbcUrlOptions("encrypt=true, trustServerCertificate=true");
+		}
 	}
 
 	private void setJdbcUrlOptions(Map<String, String> optionsMap)
@@ -6800,12 +6858,22 @@ if ( ! jdbcSshTunnelUse )
 		// Show or hide the MS SQL-Server Windows Authentication CheckBox
 		String url = StringUtil.getSelectedItemString(_jdbcUrl_cbx);
 //		_jdbcSqlServerUseWindowsAuthentication_chk.setVisible(url.startsWith("jdbc:sqlserver:"));
-		setSqlServerUseWindowsAuthenticationVisible(url.startsWith("jdbc:sqlserver:"));
+		setSqlServerUseWindowsAuthenticationVisible (url.startsWith("jdbc:sqlserver:"));
+		setSqlServerUseEncryptVisible               (url.startsWith("jdbc:sqlserver:"));
+		setSqlServerUseTrustServerCertificateVisible(url.startsWith("jdbc:sqlserver:"));
 
 		// MS SQL-Server: Windows authentication
 		String val = optionsMap.get("integratedSecurity");
 //		_jdbcSqlServerUseWindowsAuthentication_chk.setSelected(val != null && val.equalsIgnoreCase("true"));
-		setSqlServerUseWindowsAuthenticationSelected(val != null && val.equalsIgnoreCase("true"));
+		setSqlServerUseWindowsAuthenticationSelected (val != null && val.equalsIgnoreCase("true"));
+		
+		// MS SQL-Server: Encrypt
+		val = optionsMap.get("encrypt");
+		setSqlServerUseEncryptSelected(val != null && val.equalsIgnoreCase("true"));
+
+		// MS SQL-Server: Trust Server Certificate
+		val = optionsMap.get("trustServerCertificate");
+		setSqlServerUseTrustServerCertificateSelected(val != null && val.equalsIgnoreCase("true"));
 	}
 	private void setJdbcUrlOptions(String optionsStr)
 	{
@@ -6826,7 +6894,31 @@ if ( ! jdbcSshTunnelUse )
 		_jdbcUsername_txt.setEnabled( ! toValue );
 		_jdbcPassword_txt.setEnabled( ! toValue );
 	}
+	
+	private void setSqlServerUseEncryptVisible(boolean toValue)
+	{
+		_jdbcSqlServerUseEncrypt_chk.setVisible( toValue );
+	}
+	private void setSqlServerUseEncryptSelected(boolean toValue)
+	{
+		_jdbcSqlServerUseEncrypt_chk.setSelected( toValue );
+	}
+	
+	private void setSqlServerUseTrustServerCertificateVisible(boolean toValue)
+	{
+		_jdbcSqlServerUseTrustServerCertificate_chk.setVisible( toValue );
 
+//		_jdbcUsername_txt.setEnabled( ! toValue );
+//		_jdbcPassword_txt.setEnabled( ! toValue );
+	}
+	private void setSqlServerUseTrustServerCertificateSelected(boolean toValue)
+	{
+		_jdbcSqlServerUseTrustServerCertificate_chk.setSelected( toValue );
+
+//		_jdbcUsername_txt.setEnabled( ! toValue );
+//		_jdbcPassword_txt.setEnabled( ! toValue );
+	}
+	
 	private void action_nwPasswdEncryption()
 	{
 		boolean encrypt = _aseOptionPwdEncryption_chk.isSelected();
@@ -7842,6 +7934,29 @@ if ( ! jdbcSshTunnelUse )
 
 				ConnectionProfile.JdbcEntry entry = connProfile.getJdbcEntry(); 
 
+				String jdbcUrlOptions = entry._jdbcUrlOptions;
+				// Special thing for SQL-Server and with JDBC Driver 10.1 or newer where encrypt=true is the new DEFAULT
+				// Then we need to "upgrade" current connection profile with: trustServerCertificate=true
+				if (entry._jdbcUrl.startsWith("jdbc:sqlserver:"))
+				{
+					Map<String, String> optionsMap = StringUtil.parseCommaStrToMap(entry._jdbcUrlOptions);
+					
+					if ( ! optionsMap.containsKey("encrypt") )
+					{
+						optionsMap.put("encrypt", "true");
+						_logger.info("Adding Connection Property 'encrypt=true' when loading Connection Profile '" + connProfile.getName() + "'.");
+					}
+
+					if ( ! optionsMap.containsKey("trustServerCertificate") )
+					{
+						optionsMap.put("trustServerCertificate", "true");
+						_logger.info("Adding Connection Property 'trustServerCertificate=true' when loading Connection Profile '" + connProfile.getName() + "'.");
+					}
+
+					jdbcUrlOptions = StringUtil.toCommaStr(optionsMap, "=", ", ");
+				}
+
+				
 				setConnectionProfileTypeName(connProfile, entry._profileTypeName);
 				_jdbcDriver_cbx       .setSelectedItem(entry._jdbcDriver);
 				setJdbcUrlTemplates(entry._jdbcDriver);
@@ -7850,7 +7965,8 @@ if ( ! jdbcSshTunnelUse )
 				_jdbcPassword_txt     .setText(        entry._jdbcPassword);
 				_jdbcSqlInit_txt      .setText(        entry._jdbcSqlInit);
 //				_jdbcUrlOptions_txt   .setText(        entry._jdbcUrlOptions);
-				setJdbcUrlOptions(entry._jdbcUrlOptions);
+//				setJdbcUrlOptions(entry._jdbcUrlOptions);
+				setJdbcUrlOptions(jdbcUrlOptions);
 				_jdbcSavePassword_chk .setSelected(    entry._jdbcSavePassword);
 				_jdbcSshTunnel_chk    .setSelected(    entry._jdbcShhTunnelUse);
 				_jdbcSshTunnelInfo    =                entry._jdbcShhTunnelInfo;
@@ -8511,6 +8627,12 @@ if ( ! jdbcSshTunnelUse )
 
 			conf.setProperty(PROPKEY_CONN_SQLSERVER_WIN_AUTH,             _jdbcSqlServerUseWindowsAuthentication_chk.isSelected() );
 			conf.setProperty(PROPKEY_CONN_SQLSERVER_WIN_AUTH+"."+urlStr,  _jdbcSqlServerUseWindowsAuthentication_chk.isSelected() );
+
+			conf.setProperty(PROPKEY_CONN_SQLSERVER_ENCRYPT,             _jdbcSqlServerUseEncrypt_chk.isSelected() );
+			conf.setProperty(PROPKEY_CONN_SQLSERVER_ENCRYPT+"."+urlStr,  _jdbcSqlServerUseEncrypt_chk.isSelected() );
+
+			conf.setProperty(PROPKEY_CONN_SQLSERVER_TRUST_CERT,             _jdbcSqlServerUseTrustServerCertificate_chk.isSelected() );
+			conf.setProperty(PROPKEY_CONN_SQLSERVER_TRUST_CERT+"."+urlStr,  _jdbcSqlServerUseTrustServerCertificate_chk.isSelected() );
 		}
 
 		//------------------
@@ -8800,7 +8922,9 @@ if ( ! jdbcSshTunnelUse )
 		_jdbcSshTunnel_chk.setSelected(bol);
 
 //		_jdbcSqlServerUseWindowsAuthentication_chk.setSelected(conf.getBooleanProperty(PROPKEY_CONN_SQLSERVER_WIN_AUTH, DEFAULT_CONN_SQLSERVER_WIN_AUTH)); 
-		setSqlServerUseWindowsAuthenticationSelected(conf.getBooleanProperty(PROPKEY_CONN_SQLSERVER_WIN_AUTH, DEFAULT_CONN_SQLSERVER_WIN_AUTH));
+		setSqlServerUseWindowsAuthenticationSelected (conf.getBooleanProperty(PROPKEY_CONN_SQLSERVER_WIN_AUTH  , DEFAULT_CONN_SQLSERVER_WIN_AUTH));
+		setSqlServerUseEncryptSelected               (conf.getBooleanProperty(PROPKEY_CONN_SQLSERVER_ENCRYPT   , DEFAULT_CONN_SQLSERVER_ENCRYPT));
+		setSqlServerUseTrustServerCertificateSelected(conf.getBooleanProperty(PROPKEY_CONN_SQLSERVER_TRUST_CERT, DEFAULT_CONN_SQLSERVER_TRUST_CERT));
 
 
 		//----------------------------------

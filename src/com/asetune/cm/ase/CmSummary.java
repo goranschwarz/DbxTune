@@ -809,7 +809,7 @@ extends CountersModel
 			cols1 += ", CheckPoints         = sum(CheckPoints) \n";
 			cols1 += ", NumDeadlocks        = sum(NumDeadlocks) \n";
 			cols1 += ", DiagnosticDumps     = sum(DiagnosticDumps) \n";
-			cols1 += ", Connections         = sum(DbxConnections) \n";
+			cols1 += ", Connections         = sum(Connections) \n";
 			cols1 += ", MaxRecovery         = avg(MaxRecovery) \n";
 			cols1 += ", Transactions        = sum(Transactions) \n";
 			cols1 += ", StartDate           = min(StartDate) \n";

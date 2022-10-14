@@ -220,7 +220,7 @@ implements Serializable
 //		String firstIndex = null;
 //		if (pk.isEmpty())
 //		{
-//			rs = dbmd.getIndexInfo(cat, schema, name, true, false);
+//			rs = dbmd.getIndexInfo(cat, schema, name, true, true);
 //			while(rs.next())
 //			{
 //				int    typ     = rs.getInt   ("TYPE");
@@ -267,7 +267,7 @@ implements Serializable
 		String firstIndex = null;
 		if (pk.isEmpty())
 		{
-			rs = dbmd.getIndexInfo(cat, schema, name, true, false);
+			rs = dbmd.getIndexInfo(cat, schema, name, true, true);
 			rstm = new ResultSetTableModel(rs, "getIndexInfo");
 
 			// Lets try to sort this as well

@@ -252,7 +252,7 @@ public class Table
 		//    13 - FILTER_CONDITION String => Filter condition, if any. (may be null)
 		//--------------------
 		Map<String, Index> tmpIndexMap = new LinkedHashMap<>();
-		rs = dbmd.getIndexInfo(t._catalogName, t._schemaName, t._tableName, false, false); // unique=false, approximate=false
+		rs = dbmd.getIndexInfo(t._catalogName, t._schemaName, t._tableName, false, true); // unique=false, approximate=true
 		while(rs.next())
 		{
 			boolean isUnique  = ! rs.getBoolean("NON_UNIQUE");

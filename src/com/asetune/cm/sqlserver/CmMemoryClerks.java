@@ -124,10 +124,24 @@ extends CountersModel
 	//------------------------------------------------------------
 	private static final String  PROP_PREFIX                       = CM_NAME;
 
-	public static final String GRAPH_NAME_MEMORY_CLERKS_TOP    = "MemoryClerksTop";
+	public static final String GRAPH_NAME_MEMORY_CLERK_BUFFER_POOL = "MemoryClerkBp";
+	public static final String GRAPH_NAME_MEMORY_CLERKS_TOP        = "MemoryClerksTop";
 
 	private void addTrendGraphs()
 	{
+		//-----
+		addTrendGraph(GRAPH_NAME_MEMORY_CLERK_BUFFER_POOL,
+			"Buffer Pool Memory Clerk, in MB", // Menu CheckBox text
+			"Buffer Pool Memory Clerk, in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			new String[] {"Buffer Pool (MEMORYCLERK_SQLBUFFERPOOL)"}, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.MEMORY,
+			false,  // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
 		//-----
 		addTrendGraph(GRAPH_NAME_MEMORY_CLERKS_TOP,
 			"Top 10 Memory Clerks, in MB", // Menu CheckBox text
@@ -146,6 +160,17 @@ extends CountersModel
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
 		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_MEMORY_CLERK_BUFFER_POOL.equals(tgdp.getName()))
+		{
+			Double[] dArray = new Double[1];
+
+			dArray[0] = this.getAbsValueAsDouble("MEMORYCLERK_SQLBUFFERPOOL", "SizeMb");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), dArray);
+		}
+
+		// -----------------------------------------------------------------------------------------
 		if (GRAPH_NAME_MEMORY_CLERKS_TOP.equals(tgdp.getName()))
 		{
 			int top = 10;
@@ -153,10 +178,22 @@ extends CountersModel
 			// Write 1 "line" for every database
 			Double[] dArray = new Double[top];
 			String[] lArray = new String[top];
-			for (int i = 0; i < top; i++)
+			
+			int ap = 0;
+			for (int row = 0; row < top; row++)
 			{
-				lArray[i] = this.getAbsString       (i, "type");
-				dArray[i] = this.getAbsValueAsDouble(i, "SizeMb");
+				String type = this.getAbsString(row, "type");
+				
+				// SKIP: Buffer Pool -- It's handled in another graph (since it's usually BIG)
+				if ("MEMORYCLERK_SQLBUFFERPOOL".equals(type))
+				{
+					top++;
+					continue;
+				}
+
+				lArray[ap] = type;
+				dArray[ap] = this.getAbsValueAsDouble(row, "SizeMb");
+				ap++; // increment after... otherwise we will start at: 1
 			}
 
 			// Set the values

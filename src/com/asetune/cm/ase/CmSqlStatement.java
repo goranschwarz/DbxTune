@@ -1798,6 +1798,9 @@ extends CountersModel
 									if (debugPrint || _logger.isDebugEnabled())
 										System.out.println("##### sendAlarmRequest("+cm.getName()+"): ErrorNumber="+alarmErrorNum+", Count="+errorCount+", is above threshold="+alarmThreshold+".)");
 
+//FIXME; -- NOT YET IMPLEMENTED --
+//FIXME; if (alarmErrorNum == 1105) -- Get TranLog Charts from CmOpenDatabases
+									
 									// Create Alarm
 									AlarmEvent alarm = new AlarmEventClientErrorMsg(cm, alarmErrorNum, dbname, errorCount, errorDesc, alarmThreshold);
 									

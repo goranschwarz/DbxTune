@@ -46,6 +46,7 @@ public abstract class SqlServerConfigText
 	{
 		 SqlServerHelpDb
 		,SqlServerSysDatabases
+		,SqlServerSysMasterFiles
 		,SqlServerTempdb
 		,SqlServerTraceflags
 		,SqlServerLinkedServers
@@ -65,6 +66,7 @@ public abstract class SqlServerConfigText
 	{
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.HelpDb());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SysDatabases());
+		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SysMasterFiles());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.Tempdb());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.Traceflags());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.LinkedServers());
@@ -222,6 +224,36 @@ public abstract class SqlServerConfigText
 			//  22 LIGHTWEIGHT_QUERY_PROFILING          1         NULL
 			//  23 VERBOSE_TRUNCATION_WARNINGS          1         NULL
 			//  24 LAST_QUERY_PLAN_STATS                0         NULL
+		}
+	}
+
+	public static class SysMasterFiles extends DbmsConfigTextAbstract
+	{
+		@Override public    String     getTabLabel()                        { return "sys.master_files"; }
+		@Override public    String     getName()                            { return ConfigType.SqlServerSysMasterFiles.toString(); }
+		@Override public    String     getConfigType()                      { return getName(); }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) 
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) 
+		{ 
+			String sql1 = "select dbname = db_name(database_id), SizeInMb = size/128.0, * from sys.master_files";
+			
+			String sql2 = ""
+				    + "SELECT DISTINCT \n"
+				    + "     ovs.logical_volume_name            AS VolumeName \n"
+				    + "    ,ovs.volume_mount_point             AS MountPoint \n"
+				    + "    ,CAST(ovs.available_bytes/1024.0/1024.0 as numeric(25,1)) AS FreeSpaceMb \n"
+				    + "    ,CAST(ovs.total_bytes    /1024.0/1024.0 as numeric(25,1)) AS SizeMb \n"
+				    + "    ,CAST((ovs.available_bytes*1.0 / ovs.total_bytes*1.0) * 100.0 as numeric(6,1)) AS UsedPct \n"
+				    + "FROM sys.master_files mf \n"
+				    + "CROSS APPLY sys.dm_os_volume_stats(mf.database_id, mf.FILE_ID) ovs; \n"
+				    + "";
+
+			return ""
+			     + sql1
+			     + "\ngo\n"
+			     + sql2
+			     + "\ngo\n"
+			     ;
 		}
 	}
 

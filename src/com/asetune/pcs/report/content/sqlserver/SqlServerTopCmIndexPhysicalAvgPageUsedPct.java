@@ -127,7 +127,7 @@ extends SqlServerAbstract
 		else
 		{
 			// Highlight sort column
-			_shortRstm.setHighlightSortColumns("avg_page_space_used_in_percent");
+			rstm.setHighlightSortColumns("avg_page_space_used_in_percent");
 
 			// Remove some columns which we dont really need
 			rstm.removeColumnNoCase("SessionStartTime");

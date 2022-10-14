@@ -89,6 +89,7 @@ extends DailySummaryReportDefault
 		addReportEntry( new AseTopCmActiveStatements(this)  );
 
 		// SQL: Accessed Tables
+//FIXME: Add AseTopTableSize or check/use AseTopCmObjectActivityTabSize(and if rowCount/MB has timedOut, can we use getTableInformationFromMonDdlStorage)
 		addReportEntry( new AseTopCmObjectActivity(this, AseTopCmObjectActivity.ReportType.LOGICAL_READS) );
 		addReportEntry( new AseTopCmObjectActivity(this, AseTopCmObjectActivity.ReportType.LOCK_WAIT_TIME) );
 //		addReportEntry( new AseTopCmObjectActivityLockWaits(this) );

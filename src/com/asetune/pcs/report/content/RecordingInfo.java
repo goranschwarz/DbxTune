@@ -50,6 +50,7 @@ extends ReportEntryAbstract
 	private String    _startTime   = null;
 	private String    _endTime     = null;
 	private String    _duration    = null;
+	private String    _startDay    = null;
 
 	private Exception _problem     = null;
 
@@ -78,6 +79,7 @@ extends ReportEntryAbstract
 	public String    getStartTime()           { return _startTime; } 
 	public String    getEndTime()             { return _endTime; } 
 	public String    getDuration()            { return _duration; } 
+	public String    getStartDay()            { return _startDay; } 
 	public String    getDbmsVersionString()   { return _dbmsVersionString; } 
 	public String    getDbmsServerName()      { return _dbmsServerName; } 
 	
@@ -142,6 +144,7 @@ extends ReportEntryAbstract
 				sb.append("  <tr> " + tdBullet +" <td><b>Report Period: </b></td> <td> Full day</td> </tr>\n");
 			}
 			sb.append(blankTableRow);
+			sb.append("  <tr> " + tdBullet +" <td><b>Recording Start Day:        </b></td> <td>" + _startDay               + "</td> </tr>\n");
 			sb.append("  <tr> " + tdBullet +" <td><b>Recording Start Date:       </b></td> <td>" + _startTime              + "</td> </tr>\n");
 			sb.append("  <tr> " + tdBullet +" <td><b>Recording End  Date:        </b></td> <td>" + _endTime                + "</td> </tr>\n");
 			sb.append("  <tr> " + tdBullet +" <td><b>Recording Duration:         </b></td> <td>" + _duration               + "</td> </tr>\n");
@@ -333,6 +336,7 @@ extends ReportEntryAbstract
 						_endTime   = endTime   + "";
 						_duration  = TimeUtils.msToTimeStr("%HH:%MM:%SS", endTime.getTime() - startTime.getTime() );
 					//	_duration  = TimeUtils.msToTimeStr("%?DD[d ]%HH:%MM:%SS", endTime.getTime() - startTime.getTime() );
+						_startDay  = startTime.toLocalDateTime().getDayOfWeek().name();
 					}
 				}
 			}

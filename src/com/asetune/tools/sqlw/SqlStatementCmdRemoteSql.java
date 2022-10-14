@@ -32,6 +32,7 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.log4j.Logger;
 
 import com.asetune.gui.ConnectionProfile;
 import com.asetune.gui.ConnectionProfileManager;
@@ -43,7 +44,7 @@ import com.asetune.utils.StringUtil;
 public class SqlStatementCmdRemoteSql 
 extends SqlStatementAbstract
 {
-//	private static Logger _logger = Logger.getLogger(SqlStatementCmdRemoteSql.class);
+	private static Logger _logger = Logger.getLogger(SqlStatementAbstract.class);
 
 	private String[] _args = null;
 	private String _originCmd = null;
@@ -144,6 +145,9 @@ extends SqlStatementAbstract
 
 			if (cmdLine.hasOption('?'))
 				printHelp(null, "You wanted help...");
+			
+			if ("null".equalsIgnoreCase(_params._passwd))
+				_params._passwd = "";
 		}
 		else
 		{
@@ -195,8 +199,8 @@ extends SqlStatementAbstract
 			}
 		}
 		
-		if (StringUtil.isNullOrBlank(_params._server) && _rightConnectionProfile == null)
-			printHelp(null, "Missing mandatory parameter '-p|--profile <profile>' or '-S|--server <srvName>'.");
+		if (StringUtil.isNullOrBlank(_params._server) && _rightConnectionProfile == null && StringUtil.isNullOrBlank(_params._url))
+			printHelp(null, "Missing mandatory parameter '-p|--profile <profile>' or '-S|--server <srvName>' or '-u|--url jdbc:...'");
 
 		if (StringUtil.isNullOrBlank(_params._sql))
 			printHelp(null, "Missing mandatory parameter '-s|--sql <text>'");
@@ -341,6 +345,9 @@ extends SqlStatementAbstract
 		}
 		catch (Exception ex)
 		{
+			if (ex instanceof RuntimeException)
+				_logger.error("Problems connecting to remote DBMS, Caught: "+ex, ex);
+
 			throw new SQLException("Problems connecting to remote DBMS, Caught: "+ex, ex);
 		}
 	}
@@ -349,6 +356,11 @@ extends SqlStatementAbstract
 	public boolean execute() throws SQLException
 	{
 		String sql = _params._sql;
+		
+		if (true)
+		{
+			sql = _rightConn.quotifySqlString(sql);
+		}
 
 		if (_progress != null) _progress.setState("Executing SQL at Remote DBMS: "+sql);
 		if (_params._debug)     addDebugMessage(  "Executing SQL at Remote DBMS: "+sql);

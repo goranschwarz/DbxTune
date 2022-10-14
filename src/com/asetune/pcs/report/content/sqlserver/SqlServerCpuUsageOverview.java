@@ -70,6 +70,8 @@ extends SqlServerAbstract
 				"CmSummary_aaReadWriteGraph",
 				"CmPerfCounters_CacheReads",
 				"CmPerfCounters_CacheHitRate",
+				"CmMemoryClerks_MemoryClerkBp",
+				"CmMemoryClerks_MemoryClerksTop",
 //				"CmPerfCounters_OsCpuEffective",
 				"CmPerfCounters_SqlBatch",
 				"CmPerfCounters_TransWriteSec",
@@ -83,6 +85,7 @@ extends SqlServerAbstract
 		_CmPerfCounters_CacheReads     .writeHtmlContent(w, null, null);
 		_CmPerfCounters_CacheHitRate   .writeHtmlContent(w, null, null);
 //		_CmPerfCounters_OsCpuEffective .writeHtmlContent(sb, null, null);
+		_CmMemoryClerks_MemoryClerkBp  .writeHtmlContent(w, null, null);
 		_CmMemoryClerks_MemoryClerksTop.writeHtmlContent(w, null, null);
 		_CmPerfCounters_SqlBatch       .writeHtmlContent(w, null, null);
 		_CmPerfCounters_TransWriteSec  .writeHtmlContent(w, null, null);
@@ -130,6 +133,7 @@ extends SqlServerAbstract
 //		_CmPerfCounters_OsCpuEffective  = createTsLineChart(conn, "CmPerfCounters", "OsCpuEffective",   maxValue, null,    "CPU Usage Effective in Percent (Perf Counters)");
 		_CmPerfCounters_CacheReads      = createTsLineChart(conn, "CmPerfCounters", "CacheReads",       -1,       null,    "Buffer Cache Reads per Sec (Server->Perf Counters)");
 		_CmPerfCounters_CacheHitRate    = createTsLineChart(conn, "CmPerfCounters", "CacheHitRate",     -1,       null,    "Buffer Cache Hit Rate, in Percent (Server->Perf Counters)");
+		_CmMemoryClerks_MemoryClerkBp   = createTsLineChart(conn, "CmMemoryClerks", "MemoryClerkBp",    -1,       null,    "Buffer Pool Memory Clerk, in MB (Server->Memory)");
 		_CmMemoryClerks_MemoryClerksTop = createTsLineChart(conn, "CmMemoryClerks", "MemoryClerksTop",  -1,       null,    "Top ## Memory Clerks, in MB (Server->Memory)");
 		_CmPerfCounters_SqlBatch        = createTsLineChart(conn, "CmPerfCounters", "SqlBatch",         -1,       null,    "SQL Batches Received per Sec (Perf Counters)");
 		_CmPerfCounters_TransWriteSec   = createTsLineChart(conn, "CmPerfCounters", "TransWriteSec",    -1,       null,    "Write Transactions per Sec (Perf Counters)");
@@ -143,6 +147,7 @@ extends SqlServerAbstract
 	private IReportChart _CmPerfCounters_CacheReads;
 	private IReportChart _CmPerfCounters_CacheHitRate;
 //	private IReportChart _CmPerfCounters_OsCpuEffective;
+	private IReportChart _CmMemoryClerks_MemoryClerkBp;
 	private IReportChart _CmMemoryClerks_MemoryClerksTop;
 	private IReportChart _CmPerfCounters_SqlBatch;
 	private IReportChart _CmPerfCounters_TransWriteSec;

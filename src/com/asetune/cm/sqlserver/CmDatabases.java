@@ -45,6 +45,7 @@ import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventDatabaseState;
+import com.asetune.alarm.events.AlarmEventDbSizeChanged;
 import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
 import com.asetune.alarm.events.AlarmEventLowDbFreeSpace;
 import com.asetune.alarm.events.AlarmEventLowLogFreeSpace;
@@ -142,6 +143,9 @@ extends CountersModel
 			"QsUsedPct"
 	};
 	public static final String[] DIFF_COLUMNS     = new String[] {
+			"DbSizeInMbDiff",
+			"LogSizeInMbDiff",
+			"DataSizeInMbDiff",
 			"LogSizeUsedInMbDiff",
 			"LogSizeFreeInMbDiff",
 			"DataSizeUsedInMbDiff",
@@ -2039,6 +2043,10 @@ extends CountersModel
 			    + "    ,d.log_reuse_wait \n"
 			    + "    ,d.log_reuse_wait_desc \n"
 			    + " \n"
+			    + "    ,DbSizeInMbDiff           = data.totalDataSizeMb + log.totalLogSizeMb \n"
+			    + "    ,LogSizeInMbDiff          = log.totalLogSizeMb \n"
+			    + "    ,DataSizeInMbDiff         = data.totalDataSizeMb \n"
+			    + " \n"
 			    + "    ,DbSizeInMb               = data.totalDataSizeMb + log.totalLogSizeMb \n"
 			    + "    ,LogSizeInMb              = log.totalLogSizeMb \n"
 			    + "    ,DataSizeInMb             = data.totalDataSizeMb \n"
@@ -3352,6 +3360,73 @@ extends CountersModel
 				}
 			} // end: MandatoryDbnamesSkip
 
+
+			//-------------------------------------------------------
+			// DbGrow/LogGrow (when the database increases in size)
+			//-------------------------------------------------------
+			//-------------------------------------------------------
+			// DbSizeInMbDiff
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("DbSizeInMbDiff"))
+			{
+				Double val = cm.getDiffValueAsDouble(r, "DbSizeInMbDiff");
+				if (val == null)
+					val = 0.0;
+				
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_DbSizeInMbDiff, DEFAULT_alarm_DbSizeInMbDiff);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): DbSizeInMbDiff -- dbname='"+dbname+"', threshold="+threshold+", val='"+val+"'.");
+
+				// If database size is lower than earlier (negative), then turn it into a positive number
+				if (val < 0)
+					val = Math.abs(val);
+
+				if (val.intValue() > threshold)
+				{
+					// Get config 'skip some transaction names'
+					String keepDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_DbSizeInMbDiffForDbs,  DEFAULT_alarm_DbSizeInMbDiffForDbs);
+					String skipDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_DbSizeInMbDiffSkipDbs, DEFAULT_alarm_DbSizeInMbDiffSkipDbs);
+					String keepSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_DbSizeInMbDiffForSrv,  DEFAULT_alarm_DbSizeInMbDiffForSrv);
+					String skipSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_DbSizeInMbDiffSkipSrv, DEFAULT_alarm_DbSizeInMbDiffSkipSrv);
+
+					// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+					boolean doAlarm = true;
+
+					// if -1 (BackupStartTime=NULL), only alarm if we have anything in the keep* or skip* rules
+					if (val.intValue() < 0 && StringUtil.isNullOrBlankForAll(keepDbRegExp, skipDbRegExp, keepSrvRegExp, skipSrvRegExp))
+						doAlarm = false;
+					
+					// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
+					// Below is more readable, from a variable context point-of-view, but HARDER to understand
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepSrvRegExp) ||   dbmsSrvName.matches(keepSrvRegExp))); //     matches the KEEP Srv regexp
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbRegExp)  || ! dbname     .matches(skipDbRegExp ))); // NO match in the SKIP Db  regexp
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipSrvRegExp) || ! dbmsSrvName.matches(skipSrvRegExp))); // NO match in the SKIP Srv regexp
+					
+					if (doAlarm)
+					{
+						Double DbSizeInMbDiff   = cm.getDiffValueAsDouble(r, "DbSizeInMbDiff");
+						Double DataSizeInMbDiff = cm.getDiffValueAsDouble(r, "DataSizeInMbDiff");
+						Double LogSizeInMbDiff  = cm.getDiffValueAsDouble(r, "LogSizeInMbDiff");
+						
+						Double DbSizeInMbAbs   = cm.getAbsValueAsDouble(r, "DbSizeInMb");
+						Double DataSizeInMbAbs = cm.getAbsValueAsDouble(r, "DataSizeInMb");
+						Double LogSizeInMbAbs  = cm.getAbsValueAsDouble(r, "LogSizeInMb");
+						
+						String extendedDescText = cm.toTextTableString(DATA_DIFF, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_DIFF, r, true, false, false);
+						AlarmEvent ae = new AlarmEventDbSizeChanged(cm, threshold, dbname, 
+								DbSizeInMbDiff, DataSizeInMbDiff, LogSizeInMbDiff, 
+								DbSizeInMbAbs , DataSizeInMbAbs , LogSizeInMbAbs);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						alarmHandler.addAlarm( ae );
+					}
+				}
+			}
+			
+			
 		} // end: loop dbname(s)
 	}
 
@@ -3955,6 +4030,17 @@ extends CountersModel
 	public static final String  PROPKEY_alarm_AgMandatoryDbnamesSkipSystem       = CM_NAME + ".alarm.system.ag.mandatory.dbnames.skip.system";
 	public static final String  DEFAULT_alarm_AgMandatoryDbnamesSkipSystem       = "master, tempdb, model, msdb, SSISDB, ReportServer, ReportServerTempDB";
 
+	public static final String  PROPKEY_alarm_DbSizeInMbDiff                     = CM_NAME + ".alarm.system.if.DbSizeInMbDiff.gt";
+	public static final int     DEFAULT_alarm_DbSizeInMbDiff                     = 10; // set this to a *high* value to disable
+	public static final String  PROPKEY_alarm_DbSizeInMbDiffForDbs               = CM_NAME + ".alarm.system.if.DbSizeInMbDiff.for.dbs";
+	public static final String  DEFAULT_alarm_DbSizeInMbDiffForDbs               = "";
+	public static final String  PROPKEY_alarm_DbSizeInMbDiffSkipDbs              = CM_NAME + ".alarm.system.if.DbSizeInMbDiff.skip.dbs";
+	public static final String  DEFAULT_alarm_DbSizeInMbDiffSkipDbs              = "";
+	public static final String  PROPKEY_alarm_DbSizeInMbDiffForSrv               = CM_NAME + ".alarm.system.if.DbSizeInMbDiff.for.srv";
+	public static final String  DEFAULT_alarm_DbSizeInMbDiffForSrv               = "";
+	public static final String  PROPKEY_alarm_DbSizeInMbDiffSkipSrv              = CM_NAME + ".alarm.system.if.DbSizeInMbDiff.skip.srv";
+	public static final String  DEFAULT_alarm_DbSizeInMbDiffSkipSrv              = "";
+	
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
@@ -4013,6 +4099,15 @@ extends CountersModel
 		list.add(new CmSettingsHelper("AgMandatoryDbnamesSkip",           isAlarmSwitch, PROPKEY_alarm_AgMandatoryDbnamesSkip          , String .class, conf.getProperty      (PROPKEY_alarm_AgMandatoryDbnamesSkip          , DEFAULT_alarm_AgMandatoryDbnamesSkip          ), DEFAULT_alarm_AgMandatoryDbnamesSkip          , "If database do NOT belong to an Availability Group and are NOT part of this list, then send 'AlarmEventDbNotInHadr'. format: Comma Separated List (Note: the 'dbname' can use regexp)" , new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("AgMandatoryDbnamesSkipSystem",                    PROPKEY_alarm_AgMandatoryDbnamesSkipSystem    , String .class, conf.getProperty      (PROPKEY_alarm_AgMandatoryDbnamesSkipSystem    , DEFAULT_alarm_AgMandatoryDbnamesSkipSystem    ), DEFAULT_alarm_AgMandatoryDbnamesSkipSystem    , "A list of SQL Server System databases to NOT check for Availability Group. format: Comma Separated List (Note: the 'dbname' can use regexp)" , new RegExpInputValidator()));
 
+		// Add alarm for Database Grow (INFO Alarm every time a database grows/shrinks)
+		list.add(new CmSettingsHelper("DbSizeInMbDiff",                   isAlarmSwitch, PROPKEY_alarm_DbSizeInMbDiff                  , Integer.class, conf.getIntProperty   (PROPKEY_alarm_DbSizeInMbDiff                  , DEFAULT_alarm_DbSizeInMbDiff                  ), DEFAULT_alarm_DbSizeInMbDiff                  , "If 'DbSizeInMbDiff' is changed more than this value. (both grow and shrink sizes are respected."));
+		list.add(new CmSettingsHelper("DbSizeInMbDiff ForDbs",                           PROPKEY_alarm_DbSizeInMbDiffForDbs            , String .class, conf.getProperty      (PROPKEY_alarm_DbSizeInMbDiffForDbs            , DEFAULT_alarm_DbSizeInMbDiffForDbs            ), DEFAULT_alarm_DbSizeInMbDiffForDbs            , "If 'DbSizeInMbDiff' is true; Only for the databases listed (regexp is used, blank=skip-no-dbs). After this rule the 'skip' rule is evaluated.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("DbSizeInMbDiff SkipDbs",                          PROPKEY_alarm_DbSizeInMbDiffSkipDbs           , String .class, conf.getProperty      (PROPKEY_alarm_DbSizeInMbDiffSkipDbs           , DEFAULT_alarm_DbSizeInMbDiffSkipDbs           ), DEFAULT_alarm_DbSizeInMbDiffSkipDbs           , "If 'DbSizeInMbDiff' is true; Discard databases listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                     new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("DbSizeInMbDiff ForSrv",                           PROPKEY_alarm_DbSizeInMbDiffForSrv            , String .class, conf.getProperty      (PROPKEY_alarm_DbSizeInMbDiffForSrv            , DEFAULT_alarm_DbSizeInMbDiffForSrv            ), DEFAULT_alarm_DbSizeInMbDiffForSrv            , "If 'DbSizeInMbDiff' is true; Only for the servers listed (regexp is used, blank=skip-no-srv). After this rule the 'skip' rule is evaluated.",   new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("DbSizeInMbDiff SkipSrv",                          PROPKEY_alarm_DbSizeInMbDiffSkipSrv           , String .class, conf.getProperty      (PROPKEY_alarm_DbSizeInMbDiffSkipSrv           , DEFAULT_alarm_DbSizeInMbDiffSkipSrv           ), DEFAULT_alarm_DbSizeInMbDiffSkipSrv           , "If 'DbSizeInMbDiff' is true; Discard servers listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                       new RegExpInputValidator()));
+
+		// TODO: Possibly: Database Options, like we do in ASE (get options from SCOPED Database Options)
+		
 		return list;
 	}
 	

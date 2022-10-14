@@ -22,6 +22,7 @@ package com.asetune.cm.ase;
 
 import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -1610,6 +1611,9 @@ extends CountersModel
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			
+			// Add values to short term graph that can be used by alarms (in other collectors)
+			addDataPointsToAlarmChart(GRAPH_NAME_LOGSIZE_LEFT_MB, this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_LOGSIZE_USED_MB.equals(tgdp.getName()))
@@ -1630,6 +1634,9 @@ extends CountersModel
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+
+			// Add values to short term graph that can be used by alarms (in other collectors)
+			addDataPointsToAlarmChart(GRAPH_NAME_LOGSIZE_USED_MB, this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_LOGSIZE_USED_PCT.equals(tgdp.getName()))
@@ -1650,6 +1657,9 @@ extends CountersModel
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+
+			// Add values to short term graph that can be used by alarms (in other collectors)
+			addDataPointsToAlarmChart(GRAPH_NAME_LOGSIZE_USED_PCT, this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_DATASIZE_LEFT_MB.equals(tgdp.getName()))
@@ -1843,6 +1853,20 @@ extends CountersModel
 //
 //		return "<html><pre>" + str + "</pre></html>";
 //	}
+
+	protected void addDataPointsToAlarmChart(String chartName, Timestamp timestamp, String[] lArray, Double[] dArray)
+	{
+//		FIXME; -- NOT YET IMPLEMENTED --
+//
+//		can we use "MovingAverageCounterManager" / "MovingAverageCounter" for this or should we create a "new" thing here
+//		Or should we use "TrendGraphDataPoint" and "cache" a local copy for #/15 minutes...
+	}
+
+	public String getAlarmChartFor(String... chartName)
+	{
+//		FIXME; -- NOT YET IMPLEMENTED --
+		return "";
+	}
 
 	@Override
 	public void sendAlarmRequest()

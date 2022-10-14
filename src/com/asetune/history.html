@@ -135,6 +135,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>new section to track how long time each Report Section takes</LI>
 				<LI>The GUI Version can now create a report on the current recording</LI>
 				<LI>Added section to see how large the PCS Tables are (mostly used by me for debugging)</LI>
+				<LI>Recording Information -- Added line "Recording Start Day" so we can easely see what DAY this report reflects (not just the date)</LI>
 			</UL>
 		</LI>
 
@@ -145,7 +146,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	 			<li>To version 1.5.1          Component: JfreeChart</li>
 	 			<li>To version 4.5            Component: JSqlParser</li>
 	 			<li>To version 21.1           Component: Oracle JDBC Driver</li>
-	 			<li>To version 9.2.0          Component: Microsoft JDBC Driver</li>
+	 			<li>To version 11.2.1         Component: Microsoft JDBC Driver</li>
 	 			<li>To version 9.4.38         Component: Jetty Embedded WebServer</li>
 				<li>To version ASE 16 SP4     Component: jConnect: jconn42.jar (which has JDBC 4.2 implementation)</li>
 				<li>To version ASE 16 SP4     Component: jConnect: jconn4.jar (keeping this since ddlgen,jar uses it... hopefully this wont collide with jconn42.jar, if it does simply remove jconn4.jar)</li>
@@ -183,6 +184,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<li>AsePlanViewer - Fill in 'execParameters' or 'compileParameters' in the SQL Text</li>
 		<li>bugfix: Discard Msg 938 -- Database 'xxx' is unavailable. It is undergoing LOAD TRANSACTION. in createPcsHeaderInfo()</li>
 		<li>Alarm on AlarmEvent: ConfigResourceIsLow, ProcedureCacheLowOnMemory, ConfigResourceIsUsedUp -- added a chart that shows what happened in the last hour</li>
+		<li>Bugfix: CmSummary -- Fixed typo 'sum(DbxConnections)' to 'sum(Connections)'</li>
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
@@ -195,6 +197,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>Added skip capabilities for alarm BlockingLockAlarm, you can skip on columns 'Command', 'Application', 'SrvUserName', and 'HostName'. The default is to skip where Command = <code>^(DUMP DATABASE|DUMP TRANSACTION).*</code> </li>
 			<li>raise AlarmEventLongRunningStatement when a statement has been executed for more than 3 hours (by default), 'skip' can be done on: dbname, Application, SrvUserName, HostName, Command</li>
 			<li>AlarmEventBlockingLockAlarm now also contains SPID, so we can report multiple blocking locks</li>
+			<li>Possible to filter out rows that hasnt been holding locks for more than X seconds (property: CmActiveStatements.sample.holdingLocks.gt.SecondsWaiting=##)</li>
 		</ul>
 		</LI>
 
@@ -420,11 +423,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<UL>
 		<LI>First step of monitor Azure SQL Database</LI>
 
+		<LI>ConnectionDialog: Added default property values for: encrypt=true, trustServerCertificate=true (since the new MS JDBC driver now by default are using "wire" encryption)</LI>
+
 		<LI>Added Alarm: <b>AlarmEventDacInUse                  </b> -- If someone is using te DAC (Dedicated Admin Connection) which normally should be used in emergency cases</LI>
 		<LI>Added Alarm: <b>AlarmEventQueryStoreLowFreeSpace    </b> -- If querey Store Space starts to get low </LI>
 		<LI>Added Alarm: <b>AlarmEventQueryStoreUnexpectedState </b> -- If Query Store 'state' is not the expected/desired state</LI>
 		<LI>Added Alarm: <b>AlarmEventPerfCounter               </b> -- may be used for all PerfCounter Alarms (the Severity is passed by the CM depending on what it think is appropriate)</LI>
 		<LI>Added Alarm: <b>AlarmEventTempdbSpidUsage           </b> -- When a SPID uses a lot of tempdb space</LI>
+		<LI>Added Alarm: <b>AlarmEventDbSizeChanged             </b> -- When database gets bigger, we want a INFO alarm about this!</LI>
 
 		<LI>Added CM: <b>CmIndexMissing </b> - Take information from 'dm_db_missing_index_*' and display them, in a prioritized way... NOTE: as always take the recommendations with 'a grain of salt'</LI>
 		<LI>Added CM: <b>CmIndexUnused  </b> - Unused Indexes - ordered by 'user_updates desc' so the undex with most updates will be "first"</LI>
@@ -432,11 +438,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added CM: <b>CmMemoryClerks </b> - Information about the memory clerks</LI>
 		<LI>Added CM: <b>CmMemoryGrants </b> - Information about SPID's that requests memory grants</LI>
 		<LI>Added CM: <b>CmActiveStPlanStats</b> - Active Stmnts Plan Stat -- get info about execution plan operators, to check what's taking most time in a execution plan. NOTE: This is in beta mode, and may be discarded</LI>
+		<LI>Added CM: <b>CmVersionStore</b> - How much is the Version Storage Used per Database in tempdb</LI>
 
 		<LI><b>Spaces in dbname   </b> - bugfix: when database names contains spaces. now they are quoted with square brackets. example: [my db name].sys.some_table_name</LI>
 
 		<LI><b>DBMS Configuration </b> - Also get linked servers using 'exec sp_linkedservers'</LI>
 		<LI><b>DBMS Configuration </b> - Added check to check if 'instant file initialization' is enabled at the OS Level</LI>
+		<LI><b>DBMS Configuration </b> - Added tab "SysMasterFiles" to see ALL files the SQL Server is using (CmDatabase only shows first file for each database)</LI>
 
 		<LI><b>CmActiveStatements </b> - For blocking locks (marked as red background) - only the root blocker(s) are marked. logic (ImBlockingOtherSessionIds!="" and ImBlockedBySessionId=0)</LI>
 		<LI><b>CmActiveStatements </b> - added column 'dop - Degree Of Parallelism' if version is above 2016</LI>
@@ -474,6 +482,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmDatabases        </b> - new columns: 'LogFileCount', 'DataFileCount', 'OldestTranTempdbUsageMb'</LI>
 		<LI><b>CmDatabases        </b> - new columns: 'LastGoodCheckDbTime', 'LastGoodCheckDbDays' to reflect what we have executed a DBCC CHECKDB. NOte: Only in 2016 SP2 and later.</LI>
 		<LI><b>CmDatabases        </b> - raise AlarmEventDbccCheckdbAge when dbcc checkdb hasn't been executed. Default is 99999 (Basically turned OFF)</LI>
+		<LI><b>CmDatabases        </b> - Added columns 'DbSizeInMbDiff' , 'DataSizeInMbDiff' and 'LogSizeInMbDiff' so we can easier see database growth and send alarm: AlarmEventDbSizeChanged</LI>
 
 		<LI><b>CmDeviceIo         </b> - 3 new Graph: Number of Disk Operations, for ALL Devices (Read+Write, Read, Write)</LI>
 

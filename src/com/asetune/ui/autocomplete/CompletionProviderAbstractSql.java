@@ -3284,7 +3284,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 //				rs.close();
 
 //				// INDEX INFO
-//				rs = dbmd.getIndexInfo(null, null, ti._tabName, false, false);
+//				rs = dbmd.getIndexInfo(null, null, ti._tabName, false, true);
 //				rstm = new ResultSetTableModel(rs);
 //				System.out.println("########## INDEX("+ti._tabName+"):--------\n" + rstm.toTableString());
 //				while(rs.next())

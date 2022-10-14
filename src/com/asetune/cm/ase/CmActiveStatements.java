@@ -170,6 +170,9 @@ extends CountersModel
 	
 	public static final String  PROPKEY_sample_holdingLocks       = PROP_PREFIX + ".sample.holdingLocks";
 	public static final boolean DEFAULT_sample_holdingLocks       = true;
+
+	public static final String  PROPKEY_sample_holdingLocks_gt_SecondsWaiting = PROP_PREFIX + ".sample.holdingLocks.gt.SecondsWaiting";
+	public static final int     DEFAULT_sample_holdingLocks_gt_SecondsWaiting = 0;
 	
 	public static final String  PROPKEY_sample_spidLocks          = PROP_PREFIX + ".sample.spidLocks";
 	public static final boolean DEFAULT_sample_spidLocks          = true;
@@ -300,7 +303,8 @@ extends CountersModel
 		// IMPORTANT: when you add a column to the FIRST you need to add it to the SECOND as well
 		////////////////////////////
 
-		boolean showHoldingLocks = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_holdingLocks, DEFAULT_sample_holdingLocks);
+		boolean showHoldingLocks                 = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_holdingLocks                  , DEFAULT_sample_holdingLocks);
+		int     showHoldingLocksGtSecondsWaiting = Configuration.getCombinedConfiguration().getIntProperty    (PROPKEY_sample_holdingLocks_gt_SecondsWaiting, DEFAULT_sample_holdingLocks_gt_SecondsWaiting);
 
 		// ASE 15.0.2 ESD#2
 		String SrvUserName = "";
@@ -368,7 +372,8 @@ extends CountersModel
 		         SrvUserName +
 		         "P.Command, P.Application, \n" +
 		         HostName + ClientName + ClientHostName + ClientApplName + ClientDriverVersion + ase1570_nl +
-		         "S.CpuTime, S.WaitTime, \n" +
+		         "S.CpuTime, \n" +
+		         "S.WaitTime, \n" +
 		         "ExecTimeInMs    = CASE WHEN datediff(day, S.StartTime, getdate()) >= 24 THEN -1 ELSE  datediff(ms, S.StartTime, getdate()) END, \n" +               // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 		         "UsefullExecTime = CASE WHEN datediff(day, S.StartTime, getdate()) >= 24 THEN -1 ELSE (datediff(ms, S.StartTime, getdate()) - S.WaitTime) END, \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 		         QueryOptimizationTime + ase160_sp3_nl +
@@ -459,7 +464,9 @@ extends CountersModel
 		         SrvUserName +
 		         "P.Command, P.Application, \n" +
 		         HostName + ClientName + ClientHostName + ClientApplName + ClientDriverVersion + ase1570_nl +
-		         "CpuTime=-1, WaitTime=-1, \n" +
+		         "CpuTime         = -1, \n" +
+//		         "WaitTime        = -1, \n" +
+		         "WaitTime        = 1000 * P.SecondsWaiting, \n" +
 		         "ExecTimeInMs    = -1, \n" +
 		         "UsefullExecTime = -1, \n" +
 		         QueryOptimizationTime_union + ase160_sp3_nl +
@@ -513,8 +520,9 @@ extends CountersModel
 				"select " + cols1 + cols2 + cols3 + "\n" +
 				"from master.dbo.monProcess P \n" +
 				"where 1 = 1 \n" + 
-				"  and P.WaitEventID = 250 -- 'waiting for input from the network' \n" + 
-				"  and P.SPID in (select spid from master.dbo.syslocks) \n" +
+				"  and P.WaitEventID    = 250  -- 'waiting for input from the network' \n" + 
+				"  and P.SecondsWaiting > " + showHoldingLocksGtSecondsWaiting + "    -- And has been at client side control for more than X seconds. \n" +
+				"  and P.SPID in (select spid from master.dbo.syslocks) -- And holds any locks. \n" +
 				optGoalPlan;
 		}
 
@@ -543,15 +551,16 @@ extends CountersModel
 //		list.add(new CmSettingsHelper("Get Cached Plan in XML",   getName()+".sample.cachedPlanInXml" , Boolean.class, conf.getBooleanProperty(getName()+".sample.cachedPlanInXml" , false), false, "Do 'select show_cached_plan_in_xml(planid, 0, 0)' on every row in the table."          ));
 //		list.add(new CmSettingsHelper("Get SPID's holding locks", getName()+".sample.holdingLocks"    , Boolean.class, conf.getBooleanProperty(getName()+".sample.holdingLocks"    , true ), true , "Include SPID's that holds locks even if that are not active in the server."            ));
 
-		list.add(new CmSettingsHelper("Get Showplan"             , PROPKEY_sample_showplan        , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_showplan        , DEFAULT_sample_showplan       ), DEFAULT_sample_showplan       , "Do 'sp_showplan spid' on every row in the table."                                      ));
-		list.add(new CmSettingsHelper("Get Monitored SQL Text"   , PROPKEY_sample_monSqlText      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_monSqlText      , DEFAULT_sample_monSqlText     ), DEFAULT_sample_monSqlText     , "Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table." ));
-		list.add(new CmSettingsHelper("Get DBCC SQL Text"        , PROPKEY_sample_dbccSqlText     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_dbccSqlText     , DEFAULT_sample_dbccSqlText    ), DEFAULT_sample_dbccSqlText    , "Do 'dbcc sqltext(spid)' on every row in the table."                                    ));
-		list.add(new CmSettingsHelper("Get Procedure Call Stack" , PROPKEY_sample_procCallStack   , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_procCallStack   , DEFAULT_sample_procCallStack  ), DEFAULT_sample_procCallStack  , "Do 'select * from monProcessProcedures where SPID=spid' on every row in the table."    ));
-		list.add(new CmSettingsHelper("Get ASE Stacktrace"       , PROPKEY_sample_dbccStacktrace  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_dbccStacktrace  , DEFAULT_sample_dbccStacktrace ), DEFAULT_sample_dbccStacktrace , "Do 'dbcc stacktrace(spid)' on every row in the table."                                 ));
-		list.add(new CmSettingsHelper("Get Cached Plan in XML"   , PROPKEY_sample_cachedPlanInXml , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_cachedPlanInXml , DEFAULT_sample_cachedPlanInXml), DEFAULT_sample_cachedPlanInXml, "Do 'select show_cached_plan_in_xml(planid, 0, 0)' on every row in the table."          ));
-		list.add(new CmSettingsHelper("Get SPID's holding locks" , PROPKEY_sample_holdingLocks    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_holdingLocks    , DEFAULT_sample_holdingLocks   ), DEFAULT_sample_holdingLocks   , "Include SPID's that holds locks even if that are not active in the server."            ));
-		list.add(new CmSettingsHelper("Get SPID Locks"           , PROPKEY_sample_spidLocks       , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidLocks       , DEFAULT_sample_spidLocks      ), DEFAULT_sample_spidLocks      , "Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking."));
-		
+		list.add(new CmSettingsHelper("Get Showplan"                               , PROPKEY_sample_showplan                      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_showplan                      , DEFAULT_sample_showplan                      ), DEFAULT_sample_showplan                      , "Do 'sp_showplan spid' on every row in the table."                                      ));
+		list.add(new CmSettingsHelper("Get Monitored SQL Text"                     , PROPKEY_sample_monSqlText                    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_monSqlText                    , DEFAULT_sample_monSqlText                    ), DEFAULT_sample_monSqlText                    , "Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table." ));
+		list.add(new CmSettingsHelper("Get DBCC SQL Text"                          , PROPKEY_sample_dbccSqlText                   , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_dbccSqlText                   , DEFAULT_sample_dbccSqlText                   ), DEFAULT_sample_dbccSqlText                   , "Do 'dbcc sqltext(spid)' on every row in the table."                                    ));
+		list.add(new CmSettingsHelper("Get Procedure Call Stack"                   , PROPKEY_sample_procCallStack                 , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_procCallStack                 , DEFAULT_sample_procCallStack                 ), DEFAULT_sample_procCallStack                 , "Do 'select * from monProcessProcedures where SPID=spid' on every row in the table."    ));
+		list.add(new CmSettingsHelper("Get ASE Stacktrace"                         , PROPKEY_sample_dbccStacktrace                , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_dbccStacktrace                , DEFAULT_sample_dbccStacktrace                ), DEFAULT_sample_dbccStacktrace                , "Do 'dbcc stacktrace(spid)' on every row in the table."                                 ));
+		list.add(new CmSettingsHelper("Get Cached Plan in XML"                     , PROPKEY_sample_cachedPlanInXml               , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_cachedPlanInXml               , DEFAULT_sample_cachedPlanInXml               ), DEFAULT_sample_cachedPlanInXml               , "Do 'select show_cached_plan_in_xml(planid, 0, 0)' on every row in the table."          ));
+		list.add(new CmSettingsHelper("Get SPID's holding locks"                   , PROPKEY_sample_holdingLocks                  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_holdingLocks                  , DEFAULT_sample_holdingLocks                  ), DEFAULT_sample_holdingLocks                  , "Include SPID's that holds locks even if that are not active in the server."            ));
+		list.add(new CmSettingsHelper("Get SPID's holding locks, idle above X sec" , PROPKEY_sample_holdingLocks_gt_SecondsWaiting, Integer.class, conf.getIntProperty    (PROPKEY_sample_holdingLocks_gt_SecondsWaiting, DEFAULT_sample_holdingLocks_gt_SecondsWaiting), DEFAULT_sample_holdingLocks_gt_SecondsWaiting, "Include SPID's that holds locks even if that are not active in the server, AND has been idle for more than X seconds. Set this to -1 to see even shorter idel times."));
+		list.add(new CmSettingsHelper("Get SPID Locks"                             , PROPKEY_sample_spidLocks                     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidLocks                     , DEFAULT_sample_spidLocks                     ), DEFAULT_sample_spidLocks                     , "Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking."));
+
 		return list;
 	}
 

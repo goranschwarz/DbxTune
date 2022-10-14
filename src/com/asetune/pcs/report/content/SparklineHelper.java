@@ -348,7 +348,7 @@ public class SparklineHelper
 
 					// Check if index already exists
 					boolean indexExists = false;
-					try (ResultSet rs = conn.getMetaData().getIndexInfo(null, schemaName, tableName, false, false))
+					try (ResultSet rs = conn.getMetaData().getIndexInfo(null, schemaName, tableName, false, true))
 					{
 						while(rs.next())
 						{

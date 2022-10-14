@@ -88,7 +88,7 @@ implements Cloneable
 
 	
 	public String        getUsername()      { return _username; }
-	public String        getPassword()      { return _password; }
+	public String        getPassword()      { return _password == null ? "" : _password; }
 	public String        getServer()        { return _server; }
 	public String        getDbname()        { return _dbname; }
 	public int           getLoginTimeout()  { return _loginTimeout; }
@@ -101,7 +101,7 @@ implements Cloneable
 	public String        getSqlInit()       { return _sqlInit; } 
 
 	public void setUsername     (String        username)        { _username      = username; }
-	public void setPassword     (String        password)        { _password      = password; }
+	public void setPassword     (String        password)        { _password      = password == null ? "" : password; }
 	public void setServer       (String        server)          { _server        = server; }
 	public void setDbname       (String        dbname)          { _dbname        = dbname; }
 	public void setLoginTimeout (String        loginTimeoutStr) { _loginTimeout  = StringUtil.parseInt(loginTimeoutStr, -1); }

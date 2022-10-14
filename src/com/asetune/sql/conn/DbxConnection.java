@@ -53,6 +53,7 @@ import javax.swing.ImageIcon;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.ConnectionProfileManager;
 import com.asetune.gui.ConnectionProgressDialog;
 import com.asetune.gui.swing.WaitForExecDialog;
@@ -83,6 +84,7 @@ import com.asetune.sql.ddl.IDbmsDdlResolver;
 import com.asetune.ssh.SshTunnelInfo;
 import com.asetune.ui.autocomplete.completions.TableExtraInfo;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.H2UrlHelper;
 import com.asetune.utils.RepServerUtils;
@@ -286,6 +288,7 @@ implements Connection, AutoCloseable
 			if (urlOptions != null)
 				props.putAll(urlOptions);
 
+//System.out.println("DbxConnection-connect(): user="+user+", passwd="+(passwd==null?"-NULL-":passwd)+", connProp="+connProp);
 			props.put("user", user);
 			props.put("password", passwd);
 
@@ -301,7 +304,9 @@ implements Connection, AutoCloseable
 //				}
 //			}
 			
+			//----------------------------------------------------------------------------------
 			// Add specific JDBC Properties, for specific URL's, if not already specified
+			//----------------------------------------------------------------------------------
 			// DB2
 			if (url.startsWith("jdbc:db2:"))
 			{
@@ -310,6 +315,7 @@ implements Connection, AutoCloseable
 					props .put("retrieveMessagesFromServerOnGetMessage", "true");
 				}
 			}
+
 			// Sybase/jConnect
 			if (url.startsWith("jdbc:sybase:Tds:"))
 			{
@@ -318,12 +324,23 @@ implements Connection, AutoCloseable
 					props .put("APPLICATIONNAME", appname);
 				}
 			}
+
 			// Microsoft SQL-Server
 			if (url.startsWith("jdbc:sqlserver:"))
 			{
 				if (StringUtil.hasValue(appname) &&  ! props.containsKey("applicationName") )
 				{
 					props .put("applicationName", appname);
+				}
+
+				if ( ! props.containsKey("trustServerCertificate") )
+				{
+					boolean trustServerCertificate = Configuration.getCombinedConfiguration().getBooleanProperty(ConnectionDialog.PROPKEY_CONN_SQLSERVER_TRUST_CERT, ConnectionDialog.DEFAULT_CONN_SQLSERVER_TRUST_CERT);
+					if (trustServerCertificate) // the JDBC driver default is: trustServerCertificate=false
+					{
+						props .put("trustServerCertificate", "true");
+						_logger.info("Adding Connection Property 'trustServerCertificate=true' when making a connection to SQL Server. This can be changed by adding '" + ConnectionDialog.PROPKEY_CONN_SQLSERVER_TRUST_CERT + "=false' in the Configuration file.");
+					}
 				}
 			}
 
