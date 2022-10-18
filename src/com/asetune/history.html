@@ -152,6 +152,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<li>To version ASE 16 SP4     Component: jConnect: jconn4.jar (keeping this since ddlgen,jar uses it... hopefully this wont collide with jconn42.jar, if it does simply remove jconn4.jar)</li>
 				<li>To version 8.0.25         Component: mysql-connector, JDBC Driver for MySQL</li>
 				<li>To version 263            Component: ganymed ssh2</li>
+	 			<li>To version 1.17           Component: simplemagic</li>
 			</ul>
 		</LI>
 	</UL>
@@ -185,6 +186,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<li>bugfix: Discard Msg 938 -- Database 'xxx' is unavailable. It is undergoing LOAD TRANSACTION. in createPcsHeaderInfo()</li>
 		<li>Alarm on AlarmEvent: ConfigResourceIsLow, ProcedureCacheLowOnMemory, ConfigResourceIsUsedUp -- added a chart that shows what happened in the last hour</li>
 		<li>Bugfix: CmSummary -- Fixed typo 'sum(DbxConnections)' to 'sum(Connections)'</li>
+		<li>Bugfix: Configuration sanity check for 'dsync' and 'directio'. Only when it's a filesystem. (skipping RAW/BLOCK devices)</li>
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
@@ -563,6 +565,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmTempdbSpidUsage  </b> - better version handling (older versions of SQL-Server, then we skip more columns, not yet invented)</LI>
 		<LI><b>CmTempdbSpidUsage  </b> - Added option to include/exclude 'InternalObject' in 'TotalUsageMb'. The internal objects seems to show strange values in some/most cases. This can be changed with the GUI or property 'CmTempdbSpidUsage.sample.TotalUsageMb.includeInternalObjects', where the default is false.</LI>
 		<LI><b>CmTempdbSpidUsage  </b> - Added Alarm 'TempdbSpidUsage', when a specific SPID is using to much space. Property: 'CmTempdbSpidUsage.alarm.system.if.TotalUsageMb_abs.gt' with a default of 20GB or 20480MB, there are properties to skipp some logins and progran_names</LI>
+		<LI><b>CmTempdbSpidUsage  </b> - On alarm: Extra info: Changed HTML Table to be on ABS instead of RATE</LI>
 		
 		<LI><b>CmTempdbUsage      </b> - added 2 new graphs 'Tempdb Usage by Object Type, in MB, {All|Subset}' -- Shows "Version Store", "Internal Objects", "User Objects", "Mixed Extents", "Allocated Space", "Free Space", "Total Space"</LI>
 		<LI><b>CmTempdbUsage      </b> - better version handling (older versions of SQL-Server, then we skip more columns, not yet invented)</LI>
@@ -738,6 +741,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Better positioning for Postgres Error message. Postgres says 'Position: ###' where ### is offset in the text. So Translate the offset into Row/column so the "red snivle line" points out where the error is.</LI>
 		<LI>Code Compleation. By default add Square Brackets instead of DBMS Specific chars, which later will be translated in the "correct" char for that DBMS Type upon execution (this can be changed in the Code Completion Settings Dialog)</LI>
 		<LI>Postgres: Check for open transaction (and we are holding locks), then write a Watermark text 'You are in a TRANSACTION...'</LI>
+		<LI>Tooltip on cells: Extended check for "if JSON"</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

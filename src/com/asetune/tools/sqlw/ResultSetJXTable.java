@@ -853,6 +853,18 @@ implements ToolTipHyperlinkResolver
 			}
 		}
 
+		//------------------------------------------------------------------------
+		// "simple magic" do NOT seem to recognize JSON
+		// So lets do an extra check here
+		//------------------------------------------------------------------------
+		if (JsonUtils.isPossibleJson(cellStr))
+		{
+			if (JsonUtils.isJsonValid(cellStr))
+			{
+				_logger.info("Tooltip: Possible a JSON cell content. JsonUtils.isJsonValid(cellStr)==true. info=|" + info + "|. ACTION RESETTING: info=null");
+				info = null;
+			}
+		}
 
 		//------------------------------------------------------------------------
 		// Unrecognized MIME Type
@@ -927,6 +939,10 @@ implements ToolTipHyperlinkResolver
 					{
 						return "<html>Sorry problems when creating temporary file '"+tmpFile+"'<br>Caught: "+ex+"</html>";
 					}
+				}
+				else
+				{
+					_logger.info("Tooltip: Possible JSON 'JsonUtils.isPossibleJson(cellStr)==true', but 'JsonUtils.isJsonValid(cellStr)==false'. JsonUtils.isJsonValid_returnException(cellStr): " + JsonUtils.isJsonValid_returnException(cellStr));
 				}
 			}
 

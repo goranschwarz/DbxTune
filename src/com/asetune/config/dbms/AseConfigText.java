@@ -835,6 +835,14 @@ public abstract class AseConfigText
 					// cntrltype == 0, seems to be "normal" physical devices 
 					if (cntrltype != 0)
 						continue;
+					
+					// Skip check if it's NOT a filesystem device
+					// dsync and directio is not valid options for RAW or BLOCK devices
+					if (!description.contains("file system device"))
+					{
+						_logger.info("Checking Configuration for 'HelpDevice': Skipping device name '"+deviceName+"', description does NOT contain 'file system device'. description='" + description + "'.");
+						continue;
+					}
 
 					// skip any device names that contains "temp" or "tmp"
 					if (deviceName.indexOf("temp") >= 0 || deviceName.indexOf("tmp") >= 0)

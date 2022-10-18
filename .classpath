@@ -112,7 +112,6 @@
 	<classpathentry kind="lib" path="lib/cron4j-2.2.5.jar" sourcepath="3pp/cron4j-2.2.5-sources.jar"/>
 	<classpathentry kind="lib" path="lib/cron-utils-7.0.6.jar"/>
 	<classpathentry kind="lib" path="lib/jchart2d-3.3.2.jar" sourcepath="3pp/jchart2d-3.3.2-sources.jar"/>
-	<classpathentry kind="lib" path="lib/simplemagic-1.14.jar"/>
 	<classpathentry kind="lib" path="lib/juniversalchardet-2.3.0.jar"/>
 	<classpathentry kind="lib" path="lib/miglayout-core-5.2.jar"/>
 	<classpathentry kind="lib" path="lib/miglayout-swing-5.2.jar"/>
@@ -132,5 +131,6 @@
 	<classpathentry kind="lib" path="lib/h2-2.1.214.jar"/>
 	<classpathentry kind="lib" path="lib/jsqlparser-4.5.jar"/>
 	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-11.2.1.jre8.jar"/>
+	<classpathentry kind="lib" path="lib/simplemagic-1.17.jar" sourcepath="3pp/simplemagic-1.17-sources.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>

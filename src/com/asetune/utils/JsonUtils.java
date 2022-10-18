@@ -103,6 +103,25 @@ public class JsonUtils
 			return false;
 		}
 	}
+	public static Exception isJsonValid_returnException(String jsonInString)
+	{
+		if (StringUtil.isNullOrBlank(jsonInString))
+			return null;
+
+		try
+		{
+			JsonElement elem = new JsonParser().parse(jsonInString);
+			//System.out.println("isJsonValid(): isJsonArray="+elem.isJsonArray()+", isJsonObject()="+elem.isJsonObject() + ". input=|"+jsonInString+"|.");
+			if (elem.isJsonArray() || elem.isJsonObject())
+				return null;
+			
+			return new Exception("Passed JSON Parse, but element is NOT a 'elem.isJsonArray()' or 'elem.isJsonObject()'.");
+		}
+		catch (Exception ex)
+		{
+			return ex;
+		}
+	}
 
 	public static String format(String jsonStr)
 	{

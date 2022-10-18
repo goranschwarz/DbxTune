@@ -478,8 +478,10 @@ extends CountersModel
 						// NO match in the SKIP regEx
 						if (doAlarm)
 						{
-							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+//							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+//							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+							String extendedDescText = cm.toTextTableString(DATA_ABS, r);
+							String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, r, true, false, false);
 													
 							AlarmEvent ae = new AlarmEventTempdbSpidUsage(cm, threshold, session_id, TotalUsageMb_abs, last_request_start_time, last_request_in_sec, login_name, program_name);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
