@@ -68,6 +68,7 @@ extends MonTablesDictionaryDefault
 				return;
 
 			// NOTE: the below information on all pg_stat_* tables are copied from: http://www.postgresql.org/docs/current/static/monitoring-stats.html
+//TODO; update all below tables to reflect Postgres 15
 
 			//---------------------------------------------------------------------------------------------------------------
 			// pg_stat_activity

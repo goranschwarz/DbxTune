@@ -31,6 +31,7 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.rs.AlarmEventRsDbQueueSize;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSybMessageHandler;
@@ -516,13 +517,36 @@ extends CountersModel
 
 					if (size.intValue() > threshold)
 					{
-						AlarmHandler.getInstance().addAlarm( new AlarmEventRsDbQueueSize(cm, threshold, name, type, size.intValue()) );
+						String extendedDescText = "";
+						String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_QUEUE_SIZE);
+
+						AlarmEvent ae = new AlarmEventRsDbQueueSize(cm, threshold, name, type, size.intValue());
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						AlarmHandler.getInstance().addAlarm(ae);
 					}
 				}
 			}
 		} // end: loop all rows
 	} // end: method
 
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_QUEUE_SIZE.equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+
+	
 	public static final String  PROPKEY_alarm_size = CM_NAME + ".alarm.system.if.size.gt";
 	public static final int     DEFAULT_alarm_size = 8192;
 	

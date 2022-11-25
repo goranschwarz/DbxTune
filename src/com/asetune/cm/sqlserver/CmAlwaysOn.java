@@ -1141,7 +1141,60 @@ extends CountersModel
 			log_state                    = "    ,log_state                             = CASE WHEN ars.is_local = 1 THEN ls.log_state                                    ELSE NULL END \n";
 		}
 
+		// NOTE: when I switched to #temp tables, we get Warning: 8153 - Warning: Null value is eliminated by an aggregate or other SET operation.
+		//       this is why the: SET ANSI_WARNINGS ON/OFF was added
+		String sqlPre = ""
+			    + "declare @ansiWarningsWasChanged int = 0 \n"
+			    + " \n"
+			    + "/*-- Check for: ANSI_WARNINGS = ON */\n"
+			    + "if ( (8 & @@OPTIONS) = 8 ) \n"
+			    + "begin \n"
+//			    + "    print 'INFO: --- SET ANSI_WARNINGS OFF' \n"
+			    + "    SET @ansiWarningsWasChanged = 1 \n"
+			    + "    SET ANSI_WARNINGS OFF \n"
+			    + "end \n"
+				+ " \n"
+				+ "/*-- DROP old/previously used temp tables. */ \n"
+			    + "IF OBJECT_ID(N'tempdb..#dbx_availability_replicas'              , N'U') IS NOT NULL   drop table #dbx_availability_replicas \n"
+			    + "IF OBJECT_ID(N'tempdb..#dbx_availability_groups'                , N'U') IS NOT NULL   drop table #dbx_availability_groups \n"
+			    + "IF OBJECT_ID(N'tempdb..#dbx_availability_databases_cluster'     , N'U') IS NOT NULL   drop table #dbx_availability_databases_cluster \n"
+			    + "IF OBJECT_ID(N'tempdb..#dbx_dm_hadr_availability_group_states'  , N'U') IS NOT NULL   drop table #dbx_dm_hadr_availability_group_states \n"
+			    + "IF OBJECT_ID(N'tempdb..#dbx_dm_hadr_availability_replica_states', N'U') IS NOT NULL   drop table #dbx_dm_hadr_availability_replica_states \n"
+			    + "IF OBJECT_ID(N'tempdb..#dbx_dm_hadr_database_replica_states'    , N'U') IS NOT NULL   drop table #dbx_dm_hadr_database_replica_states \n"
+			    + "IF OBJECT_ID(N'tempdb..#dbx_master_files'                       , N'U') IS NOT NULL   drop table #dbx_master_files \n"
+			    + " \n"
+				+ "/*-- Populate temp tables (used below). */ \n"
+			    + "select *                       into #dbx_availability_replicas                from sys.availability_replicas \n"
+			    + "select *                       into #dbx_availability_groups                  from sys.availability_groups \n"
+			    + "select *                       into #dbx_availability_databases_cluster       from sys.availability_databases_cluster \n"
+			    + "select *                       into #dbx_dm_hadr_availability_group_states    from sys.dm_hadr_availability_group_states \n"
+			    + "select *                       into #dbx_dm_hadr_availability_replica_states  from sys.dm_hadr_availability_replica_states \n"
+			    + "select *                       into #dbx_dm_hadr_database_replica_states      from sys.dm_hadr_database_replica_states \n"
+			    + "select database_id, type, size into #dbx_master_files                         from sys.master_files \n"
+				+ " \n"
+//			    + "go \n"
+				+ "";
 
+		String sqlPost = ""
+				+ " \n"
+			    + "/* -- Reset: ANSI_WARNINGS = ON */ \n"
+			    + "if ( @ansiWarningsWasChanged = 1 ) \n"
+			    + "begin \n"
+//			    + "    print 'INFO: --- SET ANSI_WARNINGS ON' \n"
+			    + "    SET ANSI_WARNINGS ON \n"
+			    + "end \n"
+				+ "";
+//		String sqlPost = ""
+//			    + "drop table #dbx_availability_replicas \n"
+//			    + "drop table #dbx_availability_groups \n"
+//			    + "drop table #dbx_availability_databases_cluster \n"
+//			    + "drop table #dbx_dm_hadr_availability_group_states \n"
+//			    + "drop table #dbx_dm_hadr_availability_replica_states \n"
+//			    + "drop table #dbx_dm_hadr_database_replica_states \n"
+//			    + "drop table #dbx_master_files \n"
+//			    + "go \n"
+//			    + "";
+		
 		String sql = ""
 			+ "select /* ${cmCollectorName} */ \n"
 			+ "     locality                              = CASE WHEN ars.is_local = 1 THEN convert(varchar(20), 'LOCAL') ELSE convert(varchar(20), 'REMOTE') END \n" // Make it 20 so REMOTE-LIVE-DATA also fits
@@ -1175,8 +1228,10 @@ extends CountersModel
 			+ total_log_size_mb
 			+ log_state
 			+ "\n"
-			+ "    ,DataSizeInMb = (SELECT convert(decimal(10,1), sum(mf.size / 128.0)) FROM sys.master_files mf WHERE mf.type = 0 AND mf.database_id = drs.database_id) \n"
-			+ "    ,LogSize      = (SELECT convert(decimal(10,1), sum(mf.size / 128.0)) FROM sys.master_files mf WHERE mf.type = 1 AND mf.database_id = drs.database_id) \n"
+//			+ "    ,DataSizeInMb = (SELECT convert(decimal(10,1), sum(mf.size / 128.0)) FROM sys.master_files mf WHERE mf.type = 0 AND mf.database_id = drs.database_id) \n"
+//			+ "    ,LogSize      = (SELECT convert(decimal(10,1), sum(mf.size / 128.0)) FROM sys.master_files mf WHERE mf.type = 1 AND mf.database_id = drs.database_id) \n"
+			+ "    ,DataSizeInMb = (SELECT convert(decimal(10,1), sum(mf.size / 128.0)) FROM #dbx_master_files mf WHERE mf.type = 0 AND mf.database_id = drs.database_id) \n"
+			+ "    ,LogSize      = (SELECT convert(decimal(10,1), sum(mf.size / 128.0)) FROM #dbx_master_files mf WHERE mf.type = 1 AND mf.database_id = drs.database_id) \n"
 			+ "\n"
 			+ "    ,p_TransactionsPerSec               = convert(decimal(17,2), NULL) \n"  // grab from CmPerfCounters: String pk = createPkStr(":Databases", "Transactions/sec"                           , dbname); 
 			+ "    ,p_WriteTransactionsPerSec          = convert(decimal(17,2), NULL) \n"  // grab from CmPerfCounters: String pk = createPkStr(":Databases", "Write Transactions/sec"                     , dbname); 
@@ -1289,19 +1344,26 @@ extends CountersModel
 			+ "    ,BagPercentDetails                     = convert(varchar(512), null) \n"
 			
 			+ " \n"
-			+ "from sys.availability_replicas ar \n"
-			+ "inner join sys.availability_groups                       ag on ar.group_id   = ag.group_id \n"
-			+ "inner join sys.availability_databases_cluster           adc on ar.group_id   = adc.group_id \n"
-			+ "inner join sys.dm_hadr_availability_group_states        ags on ar.group_id   = ags.group_id \n"
-			+ "left outer join sys.dm_hadr_availability_replica_states ars on ar.replica_id = ars.replica_id \n"
-			+ "left outer join sys.dm_hadr_database_replica_states     drs on ar.replica_id = drs.replica_id \n"
+//			+ "from            sys.availability_replicas                ar \n"
+//			+ "inner join      sys.availability_groups                  ag on ar.group_id   = ag.group_id \n"
+//			+ "inner join      sys.availability_databases_cluster      adc on ar.group_id   = adc.group_id \n"
+//			+ "inner join      sys.dm_hadr_availability_group_states   ags on ar.group_id   = ags.group_id \n"
+//			+ "left outer join sys.dm_hadr_availability_replica_states ars on ar.replica_id = ars.replica_id \n"
+//			+ "left outer join sys.dm_hadr_database_replica_states     drs on ar.replica_id = drs.replica_id \n"
+			+ "from            #dbx_availability_replicas                ar \n"
+			+ "inner join      #dbx_availability_groups                  ag on ar.group_id   = ag.group_id \n"
+			+ "inner join      #dbx_availability_databases_cluster      adc on ar.group_id   = adc.group_id \n"
+			+ "inner join      #dbx_dm_hadr_availability_group_states   ags on ar.group_id   = ags.group_id \n"
+			+ "left outer join #dbx_dm_hadr_availability_replica_states ars on ar.replica_id = ars.replica_id \n"
+			+ "left outer join #dbx_dm_hadr_database_replica_states     drs on ar.replica_id = drs.replica_id \n"
 			+ outer_apply__dm_db_log_stats
 			+ "where 1 = 1 \n"
 //			+ "order by ar.replica_server_name, adc.database_name \n"
 			+ "order by 1, 4, 2  -- locality, database_name, server_name \n"
+//		    + "go \n"
 			+ "";
 		
-		return sql;
+		return sqlPre + sql + sqlPost;
 	}
 	
 	@Override

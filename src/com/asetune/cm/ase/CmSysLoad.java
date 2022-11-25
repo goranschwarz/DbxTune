@@ -31,6 +31,7 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventRunQueueLength;
 import com.asetune.alarm.events.AlarmEventRunQueueLength.RangeType;
 import com.asetune.cm.CmSettingsHelper;
@@ -627,7 +628,15 @@ extends CountersModel
 							System.out.println("##### sendAlarmRequest("+cm.getName()+"): RunQueueLengthAvg1min - threshold="+threshold+", RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min="+Avg_5min+", avg_15min="+Avg_15min+".");
 
 						if (Avg_1min > threshold)
-							AlarmHandler.getInstance().addAlarm( new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_1_MINUTE, Avg_1min, Avg_5min, Avg_15min) );
+						{
+							String extendedDescText = "";
+							String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AVG_RUN_QUEUE_LENTH);
+
+							AlarmEvent ae = new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_1_MINUTE, Avg_1min, Avg_5min, Avg_15min);
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							AlarmHandler.getInstance().addAlarm(ae);
+						}
 					}
 				}
 
@@ -641,7 +650,15 @@ extends CountersModel
 							System.out.println("##### sendAlarmRequest("+cm.getName()+"): RunQueueLengthAvg5min - threshold="+threshold+", RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min="+Avg_5min+", avg_15min="+Avg_15min+".");
 
 						if (Avg_5min > threshold)
-							AlarmHandler.getInstance().addAlarm( new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_5_MINUTE, Avg_1min, Avg_5min, Avg_15min) );
+						{
+							String extendedDescText = "";
+							String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AVG_RUN_QUEUE_LENTH);
+
+							AlarmEvent ae = new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_5_MINUTE, Avg_1min, Avg_5min, Avg_15min);
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							AlarmHandler.getInstance().addAlarm(ae);
+						}
 					}
 				}
 
@@ -655,13 +672,38 @@ extends CountersModel
 							System.out.println("##### sendAlarmRequest("+cm.getName()+"): RunQueueLengthAvg15min - threshold="+threshold+", RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min="+Avg_5min+", avg_15min="+Avg_15min+".");
 
 						if (Avg_15min > threshold)
-							AlarmHandler.getInstance().addAlarm( new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_15_MINUTE, Avg_1min, Avg_5min, Avg_15min) );
+						{
+							String extendedDescText = "";
+							String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AVG_RUN_QUEUE_LENTH);
+
+							AlarmEvent ae = new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_15_MINUTE, Avg_1min, Avg_5min, Avg_15min);
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							AlarmHandler.getInstance().addAlarm(ae);
+						}
 					}
 				}
 			}
 		}
 	}
 
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_AVG_RUN_QUEUE_LENTH.equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+
+	
 	public static final String  PROPKEY_alarm_RunQueueLengthAvg1min = PROP_PREFIX + ".alarm.system.if.RunQueueLengthAvg1min.gt";
 //	public static final double  DEFAULT_alarm_RunQueueLengthAvg1min = 1.7;
 	public static final double  DEFAULT_alarm_RunQueueLengthAvg1min = 3.0;

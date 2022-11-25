@@ -1058,7 +1058,8 @@ extends Properties
 			throw new MandatoryPropertyException("The property '"+propName+"' is mandatory.");
 		try
 		{
-			return Integer.parseInt(val);
+//			return Integer.parseInt(val);
+			return NumberUtils.toNumber(val).intValue();
 		}
 		catch (NumberFormatException e)
 		{
@@ -1069,7 +1070,8 @@ extends Properties
 	public int getIntProperty(String propName)
 	{
 		String val = getProperty(propName);
-		return Integer.parseInt(val);
+//		return Integer.parseInt(val);
+		return NumberUtils.toNumber(val).intValue();
 	}
 	/** Get a int value for property */
 	public int getIntProperty(String propName, int defaultValue)
@@ -1083,7 +1085,8 @@ extends Properties
 //		if (val != null && val.equals(""))
 		if (StringUtil.isNullOrBlank(val))
 			val = defaultValue;
-		return Integer.parseInt(val);
+//		return Integer.parseInt(val);
+		return NumberUtils.toNumber(val).intValue();
 	}
 
 
@@ -1096,13 +1099,15 @@ extends Properties
 		String val = getProperty(propName);
 		if (val == null)
 			throw new MandatoryPropertyException("The property '"+propName+"' is mandatory.");
-		return Long.parseLong(val);
+//		return Long.parseLong(val);
+		return NumberUtils.toNumber(val).longValue();
 	}
 	/** Get a long value for property */
 	public long getLongProperty(String propName)
 	{
 		String val = getProperty(propName);
-		return Long.parseLong(val);
+//		return Long.parseLong(val);
+		return NumberUtils.toNumber(val).longValue();
 	}
 	/** Get a long value for property */
 	public long getLongProperty(String propName, long defaultValue)
@@ -1116,7 +1121,8 @@ extends Properties
 //		if (val != null && val.equals(""))
 		if (StringUtil.isNullOrBlank(val))
 			val = defaultValue;
-		return Long.parseLong(val);
+//		return Long.parseLong(val);
+		return NumberUtils.toNumber(val).longValue();
 	}
 
 
@@ -1129,13 +1135,15 @@ extends Properties
 		String val = getProperty(propName);
 		if (val == null)
 			throw new MandatoryPropertyException("The property '"+propName+"' is mandatory.");
-		return Double.parseDouble(val);
+//		return Double.parseDouble(val);
+		return NumberUtils.toNumber(val).doubleValue();
 	}
 	/** Get a Double value for property */
 	public double getDoubleProperty(String propName)
 	{
 		String val = getProperty(propName);
-		return Double.parseDouble(val);
+//		return Double.parseDouble(val);
+		return NumberUtils.toNumber(val).doubleValue();
 	}
 	/** Get a Double value for property */
 	public double getDoubleProperty(String propName, double defaultValue)
@@ -1149,7 +1157,8 @@ extends Properties
 //		if (val != null && val.equals(""))
 		if (StringUtil.isNullOrBlank(val))
 			val = defaultValue;
-		return Double.parseDouble(val);
+//		return Double.parseDouble(val);
+		return NumberUtils.toNumber(val).doubleValue();
 	}
 
 

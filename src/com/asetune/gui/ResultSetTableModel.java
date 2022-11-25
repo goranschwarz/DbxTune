@@ -2963,6 +2963,34 @@ public class ResultSetTableModel
 
 
 	/**
+	 * Rename a column 
+	 * 
+	 * @param oldColName
+	 * @param newColName
+	 * @return true = in Success, false if Column wasnt found 
+	 */
+	public boolean renameColumn(String oldColName, String newColName)
+	{
+		int colPos = findColumn(oldColName);
+		if ( colPos == -1 )
+			return false;
+
+		_rsmdColumnName .set(colPos, newColName);
+		_rsmdColumnLabel.set(colPos, newColName);
+
+		// NOTE: We should probably set more options as:
+		// _rsmdColumnType         // rsmd.getColumnType(c); 
+		// _rsmdColumnTypeStr      // getColumnJavaSqlTypeName(_rsmdColumnType.get(index)) 
+		// _rsmdColumnTypeName     // rsmd.getColumnTypeName(c);
+		// _rsmdColumnTypeNameStr  // kind of 'SQL' datatype: this.getColumnTypeName(rsmd, c);
+		// _rsmdColumnClassName    // rsmd.getColumnClassName(c);
+		// _displaySize            // Math.max(rsmd.getColumnDisplaySize(c), rsmd.getColumnLabel(c).length());
+		
+		return true;
+	}
+
+	
+	/**
 	 * REMOVE This column from the TableModel 
 	 * @param colname    Name of the column (case Sensitive)
 	 * 
@@ -4568,13 +4596,33 @@ public class ResultSetTableModel
 	public static ResultSetTableModel executeQuery(DbxConnection conn, String sql, String name)
 	throws SQLException
 	{
+		return executeQuery(conn, sql, 0, name);
+	}
+	
+	/**
+	 * Execute a SQL Query and return the Results as a ResultSetTableModel
+	 * <p>
+	 * NOTE: All Square Bracket Quoted Identifiers will be translated to DBMS specific quotes.<br>
+	 * So SQL <code>select [c1] from [dbo].[t1]</code> will be translated into <code>select "c1" from "dbo"."t1"</code> if the Quote char for the DBMS is " (double quote)
+	 * 
+	 * @param conn            The JDBC Connection
+	 * @param sql             SQL Statement to execute
+	 * @param queryTimeout    stmnt.setQueryTimeout(queryTimeout)
+	 * @param name            If you want to give the "table" a name!
+	 * 
+	 * @return a ResultSetTableModel 
+	 * @throws SQLException on errors
+	 */
+	public static ResultSetTableModel executeQuery(DbxConnection conn, String sql, int queryTimeout, String name)
+	throws SQLException
+	{
 		// transform all "[" and "]" to DBMS Vendor Quoted Identifier Chars 
 		sql = conn.quotifySqlString(sql);
 
 		try ( Statement stmnt = conn.createStatement() )
 		{
 			// Unlimited execution time
-			stmnt.setQueryTimeout(0);
+			stmnt.setQueryTimeout(queryTimeout);
 			try ( ResultSet rs = stmnt.executeQuery(sql) )
 			{
 				ResultSetTableModel rstm = createResultSetTableModel(rs, name, sql, false);

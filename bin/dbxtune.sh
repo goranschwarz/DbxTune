@@ -150,6 +150,14 @@ case "${toolset}" in
 		javaSplashScreen="lib/sqlw_splash.jpg"
 		;;
 
+	tailw)
+		shortAppName="tailw"
+		longAppName="TailW"
+		javaMainClass="com.asetune.tools.tailw.LogTailWindow"
+		javaMainParams=""
+		javaSplashScreen="lib/tailw_splash.jpg"
+		;;
+
 	central)
 		shortAppName="dbxtunecentral"
 		longAppName="DbxTuneCentral"
@@ -190,6 +198,31 @@ case "${toolset}" in
 		javaMainClass="org.h2.tools.Server"
 		javaMainParams="-tcp -tcpAllowOthers -ifExists"
 		#javaMainParams="-tcp -tcpAllowOthers -ifExists -baseDir ${baseDir}"
+		javaSplashScreen=""
+		;;
+
+	sshtest)
+		shortAppName="sshtest"
+		longAppName="SshTest"
+		javaMainClass="com.asetune.ssh.SshConnectionTester"
+		javaMainParams=""
+		javaSplashScreen=""
+		;;
+
+	mailtest)
+		shortAppName="mailtest"
+		longAppName="MailTest"
+		javaMainClass="com.asetune.test.MailTest"
+		javaMainParams=""
+		javaSplashScreen=""
+		;;
+
+	## If the parameter starts with "com.asetune." then: test "any" classname passed in
+	com.asetune.*)
+		shortAppName="classtest"
+		longAppName="ClassTest"
+		javaMainClass="${toolset}"
+		javaMainParams=""
 		javaSplashScreen=""
 		;;
 
@@ -445,6 +478,23 @@ then
 	echo ""
 	exit 1
 fi
+
+##
+## FIX for Java 11 or above
+##
+if [ ${javaVersionNum} -ge 11 ]
+then
+	echo ""
+	echo "================================================================"
+	echo "Adjustments for java 11 and above."
+	echo "Java version ${javaVersionNum} is used. This version is missing some basic JARS, which will be added"
+	echo "----------------------------------------------------------------"
+	echo "INFO: - Adding '${APPL_HOME}/lib/jaxb-ri/*' to CLASSPATH"
+	echo "----------------------------------------------------------------"
+	echo ""
+	export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jaxb-ri/*
+fi
+
 
 #------------------------------------------------------------------------
 #--- CHECK current Java Version

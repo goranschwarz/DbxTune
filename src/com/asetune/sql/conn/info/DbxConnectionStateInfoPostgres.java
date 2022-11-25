@@ -38,6 +38,7 @@ extends DbxConnectionStateInfoGenericJdbc
 	public String _currentCatalog = "";
 	public String _currentSchema  = "";
 	public int    _backendPid     = -1;
+	public boolean _isInRecovery  = false;
 
 	public int    _lockCount      = -1;
 //	public List<LockRecord> _lockList = new ArrayList<LockRecord>();
@@ -50,7 +51,7 @@ extends DbxConnectionStateInfoGenericJdbc
 
 	private void refresh(DbxConnection conn)
 	{
-		String sql = "select session_user, current_user, current_catalog, current_schema, pg_backend_pid()";
+		String sql = "select session_user, current_user, current_catalog, current_schema, pg_backend_pid(), pg_is_in_recovery()";
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
 			while(rs.next())
@@ -60,6 +61,7 @@ extends DbxConnectionStateInfoGenericJdbc
 				_currentCatalog = rs.getString(3);
 				_currentSchema  = rs.getString(4);
 				_backendPid     = rs.getInt   (5);
+				_isInRecovery   = rs.getBoolean(6);
 			}
 		}
 		catch (SQLException ex)
@@ -112,6 +114,7 @@ extends DbxConnectionStateInfoGenericJdbc
 		String cat         = "cat=<b>"         + _currentCatalog   + "</b>";
 		String schema      = "schema=<b>"      + _currentSchema    + "</b>";
 		String ac          = "ac=<b>"          + autocommitBool    + "</b>";
+		String inRecovery  = "inRecovery=<b>"  + _isInRecovery     + "</b>";
 
 		String loginUser   = "";
 		if (_sessionUser.equals(_currentUser))
@@ -127,13 +130,17 @@ extends DbxConnectionStateInfoGenericJdbc
 		if ( ! autocommitBool )
 			autocommit = "AutoCommit=<b><font color='red'>" + autocommitBool + "</font></b>";
 
+		if ( _isInRecovery )
+			inRecovery = "inRecovery=<b><font color='red'>" + _isInRecovery + "</font></b>";
+
 		// status: Normal state
 		String text = "<html>" 
-				+ bpid      + ", " 
-				+ cat       + ", " 
-				+ schema    + ", " 
-				+ loginUser + ", " 
-				+ ac        +
+				+ bpid       + ", " 
+				+ cat        + ", " 
+				+ schema     + ", " 
+				+ loginUser  + ", " 
+				+ ac         + ", " 
+				+ inRecovery +
 				"</html>";
 //		String text = "ac="+getAutoCommit();
 
@@ -146,7 +153,8 @@ extends DbxConnectionStateInfoGenericJdbc
 				+ cat        + ", " 
 				+ schema     + ", " 
 				+ loginUser  + ", " 
-				+ isolation  + 
+				+ isolation  + ", "
+				+ inRecovery +
 				"</html>";
 		}
 
@@ -165,6 +173,7 @@ extends DbxConnectionStateInfoGenericJdbc
 				"<tr> <td>Current Schema:  </td> <td><b>" + _currentSchema         + "</b> </td> </tr>" +
 				"<tr> <td>AutoCommit:      </td> <td><b>" + getAutoCommit()        + "</b> </td> </tr>" +
 				"<tr> <td>Isolation Level: </td> <td><b>" + getIsolationLevelStr() + "</b> </td> </tr>" +
+				"<tr> <td>Is In Recovery:  </td> <td><b>" + _isInRecovery          + "</b> </td> </tr>" +
 				"</table>" +
 				"<hr>" + 
 				"Various status for the current connection. Are we in a transaction or not." +

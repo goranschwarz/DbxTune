@@ -1376,6 +1376,9 @@ public class OverviewServlet extends HttpServlet
 				if (firstServerName == null)
 					firstServerName = session.getServerName();
 
+				if (firstServerName == null)
+					firstServerName = "-unknown-";
+
 				out.println("  <li> <a href='/report?op=viewLatest&name=" + session.getServerName() + "'>" + session.getServerName() + "</a> </li>");
 			}
 			out.println("</ul>");

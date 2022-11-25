@@ -26,9 +26,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.HashMap;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.cache.DbmsObjectIdCache;
+import com.asetune.cache.DbmsObjectIdCachePostgres;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.os.CmOsDiskSpace;
 import com.asetune.cm.os.CmOsIostat;
@@ -40,18 +43,22 @@ import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
 import com.asetune.cm.postgres.CmActiveStatements;
 import com.asetune.cm.postgres.CmPgActivity;
+import com.asetune.cm.postgres.CmPgArchiver;
 import com.asetune.cm.postgres.CmPgBgWriter;
 import com.asetune.cm.postgres.CmPgDatabase;
 import com.asetune.cm.postgres.CmPgFunctions;
 import com.asetune.cm.postgres.CmPgIndexes;
 import com.asetune.cm.postgres.CmPgIndexesIo;
+import com.asetune.cm.postgres.CmPgLocks;
 import com.asetune.cm.postgres.CmPgReplication;
 import com.asetune.cm.postgres.CmPgSequencesIo;
+import com.asetune.cm.postgres.CmPgSlru;
 import com.asetune.cm.postgres.CmPgStatements;
 import com.asetune.cm.postgres.CmPgStatementsSumDb;
 import com.asetune.cm.postgres.CmPgTableSize;
 import com.asetune.cm.postgres.CmPgTables;
 import com.asetune.cm.postgres.CmPgTablesIo;
+import com.asetune.cm.postgres.CmPgWal;
 import com.asetune.cm.postgres.CmSummary;
 import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistContainer;
@@ -59,6 +66,7 @@ import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
 
@@ -108,10 +116,13 @@ extends CounterControllerAbstract
 		CmPgActivity        .create(counterController, guiController);
 		CmPgDatabase        .create(counterController, guiController);
 		CmPgBgWriter        .create(counterController, guiController);
+		CmPgWal             .create(counterController, guiController);
+		CmPgArchiver        .create(counterController, guiController);
 		CmPgReplication     .create(counterController, guiController);
 
 		// Object Access
 		CmActiveStatements  .create(counterController, guiController);
+//		CmPgBlockingLocks   .create(counterController, guiController); // nearly the same as CmActiveStatements -->> possibly do: sel * pg_locks instead???
 		CmPgTables          .create(counterController, guiController);
 		CmPgTablesIo        .create(counterController, guiController);
 		CmPgIndexes         .create(counterController, guiController);
@@ -122,7 +133,13 @@ extends CounterControllerAbstract
 		CmPgStatementsSumDb .create(counterController, guiController);
 		CmPgTableSize       .create(counterController, guiController);
 
+		// NOTE: This should be AFTER 'CmPgTables' since we depends on that to store information about Postgres 'relationid' --> 'tablename'
+		CmPgLocks           .create(counterController, guiController);
+		
+		
 		// Cache
+		CmPgSlru            .create(counterController, guiController);
+
 		// Disk
 
 		// OS HOST Monitoring
@@ -215,9 +232,13 @@ extends CounterControllerAbstract
 	}
 
 //	/** If DNS Lookups takes to long, cache the host names in here */
-//	private HashMap<String, String> _ipToHostCache = null;             // key=IP, Value=HostName
-//	private long                    _ipToHostLastLookup    = 0;        // Time stamp when we did last getHostName()
-//	private long                    _ipToHostLastLookupTtl = 3600_000; // 1 hour
+	private boolean                 _ipToHostCache_isEnabled = true; // enables/disables if lookup takes to long.
+	private HashMap<String, String> _ipToHostCache = new HashMap<>();  // key=IP, Value=HostName
+	private long                    _ipToHostLastLookup    = 0;        // Time stamp when we did last getHostName()
+	private long                    _ipToHostLastLookupTtl = Configuration.getCombinedConfiguration().getLongProperty(PROPKEY_ipToHostCache_ttl, DEFAULT_ipToHostCache_ttl);
+
+	public static final String PROPKEY_ipToHostCache_ttl = "CounterControllerPostgres.ipToHostCache.ttl.ms";
+	public static final long   DEFAULT_ipToHostCache_ttl = 600 * 1000; // 10 minutes
 	
 	@Override
 	public PersistContainer.HeaderInfo createPcsHeaderInfo()
@@ -247,26 +268,43 @@ extends CounterControllerAbstract
 //				counterClearTime = rs.getTimestamp(4);
 
 				String hostname = ip;
-				try
+				
+				if (_ipToHostCache_isEnabled && _ipToHostCache.containsKey(ip) && TimeUtils.msDiffNow(_ipToHostLastLookup) < _ipToHostLastLookupTtl)
 				{
-					long startTime = System.currentTimeMillis();
-
-					// Do the lookup
-					InetAddress addr = InetAddress.getByName(ip);
-					hostname = addr.getHostName();
-					
-					// If this takes to long...
-					long execTimeMs = TimeUtils.msDiffNow(startTime);
-					if (execTimeMs > 2_000)
-					{
-						_logger.warn("createPcsHeaderInfo(): This takes to long time. java.net.InetAddress.getHostName() took " + execTimeMs + " ms to compleate. Check your DNS Reverse Lookup settings.");
-
-						// Possible fix: CACHE the DNS lookup in a HashMap<IP, hostname>, also set a TTL for 1 hour
-					}
+					hostname = _ipToHostCache.get(ip);
+//System.out.println("IP to HOSTNAME lookup. Got hostname '" + hostname + "' for ip '" + ip + "' from cache. CacheAge=" + TimeUtils.msDiffNow(_ipToHostLastLookup) + ", TTL can be changed via Property '" + PROPKEY_ipToHostCache_ttl + "', defaultTtl=" + DEFAULT_ipToHostCache_ttl + ".");
+					if (_logger.isDebugEnabled())
+						_logger.debug("IP to HOSTNAME lookup. Got hostname '" + hostname + "' for ip '" + ip + "' from cache. CacheAge=" + TimeUtils.msDiffNow(_ipToHostLastLookup) + ", TTL can be changed via Property '" + PROPKEY_ipToHostCache_ttl + "', defaultTtl=" + DEFAULT_ipToHostCache_ttl + ".");
 				}
-				catch(UnknownHostException ex)
+				else
 				{
-					_logger.info("Problems looking up the IP '" + ip + "' into a real name, using InetAddress.getByName(ip). So lets use the IP adress '" + hostname + "' as the name. Caught: " + ex);
+					try
+					{
+						long startTime = System.currentTimeMillis();
+
+						// Do the lookup
+						InetAddress addr = InetAddress.getByName(ip);
+						hostname = addr.getHostName();
+
+						// Cache: IP -> Hostname
+						_ipToHostCache.put(ip, hostname);
+						_ipToHostLastLookup = System.currentTimeMillis();
+						_ipToHostCache_isEnabled = false; // turn OFF caching... if we had a long lookup time, the cache will be ENABLED
+
+						// If this takes to long...
+						long execTimeMs = TimeUtils.msDiffNow(startTime);
+						if (execTimeMs > 2_000)
+						{
+							_ipToHostCache_isEnabled = true; // ENABLE cache
+							_logger.warn("createPcsHeaderInfo(): This takes to long time, ENABLING 'ip-to-hostname' local cache. java.net.InetAddress.getHostName() took " + execTimeMs + " ms to compleate. Check your DNS Reverse Lookup settings.");
+
+							// Possible fix: CACHE the DNS lookup in a HashMap<IP, hostname>, also set a TTL for 1 hour
+						}
+					}
+					catch(UnknownHostException ex)
+					{
+						_logger.info("Problems looking up the IP '" + ip + "' into a real name, using InetAddress.getByName(ip). So lets use the IP adress '" + hostname + "' as the name. Caught: " + ex);
+					}
 				}
 
 				mainSampleTime   = ts;
@@ -434,17 +472,61 @@ extends CounterControllerAbstract
 				// Lets use ONE transaction for every refresh
 				if (dbxConn.getAutoCommit() == true)
 					dbxConn.setAutoCommit(false);
-				
-				// So when entering a refresh: just finishing off the current transaction.
-				dbxConn.commit(); 
+			}
+			else
+			{
+				// When leaving refresh mode... set AutoCommit to true -- so we don't end up 'idle in transaction' while sleeping
+				if (dbxConn.getAutoCommit() == false)
+					dbxConn.setAutoCommit(true);
 			}
 		}
 		catch(SQLException e)
 		{
-			_logger.info("Problem when changing the IQ Connection autocommit mode.");
+			_logger.info("Problem when changing the Postgres Connection autocommit mode.");
 		}
 
 		super.setInRefresh(enterRefreshMode);
+	}
+
+	//==================================================================
+	// BEGIN: NO-GUI methods
+	//==================================================================
+	@Override
+	public DbxConnection noGuiConnect(String dbmsUsername, String dbmsPassword, String dbmsServer, String dbmsHostPortStr, String jdbcUrlOptions) throws SQLException, Exception
+	{
+		DbxConnection conn = super.noGuiConnect(dbmsUsername, dbmsPassword, dbmsServer, dbmsHostPortStr, jdbcUrlOptions);
+		
+		// DBMS ObjectID --> ObjectName Cache... maybe it's not the perfect place to initialize this...
+		DbmsObjectIdCache.setInstance( new DbmsObjectIdCachePostgres( new ConnectionProvider()
+		{
+			@Override
+			public DbxConnection getNewConnection(String appname)
+			{
+				try 
+				{
+					return DbxConnection.connect(null, appname);
+				} 
+				catch(Exception e) 
+				{
+					_logger.error("Problems getting a new connection. Caught: "+e, e);
+					return null;
+				}
+			}
+			
+			@Override
+			public DbxConnection getConnection()
+			{
+//				return getCounterController().getMonConnection();
+				return getMonConnection();
+			}
+		}) );
+
+		// Populate Object ID Cache
+		if (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled())
+			DbmsObjectIdCache.getInstance().getBulk(null); // null == ALL Databases
+
+		// Return the connection
+		return conn;
 	}
 
 	@Override

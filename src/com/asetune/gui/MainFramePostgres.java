@@ -27,6 +27,8 @@ import javax.swing.Icon;
 import javax.swing.ImageIcon;
 
 import com.asetune.Version;
+import com.asetune.cache.DbmsObjectIdCache;
+import com.asetune.cache.DbmsObjectIdCachePostgres;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.DbmsConfigTextManager;
 import com.asetune.config.dbms.IDbmsConfig;
@@ -175,6 +177,12 @@ extends MainFrame
 	@Override
 	public void connectMonitorHookin()
 	{
+		// DBMS ObjectID --> ObjectName Cache... maybe it's not the perfect place to initialize this...
+		DbmsObjectIdCache.setInstance( new DbmsObjectIdCachePostgres(this) );
+		
+		// Populate Object ID Cache
+		if (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled())
+			DbmsObjectIdCache.getInstance().getBulk(null); // null == ALL Databases
 	}
 
 	@Override

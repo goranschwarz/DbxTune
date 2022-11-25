@@ -35,6 +35,7 @@ import java.util.HashMap;
 import javax.swing.BorderFactory;
 import javax.swing.Icon;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -51,6 +52,7 @@ import com.asetune.CounterController;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.postgres.CmSummary;
+import com.asetune.gui.ChangeToJTabDialog;
 import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.ShowCmPropertiesDialog;
@@ -76,9 +78,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 	private CountersModel      _cm = null;
 
-//	private ChangeToJTabDialog _focusToBlockingTab = null;
-//	private ChangeToJTabDialog _focusToDatabasesTab_fullLog = null;
-//	private ChangeToJTabDialog _focusToDatabasesTab_oldestOpenTran = null;
+	private ChangeToJTabDialog _focusToBlockingTab = null;
+	private ChangeToJTabDialog _focusToActiveStmntsTab_oldestOpenTran = null;
+
 	private Watermark          _watermark;
 
 	private Icon             _icon = null;//SwingUtils.readImageIcon(Version.class, "images/summary_tab.png");
@@ -117,9 +119,29 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JTextField       _inRecovery_txt               = new JTextField();
 	private JLabel           _inRecovery_lbl               = new JLabel();
 
+
+	// Blocking
+	private JTextField       _blockingLockCount_txt        = new JTextField();
+	private JLabel           _blockingLockCount_lbl        = new JLabel();
 	
-	private JTextField       _oldestRunningXactAge_txt     = new JTextField();
-	private JLabel           _oldestRunningXactAge_lbl     = new JLabel();
+	private JTextField       _blockingLockWaitStart_txt    = new JTextField();
+	private JLabel           _blockingLockWaitStart_lbl    = new JLabel();
+
+	private JTextField       _blockingLockWaitInSec_txt    = new JTextField();
+	private JLabel           _blockingLockWaitInSec_lbl    = new JLabel();
+
+
+//	// Oldest Transaction and Statement
+//	private JTextField       _oldestXactStartInSec_txt     = new JTextField();
+//	private JLabel           _oldestXactStartInSec_lbl     = new JLabel();
+//	
+//	private JTextField       _oldestStmntStartInSec_txt    = new JTextField();
+//	private JLabel           _oldestStmntStartInSec_lbl    = new JLabel();
+	
+
+	// XID Age... backend_xmin
+	private JTextField       _oldestBackendXminAge_txt     = new JTextField();
+	private JLabel           _oldestBackendXminAge_lbl     = new JLabel();
 	
 	private JTextField       _oldestPreparedXactAge_txt    = new JTextField();
 	private JLabel           _oldestPreparedXactAge_lbl    = new JLabel();
@@ -130,6 +152,46 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JTextField       _oldestReplicaXactAge_txt     = new JTextField();
 	private JLabel           _oldestReplicaXactAge_lbl     = new JLabel();
 	
+
+	// Oldest Transaction and Statement
+	private JLabel           _oXactInfo_lbl                = new JLabel();
+                                                           
+	private JLabel           _oXactState_lbl               = new JLabel();
+	private JTextField       _oXactState_txt               = new JTextField();
+
+	private JLabel           _oXactPid_lbl                 = new JLabel();
+	private JTextField       _oXactPid_txt                 = new JTextField();
+
+	private JLabel           _oXactDbname_lbl              = new JLabel();
+	private JTextField       _oXactDbname_txt              = new JTextField();
+
+	private JLabel           _oXactUsername_lbl            = new JLabel();
+	private JTextField       _oXactUsername_txt            = new JTextField();
+
+	private JLabel           _oXactAppname_lbl             = new JLabel();
+	private JTextField       _oXactAppname_txt             = new JTextField();
+
+	private JLabel           _oXactIsWaiting_lbl           = new JLabel();
+	private JCheckBox        _oXactIsWaiting_chk           = new JCheckBox();
+	private JTextField       _oXactIsWaiting1_txt          = new JTextField();
+	private JTextField       _oXactIsWaiting2_txt          = new JTextField();
+
+	private JLabel           _oXactStartInSec_lbl          = new JLabel();
+	private JTextField       _oXactStartInSec_txt          = new JTextField();
+	private JTextField       _oXactStartAge_txt            = new JTextField();
+
+	private JLabel           _oStmntStartInSec_lbl         = new JLabel();
+	private JTextField       _oStmntStartInSec_txt         = new JTextField();
+	private JTextField       _oStmntStartAge_txt           = new JTextField();
+
+	private JLabel           _oStmntExecInSec_lbl          = new JLabel();
+	private JTextField       _oStmntExecInSec_txt          = new JTextField();
+	private JTextField       _oStmntExecAge_txt            = new JTextField();
+
+	private JLabel           _oInCurrentStateInSec_lbl     = new JLabel();
+	private JTextField       _oInCurrentStateInSec_txt     = new JTextField();
+	private JTextField       _oInCurrentStateAge_txt       = new JTextField();
+
 	
 	
 	private static final Color NON_CONFIGURED_MONITORING_COLOR = new Color(255, 224, 115);
@@ -330,6 +392,38 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_inRecovery_txt       .setEditable(false);
 
 
+		tooltip = "Number concurrent of blocking locks";
+		_blockingLockCount_lbl.setText("Blocking Lock Count");
+		_blockingLockCount_lbl.setToolTipText(tooltip);
+		_blockingLockCount_txt.setToolTipText(tooltip);
+		_blockingLockCount_txt.setEditable(false);
+
+		tooltip = "Start Time for oldest blocking locks";
+		_blockingLockWaitStart_lbl.setText("Blocking Lock Start Time");
+		_blockingLockWaitStart_lbl.setToolTipText(tooltip);
+		_blockingLockWaitStart_txt.setToolTipText(tooltip);
+		_blockingLockWaitStart_txt.setEditable(false);
+
+		tooltip = "Wait time in seconds for oldest blocking locks";
+		_blockingLockWaitInSec_lbl.setText("Blocking Lock Time in Sec");
+		_blockingLockWaitInSec_lbl.setToolTipText(tooltip);
+		_blockingLockWaitInSec_txt.setToolTipText(tooltip);
+		_blockingLockWaitInSec_txt.setEditable(false);
+
+
+//		tooltip = "Oldest Transaction Start Time";
+//		_oldestXactStartInSec_lbl.setText("Oldest Xact Start in Sec");
+//		_oldestXactStartInSec_lbl.setToolTipText(tooltip);
+//		_oldestXactStartInSec_txt.setToolTipText(tooltip);
+//		_oldestXactStartInSec_txt.setEditable(false);
+//
+//		tooltip = "Oldest Statement Start Time in Seconds";
+//		_oldestStmntStartInSec_lbl.setText("Oldest Stmnt Start in Sec");
+//		_oldestStmntStartInSec_lbl.setToolTipText(tooltip);
+//		_oldestStmntStartInSec_txt.setToolTipText(tooltip);
+//		_oldestStmntStartInSec_txt.setEditable(false);
+
+
 		String baseTooltipForOldestXxx = "<html>"
 				+ "<h2>Getting out of transaction ID (TXID) wraparound</h2>"
 				+ "<h3>Checking if there is a stuck transaction ID</h3>"
@@ -353,30 +447,83 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 				+ "</html>";
 
 		tooltip = baseTooltipForOldestXxx.replace("${REPLACE_THIS_WITH_SQL}", "SELECT max(age(backend_xmin)) FROM pg_stat_activity  WHERE state != 'idle'");
-		_oldestRunningXactAge_lbl     .setText("Oldest Running Xact Age");
-		_oldestRunningXactAge_lbl     .setToolTipText(tooltip);
-		_oldestRunningXactAge_txt     .setToolTipText(tooltip);
-		_oldestRunningXactAge_txt     .setEditable(false);
+		_oldestBackendXminAge_lbl     .setText("Oldest Backend Xmin 'Age'");
+		_oldestBackendXminAge_lbl     .setToolTipText(tooltip);
+		_oldestBackendXminAge_txt     .setToolTipText(tooltip);
+		_oldestBackendXminAge_txt     .setEditable(false);
 
 		tooltip = baseTooltipForOldestXxx.replace("${REPLACE_THIS_WITH_SQL}", "SELECT max(age(transaction)) FROM pg_prepared_xacts");
-		_oldestPreparedXactAge_lbl    .setText("Oldest Prepared Xact Age");
+		_oldestPreparedXactAge_lbl    .setText("Oldest Prepared Xact 'Age'");
 		_oldestPreparedXactAge_lbl    .setToolTipText(tooltip);
 		_oldestPreparedXactAge_txt    .setToolTipText(tooltip);
 		_oldestPreparedXactAge_txt    .setEditable(false);
 
 		tooltip = baseTooltipForOldestXxx.replace("${REPLACE_THIS_WITH_SQL}", "SELECT max(age(xmin)) FROM pg_replication_slots");
-		_oldestReplicationSlotAge_lbl .setText("Oldest Replication Slot Age");
+		_oldestReplicationSlotAge_lbl .setText("Oldest Replication Slot 'Age'");
 		_oldestReplicationSlotAge_lbl .setToolTipText(tooltip);
 		_oldestReplicationSlotAge_txt .setToolTipText(tooltip);
 		_oldestReplicationSlotAge_txt .setEditable(false);
 
 		tooltip = baseTooltipForOldestXxx.replace("${REPLACE_THIS_WITH_SQL}", "SELECT max(age(backend_xmin)) FROM pg_stat_replication");
-		_oldestReplicaXactAge_lbl     .setText("Oldest Replica Xact Age");
+		_oldestReplicaXactAge_lbl     .setText("Oldest Replica Xact 'Age'");
 		_oldestReplicaXactAge_lbl     .setToolTipText(tooltip);
 		_oldestReplicaXactAge_txt     .setToolTipText(tooltip);
 		_oldestReplicaXactAge_txt     .setEditable(false);
 
 		
+		tooltip = "Olest Active or Idle-in-transaction Transaction information.";
+		_oXactInfo_lbl                .setToolTipText(tooltip); _oXactInfo_lbl.setText("Info about oldest Active/Idle Transaction:");
+
+		tooltip = "In what 'state' do the oldest open transaction have. Probably: 'active', or 'idle in transaction' (meaning uncommitted transaction, Probably stay in AutoCommit=false for to long.)";
+		_oXactState_lbl               .setToolTipText(tooltip); _oXactState_lbl.setText("In State");
+		_oXactState_txt               .setToolTipText(tooltip); _oXactState_txt.setEditable(false);
+
+		tooltip = "Backend 'pid' of the oldest transaction";
+		_oXactPid_lbl                 .setToolTipText(tooltip); _oXactPid_lbl.setText("Backend Pid");
+		_oXactPid_txt                 .setToolTipText(tooltip); _oXactPid_txt.setEditable(false);
+
+		tooltip = "In what 'database' context does the oldest transaction have";
+		_oXactDbname_lbl              .setToolTipText(tooltip); _oXactDbname_lbl.setText("Dbname");
+		_oXactDbname_txt              .setToolTipText(tooltip); _oXactDbname_txt.setEditable(false);
+
+		tooltip = "What 'username' holds the oldest transaction";
+		_oXactUsername_lbl            .setToolTipText(tooltip); _oXactUsername_lbl.setText("Username");
+		_oXactUsername_txt            .setToolTipText(tooltip); _oXactUsername_txt.setEditable(false);
+
+		tooltip = "What 'application name' holds the oldest transaction";
+		_oXactAppname_lbl             .setToolTipText(tooltip); _oXactAppname_lbl.setText("Application");
+		_oXactAppname_txt             .setToolTipText(tooltip); _oXactAppname_txt.setEditable(false);
+
+		tooltip = "<html>If the 'pid' is waiting for something. (possibly a blocking lock). In Version above 10, we can also see <b>what</b> we are waiting on.</html>";
+		_oXactIsWaiting_lbl           .setToolTipText(tooltip); _oXactIsWaiting_lbl.setText("Is Waiting");
+		_oXactIsWaiting_chk           .setToolTipText(tooltip); _oXactIsWaiting_chk .setEnabled(false);
+		_oXactIsWaiting1_txt          .setToolTipText(tooltip); _oXactIsWaiting1_txt.setEditable(false);
+		_oXactIsWaiting2_txt          .setToolTipText(tooltip); _oXactIsWaiting2_txt.setEditable(false);
+
+		tooltip = "When did the oldest transaction start.";
+		_oXactStartInSec_lbl          .setToolTipText(tooltip); _oXactStartInSec_lbl.setText("Transaction Start Time");
+		_oXactStartInSec_txt          .setToolTipText(tooltip); _oXactStartInSec_txt.setEditable(false);
+		_oXactStartAge_txt            .setToolTipText(tooltip); _oXactStartAge_txt  .setEditable(false);
+
+		tooltip = "When did the last SQL Statement start.";
+		_oStmntStartInSec_lbl         .setToolTipText(tooltip); _oStmntStartInSec_lbl.setText("Last Stmnt Start Time");
+		_oStmntStartInSec_txt         .setToolTipText(tooltip); _oStmntStartInSec_txt.setEditable(false);
+		_oStmntStartAge_txt           .setToolTipText(tooltip); _oStmntStartAge_txt  .setEditable(false);
+
+		tooltip = "<html>For how long did the last SQL Statement execute. <br>"
+				+ "(if the 'state' is 'active' then it's the execution time for the currently executing SQL Statement.</html>";
+		_oStmntExecInSec_lbl          .setToolTipText(tooltip); _oStmntExecInSec_lbl.setText("Last Stmnt Exec Time");
+		_oStmntExecInSec_txt          .setToolTipText(tooltip); _oStmntExecInSec_txt.setEditable(false);
+		_oStmntExecAge_txt            .setToolTipText(tooltip); _oStmntExecAge_txt  .setEditable(false);
+
+		tooltip = "<html>When did the 'state' change. <br>"
+				+ "Example from 'active' to 'idle in transaction'...<br>"
+				+ "The above indicates that we might have a longer transaction than needed. <br>"
+				+ "Either by a manual transaction, or by running in AutoCommit=false and not turning AutoCommitt=true.<br>"
+				+ "<b>Note:</b> If AutoCommit=false, it's not enough to just commit/rollback... That just starts a new transaction!</html>";
+		_oInCurrentStateInSec_lbl     .setToolTipText(tooltip); _oInCurrentStateInSec_lbl.setText("In Current State Time");
+		_oInCurrentStateInSec_txt     .setToolTipText(tooltip); _oInCurrentStateInSec_txt.setEditable(false);
+		_oInCurrentStateAge_txt       .setToolTipText(tooltip); _oInCurrentStateAge_txt  .setEditable(false);
 		
 		
 		//--------------------------
@@ -407,8 +554,25 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		panel.add(_inRecovery_txt,               "growx, wrap 20");
 
 
-		panel.add(_oldestRunningXactAge_lbl,     "");
-		panel.add(_oldestRunningXactAge_txt,     "growx, wrap");
+		panel.add(_blockingLockCount_lbl,        "");
+		panel.add(_blockingLockCount_txt,        "growx, wrap");
+
+		panel.add(_blockingLockWaitStart_lbl,    "");
+		panel.add(_blockingLockWaitStart_txt,    "growx, wrap");
+
+		panel.add(_blockingLockWaitInSec_lbl,    "");
+		panel.add(_blockingLockWaitInSec_txt,    "growx, wrap 20");
+
+
+//		panel.add(_oldestXactStartInSec_lbl,     "");
+//		panel.add(_oldestXactStartInSec_txt,     "growx, wrap");
+//
+//		panel.add(_oldestStmntStartInSec_lbl,    "");
+//		panel.add(_oldestStmntStartInSec_txt,    "growx, wrap 20");
+
+
+		panel.add(_oldestBackendXminAge_lbl,     "");
+		panel.add(_oldestBackendXminAge_txt,     "growx, wrap");
 
 		panel.add(_oldestPreparedXactAge_lbl,    "");
 		panel.add(_oldestPreparedXactAge_txt,    "growx, wrap");
@@ -417,8 +581,48 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		panel.add(_oldestReplicationSlotAge_txt, "growx, wrap");
 
 		panel.add(_oldestReplicaXactAge_lbl,     "");
-		panel.add(_oldestReplicaXactAge_txt,     "growx, wrap");
+		panel.add(_oldestReplicaXactAge_txt,     "growx, wrap 20");
 
+
+		//--------------------------
+		panel.add(_oXactInfo_lbl               , "span, wrap");
+                                               
+		panel.add(_oXactState_lbl              , "");
+		panel.add(_oXactState_txt              , "growx, wrap");
+                                               
+		panel.add(_oXactPid_lbl                , "");
+		panel.add(_oXactPid_txt                , "growx, wrap");
+                                               
+		panel.add(_oXactDbname_lbl             , "");
+		panel.add(_oXactDbname_txt             , "growx, wrap");
+                                               
+		panel.add(_oXactUsername_lbl           , "");
+		panel.add(_oXactUsername_txt           , "growx, wrap");
+                                               
+		panel.add(_oXactAppname_lbl            , "");
+		panel.add(_oXactAppname_txt            , "growx, wrap");
+                                               
+		panel.add(_oXactIsWaiting_lbl          , "split 2");
+		panel.add(_oXactIsWaiting_chk          , "");
+		panel.add(_oXactIsWaiting1_txt         , "growx, wrap");
+		panel.add(_oXactIsWaiting2_txt         , "skip, growx, wrap");
+                                               
+		panel.add(_oXactStartInSec_lbl         , "");
+		panel.add(_oXactStartInSec_txt         , "growx, split");
+		panel.add(_oXactStartAge_txt           , "growx, wrap");
+                                               
+		panel.add(_oStmntStartInSec_lbl        , "");
+		panel.add(_oStmntStartInSec_txt        , "growx, split");
+		panel.add(_oStmntStartAge_txt          , "growx, wrap");
+                                               
+		panel.add(_oStmntExecInSec_lbl         , "");
+		panel.add(_oStmntExecInSec_txt         , "growx, split");
+		panel.add(_oStmntExecAge_txt           , "growx, wrap");
+                                               
+		panel.add(_oInCurrentStateInSec_lbl    , "");
+		panel.add(_oInCurrentStateInSec_txt    , "growx, split");
+		panel.add(_oInCurrentStateAge_txt      , "growx, wrap");
+		
 		
 		setComponentProperties();
 
@@ -519,14 +723,129 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_startDate_txt              .setText(cm.getAbsString (0, "start_time"));
 		_inRecovery_txt             .setText(cm.getAbsString (0, "in_recovery").toUpperCase() );
 		
-		_oldestRunningXactAge_txt     .setText(cm.getAbsString (0, "oldest_running_xact_age"));
+		_blockingLockCount_txt        .setText(cm.getAbsString (0, "blocking_lock_count"     ,  false, ""));
+		_blockingLockWaitStart_txt    .setText(cm.getAbsString (0, "blocking_lock_wait_start",  false, ""));
+		_blockingLockWaitInSec_txt    .setText(cm.getAbsString (0, "blocking_lock_wait_in_sec", false, "-1"));
+
+//		_oldestXactStartInSec_txt     .setText(cm.getAbsString (0, "oldest_xact_start_in_sec"));
+//		_oldestStmntStartInSec_txt    .setText(cm.getAbsString (0, "oldest_stmnt_start_in_sec"));
+		
+		_oldestBackendXminAge_txt     .setText(cm.getAbsString (0, "oldest_backend_xmin_age"));
 		_oldestPreparedXactAge_txt    .setText(cm.getAbsString (0, "oldest_prepared_xact_age"));
 		_oldestReplicationSlotAge_txt .setText(cm.getAbsString (0, "oldest_replication_slot_age"));
 		_oldestReplicaXactAge_txt     .setText(cm.getAbsString (0, "oldest_replica_xact_age"));
 
+		_oXactState_txt               .setText(cm.getAbsString (0, "oxact_state"));
+		_oXactPid_txt                 .setText(cm.getAbsString (0, "oxact_pid"));
+		_oXactDbname_txt              .setText(cm.getAbsString (0, "oxact_dbname"));
+		_oXactUsername_txt            .setText(cm.getAbsString (0, "oxact_username"));
+		_oXactAppname_txt             .setText(cm.getAbsString (0, "oxact_appname"));
+		_oXactIsWaiting_chk           .setSelected("true".equalsIgnoreCase(cm.getAbsString (0, "oxact_is_waiting")));
+		_oXactIsWaiting1_txt          .setText(cm.getAbsString (0, "oxact_is_waiting_type"));
+		_oXactIsWaiting2_txt          .setText(cm.getAbsString (0, "oxact_is_waiting_event"));
+
+		_oXactStartInSec_txt          .setText(cm.getAbsString (0, "oxact_xact_start_in_sec"));
+		_oXactStartAge_txt            .setText(cm.getAbsString (0, "oxact_xact_start_age"));
+		
+		_oStmntStartInSec_txt         .setText(cm.getAbsString (0, "oxact_stmnt_start_in_sec"));
+		_oStmntStartAge_txt           .setText(cm.getAbsString (0, "oxact_stmnt_start_age"));
+		
+		_oStmntExecInSec_txt          .setText(cm.getAbsString (0, "oxact_stmnt_last_exec_in_sec"));
+		_oStmntExecAge_txt            .setText(cm.getAbsString (0, "oxact_stmnt_last_exec_age"));
+		
+		_oInCurrentStateInSec_txt     .setText(cm.getAbsString (0, "oxact_in_current_state_in_sec"));
+		_oInCurrentStateAge_txt       .setText(cm.getAbsString (0, "oxact_in_current_state_age"));
+		
 		// Set the background color to RED if we are in "recovery mode"
 		boolean inRecoveryMode = "true".equalsIgnoreCase( cm.getAbsString (0, "in_recovery") );
 		_inRecovery_txt.setBackground( inRecoveryMode ? Color.RED : _startDate_txt.getBackground() );
+
+		//----------------------------------------------
+		// Check LOCK WAITS and, do notification
+		//----------------------------------------------
+		// Set the background color to RED if we have Blocking
+		int     blockingLockCount = cm.getAbsValueAsInteger(0, "blocking_lock_count", false, -1);
+		boolean hasBlockingCount  = blockingLockCount > 0;
+		_blockingLockCount_txt    .setBackground( hasBlockingCount ? Color.RED : _startDate_txt.getBackground() );
+		_blockingLockWaitStart_txt.setBackground( hasBlockingCount ? Color.RED : _startDate_txt.getBackground() );
+		_blockingLockWaitInSec_txt.setBackground( hasBlockingCount ? Color.RED : _startDate_txt.getBackground() );
+		
+		if (hasBlockingCount)
+		{
+			boolean isVisibleInPrevSample = MainFrame.getInstance().hasBlockingLocks();
+			MainFrame.getInstance().setBlockingLocks(true, blockingLockCount);
+
+			String toTabName = "Blocking";
+			if ( _focusToBlockingTab == null )
+				_focusToBlockingTab = new ChangeToJTabDialog(MainFrame.getInstance(), "Found Blocking Locks...", cm.getGuiController().getTabbedPane(), toTabName);
+
+			if ( ! isVisibleInPrevSample )
+				_focusToBlockingTab.setVisible(true);
+		}
+		else
+		{
+			MainFrame.getInstance().setBlockingLocks(hasBlockingCount, 0);
+		}
+		// end: Check LOCK WAITS and, do notification
+
+		//----------------------------------------------
+		// Check OLDEST OPEN TRANSACTION and, do notification
+		//----------------------------------------------
+		int oldestOpenTranInSec          = cm.getAbsValueAsInteger(0, "oxact_xact_start_in_sec", false, -1);
+		int oldestOpenTranInSecThreshold = CmSummary.DEFAULT_alarm_oldestOpenTranInSec; 
+		_logger.debug("OLDEST-OPEN-TRANSACTION="+oldestOpenTranInSec+".");
+		if (oldestOpenTranInSec > oldestOpenTranInSecThreshold)
+		{
+			_oXactStartInSec_txt.setBackground(Color.RED);
+			_oXactStartAge_txt  .setBackground(Color.RED);
+
+			boolean isVisibleInPrevSample = MainFrame.getInstance().hasOldestOpenTran();
+			MainFrame.getInstance().setOldestOpenTran(true, oldestOpenTranInSec);
+
+			String toTabName = "Active Statements";
+			if ( _focusToActiveStmntsTab_oldestOpenTran == null )
+				_focusToActiveStmntsTab_oldestOpenTran = new ChangeToJTabDialog(MainFrame.getInstance(), "Found A 'long' running Transaction", cm.getGuiController().getTabbedPane(), toTabName);
+
+			if ( ! isVisibleInPrevSample )
+				_focusToActiveStmntsTab_oldestOpenTran.setVisible(true);
+		}
+		else
+		{
+			_oXactStartInSec_txt.setBackground(_startDate_txt.getBackground());
+			_oXactStartAge_txt  .setBackground(_startDate_txt.getBackground());
+
+			MainFrame.getInstance().setOldestOpenTran(false, 0);
+		}
+		// end: Check OLDEST OPEN TRANSACTION and, do notification
+
+		//----------------------------------------------
+		// Check OLDEST STATEMENT and, do notification
+		//----------------------------------------------
+		int oldestStatementInSec          = cm.getAbsValueAsInteger(0, "oxact_stmnt_last_exec_in_sec", false, -1);
+		int oldestStatementInSecThreshold = CmSummary.DEFAULT_alarm_oldestStatementInSec;
+		if (oldestStatementInSec > oldestStatementInSecThreshold)
+		{
+			_oStmntExecInSec_txt.setBackground(Color.RED);
+			_oStmntExecAge_txt  .setBackground(Color.RED);
+
+//			boolean isVisibleInPrevSample = MainFrame.getInstance().hasOldestStatement();
+//			MainFrame.getInstance().setOldestStatement(true, oldestOpenTranInSec);
+//
+//			String toTabName = "Active Statements";
+//			if ( _focusToActiveStmntsTab_oldestStmnt == null )
+//				_focusToActiveStmntsTab_oldestStmnt = new ChangeToJTabDialog(MainFrame.getInstance(), "Found A 'long' running Statement", cm.getGuiController().getTabbedPane(), toTabName);
+//
+//			if ( ! isVisibleInPrevSample )
+//				_focusToActiveStmntsTab_oldestStmnt.setVisible(true);
+		}
+		else
+		{
+			_oStmntExecInSec_txt.setBackground(_startDate_txt.getBackground());
+			_oStmntExecAge_txt  .setBackground(_startDate_txt.getBackground());
+
+//			MainFrame.getInstance().setOldestStatement(false, 0);
+		}
+		// end: Check OLDEST STATEMENT and, do notification
 	}
 
 	@Override
@@ -561,7 +880,16 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_inRecovery_txt             .setText("");  _inRecovery_txt.setBackground( _startDate_txt.getBackground() );
 
 
-		_oldestRunningXactAge_txt     .setText("");
+		_blockingLockCount_txt        .setText(""); _blockingLockCount_txt    .setBackground( _startDate_txt.getBackground() );
+		_blockingLockWaitStart_txt    .setText(""); _blockingLockWaitStart_txt.setBackground( _startDate_txt.getBackground() );
+		_blockingLockWaitInSec_txt    .setText(""); _blockingLockWaitInSec_txt.setBackground( _startDate_txt.getBackground() );
+
+		_oXactStartInSec_txt          .setText(""); _oXactStartInSec_txt      .setBackground( _startDate_txt.getBackground() );
+		_oXactStartAge_txt            .setText(""); _oXactStartAge_txt        .setBackground( _startDate_txt.getBackground() );
+		_oStmntExecInSec_txt          .setText(""); _oStmntExecInSec_txt      .setBackground( _startDate_txt.getBackground() );
+		_oStmntExecAge_txt            .setText(""); _oStmntExecAge_txt        .setBackground( _startDate_txt.getBackground() );
+
+		_oldestBackendXminAge_txt     .setText("");
 		_oldestPreparedXactAge_txt    .setText("");
 		_oldestReplicationSlotAge_txt .setText("");
 		_oldestReplicaXactAge_txt     .setText("");

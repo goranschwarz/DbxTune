@@ -213,7 +213,7 @@ extends DbmsConfigAbstract
 		"      ,category \n" +
 		"      ,short_desc \n" +
 		"      ,extra_desc \n" +
-		"      ,context \n" +
+		"      ,context \n" +                 // 'postmaster' <<--- If the config option needs a reboot
 		"      ,vartype \n" +
 		"      ,source \n" +
 		"      ,min_val \n" +

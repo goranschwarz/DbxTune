@@ -2478,6 +2478,7 @@ extends SqlCaptureBrokerAbstract
 				int pos_ProcName      = findInListToJdbcPos(colNames, "ProcName");
 				int pos_LineNumber    = findInListToJdbcPos(colNames, "LineNumber");
 				int pos_DBName        = findInListToJdbcPos(colNames, "DBName");
+				int pos_DBID          = findInListToJdbcPos(colNames, "DBID");
 				
 				while(rs.next())
 				{
@@ -2507,6 +2508,7 @@ extends SqlCaptureBrokerAbstract
 					int    lineNumber = rs.getInt   (pos_LineNumber);
 					
 					String DBName     = rs.getString(pos_DBName);
+					int    DBID       = rs.getInt   (pos_DBID);
 
 
 					// To be used by keep/discard Set
@@ -2528,8 +2530,10 @@ extends SqlCaptureBrokerAbstract
 					//     15-20 sec
 					//     20-30 sec
 					//     above 30 sec
+					// For Example: how many Statements that executed, between
+					//     Also a Map for DBName exists
 					if (_statementStatistics != null)
-						updateStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, DBName);
+						updateStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, DBName, DBID);
 
 					
 					//System.out.println("Statement CHECK if above THRESHOLD: SPID="+SPID+",KPID="+KPID+",BatchID="+BatchID+": execTime="+execTime+", logicalReads="+logicalReads+", physicalReads="+physicalReads+".   SAVE="+(execTime > saveStatement_gt_execTime && logicalReads > saveStatement_gt_logicalReads && physicalReads > saveStatement_gt_physicalReads));
@@ -4319,12 +4323,12 @@ extends SqlCaptureBrokerAbstract
 	 * @param dbname 
 	 * @param contextID 
 	 */
-	private void updateStatementStats(int execTime, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, int procedureId, String procName, int lineNumber, String dbname)
+	private void updateStatementStats(int execTime, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, int procedureId, String procName, int lineNumber, String dbname, int dbid)
 	{
 		if (_statementStatistics == null)
 			return;
 		
-		_statementStatistics.addStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname);
+		_statementStatistics.addStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid);
 	}
 
 	public void closeStatementStats()
@@ -4360,7 +4364,7 @@ extends SqlCaptureBrokerAbstract
 		}
 	}
 
-	/** This will be NULL untill we call getStatementStats() for the first time. */
+	/** This will be NULL until we call getStatementStats() for the first time. */
 	private SqlCaptureStatementStatisticsSample _statementStatistics = null;
 
 	//--------------------------------------------------------------------------

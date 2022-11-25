@@ -25,6 +25,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -60,6 +61,20 @@ extends DbmsObjectIdCache
 	public boolean isBulkLoadOnStartEnabled()
 	{
 		return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_BulkLoadOnStart, DEFAULT_BulkLoadOnStart);
+	}
+
+	public static final String SCHEMA_DBO = "dbo";
+	public static final String SCHEMA_SYS = "sys";
+
+	@Override
+	protected Map<String, String> createStaticSchemaNames()
+	{
+		Map<String, String> map = new HashMap<>();
+
+		map.put(SCHEMA_DBO, SCHEMA_DBO);
+		map.put(SCHEMA_SYS, SCHEMA_SYS);
+		
+		return map;
 	}
 
 	@Override
@@ -104,7 +119,7 @@ extends DbmsObjectIdCache
 	
 	@Override
 //	protected ObjectInfo get(DbxConnection conn, int dbid, int objectid) 
-	protected ObjectInfo get(DbxConnection conn, LookupType lookupType, int dbid, Number lookupId) 
+	protected ObjectInfo get(DbxConnection conn, LookupType lookupType, long dbid, Number lookupId) 
 	throws TimeoutException
 	{
 		if (conn == null)
@@ -198,7 +213,7 @@ extends DbmsObjectIdCache
 					if (objectInfo == null)
 					{
 //						objectInfo = new ObjectInfo(dbid, dbname, schemaId, schemaName, objectId, objectName, indexId, indexName);
-						objectInfo = new ObjectInfo(dbid, dbname, schemaId, schemaName, objectId, objectName);
+						objectInfo = new ObjectInfo(dbid, dbname, schemaId, schemaName, objectId, objectName, ObjectType.BASE_TABLE);
 						super.setObjectInfo(dbid, objectId, objectInfo);
 					}
 
@@ -255,13 +270,13 @@ extends DbmsObjectIdCache
 		super.clear();
 		
 		// First: get all databases
-		Map<Integer, String> dbNameMap = new LinkedHashMap<>();
+		Map<Long, String> dbNameMap = new LinkedHashMap<>();
 		String sql = "select database_id, name from sys.databases WITH (READUNCOMMITTED)";
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
 			while(rs.next())
 			{
-				int    dbid   = rs.getInt   (1);
+				long   dbid   = rs.getLong  (1);
 				String dbname = rs.getString(2);
 				
 				dbNameMap.put(dbid, dbname);
@@ -277,9 +292,9 @@ extends DbmsObjectIdCache
 		super._dbNamesMap = dbNameMap;
 		
 		// Second: Loop all databases and get info...
-		for (Entry<Integer, String> e : dbNameMap.entrySet())
+		for (Entry<Long, String> e : dbNameMap.entrySet())
 		{
-			int    dbid   = e.getKey();
+			long   dbid   = e.getKey();
 			String dbname = e.getValue();
 
 			// If we just wanted to fetch SOME databases
@@ -294,11 +309,11 @@ extends DbmsObjectIdCache
 			sql = ""
 				    + "select \n"
 				    + "     s.schema_id \n"
-				    + "    ,s.name AS SchemaName \n"
+				    + "    ,s.name         AS SchemaName \n"
 				    + "    ,o.object_id \n"
-				    + "    ,o.name AS ObjectName \n"
+				    + "    ,o.name         AS ObjectName \n"
 				    + "    ,i.index_id \n"
-				    + "    ,i.name AS IndexName \n"
+				    + "    ,i.name         AS IndexName \n"
 				    + "    ,p.partition_id \n"
 				    + "    ,p.hobt_id \n"
 				    + "from            [" + dbname + "].sys.objects    o WITH (READUNCOMMITTED) \n"
@@ -309,7 +324,7 @@ extends DbmsObjectIdCache
 				   	+ "order by o.object_id \n"       // The order by is probably redundant (since it comes in this order without the order by... it's just for safety
 				   	+ "";
 			
-			int objectId_save = Integer.MIN_VALUE; // Changed when a new ObjectId is found
+			long objectId_save = Long.MIN_VALUE; // Changed when a new ObjectId is found
 			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 			{
 				ObjectInfo objectInfo = null;
@@ -318,14 +333,14 @@ extends DbmsObjectIdCache
 				{
 					totalRowsRead++;
 
-					int    schemaId    = rs.getInt   (1);
+					long   schemaId    = rs.getLong  (1);
 					String schemaName  = rs.getString(2);
-					int    objectId    = rs.getInt   (3);
+					long   objectId    = rs.getLong  (3);
 					String objectName  = rs.getString(4);
-					int    indexId     = rs.getInt   (5);
+					long   indexId     = rs.getLong  (5);
 					String indexName   = rs.getString(6);
-					long   partitionId = rs.getInt   (7);
-					long   hobtId      = rs.getInt   (8);
+					long   partitionId = rs.getLong  (7);
+					long   hobtId      = rs.getLong  (8);
 
 					// First row for each ObjectId
 					if (objectId != objectId_save)
@@ -334,7 +349,7 @@ extends DbmsObjectIdCache
 						objectId_save = objectId;
 
 						// Create a new ObjectInfo
-						objectInfo = new ObjectInfo(dbid, dbname, schemaId, schemaName, objectId, objectName);
+						objectInfo = new ObjectInfo(dbid, dbname, schemaId, schemaName, objectId, objectName, ObjectType.BASE_TABLE);
 
 //						fixme; this needs more work 
 						

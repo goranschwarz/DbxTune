@@ -169,6 +169,13 @@ public class SshConnection
 		setUsername(username);
 		setPassword(password);
 		setKeyFile (keyFile);
+
+		// enable logging?
+		boolean enableLogging = Configuration.getCombinedConfiguration().getBooleanProperty("SshConnection.logging.enable", false);
+		if (enableLogging)
+		{
+			ch.ethz.ssh2.log.Logger.enabled = true;
+		}
 	}
 
 	public void setUsername(String username) { _username = username; }
@@ -321,77 +328,50 @@ public class SshConnection
 
 		while (true)
 		{
+			if (_conn.isAuthMethodAvailable(_username, "publickey") && (useSshKeyFile || enableDSA || enableRSA))
+				logInfoMsg("SSH Authentication method 'publickey': is available, and will be tested first.");
+
+
+			//--------------------------------------------------
+			// User Supplied SSH Key File
+			//--------------------------------------------------
 			if (useSshKeyFile && _conn.isAuthMethodAvailable(_username, "publickey"))
 			{
 				File key = new File(_keyFile);
-			
-				logInfoMsg("SSH Authentication method 'publickey': Trying using key file '"+key+"'.");
 				
-				boolean res = _conn.authenticateWithPublicKey(_username, key, _password);
-
-				if (res == true)
+				logInfoMsg("SSH Authentication method 'publickey': Trying User Supplied SSH Key File '"+key+"'.");
+				
+				try
 				{
-					logInfoMsg("SSH Authentication method 'publickey' with file '"+key+"': SUCCEEDED");
-					break;
+					boolean res = _conn.authenticateWithPublicKey(_username, key, _password);
+
+					if (res == true)
+					{
+						logInfoMsg("SSH Authentication method 'publickey' with User Supplied SSH Key File '"+key+"': SUCCEEDED");
+						break;
+					}
+
+					lastError = "User Supplied SSH Key File '"+key+"' authentication FAILED.";
+
+					logInfoMsg("SSH Authentication method 'publickey': "+lastError);
+
+					useSshKeyFile = false; // do not try again
+					
 				}
+				catch (Exception ex)
+				{
+					logInfoMsg("SSH Authentication method 'publickey': User Supplied SSH Key File '"+key+"' authentication FAILED. Caught Exception: " + ex);
 
-				lastError = "User Supplied SSH Key File '"+key+"' authentication failed.";
-
-				logInfoMsg("SSH Authentication method 'publickey': "+lastError);
-
-				useSshKeyFile = false; // do not try again
+					useSshKeyFile = false; // do not try again
+				}
 			}
 			
 			
+			//--------------------------------------------------
+			// Default RSA or DSA Key File
+			//--------------------------------------------------
 			if ((enableDSA || enableRSA) && _conn.isAuthMethodAvailable(_username, "publickey"))
 			{
-				logInfoMsg("SSH Authentication method 'publickey' is available, and will be tested first.");
-				
-				if (enableDSA)
-				{
-					File privKey = new File(_idDSAPath);
-					File pubKey  = new File(_idDSAPath + ".pub");
-
-					if (privKey.exists())
-					{
-						logInfoMsg("SSH Authentication method 'publickey': Trying DSA using key file '"+privKey+"'.");
-						
-//						EnterSomethingDialog esd = new EnterSomethingDialog(null, "DSA Authentication",
-//								new String[] { lastError, "Enter DSA private key password:" }, true);
-//						esd.setVisible(true);
-
-//						boolean res = _conn.authenticateWithPublicKey(_username, key, esd.answer);
-						boolean res = _conn.authenticateWithPublicKey(_username, privKey, _password);
-
-						if (res == true)
-						{
-							logInfoMsg("SSH Authentication method 'publickey' DSA: SUCCEEDED");
-							break;
-						}
-
-						lastError = "DSA authentication failed.";
-						logInfoMsg("SSH Authentication method 'publickey': "+lastError);
-
-						// Print help message how to implement PUBLIC KEY Authentication
-						try {
-							if (pubKey.exists())
-							{
-								String keyType    = "DSA";
-    							String keyContent = FileUtils.readFileToString(pubKey, Charset.defaultCharset()).trim();
-    							String addKeyMethodHelpText = "To use the " + keyType + " Public Key, add the following '" + keyContent + "' as a new row in file '~" + _username + "/.ssh/authorized_keys' at server '" + _hostname + "'. Note: the 'authorized_keys' file needs ta have '-rw-------' (chmod 600 ~/.ssh/authorized_keys) authorization.";
-    
-    							logInfoMsg(addKeyMethodHelpText);
-							}
-						}
-						catch (IOException ignore) {}
-					}
-					else
-					{
-						logInfoMsg("Skipping: SSH Authentication method 'publickey': DSA Key File '"+privKey+"' not found.");
-					}
-					enableDSA = false; // do not try again
-				}
-
 				if (enableRSA)
 				{
 					File privKey = new File(_idRSAPath);
@@ -399,47 +379,110 @@ public class SshConnection
 
 					if (privKey.exists())
 					{
-						logInfoMsg("SSH Authentication method 'publickey': Trying RSA using key file '"+privKey+"'.");
-						
-//						EnterSomethingDialog esd = new EnterSomethingDialog(null, "RSA Authentication",
-//								new String[] { lastError, "Enter RSA private key password:" }, true);
-//						esd.setVisible(true);
+						logInfoMsg("SSH Authentication method 'publickey': Trying Default RSA using key file '"+privKey+"'.");
 
-//						boolean res = _conn.authenticateWithPublicKey(_username, key, esd.answer);
-						boolean res = _conn.authenticateWithPublicKey(_username, privKey, _password);
-
-						if (res == true)
+						try
 						{
-							logInfoMsg("SSH Authentication method 'publickey' RSA: SUCCEEDED");
-							break;
-						}
+//							EnterSomethingDialog esd = new EnterSomethingDialog(null, "RSA Authentication",
+//							new String[] { lastError, "Enter RSA private key password:" }, true);
+//							esd.setVisible(true);
 
-						lastError = "RSA authentication failed.";
-						logInfoMsg("SSH Authentication method 'publickey': "+lastError);
+//							boolean res = _conn.authenticateWithPublicKey(_username, key, esd.answer);
+							boolean res = _conn.authenticateWithPublicKey(_username, privKey, _password);
 
-						// Print help message how to implement PUBLIC KEY Authentication
-						try {
-							if (pubKey.exists())
+							if (res == true)
 							{
-								String keyType    = "RSA";
-    							String keyContent = FileUtils.readFileToString(pubKey, Charset.defaultCharset()).trim();
-    							String addKeyMethodHelpText = "To use the " + keyType + " Public Key, add the following '" + keyContent + "' as a new row in file '~" + _username + "/.ssh/authorized_keys' at server '" + _hostname + "'. Note: the 'authorized_keys' file needs ta have '-rw-------' (chmod 600 ~/.ssh/authorized_keys) authorization.";
-    
-    							logInfoMsg(addKeyMethodHelpText);
+								logInfoMsg("SSH Authentication method 'publickey': Default RSA: SUCCEEDED");
+								break;
 							}
+
+							lastError = "Default RSA authentication FAILED.";
+							logInfoMsg("SSH Authentication method 'publickey': "+lastError);
+
+							// Print help message how to implement PUBLIC KEY Authentication
+							try {
+								if (pubKey.exists())
+								{
+									String keyType    = "RSA";
+	    							String keyContent = FileUtils.readFileToString(pubKey, Charset.defaultCharset()).trim();
+	    							String addKeyMethodHelpText = "To use the " + keyType + " Public Key, add the following '" + keyContent + "' as a new row in file '~" + _username + "/.ssh/authorized_keys' at server '" + _hostname + "'. Note: the 'authorized_keys' file needs ta have '-rw-------' (chmod 600 ~/.ssh/authorized_keys) authorization.";
+	    
+	    							logInfoMsg(addKeyMethodHelpText);
+								}
+							}
+							catch (IOException ignore) {}
 						}
-						catch (IOException ignore) {}
+						catch (Exception ex)
+						{
+							logInfoMsg("SSH Authentication method 'publickey': Default RSA authentication FAILED. Caught Exception: " + ex);
+						}						
 					}
 					else
 					{
-						logInfoMsg("Skipping: SSH Authentication method 'publickey': RSA Key File '"+privKey+"' not found.");
+						logInfoMsg("Skipping: SSH Authentication method 'publickey': Default RSA Key File '"+privKey+"' not found.");
 					}
 					enableRSA = false; // do not try again
+				}
+
+				if (enableDSA)
+				{
+					File privKey = new File(_idDSAPath);
+					File pubKey  = new File(_idDSAPath + ".pub");
+
+					if (privKey.exists())
+					{
+						logInfoMsg("SSH Authentication method 'publickey': Trying Default DSA using key file '"+privKey+"'.");
+						
+						try
+						{
+//							EnterSomethingDialog esd = new EnterSomethingDialog(null, "DSA Authentication",
+//							new String[] { lastError, "Enter DSA private key password:" }, true);
+//							esd.setVisible(true);
+
+//							boolean res = _conn.authenticateWithPublicKey(_username, key, esd.answer);
+
+							boolean res = _conn.authenticateWithPublicKey(_username, privKey, _password);
+
+							if (res == true)
+							{
+								logInfoMsg("SSH Authentication method 'publickey': Default DSA: SUCCEEDED");
+								break;
+							}
+
+							lastError = "Default DSA authentication FAILED.";
+							logInfoMsg("SSH Authentication method 'publickey': "+lastError);
+
+							// Print help message how to implement PUBLIC KEY Authentication
+							try {
+								if (pubKey.exists())
+								{
+									String keyType    = "DSA";
+	    							String keyContent = FileUtils.readFileToString(pubKey, Charset.defaultCharset()).trim();
+	    							String addKeyMethodHelpText = "To use the " + keyType + " Public Key, add the following '" + keyContent + "' as a new row in file '~" + _username + "/.ssh/authorized_keys' at server '" + _hostname + "'. Note: the 'authorized_keys' file needs ta have '-rw-------' (chmod 600 ~/.ssh/authorized_keys) authorization.";
+	    
+	    							logInfoMsg(addKeyMethodHelpText);
+								}
+							}
+							catch (IOException ignore) {}
+						}
+						catch (Exception ex)
+						{
+							logInfoMsg("SSH Authentication method 'publickey': Default DSA authentication FAILED. Caught Exception: " + ex);
+						}
+					}
+					else
+					{
+						logInfoMsg("Skipping: SSH Authentication method 'publickey': Default DSA Key File '"+privKey+"' not found.");
+					}
+					enableDSA = false; // do not try again
 				}
 
 				continue;
 			}
 
+			//--------------------------------------------------
+			// keyboard-interactive
+			//--------------------------------------------------
 			if (enableKeyboardInteractive && _conn.isAuthMethodAvailable(_username, "keyboard-interactive"))
 			{
 				logInfoMsg("SSH Authentication method 'keyboard-interactive': Trying...");
@@ -477,6 +520,9 @@ public class SshConnection
 				continue;
 			}
 
+			//--------------------------------------------------
+			// Password
+			//--------------------------------------------------
 			if (_conn.isAuthMethodAvailable(_username, "password"))
 			{
 				logInfoMsg("SSH Authentication method 'password': Trying...");
@@ -1229,7 +1275,8 @@ public class SshConnection
 			// on Linux you it might be available using: 'locale charmap' -- returned 'UTF-8'
 			
 			// also try to figure out a dummy default character set for the OS
-			if      (_osName.equals    ("Linux"   )) _osCharset = "UTF-8";
+//			if      (_osName.equals    ("Linux"   )) _osCharset = "UTF-8";
+			if      (_osName.equals    ("Linux"   )) _osCharset = linuxToJavaCharset();
 			else if (_osName.equals    ("SunOS"   )) _osCharset = "ISO-8859-1";
 			else if (_osName.equals    ("AIX"     )) _osCharset = "ISO-8859-1"; // TODO: CHECK
 			else if (_osName.equals    ("HP-UX"   )) _osCharset = "ISO-8859-1"; // TODO: CHECK
@@ -1243,7 +1290,72 @@ public class SshConnection
 
 		return output;
 	}
-	
+
+	/**
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
+	private String linuxToJavaCharset()
+	throws IOException
+	{
+		if (_conn == null)
+		{
+			throw new IOException("The SSH connection to the host '"+_hostname+"' was null. The connection has not been initialized OR someone has closed the connection.");
+		}
+
+		// Check what OS we ended up in
+		String output = "";
+		{
+			Session sess = _conn.openSession();
+			sess.execCommand("echo ${LC_ALL:-${LC_CTYPE:-${LANG}}}");
+
+			InputStream stdout = new StreamGobbler(sess.getStdout());
+			BufferedReader br = new BufferedReader(new InputStreamReader(stdout));
+
+			while (true)
+			{
+				String line = br.readLine();
+				if (line == null)
+					break;
+
+				output += line;
+			}
+
+			br.close();
+			sess.close();
+		}
+
+		if (StringUtil.isNullOrBlank(output))
+		{
+			output = "UTF-8";
+			_logger.info("Could not retrive Linux charset, setting it to '" + output + "'");
+		}
+		else
+		{
+			// Active code page: ###
+			String[] sa = output.split("\\.");
+			if (sa.length == 2)
+			{
+				output = sa[1]; // echo ${LC_ALL:-${LC_CTYPE:-${LANG}}} -->>> 'en_US.UTF-8'
+			}
+			_logger.info("Detected Linux charset='" + output + "'.");
+		}
+
+		if (StringUtil.isNullOrBlank(output))
+		{
+			output = "UTF-8";
+			_logger.info("After charset lookup translation, the charset is still not known. setting it to '" + output + "' as a last resort.");
+		}
+
+		return output;
+	}
+
+	/**
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
 	private String windowsToJavaCharset()
 	throws IOException
 	{

@@ -38,7 +38,7 @@ import com.asetune.sql.conn.info.DbmsVersionInfo;
 public class CmPgBgWriter
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmPgActivity.class);
+//	private static Logger        _logger          = Logger.getLogger(CmPgBgWriter.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmPgBgWriter.class.getSimpleName();
@@ -154,7 +154,7 @@ extends CountersModel
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 //		return "select *, 1 as PK from pg_catalog.pg_stat_bgwriter";
-		return "select * from pg_catalog.pg_stat_bgwriter";
+		return "select * from pg_stat_bgwriter";
 	}
 
 	private void addTrendGraphs()

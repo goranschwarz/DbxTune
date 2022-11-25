@@ -279,8 +279,10 @@ extends CountersModel
 		// Loop on all diffData rows
 		for (int rowId = 0; rowId < diffData.getRowCount(); rowId++)
 		{
-			long total_reads  = ((Number)diffData.getValueAt(rowId, total_reads_pos )).longValue();
-			long all_blks_hit = ((Number)diffData.getValueAt(rowId, all_blks_hit_pos)).longValue();
+//			long total_reads  = ((Number)diffData.getValueAt(rowId, total_reads_pos )).longValue();
+//			long all_blks_hit = ((Number)diffData.getValueAt(rowId, all_blks_hit_pos)).longValue();
+			long total_reads  = diffData.getValueAsLong(rowId, total_reads_pos, 0L);
+			long all_blks_hit = diffData.getValueAsLong(rowId, all_blks_hit_pos, 0L);
 
 //			Double cache_hit_pct = 0d;
 			Double cache_hit_pct = null;

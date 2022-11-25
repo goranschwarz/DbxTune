@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.mail.EmailConstants;
+import org.apache.commons.mail.EmailException;
 import org.apache.commons.mail.HtmlEmail;
 import org.apache.log4j.Logger;
 
@@ -42,6 +43,66 @@ extends ReportSenderAbstract
 {
 	private static Logger _logger = Logger.getLogger(ReportSenderToMail.class);
 
+	/**
+	 * Since we send mail from 2 places... use this to "create and setup" a basic email message
+	 * 
+	 * @param toList
+	 * @return
+	 * @throws EmailException
+	 */
+	private HtmlEmail createAndSetupMailObject(List<String> toList)
+	throws EmailException
+	{
+		HtmlEmail email = new HtmlEmail();
+
+		email.setHostName(_smtpHostname);
+
+		// CharSet
+		email.setCharset(EmailConstants.UTF_8);
+		
+		// Connection timeout
+		if (_smtpConnectTimeout >= 0)
+			email.setSocketConnectionTimeout(_smtpConnectTimeout);
+
+		// SMTP PORT
+		if (_smtpPort >= 0)
+			email.setSmtpPort(_smtpPort);
+
+		// USE SSL
+		if (_useSsl)
+			email.setSSLOnConnect(_useSsl);
+
+		// SSL PORT
+		if (_sslPort >= 0)
+			email.setSslSmtpPort(_sslPort+""); // Hmm why is this a String parameter?
+
+		// START TLS
+		if (_startTls)
+			email.setStartTLSEnabled(_startTls);
+		
+		// AUTHENTICATION
+		if (StringUtil.hasValue(_username))
+			email.setAuthentication(_username, _password);
+		
+		// add TO
+//		for (String to : _toList)
+		for (String to : toList)
+			email.addTo(to);
+
+		// add CC
+//		for (String cc : _ccList)
+//			email.addCc(cc);
+
+		// FROM
+		email.setFrom(_from);
+		
+		return email;
+	}
+	
+	
+	/**
+	 * SEND the DSR - Daily Summary Report
+	 */
 	@Override
 	public void send(DailySummaryReportContent reportContent)
 	{
@@ -120,48 +181,10 @@ extends ReportSenderAbstract
 
 		try
 		{
-			HtmlEmail email = new HtmlEmail();
-
-			email.setHostName(_smtpHostname);
-
-			// CharSet
-			email.setCharset(EmailConstants.UTF_8);
+			// Create basic mail object (setup "basic info")
+			HtmlEmail email = createAndSetupMailObject(toList);
 			
-			// Connection timeout
-			if (_smtpConnectTimeout >= 0)
-				email.setSocketConnectionTimeout(_smtpConnectTimeout);
-
-			// SMTP PORT
-			if (_smtpPort >= 0)
-				email.setSmtpPort(_smtpPort);
-
-			// USE SSL
-			if (_useSsl)
-				email.setSSLOnConnect(_useSsl);
-
-			// SSL PORT
-			if (_sslPort >= 0)
-				email.setSslSmtpPort(_sslPort+""); // Hmm why is this a String parameter?
-
-			// START TLS
-			if (_startTls)
-				email.setStartTLSEnabled(_startTls);
-			
-			// AUTHENTICATION
-			if (StringUtil.hasValue(_username))
-				email.setAuthentication(_username, _password);
-			
-			// add TO
-//			for (String to : _toList)
-			for (String to : toList)
-				email.addTo(to);
-
-			// add CC
-//			for (String cc : _ccList)
-//				email.addCc(cc);
-
-			// FROM & SUBJECT
-			email.setFrom(_from);
+			// SUBJECT
 			email.setSubject(msgSubject);
 
 			// CONTENT HTML or PLAIN
@@ -234,7 +257,14 @@ extends ReportSenderAbstract
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems sending mail (fullSizeKb=" + fullSizeKb + ", fullSizeMb=" + fullSizeMb + ", msgSizeKb=" + msgSizeKb + ", msgSizeMb=" + msgSizeMb + ", hasAttachment=" + hasAttachment + ", zipAttachment=" + zipAttachment + ", zipSaveMb=" + zipSaveMb + ", attachSizeKb=" + attachSizeKb + ", attachSizeMb=" + attachSizeMb + ", attachMaxSizeMb=" + _attachHtmlContentMaxSizeMb + ", host='" + _smtpHostname + "', toList=" + toList + ", subject='" + msgSubject + "', for server name '" + serverName + "').", ex);
+			String msg = "Problems sending mail (fullSizeKb=" + fullSizeKb + ", fullSizeMb=" + fullSizeMb + ", msgSizeKb=" + msgSizeKb + ", msgSizeMb=" + msgSizeMb + ", hasAttachment=" + hasAttachment + ", zipAttachment=" + zipAttachment + ", zipSaveMb=" + zipSaveMb + ", attachSizeKb=" + attachSizeKb + ", attachSizeMb=" + attachSizeMb + ", attachMaxSizeMb=" + _attachHtmlContentMaxSizeMb + ", host='" + _smtpHostname + "', toList=" + toList + ", subject='" + msgSubject + "', for server name '" + serverName + "').";
+			_logger.error(msg, ex);
+			
+			// Fallback: Send mail (if possible) with the error information!
+			// This will of course only work if the mail is setup correctly... 
+			// Typically this will be send for:
+			//   * message file too big (when the mail server says the content is to *big*
+			sendExceptionMail(toList, serverName, msg, ex);
 		}
 		finally
 		{
@@ -244,6 +274,76 @@ extends ReportSenderAbstract
 		}
 	}
 
+	/**
+	 * If we had problems sending the Daily Summary Mail... use this to <b>try</b> to send a mail informing about the error...
+	 * 
+	 * @param toList             To the following addresses
+	 * @param serverName         Name of the DBMS server name we tried to send message for
+	 * @param problemDesc        Short info about sizes etc
+	 * @param problemException   The Exception originally grabbed when sending mail
+	 */
+	private void sendExceptionMail(List<String> toList, String serverName, String problemDesc, Exception problemException)
+	{
+		String msgSubject      = "Problems sending DSR email for '" + serverName + "'.";
+
+		String msgPlainContent = ""
+				+ "ProblemDesc: " + problemDesc      + "\n"
+				+ "Exception: "   + problemException + "\n"
+				+ "";
+
+		String msgHtmlContent  = "" 
+				+ "<html> \n"
+				+ "<head> \n"
+				+ "    <style> \n" 
+				+ "        body  { font-family: Arial, Helvetica, sans-serif; } \n" 
+				+ "        pre   { font-size: 10px; word-wrap: none; white-space: no-wrap; space: nowrap; } \n"
+				+ "    </style> \n"
+				+ "</head> \n"
+				+ "<body> \n"
+				+ ""
+				+ "<b>For Server:</b> " + serverName + "\n"
+				+ "<br>"
+				+ ""
+				+ "<b>Problem Description:</b> \n"
+				+ "<pre> \n"
+				+ problemDesc + "\n"
+				+ "</pre> \n"
+				+ "<br>"
+				+ ""
+				+ "<b>Exception:</b> \n"
+				+ "<pre> \n"
+				+ StringUtil.exceptionToString(problemException) + "\n"
+				+ "</pre> \n"
+				+ "<br>"
+				+ ""
+				+ "</body> \n"
+				+ "</html> \n"
+				+ "";
+
+		try
+		{
+			// Create basic mail object (setup "basic info")
+			HtmlEmail email = createAndSetupMailObject(toList);
+			
+			// SUBJECT
+			email.setSubject(msgSubject);
+
+			// CONTENT HTML or PLAIN
+			email.setHtmlMsg(msgHtmlContent);
+
+			// Client do not have HTML support
+			email.setTextMsg(msgPlainContent);
+
+			// SEND
+			email.send();
+		}
+		catch (Exception ex)
+		{
+			String msg = "Problems sending DSR FALLBACK Error mail. Subject: " + msgSubject;
+			_logger.error(msg, ex);
+		}
+	}
+	
 
 //	@Override
 	public List<CmSettingsHelper> getAvailableSettings()

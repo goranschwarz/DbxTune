@@ -36,6 +36,7 @@ import com.asetune.DbxTune;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.asetune.alarm.events.AlarmEventFullTranLog;
 import com.asetune.alarm.events.AlarmEventHighCpuUtilization;
@@ -1548,7 +1549,15 @@ extends CountersModel
 						System.out.println("##### sendAlarmRequest("+cm.getName()+"): TotalCPUTime - threshold="+threshold+", pctCPUTime='"+pctCPUTime+"', pctSystemCPUTime='"+pctUserCPUTime+"', pctUserCPUTime='"+pctSystemCPUTime+"', pctIdleCPUTime='"+pctIdleCPUTime+"'.");
 
 					if (pctCPUTime.doubleValue() > threshold)
-						AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, threshold, CpuType.TOTAL_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime) );
+					{
+						String extendedDescText = "";
+						String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AA_CPU);
+
+						AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, CpuType.TOTAL_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						AlarmHandler.getInstance().addAlarm(ae);
+					}
 				}
 
 				if (isSystemAlarmsForColumnEnabledAndInTimeRange("UserCPUTime"))
@@ -1559,7 +1568,15 @@ extends CountersModel
 						System.out.println("##### sendAlarmRequest("+cm.getName()+"): UserCPUTime - threshold="+threshold+", pctCPUTime='"+pctCPUTime+"', pctSystemCPUTime='"+pctUserCPUTime+"', pctUserCPUTime='"+pctSystemCPUTime+"', pctIdleCPUTime='"+pctIdleCPUTime+"'.");
 
 					if (pctUserCPUTime.doubleValue() > threshold)
-						AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, threshold, CpuType.USER_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime) );
+					{
+						String extendedDescText = "";
+						String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AA_CPU);
+
+						AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, CpuType.USER_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						AlarmHandler.getInstance().addAlarm(ae);
+					}
 				}
 
 				if (isSystemAlarmsForColumnEnabledAndInTimeRange("IoCPUTime"))
@@ -1570,7 +1587,15 @@ extends CountersModel
 						System.out.println("##### sendAlarmRequest("+cm.getName()+"): IoCPUTime - threshold="+threshold+", pctCPUTime='"+pctCPUTime+"', pctSystemCPUTime='"+pctUserCPUTime+"', pctUserCPUTime='"+pctSystemCPUTime+"', pctIdleCPUTime='"+pctIdleCPUTime+"'.");
 
 					if (pctSystemCPUTime.doubleValue() > threshold)
-						AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, threshold, CpuType.IO_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime) );
+					{
+						String extendedDescText = "";
+						String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AA_CPU);
+
+						AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, CpuType.IO_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						AlarmHandler.getInstance().addAlarm(ae);
+					}
 				}
 			}
 			// CmSummary.system.alarm.system.if.CPUTime.gt=90
@@ -1652,6 +1677,22 @@ extends CountersModel
 					AlarmHandler.getInstance().addAlarm( new AlarmEventFullTranLog(cm, threshold, fullTranslogCount) );
 			}
 		}
+	}
+
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_AA_CPU.equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
 	}
 
 	public static final String  PROPKEY_alarm_TotalCPUTime                    = CM_NAME + ".alarm.system.if.TotalCPUTime.gt";

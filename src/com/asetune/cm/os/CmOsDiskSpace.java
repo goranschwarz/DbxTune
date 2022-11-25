@@ -33,6 +33,7 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventLowOsDiskFreeSpace;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.MapNumberValidator;
@@ -341,7 +342,14 @@ extends CounterModelHostMonitor
 				{
 					if (freeMb.intValue() < threshold.intValue())
 					{
-						AlarmHandler.getInstance().addAlarm( new AlarmEventLowOsDiskFreeSpace(cm, mountPoint, freeMb.intValue(), usedPct, threshold.intValue()) );
+						String extendedDescText = "";
+						String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AVAILABLE_MB);
+						       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_USED_PCT);
+
+						AlarmEvent ae = new AlarmEventLowOsDiskFreeSpace(cm, mountPoint, freeMb.intValue(), usedPct, threshold.intValue());
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						AlarmHandler.getInstance().addAlarm(ae);
 					}
 				}
 			}
@@ -362,13 +370,38 @@ extends CounterModelHostMonitor
 				{
 					if (usedPct > threshold.doubleValue())
 					{
-						AlarmHandler.getInstance().addAlarm( new AlarmEventLowOsDiskFreeSpace(cm, mountPoint, freeMb.intValue(), usedPct, threshold.doubleValue()) );
+						String extendedDescText = "";
+						String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AVAILABLE_MB);
+						       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_USED_PCT);
+
+						AlarmEvent ae = new AlarmEventLowOsDiskFreeSpace(cm, mountPoint, freeMb.intValue(), usedPct, threshold.doubleValue());
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						AlarmHandler.getInstance().addAlarm(ae);
 					}
 				}
 			}
 		}
 	}
 
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_AVAILABLE_MB.equals(name)) return true;
+		if (GRAPH_NAME_USED_PCT    .equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+
+	
 	/**
 	 * Helper method to get the Threshold for a specific "mount point", using direct access to map or by check all key values in map with regexp...
 	 * 

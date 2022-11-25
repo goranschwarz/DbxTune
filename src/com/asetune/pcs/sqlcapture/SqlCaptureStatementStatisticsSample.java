@@ -28,6 +28,7 @@ import java.util.Map;
 
 import org.h2.tools.SimpleResultSet;
 
+import com.asetune.utils.StringUtil;
 import com.google.gson.Gson;
 
 /**
@@ -73,9 +74,20 @@ public class SqlCaptureStatementStatisticsSample
 	public final static String EXEC_SPAN_ABOVE_100_sec  = "above 100 sec";
 
 //	public final static String EXEC_SPAN_SUMMARY        = "SUMMARY";
+//	public final static String EXEC_SPAN_SUMMARY        = "_Total";
+
+	public final static int    SUMMARY_STAT_ID          = 19;
+
+	public enum StatType
+	{
+		EXEC_SPAN,
+		DBNAME
+	};
 	
 	private LinkedHashMap<String, StatCounter> _execTimeMap = new LinkedHashMap<>();
 	
+	private HashMap<String, StatCounter> _dbnameMap = new HashMap<>();
+
 	/** When did we call addStatementStats() */
 	private long  _lastUpdateTime = -1;
 
@@ -197,14 +209,18 @@ public class SqlCaptureStatementStatisticsSample
 			_execTimeMap.put(EXEC_SPAN_50_to_100_sec , new StatCounter(17, EXEC_SPAN_50_to_100_sec ));
 			_execTimeMap.put(EXEC_SPAN_ABOVE_100_sec , new StatCounter(18, EXEC_SPAN_ABOVE_100_sec ));
 			
+			// NOTE: If we add statId > 18 ... also change: SUMMARY_STAT_ID
+			
 			// Summary will always be updated (but this record needs to be discarded by graphs that does SUM over all records in the table)
-			// SKIP THIS FOR NOW
-			//_execTimeMap.put(EXEC_SPAN_SUMMARY       , new StatCounter(EXEC_SPAN_SUMMARY       ));
+			//_execTimeMap.put(EXEC_SPAN_SUMMARY       , new StatCounter(SUMMARY_STAT_ID, EXEC_SPAN_SUMMARY       ));
 
+
+			// Create a Map for DBNAME as well
+			_dbnameMap = new HashMap<>();
 		}
 	}
 	
-	private void addExecTimeInternal(String key, int execTimeMs, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, int procedureId, String procName, int lineNumber, String dbname)
+	private void addExecTimeInternal(StatType type, String key, int execTimeMs, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, int procedureId, String procName, int lineNumber, String dbname, int dbid)
 	{
 		// if something seems to be from the statement cache, and the LineNumber is 0, then discard the entry
 		// it looks like there are always 2 rows in monSysStatement when there are (*ss or *sq) objects
@@ -214,7 +230,25 @@ public class SqlCaptureStatementStatisticsSample
 			return;
 		}
 
-		StatCounter st = _execTimeMap.get(key);
+		StatCounter st = null;
+		if (StatType.EXEC_SPAN.equals(type))
+		{
+			st = _execTimeMap.get(key);
+		}
+		else if (StatType.DBNAME.equals(type))
+		{
+			st = _dbnameMap.get(key);
+			if (st == null)
+			{
+				st = new StatCounter(dbid, key);
+				_dbnameMap.put(key, st);
+			}
+		}
+		else
+		{
+			
+		}
+
 		st.count++;
 
 		st.sumExecTimeMs    += execTimeMs;
@@ -312,31 +346,38 @@ public class SqlCaptureStatementStatisticsSample
 //		}
 	}
 
-	public void addExecTime(int ms, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, int procedureId, String procName, int lineNumber, String dbname)
+	public void addExecTime(int ms, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, int procedureId, String procName, int lineNumber, String dbname, int dbid)
 	{
-		if      (ms == 0 && logicalReads == 0) addExecTimeInternal(EXEC_SPAN_0ms_0lr_0pr   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname); 
-		else if (ms >= 0     && ms <= 1)       addExecTimeInternal(EXEC_SPAN_0_to_1_ms     , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname); 
-		else if (ms >= 1     && ms <= 2)       addExecTimeInternal(EXEC_SPAN_1_to_2_ms     , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname); 
-		else if (ms >= 2     && ms <= 5)       addExecTimeInternal(EXEC_SPAN_2_to_5_ms     , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname); 
-		else if (ms >= 5     && ms <= 10)      addExecTimeInternal(EXEC_SPAN_5_to_10_ms    , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname); 
-		else if (ms >= 10    && ms <= 20)      addExecTimeInternal(EXEC_SPAN_10_to_20_ms   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname); 
-		else if (ms >= 20    && ms <= 50)      addExecTimeInternal(EXEC_SPAN_20_to_50_ms   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname); 
-		else if (ms >= 50    && ms <= 100)     addExecTimeInternal(EXEC_SPAN_50_to_100_ms  , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname); 
-		else if (ms >= 100   && ms <= 200)     addExecTimeInternal(EXEC_SPAN_100_to_200_ms , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname); 
-		else if (ms >= 200   && ms <= 500)     addExecTimeInternal(EXEC_SPAN_200_to_500_ms , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname); 
-		else if (ms >= 500   && ms <= 1000)    addExecTimeInternal(EXEC_SPAN_500_to_1000_ms, ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname); 
-		else if (ms >= 1000  && ms <= 2000)    addExecTimeInternal(EXEC_SPAN_1_to_2_sec    , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname); 
-		else if (ms >= 2000  && ms <= 5000)    addExecTimeInternal(EXEC_SPAN_2_to_5_sec    , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname); 
-		else if (ms >= 5000  && ms <= 10000)   addExecTimeInternal(EXEC_SPAN_5_to_10_sec   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname); 
-		else if (ms >= 10000 && ms <= 20000)   addExecTimeInternal(EXEC_SPAN_10_to_20_sec  , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname); 
-		else if (ms >= 20000 && ms <= 50000)   addExecTimeInternal(EXEC_SPAN_20_to_50_sec  , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname); 
-		else if (ms >= 50000 && ms <= 100000)  addExecTimeInternal(EXEC_SPAN_50_to_100_sec , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname); 
-		else if (ms >= 100000)                 addExecTimeInternal(EXEC_SPAN_ABOVE_100_sec , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname); 
+		if      (ms == 0 && logicalReads == 0) addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_0ms_0lr_0pr   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
+		else if (ms >= 0     && ms <= 1)       addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_0_to_1_ms     , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
+		else if (ms >= 1     && ms <= 2)       addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_1_to_2_ms     , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
+		else if (ms >= 2     && ms <= 5)       addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_2_to_5_ms     , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
+		else if (ms >= 5     && ms <= 10)      addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_5_to_10_ms    , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
+		else if (ms >= 10    && ms <= 20)      addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_10_to_20_ms   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
+		else if (ms >= 20    && ms <= 50)      addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_20_to_50_ms   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
+		else if (ms >= 50    && ms <= 100)     addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_50_to_100_ms  , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
+		else if (ms >= 100   && ms <= 200)     addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_100_to_200_ms , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
+		else if (ms >= 200   && ms <= 500)     addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_200_to_500_ms , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
+		else if (ms >= 500   && ms <= 1000)    addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_500_to_1000_ms, ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
+		else if (ms >= 1000  && ms <= 2000)    addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_1_to_2_sec    , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
+		else if (ms >= 2000  && ms <= 5000)    addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_2_to_5_sec    , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
+		else if (ms >= 5000  && ms <= 10000)   addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_5_to_10_sec   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
+		else if (ms >= 10000 && ms <= 20000)   addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_10_to_20_sec  , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
+		else if (ms >= 20000 && ms <= 50000)   addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_20_to_50_sec  , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
+		else if (ms >= 50000 && ms <= 100000)  addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_50_to_100_sec , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
+		else if (ms >= 100000)                 addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_ABOVE_100_sec , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
 		else
 			System.out.println("addExecTime(ms="+ms+", logicalReads="+logicalReads+", physicalReads="+physicalReads);
 
 		// Add SUMMARY
-		//addExecTimeInternal(EXEC_SPAN_SUMMARY , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procedureId, ssqlId);
+		//addExecTimeInternal(EXEC_SPAN_SUMMARY , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname);
+
+	
+		// Add to DBname map
+		if (StringUtil.isNullOrBlank(dbname))
+			dbname = "-no-db-context-";
+
+		addExecTimeInternal(StatType.DBNAME, dbname, ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid); 
 	}
 
 
@@ -350,7 +391,7 @@ public class SqlCaptureStatementStatisticsSample
 
 	private static final int DISCARD_OUT_OF_BOUNDS__MAX_PHYSICAL_READS = Integer.MAX_VALUE - 10;
 	
-	public void addStatementStats(int execTimeMs, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, int procedureId, String procName, int lineNumber, String dbname)
+	public void addStatementStats(int execTimeMs, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, int procedureId, String procName, int lineNumber, String dbname, int dbid)
 	{
 		if (physicalReads >= DISCARD_OUT_OF_BOUNDS__MAX_PHYSICAL_READS)
 		{
@@ -358,7 +399,7 @@ public class SqlCaptureStatementStatisticsSample
 			physicalReads = 0;
 		}
 
-		addExecTime(execTimeMs, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname);
+		addExecTime(execTimeMs, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid);
 //		addLogicalReads(logicalReads);
 //		addPhysicalReads(physicalReads);
 	}
@@ -421,6 +462,125 @@ public class SqlCaptureStatementStatisticsSample
 		Gson gson = new Gson(); 
 
 		for (StatCounter sc : _execTimeMap.values())
+		{
+			rs.addRow(
+				sc.name, 
+
+				sc.count,                                                                     // totalCount
+//				sc.count - (sc.inStmntCacheCount + sc.dynamicStmntCount + sc.inProcCount),    // inSqlBatchCount
+				sc.sqlBatchCount,                                                             // sqlBatchCount
+				sc.errorCount,                                                                // errorCount
+				sc.inStmntCacheCount,                                                         // inStmntCacheCount
+				sc.dynamicStmntCount,                                                         // dynamicStmntCount
+				sc.inProcCount,                                                               // inProcedureCount
+				sc.inProcNullCount,                                                           // inProcNameNullCount
+
+				sc.count,                                                                     // totalCount        - ABS
+//				sc.count - (sc.inStmntCacheCount + sc.dynamicStmntCount + sc.inProcCount),    // inSqlBatchCount   - ABS
+				sc.sqlBatchCount,                                                             // sqlBatchCount     - ABS
+				sc.inStmntCacheCount,                                                         // inStmntCacheCount - ABS
+				sc.dynamicStmntCount,                                                         // dynamicStmntCount - ABS
+				sc.inProcCount,                                                               // inProcedureCount  - ABS
+				sc.inProcNullCount,                                                           // inProcNameNullCount - ABS
+
+				sc.sumExecTimeMs, 
+				sc.sumExecTimeMs,                                      // ABS
+				sc.count == 0 ? 0 : sc.sumExecTimeMs / sc.count,       // AVG
+				sc.maxExecTimeMs, 
+
+				sc.sumLogicalReads, 
+				sc.sumLogicalReads,                                    // ABS
+				sc.count == 0 ? 0 : sc.sumLogicalReads / sc.count,     // AVG
+				sc.maxLogicalReads, 
+
+				sc.sumPhysicalReads,
+				sc.sumPhysicalReads,                                   // ABS
+				sc.count == 0 ? 0 : sc.sumPhysicalReads / sc.count,    // AVG
+				sc.maxPhysicalReads,
+
+				sc.sumCpuTime,
+				sc.sumCpuTime,                                         // ABS
+				sc.count == 0 ? 0 : sc.sumCpuTime / sc.count,          // AVG
+				sc.maxCpuTime,
+
+				sc.sumWaitTime,
+				sc.sumWaitTime,                                        // ABS
+				sc.count == 0 ? 0 : sc.sumWaitTime / sc.count,         // AVG
+				sc.maxWaitTime,
+				
+				sc.sumRowsAffected,
+				sc.sumRowsAffected,                                    // ABS
+				sc.count == 0 ? 0 : sc.sumRowsAffected / sc.count,     // AVG
+				sc.maxRowsAffected,
+
+				sc.errorCountMap == null ? null : gson.toJson(sc.errorCountMap),
+
+				sc.statId
+			);
+		}
+
+		return rs;
+	}
+
+
+
+	public ResultSet toResultSetDbName()
+	{
+		SimpleResultSet rs = new SimpleResultSet();
+		rs.addColumn("dbname",                 Types.VARCHAR, 30, 0);
+
+		rs.addColumn("totalCount",             Types.BIGINT,   0, 0);
+		rs.addColumn("sqlBatchCount",          Types.BIGINT,   0, 0);
+		rs.addColumn("errorCount",             Types.BIGINT,   0, 0);
+		rs.addColumn("inStmntCacheCount",      Types.BIGINT,   0, 0);
+		rs.addColumn("dynamicStmntCount",      Types.BIGINT,   0, 0);
+		rs.addColumn("inProcedureCount",       Types.BIGINT,   0, 0);
+		rs.addColumn("inProcNameNullCount",    Types.BIGINT,   0, 0);
+
+		rs.addColumn("totalCountAbs",          Types.BIGINT,   0, 0);
+		rs.addColumn("sqlBatchCountAbs",       Types.BIGINT,   0, 0);
+		rs.addColumn("inStmntCacheCountAbs",   Types.BIGINT,   0, 0);
+		rs.addColumn("dynamicStmntCountAbs",   Types.BIGINT,   0, 0);
+		rs.addColumn("inProcedureCountAbs",    Types.BIGINT,   0, 0);
+		rs.addColumn("inProcNameNullCountAbs", Types.BIGINT,   0, 0);
+
+		rs.addColumn("sumExecTimeMs",          Types.BIGINT,   0, 0);
+		rs.addColumn("sumExecTimeMsAbs",       Types.BIGINT,   0, 0);
+		rs.addColumn("avgExecTimeMs",          Types.INTEGER,  0, 0);
+		rs.addColumn("maxExecTimeMs",          Types.INTEGER,  0, 0);
+
+		rs.addColumn("sumLogicalReads",        Types.BIGINT,   0, 0);
+		rs.addColumn("sumLogicalReadsAbs",     Types.BIGINT,   0, 0);
+		rs.addColumn("avgLogicalReads",        Types.INTEGER,  0, 0);
+		rs.addColumn("maxLogicalReads",        Types.INTEGER,  0, 0);
+
+		rs.addColumn("sumPhysicalReads",       Types.BIGINT,   0, 0);
+		rs.addColumn("sumPhysicalReadsAbs",    Types.BIGINT,   0, 0);
+		rs.addColumn("avgPhysicalReads",       Types.INTEGER,  0, 0);
+		rs.addColumn("maxPhysicalReads",       Types.INTEGER,  0, 0);
+
+		rs.addColumn("sumCpuTime",             Types.BIGINT,   0, 0);
+		rs.addColumn("sumCpuTimeAbs",          Types.BIGINT,   0, 0);
+		rs.addColumn("avgCpuTime",             Types.INTEGER,  0, 0);
+		rs.addColumn("maxCpuTime",             Types.INTEGER,  0, 0);
+
+		rs.addColumn("sumWaitTime",            Types.BIGINT,   0, 0);
+		rs.addColumn("sumWaitTimeAbs",         Types.BIGINT,   0, 0);
+		rs.addColumn("avgWaitTime",            Types.INTEGER,  0, 0);
+		rs.addColumn("maxWaitTime",            Types.INTEGER,  0, 0);
+
+		rs.addColumn("sumRowsAffected",        Types.BIGINT,   0, 0);
+		rs.addColumn("sumRowsAffectedAbs",     Types.BIGINT,   0, 0);
+		rs.addColumn("avgRowsAffected",        Types.INTEGER,  0, 0);
+		rs.addColumn("maxRowsAffected",        Types.INTEGER,  0, 0);
+
+		rs.addColumn("errorMsgCountMap",       Types.VARCHAR, 1024, 0);
+
+		rs.addColumn("dbid",                   Types.INTEGER,  0, 0);
+
+		Gson gson = new Gson(); 
+
+		for (StatCounter sc : _dbnameMap.values())
 		{
 			rs.addRow(
 				sc.name, 

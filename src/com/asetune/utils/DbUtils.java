@@ -2141,6 +2141,53 @@ public class DbUtils
 	}
 
 
+	/**
+	 * Executes SQL Statement and return first NON NULL value from first column.
+	 * 
+	 * @param conn       The Connection to use
+	 * @param sql        The SQL Statement to execute
+	 * @return 
+	 * @throws SQLException
+	 */
+	public static String execQueryFirtColumnFirstRow(DbxConnection conn, String sql)
+	throws SQLException
+	{
+		String result = null;
+
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+			{
+				if (result == null)
+					result = rs.getString(1);
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * Executes SQL Statement and return first NON NULL value from first column.<br>
+	 * This is the "NO THROW" version...<br>
+	 * It just returns "null" and writes the Exception to the error log instead.
+	 * 
+	 * @param conn       The Connection to use
+	 * @param sql        The SQL Statement to execute
+	 * @return 
+	 */
+	public static String execQueryFirtColumnFirstRowNoThrow(DbxConnection conn, String sql)
+	{
+		try
+		{
+			return execQueryFirtColumnFirstRow(conn, sql);
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("execQueryFirtColumnFirstRowNoThrow(): Problems executing SQL='" + sql + "'.", ex);
+			return null;
+		}
+	}
+	
+
 	private static void test(int testCase, int expected, String str)
 	{
 		System.out.println();

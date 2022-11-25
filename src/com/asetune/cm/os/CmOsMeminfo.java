@@ -497,8 +497,8 @@ extends CounterModelHostMonitor
 
 //			int swapIn_15mAvg  = (int) MovingAverageCounterManager.getInstance(groupName, "swapIn",  15).add(swapIn) .getAvg(0, true, maxCap);
 //			int swapOut_15mAvg = (int) MovingAverageCounterManager.getInstance(groupName, "swapOut", 15).add(swapOut).getAvg(0, true, maxCap);
-			int swapIn_60mAvg  = (int) MovingAverageCounterManager.getInstance(groupName, "swapIn",  60).add(swapIn) .getAvg(0, true, maxCap);
-			int swapOut_60mAvg = (int) MovingAverageCounterManager.getInstance(groupName, "swapOut", 60).add(swapOut).getAvg(0, true, maxCap);
+//			int swapIn_60mAvg  = (int) MovingAverageCounterManager.getInstance(groupName, "swapIn",  60).add(swapIn) .getAvg(0, true, maxCap);
+//			int swapOut_60mAvg = (int) MovingAverageCounterManager.getInstance(groupName, "swapOut", 60).add(swapOut).getAvg(0, true, maxCap);
 			
 			if (debugPrint || _logger.isDebugEnabled())
 				System.out.println("##### sendAlarmRequest("+cm.getName()+"): swapping: in=" + swapIn + ", out=" + swapOut + ". swapIn_5mAvg=" + swapIn_5mAvg + ", swapOut_5mAvg=" + swapOut_5mAvg);

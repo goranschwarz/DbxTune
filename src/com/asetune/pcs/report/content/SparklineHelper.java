@@ -490,6 +490,7 @@ public class SparklineHelper
 			sb.append("<div id='" + name + "-progress-div' style='display:none'> \n");
 			sb.append("  <label for='" + name + "-progress-bar'>" + label + "</label> \n");
 			sb.append("  <progress id='" + name + "-progress-bar' max='100' style='height: 20px; width:80%;'></progress> \n");
+			sb.append("  <button id='" + name + "-stop-progress-but' onclick='stopSparklineInit()' type='button' class='btn btn-primary btn-sm'>Stop</button> \n");
 			sb.append("</div>\n");
 
 			sb.append("\n");
@@ -501,6 +502,15 @@ public class SparklineHelper
 			sb.append("      var sparklineListMax     = 0; \n");
 			sb.append("    const sparklineConfMap     = new Map(); \n");
 			sb.append("\n");
+			
+			sb.append("    // function called when pressing 'Stop' button right next to the progress bar \n");
+			sb.append("    function stopSparklineInit() \n");
+			sb.append("    { \n");
+			sb.append("        console.log('-stopSparklineInit-');  \n");
+			sb.append("        while (sparklineListToLoad.length !== 0) \n");
+			sb.append("            sparklineListToLoad.shift(); \n");
+			sb.append("    } \n");
+			
 			sb.append("    // function to be called at page load, which will initialize all Charts, (and update progressbar) \n");
 			sb.append("    function loadNextSparkline() \n");
 			sb.append("    { \n");

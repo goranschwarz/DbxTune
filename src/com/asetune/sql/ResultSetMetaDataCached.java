@@ -24,6 +24,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -31,9 +32,11 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+import org.h2.tools.SimpleResultSet;
 
 import com.asetune.RsTune;
 import com.asetune.Version;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.ddl.DataTypeNotResolvedException;
 import com.asetune.sql.ddl.IDbmsDataTypeResolver;
@@ -877,6 +880,20 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 		return _entries.get(column - 1);
 	}
 
+	/**
+	 * Get internal entry with details.
+	 * @param colName  Column Name 
+	 * @return the Entry if found, null if NOT Found
+	 */
+	public Entry getEntry(String colName)
+	{
+		int pos = findColumn(colName);
+		if (pos == -1)
+			return null;
+		
+		return getEntry(pos);
+	}
+
 	public List<Entry> getEntries()
 	{
 		return _entries;
@@ -1035,4 +1052,150 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 	{ 
 		throw new UnsupportedOperationException("Currently it is only possible to wrap JDBC 3."); 
 	}
+
+
+	// ==========================================
+	// And some convenient methods
+	// ==========================================
+	public int getPrecision(String colName, int def)
+	{
+		int precision = -1;
+
+		Entry entry = getEntry(colName);
+		if (entry != null)
+		{
+			precision = entry.getPrecision();
+			if (precision <= 0)
+				precision = def;
+
+			return precision;
+		}
+
+		return def;
+	}
+
+	
+	/**
+	 * Like DatabaseMetaData.getColumns(...) but instead of using that it simply does a <code>SELECT * FROM [catalog].[schema].[tabname] WHERE 1=2</code> to get a ResultSetMetaData object.
+	 * <br>
+	 * Note: 
+	 * <ul>
+	 *    <li>the '[' and ']' chars will be replaced with the Quoted Identifier Character for the DBMS Vendor</li>
+	 *    <li>If catalog parameter is <b>not</b> specified, it will be removed from the above SELECT Statement.</li>
+	 *    <li>If schema parameter is <b>not</b> specified, it will be removed from the above SELECT Statement.</li>
+	 *    <li>Special Case: If catalog parameter <b>is</b> specified and schema parameter is <b>not</b> specified, An empty/default schema name will be added hoping the DBMS will resolve it to "default" schema name. SQL will be <code>SELECT * FROM [catalog]..[tabname] WHERE 1=2</code></li>	
+	 * </ul> 
+	 * 
+	 * @param conn         Connection to DBMS
+	 * @param catalog      Name of the Catalog/database, null or "" and we wont use it
+	 * @param schema       Name of the schema, null or "" and we wont use it
+	 * @param table        Name of the table to get info from
+	 * @return
+	 */
+	public static ResultSetMetaDataCached getMetaData(DbxConnection conn, String catalog, String schema, String table)
+	{
+		String catName = StringUtil.isNullOrBlank(catalog) ? "" : "[" + catalog + "].";
+		String schName = StringUtil.isNullOrBlank(schema)  ? "" : "[" + schema  + "].";
+		String tabName = "[" + table + "].";
+
+		// special case: If we have 'catalog' but NOT 'schema', then add "empty" schema and hope it will resolve to "default" schema name
+		// For Sybase and SQL Server it will work (the default is dbo), But for "other" DBMS Vendors, I don't know 
+		if (StringUtil.hasValue(catName) && StringUtil.isNullOrBlank(schema))
+			schName = ".";
+		
+		String sql = conn.quotifySqlString("SELECT * FROM " + catName + schName + tabName + " WHERE 1 = 2");
+		
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			ResultSetMetaDataCached rsmdc = new ResultSetMetaDataCached(rs);
+
+			// Read the RS... it should have 0 rows... but anyway...
+			while (rs.next())
+				;
+
+			return rsmdc;
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems getting ResultSetMetaData for catalog=" + catalog + ", schema=" + schema + ", table=" + table + ". Used SQL=|" + sql + "|.", ex);
+			return null;
+		}
+	}
+	
+	
+	
+	
+	public String debugPrint()
+	{
+		try
+		{
+			ResultSetTableModel rstm = new ResultSetTableModel(toResultSet(), "debugPrint");
+			return rstm.toAsciiTableString();
+		}
+		catch (SQLException ex)
+		{
+			return "" + ex;
+		}
+	}
+	
+	
+	public ResultSet toResultSet()
+	{
+		SimpleResultSet rs = new SimpleResultSet();
+		rs.addColumn("autoIncrement",          Types.BIT,        0, 0);
+		rs.addColumn("caseSensitive",          Types.BIT,        0, 0);
+		rs.addColumn("searchable",             Types.BIT,        0, 0);
+		rs.addColumn("currency",               Types.BIT,        0, 0);
+		rs.addColumn("nullable",               Types.INTEGER,    0, 0);
+		rs.addColumn("signed",                 Types.BIT,        0, 0);
+		rs.addColumn("columnDisplaySize",      Types.INTEGER,   80, 0);
+		rs.addColumn("columnLabel",            Types.VARCHAR,   80, 0);
+		rs.addColumn("columnName",             Types.VARCHAR,   80, 0);
+		rs.addColumn("schemaName",             Types.VARCHAR,   80, 0);
+		rs.addColumn("precision",              Types.INTEGER,    0, 0);
+		rs.addColumn("scale",                  Types.INTEGER,    0, 0);
+		rs.addColumn("tableName",              Types.VARCHAR,   80, 0);
+		rs.addColumn("catalogName",            Types.VARCHAR,   80, 0);
+		rs.addColumn("columnType",             Types.INTEGER,    0, 0);
+		rs.addColumn("columnTypeName",         Types.VARCHAR,   80, 0);
+		rs.addColumn("readOnly",               Types.BIT,        0, 0);
+		rs.addColumn("writable",               Types.BIT,        0, 0);
+		rs.addColumn("definitelyWritable",     Types.BIT,        0, 0);
+		rs.addColumn("columnClassName",        Types.VARCHAR,   80, 0);
+		rs.addColumn("columnPos",              Types.INTEGER,    0, 0);
+		rs.addColumn("columnResolvedTypeName", Types.VARCHAR,   80, 0);
+		rs.addColumn("changeBitMap",           Types.INTEGER,    0, 0);
+
+		for (Entry entry : _entries)
+		{
+			rs.addRow(
+					 entry._autoIncrement
+					,entry._caseSensitive
+					,entry._searchable
+					,entry._currency
+					,entry._nullable
+					,entry._signed
+					,entry._columnDisplaySize
+					,entry._columnLabel
+					,entry._columnName
+					,entry._schemaName
+					,entry._precision
+					,entry._scale
+					,entry._tableName
+					,entry._catalogName
+					,entry._columnType
+					,entry._columnTypeName
+					,entry._readOnly
+					,entry._writable
+					,entry._definitelyWritable
+					,entry._columnClassName
+					,entry._columnPos
+					,entry._columnResolvedTypeName
+					,entry._changeBitMap
+			);
+		}
+
+		return rs;
+	}
+	
 }

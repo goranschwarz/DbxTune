@@ -370,6 +370,7 @@ extends DailySummaryReportAbstract
 		w.append("            mso-table-layout-alt: fixed; \n"); // not sure about this - https://gist.github.com/webtobesocial/ac9d052595b406d5a5c1
 		w.append("            mso-table-overlap: never; \n");    // not sure about this - https://gist.github.com/webtobesocial/ac9d052595b406d5a5c1
 		w.append("            mso-table-wrap: none; \n");        // not sure about this - https://gist.github.com/webtobesocial/ac9d052595b406d5a5c1
+//		w.append("            mso-cellspacing: 20px; \n");
 		w.append("            border-collapse: collapse; \n");
 		w.append("        } \n");
 		w.append("        th { \n");
@@ -559,6 +560,14 @@ extends DailySummaryReportAbstract
 		w.append("            box-sizing: content-box;								\n");
 		w.append("        } 														\n");
 		w.append("\n");
+		w.append("        /* bootstrap collapsed related */ \n");
+		w.append("        .card-header .fa {									\n");
+		w.append("            transition: .3s transform ease-in-out;			\n");
+		w.append("        }														\n");
+		w.append("        .card-header .collapsed .fa {							\n");
+		w.append("            transform: rotate(90deg);							\n");
+		w.append("        }														\n");
+		w.append("\n");
 		w.append("    </style> \n");
 		w.append("\n");
 	}
@@ -603,10 +612,11 @@ extends DailySummaryReportAbstract
 //			if (getReportPeriodBeginTime() != null) titleReportPeriod +=         TimeUtils.getCurrentTimeForFileNameHm(getReportPeriodBeginTime().getTime());
 //			if (getReportPeriodEndTime()   != null)	titleReportPeriod += " - " + TimeUtils.getCurrentTimeForFileNameHm(getReportPeriodEndTime()  .getTime());
 //		}
-		String    reportBeginDateStr = TimeUtils.getCurrentTimeForFileNameYmd(getReportBeginTime().getTime());
-//		String    reportBeginTimeStr = TimeUtils.getCurrentTimeForFileNameHm (getReportBeginTime().getTime());
-//		String    reportEndDateStr   = TimeUtils.getCurrentTimeForFileNameYmd(getReportEndTime()  .getTime());
-//		String    reportEndTimeStr   = TimeUtils.getCurrentTimeForFileNameHm (getReportEndTime()  .getTime());
+		String reportBeginDateStr = "-unknown-start-time-";
+		if (getReportBeginTime() != null)
+		{
+			reportBeginDateStr = TimeUtils.getCurrentTimeForFileNameYmd(getReportBeginTime().getTime());
+		}
 
 		titleReportPeriod = " - " + reportBeginDateStr;
 
@@ -712,6 +722,9 @@ extends DailySummaryReportAbstract
 		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js'                             integrity='sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
 		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-moment/1.0.0/chartjs-adapter-moment.min.js' integrity='sha512-oh5t+CdSBsaVVAvxcZKy3XJdP7ZbYUBSRCXDTVn0ODewMDDNnELsrG9eDm8rVZAQg7RsDD/8K3MjPAFB13o6eA==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
 
+		// font awesome
+		w.append("    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css' integrity='sha512-xh6O/CkQoPOWDdYTDqeRdPCVd1SpvCA9XXcUnZS2FmJNp1coAFzvtCN9BmamE+4aHK8yyUHUSCcJHgXloTyT2A==' crossorigin='anonymous' referrerpolicy='no-referrer' /> \n");
+
 		w.append("\n");
 		w.append("    <script type='text/javascript'>  \n");
 		w.append("        function toggle_visibility(id) \n");
@@ -725,6 +738,41 @@ extends DailySummaryReportAbstract
 		w.append("        } \n");
 		w.append("\n");
 		w.append("    </script> \n");
+
+		w.append("\n");
+		w.append("    <script type='text/javascript'>  \n");
+		w.append("        function collapseSection(name) 			\n");
+		w.append("        { 										\n");
+		w.append("           console.log('collapseSection(): name=|' + name + '|.'); \n");
+		w.append("           if (name === 'ALL') 					\n");
+		w.append("           { 										\n");
+		w.append("               $('.collapse').collapse('hide');	\n");
+//		w.append("               $('#collapse_toc').collapse('show');	\n"); // But keep the TOC open
+		w.append("           } 										\n");
+		w.append("           else 									\n");
+		w.append("           { 										\n");
+		w.append("               $('#collapse_' + name).collapse('hide');	\n");
+		w.append("               $('#heading_' + name)[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });	\n"); // Scroll to this HEADING otherwise it may be "confusing"
+//		w.append("               document.getElementById('heading_' + name).scrollIntoView();	\n"); // Scroll to this HEADING otherwise it may be "confusing"
+		w.append("           } 										\n");
+		w.append("           return false; 							\n");
+		w.append("        } 										\n");
+		w.append("\n");
+		w.append("        function expandSection(name) 				\n");
+		w.append("        { 										\n");
+		w.append("           console.log('expandSection(): name=|' + name + '|.'); \n");
+		w.append("           if (name === 'ALL') 					\n");
+		w.append("           { 										\n");
+		w.append("               $('.collapse').collapse('show');	\n");
+		w.append("           } 										\n");
+		w.append("           else 									\n");
+		w.append("           { 										\n");
+		w.append("               $('#collapse_' + name).collapse('show');	\n");
+		w.append("           } 										\n");
+		w.append("           return false; 							\n");
+		w.append("        } 										\n");
+		w.append("    </script> \n");
+		w.append("\n");
 
 //		<STYLE type="text/css">
 //		  /* Sortable tables */
@@ -764,18 +812,41 @@ extends DailySummaryReportAbstract
 		sb.append("</div>\n");
 		
 
+		// Collapseable group div 
+		if (useBootstrap())
+		{
+			sb.append("<div id='accordion' role='tablist' aria-multiselectable='true'> \n");			
+		}
+		
 		// TOC HEADER
 		if (useBootstrap())
 		{
 			// Bootstrap "card" - BEGIN
+//			sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+//			sb.append("<div id='toc' class='card border-dark mb-3'>");
+//			sb.append("<h5 class='card-header'><b>Daily Summary Report for Servername: ").append(getServerName()).append("</b></h5>");
+//			sb.append("<div class='card-body'>");
+//			sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+//			
+//			sb.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
+//			sb.append("<h2>Daily Summary Report for Servername: ").append(getServerName()).append("</h2>\n");
+//			sb.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
+
+			// Bootstrap "card" - BEGIN
 			sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-			sb.append("<div id='toc' class='card border-dark mb-3'>");
-			sb.append("<h5 class='card-header'><b>Daily Summary Report for Servername: ").append(getServerName()).append("</b></h5>");
-			sb.append("<div class='card-body'>");
+			sb.append("<div class='card border-dark mb-3' id='toc'> \n");
+			sb.append("<h5 class='card-header' role='tab' id='heading_toc'> \n");
+			sb.append("  <a data-toggle='collapse' data-parent='#accordion' href='#collapse_toc' aria-expanded='true' aria-controls='collapse_toc' class='d-block'> \n");
+			sb.append("    <i class='fa fa-chevron-down float-right'></i> \n");
+			sb.append("    <b>").append("Daily Summary Report for Servername: ").append(getServerName()).append("</b> \n");
+			sb.append("  </a> \n");
+			sb.append("</h5> \n");
+			sb.append("<div id='collapse_toc' class='collapse show' role='tabpanel' aria-labelledby='heading_toc'> \n");
+			sb.append("<div class='card-body'> \n");
 			sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
-			
+
 			sb.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
-			sb.append("<h2>Daily Summary Report for Servername: ").append(getServerName()).append("</h2>\n");
+			sb.append("<h2>Daily Summary Report for Servername: ").append(getServerName()).append("</h2> \n");
 			sb.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
 		}
 		else
@@ -811,11 +882,18 @@ extends DailySummaryReportAbstract
 		if (useBootstrap())
 		{
 			// Bootstrap "card" - END
+			sb.append("<a href='javascript:void(0);' onclick=\"collapseSection('ALL');\">Collapse</a> ");
+			sb.append(" or \n");
+			sb.append("<a href='javascript:void(0);' onclick=\"expandSection('ALL');\">Expand</a> ");
+			sb.append(" ALL sections \n");
+
 			sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-			sb.append("</div>"); // end: card-body
-			sb.append("</div>"); // end: card
+			sb.append("</div> \n"); // end: card-body
+			sb.append("</div> \n"); // end: collapse
+			sb.append("</div> \n"); // end: card
 			sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 		}
+		
 //System.out.println("  ******* Used Memory " + Memory.getUsedMemoryInMB() + " MB ****** at createHtmlBody(): after TOC");
 
 
@@ -836,13 +914,30 @@ extends DailySummaryReportAbstract
 			// Section HEADER
 			if (useBootstrap())
 			{
+//				// Bootstrap "card" - BEGIN
+//				sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+//				sb.append("<div id='").append(tocDiv).append("' class='card border-dark mb-3'>");
+//				sb.append("<h5 class='card-header'><b>").append(entry.getSubject()).append("</b></h5>");
+//				sb.append("<div class='card-body'>");
+//				sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+//				
+//				sb.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
+//				sb.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
+//				sb.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
+
 				// Bootstrap "card" - BEGIN
 				sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-				sb.append("<div id='").append(tocDiv).append("' class='card border-dark mb-3'>");
-				sb.append("<h5 class='card-header'><b>").append(entry.getSubject()).append("</b></h5>");
-				sb.append("<div class='card-body'>");
+				sb.append("<div class='card border-dark mb-3' id='").append(tocDiv).append("'> \n");
+				sb.append("<h5 class='card-header' role='tab' id='heading_").append(tocDiv).append("'> \n");
+				sb.append("  <a data-toggle='collapse' data-parent='#accordion' href='#collapse_").append(tocDiv).append("' aria-expanded='true' aria-controls='collapse_").append(tocDiv).append("' class='d-block'> \n");
+				sb.append("    <i class='fa fa-chevron-down float-right'></i> \n");
+				sb.append("    <b>").append(entry.getSubject()).append("</b> \n");
+				sb.append("  </a> \n");
+				sb.append("</h5> \n");
+				sb.append("<div id='collapse_").append(tocDiv).append("' class='collapse show' role='tabpanel' aria-labelledby='heading_").append(tocDiv).append("'> \n");
+				sb.append("<div class='card-body'> \n");
 				sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
-				
+
 				sb.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
 				sb.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
 				sb.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
@@ -881,6 +976,8 @@ extends DailySummaryReportAbstract
 						sb.append("<i>To disable this report entry, put the following in the configuration file. ");
 						sb.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code></i><br>\n");
 					}
+
+					sb.append("<a href='javascript:void(0);' onclick=\"collapseSection('" + tocDiv + "');\">Collapse this section</a> <br>\n");
 				}
 				catch (RuntimeException rte)
 				{
@@ -919,8 +1016,9 @@ extends DailySummaryReportAbstract
 			{
 				// Bootstrap "card" - END
 				sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-				sb.append("</div>"); // end: card-body
-				sb.append("</div>"); // end: card
+				sb.append("</div> \n"); // end: card-body
+				sb.append("</div> \n"); // end: collapse
+				sb.append("</div> \n"); // end: card
 				sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 			}
 			
@@ -932,6 +1030,13 @@ extends DailySummaryReportAbstract
 		//--------------------------------------------------
 		// DEBUG - Write time it too to create each report entry
 		printExecTimeReport(sb, MessageType.FULL_MESSAGE);
+
+		
+		// Collapseable group div 
+		if (useBootstrap())
+		{
+			sb.append("</div> \n");			
+		}
 
 		//--------------------------------------------------
 		// END
@@ -1207,13 +1312,30 @@ extends DailySummaryReportAbstract
 			// Section HEADER
 			if (useBootstrap())
 			{
+//				// Bootstrap "card" - BEGIN
+//				w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+//				w.append("<div id='").append(tocDiv).append("' class='card border-dark mb-3'>");
+//				w.append("<h5 class='card-header'><b>").append(headingName).append("</b></h5>");
+//				w.append("<div class='card-body'>");
+//				w.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+//				
+//				w.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
+//				w.append("<h2 id='").append(tocDiv).append("'>").append(headingName).append("</h2> \n");
+//				w.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
+
 				// Bootstrap "card" - BEGIN
 				w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-				w.append("<div id='").append(tocDiv).append("' class='card border-dark mb-3'>");
-				w.append("<h5 class='card-header'><b>").append(headingName).append("</b></h5>");
-				w.append("<div class='card-body'>");
+				w.append("<div class='card border-dark mb-3' id='").append(tocDiv).append("'> \n");
+				w.append("<h5 class='card-header' role='tab' id='heading_").append(tocDiv).append("'> \n");
+				w.append("  <a data-toggle='collapse' data-parent='#accordion' href='#collapse_").append(tocDiv).append("' aria-expanded='true' aria-controls='collapse_").append(tocDiv).append("' class='d-block'> \n");
+				w.append("    <i class='fa fa-chevron-down float-right'></i> \n");
+				w.append("    <b>").append(headingName).append("</b> \n");
+				w.append("  </a> \n");
+				w.append("</h5> \n");
+				w.append("<div id='collapse_").append(tocDiv).append("' class='collapse show' role='tabpanel' aria-labelledby='heading_").append(tocDiv).append("'> \n");
+				w.append("<div class='card-body'> \n");
 				w.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
-				
+
 				w.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
 				w.append("<h2 id='").append(tocDiv).append("'>").append(headingName).append("</h2> \n");
 				w.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
@@ -1253,15 +1375,19 @@ extends DailySummaryReportAbstract
 
 			w.append("</table> \n");
 			w.append("\n<br>");
-			w.append("<i>To disable this report entry, put the following in the configuration file. <code>" + propName + " = false</code></i>");
+			w.append("<i>To disable this report entry, put the following in the configuration file. <code>" + propName + " = false</code></i> <br> \n");
+
+			if (MessageType.FULL_MESSAGE.equals(messageType))
+				w.append("<a href='javascript:void(0);' onclick=\"collapseSection('" + tocDiv + "');\">Collapse this section</a> <br>\n");
 
 			// Section FOOTER
 			if (useBootstrap())
 			{
 				// Bootstrap "card" - END
 				w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-				w.append("</div>"); // end: card-body
-				w.append("</div>"); // end: card
+				w.append("</div> \n"); // end: card-body
+				w.append("</div> \n"); // end: collapse
+				w.append("</div> \n"); // end: card
 				w.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 			}
 		}

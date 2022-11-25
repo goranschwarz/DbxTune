@@ -97,14 +97,14 @@ extends CountersModel
 			,"dm_tran_active_transactions"
 			,"dm_db_session_space_usage"
 			,"dm_exec_sql_text"
-			};
+		};
 
 	public static final String[] NEED_ROLES       = new String[] {};//{"VIEW SERVER STATE"};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] { "percent_complete" };
 	public static final String[] DIFF_COLUMNS     = new String[] {
-			"net_bytes_received"
+			 "net_bytes_received"
 			,"net_bytes_sent"
 			,"cpu_time"
 //			,"memory_usage"
@@ -120,7 +120,13 @@ extends CountersModel
 			,"exec_logical_reads"
 			,"exec_row_count"
 //			,"exec_granted_query_memory"
-			};
+
+			,"tmp_user_objects_alloc_mb"
+			,"tmp_user_objects_dealloc_mb"
+			,"tmp_user_objects_deferred_dealloc_mb"
+			,"tmp_internal_objects_alloc_mb"
+			,"tmp_internal_objects_dealloc_mb"
+		};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -237,12 +243,12 @@ extends CountersModel
 			                                                                         + "  <li>TSQL Default VIA (Virtual Interface Adapter)</li>"
 			                                                                         + "</ul>"
 			                                                                         + "</html>");
-			mtd.addColumn("CmSessions",  "tmp_total_used_mb",                    "<html>Total MB this session holds in 'tempdb'. <br><b>Algorithm</b>: 'tmp_user_objects_now_mb' + 'tmp_internal_objects_now_mb'</html>");
-			mtd.addColumn("CmSessions",  "tmp_user_objects_now_mb",              "<html>MB in 'tempdb': Used now for <b>user objects</b> by this session. <br><b>Algorithm</b>: (user_objects_alloc_page_count - user_objects_dealloc_page_count - user_objects_deferred_dealloc_page_count) / 128 </html>");
+			mtd.addColumn("CmSessions",  "tmp_total_used_mb",                    "<html>Total MB this session holds in 'tempdb'. <br><b>Algorithm</b>: 'tmp_user_objects_used_mb' + 'tmp_internal_objects_used_mb'</html>");
+			mtd.addColumn("CmSessions",  "tmp_user_objects_used_mb",             "<html>MB in 'tempdb': Used now for <b>user objects</b> by this session. <br><b>Algorithm</b>: (user_objects_alloc_page_count - user_objects_dealloc_page_count - user_objects_deferred_dealloc_page_count) / 128 </html>");
 			mtd.addColumn("CmSessions",  "tmp_user_objects_alloc_mb",            "<html>MB in 'tempdb': reserved or allocated for <b>user objects</b> by this session</html>");
 			mtd.addColumn("CmSessions",  "tmp_user_objects_dealloc_mb",          "<html>MB in 'tempdb': deallocated and no longer reserved for <b>user objects</b> by this session </html>");
 			mtd.addColumn("CmSessions",  "tmp_user_objects_deferred_dealloc_mb", "<html>MB in 'tempdb': which have been marked for deferred deallocation for <b>user objects</b></html>");
-			mtd.addColumn("CmSessions",  "tmp_internal_objects_now_mb",          "<html>MB in 'tempdb': Used now for <b>internal objects</b> by this session. <br><b>Algorithm</b>: (internal_objects_alloc_page_count - internal_objects_dealloc_page_count) / 128 </html>");
+			mtd.addColumn("CmSessions",  "tmp_internal_objects_used_mb",         "<html>MB in 'tempdb': Used now for <b>internal objects</b> by this session. <br><b>Algorithm</b>: (internal_objects_alloc_page_count - internal_objects_dealloc_page_count) / 128 </html>");
 			mtd.addColumn("CmSessions",  "tmp_internal_objects_alloc_mb",        "<html>MB in 'tempdb': reserved or allocated for <b>internal objects</b> by this session</html>");
 			mtd.addColumn("CmSessions",  "tmp_internal_objects_dealloc_mb",      "<html>MB in 'tempdb': deallocated and no longer reserved for <b>internal objects</b> by this session</html>");
 		}
@@ -311,7 +317,7 @@ extends CountersModel
 		// Just guessing here 2014 SP2 and 2012 SP3
 		if (srvVersion >= Ver.ver(2014,0,0, 2) || (srvVersion < Ver.ver(2014) && srvVersion >= Ver.ver(2012,0,0, 3)) ) 
 		{
-			ssu__s_user_objects_deferred_dealloc_page_count_CALC = " - ssu.user_objects_deferred_dealloc_page_count";
+//			ssu__s_user_objects_deferred_dealloc_page_count_CALC = " - ssu.user_objects_deferred_dealloc_page_count";
 			ssu__s_user_objects_deferred_dealloc_page_count = "    ,tmp_user_objects_deferred_dealloc_mb = convert(numeric(12,1), (ssu.user_objects_deferred_dealloc_page_count) / 128.0)  -- SP ?? in 2012 & 2014 \n";
 		}
 
@@ -483,14 +489,16 @@ extends CountersModel
 			    + er__statement_sql_handle
 			    + er__page_resource
 			    + " \n"
-			    + "    ,tmp_total_used_mb                = convert(numeric(12,1), ((ssu.user_objects_alloc_page_count - ssu.user_objects_dealloc_page_count" + ssu__s_user_objects_deferred_dealloc_page_count_CALC + ") + (ssu.internal_objects_alloc_page_count - ssu.internal_objects_dealloc_page_count)) / 128.0) \n"
-			    + "    ,tmp_user_objects_now_mb          = convert(numeric(12,1),  (ssu.user_objects_alloc_page_count - ssu.user_objects_dealloc_page_count" + ssu__s_user_objects_deferred_dealloc_page_count_CALC + ") / 128.0) \n"
-			    + "    ,tmp_user_objects_alloc_mb        = convert(numeric(12,1),  (ssu.user_objects_alloc_page_count)       / 128.0) \n"
-			    + "    ,tmp_user_objects_dealloc_mb      = convert(numeric(12,1),  (ssu.user_objects_dealloc_page_count)     / 128.0) \n"
-			    + ssu__s_user_objects_deferred_dealloc_page_count
-			    + "    ,tmp_internal_objects_now_mb      = convert(numeric(12,1), (ssu.internal_objects_alloc_page_count - ssu.internal_objects_dealloc_page_count) / 128.0) \n"
-			    + "    ,tmp_internal_objects_alloc_mb    = convert(numeric(12,1), (ssu.internal_objects_alloc_page_count)   / 128.0) \n"
-			    + "    ,tmp_internal_objects_dealloc_mb  = convert(numeric(12,1), (ssu.internal_objects_dealloc_page_count) / 128.0) \n"
+			    + "    ,tmp_total_used_mb                    = convert(numeric(12,1), NULL) /* NOTE: all 'tmp_*' are maintained in Java code */ \n"
+			    + "    ,tmp_user_objects_used_mb             = convert(numeric(12,1), NULL) \n"
+			    + "    ,tmp_internal_objects_used_mb         = convert(numeric(12,1), NULL) \n"
+			    + " \n"
+			    + "    ,tmp_user_objects_alloc_mb            = convert(numeric(12,1), NULL) \n"
+			    + "    ,tmp_user_objects_dealloc_mb          = convert(numeric(12,1), NULL) \n"
+				+ "    ,tmp_user_objects_deferred_dealloc_mb = convert(numeric(12,1), NULL) /* only maintained from: SP ?? in 2012 & 2014*/ \n"
+			    + " \n"
+			    + "    ,tmp_internal_objects_alloc_mb        = convert(numeric(12,1), NULL) \n"
+			    + "    ,tmp_internal_objects_dealloc_mb      = convert(numeric(12,1), NULL) \n"
 //			    + " \n"
 //			    + "FROM sys.dm_exec_connections ec \n"
 			    + "FROM ec \n"
@@ -499,7 +507,7 @@ extends CountersModel
 			    + "LEFT OUTER join sys.dm_exec_requests                  er ON ec.session_id      = er.session_id \n"
 			    + "LEFT OUTER JOIN sys.dm_tran_session_transactions     tst ON es.session_id      = tst.session_id \n"
 			    + "LEFT OUTER JOIN sys.dm_tran_active_transactions      tat ON tst.transaction_id = tat.transaction_id \n"
-			    + "LEFT OUTER join tempdb.sys.dm_db_session_space_usage ssu ON ec.session_id      = ssu.session_id \n"
+//			    + "LEFT OUTER join tempdb.sys.dm_db_session_space_usage ssu ON ec.session_id      = ssu.session_id \n"
 				+ "OUTER APPLY sys.dm_exec_sql_text(er.sql_handle) dest \n"
 //			    + "WHERE ec.net_transport != 'Session' -- do not include MARS sessions, see: https://sqljudo.wordpress.com/2014/03/07/cardinality-of-dm_exec_sessions-and-dm_exec_connections/ \n"
 			    + "";
@@ -569,6 +577,8 @@ extends CountersModel
 	@Override
 	public void localCalculation(CounterSample newSample)
 	{
+		boolean getTempdbSpidUsage = Configuration.getCombinedConfiguration().getBooleanProperty(CmSummary.PROPKEY_sample_tempdbSpidUsage, CmSummary.DEFAULT_sample_tempdbSpidUsage);
+
 		int pos_SPID               = newSample.findColumn("session_id");
 		int pos_BlockingSPID       = newSample.findColumn("blocking_session_id");
 		int pos_BlockingOtherSpids = newSample.findColumn("BlockingOtherSpids");
@@ -586,8 +596,40 @@ extends CountersModel
 				String blockingList = getBlockingListStrForSpid(newSample, spid, pos_BlockingSPID, pos_SPID);
 
 				newSample.setValueAt(blockingList, rowId, pos_BlockingOtherSpids);
-			}
+				
+				// Maintain 'tmp_*' columns
+				if (getTempdbSpidUsage)
+				{
+					// 1: Get tempdb info about 'spid', and if we have a value:
+					//    2: Set values for columns
+					//       - tmp_total_used_mb
+					//       - tmp_user_objects_used_mb
+					//       - tmp_internal_objects_used_mb
+					//
+					//       - tmp_user_objects_alloc_mb
+					//       - tmp_user_objects_dealloc_mb
+					//       - tmp_user_objects_deferred_dealloc_mb
+					//
+					//       - tmp_internal_objects_alloc_mb
+					//       - tmp_internal_objects_dealloc_mb
+					//    (if the above columns can't be found... Simply write a message to the error log)
+					//
+					TempdbUsagePerSpid.TempDbSpaceInfo spaceInfo = TempdbUsagePerSpid.getInstance().getEntryForSpid(spid);
+					if (spaceInfo != null)
+					{
+						newSample.setValueAt(spaceInfo.getTotalSpaceUsedInMb()               , rowId, "tmp_total_used_mb");
+						newSample.setValueAt(spaceInfo.getUserObjectSpaceUsedInMb()          , rowId, "tmp_user_objects_used_mb");
+						newSample.setValueAt(spaceInfo.getInternalObjectSpaceUsedInMb()      , rowId, "tmp_internal_objects_used_mb");
 
+						newSample.setValueAt(spaceInfo.get_user_objects_alloc_mb()           , rowId, "tmp_user_objects_alloc_mb");
+						newSample.setValueAt(spaceInfo.get_user_objects_dealloc_mb()         , rowId, "tmp_user_objects_dealloc_mb");
+						newSample.setValueAt(spaceInfo.get_user_objects_deferred_dealloc_mb(), rowId, "tmp_user_objects_deferred_dealloc_mb");
+
+						newSample.setValueAt(spaceInfo.get_internal_objects_alloc_mb()       , rowId, "tmp_internal_objects_alloc_mb");
+						newSample.setValueAt(spaceInfo.get_internal_objects_dealloc_mb()     , rowId, "tmp_internal_objects_dealloc_mb");
+					}
+				}
+			}
 		}
 	}
 

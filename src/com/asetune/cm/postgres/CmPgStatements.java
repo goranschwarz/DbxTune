@@ -21,9 +21,7 @@
 package com.asetune.cm.postgres;
 
 import java.awt.event.MouseEvent;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -44,13 +42,13 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.postgres.gui.CmPgStatementsPanel;
-import com.asetune.graph.TrendGraphDataPoint;
-import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.sql.ResultSetMetaDataCached;
+import com.asetune.sql.ResultSetMetaDataCached.Entry;
 import com.asetune.sql.SqlParserUtils;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
@@ -347,7 +345,7 @@ extends CountersModel
 		if (srvVersion >= Ver.ver(13))
 		{
 			total_time1 = "(s.total_plan_time + s.total_exec_time)";
-			total_time2 = "    ,(s.total_plan_time + s.total_exec_time) AS total_time n";
+			total_time2 = "    ,(s.total_plan_time + s.total_exec_time) AS total_time \n";
 		}
 
 		int total_time_gt = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_sample_total_time_gt, DEFAULT_sample_total_time_gt);
@@ -373,6 +371,27 @@ extends CountersModel
 //				"where s.calls > 1 \n" +
 				"where " + total_time1 + " > " + total_time_gt + " \n" +
 				"";
+	}
+	
+	@Override
+	public ResultSetMetaDataCached modifyResultSetMetaData(ResultSetMetaDataCached rsmdc)
+	{
+		for (Entry entry : rsmdc.getEntries())
+		{
+			if (    "wal_bytes".equals(entry.getColumnLabel()) 
+			     && entry.getColumnType() == Types.NUMERIC 
+			     && entry.getPrecision() == 0 
+			     && entry.getScale() == 0
+			   ) 
+			{
+				entry.setPrecision(38);
+				entry.setScale(0);
+
+				_logger.info("modifyResultSetMetaData: Cm='" + getName() + "', columnName='" + entry.getColumnLabel() + "', changing data type PRECISION from 0 to 38");
+			}
+		}
+		
+		return rsmdc;
 	}
 
 	@Override

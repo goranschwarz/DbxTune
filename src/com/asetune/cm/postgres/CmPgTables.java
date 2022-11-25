@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CmSettingsHelper;
@@ -52,7 +54,7 @@ import com.asetune.utils.Configuration;
 public class CmPgTables
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmPgTables.class);
+	private static Logger        _logger          = Logger.getLogger(CmPgTables.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmPgTables.class.getSimpleName();
@@ -121,7 +123,8 @@ extends CountersModel
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
-	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
+//	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; } // 10 seconds is the default
+	@Override public int     getDefaultQueryTimeout()                 { return 30; }
 	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
 	@Override public Type    getTemplateLevel()                       { return Type.MEDIUM; }
 
@@ -148,6 +151,8 @@ extends CountersModel
 		setDescription(HTML_DESC);
 
 		setIconFile(GUI_ICON_FILE);
+
+//		addCmDependsOnMe(CmPgLocks.CM_NAME); // go and check CmPgLocks if it needs refresh as part of this refresh (if CmPgLocks needs to be refreshed, lets refresh since he depends on me)
 
 		setCounterController(counterController);
 		setGuiController(guiController);
@@ -325,4 +330,113 @@ extends CountersModel
 			"where (coalesce(seq_scan, 0) + coalesce(idx_scan, 0)) > 0"
 			;
 	}
+
+//	/**
+//	 * Special method called from DbmsObjectIdCache, when Objects can't be found in the cache
+//	 * <p>
+//	 * This instead of connecting to the DBMS and get info from there<br>
+//	 * NOTE: SchemaID's are not known, so it will be set to -1 
+//	 * 
+//	 * @param dbnameToLookup
+//	 * @param lookupId
+//	 * @return
+//	 */
+//	public ObjectInfo getObjectIdCacheEntry(String dbnameToLookup, Number lookupId)
+//	{
+//		// Exit early if no cache
+//		if ( ! DbmsObjectIdCache.hasInstance() )
+//			return null;
+//			
+//		int relid_pos       = findColumn("relid");
+//		int dbname_pos      = findColumn("dbname");
+//		int schema_name_pos = findColumn("schemaname");
+//		int table_name_pos  = findColumn("relname");
+//		
+//		// Loop all rows, and find matching REL-ID and DBNAME
+//		int rowc = getRowCount();
+//		for (int rowId = 0; rowId < rowc; rowId++)
+//		{
+//			String dbname = getAbsString(rowId, dbname_pos);
+//			Long   relid  = getAbsValueAsLong(rowId, relid_pos);
+//			if (dbname != null && relid != null)
+//			{
+//				if (relid.equals(lookupId) && dbname.equals(dbnameToLookup))
+//				{
+//					String schema_name = getAbsString(rowId, schema_name_pos);
+//					String table_name  = getAbsString(rowId, table_name_pos);
+//					
+//					Long dbid = DbmsObjectIdCache.getInstance().getDbid(dbname);
+//					long schemaId = -1;
+//
+//					if (dbid != null)
+//					{
+//						ObjectInfo objectInfo = new ObjectInfo(dbid, dbname, schemaId, schema_name, relid, table_name);
+//
+//						return objectInfo;
+//					}
+//				}
+//			}
+//		}
+//		return null;
+//	}
+//	
+//	@Override
+//	public void localCalculation(CounterSample newSample)
+//	{
+//		// Exit early - If the cache isn't available
+//		if ( ! DbmsObjectIdCache.hasInstance() )
+//		{
+//			return;
+//		}
+//		
+//		DbmsObjectIdCache dbmsObjectIdCache = DbmsObjectIdCache.getInstance();
+//
+//		// If there is NO "table" objects in the cache... add entries
+//		if ( ! dbmsObjectIdCache.hasObjectIds() )
+//		{
+//			int addCount = 0;
+//
+//			int relid_pos       = newSample.findColumn("relid");
+//			int dbname_pos      = newSample.findColumn("dbname");
+//			int schema_name_pos = newSample.findColumn("schemaname");
+//			int table_name_pos  = newSample.findColumn("relname");
+//			
+//			// No need to continue if we havn't got the columns we need
+//			if (relid_pos == -1 || dbname_pos == -1 || schema_name_pos == -1 || table_name_pos == -1)
+//			{
+//				_logger.info("localCalculation(): Desired columns not available (relid_pos="+relid_pos+", dbname_pos="+dbname_pos+", schema_name_pos="+schema_name_pos+", table_name_pos="+table_name_pos+"), can't resolv 'database:id' and 'relation:id' into real names.");
+//				return;
+//			}
+//
+//			// Loop all rows, and ADD entries
+//			int rowc = newSample.getRowCount();
+//			for (int rowId = 0; rowId < rowc; rowId++)
+//			{
+//				String dbname = newSample.getValueAsString(rowId, dbname_pos);
+//				Long   relid  = newSample.getValueAsLong(rowId, relid_pos);
+//
+//				if (dbname != null && relid != null)
+//				{
+//					String schema_name = newSample.getValueAsString(rowId, schema_name_pos);
+//					String table_name  = newSample.getValueAsString(rowId, table_name_pos);
+//						
+//					Long dbid = DbmsObjectIdCache.getInstance().getDbid(dbname);
+//					long schemaId = -1;
+//
+//					if (dbid != null)
+//					{
+//						// Create a new Object
+//						ObjectInfo objectInfo = new ObjectInfo(dbid, dbname, schemaId, schema_name, relid, table_name);
+//
+//						// ADD it to the Cache.
+//						dbmsObjectIdCache.setObjectInfo(dbid, relid, objectInfo);
+//
+//						addCount++;
+//					}
+//				}
+//			}
+//			
+//			_logger.info("localCalculation(): Populated " + addCount + " entries to DbmsObjectIdCache.");
+//		}
+//	}
 }

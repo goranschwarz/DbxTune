@@ -191,6 +191,10 @@
 			<fileset dir="lib/jdbc_drivers"/>
 		</copy>
 
+		<copy todir="${dist}/lib/jaxb-ri">
+			<fileset dir="lib/jaxb-ri"/>
+		</copy>
+
 		<copy todir="${dist}/resources">
 			<fileset dir="resources"/>
 		</copy>

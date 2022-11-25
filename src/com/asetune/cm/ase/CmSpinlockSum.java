@@ -73,6 +73,11 @@ extends CountersModel
 			"<B>Note</B>: The origin text for below information can be found at: <A HREF=\"http://wiki.scn.sap.com/wiki/display/SYBASE/Spinlocks+and+CPU+usage+in+SAP+ASE\">http://wiki.scn.sap.com/wiki/display/SYBASE/Spinlocks+and+CPU+usage+in+SAP+ASE</A> <BR> \n" +
 			"<B>Note</B>: To check for <I>possible solutions</I> for some known spinlock contentions, see: at the end of this information<BR> \n" +
 			" \n" +
+			"<BR> \n" +
+			"<B>Another place to look at</B>: 'https://help.sap.com/docs/SAP_ASE' search for 'Common Spinlock Contention Objects and Their Resolutions' <BR> \n" +
+			"<A HREF=\"https://help.sap.com/docs/SAP_ASE?q=Common%20Spinlock%20Contention%20Objects%20and%20Their%20Resolutions\">https://help.sap.com/docs/SAP_ASE?q=Common%20Spinlock%20Contention%20Objects%20and%20Their%20Resolutions</A> <BR> \n" +
+			"<A HREF=\"https://help.sap.com/docs/SAP_ASE/91d32d977a174c68829880bc020fc352/e711bd4354b8480f8d44ee6959498f9c.html?q=spinlock%20monitoring\">https://help.sap.com/docs/SAP_ASE/91d32d977a174c68829880bc020fc352/e711bd4354b8480f8d44ee6959498f9c.html?q=spinlock%20monitoring</A> <BR> \n" +
+			" \n" +
 			"<H1>Spinlocks and CPU usage in SAP ASE</H1> \n" +
 			" \n" +
 			"<H2>Purpose</H2> \n" +

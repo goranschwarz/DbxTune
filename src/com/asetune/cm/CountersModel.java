@@ -84,6 +84,9 @@ import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventConfigResourceIsUsedUp;
 import com.asetune.alarm.events.AlarmEventProcedureCacheOutOfMemory;
 import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.graph.ChartDataHistoryCreator;
+import com.asetune.graph.ChartDataHistoryManager;
+import com.asetune.graph.ChartDataHistorySeries;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.Category;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
@@ -2732,11 +2735,95 @@ implements Cloneable, ITableTooltip
 				//System.out.println("cm='"+StringUtil.left(this.getName(),25)+"', _trendGraphData="+tgdp);
 				if (_logger.isDebugEnabled())
 					_logger.debug("cm='"+StringUtil.left(this.getName(),25)+"', _trendGraphData="+tgdp);
+
+				// Check if history is ENABLED for this TrendGraph
+				if (isGraphDataHistoryEnabled(tgdp.getName()))
+				{
+					if (tgdp.hasData())
+					{
+						// Get instance
+						String cmName    = this.getName();
+						String chartName = tgdp.getName();
+						ChartDataHistorySeries cdhs = ChartDataHistoryManager.getInstance(cmName, chartName, getGraphDataHistoryTimeInterval(chartName));
+
+						// Add this data point to the history
+						cdhs.add(tgdp);
+					}
+				}
 			}
 			catch (Exception ex)
 			{
 				_logger.warn("Problems in updateGraphData() for CM='" + getName() + "', graphName='" + tgdp.getName() + "'.", ex);
 			}
+		}
+	}
+	
+
+	/**
+	 * SHould we save a "in-memory" history for this graph.<br>
+	 * This will/may be  used for Alarms and other various reasons!
+	 *  
+	 * @param name  Name of the graph/chart
+	 * @return
+	 */
+	public boolean isGraphDataHistoryEnabled(String graphName)
+	{
+		return false;
+	}
+
+	/**
+	 * For how many minutes should we hold the in-memory counter values
+	 *  
+	 * @param name  Name of the graph/chart
+	 * @return minutes to hold (default is -1, which means to use the default value)
+	 */
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		return ChartDataHistorySeries.DEFAULT_KEEP_AGE_IN_MINUTES; // Default: 60 minutes
+	}
+
+	/**
+	 * Get a HTML 'img' tag looking something like:<br> <code>&lt;img  width='500' height='180' src='data:image/png;base64,iVBORw0...'&gt;</code>
+	 * @param graphName Name of the Graph
+	 * @param seriesNames     Only show the following series (empty for ALL series)
+	 * @return null if not found, else a HTML 'img' tag
+	 */
+	public String getGraphDataHistoryAsHtmlImage(String graphName, String... seriesNames)
+	{
+		return getGraphDataHistoryAsHtmlImage(graphName, 0, seriesNames);
+	}
+
+
+	/**
+	 * Get a HTML 'img' tag looking something like:<br> <code>&lt;img  width='500' height='180' src='data:image/png;base64,iVBORw0...'&gt;</code>
+	 * @param graphName Name of the Graph
+	 * @param timeLimit       0 = All data, # = Only last # MINUTES of data points 
+	 * @param seriesNames     Only show the following series (empty for ALL series)
+	 * @return null if not found, else a HTML 'img' tag
+	 */
+	public String getGraphDataHistoryAsHtmlImage(String graphName, int timeLimit, String... seriesNames)
+	{
+		String cmName    = this.getName();
+		
+		if (ChartDataHistoryManager.hasInstance(cmName, graphName))
+		{
+			// Get the Data Series
+			ChartDataHistorySeries cdhs = ChartDataHistoryManager.getInstance(cmName, graphName, getGraphDataHistoryTimeInterval(graphName));
+
+			// Get the TGDP so we can get the "Graph Label"
+			TrendGraphDataPoint tgdp = getTrendGraphData(graphName);
+
+			if (tgdp == null)
+				throw new RuntimeException("NO_TREND_GRAPH_DATA_POINT: For cm='" + cmName + "', graphName='" + graphName + "', could not find any TrendGraphDataPoint for graphName. If this happens, something is seriously wrong. ");
+
+			// CREATE the 'img' tag
+			return ChartDataHistoryCreator.getChartAsHtmlImage(tgdp.getGraphLabel(), cdhs, seriesNames);
+		}
+		else
+		{
+			// graph not found
+			_logger.info("getGraphDataHistoryAsHtmlImage(): NO_CHART_DATA_HISTORY_SERIES: For cm='" + cmName + "', graphName='" + graphName + "', could not find any ChartDataHistorySeries for graphName '" + graphName + "'.");
+			return null;
 		}
 	}
 
@@ -5107,7 +5194,7 @@ implements Cloneable, ITableTooltip
 		{
 			// below may end up with data overflow (due to sum may overflow the data-type, and if we want to store the data in PCS we want to keep the origin data-type)
 			// hence the try/catch
-			calculateAggregateRow(tmpNewSample);
+			calculateAggregateRow(DATA_ABS, tmpNewSample);
 		}
 		catch (RuntimeException ex)
 		{
@@ -5160,6 +5247,10 @@ implements Cloneable, ITableTooltip
 				// old sample is not null, so we can compute the diffs
 //				tmpDiffData = CounterSample.computeDiffCnt(_prevSample, tmpNewSample, deletedRows, _pkCols, _isDiffCol, _isCountersCleared);
 				tmpDiffData = computeDiffCnt(_prevSample, tmpNewSample, deletedRows, newDeltaRows, _pkCols, _isDiffCol, _isCountersCleared);
+				
+				// Aggregated MIN/MAX values has to be calculated for DIFF counters
+				if (hasAggregatedRow())
+					calculateAggregateRow(DATA_DIFF, tmpDiffData);
 			}
 	
 			if (tmpDiffData == null)
@@ -5182,6 +5273,10 @@ implements Cloneable, ITableTooltip
 				// we got some data, compute the rates and update the data model
 //				tmpRateData = CounterSample.computeRatePerSec(tmpDiffData, _isDiffCol, _isPctCol);
 				tmpRateData = computeRatePerSec(tmpDiffData, _isDiffCol, _isPctCol);
+
+				// Aggregated MIN/MAX values has to be calculated for RATE counters
+				if (hasAggregatedRow())
+					calculateAggregateRow(DATA_RATE, tmpDiffData);
 
 				// Compute local stuff for RatePerSec, here we can adjust some stuff if needed
 				localCalculationRatePerSec(tmpRateData, tmpDiffData);
@@ -6938,7 +7033,9 @@ implements Cloneable, ITableTooltip
 		return (_diffData == null) ? 0 : _diffData.getRowCount();
 	}
 
-	// 
+	//---------------------------------------------------------------------------
+	// Double
+	//---------------------------------------------------------------------------
 	private Double getValueAsDouble(int whatData, int rowId, int colPos)
 	{
 		return getValueAsDouble(whatData, rowId, colPos, null);
@@ -6976,6 +7073,143 @@ implements Cloneable, ITableTooltip
 			return new Double(Double.parseDouble(o.toString()));
 	}
 
+	private Double getValueAsDouble(int whatData, String pkStr, String colname, boolean caseSensitive)
+	{
+		return getValueAsDouble(whatData, pkStr, colname, caseSensitive, null);
+	}
+
+	// 
+	private synchronized Double getValueAsDouble(int whatData, String pkStr, String colname, boolean caseSensitive, Double def)
+	{
+		Object o = getValue(whatData, pkStr, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return new Double(((Number) o).doubleValue());
+		else
+			return new Double(Double.parseDouble(o.toString()));
+	}
+
+	//---------------------------------------------------------------------------
+	// Integer
+	//---------------------------------------------------------------------------
+	private Integer getValueAsInteger(int whatData, int rowId, int colPos)
+	{
+		return getValueAsInteger(whatData, rowId, colPos, null);
+	}
+
+	// 
+	private synchronized Integer getValueAsInteger(int whatData, int rowId, int colPos, Integer def)
+	{
+		Object o = getValue(whatData, rowId, colPos);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return new Integer(((Number) o).intValue());
+		else
+			return new Integer(Integer.parseInt(o.toString()));
+	}
+
+	// 
+	private Integer getValueAsInteger(int whatData, int rowId, String colname, boolean caseSensitive)
+	{
+		return getValueAsInteger(whatData, rowId, colname, caseSensitive, null);
+	}
+
+	// 
+	private synchronized Integer getValueAsInteger(int whatData, int rowId, String colname, boolean caseSensitive, Integer def)
+	{
+		Object o = getValue(whatData, rowId, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return new Integer(((Number) o).intValue());
+		else
+			return new Integer(Integer.parseInt(o.toString()));
+	}
+
+	private Integer getValueAsInteger(int whatData, String pkStr, String colname, boolean caseSensitive)
+	{
+		return getValueAsInteger(whatData, pkStr, colname, caseSensitive, null);
+	}
+
+	// 
+	private synchronized Integer getValueAsInteger(int whatData, String pkStr, String colname, boolean caseSensitive, Integer def)
+	{
+		Object o = getValue(whatData, pkStr, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return new Integer(((Number) o).intValue());
+		else
+			return new Integer(Integer.parseInt(o.toString()));
+	}
+
+	//---------------------------------------------------------------------------
+	// Long
+	//---------------------------------------------------------------------------
+	private Long getValueAsLong(int whatData, int rowId, int colPos)
+	{
+		return getValueAsLong(whatData, rowId, colPos, null);
+	}
+
+	// 
+	private synchronized Long getValueAsLong(int whatData, int rowId, int colPos, Long def)
+	{
+		Object o = getValue(whatData, rowId, colPos);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return new Long(((Number) o).longValue());
+		else
+			return new Long(Long.parseLong(o.toString()));
+	}
+
+	// 
+	private Long getValueAsLong(int whatData, int rowId, String colname, boolean caseSensitive)
+	{
+		return getValueAsLong(whatData, rowId, colname, caseSensitive, null);
+	}
+
+	// 
+	private synchronized Long getValueAsLong(int whatData, int rowId, String colname, boolean caseSensitive, Long def)
+	{
+		Object o = getValue(whatData, rowId, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return new Long(((Number) o).longValue());
+		else
+			return new Long(Long.parseLong(o.toString()));
+	}
+
+	private Long getValueAsLong(int whatData, String pkStr, String colname, boolean caseSensitive)
+	{
+		return getValueAsLong(whatData, pkStr, colname, caseSensitive, null);
+	}
+
+	// 
+	private synchronized Long getValueAsLong(int whatData, String pkStr, String colname, boolean caseSensitive, Long def)
+	{
+		Object o = getValue(whatData, pkStr, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return new Long(((Number) o).longValue());
+		else
+			return new Long(Long.parseLong(o.toString()));
+	}
+
+	//---------------------------------------------------------------------------
+	// Value
+	//---------------------------------------------------------------------------
 	// Return the value of a cell by ROWID (rowId, ColumnName)
 	protected synchronized Object getValue(int whatData, int rowId, String colname, boolean caseSensitive)
 	{
@@ -7042,24 +7276,6 @@ implements Cloneable, ITableTooltip
 	}
 
 	// 
-	private Double getValueAsDouble(int whatData, String pkStr, String colname, boolean caseSensitive)
-	{
-		return getValueAsDouble(whatData, pkStr, colname, caseSensitive, null);
-	}
-
-	// 
-	private synchronized Double getValueAsDouble(int whatData, String pkStr, String colname, boolean caseSensitive, Double def)
-	{
-		Object o = getValue(whatData, pkStr, colname, caseSensitive);
-		if (o == null)
-			return def;
-
-		if (o instanceof Number)
-			return new Double(((Number) o).doubleValue());
-		else
-			return new Double(Double.parseDouble(o.toString()));
-	}
-
 	private Object getValue(int whatData, String pkStr, String colname, boolean caseSensitive)
 	{
 		return getValue(whatData, pkStr, colname, caseSensitive, null);
@@ -7164,6 +7380,42 @@ implements Cloneable, ITableTooltip
 		return ia;
 	}
 
+	/** If we want to discard Aggregated rows in methods: getMaxValue() */
+	public boolean discardAggregatedRowFromMax()
+	{
+		return true;
+	}
+
+	/** If we want to discard Aggregated rows in methods: getMinValue() */
+	public boolean discardAggregatedRowFromMin()
+	{
+		return true;
+	}
+
+	/** If we want to discard Aggregated rows in methods: getSumValue() */
+	public boolean discardAggregatedRowFromSumAndAvg()
+	{
+		return true;
+	}
+
+	/** If we want to discard Aggregated rows in methods: getCountGtZero() */
+	public boolean discardAggregatedRowFromCountGtZero()
+	{
+		return true;
+	}
+	
+//	/** If we want to discard Aggregated rows in methods: getAvgValue() */
+//	public boolean discardAggregatedRowFromAvg()
+//	{
+//		return true;
+//	}
+
+//	/** If we want to discard Aggregated rows in methods: getAvgValueGtZero() */
+//	public boolean discardAggregatedRowFromAvgGtZero()
+//	{
+//		return true;
+//	}
+
 	private synchronized Double getMaxValue(int whatData, int[] rowIds, String colname, boolean caseSensitive)
 	{
 		CounterTableModel data = null;
@@ -7221,6 +7473,10 @@ implements Cloneable, ITableTooltip
 			if (rowIds != null)
 				rowId = rowIds[i];
 
+			// If the row is an Aggregated row... skip this
+			if (discardAggregatedRowFromMax() && isAggregateRow(rowId))
+				continue;
+			
 			Object o = data.getValueAt(rowId, colPos);
 			if (o == null)
 				continue;
@@ -7304,6 +7560,10 @@ implements Cloneable, ITableTooltip
 			if (rowIds != null)
 				rowId = rowIds[i];
 
+			// If the row is an Aggregated row... skip this
+			if (discardAggregatedRowFromMin() && isAggregateRow(rowId))
+				continue;
+			
 			Object o = data.getValueAt(rowId, colPos);
 			if (o == null)
 				continue;
@@ -7386,6 +7646,10 @@ implements Cloneable, ITableTooltip
 			if (rowIds != null)
 				rowId = rowIds[i];
 
+			// If the row is an Aggregated row... skip this
+			if (discardAggregatedRowFromSumAndAvg() && isAggregateRow(rowId))
+				continue;
+			
 			Object o = data.getValueAt(rowId, colPos);
 			if (o == null)
 				continue;
@@ -7469,6 +7733,10 @@ implements Cloneable, ITableTooltip
 			if (rowIds != null)
 				rowId = rowIds[i];
 
+			// If the row is an Aggregated row... skip this
+			if (discardAggregatedRowFromCountGtZero() && isAggregateRow(rowId))
+				continue;
+			
 			Object o = data.getValueAt(rowId, colPos);
 			if (o == null)
 				continue;
@@ -7508,6 +7776,9 @@ implements Cloneable, ITableTooltip
 		if (rowIds != null)
 			count = rowIds.length;
 		
+		if (discardAggregatedRowFromSumAndAvg() && hasAggregatedRow())
+			count--;
+			
 		if (count == 0)
 			return new Double(0);
 		else
@@ -7536,6 +7807,9 @@ implements Cloneable, ITableTooltip
 		if (rowIds != null)
 			count = rowIds.length;
 		
+		if (discardAggregatedRowFromSumAndAvg() && hasAggregatedRow())
+			count--;
+			
 		if (count == 0)
 			return new Double(0);
 		else
@@ -7632,11 +7906,13 @@ implements Cloneable, ITableTooltip
 	//--------------------------------------------------------------
 	// Wrapper functions to read ABSOLUTE values
 	//--------------------------------------------------------------
-	public String getAbsString        (int    rowId, int    colPos)                          { Object o = getValue     (DATA_ABS, rowId, colPos);        return (o==null)?"":o.toString(); }
-	public String getAbsString        (int    rowId, String colname)                         { Object o = getValue     (DATA_ABS, rowId, colname, true); return (o==null)?"":o.toString(); }
-	public String getAbsString        (int    rowId, String colname, boolean cs)             { Object o = getValue     (DATA_ABS, rowId, colname,   cs); return (o==null)?"":o.toString(); }
-	public String getAbsString        (String pkStr, String colname)                         { Object o = getValue     (DATA_ABS, pkStr, colname, true); return (o==null)?"":o.toString(); }
-	public String getAbsString        (String pkStr, String colname, boolean cs)             { Object o = getValue     (DATA_ABS, pkStr, colname,   cs); return (o==null)?"":o.toString(); }
+	public String getAbsString        (int    rowId, int    colPos)                          { Object o = getValue     (DATA_ABS, rowId, colPos);        return (o==null) ?  "" : o.toString(); }
+	public String getAbsString        (int    rowId, String colname)                         { Object o = getValue     (DATA_ABS, rowId, colname, true); return (o==null) ?  "" : o.toString(); }
+	public String getAbsString        (int    rowId, String colname, boolean cs)             { Object o = getValue     (DATA_ABS, rowId, colname,   cs); return (o==null) ?  "" : o.toString(); }
+	public String getAbsString        (int    rowId, String colname, boolean cs, String def) { Object o = getValue     (DATA_ABS, rowId, colname,   cs); return (o==null) ? def : o.toString(); }
+	public String getAbsString        (String pkStr, String colname)                         { Object o = getValue     (DATA_ABS, pkStr, colname, true); return (o==null) ?  "" : o.toString(); }
+	public String getAbsString        (String pkStr, String colname, boolean cs)             { Object o = getValue     (DATA_ABS, pkStr, colname,   cs); return (o==null) ?  "" : o.toString(); }
+	public String getAbsString        (String pkStr, String colname, boolean cs, String def) { Object o = getValue     (DATA_ABS, pkStr, colname,   cs); return (o==null) ? def : o.toString(); }
 	
 	public Object getAbsValue         (int    rowId, int    colPos)                          { Object o = getValue     (DATA_ABS, rowId, colPos); return o; }
 	public Object getAbsValue         (int    rowId, String colname)                         { return getValue         (DATA_ABS, rowId, colname, true); }
@@ -7654,6 +7930,28 @@ implements Cloneable, ITableTooltip
 	public Double getAbsValueAsDouble (String pkStr, String colname, boolean cs)             { return getValueAsDouble (DATA_ABS, pkStr, colname,   cs);      }
 	public Double getAbsValueAsDouble (String pkStr, String colname, Double def)             { return getValueAsDouble (DATA_ABS, pkStr, colname, true, def); }
 	public Double getAbsValueAsDouble (String pkStr, String colname, boolean cs, Double def) { return getValueAsDouble (DATA_ABS, pkStr, colname,   cs, def); }
+	
+	public Integer getAbsValueAsInteger(int    rowId, int    colPos)                          { return getValueAsInteger(DATA_ABS, rowId, colPos);             }
+	public Integer getAbsValueAsInteger(int    rowId, int    colPos, Integer def)             { return getValueAsInteger(DATA_ABS, rowId, colPos, def);        }
+	public Integer getAbsValueAsInteger(int    rowId, String colname)                         { return getValueAsInteger(DATA_ABS, rowId, colname, true);      }
+	public Integer getAbsValueAsInteger(int    rowId, String colname, boolean cs)             { return getValueAsInteger(DATA_ABS, rowId, colname,   cs);      }
+	public Integer getAbsValueAsInteger(int    rowId, String colname, Integer def)            { return getValueAsInteger(DATA_ABS, rowId, colname, true, def); }
+	public Integer getAbsValueAsInteger(int    rowId, String colname, boolean cs, Integer def){ return getValueAsInteger(DATA_ABS, rowId, colname,   cs, def); }
+	public Integer getAbsValueAsInteger(String pkStr, String colname)                         { return getValueAsInteger(DATA_ABS, pkStr, colname, true);      }
+	public Integer getAbsValueAsInteger(String pkStr, String colname, boolean cs)             { return getValueAsInteger(DATA_ABS, pkStr, colname,   cs);      }
+	public Integer getAbsValueAsInteger(String pkStr, String colname, Integer def)            { return getValueAsInteger(DATA_ABS, pkStr, colname, true, def); }
+	public Integer getAbsValueAsInteger(String pkStr, String colname, boolean cs, Integer def){ return getValueAsInteger(DATA_ABS, pkStr, colname,   cs, def); }
+	
+	public Long   getAbsValueAsLong  (int    rowId, int    colPos)                           { return getValueAsLong   (DATA_ABS, rowId, colPos);             }
+	public Long   getAbsValueAsLong  (int    rowId, int    colPos, Long def)                 { return getValueAsLong   (DATA_ABS, rowId, colPos, def);        }
+	public Long   getAbsValueAsLong  (int    rowId, String colname)                          { return getValueAsLong   (DATA_ABS, rowId, colname, true);      }
+	public Long   getAbsValueAsLong  (int    rowId, String colname, boolean cs)              { return getValueAsLong   (DATA_ABS, rowId, colname,   cs);      }
+	public Long   getAbsValueAsLong  (int    rowId, String colname, Long def)                { return getValueAsLong   (DATA_ABS, rowId, colname, true, def); }
+	public Long   getAbsValueAsLong  (int    rowId, String colname, boolean cs, Long def)    { return getValueAsLong   (DATA_ABS, rowId, colname,   cs, def); }
+	public Long   getAbsValueAsLong  (String pkStr, String colname)                          { return getValueAsLong   (DATA_ABS, pkStr, colname, true);      }
+	public Long   getAbsValueAsLong  (String pkStr, String colname, boolean cs)              { return getValueAsLong   (DATA_ABS, pkStr, colname,   cs);      }
+	public Long   getAbsValueAsLong  (String pkStr, String colname, Long def)                { return getValueAsLong   (DATA_ABS, pkStr, colname, true, def); }
+	public Long   getAbsValueAsLong  (String pkStr, String colname, boolean cs, Long def)    { return getValueAsLong   (DATA_ABS, pkStr, colname,   cs, def); }
 	
 	public Double getAbsValueMax      (int    colPos)                                        { return getMaxValue      (DATA_ABS, null,  colPos);        }
 	public Double getAbsValueMax      (String colname)                                       { return getMaxValue      (DATA_ABS, null,  colname, true); }
@@ -7723,6 +8021,28 @@ implements Cloneable, ITableTooltip
 	public Double getDiffValueAsDouble (String pkStr, String colname, Double def)             { return getValueAsDouble (DATA_DIFF, pkStr, colname, true, def); }
 	public Double getDiffValueAsDouble (String pkStr, String colname, boolean cs, Double def) { return getValueAsDouble (DATA_DIFF, pkStr, colname,   cs, def); }
 	
+	public Integer getDiffValueAsInteger(int    rowId, int    colPos)                          { return getValueAsInteger(DATA_DIFF, rowId, colPos);             }
+	public Integer getDiffValueAsInteger(int    rowId, int    colPos, Integer def)             { return getValueAsInteger(DATA_DIFF, rowId, colPos, def);        }
+	public Integer getDiffValueAsInteger(int    rowId, String colname)                         { return getValueAsInteger(DATA_DIFF, rowId, colname, true);      }
+	public Integer getDiffValueAsInteger(int    rowId, String colname, boolean cs)             { return getValueAsInteger(DATA_DIFF, rowId, colname,   cs);      }
+	public Integer getDiffValueAsInteger(int    rowId, String colname, Integer def)            { return getValueAsInteger(DATA_DIFF, rowId, colname, true, def); }
+	public Integer getDiffValueAsInteger(int    rowId, String colname, boolean cs, Integer def){ return getValueAsInteger(DATA_DIFF, rowId, colname,   cs, def); }
+	public Integer getDiffValueAsInteger(String pkStr, String colname)                         { return getValueAsInteger(DATA_DIFF, pkStr, colname, true);      }
+	public Integer getDiffValueAsInteger(String pkStr, String colname, boolean cs)             { return getValueAsInteger(DATA_DIFF, pkStr, colname,   cs);      }
+	public Integer getDiffValueAsInteger(String pkStr, String colname, Integer def)            { return getValueAsInteger(DATA_DIFF, pkStr, colname, true, def); }
+	public Integer getDiffValueAsInteger(String pkStr, String colname, boolean cs, Integer def){ return getValueAsInteger(DATA_DIFF, pkStr, colname,   cs, def); }
+	
+	public Long   getDiffValueAsLong  (int    rowId, int    colPos)                           { return getValueAsLong   (DATA_DIFF, rowId, colPos);             }
+	public Long   getDiffValueAsLong  (int    rowId, int    colPos, Long def)                 { return getValueAsLong   (DATA_DIFF, rowId, colPos, def);        }
+	public Long   getDiffValueAsLong  (int    rowId, String colname)                          { return getValueAsLong   (DATA_DIFF, rowId, colname, true);      }
+	public Long   getDiffValueAsLong  (int    rowId, String colname, boolean cs)              { return getValueAsLong   (DATA_DIFF, rowId, colname,   cs);      }
+	public Long   getDiffValueAsLong  (int    rowId, String colname, Long def)                { return getValueAsLong   (DATA_DIFF, rowId, colname, true, def); }
+	public Long   getDiffValueAsLong  (int    rowId, String colname, boolean cs, Long def)    { return getValueAsLong   (DATA_DIFF, rowId, colname,   cs, def); }
+	public Long   getDiffValueAsLong  (String pkStr, String colname)                          { return getValueAsLong   (DATA_DIFF, pkStr, colname, true);      }
+	public Long   getDiffValueAsLong  (String pkStr, String colname, boolean cs)              { return getValueAsLong   (DATA_DIFF, pkStr, colname,   cs);      }
+	public Long   getDiffValueAsLong  (String pkStr, String colname, Long def)                { return getValueAsLong   (DATA_DIFF, pkStr, colname, true, def); }
+	public Long   getDiffValueAsLong  (String pkStr, String colname, boolean cs, Long def)    { return getValueAsLong   (DATA_DIFF, pkStr, colname,   cs, def); }
+	
 	public Double getDiffValueMax      (int    colPos)                                        { return getMaxValue      (DATA_DIFF, null,  colPos);        }
 	public Double getDiffValueMax      (String colname)                                       { return getMaxValue      (DATA_DIFF, null,  colname, true); }
 	public Double getDiffValueMax      (String colname, boolean cs)                           { return getMaxValue      (DATA_DIFF, null,  colname,   cs); }
@@ -7790,6 +8110,28 @@ implements Cloneable, ITableTooltip
 	public Double getRateValueAsDouble (String pkStr, String colname, boolean cs)             { return getValueAsDouble (DATA_RATE, pkStr, colname,   cs);      }
 	public Double getRateValueAsDouble (String pkStr, String colname, Double def)             { return getValueAsDouble (DATA_RATE, pkStr, colname, true, def); }
 	public Double getRateValueAsDouble (String pkStr, String colname, boolean cs, Double def) { return getValueAsDouble (DATA_RATE, pkStr, colname,   cs, def); }
+	
+	public Integer getRateValueAsInteger(int    rowId, int    colPos)                          { return getValueAsInteger(DATA_RATE, rowId, colPos);             }
+	public Integer getRateValueAsInteger(int    rowId, int    colPos, Integer def)             { return getValueAsInteger(DATA_RATE, rowId, colPos, def);        }
+	public Integer getRateValueAsInteger(int    rowId, String colname)                         { return getValueAsInteger(DATA_RATE, rowId, colname, true);      }
+	public Integer getRateValueAsInteger(int    rowId, String colname, boolean cs)             { return getValueAsInteger(DATA_RATE, rowId, colname,   cs);      }
+	public Integer getRateValueAsInteger(int    rowId, String colname, Integer def)            { return getValueAsInteger(DATA_RATE, rowId, colname, true, def); }
+	public Integer getRateValueAsInteger(int    rowId, String colname, boolean cs, Integer def){ return getValueAsInteger(DATA_RATE, rowId, colname,   cs, def); }
+	public Integer getRateValueAsInteger(String pkStr, String colname)                         { return getValueAsInteger(DATA_RATE, pkStr, colname, true);      }
+	public Integer getRateValueAsInteger(String pkStr, String colname, boolean cs)             { return getValueAsInteger(DATA_RATE, pkStr, colname,   cs);      }
+	public Integer getRateValueAsInteger(String pkStr, String colname, Integer def)            { return getValueAsInteger(DATA_RATE, pkStr, colname, true, def); }
+	public Integer getRateValueAsInteger(String pkStr, String colname, boolean cs, Integer def){ return getValueAsInteger(DATA_RATE, pkStr, colname,   cs, def); }
+	
+	public Long   getRateValueAsLong  (int    rowId, int    colPos)                           { return getValueAsLong   (DATA_RATE, rowId, colPos);             }
+	public Long   getRateValueAsLong  (int    rowId, int    colPos, Long def)                 { return getValueAsLong   (DATA_RATE, rowId, colPos, def);        }
+	public Long   getRateValueAsLong  (int    rowId, String colname)                          { return getValueAsLong   (DATA_RATE, rowId, colname, true);      }
+	public Long   getRateValueAsLong  (int    rowId, String colname, boolean cs)              { return getValueAsLong   (DATA_RATE, rowId, colname,   cs);      }
+	public Long   getRateValueAsLong  (int    rowId, String colname, Long def)                { return getValueAsLong   (DATA_RATE, rowId, colname, true, def); }
+	public Long   getRateValueAsLong  (int    rowId, String colname, boolean cs, Long def)    { return getValueAsLong   (DATA_RATE, rowId, colname,   cs, def); }
+	public Long   getRateValueAsLong  (String pkStr, String colname)                          { return getValueAsLong   (DATA_RATE, pkStr, colname, true);      }
+	public Long   getRateValueAsLong  (String pkStr, String colname, boolean cs)              { return getValueAsLong   (DATA_RATE, pkStr, colname,   cs);      }
+	public Long   getRateValueAsLong  (String pkStr, String colname, Long def)                { return getValueAsLong   (DATA_RATE, pkStr, colname, true, def); }
+	public Long   getRateValueAsLong  (String pkStr, String colname, boolean cs, Long def)    { return getValueAsLong   (DATA_RATE, pkStr, colname,   cs, def); }
 	
 	public Double getRateValueMax      (int    colPos)                                        { return getMaxValue      (DATA_RATE, null,  colPos);        }
 	public Double getRateValueMax      (String colname)                                       { return getMaxValue      (DATA_RATE, null,  colname, true); }
@@ -7974,6 +8316,9 @@ implements Cloneable, ITableTooltip
 
 		// Create the new object
 		ResultSetMetaDataCached originRsmd = new ResultSetMetaDataCached(rsmd, productName);
+
+		// If the CM needs to "modify" anything in the ResultSet, rename columns or data type modifications
+		originRsmd = modifyResultSetMetaData(originRsmd);
 		
 		// re-map any data types from the SOURCE DBMS to a more "normalized form", for example:
 		//   - Sybase ASE: unsigned int          -->> bigint (and a bunch of other stuff)
@@ -7985,6 +8330,16 @@ implements Cloneable, ITableTooltip
 		return normalizedSourceRsmd;
 	}
 
+	/**
+	 * Implement this if you want to rename columns or do data type modifications etc...
+	 * 
+	 * @param rsmdc    The ResultSetMetaData
+	 * @return The new/modified ResultSetMetaDataCached (by default the base implementation just returns the input
+	 */
+	public ResultSetMetaDataCached modifyResultSetMetaData(ResultSetMetaDataCached rsmdc)
+	{
+		return rsmdc;
+	}
 
 	/**
 	 * This is called when a PCS Database is about to be rolled over into a new database (timestamp)
@@ -8946,10 +9301,11 @@ implements Cloneable, ITableTooltip
 
 	/**
 	 * Does the actual aggregation
+	 * @param counterType 
 	 * 
-	 * @param newSample
+	 * @param cs
 	 */
-	public void calculateAggregateRow(CounterSample newSample)
+	public void calculateAggregateRow(int counterType, CounterSample cs)
 	{
 		Map<String, AggregationType> aggCols = getAggregateColumns();
 
@@ -8957,6 +9313,45 @@ implements Cloneable, ITableTooltip
 			return;
 		if (aggCols.isEmpty())
 			return;
+
+		int colCount = cs.getColumnCount();
+		int rowCount = cs.getRowCount();
+
+		// For DIFF and RATE values only do MIN/MAX
+		if (counterType == DATA_DIFF || counterType == DATA_RATE)
+		{
+			for (int c = 0; c < colCount; c++)
+			{
+				String colName  = cs.getColumnName(c);
+				int    jdbcType = cs.getColSqlType(c);
+
+				AggregationType aggType = aggCols.get(colName);
+				if (aggType != null)
+				{
+					AggregationType.Agg aggregationType = aggType.getAggregationType();
+
+					if (AggregationType.Agg.MIN.equals(aggregationType) || AggregationType.Agg.MAX.equals(aggregationType))
+					{
+						Object dataValue = null;
+
+						// Loop all rows and do SUM
+						for (int r = 0; r < rowCount; r++)
+						{
+							Object colVal = cs.getValueAsObject(r, c);
+
+							if (AggregationType.Agg.MIN.equals(aggregationType))
+								dataValue = privateAggregate_doMinForValue(dataValue, colVal, jdbcType);
+
+							if (AggregationType.Agg.MAX.equals(aggregationType))
+								dataValue = privateAggregate_doMaxForValue(dataValue, colVal, jdbcType);
+						}
+
+						cs.setValueAt(dataValue, getAggregatedRowId(), c);
+					}
+				}
+			}
+			return;
+		}
 
 //System.out.println("");
 //System.out.println(getName() + ": >>> Entring calculateSummaryRow(): pkCols=" + getPk() + ", aggCols=" + aggCols);
@@ -8967,8 +9362,6 @@ implements Cloneable, ITableTooltip
 		//      -> Check for what data type
 		// 
 		//      - Loop rows: and do SUM on all rows
-		int colCount = newSample.getColumnCount();
-		int rowCount = newSample.getRowCount();
 
 		// Create a new List where we will PUT values for ALL columns
 		List<Object> aggRow = new ArrayList<>(colCount);
@@ -8979,23 +9372,28 @@ implements Cloneable, ITableTooltip
 		for (int c = 0; c < colCount; c++)
 		{
 			Object addValue = null;
-			String colName  = newSample.getColumnName(c);
-			int    jdbcType = newSample.getColSqlType(c);
+			String colName  = cs.getColumnName(c);
+			int    jdbcType = cs.getColSqlType(c);
 
 			AggregationType aggType = aggCols.get(colName);
 			if (aggType != null)
 			{
 				Object sumValue = null;
+				Object minValue = null;
+				Object maxValue = null;
 				int    rowCountForAverageCalculation = 0;
 				AggregationType.Agg aggregationType = aggType.getAggregationType();
 				
-				if (private_isSummarizableForJdbcType(jdbcType))
+				if (privateAggregate_isSummarizableForJdbcType(jdbcType))
 				{
 					// Loop all rows and do SUM
 					for (int r = 0; r < rowCount; r++)
 					{
-						Object colVal = newSample.getValueAsObject(r, c);
-						sumValue = private_doSummaryForValue(sumValue, colVal, jdbcType);
+						Object colVal = cs.getValueAsObject(r, c);
+						sumValue = privateAggregate_doSummaryForValue(sumValue, colVal, jdbcType);
+						minValue = privateAggregate_doMinForValue    (minValue, colVal, jdbcType);
+						maxValue = privateAggregate_doMaxForValue    (maxValue, colVal, jdbcType);
+//						System.out.println("calculateAggregateRow("+newSample.getName()+"): r="+r+", colName=|"+getColumnName(c)+"|, colVal=|"+colVal+"|, sumValue="+sumValue+", minValue="+minValue+", maxValue="+maxValue+", jdbcType="+jdbcType);
 
 						if (colVal != null && AggregationType.Agg.AVG.equals(aggregationType))
 						{
@@ -9029,9 +9427,17 @@ implements Cloneable, ITableTooltip
 						}
 						else
 						{
-							addValue = private_doAverageForValue(sumValue, jdbcType, rowCountForAverageCalculation);
+							addValue = privateAggregate_doAverageForValue(sumValue, jdbcType, rowCountForAverageCalculation);
 //							System.out.println(getName() + ":   - " + aggregationType + ": AVG-COL column[col="+c+", name='"+colName+"']: value=|" + addValue +"|, JDBC_TYPE=" + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ".");
 						}
+					}
+					else if (AggregationType.Agg.MIN.equals(aggType.getAggregationType()))
+					{
+						addValue = minValue;
+					}
+					else if (AggregationType.Agg.MAX.equals(aggType.getAggregationType()))
+					{
+						addValue = maxValue;
 					}
 					else // UNKNOWN Aggregation type
 					{
@@ -9054,14 +9460,14 @@ implements Cloneable, ITableTooltip
 				if (pkList != null && pkList.contains(colName))
 				{
 					// Add PK VALUE
-					addValue = private_getAggregatePkValueForJdbcType(jdbcType);
+					addValue = privateAggregate_getAggregatePkValueForJdbcType(jdbcType);
 //System.out.println(getName() + ":   - SUM: PK column[col="+c+", name='"+colName+"']: value=|" + addValue +"|.");
 				}
 				else
 				{
 					// Add NULL value
 					addValue = null;
-					addValue = calculateAggregateRow_nonAggregatedColumnDataProvider(newSample, colName, c, jdbcType, addValue);
+					addValue = calculateAggregateRow_nonAggregatedColumnDataProvider(cs, colName, c, jdbcType, addValue);
 //System.out.println(getName() + ":   - SUM: COL-NOT-IN-SUM-LIST column[col="+c+", name='"+colName+"']: value=|" + addValue +"|.");
 				}
 			}
@@ -9080,7 +9486,7 @@ implements Cloneable, ITableTooltip
 		setAggregatedRow(aggRow);
 		
 		if (isAggregateRowAppendEnabled())
-			_aggregatedRowId = newSample.addRow(this, aggRow);
+			_aggregatedRowId = cs.addRow(this, aggRow);
 
 //		FIXME; Possibly a parameter(pos) to addRow... so we can add row first, last or at a specific position
 //		       This means we need to rebuild the PK->RowId HashMap... (do we want to do that?)
@@ -9163,7 +9569,9 @@ implements Cloneable, ITableTooltip
 		public enum Agg
 		{
 			SUM,
-			AVG
+			AVG,
+			MIN,
+			MAX
 		};
 
 //		public AggregationType(Agg type, String colName, int datatype)
@@ -9216,7 +9624,7 @@ implements Cloneable, ITableTooltip
 	/**
 	 *  Responsible for doing the SUM aggregation for various data types 
 	 */
-	private Object private_doSummaryForValue(Object sumVal, Object val, int jdbcType)
+	private Object privateAggregate_doSummaryForValue(Object sumVal, Object val, int jdbcType)
 	{
 		// No need to SUM, just return "what we got so far"
 		if (val == null)
@@ -9280,7 +9688,7 @@ implements Cloneable, ITableTooltip
 	/**
 	 *  Responsible for doing the AVG calculation for various data types 
 	 */
-	private Object private_doAverageForValue(Object val, int jdbcType, int rowCount)
+	private Object privateAggregate_doAverageForValue(Object val, int jdbcType, int rowCount)
 	{
 		// No need to SUM, just return "what we got so far"
 		if (val == null)
@@ -9334,6 +9742,132 @@ implements Cloneable, ITableTooltip
 		_logger.error(getName() + ": Unhandled JDBC datatype " + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ", in xxx_doSummaryForValue().");
 		return null;
 	}
+	/**
+	 *  Responsible for doing the MIN aggregation for various data types 
+	 */
+	private Object privateAggregate_doMinForValue(Object minVal, Object val, int jdbcType)
+	{
+		// No need to MIN, just return "what we got so far"
+		if (val == null)
+			return minVal;
+
+		boolean dummy = false;
+		if (dummy) 
+		{
+			// dummy just to simplify commenting out of the first if statement
+		}
+//		else if (jdbcType == java.sql.Types.TINYINT)
+//		{
+//		}
+		else if (jdbcType == java.sql.Types.SMALLINT)
+		{
+			if (minVal == null) 
+				minVal = ((Number)val).shortValue();
+
+			return new Short( (short) Math.min( ((Number)minVal).shortValue(), ((Number)val).shortValue() ) );
+		}
+		else if (jdbcType == java.sql.Types.INTEGER)
+		{
+			if (minVal == null) 
+				minVal = ((Number)val).intValue();
+
+			return Math.min( ((Number)minVal).intValue(), ((Number)val).intValue() );
+		}
+		else if (jdbcType == java.sql.Types.BIGINT)
+		{
+			if (minVal == null) 
+				minVal = ((Number)val).longValue();
+
+			return Math.min( ((Number)minVal).longValue(), ((Number)val).longValue() );
+		}
+		else if (jdbcType == java.sql.Types.FLOAT || jdbcType == java.sql.Types.REAL)
+		{
+			if (minVal == null) 
+				minVal = ((Number)val).floatValue();
+
+			return Math.min( ((Number)minVal).floatValue(), ((Number)val).floatValue() );
+		}
+		else if (jdbcType == java.sql.Types.DOUBLE)
+		{
+			if (minVal == null) 
+				minVal = ((Number)val).doubleValue();
+
+			return Math.min( ((Number)minVal).doubleValue(), ((Number)val).doubleValue() );
+		}
+		else if (jdbcType == java.sql.Types.NUMERIC || jdbcType == java.sql.Types.DECIMAL)
+		{
+			if (minVal == null) 
+				minVal = (BigDecimal) val;
+
+			return ((BigDecimal)minVal).min( (BigDecimal) val );
+		}
+		
+		_logger.error(getName() + ": Unhandled JDBC datatype " + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ", in private_doMinForValue().");
+		return null;
+	}
+	/**
+	 *  Responsible for doing the MIN aggregation for various data types 
+	 */
+	private Object privateAggregate_doMaxForValue(Object maxVal, Object val, int jdbcType)
+	{
+		// No need to MAX, just return "what we got so far"
+		if (val == null)
+			return maxVal;
+
+		boolean dummy = false;
+		if (dummy) 
+		{
+			// dummy just to simplify commenting out of the first if statement
+		}
+//		else if (jdbcType == java.sql.Types.TINYINT)
+//		{
+//		}
+		else if (jdbcType == java.sql.Types.SMALLINT)
+		{
+			if (maxVal == null) 
+				maxVal = ((Number)val).shortValue();
+
+			return new Short( (short) Math.max( ((Number)maxVal).shortValue(), ((Number)val).shortValue() ) );
+		}
+		else if (jdbcType == java.sql.Types.INTEGER)
+		{
+			if (maxVal == null) 
+				maxVal = ((Number)val).intValue();
+
+			return Math.max( ((Number)maxVal).intValue(), ((Number)val).intValue() );
+		}
+		else if (jdbcType == java.sql.Types.BIGINT)
+		{
+			if (maxVal == null) 
+				maxVal = ((Number)val).longValue();
+
+			return Math.max( ((Number)maxVal).longValue(), ((Number)val).longValue() );
+		}
+		else if (jdbcType == java.sql.Types.FLOAT || jdbcType == java.sql.Types.REAL)
+		{
+			if (maxVal == null) 
+				maxVal = ((Number)val).floatValue();
+
+			return Math.max( ((Number)maxVal).floatValue(), ((Number)val).floatValue() );
+		}
+		else if (jdbcType == java.sql.Types.DOUBLE)
+		{
+			if (maxVal == null) 
+				maxVal = ((Number)val).doubleValue();
+
+			return Math.max( ((Number)maxVal).doubleValue(), ((Number)val).doubleValue() );
+		}
+		else if (jdbcType == java.sql.Types.NUMERIC || jdbcType == java.sql.Types.DECIMAL)
+		{
+			if (maxVal == null) 
+				maxVal = (BigDecimal) val;
+
+			return ((BigDecimal)maxVal).max( (BigDecimal) val );
+		}
+		
+		_logger.error(getName() + ": Unhandled JDBC datatype " + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ", in private_doMaxForValue().");
+		return null;
+	}
 
 
 	/**
@@ -9341,7 +9875,7 @@ implements Cloneable, ITableTooltip
 	 * @param jdbcType
 	 * @return
 	 */
-	private Object private_getAggregatePkValueForJdbcType(int jdbcType)
+	private Object privateAggregate_getAggregatePkValueForJdbcType(int jdbcType)
 	{
 		String strVal = "_Total";
 
@@ -9402,7 +9936,7 @@ implements Cloneable, ITableTooltip
 	 * @param jdbcType
 	 * @return
 	 */
-	private boolean private_isSummarizableForJdbcType(int jdbcType)
+	private boolean privateAggregate_isSummarizableForJdbcType(int jdbcType)
 	{
 		switch (jdbcType)
 		{

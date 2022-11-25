@@ -24,15 +24,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
-<H2>YYYY-MM-DD</H2>
+<H2>2022-11-23</H2>
 <UL>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<H3>Generic - Changes that affects all DbxTune tools</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
 		<LI>Improved removal of old HPROF files</LI>
-		<LI>Alarms
-			<LI>Bugfix: Alarms may be canceled to early, if for example any 'timout' happened when the CM refreshed it's data (or other errors happened)</LI>
+		<LI><b>Alarms Handeling:</b>
 			<UL>
 				<LI>New: AlarmEventClientErrorMsg           -- If the AseSqlCapture part sees an Error Number that is severe, then raise alarm.</LI>
 				<LI>new: AlarmEventClientErrorMsgRate       -- If we receive "bursts" of Client Error Messages (more than 10 per second), raise alarm.</LI>
@@ -60,13 +59,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>Changed: AlarmEventOsSwapping                -- Have a Max value where we "cap" off at, so that peaks will be removed and we see a Average without peeaks (the calculation is 1.5 of the threshold value)</LI>
 				<LI>Changed: OsLOadAverage                       -- Added a chart that shows what happened in the last hour</LI>
 				<LI>Changed: AlarmEventOsSwapping                -- Added a chart that shows what happened in the last hour</LI>
+
+				<LI>Bugfix: Alarms may be canceled to early, if for example any 'timout' happened when the CM refreshed it's data (or other errors happened)</LI>
 			</UL>
 		</LI>
 		<LI>AlarmWriterToMail: Changed temple for Subject to include ${severity}, also changed encoding to UTF-8</LI>
 		<LI>All CM's -- SqlPrefix -- Prefix SQL Statements issued by the CounterModel with /* DbxTuneAppName:CmName */ so we can see in the daily report that it's AseTune / PostgresTune etc that are responsible for the SQL Statements issued</LI>
 		<LI>new: Menu -> Tools -> 'Create Daily Summary Report...' Opens a dialog where you can produce a Daily Summary Report on any recording database.</LI>
 		<LI>Focusable Tooltip is now resizable in a better way (all edges can be used)</LI>
-		<LI>new cmdline interface 'dsr.bat' or 'dsr.sh' for Daily Summary Report</LI>
+		<LI>new cmdline interface <code>dsr.bat</code> or <code>dsr.sh</code> for Daily Summary Report</LI>
 		<LI>Changed all CM's for Alarm Debugging to print threshold values earlier</LI>
 		<LI>bugfix: Filter Field didn't allow [] in the column names (the bug was introduced when changing version of JSqlParser)</LI>
 		<LI>NoGUI - if we have a previous connection, then do not exit (when checking for "proper monitoring configuration") when connecting.</LI>
@@ -116,8 +117,25 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added the ability for a CM to add an Aggregated row (SUM or AVG)</LI>
 		<LI>Aggregated rows will be highlighted in GUI using a "light blue" background</LI>
 		<LI>On AlarmEventOsLoadAverage added charts for "Adjusted Load Average"</LI>
+		<LI>Created a Chart Data History Manager, to hold some chart's in memory, so we later can use/attach, them to various alarms. Each CM will have to enable what charts that needs such history</LI>
+		<LI>Made a note in the cmdline switch help that H2 is the only <b>supported</b> database for the moment.</LI>
+		<LI>The ability to have a "SUM/AVG/MIN/MAX" row at the end of any CM (each CM needs to declare the behaviour, if it's neede; what column etc...)<br>
+		    Note: Aggregated rows will be discarded from CM methods like: getMaxValue(), getMinValue(), getSumValue(), getCountGtZero(), getAvgValue() </LI>
+		<LI>Source DBMS data type translation. Each CM can implement modifyResultSetMetaData() to change data type (this was implented due to Postgres 
+            in some cases returned Precision and Scale with 0 values (it probably ment use "max" value, which is hard to translate into "other" DBMS 
+            when storing data in a PCS). Now there is a way to handle this. Either use SQL CAST or if not desirable, use this method to set Presision and Scale)</LI>
+		<LI>PCS: Data Type Resolver -- Prints Warnings if Presision and Scale are 0 for NUMERIC and DECIMAL datatypes. (also if Presision is 0 for other columns)</LI>
 
-		<LI>Daily Summary Report Changes
+		<LI><b>OsHostMonitoring (for all DbxTune Collectors)</b><br>
+			<UL>
+				<LI><b>CmOsDiskSpace</b> -- AlarmEventLowOsDiskFreeSpace -- Available-MB -- now contains a history chart</LI>
+				<LI><b>CmOsDiskSpace</b> -- AlarmEventLowOsDiskFreeSpace -- UsedPct -- now contains a history chart</LI>
+				<LI><b>CmOsIostat   </b> -- AlarmEventOsDiskUtilPct -- utilPct -- now contains a history chart</LI>
+				<LI><b>SshConnection</b> -- You can enable a bit more logging with property: <code>SshConnection.logging.enable</code></LI>
+			</UL>
+		</LI>
+
+		<LI><b>Daily Summary Report Changes</b><br>
 			<UL>
 				<LI>Changed a bunch of things :)</LI>
 				<LI>Reports split in 2. One short version (which will be the main content for mails), and one long version (it will be attached in mails)</LI>
@@ -136,6 +154,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>The GUI Version can now create a report on the current recording</LI>
 				<LI>Added section to see how large the PCS Tables are (mostly used by me for debugging)</LI>
 				<LI>Recording Information -- Added line "Recording Start Day" so we can easely see what DAY this report reflects (not just the date)</LI>
+				<LI>Changed some formating for sparkline (in Microsoft Outlook Version ### doesnt to a good job with rendering/layout of small images...)</LI>
+				<LI>The HTML Report -- Sections can now be collapsed</LI>
+				<LI>The HTML Report -- Chart.JS and Sparkline initialization can now be stopped with a button.</LI>
+				<LI>Mail Sender -- Of failure -- Try to send a "simpler" mail about the issue </LI>
 			</UL>
 		</LI>
 
@@ -174,6 +196,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>index page: Only one button per server, which is now a drop-down box where you can choose: Various Actions</LI>
 		<LI>Layout on the index page can also be controlled with "Grouping" and "Labels". in file '~/.dbxtune/dbxc/conf/SERVER_LIST'. Example: '#FORMAT; GROUP; Production Servers;' or '#FORMAT; LABEL; Some Sub-level text'</LI>
 		<LI>Refresh of DbxTune collectors via the Web Interface (this is primary for refresh of Active SQL Statements)</LI>
+		<LI>When reading graphs; Series that are empty (only nulls within the search period) will not be displayed. (This can be overridden with property: <code>CentralPersistReader.getGraphData.removeSeriesWhenAllRowsAreNull=true|false)</code></LI>
  	</UL>
 
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -199,20 +222,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>Added skip capabilities for alarm BlockingLockAlarm, you can skip on columns 'Command', 'Application', 'SrvUserName', and 'HostName'. The default is to skip where Command = <code>^(DUMP DATABASE|DUMP TRANSACTION).*</code> </li>
 			<li>raise AlarmEventLongRunningStatement when a statement has been executed for more than 3 hours (by default), 'skip' can be done on: dbname, Application, SrvUserName, HostName, Command</li>
 			<li>AlarmEventBlockingLockAlarm now also contains SPID, so we can report multiple blocking locks</li>
-			<li>Possible to filter out rows that hasnt been holding locks for more than X seconds (property: CmActiveStatements.sample.holdingLocks.gt.SecondsWaiting=##)</li>
-		</ul>
-		</LI>
-
-		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
-		<LI>
-		<b>CmSqlStatement - tab: SQL Statements</b><br>
-		<ul>
-			<li>New column: 'errorMsgCountMap'       -- A JSON String, which contains {MsgNumber={DBName=count}} example: {"1105":{"db1":5}} </li>
-			<li>New column: 'inProcNameNullCount'    -- diff calculated: Estimated SQL Statements requests executed where ProcedureId was not 0, but the ProcedureName could NOT be found</li>
-			<li>New column: 'inProcNameNullCountAbs' -- absolute values: Estimated SQL Statements requests executed where ProcedureId was not 0, but the ProcedureName could NOT be found</li>
-			<li>changed default for CmSqlStatement.alarm.system.if.errorCount.gt from 10 to 20</li>
-			<li>Bugfix - fixed null pointer exception in error number mapping count</li>
-			
+			<li>Possible to filter out rows that hasnt been holding locks for more than X seconds (property: <code>CmActiveStatements.sample.holdingLocks.gt.SecondsWaiting=##</code>)</li>
 		</ul>
 		</LI>
 
@@ -254,11 +264,21 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
+		<b>CmEngines - tab: Engines</b><br>
+		<ul>
+			<li>AlarmEventHighCpuUtilization now contains a history chart</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
 		<b>CmErrorLog</b><br>
 		<ul>
 			<li>for AlarmEventErrorLogEntry also send a description of the error number</li>
 			<li>Alarm: Added error number 1621 to the SkipList</li>
 			<li>Added 'AlarmEventProcessStackTrace' and 'AlarmEventProcessTimeSliceError'. Note: only 'StackTrace' will be kept at the en (but for now I overlap the alarms until properly tested)</li>
+			<li>AlarmEventConfigResourceIsUsedUp -- number of user connections -- now contains a history chart</li>
+			<li>AlarmEventFullTranLog -- now contains a history chart</li>
 		</ul>
 		</LI>
 
@@ -279,6 +299,19 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>Added HTML Table with all info to the alarms: AlarmEventLastBackupFailed, AlarmEventOldBackup, AlarmEventOldTranLogBackup</li>
 			<li>New columns 'DBOptions', 'status*' and 'minLogMode' all to support DBOptions</li>
 			<li>New alarm: AlarmEventDatabaseOption when above 'DBOptions' is changed.</li>
+			<li>AlarmEventFullTranLog -- now contains a history chart</li>
+			<li>AlarmEventLowDbFreeSpace -- now contains a history chart</li>
+			<li>AlarmEventLowLogFreeSpace -- LowLogFreeSpaceInMb -- now contains a history chart</li>
+			<li>AlarmEventLowDbFreeSpace -- LowDbFreeSpaceInPct -- now contains a history chart</li>
+			<li>AlarmEventLowLogFreeSpace -- LowLogFreeSpaceInPct -- now contains a history chart</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmPCacheModuleUsage - tab: Proc Cache Module Usage</b><br>
+		<ul>
+			<li>AlarmEventStatementCacheAboveConfig -- StatementCacheUsage -- now contains a history chart</li>
 		</ul>
 		</LI>
 
@@ -293,10 +326,33 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
+		<b>CmSqlStatement - tab: SQL Statements</b><br>
+		<ul>
+			<li>New column: 'errorMsgCountMap'       -- A JSON String, which contains {MsgNumber={DBName=count}} example: {"1105":{"db1":5}} </li>
+			<li>New column: 'inProcNameNullCount'    -- diff calculated: Estimated SQL Statements requests executed where ProcedureId was not 0, but the ProcedureName could NOT be found</li>
+			<li>New column: 'inProcNameNullCountAbs' -- absolute values: Estimated SQL Statements requests executed where ProcedureId was not 0, but the ProcedureName could NOT be found</li>
+			<li>changed default for CmSqlStatement.alarm.system.if.errorCount.gt from 10 to 20</li>
+			<li>Bugfix - fixed null pointer exception in error number mapping count</li>
+			<li>AlarmEventClientErrorMsgRate -- errorCount -- now contains a history chart</li>
+			<li>AlarmEventClientErrorMsg -- error=1105 -- now contains a history chart</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmSqlStatementPerDb - tab: SQL Statements/DB</b><br>
+		<ul>
+			<li>New Performance Counter, to check what databases that has the most calls and CPU, Logical/Physical usage.<br>
+			    NOTE: This requires use to make a recording, since we depends on the SQL Capture subsystem</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
 		<b>CmStatementCache - tab: Statement Cache</b><br>
 		<ul>
 			<li>Bugfix for CacheHitPct which was based on Absolute values instead of DIFF values, this lead to no or incorrect alarm AlarmEventConfigResourceIsLow(..."statement cache size"...)</li>
-			<li> - CmStmntCacheDetails - added columns 'TotalEstWaitTime' and 'TotalEstWaitTimeDiff' -- Total Estimated Wait Time... Algorithm: TotalElapsedTime - TotalCpuTime</li>
+			<li>AlarmEventConfigResourceIsLow -- statement cache size -- now contains a history chart</li>
 		</ul>
 		</LI>
 
@@ -304,7 +360,27 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>
 		<b>CmStmntCacheDetails - tab: Statement Cache Details</b><br>
 		<ul>
-			<li> added columns 'TotalEstWaitTime' and 'TotalEstWaitTimeDiff' -- Total Estimated Wait Time... Algorithm: TotalElapsedTime - TotalCpuTime</li>
+			<li>added columns 'TotalEstWaitTime' and 'TotalEstWaitTimeDiff' -- Total Estimated Wait Time... Algorithm: TotalElapsedTime - TotalCpuTime</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmSummary - tab: Summary</b><br>
+		<ul>
+			<li>AlarmEventHighCpuUtilization -- TotalCPUTime -- now contains a history chart</li>
+			<li>AlarmEventHighCpuUtilization -- UserCPUTime -- now contains a history chart</li>
+			<li>AlarmEventHighCpuUtilization -- IoCPUTime -- now contains a history chart</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmSysLoad - tab: System Load</b><br>
+		<ul>
+			<li>AlarmEventRunQueueLength -- RunQueueLengthAvg1min -- now contains a history chart</li>
+			<li>AlarmEventRunQueueLength -- RunQueueLengthAvg5min -- now contains a history chart</li>
+			<li>AlarmEventRunQueueLength -- RunQueueLengthAvg15min -- now contains a history chart</li>
 		</ul>
 		</LI>
 
@@ -324,6 +400,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>DDL Lookup: extract SQL Text from XML Plan, extract table names and send those to DDL Storage</li>
 			<li>DDL Lookup: If DDL Stored object are views... extract table names and send those to DDL Storage</li>
 			<li>DDL Lookup: Extract trigger dependencies even if the full dependant 'sp_depends' option is enabled.</li>
+			<li>Now also aggregate counters on a database level to support the new CM: CmSqlStatementPerDb</li>
+			
 		</ul>
 		</LI>
 
@@ -350,6 +428,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>For table information VIEW added: 'DDL Definition'</li>
 			<li>For table information TABLE added: 'Created', 'Sample Time', 'DDL Info', 'Triggers DDL'</li>
 			<li>For table information INDEX/DATA added: 'RowsInserted', 'RowsUpdated', 'RowsDeleted', 'LogicalReads', 'PhysicalReads', 'APFReads', 'LockWaits', 'SharedLockWaitTime', 'ExclusiveLockWaitTime', 'UpdateLockWaitTime'.</li>
+			<li>Added section AseCmSqlStatementPerDb -- SQL Statement Execution Statistics per Database (origin: CmSqlStatementPerDb / monSysStatement)</li>
 		</ul>
 		</LI>
 
@@ -361,7 +440,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>IqTune - Sybase/SAP IQ (The Column Storage Database) </H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to evolve</LI>
+		<LI>Setting AutoCommit=false at the end of a sample, and AutoCommit=true during sampling data.</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -386,6 +465,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmWsRepLatency</b>      - Fixed some bugs (with "" empty logical database names)</LI>
 		<LI><b>CmAdminDiskSpace</b>    - fix in "usedPct" calculation, which is just a info number sent as the alarm</LI>
 		<LI><b>CmWsRepLatency</b>      - bugfix: if B srv was down, sometimes we sent alarm RsMissingLogicalConnection (hoefully this is solved now)</LI>
+		<LI><b>CmAdminDiskSpace</b>    - AlarmEventRsSdUsage -- SpaceUsedSegs -- now contains a history chart</LI>
+		<LI><b>CmAdminDiskSpace</b>    - AlarmEventRsSdUsage -- SpaceFreeSegs -- now contains a history chart</LI>
+		<LI><b>CmAdminDiskSpace</b>    - AlarmEventRsSdUsage -- SpaceUsedPct -- now contains a history chart</LI>
+		<LI><b>CmDbQueueSizeInRssd</b> - AlarmEventRsDbQueueSize -- size -- now contains a history chart</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -415,6 +498,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>new: CmExecutionTime - Execution times for individual Oracle Modules using 'V$SYS_TIME_MODEL'</LI>
 		<LI>new: CmSqlStats - shows Oracle SQL Exec/CPU/BUFFER_GETS Statistics using 'V$SQLSTATS'</LI>
 		<LI>PCS: Changed how the JDBC data type information was interpreted, some INTEGER was changed into BIGINT (this is only valid if you are recording data)</LI>
+		<LI>Setting AutoCommit=false at the end of a sample, and AutoCommit=true during sampling data.</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -447,6 +531,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>DBMS Configuration </b> - Also get linked servers using 'exec sp_linkedservers'</LI>
 		<LI><b>DBMS Configuration </b> - Added check to check if 'instant file initialization' is enabled at the OS Level</LI>
 		<LI><b>DBMS Configuration </b> - Added tab "SysMasterFiles" to see ALL files the SQL Server is using (CmDatabase only shows first file for each database)</LI>
+		<LI><b>DBMS Configuration </b> - Added capture for Resource Governor</LI>
+		<LI><b>DBMS Configuration </b> - Added new checks/issues for 'optimize for ad hoc workloads', 'max server memory (MB)', 'remote admin connections', 'cost threshold for parallelism'</LI>
+		<LI><b>DBMS Configuration </b> - Added tab for tempdb. Also with checking issues for 'temdb files &lt; cores', 'datafiles_equal_size', 'datafiles_equal_grow_size'</LI>
+		<LI><b>DBMS Configuration </b> - Added SuspectPages, so we can get this in a "static" way also. Also DbmsConfigIssue if *anything* was found (to detect older/existing SuspectPages errors)</LI>
 
 		<LI><b>CmActiveStatements </b> - For blocking locks (marked as red background) - only the root blocker(s) are marked. logic (ImBlockingOtherSessionIds!="" and ImBlockedBySessionId=0)</LI>
 		<LI><b>CmActiveStatements </b> - added column 'dop - Degree Of Parallelism' if version is above 2016</LI>
@@ -465,12 +553,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmActiveStatements </b> - bugfix: Only report 'root cause' session_id's on blocking locks </LI>
 		<LI><b>CmActiveStatements </b> - AlarmEventBlockingLockAlarm now also contains SPID, so we can report multiple blocking locks </LI>
 		<LI><b>CmActiveStatements </b> - raise alarm 'AlarmEventHoldingLocksWhileWaitForClientInput' when a SPID has been holding locks at DBMS but not issuing any new commands from the client side.</LI>
+		<LI><b>CmActiveStatements </b> - New Columns 'TempdbUsageMbUser', 'TempdbUsageMbInternal', which is a "break up" of 'TempdbUsageMb', which is now calculated in a different way (values fetched in CmSummary and used in other "various" places)</LI>
+		<LI><b>CmActiveStatements </b> - New Columns 'estimated_finish_time', which is an estimate of 'estimated_completion_time'</LI>
 
 		<LI><b>CmActiveStatements </b> - new column 'tran_name' to easier track if this is an "implicit" or a "normal" transaction </LI>
 		<LI><b>CmActiveStatements </b> - alarm HoldingLocksWhileWaitForClientInput, new option to only send alarm if it hold exclusive locks (CmActiveStatements.alarm.system.if.HoldingLocksWhileWaitForClientInputInSec.exclusiveLocksOnly=true|false) default=true</LI>
 
 		<LI><b>CmAlwaysOn         </b> - Granting select,insert,update,delete on table 'sqlserverTune_ag_dummy_update' was enhanced (note: this will still fail if the connection do not have authorization to create the table in the database. </LI>
 		<LI><b>CmAlwaysOn         </b> - Added some debug info, when remote queries goes "bad"</LI>
+		<LI><b>CmAlwaysOn         </b> - Using temp tables for intermidiate storage of tables instead of the join (this to see if it performs better)</LI>
 
 		<LI><b>CmDatabases        </b> - Added 'OldestTranName' and 'OldestTranId' - Now shows the transaction name and id (watch out for OldestTranName 'implicit_transaction', which indicates that AotoCommit is FALSE, which introduces more blocking locks)</LI>
 		<LI><b>CmDatabases        </b> - fixed bug: LowDbFreeSpaceInMb and LowLogFreeSpaceInMb sometimes didn't fire correctly</LI>
@@ -485,6 +576,16 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmDatabases        </b> - new columns: 'LastGoodCheckDbTime', 'LastGoodCheckDbDays' to reflect what we have executed a DBCC CHECKDB. NOte: Only in 2016 SP2 and later.</LI>
 		<LI><b>CmDatabases        </b> - raise AlarmEventDbccCheckdbAge when dbcc checkdb hasn't been executed. Default is 99999 (Basically turned OFF)</LI>
 		<LI><b>CmDatabases        </b> - Added columns 'DbSizeInMbDiff' , 'DataSizeInMbDiff' and 'LogSizeInMbDiff' so we can easier see database growth and send alarm: AlarmEventDbSizeChanged</LI>
+		<LI><b>CmDatabases        </b> - column 'OldestTranTempdbUsageMb' is replaced with 'OldestTranTempdbUsageMbAll', 'OldestTranTempdbUsageMbUser' and 'OldestTranTempdbUsageMbInternal', and fetched from CmSummary new TempdbUsagePerSpid sub system.</LI>
+		<LI><b>CmDatabases        </b> - AlarmEventLowDbFreeSpace -- LowDbFreeSpaceInMb -- now contains a history chart</LI>
+		<LI><b>CmDatabases        </b> - AlarmEventLowLogFreeSpace -- LowLogFreeSpaceInMb -- now contains a history chart</LI>
+		<LI><b>CmDatabases        </b> - AlarmEventLowDbFreeSpace -- LowDbFreeSpaceInPct -- now contains a history chart</LI>
+		<LI><b>CmDatabases        </b> - AlarmEventLowLogFreeSpace -- LowLogFreeSpaceInPct -- now contains a history chart</LI>
+		<LI><b>CmDatabases        </b> - AlarmEventLowOsDiskFreeSpace -- LowOsDiskFreeSpaceInMb -- now contains a history chart</LI>
+		<LI><b>CmDatabases        </b> - AlarmEventLowOsDiskFreeSpace -- LowOsDiskFreeSpaceInPct -- now contains a history chart</LI>
+		<LI><b>CmDatabases        </b> - AlarmEventQueryStoreLowFreeSpace -- QsUsedSpaceInPct -- now contains a history chart</LI>
+		<LI><b>CmDatabases        </b> - AlarmEventQueryStoreLowFreeSpace -- QsFreeSpaceInMb -- now contains a history chart</LI>
+		<LI><b>CmDatabases        </b> - AlarmEventDbSizeChanged -- DbSizeInMbDiff -- now contains a history chart</LI>
 
 		<LI><b>CmDeviceIo         </b> - 3 new Graph: Number of Disk Operations, for ALL Devices (Read+Write, Read, Write)</LI>
 
@@ -550,6 +651,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmSessions         </b> - new column 'endpoint_type' so we can see what type of coonection it's using (DAC, SHARED_MEMORY, NAMED_PIPES, TCP, VIA) </LI>
 		<LI><b>CmSessions         </b> - skip alarm 'LongRunningStatement' if column 'executing_managed_code' is true, and 'wait_type' is 'SLEEP_TASK' </LI>
 		<LI><b>CmSessions         </b> - added columns 'tran_age_ms', and a few other columns for completion time and elaped time </LI>
+		<LI><b>CmSessions         </b> - Columns 'tmp_user_objects_alloc_mb', 'tmp_user_objects_dealloc_mb', 'tmp_user_objects_deferred_dealloc_mb', 'tmp_internal_objects_alloc_mb' and 'tmp_internal_objects_dealloc_mb'. Are now DIFF Calculated.</LI>
+		<LI><b>CmSessions         </b> - Columns 'tmp_user_objects_now_mb' and 'tmp_internal_objects_now_mb' are renamed to 'tmp_user_objects_used_mb' and 'tmp_internal_objects_used_mb'.</LI>
+		<LI><b>CmSessions         </b> - Columns 'tmp_*' columns are now fetched from CmSummary new TempdbUsagePerSpid sub system.</LI>
 
 		<LI><b>CmSpidWait         </b> - added column 'WaitClass', which tries to group 'wait_type' in groups ... this according to https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15</LI>
 
@@ -558,14 +662,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmSummary          </b> - Added option 'CmSummary.oldestOpenTran.discard.tempdb' to NOT alarm on old transactions in tempdb</LI>
 		<LI><b>CmSummary          </b> - new columns: some new columns for oldestOpenTran***</LI>
 		<LI><b>CmSummary          </b> - Skip alarm 'LongRunningTransaction' properies oldestOpenTran(LoginName|Cmd|Name|WaitType)</LI>
+		<LI><b>CmSummary          </b> - now monitors the table 'msdb.dbo.suspect_pages' for suspect pages, and sends AlarmEventSuspectPages is any are found. (This can be disabled by property: <code>CmSummary.suspectPageCount.enabled=false</code>, <code>CmSummary.alarm.system.if.suspectPageCount.gt=###</code>)</LI>
+		<LI><b>CmSummary          </b> - Column 'tempdbUsageMbAll', 'tempdbUsageMbUser' and 'tempdbUsageMbInternal' are now DIFF calculated.</LI>
+		<LI><b>CmSummary          </b> - new graph -- Tempdb Usage by SPID's in MB -- with 3 series: 'All', 'User Objects', 'Internal Objects'</LI>
+		<LI><b>CmSummary          </b> - now gets tempdb usage, which is used by various other CM's (This can be disabled by property: <code>CmSummary.sample.tempdb.spid.usage=false</code>)</LI>
 
 		<LI><b>CmTableSize        </b> - using the DbmsObjectIdCache to lookup database_id-&gt;DbName, object_id-&gt;(TableName, SchemaName), index_id-&gt;IndexName </LI>
 
 		<LI><b>CmTempdbSpidUsage  </b> - Completely rewritten, hopefully this one will work better</LI>
-		<LI><b>CmTempdbSpidUsage  </b> - better version handling (older versions of SQL-Server, then we skip more columns, not yet invented)</LI>
-		<LI><b>CmTempdbSpidUsage  </b> - Added option to include/exclude 'InternalObject' in 'TotalUsageMb'. The internal objects seems to show strange values in some/most cases. This can be changed with the GUI or property 'CmTempdbSpidUsage.sample.TotalUsageMb.includeInternalObjects', where the default is false.</LI>
-		<LI><b>CmTempdbSpidUsage  </b> - Added Alarm 'TempdbSpidUsage', when a specific SPID is using to much space. Property: 'CmTempdbSpidUsage.alarm.system.if.TotalUsageMb_abs.gt' with a default of 20GB or 20480MB, there are properties to skipp some logins and progran_names</LI>
-		<LI><b>CmTempdbSpidUsage  </b> - On alarm: Extra info: Changed HTML Table to be on ABS instead of RATE</LI>
 		
 		<LI><b>CmTempdbUsage      </b> - added 2 new graphs 'Tempdb Usage by Object Type, in MB, {All|Subset}' -- Shows "Version Store", "Internal Objects", "User Objects", "Mixed Extents", "Allocated Space", "Free Space", "Total Space"</LI>
 		<LI><b>CmTempdbUsage      </b> - better version handling (older versions of SQL-Server, then we skip more columns, not yet invented)</LI>
@@ -607,9 +711,6 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>html-query-plan: upgraded to version 2.6.1 </LI>
 		<LI>Changed how to detect if the SQL-Server is a 'Azure Synapse Analytics' or 'Parallel Data Warehouse'. now using: select ServerProperty('EngineEdition')</LI>
 		<LI>Tooltip and Alarm with ShowPlanXML content... show a simplified plan with a Unordered List (that is indented to show children)</LI>
-		<LI>DBMS Config: added capture for Resource Governor</LI>
-		<LI>DBMS Config: Added new checks/issues for 'optimize for ad hoc workloads', 'max server memory (MB)', 'remote admin connections', 'cost threshold for parallelism'</LI>
-		<LI>DBMS Config: Added tab for tempdb. Also with checking issues for 'temdb files &lt; cores', 'datafiles_equal_size', 'datafiles_equal_grow_size'</LI>
 		<LI>all collectors had a SQL change. the Collector name is injected *after* the select statement (for easier identification when monitoring)</LI>
 		<LI>DDL Lookup: extract SQL Text from XML Plan, extract table names and send those to DDL Storage</LI>
 		<LI>DDL Lookup: If DDL Stored object are views... extract table names and send those to DDL Storage</LI>
@@ -619,6 +720,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added scheduler work to examen Query Store, to get top collected SQL Statement, parse them for table names and send them to the DDL Storage in the PCS (for later use by Daily Summary Reports)</LI>
 		<LI>DDL extract in SqlServer removed 'OPTIMIZE_FOR_SEQUENTIAL_KEY', since it's only for SQL Server 2019 (might be added in at a later stage)</LI>
 		<LI>ObjectLookupInspecor: added some [qutedIdentifiers] around dbname... to handle databases with spaces in them</LI>
+		<LI>When showing a XML Showplan in a tooltip. Added option 'Open in Azure Data Studio'</LI>
 		
 		<!-- ~~~~~ Daily Report ~~~~~ -->
 		<LI>
@@ -667,19 +769,34 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>onConnect, execute: set session work_mem = '128MB'       Can be changed by config: PostgresTune.onMonConnect.set.dbms.option.work_mem=SOME_VALUE|DEFAULT</LI>
 		<LI>onConnect, execute: set session temp_buffers = '128MB'   Can be changed by config: PostgresTune.onMonConnect.set.dbms.option.temp_buffers=SOME_VALUE|DEFAULT</LI>
 		<LI>Change how we collect current time from: CURRENT_TIMESTAMP to CLOCK_TIMESTAMP()</LI>
+		<LI>Setting AutoCommit=false at the end of a sample, and AutoCommit=true during sampling data.</LI>
+		<LI>Created a IP to Hostname cache, if we timeout on the lookup the cache is enabled for 10 minutes (property: <code>CounterControllerPostgres.ipToHostCache.ttl.ms=600000</code>)</LI>
 
 		<LI><b>CmActiveStatements   </b> - new collector: CmActiveStatements, view SQL Statements that are active now</LI>
+		<LI><b>CmPgArchiver         </b> - new collector: containing data about the archiver process of the cluster</LI>
 		<LI><b>CmPgActivity         </b> - added column 'StatementExecInSec', and raise AlarmEventLongRunningStatement when a statement has been executed for more than 3 hours (by defualt), 'skip' can be done on: dbname, login, cmd and tranName</LI>
 		<LI><b>CmPgActivity         </b> - added columns: 'im_blocked_by_pids' and 'im_blocking_other_pids'</LI>
 		<LI><b>CmPgActivity         </b> - added columns: 'backend_start_age', 'xact_start_age', 'query_start_age', 'state_change_age' and 'xactTimeInMs'</LI>
 		<LI><b>CmPgDatabase         </b> - Added graphs 'CacheHitPct' and 'TotalReads'</LI>
+		<LI><b>CmPgDatabase         </b> - Added graph -- Rows Inserted, Updated and Deleted per second</LI>
+		<LI><b>CmPgDatabase         </b> - AlarmEventConfigResourceIsLow -- free_connections -- now contains a history chart</LI>
 		<LI><b>CmPgReplication      </b> - new collector: Check Replication</LI>
+		<LI><b>CmPgSlru             </b> - new collector: Postgres accesses certain on-disk information via SLRU (simple least-recently-used) caches.</LI>
 		<LI><b>CmPgStatements       </b> - Now works with Postgres 9.3 (and possibly versions below that), where I "fake" the 'queryid' by taking a md5 checksum (first 16 chars) and converting that to an bigint</LI>
 		<LI><b>CmPgStatements       </b> - new columns for later versions (up to version 14)</LI>
 		<LI><b>CmPgStatements       </b> - Parse SQL Text and send of tables for top ## statements to DDL Store</LI>
+		<LI><b>CmPgStatementsSumDb  </b> - new collector: Statements by DB</LI>
+		<LI><b>CmPgWal              </b> - new collector: containing data about WAL activity of the cluster, which has 3 graphs 'WAL Records per Second', 'WAL Writes per Second' and 'WAL Write Time in ms'</LI>
+		<LI><b>CmPgLocks            </b> - new collector: All locks in the Postgres Instance. (from pg_locks), ObjectID's will be resolved using DbmsObjectIdCache</LI>
 		<LI><b>CmSummary            </b> - added column 'in_recovery' to check if we connected to the ACTIVE or the STANDBY instance.</LI>
 		<LI><b>CmSummary            </b> - added columns 'oldest_running_xact_age', 'oldest_prepared_xact_age', 'oldest_replication_slot_age', 'oldest_replica_xact_age' to check if we will exceed the MAX Transaction ID in some "near" future!</LI>
 		<LI><b>CmSummary            </b> - Also a Graph on columns 'oldest_running_xact_age', 'oldest_prepared_xact_age', 'oldest_replication_slot_age', 'oldest_replica_xact_age'</LI>
+		<LI><b>CmSummary            </b> - New graphs: 'Oldest Open Transaction in Seconds', 'Oldest Statement in Seconds', 'Oldest State in Seconds', 'Oldest Xact/Stmnt/State in Seconds', 'Blocking Locks Count' and 'Max Wait Time for Blocking Locks in Seconds'.</LI>
+		<LI><b>CmSummary            </b> - New columns for Blocking Locks: 'blocking_lock_count', 'blocking_lock_wait_start' and 'blocking_lock_wait_in_sec'. (note: this can be disabled with property: <code>CmSummary.getBlockingLockCount=false</code>)</LI>
+		<LI><b>CmSummary            </b> - New columns for Oldest Open Transaction (only displayed when we have one): Columns 'pid', 'state', 'dbname', 'appname', 'is_waiting', 'waiting_type', 'waiting_event', 'xact_start_in_sec', 'stmnt_start_in_sec', 'stmnt_last_exec_in_sec' , 'in_current_state_in_sec' , also _in_sec as '*_age'.</LI>
+		<LI><b>CmSummary            </b> - sends Alarm: AlarmEventBlockingLockAlarm when 'blocking_lock_count' is above 0</LI>
+		<LI><b>CmSummary            </b> - sends Alarm: AlarmEventLongRunningTransaction when 'oldest_xact_start_in_sec' is above 1800 seconds (30 minutes)</LI>
+		<LI><b>CmSummary            </b> - sends Alarm: AlarmEventLongRunningTransaction when 'oldest_stmnt_start_in_sec' is above 10800 seconds (3 hours)</LI>
 		<LI><b>CmPgTables           </b> - New chart 'DeadRows' so we can follow number of dead rows for each database</LI>
 		<LI><b>CmPgTablesIo         </b> - Added columns 'cache_hit_pct', 'total_reads', 'all_blks_read', 'all_blks_hit'.</LI>
 		<LI><b>CmPgTablesIo         </b> - Added graphs 'CacheHit' and 'CacheReads'</LI>
@@ -695,6 +812,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>Daily Summary Report </b> - For table information TABLE added: 'Sample Time', 'DDL Info', 'Triggers DDL'</LI>
 		<LI><b>Daily Summary Report </b> - For table information INDEX added: 'Included Columns'</LI>
 		<LI><b>Daily Summary Report </b> - PostgresStatementsPerDb to see at a database level</LI>
+		<LI><b>Daily Summary Report </b> - Added section PostgresLongRunningStmnts -- Long Running Statements Information (origin: CmSummary / pg_stat_activity)</LI>
 		<LI><b>DBMS Configurations  </b> - Added sanity checks for 'synchronous_commit', 'shared_buffers', 'effective_cache_size', 'shared_preload_libraries', 'random_page_cost'</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
@@ -705,6 +823,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
 		<LI>Added CM: CmInnoDbMetrics - InnoDB Metrics</LI>
+		<LI>Setting AutoCommit=false at the end of a sample, and AutoCommit=true during sampling data.</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -742,6 +861,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Code Compleation. By default add Square Brackets instead of DBMS Specific chars, which later will be translated in the "correct" char for that DBMS Type upon execution (this can be changed in the Code Completion Settings Dialog)</LI>
 		<LI>Postgres: Check for open transaction (and we are holding locks), then write a Watermark text 'You are in a TRANSACTION...'</LI>
 		<LI>Tooltip on cells: Extended check for "if JSON"</LI>
+		<LI>During connect, when 'Getting DBS Information' takes more than 100ms, show a popup informing what we are doing) instead of just blocking -- This is mainly for Postgres resolving IP into a hostname, which takes time if reversed DNS lookup isn't enabled.</LI>
+		<LI>for Postgres: Status information -- Also display if we are in 'Recovery Mode'</LI>
+		<LI>for Postgres: Added some new templates: 'Get hostname, port and Postgres Version String', 'Get what Extentions are installed' and 'Reload Postgres Configuration and pg_hba.conf file'.</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

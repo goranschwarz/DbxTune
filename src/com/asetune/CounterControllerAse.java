@@ -87,6 +87,7 @@ import com.asetune.cm.ase.CmSpinlockActivity;
 import com.asetune.cm.ase.CmSpinlockSum;
 import com.asetune.cm.ase.CmSqlDynamic;
 import com.asetune.cm.ase.CmSqlStatement;
+import com.asetune.cm.ase.CmSqlStatementPerDb;
 import com.asetune.cm.ase.CmStatementCache;
 import com.asetune.cm.ase.CmStmntCacheDetails;
 import com.asetune.cm.ase.CmSummary;
@@ -402,6 +403,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 		CmActiveStatements .create(counterController, guiController);
 		CmObjectActivity   .create(counterController, guiController);
 		CmSqlStatement     .create(counterController, guiController);
+		CmSqlStatementPerDb.create(counterController, guiController);
 		CmSqlDynamic       .create(counterController, guiController);
 		CmActiveObjects    .create(counterController, guiController);
 		CmProcCallStack    .create(counterController, guiController);

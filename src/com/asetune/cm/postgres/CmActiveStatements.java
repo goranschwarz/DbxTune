@@ -21,9 +21,6 @@
 package com.asetune.cm.postgres;
 
 import java.awt.event.MouseEvent;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -41,9 +38,10 @@ import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.AlarmHelper;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventLongRunningStatement;
+import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
 import com.asetune.cm.CmSettingsHelper;
-import com.asetune.cm.CounterSample;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -52,8 +50,6 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
-import com.asetune.sql.ResultSetMetaDataCached;
-import com.asetune.sql.ResultSetMetaDataCached.Entry;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Configuration;
@@ -149,8 +145,11 @@ extends CountersModel
 	//------------------------------------------------------------
 	private static final String  PROP_PREFIX                = CM_NAME;
 
-	public static final String  PROPKEY_exclude_IdleInTransaction_lt_ms = PROP_PREFIX + ".exclude.idle-in-transaction.lt.ms";
-	public static final int     DEFAULT_exclude_IdleInTransaction_lt_ms = 200; 
+//	public static final String  PROPKEY_exclude_IdleInTransaction_lt_ms = PROP_PREFIX + ".exclude.idle-in-transaction.lt.ms";
+//	public static final int     DEFAULT_exclude_IdleInTransaction_lt_ms = 200; 
+
+	public static final String  PROPKEY_sample_pidLocks          = PROP_PREFIX + ".sample.pidLocks";
+	public static final boolean DEFAULT_sample_pidLocks          = true;
 
 	
 	private void addTrendGraphs()
@@ -191,39 +190,11 @@ extends CountersModel
 		return pkCols;
 	}
 
-//	@Override
-//	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
-//	{
-//		String im_blocked_by_pids     = "";
-//		String im_blocking_other_pids = "";
-//		if (versionInfo.getLongVersion() >= Ver.ver(9, 6))
-//		{
-//			im_blocked_by_pids     = "    ,CAST(array_to_string(pg_blocking_pids(pid), ', ') as varchar(512)) AS im_blocked_by_pids \n";
-//			im_blocking_other_pids = "    ,CAST('' as varchar(512)) AS im_blocking_other_pids \n";
-//		}
-//
-//TODO; add columns; backend_start_AGE, xact_start_AGE, query_start_AGE, state_change_AGE (age would be in HH:MM:SS.ms)
-//-- do: implement version specific SQL on below
-//		return ""
-//				+ "select \n"
-//				+ "     * \n"
-//				+       im_blocked_by_pids
-//				+       im_blocking_other_pids
-//				+ "    ,CASE WHEN state != 'active' THEN NULL \n"
-//				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from query_start)) * 1000) as int) \n"
-//				+ "     END as \"execTimeInMs\" \n"
-//				+ "from pg_catalog.pg_stat_activity \n"
-//				+ "where state != 'idle' \n"
-//				+ "  and pid   != pg_backend_pid() \n"
-//				+ "  and application_name != '" + Version.getAppName() + "' \n"
-//				+ "";
-//	}
-
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		// do NOT include records with status='idle in transaction' with values less than
-		int exclude_idleInTransaction_lt_ms = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_exclude_IdleInTransaction_lt_ms, DEFAULT_exclude_IdleInTransaction_lt_ms);
+//		int exclude_idleInTransaction_lt_ms = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_exclude_IdleInTransaction_lt_ms, DEFAULT_exclude_IdleInTransaction_lt_ms);
 		
 		String waiting = "    ,waiting \n";
 
@@ -270,7 +241,7 @@ extends CountersModel
 
 		// ----- 14
 		String query_id = "";
-		if (versionInfo.getLongVersion() >= Ver.ver(13))
+		if (versionInfo.getLongVersion() >= Ver.ver(14))
 		{
 			query_id  = "    ,query_id \n";
 		}
@@ -289,10 +260,23 @@ extends CountersModel
 				+ "    ,usesysid \n"
 				+ "    ,usename \n"
 				+ "    ,CAST(application_name as varchar(128)) AS application_name \n"
-				+ "    ,CAST(age(clock_timestamp(), backend_start) as varchar(30)) AS backend_start_age \n"
-				+ "    ,CAST(age(clock_timestamp(), xact_start)    as varchar(30)) AS xact_start_age \n"
-				+ "    ,CAST(age(clock_timestamp(), query_start)   as varchar(30)) AS query_start_age \n"
-				+ "    ,CAST(age(clock_timestamp(), state_change)  as varchar(30)) AS state_change_age \n"
+			    + " \n"
+			    + "    ,CAST( COALESCE( EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM xact_start ), -1) as numeric(12,1))  AS xact_start_sec \n"
+			    + "    ,CAST( COALESCE( EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM query_start), -1) as numeric(12,1))  AS stmnt_start_sec \n"
+			    + "    ,CAST( CASE WHEN state = 'active' \n"
+			    + "                THEN COALESCE( EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM query_start ), -1) /* active -- query-elapsed-time */ \n"
+			    + "                ELSE COALESCE( EXTRACT('epoch' FROM state_change     ) - EXTRACT('epoch' FROM query_start ), -1) /* else   -- last-exec-time*/ \n"
+			    + "     END as numeric(12,1))                                                                                               AS stmnt_last_exec_sec \n"
+			    + "    ,CAST( COALESCE( EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM state_change), -1) as numeric(12,1)) AS in_current_state_sec \n"
+			    + " \n"
+				+ "    ,CAST( clock_timestamp() - xact_start   as varchar(30)) AS xact_start_age \n"
+				+ "    ,CAST( clock_timestamp() - query_start  as varchar(30)) AS stmnt_start_age \n"
+				+ "    ,CAST( CASE WHEN state = 'active' \n"
+				+ "                THEN clock_timestamp() - query_start /* active -- query-elapsed-time */ \n"
+				+ "                ELSE state_change      - query_start /* else   -- last-exec-time*/ \n"
+				+ "           END as varchar(30))                              AS stmnt_last_exec_age \n"
+				+ "    ,CAST( clock_timestamp() - state_change as varchar(30)) AS in_current_state_age \n"
+			    + " \n"
 				+ "    ,backend_start \n"
 				+ "    ,xact_start \n"
 				+ "    ,query_start \n"
@@ -318,72 +302,74 @@ extends CountersModel
 				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from xact_start)) * 1000) as int) \n"
 				+ "     END as \"xactTimeInMs\" \n"
 
-				+ "from pg_catalog.pg_stat_activity \n"
+				+ "from pg_stat_activity \n"
 				+ "where state != 'idle' \n"
 				+ "  and pid   != pg_backend_pid() \n"
 				+ "  and application_name != '" + Version.getAppName() + "' \n"
 				+ "";
-		
-		if (exclude_idleInTransaction_lt_ms >= 0)
-		{
-			sql += ""
-				+ "  /* for state='idle in transaction', then show 'xact_start' older than " + exclude_idleInTransaction_lt_ms + " ms */ \n"
-				+ "  and ((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from xact_start)) * 1000) > (CASE WHEN state = 'idle in transaction' THEN " + exclude_idleInTransaction_lt_ms + " ELSE -1 END) \n" 
-				+ "";
-		}
+
+		// Note: This FILTER should be MOVED into the HTML page (so users can decide the filter criteria) 
+//		if (exclude_idleInTransaction_lt_ms >= 0)
+//		{
+//			sql += ""
+//				+ "  /* for state='idle in transaction', then show 'xact_start' older than " + exclude_idleInTransaction_lt_ms + " ms */ \n"
+//				+ "  and ((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from xact_start)) * 1000) > (CASE WHEN state = 'idle in transaction' THEN " + exclude_idleInTransaction_lt_ms + " ELSE -1 END) \n" 
+//				+ "";
+//		}
 			
 		return sql;
 	}
 
-	/**
-	 * Change data types (or length) for some column  
-	 * <p>
-	 * We could have done that by converting columns into varchar datatypes, but since we do: "select * from ..." 
-	 * for forward/backward compatibility, this is done in the code instead...<br>
-	 * When we switch to "column specified" SQL Statement, then we can get rid of this!  
-	 */
-	@Override
-	public ResultSetMetaDataCached createResultSetMetaData(ResultSetMetaData rsmd) throws SQLException
-	{
-		ResultSetMetaDataCached rsmdc = super.createResultSetMetaData(rsmd);
-
-		if (rsmdc == null)
-			return null;
-		
-		// In PG x.y
-		setColumnShorterLength(rsmdc, "application_name" , 60);  // text --> varchar(60)
-		setColumnShorterLength(rsmdc, "client_addr"      , 30);  // text --> varchar(30)
-		setColumnShorterLength(rsmdc, "client_hostname"  , 60);  // text --> varchar(60)
-		setColumnShorterLength(rsmdc, "state"            , 30);  // text --> varchar(30)
-//		setColumnShorterLength(rsmdc, "backend_xid"      , 20);  // xid  --- Already set to varchar(30) in com.asetune.sql.ddl.DbmsDdlResolverPostgres
-//		setColumnShorterLength(rsmdc, "backend_xmin"     , 20);  // xid  --- Already set to varchar(30) in com.asetune.sql.ddl.DbmsDdlResolverPostgres
-		
-		// In PG 9.6
-		setColumnShorterLength(rsmdc, "wait_event_type"  , 30);  // text --> varchar(30)
-		setColumnShorterLength(rsmdc, "wait_event"       , 50);  // text --> varchar(50)
-
-		// In PG 10
-		setColumnShorterLength(rsmdc, "backend_type"     , 30);  // text --> varchar(30)
-		
-		return rsmdc;
-	}
-
-	private void setColumnShorterLength(ResultSetMetaDataCached rsmdc, String colName, int newLength)
-	{
-		int colPos = rsmdc.findColumn(colName);
-		
-		// return if column wasn't found
-		if (colPos == -1)
-			return;
-		
-		Entry colEntry = rsmdc.getEntry(colPos);
-		if (colEntry.getPrecision() > newLength)
-		{
-			colEntry.setColumnType(Types.VARCHAR);
-			colEntry.setColumnTypeName("varchar");
-			colEntry.setPrecision(newLength);
-		}
-	}
+	// The below is not more needed... since we do proper CAST(...) of data types in the SELECT Statement
+//	/**
+//	 * Change data types (or length) for some column  
+//	 * <p>
+//	 * We could have done that by converting columns into varchar datatypes, but since we do: "select * from ..." 
+//	 * for forward/backward compatibility, this is done in the code instead...<br>
+//	 * When we switch to "column specified" SQL Statement, then we can get rid of this!  
+//	 */
+//	@Override
+//	public ResultSetMetaDataCached createResultSetMetaData(ResultSetMetaData rsmd) throws SQLException
+//	{
+//		ResultSetMetaDataCached rsmdc = super.createResultSetMetaData(rsmd);
+//
+//		if (rsmdc == null)
+//			return null;
+//		
+//		// In PG x.y
+//		setColumnShorterLength(rsmdc, "application_name" , 60);  // text --> varchar(60)
+//		setColumnShorterLength(rsmdc, "client_addr"      , 30);  // text --> varchar(30)
+//		setColumnShorterLength(rsmdc, "client_hostname"  , 60);  // text --> varchar(60)
+//		setColumnShorterLength(rsmdc, "state"            , 30);  // text --> varchar(30)
+////		setColumnShorterLength(rsmdc, "backend_xid"      , 20);  // xid  --- Already set to varchar(30) in com.asetune.sql.ddl.DbmsDdlResolverPostgres
+////		setColumnShorterLength(rsmdc, "backend_xmin"     , 20);  // xid  --- Already set to varchar(30) in com.asetune.sql.ddl.DbmsDdlResolverPostgres
+//		
+//		// In PG 9.6
+//		setColumnShorterLength(rsmdc, "wait_event_type"  , 30);  // text --> varchar(30)
+//		setColumnShorterLength(rsmdc, "wait_event"       , 50);  // text --> varchar(50)
+//
+//		// In PG 10
+//		setColumnShorterLength(rsmdc, "backend_type"     , 30);  // text --> varchar(30)
+//		
+//		return rsmdc;
+//	}
+//
+//	private void setColumnShorterLength(ResultSetMetaDataCached rsmdc, String colName, int newLength)
+//	{
+//		int colPos = rsmdc.findColumn(colName);
+//		
+//		// return if column wasn't found
+//		if (colPos == -1)
+//			return;
+//		
+//		Entry colEntry = rsmdc.getEntry(colPos);
+//		if (colEntry.getPrecision() > newLength)
+//		{
+//			colEntry.setColumnType(Types.VARCHAR);
+//			colEntry.setColumnTypeName("varchar");
+//			colEntry.setPrecision(newLength);
+//		}
+//	}
 	
 	@Override
 	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
@@ -428,6 +414,55 @@ extends CountersModel
 				newSample.setValueAt(blockingList, rowId, pos_im_blocking_other_pids);
 			}
 		}
+		
+//		// -NOT-YET-IMPLEMENTED- (the below was borrowed from SqlServer.CmActiveStatements)
+//		boolean getSpidLocks = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_pidLocks, DEFAULT_sample_pidLocks);
+//		if (getSpidLocks)
+//		{
+//			String spidLocks       = "This was disabled";
+//			int    spidLockCount   = -1;
+//
+//			int pos_HasPidLocks  = newSample.findColumn("HasPidLocks");
+//			int pos_PidLocks     = newSample.findColumn("PidLocks");
+//			int pos_PidLockCount = newSample.findColumn("PidLockCount");
+//
+//			for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
+//			{
+//				int pid = newSample.getValueAsInteger(rowId, pos_pid);
+//
+//				List<PgLockRecord> lockList = null;
+//				try
+//				{
+//					lockList = PostgresUtils.getLockSummaryForPid(getCounterController().getMonConnection(), spid);
+//					spidLocks = PostgresUtils.getLockSummaryForPid(lockList, true, false);
+//					if (spidLocks == null)
+//						spidLocks = "No Locks found";
+//				}
+//				catch (TimeoutException ex)
+//				{
+//					spidLocks = "Timeout - when getting lock information";
+//				}
+//				
+//				spidLockCount = 0;
+//				if (lockList != null)
+//				{
+//					for (PgLockRecord lockRecord : lockList)
+//					{
+//						spidLockCount += lockRecord._lockCount;
+//					}
+//				}
+//				
+//				boolean b;
+//				Object obj;
+//
+//				// SPID Locks
+//				b = !"This was disabled".equals(spidLocks) && !"No Locks found".equals(spidLocks) && !"Timeout - when getting lock information".equals(spidLocks);
+//				newSample.setValueAt(new Boolean(b), rowId, pos_HasPidLocks);
+//				newSample.setValueAt(spidLocks,      rowId, pos_PidLocks);
+//				newSample.setValueAt(spidLockCount,  rowId, pos_PidLockCount);
+//			}
+//		}
+
 	}
 	
 	private String getBlockingListStr(CounterSample counters, int pid, int pos_blockingPid, int pos_pid)
@@ -518,7 +553,6 @@ extends CountersModel
 		{
 			//-------------------------------------------------------
 			// StatementExecInSec 
-			// --->>> possibly move/copy this to CmActiveStatements
 			//-------------------------------------------------------
 			if (isSystemAlarmsForColumnEnabledAndInTimeRange("StatementExecInSec"))
 			{
@@ -591,6 +625,75 @@ extends CountersModel
 					} // end: above threshold
 				} // end: is number
 			} // end: StatementExecInSec
+
+			//-------------------------------------------------------
+			// OpenXactInSec 
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("OpenXactInSec"))
+			{
+				// Only continue is "state" is "active" or "idle in transaction"
+				String state = cm.getDiffValue(r, "state") + "";
+				if ("active".equals(state) || "idle in transaction".equals(state))
+				{
+					int xactTimeInSec = -1;
+
+					// get 'xact_start_sec'
+					Object o_xact_start_sec = cm.getDiffValue(r, "xact_start_sec");
+					if (o_xact_start_sec != null && o_xact_start_sec instanceof Number)
+					{
+						xactTimeInSec = ((Number)o_xact_start_sec).intValue();
+					}
+					
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_OpenXactInSec, DEFAULT_alarm_OpenXactInSec);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", xactTimeInSec='"+xactTimeInSec+"'.");
+
+					if (xactTimeInSec > threshold)
+					{
+						// Get config 'skip some known values'
+						String skipDbnameRegExp   = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OpenXactInSecSkipDbname,   DEFAULT_alarm_OpenXactInSecSkipDbname);
+						String skipLoginRegExp    = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OpenXactInSecSkipLogin,    DEFAULT_alarm_OpenXactInSecSkipLogin);
+						String skipCmdRegExp      = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OpenXactInSecSkipCmd,      DEFAULT_alarm_OpenXactInSecSkipCmd);
+						String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OpenXactInSecSkipTranName, DEFAULT_alarm_OpenXactInSecSkipTranName);
+
+//						String StatementStartTime = cm.getDiffValue(r, "query_start")   + "";
+
+						String DBName             = cm.getDiffValue(r, "datname")       + "";
+						String Login              = cm.getDiffValue(r, "usename")       + "";
+						String Command            = cm.getDiffValue(r, "query")         + "";
+//						String tran_name          = cm.getDiffValue(r, "transaction_name") + "";
+//						String tran_name          = "-unknown-";
+						String tran_name          = cm.getDiffValue(r, "state") + "";
+						
+						// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+						boolean doAlarm = true;
+
+						// The below could have been done with nested if(!skipXxx), if(!skipYyy) doAlarm=true; 
+						// Below is more readable, from a variable context point-of-view, but HARDER to understand
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbnameRegExp)   || ! DBName   .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipLoginRegExp)    || ! Login    .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipCmdRegExp)      || ! Command  .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranNameRegExp) || ! tran_name.matches(skipTranNameRegExp))); // NO match in the SKIP TranName regexp
+
+						// NO match in the SKIP regEx
+						if (doAlarm)
+						{
+							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+//							public AlarmEventLongRunningTransaction(CountersModel cm, Number threshold, Number oldestTranInSeconds, Number spid, String dbname, String tranName, String tranCmd, String waitType, String loginName, Double tempdbUsageMb)
+//							public AlarmEventLongRunningTransaction(CountersModel cm, Number threshold, String dbname, Number oldestTranInSeconds, String oldestTranName)
+							
+							AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, DBName, xactTimeInSec, tran_name);
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+							alarmHandler.addAlarm( ae );
+						}
+					} // end: above threshold
+				} // end: is number
+			} // end: StatementExecInSec
+
 		} // end: loop rows
 	}
 
@@ -609,7 +712,23 @@ extends CountersModel
 
 	public static final String  PROPKEY_alarm_StatementExecInSecSkipTranName = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.tranName";
 	public static final String  DEFAULT_alarm_StatementExecInSecSkipTranName = "";
+
 	
+	public static final String  PROPKEY_alarm_OpenXactInSec             = CM_NAME + ".alarm.system.if.OpenXactInSec.gt";
+	public static final int     DEFAULT_alarm_OpenXactInSec             = 30 * 60; // 30 minutes
+
+	public static final String  PROPKEY_alarm_OpenXactInSecSkipDbname   = CM_NAME + ".alarm.system.if.OpenXactInSec.skip.dbname";
+	public static final String  DEFAULT_alarm_OpenXactInSecSkipDbname   = "";
+
+	public static final String  PROPKEY_alarm_OpenXactInSecSkipLogin    = CM_NAME + ".alarm.system.if.OpenXactInSec.skip.login";
+	public static final String  DEFAULT_alarm_OpenXactInSecSkipLogin    = "";
+
+	public static final String  PROPKEY_alarm_OpenXactInSecSkipCmd      = CM_NAME + ".alarm.system.if.OpenXactInSec.skip.cmd";
+//	public static final String  DEFAULT_alarm_OpenXactInSecSkipCmd      = "^(BACKUP |RESTORE ).*";
+	public static final String  DEFAULT_alarm_OpenXactInSecSkipCmd      = "";
+
+	public static final String  PROPKEY_alarm_OpenXactInSecSkipTranName = CM_NAME + ".alarm.system.if.OpenXactInSec.skip.tranName";
+	public static final String  DEFAULT_alarm_OpenXactInSecSkipTranName = "";
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -624,6 +743,12 @@ extends CountersModel
 		list.add(new CmSettingsHelper("StatementExecInSec SkipLogins",               PROPKEY_alarm_StatementExecInSecSkipLogin   , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipLogin   , DEFAULT_alarm_StatementExecInSecSkipLogin   ), DEFAULT_alarm_StatementExecInSecSkipLogin   , "If 'StatementExecInSec' is true; Discard Logins listed (regexp is used)."   , new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("StatementExecInSec SkipCommands",             PROPKEY_alarm_StatementExecInSecSkipCmd     , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipCmd     , DEFAULT_alarm_StatementExecInSecSkipCmd     ), DEFAULT_alarm_StatementExecInSecSkipCmd     , "If 'StatementExecInSec' is true; Discard Commands listed (regexp is used)." , new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("StatementExecInSec SkipTranNames",            PROPKEY_alarm_StatementExecInSecSkipTranName, String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipTranName, DEFAULT_alarm_StatementExecInSecSkipTranName), DEFAULT_alarm_StatementExecInSecSkipTranName, "If 'StatementExecInSec' is true; Discard TranName listed (regexp is used)." , new RegExpInputValidator()));
+		
+		list.add(new CmSettingsHelper("OpenXactInSec",                isAlarmSwitch, PROPKEY_alarm_OpenXactInSec                 , Integer.class, conf.getIntProperty(PROPKEY_alarm_OpenXactInSec                 , DEFAULT_alarm_OpenXactInSec                 ), DEFAULT_alarm_OpenXactInSec                 , "If any SPID's has an Open Transaction for more than ## seconds, then send alarm 'AlarmEventLongRunningTransaction'." ));
+		list.add(new CmSettingsHelper("OpenXactInSec SkipDbs",                       PROPKEY_alarm_OpenXactInSecSkipDbname       , String .class, conf.getProperty   (PROPKEY_alarm_OpenXactInSecSkipDbname       , DEFAULT_alarm_OpenXactInSecSkipDbname       ), DEFAULT_alarm_OpenXactInSecSkipDbname       , "If 'StatementExecInSec' is true; Discard databases listed (regexp is used).", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("OpenXactInSec SkipLogins",                    PROPKEY_alarm_OpenXactInSecSkipLogin        , String .class, conf.getProperty   (PROPKEY_alarm_OpenXactInSecSkipLogin        , DEFAULT_alarm_OpenXactInSecSkipLogin        ), DEFAULT_alarm_OpenXactInSecSkipLogin        , "If 'StatementExecInSec' is true; Discard Logins listed (regexp is used)."   , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("OpenXactInSec SkipCommands",                  PROPKEY_alarm_OpenXactInSecSkipCmd          , String .class, conf.getProperty   (PROPKEY_alarm_OpenXactInSecSkipCmd          , DEFAULT_alarm_OpenXactInSecSkipCmd          ), DEFAULT_alarm_OpenXactInSecSkipCmd          , "If 'StatementExecInSec' is true; Discard Commands listed (regexp is used)." , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("OpenXactInSec SkipTranNames",                 PROPKEY_alarm_OpenXactInSecSkipTranName     , String .class, conf.getProperty   (PROPKEY_alarm_OpenXactInSecSkipTranName     , DEFAULT_alarm_OpenXactInSecSkipTranName     ), DEFAULT_alarm_OpenXactInSecSkipTranName     , "If 'StatementExecInSec' is true; Discard TranName listed (regexp is used)." , new RegExpInputValidator()));
 		
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "application_name") );
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "usename") );

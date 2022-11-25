@@ -686,13 +686,18 @@ implements Runnable
 //				if ( ! pw.isSessionStarted() || cont.getStartNewSample() )
 				if ( ! pw.isSessionStarted(sessionName) || startNewSession )
 				{
+					Long   contSessionStartTime     = cont.getSessionStartTime()            == null ? null : cont.getSessionStartTime().getTime();
+					Long     pwSessionStartTime     =   pw.getSessionStartTime(sessionName) == null ? null :   pw.getSessionStartTime(sessionName).getTime() ;
+					String contSessionStartTimeStr  = contSessionStartTime == null ? "-null-" : TimeUtils.toString(contSessionStartTime);
+					String    pwSessionStartTimeStr =   pwSessionStartTime == null ? "-null-" : TimeUtils.toString(pwSessionStartTime);
+					
 					System.out.println("############################-STARTING-A-NEW-SESSION-########### srvName='"+cont.getServerName()+"'.");
 					System.out.println("## Writer["+pw.getName()+"] -->> startSession(): ");
 					System.out.println("##    !pw.isSessionStarted()="+!pw.isSessionStarted(sessionName));
 					System.out.println("##    startNewSession       ="+startNewSession);
 					System.out.println("##");
-					System.out.println("##    cont.getSessionStartTime().getTime() = "+( cont.getSessionStartTime()            == null ? null : cont.getSessionStartTime().getTime() ) );
-					System.out.println("##      pw.getSessionStartTime().getTime() = "+(   pw.getSessionStartTime(sessionName) == null ? null :   pw.getSessionStartTime(sessionName).getTime() ) );
+					System.out.println("##    cont.getSessionStartTime().getTime() = " + contSessionStartTime + " - '" + contSessionStartTimeStr + "'.");
+					System.out.println("##      pw.getSessionStartTime().getTime() = " + pwSessionStartTime   + " - '" + pwSessionStartTimeStr   + "'.");
 					System.out.println("###############################################################");
 
 					Timestamp newTs = cont.getSessionStartTime();

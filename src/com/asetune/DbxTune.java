@@ -1912,6 +1912,7 @@ public abstract class DbxTune
 		pw.println("  -T H2  -d h2dbfile|default");
 		pw.println("  -T ASE -d hostname:port:dbname:user:passwd");
 		pw.println("  -T ASA -d hostname:port:dbname:user:passwd");
+		pw.println("  NOTE: Only -T H2 is supported for the moment (ASE, and ASA can still be used, but may *not* work as expected)");
 		pw.println("  Default connection specifications for different dbtypes:");
 		pw.println("     H2:  'h2dbfile' file is mandatory.");
 		pw.println("          Use: -d default, will set h2dbfile to '${<DBXTUNE>_SAVE_DIR}/${SERVERNAME}_${DATE}'");

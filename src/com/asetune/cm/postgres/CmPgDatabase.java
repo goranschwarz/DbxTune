@@ -34,6 +34,7 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventConfigResourceIsLow;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
@@ -105,7 +106,13 @@ extends CountersModel
 			"temp_bytes",
 			"deadlocks",
 			"blk_read_time",
-			"blk_write_time"
+			"blk_write_time",
+			
+			// 14
+			"session_time",
+			"active_time",
+			"idle_in_transaction_time"
+			
 	};
 //	RS> Col# Label          JDBC Type Name           Guessed DBMS type
 //	RS> ---- -------------- ------------------------ -----------------
@@ -206,6 +213,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_ROWS_INSERTS              = "Inserts";
 	public static final String GRAPH_NAME_ROWS_UPDATED              = "Updated";
 	public static final String GRAPH_NAME_ROWS_DELETED              = "Deleted";
+	public static final String GRAPH_NAME_ROWS_INS_UPD_DEL          = "InsUpDel";
 	public static final String GRAPH_NAME_ROWS_CONFLICTS            = "Conflicts";
 	public static final String GRAPH_NAME_TEMP_FILES                = "TempFiles";
 	public static final String GRAPH_NAME_TEMP_BYTES                = "TempBytes";
@@ -246,12 +254,14 @@ extends CountersModel
 			+ "    ,CAST( 'n/a' as varchar(30))    AS slide_time \n"
 			+ "    ,(SELECT setting::int FROM pg_settings WHERE name = 'max_connections') AS srv_cfg_max_connections \n"
 			+ "    ,d.datconnlimit                 AS db_conn_limit \n"
-			+ "    ,a.rolname                      AS db_owner \n"
+//			+ "    ,a.rolname                      AS db_owner \n"
+			+ "    ,a.usename                      AS db_owner \n"
 			+ "    ,d.datcollate                   AS db_collation \n" 
 			+ "    ,CAST(d.datacl as varchar(512)) AS db_access_privileges \n" 
 			+ "FROM pg_stat_database sd \n"
 			+ "INNER JOIN pg_database d ON sd.datid = d.oid \n"
-			+ "INNER JOIN pg_authid   a ON d.datdba = a.oid \n"
+//			+ "INNER JOIN pg_authid   a ON d.datdba = a.oid \n"  // Possibly use >>> 'pg_user' <<< or 'pg_roles' instead of pg_authid
+			+ "INNER JOIN pg_user     a ON d.datdba = a.usesysid \n"
 //			+ "WHERE sd.datname NOT LIKE 'template%' \n"
 			+ "WHERE NOT d.datistemplate \n"
 			+ "";
@@ -693,6 +703,17 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
+		addTrendGraph(GRAPH_NAME_ROWS_INS_UPD_DEL,
+			"Rows Inserted, Updated and Deleted", 	                         // Menu CheckBox text
+			"Rows Inserted, Updated and Deleted per second ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			null, LabelType.Dynamic, 
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			true, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
 		addTrendGraph(GRAPH_NAME_ROWS_CONFLICTS,
 			"Conflicting Statements", 	                         // Menu CheckBox text
 			"Conflicting Statements per second ("+SHORT_NAME+")", // Graph Label 
@@ -856,6 +877,50 @@ extends CountersModel
 		if (GRAPH_NAME_WRITE_TIME               .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "blk_write_time");
 		if (GRAPH_NAME_DBSIZE_MB                .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_ABS,  true , false, "dbsize_mb");
 
+		if (GRAPH_NAME_ROWS_INS_UPD_DEL         .equals(tgdp.getName())) 
+		{
+			// This basically does the same as in localUpdateGraphData(), but it gets 3 counters and combine them into 1 data point 
+			boolean addSummaryRow = true;
+
+			// Write 1 "line" for every db (except for 'template*' databases)
+			Double[] dArray = new Double[ addSummaryRow ? this.size()+1 : this.size()];
+			String[] lArray = new String[dArray.length];
+			int ap = addSummaryRow ? 1 : 0;
+			double sum = 0;
+
+			int rc = this.size();
+			for (int r = 0; r < rc; r++) // we still need to loop all rows...
+			{
+				String dbname = this.getAbsString(r, "datname");
+				if (dbname != null && !dbname.startsWith("template"))
+				{
+					Double tup_inserted = this.getRateValueAsDouble(r, "tup_inserted");
+					Double tup_updated  = this.getRateValueAsDouble(r, "tup_updated");
+					Double tup_deleted  = this.getRateValueAsDouble(r, "tup_deleted");
+
+					Double data = tup_inserted.doubleValue() + tup_updated.doubleValue() + tup_deleted.doubleValue();
+					
+					if (data != null)
+						sum += data;
+
+					lArray[ap] = dbname;
+					dArray[ap] = data;
+					ap++;
+				}
+			}
+
+			if (addSummaryRow && this.size() > 0)
+			{
+				String sumLabel = "ALL-DBs";
+					
+				lArray[0] = sumLabel;
+				dArray[0] = sum;
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
 		if (GRAPH_NAME_CONNECTIONS_SUM.equals(tgdp.getName()))
 		{
 			Double[] arr = new Double[2];
@@ -912,13 +977,37 @@ extends CountersModel
 
 				if (numFree < threshold)
 				{
-					AlarmHandler.getInstance().addAlarm( 
-						new AlarmEventConfigResourceIsLow(cm, "max_connections", numFree, sumNumbackends, pctUsed, threshold) );
+					String extendedDescText = "";
+					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_CONNECTIONS_SUM);
+					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_CONNECTIONS);
+
+					AlarmEvent ae = new AlarmEventConfigResourceIsLow(cm, "max_connections", numFree, sumNumbackends, pctUsed, threshold);
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					AlarmHandler.getInstance().addAlarm(ae);
 				}
 			}
 		}
 	} // end: method
 
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_CONNECTIONS    .equals(name)) return true;
+		if (GRAPH_NAME_CONNECTIONS_SUM.equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+
+	
 	public static final String  PROPKEY_alarm_FreeConnections = CM_NAME + ".alarm.system.if.free_connections.lt";
 	public static final int     DEFAULT_alarm_FreeConnections = 25;
 

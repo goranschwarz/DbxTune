@@ -196,12 +196,31 @@ implements Cloneable
 		else
 			sb.append("_password") .append("=").append("*secret*")    .append(", ");
 		
+		// NOTE: The key "password" may also be in: _urlOptions ... this needs to be removed 
+		String urlOptionsStr = "";
+		if (_logger.isDebugEnabled() || System.getProperty("DbxConnection.connect.nogui.print", "false").equalsIgnoreCase("true"))
+		{
+			urlOptionsStr = _urlOptions + ""; // This will include any password in _urlOptions
+		}
+		else
+		{
+			if (_urlOptions != null)
+			{
+				// Copy _urlOptions and remove key "password"
+				Properties tmpUrlOptions = new Properties(_urlOptions);
+				tmpUrlOptions.remove("password");
+
+				urlOptionsStr = tmpUrlOptions + ""; // no "password" key in the copy of _urlOptions
+			}
+		}
+		
+
 		sb.append("_server")       .append("=").append(_server)       .append(", ");
 		sb.append("_dbname")       .append("=").append(_dbname)       .append(", ");
 		sb.append("_loginTimeout") .append("=").append(_loginTimeout) .append(", ");
 		sb.append("_driverClass")  .append("=").append(_driverClass)  .append(", ");
 		sb.append("_url")          .append("=").append(_url)          .append(", ");
-		sb.append("_urlOptions")   .append("=").append(_urlOptions)   .append(", ");
+		sb.append("_urlOptions")   .append("=").append(urlOptionsStr) .append(", ");
 		sb.append("_appName")      .append("=").append(_appName)      .append(", ");
 		sb.append("_appVersion")   .append("=").append(_appVersion)   .append(", ");
 		sb.append("_sqlInit")      .append("=").append(_sqlInit)      .append(", ");

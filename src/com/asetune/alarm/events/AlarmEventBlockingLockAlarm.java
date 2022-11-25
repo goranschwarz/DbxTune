@@ -49,6 +49,27 @@ extends AlarmEvent
 		setData(count);
 	}
 
+	/** used by CmSummary */
+	public AlarmEventBlockingLockAlarm(CountersModel cm, Number threshold, Number count, Number maxWaitTime)
+	{
+		super(
+				Version.getAppName(), // serviceType
+				cm.getServerName(),   // serviceName
+				cm.getName(),         // serviceInfo
+				null,                 // extraInfo
+				AlarmEvent.Category.LOCK,
+				AlarmEvent.Severity.WARNING, 
+				AlarmEvent.ServiceState.AFFECTED, 
+				"Found Blocking locks in '" + cm.getServerName() + "'. Count=" + count + ", with maxWaitTime=" + maxWaitTime + ". (threshold="+threshold+")",
+				threshold);
+
+		// Set: Time To Live if postpone is enabled
+		setTimeToLive(cm);
+
+		// Set the raw data carier: current cpu usage
+		setData(count);
+	}
+
 	/** used by CmActiveStatements */
 	public AlarmEventBlockingLockAlarm(CountersModel cm, Number threshold, int spid, Number blockingOthersMaxTimeInSec, String blockingOtherSpids, Number blockCount)
 	{

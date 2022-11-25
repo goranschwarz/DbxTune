@@ -29,6 +29,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.cm.sqlserver.CmSummary;
 import com.asetune.config.dbms.DbmsConfigIssue.Severity;
 import com.asetune.config.dict.SqlServerTraceFlagsDictionary;
 import com.asetune.gui.ResultSetTableModel;
@@ -53,6 +54,7 @@ public abstract class SqlServerConfigText
 		,SqlServerHelpSort
 		,SqlServerHostInfo
 		,SqlServerSysInfo
+		,SqlServerSuspectPages
 		,SqlServerServices
 		,SqlServerResourceGovernor
 		,SqlServerServerRegistry
@@ -73,6 +75,7 @@ public abstract class SqlServerConfigText
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.HelpSort());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.HostInfo());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SysInfo());
+		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SuspectPages());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SqlServices());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.ResourceGovernor());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.ServerRegistry());
@@ -111,7 +114,7 @@ public abstract class SqlServerConfigText
 		@Override
 		public void checkConfig(DbxConnection conn)
 		{
-			// no nothing, if we havnt got an instance
+			// no nothing, if we havn't got an instance
 			if ( ! DbmsConfigManager.hasInstance() )
 				return;
 
@@ -401,7 +404,7 @@ public abstract class SqlServerConfigText
 		@Override
 		public void checkConfig(DbxConnection conn)
 		{
-			// no nothing, if we havnt got an instance
+			// no nothing, if we havn't got an instance
 			if ( ! DbmsConfigManager.hasInstance() )
 				return;
 
@@ -746,6 +749,58 @@ public abstract class SqlServerConfigText
 		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from sys.dm_os_sys_info"; }
 	}
 
+	public static class SuspectPages extends DbmsConfigTextAbstract
+	{
+		@Override public    String     getTabLabel()                          { return "Suspect Pages"; }
+		@Override public    String     getName()                              { return ConfigType.SqlServerSuspectPages.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return CmSummary.getSql_suspectPageInfo(v); }
+
+		/** 
+		 * Check for 'suspect pages' 
+		 */
+		@Override
+		public void checkConfig(DbxConnection conn)
+		{
+			// no nothing, if we havn't got an instance
+			if ( ! DbmsConfigManager.hasInstance() )
+				return;
+
+			String    srvName    = "-UNKNOWN-";
+			Timestamp srvRestart = null;
+			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
+			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+
+			String sql = "select count(*), sum(error_count) from msdb.dbo.suspect_pages";
+			
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while(rs.next())
+				{
+					int suspectPageCount  = rs.getInt(1);
+					int suspectPageErrors = rs.getInt(2);
+					
+					if (suspectPageCount > 0)
+					{
+						String key = "DbmsConfigIssue." + srvName + ".suspectPageCount";
+
+						DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "Suspect Page Count", Severity.ERROR, 
+								suspectPageCount + " Suspect pages, with " + suspectPageErrors + " errors of some form was found in 'msdb.dbo.suspect_pages'. The instance may have a severy corruption issue, please investigate.", 
+								"If the errors has already been resolved, please remove those records from table 'msdb.dbo.suspect_pages'. "
+										+ "Resources: 'https://learn.microsoft.com/en-us/sql/relational-databases/backup-restore/manage-the-suspect-pages-table-sql-server' "
+										+ "and possibly: 'https://www.brentozar.com/go/corruption'");
+
+						DbmsConfigManager.getInstance().addConfigIssue(issue);
+					}
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("Problems getting SQL-Server 'Suspect Page Count', using sql '"+sql+"'. Caught: "+ex, ex);
+			}
+		}
+	}
+
 	public static class SqlServices extends DbmsConfigTextAbstract
 	{
 		@Override public    String     getTabLabel()                          { return "SQL Services"; }
@@ -759,7 +814,7 @@ public abstract class SqlServerConfigText
 		@Override
 		public void checkConfig(DbxConnection conn)
 		{
-			// no nothing, if we havnt got an instance
+			// no nothing, if we havn't got an instance
 			if ( ! DbmsConfigManager.hasInstance() )
 				return;
 

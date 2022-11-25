@@ -32,6 +32,7 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.rs.AlarmEventRsSdUsage;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
@@ -332,7 +333,14 @@ extends CountersModel
 
 				if (usedSpaceInMb > threshold)
 				{
-					AlarmHandler.getInstance().addAlarm( new AlarmEventRsSdUsage(cm, threshold, "USED_SEGS", usedSpaceInMb, freeSpaceInMb, usedPct.doubleValue()) );
+					String extendedDescText = "";
+					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_QUEUE_SIZE);
+					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_QUEUE_USAGE_PCT);
+
+					AlarmEvent ae = new AlarmEventRsSdUsage(cm, threshold, "USED_SEGS", usedSpaceInMb, freeSpaceInMb, usedPct.doubleValue());
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					AlarmHandler.getInstance().addAlarm(ae);
 				}
 			}
 		}
@@ -358,7 +366,14 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_SpaceFreeSegs, DEFAULT_alarm_SpaceFreeSegs);
 				if (freeSpaceInMb < threshold)
 				{
-					AlarmHandler.getInstance().addAlarm( new AlarmEventRsSdUsage(cm, threshold, "FREE_SEGS", usedSpaceInMb, freeSpaceInMb, usedPct.doubleValue()) );
+					String extendedDescText = "";
+					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_QUEUE_SIZE);
+					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_QUEUE_USAGE_PCT);
+
+					AlarmEvent ae = new AlarmEventRsSdUsage(cm, threshold, "FREE_SEGS", usedSpaceInMb, freeSpaceInMb, usedPct.doubleValue());
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					AlarmHandler.getInstance().addAlarm(ae);
 				}
 			}
 		}
@@ -384,12 +399,37 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_SpaceUsedPct, DEFAULT_alarm_SpaceUsedPct);
 				if (usedPct.intValue() > threshold)
 				{
-					AlarmHandler.getInstance().addAlarm( new AlarmEventRsSdUsage(cm, threshold, "USED_PCT", usedSpaceInMb, freeSpaceInMb, usedPct.doubleValue()) );
+					String extendedDescText = "";
+					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_QUEUE_SIZE);
+					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_QUEUE_USAGE_PCT);
+
+					AlarmEvent ae = new AlarmEventRsSdUsage(cm, threshold, "USED_PCT", usedSpaceInMb, freeSpaceInMb, usedPct.doubleValue());
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					AlarmHandler.getInstance().addAlarm(ae);
 				}
 			}
 		}
 	} // end: method
 
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_QUEUE_SIZE     .equals(name)) return true;
+		if (GRAPH_NAME_QUEUE_USAGE_PCT.equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+
+	
 	public static final String  PROPKEY_alarm_SpaceUsedSegs                      = CM_NAME + ".alarm.system.if.SpaceUsedSegs.gt";
 	public static final int     DEFAULT_alarm_SpaceUsedSegs                      = 8192;
 	

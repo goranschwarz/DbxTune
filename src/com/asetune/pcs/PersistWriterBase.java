@@ -48,6 +48,7 @@ import com.asetune.config.dict.MonTablesDictionary.MonTableEntry;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.ddl.DbmsDdlResolverAbstract;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.TimeUtils;
 
@@ -574,9 +575,24 @@ public abstract class PersistWriterBase
 		{
 			int type   = rsmd.getColumnType(col);
 //			int length = rsmd.getPrecision(col);
-			int length = Math.max(rsmd.getColumnDisplaySize(col), rsmd.getPrecision(col)); // Use this instead of the below switch for different data types
+//			int length = Math.max(rsmd.getColumnDisplaySize(col), rsmd.getPrecision(col)); // or should it be: rsmd.getPrecision(col) > 0 ? rsmd.getPrecision(col) : rsmd.getColumnDisplaySize(col);
+//			int length = rsmd.getPrecision(col) > 0 ? rsmd.getPrecision(col) : rsmd.getColumnDisplaySize(col);
+			int length = rsmd.getPrecision(col);
 			int scale  = rsmd.getScale(col);
 
+			if (length <= 0)
+			{
+				int newLength = rsmd.getColumnDisplaySize(col);
+				
+				if (DbmsDdlResolverAbstract.shouldHaveNonZeroPrecisionForDataType(type))
+				{
+					String msg = "Inproper Column Precision for: TableName='" + rsmd.getTableName(col) + "', ColumnName='" + rsmd.getColumnLabel(col) + "' has a Precision of " + length + ", and a Scale of " + scale + ". The PCS will use a Presision of " + newLength + " instead.";
+					_logger.info(msg, new RuntimeException(msg));
+				}
+
+				length = newLength;
+			}
+			
 //			switch (type)
 //			{
 //			case Types.CHAR:
@@ -946,7 +962,7 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(lq+"Discarded"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER     ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"ConfigName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  80),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"Severity"         +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  30),20)+" "+getNullable(true) +"\n");
-				sbSql.append("   ,"+fill(lq+"Description"      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 512),20)+" "+getNullable(true) +"\n");
+				sbSql.append("   ,"+fill(lq+"Description"      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,2048),20)+" "+getNullable(true) +"\n");
 				sbSql.append("   ,"+fill(lq+"Resolution"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,2048),20)+" "+getNullable(true) +"\n");
 				sbSql.append("   ,"+fill(lq+"PropertyName"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 256),20)+" "+getNullable(true )+"\n");
 				sbSql.append(") \n");

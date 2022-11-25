@@ -24,6 +24,7 @@ package com.asetune.sql.ddl;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 
 import org.apache.log4j.Logger;
 
@@ -286,8 +287,24 @@ implements IDbmsDataTypeResolver, IDbmsDdlResolver
 	public String dataTypeResolverToTarget(Entry entry)
 	{
 		int javaSqlType = entry.getColumnType();
+//		int length      = entry.getPrecision();
+//		int length      = Math.max(entry.getColumnDisplaySize(), entry.getPrecision());   // or should it be: entry.getPrecision() > 0 ? entry.getPrecision() : entry.getColumnDisplaySize();
+//		int length      = entry.getPrecision() > 0 ? entry.getPrecision() : entry.getColumnDisplaySize();
 		int length      = entry.getPrecision();
 		int scale       = entry.getScale();
+
+		if (length <= 0)
+		{
+			int newLength = entry.getColumnDisplaySize();
+
+			if (DbmsDdlResolverAbstract.shouldHaveNonZeroPrecisionForDataType(javaSqlType))
+			{
+				String msg = "dataTypeResolverToTarget(): Inproper Column Precision for: TableName='" + entry.getTableName() + "', ColumnName='" + entry.getColumnLabel() + "' has a Precision of " + length + ", and a Scale of " + scale + ". The PCS will use a Presision of " + newLength + " instead.";
+				_logger.info(msg, new RuntimeException(msg));
+			}
+
+			length = newLength;
+		}
 		
 		String targetDataType = dataTypeResolverToTarget(javaSqlType, length, scale);
 		
@@ -308,7 +325,92 @@ implements IDbmsDataTypeResolver, IDbmsDdlResolver
 		
 		// normalize DBMS Specific database types using any of the subclass implementation
 		dbmsVendorDataTypeResolverForSource(entry);
+		
+		// Check for "strange" things
+		checkSourceDataTypes(entry);
 	}
+	
+	/**
+	 * Check for "strange" things and warn
+	 * @param entry
+	 */
+	private void checkSourceDataTypes(Entry entry)
+	{
+		String msg = null;
+
+		if (entry.getPrecision() == 0)
+		{
+			switch (entry.getColumnType())
+			{
+
+			// ----------------------------------
+			case Types.CHAR:
+			case Types.VARCHAR:
+				msg = "DbmsDdlResolverAbstract.dataTypeResolverForSource().checkSourceDataTypes(): TabName='" + entry.getTableName() + "', Column='" + entry.getColumnLabel() + "', jdbcType='" + DataTypeNotResolvedException.getJdbcTypeAsString(entry.getColumnType())+ "'. has getPrecision()=" + entry.getPrecision() + ". This seems to be unlikely, please cast the data in SQL to use a specific length.";
+				_logger.warn(msg, new RuntimeException(msg));
+				break;
+
+				// ----------------------------------
+			case Types.NCHAR:
+			case Types.NVARCHAR:
+//			case Types.LONGNVARCHAR:
+				msg = "DbmsDdlResolverAbstract.dataTypeResolverForSource().checkSourceDataTypes(): TabName='" + entry.getTableName() + "',Column='" + entry.getColumnLabel() + "', jdbcType='" + DataTypeNotResolvedException.getJdbcTypeAsString(entry.getColumnType())+ "'. has getPrecision()=" + entry.getPrecision() + ". This seems to be unlikely, please cast the data in SQL to use a specific length.";
+				_logger.warn(msg, new RuntimeException(msg));
+				break;
+
+			// ----------------------------------
+			case Types.BINARY:
+			case Types.VARBINARY:
+//			case Types.LONGVARBINARY:
+				msg = "DbmsDdlResolverAbstract.dataTypeResolverForSource().checkSourceDataTypes(): TabName='" + entry.getTableName() + "',Column='" + entry.getColumnLabel() + "', jdbcType='" + DataTypeNotResolvedException.getJdbcTypeAsString(entry.getColumnType())+ "'. has getPrecision()=" + entry.getPrecision() + ". This seems to be unlikely, please cast the data in SQL to use a specific length.";
+				_logger.warn(msg, new RuntimeException(msg));
+				break;
+
+			// ----------------------------------
+			case Types.DECIMAL:
+			case Types.NUMERIC:
+				msg = "DbmsDdlResolverAbstract.dataTypeResolverForSource().checkSourceDataTypes(): TabName='" + entry.getTableName() + "',Column='" + entry.getColumnLabel() + "', jdbcType='" + DataTypeNotResolvedException.getJdbcTypeAsString(entry.getColumnType())+ "'. has getPrecision()=" + entry.getPrecision() + ", getScale()=" + entry.getScale() + ". This seems to be unlikely, please cast the data in SQL to use a specific length.";
+				_logger.warn(msg, new RuntimeException(msg));
+				break;
+			}
+		}
+	}
+
+	/**
+	 * Used by PersistWriterBase and "this" before writing INFO messages about missing precisions 
+	 * @param jdbcType   The integer value of: java.sql.Types
+	 */
+	public static boolean shouldHaveNonZeroPrecisionForDataType(int jdbcType)
+	{
+		switch (jdbcType)
+		{
+
+		// ----------------------------------
+		case Types.CHAR:
+		case Types.VARCHAR:
+			return true;
+
+		// ----------------------------------
+		case Types.NCHAR:
+		case Types.NVARCHAR:
+//		case Types.LONGNVARCHAR:
+			return true;
+
+		// ----------------------------------
+		case Types.BINARY:
+		case Types.VARBINARY:
+//		case Types.LONGVARBINARY:
+			return true;
+
+		// ----------------------------------
+		case Types.DECIMAL:
+		case Types.NUMERIC:
+			return true;
+		}
+		
+		return false;
+	}
+
 	
 //	@Override
 //	public void dataTypeResolverSource(Entry entry)

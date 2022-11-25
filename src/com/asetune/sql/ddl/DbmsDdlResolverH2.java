@@ -21,12 +21,15 @@ DbmsDdlResolverDerbyDbmsDdlResolverDb2 * Copyright (C) 2010-2020 Goran Schwarz
  ******************************************************************************/
 package com.asetune.sql.ddl;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.sql.ResultSetMetaDataCached.Entry;
 import com.asetune.sql.conn.DbxConnection;
 
 public class DbmsDdlResolverH2 
 extends DbmsDdlResolverAbstract
 {
+	private static Logger _logger = Logger.getLogger(DbmsDdlResolverH2.class);
 
 	public DbmsDdlResolverH2(DbxConnection conn)
 	{
@@ -66,6 +69,37 @@ extends DbmsDdlResolverAbstract
 	private String varcharFix (int len) { return (len > 1000000000) ? "clob"  : "varchar(" + len + ")"; }
 	private String nvarcharFix(int len) { return (len > 1000000000) ? "clob"  : "varchar(" + len + ")"; } // Not sure if this is 1000000000 ????
 
+	private String numericFix(int len, int scale) 
+	{
+		int length = len;
+
+		// http://www.h2database.com/html/datatypes.html#numeric_type
+		if (length > 100_000) // H2 max precision is 100_000
+		{
+			length = 100_000;
+			
+			String msg = "DbmsDdlResolverH2: numericFix(len=" + len + ", scale=" + scale + "). len was to high, setting this to " + length;
+			_logger.warn(msg, new RuntimeException(msg));
+		}
+		
+		return "numeric(" + length + "," + scale + ")";
+	}
+	private String decimalFix(int len, int scale) 
+	{
+		int length = len;
+
+		// http://www.h2database.com/html/datatypes.html#numeric_type
+		if (length > 100_000) // H2 max precision is 100_000
+		{
+			length = 100_000;
+
+			String msg = "DbmsDdlResolverH2: decimalFix(len=" + len + ", scale=" + scale + "). len was to high, setting this to " + length;
+			_logger.warn(msg, new RuntimeException(msg));
+		}
+		
+		return "decimal(" + length + "," + scale + ")";
+	}
+
 	/**
 	 * Resolve JDBC Types -->> H2 
 	 */
@@ -83,8 +117,8 @@ extends DbmsDdlResolverAbstract
 		case java.sql.Types.FLOAT:                   return "float";
 		case java.sql.Types.REAL:                    return "real";
 		case java.sql.Types.DOUBLE:                  return "double precision";
-		case java.sql.Types.NUMERIC:                 return "numeric("+length+","+scale+")";
-		case java.sql.Types.DECIMAL:                 return "decimal("+length+","+scale+")";
+		case java.sql.Types.NUMERIC:                 return numericFix(length, scale); // return "numeric("+length+","+scale+")";
+		case java.sql.Types.DECIMAL:                 return decimalFix(length, scale); // "decimal("+length+","+scale+")";
 		case java.sql.Types.CHAR:                    return "char("+length+")";
 		case java.sql.Types.VARCHAR:                 return varcharFix(length);           // if ABOVE 1000000000 -> clob
 		case java.sql.Types.LONGVARCHAR:             return "clob";

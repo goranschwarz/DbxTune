@@ -33,6 +33,7 @@ import com.asetune.CounterController;
 import com.asetune.Version;
 import com.asetune.cache.DbmsObjectIdCache;
 import com.asetune.cache.DbmsObjectIdCacheSqlServer;
+import com.asetune.cm.sqlserver.TempdbUsagePerSpid;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.DbmsConfigTextManager;
 import com.asetune.config.dbms.IDbmsConfig;
@@ -192,6 +193,7 @@ extends MainFrame
 	@Override
 	public void disconnectHookin(WaitForExecDialog waitDialog)
 	{
+		TempdbUsagePerSpid.getInstance().close();
 	}
 
 	@Override

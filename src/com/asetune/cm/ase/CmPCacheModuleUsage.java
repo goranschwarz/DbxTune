@@ -32,6 +32,7 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventStatementCacheAboveConfig;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
@@ -403,14 +404,36 @@ extends CountersModel
 
 					if (stmntCachePctUsed.intValue() > threshold)
 					{
-						AlarmHandler.getInstance().addAlarm( 
-							new AlarmEventStatementCacheAboveConfig(cm, _statementCacheConfigSizeMb, activeMb.intValue(), stmntCachePctUsed, procCachePctUsed, threshold) );
+						String extendedDescText = "";
+						String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MODULE_USAGE_MB);
+
+						AlarmEvent ae = new AlarmEventStatementCacheAboveConfig(cm, _statementCacheConfigSizeMb, activeMb.intValue(), stmntCachePctUsed, procCachePctUsed, threshold);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						AlarmHandler.getInstance().addAlarm(ae);
 					}
 				}
 			}
 		}
 	} // end: method
 
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_MODULE_USAGE_MB.equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+
+	
 	public static final String  PROPKEY_alarm_StatementCacheUsagePct = CM_NAME + ".alarm.system.if.StatementCacheUsagePct.gt";
 	public static final int     DEFAULT_alarm_StatementCacheUsagePct = 120;
 	

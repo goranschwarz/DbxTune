@@ -409,7 +409,7 @@ public abstract class ReportChartAbstract implements IReportChart
 			getReportEntry().setStatusEntry("chartJs_writeOnce");
 
 			String name = "chartJs";
-			String label = "Initializing Chart Info: ";
+			String label = "Initializing Chart Info : "; // The extra space before ":" to align with "spark-line" a bit better 
 			String topPx = "50px";
 			
 			writer.append("\n");
@@ -417,6 +417,7 @@ public abstract class ReportChartAbstract implements IReportChart
 			writer.append("<div id='" + name + "-progress-div' style='display:none'> \n");
 			writer.append("  <label for='" + name + "-progress-bar'>" + label + "</label> \n");
 			writer.append("  <progress id='" + name + "-progress-bar' max='100' style='height: 20px; width:80%;'></progress> \n");
+			writer.append("  <button id='" + name + "-stop-progress-but' onclick='stopChartInit()' type='button' class='btn btn-primary btn-sm'>Stop</button> \n");
 			writer.append("</div>\n");
 
 			writer.append("\n");
@@ -428,6 +429,14 @@ public abstract class ReportChartAbstract implements IReportChart
 			writer.append("      var chartJsListMax     = 0; \n");
 			writer.append("    const chartJsConfMap     = new Map(); \n");
 			writer.append("\n");
+			writer.append("    // function called when pressing 'Stop' button right next to the progress bar \n");
+			writer.append("    function stopChartInit() \n");
+			writer.append("    { \n");
+			writer.append("        console.log('-stopChartInit-');  \n");
+			writer.append("        while (chartJsListToLoad.length !== 0) \n");
+			writer.append("            chartJsListToLoad.shift(); \n");
+			writer.append("    } \n");
+			
 			writer.append("    // function to be called at page load, which will initialize all Charts, (and update progressbar) \n");
 			writer.append("    function loadNextChart() \n");
 			writer.append("    { \n");
@@ -644,6 +653,7 @@ public abstract class ReportChartAbstract implements IReportChart
 		writer.append("                    unit: 'hour', \n");
 //		writer.append("                    parser: 'YYYY-MM-DDTHH:mm:ss.SSSSSSZ', \n");
 		writer.append("                    stepSize: 1, \n");
+		writer.append("                    tooltipFormat: 'YYYY-MM-DD (dddd) HH:mm:ss', \n");
 		writer.append("                    displayFormats: { \n");
 		writer.append("                        millisecond: 'HH:mm:ss', \n");
 		writer.append("                        second: 'HH:mm:ss', \n");
@@ -703,6 +713,7 @@ public abstract class ReportChartAbstract implements IReportChart
 	 * @param writer
 	 * @throws IOException
 	 */
+	@SuppressWarnings("rawtypes")
 	public void writeAsChartJsStackedBarChart(Writer writer)
 	throws IOException
 	{
@@ -756,42 +767,136 @@ public abstract class ReportChartAbstract implements IReportChart
 	public void writeAsChartJsLineChart(Writer writer)
 	throws IOException
 	{
-		// Extract "data" from the "data set"
-		LinkedHashMap<String, List<String>> seriesDataTs  = new LinkedHashMap<>();
-		LinkedHashMap<String, List<Number>> seriesDataVal = new LinkedHashMap<>();
-		List<String> dataTsXxx = null;
+		// Problem in here might be that the series are not equal in "size/timeSamples" and "dataPoints"
+		// The ChartJs object will be created as:
+		// ------------------------------------------------------
+		// type: 'line', 
+		// data: 
+		// { 
+		//     labels: ['21:01', '21:02', '21:03', '21:04', '21:05', '21:06', '21:07', '21:08', '21:09', ...], 
+		//     datasets: [ 
+		//         { 
+		//             label: 'serie-1', 
+		//             data: [1, 2, 3, 4, 5, 6, 7, 8, 9, ...], // where value 1=represents->21:01 
+		//             ...
+		//         }, { 
+		//             label: 'serie-2', 
+		//             data: [null, null, null, 4, 5, 6, 7, 8, 9, ...],  // missing dataPoints for: 21:01, 21:02, 21:03
+		//             ...
+		//         }, { 
+		//             label: 'serie-3', 
+		//             data: [null, 2, 3, 4, 5, 6, null, null, null, ...],   // missing dataPoints for: 21:01 and 21:07, 21:08, 21:09
+		//             ...
+		//     ] 
+		// }, 
+		// ------------------------------------------------------
+		// in above example:
+		//    - "serie-2" is missing 3 "time-stamps" at the beginning 
+		//    - "serie-3" is missing 1 "time-stamps" at the beginning and 3 at the end
+		// We need to "adjust" the input to put the "data point" in the correct "time slot"
+		// meaning we need to:
+		//    - check first/last time entry in each series
+		//    - Check that all series is of same size
+		// If we have an issue we need to:
+		//    - "shuffle" around data a bit
+		//
+		// Here is what I do, at the end (it's not perfect, but good enough):
+		//    - use the "biggest" time-series (as a outer loop)
+		//    - then "insert" data-points at "start" for each series until it has the same size as the "biggest" time-series 
+		// After the "fix":
+		//    - Do post/sanity checking, and if we find issues, just write WARNING messages about it (so we can fix it if cases like that arises)
+		// ------------------------------------------------------
 		
 		Dataset dataset = getDataset();
 		if (dataset instanceof TimeSeriesCollection)
 		{
 			TimeSeriesCollection tsDataset = (TimeSeriesCollection) dataset;
 
+			// Extract "data" from the "data set" into the below Map's
+			LinkedHashMap<String, List<Long>>   seriesDataTs  = new LinkedHashMap<>();
+			LinkedHashMap<String, List<Number>> seriesDataVal = new LinkedHashMap<>();
+			List<Long> dataTsToUse = null;
+
+			// Loop all series and fill: above Map's
 			for (int s=0; s<tsDataset.getSeriesCount(); s++)
 			{
 				TimeSeries timeSeries = tsDataset.getSeries(s);
 
-				List<String> dataTs  = new ArrayList<>();
+				List<Long>   dataTs  = new ArrayList<>();
 				List<Number> dataVal = new ArrayList<>();
-
-				dataTsXxx = dataTs;
 
 				seriesDataTs .put(timeSeries.getKey().toString(), dataTs);
 				seriesDataVal.put(timeSeries.getKey().toString(), dataVal);
 
 				for (int i=0; i<timeSeries.getItemCount(); i++)
 				{
-					TimeSeriesDataItem dataItem = timeSeries.getDataItem(i);
-					RegularTimePeriod dataPeriod = dataItem.getPeriod();
-					Number dataValue = dataItem.getValue();
+					TimeSeriesDataItem dataItem   = timeSeries.getDataItem(i);
+					RegularTimePeriod  dataPeriod = dataItem.getPeriod();
+					Number             dataValue  = dataItem.getValue();
 					
-					dataTs .add( "'" + TimeUtils.toStringIso8601(dataPeriod.getFirstMillisecond()) + "'");
+					dataTs .add( dataPeriod.getFirstMillisecond() );
 					dataVal.add( dataValue );
 				}
+
+				// Remember the **largest** TimeStamp series, first stage (protecting from null's)
+				if (dataTsToUse == null)
+					dataTsToUse = dataTs;
+
+				// Remember the **largest** TimeStamp series
+				if (dataTs.size() > dataTsToUse.size())
+					dataTsToUse = dataTs;
 			}
+
+			// If we have "size issues" -- which I'm describing at the "top" of this method
+			// - Adjust "data points" position (for now: only padding at start)
+			for (Entry<String, List<Number>> entry : seriesDataVal.entrySet())
+			{
+				String       sName = entry.getKey();
+				List<Number> sData = entry.getValue();
+
+				// if: current serie has less entries, then "pad" the start with "null" values
+				if (sData.size() < dataTsToUse.size())
+				{
+					if (_logger.isDebugEnabled())
+						_logger.debug(">>>>>>>>>> writeAsChartJsLineChart(): PADDING >>Start<< with " + (dataTsToUse.size() - sData.size()) + " 'null' entries. cmName='" + _cmName + "', graphName='" + _graphName + "', serieName='" + sName + "', graphTitle='" + _graphTitle + "'.");
+
+					while(sData.size() < dataTsToUse.size())
+						sData.add(0, null);
+				}
+			}
+			
+			// Sanity check (only print warning messages and continue)
+			//   - all series should have the same size
+			//   - all series "last" TS should be the same
+			for (String sName : seriesDataVal.keySet())
+			{
+				int  xValCnt = dataTsToUse.size();
+				long xLastTs = dataTsToUse.get(dataTsToUse.size()-1); // get LAST entry
+
+				int  sValCnt = seriesDataVal.get(sName).size();
+				long sLastTs = seriesDataTs .get(sName).get(seriesDataTs.get(sName).size()-1); // get LAST entry
+
+				if (xValCnt != sValCnt)
+					_logger.warn(">>>>>>>>>> writeAsChartJsLineChart(): SANITY-CHECK[SIZE] - xValCnt=" + xValCnt + ", sValCnt=" + sValCnt + ". cmName='" + _cmName + "', graphName='" + _graphName + "', serieName='" + sName + "', graphTitle='" + _graphTitle + "'.");
+
+				if (xLastTs != sLastTs)
+					_logger.warn(">>>>>>>>>> writeAsChartJsLineChart(): SANITY-CHECK[LAST-TS] - xLastTs=" + xLastTs + ":[" + TimeUtils.toStringIso8601(xLastTs) + "], sLastTs=" + sLastTs + ":[" + TimeUtils.toStringIso8601(sLastTs) + "]. Data points might be placed in the wrong 'slot' at the timeline. cmName='" + _cmName + "', graphName='" + _graphName + "', serieName='" + sName + "', graphTitle='" + _graphTitle + "'.");
+			}
+			
+			// Convert all Time-stamps <Long> into Strings with format "Iso8601" (example: 2022-11-02T20:59:47.040+01:00)
+			// For Chart.js it will be used as 'labels', see description at the "top" of this method
+			List<String> dataTsStr = new ArrayList<>();
+			for (Long ts : dataTsToUse)
+				dataTsStr.add( "'" + TimeUtils.toStringIso8601(ts) + "'");
+
+			// Write the HTML and JavaScript code
+			writeAsChartJsHtmlAndJsCode(writer, ChartType.LINE, dataTsStr, seriesDataVal);
 		}
-		
-		// Write the HTML and JavaScript code
-		writeAsChartJsHtmlAndJsCode(writer, ChartType.LINE, dataTsXxx, seriesDataVal);
+		else
+		{
+			String datasetClassName = (dataset == null) ? "" : dataset.getClass().getName();
+			_logger.warn(">>>>>>>>>> writeAsChartJsLineChart(): dataset is NOT instanceof 'TimeSeriesCollection', it is '" + datasetClassName + "' . cmName='" + _cmName + "', graphName='" + _graphName + "', graphTitle='" + _graphTitle + "'.");
+		}
 	}
 
 	public void writeAsHtmlInlineImage(Writer writer)

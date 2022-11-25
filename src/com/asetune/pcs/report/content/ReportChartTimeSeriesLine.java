@@ -263,6 +263,8 @@ extends ReportChartAbstract
 		}
 
 //		int readCount = 0;
+		
+		boolean skipLabelsWithNull = true;
 
 		// autoclose: stmnt, rs
 		try (Statement stmnt = conn.createStatement())
@@ -309,6 +311,9 @@ extends ReportChartAbstract
 					{
 						String label     = labels[ca];
 						Double dataValue = datapt[ca];
+
+						if (label == null && skipLabelsWithNull)
+							continue;
 
 						if (label == null)
 							label = "colnum-"+ca;

@@ -31,6 +31,7 @@ import org.apache.log4j.Logger;
 import com.asetune.pcs.report.content.DbmsConfigIssues;
 import com.asetune.pcs.report.content.ase.AseCmDeviceIo;
 import com.asetune.pcs.report.content.ase.AseCmSqlStatement;
+import com.asetune.pcs.report.content.ase.AseCmSqlStatementPerDb;
 import com.asetune.pcs.report.content.ase.AseConfiguration;
 import com.asetune.pcs.report.content.ase.AseCpuUsageOverview;
 import com.asetune.pcs.report.content.ase.AseDbSize;
@@ -74,6 +75,7 @@ extends DailySummaryReportDefault
 		addReportEntry( new OsCpuUsageOverview(this)        );
 		
 		// SQL: from mon SysStatements...
+		addReportEntry( new AseCmSqlStatementPerDb(this)    );
 		addReportEntry( new AseCmSqlStatement(this)         );
 		addReportEntry( new AseTopSlowNormalizedSql(this, AseTopSlowNormalizedSql.ReportType.CPU_TIME)   );
 		addReportEntry( new AseTopSlowNormalizedSql(this, AseTopSlowNormalizedSql.ReportType.WAIT_TIME)  );

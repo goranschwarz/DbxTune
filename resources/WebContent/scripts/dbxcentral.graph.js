@@ -298,7 +298,8 @@ var _serverList   = [];      // What servers does the URL reflect
 var _graphMap     = [];      // Graphs that are displaied / instantiated
 var _debug        = 0;       // Debug level: 0=off, 1=more, 2=evenMore, 3...
 var _subscribe    = false;   // If we should subscribe to Graph data from the server
-var _colorSchema  = "white"; // Color schema, can be: "white" or "dark"
+//var _colorSchema  = "white"; // Color schema, can be: "white" or "dark"
+var _colorSchema  = "dark"; // Color schema, can be: "white" or "dark"
 var _showSrvTimer = null;
 
 //window.chartColors = {
@@ -1486,7 +1487,7 @@ function dbxTuneGraphSubscribe()
 //--------------------------------------------------------------------
 class DbxGraph
 {
-	constructor(outerChartDiv, serverName, cmName, graphName, graphLabel, graphProps, graphCategory, isPercentGraph, subscribeAgeInSec, gheight, gwidth, debug, initStartTime, initEndTime, initSampleType, initSampleValue, isMultiDayChart)
+	constructor(outerChartDiv, serverName, cmName, graphName, graphLabel, graphProps, graphCategory, isPercentGraph, graphLineProps, subscribeAgeInSec, gheight, gwidth, debug, initStartTime, initEndTime, initSampleType, initSampleValue, isMultiDayChart)
 	{
 		// Properties/fields
 		this._serverName        = serverName;
@@ -1498,6 +1499,7 @@ class DbxGraph
 		this._graphCategory     = graphCategory;
 		this._isPercentGraph    = isPercentGraph;
 		this._subscribeAgeInSec = subscribeAgeInSec;
+		this._graphLineProps    = graphLineProps;
 		this._debug             = debug;
 
 		this._initStartTime     = initStartTime;
@@ -1518,6 +1520,9 @@ class DbxGraph
 		this._series = [];
 		this._initialized = false;
 
+		if (typeof this._graphLineProps !== 'object')
+			this._graphLineProps = {};
+
 		if (_debug > 0)
 			console.log("Creating DbxGraph: " 
 				+   "_serverName       ='" + this._serverName        + "'\n"
@@ -1528,6 +1533,7 @@ class DbxGraph
 				+ ", _graphProps       ='" + this._graphProps        + "'\n"
 				+ ", _graphCategory    ='" + this._graphCategory     + "'\n"
 				+ ", _isPercentGraph   ='" + this._isPercentGraph    + "'\n"
+				+ ", _graphLineProps   ='" + this._graphLineProps    + "'\n"
 				+ ", _subscribeAgeInSec='" + this._subscribeAgeInSec + "'\n"
 				+ ", _debug            ='" + this._debug             + "'\n"
 
@@ -1686,6 +1692,7 @@ class DbxGraph
 					xAxes: [{
 						type: 'time',
 						distribution: 'linear',
+						tooltipFormat: 'YYYY-MM-DD (dddd) HH:mm:ss', // This didn't work
 						time: {
 							displayFormats: {
 								second: 'HH:mm:ss',
@@ -1880,6 +1887,7 @@ class DbxGraph
 		// and add it to the outer div
 		const newDiv = document.createElement("div");
 		newDiv.setAttribute("id", this._fullName);
+		newDiv.setAttribute("graph-line-props", this.buildHtmlAttrGraphLineProps());
 		newDiv.style.border = "1px dotted gray";
 		if (_colorSchema === "dark")
 		{
@@ -1918,6 +1926,9 @@ class DbxGraph
 		this._chartObject = new Chart(ctx, this._chartConfig);
 		this._canvasCtx = ctx;
 
+		// Enable/disable some specififc "lines" 
+		
+		
 		//---------------------------------------------------------------------------------------------------------
 		// on right click: 
 		//---------------------------------------------------------------------------------------------------------
@@ -2008,8 +2019,10 @@ class DbxGraph
 						name: "Open this graph in new Tab",
 						callback: function(key, opt) 
 						{
-							var graphName = $(this).attr('id');
-							console.log("contextMenu(graphName="+graphName+"): key='"+key+"'.");
+							var graphName      = $(this).attr('id');
+							var graphLineProps = $(this).attr('graph-line-props');
+							var graphListAttr  = graphName + graphLineProps
+							console.log("contextMenu(graphName="+graphName+"): key='"+key+"', graphListAttr='"+graphListAttr+"'.");
 
 							// Get serverName this graph is for
 							var srvName = getGraphByName(graphName).getServerName();
@@ -2020,9 +2033,9 @@ class DbxGraph
 							const params = new URLSearchParams(url.search);
 
 							// Change/set some parameters
-							params.set('sessionName', srvName);
 							params.set('gcols',       1);
-							params.set('graphList',   graphName);
+							params.set('sessionName', srvName);
+							params.set('graphList',   graphListAttr);
 
 							window.open(`${location.pathname}?${params}`, '_blank');
 						}
@@ -2031,8 +2044,10 @@ class DbxGraph
 						name: "Open this graph (last 7 days, full day) in new Tab",
 						callback: function(key, opt) 
 						{
-							var graphName = $(this).attr('id');
-							console.log("contextMenu(graphName="+graphName+"): key='"+key+"'.");
+							var graphName      = $(this).attr('id');
+							var graphLineProps = $(this).attr('graph-line-props');
+							var graphListAttr  = graphName + graphLineProps
+							console.log("contextMenu(graphName="+graphName+"): key='"+key+"', graphListAttr='"+graphListAttr+"'.");
 
 							// Get serverName this graph is for
 							var srvName = getGraphByName(graphName).getServerName();
@@ -2045,11 +2060,11 @@ class DbxGraph
 							// Change/set some parameters
 							params.set('mdc',         "999");
 							params.set('mdcp',        "false");
+							params.set('gcols',       1);
 							params.set('startTime',   new moment().subtract(6, "days").startOf('day').format('YYYY-MM-DD HH:mm'));
 							params.set('endTime',     "24h");
 							params.set('sessionName', srvName);
-							params.set('graphList',   graphName);
-							params.set('gcols',       1);
+							params.set('graphList',   graphListAttr);
 
 							window.open(`${location.pathname}?${params}`, '_blank');
 						}
@@ -2058,8 +2073,10 @@ class DbxGraph
 						name: "Open this graph (last 7 days, # time) in new Tab",
 						callback: function(key, opt) 
 						{
-							var graphName = $(this).attr('id');
-							console.log("contextMenu(graphName="+graphName+"): key='"+key+"'.");
+							var graphName      = $(this).attr('id');
+							var graphLineProps = $(this).attr('graph-line-props');
+							var graphListAttr  = graphName + graphLineProps
+							console.log("contextMenu(graphName="+graphName+"): key='"+key+"', graphListAttr='"+graphListAttr+"'.");
 
 							// Get serverName this graph is for
 							var srvName = getGraphByName(graphName).getServerName();
@@ -2081,10 +2098,10 @@ class DbxGraph
 							// Change/set some parameters
 							params.set('mdc',         "-6");
 							params.set('mdcp',        "false");
+							params.set('gcols',       1);
 							params.set('endTime',     currentHourSpan + "h");
 							params.set('sessionName', srvName);
-							params.set('graphList',   graphName);
-							params.set('gcols',       1);
+							params.set('graphList',   graphListAttr);
 
 							window.open(`${location.pathname}?${params}`, '_blank');
 						}
@@ -2093,8 +2110,10 @@ class DbxGraph
 						name: "Open this graph (last 30 days, full day) in new Tab",
 						callback: function(key, opt) 
 						{
-							var graphName = $(this).attr('id');
-							console.log("contextMenu(graphName="+graphName+"): key='"+key+"'.");
+							var graphName      = $(this).attr('id');
+							var graphLineProps = $(this).attr('graph-line-props');
+							var graphListAttr  = graphName + graphLineProps
+							console.log("contextMenu(graphName="+graphName+"): key='"+key+"', graphListAttr='"+graphListAttr+"'.");
 
 							// Get serverName this graph is for
 							var srvName = getGraphByName(graphName).getServerName();
@@ -2107,11 +2126,11 @@ class DbxGraph
 							// Change/set some parameters
 							params.set('mdc',         "999");
 							params.set('mdcp',        "false");
+							params.set('gcols',       1);
 							params.set('startTime',   new moment().subtract(30, "days").startOf('day').format('YYYY-MM-DD HH:mm'));
 							params.set('endTime',     "24h");
 							params.set('sessionName', srvName);
-							params.set('graphList',   graphName);
-							params.set('gcols',       1);
+							params.set('graphList',   graphListAttr);
 
 							window.open(`${location.pathname}?${params}`, '_blank');
 						}
@@ -2120,8 +2139,10 @@ class DbxGraph
 						name: "Open this graph (last 30 days, # time) in new Tab",
 						callback: function(key, opt) 
 						{
-							var graphName = $(this).attr('id');
-							console.log("contextMenu(graphName="+graphName+"): key='"+key+"'.");
+							var graphName      = $(this).attr('id');
+							var graphLineProps = $(this).attr('graph-line-props');
+							var graphListAttr  = graphName + graphLineProps
+							console.log("contextMenu(graphName="+graphName+"): key='"+key+"', graphListAttr='"+graphListAttr+"'.");
 
 							// Get serverName this graph is for
 							var srvName = getGraphByName(graphName).getServerName();
@@ -2143,10 +2164,10 @@ class DbxGraph
 							// Change/set some parameters
 							params.set('mdc',         "-30");
 							params.set('mdcp',        "false");
+							params.set('gcols',       1);
 							params.set('endTime',     currentHourSpan + "h");
 							params.set('sessionName', srvName);
-							params.set('graphList',   graphName);
-							params.set('gcols',       1);
+							params.set('graphList',   graphListAttr);
 
 							window.open(`${location.pathname}?${params}`, '_blank');
 						}
@@ -2317,12 +2338,19 @@ class DbxGraph
 	getGraphLabel()      { return this._graphLabel; }
 	getGraphProps()      { return this._graphProps; }
 	getGraphCategory()   { return this._graphCategory; }
+	getGraphLineProps()  { return this._graphLineProps; }
 
 	getInitStartTime()   { return this._initStartTime;   }
 	getInitEndTime()     { return this._initEndTime;     }
 	getInitSampleType()  { return this._initSampleType;  }
 	getInitSampleValue() { return this._initSampleValue; }
 	isMultiDayChart()    { return this._isMultiDayChart; }
+
+	// Run AFTER load has been completed, so we can make any "adjustments"
+	onLoadCompetion()
+	{
+		this.enableDisableChartLines();
+	}
 
 	checkForNoDataInChart()
 	{ 
@@ -2346,7 +2374,94 @@ class DbxGraph
 			//}, 1000);
 		}
 	}
-		
+
+	buildHtmlAttrGraphLineProps()
+	{
+		var retStr = "";
+		if (this._graphLineProps.hasOwnProperty("showCol") && this._graphLineProps.showCol.length > 0)
+		{
+			this._graphLineProps.showCol.forEach(function(name)
+			{
+				retStr += name + ";";
+			});
+		}
+		if (this._graphLineProps.hasOwnProperty("hideCol") && this._graphLineProps.hideCol.length > 0)
+		{
+			this._graphLineProps.hideCol.forEach(function(name)
+			{
+				retStr += "-" + name + ";";
+			});
+		}
+
+		// Remove last ";"
+		if (retStr.endsWith(";"))
+			retStr = retStr.substring(0, retStr.length-1);
+
+		// if we got data, surround with []
+		if (retStr !== "")
+			retStr = "[" + retStr + "]";
+
+		return retStr;
+	}
+	
+	// Based on property "_graphLineProps", hide/show specific laines foreach graph...
+	// The is specified in the URL. Example: http://gorans.org:8080/graph.html?startTime=4h&sessionName=GORAN_UB3_DS&graphList=CmExecutionTime_TimeGraph[Sorting;Compilation]
+	//   - to show only the following 2 lines 'Sorting' and 'Compilation'                                                                               ^^^^^^^^^^^^^^^^^^^^^
+	enableDisableChartLines()
+	{
+		var ci = this._chartObject;
+
+		// Disable all lines EXEPT the ones in "_graphLineProps.showCol"
+		if (this._graphLineProps.hasOwnProperty("showCol") && this._graphLineProps.showCol.length > 0)
+		{
+			// Hide ALL 
+			ci.data.datasets.forEach(function(dataset, index)
+			{
+				var meta = ci.getDatasetMeta(index);
+				meta.hidden = true;
+			});
+			// Show specified
+			this._graphLineProps.showCol.forEach(function(name)
+			{
+				var foundLabel = false;
+				ci.data.datasets.forEach(function(dataset, index)
+				{
+					if (name === dataset.label)
+					{
+						foundLabel = foundLabel;
+						var meta = ci.getDatasetMeta(index);
+						meta.hidden = false;
+					}
+				});
+				if ( ! foundLabel )
+					console.log("WARNING: enableDisableChartLines(): show: did NOT find the label '" + name + "'.");
+			});
+		}
+
+		// Disable all lines in "_graphLineProps.hideCol"
+		if (this._graphLineProps.hasOwnProperty("hideCol") && this._graphLineProps.hideCol.length > 0)
+		{
+			// HIDE specified
+			this._graphLineProps.hideCol.forEach(function(name)
+			{
+				var foundLabel = false;
+				ci.data.datasets.forEach(function(dataset, index)
+				{
+					if (name === dataset.label)
+					{
+						foundLabel = foundLabel;
+						var meta = ci.getDatasetMeta(index);
+						meta.hidden = true;
+					}
+				});
+				if ( ! foundLabel )
+					console.log("WARNING: enableDisableChartLines(): hide: did NOT find the label '" + name + "'.");
+			});
+		}
+
+		ci.update();
+	}
+
 	getOldestTs() 
 	{ 
 		return this._chartObject.data.labels[0]; 
@@ -3038,7 +3153,7 @@ function dbxTuneLoadCharts(destinationDivId)
 				return;
 			}
 		}
-		else // Try to read it as a comma separated lits and create a graphProfile
+		else // Try to read it as a comma separated liss and create a graphProfile
 		{
 			let graphNameArr = graphList.split(",");
 			graphProfile = [];
@@ -3046,6 +3161,8 @@ function dbxTuneLoadCharts(destinationDivId)
 			{
 				var graphEntry = {};
 				var tmpStrEntry = graphNameArr[i];
+
+				graphEntry.graphLineProps = {}; // Initialize with empty object
 
 				// Plain graph name (no specifications/properties)
 				if ( ! tmpStrEntry.includes("[") )
@@ -3065,21 +3182,24 @@ function dbxTuneLoadCharts(destinationDivId)
 					
 					console.log("DEBUG: tmpStrGraphName="+tmpStrGraphName+", tmpStrGraphProps="+tmpStrGraphProps);
 					
-					
-//					// TODO: parse properties into a "Object"
-//					let tmpGraphPropArr = graphList.split(";");
-//					let tmpGraphPropObj = {}; // empty Object
-//					for (let i=0; i<tmpGraphPropArr.length; i++) 
-//					{
-//						var tmpPropEntry = tmpGraphPropArr[i];
-//						
-//						// FIXME: Check what to do with this entry... 
-//						tmpGraphPropObj.hideCol.push(graphEntry); // FIXME: push column names to hide on this name
-//						tmpGraphPropObj.showCol.push(graphEntry); // FIXME: push column names to show on this name
-//					}
+					// TODO: parse tmpStrGraphProps into a "Object"
+					let tmpGraphPropArr = tmpStrGraphProps.split(";");
+					let tmpGraphPropObj = { hideCol:[], showCol:[] }; // empty Object
+					for (let i=0; i<tmpGraphPropArr.length; i++) 
+					{
+						var tmpPropEntry = tmpGraphPropArr[i];
+						
+						// FIXME: Check what to do with this entry... 
+						if (tmpPropEntry.startsWith("-"))
+							tmpGraphPropObj.hideCol.push(tmpPropEntry.substring(1)); // Remove the '-' char
+						else if (tmpPropEntry.startsWith("+"))
+							tmpGraphPropObj.showCol.push(tmpPropEntry.substring(1)); // Remove the '+' char
+						else
+							tmpGraphPropObj.showCol.push(tmpPropEntry);
+					}
 					
 					graphEntry.graph = tmpStrGraphName;
-//					graphEntry.graphLineProps = tmpGraphPropObj; // FIXME: This object should later on be passed into: new DbxGraph(... entry.graphLineProps, ...) the DbxGraph Object should handle "the rest"
+					graphEntry.graphLineProps = tmpGraphPropObj; // FIXME: This object should later on be passed into: new DbxGraph(... entry.graphLineProps, ...) the DbxGraph Object should handle "the rest"
 				}
 				
 				// Add the object to the profile
@@ -3198,6 +3318,7 @@ function dbxTuneLoadCharts(destinationDivId)
 							entry.graphProps,
 							entry.graphCategory,
 							entry.percentGraph,
+							entry.graphLineProps,
 							subscribeAgeInSec,
 							gheight,
 							gwidth,
@@ -3243,6 +3364,7 @@ function dbxTuneLoadCharts(destinationDivId)
 							entry.graphProps,
 							entry.graphCategory,
 							entry.percentGraph,
+							entry.graphLineProps,
 							subscribeAgeInSec,
 							gheight,
 							gwidth,
@@ -3345,7 +3467,8 @@ function createGraphLoadOrder(graphProfile, graphObjects, loadAllGraphs)
 	// We HAVE a profile, then: only add graphs within the profile
 	for(let i = 0; i < graphProfile.length; i++) 
 	{
-		const fullGraphName = graphProfile[i].graph;
+		const fullGraphName  = graphProfile[i].graph;
+		const graphLineProps = graphProfile[i].graphLineProps;
 		var   serverList = [];
 		
 		if (graphProfile[i].hasOwnProperty("srv"))
@@ -3371,6 +3494,7 @@ function createGraphLoadOrder(graphProfile, graphObjects, loadAllGraphs)
 
 				if (entry.tableName === fullGraphName && entry.serverName === serverName) 
 				{
+					entry.graphLineProps = graphLineProps;
 					retData.push(entry);
 				}
 			}
@@ -3432,6 +3556,9 @@ function loadDataForGraph(indexToLoad)
 			console.time('dbxGraph.addData:: cmName='+cmName+', graphName='+graphName+', startTime='+startTime+', endTime='+endTime);
 			dbxGraph.addData(jsonResp);
 			console.timeEnd('dbxGraph.addData:: cmName='+cmName+', graphName='+graphName+', startTime='+startTime+', endTime='+endTime);
+
+			// Do stuff after a graph has been loaded
+			dbxGraph.onLoadCompetion();
 			
 			if (_debug > 0)
 				console.log('DONE: loading data for cmName='+cmName+', graphName='+graphName);

@@ -395,10 +395,10 @@ extends CountersModel
 				_mandatoryLogicalConnections.add(lName);
 			}
 
-if (_mandatoryLogicalConnections != null && !_mandatoryLogicalConnections.isEmpty())
-{
-	System.out.println("##### DEBUG: sendAlarmRequest("+cm.getName()+"): getAbsRowCount()=" + cm.getAbsRowCount() + ", thisSampleLogicalConnections=" + thisSampleLogicalConnections + ", _mandatoryLogicalConnections=" + _mandatoryLogicalConnections);
-}
+//if (_mandatoryLogicalConnections != null && !_mandatoryLogicalConnections.isEmpty())
+//{
+//	System.out.println("##### DEBUG: sendAlarmRequest("+cm.getName()+"): getAbsRowCount()=" + cm.getAbsRowCount() + ", thisSampleLogicalConnections=" + thisSampleLogicalConnections + ", _mandatoryLogicalConnections=" + _mandatoryLogicalConnections);
+//}
 			
 // SOME TIMES it seems that getAbsRowCount() is 0 ... when the B node is DOWN ... 
 // But I don't understand... since a "dummy" row is still added in CounterSampleWsIterator.getSample(...) catch(StandbyErrors) _rows.add(createSkipRow(wsEntry, standbyMsg));  

@@ -1061,12 +1061,12 @@ implements IReportEntry
 	/**
 	 * Simple wrapper method to create a ReportChartObject
 	 * 
-	 * @param conn
-	 * @param cmName
-	 * @param graphName
-	 * @param maxValue
-	 * @param skipNames
-	 * @param graphTitle
+	 * @param conn             DBMS Connection
+	 * @param cmName           CM Name
+	 * @param graphName        Graph Name
+	 * @param maxValue         -1 = No Max Value
+	 * @param skipNames        Skip some Series (CVS String) 
+	 * @param graphTitle       What's on top of the Graph
 	 * 
 	 * @return This will always returns a ReportChartObject object
 	 */
@@ -1078,12 +1078,12 @@ implements IReportEntry
 	/**
 	 * Simple wrapper method to create a ReportChartObject
 	 * 
-	 * @param conn
-	 * @param cmName
-	 * @param graphName
-	 * @param maxValue
-	 * @param skipNames
-	 * @param graphTitle
+	 * @param conn             DBMS Connection
+	 * @param cmName           CM Name
+	 * @param graphName        Graph Name
+	 * @param maxValue         -1 = No Max Value
+	 * @param skipNames        Skip some Series (CVS String) 
+	 * @param graphTitle       What's on top of the Graph
 	 * 
 	 * @return This will always returns a ReportChartObject object
 	 */
@@ -1137,6 +1137,69 @@ implements IReportEntry
 		}
 		
 		return rowsChanged;
+	}
+
+
+	/**
+	 * FIXME
+	 * 
+	 * @param conn
+	 * @param rstm
+	 * @param cmName
+	 */
+	public void fixDictionaryCompressedColumns(DbxConnection conn, ResultSetTableModel rstm, String cmName)
+	{
+		if (conn == null) return;
+		if (rstm == null) return;
+
+		// Get the list of columns ending with "$dcc$"
+		List<String> dccColumns = new ArrayList<>(); 
+		for (String colName : rstm.getColumnNames())
+		{
+			if (colName.endsWith("$dcc$"))
+				dccColumns.add(colName);
+		}
+
+		// exit if no DCC columns
+		if (dccColumns.isEmpty())
+			return;
+
+		// For every DCC to fix
+		// - For each row in the RSTM 
+		// - Get "actual" text instead of the "hash"
+		// - Change the column name "strip off" the "$dcc$"
+		for (String colName : dccColumns)
+		{
+			int replaceCount = 0;
+
+			String originColName = colName.substring(0, colName.length() - "$dcc$".length());
+			String dccTableName = cmName + "$dcc$" + originColName;
+			
+			for (int r=0; r<rstm.getRowCount(); r++)
+			{
+				int colPos = rstm.findColumn(colName);
+				
+				String hashId = rstm.getValueAsString(r, colName);
+				String sql = conn.quotifySqlString("select [colVal] from [" + dccTableName + "] where [hashId] = '" + hashId + "'");
+				
+				String val = DbUtils.execQueryFirtColumnFirstRowNoThrow(conn, sql);
+
+				if (StringUtil.hasValue(val))
+				{
+					rstm.setValueAtWithOverride(val, r, colPos);
+					replaceCount++;
+				}
+			}
+
+			// Change the "MetaData" for the column. (Column Name and Column Data Type)
+			if (replaceCount > 0)
+			{
+				String oldColName = colName;
+				String newColName = colName.substring(0, colName.length() - "$dcc$".length());
+
+				rstm.renameColumn(oldColName, newColName);
+			}
+		}
 	}
 
 	/**

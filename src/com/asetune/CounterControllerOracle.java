@@ -302,6 +302,34 @@ extends CounterControllerAbstract
 	}
 
 	@Override
+	public void setInRefresh(boolean enterRefreshMode)
+	{
+		try
+		{
+			DbxConnection dbxConn = getMonConnection();
+			
+			if (enterRefreshMode)
+			{
+				// Lets use ONE transaction for every refresh
+				if (dbxConn.getAutoCommit() == true)
+					dbxConn.setAutoCommit(false);
+			}
+			else
+			{
+				// When leaving refresh mode... set AutoCommit to true -- so we don't hold anything while sleeping
+				if (dbxConn.getAutoCommit() == false)
+					dbxConn.setAutoCommit(true);
+			}
+		}
+		catch(SQLException e)
+		{
+			_logger.info("Problem when changing the Orcale Connection autocommit mode.");
+		}
+
+		super.setInRefresh(enterRefreshMode);
+	}
+
+	@Override
 	public void noGuiConnectErrorHandler(SQLException ex, String dbmsUsername, String dbmsPassword, String dbmsServer, String dbmsHostPortStr, String jdbcUrlOptions) 
 	throws Exception
 	{

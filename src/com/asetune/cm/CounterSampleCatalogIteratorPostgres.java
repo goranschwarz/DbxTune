@@ -53,14 +53,19 @@ extends CounterSampleCatalogIterator
 	// This is used if no databases are in a "valid" state.
 	private List<String> _fallbackList = null;
 
-	private static DbxConnectionPoolMap _cpm;
+//	private static DbxConnectionPoolMap _cpm;
 	
 
 	public static void closeConnPool()
 	{
-		if (_cpm != null)
-			_cpm.close();
-		_cpm = null;
+//		if (_cpm != null)
+//			_cpm.close();
+//		_cpm = null;
+		if (DbxConnectionPoolMap.hasInstance())
+		{
+			DbxConnectionPoolMap.getInstance().close();
+			DbxConnectionPoolMap.setInstance(null);
+		}
 	}
 
 	/**
@@ -75,8 +80,10 @@ extends CounterSampleCatalogIterator
 		super(name, negativeDiffCountersToZero, diffColNames, prevSample);
 		_fallbackList = fallbackList;
 		
-		if (_cpm == null)
-			_cpm = new DbxConnectionPoolMap();
+//		if (_cpm == null)
+//			_cpm = new DbxConnectionPoolMap();
+		if ( ! DbxConnectionPoolMap.hasInstance() )
+			DbxConnectionPoolMap.setInstance(new DbxConnectionPoolMap());
 	}
 	
 	@Override
@@ -116,7 +123,9 @@ extends CounterSampleCatalogIterator
 		if (srvConn == null)
 			throw new RuntimeException("The 'template' Connection can not be null.");
 		
-		if (_cpm == null)
+//		if (_cpm == null)
+//			throw new RuntimeException("Connection pool Map is not initialized");
+		if ( ! DbxConnectionPoolMap.hasInstance() )
 			throw new RuntimeException("Connection pool Map is not initialized");
 
 		// Are we in GUI mode or not (connections can then use)
@@ -125,14 +134,18 @@ extends CounterSampleCatalogIterator
 		if (MainFrame.hasInstance())
 			guiOwner = MainFrame.getInstance();
 
+		DbxConnectionPoolMap cpm = DbxConnectionPoolMap.getInstance();
+		
 		// reuse a connction if one exists
-		if (_cpm.hasMapping(dbname))
+//		if (_cpm.hasMapping(dbname))
+		if (cpm.hasMapping(dbname))
 		{
 			// Set status
 			if (cm != null && cm.getGuiController() != null)
 				cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "get conn to db '"+dbname+"'");
 			
-			return _cpm.getPool(dbname).getConnection(guiOwner);
+//			return _cpm.getPool(dbname).getConnection(guiOwner);
+			return cpm.getPool(dbname).getConnection(guiOwner);
 		}
 
 		// Grab the ConnectionProperty from the template Connection
@@ -175,7 +188,8 @@ extends CounterSampleCatalogIterator
 		CounterController.getInstance().onMonConnect(dbConn);
 
 		// when first connection is successful, add the connection pool to the MAP
-		_cpm.setPool(dbname, cp);
+//		_cpm.setPool(dbname, cp);
+		cpm.setPool(dbname, cp);
 		
 		return dbConn;
 	}
@@ -192,12 +206,20 @@ extends CounterSampleCatalogIterator
 		if (dbConn == null)
 			return;
 
-		if (_cpm == null)
+//		if (_cpm == null)
+//			throw new RuntimeException("Connection pool Map is not initialized");
+		if ( ! DbxConnectionPoolMap.hasInstance() )
 			throw new RuntimeException("Connection pool Map is not initialized");
 		
-		if (_cpm.hasMapping(dbname))
+		DbxConnectionPoolMap cpm = DbxConnectionPoolMap.getInstance();
+		
+//		if (_cpm.hasMapping(dbname))
+//		{
+//			_cpm.getPool(dbname).releaseConnection(dbConn);
+//		}
+		if (cpm.hasMapping(dbname))
 		{
-			_cpm.getPool(dbname).releaseConnection(dbConn);
+			cpm.getPool(dbname).releaseConnection(dbConn);
 		}
 		else
 		{

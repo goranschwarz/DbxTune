@@ -196,14 +196,27 @@ public class AseTopCmObjectActivityTabSize extends AseAbstract
 		}
 		else
 		{
-			// Highlight sort column
-			_shortRstm.setHighlightSortColumns("UsageInMb_max");
+//			if (_shortRstm.getRowCount() > 0)
+//			{
+				// Highlight sort column
+				_shortRstm.setHighlightSortColumns("UsageInMb_max");
 
-			// Describe the table
-			setSectionDescription(_shortRstm);
+				// Describe the table
+				setSectionDescription(_shortRstm);
 
-			// Calculate Duration
-			setDurationColumn(_shortRstm, "CmSampleTime_min", "CmSampleTime_max", "Duration");
+				// Calculate Duration
+				setDurationColumn(_shortRstm, "CmSampleTime_min", "CmSampleTime_max", "Duration");
+//			}
+//			else
+//			{
+//				// Can we get the information from "some where else"
+//				sql = ""
+//				    + "select * \n"
+//				    + "from [MonDdlStorage] \n"
+//				    + "where [type] = 'U' \n"
+//				    + "order by XXX desc \n"     // sp_spaceused is in 'extraInfoText'... But we need to parse that... and that will be "hard"
+//				    + "";
+//			}
 		}
 	}
 	

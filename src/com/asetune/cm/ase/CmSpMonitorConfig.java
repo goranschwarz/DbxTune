@@ -735,6 +735,29 @@ extends CountersModel
 
 	} // end: method
 
+//NOTE: The below was already done with MovingAverageCounterManager(...) <<< see above
+//      But from 'CmErrorLog' we use;GRAPH_NAME_METADATA_ACTIVE, GRAPH_NAME_METADATA_PCT_USAGE  so we still need to add those 2 down here!
+//      FIXME: Remove the MovingAverageChart.getChartAsHtmlImage(...) in above section to use the *new* GraphHistory functionality instead!
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+//		if (GRAPH_NAME_PROC_CACHE_PCT_USAGE.equals(name)) return true;
+//		if (GRAPH_NAME_PROC_CACHE_MEM_USAGE.equals(name)) return true;
+		if (GRAPH_NAME_METADATA_PCT_USAGE  .equals(name)) return true;
+		if (GRAPH_NAME_METADATA_ACTIVE     .equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+
+	
 	public static final String  PROPKEY_alarm_ProcedureCacheUsagePct     = CM_NAME + ".alarm.system.if.ProcedureCacheUsagePct.gt";
 	public static final int     DEFAULT_alarm_ProcedureCacheUsagePct     = 80;
 	

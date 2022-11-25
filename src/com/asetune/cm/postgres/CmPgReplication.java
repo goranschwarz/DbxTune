@@ -260,9 +260,9 @@ extends CountersModel
 			    + "    ,(pg_wal_lsn_diff(write_lsn            ,flush_lsn  ) / 1024)::bigint AS flush_kb \n"
 			    + "    ,(pg_wal_lsn_diff(flush_lsn            ,replay_lsn ) / 1024)::bigint AS replay_kb \n"
 			    + "    ,(pg_wal_lsn_diff(pg_current_wal_lsn() ,replay_lsn))::bigint / 1024  AS total_lag_kb \n"
-	    	    + "    ,EXTRACT(EPOCH FROM (clock_timestamp() - write_lag )) AS write_lag \n"
-	    	    + "    ,EXTRACT(EPOCH FROM (clock_timestamp() - flush_lag )) AS flush_lag \n"
-	    	    + "    ,EXTRACT(EPOCH FROM (clock_timestamp() - replay_lag)) AS replay_lag \n"
+	    	    + "    ,EXTRACT(EPOCH FROM (clock_timestamp() - write_lag ))::int AS write_lag \n"
+	    	    + "    ,EXTRACT(EPOCH FROM (clock_timestamp() - flush_lag ))::int AS flush_lag \n"
+	    	    + "    ,EXTRACT(EPOCH FROM (clock_timestamp() - replay_lag))::int AS replay_lag \n"
 			    +       reply_time
 			    +       reply_time_seconds
 			    + "FROM pg_stat_replication \n"
@@ -414,8 +414,13 @@ extends CountersModel
 
 					if (total_lag_kb.intValue() > threshold)
 					{
-						AlarmEvent alarm = new AlarmEventPgReplicationLag(cm, client_addr, total_lag_kb.intValue(), threshold); 
-						AlarmHandler.getInstance().addAlarm(alarm);
+						String extendedDescText = "";
+						String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOTAL_LAG);
+
+						AlarmEvent ae = new AlarmEventPgReplicationLag(cm, client_addr, total_lag_kb.intValue(), threshold); 
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						AlarmHandler.getInstance().addAlarm(ae);
 					}
 				}
 			}
@@ -440,14 +445,37 @@ extends CountersModel
 
 					if (reply_time_seconds.intValue() > threshold)
 					{
-						AlarmEvent alarm = new AlarmEventPgReplicationAge(cm, client_addr, reply_time_seconds.intValue(), threshold); 
-						AlarmHandler.getInstance().addAlarm(alarm);
+						String extendedDescText = "";
+						String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_REP_AGE_SECONDS);
+
+						AlarmEvent ae = new AlarmEventPgReplicationAge(cm, client_addr, reply_time_seconds.intValue(), threshold); 
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						AlarmHandler.getInstance().addAlarm(ae);
 					}
 				}
 			}
 		}
 	} // end: method
 
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_REP_AGE_SECONDS.equals(name)) return true;
+		if (GRAPH_NAME_TOTAL_LAG      .equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+
+	
 	public static final String  PROPKEY_alarm_TotalLagKb         = CM_NAME + ".alarm.system.if.total_lag_kb.gt";
 	public static final int     DEFAULT_alarm_TotalLagKb         = 1024 * 100; // 100 MB
 

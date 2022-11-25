@@ -2784,6 +2784,94 @@ implements
 					return false;
 				}
 			}, SwingUtils.readImageIcon(Version.class, "images/highlighter_aggregate_avg.png")));
+
+			// ICON for MIN Aggregated Columns
+			_dataTable.addHighlighter( new IconHighlighter(new HighlightPredicate()
+			{
+				@Override
+				public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+				{
+					CountersModel cm = _cm;
+					if ( !_tailMode )
+						cm = _cmDisplay;
+
+					if ( cm == null )                                return false;
+					if ( !cm.isDataInitialized() )                   return false;
+//					if (  cm.discardDiffHighlighterOnAbsTable() )    return false;
+//					if ( !cm.isAggregateRowEnabled() )               return false;
+					
+					if ( cm.isAggregateRow(adapter.convertRowIndexToModel(adapter.row)) )
+					{
+						Map<String, AggregationType> aggCols = cm.getAggregateColumns();
+						if (aggCols == null)
+							return false;
+						
+						AggregationType aggType = aggCols.get( adapter.getColumnName(adapter.convertColumnIndexToModel(adapter.column)) );
+						if (aggType != null && AggregationType.Agg.MIN.equals(aggType.getAggregationType()))
+							return true;
+					}
+					return false;
+				}
+			}, SwingUtils.readImageIcon(Version.class, "images/highlighter_aggregate_min.png")));
+
+			// ICON for MAX Aggregated Columns
+			_dataTable.addHighlighter( new IconHighlighter(new HighlightPredicate()
+			{
+				@Override
+				public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+				{
+					CountersModel cm = _cm;
+					if ( !_tailMode )
+						cm = _cmDisplay;
+
+					if ( cm == null )                                return false;
+					if ( !cm.isDataInitialized() )                   return false;
+//					if (  cm.discardDiffHighlighterOnAbsTable() )    return false;
+//					if ( !cm.isAggregateRowEnabled() )               return false;
+					
+					if ( cm.isAggregateRow(adapter.convertRowIndexToModel(adapter.row)) )
+					{
+						Map<String, AggregationType> aggCols = cm.getAggregateColumns();
+						if (aggCols == null)
+							return false;
+						
+						AggregationType aggType = aggCols.get( adapter.getColumnName(adapter.convertColumnIndexToModel(adapter.column)) );
+						if (aggType != null && AggregationType.Agg.MAX.equals(aggType.getAggregationType()))
+							return true;
+					}
+					return false;
+				}
+			}, SwingUtils.readImageIcon(Version.class, "images/highlighter_aggregate_max.png")));
+
+//			// NOTE: COUNT is -not-yet-implemented-
+//			// ICON for COUNT Aggregated Columns
+//			_dataTable.addHighlighter( new IconHighlighter(new HighlightPredicate()
+//			{
+//				@Override
+//				public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+//				{
+//					CountersModel cm = _cm;
+//					if ( !_tailMode )
+//						cm = _cmDisplay;
+//
+//					if ( cm == null )                                return false;
+//					if ( !cm.isDataInitialized() )                   return false;
+////					if (  cm.discardDiffHighlighterOnAbsTable() )    return false;
+////					if ( !cm.isAggregateRowEnabled() )               return false;
+//					
+//					if ( cm.isAggregateRow(adapter.convertRowIndexToModel(adapter.row)) )
+//					{
+//						Map<String, AggregationType> aggCols = cm.getAggregateColumns();
+//						if (aggCols == null)
+//							return false;
+//						
+//						AggregationType aggType = aggCols.get( adapter.getColumnName(adapter.convertColumnIndexToModel(adapter.column)) );
+//						if (aggType != null && AggregationType.Agg.COUNT.equals(aggType.getAggregationType()))
+//							return true;
+//					}
+//					return false;
+//				}
+//			}, SwingUtils.readImageIcon(Version.class, "images/highlighter_aggregate_count.png")));
 		}
 		
 

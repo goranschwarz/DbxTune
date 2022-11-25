@@ -341,10 +341,15 @@ extends CountersModelAppend
 				// ErrorNumber=1601, Severity=17, ErrorMessage=There are not enough 'user connections' available to start a new process...
 				if (errorNumber == 1601 || ErrorMessage.indexOf("There are not enough 'user connections' available to start a new process") >= 0)
 				{
+					String resourceName = "number of user connections";
 					String extendedDescText = ErrorMessage;
 					String extendedDescHtml = ErrorMessage;
 
-					AlarmEvent ae = new AlarmEventConfigResourceIsUsedUp(this, "number of user connections", 1601, ErrorMessage);
+					CountersModel cmSpMonitorConfig = getCounterController().getCmByName(CmSpMonitorConfig.CM_NAME);
+					extendedDescHtml += "<br><br>" + cmSpMonitorConfig.getGraphDataHistoryAsHtmlImage(CmSpMonitorConfig.GRAPH_NAME_METADATA_ACTIVE   , resourceName);
+					extendedDescHtml += "<br><br>" + cmSpMonitorConfig.getGraphDataHistoryAsHtmlImage(CmSpMonitorConfig.GRAPH_NAME_METADATA_PCT_USAGE, resourceName);
+
+					AlarmEvent ae = new AlarmEventConfigResourceIsUsedUp(this, resourceName, 1601, ErrorMessage);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
 					alarmHandler.addAlarm( ae );
@@ -374,6 +379,10 @@ extends CountersModelAppend
 
 					if (StringUtil.isNullOrBlank(dbname))
 						dbname = "-no-dbname-found-in-errorlog-";
+
+					CountersModel cmOpenDatabases = getCounterController().getCmByName(CmOpenDatabases.CM_NAME);
+					extendedDescHtml += "<br><br>" + cmOpenDatabases.getGraphDataHistoryAsHtmlImage(CmOpenDatabases.GRAPH_NAME_LOGSIZE_LEFT_MB,  dbname);
+					extendedDescHtml += "<br><br>" + cmOpenDatabases.getGraphDataHistoryAsHtmlImage(CmOpenDatabases.GRAPH_NAME_LOGSIZE_USED_PCT, dbname);
 
 					AlarmEvent ae = new AlarmEventFullTranLog(this, 0, dbname);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);

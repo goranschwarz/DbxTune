@@ -1625,6 +1625,7 @@ extends CounterModelHostMonitor
 
 						String extendedDescText = cm.toTextTableString(DATA_ABS, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, r, true, false, false);
+						       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_BusyPct);
 
 						AlarmEvent ae = new AlarmEventOsDiskUtilPct(cm, threshold, hostname, device, utilPct, raiseDelay);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
@@ -1637,6 +1638,23 @@ extends CounterModelHostMonitor
 		} // end: loop all devices
 	}
 
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_BusyPct.equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+
+	
 	public static final String  PROPKEY_alarm_utilPct           = CM_NAME + ".alarm.system.if.utilPct.gt";
 	public static final double  DEFAULT_alarm_utilPct           = 95.0;
 

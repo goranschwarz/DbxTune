@@ -3615,41 +3615,63 @@ public class QueryWindow
 			throw new RuntimeException("getDbmsProductInfoAfterConnect(): conn is null");
 
 		// Get product info
-		try	
-		{
-			ConnectionProp connProp = conn.getConnProp();
+		// In some cases this takes a long time (for instance in Postgres, getting hostname-from-ip, so lets do this in a "popup-executing-if-it-takes-a-long-time")
+		String dbProduct = conn.getDatabaseProductNameNoThhrow("-unknown-"); 
 
-			_srvVersion                 = conn.getDbmsVersionNumber();
-			_connectedAtTime            = System.currentTimeMillis();
-			_connectedDriverName        = connDialog == null ? null : connDialog.getDriverName();
-			_connectedDriverVersion     = connDialog == null ? null : connDialog.getDriverVersion();
-			_connectedToProductName     = conn.getDatabaseProductName(); 
-			_connectedToProductVersion  = conn.getDatabaseProductVersion(); 
-			_connectedToServerName      = conn.getDbmsServerName();
-			_connectedToSysListeners    = null;
-			_connectedSrvPageSizeInKb   = conn.getDbmsPageSizeInKb();
-			_connectedSrvCharset        = conn.getDbmsCharsetName();
-			_connectedSrvSortorder      = conn.getDbmsSortOrderName();
-			_connectedAsUser            = connProp != null ? connProp.getUsername() : ( connDialog == null ? "" : connDialog.getUsername() );
-			_connectedWithUrl           = connProp != null ? connProp.getUrl()      : ( connDialog == null ? "" : connDialog.getUrl() );
-			_connectedClientCharsetId   = null;
-			_connectedClientCharsetName = null;
-			_connectedClientCharsetDesc = null;
-			_connectedExtraInfo         = conn.getDbmsExtraInfo();
-			try { _connectedInitialCatalog    = conn.getCatalog(); } catch (SQLException ex) {}
+		String extraPopupInfoText = null;
+		if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_POSTGRES))
+			extraPopupInfoText = "<html>"
+					+ "If this is slow, check your: Reverse DNS Lookup setting.<br>"
+					+ "To get Servers hostname, the IP is looked up via DNS.<br>"
+					+ "https://en.wikipedia.org/wiki/Reverse_DNS_lookup"
+					+ "</html>";
 
-			SqlUtils.setPrettyPrintDatabaseProductName(_connectedToProductName);
-			
-			_logger.info("Connected to DatabaseProductName='"+_connectedToProductName+"', DatabaseProductVersion='"+_connectedToProductVersion+"', srvVersionNum="+_srvVersion+" ("+Ver.versionNumToStr(_srvVersion, _connectedToProductName)+"), DatabaseServerName='"+_connectedToServerName+"', InitialCatalog='"+_connectedInitialCatalog+"' with Username='"+_connectedAsUser+"', toURL='"+_connectedWithUrl+"', using Driver='"+_connectedDriverName+"', DriverVersion='"+_connectedDriverVersion+"'.");
-		} 
-		catch (Throwable ex) 
+		WaitForExecDialog execWait = new WaitForExecDialog(_window, "Getting Various DBMS Information for " + dbProduct, extraPopupInfoText);
+		BgExecutor doWork = new BgExecutor(execWait)
 		{
-			if (_logger.isDebugEnabled())
-				_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: "+ex, ex);
-			else
-				_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: "+ex);
-		}
-		
+			@Override
+			public Object doWork()
+			{
+				try	
+				{
+					ConnectionProp connProp = conn.getConnProp();
+
+					_srvVersion                 = conn.getDbmsVersionNumber();
+					_connectedAtTime            = System.currentTimeMillis();
+					_connectedDriverName        = connDialog == null ? null : connDialog.getDriverName();
+					_connectedDriverVersion     = connDialog == null ? null : connDialog.getDriverVersion();
+					_connectedToProductName     = conn.getDatabaseProductName(); 
+					_connectedToProductVersion  = conn.getDatabaseProductVersion(); 
+					_connectedToServerName      = conn.getDbmsServerName();
+					_connectedToSysListeners    = null;
+					_connectedSrvPageSizeInKb   = conn.getDbmsPageSizeInKb();
+					_connectedSrvCharset        = conn.getDbmsCharsetName();
+					_connectedSrvSortorder      = conn.getDbmsSortOrderName();
+					_connectedAsUser            = connProp != null ? connProp.getUsername() : ( connDialog == null ? "" : connDialog.getUsername() );
+					_connectedWithUrl           = connProp != null ? connProp.getUrl()      : ( connDialog == null ? "" : connDialog.getUrl() );
+					_connectedClientCharsetId   = null;
+					_connectedClientCharsetName = null;
+					_connectedClientCharsetDesc = null;
+					_connectedExtraInfo         = conn.getDbmsExtraInfo();
+					try { _connectedInitialCatalog    = conn.getCatalog(); } catch (SQLException ex) {}
+
+					SqlUtils.setPrettyPrintDatabaseProductName(_connectedToProductName);
+					
+					_logger.info("Connected to DatabaseProductName='"+_connectedToProductName+"', DatabaseProductVersion='"+_connectedToProductVersion+"', srvVersionNum="+_srvVersion+" ("+Ver.versionNumToStr(_srvVersion, _connectedToProductName)+"), DatabaseServerName='"+_connectedToServerName+"', InitialCatalog='"+_connectedInitialCatalog+"' with Username='"+_connectedAsUser+"', toURL='"+_connectedWithUrl+"', using Driver='"+_connectedDriverName+"', DriverVersion='"+_connectedDriverVersion+"'.");
+				} 
+				catch (Throwable ex) 
+				{
+					if (_logger.isDebugEnabled())
+						_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: "+ex, ex);
+					else
+						_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: "+ex);
+				}
+				
+				return null;
+			}
+		};
+		execWait.execAndWait(doWork, 100); // After 100ms a "popup" is displayed
+
 
 		if (_logger.isDebugEnabled())
 		{
@@ -12773,6 +12795,12 @@ checkPanelSize(_resPanel, comp);
 		commandList.add(new FavoriteCommandEntry(VendorType.DB2,     "\\call dbms_output.disable()",                                      "msg: dbms_output.DISABLE",  "Disable the DBMS_OUTPUT subsystem (or use Options-&gt;Enable dbms_output.get_line)"));
 		commandList.add(new FavoriteCommandEntry(VendorType.DB2,     "\\call dbms_output.get_line(?,?) :(string=null out, int=null out)", "msg: dbms_output.GET_LINE", "Get ONE line from the DBMS_OUTPUT queue (or use Options-&gt;Enable dbms_output.get_line)"));
 
+		// Postgres Commands
+		commandList.add(new FavoriteCommandEntry(VendorType.POSTGRES,"select inet_server_addr() AS on_host_name, inet_server_port() AS on_port_number, version() AS version"       , "inet_server_addr(), inet_server_port(), version()", "Get hostname, port and Postgres Version String."));
+		commandList.add(new FavoriteCommandEntry(VendorType.POSTGRES,"select * from pg_extension"       , "", "Get what Extentions are installed."));
+		commandList.add(new FavoriteCommandEntry(VendorType.POSTGRES,"select pg_reload_conf()"          , "", "Reload Postgres Configuration and 'pg_hba.conf' file."));
+
+		
 		commandList.add(FavoriteCommandEntry.addSeparator());
 		commandList.add(new FavoriteCommandEntry(VendorType.GENERIC, "",                                              "", "Note: Use Ctrl+Space to get code assist for table/column/procedure/etc completion..."));
 

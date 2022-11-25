@@ -102,6 +102,9 @@ extends MonitorIo
 		// Device:         rrqm/s   wrqm/s     r/s     w/s   rsec/s   wsec/s avgrq-sz avgqu-sz   await  svctm  %util
 		// sda               0.02     1.49    0.16    0.95     3.27    19.52    20.57     0.04   36.29   2.10   0.23
 
+		//-------------------------------------------------------------------------------------------------------
+		// Version 10.2 example, has 14 columns
+		//-------------------------------------------------------------------------------------------------------
 		// gorans@gorans-ub:~$ iostat -V
 		// sysstat version 10.2.0
 		// (C) Sebastien Godard (sysstat <at> orange.fr)
@@ -120,6 +123,24 @@ extends MonitorIo
 		// Also with this version, tickless CPUs will no longer be displayed as offline processors, but as 100% idle ones.
 
 
+		//-------------------------------------------------------------------------------------------------------
+		// Version 11.7 example, has 16 columns
+		//-------------------------------------------------------------------------------------------------------
+		// [gorans@primary1 ~]$ iostat -V
+		// sysstat version 11.7.3
+		// (C) Sebastien Godard (sysstat <at> orange.fr)
+		//-------------------------------------------------------------------------------------------------------
+		// [gorans@primary1 ~]$ iostat -xdk
+		// Linux 4.18.0-408.el8.x86_64 (primary1)  11/08/2022      _x86_64_        (1 CPU)
+        // 
+		// Device            r/s     w/s     rkB/s     wkB/s   rrqm/s   wrqm/s  %rrqm  %wrqm r_await w_await aqu-sz rareq-sz wareq-sz  svctm  %util
+		// sda              0.02    0.32      0.46      9.04     0.00     0.08   0.27  20.37    0.36    1.20   0.00    27.76    28.62   0.87   0.03
+		// scd0             0.00    0.00      0.00      0.00     0.00     0.00   0.00   0.00    0.00    0.00   0.00     0.12     0.00   0.46   0.00
+		// dm-0             0.02    0.39      0.44      9.02     0.00     0.00   0.00   0.00    0.35    0.92   0.00    28.23    22.87   0.70   0.03
+		// dm-1             0.00    0.00      0.00      0.01     0.00     0.00   0.00   0.00    0.14    1.17   0.00    18.98     4.00   0.27   0.00
+		//-------------------------------------------------------------------------------------------------------
+		
+		
 		// -----------------------------------------------------------
 		// Below is from: http://sebastien.godard.pagesperso-orange.fr/man_iostat.html
 		// at: 2021-10-07, when latest version was: 12.5.4
@@ -173,6 +194,7 @@ extends MonitorIo
 		// aqu-sz                            -- The average queue length of the requests that were issued to the device.
 		//                                      Note: In previous versions, this field was known as avgqu-sz.
 		// %util                             -- Percentage of elapsed time during which I/O requests were issued to the device (bandwidth utilization for the device). Device saturation occurs when this value is close to 100% for devices serving requests serially. But for devices serving requests in parallel, such as RAID arrays and modern SSDs, this number does not reflect their performance limits.
+
 
 		//------------------------------------------
 		// Version 12.2 has 21 columns

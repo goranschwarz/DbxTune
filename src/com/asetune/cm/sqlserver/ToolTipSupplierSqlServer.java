@@ -407,6 +407,7 @@ extends CmToolTipSupplierDefault
 				sb.append("File Size: <code>").append(StringUtil.bytesToHuman(htmlTmpFile.length(), "#.#")).append("</code><br>");
 				sb.append("<a href='").append(OPEN_IN_EXTERNAL_BROWSER         + htmlUrl   ).append("'>Open in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>");
 				sb.append("<a href='").append(OPEN_IN_SENTRY_ONE_PLAN_EXPLORER + xmlUrlStr1).append("'>Open in 'SentryOne Plan Explorer'</a> (Note: This may take a few seconds to start)<br>");
+				sb.append("<a href='").append(OPEN_IN_AZURE_DATA_STUDIO        + xmlUrlStr1).append("'>Open in 'Azure Data Studio'</a> <br>");
 				sb.append("<a href='").append(OPEN_IN_EXTERNAL_BROWSER         + xmlUrlStr2).append("'>Open in 'SSMS' or other...</a> (registered application for file extention <b>'.sqlplan'</b> will be used, Note: This may take a few seconds to start)<br>");
 				sb.append("<br>");
 				sb.append("<a href='").append(SET_PROPERTY_TEMP + propName_autoExternal + "=" + (!showAutoExtern) ).append("'>"+(showAutoExtern ? "Disable" : "Enable")+"</a> - Automatically open in Extrnal Browser. (set property <code>"+propName_autoExternal+"="+(!showAutoExtern)+"</code>)<br>");

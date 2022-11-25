@@ -21,9 +21,6 @@
 package com.asetune.cm.postgres;
 
 import java.awt.event.MouseEvent;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -51,8 +48,6 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
-import com.asetune.sql.ResultSetMetaDataCached;
-import com.asetune.sql.ResultSetMetaDataCached.Entry;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Configuration;
@@ -274,10 +269,33 @@ extends CountersModel
 				+ "    ,usesysid \n"
 				+ "    ,usename \n"
 				+ "    ,CAST(application_name as varchar(128)) AS application_name \n"
-				+ "    ,CAST(age(clock_timestamp(), backend_start) as varchar(30)) AS backend_start_age \n"
-				+ "    ,CAST(age(clock_timestamp(), xact_start)    as varchar(30)) AS xact_start_age \n"
-				+ "    ,CAST(age(clock_timestamp(), query_start)   as varchar(30)) AS query_start_age \n"
-				+ "    ,CAST(age(clock_timestamp(), state_change)  as varchar(30)) AS state_change_age \n"
+			    + " \n"
+//				+ "    ,CASE WHEN state = 'idle' OR state IS NULL THEN -1   ELSE CAST(EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM xact_start   ) as int) END AS xact_start_sec \n"
+//				+ "    ,CASE WHEN state = 'idle' OR state IS NULL THEN -1   ELSE CAST(EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM query_start  ) as int) END AS query_start_sec \n"
+//				+ "    ,CASE WHEN state = 'idle' OR state IS NULL THEN CAST(EXTRACT('epoch' FROM query_start)       - EXTRACT('epoch' FROM clock_timestamp() ) as int) \n"
+//				+ "                                               ELSE CAST(EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM query_start       ) as int) END AS last_query_start_sec \n" // less than 0 -->> Inactive Statement -NumberOfSecondsSinceLastExecution
+				+ "    ,CAST( CASE WHEN state = 'idle' OR state IS NULL THEN -1   ELSE COALESCE( EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM xact_start  ), -1) END as numeric(12,1)) AS xact_start_sec \n"
+				+ "    ,CAST( CASE WHEN state = 'idle' OR state IS NULL THEN -1   ELSE COALESCE( EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM query_start ), -1) END as numeric(12,1)) AS stmnt_start_sec \n"
+			    + "    ,CAST( CASE WHEN state = 'active' \n"
+			    + "                THEN COALESCE( EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM query_start ), -1) /* active -- query-elapsed-time */ \n"
+			    + "                ELSE COALESCE( EXTRACT('epoch' FROM state_change     ) - EXTRACT('epoch' FROM query_start ), -1) /* else   -- last-exec-time*/ \n"
+			    + "           END as numeric(12,1)) AS stmnt_last_exec_sec \n"
+			    + "    ,CAST( COALESCE( EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM state_change), -1) as numeric(12,1)) AS in_current_state_sec \n"
+			    + " \n"
+//				+ "    ,                                                         CAST(age(clock_timestamp(), backend_start) as varchar(30))     AS backend_start_age \n"
+//				+ "    ,CASE WHEN state = 'idle' OR state IS NULL THEN NULL ELSE CAST(age(clock_timestamp(), xact_start)    as varchar(30)) END AS xact_start_age \n"
+//				+ "    ,CASE WHEN state = 'idle' OR state IS NULL THEN NULL ELSE CAST(age(clock_timestamp(), query_start)   as varchar(30)) END AS query_start_age \n"
+//				+ "    ,CAST(age(clock_timestamp(), query_start)   as varchar(30)) AS last_query_start_age \n" // time when last query was executed
+//				+ "    ,CASE WHEN state = 'idle' OR state IS NULL THEN NULL ELSE CAST(age(clock_timestamp(), state_change)  as varchar(30)) END AS state_change_age \n"
+				+ "    ,CAST(                                                          clock_timestamp() - backend_start   as varchar(30)) AS backend_start_age \n"
+				+ "    ,CAST( CASE WHEN state = 'idle' OR state IS NULL THEN NULL ELSE clock_timestamp() - xact_start  END as varchar(30)) AS xact_start_age \n"
+				+ "    ,CAST( CASE WHEN state = 'idle' OR state IS NULL THEN NULL ELSE clock_timestamp() - query_start END as varchar(30)) AS query_start_age \n"
+			    + "    ,CAST( CASE WHEN state = 'active' \n"
+			    + "                THEN clock_timestamp() - query_start /* active -- query-elapsed-time */ \n"
+			    + "                ELSE state_change      - query_start /* else   -- last-exec-time*/ \n"
+			    + "           END                                                                                          as varchar(30)) AS stmnt_last_exec_age \n"
+			    + "    ,CAST(                                                          clock_timestamp() - state_change    as varchar(30)) AS in_current_state_age \n"
+			    + " \n"
 				+ "    ,backend_start \n"
 				+ "    ,xact_start \n"
 				+ "    ,query_start \n"
@@ -304,65 +322,61 @@ extends CountersModel
 				+ "     END as \"xactTimeInMs\" \n"
 
 				+ "from pg_catalog.pg_stat_activity \n"
-//				+ "where state != 'idle' \n"
-//				+ "  and pid   != pg_backend_pid() \n"
-//				+ "  and application_name != '" + Version.getAppName() + "' \n"
-//				+ "  /* for state='idle in transaction', then show 'xact_start' older than 200ms */ \n"
-//				+ "  and ((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from xact_start)) * 1000) > (CASE WHEN state = 'idle in transaction' THEN 200 ELSE -1 END) \n" 
 				+ "";
 			
 		return sql;
 	}
 
-	/**
-	 * Change data types (or length) for some column  
-	 * <p>
-	 * We could have done that by converting columns into varchar datatypes, but since we do: "select * from ..." 
-	 * for forward/backward compatibility, this is done in the code instead...<br>
-	 * When we switch to "column specified" SQL Statement, then we can get rid of this!  
-	 */
-	@Override
-	public ResultSetMetaDataCached createResultSetMetaData(ResultSetMetaData rsmd) throws SQLException
-	{
-		ResultSetMetaDataCached rsmdc = super.createResultSetMetaData(rsmd);
-
-		if (rsmdc == null)
-			return null;
-		
-		// In PG x.y
-		setColumnShorterLength(rsmdc, "application_name" , 60);  // text --> varchar(60)
-		setColumnShorterLength(rsmdc, "client_addr"      , 30);  // text --> varchar(30)
-		setColumnShorterLength(rsmdc, "client_hostname"  , 60);  // text --> varchar(60)
-		setColumnShorterLength(rsmdc, "state"            , 30);  // text --> varchar(30)
-//		setColumnShorterLength(rsmdc, "backend_xid"      , 20);  // xid  --- Already set to varchar(30) in com.asetune.sql.ddl.DbmsDdlResolverPostgres
-//		setColumnShorterLength(rsmdc, "backend_xmin"     , 20);  // xid  --- Already set to varchar(30) in com.asetune.sql.ddl.DbmsDdlResolverPostgres
-		
-		// In PG 9.6
-		setColumnShorterLength(rsmdc, "wait_event_type"  , 30);  // text --> varchar(30)
-		setColumnShorterLength(rsmdc, "wait_event"       , 50);  // text --> varchar(50)
-
-		// In PG 10
-		setColumnShorterLength(rsmdc, "backend_type"     , 30);  // text --> varchar(30)
-		
-		return rsmdc;
-	}
-
-	private void setColumnShorterLength(ResultSetMetaDataCached rsmdc, String colName, int newLength)
-	{
-		int colPos = rsmdc.findColumn(colName);
-		
-		// return if column wasn't found
-		if (colPos == -1)
-			return;
-		
-		Entry colEntry = rsmdc.getEntry(colPos);
-		if (colEntry.getPrecision() > newLength)
-		{
-			colEntry.setColumnType(Types.VARCHAR);
-			colEntry.setColumnTypeName("varchar");
-			colEntry.setPrecision(newLength);
-		}
-	}
+	// The below is not more needed... since we do proper CAST(...) of data types in the SELECT Statement
+//	/**
+//	 * Change data types (or length) for some column  
+//	 * <p>
+//	 * We could have done that by converting columns into varchar datatypes, but since we do: "select * from ..." 
+//	 * for forward/backward compatibility, this is done in the code instead...<br>
+//	 * When we switch to "column specified" SQL Statement, then we can get rid of this!  
+//	 */
+//	@Override
+//	public ResultSetMetaDataCached createResultSetMetaData(ResultSetMetaData rsmd) throws SQLException
+//	{
+//		ResultSetMetaDataCached rsmdc = super.createResultSetMetaData(rsmd);
+//
+//		if (rsmdc == null)
+//			return null;
+//		
+//		// In PG x.y
+//		setColumnShorterLength(rsmdc, "application_name" , 60);  // text --> varchar(60)
+//		setColumnShorterLength(rsmdc, "client_addr"      , 30);  // text --> varchar(30)
+//		setColumnShorterLength(rsmdc, "client_hostname"  , 60);  // text --> varchar(60)
+//		setColumnShorterLength(rsmdc, "state"            , 30);  // text --> varchar(30)
+////		setColumnShorterLength(rsmdc, "backend_xid"      , 20);  // xid  --- Already set to varchar(30) in com.asetune.sql.ddl.DbmsDdlResolverPostgres
+////		setColumnShorterLength(rsmdc, "backend_xmin"     , 20);  // xid  --- Already set to varchar(30) in com.asetune.sql.ddl.DbmsDdlResolverPostgres
+//		
+//		// In PG 9.6
+//		setColumnShorterLength(rsmdc, "wait_event_type"  , 30);  // text --> varchar(30)
+//		setColumnShorterLength(rsmdc, "wait_event"       , 50);  // text --> varchar(50)
+//
+//		// In PG 10
+//		setColumnShorterLength(rsmdc, "backend_type"     , 30);  // text --> varchar(30)
+//		
+//		return rsmdc;
+//	}
+//
+//	private void setColumnShorterLength(ResultSetMetaDataCached rsmdc, String colName, int newLength)
+//	{
+//		int colPos = rsmdc.findColumn(colName);
+//		
+//		// return if column wasn't found
+//		if (colPos == -1)
+//			return;
+//		
+//		Entry colEntry = rsmdc.getEntry(colPos);
+//		if (colEntry.getPrecision() > newLength)
+//		{
+//			colEntry.setColumnType(Types.VARCHAR);
+//			colEntry.setColumnTypeName("varchar");
+//			colEntry.setPrecision(newLength);
+//		}
+//	}
 	
 	@Override
 	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 

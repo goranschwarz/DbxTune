@@ -22,7 +22,6 @@ package com.asetune.cm.ase;
 
 import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
-import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -1611,9 +1610,6 @@ extends CountersModel
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
-			
-			// Add values to short term graph that can be used by alarms (in other collectors)
-			addDataPointsToAlarmChart(GRAPH_NAME_LOGSIZE_LEFT_MB, this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_LOGSIZE_USED_MB.equals(tgdp.getName()))
@@ -1634,9 +1630,6 @@ extends CountersModel
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
-
-			// Add values to short term graph that can be used by alarms (in other collectors)
-			addDataPointsToAlarmChart(GRAPH_NAME_LOGSIZE_USED_MB, this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_LOGSIZE_USED_PCT.equals(tgdp.getName()))
@@ -1657,9 +1650,6 @@ extends CountersModel
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
-
-			// Add values to short term graph that can be used by alarms (in other collectors)
-			addDataPointsToAlarmChart(GRAPH_NAME_LOGSIZE_USED_PCT, this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_DATASIZE_LEFT_MB.equals(tgdp.getName()))
@@ -1854,20 +1844,6 @@ extends CountersModel
 //		return "<html><pre>" + str + "</pre></html>";
 //	}
 
-	protected void addDataPointsToAlarmChart(String chartName, Timestamp timestamp, String[] lArray, Double[] dArray)
-	{
-//		FIXME; -- NOT YET IMPLEMENTED --
-//
-//		can we use "MovingAverageCounterManager" / "MovingAverageCounter" for this or should we create a "new" thing here
-//		Or should we use "TrendGraphDataPoint" and "cache" a local copy for #/15 minutes...
-	}
-
-	public String getAlarmChartFor(String... chartName)
-	{
-//		FIXME; -- NOT YET IMPLEMENTED --
-		return "";
-	}
-
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -1964,6 +1940,9 @@ extends CountersModel
 					{
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_LEFT_MB, dbname);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_USED_PCT, dbname);
+
 						AlarmEvent ae = new AlarmEventFullTranLog(cm, threshold, dbname);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -2009,6 +1988,7 @@ extends CountersModel
 					{
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
 						AlarmEvent ae = new AlarmEventLastBackupFailed(cm, dbname, threshold);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -2089,6 +2069,7 @@ extends CountersModel
 	
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
 						AlarmEvent ae = new AlarmEventOldBackup(cm, threshold, dbname, lastBackupDate, val.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -2198,6 +2179,7 @@ extends CountersModel
 
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						
 						AlarmEvent ae = new AlarmEventOldTranLogBackup(cm, threshold, dbname, lastBackupDate, val.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -2255,6 +2237,9 @@ extends CountersModel
 					{
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DATASIZE_LEFT_MB, dbname);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DATASIZE_USED_PCT, dbname);
+
 						AlarmEvent ae = new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -2282,6 +2267,9 @@ extends CountersModel
 					{
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_LEFT_MB, dbname);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_USED_PCT, dbname);
+
 						AlarmEvent ae = new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -2309,6 +2297,9 @@ extends CountersModel
 					{
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DATASIZE_LEFT_MB, dbname);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DATASIZE_USED_PCT, dbname);
+
 						AlarmEvent ae = new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -2336,6 +2327,9 @@ extends CountersModel
 					{
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_LEFT_MB, dbname);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_USED_PCT, dbname);
+
 						AlarmEvent ae = new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -2398,6 +2392,7 @@ extends CountersModel
 
 								String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 								String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
 								AlarmEvent ae = new AlarmEventDatabaseOption(cm, dbname, addedOptions, removedOptions, currDbOptionsList);
 								ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 								
@@ -2437,6 +2432,29 @@ extends CountersModel
 	/** Remember DBOptions. key=dbname, val=DBOption, the value will be set at every call to sendAlarmRequest() */
 	private Map<String, String> _prevDbOptionsMap = new HashMap<>();
 	
+	
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_LOGSIZE_LEFT_MB  .equals(name)) return true;
+//		if (GRAPH_NAME_LOGSIZE_USED_MB  .equals(name)) return true;
+		if (GRAPH_NAME_LOGSIZE_USED_PCT .equals(name)) return true;
+		if (GRAPH_NAME_DATASIZE_LEFT_MB .equals(name)) return true;
+//		if (GRAPH_NAME_DATASIZE_USED_MB .equals(name)) return true;
+		if (GRAPH_NAME_DATASIZE_USED_PCT.equals(name)) return true;
+//		if (GRAPH_NAME_TEMPDB_USED_MB   .equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+
 	@Override
 	public void reset()
 	{

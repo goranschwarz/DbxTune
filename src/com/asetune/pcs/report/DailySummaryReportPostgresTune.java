@@ -28,6 +28,7 @@ import com.asetune.pcs.report.content.os.OsSpaceUsageOverview;
 import com.asetune.pcs.report.content.postgres.PostgresConfig;
 import com.asetune.pcs.report.content.postgres.PostgresConfiguration;
 import com.asetune.pcs.report.content.postgres.PostgresDbSize;
+import com.asetune.pcs.report.content.postgres.PostgresLongRunningStmnts;
 import com.asetune.pcs.report.content.postgres.PostgresStatementsPerDb;
 import com.asetune.pcs.report.content.postgres.PostgresTopDeadRows;
 import com.asetune.pcs.report.content.postgres.PostgresTopSql;
@@ -45,6 +46,9 @@ extends DailySummaryReportDefault
 
 		// CPU
 		addReportEntry( new OsCpuUsageOverview    (this) );
+
+		// Statements
+		addReportEntry( new PostgresLongRunningStmnts(this) );
 
 		// SQL
 		addReportEntry( new PostgresStatementsPerDb(this) );

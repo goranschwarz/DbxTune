@@ -20,6 +20,9 @@
  ******************************************************************************/
 package com.asetune.cm.postgres;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -651,6 +654,21 @@ extends CountersModel
 	{
 		long srvVersion = versionInfo.getLongVersion();
 
+		int pgUserCount = -1;
+		if (conn != null)
+		{
+			String sql = "select count(*) from pg_user";
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while(rs.next())
+					pgUserCount = rs.getInt(1);
+			}
+			catch(SQLException ex)
+			{
+				_logger.warn("Problem getting number of Postgres users. SQL='" + sql + "'. Caught: " + ex, ex);
+			}
+		}
+		
 		// The function pg_stat_statements() intruduced a flag to NOT include column 'query' in version 9.4
 		String pg_stat_statements = "pg_stat_statements";
 		if (srvVersion >= Ver.ver(9,4))
@@ -666,7 +684,7 @@ extends CountersModel
 //			total_time2 = "    ,(s.total_plan_time + s.total_exec_time) AS total_time n";
 //		}
 		String total_time1 = "        ,cast(sum(s.total_time)          as bigint) as total_time \n";
-		String total_time2 = "s.total_time";
+		String total_time2 = "sum(s.total_time)";
 		if (srvVersion >= Ver.ver(13))
 		{
 			total_time1 = "        ,cast(sum(s.total_plan_time) + sum(s.total_exec_time) as bigint) as total_time \n";
@@ -691,8 +709,20 @@ extends CountersModel
 		String where_excludeDbxTune = "";
 		if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_excludeDbxTune, DEFAULT_excludeDbxTune))
 		{
-			where_excludeDbxTune = "      and s.userid not in (select a.usesysid from pg_stat_activity a where a.application_name = '" + Version.getAppName() + "') \n";
+			if (pgUserCount <= 1)
+			{
+				_logger.warn("Only " + pgUserCount + " was found in DBMS. So if we exclude users, we wont see anythying in here. Property: '" + PROPKEY_excludeDbxTune + "=true|false'");
+				where_excludeDbxTune = "";
+			}
+			else
+			{
+				where_excludeDbxTune = "      and s.userid not in (select a.usesysid from pg_stat_activity a where a.application_name = '" + Version.getAppName() + "') \n";
+			}
 		}
+//		TODO; Can we think of a better alternative here?
+//				* id there is only 1 user (everyone is for example using "postgres"), then the above filter will be *bad*
+//				* so if we can do select usesysid, count(1) from pg_stat_activity group by usesysid -- or similar to figgure out if we only have 1 user...
+//              * and also do: if ("only-1-user") then: -NOT-use-filter- or similar
 
 		
 //		String sql = ""
@@ -750,7 +780,7 @@ extends CountersModel
 			    + wal_records1
 			    + wal_bytes1
 			    + "        ,cast(100.0 * sum(s.shared_blks_hit) / nullif(sum(s.shared_blks_hit) + sum(s.shared_blks_read), 0) as numeric(5,1)) AS cache_hit_pct \n"
-			    + "        ,cast(CASE WHEN sum(s.calls) > 0 THEN sum(" + total_time2 + ")      / sum(s.calls) ELSE 0 END as numeric(18,1)) as avg_time_per_call \n"
+			    + "        ,cast(CASE WHEN sum(s.calls) > 0 THEN " + total_time2 + "    / sum(s.calls) ELSE 0 END as numeric(18,1)) as avg_time_per_call \n"
 			    + "        ,cast(CASE WHEN sum(s.calls) > 0 THEN sum(s.rows)            / sum(s.calls) ELSE 0 END as numeric(18,1)) as avg_rows_per_call \n"
 			    + "        ,cast(CASE WHEN sum(s.rows)  > 0 THEN sum(s.shared_blks_hit) / sum(s.rows)  ELSE 0 END as numeric(18,1)) as shared_blks_hit_per_row \n"
 			    + "    from " + pg_stat_statements + " s \n"

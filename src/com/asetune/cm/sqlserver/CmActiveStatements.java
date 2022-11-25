@@ -220,7 +220,9 @@ extends CountersModel
 		setLocalToolTipTextOnTableColumnHeader("HasBlockedSpidsInfo",        "Has values in column 'BlockedSpidsInfo'");
 		setLocalToolTipTextOnTableColumnHeader("BlockedSpidsInfo",           "If this SPID is BLOCKING other spid's, then here is a html-table of showplan for the Blocked spid's. (Note: 'Get Showplan' must be enabled)");
 
-		setLocalToolTipTextOnTableColumnHeader("TempdbUsageMb",              "Number of MB this Statement is using in tempdb.");
+		setLocalToolTipTextOnTableColumnHeader("TempdbUsageMb",              "Number of MB this Statement is using in tempdb (for both 'user objects' and 'internal objects'.");
+		setLocalToolTipTextOnTableColumnHeader("TempdbUsageMbUser",          "Number of MB this Statement is using in tempdb (for user objects, probably temp tables).");
+		setLocalToolTipTextOnTableColumnHeader("TempdbUsageMbInternal",      "Number of MB this Statement is using in tempdb (for internal objects, probably worker tables, etc).");
 	}
 
 	@Override
@@ -313,11 +315,11 @@ extends CountersModel
 			dop_locks  = "    ,-1 as dop \n";
 		}
 		
-		String user_objects_deferred_dealloc_page_count = "0";
-		if (srvVersion >= Ver.ver(2014))
-		{
-			user_objects_deferred_dealloc_page_count = "user_objects_deferred_dealloc_page_count";			
-		}
+//		String user_objects_deferred_dealloc_page_count = "0";
+//		if (srvVersion >= Ver.ver(2014))
+//		{
+//			user_objects_deferred_dealloc_page_count = "user_objects_deferred_dealloc_page_count";			
+//		}
 		
 		String whereIsUserSpid  = "  AND des.is_user_process = 1 \n";
 		if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_systemSpids, DEFAULT_sample_systemSpids))
@@ -344,15 +346,18 @@ extends CountersModel
 			"    ,ProcName            = object_name(dest.objectid, dest.dbid) \n" +
 			"    ,StmntStart          = der.statement_start_offset \n" +
 			"    ,des.[HOST_NAME] \n" +
-			"    ,TempdbUsageMb       = (select \n" + 
-			"                            CAST( ( \n" + // The below calculations also used in: CmTempdbSpidUsage
-			"                                        (user_objects_alloc_page_count - user_objects_dealloc_page_count - " + user_objects_deferred_dealloc_page_count + ") \n" + 
-			"                                      + (internal_objects_alloc_page_count - internal_objects_dealloc_page_count) \n" + 
-			"                                  ) / 128.0 AS decimal(12,1) \n" + 
-			"                                ) \n" + 
-			"                            from tempdb.sys.dm_db_session_space_usage ts \n" + 
-			"                            where ts.session_id = des.session_id \n" +
-			"                           ) \n" +
+//			"    ,TempdbUsageMb       = (select \n" + 
+//			"                            CAST( ( \n" + // The below calculations also used in: CmTempdbSpidUsage
+//			"                                        (user_objects_alloc_page_count - user_objects_dealloc_page_count - " + user_objects_deferred_dealloc_page_count + ") \n" + 
+//			"                                      + (internal_objects_alloc_page_count - internal_objects_dealloc_page_count) \n" + 
+//			"                                  ) / 128.0 AS decimal(12,1) \n" + 
+//			"                                ) \n" + 
+//			"                            from tempdb.sys.dm_db_session_space_usage ts \n" + 
+//			"                            where ts.session_id = des.session_id \n" +
+//			"                           ) \n" +
+			"    ,TempdbUsageMb          = convert(numeric(12,1), NULL)  \n" +
+			"    ,TempdbUsageMbUser      = convert(numeric(12,1), NULL)  \n" +
+			"    ,TempdbUsageMbInternal  = convert(numeric(12,1), NULL)  \n" +
 			"    ,HasSqlText          = convert(bit,0) \n" +
 			"    ,HasQueryplan        = convert(bit,0) \n" +
 			"    ,HasLiveQueryplan    = convert(bit,0) \n" +
@@ -390,6 +395,10 @@ extends CountersModel
 			"    ,des.is_user_process \n" +
 			"    ,der.percent_complete \n" +
 			"    ,der.estimated_completion_time \n" +
+			"	 ,estimated_finish_time = CASE WHEN estimated_completion_time > 0 \n" + 
+			"                                  THEN cast(cast(dateadd(ms,der.estimated_completion_time, getdate()) as time) as varchar(8)) \n" +
+			"	                               ELSE NULL \n" +
+			"	                          END \n" +
 //			"    ,OBJECT_NAME(dest.objectid, der.database_id) AS OBJECT_NAME \n" +
 			"    ,SUBSTRING(dest.text, der.statement_start_offset / 2,  \n" +
 			"        ( CASE WHEN der.statement_end_offset = -1  \n" +
@@ -432,7 +441,9 @@ extends CountersModel
 			"    ,ProcName            = object_name(dest.objectid, dest.dbid) \n" +
 			"    ,StmntStart          = -1 \n" +
 			"    ,p1.hostname                                  --des.[HOST_NAME] \n" +
-			"    ,TempdbUsageMb       = -1 \n" +
+			"    ,TempdbUsageMb          = convert(numeric(12,1), NULL)  \n" +
+			"    ,TempdbUsageMbUser      = convert(numeric(12,1), NULL)  \n" +
+			"    ,TempdbUsageMbInternal  = convert(numeric(12,1), NULL)  \n" +
 			"    ,HasSqlText          = convert(bit,0)  \n" +
 			"    ,HasQueryplan        = convert(bit,0)  \n" +
 			"    ,HasLiveQueryplan    = convert(bit,0) \n" +
@@ -476,6 +487,7 @@ extends CountersModel
 			"    ,is_user_process           = CASE WHEN sid != 0x01 THEN convert(bit, 1) ELSE convert(bit, 0) END \n" +
 			"    ,percent_complete          = -1\n" +
 			"    ,estimated_completion_time = -1\n" +
+			"    ,estimated_finish_time     = NULL \n" + 
 			"    ,dest.text \n" +
 			"    ,SpidLocks        = convert(varchar(max),null) \n" +
 			"    ,BlockedSpidsInfo = convert(varchar(max),null) \n" +
@@ -674,6 +686,47 @@ extends CountersModel
 		else if ("HasSpidLocks"       .equals(colName)) return Boolean.class;
 		else if ("HasBlockedSpidsInfo".equals(colName)) return Boolean.class;
 		else return super.getColumnClass(columnIndex);
+	}
+
+	/** 
+	 * Fill in TempdbUsage*
+	 */
+	@Override
+	public void localCalculation(CounterSample newSample)
+	{
+		boolean getTempdbSpidUsage = Configuration.getCombinedConfiguration().getBooleanProperty(CmSummary.PROPKEY_sample_tempdbSpidUsage, CmSummary.DEFAULT_sample_tempdbSpidUsage);
+
+		int pos_SPID               = newSample.findColumn("session_id");
+		
+		// Loop on all diffData rows
+		for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
+		{
+			Object o_SPID        = newSample.getValueAt(rowId, pos_SPID);
+			
+			if (o_SPID instanceof Number)
+			{
+				int spid = ((Number)o_SPID).intValue();
+
+				// Maintain 'TempdbUsageMb*' columns
+				if (getTempdbSpidUsage)
+				{
+					// 1: Get tempdb info about 'spid', and if we have a value:
+					//    2: Set values for columns
+					//       - TempdbUsageMb
+					//       - TempdbUsageMbUser
+					//       - TempdbUsageMbInternal
+					//    (if the above columns can't be found... Simply write a message to the error log)
+					//
+					TempdbUsagePerSpid.TempDbSpaceInfo spaceInfo = TempdbUsagePerSpid.getInstance().getEntryForSpid(spid);
+					if (spaceInfo != null)
+					{
+						newSample.setValueAt(spaceInfo.getTotalSpaceUsedInMb()               , rowId, "TempdbUsageMb");
+						newSample.setValueAt(spaceInfo.getUserObjectSpaceUsedInMb()          , rowId, "TempdbUsageMbUser");
+						newSample.setValueAt(spaceInfo.getInternalObjectSpaceUsedInMb()      , rowId, "TempdbUsageMbInternal");
+					}
+				}
+			}
+		}
 	}
 
 	/** 

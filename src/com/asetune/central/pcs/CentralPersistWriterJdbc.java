@@ -63,6 +63,7 @@ import com.asetune.check.CheckForUpdatesDbx.DbxConnectInfo;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
@@ -2113,26 +2114,41 @@ extends CentralPersistWriterBase
 			// Now insert the record to CENTRAL_SESSIONS if it do NOT exist
 			if ( ! sessionExists )
 			{
+				// Possibly get data types and lengths of Table.CENTRAL_SESSIONS
+				// This so we can "truncate" Strings if they are to long!
+				// The default length -1 just means... no specific length (do not truncate)
+				String centralSessionTableName = getTableName(conn, schemaName, Table.CENTRAL_SESSIONS, null, false);
+
+				ResultSetMetaDataCached rsmdc = ResultSetMetaDataCached.getMetaData(conn, null,  schemaName, centralSessionTableName);
+				int len_ServerName          = rsmdc != null ? rsmdc.getPrecision("ServerName"         , -1) : -1;
+				int len_OnHostname          = rsmdc != null ? rsmdc.getPrecision("OnHostname"         , -1) : -1;
+				int len_ProductString       = rsmdc != null ? rsmdc.getPrecision("ProductString"      , -1) : -1;
+				int len_VersionString       = rsmdc != null ? rsmdc.getPrecision("VersionString"      , -1) : -1;
+				int len_BuildString         = rsmdc != null ? rsmdc.getPrecision("BuildString"        , -1) : -1;
+				int len_CollectorHostname   = rsmdc != null ? rsmdc.getPrecision("CollectorHostname"  , -1) : -1;
+				int len_CollectorCurrentUrl = rsmdc != null ? rsmdc.getPrecision("CollectorCurrentUrl", -1) : -1;
+				int len_CollectorInfoFile   = rsmdc != null ? rsmdc.getPrecision("CollectorInfoFile"  , -1) : -1;
+				
 				//StringBuffer sbSql = new StringBuffer();
 				sbSql = new StringBuffer();
 				sbSql.append(getTableInsertStr(conn, schemaName, Table.CENTRAL_SESSIONS, null, false));
 				sbSql.append(" values(");
-				sbSql.append("  ").append(DbUtils.safeStr(cont.getSessionStartTime()       ));
-				sbSql.append(", ").append(DbUtils.safeStr(0                                )); // Status is not in the container, so always add 0
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getServerName()             ));
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getOnHostname()             ));
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getAppName()                ));
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getAppVersion()             ));
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getAppBuildStr()            ));
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorHostname()      ));
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorSampleInterval()));
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorCurrentUrl()    ));
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorInfoFile()      ));
+				sbSql.append("  ").append(DbUtils.safeStr(cont.getSessionStartTime()                                ));
+				sbSql.append(", ").append(DbUtils.safeStr(0                                                         )); // Status is not in the container, so always add 0
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getServerName()             , len_ServerName         ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getOnHostname()             , len_OnHostname         ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getAppName()                , len_ProductString      ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getAppVersion()             , len_VersionString      ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getAppBuildStr()            , len_BuildString        ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorHostname()      , len_CollectorHostname  ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorSampleInterval()                         ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorCurrentUrl()    , len_CollectorCurrentUrl));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorInfoFile()      , len_CollectorInfoFile  ));
 				sbSql.append(", 0");     // NumOfSamples   always starts at 0
 				sbSql.append(", null"); // LastSampleTime is null at start
 				sbSql.append(")"); // end-of-values
 				sql = sbSql.toString();
-				
+
 				try
 				{
 					conn.dbExec(sql);
@@ -2393,6 +2409,12 @@ extends CentralPersistWriterBase
 				if (rowCount != 1)
 				{
 					_logger.warn("Problems updating '" + tabName + "', rowcount is NOT 1, rowcount = " + rowCount + ", sessionStartTime='" + sessionStartTime + "'. Executed following SQL: " + sql);
+					
+					// get ALL rows in CENTRAL_SESSIONS for debugging, and print it to the log!
+					String debugSql = "select * from " + tabName;
+					ResultSetTableModel debugRstm = ResultSetTableModel.executeQuery(conn, debugSql, true, "debugSql");
+
+					_logger.info("Below is a ResultSet of ALL rows in the above table '" + tabName + "'.\n" + debugRstm.toAsciiTableString());
 				}
 				getStatistics().incUpdates();
 

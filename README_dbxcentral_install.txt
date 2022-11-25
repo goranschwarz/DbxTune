@@ -417,6 +417,54 @@ refresh the browser... or open a new tab: http://dbxtune.acme.com:8080/
 ########################################
 
 ##--------------------------------------
+## Preparations of the Postgres DBMS, Step 1 -- RECOMENDED
+##     - create a specific user in Postgres, which is used to monitor the system with 
+##--------------------------------------
+
+	## Create a random password:
+	dbxtunePasswd=$(cat /dev/urandom | tr -cd '[:alnum:]' | fold -w24 | head -n1); echo ${dbxtunePasswd}
+	
+	## as the postgres user (or any other admin account)
+	psql 
+	CREATE USER dbxtune WITH PASSWORD 'the-long-and-arbitrary-password';
+	GRANT pg_monitor TO dbxtune;
+	GRANT pg_read_all_data TO dbxtune;
+	-- ALTER USER dbxtune WITH SUPERUSER; -- This is probably NOT needed, but it can be used as a temporary workaround
+	
+	## Test that we can login to Postgres with the 'dbxtune' user
+	psql --username dbxtune --host $(hostname) --port 5432 
+
+
+##--------------------------------------
+## Preparations of the Postgres DBMS, Step 2 -- RECOMENDED
+##     - Make sure that the extension 'pg_stat_statements' are enabled 
+## Note: search the internet for 'pg_stat_statements configuration' and you will find plenty of results
+##--------------------------------------
+	psql --username dbxtune --host $(hostname) --port 5432 
+	select * from pg_stat_statements;
+	## If the above works, no need to continue!
+	
+	## If 'pg_stat_statements' is NOT enabled... Lets enable it:
+	
+	## Change the configuration file
+	vi ...postgresInstallDir.../postgres.conf
+	shared_preload_libraries = 'pg_stat_statements'
+	#-- Other pg_stat_statistics config parameters can possibly be found here: https://docs.yugabyte.com/preview/explore/query-1-performance/pg-stat-statements/
+	
+	## Restart Postgres
+	pg_ctl restart
+	
+	## as the postgres admin user
+	psql 
+	CREATE EXTENSION pg_stat_statements;
+	
+	## Now test with dbxtune user
+	psql --username dbxtune --host $(hostname) --port 5432 
+	select * from pg_stat_statements;
+
+
+
+##--------------------------------------
 ## describe what SQL-Servers that should be monitored
 ##
 cd ${HOME}/.dbxtune/dbxc/conf
@@ -426,13 +474,16 @@ vi SERVER_LIST
 
 ##--------------------------------------
 ## Add passwords for the servers (both DBMS user and OS/SSH user)
-## (Note: for SQL-Server on Windows we can currently NOT monitor the OS)
+## (Note: for SQL-Server on Windows you need to install a SSH server, and possibly create a local user)
+## Note: For the SSH User: If you want to use SSH private/public key, this can be done, in the 'postgres.GENERIC.conf' put 'conn.sshKeyFile=/.../.ssh/id_rsa' or use cmdline switch '-k /.../.ssh/id_rsa' in 'start_postgrestune.sh'
+##       Also verify that you can do ssh using that key, using: ssh username@hostname -i /.../.ssh/id_rsa
+##       Or: /dbxtune-install-dir/bin/dbxtune.sh sshtest ## You will have to create a input file... a template is printed if not specified 
 ##
 cd ${HOME}/.dbxtune/dbxc/bin
-./dbxPassword.sh set -U<dbms_user> -P<passwd> [-S <dbms_srv_name>]
+./dbxPassword.sh set -U<dbms_user> -P<passwd> -S <dbms_srv_name>
 
 		## Below is an example of how I did it
-		sybase@gorans-ub2:~/.dbxtune/dbxc/bin$ ./dbxPassword.sh set -Upostgres -Psecret3 -Sgorans-ub2-pg
+		sybase@gorans-ub2:~/.dbxtune/dbxc/bin$ ./dbxPassword.sh set -Udbxtune -Psecret3 -Sgorans-ub2-pg
 
 ##--------------------------------------
 ## Edit NO-GUI Configuration files
@@ -444,7 +495,7 @@ vi postgres.GENERIC.conf
 
 ##--------------------------------------
 ## Edit NO-GUI START files, possibly change
-##     - dbmsUser=postgres
+##     - dbmsUser=dbxtune
 ##     - osUser=gorans
 ##
 cd ${HOME}/.dbxtune/dbxc/bin

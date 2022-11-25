@@ -86,26 +86,51 @@ extends CountersModel
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
+//	public static final String[] DIFF_COLUMNS     = new String[] {
+//			 "TotalUsageMb"
+//			,"SessUserObjectMb"
+//			,"SessInternalObjectMb"
+//			,"TaskUserObjectMb"
+//			,"TaskInternalObjectMb"
+//			,"s_user_objects_alloc_MB"
+//			,"s_user_objects_dealloc_MB"
+//			,"s_user_objects_deferred_dealloc_MB"
+//			,"s_internal_objects_alloc_MB"
+//			,"s_internal_objects_dealloc_MB"
+//			,"t_user_objects_alloc_MB"
+//			,"t_user_objects_dealloc_MB"
+//			,"t_internal_objects_alloc_MB"
+//			,"t_internal_objects_dealloc_MB"
+//			,"cpu_time"
+//			,"reads"
+//			,"writes"
+//			,"logical_reads"
+//			,"row_count"
+//		};
 	public static final String[] DIFF_COLUMNS     = new String[] {
 			 "TotalUsageMb"
-			,"SessUserObjectMb"
-			,"SessInternalObjectMb"
-			,"TaskUserObjectMb"
-			,"TaskInternalObjectMb"
-			,"s_user_objects_alloc_MB"
-			,"s_user_objects_dealloc_MB"
-			,"s_user_objects_deferred_dealloc_MB"
-			,"s_internal_objects_alloc_MB"
-			,"s_internal_objects_dealloc_MB"
-			,"t_user_objects_alloc_MB"
-			,"t_user_objects_dealloc_MB"
-			,"t_internal_objects_alloc_MB"
-			,"t_internal_objects_dealloc_MB"
-			,"cpu_time"
-			,"reads"
-			,"writes"
-			,"logical_reads"
-			,"row_count"
+			,"user_used_mb"
+			,"internal_used_mb"
+			,"user_deferred_dealloc_used_mb"
+
+			,"user_alloc_page_count"
+			,"user_dealloc_page_count"
+			,"user_deferred_dealloc_page_count"
+			,"internal_alloc_page_count"
+			,"internal_dealloc_page_count"
+
+			,"request_cpu_time"
+			,"request_total_elapsed_time"
+			,"request_reads"
+			,"request_writes"
+			,"request_logical_reads"
+			,"request_row_count"
+
+			,"session_cpu_time"
+			,"session_reads"
+			,"session_writes"
+			,"session_logical_reads"
+			,"session_row_count"
 		};
 	// RS> Col# Label                              JDBC Type Name           Guessed DBMS type Source Table
 	// RS> ---- ---------------------------------- ------------------------ ----------------- ------------
@@ -200,16 +225,20 @@ extends CountersModel
 	public static final String  PROPKEY_sample_sqlText             = PROP_PREFIX + ".sample.sqlText";
 	public static final boolean DEFAULT_sample_sqlText             = false;
 
-	public static final String  PROPKEY_sample_TotalUsageMb_includeInternalObjects = PROP_PREFIX + ".sample.TotalUsageMb.includeInternalObjects";
-	public static final boolean DEFAULT_sample_TotalUsageMb_includeInternalObjects = false;
+	public static final String  PROPKEY_sample_TotalUsageMb_min    = PROP_PREFIX + ".sample.TotalUsageMb.min";
+	public static final Double  DEFAULT_sample_TotalUsageMb_min    = 1.0;
+
+//	public static final String  PROPKEY_sample_TotalUsageMb_includeInternalObjects = PROP_PREFIX + ".sample.TotalUsageMb.includeInternalObjects";
+//	public static final boolean DEFAULT_sample_TotalUsageMb_includeInternalObjects = false;
 
 	@Override
 	protected void registerDefaultValues()
 	{
 		super.registerDefaultValues();
 
-//		Configuration.registerDefaultValue(PROPKEY_sample_systemThreads, DEFAULT_sample_systemThreads);
-		Configuration.registerDefaultValue(PROPKEY_sample_sqlText, DEFAULT_sample_sqlText);
+		Configuration.registerDefaultValue(PROPKEY_sample_systemThreads   , DEFAULT_sample_systemThreads);
+		Configuration.registerDefaultValue(PROPKEY_sample_sqlText         , DEFAULT_sample_sqlText);
+		Configuration.registerDefaultValue(PROPKEY_sample_TotalUsageMb_min, DEFAULT_sample_TotalUsageMb_min);
 	}
 	
 	/** Used by the: Create 'Offline Session' Wizard */
@@ -221,7 +250,8 @@ extends CountersModel
 		
 		list.add(new CmSettingsHelper("Sample System Threads"                     , PROPKEY_sample_systemThreads                      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemThreads                      , DEFAULT_sample_systemThreads                      ), DEFAULT_sample_systemThreads                      , CmTempdbSpidUsagePanel.TOOLTIP_sample_systemThreads ));
 		list.add(new CmSettingsHelper("Sample SQL Text"                           , PROPKEY_sample_sqlText                            , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_sqlText                            , DEFAULT_sample_sqlText                            ), DEFAULT_sample_sqlText                            , CmTempdbSpidUsagePanel.TOOLTIP_sample_sqlText ));
-		list.add(new CmSettingsHelper("Include 'InternalObject' in 'TotalUsageMb'", PROPKEY_sample_TotalUsageMb_includeInternalObjects, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_TotalUsageMb_includeInternalObjects, DEFAULT_sample_TotalUsageMb_includeInternalObjects), DEFAULT_sample_TotalUsageMb_includeInternalObjects, CmTempdbSpidUsagePanel.TOOLTIP_sample_TotalUsageMb_includeInternalObjects ));
+		list.add(new CmSettingsHelper("Total Usage Mb Min Value"                  , PROPKEY_sample_TotalUsageMb_min                   , Double .class, conf.getDoubleProperty (PROPKEY_sample_TotalUsageMb_min                   , DEFAULT_sample_TotalUsageMb_min                   ), DEFAULT_sample_TotalUsageMb_min                   , CmTempdbSpidUsagePanel.TOOLTIP_sample_TotalUsageMb_min ));
+//		list.add(new CmSettingsHelper("Include 'InternalObject' in 'TotalUsageMb'", PROPKEY_sample_TotalUsageMb_includeInternalObjects, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_TotalUsageMb_includeInternalObjects, DEFAULT_sample_TotalUsageMb_includeInternalObjects), DEFAULT_sample_TotalUsageMb_includeInternalObjects, CmTempdbSpidUsagePanel.TOOLTIP_sample_TotalUsageMb_includeInternalObjects ));
 
 		return list;
 	}
@@ -280,131 +310,253 @@ extends CountersModel
 
 		String dm_db_task_space_usage    = "dm_db_task_space_usage";
 		String dm_db_session_space_usage = "dm_db_session_space_usage";
+		String dm_exec_requests          = "dm_exec_requests";
 		String dm_exec_sessions          = "dm_exec_sessions";
-		String dm_exec_connections       = "dm_exec_connections";
-		String dm_exec_sql_text          = "dm_exec_sql_text";
+		String dm_exec_input_buffer      = "dm_exec_input_buffer";
+//		String dm_exec_connections       = "dm_exec_connections";
+//		String dm_exec_sql_text          = "dm_exec_sql_text";
 		
 		if (ssVersionInfo.isAzureSynapseAnalytics())
 		{
 			dm_db_task_space_usage    = "dm_pdw_nodes_db_task_space_usage";
 			dm_db_session_space_usage = "dm_pdw_nodes_db_session_space_usage";
+			dm_exec_requests          = "dm_exec_requests";                     // same name
 			dm_exec_sessions          = "dm_exec_sessions";                     // same name
-			dm_exec_connections       = "dm_pdw_exec_connections";
-			dm_exec_sql_text          = "dm_exec_sql_text";                     // same name
+			dm_exec_input_buffer      = "dm_exec_input_buffer";
+//			dm_exec_connections       = "dm_pdw_exec_connections";
+//			dm_exec_sql_text          = "dm_exec_sql_text";                     // same name
 		}
 
 		Configuration conf = Configuration.getCombinedConfiguration();
 		boolean sample_systemThreads          = conf.getBooleanProperty(PROPKEY_sample_systemThreads                      , DEFAULT_sample_systemThreads);
 		boolean sample_sqlText                = conf.getBooleanProperty(PROPKEY_sample_sqlText                            , DEFAULT_sample_sqlText);
-		boolean sample_includeInternalObjects = conf.getBooleanProperty(PROPKEY_sample_TotalUsageMb_includeInternalObjects, DEFAULT_sample_TotalUsageMb_includeInternalObjects);
+		Double  sample_TotalUsageMb_min       = conf.getDoubleProperty(PROPKEY_sample_TotalUsageMb_min                    , DEFAULT_sample_TotalUsageMb_min);
+//		boolean sample_includeInternalObjects = conf.getBooleanProperty(PROPKEY_sample_TotalUsageMb_includeInternalObjects, DEFAULT_sample_TotalUsageMb_includeInternalObjects);
 
-
+		boolean hasCol__user_objects_deferred_dealloc_page_count = false;
 		String user_objects_deferred_dealloc_page_count = "0";
 		if (srvVersion >= Ver.ver(2014))
 		{
-			user_objects_deferred_dealloc_page_count = "user_objects_deferred_dealloc_page_count";
+			hasCol__user_objects_deferred_dealloc_page_count = true;
+//			user_objects_deferred_dealloc_page_count = "user_objects_deferred_dealloc_page_count";
 		}
+//
+//		// TotalUsageMb, TotalUsageMb_abs
+//		String TotalUsageMb     = "    ,TotalUsageMb         = isnull(s_user_objects_MB,0) + isnull(t_user_objects_MB,0) \n";
+//		String TotalUsageMb_abs = "    ,TotalUsageMb_abs     = isnull(s_user_objects_MB,0) + isnull(t_user_objects_MB,0) \n";
+//		if (sample_includeInternalObjects)
+//		{
+//			TotalUsageMb     = "    ,TotalUsageMb         = isnull(s_user_objects_MB,0) + isnull(s_internal_objects_MB,0) + isnull(t_user_objects_MB,0) + isnull(t_internal_objects_MB,0) \n";
+//			TotalUsageMb_abs = "    ,TotalUsageMb_abs     = isnull(s_user_objects_MB,0) + isnull(s_internal_objects_MB,0) + isnull(t_user_objects_MB,0) + isnull(t_internal_objects_MB,0) \n";
+//		}
+//		                                                                                                                                                                                                         
+//		String sql = ""
+//			    + "; \n"
+//			    + "WITH \n"
+//			    + "tmpSess as ( \n"
+//			    + "    SELECT /* ${cmCollectorName} */ \n"
+//			    + "         session_id \n"
+//			    + "        ,CAST((user_objects_alloc_page_count - user_objects_dealloc_page_count - " + user_objects_deferred_dealloc_page_count + ") / 128.0 AS DECIMAL(15, 1)) AS s_user_objects_MB \n"
+//			    + "        ,CAST( user_objects_alloc_page_count                                                                               / 128.0 AS DECIMAL(15, 1)) AS s_user_objects_alloc_MB \n"
+//			    + "        ,CAST( user_objects_dealloc_page_count                                                                             / 128.0 AS DECIMAL(15, 1)) AS s_user_objects_dealloc_MB \n"
+//			    + "        ,CAST( " + user_objects_deferred_dealloc_page_count + "                                                                    / 128.0 AS DECIMAL(15, 1)) AS s_user_objects_deferred_dealloc_MB \n"
+//			    + "        ,CAST((internal_objects_alloc_page_count - internal_objects_dealloc_page_count)                                    / 128.0 AS DECIMAL(15, 1)) AS s_internal_objects_MB \n"
+//			    + "        ,CAST( internal_objects_alloc_page_count                                                                           / 128.0 AS DECIMAL(15, 1)) AS s_internal_objects_alloc_MB \n"
+//			    + "        ,CAST( internal_objects_dealloc_page_count                                                                         / 128.0 AS DECIMAL(15, 1)) AS s_internal_objects_dealloc_MB \n"
+//			    + "    FROM tempdb.sys." + dm_db_session_space_usage +" \n"
+//			    + "    WHERE (   user_objects_alloc_page_count            > 0 \n"
+//			    + "           OR user_objects_dealloc_page_count          > 0 \n"
+//			    + "           OR " + user_objects_deferred_dealloc_page_count + " > 0 \n"
+//			    + "           OR internal_objects_alloc_page_count        > 0 \n"
+//			    + "           OR internal_objects_dealloc_page_count      > 0 \n"
+//			    + "          ) \n"
+//			    + "      AND database_id = DB_ID('tempdb') \n"
+//			    + "), \n"
+//			    + "tmlTasks as ( \n"
+//			    + "    SELECT /* ${cmCollectorName} */ \n"
+//			    + "         session_id \n"
+//			    + "        ,CAST(SUM(user_objects_alloc_page_count - user_objects_dealloc_page_count        ) / 128.0 AS DECIMAL(15, 1)) AS t_user_objects_MB \n"
+//			    + "        ,CAST(SUM(user_objects_alloc_page_count                                          ) / 128.0 AS DECIMAL(15, 1)) AS t_user_objects_alloc_MB \n"
+//			    + "        ,CAST(SUM(user_objects_dealloc_page_count                                        ) / 128.0 AS DECIMAL(15, 1)) AS t_user_objects_dealloc_MB \n"
+//			    + "        ,CAST(SUM(internal_objects_alloc_page_count - internal_objects_dealloc_page_count) / 128.0 AS DECIMAL(15, 1)) AS t_internal_objects_MB \n"
+//			    + "        ,CAST(SUM(internal_objects_alloc_page_count                                      ) / 128.0 AS DECIMAL(15, 1)) AS t_internal_objects_alloc_MB \n"
+//			    + "        ,CAST(SUM(internal_objects_dealloc_page_count                                    ) / 128.0 AS DECIMAL(15, 1)) AS t_internal_objects_dealloc_MB \n"
+//			    + "    FROM tempdb.sys." + dm_db_task_space_usage + " \n"
+//			    + "    WHERE (   user_objects_alloc_page_count       > 0 \n"
+//			    + "           OR user_objects_dealloc_page_count     > 0 \n"
+//			    + "           OR internal_objects_alloc_page_count   > 0 \n"
+//			    + "           OR internal_objects_dealloc_page_count > 0 \n"
+//			    + "          ) \n"
+//			    + "      AND database_id = DB_ID('tempdb') \n"
+//			    + "    GROUP BY session_id -- Group by since 'session_id' can have several 'exec_context_id' (parallel workers) \n"
+//			    + ") \n"
+//			    + "SELECT /* ${cmCollectorName} */ \n"
+//			    + "     COALESCE(s.session_id, t.session_id) as [session_id] \n"
+//			    + TotalUsageMb_abs
+//			    + TotalUsageMb
+//			    + "    ,SessUserObjectMb     = isnull(s_user_objects_MB,0) \n"
+//			    + "    ,SessInternalObjectMb = isnull(s_internal_objects_MB,0) \n"
+//			    + "    ,TaskUserObjectMb     = isnull(t_user_objects_MB,0) \n"
+//			    + "    ,TaskInternalObjectMb = isnull(t_internal_objects_MB,0) \n"
+//			    + "    ,s_user_objects_alloc_MB \n"
+//			    + "    ,s_user_objects_dealloc_MB \n"
+//			    + "    ,s_user_objects_deferred_dealloc_MB \n"
+//			    + "    ,s_internal_objects_alloc_MB \n"
+//			    + "    ,s_internal_objects_dealloc_MB \n"
+//			    + "    ,t_user_objects_alloc_MB \n"
+//			    + "    ,t_user_objects_dealloc_MB \n"
+//			    + "    ,t_internal_objects_alloc_MB \n"
+//			    + "    ,t_internal_objects_dealloc_MB \n"
+//			    + "    ,ES.is_user_process \n"
+//			    + "    ,dbname = DB_NAME(ES.database_id) \n"
+//			    + "    ,ES.login_name \n"
+//			    + "    ,ES.program_name \n"
+//			    + "    ,ES.host_name \n"
+//			    + "    ,ES.host_process_id \n"
+//			    + "    ,ES.status \n"
+//			    + "    ,ES.open_transaction_count \n"
+//			    + "    ,transaction_isolation_level = CASE WHEN ES.transaction_isolation_level = 0 THEN 'Unspecified'     + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
+//			    + "                                        WHEN ES.transaction_isolation_level = 1 THEN 'ReadUncommitted' + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
+//			    + "                                        WHEN ES.transaction_isolation_level = 2 THEN 'ReadCommitted'   + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
+//			    + "                                        WHEN ES.transaction_isolation_level = 3 THEN 'RepeatableRead'  + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
+//			    + "                                        WHEN ES.transaction_isolation_level = 4 THEN 'Serializable'    + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
+//			    + "                                        WHEN ES.transaction_isolation_level = 5 THEN 'Snapshot'        + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
+//			    + "                                        ELSE                                         'UNKNOWN'         + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
+//			    + "                                   END \n"
+//			    + "    ,ES.last_request_start_time \n"
+//			    + "    ,last_request_in_sec = datediff(second, ES.last_request_start_time, getdate()) \n"
+//			    + "    ,ES.cpu_time \n"
+//			    + "    ,ES.memory_usage \n"
+//			    + "    ,ES.reads \n"
+//			    + "    ,ES.writes \n"
+//			    + "    ,ES.logical_reads \n"
+//			    + "    ,ES.row_count \n"
+//			    + (!sample_sqlText ? "    ,CAST('-not-enabled-' as nvarchar(max)) AS [LastQueryText] \n" : "    ,TXT.text AS [LastQueryText] \n")
+//			    + "FROM tmpSess s \n"
+//			    + "FULL OUTER JOIN tmlTasks t ON s.session_id = t.session_id \n"
+//			    + "LEFT OUTER JOIN sys." + dm_exec_sessions + "    ES ON ES.session_id = COALESCE(s.session_id, t.session_id) \n"
+//			    + (!sample_sqlText      ? "" : "LEFT OUTER JOIN sys." + dm_exec_connections + " CN ON CN.session_id = COALESCE(s.session_id, t.session_id) \n")
+//			    + (!sample_sqlText      ? "" : "OUTER APPLY sys." + dm_exec_sql_text + "(CN.most_recent_sql_handle) TXT \n")
+//			    + (sample_systemThreads ? "" : "WHERE ES.is_user_process = 1 \n")
+//			    + "order by 3 desc \n"
+//			    + "";
 
-		// TotalUsageMb, TotalUsageMb_abs
-		String TotalUsageMb     = "    ,TotalUsageMb         = isnull(s_user_objects_MB,0) + isnull(t_user_objects_MB,0) \n";
-		String TotalUsageMb_abs = "    ,TotalUsageMb_abs     = isnull(s_user_objects_MB,0) + isnull(t_user_objects_MB,0) \n";
-		if (sample_includeInternalObjects)
-		{
-			TotalUsageMb     = "    ,TotalUsageMb         = isnull(s_user_objects_MB,0) + isnull(s_internal_objects_MB,0) + isnull(t_user_objects_MB,0) + isnull(t_internal_objects_MB,0) \n";
-			TotalUsageMb_abs = "    ,TotalUsageMb_abs     = isnull(s_user_objects_MB,0) + isnull(s_internal_objects_MB,0) + isnull(t_user_objects_MB,0) + isnull(t_internal_objects_MB,0) \n";
-		}
-		                                                                                                                                                                                                         
+		// TODO: Possibly use the below SQL (core of this was found at: https://www.haio.ir/app/uploads/2021/12/SQL-Server-Advanced-Troubleshooting-and-Performance-Tuning-Seventh-Early-Release-by-Dmitri-Korotkevitch-z-lib.org_.pdf
 		String sql = ""
-			    + "; \n"
-			    + "WITH \n"
-			    + "tmpSess as ( \n"
-			    + "    SELECT /* ${cmCollectorName} */ \n"
-			    + "         session_id \n"
-			    + "        ,CAST((user_objects_alloc_page_count - user_objects_dealloc_page_count - " + user_objects_deferred_dealloc_page_count + ") / 128.0 AS DECIMAL(15, 1)) AS s_user_objects_MB \n"
-			    + "        ,CAST( user_objects_alloc_page_count                                                                               / 128.0 AS DECIMAL(15, 1)) AS s_user_objects_alloc_MB \n"
-			    + "        ,CAST( user_objects_dealloc_page_count                                                                             / 128.0 AS DECIMAL(15, 1)) AS s_user_objects_dealloc_MB \n"
-			    + "        ,CAST( " + user_objects_deferred_dealloc_page_count + "                                                                    / 128.0 AS DECIMAL(15, 1)) AS s_user_objects_deferred_dealloc_MB \n"
-			    + "        ,CAST((internal_objects_alloc_page_count - internal_objects_dealloc_page_count)                                    / 128.0 AS DECIMAL(15, 1)) AS s_internal_objects_MB \n"
-			    + "        ,CAST( internal_objects_alloc_page_count                                                                           / 128.0 AS DECIMAL(15, 1)) AS s_internal_objects_alloc_MB \n"
-			    + "        ,CAST( internal_objects_dealloc_page_count                                                                         / 128.0 AS DECIMAL(15, 1)) AS s_internal_objects_dealloc_MB \n"
-			    + "    FROM tempdb.sys." + dm_db_session_space_usage +" \n"
-			    + "    WHERE (   user_objects_alloc_page_count            > 0 \n"
-			    + "           OR user_objects_dealloc_page_count          > 0 \n"
-			    + "           OR " + user_objects_deferred_dealloc_page_count + " > 0 \n"
-			    + "           OR internal_objects_alloc_page_count        > 0 \n"
-			    + "           OR internal_objects_dealloc_page_count      > 0 \n"
-			    + "          ) \n"
-			    + "      AND database_id = DB_ID('tempdb') \n"
-			    + "), \n"
-			    + "tmlTasks as ( \n"
-			    + "    SELECT /* ${cmCollectorName} */ \n"
-			    + "         session_id \n"
-			    + "        ,CAST(SUM(user_objects_alloc_page_count - user_objects_dealloc_page_count        ) / 128.0 AS DECIMAL(15, 1)) AS t_user_objects_MB \n"
-			    + "        ,CAST(SUM(user_objects_alloc_page_count                                          ) / 128.0 AS DECIMAL(15, 1)) AS t_user_objects_alloc_MB \n"
-			    + "        ,CAST(SUM(user_objects_dealloc_page_count                                        ) / 128.0 AS DECIMAL(15, 1)) AS t_user_objects_dealloc_MB \n"
-			    + "        ,CAST(SUM(internal_objects_alloc_page_count - internal_objects_dealloc_page_count) / 128.0 AS DECIMAL(15, 1)) AS t_internal_objects_MB \n"
-			    + "        ,CAST(SUM(internal_objects_alloc_page_count                                      ) / 128.0 AS DECIMAL(15, 1)) AS t_internal_objects_alloc_MB \n"
-			    + "        ,CAST(SUM(internal_objects_dealloc_page_count                                    ) / 128.0 AS DECIMAL(15, 1)) AS t_internal_objects_dealloc_MB \n"
-			    + "    FROM tempdb.sys." + dm_db_task_space_usage + " \n"
-			    + "    WHERE (   user_objects_alloc_page_count       > 0 \n"
-			    + "           OR user_objects_dealloc_page_count     > 0 \n"
-			    + "           OR internal_objects_alloc_page_count   > 0 \n"
-			    + "           OR internal_objects_dealloc_page_count > 0 \n"
-			    + "          ) \n"
-			    + "      AND database_id = DB_ID('tempdb') \n"
-			    + "    GROUP BY session_id -- Group by since 'session_id' can have several 'exec_context_id' (parallel workers) \n"
+			    + ";WITH SpaceUsagePages AS ( \n"
+			    + "    SELECT \n"
+			    + "         ss.session_id \n"
+			    + "        ,ss.user_objects_alloc_page_count       + ISNULL(SUM(ts.user_objects_alloc_page_count)      ,0) AS [user_alloc_page_count] \n"
+			    + "        ,ss.user_objects_dealloc_page_count     + ISNULL(SUM(ts.user_objects_dealloc_page_count)    ,0) AS [user_dealloc_page_count] \n"
+			    + (hasCol__user_objects_deferred_dealloc_page_count 
+			    ? "        ,ss.user_objects_deferred_dealloc_page_count                                                    AS [user_deferred_dealloc_page_count] \n" 
+			    : "")
+			    + "        ,ss.internal_objects_alloc_page_count   + ISNULL(SUM(ts.internal_objects_alloc_page_count)  ,0) AS [internal_alloc_page_count] \n"
+			    + "        ,ss.internal_objects_dealloc_page_count + ISNULL(SUM(ts.internal_objects_dealloc_page_count),0) AS [internal_dealloc_page_count] \n"
+			    + "    FROM \n"
+			    + "        tempdb.sys."                 + dm_db_session_space_usage + " ss WITH (NOLOCK) \n"
+			    + "        LEFT OUTER JOIN tempdb.sys." + dm_db_task_space_usage    + " ts WITH (NOLOCK) ON ss.session_id = ts.session_id \n"
+			    + "    GROUP BY \n"
+			    + "         ss.session_id \n"
+			    + "        ,ss.user_objects_alloc_page_count \n"
+			    + "        ,ss.user_objects_dealloc_page_count \n"
+			    + "        ,ss.internal_objects_alloc_page_count \n"
+			    + "        ,ss.internal_objects_dealloc_page_count \n"
+			    + "        ,ss.user_objects_deferred_dealloc_page_count \n"
 			    + ") \n"
-			    + "SELECT /* ${cmCollectorName} */ \n"
-			    + "     COALESCE(s.session_id, t.session_id) as [session_id] \n"
-			    + TotalUsageMb_abs
-			    + TotalUsageMb
-			    + "    ,SessUserObjectMb     = isnull(s_user_objects_MB,0) \n"
-			    + "    ,SessInternalObjectMb = isnull(s_internal_objects_MB,0) \n"
-			    + "    ,TaskUserObjectMb     = isnull(t_user_objects_MB,0) \n"
-			    + "    ,TaskInternalObjectMb = isnull(t_internal_objects_MB,0) \n"
-			    + "    ,s_user_objects_alloc_MB \n"
-			    + "    ,s_user_objects_dealloc_MB \n"
-			    + "    ,s_user_objects_deferred_dealloc_MB \n"
-			    + "    ,s_internal_objects_alloc_MB \n"
-			    + "    ,s_internal_objects_dealloc_MB \n"
-			    + "    ,t_user_objects_alloc_MB \n"
-			    + "    ,t_user_objects_dealloc_MB \n"
-			    + "    ,t_internal_objects_alloc_MB \n"
-			    + "    ,t_internal_objects_dealloc_MB \n"
-			    + "    ,ES.is_user_process \n"
-			    + "    ,dbname = DB_NAME(ES.database_id) \n"
-			    + "    ,ES.login_name \n"
-			    + "    ,ES.program_name \n"
-			    + "    ,ES.host_name \n"
-			    + "    ,ES.host_process_id \n"
-			    + "    ,ES.status \n"
-			    + "    ,ES.open_transaction_count \n"
-			    + "    ,transaction_isolation_level = CASE WHEN ES.transaction_isolation_level = 0 THEN 'Unspecified'     + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
-			    + "                                        WHEN ES.transaction_isolation_level = 1 THEN 'ReadUncommitted' + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
-			    + "                                        WHEN ES.transaction_isolation_level = 2 THEN 'ReadCommitted'   + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
-			    + "                                        WHEN ES.transaction_isolation_level = 3 THEN 'RepeatableRead'  + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
-			    + "                                        WHEN ES.transaction_isolation_level = 4 THEN 'Serializable'    + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
-			    + "                                        WHEN ES.transaction_isolation_level = 5 THEN 'Snapshot'        + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
-			    + "                                        ELSE                                         'UNKNOWN'         + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
-			    + "                                   END \n"
-			    + "    ,ES.last_request_start_time \n"
-			    + "    ,last_request_in_sec = datediff(second, ES.last_request_start_time, getdate()) \n"
-			    + "    ,ES.cpu_time \n"
-			    + "    ,ES.memory_usage \n"
-			    + "    ,ES.reads \n"
-			    + "    ,ES.writes \n"
-			    + "    ,ES.logical_reads \n"
-			    + "    ,ES.row_count \n"
-			    + (!sample_sqlText ? "    ,CAST('-not-enabled-' as nvarchar(max)) AS [LastQueryText] \n" : "    ,TXT.text AS [LastQueryText] \n")
-			    + "FROM tmpSess s \n"
-			    + "FULL OUTER JOIN tmlTasks t ON s.session_id = t.session_id \n"
-			    + "LEFT OUTER JOIN sys." + dm_exec_sessions + "    ES ON ES.session_id = COALESCE(s.session_id, t.session_id) \n"
-			    + (!sample_sqlText      ? "" : "LEFT OUTER JOIN sys." + dm_exec_connections + " CN ON CN.session_id = COALESCE(s.session_id, t.session_id) \n")
-			    + (!sample_sqlText      ? "" : "OUTER APPLY sys." + dm_exec_sql_text + "(CN.most_recent_sql_handle) TXT \n")
-			    + (sample_systemThreads ? "" : "WHERE ES.is_user_process = 1 \n")
-			    + "order by 3 desc \n"
+			    + ",SpaceUsageMb AS ( \n"
+			    + "    SELECT \n"
+			    + "         session_id \n"
+			    + "        ,CONVERT(DECIMAL(12,1), ([user_alloc_page_count]     - [user_dealloc_page_count]    ) / 128.0) AS [user_used_mb] \n"
+			    + "        ,CONVERT(DECIMAL(12,1), ([internal_alloc_page_count] - [internal_dealloc_page_count]) / 128.0) AS [internal_used_mb] \n"
+			    + (hasCol__user_objects_deferred_dealloc_page_count 
+			    ? "        ,CONVERT(DECIMAL(12,1), user_deferred_dealloc_page_count                              / 128.0) AS [user_deferred_dealloc_used_mb] \n" 
+			    : "")
+			    + "    FROM SpaceUsagePages \n"
+			    + ") \n"
+			    + "SELECT \n"
+			    + "     su.session_id \n"
+				+ " \n"
+//				+ "    ,su.user_used_mb + su.internal_used_mb                   AS [space_used_mb_abs] \n"
+				+ "    ,su.user_used_mb + su.internal_used_mb                   AS [TotalUsageMb_abs] \n"
+				+ "    ,su.user_used_mb                                         AS [user_used_mb_abs] \n"
+				+ "    ,su.internal_used_mb                                     AS [internal_used_mb_abs] \n"
+				+ (hasCol__user_objects_deferred_dealloc_page_count 
+				? "    ,su.user_deferred_dealloc_used_mb                        AS [user_deferred_dealloc_used_mb_abs] \n" 
+				: "")
+				+ " \n"
+//			    + "    ,su.user_used_mb + su.internal_used_mb                   AS [space_used_mb] \n"
+			    + "    ,su.user_used_mb + su.internal_used_mb                   AS [TotalUsageMb] \n"
+			    + "    ,su.user_used_mb                                         AS [user_used_mb] \n"
+			    + "    ,su.internal_used_mb                                     AS [internal_used_mb] \n"
+			    + (hasCol__user_objects_deferred_dealloc_page_count 
+			    ? "    ,su.user_deferred_dealloc_used_mb                        AS [user_deferred_dealloc_used_mb] \n" 
+			    : "")
+			    + " \n"
+				+ "    ,sup.user_alloc_page_count \n"
+				+ "    ,sup.user_dealloc_page_count \n"
+				+ "    ,sup.user_deferred_dealloc_page_count \n"
+				+ "    ,sup.internal_alloc_page_count \n"
+				+ "    ,sup.internal_dealloc_page_count \n"
+				+ " \n"
+			    + "    ,CASE WHEN er.status IS NULL THEN convert(bit, 0) ELSE convert(bit, 1) END AS [is_running] \n"
+			    + "    ,es.is_user_process \n"
+			    + "    ,DB_NAME(es.database_id)                                 AS [spid_cw_dbname] \n"
+			    + " \n"
+			    + "    ,es.open_transaction_count \n"
+			    + "    ,es.login_time \n"
+			    + "    ,es.original_login_name \n"
+			    + "    ,es.host_name \n"
+			    + "    ,es.host_process_id \n"
+			    + "    ,es.program_name \n"
+				+ "    ,er.command                                              AS [request_command] \n"
+			    + "    ,er.status                                               AS [request_status] \n"
+			    + "    ,es.status                                               AS [session_status] \n"
+			    + "    ,er.start_time                                           AS [request_start_time] \n"
+			    + "    ,CONVERT(DECIMAL(21,3),er.total_elapsed_time / 1000.0)   AS [duration_is_sec] \n"
+			    + "    ,es.last_request_start_time                              AS [last_request_start_time] \n"
+			    + "    ,datediff(second, es.last_request_start_time, getdate()) AS [last_request_in_sec] \n"
+			    + "    ,er.cpu_time                                             AS [request_cpu_time] \n"
+			    + "    ,er.total_elapsed_time                                   AS [request_total_elapsed_time] \n"
+			    + "    ,er.reads                                                AS [request_reads] \n"
+			    + "    ,er.writes                                               AS [request_writes] \n"
+			    + "    ,er.logical_reads                                        AS [request_logical_reads] \n"
+			    + "    ,er.row_count                                            AS [request_row_count] \n"
+			    + "    ,es.cpu_time                                             AS [session_cpu_time] \n"
+			    + "    ,es.memory_usage                                         AS [session_memory_usage] \n"
+			    + "    ,es.reads                                                AS [session_reads] \n"
+			    + "    ,es.writes                                               AS [session_writes] \n"
+			    + "    ,es.logical_reads                                        AS [session_logical_reads] \n"
+			    + "    ,es.row_count                                            AS [session_row_count] \n"
+			    + "    ,er.wait_type                                            AS [request_wait_type] \n"
+				+ "    ,er.last_wait_type                                       AS [request_last_wait_type] \n"
+			    + "    ,er.wait_time                                            AS [request_wait_time] \n"
+			    + "    ,er.wait_resource                                        AS [request_wait_resource] \n"
+			    + "    ,er.blocking_session_id                                  AS [im_blocked_by_spid] \n"
+			    + "    ,CASE WHEN ES.transaction_isolation_level = 0 THEN 'Unspecified'     + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
+			    + "          WHEN ES.transaction_isolation_level = 1 THEN 'ReadUncommitted' + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
+			    + "          WHEN ES.transaction_isolation_level = 2 THEN 'ReadCommitted'   + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
+			    + "          WHEN ES.transaction_isolation_level = 3 THEN 'RepeatableRead'  + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
+			    + "          WHEN ES.transaction_isolation_level = 4 THEN 'Serializable'    + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
+			    + "          WHEN ES.transaction_isolation_level = 5 THEN 'Snapshot'        + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
+			    + "          ELSE                                         'UNKNOWN'         + ' - ' + CAST(ES.transaction_isolation_level as varchar(10)) \n"
+			    + "     END                                                     AS [transaction_isolation_level] \n"
+//			    + "    ,ib.event_info                                           AS [LastQueryText] \n"
+			    + (!sample_sqlText ? "    ,CAST('-not-enabled-' as nvarchar(max)) AS [LastQueryText] \n" : "    ,ib.event_info AS [LastQueryText] \n")
+			    + "FROM \n"
+			    + "    SpaceUsageMb su \n"
+				+ "    LEFT OUTER JOIN SpaceUsagePages sup ON su.session_id = sup.session_id \n"
+			    + "    LEFT OUTER JOIN sys." + dm_exec_requests + " er WITH (NOLOCK) ON su.session_id = er.session_id \n"
+			    + "    LEFT OUTER JOIN sys." + dm_exec_sessions + " es WITH (NOLOCK) ON su.session_id = es.session_id \n"
+			    + (!sample_sqlText      ? "" : "    OUTER APPLY sys." + dm_exec_input_buffer + "(es.session_id, er.request_id) ib \n")
+				+ "WHERE 1 = 1\n"
+			    + "  AND su.user_used_mb + su.internal_used_mb >= " + sample_TotalUsageMb_min + " /* property='" + PROPKEY_sample_TotalUsageMb_min + "=" + sample_TotalUsageMb_min + "' */ \n"
+			    + (sample_systemThreads ? "" : "  AND es.is_user_process = 1 \n")
+			    + "ORDER BY \n"
+			    + "    [TotalUsageMb_abs] DESC \n"
+//			    + "OPTION (RECOMPILE) \n"
 			    + "";
-
+		
 		return sql;
 	}
 	@Override

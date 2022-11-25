@@ -69,4 +69,9 @@ public class DbxGraphData
 		
 		_data = labelAndDataMap;
 	}
+
+	public void removeSerieName(String label)
+	{
+		_data.remove(label);
+	}
 }

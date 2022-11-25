@@ -21,6 +21,7 @@
 package com.asetune.cm.sqlserver;
 
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -32,24 +33,28 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.Version;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
+import com.asetune.alarm.events.sqlserver.AlarmEventSuspectPages;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.gui.CmSummaryPanel;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
-import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
 
 /**
@@ -84,7 +89,8 @@ extends CountersModel
 		"cpu_busy", "cpu_io", "cpu_idle", "io_total_read", "io_total_write", 
 		"aaConnections", "distinctLogins", 
 		"pack_received", "pack_sent", "packet_errors", "total_errors",
-		"ms_ticks", "process_kernel_time_ms", "process_user_time_ms" 
+		"ms_ticks", "process_kernel_time_ms", "process_user_time_ms",
+		"tempdbUsageMbAll", "tempdbUsageMbUser", "tempdbUsageMbInternal"
 	};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
@@ -138,6 +144,12 @@ extends CountersModel
 	//------------------------------------------------------------
 	public static final String  PROPKEY_oldestOpenTran_discard_tempdb = "CmSummary.oldestOpenTran.discard.tempdb";
 	public static final boolean DEFAULT_oldestOpenTran_discard_tempdb = false;
+
+	public static final String  PROPKEY_suspectPageCount_isEnabled = "CmSummary.suspectPageCount.enabled";
+	public static final boolean DEFAULT_suspectPageCount_isEnabled = true;
+	
+	public static final String  PROPKEY_sample_tempdbSpidUsage = "CmSummary.sample.tempdb.spid.usage";
+	public static final boolean DEFAULT_sample_tempdbSpidUsage = true;
 	
 	public static final String GRAPH_NAME_AA_CPU                   = "aaCpuGraph";         // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_CPU;
 //	public static final String GRAPH_NAME_SYS_INFO_CPU             = "sysInfoCpuGraph";
@@ -148,7 +160,11 @@ extends CountersModel
 	public static final String GRAPH_NAME_AA_NW_PACKET             = "aaPacketGraph";      // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET;
 	public static final String GRAPH_NAME_OLDEST_TRAN_IN_SEC       = "OldestTranInSecGraph";
 	public static final String GRAPH_NAME_MAX_SQL_EXEC_TIME_IN_SEC = "MaxSqlExecTimeInSec";
-	
+	public static final String GRAPH_NAME_TEMPDB_SPID_USAGE        = "TempdbSpidUsage";
+
+	// If we got Suspect Page Count > 0; then we will try to populate this, so we can attach it to the alarm.
+	private ResultSetTableModel _lastSuspectPage_rstm = null;
+
 	private void addTrendGraphs()
 	{
 		// GRAPH
@@ -178,9 +194,11 @@ extends CountersModel
 		//	0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 		//	-1);   // minimum height
 
+		int LockWaitsThresholdSec = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LockWaitsThresholdSec, DEFAULT_alarm_LockWaitsThresholdSec);
+
 		addTrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
 			"Blocking Locks", 	                                     // Menu CheckBox text
-			"Number of Concurrently Blocking Locks, above 5 sec (from sysprocesses)", // Label 
+			"Number of Concurrently Blocking Locks, above " + LockWaitsThresholdSec + " sec (from sysprocesses)", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] { "Blocking Locks" }, 
 			LabelType.Static,
@@ -261,6 +279,18 @@ extends CountersModel
 			true,  // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_TEMPDB_SPID_USAGE,
+			"Tempdb Usage by SPID's in MB",     // Menu CheckBox text
+			"Tempdb Usage by SPID's in MB", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			new String[] { "All", "User Objects", "Internal Objects" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.SPACE,
+			false, // is Percent Graph
+			false,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 	}
 
 	@Override
@@ -318,10 +348,10 @@ extends CountersModel
 
 		// ----- SQL-Server 2014 and above
 		String user_objects_deferred_dealloc_page_count = "0";
-		if (srvVersion >= Ver.ver(2014))
-		{
-			user_objects_deferred_dealloc_page_count = "user_objects_deferred_dealloc_page_count";
-		}
+//		if (srvVersion >= Ver.ver(2014))
+//		{
+//			user_objects_deferred_dealloc_page_count = "user_objects_deferred_dealloc_page_count";
+//		}
 
 		String notInTempdb = "";
 		if ( Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_oldestOpenTran_discard_tempdb, DEFAULT_oldestOpenTran_discard_tempdb))
@@ -353,7 +383,16 @@ extends CountersModel
 //					"";
 //			}
 //		}
-		
+
+		 // where ... --- https://learn.microsoft.com/en-us/sql/relational-databases/backup-restore/manage-the-suspect-pages-table-sql-server?view=sql-server-ver16
+		String suspectPageCount  = ", suspectPageCount             = -1 \n";
+		String suspectPageErrors = ", suspectPageErrors            = -1 \n";
+		if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_suspectPageCount_isEnabled, DEFAULT_suspectPageCount_isEnabled))
+		{
+			suspectPageCount  = ", suspectPageCount             = (select count(*)         from msdb.dbo.suspect_pages) \n";
+			suspectPageErrors = ", suspectPageErrors            = (select sum(error_count) from msdb.dbo.suspect_pages) \n";
+		}
+
 		// SQL For listeners 
 		String listenerInfo = "" +
 				"/* Get info about Listeners (as a Comma Separated List): TYPE=ipv#[ip;port] */\n" +
@@ -397,7 +436,7 @@ extends CountersModel
 				"declare @oldestOpenTranCmd            nvarchar(32)  \n" +
 				"declare @oldestOpenTranLoginName      nvarchar(128) \n" +
 				"declare @oldestOpenTranName           nvarchar(32)  \n" +
-				"declare @oldestOpenTranTempdbUsageMb  decimal(12,1) \n" +
+//				"declare @oldestOpenTranTempdbUsageMb  decimal(12,1) \n" +
 				"declare @oldestOpenTranInSec          int = 0\n" +
 				"declare @oldestOpenTranInSecThreshold int = " + oldestOpenTranInSec + " \n" +
 				"\n" +
@@ -450,18 +489,21 @@ extends CountersModel
 				"        select @oldestOpenTranLoginName     = login_name \n" +
 				"                                              from sys.dm_exec_sessions \n" +
 				"                                              where session_id = @oldestOpenTranSpid \n" +
-				"        select @oldestOpenTranTempdbUsageMb = CAST( ( \n" + // The below calculations also used in: CmTempdbSpidUsage
-				"                                                          (ts.user_objects_alloc_page_count - ts.user_objects_dealloc_page_count - " + user_objects_deferred_dealloc_page_count + ") \n" +  
-				"                                                        + (ts.internal_objects_alloc_page_count - ts.internal_objects_dealloc_page_count) \n" +
-				"                                                    ) / 128.0 AS decimal(12,1) \n" +
-				"                                                  ) \n" +
-				"                                              from tempdb.sys.dm_db_session_space_usage ts \n" + 
-				"                                              where ts.session_id = @oldestOpenTranSpid \n" +
+//				"        select @oldestOpenTranTempdbUsageMb = CAST( ( \n" + // The below calculations also used in: CmTempdbSpidUsage
+//				"                                                          (ts.user_objects_alloc_page_count - ts.user_objects_dealloc_page_count - " + user_objects_deferred_dealloc_page_count + ") \n" +  
+//				"                                                        + (ts.internal_objects_alloc_page_count - ts.internal_objects_dealloc_page_count) \n" +
+//				"                                                    ) / 128.0 AS decimal(12,1) \n" +
+//				"                                                  ) \n" +
+//				"                                              from tempdb.sys.dm_db_session_space_usage ts \n" + 
+//				"                                              where ts.session_id = @oldestOpenTranSpid \n" +
 				"    end \n" +
 				"end \n" +
+//TODO; fix tempdb usage in various CM's -- CmActiveStatements, CmDatabases, CmSessions, CmSummary, CmTempdbSpidUsage?? (or everywhere where 'sys.dm_db_session_space_usage' and 'sys.dm_db_task_space_usage'
+				
 				"\n" +
 				"/* And some other metrics */\n" +
-				"select @LockWaits           = count(*) FROM sys.sysprocesses WHERE blocked != 0 AND ecid != 0 AND waittime >= " + (LockWaitsThresholdSec * 1000) + " \n" +
+//				"select @LockWaits           = count(*) FROM sys.sysprocesses WHERE blocked != 0 AND ecid != 0 AND waittime >= " + (LockWaitsThresholdSec * 1000) + " \n" + // note: 'ecid != 0' can't be correct, then it's only worker threads... 
+				"select @LockWaits           = count(*) FROM sys.sysprocesses WHERE blocked != 0 AND waittime >= " + (LockWaitsThresholdSec * 1000) + " \n" +
 				"select @LockWaitThreshold   = " + (LockWaitsThresholdSec * 1000) + " \n" +
 				"select @Connections         = count(*)            FROM sys.sysprocesses WHERE sid != 0x01 \n" +
 				"select @distinctLogins      = count(distinct sid) FROM sys.sysprocesses WHERE sid != 0x01 \n" +
@@ -493,6 +535,11 @@ extends CountersModel
 				", aaConnections                = @@connections                 \n" +
 				", distinctLogins               = @distinctLogins               \n" +
 				", fullTranslogCount            = @fullTranslogCount            \n" +
+				suspectPageCount +
+				suspectPageErrors +
+				", tempdbUsageMbAll             = convert(numeric(12,1), NULL)  \n" +
+				", tempdbUsageMbUser            = convert(numeric(12,1), NULL)  \n" +
+				", tempdbUsageMbInternal        = convert(numeric(12,1), NULL)  \n" +
 				", oldestOpenTranBeginTime      = @oldestOpenTranBeginTime      \n" +
 				", oldestOpenTranId             = @oldestOpenTranId             \n" +
 				", oldestOpenTranSpid           = @oldestOpenTranSpid           \n" +
@@ -501,7 +548,9 @@ extends CountersModel
 				", oldestOpenTranWaitType       = @oldestOpenTranWaitType       \n" +
 				", oldestOpenTranCmd            = @oldestOpenTranCmd            \n" +
 				", oldestOpenTranLoginName      = @oldestOpenTranLoginName      \n" +
-				", oldestOpenTranTempdbUsageMb  = @oldestOpenTranTempdbUsageMb  \n" +
+				", oldestOpenTranTempdbUsageMbAll       = convert(numeric(12,1), NULL)  \n" +
+				", oldestOpenTranTempdbUsageMbUser      = convert(numeric(12,1), NULL)  \n" +
+				", oldestOpenTranTempdbUsageMbInternal  = convert(numeric(12,1), NULL)  \n" +
 				", oldestOpenTranInSec          = @oldestOpenTranInSec          \n" +
 				", oldestOpenTranInSecThreshold = @oldestOpenTranInSecThreshold \n" +
 				", maxSqlExecTimeInSec          = @maxSqlExecTimeInSec          \n" +
@@ -518,6 +567,165 @@ extends CountersModel
 				"";
 
 		return sql;
+	}
+	
+	@Override
+	protected int refreshGetData(DbxConnection conn) 
+	throws Exception
+	{
+		// Do NORMAL refresh
+		int rowCount = super.refreshGetData(conn);
+
+		// Reset last suspect RSTM
+		_lastSuspectPage_rstm = null;
+
+		// Get Suspect count...
+		Integer suspectPageCount = getAbsValueAsInteger(0, "suspectPageCount");
+		if (suspectPageCount != null && suspectPageCount > 0)
+		{
+			String sql = getSql_suspectPageInfo(conn.getDbmsVersionInfo());
+			try
+			{
+				int queryTimeout = 5;
+				_lastSuspectPage_rstm = ResultSetTableModel.executeQuery(conn, sql, queryTimeout, "suspectPageInfo");
+			}
+			catch (SQLException ex)
+			{
+				_logger.warn("Problems getting SQL Server 'suspect pages' from 'msdb.dbo.suspect_pages'. Skipping this and continuing. SQL=" + sql, ex);
+			}
+		}
+
+		// refresh tempdb usage info
+		boolean getTempdbSpidUsage = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_tempdbSpidUsage, DEFAULT_sample_tempdbSpidUsage);
+		if (getTempdbSpidUsage)
+		{
+			long startTime = System.currentTimeMillis();
+
+			// Refresh
+			TempdbUsagePerSpid.getInstance().refresh(conn);
+
+			long refreshTime = TimeUtils.msDiffNow(startTime);
+			if (refreshTime > 1_000) // more than 1 seconds... write warning
+			{
+				_logger.warn("Refreshing 'tempdb usage information' took " + refreshTime + " ms. This is a bit long, the threshold for this message is 1 seconds.");
+			}
+		}
+		
+		return rowCount;
+	}
+	
+	public ResultSetTableModel get_lastSuspectPage_rstm()
+	{
+		return _lastSuspectPage_rstm;
+	}
+
+	public static String getSql_suspectPageInfo(DbmsVersionInfo versionInfo)
+	{
+		String sql = ""
+			    + "select /* " + Version.getAppName() + ":" + CM_NAME + " */ \n"
+			    + "     sp.database_id \n"
+			    + "    ,dbname             = db_name(sp.database_id) \n"
+			    + "    ,sp.file_id \n"
+			    + "    ,file_size_mb       = convert(numeric(10,1), mf.size / 128.0) \n"
+			    + "    ,file_type          = mf.type_desc \n"
+			    + "    ,logical_file_name  = mf.name \n"
+			    + "    ,physical_file_name = mf.physical_name \n"
+			    + "    ,sp.page_id \n"
+			    + "    ,sp.event_type \n"
+			    + "    ,event_type_desc = \n"
+			    + "     CASE sp.event_type \n"
+			    + "          WHEN 1 THEN '823 or 824 error' \n"
+			    + "          WHEN 2 THEN 'Bad checksum' \n"
+			    + "          WHEN 3 THEN 'Torn page' \n"
+			    + "          WHEN 4 THEN 'Restored' \n"
+			    + "          WHEN 5 THEN 'Repaired' \n"
+			    + "          WHEN 7 THEN 'Deallocated' \n"
+			    + "          ELSE '-unknown-' \n"
+			    + "     END \n"
+			    + "    ,sp.error_count \n"
+			    + "    ,sp.last_update_date \n"
+			    + "from msdb.dbo.suspect_pages sp \n"
+			    + "join sys.master_files mf on sp.file_id = mf.file_id and sp.database_id = mf.database_id \n"
+			    + "";
+
+		// in 2019 -- get some page information, so we can see what TableName, IndexId, PageTypeDesc (etc)
+		if (versionInfo != null && versionInfo.getLongVersion() > Ver.ver(2019))
+		{
+			sql = ""
+				    + "select /* " + Version.getAppName() + ":" + CM_NAME + " */ \n"
+				    + "     sp.database_id \n"
+				    + "    ,dbname             = db_name(sp.database_id) \n"
+				    + "    ,sp.file_id \n"
+				    + "    ,file_size_mb       = convert(numeric(10,1), mf.size / 128.0) \n"
+				    + "    ,file_type          = mf.type_desc \n"
+				    + "    ,logical_file_name  = mf.name \n"
+				    + "    ,physical_file_name = mf.physical_name \n"
+				    + "    ,object_name = object_name(pi.object_id, pi.database_id) \n" // 2019
+				    + "    ,pi.index_id \n"                                             // 2019
+				    + "    ,pi.page_type_desc \n"                                       // 2019
+				    + "    ,sp.page_id \n"
+				    + "    ,sp.event_type \n"
+				    + "    ,event_type_desc = \n"
+				    + "     CASE sp.event_type \n"
+				    + "          WHEN 1 THEN '823 or 824 error' \n"
+				    + "          WHEN 2 THEN 'Bad checksum' \n"
+				    + "          WHEN 3 THEN 'Torn page' \n"
+				    + "          WHEN 4 THEN 'Restored' \n"
+				    + "          WHEN 5 THEN 'Repaired' \n"
+				    + "          WHEN 7 THEN 'Deallocated' \n"
+				    + "          ELSE '-unknown-' \n"
+				    + "     END \n"
+				    + "    ,sp.error_count \n"
+				    + "    ,sp.last_update_date \n"
+				    + "from msdb.dbo.suspect_pages sp \n"
+				    + "join sys.master_files mf on sp.file_id = mf.file_id and sp.database_id = mf.database_id \n"
+				    + "outer apply sys.dm_db_page_info(sp.database_id, sp.file_id, sp.page_id, 'DETAILED') pi \n" // 2019
+				    + "";
+		}
+
+		return sql;
+	}
+
+	@Override
+	public void localCalculation(CounterSample newSample)
+	{
+		boolean getTempdbSpidUsage = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_tempdbSpidUsage, DEFAULT_sample_tempdbSpidUsage);
+		if (getTempdbSpidUsage)
+		{
+			// set ...
+			if (newSample.findColumn("tempdbUsageMbAll") != -1)
+			{
+				TempdbUsagePerSpid inst = TempdbUsagePerSpid.getInstance();
+				
+				newSample.setValueAt(inst.getTotalSpaceUsedInMb()         , 0, "tempdbUsageMbAll");
+				newSample.setValueAt(inst.getUserObjectSpaceUsedInMb()    , 0, "tempdbUsageMbUser");
+				newSample.setValueAt(inst.getInternalObjectSpaceUsedInMb(), 0, "tempdbUsageMbInternal");
+			}
+			
+			// 1: Get column position for 'oldestOpenTranSpid', and if it was found:
+			//    2: Get value for 'oldestOpenTranSpid', and if we have a value:
+			//       3: Get tempdb info about 'oldestOpenTranSpid', and if we have a value:
+			//          4: Set values for columns
+			//             - oldestOpenTranTempdbUsageMbAll
+			//             - oldestOpenTranTempdbUsageMbUser
+			//             - oldestOpenTranTempdbUsageMbInternal
+			//             (if the above columns can't be found... Simply write a message to the error log)
+			int oldestOpenTranSpid_pos = newSample.findColumn("oldestOpenTranSpid");
+			if (oldestOpenTranSpid_pos != -1)
+			{
+				int oldestOpenTranSpid = newSample.getValueAsInteger(0, oldestOpenTranSpid_pos, -1);
+				if (oldestOpenTranSpid != -1)
+				{
+					TempdbUsagePerSpid.TempDbSpaceInfo spaceInfo = TempdbUsagePerSpid.getInstance().getEntryForSpid(oldestOpenTranSpid);
+					if (spaceInfo != null)
+					{
+						newSample.setValueAt(spaceInfo.getTotalSpaceUsedInMb()         , 0, "oldestOpenTranTempdbUsageMbAll");
+						newSample.setValueAt(spaceInfo.getUserObjectSpaceUsedInMb()    , 0, "oldestOpenTranTempdbUsageMbUser");
+						newSample.setValueAt(spaceInfo.getInternalObjectSpaceUsedInMb(), 0, "oldestOpenTranTempdbUsageMbInternal");
+					}
+				}
+			}
+		}
 	}
 	
 	@Override
@@ -726,6 +934,23 @@ extends CountersModel
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_TEMPDB_SPID_USAGE.equals(tgdp.getName()))
+		{	
+			Double[] arr = new Double[3];
+
+			arr[0] = this.getAbsValueAsDouble(0, "tempdbUsageMbAll"     , true, -1d);
+			arr[1] = this.getAbsValueAsDouble(0, "tempdbUsageMbUser"    , true, -1d);
+			arr[2] = this.getAbsValueAsDouble(0, "tempdbUsageMbInternal", true, -1d);
+
+			_logger.debug("updateGraphData("+tgdp.getName()+"): tempdbUsageMbAll='"+arr[0]+"', tempdbUsageMbUser='"+arr[1]+"', tempdbUsageMbInternal='"+arr[2]+"'.");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
 	}
 	
 	
@@ -774,6 +999,8 @@ extends CountersModel
 		{
 			Double oldestOpenTranInSec = cm.getAbsValueAsDouble(0, "oldestOpenTranInSec");
 			Double oldestOpenTranSpid  = cm.getAbsValueAsDouble(0, "oldestOpenTranSpid", 0d);
+
+			// Only continue if 'oldestOpenTranSpid' HAS a value... otherwise it's probably a internal transaction, which MAY not have an impact
 			if (oldestOpenTranInSec != null && oldestOpenTranSpid.intValue() != 0 )
 			{
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestOpenTranInSec, DEFAULT_alarm_oldestOpenTranInSec);
@@ -790,12 +1017,13 @@ extends CountersModel
 					String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_oldestOpenTranInSecSkipTranName, DEFAULT_alarm_oldestOpenTranInSecSkipTranName);
 					String skipWaitTypeRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_oldestOpenTranInSecSkipWaitType, DEFAULT_alarm_oldestOpenTranInSecSkipWaitType);
 
-					String oldestOpenTranDbname        = cm.getAbsString       (0, "oldestOpenTranDbname");
-					String oldestOpenTranLoginName     = cm.getAbsString       (0, "oldestOpenTranLoginName");
-					String oldestOpenTranCmd           = cm.getAbsString       (0, "oldestOpenTranCmd");
-					String oldestOpenTranName          = cm.getAbsString       (0, "oldestOpenTranName");
-					String oldestOpenTranWaitType      = cm.getAbsString       (0, "oldestOpenTranWaitType");
-					Double oldestOpenTranTempdbUsageMb = cm.getAbsValueAsDouble(0, "oldestOpenTranTempdbUsageMb");
+					String oldestOpenTranDbname           = cm.getAbsString       (0, "oldestOpenTranDbname");
+					String oldestOpenTranLoginName        = cm.getAbsString       (0, "oldestOpenTranLoginName");
+					String oldestOpenTranCmd              = cm.getAbsString       (0, "oldestOpenTranCmd");
+					String oldestOpenTranName             = cm.getAbsString       (0, "oldestOpenTranName");
+					String oldestOpenTranWaitType         = cm.getAbsString       (0, "oldestOpenTranWaitType");
+//					Double oldestOpenTranTempdbUsageMb    = cm.getAbsValueAsDouble(0, "oldestOpenTranTempdbUsageMb");
+					Double oldestOpenTranTempdbUsageMbAll = cm.getAbsValueAsDouble(0, "oldestOpenTranTempdbUsageMbAll");
 					
 					// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
 					boolean doAlarm = true;
@@ -811,7 +1039,7 @@ extends CountersModel
 					// NO match in the SKIP regEx
 					if (doAlarm)
 					{
-						AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, oldestOpenTranInSec, oldestOpenTranSpid.intValue(), oldestOpenTranDbname, oldestOpenTranName, oldestOpenTranCmd, oldestOpenTranWaitType, oldestOpenTranLoginName, oldestOpenTranTempdbUsageMb);
+						AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, oldestOpenTranInSec, oldestOpenTranSpid.intValue(), oldestOpenTranDbname, oldestOpenTranName, oldestOpenTranCmd, oldestOpenTranWaitType, oldestOpenTranLoginName, oldestOpenTranTempdbUsageMbAll);
 						
 						alarmHandler.addAlarm( ae );
 					}
@@ -837,6 +1065,37 @@ extends CountersModel
 //					AlarmHandler.getInstance().addAlarm( new AlarmEventFullTranLog(cm, threshold, fullTranslogCount) );
 //			}
 //		}
+
+		//-------------------------------------------------------
+		// suspectPageCount
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("suspectPageCount"))
+		{
+			Integer suspectPageCount  = cm.getAbsValueAsInteger(0, "suspectPageCount", false, -1);
+			if (suspectPageCount != null && suspectPageCount > 0 )
+			{
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_suspectPageCount, DEFAULT_alarm_suspectPageCount);
+
+				Integer suspectPageErrors = cm.getAbsValueAsInteger(0, "suspectPageErrors", false, -1);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", suspectPageCount="+suspectPageCount+", suspectPageErrors="+suspectPageErrors+".");
+
+				if (suspectPageCount.intValue() > threshold)
+				{
+//					String extendedDescText = FIXME; get table from suspect_pages Table // cm.toTextTableString(DATA_RATE, r);
+//					String extendedDescHtml = FIXME; get table from suspect_pages Table // cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+					String extendedDescText = (_lastSuspectPage_rstm == null) ? "" : _lastSuspectPage_rstm.toAsciiTableString();
+					String extendedDescHtml = (_lastSuspectPage_rstm == null) ? "" : _lastSuspectPage_rstm.toHtmlTableString("sortable");
+
+					AlarmEvent ae = new AlarmEventSuspectPages(cm, threshold, suspectPageCount, suspectPageErrors);
+
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+					alarmHandler.addAlarm( ae );
+				} // end: above threshold
+			} // end: suspectPageCount above threshold
+		} // end: suspectPageCount
 	}
 
 	public static final String  PROPKEY_alarm_LockWaits                       = CM_NAME + ".alarm.system.if.LockWaits.gt";
@@ -865,6 +1124,10 @@ extends CountersModel
 
 //	public static final String  PROPKEY_alarm_fullTranslogCount               = CM_NAME + ".alarm.system.if.fullTranslogCount.gt";
 //	public static final int     DEFAULT_alarm_fullTranslogCount               = 0;
+
+	public static final String  PROPKEY_alarm_suspectPageCount                = CM_NAME + ".alarm.system.if.suspectPageCount.gt";
+	public static final int     DEFAULT_alarm_suspectPageCount                = 0;
+
 	
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -883,6 +1146,7 @@ extends CountersModel
 		list.add(new CmSettingsHelper("oldestOpenTranInSec SkipCmd",                     PROPKEY_alarm_oldestOpenTranInSecSkipCmd      , String .class, conf.getProperty      (PROPKEY_alarm_oldestOpenTranInSecSkipCmd      , DEFAULT_alarm_oldestOpenTranInSecSkipCmd     ), DEFAULT_alarm_oldestOpenTranInSecSkipCmd     , "If 'oldestOpenTranInSec' is true; then we can filter out transaction names using a Regular expression... if (cmd.matches('regexp'))...      This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("oldestOpenTranInSec WaitType",                    PROPKEY_alarm_oldestOpenTranInSecSkipWaitType , String .class, conf.getProperty      (PROPKEY_alarm_oldestOpenTranInSecSkipWaitType , DEFAULT_alarm_oldestOpenTranInSecSkipWaitType), DEFAULT_alarm_oldestOpenTranInSecSkipWaitType, "If 'oldestOpenTranInSec' is true; then we can filter out transaction names using a Regular expression... if (waitType.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
 //		list.add(new CmSettingsHelper("fullTranslogCount",                isAlarmSwitch, PROPKEY_alarm_fullTranslogCount               , Integer.class, conf.getIntProperty   (PROPKEY_alarm_fullTranslogCount               , DEFAULT_alarm_fullTranslogCount              ), DEFAULT_alarm_fullTranslogCount              , "If 'fullTranslogCount' is greater than ## then send 'AlarmEventFullTranLog'." ));
+		list.add(new CmSettingsHelper("suspectPageCount",                 isAlarmSwitch, PROPKEY_alarm_suspectPageCount                , Integer.class, conf.getIntProperty   (PROPKEY_alarm_suspectPageCount                , DEFAULT_alarm_suspectPageCount               ), DEFAULT_alarm_suspectPageCount               , "If 'suspectPageCount' (number of records in 'msdb.dbo.suspect_pages') is greater than ## then send 'AlarmEventSuspectPages'." ));
 
 		return list;
 	}

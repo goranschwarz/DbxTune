@@ -2878,7 +2878,7 @@ public class CentralPersistReader
 			}
 
 
-			// Get num records that we expect (this so we aotomatically can apply SampleType.MAX_OVER_SAMPLES if it's to many rows)
+			// Get num records that we expect (this so we automatically can apply SampleType.MAX_OVER_SAMPLES if it's to many rows)
 			if (SampleType.AUTO.equals(sampleType))
 			{
 				int threshold = 360;        // 360 records is 2 hours, with a 20 seconds sample intervall:  60 * 3 * 2
@@ -2928,6 +2928,11 @@ public class CentralPersistReader
 					+" order by " + lq + "SessionSampleTime" + rq 
 					;
 
+			// A Map that will indicate that ONLY NULL values was fetched from the database
+			LinkedHashMap<String, Boolean> labelAndAllNullMap = null;
+			if (Configuration.getCombinedConfiguration().getBooleanProperty("CentralPersistReader.getGraphData.removeSeriesWhenAllRowsAreNull", true));
+				labelAndAllNullMap = new LinkedHashMap<>();
+
 			List<DbxGraphData> list = new ArrayList<>();
 			int readCount = 0;
 
@@ -2965,6 +2970,17 @@ public class CentralPersistReader
 							for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
 							{
 								labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
+								labelAndDataNullHandler(labelAndAllNullMap, labelNames.get(l), rs.wasNull());
+
+								//-------------------------------------------------
+								// IF we want to handle NULL values...
+								//-------------------------------------------------
+								//String label = labelNames.get(l);
+								//Double value = rs.getDouble(c);
+                                //
+								//labelAndDataMap.put( label, value );
+                                //
+								//labelAndDataNullHandler(labelAndAllNullMap, label, rs.wasNull());
 							}
 	
 							DbxGraphData e = new DbxGraphData(cmName, graphName, sessionSampleTime, graphLabel, graphProps, graphCategory, isPercentGraph, labelAndDataMap);
@@ -3008,6 +3024,7 @@ public class CentralPersistReader
 							for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
 							{
 								labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
+								labelAndDataNullHandler(labelAndAllNullMap, labelNames.get(l), rs.wasNull());
 							}
 	
 							tmpList.add(labelAndDataMap);
@@ -3066,6 +3083,7 @@ public class CentralPersistReader
 							for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
 							{
 								labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
+								labelAndDataNullHandler(labelAndAllNullMap, labelNames.get(l), rs.wasNull());
 							}
 	
 							tmpList.add(labelAndDataMap);
@@ -3124,6 +3142,7 @@ public class CentralPersistReader
 							for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
 							{
 								labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
+								labelAndDataNullHandler(labelAndAllNullMap, labelNames.get(l), rs.wasNull());
 							}
 	
 							tmpList.add(labelAndDataMap);
@@ -3184,6 +3203,7 @@ public class CentralPersistReader
 							for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
 							{
 								labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
+								labelAndDataNullHandler(labelAndAllNullMap, labelNames.get(l), rs.wasNull());
 							}
 	
 							tmpList.add(labelAndDataMap);
@@ -3228,7 +3248,26 @@ public class CentralPersistReader
 //			System.out.println("getGraphData(sessionName='"+sessionName+"', cmName='"+cmName+"', graphName='"+graphName+"', startTime='"+startTime+"', endTime='"+endTime+"', sampleType="+sampleType+", sampleValue="+sampleValue+") SQL=|"+sql+"|, readCount="+readCount+", retListSize="+list.size());
 			if (_logger.isDebugEnabled())
 				_logger.debug("getGraphData(sessionName='"+sessionName+"', cmName='"+cmName+"', graphName='"+graphName+"', startTime='"+startTime+"', endTime='"+endTime+"', sampleType="+sampleType+", sampleValue="+sampleValue+") SQL=|"+sql+"|, readCount="+readCount+", retListSize="+list.size());
-				
+
+
+			// Removing series/labels that ONLY hold NULL values in the database
+			if (labelAndAllNullMap != null)
+			{
+				for (Entry<String, Boolean> entry : labelAndAllNullMap.entrySet())
+				{
+					if (entry.getValue())
+					{
+						String label = entry.getKey();
+						
+						for (DbxGraphData dbxGraphEntry : list)
+							dbxGraphEntry.removeSerieName(label);
+
+						_logger.info("Removing label/serie '" + label + "' from CM='" + cmName + "', graphName='" + graphName + "' since ALL rows had NULL values in the table.");
+					}
+				}
+			}
+
+			// Return
 			return list;
 		}
 		finally
@@ -3236,6 +3275,53 @@ public class CentralPersistReader
 			releaseConnection(conn);
 		}
 	}
+
+	/** maintain a Map with &lt;Label, allRowsWasNull:Boolean&gt;  */
+	private static void labelAndDataNullHandler(LinkedHashMap<String, Boolean> map, String label, boolean wasNull)
+	{
+		if (map == null)
+			return;
+
+		Boolean prev = map.get(label);
+		if (prev == null)
+		{
+			// did not exists, just add it with current value of wasNull
+			map.put(label, wasNull);
+		}
+		else
+		{
+			// Previous fetch was a NULL value
+			// But this fetch was a REAL value ... then set to FALSE
+			if (prev.equals(Boolean.TRUE) && !wasNull)
+				map.put(label, Boolean.FALSE);
+		}
+	}
+	
+//	public static void main(String[] args)
+//	{
+//		LinkedHashMap<String, Boolean> labelAndAllNullMap = new LinkedHashMap<>();
+//		
+//		labelAndDataNullHandler(labelAndAllNullMap, "c1", true);
+//		labelAndDataNullHandler(labelAndAllNullMap, "c1", true);
+//		labelAndDataNullHandler(labelAndAllNullMap, "c1", true);
+//		labelAndDataNullHandler(labelAndAllNullMap, "c1", true);
+//		labelAndDataNullHandler(labelAndAllNullMap, "c1", true);
+//		labelAndDataNullHandler(labelAndAllNullMap, "c1", true);
+//
+//		labelAndDataNullHandler(labelAndAllNullMap, "c2", false);
+//		labelAndDataNullHandler(labelAndAllNullMap, "c2", true);
+//
+//		labelAndDataNullHandler(labelAndAllNullMap, "c3", true);
+//		labelAndDataNullHandler(labelAndAllNullMap, "c3", false);
+//
+//		System.out.println(labelAndAllNullMap);
+//		
+//		for (Entry<String, Boolean> entry : labelAndAllNullMap.entrySet())
+//		{
+//			if (entry.getValue())
+//				System.out.println("ALL NULL column '" + entry.getKey() + "'."); // This should return 'c1' as the only column
+//		}
+//	}
 
 	/**
 	 * Calculate average values from all values in the Map

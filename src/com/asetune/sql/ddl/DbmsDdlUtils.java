@@ -34,7 +34,6 @@ import com.asetune.sql.ddl.model.Catalog;
 import com.asetune.sql.ddl.model.Index;
 import com.asetune.sql.ddl.model.Schema;
 import com.asetune.sql.ddl.model.Table;
-import com.asetune.sql.ddl.model.View;
 
 public class DbmsDdlUtils
 {

@@ -39,6 +39,7 @@ import java.util.concurrent.TimeoutException;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.SwingWorker.StateValue;
@@ -110,8 +111,12 @@ implements PropertyChangeListener, ActionListener
 	private JLabel          _label           = new JLabel("Waiting...", JLabel.CENTER);
 
 	private JLabel          _state_lbl       = new JLabel();
+
+	private JLabel          _extraLabelText_lbl = null;
+
 	private RSyntaxTextAreaX _extraText_txt   = null;
 	private RTextScrollPane _extraText_sroll = null;
+
 	private JButton         _cancel_but      = new JButton("Cancel");
 	private boolean         _cancelWasPressed= false;
 	private Connection      _conn            = null;
@@ -119,18 +124,18 @@ implements PropertyChangeListener, ActionListener
 	/** if a JDBC Connection is passed, the cancel button is visible */
 	public WaitForExecDialog(Window owner, Connection conn, String waitForLabel)
 	{
-		this(owner, null, waitForLabel, null);
+		this(owner, null, waitForLabel, null, null);
 	}
 
 	public WaitForExecDialog(Window owner, String waitForLabel)
 	{
-		this(owner, null, waitForLabel, null);
+		this(owner, null, waitForLabel, null, null);
 	}
-	public WaitForExecDialog(Window owner, String waitForLabel, String extraString)
+	public WaitForExecDialog(Window owner, String waitForLabel, String extraLabelText)
 	{
-		this(owner, null, waitForLabel, null);
+		this(owner, null, waitForLabel, extraLabelText, null);
 	}
-	public WaitForExecDialog(Window owner, Connection conn, String waitForLabel, String extraString)
+	public WaitForExecDialog(Window owner, Connection conn, String waitForLabel, String extraLabelText, String extraScrollableText)
 	{
 		super((Frame)null, "Waiting...", true);
 		setLayout(new MigLayout());
@@ -143,14 +148,20 @@ implements PropertyChangeListener, ActionListener
 
 		_conn = conn;
 
-		if (extraString != null)
+		if (extraLabelText != null)
+		{
+			_extraLabelText_lbl = new JLabel(extraLabelText, SwingConstants.CENTER);
+		}
+
+		if (extraScrollableText != null)
 		{
 			_extraText_txt   = new RSyntaxTextAreaX();
-			_extraText_sroll = null;new RTextScrollPane(_extraText_txt);
+//			_extraText_sroll = null;new RTextScrollPane(_extraText_txt);
+			_extraText_sroll = new RTextScrollPane(_extraText_txt);
 
 			RSyntaxUtilitiesX.installRightClickMenuExtentions(_extraText_txt, _extraText_sroll, this);
 
-			_extraText_txt.setText(extraString);
+			_extraText_txt.setText(extraScrollableText);
 		//	_extraText_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
 			_extraText_txt.setHighlightCurrentLine(false);
 		//	_extraText_txt.setLineWrap(true);
@@ -160,7 +171,11 @@ implements PropertyChangeListener, ActionListener
 		add(_label,        "push, grow, wrap");
 		add(_state_lbl,    "wrap");
 		add(_cancel_but,   "center, hidemode 3");
-		if (extraString != null)
+
+		if (_extraLabelText_lbl != null)
+			add(_extraLabelText_lbl, "push, grow, wrap");
+			
+		if (extraScrollableText != null)
 			add(_extraText_sroll, "push, grow, wrap");
 
 		_cancel_but.addActionListener(this);

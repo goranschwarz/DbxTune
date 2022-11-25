@@ -402,7 +402,9 @@ extends ReportEntryAbstract
 			sb.append("<tbody> \n");
 			for (PgIndexInfo entry : indexInfoList)
 			{
-				long avgBytesPerRow = entry.getSizePages() * 8192L / entry.getRowCount();
+				long avgBytesPerRow = 0;
+				if (entry.getRowCount() > 0)
+					avgBytesPerRow = entry.getSizePages() * 8192L / entry.getRowCount();
 
 				sb.append("<tr> \n");
 				sb.append("  <td>").append(            entry.getIndexName()          ).append("</td> \n");

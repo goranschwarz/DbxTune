@@ -50,6 +50,7 @@ import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.StandardXYItemRenderer;
 import org.jfree.chart.ui.ApplicationFrame;
 import org.jfree.chart.ui.RectangleInsets;
+import org.jfree.data.Range;
 import org.jfree.data.time.Minute;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
@@ -80,12 +81,17 @@ public class SparklineJfreeChart
 		TimeSeriesCollection dataSet = new TimeSeriesCollection();
 		TimeSeries data = new TimeSeries("Sparkline");
 
+		boolean allValuesAreZero = true;
+		
 		// Add data here
 		for (int i=0; i<_data.values.size(); i++)
 		{
 //			Integer   val = _data.values.get(i);
 			Number    val = _data.values.get(i);
 			Timestamp bts = _data.beginTs.get(i);
+			
+			if (val != null && val.doubleValue() != 0d)
+				allValuesAreZero = false;
 			
 			data.add(new Minute(bts), val);
 		}
@@ -112,9 +118,14 @@ public class SparklineJfreeChart
 		y.setNegativeArrowVisible(false);
 		y.setPositiveArrowVisible(false);
 		y.setVisible(false);
+		if (allValuesAreZero)
+			y.setRange(new Range(0,1)); // So '0' do not end up in the middle of the chart
+		
 		
 		XYPlot plot = new XYPlot();
-		plot.setInsets(new RectangleInsets(-1, -1, 0, 0));
+//		plot.setInsets(new RectangleInsets(-1, -1, 0, 0));
+		plot.setInsets(new RectangleInsets(-1, -1, 1, 0)); // Bottom[param:3]=1 -->> to address a MS Office rendering issue 
+//		plot.setBackgroundPaint(Color.WHITE);  // This is the background color on the line/chart area (the outside is set on the "_chart" object at the end
 		plot.setDataset(dataSet);
 		plot.setDomainAxis(x);
 		plot.setDomainGridlinesVisible(false);
@@ -133,7 +144,15 @@ public class SparklineJfreeChart
 				plot, false
 				);
 		_chart.setBorderVisible(false);
+
+		// Background color is normally Gray, when we set inserts[bottom=1], the non filled area gets "gray", so this fixes that
+//		_chart.setBackgroundPaint(Color.WHITE); // White DID NOT work... But Yellow / Blue etc works, I dint know what the issue is? 
+//		_chart.setBackgroundPaint(CHART_BG_COLOR);
 	}
+//	public final static Color CHART_BG_COLOR = Color.CYAN; // CYAN becomes "some other" color...
+//	public final static Color CHART_BG_COLOR = new Color(254, 254, 254, 0); // (white transparent) WHITE DID NOT WORK, so doing an "almost" white .. this did NOT Work either...
+//	public final static Color CHART_BG_COLOR = new Color(254, 254, 254, 255); // (white transparent) WHITE DID NOT WORK, so doing an "almost" white .. this did NOT Work either...
+//	public final static Color CHART_BG_COLOR = new Color(0, 0, 0, 0); // (black transparent) WHITE DID NOT WORK, so doing an "almost" white .. this did NOT Work either...
 
 	public void init_test()
 	{
@@ -342,10 +361,12 @@ public class SparklineJfreeChart
 
 			// writeChartAsPNG produces the same size with compression="default" (just using with, height), compression=0 and compression=9
 			// So no difference here... 
-			int     width       = 350;
-			int     height      = 18; //30;
-			boolean encodeAlpha = false;
-			int     compression = 0;
+			int     width         = 350;
+//			int     height        = 18; //30;
+			int     height        = 19; //30;
+//			int     paddingBottom = 2;
+			boolean encodeAlpha   = false;
+			int     compression   = 0;
 //			ChartUtils.writeChartAsPNG(b64o, _chart, 2048, 300);
 			ChartUtils.writeChartAsPNG(b64o, _chart, width, height, encodeAlpha, compression);
 			ReportChartAbstract.writeChartAsPNG(b64o, _chart, width, height, encodeAlpha, compression);
@@ -354,6 +375,8 @@ public class SparklineJfreeChart
 			String base64Str = new String(bo.toByteArray());
 
 			String htmlStr = "<img width='" + width + "' height='" + height + "' src='data:image/png;base64," + base64Str + "'>";
+//			String htmlStr = "<img width='" + width + "' height='" + (height+paddingBottom) + "' style='padding-bottom:" + paddingBottom + "px' src='data:image/png;base64," + base64Str + "'>"; // // padding-bottom:1px -->> to address a MS Office rendering issue
+			
 //			String htmlStr = "<img width='" + width + "' height='" + height + "' src='data:image/jpeg;base64," + base64Str + "'>";
 			return htmlStr;
 		}

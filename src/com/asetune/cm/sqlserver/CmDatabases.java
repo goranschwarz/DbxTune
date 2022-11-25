@@ -1696,10 +1696,10 @@ extends CountersModel
 
 		// ----- SQL-Server 2014 and above
 		String user_objects_deferred_dealloc_page_count = "0";
-		if (srvVersion >= Ver.ver(2014))
-		{
-			user_objects_deferred_dealloc_page_count = "user_objects_deferred_dealloc_page_count";
-		}
+//		if (srvVersion >= Ver.ver(2014))
+//		{
+//			user_objects_deferred_dealloc_page_count = "user_objects_deferred_dealloc_page_count";
+//		}
 
 		// ----- SQL-Server 2016 and above
 		String queryStoreCreateTempTable   = "";
@@ -2076,15 +2076,19 @@ extends CountersModel
 			    + "    ,OldestTranName           = oti.transaction_name \n"
 			    + "    ,OldestTranId             = oti.transaction_id \n"
 			    + "    ,OldestTranSpid           = oti.session_id \n"
-			    + "    ,OldestTranTempdbUsageMb  = (select \n" 
-			    + "                                 CAST( ( \n"  // The below calculations also used in: CmTempdbSpidUsage
-			    + "                                             (ts.user_objects_alloc_page_count - ts.user_objects_dealloc_page_count - " + user_objects_deferred_dealloc_page_count + ") \n"  
-			    + "                                           + (ts.internal_objects_alloc_page_count - ts.internal_objects_dealloc_page_count) \n" 
-			    + "                                       ) / 128.0 AS decimal(12,1) \n" 
-			    + "                                     ) \n" 
-			    + "                                 from tempdb.sys.dm_db_session_space_usage ts \n" 
-			    + "                                 where ts.session_id = oti.session_id \n"
-			    + "                                ) \n"
+//			    + "    ,OldestTranTempdbUsageMb         = convert(numeric(12,1), -1) \n" 
+			    + "    ,OldestTranTempdbUsageMbAll      = convert(numeric(12,1), NULL) \n" 
+			    + "    ,OldestTranTempdbUsageMbUser     = convert(numeric(12,1), NULL) \n" 
+			    + "    ,OldestTranTempdbUsageMbInternal = convert(numeric(12,1), NULL) \n" 
+//			    + "    ,OldestTranTempdbUsageMb  = (select \n" 
+//			    + "                                 CAST( ( \n"  // The below calculations also used in: CmTempdbSpidUsage
+//			    + "                                             (ts.user_objects_alloc_page_count - ts.user_objects_dealloc_page_count - " + user_objects_deferred_dealloc_page_count + ") \n"  
+//			    + "                                           + (ts.internal_objects_alloc_page_count - ts.internal_objects_dealloc_page_count) \n" 
+//			    + "                                       ) / 128.0 AS decimal(12,1) \n" 
+//			    + "                                     ) \n" 
+//			    + "                                 from tempdb.sys.dm_db_session_space_usage ts \n" 
+//			    + "                                 where ts.session_id = oti.session_id \n"
+//			    + "                                ) \n"
 //Possibly move above (OldestTranTempdbUsageMb) to section; "oti"
 			    + "    ,OldestTranProg           = oti.program_name \n"
 			    + "    ,OldestTranUser           = oti.login_name \n"
@@ -2132,7 +2136,7 @@ extends CountersModel
 
 		return sql;
 	}
-
+	
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
@@ -2509,6 +2513,8 @@ extends CountersModel
 	@Override
 	public void localCalculation(CounterSample newSample)
 	{
+		boolean getTempdbSpidUsage = Configuration.getCombinedConfiguration().getBooleanProperty(CmSummary.PROPKEY_sample_tempdbSpidUsage, CmSummary.DEFAULT_sample_tempdbSpidUsage);
+
 		int pos_OldestTranSpid         = -1; 
 		int pos_OldestTranHasLocks     = -1; 
 		int pos_OldestTranLocks        = -1;
@@ -2543,8 +2549,10 @@ extends CountersModel
 
 				if (OldestTranSpid > 0) // NULL result from the DBMS is translated as 0... so lets not hope that the SPID 0 has issues.
 				{
+					//---------------------------------------------
+					// Get locks
+					//---------------------------------------------
 					String sysLocks = "This was disabled";
-
 					if (getLocks)
 					{
 						try
@@ -2565,9 +2573,29 @@ extends CountersModel
 					b = !"This was disabled".equals(sysLocks) && !NO_LOCKS_WAS_FOUND.equals(sysLocks) && !"Timeout - when getting lock information".equals(sysLocks);
 					newSample.setValueAt(new Boolean(b), rowId, pos_OldestTranHasLocks);
 					newSample.setValueAt(sysLocks,       rowId, pos_OldestTranLocks);
-				}
-			}
-		}
+
+					//---------------------------------------------
+					// Get tempdb space usage
+					//---------------------------------------------
+					if (getTempdbSpidUsage)
+					{
+						// 1: Get tempdb info about 'oldestOpenTranSpid', and if we have a value:
+						//    2: Set values for columns
+						//       - OldestTranTempdbUsageMbAll
+						//       - OldestTranTempdbUsageMbUser
+						//       - OldestTranTempdbUsageMbInternal
+						//       (if the above columns can't be found... Simply write a message to the error log)
+						TempdbUsagePerSpid.TempDbSpaceInfo spaceInfo = TempdbUsagePerSpid.getInstance().getEntryForSpid(OldestTranSpid);
+						if (spaceInfo != null)
+						{
+							newSample.setValueAt(spaceInfo.getTotalSpaceUsedInMb()         , rowId, "OldestTranTempdbUsageMbAll");
+							newSample.setValueAt(spaceInfo.getUserObjectSpaceUsedInMb()    , rowId, "OldestTranTempdbUsageMbUser");
+							newSample.setValueAt(spaceInfo.getInternalObjectSpaceUsedInMb(), rowId, "OldestTranTempdbUsageMbInternal");
+						}
+					} // end: getTempdbSpidUsage
+				} // end: OldestTranSpid > 0
+			} // end: HAS: oval_OldestTranSpid
+		} // end: Loop on all rows
 	}
 	
 	private static final String NO_LOCKS_WAS_FOUND = "No locks was found";
@@ -2680,6 +2708,7 @@ extends CountersModel
 						{
 							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+							
 							AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
@@ -2793,6 +2822,7 @@ extends CountersModel
 						
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						
 						AlarmEvent ae = new AlarmEventOldBackup(cm, threshold, dbname, lastBackupDate, val.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -2844,6 +2874,7 @@ extends CountersModel
 						
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						
 						AlarmEvent ae = new AlarmEventOldIncrementalBackup(cm, threshold, dbname, lastBackupDate, val.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -2894,6 +2925,7 @@ extends CountersModel
 						
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						
 						AlarmEvent ae = new AlarmEventOldTranLogBackup(cm, threshold, dbname, lastBackupDate, val.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -2920,6 +2952,10 @@ extends CountersModel
 					{
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DATASIZE_LEFT_MB , dbname);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DATASIZE_USED_PCT, dbname);
+						
 						AlarmEvent ae = new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -2947,6 +2983,10 @@ extends CountersModel
 					{
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_LEFT_MB , dbname);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_USED_PCT, dbname);
+						
 						AlarmEvent ae = new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -2974,6 +3014,10 @@ extends CountersModel
 					{
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DATASIZE_LEFT_MB , dbname);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DATASIZE_USED_PCT, dbname);
+						
 						AlarmEvent ae = new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -3001,6 +3045,10 @@ extends CountersModel
 					{
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_LEFT_MB , dbname);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_USED_PCT, dbname);
+						
 						AlarmEvent ae = new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -3075,6 +3123,10 @@ extends CountersModel
 						
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_OS_DISK_FREE_MB);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_OS_DISK_USED_PCT);
+						
 						AlarmEvent ae = new AlarmEventLowOsDiskFreeSpace(cm, mountPoint, freeMb.intValue(), usedPct, threshold.intValue()); // NOTE: threshold is Integer = MB
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -3143,6 +3195,10 @@ extends CountersModel
 												
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_OS_DISK_FREE_MB);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_OS_DISK_USED_PCT);
+						
 						AlarmEvent ae = new AlarmEventLowOsDiskFreeSpace(cm, mountPoint, freeMb.intValue(), usedPct, threshold.doubleValue()); // NOTE: threshold is Double = PCT
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -3179,6 +3235,7 @@ extends CountersModel
 					{
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						
 						AlarmEvent ae = new AlarmEventDatabaseState(cm, dbname, alarm, p.pattern());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -3210,6 +3267,7 @@ extends CountersModel
 
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						
 						AlarmEvent ae = new AlarmEventQueryStoreUnexpectedState(cm, dbname, qsDesiredState, qsActualState, qsReadOnlyReason, expectedStr);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -3240,6 +3298,10 @@ extends CountersModel
 					{
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+						// For the moment there is NO chart for QueryStore Size
+						//extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_XXX, dbname);
+						
 						AlarmEvent ae = new AlarmEventQueryStoreLowFreeSpace(cm, dbname, QsUsedSpaceInPct, QsMaxSizeInMb, QsUsedSpaceInMb, QsFreeSpaceInMb, AlarmEventQueryStoreLowFreeSpace.Type.PCT, threshold);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
@@ -3273,6 +3335,10 @@ extends CountersModel
 						{
 							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+							
+							// For the moment there is NO chart for QueryStore Size
+							//extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_XXX, dbname);
+							
 							AlarmEvent ae = new AlarmEventQueryStoreLowFreeSpace(cm, dbname, QsUsedSpaceInPct, QsMaxSizeInMb, QsUsedSpaceInMb, QsFreeSpaceInMb, AlarmEventQueryStoreLowFreeSpace.Type.MB, threshold);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
@@ -3307,6 +3373,7 @@ extends CountersModel
 						{
 							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+							
 							AlarmEvent ae = new AlarmEventDbccCheckdbAge(cm, dbname, LastGoodCheckDbDays.intValue(), LastGoodCheckDbTime, threshold.intValue());
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
@@ -3416,6 +3483,11 @@ extends CountersModel
 						
 						String extendedDescText = cm.toTextTableString(DATA_DIFF, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_DIFF, r, true, false, false);
+
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DB_SIZE_MB      , dbname);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DATASIZE_LEFT_MB, dbname);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_LEFT_MB , dbname);
+						
 						AlarmEvent ae = new AlarmEventDbSizeChanged(cm, threshold, dbname, 
 								DbSizeInMbDiff, DataSizeInMbDiff, LogSizeInMbDiff, 
 								DbSizeInMbAbs , DataSizeInMbAbs , LogSizeInMbAbs);
@@ -3430,6 +3502,34 @@ extends CountersModel
 		} // end: loop dbname(s)
 	}
 
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_DB_SIZE_MB       .equals(name)) return true;
+		if (GRAPH_NAME_LOGSIZE_LEFT_MB  .equals(name)) return true;
+//		if (GRAPH_NAME_LOGSIZE_USED_MB  .equals(name)) return true;
+		if (GRAPH_NAME_LOGSIZE_USED_PCT .equals(name)) return true;
+		if (GRAPH_NAME_DATASIZE_LEFT_MB .equals(name)) return true;
+//		if (GRAPH_NAME_DATASIZE_USED_MB .equals(name)) return true;
+		if (GRAPH_NAME_DATASIZE_USED_PCT.equals(name)) return true;
+//		if (GRAPH_NAME_TEMPDB_USED_MB   .equals(name)) return true;
+
+		if (GRAPH_NAME_OS_DISK_FREE_MB  .equals(name)) return true;
+//		if (GRAPH_NAME_OS_DISK_USED_MB  .equals(name)) return true;
+		if (GRAPH_NAME_OS_DISK_USED_PCT .equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+
+	
 	/** Helper method to check if a Query Store is enabled */
 	private boolean isQueryStoreEnabledForDatabaseAtRow(int row)
 	{

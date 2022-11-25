@@ -333,6 +333,77 @@ extends CounterTableModel
 		// Set the value
 		r.set(col, value);
 	}
+
+	/**
+	 * Set value <br>
+	 * If column name or row is NOT found, a error message will be printed (no Exception will be thrown) 
+	 * 
+	 * @param value        The value to set 
+	 * @param row          Row number (starting at 0)
+	 * @param colName      Column name to set (This is case SENSITIVE)
+	 */
+	public void setValueAt(Object value, int row, String colName)
+	{
+		setValueAt(value, row, colName, true, false);
+	}
+	
+	/**
+	 * Set value 
+	 * If column name or row is NOT found, a error message will be printed (no Exception will be thrown) 
+	 * 
+	 * @param value             The value to set 
+	 * @param row               Row number (starting at 0)
+	 * @param colName           Column name to set
+	 * @param caseSensitive     If the column name search should be Case Sensitive)
+	 */
+	public void setValueAt(Object value, int row, String colName, boolean caseSensitive)
+	{
+		setValueAt(value, row, colName, true, false);
+	}
+	
+	/**
+	 * Set value 
+	 * If column name or row is NOT found 
+	 * 
+	 * @param value             The value to set 
+	 * @param row               Row number (starting at 0)
+	 * @param colName           Column name to set
+	 * @param caseSensitive     If the column name search should be Case Sensitive)
+	 * @param throwException    if ColumnName wasn't found; throw an exception, otherwise a error message will be printed
+	 */
+	public void setValueAt(Object value, int row, String colName, boolean caseSensitive, boolean throwException)
+	throws ColumnNameNotFoundException
+	{
+		int col = findColumn(colName, caseSensitive);
+		
+		if (col == -1)
+		{
+			ColumnNameNotFoundException ex = new ColumnNameNotFoundException(colName, this);
+			if (throwException)
+				throw ex;
+			else
+				_logger.warn(ex.getMessage(), ex);
+
+			return;
+		}
+
+		// Set the value
+		setValueAt(value, row, col);
+	}
+	
+	/**
+	 * Exception used in setValueAt(...) if column names wasn't found
+	 */
+	public static class ColumnNameNotFoundException
+	extends RuntimeException
+	{
+		private static final long serialVersionUID = 1L;
+
+		public ColumnNameNotFoundException(String colName, CounterSample cs)
+		{
+			super("Column name '" + colName + "' could not be found in CounterSample named '" + cs.getName() + "'.");
+		}
+	}
 	
 //	public void addTableModelListener(TableModelListener tablemodellistener)
 //	{
@@ -605,18 +676,34 @@ extends CounterTableModel
 			return rs.getObject(col);
 		}
 
+		// For Primitive Data types (int, etc...) return a Java "null" instead of what getXxx() method dictates.
+		boolean pdt2null = false; // Lets TEST how much this will *break* before we start to enable this.
+//		pdt2null = true; // Only for testing so far
+
 		// Return the "object" via getXXX method for "known" datatypes
 		int objSqlType = rsmd == null ? _colSqlType.get(col - 1) : rsmd.getColumnType(col);
 		switch (objSqlType)
 		{
-		case java.sql.Types.BIT:          return rs.getBoolean(col);
-		case java.sql.Types.TINYINT:      return rs.getByte(col);
-		case java.sql.Types.SMALLINT:     return rs.getShort(col);
-		case java.sql.Types.INTEGER:      return rs.getInt(col);
-		case java.sql.Types.BIGINT:       return rs.getLong(col);
-		case java.sql.Types.FLOAT:        return rs.getFloat(col);
-		case java.sql.Types.REAL:         return rs.getFloat(col);
-		case java.sql.Types.DOUBLE:       return rs.getDouble(col);
+//		case java.sql.Types.BIT:          return rs.getBoolean(col);
+//		case java.sql.Types.TINYINT:      return rs.getByte(col);
+//		case java.sql.Types.SMALLINT:     return rs.getShort(col);
+//		case java.sql.Types.INTEGER:      return rs.getInt(col);
+//		case java.sql.Types.BIGINT:       return rs.getLong(col);
+//		case java.sql.Types.FLOAT:        return rs.getFloat(col);
+//		case java.sql.Types.REAL:         return rs.getFloat(col);
+//		case java.sql.Types.DOUBLE:       return rs.getDouble(col);
+		
+		// Primitive data types
+		case java.sql.Types.BIT:          {boolean val = rs.getBoolean(col); return pdt2null && rs.wasNull() ? null : val; }
+		case java.sql.Types.TINYINT:      {byte    val = rs.getByte(col);    return pdt2null && rs.wasNull() ? null : val; }
+		case java.sql.Types.SMALLINT:     {short   val = rs.getShort(col);   return pdt2null && rs.wasNull() ? null : val; }
+		case java.sql.Types.INTEGER:      {int     val = rs.getInt(col);     return pdt2null && rs.wasNull() ? null : val; }
+		case java.sql.Types.BIGINT:       {long    val = rs.getLong(col);    return pdt2null && rs.wasNull() ? null : val; }
+		case java.sql.Types.FLOAT:        {float   val = rs.getFloat(col);   return pdt2null && rs.wasNull() ? null : val; }
+		case java.sql.Types.REAL:         {float   val = rs.getFloat(col);   return pdt2null && rs.wasNull() ? null : val; }
+		case java.sql.Types.DOUBLE:       {double  val = rs.getDouble(col);  return pdt2null && rs.wasNull() ? null : val; }
+
+		// Data types where getXxx returns Objects, or "null" when when it's a SQL-NULL 
 		case java.sql.Types.NUMERIC:      return rs.getBigDecimal(col);
 		case java.sql.Types.DECIMAL:      return rs.getBigDecimal(col);
 		case java.sql.Types.CHAR:         return rs.getString(col);

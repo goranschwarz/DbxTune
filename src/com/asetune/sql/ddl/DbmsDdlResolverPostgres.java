@@ -83,8 +83,8 @@ extends DbmsDdlResolverAbstract
 		{
 			entry.setColumnType(Types.VARCHAR);
 			entry.setColumnTypeName("varchar");
-			entry.setPrecision(256);
-			entry.setColumnDisplaySize(256);
+			entry.setPrecision(255);
+			entry.setColumnDisplaySize(255);
 		}
 
 		else if ("uuid".equalsIgnoreCase(dt) && entry.getColumnDisplaySize() == 2147483647)

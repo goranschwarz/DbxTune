@@ -130,6 +130,7 @@ import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.ui.DbmsConfigIssuesDialog;
 import com.asetune.config.ui.DbmsConfigViewDialog;
+import com.asetune.graph.ChartDataHistoryManager;
 import com.asetune.gui.ConnectionDialog.Options;
 import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.GMemoryIndicator;
@@ -2445,6 +2446,9 @@ public abstract class MainFrame
 
 			// MovingAverageCounterManager is a static implementation, so we can call it directly without checking if it has an instance!
 			MovingAverageCounterManager.outOfMemoryHandler();
+
+			// ChartDataManager is a static implementation, so we can call it directly without checking if it has an instance!
+			ChartDataHistoryManager.outOfMemoryHandler();
 
 			// While doing GC show GUI
 			if (MainFrame.getInstance().isActive())

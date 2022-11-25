@@ -84,6 +84,7 @@ import com.asetune.pcs.report.IDailySummaryReport;
 import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.asetune.pcs.sqlcapture.SqlCaptureDetails;
 import com.asetune.sql.PreparedStatementCache;
+import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
@@ -4051,33 +4052,23 @@ public class PersistWriterJdbc
 //			sqlSb.append(", ?");
 //		sqlSb.append(")");
 
-		ResultSetMetaData rsmd = null;
-		try
-		{
-			rsmd = cm.getResultSetMetaData();
-			
-			if ( rsmd != null && rsmd.getColumnCount() == 0 )
-				rsmd = null;
-		}
-		catch (SQLException ignore) { /*ignore*/ }
+		// Get ResultSetMeataData... This is used to truncate strings that are to long, before sending them to the PCS
+		ResultSetMetaDataCached rsmd = cm.getResultSetMetaData();
+		if ( rsmd != null && rsmd.getColumnCount() == 0 )
+			rsmd = null;
 		
-		// TODO: Instead of getting the CM.getResultSetMetaData() we might want to use
-//		TableInfo storageTableInfo = new TableInfo(); // note TableInfo needs to be created
-//		try
-//		{
-//			ResultSet colRs = conn.getMetaData().getColumns(null, null, tabName, "%");
-//			while (colRs.next())
-//			{
-//				String colName = colRs.getString(4); // COLUMN_NAME 
-//				int    colType = colRs.getInt   (5); // DATA_TYPE:  SQL type from java.sql.Types 
-//				int    colSize = colRs.getInt   (7); // COLUMN_SIZE
-//				
-//				tableInfo.add(colName, colType, colSize);
-//			}
-//			colRs.close();
-//		}
-//		catch (SQLException ignore) { /*ignore*/ }
 
+		// Write information...
+		if (_logger.isTraceEnabled())
+		{
+			_logger.trace("------------------------------ PCS-STORE [" + tabName + "]: rsmd="+rsmd);
+			if (rsmd != null)
+			{
+				_logger.trace(rsmd.debugPrint());
+			}
+			
+		}
+		
 		String sql = "";
 		DictCompression dcc = null;
 		if (DictCompression.isEnabled())
@@ -4170,6 +4161,8 @@ public class PersistWriterJdbc
 
 						// TODO: instead of the cm.rsmd we can use "storageTableInfo"
 						// this needs to be implemented first
+						
+						byte[] binaryData = null;
 
 						// if str length is longer than column length, truncate the value...
 						if (rsmd != null)
@@ -4191,37 +4184,50 @@ public class PersistWriterJdbc
 
 							// NOTE: column in JDBC starts at 1, not 0
 //							int allowedLength = rsmd.getColumnDisplaySize( c + 1 ); // getColumnDisplaySize() is used when creating the tables, so this should hopefully work
-							int allowedLength = Math.max(rsmd.getColumnDisplaySize(c+1), rsmd.getPrecision(c+1)); // getColumnDisplaySize() is used when creating the tables, so this should hopefully work
+//							int allowedLength = Math.max(rsmd.getColumnDisplaySize(c+1), rsmd.getPrecision(c+1)); // getColumnDisplaySize() is used when creating the tables, so this should hopefully work
+							int allowedLength = rsmd.getPrecision(c+1); // getPrecision() SHOULD work... if it's 0 (for some DBMS's, it should have been translated/fixed into a real length at an earlier step)
 							int jdbcDataType  = rsmd.getColumnType(c + 1);
 //							if (jdbcDataType == Types.BINARY || jdbcDataType == Types.VARBINARY)
 //								allowedLength += 2; // binary may need the extra 2 chars if it's prefixed with a 0x
 
 							// If a hex string starts with 0x chop that off, H2 doesn't seem to like it
-							if (str != null && (jdbcDataType == Types.BINARY || jdbcDataType == Types.VARBINARY))
+							// If a hex string AND the data type is "binary" then: Convert the HexString into a "byte array"
+							if (str != null && (jdbcDataType == Types.BINARY || jdbcDataType == Types.VARBINARY || jdbcDataType == Types.LONGVARBINARY || jdbcDataType == Types.BLOB))
 							{
-								if (str.startsWith("0x"))
-									str = str.substring("0x".length());
+//								if (str.startsWith("0x"))
+//									str = str.substring("0x".length());
+								// If it starts with '0x', then StringUtil.hexToBytes() will strip that off.
+								binaryData = StringUtil.hexToBytes(str);
 							}
-
-							if ( allowedLength > 0  &&  str != null  &&  str.length() > allowedLength )
+							else
 							{
 								int dataLength = str.length();
-//								String colName = cols.get(c);
 
-								// Add '...' at the end if it's a long string, or simply "chop it of" if it's a very short string.
-								String truncStr = "";
-								if (allowedLength <= 3 || (jdbcDataType == Types.BINARY || jdbcDataType == Types.VARBINARY) ) // Binary data types can contain '...'
-									truncStr = str.substring(0, allowedLength);
-								else
-									truncStr = str.substring(0, allowedLength - 3) + "...";
+								// If the string we are going to store in PCS is to long... Truncate it!
+								if ( allowedLength > 0  &&  str != null  &&  dataLength > allowedLength )
+								{
+//									String colName = cols.get(c);
 
-								_logger.info("save(): Truncating a Overflowing String value. table='"+tabName+"', column='"+colName+"', allowedLength="+allowedLength+", dataLength="+dataLength+", newStr["+truncStr.length()+"]='"+truncStr+"', originStr["+str.length()+"]='"+str+"'.");
+									// Add '...' at the end if it's a long string, or simply "chop it of" if it's a very short string.
+									String truncStr = "";
 
-								str = truncStr;
+									if (allowedLength <= 3)
+										truncStr = str.substring(0, allowedLength);
+									else
+										truncStr = str.substring(0, allowedLength - 3) + "...";
+
+									_logger.info("save(): Truncating a Overflowing String value. table='"+tabName+"', column='"+colName+"', allowedLength="+allowedLength+", dataLength="+dataLength+", newStr["+truncStr.length()+"]='"+truncStr+"', originStr["+str.length()+"]='"+str+"'.");
+
+									str = truncStr;
+								}
 							}
 						}
 
-						pstmt.setString(col++, str);
+						// binaryData is set when: the data type is "binary"
+						if (binaryData != null)
+							pstmt.setBytes(col++, binaryData);
+						else
+							pstmt.setString(col++, str);
 					}
 					else
 						pstmt.setObject(col++, colObj);

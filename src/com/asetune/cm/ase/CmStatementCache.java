@@ -463,14 +463,36 @@ extends CountersModel
 					String fixMsg  = "Fix this using: sp_configure 'statement cache size', 0, '###M'... or free unused memory with 'dbcc traceon(3604) dbcc proc_cache(free_unused)'.";
 					String msg     = warnMsg + fixMsg;
 
+					String extendedDescText = "";
+					String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_HIT_RATE_PCT);
+
 					// 300 = Wait for 5 minutes before the alarm is *fired* (this can be overridden by property 'AlarmEventConfigResourceIsLow.raise.delay=seconds'
-					AlarmEvent alarm = new AlarmEventConfigResourceIsLow(cm, "statement cache size", TotalSizeMB, msg, threshold, 300); 
-					AlarmHandler.getInstance().addAlarm(alarm);
+					AlarmEvent ae = new AlarmEventConfigResourceIsLow(cm, "statement cache size", TotalSizeMB, msg, threshold, 300); 
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					AlarmHandler.getInstance().addAlarm(ae);
 				}
 			}
 		}
 	}
 
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_HIT_RATE_PCT.equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+
+	
 	public static final String  PROPKEY_alarm_CacheHitPct = CM_NAME + ".alarm.system.if.CacheHitPct.lt";
 	public static final int     DEFAULT_alarm_CacheHitPct = 25;
 	

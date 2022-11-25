@@ -291,9 +291,12 @@ extends CounterControllerAbstract
 				// Lets use ONE transaction for every refresh
 				if (dbxConn.getAutoCommit() == true)
 					dbxConn.setAutoCommit(false);
-				
-				// So when entering a refresh: just finishing off the current transaction.
-				dbxConn.commit(); 
+			}
+			else
+			{
+				// When leaving refresh mode... set AutoCommit to true -- so we don't hold anything while sleeping
+				if (dbxConn.getAutoCommit() == false)
+					dbxConn.setAutoCommit(true);
 			}
 		}
 		catch(SQLException e)

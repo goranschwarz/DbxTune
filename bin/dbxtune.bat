@@ -80,6 +80,11 @@ IF "%APP_NAME%" == "ase" (
 	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/sqlw_splash.jpg
 
+) ELSE IF "%APP_NAME%" == "tailw" (
+	set JAVA_START_CLASS=com.asetune.tools.tailw.LogTailWindow
+	set JAVA_START_PARAMS=
+	set SPLASH=-splash:lib/tailw_splash.jpg
+
 ) ELSE IF "%APP_NAME%" == "central" (
 	set JAVA_START_CLASS=com.asetune.central.DbxTuneCentral
 	set JAVA_START_PARAMS=
@@ -105,6 +110,21 @@ rem	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy2
 ) ELSE IF "%APP_NAME%" == "h2srv" (
 	set JAVA_START_CLASS=org.h2.tools.Server
 	set JAVA_START_PARAMS=-tcp -tcpAllowOthers -ifExists
+	set SPLASH=
+
+) ELSE IF "%APP_NAME%" == "sshtest" (
+	set JAVA_START_CLASS=com.asetune.ssh.SshConnectionTester
+	set JAVA_START_PARAMS=
+	set SPLASH=
+
+) ELSE IF "%APP_NAME%" == "mailtest" (
+	set JAVA_START_CLASS=com.asetune.test.MailTest
+	set JAVA_START_PARAMS=
+	set SPLASH=
+
+) ELSE IF "%APP_NAME:~0,11%" == "com.asetune" (
+	set JAVA_START_CLASS=%APP_NAME%
+	set JAVA_START_PARAMS=
 	set SPLASH=
 
 ) ELSE (

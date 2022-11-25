@@ -47,11 +47,11 @@ import com.asetune.pcs.report.content.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.HtmlTableProducer;
-import com.asetune.utils.StringUtil;
 import com.asetune.utils.HtmlTableProducer.ColumnCopyDef;
 import com.asetune.utils.HtmlTableProducer.ColumnCopyRender;
 import com.asetune.utils.HtmlTableProducer.ColumnCopyRow;
 import com.asetune.utils.HtmlTableProducer.ColumnStatic;
+import com.asetune.utils.StringUtil;
 
 public class AseTopCmCachedProcs extends AseAbstract
 {

@@ -171,6 +171,10 @@ extends CountersModel
 		CounterSetTemplates.register(this);
 	}
 
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// NOTE: This is mostly the same as "CmSqlStatementPerDb" -- So changes might need to be synchronized
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 	//------------------------------------------------------------
 	// Implementation
@@ -858,64 +862,66 @@ extends CountersModel
 	{
 		try 
 		{
+			String tabName = "CmSqlStatement";
+
 			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
-			mtd.addTable("CmSqlStatement",  "xxx.");
+			mtd.addTable(tabName,  "xxx.");
 
-			mtd.addColumn("CmSqlStatement", "name",                 "<html>Execution time span for this statistics</html>");
+			mtd.addColumn(tabName, "name",                 "<html>Execution time span for this statistics</html>");
 
-			mtd.addColumn("CmSqlStatement", "totalCount",           "<html>Summary value for 'inSqlBatchCount', 'inStmntCacheCount', 'dynamicStmntCount' and 'inProcedureCount'.</html>");
-			mtd.addColumn("CmSqlStatement", "totalCountAbs",        "<html>Summary value for 'inSqlBatchCount', 'inStmntCacheCount', 'dynamicStmntCount' and 'inProcedureCount'.</html>");
+			mtd.addColumn(tabName, "totalCount",           "<html>Summary value for 'inSqlBatchCount', 'inStmntCacheCount', 'dynamicStmntCount' and 'inProcedureCount'.</html>");
+			mtd.addColumn(tabName, "totalCountAbs",        "<html>Summary value for 'inSqlBatchCount', 'inStmntCacheCount', 'dynamicStmntCount' and 'inProcedureCount'.</html>");
 
-			mtd.addColumn("CmSqlStatement", "sqlBatchCount",        "<html>Estimated SQL Batch requests. <br><b>Algorithm:</b> if columns 'ProcName' is NULL from monSysStatement <br><b>Note:</b> If the SqlBatch contains several statements, the counter will be incremented for every statement within the SQL Batch.</html>");
-			mtd.addColumn("CmSqlStatement", "sqlBatchCountAbs",     "<html>Estimated SQL Batch requests. <br><b>Algorithm:</b> if columns 'ProcName' is NULL from monSysStatement <br><b>Note:</b> If the SqlBatch contains several statements, the counter will be incremented for every statement within the SQL Batch.</html>");
+			mtd.addColumn(tabName, "sqlBatchCount",        "<html>Estimated SQL Batch requests. <br><b>Algorithm:</b> if columns 'ProcName' is NULL from monSysStatement <br><b>Note:</b> If the SqlBatch contains several statements, the counter will be incremented for every statement within the SQL Batch.</html>");
+			mtd.addColumn(tabName, "sqlBatchCountAbs",     "<html>Estimated SQL Batch requests. <br><b>Algorithm:</b> if columns 'ProcName' is NULL from monSysStatement <br><b>Note:</b> If the SqlBatch contains several statements, the counter will be incremented for every statement within the SQL Batch.</html>");
 
-			mtd.addColumn("CmSqlStatement", "errorCount",           "<html>Summary value for number of records that had a 'ErrorStatus' greater than 0.</html>");
-			mtd.addColumn("CmSqlStatement", "errorCountAbs",        "<html>Summary value for number of records that had a 'ErrorStatus' greater than 0.</html>");
+			mtd.addColumn(tabName, "errorCount",           "<html>Summary value for number of records that had a 'ErrorStatus' greater than 0.</html>");
+			mtd.addColumn(tabName, "errorCountAbs",        "<html>Summary value for number of records that had a 'ErrorStatus' greater than 0.</html>");
 
-			mtd.addColumn("CmSqlStatement", "inStmntCacheCount",    "<html>Estimated SQL Statements Batch requests executed as a Statement Cache (compiled). <br><b>Algorithm:</b> if columns 'ProcName' starts with '*ss' from monSysStatement</html>");
-			mtd.addColumn("CmSqlStatement", "inStmntCacheCountAbs", "<html>Estimated SQL Statements Batch requests executed as a Statement Cache (compiled). <br><b>Algorithm:</b> if columns 'ProcName' starts with '*ss' from monSysStatement</html>");
+			mtd.addColumn(tabName, "inStmntCacheCount",    "<html>Estimated SQL Statements Batch requests executed as a Statement Cache (compiled). <br><b>Algorithm:</b> if columns 'ProcName' starts with '*ss' from monSysStatement</html>");
+			mtd.addColumn(tabName, "inStmntCacheCountAbs", "<html>Estimated SQL Statements Batch requests executed as a Statement Cache (compiled). <br><b>Algorithm:</b> if columns 'ProcName' starts with '*ss' from monSysStatement</html>");
 
-			mtd.addColumn("CmSqlStatement", "dynamicStmntCount",    "<html>Estimated Dynamic SQL Statements (ct_dynamic or PreparedStatement using a LWP). <br><b>Algorithm:</b> if columns 'ProcName' starts with '*sq' from monSysStatement</html>");
-			mtd.addColumn("CmSqlStatement", "dynamicStmntCountAbs", "<html>Estimated Dynamic SQL Statements (ct_dynamic or PreparedStatement using a LWP). <br><b>Algorithm:</b> if columns 'ProcName' starts with '*sq' from monSysStatement</html>");
+			mtd.addColumn(tabName, "dynamicStmntCount",    "<html>Estimated Dynamic SQL Statements (ct_dynamic or PreparedStatement using a LWP). <br><b>Algorithm:</b> if columns 'ProcName' starts with '*sq' from monSysStatement</html>");
+			mtd.addColumn(tabName, "dynamicStmntCountAbs", "<html>Estimated Dynamic SQL Statements (ct_dynamic or PreparedStatement using a LWP). <br><b>Algorithm:</b> if columns 'ProcName' starts with '*sq' from monSysStatement</html>");
 
-			mtd.addColumn("CmSqlStatement", "inProcedureCount",     "<html>Estimated SQL Statements requests executed from withing a Stored Proc. <br><b>Algorithm:</b> if columns 'ProcName' does NOT start with '*sq' or '*ss' from monSysStatement</html>");
-			mtd.addColumn("CmSqlStatement", "inProcedureCountAbs",  "<html>Estimated SQL Statements requests executed from withing a Stored Proc. <br><b>Algorithm:</b> if columns 'ProcName' does NOT start with '*sq' or '*ss' from monSysStatement</html>");
+			mtd.addColumn(tabName, "inProcedureCount",     "<html>Estimated SQL Statements requests executed from withing a Stored Proc. <br><b>Algorithm:</b> if columns 'ProcName' does NOT start with '*sq' or '*ss' from monSysStatement</html>");
+			mtd.addColumn(tabName, "inProcedureCountAbs",  "<html>Estimated SQL Statements requests executed from withing a Stored Proc. <br><b>Algorithm:</b> if columns 'ProcName' does NOT start with '*sq' or '*ss' from monSysStatement</html>");
 			
-			mtd.addColumn("CmSqlStatement", "inProcNameNullCount",     "<html>Estimated SQL Statements requests executed where ProcedureId was not 0, but the ProcedureName could NOT be found.. <br><b>Algorithm:</b> if columns 'ProcedureId' != 0 and 'ProcName' is NULL from monSysStatement</html>");
-			mtd.addColumn("CmSqlStatement", "inProcNameNullCountAbs",  "<html>Estimated SQL Statements requests executed where ProcedureId was not 0, but the ProcedureName could NOT be found.. <br><b>Algorithm:</b> if columns 'ProcedureId' != 0 and 'ProcName' is NULL from monSysStatement</html>");
+			mtd.addColumn(tabName, "inProcNameNullCount",     "<html>Estimated SQL Statements requests executed where ProcedureId was not 0, but the ProcedureName could NOT be found.. <br><b>Algorithm:</b> if columns 'ProcedureId' != 0 and 'ProcName' is NULL from monSysStatement</html>");
+			mtd.addColumn(tabName, "inProcNameNullCountAbs",  "<html>Estimated SQL Statements requests executed where ProcedureId was not 0, but the ProcedureName could NOT be found.. <br><b>Algorithm:</b> if columns 'ProcedureId' != 0 and 'ProcName' is NULL from monSysStatement</html>");
 			
-			mtd.addColumn("CmSqlStatement", "sumExecTimeMs",        "<html>Summary of all Executions for this time span.<br>Also 'diff' and 'rate' calculated to get a sence for the changes<br>But for this metrics it's probably more interesting to look at the ABS column (to the right)</html>");
-			mtd.addColumn("CmSqlStatement", "sumExecTimeMsAbs",     "<html>Summary of all Executions for this time span.</html>");
-			mtd.addColumn("CmSqlStatement", "avgExecTimeMs",        "<html>Average execution time for this time span.<br><b>Algorithm:</b> abs.sumExecTimeMs / abs.totalCount</html>");
-			mtd.addColumn("CmSqlStatement", "maxExecTimeMs",        "<html>Maximum execution time for this time span.</html>");
+			mtd.addColumn(tabName, "sumExecTimeMs",        "<html>Summary of all Executions for this time span.<br>Also 'diff' and 'rate' calculated to get a sence for the changes<br>But for this metrics it's probably more interesting to look at the ABS column (to the right)</html>");
+			mtd.addColumn(tabName, "sumExecTimeMsAbs",     "<html>Summary of all Executions for this time span.</html>");
+			mtd.addColumn(tabName, "avgExecTimeMs",        "<html>Average execution time for this time span.<br><b>Algorithm:</b> abs.sumExecTimeMs / abs.totalCount</html>");
+			mtd.addColumn(tabName, "maxExecTimeMs",        "<html>Maximum execution time for this time span.</html>");
 			                                                        
-			mtd.addColumn("CmSqlStatement", "sumLogicalReads",      "<html>Summary of all LogicalReads for this time span.<br>Also 'diff' and 'rate' calculated to get a sence for the changes</html>");
-			mtd.addColumn("CmSqlStatement", "sumLogicalReadsAbs",   "<html>Summary of all LogicalReads for this time span.</html>");
-			mtd.addColumn("CmSqlStatement", "avgLogicalReads",      "<html>Average LogicalReads for this time span.<br><b>Algorithm:</b> abs.sumLogicalReads / abs.totalCount</html>");
-			mtd.addColumn("CmSqlStatement", "maxLogicalReads",      "<html>Maximum LogicalReads for this time span.</html>");
+			mtd.addColumn(tabName, "sumLogicalReads",      "<html>Summary of all LogicalReads for this time span.<br>Also 'diff' and 'rate' calculated to get a sence for the changes</html>");
+			mtd.addColumn(tabName, "sumLogicalReadsAbs",   "<html>Summary of all LogicalReads for this time span.</html>");
+			mtd.addColumn(tabName, "avgLogicalReads",      "<html>Average LogicalReads for this time span.<br><b>Algorithm:</b> abs.sumLogicalReads / abs.totalCount</html>");
+			mtd.addColumn(tabName, "maxLogicalReads",      "<html>Maximum LogicalReads for this time span.</html>");
                                                                     
-			mtd.addColumn("CmSqlStatement", "sumPhysicalReads",     "<html>Summary of all PhysicalReads for this time span.<br>Also 'diff' and 'rate' calculated to get a sence for the changes</html>");
-			mtd.addColumn("CmSqlStatement", "sumPhysicalReadsAbs",  "<html>Summary of all PhysicalReads for this time span.</html>");
-			mtd.addColumn("CmSqlStatement", "avgPhysicalReads",     "<html>Average PhysicalReads for this time span.<br><b>Algorithm:</b> abs.sumPhysicalReads / abs.totalCount</html>");
-			mtd.addColumn("CmSqlStatement", "maxPhysicalReads",     "<html>Maximum PhysicalReads for this time span.</html>");
+			mtd.addColumn(tabName, "sumPhysicalReads",     "<html>Summary of all PhysicalReads for this time span.<br>Also 'diff' and 'rate' calculated to get a sence for the changes</html>");
+			mtd.addColumn(tabName, "sumPhysicalReadsAbs",  "<html>Summary of all PhysicalReads for this time span.</html>");
+			mtd.addColumn(tabName, "avgPhysicalReads",     "<html>Average PhysicalReads for this time span.<br><b>Algorithm:</b> abs.sumPhysicalReads / abs.totalCount</html>");
+			mtd.addColumn(tabName, "maxPhysicalReads",     "<html>Maximum PhysicalReads for this time span.</html>");
                                                                     
-			mtd.addColumn("CmSqlStatement", "sumCpuTime",           "<html>Summary of all CpuTime for this time span.<br>Also 'diff' and 'rate' calculated to get a sence for the changes<br>But for this metrics it's probably more interesting to look at the ABS column (to the right)</html>");
-			mtd.addColumn("CmSqlStatement", "sumCpuTimeAbs",        "<html>Summary of all CpuTime for this time span.</html>");
-			mtd.addColumn("CmSqlStatement", "avgCpuTime",           "<html>Average CpuTime for this time span.<br><b>Algorithm:</b> abs.sumCpuTime / abs.totalCount</html>");
-			mtd.addColumn("CmSqlStatement", "maxCpuTime",           "<html>Maximum CpuTime for this time span.</html>");
+			mtd.addColumn(tabName, "sumCpuTime",           "<html>Summary of all CpuTime for this time span.<br>Also 'diff' and 'rate' calculated to get a sence for the changes<br>But for this metrics it's probably more interesting to look at the ABS column (to the right)</html>");
+			mtd.addColumn(tabName, "sumCpuTimeAbs",        "<html>Summary of all CpuTime for this time span.</html>");
+			mtd.addColumn(tabName, "avgCpuTime",           "<html>Average CpuTime for this time span.<br><b>Algorithm:</b> abs.sumCpuTime / abs.totalCount</html>");
+			mtd.addColumn(tabName, "maxCpuTime",           "<html>Maximum CpuTime for this time span.</html>");
                                                                     
-			mtd.addColumn("CmSqlStatement", "sumWaitTime",          "<html>Summary of all WaitTime for this time span.<br>Also 'diff' and 'rate' calculated to get a sence for the changes<br>But for this metrics it's probably more interesting to look at the ABS column (to the right)</html>");
-			mtd.addColumn("CmSqlStatement", "sumWaitTimeAbs",       "<html>Summary of all WaitTime for this time span.</html>");
-			mtd.addColumn("CmSqlStatement", "avgWaitTime",          "<html>Average WaitTime for this time span.<br><b>Algorithm:</b> abs.sumWaitTime / abs.totalCount</html>");
-			mtd.addColumn("CmSqlStatement", "maxWaitTime",          "<html>Maximum WaitTime for this time span.</html>");
+			mtd.addColumn(tabName, "sumWaitTime",          "<html>Summary of all WaitTime for this time span.<br>Also 'diff' and 'rate' calculated to get a sence for the changes<br>But for this metrics it's probably more interesting to look at the ABS column (to the right)</html>");
+			mtd.addColumn(tabName, "sumWaitTimeAbs",       "<html>Summary of all WaitTime for this time span.</html>");
+			mtd.addColumn(tabName, "avgWaitTime",          "<html>Average WaitTime for this time span.<br><b>Algorithm:</b> abs.sumWaitTime / abs.totalCount</html>");
+			mtd.addColumn(tabName, "maxWaitTime",          "<html>Maximum WaitTime for this time span.</html>");
                                                                     
-			mtd.addColumn("CmSqlStatement", "sumRowsAffected",      "<html>Summary of all RowsAffected for this time span.<br>Also 'diff' and 'rate' calculated to get a sence for the changes</html>");
-			mtd.addColumn("CmSqlStatement", "sumRowsAffectedAbs",   "<html>Summary of all RowsAffected for this time span.</html>");
-			mtd.addColumn("CmSqlStatement", "avgRowsAffected",      "<html>Average RowsAffected for this time span.<br><b>Algorithm:</b> abs.sumRowsAffected / abs.totalCount</html>");
-			mtd.addColumn("CmSqlStatement", "maxRowsAffected",      "<html>Maximum RowsAffected for this time span.</html>");
+			mtd.addColumn(tabName, "sumRowsAffected",      "<html>Summary of all RowsAffected for this time span.<br>Also 'diff' and 'rate' calculated to get a sence for the changes</html>");
+			mtd.addColumn(tabName, "sumRowsAffectedAbs",   "<html>Summary of all RowsAffected for this time span.</html>");
+			mtd.addColumn(tabName, "avgRowsAffected",      "<html>Average RowsAffected for this time span.<br><b>Algorithm:</b> abs.sumRowsAffected / abs.totalCount</html>");
+			mtd.addColumn(tabName, "maxRowsAffected",      "<html>Maximum RowsAffected for this time span.</html>");
 
-//			mtd.addColumn("CmSqlStatement", "errorMsgCountMap",      "<html>A JSON String, which contains: {\"MsgNumber\"=count, \"MsgNumber\"=count}.</html>");
-			mtd.addColumn("CmSqlStatement", "errorMsgCountMap",      "<html>A JSON String, which contains: {\"MsgNumber\"={\"dbname\"=count}, \"MsgNumber\"={\"dbname\"=count}}.</html>");
+//			mtd.addColumn(tabName, "errorMsgCountMap",      "<html>A JSON String, which contains: {\"MsgNumber\"=count, \"MsgNumber\"=count}.</html>");
+			mtd.addColumn(tabName, "errorMsgCountMap",      "<html>A JSON String, which contains: {\"MsgNumber\"={\"dbname\"=count}, \"MsgNumber\"={\"dbname\"=count}}.</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -1059,6 +1065,84 @@ extends CountersModel
 			return true;
 		}
 	};
+	
+	@Override
+	public Map<String, AggregationType> createAggregateColumns()
+	{
+		HashMap<String, AggregationType> aggColumns = new HashMap<>(getColumnCount());
+
+		AggregationType tmp;
+		
+		// Create the columns ::::::::::::::::::::::::::::::::::::::::::::::::::::::::: And ADD it to the return Map 
+		// The list is grabbed from: SqlCaptureStatementStatisticsSample.toResultSet()
+//		tmp = new AggregationType("name",                   Types.VARCHAR, 30, 0);
+        
+		tmp = new AggregationType("totalCount",             AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("sqlBatchCount",          AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("errorCount",             AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("inStmntCacheCount",      AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("dynamicStmntCount",      AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("inProcedureCount",       AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("inProcNameNullCount",    AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		        
+		tmp = new AggregationType("totalCountAbs",          AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("sqlBatchCountAbs",       AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("inStmntCacheCountAbs",   AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("dynamicStmntCountAbs",   AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("inProcedureCountAbs",    AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("inProcNameNullCountAbs", AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		    
+		tmp = new AggregationType("sumExecTimeMs",          AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("sumExecTimeMsAbs",       AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("avgExecTimeMs",          AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("maxExecTimeMs",          AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
+		        
+		tmp = new AggregationType("sumLogicalReads",        AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("sumLogicalReadsAbs",     AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("avgLogicalReads",        AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("maxLogicalReads",        AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
+		        
+		tmp = new AggregationType("sumPhysicalReads",       AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("sumPhysicalReadsAbs",    AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("avgPhysicalReads",       AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("maxPhysicalReads",       AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
+		        
+		tmp = new AggregationType("sumCpuTime",             AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("sumCpuTimeAbs",          AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("avgCpuTime",             AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("maxCpuTime",             AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
+		        
+		tmp = new AggregationType("sumWaitTime",            AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("sumWaitTimeAbs",         AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("avgWaitTime",            AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("maxWaitTime",            AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
+		        
+		tmp = new AggregationType("sumRowsAffected",        AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("sumRowsAffectedAbs",     AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("avgRowsAffected",        AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("maxRowsAffected",        AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
+		        
+//		tmp = new AggregationType("errorMsgCountMap",       Types.VARCHAR, 1024, 0);
+
+//		tmp = new AggregationType("statId",                 Types.INTEGER,  0, 0);
+
+		return aggColumns;
+	}
+
+	@Override
+	public boolean isAggregateRowAppendEnabled()
+	{
+		return true;
+	}
+
+	@Override
+	public Object calculateAggregateRow_nonAggregatedColumnDataProvider(CounterSample newSample, String colName, int c, int jdbcType, Object addValue)
+	{
+		if ("statId".equalsIgnoreCase(colName))
+			return new Integer(SqlCaptureStatementStatisticsSample.SUMMARY_STAT_ID);
+		
+		return null;
+	}
 
 //	/**
 //	 * Do DIFF calculation on the JSON value at column 'errorMsgCountMap', which is a HashMap of &lt;MsgNumber, Counter&gt;
@@ -1686,6 +1770,9 @@ extends CountersModel
 //					System.out.println("XXXXXXXXXXXXXXXXXX: errorMsgInfoTxt ="+errorMsgInfoTxt);
 //					System.out.println("XXXXXXXXXXXXXXXXXX: errorMsgInfoHtml="+errorMsgInfoHtml);
 
+					errorMsgInfoHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_SQL_STATEMENT_ERROR_COUNT);
+					errorMsgInfoHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_SQL_STATEMENT_SEC);
+					
 					// Create Alarm
 					AlarmEvent alarm = new AlarmEventClientErrorMsgRate(cm, round1(errorCountPerSec), errorMsgInfoJson, threshold);
 					
@@ -1798,15 +1885,22 @@ extends CountersModel
 									if (debugPrint || _logger.isDebugEnabled())
 										System.out.println("##### sendAlarmRequest("+cm.getName()+"): ErrorNumber="+alarmErrorNum+", Count="+errorCount+", is above threshold="+alarmThreshold+".)");
 
-//FIXME; -- NOT YET IMPLEMENTED --
-//FIXME; if (alarmErrorNum == 1105) -- Get TranLog Charts from CmOpenDatabases
-									
+									// if 1105 (out-of-space) -- Get TranLog Charts 'LogSize Left in MB' from CmOpenDatabases
+									// NOTE: Make the chart for ALL Databases, since it might be 'tempdb' that the 1105 happens in (even if the current working database is a User Database)
+									String extendedDescHtml = "";
+									if (alarmErrorNum == 1105)
+									{
+										CountersModel cmOpenDatabases = getCounterController().getCmByName(CmOpenDatabases.CM_NAME);
+										extendedDescHtml = "<br><br>" + cmOpenDatabases.getGraphDataHistoryAsHtmlImage(CmOpenDatabases.GRAPH_NAME_LOGSIZE_LEFT_MB);
+										extendedDescHtml = "<br><br>" + cmOpenDatabases.getGraphDataHistoryAsHtmlImage(CmOpenDatabases.GRAPH_NAME_LOGSIZE_USED_PCT);
+									}
+
 									// Create Alarm
 									AlarmEvent alarm = new AlarmEventClientErrorMsg(cm, alarmErrorNum, dbname, errorCount, errorDesc, alarmThreshold);
 									
 									// Set the Error Info
 									String errorMsgInfoTxt  = "Msg=" + alarmErrorNum + ", DBName='" + dbname + "', DiffErrorCount=" + errorCount + ", Description='" + errorDesc + "'";
-									String errorMsgInfoHtml = errorMsgInfoTxt;
+									String errorMsgInfoHtml = errorMsgInfoTxt + extendedDescHtml;
 
 									alarm.setExtendedDescription(errorMsgInfoTxt, errorMsgInfoHtml);
 									
@@ -1856,6 +1950,23 @@ extends CountersModel
 		} // end: check - SQL Capture Thread
 	}
 
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_SQL_STATEMENT_ERROR_COUNT.equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+
+	
 	private Map<Integer, Integer> _map_alarm_ErrorNumbers;  // Note: do NOT initialize this here... since the initAlarms() is done in super, if initialized it will be overwritten here...
 
 	/**

@@ -38,6 +38,7 @@ import com.asetune.gui.focusabletip.ToolTipHyperlinkResolver;
 import com.asetune.gui.swing.GTable;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.xmenu.AzureDataStudio;
 import com.asetune.xmenu.SqlSentryPlanExplorer;
 
 public class CmToolTipSupplierDefault
@@ -187,6 +188,7 @@ implements GTable.ITableTooltip, ToolTipHyperlinkResolver
 	/** used to specify that a HTML LINK should be opened in EXTERNAL Browser */
 	public static final String OPEN_IN_EXTERNAL_BROWSER         = "OPEN-IN-EXTERNAL-BROWSER:";
 	public static final String OPEN_IN_SENTRY_ONE_PLAN_EXPLORER = "OPEN-IN-SENTRY-ONE-PLAN-EXPLORER:";
+	public static final String OPEN_IN_AZURE_DATA_STUDIO        = "OPEN-IN-AZURE-DATA-STUDIO:";
 	public static final String SET_PROPERTY_TEMP                = "SET-PROPERTY-TEMP:";
 
 	protected static File createTempFile(String prefix, String suffix, byte[] bytes)
@@ -242,6 +244,19 @@ implements GTable.ITableTooltip, ToolTipHyperlinkResolver
 			
 			File tempFile = new File(urlStr);
 			SqlSentryPlanExplorer.openSqlPlanExplorer(tempFile);
+			
+			return ResolverReturn.createDoNothing(event);
+			//return null;
+		}
+
+		if (desc.startsWith(OPEN_IN_AZURE_DATA_STUDIO))
+		{
+			String urlStr = desc.substring(OPEN_IN_AZURE_DATA_STUDIO.length());
+			if (urlStr.startsWith("file:///"))
+				urlStr = urlStr.substring("file:///".length());
+			
+			File tempFile = new File(urlStr);
+			AzureDataStudio.open(tempFile);
 			
 			return ResolverReturn.createDoNothing(event);
 			//return null;

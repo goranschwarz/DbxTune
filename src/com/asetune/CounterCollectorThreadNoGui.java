@@ -63,6 +63,7 @@ import com.asetune.config.dbms.DbmsConfigTextManager;
 import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
+import com.asetune.graph.ChartDataHistoryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.PersistContainer;
@@ -839,6 +840,9 @@ implements Memory.MemoryListener
 
 		// MovingAverageCounterManager is a static implementation, so we can call it directly without checking if it has an instance!
 		MovingAverageCounterManager.outOfMemoryHandler();
+
+		// ChartDataManager is a static implementation, so we can call it directly without checking if it has an instance!
+		ChartDataHistoryManager.outOfMemoryHandler();
 
 		System.gc();
 	}

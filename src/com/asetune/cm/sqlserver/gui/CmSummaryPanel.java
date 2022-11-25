@@ -59,11 +59,14 @@ import com.asetune.cm.sqlserver.CmSummary;
 import com.asetune.gui.ChangeToJTabDialog;
 import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.ResultSetTableModel;
+import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.gui.ShowCmPropertiesDialog;
 import com.asetune.gui.TrendGraph;
 import com.asetune.gui.TrendGraphDashboardPanel;
 import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.gui.swing.GTextField;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -239,6 +242,19 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //	private JTextField       _LogicalReads_Rate_txt        = new JTextField();
 	private JLabel           _fullTranslog_lbl             = new JLabel();
 	private JTextField       _fullTranslog_txt             = new JTextField();
+	
+	private JLabel           _tempdbUsageMbAll_lbl         = new JLabel();
+	private JTextField       _tempdbUsageMbAllAbs_txt      = new JTextField();
+	private JTextField       _tempdbUsageMbAllDiff_txt     = new JTextField();
+
+	private JLabel           _tempdbUsageMbUser_lbl        = new JLabel();
+	private JTextField       _tempdbUsageMbUserAbs_txt     = new JTextField();
+	private JTextField       _tempdbUsageMbUserDiff_txt    = new JTextField();
+
+	private JLabel           _tempdbUsageMbInternal_lbl    = new JLabel();
+	private JTextField       _tempdbUsageMbInternalAbs_txt = new JTextField();
+	private JTextField       _tempdbUsageMbInternalDiff_txt= new JTextField();
+
 	private JLabel           _oldestOpenTranBeginTime_lbl  = new JLabel();
 	private JTextField       _oldestOpenTranBeginTime_txt  = new JTextField();
 	private JLabel           _oldestOpenTranId_lbl         = new JLabel();
@@ -255,14 +271,20 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JTextField       _oldestOpenTranCmd_txt        = new JTextField();
 	private JLabel           _oldestOpenTranLoginName_lbl  = new JLabel();
 	private JTextField       _oldestOpenTranLoginName_txt  = new JTextField();
-	private JLabel           _oldestOpenTranTempdbUsageMb_lbl = new JLabel();
-	private JTextField       _oldestOpenTranTempdbUsageMb_txt = new JTextField();
+	private JLabel           _oldestOpenTranTempdbUsageMb_lbl         = new JLabel();
+	private JTextField       _oldestOpenTranTempdbUsageMbAll_txt      = new JTextField();
+	private JTextField       _oldestOpenTranTempdbUsageMbUser_txt     = new JTextField();
+	private JTextField       _oldestOpenTranTempdbUsageMbInternal_txt = new JTextField();
 	private JLabel           _oldestOpenTranSec_lbl        = new JLabel();
 	private JTextField       _oldestOpenTranSec_txt        = new JTextField();
 	private JLabel           _oldestOpenTranThreshold_lbl  = new JLabel();
 	private JTextField       _oldestOpenTranThreshold_txt  = new JTextField();
 	private JLabel           _maxSqlExecTimeInSec_lbl      = new JLabel();
 	private JTextField       _maxSqlExecTimeInSec_txt      = new JTextField();
+	private JLabel           _suspectPageCount_lbl         = new JLabel();
+	private GTextField       _suspectPageCount_txt         = new GTextField();
+	private JLabel           _suspectPageErrors_lbl        = new JLabel();
+	private GTextField       _suspectPageErrors_txt        = new GTextField();
 
 //	private JLabel           _bootcount_lbl                = new JLabel();
 //	private JTextField       _bootcount_txt                = new JTextField();
@@ -856,6 +878,33 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_fullTranslog_txt.setToolTipText(tooltip);
 		_fullTranslog_txt.setEditable(false);
 
+		tooltip = "<html>How many MB is used by all SPID's tempdb.<br>LOCAL_TEXT</html>";
+		_tempdbUsageMbAll_lbl        .setText("tempdb usage, Mb (all)");
+		_tempdbUsageMbAll_lbl        .setToolTipText(tooltip.replace("LOCAL_TEXT", ""));
+		_tempdbUsageMbAllAbs_txt     .setToolTipText(tooltip.replace("LOCAL_TEXT", "All tempdb space used (both 'user' and 'internal' objects)."));
+		_tempdbUsageMbAllAbs_txt     .setEditable(false);
+		_tempdbUsageMbAllDiff_txt    .setToolTipText(tooltip.replace("LOCAL_TEXT", "<b>Diff Calculated</b>. <br>All tempdb space used (both 'user' and 'internal' objects)."));
+		_tempdbUsageMbAllDiff_txt    .setEditable(false);
+		_tempdbUsageMbAllDiff_txt    .setForeground(Color.BLUE);
+
+		tooltip = "<html>How many MB is used by all SPID's tempdb.<br>LOCAL_TEXT</html>";
+		_tempdbUsageMbUser_lbl        .setText("tempdb usage, Mb (usr)");
+		_tempdbUsageMbUser_lbl        .setToolTipText(tooltip.replace("LOCAL_TEXT", ""));
+		_tempdbUsageMbUserAbs_txt     .setToolTipText(tooltip.replace("LOCAL_TEXT", "User Objects, most possibly temp tables."));
+		_tempdbUsageMbUserAbs_txt     .setEditable(false);
+		_tempdbUsageMbUserDiff_txt    .setToolTipText(tooltip.replace("LOCAL_TEXT", "<b>Diff Calculated</b>. <br>User Objects, most possibly temp tables."));
+		_tempdbUsageMbUserDiff_txt    .setEditable(false);
+		_tempdbUsageMbUserDiff_txt    .setForeground(Color.BLUE);
+
+		tooltip = "<html>How many MB is used by all SPID's tempdb.<br>LOCAL_TEXT</html>";
+		_tempdbUsageMbInternal_lbl        .setText("tempdb usage, Mb (int)");
+		_tempdbUsageMbInternal_lbl        .setToolTipText(tooltip.replace("LOCAL_TEXT", ""));
+		_tempdbUsageMbInternalAbs_txt     .setToolTipText(tooltip.replace("LOCAL_TEXT", "All tempdb space used (both 'user' and 'internal' objects)."));
+		_tempdbUsageMbInternalAbs_txt     .setEditable(false);
+		_tempdbUsageMbInternalDiff_txt    .setToolTipText(tooltip.replace("LOCAL_TEXT", "<b>Diff Calculated</b>. <br>Internal Objects, most possibly work tables etc (implicitly usage by the SQL Server engine)."));
+		_tempdbUsageMbInternalDiff_txt    .setEditable(false);
+		_tempdbUsageMbInternalDiff_txt    .setForeground(Color.BLUE);
+
 		tooltip = "Oldest Open Transaction Time (empty if no open transactions).";
 		_oldestOpenTranBeginTime_lbl.setText("Oldest Open Tran Time");
 		_oldestOpenTranBeginTime_lbl.setToolTipText(tooltip);
@@ -904,11 +953,15 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_oldestOpenTranLoginName_txt.setToolTipText(tooltip);
 		_oldestOpenTranLoginName_txt.setEditable(false);
 
-		tooltip = "How many MB in tempdb does the 'Oldest Open Tran SPID' hold (empty if no open transactions).";
+		tooltip = "<html>How many MB in tempdb does the 'Oldest Open Tran SPID' hold (empty if no open transactions).<br>LOCAL_TEXT</html>";
 		_oldestOpenTranTempdbUsageMb_lbl.setText("Oldest Open Tran TmpMb");
-		_oldestOpenTranTempdbUsageMb_lbl.setToolTipText(tooltip);
-		_oldestOpenTranTempdbUsageMb_txt.setToolTipText(tooltip);
-		_oldestOpenTranTempdbUsageMb_txt.setEditable(false);
+		_oldestOpenTranTempdbUsageMb_lbl.setToolTipText(tooltip.replace("LOCAL_TEXT", ""));
+		_oldestOpenTranTempdbUsageMbAll_txt     .setToolTipText(tooltip.replace("LOCAL_TEXT", "All tempdb space used (both 'user' and 'internal' objects)."));
+		_oldestOpenTranTempdbUsageMbAll_txt     .setEditable(false);
+		_oldestOpenTranTempdbUsageMbUser_txt    .setToolTipText(tooltip.replace("LOCAL_TEXT", "User Objects, most possibly temp tables."));
+		_oldestOpenTranTempdbUsageMbUser_txt    .setEditable(false);
+		_oldestOpenTranTempdbUsageMbInternal_txt.setToolTipText(tooltip.replace("LOCAL_TEXT", "Internal Objects, most possibly work tables etc (implicity usaged by the SQL Server engine)."));
+		_oldestOpenTranTempdbUsageMbInternal_txt.setEditable(false);
 
 		tooltip = "Oldest Open Transaction in any database, presented in seconds.";
 		_oldestOpenTranSec_lbl.setText("Oldest Open Tran Sec");
@@ -928,6 +981,18 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_maxSqlExecTimeInSec_txt.setToolTipText(tooltip);
 		_maxSqlExecTimeInSec_txt.setEditable(false);
 
+		tooltip = "Number of rows in table: msdb.dbo.suspect_pages";  // Note: if you change this, also change in: setSummaryData()
+		_suspectPageCount_lbl.setText("Suspect Page Count");
+		_suspectPageCount_lbl.setToolTipText(tooltip);
+		_suspectPageCount_txt.setToolTipText(tooltip);
+		_suspectPageCount_txt.setEditable(false);
+
+		tooltip = "Number of sum(error_count) in table: msdb.dbo.suspect_pages";  // Note: if you change this, also change in : setSummaryData()
+		_suspectPageErrors_lbl.setText("Errors");
+		_suspectPageErrors_lbl.setToolTipText(tooltip);
+		_suspectPageErrors_txt.setToolTipText(tooltip);
+		_suspectPageErrors_txt.setEditable(false);
+		
 		
 		
 //		tooltip = "How many times has this SQL-Server been rebooted.";
@@ -1060,11 +1125,11 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		panel.add(_lastSampleTime_txt,      "growx, wrap");
 		
 		panel.add(_utcTimeDiff_lbl,         "");
-		panel.add(_utcTimeDiff_txt,         "growx, wrap");
-		
+		panel.add(_utcTimeDiff_txt,         "growx, wrap 20");
+		//---------------------------------------------------------------- small space
 
 
-		panel.add(_startDate_lbl,           "gapy 20");
+		panel.add(_startDate_lbl,           "");
 		panel.add(_startDate_txt,           "growx, wrap");
 		
 		panel.add(_daysRunning_lbl,         "");
@@ -1200,8 +1265,26 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		panel.add(_fullTranslog_txt,            "growx, wrap");
 
 		panel.add(_maxSqlExecTimeInSec_lbl,     "");
-		panel.add(_maxSqlExecTimeInSec_txt,     "growx, wrap 20");
+		panel.add(_maxSqlExecTimeInSec_txt,     "growx, wrap");
 
+		panel.add(_suspectPageCount_lbl,        "");
+		panel.add(_suspectPageCount_txt,        "growx, split");
+		panel.add(_suspectPageErrors_lbl,       "");
+		panel.add(_suspectPageErrors_txt,       "growx, wrap");
+
+		panel.add(_tempdbUsageMbAll_lbl,         "");
+		panel.add(_tempdbUsageMbAllAbs_txt,      "growx, split");
+		panel.add(_tempdbUsageMbAllDiff_txt,     "growx, wrap");
+		
+		panel.add(_tempdbUsageMbUser_lbl,        "");
+		panel.add(_tempdbUsageMbUserAbs_txt,     "growx, split");
+		panel.add(_tempdbUsageMbUserDiff_txt,    "growx, wrap");
+		
+		panel.add(_tempdbUsageMbInternal_lbl,    "");
+		panel.add(_tempdbUsageMbInternalAbs_txt, "growx, split");
+		panel.add(_tempdbUsageMbInternalDiff_txt,"growx, wrap 20");
+		//---------------------------------------------------------------- small space
+		
 		panel.add(_oldestOpenTranBeginTime_lbl, "");
 		panel.add(_oldestOpenTranBeginTime_txt, "growx, wrap");
 
@@ -1226,14 +1309,17 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		panel.add(_oldestOpenTranLoginName_lbl, "");
 		panel.add(_oldestOpenTranLoginName_txt, "growx, wrap");
 
-		panel.add(_oldestOpenTranTempdbUsageMb_lbl, "");
-		panel.add(_oldestOpenTranTempdbUsageMb_txt, "growx, wrap");
+		panel.add(_oldestOpenTranTempdbUsageMb_lbl,         "");
+		panel.add(_oldestOpenTranTempdbUsageMbAll_txt,      "growx, split");
+		panel.add(_oldestOpenTranTempdbUsageMbUser_txt,     "growx, split");
+		panel.add(_oldestOpenTranTempdbUsageMbInternal_txt, "growx, wrap");
 
 		panel.add(_oldestOpenTranSec_lbl,       "");
 		panel.add(_oldestOpenTranSec_txt,       "growx, wrap");
 
 		panel.add(_oldestOpenTranThreshold_lbl, "");
 		panel.add(_oldestOpenTranThreshold_txt, "growx, wrap 20");
+		//---------------------------------------------------------------- small space
 
 		
 //		panel.add(_bootcount_lbl,           "gapy 20");
@@ -1586,20 +1672,32 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		setFieldAbsDiffRate(cm, "PhysicalWrites", _PhysicalWrites_lbl, _PhysicalWrites_Abs_txt, _PhysicalWrites_Diff_txt, _PhysicalWrites_Rate_txt);
 //		setFieldAbsDiffRate(cm, "LogicalReads",   _LogicalReads_lbl,   _LogicalReads_Abs_txt,   _LogicalReads_Diff_txt,   _LogicalReads_Rate_txt);
 //
-		_fullTranslog_txt               .setText(cm.getAbsString (0, "fullTranslogCount"));
-		_oldestOpenTranBeginTime_txt    .setText(cm.getAbsString (0, "oldestOpenTranBeginTime"));
-		_oldestOpenTranId_txt           .setText(cm.getAbsString (0, "oldestOpenTranId"));
-		_oldestOpenTranSpid_txt         .setText(cm.getAbsString (0, "oldestOpenTranSpid"));
-		_oldestOpenTranName_txt         .setText(cm.getAbsString (0, "oldestOpenTranName"));
-		_oldestOpenTranDbname_txt       .setText(cm.getAbsString (0, "oldestOpenTranDbname"));
-		_oldestOpenTranWaitType_txt     .setText(cm.getAbsString (0, "oldestOpenTranWaitType"));
-		_oldestOpenTranCmd_txt          .setText(cm.getAbsString (0, "oldestOpenTranCmd"));
-		_oldestOpenTranLoginName_txt    .setText(cm.getAbsString (0, "oldestOpenTranLoginName"));
-		_oldestOpenTranTempdbUsageMb_txt.setText(cm.getAbsString (0, "oldestOpenTranTempdbUsageMb"));		
+		_fullTranslog_txt                       .setText(cm.getAbsString (0, "fullTranslogCount"));
+		
+		_tempdbUsageMbAllAbs_txt		        .setText(cm.getAbsString (0, "tempdbUsageMbAll"));
+		_tempdbUsageMbUserAbs_txt		        .setText(cm.getAbsString (0, "tempdbUsageMbUser"));
+		_tempdbUsageMbInternalAbs_txt		    .setText(cm.getAbsString (0, "tempdbUsageMbInternal"));
+		_tempdbUsageMbAllDiff_txt		        .setText(cm.getDiffString(0, "tempdbUsageMbAll"));
+		_tempdbUsageMbUserDiff_txt		        .setText(cm.getDiffString(0, "tempdbUsageMbUser"));
+		_tempdbUsageMbInternalDiff_txt		    .setText(cm.getDiffString(0, "tempdbUsageMbInternal"));
+		
+		_oldestOpenTranBeginTime_txt            .setText(cm.getAbsString (0, "oldestOpenTranBeginTime"));
+		_oldestOpenTranId_txt                   .setText(cm.getAbsString (0, "oldestOpenTranId"));
+		_oldestOpenTranSpid_txt                 .setText(cm.getAbsString (0, "oldestOpenTranSpid"));
+		_oldestOpenTranName_txt                 .setText(cm.getAbsString (0, "oldestOpenTranName"));
+		_oldestOpenTranDbname_txt               .setText(cm.getAbsString (0, "oldestOpenTranDbname"));
+		_oldestOpenTranWaitType_txt             .setText(cm.getAbsString (0, "oldestOpenTranWaitType"));
+		_oldestOpenTranCmd_txt                  .setText(cm.getAbsString (0, "oldestOpenTranCmd"));
+		_oldestOpenTranLoginName_txt            .setText(cm.getAbsString (0, "oldestOpenTranLoginName"));
+		_oldestOpenTranTempdbUsageMbAll_txt     .setText(cm.getAbsString (0, "oldestOpenTranTempdbUsageMbAll"));
+		_oldestOpenTranTempdbUsageMbUser_txt    .setText(cm.getAbsString (0, "oldestOpenTranTempdbUsageMbUser"));
+		_oldestOpenTranTempdbUsageMbInternal_txt.setText(cm.getAbsString (0, "oldestOpenTranTempdbUsageMbInternal"));
 
-		_oldestOpenTranSec_txt          .setText(cm.getAbsString (0, "oldestOpenTranInSec"));
-		_oldestOpenTranThreshold_txt    .setText(cm.getAbsString (0, "oldestOpenTranInSecThreshold"));
-		_maxSqlExecTimeInSec_txt        .setText(cm.getAbsString (0, "maxSqlExecTimeInSec"));
+		_oldestOpenTranSec_txt                  .setText(cm.getAbsString (0, "oldestOpenTranInSec"));
+		_oldestOpenTranThreshold_txt            .setText(cm.getAbsString (0, "oldestOpenTranInSecThreshold"));
+		_maxSqlExecTimeInSec_txt                .setText(cm.getAbsString (0, "maxSqlExecTimeInSec"));
+		_suspectPageCount_txt                   .setText(cm.getAbsString (0, "suspectPageCount"));
+		_suspectPageErrors_txt                  .setText(cm.getAbsString (0, "suspectPageErrors"));
 
 		// Fix some integer "null" values into blanks
 		if (_oldestOpenTranId_txt  .getText().trim().equals("0")) _oldestOpenTranId_txt.setText("");
@@ -1610,16 +1708,18 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 {
 	System.out.println("");
 	System.out.println("####################################################: " + new Timestamp(System.currentTimeMillis()));
-	System.out.println("CmSummary: _oldestOpenTranBeginTime     = '" + _oldestOpenTranBeginTime_txt    .getText() + "'.");
-	System.out.println("CmSummary: _oldestOpenTranId            = '" + _oldestOpenTranId_txt           .getText() + "'.");
-	System.out.println("CmSummary: _oldestOpenTranSpid          = '" + _oldestOpenTranSpid_txt         .getText() + "'.");
-	System.out.println("CmSummary: _oldestOpenTranName          = '" + _oldestOpenTranName_txt         .getText() + "'.");
-	System.out.println("CmSummary: _oldestOpenTranDbname        = '" + _oldestOpenTranDbname_txt       .getText() + "'.");
-	System.out.println("CmSummary: _oldestOpenTranWaitType      = '" + _oldestOpenTranWaitType_txt     .getText() + "'.");
-	System.out.println("CmSummary: _oldestOpenTranCmd           = '" + _oldestOpenTranCmd_txt          .getText() + "'.");
-	System.out.println("CmSummary: _oldestOpenTranLoginName     = '" + _oldestOpenTranLoginName_txt    .getText() + "'.");
-	System.out.println("CmSummary: _oldestOpenTranTempdbUsageMb = '" + _oldestOpenTranTempdbUsageMb_txt.getText() + "'.");
-	System.out.println("CmSummary: _oldestOpenTranSec           = '" + _oldestOpenTranSec_txt              .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranBeginTime             = '" + _oldestOpenTranBeginTime_txt            .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranId                    = '" + _oldestOpenTranId_txt                   .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranSpid                  = '" + _oldestOpenTranSpid_txt                 .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranName                  = '" + _oldestOpenTranName_txt                 .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranDbname                = '" + _oldestOpenTranDbname_txt               .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranWaitType              = '" + _oldestOpenTranWaitType_txt             .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranCmd                   = '" + _oldestOpenTranCmd_txt                  .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranLoginName             = '" + _oldestOpenTranLoginName_txt            .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranTempdbUsageMbAll      = '" + _oldestOpenTranTempdbUsageMbAll_txt     .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranTempdbUsageMbUser     = '" + _oldestOpenTranTempdbUsageMbUser_txt    .getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranTempdbUsageMbInternal = '" + _oldestOpenTranTempdbUsageMbInternal_txt.getText() + "'.");
+	System.out.println("CmSummary: _oldestOpenTranSec                   = '" + _oldestOpenTranSec_txt                  .getText() + "'.");
 	System.out.println("");
 }
 //		_bootcount_txt        .setText(cm.getAbsString (0, "bootcount"));
@@ -1689,6 +1789,53 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 //			_countersCleared_txt.setBackground(_atAtServerName_txt.getBackground());
 //		// end: counters clear time: background color
 //
+		//----------------------------------------------
+		// Check SUSPECT PAGES and, do notification
+		//----------------------------------------------
+		Integer suspectPageCount = cm.getAbsValueAsInteger(0, "suspectPageCount", false, -1);
+		if (suspectPageCount > 0)
+		{
+			ResultSetTableModel rstm = (cm instanceof CmSummary) ? ((CmSummary)cm).get_lastSuspectPage_rstm() : null;
+			
+			if (rstm != null)
+			{
+//				String errTooltip = "<html>" + rstm.toHtmlTableString("sortable") + "</html>";
+				String errTooltip = rstm.toHtmlTableString("sortable", true, true, null, new TableStringRenderer()
+				{
+					@Override
+					public String tagTableAttr(ResultSetTableModel rstm)
+					{
+						// TODO Auto-generated method stub
+						return "border='1'";
+					}
+					@Override
+					public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+					{
+						if ("object_name".equalsIgnoreCase(colName))
+							return "<b>" + strVal + "</b>";
+						return strVal;
+					}
+				});
+				errTooltip = "<html>" + errTooltip + "</html>";
+
+				_suspectPageCount_txt .setToolTipText(errTooltip);
+				_suspectPageErrors_txt.setToolTipText(errTooltip);
+			}
+
+			_suspectPageCount_txt .setBackground(Color.RED);
+			_suspectPageErrors_txt.setBackground(Color.RED);
+		}
+		else
+		{
+			_suspectPageCount_txt .setToolTipText("Number of rows in table: msdb.dbo.suspect_pages");
+			_suspectPageErrors_txt.setToolTipText("Number of sum(error_count) in table: msdb.dbo.suspect_pages");
+
+			_suspectPageCount_txt .setBackground(_atAtServerName_txt.getBackground());
+			_suspectPageErrors_txt.setBackground(_atAtServerName_txt.getBackground());
+		}
+
+		
+		
 		//----------------------------------------------
 		// Check LOCK WAITS and, do notification
 		//----------------------------------------------
@@ -1901,6 +2048,14 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 //		_LogicalReads_Rate_txt  .setText("");
 
 		_fullTranslog_txt               .setText("");
+
+		_tempdbUsageMbAllAbs_txt        .setText("");
+		_tempdbUsageMbUserAbs_txt       .setText("");
+		_tempdbUsageMbInternalAbs_txt   .setText("");
+		_tempdbUsageMbAllDiff_txt       .setText("");
+		_tempdbUsageMbUserDiff_txt      .setText("");
+		_tempdbUsageMbInternalDiff_txt  .setText("");
+		
 		_oldestOpenTranBeginTime_txt    .setText("");
 		_oldestOpenTranId_txt           .setText("");
 		_oldestOpenTranSpid_txt         .setText("");
@@ -1909,11 +2064,15 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		_oldestOpenTranWaitType_txt     .setText("");
 		_oldestOpenTranCmd_txt          .setText("");
 		_oldestOpenTranLoginName_txt    .setText("");
-		_oldestOpenTranTempdbUsageMb_txt.setText("");
+		_oldestOpenTranTempdbUsageMbAll_txt     .setText("");
+		_oldestOpenTranTempdbUsageMbUser_txt    .setText("");
+		_oldestOpenTranTempdbUsageMbInternal_txt.setText("");
 
 		_oldestOpenTranSec_txt          .setText("");
 		_oldestOpenTranThreshold_txt    .setText("");
 		_maxSqlExecTimeInSec_txt        .setText("");
+		_suspectPageCount_txt           .setText(""); _suspectPageCount_txt .setBackground(_atAtServerName_txt.getBackground());
+		_suspectPageErrors_txt          .setText(""); _suspectPageErrors_txt.setBackground(_atAtServerName_txt.getBackground());
 		
 //		_bootcount_txt          .setText("");
 //		_recoveryState_txt      .setText("");

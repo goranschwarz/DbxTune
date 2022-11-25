@@ -113,4 +113,37 @@ public class NumberUtils
 
 //	    return new BigDecimal( value ).setScale(places, RoundingMode.HALF_UP).doubleValue();
 	}
+
+	/**
+	 * Round a Double value at some decimals, and return as BigDecimal
+	 * @param val
+	 * @param places
+	 */
+	public static BigDecimal roundAsBigDecimal(Double value, int places)
+	{
+		if (value == null)
+			return null;
+			
+		if (places < 0) 
+			throw new IllegalArgumentException();
+
+		BigDecimal bd = new BigDecimal(value);
+		bd = bd.setScale(places, RoundingMode.HALF_UP);
+	    return bd;
+	}
+
+	/**
+	 * Round a double value at some decimals, and return as BigDecimal
+	 * @param val
+	 * @param places
+	 */
+	public static BigDecimal roundAsBigDecimal(double value, int places)
+	{
+		if (places < 0) 
+			throw new IllegalArgumentException();
+
+		BigDecimal bd = new BigDecimal(value);
+		bd = bd.setScale(places, RoundingMode.HALF_UP);
+	    return bd;
+	}
 }

@@ -20,6 +20,8 @@
  ******************************************************************************/
 package com.asetune.cache;
 
+import java.sql.SQLException;
+import java.sql.Types;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
@@ -32,8 +34,10 @@ import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.log4j.Logger;
+import org.h2.tools.SimpleResultSet;
 
 import com.asetune.Version;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
@@ -46,9 +50,12 @@ public abstract class DbmsObjectIdCache
 	public static final String  PROPKEY_lowOnMememory_removePct  = "DbmsObjectIdCache.lowOnMememory.removePct";
 	public static final int     DEFAULT_lowOnMememory_removePct  = 20;
 
-	public static final String SCHEMA_DBO = "dbo";
-	public static final String SCHEMA_SYS = "sys";
+	public static final String  PROPKEY_DbmsLookupNotFoundThreshold = "DbmsObjectIdCache.dbms.lookup.notFound.threshold";
+	public static final int     DEFAULT_DbmsLookupNotFoundThreshold = 5;
 
+	public static final String  PROPKEY_DbmsLookupNotFound_callCreateObject = "DbmsObjectIdCache.dbms.lookup.notFound.call.createObject";
+	public static final boolean DEFAULT_DbmsLookupNotFound_callCreateObject = false;
+	
 	public enum LookupType
 	{
 		/** Object ID */
@@ -61,27 +68,40 @@ public abstract class DbmsObjectIdCache
 		HobtId
 	};
 	
+	public enum ObjectType
+	{
+		BASE_TABLE, 
+
+		SYSTEM_TABLE, 
+
+		/** In some databases like Postgres, an index should be considered as it's own object */
+		INDEX,
+		
+		UNKNOWN
+	};
+	
 	/** Data Record -- ObjectInfo */
 	public static class ObjectInfo
 	{
-		private int    _dbid;
+		private long   _dbid;
 		private String _dbname;
 
-		private int    _schemaId;
+		private long   _schemaId;
 		private String _schemaName;
 
-		private int    _objectId;
+		private long   _objectId;
 		private String _objectName;
 		
 		// possibly also Index names
-		private Map<Integer, String> _indexNames;
+		private Map<Long, String> _indexNames;
 		
 		// Partitions
 		private Set<Long> _partitionIds;
 		
 		// Partitions
 		private Set<Long> _hobtIds;
-		
+
+		private ObjectType _objectType;
 //		private long _lastAccessTime;  // not yet implemented
 		
 
@@ -100,7 +120,7 @@ public abstract class DbmsObjectIdCache
 			size += 4 + 36 + (_objectName == null ? 0 : _objectName.length() * 2); 
 
 			// Index info
-			for (Entry<Integer, String> entry : _indexNames.entrySet())
+			for (Entry<Long, String> entry : _indexNames.entrySet())
 			{
 				size += 4; // index id
 				size += entry.getValue().length() * 2; // index name
@@ -113,15 +133,24 @@ public abstract class DbmsObjectIdCache
 			return size;
 		}
 		
-//		public ObjectInfo(int dbid, String dbname, int schemaId, String schemaName, int objectId, String objectName, int indexId, String indexName)
-		public ObjectInfo(int dbid, String dbname, int schemaId, String schemaName, int objectId, String objectName)
+		public ObjectInfo(long dbid, String dbname, long schemaId, String schemaName, long objectId, String objectName, ObjectType objectType)
 		{
 			_dbid       = dbid;       
 			_dbname     = dbname;     
 
 			// maybe this helps memory consumption a bit for 'dbo' and 'sys' schemas, since we are making it a "singleton"
-			if      (SCHEMA_DBO.equals(schemaName)) schemaName = SCHEMA_DBO;
-			else if (SCHEMA_SYS.equals(schemaName)) schemaName = SCHEMA_SYS;
+			//schemaName = normalizeSchemaName(schemaName);
+			if (_staticSchemaNames != null)
+			{
+				String staticSchemaName = _staticSchemaNames.get(schemaName);
+				if (staticSchemaName != null)
+					schemaName = staticSchemaName;
+			}
+//			if      (SCHEMA_DBO        .equals(schemaName)) schemaName = SCHEMA_DBO;
+//			else if (SCHEMA_SYS        .equals(schemaName)) schemaName = SCHEMA_SYS;
+//			else if (SCHEMA_PUBLIC     .equals(schemaName)) schemaName = SCHEMA_PUBLIC;
+//			else if (SCHEMA_PG_CATALOG .equals(schemaName)) schemaName = SCHEMA_PG_CATALOG;
+//			else if (SCHEMA_INFORMATION.equals(schemaName)) schemaName = SCHEMA_INFORMATION;
 			
 			_schemaId   = schemaId;   
 			_schemaName = schemaName; 
@@ -129,10 +158,11 @@ public abstract class DbmsObjectIdCache
 			_objectId   = objectId;   
 			_objectName = objectName; 
 			
+			_objectType = objectType;
 //			addIndex(indexId, indexName);
 		}
 		
-		public String addIndex(int indexId, String indexName)
+		public String addIndex(long indexId, String indexName)
 		{
 			if (indexName == null)
 				return null;
@@ -159,15 +189,17 @@ public abstract class DbmsObjectIdCache
 			return _hobtIds.add(hobtId);
 		}
 		
-		public int    getDbid()       { return _dbid;       }
-		public String getDBName()     { return _dbname;     }
-		public int    getSchemaId()   { return _schemaId;   }
-		public String getSchemaName() { return _schemaName; }
-		public int    getObjectId()   { return _objectId;   }
-		public String getObjectName() { return _objectName; }
+		public long       getDbid()          { return _dbid;       }
+		public String     getDBName()        { return _dbname;     }
+		public long       getSchemaId()      { return _schemaId;   }
+		public String     getSchemaName()    { return _schemaName; }
+		public long       getObjectId()      { return _objectId;   }
+		public String     getObjectName()    { return _objectName; }
+		public ObjectType getObjectType()    { return _objectType; }
+		public String     getObjectTypeStr() { return _objectType + ""; }
 
 		/** Get index Map, which is a Map of IndexId, IndexName */
-		public Map<Integer, String> getIndexMap() 
+		public Map<Long, String> getIndexMap() 
 		{
 			if (_indexNames == null)
 				return Collections.emptyMap();
@@ -176,7 +208,7 @@ public abstract class DbmsObjectIdCache
 		}
 
 		/** Get index name for a index ID */
-		public String getIndexName(int indexId) 
+		public String getIndexName(long indexId) 
 		{ 
 			if (indexId == 0)
 				return "HEAP";
@@ -193,10 +225,17 @@ public abstract class DbmsObjectIdCache
 
 	private ConnectionProvider _connProvider = null;
 
-	protected Map<Integer, String>                   _dbNamesMap       = new HashMap<>();
-	private   Map<Integer, Map<Integer, ObjectInfo>> _dbid_objectId    = new HashMap<>();
-	private   Map<Integer, Map<Long, ObjectInfo>>    _dbid_partitionId = new HashMap<>();
-	private   Map<Integer, Map<Long, ObjectInfo>>    _dbid_hobtId      = new HashMap<>();
+	// This can also be used as a schema name translator. 
+	// But the main purpose is to use Singleton object, so we don't "pollute" the memory (with multiple Strings of "dbo", "sys", "pg_catalog"...)
+	private static Map<String, String> _staticSchemaNames;
+	
+	protected Map<Long, String>                _dbNamesMap       = new HashMap<>();
+	private   Map<Long, Map<Long, ObjectInfo>> _dbid_objectId    = new HashMap<>();
+	private   Map<Long, Map<Long, ObjectInfo>> _dbid_partitionId = new HashMap<>();
+	private   Map<Long, Map<Long, ObjectInfo>> _dbid_hobtId      = new HashMap<>();
+
+	private   Map<Long, Map<Long, Integer>> _dbid_objectId_dbmsLookupNotFoundCounter = new HashMap<>();
+	
 	
 	/** Keep a local DBMS Connection for the lookups */
 	private DbxConnection _localConnection;
@@ -206,6 +245,9 @@ public abstract class DbmsObjectIdCache
 	protected long _statBulkPhysicalReads = 0;    // How many times did we call getPlanBulk()
 	protected long _statLogicalWrite      = 0;    // How many times did we call setPlan()
 
+	protected long _statDbmsLookupNotFoundCount         = 0; // How many times did we do a DBMS lookup, and found NO object.
+	protected long _statDbmsLookupNotFoundCountExceeded = 0; // How many times did we SKIP DBMS call due to "not-found-count-threshold" was crossed for the object
+	
 	private   long _statReportModulus     = 5000; // When it gets crossed it will double itself, but max is always _statReportModulusMax
 	private   long _statReportModulusMax  = 100000;
 //	private   long _statReportModulus     = 500;   // <<<--- for TEST purposes
@@ -215,6 +257,9 @@ public abstract class DbmsObjectIdCache
 	protected long _statResetCalls        = 0;    // How many times did we call outOfMemoryHandler()
 	protected long _statDecreaseCalls     = 0;    // How many times did we call lowOfMemoryHandler()
 
+//	protected int     _dbmsLookupNotFoundThreshold = -1; 
+//	protected boolean _onDbmsLookupNotFound_callCreateObject = false;
+
 	//----------------------------------------------------------------
 	// BEGIN: instance
 	private static DbmsObjectIdCache _instance = null;
@@ -222,7 +267,7 @@ public abstract class DbmsObjectIdCache
 	{
 		if (_instance == null)
 		{
-			throw new RuntimeException("DbmsObjectIdCache dosn't have an instance yet, please set with setInstance(instance).");
+			throw new RuntimeException("DbmsObjectIdCache doesn't have an instance yet, please set with setInstance(instance).");
 		}
 		return _instance;
 	}
@@ -242,6 +287,9 @@ public abstract class DbmsObjectIdCache
 	public DbmsObjectIdCache(ConnectionProvider connProvider)
 	{
 		_connProvider = connProvider;
+		
+		if (_staticSchemaNames == null)
+			_staticSchemaNames = createStaticSchemaNames();
 	}
 	// END: Constructors
 	//----------------------------------------------------------------
@@ -255,6 +303,9 @@ public abstract class DbmsObjectIdCache
 		_dbid_objectId    = null;
 		_dbid_partitionId = null;
 		_dbid_hobtId      = null;
+
+		_dbid_objectId_dbmsLookupNotFoundCounter = null;
+		
 		
 		if (_localConnection != null)
 			_localConnection.closeNoThrow();
@@ -269,7 +320,7 @@ public abstract class DbmsObjectIdCache
 	{
 		int size = 0;
 
-		for (Map<Integer, ObjectInfo> e : _dbid_objectId.values())
+		for (Map<Long, ObjectInfo> e : _dbid_objectId.values())
 			size += e.size();
 
 		return size;
@@ -282,10 +333,10 @@ public abstract class DbmsObjectIdCache
 	{
 		Map<String, Integer> dbSizeMap = new LinkedHashMap<>();
 
-		for (Entry<Integer, Map<Integer, ObjectInfo>> e : _dbid_objectId.entrySet())
+		for (Entry<Long, Map<Long, ObjectInfo>> e : _dbid_objectId.entrySet())
 		{
-			Integer dbid = e.getKey();
-			Map<Integer, ObjectInfo> objInfoPerDb = e.getValue();
+			Long dbid = e.getKey();
+			Map<Long, ObjectInfo> objInfoPerDb = e.getValue();
 
 			if (dbid != null)
 			{
@@ -310,6 +361,8 @@ public abstract class DbmsObjectIdCache
 		_dbid_partitionId = new HashMap<>();
 		_dbid_hobtId      = new HashMap<>();
 
+		_dbid_objectId_dbmsLookupNotFoundCounter = new HashMap<>();
+		
 		_statResetCalls++;
 	}
 
@@ -325,9 +378,9 @@ public abstract class DbmsObjectIdCache
 
 		if (_dbid_objectId != null)
 		{
-			for (Entry<Integer, Map<Integer, ObjectInfo>> dbidEntry : _dbid_objectId.entrySet())
+			for (Entry<Long, Map<Long, ObjectInfo>> dbidEntry : _dbid_objectId.entrySet())
 			{
-				for (Entry<Integer, ObjectInfo> objIdEntry : dbidEntry.getValue().entrySet())
+				for (Entry<Long, ObjectInfo> objIdEntry : dbidEntry.getValue().entrySet())
 				{
 					entryCount++;
 					usedMemory += objIdEntry.getValue().getMemorySize();
@@ -352,6 +405,7 @@ public abstract class DbmsObjectIdCache
 		// Simply create a new _cache to clear it.
 	//	_dbNamesMap    = new HashMap<>();
 		_dbid_objectId = new HashMap<>();
+		_dbid_objectId_dbmsLookupNotFoundCounter = new HashMap<>();
 	}
 
 	/**
@@ -381,7 +435,7 @@ public abstract class DbmsObjectIdCache
 			else
 			{
 				// Outer "dbid entries" wont be removed (we could probably do this better by "randomize" what DBID we visit (or have some MRU strategy)
-				for (Map<Integer, ObjectInfo> dbidEntry : _dbid_objectId.values())
+				for (Map<Long, ObjectInfo> dbidEntry : _dbid_objectId.values())
 				{
 					// Just the "inner" entries... and for that we need a Iterator (to call remove) 
 					Iterator<ObjectInfo> it = dbidEntry.values().iterator();
@@ -433,18 +487,42 @@ public abstract class DbmsObjectIdCache
 	}
 
 	/**
+	 * Check if the Object has entries
+	 * @return
+	 */
+	public boolean hasDbIds()
+	{
+		if (_dbNamesMap == null)
+			return false;
+		
+		return ! _dbNamesMap.isEmpty();
+	}
+
+	/**
+	 * Check if the Object has entries
+	 * @return
+	 */
+	public boolean hasObjectIds()
+	{
+		if (_dbid_objectId == null)
+			return false;
+		
+		return ! _dbid_objectId.isEmpty();
+	}
+
+	/**
 	 * Check if the ID is Cached (does not do any physical IO)
 	 * @param dbid
 	 * @param objectid
 	 * @return true or false
 	 */
-	public boolean isCached(int dbid, int objectid)
+	public boolean isCached(long dbid, long objectid)
 	{
 		_statLogicalRead++;
 		if ( (_statLogicalRead % _statReportModulus) == 0 )
 			printStatistics();
 
-		Map<Integer, ObjectInfo> objIdMap = _dbid_objectId.get(dbid);
+		Map<Long, ObjectInfo> objIdMap = _dbid_objectId.get(dbid);
 		if (objIdMap == null)
 			return false;
 
@@ -456,12 +534,24 @@ public abstract class DbmsObjectIdCache
 	 * @param dbid
 	 * @return
 	 */
-	public String getDBName(int dbid)
+	public String getDBName(long dbid)
 	{
-//		if (dbid == 32767)
-//			return "mssqlsystemresource";
-
 		return _dbNamesMap.get(dbid);
+	}
+
+	/**
+	 * Get the dbid from cache 
+	 * @param dbname
+	 * @return
+	 */
+	public Long getDbid(String dbname)
+	{
+		for (Entry<Long, String> entry : _dbNamesMap.entrySet())
+		{
+			if (dbname.equals(entry.getValue()))
+				return entry.getKey();
+		}
+		return null;
 	}
 
 	/**
@@ -470,11 +560,58 @@ public abstract class DbmsObjectIdCache
 	 * @param dbname
 	 * @return
 	 */
-	public String setDBName(int dbid, String dbname)
+	public String setDBName(long dbid, String dbname)
 	{
 		return _dbNamesMap.put(dbid, dbname);
 	}
 
+	public String debugPrintAllObject()
+	{
+		SimpleResultSet rs = new SimpleResultSet();
+		rs.addColumn("dbid",                   Types.BIGINT,     0, 0);
+		rs.addColumn("dbname",                 Types.VARCHAR,   80, 0);
+
+		rs.addColumn("schemaId",               Types.BIGINT,     0, 0);
+		rs.addColumn("schemaName",             Types.VARCHAR,   80, 0);
+
+		rs.addColumn("objectId",               Types.BIGINT,     0, 0);
+		rs.addColumn("objectName",             Types.VARCHAR,   80, 0);
+		
+		rs.addColumn("objectType",             Types.VARCHAR,   80, 0);
+
+		for (Entry<Long, Map<Long, ObjectInfo>> e1 : _dbid_objectId.entrySet())
+		{
+//			Long dbid                    = e1.getKey();
+			Map<Long, ObjectInfo> objMap = e1.getValue();
+			
+			for (Entry<Long, ObjectInfo> e2 : objMap.entrySet())
+			{
+//				Long objid    = e2.getKey();
+				ObjectInfo oi = e2.getValue();
+
+				rs.addRow(
+						 oi._dbid
+						,oi._dbname
+						,oi._schemaId
+						,oi._schemaName
+						,oi._objectId
+						,oi._objectName
+						,oi._objectType
+				);
+			}
+		}
+		
+		try
+		{
+			ResultSetTableModel rstm = new ResultSetTableModel(rs, "debugPrint");
+			return rstm.toAsciiTableString();
+		}
+		catch (SQLException ex)
+		{
+			return "" + ex;
+		}
+	}
+	
 	/**
 	 * 
 	 * @param dbid
@@ -483,7 +620,7 @@ public abstract class DbmsObjectIdCache
 	 * @return IndexName if it was found. Null if the ID wasn't found
 	 * @throws TimeoutException
 	 */
-	public String getIndexName(int dbid, int objectid, int indexid) 
+	public String getIndexName(long dbid, long objectid, long indexid) 
 	throws TimeoutException
 	{
 		ObjectInfo objectInfo = getByObjectId(dbid, objectid);
@@ -501,7 +638,7 @@ public abstract class DbmsObjectIdCache
 	 * @return SchemaName if it was found. Null if the ID wasn't found
 	 * @throws TimeoutException
 	 */
-	public String getSchemaName(int dbid, int objectid) 
+	public String getSchemaName(long dbid, long objectid) 
 	throws TimeoutException
 	{
 		ObjectInfo objectInfo = getByObjectId(dbid, objectid);
@@ -519,7 +656,7 @@ public abstract class DbmsObjectIdCache
 	 * @return ObjectName if it was found. Null if the ID wasn't found
 	 * @throws TimeoutException
 	 */
-	public String getObjectName(int dbid, int objectid) 
+	public String getObjectName(long dbid, long objectid) 
 	throws TimeoutException
 	{
 		ObjectInfo objectInfo = getByObjectId(dbid, objectid);
@@ -531,32 +668,110 @@ public abstract class DbmsObjectIdCache
 	}
 	
 	/**
+	 * 
+	 * @param dbid
+	 * @param objectid
+	 * @return ObjectName if it was found. Null if the ID wasn't found
+	 * @throws TimeoutException
+	 */
+	public String getObjectType(long dbid, long objectid) 
+	throws TimeoutException
+	{
+		ObjectInfo objectInfo = getByObjectId(dbid, objectid);
+		
+		if (objectInfo == null)
+			return null;
+
+		return objectInfo.getObjectTypeStr();
+	}
+	
+	/**
+	 * Make a DBMS call to get the object which wasn't found in the cache
+	 * <p>
+	 * Note: The DBMS lookup for each "dbid" and "lookupId" will only be attempted 5 times (by default, or override method {@link #getConfig_dbmsLookupNotFoundThreshold()}, 
+	 *       or change property <code>DbmsObjectIdCache.dbms.lookup.notFound.threshold=##</code><br>
+	 * <p>
+	 * When the "not-found-count" for this object has been reached, we wont try again and a NULL value value will be returned, or possible call {@link #onDbmsLookupNotFound_createObject()}.
+	 * 
+	 * @param connection
+	 * @param lookupType
+	 * @param dbid
+	 * @param lookupId
+	 * @return
+	 * @throws TimeoutException
+	 */
+	protected ObjectInfo getFromDbWrapper(DbxConnection connection, LookupType lookupType, long dbid, Number lookupId)
+	throws TimeoutException
+	{
+		// Check how many times we have *failed* to get the: dbid, lookupId
+		// If the "not-found-count" is above the "threshold"... Simply return a null value without doing database lookup
+		Map<Long, Integer> map = _dbid_objectId_dbmsLookupNotFoundCounter.get(dbid);
+		Integer notFoundCount = (map == null) ? null : map.get(lookupId);
+
+		if (notFoundCount != null && notFoundCount > getConfig_dbmsLookupNotFoundThreshold())
+		{
+			_statDbmsLookupNotFoundCountExceeded++;
+
+			if (getConfig_onDbmsLookupNotFound_callCreateObject())
+			{
+				// Note: This "fake" object will be cached
+				ObjectInfo tmpEntry = onDbmsLookupNotFound_createObject(lookupType, dbid, lookupId);
+				setObjectInfo(dbid, dbid, tmpEntry);
+
+				return tmpEntry;
+			}
+			return null;
+		}
+		
+		// Do the lookup in the DBMS
+		_statPhysicalRead++;
+		ObjectInfo entry = get(getConnection(), lookupType, dbid, lookupId);
+
+		// If we did NOT find a object, then increment the "fail-counter"
+		if (entry == null)
+		{
+			_statDbmsLookupNotFoundCount++;
+
+			// Get map, if it do not exists, create one
+			Map<Long, Integer> objErrorMap = _dbid_objectId_dbmsLookupNotFoundCounter.get(dbid);
+			if (objErrorMap == null)
+			{
+				objErrorMap = new HashMap<Long, Integer>();
+				_dbid_objectId_dbmsLookupNotFoundCounter.put(dbid, objErrorMap);
+			}
+
+			// Get counter and increment
+			Integer tmpNotFoundCount = objErrorMap.get(lookupId);
+			if (tmpNotFoundCount == null)
+				tmpNotFoundCount = 0;
+			tmpNotFoundCount++;
+
+			// Put the "fail-count" back in the map
+			objErrorMap.put(lookupId.longValue(), tmpNotFoundCount);
+		}
+		
+		return entry;
+	}
+
+	/**
 	 * Get the content from cache, if it's not in the cache it will call the back-end to get the information 
 	 * @param dbid
 	 * @param objectid
 	 * @return
 	 * @throws TimeoutException 
 	 */
-	public ObjectInfo getByObjectId(int dbid, int objectid) 
+	public ObjectInfo getByObjectId(long dbid, long objectid) 
 	throws TimeoutException
 	{
 		_statLogicalRead++;
 		
-		Map<Integer, ObjectInfo> map = _dbid_objectId.get(dbid);
+		Map<Long, ObjectInfo> map = _dbid_objectId.get(dbid);
 		ObjectInfo entry = (map == null) ? null : map.get(objectid);
 
 		if (entry == null)
 		{
 			// Get the information from the DBMS
-			_statPhysicalRead++;
-			entry = get(getConnection(), LookupType.ObjectId, dbid, objectid);
-//			if (entry != null)
-//			{
-//				if (objIdMap == null)
-//					objIdMap = new HashMap<Integer, ObjectInfo>();
-//
-//				objIdMap.put(objectid, entry);
-//			}
+			entry = getFromDbWrapper(getConnection(), LookupType.ObjectId, dbid, objectid);
 		}
 		if ( (_statLogicalRead % _statReportModulus) == 0 )
 			printStatistics();
@@ -564,7 +779,7 @@ public abstract class DbmsObjectIdCache
 		return entry;
 	}
 
-	public ObjectInfo getByPartitionId(int dbid, long partitionId)
+	public ObjectInfo getByPartitionId(long dbid, long partitionId)
 	throws TimeoutException
 	{
 		_statLogicalRead++;
@@ -575,8 +790,7 @@ public abstract class DbmsObjectIdCache
 		if (entry == null)
 		{
 			// Get the information from the DBMS
-			_statPhysicalRead++;
-			entry = get(getConnection(), LookupType.PartitionId, dbid, partitionId);
+			entry = getFromDbWrapper(getConnection(), LookupType.PartitionId, dbid, partitionId);
 		}
 		if ( (_statLogicalRead % _statReportModulus) == 0 )
 			printStatistics();
@@ -584,7 +798,7 @@ public abstract class DbmsObjectIdCache
 		return entry;
 	}
 
-	public ObjectInfo getByHobtId(int dbid, long hobtId)
+	public ObjectInfo getByHobtId(long dbid, long hobtId)
 	throws TimeoutException
 	{
 		_statLogicalRead++;
@@ -595,8 +809,7 @@ public abstract class DbmsObjectIdCache
 		if (entry == null)
 		{
 			// Get the information from the DBMS
-			_statPhysicalRead++;
-			entry = get(getConnection(), LookupType.HobtId, dbid, hobtId);
+			entry = getFromDbWrapper(getConnection(), LookupType.HobtId, dbid, hobtId);
 		}
 		if ( (_statLogicalRead % _statReportModulus) == 0 )
 			printStatistics();
@@ -611,9 +824,9 @@ public abstract class DbmsObjectIdCache
 	 * @param objectid
 	 * @return null if not found
 	 */
-	protected ObjectInfo internal_getByObjectId(int dbid, int objectid) 
+	protected ObjectInfo internal_getByObjectId(long dbid, long objectid) 
 	{
-		Map<Integer, ObjectInfo> objIdMap = _dbid_objectId.get(dbid);
+		Map<Long, ObjectInfo> objIdMap = _dbid_objectId.get(dbid);
 		if (objIdMap == null)
 			return null;
 		
@@ -664,21 +877,21 @@ public abstract class DbmsObjectIdCache
 	 * @param objectInfo
 	 * @return The old content, if not previously cached it will return NULL
 	 */
-	public ObjectInfo setObjectInfo(int dbid, int objectid, ObjectInfo objectInfo)
+	public ObjectInfo setObjectInfo(long dbid, long objectid, ObjectInfo objectInfo)
 	{
 		_statLogicalWrite++;
 
-		Map<Integer, ObjectInfo> objIdMap = _dbid_objectId.get(dbid);
+		Map<Long, ObjectInfo> objIdMap = _dbid_objectId.get(dbid);
 		if (objIdMap == null)
 		{
-			objIdMap = new HashMap<Integer, ObjectInfo>();
+			objIdMap = new HashMap<Long, ObjectInfo>();
 			_dbid_objectId.put(dbid, objIdMap);
 		}
 
 		return objIdMap.put(objectid, objectInfo);
 	}
 	
-	public String addIndex(int dbid, int objectid, int indexId, String indexName)
+	public String addIndex(long dbid, long objectid, long indexId, String indexName)
 	{
 		ObjectInfo oi = internal_getByObjectId(dbid, objectid);
 		if (oi == null)
@@ -687,7 +900,7 @@ public abstract class DbmsObjectIdCache
 		return oi.addIndex(indexId, indexName);
 	}
 	
-	public boolean addPartition(int dbid, int objectid, long partitionId)
+	public boolean addPartition(long dbid, long objectid, long partitionId)
 	{
 		ObjectInfo oi = internal_getByObjectId(dbid, objectid);
 		if (oi == null)
@@ -704,7 +917,7 @@ public abstract class DbmsObjectIdCache
 		return oi.addPartition(partitionId);
 	}
 	
-	public boolean addHobt(int dbid, int objectid, long hobtId)
+	public boolean addHobt(long dbid, long objectid, long hobtId)
 	{
 		ObjectInfo oi = internal_getByObjectId(dbid, objectid);
 		if (oi == null)
@@ -750,12 +963,70 @@ public abstract class DbmsObjectIdCache
 		_logger.info("DONE: getBulk() in DbmsObjectIdCache. execTimeMs=" + execTimeMs + ", execTimeStr=" + TimeUtils.msToTimeStrShort(execTimeMs) + " ([HH:]%MM:%SS.%ms), TotalEntries=" + size() + ", EntriesPerDb=" + sizePerDb());
 	}
 
+//	/**
+//	 * Checks if we have done bulk load for a specific database<br>
+//	 * It might be useful if we can't do in initially, and has to defer it to a later stage<br>
+//	 * For example in Postgres we might want to setup connections in a Connection Pool and use that...
+//	 * 
+//	 * @param dbname
+//	 * @return true if Bulk load has been done.
+//	 */
+//	public boolean hasBuldLoadBeenDone(String dbname)
+//	{
+//	}
+
+	/**
+	 * Get configuration for...
+	 */
+	protected int getConfig_dbmsLookupNotFoundThreshold()
+	{
+		return Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_DbmsLookupNotFoundThreshold, DEFAULT_DbmsLookupNotFoundThreshold);
+	}
+
+	/**
+	 * Get configuration for...
+	 */
+	protected boolean getConfig_onDbmsLookupNotFound_callCreateObject()
+	{
+		return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_DbmsLookupNotFound_callCreateObject, DEFAULT_DbmsLookupNotFound_callCreateObject);
+	}
+
+	/**
+	 * Create a Dummy Object that can be cached instead of the "real" DBMS object, which could not be found. 
+	 * 
+	 * @param lookupType
+	 * @param dbid
+	 * @param lookupId
+	 * @return
+	 */
+	protected ObjectInfo onDbmsLookupNotFound_createObject(LookupType lookupType, long dbid, Number lookupId)
+	{
+		String cachedDbname = getDBName(dbid);
+		
+		String dbname         = cachedDbname != null ? cachedDbname : "-unknown-dbname-";
+		long   schemaId       = -1;
+		String schemaName     = "-unknown-schema-"; 
+		long   objectId       = lookupId.longValue();
+		String objectName     = "-unknown-object-";
+		ObjectType objectType = ObjectType.UNKNOWN;
+
+//		public ObjectInfo(long dbid, String dbname, long schemaId, String schemaName, long objectId, String objectName, ObjectType objectType)
+
+		return new ObjectInfo(dbid, dbname, schemaId, schemaName, objectId, objectName, objectType);
+	}
+	
+
+	/**
+	 * @return return a Map with some statics SCHEMA names for this DBMS Vendor
+	 */
+	protected abstract Map<String, String> createStaticSchemaNames();
+
 	/**
 	 * If "bulk load on start" is enabled, then try to populate all/as-many-as-possible on startup 
 	 * @return true if we should call <code>getBulk()</code> on startup
 	 */
 	public abstract boolean isBulkLoadOnStartEnabled();
-	
+
 	/**
 	 * Someone subclass to implement this method
 	 * 
@@ -766,7 +1037,7 @@ public abstract class DbmsObjectIdCache
 	 * @return 
 	 * @throws TimeoutException
 	 */
-	protected abstract ObjectInfo get(DbxConnection connection, LookupType lookupType, int dbid, Number lookupId) 
+	protected abstract ObjectInfo get(DbxConnection connection, LookupType lookupType, long dbid, Number lookupId) 
 	throws TimeoutException;
 
 	/**

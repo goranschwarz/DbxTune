@@ -32,6 +32,7 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventHighCpuUtilization;
 import com.asetune.alarm.events.AlarmEventHighCpuUtilization.CpuType;
 import com.asetune.cm.CmSettingsHelper;
@@ -759,10 +760,35 @@ extends CountersModel
 					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", NonIdleCPUTimePct='"+NonIdleCPUTimePct+"'.");
 
 				if (NonIdleCPUTimePct.intValue() > threshold)
-					AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, threshold, CpuType.TOTAL_CPU, NonIdleCPUTimePct, UserCPUTimePct, SystemCPUTimePct, IdleCPUTimePct) );
+				{
+					String extendedDescText = "";
+					String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_CPU_SUM);
+
+					AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, CpuType.TOTAL_CPU, NonIdleCPUTimePct, UserCPUTimePct, SystemCPUTimePct, IdleCPUTimePct);
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					AlarmHandler.getInstance().addAlarm(ae);
+				}
 			}
 		}
 	}
+
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_CPU_SUM.equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+
 
 	public static final String  PROPKEY_alarm_CPUTime             = CM_NAME + ".alarm.system.if.CPUTime.gt";
 	public static final int     DEFAULT_alarm_CPUTime             = 90;
