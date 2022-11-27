@@ -565,13 +565,26 @@ public class StringUtil
 	 */
 	public static List<String> parseCommaStrToList(String str, boolean skipEmtyStrings)
 	{
+		return parseCommaStrToList(str, REGEX_SPLIT_COMMA_RESPECT_QUOTES, skipEmtyStrings);
+	}
+
+	/**
+	 * Parsers a comma separated list and returns a ArrayList which holds all values.<br>
+	 * The entries will be trimmed()...
+	 * @param str             a comma separated list
+	 * @param regex           How to split
+	 * @param skipEmtyStrings Do not add empty string to the output list
+	 * @return a ArrayList with Strings  (if input string is null, return empty list)
+	 */
+	public static List<String> parseCommaStrToList(String str, String regex, boolean skipEmtyStrings)
+	{
 		ArrayList<String> list = new ArrayList<String>();
 
 		if (str == null)
 			return list;
 
 //		String[] sa = str.split(",");
-		String[] sa = str.split(REGEX_SPLIT_COMMA_RESPECT_QUOTES);
+		String[] sa = str.split(regex);
 		for (String se : sa)
 		{
 			if (skipEmtyStrings && se.equals(""))
@@ -640,7 +653,7 @@ public class StringUtil
 	}
 	public static Map<String,String> parseCommaStrToMap(String source, String keyValSep, String entrySep)
 	{
-		if (source == null)
+		if (isNullOrBlank(source))
 			return new LinkedHashMap<String,String>();
 		source = source.trim();
 

@@ -1685,7 +1685,7 @@ implements Memory.MemoryListener
 								}
 							}
 
-							_logger.info("Checking for Java HPROF file(s) is complete. fileCount=" + fileCount + ", matchCount=" + fileMatchCount + ", noMatchCount=" + fileNoMatchCount + ", deleteCount=" + fileDeleteCount + ", notOldEnoughCount=" + fileNotOldEnoughCount + ".");
+							_logger.info("Checking for Java HPROF file(s) is complete. fileCount=" + fileCount + ", matchCount=" + fileMatchCount + ", noMatchCount=" + fileNoMatchCount + ", deleteCount=" + fileDeleteCount + ", notOldEnoughCount=" + fileNotOldEnoughCount + ", fileAgeThreshold=" + fileAgeThreshold + " (days).");
 						}
 						catch (IOException ex)
 						{

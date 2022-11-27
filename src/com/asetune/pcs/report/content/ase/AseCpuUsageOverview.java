@@ -90,11 +90,11 @@ public class AseCpuUsageOverview extends AseAbstract
 				));
 
 		_CmSummary_aaCpuGraph           .writeHtmlContent(w, null, "The above graph may contain <i>extra</i> CPU Usages, which will be CPU Used during I/O completaion checks.");
+		_CmEngines_cpuSum               .writeHtmlContent(w, null, "The above graph Will only contain CPU Cyckles used to execute User Work.");
 		_CmOsMpstat_MpSum               .writeHtmlContent(w, null, null);
 		_CmSummary_aaDiskGraph          .writeHtmlContent(w, null, "How many disk I/Os was done... To be used in conjunction with '@@cpu_xxx' to decide if CPU is comming from disk or <i>other</i> DBMS load.");
 		if (isFullMessageType())
 		{
-			_CmEngines_cpuSum               .writeHtmlContent(w, null, "The above graph Will only contain CPU Cyckles used to execute User Work.");
 			_CmEngines_cpuEng               .writeHtmlContent(w, null, "The above graph Will only contain CPU Cyckles used to execute User Work, but for each ASE Engine.<br>\n"
 			                                                              + "So here you can see if you have specififc Engines scheduling work.");
 			_CmSysLoad_EngineRunQLengthGraph.writeHtmlContent(w, null, "The above graph shows how many task(s) that are in the Schedulers Execution Queue for each ASE Engine.<br>\n"

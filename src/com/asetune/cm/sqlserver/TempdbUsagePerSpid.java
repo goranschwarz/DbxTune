@@ -46,8 +46,8 @@ public class TempdbUsagePerSpid
 	private int _queryTimeout = 3;
 	
 	public static final String  PROPKEY_debugOnRefreshPrintInfo = "TempdbUsagePerSpid.debug.on.refresh.print.info";
-//	public static final boolean DEFAULT_debugOnRefreshPrintInfo = false;
-	public static final boolean DEFAULT_debugOnRefreshPrintInfo = true;
+	public static final boolean DEFAULT_debugOnRefreshPrintInfo = false;
+//	public static final boolean DEFAULT_debugOnRefreshPrintInfo = true;
 	
 //	private HashMap<Integer, TempDbSpaceInfo> _prevMap;                   // If we want to do "delta" calculations
 	private HashMap<Integer, TempDbSpaceInfo> _infoMap = new HashMap<>(); // Stores latest information <spid, info>

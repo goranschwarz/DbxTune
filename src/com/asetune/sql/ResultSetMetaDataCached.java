@@ -1096,7 +1096,7 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 	{
 		String catName = StringUtil.isNullOrBlank(catalog) ? "" : "[" + catalog + "].";
 		String schName = StringUtil.isNullOrBlank(schema)  ? "" : "[" + schema  + "].";
-		String tabName = "[" + table + "].";
+		String tabName = "[" + table + "]";
 
 		// special case: If we have 'catalog' but NOT 'schema', then add "empty" schema and hope it will resolve to "default" schema name
 		// For Sybase and SQL Server it will work (the default is dbo), But for "other" DBMS Vendors, I don't know 

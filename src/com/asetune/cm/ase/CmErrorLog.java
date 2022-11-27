@@ -168,8 +168,8 @@ extends CountersModelAppend
 		}
 	
 		String sql = 
-			"select " + cols1 + cols2 + cols3 + "\n" +
-			"from master..monErrorLog\n";
+			"select " + cols1 + cols2 + cols3 + " \n" +
+			"from master..monErrorLog \n";
 
 		return sql;
 	}

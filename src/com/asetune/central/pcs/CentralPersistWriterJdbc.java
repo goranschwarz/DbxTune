@@ -2117,9 +2117,9 @@ extends CentralPersistWriterBase
 				// Possibly get data types and lengths of Table.CENTRAL_SESSIONS
 				// This so we can "truncate" Strings if they are to long!
 				// The default length -1 just means... no specific length (do not truncate)
-				String centralSessionTableName = getTableName(conn, schemaName, Table.CENTRAL_SESSIONS, null, false);
+				String centralSessionTableName = getTableName(conn, null, Table.CENTRAL_SESSIONS, null, false); // Note: for Table.CENTRAL_SESSIONS schema should NOT be used
 
-				ResultSetMetaDataCached rsmdc = ResultSetMetaDataCached.getMetaData(conn, null,  schemaName, centralSessionTableName);
+				ResultSetMetaDataCached rsmdc = ResultSetMetaDataCached.getMetaData(conn, null, null, centralSessionTableName); // Note: for Table.CENTRAL_SESSIONS schema should NOT be used
 				int len_ServerName          = rsmdc != null ? rsmdc.getPrecision("ServerName"         , -1) : -1;
 				int len_OnHostname          = rsmdc != null ? rsmdc.getPrecision("OnHostname"         , -1) : -1;
 				int len_ProductString       = rsmdc != null ? rsmdc.getPrecision("ProductString"      , -1) : -1;

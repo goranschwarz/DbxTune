@@ -41,6 +41,7 @@ import java.util.Set;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
@@ -211,9 +212,11 @@ extends CountersModel
 	// Set in localCalculation
 	private String _localSrvName = "";
 
-	public static final String GRAPH_NAME_WRITE_TRANS         = "WriteTrans";
-	public static final String GRAPH_NAME_BYTES_TO_REPLICA    = "BytesToReplica";
-	public static final String GRAPH_NAME_RECOVERY_QUEUE      = "RecoveryQueue";
+	public static final String GRAPH_NAME_WRITE_TRANS               = "WriteTrans";
+	public static final String GRAPH_NAME_BYTES_TO_REPLICA          = "BytesToReplica";
+	public static final String GRAPH_NAME_RECOVERY_QUEUE            = "RecoveryQueue";
+	public static final String GRAPH_NAME_LOG_SEND_QUEUE_SIZE_IN_KB = "LogSendQueueSizeKb";
+	public static final String GRAPH_NAME_SECONDARY_COMMIT_LAG_TIME = "SecCommitLagTime";
 
 
 	@Override
@@ -267,6 +270,30 @@ extends CountersModel
 				"AlwaysOn Recovery Queue, # Log Records",        // Menu CheckBox text
 				"AlwaysOn Recovery Queue, # Log Records ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				null, 
+				LabelType.Dynamic,
+				TrendGraphDataPoint.Category.REPLICATION,
+				false, // is Percent Graph
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_LOG_SEND_QUEUE_SIZE_IN_KB,
+				"AlwaysOn Log Send Queue Size In KB",        // Menu CheckBox text
+				"AlwaysOn Log Send Queue Size In KB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB,
+				null, 
+				LabelType.Dynamic,
+				TrendGraphDataPoint.Category.REPLICATION,
+				false, // is Percent Graph
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_SECONDARY_COMMIT_LAG_TIME,
+				"AlwaysOn Secondary Commit Lag Time, in Seconds",        // Menu CheckBox text
+				"AlwaysOn Secondary Commit Lag Time, in Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS,
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.REPLICATION,
@@ -370,6 +397,87 @@ extends CountersModel
 				Double dvalue      = this.getAbsValueAsDouble(row, "s_RecoveryQueue");
 
 				lArray[d] = server_name + ":" + dbname;
+				dArray[d] = dvalue;
+				d++;
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_LOG_SEND_QUEUE_SIZE_IN_KB.equals(tgdp.getName()))
+		{
+			HashMap<String, Object> whereClause = new HashMap<>(2);
+			whereClause.put("locality",       COLVAL_LOCALITY_LOCAL);
+			whereClause.put("role_desc",      PRIMARY_ROLE);
+
+			List<Integer> rowIds = getAbsRowIdsWhere(whereClause);
+
+			if (rowIds.isEmpty())
+				return;
+
+			// Write 1 "line" for every database
+			Double[] dArray = new Double[rowIds.size()];
+			String[] lArray = new String[rowIds.size()];
+			int d = 0;
+			for (int row : rowIds)
+			{
+				String server_name = this.getAbsString       (row, "server_name");
+				String ag_name     = this.getAbsString       (row, "ag_name");
+				Double dvalue      = this.getAbsValueAsDouble(row, "LogSendQueueSizeKb");
+
+				lArray[d] = ag_name + ":" + server_name;
+				dArray[d] = dvalue;
+				d++;
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_SECONDARY_COMMIT_LAG_TIME.equals(tgdp.getName()))
+		{
+			HashMap<String, Object> whereClause = new HashMap<>(2);
+			whereClause.put("locality",       COLVAL_LOCALITY_LOCAL);
+			whereClause.put("role_desc",      PRIMARY_ROLE);
+
+			List<Integer> rowIds = getAbsRowIdsWhere(whereClause);
+
+			if (rowIds.isEmpty())
+				return;
+
+			// Write 1 "line" for every database
+			Double[] dArray = new Double[rowIds.size()];
+			String[] lArray = new String[rowIds.size()];
+			int d = 0;
+			for (int row : rowIds)
+			{
+//				String server_name = this.getAbsString(row, "server_name");
+				String ag_name     = this.getAbsString(row, "ag_name");
+				String strValue    = this.getAbsString(row, "SecondaryCommitTimeLag"); // Example: prod-b1-mssql=00:00:00.000
+//				Double dvalue      = this.getAbsValueAsDouble(row, "SecondaryCommitTimeLag"); // Example: prod-b1-mssql=00:00:00.000
+
+				String toSrvName = "-unknown-";
+				Double dvalue    = -1D;
+				if (StringUtil.hasValue(strValue))
+				{
+					try 
+					{
+						toSrvName        = StringUtils.substringBefore(strValue, "=");
+						String timeVal   = StringUtils.substringAfter (strValue, "=");
+
+						Timestamp secondaryCommitTimeLagTs = TimeUtils.parseToUtcTimestamp(timeVal, "HH:mm:ss.SSS");
+						double secondaryCommitTimeLagSec = -1;
+						if (secondaryCommitTimeLagTs != null)
+							secondaryCommitTimeLagSec = secondaryCommitTimeLagTs.getTime() / 1000.0;
+						
+						dvalue = secondaryCommitTimeLagSec;
+//System.out.println("GRAPH_NAME_SECONDARY_COMMIT_LAG_TIME: ag_name="+StringUtil.left(ag_name,40)+", toSrvName='"+toSrvName+"', timeVal='"+timeVal+"', secondaryCommitTimeLagSec="+secondaryCommitTimeLagSec+", dvalue="+dvalue);
+					}
+					catch (ParseException ignore) {}
+				}
+
+				lArray[d] = ag_name + ":" + toSrvName;
 				dArray[d] = dvalue;
 				d++;
 			}
@@ -2063,6 +2171,7 @@ extends CountersModel
 							{
 								String[] sa = PRIMARY_SecondaryCommitTimeLag.split("=");
 								Timestamp prevTs = TimeUtils.parseToTimestamp(sa[0], "HH:mm:ss.SSS");
+//System.out.println("XXXXXXXXXXX: PRIMARY_SecondaryCommitTimeLag=|"+PRIMARY_SecondaryCommitTimeLag+"|, sa[0]=|"+sa[0]+"|, prevTs="+prevTs+", sa="+StringUtil.toCommaStr(sa));
 								
 								// Set the server name with the highest time diff
 								if (msDiff > prevTs.getTime())
@@ -2133,6 +2242,26 @@ extends CountersModel
 		{
 			_logger.info("NO VALUE FOR: pk=" + pk );
 		}
+	}
+
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+//		if (GRAPH_NAME_WRITE_TRANS               .equals(name)) return true;
+//		if (GRAPH_NAME_BYTES_TO_REPLICA          .equals(name)) return true;
+//		if (GRAPH_NAME_RECOVERY_QUEUE            .equals(name)) return true;
+		if (GRAPH_NAME_LOG_SEND_QUEUE_SIZE_IN_KB .equals(name)) return true;
+		if (GRAPH_NAME_SECONDARY_COMMIT_LAG_TIME .equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
 	}
 
 	@Override
@@ -2320,12 +2449,13 @@ extends CountersModel
 							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 							
+							extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOG_SEND_QUEUE_SIZE_IN_KB);
+
 							AlarmEvent ae = new AlarmEventAgLogSendQueueSize(cm, ag_name, server_name, dbname, LogSendQueueSizeMb, threshold);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-							
+
 							alarmHandler.addAlarm( ae );
 						}
-						
 					}
 				}
 			}
@@ -2346,28 +2476,37 @@ extends CountersModel
 						if (debugPrint || _logger.isDebugEnabled())
 							System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", ag_name='"+ag_name+"', server_name='"+server_name+"', dbname='"+dbname+"', SecondaryCommitTimeLag='"+SecondaryCommitTimeLag+"'.");
 
-						try 
-						{
-							Timestamp secondaryCommitTimeLagTs = TimeUtils.parseToUtcTimestamp(SecondaryCommitTimeLag, "HH:mm:ss.SSS");
-							long secondaryCommitTimeLagSec = -1;
-							if (secondaryCommitTimeLagTs != null)
-								secondaryCommitTimeLagSec = secondaryCommitTimeLagTs.getTime() / 1000;
-							
-							if (secondaryCommitTimeLagSec > threshold)
-							{
-								String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-								String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+					//	String toSrvName = StringUtils.substringBefore(SecondaryCommitTimeLag, "=");
+						String timeVal   = StringUtils.substringAfter (SecondaryCommitTimeLag, "=");
 
-								AlarmEvent ae = new AlarmEventAgSecondaryCommitTimeLag(cm, ag_name, server_name, dbname, SecondaryCommitTimeLag, threshold);
-								ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						if (StringUtil.hasValue(timeVal))
+						{
+							try 
+							{
+								Timestamp secondaryCommitTimeLagTs = TimeUtils.parseToUtcTimestamp(timeVal, "HH:mm:ss.SSS");
+								long secondaryCommitTimeLagSec = -1;
+								if (secondaryCommitTimeLagTs != null)
+									secondaryCommitTimeLagSec = secondaryCommitTimeLagTs.getTime() / 1000;
 								
-								alarmHandler.addAlarm( ae );
+								if (secondaryCommitTimeLagSec > threshold)
+								{
+									String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+									String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+									extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_SECONDARY_COMMIT_LAG_TIME);
+
+									AlarmEvent ae = new AlarmEventAgSecondaryCommitTimeLag(cm, ag_name, server_name, dbname, SecondaryCommitTimeLag, threshold);
+									ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+									alarmHandler.addAlarm( ae );
+								}
+							} 
+							catch (ParseException ex) {
+								_logger.warn("sendAlarmRequest(): SecondaryCommitTimeLag, timeVal=|" + timeVal + "|.", ex);
 							}
-						} 
-						catch (ParseException ignore) {}
+						}
 					}
 				}
-
 			}
 
 			//-------------------------------------------------------

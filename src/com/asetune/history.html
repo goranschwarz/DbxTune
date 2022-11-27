@@ -210,6 +210,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<li>Alarm on AlarmEvent: ConfigResourceIsLow, ProcedureCacheLowOnMemory, ConfigResourceIsUsedUp -- added a chart that shows what happened in the last hour</li>
 		<li>Bugfix: CmSummary -- Fixed typo 'sum(DbxConnections)' to 'sum(Connections)'</li>
 		<li>Bugfix: Configuration sanity check for 'dsync' and 'directio'. Only when it's a filesystem. (skipping RAW/BLOCK devices)</li>
+		<li>Rewrote DbmsDdlResolverTds.dbmsVendorDataTypeResolverForSource() to better conform with the Sybase datatypes in ResultSetMetaData, which does NOT follow the "standard"</li>
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
@@ -562,6 +563,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmAlwaysOn         </b> - Granting select,insert,update,delete on table 'sqlserverTune_ag_dummy_update' was enhanced (note: this will still fail if the connection do not have authorization to create the table in the database. </LI>
 		<LI><b>CmAlwaysOn         </b> - Added some debug info, when remote queries goes "bad"</LI>
 		<LI><b>CmAlwaysOn         </b> - Using temp tables for intermidiate storage of tables instead of the join (this to see if it performs better)</LI>
+		<LI><b>CmAlwaysOn         </b> - Added 2 graphs: LogSendQueueSizeKb, SecCommitLagTime, since we had alarms on them it made sense to also add Graphs</LI>
 
 		<LI><b>CmDatabases        </b> - Added 'OldestTranName' and 'OldestTranId' - Now shows the transaction name and id (watch out for OldestTranName 'implicit_transaction', which indicates that AotoCommit is FALSE, which introduces more blocking locks)</LI>
 		<LI><b>CmDatabases        </b> - fixed bug: LowDbFreeSpaceInMb and LowLogFreeSpaceInMb sometimes didn't fire correctly</LI>
@@ -864,6 +866,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>During connect, when 'Getting DBS Information' takes more than 100ms, show a popup informing what we are doing) instead of just blocking -- This is mainly for Postgres resolving IP into a hostname, which takes time if reversed DNS lookup isn't enabled.</LI>
 		<LI>for Postgres: Status information -- Also display if we are in 'Recovery Mode'</LI>
 		<LI>for Postgres: Added some new templates: 'Get hostname, port and Postgres Version String', 'Get what Extentions are installed' and 'Reload Postgres Configuration and pg_hba.conf file'.</LI>
+		<LI>Tooltip to show data types in TableHeaders, slightly rewrite, to conform with: DbmsDdlResolverTds</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

@@ -1005,9 +1005,78 @@ public class ResultSetTableModel
 				int columnType = rsmd.getColumnType(col);
 
 				//---------------------------------
+				// Sybase ASE
+				//---------------------------------
+				if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE))
+				{
+					// The below content was investigated using, SQL Statement in: asetune.sql.ddl.DbmsDdlResolverTds
+					
+					//-----------------------------------------------------
+					if (columnType == java.sql.Types.NUMERIC || columnType == java.sql.Types.DECIMAL)
+					{
+						int precision = rsmd.getPrecision(col);
+						int scale     = rsmd.getScale(col);
+							
+						columnTypeName += "("+precision+","+scale+")";
+					}
+
+					//-----------------------------------------------------
+					if (columnType == java.sql.Types.CHAR || columnType == java.sql.Types.VARCHAR)
+					{
+						int length = rsmd.getColumnDisplaySize(col);
+						columnTypeName += "("+length+")";
+					}
+
+					//-----------------------------------------------------
+					if (columnType == java.sql.Types.NCHAR)
+					{
+						int length = rsmd.getColumnDisplaySize(col) / 3;
+						columnTypeName = "nchar("+length+")";
+					}
+					//-----------------------------------------------------
+					if (columnType == java.sql.Types.NCHAR || columnType == java.sql.Types.NVARCHAR)
+					{
+						int length = rsmd.getColumnDisplaySize(col) / 3;
+						columnTypeName = "nvarchar("+length+")";
+					}
+
+					//-----------------------------------------------------
+					if (columnType == java.sql.Types.LONGVARCHAR)
+					{
+						// Note this will be OFF for some data types. 
+						//   * char     (len>=256) will be "converted" to varchar, but length is OK
+						//   * nchar    (len>=86)  will be "converted" to varchar with length be 3 times longer
+						//   * nvarchar (len>=86)  length 3 times longer
+						int length = rsmd.getColumnDisplaySize(col);
+						
+						if      (length == 1073741823) /* unitext: no need to specify length */;
+						else if (length == 2147483647) /* text   : no need to specify length */;
+						else columnTypeName += "("+length+")";
+					}
+
+					//-----------------------------------------------------
+					if (columnType == java.sql.Types.BINARY || columnType == java.sql.Types.VARBINARY)
+					{
+						int length = rsmd.getColumnDisplaySize(col) / 2;
+						columnTypeName += "("+length+")";
+					}
+					//-----------------------------------------------------
+					if (columnType == java.sql.Types.LONGVARBINARY)
+					{
+						// varbinary(256) or above will be: LONGVARBINARY
+						if ("varbinary".equals(columnTypeName))
+						{
+							int length = rsmd.getColumnDisplaySize(col) / 2;
+							columnTypeName += "("+length+")";
+						}
+						// other LONGVARBINARY. just let them be, like "image"
+					}
+				}
+
+				//---------------------------------
 				// SQL-Server
 				//---------------------------------
-				if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_MSSQL))
+				else if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_MSSQL))
 				{
 					if (columnType == java.sql.Types.NUMERIC || columnType == java.sql.Types.DECIMAL)
 					{
@@ -1865,7 +1934,7 @@ public class ResultSetTableModel
 		sb.append("</HTML>");
 		return sb.toString();
 	}
-	
+
 	/**
 	 * Produce a string with information about the current ResultSet
 	 * @return a string looking like (for <code>select * from sysobjects</code>):

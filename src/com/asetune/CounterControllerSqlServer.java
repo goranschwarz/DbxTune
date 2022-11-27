@@ -142,6 +142,12 @@ extends CounterControllerAbstract
 	public static final String  PROPKEY_NoGui_AutoEnable_TraceFlag_LiveQueryPlans = "SqlServerTune.nogui.autoEnable.traceflag.liveQueryPlans";
 	public static final boolean DEFAULT_NoGui_AutoEnable_TraceFlag_LiveQueryPlans = false;
 	
+	public static final String  PROPKEY_NoGui_onConnectEnableConnProp_encrypt = "SqlServerTune.nogui.onConnect.enable.conn.prop.encrypt";
+	public static final boolean DEFAULT_NoGui_onConnectEnableConnProp_encrypt = true;
+
+	public static final String  PROPKEY_NoGui_onConnectEnableConnProp_trustServerCertificate = "SqlServerTune.nogui.onConnect.enable.conn.prop.trustServerCertificate";
+	public static final boolean DEFAULT_NoGui_onConnectEnableConnProp_trustServerCertificate = true;
+
 	/**
 	 * The default constructor
 	 * @param hasGui should we create a GUI or NoGUI collection thread
@@ -1052,6 +1058,35 @@ extends CounterControllerAbstract
 	@Override
 	public DbxConnection noGuiConnect(String dbmsUsername, String dbmsPassword, String dbmsServer, String dbmsHostPortStr, String jdbcUrlOptions) throws SQLException, Exception
 	{
+		// Parse 'jdbcUrlOptions'... check for 'trustServerCertificate=true'
+		if (true)
+		{
+			Map<String, String> jdbcUrlOptionsMap = StringUtil.parseCommaStrToMap(jdbcUrlOptions, "=", ";");
+
+			if ( Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_NoGui_onConnectEnableConnProp_encrypt, DEFAULT_NoGui_onConnectEnableConnProp_encrypt) )
+			{
+				if ( ! jdbcUrlOptionsMap.containsKey("encrypt") )
+				{
+					jdbcUrlOptionsMap.put("encrypt", "true");
+					_logger.info("onConnect: SQL Server URL Options, could not find 'encrypt', adding option: encrypt=true");
+				}
+			}
+
+			if ( Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_NoGui_onConnectEnableConnProp_trustServerCertificate, DEFAULT_NoGui_onConnectEnableConnProp_trustServerCertificate) )
+			{
+				if ( ! jdbcUrlOptionsMap.containsKey("trustServerCertificate") )
+				{
+					jdbcUrlOptionsMap.put("trustServerCertificate", "true");
+					_logger.info("onConnect: SQL Server URL Options, could not find 'trustServerCertificate', adding option: trustServerCertificate=true");
+				}
+			}
+
+			jdbcUrlOptions = StringUtil.toCommaStr(jdbcUrlOptionsMap, "=", ";");
+			if (StringUtil.hasValue(jdbcUrlOptions))
+				_logger.info("onConnect: This SQL Server URL Options will be used: " + jdbcUrlOptions);
+		}
+
+		// Let's connect
 		DbxConnection conn = super.noGuiConnect(dbmsUsername, dbmsPassword, dbmsServer, dbmsHostPortStr, jdbcUrlOptions);
 		
 		// DBMS ObjectID --> ObjectName Cache... maybe it's not the perfect place to initialize this...
