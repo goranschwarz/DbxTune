@@ -56,13 +56,43 @@ extends TdsConnection
 	public static final String  PROPKEY_getTableExtraInfo_getIndexTypeInfo = "AseConnection.getTableExtraInfo.getIndexTypeInfo";
 	public static final boolean DEFAULT_getTableExtraInfo_getIndexTypeInfo = true;
 
+//	private int _unicharsize = 2;
+//	private int _ncharsize   = 1;
+	
 	public AseConnection(Connection conn)
 	{
 		super(conn);
 		Ver.majorVersion_mustBeTenOrAbove = true;
 //System.out.println("constructor::AseConnection(conn): conn="+conn);
+		
+//		init(conn);
 	}
 
+	// The below init of _unicharsize and _ncharsize was used in DbmsDdlResolverTds.dbmsVendorDataTypeResolverForSource()
+	// But it was commented out... lets keep the code in here for future use... if we need it.
+//	private void init(Connection conn)
+//	{
+//		String sql = "select unicharsize = @@unicharsize, ncharsize = @@ncharsize";
+//
+//		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+//		{
+//			while (rs.next())
+//			{
+//				_unicharsize = rs.getInt(1);
+//				_ncharsize   = rs.getInt(2);
+//			}
+////System.out.println("AseConnection.init(): _unicharsize=" + _unicharsize + ", _ncharsize=" + _ncharsize);
+//		}
+//		catch (SQLException ex)
+//		{
+//			_logger.warn("When initializing AseConnection, we caught Exception, which will be skipped: " + ex);
+//		}
+//	}
+
+//	public int getUnicharSize() { return _unicharsize; }
+//	public int getNcharSize()   { return _ncharsize; }
+
+	
 	@Override
 	public DbmsVersionInfo createDbmsVersionInfo()
 	{

@@ -37,6 +37,7 @@ import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.cm.ase.CmSpMonitorConfig;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.gui.CmTempdbSpidUsagePanel;
 import com.asetune.gui.MainFrame;
@@ -612,7 +613,7 @@ extends CountersModel
 						String last_request_start_time = cm.getAbsValue(r, "last_request_start_time") + "";
 						String last_request_in_sec     = cm.getAbsValue(r, "last_request_in_sec") + "";
 //						String StatementStartTime      = cm.getAbsValue(r, "exec_start_time")         + "";
-						String login_name              = cm.getAbsValue(r, "login_name")              + "";
+						String login_name              = cm.getAbsValue(r, "original_login_name")     + "";
 						String program_name            = cm.getAbsValue(r, "program_name")            + "";
 //						String Command                 = cm.getAbsValue(r, "command")                 + "";
 //						String tran_name               = cm.getAbsValue(r, "transaction_name")        + "";
@@ -634,7 +635,16 @@ extends CountersModel
 //							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 							String extendedDescText = cm.toTextTableString(DATA_ABS, r);
 							String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, r, true, false, false);
-													
+
+							// Get a small graph (from CmSummary) about the usage for the last hour
+							CountersModel cmSummary = getCounterController().getCmByName(CmSummary.CM_NAME);
+							extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_TEMPDB_SPID_USAGE);
+
+							// Get a small html table, with SPID's above 10% usage from the threshold used to fire the alarm
+							// This will show us if there are MORE than 1 SPID that is *eating* tempdb space!
+							double reportSpaceThresholdInMb = threshold * 0.1;
+							extendedDescHtml += "<br><br>" + TempdbUsagePerSpid.getInstance().toHtmlTableString(reportSpaceThresholdInMb);
+							
 							AlarmEvent ae = new AlarmEventTempdbSpidUsage(cm, threshold, session_id, TotalUsageMb_abs, last_request_start_time, last_request_in_sec, login_name, program_name);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						

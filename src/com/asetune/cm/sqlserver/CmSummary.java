@@ -953,6 +953,29 @@ extends CountersModel
 		}
 	}
 	
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+//		if (GRAPH_NAME_AA_CPU                  .equals(name)) return true;
+//		if (GRAPH_NAME_BLOCKING_LOCKS          .equals(name)) return true;
+//		if (GRAPH_NAME_CONNECTION              .equals(name)) return true;
+//		if (GRAPH_NAME_CONNECTION_RATE         .equals(name)) return true;
+//		if (GRAPH_NAME_AA_DISK_READ_WRITE      .equals(name)) return true;
+//		if (GRAPH_NAME_AA_NW_PACKET            .equals(name)) return true;
+//		if (GRAPH_NAME_OLDEST_TRAN_IN_SEC      .equals(name)) return true;
+//		if (GRAPH_NAME_MAX_SQL_EXEC_TIME_IN_SEC.equals(name)) return true;
+		if (GRAPH_NAME_TEMPDB_SPID_USAGE       .equals(name)) return true;  // Used by CmTempdbSpidUsage
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
 	
 	//--------------------------------------------------------------------
 	// Alarm Handling

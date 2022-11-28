@@ -231,8 +231,8 @@ extends CountersModel
 			-1);   // minimum height
 
 		addTrendGraph(GRAPH_NAME_LOGSIZE_LEFT_MB,
-			"DB Transaction Log Space left in MB",        // Menu CheckBox text
-			"DB Transaction Log Space left to use in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"DB Transaction Log Space Available in MB",        // Menu CheckBox text
+			"DB Transaction Log Space Available in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			null, 
 			LabelType.Dynamic,
@@ -243,8 +243,8 @@ extends CountersModel
 			-1);   // minimum height
 
 		addTrendGraph(GRAPH_NAME_LOGSIZE_USED_MB,
-			"DB Transaction Log Space used in MB",        // Menu CheckBox text
-			"DB Transaction Log Space used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"DB Transaction Log Space Used in MB",        // Menu CheckBox text
+			"DB Transaction Log Space Used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			null, 
 			LabelType.Dynamic,
@@ -255,8 +255,8 @@ extends CountersModel
 			-1);   // minimum height
 
 		addTrendGraph(GRAPH_NAME_LOGSIZE_USED_PCT,
-			"DB Transaction Log Space used in PCT",     // Menu CheckBox text
-			"DB Transaction Log Space used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"DB Transaction Log Space Used in PCT",     // Menu CheckBox text
+			"DB Transaction Log Space Used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			null, 
 			LabelType.Dynamic,
@@ -267,8 +267,8 @@ extends CountersModel
 			-1);   // minimum height
 
 		addTrendGraph(GRAPH_NAME_DATASIZE_LEFT_MB,
-			"DB Data Space left in MB",        // Menu CheckBox text
-			"DB Data Space left to use in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"DB Data Space Available in MB",        // Menu CheckBox text
+			"DB Data Space Available in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			null, 
 			LabelType.Dynamic,
@@ -279,8 +279,8 @@ extends CountersModel
 			-1);   // minimum height
 
 		addTrendGraph(GRAPH_NAME_DATASIZE_USED_MB,
-			"DB Data Space used in MB",     // Menu CheckBox text
-			"DB Data Space used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"DB Data Space Used in MB",     // Menu CheckBox text
+			"DB Data Space Used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			null, 
 			LabelType.Dynamic,
@@ -291,8 +291,8 @@ extends CountersModel
 			-1);   // minimum height
 
 		addTrendGraph(GRAPH_NAME_DATASIZE_USED_PCT,
-			"DB Data Space used in PCT",     // Menu CheckBox text
-			"DB Data Space used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"DB Data Space Used in PCT",     // Menu CheckBox text
+			"DB Data Space Used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			null, 
 			LabelType.Dynamic,
@@ -314,8 +314,8 @@ extends CountersModel
 //			-1);   // minimum height
 
 		addTrendGraph(GRAPH_NAME_TEMPDB_USED_MB,
-			"TempDB Space used in MB",     // Menu CheckBox text
-			"TempDB Space used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"TempDB Space Used in MB",     // Menu CheckBox text
+			"TempDB Space Used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			null, 
 			LabelType.Dynamic,
@@ -324,78 +324,6 @@ extends CountersModel
 			false, // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
-
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//			tg = new TrendGraph(GRAPH_NAME_LOGSEMAPHORE_CONT,
-//				"DB Transaction Log Semaphore Contention",            // Menu CheckBox text
-//				"DB Transaction Log Semaphore Contention in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_LOGSIZE_LEFT_MB,
-//				"DB Transaction Log Space left in MB",        // Menu CheckBox text
-//				"DB Transaction Log Space left to use in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_LOGSIZE_USED_PCT,
-//				"DB Transaction Log Space used in PCT",     // Menu CheckBox text
-//				"DB Transaction Log Space used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				true,  // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_DATASIZE_LEFT_MB,
-//				"DB Data Space left in MB",        // Menu CheckBox text
-//				"DB Data Space left to use in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_DATASIZE_USED_PCT,
-//				"DB Data Space used in PCT",     // Menu CheckBox text
-//				"DB Data Space used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				true,  // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-////			tg = new TrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
-////				"Oldest Open Transaction in any Databases",     // Menu CheckBox text
-////				"Oldest Open Transaction in any Databases, in Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-////				openTranLabels, 
-////				false, // is Percent Graph
-////				this, 
-////				false, // visible at start
-////				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-////				-1);   // minimum height
-////			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 	@Override

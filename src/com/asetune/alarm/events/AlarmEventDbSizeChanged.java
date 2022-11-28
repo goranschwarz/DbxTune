@@ -54,9 +54,9 @@ extends AlarmEvent
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
 				"Database Size changed for dbname '" + dbname + "' in Server '" + cm.getServerName() + "'. "
-						+ "dbSizeInMb"   + "[abs=" + dbSizeInMbAbs   + ",diff=" + dbSizeInMbDiff   + "}, "
-						+ "dataSizeInMb" + "[abs=" + dataSizeInMbAbs + ",diff=" + dataSizeInMbDiff + "}, "
-						+ "logSizeInMb"  + "[abs=" + logSizeInMbAbs  + ",diff=" + logSizeInMbDiff  + "}. "
+						+ "dbSizeInMb"   + "[abs=" + dbSizeInMbAbs   + ",diff=" + dbSizeInMbDiff   + "], "
+						+ "dataSizeInMb" + "[abs=" + dataSizeInMbAbs + ",diff=" + dataSizeInMbDiff + "], "
+						+ "logSizeInMb"  + "[abs=" + logSizeInMbAbs  + ",diff=" + logSizeInMbDiff  + "]. "
 						+ "(threshold=" + threshold + ")",
 				threshold
 				);
@@ -66,8 +66,8 @@ extends AlarmEvent
 
 		// Set the raw data carier
 		setData("dbname=" + dbname + ", "
-				+ "dbSizeInMb"   + "[abs=" + dbSizeInMbAbs   + ",diff=" + dbSizeInMbDiff   + "}, "
-				+ "dataSizeInMb" + "[abs=" + dataSizeInMbAbs + ",diff=" + dataSizeInMbDiff + "}, "
-				+ "logSizeInMb"  + "[abs=" + logSizeInMbAbs  + ",diff=" + logSizeInMbDiff  + "}.");
+				+ "dbSizeInMb"   + "[abs=" + dbSizeInMbAbs   + ",diff=" + dbSizeInMbDiff   + "], "
+				+ "dataSizeInMb" + "[abs=" + dataSizeInMbAbs + ",diff=" + dataSizeInMbDiff + "], "
+				+ "logSizeInMb"  + "[abs=" + logSizeInMbAbs  + ",diff=" + logSizeInMbDiff  + "].");
 	}
 }

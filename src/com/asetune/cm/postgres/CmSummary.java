@@ -556,6 +556,28 @@ extends CountersModel
 		}
 	}
 
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+//		if (GRAPH_NAME_MAX_XID               .equals(name)) return true;
+//		if (GRAPH_NAME_OLDEST_XACT_IN_SEC    .equals(name)) return true;
+//		if (GRAPH_NAME_OLDEST_STMNT_IN_SEC   .equals(name)) return true;
+//		if (GRAPH_NAME_OLDEST_STATE_IN_SEC   .equals(name)) return true;
+		if (GRAPH_NAME_OLDEST_COMBO_IN_SEC   .equals(name)) return true;
+//		if (GRAPH_NAME_BLOCKING_LOCK_COUNT   .equals(name)) return true;
+//		if (GRAPH_NAME_BLOCKING_MAX_WAIT_TIME.equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+	
 
 	//----------------------------------------------------------------
 	// ALARMS

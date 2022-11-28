@@ -69,7 +69,9 @@ import com.asetune.cm.SortOptions.DataSortSensitivity;
 import com.asetune.cm.SortOptions.SortOrder;
 import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.SqlProgressDialog;
+import com.asetune.sql.conn.AseConnection;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.TdsConnection;
 import com.asetune.sql.pipe.PipeCommand;
 import com.asetune.sql.pipe.PipeCommandConvert;
 import com.asetune.sql.pipe.PipeCommandGrep;
@@ -291,12 +293,15 @@ public class ResultSetTableModel
 //			if (conn != null && conn instanceof DbxConnection)
 //				dbxConn = (DbxConnection) conn;
 //		}
+
+		Connection rsStmntConn = null;
 		if (rs.getStatement() != null)
 		{
+			rsStmntConn = rs.getStatement().getConnection();
 			try
 			{
-				Connection conn = rs.getStatement().getConnection();
-				_dbmsProductName = conn.getMetaData().getDatabaseProductName();
+				//Connection conn = rs.getStatement().getConnection();
+				_dbmsProductName = rsStmntConn.getMetaData().getDatabaseProductName();
 			}
 			catch (SQLException ignore) {}
 		}
@@ -342,7 +347,7 @@ public class ResultSetTableModel
 			String columnName        = rsmd.getColumnName(c);
 			String columnClassName   = rsmd.getColumnClassName(c);
 //			String columnTypeNameGen = dbxConn == null ? getColumnTypeName(rsmd, c) : dbxConn.getColumnTypeName(rsmd, c);
-			String columnTypeNameGen = getColumnTypeName(_dbmsProductName, rsmd, c);
+			String columnTypeNameGen = getColumnTypeName(rsStmntConn, _dbmsProductName, rsmd, c);
 			
 			String columnTypeNameRaw = "-unknown-";
 			try {  columnTypeNameRaw = rsmd.getColumnTypeName(c); } catch(SQLException ignore) {}; // sometimes this caused SQLException, especially for 'compute by' 
@@ -990,9 +995,13 @@ public class ResultSetTableModel
 
 	public static String getColumnTypeName(ResultSetMetaData rsmd, int col)
 	{
-		return getColumnTypeName(null, rsmd, col);
+		return getColumnTypeName(null, null, rsmd, col);
 	}
 	public static String getColumnTypeName(String dbmsProductName, ResultSetMetaData rsmd, int col)
+	{
+		return getColumnTypeName(null, rsmd, col);
+	}
+	private static String getColumnTypeName(Connection rsStmntConn, String dbmsProductName, ResultSetMetaData rsmd, int col)
 	{
 		String columnTypeName;
 		// in RepServer, the getColumnTypeName() throws exception: JZ0SJ ... wants metadata 
@@ -1009,6 +1018,17 @@ public class ResultSetTableModel
 				//---------------------------------
 				if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE))
 				{
+					// This various from 1 and 3 depending on the ASE Charset, it's detected via @@ncharsize
+					int ncharsize = 1;
+
+					// The below dosn't seem to work, since it's a SybConnection and not a specialized: AseConnection
+					// So 'ncharsize' will be hard coded to 1, which will only affect NCHAR/NVARCHAR columns if the ASE CharSet is utf8
+					// The result will be that NCHAR and NVARCHAR will be 3 times larger if the ASE CharSet is utf8... lets solve this in the future
+					//if (rsStmntConn != null && rsStmntConn instanceof AseConnection)
+					//{
+					//	ncharsize = ((AseConnection)rsStmntConn).getNcharSize();
+					//}
+					
 					// The below content was investigated using, SQL Statement in: asetune.sql.ddl.DbmsDdlResolverTds
 					
 					//-----------------------------------------------------
@@ -1030,13 +1050,13 @@ public class ResultSetTableModel
 					//-----------------------------------------------------
 					if (columnType == java.sql.Types.NCHAR)
 					{
-						int length = rsmd.getColumnDisplaySize(col) / 3;
+						int length = rsmd.getColumnDisplaySize(col) / ncharsize;
 						columnTypeName = "nchar("+length+")";
 					}
 					//-----------------------------------------------------
-					if (columnType == java.sql.Types.NCHAR || columnType == java.sql.Types.NVARCHAR)
+					if (columnType == java.sql.Types.NVARCHAR)
 					{
-						int length = rsmd.getColumnDisplaySize(col) / 3;
+						int length = rsmd.getColumnDisplaySize(col) / ncharsize;
 						columnTypeName = "nvarchar("+length+")";
 					}
 

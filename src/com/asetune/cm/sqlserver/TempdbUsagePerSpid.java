@@ -280,6 +280,123 @@ public class TempdbUsagePerSpid
 		}
 	}
 
+
+	//--------------------------------------------------------------------
+	//-- Some methods for reporting (or create HTML Table on content)
+	//--------------------------------------------------------------------
+	/**
+	 * Get html table with the following content
+	 * <ul>
+	 *    <li>SPID</li>
+	 *    <li>Task/Worker Count</li>
+	 *    <li>Total Space Used In Mb</li>
+	 *    <li>User Object Space Used In Mb</li>
+	 *    <li>Internal Object Space Used In Mb</li>
+	 * </ul>
+	 * 
+	 * Using: <br>
+	 *  - borders = true<br>
+	 *  - striped Rows = false<br>
+	 *  - addOuterHtmlTags = false<br>
+	 * 
+	 * @param thresholdInMb           Only print SPID's with 'Total Space Used In Mb' above this value
+	 * @param borders                 Should the table have borders
+	 * @param stripedRows             Stripe the rows
+	 * @param addOuterHtmlTags        add outer begin/end <code><b>&lt;html&gt;</b> html-table-tags <b>&lt;/html&gt;</b></code> tags
+	 * 
+	 * @return A HTML Table (if no SPID's is above the threshold, an empty string "", will be returned)
+	 */
+	public String toHtmlTableString(double thresholdInMb)
+	{
+		return toHtmlTableString(thresholdInMb, true, false, false);
+	}
+
+	/**
+	 * Get html table with the following content
+	 * <ul>
+	 *    <li>SPID</li>
+	 *    <li>Task/Worker Count</li>
+	 *    <li>Total Space Used In Mb</li>
+	 *    <li>User Object Space Used In Mb</li>
+	 *    <li>Internal Object Space Used In Mb</li>
+	 * </ul>
+	 * 
+	 * @param thresholdInMb           Only print SPID's with 'Total Space Used In Mb' above this value
+	 * @param borders                 Should the table have borders
+	 * @param stripedRows             Stripe the rows
+	 * @param addOuterHtmlTags        add outer begin/end <code><b>&lt;html&gt;</b> html-table-tags <b>&lt;/html&gt;</b></code> tags
+	 * 
+	 * @return A HTML Table (if no SPID's is above the threshold, an empty string "", will be returned)
+	 */
+	public String toHtmlTableString(double thresholdInMb, boolean borders, boolean stripedRows, boolean addOuterHtmlTags)
+	{
+		if (_infoMap   == null) return "";
+		if (_infoMap.isEmpty()) return "";
+		
+		StringBuilder sb = new StringBuilder(1024);
+
+		if (addOuterHtmlTags)
+			sb.append("<html>\n");
+
+		String border      = borders ? " border=1"      : " border=0";
+		String cellPadding = borders ? ""               : " cellpadding=1";
+		String cellSpacing = borders ? ""               : " cellspacing=0";
+
+		String stripeColor = "#f2f2f2"; // Light gray;
+
+		int rowCount = 0;
+
+		// Table start & header
+		sb.append("The below table contains SPID's with tempdb usage above ").append(thresholdInMb).append(" MB.<br>\n");
+		
+		
+		// Table start & header
+		sb.append("<table").append(border).append(cellPadding).append(cellSpacing).append(">\n");
+
+		sb.append("<thead>\n");
+		sb.append("<tr>\n");
+		sb.append("  <th nowrap><b>SPID</b></th>\n");
+		sb.append("  <th nowrap><b>Task/Worker Count</b></th>\n");
+		sb.append("  <th nowrap><b>Total Space Used In Mb</b></th>\n");
+		sb.append("  <th nowrap><b>User Object Space Used In Mb</b></th>\n");
+		sb.append("  <th nowrap><b>Internal Object Space Used In Mb</b></th>\n");
+		sb.append("</tr>\n");
+		sb.append("</thead>\n");
+		
+		sb.append("<tbody>\n");
+		for (TempDbSpaceInfo entry : _infoMap.values())
+		{
+			// Skip rows if below threshold
+			if (entry.getTotalSpaceUsedInMb().doubleValue() < thresholdInMb)
+				continue;
+			
+			rowCount++;
+
+			String stripeTag = "";
+			if (stripedRows && ((rowCount % 2) == 0) )
+				stripeTag = " bgcolor='" + stripeColor + "'";
+
+			sb.append("<tr").append(stripeTag).append(">\n");
+			sb.append("  <td nowrap>").append( entry.getSessionId()                   ).append("</td>\n");
+			sb.append("  <td nowrap>").append( entry.getTaskCount()                   ).append("</td>\n");
+			sb.append("  <td nowrap>").append( entry.getTotalSpaceUsedInMb()          ).append("</td>\n");
+			sb.append("  <td nowrap>").append( entry.getUserObjectSpaceUsedInMb()     ).append("</td>\n");
+			sb.append("  <td nowrap>").append( entry.getInternalObjectSpaceUsedInMb() ).append("</td>\n");
+			sb.append("</tr>\n");
+		}
+		sb.append("</tbody>\n");
+
+		sb.append("</table>\n");
+
+		if (addOuterHtmlTags)
+			sb.append("</html>\n");
+
+		// No rows: return empty string
+		if (rowCount == 0)
+			return "";
+		
+		return sb.toString();
+	}
 	
 	
 	//--------------------------------------------------------------------

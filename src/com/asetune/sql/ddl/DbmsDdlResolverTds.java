@@ -285,7 +285,17 @@ extends DbmsDdlResolverAbstract
 	@Override
 	public void dbmsVendorDataTypeResolverForSource(Entry entry)
 	{
-		
+		// This various from 1 and 3 depending on the ASE Charset, it's detected via @@ncharsize
+		int ncharsize = 1;
+
+		// The below dosn't seem to work, since getConnection() mosltly is NULL
+		// So 'ncharsize' will be hard coded to 1, which will only affect NCHAR/NVARCHAR columns if the ASE CharSet is utf8
+		// The result will be that NCHAR and NVARCHAR will be 3 times larger if the ASE CharSet is utf8... lets solve this in the future
+		//if (getConnection() != null && getConnection() instanceof AseConnection)
+		//{
+		//	ncharsize = ((AseConnection)getConnection()).getNcharSize();
+		//}
+
 		//-----------------------------------------------------------------------------
 		// Adjustments for: Character
 		// Note: char(256) and above will be handled as "varchar", I can't figure out how to detect  
@@ -296,7 +306,7 @@ extends DbmsDdlResolverAbstract
 			if (Types.NCHAR == entry.getColumnType())
 			{
 				entry.setColumnTypeName("nchar");
-				entry.setPrecision( entry.getColumnDisplaySize() / 3 );
+				entry.setPrecision( entry.getColumnDisplaySize() / ncharsize );
 			}
 			else
 			{
@@ -309,7 +319,7 @@ extends DbmsDdlResolverAbstract
 			if (Types.NVARCHAR == entry.getColumnType())
 			{
 				entry.setColumnTypeName("nvarchar");
-				entry.setPrecision( entry.getColumnDisplaySize() / 3 );
+				entry.setPrecision( entry.getColumnDisplaySize() / ncharsize );
 			}
 			else
 			{

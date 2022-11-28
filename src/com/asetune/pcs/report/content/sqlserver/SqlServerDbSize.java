@@ -148,9 +148,9 @@ extends SqlServerAbstract
 		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Transaction Log and Data Size Usage of each Database during the day<br>\n"
 		                                                  + "FIXME: Presented as: \n"
 		                                                  + "<ul> \n"
-		                                                  + "  <li>FIXME: <b> Space Used in Percent   </b> - When this gets <b>high</b> we could be in trouble. But the below 'Space Left to use' is a better indicator.</li> \n"
-		                                                  + "  <li>FIXME: <b> Space Left to use in MB </b> - When This gets <b>low</b> we could be in trouble. No space = No more modifications. </li> \n"
-		                                                  + "  <li>FIXME: <b> Space used in MB        </b> - Just an indicator of how much MB we are actually using for the different databases.</li> \n"
+		                                                  + "  <li>FIXME: <b> Space Used in Percent </b> - When this gets <b>high</b> we could be in trouble. But the below 'Space Available' is a better indicator.</li> \n"
+		                                                  + "  <li>FIXME: <b> Space Available in MB </b> - When This gets <b>low</b> we could be in trouble. No space = No more modifications. </li> \n"
+		                                                  + "  <li>FIXME: <b> Space Used in MB      </b> - Just an indicator of how much MB we are actually using for the different databases.</li> \n"
 		                                                  + "</ul> \n",
 				"CmDatabases_DbSizeMb",
 
@@ -267,19 +267,19 @@ extends SqlServerAbstract
 		
 		_CmDatabases_DbSizeMb               = createTsLineChart(conn, "CmDatabases", "DbSizeMb"              , -1,  null, "Database Size in MB (Server->Databases)");
 
-		_CmDatabases_DbDataSizeUsedPctGraph = createTsLineChart(conn, "CmDatabases", "DbDataSizeUsedPctGraph", 100, null, "DB Data Space used in Percent (Server->Databases)");
-		_CmDatabases_DbDataSizeLeftMbGraph  = createTsLineChart(conn, "CmDatabases", "DbDataSizeLeftMbGraph" , -1,  null, "DB Data Space left to use in MB (Server->Databases)");
-		_CmDatabases_DbDataSizeUsedMbGraph  = createTsLineChart(conn, "CmDatabases", "DbDataSizeUsedMbGraph" , -1,  null, "DB Data Space used in MB (Server->Databases)");
+		_CmDatabases_DbDataSizeUsedPctGraph = createTsLineChart(conn, "CmDatabases", "DbDataSizeUsedPctGraph", 100, null, "DB Data Space Used in Percent (Server->Databases)");
+		_CmDatabases_DbDataSizeLeftMbGraph  = createTsLineChart(conn, "CmDatabases", "DbDataSizeLeftMbGraph" , -1,  null, "DB Data Space Available in MB (Server->Databases)");
+		_CmDatabases_DbDataSizeUsedMbGraph  = createTsLineChart(conn, "CmDatabases", "DbDataSizeUsedMbGraph" , -1,  null, "DB Data Space Used in MB (Server->Databases)");
 
-		_CmDatabases_DbLogSizeUsedPctGraph  = createTsLineChart(conn, "CmDatabases", "DbLogSizeUsedPctGraph" , 100, null, "DB Transaction Log Space used in Percent (Server->Databases)");
-		_CmDatabases_DbLogSizeLeftMbGraph   = createTsLineChart(conn, "CmDatabases", "DbLogSizeLeftMbGraph"  , -1,  null, "DB Transaction Log Space left to use in MB (Server->Databases)");
-		_CmDatabases_DbLogSizeUsedMbGraph   = createTsLineChart(conn, "CmDatabases", "DbLogSizeUsedMbGraph"  , -1,  null, "DB Transaction Log Space used in MB (Server->Databases)");
+		_CmDatabases_DbLogSizeUsedPctGraph  = createTsLineChart(conn, "CmDatabases", "DbLogSizeUsedPctGraph" , 100, null, "DB Transaction Log Space Used in Percent (Server->Databases)");
+		_CmDatabases_DbLogSizeLeftMbGraph   = createTsLineChart(conn, "CmDatabases", "DbLogSizeLeftMbGraph"  , -1,  null, "DB Transaction Log Space Available in MB (Server->Databases)");
+		_CmDatabases_DbLogSizeUsedMbGraph   = createTsLineChart(conn, "CmDatabases", "DbLogSizeUsedMbGraph"  , -1,  null, "DB Transaction Log Space Used in MB (Server->Databases)");
 
 		_CmDatabases_TempdbUsedMbGraph      = createTsLineChart(conn, "CmDatabases", "TempdbUsedMbGraph"     , -1,  null, "TempDB Space used in MB (Server->Databases)");
 
-		_CmDatabases_OsDiskUsedPct          = createTsLineChart(conn, "CmDatabases", "OsDiskUsedPct"         , 100, null, "DB OS Disk Space used in Percent (Server->Databases)");
-		_CmDatabases_OsDiskFreeMb           = createTsLineChart(conn, "CmDatabases", "OsDiskFreeMb"          , -1,  null, "DB OS Disk Space free/left in MB (Server->Databases)");
-		_CmDatabases_OsDiskUsedMb           = createTsLineChart(conn, "CmDatabases", "OsDiskUsedMb"          , -1,  null, "DB OS Disk Space used in MB (Server->Databases)");
+		_CmDatabases_OsDiskUsedPct          = createTsLineChart(conn, "CmDatabases", "OsDiskUsedPct"         , 100, null, "DB OS Disk Space Used in Percent (Server->Databases)");
+		_CmDatabases_OsDiskFreeMb           = createTsLineChart(conn, "CmDatabases", "OsDiskFreeMb"          , -1,  null, "DB OS Disk Space Available in MB (Server->Databases)");
+		_CmDatabases_OsDiskUsedMb           = createTsLineChart(conn, "CmDatabases", "OsDiskUsedMb"          , -1,  null, "DB OS Disk Space Used in MB (Server->Databases)");
 	}
 
 	private IReportChart _CmDatabases_DbSizeMb;

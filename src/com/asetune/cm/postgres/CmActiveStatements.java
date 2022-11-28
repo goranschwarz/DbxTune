@@ -617,6 +617,11 @@ extends CountersModel
 							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 													
+							// Get a small graph (from CmSummary) about the usage for the last hour
+							CountersModel cmSummary = getCounterController().getCmByName(CmSummary.CM_NAME);
+							extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_OLDEST_COMBO_IN_SEC);
+
+							// create the alarm
 							AlarmEvent ae = new AlarmEventLongRunningStatement(cm, threshold, StatementExecInSec, StatementStartTime, DBName, Login, Command, tran_name);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
@@ -682,9 +687,11 @@ extends CountersModel
 							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 
-//							public AlarmEventLongRunningTransaction(CountersModel cm, Number threshold, Number oldestTranInSeconds, Number spid, String dbname, String tranName, String tranCmd, String waitType, String loginName, Double tempdbUsageMb)
-//							public AlarmEventLongRunningTransaction(CountersModel cm, Number threshold, String dbname, Number oldestTranInSeconds, String oldestTranName)
-							
+							// Get a small graph (from CmSummary) about the usage for the last hour
+							CountersModel cmSummary = getCounterController().getCmByName(CmSummary.CM_NAME);
+							extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_OLDEST_COMBO_IN_SEC);
+
+							// create the alarm
 							AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, DBName, xactTimeInSec, tran_name);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
