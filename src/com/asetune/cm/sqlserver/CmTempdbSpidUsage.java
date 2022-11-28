@@ -37,7 +37,6 @@ import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
-import com.asetune.cm.ase.CmSpMonitorConfig;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.gui.CmTempdbSpidUsagePanel;
 import com.asetune.gui.MainFrame;
