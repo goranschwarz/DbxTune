@@ -31,10 +31,10 @@ public class Version
 {
 	public static       String PRODUCT_STRING     = "AseTune";      // Do not have spaces etc in this one
 //	public static final String VERSION_STRING     = "4.1.0";        // Use this for public releases
-	public static final String VERSION_STRING     = "4.1.0.106.dev"; // Use this for early releases
-	public static final String BUILD_STRING       = "2022-11-29/build 436";
+	public static final String VERSION_STRING     = "4.1.0.107.dev"; // Use this for early releases
+	public static final String BUILD_STRING       = "2022-12-02/build 437";
 
-	public static final String GIT_DATE_STRING    = "2022-11-29";  // try to update this
+	public static final String GIT_DATE_STRING    = "2022-12-02";  // try to update this
 	public static final String GIT_REVISION_STR   = "502";         // used by CheckForUpdates --- update this on every check-in (emulates Subversion "Revision:" tag)
 
 	public static final boolean IS_DEVELOPMENT_VERSION  = true; // if true: date expiration will be checked on startup

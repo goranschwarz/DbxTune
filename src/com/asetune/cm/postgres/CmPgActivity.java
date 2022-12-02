@@ -44,6 +44,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.postgres.gui.CmPgActivityPanel;
+import com.asetune.config.dict.PostgresWaitTypeDictionary;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
@@ -262,10 +263,16 @@ extends CountersModel
 				+ "select \n"
 				+ "     datid \n"
 				+ "    ,datname \n"
-				+ "    ,pid \n"
 				+ leader_pid
+				+ "    ,pid \n"
+				+ "    ,CAST(state            as varchar(128)) AS state \n"
+				+ waiting
+				+ wait_event_type
+				+ wait_event
+
 				+ im_blocked_by_pids
 				+ im_blocking_other_pids
+
 				+ "    ,usesysid \n"
 				+ "    ,usename \n"
 				+ "    ,CAST(application_name as varchar(128)) AS application_name \n"
@@ -300,10 +307,7 @@ extends CountersModel
 				+ "    ,xact_start \n"
 				+ "    ,query_start \n"
 				+ "    ,state_change \n"
-				+ waiting
-				+ wait_event_type
-				+ wait_event
-				+ "    ,CAST(state            as varchar(128)) AS state \n"
+
 				+ backend_xid
 				+ backend_xmin
 				+ backend_type
@@ -386,6 +390,15 @@ extends CountersModel
 		{
 			return cellValue == null ? null : toHtmlString(cellValue.toString());
 		}
+
+		if ("wait_event_type".equals(colName))
+		{
+			return cellValue == null ? null : PostgresWaitTypeDictionary.getWaitEventTypeDescription(cellValue.toString());
+		}
+		if ("wait_event".equals(colName))
+		{
+			return cellValue == null ? null : PostgresWaitTypeDictionary.getWaitEventDescription(cellValue.toString());
+		}		
 		
 		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
 	}

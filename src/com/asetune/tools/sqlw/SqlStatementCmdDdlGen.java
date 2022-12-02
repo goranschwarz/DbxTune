@@ -21,6 +21,8 @@
 package com.asetune.tools.sqlw;
 
 import java.awt.Component;
+import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -32,6 +34,7 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.SqlTextDialog;
@@ -63,10 +66,12 @@ extends SqlStatementAbstract
 		String  _viewname        = null;
 		String  _procname        = null;
 		
-		boolean _useJdbcMetaData = false;
-		boolean _openWindow      = false;
-		String  _extraParams     = null;
-		String  _rawParams       = null;
+		boolean _useJdbcMetaData     = false;
+		boolean _openWindow          = false;
+		String  _saveToFile          = null;
+		boolean _saveToFileOverwrite = false;
+		String  _extraParams         = null;
+		String  _rawParams           = null;
 	}
 	private CmdParams _params = new CmdParams();
 	
@@ -95,7 +100,7 @@ extends SqlStatementAbstract
 	{
 		_originCmd = input;
 //		String params = input.substring(input.indexOf(' ') + 1).trim();
-		String params = input.replace("\\ddlgen", "").trim();
+		String params = input.replaceFirst("\\ddlgen", "").trim();
 
 		_args = StringUtil.translateCommandline(params, false);
 
@@ -109,10 +114,12 @@ extends SqlStatementAbstract
 			if (cmdLine.hasOption('v')) _params._viewname    = cmdLine.getOptionValue('v');
 			if (cmdLine.hasOption('p')) _params._procname    = cmdLine.getOptionValue('p');
 
-			if (cmdLine.hasOption('M')) _params._useJdbcMetaData = true;
-			if (cmdLine.hasOption('w')) _params._openWindow      = true;
-			if (cmdLine.hasOption('x')) _params._extraParams     = cmdLine.getOptionValue('x');
-			if (cmdLine.hasOption('X')) _params._rawParams       = cmdLine.getOptionValue('X');
+			if (cmdLine.hasOption('M')) _params._useJdbcMetaData     = true;
+			if (cmdLine.hasOption('w')) _params._openWindow          = true;
+			if (cmdLine.hasOption('o')) _params._saveToFile          = cmdLine.getOptionValue('o');
+			if (cmdLine.hasOption('O')) _params._saveToFileOverwrite = true;
+			if (cmdLine.hasOption('x')) _params._extraParams         = cmdLine.getOptionValue('x');
+			if (cmdLine.hasOption('X')) _params._rawParams           = cmdLine.getOptionValue('X');
 
 			if (cmdLine.hasOption('h'))
 				printHelp(null, "You wanted help...");
@@ -157,6 +164,8 @@ extends SqlStatementAbstract
 		options.addOption( "x", "extraParams",      true,  "fixme" );
 		options.addOption( "X", "rawParams",        true,  "fixme" );
 		options.addOption( "w", "openWindow",       false, "fixme" );
+		options.addOption( "o", "outputFile",       true,  "fixme" );
+		options.addOption( "O", "overwrite",        false, "fixme" );
 		options.addOption( "h", "help",             false, "fixme" );
 
 
@@ -217,6 +226,8 @@ extends SqlStatementAbstract
 		sb.append("                               Note: in -X you can use some variables/templates\n");
 		sb.append("                               Example: -X '-U${username} -P${password} -S${hostport} -TC -N%'\n");
 		sb.append("  -w,--openWindow              Open a Window with the DDL. Nomally it goes to output window.\n");
+		sb.append("  -o,--outputFile              Save to this file. Nomally it goes to output window.\n");
+		sb.append("  -O,--overwrite               If the 'outputFile' exists, overwrite the file.\n");
 		sb.append("  -h,--help                    Print this text.\n");
 		sb.append("  \n");
 
@@ -270,15 +281,41 @@ extends SqlStatementAbstract
 			{
 				_resultCompList.add(new JAseMessage(ddlgen.getUsedCommand(), _originCmd));
 
-				if (_params._openWindow)
+				// Save the output to file
+				if (StringUtil.hasValue(_params._saveToFile))
 				{
-    				SqlTextDialog dialog = new SqlTextDialog(null, retStr);
-    				dialog.setVisible(true);
+					File f = new File(_params._saveToFile);
+
+					// If file exists and overwrite is enabled, delete the file.
+					if (f.exists() && _params._saveToFileOverwrite)
+					{
+						f.delete();
+						_resultCompList.add(new JAseMessage("Deleting the File '" + f.getAbsolutePath() + "'.", _originCmd));
+					}
+
+					// Write the file
+					if (f.exists())
+					{
+						_resultCompList.add(new JAseMessage("ERROR: File '" + f.getAbsolutePath() + "' already exists, skipping write.", _originCmd));
+					}
+					else
+					{
+						FileUtils.write(f, retStr, StandardCharsets.UTF_8);
+						_resultCompList.add(new JAseMessage("Content written to File '" + f.getAbsolutePath() + "'.", _originCmd));
+					}
 				}
 				else
 				{
-					JDdlGenOutput output = new JDdlGenOutput(ddlgen.getUsedCommand(), retStr);
-					_resultCompList.add(output);
+					if (_params._openWindow)
+					{
+	    				SqlTextDialog dialog = new SqlTextDialog(null, retStr);
+	    				dialog.setVisible(true);
+					}
+					else
+					{
+						JDdlGenOutput output = new JDdlGenOutput(ddlgen.getUsedCommand(), retStr);
+						_resultCompList.add(output);
+					}
 				}
 			}
 

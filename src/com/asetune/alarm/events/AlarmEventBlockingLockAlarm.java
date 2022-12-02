@@ -71,7 +71,7 @@ extends AlarmEvent
 	}
 
 	/** used by CmActiveStatements */
-	public AlarmEventBlockingLockAlarm(CountersModel cm, Number threshold, int spid, Number blockingOthersMaxTimeInSec, String blockingOtherSpids, Number blockCount)
+	public AlarmEventBlockingLockAlarm(CountersModel cm, Number threshold, long spid, Number blockingOthersMaxTimeInSec, String blockingOtherSpids, Number blockCount)
 	{
 		super(
 				Version.getAppName(), // serviceType

@@ -158,6 +158,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>The HTML Report -- Sections can now be collapsed</LI>
 				<LI>The HTML Report -- Chart.JS and Sparkline initialization can now be stopped with a button.</LI>
 				<LI>Mail Sender -- Of failure -- Try to send a "simpler" mail about the issue </LI>
+				<LI>If mail send fail, try to send another mail with NO attachment (but only if Eception looks like a 'message file too big'</LI>
 			</UL>
 		</LI>
 
@@ -211,6 +212,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<li>Bugfix: CmSummary -- Fixed typo 'sum(DbxConnections)' to 'sum(Connections)'</li>
 		<li>Bugfix: Configuration sanity check for 'dsync' and 'directio'. Only when it's a filesystem. (skipping RAW/BLOCK devices)</li>
 		<li>Rewrote DbmsDdlResolverTds.dbmsVendorDataTypeResolverForSource() to better conform with the Sybase datatypes in ResultSetMetaData, which does NOT follow the "standard"</li>
+		<li>For alarm AlarmEventClientErrorMsg, if error 1105 -- adding a table with all databases: DBName, DbSizeInMb, LogSizeInMb, LogSizeFreeInMb, LogSizeUsedInMb, LogSizeUsedPct, TransactionLogFull, DataSizeInMb, DataSizeFreeInMb, DataSizeUsedInMb, DataSizeUsedPct, DBOptions</li>
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
@@ -518,6 +520,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added Alarm: <b>AlarmEventPerfCounter               </b> -- may be used for all PerfCounter Alarms (the Severity is passed by the CM depending on what it think is appropriate)</LI>
 		<LI>Added Alarm: <b>AlarmEventTempdbSpidUsage           </b> -- When a SPID uses a lot of tempdb space</LI>
 		<LI>Added Alarm: <b>AlarmEventDbSizeChanged             </b> -- When database gets bigger, we want a INFO alarm about this!</LI>
+		<LI>Added Alarm: <b>AlarmEventCertificateExpiry         </b> -- If any server certificates is about to expire</LI>
 
 		<LI>Added CM: <b>CmIndexMissing </b> - Take information from 'dm_db_missing_index_*' and display them, in a prioritized way... NOTE: as always take the recommendations with 'a grain of salt'</LI>
 		<LI>Added CM: <b>CmIndexUnused  </b> - Unused Indexes - ordered by 'user_updates desc' so the undex with most updates will be "first"</LI>
@@ -536,6 +539,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>DBMS Configuration </b> - Added new checks/issues for 'optimize for ad hoc workloads', 'max server memory (MB)', 'remote admin connections', 'cost threshold for parallelism'</LI>
 		<LI><b>DBMS Configuration </b> - Added tab for tempdb. Also with checking issues for 'temdb files &lt; cores', 'datafiles_equal_size', 'datafiles_equal_grow_size'</LI>
 		<LI><b>DBMS Configuration </b> - Added SuspectPages, so we can get this in a "static" way also. Also DbmsConfigIssue if *anything* was found (to detect older/existing SuspectPages errors)</LI>
+		<LI><b>DBMS Configuration </b> - Added SqlServerCertificates, to view what certificates the SQL Server has</LI>
+		<LI><b>DBMS Configuration </b> - Added SqlServerAgentJobs, to view some info about SQL Agent Jobs</LI>
 
 		<LI><b>CmActiveStatements </b> - For blocking locks (marked as red background) - only the root blocker(s) are marked. logic (ImBlockingOtherSessionIds!="" and ImBlockedBySessionId=0)</LI>
 		<LI><b>CmActiveStatements </b> - added column 'dop - Degree Of Parallelism' if version is above 2016</LI>
@@ -617,6 +622,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmMemoryClearks    </b> - Added columns 'name', 'virtual_memory_reserved_MB', 'virtual_memory_committed_MB', 'awe_allocated_MB', 'shared_memory_reserved_MB', 'shared_memory_committed_MB'. </LI>
 		<LI><b>CmMemoryClearks    </b> - Added graph 'Top 10 Memory Clerks, in MB' </LI>
 		<LI><b>CmMemoryClearks    </b> - Added local "tab" pie chart, how the memory is distributed between the modules </LI>
+		<LI><b>CmMemoryClearks    </b> - Changed calculation of 'SizeMb' added 'virtual_memory_committed_kb' and 'awe_allocated_kb' </LI>
 
 		<LI><b>CmMemoryGrants     </b> - using OUTER apply instead of CROSS apply to *not* miss records with no query or query plan </LI>
 
@@ -668,6 +674,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmSummary          </b> - Column 'tempdbUsageMbAll', 'tempdbUsageMbUser' and 'tempdbUsageMbInternal' are now DIFF calculated.</LI>
 		<LI><b>CmSummary          </b> - new graph -- Tempdb Usage by SPID's in MB -- with 3 series: 'All', 'User Objects', 'Internal Objects'</LI>
 		<LI><b>CmSummary          </b> - now gets tempdb usage, which is used by various other CM's (This can be disabled by property: <code>CmSummary.sample.tempdb.spid.usage=false</code>)</LI>
+		<LI><b>CmSummary          </b> - Added 3 graphs: TargetAndTotalMemMb, MemUtilizationPct, OsMemoryFreeMb</LI>
+		<LI><b>CmSummary          </b> - Added som memory columns: total_os_memory_mb, available_physical_memory_mb, system_high_memory_signal_state, system_low_memory_signal_state, Total_Server_Memory_MB, Target_Server_Memory_MB, TargetVsTotal_diff_MB, memory_used_by_sqlserver_MB, locked_pages_used_by_sqlserver_MB, process_memory_utilization_pct, process_physical_memory_low, process_virtual_memory_low</LI>
 
 		<LI><b>CmTableSize        </b> - using the DbmsObjectIdCache to lookup database_id-&gt;DbName, object_id-&gt;(TableName, SchemaName), index_id-&gt;IndexName </LI>
 
@@ -867,6 +875,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>for Postgres: Status information -- Also display if we are in 'Recovery Mode'</LI>
 		<LI>for Postgres: Added some new templates: 'Get hostname, port and Postgres Version String', 'Get what Extentions are installed' and 'Reload Postgres Configuration and pg_hba.conf file'.</LI>
 		<LI>Tooltip to show data types in TableHeaders, slightly rewrite, to conform with: DbmsDdlResolverTds</LI>
+		<LI>in the tool 'ddlgen' added options '-o|--outputFile' and '-O|--overwrite'</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

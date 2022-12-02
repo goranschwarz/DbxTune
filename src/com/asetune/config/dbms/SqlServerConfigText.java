@@ -26,9 +26,13 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEventCertificateExpiry;
 import com.asetune.cm.sqlserver.CmSummary;
 import com.asetune.config.dbms.DbmsConfigIssue.Severity;
 import com.asetune.config.dict.SqlServerTraceFlagsDictionary;
@@ -55,10 +59,12 @@ public abstract class SqlServerConfigText
 		,SqlServerHostInfo
 		,SqlServerSysInfo
 		,SqlServerSuspectPages
+		,SqlServerCertificates
 		,SqlServerServices
 		,SqlServerResourceGovernor
 		,SqlServerServerRegistry
 		,SqlServerClusterNodes
+		,SqlServerAgentJobs
 		};
 
 	/** Log4j logging. */
@@ -77,9 +83,11 @@ public abstract class SqlServerConfigText
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SysInfo());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SuspectPages());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SqlServices());
+		DbmsConfigTextManager.addInstance(new SqlServerConfigText.Certificates());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.ResourceGovernor());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.ServerRegistry());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.ClusterNodes());
+		DbmsConfigTextManager.addInstance(new SqlServerConfigText.AgentJobs());
 	}
 
 	/*-----------------------------------------------------------
@@ -801,6 +809,89 @@ public abstract class SqlServerConfigText
 		}
 	}
 
+	public static class Certificates extends DbmsConfigTextAbstract
+	{
+		@Override public    String     getTabLabel()                          { return "Certificates"; }
+		@Override public    String     getName()                              { return ConfigType.SqlServerCertificates.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) 
+		{
+			String sql = ""
+				    + "print '------------------------------------------------------------------------------------------------------------' \n"
+				    + "print '-- NOTE: Certificates starting with ## are SQL Server internal certificates, which we should NOT care about.' \n"
+				    + "print '------------------------------------------------------------------------------------------------------------' \n"
+				    + "print '' \n"
+				    + "\n"
+				    + "select datediff(day, getdate(), expiry_date) AS days_to_expiry, * from sys.certificates \n"
+				    + "";
+
+			return sql;
+		}
+
+		/** 
+		 * Check for 'soon to be expired certificates' 
+		 */
+		@Override
+		public void checkConfig(DbxConnection conn)
+		{
+			// no nothing, if we havn't got an instance
+			if ( ! DbmsConfigManager.hasInstance() )
+				return;
+
+			String    srvName    = "-UNKNOWN-";
+			Timestamp srvRestart = null;
+			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
+			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+
+			String sql = ""
+				    + "SELECT \n"
+				    + "     name \n"
+				    + "    ,expiry_date \n"
+				    + "    ,datediff(day, getdate(), expiry_date) AS days_to_expiry \n"
+				    + "FROM sys.certificates \n"
+				    + "WHERE name NOT LIKE '##%' \n"
+				    + "";
+			
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while(rs.next())
+				{
+					String    name           = rs.getString   (1);
+					Timestamp expiry_date    = rs.getTimestamp(2);
+					int       days_to_expiry = rs.getInt      (3);
+					
+					int threshold = 30;
+					if (days_to_expiry < threshold)
+					{
+						String key = "DbmsConfigIssue." + srvName + ".certificates";
+
+						DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "Certificate", Severity.WARNING, 
+								"Certificate named '" + name + "' will exire in " + days_to_expiry + " days, at '" + expiry_date + "'.", 
+								"Renew the certificate.");
+
+						// Add issue
+						DbmsConfigManager.getInstance().addConfigIssue(issue);
+						
+						// Send an alarm about this as well
+						if (AlarmHandler.hasInstance())
+						{
+							// Set time to live as 25 hours... next day recording will send a new alarm
+							long ttl = TimeUnit.HOURS.toMillis(25);     // 25 hours to milliseconds.
+							AlarmEvent ae = new AlarmEventCertificateExpiry(srvName, name, days_to_expiry, expiry_date, ttl, threshold);
+							
+							// Send the alarm
+							AlarmHandler.getInstance().addAlarm(ae);
+						}
+					}
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("Problems getting SQL-Server 'Suspect Page Count', using sql '"+sql+"'. Caught: "+ex, ex);
+			}
+		}
+	}
+
 	public static class SqlServices extends DbmsConfigTextAbstract
 	{
 		@Override public    String     getTabLabel()                          { return "SQL Services"; }
@@ -925,6 +1016,90 @@ public abstract class SqlServerConfigText
 				return "sys.dm_os_cluster_nodes: is NOT supported in Azure SQL Database.";
 
 			return super.checkRequirements(conn);
+		}
+	}
+
+	public static class AgentJobs extends DbmsConfigTextAbstract
+	{
+		@Override public    String     getTabLabel()                          { return "Agent Jobs"; }
+		@Override public    String     getName()                              { return ConfigType.SqlServerAgentJobs.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+		@Override
+		public String checkRequirements(DbxConnection conn)
+		{
+			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+
+			// In Azure Database, skip this 
+			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+				return "NOT supported in Azure SQL Database.";
+
+			return super.checkRequirements(conn);
+		}
+		@Override protected String getSqlCurrentConfig(DbmsVersionInfo v) 
+		{ 
+			// from : https://glennsqlperformance.com/resources/
+			// And slightly modified
+			String sql = ""
+				    + "-- Get SQL Server Agent jobs and Category information (Query 10) (SQL Server Agent Jobs) \n"
+				    + "print '-------------------------------------------------------------------------------' \n"
+				    + "print '-- Get SQL Server Agent jobs ' \n"
+				    + "print '-------------------------------------------------------------------------------' \n"
+				    + "print '' \n"
+				    + "SELECT \n"
+				    + "     sj.name                      AS [Job Name] \n"
+				    + "    ,sj.[description]             AS [Job Description] \n"
+				    + "    ,sc.name                      AS [CategoryName] \n"
+				    + "    ,SUSER_SNAME(sj.owner_sid)    AS [Job Owner] \n"
+				    + "    ,sj.date_created              AS [Date Created] \n"
+				    + "    ,sj.[enabled]                 AS [Job Enabled] \n"
+				    + "    ,sj.notify_email_operator_id \n"
+				    + "    ,sj.notify_level_email \n"
+				    + "    ,h.run_status \n"
+				    + "    ,CASE WHEN h.run_status=0 THEN 'FAILED' \n"
+				    + "          WHEN h.run_status=1 THEN 'Success' \n"
+				    + "          WHEN h.run_status=2 THEN 'Retry' \n"
+				    + "          WHEN h.run_status=3 THEN 'Canceled' \n"
+				    + "          WHEN h.run_status=4 THEN 'In Progress' \n"
+				    + "          ELSE 'unknown' \n"
+				    + "     END AS run_status_desc \n"
+				    + "    ,RIGHT(STUFF(STUFF(REPLACE(STR(h.run_duration, 7, 0), ' ', '0'), 4, 0, ':'), 7, 0, ':'),8) AS [Last Duration - HHMMSS] \n"
+				    + "    ,CONVERT(DATETIME, RTRIM(h.run_date) + ' ' + STUFF(STUFF(REPLACE(STR(RTRIM(h.run_time),6,0),' ','0'),3,0,':'),6,0,':')) AS [Last Start Date] \n"
+				    + "    ,datediff(hour, CONVERT(DATETIME, RTRIM(h.run_date) + ' ' + STUFF(STUFF(REPLACE(STR(RTRIM(h.run_time),6,0),' ','0'),3,0,':'),6,0,':')), getdate()) AS [Last Start Age In Hours] \n"
+				    + "FROM msdb.dbo.sysjobs AS sj WITH (NOLOCK) \n"
+				    + "INNER JOIN \n"
+				    + "    (SELECT job_id, instance_id = MAX(instance_id) \n"
+				    + "     FROM msdb.dbo.sysjobhistory WITH (NOLOCK) \n"
+				    + "     GROUP BY job_id) AS l \n"
+				    + "  ON sj.job_id = l.job_id \n"
+				    + "INNER JOIN msdb.dbo.syscategories AS sc WITH (NOLOCK) ON sj.category_id = sc.category_id \n"
+				    + "INNER JOIN msdb.dbo.sysjobhistory AS  h WITH (NOLOCK) ON h.job_id       = l.job_id  AND  h.instance_id = l.instance_id \n"
+				    + "ORDER BY CONVERT(INT, h.run_duration) DESC, [Last Start Date] DESC \n"
+				    + "OPTION (RECOMPILE); \n"
+				    + " \n"
+				    + "-- Get SQL Server Agent Alert Information (Query 11) (SQL Server Agent Alerts) \n"
+				    + "print '' \n"
+				    + "print '' \n"
+				    + "print '-------------------------------------------------------------------------------' \n"
+				    + "print '-- Get SQL Server Agent Alert Information' \n"
+				    + "print '-------------------------------------------------------------------------------' \n"
+				    + "print '' \n"
+				    + "SELECT \n"
+				    + "     name \n"
+				    + "    ,event_source \n"
+				    + "    ,message_id \n"
+				    + "    ,severity \n"
+				    + "    ,[enabled] \n"
+				    + "    ,has_notification \n"
+				    + "    ,delay_between_responses \n"
+				    + "    ,occurrence_count \n"
+				    + "    ,last_occurrence_date \n"
+				    + "    ,last_occurrence_time \n"
+				    + "FROM msdb.dbo.sysalerts WITH (NOLOCK) \n"
+				    + "ORDER BY name \n"
+				    + "OPTION (RECOMPILE); \n"
+				    + "";
+
+			return sql; 
 		}
 	}
 

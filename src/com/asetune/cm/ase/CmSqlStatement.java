@@ -1893,6 +1893,15 @@ extends CountersModel
 										CountersModel cmOpenDatabases = getCounterController().getCmByName(CmOpenDatabases.CM_NAME);
 										extendedDescHtml = "<br><br>" + cmOpenDatabases.getGraphDataHistoryAsHtmlImage(CmOpenDatabases.GRAPH_NAME_LOGSIZE_LEFT_MB);
 										extendedDescHtml = "<br><br>" + cmOpenDatabases.getGraphDataHistoryAsHtmlImage(CmOpenDatabases.GRAPH_NAME_LOGSIZE_USED_PCT);
+
+										// Create a HTML table with just some of the columns in CmOpenDatabases
+										// as a clarification of what database might affected by the 1105... if it's hard to see in the above graph.
+										Configuration conf = new Configuration();
+										conf.setProperty("borders", true);
+										extendedDescHtml = "<br><br>" + cmOpenDatabases.toHtmlTableForColumns(DATA_ABS, conf, 
+												"DBName", "DbSizeInMb", 
+												"LogSizeInMb",  "LogSizeFreeInMb",  "LogSizeUsedInMb",  "LogSizeUsedPct", "TransactionLogFull",
+												"DataSizeInMb", "DataSizeFreeInMb", "DataSizeUsedInMb", "DataSizeUsedPct", "DBOptions");
 									}
 
 									// Create Alarm

@@ -665,7 +665,7 @@ extends CountersModel
 	public static final int     DEFAULT_alarm_BlockingLockCount                = 0;
 
 	public static final String  PROPKEY_alarm_BlockingLockCount_minWaitTimeSec = CM_NAME + ".alarm.system.if.blocking_lock_count.minWaitTimeSec";
-	public static final double  DEFAULT_alarm_BlockingLockCount_minWaitTimeSec = 5.0;
+	public static final double  DEFAULT_alarm_BlockingLockCount_minWaitTimeSec = 30.0;
 
 	public static final String  PROPKEY_alarm_oldestOpenTranInSec              = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.gt";
 //	public static final int     DEFAULT_alarm_oldestOpenTranInSec              = 60 * 5; // 5 Minutes

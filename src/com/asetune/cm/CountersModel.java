@@ -2066,6 +2066,133 @@ implements Cloneable, ITableTooltip
 
 		return sb.toString();
 	}
+
+	/**
+	 * Create a HTML Table 
+	 * 
+	 * @param whatData          DATA_ABS, DATA_DIFF, DATA_RATE
+	 * @param conf              If we want to set specific properties on the table (like: borders=true, stripedRows=true, addOuterHtmlTags=true)
+	 * @param columns           The columns we want in the table
+	 * @return
+	 */
+	public String toHtmlTableForColumns(int whatData, Configuration conf, String... columns)
+	{
+		boolean borders          = conf == null ? false             : conf.getBooleanProperty("borders"         , false);
+		boolean stripedRows      = conf == null ? false             : conf.getBooleanProperty("stripedRows"     , false);
+		boolean addOuterHtmlTags = conf == null ? false             : conf.getBooleanProperty("addOuterHtmlTags", false);
+		String  stripeColor      = conf == null ? "#f2f2f2"         : conf.getProperty       ("stripeColor"     , "#f2f2f2");
+		int     maxStrLen        = conf == null ? Integer.MAX_VALUE : conf.getIntProperty    ("maxStrLen"       , Integer.MAX_VALUE);
+
+		StringBuilder sb = new StringBuilder(1024);
+
+		if (addOuterHtmlTags)
+			sb.append("<html> \n");
+
+		String border      = borders ? " border=1"      : " border=0";
+		String cellPadding = borders ? ""               : " cellpadding=1";
+		String cellSpacing = borders ? ""               : " cellspacing=0";
+
+		// One row for every column
+		sb.append("<table").append(border).append(cellPadding).append(cellSpacing).append(">\n");
+
+		// Table head
+		sb.append("<thead> \n");
+		sb.append("<tr> \n");
+		for (String colName : columns)
+		{
+			sb.append("  <th>").append(colName).append("</th>\n");
+		}
+		sb.append("</tr> \n");
+		sb.append("</thead> \n");
+		
+		// Table Body
+		sb.append("<tbody> \n");
+		int rowc = getRowCount(whatData);
+		for (int r=0; r<rowc; r++)
+		{
+			String stripeTag = "";
+			if (stripedRows && ((r % 2) == 0) )
+				stripeTag = " bgcolor='" + stripeColor + "'";
+			
+			sb.append("<tr").append(stripeTag).append("> \n");
+
+			for (String colName : columns)
+			{
+				Object objVal = null;
+				String strVal = "";
+
+				int colPos = findColumn(colName);
+				
+				if (colPos == -1)
+					objVal = "ColName='" + colName + "': not found";
+				else
+					objVal = getValue(whatData, r, colPos); // DATA_ABS, DATA_DIFF, DATA_RATE
+				
+				if (objVal != null)
+				{
+					strVal = objVal.toString();
+
+					// Remove any leading/ending HTML tags
+					if (StringUtils.startsWithIgnoreCase(strVal, "<html>"))
+					{
+						strVal = strVal.substring("<html>".length());
+						strVal = strVal.trim();
+						if (StringUtils.endsWithIgnoreCase(strVal, "</html>"))
+							strVal = strVal.substring(0, strVal.length() - "</html>".length() );
+					}
+					else
+					{
+						// check for XML content "somewhere" in the string
+						if (strVal.indexOf("<?xml") >= 0)
+						{
+							if ("TO_ESCAPED_TEXT".equals(Configuration.getCombinedConfiguration().getProperty("toHtmlTableString.xml", "TO_ESCAPED_TEXT")))
+							{
+								// if there are any XML tag in the field... Then surround the value with a '<pre>' tag and escape all "xml" tags etc...
+								strVal = "<pre>" + StringEscapeUtils.escapeHtml4(strVal) + "</pre>";
+							}
+						}
+						else if (strVal.indexOf("<ShowPlanXML xmlns=") >= 0)
+						{
+							SqlServerShowPlanXmlTransformer t = new SqlServerShowPlanXmlTransformer();
+							try
+							{
+								// Get HTML (what type/look-and-feel) is decided by configuration in: SqlServerShowPlanXmlTransformer.PROKKEY_transform
+								strVal = t.toHtml(strVal);
+							}
+							catch (Exception ex)
+							{
+								strVal = "Could not translate SQL-Server ShowPlanXML to HTML text. Caught: " + ex;
+								_logger.error(strVal);
+							}
+						}
+						else
+						{
+							// make '\n' into '<br>'
+							strVal = strVal.replace("\n", "<br>");
+						}
+					}
+					
+					// If it's a LONG String, only display first 'maxStrLen' characters...
+					int strValLen = strVal.length(); 
+					if (strValLen > maxStrLen)
+					{
+						strVal =  strVal.substring(0, maxStrLen);
+						strVal += "...<br><font color='orange'><i><b>NOTE:</b> content is truncated after " + maxStrLen + " chars (actual length is "+strValLen+").</i></font>";
+					}
+				}
+				
+				sb.append("  <td nowrap>").append(strVal).append("</td> \n");
+			}
+			sb.append("</tr> \n");
+		}
+		sb.append("</tbody> \n");
+		sb.append("</table> \n");
+
+		if (addOuterHtmlTags)
+			sb.append("</html> \n");
+
+		return sb.toString();
+	}
 	
 
 	/**
@@ -9989,7 +10116,7 @@ implements Cloneable, ITableTooltip
 			return false;
 		}
 	}
-	
+
 	//-------------------------------------------------------
 	// END: Aggregation 
 	//-------------------------------------------------------

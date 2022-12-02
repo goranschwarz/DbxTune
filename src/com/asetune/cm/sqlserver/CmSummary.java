@@ -161,6 +161,9 @@ extends CountersModel
 	public static final String GRAPH_NAME_OLDEST_TRAN_IN_SEC       = "OldestTranInSecGraph";
 	public static final String GRAPH_NAME_MAX_SQL_EXEC_TIME_IN_SEC = "MaxSqlExecTimeInSec";
 	public static final String GRAPH_NAME_TEMPDB_SPID_USAGE        = "TempdbSpidUsage";
+	public static final String GRAPH_NAME_TARGET_AND_TOTAL_MEM_MB  = "TargetAndTotalMemMb";
+	public static final String GRAPH_NAME_MEMORY_UTILAZATION_PCT   = "MemUtilizationPct";
+	public static final String GRAPH_NAME_OS_MEMORY_FREE_MB        = "OsMemoryFreeMb";
 
 	// If we got Suspect Page Count > 0; then we will try to populate this, so we can attach it to the alarm.
 	private ResultSetTableModel _lastSuspectPage_rstm = null;
@@ -291,6 +294,42 @@ extends CountersModel
 			false,  // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_TARGET_AND_TOTAL_MEM_MB,
+			"Target and Total Server Memory in MB",     // Menu CheckBox text
+			"Target and Total Server Memory in MB", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			new String[] { "Target Server Memory MB", "Total Server Memory MB" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.MEMORY,
+			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_MEMORY_UTILAZATION_PCT,
+			"SQL Server Memory Utilazation in Percent", // Menu CheckBox text
+			"SQL Server Memory Utilazation in Percent", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			new String[] { "process_memory_utilization_percentage" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.MEMORY,
+			true,  // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_OS_MEMORY_FREE_MB,
+			"OS Free/Available Memory in MB", // Menu CheckBox text
+			"OS Free/Available Memory in MB", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			new String[] { "available_physical_memory_mb" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.MEMORY,
+			false,  // is Percent Graph
+			false,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 	}
 
 	@Override
@@ -329,11 +368,12 @@ extends CountersModel
 		return pkCols;
 	}
 
+
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		DbmsVersionInfoSqlServer ssVersionInfo = (DbmsVersionInfoSqlServer) versionInfo;
-		long srvVersion = ssVersionInfo.getLongVersion();
+//		long srvVersion = ssVersionInfo.getLongVersion();
 		
 		String dm_tran_active_transactions   = "dm_tran_active_transactions";
 		String dm_tran_database_transactions = "dm_tran_database_transactions";
@@ -347,7 +387,7 @@ extends CountersModel
 		}
 
 		// ----- SQL-Server 2014 and above
-		String user_objects_deferred_dealloc_page_count = "0";
+//		String user_objects_deferred_dealloc_page_count = "0";
 //		if (srvVersion >= Ver.ver(2014))
 //		{
 //			user_objects_deferred_dealloc_page_count = "user_objects_deferred_dealloc_page_count";
@@ -385,12 +425,12 @@ extends CountersModel
 //		}
 
 		 // where ... --- https://learn.microsoft.com/en-us/sql/relational-databases/backup-restore/manage-the-suspect-pages-table-sql-server?view=sql-server-ver16
-		String suspectPageCount  = ", suspectPageCount             = -1 \n";
-		String suspectPageErrors = ", suspectPageErrors            = -1 \n";
+		String suspectPageCount  = "    , suspectPageCount                    = -1 \n";
+		String suspectPageErrors = "    , suspectPageErrors                   = -1 \n";
 		if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_suspectPageCount_isEnabled, DEFAULT_suspectPageCount_isEnabled))
 		{
-			suspectPageCount  = ", suspectPageCount             = (select count(*)         from msdb.dbo.suspect_pages) \n";
-			suspectPageErrors = ", suspectPageErrors            = (select sum(error_count) from msdb.dbo.suspect_pages) \n";
+			suspectPageCount  = "    , suspectPageCount                    = (select count(*)         from msdb.dbo.suspect_pages) \n";
+			suspectPageErrors = "    , suspectPageErrors                   = (select sum(error_count) from msdb.dbo.suspect_pages) \n";
 		}
 
 		// SQL For listeners 
@@ -419,41 +459,80 @@ extends CountersModel
 		int oldestOpenTranInSec   = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestOpenTranInSec  , DEFAULT_alarm_oldestOpenTranInSec);
 
 		String sql = "" +
-				"declare @listeners           varchar(768) \n" +
+				"declare @listeners                           varchar(768) \n" +
 				"\n" +
-				"declare @LockWaits           int \n" +
-				"declare @LockWaitThreshold   int \n" +
-				"declare @Connections         int \n" +
-				"declare @distinctLogins      int \n" +
-				"declare @maxSqlExecTimeInSec int \n" +
-				"declare @fullTranslogCount   int \n" +
+				"declare @LockWaits                           int \n" +
+				"declare @LockWaitThreshold                   int \n" +
+				"declare @Connections                         int \n" +
+				"declare @distinctLogins                      int \n" +
+				"declare @maxSqlExecTimeInSec                 int \n" +
+				"declare @fullTranslogCount                   int \n" +
 				"\n" +
-				"declare @oldestOpenTranBeginTime      datetime \n" +
-				"declare @oldestOpenTranId             bigint \n" +
-				"declare @oldestOpenTranSpid           int \n" +
-				"declare @oldestOpenTranDbname         nvarchar(128) \n" +
-				"declare @oldestOpenTranWaitType       nvarchar(60)  \n" +
-				"declare @oldestOpenTranCmd            nvarchar(32)  \n" +
-				"declare @oldestOpenTranLoginName      nvarchar(128) \n" +
-				"declare @oldestOpenTranName           nvarchar(32)  \n" +
-//				"declare @oldestOpenTranTempdbUsageMb  decimal(12,1) \n" +
-				"declare @oldestOpenTranInSec          int = 0\n" +
-				"declare @oldestOpenTranInSecThreshold int = " + oldestOpenTranInSec + " \n" +
+				"declare @oldestOpenTranBeginTime             datetime \n" +
+				"declare @oldestOpenTranId                    bigint \n" +
+				"declare @oldestOpenTranSpid                  int \n" +
+				"declare @oldestOpenTranDbname                nvarchar(128) \n" +
+				"declare @oldestOpenTranWaitType              nvarchar(60)  \n" +
+				"declare @oldestOpenTranCmd                   nvarchar(32)  \n" +
+				"declare @oldestOpenTranLoginName             nvarchar(128) \n" +
+				"declare @oldestOpenTranName                  nvarchar(32)  \n" +
+//				"declare @oldestOpenTranTempdbUsageMb         decimal(12,1) \n" +
+				"declare @oldestOpenTranInSec                 int = 0\n" +
+				"declare @oldestOpenTranInSecThreshold        int = " + oldestOpenTranInSec + " \n" +
 				"\n" +
-//				"declare @scheduler_count              int    = 0\n" +
-//				"declare @ms_ticks                     bigint = 0\n" +
-//				"declare @process_kernel_time_ms       bigint = 0\n" +
-//				"declare @process_user_time_ms         bigint = 0\n" +
-//				"\n" +
+				"declare @start_date                          datetime = NULL \n" +
+				"declare @days_running                        int      = 0 \n" +
+				"declare @Target_Server_Memory_MB             bigint   = 0 \n" +
+				"declare @Total_Server_Memory_MB              bigint   = 0 \n" +
+			    "declare @TargetVsTotal_diff_MB               bigint   = 0 \n" +
+			    "declare @scheduler_count                     int      = 0 \n" +
+			    "declare @ms_ticks                            bigint   = 0 \n" +
+			    "declare @process_kernel_time_ms              bigint   = 0 \n" +
+			    "declare @process_user_time_ms                bigint   = 0 \n" +
+			    " \n" +
+			    "declare @total_os_memory_mb                  bigint   = 0 \n" +
+			    "declare @available_os_memory_mb              bigint   = 0 \n" +
+			    "declare @system_high_memory_signal_state     bit      = 0 \n" +
+			    "declare @system_low_memory_signal_state      bit      = 0 \n" +
+			    " \n" +
+			    "declare @memory_used_by_sqlserver_MB         bigint   = 0 \n" +
+			    "declare @locked_pages_used_by_sqlserver_MB   bigint   = 0 \n" +
+			    "declare @process_memory_utilization_pct      int      = 0 \n" +
+			    "declare @process_physical_memory_low         bit      = 0 \n" +
+			    "declare @process_virtual_memory_low          bit      = 0 \n" +
+				"\n" +
 				listenerInfo +
 				"\n" +
-//				"/* CPU time from dm_os_sys_info */\n" +
-//				"select @scheduler_count        = scheduler_count \n" +
-//				"      ,@ms_ticks               = ms_ticks \n" +
-//				"      ,@process_kernel_time_ms = process_kernel_time_ms \n" +
-//				"      ,@process_user_time_ms   = process_user_time_ms \n" + 
-//				"from sys.dm_os_sys_info \n" +
-//				"\n" +
+			    "/* dm_os_sys_info */ \n" +
+			    "select \n" +
+			    "       @start_date                        = sqlserver_start_time \n" +
+			    "      ,@days_running                      = datediff(day, sqlserver_start_time, getdate()) \n" +
+			    "      ,@Target_Server_Memory_MB           = committed_target_kb / 1024 \n" +
+			    "      ,@Total_Server_Memory_MB            = committed_kb / 1024 \n" +
+			    "      ,@TargetVsTotal_diff_MB             = (committed_target_kb - committed_kb) / 1024 \n" +
+			    "      ,@scheduler_count                   = scheduler_count \n" +
+			    "      ,@ms_ticks                          = ms_ticks \n" +
+			    "      ,@process_kernel_time_ms            = process_kernel_time_ms \n" +
+			    "      ,@process_user_time_ms              = process_user_time_ms \n" +
+			    "from sys.dm_os_sys_info \n" +
+			    " \n" +
+			    "/* dm_os_sys_memory */ \n" +
+			    "select \n" +
+			    "       @total_os_memory_mb                = total_physical_memory_kb     / 1024 \n" +
+			    "      ,@available_os_memory_mb            = available_physical_memory_kb / 1024 \n" +
+			    "      ,@system_high_memory_signal_state   = system_high_memory_signal_state \n" +
+			    "      ,@system_low_memory_signal_state    = system_low_memory_signal_state \n" +
+			    "from sys.dm_os_sys_memory \n" +
+			    " \n" +
+			    "/* dm_os_process_memory */ \n" +
+			    "select \n" +
+			    "       @memory_used_by_sqlserver_MB       = physical_memory_in_use_kb  / 1024 \n" +
+			    "      ,@locked_pages_used_by_sqlserver_MB = locked_page_allocations_kb / 1024 \n" +
+			    "      ,@process_memory_utilization_pct    = memory_utilization_percentage \n" +
+			    "      ,@process_physical_memory_low       = process_physical_memory_low \n" +
+			    "      ,@process_virtual_memory_low        = process_virtual_memory_low \n" +
+			    "from sys.dm_os_process_memory \n" +
+			    " \n" +
 				"/* Get info about Open Transactions */\n" +
 				"select @oldestOpenTranBeginTime = min(database_transaction_begin_time) \n" +
 				"                                  from sys." + dm_tran_database_transactions + " \n" +
@@ -498,11 +577,8 @@ extends CountersModel
 //				"                                              where ts.session_id = @oldestOpenTranSpid \n" +
 				"    end \n" +
 				"end \n" +
-//TODO; fix tempdb usage in various CM's -- CmActiveStatements, CmDatabases, CmSessions, CmSummary, CmTempdbSpidUsage?? (or everywhere where 'sys.dm_db_session_space_usage' and 'sys.dm_db_task_space_usage'
-				
 				"\n" +
 				"/* And some other metrics */\n" +
-//				"select @LockWaits           = count(*) FROM sys.sysprocesses WHERE blocked != 0 AND ecid != 0 AND waittime >= " + (LockWaitsThresholdSec * 1000) + " \n" + // note: 'ecid != 0' can't be correct, then it's only worker threads... 
 				"select @LockWaits           = count(*) FROM sys.sysprocesses WHERE blocked != 0 AND waittime >= " + (LockWaitsThresholdSec * 1000) + " \n" +
 				"select @LockWaitThreshold   = " + (LockWaitsThresholdSec * 1000) + " \n" +
 				"select @Connections         = count(*)            FROM sys.sysprocesses WHERE sid != 0x01 \n" +
@@ -515,55 +591,71 @@ extends CountersModel
 				" \n" +
 				"/* Output the data */\n" +
 				"select /* ${cmCollectorName} */ \n" +
-				"  srvVersion                   = @@version  \n" +
-				", atAtServerName               = @@servername  \n" +
-				", clusterInstanceId            = 'Not Enabled'  \n" +
-				", clusterCoordId               = 'Not Enabled'  \n" +
-				", timeIsNow                    = getdate()  \n" +
-				", utcTimeDiff                  = datediff(mi, getutcdate(), getdate())  \n" +
-				", OnHostName                   = convert(varchar(100), SERVERPROPERTY('MachineName')) \n" +
-				", NetworkAddressInfo           = @listeners \n" +
-				", srvPageSize                  = convert(int, 8196)--@@maxpagesize  \n" +
-				", LockWaits                    = @LockWaits                    \n" +
-				", LockWaitThreshold            = @LockWaitThreshold            \n" +
-				", cpu_busy                     = @@cpu_busy                    \n" +
-				", cpu_io                       = @@io_busy                     \n" +
-				", cpu_idle                     = @@idle                        \n" +
-				", io_total_read                = @@total_read                  \n" +
-				", io_total_write               = @@total_write                 \n" +
-				", Connections                  = @Connections                  \n" + 
-				", aaConnections                = @@connections                 \n" +
-				", distinctLogins               = @distinctLogins               \n" +
-				", fullTranslogCount            = @fullTranslogCount            \n" +
+				"      srvVersion                          = @@version  \n" +
+				"    , atAtServerName                      = @@servername  \n" +
+				"    , clusterInstanceId                   = 'Not Enabled'  \n" +
+				"    , clusterCoordId                      = 'Not Enabled'  \n" +
+				"    , timeIsNow                           = getdate()  \n" +
+				"    , utcTimeDiff                         = datediff(mi, getutcdate(), getdate())  \n" +
+				"    , OnHostName                          = convert(varchar(100), SERVERPROPERTY('MachineName')) \n" +
+				"    , NetworkAddressInfo                  = @listeners \n" +
+				"    , srvPageSize                         = convert(int, 8196)--@@maxpagesize  \n" +
+				"    , LockWaits                           = @LockWaits                    \n" +
+				"    , LockWaitThreshold                   = @LockWaitThreshold            \n" +
+				"    , cpu_busy                            = @@cpu_busy                    \n" +
+				"    , cpu_io                              = @@io_busy                     \n" +
+				"    , cpu_idle                            = @@idle                        \n" +
+				"    , io_total_read                       = @@total_read                  \n" +
+				"    , io_total_write                      = @@total_write                 \n" +
+				"    , Connections                         = @Connections                  \n" + 
+				"    , aaConnections                       = @@connections                 \n" +
+				"    , distinctLogins                      = @distinctLogins               \n" +
+				"    , fullTranslogCount                   = @fullTranslogCount            \n" +
 				suspectPageCount +
 				suspectPageErrors +
-				", tempdbUsageMbAll             = convert(numeric(12,1), NULL)  \n" +
-				", tempdbUsageMbUser            = convert(numeric(12,1), NULL)  \n" +
-				", tempdbUsageMbInternal        = convert(numeric(12,1), NULL)  \n" +
-				", oldestOpenTranBeginTime      = @oldestOpenTranBeginTime      \n" +
-				", oldestOpenTranId             = @oldestOpenTranId             \n" +
-				", oldestOpenTranSpid           = @oldestOpenTranSpid           \n" +
-				", oldestOpenTranDbname         = @oldestOpenTranDbname         \n" +
-				", oldestOpenTranName           = @oldestOpenTranName           \n" +
-				", oldestOpenTranWaitType       = @oldestOpenTranWaitType       \n" +
-				", oldestOpenTranCmd            = @oldestOpenTranCmd            \n" +
-				", oldestOpenTranLoginName      = @oldestOpenTranLoginName      \n" +
-				", oldestOpenTranTempdbUsageMbAll       = convert(numeric(12,1), NULL)  \n" +
-				", oldestOpenTranTempdbUsageMbUser      = convert(numeric(12,1), NULL)  \n" +
-				", oldestOpenTranTempdbUsageMbInternal  = convert(numeric(12,1), NULL)  \n" +
-				", oldestOpenTranInSec          = @oldestOpenTranInSec          \n" +
-				", oldestOpenTranInSecThreshold = @oldestOpenTranInSecThreshold \n" +
-				", maxSqlExecTimeInSec          = @maxSqlExecTimeInSec          \n" +
-				", StartDate                    =               (select sqlserver_start_time from sys.dm_os_sys_info) \n" +
-				", DaysRunning                  = datediff(day, (select sqlserver_start_time from sys.dm_os_sys_info), getdate()) \n" +
-				", pack_received                = @@pack_received  \n" +
-				", pack_sent                    = @@pack_sent      \n" +
-				", packet_errors                = @@packet_errors  \n" +
-				", total_errors                 = @@total_errors   \n" +
-//				", scheduler_count              = @scheduler_count \n" +
-//				", ms_ticks                     = @ms_ticks               \n" +
-//				", process_kernel_time_ms       = @process_kernel_time_ms \n" +
-//				", process_user_time_ms         = @process_user_time_ms   \n" + 
+				"    , tempdbUsageMbAll                    = convert(numeric(12,1), NULL)  \n" +
+				"    , tempdbUsageMbUser                   = convert(numeric(12,1), NULL)  \n" +
+				"    , tempdbUsageMbInternal               = convert(numeric(12,1), NULL)  \n" +
+				"    , oldestOpenTranBeginTime             = @oldestOpenTranBeginTime      \n" +
+				"    , oldestOpenTranId                    = @oldestOpenTranId             \n" +
+				"    , oldestOpenTranSpid                  = @oldestOpenTranSpid           \n" +
+				"    , oldestOpenTranDbname                = @oldestOpenTranDbname         \n" +
+				"    , oldestOpenTranName                  = @oldestOpenTranName           \n" +
+				"    , oldestOpenTranWaitType              = @oldestOpenTranWaitType       \n" +
+				"    , oldestOpenTranCmd                   = @oldestOpenTranCmd            \n" +
+				"    , oldestOpenTranLoginName             = @oldestOpenTranLoginName      \n" +
+				"    , oldestOpenTranTempdbUsageMbAll      = convert(numeric(12,1), NULL)  \n" +
+				"    , oldestOpenTranTempdbUsageMbUser     = convert(numeric(12,1), NULL)  \n" +
+				"    , oldestOpenTranTempdbUsageMbInternal = convert(numeric(12,1), NULL)  \n" +
+				"    , oldestOpenTranInSec                 = @oldestOpenTranInSec          \n" +
+				"    , oldestOpenTranInSecThreshold        = @oldestOpenTranInSecThreshold \n" +
+				"    , maxSqlExecTimeInSec                 = @maxSqlExecTimeInSec          \n" +
+
+				"    , StartDate                           = @start_date \n" +
+				"    , DaysRunning                         = @days_running \n" +
+
+				"    , pack_received                       = @@pack_received  \n" +
+				"    , pack_sent                           = @@pack_sent      \n" +
+				"    , packet_errors                       = @@packet_errors  \n" +
+				"    , total_errors                        = @@total_errors   \n" +
+
+			    "    , total_os_memory_mb                  = @total_os_memory_mb \n" +
+			    "    , available_physical_memory_mb        = @available_os_memory_mb \n" +
+			    "    , system_high_memory_signal_state     = @system_high_memory_signal_state \n" +
+			    "    , system_low_memory_signal_state      = @system_low_memory_signal_state \n" +
+				
+				"    , Total_Server_Memory_MB              = @Total_Server_Memory_MB \n" +
+				"    , Target_Server_Memory_MB             = @Target_Server_Memory_MB \n" +
+				"    , TargetVsTotal_diff_MB               = @TargetVsTotal_diff_MB \n" +
+				"    , scheduler_count                     = @scheduler_count \n" +
+				"    , ms_ticks                            = @ms_ticks \n" +
+				"    , process_kernel_time_ms              = @process_kernel_time_ms \n" +
+				"    , process_user_time_ms                = @process_user_time_ms \n" +
+				"    , memory_used_by_sqlserver_MB         = @memory_used_by_sqlserver_MB \n" +
+				"    , locked_pages_used_by_sqlserver_MB   = @locked_pages_used_by_sqlserver_MB \n" +
+				"    , process_memory_utilization_pct      = @process_memory_utilization_pct \n" +
+				"    , process_physical_memory_low         = @process_physical_memory_low \n" +
+				"    , process_virtual_memory_low          = @process_virtual_memory_low \n" +
 				"";
 
 		return sql;
@@ -947,6 +1039,52 @@ extends CountersModel
 			arr[2] = this.getAbsValueAsDouble(0, "tempdbUsageMbInternal", true, -1d);
 
 			_logger.debug("updateGraphData("+tgdp.getName()+"): tempdbUsageMbAll='"+arr[0]+"', tempdbUsageMbUser='"+arr[1]+"', tempdbUsageMbInternal='"+arr[2]+"'.");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_TARGET_AND_TOTAL_MEM_MB.equals(tgdp.getName()))
+		{	
+			Double[] arr = new Double[2];
+
+			arr[0] = this.getAbsValueAsDouble(0, "Target_Server_Memory_MB", true, -1d);
+			arr[1] = this.getAbsValueAsDouble(0, "Total_Server_Memory_MB" , true, -1d);
+
+			_logger.debug("updateGraphData("+tgdp.getName()+"): Target_Server_Memory_MB='"+arr[0]+"', Total_Server_Memory_MB='"+arr[1]+"'.");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_MEMORY_UTILAZATION_PCT.equals(tgdp.getName()))
+		{	
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getAbsValueAsDouble(0, "process_memory_utilization_pct", true, -1d);
+
+			_logger.debug("updateGraphData("+tgdp.getName()+"): process_memory_utilization_pct='"+arr[0]+"'.");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_OS_MEMORY_FREE_MB.equals(tgdp.getName()))
+		{	
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getAbsValueAsDouble(0, "available_physical_memory_mb", true, -1d);
+
+			_logger.debug("updateGraphData("+tgdp.getName()+"): available_physical_memory_mb='"+arr[0]+"'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

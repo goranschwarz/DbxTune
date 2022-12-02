@@ -99,7 +99,7 @@ extends ReportSenderAbstract
 		return email;
 	}
 	
-	
+
 	/**
 	 * SEND the DSR - Daily Summary Report
 	 */
@@ -265,6 +265,45 @@ extends ReportSenderAbstract
 			// Typically this will be send for:
 			//   * message file too big (when the mail server says the content is to *big*
 			sendExceptionMail(toList, serverName, msg, ex);
+			
+			//-------------------------------------------------------------------------
+			// Below is a typical Exception, where the mail is TO BIG
+			//-------------------------------------------------------------------------
+			// For Server: DBMS_SERVER_NAME 
+			// Problem Description: 
+			//  
+			// Problems sending mail (fullSizeKb=30678, fullSizeMb=29, msgSizeKb=11265, msgSizeMb=11, hasAttachment=true, zipAttachment=true, zipSaveMb=56, attachSizeKb=19413, attachSizeMb=18, attachMaxSizeMb=30, host='relay.maxm.se', toList=[goran.schwarz@maxm.se, sybase-dba-alarms@b3.se], subject='Daily Report for: MM-OP-DW', for server name 'MM-OP-DW').
+            // 
+			// Exception: 
+			//  
+			// org.apache.commons.mail.EmailException: Sending the email to the following server failed : relay.maxm.se:25
+			//           at org.apache.commons.mail.Email.sendMimeMessage(Email.java:1421)
+			//           at org.apache.commons.mail.Email.send(Email.java:1448)
+			//           at com.asetune.pcs.report.senders.ReportSenderToMail.send(ReportSenderToMail.java:254)
+			//           at com.asetune.pcs.report.DailySummaryReportAbstract.send(DailySummaryReportAbstract.java:209)
+			//           at com.asetune.pcs.PersistWriterJdbc.createDailySummaryReport(PersistWriterJdbc.java:5074)
+			//           at com.asetune.pcs.PersistWriterJdbc.access$200(PersistWriterJdbc.java:103)
+			//           at com.asetune.pcs.PersistWriterJdbc$2.run(PersistWriterJdbc.java:790)
+			//           at java.lang.Thread.run(Thread.java:750)
+			// Caused by: com.sun.mail.smtp.SMTPSendFailedException: 552 5.3.4 Error: message file too big
+    		// 	         at com.sun.mail.smtp.SMTPTransport.issueSendCommand(SMTPTransport.java:2267)
+			// 	         at com.sun.mail.smtp.SMTPTransport.finishData(SMTPTransport.java:2045)
+			// 	         at com.sun.mail.smtp.SMTPTransport.sendMessage(SMTPTransport.java:1260)
+			// 	         at javax.mail.Transport.send0(Transport.java:255)
+			// 	         at javax.mail.Transport.send(Transport.java:124)
+			// 	         at org.apache.commons.mail.Email.sendMimeMessage(Email.java:1411)
+			// 	         ... 7 more
+			//-------------------------------------------------------------------------
+			
+			// Should we try to send this once again, WITHOUT any Attachment?
+			// Note: do not trust 'message file too big' the message may be localized
+			String exStr = StringUtil.exceptionToString(ex); 
+			if (exStr.contains("Exception: 552 5.3.4 Error: ") || exStr.contains("message file too big")) 
+			{
+				// Possibly send mail again without any attachment
+				sendNoAttachmentMail(toList, msgSubject, msgBody, reportContent.isShortMessageOfHtml());
+			}
+			
 		}
 		finally
 		{
@@ -272,6 +311,42 @@ extends ReportSenderAbstract
 			if (zipFile != null)
 				zipFile.delete();
 		}
+	}
+
+	private void sendNoAttachmentMail(List<String> toList, String subject, String msgBody, boolean isMsgHtml)
+	{
+		String msgSubject  = subject + " (fallback: no-attachment)";
+
+		try
+		{
+			// Create basic mail object (setup "basic info")
+			HtmlEmail email = createAndSetupMailObject(toList);
+			
+			// SUBJECT
+			email.setSubject(msgSubject);
+
+			// CONTENT HTML or PLAIN
+			if (isMsgHtml)
+			{
+				email.setHtmlMsg(msgBody);
+
+				// Client do not have HTML support
+				email.setTextMsg("Your email client does not support HTML messages, see DbxCentral to read the report!");
+			}
+			else
+			{
+				email.setTextMsg(msgBody);
+			}
+
+			// SEND
+			email.send();
+		}
+		catch (Exception ex)
+		{
+			String msg = "Problems sending DSR FALLBACK Error mail. Subject: " + msgSubject;
+			_logger.error(msg, ex);
+		}
+		
 	}
 
 	/**

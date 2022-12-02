@@ -76,6 +76,20 @@ public class MathUtils
 		return bd.doubleValue();
 	}
 	
+	public static BigDecimal max(BigDecimal bd1, BigDecimal bd2)
+	{
+		if (bd1 == null && bd2 == null)
+			return null;
+		
+		if (bd1 == null)
+			return bd2;
+
+		if (bd2 == null)
+		    return bd1;
+
+		return bd1.max(bd2);
+	}
+
 	public static void main(String[] args)
 	{
 		System.out.println("near(10, 100, 80 ) == false : " + pctNear(10, 100, 80));
@@ -91,4 +105,5 @@ public class MathUtils
 		System.out.println("round(1.1234d, 1) == 1.1 : " + round(1.1234d, 1));
 		System.out.println("round(1.1234f, 1) == 1.1 : " + round(1.1234f, 1));
 	}
+
 }

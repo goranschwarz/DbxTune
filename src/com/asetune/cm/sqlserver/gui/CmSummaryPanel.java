@@ -27,6 +27,7 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.MouseEvent;
@@ -38,6 +39,7 @@ import java.util.HashMap;
 import javax.swing.BorderFactory;
 import javax.swing.Icon;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -45,6 +47,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 import javax.swing.ToolTipManager;
+import javax.swing.border.EmptyBorder;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 
@@ -117,213 +120,140 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		}
 	}
 	
-	private JLabel           _title_lbl                    = new JLabel();
-	private JButton          _trendGraphs_but              = new JButton();
+	private JLabel           _title_lbl                                 = new JLabel();
+	private JButton          _trendGraphs_but                           = new JButton();
+                                                                        
+	// SERVER INFO PANEL                                                
+	private JTextField       _localServerName_txt                       = new LocalTextField();
+	private JLabel           _localServerName_lbl                       = new JLabel();
+	private JTextField       _atAtServerName_txt                        = new JTextField();
+	private JLabel           _atAtServerName_lbl                        = new JLabel();
+	private JTextField       _listeners_txt                             = new LocalTextField();
+	private JLabel           _listeners_lbl                             = new JLabel();
+	private JTextField       _onHostName_txt                            = new JTextField();
+	private JLabel           _onHostName_lbl                            = new JLabel();
+	private JTextField       _srvVersion_txt                            = new LocalTextField();
+	private JLabel           _srvVersion_lbl                            = new JLabel();
+	private JTextField       _asePageSize_txt                           = new JTextField();
+	private JLabel           _asePageSize_lbl                           = new JLabel();
+	private JTextField       _lastSampleTime_txt                        = new JTextField();
+	private JLabel           _lastSampleTime_lbl                        = new JLabel();
+	private JTextField       _utcTimeDiff_txt                           = new JTextField();
+	private JLabel           _utcTimeDiff_lbl                           = new JLabel();
+                                                                        
+	private JTextField       _startDate_txt                             = new JTextField();
+	private JLabel           _startDate_lbl                             = new JLabel();
+	private JTextField       _daysRunning_txt                           = new JTextField();
+	private JLabel           _daysRunning_lbl                           = new JLabel();
+                                                                        
+	private JTextField       _connectionsDiff_txt                       = new JTextField();
+	private JTextField       _connections_txt                           = new JTextField();
+	private JLabel           _connections_lbl                           = new JLabel();
+	private JTextField       _distinctLoginsDiff_txt                    = new JTextField();
+	private JTextField       _distinctLoginsAbs_txt                     = new JTextField();
+	private JLabel           _distinctLogins_lbl                        = new JLabel();
+	private JTextField       _lockWaitThreshold_txt                     = new JTextField();
+	private JLabel           _lockWaitThreshold_lbl                     = new JLabel();
+	private JTextField       _lockWaits_txt                             = new JTextField();
+	private JTextField       _lockWaitsDiff_txt                         = new JTextField();
+	private JLabel           _lockWaits_lbl                             = new JLabel();
+	private JLabel           _fullTranslog_lbl                          = new JLabel();
+	private JTextField       _fullTranslog_txt                          = new JTextField();
+	                                                                    
+	private JLabel           _tempdbUsageMbAll_lbl                      = new JLabel();
+	private JTextField       _tempdbUsageMbAllAbs_txt                   = new JTextField();
+	private JTextField       _tempdbUsageMbAllDiff_txt                  = new JTextField();
+                                                                        
+	private JLabel           _tempdbUsageMbUser_lbl                     = new JLabel();
+	private JTextField       _tempdbUsageMbUserAbs_txt                  = new JTextField();
+	private JTextField       _tempdbUsageMbUserDiff_txt                 = new JTextField();
+                                                                        
+	private JLabel           _tempdbUsageMbInternal_lbl                 = new JLabel();
+	private JTextField       _tempdbUsageMbInternalAbs_txt              = new JTextField();
+	private JTextField       _tempdbUsageMbInternalDiff_txt             = new JTextField();
+                                                                        
+	private JLabel           _oldestOpenTranBeginTime_lbl               = new JLabel();
+	private JTextField       _oldestOpenTranBeginTime_txt               = new JTextField();
+	private JLabel           _oldestOpenTranId_lbl                      = new JLabel();
+	private JTextField       _oldestOpenTranId_txt                      = new JTextField();
+	private JLabel           _oldestOpenTranSpid_lbl                    = new JLabel();
+	private JTextField       _oldestOpenTranSpid_txt                    = new JTextField();
+	private JLabel           _oldestOpenTranName_lbl                    = new JLabel();
+	private JTextField       _oldestOpenTranName_txt                    = new JTextField();
+	private JLabel           _oldestOpenTranDbname_lbl                  = new JLabel();
+	private JTextField       _oldestOpenTranDbname_txt                  = new JTextField();
+	private JLabel           _oldestOpenTranWaitType_lbl                = new JLabel();
+	private JTextField       _oldestOpenTranWaitType_txt                = new JTextField();
+	private JLabel           _oldestOpenTranCmd_lbl                     = new JLabel();
+	private JTextField       _oldestOpenTranCmd_txt                     = new JTextField();
+	private JLabel           _oldestOpenTranLoginName_lbl               = new JLabel();
+	private JTextField       _oldestOpenTranLoginName_txt               = new JTextField();
+	private JLabel           _oldestOpenTranTempdbUsageMb_lbl           = new JLabel();
+	private JTextField       _oldestOpenTranTempdbUsageMbAll_txt        = new JTextField();
+	private JTextField       _oldestOpenTranTempdbUsageMbUser_txt       = new JTextField();
+	private JTextField       _oldestOpenTranTempdbUsageMbInternal_txt   = new JTextField();
+	private JLabel           _oldestOpenTranSec_lbl                     = new JLabel();
+	private JTextField       _oldestOpenTranSec_txt                     = new JTextField();
+	private JLabel           _oldestOpenTranThreshold_lbl               = new JLabel();
+	private JTextField       _oldestOpenTranThreshold_txt               = new JTextField();
+	private JLabel           _maxSqlExecTimeInSec_lbl                   = new JLabel();
+	private JTextField       _maxSqlExecTimeInSec_txt                   = new JTextField();
+	private JLabel           _suspectPageCount_lbl                      = new JLabel();
+	private GTextField       _suspectPageCount_txt                      = new GTextField();
+	private JLabel           _suspectPageErrors_lbl                     = new JLabel();
+	private GTextField       _suspectPageErrors_txt                     = new GTextField();
 
-	// SERVER INFO PANEL
-	private JTextField       _localServerName_txt          = new LocalTextField();
-	private JLabel           _localServerName_lbl          = new JLabel();
-	private JTextField       _atAtServerName_txt           = new JTextField();
-	private JLabel           _atAtServerName_lbl           = new JLabel();
-	private JTextField       _listeners_txt                = new LocalTextField();
-	private JLabel           _listeners_lbl                = new JLabel();
-	private JTextField       _onHostName_txt               = new JTextField();
-	private JLabel           _onHostName_lbl               = new JLabel();
-	private JTextField       _srvVersion_txt               = new LocalTextField();
-	private JLabel           _srvVersion_lbl               = new JLabel();
-	private JTextField       _asePageSize_txt              = new JTextField();
-	private JLabel           _asePageSize_lbl              = new JLabel();
-	private JTextField       _lastSampleTime_txt           = new JTextField();
-	private JLabel           _lastSampleTime_lbl           = new JLabel();
-	private JTextField       _utcTimeDiff_txt              = new JTextField();
-	private JLabel           _utcTimeDiff_lbl              = new JLabel();
+	private JLabel           _osMemMb_lbl                               = new JLabel();
+	private JTextField       _osMem_total_os_memory_mb_txt              = new JTextField();
+	private JTextField       _osMem_available_os_memory_mb_txt          = new JTextField();
+	private JCheckBox        _osMem_system_high_memory_signal_state_chk = new JCheckBox();
+	private JCheckBox        _osMem_system_low_memory_signal_state_chk  = new JCheckBox();
 
-	private JTextField       _startDate_txt                = new JTextField();
-	private JLabel           _startDate_lbl                = new JLabel();
-	private JTextField       _daysRunning_txt              = new JTextField();
-	private JLabel           _daysRunning_lbl              = new JLabel();
-//	private JTextField       _countersCleared_txt          = new JTextField();
-//	private JLabel           _countersCleared_lbl          = new JLabel();
-//	private JTextField       _checkPoints_txt              = new JTextField();
-//	private JLabel           _checkPoints_lbl              = new JLabel();
-//	private JTextField       _numDeadlocks_txt             = new JTextField();
-//	private JTextField       _numDeadlocksDiff_txt         = new JTextField();
-//	private JLabel           _numDeadlocks_lbl             = new JLabel();
-//	private JTextField       _diagnosticDumps_txt          = new JTextField();
-//	private JLabel           _diagnosticDumps_lbl          = new JLabel();
-	private JTextField       _connectionsDiff_txt          = new JTextField();
-	private JTextField       _connections_txt              = new JTextField();
-	private JLabel           _connections_lbl              = new JLabel();
-	private JTextField       _distinctLoginsDiff_txt       = new JTextField();
-	private JTextField       _distinctLoginsAbs_txt        = new JTextField();
-	private JLabel           _distinctLogins_lbl           = new JLabel();
-	private JTextField       _lockWaitThreshold_txt        = new JTextField();
-	private JLabel           _lockWaitThreshold_lbl        = new JLabel();
-	private JTextField       _lockWaits_txt                = new JTextField();
-	private JTextField       _lockWaitsDiff_txt            = new JTextField();
-	private JLabel           _lockWaits_lbl                = new JLabel();
-//	private JTextField       _maxRecovery_txt              = new JTextField();
-//	private JLabel           _maxRecovery_lbl              = new JLabel();
-//	private JLabel           _Transactions_lbl             = new JLabel();
-//	private JTextField       _Transactions_Abs_txt         = new JTextField();
-//	private JTextField       _Transactions_Diff_txt        = new JTextField();
-//	private JTextField       _Transactions_Rate_txt        = new JTextField();
-//	private JLabel           _Rollbacks_lbl                = new JLabel();
-//	private JTextField       _Rollbacks_Abs_txt            = new JTextField();
-//	private JTextField       _Rollbacks_Diff_txt           = new JTextField();
-//	private JTextField       _Rollbacks_Rate_txt           = new JTextField();
-//	private JLabel           _Selects_lbl                  = new JLabel();
-//	private JTextField       _Selects_Abs_txt              = new JTextField();
-//	private JTextField       _Selects_Diff_txt             = new JTextField();
-//	private JTextField       _Selects_Rate_txt             = new JTextField();
-//	private JLabel           _Updates_lbl                  = new JLabel();
-//	private JTextField       _Updates_Abs_txt              = new JTextField();
-//	private JTextField       _Updates_Diff_txt             = new JTextField();
-//	private JTextField       _Updates_Rate_txt             = new JTextField();
-//	private JLabel           _Inserts_lbl                  = new JLabel();
-//	private JTextField       _Inserts_Abs_txt              = new JTextField();
-//	private JTextField       _Inserts_Diff_txt             = new JTextField();
-//	private JTextField       _Inserts_Rate_txt             = new JTextField();
-//	private JLabel           _Deletes_lbl                  = new JLabel();
-//	private JTextField       _Deletes_Abs_txt              = new JTextField();
-//	private JTextField       _Deletes_Diff_txt             = new JTextField();
-//	private JTextField       _Deletes_Rate_txt             = new JTextField();
-//	private JLabel           _Merges_lbl                   = new JLabel();
-//	private JTextField       _Merges_Abs_txt               = new JTextField();
-//	private JTextField       _Merges_Diff_txt              = new JTextField();
-//	private JTextField       _Merges_Rate_txt              = new JTextField();
-//	private JLabel           _TableAccesses_lbl            = new JLabel();
-//	private JTextField       _TableAccesses_Abs_txt        = new JTextField();
-//	private JTextField       _TableAccesses_Diff_txt       = new JTextField();
-//	private JTextField       _TableAccesses_Rate_txt       = new JTextField();
-//	private JLabel           _IndexAccesses_lbl            = new JLabel();
-//	private JTextField       _IndexAccesses_Abs_txt        = new JTextField();
-//	private JTextField       _IndexAccesses_Diff_txt       = new JTextField();
-//	private JTextField       _IndexAccesses_Rate_txt       = new JTextField();
-//	private JLabel           _TempDbObjects_lbl            = new JLabel();
-//	private JTextField       _TempDbObjects_Abs_txt        = new JTextField();
-//	private JTextField       _TempDbObjects_Diff_txt       = new JTextField();
-//	private JTextField       _TempDbObjects_Rate_txt       = new JTextField();
-//	private JLabel           _WorkTables_lbl               = new JLabel();
-//	private JTextField       _WorkTables_Abs_txt           = new JTextField();
-//	private JTextField       _WorkTables_Diff_txt          = new JTextField();
-//	private JTextField       _WorkTables_Rate_txt          = new JTextField();
-//	private JLabel           _ULCFlushes_lbl               = new JLabel();
-//	private JTextField       _ULCFlushes_Abs_txt           = new JTextField();
-//	private JTextField       _ULCFlushes_Diff_txt          = new JTextField();
-//	private JTextField       _ULCFlushes_Rate_txt          = new JTextField();
-//	private JLabel           _ULCFlushFull_lbl             = new JLabel();
-//	private JTextField       _ULCFlushFull_Abs_txt         = new JTextField();
-//	private JTextField       _ULCFlushFull_Diff_txt        = new JTextField();
-//	private JTextField       _ULCFlushFull_Rate_txt        = new JTextField();
-//	private JLabel           _ULCKBWritten_lbl             = new JLabel();
-//	private JTextField       _ULCKBWritten_Abs_txt         = new JTextField();
-//	private JTextField       _ULCKBWritten_Diff_txt        = new JTextField();
-//	private JTextField       _ULCKBWritten_Rate_txt        = new JTextField();
-//	private JLabel           _PagesRead_lbl                = new JLabel();
-//	private JTextField       _PagesRead_Abs_txt            = new JTextField();
-//	private JTextField       _PagesRead_Diff_txt           = new JTextField();
-//	private JTextField       _PagesRead_Rate_txt           = new JTextField();
-//	private JLabel           _PagesWritten_lbl             = new JLabel();
-//	private JTextField       _PagesWritten_Abs_txt         = new JTextField();
-//	private JTextField       _PagesWritten_Diff_txt        = new JTextField();
-//	private JTextField       _PagesWritten_Rate_txt        = new JTextField();
-//	private JLabel           _PhysicalReads_lbl            = new JLabel();
-//	private JTextField       _PhysicalReads_Abs_txt        = new JTextField();
-//	private JTextField       _PhysicalReads_Diff_txt       = new JTextField();
-//	private JTextField       _PhysicalReads_Rate_txt       = new JTextField();
-//	private JLabel           _PhysicalWrites_lbl           = new JLabel();
-//	private JTextField       _PhysicalWrites_Abs_txt       = new JTextField();
-//	private JTextField       _PhysicalWrites_Diff_txt      = new JTextField();
-//	private JTextField       _PhysicalWrites_Rate_txt      = new JTextField();
-//	private JLabel           _LogicalReads_lbl             = new JLabel();
-//	private JTextField       _LogicalReads_Abs_txt         = new JTextField();
-//	private JTextField       _LogicalReads_Diff_txt        = new JTextField();
-//	private JTextField       _LogicalReads_Rate_txt        = new JTextField();
-	private JLabel           _fullTranslog_lbl             = new JLabel();
-	private JTextField       _fullTranslog_txt             = new JTextField();
-	
-	private JLabel           _tempdbUsageMbAll_lbl         = new JLabel();
-	private JTextField       _tempdbUsageMbAllAbs_txt      = new JTextField();
-	private JTextField       _tempdbUsageMbAllDiff_txt     = new JTextField();
-
-	private JLabel           _tempdbUsageMbUser_lbl        = new JLabel();
-	private JTextField       _tempdbUsageMbUserAbs_txt     = new JTextField();
-	private JTextField       _tempdbUsageMbUserDiff_txt    = new JTextField();
-
-	private JLabel           _tempdbUsageMbInternal_lbl    = new JLabel();
-	private JTextField       _tempdbUsageMbInternalAbs_txt = new JTextField();
-	private JTextField       _tempdbUsageMbInternalDiff_txt= new JTextField();
-
-	private JLabel           _oldestOpenTranBeginTime_lbl  = new JLabel();
-	private JTextField       _oldestOpenTranBeginTime_txt  = new JTextField();
-	private JLabel           _oldestOpenTranId_lbl         = new JLabel();
-	private JTextField       _oldestOpenTranId_txt         = new JTextField();
-	private JLabel           _oldestOpenTranSpid_lbl       = new JLabel();
-	private JTextField       _oldestOpenTranSpid_txt       = new JTextField();
-	private JLabel           _oldestOpenTranName_lbl       = new JLabel();
-	private JTextField       _oldestOpenTranName_txt       = new JTextField();
-	private JLabel           _oldestOpenTranDbname_lbl     = new JLabel();
-	private JTextField       _oldestOpenTranDbname_txt     = new JTextField();
-	private JLabel           _oldestOpenTranWaitType_lbl   = new JLabel();
-	private JTextField       _oldestOpenTranWaitType_txt   = new JTextField();
-	private JLabel           _oldestOpenTranCmd_lbl        = new JLabel();
-	private JTextField       _oldestOpenTranCmd_txt        = new JTextField();
-	private JLabel           _oldestOpenTranLoginName_lbl  = new JLabel();
-	private JTextField       _oldestOpenTranLoginName_txt  = new JTextField();
-	private JLabel           _oldestOpenTranTempdbUsageMb_lbl         = new JLabel();
-	private JTextField       _oldestOpenTranTempdbUsageMbAll_txt      = new JTextField();
-	private JTextField       _oldestOpenTranTempdbUsageMbUser_txt     = new JTextField();
-	private JTextField       _oldestOpenTranTempdbUsageMbInternal_txt = new JTextField();
-	private JLabel           _oldestOpenTranSec_lbl        = new JLabel();
-	private JTextField       _oldestOpenTranSec_txt        = new JTextField();
-	private JLabel           _oldestOpenTranThreshold_lbl  = new JLabel();
-	private JTextField       _oldestOpenTranThreshold_txt  = new JTextField();
-	private JLabel           _maxSqlExecTimeInSec_lbl      = new JLabel();
-	private JTextField       _maxSqlExecTimeInSec_txt      = new JTextField();
-	private JLabel           _suspectPageCount_lbl         = new JLabel();
-	private GTextField       _suspectPageCount_txt         = new GTextField();
-	private JLabel           _suspectPageErrors_lbl        = new JLabel();
-	private GTextField       _suspectPageErrors_txt        = new GTextField();
-
-//	private JLabel           _bootcount_lbl                = new JLabel();
-//	private JTextField       _bootcount_txt                = new JTextField();
-//	private JLabel           _recoveryState_lbl            = new JLabel();
-//	private JTextField       _recoveryState_txt            = new JTextField();
-
-	private JLabel           _cpuTime_lbl                  = new JLabel();
-	private JTextField       _cpuTime_txt                  = new JTextField();
-	private JLabel           _cpuUser_lbl                  = new JLabel();
-	private JTextField       _cpuUser_txt                  = new JTextField();
-	private JLabel           _cpuSystem_lbl                = new JLabel();
-	private JTextField       _cpuSystem_txt                = new JTextField();
-	private JLabel           _cpuIdle_lbl                  = new JLabel();
-	private JTextField       _cpuIdle_txt                  = new JTextField();
-
-	private JLabel           _ioTotalRead_lbl               = new JLabel();
-	private JTextField       _ioTotalRead_txt               = new JTextField();
-	private JTextField       _ioTotalReadDiff_txt           = new JTextField();
-	private JLabel           _ioTotalWrite_lbl              = new JLabel();
-	private JTextField       _ioTotalWrite_txt              = new JTextField();
-	private JTextField       _ioTotalWriteDiff_txt          = new JTextField();
-
-	private JLabel           _aaConnections_lbl             = new JLabel();
-	private JTextField       _aaConnectionsAbs_txt          = new JTextField();
-	private JTextField       _aaConnectionsDiff_txt         = new JTextField();
-	private JTextField       _aaConnectionsRate_txt         = new JTextField();
-
-	private JLabel           _packReceived_lbl              = new JLabel();
-	private JTextField       _packReceived_txt              = new JTextField();
-	private JTextField       _packReceivedDiff_txt          = new JTextField();
-	private JLabel           _packSent_lbl                  = new JLabel();
-	private JTextField       _packSent_txt                  = new JTextField();
-	private JTextField       _packSentDiff_txt              = new JTextField();
-	private JLabel           _packetErrors_lbl              = new JLabel();
-	private JTextField       _packetErrors_txt              = new JTextField();
-	private JTextField       _packetErrorsDiff_txt          = new JTextField();
-	private JLabel           _totalErrors_lbl               = new JLabel();
-	private JTextField       _totalErrors_txt               = new JTextField();
-	private JTextField       _totalErrorsDiff_txt           = new JTextField();
+	private JLabel           _memXxxServerMb_lbl                        = new JLabel();
+	private JTextField       _memTargetServerMb_txt                     = new JTextField();
+	private JTextField       _memTotalServerMb_txt                      = new JTextField();
+	private JTextField       _memTargetVsTotalMb_txt                    = new JTextField();
+                                                                        
+	private JLabel           _memYyyServerMb_lbl                        = new JLabel();
+	private JTextField       _memUsedByServer_txt                       = new JTextField();
+	private JTextField       _memLockedPagesUsedByServer_txt            = new JTextField();
+	private JTextField       _memUtilizationPct_txt                     = new JTextField();
+	private JCheckBox        _memProcessPhysicalMemoryLow_chk           = new JCheckBox();
+	private JCheckBox        _memProcessVirtualMemoryLow_chk            = new JCheckBox();
+                                                                        
+	private JLabel           _cpuTime_lbl                               = new JLabel();
+	private JTextField       _cpuTime_txt                               = new JTextField();
+	private JLabel           _cpuUser_lbl                               = new JLabel();
+	private JTextField       _cpuUser_txt                               = new JTextField();
+	private JLabel           _cpuSystem_lbl                             = new JLabel();
+	private JTextField       _cpuSystem_txt                             = new JTextField();
+	private JLabel           _cpuIdle_lbl                               = new JLabel();
+	private JTextField       _cpuIdle_txt                               = new JTextField();
+                                                                        
+	private JLabel           _ioTotalRead_lbl                           = new JLabel();
+	private JTextField       _ioTotalRead_txt                           = new JTextField();
+	private JTextField       _ioTotalReadDiff_txt                       = new JTextField();
+	private JLabel           _ioTotalWrite_lbl                          = new JLabel();
+	private JTextField       _ioTotalWrite_txt                          = new JTextField();
+	private JTextField       _ioTotalWriteDiff_txt                      = new JTextField();
+                                                                        
+	private JLabel           _aaConnections_lbl                         = new JLabel();
+	private JTextField       _aaConnectionsAbs_txt                      = new JTextField();
+	private JTextField       _aaConnectionsDiff_txt                     = new JTextField();
+	private JTextField       _aaConnectionsRate_txt                     = new JTextField();
+                                                                        
+	private JLabel           _packReceived_lbl                          = new JLabel();
+	private JTextField       _packReceived_txt                          = new JTextField();
+	private JTextField       _packReceivedDiff_txt                      = new JTextField();
+	private JLabel           _packSent_lbl                              = new JLabel();
+	private JTextField       _packSent_txt                              = new JTextField();
+	private JTextField       _packSentDiff_txt                          = new JTextField();
+	private JLabel           _packetErrors_lbl                          = new JLabel();
+	private JTextField       _packetErrors_txt                          = new JTextField();
+	private JTextField       _packetErrorsDiff_txt                      = new JTextField();
+	private JLabel           _totalErrors_lbl                           = new JLabel();
+	private JTextField       _totalErrors_txt                           = new JTextField();
+	private JTextField       _totalErrorsDiff_txt                       = new JTextField();
 	
 	private static final Color NON_CONFIGURED_MONITORING_COLOR = new Color(255, 224, 115);
 	private HashMap<String, String> _originToolTip = new HashMap<String, String>(); // <name><msg>
@@ -540,33 +470,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_daysRunning_txt      .setToolTipText(tooltip);
 		_daysRunning_txt      .setEditable(false);
 
-//		tooltip = "Date and time at which the monitor counters were last cleared.";
-//		_countersCleared_lbl  .setText("Counters clear date");
-//		_countersCleared_lbl  .setToolTipText(tooltip);
-//		_countersCleared_txt  .setToolTipText(tooltip);
-//		_countersCleared_txt  .setEditable(false);
-//
-//		tooltip = "Whether any checkpoint is currently running.";
-//		_checkPoints_lbl      .setText("Running checkpoint");
-//		_checkPoints_lbl      .setToolTipText(tooltip);
-//		_checkPoints_txt      .setToolTipText(tooltip);
-//		_checkPoints_txt      .setEditable(false);
-//
-//		tooltip = "Total number of deadlocks that have occurred.";
-//		_numDeadlocks_lbl     .setText("Number of deadlock");
-//		_numDeadlocks_lbl     .setToolTipText(tooltip);
-//		_numDeadlocks_txt     .setToolTipText(tooltip);
-//		_numDeadlocks_txt     .setEditable(false);
-//		_numDeadlocksDiff_txt .setEditable(false);
-//		_numDeadlocksDiff_txt .setToolTipText("The difference since previous sample.");
-//		_numDeadlocksDiff_txt.setForeground(Color.BLUE);
-//
-//		tooltip = "Whether the Sybmon diagnostic utility is performing a shared memory dump.";
-//		_diagnosticDumps_lbl  .setText("Diagnostics Dumps");
-//		_diagnosticDumps_lbl  .setToolTipText(tooltip);
-//		_diagnosticDumps_txt  .setToolTipText(tooltip);
-//		_diagnosticDumps_txt  .setEditable(false);
 
+		//-----------------------------------------------------------------------------------
 		tooltip = "Number of active inbound connections.";
 		_connections_lbl      .setText("Connections");
 		_connections_lbl      .setToolTipText(tooltip);
@@ -600,278 +505,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_lockWaitsDiff_txt    .setToolTipText("The difference since previous sample.");
 		_lockWaitsDiff_txt.setForeground(Color.BLUE);
 
-//		tooltip = "The maximum time (in minutes), per database, that SQL-Server uses to complete its recovery procedures in case of a system failure, the current 'Run Value' for the 'recovery interval in minutes' configuration option.";
-//		_maxRecovery_lbl      .setText("Max recovery");
-//		_maxRecovery_lbl      .setToolTipText(tooltip);
-//		_maxRecovery_txt      .setToolTipText(tooltip);
-//		_maxRecovery_txt      .setEditable(false);
-//		
-//		tooltip = "<html>Number of transactions executed (abs, <font color='blue'>diff, <i>rate</i></font>), Only available from 15.0.3 CE or 15.5 (not to be trusted in a Cluster Server).";
-//		_originToolTip        .put    ("Transactions", tooltip);
-//		_Transactions_lbl     .setText("Transactions");
-//		_Transactions_lbl     .setToolTipText(tooltip);
-//		_Transactions_Abs_txt .setToolTipText(tooltip);
-//		_Transactions_Abs_txt .setEditable(false);
-//		_Transactions_Diff_txt.setEditable(false);
-//		_Transactions_Diff_txt.setToolTipText(tooltip);
-//		_Transactions_Rate_txt.setEditable(false);
-//		_Transactions_Rate_txt.setToolTipText(tooltip);
-//		_Transactions_Diff_txt.setForeground(Color.BLUE);
-//		_Transactions_Rate_txt.setForeground(Color.BLUE);
-//		_Transactions_Rate_txt.setFont(RATE_FONT);
-//		
-//		tooltip = "<html>Total number of transactions that have been rolled back on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
-//		_originToolTip      .put    ("Rollbacks", tooltip);
-//		_Rollbacks_lbl      .setText("Rollbacks");
-//		_Rollbacks_lbl      .setToolTipText(tooltip);
-//		_Rollbacks_Abs_txt  .setToolTipText(tooltip);
-//		_Rollbacks_Abs_txt  .setEditable(false);
-//		_Rollbacks_Diff_txt .setEditable(false);
-//		_Rollbacks_Diff_txt .setToolTipText(tooltip);
-//		_Rollbacks_Rate_txt .setEditable(false);
-//		_Rollbacks_Rate_txt .setToolTipText(tooltip);
-//		_Rollbacks_Diff_txt.setForeground(Color.BLUE);
-//		_Rollbacks_Rate_txt.setForeground(Color.BLUE);
-//		_Rollbacks_Rate_txt.setFont(RATE_FONT);
-//
-//		tooltip = "<html>Total number of select operations that have been executed on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
-//		_originToolTip    .put    ("Selects", tooltip);
-//		_Selects_lbl      .setText("Selects");
-//		_Selects_lbl      .setToolTipText(tooltip);
-//		_Selects_Abs_txt  .setToolTipText(tooltip);
-//		_Selects_Abs_txt  .setEditable(false);
-//		_Selects_Diff_txt .setEditable(false);
-//		_Selects_Diff_txt .setToolTipText(tooltip);
-//		_Selects_Rate_txt .setEditable(false);
-//		_Selects_Rate_txt .setToolTipText(tooltip);
-//		_Selects_Diff_txt.setForeground(Color.BLUE);
-//		_Selects_Rate_txt.setForeground(Color.BLUE);
-//		_Selects_Rate_txt.setFont(RATE_FONT);
-//
-//		tooltip = "<html>Total number of update operations that have been executed on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
-//		_originToolTip    .put    ("Updates", tooltip);
-//		_Updates_lbl      .setText("Updates");
-//		_Updates_lbl      .setToolTipText(tooltip);
-//		_Updates_Abs_txt  .setToolTipText(tooltip);
-//		_Updates_Abs_txt  .setEditable(false);
-//		_Updates_Diff_txt .setEditable(false);
-//		_Updates_Diff_txt .setToolTipText(tooltip);
-//		_Updates_Rate_txt .setEditable(false);
-//		_Updates_Rate_txt .setToolTipText(tooltip);
-//		_Updates_Diff_txt.setForeground(Color.BLUE);
-//		_Updates_Rate_txt.setForeground(Color.BLUE);
-//		_Updates_Rate_txt.setFont(RATE_FONT);
-//
-//		tooltip = "<html>Total number of insert operations that have been executed on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
-//		_originToolTip    .put    ("Inserts", tooltip);
-//		_Inserts_lbl      .setText("Inserts");
-//		_Inserts_lbl      .setToolTipText(tooltip);
-//		_Inserts_Abs_txt  .setToolTipText(tooltip);
-//		_Inserts_Abs_txt  .setEditable(false);
-//		_Inserts_Diff_txt .setEditable(false);
-//		_Inserts_Diff_txt .setToolTipText(tooltip);
-//		_Inserts_Rate_txt .setEditable(false);
-//		_Inserts_Rate_txt .setToolTipText(tooltip);
-//		_Inserts_Diff_txt.setForeground(Color.BLUE);
-//		_Inserts_Rate_txt.setForeground(Color.BLUE);
-//		_Inserts_Rate_txt.setFont(RATE_FONT);
-//
-//		tooltip = "<html>Total number of delete operations that have been executed on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
-//		_originToolTip    .put    ("Deletes", tooltip);
-//		_Deletes_lbl      .setText("Deletes");
-//		_Deletes_lbl      .setToolTipText(tooltip);
-//		_Deletes_Abs_txt  .setToolTipText(tooltip);
-//		_Deletes_Abs_txt  .setEditable(false);
-//		_Deletes_Diff_txt .setEditable(false);
-//		_Deletes_Diff_txt .setToolTipText(tooltip);
-//		_Deletes_Rate_txt .setEditable(false);
-//		_Deletes_Rate_txt .setToolTipText(tooltip);
-//		_Deletes_Diff_txt.setForeground(Color.BLUE);
-//		_Deletes_Rate_txt.setForeground(Color.BLUE);
-//		_Deletes_Rate_txt.setFont(RATE_FONT);
-//
-//		tooltip = "<html>Total number of merge operations that have been executed on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
-//		_originToolTip   .put    ("Merges", tooltip);
-//		_Merges_lbl      .setText("Merges");
-//		_Merges_lbl      .setToolTipText(tooltip);
-//		_Merges_Abs_txt  .setToolTipText(tooltip);
-//		_Merges_Abs_txt  .setEditable(false);
-//		_Merges_Diff_txt .setEditable(false);
-//		_Merges_Diff_txt .setToolTipText(tooltip);
-//		_Merges_Rate_txt .setEditable(false);
-//		_Merges_Rate_txt .setToolTipText(tooltip);
-//		_Merges_Diff_txt.setForeground(Color.BLUE);
-//		_Merges_Rate_txt.setForeground(Color.BLUE);
-//		_Merges_Rate_txt.setFont(RATE_FONT);
-//
-//		tooltip = "<html>Number of pages where data was retrieved without an index on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
-//		_originToolTip          .put    ("TableAccesses", tooltip);
-//		_TableAccesses_lbl      .setText("TableAccesses");
-//		_TableAccesses_lbl      .setToolTipText(tooltip);
-//		_TableAccesses_Abs_txt  .setToolTipText(tooltip);
-//		_TableAccesses_Abs_txt  .setEditable(false);
-//		_TableAccesses_Diff_txt .setEditable(false);
-//		_TableAccesses_Diff_txt .setToolTipText(tooltip);
-//		_TableAccesses_Rate_txt .setEditable(false);
-//		_TableAccesses_Rate_txt .setToolTipText(tooltip);
-//		_TableAccesses_Diff_txt.setForeground(Color.BLUE);
-//		_TableAccesses_Rate_txt.setForeground(Color.BLUE);
-//		_TableAccesses_Rate_txt.setFont(RATE_FONT);
-//
-//		tooltip = "<html>Number of pages where data was retrieved using an index on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
-//		_originToolTip          .put    ("IndexAccesses", tooltip);
-//		_IndexAccesses_lbl      .setText("IndexAccesses");
-//		_IndexAccesses_lbl      .setToolTipText(tooltip);
-//		_IndexAccesses_Abs_txt  .setToolTipText(tooltip);
-//		_IndexAccesses_Abs_txt  .setEditable(false);
-//		_IndexAccesses_Diff_txt .setEditable(false);
-//		_IndexAccesses_Diff_txt .setToolTipText(tooltip);
-//		_IndexAccesses_Rate_txt .setEditable(false);
-//		_IndexAccesses_Rate_txt .setToolTipText(tooltip);
-//		_IndexAccesses_Diff_txt.setForeground(Color.BLUE);
-//		_IndexAccesses_Rate_txt.setForeground(Color.BLUE);
-//		_IndexAccesses_Rate_txt.setFont(RATE_FONT);
-//
-//		tooltip = "<html>Total number of temporary tables created on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
-//		_originToolTip          .put    ("TempDbObjects", tooltip);
-//		_TempDbObjects_lbl      .setText("TempDbObjects");
-//		_TempDbObjects_lbl      .setToolTipText(tooltip);
-//		_TempDbObjects_Abs_txt  .setToolTipText(tooltip);
-//		_TempDbObjects_Abs_txt  .setEditable(false);
-//		_TempDbObjects_Diff_txt .setEditable(false);
-//		_TempDbObjects_Diff_txt .setToolTipText(tooltip);
-//		_TempDbObjects_Rate_txt .setEditable(false);
-//		_TempDbObjects_Rate_txt .setToolTipText(tooltip);
-//		_TempDbObjects_Diff_txt.setForeground(Color.BLUE);
-//		_TempDbObjects_Rate_txt.setForeground(Color.BLUE);
-//		_TempDbObjects_Rate_txt.setFont(RATE_FONT);
-//
-//		tooltip = "<html>Total number of work tables created on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
-//		_originToolTip       .put    ("WorkTables", tooltip);
-//		_WorkTables_lbl      .setText("WorkTables");
-//		_WorkTables_lbl      .setToolTipText(tooltip);
-//		_WorkTables_Abs_txt  .setToolTipText(tooltip);
-//		_WorkTables_Abs_txt  .setEditable(false);
-//		_WorkTables_Diff_txt .setEditable(false);
-//		_WorkTables_Diff_txt .setToolTipText(tooltip);
-//		_WorkTables_Rate_txt .setEditable(false);
-//		_WorkTables_Rate_txt .setToolTipText(tooltip);
-//		_WorkTables_Diff_txt.setForeground(Color.BLUE);
-//		_WorkTables_Rate_txt.setForeground(Color.BLUE);
-//		_WorkTables_Rate_txt.setFont(RATE_FONT);
-//
-//		tooltip = "<html>Total number of times the User Log Cache was flushed, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
-//		_originToolTip       .put    ("ULCFlushes", tooltip);
-//		_ULCFlushes_lbl      .setText("ULCFlushes");
-//		_ULCFlushes_lbl      .setToolTipText(tooltip);
-//		_ULCFlushes_Abs_txt  .setToolTipText(tooltip);
-//		_ULCFlushes_Abs_txt  .setEditable(false);
-//		_ULCFlushes_Diff_txt .setEditable(false);
-//		_ULCFlushes_Diff_txt .setToolTipText(tooltip);
-//		_ULCFlushes_Rate_txt .setEditable(false);
-//		_ULCFlushes_Rate_txt .setToolTipText(tooltip);
-//		_ULCFlushes_Diff_txt.setForeground(Color.BLUE);
-//		_ULCFlushes_Rate_txt.setForeground(Color.BLUE);
-//		_ULCFlushes_Rate_txt.setFont(RATE_FONT);
-//
-//		tooltip = "<html>Number of times the User Log Cache was flushed because it was full, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
-//		_originToolTip         .put    ("ULCFlushFull", tooltip);
-//		_ULCFlushFull_lbl      .setText("ULCFlushFull");
-//		_ULCFlushFull_lbl      .setToolTipText(tooltip);
-//		_ULCFlushFull_Abs_txt  .setToolTipText(tooltip);
-//		_ULCFlushFull_Abs_txt  .setEditable(false);
-//		_ULCFlushFull_Diff_txt .setEditable(false);
-//		_ULCFlushFull_Diff_txt .setToolTipText(tooltip);
-//		_ULCFlushFull_Rate_txt .setEditable(false);
-//		_ULCFlushFull_Rate_txt .setToolTipText(tooltip);
-//		_ULCFlushFull_Diff_txt.setForeground(Color.BLUE);
-//		_ULCFlushFull_Rate_txt.setForeground(Color.BLUE);
-//		_ULCFlushFull_Rate_txt.setFont(RATE_FONT);
-//
-//		tooltip = "<html>Number of kilobytes written to the user log cache, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
-//		_originToolTip         .put    ("ULCKBWritten", tooltip);
-//		_ULCKBWritten_lbl      .setText("ULCKBWritten");
-//		_ULCKBWritten_lbl      .setToolTipText(tooltip);
-//		_ULCKBWritten_Abs_txt  .setToolTipText(tooltip);
-//		_ULCKBWritten_Abs_txt  .setEditable(false);
-//		_ULCKBWritten_Diff_txt .setEditable(false);
-//		_ULCKBWritten_Diff_txt .setToolTipText(tooltip);
-//		_ULCKBWritten_Rate_txt .setEditable(false);
-//		_ULCKBWritten_Rate_txt .setToolTipText(tooltip);
-//		_ULCKBWritten_Diff_txt.setForeground(Color.BLUE);
-//		_ULCKBWritten_Rate_txt.setForeground(Color.BLUE);
-//		_ULCKBWritten_Rate_txt.setFont(RATE_FONT);
-//
-//		tooltip = "<html>Number of pages read on server wide, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
-//		_originToolTip      .put    ("PagesRead", tooltip);
-//		_PagesRead_lbl      .setText("PagesRead");
-//		_PagesRead_lbl      .setToolTipText(tooltip);
-//		_PagesRead_Abs_txt  .setToolTipText(tooltip);
-//		_PagesRead_Abs_txt  .setEditable(false);
-//		_PagesRead_Diff_txt .setEditable(false);
-//		_PagesRead_Diff_txt .setToolTipText(tooltip);
-//		_PagesRead_Rate_txt .setEditable(false);
-//		_PagesRead_Rate_txt .setToolTipText(tooltip);
-//		_PagesRead_Diff_txt.setForeground(Color.BLUE);
-//		_PagesRead_Rate_txt.setForeground(Color.BLUE);
-//		_PagesRead_Rate_txt.setFont(RATE_FONT);
-//
-//		tooltip = "<html>Number of pages written on server wide, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
-//		_originToolTip         .put    ("PagesWritten", tooltip);
-//		_PagesWritten_lbl      .setText("PagesWritten");
-//		_PagesWritten_lbl      .setToolTipText(tooltip);
-//		_PagesWritten_Abs_txt  .setToolTipText(tooltip);
-//		_PagesWritten_Abs_txt  .setEditable(false);
-//		_PagesWritten_Diff_txt .setEditable(false);
-//		_PagesWritten_Diff_txt .setToolTipText(tooltip);
-//		_PagesWritten_Rate_txt .setEditable(false);
-//		_PagesWritten_Rate_txt .setToolTipText(tooltip);
-//		_PagesWritten_Diff_txt.setForeground(Color.BLUE);
-//		_PagesWritten_Rate_txt.setForeground(Color.BLUE);
-//		_PagesWritten_Rate_txt.setFont(RATE_FONT);
-//
-//		tooltip = "<html>Number of buffers read from the disk, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
-//		_originToolTip          .put    ("PhysicalReads", tooltip);
-//		_PhysicalReads_lbl      .setText("PhysicalReads");
-//		_PhysicalReads_lbl      .setToolTipText(tooltip);
-//		_PhysicalReads_Abs_txt  .setToolTipText(tooltip);
-//		_PhysicalReads_Abs_txt  .setEditable(false);
-//		_PhysicalReads_Diff_txt .setEditable(false);
-//		_PhysicalReads_Diff_txt .setToolTipText(tooltip);
-//		_PhysicalReads_Rate_txt .setEditable(false);
-//		_PhysicalReads_Rate_txt .setToolTipText(tooltip);
-//		_PhysicalReads_Diff_txt.setForeground(Color.BLUE);
-//		_PhysicalReads_Rate_txt.setForeground(Color.BLUE);
-//		_PhysicalReads_Rate_txt.setFont(RATE_FONT);
-//
-//		tooltip = "<html>Number of buffers written to the disk, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
-//		_originToolTip           .put    ("PhysicalWrites", tooltip);
-//		_PhysicalWrites_lbl      .setText("PhysicalWrites");
-//		_PhysicalWrites_lbl      .setToolTipText(tooltip);
-//		_PhysicalWrites_Abs_txt  .setToolTipText(tooltip);
-//		_PhysicalWrites_Abs_txt  .setEditable(false);
-//		_PhysicalWrites_Diff_txt .setEditable(false);
-//		_PhysicalWrites_Diff_txt .setToolTipText(tooltip);
-//		_PhysicalWrites_Rate_txt .setEditable(false);
-//		_PhysicalWrites_Rate_txt .setToolTipText(tooltip);
-//		_PhysicalWrites_Diff_txt.setForeground(Color.BLUE);
-//		_PhysicalWrites_Rate_txt.setForeground(Color.BLUE);
-//		_PhysicalWrites_Rate_txt.setFont(RATE_FONT);
-//
-//		tooltip = "<html>Number of buffers read from cache, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
-//		_originToolTip         .put    ("LogicalReads", tooltip);
-//		_LogicalReads_lbl      .setText("LogicalReads");
-//		_LogicalReads_lbl      .setToolTipText(tooltip);
-//		_LogicalReads_Abs_txt  .setToolTipText(tooltip);
-//		_LogicalReads_Abs_txt  .setEditable(false);
-//		_LogicalReads_Diff_txt .setEditable(false);
-//		_LogicalReads_Diff_txt .setToolTipText(tooltip);
-//		_LogicalReads_Rate_txt .setEditable(false);
-//		_LogicalReads_Rate_txt .setToolTipText(tooltip);
-//		_LogicalReads_Diff_txt.setForeground(Color.BLUE);
-//		_LogicalReads_Rate_txt.setForeground(Color.BLUE);
-//		_LogicalReads_Rate_txt.setFont(RATE_FONT);
 
+		//-----------------------------------------------------------------------------------
 		tooltip = "Number of databases that has a full transaction log, which probably means suspended SPID's.";
 		_fullTranslog_lbl.setText("Full Transaction Logs");
 		_fullTranslog_lbl.setToolTipText(tooltip);
@@ -995,18 +630,73 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		
 		
 		
-//		tooltip = "How many times has this SQL-Server been rebooted.";
-//		_bootcount_lbl      .setText("Boot Count");
-//		_bootcount_lbl      .setToolTipText(tooltip);
-//		_bootcount_txt      .setToolTipText(tooltip);
-//		_bootcount_txt      .setEditable(false);
-//
-//		tooltip = "If the SQL-Server is in-recovery, this would be the reason.";
-//		_recoveryState_lbl      .setText("Recovery State");
-//		_recoveryState_lbl      .setToolTipText(tooltip);
-//		_recoveryState_txt      .setToolTipText(tooltip);
-//		_recoveryState_txt      .setEditable(false);
+		//-----------------------------------------------------------------------------------
 
+		tooltip = "";
+		_osMemMb_lbl                              .setText("OS Memory in MB");
+		_osMemMb_lbl                              .setToolTipText("<html>Operating System Memory Information<ul>"
+				+ "<li>1: dm_os_sys_memory.total_physical_memory_kb/1024     -- Total size of physical memory available to the operating system </li> "
+				+ "<li>2: dm_os_sys_memory.available_physical_memory_kb/1024 -- Size of physical memory available in the operating system </li> "
+				+ "<li>4: dm_os_sys_memory.system_high_memory_signal_state   -- State of the system high memory resource notification. A value of 1 indicates the high memory signal has been set by the OS </li> "
+				+ "<li>5: dm_os_sys_memory.system_low_memory_signal_state    -- State of the system low memory resource notification. A value of 1 indicates the low memory signal has been set by the OS </li> "
+				+ "</ul></html>");
+
+		_osMem_total_os_memory_mb_txt             .setToolTipText("<html>Total size of physical memory available to the operating system (total memory on the machine)</html>");
+		_osMem_available_os_memory_mb_txt         .setToolTipText("<html>Size of physical memory free/available in the operating system</html>");
+		_osMem_system_high_memory_signal_state_chk.setToolTipText("<html>State of the system high memory resource notification. A value of 1 indicates the high memory signal has been set by the OS</html>");
+		_osMem_system_low_memory_signal_state_chk .setToolTipText("<html>State of the system low memory resource notification. A value of 1 indicates the low memory signal has been set by the OS</html>");
+
+		_osMem_total_os_memory_mb_txt             .setEditable(false);
+		_osMem_available_os_memory_mb_txt         .setEditable(false);
+		_osMem_system_high_memory_signal_state_chk.setEnabled (false);
+		_osMem_system_low_memory_signal_state_chk .setEnabled (false);
+
+		_osMem_system_high_memory_signal_state_chk.setBorder(new EmptyBorder(new Insets(1,1,1,1)));
+		_osMem_system_low_memory_signal_state_chk .setBorder(new EmptyBorder(new Insets(1,1,1,1)));
+		
+		
+		tooltip = "";
+		_memXxxServerMb_lbl.setText("Target & Total Memory");
+		_memXxxServerMb_lbl.setToolTipText("<html><ul> "
+				+ "<li>1: Target Server Memory MB</li> "
+				+ "<li>2: Total Server Memory MB</li> "
+				+ "<li>3: Target - Total (not-yet-used) MB</li> "
+				+ "</ul></html>");
+
+		_memTargetServerMb_txt .setToolTipText("<html><b>Target Server Memory MB</b> - The amount of memory that SQL Server is willing (potential) to allocate to the SQL Server under its current load.</html>");
+		_memTotalServerMb_txt  .setToolTipText("<html><b>Total Server Memory MB</b> - Current amount of memory <b>currently</b> assigned/allocated to SQL Server</html>");
+		_memTargetVsTotalMb_txt.setToolTipText("<html><b>Target - Total (not-yet-used) MB</b> - Simply the two field on the left: Target - Total ... Basically how much memory until we reach the MAX Memory</html>");
+		
+		_memTargetServerMb_txt .setEditable(false);
+		_memTotalServerMb_txt  .setEditable(false);
+		_memTargetVsTotalMb_txt.setEditable(false);
+
+		
+		_memYyyServerMb_lbl.setText("Memory Used");
+		_memYyyServerMb_lbl.setToolTipText("<html><ul> "
+				+ "<li>1: dm_os_process_memory.physical_memory_in_use_kb/1024  -- the process working set in KB, as reported by operating system, as well as tracked allocations by using large page APIs </li> "
+				+ "<li>2: dm_os_process_memory.locked_page_allocations_kb/1024 -- Specifies memory pages locked in memory</li> "
+				+ "<li>3: dm_os_process_memory.memory_utilization_percentage   -- Specifies the percentage of committed memory that is in the working set</li> "
+				+ "<li>4: dm_os_process_memory.process_physical_memory_low     -- Indicates that the process is responding to low physical memory notification</li> "
+				+ "<li>5: dm_os_process_memory.process_virtual_memory_low      -- Indicates that low virtual memory condition has been detected</li> "
+				+ "</ul></html>");
+
+		_memUsedByServer_txt            .setToolTipText("<html><b>Memory Used by SQL Server in MB</b>       - dm_os_process_memory.physical_memory_in_use_kb</html>");
+		_memLockedPagesUsedByServer_txt .setToolTipText("<html><b>Locked Pages Used by SQL Server in MB</b> - dm_os_process_memory.locked_page_allocations_kb</html>");
+		_memUtilizationPct_txt          .setToolTipText("<html><b>Memory Utilization Percentage</b>         - dm_os_process_memory.memory_utilization_percentage</html>");
+		_memProcessPhysicalMemoryLow_chk.setToolTipText("<html><b>process_physical_memory_low</b>           - dm_os_process_memory.process_physical_memory_low -- indicates that you are under memory pressure -- Indicates that the process is responding to low physical memory notification</html>");
+		_memProcessVirtualMemoryLow_chk .setToolTipText("<html><b>process_virtual_memory_low</b>            - dm_os_process_memory.process_virtual_memory_low -- indicates that you are under memory pressure -- Indicates that low virtual memory condition has been detected</html>");
+
+		_memUsedByServer_txt            .setEditable(false);
+		_memLockedPagesUsedByServer_txt .setEditable(false);
+		_memUtilizationPct_txt          .setEditable(false);
+		_memProcessPhysicalMemoryLow_chk.setEnabled (false);
+		_memProcessVirtualMemoryLow_chk .setEnabled (false);
+		
+		_memProcessPhysicalMemoryLow_chk.setBorder(new EmptyBorder(new Insets(1,1,1,1)));
+		_memProcessVirtualMemoryLow_chk .setBorder(new EmptyBorder(new Insets(1,1,1,1)));
+		
+		
 		tooltip = "CPU Time. Global variable @@cpu_busy + @@io_busy.";
 //		_cpuTime_lbl      .setText("CPU Usage");
 		_cpuTime_lbl      .setText("CPU Time/User/Sys");
@@ -1103,365 +793,185 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		//--------------------------
 		// DO the LAYOUT
 		//--------------------------
-		panel.add(_localServerName_lbl,     "");
-		panel.add(_localServerName_txt,     "growx, wrap");
-		
-		panel.add(_atAtServerName_lbl,      "");
-		panel.add(_atAtServerName_txt,      "growx, wrap");
-		
-		panel.add(_listeners_lbl,           "");
-		panel.add(_listeners_txt,           "growx, wrap");
-		
-		panel.add(_onHostName_lbl,          "");
-		panel.add(_onHostName_txt,          "growx, wrap");
-		
-		panel.add(_srvVersion_lbl,          "");
-		panel.add(_srvVersion_txt,          "growx, wrap");
-		
-		panel.add(_asePageSize_lbl,         "");
-		panel.add(_asePageSize_txt,         "growx, wrap");
-		
-		panel.add(_lastSampleTime_lbl,      "");
-		panel.add(_lastSampleTime_txt,      "growx, wrap");
-		
-		panel.add(_utcTimeDiff_lbl,         "");
-		panel.add(_utcTimeDiff_txt,         "growx, wrap 20");
+		panel.add(_localServerName_lbl,                       "");
+		panel.add(_localServerName_txt,                       "growx, wrap");
+		                                                      
+		panel.add(_atAtServerName_lbl,                        "");
+		panel.add(_atAtServerName_txt,                        "growx, wrap");
+		                                                      
+		panel.add(_listeners_lbl,                             "");
+		panel.add(_listeners_txt,                             "growx, wrap");
+		                                                      
+		panel.add(_onHostName_lbl,                            "");
+		panel.add(_onHostName_txt,                            "growx, wrap");
+		                                                      
+		panel.add(_srvVersion_lbl,                            "");
+		panel.add(_srvVersion_txt,                            "growx, wrap");
+		                                                      
+		panel.add(_asePageSize_lbl,                           "");
+		panel.add(_asePageSize_txt,                           "growx, wrap");
+		                                                      
+		panel.add(_lastSampleTime_lbl,                        "");
+		panel.add(_lastSampleTime_txt,                        "growx, wrap");
+		                                                      
+		panel.add(_utcTimeDiff_lbl,                           "");
+		panel.add(_utcTimeDiff_txt,                           "growx, wrap 20");
 		//---------------------------------------------------------------- small space
 
 
-		panel.add(_startDate_lbl,           "");
-		panel.add(_startDate_txt,           "growx, wrap");
-		
-		panel.add(_daysRunning_lbl,         "");
-		panel.add(_daysRunning_txt,         "growx, wrap");
-		
-//		panel.add(_countersCleared_lbl,     "");
-//		panel.add(_countersCleared_txt,     "growx, wrap");
-//		
-//		panel.add(_checkPoints_lbl,         "");
-//		panel.add(_checkPoints_txt,         "growx, wrap");
-//		
-//		panel.add(_numDeadlocks_lbl,        "");
-//		panel.add(_numDeadlocks_txt,        "growx, split");
-//		panel.add(_numDeadlocksDiff_txt,    "growx, wrap");
-//		
-//		panel.add(_diagnosticDumps_lbl,     "");
-//		panel.add(_diagnosticDumps_txt,     "growx, wrap");
-		
-		panel.add(_connections_lbl,         "");
-		panel.add(_connections_txt,         "growx, split");
-		panel.add(_connectionsDiff_txt,     "growx, wrap");
-		
-		panel.add(_distinctLogins_lbl,      "");
-		panel.add(_distinctLoginsAbs_txt,   "growx, split");
-		panel.add(_distinctLoginsDiff_txt,  "growx, wrap");
-		
-		panel.add(_lockWaitThreshold_lbl,   "");
-		panel.add(_lockWaitThreshold_txt,   "growx, wrap");
-		
-		panel.add(_lockWaits_lbl,           "");
-		panel.add(_lockWaits_txt,           "growx, split");
-		panel.add(_lockWaitsDiff_txt,       "growx, wrap");
-		
-//		panel.add(_maxRecovery_lbl,         "");
-//		panel.add(_maxRecovery_txt,         "growx, wrap");
-		
-//		panel.add(_Transactions_lbl,        "hidemode 3");
-//		panel.add(_Transactions_Abs_txt,    "hidemode 3, growx, split");
-//		panel.add(_Transactions_Diff_txt,   "hidemode 3, growx, split");
-//		panel.add(_Transactions_Rate_txt,   "hidemode 3, growx, wrap");
-//		
-//		panel.add(_Rollbacks_lbl,           "hidemode 3");
-//		panel.add(_Rollbacks_Abs_txt,       "hidemode 3, growx, split");
-//		panel.add(_Rollbacks_Diff_txt,      "hidemode 3, growx, split");
-//		panel.add(_Rollbacks_Rate_txt,      "hidemode 3, growx, wrap");
-//
-//		panel.add(_Selects_lbl,             "hidemode 3");
-//		panel.add(_Selects_Abs_txt,         "hidemode 3, growx, split");
-//		panel.add(_Selects_Diff_txt,        "hidemode 3, growx, split");
-//		panel.add(_Selects_Rate_txt,        "hidemode 3, growx, wrap");
-//
-//		panel.add(_Updates_lbl,             "hidemode 3");
-//		panel.add(_Updates_Abs_txt,         "hidemode 3, growx, split");
-//		panel.add(_Updates_Diff_txt,        "hidemode 3, growx, split");
-//		panel.add(_Updates_Rate_txt,        "hidemode 3, growx, wrap");
-//
-//		panel.add(_Inserts_lbl,             "hidemode 3");
-//		panel.add(_Inserts_Abs_txt,         "hidemode 3, growx, split");
-//		panel.add(_Inserts_Diff_txt,        "hidemode 3, growx, split");
-//		panel.add(_Inserts_Rate_txt,        "hidemode 3, growx, wrap");
-//
-//		panel.add(_Deletes_lbl,             "hidemode 3");
-//		panel.add(_Deletes_Abs_txt,         "hidemode 3, growx, split");
-//		panel.add(_Deletes_Diff_txt,        "hidemode 3, growx, split");
-//		panel.add(_Deletes_Rate_txt,        "hidemode 3, growx, wrap");
-//
-//		panel.add(_Merges_lbl,              "hidemode 3");
-//		panel.add(_Merges_Abs_txt,          "hidemode 3, growx, split");
-//		panel.add(_Merges_Diff_txt,         "hidemode 3, growx, split");
-//		panel.add(_Merges_Rate_txt,         "hidemode 3, growx, wrap");
-//
-//		panel.add(_TableAccesses_lbl,       "hidemode 3");
-//		panel.add(_TableAccesses_Abs_txt,   "hidemode 3, growx, split");
-//		panel.add(_TableAccesses_Diff_txt,  "hidemode 3, growx, split");
-//		panel.add(_TableAccesses_Rate_txt,  "hidemode 3, growx, wrap");
-//
-//		panel.add(_IndexAccesses_lbl,       "hidemode 3");
-//		panel.add(_IndexAccesses_Abs_txt,   "hidemode 3, growx, split");
-//		panel.add(_IndexAccesses_Diff_txt,  "hidemode 3, growx, split");
-//		panel.add(_IndexAccesses_Rate_txt,  "hidemode 3, growx, wrap");
-//
-//		panel.add(_TempDbObjects_lbl,       "hidemode 3");
-//		panel.add(_TempDbObjects_Abs_txt,   "hidemode 3, growx, split");
-//		panel.add(_TempDbObjects_Diff_txt,  "hidemode 3, growx, split");
-//		panel.add(_TempDbObjects_Rate_txt,  "hidemode 3, growx, wrap");
-//
-//		panel.add(_WorkTables_lbl,          "hidemode 3");
-//		panel.add(_WorkTables_Abs_txt,      "hidemode 3, growx, split");
-//		panel.add(_WorkTables_Diff_txt,     "hidemode 3, growx, split");
-//		panel.add(_WorkTables_Rate_txt,     "hidemode 3, growx, wrap");
-//
-//		panel.add(_ULCFlushes_lbl,          "hidemode 3");
-//		panel.add(_ULCFlushes_Abs_txt,      "hidemode 3, growx, split");
-//		panel.add(_ULCFlushes_Diff_txt,     "hidemode 3, growx, split");
-//		panel.add(_ULCFlushes_Rate_txt,     "hidemode 3, growx, wrap");
-//
-//		panel.add(_ULCFlushFull_lbl,        "hidemode 3");
-//		panel.add(_ULCFlushFull_Abs_txt,    "hidemode 3, growx, split");
-//		panel.add(_ULCFlushFull_Diff_txt,   "hidemode 3, growx, split");
-//		panel.add(_ULCFlushFull_Rate_txt,   "hidemode 3, growx, wrap");
-//
-//		panel.add(_ULCKBWritten_lbl,        "hidemode 3");
-//		panel.add(_ULCKBWritten_Abs_txt,    "hidemode 3, growx, split");
-//		panel.add(_ULCKBWritten_Diff_txt,   "hidemode 3, growx, split");
-//		panel.add(_ULCKBWritten_Rate_txt,   "hidemode 3, growx, wrap");
-//
-//		panel.add(_PagesRead_lbl,           "hidemode 3");
-//		panel.add(_PagesRead_Abs_txt,       "hidemode 3, growx, split");
-//		panel.add(_PagesRead_Diff_txt,      "hidemode 3, growx, split");
-//		panel.add(_PagesRead_Rate_txt,      "hidemode 3, growx, wrap");
-//
-//		panel.add(_PagesWritten_lbl,        "hidemode 3");
-//		panel.add(_PagesWritten_Abs_txt,    "hidemode 3, growx, split");
-//		panel.add(_PagesWritten_Diff_txt,   "hidemode 3, growx, split");
-//		panel.add(_PagesWritten_Rate_txt,   "hidemode 3, growx, wrap");
-//
-//		panel.add(_PhysicalReads_lbl,       "hidemode 3");
-//		panel.add(_PhysicalReads_Abs_txt,   "hidemode 3, growx, split");
-//		panel.add(_PhysicalReads_Diff_txt,  "hidemode 3, growx, split");
-//		panel.add(_PhysicalReads_Rate_txt,  "hidemode 3, growx, wrap");
-//
-//		panel.add(_PhysicalWrites_lbl,      "hidemode 3");
-//		panel.add(_PhysicalWrites_Abs_txt,  "hidemode 3, growx, split");
-//		panel.add(_PhysicalWrites_Diff_txt, "hidemode 3, growx, split");
-//		panel.add(_PhysicalWrites_Rate_txt, "hidemode 3, growx, wrap");
-//
-//		panel.add(_LogicalReads_lbl,        "hidemode 3");
-//		panel.add(_LogicalReads_Abs_txt,    "hidemode 3, growx, split");
-//		panel.add(_LogicalReads_Diff_txt,   "hidemode 3, growx, split");
-//		panel.add(_LogicalReads_Rate_txt,   "hidemode 3, growx, wrap");
-
-		panel.add(_fullTranslog_lbl,            "");
-		panel.add(_fullTranslog_txt,            "growx, wrap");
-
-		panel.add(_maxSqlExecTimeInSec_lbl,     "");
-		panel.add(_maxSqlExecTimeInSec_txt,     "growx, wrap");
-
-		panel.add(_suspectPageCount_lbl,        "");
-		panel.add(_suspectPageCount_txt,        "growx, split");
-		panel.add(_suspectPageErrors_lbl,       "");
-		panel.add(_suspectPageErrors_txt,       "growx, wrap");
-
-		panel.add(_tempdbUsageMbAll_lbl,         "");
-		panel.add(_tempdbUsageMbAllAbs_txt,      "growx, split");
-		panel.add(_tempdbUsageMbAllDiff_txt,     "growx, wrap");
-		
-		panel.add(_tempdbUsageMbUser_lbl,        "");
-		panel.add(_tempdbUsageMbUserAbs_txt,     "growx, split");
-		panel.add(_tempdbUsageMbUserDiff_txt,    "growx, wrap");
-		
-		panel.add(_tempdbUsageMbInternal_lbl,    "");
-		panel.add(_tempdbUsageMbInternalAbs_txt, "growx, split");
-		panel.add(_tempdbUsageMbInternalDiff_txt,"growx, wrap 20");
+		panel.add(_startDate_lbl,                             "");
+		panel.add(_startDate_txt,                             "growx, wrap");
+		                                                      
+		panel.add(_daysRunning_lbl,                           "");
+		panel.add(_daysRunning_txt,                           "growx, wrap");
+		                                                      
+                                                              
+		panel.add(_connections_lbl,                           "");
+		panel.add(_connections_txt,                           "growx, split");
+		panel.add(_connectionsDiff_txt,                       "growx, wrap");
+		                                                      
+		panel.add(_distinctLogins_lbl,                        "");
+		panel.add(_distinctLoginsAbs_txt,                     "growx, split");
+		panel.add(_distinctLoginsDiff_txt,                    "growx, wrap");
+		                                                      
+		panel.add(_lockWaitThreshold_lbl,                     "");
+		panel.add(_lockWaitThreshold_txt,                     "growx, wrap");
+		                                                      
+		panel.add(_lockWaits_lbl,                             "");
+		panel.add(_lockWaits_txt,                             "growx, split");
+		panel.add(_lockWaitsDiff_txt,                         "growx, wrap");
+		                                                      
+		panel.add(_fullTranslog_lbl,                          "");
+		panel.add(_fullTranslog_txt,                          "growx, wrap");
+                                                              
+		panel.add(_maxSqlExecTimeInSec_lbl,                   "");
+		panel.add(_maxSqlExecTimeInSec_txt,                   "growx, wrap");
+                                                              
+		panel.add(_suspectPageCount_lbl,                      "");
+		panel.add(_suspectPageCount_txt,                      "growx, split");
+		panel.add(_suspectPageErrors_lbl,                     "");
+		panel.add(_suspectPageErrors_txt,                     "growx, wrap");
+                                                              
+		panel.add(_tempdbUsageMbAll_lbl,                      "");
+		panel.add(_tempdbUsageMbAllAbs_txt,                   "growx, split");
+		panel.add(_tempdbUsageMbAllDiff_txt,                  "growx, wrap");
+		                                                      
+		panel.add(_tempdbUsageMbUser_lbl,                     "");
+		panel.add(_tempdbUsageMbUserAbs_txt,                  "growx, split");
+		panel.add(_tempdbUsageMbUserDiff_txt,                 "growx, wrap");
+		                                                      
+		panel.add(_tempdbUsageMbInternal_lbl,                 "");
+		panel.add(_tempdbUsageMbInternalAbs_txt,              "growx, split");
+		panel.add(_tempdbUsageMbInternalDiff_txt,             "growx, wrap 20");
 		//---------------------------------------------------------------- small space
 		
-		panel.add(_oldestOpenTranBeginTime_lbl, "");
-		panel.add(_oldestOpenTranBeginTime_txt, "growx, wrap");
+		panel.add(_oldestOpenTranBeginTime_lbl,               "");
+		panel.add(_oldestOpenTranBeginTime_txt,               "growx, wrap");
+                                                              
+		panel.add(_oldestOpenTranId_lbl,                      "");
+		panel.add(_oldestOpenTranId_txt,                      "growx, wrap");
+                                                              
+		panel.add(_oldestOpenTranSpid_lbl,                    "");
+		panel.add(_oldestOpenTranSpid_txt,                    "growx, wrap");
+                                                              
+		panel.add(_oldestOpenTranName_lbl,                    "");
+		panel.add(_oldestOpenTranName_txt,                    "growx, wrap");
+                                                              
+		panel.add(_oldestOpenTranDbname_lbl,                  "");
+		panel.add(_oldestOpenTranDbname_txt,                  "growx, wrap");
+                                                              
+		panel.add(_oldestOpenTranWaitType_lbl,                "");
+		panel.add(_oldestOpenTranWaitType_txt,                "growx, wrap");
+                                                              
+		panel.add(_oldestOpenTranCmd_lbl,                     "");
+		panel.add(_oldestOpenTranCmd_txt,                     "growx, wrap");
+                                                              
+		panel.add(_oldestOpenTranLoginName_lbl,               "");
+		panel.add(_oldestOpenTranLoginName_txt,               "growx, wrap");
 
-		panel.add(_oldestOpenTranId_lbl,        "");
-		panel.add(_oldestOpenTranId_txt,        "growx, wrap");
-
-		panel.add(_oldestOpenTranSpid_lbl,      "");
-		panel.add(_oldestOpenTranSpid_txt,      "growx, wrap");
-
-		panel.add(_oldestOpenTranName_lbl,      "");
-		panel.add(_oldestOpenTranName_txt,      "growx, wrap");
-
-		panel.add(_oldestOpenTranDbname_lbl,    "");
-		panel.add(_oldestOpenTranDbname_txt,    "growx, wrap");
-
-		panel.add(_oldestOpenTranWaitType_lbl,  "");
-		panel.add(_oldestOpenTranWaitType_txt,  "growx, wrap");
-
-		panel.add(_oldestOpenTranCmd_lbl,       "");
-		panel.add(_oldestOpenTranCmd_txt,       "growx, wrap");
-
-		panel.add(_oldestOpenTranLoginName_lbl, "");
-		panel.add(_oldestOpenTranLoginName_txt, "growx, wrap");
-
-		panel.add(_oldestOpenTranTempdbUsageMb_lbl,         "");
-		panel.add(_oldestOpenTranTempdbUsageMbAll_txt,      "growx, split");
-		panel.add(_oldestOpenTranTempdbUsageMbUser_txt,     "growx, split");
-		panel.add(_oldestOpenTranTempdbUsageMbInternal_txt, "growx, wrap");
-
-		panel.add(_oldestOpenTranSec_lbl,       "");
-		panel.add(_oldestOpenTranSec_txt,       "growx, wrap");
-
-		panel.add(_oldestOpenTranThreshold_lbl, "");
-		panel.add(_oldestOpenTranThreshold_txt, "growx, wrap 20");
+		panel.add(_oldestOpenTranTempdbUsageMb_lbl,           "");
+		panel.add(_oldestOpenTranTempdbUsageMbAll_txt,        "growx, gapright 2, split");
+		panel.add(_oldestOpenTranTempdbUsageMbUser_txt,       "growx, gapright 2");
+		panel.add(_oldestOpenTranTempdbUsageMbInternal_txt,   "growx, wrap");
+                                                              
+		panel.add(_oldestOpenTranSec_lbl,                     "");
+		panel.add(_oldestOpenTranSec_txt,                     "growx, wrap");
+                                                              
+		panel.add(_oldestOpenTranThreshold_lbl,               "");
+		panel.add(_oldestOpenTranThreshold_txt,               "growx, wrap 20");
 		//---------------------------------------------------------------- small space
 
-		
-//		panel.add(_bootcount_lbl,           "gapy 20");
-//		panel.add(_bootcount_txt,           "growx, wrap");
-//		
-//		panel.add(_recoveryState_lbl,       "");
-//		panel.add(_recoveryState_txt,       "growx, wrap");
-		
-//		panel.add(_cpuTime_lbl,             "");
-//		panel.add(_cpuTime_txt,             "growx, wrap");
-//		panel.add(_cpuUser_lbl,             "");
-//		panel.add(_cpuUser_txt,             "growx, wrap");
-//		panel.add(_cpuSystem_lbl,           "");
-//		panel.add(_cpuSystem_txt,           "growx, wrap");
+		panel.add(_osMemMb_lbl,                               "");
+		panel.add(_osMem_total_os_memory_mb_txt,              "growx, gapright 2, split");
+		panel.add(_osMem_available_os_memory_mb_txt,          "growx, gapright 2");
+		panel.add(_osMem_system_high_memory_signal_state_chk, "gapright 2");
+		panel.add(_osMem_system_low_memory_signal_state_chk,  "gapright 0, wrap");
 
-		panel.add(_cpuTime_lbl,             "");
-		panel.add(_cpuTime_txt,             "growx, split");
-		panel.add(_cpuUser_txt,             "growx, split");
-		panel.add(_cpuSystem_txt,           "growx, wrap");
+		panel.add(_memXxxServerMb_lbl,                        "");
+		panel.add(_memTargetServerMb_txt,                     "growx, gapright 2, split");
+		panel.add(_memTotalServerMb_txt,                      "growx, gapright 2");
+		panel.add(_memTargetVsTotalMb_txt,                    "growx, wrap");
+                                                              
+		panel.add(_memYyyServerMb_lbl,                        "");
+		panel.add(_memUsedByServer_txt,                       "growx, gapright 2, split");
+		panel.add(_memLockedPagesUsedByServer_txt,            "growx, gapright 2");
+		panel.add(_memUtilizationPct_txt,                     "growx, gapright 2");
+		panel.add(_memProcessPhysicalMemoryLow_chk,           "gapright 2");
+		panel.add(_memProcessVirtualMemoryLow_chk,            "gapright 0, wrap");
 
-		panel.add(_cpuIdle_lbl,             "");
-		panel.add(_cpuIdle_txt,             "growx, wrap");
 		
-		panel.add(_ioTotalRead_lbl,         "");
-		panel.add(_ioTotalRead_txt,         "growx, split");
-		panel.add(_ioTotalReadDiff_txt,     "growx, wrap");
-		
-		panel.add(_ioTotalWrite_lbl,        "");
-		panel.add(_ioTotalWrite_txt,        "growx, split");
-		panel.add(_ioTotalWriteDiff_txt,    "growx, wrap");
-		
-		panel.add(_aaConnections_lbl,       "");
-		panel.add(_aaConnectionsAbs_txt,    "growx, split");
-		panel.add(_aaConnectionsDiff_txt,   "growx, split");
-		panel.add(_aaConnectionsRate_txt,   "growx, wrap");
-
-		panel.add(_packReceived_lbl,        "");
-		panel.add(_packReceived_txt,        "growx, split");
-		panel.add(_packReceivedDiff_txt,    "growx, wrap");
-		
-		panel.add(_packSent_lbl,            "");
-		panel.add(_packSent_txt,            "growx, split");
-		panel.add(_packSentDiff_txt,        "growx, wrap");
-		
-		panel.add(_packetErrors_lbl,        "");
-		panel.add(_packetErrors_txt,        "growx, split");
-		panel.add(_packetErrorsDiff_txt,    "growx, wrap");
-		
-		panel.add(_totalErrors_lbl,         "");
-		panel.add(_totalErrors_txt,         "growx, split");
-		panel.add(_totalErrorsDiff_txt,     "growx, wrap");
+		panel.add(_cpuTime_lbl,                               "");
+		panel.add(_cpuTime_txt,                               "growx, gapright 2, split");
+		panel.add(_cpuUser_txt,                               "growx, gapright 2");
+		panel.add(_cpuSystem_txt,                             "growx, wrap");
+                                                              
+		panel.add(_cpuIdle_lbl,                               "");
+		panel.add(_cpuIdle_txt,                               "growx, wrap");
+		                                                      
+		panel.add(_ioTotalRead_lbl,                           "");
+		panel.add(_ioTotalRead_txt,                           "growx, split");
+		panel.add(_ioTotalReadDiff_txt,                       "growx, wrap");
+		                                                      
+		panel.add(_ioTotalWrite_lbl,                          "");
+		panel.add(_ioTotalWrite_txt,                          "growx, split");
+		panel.add(_ioTotalWriteDiff_txt,                      "growx, wrap");
+		                                                      
+		panel.add(_aaConnections_lbl,                         "");
+		panel.add(_aaConnectionsAbs_txt,                      "growx, gapright 2, split");
+		panel.add(_aaConnectionsDiff_txt,                     "growx, gapright 2");
+		panel.add(_aaConnectionsRate_txt,                     "growx, wrap");
+                                                              
+		panel.add(_packReceived_lbl,                          "");
+		panel.add(_packReceived_txt,                          "growx, split");
+		panel.add(_packReceivedDiff_txt,                      "growx, wrap");
+		                                                      
+		panel.add(_packSent_lbl,                              "");
+		panel.add(_packSent_txt,                              "growx, split");
+		panel.add(_packSentDiff_txt,                          "growx, wrap");
+		                                                      
+		panel.add(_packetErrors_lbl,                          "");
+		panel.add(_packetErrors_txt,                          "growx, split");
+		panel.add(_packetErrorsDiff_txt,                      "growx, wrap");
+		                                                      
+		panel.add(_totalErrors_lbl,                           "");
+		panel.add(_totalErrors_txt,                           "growx, split");
+		panel.add(_totalErrorsDiff_txt,                       "growx, wrap");
 				
 		setComponentProperties();
 
 		return panel;
 	}
 
-	@Override
-	public void setComponentProperties()
-	{
-		// SET initial visibility based of config show ABS/DIFF/RATE
-		Configuration conf = Configuration.getCombinedConfiguration();
-		boolean showAbs  = conf.getBooleanProperty(MainFrame.PROPKEY_summaryOperations_showAbs,   MainFrame.DEFAULT_summaryOperations_showAbs);
-		boolean showDiff = conf.getBooleanProperty(MainFrame.PROPKEY_summaryOperations_showDiff,  MainFrame.DEFAULT_summaryOperations_showDiff);
-		boolean showRate = conf.getBooleanProperty(MainFrame.PROPKEY_summaryOperations_showRate,  MainFrame.DEFAULT_summaryOperations_showRate);
-
-//		_Transactions_Abs_txt   .setVisible(showAbs); 
-//		_Transactions_Diff_txt  .setVisible(showDiff);
-//		_Transactions_Rate_txt  .setVisible(showRate);
+//	@Override
+//	public void setComponentProperties()
+//	{
+//		// SET initial visibility based of config show ABS/DIFF/RATE
+//		Configuration conf = Configuration.getCombinedConfiguration();
+//		boolean showAbs  = conf.getBooleanProperty(MainFrame.PROPKEY_summaryOperations_showAbs,   MainFrame.DEFAULT_summaryOperations_showAbs);
+//		boolean showDiff = conf.getBooleanProperty(MainFrame.PROPKEY_summaryOperations_showDiff,  MainFrame.DEFAULT_summaryOperations_showDiff);
+//		boolean showRate = conf.getBooleanProperty(MainFrame.PROPKEY_summaryOperations_showRate,  MainFrame.DEFAULT_summaryOperations_showRate);
 //
-//		_Rollbacks_Abs_txt      .setVisible(showAbs);
-//		_Rollbacks_Diff_txt     .setVisible(showDiff);
-//		_Rollbacks_Rate_txt     .setVisible(showRate);
-//
-//		_Selects_Abs_txt        .setVisible(showAbs);
-//		_Selects_Diff_txt       .setVisible(showDiff);
-//		_Selects_Rate_txt       .setVisible(showRate);
-//
-//		_Updates_Abs_txt        .setVisible(showAbs);
-//		_Updates_Diff_txt       .setVisible(showDiff);
-//		_Updates_Rate_txt       .setVisible(showRate);
-//
-//		_Inserts_Abs_txt        .setVisible(showAbs);
-//		_Inserts_Diff_txt       .setVisible(showDiff);
-//		_Inserts_Rate_txt       .setVisible(showRate);
-//
-//		_Deletes_Abs_txt        .setVisible(showAbs);
-//		_Deletes_Diff_txt       .setVisible(showDiff);
-//		_Deletes_Rate_txt       .setVisible(showRate);
-//
-//		_Merges_Abs_txt         .setVisible(showAbs);
-//		_Merges_Diff_txt        .setVisible(showDiff);
-//		_Merges_Rate_txt        .setVisible(showRate);
-//
-//		_TableAccesses_Abs_txt  .setVisible(showAbs);
-//		_TableAccesses_Diff_txt .setVisible(showDiff);
-//		_TableAccesses_Rate_txt .setVisible(showRate);
-//
-//		_IndexAccesses_Abs_txt  .setVisible(showAbs);
-//		_IndexAccesses_Diff_txt .setVisible(showDiff);
-//		_IndexAccesses_Rate_txt .setVisible(showRate);
-//
-//		_TempDbObjects_Abs_txt  .setVisible(showAbs);
-//		_TempDbObjects_Diff_txt .setVisible(showDiff);
-//		_TempDbObjects_Rate_txt .setVisible(showRate);
-//
-//		_WorkTables_Abs_txt     .setVisible(showAbs);
-//		_WorkTables_Diff_txt    .setVisible(showDiff);
-//		_WorkTables_Rate_txt    .setVisible(showRate);
-//
-//		_ULCFlushes_Abs_txt     .setVisible(showAbs);
-//		_ULCFlushes_Diff_txt    .setVisible(showDiff);
-//		_ULCFlushes_Rate_txt    .setVisible(showRate);
-//
-//		_ULCFlushFull_Abs_txt   .setVisible(showAbs);
-//		_ULCFlushFull_Diff_txt  .setVisible(showDiff);
-//		_ULCFlushFull_Rate_txt  .setVisible(showRate);
-//
-//		_ULCKBWritten_Abs_txt   .setVisible(showAbs);
-//		_ULCKBWritten_Diff_txt  .setVisible(showDiff);
-//		_ULCKBWritten_Rate_txt  .setVisible(showRate);
-//
-//		_PagesRead_Abs_txt      .setVisible(showAbs);
-//		_PagesRead_Diff_txt     .setVisible(showDiff);
-//		_PagesRead_Rate_txt     .setVisible(showRate);
-//
-//		_PagesWritten_Abs_txt   .setVisible(showAbs);
-//		_PagesWritten_Diff_txt  .setVisible(showDiff);
-//		_PagesWritten_Rate_txt  .setVisible(showRate);
-//
-//		_PhysicalReads_Abs_txt  .setVisible(showAbs);
-//		_PhysicalReads_Diff_txt .setVisible(showDiff);
-//		_PhysicalReads_Rate_txt .setVisible(showRate);
-//
-//		_PhysicalWrites_Abs_txt .setVisible(showAbs);
-//		_PhysicalWrites_Diff_txt.setVisible(showDiff);
-//		_PhysicalWrites_Rate_txt.setVisible(showRate);
-//
-//		_LogicalReads_Abs_txt   .setVisible(showAbs);
-//		_LogicalReads_Diff_txt  .setVisible(showDiff);
-//		_LogicalReads_Rate_txt  .setVisible(showRate);
-	}
+//	}
 
 	private TrendGraphDashboardPanel createGraphPanel() 
 	{
@@ -1529,77 +1039,6 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		setSummaryData(_cm, false);
 	}
 
-	private void setFieldAbsDiffRate(CountersModel cm, String name, JLabel label, JTextField absField, JTextField diffField, JTextField rateField)
-	{
-		if (cm.isDataInitialized())
-		{
-			Configuration conf = Configuration.getCombinedConfiguration();
-			boolean showAbs  = conf.getBooleanProperty(MainFrame.PROPKEY_summaryOperations_showAbs,   MainFrame.DEFAULT_summaryOperations_showAbs);
-			boolean showDiff = conf.getBooleanProperty(MainFrame.PROPKEY_summaryOperations_showDiff,  MainFrame.DEFAULT_summaryOperations_showDiff);
-			boolean showRate = conf.getBooleanProperty(MainFrame.PROPKEY_summaryOperations_showRate,  MainFrame.DEFAULT_summaryOperations_showRate);
-
-			// Remember origin tooltip
-			if ( ! _originToolTip.containsKey(name) )
-				_originToolTip.put(name, absField.getToolTipText());
-
-			if (cm.findColumn(name) >= 0)
-			{
-//System.out.println("setFieldAbsDiffRate(): cm='"+cm.getName()+"', field='"+name+"', ABS="+cm.getAbsString (0, name)+", DIFF="+cm.getDiffString(0, name)+", RATE="+cm.getRateString(0, name)+".");
-
-				absField .setText(cm.getAbsString (0, name));
-				diffField.setText(cm.getDiffString(0, name));
-				rateField.setText(cm.getRateString(0, name));
-	
-				label    .setVisible(true && (showAbs || showDiff || showRate));
-				absField .setVisible(true && showAbs);
-				diffField.setVisible(true && showDiff);
-				rateField.setVisible(true && showRate);
-
-				// Check for non configured monitoring has happened
-				boolean hasNonConfiguredMonitoringHappened = (getCm().isInitialized() && getCm().hasNonConfiguredMonitoringHappened());
-
-				// Get BG Color from some other field
-				Color bgColor = _atAtServerName_txt.getBackground();
-				if (hasNonConfiguredMonitoringHappened)
-					bgColor = NON_CONFIGURED_MONITORING_COLOR;
-
-				absField .setBackground(bgColor);
-				diffField.setBackground(bgColor);
-				rateField.setBackground(bgColor);
-
-//System.out.println("setFieldAbsDiffRate(): cm='"+cm.getName()+"', field='"+name+"', hasNonConfiguredMonitoringHappened="+hasNonConfiguredMonitoringHappened);
-				// Set Tooltip
-				if (hasNonConfiguredMonitoringHappened)
-				{
-					String tooltip = "<html><font color='red'>" + getCm().getNonConfiguredMonitoringMessage(false) + "</font></html>";
-					label    .setToolTipText(tooltip);
-					absField .setToolTipText(tooltip);
-					diffField.setToolTipText(tooltip);
-					rateField.setToolTipText(tooltip);
-				}
-				else
-				{
-					String tooltip = _originToolTip.get(name);
-					label    .setToolTipText(tooltip);
-					absField .setToolTipText(tooltip);
-					diffField.setToolTipText(tooltip);
-					rateField.setToolTipText(tooltip);
-				}
-			}
-			else
-			{
-				absField  .setText("Not available");
-				diffField .setText("");
-				rateField .setText("");
-	
-				label    .setVisible(false);
-				absField .setVisible(false);
-				diffField.setVisible(false);
-				rateField.setVisible(false);
-			}
-		}
-	}
-
 	@Override
 	public void setSummaryData(CountersModel cm, boolean postProcessing)
 	{
@@ -1626,11 +1065,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 		_startDate_txt         .setText(cm.getAbsString (0, "StartDate"));
 		_daysRunning_txt       .setText(cm.getAbsString (0, "DaysRunning"));
-//		_countersCleared_txt   .setText(cm.getAbsString (0, "CountersCleared"));
-//		_checkPoints_txt       .setText(cm.getAbsString (0, "CheckPoints"));
-//		_numDeadlocks_txt      .setText(cm.getAbsString (0, "NumDeadlocks"));
-//		_numDeadlocksDiff_txt  .setText(cm.getDiffString(0, "NumDeadlocks"));
-//		_diagnosticDumps_txt   .setText(cm.getAbsString (0, "DiagnosticDumps"));
+
 		_connections_txt       .setText(cm.getAbsString (0, "Connections"));
 		_connectionsDiff_txt   .setText(cm.getDiffString(0, "Connections"));
 		_distinctLoginsAbs_txt .setText(cm.getAbsString (0, "distinctLogins"));
@@ -1638,40 +1073,6 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_lockWaitThreshold_txt .setText(cm.getAbsString (0, "LockWaitThreshold"));
 		_lockWaits_txt         .setText(cm.getAbsString (0, "LockWaits"));
 		_lockWaitsDiff_txt     .setText(cm.getDiffString(0, "LockWaits"));
-//		_maxRecovery_txt       .setText(cm.getAbsString (0, "MaxRecovery"));
-//
-////		if (cm.findColumn("Transactions") >= 0)
-////		{
-////			_transactions_txt     .setText(cm.getAbsString (0, "Transactions"));
-////			_transactionsDiff_txt .setText(cm.getDiffString(0, "Transactions"));
-////			_transactionsRate_txt .setText(cm.getRateString(0, "Transactions"));
-////		}
-////		else
-////		{
-////			_transactions_txt     .setText("Not available");
-////			_transactionsDiff_txt .setText("");
-////			_transactionsRate_txt .setText("");
-////		}
-//		setFieldAbsDiffRate(cm, "Transactions",   _Transactions_lbl,   _Transactions_Abs_txt,   _Transactions_Diff_txt,   _Transactions_Rate_txt);
-//		setFieldAbsDiffRate(cm, "Rollbacks",      _Rollbacks_lbl,      _Rollbacks_Abs_txt,      _Rollbacks_Diff_txt,      _Rollbacks_Rate_txt);
-//		setFieldAbsDiffRate(cm, "Selects",        _Selects_lbl,        _Selects_Abs_txt,        _Selects_Diff_txt,        _Selects_Rate_txt);
-//		setFieldAbsDiffRate(cm, "Updates",        _Updates_lbl,        _Updates_Abs_txt,        _Updates_Diff_txt,        _Updates_Rate_txt);
-//		setFieldAbsDiffRate(cm, "Inserts",        _Inserts_lbl,        _Inserts_Abs_txt,        _Inserts_Diff_txt,        _Inserts_Rate_txt);
-//		setFieldAbsDiffRate(cm, "Deletes",        _Deletes_lbl,        _Deletes_Abs_txt,        _Deletes_Diff_txt,        _Deletes_Rate_txt);
-//		setFieldAbsDiffRate(cm, "Merges",         _Merges_lbl,         _Merges_Abs_txt,         _Merges_Diff_txt,         _Merges_Rate_txt);
-//		setFieldAbsDiffRate(cm, "TableAccesses",  _TableAccesses_lbl,  _TableAccesses_Abs_txt,  _TableAccesses_Diff_txt,  _TableAccesses_Rate_txt);
-//		setFieldAbsDiffRate(cm, "IndexAccesses",  _IndexAccesses_lbl,  _IndexAccesses_Abs_txt,  _IndexAccesses_Diff_txt,  _IndexAccesses_Rate_txt);
-//		setFieldAbsDiffRate(cm, "TempDbObjects",  _TempDbObjects_lbl,  _TempDbObjects_Abs_txt,  _TempDbObjects_Diff_txt,  _TempDbObjects_Rate_txt);
-//		setFieldAbsDiffRate(cm, "WorkTables",     _WorkTables_lbl,     _WorkTables_Abs_txt,     _WorkTables_Diff_txt,     _WorkTables_Rate_txt);
-//		setFieldAbsDiffRate(cm, "ULCFlushes",     _ULCFlushes_lbl,     _ULCFlushes_Abs_txt,     _ULCFlushes_Diff_txt,     _ULCFlushes_Rate_txt);
-//		setFieldAbsDiffRate(cm, "ULCFlushFull",   _ULCFlushFull_lbl,   _ULCFlushFull_Abs_txt,   _ULCFlushFull_Diff_txt,   _ULCFlushFull_Rate_txt);
-//		setFieldAbsDiffRate(cm, "ULCKBWritten",   _ULCKBWritten_lbl,   _ULCKBWritten_Abs_txt,   _ULCKBWritten_Diff_txt,   _ULCKBWritten_Rate_txt);
-//		setFieldAbsDiffRate(cm, "PagesRead",      _PagesRead_lbl,      _PagesRead_Abs_txt,      _PagesRead_Diff_txt,      _PagesRead_Rate_txt);
-//		setFieldAbsDiffRate(cm, "PagesWritten",   _PagesWritten_lbl,   _PagesWritten_Abs_txt,   _PagesWritten_Diff_txt,   _PagesWritten_Rate_txt);
-//		setFieldAbsDiffRate(cm, "PhysicalReads",  _PhysicalReads_lbl,  _PhysicalReads_Abs_txt,  _PhysicalReads_Diff_txt,  _PhysicalReads_Rate_txt);
-//		setFieldAbsDiffRate(cm, "PhysicalWrites", _PhysicalWrites_lbl, _PhysicalWrites_Abs_txt, _PhysicalWrites_Diff_txt, _PhysicalWrites_Rate_txt);
-//		setFieldAbsDiffRate(cm, "LogicalReads",   _LogicalReads_lbl,   _LogicalReads_Abs_txt,   _LogicalReads_Diff_txt,   _LogicalReads_Rate_txt);
-//
 		_fullTranslog_txt                       .setText(cm.getAbsString (0, "fullTranslogCount"));
 		
 		_tempdbUsageMbAllAbs_txt		        .setText(cm.getAbsString (0, "tempdbUsageMbAll"));
@@ -1722,11 +1123,23 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 	System.out.println("CmSummary: _oldestOpenTranSec                   = '" + _oldestOpenTranSec_txt                  .getText() + "'.");
 	System.out.println("");
 }
-//		_bootcount_txt        .setText(cm.getAbsString (0, "bootcount"));
-//		_recoveryState_txt    .setText(cm.getAbsString (0, "recovery_state"));
-//		_cpuBusy_txt          .setText(cm.getDiffString(0, "cpu_busy"));
-//		_cpuIo_txt            .setText(cm.getDiffString(0, "cpu_io"));
-//		_cpuIdle_txt          .setText(cm.getDiffString(0, "cpu_idle"));
+
+		_osMem_total_os_memory_mb_txt             .setText(cm.getAbsString (0, "total_os_memory_mb"));
+		_osMem_available_os_memory_mb_txt         .setText(cm.getAbsString (0, "available_physical_memory_mb"));
+		_osMem_system_high_memory_signal_state_chk.setSelected("true".equalsIgnoreCase(cm.getAbsString (0, "system_high_memory_signal_state")));
+		_osMem_system_low_memory_signal_state_chk .setSelected("true".equalsIgnoreCase(cm.getAbsString (0, "system_low_memory_signal_state")));
+
+		_memTargetServerMb_txt                    .setText(cm.getAbsString (0, "Target_Server_Memory_MB"));
+		_memTotalServerMb_txt                     .setText(cm.getAbsString (0, "Total_Server_Memory_MB"));
+		_memTargetVsTotalMb_txt                   .setText(cm.getAbsString (0, "TargetVsTotal_diff_MB"));
+                                                  
+		_memUsedByServer_txt                      .setText(cm.getAbsString (0, "memory_used_by_sqlserver_MB"));
+		_memLockedPagesUsedByServer_txt           .setText(cm.getAbsString (0, "locked_pages_used_by_sqlserver_MB"));
+		_memUtilizationPct_txt                    .setText(cm.getAbsString (0, "process_memory_utilization_pct"));
+		_memProcessPhysicalMemoryLow_chk          .setSelected("true".equalsIgnoreCase(cm.getAbsString (0, "process_physical_memory_low")));
+		_memProcessVirtualMemoryLow_chk           .setSelected("true".equalsIgnoreCase(cm.getAbsString (0, "process_virtual_memory_low")));
+
+
 		_ioTotalRead_txt      .setText(cm.getAbsString (0, "io_total_read"));
 		_ioTotalReadDiff_txt  .setText(cm.getRateString(0, "io_total_read"));
 		_ioTotalWrite_txt     .setText(cm.getAbsString (0, "io_total_write"));
@@ -1945,156 +1358,85 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		setWatermark();
 
 		// Server info
-		_localServerName_txt    .setText("");
+		_localServerName_txt                      .setText("");
+                                                  
+		_atAtServerName_txt                       .setText("");
+		_listeners_txt                            .setText("");
+		_onHostName_txt                           .setText("");
+		_srvVersion_txt                           .setText("");
+		_asePageSize_txt                          .setText("");
+		_lastSampleTime_txt                       .setText("");
+		_utcTimeDiff_txt                          .setText("");
+                                                  
+		_startDate_txt                            .setText("");
+		_daysRunning_txt                          .setText("");
+		_connections_txt                          .setText("");
+		_connectionsDiff_txt                      .setText("");
+		_distinctLoginsAbs_txt                    .setText("");
+		_distinctLoginsDiff_txt                   .setText("");
+		_lockWaitThreshold_txt                    .setText("");
+		_lockWaits_txt                            .setText("");
+		_lockWaitsDiff_txt                        .setText("");
+		_fullTranslog_txt                         .setText("");
+                                                  
+		_tempdbUsageMbAllAbs_txt                  .setText("");
+		_tempdbUsageMbUserAbs_txt                 .setText("");
+		_tempdbUsageMbInternalAbs_txt             .setText("");
+		_tempdbUsageMbAllDiff_txt                 .setText("");
+		_tempdbUsageMbUserDiff_txt                .setText("");
+		_tempdbUsageMbInternalDiff_txt            .setText("");
+		                                          
+		_oldestOpenTranBeginTime_txt              .setText("");
+		_oldestOpenTranId_txt                     .setText("");
+		_oldestOpenTranSpid_txt                   .setText("");
+		_oldestOpenTranName_txt                   .setText("");
+		_oldestOpenTranDbname_txt                 .setText("");
+		_oldestOpenTranWaitType_txt               .setText("");
+		_oldestOpenTranCmd_txt                    .setText("");
+		_oldestOpenTranLoginName_txt              .setText("");
+		_oldestOpenTranTempdbUsageMbAll_txt       .setText("");
+		_oldestOpenTranTempdbUsageMbUser_txt      .setText("");
+		_oldestOpenTranTempdbUsageMbInternal_txt  .setText("");
+                                                  
+		_oldestOpenTranSec_txt                    .setText("");
+		_oldestOpenTranThreshold_txt              .setText("");
+		_maxSqlExecTimeInSec_txt                  .setText("");
+		_suspectPageCount_txt                     .setText(""); _suspectPageCount_txt .setBackground(_atAtServerName_txt.getBackground());
+		_suspectPageErrors_txt                    .setText(""); _suspectPageErrors_txt.setBackground(_atAtServerName_txt.getBackground());
+		                                        
+		_osMem_total_os_memory_mb_txt             .setText("");
+		_osMem_available_os_memory_mb_txt         .setText("");
+		_osMem_system_high_memory_signal_state_chk.setSelected(false);
+		_osMem_system_low_memory_signal_state_chk .setSelected(false);
 
-		_atAtServerName_txt     .setText("");
-		_listeners_txt          .setText("");
-		_onHostName_txt         .setText("");
-		_srvVersion_txt         .setText("");
-		_asePageSize_txt        .setText("");
-		_lastSampleTime_txt     .setText("");
-		_utcTimeDiff_txt        .setText("");
-
-		_startDate_txt          .setText("");
-		_daysRunning_txt        .setText("");
-//		_countersCleared_txt    .setText("");
-//		_checkPoints_txt        .setText("");
-//		_numDeadlocks_txt       .setText("");
-//		_numDeadlocksDiff_txt   .setText("");
-//		_diagnosticDumps_txt    .setText("");
-		_connections_txt        .setText("");
-		_connectionsDiff_txt    .setText("");
-		_distinctLoginsAbs_txt  .setText("");
-		_distinctLoginsDiff_txt .setText("");
-		_lockWaitThreshold_txt  .setText("");
-		_lockWaits_txt          .setText("");
-		_lockWaitsDiff_txt      .setText("");
-//		_maxRecovery_txt        .setText("");
-
-//		_Transactions_Abs_txt   .setText("");
-//		_Transactions_Diff_txt  .setText("");
-//		_Transactions_Rate_txt  .setText("");
-//
-//		_Rollbacks_Abs_txt      .setText("");
-//		_Rollbacks_Diff_txt     .setText("");
-//		_Rollbacks_Rate_txt     .setText("");
-//
-//		_Selects_Abs_txt        .setText("");
-//		_Selects_Diff_txt       .setText("");
-//		_Selects_Rate_txt       .setText("");
-//
-//		_Updates_Abs_txt        .setText("");
-//		_Updates_Diff_txt       .setText("");
-//		_Updates_Rate_txt       .setText("");
-//
-//		_Inserts_Abs_txt        .setText("");
-//		_Inserts_Diff_txt       .setText("");
-//		_Inserts_Rate_txt       .setText("");
-//
-//		_Deletes_Abs_txt        .setText("");
-//		_Deletes_Diff_txt       .setText("");
-//		_Deletes_Rate_txt       .setText("");
-//
-//		_Merges_Abs_txt         .setText("");
-//		_Merges_Diff_txt        .setText("");
-//		_Merges_Rate_txt        .setText("");
-//
-//		_TableAccesses_Abs_txt  .setText("");
-//		_TableAccesses_Diff_txt .setText("");
-//		_TableAccesses_Rate_txt .setText("");
-//
-//		_IndexAccesses_Abs_txt  .setText("");
-//		_IndexAccesses_Diff_txt .setText("");
-//		_IndexAccesses_Rate_txt .setText("");
-//
-//		_TempDbObjects_Abs_txt  .setText("");
-//		_TempDbObjects_Diff_txt .setText("");
-//		_TempDbObjects_Rate_txt .setText("");
-//
-//		_WorkTables_Abs_txt     .setText("");
-//		_WorkTables_Diff_txt    .setText("");
-//		_WorkTables_Rate_txt    .setText("");
-//
-//		_ULCFlushes_Abs_txt     .setText("");
-//		_ULCFlushes_Diff_txt    .setText("");
-//		_ULCFlushes_Rate_txt    .setText("");
-//
-//		_ULCFlushFull_Abs_txt   .setText("");
-//		_ULCFlushFull_Diff_txt  .setText("");
-//		_ULCFlushFull_Rate_txt  .setText("");
-//
-//		_ULCKBWritten_Abs_txt   .setText("");
-//		_ULCKBWritten_Diff_txt  .setText("");
-//		_ULCKBWritten_Rate_txt  .setText("");
-//
-//		_PagesRead_Abs_txt      .setText("");
-//		_PagesRead_Diff_txt     .setText("");
-//		_PagesRead_Rate_txt     .setText("");
-//
-//		_PagesWritten_Abs_txt   .setText("");
-//		_PagesWritten_Diff_txt  .setText("");
-//		_PagesWritten_Rate_txt  .setText("");
-//
-//		_PhysicalReads_Abs_txt  .setText("");
-//		_PhysicalReads_Diff_txt .setText("");
-//		_PhysicalReads_Rate_txt .setText("");
-//
-//		_PhysicalWrites_Abs_txt .setText("");
-//		_PhysicalWrites_Diff_txt.setText("");
-//		_PhysicalWrites_Rate_txt.setText("");
-//
-//		_LogicalReads_Abs_txt   .setText("");
-//		_LogicalReads_Diff_txt  .setText("");
-//		_LogicalReads_Rate_txt  .setText("");
-
-		_fullTranslog_txt               .setText("");
-
-		_tempdbUsageMbAllAbs_txt        .setText("");
-		_tempdbUsageMbUserAbs_txt       .setText("");
-		_tempdbUsageMbInternalAbs_txt   .setText("");
-		_tempdbUsageMbAllDiff_txt       .setText("");
-		_tempdbUsageMbUserDiff_txt      .setText("");
-		_tempdbUsageMbInternalDiff_txt  .setText("");
-		
-		_oldestOpenTranBeginTime_txt    .setText("");
-		_oldestOpenTranId_txt           .setText("");
-		_oldestOpenTranSpid_txt         .setText("");
-		_oldestOpenTranName_txt         .setText("");
-		_oldestOpenTranDbname_txt       .setText("");
-		_oldestOpenTranWaitType_txt     .setText("");
-		_oldestOpenTranCmd_txt          .setText("");
-		_oldestOpenTranLoginName_txt    .setText("");
-		_oldestOpenTranTempdbUsageMbAll_txt     .setText("");
-		_oldestOpenTranTempdbUsageMbUser_txt    .setText("");
-		_oldestOpenTranTempdbUsageMbInternal_txt.setText("");
-
-		_oldestOpenTranSec_txt          .setText("");
-		_oldestOpenTranThreshold_txt    .setText("");
-		_maxSqlExecTimeInSec_txt        .setText("");
-		_suspectPageCount_txt           .setText(""); _suspectPageCount_txt .setBackground(_atAtServerName_txt.getBackground());
-		_suspectPageErrors_txt          .setText(""); _suspectPageErrors_txt.setBackground(_atAtServerName_txt.getBackground());
-		
-//		_bootcount_txt          .setText("");
-//		_recoveryState_txt      .setText("");
-		_cpuTime_txt            .setText("");
-		_cpuUser_txt            .setText("");
-		_cpuSystem_txt          .setText("");
-		_cpuIdle_txt            .setText("");
-		_ioTotalRead_txt        .setText("");
-		_ioTotalReadDiff_txt    .setText("");
-		_ioTotalWrite_txt       .setText("");
-		_ioTotalWriteDiff_txt   .setText("");
-		_aaConnectionsAbs_txt   .setText("");
-		_aaConnectionsDiff_txt  .setText("");
-		_aaConnectionsRate_txt  .setText("");
-		_packReceived_txt       .setText("");
-		_packReceivedDiff_txt   .setText("");
-		_packSent_txt           .setText("");
-		_packSentDiff_txt       .setText("");
-		_packetErrors_txt       .setText("");
-		_packetErrorsDiff_txt   .setText("");
-		_totalErrors_txt        .setText("");
-		_totalErrorsDiff_txt    .setText("");
+		_memTargetServerMb_txt                    .setText("");
+		_memTotalServerMb_txt                     .setText("");
+		_memTargetVsTotalMb_txt                   .setText("");
+		_memUsedByServer_txt                      .setText("");
+		_memLockedPagesUsedByServer_txt           .setText("");
+		_memUtilizationPct_txt                    .setText("");
+		_memProcessPhysicalMemoryLow_chk          .setSelected(false);
+		_memProcessVirtualMemoryLow_chk           .setSelected(false);
+                                                  
+		_cpuTime_txt                              .setText("");
+		_cpuUser_txt                              .setText("");
+		_cpuSystem_txt                            .setText("");
+		_cpuIdle_txt                              .setText("");
+		_ioTotalRead_txt                          .setText("");
+		_ioTotalReadDiff_txt                      .setText("");
+		_ioTotalWrite_txt                         .setText("");
+		_ioTotalWriteDiff_txt                     .setText("");
+		_aaConnectionsAbs_txt                     .setText("");
+		_aaConnectionsDiff_txt                    .setText("");
+		_aaConnectionsRate_txt                    .setText("");
+		_packReceived_txt                         .setText("");
+		_packReceivedDiff_txt                     .setText("");
+		_packSent_txt                             .setText("");
+		_packSentDiff_txt                         .setText("");
+		_packetErrors_txt                         .setText("");
+		_packetErrorsDiff_txt                     .setText("");
+		_totalErrors_txt                          .setText("");
+		_totalErrorsDiff_txt                      .setText("");
 	}
 
 	@Override
@@ -2106,13 +1448,6 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		conf.setLayoutProperty("summaryPanel.serverInfo.height", _dataPanelScroll.getSize().height);
 
 		conf.save();
-	}
-
-	private void saveProps()
-	{
-//		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
-//
-//		conf.save();
 	}
 
 	private void loadProps()
@@ -2248,5 +1583,10 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 	public int getClusterView()
 	{
 		return AseConnectionUtils.CE_SYSTEM_VIEW_UNKNOWN;
+	}
+
+	@Override
+	public void setComponentProperties()
+	{
 	}
 }

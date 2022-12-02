@@ -278,14 +278,16 @@ extends CountersModel
 		ResultSetTableModel rstm_dummy = ResultSetTableModel.executeQuery(conn, "select * from sys.dm_os_memory_clerks where 1=2", true, "dummy");
 		
 		// in Version 2012 ??? the columns 'pages_kb' was introduced
-		String pages_kb = "([single_pages_kb] + [multi_pages_kb])";
-		String orderBy  = "ORDER BY SUM([single_pages_kb]) + SUM([multi_pages_kb]) DESC \n";
+		String pages_kb = "([single_pages_kb] + [multi_pages_kb] + [virtual_memory_committed_kb] + [awe_allocated_kb])";
+//		String orderBy  = "ORDER BY SUM([single_pages_kb]) + SUM([multi_pages_kb]) DESC \n";
+		String orderBy  = "ORDER BY [SizeMb] DESC \n";
 		if (rstm_dummy.hasColumn("pages_kb"))
 		{
-			pages_kb = "[pages_kb]";
-			orderBy  = "ORDER BY SUM([pages_kb]) DESC \n";
+//			pages_kb = "[pages_kb]";
+//			orderBy  = "ORDER BY SUM([pages_kb]) DESC \n";
+			pages_kb = "([pages_kb] + [virtual_memory_committed_kb] + [awe_allocated_kb])";
 		}
-		
+
 		String sql = ""
 			    + "SELECT /* ${cmCollectorName} */ \n"
 			    + "     [type]                                          AS [type]\n"
