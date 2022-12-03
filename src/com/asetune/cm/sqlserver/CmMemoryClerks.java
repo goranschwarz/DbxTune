@@ -26,6 +26,7 @@ import java.util.List;
 
 import javax.naming.NameNotFoundException;
 
+import com.asetune.CounterController;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CounterSetTemplates;
@@ -118,6 +119,8 @@ extends CountersModel
 		CounterSetTemplates.register(this);
 	}
 
+//TODO; -- POSSIBLY -- Add Aggregate(SUM) to some columns... NOTE: Make sure local graph does NOT include the AGGREGATED row in the local Pie Chart;
+	
 
 	//------------------------------------------------------------
 	// Implementation
@@ -126,6 +129,7 @@ extends CountersModel
 
 	public static final String GRAPH_NAME_MEMORY_CLERK_BUFFER_POOL = "MemoryClerkBp";
 	public static final String GRAPH_NAME_MEMORY_CLERKS_TOP        = "MemoryClerksTop";
+	public static final String GRAPH_NAME_MEMORY_TTM_VS_ALL_CLERKS = "TTMemVsAllClerks"; // Target and Total Memory vs ALL memory Clerks
 
 	private void addTrendGraphs()
 	{
@@ -149,6 +153,19 @@ extends CountersModel
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			null, 
 			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.MEMORY,
+			false,  // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_MEMORY_TTM_VS_ALL_CLERKS,
+			"All Memory Clerks vs Target & Total Memory, in MB", // Menu CheckBox text
+			"All Memory Clerks vs Target & Total Memory, in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			new String[] {"SUM of All Memory Clerks", "Target Server Memory MB", "Total Server Memory MB"}, 
+			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
 			false,  // is Percent Graph
 			true,  // visible at start
@@ -199,6 +216,22 @@ extends CountersModel
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_MEMORY_TTM_VS_ALL_CLERKS.equals(tgdp.getName()))
+		{
+			Double[] dArray = new Double[3];
+
+			CmSummary cmSummary = (CmSummary) CounterController.getSummaryCm();
+			
+			dArray[0] = this.getAbsValueSum("SizeMb");
+			dArray[1] = new Double( cmSummary.getLastTargetServerMemoryMb() );
+			dArray[2] = new Double( cmSummary.getLastTotalServerMemoryMb() );
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), dArray);
+		}
+
 	}
 
 

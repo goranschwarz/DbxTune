@@ -3656,6 +3656,14 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				}
 				
 				//--------------------------
+				// Close ChartDataHistory
+				if (true)
+				{
+					getWaitDialog().setState("Closing Chart Data History.");
+					ChartDataHistoryManager.close();
+				}
+				
+				//--------------------------
 				// Close the DDL View
 				if (_ddlViewer != null)
 				{

@@ -168,6 +168,15 @@ extends CountersModel
 	// If we got Suspect Page Count > 0; then we will try to populate this, so we can attach it to the alarm.
 	private ResultSetTableModel _lastSuspectPage_rstm = null;
 
+	
+	private long _lastTargetServerMemoryMb = -1;
+	private long _lastTotalServerMemoryMb  = -1;
+
+	public long getLastTargetServerMemoryMb() { return _lastTargetServerMemoryMb; }
+	public long getLastTotalServerMemoryMb()  { return _lastTotalServerMemoryMb; }
+	
+
+	
 	private void addTrendGraphs()
 	{
 		// GRAPH
@@ -201,7 +210,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
 			"Blocking Locks", 	                                     // Menu CheckBox text
-			"Number of Concurrently Blocking Locks, above " + LockWaitsThresholdSec + " sec (from sysprocesses)", // Label 
+			"Number of Concurrently Blocking Locks, above " + LockWaitsThresholdSec + " sec, from sysprocesses ("+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] { "Blocking Locks" }, 
 			LabelType.Static,
@@ -213,7 +222,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_CONNECTION,
 			"Connections/Users in SQL-Server", 	          // Menu CheckBox text
-			"Connections/Users connected to the SQL-Server", // Label 
+			"Connections/Users connected to the SQL-Server ("+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] { "UserConnections (abs)", "distinctLogins (abs)", "@@connections (diff)", "@@connections (rate)" }, 
 			LabelType.Static,
@@ -225,7 +234,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_CONNECTION_RATE,
 			"Connection Rate in ASE", 	          // Menu CheckBox text
-			"Connection Attemtps per Second (source @@connections)", // Label 
+			"Connection Attemtps per Second, using @@connections ("+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "@@connections (rate)" }, 
 			LabelType.Static,
@@ -237,7 +246,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_AA_DISK_READ_WRITE,
 			"Disk read/write, Global Variables", 	                         // Menu CheckBox text
-			"Disk read/write per second, using @@total_read, @@total_write", // Label 
+			"Disk read/write per second, using @@total_read, @@total_write ("+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "@@total_read", "@@total_write" }, 
 			LabelType.Static,
@@ -249,7 +258,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_AA_NW_PACKET,
 			"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
-			"Network Packets received/sent per second, using @@pack_received, @@pack_sent", // Label 
+			"Network Packets received/sent per second, using @@pack_received, @@pack_sent ("+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" }, 
 			LabelType.Static,
@@ -261,7 +270,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
 			"Oldest Open Transaction in any Databases",     // Menu CheckBox text
-			"Oldest Open Transaction in any Databases, in Seconds", // Label 
+			"Oldest Open Transaction in any Databases, in Seconds ("+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS,
 			new String[] { "Seconds" }, 
 			LabelType.Static,
@@ -273,7 +282,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_MAX_SQL_EXEC_TIME_IN_SEC,
 			"Max Active SQL Execution Time In Seconds",     // Menu CheckBox text
-			"Max Active SQL Execution Time In Seconds", // Label 
+			"Max Active SQL Execution Time In Second ("+SHORT_NAME+")s", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS,
 			new String[] { "Max Active SQL Execution Time In Seconds" }, 
 			LabelType.Static,
@@ -285,7 +294,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_TEMPDB_SPID_USAGE,
 			"Tempdb Usage by SPID's in MB",     // Menu CheckBox text
-			"Tempdb Usage by SPID's in MB", // Label 
+			"Tempdb Usage by SPID's in MB ("+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			new String[] { "All", "User Objects", "Internal Objects" }, 
 			LabelType.Static,
@@ -297,7 +306,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_TARGET_AND_TOTAL_MEM_MB,
 			"Target and Total Server Memory in MB",     // Menu CheckBox text
-			"Target and Total Server Memory in MB", // Label 
+			"Target and Total Server Memory in MB ("+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			new String[] { "Target Server Memory MB", "Total Server Memory MB" }, 
 			LabelType.Static,
@@ -309,7 +318,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_MEMORY_UTILAZATION_PCT,
 			"SQL Server Memory Utilazation in Percent", // Menu CheckBox text
-			"SQL Server Memory Utilazation in Percent", // Label 
+			"SQL Server Memory Utilazation in Percent ("+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			new String[] { "process_memory_utilization_percentage" }, 
 			LabelType.Static,
@@ -321,7 +330,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_OS_MEMORY_FREE_MB,
 			"OS Free/Available Memory in MB", // Menu CheckBox text
-			"OS Free/Available Memory in MB", // Label 
+			"OS Free/Available Memory in MB ("+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			new String[] { "available_physical_memory_mb" }, 
 			LabelType.Static,
@@ -781,6 +790,11 @@ extends CountersModel
 	@Override
 	public void localCalculation(CounterSample newSample)
 	{
+		// Refresh local members used by GET methods (so that other CM's can use the same values)
+		_lastTargetServerMemoryMb = newSample.getValueAsInteger(0, "Target_Server_Memory_MB", false, -1);
+		_lastTotalServerMemoryMb  = newSample.getValueAsInteger(0, "Total_Server_Memory_MB" , false, -1);
+
+		// Get tempdb SPID Usage
 		boolean getTempdbSpidUsage = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_tempdbSpidUsage, DEFAULT_sample_tempdbSpidUsage);
 		if (getTempdbSpidUsage)
 		{

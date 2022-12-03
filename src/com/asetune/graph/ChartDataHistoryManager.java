@@ -59,7 +59,11 @@ public class ChartDataHistoryManager
 		}
 		return val;
 	}
-	
+
+	public static void close()
+	{
+		_map = new HashMap<>();
+	}
 
 	public static void outOfMemoryHandler()
 	{
