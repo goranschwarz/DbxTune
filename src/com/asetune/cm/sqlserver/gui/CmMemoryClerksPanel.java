@@ -161,6 +161,10 @@ extends TabularCntrPanel
 //					Number ExecutionTimePerCnt = (Number)dataTable.getValueAt(r, ExecutionTimePerCnt_pos);
 //					Number CpuUsagePct         = (Number)dataTable.getValueAt(r, CpuUsagePct_pos);
 
+					// SKIP the "Aggregate Row"
+					if ("_Total".equals(OperationName))
+						continue;
+					
 //					if (_logger.isDebugEnabled())
 //						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": type_pos("+type_pos+")='"+OperationName+"', SizeMb_pos("+SizeMb_pos+")='"+SizeMb+"', ExecutionTime("+ExecutionTime_pos+")='"+ExecutionTime+"', ExecutionTimePerCnt("+ExecutionTimePerCnt_pos+")='"+ExecutionTimePerCnt+"', CpuUsagePct("+CpuUsagePct_pos+")='"+CpuUsagePct+"'.");
 

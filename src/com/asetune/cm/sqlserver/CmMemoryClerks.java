@@ -21,16 +21,20 @@
 package com.asetune.cm.sqlserver;
 
 import java.awt.event.MouseEvent;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 
 import com.asetune.CounterController;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.cm.CountersModel.AggregationType;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.gui.CmMemoryClerksPanel;
 import com.asetune.config.dict.MonTablesDictionary;
@@ -164,7 +168,7 @@ extends CountersModel
 			"All Memory Clerks vs Target & Total Memory, in MB", // Menu CheckBox text
 			"All Memory Clerks vs Target & Total Memory, in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
-			new String[] {"SUM of All Memory Clerks", "Target Server Memory MB", "Total Server Memory MB"}, 
+			new String[] {"SUM of All Memory Clerks", "Target Server Memory MB", "Total Server Memory MB", "Buffer Pool Memory Clerk"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
 			false,  // is Percent Graph
@@ -220,13 +224,14 @@ extends CountersModel
 		// -----------------------------------------------------------------------------------------
 		if (GRAPH_NAME_MEMORY_TTM_VS_ALL_CLERKS.equals(tgdp.getName()))
 		{
-			Double[] dArray = new Double[3];
+			Double[] dArray = new Double[4];
 
 			CmSummary cmSummary = (CmSummary) CounterController.getSummaryCm();
 			
 			dArray[0] = this.getAbsValueSum("SizeMb");
 			dArray[1] = new Double( cmSummary.getLastTargetServerMemoryMb() );
 			dArray[2] = new Double( cmSummary.getLastTotalServerMemoryMb() );
+			dArray[3] = this.getAbsValueAsDouble("MEMORYCLERK_SQLBUFFERPOOL", "SizeMb");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), dArray);
@@ -255,9 +260,10 @@ extends CountersModel
 			mtd.addColumn(cmName, "MaxMb"           ,"<html>If the Clerk has many instances, this will be the MAX memory in MB</html>");
 			mtd.addColumn(cmName, "MinMb"           ,"<html>If the Clerk has many instances, this will be the MIN memory in MB</html>");
 
+			mtd.addColumn(cmName, "pages_MB"                     ,"<html>Specifies the amount of page memory allocated in megabytes (MB) for this memory clerk</html>");
 			mtd.addColumn(cmName, "virtual_memory_reserved_MB"   ,"<html>Specifies the amount of virtual memory that is reserved by a memory clerk</html>");
 			mtd.addColumn(cmName, "virtual_memory_committed_MB"  ,"<html>Specifies the amount of virtual memory that is committed by a memory clerk. The amount of committed memory should always be less than the amount of reserved memory.</html>");
-			mtd.addColumn(cmName, "awe_allocated_MB"             ,"<html>Specifies the amount of memory in kilobytes (MB) locked in the physical memory and not paged out by the operating system.</html>");
+			mtd.addColumn(cmName, "awe_allocated_MB"             ,"<html>Specifies the amount of memory in megabytes (MB) locked in the physical memory and not paged out by the operating system.</html>");
 			mtd.addColumn(cmName, "shared_memory_reserved_MB"    ,"<html>Specifies the amount of shared memory that is reserved by a memory clerk. The amount of memory reserved for use by shared memory and file mapping.</html>");
 			mtd.addColumn(cmName, "shared_memory_committed_MB"   ,"<html>Specifies the amount of shared memory that is committed by the memory clerk.</html>");
 		}
@@ -311,28 +317,31 @@ extends CountersModel
 		ResultSetTableModel rstm_dummy = ResultSetTableModel.executeQuery(conn, "select * from sys.dm_os_memory_clerks where 1=2", true, "dummy");
 		
 		// in Version 2012 ??? the columns 'pages_kb' was introduced
-		String pages_kb = "([single_pages_kb] + [multi_pages_kb] + [virtual_memory_committed_kb] + [awe_allocated_kb])";
-//		String orderBy  = "ORDER BY SUM([single_pages_kb]) + SUM([multi_pages_kb]) DESC \n";
-		String orderBy  = "ORDER BY [SizeMb] DESC \n";
+		String pages_kb = "([single_pages_kb] + [multi_pages_kb])";
 		if (rstm_dummy.hasColumn("pages_kb"))
 		{
-//			pages_kb = "[pages_kb]";
-//			orderBy  = "ORDER BY SUM([pages_kb]) DESC \n";
-			pages_kb = "([pages_kb] + [virtual_memory_committed_kb] + [awe_allocated_kb])";
+			pages_kb = "[pages_kb]";
 		}
 
+		String calculation_cols = "([single_pages_kb] + [multi_pages_kb] + [virtual_memory_committed_kb] + [awe_allocated_kb])";
+		if (rstm_dummy.hasColumn("pages_kb"))
+		{
+			calculation_cols = "([pages_kb] + [virtual_memory_committed_kb] + [awe_allocated_kb])";
+		}
+		
 		String sql = ""
 			    + "SELECT /* ${cmCollectorName} */ \n"
 			    + "     [type]                                          AS [type]\n"
 			    + "    ,max([name])                                     AS [name] \n"
 			    + "    ,count(*)                                        AS [InstanceCount] \n"
-			    + "    ,cast(SUM(" + pages_kb + ") / 1024.0 as numeric(12,1)) AS [SizeMb] \n"
-			    + "    ,cast(SUM(" + pages_kb + ") / 1024.0 as numeric(12,1)) AS [SizeMb_diff] \n"
-			    + "    ,cast(AVG(" + pages_kb + ") / 1024.0 as numeric(12,1)) AS [AvgMb] \n"
-			    + "    ,cast(MAX(" + pages_kb + ") / 1024.0 as numeric(12,1)) AS [MaxMb] \n"
-			    + "    ,cast(MIN(" + pages_kb + ") / 1024.0 as numeric(12,1)) AS [MinMb] \n"
+			    + "    ,cast(SUM(" + calculation_cols + ") / 1024.0 as numeric(12,1)) AS [SizeMb] \n"
+			    + "    ,cast(SUM(" + calculation_cols + ") / 1024.0 as numeric(12,1)) AS [SizeMb_diff] \n"
+			    + "    ,cast(AVG(" + calculation_cols + ") / 1024.0 as numeric(12,1)) AS [AvgMb] \n"
+			    + "    ,cast(MAX(" + calculation_cols + ") / 1024.0 as numeric(12,1)) AS [MaxMb] \n"
+			    + "    ,cast(MIN(" + calculation_cols + ") / 1024.0 as numeric(12,1)) AS [MinMb] \n"
 
 			    // Some extra columns (not knowing if they are important or not)
+			    + "    ,cast(SUM(" + pages_kb             +  ") / 1024.0 as numeric(12,1)) AS [pages_MB] \n"
 			    + "    ,cast(SUM([virtual_memory_reserved_kb] ) / 1024.0 as numeric(12,1)) AS [virtual_memory_reserved_MB] \n"
 			    + "    ,cast(SUM([virtual_memory_committed_kb]) / 1024.0 as numeric(12,1)) AS [virtual_memory_committed_MB] \n"
 			    + "    ,cast(SUM([awe_allocated_kb]           ) / 1024.0 as numeric(12,1)) AS [awe_allocated_MB] \n"
@@ -341,7 +350,7 @@ extends CountersModel
 			    
 			    + "FROM sys.dm_os_memory_clerks \n"
 			    + "GROUP BY [type] \n"
-			    + orderBy
+			    + "ORDER BY [SizeMb] DESC \n"
 			    + "";
 
 		return sql;
@@ -377,5 +386,49 @@ extends CountersModel
 
 		// or possibly: select value_in_use from sys.configurations where configuration_id = 1544 /*max server memory (MB)*/
 		// Only use this if you can STORE the value somewhere (so we can read it if we are watching a "replay" (saved in offline storage)
+	}
+
+	
+	@Override
+	public Map<String, AggregationType> createAggregateColumns()
+	{
+		HashMap<String, AggregationType> aggColumns = new HashMap<>(getColumnCount());
+
+		AggregationType tmp;
+		
+		// Create the columns :::::::::::::::::::::::::::::::::::::::::::::::::::::: And ADD it to the return Map 
+		tmp = new AggregationType("SizeMb"                     , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("SizeMb_diff"                , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("AvgMb"                      , AggregationType.Agg.AVG);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("MaxMb"                      , AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("MinMb"                      , AggregationType.Agg.MIN);   aggColumns.put(tmp.getColumnName(), tmp);
+
+		tmp = new AggregationType("pages_MB"                   , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("virtual_memory_reserved_MB" , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("virtual_memory_committed_MB", AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("awe_allocated_MB"           , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("shared_memory_reserved_MB"  , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("shared_memory_committed_MB" , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		
+		return aggColumns;
+	}
+
+	@Override
+	public boolean isAggregateRowAppendEnabled()
+	{
+		return true;
+	}
+
+	@Override
+	public Object calculateAggregateRow_nonAggregatedColumnDataProvider(CounterSample newSample, String colName, int c, int jdbcType, Object addValue)
+	{
+		if ("name".equalsIgnoreCase(colName))
+			return "_Total";
+
+		if ("InstanceCount".equalsIgnoreCase(colName))
+			return new Integer(-1);
+
+		
+		return null;
 	}
 }
