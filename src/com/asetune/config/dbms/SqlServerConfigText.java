@@ -40,6 +40,7 @@ import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
@@ -1033,6 +1034,22 @@ public abstract class SqlServerConfigText
 			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
 				return "NOT supported in Azure SQL Database.";
 
+			String problemDesc = "";
+			if ( ! DbUtils.checkIfTableIsSelectable(conn, "msdb.dbo.sysjobs"      ) ) problemDesc += "msdb.dbo.sysjobs, ";
+			if ( ! DbUtils.checkIfTableIsSelectable(conn, "msdb.dbo.sysjobhistory") ) problemDesc += "msdb.dbo.sysjobs, ";
+			if ( ! DbUtils.checkIfTableIsSelectable(conn, "msdb.dbo.syscategories") ) problemDesc += "msdb.dbo.syscategories, ";
+			if ( ! DbUtils.checkIfTableIsSelectable(conn, "msdb.dbo.sysalerts"    ) ) problemDesc += "msdb.dbo.sysalerts, ";
+
+			String username = "unknownLoginName";
+			try { username = conn.getMetaData().getUserName(); }
+			catch (SQLException ignore) {}
+
+			if (StringUtil.hasValue(problemDesc))
+				return "Problems when trying to SELECT ... values from the following tables: " + problemDesc + "\n"
+						+ "Please check that the user '" + username + "' has rights to read the tables.\n"
+						+ "Possible fix: USE msdb; CREATE USER " + username + " FOR LOGIN " + username + "; ALTER ROLE db_datareader ADD MEMBER " + username + "; \n"
+						+ "This configuation will NOT be extracted.";
+			
 			return super.checkRequirements(conn);
 		}
 		@Override protected String getSqlCurrentConfig(DbmsVersionInfo v) 

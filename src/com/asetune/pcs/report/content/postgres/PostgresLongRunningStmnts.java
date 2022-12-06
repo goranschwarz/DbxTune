@@ -25,10 +25,14 @@ import java.io.IOException;
 import java.io.Writer;
 
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.gui.ResultSetTableModel.TableStringRenderer;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.SqlUtils;
+import com.asetune.utils.SqlUtils.SqlDialict;
+import com.asetune.utils.StringUtil;
 
 public class PostgresLongRunningStmnts
 extends PostgresAbstract
@@ -101,12 +105,97 @@ extends PostgresAbstract
 		}
 
 
-		// Get a description of this section, and column names
-		sb.append(getSectionDescriptionHtml(_shortRstm, true));
+		// Create a special renderer to control the HTML table content
+		class TmpRenderer 
+		implements ResultSetTableModel.TableStringRenderer
+		{
+			@Override
+			public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+			{
+				// Format the SQL Statement
+				if ("last_known_sql_statement".equals(colName))
+				{
+					if (StringUtil.hasValue(strVal) && ! ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(strVal))
+					{
+						strVal = "<details class='dsr-pg-lrs-details' open>"
+							+ "  <summary>SQL Statement</summary>"
+							+ "  <i>-- <font size='-2'>Note: below SQL Statement is formatted (not the original) </i></font><br>"
+							+ "  <pre>" + SqlUtils.format(strVal, SqlDialict.Postgres) + "</pre>"
+							+ "</details>";
+					}
+				}
 
-		// Last sample Database Size info
-		sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
-		sb.append(toHtmlTable(_shortRstm));
+				// Format the SQL Statement
+				if ("pid_lock_info".equals(colName))
+				{
+					if (StringUtil.hasValue(strVal) && ! ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(strVal))
+					{
+						strVal = "<details class='dsr-pg-lrs-details' open>"
+							+ "  <summary>Lock Info</summary>"
+							+    strVal
+							+ "</details>";
+					}
+				}
+
+				// Format the SQL Statement
+				if ("blocked_pids_info".equals(colName))
+				{
+					if (StringUtil.hasValue(strVal) && ! ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(strVal))
+					{
+						strVal = "<details class='dsr-pg-lrs-details' open>"
+							+ "  <summary>Blocked PIDs Info</summary>"
+							+    strVal
+							+ "</details>";
+					}
+				}
+				
+				return TableStringRenderer.super.cellValue(rstm, row, col, colName, objVal, strVal);
+			}
+		}
+
+		
+		String detailsForAboveStatements = ""
+				+ "<details> \n"
+				+ "<summary>Details for above Statements</summary> \n"
+				+ "<br> \n"
+
+				// Get a description of this section, and column names
+				+ getSectionDescriptionHtml(_shortRstm, true)
+				
+				// As a html table
+				+ "Row Count: " + _shortRstm.getRowCount() + " &emsp; &emsp; \n"
+				+ "<a href='javascript:void(0)' onClick=\"openCloseDsrPgLrsDetails('open')\">Open</a>  \n"
+				+ "or <a href='javascript:void(0)' onClick=\"openCloseDsrPgLrsDetails('close')\">Close</a> \n"
+				+ " All <i>closable</i> items in the below table.<br> \n"
+
+//				+ toHtmlTable(_shortRstm)
+				+ _shortRstm.toHtmlTableString("sortable", true, true, null, new TmpRenderer())
+				
+				+ "<a href='javascript:void(0)' onClick=\"openCloseDsrPgLrsDetails('open')\">Open</a>  \n"
+				+ "or <a href='javascript:void(0)' onClick=\"openCloseDsrPgLrsDetails('close')\">Close</a> \n"
+				+ " All <i>closable</i> items in the above table.<br> \n"
+				
+				+ "\n"
+				+ "</details> \n"
+				+ "\n"
+
+				+ "\n"
+				+ "<script> \n"
+				+ "function openCloseDsrPgLrsDetails(openOrClose)                        \n"
+				+ "{                                                                     \n"
+				+ "    const details = document.querySelectorAll('.dsr-pg-lrs-details'); \n"
+				+ "                                                                      \n"
+				+ "    details.forEach( (detail) => {                                    \n"
+				+ "        if ('open'  === openOrClose) detail.setAttribute('open', true); \n"
+				+ "        if ('close' === openOrClose) detail.removeAttribute('open');    \n"
+				+ "    });                                                               \n"
+				+ "}                                                                     \n"
+				+ "</script> \n"
+				+ "\n"
+				+ "";
+
+		// If MS Outlook, hide the content, since it can't handle it in a good manner
+		sb.append(msOutlookAlternateText(detailsForAboveStatements, "Details for above Statements", null));
 	}
 
 	@Override
@@ -156,8 +245,46 @@ extends PostgresAbstract
 
 			// Remove some "other columns" columns
 			_shortRstm.removeColumn("datid");
+//			_shortRstm.removeColumn("datname");								// remove from table
+			_shortRstm.removeColumn("leader_pid");
 			_shortRstm.removeColumn("pid");
+//			_shortRstm.removeColumn("state");								// remove from table
+//			_shortRstm.removeColumn("wait_event_type");						// remove from table
+//			_shortRstm.removeColumn("wait_event");							// remove from table
+//			_shortRstm.removeColumn("im_blocked_by_pids");					// remove from table
+//			_shortRstm.removeColumn("im_blocking_other_pids");				// remove from table
+//			_shortRstm.removeColumn("im_blocking_others_max_time_in_sec");	// remove from table
 			_shortRstm.removeColumn("usesysid");
+//			_shortRstm.removeColumn("usename");								// remove from table
+//			_shortRstm.removeColumn("application_name");					// remove from table
+			_shortRstm.removeColumn("has_sql_text");
+			_shortRstm.removeColumn("has_pid_lock_info");
+//			_shortRstm.removeColumn("pid_lock_count");						// remove from table
+			_shortRstm.removeColumn("has_blocked_pids_info");
+//			_shortRstm.removeColumn("xact_start_sec");						// remove from table
+//			_shortRstm.removeColumn("stmnt_start_sec");						// remove from table
+//			_shortRstm.removeColumn("stmnt_last_exec_sec");					// remove from table
+//			_shortRstm.removeColumn("in_current_state_sec");				// remove from table
+			_shortRstm.removeColumn("xact_start_age");
+			_shortRstm.removeColumn("stmnt_start_age");
+			_shortRstm.removeColumn("stmnt_last_exec_age");
+			_shortRstm.removeColumn("in_current_state_age");
+			_shortRstm.removeColumn("backend_start");
+			_shortRstm.removeColumn("xact_start");
+			_shortRstm.removeColumn("query_start");
+			_shortRstm.removeColumn("state_change");
+			_shortRstm.removeColumn("backend_xid");
+			_shortRstm.removeColumn("backend_xmin");
+//			_shortRstm.removeColumn("backend_type");						// remove from table
+			_shortRstm.removeColumn("client_addr");
+//			_shortRstm.removeColumn("client_hostname");						// remove from table
+			_shortRstm.removeColumn("client_port");
+			_shortRstm.removeColumn("query_id");
+//			_shortRstm.removeColumn("last_known_sql_statement");			// remove from table
+//			_shortRstm.removeColumn("pid_lock_info");						// remove from table
+//			_shortRstm.removeColumn("blocked_pids_info");					// remove from table
+			_shortRstm.removeColumn("execTimeInMs");
+			_shortRstm.removeColumn("xactTimeInMs");
 			
 			// Highlight sort column
 			_shortRstm.setHighlightSortColumns("xact_start_sec");

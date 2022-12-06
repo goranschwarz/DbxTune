@@ -951,24 +951,29 @@ implements ToolTipHyperlinkResolver
 			//------------------------------------------------------------------------
 			if (StringUtil.isPossibleXml(cellStr))
 			{
-//System.out.println("getContentSpecificToolTipText(cellStr, bytes): isPossibleXml=true");
-//				StringBuilder sb = new StringBuilder();
-//				sb.append("<html>");
-//				sb.append("Cell content looks like <i>XML</i>, so displaying it as formated XML. Origin length="+cellStr.length()+"<br>");
-//				sb.append("<hr>");
-//				sb.append("<pre><code>");
-//				sb.append(StringUtil.xmlFormat(cellStr).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"));
-//				sb.append("</code></pre>");
-//				sb.append("</html>");
-//
-//				return sb.toString();
+				String first250Char = cellStr.substring(0, Math.min(255, cellStr.length()-1));
+				String xmlExtention = ".xml"; 
+				
+				// Check for XML subcategory
+				
+				// -- SQL Server -- Deadlock report -- to filename: .xdl
+				if (first250Char.contains("<deadlock>"))
+				{
+					xmlExtention = ".xdl";
+				}
+
+				// -- SQL Server -- Showplan -- to filename: .sqlplan
+				if (first250Char.contains("<ShowPlanXML "))
+				{
+					xmlExtention = ".sqlplan";
+				}
 
 				File tmpFile = null;
 				try
 				{
 					// put content in a TEMP file 
 //					tmpFile = createTempFile("sqlw_XML_tooltip_", ".html", bytes);
-					tmpFile = createTempFile("sqlw_XML_tooltip_", ".xml", bytes);
+					tmpFile = createTempFile("sqlw_XML_tooltip_", xmlExtention, bytes);
 
 					// Compose ToolTip HTML (with content, & a LINK to be opened in "browser")
 					String urlStr = ("file:///"+tmpFile);
@@ -985,8 +990,7 @@ implements ToolTipHyperlinkResolver
 						sb.append("Using temp file: <code>").append(tmpFile).append("</code><br>");
 						sb.append("File Size: <code>").append(StringUtil.bytesToHuman(tmpFile.length(), "#.#")).append("</code><br>");
 						sb.append("Guessed Charset: <code>").append(guessedCharset).append("</code><br>");
-//						sb.append("<a href='").append(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>");
-						sb.append("<a href='").append(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for file extention <b>'.xml'</b> will be used)<br>");
+						sb.append("<a href='").append(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for file extention <b>'" + xmlExtention + "'</b> will be used)<br>");
 						sb.append("<hr>");
 
 						int maxDisplayLenKb = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_TOOLTIP_XML_INLINE_MAX_SIZE_KB, DEFAULT_TOOLTIP_XML_INLINE_MAX_SIZE_KB);

@@ -246,6 +246,13 @@ public class PostgresUtils
 		return lockList;
 	}
 
+	private static String toString(Object obj)
+	{
+		if (obj == null)
+			return "";
+		return obj.toString();
+	}
+
 	/** 
 	 * @return "" if no locks, otherwise a HTML TABLE, with the headers: DB, Table, Type, Count
 	 */
@@ -280,20 +287,20 @@ public class PostgresUtils
 			else if ("pg_catalog".equals(lr._schemaName)) sb.append("<TR style='color: gray;'>");   // Postgres system schema object
 			else                                          sb.append("<TR>");
 
-			sb.append("<TD>").append(lr._pid          ).append("</TD>");
-			sb.append("<TD>").append(lr._dbid         ).append("</TD>");
-			sb.append("<TD>").append(lr._dbname       ).append("</TD>");
-			sb.append("<TD>").append(lr._objectTypeStr).append("</TD>");
-			sb.append("<TD>").append(lr._objectid     ).append("</TD>");
-			sb.append("<TD>").append(lr._schemaName   ).append("</TD>");
-			sb.append("<TD>").append(lr._tableName    ).append("</TD>");
-			sb.append("<TD>").append(lr._xactId       ).append("</TD>");
-			sb.append("<TD>").append(lr._lockGranted  ).append("</TD>");
-			sb.append("<TD>").append(lr._lockType     ).append("</TD>");
-			sb.append("<TD>").append(lr._lockMode     ).append("</TD>");
-			sb.append("<TD>").append(lr._lockWaitStart).append("</TD>");
-			sb.append("<TD>").append(lr._lockWaitInSec).append("</TD>");
-			sb.append("<TD>").append(lr._lockCount    ).append("</TD>");
+			sb.append("<TD>").append(toString( lr._pid           )).append("</TD>");
+			sb.append("<TD>").append(toString( lr._dbid          )).append("</TD>");
+			sb.append("<TD>").append(toString( lr._dbname        )).append("</TD>");
+			sb.append("<TD>").append(toString( lr._objectTypeStr )).append("</TD>");
+			sb.append("<TD>").append(toString( lr._objectid      )).append("</TD>");
+			sb.append("<TD>").append(toString( lr._schemaName    )).append("</TD>");
+			sb.append("<TD>").append(toString( lr._tableName     )).append("</TD>");
+			sb.append("<TD>").append(toString( lr._xactId        )).append("</TD>");
+			sb.append("<TD>").append(toString( lr._lockGranted   )).append("</TD>");
+			sb.append("<TD>").append(toString( lr._lockType      )).append("</TD>");
+			sb.append("<TD>").append(toString( lr._lockMode      )).append("</TD>");
+			sb.append("<TD>").append(toString( lr._lockWaitStart )).append("</TD>");
+			sb.append("<TD>").append(toString( lr._lockWaitInSec )).append("</TD>");
+			sb.append("<TD>").append(toString( lr._lockCount     )).append("</TD>");
 			sb.append("</TR>");
 		}
 		sb.append("</TABLE>");

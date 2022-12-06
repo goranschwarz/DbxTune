@@ -131,6 +131,10 @@ public class DbmsObjectIdCacheUtils
 				}
 			}
 		}
+//		else
+//		{
+//			_logger.info("Skipping BULK load of ObjectId's at localCalculation_DbmsObjectIdFiller(), isBulkLoadOnStartEnabled() was NOT enabled.");
+//		}
 	}
 
 }

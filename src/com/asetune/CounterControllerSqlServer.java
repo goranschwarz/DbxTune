@@ -1118,6 +1118,8 @@ extends CounterControllerAbstract
 		// Populate Object ID Cache
 		if (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled())
 			DbmsObjectIdCache.getInstance().getBulk(null); // null == ALL Databases
+		else
+			_logger.info("Skipping BULK load of ObjectId's at noGuiConnect(), isBulkLoadOnStartEnabled() was NOT enabled. Property '" + DbmsObjectIdCacheSqlServer.PROPKEY_BulkLoadOnStart + "=true|false'.");
 		
 		// Return the connection
 		return conn;

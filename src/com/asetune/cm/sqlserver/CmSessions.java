@@ -889,6 +889,7 @@ extends CountersModel
 
 
 
+	// -----------------------------------------------------------------------------------------------------
 	// TODO: search for: last-page insert PAGELATCH_EX contention in SQL Server
 	//       https://docs.microsoft.com/en-US/troubleshoot/sql/performance/resolve-pagelatch-ex-contention
 	//       https://techcommunity.microsoft.com/t5/sql-server-blog/pagelatch-ex-waits-and-heavy-inserts/ba-p/384289
@@ -903,7 +904,71 @@ extends CountersModel
 	//        * Send some ALARM on it
 	// POSIBLY:
 	//   - The above will also work for "tempdb contention" PFS, GAM and SGAM pages.
+	// -----------------------------------------------------------------------------------------------------
 
+	
+	// -----------------------------------------------------------------------------------------------------
+	// TODO: decode some WaitResource: PAGE and KEY
+	// see -- https://littlekendra.com/2016/10/17/decoding-key-and-page-waitresource-for-deadlocks-and-blocking/
+	// -----------------------------------------------------------------------------------------------------
+	//    CmSessions: ================= WaitInfo ====================== 
+	//    CmSessions: WaitResources(5): [PAGE: 6:1:573542, KEY: 6:72057594044153856 (3713510338dc), KEY: 6:72057594044153856 (a360e767ed88), PAGE: 6:1:592565, PAGE: 6:1:541678] 
+	//    CmSessions: WaitTypes    (3): [LCK_M_U, LCK_M_IX, LCK_M_S] 
+	//    CmSessions: 
+	//    CmSessions: Wait Resources -- Count: 
+	//    CmSessions:   - count=4 -- WaitResource='PAGE: 6:1:573542' 
+	//    CmSessions:   - count=1 -- WaitResource='KEY: 6:72057594044153856 (3713510338dc)' 
+	//    CmSessions:   - count=2 -- WaitResource='KEY: 6:72057594044153856 (a360e767ed88)' 
+	//    CmSessions:   - count=2 -- WaitResource='PAGE: 6:1:592565' 
+	//    CmSessions:   - count=1 -- WaitResource='PAGE: 6:1:541678' 
+	//    CmSessions: 
+	//    CmSessions: Wait Resources -- Sum WaitTime: 
+	//    CmSessions:   - waitTime=146398 ms -- WaitResource='PAGE: 6:1:573542' 
+	//    CmSessions:   - waitTime=78312 ms -- WaitResource='KEY: 6:72057594044153856 (3713510338dc)' 
+	//    CmSessions:   - waitTime=81128 ms -- WaitResource='KEY: 6:72057594044153856 (a360e767ed88)' 
+	//    CmSessions:   - waitTime=146508 ms -- WaitResource='PAGE: 6:1:592565' 
+	//    CmSessions:   - waitTime=61677 ms -- WaitResource='PAGE: 6:1:541678' 
+	//    CmSessions: 
+	//    CmSessions: Wait Types -- Sum WaitTime: 
+	//    CmSessions:   - waitTime=81128 ms -- WaitType='LCK_M_U' 
+	//    CmSessions:   - waitTime=132778 ms -- WaitType='LCK_M_IX' 
+	//    CmSessions:   - waitTime=300117 ms -- WaitType='LCK_M_S' 
+	//    CmSessions: ================================================= 
+    //    
+	//    --To decode: WaitResource='PAGE: <dbid:fileid:page>
+	//    ----------------------------------------------------------------
+	//    -- In 2019 or later: sys.dm_db_page_info ( DatabaseId, FileId, PageId, Mode )  -- https://learn.microsoft.com/en-us/sql/relational-databases/system-dynamic-management-views/sys-dm-db-page-info-transact-sql?view=sql-server-ver16
+	//    -- SELECT sys.dm_db_page_info (#, #, #, 'DETAILED')
+	//    ----------------------------------------------------------------
+	//    -- DBCC PAGE (DatabaseName, FileNumber, PageNumber, DumpStyle)
+	//    -- DBCC PAGE ('dbname', #, #, 2)
+	//    ----------------------------------------------------------------
+	//    also get the records
+	//    SELECT sys.fn_PhysLocFormatter (%%physloc%%), *
+	//    FROM dbo.tabname (NOLOCK)
+	//    WHERE sys.fn_PhysLocFormatter (%%physloc%%) like '(<dbid>:<page>%'
+	//
+    //    
+	//    ----------------------------------------------------------------
+	//    --To decode: WaitResource='KEY: <dbid:hobt (Magic hash)>
+	//    ----------------------------------------------------------------
+	//    SELECT 
+	//        sc.name as schema_name, 
+	//        so.name as object_name, 
+	//        si.name as index_name
+	//    FROM sys.partitions AS p
+	//    JOIN sys.objects AS so ON p.object_id  = so.object_id
+	//    JOIN sys.indexes AS si ON p.index_id   = si.index_id  AND p.object_id = si.object_id
+	//    JOIN sys.schemas AS sc ON so.schema_id = sc.schema_id
+	//    WHERE hobt_id = 72057594044153856 ;
+	//    GO
+    //    
+	//    SELECT * FROM meeting_details (NOLOCK) WHERE %%lockres%% = CAST('(3713510338dc)' AS varchar(60)) COLLATE Latin1_General_100_CI_AS_KS_WS_SC;
+	//    SELECT * FROM meeting_details (NOLOCK) WHERE %%lockres%% = CAST('(a360e767ed88)' AS varchar(60)) COLLATE Latin1_General_100_CI_AS_KS_WS_SC;
+	// -----------------------------------------------------------------------------------------------------
+	
+	
+	
 	private static class SpidWaitInfo
 	{
 		int    _session_id;

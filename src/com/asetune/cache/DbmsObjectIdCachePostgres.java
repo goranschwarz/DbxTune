@@ -39,6 +39,7 @@ import com.asetune.cm.CounterSampleCatalogIteratorPostgres;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.DbxConnectionPool;
 import com.asetune.sql.conn.DbxConnectionPoolMap;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
@@ -50,7 +51,7 @@ extends DbmsObjectIdCache
 
 	public static final String  PROPKEY_BulkLoadOnStart = "PostgresTune.objectIdCahe.bulkLoadOnStart";
 	public static final boolean DEFAULT_BulkLoadOnStart = true;  // for testing just now...
-//	public static final boolean DEFAULT_BulkLoadOnStart = false; // if we want to revert back for X number of CM's to use SQL Server direct lookups of: sys.objects, etc...
+//	public static final boolean DEFAULT_BulkLoadOnStart = false; // if we want to revert back for X number of CM's to use direct lookups of: pg_class, etc...
 
 	public DbmsObjectIdCachePostgres(ConnectionProvider connProvider)
 	{
@@ -65,8 +66,8 @@ extends DbmsObjectIdCache
 	@Override
 	public boolean isBulkLoadOnStartEnabled()
 	{
-//		return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_BulkLoadOnStart, DEFAULT_BulkLoadOnStart);
-		return false;
+		return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_BulkLoadOnStart, DEFAULT_BulkLoadOnStart);
+//		return false;
 	}
 
 	public static final String SCHEMA_PUBLIC      = "public";
@@ -236,9 +237,9 @@ extends DbmsObjectIdCache
 	 * BULK LOAD for Postgres... 
 	 */
 	@Override
-	protected void getBulk(DbxConnection conn, Set<String> dbnameSet)
+	protected void getBulk(DbxConnection templateConn, Set<String> dbnameSet)
 	{
-		if (conn == null)
+		if (templateConn == null)
 			throw new RuntimeException("DbmsObjectIdCacheSqlServer.getBulk(...): Connection can't be null.");
 
 		// Clear all cached values
@@ -252,7 +253,7 @@ extends DbmsObjectIdCache
 				+ "WHERE datname not like 'template%' \n"
 				+ "  AND has_database_privilege(datname, 'CONNECT') \n" // Possibly add this to only lookup databases that we have access to
 				+ "ORDER by 1 \n";
-		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		try (Statement stmnt = templateConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
 			while(rs.next())
 			{
@@ -260,6 +261,12 @@ extends DbmsObjectIdCache
 				String dbname = rs.getString(2);
 				
 				dbNameMap.put(dbid, dbname);
+				
+				// Special case... 
+				// If database is 'postgres' should we add a entry 'dbid=0', so we can lookup system tables (in case the datid in pg_locks is 0)
+				// ---- Lest do this in the future if we KEEP seeing this behavior (because I don't know the side effect right now)
+				//if ("postgres".equals(dbname))
+				//	dbNameMap.put(0L, dbname);
 			}
 		}
 		catch(SQLException ex)
@@ -298,18 +305,18 @@ extends DbmsObjectIdCache
 				long startTime = System.currentTimeMillis();
 				
 				// Get a Connection Pool for this specific database
-				DbxConnectionPool connPool = DbxConnectionPoolMap.getInstance().getPool(dbname);
-				if (connPool == null)
+//				DbxConnectionPool connPool = DbxConnectionPoolMap.getInstance().getPool(dbname);
+//				if (connPool == null)
+				if ( ! DbxConnectionPoolMap.hasInstance() )
 				{
-					_logger.info("Skipping BULK load of ObjectId's for database '" + dbname + "', no connection pool was found.");
+					_logger.info("Skipping BULK load of ObjectId's for database '" + dbname + "', no Connection Pool Map was found.");
 					continue;
 				}
 
 				// CONNECT TO the database (use some Connection Pool)
 				try
 				{
-					DbxConnection dbConn = CounterSampleCatalogIteratorPostgres.getConnection(null, conn, dbname);
-					
+					DbxConnection dbConn = CounterSampleCatalogIteratorPostgres.getConnection(null, templateConn, dbname);
 //					sql = ""
 //							+ "SELECT \n"
 //							+ "     nsp.oid as schema_id \n"
@@ -353,7 +360,7 @@ extends DbmsObjectIdCache
 							// ----------------------------------------
 
 					long objectId_save = Long.MIN_VALUE; // Changed when a new ObjectId is found
-					try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+					try (Statement stmnt = dbConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 					{
 						ObjectInfo objectInfo = null;
 

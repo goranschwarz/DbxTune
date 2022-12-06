@@ -26,6 +26,8 @@ import java.util.List;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.Version;
 import com.asetune.cache.DbmsObjectIdCache;
 import com.asetune.cache.DbmsObjectIdCachePostgres;
@@ -44,6 +46,7 @@ public class MainFramePostgres
 extends MainFrame
 {
 	private static final long serialVersionUID = 1L;
+	private static Logger _logger = Logger.getLogger(MainFramePostgres.class);
 
 	public MainFramePostgres()
 	{
@@ -183,6 +186,8 @@ extends MainFrame
 		// Populate Object ID Cache
 		if (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled())
 			DbmsObjectIdCache.getInstance().getBulk(null); // null == ALL Databases
+		else
+			_logger.info("Skipping BULK load of ObjectId's at connectMonitorHookin(), isBulkLoadOnStartEnabled() was NOT enabled. Property '" + DbmsObjectIdCachePostgres.PROPKEY_BulkLoadOnStart + "=true|false'.");
 	}
 
 	@Override

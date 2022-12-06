@@ -495,20 +495,12 @@ extends CounterModelHostMonitor
 			int swapIn_5mAvg  = (int) MovingAverageCounterManager.getInstance(groupName, "swapIn",  5).add(swapIn) .getAvg(0, true, maxCap);
 			int swapOut_5mAvg = (int) MovingAverageCounterManager.getInstance(groupName, "swapOut", 5).add(swapOut).getAvg(0, true, maxCap);
 
-//			int swapIn_15mAvg  = (int) MovingAverageCounterManager.getInstance(groupName, "swapIn",  15).add(swapIn) .getAvg(0, true, maxCap);
-//			int swapOut_15mAvg = (int) MovingAverageCounterManager.getInstance(groupName, "swapOut", 15).add(swapOut).getAvg(0, true, maxCap);
-//			int swapIn_60mAvg  = (int) MovingAverageCounterManager.getInstance(groupName, "swapIn",  60).add(swapIn) .getAvg(0, true, maxCap);
-//			int swapOut_60mAvg = (int) MovingAverageCounterManager.getInstance(groupName, "swapOut", 60).add(swapOut).getAvg(0, true, maxCap);
+			// Add to 60m since this is what we use as a Graph in the Alarm (but we don't care/use the result calculation)
+			MovingAverageCounterManager.getInstance(groupName, "swapIn",  60).add(swapIn) .getAvg(0, true, maxCap);
+			MovingAverageCounterManager.getInstance(groupName, "swapOut", 60).add(swapOut).getAvg(0, true, maxCap);
 			
 			if (debugPrint || _logger.isDebugEnabled())
 				System.out.println("##### sendAlarmRequest("+cm.getName()+"): swapping: in=" + swapIn + ", out=" + swapOut + ". swapIn_5mAvg=" + swapIn_5mAvg + ", swapOut_5mAvg=" + swapOut_5mAvg);
-
-//			int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_swap, DEFAULT_alarm_swap);
-//			if (swapIn > threshold || swapOut > threshold)
-//			{
-//				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, hostname, swapIn, swapOut);
-//				alarmHandler.addAlarm( alarm );
-//			}
 
 			if (swapIn_5mAvg > threshold || swapOut_5mAvg > threshold)
 			{
@@ -518,12 +510,9 @@ extends CounterModelHostMonitor
 				double    swapOut_peakNumber = MovingAverageCounterManager.getInstance(groupName, "swapOut", 5).getPeakNumber();
 
 				// Create a small chart, that can be used in emails etc.
-//				String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("OS Swapping (15 minutes)", 
-//						MovingAverageCounterManager.getInstance("swapIn",  15),  // Note make the chart on 15 minutes to see more info
-//						MovingAverageCounterManager.getInstance("swapOut", 15)); // Note make the chart on 15 minutes to see more info
 				String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("OS Swapping (1 hour)", 
-						MovingAverageCounterManager.getInstance(groupName, "swapIn",  60),  // Note make the chart on 15 minutes to see more info
-						MovingAverageCounterManager.getInstance(groupName, "swapOut", 60)); // Note make the chart on 15 minutes to see more info
+						MovingAverageCounterManager.getInstance(groupName, "swapIn",  60),  // Note make the chart on 60 minutes to see more info
+						MovingAverageCounterManager.getInstance(groupName, "swapOut", 60)); // Note make the chart on 60 minutes to see more info
 
 				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, maxCap, hostname, "over 5 minute moving average", 
 						swapIn_5mAvg,  swapIn_peakTs,  swapIn_peakNumber,
