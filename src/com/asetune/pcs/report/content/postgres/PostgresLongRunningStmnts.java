@@ -222,13 +222,27 @@ extends PostgresAbstract
 	{
 		int topRows = getTopRows();
 
-		String sql = ""
-			    + "select top " + topRows + " \n"
-			    + "     * \n"
-			    + "from [CmActiveStatements_abs] diff\n"
-			    + "order by [xact_start_sec] desc \n" 
-			    + "";
+//		String sql = ""
+//			    + "select top " + topRows + " \n"
+//			    + "     * \n"
+//			    + "from [CmActiveStatements_abs] diff\n"
+//			    + "order by [xact_start_sec] desc \n" 
+//			    + "";
 
+		String sql = ""
+			    + "WITH sqlMaxTime AS ( \n"
+			    + "    SELECT [last_known_sql_statement], MAX([xact_start_sec]) AS [max_xact_start_sec] \n"
+			    + "    FROM [CmActiveStatements_abs] \n"
+			    + "    GROUP BY [last_known_sql_statement] \n"
+			    + "    ORDER BY [max_xact_start_sec] DESC \n"
+			    + ") \n"
+			    + "SELECT top " + topRows + " \n"
+			    + "    cm.* \n"
+			    + "FROM sqlMaxTime \n"
+			    + "JOIN [CmActiveStatements_abs] cm ON sqlMaxTime.[last_known_sql_statement] = cm.[last_known_sql_statement]  AND sqlMaxTime.[max_xact_start_sec] = cm.[xact_start_sec] \n"
+			    + "ORDER BY [xact_start_sec] DESC \n"
+			    + "";
+		
 		_shortRstm = executeQuery(conn, sql, true, "CmActiveStatements_abs");
 
 		if (_shortRstm != null)
@@ -245,26 +259,26 @@ extends PostgresAbstract
 
 			// Remove some "other columns" columns
 			_shortRstm.removeColumn("datid");
-//			_shortRstm.removeColumn("datname");								// remove from table
+//			_shortRstm.removeColumn("datname");								// keep in table
 			_shortRstm.removeColumn("leader_pid");
 			_shortRstm.removeColumn("pid");
-//			_shortRstm.removeColumn("state");								// remove from table
-//			_shortRstm.removeColumn("wait_event_type");						// remove from table
-//			_shortRstm.removeColumn("wait_event");							// remove from table
-//			_shortRstm.removeColumn("im_blocked_by_pids");					// remove from table
-//			_shortRstm.removeColumn("im_blocking_other_pids");				// remove from table
-//			_shortRstm.removeColumn("im_blocking_others_max_time_in_sec");	// remove from table
+//			_shortRstm.removeColumn("state");								// keep in table
+//			_shortRstm.removeColumn("wait_event_type");						// keep in table
+//			_shortRstm.removeColumn("wait_event");							// keep in table
+//			_shortRstm.removeColumn("im_blocked_by_pids");					// keep in table
+//			_shortRstm.removeColumn("im_blocking_other_pids");				// keep in table
+//			_shortRstm.removeColumn("im_blocking_others_max_time_in_sec");	// keep in table
 			_shortRstm.removeColumn("usesysid");
-//			_shortRstm.removeColumn("usename");								// remove from table
-//			_shortRstm.removeColumn("application_name");					// remove from table
+//			_shortRstm.removeColumn("usename");								// keep in table
+//			_shortRstm.removeColumn("application_name");					// keep in table
 			_shortRstm.removeColumn("has_sql_text");
 			_shortRstm.removeColumn("has_pid_lock_info");
-//			_shortRstm.removeColumn("pid_lock_count");						// remove from table
+//			_shortRstm.removeColumn("pid_lock_count");						// keep in table
 			_shortRstm.removeColumn("has_blocked_pids_info");
-//			_shortRstm.removeColumn("xact_start_sec");						// remove from table
-//			_shortRstm.removeColumn("stmnt_start_sec");						// remove from table
-//			_shortRstm.removeColumn("stmnt_last_exec_sec");					// remove from table
-//			_shortRstm.removeColumn("in_current_state_sec");				// remove from table
+//			_shortRstm.removeColumn("xact_start_sec");						// keep in table
+//			_shortRstm.removeColumn("stmnt_start_sec");						// keep in table
+//			_shortRstm.removeColumn("stmnt_last_exec_sec");					// keep in table
+//			_shortRstm.removeColumn("in_current_state_sec");				// keep in table
 			_shortRstm.removeColumn("xact_start_age");
 			_shortRstm.removeColumn("stmnt_start_age");
 			_shortRstm.removeColumn("stmnt_last_exec_age");
@@ -275,14 +289,14 @@ extends PostgresAbstract
 			_shortRstm.removeColumn("state_change");
 			_shortRstm.removeColumn("backend_xid");
 			_shortRstm.removeColumn("backend_xmin");
-//			_shortRstm.removeColumn("backend_type");						// remove from table
-			_shortRstm.removeColumn("client_addr");
-//			_shortRstm.removeColumn("client_hostname");						// remove from table
+//			_shortRstm.removeColumn("backend_type");						// keep in table
+//			_shortRstm.removeColumn("client_addr");   						// keep in table
+			_shortRstm.removeColumn("client_hostname");
 			_shortRstm.removeColumn("client_port");
 			_shortRstm.removeColumn("query_id");
-//			_shortRstm.removeColumn("last_known_sql_statement");			// remove from table
-//			_shortRstm.removeColumn("pid_lock_info");						// remove from table
-//			_shortRstm.removeColumn("blocked_pids_info");					// remove from table
+//			_shortRstm.removeColumn("last_known_sql_statement");			// keep in table
+//			_shortRstm.removeColumn("pid_lock_info");						// keep in table
+//			_shortRstm.removeColumn("blocked_pids_info");					// keep in table
 			_shortRstm.removeColumn("execTimeInMs");
 			_shortRstm.removeColumn("xactTimeInMs");
 			

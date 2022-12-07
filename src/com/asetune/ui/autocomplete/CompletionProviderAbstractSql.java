@@ -6023,8 +6023,11 @@ if (_guiOwner == null)
 		sqlSb.add( new JMenuItem( new JavaGenerator("To Clipboard",               CmdOutputType.TO_CLIPBOARD, GenerateJavaType.SQL_STRINGBUILDER)   ));
 		sqlSb.add( new JMenuItem( new JavaGenerator("To Separate Window",         CmdOutputType.TO_WINDOW,    GenerateJavaType.SQL_STRINGBUILDER)   ));
 
+		JMenuItem sqlStrip = new JMenuItem( new StripJavaToSqlGenerator("Strip Java to SQL") );
+		
 		top.add(sqlStr);
 		top.add(sqlSb);
+		top.add(sqlStrip);
 		
 		return top;
 	}
@@ -6128,6 +6131,54 @@ if (_guiOwner == null)
 		}
 	}
 
+	private class StripJavaToSqlGenerator extends TextAction
+	{
+		private static final long serialVersionUID = 1L;
+
+		public StripJavaToSqlGenerator(String name)
+		{
+			super(name);
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			String text = getLookupText(getTextComponent(e));
+
+			if (StringUtil.hasValue(text))
+			{
+				// Get a list, one entry for each row
+				List<String> lines;
+				try { lines = IOUtils.readLines(new StringReader(text)); }
+				catch(IOException ignore) { return; }
+
+				StringBuilder sb = new StringBuilder();
+				
+				for (String originStr : lines)
+				{
+					String tmpStr = originStr.trim();
+					
+					if (tmpStr.startsWith("+ \"") && tmpStr.endsWith("\\n\""))
+					{
+						tmpStr = tmpStr.substring(3);                        // remove prefix: |+ "|
+						tmpStr = tmpStr.substring(0, tmpStr.length()-3);        // remove suffix: |\n"|
+
+						tmpStr = StringUtil.rtrim(tmpStr);
+						
+						sb.append(tmpStr).append("\n");
+					}
+					else
+					{
+						sb.append("-- ").append(originStr).append("\n");
+					}
+				}
+
+				text = sb.toString();
+				
+				getTextComponent(e).replaceSelection(text);
+			}
+		}
+	}
 	/*----------------------------------------------------------------------
 	** END: Generate SQL Menu
 	**----------------------------------------------------------------------*/ 	

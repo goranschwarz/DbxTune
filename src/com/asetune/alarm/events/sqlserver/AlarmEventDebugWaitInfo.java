@@ -43,7 +43,7 @@ extends AlarmEvent
 				cm.getName(),         // serviceInfo
 				null,                 // extraInfo
 				AlarmEvent.Category.OTHER,
-				AlarmEvent.Severity.WARNING, 
+				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
 				"At server '" + cm.getServerName() + "', WaitInfo from 'dm_exec_requests '.",
 				null
