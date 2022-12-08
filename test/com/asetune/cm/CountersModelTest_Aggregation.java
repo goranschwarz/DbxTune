@@ -21,7 +21,6 @@
 package com.asetune.cm;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 
 import java.sql.DriverManager;
 import java.util.ArrayList;
@@ -37,10 +36,8 @@ import org.junit.Test;
 
 import com.asetune.CounterControllerAbstract;
 import com.asetune.ICounterController;
-import com.asetune.cm.CountersModel.AggregationType;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.sql.conn.DbxConnection;
-import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 public class CountersModelTest_Aggregation

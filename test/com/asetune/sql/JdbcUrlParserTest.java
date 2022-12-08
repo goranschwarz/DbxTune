@@ -22,9 +22,6 @@ package com.asetune.sql;
 
 import static org.junit.Assert.assertEquals;
 
-import java.util.Properties;
-
-import org.apache.log4j.PropertyConfigurator;
 import org.junit.Test;
 
 public class JdbcUrlParserTest

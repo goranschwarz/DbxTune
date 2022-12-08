@@ -22,10 +22,8 @@
 package com.asetune.alarm.events;
 
 import java.sql.Timestamp;
-import java.util.List;
 
 import com.asetune.Version;
-import com.asetune.cm.CountersModel;
 
 public class AlarmEventCertificateExpiry
 extends AlarmEvent 

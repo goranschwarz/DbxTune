@@ -25,8 +25,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
 
-import com.asetune.sql.conn.DbxConnectionTest;
-
 @RunWith(Suite.class)
 @SuiteClasses({ 
 	TableTest.class

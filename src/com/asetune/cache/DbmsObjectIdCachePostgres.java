@@ -37,7 +37,6 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.cm.CounterSampleCatalogIteratorPostgres;
 import com.asetune.sql.conn.DbxConnection;
-import com.asetune.sql.conn.DbxConnectionPool;
 import com.asetune.sql.conn.DbxConnectionPoolMap;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;

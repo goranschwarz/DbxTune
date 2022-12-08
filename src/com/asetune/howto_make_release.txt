@@ -32,12 +32,11 @@ ant
 cd dist\bin
 asetune.bat
 -- Check if everything is working
-cd ..
+cd ..\..
 ant clean
 
 -----------------------------------------------------------
-CLEANUP configuration
-C:\projects\asetune\asetune.properties
+CHECK: README.md & README.txt etc files (so that they are "up to date"
 
 
 

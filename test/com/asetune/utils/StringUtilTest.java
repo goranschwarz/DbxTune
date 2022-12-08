@@ -29,8 +29,6 @@ import java.util.Map;
 
 import org.junit.Test;
 
-import com.asetune.pcs.report.senders.MailHelper;
-
 public class StringUtilTest
 {
 

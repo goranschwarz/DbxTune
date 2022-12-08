@@ -21,7 +21,6 @@
 package com.asetune.cm;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 
 import java.sql.DriverManager;
 import java.util.ArrayList;

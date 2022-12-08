@@ -22,7 +22,6 @@
 package com.asetune.gui;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 
 import java.sql.SQLException;
 import java.sql.Types;

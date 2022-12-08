@@ -17,8 +17,10 @@ any good tools for "digging" into the various Performance Counters (and also
 record a session that could be investigated later on), so I created my own 
 tool (AseTune) to be able to perform my duties at customer sites.
 
-I left SAP 2015/2016, and now I work as a consultant for B3IT - http://b3.se
-So if you are looking for help, I can help you...
+I left SAP 2015/2016, and worked as a consultant for B3 Consulting Group - https://b3.se  
+
+I left B3 2022, and now I work as a consultant for Execute IT - https://executeit.se
+So if you are looking for help... I can help you... Contact me at: goran_schwarz@hotmail.com
 
 
 
@@ -74,7 +76,7 @@ For a big picture look at the file: doc/dbxtune-central.pptx
 ==============================================================================
  Requirements
 ==============================================================================
-* Java 7 and above (Java 7 is still working, but it I *will* move to Java 8 on next release)
+* Java 8 and above 
 
 
 
@@ -123,13 +125,13 @@ This is the most complete tool. This because it has been around for 7-10 years
 - get values from various admin who, xxx
 - get values from admin statistics, which all tabs under "counters" are based on
   This tool is new in release 2015-06-01
-  Status: low functionality, a lot of things to-do here (not sure if it will be released, please send me feedback) 
+  Status: Good 
 
 ------------------------------------------------------------------------------
 -- IqTune --------------------------------------------------------------------
 ------------------------------------------------------------------------------
   This tool is new in release 2015-06-01
-  Status: much more can be done (kind of "entry" level) 
+  Status: Good 
 
 ------------------------------------------------------------------------------
 -- HanaTune ------------------------------------------------------------------
@@ -142,7 +144,7 @@ This is the most complete tool. This because it has been around for 7-10 years
 -- SqlServerTune -------------------------------------------------------------
 ------------------------------------------------------------------------------
   This tool is new in release 2015-06-01
-  Status: Not that much functionality, needs MORE work before released. 
+  Status: Good 
   Tip: Create 'User Defined Counters' where you can add your own SQL and Performance Counters...
 
 ------------------------------------------------------------------------------
@@ -157,7 +159,7 @@ This is the most complete tool. This because it has been around for 7-10 years
 -- PostgresTune --------------------------------------------------------------
 ------------------------------------------------------------------------------
   This tool is new in release 2016-11-06
-  Status: Not that much functionality, needs A LOT MORE work before released. 
+  Status: Good 
   Tip: Create 'User Defined Counters' where you can add your own SQL and Performance Counters...
 
 ------------------------------------------------------------------------------

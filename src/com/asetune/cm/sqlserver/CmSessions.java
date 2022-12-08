@@ -864,7 +864,14 @@ extends CountersModel
 	public static final String  PROPKEY_alarm_DacInUse                       = CM_NAME + ".alarm.system.if.EndpointType.is.DAC";
 	public static final boolean DEFAULT_alarm_DacInUse                       = true;
 	
+	public static final String  PROPKEY_alarm_WaitInfo                       = CM_NAME + ".alarm.system.if.WaitInfo";
+	public static final boolean DEFAULT_alarm_WaitInfo                       = false;
 
+	public static final String  PROPKEY_alarm_WaitInfo_maxCount_gt           = CM_NAME + ".alarm.system.if.WaitInfo.maxCount.gt";
+	public static final int     DEFAULT_alarm_WaitInfo_maxCount_gt           = 2;
+
+
+	
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
@@ -879,7 +886,9 @@ extends CountersModel
 		list.add(new CmSettingsHelper("StatementExecInSec SkipCommands",             PROPKEY_alarm_StatementExecInSecSkipCmd     , String .class, conf.getProperty       (PROPKEY_alarm_StatementExecInSecSkipCmd     , DEFAULT_alarm_StatementExecInSecSkipCmd     ), DEFAULT_alarm_StatementExecInSecSkipCmd     , "If 'StatementExecInSec' is true; Discard Commands listed (regexp is used)." , new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("StatementExecInSec SkipTranNames",            PROPKEY_alarm_StatementExecInSecSkipTranName, String .class, conf.getProperty       (PROPKEY_alarm_StatementExecInSecSkipTranName, DEFAULT_alarm_StatementExecInSecSkipTranName), DEFAULT_alarm_StatementExecInSecSkipTranName, "If 'StatementExecInSec' is true; Discard TranName listed (regexp is used)." , new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("DacInUse",                     isAlarmSwitch, PROPKEY_alarm_DacInUse                      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_DacInUse                      , DEFAULT_alarm_DacInUse                      ), DEFAULT_alarm_DacInUse                      , "If any user is connected via the DAC (Dedicated Admin Connection), then send alarm 'AlarmEventDacInUse'." ));
-		
+		list.add(new CmSettingsHelper("WaitInfo",                     isAlarmSwitch, PROPKEY_alarm_WaitInfo                      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_WaitInfo                      , DEFAULT_alarm_WaitInfo                      ), DEFAULT_alarm_WaitInfo                      , "If any users has 'WaitInfo', then send alarm 'AlarmEventDebugWaitInfo' for debugging purposes." ));
+		list.add(new CmSettingsHelper("WaitInfo MaxCount",                           PROPKEY_alarm_WaitInfo_maxCount_gt          , Integer.class, conf.getIntProperty    (PROPKEY_alarm_WaitInfo_maxCount_gt          , DEFAULT_alarm_WaitInfo_maxCount_gt          ), DEFAULT_alarm_WaitInfo_maxCount_gt          , "If 'WaitInfo' is enabled 'maxCount' must be above ##." ));
+
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "program_name") );
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "login_name") );
 
@@ -1093,11 +1102,17 @@ extends CountersModel
 				return;
 			
 			String infoStr = getInfoString();
-			System.out.println(infoStr);
-
-			if (Configuration.getCombinedConfiguration().getBooleanProperty("CmSessions.sendAlarm.AlarmEventDebugWaitInfo.send", true)) 
+			
+			if (true)
 			{
-				int alarmOnMaxCountGt = Configuration.getCombinedConfiguration().getIntProperty("CmSessions.sendAlarm.AlarmEventDebugWaitInfo.maxCount.gt", 2);
+				System.out.println(infoStr);
+			}
+
+//			if (Configuration.getCombinedConfiguration().getBooleanProperty("CmSessions.sendAlarm.AlarmEventDebugWaitInfo.send", true)) 
+			if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_alarm_WaitInfo, DEFAULT_alarm_WaitInfo)) 
+			{
+//				int alarmOnMaxCountGt = Configuration.getCombinedConfiguration().getIntProperty("CmSessions.sendAlarm.AlarmEventDebugWaitInfo.maxCount.gt", 2);
+				int alarmOnMaxCountGt = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_WaitInfo_maxCount_gt, DEFAULT_alarm_WaitInfo_maxCount_gt);
 				
 				if (getMaxCount() > alarmOnMaxCountGt)
 				{
@@ -1152,6 +1167,4 @@ extends CountersModel
 			return sb.toString();
 		}
 	}
-
-
 }

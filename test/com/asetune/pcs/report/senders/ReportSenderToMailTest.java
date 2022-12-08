@@ -32,7 +32,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.asetune.pcs.report.DailySummaryReportFactory;
-import com.asetune.pcs.report.senders.ReportSenderToMail;
 import com.asetune.utils.Configuration;
 
 public class ReportSenderToMailTest

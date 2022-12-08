@@ -50,7 +50,9 @@ There are a couple of ways you can use the DbxTune tool set
 I was working for Sybase and SAP for 21 years (from 1994 to end-of 2015), as a consultant...  
 One of my specialties was Performance & Tuning work, and Sybase didn't have any good tools for _digging_ into the various Performance Counters (and also record a session that could be investigated on later), **so I created my own tool** (AseTune) to be able to perform my duties at customer sites.
 
-I left SAP 2015/2016, and now I work as a consultant for B3 Consulting Group - https://b3.se  
+I left SAP 2015/2016, and worked as a consultant for B3 Consulting Group - https://b3.se  
+
+I left B3 2022, and now I work as a consultant for Execute IT - https://executeit.se
 So if you are looking for help... I can help you... Contact me at: goran_schwarz@hotmail.com
 
 
@@ -64,8 +66,8 @@ All the below tools need enhancements, please let me know what, and how you can 
 | ----------------- | ------------------ | ------------------------------------------------------------ |
 | **Ase**Tune       | Excellent          | Tune Sybase/SAP Adaptive Server Enterprise                   |
 | **Iq**Tune        | Good               | Tune Sybase/SAP IQ - The Column Store database               |
-| **SqlServer**Tune | Needs Improvements | Tune Microsoft SQL-Server                                    |
-| **Postgres**Tune  | Needs Improvements | Tune Postgres DBMS                                           |
+| **SqlServer**Tune | Good               | Tune Microsoft SQL-Server                                    |
+| **Postgres**Tune  | Good               | Tune Postgres DBMS                                           |
 | **MySql**Tune     | Needs Improvements | Tune MySQL DBMS (5.7 and later)                              |
 | **Oracle**Tune    | Initial State      | Tune Oracle DBMS                                             |
 | **DB2**Tune       | Initial State      | Tune DB2 LUW DBMS (LUW = Linux Unix Windows, mainframe is **not** supported) |
@@ -76,7 +78,7 @@ All the below tools need enhancements, please let me know what, and how you can 
 ### Other tools
 | Name            | Status | Description                                                  |
 | --------------- | ------ | ------------------------------------------------------------ |
-| **DbxCentral**  | Beta   | A WebServer that handles centralized metrics if/when you use NO-GUI collectors (see below for more info) |
+| **DbxCentral**  | Good   | A WebServer that handles centralized metrics if/when you use NO-GUI collectors (see below for more info) |
 | **SQL Window**  | Good   | Simple Query tool, connect to all of the above server types and execute commands (and any JDBC compliant DBMS) |
 | **Tail Window** | Good   | Tail any file, if the file is located on Unix/Linux, simply open a SSH connection for the tail. |
 | **PerfDemo**    | Beta   | A tool that can be used to stress load ASE - used for demo purposes of AseTune |
@@ -173,7 +175,7 @@ See: `README_dbxcentral_install.txt`
 
 ------------------------------------------------------------------------------
 ### AseTune
-This is the most complete tool. This because it has been around for 10 years
+This is the most complete tool. This because it has been around for 10-15 years
 
 ------------------------------------------------------------------------------
 ### RaxTune
@@ -185,12 +187,12 @@ This tool was new in release 2015-06-01
 Get values from various admin who, xxx  
 Get values from admin statistics, which all tabs under "counters" are based on  
 This tool was new in release 2015-06-01  
-Status: low functionality, a lot of things to-do here
+Status: Good
 
 ------------------------------------------------------------------------------
 ### IqTune
 This tool was new in release 2015-06-01  
-Status: much more can be done (kind of _entry_ level)
+Status: Good
 
 ------------------------------------------------------------------------------
 ### HanaTune
@@ -201,20 +203,19 @@ Tip: Create 'User Defined Counters' where you can add your own SQL and Performan
 ------------------------------------------------------------------------------
 ### SqlServerTune
 This tool was new in release 2015-06-01  
-Status: Not that much functionality, needs MORE work... (soon at _entry_ level)  
+Status: Good  
 Tip: Create 'User Defined Counters' where you can add your own SQL and Performance Counters...
 
 ------------------------------------------------------------------------------
 ### OracleTune
 This tool was new in release 2015-06-01  
 Status: Not that much functionality, needs **A LOT MORE** work...  
-Note: Recording capability doesn't work that good for the moment (JDBC ResultSet MetaData returns "strange" data types for Oracle Columns, which I need to "map" into something more appropriate for H2 or any other "normal" database)  
 Tip: Create 'User Defined Counters' where you can add your own SQL and Performance Counters...
 
 ------------------------------------------------------------------------------
 ### PostgresTune
 This tool was new in release 2016-11-06  
-Status: Not that much functionality, needs MORE work... (soon at _entry_ level)  
+Status: Good  
 Tip: Create 'User Defined Counters' where you can add your own SQL and Performance Counters...
 
 ------------------------------------------------------------------------------
