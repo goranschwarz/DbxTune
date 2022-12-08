@@ -59,9 +59,9 @@
 	//------------------------------------------
 	// DEFINE latest version information
 	//-------
-	$SQLW_LATEST_VERSION_SRC = 500;
-	$SQLW_LATEST_VERSION_STR = "4.1.0";
-	$SQLW_LATEST_VERSION_STR = "2020-07-01";
+	$SQLW_LATEST_VERSION_SRC = 600;
+	$SQLW_LATEST_VERSION_STR = "4.5.0";
+	$SQLW_LATEST_VERSION_STR = "2022-12-08";
 	$DOWNLOAD_URL            = "sourceforge.net/projects/asetune/files/";
 	$WHATSNEW_URL            = "www.dbxtune.com/history.html";
 	$SEND_OPTIONS            = "sendConnectInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=false, sendLogInfoError=false, sendLogInfoThreshold=100";

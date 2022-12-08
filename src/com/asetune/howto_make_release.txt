@@ -77,9 +77,10 @@ ant
 cd dist\bin
 asetune.bat
 -- Check if everything is working
-cd ..
+cd ..\..
 
-
+## Push the version to my releases at: gorans.org 
+ant -Dpassword=theSecretPasswd push
 
 
 
