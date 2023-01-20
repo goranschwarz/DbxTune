@@ -37,7 +37,7 @@ extends AlarmEvent
 	 * @param logicalName
 	 * @param colName
 	 */
-	public AlarmEventPgReplicationAge(CountersModel cm, String client_addr, int reply_time_seconds, int threshold)
+	public AlarmEventPgReplicationAge(CountersModel cm, String client_addr, int reply_time_seconds, int thresholdInSec)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -47,10 +47,13 @@ extends AlarmEvent
 				AlarmEvent.Category.RPO,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"Replication Age in Server '" + cm.getServerName() + "' to '" + client_addr + "', age="+reply_time_seconds+". (threshold="+threshold+")",
-				threshold
+				"Replication Age in Server '" + cm.getServerName() + "' to '" + client_addr + "', age="+reply_time_seconds+". (thresholdInSec="+thresholdInSec+")",
+				thresholdInSec
 				);
 
+		// Adjust the Alarm Full Duration with X seconds
+		setFullDurationAdjustmentInSec( thresholdInSec );
+		
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);
 

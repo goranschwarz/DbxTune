@@ -521,7 +521,7 @@ extends CountersModel
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CPU,
 			true, // is Percent Graph
-			true, // visible at start
+			false, // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
@@ -543,7 +543,7 @@ extends CountersModel
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CPU,
 			true, // is Percent Graph
-			true, // visible at start
+			false, // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 

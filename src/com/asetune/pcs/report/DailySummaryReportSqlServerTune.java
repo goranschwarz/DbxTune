@@ -20,6 +20,14 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import org.apache.log4j.Logger;
+
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.content.DbmsConfigIssues;
 import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
 import com.asetune.pcs.report.content.os.OsIoStatOverview;
@@ -36,8 +44,8 @@ import com.asetune.pcs.report.content.sqlserver.SqlServerSlowCmDeviceIo;
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecCursors;
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecFunctionStats;
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecProcedureStats;
+import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecQueryStatPerDb;
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecQueryStats;
-import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecQueryStatsDb;
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmExecTriggerStats;
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmIndexOpStat;
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmIndexPhysicalAvgPageUsedPct;
@@ -45,10 +53,14 @@ import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmIndexPhysicalTabSi
 import com.asetune.pcs.report.content.sqlserver.SqlServerTopCmTableSize;
 import com.asetune.pcs.report.content.sqlserver.SqlServerUnusedIndexes;
 import com.asetune.pcs.report.content.sqlserver.SqlServerWaitStats;
+import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.StringUtil;
 
 public class DailySummaryReportSqlServerTune 
 extends DailySummaryReportDefault
 {
+	private static Logger _logger = Logger.getLogger(DailySummaryReportSqlServerTune.class);
+
 	@Override
 	public void addReportEntries()
 	{
@@ -62,7 +74,8 @@ extends DailySummaryReportDefault
 		
 		// SQL
 		addReportEntry( new SqlServerPlanCacheHistory       (this));        // Check if the Plan Cache can be trusted... https://www.brentozar.com/archive/2018/07/tsql2sday-how-much-plan-cache-history-do-you-have/
-		addReportEntry( new SqlServerTopCmExecQueryStatsDb  (this));
+//		addReportEntry( new SqlServerTopCmExecQueryStatsDb  (this)); // Older version of the "DB" statistics
+		addReportEntry( new SqlServerTopCmExecQueryStatPerDb(this));
 		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.CPU_TIME));
 		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.EST_WAIT_TIME));
 		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.TEMPDB_SPILLS));
@@ -107,4 +120,126 @@ extends DailySummaryReportDefault
 		addReportEntry( new SqlServerConfiguration(this)      );
 		addReportEntry( new DbmsConfigIssues(this)            );
 	}
+
+
+
+
+	/**
+	 * Create a Map of "other information" like "SOrt Order" and other information, used in the "Recording Information" section
+	 */
+	@Override
+	public Map<String, String> createDbmsOtherInfoMap(DbxConnection conn)
+	{
+		Map<String, String> otherInfo = new LinkedHashMap<>();
+		String sql;
+
+		//-------------------------------------------------------
+		// License Info
+		//-------------------------------------------------------
+		// This can be grabbed from the Version String
+		sql = "select top 1 [srvVersion] from [CmSummary_abs]";
+		
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			String versionStr = "";
+
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while(rs.next())
+					versionStr = rs.getString(1);
+			}
+
+			// Remove: newLines, Tabs, and collapse double space into single space
+			versionStr = versionStr.replace('\n', ' ').replace('\t', ' ');
+			while(versionStr.contains("  "))
+				versionStr = versionStr.replace("  ", " ");
+
+			String edition = "";
+			if      (versionStr.contains("Microsoft Corporation Standard Edition"  )) edition = "Standard Edition";
+			else if (versionStr.contains("Microsoft Corporation Enterprise Edition")) edition = "Enterprise Edition";
+			else if (versionStr.contains("Microsoft Corporation Web Edition"       )) edition = "Web Edition";
+			else if (versionStr.contains("Microsoft Corporation Developer Edition" )) edition = "Developer Edition";
+			else if (versionStr.contains("Microsoft Corporation Express Edition"   )) edition = "Express Edition";
+			else if (versionStr.contains("Microsoft SQL Azure "                    )) edition = "Azure";
+			
+			if (StringUtil.hasValue(edition))
+				otherInfo.put("SQL Server Edition", edition);
+		}
+		catch(Exception ex)
+		{
+			_logger.warn("Problems getting first row for @@version from CmSummary_abs.", ex);
+		}
+		
+
+		
+		//-------------------------------------------------------
+		// Collation/Sort Order
+		//-------------------------------------------------------
+		sql = ""
+			    + "select [configText] \n"
+			    + "from [MonSessionDbmsConfigText] \n"
+			    + "where [configName] = 'SqlServerHelpSort' \n"
+			    + "  and [SessionStartTime] = (select max([SessionStartTime]) from [MonSessionDbmsConfigText]) \n"
+			    + "";
+
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			String configText = "";
+
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while(rs.next())
+					configText = rs.getString(1);
+			}
+
+			// +-------------------------------------------------------------------------------------------------------------------------------+
+			// |Server default collation                                                                                                       |
+			// +-------------------------------------------------------------------------------------------------------------------------------+
+			// |Latin1-General-100, case-insensitive, accent-sensitive, kanatype-insensitive, width-insensitive, supplementary characters, UTF8|
+			// +-------------------------------------------------------------------------------------------------------------------------------+
+			// Rows 1
+			// +--------------------------------+
+			// |SERVERPROPERTY_Collation        |
+			// +--------------------------------+
+			// |Latin1_General_100_CI_AS_SC_UTF8|
+			// +--------------------------------+
+			// Rows 1
+			
+			String collationName = "";
+			String collationDesc = "";
+
+			for (ResultSetTableModel rstm : ResultSetTableModel.parseTextTables(configText))
+			{
+				if (rstm.hasColumn("Server default collation"))
+				{
+					collationDesc = rstm.getValueAsString(0, 0); // rowPos & colPos is at ModelPosition, starting at 0
+				}
+
+				if (rstm.hasColumn("SERVERPROPERTY_Collation"))
+				{
+					collationName = rstm.getValueAsString(0, 0); // rowPos & colPos is at ModelPosition, starting at 0
+				}
+			}
+
+			// Put them in the "desired" order
+			if (StringUtil.hasValue(collationName)) otherInfo.put("Collation Name"       , collationName);
+			if (StringUtil.hasValue(collationDesc)) otherInfo.put("Collation Description", collationDesc);
+		}
+		catch(Exception ex)
+		{
+			_logger.warn("Problems getting SQL Server Config Information from table 'MonSessionDbmsConfigText'.", ex);
+		}
+
+		//-------------------------------------------------------
+		// return
+		//-------------------------------------------------------
+		return otherInfo;
+	}
+
 }

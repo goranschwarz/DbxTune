@@ -42,6 +42,7 @@ import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.AlarmHelper;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventBlockingLockAlarm;
+import com.asetune.alarm.events.AlarmEventHoldingLocksWhileWaitForClientInput;
 import com.asetune.alarm.events.AlarmEventLongRunningStatement;
 import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
 import com.asetune.cm.CmSettingsHelper;
@@ -61,6 +62,7 @@ import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.MathUtils;
 import com.asetune.utils.PostgresUtils;
 import com.asetune.utils.PostgresUtils.PgLockRecord;
 import com.asetune.utils.StringUtil;
@@ -91,6 +93,7 @@ extends CountersModel
 //		"    <li>XXX    - disabled -  This state is reported if track_activities is disabled in this backend.</li>" +
 		"    <li>PINK   - PID is Blocked by another PID from running, this PID is the Victim of a Blocking Lock, which is showned in RED.</li>" +
 		"    <li>RED    - PID is Blocking other PID's from running, this PID is Responslibe or the Root Cause of a Blocking Lock.</li>" +
+		"    <li>LIGHT_BLUE - (only on cell 'pid_exlock_count') PID is holding <b>Exclusive</b> locks.</li>" +
 		"</ul>" +
 		"</html>";
 
@@ -192,6 +195,7 @@ extends CountersModel
 			mtd.addColumn("CmActiveStatements", "pid"                               ,  "<html>Process ID of this backend  </html>");
 			mtd.addColumn("CmActiveStatements", "leader_pid"                        ,  "<html>Process ID of the parallel group leader, if this process is a parallel query worker. NULL if this process is a parallel group leader or does not participate in parallel query.  </html>");
 			mtd.addColumn("CmActiveStatements", "im_blocked_by_pids"                ,  "<html>This pid is <b>blocked</b> by a list of other pid's. This pad will WAIT until the other pid's has released there locks.<br><b>Note:</b> This is only maintained from Version 9.6 and above.  </html>");
+			mtd.addColumn("CmActiveStatements", "im_blocked_max_wait_time_in_sec"   ,  "<html>This pid has been <b>blocked</b> for this amount of times (max wait time from pg_locks)</html>");
 			mtd.addColumn("CmActiveStatements", "im_blocking_other_pids"            ,  "<html>This pid is <b>BLOCKING</b> other pid's from working. In a blocking situation this pid is the <b>root cause</b>. Check the SQL Statement or the 'lock list', which is also provided here.  </html>");
 			mtd.addColumn("CmActiveStatements", "im_blocking_others_max_time_in_sec",  "<html>Number of seconds this pid has been blocking other pid's from working. <br><b>Note:</b> This is only maintained from Version 14 and above.  </html>");
 			mtd.addColumn("CmActiveStatements", "usesysid"                          ,  "<html>OID of the user logged into this backend  </html>");
@@ -207,7 +211,8 @@ extends CountersModel
 			mtd.addColumn("CmActiveStatements", "in_current_state_age"              ,  "<html>For how long have we been in this state (HH:MM:SS.ssssss)  </html>");
 			mtd.addColumn("CmActiveStatements", "has_sql_text"                      ,  "<html>If we have any SQL Statement in column 'last_known_sql_statement'  </html>");
 			mtd.addColumn("CmActiveStatements", "has_pid_lock_info"                 ,  "<html>A table of locks that this PID is holding. <br><b>Note:</b> WaitTime in the table is only maintained from Version 14 and above.  </html>");
-			mtd.addColumn("CmActiveStatements", "pid_lock_count"                    ,  "<html>Hmmm... for Postgres: maybe not working to 100% as I would like it.  </html>");
+			mtd.addColumn("CmActiveStatements", "pid_lock_count"                    ,  "<html>How many locks does this PID hold</html>");
+			mtd.addColumn("CmActiveStatements", "pid_exlock_count"                  ,  "<html>How many <b>Exclusive</b> locks does this PID hold</html>");
 			mtd.addColumn("CmActiveStatements", "has_blocked_pids_info"             ,  "<html>Has values in column 'blocked_pids_info'  </html>");
 			mtd.addColumn("CmActiveStatements", "backend_start"                     ,  "<html>Time when this process was started. For client backends, this is the time the client connected to the server.  </html>");
 			mtd.addColumn("CmActiveStatements", "xact_start"                        ,  "<html>Time when this process' current transaction was started, or null if no transaction is active. If the current query is the first of its transaction, this column is equal to the query_start column.  </html>");
@@ -308,6 +313,7 @@ extends CountersModel
 		// ----- 9.6
 		String im_blocked_by_pids                 = "";
 		String im_blocking_other_pids             = "";
+		String im_blocked_max_wait_time_in_sec    = "";
 		String im_blocking_others_max_time_in_sec = "";
 		String wait_event_type                    = "";
 		String wait_event                         = "";
@@ -315,14 +321,14 @@ extends CountersModel
 		{
 			im_blocked_by_pids                 = "    ,CAST(array_to_string(pg_blocking_pids(pid), ', ') as varchar(512)) AS im_blocked_by_pids \n";
 			im_blocking_other_pids             = "    ,CAST('' as varchar(512)) AS im_blocking_other_pids \n";
+			im_blocked_max_wait_time_in_sec    = "    ,CAST(-1 as integer)      AS im_blocked_max_wait_time_in_sec \n";
 			im_blocking_others_max_time_in_sec = "    ,CAST(-1 as integer)      AS im_blocking_others_max_time_in_sec \n";
 
 			waiting         = ""; // Waiting was removed in 9.6 and replaced by wait_event_type and wait_event
 			wait_event_type = "    ,CAST(wait_event_type as varchar(128)) AS wait_event_type \n";
 			wait_event      = "    ,CAST(wait_event      as varchar(128)) AS wait_event \n";
 		}
-		
-		
+
 		// ----- 10
 		String backend_type = "";
 		if (versionInfo.getLongVersion() >= Ver.ver(10))
@@ -356,12 +362,14 @@ extends CountersModel
 				+ leader_pid
 				+ "    ,pid \n"
 				+ "    ,CAST(state            as varchar(128)) AS state \n"
+				+ backend_type
 				+ waiting
 				+ wait_event_type
 				+ wait_event
 				
 				+ im_blocked_by_pids
 				+ im_blocking_other_pids
+				+ im_blocked_max_wait_time_in_sec
 				+ im_blocking_others_max_time_in_sec
 				+ "    ,usesysid \n"
 				+ "    ,usename \n"
@@ -369,7 +377,8 @@ extends CountersModel
 			    + " \n"
 				+ "    ,CAST(false as boolean)                 AS has_sql_text \n"
 				+ "    ,CAST(false as boolean)                 AS has_pid_lock_info \n"
-				+ "    ,CAST(-1 as integer)                    AS pid_lock_count \n"
+				+ "    ,CAST(-1    as integer)                 AS pid_lock_count \n"
+				+ "    ,CAST(-1    as integer)                 AS pid_exlock_count \n"
 				+ "    ,CAST(false as boolean)                 AS has_blocked_pids_info \n"
 			    + " \n"
 			    + "    ,CAST( COALESCE( EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM xact_start ), -1) as numeric(12,1))  AS xact_start_sec \n"
@@ -394,7 +403,6 @@ extends CountersModel
 				+ "    ,state_change \n"
 				+ backend_xid
 				+ backend_xmin
-				+ backend_type
 				+ "    ,CAST(client_addr      as varchar(128)) AS client_addr \n"
 				+ "    ,CAST(client_hostname  as varchar(128)) AS client_hostname \n"
 				+ "    ,client_port \n"
@@ -623,22 +631,32 @@ extends CountersModel
 		} // end: resolvImBlockedByPids
 
 
+//TODO; Check CmActiveStatements -- Blocking seems strange
+//Check; Daily Summary Report for Servername: mtlplictd01 (2022-12-15) -- in mail;
+//And; Who doesnt the BlockingAlrm fire (it does from CmSummary);
+
+
+
 		// TODO: The below needs to be implemented BETTER... meaning: PostgresUtils.getLockSummaryForPid
 		boolean getPidLocks = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_pidLocks, DEFAULT_sample_pidLocks);
 		if (getPidLocks)
 		{
-			String pidLocks       = "This was disabled";
+			String pidLocksStr    = "This was disabled";
 			int    pidLockCount   = -1;
+			int    pidExLockCount = -1; // Exclusive Lock Count
 
 			int pos_pid                                = newSample.findColumn("pid");
 			int pos_has_pid_lock_info                  = newSample.findColumn("has_pid_lock_info");
 			int pos_pid_lock_info                      = newSample.findColumn("pid_lock_info");
 			int pos_pid_lock_count                     = newSample.findColumn("pid_lock_count");
+			int pos_pid_exlock_count                   = newSample.findColumn("pid_exlock_count");
+			int pos_im_blocked_max_wait_time_in_sec    = newSample.findColumn("im_blocked_max_wait_time_in_sec");
 			int pos_im_blocking_others_max_time_in_sec = newSample.findColumn("im_blocking_others_max_time_in_sec");
+			
 
-			if (pos_has_pid_lock_info == -1 || pos_pid_lock_info == -1 || pos_pid_lock_count == -1)
+			if (pos_has_pid_lock_info == -1 || pos_pid_lock_info == -1 || pos_pid_lock_count == -1 || pos_pid_exlock_count == -1)
 			{
-				_logger.warn("Skipping update of 'locking info', cant find desired columns. pos_has_pid_lock_info=" + pos_has_pid_lock_info + ", pos_pid_lock_info=" + pos_pid_lock_info + ", pos_pid_lock_count=" + pos_pid_lock_count);
+				_logger.warn("Skipping update of 'locking info', cant find desired columns. pos_has_pid_lock_info=" + pos_has_pid_lock_info + ", pos_pid_lock_info=" + pos_pid_lock_info + ", pos_pid_lock_count=" + pos_pid_lock_count + ", pos_pid_exlock_count=" + pos_pid_exlock_count);
 			}
 			else
 			{
@@ -649,36 +667,48 @@ extends CountersModel
 					List<PgLockRecord> lockList = null;
 					try
 					{
-						lockList = PostgresUtils.getLockSummaryForPid(getCounterController().getMonConnection(), pid);
-						pidLocks = PostgresUtils.getLockSummaryForPid(lockList, true, false);
-						if (pidLocks == null)
-							pidLocks = "No Locks found";
+						lockList    = PostgresUtils.getLockSummaryForPid(getCounterController().getMonConnection(), pid);
+						pidLocksStr = PostgresUtils.getLockSummaryForPid(lockList, true, false);
+						if (pidLocksStr == null)
+							pidLocksStr = "No Locks found";
 					}
 					catch (TimeoutException ex)
 					{
-						pidLocks = "Timeout - when getting lock information";
+						pidLocksStr = "Timeout - when getting lock information";
 					}
 					
+					BigDecimal blocked_max_wait_time_in_sec    = null;
 					BigDecimal blocking_others_max_time_in_sec = null;
-					pidLockCount = 0;
+					pidLockCount   = 0;
+					pidExLockCount = 0;
 					if (lockList != null)
 					{
 						for (PgLockRecord lockRecord : lockList)
 						{
-							pidLockCount += lockRecord._lockCount;
-							
-							if (lockRecord._blockedPidsMaxWaitInSec != null)
-								blocking_others_max_time_in_sec = lockRecord._blockedPidsMaxWaitInSec;
+							pidLockCount   += lockRecord._lockCount;
+							pidExLockCount += lockRecord._exLockCount;
+
+							// Get I'm Being Blocked Max Wait Time
+							blocked_max_wait_time_in_sec = MathUtils.max(blocked_max_wait_time_in_sec, lockRecord._lockWaitInSec);
+
+							// Get I'm Blocking others Max Wait Time
+							blocking_others_max_time_in_sec = MathUtils.max(blocking_others_max_time_in_sec, lockRecord._blockedPidsMaxWaitInSec);
 						}
 					}
 
 					boolean b;
 
 					// SPID Locks
-					b = !"This was disabled".equals(pidLocks) && !"No Locks found".equals(pidLocks) && !"Timeout - when getting lock information".equals(pidLocks);
+					b = !"This was disabled".equals(pidLocksStr) && !"No Locks found".equals(pidLocksStr) && !"Timeout - when getting lock information".equals(pidLocksStr);
 					newSample.setValueAt(new Boolean(b), rowId, pos_has_pid_lock_info);
-					newSample.setValueAt(pidLocks,       rowId, pos_pid_lock_info);
+					newSample.setValueAt(pidLocksStr,    rowId, pos_pid_lock_info);
 					newSample.setValueAt(pidLockCount,   rowId, pos_pid_lock_count);
+					newSample.setValueAt(pidExLockCount, rowId, pos_pid_exlock_count);
+
+					if (pos_im_blocked_max_wait_time_in_sec != -1 && blocked_max_wait_time_in_sec != null)
+					{
+						newSample.setValueAt(blocked_max_wait_time_in_sec, rowId, pos_im_blocked_max_wait_time_in_sec);
+					}
 
 					if (pos_im_blocking_others_max_time_in_sec != -1 && blocking_others_max_time_in_sec != null)
 					{
@@ -911,47 +941,122 @@ extends CountersModel
 
 		for (int r=0; r<cm.getDiffRowCount(); r++)
 		{
+//			//-------------------------------------------------------
+//			// ImBlockingOthersMaxTimeInSec or HasBlockingLocks 
+//			//-------------------------------------------------------
+//			// TODO: implement this
+//			// see: SqlServer CmActiveStatements.sendAlarmRequest()
+//			if (isSystemAlarmsForColumnEnabledAndInTimeRange("ImBlockingOthersMaxTimeInSec"))
+//			{
+//				Object o_ImBlockedBySessionPids       = cm.getRateValue(r, "im_blocked_by_pids");
+//				Object o_ImBlockingOthersMaxTimeInSec = cm.getRateValue(r, "im_blocking_others_max_time_in_sec");
+//
+//				if (o_ImBlockingOthersMaxTimeInSec != null && o_ImBlockingOthersMaxTimeInSec instanceof Number)
+//				{
+//					String ImBlockedBySessionPids       = o_ImBlockedBySessionPids + "";
+//					int    ImBlockingOthersMaxTimeInSec = ((Number)o_ImBlockingOthersMaxTimeInSec).intValue();
+//
+//					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSec, DEFAULT_alarm_ImBlockingOthersMaxTimeInSec);
+//
+//					if (debugPrint || _logger.isDebugEnabled())
+//						System.out.println("##### sendAlarmRequest("+cm.getName()+"): ImBlockedBySessionPids="+ImBlockedBySessionPids+"; ImBlockingOthersMaxTimeInSec='"+ImBlockingOthersMaxTimeInSec+"', threshold="+threshold+".");
+//
+//					if (StringUtil.isNullOrBlank(ImBlockedBySessionPids)) // meaning: THIS SPID is responsible for the block (it's not blocked, meaning; the root cause)
+//					{
+//						List<String> ImBlockingOtherSessionPidsList = StringUtil.commaStrToList(cm.getRateValue(r, "im_blocking_other_pids") + "");
+//						String BlockingOtherPidsStr = ImBlockingOtherSessionPidsList + "";
+//						int    blockCount           = ImBlockingOtherSessionPidsList.size();
+//						long   pid                  = cm.getRateValueAsLong(r, "pid");
+//
+//						if (debugPrint || _logger.isDebugEnabled())
+//							System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", ImBlockingOthersMaxTimeInSec='"+ImBlockingOthersMaxTimeInSec+"', ImBlockingOtherSessionIdsList="+ImBlockingOtherSessionPidsList);
+//
+//						if (ImBlockingOthersMaxTimeInSec > threshold)
+//						{
+//							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+//							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+//
+//							AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, pid, ImBlockingOthersMaxTimeInSec, BlockingOtherPidsStr, blockCount);
+//
+//							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+//							
+//							alarmHandler.addAlarm( ae );
+//						}
+//					}
+//				}
+//			}
 			//-------------------------------------------------------
 			// ImBlockingOthersMaxTimeInSec or HasBlockingLocks 
 			//-------------------------------------------------------
-			// TODO: implement this
-			// see: SqlServer CmActiveStatements.sendAlarmRequest()
+			// Lets make it a bit simpler for now ('ImBlockingOthersMaxTimeInSec' is skipped and just focusing that I'm blocking)
+			// But: When 'ImBlockingOthersMaxTimeInSec' is showing a *PROPER* value it should be used, so we don't alarm on "short" blocks 
 			if (isSystemAlarmsForColumnEnabledAndInTimeRange("ImBlockingOthersMaxTimeInSec"))
 			{
-				Object o_ImBlockedBySessionIds        = cm.getRateValue(r, "im_blocked_by_pids");
-				Object o_ImBlockingOthersMaxTimeInSec = cm.getRateValue(r, "im_blocking_others_max_time_in_sec");
+				String ImBlockedByPids              = cm.getRateString        (r, "im_blocked_by_pids");
+				String ImBlockingOtherPids          = cm.getRateString        (r, "im_blocking_other_pids");
+				int    ImBlockingOthersMaxTimeInSec = cm.getRateValueAsInteger(r, "im_blocking_others_max_time_in_sec", -1);
 
-				if (o_ImBlockingOthersMaxTimeInSec != null && o_ImBlockingOthersMaxTimeInSec instanceof Number)
+				// BlockingOthers AND isNotBlocked
+				if (StringUtil.hasValue(ImBlockingOtherPids) && StringUtil.isNullOrBlank(ImBlockedByPids))
 				{
-					String ImBlockedBySessionIds        = o_ImBlockedBySessionIds + "";
-					int    ImBlockingOthersMaxTimeInSec = ((Number)o_ImBlockingOthersMaxTimeInSec).intValue();
-
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSec, DEFAULT_alarm_ImBlockingOthersMaxTimeInSec);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): ImBlockedBySessionIds="+ImBlockedBySessionIds+"; ImBlockingOthersMaxTimeInSec='"+ImBlockingOthersMaxTimeInSec+"', threshold="+threshold+".");
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): ImBlockingOtherPids='" + ImBlockingOtherPids + "', ImBlockedByPids='" + ImBlockedByPids + "'; ImBlockingOthersMaxTimeInSec=" + ImBlockingOthersMaxTimeInSec + ", threshold=" + threshold + ".");
 
-					if (StringUtil.isNullOrBlank(ImBlockedBySessionIds)) // meaning: THIS SPID is responsible for the block (it's not blocked, meaning; the root cause)
+					List<String> ImBlockingOtherPidsList = StringUtil.commaStrToList(ImBlockingOtherPids);
+					String BlockingOtherPidsStr = ImBlockingOtherPidsList + "";
+					int    blockCount           = ImBlockingOtherPidsList.size();
+					long   pid                  = cm.getRateValueAsLong(r, "pid");
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", ImBlockingOthersMaxTimeInSec='"+ImBlockingOthersMaxTimeInSec+"', ImBlockingOtherPidsList="+ImBlockingOtherPidsList);
+
+					// If MaxTime is "unknown" or above the threshold (unknown could be: not available in this DBMS Version or we failed to fetch/calculate it)
+					if (ImBlockingOthersMaxTimeInSec == -1 || ImBlockingOthersMaxTimeInSec > threshold)
 					{
-						List<String> ImBlockingOtherSessionIdsList = StringUtil.commaStrToList(cm.getRateValue(r, "im_blocking_other_pids") + "");
-						String BlockingOtherSpidsStr = ImBlockingOtherSessionIdsList + "";
-						int    blockCount            = ImBlockingOtherSessionIdsList.size();
-						long   pid                   = cm.getRateValueAsLong(r, "pid");
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 
-						if (debugPrint || _logger.isDebugEnabled())
-							System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", ImBlockingOthersMaxTimeInSec='"+ImBlockingOthersMaxTimeInSec+"', ImBlockingOtherSessionIdsList="+ImBlockingOtherSessionIdsList);
+						AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, pid, ImBlockingOthersMaxTimeInSec, BlockingOtherPidsStr, blockCount);
 
-						if (ImBlockingOthersMaxTimeInSec > threshold)
-						{
-							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
+					}
+				}
+			}
 
-							AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, pid, ImBlockingOthersMaxTimeInSec, BlockingOtherSpidsStr, blockCount);
+			
+			//-------------------------------------------------------
+			// HoldingXLocksWhileWaitForClientInputInSec 
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("HoldingXLocksWhileWaitForClientInputInSec"))
+			{
+				String state            = cm.getRateValue         (r, "state") + "";
+				int    pid_exlock_count = cm.getRateValueAsInteger(r, "pid_exlock_count", -1);
+				int    stmnt_start_sec  = cm.getRateValueAsInteger(r, "stmnt_start_sec" , -1);
 
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-							
-							alarmHandler.addAlarm( ae );
-						}
+				if (pid_exlock_count > 0 && stmnt_start_sec > 0 && state.startsWith("idle in transaction"))
+				{
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_HoldingXLocksWhileWaitForClientInputInSec, DEFAULT_alarm_HoldingXLocksWhileWaitForClientInputInSec);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold=" + threshold + ", stmnt_start_sec=" + stmnt_start_sec + ", pid_exlock_count=" + pid_exlock_count + ", state='" + state + "'.");
+
+					if (stmnt_start_sec > threshold)
+					{
+						long   pid         = cm.getRateValueAsLong(r, "pid", -1L);
+						String query_start = cm.getRateValue      (r, "query_start") + "";
+
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+						AlarmEvent ae = new AlarmEventHoldingLocksWhileWaitForClientInput(cm, threshold, pid, stmnt_start_sec, query_start, true);
+						
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
 					}
 				}
 			}
@@ -994,27 +1099,26 @@ extends CountersModel
 					if (StatementExecInSec > threshold)
 					{
 						// Get config 'skip some known values'
-						String skipDbnameRegExp   = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipDbname,   DEFAULT_alarm_StatementExecInSecSkipDbname);
-						String skipLoginRegExp    = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipLogin,    DEFAULT_alarm_StatementExecInSecSkipLogin);
-						String skipCmdRegExp      = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipCmd,      DEFAULT_alarm_StatementExecInSecSkipCmd);
-						String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipTranName, DEFAULT_alarm_StatementExecInSecSkipTranName);
+						String skipDbnameRegExp      = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipDbname,      DEFAULT_alarm_StatementExecInSecSkipDbname);
+						String skipLoginRegExp       = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipLogin,       DEFAULT_alarm_StatementExecInSecSkipLogin);
+						String skipCmdRegExp         = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipCmd,         DEFAULT_alarm_StatementExecInSecSkipCmd);
+						String skipBackendTypeRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipBackendType, DEFAULT_alarm_StatementExecInSecSkipBackendType);
 
-						String StatementStartTime = cm.getDiffValue(r, "query_start")   + "";
-						String DBName             = cm.getDiffValue(r, "datname")       + "";
-						String Login              = cm.getDiffValue(r, "usename")       + "";
-						String Command            = cm.getDiffValue(r, "query")         + "";
-//						String tran_name          = cm.getDiffValue(r, "transaction_name") + "";
-						String tran_name          = "-unknown-";
+						String StatementStartTime = cm.getDiffValue(r, "query_start")  + "";
+						String DBName             = cm.getDiffValue(r, "datname")      + "";
+						String Login              = cm.getDiffValue(r, "usename")      + "";
+						String Command            = cm.getDiffValue(r, "query")        + "";
+						String backend_type       = cm.getDiffValue(r, "backend_type") + "";
 						
 						// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
 						boolean doAlarm = true;
 
 						// The below could have been done with nested if(!skipXxx), if(!skipYyy) doAlarm=true; 
 						// Below is more readable, from a variable context point-of-view, but HARDER to understand
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbnameRegExp)   || ! DBName   .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipLoginRegExp)    || ! Login    .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipCmdRegExp)      || ! Command  .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranNameRegExp) || ! tran_name.matches(skipTranNameRegExp))); // NO match in the SKIP TranName regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbnameRegExp)      || ! DBName      .matches(skipCmdRegExp        ))); // NO match in the SKIP Cmd      regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipLoginRegExp)       || ! Login       .matches(skipCmdRegExp        ))); // NO match in the SKIP Cmd      regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipCmdRegExp)         || ! Command     .matches(skipCmdRegExp        ))); // NO match in the SKIP Cmd      regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipBackendTypeRegExp) || ! backend_type.matches(skipBackendTypeRegExp))); // NO match in the SKIP TranName regexp
 
 						// NO match in the SKIP regEx
 						if (doAlarm)
@@ -1027,7 +1131,7 @@ extends CountersModel
 							extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_OLDEST_COMBO_IN_SEC);
 
 							// create the alarm
-							AlarmEvent ae = new AlarmEventLongRunningStatement(cm, threshold, StatementExecInSec, StatementStartTime, DBName, Login, Command, tran_name);
+							AlarmEvent ae = new AlarmEventLongRunningStatement(cm, threshold, StatementExecInSec, StatementStartTime, DBName, Login, Command, backend_type);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
 							alarmHandler.addAlarm( ae );
@@ -1062,29 +1166,27 @@ extends CountersModel
 					if (xactTimeInSec > threshold)
 					{
 						// Get config 'skip some known values'
-						String skipDbnameRegExp   = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OpenXactInSecSkipDbname,   DEFAULT_alarm_OpenXactInSecSkipDbname);
-						String skipLoginRegExp    = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OpenXactInSecSkipLogin,    DEFAULT_alarm_OpenXactInSecSkipLogin);
-						String skipCmdRegExp      = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OpenXactInSecSkipCmd,      DEFAULT_alarm_OpenXactInSecSkipCmd);
-						String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OpenXactInSecSkipTranName, DEFAULT_alarm_OpenXactInSecSkipTranName);
+						String skipDbnameRegExp      = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OpenXactInSecSkipDbname,      DEFAULT_alarm_OpenXactInSecSkipDbname);
+						String skipLoginRegExp       = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OpenXactInSecSkipLogin,       DEFAULT_alarm_OpenXactInSecSkipLogin);
+						String skipCmdRegExp         = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OpenXactInSecSkipCmd,         DEFAULT_alarm_OpenXactInSecSkipCmd);
+						String skipBackendTypeRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OpenXactInSecSkipBackendType, DEFAULT_alarm_OpenXactInSecSkipBackendType);
 
 //						String StatementStartTime = cm.getDiffValue(r, "query_start")   + "";
 
-						String DBName             = cm.getDiffValue(r, "datname")       + "";
-						String Login              = cm.getDiffValue(r, "usename")       + "";
-						String Command            = cm.getDiffValue(r, "query")         + "";
-//						String tran_name          = cm.getDiffValue(r, "transaction_name") + "";
-//						String tran_name          = "-unknown-";
-						String tran_name          = cm.getDiffValue(r, "state") + "";
+						String DBName             = cm.getDiffValue(r, "datname")      + "";
+						String Login              = cm.getDiffValue(r, "usename")      + "";
+						String Command            = cm.getDiffValue(r, "query")        + "";
+						String backend_type       = cm.getDiffValue(r, "backend_type") + "";
 						
 						// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
 						boolean doAlarm = true;
 
 						// The below could have been done with nested if(!skipXxx), if(!skipYyy) doAlarm=true; 
 						// Below is more readable, from a variable context point-of-view, but HARDER to understand
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbnameRegExp)   || ! DBName   .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipLoginRegExp)    || ! Login    .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipCmdRegExp)      || ! Command  .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranNameRegExp) || ! tran_name.matches(skipTranNameRegExp))); // NO match in the SKIP TranName regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbnameRegExp)      || ! DBName      .matches(skipCmdRegExp        ))); // NO match in the SKIP Cmd      regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipLoginRegExp)       || ! Login       .matches(skipCmdRegExp        ))); // NO match in the SKIP Cmd      regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipCmdRegExp)         || ! Command     .matches(skipCmdRegExp        ))); // NO match in the SKIP Cmd      regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipBackendTypeRegExp) || ! backend_type.matches(skipBackendTypeRegExp))); // NO match in the SKIP backendType regexp
 
 						// NO match in the SKIP regEx
 						if (doAlarm)
@@ -1097,7 +1199,7 @@ extends CountersModel
 							extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_OLDEST_COMBO_IN_SEC);
 
 							// create the alarm
-							AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, DBName, xactTimeInSec, tran_name);
+							AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, DBName, xactTimeInSec, backend_type);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
 							alarmHandler.addAlarm( ae );
@@ -1109,41 +1211,47 @@ extends CountersModel
 		} // end: loop rows
 	}
 
-	public static final String  PROPKEY_alarm_ImBlockingOthersMaxTimeInSec   = CM_NAME + ".alarm.system.if.ImBlockingOthersMaxTimeInSec.gt";
-	public static final int     DEFAULT_alarm_ImBlockingOthersMaxTimeInSec   = 60;
+	public static final String  PROPKEY_alarm_ImBlockingOthersMaxTimeInSec      = CM_NAME + ".alarm.system.if.ImBlockingOthersMaxTimeInSec.gt";
+	public static final int     DEFAULT_alarm_ImBlockingOthersMaxTimeInSec      = 60;
 
-	public static final String  PROPKEY_alarm_StatementExecInSec             = CM_NAME + ".alarm.system.if.StatementExecInSec.gt";
-	public static final int     DEFAULT_alarm_StatementExecInSec             = 3 * 60 * 60; // 3 Hours
 
-	public static final String  PROPKEY_alarm_StatementExecInSecSkipDbname   = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.dbname";
-	public static final String  DEFAULT_alarm_StatementExecInSecSkipDbname   = "";
+	public static final String  PROPKEY_alarm_HoldingXLocksWhileWaitForClientInputInSec  = CM_NAME + ".alarm.system.if.HoldingXLocksWhileWaitForClientInputInSec.gt";
+	public static final int     DEFAULT_alarm_HoldingXLocksWhileWaitForClientInputInSec  = 300; // 5 minutes
 
-	public static final String  PROPKEY_alarm_StatementExecInSecSkipLogin    = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.login";
-	public static final String  DEFAULT_alarm_StatementExecInSecSkipLogin    = "";
 
-	public static final String  PROPKEY_alarm_StatementExecInSecSkipCmd      = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.cmd";
-//	public static final String  DEFAULT_alarm_StatementExecInSecSkipCmd      = "^(BACKUP |RESTORE ).*";
-	public static final String  DEFAULT_alarm_StatementExecInSecSkipCmd      = "";
+	public static final String  PROPKEY_alarm_StatementExecInSec                = CM_NAME + ".alarm.system.if.StatementExecInSec.gt";
+	public static final int     DEFAULT_alarm_StatementExecInSec                = 3 * 60 * 60; // 3 Hours
 
-	public static final String  PROPKEY_alarm_StatementExecInSecSkipTranName = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.tranName";
-	public static final String  DEFAULT_alarm_StatementExecInSecSkipTranName = "";
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipDbname      = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.dbname";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipDbname      = "";
 
-	
-	public static final String  PROPKEY_alarm_OpenXactInSec             = CM_NAME + ".alarm.system.if.OpenXactInSec.gt";
-	public static final int     DEFAULT_alarm_OpenXactInSec             = 30 * 60; // 30 minutes
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipLogin       = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.login";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipLogin       = "";
 
-	public static final String  PROPKEY_alarm_OpenXactInSecSkipDbname   = CM_NAME + ".alarm.system.if.OpenXactInSec.skip.dbname";
-	public static final String  DEFAULT_alarm_OpenXactInSecSkipDbname   = "";
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipCmd         = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.cmd";
+//	public static final String  DEFAULT_alarm_StatementExecInSecSkipCmd         = "^(BACKUP |RESTORE ).*";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipCmd         = "";
 
-	public static final String  PROPKEY_alarm_OpenXactInSecSkipLogin    = CM_NAME + ".alarm.system.if.OpenXactInSec.skip.login";
-	public static final String  DEFAULT_alarm_OpenXactInSecSkipLogin    = "";
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipBackendType = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.backendType";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipBackendType = "^(walsender)";
 
-	public static final String  PROPKEY_alarm_OpenXactInSecSkipCmd      = CM_NAME + ".alarm.system.if.OpenXactInSec.skip.cmd";
-//	public static final String  DEFAULT_alarm_OpenXactInSecSkipCmd      = "^(BACKUP |RESTORE ).*";
-	public static final String  DEFAULT_alarm_OpenXactInSecSkipCmd      = "";
 
-	public static final String  PROPKEY_alarm_OpenXactInSecSkipTranName = CM_NAME + ".alarm.system.if.OpenXactInSec.skip.tranName";
-	public static final String  DEFAULT_alarm_OpenXactInSecSkipTranName = "";
+	public static final String  PROPKEY_alarm_OpenXactInSec                     = CM_NAME + ".alarm.system.if.OpenXactInSec.gt";
+	public static final int     DEFAULT_alarm_OpenXactInSec                     = 60 * 60; // 1 hours
+
+	public static final String  PROPKEY_alarm_OpenXactInSecSkipDbname           = CM_NAME + ".alarm.system.if.OpenXactInSec.skip.dbname";
+	public static final String  DEFAULT_alarm_OpenXactInSecSkipDbname           = "";
+
+	public static final String  PROPKEY_alarm_OpenXactInSecSkipLogin            = CM_NAME + ".alarm.system.if.OpenXactInSec.skip.login";
+	public static final String  DEFAULT_alarm_OpenXactInSecSkipLogin            = "";
+
+	public static final String  PROPKEY_alarm_OpenXactInSecSkipCmd              = CM_NAME + ".alarm.system.if.OpenXactInSec.skip.cmd";
+//	public static final String  DEFAULT_alarm_OpenXactInSecSkipCmd              = "^(BACKUP |RESTORE ).*";
+	public static final String  DEFAULT_alarm_OpenXactInSecSkipCmd              = "";
+
+	public static final String  PROPKEY_alarm_OpenXactInSecSkipBackendType      = CM_NAME + ".alarm.system.if.OpenXactInSec.skip.backendType";
+	public static final String  DEFAULT_alarm_OpenXactInSecSkipBackendType      = "^(walsender)"; 
+
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -1153,20 +1261,42 @@ extends CountersModel
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec", isAlarmSwitch, PROPKEY_alarm_ImBlockingOthersMaxTimeInSec  , Integer.class, conf.getIntProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSec  , DEFAULT_alarm_ImBlockingOthersMaxTimeInSec  ), DEFAULT_alarm_ImBlockingOthersMaxTimeInSec  , "If 'ImBlockingOthersMaxTimeInSec' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
+		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec",              isAlarmSwitch, PROPKEY_alarm_ImBlockingOthersMaxTimeInSec              , Integer.class, conf.getIntProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSec              , DEFAULT_alarm_ImBlockingOthersMaxTimeInSec              ), DEFAULT_alarm_ImBlockingOthersMaxTimeInSec              , "If 'ImBlockingOthersMaxTimeInSec' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
 
-		list.add(new CmSettingsHelper("StatementExecInSec",           isAlarmSwitch, PROPKEY_alarm_StatementExecInSec            , Integer.class, conf.getIntProperty(PROPKEY_alarm_StatementExecInSec            , DEFAULT_alarm_StatementExecInSec            ), DEFAULT_alarm_StatementExecInSec            , "If any SPID's has been executed a single SQL Statement for more than ## seconds, then send alarm 'AlarmEventLongRunningStatement'." ));
-		list.add(new CmSettingsHelper("StatementExecInSec SkipDbs",                  PROPKEY_alarm_StatementExecInSecSkipDbname  , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipDbname  , DEFAULT_alarm_StatementExecInSecSkipDbname  ), DEFAULT_alarm_StatementExecInSecSkipDbname  , "If 'StatementExecInSec' is true; Discard databases listed (regexp is used).", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("StatementExecInSec SkipLogins",               PROPKEY_alarm_StatementExecInSecSkipLogin   , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipLogin   , DEFAULT_alarm_StatementExecInSecSkipLogin   ), DEFAULT_alarm_StatementExecInSecSkipLogin   , "If 'StatementExecInSec' is true; Discard Logins listed (regexp is used)."   , new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("StatementExecInSec SkipCommands",             PROPKEY_alarm_StatementExecInSecSkipCmd     , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipCmd     , DEFAULT_alarm_StatementExecInSecSkipCmd     ), DEFAULT_alarm_StatementExecInSecSkipCmd     , "If 'StatementExecInSec' is true; Discard Commands listed (regexp is used)." , new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("StatementExecInSec SkipTranNames",            PROPKEY_alarm_StatementExecInSecSkipTranName, String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipTranName, DEFAULT_alarm_StatementExecInSecSkipTranName), DEFAULT_alarm_StatementExecInSecSkipTranName, "If 'StatementExecInSec' is true; Discard TranName listed (regexp is used)." , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("HoldingXLocksWhileWaitForClientInputInSec", isAlarmSwitch, PROPKEY_alarm_HoldingXLocksWhileWaitForClientInputInSec , Integer.class, conf.getIntProperty(PROPKEY_alarm_HoldingXLocksWhileWaitForClientInputInSec , DEFAULT_alarm_HoldingXLocksWhileWaitForClientInputInSec ), DEFAULT_alarm_HoldingXLocksWhileWaitForClientInputInSec , "If Client 'idle in transaction' and is Holding Exclusive Locks at DBMS and 'stmnt_start_sec' is greater than ## seconds then send 'AlarmEventHoldingLocksWhileWaitForClientInput'." ));
 
-		list.add(new CmSettingsHelper("OpenXactInSec",                isAlarmSwitch, PROPKEY_alarm_OpenXactInSec                 , Integer.class, conf.getIntProperty(PROPKEY_alarm_OpenXactInSec                 , DEFAULT_alarm_OpenXactInSec                 ), DEFAULT_alarm_OpenXactInSec                 , "If any SPID's has an Open Transaction for more than ## seconds, then send alarm 'AlarmEventLongRunningTransaction'." ));
-		list.add(new CmSettingsHelper("OpenXactInSec SkipDbs",                       PROPKEY_alarm_OpenXactInSecSkipDbname       , String .class, conf.getProperty   (PROPKEY_alarm_OpenXactInSecSkipDbname       , DEFAULT_alarm_OpenXactInSecSkipDbname       ), DEFAULT_alarm_OpenXactInSecSkipDbname       , "If 'StatementExecInSec' is true; Discard databases listed (regexp is used).", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("OpenXactInSec SkipLogins",                    PROPKEY_alarm_OpenXactInSecSkipLogin        , String .class, conf.getProperty   (PROPKEY_alarm_OpenXactInSecSkipLogin        , DEFAULT_alarm_OpenXactInSecSkipLogin        ), DEFAULT_alarm_OpenXactInSecSkipLogin        , "If 'StatementExecInSec' is true; Discard Logins listed (regexp is used)."   , new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("OpenXactInSec SkipCommands",                  PROPKEY_alarm_OpenXactInSecSkipCmd          , String .class, conf.getProperty   (PROPKEY_alarm_OpenXactInSecSkipCmd          , DEFAULT_alarm_OpenXactInSecSkipCmd          ), DEFAULT_alarm_OpenXactInSecSkipCmd          , "If 'StatementExecInSec' is true; Discard Commands listed (regexp is used)." , new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("OpenXactInSec SkipTranNames",                 PROPKEY_alarm_OpenXactInSecSkipTranName     , String .class, conf.getProperty   (PROPKEY_alarm_OpenXactInSecSkipTranName     , DEFAULT_alarm_OpenXactInSecSkipTranName     ), DEFAULT_alarm_OpenXactInSecSkipTranName     , "If 'StatementExecInSec' is true; Discard TranName listed (regexp is used)." , new RegExpInputValidator()));
-		
+		list.add(new CmSettingsHelper("StatementExecInSec",                        isAlarmSwitch, PROPKEY_alarm_StatementExecInSec                        , Integer.class, conf.getIntProperty(PROPKEY_alarm_StatementExecInSec                        , DEFAULT_alarm_StatementExecInSec                        ), DEFAULT_alarm_StatementExecInSec                        , "If any SPID's has been executed a single SQL Statement for more than ## seconds, then send alarm 'AlarmEventLongRunningStatement'." ));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipDbs",                               PROPKEY_alarm_StatementExecInSecSkipDbname              , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipDbname              , DEFAULT_alarm_StatementExecInSecSkipDbname              ), DEFAULT_alarm_StatementExecInSecSkipDbname              , "If 'StatementExecInSec' is true; Discard 'datname' listed (regexp is used)."      , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipLogins",                            PROPKEY_alarm_StatementExecInSecSkipLogin               , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipLogin               , DEFAULT_alarm_StatementExecInSecSkipLogin               ), DEFAULT_alarm_StatementExecInSecSkipLogin               , "If 'StatementExecInSec' is true; Discard 'usename' listed (regexp is used)."      , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipCommands",                          PROPKEY_alarm_StatementExecInSecSkipCmd                 , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipCmd                 , DEFAULT_alarm_StatementExecInSecSkipCmd                 ), DEFAULT_alarm_StatementExecInSecSkipCmd                 , "If 'StatementExecInSec' is true; Discard 'query' listed (regexp is used)."        , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipBackendType",                       PROPKEY_alarm_StatementExecInSecSkipBackendType         , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipBackendType         , DEFAULT_alarm_StatementExecInSecSkipBackendType         ), DEFAULT_alarm_StatementExecInSecSkipBackendType         , "If 'StatementExecInSec' is true; Discard 'backend_type' listed (regexp is used)." , new RegExpInputValidator()));
+                                                                                                                                                                                                                                                                                                                 
+		list.add(new CmSettingsHelper("OpenXactInSec",                             isAlarmSwitch, PROPKEY_alarm_OpenXactInSec                             , Integer.class, conf.getIntProperty(PROPKEY_alarm_OpenXactInSec                             , DEFAULT_alarm_OpenXactInSec                             ), DEFAULT_alarm_OpenXactInSec                             , "If any SPID's has an Open Transaction for more than ## seconds, then send alarm 'AlarmEventLongRunningTransaction'." ));
+		list.add(new CmSettingsHelper("OpenXactInSec SkipDbs",                                    PROPKEY_alarm_OpenXactInSecSkipDbname                   , String .class, conf.getProperty   (PROPKEY_alarm_OpenXactInSecSkipDbname                   , DEFAULT_alarm_OpenXactInSecSkipDbname                   ), DEFAULT_alarm_OpenXactInSecSkipDbname                   , "If 'StatementExecInSec' is true; Discard 'datname' listed (regexp is used)."      , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("OpenXactInSec SkipLogins",                                 PROPKEY_alarm_OpenXactInSecSkipLogin                    , String .class, conf.getProperty   (PROPKEY_alarm_OpenXactInSecSkipLogin                    , DEFAULT_alarm_OpenXactInSecSkipLogin                    ), DEFAULT_alarm_OpenXactInSecSkipLogin                    , "If 'StatementExecInSec' is true; Discard 'usename' listed (regexp is used)."      , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("OpenXactInSec SkipCommands",                               PROPKEY_alarm_OpenXactInSecSkipCmd                      , String .class, conf.getProperty   (PROPKEY_alarm_OpenXactInSecSkipCmd                      , DEFAULT_alarm_OpenXactInSecSkipCmd                      ), DEFAULT_alarm_OpenXactInSecSkipCmd                      , "If 'StatementExecInSec' is true; Discard 'query' listed (regexp is used)."        , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("OpenXactInSec SkipBackendType",                            PROPKEY_alarm_OpenXactInSecSkipBackendType              , String .class, conf.getProperty   (PROPKEY_alarm_OpenXactInSecSkipBackendType              , DEFAULT_alarm_OpenXactInSecSkipBackendType              ), DEFAULT_alarm_OpenXactInSecSkipBackendType              , "If 'StatementExecInSec' is true; Discard 'backend_type' listed (regexp is used)." , new RegExpInputValidator()));
+
+//TODO;
+// // * add alarm: HoldingLocksWhileWaitForClientInput, using 'pid_exlock_count'; 
+// // * increase the default for OpenXactInSec to 1h or 2h;
+// // * In Alarm "CANCEL" add "Real/Actual/Effected Duration", which also calculates the "incubation" period of an alarm (or adds the "threshold value" for time sensitive alarms;
+// // * Replication and LongRunningTransaction... investigate what "background" PID's we should "warn" on
+//TODO;
+// // * DDL Storage... check if it's a function (not in pg_class) and get/extract TEXT, parse and get/store tables accessed (like we do with views)
+// // * DDL Storage... Check for Foreign Data Wrappers... DDL For table must reflect that
+// // * Possibly add/use 'pg_stat_progress_cluster' && 'pg_stat_progress_vacuum' or pg_stat_progress_*
+// // * look at extension: pg_buffercache
+// // * integrate 'pg_stat_ssl' into 'CmPgActivity'
+// // * maybe look at https://pgstats.dev/ to find more interesting things
+// // 
+//TODO SQL-Server;
+// // SSMS had a Table Activity Report -- with Logical Reads ... where does it get that information from 
+//TODO General;
+// // DSR Charts -- Sort them in some way so that the "heaviest/largest" series is the first serie, etc... 
+// // DSR Mail Subject -- Possibility to add '${description}' from the SERVER_LIST file... implemented as template tagname '${dbxCentralServerNameDescription}'
+// // DbxCentral "buttons" -- add "template" so we can label the buttons with info from SERVER_LIST file... '${serverName} -- ${dbxCentralServerNameDescription}'
+
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "application_name") );
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "usename") );
 

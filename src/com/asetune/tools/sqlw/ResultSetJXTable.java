@@ -947,6 +947,65 @@ implements ToolTipHyperlinkResolver
 			}
 
 			//------------------------------------------------------------------------
+			// HTML XML that do NOT start with '<html ' isn't picked up by the ContentInfoUtil, so lets dig into the String and check if it *might* be a HTML content...
+			//------------------------------------------------------------------------
+			if (StringUtil.isPossibleHtml(cellStr))
+			{
+//				String first250Char = cellStr.substring(0, Math.min(255, cellStr.length()-1));
+//				boolean hasStartHtmlTag = StringUtils.containsIgnoreCase(first250Char, "<html");
+				
+				File tmpFile = null;
+				try
+				{
+					String fileExtention = ".html";
+					
+					// put content in a TEMP file 
+					tmpFile = createTempFile("sqlw_HTML_tooltip_", fileExtention, bytes);
+
+					// Compose ToolTip HTML (with content, & a LINK to be opened in "browser")
+					String urlStr = ("file:///"+tmpFile);
+					try	
+					{
+						URL url = new URL(urlStr);
+						
+						StringBuilder sb = new StringBuilder();
+						sb.append("<html>");
+						sb.append("<h2>Tooltip for 'HTML' (without html start tag)</h2>");
+						if (wasBase64_decoded)
+							sb.append("<i>Cell Content was decoded using 'decodeBase64', before actual content could be determined.</i><br>");
+						sb.append("<br>");
+						sb.append("Using temp file: <code>").append(tmpFile).append("</code><br>");
+						sb.append("File Size: <code>").append(StringUtil.bytesToHuman(tmpFile.length(), "#.#")).append("</code><br>");
+						sb.append("Guessed Charset: <code>").append(guessedCharset).append("</code><br>");
+						sb.append("<a href='").append(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for file extention <b>'" + fileExtention + "'</b> will be used)<br>");
+						sb.append("<hr>");
+
+						sb.append(cellStr);
+
+						sb.append("</html>");
+
+						return sb.toString();
+					}
+					catch (Exception ex) 
+					{
+						_logger.warn("Problems when open the URL '"+urlStr+"'. Caught: "+ex, ex); 
+						return 
+							"<html>Problems when open the URL '<code>"+urlStr+"</code>'.<br>"
+							+ "Caught: <b>" + ex + "</b><br>"
+							+ "<hr>"
+							+ "<a href='" + CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for file extention <b>'" + fileExtention + "'</b> will be used)<br>"
+							+ "Or copy the above filename, and open it in any application or text editor<br>"
+							+ "<html/>";
+					}
+				}
+				catch (Exception ex)
+				{
+					return "<html>Sorry problems when creating temporary file '"+tmpFile+"'<br>Caught: "+ex+"</html>";
+				}
+			}
+
+			
+			//------------------------------------------------------------------------
 			// XML that do NOT start with '<?xml ' isn't picked up by the ContentInfoUtil, so lets dig into the String and check if it *might* be a XML content...
 			//------------------------------------------------------------------------
 			if (StringUtil.isPossibleXml(cellStr))

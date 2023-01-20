@@ -217,6 +217,14 @@ case "${toolset}" in
 		javaSplashScreen=""
 		;;
 
+	mailtest2)
+		shortAppName="mailtest2"
+		longAppName="MailTest2"
+		javaMainClass="com.asetune.test.MailTest2"
+		javaMainParams=""
+		javaSplashScreen=""
+		;;
+
 	## If the parameter starts with "com.asetune." then: test "any" classname passed in
 	com.asetune.*)
 		shortAppName="classtest"

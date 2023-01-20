@@ -22,22 +22,32 @@ package com.asetune.cm.postgres.gui;
 
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+import javax.swing.JCheckBox;
+import javax.swing.JPanel;
 
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.postgres.CmPgActivity;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmPgActivityPanel
 extends TabularCntrPanel
 {
 //	private static final Logger  _logger	           = Logger.getLogger(CmPgActivityPanel.class);
 	private static final long    serialVersionUID      = 1L;
+
+	private JCheckBox l_sampleSslInfo_chk;
 
 	public CmPgActivityPanel(CountersModel cm)
 	{
@@ -134,4 +144,63 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.RED), null));
 	}
 
+	@Override
+	protected JPanel createLocalOptionsPanel()
+	{
+		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+		boolean defaultOpt;
+//		int     defaultIntOpt;
+
+		//-----------------------------------------
+		// sample system tables:
+		//-----------------------------------------
+		defaultOpt = conf == null ? CmPgActivity.DEFAULT_sample_sslInfo : conf.getBooleanProperty(CmPgActivity.PROPKEY_sample_sslInfo, CmPgActivity.DEFAULT_sample_sslInfo);
+		l_sampleSslInfo_chk = new JCheckBox("Sample SSL Information", defaultOpt);
+
+		l_sampleSslInfo_chk.setName(CmPgActivity.PROPKEY_sample_sslInfo);
+		l_sampleSslInfo_chk.setToolTipText("<html>" +
+				"Include SSL information about client connections.<br>" +
+				"</html>");
+
+		l_sampleSslInfo_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				conf.setProperty(CmPgActivity.PROPKEY_sample_sslInfo, ((JCheckBox)e.getSource()).isSelected());
+				conf.save();
+				
+				// This will force the CM to re-initialize the SQL statement.
+				CountersModel cm = getCm().getCounterController().getCmByName(getName());
+				if (cm != null)
+					cm.setSql(null);
+				
+				// Since this means include or exclude X number of columns, we need to reset the dictionary 
+				cm.reset();
+				// cm.clear(); // this does less than clear()
+			}
+		});
+		
+		// LAYOUT
+		panel.add(l_sampleSslInfo_chk, "wrap");
+
+		return panel;
+	}
+
+	@Override
+	public void checkLocalComponents()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		boolean confProp = conf.getBooleanProperty(CmPgActivity.PROPKEY_sample_sslInfo, CmPgActivity.DEFAULT_sample_sslInfo);
+		boolean guiProp  = l_sampleSslInfo_chk.isSelected();
+
+		if (confProp != guiProp)
+			l_sampleSslInfo_chk.setSelected(confProp);
+	}
 }

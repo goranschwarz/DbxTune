@@ -81,7 +81,7 @@ extends ReportChartAbstract
 	
 	public ReportChartTimeSeriesStackedBar(ReportEntryAbstract reportEntry, DbxConnection conn, String cmName, String dataGroupColumn, int dataGroupMinutes, TopGroupCountReport topGroupCountReport, String dataValueColumn, Double dataDivideByValue, String keepGroups, String skipGroups, String graphTitle)
 	{
-		super(reportEntry, conn, ChartType.STACKED_BAR, cmName, dataGroupColumn, graphTitle, -1);
+		super(reportEntry, conn, ChartType.STACKED_BAR, cmName, dataGroupColumn, graphTitle, -1, false); // sorted will change in super if sort succeeds
 		
 		_dataGroupColumn     = dataGroupColumn;
 		_dataGroupMinutes    = dataGroupMinutes;
@@ -340,6 +340,9 @@ extends ReportChartAbstract
 							categoryDataset.addValue(dr.value, dr.group, dr.ts);
 						else
 							timeTableDataset.add(new Minute(dr.ts), dr.value, dr.group);
+						
+						// Remember min/max value
+						setDatasetMinMaxValue(dr.value);
 					}
 				}
 			}
@@ -423,6 +426,7 @@ extends ReportChartAbstract
 				}
 			}
 			
+			super._isSorted = true;
 			return newDataset;
 		} 
 		catch(RuntimeException ex) 

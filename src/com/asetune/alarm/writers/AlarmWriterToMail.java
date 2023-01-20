@@ -34,6 +34,7 @@ import com.asetune.cm.CmSettingsHelper.Type;
 import com.asetune.cm.CmSettingsHelper.UrlInputValidator;
 import com.asetune.pcs.report.senders.MailHelper;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.JsonUtils;
 import com.asetune.utils.StringUtil;
 
 public class AlarmWriterToMail
@@ -82,11 +83,11 @@ extends AlarmWriterAbstract
 		String serverName = alarmEvent.getServiceName();
 
 		// Getting mail addresses to send the report to
-		List<String> toList = MailHelper.getMailToAddressForServerNameAsList(serverName, PROPKEY_to, DEFAULT_to);
-		
+		List<String> toList = MailHelper.getMailToAddressForServerNameAsList(serverName, alarmEvent, PROPKEY_to, _to);
+
 		if (toList.isEmpty())
 		{
-			String toPropVal = ", property: " + PROPKEY_to + "=" + Configuration.getCombinedConfiguration().getProperty(PROPKEY_to, DEFAULT_to);
+			String toPropVal = ", property: " + PROPKEY_to + "=" + Configuration.getCombinedConfiguration().getProperty(PROPKEY_to, _to);
 
 			_logger.info("Canceling sending '" + action + "' Alarm '" + alarmEvent.getAlarmClassAbriviated() + "' for server '" + serverName + "' due to NO mail recipiants. toList=" + toList + toPropVal);
 			return;
@@ -140,8 +141,13 @@ extends AlarmWriterAbstract
 //			for (String cc : _ccList)
 //				email.addCc(cc);
 
-			// FROM & SUBJECT
-			email.setFrom(_from);
+			// FROM
+//			email.setFrom(_from);
+			String fromMailAddress = StringUtil.parseMailFromAddress_getEmailAddress(_from);
+			String fromDisplayName = StringUtil.parseMailFromAddress_getDisplayName (_from);
+			email.setFrom(fromMailAddress, fromDisplayName);
+
+			// SUBJECT
 			email.setSubject(msgSubject);
 
 			// CONTENT HTMP or PLAIN
@@ -358,6 +364,8 @@ extends AlarmWriterAbstract
 
 		_smtpHostname           = conf.getProperty       (PROPKEY_smtpHostname,           DEFAULT_smtpHostname);
 		_to                     = conf.getProperty       (PROPKEY_to,                     DEFAULT_to);
+		if (JsonUtils.isPossibleJson(_to))
+			_logger.info("    NOTE: the Above 'to' string look like JSON Content and will be evaluated at runtime, when the ServerName is known.");
 //		_cc                     = conf.getProperty       (PROPKEY_cc,                     DEFAULT_cc);
 		_from                   = conf.getProperty       (PROPKEY_from,                   DEFAULT_from);
 		_subjectTemplate        = conf.getProperty       (PROPKEY_subjectTemplate,        DEFAULT_subjectTemplate);
@@ -372,6 +380,11 @@ extends AlarmWriterAbstract
 		_startTls               = conf.getBooleanProperty(PROPKEY_startTls,               DEFAULT_startTls);
 		_smtpConnectTimeout     = conf.getIntProperty    (PROPKEY_connectionTimeout,      DEFAULT_connectionTimeout);
 
+		// Fix for backward Compatibility: both properties below was named as 'smpt' instead of 'smtp' (so if not found in the 'smtp' go back and check for the *faulty* property)
+		if (StringUtil.isNullOrBlank(_password)) _password = conf.getProperty   ("AlarmWriterToMail.smpt.password", _password);
+		if (_smtpPort == DEFAULT_smtpPort)       _smtpPort = conf.getIntProperty("AlarmWriterToMail.smpt.port"    , _smtpPort);
+
+		
 		//------------------------------------------
 		// Check for mandatory parameters
 		//------------------------------------------
@@ -425,7 +438,8 @@ extends AlarmWriterAbstract
 	public static final String  DEFAULT_from                   = "";
 	                                                           
 	public static final String  PROPKEY_subjectTemplate        = "AlarmWriterToMail.msg.subject.template";
-	public static final String  DEFAULT_subjectTemplate        = "${type}: ${serviceName} - ${severity} - ${alarmClassAbriviated} - ${extraInfo}";
+//	public static final String  DEFAULT_subjectTemplate        = "${type}: ${serviceName} - ${severity} - ${alarmClassAbriviated} - ${extraInfo}";
+	public static final String  DEFAULT_subjectTemplate        = "${type}: ${serverDisplayName} - ${severity} - ${alarmClassAbriviated} - ${extraInfo}";
 	                                                           
 	public static final String  PROPKEY_msgBodyTemplate        = "AlarmWriterToMail.msg.body.template";
 	public static final String  DEFAULT_msgBodyTemplate        = createMsgBodyTemplate();
@@ -437,13 +451,13 @@ extends AlarmWriterAbstract
 	public static final String  PROPKEY_username               = "AlarmWriterToMail.smtp.username";
 	public static final String  DEFAULT_username               = "";
                                                                
-	public static final String  PROPKEY_password               = "AlarmWriterToMail.smpt.password";
+	public static final String  PROPKEY_password               = "AlarmWriterToMail.smtp.password";
 	public static final String  DEFAULT_password               = "";
                                                                
 //	public static final String  PROPKEY_cc                     = "AlarmWriterToMail.cc";
 //	public static final String  DEFAULT_cc                     = "";
                                                                
-	public static final String  PROPKEY_smtpPort               = "AlarmWriterToMail.smpt.port";
+	public static final String  PROPKEY_smtpPort               = "AlarmWriterToMail.smtp.port";
 	public static final int     DEFAULT_smtpPort               = -1;
                                                                
 	public static final String  PROPKEY_sslPort                = "AlarmWriterToMail.ssl.port";
@@ -492,7 +506,8 @@ extends AlarmWriterAbstract
 		return ""
 			+ "Type:      ${type}  (${duration})\n"
 			+ "\n"
-			+ "Server:    ${serviceName}\n"
+//			+ "Server:    ${serviceName}\n"
+			+ "Server:    ${serverDisplayName}\n"
 			+ "Alarm:     ${alarmClassAbriviated}\n"
 			+ "Collector: ${serviceInfo}\n"
 			+ "\n"
@@ -537,13 +552,16 @@ extends AlarmWriterAbstract
 			+ "<table>\n"
 			+ "  <tr> <td><b>Type:      </b></td> <td>${type}                 </td> </tr>\n"
 			+ "#if (${type} == 'CANCEL' || ${type} == 'RE-RAISE')\n"
-			+ "  <tr> <td><b>Duration:  </b></td> <td>${duration} (MM:SS)     </td> </tr>\n"
-			+ "  <tr> <td><b>ReRaiseCnt:</b></td> <td>${reRaiseCount}         </td> </tr>\n"
+			+ "  <tr> <td><b>Duration:      </b></td> <td>${duration}         </td> </tr>\n"
+//			+ "  <tr> <td><b>Alarm Duration:</b></td> <td>${alarmDuration}    </td> </tr>\n"
+//			+ "  <tr> <td><b>Full Duration: </b></td> <td>${fullDuration}     </td> </tr>\n"
+			+ "  <tr> <td><b>ReRaiseCnt:    </b></td> <td>${reRaiseCount}     </td> </tr>\n"
 			+ "#end\n"
 			+ "  <tr> <td><b>Active Cnt:</b></td> <td>${activeAlarmCount}     </td> </tr>\n"
 			+ "\n"
 			+ "  <td colspan='2'>&nbsp; </td>\n"
-			+ "  <tr> <td><b>Server:    </b></td> <td>${serviceName}          </td> </tr>\n"
+//			+ "  <tr> <td><b>Server:    </b></td> <td>${serviceName}          </td> </tr>\n"
+			+ "  <tr> <td><b>Server:    </b></td> <td>${serverDisplayName}    </td> </tr>\n"
 			+ "  <tr> <td><b>Alarm:     </b></td> <td>${alarmClassAbriviated} </td> </tr>\n"
 			+ "  <tr> <td><b>Collector: </b></td> <td>${serviceInfo}          </td> </tr>\n"
 			+ "\n"

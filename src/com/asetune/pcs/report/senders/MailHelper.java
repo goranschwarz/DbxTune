@@ -22,13 +22,18 @@
 package com.asetune.pcs.report.senders;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEventDummy;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.JsonUtils;
 import com.asetune.utils.StringUtil;
@@ -41,6 +46,55 @@ public class MailHelper
 {
 	private static Logger _logger = Logger.getLogger(ReportSenderAbstract.class);
 
+	public static void main(String[] args)
+	{
+		Properties log4jProps = new Properties();
+//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
+		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
+		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
+		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
+		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
+		PropertyConfigurator.configure(log4jProps);
+
+		List<String> list;
+
+		// test-1
+		System.setProperty("xxx.test.1", "test1@acme.com");
+		list = getMailToAddressForServerNameAsList("", null, "xxx.test.1", "test1");
+		System.out.println("test.1: " + list);
+		System.out.println( list.equals(Arrays.asList(new String[]{"test1@acme.com"})) ? "OK" : "---- FAIL ----");
+
+		// test-2
+		System.setProperty("xxx.test.2", ("[ "
+				+ "{#serverName#:#srv1#, #to#:#test2.srv1@json.acme.com#}, "
+				+ "{#serverName#:#srv2#, #to#:#test2.srv2@json.acme.com#} "
+				+ "]").replace('#', '"'));
+		list = getMailToAddressForServerNameAsList("srv1", null, "xxx.test.2", "test2");
+		System.out.println("test.2: " + list);
+		System.out.println( list.equals(Arrays.asList(new String[]{"test2.srv1@json.acme.com"})) ? "OK" : "---- FAIL ----");
+
+		// test-3
+		AlarmEvent ae = new AlarmEventDummy("test", "test", "test", AlarmEvent.Category.OTHER, AlarmEvent.Severity.INFO, AlarmEvent.ServiceState.UP, 0, null, null, null, 0);
+		System.setProperty("xxx.test.3", ("[ "
+				+ "{#serverName#:#srv1#, #alarmName#:#Dummy#, #to#:#test3.onlyDummyAlarm.srv1@json.acme.com#}, "
+				+ "{#serverName#:#srv1#,                      #to#:#test3.allAlarms.srv1@json.acme.com#} "
+				+ "]").replace('#', '"'));
+		list = getMailToAddressForServerNameAsList("srv1", ae, "xxx.test.3", "test3");
+		System.out.println("test.3: " + list);
+		System.out.println( list.equals(Arrays.asList(new String[]{"test3.onlyDummyAlarm.srv1@json.acme.com", "test3.allAlarms.srv1@json.acme.com"})) ? "OK" : "---- FAIL ----");
+
+		// test-4 (regex)
+		ae = new AlarmEventDummy("test", "test", "test", AlarmEvent.Category.OTHER, AlarmEvent.Severity.INFO, AlarmEvent.ServiceState.UP, 0, null, null, null, 0);
+		System.setProperty("xxx.test.4", ("[ "
+				+ "{#serverName#:#srv1#, #to#:#test4.onlyDummyAlarm.srv1@json.acme.com#, #alarmName#:#(Dummy1|Dummy2|Dummy)# }, "
+				+ "{#serverName#:#srv1#, #to#:#test4.allAlarms.srv1@json.acme.com#}, "
+				+ "{#serverName#:#srv1#, #to#:#test4.noMatch.srv1@json.acme.com#, #alarmName#:#(Dummy1|Dummy2)# } "
+				+ "]").replace('#', '"'));
+		list = getMailToAddressForServerNameAsList("srv1", ae, "xxx.test.4", "test4");
+		System.out.println("test.4: " + list);
+		System.out.println( list.equals(Arrays.asList(new String[]{"test4.onlyDummyAlarm.srv1@json.acme.com", "test4.allAlarms.srv1@json.acme.com"})) ? "OK" : "---- FAIL ----");
+	}
+
 	/**
 	 * Helper method to get mail addresses
 	 * 
@@ -49,9 +103,9 @@ public class MailHelper
 	 * @param defaultTo
 	 * @return
 	 */
-	public static List<String> getMailToAddressForServerNameAsList(String serverName, String propKeyTo, String defaultTo)
+	public static List<String> getMailToAddressForServerNameAsList(String serverName, AlarmEvent alarmEvent, String propKeyTo, String defaultTo)
 	{
-		String toStr = getMailToAddressForServerName(serverName, propKeyTo, defaultTo);
+		String toStr = getMailToAddressForServerName(serverName, alarmEvent, propKeyTo, defaultTo);
 		return StringUtil.commaStrToList(toStr, true);
 	}
 
@@ -63,7 +117,7 @@ public class MailHelper
 	 * @param defaultTo
 	 * @return
 	 */
-	public static String getMailToAddressForServerName(String serverName, String propKeyTo, String defaultTo)
+	public static String getMailToAddressForServerName(String serverName, AlarmEvent alarmEvent, String propKeyTo, String defaultTo)
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		
@@ -72,22 +126,24 @@ public class MailHelper
 		String toStr = conf.getProperty(propKeyTo, defaultTo);
 		
 		if (_logger.isDebugEnabled())
-			_logger.debug("getMailToAddressForServerName('"+serverName+"'): "+propKeyTo+"=|"+toStr+"|");
+			_logger.debug("getMailToAddressForServerName('" + serverName + "'): " + propKeyTo + "=|" + toStr + "|");
 
 		// Exit early if not properly configured.
 		if (StringUtil.isNullOrBlank(toStr))
 		{
-			_logger.warn("getMailToAddressForServerName('"+serverName+"'): "+propKeyTo+"=|"+toStr+"| is EMPTY... This is a Mandatory property value.");
-			return "";
+			throw new RuntimeException("getMailToAddressForServerName('" + serverName + "'): " + propKeyTo + "=|" + toStr + "| is EMPTY... This is a Mandatory property value.");
+			//_logger.warn("getMailToAddressForServerName('" + serverName + "'): " + propKeyTo + "=|" + toStr + "| is EMPTY... This is a Mandatory property value.");
+			//return "";
 		}
 
 		
 //		if (JsonUtils.isPossibleJson(toStr))
 		if (JsonUtils.isJsonValid(toStr))
 		{
+			Set<String> returnSet = new LinkedHashSet<>();
 			String jsonStr = toStr;
 			int jsonArrayLoopCount = 0;
-
+			
 			try
 			{
 				JsonArray jsonArr = new JsonParser().parse(jsonStr).getAsJsonArray();
@@ -97,15 +153,18 @@ public class MailHelper
 					JsonObject jsonObj = jsonElement.getAsJsonObject();
 					
 					if (_logger.isDebugEnabled())
-						_logger.debug("Checking serverName='" + serverName + "' against the JSON entry: " + jsonObj );
+						_logger.debug("json[" + jsonArrayLoopCount + "] Checking step-1: serverName='" + serverName + "' against the JSON entry: " + jsonObj );
 
 					if (jsonObj.has("serverName") && jsonObj.has("to"))
 					{
 						String entryServerName = jsonObj.get("serverName").getAsString();
 						String entryTo         = jsonObj.get("to"        ).getAsString();
+
+						// If we have 'alarmName', then get it
+						String entryAlarmName  = !jsonObj.has("alarmName") ? null : jsonObj.get("alarmName").getAsString();
 						
 						if (_logger.isDebugEnabled())
-							_logger.debug("Checking serverName='" + serverName + "' against the JSON entry with: serverNameRegExp='" + entryServerName + "', toStr='" + entryTo + "'.");
+							_logger.debug("json[" + jsonArrayLoopCount + "] Checking step-2: serverName='" + serverName + "' against the JSON entry with: serverNameRegExp='" + entryServerName + "', alarmNameRegExp='" + entryAlarmName + "', toStr='" + entryTo + "'.");
 
 						if (StringUtil.hasValue(entryServerName) && StringUtil.hasValue(entryTo))
 						{
@@ -113,21 +172,59 @@ public class MailHelper
 							if (serverName.matches(entryServerName))
 							{
 								if (_logger.isDebugEnabled())
-									_logger.debug("MATCH: using mail address to='" + entryTo + "' for serverName='" + serverName + "'.");
+									_logger.debug("json[" + jsonArrayLoopCount + "] MATCH-start: using mail address to='" + entryTo + "' for serverName='" + serverName + "'.");
 
-								return entryTo;
+								boolean match = true;
+								String alarmName = alarmEvent == null ? "" : alarmEvent.getClass().getSimpleName();
+								
+								// Check optional restriction 'AlarmName'
+								// Which can be long or short name: 'AlarmEvenXxx' or 'Xxx'
+								if (StringUtil.hasValue(entryAlarmName) && StringUtil.hasValue(alarmName))
+								{
+									// Remove any "fullname" prefix
+									if (alarmName.startsWith("AlarmEvent"))
+										alarmName = alarmName.substring("AlarmEvent".length());
+
+									if (entryAlarmName.contains("AlarmEvent"))
+										entryAlarmName = entryAlarmName.replace("AlarmEvent", "");
+
+									if ( ! alarmName.matches(entryAlarmName) )
+									{
+										if (_logger.isDebugEnabled())
+											_logger.debug("json[" + jsonArrayLoopCount + "] DISABLE-MATCH-DUE-TO: NOT MATCHING: alarmName='" + alarmName + "', entryAlarmNameRegEx='" + entryAlarmName + "'.");
+
+										match = false;
+									}
+								}
+
+								if (match)
+								{
+									if (_logger.isDebugEnabled())
+										_logger.debug("json[" + jsonArrayLoopCount + "] MATCH-end: using mail address to='" + entryTo + "' for serverName='" + serverName + "', alarmName='" + alarmName + "'.");
+
+									returnSet.add(entryTo);
+								}
+								else
+								{
+									if (_logger.isDebugEnabled())
+										_logger.debug("json[" + jsonArrayLoopCount + "] NO-MATCH-end: using mail address to='" + entryTo + "' for serverName='" + serverName + "', alarmName='" + alarmName + "'.");
+								}
 							}
 						}
 					}
 					else
 					{
-						_logger.info("getMailToAddressForServerName('"+serverName+"'): Skipping JSON entry '" + jsonObj + "', it dosn't contain members: 'serverName' and 'to'.");
+						_logger.info("json[" + jsonArrayLoopCount + "] getMailToAddressForServerName('"+serverName+"'): Skipping JSON entry '" + jsonObj + "', it dosn't contain members: 'serverName' and 'to'.");
 					}
 				}
 				if (jsonArrayLoopCount == 0)
 				{
 					_logger.warn("getMailToAddressForServerName('"+serverName+"'): NO JSON Array was found in JSON String '" + jsonStr + "', Skipping this and returning ''. for property '" + propKeyTo + "'.");
 					return "";
+				}
+				else if ( ! returnSet.isEmpty() )
+				{
+					return StringUtil.toCommaStr(returnSet);
 				}
 
 				_logger.info("getMailToAddressForServerName('"+serverName+"'): No matching entry was found for serverName '" + serverName + "' in JSON '" + jsonStr + "' using propert '" + propKeyTo + "'. Returning ''(blank) as the email recipiant.");

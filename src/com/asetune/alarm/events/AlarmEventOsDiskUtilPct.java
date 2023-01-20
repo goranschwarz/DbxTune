@@ -46,6 +46,9 @@ extends AlarmEvent
 				"Slow or heavily used OS Disk found in '" + cm.getServerName() + "', device='" + device + "', pctUsed=" + utilPct + ", raiseDelay=" + raiseDelayInMinutes + ". (threshold="+threshold+")",
 				threshold);
 
+		// Adjust the Alarm Full Duration with X seconds
+		setFullDurationAdjustmentInSec( raiseDelayInMinutes * 60 );
+
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);
 

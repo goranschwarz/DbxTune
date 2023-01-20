@@ -31,6 +31,8 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 
@@ -191,7 +193,23 @@ extends ReportEntryAbstract
 	}
 
 	
-
+	/**
+	 * 
+	 * @param dbname1 
+	 * @param dbname2
+	 * @return
+	 */
+	private String markIfDifferent(String dbname1, String dbname2)
+	{
+		if (StringUtil.isNullOrBlank(dbname1) || StringUtil.isNullOrBlank(dbname2))
+			return dbname1;
+		
+		if (dbname1.equals(dbname2))
+			return dbname1;
+		
+//		return "<mark>" + dbname1 + "</mark>";
+		return "<span style='background-color: yellow'>" + dbname1 + "</span>";
+	}
 	/**
 	 * 
 	 * @param tableInfoList
@@ -233,7 +251,13 @@ extends ReportEntryAbstract
 				}
 			}
 		}
-		
+
+		// Used to check when looping if the database is the SAME as the rest!
+		String firstEntryDbname = null;
+		if ( ! tableInfoList.isEmpty() )
+			firstEntryDbname = tableInfoList.iterator().next().getDbName();			
+
+
 		String className = "";
 		if (StringUtil.hasValue(classname))
 			className = " class='" + classname + "'";
@@ -264,16 +288,48 @@ extends ReportEntryAbstract
 			if (entry.isView())
 			{
 				tableInfoMap.put("Type"       ,            "<b>VIEW</b>"              );
-				tableInfoMap.put("DBName"     ,            entry.getDbName()          );
+				tableInfoMap.put("DBName"     ,            markIfDifferent(entry.getDbName(), firstEntryDbname));
 				tableInfoMap.put("Schema"     ,            entry.getSchemaName()      );
 				tableInfoMap.put("View"       ,            entry.getTableName()       );
-				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
+//				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
 //				tableInfoMap.put("References" ,            entry.getViewReferences()+""); // instead show this in the: Index Info section
 				tableInfoMap.put("DDL"        ,            getFormattedSqlAsTooltipDiv(entry._objectText, "View DDL", DbUtils.DB_PROD_NAME_POSTGRES));
 			}
+			else if (entry.isFunction())
+			{
+				tableInfoMap.put("Type"       ,            "<b>FUNCTION</b>"          );
+				tableInfoMap.put("DBName"     ,            markIfDifferent(entry.getDbName(), firstEntryDbname));
+				tableInfoMap.put("Schema"     ,            entry.getSchemaName()      );
+				tableInfoMap.put("Function"   ,            entry.getTableName()       );
+//				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
+//				tableInfoMap.put("References" ,            entry.getFunctionReferences()+""); // instead show this in the: Index Info section
+				tableInfoMap.put("DDL"        ,            getFormattedSqlAsTooltipDiv(entry._objectText, "Function DDL", DbUtils.DB_PROD_NAME_POSTGRES));
+			}
+			else if (entry.isProcedure())
+			{
+				tableInfoMap.put("Type"       ,            "<b>PROCEDURE</b>"          );
+				tableInfoMap.put("DBName"     ,            markIfDifferent(entry.getDbName(), firstEntryDbname));
+				tableInfoMap.put("Schema"     ,            entry.getSchemaName()      );
+				tableInfoMap.put("Function"   ,            entry.getTableName()       );
+//				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
+//				tableInfoMap.put("References" ,            entry.getFunctionReferences()+""); // instead show this in the: Index Info section
+				tableInfoMap.put("DDL"        ,            getFormattedSqlAsTooltipDiv(entry._objectText, "Procedure DDL", DbUtils.DB_PROD_NAME_POSTGRES));
+			}
+			else if (entry.isRemoteTable())
+			{
+				tableInfoMap.put("Type"       ,            "<b>REMOTE TABLE</b>"      );
+				tableInfoMap.put("DBName"     ,            markIfDifferent(entry.getDbName(), firstEntryDbname));
+				tableInfoMap.put("Schema"     ,            entry.getSchemaName()      );
+				tableInfoMap.put("Table"      ,            entry.getTableName()       );
+				tableInfoMap.put("Remote SRV" ,            entry.getRemoteServerName());
+				tableInfoMap.put("Remote DB"  ,            entry.getRemoteDBName()    );
+				tableInfoMap.put("Remote TBL" ,            entry.getRemoteTableName() );
+//				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
+				tableInfoMap.put("DDL"        ,            getTextAsTooltipDiv(entry._objectText, "Remote Table DDL"));
+			}
 			else // Any table
 			{
-//				tableInfoMap.put("DBName"      ,            entry.getDbName()     );
+				tableInfoMap.put("DBName"     ,             markIfDifferent(entry.getDbName(), firstEntryDbname));
 				tableInfoMap.put("Schema"      ,            entry.getSchemaName() );
 				tableInfoMap.put("Table"       ,            entry.getTableName()  );
 				tableInfoMap.put("Rowcount"    , nf.format( entry.getRowTotal()  ));
@@ -286,6 +342,7 @@ extends ReportEntryAbstract
 				tableInfoMap.put("Data Pages"  , nf.format( entry.getDataPages() ));
 				tableInfoMap.put("Index MB"    , nf.format( entry.getIndexMb()   ));
 				tableInfoMap.put("Toast/LOB MB", entry.getToastMb() == -1 ? "-no-toast-" : nf.format( entry.getToastMb()   ));
+//				tableInfoMap.put("Created"     , entry.getCrDate()+""       );
 				tableInfoMap.put("Sampled"     , entry.getSampleTime()+""   );
 				tableInfoMap.put("Index Count" , entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>") );
 				tableInfoMap.put("DDL Info"    , getTextAsTooltipDiv(entry._objectText, "Table Info"));
@@ -297,16 +354,82 @@ extends ReportEntryAbstract
 
 			if (entry.isView()) 
 			{
-				// Build a bullet list of view references
+				// Build a bullet list of tables referenced by the view
 				indexInfo = "";
 				if (entry.getViewReferences() != null)
 				{
-					indexInfo += "<ul>";
-					for (String viewRef : entry.getViewReferences())
+					indexInfo += "Referenced Tables in this View: \n";
+					indexInfo += "<ul> \n";
+					for (String ref : entry.getViewReferences())
 					{
-						indexInfo += "<li>" + viewRef + "</li>";
+						indexInfo += "<li>" + ref + "</li> \n";
 					}
-					indexInfo += "</ul>";
+					indexInfo += "</ul> \n";
+				}
+			}
+			else if (entry.isFunction()) 
+			{
+				// Build a bullet list of tables referenced by the function
+				indexInfo = "";
+				if (entry.getFunctionReferences() != null)
+				{
+					indexInfo += "Referenced Tables in this Function: \n";
+					indexInfo += "<ul> \n";
+					for (String ref : entry.getFunctionReferences())
+					{
+						indexInfo += "<li>" + ref + "</li> \n";
+					}
+					indexInfo += "</ul> \n";
+				}
+			}
+			else if (entry.isProcedure()) 
+			{
+				// Build a bullet list of tables referenced by the PRODECURE
+				indexInfo = "";
+				if (entry.getFunctionReferences() != null) // NOTE: same as for FUNCTION
+				{
+					indexInfo += "Referenced Tables in this Procedure: \n";
+					indexInfo += "<ul> \n";
+					for (String ref : entry.getFunctionReferences()) // NOTE: same as for FUNCTION
+					{
+						indexInfo += "<li>" + ref + "</li> \n";
+					}
+					indexInfo += "</ul> \n";
+				}
+			}
+			else if (entry.isRemoteTable()) 
+			{
+				indexInfo = "";
+				if (entry.getRemoteTableOptionsMap() != null)
+				{
+					indexInfo += "Remote Table Options: \n";;
+					indexInfo += "<table> \n";
+					indexInfo += "  <thead> \n";
+					indexInfo += "    <tr> <th>Option</th> <th>Value</th> </tr> \n";
+					indexInfo += "  </thead> \n";
+					indexInfo += "  <tbody> \n";
+					for (Entry<String, String> opt : entry.getRemoteTableOptionsMap().entrySet())
+					{
+						indexInfo += "    <tr> <td>" + opt.getKey() + "</td><td>" + opt.getValue() + "</td></tr> \n";
+					}
+					indexInfo += "  </tbody> \n";
+					indexInfo += "</table> \n";
+					indexInfo += "<br> \n";
+				}
+				if (entry.getRemoteServerOptionsMap() != null)
+				{
+					indexInfo += "Remote Server Options: \n";;
+					indexInfo += "<table> \n";
+					indexInfo += "  <thead> \n";
+					indexInfo += "    <tr> <th>Option</th> <th>Value</th> </tr> \n";
+					indexInfo += "  </thead> \n";
+					indexInfo += "  <tbody> \n";
+					for (Entry<String, String> opt : entry.getRemoteServerOptionsMap().entrySet())
+					{
+						indexInfo += "    <tr> <td>" + opt.getKey() + "</td><td>" + opt.getValue() + "</td></tr> \n";
+					}
+					indexInfo += "  </tbody> \n";
+					indexInfo += "</table> \n";
 				}
 			}
 			else
@@ -733,7 +856,13 @@ extends ReportEntryAbstract
 			    + "select [dbname], [owner], [objectName], [type], [crdate], [sampleTime], [extraInfoText], [objectText], [dependList] \n"
 			    + "from [MonDdlStorage] \n"
 			    + "where 1 = 1 \n"
-			    + "  and [type] in ('r', 'v') \n" // Possibly also for m=Materialized view
+		//	    + "  and [type] in ('r', 'v', 'f', 'FN', 'P') \n" // This isn't really needed, since we check for "type" in the "read loop"
+			         // r  = Relation (table)
+			         // v  = View
+			         // f  = Foreign Table (External Table)
+			         // FN = FuNction (possibly Table Valued Function)
+			         // P  = Procedure
+			         // NOT NOW: Possibly also add 'm' Materialized view
 			    + and_dbname
 			    + and_owner
 			    + and_table
@@ -779,33 +908,50 @@ extends ReportEntryAbstract
 		// Loop the record we just found in MonDdlStorage
 		for (PgTableInfo ti : tmpList)
 		{
-			// If the TableInforation has already been added, just grab next one.
+			// If the TableInformation has already been added, just grab next one.
 			if (result.contains(ti))
 				continue;
 
-			// For views, go and get referenced tables (stored in table 'MonDdlStorage', column 'extraInfoText' (with prefix 'TableList: t1, t2, t3'
+			//--------------------------------------------------------------
+			// For views/functions, go and get referenced tables (stored in table 'MonDdlStorage', column 'extraInfoText' (with prefix 'TableList: t1, t2, t3'
 			// Then read table information for those tables.
-			if (ti.isView())
+			//--------------------------------------------------------------
+			if (ti.isView() || ti.isFunction() || ti.isProcedure())
 			{
+//System.out.println("--------------- REPORT(type='"+ti._type+"'): ti._extraInfoText=" + ti._extraInfoText);
 				if (StringUtil.hasValue(ti._extraInfoText))
 				{
 					// Add to the result (even for VIEWS)
 					// NOTE: if we restrict this to only TABLES, then we might get an infinite loop on recursion when traversing DEPENDENT VIEWS
 					result.add(ti);
-					
+
 					List<String> lines = StringUtil.readLines(ti._extraInfoText);
 					for (String row : lines)
 					{
 						if (row.startsWith("TableList: "))
 						{
 							row = row.substring("TableList: ".length()).trim();
-							List<String> viewReferences = StringUtil.parseCommaStrToList(row, true);
+							List<String> references = StringUtil.parseCommaStrToList(row, true);
 							
 							// What "tables" do this view reference
-							ti._viewReferences = viewReferences;
-//System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recursCallCount+"): ti='"+ti.getFullTableName()+"', is a VIEW, the following references will also be fetched: " + viewReferences);
+							if (ti.isView())
+							{
+								ti._viewReferences = references;
+							}
+							else if (ti.isFunction())
+							{
+								ti._functionReferences = references;
+							}
+							else if (ti.isProcedure())
+							{
+								ti._functionReferences = references; // NOTE: same as for FUNCTION
+							}
+//System.out.println("--------------- xxxxxxxxxx REPORT(type='"+ti._type+"'): references=" + references);
+
+							//System.out.println("getTableInformationFromMonDdlStorage(recursCallCount="+recursCallCount+"): ti='"+ti.getFullTableName()+"', is a VIEW or FUNCTION, the following references will also be fetched: " + references);
+
 							// Loop the list
-							for (String tableName : viewReferences)
+							for (String tableName : references)
 							{
 								recursCallCount++;
 
@@ -815,11 +961,29 @@ extends ReportEntryAbstract
 						}
 					}
 				}
-				continue;
 			} // end: VIEW
 
+			//--------------------------------------------------------------
+			// For Remote (Foreign Data Wrapper) Tables get **VARIOUS** information
+			//--------------------------------------------------------------
+			else if (ti.isRemoteTable())
+			{
+//				if (StringUtil.hasValue(ti._extraInfoText))
+				if (StringUtil.hasValue(ti._objectText))
+				{
+					// Add to the result
+					result.add(ti);
+					
+					// Get values for: getRemoteServerName() & getRemoteServerOptions()
+					getRemoteTableInfo(conn, ti);
+				}
+			} // end: REMOTE Table
+
+			
+			//--------------------------------------------------------------
 			// For User Tables get **VARIOUS** information
-			if (ti.isUserTable())
+			//--------------------------------------------------------------
+			else if (ti.isUserTable())
 			{
 //				if (StringUtil.hasValue(ti._objectText) && StringUtil.hasValue(ti._extraInfoText))
 				if (StringUtil.hasValue(ti._extraInfoText))
@@ -890,9 +1054,158 @@ extends ReportEntryAbstract
 				} // end: has: _objectText && _extraInfoText 
 				
 			} // end: USER Table
+			else
+			{
+				_logger.warn("Unhandled type='" + ti.getType() + "' when reading results from PCS table 'MonDdlStorage'. ti=" + ti);
+			}
 
 		} // end: loop AseTableInfo
 	}
+
+	/**
+	 * Parse the information from the DdlStorage columns 'objectText' and 'extraInfoText' where various information is stored in.
+	 * @param ti
+	 * @return
+	 */
+	private boolean getRemoteTableInfo(DbxConnection conn, PgTableInfo ti)
+	{
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Below is how column 'objectText' typically looks like
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//   +----------------+-----------------+---------------------------+------------------------+-----------------+-------------+------------------+--------------+-----------+
+		//   |ordinal_position|column_name      |data_type                  |character_maximum_length|numeric_precision|numeric_scale|datetime_precision|column_default|is_nullable|
+		//   +----------------+-----------------+---------------------------+------------------------+-----------------+-------------+------------------+--------------+-----------+
+		//   |               1|uuid             |character varying          |                      50|(NULL)           |(NULL)       |(NULL)            |(NULL)        |NO         |
+		//   |               2|personnummer     |character varying          |                      50|(NULL)           |(NULL)       |(NULL)            |(NULL)        |YES        |
+		//   |               3|foretagsid       |character varying          |                      50|(NULL)           |(NULL)       |(NULL)            |(NULL)        |NO         |
+		//   |               4|forsakringsnummer|character varying          |                      50|(NULL)           |(NULL)       |(NULL)            |(NULL)        |YES        |
+		//   |               5|beskrivning      |character varying          |                     200|(NULL)           |(NULL)       |(NULL)            |(NULL)        |YES        |
+		//   |               6|typ              |character varying          |                      40|(NULL)           |(NULL)       |(NULL)            |(NULL)        |YES        |
+		//   |               7|active           |boolean                    |(NULL)                  |(NULL)           |(NULL)       |(NULL)            |true          |NO         |
+		//   |               8|uppdaterad       |timestamp without time zone|(NULL)                  |(NULL)           |(NULL)       |                 6|(NULL)        |YES        |
+		//   |               9|skapad           |timestamp without time zone|(NULL)                  |(NULL)           |(NULL)       |                 6|(NULL)        |NO         |
+		//   |              10|skapadav         |character varying          |                      50|(NULL)           |(NULL)       |(NULL)            |(NULL)        |YES        |
+		//   |              11|atgardad         |boolean                    |(NULL)                  |(NULL)           |(NULL)       |(NULL)            |false         |NO         |
+		//   |              12|atgardadav       |character varying          |                      50|(NULL)           |(NULL)       |(NULL)            |(NULL)        |YES        |
+		//   |              13|atgardadtid      |timestamp without time zone|(NULL)                  |(NULL)           |(NULL)       |                 6|(NULL)        |YES        |
+		//   |              14|dold             |boolean                    |(NULL)                  |(NULL)           |(NULL)       |(NULL)            |false         |NO         |
+		//   |              15|doldav           |character varying          |                      50|(NULL)           |(NULL)       |(NULL)            |(NULL)        |YES        |
+		//   |              16|doldtid          |timestamp without time zone|(NULL)                  |(NULL)           |(NULL)       |                 6|(NULL)        |YES        |
+		//   +----------------+-----------------+---------------------------+------------------------+-----------------+-------------+------------------+--------------+-----------+
+
+		//  +---------------------+--------------------+------------------+-----------+------------+
+		//  |foreign_table_catalog|foreign_table_schema|foreign_table_name|option_name|option_value|
+		//  +---------------------+--------------------+------------------+-----------+------------+
+		//  |gorans_db2           |foreign_data        |t1                |schema_name|public      |
+		//  |gorans_db2           |foreign_data        |t1                |table_name |t1          |
+		//  +---------------------+--------------------+------------------+-----------+------------+
+		
+		//  +--------------------+-------------------------+-------------------+----------------------+------------------------+
+		//  |foreign_server_name |foreign_data_wrapper_name|foreign_server_type|foreign_server_version|authorization_identifier|
+		//  +--------------------+-------------------------+-------------------+----------------------+------------------------+
+		//  |pg-1a-gs__gorans_db1|postgres_fdw             |(NULL)             |(NULL)                |postgres                |
+		//  +--------------------+-------------------------+-------------------+----------------------+------------------------+
+
+		//  +--------------------+-----------+------------+
+		//  |foreign_server_name |option_name|option_value|
+		//  +--------------------+-----------+------------+
+		//  |pg-1a-gs__gorans_db1|host       |127.0.0.1   |
+		//  |pg-1a-gs__gorans_db1|port       |5432        |
+		//  |pg-1a-gs__gorans_db1|dbname     |gorans_db1  |
+		//  +--------------------+-----------+------------+
+		
+		
+//		if (StringUtil.hasValue(ti._extraInfoText))
+		if (StringUtil.hasValue(ti._objectText))
+		{
+			List<ResultSetTableModel> extraInfoRstmList = ResultSetTableModel.parseTextTables(ti._objectText);
+
+			ResultSetTableModel foreignTableOptions = ResultSetTableModel.getTableWithColumnNames(extraInfoRstmList, true, "foreign_table_catalog", "foreign_table_schema", "foreign_table_name", "option_name", "option_value");
+//			ResultSetTableModel remoteServerInfo    = ResultSetTableModel.getTableWithColumnNames(extraInfoRstmList, true, "foreign_server_name", "foreign_data_wrapper_name", "foreign_server_type", "foreign_server_version", "authorization_identifier");
+			ResultSetTableModel remoteServerOptions = ResultSetTableModel.getTableWithColumnNames(extraInfoRstmList, true, "foreign_server_name", "option_name", "option_value");
+
+//			// REMOTE SERVER INFO
+//			if (remoteServerInfo != null && !remoteServerInfo.isEmpty())
+//			{
+//				remoteServerInfo.setHandleColumnNotFoundAsNullValueInGetValues(true);
+//				
+//				int r = 0;
+//
+//				ti._rowtotal            = tableSizeInfo.getValueAsLong   (r, "row_estimate"                , true, -1L);
+//				ti._partitionCount      = tableSizeInfo.getValueAsInteger(r, "partition_count"             , true, -1);
+//				ti._object_id           = tableSizeInfo.getValueAsLong   (r, "oid"                         , true, -1L);
+//
+//				ti._totalMb             = tableSizeInfo.getValueAsDouble (r, "total_size_mb"               , true, -1d);
+//				ti._dataMb              = tableSizeInfo.getValueAsDouble (r, "table_size_mb"               , true, -1d);
+//				ti._dataPages           = tableSizeInfo.getValueAsLong   (r, "table_size_pgs"              , true, -1L);
+//				ti._indexMb             = tableSizeInfo.getValueAsDouble (r, "index_size_mb"               , true, -1d);
+//				ti._toastMb             = tableSizeInfo.getValueAsDouble (r, "toast_size_mb"               , true, -1d);
+//			}
+
+			// REMOTE TABLE OPTIONS
+			if (foreignTableOptions != null && !foreignTableOptions.isEmpty())
+			{
+				foreignTableOptions.setHandleColumnNotFoundAsNullValueInGetValues(true);
+
+				Map<String, String> map = new LinkedHashMap<>();
+
+				for (int r=0; r<foreignTableOptions.getRowCount(); r++)
+				{
+					String option_name  = foreignTableOptions.getValueAsString(r, "option_name");
+					String option_value = foreignTableOptions.getValueAsString(r, "option_value");
+					map.put(option_name, option_value);
+				}
+				
+				if ( ! map.containsKey("schema_name") ) map.put("schema_name", ti.getSchemaName());
+				if ( ! map.containsKey("table_name" ) ) map.put("table_name" , ti.getTableName());
+				
+				ti._remoteTableOptionsMap = map;
+				ti._remoteTableOptions = StringUtil.toCommaStr(map);
+			}
+			else // If it's empty, just add: 'schema_name' and 'table_name' as the default
+			{
+				Map<String, String> map = new LinkedHashMap<>();
+				
+				map.put("schema_name", ti.getSchemaName());
+				map.put("table_name" , ti.getTableName());
+				
+				ti._remoteTableOptionsMap = map;
+				ti._remoteTableOptions = StringUtil.toCommaStr(map);
+			}
+
+			// REMOTE SERVER OPTIONS
+			if (remoteServerOptions != null && !remoteServerOptions.isEmpty())
+			{
+				remoteServerOptions.setHandleColumnNotFoundAsNullValueInGetValues(true);
+
+				Map<String, String> map = new LinkedHashMap<>();
+
+				for (int r=0; r<remoteServerOptions.getRowCount(); r++)
+				{
+					ti._remoteServerName = remoteServerOptions.getValueAsString(r, "foreign_server_name");
+
+					String option_name  = remoteServerOptions.getValueAsString(r, "option_name");
+					String option_value = remoteServerOptions.getValueAsString(r, "option_value");
+					map.put(option_name, option_value);
+					
+					if ("dbname".equals(option_name))
+					{
+						ti._remoteDBName = option_value;
+					}
+				}
+				
+				ti._remoteServerOptionsMap = map;
+				ti._remoteServerOptions = StringUtil.toCommaStr(map);
+			}
+
+			// valid entry
+			return true;
+		}
+		
+		// invalid entry
+		return false;
+	}
+
 
 	/**
 	 * Parse the information from the DdlStorage columns 'objectText' and 'extraInfoText' where various information is stored in.
@@ -1951,8 +2264,17 @@ extends ReportEntryAbstract
 //		private int       _indexCount;
 		private List<PgIndexInfo> _indexList = new ArrayList<>();
 
-		public List<String> _viewReferences; // if _type == "v", this this will hold; table/views this view references
+		public List<String> _viewReferences;     // if _type == "v",  this this will hold; table/views this view references
+		public List<String> _functionReferences; // if _type == "FN", this this will hold; table/views this function references
 
+		private String    _remoteTableOptions;
+		private Map<String, String> _remoteTableOptionsMap;
+
+		private String    _remoteDBName;
+		
+		private String    _remoteServerName;
+		private String    _remoteServerOptions;
+		private Map<String, String> _remoteServerOptionsMap;
 
 		// CmPgTables_diff
 		private long      _seq_scan                = -1;
@@ -2086,11 +2408,43 @@ extends ReportEntryAbstract
 		public int       getIndexCount()         { return getIndexList().size(); }
 		public List<PgIndexInfo> getIndexList()  { return _indexList == null ? Collections.emptyList() : _indexList; }
 
-		public boolean      isUserTable()         { return "r".equals(_type); }
-		public boolean      isView()              { return "v".equals(_type); }
-		public List<String> getViewReferences()   { return _viewReferences; }
+		public boolean      isUserTable()           { return "r" .equals(_type); }
+		public boolean      isView()                { return "v" .equals(_type); }
+		public boolean      isRemoteTable()         { return "f" .equals(_type); }
+		public boolean      isFunction()            { return "FN".equals(_type); }
+		public boolean      isProcedure()           { return "P" .equals(_type); }
 
+		public List<String> getViewReferences()     { return _viewReferences; }
+		public List<String> getFunctionReferences() { return _functionReferences; }
+
+		public String    getRemoteServerName()      { return _remoteServerName; }
+		public String    getRemoteServerOptions()   { return _remoteServerOptions; }
+		public Map<String, String> getRemoteServerOptionsMap()   { return _remoteServerOptionsMap != null ? _remoteServerOptionsMap : Collections.emptyMap(); }
+
+		public String    getRemoteDBName()          { return _remoteDBName; }
+
+		public String    getRemoteTableOptions()    { return _remoteTableOptions; }
+		public Map<String, String> getRemoteTableOptionsMap()   { return _remoteTableOptionsMap != null ? _remoteTableOptionsMap : Collections.emptyMap(); }
+		public String    getRemoteTableName()
+		{
+			if (_remoteTableOptionsMap == null)
+				return "unknown";
+
+			String schema_name = _remoteTableOptionsMap.get("schema_name");
+			String table_name  = _remoteTableOptionsMap.get("table_name");
+
+			if (StringUtil.isNullOrBlank(schema_name)) schema_name = getSchemaName();
+			if (StringUtil.isNullOrBlank(table_name )) table_name  = getTableName();
+			
+			return schema_name + "." + table_name; 
+		}
 		
+		@Override
+		public String toString()
+		{
+			return super.toString() + "objectId=" + getObjectId() + ", dbname='" + getDbName() + "', schemaName='" + getSchemaName() + "', relationName='" + getTableName() + "', type='" + getType() + "'.";
+		}
+
 		/////////////////////////////////////////////////////////////////////////////////
 		// hashCode() & equals() so we can use Set/Map and sorting...
 		/////////////////////////////////////////////////////////////////////////////////

@@ -37,6 +37,7 @@ import org.apache.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
 import com.asetune.Version;
+import com.asetune.cache.DbmsObjectIdCache.ObjectType;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -70,13 +71,46 @@ public abstract class DbmsObjectIdCache
 	
 	public enum ObjectType
 	{
+		/**
+		 * Normal Table
+		 */
 		BASE_TABLE, 
 
+		/**
+		 * System Table
+		 */
 		SYSTEM_TABLE, 
+
+		/**
+		 * LOB = Large OBject
+		 */
+		LOB_TABLE, 
+
+		/**
+		 * A Normal table that is physically partitioned in different physical areas
+		 */
+		PARTITIONED_TABLE,
+
+		/** 
+		 * In Sybase a Proxy Table <br>
+		 * In Postgres a Foreign Data Wrapper <br> 
+		 * In SQL Server a (not 100% sure how this is done oe if it exists) <br> 
+		 */
+		REMOTE_TABLE, 
 
 		/** In some databases like Postgres, an index should be considered as it's own object */
 		INDEX,
 		
+		/** A basic view on table(s) */
+		VIEW,
+
+		/** A view that is materialized and "possibly" needs to be refreshed (a static point in time of data) */
+		MATERIALIZED_VIEW,
+
+		/** A Sequence object to generate new ID's */
+		SEQUENCE,
+
+		/** Unspecified object type */
 		UNKNOWN
 	};
 	
@@ -1017,7 +1051,7 @@ public abstract class DbmsObjectIdCache
 	
 
 	/**
-	 * @return return a Map with some statics SCHEMA names for this DBMS Vendor
+	 * @return return a Map with some statics/well-known SCHEMA names for this DBMS Vendor
 	 */
 	protected abstract Map<String, String> createStaticSchemaNames();
 

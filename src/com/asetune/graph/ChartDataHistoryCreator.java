@@ -54,8 +54,8 @@ import com.asetune.utils.StringUtil;
 
 public class ChartDataHistoryCreator
 {
-	public static final int DEFAULT_WIDTH  = 500;
-	public static final int DEFAULT_HEIGHT = 180;
+	public static final int DEFAULT_WIDTH  = 900;
+	public static final int DEFAULT_HEIGHT = 190;
 	
 	//---------------------------------------------------
 	// BEGIN: Charting Helpers

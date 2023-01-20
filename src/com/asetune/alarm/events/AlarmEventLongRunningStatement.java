@@ -30,7 +30,7 @@ extends AlarmEvent
 {
 	private static final long serialVersionUID = 1L;
 
-	public AlarmEventLongRunningStatement(CountersModel cm, Number threshold, Number inSeconds, String startTime, String dbname, String login, String command, String tranName)
+	public AlarmEventLongRunningStatement(CountersModel cm, Number thresholdInSec, Number inSeconds, String startTime, String dbname, String login, String command, String tranName)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -40,8 +40,11 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
-				"Found Long running SQL Statement in '" + cm.getServerName() + "'. Seconds=" + inSeconds + ", StartTime='" + startTime + "', dbname='" + dbname +"', Login='" + login + "', Command='" + command + "', TranName='" + StringUtils.trim(tranName) + "'. (threshold=" + threshold + ")",
-				threshold);
+				"Found Long running SQL Statement in '" + cm.getServerName() + "'. Seconds=" + inSeconds + ", StartTime='" + startTime + "', dbname='" + dbname +"', Login='" + login + "', Command='" + command + "', TranName='" + StringUtils.trim(tranName) + "'. (thresholdInSec=" + thresholdInSec + ")",
+				thresholdInSec);
+
+		// Adjust the Alarm Full Duration with X seconds
+		setFullDurationAdjustmentInSec( thresholdInSec == null ? 0 : thresholdInSec.intValue() );
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);

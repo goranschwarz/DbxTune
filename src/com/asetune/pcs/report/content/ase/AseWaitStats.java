@@ -32,6 +32,7 @@ import java.util.Map.Entry;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.pcs.report.content.ReportChartTimeSeriesStackedBar;
@@ -292,12 +293,13 @@ extends AseAbstract
 						}
 					}
 					
+					String formatedWaitTimeMs = ResultSetTableModel.renderHighlightSortColumnForHtml("WaitTime", NumberFormat.getInstance().format(entry.getValue()));
 							
 					sb.append("<tr> \n");
 					sb.append("  <td>").append(cnt++           ).append("</td> \n");
 					sb.append("  <td>").append(entry.getKey()  ).append("</td> \n");
 					sb.append("  <td>").append(sparklineDataStr_wt).append("</td> \n");
-					sb.append("  <td><b>").append(NumberFormat.getInstance().format(entry.getValue())).append("</b></td> \n");
+					sb.append("  <td>").append(formatedWaitTimeMs).append("</td> \n");
 					sb.append("  <td>").append(TimeUtils.secToTimeStrLong(entry.getValue().intValue())).append("</td> \n");
 					sb.append("  <td>").append(sparklineDataStr_wtpc).append("</td> \n");
 					sb.append("  <td> <a href='https://wiki.scn.sap.com/wiki/display/SYBASE/ASE+Wait+Event+" + waitEventId + "' target='_blank'>WaitEventID - " + waitEventId + "</a>").append("</td> \n");

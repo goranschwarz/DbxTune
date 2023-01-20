@@ -1065,15 +1065,20 @@ implements IReportEntry
 	 * @param cmName           CM Name
 	 * @param graphName        Graph Name
 	 * @param maxValue         -1 = No Max Value
+	 * @param sort             Put the most active/heaviest series first (at left side)
 	 * @param skipNames        Skip some Series (CVS String) 
 	 * @param graphTitle       What's on top of the Graph
 	 * 
 	 * @return This will always returns a ReportChartObject object
 	 */
-	public IReportChart createTsLineChart(DbxConnection conn, String cmName, String graphName, int maxValue, String skipNames, String graphTitle)
+	public IReportChart createTsLineChart(DbxConnection conn, String cmName, String graphName, int maxValue, boolean sort, String skipNames, String graphTitle)
 	{
-		return new ReportChartTimeSeriesLine(this, conn, cmName, graphName, maxValue, skipNames, graphTitle);
+		return new ReportChartTimeSeriesLine(this, conn, cmName, graphName, maxValue, sort, skipNames, graphTitle);
 	}
+//	public IReportChart createTsLineChart(DbxConnection conn, String cmName, String graphName, int maxValue, String skipNames, String graphTitle)
+//	{
+//		return new ReportChartTimeSeriesLine(this, conn, cmName, graphName, maxValue, false, skipNames, graphTitle);
+//	}
 	
 	/**
 	 * Simple wrapper method to create a ReportChartObject

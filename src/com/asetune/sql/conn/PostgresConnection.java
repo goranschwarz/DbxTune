@@ -27,6 +27,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
@@ -43,6 +45,18 @@ public class PostgresConnection extends DbxConnection
 {
 	private static Logger _logger = Logger.getLogger(PostgresConnection.class);
 
+	// Cached values
+	private List<String> _getActiveServerRolesOrPermissions = null;
+
+	@Override
+	public void clearCachedValues()
+	{
+		super.clearCachedValues();
+
+		_getActiveServerRolesOrPermissions = null;
+	}
+
+	
 	public PostgresConnection(Connection conn)
 	{
 		super(conn);
@@ -67,37 +81,101 @@ public class PostgresConnection extends DbxConnection
 	@Override
 	public boolean isInTransaction() throws SQLException
 	{
-		return false;
+		// Before Version 13, check if we have Exclusive locks
+		if (getDbmsVersionNumber() < Ver.ver(13))
+		{
+			// workbench.db.postgresql.opentransaction.query=select count(*) from pg_locks where pid = pg_backend_pid() and locktype in ('transactionid') and mode = 'ExclusiveLock'
+
+			int rowc = 0;
+			String sql = ""
+				    + "SELECT count(*) \n"
+				    + "FROM pg_locks \n"
+				    + "WHERE pid = pg_backend_pid() \n"
+				    + "  AND mode like '%Exclusive%' \n"
+				    + "  AND locktype != 'virtualxid' \n"
+				    + "";
+
+			try (Statement stmnt = this.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+					rowc = rs.getInt(1);
+			}
+			return rowc > 0;
+		}
+		else // in Version 13 or ABOVE
+		{
+			String sql = "SELECT pg_current_xact_id_if_assigned()";
+			String xactid = null;
+
+			try (Statement stmnt = this.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+					xactid = rs.getString(1);
+			}
+			return StringUtil.hasValue(xactid);
+		}
 	}
 
+	
 
-//	NOTE: The below didn't work as expected... find a better way!!!
-//	@Override
-//	public boolean isInTransaction()
-//	throws SQLException
-//	{
-//		String sql = 
-//			"select count(*) \n" +
-//			"from pg_locks \n" +
-//			"where pid = pg_backend_pid() \n" +
-//			"  and locktype in ('transactionid') \n" +
-//			"  and mode = 'ExclusiveLock' \n";
-//
-//		boolean retVal = false;
-//		
-//		Statement stmt = createStatement();
-//		ResultSet rs = stmt.executeQuery(sql);
-//		while (rs.next())
-//		{
-//			retVal = rs.getInt(1) == 1;
-//		}
-//		rs.close();
-//		stmt.close();
-//
-//		return retVal;
-//	}
-// workbench.db.postgresql.opentransaction.query=select count(*) from pg_locks where pid = pg_backend_pid() and locktype in ('transactionid') and mode = 'ExclusiveLock'
 
+	@Override
+	public List<String> getActiveServerRolesOrPermissions()
+	{
+		if (_getActiveServerRolesOrPermissions != null)
+			return _getActiveServerRolesOrPermissions;
+
+		// Get current active roles
+		String sql = ""	
+				+ "WITH RECURSIVE cte AS ( \n"
+				+ "    SELECT oid \n"
+				+ "    FROM   pg_roles \n"
+				+ "    WHERE  rolname = session_user \n"
+				+ " \n"
+				+ "    UNION ALL \n"
+				+ " \n"
+				+ "    SELECT m.roleid \n"
+				+ "    FROM   cte \n"
+				+ "    JOIN   pg_auth_members m ON m.member = cte.oid \n"
+				+ ") \n"
+				+ "SELECT oid, \n"
+				+ "       oid::regrole::text AS rolename \n"
+				+ "FROM cte \n"
+				+ " \n"
+				+ "UNION ALL \n"
+				+ " \n"
+				+ "SELECT oid, 'superuser' AS rolename \n" // get if we are "superuser"
+				+ "FROM pg_roles \n"
+				+ "WHERE rolname = session_user \n"
+				+ "  AND rolsuper = true \n"
+				+ "";
+
+		try (Statement stmnt = this.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			List<String> permissionList = new LinkedList<String>();
+
+			while (rs.next())
+			{
+				String role = rs.getString(2);
+				if ( ! permissionList.contains(role) )
+					permissionList.add(role);
+			}
+
+			if (_logger.isDebugEnabled())
+				_logger.debug("getActiveServerRolesOrPermissions() returns, permissionList='"+permissionList+"'.");
+
+			// Cache the value for next execution
+			_getActiveServerRolesOrPermissions = permissionList;
+			return permissionList;
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("getActiveServerRolesOrPermissions(): Problems when executing sql: "+sql, ex);
+			return null;
+		}
+	}
+	
+	
 	@Override
 	public Map<String, TableExtraInfo> getTableExtraInfo(String cat, String schema, String table)
 	{

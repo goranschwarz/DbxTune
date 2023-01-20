@@ -94,7 +94,10 @@ extends ReportSenderAbstract
 //			email.addCc(cc);
 
 		// FROM
-		email.setFrom(_from);
+//		email.setFrom(_from);
+		String fromMailAddress = StringUtil.parseMailFromAddress_getEmailAddress(_from);
+		String fromDisplayName = StringUtil.parseMailFromAddress_getDisplayName (_from);
+		email.setFrom(fromMailAddress, fromDisplayName);
 		
 		return email;
 	}
@@ -109,7 +112,8 @@ extends ReportSenderAbstract
 //		String msgSubject = WriterUtils.createMessageFromTemplate(action, alarmEvent, _subjectTemplate, true);
 //		String msgBody    = WriterUtils.createMessageFromTemplate(action, alarmEvent, _msgBodyTemplate, true);
 
-		String serverName = reportContent.getServerName();
+//		String serverName = reportContent.getServerName();
+		String serverName = reportContent.getDisplayOrServerName();
 		
 		if (reportContent.hasNothingToReport())
 		{
@@ -119,19 +123,20 @@ extends ReportSenderAbstract
 				return;
 			}
 		}
-		
+
 		// Getting mail addresses to send the report to
-		List<String> toList = MailHelper.getMailToAddressForServerNameAsList(serverName, PROPKEY_to, DEFAULT_to);
+		List<String> toList = MailHelper.getMailToAddressForServerNameAsList(serverName, null, PROPKEY_to, _to);
 		
 		if (toList.isEmpty())
 		{
-			String toPropVal = ", property: " + PROPKEY_to + "=" + Configuration.getCombinedConfiguration().getProperty(PROPKEY_to, DEFAULT_to);
+			String toPropVal = ", property: " + PROPKEY_to + "=" + Configuration.getCombinedConfiguration().getProperty(PROPKEY_to, _to);
 
 			_logger.info("Canceling sending Daily Report for server '" + serverName + "' due to NO mail recipiants. toList=" + toList + toPropVal);
 			return;
 		}
 
 		String msgSubject = _subjectTemplate.replace("${srvName}", serverName);
+
 //		String msgBodyText    = reportContent.getReportAsText();
 //		String msgBodyHtml    = reportContent.getReportAsHtml();
 
@@ -492,7 +497,7 @@ extends ReportSenderAbstract
 	@Override
 	public boolean isEnabledForServer(String serverName)
 	{
-		return StringUtil.hasValue( MailHelper.getMailToAddressForServerName(serverName, PROPKEY_to, DEFAULT_to) );
+		return StringUtil.hasValue( MailHelper.getMailToAddressForServerName(serverName, null, PROPKEY_to, _to) );
 
 		// TODO: not yet implemented
 		//return true;
@@ -607,6 +612,11 @@ extends ReportSenderAbstract
 		_startTls                   = conf.getBooleanProperty(PROPKEY_startTls,                   DEFAULT_startTls);
 		_smtpConnectTimeout         = conf.getIntProperty    (PROPKEY_connectionTimeout,          DEFAULT_connectionTimeout);
 
+		// Fix for backward Compatibility: both properties below was named as 'smpt' instead of 'smtp' (so if not found in the 'smtp' go back and check for the *faulty* property)
+		if (StringUtil.isNullOrBlank(_password)) _password = conf.getProperty   ("ReportSenderToMail.smpt.password", _password);
+		if (_smtpPort == DEFAULT_smtpPort)       _smtpPort = conf.getIntProperty("ReportSenderToMail.smpt.port"    , _smtpPort);
+
+		
 		//------------------------------------------
 		// Check for mandatory parameters
 		//------------------------------------------
@@ -695,13 +705,13 @@ extends ReportSenderAbstract
 	public static final String  PROPKEY_username                   = "ReportSenderToMail.smtp.username";
 	public static final String  DEFAULT_username                   = "";
                                                                    
-	public static final String  PROPKEY_password                   = "ReportSenderToMail.smpt.password";
+	public static final String  PROPKEY_password                   = "ReportSenderToMail.smtp.password";
 	public static final String  DEFAULT_password                   = "";
                                                                    
 //	public static final String  PROPKEY_cc                         = "ReportSenderToMail.cc";
 //	public static final String  DEFAULT_cc                         = "";
                                                                    
-	public static final String  PROPKEY_smtpPort                   = "ReportSenderToMail.smpt.port";
+	public static final String  PROPKEY_smtpPort                   = "ReportSenderToMail.smtp.port";
 	public static final int     DEFAULT_smtpPort                   = -1;
                                                                    
 	public static final String  PROPKEY_sslPort                    = "ReportSenderToMail.ssl.port";

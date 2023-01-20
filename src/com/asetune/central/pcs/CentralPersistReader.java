@@ -110,8 +110,14 @@ public class CentralPersistReader
 		/** Only take the MAX value from X samples, this can be used if there are to many samples */
 		MAX_OVER_SAMPLES,
 
+		/** Only take the MIN value from X samples, this can be used if there are to many samples */
+		MIN_OVER_SAMPLES,
+
 		/** Only take the MAX value from a sample over X minutes, this can be used if there are to many samples */
 		MAX_OVER_MINUTES, 
+
+		/** Only take the MIN value from a sample over X minutes, this can be used if there are to many samples */
+		MIN_OVER_MINUTES, 
 
 		/** Only take the Average value from a sample over X minutes, this can be used if there are to many samples */
 		AVG_OVER_MINUTES,
@@ -477,27 +483,30 @@ public class CentralPersistReader
 		String tabName = CentralPersistWriterBase.getTableName(conn, schema, Table.ALARM_ACTIVE, null, true);
 
 		String sql = "select "
-					+ "  '"+schema+"' as " + lq + "srvName" + rq
-					+ " ," + lq + "alarmClass"              + rq
-					+ " ," + lq + "serviceType"             + rq
-					+ " ," + lq + "serviceName"             + rq
-					+ " ," + lq + "serviceInfo"             + rq
-					+ " ," + lq + "extraInfo"               + rq
-					+ " ," + lq + "category"                + rq
-					+ " ," + lq + "severity"                + rq
-					+ " ," + lq + "state"                   + rq
-					+ " ," + lq + "repeatCnt"               + rq
-					+ " ," + lq + "duration"                + rq
-					+ " ," + lq + "createTime"              + rq
-					+ " ," + lq + "cancelTime"              + rq
-					+ " ," + lq + "timeToLive"              + rq
-					+ " ," + lq + "threshold"               + rq
-					+ " ," + lq + "data"                    + rq
-					+ " ," + lq + "lastData"                + rq
-					+ " ," + lq + "description"             + rq
-					+ " ," + lq + "lastDescription"         + rq
-					+ " ," + lq + "extendedDescription"     + rq
-					+ " ," + lq + "lastExtendedDescription" + rq
+					+ "  '"+schema+"' as " + lq + "srvName"     + rq
+					+ " ," + lq + "alarmClass"                  + rq
+					+ " ," + lq + "serviceType"                 + rq
+					+ " ," + lq + "serviceName"                 + rq
+					+ " ," + lq + "serviceInfo"                 + rq
+					+ " ," + lq + "extraInfo"                   + rq
+					+ " ," + lq + "category"                    + rq
+					+ " ," + lq + "severity"                    + rq
+					+ " ," + lq + "state"                       + rq
+					+ " ," + lq + "repeatCnt"                   + rq
+					+ " ," + lq + "duration"                    + rq
+					+ " ," + lq + "alarmDuration"               + rq
+					+ " ," + lq + "fullDuration"                + rq
+					+ " ," + lq + "fullDurationAdjustmentInSec" + rq
+					+ " ," + lq + "createTime"                  + rq
+					+ " ," + lq + "cancelTime"                  + rq
+					+ " ," + lq + "timeToLive"                  + rq
+					+ " ," + lq + "threshold"                   + rq
+					+ " ," + lq + "data"                        + rq
+					+ " ," + lq + "lastData"                    + rq
+					+ " ," + lq + "description"                 + rq
+					+ " ," + lq + "lastDescription"             + rq
+					+ " ," + lq + "extendedDescription"         + rq
+					+ " ," + lq + "lastExtendedDescription"     + rq
 				+" from " + tabName
 				+" order by " + lq+"createTime"+rq + ", " +lq+"cancelTime"+rq;
 
@@ -525,18 +534,21 @@ public class CentralPersistReader
 						rs.getString   (7),  // "category"               
 						rs.getString   (8),  // "severity"               
 						rs.getString   (9),  // "state"                  
-						rs.getInt      (10),  // "repeatCnt"              
+						rs.getInt      (10), // "repeatCnt"              
 						rs.getString   (11), // "duration"               
-						rs.getTimestamp(12), // "createTime"             
-						rs.getTimestamp(13), // "cancelTime"             
-						rs.getInt      (14), // "timeToLive"             
-						rs.getString   (15), // "threshold"              
-						rs.getString   (16), // "data"                   
-						rs.getString   (17), // "lastData"               
-						rs.getString   (18), // "description"            
-						rs.getString   (19), // "lastDescription"        
-						rs.getString   (20), // "extendedDescription"    
-						rs.getString   (21)  // "lastExtendedDescription"
+						rs.getString   (12), // "alarmDuration"               
+						rs.getString   (13), // "fullDuration"               
+						rs.getInt      (14), // "fullDurationAdjustmentInSec"               
+						rs.getTimestamp(15), // "createTime"             
+						rs.getTimestamp(16), // "cancelTime"             
+						rs.getInt      (17), // "timeToLive"             
+						rs.getString   (18), // "threshold"              
+						rs.getString   (19), // "data"                   
+						rs.getString   (20), // "lastData"               
+						rs.getString   (21), // "description"            
+						rs.getString   (22), // "lastDescription"        
+						rs.getString   (23), // "extendedDescription"    
+						rs.getString   (24)  // "lastExtendedDescription"
 						);
 					list.add(a);
 				}
@@ -701,31 +713,34 @@ public class CentralPersistReader
 		}
 		
 		String sql = "select "
-					+ "  '"+schema+"' as " + lq + "srvName" + rq
-					+ " ," + lq + "SessionStartTime"        + rq
-					+ " ," + lq + "SessionSampleTime"       + rq
-					+ " ," + lq + "eventTime"               + rq
-					+ " ," + lq + "action"                  + rq
-					+ " ," + lq + "alarmClass"              + rq
-					+ " ," + lq + "serviceType"             + rq
-					+ " ," + lq + "serviceName"             + rq
-					+ " ," + lq + "serviceInfo"             + rq
-					+ " ," + lq + "extraInfo"               + rq
-					+ " ," + lq + "category"                + rq
-					+ " ," + lq + "severity"                + rq
-					+ " ," + lq + "state"                   + rq
-					+ " ," + lq + "repeatCnt"               + rq
-					+ " ," + lq + "duration"                + rq
-					+ " ," + lq + "createTime"              + rq
-					+ " ," + lq + "cancelTime"              + rq
-					+ " ," + lq + "timeToLive"              + rq
-					+ " ," + lq + "threshold"               + rq
-					+ " ," + lq + "data"                    + rq
-					+ " ," + lq + "lastData"                + rq
-					+ " ," + lq + "description"             + rq
-					+ " ," + lq + "lastDescription"         + rq
-					+ " ," + lq + "extendedDescription"     + rq
-					+ " ," + lq + "lastExtendedDescription" + rq
+					+ "  '"+schema+"' as " + lq + "srvName"     + rq
+					+ " ," + lq + "SessionStartTime"            + rq
+					+ " ," + lq + "SessionSampleTime"           + rq
+					+ " ," + lq + "eventTime"                   + rq
+					+ " ," + lq + "action"                      + rq
+					+ " ," + lq + "alarmClass"                  + rq
+					+ " ," + lq + "serviceType"                 + rq
+					+ " ," + lq + "serviceName"                 + rq
+					+ " ," + lq + "serviceInfo"                 + rq
+					+ " ," + lq + "extraInfo"                   + rq
+					+ " ," + lq + "category"                    + rq
+					+ " ," + lq + "severity"                    + rq
+					+ " ," + lq + "state"                       + rq
+					+ " ," + lq + "repeatCnt"                   + rq
+					+ " ," + lq + "duration"                    + rq
+					+ " ," + lq + "alarmDuration"               + rq
+					+ " ," + lq + "fullDuration"                + rq
+					+ " ," + lq + "fullDurationAdjustmentInSec" + rq
+					+ " ," + lq + "createTime"                  + rq
+					+ " ," + lq + "cancelTime"                  + rq
+					+ " ," + lq + "timeToLive"                  + rq
+					+ " ," + lq + "threshold"                   + rq
+					+ " ," + lq + "data"                        + rq
+					+ " ," + lq + "lastData"                    + rq
+					+ " ," + lq + "description"                 + rq
+					+ " ," + lq + "lastDescription"             + rq
+					+ " ," + lq + "extendedDescription"         + rq
+					+ " ," + lq + "lastExtendedDescription"     + rq
 				+" from " + tabName
 				+whereStr
 			//	+" order by " + lq+"createTime"+rq + ", " +lq+"cancelTime"+rq;
@@ -760,16 +775,19 @@ public class CentralPersistReader
 						rs.getString   (13), // state                               
 						rs.getInt      (14), // repeatCnt                           
 						rs.getString   (15), // duration                            
-						rs.getTimestamp(16), // createTime                          
-						rs.getTimestamp(17), // cancelTime                          
-						rs.getInt      (18), // timeToLive                          
-						rs.getString   (19), // threshold                           
-						rs.getString   (20), // data                                
-						rs.getString   (21), // lastData                            
-						rs.getString   (22), // description                         
-						rs.getString   (23), // lastDescription                     
-						rs.getString   (24), // extendedDescription                 
-						rs.getString   (25)  // lastExtendedDescription             
+						rs.getString   (16), // alarmDuration                       
+						rs.getString   (17), // fullDuration                        
+						rs.getInt      (18), // fullDurationAdjustmentInSec         
+						rs.getTimestamp(19), // createTime                          
+						rs.getTimestamp(20), // cancelTime                          
+						rs.getInt      (21), // timeToLive                          
+						rs.getString   (22), // threshold                           
+						rs.getString   (23), // data                                
+						rs.getString   (24), // lastData                            
+						rs.getString   (25), // description                         
+						rs.getString   (26), // lastDescription                     
+						rs.getString   (27), // extendedDescription                 
+						rs.getString   (28)  // lastExtendedDescription             
 						);
 					list.add(a);
 				}
@@ -1169,6 +1187,7 @@ public class CentralPersistReader
 					+ "  " + lq + "SessionStartTime"        + rq
 					+ " ," + lq + "Status"                  + rq
 					+ " ," + lq + "ServerName"              + rq
+					+ " ," + lq + "ServerDisplayName"       + rq
 					+ " ," + lq + "OnHostname"              + rq
 					+ " ," + lq + "ProductString"           + rq
 					+ " ," + lq + "VersionString"           + rq
@@ -1223,6 +1242,7 @@ public class CentralPersistReader
 						rs.getTimestamp(c++), // "SessionStartTime"       
 						rs.getInt      (c++), // "Status"
 						rs.getString   (c++), // "ServerName"             
+						rs.getString   (c++), // "ServerDisplayName"      
 						rs.getString   (c++), // "OnHostname"             
 						rs.getString   (c++), // "ProductString"          
 						rs.getString   (c++), // "VersionString"          
@@ -1294,6 +1314,7 @@ public class CentralPersistReader
 						+ "  " + lq + "SessionStartTime"        + rq
 						+ " ," + lq + "Status"                  + rq
 						+ " ," + lq + "ServerName"              + rq
+						+ " ," + lq + "ServerDisplayName"       + rq
 						+ " ," + lq + "OnHostname"              + rq
 						+ " ," + lq + "ProductString"           + rq
 						+ " ," + lq + "VersionString"           + rq
@@ -1346,6 +1367,7 @@ public class CentralPersistReader
 							rs.getTimestamp(c++), // "SessionStartTime"       
 							rs.getInt      (c++), // "Status"
 							rs.getString   (c++), // "ServerName"             
+							rs.getString   (c++), // "ServerDisplayName"      
 							rs.getString   (c++), // "OnHostname"             
 							rs.getString   (c++), // "ProductString"          
 							rs.getString   (c++), // "VersionString"          
@@ -2764,6 +2786,8 @@ public class CentralPersistReader
 				}
 			}
 
+			// TODO: We could probably use 'graphProps' or guess from 'graphLabel'
+			//       what 'sampleType' we should use MIN or MAX (if the input is AUTO)
 			
 			// sessionName.cmName_graphName
 			tabName = lq + sessionName + rq + "." + lq + cmName + "_" + graphName + rq;
@@ -2881,7 +2905,7 @@ public class CentralPersistReader
 			// Get num records that we expect (this so we automatically can apply SampleType.MAX_OVER_SAMPLES if it's to many rows)
 			if (SampleType.AUTO.equals(sampleType))
 			{
-				int threshold = 360;        // 360 records is 2 hours, with a 20 seconds sample intervall:  60 * 3 * 2
+				int threshold = 360;        // 360 records is 2 hours, with a 20 seconds sample interval:  60 * 3 * 2
 				int dataRowCount = -1;
 
 				if (sampleValue > 0)
@@ -3112,6 +3136,65 @@ public class CentralPersistReader
 							list.add(e);
 						}
 					}
+					else if (SampleType.MIN_OVER_MINUTES.equals(sampleType)) // calculate MAX over X minutes
+					{
+						// This section calculates MIN values over X number of minutes (goal is to return LESS records to client)
+						// Algorithm:
+						//   - Add records to a temporary list
+						//   - When 'sessionSampleTime' has reached a "time span" (or there are no-more-rows)
+						//     - calculate MIN over all "saved" records.
+						//     - add the MIN calculated record to the "return list"
+						
+						//
+						Timestamp spanStartTime = null;
+						List<Map<String, Double>> tmpList = new ArrayList<>();
+						
+						long maxOverMs = sampleValue * 1000 * 60; // convert the input MINUTE into MS
+	
+						while (rs.next())
+						{
+							readCount++;
+							LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
+	
+						//	Timestamp sessionStartTime  = rs.getTimestamp(1);
+							Timestamp sessionSampleTime = rs.getTimestamp(2);
+						//	Timestamp cmSampleTime      = rs.getTimestamp(3);
+							
+							if (spanStartTime == null)
+								spanStartTime = sessionSampleTime;
+	
+							for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
+							{
+								labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
+								labelAndDataNullHandler(labelAndAllNullMap, labelNames.get(l), rs.wasNull());
+							}
+	
+							tmpList.add(labelAndDataMap);
+							
+							// Is it time to do calculation yet? 
+							long spanDiffMs = sessionSampleTime.getTime() - spanStartTime.getTime();
+							if (spanDiffMs >= maxOverMs)
+							{
+								LinkedHashMap<String, Double> maxMap = calcMinData(tmpList);
+								tmpList.clear();
+								
+								DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, maxMap);
+								list.add(e);
+								
+								// Start a new spanTime
+								spanStartTime = sessionSampleTime;
+							}
+						}
+						// Calculate and Add results from "last" records 
+						if ( ! tmpList.isEmpty() )
+						{
+							LinkedHashMap<String, Double> maxMap = calcMinData(tmpList);
+							tmpList.clear();
+							
+							DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, maxMap);
+							list.add(e);
+						}
+					}
 					else if (SampleType.SUM_OVER_MINUTES.equals(sampleType)) // calculate SUM over X minutes
 					{
 						// This section calculates SUM values over X number of minutes (goal is to return LESS records to client)
@@ -3226,6 +3309,67 @@ public class CentralPersistReader
 						if ( ! tmpList.isEmpty() )
 						{
 							LinkedHashMap<String, Double> maxMap = calcMaxData(tmpList);
+							tmpList.clear();
+							
+							DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, maxMap);
+							list.add(e);
+						}
+					}
+					else if (SampleType.MIN_OVER_SAMPLES.equals(sampleType)) // calculate MIN over X samples
+					{
+						// This section calculates MIN values over X number of samples (goal is to return LESS records to client)
+						// Algorithm:
+						//   - Add records to a temporary list
+						//   - When 'count' has reached a "span" (or there are no-more-rows)
+						//     - calculate MIN over all "saved" records.
+						//     - add the MIN calculated record to the "return list"
+						
+						//
+						int       spanStartRow  = 0;
+						Timestamp spanStartTime = null;
+						List<Map<String, Double>> tmpList = new ArrayList<>();
+						
+						long maxOverRows = sampleValue; // convert the input MINUTE into MS
+	
+						while (rs.next())
+						{
+							spanStartRow++;
+							readCount++;
+							LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
+	
+						//	Timestamp sessionStartTime  = rs.getTimestamp(1);
+							Timestamp sessionSampleTime = rs.getTimestamp(2);
+						//	Timestamp cmSampleTime      = rs.getTimestamp(3);
+							
+							if (spanStartTime == null)
+								spanStartTime = sessionSampleTime;
+	
+							for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
+							{
+								labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
+								labelAndDataNullHandler(labelAndAllNullMap, labelNames.get(l), rs.wasNull());
+							}
+	
+							tmpList.add(labelAndDataMap);
+							
+							// Is it time to do calculation yet? 
+							if (spanStartRow >= maxOverRows)
+							{
+								LinkedHashMap<String, Double> maxMap = calcMinData(tmpList);
+								tmpList.clear();
+								
+								DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, maxMap);
+								list.add(e);
+								
+								// Start a new spanTime
+								spanStartRow  = 0;
+								spanStartTime = sessionSampleTime;
+							}
+						}
+						// Calculate and Add results from "last" records 
+						if ( ! tmpList.isEmpty() )
+						{
+							LinkedHashMap<String, Double> maxMap = calcMinData(tmpList);
 							tmpList.clear();
 							
 							DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, maxMap);
@@ -3447,6 +3591,43 @@ public class CentralPersistReader
 							toMap.put(fromKey, Math.min(currentMaxVal, fromVal));
 						else
 							toMap.put(fromKey, Math.max(currentMaxVal, fromVal));
+					}
+				}
+			}
+		}
+		
+		return toMap;
+	}
+
+	/**
+	 * Calculate min values from all values in the Map
+	 * @param tmpList
+	 * @return
+	 */
+	private LinkedHashMap<String, Double> calcMinData(List<Map<String, Double>> tmpList)
+	{
+		// Algorithm
+		// - add all List entries to a MAX map
+
+		// Create the output Map
+		LinkedHashMap<String, Double> toMap = new LinkedHashMap<>();
+		
+		// Add MAX entries from the List of Maps into a single Map with same keys 
+		for (Map<String, Double> fromMap : tmpList)
+		{
+			for (Entry<String, Double> from : fromMap.entrySet())
+			{
+				String fromKey = from.getKey();
+				Double fromVal = from.getValue();
+
+				Double currentMaxVal = toMap.get(fromKey);
+				if (currentMaxVal == null)
+					toMap.put(fromKey, fromVal);
+				else
+				{
+					if (fromVal != null)
+					{
+						toMap.put(fromKey, Math.min(currentMaxVal, fromVal));
 					}
 				}
 			}

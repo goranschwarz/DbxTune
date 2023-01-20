@@ -133,13 +133,13 @@ extends DbmsObjectIdCache
 
 		String sql = ""
 			    + "SELECT \n"
-			    + "     ns.oid       AS schema_id \n"
-			    + "    ,ns.nspname   AS schema_name \n"
-			    + "    ,tc.oid       AS object_id \n"
-			    + "    ,tc.relname   AS object_name \n"
-			    + "    ,i.indexrelid AS index_id \n"
-			    + "    ,ic.relname   AS index_name \n"
-			    + "    ,tc.relkind   AS object_type \n"
+			    + "     ns.oid       AS schema_id \n"    // 1
+			    + "    ,ns.nspname   AS schema_name \n"  // 2
+			    + "    ,tc.oid       AS object_id \n"    // 3
+			    + "    ,tc.relname   AS object_name \n"  // 4
+			    + "    ,i.indexrelid AS index_id \n"     // 5
+			    + "    ,ic.relname   AS index_name \n"   // 6
+			    + "    ,tc.relkind   AS object_type \n"  // 7
 			    + "FROM pg_class              tc \n"
 			    + "  JOIN pg_namespace        ns ON ns.oid = tc.relnamespace \n"
 			    + "  LEFT OUTER JOIN pg_index i  ON tc.oid       = i.indrelid \n"
@@ -173,10 +173,10 @@ extends DbmsObjectIdCache
 					String objectName  = rs.getString(4);
 					long   indexId     = rs.getLong  (5);
 					String indexName   = rs.getString(6);
+					String relKind     = rs.getString(7);
 
-					ObjectType objectType = ObjectType.BASE_TABLE;
-					if ("pg_catalog"        .equals(schemaName)) objectType = ObjectType.SYSTEM_TABLE;
-					if ("information_schema".equals(schemaName)) objectType = ObjectType.SYSTEM_TABLE;
+					// Transform to a normalized ObjectType
+					ObjectType objectType = getObjectType(schemaName, relKind);
 
 					// Create a new ObjectInfo
 					objectInfo = new ObjectInfo(dbid, dbname, schemaId, schemaName, objectId, objectName, objectType);
@@ -203,8 +203,8 @@ extends DbmsObjectIdCache
 		{
 			long execTime = TimeUtils.msDiffNow(execStartTime);
 			
-			// SET LOCK_TIMEOUT ### causes:   ErrorCode=1222, MsgText=Lock request time out period exceeded.
-			// jdbc.setQueryTimeout() causes:                 MsgText=...query has timed out...
+			// SET LOCK_TIMEOUT ### causes:   ErrorCode=1222, MsgText=Lock request time out period exceeded.   (NOTE: This is for SQL Server... need to find similar for Postgres)
+			// jdbc.setQueryTimeout() causes:                 MsgText=...query has timed out...                (NOTE: This is for SQL Server... need to find similar for Postgres)
 			if ( ex.getErrorCode() == 1222 || (ex.getMessage() != null && ex.getMessage().contains("query has timed out")) )
 			{
 				_logger.warn("DbmsObjectIdCachePostgres.get(conn, lookupType=" + lookupType + ", dbid=" + dbid + " [dbname=" + dbname + "], lookupId=" + lookupId + "): Problems getting schema/table/index name. The query has timed out (after " + execTime + " ms). But the lock information will still be returned (but without the schema/table/index name.");
@@ -222,7 +222,7 @@ extends DbmsObjectIdCache
 		}
 //System.out.println("        << DbmsObjectIdCachePostgres.get(SINGEL-OBJ): Lookup for: dbid=" + dbid +", lookupId=" + lookupId + ". Returning: objectInfo=" + objectInfo);
 
-		// Finally: return the object, which will be held in-memory by the Cache
+		// Finally: return the object... although the 'super.setObjectInfo(...)' saves/set the mapping to the in-memory Cache
 		return objectInfo;
 	}
 
@@ -329,19 +329,20 @@ extends DbmsObjectIdCache
 //							+ "";
 					sql = ""
 						    + "SELECT \n"
-						    + "     ns.oid       AS schema_id \n"
-						    + "    ,ns.nspname   AS schema_name \n"
-						    + "    ,tc.oid       AS object_id \n"
-						    + "    ,tc.relname   AS object_name \n"
-						    + "    ,i.indexrelid AS index_id \n"
-						    + "    ,ic.relname   AS index_name \n"
-						    + "    ,tc.relkind   AS object_type \n"
+						    + "     ns.oid       AS schema_id \n"   // 1
+						    + "    ,ns.nspname   AS schema_name \n" // 2
+						    + "    ,tc.oid       AS object_id \n"   // 3
+						    + "    ,tc.relname   AS object_name \n" // 4
+						    + "    ,i.indexrelid AS index_id \n"    // 5
+						    + "    ,ic.relname   AS index_name \n"  // 6
+						    + "    ,tc.relkind   AS object_type \n" // 7
 						    + "FROM pg_class              tc \n"
 						    + "  JOIN pg_namespace        ns ON ns.oid = tc.relnamespace \n"
 						    + "  LEFT OUTER JOIN pg_index i  ON tc.oid       = i.indrelid \n"
 						    + "  LEFT OUTER JOIN pg_class ic ON i.indexrelid = ic.oid \n"
-						    + "WHERE tc.relkind in('r', 'm', 'p') \n"
-						    + "   OR tc.relname = 'pg_locks' \n" // This one will be visible in Counter 'CmPgLocks'
+						    + "WHERE 1 = 1 \n"
+//						    + "  AND tc.relkind in('r', 'm', 'p') \n"
+//						    + "   OR tc.relname = 'pg_locks' \n" // This one will be visible in Counter 'CmPgLocks'
 						    + "ORDER BY tc.oid, i.indexrelid \n"
 						    + "";
 							// ----------------------------------------
@@ -373,9 +374,7 @@ extends DbmsObjectIdCache
 							String objectName  = rs.getString(4);
 							long   indexId     = rs.getLong  (5);
 							String indexName   = rs.getString(6);
-//							long   partitionId = rs.getLong  (7);
-//							long   hobtId      = rs.getLong  (8);
-//							String objectType  = rs.getString(7);
+							String relKind     = rs.getString(7);
 
 							// First row for each ObjectId
 							if (objectId != objectId_save)
@@ -383,10 +382,9 @@ extends DbmsObjectIdCache
 								objectIdsRead++;
 								objectId_save = objectId;
 
-								ObjectType objectType = ObjectType.BASE_TABLE;
-								if ("pg_catalog"        .equals(schemaName)) objectType = ObjectType.SYSTEM_TABLE;
-								if ("information_schema".equals(schemaName)) objectType = ObjectType.SYSTEM_TABLE;
-
+								// Transform to a normalized ObjectType
+								ObjectType objectType = getObjectType(schemaName, relKind);
+								
 								// Create a new ObjectInfo
 								objectInfo = new ObjectInfo(dbid, dbname, schemaId, schemaName, objectId, objectName, objectType);
 
@@ -407,9 +405,6 @@ extends DbmsObjectIdCache
 								ObjectInfo indexObjectInfo = new ObjectInfo(dbid, dbname, schemaId, schemaName, indexId, indexName, ObjectType.INDEX);
 								super.setObjectInfo(dbid, indexId, indexObjectInfo);
 							}
-//							super.addPartition(dbid, objectId, partitionId);
-//							super.addHobt     (dbid, objectId, hobtId);
-
 						} // end: rs.next()
 
 						_statBulkPhysicalReads++;
@@ -444,4 +439,43 @@ extends DbmsObjectIdCache
 			} // end: DB-Loop
 		} // end: Do lookup
 	} // end: method
+
+	
+	/**
+	 * Transform a Postgres schemaName and relKind to a more "normalized" object type
+	 * 
+	 * @param schemaName
+	 * @param relKind
+	 * @return
+	 */
+	public static ObjectType getObjectType(String schemaName, String relKind)
+	{
+		// System tables... can be figured out from schema name
+		if ("pg_catalog"        .equals(schemaName)) return ObjectType.SYSTEM_TABLE;
+		if ("information_schema".equals(schemaName)) return ObjectType.SYSTEM_TABLE;
+
+		// Postgres 'relkind'
+		//   r = ordinary table
+		//   i = index
+		//   S = sequence
+		//   t = TOAST table
+		//   v = view
+		//   m = materialized view
+		//   c = composite type
+		//   f = foreign table
+		//   p = partitioned table
+		//   I = partitioned index
+		if ("r".equals(relKind)) return ObjectType.BASE_TABLE;
+		if ("i".equals(relKind)) return ObjectType.INDEX;
+		if ("S".equals(relKind)) return ObjectType.SEQUENCE;
+		if ("t".equals(relKind)) return ObjectType.LOB_TABLE;
+		if ("v".equals(relKind)) return ObjectType.VIEW;
+		if ("m".equals(relKind)) return ObjectType.MATERIALIZED_VIEW;
+//		if ("c".equals(relKind)) return ObjectType.XXX;
+		if ("f".equals(relKind)) return ObjectType.REMOTE_TABLE;
+		if ("p".equals(relKind)) return ObjectType.PARTITIONED_TABLE;
+		if ("I".equals(relKind)) return ObjectType.INDEX;
+
+		return ObjectType.UNKNOWN;
+	}
 }

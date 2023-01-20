@@ -405,8 +405,8 @@ extends DbmsConfigAbstract
 
 	public PostgresConfig()
 	{
-//		DbmsConfigTextManager.clear();
-//		RaxConfigText.createAndRegisterAllInstances();
+		DbmsConfigTextManager.clear();
+		PostgresConfigText.createAndRegisterAllInstances();
 	}
 
 	/**

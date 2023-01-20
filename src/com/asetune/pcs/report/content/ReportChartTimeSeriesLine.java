@@ -28,12 +28,14 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import org.apache.log4j.Logger;
 import org.jfree.chart.ChartFactory;
@@ -49,6 +51,7 @@ import org.jfree.data.general.Dataset;
 import org.jfree.data.time.Millisecond;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
+import org.jfree.data.time.TimeSeriesDataItem;
 import org.jfree.data.xy.XYDataset;
 
 import com.asetune.sql.conn.DbxConnection;
@@ -66,14 +69,16 @@ extends ReportChartAbstract
 	
 	private String        _graphName;
 	private int           _maxValue;
+	private boolean       _isSorted;
 	private String        _skipNames;      // This is used two fold: skip "chart lines" OR skip some values that might be to "high/low" for the chart...
-	
-	public ReportChartTimeSeriesLine(ReportEntryAbstract reportEntry, DbxConnection conn, String cmName, String graphName, int maxValue, String skipNames, String graphTitle)
+
+	public ReportChartTimeSeriesLine(ReportEntryAbstract reportEntry, DbxConnection conn, String cmName, String graphName, int maxValue, boolean sorted, String skipNames, String graphTitle)
 	{
-		super(reportEntry, conn, ChartType.LINE, cmName, graphName, graphTitle, maxValue);
+		super(reportEntry, conn, ChartType.LINE, cmName, graphName, graphTitle, maxValue, sorted);
 		
 		_graphName       = graphName;
 		_maxValue        = maxValue;
+		_isSorted        = sorted;
 		_skipNames       = skipNames;
 
 		create();
@@ -166,6 +171,13 @@ extends ReportChartAbstract
 //		axis.setDateFormatOverride(new SimpleDateFormat("dd-MMM-yyyy HH:mm"));
 		axis.setDateFormatOverride(new SimpleDateFormat("HH:mm"));
 		
+		// If all values are NEAR Zero, then set Range to be 1 so we don't get exponential scale like '4E-9' and '-4E-9'
+		if (isAllDataValuesNearZero())
+		{
+			NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+			rangeAxis.setRange(-1.0, 1.0);
+		}
+
 		// for Percent Graph: set MAX to 100%
 		if (maxValue > 0)
 		{
@@ -372,6 +384,9 @@ extends ReportChartAbstract
 							// Add the dataPoint to the TimeSeries
 							//graphTimeSerie.add(new Millisecond(ts), dataValue);
 							graphTimeSerie.addOrUpdate(new Millisecond(ts), dataValue);
+							
+							// Remember min/max value
+							setDatasetMinMaxValue(dataValue);
 						}
 					}
 				}
@@ -383,6 +398,12 @@ extends ReportChartAbstract
 				dataset.addSeries(dbxGraphData);
 			}
 
+//System.out.println("################# _isSorted=" + _isSorted + ", _graphName='" + _graphName + "'.");
+			if (_isSorted)
+			{
+				dataset = sortTimeSeriesCollection(dataset);
+			}
+			
 			return dataset;
 		}
 		catch (SQLException ex)
@@ -396,6 +417,77 @@ extends ReportChartAbstract
 //			_logger.warn("Problems getting '" + name + "': " + ex);
 			
 			return null;
+		}
+	}
+
+	/** Sort the data set */
+//	@SuppressWarnings({ "rawtypes", "unchecked" })
+	protected TimeSeriesCollection sortTimeSeriesCollection(TimeSeriesCollection originDataset)
+	{
+		// algorithm
+		// - iterate all records in originDataset: calculate SUM values for each "group" in a MAP
+		// - sort the temporary MAP by counter value descending
+		// - copy all records from originDataset to newDataset (add order will be by the MAP)
+		try 
+		{
+			// A MAP That will hold SUM for each of the "groups"
+			Map<String, Double> keySumValues = new LinkedHashMap<>();
+
+			// Map that will hold <SerieName, TimeSeries>
+			Map<String, TimeSeries> originSeriesMap = new LinkedHashMap<>(); 
+
+			// Get Series into Map
+			for (int s=0; s<originDataset.getSeriesCount(); s++)
+			{
+				String     sKey = (String) originDataset.getSeriesKey(s);
+				TimeSeries sVal =          originDataset.getSeries(s);
+				
+				originSeriesMap.put(sKey, sVal);
+			}
+
+			// Sum all values for each Key/Series. Put it in MAP: keySumValues
+			for (Entry<String, TimeSeries> entry : originSeriesMap.entrySet())
+			{
+				String     sKey = (String) entry.getKey();
+				TimeSeries sVal =          entry.getValue();
+
+				double sumValues = 0.0;
+				for (int i=0; i<sVal.getItemCount(); i++)
+				{
+					TimeSeriesDataItem tsdi = sVal.getDataItem(i);
+					Number dataVal = tsdi.getValue();
+					if (dataVal != null)
+						sumValues += dataVal.doubleValue();
+				}
+				
+				keySumValues.put(sKey, sumValues);
+			}
+
+			// Sort the MAP:keySumValues by counter value descending into MAP:sorted
+			Map<String, Double> sorted =
+					keySumValues.entrySet().stream()
+					.sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
+					.collect(Collectors.toMap(
+							Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
+
+
+//System.out.println("################# _graphName='"+_graphName+"', keySumValues=" + keySumValues);
+//System.out.println("################# _graphName='"+_graphName+"', sorted      =" + sorted);
+			
+			// Copy all records from originDataset to newDataset (add order will be by the MAP: sorted)
+			TimeSeriesCollection sortedDataset = new TimeSeriesCollection();
+			for (String seriesName : sorted.keySet())
+			{
+				TimeSeries ts = originDataset.getSeries(seriesName);
+				sortedDataset.addSeries(ts);
+			}
+
+			return sortedDataset;
+		} 
+		catch(RuntimeException ex) 
+		{
+			_logger.error("Problems sorting TimeSeriesCollection, skipping the sort...", ex);
+			return originDataset;
 		}
 	}
 

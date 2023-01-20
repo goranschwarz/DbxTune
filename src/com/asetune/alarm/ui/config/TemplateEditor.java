@@ -113,7 +113,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 	private JButton          _ok          = new JButton("OK");
 	private JButton          _cancel      = new JButton("Cancel");
 	
-	private AlarmEvent       _exampleAlarmEvent     = new AlarmEventDummy("GORAN_1_DS", "SomeCmName", "SomeExtraInfo", Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 999, "This is an Alarm Example with the data value of '999'", "Extended Description goes here");
+	private AlarmEvent       _exampleAlarmEvent     = new AlarmEventDummy("GORAN_1_DS", "SomeCmName", "SomeExtraInfo", Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 999, "This is an Alarm Example with the data value of '999'", "Extended Description goes here", 0);
 	private List<AlarmEvent> _exampleAlarmEventList = new ArrayList<>();
 
 	private static final String DIALOG_TITLE = "AlarmEvent Template Editor";
@@ -132,11 +132,11 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 		_currentConfig          = configuration;
 
 		// Add some examples, which will be used...
-		_exampleAlarmEvent     = new AlarmEventDummy("GORAN_1_DS", "SomeCmName", "SomeExtraInfo", Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 999, "This is an Alarm Example with the data value of '999'", "Extended Description goes here");
+		_exampleAlarmEvent     = new AlarmEventDummy("GORAN_1_DS", "SomeCmName", "SomeExtraInfo", Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 999, "This is an Alarm Example with the data value of '999'", "Extended Description goes here", 0);
 		_exampleAlarmEventList = new ArrayList<>();
 		for (int i=0; i<10; i++)
 		{
-			AlarmEvent ae = new AlarmEventDummy("GORAN_"+i+"_DS", "SomeCmName-"+i, "SomeExtraInfo-"+i, Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 150+i, "This is an Alarm Example with the data value of '"+(150+i)+"'", "Extended Description goes here - "+i);
+			AlarmEvent ae = new AlarmEventDummy("GORAN_"+i+"_DS", "SomeCmName-"+i, "SomeExtraInfo-"+i, Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 150+i, "This is an Alarm Example with the data value of '"+(150+i)+"'", "Extended Description goes here - "+i, 0);
 			_exampleAlarmEventList.add(ae);
 		}
 

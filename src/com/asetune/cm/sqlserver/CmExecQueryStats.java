@@ -303,6 +303,40 @@ extends CountersModel
 		return map;
 	}
 
+//	@Override
+//	public Map<String, AggregationType> createAggregateColumns()
+//	{
+//		HashMap<String, AggregationType> aggColumns = new HashMap<>(getColumnCount());
+//
+//		AggregationType tmp;
+//
+//		//Should we do this;
+//		//I think there will be a POTENTIAL data overflow... 
+//		//This has NOT YET been tested;
+//		
+//		// Create the columns :::::::::::::::::::::::::::::::::::::::::::::::::::::: And ADD it to the return Map 
+//		tmp = new AggregationType("execution_count"                , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("total_worker_time"              , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("total_physical_reads"           , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("total_logical_writes"           , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("total_logical_reads"            , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("total_clr_time"                 , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("total_elapsed_time"             , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("total_rows"                     , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("total_dop"                      , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("total_grant_kb"                 , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("total_used_grant_kb"            , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("total_ideal_grant_kb"           , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("total_reserved_threads"         , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("total_used_threads"             , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("total_columnstore_segment_reads", AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("total_columnstore_segment_skips", AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("total_spills"                   , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("total_page_server_reads"        , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+//
+//		return aggColumns;
+//	}
+
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{

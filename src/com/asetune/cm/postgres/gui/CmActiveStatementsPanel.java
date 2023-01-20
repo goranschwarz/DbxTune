@@ -26,6 +26,7 @@ import java.awt.Component;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
+import org.jfree.chart.ChartColor;
 
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.TabularCntrPanel;
@@ -147,6 +148,27 @@ extends TabularCntrPanel
 				return false;
 			}
 		}, SwingUtils.parseColor(colorStr, Color.RED), null));
+
+		// At the END, because it will only color ONE CELL
+		// LIGHT_BLUE = Has Exclusive lock
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.has_exlusive_lock");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				if ("pid_exlock_count".equals(adapter.getColumnName(adapter.column)))
+				{
+					Object o_exclLockCount = adapter.getValue();
+					if (o_exclLockCount instanceof Number)
+					{
+						if (((Number)o_exclLockCount).intValue() > 0)
+							return true;
+					}
+				}
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, ChartColor.VERY_LIGHT_BLUE), null));
 	}
 
 }

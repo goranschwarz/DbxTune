@@ -5115,6 +5115,24 @@ implements Cloneable, ITableTooltip
 				// but that might also take to long time... Then what...
 				//conn.close();
 			}
+			
+			// For Postgres and possibly others (if we are sampling ALL CM's in a transaction) 
+			// If we are in a transaction (AutoCommit=false) AND had an error, we can't continue 
+			// issuing SQL Statements until we "end" the transaction and start a a new
+			try
+			{
+				if (conn.getAutoCommit() == false)
+				{
+					// Lets rollback and start a new transaction
+					conn.rollback();
+
+					_logger.info("After Exception in refresh() for cm '" + getName() + "', the connection was in AutoCommit. So lets rollback and start a new transaction.");
+				}
+			}
+			catch (SQLException getAcEx)
+			{
+				_logger.warn("Problems AFTER Exception in refresh() for cm '" + getName() + "', Trying call getAutoCommit(). SQLException=" + getAcEx);
+			}
 
 			// If we got an exception, go and check if we are still connected
 			if ( ! getCounterController().isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
@@ -9189,10 +9207,11 @@ implements Cloneable, ITableTooltip
 						if (d < labelArr.length)
 							label = labelArr[d];
 
-						if (label == null)
+						if (StringUtil.isNullOrBlank(label))
 						{
+System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + label + "', setting it to 'lbl-"+d+"'. For cm='"+getName()+"', graphName='"+graphName+"', label='"+label+"', data="+data);
 							if (_logger.isDebugEnabled())
-								_logger.debug("Writing JSON Graph, LABEL was null, setting it to 'lbl-"+d+"'. For cm='"+getName()+"', graphName='"+graphName+"', label='"+label+"', data="+data);
+								_logger.debug("Writing JSON Graph, LABEL was NULL or blank '" + label + "', setting it to 'lbl-"+d+"'. For cm='"+getName()+"', graphName='"+graphName+"', label='"+label+"', data="+data);
 							label = "lbl-"+d;
 						}
 
@@ -9493,6 +9512,9 @@ implements Cloneable, ITableTooltip
 		// Create a new List where we will PUT values for ALL columns
 		List<Object> aggRow = new ArrayList<>(colCount);
 
+		// If any of the AVG columns needs post processing (has installed callback)
+		boolean needsPostCalculation = false;
+		
 		// loop columns
 		// If part of PK, do SUM
 		// else add NULL value
@@ -9510,7 +9532,11 @@ implements Cloneable, ITableTooltip
 				Object maxValue = null;
 				int    rowCountForAverageCalculation = 0;
 				AggregationType.Agg aggregationType = aggType.getAggregationType();
-				
+
+				// If we have installed call backs, mark that we need to do them AFTER all Aggregations are DONE.
+				if (aggType.hasAvgCallbacks())
+					needsPostCalculation = true;
+
 				if (privateAggregate_isSummarizableForJdbcType(jdbcType))
 				{
 					// Loop all rows and do SUM
@@ -9549,6 +9575,9 @@ implements Cloneable, ITableTooltip
 					{
 						if (aggType.isAverageCalcInMethodLocalCalculation())
 						{
+							// TODO in the future; use installed callback to do "user defined" calculations, which can operate (use an algorithm) on other columns that the agregated column.
+							//addValue = aggType.doAvgCalc(this, colName, sumValue, jdbcType, rowCountForAverageCalculation);
+
 							addValue = null;
 //							System.out.println(getName() + ":   - " + aggregationType + ": AVG-COL column[col="+c+", name='"+colName+"']: value=|" + addValue +"|, JDBC_TYPE=" + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ". AVERAGE VALUE IS CALCULATED IN METHOD: localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData);");
 						}
@@ -9588,6 +9617,7 @@ implements Cloneable, ITableTooltip
 				{
 					// Add PK VALUE
 					addValue = privateAggregate_getAggregatePkValueForJdbcType(jdbcType);
+					addValue = calculateAggregateRow_getAggregatePkColumnDataProvider(cs, colName, c, jdbcType, addValue);
 //System.out.println(getName() + ":   - SUM: PK column[col="+c+", name='"+colName+"']: value=|" + addValue +"|.");
 				}
 				else
@@ -9619,6 +9649,45 @@ implements Cloneable, ITableTooltip
 //		       This means we need to rebuild the PK->RowId HashMap... (do we want to do that?)
 
 //System.out.println(getName() + ": <<< ADDING SUM row: AggRowID=" + _aggregatedRowId + ", " + aggRow);
+
+		// Do POST Processing
+		if (needsPostCalculation)
+		{
+			// loop columns
+			for (int c = 0; c < colCount; c++)
+			{
+				String colName  = cs.getColumnName(c);
+				int    jdbcType = cs.getColSqlType(c);
+//				int    numPrec  = cs.getColSqlPrecision(c);
+//				int    numScale = cs.getColSqlScale(c);
+
+				AggregationType aggType = aggCols.get(colName);
+				if (aggType != null)
+				{
+					// Call: Average callback
+					if (aggType.hasAvgCallbacks())
+					{
+						try
+						{
+							AggregationAverageCallback cb = aggType.getAvgCallback();
+							if (cb != null)
+							{
+								Object avgVal = cb.doAvgCalc(this, cs, counterType, _aggregatedRowId, colName, jdbcType);
+
+								if (_logger.isDebugEnabled())
+									_logger.debug("calculateAggregateRow(): cm='" + getName() + "', AvgCallback: colName='" + colName + "', newValue=" + avgVal + ".");
+
+								cs.setValueAt(avgVal, _aggregatedRowId, c);
+							}
+						}
+						catch (RuntimeException ex)
+						{
+							_logger.warn("Problems when doing AVG user-defined aggregation, skipping this and continuing...", ex);
+						}
+					}
+				}
+			}
+		}
 	}
 
 	/** 
@@ -9693,6 +9762,8 @@ implements Cloneable, ITableTooltip
 		private String _colName;
 		private boolean _onAverageTreatZeroAsNull = false;
 		private boolean _doAverageCalcInMethodLocalCalculation = false;
+		private AggregationAverageCallback _avgCalcCallback;
+
 		public enum Agg
 		{
 			SUM,
@@ -9707,6 +9778,7 @@ implements Cloneable, ITableTooltip
 			_colName = colName;
 			_type    = type;
 		}
+
 		/** Can be used for a AVERAGE to decide if we should discard 0 values in rowCount. avg=sum/rowCount */
 		public AggregationType(String colName, Agg type, boolean onAverageTreatZeroAsNull, boolean doAverageCalcInMethodLocalCalculation)
 		{
@@ -9714,6 +9786,15 @@ implements Cloneable, ITableTooltip
 			_type    = type;
 			_onAverageTreatZeroAsNull = onAverageTreatZeroAsNull;
 			_doAverageCalcInMethodLocalCalculation = doAverageCalcInMethodLocalCalculation;
+		}
+
+		/** Can be used AVG calculations */
+		public AggregationType(String colName, Agg type, AggregationAverageCallback avgCalcCallback)
+		{
+			_colName = colName;
+			_type    = type;
+
+			_avgCalcCallback = avgCalcCallback;
 		}
 
 		public String getColumnName()
@@ -9732,8 +9813,39 @@ implements Cloneable, ITableTooltip
 		{
 			return _doAverageCalcInMethodLocalCalculation;
 		}
+
+		public AggregationAverageCallback getAvgCallback()
+		{
+			return _avgCalcCallback;
+		}
+		public boolean hasAvgCallbacks()
+		{
+			return _avgCalcCallback != null;
+		}
+	}
+	
+	/**
+	 * Can be used to do Average Aggregation in an alternate way than the default implementation.
+	 * @author goran
+	 */
+	public static interface AggregationAverageCallback
+	{
+		Object doAvgCalc(CountersModel countersModel, CounterSample cs, int counterType, int aggRowId, String colName, int jdbcType);
 	}
 
+	/**
+	 * 
+	 * @param newSample
+	 * @param colName       Name of the column
+	 * @param colPos        Starting at 0
+	 * @param jdbcType      JDBC DataType
+	 * @param addValue      The value passed
+	 * @return
+	 */
+	public Object calculateAggregateRow_getAggregatePkColumnDataProvider(CounterSample newSample, String colName, int colPos, int jdbcType, Object addValue)
+	{
+		return addValue;
+	}
 	/**
 	 * 
 	 * @param newSample
@@ -9997,6 +10109,11 @@ implements Cloneable, ITableTooltip
 	}
 
 
+	/** 
+	 * Used by method {@link #calculateAggregateRow_getAggregatePkColumnDataProvider()} to set String Values<br>
+	 * For other data types a zero (0) is assigned (in the specified JdbcType)
+	 */
+	public static final String calculateAggregateRow__DEFAULT_STRING_VALUE = "_Total";
 	/**
 	 * 
 	 * @param jdbcType
@@ -10004,7 +10121,7 @@ implements Cloneable, ITableTooltip
 	 */
 	private Object privateAggregate_getAggregatePkValueForJdbcType(int jdbcType)
 	{
-		String strVal = "_Total";
+		String strVal = calculateAggregateRow__DEFAULT_STRING_VALUE;
 
 		switch (jdbcType)
 		{

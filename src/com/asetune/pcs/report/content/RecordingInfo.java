@@ -56,6 +56,7 @@ extends ReportEntryAbstract
 
 	private String _dbmsVersionString;
 	private String _dbmsServerName;
+	private String _dbmsDisplayName;
 	private String _dbmsStartTimeStr;
 	private String _dbmsStartTimeInDaysStr;
 
@@ -82,6 +83,7 @@ extends ReportEntryAbstract
 	public String    getStartDay()            { return _startDay; } 
 	public String    getDbmsVersionString()   { return _dbmsVersionString; } 
 	public String    getDbmsServerName()      { return _dbmsServerName; } 
+	public String    getDbmsDisplayName()     { return _dbmsDisplayName; } 
 	
 	@Override
 	public boolean hasShortMessageText()
@@ -152,6 +154,8 @@ extends ReportEntryAbstract
 
 			sb.append(blankTableRow);
 			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Server Name:           </b></td> <td>" + _dbmsServerName         + "</td> </tr>\n");
+			if (StringUtil.hasValue(_dbmsDisplayName))
+				sb.append("  <tr> " + tdBullet +" <td><b>DBMS Display Name:      </b></td> <td>" + _dbmsDisplayName        + "</td> </tr>\n");
 			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Version String:        </b></td> <td>" + _dbmsVersionString      + "</td> </tr>\n");
 
 			sb.append(blankTableRow);
@@ -291,6 +295,9 @@ extends ReportEntryAbstract
 			_dbmsStartTimeInDaysStr = dsr.getDbmsStartTimeInDays()     < 0 ? "-unknown-" : dsr.getDbmsStartTimeInDays()+"";
 			_dbmsOtherInfoMap       = dsr.getDbmsOtherInfoMap();
 			_recordingVersion       = dsr.getRecDbxAppName() + ", Version: " + dsr.getRecDbxVersionStr() + ", Build: " + dsr.getRecDbxBuildStr();
+
+			if (dsr.getReportContent() != null)
+				_dbmsDisplayName = dsr.getReportContent().getDisplayOrServerName();
 		}
 
 		//-----------------------------------------

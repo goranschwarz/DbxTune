@@ -2522,4 +2522,54 @@ implements ICounterController
 	//==================================================================
 	// END: Scheduler
 	//==================================================================
+
+
+	//==================================================================
+	// BEGIN: serverAliasName and serverDisplayName
+	//==================================================================
+	private String _serverAliasName;
+	private String _serverDisplayName;
+
+	/** 
+	 * (in no-gui mode) the Collector can specify '-A' or '--aliasName' this would be that value <br>
+	 * NOTE: This might be removed when a better solution is implemented
+	 */
+	@Override
+	public String getServerAliasName()
+	{
+		return _serverAliasName;
+	}
+
+	/** 
+	 * (in no-gui mode) the Collector can specify '-N' or '--aliasName' this would be that value <br>
+	 * NOTE: This might be removed when a better solution is implemented
+	 */
+	@Override
+	public void setServerAliasName(String aliasName)
+	{
+		_serverAliasName = aliasName;
+	}
+
+	/** 
+	 * (in no-gui mode) the Collector can specify '-N' or '--displayName' this would be that value <br>
+	 * NOTE: This might be removed when a better solution is implemented
+	 */
+	@Override
+	public String getServerDisplayName()
+	{
+		return _serverDisplayName;
+	}
+
+	/** 
+	 * (in no-gui mode) the Collector can specify '-N' or '--displayName' this would be that value <br>
+	 * NOTE: This might be removed when a better solution is implemented
+	 */
+	@Override
+	public void setServerDisplayName(String displayName)
+	{
+		_serverDisplayName = displayName;
+	}
+	//==================================================================
+	// END: serverDisplayName
+	//==================================================================
 }

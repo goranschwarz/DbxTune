@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.Map.Entry;
 
 import com.asetune.config.dict.SqlServerWaitTypeDictionary;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.pcs.report.content.ReportChartTimeSeriesStackedBar.TopGroupCountReport;
@@ -256,11 +257,13 @@ extends SqlServerAbstract
 						}
 					}
 
+					String formatedWaitTimeMs = ResultSetTableModel.renderHighlightSortColumnForHtml("wait_time_ms", NumberFormat.getInstance().format(entry.getValue()));
+
 					sb.append("<tr> \n");
 					sb.append("  <td>").append(cnt++           ).append("</td> \n");
 					sb.append("  <td>").append(entry.getKey()  ).append("</td> \n");
 					sb.append("  <td>").append(sparklineDataStr_ms).append("</td> \n");
-					sb.append("  <td><b>").append(NumberFormat.getInstance().format(entry.getValue())).append("</b></td> \n");
+					sb.append("  <td>").append(formatedWaitTimeMs).append("</td> \n");
 					sb.append("  <td>").append(TimeUtils.msToTimeStr("%?DD[d ]%HH:%MM:%SS", entry.getValue().intValue())).append("</td> \n");
 					sb.append("  <td>").append(sparklineDataStr_wtpc).append("</td> \n");
 					sb.append("  <td> <a href='https://www.sqlskills.com/help/waits/"+entry.getKey()+"' target='_blank'>"+entry.getKey()+"</a>").append("</td> \n");

@@ -27,12 +27,18 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
 
 import com.asetune.central.DbxTuneCentral;
 import com.asetune.utils.StringUtil;
@@ -75,11 +81,14 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 
 
-@JsonPropertyOrder(value = {"serverName", "serverNameOrAlias", "enabled", "description", "extraInfo"}, alphabetic = true)
+@JsonPropertyOrder(value = {"serverName", "serverNameOrAlias", "displayName", "enabled", "description", "extraInfo"}, alphabetic = true)
 public class DbxCentralServerDescription
 {
+	private static Logger _logger = Logger.getLogger(DbxCentralServerDescription.class);
+
 	private String  _serverName;
 	private String  _aliasName;
+	private String  _displayName;
 	private boolean _isEnabled;
 	private String  _description;
 	private String  _extraInfo;
@@ -94,12 +103,14 @@ public class DbxCentralServerDescription
 	
 	public String  getServerName () { return _serverName ;  }
 	public String  getAliasName  () { return _aliasName  ;  }
+	public String  getDisplayName() { return _displayName;  }
 	public boolean isEnabled     () { return _isEnabled  ;  }
 	public String  getDescription() { return _description;  }
 	public String  getExtraInfo  () { return _extraInfo  ;  }
 
 	public void setServerName (String  serverName ) { _serverName  = serverName ; }
 	public void setAliasName  (String  aliasName  ) { _aliasName   = aliasName  ; }
+	public void setDisplayName(String  displayName) { _displayName = displayName; }
 	public void setEnabled    (boolean enabled    ) { _isEnabled   = enabled    ; }
 	public void setDescription(String  description) { _description = description; }
 	public void setExtraInfo  (String  extraInfo)   { _extraInfo   = extraInfo  ; }
@@ -115,26 +126,66 @@ public class DbxCentralServerDescription
 		
 		if (_extraInfo != null)
 		{
-			int pos_switch_A = _extraInfo.indexOf("-A");
-			int pos_long_A   = _extraInfo.indexOf("--serverAlias");
-			
-			// get everything *after* switch '-A' or '--serverAlias'
-			String tmp = null;
-			if (pos_switch_A != -1) tmp = StringUtils.trim( StringUtils.substringAfter(_extraInfo, "-A") );
-			if (pos_long_A   != -1) tmp = StringUtils.trim( StringUtils.substringAfter(_extraInfo, "--serverAlias") );
-
-			// The only use the *first* word after that
-			if (tmp != null)
+			// Only parse if we got ANY of the switches
+			if (StringUtil.containsAny(extraInfo, 
+					"-A", "--serverAlias", 
+					"-N", "--displayName"))
 			{
-				int firstSpace = tmp.indexOf(' ');
-				if (firstSpace != -1)
-				{
-					tmp = tmp.substring(0, firstSpace).trim();
-				}
+				parseExtraInfo(extraInfo);
 			}
-			
-			_aliasName = tmp;
 		}
+	}
+	
+	private void parseExtraInfo(String extraInfo)
+	{
+		boolean removeFirst = true;
+		String[] args = StringUtil.translateCommandline(extraInfo, removeFirst);
+		if (args.length >= 1)
+		{
+			try
+			{
+				Options options = new Options();
+
+				// create the Options
+				options.addOption( "A", "serverAlias", true, "fixme" );
+				options.addOption( "N", "displayName", true, "fixme" );
+
+				// create the command line com.asetune.parser
+				CommandLineParser parser = new DefaultParser();
+
+				// parse the command line arguments
+				CommandLine cmd = parser.parse(options, args);
+
+				// Handle results
+				if (cmd.hasOption('A')) _aliasName   = replaceSrvNameTemplate(cmd.getOptionValue('A'), _serverName);
+				if (cmd.hasOption('N')) _displayName = replaceSrvNameTemplate(cmd.getOptionValue('N'), _serverName);
+			}
+			catch (ParseException ex)
+			{
+				_logger.warn("Problem parsing extraInfo for serverName='" + _serverName + "'. args=|" + Arrays.asList(args) + "|. Caught: " + ex);
+			}
+		}
+	}
+	/**
+	 * replace &lt;SRVNAME&gt; with input parameter srvName<br>
+	 * and input starts and ends with '_' replace all underscores with spaces, and remove start/end underscores 
+	 */
+	public static String replaceSrvNameTemplate(String input, String srvName)
+	{
+		if (StringUtil.isNullOrBlank(input))   return input;
+		if (StringUtil.isNullOrBlank(srvName)) return input;
+		
+		String displayName = input;
+
+		// Fix <SRVNAME>
+		if (displayName.contains("<SRVNAME>"))
+			displayName = displayName.replace("<SRVNAME>", srvName);
+
+		// if displayName starts and ends with '_' replace all underscores with spaces, and remove start/end underscores
+		if (displayName.startsWith("_") && displayName.endsWith("_"))
+			displayName = displayName.replace('_', ' ').trim();
+		
+		return displayName;
 	}
 
 

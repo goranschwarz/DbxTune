@@ -1167,24 +1167,35 @@ Active Alarms
 			
 				// Below is a LINK Button, so you can both do right click on the link to open, and click to open (using the properties: open-in-{here|tab}, time, subscribe)
 				const startTime = $('#dbx-hours-txt').val() + "h";
-			
+
+				// Separate serverName and serverDisplayName
+				// On the Server Side DbxCentral options may choose to use another label composed by the server side settings (that is if the server names are "cryptical")
+				var serverName        = srvSession.serverName;
+				var serverDisplayName = srvSession.serverName;
+				
+				if(srvSession.hasOwnProperty('serverDisplayName'))
+				{
+					serverDisplayName = srvSession.serverDisplayName;
+				}
+				
+				
 				html += ''
 						+ '<div class="btn-group">'
-						+ '  <button id="btn-qa-normal-'+srvSession.serverName+'" type="button" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2 dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'
-						+ '    '+srvSession.serverName
-						+ '    <span id="btn-qa-normal-alarms-'+srvSession.serverName+'", class="badge badge-pill badge-warning"></span>'
+						+ '  <button id="btn-qa-normal-'+serverName+'" type="button" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2 dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'
+						+ '    ' + serverDisplayName
+						+ '    <span id="btn-qa-normal-alarms-'+serverName+'", class="badge badge-pill badge-warning"></span>'
 						+ '  </button>'
 						+ '  <div class="dropdown-menu">'
-						+ '    <a class="dropdown-item" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+srvSession.serverName+'"               onclick=\'return openGraphPage("server-ssp", "'+srvSession.serverName+'", "")\'>Show <b>System Selected</b> Graphs</a>'
-						+ '    <a class="dropdown-item" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+srvSession.serverName+'&graphList=all" onclick=\'return openGraphPage("server-all", "'+srvSession.serverName+'", "")\'>Show <b>ALL</b> Available Graphs</a>'
+						+ '    <a class="dropdown-item" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+serverName+'"               onclick=\'return openGraphPage("server-ssp", "'+serverName+'", "")\'>Show <b>System Selected</b> Graphs</a>'
+						+ '    <a class="dropdown-item" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+serverName+'&graphList=all" onclick=\'return openGraphPage("server-all", "'+serverName+'", "")\'>Show <b>ALL</b> Available Graphs</a>'
 						+ '    <div class="dropdown-divider"></div>'
-						+ '    <a class="dropdown-item" href="/report?op=viewLatest&name='+srvSession.serverName+'" target="_blank">Open <b>Latest</b> Daily Summary Report</a>'
-						+ '    <a class="dropdown-item" href="/overview#dsr-srv-'+srvSession.serverName+'" target="_blank">View <b>List</b> of <b>all</b> Daily Summary Report for this Server</a>'
-						+ '    <a class="dropdown-item" href="/overview?op=dsr-current-srv&srv='+srvSession.serverName+'" target="_blank"><b>Create</b> Daily Summary Report on Current Recording</a>'
+						+ '    <a class="dropdown-item" href="/report?op=viewLatest&name='+serverName+'" target="_blank">Open <b>Latest</b> Daily Summary Report</a>'
+						+ '    <a class="dropdown-item" href="/overview#dsr-srv-'+serverName+'" target="_blank">View <b>List</b> of <b>all</b> Daily Summary Report for this Server</a>'
+						+ '    <a class="dropdown-item" href="/overview?op=dsr-current-srv&srv='+serverName+'" target="_blank"><b>Create</b> Daily Summary Report on Current Recording</a>'
 						+ '    <div class="dropdown-divider"></div>'
-						+ '    <a class="dropdown-item" href="/overview#offline-srv-'+srvSession.serverName+'" target="_blank">View <b>List</b> of all <b>Recordings</b> for this Server</a>'
+						+ '    <a class="dropdown-item" href="/overview#offline-srv-'+serverName+'" target="_blank">View <b>List</b> of all <b>Recordings</b> for this Server</a>'
 						+ '    <div class="dropdown-divider"></div>'
-						+ '    <a class="dropdown-item" href="/log?name='+srvSession.serverName+'.console&tail=5000" target="_blank"><b>Tail</b> Collector Console File</a>'
+						+ '    <a class="dropdown-item" href="/log?name='+serverName+'.console&tail=5000" target="_blank"><b>Tail</b> Collector Console File</a>'
 						+ '    <div class="dropdown-divider"></div>'
 						+ '    <a class="dropdown-item" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="#">Server <b>Info</b></a>'
 						+ '  </div>'

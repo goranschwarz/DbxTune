@@ -1264,7 +1264,7 @@ implements Runnable
 			// AND catch all runtime errors that might come
 			try 
 			{
-				_logger.info("Starting Counters Storage Session '" + pw.getName() + "' for sessionStartTime='" + cont.getSessionStartTime() + "', server='" + cont.getServerName() + "', with serverAlias='" + cont.getServerNameAlias() + "'.");
+				_logger.info("Starting Counters Storage Session '" + pw.getName() + "' for sessionStartTime='" + cont.getSessionStartTime() + "', server='" + cont.getServerName() + "', with serverAlias='" + cont.getServerNameAlias() + "', displayName='" + cont.getServerDisplayName() + "'.");
 
 				pw.startSession(cont);
 			}

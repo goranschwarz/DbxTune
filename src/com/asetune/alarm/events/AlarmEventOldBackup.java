@@ -59,7 +59,7 @@ extends AlarmEvent
 	 * @param cm
 	 * @param dbname
 	 */
-	public AlarmEventOldBackup(CountersModel cm, Number threshold, String dbname, String lastBackupStartTime, int age)
+	public AlarmEventOldBackup(CountersModel cm, Number thresholdInHours, String dbname, String lastBackupStartTime, int age)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -71,8 +71,11 @@ extends AlarmEvent
 				AlarmEvent.ServiceState.UP, 
 				"Old or No Database Backup found in '" + cm.getServerName() + "', dbname='" + dbname + "', Backup Age in Hours '" + age + "'" 
 						+ (age == -1 ? ", (where -1 means: Since ASE was started)" : "") 
-						+ ", lastBackupStartTime='" + lastBackupStartTime + "'. (threshold="+threshold+")",
-				threshold);
+						+ ", lastBackupStartTime='" + lastBackupStartTime + "'. (thresholdInHours="+thresholdInHours+")",
+						thresholdInHours);
+
+		// Adjust the Alarm Full Duration with X seconds
+		setFullDurationAdjustmentInSec( thresholdInHours == null ? 0 : thresholdInHours.intValue() * 60 );
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);

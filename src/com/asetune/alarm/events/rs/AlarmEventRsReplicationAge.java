@@ -37,7 +37,7 @@ extends AlarmEvent
 	 * @param logicalName
 	 * @param colName
 	 */
-	public AlarmEventRsReplicationAge(CountersModel cm, int threshold, String logicalName, String colName, int age)
+	public AlarmEventRsReplicationAge(CountersModel cm, int thresholdInMinutes, String logicalName, String colName, int age)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -47,10 +47,13 @@ extends AlarmEvent
 				AlarmEvent.Category.RPO,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"Replication Age in Server '" + cm.getServerName() + "' for Logical Connection '" + logicalName + "', colName='"+colName+"', age="+age+". (threshold="+threshold+")",
-				threshold
+				"Replication Age in Server '" + cm.getServerName() + "' for Logical Connection '" + logicalName + "', colName='"+colName+"', age="+age+". (thresholdInMinutes="+thresholdInMinutes+")",
+				thresholdInMinutes
 				);
 
+		// Adjust the Alarm Full Duration with X seconds
+		setFullDurationAdjustmentInSec( thresholdInMinutes * 60 );
+		
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);
 

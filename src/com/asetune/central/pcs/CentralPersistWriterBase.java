@@ -63,7 +63,7 @@ implements ICentralPersistWriter
 	 *   <li> 11 - Change column 'data', 'lastData' from varchar(160) -> 512    in tables *schema*.'DbxAlarmActive', *schema*.'DbxAlarmHistory' </li>
 	 * </ul> 
 	 */
-	public static int DBX_CENTRAL_DB_VERSION = 11;
+	public static int DBX_CENTRAL_DB_VERSION = 13;
 	
 	
 	public enum Table
@@ -440,16 +440,6 @@ implements ICentralPersistWriter
 		{
 			if (Table.CENTRAL_VERSION_INFO.equals(type))
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"ProductString"   +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"VersionString"   +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"BuildString"     +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"DbVersion"       +rq,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"DbProductName"   +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("\n");
-//				sbSql.append("   ,PRIMARY KEY ("+lq+"ProductString"+rq+")\n");
-//				sbSql.append(") \n");
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"ProductString"   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30),20)+" "+getNullable(false)+"\n");
@@ -463,29 +453,12 @@ implements ICentralPersistWriter
 			}
 			else if (Table.CENTRAL_SESSIONS.equals(type))
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"SessionStartTime"        +rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"Status"                  +rq,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"ServerName"              +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"OnHostname"              +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"ProductString"           +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"VersionString"           +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"BuildString"             +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"CollectorHostname"       +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"CollectorSampleInterval" +rq,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"CollectorCurrentUrl"     +rq,40)+" "+fill(getDatatype("varchar", 80,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"CollectorInfoFile"       +rq,40)+" "+fill(getDatatype("varchar",256,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"NumOfSamples"            +rq,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"LastSampleTime"          +rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("\n");
-//				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+")\n");
-//				sbSql.append(") \n");
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"SessionStartTime"        +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP   ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"Status"                  +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER     ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"ServerName"              +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  60),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"ServerDisplayName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  60),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"OnHostname"              +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  60),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"ProductString"           +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  60),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"VersionString"           +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  60),20)+" "+getNullable(false)+"\n");
@@ -502,17 +475,6 @@ implements ICentralPersistWriter
 			}
 			else if (Table.CENTRAL_GRAPH_PROFILES.equals(type))
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"ProductString"      +rq,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"UserName"           +rq,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"ProfileName"        +rq,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"ProfileDescription" +rq,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"ProfileValue"       +rq,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"ProfileUrlOptions"  +rq,40)+" "+fill(getDatatype("varchar", 1024,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("\n");
-//				sbSql.append("   ,PRIMARY KEY ("+lq+"ProductString"+rq+", "+lq+"UserName"+rq+", "+lq+"ProfileName"+rq+")\n");
-//				sbSql.append(") \n");
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"ProductString"      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   30),20)+" "+getNullable(false)+"\n");
@@ -527,15 +489,6 @@ implements ICentralPersistWriter
 			}
 			else if (Table.CENTRAL_USERS.equals(type))
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"UserName"           +rq,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"Password"           +rq,40)+" "+fill(getDatatype("varchar",   60,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"Email"              +rq,40)+" "+fill(getDatatype("varchar",   60,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"Roles"              +rq,40)+" "+fill(getDatatype("varchar",  120,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("\n");
-//				sbSql.append("   ,PRIMARY KEY ("+lq+"UserName"+rq+")\n");
-//				sbSql.append(") \n");
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"UserName"           +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  30),20)+" "+getNullable(false)+"\n");
@@ -563,13 +516,6 @@ implements ICentralPersistWriter
 			}
 			else if (Table.SESSION_SAMPLES.equals(type))
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"SessionSampleTime"+rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("\n");
-//				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionSampleTime"+rq+", "+lq+"SessionStartTime"+rq+")\n");
-//				sbSql.append(") \n");
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
@@ -580,17 +526,6 @@ implements ICentralPersistWriter
 			}
 			else if (Table.SESSION_SAMPLE_SUM.equals(type))
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"CmName"           +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"graphSamples"     +rq,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"absSamples"       +rq,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"diffSamples"      +rq,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"rateSamples"      +rq,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("\n");
-//				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+", "+lq+"CmName"+rq+")\n");
-//				sbSql.append(") \n");
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP  ),20)+" "+getNullable(false)+"\n");
@@ -605,37 +540,6 @@ implements ICentralPersistWriter
 			}
 			else if (Table.SESSION_SAMPLE_DETAILS.equals(type))
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"SessionStartTime"      +rq,40)+" "+fill(getDatatype("datetime",-1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"SessionSampleTime"     +rq,40)+" "+fill(getDatatype("datetime",-1,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"CmName"                +rq,40)+" "+fill(getDatatype("varchar", 30,  -1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"type"                  +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-////				sbSql.append("   ,"+fill(lq+"graphCount"            +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-////				sbSql.append("   ,"+fill(lq+"absRows"               +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-////				sbSql.append("   ,"+fill(lq+"diffRows"              +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-////				sbSql.append("   ,"+fill(lq+"rateRows"              +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"graphRecvCount"        +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"absRecvRows"           +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"diffRecvRows"          +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"rateRecvRows"          +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"graphSaveCount"        +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"absSaveRows"           +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"diffSaveRows"          +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"rateSaveRows"          +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"sqlRefreshTime"        +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"guiRefreshTime"        +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"lcRefreshTime"         +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"nonCfgMonHappened"     +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"nonCfgMonMissingParams"+rq,40)+" "+fill(getDatatype("varchar", 100, -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"nonCfgMonMessages"     +rq,40)+" "+fill(getDatatype("varchar", 1024,-1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"isCountersCleared"     +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"hasValidSampleData"    +rq,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"exceptionMsg"          +rq,40)+" "+fill(getDatatype("varchar", 1024,-1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("   ,"+fill(lq+"exceptionFullText"     +rq,40)+" "+fill(getDatatype("text",    -1,  -1,-1),20)+" "+getNullable(true)+"\n");
-//				sbSql.append("\n");
-//				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionSampleTime"+rq+", "+lq+"CmName"+rq+", "+lq+"SessionStartTime"+rq+")\n");
-//				sbSql.append(") \n");
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"SessionStartTime"      +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
@@ -666,22 +570,6 @@ implements ICentralPersistWriter
 			}
 			else if (Table.GRAPH_PROPERTIES.equals(type))
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"SessionStartTime"+rq,40)+" "+fill(getDatatype("datetime", -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"CmName"          +rq,40)+" "+fill(getDatatype("varchar",  30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"GraphName"       +rq,40)+" "+fill(getDatatype("varchar",  30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"TableName"       +rq,40)+" "+fill(getDatatype("varchar", 128,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"GraphLabel"      +rq,40)+" "+fill(getDatatype("varchar", 255,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"GraphProps"      +rq,40)+" "+fill(getDatatype("varchar",1024,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"GraphCategory"   +rq,40)+" "+fill(getDatatype("varchar",  30,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"isPercentGraph"  +rq,40)+" "+fill(getDatatype("int",      -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"visibleAtStart"  +rq,40)+" "+fill(getDatatype("int",      -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"initialOrder"    +rq,40)+" "+fill(getDatatype("int",      -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("\n");
-////				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+", "+lq+"CmName"+rq+", "+lq+"GraphName"+rq+")\n");
-//				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+", "+lq+"GraphName"+rq+")\n");
-//				sbSql.append(") \n");
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"SessionStartTime"+rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP   ),20)+" "+getNullable(false)+"\n");
@@ -700,31 +588,6 @@ implements ICentralPersistWriter
 			}
 			else if (Table.ALARM_ACTIVE.equals(type))
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"alarmClass"                 +rq,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"serviceType"                +rq,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"serviceName"                +rq,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"serviceInfo"                +rq,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"extraInfo"                  +rq,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"category"                   +rq,40)+" "+fill(getDatatype("varchar",   20,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"severity"                   +rq,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"state"                      +rq,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"repeatCnt"                  +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"duration"                   +rq,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"createTime"                 +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"cancelTime"                 +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"timeToLive"                 +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"threshold"                  +rq,40)+" "+fill(getDatatype("varchar",   15,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"data"                       +rq,40)+" "+fill(getDatatype("varchar",  160,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"lastData"                   +rq,40)+" "+fill(getDatatype("varchar",  160,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"description"                +rq,40)+" "+fill(getDatatype("varchar",  512,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"lastDescription"            +rq,40)+" "+fill(getDatatype("varchar",  512,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"extendedDescription"        +rq,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"lastExtendedDescription"    +rq,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("\n");
-//				sbSql.append("   ,PRIMARY KEY ("+lq+"alarmClass"+rq+", "+lq+"serviceType"+rq+", "+lq+"serviceName"+rq+", "+lq+"serviceInfo"+rq+", "+lq+"extraInfo"+rq+")\n");
-//				sbSql.append(") \n");
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"alarmClass"                 +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
@@ -736,7 +599,10 @@ implements ICentralPersistWriter
 				sbSql.append("   ,"+fill(lq+"severity"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   10),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"state"                      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   10),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"repeatCnt"                  +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"duration"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   10),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"duration"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"alarmDuration"              +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   20),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"fullDuration"               +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   20),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"fullDurationAdjustmentInSec"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"createTime"                 +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"cancelTime"                 +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"timeToLive"                 +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true )+"\n");
@@ -753,36 +619,6 @@ implements ICentralPersistWriter
 			}
 			else if (Table.ALARM_HISTORY.equals(type))
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(lq+"SessionStartTime"           +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"SessionSampleTime"          +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"eventTime"	                 +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"action"                     +rq,40)+" "+fill(getDatatype("varchar",   15,-1,-1),20)+" "+getNullable(false)+"\n");
-////				sbSql.append("   ,"+fill(lq+"isActive"                   +rq,40)+" "+fill(getDatatype("bit",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"alarmClass"                 +rq,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"serviceType"                +rq,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"serviceName"                +rq,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"serviceInfo"                +rq,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"extraInfo"                  +rq,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"category"                   +rq,40)+" "+fill(getDatatype("varchar",   20,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"severity"                   +rq,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"state"                      +rq,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"repeatCnt"                  +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"duration"                   +rq,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"createTime"                 +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"cancelTime"                 +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"timeToLive"                 +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"threshold"                  +rq,40)+" "+fill(getDatatype("varchar",   15,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"data"                       +rq,40)+" "+fill(getDatatype("varchar",  160,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"lastData"                   +rq,40)+" "+fill(getDatatype("varchar",  160,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"description"                +rq,40)+" "+fill(getDatatype("varchar",  512,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"lastDescription"            +rq,40)+" "+fill(getDatatype("varchar",  512,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(lq+"extendedDescription"        +rq,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("   ,"+fill(lq+"lastExtendedDescription"    +rq,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true )+"\n");
-//				sbSql.append("\n");
-//				sbSql.append("   ,PRIMARY KEY ("+lq+"eventTime"+rq+", "+lq+"action"+rq+", "+lq+"alarmClass"+rq+", "+lq+"serviceType"+rq+", "+lq+"serviceName"+rq+", "+lq+"serviceInfo"+rq+", "+lq+"extraInfo"+rq+")\n");
-//				sbSql.append(") \n");
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"SessionStartTime"           +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
@@ -798,7 +634,10 @@ implements ICentralPersistWriter
 				sbSql.append("   ,"+fill(lq+"severity"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   10),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"state"                      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   10),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"repeatCnt"                  +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"duration"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   10),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"duration"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"alarmDuration"              +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   20),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"fullDuration"               +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   20),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"fullDurationAdjustmentInSec"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"createTime"                 +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"cancelTime"                 +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"timeToLive"                 +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true )+"\n");
@@ -826,14 +665,6 @@ implements ICentralPersistWriter
 			}
 			else if ( Table.ABS.equals(type) || Table.DIFF.equals(type) || Table.RATE.equals(type) )
 			{
-//				sbSql.append("create table " + tabName + "\n");
-//				sbSql.append("( \n");
-//				sbSql.append("    "+fill(rq+"SessionStartTime" +lq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(rq+"SessionSampleTime"+lq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(rq+"CmSampleTime"     +lq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(rq+"CmSampleMs"       +lq,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("   ,"+fill(rq+"CmNewDiffRateRow" +lq,40)+" "+fill(getDatatype("tinyint", -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//				sbSql.append("\n");
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(rq+"SessionStartTime" +lq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
@@ -992,115 +823,123 @@ implements ICentralPersistWriter
 		else if (type.equals(Table.CENTRAL_SESSIONS))
 		{
 			sbSql.append("insert into ").append(tabName)      .append(" (");
-			sbSql.append(lq).append("SessionStartTime")       .append(rq).append(", ");
-			sbSql.append(lq).append("Status")                 .append(rq).append(", ");
-			sbSql.append(lq).append("ServerName")             .append(rq).append(", ");
-			sbSql.append(lq).append("OnHostname")             .append(rq).append(", ");
-			sbSql.append(lq).append("ProductString")          .append(rq).append(", ");
-			sbSql.append(lq).append("VersionString")          .append(rq).append(", ");
-			sbSql.append(lq).append("BuildString")            .append(rq).append(", ");
-			sbSql.append(lq).append("CollectorHostname")      .append(rq).append(", ");
-			sbSql.append(lq).append("CollectorSampleInterval").append(rq).append(", ");
-			sbSql.append(lq).append("CollectorCurrentUrl")    .append(rq).append(", ");
-			sbSql.append(lq).append("CollectorInfoFile")      .append(rq).append(", ");
-			sbSql.append(lq).append("NumOfSamples")           .append(rq).append(", ");
+			sbSql.append(lq).append("SessionStartTime")       .append(rq).append(", "); // 1
+			sbSql.append(lq).append("Status")                 .append(rq).append(", "); // 2
+			sbSql.append(lq).append("ServerName")             .append(rq).append(", "); // 3
+			sbSql.append(lq).append("ServerDisplayName")      .append(rq).append(", "); // 4
+			sbSql.append(lq).append("OnHostname")             .append(rq).append(", "); // 5
+			sbSql.append(lq).append("ProductString")          .append(rq).append(", "); // 6
+			sbSql.append(lq).append("VersionString")          .append(rq).append(", "); // 7
+			sbSql.append(lq).append("BuildString")            .append(rq).append(", "); // 8
+			sbSql.append(lq).append("CollectorHostname")      .append(rq).append(", "); // 9
+			sbSql.append(lq).append("CollectorSampleInterval").append(rq).append(", "); // 10
+			sbSql.append(lq).append("CollectorCurrentUrl")    .append(rq).append(", "); // 11
+			sbSql.append(lq).append("CollectorInfoFile")      .append(rq).append(", "); // 12
+			sbSql.append(lq).append("NumOfSamples")           .append(rq).append(", "); // 13
 			sbSql.append(lq).append("LastSampleTime")         .append(rq).append("");
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
 				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+			                      // 1  2  3  4  5  6  7  8  9 10 11 12 13
 		}
 		else if (type.equals(Table.CENTRAL_GRAPH_PROFILES))
 		{
 			sbSql.append("insert into ").append(tabName) .append(" (");
-			sbSql.append(lq).append("ProductString")     .append(rq).append(", ");
-			sbSql.append(lq).append("UserName")          .append(rq).append(", ");
-			sbSql.append(lq).append("ProfileName")       .append(rq).append(", ");
-			sbSql.append(lq).append("ProfileDescription").append(rq).append(", ");
-			sbSql.append(lq).append("ProfileValue")      .append(rq).append(", ");
-			sbSql.append(lq).append("ProfileUrlOptions") .append(rq).append("");
+			sbSql.append(lq).append("ProductString")     .append(rq).append(", ");  // 1 
+			sbSql.append(lq).append("UserName")          .append(rq).append(", ");  // 2 
+			sbSql.append(lq).append("ProfileName")       .append(rq).append(", ");  // 3 
+			sbSql.append(lq).append("ProfileDescription").append(rq).append(", ");  // 4 
+			sbSql.append(lq).append("ProfileValue")      .append(rq).append(", ");  // 5 
+			sbSql.append(lq).append("ProfileUrlOptions") .append(rq).append("");    // 6 
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
 				sbSql.append("values(?, ?, ?, ?, ?, ?) \n");
+			                      // 1  2  3  4  5  6
 		}
 		else if (type.equals(Table.CENTRAL_USERS))
 		{
-			sbSql.append("insert into ").append(tabName)  .append(" (");
-			sbSql.append(lq).append("UserName").append(rq).append(", ");
-			sbSql.append(lq).append("Password").append(rq).append(", ");
-			sbSql.append(lq).append("Email")   .append(rq).append(", ");
-			sbSql.append(lq).append("Roles")   .append(rq).append("");
-			sbSql.append(") ");
+			sbSql.append("insert into ").append(tabName)  .append(" ("); 
+			sbSql.append(lq).append("UserName").append(rq).append(", ");  // 1 
+			sbSql.append(lq).append("Password").append(rq).append(", ");  // 2 
+			sbSql.append(lq).append("Email")   .append(rq).append(", ");  // 3 
+			sbSql.append(lq).append("Roles")   .append(rq).append("");    // 4 
+			sbSql.append(") "); 
 			if (addPrepStatementQuestionMarks)
 				sbSql.append("values(?, ?, ?, ?) \n");
+			                      // 1  2  3  4
 		}
 		else if (type.equals(Table.DSR_SKIP_ENTRIES))
 		{
 			sbSql.append("insert into ").append(tabName)  .append(" (");
-			sbSql.append(lq).append("SrvName")       .append(rq).append(", ");
-			sbSql.append(lq).append("ClassName")     .append(rq).append(", ");
-			sbSql.append(lq).append("EntryType")     .append(rq).append(", ");
-//			sbSql.append(lq).append("NumberVal")     .append(rq).append(", ");
-			sbSql.append(lq).append("StringVal")     .append(rq).append(", ");
-			sbSql.append(lq).append("Description")   .append(rq).append(", ");
-			sbSql.append(lq).append("SqlTextExample").append(rq).append("");
+			sbSql.append(lq).append("SrvName")       .append(rq).append(", "); // 1
+			sbSql.append(lq).append("ClassName")     .append(rq).append(", "); // 2
+			sbSql.append(lq).append("EntryType")     .append(rq).append(", "); // 3
+//			sbSql.append(lq).append("NumberVal")     .append(rq).append(", "); 
+			sbSql.append(lq).append("StringVal")     .append(rq).append(", "); // 4
+			sbSql.append(lq).append("Description")   .append(rq).append(", "); // 5
+			sbSql.append(lq).append("SqlTextExample").append(rq).append("");   // 6
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
 				sbSql.append("values(?, ?, ?, ?, ?, ?) \n");
+			                      // 1  2  3  4  5  6
 		}
 		else if (type.equals(Table.SESSION_SAMPLES))
 		{
 			sbSql.append("insert into ").append(tabName).append(" (");
-			sbSql.append(lq).append("SessionStartTime") .append(rq).append(", ");
-			sbSql.append(lq).append("SessionSampleTime").append(rq).append("");
+			sbSql.append(lq).append("SessionStartTime") .append(rq).append(", "); // 1
+			sbSql.append(lq).append("SessionSampleTime").append(rq).append("");   // 2
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
 				sbSql.append("values(?, ?) \n");
+			                      // 1  2
 		}
 		else if (type.equals(Table.SESSION_SAMPLE_SUM))
 		{
 			sbSql.append("insert into ").append(tabName).append(" (");
-			sbSql.append(lq).append("SessionStartTime").append(rq).append(", ");
-			sbSql.append(lq).append("CmName")          .append(rq).append(", ");
-			sbSql.append(lq).append("graphSamples")    .append(rq).append(", ");
-			sbSql.append(lq).append("absSamples")      .append(rq).append(", ");
-			sbSql.append(lq).append("diffSamples")     .append(rq).append(", ");
-			sbSql.append(lq).append("rateSamples")     .append(rq).append("");
+			sbSql.append(lq).append("SessionStartTime").append(rq).append(", "); // 1
+			sbSql.append(lq).append("CmName")          .append(rq).append(", "); // 2
+			sbSql.append(lq).append("graphSamples")    .append(rq).append(", "); // 3
+			sbSql.append(lq).append("absSamples")      .append(rq).append(", "); // 4
+			sbSql.append(lq).append("diffSamples")     .append(rq).append(", "); // 5
+			sbSql.append(lq).append("rateSamples")     .append(rq).append("");   // 6
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?) \n");
+				sbSql.append("values(?, ?, ?, ?, ?, ?) \n");
+			                      // 1  2  3  4  5  6
 		}
 		else if (type.equals(Table.SESSION_SAMPLE_DETAILS))
 		{
 			sbSql.append("insert into ").append(tabName)     .append(" (");
-			sbSql.append(lq).append("SessionStartTime")      .append(rq).append(", ");
-			sbSql.append(lq).append("SessionSampleTime")     .append(rq).append(", ");
-			sbSql.append(lq).append("CmName")                .append(rq).append(", ");
-			sbSql.append(lq).append("type")                  .append(rq).append(", ");
+			sbSql.append(lq).append("SessionStartTime")      .append(rq).append(", "); // 1
+			sbSql.append(lq).append("SessionSampleTime")     .append(rq).append(", "); // 2
+			sbSql.append(lq).append("CmName")                .append(rq).append(", "); // 3
+			sbSql.append(lq).append("type")                  .append(rq).append(", "); // 4
 //			sbSql.append(lq).append("graphCount")            .append(rq).append(", ");
 //			sbSql.append(lq).append("absRows")               .append(rq).append(", ");
 //			sbSql.append(lq).append("diffRows")              .append(rq).append(", ");
 //			sbSql.append(lq).append("rateRows")              .append(rq).append(", ");
-			sbSql.append(lq).append("graphRecvCount")        .append(rq).append(", ");
-			sbSql.append(lq).append("absRecvRows")           .append(rq).append(", ");
-			sbSql.append(lq).append("diffRecvRows")          .append(rq).append(", ");
-			sbSql.append(lq).append("rateRecvRows")          .append(rq).append(", ");
-			sbSql.append(lq).append("graphSaveCount")        .append(rq).append(", ");
-			sbSql.append(lq).append("absSaveRows")           .append(rq).append(", ");
-			sbSql.append(lq).append("diffSaveRows")          .append(rq).append(", ");
-			sbSql.append(lq).append("rateSaveRows")          .append(rq).append(", ");
-			sbSql.append(lq).append("sqlRefreshTime")        .append(rq).append(", ");
-			sbSql.append(lq).append("guiRefreshTime")        .append(rq).append(", ");
-			sbSql.append(lq).append("lcRefreshTime")         .append(rq).append(", ");
-			sbSql.append(lq).append("nonCfgMonHappened")     .append(rq).append(", ");
-			sbSql.append(lq).append("nonCfgMonMissingParams").append(rq).append(", ");
-			sbSql.append(lq).append("nonCfgMonMessages")     .append(rq).append(", ");
-			sbSql.append(lq).append("isCountersCleared")     .append(rq).append(", ");
-			sbSql.append(lq).append("hasValidSampleData")    .append(rq).append(", ");
-			sbSql.append(lq).append("exceptionMsg")          .append(rq).append(", ");
-			sbSql.append(lq).append("exceptionFullText")     .append(rq).append(" ");
+			sbSql.append(lq).append("graphRecvCount")        .append(rq).append(", "); // 5
+			sbSql.append(lq).append("absRecvRows")           .append(rq).append(", "); // 6
+			sbSql.append(lq).append("diffRecvRows")          .append(rq).append(", "); // 7
+			sbSql.append(lq).append("rateRecvRows")          .append(rq).append(", "); // 8
+			sbSql.append(lq).append("graphSaveCount")        .append(rq).append(", "); // 9
+			sbSql.append(lq).append("absSaveRows")           .append(rq).append(", "); // 10
+			sbSql.append(lq).append("diffSaveRows")          .append(rq).append(", "); // 11
+			sbSql.append(lq).append("rateSaveRows")          .append(rq).append(", "); // 12
+			sbSql.append(lq).append("sqlRefreshTime")        .append(rq).append(", "); // 13
+			sbSql.append(lq).append("guiRefreshTime")        .append(rq).append(", "); // 14
+			sbSql.append(lq).append("lcRefreshTime")         .append(rq).append(", "); // 15
+			sbSql.append(lq).append("nonCfgMonHappened")     .append(rq).append(", "); // 16
+			sbSql.append(lq).append("nonCfgMonMissingParams").append(rq).append(", "); // 17
+			sbSql.append(lq).append("nonCfgMonMessages")     .append(rq).append(", "); // 18
+			sbSql.append(lq).append("isCountersCleared")     .append(rq).append(", "); // 19
+			sbSql.append(lq).append("hasValidSampleData")    .append(rq).append(", "); // 20
+			sbSql.append(lq).append("exceptionMsg")          .append(rq).append(", "); // 21
+			sbSql.append(lq).append("exceptionFullText")     .append(rq).append(" ");  // 22
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+			                      // 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22
 		}
 		else if (type.equals(Table.GRAPH_PROPERTIES))
 		{
@@ -1118,64 +957,73 @@ implements ICentralPersistWriter
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
 				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+			                      // 1  2  3  4  5  6  7  8  9 10
 		}
 		else if (type.equals(Table.ALARM_ACTIVE))
 		{
 			sbSql.append("insert into ").append(tabName).append(" (");
-			sbSql.append(lq).append("alarmClass"             ).append(rq).append(", ");
-			sbSql.append(lq).append("serviceType"            ).append(rq).append(", ");
-			sbSql.append(lq).append("serviceName"            ).append(rq).append(", ");
-			sbSql.append(lq).append("serviceInfo"            ).append(rq).append(", ");
-			sbSql.append(lq).append("extraInfo"              ).append(rq).append(", ");
-			sbSql.append(lq).append("category"               ).append(rq).append(", ");
-			sbSql.append(lq).append("severity"               ).append(rq).append(", ");
-			sbSql.append(lq).append("state"                  ).append(rq).append(", ");
-			sbSql.append(lq).append("repeatCnt"              ).append(rq).append(", ");
-			sbSql.append(lq).append("duration"               ).append(rq).append(", ");
-			sbSql.append(lq).append("createTime"             ).append(rq).append(", ");
-			sbSql.append(lq).append("cancelTime"             ).append(rq).append(", ");
-			sbSql.append(lq).append("timeToLive"             ).append(rq).append(", ");
-			sbSql.append(lq).append("threshold"              ).append(rq).append(", ");
-			sbSql.append(lq).append("data"                   ).append(rq).append(", ");
-			sbSql.append(lq).append("lastData"               ).append(rq).append(", ");
-			sbSql.append(lq).append("description"            ).append(rq).append(", ");
-			sbSql.append(lq).append("lastDescription"        ).append(rq).append(", ");
-			sbSql.append(lq).append("extendedDescription"    ).append(rq).append(", ");
-			sbSql.append(lq).append("lastExtendedDescription").append(rq).append("");
+			sbSql.append(lq).append("alarmClass"                 ).append(rq).append(", "); // 1
+			sbSql.append(lq).append("serviceType"                ).append(rq).append(", "); // 2
+			sbSql.append(lq).append("serviceName"                ).append(rq).append(", "); // 3
+			sbSql.append(lq).append("serviceInfo"                ).append(rq).append(", "); // 4
+			sbSql.append(lq).append("extraInfo"                  ).append(rq).append(", "); // 5
+			sbSql.append(lq).append("category"                   ).append(rq).append(", "); // 6
+			sbSql.append(lq).append("severity"                   ).append(rq).append(", "); // 7
+			sbSql.append(lq).append("state"                      ).append(rq).append(", "); // 8
+			sbSql.append(lq).append("repeatCnt"                  ).append(rq).append(", "); // 9
+			sbSql.append(lq).append("duration"                   ).append(rq).append(", "); // 10
+			sbSql.append(lq).append("alarmDuration"              ).append(rq).append(", "); // 11
+			sbSql.append(lq).append("fullDuration"               ).append(rq).append(", "); // 12
+			sbSql.append(lq).append("fullDurationAdjustmentInSec").append(rq).append(", "); // 13
+			sbSql.append(lq).append("createTime"                 ).append(rq).append(", "); // 14
+			sbSql.append(lq).append("cancelTime"                 ).append(rq).append(", "); // 15
+			sbSql.append(lq).append("timeToLive"                 ).append(rq).append(", "); // 16
+			sbSql.append(lq).append("threshold"                  ).append(rq).append(", "); // 17
+			sbSql.append(lq).append("data"                       ).append(rq).append(", "); // 18
+			sbSql.append(lq).append("lastData"                   ).append(rq).append(", "); // 19
+			sbSql.append(lq).append("description"                ).append(rq).append(", "); // 20
+			sbSql.append(lq).append("lastDescription"            ).append(rq).append(", "); // 21
+			sbSql.append(lq).append("extendedDescription"        ).append(rq).append(", "); // 22
+			sbSql.append(lq).append("lastExtendedDescription"    ).append(rq).append("");   // 23
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+			                      // 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
 		}
 		else if (type.equals(Table.ALARM_HISTORY))
 		{
 			sbSql.append("insert into ").append(tabName).append(" (");
-			sbSql.append(lq).append("SessionStartTime"       ).append(rq).append(", ");
-			sbSql.append(lq).append("SessionSampleTime"      ).append(rq).append(", ");
-			sbSql.append(lq).append("eventTime"              ).append(rq).append(", ");
-			sbSql.append(lq).append("action"                 ).append(rq).append(", ");
-			sbSql.append(lq).append("alarmClass"             ).append(rq).append(", ");
-			sbSql.append(lq).append("serviceType"            ).append(rq).append(", ");
-			sbSql.append(lq).append("serviceName"            ).append(rq).append(", ");
-			sbSql.append(lq).append("serviceInfo"            ).append(rq).append(", ");
-			sbSql.append(lq).append("extraInfo"              ).append(rq).append(", ");
-			sbSql.append(lq).append("category"               ).append(rq).append(", ");
-			sbSql.append(lq).append("severity"               ).append(rq).append(", ");
-			sbSql.append(lq).append("state"                  ).append(rq).append(", ");
-			sbSql.append(lq).append("repeatCnt"              ).append(rq).append(", ");
-			sbSql.append(lq).append("duration"               ).append(rq).append(", ");
-			sbSql.append(lq).append("createTime"             ).append(rq).append(", ");
-			sbSql.append(lq).append("cancelTime"             ).append(rq).append(", ");
-			sbSql.append(lq).append("timeToLive"             ).append(rq).append(", ");
-			sbSql.append(lq).append("threshold"              ).append(rq).append(", ");
-			sbSql.append(lq).append("data"                   ).append(rq).append(", ");
-			sbSql.append(lq).append("lastData"               ).append(rq).append(", ");
-			sbSql.append(lq).append("description"            ).append(rq).append(", ");
-			sbSql.append(lq).append("lastDescription"        ).append(rq).append(", ");
-			sbSql.append(lq).append("extendedDescription"    ).append(rq).append(", ");
-			sbSql.append(lq).append("lastExtendedDescription").append(rq).append("");
+			sbSql.append(lq).append("SessionStartTime"           ).append(rq).append(", "); // 1 
+			sbSql.append(lq).append("SessionSampleTime"          ).append(rq).append(", "); // 2 
+			sbSql.append(lq).append("eventTime"                  ).append(rq).append(", "); // 3 
+			sbSql.append(lq).append("action"                     ).append(rq).append(", "); // 4 
+			sbSql.append(lq).append("alarmClass"                 ).append(rq).append(", "); // 5 
+			sbSql.append(lq).append("serviceType"                ).append(rq).append(", "); // 6 
+			sbSql.append(lq).append("serviceName"                ).append(rq).append(", "); // 7 
+			sbSql.append(lq).append("serviceInfo"                ).append(rq).append(", "); // 8 
+			sbSql.append(lq).append("extraInfo"                  ).append(rq).append(", "); // 9 
+			sbSql.append(lq).append("category"                   ).append(rq).append(", "); // 10
+			sbSql.append(lq).append("severity"                   ).append(rq).append(", "); // 11
+			sbSql.append(lq).append("state"                      ).append(rq).append(", "); // 12
+			sbSql.append(lq).append("repeatCnt"                  ).append(rq).append(", "); // 13
+			sbSql.append(lq).append("duration"                   ).append(rq).append(", "); // 14
+			sbSql.append(lq).append("alarmDuration"              ).append(rq).append(", "); // 15
+			sbSql.append(lq).append("fullDuration"               ).append(rq).append(", "); // 16
+			sbSql.append(lq).append("fullDurationAdjustmentInSec").append(rq).append(", "); // 17
+			sbSql.append(lq).append("createTime"                 ).append(rq).append(", "); // 18
+			sbSql.append(lq).append("cancelTime"                 ).append(rq).append(", "); // 19
+			sbSql.append(lq).append("timeToLive"                 ).append(rq).append(", "); // 20
+			sbSql.append(lq).append("threshold"                  ).append(rq).append(", "); // 21
+			sbSql.append(lq).append("data"                       ).append(rq).append(", "); // 22
+			sbSql.append(lq).append("lastData"                   ).append(rq).append(", "); // 23
+			sbSql.append(lq).append("description"                ).append(rq).append(", "); // 24
+			sbSql.append(lq).append("lastDescription"            ).append(rq).append(", "); // 25
+			sbSql.append(lq).append("extendedDescription"        ).append(rq).append(", "); // 26
+			sbSql.append(lq).append("lastExtendedDescription"    ).append(rq).append("");   // 27
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+			                      // 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27
 		}
 //		else if (type.equals(Table.CHART_LABELS))
 //		{
@@ -1191,22 +1039,23 @@ implements ICentralPersistWriter
 		else if (type.equals(Table.CM_LAST_SAMPLE_JSON))
 		{
 			sbSql.append("insert into ").append(tabName).append(" (");
-			sbSql.append(lq).append("SessionSampleTime").append(rq).append(", ");
-			sbSql.append(lq).append("CmName"           ).append(rq).append(", ");
-			sbSql.append(lq).append("JsonText"         ).append(rq).append("");
+			sbSql.append(lq).append("SessionSampleTime").append(rq).append(", "); // 1
+			sbSql.append(lq).append("CmName"           ).append(rq).append(", "); // 2
+			sbSql.append(lq).append("JsonText"         ).append(rq).append("");   // 3
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
 				sbSql.append("values(?, ?, ?) \n");
+			                      // 1  2  3
 		}
 		else if ( Table.ABS.equals(type) || Table.DIFF.equals(type) || Table.RATE.equals(type) )
 		{
 			sbSql.append("insert into ").append(tabName) .append(" (");
-			sbSql.append(lq).append("SessionStartTime") .append(rq).append(", ");
-			sbSql.append(lq).append("SessionSampleTime").append(rq).append(", ");
-			sbSql.append(lq).append("CmSampleTime")     .append(rq).append(", ");
-			sbSql.append(lq).append("CmSampleMs")       .append(rq).append(", ");
+			sbSql.append(lq).append("SessionStartTime") .append(rq).append(", "); // 1
+			sbSql.append(lq).append("SessionSampleTime").append(rq).append(", "); // 2
+			sbSql.append(lq).append("CmSampleTime")     .append(rq).append(", "); // 3
+			sbSql.append(lq).append("CmSampleMs")       .append(rq).append(", "); // 4
 //			sbSql.append(lq).append("CmNewDiffRateRow") .append(rq).append(", ");
-			sbSql.append(lq).append("CmRowState")       .append(rq).append(", ");
+			sbSql.append(lq).append("CmRowState")       .append(rq).append(", "); // 5
 			
 			// Get ALL other column names from the CM
 //			int cols = cm.getColumnCount();
@@ -1226,6 +1075,7 @@ implements ICentralPersistWriter
 			if (addPrepStatementQuestionMarks)
 			{
 				sbSql.append("values(?, ?, ?, ?, ?, ");
+				                  // 1  2  3  4  5
 				for (int c=0; c<cols; c++) 
 					sbSql.append("?, ");
 

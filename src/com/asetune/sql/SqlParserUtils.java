@@ -338,6 +338,62 @@ public class SqlParserUtils
 		// Solved with another workaround: The caller can store "faulty" entries in a "discarded" Set ... (thats how I solved it in DDL Storage) 
 		return new LinkedHashSet<>(tables);
 	}
+
+	
+//	public static Set<String> getTables2_noThrow(String sql)
+//	{
+//		try { return getTables2(sql); }
+//		catch (ParseException ex) { return Collections.emptySet(); }
+//	}
+//	public static Set<String> getTables2(String sql)
+//	throws ParseException
+//	{
+//		if (StringUtil.isNullOrBlank(sql))
+//			return Collections.emptySet();
+//			
+//		boolean logIssues = true;
+//		// Now parse and get the table list
+//		try
+//		{
+//			Statement stmt = CCJSqlParserUtil.parse(sql, parser -> parser.withSquareBracketQuotation(true));
+//
+//			try
+//			{
+//				TablesNamesFinder tablesNamesFinder = new TablesNamesFinder();
+//				List<String> tableList = tablesNamesFinder.getTableList(stmt);
+////				return tableList;
+//				return new HashSet<>(tableList);
+//			}
+//			catch(RuntimeException rte)
+//			{
+//				_logger.error("StatementTablesFinder.getTables(): Problems getting table names for SQL Statement=|" + sql + "|. Caught: " + rte, rte);
+//				_logger.error("", rte);
+//
+//				return Collections.emptySet();
+//			}
+//		}
+//		catch (JSQLParserException ex)
+//		{
+//			Throwable cause = ex.getCause();
+//			String causeStr = cause == null ? "" : cause.toString().replace('\n', ' ');
+//
+//			if (cause instanceof ParseException)
+//			{
+//				if (logIssues)
+//					_logger.warn("StatementTablesFinder.getTables(): Problems parsing SQL Statement=|" + sql + "|. ex=" + ex + ", cause=" + causeStr);
+//				throw (ParseException) cause;
+//			}
+//
+//			if (logIssues)
+//				_logger.error("StatementTablesFinder.getTables(): Problems parsing SQL Statement=|" + sql + "|. ex=" + ex + ", cause="+causeStr, cause);
+//
+//			//throw new ParseException("Parser caught unexpected exception '" + cause + "'.");
+//
+//			return Collections.emptySet();
+////			return null;
+//		}
+//		
+//	}
 	
 	
 	private static Collection<String> test(String sql)
@@ -345,6 +401,7 @@ public class SqlParserUtils
 //		return getTablesNoThrow(sql);
 //		return new TableNameParser(sql).tables();
 		return getTables(sql);
+//		return getTables2_noThrow(sql);
 	}
 	
 	public static void main(String[] args)
@@ -398,5 +455,14 @@ public class SqlParserUtils
 		System.out.println("D-21: " + test("delete from dbo.Event where txId in (select c.txId from dbo.Conversation c where c.updated <= dateadd(month, @monthsToDelete, getdate()) and c.type = @typeToDelete)(@monthsToDelete INT output, @typeToDelete VARCHAR(30) output)"));
 
 		System.out.println("SS-1: " + test("(@P0 nvarchar(4000))select agarochkon0_.formular_ref as formular9_8_0_, agarochkon0_.id as id1_8_0_, agarochkon0_.id as id1_8_1_, agarochkon0_.uuid as uuid2_8_1_, agarochkon0_.agarandel as agarande3_8_1_, agarochkon0_.agt_bolag_ref as agt_bola8_8_1_, agarochkon0_.formular_ref as formular9_8_1_, agarochkon0_.person_el_org_nummer as person_e4_8_1_, agarochkon0_.kundbolaget as kundbola5_8_1_, agarochkon0_.namn as namn6_8_1_, agarochkon0_.person as person7_8_1_, agareentit1_.id as id1_8_2_, agareentit1_.uuid as uuid2_8_2_, agareentit1_.agarandel as agarande3_8_2_, agareentit1_.agt_bolag_ref as agt_bola8_8_2_, agareentit1_.formular_ref as formular9_8_2_, agareentit1_.person_el_org_nummer as person_e4_8_2_, agareentit1_.kundbolaget as kundbola5_8_2_, agareentit1_.namn as namn6_8_2_, agareentit1_.person as person7_8_2_ from agare agarochkon0_ left outer join agare agareentit1_ on agarochkon0_.agt_bolag_ref=agareentit1_.id where agarochkon0_.formular_ref=@P0"));
+
+		System.out.println("PG-TVF-1: " + test("CREATE OR REPLACE FUNCTION public.get_film(p_pattern character varying, p_year integer)  RETURNS TABLE(film_title character varying, film_release_year integer)  LANGUAGE plpgsql AS $function$ DECLARE      var_r record; BEGIN     FOR var_r IN(SELECT                  title,                  release_year                  FROM film                  WHERE title ILIKE p_pattern AND                  release_year = p_year)       LOOP         film_title := upper(var_r.title) ;          film_release_year := var_r.release_year;         RETURN NEXT;     END LOOP; END; $function$"));
+		System.out.println("PG-TVF-2: " + test("SELECT * from get_film('asfdafd',23)"));
+		System.out.println("PG-TVF-3: " + test("SELECT * from issuer_instrument.getprevdivisorvalues($1,$2)"));
+		System.out.println("PG-TVF-4: " + test("SELECT functionName()"));
+		System.out.println("PG-TVF-5: " + test("CREATE OR REPLACE FUNCTION public.t1_dummy2_func()		 RETURNS integer		 LANGUAGE plpgsql		AS $function$		DECLARE		  v_rowcount int;		BEGIN		   FOR i IN 1..10 LOOP		      select count(*) INTO v_rowcount		      from t1		      where c2 = cast(gen_random_uuid() as varchar(30));		   END LOOP;		   return v_rowcount;		END;		$function$"));
+		System.out.println("PG-TVF-6: " + test("CREATE OR REPLACE FUNCTION public.t1_dummy2_func()		 RETURNS integer		 LANGUAGE plpgsql		AS $function$		DECLARE		  v_rowcount int;		BEGIN		   FOR i IN 1..10 LOOP		      select count(*)                             from t1		      where c2 = cast(gen_random_uuid() as varchar(30));		   END LOOP;		   return v_rowcount;		END;		$function$"));
+		System.out.println("PG-TVF-6: " + test("CREATE OR REPLACE FUNCTION public.t1_dummy2_func()		 RETURNS integer		 LANGUAGE plpgsql		AS $function$		DECLARE		  v_rowcount int;		BEGIN		   FOR i IN 1..10 LOOP		      select count(*) from t1 where c2 = ''; select count(*) from t333 where c2 = ''; END LOOP; return v_rowcount; END; $function$"));
+		System.out.println("PG-TVF-4: " + test("CALL issuer_instrument.stg_master_reset()"));
 	}
 }

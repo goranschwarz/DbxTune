@@ -34,6 +34,8 @@ import com.asetune.alarm.events.postgres.AlarmEventPgArchiveError;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
 import com.asetune.sql.conn.DbxConnection;
@@ -129,6 +131,7 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	public static final String GRAPH_NAME_ARCHIVED_COUNT = "ArchivedCount";
 	
 //	@Override
 //	protected TabularCntrPanel createGui()
@@ -166,8 +169,35 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
+		addTrendGraph(GRAPH_NAME_ARCHIVED_COUNT,
+				"Archived Files Count", 	                // Menu CheckBox text
+				"Archived Files Count (archived_count) ("+SHORT_NAME+")", // Graph Label 
+				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				new String[] {"archived_count"}, 
+				LabelType.Static, 
+				TrendGraphDataPoint.Category.OTHER,
+				false, // is Percent Graph
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+
 	}
 
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		if (GRAPH_NAME_ARCHIVED_COUNT.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getDiffValueAsDouble(0, "archived_count");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+	}
+	
+	
 	//----------------------------------------------------------------
 	// ALARMS
 	//----------------------------------------------------------------

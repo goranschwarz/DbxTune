@@ -330,4 +330,16 @@ public interface ICounterController
 
 	/** Stop the installed scheduler, if we have any installed */
 	void stopScheduler();
+
+	/** (in no-gui mode) the Collector can specify '-A' or '--aliasName' this would be that value  */
+	String getServerAliasName();
+
+	/** (in no-gui mode) the Collector can specify '-A' or '--aliasName' this would be that value  */
+	void setServerAliasName(String aliasName);
+
+	/** (in no-gui mode) the Collector can specify '-N' or '--displayName' this would be that value  */
+	String getServerDisplayName();
+
+	/** (in no-gui mode) the Collector can specify '-N' or '--displayName' this would be that value  */
+	void setServerDisplayName(String displayName);
 }

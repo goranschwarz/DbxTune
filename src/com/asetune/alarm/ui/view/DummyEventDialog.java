@@ -92,6 +92,10 @@ implements ActionListener, FocusListener
 	private JLabel               _raiseDelay_lbl          = new JLabel("Raise Delay");
 	private JTextField           _raiseDelay_txt          = new JTextField();
 
+//	private JLabel               _fullDurationAdjustmentInSec_lbl = new JLabel("Full Duration Adjustment In Sec");
+	private JLabel               _fullDurationAdjustmentInSec_lbl = new JLabel("Full Duration Adj In Sec");
+	private JTextField           _fullDurationAdjustmentInSec_txt = new JTextField();
+
 	private JLabel               _data_lbl                = new JLabel("Data");
 	private JTextField           _data_txt                = new JTextField();
 
@@ -246,6 +250,9 @@ implements ActionListener, FocusListener
 		panel.add(_raiseDelay_lbl,    "");
 		panel.add(_raiseDelay_txt,    "pushx, growx, wrap");
 
+		panel.add(_fullDurationAdjustmentInSec_lbl,    "");
+		panel.add(_fullDurationAdjustmentInSec_txt,    "pushx, growx, wrap");
+
 		panel.add(_data_lbl,          "");
 		panel.add(_data_txt,          "pushx, growx, wrap");
 
@@ -294,6 +301,7 @@ implements ActionListener, FocusListener
 		_serviceInfo_txt  .setText("CmDummy");
 		_timeToLive_txt   .setText("-1");
 		_raiseDelay_txt   .setText("0");
+		_fullDurationAdjustmentInSec_txt.setText("0");
 		_description_txt  .setText("A Dummy Description");
 
 		// ADD KEY listeners
@@ -316,6 +324,7 @@ implements ActionListener, FocusListener
 		_extraInfo_txt    .addFocusListener(this);
 		_timeToLive_txt   .addFocusListener(this);
 		_raiseDelay_txt   .addFocusListener(this);
+		_fullDurationAdjustmentInSec_txt.addFocusListener(this);
 		_data_txt         .addFocusListener(this);
 		_description_txt  .addFocusListener(this);
 		_extendedDesc_txt .addFocusListener(this);
@@ -363,11 +372,12 @@ implements ActionListener, FocusListener
 			AlarmEvent.ServiceState state        = (AlarmEvent.ServiceState)_state_cbx   .getSelectedItem();
 			int    timeToLive                    = StringUtil.parseInt(_timeToLive_txt.getText(), -1);
 			int    raiseDelay                    = StringUtil.parseInt(_raiseDelay_txt.getText(), -1);
+			int    fullDurationAdjustmentInSec   = StringUtil.parseInt(_fullDurationAdjustmentInSec_txt.getText(), -1);
 			String data                          = _data_txt        .getText();
 			String description                   = _description_txt .getText().replace("\\n", "\n");
 			String extendedDesc                  = _extendedDesc_txt.getText().replace("\\n", "\n");
 
-			AlarmEventDummy alarmEvent = new AlarmEventDummy(serviceName, serviceInfo, extraInfo, category, severity, state, timeToLive, data, description, extendedDesc);
+			AlarmEventDummy alarmEvent = new AlarmEventDummy(serviceName, serviceInfo, extraInfo, category, severity, state, timeToLive, data, description, extendedDesc, fullDurationAdjustmentInSec);
 
 			if (raiseDelay > 0)
 				alarmEvent.setRaiseDelayInSec(raiseDelay);
@@ -394,11 +404,12 @@ implements ActionListener, FocusListener
 			AlarmEvent.ServiceState state        = (AlarmEvent.ServiceState)_state_cbx   .getSelectedItem();
 			int    timeToLive                    = StringUtil.parseInt(_timeToLive_txt.getText(), -1);
 			int    raiseDelay                    = StringUtil.parseInt(_raiseDelay_txt.getText(), -1);
+			int    fullDurationAdjustmentInSec   = StringUtil.parseInt(_fullDurationAdjustmentInSec_txt.getText(), -1);
 			String data                          = _data_txt        .getText();
 			String description                   = _description_txt .getText().replace("\\n", "\n");
 			String extendedDesc                  = _extendedDesc_txt.getText().replace("\\n", "\n");
 
-			AlarmEventDummy alarmEvent = new AlarmEventDummy(serviceName, serviceInfo, extraInfo, category, severity, state, timeToLive, data, description, extendedDesc);
+			AlarmEventDummy alarmEvent = new AlarmEventDummy(serviceName, serviceInfo, extraInfo, category, severity, state, timeToLive, data, description, extendedDesc, fullDurationAdjustmentInSec);
 
 			if (raiseDelay > 0)
 				alarmEvent.setRaiseDelayInSec(raiseDelay);

@@ -109,7 +109,45 @@ extends CounterModelHostMonitor
 		return new CmOsMeminfoPanel(this);
 	}
 
+	
+// TODO: Look at the following places to get ideas for Memory Usage [Linux/Windows]
+//			Linux   -- https://github.com/postgrespro/mamonsu/blob/master/mamonsu/plugins/system/linux/memory.py	
+//			Windows -- https://github.com/postgrespro/mamonsu/blob/master/mamonsu/plugins/system/windows/memory.py	
 
+ /*  Linux   -- https://github.com/postgrespro/mamonsu/blob/master/mamonsu/plugins/system/linux/memory.py
+        ("active"      , "Active"      , "Active - Memory Recently Used"                 , "BAEB6B", 1),
+        ("available"   , "MemAvailable", "Available - Free Memory"                       , "00CC00", 1),
+        ("buffers"     , "Buffers"     , "Buffers - Block Device Cache and Dirty"        , "00B0B8", 1),
+        ("cached"      , "Cached"      , "Cached - Parked File Data (file content) Cache", "52768F", 1),
+        ("committed"   , "Committed_AS", "Committed AS - Total Committed Memory"         , "9C8A4E", 1),
+        ("inactive"    , "Inactive"    , "Inactive - Memory Not Currently Used"          , "A39B98", 1),
+        ("mapped"      , "Mapped"      , "Mapped - All mmap()ed Pages"                   , "9F1E28", 1),
+        ("page_tables" , "PageTables"  , "PageTables - Map bt Virtual and Physical"      , "793F5D", 1),
+        ("slab"        , "Slab"        , "Slab - Kernel Used Memory (inode cache)"       , "F6CB93", 1),
+        ("swap"        , None          , "Swap - Swap Space Used"                        , "006AAE", 1),
+        ("swap_cache"  , "SwapCached"  , "SwapCached - Fetched unmod Yet Swap Pages"     , "87C2B9", 1),
+        ("total"       , "MemTotal"    , "Total - All Memory"                            , "FF5656", 4),
+        ("unused"      , "MemFree"     , "Unused - Wasted Memory"                        , "3B415A", 1),
+        ("used"        , None          , "Used - User-Space Applications"                , "001219", 1),
+        ("vmalloc_used", "VmallocUsed" , "VMallocUsed - vmaloc() Allocated by Kernel"    , "CF6518", 1)
+
+        for item in self.Items:
+            zbx_key, meminfo_key = item[0], item[1]
+            if meminfo_key is not None:
+                result[zbx_key] = meminfo.get(meminfo_key) or 0
+        used = meminfo["MemTotal"] - result["unused"] - result["buffers"] - result["cached"] - result["slab"] - result["page_tables"] - result["swap_cache"]
+        result["used"] = used if used > 0 else 0
+        result["swap"] = (meminfo.get("SwapTotal") or 0) - (meminfo.get("SwapFree") or 0)
+ */
+
+ /*  Windows   -- https://github.com/postgrespro/mamonsu/blob/master/mamonsu/plugins/system/windows/memory.py
+        (r"\Memory\Cache Bytes",                 "[cache]",     "Memory Cached",    Plugin.UNITS.bytes, ("9C8A4E", 0)),
+        (r"\Memory\Available Bytes",             "[available]", "Memory Available", Plugin.UNITS.bytes, ("00CC00", 0)),
+        (r"\Memory\Free & Zero Page List Bytes", "[free]",      "Memory Free",      Plugin.UNITS.bytes, ("3B415A", 0))
+ */
+	
+	
+	
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------

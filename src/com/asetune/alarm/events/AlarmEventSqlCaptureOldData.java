@@ -45,6 +45,9 @@ extends AlarmEvent
 				thresholdInSec // crossedThreshold... well this one do not have a number.
 				);
 
+		// Adjust the Alarm Full Duration with X seconds
+		setFullDurationAdjustmentInSec( thresholdInSec );
+
 		setTimeToLive(cm);
 
 		// Set the raw data

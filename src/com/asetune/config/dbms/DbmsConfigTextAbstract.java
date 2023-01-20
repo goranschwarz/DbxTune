@@ -295,6 +295,9 @@ implements IDbmsConfigText
 		List<String> needRole    = needRole();
 		List<String> needConfig  = needConfig();
 
+		if (_logger.isDebugEnabled())
+			_logger.debug(getName() + ":checkRequirements(): srvVersion=" + srvVersion + ", isCluster=" + isCluster + ", needVersion=" + needVersion + ", needCluster=" + needCluster + ", needRole=" + needRole + ", needConfig=" + needConfig);
+
 		// Check if we can get the configuration, due to compatible version.
 		if (needVersion > 0 && srvVersion < needVersion)
 		{
@@ -310,7 +313,8 @@ implements IDbmsConfigText
 		// Check if we can get the configuration, due to enough rights/role based.
 		if (needRole != null)
 		{
-			List<String> hasRoles = AseConnectionUtils.getActiveSystemRoles(conn);
+//			List<String> hasRoles = AseConnectionUtils.getActiveSystemRoles(conn);
+			List<String> hasRoles = conn.getActiveServerRolesOrPermissions();
 
 			boolean haveRole = false;
 			for (String role : needRole)
@@ -318,6 +322,10 @@ implements IDbmsConfigText
 				if (hasRoles.contains(role))
 					haveRole = true;
 			}
+
+			if (_logger.isDebugEnabled())
+				_logger.debug(getName() + ":      --- haveRole=" + haveRole + ", hasRoles=" + hasRoles);
+
 			if ( ! haveRole )
 			{
 				return "This info is only available if you have been granted any of the following role(s) '"+needRole+"'.";
@@ -402,144 +410,16 @@ implements IDbmsConfigText
 				return;
 			}
 
-//			DbmsVersionInfo dbmsVersionInfo = conn.getDbmsVersionInfo();
-//
-//			long         srvVersion = conn.getDbmsVersionNumber();
-//			boolean      isCluster  = conn.isDbmsClusterEnabled();
-//
-//			long         needVersion = needVersion();
-//			boolean      needCluster = needCluster();
-//			List<String> needRole    = needRole();
-//			List<String> needConfig  = needConfig();
-//			boolean      isEnabled   = isEnabled();
-//			String       skipReason  = getSkipReason(conn); // return null/empty-string on OK, otherwise a message why it should be SKIPPED 
-//
-//			// Check if it's enabled, or should we go ahead and try to get the configuration
-//			if ( ! isEnabled )
-//			{
-//				setConfig("This configuration check is disabled. \n"
-//						+ "To enable it: change the property 'dbms.config.text."+getName()+".enabled=false', to true. Or simply remove it.\n"
-//						+ "\n"
-//						+ "The different properties files you can change it in is:\n"
-//						+ "  - USER_TEMP:   " + Configuration.getInstance(Configuration.USER_TEMP).getFilename() + "\n"
-//						+ "  - USER_CONF:   " + Configuration.getInstance(Configuration.USER_CONF).getFilename() + "\n"
-//						+ "  - SYSTEM_CONF: " + Configuration.getInstance(Configuration.SYSTEM_CONF).getFilename() + "\n"
-//						+ Version.getAppName() + " reads the config files in the above order. So USER_TEMP overrides the other files, etc...\n"
-//						+ "Preferable change it in *USER_CONF* or USER_TEMP. SYSTEM_CONF is overwritten when a new version of "+Version.getAppName()+" is installed.\n"
-//						+ "If USER_CONF, do not exist: simply create it.");
-//				return;
-//			}
-//
-//			// Check if this should be SKIPPED or not
-//			if (StringUtil.hasValue(skipReason))
-//			{
-//				setConfig(skipReason);
-//				return;
-//			}
-//
-//			// Check if we can get the configuration, due to compatible version.
-//			if (needVersion > 0 && srvVersion < needVersion)
-//			{
-//				setConfig("This info is only available if the Server Version is above " + Ver.versionNumToStr(needVersion));
-//				return;
-//			}
-//
-//			// Check if we can get the configuration, due to cluster.
-//			if (needCluster && ! isCluster)
-//			{
-//				setConfig("This info is only available if the Server is Cluster Enabled.");
-//				return;
-//			}
-//
-//			// Check if we can get the configuration, due to enough rights/role based.
-//			if (needRole != null)
-//			{
-//				List<String> hasRoles = AseConnectionUtils.getActiveSystemRoles(conn);
-//
-//				boolean haveRole = false;
-//				for (String role : needRole)
-//				{
-//					if (hasRoles.contains(role))
-//						haveRole = true;
-//				}
-//				if ( ! haveRole )
-//				{
-//					setConfig("This info is only available if you have been granted any of the following role(s) '"+needRole+"'.");
-//					return;
-//				}
-//			}
-//
-//			// Check if we can get the configuration, due to enough rights/role based.
-//			if (needConfig != null)
-//			{
-//				List<String> missingConfigs = new ArrayList<String>();
-//				
-//				for (String configName : needConfig)
-//				{
-//					boolean isConfigured = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, configName);
-//					if ( ! isConfigured )
-//						missingConfigs.add(configName);
-//				}
-//				
-//				if (missingConfigs.size() > 0)
-//				{
-//					String configStr;
-//					configStr  = "This info is only available if the following configuration(s) has been enabled '"+needConfig+"'.\n";
-//					configStr += "\n";
-//					configStr += "The following configuration(s) is missing:\n";
-//					for (String str : missingConfigs)
-//						configStr += "     exec sp_configure '" + str + "', 1\n";
-//					setConfig(configStr);
-//					return;
-//				}
-//			}
-
 			// Get the SQL to execute.
 //			String sql = getSqlCurrentConfig(srvVersion);
 			String sql = getSqlCurrentConfig(dbmsVersionInfo);
 			
-			AseSqlScript script = null;
-			try
-			{
-				 // 10 seconds timeout, it shouldn't take more than 10 seconds to get Cache Config or similar.
-				script = new AseSqlScript(conn, getSqlTimeout(), getKeepDbmsState(), getDiscardDbmsErrorList()); 
-				script.setRsAsAsciiTable(true);
-				setConfig(script.executeSqlStr(sql, true));
-			}
-			catch (SQLException ex)
-			{
-				_logger.error("AseConfigText:initialize:sql='"+sql+"'", ex);
-				if (_hasGui)
-					SwingUtils.showErrorMessage("AseConfigText - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
-				setConfig(null);
-
-				// JZ0C0: Connection is already closed.
-				// JZ006: Caught IOException: com.sybase.jdbc4.jdbc.SybConnectionDeadException: JZ0C0: Connection is already closed.
-				if ( "JZ0C0".equals(ex.getSQLState()) || "JZ006".equals(ex.getSQLState()) )
-				{
-					try
-					{
-						_logger.info("AseConfigText:initialize(): lost connection... try to reconnect...");
-						conn.reConnect(null);
-						_logger.info("AseConfigText:initialize(): Reconnect succeeded, but the configuration will not be visible");
-					}
-					catch(Exception reconnectEx)
-					{
-						_logger.warn("AseConfigText:initialize(): reconnect failed due to: "+reconnectEx);
-						throw ex; // Note throw the original exception and not reconnectEx
-					}
-				}
-
-				return;
-			}
-			finally
-			{
-				if (script != null)
-					script.close();
-			}
-
+			// Fetch/Execute the SQL Statement in the online DBMS
+			String result = doOnlineRefresh(conn, sql);
+			setConfig(result);
+			
 			// Check if we got any strange in the configuration
-			// in cese it does: report that...
+			// in case it does: report that...
 			checkConfig(conn);
 		}
 		else 
@@ -566,9 +446,9 @@ implements IDbmsConfigText
 					_logger.warn("The saved value for '"+getConfigType().toString()+"' wasn't available in the offline database, sorry.");
 					return;
 				}
-				_logger.error("AseConfigText:initialize:sql='"+sql+"'", ex);
+				_logger.error("DbmsConfigText:initialize:sql='"+sql+"'", ex);
 				if (_hasGui)
-					SwingUtils.showErrorMessage("AseConfigText - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
+					SwingUtils.showErrorMessage("DbmsConfigText - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
 				setConfig(null);
 
 				// JZ0C0: Connection is already closed.
@@ -580,6 +460,58 @@ implements IDbmsConfigText
 		}
 	}
 	
+	/**
+	 * Responsible for executing the SQL Statement and return a proper "configuration" string set as the value to show 
+	 * @param conn
+	 * @param sql
+	 * @return
+	 */
+	protected String doOnlineRefresh(DbxConnection conn, String sql)
+	{
+		AseSqlScript script = null;
+		try
+		{
+			 // 10 seconds timeout, it shouldn't take more than 10 seconds to get Cache Config or similar.
+			script = new AseSqlScript(conn, getSqlTimeout(), getKeepDbmsState(), getDiscardDbmsErrorList()); 
+			script.setRsAsAsciiTable(true);
+
+			return script.executeSqlStr(sql, true);
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("DbmsConfigText:initialize:sql='"+sql+"'", ex);
+			if (_hasGui)
+				SwingUtils.showErrorMessage("DbmsConfigText - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
+//			setConfig(null);
+			String errorMsg = "SQL Exception: "+ex.getMessage();
+
+			// JZ0C0: Connection is already closed.
+			// JZ006: Caught IOException: com.sybase.jdbc4.jdbc.SybConnectionDeadException: JZ0C0: Connection is already closed.
+			if ( "JZ0C0".equals(ex.getSQLState()) || "JZ006".equals(ex.getSQLState()) )
+			{
+				try
+				{
+					_logger.info("DbmsConfigText:initialize(): lost connection... try to reconnect...");
+					conn.reConnect(null);
+					_logger.info("DbmsConfigText:initialize(): Reconnect succeeded, but the configuration will not be visible");
+				}
+				catch(Exception reconnectEx)
+				{
+					_logger.warn("DbmsConfigText:initialize(): reconnect failed due to: "+reconnectEx);
+//					throw ex; // Note throw the original exception and not reconnectEx
+					return ex + "";
+				}
+			}
+
+			return errorMsg;
+		}
+		finally
+		{
+			if (script != null)
+				script.close();
+		}
+	}
+
 	@Override
 	public void checkConfig(DbxConnection conn)
 	{

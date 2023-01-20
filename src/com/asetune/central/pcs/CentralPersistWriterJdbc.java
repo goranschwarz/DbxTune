@@ -1827,6 +1827,50 @@ extends CentralPersistWriterBase
 			}
 		}
 
+		if (fromDbVersion <= 11)
+		{
+			// Add column 'ServerDisplayName' to Table.CENTRAL_SESSIONS
+			step = 13;
+
+			// Add column 'CollectorInfoFile' to table 'DbxCentralSessions'
+			String onlyTabName = getTableName(conn, null, Table.CENTRAL_SESSIONS, null, false);
+			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"ServerDisplayName"+rq + " varchar(60) null"; // NOTE: 'not null' is not supported at upgrades
+			internalDbUpgradeDdlExec(conn, step, sql);
+		}
+
+		if (fromDbVersion <= 12)
+		{
+			// Change column 'duration' from 10 to 80 in table 'DbxAlarmActive', 'DbxAlarmHistory'
+			step = 14;
+
+			// Get schemas
+			Set<String> schemaSet = new LinkedHashSet<>();
+			ResultSet schemaRs = conn.getMetaData().getSchemas();
+			while (schemaRs.next())
+				schemaSet.add(schemaRs.getString(1));
+			schemaRs.close();
+
+			// Loop schemas: if table exists in schema, make the alter
+			//               in some schemas, the table simply do not exists (H2 INFORMATION for example)
+			for (String schemaName : schemaSet)
+			{
+				internalDbUpgradeAlarmActiveHistory_step14(conn, step, schemaName, Table.ALARM_ACTIVE);
+				internalDbUpgradeAlarmActiveHistory_step14(conn, step, schemaName, Table.ALARM_HISTORY);
+			}
+
+			// add columns: 'alarmDuration', 'fullDuration', 'fullDurationAdjustmentInSec' to tables: 'DbxAlarmActive', 'DbxAlarmHistory'
+			step = 15;
+
+			// Loop schemas: if table exists in schema, make the alter
+			//               in some schemas, the table simply do not exists (H2 INFORMATION for example)
+			for (String schemaName : schemaSet)
+			{
+				internalDbUpgradeAlarmActiveHistory_step15(conn, step, schemaName, Table.ALARM_ACTIVE);
+				internalDbUpgradeAlarmActiveHistory_step15(conn, step, schemaName, Table.ALARM_HISTORY);
+			}
+
+		}
+
 		_logger.info("End - Internal Upgrade of Dbx Central database tables from version '"+fromDbVersion+"' to version '"+toDbVersion+"'.");
 		return toDbVersion;
 	}
@@ -1933,6 +1977,81 @@ extends CentralPersistWriterBase
 		}
 	}
 
+	// Modify column 'duration' from varchar(10) --> varchar(80)
+	private void internalDbUpgradeAlarmActiveHistory_step14(DbxConnection conn, int step, String schemaName, Table table) 
+	throws SQLException
+	{
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
+		// H2, Postgres, SqlServer:  ALTER TABLE tabname ALTER COLUMN colname DATATYPE
+		// ASE, MySql, Oracle:       ALTER TABLE tabname MODIFY       colname DATATYPE
+		String dbmsSpecificSyntax_beforeColName = " alter column ";
+		if (DbUtils.isProductName(conn.getDatabaseProductName(), DbUtils.DB_PROD_NAME_SYBASE_ASE, DbUtils.DB_PROD_NAME_MYSQL, DbUtils.DB_PROD_NAME_ORACLE))
+			dbmsSpecificSyntax_beforeColName = " modify ";
+
+		// get table name
+		String onlyTabName = getTableName(conn, null, table, null, false);
+
+		// get all columns, this to check if TABLE EXISTS
+		Set<String> colNames = new LinkedHashSet<>();
+		ResultSet colRs = conn.getMetaData().getColumns(null, schemaName, onlyTabName, "%");
+		while (colRs.next())
+			colNames.add(colRs.getString("COLUMN_NAME").toLowerCase()); // to lowercase in case the DBMS stores them in-another-way
+		colRs.close();
+
+		// IF the table exists & column 'category' do NOT exists, add it
+		if ( colNames.size() > 0 )
+		{
+			String sql;
+			
+			// Column 'duration'
+			sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + dbmsSpecificSyntax_beforeColName + lq+"duration"+rq + " varchar(80)";
+			internalDbUpgradeDdlExec(conn, step, sql);
+		}
+	}
+
+	// add columns: alarmDuration, fullDuration, fullDurationAdjustmentInSec
+	private void internalDbUpgradeAlarmActiveHistory_step15(DbxConnection conn, int step, String schemaName, Table table) 
+	throws SQLException
+	{
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
+		// get table name
+		String onlyTabName = getTableName(conn, null, table, null, false);
+
+		// get all columns
+		Set<String> colNames = new LinkedHashSet<>();
+		ResultSet colRs = conn.getMetaData().getColumns(null, schemaName, onlyTabName, "%");
+		while (colRs.next())
+			colNames.add(colRs.getString("COLUMN_NAME").toLowerCase()); // to lowercase in case the DBMS stores them in-another-way
+		colRs.close();
+
+		// IF the table exists & column 'category' do NOT exists, add it
+		if ( colNames.size() > 0 )
+		{
+			if ( ! colNames.contains("alarmDuration"))
+			{
+				String sql = "alter table " + lq+schemaName+rq + "." + lq+onlyTabName+rq + " add column " + lq+"alarmDuration"+rq + " varchar(20) null"; // NOTE: 'not null' is not supported at upgrades
+				internalDbUpgradeDdlExec(conn, step, sql);
+			}
+
+			if ( ! colNames.contains("fullDuration"))
+			{
+				String sql = "alter table " + lq+schemaName+rq + "." + lq+onlyTabName+rq + " add column " + lq+"fullDuration"+rq + " varchar(20) null"; // NOTE: 'not null' is not supported at upgrades
+				internalDbUpgradeDdlExec(conn, step, sql);
+			}
+
+			if ( ! colNames.contains("fullDurationAdjustmentInSec"))
+			{
+				String sql = "alter table " + lq+schemaName+rq + "." + lq+onlyTabName+rq + " add column " + lq+"fullDurationAdjustmentInSec"+rq + " int null"; // NOTE: 'not null' is not supported at upgrades
+				internalDbUpgradeDdlExec(conn, step, sql);
+			}
+		}
+	}
+
+	
 	private void internalDbUpgradeDdlExec(DbxConnection conn, int step, String sql)
 	throws SQLException
 	{
@@ -2121,6 +2240,7 @@ extends CentralPersistWriterBase
 
 				ResultSetMetaDataCached rsmdc = ResultSetMetaDataCached.getMetaData(conn, null, null, centralSessionTableName); // Note: for Table.CENTRAL_SESSIONS schema should NOT be used
 				int len_ServerName          = rsmdc != null ? rsmdc.getPrecision("ServerName"         , -1) : -1;
+				int len_ServerDisplayName   = rsmdc != null ? rsmdc.getPrecision("ServerDisplayName"  , -1) : -1;
 				int len_OnHostname          = rsmdc != null ? rsmdc.getPrecision("OnHostname"         , -1) : -1;
 				int len_ProductString       = rsmdc != null ? rsmdc.getPrecision("ProductString"      , -1) : -1;
 				int len_VersionString       = rsmdc != null ? rsmdc.getPrecision("VersionString"      , -1) : -1;
@@ -2136,6 +2256,7 @@ extends CentralPersistWriterBase
 				sbSql.append("  ").append(DbUtils.safeStr(cont.getSessionStartTime()                                ));
 				sbSql.append(", ").append(DbUtils.safeStr(0                                                         )); // Status is not in the container, so always add 0
 				sbSql.append(", ").append(DbUtils.safeStr(cont.getServerName()             , len_ServerName         ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getServerDisplayName()      , len_ServerDisplayName  ));
 				sbSql.append(", ").append(DbUtils.safeStr(cont.getOnHostname()             , len_OnHostname         ));
 				sbSql.append(", ").append(DbUtils.safeStr(cont.getAppName()                , len_ProductString      ));
 				sbSql.append(", ").append(DbUtils.safeStr(cont.getAppVersion()             , len_VersionString      ));
@@ -2499,26 +2620,29 @@ extends CentralPersistWriterBase
 				{
 					sbSql.append(getTableInsertStr(conn, schemaName, Table.ALARM_ACTIVE, null, false));
 					sbSql.append(" values(");
-					sbSql.append("  ").append(safeStr( ae.getAlarmClassAbriviated() , 80  ));
-					sbSql.append(", ").append(safeStr( ae.getServiceType()          , 80  ));
-					sbSql.append(", ").append(safeStr( ae.getServiceName()          , 80  ));
-					sbSql.append(", ").append(safeStr( ae.getServiceInfo()          , 80  ));
-					sbSql.append(", ").append(safeStr( ae.getExtraInfo()            , 80  ));
-					sbSql.append(", ").append(safeStr( ae.getCategory()             , 20  ));
-					sbSql.append(", ").append(safeStr( ae.getSeverity()             , 10  ));
-					sbSql.append(", ").append(safeStr( ae.getState()                , 10  ));
-					sbSql.append(", ").append(safeStr( ae.getRepeatCnt()                  ));
-					sbSql.append(", ").append(safeStr( ae.getDuration()             , 10  ));
-					sbSql.append(", ").append(safeStr( ae.getCreationTime()               ));
-					sbSql.append(", ").append(safeStr( ae.getCancelTime()                 ));
-					sbSql.append(", ").append(safeStr( ae.getTimeToLive()                 ));
-					sbSql.append(", ").append(safeStr( ae.getThreshold()            , 15  ));
-					sbSql.append(", ").append(safeStr( ae.getData()                 , 160 ));
-					sbSql.append(", ").append(safeStr( ae.getReRaiseData()          , 160 ));
-					sbSql.append(", ").append(safeStr( ae.getDescription()          , 512 ));
-					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()   , 512 ));
-					sbSql.append(", ").append(safeStr( ae.getExtendedDescription()        ));
-					sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() ));
+					sbSql.append("  ").append(safeStr( ae.getAlarmClassAbriviated() , 80  )); // "alarmClass"                  // 1 
+					sbSql.append(", ").append(safeStr( ae.getServiceType()          , 80  )); // "serviceType"                 // 2 
+					sbSql.append(", ").append(safeStr( ae.getServiceName()          , 80  )); // "serviceName"                 // 3 
+					sbSql.append(", ").append(safeStr( ae.getServiceInfo()          , 80  )); // "serviceInfo"                 // 4 
+					sbSql.append(", ").append(safeStr( ae.getExtraInfo()            , 80  )); // "extraInfo"                   // 5 
+					sbSql.append(", ").append(safeStr( ae.getCategory()             , 20  )); // "category"                    // 6 
+					sbSql.append(", ").append(safeStr( ae.getSeverity()             , 10  )); // "severity"                    // 7 
+					sbSql.append(", ").append(safeStr( ae.getState()                , 10  )); // "state"                       // 8 
+					sbSql.append(", ").append(safeStr( ae.getRepeatCnt()                  )); // "repeatCnt"                   // 9 
+					sbSql.append(", ").append(safeStr( ae.getDuration()             , 80  )); // "duration"                    // 10
+					sbSql.append(", ").append(safeStr( ae.getAlarmDuration()        , 20  )); // "alarmDuration"               // 11
+					sbSql.append(", ").append(safeStr( ae.getFullDuration()         , 20  )); // "fullDuration"                // 12
+					sbSql.append(", ").append(safeStr( ae.getFullDurationAdjustmentInSec())); // "fullDurationAdjustmentInSec" // 13
+					sbSql.append(", ").append(safeStr( ae.getCreationTime()               )); // "createTime"                  // 14
+					sbSql.append(", ").append(safeStr( ae.getCancelTime()                 )); // "cancelTime"                  // 15
+					sbSql.append(", ").append(safeStr( ae.getTimeToLive()                 )); // "timeToLive"                  // 16
+					sbSql.append(", ").append(safeStr( ae.getThreshold()            , 15  )); // "threshold"                   // 17
+					sbSql.append(", ").append(safeStr( ae.getData()                 , 160 )); // "data"                        // 18
+					sbSql.append(", ").append(safeStr( ae.getReRaiseData()          , 160 )); // "lastData"                    // 19
+					sbSql.append(", ").append(safeStr( ae.getDescription()          , 512 )); // "description"                 // 20
+					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()   , 512 )); // "lastDescription"             // 21
+					sbSql.append(", ").append(safeStr( ae.getExtendedDescription()        )); // "extendedDescription"         // 22
+					sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() )); // "lastExtendedDescription"     // 23
 					sbSql.append(")");
 
 					sql = sbSql.toString();
@@ -2610,32 +2734,35 @@ extends CentralPersistWriterBase
 						
 						sbSql.append(getTableInsertStr(conn, schemaName, Table.ALARM_HISTORY, null, false));
 						sbSql.append(" values(");
-						sbSql.append("  ").append(safeStr( sessionStartTime ));
-						sbSql.append(", ").append(safeStr( sessionSampleTime ));
-
-						sbSql.append(", ").append(safeStr( aew.getEventTime() ));
-						sbSql.append(", ").append(safeStr( aew.getAction() ));
-
-						sbSql.append(", ").append(safeStr( ae.getAlarmClassAbriviated() , 80  ));
-						sbSql.append(", ").append(safeStr( ae.getServiceType()          , 80  ));
-						sbSql.append(", ").append(safeStr( ae.getServiceName()          , 80  ));
-						sbSql.append(", ").append(safeStr( ae.getServiceInfo()          , 80  ));
-						sbSql.append(", ").append(safeStr( ae.getExtraInfo()            , 80  ));
-						sbSql.append(", ").append(safeStr( ae.getCategory()             , 20  ));
-						sbSql.append(", ").append(safeStr( ae.getSeverity()             , 10  ));
-						sbSql.append(", ").append(safeStr( ae.getState()                , 10  ));
-						sbSql.append(", ").append(safeStr( ae.getRepeatCnt()                  ));
-						sbSql.append(", ").append(safeStr( ae.getDuration()             , 10  ));
-						sbSql.append(", ").append(safeStr( ae.getCreationTime()               ));
-						sbSql.append(", ").append(safeStr( ae.getCancelTime()                 ));
-						sbSql.append(", ").append(safeStr( ae.getTimeToLive()                 ));
-						sbSql.append(", ").append(safeStr( ae.getThreshold()            , 15  ));
-						sbSql.append(", ").append(safeStr( ae.getData()                 , 160 ));
-						sbSql.append(", ").append(safeStr( ae.getReRaiseData()          , 160 ));
-						sbSql.append(", ").append(safeStr( ae.getDescription()          , 512 ));
-						sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()   , 512 ));
-						sbSql.append(", ").append(safeStr( ae.getExtendedDescription()        ));
-						sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() ));
+						sbSql.append("  ").append(safeStr( sessionStartTime ));                    // "SessionStartTime"            // 1  
+						sbSql.append(", ").append(safeStr( sessionSampleTime ));                   // "SessionSampleTime"           // 2  
+						
+						sbSql.append(", ").append(safeStr( aew.getEventTime() ));                  // "eventTime"                   // 3  
+						sbSql.append(", ").append(safeStr( aew.getAction() ));                     // "action"                      // 4  
+						
+						sbSql.append(", ").append(safeStr( ae.getAlarmClassAbriviated() , 80  ));  // "alarmClass"                  // 5  
+						sbSql.append(", ").append(safeStr( ae.getServiceType()          , 80  ));  // "serviceType"                 // 6  
+						sbSql.append(", ").append(safeStr( ae.getServiceName()          , 80  ));  // "serviceName"                 // 7  
+						sbSql.append(", ").append(safeStr( ae.getServiceInfo()          , 80  ));  // "serviceInfo"                 // 8  
+						sbSql.append(", ").append(safeStr( ae.getExtraInfo()            , 80  ));  // "extraInfo"                   // 9  
+						sbSql.append(", ").append(safeStr( ae.getCategory()             , 20  ));  // "category"                    // 10 
+						sbSql.append(", ").append(safeStr( ae.getSeverity()             , 10  ));  // "severity"                    // 11 
+						sbSql.append(", ").append(safeStr( ae.getState()                , 10  ));  // "state"                       // 12 
+						sbSql.append(", ").append(safeStr( ae.getRepeatCnt()                  ));  // "repeatCnt"                   // 13 
+						sbSql.append(", ").append(safeStr( ae.getDuration()             , 80  ));  // "duration"                    // 14 
+						sbSql.append(", ").append(safeStr( ae.getAlarmDuration()        , 20  ));  // "alarmDuration"               // 15 
+						sbSql.append(", ").append(safeStr( ae.getFullDuration()         , 20  ));  // "fullDuration"                // 16 
+						sbSql.append(", ").append(safeStr( ae.getFullDurationAdjustmentInSec()));  // "fullDurationAdjustmentInSec" // 17 
+						sbSql.append(", ").append(safeStr( ae.getCreationTime()               ));  // "createTime"                  // 18 
+						sbSql.append(", ").append(safeStr( ae.getCancelTime()                 ));  // "cancelTime"                  // 19 
+						sbSql.append(", ").append(safeStr( ae.getTimeToLive()                 ));  // "timeToLive"                  // 20 
+						sbSql.append(", ").append(safeStr( ae.getThreshold()            , 15  ));  // "threshold"                   // 21 
+						sbSql.append(", ").append(safeStr( ae.getData()                 , 160 ));  // "data"                        // 22 
+						sbSql.append(", ").append(safeStr( ae.getReRaiseData()          , 160 ));  // "lastData"                    // 23 
+						sbSql.append(", ").append(safeStr( ae.getDescription()          , 512 ));  // "description"                 // 24 
+						sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()   , 512 ));  // "lastDescription"             // 25 
+						sbSql.append(", ").append(safeStr( ae.getExtendedDescription()        ));  // "extendedDescription"         // 26 
+						sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() ));  // "lastExtendedDescription"     // 27 
 						sbSql.append(")");
 
 						sql = sbSql.toString();

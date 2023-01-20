@@ -87,6 +87,11 @@ public abstract class ReportChartAbstract implements IReportChart
 	private JFreeChart _chart;
 	private Dataset    _dataset;
 
+	protected double   _minDataValue = 0d;
+	protected double   _maxDataValue = 0d;
+	protected boolean  _hasMinMaxDataValue = false;
+
+
 	private String     _problem;
 	private Exception  _exception;
 	private int        _defaultQueryTimeout = 0; 
@@ -102,6 +107,7 @@ public abstract class ReportChartAbstract implements IReportChart
 	private String        _graphName;
 	private String        _graphTitle;
 	private int           _maxValue;
+	protected boolean     _isSorted;
 	private String        _chartId;  // used to create 
 	private static long   _chartIdCounter = 0; // incremented in the constructor for every creation.
 	
@@ -133,7 +139,7 @@ public abstract class ReportChartAbstract implements IReportChart
 	public void setPreComment         (String              preComment ) { _preComment          = preComment;  }
 	public void setPostComment        (String              postComment) { _postComment         = postComment; }
 
-	public ReportChartAbstract(ReportEntryAbstract reportEntry, DbxConnection conn, ChartType chartType, String cmName, String graphName, String graphTitle, int maxValue)
+	public ReportChartAbstract(ReportEntryAbstract reportEntry, DbxConnection conn, ChartType chartType, String cmName, String graphName, String graphTitle, int maxValue, boolean sorted)
 	{
 		_reportEntry     = reportEntry;
 		_conn            = conn;
@@ -142,6 +148,7 @@ public abstract class ReportChartAbstract implements IReportChart
 		_graphName       = graphName; 
 		_graphTitle      = graphTitle;
 		_maxValue        = maxValue;
+		_isSorted        = sorted;
 		
 		_chartIdCounter++;
 		_chartId         = _cmName + "_" + _chartIdCounter;
@@ -212,7 +219,46 @@ public abstract class ReportChartAbstract implements IReportChart
 //
 //		return CHART_WIDTH_FULL_MSG;
 	}
+
+	/**
+	 * Can be called when creating data set to indicate what value is the min/max value in the data set<br>
+	 * This can then be used to check "things" when creating the renders
+	 * 
+	 * @param dataValue  The value which we will do: <code>Math.min()</code> and <code>Math.max()</code> on
+	 */
+	public void setDatasetMinMaxValue(Double dataValue)
+	{
+		if (dataValue == null)
+			return;
+
+		_hasMinMaxDataValue = true;
+
+		_minDataValue = Math.min(_minDataValue, dataValue.doubleValue());
+		_maxDataValue = Math.max(_maxDataValue, dataValue.doubleValue());
+	}
+	public Double getDatasetMinValue() { return _minDataValue; }
+	public Double getDatasetMaxValue() { return _maxDataValue; }
 	
+	public boolean isAllDataValuesNearZero()
+	{
+		// If method setDatasetMinMaxValue() wasn't called, then we dont know that min/max values, so return false
+		if (_hasMinMaxDataValue == false)
+			return false;
+
+		double minVal = 0.0001;
+		double maxVal = 0.0001;
+
+//System.out.println("isAllDataValuesNearZero(): <<<<< " + ((getDatasetMinValue() >minVal && getDatasetMaxValue() < maxVal) || (getDatasetMinValue() == 0d && getDatasetMaxValue() == 0d)) + ", min=" + getDatasetMinValue() + ", max=" + getDatasetMaxValue());
+
+		if (getDatasetMinValue() == 0d && getDatasetMaxValue() == 0d)
+			return true;
+
+		if (getDatasetMinValue() > minVal && getDatasetMaxValue() < maxVal)
+			return true;
+
+		return false;
+	}
+
 	/**
 	 * 
 	 * @return
@@ -386,6 +432,12 @@ public abstract class ReportChartAbstract implements IReportChart
 		writeAsHtmlInlineImage(sb);           // Write as <img id='img_" + _cmName + _graphTitle + "' src='data:image/png;base64,...>
 		writeAsChartJs(sb);                   // Write as <canvas id='canvas_" + _cmName + _graphTitle + "'>...</div>
 		sb.append("<br>\n");
+
+		if (_isSorted)
+		{
+			sb.append("<b>Note:</b> The above chart is sorted by summary of all values in each series (most active serie is first).");
+			sb.append("<br>\n");
+		}
 
 		// Post Text
 		if (StringUtil.hasValue(postText))

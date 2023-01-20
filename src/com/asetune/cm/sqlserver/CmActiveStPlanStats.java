@@ -20,6 +20,8 @@
  ******************************************************************************/
 package com.asetune.cm.sqlserver;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
@@ -45,7 +47,7 @@ import com.asetune.utils.Ver;
 public class CmActiveStPlanStats
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmActiveStatementsPlanStats.class);
+//	private static Logger        _logger          = Logger.getLogger(CmActiveStPlanStats.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmActiveStPlanStats.class.getSimpleName();
@@ -77,7 +79,7 @@ extends CountersModel
 	public static final String[] NEED_ROLES       = new String[] {};//{"VIEW SERVER STATE"};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
-	public static final String[] PCT_COLUMNS      = new String[] {};
+	public static final String[] PCT_COLUMNS      = new String[] { "completed_pct" };
 	public static final String[] DIFF_COLUMNS     = new String[] {
 			 "row_count"
 			,"rewind_count"
@@ -189,6 +191,9 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("completed_pct", 7)); // after "row_count"
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("row_count_abs", 7)); // after "row_count"
+
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("index_name",    21));
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("object_name",   21));
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("schema_name",   21));
@@ -198,14 +203,18 @@ extends CountersModel
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("sql_handle",    ColumnHeaderPropsEntry.AS_LAST_VIEW_COLUMN));
 
 		String sql = ""
-			    + "select /* ${cmCollectorName} */ \n"
+			    + "SELECT /* ${cmCollectorName} */ \n"
 				+ "     * \n"
-				+ "    ,cast('' as varchar(128)) AS database_name \n"
-				+ "    ,cast('' as varchar(128)) AS schema_name \n"
-				+ "    ,cast('' as varchar(128)) AS object_name \n"
-				+ "    ,cast('' as varchar(128)) AS index_name \n"
-			    + "from sys.dm_exec_query_profiles \n"
-			    + "where session_id != @@spid \n"
+				+ "    ,row_count AS row_count_abs \n"
+				+ "    ,CAST(-1 as numeric(12,1)) AS completed_pct \n"
+				
+				+ "    ,CAST('' as varchar(128))  AS database_name \n"
+				+ "    ,CAST('' as varchar(128))  AS schema_name \n"
+				+ "    ,CAST('' as varchar(128))  AS object_name \n"
+				+ "    ,CAST('' as varchar(128))  AS index_name \n"
+				
+			    + "FROM sys.dm_exec_query_profiles \n"
+			    + "WHERE session_id != @@spid \n"
 			    + "";
 
 		return sql;
@@ -217,64 +226,94 @@ extends CountersModel
 	@Override
 	public void localCalculation(CounterSample newSample)
 	{
-		if ( ! DbmsObjectIdCache.hasInstance() )
-			return;
-
-		DbmsObjectIdCache objectIdCache = DbmsObjectIdCache.getInstance();
-		
-
-		int database_id_pos   = newSample.findColumn("database_id");
-		int object_id_pos     = newSample.findColumn("object_id");
-		int index_id_pos      = newSample.findColumn("index_id");
-		
-		int database_name_pos = newSample.findColumn("database_name");
-		int schema_name_pos   = newSample.findColumn("schema_name");
-		int object_name_pos   = newSample.findColumn("object_name");
-		int index_name_pos    = newSample.findColumn("index_name");
-
-		// Check that all "pos" are found
-
-		// Loop rows and fill in:
-		for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
+		//-------------------------------------------------------------
+		// fill in *guessed*: completed_pct
+		//-------------------------------------------------------------
+		boolean setCompletedPct = true;
+		if (setCompletedPct)
 		{
-			Object o_database_id = newSample.getValueAsObject(rowId, database_id_pos);
-			Object o_object_id   = newSample.getValueAsObject(rowId, object_id_pos);
-			Object o_index_id    = newSample.getValueAsObject(rowId, index_id_pos);
-			
-			if (   o_database_id != null && o_database_id instanceof Number 
-				&& o_object_id   != null && o_object_id   instanceof Number)
+			int row_count_pos          = newSample.findColumn("row_count");
+			int estimate_row_count_pos = newSample.findColumn("estimate_row_count");
+			int completed_pct_pos      = newSample.findColumn("completed_pct");
+
+			if (row_count_pos != -1 && estimate_row_count_pos != -1 && completed_pct_pos != -1)
 			{
-				int dbid     = ((Number)o_database_id).intValue();
-				int objectId = ((Number)o_object_id).intValue();
-
-				if (dbid == 0 && objectId == 0)
-					continue;
-				try
+				for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
 				{
-					ObjectInfo oi = objectIdCache.getByObjectId(dbid, objectId);
+					long row_count          = newSample.getValueAsInteger(rowId, row_count_pos, -1);
+					long estimate_row_count = newSample.getValueAsInteger(rowId, estimate_row_count_pos, -1);
 
-					if (oi != null)
+					if (estimate_row_count > 0 && row_count > 0)
 					{
-						newSample.setValueAt(oi.getDBName()    , rowId, database_name_pos);
-						newSample.setValueAt(oi.getSchemaName(), rowId, schema_name_pos);
-						newSample.setValueAt(oi.getObjectName(), rowId, object_name_pos);
-						
-						if (o_index_id != null && o_index_id instanceof Number)
+						BigDecimal val = new BigDecimal( (row_count*1.0) / (estimate_row_count*1.0) * 100.0 ).setScale(1, RoundingMode.HALF_EVEN);
+						newSample.setValueAt(val, rowId, completed_pct_pos);
+					}
+				} // end: loop rows
+			} // end: has columns
+		} // end: setCompletedPct
+
+		
+		//-------------------------------------------------------------
+		// fill in: database_name, schema_name, object_name, index_name
+		//-------------------------------------------------------------
+		boolean setIdToName = true;
+		if (setIdToName && DbmsObjectIdCache.hasInstance())
+		{
+			DbmsObjectIdCache objectIdCache = DbmsObjectIdCache.getInstance();
+			
+			int database_id_pos   = newSample.findColumn("database_id");
+			int object_id_pos     = newSample.findColumn("object_id");
+			int index_id_pos      = newSample.findColumn("index_id");
+			
+			int database_name_pos = newSample.findColumn("database_name");
+			int schema_name_pos   = newSample.findColumn("schema_name");
+			int object_name_pos   = newSample.findColumn("object_name");
+			int index_name_pos    = newSample.findColumn("index_name");
+
+			// Check that all "pos" are found
+
+			// Loop rows and fill in:
+			for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
+			{
+				Object o_database_id = newSample.getValueAsObject(rowId, database_id_pos);
+				Object o_object_id   = newSample.getValueAsObject(rowId, object_id_pos);
+				Object o_index_id    = newSample.getValueAsObject(rowId, index_id_pos);
+							
+				if (   o_database_id != null && o_database_id instanceof Number 
+					&& o_object_id   != null && o_object_id   instanceof Number)
+				{
+					int dbid     = ((Number)o_database_id).intValue();
+					int objectId = ((Number)o_object_id).intValue();
+
+					if (dbid == 0 && objectId == 0)
+						continue;
+					try
+					{
+						ObjectInfo oi = objectIdCache.getByObjectId(dbid, objectId);
+
+						if (oi != null)
 						{
-							int indexId = ((Number)o_index_id).intValue();
-						//	if (indexId != 0)
-								newSample.setValueAt(oi.getIndexName(indexId), rowId, index_name_pos);
+							newSample.setValueAt(oi.getDBName()    , rowId, database_name_pos);
+							newSample.setValueAt(oi.getSchemaName(), rowId, schema_name_pos);
+							newSample.setValueAt(oi.getObjectName(), rowId, object_name_pos);
+							
+							if (o_index_id != null && o_index_id instanceof Number)
+							{
+								int indexId = ((Number)o_index_id).intValue();
+							//	if (indexId != 0)
+									newSample.setValueAt(oi.getIndexName(indexId), rowId, index_name_pos);
+							}
 						}
 					}
+					catch (TimeoutException ex) 
+					{
+						newSample.setValueAt("-timeout-", rowId, database_name_pos);
+						newSample.setValueAt("-timeout-", rowId, schema_name_pos);
+						newSample.setValueAt("-timeout-", rowId, object_name_pos);
+					}
+					
 				}
-				catch (TimeoutException ex) 
-				{
-					newSample.setValueAt("-timeout-", rowId, database_name_pos);
-					newSample.setValueAt("-timeout-", rowId, schema_name_pos);
-					newSample.setValueAt("-timeout-", rowId, object_name_pos);
-				}
-				
-			}
-		}
-	}
+			} // end: loop rows
+		} // end: setIdToName
+	} // end: method
 }

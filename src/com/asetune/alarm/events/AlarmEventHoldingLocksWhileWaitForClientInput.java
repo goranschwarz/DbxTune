@@ -28,7 +28,7 @@ extends AlarmEvent
 {
 	private static final long serialVersionUID = 1L;
 
-	public AlarmEventHoldingLocksWhileWaitForClientInput(CountersModel cm, int threshold, int spid, int inSeconds, String startTime, boolean onlyExclusiveLocks)
+	public AlarmEventHoldingLocksWhileWaitForClientInput(CountersModel cm, int thresholdInSec, long spid, int inSeconds, String startTime, boolean hasExlusiveLocks)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -39,10 +39,13 @@ extends AlarmEvent
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
 				"Found Long running transaction in '" + cm.getServerName() + "', that are HOLDING-LOCKS " 
-						+ (onlyExclusiveLocks ? "(Exlusive Locks) " : "") 
+						+ (hasExlusiveLocks ? "(Exlusive Locks) " : "") 
 						+ "in DBMS while waiting for Client to send command. Last client command was issued " 
-						+ inSeconds + " seconds ago, at '" + startTime + "'. (threshold="+threshold+")",
-				threshold);
+						+ inSeconds + " seconds ago, at '" + startTime + "'. (thresholdInSec="+thresholdInSec+")",
+						thresholdInSec);
+
+		// Adjust the Alarm Full Duration with X seconds
+		setFullDurationAdjustmentInSec( thresholdInSec );
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);

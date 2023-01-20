@@ -113,8 +113,13 @@ public class MailTest
 			if (StringUtil.hasValue(cc))
 				email.addCc(cc);
 
-			// FROM & SUBJECT
-			email.setFrom(from);
+			// FROM
+//			email.setFrom(from);
+			String fromMailAddress = StringUtil.parseMailFromAddress_getEmailAddress(from);
+			String fromDisplayName = StringUtil.parseMailFromAddress_getDisplayName (from);
+			email.setFrom(fromMailAddress, fromDisplayName);
+
+			// SUBJECT
 			email.setSubject(msgSubject);
 
 			// CONTENT HTML or PLAIN

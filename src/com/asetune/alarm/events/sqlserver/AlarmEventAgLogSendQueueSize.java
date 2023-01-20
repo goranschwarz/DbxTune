@@ -39,7 +39,7 @@ extends AlarmEvent
 	 * @param queueSizeInMb             Queue Size In MB
 	 * @param threshold                 threshold that was crossed
 	 */
-	public AlarmEventAgLogSendQueueSize(CountersModel cm, String agName, String serverName, String dbname, int queueSizeInMb, int threshold)
+	public AlarmEventAgLogSendQueueSize(CountersModel cm, String agName, String serverName, String dbname, int queueSizeInMb, int thresholdInMb)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -49,8 +49,8 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Log Send Queue Size is getting HIGH, in Server '" + cm.getServerName() + "' for Availability group '" + agName + "', serverName='" + serverName + "'. queueSizeInMb='"+queueSizeInMb+"'. (threshold="+threshold+")",
-				threshold
+				"Log Send Queue Size is getting HIGH, in Server '" + cm.getServerName() + "' for Availability group '" + agName + "', serverName='" + serverName + "'. queueSizeInMb='"+queueSizeInMb+"'. (thresholdInMb="+thresholdInMb+")",
+				thresholdInMb
 				);
 
 		// Set: Time To Live if postpone is enabled

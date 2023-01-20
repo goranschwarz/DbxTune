@@ -49,6 +49,9 @@ extends AlarmEvent
 				warningText,
 				null);
 
+		// Adjust the Alarm Full Duration with X seconds
+		setFullDurationAdjustmentInSec( raiseDelayInSec );
+
 		setRaiseDelayInSec(raiseDelayInSec);
 		
 		setData("cfgVal="+cfgVal);

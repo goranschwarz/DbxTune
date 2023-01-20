@@ -29,7 +29,8 @@ import org.junit.runners.Suite.SuiteClasses;
 	com.asetune.sql.conn.AllTests.class,
 	DiffTest.class,
 	JdbcUrlParserTest.class,
-	SqlObjectNameTest.class 
+	SqlObjectNameTest.class,
+	TableNameParserTest.class
 })
 public class AllTests
 {

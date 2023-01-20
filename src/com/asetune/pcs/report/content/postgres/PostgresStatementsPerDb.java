@@ -544,8 +544,8 @@ extends PostgresAbstract
 
 			
 			// Create some Overview Charts
-			_CmPgStatementsSumDb_CallCnt   = createTsLineChart(conn, "CmPgStatementsSumDb", "CallCnt"  , -1, null, "SQL Statements [calls] per DB per second (Statements by DB)");
-			_CmPgStatementsSumDb_TotalTime = createTsLineChart(conn, "CmPgStatementsSumDb", "TotalTime", -1, null, "SQL Statements [total_time] per DB per second (Statements by DB)");
+			_CmPgStatementsSumDb_CallCnt   = createTsLineChart(conn, "CmPgStatementsSumDb", "CallCnt"  , -1, true, null, "SQL Statements [calls] per DB per second (Statements by DB)");
+			_CmPgStatementsSumDb_TotalTime = createTsLineChart(conn, "CmPgStatementsSumDb", "TotalTime", -1, true, null, "SQL Statements [total_time] per DB per second (Statements by DB)");
 
 		} // end: has data
 	}

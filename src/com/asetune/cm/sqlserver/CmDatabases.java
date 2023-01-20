@@ -1695,7 +1695,7 @@ extends CountersModel
 		}
 
 		// ----- SQL-Server 2014 and above
-		String user_objects_deferred_dealloc_page_count = "0";
+//		String user_objects_deferred_dealloc_page_count = "0";
 //		if (srvVersion >= Ver.ver(2014))
 //		{
 //			user_objects_deferred_dealloc_page_count = "user_objects_deferred_dealloc_page_count";
@@ -2039,7 +2039,7 @@ extends CountersModel
 			    + availabilityGroupRole
 			    + availabilityGroupPrimaryServer
 			    + "    ,DataFileGroupCount       = data.fileGroupCount \n"
-			    + "    ,DBOwner                  = suser_name(d.owner_sid) \n"
+			    + "    ,DBOwner                  = suser_sname(d.owner_sid) \n"
 			    + "    ,d.log_reuse_wait \n"
 			    + "    ,d.log_reuse_wait_desc \n"
 			    + " \n"

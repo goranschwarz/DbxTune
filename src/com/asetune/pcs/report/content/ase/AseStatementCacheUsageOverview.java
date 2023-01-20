@@ -106,10 +106,10 @@ public class AseStatementCacheUsageOverview extends AseAbstract
 
 		
 		int maxValue = 100;
-		_CmStatementCache_HitRatePctGraph    = createTsLineChart(conn, "CmStatementCache", "HitRatePctGraph",    maxValue, null, "Statement Cache Hit Rate, in Percent (Cache->Statement Cache)");
-		_CmStatementCache_RequestPerSecGraph = createTsLineChart(conn, "CmStatementCache", "RequestPerSecGraph",       -1, null, "Number of Requests from the Statement Cache, per Second (Cache->Statement Cache)");
+		_CmStatementCache_HitRatePctGraph    = createTsLineChart(conn, "CmStatementCache", "HitRatePctGraph",    maxValue, false, null, "Statement Cache Hit Rate, in Percent (Cache->Statement Cache)");
+		_CmStatementCache_RequestPerSecGraph = createTsLineChart(conn, "CmStatementCache", "RequestPerSecGraph",       -1, false, null, "Number of Requests from the Statement Cache, per Second (Cache->Statement Cache)");
 
-		_CmSqlStatement_SqlStmnt             = createTsLineChart(conn, "CmSqlStatement",   "SqlStmnt",                 -1, null, "SQL Statements Executed per Sec (Object/Access->SQL Statements)");
+		_CmSqlStatement_SqlStmnt             = createTsLineChart(conn, "CmSqlStatement",   "SqlStmnt",                 -1, false, null, "SQL Statements Executed per Sec (Object/Access->SQL Statements)");
 	}
 
 	private IReportChart _CmStatementCache_HitRatePctGraph;

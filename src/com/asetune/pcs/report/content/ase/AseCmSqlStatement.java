@@ -346,16 +346,16 @@ public class AseCmSqlStatement extends AseAbstract
 		
 
 		// Add Charts
-		_CmSqlStatement_SqlStmnt              = createTsLineChart(conn, "CmSqlStatement",  "SqlStmnt",            -1, null, "SQL Statements Executed per Sec (Object/Access->SQL Statements)");
-		_CmSqlStatement_SqlStmntTSpanAll      = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntTSpanAll",    -1, null, "SQL Statements (all) In Time Span Received per Sec (Object/Access->SQL Statements)");
+		_CmSqlStatement_SqlStmnt              = createTsLineChart(conn, "CmSqlStatement",  "SqlStmnt",            -1, false, null, "SQL Statements Executed per Sec (Object/Access->SQL Statements)");
+		_CmSqlStatement_SqlStmntTSpanAll      = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntTSpanAll",    -1, false, null, "SQL Statements (all) In Time Span Received per Sec (Object/Access->SQL Statements)");
 
-		_CmSqlStatement_SqlStmntSumExecMs     = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntSumExecMs",   -1, null, "Sum 'Exec Time' per sec Over SQL Response Time (Object/Access->SQL Statements)");
-		_CmSqlStatement_SqlStmntSumLRead      = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntSumLRead",    -1, null, "Sum 'Logical Reads' per sec Over SQL Response Time (Object/Access->SQL Statements)");
-		_CmSqlStatement_SqlStmntSumPRead      = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntSumPRead",    -1, null, "Sum 'Physical Reads' per sec Over SQL Response Time (Object/Access->SQL Statements)");
-		_CmSqlStatement_SqlStmntSumCpuTime    = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntSumCpuTime",  -1, null, "Sum 'CPU Time' per sec Over SQL Response Time (Object/Access->SQL Statements)");
-		_CmSqlStatement_SqlStmntSumWaitTime   = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntSumWaitTime", -1, null, "Sum 'Wait Time' per sec Over SQL Response Time (Object/Access->SQL Statements)");
-		_CmSqlStatement_SqlStmntSumRowsAfct   = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntSumRowsAfct", -1, null, "Sum 'Rows Affected' per sec Over SQL Response Time (Object/Access->SQL Statements)");
-		_CmSqlStatement_SqlStmntSumErrorCnt   = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntSumErrorCnt", -1, null, "Sum SQL Statements Error Count Per Sec (Object/Access->SQL Statements)");
+		_CmSqlStatement_SqlStmntSumExecMs     = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntSumExecMs",   -1, false, null, "Sum 'Exec Time' per sec Over SQL Response Time (Object/Access->SQL Statements)");
+		_CmSqlStatement_SqlStmntSumLRead      = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntSumLRead",    -1, false, null, "Sum 'Logical Reads' per sec Over SQL Response Time (Object/Access->SQL Statements)");
+		_CmSqlStatement_SqlStmntSumPRead      = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntSumPRead",    -1, false, null, "Sum 'Physical Reads' per sec Over SQL Response Time (Object/Access->SQL Statements)");
+		_CmSqlStatement_SqlStmntSumCpuTime    = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntSumCpuTime",  -1, false, null, "Sum 'CPU Time' per sec Over SQL Response Time (Object/Access->SQL Statements)");
+		_CmSqlStatement_SqlStmntSumWaitTime   = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntSumWaitTime", -1, false, null, "Sum 'Wait Time' per sec Over SQL Response Time (Object/Access->SQL Statements)");
+		_CmSqlStatement_SqlStmntSumRowsAfct   = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntSumRowsAfct", -1, false, null, "Sum 'Rows Affected' per sec Over SQL Response Time (Object/Access->SQL Statements)");
+		_CmSqlStatement_SqlStmntSumErrorCnt   = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntSumErrorCnt", -1, false, null, "Sum SQL Statements Error Count Per Sec (Object/Access->SQL Statements)");
 	}
 
 	private IReportChart _CmSqlStatement_SqlStmnt           ;

@@ -60,6 +60,7 @@ public class PersistContainer
 	protected String              _serverName       = null;
 	protected String              _onHostname       = null;
 	protected String              _serverNameAlias  = null;
+	protected String              _serverDisplayName= null;
 	private   List<CountersModel> _counterObjects   = null;
 
 	protected boolean             _startNewSample   = false;
@@ -76,6 +77,7 @@ public class PersistContainer
 		private Timestamp _mainSampleTime;
 		private String    _serverName;        // Normally the DBMS instance name
 		private String    _serverNameAlias;   // If we want an alternate name for DbxCentral (eg schema name storage in DbxCentral)
+		private String    _serverDisplayName; // If we want an alternate name for DbxCentral (just for buttons etc)
 		private String    _onHostname;        // on which host does this server run
 		private Timestamp _counterClearTime;  // if the server wise counters are cleared at some date/time, then this is it.
 		
@@ -97,7 +99,7 @@ public class PersistContainer
 			if (StringUtil.hasValue(alias))
 			{
 				// replace template with the server name
-				if (alias.indexOf("<SRVNAME>") != -1)
+				if (alias.contains("<SRVNAME>"))
 					alias = alias.replace("<SRVNAME>", getServerName());
 			}
 			return alias; 
@@ -119,6 +121,22 @@ public class PersistContainer
 			return srvName;
 		}
 
+		public void setServerDisplayName(String displayName)
+		{
+			_serverDisplayName = displayName;
+		}
+		public String getServerDisplayName()
+		{
+			String name = _serverDisplayName; 
+			if (StringUtil.hasValue(name))
+			{
+				// replace template with the server name
+				if (name.contains("<SRVNAME>"))
+					name = name.replace("<SRVNAME>", getServerName());
+			}
+			return name; 
+		}
+		
 		public HeaderInfo(Timestamp mainSampleTime, String serverName, String onHostname, Timestamp counterClearTime)
 		{
 			_mainSampleTime   = mainSampleTime;
@@ -150,18 +168,19 @@ public class PersistContainer
 //		_serverName       = serverName;
 //		_onHostname       = onHostname;
 //	}
-	private PersistContainer(Timestamp mainSampleTime, String serverName, String onHostname, String serverNameAlias)
+	private PersistContainer(Timestamp mainSampleTime, String serverName, String onHostname, String serverNameAlias, String serverDisplayName)
 	{
-		_sessionStartTime = null;
-		_mainSampleTime   = mainSampleTime;
-		_serverName       = serverName;
-		_onHostname       = onHostname;
-		_serverNameAlias  = serverNameAlias;
+		_sessionStartTime  = null;
+		_mainSampleTime    = mainSampleTime;
+		_serverName        = serverName;
+		_onHostname        = onHostname;
+		_serverNameAlias   = serverNameAlias;
+		_serverDisplayName = serverDisplayName;
 	}
 	
 	public PersistContainer(HeaderInfo headerInfo)
 	{
-		this(headerInfo.getMainSampleTime(), headerInfo.getServerName(), headerInfo.getOnHostname(), headerInfo.getServerNameAlias());
+		this(headerInfo.getMainSampleTime(), headerInfo.getServerName(), headerInfo.getOnHostname(), headerInfo.getServerNameAlias(), headerInfo.getServerDisplayName());
 	}
 
 
@@ -170,26 +189,28 @@ public class PersistContainer
 	**---------------------------------------------------
 	*/
 	/** Set the time when X number of "main samples" should consist of, this is basically when we connect to a ASE and start to sample performance counters */
-	public void setSessionStartTime(Timestamp startTime)    { _sessionStartTime = startTime; }
+	public void setSessionStartTime (Timestamp startTime)      { _sessionStartTime  = startTime; }
 	/** Set the "main" Timestamp, this is the time when a "loop" to collect all various ConterModdel's, which we get data for */ 
-	public void setMainSampleTime(Timestamp mainSampleTime) { _mainSampleTime   = mainSampleTime; }
-	public void setServerName     (String serverName)       { _serverName       = serverName; }
-	public void setOnHostname     (String onHostname)       { _onHostname       = onHostname; }
-	public void setServerNameAlias(String alias)            { _serverNameAlias  = alias; }
+	public void setMainSampleTime   (Timestamp mainSampleTime) { _mainSampleTime    = mainSampleTime; }
+	public void setServerName       (String serverName)        { _serverName        = serverName; }
+	public void setOnHostname       (String onHostname)        { _onHostname        = onHostname; }
+	public void setServerNameAlias  (String alias)             { _serverNameAlias   = alias; }
+	public void setServerDisplayName(String displayName)       { _serverDisplayName = displayName; }
 	
 	/** This can be used to "force" a new sample, for example if you want to 
 	 * start a new session on reconnects to the monitored ASE server */
 	public void setStartNewSample(boolean startNew) { _startNewSample = startNew; }
 
 	/** Get the time when X number of "main samples" should consist of, this is basically when we connect to a ASE and start to sample performance counters */
-	public Timestamp getSessionStartTime() { return _sessionStartTime; }
+	public Timestamp getSessionStartTime()  { return _sessionStartTime; }
 	/** Get the "main" Timestamp, this is the time when a "loop" to collect all various ConterModdel's, which we get data for */ 
-	public Timestamp getMainSampleTime()   { return _mainSampleTime; }
-	public long      getSampleInterval()   { return _sampleInterval; }
-	public String    getServerName()       { return _serverName; }
-	public String    getOnHostname()       { return _onHostname; }
-	public String    getServerNameAlias()  { return _serverNameAlias; }
-	public boolean   getStartNewSample()   { return _startNewSample; }
+	public Timestamp getMainSampleTime()    { return _mainSampleTime; }
+	public long      getSampleInterval()    { return _sampleInterval; }
+	public String    getServerName()        { return _serverName; }
+	public String    getOnHostname()        { return _onHostname; }
+	public String    getServerNameAlias()   { return _serverNameAlias; }
+	public String    getServerDisplayName() { return _serverDisplayName; }
+	public boolean   getStartNewSample()    { return _startNewSample; }
 
 	/**
 	 * Get Server Name

@@ -134,7 +134,7 @@ extends PostgresAbstract
 		// Describe the table
 		setSectionDescription(_shortRstm);
 		
-		_CmPgDatabase_DbSizeMb = createTsLineChart(conn, "CmPgDatabase", "DbSizeMb", -1, null, "DB Size in MB (Databases)");
+		_CmPgDatabase_DbSizeMb = createTsLineChart(conn, "CmPgDatabase", "DbSizeMb", -1, true, null, "DB Size in MB (Databases)");
 	}
 
 	private IReportChart _CmPgDatabase_DbSizeMb;

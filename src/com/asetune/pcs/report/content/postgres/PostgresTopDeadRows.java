@@ -197,7 +197,7 @@ extends PostgresAbstract
 			    + "                  and abs.[schemaname] = diff.[schemaname] \n"
 			    + "                  and abs.[relname]    = diff.[relname] \n"
 			    + "           ), 0)  \n"
-			    + "         as DECIMAL(5,1) )  \n"
+			    + "         as DECIMAL(9,1) )  \n"
 			    + "     AS [pct_dead] \n"
 
 			    // n_live_tup__LAST_ABS
@@ -281,7 +281,7 @@ extends PostgresAbstract
     			    + "                  and abs.[schemaname] = diff.[schemaname] \n"
     			    + "                  and abs.[relname]    = diff.[relname] \n"
     			    + "           ), 0)  \n"
-    			    + "         as DECIMAL(5,1) )  \n"
+    			    + "         as DECIMAL(9,1) )  \n"
     			    + "     AS [pct_analyze] \n"
 			    )
 
@@ -377,7 +377,7 @@ extends PostgresAbstract
 					.validate()));
 		}
 		
-		_CmPgTables_DeadRows = createTsLineChart(conn, "CmPgTables", "DeadRows", -1, null, "Number of Dead Rows per Database(n_dead_tup) per Database");
+		_CmPgTables_DeadRows = createTsLineChart(conn, "CmPgTables", "DeadRows", -1, true, null, "Number of Dead Rows per Database(n_dead_tup) per Database");
 
 	
 		// Get 'Autovacuum' server config values

@@ -33,7 +33,15 @@ extends AbstractTableModel
 	abstract public String getPkValue(int row);
 	abstract public List<String> getColNames();
 
-	public int findColumn(String colName, boolean caseSensitive)
+	@Override
+    public int findColumn(String columnName) 
+	{
+		if (columnName == null)
+			return -1;
+		return super.findColumn(columnName);
+    }
+
+    public int findColumn(String colName, boolean caseSensitive)
 	{
 		for (int c=0; c < getColumnCount(); c++) 
 		{

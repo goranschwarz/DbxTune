@@ -4504,21 +4504,21 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		GTabbedPane tabGroupUdc          = new GTabbedPane("MainFrame_TabbedPane_Udc");
 
 		// Lets do setTabLayoutPolicy for all sub tabs...
-		tabGroupServer      .setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
-		tabGroupObjectAccess.setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
-		tabGroupCache       .setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
-		tabGroupDisk        .setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
-		tabGroupRepAgent    .setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
-		tabGroupHostMonitor .setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
-		tabGroupUdc         .setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
+		tabGroupServer      .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
+		tabGroupObjectAccess.setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
+		tabGroupCache       .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
+		tabGroupDisk        .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
+		tabGroupRepAgent    .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
+		tabGroupHostMonitor .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
+		tabGroupUdc         .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
 
-		if (addTabGroup(TCP_GROUP_SERVER))        _mainTabbedPane.addTab(TCP_GROUP_SERVER,        getGroupIcon(TCP_GROUP_SERVER),        tabGroupServer,       getGroupToolTipText(TCP_GROUP_SERVER));
-		if (addTabGroup(TCP_GROUP_OBJECT_ACCESS)) _mainTabbedPane.addTab(TCP_GROUP_OBJECT_ACCESS, getGroupIcon(TCP_GROUP_OBJECT_ACCESS), tabGroupObjectAccess, getGroupToolTipText(TCP_GROUP_OBJECT_ACCESS));
-		if (addTabGroup(TCP_GROUP_CACHE))         _mainTabbedPane.addTab(TCP_GROUP_CACHE,         getGroupIcon(TCP_GROUP_CACHE),         tabGroupCache,        getGroupToolTipText(TCP_GROUP_CACHE));
-		if (addTabGroup(TCP_GROUP_DISK))          _mainTabbedPane.addTab(TCP_GROUP_DISK,          getGroupIcon(TCP_GROUP_DISK),          tabGroupDisk,         getGroupToolTipText(TCP_GROUP_DISK));
-		if (addTabGroup(TCP_GROUP_REP_AGENT))     _mainTabbedPane.addTab(TCP_GROUP_REP_AGENT,     getGroupIcon(TCP_GROUP_REP_AGENT),     tabGroupRepAgent,     getGroupToolTipText(TCP_GROUP_REP_AGENT));
-		if (addTabGroup(TCP_GROUP_HOST_MONITOR))  _mainTabbedPane.addTab(TCP_GROUP_HOST_MONITOR,  getGroupIcon(TCP_GROUP_HOST_MONITOR),  tabGroupHostMonitor,  getGroupToolTipText(TCP_GROUP_HOST_MONITOR));
-		if (addTabGroup(TCP_GROUP_UDC))           _mainTabbedPane.addTab(TCP_GROUP_UDC,           getGroupIcon(TCP_GROUP_UDC),           tabGroupUdc,          getGroupToolTipText(TCP_GROUP_UDC));
+		if (addTabGroup(TCP_GROUP_SERVER))        mainTabbedPane.addTab(TCP_GROUP_SERVER,        getGroupIcon(TCP_GROUP_SERVER),        tabGroupServer,       getGroupToolTipText(TCP_GROUP_SERVER));
+		if (addTabGroup(TCP_GROUP_OBJECT_ACCESS)) mainTabbedPane.addTab(TCP_GROUP_OBJECT_ACCESS, getGroupIcon(TCP_GROUP_OBJECT_ACCESS), tabGroupObjectAccess, getGroupToolTipText(TCP_GROUP_OBJECT_ACCESS));
+		if (addTabGroup(TCP_GROUP_CACHE))         mainTabbedPane.addTab(TCP_GROUP_CACHE,         getGroupIcon(TCP_GROUP_CACHE),         tabGroupCache,        getGroupToolTipText(TCP_GROUP_CACHE));
+		if (addTabGroup(TCP_GROUP_DISK))          mainTabbedPane.addTab(TCP_GROUP_DISK,          getGroupIcon(TCP_GROUP_DISK),          tabGroupDisk,         getGroupToolTipText(TCP_GROUP_DISK));
+		if (addTabGroup(TCP_GROUP_REP_AGENT))     mainTabbedPane.addTab(TCP_GROUP_REP_AGENT,     getGroupIcon(TCP_GROUP_REP_AGENT),     tabGroupRepAgent,     getGroupToolTipText(TCP_GROUP_REP_AGENT));
+		if (addTabGroup(TCP_GROUP_HOST_MONITOR))  mainTabbedPane.addTab(TCP_GROUP_HOST_MONITOR,  getGroupIcon(TCP_GROUP_HOST_MONITOR),  tabGroupHostMonitor,  getGroupToolTipText(TCP_GROUP_HOST_MONITOR));
+		if (addTabGroup(TCP_GROUP_UDC))           mainTabbedPane.addTab(TCP_GROUP_UDC,           getGroupIcon(TCP_GROUP_UDC),           tabGroupUdc,          getGroupToolTipText(TCP_GROUP_UDC));
 		
 		tabGroupUdc.setEmptyTabMessage(
 			"No User Defined Performance Counters has been added.\n" +

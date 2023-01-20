@@ -20,6 +20,18 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
+
 import com.asetune.pcs.report.content.DbmsConfigIssues;
 import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
 import com.asetune.pcs.report.content.os.OsIoStatOverview;
@@ -34,10 +46,13 @@ import com.asetune.pcs.report.content.postgres.PostgresTopDeadRows;
 import com.asetune.pcs.report.content.postgres.PostgresTopSql;
 import com.asetune.pcs.report.content.postgres.PostgresTopTableAccess;
 import com.asetune.pcs.report.content.postgres.PostgresTopTableSize;
+import com.asetune.sql.conn.DbxConnection;
 
 public class DailySummaryReportPostgresTune 
 extends DailySummaryReportDefault
 {
+	private static Logger _logger = Logger.getLogger(DailySummaryReportPostgresTune.class);
+
 	@Override
 	public void addReportEntries()
 	{
@@ -67,5 +82,100 @@ extends DailySummaryReportDefault
 		// Configuration
 		addReportEntry( new PostgresConfiguration(this) );
 		addReportEntry( new DbmsConfigIssues(this)      );
+	}
+
+	
+	/**
+	 * Create a Map of "other information" like "ASE Page Size" and other information, used in the "Recording Information" section
+	 */
+	@Override
+	public Map<String, String> createDbmsOtherInfoMap(DbxConnection conn)
+	{
+		Map<String, String> otherInfo = new LinkedHashMap<>();
+		String sql;
+
+		//-------------------------------------------------------
+		// IS IN RECOVERY MODE
+		//-------------------------------------------------------
+
+		// Read ALL rows, and add rows to a list when 'in_recovery' state changes
+		// I Tried various SQL Windowing functionality... but this solution was simpler (and more portable)
+		sql = ""
+			    + "select \n"
+			    + "     [in_recovery] \n"
+			    + "    ,[SessionSampleTime] \n"
+			    + "from [CmSummary_abs] \n"
+			    + "";
+
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				List<String> list = new ArrayList<>();
+
+				int     rowcount         = 0;
+				boolean last_in_recovery = false;
+				
+				boolean   in_recovery = false;
+				Timestamp ts          = null;
+
+				while(rs.next())
+				{
+					rowcount++;
+					in_recovery = rs.getBoolean  (1);
+					ts          = rs.getTimestamp(2);
+
+					if (rowcount == 1)
+					{
+						list.add(in_recovery + "|" + sdf.format(ts));
+						last_in_recovery = in_recovery;
+					}
+					else
+					{
+						if (last_in_recovery != in_recovery)
+							list.add(in_recovery + "|" + sdf.format(ts));
+
+						last_in_recovery = in_recovery;
+					}
+				}
+
+				if (list.size() == 1)
+				{
+					if (in_recovery)
+						otherInfo.put("In Recovery/Standby Mode", "<font color='red'>The whole period this Instance has been in Recovery/Standby Mode</font>");
+					else
+						otherInfo.put("Not In Recovery Mode", "The whole period this Instance has been in Normal (r/w) Mode");
+					
+				}
+				if (list.size() > 1)
+				{
+					String changeHtmlInfo = "\n<table border='1'> <thead> <tr> <th>in_recovery</th> <th>at_time</th> </tr> </thead>\n<tbody>\n";
+					for (String info : list)
+					{
+						String inRecovery = StringUtils.substringBefore(info, "|");
+						String atTime     = StringUtils.substringAfter (info, "|");
+						changeHtmlInfo += "<tr> <td>" + (inRecovery.equalsIgnoreCase("true") ? "<font color='red'>TRUE </font>" : "FALSE") + "</td> <td>" + atTime + "</td> </tr>\n";
+					}
+					changeHtmlInfo += "</tbody>\n</table>\t";
+
+					otherInfo.put("<font color='red'>Recovery Mode Changes</font>", changeHtmlInfo);
+				}
+			}
+		}
+		catch(Exception ex)
+		{
+			_logger.warn("Problems getting 'IN RECOVERY MODE' from PCS Storage.", ex);
+		}
+
+
+		//-------------------------------------------------------
+		// return
+		//-------------------------------------------------------
+		return otherInfo;
 	}
 }

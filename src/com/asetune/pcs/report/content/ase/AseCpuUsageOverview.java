@@ -159,12 +159,12 @@ public class AseCpuUsageOverview extends AseAbstract
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		int maxValue = 100;
-		_CmSummary_aaCpuGraph            = createTsLineChart(conn, "CmSummary",  "aaCpuGraph",            maxValue, null,      "CPU Summary for all Engines (using @@cpu_busy, @@cpu_io) (Summary)");
-		_CmOsMpstat_MpSum                = createTsLineChart(conn, "CmOsMpstat", "MpSum",                 maxValue, "idlePct", "OS: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
-		_CmSummary_aaDiskGraph           = createTsLineChart(conn, "CmSummary",  "aaReadWriteGraph",      -1,       null,      "Disk read/write per second, using @@total_read, @@total_write (Summary)");
-		_CmEngines_cpuSum                = createTsLineChart(conn, "CmEngines",  "cpuSum",                maxValue, null,      "CPU Summary for all Engines (Server->Engines)");
-		_CmEngines_cpuEng                = createTsLineChart(conn, "CmEngines",  "cpuEng",                maxValue, null,      "CPU Usage per Engine (System + User) (Server->Engines)");
-		_CmSysLoad_EngineRunQLengthGraph = createTsLineChart(conn, "CmSysLoad",  "EngineRunQLengthGraph", -1,       null,      "Run Queue Length, Average over last minute, Per Engine (Server->System Load)");
+		_CmSummary_aaCpuGraph            = createTsLineChart(conn, "CmSummary",  "aaCpuGraph",            maxValue, false, null,      "CPU Summary for all Engines (using @@cpu_busy, @@cpu_io) (Summary)");
+		_CmOsMpstat_MpSum                = createTsLineChart(conn, "CmOsMpstat", "MpSum",                 maxValue, false, "idlePct", "OS: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
+		_CmSummary_aaDiskGraph           = createTsLineChart(conn, "CmSummary",  "aaReadWriteGraph",      -1,       false, null,      "Disk read/write per second, using @@total_read, @@total_write (Summary)");
+		_CmEngines_cpuSum                = createTsLineChart(conn, "CmEngines",  "cpuSum",                maxValue, false, null,      "CPU Summary for all Engines (Server->Engines)");
+		_CmEngines_cpuEng                = createTsLineChart(conn, "CmEngines",  "cpuEng",                maxValue, false, null,      "CPU Usage per Engine (System + User) (Server->Engines)");
+		_CmSysLoad_EngineRunQLengthGraph = createTsLineChart(conn, "CmSysLoad",  "EngineRunQLengthGraph", -1,       false, null,      "Run Queue Length, Average over last minute, Per Engine (Server->System Load)");
 
 		// For CmExecutionTime_TimeGraph do not sample values for "Unknown" which is "out-of-bounds"
 		String skip1 = null;
@@ -176,15 +176,15 @@ public class AseCpuUsageOverview extends AseAbstract
 		if (true)
 			skip2 = ReportChartTimeSeriesLine.SKIP_COLNAME_WITH_VALUE_BELOW + "LogicalReads=" + 0; // if lower than 0 it might be a counter wrap or some other strange thing
 		
-		_CmExecutionTime_CpuUsagePct       = createTsLineChart(conn, "CmExecutionTime", "CpuUsagePct",        maxValue, null,  "ASE SubSystem Operations - CPU Usage Percent (Server->Execution Time)");
-		_CmExecutionTime_TimeGraph         = createTsLineChart(conn, "CmExecutionTime", "TimeGraph",          -1,       skip1, "ASE SubSystem Operations - Execution Time, in Micro Seconds (Server->Execution Time)");
+		_CmExecutionTime_CpuUsagePct       = createTsLineChart(conn, "CmExecutionTime", "CpuUsagePct",        maxValue, true,  null,  "ASE SubSystem Operations - CPU Usage Percent (Server->Execution Time)");
+		_CmExecutionTime_TimeGraph         = createTsLineChart(conn, "CmExecutionTime", "TimeGraph",          -1,       true,  skip1, "ASE SubSystem Operations - Execution Time, in Micro Seconds (Server->Execution Time)");
 
-		_CmSqlStatement_SqlStmntSumLRead   = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntSumLRead",   -1,       null,  "Sum Logical Reads per sec Over SQL Response Time (Object/Access->SQL Statements)");
-		_CmSqlStatement_SqlStmntSumCpuTime = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntSumCpuTime", -1,       skip1, "Sum CPU Time per sec Over SQL Response Time (Object/Access->SQL Statements)");
+		_CmSqlStatement_SqlStmntSumLRead   = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntSumLRead",   -1,       false, null,  "Sum Logical Reads per sec Over SQL Response Time (Object/Access->SQL Statements)");
+		_CmSqlStatement_SqlStmntSumCpuTime = createTsLineChart(conn, "CmSqlStatement",  "SqlStmntSumCpuTime", -1,       false, skip1, "Sum CPU Time per sec Over SQL Response Time (Object/Access->SQL Statements)");
 
-		_CmSummary_LogicalReadGraph        = createTsLineChart(conn, "CmSummary",       "LogicalReadGraph",      -1,    skip2, "ASE Operations - Logical Reads per Second (Summary)");
-		_CmSummary_SelectOperationsGraph   = createTsLineChart(conn, "CmSummary",       "SelectOperationsGraph", -1,    null,  "ASE Operations - Selects per Second (Summary)");
-		_CmSummary_IudmOperationsGraph     = createTsLineChart(conn, "CmSummary",       "IudmOperationsGraph",   -1,    null,  "ASE Operations - Ins/Upd/Del/Merge per Second (Summary)");
+		_CmSummary_LogicalReadGraph        = createTsLineChart(conn, "CmSummary",       "LogicalReadGraph",      -1,    false, skip2, "ASE Operations - Logical Reads per Second (Summary)");
+		_CmSummary_SelectOperationsGraph   = createTsLineChart(conn, "CmSummary",       "SelectOperationsGraph", -1,    false, null,  "ASE Operations - Selects per Second (Summary)");
+		_CmSummary_IudmOperationsGraph     = createTsLineChart(conn, "CmSummary",       "IudmOperationsGraph",   -1,    true,  null,  "ASE Operations - Ins/Upd/Del/Merge per Second (Summary)");
 
 		_CmExecutionTime_SUM_rstm = createSum_CmExecutionTime(conn);
 	}

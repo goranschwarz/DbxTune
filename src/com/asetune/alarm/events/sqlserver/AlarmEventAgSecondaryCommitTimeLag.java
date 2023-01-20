@@ -39,7 +39,7 @@ extends AlarmEvent
 	 * @param secondaryCommitTimeLag    QueueSize
 	 * @param threshold                 threshold that was crossed
 	 */
-	public AlarmEventAgSecondaryCommitTimeLag(CountersModel cm, String agName, String serverName, String dbname, String secondaryCommitTimeLag, int threshold)
+	public AlarmEventAgSecondaryCommitTimeLag(CountersModel cm, String agName, String serverName, String dbname, String secondaryCommitTimeLag, int thresholdInSec)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -49,10 +49,13 @@ extends AlarmEvent
 				AlarmEvent.Category.RPO,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Secondary Commit Time is Lagging in Server '" + cm.getServerName() + "' for Availability group '" + agName + "', serverName='" + serverName + "'. age='"+secondaryCommitTimeLag+"'. (threshold="+threshold+")",
-				threshold
+				"Secondary Commit Time is Lagging in Server '" + cm.getServerName() + "' for Availability group '" + agName + "', serverName='" + serverName + "'. age='"+secondaryCommitTimeLag+"'. (thresholdInSec="+thresholdInSec+")",
+				thresholdInSec
 				);
 
+		// Adjust the Alarm Full Duration with X seconds
+		setFullDurationAdjustmentInSec( thresholdInSec );
+		
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);
 

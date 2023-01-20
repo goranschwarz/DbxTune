@@ -440,6 +440,7 @@ extends PersistWriterBase
 			gen.writeStringField("serverName"             , cont.getServerName());
 			gen.writeStringField("onHostname"             , cont.getOnHostname());
 			gen.writeStringField("serverNameAlias"        , cont.getServerNameAlias());
+			gen.writeStringField("serverDisplayName"      , cont.getServerDisplayName());
 
 // Make better names...: enabledCmList, enabledCmSendCountersList, enabledCmSendGraphsList
 //			gen.writeObjectField("cmListEnabled"          , cmListEnabled);
@@ -466,7 +467,10 @@ extends PersistWriterBase
 					gen.writeStringField("severity"                   , toString( ae.getSeverity()                   ));
 					gen.writeStringField("state"                      , toString( ae.getState()                      ));
 					gen.writeNumberField("repeatCnt"                  ,           ae.getReRaiseCount()                );
-					gen.writeStringField("duration"                   , toString( ae.getDuration()                   ));
+					gen.writeStringField("duration"                   , toString( ae.getFullDuration(true)           ));
+					gen.writeStringField("alarmDuration"              , toString( ae.getAlarmDuration()              ));
+					gen.writeStringField("fullDuration"               , toString( ae.getFullDuration()               ));
+					gen.writeNumberField("fullDurationAdjustmentInSec",           ae.getFullDurationAdjustmentInSec() );
 					gen.writeNumberField("creationAgeInMs"            ,           ae.getCrAgeInMs()                   );
 					gen.writeNumberField("creationTime"               ,           ae.getCrTime()                      );
 					gen.writeStringField("creationTimeIso8601"        , toString( ae.getCrTimeIso8601()              )); 
@@ -511,7 +515,10 @@ extends PersistWriterBase
 					gen.writeStringField("severity"                   , toString( ae.getSeverity()                   ));
 					gen.writeStringField("state"                      , toString( ae.getState()                      ));
 					gen.writeNumberField("repeatCnt"                  ,           ae.getReRaiseCount()                );
-					gen.writeStringField("duration"                   , toString( ae.getDuration()                   ));
+					gen.writeStringField("duration"                   , toString( ae.getFullDuration(true)           ));
+					gen.writeStringField("alarmDuration"              , toString( ae.getAlarmDuration()              ));
+					gen.writeStringField("fullDuration"               , toString( ae.getFullDuration()               ));
+					gen.writeNumberField("fullDurationAdjustmentInSec",           ae.getFullDurationAdjustmentInSec() );
 					gen.writeNumberField("creationAgeInMs"            ,           ae.getCrAgeInMs()                   );
 					gen.writeNumberField("creationTime"               ,           ae.getCrTime()                      );
 					gen.writeStringField("creationTimeIso8601"        , toString( ae.getCrTimeIso8601()              )); 

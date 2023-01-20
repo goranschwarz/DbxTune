@@ -1739,6 +1739,15 @@ finally
 			sb.append( "</table>" );
 			sb.append( "</html>" );
 
+			 // copy 'props' and remove the "password" from the info print. (but leave it if we are in DEBUG mode)
+			Properties printProps = new Properties();
+			if (props != null) 
+				printProps.putAll(props);
+			if (printProps.containsKey("password") && !_logger.isDebugEnabled())
+				printProps.setProperty("password", "*secret*");
+			_logger.info("Trying to connect to URL='" + url + "', props='" + printProps + "'.");
+
+			// CONNECT
 			Connection conn = DriverManager.getConnection(url, props);
 			
 			return conn;

@@ -240,6 +240,11 @@ public class PostgresUtils
 					if (r._tableName  == null) r._tableName  = "";
 //					if (r._indexName  == null) r._indexName  = "";
 				}
+				else
+				{
+					// At least try to get the 'dbname'
+					r._dbname = objIdCache.getDBName(r._dbid);
+				}
 			}
 		}
 		
@@ -280,13 +285,23 @@ public class PostgresUtils
 		sb.append("</TR>");
 		for (PgLockRecord lr : list)
 		{
-//			if      (lr._isBlocking                     ) sb.append("<TR style='color: red;'>");    // BLOCKING
-			if      (lr._blockingPids  != null          ) sb.append("<TR style='color: red;'>");    // BLOCKING
-			else if (lr._lockWaitStart != null          ) sb.append("<TR style='color: orange;'>"); // WAIT
-			else if (lr._lockGranted  == false          ) sb.append("<TR style='color: orange;'>"); // WAIT
-			else if ("pg_catalog".equals(lr._schemaName)) sb.append("<TR style='color: gray;'>");   // Postgres system schema object
-			else                                          sb.append("<TR>");
+			String color = null;
 
+			// blue == has Exclusive locks
+			if ( !StringUtil.containsAny(lr._lockType, "virtualxid") && StringUtil.containsAny(lr._lockMode, "Exclusive"))
+				color = "blue";
+
+			// Some other colors that "overrides" above
+			if      (lr._blockingPids  != null          ) color = "red";     // BLOCKING
+			else if (lr._lockWaitStart != null          ) color = "orange";  // WAIT
+			else if (lr._lockGranted  == false          ) color = "orange";  // WAIT
+			else if ("pg_catalog".equals(lr._schemaName)) color = "gray";    // Postgres system schema object
+
+			if (color == null)
+				sb.append("<TR>");
+			else
+				sb.append("<TR style='color: " + color + ";'>");
+			
 			sb.append("<TD>").append(toString( lr._pid           )).append("</TD>");
 			sb.append("<TD>").append(toString( lr._dbid          )).append("</TD>");
 			sb.append("<TD>").append(toString( lr._dbname        )).append("</TD>");
@@ -430,6 +445,7 @@ public class PostgresUtils
 		public BigDecimal _lockWaitInSec = null;
 		
 		public int     _lockCount     = 0;
+		public int     _exLockCount   = 0; // Exclusive Lock Count (for lockType "relation")
 //		public boolean _isBlocking    = false; // If the record is BLOCKING Other SPID's (set at a second pass)
 		public List<Long> _blockingPids = null;
 		public BigDecimal _blockedPidsMaxWaitInSec = null;
@@ -446,6 +462,12 @@ public class PostgresUtils
 			_lockWaitStart = lockWaitStart;
 			_lockWaitInSec = lockWaitInSec;
 			_lockCount     = lockCount    ;
+
+			if ( !StringUtil.containsAny(_lockType, "virtualxid") && StringUtil.containsAny(_lockMode, "Exclusive"))
+			{
+				_exLockCount++;
+			}
+//System.out.println("--------- PgLockRecord(): pid="+pid+", dbid="+dbid+", objectid="+objectid+", lockGranted="+lockGranted+", xactId="+xactId+", lockType='"+lockType+"', lockMode='"+lockMode+"', lockWaitStart='"+lockWaitStart+"', lockWaitInSec="+lockWaitInSec+", lockCount="+lockCount+", _exLockCount="+_exLockCount);
 		}
 	}
 }

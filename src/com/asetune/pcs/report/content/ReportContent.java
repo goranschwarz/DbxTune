@@ -28,6 +28,9 @@ import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.FileUtils;
 
+import com.asetune.CounterController;
+import com.asetune.utils.StringUtil;
+
 public class ReportContent
 {
 	private String _serverName;
@@ -47,6 +50,30 @@ public class ReportContent
 //	public void setReportAsText(String text)     { _contentText = text; }
 	public void setReportAsHtml(String text)     { _contentHtml = text; }
 
+	/**
+	 * Get "serverDisplayName" or "serverName" 
+	 * @return
+	 */
+	public String getDisplayOrServerName()
+	{
+		// FIXME: Should we grab "serverDisplayName" from CounterController... or should we start to store info like we do in DbxCentral ...
+
+		String name = null;
+		if (CounterController.hasInstance())
+		{
+			name = CounterController.getInstance().getServerDisplayName();
+
+			if (StringUtil.isNullOrBlank(name))
+				name = CounterController.getInstance().getServerAliasName();
+		}
+		
+		if (StringUtil.isNullOrBlank(name))
+			name = getServerName();
+		
+		return name;
+	}
+
+	
 	public void setNothingToReport(boolean b)
 	{
 		_hasNothingToReport = b;

@@ -122,6 +122,11 @@ rem	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy2
 	set JAVA_START_PARAMS=
 	set SPLASH=
 
+) ELSE IF "%APP_NAME%" == "mailtest2" (
+	set JAVA_START_CLASS=com.asetune.test.MailTest2
+	set JAVA_START_PARAMS=
+	set SPLASH=
+
 ) ELSE IF "%APP_NAME:~0,11%" == "com.asetune" (
 	set JAVA_START_CLASS=%APP_NAME%
 	set JAVA_START_PARAMS=

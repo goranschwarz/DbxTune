@@ -55,6 +55,9 @@ extends ObjectLookupInspectorAbstract
 	public static final String  PROPKEY_view_parseAndSendTables    = Version.getAppName() + "." + ObjectLookupInspectorPostgres.class.getSimpleName() + ".view.parse.send.tables";
 	public static final boolean DEFAULT_view_parseAndSendTables    = true;
 
+	public static final String  PROPKEY_function_parseAndSendTables    = Version.getAppName() + "." + ObjectLookupInspectorPostgres.class.getSimpleName() + ".function.parse.send.tables";
+	public static final boolean DEFAULT_function_parseAndSendTables    = true;
+
 //	private long    _dbmsVersion = 0;
 
 	@Override
@@ -169,7 +172,9 @@ extends ObjectLookupInspectorAbstract
 			//   p = partitioned table, 
 			//   I = partitioned index
 			//--------------------------------------------------
-			//  TR = Trigger --- added in method: getDbmsObjectList
+			//  TR = Trigger       --- added in method: getDbmsObjectList
+			//  FN = function      --- added in method: getDbmsObjectList
+			//  P  = procedure     --- added in method: getDbmsObjectList
 			//--------------------------------------------------
 			String type = storeEntry.getType();
 
@@ -282,11 +287,116 @@ extends ObjectLookupInspectorAbstract
 				// GET SOME OTHER STATISTICS
 				// Size of tables etc
 			}
+
+			//-----------------------------------------------------------------------------------
+			//-- FOREIGN Table (or REMOTE/PROXY table)
+			//-----------------------------------------------------------------------------------
+			else if ( "f".equals(type) ) 
+			{
+				// This should be stored
+				returnList.add(storeEntry);
+
+				String tableSchema = storeEntry.getSchemaName();
+				String tableName   = storeEntry.getObjectName();
+				
+				// Get FOREIGN TABLE Columns
+				String sql_getForeignTableColumns = ""
+					    + "select \n"
+					    + "     ordinal_position \n"
+					    + "    ,column_name \n"
+					    + "    ,data_type \n"
+					    + "    ,character_maximum_length \n"
+					    + "    ,numeric_precision \n"
+					    + "    ,numeric_scale \n"
+					    + "    ,datetime_precision \n"
+					    + "    ,column_default \n"
+					    + "    ,is_nullable \n"
+					    + "from INFORMATION_SCHEMA.COLUMNS \n"
+					    + "where 1=1 \n"
+					    + "  and table_schema = '" + tableSchema + "' \n"
+					    + "  and table_name   = '" + tableName   + "' \n"
+					    + "";
+
+				// Get FOREIGN TABLE Info (what table is the remote table pointing to: schema.localForeignTable -> srvname.cat.schema.remoteTable)
+				String sql_getForeignTableOptions = ""
+					    + "select \n"
+					    + "     foreign_table_catalog \n"
+					    + "    ,foreign_table_schema \n"
+					    + "    ,foreign_table_name \n"
+					    + "    ,option_name \n"
+					    + "    ,option_value \n"
+					    + "from information_schema.foreign_table_options \n"
+					    + "where foreign_table_schema = '" + tableSchema + "' \n"
+					    + "  and foreign_table_name   = '" + tableName   + "' \n"
+					    + "";
+
+
+				// Get FOREIGN SERVER NAME
+				String sql_getForeignServerName = ""
+					    + "select \n"
+					    + "     foreign_server_name \n"
+					    + "    ,foreign_data_wrapper_name \n"
+					    + "    ,foreign_server_type \n"
+					    + "    ,foreign_server_version \n"
+					    + "    ,authorization_identifier \n"
+					    + "from information_schema.foreign_servers \n"
+					    + "where foreign_server_name = ( \n"
+					    + "        select foreign_server_name \n"
+					    + "        from information_schema.foreign_tables \n"
+					    + "        where foreign_table_schema = '" + tableSchema + "' \n"
+					    + "          and foreign_table_name   = '" + tableName   + "' \n"
+					    + "	) \n"
+					    + "";
+
+				// Get FOREIGN SERVER OPTIONS
+				String sql_getForeignServerOptions = ""
+					    + "select \n"
+					    + "      foreign_server_name \n"
+					    + "     ,option_name \n"
+					    + "     ,option_value \n"
+					    + "from information_schema.foreign_server_options \n"
+					    + "where foreign_server_name = ( \n"
+					    + "        select foreign_server_name \n"
+					    + "        from information_schema.foreign_tables \n"
+					    + "        where foreign_table_schema = '" + tableSchema + "' \n"
+					    + "          and foreign_table_name   = '" + tableName   + "' \n"
+					    + "	) \n"
+					    + "";
+
+				try	(AseSqlScript ss = new AseSqlScript(conn, 10)) 
+				{
+					ss.setRsAsAsciiTable(true);
+
+					String res_foreignTableColumns  = ss.executeSqlStr(sql_getForeignTableColumns , true);
+					String res_foreignTableOptions  = ss.executeSqlStr(sql_getForeignTableOptions , true);
+					String res_foreignServerName    = ss.executeSqlStr(sql_getForeignServerName   , true);
+					String res_foreignServerOptions = ss.executeSqlStr(sql_getForeignServerOptions, true);
+
+					storeEntry.setObjectText(""
+						+ res_foreignTableColumns  + "\n" 
+						+ res_foreignTableOptions  + "\n" 
+						+ res_foreignServerName    + "\n"
+						+ res_foreignServerOptions + "\n"
+						); 
+				}
+				catch (SQLException e) 
+				{ 
+					storeEntry.setObjectText( e.toString() ); 
+					_logger.warn("DDL Lookup. Problems Getting FOREIGN TABLE INFO information for: TableName='" + storeEntry.getObjectName() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + e);
+				}
+				
+			}
+
+			//-----------------------------------------------------------------------------------
+			//-- view, materialized view, sequence, TRIGGER, FUNCTION
+			//-----------------------------------------------------------------------------------
 			else if (
 			       "v" .equals(type) // view 
 			    || "m" .equals(type) // materialized view 
 			    || "S" .equals(type) // sequence 
-			    || "TR".equals(type) // TRIGGER (added by method: getDbmsObjectList) 
+			    || "TR".equals(type) // TRIGGER   (added by method: getDbmsObjectList) 
+			    || "FN".equals(type) // FUNCTION  (added by method: getDbmsObjectList) 
+			    || "P" .equals(type) // PROCEDURE (added by method: getDbmsObjectList) 
 			   )
 			{
 				// This should be stored
@@ -334,10 +444,12 @@ extends ObjectLookupInspectorAbstract
 						}
 					}
 				}
+
+				//--------------------------------------------
 				if ("TR".equals(type))
 				{
 					String sqlText = "";
-					String sql = ""
+					String sql     = ""
 						    + "select \n"
 						    + "    pg_get_triggerdef(t.oid, true) AS trigger_ddl \n"
 						    + "   ,pg_get_functiondef(t.tgfoid)   AS function_ddl \n"
@@ -378,11 +490,66 @@ extends ObjectLookupInspectorAbstract
 					// if TRIGGER: Possibly parse the SQL statement and extract Tables, send those tables to 'DDL Storage'...
 				}
 				
-				// If it's a view, parse the view definition, and extract tables... which is post again to the DDL Storage
+				//--------------------------------------------
+				if ( "FN".equals(type) || "P".equals(type) )
+				{
+					String sqlText = "";
+					String sql     = "select pg_get_functiondef(" + storeEntry.getObjectId() + ")";
+
+//System.out.println("YYYYYYYYYYY: Lookup(type='"+type+"'): sql=|"+sql+"|, storeEntry="+storeEntry);
+					try (Statement statement = conn.createStatement(); ResultSet rs = statement.executeQuery(sql) )
+					{
+						while(rs.next())
+						{
+							String function_ddl = rs.getString(1);
+
+							sqlText += (""
+									+ "---------------------- \n"
+									+ ("FN".equals(type) ? "-- FUNCTION-DDL: \n" : "-- PROCEDURE-DDL: \n")
+									+ "---------------------- \n"
+									+ function_ddl + "\n"
+									+ "\n"
+									+ "");
+						}
+
+//System.out.println("YYYYYYYYYYY: Lookup(type='"+type+"'): DDL="+sqlText);
+						storeEntry.setObjectText( sqlText );
+					}
+					catch (SQLException e)
+					{
+						storeEntry.setObjectText( e.toString() );
+						_logger.warn("DDL Lookup. Problems Getting FUNCTION/PROCEDURE information for: functionName='" + storeEntry.getObjectName() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + e);
+					}
+
+					//--------------------------------------------
+					// if FUNCTION: Possibly parse the SQL statement and extract Tables, send those tables to 'DDL Storage'...
+					//--------------------------------------------
+					if (StringUtil.hasValue(sqlText))
+					{
+						if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_function_parseAndSendTables, DEFAULT_function_parseAndSendTables))
+						{
+							Set<String> tableList = SqlParserUtils.getTables(sqlText);
+
+							// Post to DDL Storage, for lookup
+							for (String tableName : tableList)
+							{
+								if ("FN".equals(type))
+									pch.addDdl(dbname, tableName, this.getClass().getSimpleName() + ".resolve.function");
+								else
+									pch.addDdl(dbname, tableName, this.getClass().getSimpleName() + ".resolve.procedure");
+							}
+
+							// Add table list to the saved entry
+							storeEntry.setExtraInfoText( "TableList: " + StringUtil.toCommaStr(tableList) ); 
+//System.out.println("YYYYYYYYYYY: Lookup(type='"+type+"'): TableList: "+storeEntry.getExtraInfoText());
+						}
+					}
+				}
 			}
 			else
 			{
 				// Unknown type
+				_logger.warn("doObjectInfoLookup_doWork(), unhandled OBJECT TYPE '" + type + "'. This entry will simply be skipped. storeEntry="+storeEntry);
 				continue;
 			}
 
@@ -416,7 +583,9 @@ extends ObjectLookupInspectorAbstract
 		SqlObjectName sqlObjectName = new SqlObjectName(conn, objectName);
 		objectName = sqlObjectName.getObjectName();
 		
-		// get TYPE, OWNER CREATION_TIME and DBNAME where the record(s) was found 
+		//----------------------------------------------------------------
+		// RELATION -- get TYPE, OWNER CREATION_TIME and DBNAME where the record(s) was found 
+		//----------------------------------------------------------------
 		String sql = ""
 			    + "SELECT \n"
 			    + "     current_database() AS dbname \n"
@@ -458,6 +627,73 @@ extends ObjectLookupInspectorAbstract
 			_logger.error("Problems Getting basic information about DDL for dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Skipping DDL Storage of this object. Caught: " + e);
 			return Collections.emptyList();
 		}
+
+
+		//----------------------------------------------------------------
+		// No TABLE/RELATION was found... try to get info from FUNCTIONS/PROCEDURES
+		//----------------------------------------------------------------
+		if (objectList.isEmpty())
+		{
+//TODO; // test the proc stuff again... and remove below comments
+//TODO; // test FAILED... debug why there is NO PROCEDURE in the report...
+//TODO; // Should we check/handle PROCEDURE... the type 'FN' works even if it's a procedure, but the HTML output says 'FUNCTION' even if it's a PROCEDURE
+//TODO; // possibly use prokind --- 'f' for a normal function, 'p' for a procedure, 'a' for an aggregate function, or 'w' for a window function
+//	    + "    ,CASE WHEN c.prokind = 'f' THEN 'FN' \n"  // in SQL Server: FN = Scalar function, TF = Table function
+//	    + "          WHEN c.prokind = 'p' THEN 'P' \n"   // in SQL Server: P  = Stored procedure
+//		+ "          WHEN c.prokind = 'a' THEN 'AF' \n"  // in SQL Server: AF = Aggregate function (CLR)
+//		+ "          WHEN c.prokind = 'w' THEN 'WF' \n"  // in SQL Server: >>> Window Function do not seems to exists <<<
+//	    + "          ELSE                      'FN' \n"
+//	    + "     END AS object_type \n"
+
+			sql = ""
+				    + "SELECT \n"
+				    + "     current_database() AS dbname \n"
+				    + "    ,n.nspname          AS schema_name \n"
+				    + "    ,c.proname          AS object_name \n"
+				    + "    ,c.oid              AS object_id \n"
+//				    + "    ,'FN'               AS object_type \n"  // we could have used 'prokind' but that was added in Version 11
+				    + "    ,CASE WHEN c.prokind = 'f' THEN 'FN' \n"  // in SQL Server: FN = Scalar function, TF = Table function
+				    + "          WHEN c.prokind = 'p' THEN 'P' \n"   // in SQL Server: P  = Stored procedure
+					+ "          WHEN c.prokind = 'a' THEN 'AF' \n"  // in SQL Server: AF = Aggregate function (CLR)
+					+ "          WHEN c.prokind = 'w' THEN 'WF' \n"  // in SQL Server: >>> Window Function do not seems to exists <<<
+				    + "          ELSE                      'FN' \n"
+				    + "     END AS object_type \n"
+				    + "FROM pg_proc c \n"
+				    + "LEFT JOIN pg_namespace n ON n.oid = c.pronamespace \n"
+				    + "WHERE proname IN('" + objectName.toLowerCase() + "', '" + objectName + "') \n" // as LowerCase or OriginText (Postgres stores non-quoted-identifiers as LowerCase and "quoted-identifiers" as whatever was given)
+				    + "";
+			
+			try ( Statement statement = conn.createStatement(); ResultSet rs = statement.executeQuery(sql) )
+			{
+				while(rs.next())
+				{
+					DdlDetails entry = new DdlDetails();
+
+					entry.setSearchDbname    ( dbname );
+					entry.setObjectName      ( objectName );
+					entry.setSearchObjectName( originObjectName ); // NOT Stored in DDL Store, used for: isDdlDetailsStored(), markDdlDetailsAsStored()
+					entry.setSource          ( source );
+					entry.setDependParent    ( dependParent );
+					entry.setDependLevel     ( dependLevel );
+					entry.setSampleTime      ( new Timestamp(System.currentTimeMillis()) );
+
+					entry.setDbname          ( rs.getString   (1) );
+					entry.setSchemaName      ( rs.getString   (2) );
+					entry.setObjectName      ( rs.getString   (3) ); // Use the object name stored in the DBMS (for Postgres it can be LowerCase for non-quoted-identifiers and the actual name for "quoted-identifiers")
+					entry.setObjectId        ( rs.getInt      (4) );
+					entry.setType            ( rs.getString   (5) );
+
+					objectList.add(entry);
+//System.out.println("XXXXXXXXXX: FUNCTION/PROCEDURE: entry="+entry.toStringDebug(120));
+				}
+			}
+			catch (SQLException e)
+			{
+				_logger.error("Problems Getting FUNCTION/PROCEDURE information about DDL for dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Skipping DDL Storage of this object. Caught: " + e);
+				return Collections.emptyList();
+			}
+		} // end: No TABLE/RELATION was found
+
 
 		//-------------------------------------------------------------
 		// Do some extra lookups... to get triggers for USER Tables

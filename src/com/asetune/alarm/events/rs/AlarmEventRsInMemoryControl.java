@@ -57,32 +57,35 @@ extends AlarmEvent
 	}
 
 
-	/**
-	 * 
-	 * @param cm
-	 * @param module
-	 * @param timeInSec
-	 * @param memoryLimit
-	 * @param threshold
-	 */
-	public AlarmEventRsInMemoryControl(CountersModel cm, String module, int timeInSec, int memoryLimit, int threshold)
-	{
-		super(
-				Version.getAppName(), // serviceType
-				cm.getServerName(),   // serviceName
-				cm.getName(),         // serviceInfo
-				module,               // extraInfo
-				AlarmEvent.Category.SRV_CONFIG,
-				AlarmEvent.Severity.ERROR, 
-				AlarmEvent.ServiceState.AFFECTED,
-				"Replication Server is In-Memory-Control mode for module '" + module + "' in Server '" + cm.getServerName() + "'. Memory is exausted and in MEMORY CONTROL. Some module(s) has STOPPED working until memory is reclaimed. module='" + module + "', timeInSec=" + timeInSec + ", memoryLimit=" + memoryLimit + ", threshold=" + threshold + ". Fix: configure replication server set memory_limit to '##-in-mb'",
-				threshold
-				);
-
-		// Set: Time To Live if postpone is enabled
-		setTimeToLive(cm);
-
-		// Set the raw data carrier
-		setData("module='" + module + "', timeInSec=" + timeInSec + ", memoryLimit=" + memoryLimit);
-	}
+//	/**
+//	 * 
+//	 * @param cm
+//	 * @param module
+//	 * @param timeInSec
+//	 * @param memoryLimit
+//	 * @param threshold
+//	 */
+//	public AlarmEventRsInMemoryControl(CountersModel cm, String module, int timeInSec, int memoryLimit, int thresholdInSec)
+//	{
+//		super(
+//				Version.getAppName(), // serviceType
+//				cm.getServerName(),   // serviceName
+//				cm.getName(),         // serviceInfo
+//				module,               // extraInfo
+//				AlarmEvent.Category.SRV_CONFIG,
+//				AlarmEvent.Severity.ERROR, 
+//				AlarmEvent.ServiceState.AFFECTED,
+//				"Replication Server is In-Memory-Control mode for module '" + module + "' in Server '" + cm.getServerName() + "'. Memory is exausted and in MEMORY CONTROL. Some module(s) has STOPPED working until memory is reclaimed. module='" + module + "', timeInSec=" + timeInSec + ", memoryLimit=" + memoryLimit + ", thresholdInSec=" + thresholdInSec + ". Fix: configure replication server set memory_limit to '##-in-mb'",
+//				thresholdInSec
+//				);
+//
+//		// Adjust the Alarm Full Duration with X seconds
+//		setFullDurationAdjustmentInSec( thresholdInSec );
+//		
+//		// Set: Time To Live if postpone is enabled
+//		setTimeToLive(cm);
+//
+//		// Set the raw data carrier
+//		setData("module='" + module + "', timeInSec=" + timeInSec + ", memoryLimit=" + memoryLimit);
+//	}
 }

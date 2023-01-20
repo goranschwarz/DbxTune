@@ -988,12 +988,15 @@ public class StringUtil
 	 * Check if "any" of the strings is equal to
 	 * 
 	 * @param strToCheck Sting to check
-	 * @param equalsAny  if strToChack is equal to any of the strings here...
+	 * @param equalsAny  if strToCheck is equal to any of the strings here...
 	 * 
 	 * @return true if any match, otherwise False
 	 */
 	public static boolean equalsAny(String strToCheck, String... equalsAny)
 	{
+		if (strToCheck == null)
+			return false;
+
 		for (String str : equalsAny)
 		{
 			if (strToCheck.equals(str))
@@ -1002,6 +1005,28 @@ public class StringUtil
 		return false;
 	}
 
+	/**
+	 * Check if "any" of the strings contains
+	 * 
+	 * @param strToCheck Sting to check
+	 * @param containsAny  if strToCheck is equal to any of the strings here...
+	 * 
+	 * @return true if any match, otherwise False
+	 */
+	public static boolean containsAny(String strToCheck, String... containsAny)
+	{
+		if (strToCheck == null)
+			return false;
+
+		for (String str : containsAny)
+		{
+			if (strToCheck.contains(str))
+				return true;
+		}
+		return false;
+	}
+	
+	
 	/**
 	 * Split the String s into an array of strings. The String s is split at
 	 * each occurrence of the substring <code>splitAt</code> in <code>s</code>.
@@ -2238,6 +2263,59 @@ public class StringUtil
 			value = "";
 
 		return sb.append("<").append(tagName).append(">").append(value).append("</").append(tagName).append(">\n");
+	}
+
+	/**
+	 * Check if this "could" be a HTML document...<br>
+	 * 
+	 * @param inString The string to examen
+	 * @return
+	 */
+	public static boolean isPossibleHtml(String inString)
+	{
+		return isPossibleHtml(inString, Integer.MAX_VALUE);
+	}
+	/**
+	 * Check if this "could" be a HTML document...<br>
+	 * 
+	 * @param inString The string to examen
+	 * @return
+	 */
+	public static boolean isPossibleHtml(String inString, int checkStartLen)
+	{
+		if (StringUtil.isNullOrBlank(inString))
+			return false;
+
+		if (inString.startsWith("<html"))
+			return true;
+		
+		if (inString.startsWith("<HTML"))
+			return true;
+		
+//		int posLt    = -1; // found '<'
+//		int posGt    = -1; // found '>'
+//		int posClose = -1; // found '</'
+//		
+//		posLt    = inString.indexOf('<');
+//		posGt    = inString.indexOf('>');
+//		posClose = inString.indexOf("</");
+
+		// Loop first ##### characters
+		int len = Math.min(checkStartLen, inString.length());
+
+		String inStrShort = inString.substring(0, len);
+
+		// Check for html tags (eding tags is better, because they do not have any attributes)
+		// For now very simple, but lets expand this later on
+		
+		// TABLE, and a TableRow
+		if (StringUtils.containsIgnoreCase(inStrShort, "</table>"))
+		{
+			if (StringUtils.containsIgnoreCase(inStrShort, "</tr>"))
+				return true;
+		}
+
+		return false;
 	}
 
 	/**
@@ -3959,6 +4037,48 @@ public class StringUtil
 	}
 	
 	
+
+	public static String parseMailFromAddress_getEmailAddress(String input) { return parseMailFromAddress(input, 1); }
+	public static String parseMailFromAddress_getDisplayName (String input) { return parseMailFromAddress(input, 2); }
+	/**
+	 * 
+	 * @param input           The mail address and potentially the name. 
+	 * @param type            1=emailAddress, 2=displayName 
+	 * @return 
+	 */
+	public static String parseMailFromAddress(String input, int type)
+	{
+		if (isNullOrBlank(input))
+			return input;
+
+		if (type < 1 && type > 2)
+			throw new RuntimeException("Known output types is 1 or 2, you specified: " + type);
+		
+		String emailAddress = null;
+		String displayName  = null;
+
+		int firstPos = input.indexOf('<');
+		int lastPos  = input.lastIndexOf('>');
+		
+		// 
+		if (firstPos > 0 && lastPos > 0)
+		{
+			emailAddress = input.substring(0, firstPos).trim();
+			displayName  = input.substring(firstPos + 1, lastPos).trim();
+		}
+		else
+		{
+			emailAddress = input;
+			displayName  = null;
+		}
+		
+		if (type == 1) return emailAddress; 
+		if (type == 2) return displayName; 
+
+		throw new RuntimeException("Known output types is 1 or 2, you specified: " + type);
+	}
+	
+	
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
 	//// TEST CODE
@@ -3967,6 +4087,14 @@ public class StringUtil
 
 	public static void main(String[] args)
 	{
+		System.out.println(StringUtil.parseMailFromAddress(null               , 1) == null           ? "OK-1" : "FAIL-1 - |" + StringUtil.parseMailFromAddress(null               , 1) + "|");
+		System.out.println(StringUtil.parseMailFromAddress(""                 , 1).equals("")        ? "OK-2" : "FAIL-2 - |" + StringUtil.parseMailFromAddress(""                 , 1) + "|");
+		System.out.println(StringUtil.parseMailFromAddress("a@x.com"          , 1).equals("a@x.com") ? "OK-3" : "FAIL-3 - |" + StringUtil.parseMailFromAddress("a@x.com"          , 1) + "|");
+		System.out.println(StringUtil.parseMailFromAddress("a@x.com"          , 2) == null           ? "OK-4" : "FAIL-4 - |" + StringUtil.parseMailFromAddress("a@x.com"          , 2) + "|");
+		System.out.println(StringUtil.parseMailFromAddress("a@x.com <Xxx Yyy>", 1).equals("a@x.com") ? "OK-5" : "FAIL-5 - |" + StringUtil.parseMailFromAddress("a@x.com <Xxx Yyy>", 1) + "|");
+		System.out.println(StringUtil.parseMailFromAddress("a@x.com <Xxx Yyy>", 2).equals("Xxx Yyy") ? "OK-6" : "FAIL-6 - |" + StringUtil.parseMailFromAddress("a@x.com <Xxx Yyy>", 2) + "|");
+		System.exit(0);
+
 		System.out.println(StringUtil.truncate(null             , 10, true , null) == null               ? "OK" : "FAIL - "+StringUtil.truncate(null, 10, true, null));
 		System.out.println(StringUtil.truncate("123"            , 10, true , null).equals("123")         ? "OK" : "FAIL - "+StringUtil.truncate("123"            , 10, true , null));
 		System.out.println(StringUtil.truncate("123456789-"     , 10, true , null).equals("123456789-")  ? "OK" : "FAIL - "+StringUtil.truncate("123456789-"     , 10, true , null));

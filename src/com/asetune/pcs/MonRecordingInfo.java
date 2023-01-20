@@ -120,7 +120,7 @@ public class MonRecordingInfo
 	{
 		return _monVersionInfo;
 	}
-
+	
 	/** Initialize members  
 	 * @param sessionStartTime */
 	private void initialize(DbxConnection conn, Timestamp sessionStartTime)

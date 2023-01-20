@@ -132,12 +132,13 @@ extends Throwable
 	
 	public static final int DEFAULT_raiseDelay = 0;
 
-	private static SimpleDateFormat _dateFormater = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+//	private static SimpleDateFormat _dateFormater = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 	
 	protected String       _serviceType         = ""; // Typically the JDBC Connection.metadata.getProductName
 	protected String       _serviceName         = ""; // Typically the servername
 	protected String       _serviceInfo         = ""; 
-	protected Object       _extraInfo           = "";
+//	protected Object       _extraInfo           = ""; // Why should this be Object...
+	protected String       _extraInfo           = "";
 	protected Category     _category            = Category.OTHER;
 //	protected Category     _categoryDefault     = Category.OTHER;
 	protected Severity     _severity            = Severity.INFO;
@@ -167,6 +168,8 @@ extends Throwable
 	protected int          _timeToLive          = -1; // Time To Live in Milliseconds
 
 	protected Number       _crossedThreshold    = null;
+	
+	private int            _fullDurationAdjustmentInSec = 0;
 
 	protected int          _activeAlarmCount    = -1;
 
@@ -223,8 +226,6 @@ extends Throwable
 	public void   setReRaiseTime()        { _reRaiseTime = System.currentTimeMillis(); }
 
 
-	/** For how long has this Alarm been active. it will be displayed as "[HH:]MM:SS" where hours only will be displayed if the alarm has been active for over an hour */ 
-	public String getDuration()                  { return TimeUtils.msToTimeStr("%?HH[:]%MM:%SS", getCrAgeInMs()); }
 	public long   getCancelTime()                { return _cancelTime; }
 	public String getCancelTimeStr()             { return _cancelTimeStr; }
 	public String getCancelTimeIso8601()         { return _cancelTime == -1 ? null : TimeUtils.toStringIso8601(_cancelTime); }
@@ -268,7 +269,8 @@ extends Throwable
 	public String       getServiceType()                    { return _serviceType; }
 	public String       getServiceName()                    { return _serviceName; }
 	public String       getServiceInfo()                    { return _serviceInfo; }
-	public Object       getExtraInfo()                      { return _extraInfo; }
+//	public Object       getExtraInfo()                      { return _extraInfo; }
+	public String       getExtraInfo()                      { return _extraInfo == null ? "" : _extraInfo; } // Return "" if NULL, since extraInfo is part of PrimaryKey in SQL PCS Storage
 	public Category     getCategory()                       { return _category; }
 	public Severity     getSeverity()                       { return _severity; }
 	public ServiceState getState()                          { return _state; }
@@ -305,6 +307,107 @@ extends Throwable
 		_crossedThreshold = threshold;
 	}
 
+
+	/**
+	 * If the alarm is Raised X seconds after the actual "incident" has happened, due to a high time threshold, this will adjust the "Full Duration" field.
+	 * <p>
+	 * For example: This may be used when a "long running transaction/statement" or similar has crossed a "time" threshold<br>
+	 * If the Alarm is Raised after 30 minutes (threshold is 30 minutes), and then canceled 5 minutes later
+	 * <ul>
+	 *   <li>The <b>Alarm Duration</b> will be 5 minutes</li>
+	 *   <li>But the <b>Full Duration</b> will be 35 minutes</li>
+	 * </ul>
+	 * <p>
+	 * So setting this value will help the person that reads the Alarm to see the "real" duration without <i>thinking</i> 
+	 * 
+	 * @param seconds
+	 */
+	public void setFullDurationAdjustmentInSec(int seconds)
+	{
+		_fullDurationAdjustmentInSec = seconds;
+	}
+	/** get value set by: {@link #setFullDurationAdjustmentInSec()} */
+	public int getFullDurationAdjustmentInSec()
+	{
+		return _fullDurationAdjustmentInSec;
+	}
+	/** if setFullDurationAdjustmentInSec() is NOT zero */
+	public boolean hasFullDurationAdjustment()
+	{
+		return _fullDurationAdjustmentInSec != 0;
+	}
+	
+	/** 
+	 * For how long has this Alarm been active. <br>
+	 * If {@link #setFullDurationAdjustmentInSec()} has NOT been set it will simply call {@link #getDuration()}<br>
+	 * Otherwise it will add the "Full Duration Adjustment In Seconds" to the Duration Time.
+	 * <p>
+	 * it will be displayed as "[HH:]MM:SS" where hours only will be displayed if the alarm has been active for over an hour 
+	 */ 
+	public String getFullDuration()
+	{
+		return getFullDuration(false);
+	}
+	/** 
+	 * For how long has this Alarm been active. <br>
+	 * If {@link #setFullDurationAdjustmentInSec()} has NOT been set it will simply call {@link #getDuration()}<br>
+	 * Otherwise it will add the "Full Duration Adjustment In Seconds" to the Duration Time.
+	 * <p>
+	 * it will be displayed as "[HH:]MM:SS" where hours only will be displayed if the alarm has been active for over an hour
+	 * 
+	 * @param addExtraInfo    Adds some extra information to the output: (MM:SS)  and the Number of seconds it was adjusted with  
+	 */ 
+	public String getFullDuration(boolean addExtraInfo)
+	{
+		// Get Alarm Creation time in ms
+		long ageInMs = getCrAgeInMs();
+
+		// Add "adjustment"
+		if ( hasFullDurationAdjustment() )
+			ageInMs += getFullDurationAdjustmentInSec() * 1000;
+
+		// Format the MS to a more readable
+		String retStr = TimeUtils.msToTimeStr("%?HH[:]%MM:%SS", ageInMs);
+
+		// Add a 'HH:MM:SS' or 'MM:SS' description
+		String timeDesc = (ageInMs > 3600 * 1000) ? "HH:MM:SS" : "MM:SS";
+		retStr += " (" + timeDesc + ")"; 
+
+		// Add some more info
+		if (addExtraInfo && hasFullDurationAdjustment())
+		{
+			retStr += " -- Added/Adjusted " + getFullDurationAdjustmentInSec() + " Seconds to the Alarm Raise Time"; 
+		}
+
+		return retStr; 
+	}
+
+//	/** 
+//	 * For how long has this Alarm been active. it will be displayed as "[HH:]MM:SS" where hours only will be displayed if the alarm has been active for over an hour 
+//	 */ 
+//	public String getDuration()
+//	{ 
+//		return getAlarmDuration(); 
+//	}
+
+	/** 
+	 * For how long has this Alarm been active. it will be displayed as "[HH:]MM:SS" where hours only will be displayed if the alarm has been active for over an hour 
+	 */ 
+	public String getAlarmDuration()
+	{
+		long ageInMs = getCrAgeInMs();
+
+		// Format the MS to a more readable
+		String retStr = TimeUtils.msToTimeStr("%?HH[:]%MM:%SS", ageInMs);
+
+		// Add a 'HH:MM:SS' or 'MM:SS' description
+		String timeDesc = (ageInMs > 3600 * 1000) ? "HH:MM:SS" : "MM:SS";
+		retStr += " (" + timeDesc + ")"; 
+
+		return retStr;
+	}
+
+	
 	public void markCancel()
 	{
 		_cancelTime    = System.currentTimeMillis();
@@ -354,7 +457,7 @@ extends Throwable
 		_serviceType  = (serviceType == null) ? "" : serviceType;
 		_serviceName  = (serviceName == null) ? "" : serviceName;
 		_serviceInfo  = (serviceInfo == null) ? "" : serviceInfo;
-		_extraInfo    = (extraInfo   == null) ? "" : extraInfo;
+		_extraInfo    = (extraInfo   == null) ? "" : extraInfo.toString();
 		_category     = category;
 		_severity     = severity;
 		_state        = state;

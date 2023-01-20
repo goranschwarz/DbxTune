@@ -149,7 +149,8 @@ extends CounterSampleCatalogIterator
 		}
 
 		// Grab the ConnectionProperty from the template Connection
-		ConnectionProp connProp = srvConn.getConnProp();
+//		ConnectionProp connProp = srvConn.getConnProp();
+		ConnectionProp connProp = srvConn.getConnPropOrDefault();
 		if (connProp == null)
 			throw new SQLException("No ConnectionProperty object could be found at the template connection.");
 		
@@ -185,7 +186,8 @@ extends CounterSampleCatalogIterator
 		_logger.info("Created a new Connection for db '"+dbname+"', which will be cached in a connection pool. with maxSize=5, url='"+url+"', connProp="+connProp);
 
 		// Make the same settings as for a new Monitor Connection
-		CounterController.getInstance().onMonConnect(dbConn);
+		if (CounterController.hasInstance())
+			CounterController.getInstance().onMonConnect(dbConn);
 
 		// when first connection is successful, add the connection pool to the MAP
 //		_cpm.setPool(dbname, cp);

@@ -40,6 +40,7 @@ extends PostgresAbstract
 //	private static Logger _logger = Logger.getLogger(PostgresLongRunningStmnts.class);
 
 	private ResultSetTableModel _shortRstm;
+	private ResultSetTableModel _msoRstm; // Special table for MS Outlook
 
 	public PostgresLongRunningStmnts(DailySummaryReportAbstract reportingInstance)
 	{
@@ -117,7 +118,7 @@ extends PostgresAbstract
 				{
 					if (StringUtil.hasValue(strVal) && ! ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(strVal))
 					{
-						strVal = "<details class='dsr-pg-lrs-details' open>"
+						strVal = "<details class='dsr-pg-lrs-details'>" // removed 'open'
 							+ "  <summary>SQL Statement</summary>"
 							+ "  <i>-- <font size='-2'>Note: below SQL Statement is formatted (not the original) </i></font><br>"
 							+ "  <pre>" + SqlUtils.format(strVal, SqlDialict.Postgres) + "</pre>"
@@ -130,7 +131,7 @@ extends PostgresAbstract
 				{
 					if (StringUtil.hasValue(strVal) && ! ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(strVal))
 					{
-						strVal = "<details class='dsr-pg-lrs-details' open>"
+						strVal = "<details class='dsr-pg-lrs-details'>" // removed 'open'
 							+ "  <summary>Lock Info</summary>"
 							+    strVal
 							+ "</details>";
@@ -142,7 +143,7 @@ extends PostgresAbstract
 				{
 					if (StringUtil.hasValue(strVal) && ! ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(strVal))
 					{
-						strVal = "<details class='dsr-pg-lrs-details' open>"
+						strVal = "<details class='dsr-pg-lrs-details' open>" // keep 'open' since we normally do NOT have blocking locks
 							+ "  <summary>Blocked PIDs Info</summary>"
 							+    strVal
 							+ "</details>";
@@ -153,7 +154,6 @@ extends PostgresAbstract
 			}
 		}
 
-		
 		String detailsForAboveStatements = ""
 				+ "<details> \n"
 				+ "<summary>Details for above Statements</summary> \n"
@@ -193,9 +193,23 @@ extends PostgresAbstract
 				+ "</script> \n"
 				+ "\n"
 				+ "";
+		
+		String detailsForAboveStatementsMso = ""
+				+ ""
+				+ "Details for above Statements  <br>"
+				+ "<i>In Outlook, a shorter table is presented. To view the full content with SQL and Lock/Blocking Info... open the attached HTML Report.</i> <br>\n"
+				+ "<br> \n"
+				+ ""
+				// As a html table
+				+ "Row Count: " + _msoRstm.getRowCount() + " \n"
+				+ ""
+//				+ toHtmlTable(_shortRstm)
+				+ _msoRstm.toHtmlTableString("sortable", true, true, null, null)
+				+ "";
 
 		// If MS Outlook, hide the content, since it can't handle it in a good manner
-		sb.append(msOutlookAlternateText(detailsForAboveStatements, "Details for above Statements", null));
+		// TODO: Possibly copy '_shortRstm' into it's own table just for MS Outlook, which holds even less information!
+		sb.append(msOutlookAlternateText(detailsForAboveStatements, "Details for above Statements", detailsForAboveStatementsMso));
 	}
 
 	@Override
@@ -261,7 +275,7 @@ extends PostgresAbstract
 			_shortRstm.removeColumn("datid");
 //			_shortRstm.removeColumn("datname");								// keep in table
 			_shortRstm.removeColumn("leader_pid");
-			_shortRstm.removeColumn("pid");
+//			_shortRstm.removeColumn("pid");  								// keep in table
 //			_shortRstm.removeColumn("state");								// keep in table
 //			_shortRstm.removeColumn("wait_event_type");						// keep in table
 //			_shortRstm.removeColumn("wait_event");							// keep in table
@@ -305,16 +319,33 @@ extends PostgresAbstract
 
 			// Describe the table
 			setSectionDescription(_shortRstm);
+			
+			//------------------------------------------------------------------------
+			// Copy the "normal" table to a specialized table for MS Outlook
+			// Then remove even more columns to get a better overview from in a MS Outlook mail
+			_msoRstm = _shortRstm.copy();
+
+			_msoRstm.removeColumn("has_sql_text");
+			_msoRstm.removeColumn("has_pid_lock_info");
+			_msoRstm.removeColumn("has_blocked_pids_info");
+			
+			_msoRstm.removeColumn("last_known_sql_statement");
+			_msoRstm.removeColumn("pid_lock_info");
+			_msoRstm.removeColumn("blocked_pids_info");
+			
+			_msoRstm.setHighlightSortColumns("xact_start_sec");
+
+			setSectionDescription(_msoRstm);
 		}
 
 		// Create charts
-		_CmSummary_oldestComboInSec = createTsLineChart(conn, "CmSummary", "oldestComboInSec", -1, null, "Oldest Xact/Stmnt/State in Seconds");
-		_CmSummary_oldestXactInSec  = createTsLineChart(conn, "CmSummary", "oldestXactInSec" , -1, null, "Oldest Open Transaction in Seconds");
-		_CmSummary_oldestStmntInSec = createTsLineChart(conn, "CmSummary", "oldestStmntInSec", -1, null, "Oldest Statement in Seconds");
-		_CmSummary_oldestStateInSec = createTsLineChart(conn, "CmSummary", "oldestStateInSec", -1, null, "Oldest State in Seconds");
+		_CmSummary_oldestComboInSec = createTsLineChart(conn, "CmSummary", "oldestComboInSec", -1, false, null, "Oldest Xact/Stmnt/State in Seconds");
+		_CmSummary_oldestXactInSec  = createTsLineChart(conn, "CmSummary", "oldestXactInSec" , -1, false, null, "Oldest Open Transaction in Seconds");
+		_CmSummary_oldestStmntInSec = createTsLineChart(conn, "CmSummary", "oldestStmntInSec", -1, false, null, "Oldest Statement in Seconds");
+		_CmSummary_oldestStateInSec = createTsLineChart(conn, "CmSummary", "oldestStateInSec", -1, false, null, "Oldest State in Seconds");
 
-		_CmSummary_blkLockCount     = createTsLineChart(conn, "CmSummary", "blkLockCount"    , -1, null, "Blocking Locks Count");
-		_CmSummary_blkMaxWaitTime   = createTsLineChart(conn, "CmSummary", "blkMaxWaitTime"  , -1, null, "Max Wait Time for Blocking Locks in Seconds");
+		_CmSummary_blkLockCount     = createTsLineChart(conn, "CmSummary", "blkLockCount"    , -1, false, null, "Blocking Locks Count");
+		_CmSummary_blkMaxWaitTime   = createTsLineChart(conn, "CmSummary", "blkMaxWaitTime"  , -1, false, null, "Max Wait Time for Blocking Locks in Seconds");
 	}
 
 	private IReportChart _CmSummary_oldestComboInSec;

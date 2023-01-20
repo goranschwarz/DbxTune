@@ -38,6 +38,7 @@ import com.asetune.config.dbms.IDbmsConfigText;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.dict.MonTablesDictionaryPostgres;
 import com.asetune.gui.ConnectionDialog.Options;
+import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.SwingUtils;
@@ -220,13 +221,16 @@ extends MainFrame
 	@Override
 	protected Icon getGroupIcon(String groupName)
 	{
-		if (TCP_GROUP_SERVER.equals(groupName)) 
-			return TCP_GROUP_ICON_SERVER;
+		if      (TCP_GROUP_SERVER  .equals(groupName)) return TCP_GROUP_ICON_SERVER;
+		else if (TCP_GROUP_PROGRESS.equals(groupName)) return TCP_GROUP_ICON_PROGRESS;
 		else
 			return super.getGroupIcon(groupName);
 	}
 	public static final ImageIcon TCP_GROUP_ICON_SERVER        = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_postgresserver.png");
+	public static final ImageIcon TCP_GROUP_ICON_PROGRESS      = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_progress.png");
 
+	public static final String    TCP_GROUP_PROGRESS         = "Progress";
+	
 	@Override
 	protected boolean addTabGroup(String groupName)
 	{
@@ -235,6 +239,53 @@ extends MainFrame
 		return super.addTabGroup(groupName);
 	}
 
+	/**
+	 * @param mainTabbedPane 
+	 */
+	@Override
+	public GTabbedPane createGroupTabbedPane(GTabbedPane mainTabbedPane)
+	{
+		GTabbedPane tabGroupServer       = new GTabbedPane("MainFrame_TabbedPane_Server");
+		GTabbedPane tabGroupObjectAccess = new GTabbedPane("MainFrame_TabbedPane_ObjectAccess");
+		GTabbedPane tabGroupCache        = new GTabbedPane("MainFrame_TabbedPane_Cache");
+//		GTabbedPane tabGroupDisk         = new GTabbedPane("MainFrame_TabbedPane_Disk");
+//		GTabbedPane tabGroupRepAgent     = new GTabbedPane("MainFrame_TabbedPane_RepAgent");
+		GTabbedPane tabGroupProgress     = new GTabbedPane("MainFrame_TabbedPane_Progress");
+		GTabbedPane tabGroupHostMonitor  = new GTabbedPane("MainFrame_TabbedPane_HostMonitor");
+		GTabbedPane tabGroupUdc          = new GTabbedPane("MainFrame_TabbedPane_Udc");
+
+		// Lets do setTabLayoutPolicy for all sub tabs...
+		tabGroupServer      .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
+		tabGroupObjectAccess.setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
+		tabGroupCache       .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
+//		tabGroupDisk        .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
+//		tabGroupRepAgent    .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
+		tabGroupProgress    .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
+		tabGroupHostMonitor .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
+		tabGroupUdc         .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
+
+		if (addTabGroup(TCP_GROUP_SERVER))        mainTabbedPane.addTab(TCP_GROUP_SERVER,        getGroupIcon(TCP_GROUP_SERVER),        tabGroupServer,       getGroupToolTipText(TCP_GROUP_SERVER));
+		if (addTabGroup(TCP_GROUP_OBJECT_ACCESS)) mainTabbedPane.addTab(TCP_GROUP_OBJECT_ACCESS, getGroupIcon(TCP_GROUP_OBJECT_ACCESS), tabGroupObjectAccess, getGroupToolTipText(TCP_GROUP_OBJECT_ACCESS));
+		if (addTabGroup(TCP_GROUP_CACHE))         mainTabbedPane.addTab(TCP_GROUP_CACHE,         getGroupIcon(TCP_GROUP_CACHE),         tabGroupCache,        getGroupToolTipText(TCP_GROUP_CACHE));
+//		if (addTabGroup(TCP_GROUP_DISK))          mainTabbedPane.addTab(TCP_GROUP_DISK,          getGroupIcon(TCP_GROUP_DISK),          tabGroupDisk,         getGroupToolTipText(TCP_GROUP_DISK));
+//		if (addTabGroup(TCP_GROUP_REP_AGENT))     mainTabbedPane.addTab(TCP_GROUP_REP_AGENT,     getGroupIcon(TCP_GROUP_REP_AGENT),     tabGroupRepAgent,     getGroupToolTipText(TCP_GROUP_REP_AGENT));
+		if (addTabGroup(TCP_GROUP_PROGRESS))      mainTabbedPane.addTab(TCP_GROUP_PROGRESS,      getGroupIcon(TCP_GROUP_PROGRESS),      tabGroupProgress,     "Show information from progress reports: 'pg_stat_progress_*' tables.");
+		if (addTabGroup(TCP_GROUP_HOST_MONITOR))  mainTabbedPane.addTab(TCP_GROUP_HOST_MONITOR,  getGroupIcon(TCP_GROUP_HOST_MONITOR),  tabGroupHostMonitor,  getGroupToolTipText(TCP_GROUP_HOST_MONITOR));
+		if (addTabGroup(TCP_GROUP_UDC))           mainTabbedPane.addTab(TCP_GROUP_UDC,           getGroupIcon(TCP_GROUP_UDC),           tabGroupUdc,          getGroupToolTipText(TCP_GROUP_UDC));
+		
+		tabGroupUdc.setEmptyTabMessage(
+			"No User Defined Performance Counters has been added.\n" +
+			"\n" +
+			"To create one just follow the Wizard under:\n" +
+			"Menu -> Tools -> Create 'User Defined Counter' Wizard...\n" +
+			"\n" +
+			"This enables you to write Performance Counters on you'r Application Tables,\n" +
+			"which enables you to measure Application specific performance issues.\n" +
+			"Or simply write you'r own MDA table queries...");
+		
+		return mainTabbedPane;
+	}
+	
 
 	@Override
 	public DbmsVersionPanelAbstract createDbmsVersionPanel(ShowCmPropertiesDialog showCmPropertiesDialog)

@@ -1000,7 +1000,8 @@ extends SqlServerAbstract
 						// Only show "est-wait" if the query is "single threaded"
 						if ("est-wait".equals(rowKey))
 						{
-							return rstm.hasColumn("AvgDop") && rstm.getValueAsInteger(rstmRow, "AvgDop") == 1;
+//							return rstm.hasColumn("AvgDop") && rstm.getValueAsInteger(rstmRow, "AvgDop") == 1;
+							return rstm.hasColumn("AvgDop") && rstm.getValueAsDouble(rstmRow, "AvgDop", true, -1d) == 1.0d;
 						}
 						return true;
 					}

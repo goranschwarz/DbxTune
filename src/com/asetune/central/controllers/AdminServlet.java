@@ -129,11 +129,12 @@ public class AdminServlet extends HttpServlet
 			boolean stopCollector        = getParameter(req, "stopCollector",        "true").trim().equalsIgnoreCase("true");
 			boolean removeFromServerList = getParameter(req, "removeFromServerList", "true").trim().equalsIgnoreCase("true");
 			boolean removeLogFiles       = getParameter(req, "removeLogFiles",       "true").trim().equalsIgnoreCase("true");
+			boolean removeDsrFiles       = getParameter(req, "removeDsrFiles",       "true").trim().equalsIgnoreCase("true");
 			boolean removeDbmsData       = getParameter(req, "removeDbmsData",       "true").trim().equalsIgnoreCase("true");
 			boolean removeH2Files        = getParameter(req, "removeH2Files",        "true").trim().equalsIgnoreCase("true");
 			
 			// Remove the server name from the system
-			ActionObject ao = removeManagedServer(inputName, stopCollector, removeFromServerList, removeLogFiles, removeDbmsData, removeH2Files);
+			ActionObject ao = removeManagedServer(inputName, stopCollector, removeFromServerList, removeLogFiles, removeDsrFiles, removeDbmsData, removeH2Files);
 
 			ObjectMapper om = Helper.createObjectMapper();
 			String payload = om.writeValueAsString(ao);
@@ -238,7 +239,7 @@ public class AdminServlet extends HttpServlet
 	 * 
 	 * @return A ActionObject that can be converted to a JSON object with what we have done
 	 */
-	private ActionObject removeManagedServer(String name, boolean stopCollector, boolean removeFromServerList, boolean removeLogFiles, boolean removeDbmsData, boolean removeH2Files)
+	private ActionObject removeManagedServer(String name, boolean stopCollector, boolean removeFromServerList, boolean removeLogFiles, boolean removeDsrFiles, boolean removeDbmsData, boolean removeH2Files)
 	{
 		// Remove files
 		// Remove PCS - Schema
@@ -409,6 +410,43 @@ public class AdminServlet extends HttpServlet
 			catch (Exception e) 
 			{
 				ao.add("Remove Collector Log File", new ActionType(ActionStatus.FAIL, "Problems Collector Log Files for '"+name+"'. Caught: "+e));
+			}
+		}
+
+		// REMOVE: DSR - Daily Summary Report files
+		if (removeDsrFiles)
+		{
+			String directory = DbxTuneCentral.getAppReportsDir();
+			List<String> removedList = new ArrayList<>();
+			
+			try 
+			{
+				try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(Paths.get(directory)))
+				{
+					for (Path path : directoryStream)
+					{
+						File f = path.toFile();
+						String filename = f.getName();
+
+						if (f.isFile() && filename.startsWith(name) && (filename.endsWith(".html")))
+						{
+							String fn = filename;
+
+							// is it a TimeStamped file YYYY-MM-DD_HHMM
+							if (fn.matches("[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]_[0-9][0-9][0-9][0-9]"))
+							{
+								f.delete();
+								removedList.add(f.getName());
+							}
+						}
+					}
+				}
+
+				ao.add("Remove Collector DSR File", new ActionType(ActionStatus.SUCCESS, "Removed "+removedList.size()+" Collector DSR Files for '"+name+"'. Here is the list "+removedList));
+			}
+			catch (Exception e) 
+			{
+				ao.add("Remove Collector DSR File", new ActionType(ActionStatus.FAIL, "Problems Collector DSR Files for '"+name+"'. Caught: "+e));
 			}
 		}
 

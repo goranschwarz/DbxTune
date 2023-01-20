@@ -65,6 +65,7 @@ public class DbxTuneSample
 	Timestamp _sessionStartTime;
 	Timestamp _sessionSampleTime;
 	String _serverName;
+	String _serverDisplayName;
 	String _onHostname;
 
 //	List<String> _cmListEnabled;
@@ -90,6 +91,7 @@ public class DbxTuneSample
 	public Timestamp getSessionStartTime()  { return _sessionStartTime;  }
 	public Timestamp getSessionSampleTime() { return _sessionSampleTime; }
 	public String    getServerName()        { return _serverName;        }
+	public String    getServerDisplayName() { return _serverDisplayName; }
 	public String    getOnHostname()        { return _onHostname;        }
 
 //	public List<String> getCmListEnabled()         { return _cmListEnabled; }
@@ -107,9 +109,10 @@ public class DbxTuneSample
 	public void setSessionStartTime (Timestamp sessionStartTime)  { _sessionStartTime  = sessionStartTime;  }
 	public void setSessionSampleTime(Timestamp sessionSampleTime) { _sessionSampleTime = sessionSampleTime; }
 	public void setServerName       (String    serverName)        { _serverName        = serverName;        }
+	public void setServerDisplayName(String    displayName)       { _serverDisplayName = displayName;       }
 	public void setOnHostname       (String    onHostname)        { _onHostname        = onHostname;        }
 
-	public DbxTuneSample(String appName, String appVersion, String appBuildString, String collectorHostname, int collectorSampleInterval, String collectorCurrentUrl, String collectorInfoFile, Timestamp sessionStartTime, Timestamp sessionSampleTime, String serverName, String onHostname)
+	public DbxTuneSample(String appName, String appVersion, String appBuildString, String collectorHostname, int collectorSampleInterval, String collectorCurrentUrl, String collectorInfoFile, Timestamp sessionStartTime, Timestamp sessionSampleTime, String serverName, String serverDisplayName, String onHostname)
 	{
 		_appName                 = appName;
 		_appVersion              = appVersion;
@@ -122,6 +125,7 @@ public class DbxTuneSample
 		_sessionStartTime        = sessionStartTime;
 		_sessionSampleTime       = sessionSampleTime;
 		_serverName              = serverName;
+		_serverDisplayName       = serverDisplayName;
 		_onHostname              = onHostname;
 	}
 	public void add(CmEntry cmEntry)
@@ -603,6 +607,9 @@ public class DbxTuneSample
 		String    _state                      ;
 		int       _repeatCnt                  ;
 		String    _duration                   ;
+		String    _alarmDuration              ;
+		String    _fullDuration               ;
+		int       _fullDurationAdjustmentInSec;
 		int       _creationAgeInMs            ;
 		Timestamp _creationTime               ;
 		Timestamp _reRaiseTime                ;
@@ -616,53 +623,59 @@ public class DbxTuneSample
 		String    _reRaiseDescription         ;
 		String    _reRaiseExtendedDescription ;
 
-		public String    getAlarmClass()                 { return _alarmClass; }
-		public String    getAlarmClassAbriviated()       { return _alarmClassAbriviated; }
-		public String    getServiceType()                { return _serviceType; }
-		public String    getServiceName()                { return _serviceName; }
-		public String    getServiceInfo()                { return _serviceInfo; }
-		public String    getExtraInfo()                  { return _extraInfo; }
-		public String    getCategory()                   { return _category; }
-		public String    getSeverity()                   { return _severity; }
-		public String    getState()                      { return _state; }
-		public int       getRepeatCnt()                  { return _repeatCnt; }
-		public String    getDuration()                   { return _duration; }
-		public int       getCreationAgeInMs()            { return _creationAgeInMs; }
-		public Timestamp getCreationTime()               { return _creationTime; }
-		public Timestamp getReRaiseTime()                { return _reRaiseTime; }
-		public Timestamp getCancelTime()                 { return _cancelTime; }
-		public int       getTimeToLive()                 { return _TimeToLive; }
-		public Number    getThreshold()                  { return _threshold; }
-		public String    getData()                       { return _data; }
-		public String    getDescription()                { return _description; }
-		public String    getExtendedDescription()        { return _extendedDescription; }
-		public String    getReRaiseData()                { return _reRaiseData; }
-		public String    getReRaiseDescription()         { return _reRaiseDescription; }
-		public String    getReRaiseExtendedDescription() { return _reRaiseExtendedDescription; }
+		public String    getAlarmClass()                  { return _alarmClass; }
+		public String    getAlarmClassAbriviated()        { return _alarmClassAbriviated; }
+		public String    getServiceType()                 { return _serviceType; }
+		public String    getServiceName()                 { return _serviceName; }
+		public String    getServiceInfo()                 { return _serviceInfo; }
+		public String    getExtraInfo()                   { return _extraInfo; }
+		public String    getCategory()                    { return _category; }
+		public String    getSeverity()                    { return _severity; }
+		public String    getState()                       { return _state; }
+		public int       getRepeatCnt()                   { return _repeatCnt; }
+		public String    getDuration()                    { return _duration; }
+		public String    getAlarmDuration()               { return _alarmDuration; }
+		public String    getFullDuration()                { return _fullDuration; }
+		public int       getFullDurationAdjustmentInSec() { return _fullDurationAdjustmentInSec; }
+		public int       getCreationAgeInMs()             { return _creationAgeInMs; }
+		public Timestamp getCreationTime()                { return _creationTime; }
+		public Timestamp getReRaiseTime()                 { return _reRaiseTime; }
+		public Timestamp getCancelTime()                  { return _cancelTime; }
+		public int       getTimeToLive()                  { return _TimeToLive; }
+		public Number    getThreshold()                   { return _threshold; }
+		public String    getData()                        { return _data; }
+		public String    getDescription()                 { return _description; }
+		public String    getExtendedDescription()         { return _extendedDescription; }
+		public String    getReRaiseData()                 { return _reRaiseData; }
+		public String    getReRaiseDescription()          { return _reRaiseDescription; }
+		public String    getReRaiseExtendedDescription()  { return _reRaiseExtendedDescription; }
 
-		public void setAlarmClass                (String    alarmClass)                { _alarmClass                 = alarmClass; }
-		public void setAlarmClassAbriviated      (String    alarmClassAbriviated)      { _alarmClassAbriviated       = alarmClassAbriviated; }
-		public void setServiceType               (String    serviceType)               { _serviceType                = serviceType; }
-		public void setServiceName               (String    serviceName)               { _serviceName                = serviceName; }
-		public void setServiceInfo               (String    serviceInfo)               { _serviceInfo                = serviceInfo; }
-		public void setExtraInfo                 (String    extraInfo)                 { _extraInfo                  = extraInfo; }
-		public void setCategory                  (String    category)                  { _category                   = category; }
-		public void setSeverity                  (String    severity)                  { _severity                   = severity; }
-		public void setState                     (String    state)                     { _state                      = state; }
-		public void setRepeatCnt                 (int       repeatCnt)                 { _repeatCnt                  = repeatCnt; }
-		public void setDuration                  (String    duration)                  { _duration                   = duration; }
-		public void setCreationAgeInMs           (int       creationAgeInMs)           { _creationAgeInMs            = creationAgeInMs; }
-		public void setCreationTime              (Timestamp creationTime)              { _creationTime               = creationTime; }
-		public void setReRaiseTime               (Timestamp reRaiseTime)               { _reRaiseTime                = reRaiseTime; }
-		public void setCancelTime                (Timestamp cancelTime)                { _cancelTime                 = cancelTime; }
-		public void setTimeToLive                (int       timeToLive)                { _TimeToLive                 = timeToLive; }
-		public void setThreshold                 (Number    threshold)                 { _threshold                  = threshold; }
-		public void setData                      (String    data)                      { _data                       = data; }
-		public void setDescription               (String    description)               { _description                = description; }
-		public void setExtendedDescription       (String    extendedDescription)       { _extendedDescription        = extendedDescription; }
-		public void setReRaiseData               (String    reRaiseData)               { _reRaiseData                = reRaiseData; }
-		public void setReRaiseDescription        (String    reRaiseDescription)        { _reRaiseDescription         = reRaiseDescription; }
-		public void setReRaiseExtendedDescription(String    reRaiseExtendedDescription){ _reRaiseExtendedDescription = reRaiseExtendedDescription; }
+		public void setAlarmClass                 (String    alarmClass)                  { _alarmClass                  = alarmClass; }
+		public void setAlarmClassAbriviated       (String    alarmClassAbriviated)        { _alarmClassAbriviated        = alarmClassAbriviated; }
+		public void setServiceType                (String    serviceType)                 { _serviceType                 = serviceType; }
+		public void setServiceName                (String    serviceName)                 { _serviceName                 = serviceName; }
+		public void setServiceInfo                (String    serviceInfo)                 { _serviceInfo                 = serviceInfo; }
+		public void setExtraInfo                  (String    extraInfo)                   { _extraInfo                   = extraInfo; }
+		public void setCategory                   (String    category)                    { _category                    = category; }
+		public void setSeverity                   (String    severity)                    { _severity                    = severity; }
+		public void setState                      (String    state)                       { _state                       = state; }
+		public void setRepeatCnt                  (int       repeatCnt)                   { _repeatCnt                   = repeatCnt; }
+		public void setDuration                   (String    duration)                    { _duration                    = duration; }
+		public void setAlarmDuration              (String    alarmDuration)               { _alarmDuration               = alarmDuration; }
+		public void setFullDuration               (String    fullDuration)                { _fullDuration                = fullDuration; }
+		public void setFullDurationAdjustmentInSec(int       fullDurationAdjustmentInSec) { _fullDurationAdjustmentInSec = fullDurationAdjustmentInSec; }
+		public void setCreationAgeInMs            (int       creationAgeInMs)             { _creationAgeInMs             = creationAgeInMs; }
+		public void setCreationTime               (Timestamp creationTime)                { _creationTime                = creationTime; }
+		public void setReRaiseTime                (Timestamp reRaiseTime)                 { _reRaiseTime                 = reRaiseTime; }
+		public void setCancelTime                 (Timestamp cancelTime)                  { _cancelTime                  = cancelTime; }
+		public void setTimeToLive                 (int       timeToLive)                  { _TimeToLive                  = timeToLive; }
+		public void setThreshold                  (Number    threshold)                   { _threshold                   = threshold; }
+		public void setData                       (String    data)                        { _data                        = data; }
+		public void setDescription                (String    description)                 { _description                 = description; }
+		public void setExtendedDescription        (String    extendedDescription)         { _extendedDescription         = extendedDescription; }
+		public void setReRaiseData                (String    reRaiseData)                 { _reRaiseData                 = reRaiseData; }
+		public void setReRaiseDescription         (String    reRaiseDescription)          { _reRaiseDescription          = reRaiseDescription; }
+		public void setReRaiseExtendedDescription (String    reRaiseExtendedDescription)  { _reRaiseExtendedDescription  = reRaiseExtendedDescription; }
 		
 		@Override
 		public String toString()
@@ -672,29 +685,32 @@ public class DbxTuneSample
 			sb.append(super.toString());
 			sb.append("[");
 
-			sb.append("alarmClass                ".trim()).append("='").append(_alarmClass                ).append("'").append(","); // String    _alarmClass                 ;
-			sb.append("alarmClassAbriviated      ".trim()).append("='").append(_alarmClassAbriviated      ).append("'").append(","); // String    _alarmClassAbriviated       ;
-			sb.append("serviceType               ".trim()).append("='").append(_serviceType               ).append("'").append(","); // String    _serviceType                ;
-			sb.append("serviceName               ".trim()).append("='").append(_serviceName               ).append("'").append(","); // String    _serviceName                ;
-			sb.append("serviceInfo               ".trim()).append("='").append(_serviceInfo               ).append("'").append(","); // String    _serviceInfo                ;
-			sb.append("extraInfo                 ".trim()).append("='").append(_extraInfo                 ).append("'").append(","); // String    _extraInfo                  ;
-			sb.append("category                  ".trim()).append("='").append(_category                  ).append("'").append(","); // String    _category                   ;
-			sb.append("severity                  ".trim()).append("='").append(_severity                  ).append("'").append(","); // String    _severity                   ;
-			sb.append("state                     ".trim()).append("='").append(_state                     ).append("'").append(","); // String    _state                      ;
-			sb.append("repeatCnt                 ".trim()).append("=") .append(_repeatCnt                 ).append("") .append(","); // int       _repeatCnt                  ;
-			sb.append("duration                  ".trim()).append("='").append(_duration                  ).append("'").append(","); // String    _duration                   ;
-			sb.append("creationAgeInMs           ".trim()).append("=") .append(_creationAgeInMs           ).append("") .append(","); // int       _creationAgeInMs            ;
-			sb.append("creationTime              ".trim()).append("='").append(_creationTime              ).append("'").append(","); // Timestamp _creationTime               ;
-			sb.append("reRaiseTime               ".trim()).append("='").append(_reRaiseTime               ).append("'").append(","); // Timestamp _reRaiseTime                ;
-			sb.append("cancelTime                ".trim()).append("='").append(_cancelTime                ).append("'").append(","); // Timestamp _cancelTime                 ;
-			sb.append("TimeToLive                ".trim()).append("=") .append(_TimeToLive                ).append("") .append(","); // int       _TimeToLive                 ;
-			sb.append("threshold                 ".trim()).append("=") .append(_threshold                 ).append("") .append(","); // Number    _threshold                  ;
-			sb.append("data                      ".trim()).append("='").append(_data                      ).append("'").append(","); // String    _data                       ;
-			sb.append("description               ".trim()).append("='").append(_description               ).append("'").append(","); // String    _description                ;
-			sb.append("extendedDescription       ".trim()).append("='").append(_extendedDescription       ).append("'").append(","); // String    _extendedDescription        ;
-			sb.append("reRaiseData               ".trim()).append("='").append(_reRaiseData               ).append("'").append(","); // String    _reRaiseData                ;
-			sb.append("reRaiseDescription        ".trim()).append("='").append(_reRaiseDescription        ).append("'").append(","); // String    _reRaiseDescription         ;
-			sb.append("reRaiseExtendedDescription".trim()).append("='").append(_reRaiseExtendedDescription).append("'").append("");  // String    _reRaiseExtendedDescription ;
+			sb.append("alarmClass                 ".trim()).append("='").append(_alarmClass                 ).append("'").append(","); // String    _alarmClass                 ;
+			sb.append("alarmClassAbriviated       ".trim()).append("='").append(_alarmClassAbriviated       ).append("'").append(","); // String    _alarmClassAbriviated       ;
+			sb.append("serviceType                ".trim()).append("='").append(_serviceType                ).append("'").append(","); // String    _serviceType                ;
+			sb.append("serviceName                ".trim()).append("='").append(_serviceName                ).append("'").append(","); // String    _serviceName                ;
+			sb.append("serviceInfo                ".trim()).append("='").append(_serviceInfo                ).append("'").append(","); // String    _serviceInfo                ;
+			sb.append("extraInfo                  ".trim()).append("='").append(_extraInfo                  ).append("'").append(","); // String    _extraInfo                  ;
+			sb.append("category                   ".trim()).append("='").append(_category                   ).append("'").append(","); // String    _category                   ;
+			sb.append("severity                   ".trim()).append("='").append(_severity                   ).append("'").append(","); // String    _severity                   ;
+			sb.append("state                      ".trim()).append("='").append(_state                      ).append("'").append(","); // String    _state                      ;
+			sb.append("repeatCnt                  ".trim()).append("=") .append(_repeatCnt                  ).append("") .append(","); // int       _repeatCnt                  ;
+			sb.append("duration                   ".trim()).append("='").append(_duration                   ).append("'").append(","); // String    _duration                   ;
+			sb.append("alarmDuration              ".trim()).append("='").append(_alarmDuration              ).append("'").append(","); // String    _alarmDuration              ;
+			sb.append("fullDuration               ".trim()).append("='").append(_fullDuration               ).append("'").append(","); // String    _fullDuration               ;
+			sb.append("fullDurationAdjustmentInSec".trim()).append("=") .append(_fullDurationAdjustmentInSec).append("") .append(","); // int       _fullDurationAdjustmentInSec;
+			sb.append("creationAgeInMs            ".trim()).append("=") .append(_creationAgeInMs            ).append("") .append(","); // int       _creationAgeInMs            ;
+			sb.append("creationTime               ".trim()).append("='").append(_creationTime               ).append("'").append(","); // Timestamp _creationTime               ;
+			sb.append("reRaiseTime                ".trim()).append("='").append(_reRaiseTime                ).append("'").append(","); // Timestamp _reRaiseTime                ;
+			sb.append("cancelTime                 ".trim()).append("='").append(_cancelTime                 ).append("'").append(","); // Timestamp _cancelTime                 ;
+			sb.append("TimeToLive                 ".trim()).append("=") .append(_TimeToLive                 ).append("") .append(","); // int       _TimeToLive                 ;
+			sb.append("threshold                  ".trim()).append("=") .append(_threshold                  ).append("") .append(","); // Number    _threshold                  ;
+			sb.append("data                       ".trim()).append("='").append(_data                       ).append("'").append(","); // String    _data                       ;
+			sb.append("description                ".trim()).append("='").append(_description                ).append("'").append(","); // String    _description                ;
+			sb.append("extendedDescription        ".trim()).append("='").append(_extendedDescription        ).append("'").append(","); // String    _extendedDescription        ;
+			sb.append("reRaiseData                ".trim()).append("='").append(_reRaiseData                ).append("'").append(","); // String    _reRaiseData                ;
+			sb.append("reRaiseDescription         ".trim()).append("='").append(_reRaiseDescription         ).append("'").append(","); // String    _reRaiseDescription         ;
+			sb.append("reRaiseExtendedDescription ".trim()).append("='").append(_reRaiseExtendedDescription ).append("'").append("");  // String    _reRaiseExtendedDescription ;
 
 			sb.append("]");
 			
@@ -1040,6 +1056,7 @@ public class DbxTuneSample
 			String    serverName           = getString   (headNode, "serverName");
 			String    onHostname           = getString   (headNode, "onHostname");
 			String    serverNameAlias      = getString   (headNode, "serverNameAlias", null);
+			String    serverDisplayName    = getString   (headNode, "serverDisplayName", null);
 
 //			List<String> cmListEnabled         = getStringList(headNode, "cmListEnabled");
 //			List<String> cmListEnabledGraphs   = getStringList(headNode, "cmListEnabledGraphs");
@@ -1053,7 +1070,7 @@ public class DbxTuneSample
 			// skip serverName "unknown" 
 			if ("unknown".equals(serverName))
 			{
-				String headerInfo = "appName='"+appName+"', appVersion='"+appVersion+"', appBuildString='"+appBuildString+"', collectorHostname='"+collectorHostname+"', collectorSampleInterval="+collectorSampleInterval+", collectorCurrentUrl='"+collectorCurrentUrl+"', collectorInfoFile='"+collectorInfoFile+"', sessionStartTime='"+sessionStartTime+"', sessionSampleTime='"+sessionSampleTime+"', serverName='"+serverName+"', onHostname='"+onHostname+"', serverNameAlias='"+serverNameAlias+"'.";
+				String headerInfo = "appName='"+appName+"', appVersion='"+appVersion+"', appBuildString='"+appBuildString+"', collectorHostname='"+collectorHostname+"', collectorSampleInterval="+collectorSampleInterval+", collectorCurrentUrl='"+collectorCurrentUrl+"', collectorInfoFile='"+collectorInfoFile+"', sessionStartTime='"+sessionStartTime+"', sessionSampleTime='"+sessionSampleTime+"', serverName='"+serverName+"', onHostname='"+onHostname+"', serverNameAlias='"+serverNameAlias+"', serverDisplayName='"+serverDisplayName+"'.";
 				_logger.warn("Recieved a JSON massage with serverName='unknown'. Skipping this entry. headerInfo: "+headerInfo);
 				return null;
 			}
@@ -1064,14 +1081,14 @@ public class DbxTuneSample
 				debugPrint = true;
 
 
-			DbxTuneSample sample = new DbxTuneSample(appName, appVersion, appBuildString, collectorHostname, collectorSampleInterval, collectorCurrentUrl, collectorInfoFile, sessionStartTime, sessionSampleTime, serverNameOrAlias, onHostname);
+			DbxTuneSample sample = new DbxTuneSample(appName, appVersion, appBuildString, collectorHostname, collectorSampleInterval, collectorCurrentUrl, collectorInfoFile, sessionStartTime, sessionSampleTime, serverNameOrAlias, serverDisplayName, onHostname);
 
 //			sample._cmListEnabled         = cmListEnabled;
 //			sample._cmListEnabledGraphs   = cmListEnabledGraphs;
 //			sample._cmListEnabledCounters = cmListEnabledCounters;
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("sessionStartTime='"+sessionStartTime+"', sessionSampleTime='"+sessionSampleTime+"', serverName='"+serverName+"', serverNameAlias='"+serverNameAlias+"', onHostname='"+onHostname+"'.");
+				_logger.debug("sessionStartTime='"+sessionStartTime+"', sessionSampleTime='"+sessionSampleTime+"', serverName='"+serverName+"', serverNameAlias='"+serverNameAlias+"', serverDisplayName='"+serverDisplayName+"', onHostname='"+onHostname+"'.");
 
 			// ACTIVE ALARMS
 			JsonNode activeAlarmsNode = root.get("activeAlarms");
@@ -1081,29 +1098,32 @@ public class DbxTuneSample
 				{
 					AlarmEntry ae = new AlarmEntry();
 
-					ae.setAlarmClass                ( getString   (alarm, "alarmClass"));
-					ae.setAlarmClassAbriviated      ( getString   (alarm, "alarmClassAbriviated"));
-					ae.setServiceType               ( getString   (alarm, "serviceType"));
-					ae.setServiceName               ( getString   (alarm, "serviceName"));
-					ae.setServiceInfo               ( getString   (alarm, "serviceInfo"));
-					ae.setExtraInfo                 ( getString   (alarm, "extraInfo"));
-					ae.setCategory                  ( getString   (alarm, "category"));
-					ae.setSeverity                  ( getString   (alarm, "severity"));
-					ae.setState                     ( getString   (alarm, "state"));
-					ae.setRepeatCnt                 ( getInt      (alarm, "repeatCnt"));
-					ae.setDuration                  ( getString   (alarm, "duration"));
-					ae.setCreationAgeInMs           ( getInt      (alarm, "creationAgeInMs"));
-					ae.setCreationTime              ( getTimestamp(alarm, "creationTimeIso8601")); 
-					ae.setReRaiseTime               ( getTimestamp(alarm, "reRaiseTimeIso8601")); 
-					ae.setCancelTime                ( getTimestamp(alarm, "cancelTimeIso8601"));
-					ae.setTimeToLive                ( getInt      (alarm, "TimeToLive"));
-					ae.setThreshold                 ( (Number) createObjectFromNodeType(alarm.get("threshold")));
-					ae.setData                      ( getString   (alarm, "data"));
-					ae.setDescription               ( getString   (alarm, "description"));
-					ae.setExtendedDescription       ( getString   (alarm, "extendedDescription"));
-					ae.setReRaiseData               ( getString   (alarm, "reRaiseData"));
-					ae.setReRaiseDescription        ( getString   (alarm, "reRaiseDescription"));
-					ae.setReRaiseExtendedDescription( getString   (alarm, "reRaiseExtendedDescription"));
+					ae.setAlarmClass                 ( getString   (alarm, "alarmClass"));
+					ae.setAlarmClassAbriviated       ( getString   (alarm, "alarmClassAbriviated"));
+					ae.setServiceType                ( getString   (alarm, "serviceType"));
+					ae.setServiceName                ( getString   (alarm, "serviceName"));
+					ae.setServiceInfo                ( getString   (alarm, "serviceInfo"));
+					ae.setExtraInfo                  ( getString   (alarm, "extraInfo"));
+					ae.setCategory                   ( getString   (alarm, "category"));
+					ae.setSeverity                   ( getString   (alarm, "severity"));
+					ae.setState                      ( getString   (alarm, "state"));
+					ae.setRepeatCnt                  ( getInt      (alarm, "repeatCnt"));
+					ae.setDuration                   ( getString   (alarm, "duration"));
+					ae.setAlarmDuration              ( getString   (alarm, "alarmDuration"));
+					ae.setFullDuration               ( getString   (alarm, "fullDuration"));
+					ae.setFullDurationAdjustmentInSec( getInt      (alarm, "fullDurationAdjustmentInSec"));
+					ae.setCreationAgeInMs            ( getInt      (alarm, "creationAgeInMs"));
+					ae.setCreationTime               ( getTimestamp(alarm, "creationTimeIso8601")); 
+					ae.setReRaiseTime                ( getTimestamp(alarm, "reRaiseTimeIso8601")); 
+					ae.setCancelTime                 ( getTimestamp(alarm, "cancelTimeIso8601"));
+					ae.setTimeToLive                 ( getInt      (alarm, "TimeToLive"));
+					ae.setThreshold                  ( (Number) createObjectFromNodeType(alarm.get("threshold")));
+					ae.setData                       ( getString   (alarm, "data"));
+					ae.setDescription                ( getString   (alarm, "description"));
+					ae.setExtendedDescription        ( getString   (alarm, "extendedDescription"));
+					ae.setReRaiseData                ( getString   (alarm, "reRaiseData"));
+					ae.setReRaiseDescription         ( getString   (alarm, "reRaiseDescription"));
+					ae.setReRaiseExtendedDescription ( getString   (alarm, "reRaiseExtendedDescription"));
 					
 					sample.addActiveAlarm(ae);
 				}
@@ -1120,29 +1140,32 @@ public class DbxTuneSample
 					AlarmEntry ae = new AlarmEntry();
 					AlarmEntryWrapper aew = new AlarmEntryWrapper();
 
-					ae.setAlarmClass                ( getString   (alarm, "alarmClass"));
-					ae.setAlarmClassAbriviated      ( getString   (alarm, "alarmClassAbriviated"));
-					ae.setServiceType               ( getString   (alarm, "serviceType"));
-					ae.setServiceName               ( getString   (alarm, "serviceName"));
-					ae.setServiceInfo               ( getString   (alarm, "serviceInfo"));
-					ae.setExtraInfo                 ( getString   (alarm, "extraInfo"));
-					ae.setCategory                  ( getString   (alarm, "category"));
-					ae.setSeverity                  ( getString   (alarm, "severity"));
-					ae.setState                     ( getString   (alarm, "state"));
-					ae.setRepeatCnt                 ( getInt      (alarm, "repeatCnt"));
-					ae.setDuration                  ( getString   (alarm, "duration"));
-					ae.setCreationAgeInMs           ( getInt      (alarm, "creationAgeInMs"));
-					ae.setCreationTime              ( getTimestamp(alarm, "creationTimeIso8601")); 
-					ae.setReRaiseTime               ( getTimestamp(alarm, "reRaiseTimeIso8601")); 
-					ae.setCancelTime                ( getTimestamp(alarm, "cancelTimeIso8601"));
-					ae.setTimeToLive                ( getInt      (alarm, "TimeToLive"));
-					ae.setThreshold                 ( (Number) createObjectFromNodeType(alarm.get("threshold")));
-					ae.setData                      ( getString   (alarm, "data"));
-					ae.setDescription               ( getString   (alarm, "description"));
-					ae.setExtendedDescription       ( getString   (alarm, "extendedDescription"));
-					ae.setReRaiseData               ( getString   (alarm, "reRaiseData"));
-					ae.setReRaiseDescription        ( getString   (alarm, "reRaiseDescription"));
-					ae.setReRaiseExtendedDescription( getString   (alarm, "reRaiseExtendedDescription"));
+					ae.setAlarmClass                 ( getString   (alarm, "alarmClass"));
+					ae.setAlarmClassAbriviated       ( getString   (alarm, "alarmClassAbriviated"));
+					ae.setServiceType                ( getString   (alarm, "serviceType"));
+					ae.setServiceName                ( getString   (alarm, "serviceName"));
+					ae.setServiceInfo                ( getString   (alarm, "serviceInfo"));
+					ae.setExtraInfo                  ( getString   (alarm, "extraInfo"));
+					ae.setCategory                   ( getString   (alarm, "category"));
+					ae.setSeverity                   ( getString   (alarm, "severity"));
+					ae.setState                      ( getString   (alarm, "state"));
+					ae.setRepeatCnt                  ( getInt      (alarm, "repeatCnt"));
+					ae.setDuration                   ( getString   (alarm, "duration"));
+					ae.setAlarmDuration              ( getString   (alarm, "alarmDuration"));
+					ae.setFullDuration               ( getString   (alarm, "fullDuration"));
+					ae.setFullDurationAdjustmentInSec( getInt      (alarm, "fullDurationAdjustmentInSec"));
+					ae.setCreationAgeInMs            ( getInt      (alarm, "creationAgeInMs"));
+					ae.setCreationTime               ( getTimestamp(alarm, "creationTimeIso8601")); 
+					ae.setReRaiseTime                ( getTimestamp(alarm, "reRaiseTimeIso8601")); 
+					ae.setCancelTime                 ( getTimestamp(alarm, "cancelTimeIso8601"));
+					ae.setTimeToLive                 ( getInt      (alarm, "TimeToLive"));
+					ae.setThreshold                  ( (Number) createObjectFromNodeType(alarm.get("threshold")));
+					ae.setData                       ( getString   (alarm, "data"));
+					ae.setDescription                ( getString   (alarm, "description"));
+					ae.setExtendedDescription        ( getString   (alarm, "extendedDescription"));
+					ae.setReRaiseData                ( getString   (alarm, "reRaiseData"));
+					ae.setReRaiseDescription         ( getString   (alarm, "reRaiseDescription"));
+					ae.setReRaiseExtendedDescription ( getString   (alarm, "reRaiseExtendedDescription"));
 
 					aew.setEventTime(getTimestamp(alarm, "eventTime"));
 					aew.setAction   (getString   (alarm, "action"));
@@ -1472,13 +1495,16 @@ public class DbxTuneSample
 				gen.writeStringField("state"                      , toString( ae.getState()                      ));
 				gen.writeNumberField("repeatCnt"                  ,           ae.getRepeatCnt()                   );
 				gen.writeStringField("duration"                   , toString( ae.getDuration()                   ));
+				gen.writeStringField("alarmDuration"              , toString( ae.getAlarmDuration()              ));
+				gen.writeStringField("fullDuration"               , toString( ae.getFullDuration()               ));
+				gen.writeNumberField("fullDurationAdjustmentInSec",           ae.getFullDurationAdjustmentInSec() );
 				gen.writeNumberField("creationAgeInMs"            ,           ae.getCreationAgeInMs()             );
-//				w.writeNumberField("creationTime"               ,           ae.getCreationTime()                );
-//				w.writeStringField("creationTimeIso8601"        , toString( ae.getCreationTime()               )); 
-				gen.writeStringField("creationTime"               , toString( ae.getCreationTime()               )); 
-				gen.writeStringField("reRaiseTime"                , toString( ae.getReRaiseTime()                )); 
-//				w.writeNumberField("cancelTime"                 ,           ae.getCancelTime()                  );
-//				w.writeStringField("cancelTimeIso8601"          , toString( ae.getCancelTime()                 ));
+//				gen.writeNumberField("creationTime"               ,           ae.getCreationTime()                );
+//				gen.writeStringField("creationTimeIso8601"        , toString( ae.getCreationTime()               ));
+				gen.writeStringField("creationTime"               , toString( ae.getCreationTime()               ));
+				gen.writeStringField("reRaiseTime"                , toString( ae.getReRaiseTime()                ));
+//				gen.writeNumberField("cancelTime"                 ,           ae.getCancelTime()                  );
+//				gen.writeStringField("cancelTimeIso8601"          , toString( ae.getCancelTime()                 ));
 				gen.writeStringField("cancelTime"                 , toString( ae.getCancelTime()                 ));
 				gen.writeNumberField("TimeToLive"                 ,           ae.getTimeToLive()                  );
 				gen.writeNumberField("threshold"                  , toBigDec( ae.getThreshold()                  ));

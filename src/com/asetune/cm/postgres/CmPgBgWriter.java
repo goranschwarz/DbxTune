@@ -27,6 +27,8 @@ import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
 import com.asetune.sql.conn.DbxConnection;
@@ -128,10 +130,15 @@ extends CountersModel
 		CounterSetTemplates.register(this);
 	}
 
+//TODO; Possibly add some graphs... see: https://github.com/postgrespro/mamonsu
 
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	public static final String GRAPH_NAME_BUFFER           = "Buffer";
+	public static final String GRAPH_NAME_BUFFER_EVENTS    = "BufferEvents";
+	public static final String GRAPH_NAME_CHECKPOINT_COUNT = "CheckpointCount";
+	public static final String GRAPH_NAME_CHECKPOINT_TIME  = "CheckpointTime";
 	
 //	@Override
 //	protected TabularCntrPanel createGui()
@@ -159,5 +166,102 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
+		addTrendGraph(GRAPH_NAME_BUFFER,
+				"Buffers", 	                // Menu CheckBox text
+				"Buffers ("+SHORT_NAME+")", // Graph Label 
+				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				new String[] {"Written During Checkpoints [buffers_checkpoint]", "Written [buffers_clean]", "Written Directly by a Backend [buffers_backend]", "Allocated [buffers_alloc]"}, 
+				LabelType.Static, 
+				TrendGraphDataPoint.Category.OTHER,
+				false, // is Percent Graph
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_BUFFER_EVENTS,
+				"Buffer Events", 	                // Menu CheckBox text
+				"Buffer Events ("+SHORT_NAME+")", // Graph Label 
+				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				new String[] {"Number of bgwriter Stopped by Max Write Count [maxwritten_clean]", "Times a Backend Execute Its Own Fsync [buffers_backend_fsync]"}, 
+				LabelType.Static, 
+				TrendGraphDataPoint.Category.OTHER,
+				false, // is Percent Graph
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_CHECKPOINT_COUNT,
+				"Checkpoints Count", 	                // Menu CheckBox text
+				"Checkpoints Count ("+SHORT_NAME+")", // Graph Label 
+				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				new String[] {"By Timeout [checkpoints_timed]", "By WAL [checkpoints_req]"}, 
+				LabelType.Static, 
+				TrendGraphDataPoint.Category.OTHER,
+				false, // is Percent Graph
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_CHECKPOINT_TIME,
+				"Checkpoints Time in ms", 	                // Menu CheckBox text
+				"Checkpoints Time in ms ("+SHORT_NAME+")", // Graph Label 
+				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+				new String[] {"Sync Time [checkpoint_sync_time]", "Write Time [checkpoint_write_time]"}, 
+				LabelType.Static, 
+				TrendGraphDataPoint.Category.OTHER,
+				false, // is Percent Graph
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+	}
+
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		if (GRAPH_NAME_BUFFER.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[4];
+
+			arr[0] = this.getDiffValueAsDouble(0, "buffers_checkpoint");
+			arr[1] = this.getDiffValueAsDouble(0, "buffers_clean");
+			arr[2] = this.getDiffValueAsDouble(0, "buffers_backend");
+			arr[3] = this.getDiffValueAsDouble(0, "buffers_alloc");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		if (GRAPH_NAME_BUFFER_EVENTS.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[2];
+
+			arr[0] = this.getDiffValueAsDouble(0, "maxwritten_clean");
+			arr[1] = this.getDiffValueAsDouble(0, "buffers_backend_fsync");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		if (GRAPH_NAME_CHECKPOINT_COUNT.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[2];
+
+			arr[0] = this.getDiffValueAsDouble(0, "checkpoints_timed");
+			arr[1] = this.getDiffValueAsDouble(0, "checkpoints_req");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		if (GRAPH_NAME_CHECKPOINT_TIME.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[2];
+
+			arr[0] = this.getDiffValueAsDouble(0, "checkpoint_sync_time");
+			arr[1] = this.getDiffValueAsDouble(0, "checkpoint_write_time");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
 	}
 }

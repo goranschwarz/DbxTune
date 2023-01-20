@@ -30,7 +30,7 @@ extends AlarmEvent
 {
 	private static final long serialVersionUID = 1L;
 
-	public AlarmEventCertificateExpiry(String srvName, String name, int days_to_expiry, Timestamp expiry_date, long ttl, int threshold)
+	public AlarmEventCertificateExpiry(String srvName, String name, int days_to_expiry, Timestamp expiry_date, long ttl, int thresholdInDays)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -41,7 +41,7 @@ extends AlarmEvent
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
 				"Certificate named '" + name + "' at server '" + srvName + "' will exire in " + days_to_expiry + " days, at '" + expiry_date + "'.",
-				threshold
+				thresholdInDays
 				);
 
 		// Set: Time To Live if postpone is enabled

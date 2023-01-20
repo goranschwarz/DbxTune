@@ -22,6 +22,10 @@ package com.asetune.utils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.DoubleAdder;
+import java.util.concurrent.atomic.LongAdder;
 
 public class NumberUtils
 {
@@ -75,6 +79,26 @@ public class NumberUtils
 		{
 			return false;
 		}
+	}
+
+	public static boolean isNumeric(String strNum, boolean allowCommas)
+	{
+		if (strNum == null)
+			return false;
+
+		// Number Input string is formated with "," on every thousand for readability... so remove that
+		if (allowCommas)
+			strNum = strNum.replace(",", "").trim();
+
+		try 
+		{
+			Double.parseDouble(strNum);
+		}
+		catch (NumberFormatException nfe)
+		{
+			return false;
+		}
+		return true;
 	}
 
 	/**
@@ -145,5 +169,37 @@ public class NumberUtils
 		BigDecimal bd = new BigDecimal(value);
 		bd = bd.setScale(places, RoundingMode.HALF_UP);
 	    return bd;
+	}
+
+	/**
+	 * Returns a value 'asValue' using the same data type as the input 'numberObj'
+	 * 
+	 * @param numberObj     a data type template /this is the data type we will create the new number 'asValue'
+	 * @param asValue       The value you want to create (this is a integer)
+	 * @return
+	 */
+	public static Number toNumberValue(Number numberObj, int asValue)
+	{
+		if (numberObj == null) throw new RuntimeException("toNumberValue() expects a 'numberObj' to decide what data type to return");
+
+		// Well known data types
+		if (numberObj instanceof Integer   ) return new Integer   (asValue);
+		if (numberObj instanceof Long      ) return new Long      (asValue);
+		if (numberObj instanceof Short     ) return new Short     (asValue + "");
+		if (numberObj instanceof Double    ) return new Double    (asValue);
+		if (numberObj instanceof BigDecimal) return new BigDecimal(asValue);
+		if (numberObj instanceof Float     ) return new Float     (asValue);
+		if (numberObj instanceof Byte      ) return new Byte      (asValue + "");
+
+		// Not that Well known data types
+//		if (numberObj instanceof BigInteger       ) return new BigInteger().add(asValue);
+		if (numberObj instanceof AtomicInteger    ) return new AtomicInteger    (asValue);
+		if (numberObj instanceof AtomicLong       ) return new AtomicLong       (asValue);
+		if (numberObj instanceof LongAdder        ) return new LongAdder        ();
+//		if (numberObj instanceof LongAccumulator  ) return new LongAccumulator  ();
+		if (numberObj instanceof DoubleAdder      ) return new DoubleAdder      ();
+//		if (numberObj instanceof DoubleAccumulator) return new DoubleAccumulator();
+
+		throw new RuntimeException("toNumberValue() numberObj=" + numberObj + " is of unhandled class " + numberObj.getClass().getName());
 	}
 }

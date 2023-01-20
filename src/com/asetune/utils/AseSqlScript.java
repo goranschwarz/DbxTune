@@ -699,10 +699,19 @@ implements SybMessageHandler, AutoCloseable
 					// SqlState: 010P4 java.sql.SQLWarning: 010P4: An output parameter was received and ignored.
 					if ( ! "010P4".equals(sqe.getSQLState()) )
 					{
-						sb.append("Unexpected exception : " +
-								"SqlState: " + sqe.getSQLState()  +
-								" " + sqe.toString() +
-								", ErrorCode: " + sqe.getErrorCode() + "\n");
+						if (sqe.getErrorCode() == 0)
+						{
+							String msg = StringUtil.removeLastNewLine(sqe.getMessage());
+							sb.append(msg);
+							sb.append("\n");
+						}
+						else
+						{
+							sb.append("Unexpected exception : " +
+									"SqlState: " + sqe.getSQLState()  +
+									" " + sqe.toString() +
+									", ErrorCode: " + sqe.getErrorCode() + "\n");
+						}
 					}
 				}
 			}

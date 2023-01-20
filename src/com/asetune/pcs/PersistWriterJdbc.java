@@ -79,6 +79,7 @@ import com.asetune.config.dict.MonTablesDictionary.MonTableEntry;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportFactory;
 import com.asetune.pcs.report.IDailySummaryReport;
 import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
@@ -2345,6 +2346,16 @@ public class PersistWriterJdbc
 	private boolean dbDdlExec(DbxConnection conn, String sql)
 	throws SQLException
 	{
+		return dbDdlExec(conn, sql, null);
+	}
+	private boolean dbDdlExec(DbxConnection conn, String sql, String extraInfo)
+	throws SQLException
+	{
+		if (StringUtil.hasValue(extraInfo))
+		{
+			_logger.info(extraInfo);
+		}
+
 		if (_logger.isDebugEnabled())
 		{
 			_logger.debug("SEND DDL SQL: " + sql);
@@ -2438,6 +2449,54 @@ public class PersistWriterJdbc
 //						DictCompression.setEnabled(enableDictComp);
 						_logger.info("On Startup: No table(s) with Dictionary Compression was found in current PCS database, so it will be DISABLED for this recording.");
 						DictCompression.setEnabled(false);
+					}
+				}
+				else if (tabId == ALARM_ACTIVE)
+				{
+					// TODO: instead of upgrading like this... Create a Dictionary object instead, which we can compare with info from: DbUtils.getColumnNames(conn, null, tabName), which does: 'conn.getMetaData().getColumns(null, schemaName, tableName, "%");' 
+//					if ( colNames.contains("duration") and length < 80)
+//						Alter table modify column [duration] varchar(80) 
+
+					if ( ! colNames.contains("alarmDuration"))
+					{
+						String sql = conn.quotifySqlString("alter table [" + tabName + "] add column [alarmDuration] varchar(20) null"); // NOTE: 'not null' is not supported at upgrades
+						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: "+sql);
+					}
+
+					if ( ! colNames.contains("fullDuration"))
+					{
+						String sql = conn.quotifySqlString("alter table [" + tabName + "] add column [fullDuration] varchar(20) null"); // NOTE: 'not null' is not supported at upgrades
+						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: "+sql);
+					}
+
+					if ( ! colNames.contains("fullDurationAdjustmentInSec"))
+					{
+						String sql = conn.quotifySqlString("alter table [" + tabName + "] add column [fullDurationAdjustmentInSec] int null"); // NOTE: 'not null' is not supported at upgrades
+						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: "+sql);
+					}
+				}
+				else if (tabId == ALARM_HISTORY)
+				{
+					// TODO: instead of upgrading like this... Create a Dictionary object instead, which we can compare with info from: DbUtils.getColumnNames(conn, null, tabName), which does: 'conn.getMetaData().getColumns(null, schemaName, tableName, "%");' 
+//					if ( colNames.contains("duration") and length < 80)
+//						Alter table modify column [duration] varchar(80) 
+
+					if ( ! colNames.contains("alarmDuration"))
+					{
+						String sql = conn.quotifySqlString("alter table [" + tabName + "] add column [alarmDuration] varchar(20) null"); // NOTE: 'not null' is not supported at upgrades
+						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: "+sql);
+					}
+
+					if ( ! colNames.contains("fullDuration"))
+					{
+						String sql = conn.quotifySqlString("alter table [" + tabName + "] add column [fullDuration] varchar(20) null"); // NOTE: 'not null' is not supported at upgrades
+						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: "+sql);
+					}
+
+					if ( ! colNames.contains("fullDurationAdjustmentInSec"))
+					{
+						String sql = conn.quotifySqlString("alter table [" + tabName + "] add column [fullDurationAdjustmentInSec] int null"); // NOTE: 'not null' is not supported at upgrades
+						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: "+sql);
 					}
 				}
 //				else if (tabId == RECORDING_OPTIONS)
@@ -3410,26 +3469,29 @@ public class PersistWriterJdbc
 				{
 					sbSql.append(getTableInsertStr(conn, ALARM_ACTIVE, null, false));
 					sbSql.append(" values(");
-					sbSql.append("  ").append(safeStr( ae.getAlarmClassAbriviated()                                         ,80  )); // "alarmClass"              varchar(80)   null false   - 1
-					sbSql.append(", ").append(safeStr( ae.getServiceType()                                                  ,80  )); // "serviceType"             varchar(80)   null false   - 2
-					sbSql.append(", ").append(safeStr( ae.getServiceName()                                                  ,80  )); // "serviceName"             varchar(30)   null false   - 3
-					sbSql.append(", ").append(safeStr( ae.getServiceInfo()                                                  ,80  )); // "serviceInfo"             varchar(80)   null false   - 4
-					sbSql.append(", ").append(safeStr( ae.getExtraInfo()                                                    ,80  )); // "extraInfo"               varchar(80)   null true    - 5
-					sbSql.append(", ").append(safeStr( ae.getCategory()                                                     ,20  )); // "category"                varchar(20)   null false   - 6
-					sbSql.append(", ").append(safeStr( ae.getSeverity()                                                     ,10  )); // "severity"                varchar(10)   null false   - 7
-					sbSql.append(", ").append(safeStr( ae.getState()                                                        ,10  )); // "state"                   varchar(10)   null false   - 8
-					sbSql.append(", ").append(safeStr( ae.getReRaiseCount()                                                      )); // "repeatCnt"               int           null false   - 9
-					sbSql.append(", ").append(safeStr( ae.getDuration()                                                     ,10  )); // "duration"                varchar(10)   null false   - 10
-					sbSql.append(", ").append(safeStr( ae.getCrTime()     == -1 ? null : new Timestamp(ae.getCrTime())           )); // "createTime"              datetime      null false   - 11
-					sbSql.append(", ").append(safeStr( ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime())       )); // "cancelTime"              datetime      null true    - 12
-					sbSql.append(", ").append(safeStr( ae.getTimeToLive()                                                        )); // "timeToLive"              int           null true    - 13
-					sbSql.append(", ").append(safeStr( ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+"",15  )); // "threshold"               varchar(15)   null true    - 14
-					sbSql.append(", ").append(safeStr( ae.getData()                                                         ,512 )); // "data"                    varchar(512)  null true    - 15
-					sbSql.append(", ").append(safeStr( ae.getReRaiseData()                                                  ,512 )); // "lastData"                varchar(512)  null true    - 16
-					sbSql.append(", ").append(safeStr( ae.getDescription()                                                  ,512 )); // "description"             varchar(512)  null false   - 17
-					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()                                           ,512 )); // "lastDescription"         varchar(512)  null false   - 18
-					sbSql.append(", ").append(safeStr( ae.getExtendedDescription()                                               )); // "extendedDescription"     text          null true    - 19
-					sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription()                                        )); // "lastExtendedDescription" text          null true    - 20
+					sbSql.append("  ").append(safeStr( ae.getAlarmClassAbriviated()                                         ,80  )); // "alarmClass"                  varchar(80)   null false   - 1
+					sbSql.append(", ").append(safeStr( ae.getServiceType()                                                  ,80  )); // "serviceType"                 varchar(80)   null false   - 2
+					sbSql.append(", ").append(safeStr( ae.getServiceName()                                                  ,80  )); // "serviceName"                 varchar(30)   null false   - 3
+					sbSql.append(", ").append(safeStr( ae.getServiceInfo()                                                  ,80  )); // "serviceInfo"                 varchar(80)   null false   - 4
+					sbSql.append(", ").append(safeStr( ae.getExtraInfo()                                                    ,80  )); // "extraInfo"                   varchar(80)   null false   - 5
+					sbSql.append(", ").append(safeStr( ae.getCategory()                                                     ,20  )); // "category"                    varchar(20)   null false   - 6
+					sbSql.append(", ").append(safeStr( ae.getSeverity()                                                     ,10  )); // "severity"                    varchar(10)   null false   - 7
+					sbSql.append(", ").append(safeStr( ae.getState()                                                        ,10  )); // "state"                       varchar(10)   null false   - 8
+					sbSql.append(", ").append(safeStr( ae.getReRaiseCount()                                                      )); // "repeatCnt"                   int           null false   - 9
+					sbSql.append(", ").append(safeStr( ae.getFullDuration(true)                                             ,80  )); // "duration"                    varchar(80)   null false   - 10
+					sbSql.append(", ").append(safeStr( ae.getAlarmDuration()                                                ,20  )); // "alarmDuration"               varchar(10)   null false   - 11
+					sbSql.append(", ").append(safeStr( ae.getFullDuration()                                                 ,20  )); // "fullDuration"                varchar(10)   null false   - 12
+					sbSql.append(", ").append(safeStr( ae.getFullDurationAdjustmentInSec()                                       )); // "fullDurationAdjustmentInSec" int           null false   - 13
+					sbSql.append(", ").append(safeStr( ae.getCrTime()     == -1 ? null : new Timestamp(ae.getCrTime())           )); // "createTime"                  datetime      null false   - 14
+					sbSql.append(", ").append(safeStr( ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime())       )); // "cancelTime"                  datetime      null true    - 15
+					sbSql.append(", ").append(safeStr( ae.getTimeToLive()                                                        )); // "timeToLive"                  int           null true    - 16
+					sbSql.append(", ").append(safeStr( ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+"",15  )); // "threshold"                   varchar(15)   null true    - 17
+					sbSql.append(", ").append(safeStr( ae.getData()                                                         ,512 )); // "data"                        varchar(512)  null true    - 18
+					sbSql.append(", ").append(safeStr( ae.getReRaiseData()                                                  ,512 )); // "lastData"                    varchar(512)  null true    - 19
+					sbSql.append(", ").append(safeStr( ae.getDescription()                                                  ,512 )); // "description"                 varchar(512)  null false   - 20
+					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()                                           ,512 )); // "lastDescription"             varchar(512)  null false   - 21
+					sbSql.append(", ").append(safeStr( ae.getExtendedDescription()                                               )); // "extendedDescription"         text          null true    - 22
+					sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription()                                        )); // "lastExtendedDescription"     text          null true    - 23
 					sbSql.append(")");
 
 					sql = sbSql.toString();
@@ -3473,7 +3535,8 @@ public class PersistWriterJdbc
 						+ "  and [serviceType] = " + DbUtils.safeStr(ae.getServiceType()         ) + " \n"
 						+ "  and [serviceName] = " + DbUtils.safeStr(ae.getServiceName()         ) + " \n"
 						+ "  and [serviceInfo] = " + DbUtils.safeStr(ae.getServiceInfo()         ) + " \n"
-						+ "  and [extraInfo]   " + (ae.getExtraInfo()==null ? "is " : "= ") + DbUtils.safeStr(ae.getExtraInfo()) + " \n"
+//						+ "  and [extraInfo]   " + (ae.getExtraInfo()==null ? "is " : "= ") + DbUtils.safeStr(ae.getExtraInfo()) + " \n" // getExtraInfo() should ENSURE that it's NOT NULL
+						+ "  and [extraInfo]   = " + DbUtils.safeStr(ae.getExtraInfo()           ) + " \n"
 						+ "";
 				sql = conn.quotifySqlString(sql);
 				
@@ -3496,34 +3559,38 @@ public class PersistWriterJdbc
 //System.out.println("saveAlarms(): SQL="+sql);
 				// Set values
 				int i=1;
-				pst.setTimestamp(i++,           sessionStartTime                                                                                ); // sessionStartTime        - datetime    , Nullable = false
-				pst.setTimestamp(i++,           sessionSampleTime                                                                               ); // sessionSampleTime       - datetime    , Nullable = false
-				pst.setTimestamp(i++,           aew.getAddDate()                                                                                ); // eventTime               - datetime    , Nullable = false
-				pst.setString   (i++, strMaxLen(aew.getAction()                                                      ,15 ,"action"             )); // action                  - varchar(15) , Nullable = false
-//				pst.setBoolean  (i++,           ae.isActive()                                                                                   ); // isActive                - bit         , Nullable = false
-				pst.setString   (i++, strMaxLen(ae.getAlarmClassAbriviated()                                         ,80 ,"alarmClass"         )); // alarmClass              - varchar(80) , Nullable = false
-				pst.setString   (i++, strMaxLen(ae.getServiceType()                                                  ,80 ,"serviceType"        )); // serviceType             - varchar(80) , Nullable = false
-				pst.setString   (i++, strMaxLen(ae.getServiceName()                                                  ,80 ,"serviceName"        )); // serviceName             - varchar(80) , Nullable = false
-				pst.setString   (i++, strMaxLen(ae.getServiceInfo()                                                  ,80 ,"serviceInfo"        )); // serviceInfo             - varchar(80) , Nullable = false
-				pst.setString   (i++, strMaxLen(ae.getExtraInfo() == null ? null : ae.getExtraInfo().toString()      ,80 ,"extraInfo"          )); // extraInfo               - varchar(80) , Nullable = true 
-				pst.setString   (i++, strMaxLen(ae.getCategory()+""                                                  ,20 ,"category"           )); // category                - varchar(20) , Nullable = false
-				pst.setString   (i++, strMaxLen(ae.getSeverity()+""                                                  ,10 ,"severity"           )); // severity                - varchar(10) , Nullable = false
-				pst.setString   (i++, strMaxLen(ae.getState()+""                                                     ,10 ,"state"              )); // state                   - varchar(10) , Nullable = false
-				pst.setInt      (i++,           ae.getReRaiseCount()                                                                            ); // repeatCnt               - int         , Nullable = false
-				pst.setString   (i++, strMaxLen(ae.getDuration()                                                     ,10 ,"duration"           )); // duration                - varchar(10) , Nullable = false
-//				pst.setTimestamp(i++,           ae.getCrTimeStr()                                                                               ); // createTime              - datetime    , Nullable = false
-//				pst.setTimestamp(i++,           ae.getCancelTimeStr()                                                                           ); // cancelTime              - datetime    , Nullable = true 
-				pst.setTimestamp(i++,           ae.getCrTime()     == -1 ? null : new Timestamp(ae.getCrTime())                                 ); // createTime              - datetime    , Nullable = false
-				pst.setTimestamp(i++,           ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime())                             ); // cancelTime              - datetime    , Nullable = true 
-//				pst.setInt      (i++,           ae.getTimeToLive() == -1 ? null : ae.getTimeToLive()                                            ); // timeToLive              - int         , Nullable = true 
-				pst.setInt      (i++,           ae.getTimeToLive()                                                                              ); // timeToLive              - int         , Nullable = true 
-				pst.setString   (i++, strMaxLen(ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+"",15 ,"threshold"          )); // threshold               - varchar(15) , Nullable = true 
-				pst.setString   (i++, strMaxLen(ae.getData()        == null ? null : ae.getData().toString()         ,512,"data"               )); // data                    - varchar(512), Nullable = true 
-				pst.setString   (i++, strMaxLen(ae.getReRaiseData() == null ? null : ae.getReRaiseData().toString()  ,512,"lastData"           )); // lastData                - varchar(512), Nullable = true 
-				pst.setString   (i++, strMaxLen(ae.getDescription()                                                  ,512,"description"        )); // description             - varchar(512), Nullable = false
-				pst.setString   (i++, strMaxLen(ae.getReRaiseDescription()                                           ,512,"lastDescription"    )); // lastDescription         - varchar(512), Nullable = false
-				pst.setString   (i++,           ae.getExtendedDescription()                                                                     ); // extendedDescription     - text        , Nullable = true 
-				pst.setString   (i++,           ae.getReRaiseExtendedDescription()                                                              ); // lastExtendedDescription - text        , Nullable = true 
+				pst.setTimestamp(i++,           sessionStartTime                                                                                ); // sessionStartTime            - datetime    , Nullable = false
+				pst.setTimestamp(i++,           sessionSampleTime                                                                               ); // sessionSampleTime           - datetime    , Nullable = false
+				pst.setTimestamp(i++,           aew.getAddDate()                                                                                ); // eventTime                   - datetime    , Nullable = false
+				pst.setString   (i++, strMaxLen(aew.getAction()                                                      ,15 ,"action"             )); // action                      - varchar(15) , Nullable = false
+//				pst.setBoolean  (i++,           ae.isActive()                                                                                   ); // isActive                    - bit         , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getAlarmClassAbriviated()                                         ,80 ,"alarmClass"         )); // alarmClass                  - varchar(80) , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getServiceType()                                                  ,80 ,"serviceType"        )); // serviceType                 - varchar(80) , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getServiceName()                                                  ,80 ,"serviceName"        )); // serviceName                 - varchar(80) , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getServiceInfo()                                                  ,80 ,"serviceInfo"        )); // serviceInfo                 - varchar(80) , Nullable = false
+//				pst.setString   (i++, strMaxLen(ae.getExtraInfo() == null ? null : ae.getExtraInfo().toString()      ,80 ,"extraInfo"          )); // extraInfo                   - varchar(80) , Nullable = false 
+				pst.setString   (i++, strMaxLen(ae.getExtraInfo()                                                    ,80 ,"extraInfo"          )); // extraInfo                   - varchar(80) , Nullable = false 
+				pst.setString   (i++, strMaxLen(ae.getCategory()+""                                                  ,20 ,"category"           )); // category                    - varchar(20) , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getSeverity()+""                                                  ,10 ,"severity"           )); // severity                    - varchar(10) , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getState()+""                                                     ,10 ,"state"              )); // state                       - varchar(10) , Nullable = false
+				pst.setInt      (i++,           ae.getReRaiseCount()                                                                            ); // repeatCnt                   - int         , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getFullDuration(true)                                             ,80 ,"duration"           )); // duration                    - varchar(80) , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getAlarmDuration()                                                ,20 ,"alarmDuration"      )); // alarmDuration               - varchar(10) , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getFullDuration()                                                 ,20 ,"fullDuration"       )); // fullDuration                - varchar(10) , Nullable = false
+				pst.setInt      (i++,           ae.getFullDurationAdjustmentInSec()                                                             ); // fullDurationAdjustmentInSec - int         , Nullable = false
+//				pst.setTimestamp(i++,           ae.getCrTimeStr()                                                                               ); // createTime                  - datetime    , Nullable = false
+//				pst.setTimestamp(i++,           ae.getCancelTimeStr()                                                                           ); // cancelTime                  - datetime    , Nullable = true 
+				pst.setTimestamp(i++,           ae.getCrTime()     == -1 ? null : new Timestamp(ae.getCrTime())                                 ); // createTime                  - datetime    , Nullable = false
+				pst.setTimestamp(i++,           ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime())                             ); // cancelTime                  - datetime    , Nullable = true 
+//				pst.setInt      (i++,           ae.getTimeToLive() == -1 ? null : ae.getTimeToLive()                                            ); // timeToLive                  - int         , Nullable = true 
+				pst.setInt      (i++,           ae.getTimeToLive()                                                                              ); // timeToLive                  - int         , Nullable = true 
+				pst.setString   (i++, strMaxLen(ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+"",15 ,"threshold"          )); // threshold                   - varchar(15) , Nullable = true 
+				pst.setString   (i++, strMaxLen(ae.getData()        == null ? null : ae.getData().toString()         ,512,"data"               )); // data                        - varchar(512), Nullable = true 
+				pst.setString   (i++, strMaxLen(ae.getReRaiseData() == null ? null : ae.getReRaiseData().toString()  ,512,"lastData"           )); // lastData                    - varchar(512), Nullable = true 
+				pst.setString   (i++, strMaxLen(ae.getDescription()                                                  ,512,"description"        )); // description                 - varchar(512), Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getReRaiseDescription()                                           ,512,"lastDescription"    )); // lastDescription             - varchar(512), Nullable = false
+				pst.setString   (i++,           ae.getExtendedDescription()                                                                     ); // extendedDescription         - text        , Nullable = true 
+				pst.setString   (i++,           ae.getReRaiseExtendedDescription()                                                              ); // lastExtendedDescription     - text        , Nullable = true 
 		
 				// EXECUTE
 				pst.executeUpdate();
@@ -4076,6 +4143,10 @@ public class PersistWriterJdbc
 			dcc = DictCompression.getInstance();
 		}
 
+		String onErrorDebugInfo = "";
+		boolean onErrorPrintDataInfo = Configuration.getCombinedConfiguration().getBooleanProperty("PersistWriterJdbc.save.onErrorDebugInfo", false);
+//onErrorPrintDataInfo = true; // REMOVE THIS
+
 		try
 		{
 			sql = getTableInsertStr(conn, whatData, cm, true, cols);
@@ -4086,6 +4157,8 @@ public class PersistWriterJdbc
 			// Loop all rows, and ADD them to the Prepared Statement
 			for (int r=0; r<rowsCount; r++)
 			{
+				onErrorDebugInfo = "";
+
 				if (_shutdownWithNoWait)
 				{
 					_logger.info("saveCm:inRowLoop: Discard entry due to 'ShutdownWithNoWait'.");
@@ -4129,8 +4202,23 @@ public class PersistWriterJdbc
 				// loop all columns
 				for (int c=0; c<colsCount; c++)
 				{
-					colObj =  rows.get(r).get(c);
+					colObj           = rows.get(r).get(c);
+					int jdbcDataType = rsmd.getColumnType(c + 1);
 
+					if (onErrorPrintDataInfo || _logger.isDebugEnabled())
+					{
+						// Save information (about the row we are about to insert) that will be printed on Exception
+						onErrorDebugInfo += "PCS.save()"
+								+ ", tabName="          + StringUtil.left(tabName, 30)
+								+ ", row="              + r
+								+ ", col="              + (c+1)
+								+ ", colName="          + StringUtil.left(rsmd.getColumnLabel(c+1),30) 
+								+ ", jdbcDataTypeName=" + StringUtil.left(ResultSetTableModel.getColumnJavaSqlTypeName(jdbcDataType), 30) 
+								+ ", colObj.class="     + StringUtil.left((colObj == null ? "-null-" : colObj.getClass().getSimpleName()), 20) 
+								+ ", colObj.val=|"      + colObj + "|"
+								+ "\n";
+					}
+					
 					// Timestamp is stored with appending nanoseconds etc in a strange format
 					// if you are using setObject() so use setString() instead...
 					if (colObj != null && colObj instanceof Timestamp)
@@ -4186,7 +4274,7 @@ public class PersistWriterJdbc
 //							int allowedLength = rsmd.getColumnDisplaySize( c + 1 ); // getColumnDisplaySize() is used when creating the tables, so this should hopefully work
 //							int allowedLength = Math.max(rsmd.getColumnDisplaySize(c+1), rsmd.getPrecision(c+1)); // getColumnDisplaySize() is used when creating the tables, so this should hopefully work
 							int allowedLength = rsmd.getPrecision(c+1); // getPrecision() SHOULD work... if it's 0 (for some DBMS's, it should have been translated/fixed into a real length at an earlier step)
-							int jdbcDataType  = rsmd.getColumnType(c + 1);
+//							int jdbcDataType  = rsmd.getColumnType(c + 1);
 //							if (jdbcDataType == Types.BINARY || jdbcDataType == Types.VARBINARY)
 //								allowedLength += 2; // binary may need the extra 2 chars if it's prefixed with a 0x
 
@@ -4230,7 +4318,11 @@ public class PersistWriterJdbc
 							pstmt.setString(col++, str);
 					}
 					else
-						pstmt.setObject(col++, colObj);
+					{
+						// Pass the desired jdbcDataType, which helps the JDBC Driver to make a better decision how to store the data.
+						pstmt.setObject(col++, colObj, jdbcDataType);
+//						pstmt.setObject(col++, colObj);
+					}
 				}
 				
 				// ADD the row to the BATCH
@@ -4258,6 +4350,10 @@ public class PersistWriterJdbc
 		catch (SQLException e)
 		{
 			_logger.warn("Error writing to Persistent Counter Store. to table name '"+tabName+"'. getErrorCode()="+e.getErrorCode()+" SQL="+sql, e);
+
+			if (StringUtil.hasValue(onErrorDebugInfo))
+				System.out.println(onErrorDebugInfo);
+
 			isSevereProblem(conn, e);
 			return -1;
 		}

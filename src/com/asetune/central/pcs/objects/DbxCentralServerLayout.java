@@ -183,6 +183,7 @@ public class DbxCentralServerLayout
 								else
 									rootList.add(entry);
 							}
+
 							else
 							{
 								_logger.error("Unknown FORMAT specification '" + type + "' found in file '" + f + "' at line: " + lineNum);
@@ -211,7 +212,13 @@ public class DbxCentralServerLayout
 								for (DbxCentralSessions sessionEntry : sessionsList)
 								{
 									if (srvOrAliasName.equals(sessionEntry.getServerName()))
+									{
+										if (StringUtil.hasValue(srvDesc.getDisplayName()))
+										{
+											sessionEntry.setServerDisplayName(srvDesc.getDisplayName());
+										}
 										srvSession = sessionEntry;
+									}
 								}
 								// Remove any FOUND sessions from the list (all remaining in the list -->> will be added at the very end)
 								if (srvSession != null)

@@ -43,6 +43,32 @@ public class TableColumn
 
 
 	
+	public TableColumn()
+	{
+	}
+	public TableColumn(Table table, String colName, int colJdbcType, boolean colIsNullable)
+	{
+		this(table, colName, colJdbcType, -1, -1, colIsNullable);
+	}
+
+	public TableColumn(Table table, String colName, int colJdbcType, int colLength, boolean colIsNullable)
+	{
+		this(table, colName, colJdbcType, colLength, -1, colIsNullable);
+	}
+
+	public TableColumn(Table table, String colName, int colJdbcType, int colLength, int colScale, boolean colIsNullable)
+	{
+		_table          = table;
+
+		_colName        = colName;
+		_colJdbcType    = colJdbcType;
+		_colType        = null;
+		_colLength      = colLength;
+		_colScale       = colScale;
+		_colIsNullable  = colIsNullable ? ResultSetMetaData.columnNullable : ResultSetMetaData.columnNoNulls;
+	}
+
+
 	public Table getParent() { return _table; }
 
 

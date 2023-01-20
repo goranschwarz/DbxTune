@@ -25,11 +25,15 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.utils.StringUtil;
 
 public class TrendGraphDataPoint
 implements Cloneable
 {
+	private static Logger _logger = Logger.getLogger(TrendGraphDataPoint.class);
+
 	/** Use this when you want to assign Labels at a later stage */
 	public static final String[] RUNTIME_REPLACED_LABELS = new String[] {"RUNTIME_REPLACED_LABELS"};
 
@@ -259,12 +263,28 @@ implements Cloneable
 //			throw new RuntimeException("The TrendGraphDataPoint named '"+getName()+"' was initialized with 'RUNTIME_REPLACED_LABELS'. Then the passed labelArray must contain some valid labels.");
 //		}
 
+		// Check for "empty labels"
+		//   - Right now: we rename it to 'lbl-#'
+		//   - Another alternative is to "remove" the specified label
+		for (int i=0; i<labelArray.length; i++)
+		{
+			if (StringUtil.isNullOrBlank(labelArray[i]))
+			{
+				String msg = "setDataPoint(): Label " + i + " is NULL or BLANK (" + labelArray[i] + "), setting it to 'lbl-" + i + "'. For cm='" + getName() + "', graphName='" + _name + "', graphLabel='" + _graphLabel + "'. All Labels: " + StringUtil.toCommaStrQuoted(labelArray);
+				Exception logEx = new Exception(msg);
+				
+				_logger.warn(msg, logEx);
+
+				labelArray[i] = "lbl-" + i;
+			}
+		}
+		
 		// If it was called from: setDataPoint(date, dataArray)
 		if (labelArray == _labelArray)
 		{
 		}
 
-		// Check for unititialized Arrays, and initialize them
+		// Check for uninitialized Arrays, and initialize them
 		if (_dataArray == null) 
 		{
 			_dataArray = new Double[labelArray.length];

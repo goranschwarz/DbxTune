@@ -25,9 +25,10 @@ import java.net.UnknownHostException;
 import java.sql.Timestamp;
 import java.util.List;
 
+import com.asetune.utils.StringUtil;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-@JsonPropertyOrder(value = {"sessionStartTime", "status", "serverName", "onHostname", "productString", "versionString", "buildString", "collectorHostname", "collectorSampleInterval", "collectorCurrentUrl", "collectorInfoFile", "collectorIsLocal", "numOfSamples", "lastSampleTime", "lastSampleAgeInSec", "serverDescription", "serverExtraInfo"}, alphabetic = true)
+@JsonPropertyOrder(value = {"sessionStartTime", "status", "serverName", "serverDisplayName", "onHostname", "productString", "versionString", "buildString", "collectorHostname", "collectorSampleInterval", "collectorCurrentUrl", "collectorInfoFile", "collectorIsLocal", "numOfSamples", "lastSampleTime", "lastSampleAgeInSec", "serverDescription", "serverExtraInfo"}, alphabetic = true)
 public class DbxCentralSessions
 {
 	public static final int ST_DISABLED = 1;
@@ -35,6 +36,7 @@ public class DbxCentralSessions
 	private Timestamp _sessionStartTime        ;
 	private int       _status                  ;
 	private String    _serverName              ;
+	private String    _serverDisplayName       ;
 	private String    _onHostname              ;
 	private String    _productString           ;
 	private String    _versionString           ;
@@ -54,6 +56,7 @@ public class DbxCentralSessions
 	public Timestamp getSessionStartTime()       { return _sessionStartTime;        }
 	public int    getStatus()                    { return _status;                  }
 	public String getServerName()                { return _serverName;              }
+	public String getServerDisplayName()         { return StringUtil.hasValue(_serverDisplayName) ? _serverDisplayName : _serverName; }
 	public String getOnHostname()                { return _onHostname;              }
 	public String getProductString()             { return _productString;           }
 	public String getVersionString()             { return _versionString;           }
@@ -108,6 +111,7 @@ public class DbxCentralSessions
 	public void setSessionStartTime       (Timestamp sessionStartTime       ) { _sessionStartTime        = sessionStartTime;  }
 	public void setStatus                 (int       status                 ) { _status                  = status;            }
 	public void setServerName             (String    serverName             ) { _serverName              = serverName;        }
+	public void setServerDisplayName      (String    serverDisplayName      ) { _serverDisplayName       = serverDisplayName; }
 	public void setOnHostname             (String    onHostname             ) { _onHostname              = onHostname;        }
 	public void setProductString          (String    productString          ) { _productString           = productString;     }
 	public void setVersionString          (String    versionString          ) { _versionString           = versionString;     }
@@ -122,13 +126,17 @@ public class DbxCentralSessions
 	public void setServerExtraInfo        (String    serverExtraInfo        ) { _serverExtraInfo         = serverExtraInfo;   }
 	public void setGraphProperties        (List<DbxGraphProperties> gp      ) { _graphProperties         = gp;                }
 
-	public DbxCentralSessions(Timestamp sessionStartTime, int status, String serverName, String onHostname, String productString, String versionString, String buildString, String collectorHostname, int collectorSampleInterval, String collectorCurrentUrl, String collectorInfoFile, int numOfSamples, Timestamp lastSampleTime, String serverDescription, String serverExtraInfo, List<DbxGraphProperties> graphProperties)
+	public DbxCentralSessions(Timestamp sessionStartTime, int status, String serverName, String serverDisplayName, String onHostname, 
+			String productString, String versionString, String buildString, String collectorHostname, int collectorSampleInterval, 
+			String collectorCurrentUrl, String collectorInfoFile, int numOfSamples, Timestamp lastSampleTime, String serverDescription, 
+			String serverExtraInfo, List<DbxGraphProperties> graphProperties)
 	{
 		super();
 
 		_sessionStartTime        = sessionStartTime;
 		_status                  = status;
 		_serverName              = serverName;
+		_serverDisplayName       = serverDisplayName;
 		_onHostname              = onHostname;
 		_productString           = productString;
 		_versionString           = versionString;

@@ -341,6 +341,47 @@ for example: http://dbxtune.acme.com:8080/
 ########################################
 
 ##--------------------------------------
+## Preparations of the SQL Server DBMS, Step 1 -- RECOMENDED
+##     - create a specific user in SQL Server, which is used to monitor the system with 
+##--------------------------------------
+
+	## Create a random password, in Linux you could do:
+	dbxtunePasswd=$(cat /dev/urandom | tr -cd '[:alnum:]' | fold -w24 | head -n1); echo ${dbxtunePasswd}
+	## Or use any online password generator: https://www.google.com/search?q=generate+password+online
+	
+	## as any SQL Server login with 'sysadmin' create the login 'dbxtune'
+	CREATE LOGIN [dbxtune] WITH PASSWORD=N'the_long_and_arbitrary_password', DEFAULT_DATABASE=[master], CHECK_POLICY=OFF, CHECK_EXPIRATION=OFF;
+	GRANT VIEW SERVER STATE    TO [dbxtune]; -- To view Server level statistics (like most DMV's)
+	GRANT VIEW ANY DEFINITION  TO [dbxtune]; -- To be able to view Availability Groups, etc
+	GRANT CONNECT ANY DATABASE TO [dbxtune]; -- To access DMV's in each DB, to get DB space used and index statistics
+	## To let the user read the errorlog (via SQL)
+	use master;
+	CREATE USER [dbxtune] FOR LOGIN [dbxtune];
+	GRANT EXEC ON xp_readerrorlog TO [dbxtune];
+
+	## Test that we can login to SQL Server with the 'dbxtune' user
+	sqlcmd -Ssrvname -Udbxtune -Pthe_long_and_arbitrary_password
+
+##--------------------------------------
+## For SQL Server on WINDOWS: Preparations to monitor OS, Step 1 -- RECOMENDED
+##     - create a specific OS user on host that runs SQL Server, which is used to monitor the OS system with 
+##--------------------------------------
+
+	## Install a SSH Server
+	- Install instructions for OpenSSH on Windows Server 2019 & Windows 10:
+	- https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse
+
+	## Add Local or ActiveDirictory account
+	net user /add dbxtune long_and_arbitrary_password
+
+	## Allow user to get perf counters (from DOS), and to get "disk space used" on local drives
+	net localgroup "Performance Log Users" dbxtune /add
+	net localgroup administrators dbxtune /add
+	# The last 'local admin' is to get disk space usage (which needs admin authority): powershell gwmi win32_logicaldisk
+	# NOTE: Let me know if you have a **better** command that does NOT require "local admin" authority :)
+
+
+##--------------------------------------
 ## describe what SQL-Servers that should be monitored
 ##
 cd ${HOME}/.dbxtune/dbxc/conf
@@ -446,7 +487,11 @@ refresh the browser... or open a new tab: http://dbxtune.acme.com:8080/
 	
 	## If 'pg_stat_statements' is NOT enabled... Lets enable it:
 	
-	## Change the configuration file
+	## Check current config
+	psql 
+	select name, setting, sourcefile from pg_settings where name = 'shared_preload_libraries'
+	
+	## Change the configuration file (column 'sourcefile' from above SQL)
 	vi ...postgresInstallDir.../postgres.conf
 	shared_preload_libraries = 'pg_stat_statements'
 	#-- Other pg_stat_statistics config parameters can possibly be found here: https://docs.yugabyte.com/preview/explore/query-1-performance/pg-stat-statements/
@@ -541,9 +586,16 @@ refresh the browser... or open a new tab: http://dbxtune.acme.com:8080/
 ##   Buttons will be "red" if the server has any ACTIVE Alarms
 ##   and the alarms will be visible at the bottom of the page...
 ##
-##   - The "New Profile..." doesn't work yet
-##     If you need to create a profile (choose what servers/graphs that are displayed)
-##     let me know - and I can guide you on "how to do it manually" (add records in the Central DB)
+##   - Click any of the "server" buttons and choose an action you want to do with this server
+##     * Possibly: 'Show System Selected Graphs' or 'Show ALL Available Graphs' -- to view graphs
+##     * or 'Tail Collector Console File' if you want to see the log file of this collector... 
+##     * or 'Open Latest Daily Summary Report'. Note: This file is created at midnight every day.
+##
+##   - If you want to create a "specialized" profile, click: "New Profile..." 
+##     * type the server and graph name you want to add
+##     * continue with the above until you have a "set" of graphs you want to have
+##     * Press "Save as new Profile...", give it a proper name, and description, then press "Save"
+##     * Your profile will show up as a button at the "Profiles" section
 ##
 ## Server Page: http://dbxtune.acme.com:8080/overview
 ##   Here you will find various information like:
@@ -556,10 +608,11 @@ refresh the browser... or open a new tab: http://dbxtune.acme.com:8080/
 ##   - Active Recordings, full meta-data file content
 ##
 ## Admin Page: http://dbxtune.acme.com:8080/admin/admin.html
-##   Here you can dom some administration...
+##   Here you can do some administration...
 ##   - Remove Any off the below servers (NOTE: stop collector before doing this)
 ##   - Disable Any off the below servers... (it will not show up in the server list)
 ##   - Enable Any off the below servers... (below list has been disabled)
+##   - Change profiles... what graphs should be visible in the System and User profiles.
 ##   - Add a server NOTE: Not yet implemented
 ##   - Restart DbxCentral web server
 ##   

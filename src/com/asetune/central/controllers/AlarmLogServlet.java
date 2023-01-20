@@ -219,6 +219,9 @@ public class AlarmLogServlet extends HttpServlet
 				gen.writeStringField("severity"  , severity  );
 				gen.writeStringField("state"     , state     );
 				gen.writeStringField("duration"  , duration  );
+//				gen.writeStringField("alarmDuration"               , alarmDuration  );
+//				gen.writeStringField("fullDuration"                , fullDuration  );
+//				gen.writeStringField("fullDurationAdjustmentInSec" , fullDurationAdjustmentInSec  );
 				gen.writeStringField("msgText"   , msgText   );
 
 				// end object
@@ -479,6 +482,9 @@ public class AlarmLogServlet extends HttpServlet
 				out.println("  <td nowrap>" + severity  + "</td>");
 				out.println("  <td nowrap>" + state     + "</td>");
 				out.println("  <td nowrap>" + duration  + "</td>");
+//				out.println("  <td nowrap>" + alarmDuration                + "</td>");
+//				out.println("  <td nowrap>" + fullDuration                 + "</td>");
+//				out.println("  <td nowrap>" + fullDurationAdjustmentInSec  + "</td>");
 				out.println("  <td nowrap>" + msgText   + "</td>");
 				
 				out.println("</tr>");
@@ -632,6 +638,9 @@ public class AlarmLogServlet extends HttpServlet
 			out.println("    <th>State</th>");
 			out.println("    <th>RepeatCnt</th>");
 			out.println("    <th>Duration</th>");
+			out.println("    <th>AlarmDuration</th>");
+			out.println("    <th>FullDuration</th>");
+			out.println("    <th>FullDurationAdjustmentInSec</th>");
 			out.println("    <th>CreateTime</th>");
 			out.println("    <th>CancelTime</th>");
 			out.println("    <th>TimeToLive</th>");
@@ -660,32 +669,35 @@ public class AlarmLogServlet extends HttpServlet
 //				"duration", "createTime", "cancelTime", "timeToLive", "threshold", "data", "lastData", 
 //				"description", "lastDescription", "extendedDescription", "lastExtendedDescription"}, alphabetic = true)
 				
-				out.println("  <td nowrap>" + e.getSessionStartTime()        + "</td>");
-				out.println("  <td nowrap>" + e.getSessionSampleTime()       + "</td>");
-				out.println("  <td nowrap>" + e.getEventTime()               + "</td>");
-				out.println("  <td nowrap>" + e.getSrvName()                 + "</td>");
-				out.println("  <td nowrap>" + e.getAction()                  + "</td>");
-				out.println("  <td nowrap>" + e.getAlarmClass()              + "</td>");
-				out.println("  <td nowrap>" + e.getServiceType()             + "</td>");
-				out.println("  <td nowrap>" + e.getServiceName()             + "</td>");
-				out.println("  <td nowrap>" + e.getServiceInfo()             + "</td>");
-				out.println("  <td nowrap>" + e.getExtraInfo()               + "</td>");
-				out.println("  <td nowrap>" + e.getCategory()                + "</td>");
-				out.println("  <td nowrap>" + e.getSeverity()                + "</td>");
-				out.println("  <td nowrap>" + e.getState()                   + "</td>");
-				out.println("  <td nowrap>" + e.getRepeatCnt()               + "</td>");
-				out.println("  <td nowrap>" + e.getDuration()                + "</td>");
-				out.println("  <td nowrap>" + e.getCreateTime()              + "</td>");
-				out.println("  <td nowrap>" + e.getCancelTime()              + "</td>");
-				out.println("  <td nowrap>" + e.getTimeToLive()              + "</td>");
-				out.println("  <td nowrap>" + e.getThreshold()               + "</td>");
-				out.println("  <td nowrap>" + e.getData()                    + "</td>");
-				out.println("  <td nowrap>" + e.getLastData()                + "</td>");
-				out.println("  <td nowrap>" + e.getDescription()             + "</td>");
-				out.println("  <td nowrap>" + e.getLastDescription()         + "</td>");
+				out.println("  <td nowrap>" + e.getSessionStartTime()            + "</td>");
+				out.println("  <td nowrap>" + e.getSessionSampleTime()           + "</td>");
+				out.println("  <td nowrap>" + e.getEventTime()                   + "</td>");
+				out.println("  <td nowrap>" + e.getSrvName()                     + "</td>");
+				out.println("  <td nowrap>" + e.getAction()                      + "</td>");
+				out.println("  <td nowrap>" + e.getAlarmClass()                  + "</td>");
+				out.println("  <td nowrap>" + e.getServiceType()                 + "</td>");
+				out.println("  <td nowrap>" + e.getServiceName()                 + "</td>");
+				out.println("  <td nowrap>" + e.getServiceInfo()                 + "</td>");
+				out.println("  <td nowrap>" + e.getExtraInfo()                   + "</td>");
+				out.println("  <td nowrap>" + e.getCategory()                    + "</td>");
+				out.println("  <td nowrap>" + e.getSeverity()                    + "</td>");
+				out.println("  <td nowrap>" + e.getState()                       + "</td>");
+				out.println("  <td nowrap>" + e.getRepeatCnt()                   + "</td>");
+				out.println("  <td nowrap>" + e.getDuration()                    + "</td>");
+				out.println("  <td nowrap>" + e.getAlarmDuration()               + "</td>");
+				out.println("  <td nowrap>" + e.getFullDuration()                + "</td>");
+				out.println("  <td nowrap>" + e.getFullDurationAdjustmentInSec() + "</td>");
+				out.println("  <td nowrap>" + e.getCreateTime()                  + "</td>");
+				out.println("  <td nowrap>" + e.getCancelTime()                  + "</td>");
+				out.println("  <td nowrap>" + e.getTimeToLive()                  + "</td>");
+				out.println("  <td nowrap>" + e.getThreshold()                   + "</td>");
+				out.println("  <td nowrap>" + e.getData()                        + "</td>");
+				out.println("  <td nowrap>" + e.getLastData()                    + "</td>");
+				out.println("  <td nowrap>" + e.getDescription()                 + "</td>");
+				out.println("  <td nowrap>" + e.getLastDescription()             + "</td>");
 //FIXME; extended, lastExtended to be "collapsable"
-//				out.println("  <td nowrap>" + e.getExtendedDescription()     + "</td>");
-//				out.println("  <td nowrap>" + e.getLastExtendedDescription() + "</td>");
+//				out.println("  <td nowrap>" + e.getExtendedDescription()         + "</td>");
+//				out.println("  <td nowrap>" + e.getLastExtendedDescription()     + "</td>");
 
 //				out.println("  <td nowrap><div class='cappedCell'>" + e.getExtendedDescription()     + "</div></td>");
 //				out.println("  <td nowrap><div class='cappedCell'>" + e.getLastExtendedDescription() + "</div></td>");

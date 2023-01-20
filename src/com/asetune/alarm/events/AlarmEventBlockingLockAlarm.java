@@ -50,7 +50,7 @@ extends AlarmEvent
 	}
 
 	/** used by CmSummary */
-	public AlarmEventBlockingLockAlarm(CountersModel cm, Number threshold, Number count, Number maxWaitTime)
+	public AlarmEventBlockingLockAlarm(CountersModel cm, Number thresholdInSec, Number count, Number maxWaitTime)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -60,8 +60,11 @@ extends AlarmEvent
 				AlarmEvent.Category.LOCK,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"Found Blocking locks in '" + cm.getServerName() + "'. Count=" + count + ", with maxWaitTime=" + maxWaitTime + ". (threshold="+threshold+")",
-				threshold);
+				"Found Blocking locks in '" + cm.getServerName() + "'. Count=" + count + ", with maxWaitTime=" + maxWaitTime + ". (thresholdInSec="+thresholdInSec+")",
+				thresholdInSec);
+
+		// Adjust the Alarm Full Duration with X seconds
+		setFullDurationAdjustmentInSec( thresholdInSec == null ? 0 : thresholdInSec.intValue() );
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);
@@ -71,7 +74,7 @@ extends AlarmEvent
 	}
 
 	/** used by CmActiveStatements */
-	public AlarmEventBlockingLockAlarm(CountersModel cm, Number threshold, long spid, Number blockingOthersMaxTimeInSec, String blockingOtherSpids, Number blockCount)
+	public AlarmEventBlockingLockAlarm(CountersModel cm, Number thresholdInSec, long spid, Number blockingOthersMaxTimeInSec, String blockingOtherSpids, Number blockCount)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -81,8 +84,11 @@ extends AlarmEvent
 				AlarmEvent.Category.LOCK,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"Found Blocking locks in '" + cm.getServerName() + "'. For SPID=" + spid + ", BlockingOthersMaxTimeInSec=" + blockingOthersMaxTimeInSec + ", BlockingOtherSpids=" + blockingOtherSpids + ", BlockCount=" + blockCount + ". (thresholdInSec="+threshold+")",
-				threshold);
+				"Found Blocking locks in '" + cm.getServerName() + "'. For SPID=" + spid + ", BlockingOthersMaxTimeInSec=" + blockingOthersMaxTimeInSec + ", BlockingOtherSpids=" + blockingOtherSpids + ", BlockCount=" + blockCount + ". (thresholdInSec="+thresholdInSec+")",
+				thresholdInSec);
+
+		// Adjust the Alarm Full Duration with X seconds
+		setFullDurationAdjustmentInSec( thresholdInSec == null ? 0 : thresholdInSec.intValue() );
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);

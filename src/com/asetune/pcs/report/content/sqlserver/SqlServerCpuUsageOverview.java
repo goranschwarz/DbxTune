@@ -69,12 +69,15 @@ extends SqlServerAbstract
 				"CmOsMpstat_MpSum",
 				"CmSummary_aaReadWriteGraph",
 				"CmPerfCounters_CacheReads",
+				"CmPerfCounters_CachePhyReads",
+				"CmPerfCounters_CacheWrites",
 				"CmPerfCounters_CacheHitRate",
 				"CmMemoryClerks_MemoryClerkBp",
 				"CmMemoryClerks_MemoryClerksTop",
 				"CmMemoryClerks_TTMemVsAllClerks",
 //				"CmPerfCounters_OsCpuEffective",
-				"CmPerfCounters_SqlBatch",
+				"CmMemoryGrantsSum_GrantedMemSum",
+				"CmSummary_OsMemoryFreeMb",
 				"CmPerfCounters_TransWriteSec",
 				"CmSchedulers_RunQLengthSum",
 				"CmSchedulers_RunQLengthEng"
@@ -84,11 +87,15 @@ extends SqlServerAbstract
 		_CmOsMpstat_MpSum               .writeHtmlContent(w, null, null);
 		_CmSummary_aaReadWriteGraph     .writeHtmlContent(w, null, null);
 		_CmPerfCounters_CacheReads      .writeHtmlContent(w, null, null);
+		_CmPerfCounters_CachePhyReads   .writeHtmlContent(w, null, null);
+		_CmPerfCounters_CacheWrites     .writeHtmlContent(w, null, null);
 		_CmPerfCounters_CacheHitRate    .writeHtmlContent(w, null, null);
 //		_CmPerfCounters_OsCpuEffective  .writeHtmlContent(sb, null, null);
 		_CmMemoryClerks_MemoryClerkBp   .writeHtmlContent(w, null, null);
 		_CmMemoryClerks_MemoryClerksTop .writeHtmlContent(w, null, null);
 		_CmMemoryClerks_TTMemVsAllClerks.writeHtmlContent(w, null, null);
+		_CmMemoryGrantsSum_GrantedMemSum.writeHtmlContent(w, null, null);
+		_CmSummary_OsMemoryFreeMb       .writeHtmlContent(w, null, null);
 		_CmPerfCounters_SqlBatch        .writeHtmlContent(w, null, null);
 		_CmPerfCounters_TransWriteSec   .writeHtmlContent(w, null, null);
 		if (isFullMessageType())
@@ -101,7 +108,7 @@ extends SqlServerAbstract
 	@Override
 	public String getSubject()
 	{
-		return "CPU Usage graph of the full day (origin: CmSummary,CmPerfCounters,CmMemoryClerks,CmSchedulers / @@cpu_xxx,dm_os_schedulers)";
+		return "CPU Usage graph of the full day (origin: CmSummary,CmPerfCounters,CmMemoryClerks,CmMemoryGrantsSum,CmSchedulers / @@cpu_xxx,dm_os_schedulers)";
 	}
 
 	@Override
@@ -129,30 +136,38 @@ extends SqlServerAbstract
 		
 
 		int maxValue = 100;
-		_CmSummary_aaCpuGraph            = createTsLineChart(conn, "CmSummary",      "aaCpuGraph",       maxValue, null,    "CPU Summary for all Schedulers (using @@cpu_busy, @@cpu_io) (Summary)");
-		_CmOsMpstat_MpSum                = createTsLineChart(conn, "CmOsMpstat",     "MpSum",            maxValue, idlePct, "OS: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
-		_CmSummary_aaReadWriteGraph      = createTsLineChart(conn, "CmSummary",      "aaReadWriteGraph", -1,       null,    "Disk read/write per second, using @@total_read, @@total_write");
-//		_CmPerfCounters_OsCpuEffective   = createTsLineChart(conn, "CmPerfCounters", "OsCpuEffective",   maxValue, null,    "CPU Usage Effective in Percent (Perf Counters)");
-		_CmPerfCounters_CacheReads       = createTsLineChart(conn, "CmPerfCounters", "CacheReads",       -1,       null,    "Buffer Cache Reads per Sec (Server->Perf Counters)");
-		_CmPerfCounters_CacheHitRate     = createTsLineChart(conn, "CmPerfCounters", "CacheHitRate",     -1,       null,    "Buffer Cache Hit Rate, in Percent (Server->Perf Counters)");
-		_CmMemoryClerks_MemoryClerkBp    = createTsLineChart(conn, "CmMemoryClerks", "MemoryClerkBp",    -1,       null,    "Buffer Pool Memory Clerk, in MB (Server->Memory)");
-		_CmMemoryClerks_MemoryClerksTop  = createTsLineChart(conn, "CmMemoryClerks", "MemoryClerksTop",  -1,       null,    "Top ## Memory Clerks, in MB (Server->Memory)");
-		_CmMemoryClerks_TTMemVsAllClerks = createTsLineChart(conn, "CmMemoryClerks", "TTMemVsAllClerks", -1,       null,    "All Memory Clerks vs Target & Total Memory, in MB (Server->Memory)");
-		_CmPerfCounters_SqlBatch         = createTsLineChart(conn, "CmPerfCounters", "SqlBatch",         -1,       null,    "SQL Batches Received per Sec (Perf Counters)");
-		_CmPerfCounters_TransWriteSec    = createTsLineChart(conn, "CmPerfCounters", "TransWriteSec",    -1,       null,    "Write Transactions per Sec (Perf Counters)");
-		_CmSchedulers_RunQLengthSum      = createTsLineChart(conn, "CmSchedulers",   "RunQLengthSum",    -1,       null,    "Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)");
-		_CmSchedulers_RunQLengthEng      = createTsLineChart(conn, "CmSchedulers",   "RunQLengthEng",    -1,       null,    "Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)");
+		_CmSummary_aaCpuGraph            = createTsLineChart(conn, "CmSummary",         "aaCpuGraph",       maxValue, false, null,    "CPU Summary for all Schedulers (using @@cpu_busy, @@cpu_io) (Summary)");
+		_CmOsMpstat_MpSum                = createTsLineChart(conn, "CmOsMpstat",        "MpSum",            maxValue, false, idlePct, "OS: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
+		_CmSummary_aaReadWriteGraph      = createTsLineChart(conn, "CmSummary",         "aaReadWriteGraph", -1,       false, null,    "Disk read/write per second, using @@total_read, @@total_write (Summary)");
+//		_CmPerfCounters_OsCpuEffective   = createTsLineChart(conn, "CmPerfCounters",    "OsCpuEffective",   maxValue, false, null,    "CPU Usage Effective in Percent (Perf Counters)");
+		_CmPerfCounters_CacheReads       = createTsLineChart(conn, "CmPerfCounters",    "CacheReads",       -1,       false, null,    "Buffer Cache Reads per Sec (Server->Perf Counters)");
+		_CmPerfCounters_CachePhyReads    = createTsLineChart(conn, "CmPerfCounters",    "CachePhyReads",    -1,       false, null,    "Buffer Cache Physical Reads per Sec (Server->Perf Counters)");
+		_CmPerfCounters_CacheWrites      = createTsLineChart(conn, "CmPerfCounters",    "CacheWrites",      -1,       false, null,    "Buffer Cache Writes Sec (Server->Perf Counters)");
+		_CmPerfCounters_CacheHitRate     = createTsLineChart(conn, "CmPerfCounters",    "CacheHitRate",     -1,       false, null,    "Buffer Cache Hit Rate, in Percent (Server->Perf Counters)");
+		_CmMemoryClerks_MemoryClerkBp    = createTsLineChart(conn, "CmMemoryClerks",    "MemoryClerkBp",    -1,       false, null,    "Buffer Pool Memory Clerk, in MB (Server->Memory)");
+		_CmMemoryClerks_MemoryClerksTop  = createTsLineChart(conn, "CmMemoryClerks",    "MemoryClerksTop",  -1,       true , null,    "Top ## Memory Clerks, in MB (Server->Memory)");
+		_CmMemoryClerks_TTMemVsAllClerks = createTsLineChart(conn, "CmMemoryClerks",    "TTMemVsAllClerks", -1,       false, null,    "All Memory Clerks vs Target & Total Memory, in MB (Server->Memory)");
+		_CmMemoryGrantsSum_GrantedMemSum = createTsLineChart(conn, "CmMemoryGrantsSum", "GrantedMemSum",    -1,       false, null,    "Memory Grant Summary in MB (Server->Memory Grants Sum)");
+		_CmSummary_OsMemoryFreeMb        = createTsLineChart(conn, "CmSummary",         "OsMemoryFreeMb",   -1,       false, null,    "OS Free/Available Memory in MB (Summary)");
+		_CmPerfCounters_SqlBatch         = createTsLineChart(conn, "CmPerfCounters",    "SqlBatch",         -1,       false, null,    "SQL Batches Received per Sec (Server->Perf Counters)");
+		_CmPerfCounters_TransWriteSec    = createTsLineChart(conn, "CmPerfCounters",    "TransWriteSec",    -1,       true , null,    "Write Transactions per Sec (Server->Perf Counters)");
+		_CmSchedulers_RunQLengthSum      = createTsLineChart(conn, "CmSchedulers",      "RunQLengthSum",    -1,       false, null,    "Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)");
+		_CmSchedulers_RunQLengthEng      = createTsLineChart(conn, "CmSchedulers",      "RunQLengthEng",    -1,       false, null,    "Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)");
 	}
 
 	private IReportChart _CmSummary_aaCpuGraph;
 	private IReportChart _CmOsMpstat_MpSum;
 	private IReportChart _CmSummary_aaReadWriteGraph;
 	private IReportChart _CmPerfCounters_CacheReads;
+	private IReportChart _CmPerfCounters_CachePhyReads;
+	private IReportChart _CmPerfCounters_CacheWrites;
 	private IReportChart _CmPerfCounters_CacheHitRate;
 //	private IReportChart _CmPerfCounters_OsCpuEffective;
 	private IReportChart _CmMemoryClerks_MemoryClerkBp;
 	private IReportChart _CmMemoryClerks_MemoryClerksTop;
 	private IReportChart _CmMemoryClerks_TTMemVsAllClerks;
+	private IReportChart _CmMemoryGrantsSum_GrantedMemSum;
+	private IReportChart _CmSummary_OsMemoryFreeMb;
 	private IReportChart _CmPerfCounters_SqlBatch;
 	private IReportChart _CmPerfCounters_TransWriteSec;
 	private IReportChart _CmSchedulers_RunQLengthSum;

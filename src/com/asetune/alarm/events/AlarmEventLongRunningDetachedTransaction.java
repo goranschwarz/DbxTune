@@ -30,7 +30,7 @@ extends AlarmEvent
 {
 	private static final long serialVersionUID = 1L;
 
-	public AlarmEventLongRunningDetachedTransaction(CountersModel cm, Number threshold, String dbname, Number inSeconds, String tranName)
+	public AlarmEventLongRunningDetachedTransaction(CountersModel cm, Number thresholdInSec, String dbname, Number inSeconds, String tranName)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -40,8 +40,11 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Found Long running transaction, with state 'Detached' in '" + cm.getServerName() + "', dbname='" + dbname +"'. Seconds=" + inSeconds + ", TranName='"+StringUtils.trim(tranName)+"'. (threshold="+threshold+")",
-				threshold);
+				"Found Long running transaction, with state 'Detached' in '" + cm.getServerName() + "', dbname='" + dbname +"'. Seconds=" + inSeconds + ", TranName='"+StringUtils.trim(tranName)+"'. (thresholdInSec="+thresholdInSec+")",
+				thresholdInSec);
+
+		// Adjust the Alarm Full Duration with X seconds
+		setFullDurationAdjustmentInSec( thresholdInSec == null ? 0 : thresholdInSec.intValue() );
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);

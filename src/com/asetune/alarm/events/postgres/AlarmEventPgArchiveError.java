@@ -37,7 +37,7 @@ extends AlarmEvent
 	 * @param logicalName
 	 * @param colName
 	 */
-	public AlarmEventPgArchiveError(CountersModel cm, int threshold, int failed_count_diff, int failed_count_abs)
+	public AlarmEventPgArchiveError(CountersModel cm, int thresholdCount, int failed_count_diff, int failed_count_abs)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -47,8 +47,8 @@ extends AlarmEvent
 				AlarmEvent.Category.RPO,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Archive Error in Server '" + cm.getServerName() + "', failed_count_diff=" + failed_count_diff + " (failed_count_abs=" + failed_count_abs + "). (threshold=" + threshold + ")",
-				threshold
+				"Archive Error in Server '" + cm.getServerName() + "', failed_count_diff=" + failed_count_diff + " (failed_count_abs=" + failed_count_abs + "). (thresholdCount=" + thresholdCount + ")",
+				thresholdCount
 				);
 
 		// Set: Time To Live if postpone is enabled
@@ -58,7 +58,7 @@ extends AlarmEvent
 		setData("failed_count_diff=" + failed_count_diff + ", failed_count_abs=" + failed_count_abs);
 	}
 
-	public AlarmEventPgArchiveError(CountersModel cm, int threshold, int last_archived_in_seconds, String last_archived_time)
+	public AlarmEventPgArchiveError(CountersModel cm, int thresholdInSec, int last_archived_in_seconds, String last_archived_time)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -68,10 +68,13 @@ extends AlarmEvent
 				AlarmEvent.Category.RPO,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Archive AGE in Server '" + cm.getServerName() + "', last_archived_in_seconds=" + last_archived_in_seconds + " (last_archived_time=" + last_archived_time + "). (threshold=" + threshold + ")",
-				threshold
+				"Archive AGE in Server '" + cm.getServerName() + "', last_archived_in_seconds=" + last_archived_in_seconds + " (last_archived_time=" + last_archived_time + "). (thresholdInSec=" + thresholdInSec + ")",
+				thresholdInSec
 				);
 
+		// Adjust the Alarm Full Duration with X seconds
+		setFullDurationAdjustmentInSec( thresholdInSec );
+		
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);
 

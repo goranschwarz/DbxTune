@@ -30,7 +30,7 @@ extends AlarmEvent
 {
 	private static final long serialVersionUID = 1L;
 
-	public AlarmEventLongRunningTransaction(CountersModel cm, Number threshold, Number oldestTranInSeconds, Number spid, String dbname, String tranName, String tranCmd, String waitType, String loginName, Double tempdbUsageMb)
+	public AlarmEventLongRunningTransaction(CountersModel cm, Number thresholdInSec, Number oldestTranInSeconds, Number spid, String dbname, String tranName, String tranCmd, String waitType, String loginName, Double tempdbUsageMb)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -40,8 +40,11 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
-				"Found Long running transaction in '" + cm.getServerName() + "'. DBName='" + dbname + "', Seconds=" + oldestTranInSeconds + ", SPID=" + spid + ", tranName='" + tranName + "', cmd='" + tranCmd + "', waitType='" + waitType + "', login='" + loginName + "', tempdbUsageMb=" + tempdbUsageMb + ". (threshold="+threshold+")",
-				threshold);
+				"Found Long running transaction in '" + cm.getServerName() + "'. DBName='" + dbname + "', Seconds=" + oldestTranInSeconds + ", SPID=" + spid + ", tranName='" + tranName + "', cmd='" + tranCmd + "', waitType='" + waitType + "', login='" + loginName + "', tempdbUsageMb=" + tempdbUsageMb + ". (thresholdInSec="+thresholdInSec+")",
+				thresholdInSec);
+
+		// Adjust the Alarm Full Duration with X seconds
+		setFullDurationAdjustmentInSec( thresholdInSec == null ? 0 : thresholdInSec.intValue() );
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);
@@ -50,7 +53,7 @@ extends AlarmEvent
 		setData(oldestTranInSeconds);
 	}
 
-	public AlarmEventLongRunningTransaction(CountersModel cm, Number threshold, String dbname, Number oldestTranInSeconds, String oldestTranName)
+	public AlarmEventLongRunningTransaction(CountersModel cm, Number thresholdInSec, String dbname, Number oldestTranInSeconds, String oldestTranName)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -60,8 +63,11 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
-				"Found Long running transaction in '" + cm.getServerName() + "', dbname='" + dbname +"'. Seconds=" + oldestTranInSeconds + ", TranName='"+StringUtils.trim(oldestTranName)+"'. (threshold="+threshold+")",
-				threshold);
+				"Found Long running transaction in '" + cm.getServerName() + "', dbname='" + dbname +"'. Seconds=" + oldestTranInSeconds + ", TranName='"+StringUtils.trim(oldestTranName)+"'. (thresholdInSec="+thresholdInSec+")",
+				thresholdInSec);
+
+		// Adjust the Alarm Full Duration with X seconds
+		setFullDurationAdjustmentInSec( thresholdInSec == null ? 0 : thresholdInSec.intValue() );
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);

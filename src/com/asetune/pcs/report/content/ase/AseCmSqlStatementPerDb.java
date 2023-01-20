@@ -531,9 +531,9 @@ extends PostgresAbstract
 //
 		
 		// Add Charts
-		_CmSqlStatementPerDb_SsDbTotExecCnt  = createTsLineChart(conn, "CmSqlStatementPerDb", "SsDbTotExecCnt"  , -1, null, "SQL Statements Per DB - Total Statements Executed/sec");
-		_CmSqlStatementPerDb_SsDbSumExecTime = createTsLineChart(conn, "CmSqlStatementPerDb", "SsDbSumExecTime" , -1, null, "SQL Statements Per DB - Sum Execution Time in ms");
-		_CmSqlStatementPerDb_SsDbSumLRead    = createTsLineChart(conn, "CmSqlStatementPerDb", "SsDbSumLRead"    , -1, null, "SQL Statements Per DB - Sum Logical Reads");
+		_CmSqlStatementPerDb_SsDbTotExecCnt  = createTsLineChart(conn, "CmSqlStatementPerDb", "SsDbTotExecCnt"  , -1, true, null, "SQL Statements Per DB - Total Statements Executed/sec");
+		_CmSqlStatementPerDb_SsDbSumExecTime = createTsLineChart(conn, "CmSqlStatementPerDb", "SsDbSumExecTime" , -1, true, null, "SQL Statements Per DB - Sum Execution Time in ms");
+		_CmSqlStatementPerDb_SsDbSumLRead    = createTsLineChart(conn, "CmSqlStatementPerDb", "SsDbSumLRead"    , -1, true, null, "SQL Statements Per DB - Sum Logical Reads");
 
 	}
 	

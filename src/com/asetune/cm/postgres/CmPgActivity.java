@@ -142,7 +142,29 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	public static final String  PROPKEY_sample_sslInfo          = CM_NAME + ".sample.sslInfo";
+	public static final boolean DEFAULT_sample_sslInfo          = false;
 	
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public List<CmSettingsHelper> getLocalSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("Get SSL Information", PROPKEY_sample_sslInfo ,Boolean.class, conf.getBooleanProperty(PROPKEY_sample_sslInfo, DEFAULT_sample_sslInfo), DEFAULT_sample_sslInfo, "Include SSL information about client connections."));
+
+		return list;
+	}
+
+	@Override
+	protected void registerDefaultValues()
+	{
+		super.registerDefaultValues();
+
+		Configuration.registerDefaultValue(PROPKEY_sample_sslInfo, DEFAULT_sample_sslInfo);
+	}
+
 	private void addTrendGraphs()
 	{
 	}
@@ -206,15 +228,63 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
-		String waiting = "    ,waiting \n";
+		//-----------------------------
+		// BEGIN: SSL Info
+		//-----------------------------
+		String pg_stat_ssl_join  = "";  // table: 'pg_stat_ssl' was added in version 9.5 
+		String ssl_isActive      = "";  // 9.5
+		String ssl_version       = "";  // 9.5
+		String ssl_cipher        = "";  // 9.5
+		String ssl_bits          = "";  // 9.5
+		String ssl_compression   = "";  // 9.5, then removed in version 14
+		String ssl_client_dn     = "";  // 9.5, in version 12 changed from 'clientdn' to 'client_dn'
+		String ssl_client_serial = "";  // add in: version 12
+		String ssl_issuer_dn     = "";  // add in: version 12
+
+		boolean sampleSsl = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_sslInfo, DEFAULT_sample_sslInfo);
+		if (sampleSsl)
+		{
+			// ----- 9.5
+			if (versionInfo.getLongVersion() >= Ver.ver(9, 5))
+			{
+				pg_stat_ssl_join = "left outer join pg_stat_ssl ssl on a.pid = ssl.pid \n";
+				
+				ssl_isActive      = "    ,     ssl.ssl                               AS ssl \n";
+				ssl_version       = "    ,cast(ssl.version       as varchar(60))     AS ssl_version \n";
+				ssl_cipher        = "    ,cast(ssl.cipher        as varchar(60))     AS ssl_cipher \n";
+				ssl_bits          = "    ,     ssl.bits                              AS ssl_bits \n";
+				ssl_compression   = "    ,     ssl.compression                       AS ssl_compression \n";     // removed in version 14
+				ssl_client_dn     = "    ,cast(ssl.clientdn      as varchar(60))     AS ssl_client_dn \n";       // in version 12 changed from 'clientdn' to 'client_dn'
+			}
+			
+			// ----- 12
+			if (versionInfo.getLongVersion() >= Ver.ver(12))
+			{
+				ssl_client_dn     = "    ,cast(ssl.client_dn     as varchar(60))     AS ssl_client_dn \n";       // in version 12 changed from 'clientdn' to 'client_dn'
+				ssl_client_serial = "    ,cast(ssl.client_serial as numeric(18,0))   AS sss_client_serial \n";   // add in: version 12
+				ssl_issuer_dn     = "    ,cast(ssl.issuer_dn     as varchar(60))     AS sss_issuer_dn \n";       // add in: version 12
+			}
+
+			// ----- 14
+			if (versionInfo.getLongVersion() >= Ver.ver(14))
+			{
+				ssl_compression   = "";     // removed in version 14
+			}
+		}
+		//-----------------------------
+		// END: SSL Info
+		//-----------------------------
+		
+		
+		String waiting = "    ,a.waiting \n";
 
 		// ----- 9.4
 		String backend_xid = "";
 		String backend_xmin = "";
 		if (versionInfo.getLongVersion() >= Ver.ver(9, 4))
 		{
-			backend_xid  = "    ,backend_xid \n";
-			backend_xmin = "    ,backend_xmin \n";
+			backend_xid  = "    ,a.backend_xid \n";
+			backend_xmin = "    ,a.backend_xmin \n";
 		}
 
 		// ----- 9.6
@@ -224,12 +294,12 @@ extends CountersModel
 		String wait_event             = "";
 		if (versionInfo.getLongVersion() >= Ver.ver(9, 6))
 		{
-			im_blocked_by_pids     = "    ,CAST(array_to_string(pg_blocking_pids(pid), ', ') as varchar(512)) AS im_blocked_by_pids \n";
+			im_blocked_by_pids     = "    ,CAST(array_to_string(pg_blocking_pids(a.pid), ', ') as varchar(512)) AS im_blocked_by_pids \n";
 			im_blocking_other_pids = "    ,CAST('' as varchar(512)) AS im_blocking_other_pids \n";
 
 			waiting         = ""; // Waiting was removed in 9.6 and replaced by wait_event_type and wait_event
-			wait_event_type = "    ,CAST(wait_event_type as varchar(128)) AS wait_event_type \n";
-			wait_event      = "    ,CAST(wait_event      as varchar(128)) AS wait_event \n";
+			wait_event_type = "    ,CAST(a.wait_event_type as varchar(128)) AS wait_event_type \n";
+			wait_event      = "    ,CAST(a.wait_event      as varchar(128)) AS wait_event \n";
 		}
 		
 		
@@ -237,7 +307,7 @@ extends CountersModel
 		String backend_type = "";
 		if (versionInfo.getLongVersion() >= Ver.ver(10))
 		{
-			backend_type    = "    ,CAST(backend_type    as varchar(128)) AS backend_type \n";
+			backend_type    = "    ,CAST(a.backend_type    as varchar(128)) AS backend_type \n";
 		}
 
 		// ----- 11: No changes
@@ -246,14 +316,14 @@ extends CountersModel
 		String leader_pid = "";
 		if (versionInfo.getLongVersion() >= Ver.ver(13))
 		{
-			leader_pid  = "    ,leader_pid \n";
+			leader_pid  = "    ,a.leader_pid \n";
 		}
 
 		// ----- 14
 		String query_id = "";
 		if (versionInfo.getLongVersion() >= Ver.ver(13))
 		{
-			query_id  = "    ,query_id \n";
+			query_id  = "    ,a.query_id \n";
 		}
 
 		// ----- 15: No changes
@@ -261,11 +331,12 @@ extends CountersModel
 		// Construct the SQL Statement
 		String sql = ""
 				+ "select \n"
-				+ "     datid \n"
-				+ "    ,datname \n"
+				+ "     a.datid \n"
+				+ "    ,a.datname \n"
 				+ leader_pid
-				+ "    ,pid \n"
-				+ "    ,CAST(state            as varchar(128)) AS state \n"
+				+ "    ,a.pid \n"
+				+ "    ,CAST(a.state            as varchar(128)) AS state \n"
+				+ backend_type
 				+ waiting
 				+ wait_event_type
 				+ wait_event
@@ -273,59 +344,69 @@ extends CountersModel
 				+ im_blocked_by_pids
 				+ im_blocking_other_pids
 
-				+ "    ,usesysid \n"
-				+ "    ,usename \n"
-				+ "    ,CAST(application_name as varchar(128)) AS application_name \n"
+				+ "    ,a.usesysid \n"
+				+ "    ,a.usename \n"
+				+ "    ,CAST(a.application_name as varchar(128)) AS application_name \n"
 			    + " \n"
 //				+ "    ,CASE WHEN state = 'idle' OR state IS NULL THEN -1   ELSE CAST(EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM xact_start   ) as int) END AS xact_start_sec \n"
 //				+ "    ,CASE WHEN state = 'idle' OR state IS NULL THEN -1   ELSE CAST(EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM query_start  ) as int) END AS query_start_sec \n"
 //				+ "    ,CASE WHEN state = 'idle' OR state IS NULL THEN CAST(EXTRACT('epoch' FROM query_start)       - EXTRACT('epoch' FROM clock_timestamp() ) as int) \n"
 //				+ "                                               ELSE CAST(EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM query_start       ) as int) END AS last_query_start_sec \n" // less than 0 -->> Inactive Statement -NumberOfSecondsSinceLastExecution
-				+ "    ,CAST( CASE WHEN state = 'idle' OR state IS NULL THEN -1   ELSE COALESCE( EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM xact_start  ), -1) END as numeric(12,1)) AS xact_start_sec \n"
-				+ "    ,CAST( CASE WHEN state = 'idle' OR state IS NULL THEN -1   ELSE COALESCE( EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM query_start ), -1) END as numeric(12,1)) AS stmnt_start_sec \n"
-			    + "    ,CAST( CASE WHEN state = 'active' \n"
-			    + "                THEN COALESCE( EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM query_start ), -1) /* active -- query-elapsed-time */ \n"
-			    + "                ELSE COALESCE( EXTRACT('epoch' FROM state_change     ) - EXTRACT('epoch' FROM query_start ), -1) /* else   -- last-exec-time*/ \n"
+				+ "    ,CAST( CASE WHEN a.state = 'idle' OR a.state IS NULL THEN -1   ELSE COALESCE( EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM a.xact_start  ), -1) END as numeric(12,1)) AS xact_start_sec \n"
+				+ "    ,CAST( CASE WHEN a.state = 'idle' OR a.state IS NULL THEN -1   ELSE COALESCE( EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM a.query_start ), -1) END as numeric(12,1)) AS stmnt_start_sec \n"
+			    + "    ,CAST( CASE WHEN a.state = 'active' \n"
+			    + "                THEN COALESCE( EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM a.query_start ), -1) /* active -- query-elapsed-time */ \n"
+			    + "                ELSE COALESCE( EXTRACT('epoch' FROM state_change     ) - EXTRACT('epoch' FROM a.query_start ), -1) /* else   -- last-exec-time */ \n"
 			    + "           END as numeric(12,1)) AS stmnt_last_exec_sec \n"
-			    + "    ,CAST( COALESCE( EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM state_change), -1) as numeric(12,1)) AS in_current_state_sec \n"
+			    + "    ,CAST( COALESCE( EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM a.state_change), -1) as numeric(12,1)) AS in_current_state_sec \n"
 			    + " \n"
 //				+ "    ,                                                         CAST(age(clock_timestamp(), backend_start) as varchar(30))     AS backend_start_age \n"
 //				+ "    ,CASE WHEN state = 'idle' OR state IS NULL THEN NULL ELSE CAST(age(clock_timestamp(), xact_start)    as varchar(30)) END AS xact_start_age \n"
 //				+ "    ,CASE WHEN state = 'idle' OR state IS NULL THEN NULL ELSE CAST(age(clock_timestamp(), query_start)   as varchar(30)) END AS query_start_age \n"
 //				+ "    ,CAST(age(clock_timestamp(), query_start)   as varchar(30)) AS last_query_start_age \n" // time when last query was executed
 //				+ "    ,CASE WHEN state = 'idle' OR state IS NULL THEN NULL ELSE CAST(age(clock_timestamp(), state_change)  as varchar(30)) END AS state_change_age \n"
-				+ "    ,CAST(                                                          clock_timestamp() - backend_start   as varchar(30)) AS backend_start_age \n"
-				+ "    ,CAST( CASE WHEN state = 'idle' OR state IS NULL THEN NULL ELSE clock_timestamp() - xact_start  END as varchar(30)) AS xact_start_age \n"
-				+ "    ,CAST( CASE WHEN state = 'idle' OR state IS NULL THEN NULL ELSE clock_timestamp() - query_start END as varchar(30)) AS query_start_age \n"
-			    + "    ,CAST( CASE WHEN state = 'active' \n"
-			    + "                THEN clock_timestamp() - query_start /* active -- query-elapsed-time */ \n"
-			    + "                ELSE state_change      - query_start /* else   -- last-exec-time*/ \n"
+				+ "    ,CAST(                                                              clock_timestamp() - backend_start   as varchar(30)) AS backend_start_age \n"
+				+ "    ,CAST( CASE WHEN a.state = 'idle' OR a.state IS NULL THEN NULL ELSE clock_timestamp() - a.xact_start  END as varchar(30)) AS xact_start_age \n"
+				+ "    ,CAST( CASE WHEN a.state = 'idle' OR a.state IS NULL THEN NULL ELSE clock_timestamp() - a.query_start END as varchar(30)) AS query_start_age \n"
+			    + "    ,CAST( CASE WHEN a.state = 'active' \n"
+			    + "                THEN clock_timestamp() - a.query_start /* active -- query-elapsed-time */ \n"
+			    + "                ELSE a.state_change    - a.query_start /* else   -- last-exec-time*/ \n"
 			    + "           END                                                                                          as varchar(30)) AS stmnt_last_exec_age \n"
-			    + "    ,CAST(                                                          clock_timestamp() - state_change    as varchar(30)) AS in_current_state_age \n"
+			    + "    ,CAST(                                                        clock_timestamp() - a.state_change    as varchar(30)) AS in_current_state_age \n"
 			    + " \n"
-				+ "    ,backend_start \n"
-				+ "    ,xact_start \n"
-				+ "    ,query_start \n"
-				+ "    ,state_change \n"
+				+ "    ,a.backend_start \n"
+				+ "    ,a.xact_start \n"
+				+ "    ,a.query_start \n"
+				+ "    ,a.state_change \n"
 
 				+ backend_xid
 				+ backend_xmin
-				+ backend_type
-				+ "    ,CAST(client_addr      as varchar(128)) AS client_addr \n"
-				+ "    ,CAST(client_hostname  as varchar(128)) AS client_hostname \n"
-				+ "    ,client_port \n"
-				+ query_id
-				+ "    ,query \n"
+				+ "    ,CAST(a.client_addr      as varchar(128)) AS client_addr \n"
+				+ "    ,CAST(a.client_hostname  as varchar(128)) AS client_hostname \n"
+				+ "    ,     a.client_port \n"
+				
+				+ ssl_isActive
+				+ ssl_version
+				+ ssl_cipher
+				+ ssl_bits
+				+ ssl_compression
+				+ ssl_client_dn
+				+ ssl_client_serial
+				+ ssl_issuer_dn
 
-				+ "    ,CASE WHEN state != 'active' OR state IS NULL THEN -1 \n"
-				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from query_start)) * 1000) as int) \n"
+				+ query_id
+				+ "    ,a.query \n"
+
+				+ "    ,CASE WHEN a.state != 'active' OR a.state IS NULL THEN -1 \n"
+				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from a.query_start)) * 1000) as int) \n"
 				+ "     END as \"execTimeInMs\" \n"
 
-				+ "    ,CASE WHEN xact_start IS NULL THEN -1 \n"
-				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from xact_start)) * 1000) as int) \n"
+				+ "    ,CASE WHEN a.xact_start IS NULL THEN -1 \n"
+				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from a.xact_start)) * 1000) as int) \n"
 				+ "     END as \"xactTimeInMs\" \n"
 
-				+ "from pg_catalog.pg_stat_activity \n"
+				+ "from pg_stat_activity a \n"
+				+ pg_stat_ssl_join
 				+ "";
 			
 		return sql;
@@ -525,7 +606,6 @@ extends CountersModel
 		{
 			//-------------------------------------------------------
 			// StatementExecInSec 
-			// --->>> possibly move/copy this to CmActiveStatements
 			//-------------------------------------------------------
 			if (isSystemAlarmsForColumnEnabledAndInTimeRange("StatementExecInSec"))
 			{
@@ -562,27 +642,26 @@ extends CountersModel
 					if (StatementExecInSec > threshold)
 					{
 						// Get config 'skip some known values'
-						String skipDbnameRegExp   = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipDbname,   DEFAULT_alarm_StatementExecInSecSkipDbname);
-						String skipLoginRegExp    = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipLogin,    DEFAULT_alarm_StatementExecInSecSkipLogin);
-						String skipCmdRegExp      = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipCmd,      DEFAULT_alarm_StatementExecInSecSkipCmd);
-						String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipTranName, DEFAULT_alarm_StatementExecInSecSkipTranName);
+						String skipDbnameRegExp      = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipDbname,      DEFAULT_alarm_StatementExecInSecSkipDbname);
+						String skipLoginRegExp       = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipLogin,       DEFAULT_alarm_StatementExecInSecSkipLogin);
+						String skipCmdRegExp         = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipCmd,         DEFAULT_alarm_StatementExecInSecSkipCmd);
+						String skipBackendTypeRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipBackendType, DEFAULT_alarm_StatementExecInSecSkipBackendType);
 
-						String StatementStartTime = cm.getDiffValue(r, "query_start")   + "";
-						String DBName             = cm.getDiffValue(r, "datname")       + "";
-						String Login              = cm.getDiffValue(r, "usename")       + "";
-						String Command            = cm.getDiffValue(r, "query")         + "";
-//						String tran_name          = cm.getDiffValue(r, "transaction_name") + "";
-						String tran_name          = "-unknown-";
+						String StatementStartTime = cm.getDiffValue(r, "query_start")  + "";
+						String DBName             = cm.getDiffValue(r, "datname")      + "";
+						String Login              = cm.getDiffValue(r, "usename")      + "";
+						String Command            = cm.getDiffValue(r, "query")        + "";
+						String backend_type       = cm.getDiffValue(r, "backend_type") + "";
 						
 						// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
 						boolean doAlarm = true;
 
 						// The below could have been done with nested if(!skipXxx), if(!skipYyy) doAlarm=true; 
 						// Below is more readable, from a variable context point-of-view, but HARDER to understand
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbnameRegExp)   || ! DBName   .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipLoginRegExp)    || ! Login    .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipCmdRegExp)      || ! Command  .matches(skipCmdRegExp )));     // NO match in the SKIP Cmd      regexp
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranNameRegExp) || ! tran_name.matches(skipTranNameRegExp))); // NO match in the SKIP TranName regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbnameRegExp)      || ! DBName      .matches(skipCmdRegExp        ))); // NO match in the SKIP Cmd      regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipLoginRegExp)       || ! Login       .matches(skipCmdRegExp        ))); // NO match in the SKIP Cmd      regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipCmdRegExp)         || ! Command     .matches(skipCmdRegExp        ))); // NO match in the SKIP Cmd      regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipBackendTypeRegExp) || ! backend_type.matches(skipBackendTypeRegExp))); // NO match in the SKIP TranName regexp
 
 						// NO match in the SKIP regEx
 						if (doAlarm)
@@ -590,7 +669,7 @@ extends CountersModel
 							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 													
-							AlarmEvent ae = new AlarmEventLongRunningStatement(cm, threshold, StatementExecInSec, StatementStartTime, DBName, Login, Command, tran_name);
+							AlarmEvent ae = new AlarmEventLongRunningStatement(cm, threshold, StatementExecInSec, StatementStartTime, DBName, Login, Command, backend_type);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
 							alarmHandler.addAlarm( ae );
@@ -599,23 +678,23 @@ extends CountersModel
 				} // end: is number
 			} // end: StatementExecInSec
 		} // end: loop rows
-	}
+	} //: end: method
 
-	public static final String  PROPKEY_alarm_StatementExecInSec             = CM_NAME + ".alarm.system.if.StatementExecInSec.gt";
-	public static final int     DEFAULT_alarm_StatementExecInSec             = 3 * 60 * 60; // 3 Hours
+	public static final String  PROPKEY_alarm_StatementExecInSec                = CM_NAME + ".alarm.system.if.StatementExecInSec.gt";
+	public static final int     DEFAULT_alarm_StatementExecInSec                = 3 * 60 * 60; // 3 Hours
 
-	public static final String  PROPKEY_alarm_StatementExecInSecSkipDbname   = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.dbname";
-	public static final String  DEFAULT_alarm_StatementExecInSecSkipDbname   = "";
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipDbname      = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.dbname";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipDbname      = "";
 
-	public static final String  PROPKEY_alarm_StatementExecInSecSkipLogin    = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.login";
-	public static final String  DEFAULT_alarm_StatementExecInSecSkipLogin    = "";
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipLogin       = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.login";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipLogin       = "";
 
-	public static final String  PROPKEY_alarm_StatementExecInSecSkipCmd      = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.cmd";
-//	public static final String  DEFAULT_alarm_StatementExecInSecSkipCmd      = "^(BACKUP |RESTORE ).*";
-	public static final String  DEFAULT_alarm_StatementExecInSecSkipCmd      = "";
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipCmd         = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.cmd";
+//	public static final String  DEFAULT_alarm_StatementExecInSecSkipCmd         = "^(BACKUP |RESTORE ).*";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipCmd         = "";
 
-	public static final String  PROPKEY_alarm_StatementExecInSecSkipTranName = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.tranName";
-	public static final String  DEFAULT_alarm_StatementExecInSecSkipTranName = "";
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipBackendType = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.backendType";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipBackendType = "^(walsender)";
 	
 
 	@Override
@@ -626,11 +705,11 @@ extends CountersModel
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("StatementExecInSec",           isAlarmSwitch, PROPKEY_alarm_StatementExecInSec            , Integer.class, conf.getIntProperty(PROPKEY_alarm_StatementExecInSec            , DEFAULT_alarm_StatementExecInSec            ), DEFAULT_alarm_StatementExecInSec            , "If any SPID's has been executed a single SQL Statement for more than ## seconds, then send alarm 'AlarmEventLongRunningStatement'." ));
-		list.add(new CmSettingsHelper("StatementExecInSec SkipDbs",                  PROPKEY_alarm_StatementExecInSecSkipDbname  , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipDbname  , DEFAULT_alarm_StatementExecInSecSkipDbname  ), DEFAULT_alarm_StatementExecInSecSkipDbname  , "If 'StatementExecInSec' is true; Discard databases listed (regexp is used).", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("StatementExecInSec SkipLogins",               PROPKEY_alarm_StatementExecInSecSkipLogin   , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipLogin   , DEFAULT_alarm_StatementExecInSecSkipLogin   ), DEFAULT_alarm_StatementExecInSecSkipLogin   , "If 'StatementExecInSec' is true; Discard Logins listed (regexp is used)."   , new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("StatementExecInSec SkipCommands",             PROPKEY_alarm_StatementExecInSecSkipCmd     , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipCmd     , DEFAULT_alarm_StatementExecInSecSkipCmd     ), DEFAULT_alarm_StatementExecInSecSkipCmd     , "If 'StatementExecInSec' is true; Discard Commands listed (regexp is used)." , new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("StatementExecInSec SkipTranNames",            PROPKEY_alarm_StatementExecInSecSkipTranName, String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipTranName, DEFAULT_alarm_StatementExecInSecSkipTranName), DEFAULT_alarm_StatementExecInSecSkipTranName, "If 'StatementExecInSec' is true; Discard TranName listed (regexp is used)." , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec",           isAlarmSwitch, PROPKEY_alarm_StatementExecInSec               , Integer.class, conf.getIntProperty(PROPKEY_alarm_StatementExecInSec               , DEFAULT_alarm_StatementExecInSec               ), DEFAULT_alarm_StatementExecInSec               , "If any SPID's has been executed a single SQL Statement for more than ## seconds, then send alarm 'AlarmEventLongRunningStatement'." ));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipDbs",                  PROPKEY_alarm_StatementExecInSecSkipDbname     , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipDbname     , DEFAULT_alarm_StatementExecInSecSkipDbname     ), DEFAULT_alarm_StatementExecInSecSkipDbname     , "If 'StatementExecInSec' is true; Discard 'datname' listed (regexp is used)."      , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipLogins",               PROPKEY_alarm_StatementExecInSecSkipLogin      , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipLogin      , DEFAULT_alarm_StatementExecInSecSkipLogin      ), DEFAULT_alarm_StatementExecInSecSkipLogin      , "If 'StatementExecInSec' is true; Discard 'usename' listed (regexp is used)."      , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipCommands",             PROPKEY_alarm_StatementExecInSecSkipCmd        , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipCmd        , DEFAULT_alarm_StatementExecInSecSkipCmd        ), DEFAULT_alarm_StatementExecInSecSkipCmd        , "If 'StatementExecInSec' is true; Discard 'query' listed (regexp is used)."        , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipBackendType",          PROPKEY_alarm_StatementExecInSecSkipBackendType, String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipBackendType, DEFAULT_alarm_StatementExecInSecSkipBackendType), DEFAULT_alarm_StatementExecInSecSkipBackendType, "If 'StatementExecInSec' is true; Discard 'backend_type' listed (regexp is used)." , new RegExpInputValidator()));
 		
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "application_name") );
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "usename") );

@@ -62,6 +62,20 @@ public class MathUtils
 	}
 	
 	/**
+	 * Round a Decimal into some decimals points, using BigDecimal.ROUND_HALF_EVEN
+	 * 
+	 * @param val      The Decimal value to round
+	 * @param scale    To number of decimals
+	 */
+	public static BigDecimal roundToBigDecimal(Double val, int scale)
+	{
+		if (val == null)
+			return null;
+		
+		return new BigDecimal( val ).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
+	}
+	
+	/**
 	 * Round a Float into some decimals points, using BigDecimal.ROUND_HALF_EVEN
 	 * 
 	 * @param val      The Float value to round

@@ -38,6 +38,7 @@ import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.ResultSetMetaDataCached.Entry;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.utils.NumberUtils;
 import com.asetune.utils.Ver;
 
 /**
@@ -139,6 +140,8 @@ extends CountersModel
 	public static final String GRAPH_NAME_RECORDS     = "Records";
 	public static final String GRAPH_NAME_WRITE_COUNT = "WCount";
 	public static final String GRAPH_NAME_WRITE_TIME  = "WTime";
+	public static final String GRAPH_NAME_WAL_KB      = "WalKb";
+	public static final String GRAPH_NAME_FULL_COUNT  = "FullCount";
 	
 //	@Override
 //	protected TabularCntrPanel createGui()
@@ -185,6 +188,30 @@ extends CountersModel
 				Ver.ver(14),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);   // minimum height
 
+		addTrendGraph(GRAPH_NAME_WAL_KB,
+				"WAL KB Written per Second", 	                // Menu CheckBox text
+				"WAL KB Written per Second ("+SHORT_NAME+")", // Graph Label 
+				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB,
+				new String[] {"wal_kb"}, 
+				LabelType.Static, 
+				TrendGraphDataPoint.Category.DISK,
+				false, // is Percent Graph
+				false, // visible at start
+				Ver.ver(14),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_FULL_COUNT,
+				"WAL Buffer was Full Writes per Second", 	                // Menu CheckBox text
+				"WAL Buffer was Full Writes per Second ("+SHORT_NAME+")", // Graph Label 
+				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				new String[] {"wal_buffers_full"}, 
+				LabelType.Static, 
+				TrendGraphDataPoint.Category.DISK,
+				false, // is Percent Graph
+				false, // visible at start
+				Ver.ver(14),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+
 	}
 
 	@Override
@@ -220,6 +247,28 @@ extends CountersModel
 
 			arr[0] = this.getRateValueAsDouble(0, "wal_write_time", 0d);
 			arr[1] = this.getRateValueAsDouble(0, "wal_sync_time", 0d);
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		//---------------------------------
+		if (GRAPH_NAME_WAL_KB.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[1];
+
+			arr[0] = NumberUtils.round(this.getRateValueAsDouble(0, "wal_bytes", 0d) / 1024.0, 1);
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		//---------------------------------
+		if (GRAPH_NAME_FULL_COUNT.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getRateValueAsDouble(0, "wal_buffers_full", 0d);
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

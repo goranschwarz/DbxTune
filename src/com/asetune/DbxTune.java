@@ -902,6 +902,7 @@ public abstract class DbxTune
 			if (cmd.hasOption('P'))	storeConfigProps.setProperty("conn.dbmsPassword",    cmd.getOptionValue('P'), true);
 			if (cmd.hasOption('S'))	storeConfigProps.setProperty("conn.dbmsName",        cmd.getOptionValue('S'));
 			if (cmd.hasOption('A'))	storeConfigProps.setProperty("conn.dbmsServerAlias", cmd.getOptionValue('A'));
+			if (cmd.hasOption('N'))	storeConfigProps.setProperty("conn.dbmsDisplayName", cmd.getOptionValue('N'));
 			if (cmd.hasOption('O'))	storeConfigProps.setProperty("conn.jdbcUrlOptions",  cmd.getOptionValue('O'));
 
 			// Check servername
@@ -1875,6 +1876,8 @@ public abstract class DbxTune
 		pw.println("  -S,--server <server>      Server to connect to.");
 		pw.println("  -A,--serverAlias <name>   Server Alias (used by PCS and DbxCentral) for alternate name.");
 		pw.println("                            note: <SRVNAME> will be replaced with the DBMS Instance Name");
+		pw.println("  -N,--displayName <name>   Display Name (used by DbxCentral) to label buttons at start page.");
+		pw.println("                            note: <SRVNAME> will be replaced with the DBMS Instance Name");
 		pw.println("  -O,--urlOptions <server>  jdbc Url options/properties example: 'key1=val;key2=val'");
 		pw.println("  ");
 		pw.println("  -u,--sshUser <user>       SSH Username, used by Host Monitoring subsystem.");
@@ -1978,6 +1981,7 @@ public abstract class DbxTune
 		options.addOption( Option.builder("P").longOpt("passwd"        ).hasArg(true ).build() );
 		options.addOption( Option.builder("S").longOpt("server"        ).hasArg(true ).build() );
 		options.addOption( Option.builder("A").longOpt("serverAlias"   ).hasArg(true ).build() );
+		options.addOption( Option.builder("N").longOpt("displayName"   ).hasArg(true ).build() );
 		options.addOption( Option.builder("O").longOpt("urlOptions"    ).hasArg(true ).build() );
 
 		options.addOption( Option.builder("u").longOpt("sshUser"       ).hasArg(true ).build() );

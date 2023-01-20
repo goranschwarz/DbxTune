@@ -1167,7 +1167,7 @@ implements Runnable
 		{
 			_logger.info("DUMMY-FORCE-DUMMY-ALARM: found-file('"+probeFile1+"'), Sending alarm 'AlarmEventDummy'...");
 
-			AlarmEvent dummyAlarm = new com.asetune.alarm.events.AlarmEventDummy(srvName, "SomeCmName", "SomeExtraInfo", Category.OTHER, Severity.INFO, ServiceState.UP, -1, 999, "Dummy alarm, just to test if the alarm handler is working", "Extended Description goes here");
+			AlarmEvent dummyAlarm = new com.asetune.alarm.events.AlarmEventDummy(srvName, "SomeCmName", "SomeExtraInfo", Category.OTHER, Severity.INFO, ServiceState.UP, -1, 999, "Dummy alarm, just to test if the alarm handler is working", "Extended Description goes here", 0);
 			AlarmHandler.getInstance().addAlarm( dummyAlarm );
 
 			_logger.info("DUMMY-FORCE-DUMMY-ALARM: removing file('"+probeFile1+"').");

@@ -37,7 +37,7 @@ extends AlarmEvent
 	 * @param logicalName
 	 * @param colName
 	 */
-	public AlarmEventPgReplicationLag(CountersModel cm, String client_addr, int total_lag_kb, int threshold)
+	public AlarmEventPgReplicationLag(CountersModel cm, String client_addr, int total_lag_kb, int thresholdKb)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -47,8 +47,8 @@ extends AlarmEvent
 				AlarmEvent.Category.RPO,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"Replication Age in Server '" + cm.getServerName() + "' to '" + client_addr + "', total_lag_kb=" + total_lag_kb + ". (threshold="+threshold+")",
-				threshold
+				"Replication Age in Server '" + cm.getServerName() + "' to '" + client_addr + "', total_lag_kb=" + total_lag_kb + ". (thresholdKb="+thresholdKb+")",
+				thresholdKb
 				);
 
 		// Set: Time To Live if postpone is enabled

@@ -38,7 +38,7 @@ extends AlarmEvent
 	 * @param secSinceLastRecv
 	 * @param threshold
 	 */
-	public AlarmEventDbxCollectorNoData(String srvName, long secSinceLastRecv, long threshold)
+	public AlarmEventDbxCollectorNoData(String srvName, long secSinceLastRecv, long thresholdInSec)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -48,10 +48,13 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"DbxCentral Receiver has not received any data from instance '" + srvName + "' for " + TimeUtils.secToTimeStrLong(secSinceLastRecv)+" (HH:MM:SS) (thresholdInSec="+threshold+")",
-				threshold
+				"DbxCentral Receiver has not received any data from instance '" + srvName + "' for " + TimeUtils.secToTimeStrLong(secSinceLastRecv)+" (HH:MM:SS) (thresholdInSec="+thresholdInSec+")",
+				thresholdInSec
 				);
 
+		// Adjust the Alarm Full Duration with X seconds
+		setFullDurationAdjustmentInSec( (int) thresholdInSec );
+		
 		// Set: Time To Live if postpone is enabled
 		//setTimeToLive(cm);
 

@@ -40,7 +40,7 @@ extends AlarmEvent
 	 * @param secSinceLastSuccessSend - Number of seconds since last successfully sent was done
 	 * @param threshold               - The threshold that was used/crossed
 	 */
-	public AlarmEventHttpDestinationDown(String srvName, String cfgName, String url, long secSinceLastSuccessSend, int threshold)
+	public AlarmEventHttpDestinationDown(String srvName, String cfgName, String url, long secSinceLastSuccessSend, int thresholdInSec)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -50,10 +50,13 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"HTTP Destination could not send data to '" + cfgName + "' with URL '" + url + "' for " + TimeUtils.msToTimeStr("%HH:%MM:%SS", secSinceLastSuccessSend*1000)+" (HH:MM:SS) (thresholdInSec="+threshold+")",
-				threshold
+				"HTTP Destination could not send data to '" + cfgName + "' with URL '" + url + "' for " + TimeUtils.msToTimeStr("%HH:%MM:%SS", secSinceLastSuccessSend*1000)+" (HH:MM:SS) (thresholdInSec="+thresholdInSec+")",
+				thresholdInSec
 				);
 
+		// Adjust the Alarm Full Duration with X seconds
+		setFullDurationAdjustmentInSec( (int) thresholdInSec );
+		
 		// Set: Time To Live if postpone is enabled
 		//setTimeToLive(cm);
 

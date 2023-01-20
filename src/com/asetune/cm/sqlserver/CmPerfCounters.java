@@ -379,7 +379,7 @@ extends CountersModel
 			"Buffer Cache Physical Reads", // Menu CheckBox text
 			"Buffer Cache Physical Reads per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
-			new String[] { "Page reads (PhysicalReads)", "Readahead pages (PhysicalReads)" }, 
+			new String[] { "Page Reads (PhysicalReads)", "Read Ahead Pages (PhysicalReads)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
 			false, // is Percent Graph

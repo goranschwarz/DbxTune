@@ -79,7 +79,7 @@ public class RsWsRepLatency extends AseAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		_CmWsRepLatency_DataAgeInSec = createTsLineChart(conn, "CmWsRepLatency", "DataAgeInSec", -1, null, "Data Age In Seconds, from Active->Standby");
+		_CmWsRepLatency_DataAgeInSec = createTsLineChart(conn, "CmWsRepLatency", "DataAgeInSec", -1, true, null, "Data Age In Seconds, from Active->Standby");
 	}
 
 	private IReportChart _CmWsRepLatency_DataAgeInSec;

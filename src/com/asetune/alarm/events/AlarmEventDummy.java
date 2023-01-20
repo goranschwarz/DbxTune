@@ -27,7 +27,7 @@ extends AlarmEvent
 {
 	private static final long serialVersionUID = 1L;
 
-	public AlarmEventDummy(String serviceName, String serviceInfo, Object extraInfo, Category category, Severity severity, ServiceState state, int timeToLive, Object data, String description, String extendedDesc)
+	public AlarmEventDummy(String serviceName, String serviceInfo, Object extraInfo, Category category, Severity severity, ServiceState state, int timeToLive, Object data, String description, String extendedDesc, int thresholdInSec)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -39,6 +39,9 @@ extends AlarmEvent
 				state, 
 				description,
 				null);
+
+		// Adjust the Alarm Full Duration with X seconds
+		setFullDurationAdjustmentInSec( thresholdInSec );
 
 		setExtendedDescription(extendedDesc, "");
 

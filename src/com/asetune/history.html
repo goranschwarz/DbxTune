@@ -24,6 +24,288 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
+<H2>2023-MM-DD</H2>
+<UL>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>Generic - Changes that affects all DbxTune tools</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>Added option <code>-N|--displayName</code> to all the DbxTune collectors. This will set the Display Name in DbxCentral (button), but the server name will still be the key where "stuff" are stored. (Note: you can also use -A|--serverAlias to name a DBMS instance differently than the server name)</LI>
+		<LI>Alarms "Duration" does now reflect the "Full/Actual Duration" in a better way (for the Alarms with time thresholds... adding the threshold time to the duration makes the "Full/Actual Duration"<br>
+            Note: templates that references '<code>${duration}</code>' will have a slightly new output '01:10 (MM:SS) -- Added/Adjusted ## Seconds to the Alarm Raise Time'. Also there are new variables '<code>${alarmDuration}</code>', '<code>${fullDuration}</code>', '<code>${fullDurationAdjustmentInSec}</code>' if you want more control.</LI>
+		<LI>From Mail Addresses: You can now add "display name" in the "From" sender. Example: <code>AlarmWriterToMail.from = some.name@acme.com &lt;The Display Name&gt;</code></LI>
+		<LI> AlarmWriterToMail: Some properties was miss spelled, which is now fixed. 'smpt' -> 'smtp' (But I will still read the old names for backward compatibility, if the new names are missing)</LI>
+		<LI></LI>
+		<LI></LI>
+		
+		<LI><b>Alarms Handling:</b>
+			<UL>
+				<LI>New: AlarmEventXxx           -- xxx</LI>
+				
+				<LI>Changed: AlarmEventXxx       -- xxx</LI>
+
+				<LI>Bugfix: xxx</LI>
+			</UL>
+		</LI>
+		<LI>xxx</LI>
+
+		<LI><b>Daily Summary Report Changes</b><br>
+			<UL>
+				<LI>In the 'Recording info', Print the 'Display Name' if any...</LI>
+				<LI>many Line Chart is "sorted", so the series that holds the most values (sum of all data point) are presented/printed first (a text will indicate if it's sorted or not)</LI>
+			</UL>
+		</LI>
+
+		<LI>
+			<b>Upgraded some of the third party libraries/jars</b><br>
+			<ul>
+	 			<li>To version 2.1.214        Component: H2 Database</li>
+	 			<li>To version x.x.x          Component: Xxx</li>
+			</ul>
+		</LI>
+	</UL>
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>DbxCentral - The central WEB console to view Trend Graphs</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>Removing a server, now also removes Daily Summary Reports</LI>
+		<LI>New option when reading charts. sampleType=MIN_OVER_{SAMPLES|MINUTES} ... This is useful when for example looking ad Space Used... We might want to see the <b>Minimum</b> vales (within the sample/minutes) for 'Free Space' 
+			<ul>
+				<li><code>MIN_OVER_SAMPLES</code> Only take the MIN value from X samples, this can be used if there are to many samples</li>
+				<li><code>MIN_OVER_MINUTES</code> Only take the MIN value from a sample over X minutes, this can be used if there are to many samples</li>
+			</ul> 
+		</LI>
+ 	</UL>
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>AseTune - Sybase/SAP Adaptive Server Enterprise</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<li>xxx</li>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmXxx - tab: Active Statements</b><br>
+		<ul>
+			<li>xxx</li>
+		</ul>
+		</LI>
+
+
+		<!-- ~~~~~ SQL Capture ~~~~~ -->
+		<LI>
+		<b>SQL Capture</b><br>
+		<ul>
+			<li>xxxx</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Daily Report ~~~~~ -->
+		<LI>
+		<b>Daily Summary Report</b><br>
+		<ul>
+			<li>new: SQL Statement Execution Statistics per Database (origin: CmSqlStatementPerDb / monSysStatement)</li>
+		</ul>
+		</LI>
+
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>IqTune - Sybase/SAP IQ (The Column Storage Database) </H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>xxx</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>RsTune - Sybase/SAP Replication Server</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>xxx</LI>
+
+		<LI><b>CmName</b> - xxxx</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>RaxTune - Sybase/SAP Replication Agent X</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>HanaTune - SAP HANA</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>OracleTune - Oracle Database</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>SqlServerTune - Microsoft SQL-Server</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>xxx</LI>
+
+		<LI>Added Alarm: <b>AlarmEventMemoryGrantWait   </b> -- Used by CM 'CmMemoryGrantsSum' to alarm if we have anyone waiting to grab a memory grant.</LI>
+
+		<LI>Added CM: <b>CmMemoryGrantsSum    </b> - A Memory Grant Summary (from: dm_exec_query_resource_semaphores)</LI>
+		<LI>Added CM: <b>CmExecQueryStatPerDb </b> - Activity Grouped by Database -- Information is fetched from dm_exec_query_stats</LI>
+		<LI>Added CM: <b>CmXxxx </b> - xxx</LI>
+
+		<LI><b>DBMS Configuration </b> - Also get linked servers using 'exec sp_linkedservers'</LI>
+
+		<LI><b>CmActiveStPlanStats </b> - new column 'row_count_abs' not diff calculated version of 'row_count'</LI>
+		<LI><b>CmActiveStPlanStats </b> - new column 'completed_pct' which tries to calculte how long an operator has "reached"</LI>
+		
+		<LI><b>CmDatabases </b> - changed column 'DBOwner' from SQL  'suser_name(d.owner_sid)' to 'suser_sname(d.owner_sid)' to reflect the name in a better way</LI>
+		
+		<LI><b>CmName2 </b> - xxx</LI>
+
+		<LI><b>CmName3 </b> - xxx</LI>
+
+
+		<LI>xxx</LI>
+		
+		<LI>DDL Lookup: xxx</LI>
+		
+		<!-- ~~~~~ Daily Report ~~~~~ -->
+		<LI>
+		<b>Daily Report</b><br>
+		<ul>
+			<li>New section: Top Database Activity (order by: 'total_worker_time_ms__sum', origin: CmExecQueryStatPerDb/dm_exec_query_stats)</li>
+			<li>new: SqlServerXxxYyy       -- xxx</li>
+			<li>new: SqlServerXxxYyy       -- xxx</li>
+
+			<li>In the Recording info, Print the Edition: 'Standard Edition', 'Enterprise Edition', 'Web Edition', 'Developer Edition', 'Express Edition', or 'Azure'</li>
+			<li>In the Recording info, Print the 'Collation Name' and 'Collation Description'</li>
+			<li>In the "Overview" section, added some Graphs: 'CmPerfCounters_CachePhyReads', 'CmPerfCounters_CacheWrites', 'CmMemoryGrantsSum_GrantedMemSum' and 'CmSummary_OsMemoryFreeMb'</li>
+			<li></li>
+
+		</ul>                                                              
+		</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>PostgresTune - PostgreSQL</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>Added a new Collector Group 'Progress' with the following collectors: CmPgProgCluster, CmPgProgVacuum, CmPgProgAnalyze, CmPgProgIndex, CmPgProgCopy, CmPgProgBaseBackup</LI>
+		<LI>xxx</LI>
+		
+		<br>
+
+		<LI><b>CmActiveStatements   </b> - added new columns 'pid_exlock_count' -- How many Exclusive locks does this PID hold</LI>
+		<LI><b>CmActiveStatements   </b> - added new columns 'im_blocked_max_wait_time_in_sec' -- This pid has been blocked for this amount of times (max wait time from pg_locks)</LI>
+		<LI><b>CmActiveStatements   </b> - added AlarmEventHoldingLocksWhileWaitForClientInput, when a pid has been in state 'idle in transaction' but still has EXCLUSIVE locks in the database. Default Threshold is 300 Seconds (5 minutes)</LI>
+		<LI><b>CmActiveStatements   </b> - The alarms 'StatementExecInSec' and 'OpenXactInSec' will no longer alarm if the column 'backend_type' is 'walsender'</LI>
+		<LI><b>CmActiveStatements   </b> - The alarms 'OpenXactInSec' new threshold 1h (previously 30 minutes)</LI>
+
+		<LI><b>CmPgActivity         </b> - if property 'CmPgActivity.sample.sslInfo=true' is set (default is false), then show new columns: ssl, ssl_version, ssl_cipher, ssl_bits, ssl_client_dn, sss_client_serial, sss_issuer_dn</LI>
+		<LI><b>CmPgActivity         </b> - The alarms 'StatementExecInSec' will no longer alarm if the column 'backend_type' is 'walsender'</LI>
+
+		<LI><b>CmPgBufferCache      </b> - new Collector -- Table names and size in the Buffer Cache -- Note: Depends on extenstion: pg_buffercache, which is created on first sample (if not exists)</LI>
+
+		<LI><b>CmPgProgAnalyze      </b> - new Collector -- Whenever ANALYZE is running, the pg_stat_progress_analyze view will contain a row for each backend that is currently running that command</LI>
+		<LI><b>CmPgProgBaseBackup   </b> - new Collector -- Whenever an application like pg_basebackup is taking a base backup, the pg_stat_progress_basebackup view will contain a row for each WAL sender process that is currently running the BASE_BACKUP replication command and streaming the backup</LI>
+		<LI><b>CmPgProgCluster      </b> - new Collector -- Whenever CLUSTER or VACUUM FULL is running, the pg_stat_progress_cluster view will contain a row for each backend that is currently running either command.</LI>
+		<LI><b>CmPgProgCopy         </b> - new Collector -- Whenever COPY is running, the pg_stat_progress_copy view will contain one row for each backend that is currently running a COPY command</LI>
+		<LI><b>CmPgProgIndex        </b> - new Collector -- Whenever CREATE INDEX or REINDEX is running, the pg_stat_progress_create_index view will contain one row for each backend that is currently creating indexes</LI>
+		<LI><b>CmPgProgVacuum       </b> - new Collector -- Whenever VACUUM is running, the pg_stat_progress_vacuum view will contain one row for each backend (including autovacuum worker processes) that is currently vacuuming.  Progress for VACUUM FULL commands is reported via pg_stat_progress_cluster because both VACUUM FULL and CLUSTER rewrite the table, while regular VACUUM only modifies it in place</LI>
+
+		<LI><b>CmPgWall      </b> - new chart: WAL KB Written per Second</LI>
+		<LI><b>CmPgWall      </b> - new chart: WAL Buffer was Full Writes per Second</LI>
+
+		<LI><b>CmXxxx      </b> - </LI>
+		<LI><b>CmXxxx      </b> - </LI>
+		<LI><b>CmXxxx      </b> - </LI>
+
+		<br>
+		<LI><b>Object Inspector     </b> -  Grabs more information on more object types: Foreign Data Wrappers (Remote Tables) and procedures, functions etc...</LI>
+
+		<br>
+		<LI><b>DbmsObjectIdCache    </b> - now holds more information, to accomodate Foreign Data Wrappers (Remote Tables) and procedures, functions etc...</LI> 
+
+		<br>
+		<LI><b>DBMS Configuration   </b> - Added some Text config: 'DB Info', 'HBA Conf', 'Extentions', 'Servers'</LI> 
+
+		<br>
+		<LI><b>DDL Lookup/Store     </b> - xxx</LI> 
+
+		<br>
+		<LI><b>Daily Summary Report </b> - In the 'Recording info', Print if the DBMS is in 'Recovery/Standby Mode' or in 'Normal (r/w) Mode'</LI>
+		<LI><b>Daily Summary Report </b> - SQL Statement Information table now also holds information about 'Functions', 'Procedures', 'Remote Tables' (DDL Information and what tables they references, statistics on those tables)</LI>
+		<LI><b>Daily Summary Report </b> - Long Running Statements -- Content changes and adjustment for MS Outlook</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>MySqlTune - MySQL database</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>Db2Tune - IBM DB2 LWU</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>SQL Window</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>Table/Cell ToolTip Better support to handle/display inline HTML content that dosn't start with '&gt;html&lt;'</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+	
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>Log Tail Tool</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+</UL>
+
+
+
+
+
+
+
+
+
+<!-- ========================================================================== -->
 <H2>2022-12-08</H2>
 <UL>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -891,6 +1173,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<!-- ~~~end-of-this-tool~~~ -->
 </UL>
 
+
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2020-07-01</H2>
 <UL>
@@ -1636,6 +1925,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<!-- ~~~end-of-this-tool~~~ -->
 </UL>
 
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2018-11-05</H2>
 <UL>
@@ -2341,6 +2634,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 </UL>
 
 
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2016-11-07</H2>
 <UL>
@@ -2801,6 +3100,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 </UL>
 
 
+
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2015-06-24</H2>
 <UL>
@@ -2970,6 +3276,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	</LI>
 
 </UL>
+
+
+
+
+
+
+
 
 
 <!-- ========================================================================== -->
@@ -3444,6 +3757,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 </UL>
 
 
+
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2013-06-28</H2>
 <UL>
@@ -3712,6 +4032,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 </UL>
 
 
+
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2013-03-03</H2>
 <UL>
@@ -3737,6 +4064,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	This will exclude all extra/intermediate row counts when executing a stored procedure.<br>
 	</LI>
 </UL>
+
+
+
+
+
+
+
 
 
 <!-- ========================================================================== -->
@@ -4079,6 +4413,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 </UL>
 
 
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2012-06-19</H2>
 <UL>
@@ -4188,6 +4528,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	</ul>
 	</LI>
 </UL>
+
+
+
+
+
+
+
 
 
 <!-- ========================================================================== -->
@@ -4466,6 +4813,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	</LI>
 
 </UL>
+
+
+
+
+
+
 
 
 <!-- ========================================================================== -->
@@ -4870,6 +5223,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 </UL>
 
 
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2011-09-30</H2>
 <UL>
@@ -5000,6 +5359,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	</LI>
 
 </UL>
+
+
+
+
+
+
 
 
 <!-- ========================================================================== -->
@@ -5237,6 +5602,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	</LI>
 
 </UL>
+
+
+
+
+
+
+
+
 
 <!-- ========================================================================== -->
 <H2>2011-07-15</H2>
@@ -5506,6 +5879,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	</LI>
 
 </UL>
+
+
+
+
+
+
+
+
 
 <!-- ========================================================================== -->
 <H2>2011-04-21</H2>
@@ -5840,6 +6221,15 @@ user.predefined.sql.02.install.needsRole         = sa_role
 
 </UL>
 
+
+
+
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2011-01-12</H2>
 <UL>
@@ -6073,6 +6463,15 @@ user.predefined.sql.02.install.needsRole         = sa_role
 
 </UL>
 
+
+
+
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2010-10-29</H2>
 <UL>
@@ -6118,6 +6517,15 @@ user.predefined.sql.02.install.needsRole         = sa_role
 	</LI>
 
 </UL>
+
+
+
+
+
+
+
+
+
 
 <!-- ========================================================================== -->
 <H2>2010-06-22</H2>
@@ -6203,6 +6611,14 @@ user.predefined.sql.02.install.needsRole         = sa_role
 	</LI>
 
 </UL>
+
+
+
+
+
+
+
+
 
 <!-- ========================================================================== -->
 <H2>2010-04-27</H2>
@@ -6339,6 +6755,15 @@ user.predefined.sql.02.install.needsRole         = sa_role
 
 </UL>
 
+
+
+
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2010-02-22</H2>
 <UL>
@@ -6388,6 +6813,15 @@ user.predefined.sql.02.install.needsRole         = sa_role
 	</LI>
 
 </UL>
+
+
+
+
+
+
+
+
+
 
 <!-- ========================================================================== -->
 <H2>2010-02-14</H2>
@@ -6452,6 +6886,14 @@ user.predefined.sql.02.install.needsRole         = sa_role
 
 </UL>
 
+
+
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2010-01-28</H2>
 <UL>
@@ -6505,6 +6947,14 @@ user.predefined.sql.02.install.needsRole         = sa_role
 	</LI>
 
 </UL>
+
+
+
+
+
+
+
+
 
 <!-- ========================================================================== -->
 <H2>2009-11-23</H2>
@@ -6570,6 +7020,15 @@ user.predefined.sql.02.install.needsRole         = sa_role
 	</LI>
 </UL>
 
+
+
+
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2009-11-06</H2>
 <UL>
@@ -6613,6 +7072,15 @@ user.predefined.sql.02.install.needsRole         = sa_role
 	</LI>
 </UL>
 
+
+
+
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2009-05-21 - 2009-11-01</H2>
 <UL>
@@ -6622,6 +7090,15 @@ user.predefined.sql.02.install.needsRole         = sa_role
 		But now I'm back again :)
 	</LI>
 </UL>
+
+
+
+
+
+
+
+
+
 
 
 <!-- ========================================================================== -->
@@ -6653,6 +7130,14 @@ user.predefined.sql.02.install.needsRole         = sa_role
 </UL>
 
 
+
+
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2009-05-15</H2>
 <UL>
@@ -6668,6 +7153,13 @@ user.predefined.sql.02.install.needsRole         = sa_role
 		A vertical line in the graphs represents where we are in the in-memory counters.
 	</LI>
 </UL>
+
+
+
+
+
+
+
 
 
 <!-- ========================================================================== -->
@@ -6693,6 +7185,13 @@ user.predefined.sql.02.install.needsRole         = sa_role
 		Wizard for crating User Defined Counters
 	</LI>
 </UL>
+
+
+
+
+
+
+
 
 
 <!-- ========================================================================== -->
@@ -6724,6 +7223,13 @@ user.predefined.sql.02.install.needsRole         = sa_role
 </UL>
 
 
+
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2009-04-08</H2>
 <UL>
@@ -6739,6 +7245,13 @@ user.predefined.sql.02.install.needsRole         = sa_role
 		present it in the GUI, thats the next step.
 	</LI>
 </UL>
+
+
+
+
+
+
+
 
 
 <!-- ========================================================================== -->
@@ -6760,6 +7273,13 @@ user.predefined.sql.02.install.needsRole         = sa_role
 		- also moved TrendGraph
 	</LI>
 </UL>
+
+
+
+
+
+
+
 
 
 <!-- ========================================================================== -->
@@ -6831,6 +7351,12 @@ user.predefined.sql.02.install.needsRole         = sa_role
 </UL>
 
 
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2009-03-16</H2>
 <UL>
@@ -6847,6 +7373,12 @@ user.predefined.sql.02.install.needsRole         = sa_role
 		Some small changes on the xmenu stuff.
 	</LI>
 </UL>
+
+
+
+
+
+
 
 
 <!-- ========================================================================== -->
@@ -6944,6 +7476,13 @@ user.predefined.sql.02.install.needsRole         = sa_role
 
 
 
+
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2009-02-12</H2>
 <UL>
@@ -6956,6 +7495,12 @@ user.predefined.sql.02.install.needsRole         = sa_role
 		this makes the watermark more center of the view/what we see...
 	</LI>
 </UL>
+
+
+
+
+
+
 
 
 
@@ -6975,6 +7520,12 @@ user.predefined.sql.02.install.needsRole         = sa_role
 		Default ASEMon Icon was changed (added more blue on the table)
 	</LI>
 </UL>
+
+
+
+
+
+
 
 
 
@@ -7012,6 +7563,13 @@ user.predefined.sql.02.install.needsRole         = sa_role
 
 
 
+
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2008-10-31</H2>
 <UL>
@@ -7024,6 +7582,13 @@ user.predefined.sql.02.install.needsRole         = sa_role
 		Added Wrap/Scroll capability in the TabPanel
 	</LI>
 </UL>
+
+
+
+
+
+
+
 
 
 
@@ -7054,6 +7619,12 @@ user.predefined.sql.02.install.needsRole         = sa_role
 
 
 
+
+
+
+
+
+
 <!-- ========================================================================== -->
 <H2>2008-10-24</H2>
 <UL>
@@ -7071,6 +7642,13 @@ user.predefined.sql.02.install.needsRole         = sa_role
 		Took away a lot of static variables in GetCounters and MainFrame
 	</LI>
 </UL>
+
+
+
+
+
+
+
 
 
 
@@ -7099,6 +7677,12 @@ user.predefined.sql.02.install.needsRole         = sa_role
 		And a lot more small things.
 	</LI>
 </UL>
+
+
+
+
+
+
 
 
 <!-- ========================================================================== -->

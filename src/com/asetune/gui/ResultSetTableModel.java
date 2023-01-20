@@ -76,6 +76,7 @@ import com.asetune.sql.pipe.PipeCommandGrep;
 import com.asetune.sql.showplan.transform.SqlServerShowPlanXmlTransformer;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
+import com.asetune.utils.NumberUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
@@ -2653,11 +2654,13 @@ public class ResultSetTableModel
 	}
 
 	/** Implementation of HOW to highlight any sorted column */
-	public String renderHighlightSortColumnForHtml(String colName, String strVal)
+	public static String renderHighlightSortColumnForHtml(String colName, String strVal)
 	{
+		if (NumberUtils.isNumeric(strVal, true))
+			return "<span style='background-color: yellow'><b>" + strVal + "</b></span>";
+
 		return "<b>" + strVal + "</b>";
 	}
-
 
 	public String toString(Object objVal)
 	{

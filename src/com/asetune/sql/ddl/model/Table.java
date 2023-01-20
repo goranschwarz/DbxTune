@@ -59,6 +59,49 @@ public class Table
 	private List<String>      _pkCols = new ArrayList<>();
 	private String            _pkName;
 
+	public Table()
+	{
+	}
+	public Table(String catalogName, String schemaName, String tableName)
+	{
+		_catalogName = catalogName;
+		_schemaName  = schemaName;
+		_tableName   = tableName;
+	}
+
+	/** Add COLUMN */
+	public void add(TableColumn tableColumn)
+	{
+		// Add column object
+		_columns.add(tableColumn);
+		
+		// Add column the shortcut: _columnNames
+		_columnNames.add(tableColumn.getColumnLabel());
+
+		// Set the column position (index position starts at: 1)
+		tableColumn._colPos = _columns.size();
+	}
+
+	/** Add INDEX */
+	public void add(Index index)
+	{
+		// Add index object
+		_indexes.add(index);
+	}
+
+	/** Set Primary Key */
+	public void setPrimaryKey(String... colNames)
+	{
+		for (String colName : colNames)
+		{
+			if ( ! _columnNames.contains(colName) )
+				throw new RuntimeException("setPrimaryKey(): column name '" + colName + "' is NOT part of table '" + _tableName + "'. (catalog='" + _catalogName + "', schema='" + _schemaName + "')");
+
+			_pkCols.add(colName);
+		}
+	}
+	
+	
 	public Catalog getCatalog()     { return _catalog; }
 	public Schema  getSchema()      { return _schema; }
 	public Schema  getParent()      { return _schema; }

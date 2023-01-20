@@ -14,6 +14,10 @@
 ##    prod-1a-pg.acme.com:1234 ; 1 ; Some Desc ; ${DBXTUNE_CENTRAL_BASE}/bin/start_postgrestune.sh <SRVNAME> -A prod-1a-pg
 ##  Or for a SQL-Server with dynamic ports
 ##    GS-1-WIN\SS_2016 ; 1 ; SQL-Server 2016 on Windows ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.sh <SRVNAME> -A GS-1-WIN__SS_2016
+##  If server names might be to "like" each others, another switch -N or --displayName can be used to make a more readable description
+##    This 'displayName' will be used for DbxCentral buttons on the landing page and in Alarm Mail subject etc... 
+##    NOTE: For the moment the -N or --displayName switch can't have spaces in them (for various reasons), if you still need
+##          spaces in the name, do: -N _My_Server_Name_ (if it starts/ends with '_' all under scores will be replaced with spaces)
 ##===========================================================================
 ## NOTE about field 4 / Script...
 ## ${DBXTUNE_CENTRAL_BASE} is normally: ${HOME}/.dbxtune/dbxc

@@ -24,8 +24,8 @@ package com.asetune.sql;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -63,11 +63,12 @@ public final class TableNameParser {
 	private static final String KEYWORD_FROM = "from";
 	private static final String KEYWORD_USING = "using";
 	private static final String KEYWORD_UPDATE = "update";
+	private static final String KEYWORD_CALL = "call";
 
-	private static final List<String> concerned = Arrays.asList(KEYWORD_TABLE, KEYWORD_INTO, KEYWORD_JOIN, KEYWORD_USING, KEYWORD_UPDATE);
+	private static final List<String> concerned = Arrays.asList(KEYWORD_TABLE, KEYWORD_INTO, KEYWORD_JOIN, KEYWORD_USING, KEYWORD_UPDATE, KEYWORD_CALL);
 	private static final List<String> ignored = Arrays.asList(TOKEN_PARAN_START, TOKEN_SET, TOKEN_OF, TOKEN_DUAL);
 
-	private Map<String, String> tables = new HashMap<String, String>();
+	private Map<String, String> tables = new LinkedHashMap<String, String>();
 
 	/**
 	 * Extracts table names out of SQL
@@ -88,16 +89,16 @@ public final class TableNameParser {
 		} else {
 			while (moreTokens(tokens, index)) {
 				String currentToken = tokens[index++];
-
+//System.out.println("----- currentToken["+index+"]='" + currentToken + "'");
 				if (isFromToken(currentToken)) {
 					processFromToken(tokens, index);
 				} else if (shouldProcess(currentToken)) {
 					String nextToken = tokens[index++];
 					considerInclusion(nextToken);
 
-					if (moreTokens(tokens, index)) {
-						nextToken = tokens[index++];
-					}
+//					if (moreTokens(tokens, index)) {
+//						nextToken = tokens[index++];
+//					}
 				}
 			}
 		}
@@ -256,6 +257,7 @@ public final class TableNameParser {
 	}
 
 	private void considerInclusion(final String token) {
+//		System.out.println("     +? currentToken='" + token + "'");
 		if (!ignored.contains(token.toLowerCase()) && !this.tables.containsKey(token.toLowerCase())) {
 			this.tables.put(token.toLowerCase(), token);
 		}
@@ -265,6 +267,6 @@ public final class TableNameParser {
 	 * @return table names extracted out of sql
 	 */
 	public Collection<String> tables() {
-		return new HashSet<String>(this.tables.values());
+		return new LinkedHashSet<String>(this.tables.values());
 	}
 }

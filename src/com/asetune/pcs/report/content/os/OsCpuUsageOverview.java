@@ -124,14 +124,14 @@ public class OsCpuUsageOverview extends OsAbstract
 		}
 
 		int maxValue = 100;
-		_CmOsMpstat_MpSum          = createTsLineChart(conn, "CmOsMpstat", "MpSum",          maxValue, idlePct, "mpstat: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
-		_CmOsMpstat_MpCpu          = createTsLineChart(conn, "CmOsMpstat", "MpCpu",          maxValue, null,    "mpstat: CPU usage per core (usr+sys+iowait) (Host Monitor->OS CPU(mpstat))");
-		_CmOsUptime_AdjLoadAverage = createTsLineChart(conn, "CmOsUptime", "AdjLoadAverage", -1,       null,    "uptime: Adjusted Load Average (Host Monitor->OS Load Average(uptime))");
+		_CmOsMpstat_MpSum          = createTsLineChart(conn, "CmOsMpstat", "MpSum",          maxValue, false, idlePct, "mpstat: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
+		_CmOsMpstat_MpCpu          = createTsLineChart(conn, "CmOsMpstat", "MpCpu",          maxValue, false, null,    "mpstat: CPU usage per core (usr+sys+iowait) (Host Monitor->OS CPU(mpstat))");
+		_CmOsUptime_AdjLoadAverage = createTsLineChart(conn, "CmOsUptime", "AdjLoadAverage", -1,       false, null,    "uptime: Adjusted Load Average (Host Monitor->OS Load Average(uptime))");
 
 		if ( ! _isWindows)
-			_CmOsVmstat_SwapInOut  = createTsLineChart(conn, "CmOsVmstat", "SwapInOut",      -1,       null,    "vmstat: Swap In/Out per sec (Host Monitor->OS CPU(vmstat))");
+			_CmOsVmstat_SwapInOut  = createTsLineChart(conn, "CmOsVmstat", "SwapInOut",      -1,       false, null,    "vmstat: Swap In/Out per sec (Host Monitor->OS CPU(vmstat))");
 		else
-			_CmOsMeminfo_WinPaging = createTsLineChart(conn, "CmOsMeminfo", "WinPaging",     -1,       null,    "meminfo: Windows Paging or Swap Usage (Host Monitor->OS Memory Info)");
+			_CmOsMeminfo_WinPaging = createTsLineChart(conn, "CmOsMeminfo", "WinPaging",     -1,       false, null,    "meminfo: Windows Paging or Swap Usage (Host Monitor->OS Memory Info)");
 			
 	}
 

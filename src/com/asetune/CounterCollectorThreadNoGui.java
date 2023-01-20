@@ -52,6 +52,7 @@ import com.asetune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
 import com.asetune.cache.DbmsObjectIdCache;
 import com.asetune.cache.XmlPlanCache;
 import com.asetune.central.controllers.CollectorRefreshController;
+import com.asetune.central.pcs.objects.DbxCentralServerDescription;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesDbx.DbxConnectInfo;
 import com.asetune.cm.CounterModelHostMonitor;
@@ -130,6 +131,7 @@ implements Memory.MemoryListener
 	private String     _dbmsPassword    = null; 
 	private String     _dbmsServer      = null;
 	private String     _dbmsServerAlias = null;
+	private String     _dbmsDisplayName = null;
 //	private String     _dbmsHostname    = null;
 //	private String     _dbmsPort        = null;
 	private String     _dbmsHostPortStr = null;
@@ -267,6 +269,7 @@ implements Memory.MemoryListener
 		_dbmsPassword    = _storeProps.getProperty("conn.dbmsPassword"); 
 		_dbmsServer      = _storeProps.getProperty("conn.dbmsName");
 		_dbmsServerAlias = _storeProps.getProperty("conn.dbmsServerAlias");
+		_dbmsDisplayName = _storeProps.getProperty("conn.dbmsDisplayName");
 		String dbmsHosts = _storeProps.getProperty("conn.dbmsHost");
 		String dbmsPorts = _storeProps.getProperty("conn.dbmsPort");
 		_dbmsHostPortStr = _storeProps.getProperty("conn.dbmsHostPort");
@@ -1405,7 +1408,30 @@ implements Memory.MemoryListener
 
 				// If there is a ServerAlias, apply that... This is used by the DbxCentral for an alternate schema/servername
 				if (StringUtil.hasValue(_dbmsServerAlias))
+				{
 					headerInfo.setServerNameAlias(_dbmsServerAlias);
+
+					CounterController.getInstance().setServerAliasName(_dbmsServerAlias);
+				}
+
+				// If there is a DisplayName, apply that... This is used by the DbxCentral for label buttons in the load page
+				if (StringUtil.hasValue(_dbmsDisplayName))
+				{
+					// Translate any '<SRVNAME>' in display name
+					String srvName = _dbmsHostPortStr;
+					if (StringUtil.hasValue(_dbmsServer))      srvName = _dbmsServer;
+					if (StringUtil.hasValue(_dbmsServerAlias)) srvName = _dbmsServerAlias;
+					
+					// Replace '<SRVNAME>' with the servername
+					// and if displayName starts and ends with '_' replace all underscores with spaces, and remove start/end underscores
+					String displayName = DbxCentralServerDescription.replaceSrvNameTemplate(_dbmsDisplayName, srvName);
+
+					// Set display name in 'headerInfo'
+					headerInfo.setServerDisplayName(displayName);
+					
+					// The below will expose the "displayName" from various places (for example: AlarmWriter.WriterUtil.createMessageFromTemplate(...) 
+					CounterController.getInstance().setServerDisplayName(displayName);
+				}
 
 				// PCS
 				PersistContainer pc = new PersistContainer(headerInfo);

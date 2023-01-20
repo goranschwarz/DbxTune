@@ -45,11 +45,18 @@ import com.asetune.cm.postgres.CmActiveStatements;
 import com.asetune.cm.postgres.CmPgActivity;
 import com.asetune.cm.postgres.CmPgArchiver;
 import com.asetune.cm.postgres.CmPgBgWriter;
+import com.asetune.cm.postgres.CmPgBufferCache;
 import com.asetune.cm.postgres.CmPgDatabase;
 import com.asetune.cm.postgres.CmPgFunctions;
 import com.asetune.cm.postgres.CmPgIndexes;
 import com.asetune.cm.postgres.CmPgIndexesIo;
 import com.asetune.cm.postgres.CmPgLocks;
+import com.asetune.cm.postgres.CmPgProgAnalyze;
+import com.asetune.cm.postgres.CmPgProgBaseBackup;
+import com.asetune.cm.postgres.CmPgProgCluster;
+import com.asetune.cm.postgres.CmPgProgCopy;
+import com.asetune.cm.postgres.CmPgProgIndex;
+import com.asetune.cm.postgres.CmPgProgVacuum;
 import com.asetune.cm.postgres.CmPgReplication;
 import com.asetune.cm.postgres.CmPgSequencesIo;
 import com.asetune.cm.postgres.CmPgSlru;
@@ -139,9 +146,18 @@ extends CounterControllerAbstract
 		
 		// Cache
 		CmPgSlru            .create(counterController, guiController);
+		CmPgBufferCache     .create(counterController, guiController);
 
 		// Disk
 
+		// Progress
+		CmPgProgCluster     .create(counterController, guiController);
+		CmPgProgVacuum      .create(counterController, guiController);
+		CmPgProgAnalyze     .create(counterController, guiController);
+		CmPgProgIndex       .create(counterController, guiController);
+		CmPgProgCopy        .create(counterController, guiController);
+		CmPgProgBaseBackup  .create(counterController, guiController);
+		
 		// OS HOST Monitoring
 		CmOsIostat          .create(counterController, guiController);
 		CmOsVmstat          .create(counterController, guiController);
@@ -466,26 +482,30 @@ extends CounterControllerAbstract
 		try
 		{
 			DbxConnection dbxConn = getMonConnection();
-			
-			if (enterRefreshMode)
+			if (dbxConn != null)
 			{
-				// Lets use ONE transaction for every refresh
-				if (dbxConn.getAutoCommit() == true)
-					dbxConn.setAutoCommit(false);
-			}
-			else
-			{
-				// When leaving refresh mode... set AutoCommit to true -- so we don't end up 'idle in transaction' while sleeping
-				if (dbxConn.getAutoCommit() == false)
-					dbxConn.setAutoCommit(true);
+				if (enterRefreshMode)
+				{
+					// Lets use ONE transaction for every refresh
+					if (dbxConn.getAutoCommit() == true)
+						dbxConn.setAutoCommit(false);
+				}
+				else
+				{
+					// When leaving refresh mode... set AutoCommit to true -- so we don't end up 'idle in transaction' while sleeping
+					if (dbxConn.getAutoCommit() == false)
+						dbxConn.setAutoCommit(true);
+				}
 			}
 		}
 		catch(SQLException e)
 		{
 			_logger.info("Problem when changing the Postgres Connection autocommit mode.");
 		}
-
-		super.setInRefresh(enterRefreshMode);
+		finally 
+		{
+			super.setInRefresh(enterRefreshMode);
+		}
 	}
 
 	//==================================================================
