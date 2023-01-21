@@ -88,6 +88,9 @@ import com.asetune.sql.PreparedStatementCache;
 import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.ddl.DbmsDdlUtils;
+import com.asetune.sql.ddl.model.Table;
+import com.asetune.sql.ddl.model.TableColumn;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseUrlHelper;
 import com.asetune.utils.Configuration;
@@ -2457,6 +2460,18 @@ public class PersistWriterJdbc
 //					if ( colNames.contains("duration") and length < 80)
 //						Alter table modify column [duration] varchar(80) 
 
+					// duration: varchar(10) --> varchar(80)
+					Table alarmActive = Table.create(conn, null, null, tabName);
+					TableColumn col_duration = alarmActive.getColumn("duration");
+					if (col_duration != null)
+					{
+						if (col_duration.getColumnLength() < 80)
+						{
+							String sql = DbmsDdlUtils.getDdlForAlterTableColumn(conn, true, null, tabName, "duration", "varchar(80) null"); // NOTE: 'not null' is not supported at upgrades
+							dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: "+sql);
+						}
+					}
+
 					if ( ! colNames.contains("alarmDuration"))
 					{
 						String sql = conn.quotifySqlString("alter table [" + tabName + "] add column [alarmDuration] varchar(20) null"); // NOTE: 'not null' is not supported at upgrades
@@ -2480,6 +2495,18 @@ public class PersistWriterJdbc
 					// TODO: instead of upgrading like this... Create a Dictionary object instead, which we can compare with info from: DbUtils.getColumnNames(conn, null, tabName), which does: 'conn.getMetaData().getColumns(null, schemaName, tableName, "%");' 
 //					if ( colNames.contains("duration") and length < 80)
 //						Alter table modify column [duration] varchar(80) 
+
+					// duration: varchar(10) --> varchar(80)
+					Table alarmActive = Table.create(conn, null, null, tabName);
+					TableColumn col_duration = alarmActive.getColumn("duration");
+					if (col_duration != null)
+					{
+						if (col_duration.getColumnLength() < 80)
+						{
+							String sql = DbmsDdlUtils.getDdlForAlterTableColumn(conn, true, null, tabName, "duration", "varchar(80) null"); // NOTE: 'not null' is not supported at upgrades
+							dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: "+sql);
+						}
+					}
 
 					if ( ! colNames.contains("alarmDuration"))
 					{

@@ -226,7 +226,8 @@ extends AlarmWriterAbstract
 			+ "${StringUtil.format('%-30s %-30s %-30s %-30s %-10s %-10s %-10s %8.8s %s', 'AlarmClassAbriviated', 'ServerName', 'CmName', 'ExtraInfo', 'Category', 'Severity', 'State', 'Duration', 'Description')}\n"
 			+ "${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 8)} ${StringUtils.repeat('-', 80)}\n"
 			+ "#foreach( $alarm in $activeAlarmList )\n"
-			+ "${StringUtil.format('%-30s %-30s %-30s %-30s %-10s %-10s %-10s %8.8s %s', ${alarm.alarmClassAbriviated}, ${alarm.serviceName}, ${alarm.serviceInfo}, ${alarm.extraInfo}, ${alarm.category}, ${alarm.severity}, ${alarm.state}, ${alarm.duration}, ${alarm.description})}\n"
+//			+ "${StringUtil.format('%-30s %-30s %-30s %-30s %-10s %-10s %-10s %8.8s %s', ${alarm.alarmClassAbriviated}, ${alarm.serviceName}, ${alarm.serviceInfo}, ${alarm.extraInfo}, ${alarm.category}, ${alarm.severity}, ${alarm.state}, ${alarm.duration}, ${alarm.description})}\n"
+			+ "${StringUtil.format('%-30s %-30s %-30s %-30s %-10s %-10s %-10s %8.8s %s', ${alarmClassAbriviated}, ${serviceName}, ${serviceInfo}, ${extraInfo}, ${category}, ${severity}, ${state}, ${duration}, ${description})}\n"
 			+ "#end"
 			;
 	}
@@ -419,9 +420,15 @@ extends AlarmWriterAbstract
 		}
 
 		// Translate template into a real string
-		String writeText = WriterUtils.createMessageFromTemplate(getClass().getSimpleName(), activeAlarms, _activeAlarms_msgTemplate, true, null, "http://DUMMY-dbxtune:8080");
+//		String writeText = WriterUtils.createMessageFromTemplate(getClass().getSimpleName(), activeAlarms, _activeAlarms_msgTemplate, true, null, "http://DUMMY-dbxtune:8080");
+//		writeToFile.println(writeText);
 
-		writeToFile.println(writeText);
+		for (AlarmEvent alarmEvent : activeAlarms)
+		{
+			String writeText = WriterUtils.createMessageFromTemplate(getClass().getSimpleName(), alarmEvent, _activeAlarms_msgTemplate, true, null, "http://DUMMY-dbxtune:8080");
+			writeToFile.println(writeText);
+		}
+
 		writeToFile.close();
 	}
 }

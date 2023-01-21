@@ -121,6 +121,23 @@ public class Table
 	public List<ForeignKey>  getForeignKeysOut() { return _foreignKeysOut; }
 
 	public List<String> getColumnNames()      { return _columnNames; }
+	
+	/**
+	 * Get specification for a specific column
+	 * 
+	 * @param colName    Name of the column to search for
+	 * @return NULL if not found
+	 */
+	public TableColumn getColumn(String colName)
+	{
+		for (TableColumn tc : _columns)
+		{
+			if (tc.getColumnLabel().equals(colName))
+				return tc;
+		}
+		return null;
+	}
+
 
 	public static Table create(DbxConnection conn, String catalogName, String schemaName, String tableName)
 	throws SQLException

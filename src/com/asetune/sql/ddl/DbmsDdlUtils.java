@@ -34,6 +34,8 @@ import com.asetune.sql.ddl.model.Catalog;
 import com.asetune.sql.ddl.model.Index;
 import com.asetune.sql.ddl.model.Schema;
 import com.asetune.sql.ddl.model.Table;
+import com.asetune.utils.DbUtils;
+import com.asetune.utils.StringUtil;
 
 public class DbmsDdlUtils
 {
@@ -115,4 +117,58 @@ public class DbmsDdlUtils
 		
 		return map;
 	}
+	
+	/**
+	 * Generate a DDL statement that works on different DBMS Platforms
+	 * <ul>
+	 *   <li>H2, Postgres, SqlServer:  ALTER TABLE tabname ALTER COLUMN colname DATATYPE</li>
+	 *   <li>ASE, MySql, Oracle:       ALTER TABLE tabname MODIFY       colname DATATYPE</li>
+	 * </ul>
+	 * 
+	 * Example:<br>
+	 *   <code>DbmsDdlUtils.getDdlForAlterTableColumn(conn, true, null, "t1", "c1", "varchar(80) null");</code>
+	 * <pre>
+	 * H2        --> ALTER TABLE "t1" ALTER COLUMN "c1" varchar(80) null</code>
+	 * Postgres  --> ALTER TABLE "t1" ALTER COLUMN "c1" varchar(80) null</code>
+	 * SqlServer --> ALTER TABLE [t1] ALTER COLUMN [c1] varchar(80) null</code>
+	 * ASE       --> ALTER TABLE [t1] MODIFY       [c1] varchar(80) null</code>
+	 * Oracle    --> ALTER TABLE "t1" MODIFY       "c1" varchar(80) null</code>
+	 * MySql     --> ALTER TABLE `t1` MODIFY       `c1` varchar(80) null</code>
+	 * </pre>
+	 * 
+	 * @param conn                    A connection used to get current database vendor
+	 * @param addQuotedIdentifier     If we should add DBMS Vendor specific quotes around the schema/table/column names
+	 * @param schema                  Schema Name (can be null)
+	 * @param table                   Name of the table
+	 * @param column                  Name of the column to change      
+	 * @param text                    The "thing" we want to change with the column
+	 * 
+	 * @return
+	 * @throws SQLException if we fail to discover DBMS Vendor
+	 */
+	public static String getDdlForAlterTableColumn(DbxConnection conn, boolean addQuotedIdentifier, String schema, String table, String column, String text)
+	throws SQLException
+	{
+		// H2, Postgres, SqlServer:  ALTER TABLE tabname ALTER COLUMN colname DATATYPE
+		// ASE, MySql, Oracle:       ALTER TABLE tabname MODIFY       colname DATATYPE
+		String dbmsSpecificSyntax_beforeColName = "ALTER COLUMN";
+		if (DbUtils.isProductName(conn.getDatabaseProductName(), DbUtils.DB_PROD_NAME_SYBASE_ASE, DbUtils.DB_PROD_NAME_MYSQL, DbUtils.DB_PROD_NAME_ORACLE))
+			dbmsSpecificSyntax_beforeColName = "MODIFY";
+
+		String lq = "";
+		String rq = "";
+		if (addQuotedIdentifier)
+		{
+			lq = conn.getLeftQuote();
+			rq = conn.getRightQuote();
+		}
+		
+		String schemaName = StringUtil.isNullOrBlank(schema) ? "" : lq + schema + rq + ".";
+		String tableName  = lq + table  + rq;
+		String colName    = lq + column + rq;
+		
+		String sql = "ALTER TABLE " + schemaName + tableName + " " + dbmsSpecificSyntax_beforeColName + " " + colName + " " + text;
+		return sql;
+	}
+
 }

@@ -60,25 +60,25 @@ public class WriterUtils
 	private static Logger _logger = Logger.getLogger(WriterUtils.class);
 
 
-	/**
-	 * Take a list of AlarmEvent and fill in the template values...
-	 * 
-	 * @param writerName                  writer who calls this method
-	 * @param activeAlarmList             List of "active" alarms
-	 * @param template                    the Velocity template
-	 * @param doTrim                      remove whitespaces newlines etc from start and end
-	 * @param trMap                       A Map of Strings that needs transalations: "&" -> "&amp";
-	 * @param dbxCentralUrl               Where can the DbxCentral be found;
-	 * @return                            The resolved template
-	 * @throws ParseErrorException        If we had parser exceptions
-	 * @throws MethodInvocationException  If any exceptions where thrown when calling a method on a methodName
-	 * @throws ResourceNotFoundException  Resource not found...
-	 */
-	public static String createMessageFromTemplate(String writerName, List<AlarmEvent> activeAlarmList, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl)
-	throws ParseErrorException, MethodInvocationException, ResourceNotFoundException
-	{
-		return createMessageFromTemplate(writerName, null, activeAlarmList, template, doTrim, trMap, dbxCentralUrl);
-	}
+//	/**
+//	 * Take a list of AlarmEvent and fill in the template values...
+//	 * 
+//	 * @param writerName                  writer who calls this method
+//	 * @param activeAlarmList             List of "active" alarms
+//	 * @param template                    the Velocity template
+//	 * @param doTrim                      remove whitespaces newlines etc from start and end
+//	 * @param trMap                       A Map of Strings that needs transalations: "&" -> "&amp";
+//	 * @param dbxCentralUrl               Where can the DbxCentral be found;
+//	 * @return                            The resolved template
+//	 * @throws ParseErrorException        If we had parser exceptions
+//	 * @throws MethodInvocationException  If any exceptions where thrown when calling a method on a methodName
+//	 * @throws ResourceNotFoundException  Resource not found...
+//	 */
+//	public static String createMessageFromTemplate(String writerName, List<AlarmEvent> activeAlarmList, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl)
+//	throws ParseErrorException, MethodInvocationException, ResourceNotFoundException
+//	{
+//		return createMessageFromTemplate(writerName, null, activeAlarmList, template, doTrim, trMap, dbxCentralUrl);
+//	}
 
 	/**
 	 * Take the AlarmEvent and fill in the template values...
