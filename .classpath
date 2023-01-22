@@ -132,5 +132,6 @@
 	<classpathentry kind="lib" path="lib/jsqlparser-4.5.jar"/>
 	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-11.2.1.jre8.jar"/>
 	<classpathentry kind="lib" path="lib/simplemagic-1.17.jar" sourcepath="3pp/simplemagic-1.17-sources.jar"/>
+	<classpathentry kind="lib" path="lib/jsch-0.2.6.jar" sourcepath="3pp/jsch-0.2.6-sources.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>

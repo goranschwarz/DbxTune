@@ -1208,6 +1208,8 @@ public class SshConnection
 			Session sess = _conn.openSession();
 //			sess.execCommand("uname -a");
 			sess.execCommand("uname");
+			
+			// TODO: Possibly also use 'ver' to check if it's a DOS/Windows system
 
 			InputStream stdout = new StreamGobbler(sess.getStdout());
 			BufferedReader br = new BufferedReader(new InputStreamReader(stdout));

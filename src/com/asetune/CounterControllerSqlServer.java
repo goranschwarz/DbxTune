@@ -183,9 +183,10 @@ extends CounterControllerAbstract
 		MainFrame guiController = hasGui ? MainFrame.getInstance() : null;
 
 		CmSummary            .create(counterController, guiController);
-                             
-		CmWho                .create(counterController, guiController);
+
+		// Server
 		CmSessions           .create(counterController, guiController);
+		CmWho                .create(counterController, guiController);
 		CmSpidWait           .create(counterController, guiController);
 //		CmExecSessions       .create(counterController, guiController);
 //		CmExecRequests       .create(counterController, guiController);
@@ -208,6 +209,7 @@ extends CounterControllerAbstract
 		CmQueryTransformStat .create(counterController, guiController);
 		CmSpinlocks          .create(counterController, guiController);
                              
+		// Object Access
 		CmActiveStatements   .create(counterController, guiController);
 		CmActiveStPlanStats  .create(counterController, guiController);
 		CmOpenTransactions   .create(counterController, guiController);
@@ -225,8 +227,10 @@ extends CounterControllerAbstract
 		CmExecTriggerStats   .create(counterController, guiController);
 		CmExecCursors        .create(counterController, guiController);
                              
+		// Cache
 		CmProcedureStats     .create(counterController, guiController);
                              
+		// Disk
 		CmDeviceIo           .create(counterController, guiController);
 		CmDbIo               .create(counterController, guiController);
 
