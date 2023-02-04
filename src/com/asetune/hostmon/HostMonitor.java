@@ -38,7 +38,7 @@ import javax.swing.Timer;
 import org.apache.log4j.Logger;
 
 import com.asetune.hostmon.HostMonitorConnection.ExecutionWrapper;
-import com.asetune.ssh.SshConnection;
+import com.asetune.ssh.SshConnection2;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
@@ -623,7 +623,7 @@ implements Runnable
 //System.out.println(">>parseAndApply(): type=" + type + ", row=|" + row + "|.");
 
 		// do "dynamic" initialization (reading first row), for example if we parse a CSV and the "dynamic" column names is in header
-		if (type == SshConnection.STDOUT_DATA && md.isInitializeUsingFirstRowEnabled() && !md.isFirstRowInitDone())
+		if (type == SshConnection2.STDOUT_DATA && md.isInitializeUsingFirstRowEnabled() && !md.isFirstRowInitDone())
 		{
 			md.doInitializeUsingFirstRow(row);
 			return;
@@ -1182,7 +1182,6 @@ implements Runnable
 					// or implement some kind of wait/notifyAll paradigm for when the underlying Streams receives data (This is what I did when I used https://github.com/SoftwareAG/ganymed-ssh-2)
 					try
 					{
-//						Thread.sleep(250);
 						execWrapper.waitForData();
 					}
 					catch (InterruptedException e)
@@ -1275,7 +1274,7 @@ implements Runnable
 
 System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|"+row+"|");
 //					System.out.println(row);
-					parseAndApply(getMetaData(), row, SshConnection.STDOUT_DATA);
+					parseAndApply(getMetaData(), row, SshConnection2.STDOUT_DATA);
 				}
 
 				// STDERR
@@ -1307,7 +1306,7 @@ System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|
 					}
 					
 //					System.err.println(row);
-					parseAndApply(getMetaData(), row, SshConnection.STDERR_DATA);
+					parseAndApply(getMetaData(), row, SshConnection2.STDERR_DATA);
 				}
 			}
 //			catch (IOException e)
@@ -1469,7 +1468,6 @@ System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|
 
 					try
 					{
-//						Thread.sleep(250);
 						execWrapper.waitForData();
 					}
 					catch (InterruptedException e)
@@ -1523,7 +1521,7 @@ System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|
 						if (_logger.isDebugEnabled())
 							_logger.debug("Received on STDOUT: "+row);
 
-						parseAndApply(getMetaData(), row, SshConnection.STDOUT_DATA);
+						parseAndApply(getMetaData(), row, SshConnection2.STDOUT_DATA);
 					}
 
 //					if (_logger.isDebugEnabled())
@@ -1582,7 +1580,7 @@ System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|
 						}
 						else
 						{
-							parseAndApply(getMetaData(), row, SshConnection.STDERR_DATA);
+							parseAndApply(getMetaData(), row, SshConnection2.STDERR_DATA);
 						}
 					}
 

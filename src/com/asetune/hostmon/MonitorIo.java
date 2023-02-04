@@ -24,8 +24,8 @@ import java.util.Properties;
 
 import org.apache.log4j.PropertyConfigurator;
 
-import com.asetune.ssh.SshConnection;
-import com.asetune.ssh.SshConnection.LinuxUtilType;
+import com.asetune.ssh.SshConnection2;
+import com.asetune.ssh.SshConnection2.LinuxUtilType;
 
 public abstract class MonitorIo
 extends HostMonitor
@@ -144,7 +144,7 @@ System.out.println("OS Name: '"+osname+"'.");
 
 		try
 		{
-			SshConnection conn = new SshConnection("sunspot", "gorans", "xxxxx");
+			SshConnection2 conn = new SshConnection2("sunspot", "gorans", "xxxxx");
 			HostMonitorConnectionSsh hostMonConn = new HostMonitorConnectionSsh(conn);
 			HostMonitor mon = createMonitor(hostMonConn, false);
 //			mon.start();

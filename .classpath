@@ -126,7 +126,6 @@
 	<classpathentry kind="lib" path="lib/jetty/jetty-all-9.4.38.v20210224-uber.jar"/>
 	<classpathentry kind="lib" path="lib/jetty/javax.servlet-api-3.1.0.jar"/>
 	<classpathentry kind="lib" path="lib/jconn42.jar"/>
-	<classpathentry kind="lib" path="lib/ganymed-ssh2-263.jar" sourcepath="3pp/ganymed-ssh2-263-sources.jar"/>
 	<classpathentry kind="lib" path="lib/sql-formatter-2.0.3.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1645375698757/source/sql-formatter-2.0.3-sources.jar"/>
 	<classpathentry kind="lib" path="lib/h2-2.1.214.jar"/>
 	<classpathentry kind="lib" path="lib/jsqlparser-4.5.jar"/>

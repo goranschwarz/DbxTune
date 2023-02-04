@@ -172,7 +172,7 @@ implements ActionListener, KeyListener, FocusListener
 		// If Generate port number, get first free port
 		if (_sshLocalPortRand_chk.isSelected())
 		{
-			int freePort = SshTunnelManager.getFirstFreeLocalPortNumber();
+			int freePort = SshTunnelManager2.getFirstFreeLocalPortNumber();
 			if (freePort >= 0)
 			{
 				_sshLocalPort_txt.setText( Integer.toString(freePort) ); 
@@ -231,7 +231,7 @@ implements ActionListener, KeyListener, FocusListener
 			"<html>" +
 			   "Generate a new random number every time the listener is started.<br>" +
 			   "<br>" +
-			   "This is done by starting too check for free port number at '"+SshTunnelManager.GENERATE_PORT_NUMBER_START+"' then looping until it finds a free port number." +
+			   "This is done by starting too check for free port number at '"+SshTunnelManager2.GENERATE_PORT_NUMBER_START+"' then looping until it finds a free port number." +
 			"</html>");
 		_sshLocalPort_but.setToolTipText("Check if the current 'Local Port' is availiable for start a listener service on.");
 
@@ -308,14 +308,14 @@ implements ActionListener, KeyListener, FocusListener
 		                               + "If SSH Authentication model is 'publickey' and you have a password for the <i>private key file</i>, then type this password here.<br>"
 		                               + "If the <i>private key file</i> does <b>not</b> have a password, just type <i>anything here</i> so the button is enabled.<br>"
 		                               + "<br>"
-		                               + "Note 1: To use 'publickey' authentication the file '"+SshConnection.getRsaKeyFilename()+"' is used.<br>"
+		                               + "Note 1: To use 'publickey' authentication the file '"+SshConnection2.getRsaKeyFilename()+"' is used.<br>"
 		                               + "Note 2: The above file needs to contain a key in the OpenSSH format.<br>"
 		                               + "(If you have a PUTTY generated it needs to be converted using <i>puttygen</i>, load the file, then: Menu -&gt; Convertion -&gt; Export OpenSSH Key)<br>"
 		                               + "<br>"
-		                               + "If 'publickey' authentication does <b>not</b> work, it can be disabled, by inserting:.<br>"
-		                               + "<code>"+SshConnection.PROPKEY_sshAuthenticateEnableRSA+" = false</code>.<br>"
-		                               + "<code>"+SshConnection.PROPKEY_sshAuthenticateEnableDSA+" = false</code>.<br>"
-		                               + "In the file: <code>"+Configuration.getInstance(Configuration.USER_TEMP).getFilename()+"</code><br>"
+//		                               + "If 'publickey' authentication does <b>not</b> work, it can be disabled, by inserting:.<br>"
+//		                               + "<code>"+SshConnection2.PROPKEY_sshAuthenticateEnableRSA+" = false</code>.<br>"
+//		                               + "<code>"+SshConnection2.PROPKEY_sshAuthenticateEnableDSA+" = false</code>.<br>"
+//		                               + "In the file: <code>"+Configuration.getInstance(Configuration.USER_TEMP).getFilename()+"</code><br>"
 		                               + "</html>");
 		_sshPasswd_txt.setToolTipText(_sshPasswd_lbl.getToolTipText());
 		_sshOptionSavePwd_chk.setToolTipText("Save the password in the configuration file, and yes it's encrypted");
@@ -514,7 +514,7 @@ implements ActionListener, KeyListener, FocusListener
 		{
 			if (_sshLocalPortRand_chk.isSelected())
 			{
-				int freePort = SshTunnelManager.getFirstFreeLocalPortNumber();
+				int freePort = SshTunnelManager2.getFirstFreeLocalPortNumber();
 				if (freePort >= 0)
 				{
 					_sshLocalPort_txt.setText( Integer.toString(freePort) ); 

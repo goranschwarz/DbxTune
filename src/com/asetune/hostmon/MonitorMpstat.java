@@ -24,8 +24,8 @@ import java.util.Properties;
 
 import org.apache.log4j.PropertyConfigurator;
 
-import com.asetune.ssh.SshConnection;
-import com.asetune.ssh.SshConnection.LinuxUtilType;
+import com.asetune.ssh.SshConnection2;
+import com.asetune.ssh.SshConnection2.LinuxUtilType;
 
 public abstract class MonitorMpstat
 extends HostMonitor
@@ -44,7 +44,7 @@ extends HostMonitor
 //	public static HostMonitor createMonitor(String host, int port, String user, String passwd, String keyFile, boolean start)
 //	throws Exception
 //	{
-//		SshConnection conn = new SshConnection(host, port, user, passwd, keyFile);
+//		SshConnection2 conn = new SshConnection2(host, port, user, passwd, keyFile);
 //		return createMonitor(conn, start);
 //	}
 
@@ -56,7 +56,7 @@ extends HostMonitor
 	 * @throws Exception
 	 */
 	//@override
-//	public static HostMonitor createMonitor(SshConnection conn, boolean start)
+//	public static HostMonitor createMonitor(SshConnection2 conn, boolean start)
 	public static HostMonitor createMonitor(HostMonitorConnection conn, boolean start)
 	throws Exception
 	{
@@ -133,7 +133,7 @@ extends HostMonitor
 
 		try
 		{
-			SshConnection conn = new SshConnection("sunspot", "gorans", "xxxx");
+			SshConnection2 conn = new SshConnection2("sunspot", "gorans", "xxxx");
 
 			HostMonitorConnectionSsh hostMonConn = new HostMonitorConnectionSsh(conn);
 

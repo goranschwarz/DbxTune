@@ -93,7 +93,7 @@ import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
-import com.asetune.ssh.SshConnection;
+import com.asetune.ssh.SshConnection2;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
@@ -169,7 +169,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 	private static final int  ACCESS_TYPE_NONE        = 3;
 
 	private JPanel            _sshPanel               = null;
-	private SshConnection     _sshConn                = null;
+	private SshConnection2     _sshConn                = null;
 //	private JCheckBox         _sshConnect_chk         = new JCheckBox("SSH Connection", true);
 	private JLabel            _sshUsername_lbl        = new JLabel("Username");
 	private JTextField        _sshUsername_txt        = new JTextField("");
@@ -1397,7 +1397,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 			catch(NumberFormatException ignore) {}
 			final String keyFile = _sshKeyFile_txt.getText();
 
-			_sshConn = new SshConnection(host, port, user, passwd, keyFile);
+			_sshConn = new SshConnection2(host, port, user, passwd, keyFile);
 			WaitForExecDialog wait = new WaitForExecDialog(this, "SSH Connecting to "+host+", with user "+user);
 			_sshConn.setWaitForDialog(wait);
 

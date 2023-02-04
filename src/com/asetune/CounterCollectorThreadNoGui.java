@@ -79,7 +79,7 @@ import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.pcs.inspection.IObjectLookupInspector;
 import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.asetune.sql.conn.DbxConnection;
-import com.asetune.ssh.SshConnection;
+import com.asetune.ssh.SshConnection2;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseLicensInfo;
 import com.asetune.utils.Configuration;
@@ -1376,7 +1376,7 @@ implements Memory.MemoryListener
 						// get a connection
 						try
 						{
-							SshConnection sshConn = new SshConnection(_sshHostname, _sshPort, _sshUsername, _sshPassword, _sshKeyFile);
+							SshConnection2 sshConn = new SshConnection2(_sshHostname, _sshPort, _sshUsername, _sshPassword, _sshKeyFile);
 							sshConn.connect();
 							
 							HostMonitorConnection hostMonConn = new HostMonitorConnectionSsh(sshConn);

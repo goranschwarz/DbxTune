@@ -101,7 +101,7 @@ public class SshConnectionTester
 
 			if (debugLvl > 0)
 			{
-				ch.ethz.ssh2.log.Logger.enabled = true;
+//				ch.ethz.ssh2.log.Logger.enabled = true;
 
 				// JUL needs full NameSpace, since we also use Log4J in here
 //				final java.util.logging.Logger rootLogger = java.util.logging.Logger.getLogger("");
@@ -147,7 +147,8 @@ public class SshConnectionTester
 			
 			
 			
-			SshConnection conn = new SshConnection(hostname, port, username, password, keyfile);
+//			SshConnection conn = new SshConnection(hostname, port, username, password, keyfile);
+			SshConnection2 conn = new SshConnection2(hostname, port, username, password, keyfile);
 
 			try
 			{

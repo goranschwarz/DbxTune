@@ -75,9 +75,9 @@ import com.asetune.gui.swing.GLabel;
 import com.asetune.sql.JdbcUrlParser;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
-import com.asetune.ssh.SshConnection;
+import com.asetune.ssh.SshConnection2;
 import com.asetune.ssh.SshTunnelInfo;
-import com.asetune.ssh.SshTunnelManager;
+import com.asetune.ssh.SshTunnelManager2;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseUrlHelper;
@@ -126,7 +126,7 @@ implements ActionListener, ConnectionProgressCallback
 	private String       _sqlInit = null;
 
 	/** SSH Connection made in background */
-	private SshConnection   _sshConnection = null;
+	private SshConnection2   _sshConnection = null;
 
 	/** SSH Tunnel Information */
 	private SshTunnelInfo   _sshTunnelInfo = null;
@@ -195,19 +195,19 @@ implements ActionListener, ConnectionProgressCallback
 	private Properties _rawJdbcProps  = null;
 	private ConnectionProp _connProp  = null;
 
-	public static DbxConnection connectWithProgressDialog(Window owner, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProp connProp, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
+	public static DbxConnection connectWithProgressDialog(Window owner, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProp connProp, ConnectionProgressExtraActions extraTasks, SshConnection2 sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
 	throws Exception
 	{
 		return connectWithProgressDialog(owner, null, connProp, rawJdbcDriver, rawJdbcUrl, rawJdbcProps, extraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit, srvIcon);
 	}
-	public static DbxConnection connectWithProgressDialog(Window owner, String urlStr, ConnectionProp connProp, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
+	public static DbxConnection connectWithProgressDialog(Window owner, String urlStr, ConnectionProp connProp, ConnectionProgressExtraActions extraTasks, SshConnection2 sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
 	throws Exception
 	{
 		return connectWithProgressDialog(owner, urlStr, connProp, null, null, null, extraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit, srvIcon);
 	}
 
 	// NOTE: PRIVATE
-	private static DbxConnection connectWithProgressDialog(Window owner, String urlStr, ConnectionProp connProp, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
+	private static DbxConnection connectWithProgressDialog(Window owner, String urlStr, ConnectionProp connProp, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProgressExtraActions extraTasks, SshConnection2 sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
 	throws Exception
 	{
 //System.out.println("connectWithProgressDialog(): START");
@@ -240,17 +240,17 @@ implements ActionListener, ConnectionProgressCallback
 		return null;
 	}
 	
-	private ConnectionProgressDialog(Dialog owner, String urlStr, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProp connProp, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
+	private ConnectionProgressDialog(Dialog owner, String urlStr, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProp connProp, ConnectionProgressExtraActions extraTasks, SshConnection2 sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
 	{
 		super(owner, true);
 		init(owner, urlStr, rawJdbcDriver, rawJdbcUrl, rawJdbcProps, connProp, extraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit, srvIcon);
 	}
-	private ConnectionProgressDialog(Frame owner, String urlStr, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProp connProp, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
+	private ConnectionProgressDialog(Frame owner, String urlStr, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProp connProp, ConnectionProgressExtraActions extraTasks, SshConnection2 sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
 	{
 		super(owner, true);
 		init(owner, urlStr, rawJdbcDriver, rawJdbcUrl, rawJdbcProps, connProp, extraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit, srvIcon);
 	}
-	private void init(Component owner, String urlStr, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProp connProp, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
+	private void init(Component owner, String urlStr, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProp connProp, ConnectionProgressExtraActions extraTasks, SshConnection2 sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
 	{
 //System.out.println("ConnectionProgressDialog.init(): urlStr='"+urlStr+"', rawJdbcDriver='"+rawJdbcDriver+"', rawJdbcUrl='"+rawJdbcUrl+"', rawJdbcProps='"+rawJdbcProps+"'.");
 //System.out.println("ConnectionProgressDialog.init(): sshTunnelInfo="+sshTunnelInfo+"("+(sshTunnelInfo == null ? "-NULL-" : sshTunnelInfo.getConfigString(false, true))+")");
@@ -372,14 +372,14 @@ implements ActionListener, ConnectionProgressCallback
 //System.out.println("ConnectionProgressDialog.init(): _sshTunnelInfo != null --- 111111");
 					tdsUrlHelper = AseUrlHelper.parseUrl(_urlStr);
 //System.out.println("ConnectionProgressDialog.init(): _sshTunnelInfo != null --- 222222");
-					SshTunnelManager.getInstance().guessPort(tdsUrlHelper.getHostPortStr(), _sshTunnelInfo);
+					SshTunnelManager2.getInstance().guessPort(tdsUrlHelper.getHostPortStr(), _sshTunnelInfo);
 //System.out.println("ConnectionProgressDialog.init(): _sshTunnelInfo != null --- 333333");
 					addTask(_sshTunnelInfo.getLocalHost()+":"+_sshTunnelInfo.getLocalPort());
 				}
 				else if (_rawJdbcUrl != null)
 				{
 					jdbcUrlParser = JdbcUrlParser.parse(_rawJdbcUrl);
-					SshTunnelManager.getInstance().guessPort(jdbcUrlParser.getHostPortStr(), _sshTunnelInfo);
+					SshTunnelManager2.getInstance().guessPort(jdbcUrlParser.getHostPortStr(), _sshTunnelInfo);
 					addTask(_sshTunnelInfo.getLocalHost()+":"+_sshTunnelInfo.getLocalPort());
 				}
 			}
@@ -1222,12 +1222,12 @@ finally
 					{
 						if (_sshConnection != null)
 							_sshConnection.setGuiOwner(ConnectionProgressDialog.this); // well this is a bit ugly...
-//						SshConnection sshConn = new SshConnection(
+//						SshConnection2 sshConn = new SshConnection2(
 //								_sshTunnelInfo.getSshHost(), 
 //								_sshTunnelInfo.getSshPort(), 
 //								_sshTunnelInfo.getSshUsername(), 
 //								_sshTunnelInfo.getSshPassword());
-						SshTunnelManager tm = SshTunnelManager.getInstance();
+						SshTunnelManager2 tm = SshTunnelManager2.getInstance();
 
 						String hostPortStr = "dummy";
 						if (_urlStr != null)

@@ -24,7 +24,7 @@ import java.util.Properties;
 
 import org.apache.log4j.PropertyConfigurator;
 
-import com.asetune.ssh.SshConnection;
+import com.asetune.ssh.SshConnection2;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.MandatoryPropertyException;
 
@@ -41,7 +41,7 @@ extends HostMonitor
 		return _metaData.getOsCommand();
 	}
 
-//	public MonitorUserDefined(Configuration conf, String moduleName, SshConnection conn, boolean start)
+//	public MonitorUserDefined(Configuration conf, String moduleName, SshConnection2 conn, boolean start)
 	public MonitorUserDefined(Configuration conf, String moduleName, HostMonitorConnection conn, boolean start)
 	throws Exception
 	{
@@ -198,10 +198,10 @@ extends HostMonitor
 			confLs.setProperty("hostmon.udc.TestGorans.addStrColumn.filename",      "{length=99, sqlColumnNumber=8,  parseColumnNumber=8,  isNullable=true,  description=xxx}");
 			
 			
-//			SshConnection conn = new SshConnection("sunspot", "gorans", "xxxx");
-//			SshConnection conn = new SshConnection("bluesky2", "gorans", "xxxx");
-			SshConnection conn = new SshConnection("gorans.no-ip.org", "gorans", "1niss2e");
-//			SshConnection conn = new SshConnection("sweiq-linux", "ajackson", "sybase");
+//			SshConnection2 conn = new SshConnection2("sunspot", "gorans", "xxxx");
+//			SshConnection2 conn = new SshConnection2("bluesky2", "gorans", "xxxx");
+			SshConnection2 conn = new SshConnection2("gorans.no-ip.org", "gorans", "1niss2e");
+//			SshConnection2 conn = new SshConnection2("sweiq-linux", "ajackson", "sybase");
 		
 			HostMonitorConnectionSsh hostMonConn = new HostMonitorConnectionSsh(conn);
 

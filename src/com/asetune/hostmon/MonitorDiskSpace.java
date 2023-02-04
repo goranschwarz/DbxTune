@@ -24,7 +24,7 @@ import java.util.Properties;
 
 import org.apache.log4j.PropertyConfigurator;
 
-import com.asetune.ssh.SshConnection;
+import com.asetune.ssh.SshConnection2;
 
 public abstract class MonitorDiskSpace
 extends HostMonitor
@@ -130,7 +130,7 @@ extends HostMonitor
 
 		try
 		{
-			SshConnection conn = new SshConnection("sunspot", "gorans", "YHNmju76");
+			SshConnection2 conn = new SshConnection2("sunspot", "gorans", "YHNmju76");
 //			SshConnection conn = new SshConnection("bluesky2", "gorans", "xxxx");
 		
 			HostMonitorConnectionSsh hostMonConn = new HostMonitorConnectionSsh(conn);

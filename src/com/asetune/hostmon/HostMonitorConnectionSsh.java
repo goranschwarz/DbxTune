@@ -26,21 +26,18 @@ import java.io.InputStream;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.ssh.SshConnection;
-import com.asetune.ssh.SshConnection.LinuxUtilType;
 import com.asetune.ssh.SshConnection2;
+import com.asetune.ssh.SshConnection2.LinuxUtilType;
 import com.jcraft.jsch.ChannelExec;
-
-import ch.ethz.ssh2.Session;
 
 public class HostMonitorConnectionSsh 
 extends HostMonitorConnection
 {
 	private static Logger _logger = Logger.getLogger(HostMonitorConnectionSsh.class);
 
-	private SshConnection _sshConn;
+	private SshConnection2 _sshConn;
 	
-	public HostMonitorConnectionSsh(SshConnection sshConn)
+	public HostMonitorConnectionSsh(SshConnection2 sshConn)
 	{
 		super(ConnectionType.SSH);
 //System.out.println(this.getClass().getSimpleName()+".CONSTRUCTOR(): sshConn="+sshConn);
@@ -48,7 +45,7 @@ extends HostMonitorConnection
 		_sshConn = sshConn;
 	}
 
-	public SshConnection getSshConnection()
+	public SshConnection2 getSshConnection()
 	{
 		return _sshConn;
 	}
@@ -160,87 +157,87 @@ extends HostMonitorConnection
 
 
 
-	private static class ExecutionWrapperShh
-	implements ExecutionWrapper
-	{
-		private SshConnection _sshConn;
-		
-		private Session _sshSession;
-
-		// Below is used in waitForData(): algorithm: _sleepCount++; _sleepCount*_sleepTimeMultiplier; but maxSleepTime is respected
-		protected int            _sleepCount = 0;
-		protected int            _sleepTimeMultiplier = 3; 
-		protected int            _sleepTimeMax        = 250;
-
-		// Used in debug prints
-		private String _name;
-
-		public ExecutionWrapperShh(SshConnection sshConn)
-		{
-			_sshConn = sshConn;
-		}
-
-		@Override
-		public void executeCommand(String cmd) throws Exception
-		{
-			// Reset sleepCount on every execution
-			_sleepCount = 0;
-			_name = cmd;
-			
-			_sshSession = _sshConn.execCommand(cmd);
-		}
-
-//		@Override
-//		public String getCharset()
+//	private static class ExecutionWrapperShh
+//	implements ExecutionWrapper
+//	{
+//		private SshConnection _sshConn;
+//		
+//		private Session _sshSession;
+//
+//		// Below is used in waitForData(): algorithm: _sleepCount++; _sleepCount*_sleepTimeMultiplier; but maxSleepTime is respected
+//		protected int            _sleepCount = 0;
+//		protected int            _sleepTimeMultiplier = 3; 
+//		protected int            _sleepTimeMax        = 250;
+//
+//		// Used in debug prints
+//		private String _name;
+//
+//		public ExecutionWrapperShh(SshConnection sshConn)
 //		{
-//			return _sshConn.getOsCharset();
+//			_sshConn = sshConn;
 //		}
+//
+//		@Override
+//		public void executeCommand(String cmd) throws Exception
+//		{
+//			// Reset sleepCount on every execution
+//			_sleepCount = 0;
+//			_name = cmd;
+//			
+//			_sshSession = _sshConn.execCommand(cmd);
+//		}
+//
+////		@Override
+////		public String getCharset()
+////		{
+////			return _sshConn.getOsCharset();
+////		}
+//
+//		@Override
+//		public int waitForData() throws InterruptedException
+//		{
+//			_sleepCount++;
+//			int sleepMs = Math.min(_sleepCount * _sleepTimeMultiplier, _sleepTimeMax);;
+//
+//			if (_logger.isDebugEnabled())
+//				_logger.debug("waitForData(), sleep(" + sleepMs + "). _name=" + _name);
+//
+//			Thread.sleep(sleepMs);
+//			return sleepMs;
+//		}
+//
+//		@Override
+//		public InputStream getStdout()
+//		{
+//			return _sshSession.getStdout();
+//		}
+//
+//		@Override
+//		public InputStream getStderr()
+//		{
+//			return _sshSession.getStderr();
+//		}
+//
+//		@Override
+//		public Integer getExitStatus()
+//		{
+//			return _sshSession.getExitStatus();
+//		}
+//
+//		@Override
+//		public boolean isClosed()
+//		{
+//			return _sshSession.getState() == 4; // STATE_CLOSED = 4;
+//		}
+//
+//		@Override
+//		public void close()
+//		{
+//			_sshSession.close();
+//		}
+//	}
 
-		@Override
-		public int waitForData() throws InterruptedException
-		{
-			_sleepCount++;
-			int sleepMs = Math.min(_sleepCount * _sleepTimeMultiplier, _sleepTimeMax);;
-
-			if (_logger.isDebugEnabled())
-				_logger.debug("waitForData(), sleep(" + sleepMs + "). _name=" + _name);
-
-			Thread.sleep(sleepMs);
-			return sleepMs;
-		}
-
-		@Override
-		public InputStream getStdout()
-		{
-			return _sshSession.getStdout();
-		}
-
-		@Override
-		public InputStream getStderr()
-		{
-			return _sshSession.getStderr();
-		}
-
-		@Override
-		public Integer getExitStatus()
-		{
-			return _sshSession.getExitStatus();
-		}
-
-		@Override
-		public boolean isClosed()
-		{
-			return _sshSession.getState() == 4; // STATE_CLOSED = 4;
-		}
-
-		@Override
-		public void close()
-		{
-			_sshSession.close();
-		}
-	}
-
-	private static class ExecutionWrapperShhJsch
+	private static class ExecutionWrapperShh
 	implements ExecutionWrapper
 	{
 		private SshConnection2 _sshConn;
@@ -255,7 +252,7 @@ extends HostMonitorConnection
 		// Used in debug prints
 		private String _name;
 
-		public ExecutionWrapperShhJsch(SshConnection2 sshConn)
+		public ExecutionWrapperShh(SshConnection2 sshConn)
 		{
 			_sshConn = sshConn;
 		}

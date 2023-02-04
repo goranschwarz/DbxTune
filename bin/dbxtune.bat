@@ -362,7 +362,6 @@ set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-csv-1.5.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-cli-1.4.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-codec-1.10.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\proxy-vole_20131209.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\ganymed-ssh2-263.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jsch-0.2.6.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\rsyntaxtextarea.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\autocomplete.jar

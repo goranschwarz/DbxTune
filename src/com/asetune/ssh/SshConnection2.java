@@ -110,17 +110,17 @@ public class SshConnection2
 
 	private boolean _defaultOpenSshKkownHostsFileExists = false;
 	
-//	/** There is stdout data available that is ready to be consumed. */
-//	public static final int STDOUT_DATA = 4; //ChannelCondition.STDOUT_DATA;
-//
-//	/** There is stderr data available that is ready to be consumed. */
-//	public static final int STDERR_DATA = 8; //ChannelCondition.STDERR_DATA;
+	/** There is stdout data available that is ready to be consumed. */
+	public static final int STDOUT_DATA = 1;
+
+	/** There is stderr data available that is ready to be consumed. */
+	public static final int STDERR_DATA = 2;
 
 	private static final String _homeDir = System.getProperty("user.home", "");
 
 //	private static final String _knownHostPath = _homeDir + File.separator + ".ssh" + File.separator + "known_hosts";
 //	private static final String _idDSAPath     = _homeDir + File.separator + ".ssh" + File.separator + "id_dsa";
-//	private static final String _idRSAPath     = _homeDir + File.separator + ".ssh" + File.separator + "id_rsa";
+	private static final String _idRSAPath     = _homeDir + File.separator + ".ssh" + File.separator + "id_rsa";
 
 	private WaitForExecDialog _waitforDialog = null;
 //	private static Component         _guiOwner = null;
@@ -138,6 +138,12 @@ public class SshConnection2
 //	public static final boolean DEFAULT_sshAuthenticateEnableRSA                 = true;
 
 	public static final String PROMPT_FOR_PASSWORD = "<PROMPT_FOR_PASSWORD>";
+
+
+	public static String getRsaKeyFilename()
+	{
+		return _idRSAPath;
+	}
 
 	/**
 	 * Create an empty SshConnection, but you need to setUser,password,host
@@ -510,7 +516,7 @@ System.out.println(">>> SSH Connect");
 
 		if (localPort < 0 && sshTunnelInfo.isLocalPortGenerated() )
 		{
-			localPort = SshTunnelManager.generateLocalPort();
+			localPort = SshTunnelManager2.generateLocalPort();
 			
 			sshTunnelInfo.setLocalPort(localPort);
 		}

@@ -1472,7 +1472,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 				if ( ! _fileTail.doFileExist() )
 					_fileTail.createFile();
 			}
-			catch (IOException e)
+			catch (Exception e)
 			{
 				_logger.warn("Problems creating the file '"+_fileName+"'");
 				return;

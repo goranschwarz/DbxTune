@@ -156,7 +156,7 @@ import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.asetune.sql.JdbcUrlParser;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
-import com.asetune.ssh.SshConnection;
+import com.asetune.ssh.SshConnection2;
 import com.asetune.ssh.SshTunnelDialog;
 import com.asetune.ssh.SshTunnelInfo;
 import com.asetune.utils.AseConnectionFactory;
@@ -235,7 +235,7 @@ public class ConnectionDialog
 
 //	private Map                      _inputMap        = null;
 	private DbxConnection            _aseConn         = null;
-	private SshConnection            _sshConn         = null; // FIXME: Still used internally, but we should really be using _hostMonConn...
+	private SshConnection2            _sshConn         = null; // FIXME: Still used internally, but we should really be using _hostMonConn...
 	private HostMonitorConnection    _hostMonConn     = null;
 //	private Connection               _pcsConn         = null;
 	private DbxConnection            _offlineConn     = null;
@@ -1253,7 +1253,7 @@ public class ConnectionDialog
 
 	public int                      getConnectionType() { return _connectionType; }
 	public DbxConnection            getAseConn()        { return _aseConn; }
-//	public SshConnection            getSshConn()        { return _sshConn; }
+//	public SshConnection2            getSshConn()        { return _sshConn; }
 	public HostMonitorConnection    getHostMonConn()    { return _hostMonConn; }
 //	public Connection               getPcsConn()        { return _pcsConn; }
 //	public PersistentCounterHandler getPcsWriter()      { return _pcsWriter; }
@@ -4812,7 +4812,7 @@ public class ConnectionDialog
 	 * @param connProfile 
 	 * @return
 	 */
-//	private SshConnection hostmonCreateConnectionObject(ConnectionProfile connProfile)
+//	private SshConnection2 hostmonCreateConnectionObject(ConnectionProfile connProfile)
 //	{
 //		String username = _hostmonUsername_txt.getText();
 //		String password = _hostmonPassword_txt.getText();
@@ -4843,7 +4843,7 @@ public class ConnectionDialog
 //
 //
 //		_logger.info("Creating SSH Connection-Object to hostname='"+hostname+"'.  port='"+port+"', username='"+username+"', keyFile='"+keyFile+"'.");
-//		return new SshConnection(hostname, port, username, password, keyFile);
+//		return new SshConnection2(hostname, port, username, password, keyFile);
 //	}
 	/**
 	 * Make a HostMonitor connection object, but do NOT connect
@@ -4909,7 +4909,7 @@ public class ConnectionDialog
 		}
 		else
 		{
-			SshConnection sshConn = new SshConnection(hostname, port, username, password, keyFile);
+			SshConnection2 sshConn = new SshConnection2(hostname, port, username, password, keyFile);
 			hostMonConn = new HostMonitorConnectionSsh(sshConn);
 		}
 		return hostMonConn;

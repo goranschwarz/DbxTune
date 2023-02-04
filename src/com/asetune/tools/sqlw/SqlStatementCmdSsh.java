@@ -40,7 +40,7 @@ import com.asetune.sql.JdbcUrlParser;
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.pipe.PipeCommandException;
-import com.asetune.ssh.SshConnection;
+import com.asetune.ssh.SshConnection2;
 import com.asetune.tools.sqlw.msg.JAseMessage;
 import com.asetune.tools.sqlw.msg.JSshOutput;
 import com.asetune.utils.StringUtil;
@@ -63,7 +63,7 @@ extends SqlStatementAbstract
 		String  _hostName        = null;
 		int     _portNumber      = 22;
 		String  _identity        = null;
-		String  _password        = SshConnection.PROMPT_FOR_PASSWORD;
+		String  _password        = SshConnection2.PROMPT_FOR_PASSWORD;
 		
 		String  _cmd             = null;
 
@@ -249,7 +249,7 @@ extends SqlStatementAbstract
 	@Override
 	public boolean execute() throws SQLException
 	{
-		SshConnection sshConn = null;
+		SshConnection2 sshConn = null;
 		
 		String savedPasswd = PromptForPassword.getSavedPassword(_params._hostName, _params._loginName);
 		if (savedPasswd != null)
@@ -258,7 +258,7 @@ extends SqlStatementAbstract
 		try
 		{
 			setProgressState("Connecting to host '"+_params._hostName+"' as '"+_params._loginName+"' using SSH.");
-			sshConn = new SshConnection(_params._hostName, _params._portNumber, _params._loginName, _params._password, _params._identity);
+			sshConn = new SshConnection2(_params._hostName, _params._portNumber, _params._loginName, _params._password, _params._identity);
 //			sshConn.setWaitForDialog(this.);
 			sshConn.setGuiOwner(_owner);
 			sshConn.connect();

@@ -380,7 +380,6 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-csv-1.5.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-cli-1.4.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-codec-1.10.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/proxy-vole_20131209.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/ganymed-ssh2-263.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jsch-0.2.6.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/rsyntaxtextarea.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/autocomplete.jar

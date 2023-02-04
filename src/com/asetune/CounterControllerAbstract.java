@@ -64,7 +64,6 @@ import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
-import com.asetune.ssh.SshConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
@@ -2010,7 +2009,7 @@ implements ICounterController
 	}
 
 	/**
-	 * Set the <code>SshConnection</code> to use for monitoring.
+	 * Set the <code>SshConnection2</code> to use for monitoring.
 	 */
 //	@Override
 //	public void setHostMonConnection(SshConnection sshConn)

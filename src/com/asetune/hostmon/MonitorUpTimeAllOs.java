@@ -22,7 +22,7 @@ package com.asetune.hostmon;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.ssh.SshConnection;
+import com.asetune.ssh.SshConnection2;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
@@ -147,7 +147,7 @@ extends MonitorUpTime
 	@Override
 	public String[] parseRow(HostMonitorMetaData md, String row, String[] preParsed, int type)
 	{
-		if (type == SshConnection.STDERR_DATA)
+		if (type == SshConnection2.STDERR_DATA)
 			return null;
 
 		// Check preParsed for correct length: if not correct: print out some info for debugging.
