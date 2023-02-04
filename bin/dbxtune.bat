@@ -112,6 +112,11 @@ rem	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy2
 	set JAVA_START_PARAMS=-tcp -tcpAllowOthers -ifExists
 	set SPLASH=
 
+) ELSE IF "%APP_NAME%" == "sshtest2" (
+	set JAVA_START_CLASS=com.asetune.test.JschTest2
+	set JAVA_START_PARAMS=
+	set SPLASH=
+
 ) ELSE IF "%APP_NAME%" == "sshtest" (
 	set JAVA_START_CLASS=com.asetune.ssh.SshConnectionTester
 	set JAVA_START_PARAMS=
@@ -358,6 +363,7 @@ set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-cli-1.4.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-codec-1.10.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\proxy-vole_20131209.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\ganymed-ssh2-263.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jsch-0.2.6.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\rsyntaxtextarea.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\autocomplete.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\rstaui.jar

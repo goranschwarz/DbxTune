@@ -27,6 +27,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeoutException;
 
 import javax.naming.NameNotFoundException;
 
@@ -40,6 +41,8 @@ import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventLongRunningStatement;
 import com.asetune.alarm.events.sqlserver.AlarmEventDacInUse;
 import com.asetune.alarm.events.sqlserver.AlarmEventDebugWaitInfo;
+import com.asetune.cache.DbmsObjectIdCache;
+import com.asetune.cache.DbmsObjectIdCache.ObjectInfo;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterSample;
@@ -984,6 +987,9 @@ extends CountersModel
 		String _wait_type;
 		int    _wait_time;
 		String _wait_resource;
+
+		String _dbname;
+		String _objectName;
 		
 		public SpidWaitInfo(int session_id, String wait_type, int wait_time, String wait_resource)
 		{
@@ -1056,6 +1062,36 @@ extends CountersModel
 			{
 				// decode: https://littlekendra.com/2016/10/17/decoding-key-and-page-waitresource-for-deadlocks-and-blocking/
 				//         in this way we can get: dbname, objectname & the row/values for the resource
+				
+				if (DbmsObjectIdCache.hasInstance())
+				{
+					DbmsObjectIdCache cache = DbmsObjectIdCache.getInstance();
+					
+					String tmp = wait_resource.substring("KEY: ".length()); // Strip off "KEY: "
+					int firstPos = tmp.indexOf('(');
+					if (firstPos > 0)
+					{
+						tmp = tmp.substring(0, firstPos).trim(); // Strip off the end " (7b4f7e19e103)"
+						firstPos = tmp.indexOf(':');
+						if (firstPos > 0)
+						{
+							int  dbid   = StringUtil.parseInt (tmp.substring(0,  firstPos), -1); 
+							long hobtid = StringUtil.parseLong(tmp.substring(1 + firstPos), -1);
+							if (dbid > 0 && hobtid > 0)
+							{
+								try 
+								{
+									wi._dbname = cache.getDBName(dbid);
+									
+									ObjectInfo oi = cache.getByHobtId(dbid, hobtid);
+									if (oi != null)
+										wi._objectName = oi.getObjectName();
+								}
+								catch (TimeoutException ignore) {}
+							}
+						}
+					}
+				}
 			}
 			else if (wait_resource.startsWith("PAGE: "))   // example='PAGE: 6:1:70133' -- Database_Id : FileId : PageNumber
 			{
@@ -1091,6 +1127,10 @@ extends CountersModel
 //					else if (pageid == 6 || (pageid - 6) % 511232 == 0) decodeKeyVal.put("pageType", "DCM");
 //					else if (pageid == 7 || (pageid - 7) % 511232 == 0) decodeKeyVal.put("pageType", "BCM");
 //				}
+				
+			}
+			else if (wait_resource.startsWith("OBJECT: "))   // example='OBJECT: 7:1429580131:0' -- ???Database_Id??? : ???objectId??? : ???
+			{
 				
 			}
 
@@ -1134,6 +1174,24 @@ extends CountersModel
 			return maxCount;
 		}
 
+		public String getObjectInfoForWaitResource(String key)
+		{
+			List<SpidWaitInfo> list = _waitResourceMap.get(key);
+			if (list != null && list.size() > 0)
+			{
+				SpidWaitInfo wi = list.get(0);
+				String dbname     = wi._dbname;
+				String objectName = wi._objectName;
+				
+				if (StringUtil.isNullOrBlank(dbname) && StringUtil.isNullOrBlank(objectName))
+					return "-not-found-";
+				
+				return "dbname='" + dbname + "', ObjectName='" + objectName + "'";
+			}
+			return "";
+		}
+
+		
 		public String getInfoString()
 		{
 			StringBuilder sb = new StringBuilder();
@@ -1146,21 +1204,21 @@ extends CountersModel
 			sb.append("CmSessions: Wait Resources -- Count: \n");
 			for (Entry<String, List<SpidWaitInfo>> entry : _waitResourceMap.entrySet())
 			{
-				sb.append("CmSessions:   - count=" + entry.getValue().size() + " -- WaitResource='" + entry.getKey() + "' \n");
+				sb.append("CmSessions:   - count=" + entry.getValue().size() + " -- WaitResource='" + entry.getKey() + "'  ObjectInfo={" + getObjectInfoForWaitResource(entry.getKey()) + "} \n");
 			}
 
 			sb.append("CmSessions: \n");
 			sb.append("CmSessions: Wait Resources -- Sum WaitTime: \n");
 			for (Entry<String, Integer> entry : _waitResourceTime.entrySet())
 			{
-				sb.append("CmSessions:   - waitTime=" + entry.getValue() + " ms -- WaitResource='" + entry.getKey() + "' \n");
+				sb.append("CmSessions:   - waitTime=" + entry.getValue() + " ms -- WaitResource='" + entry.getKey() + "'  ObjectInfo={" + getObjectInfoForWaitResource(entry.getKey()) + "} \n");
 			}
 
 			sb.append("CmSessions: \n");
 			sb.append("CmSessions: Wait Types -- Sum WaitTime: \n");
 			for (Entry<String, Integer> entry : _waitTypeTime.entrySet())
 			{
-				sb.append("CmSessions:   - waitTime=" + entry.getValue() + " ms -- WaitType='" + entry.getKey() + "' \n");
+				sb.append("CmSessions:   - waitTime=" + entry.getValue() + " ms -- WaitType='" + entry.getKey() + "'  ObjectInfo={" + getObjectInfoForWaitResource(entry.getKey()) + "} \n");
 			}
 			sb.append("CmSessions: ================================================= \n");
 

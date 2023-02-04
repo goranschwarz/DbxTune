@@ -43,7 +43,7 @@ public class SshConnectionTester
 			System.out.println("");
 			System.out.println("Usage: conntest properties_file");
 			System.out.println("");
-			System.out.println("Example of a Properties file:");
+			System.out.println("Example of a Properties file: (NOTE: remove the comments)");
 			System.out.println("hostname = value            ## Mandatory");
 			System.out.println("port     = value            ## Default: 22");
 			System.out.println("username = value            ## Default: the-one-you-are-using");

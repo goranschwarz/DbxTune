@@ -105,6 +105,7 @@ extends PipeCommandAbstract
 		String  _driver             = null; // not yet used
 		int     _batchSize          = 0;
 		boolean _slowBcp            = false;
+		boolean _slowBcpInTran      = true;
 		boolean _dropTab            = false;
 		boolean _createTab          = false;
 		boolean _createIndex        = false;
@@ -133,6 +134,7 @@ extends PipeCommandAbstract
 			sb.append(", ").append("driver            ".trim()).append("=").append(StringUtil.quotify(_driver            ));
 			sb.append(", ").append("batchSize         ".trim()).append("=").append(StringUtil.quotify(_batchSize         ));
 			sb.append(", ").append("slowBcp           ".trim()).append("=").append(StringUtil.quotify(_slowBcp           ));
+			sb.append(", ").append("slowBcpInTran     ".trim()).append("=").append(StringUtil.quotify(_slowBcpInTran     ));
 			sb.append(", ").append("dropTab           ".trim()).append("=").append(StringUtil.quotify(_dropTab           ));
 			sb.append(", ").append("createTab         ".trim()).append("=").append(StringUtil.quotify(_createTab         ));
 			sb.append(", ").append("createIndex       ".trim()).append("=").append(StringUtil.quotify(_createIndex       ));
@@ -216,6 +218,7 @@ extends PipeCommandAbstract
 					if (cmdLine.hasOption('D')) _params._db            = cmdLine.getOptionValue('D');
 					if (cmdLine.hasOption('b')) try{_params._batchSize = Integer.parseInt(cmdLine.getOptionValue('b'));} catch (NumberFormatException e) {}
 					if (cmdLine.hasOption('s')) _params._slowBcp       = true;
+					if (cmdLine.hasOption('n')) _params._slowBcpInTran = false;
 					if (cmdLine.hasOption('d')) _params._dropTab       = true;
 					if (cmdLine.hasOption('c')) _params._createTab     = true;
 					if (cmdLine.hasOption('I')) _params._createIndex   = true;
@@ -396,6 +399,7 @@ extends PipeCommandAbstract
 		options.addOption( "D", "dbname",        true,  "Database name in server." );
 		options.addOption( "b", "batchSize",     true,  "Batch size" );
 		options.addOption( "s", "slowBcp",       false, "Do not set ENABLE_BULK_LOAD when connecting to ASE" );
+		options.addOption( "n", "slowBcpNoTran", false, "When doing 'slowBcp' do NOT start a transaction (one tran per row)" );
 		options.addOption( "d", "dropTable",     false, "Drop table before we start." );
 		options.addOption( "c", "crTable",       false, "Create table if one doesn't exist." );
 		options.addOption( "I", "crIndex",       false, "Create indexes." );
@@ -876,7 +880,8 @@ extends PipeCommandAbstract
 							{
 								try
 								{
-									crTabSql = dbmsDdlResolver.ddlText(sourceTable);
+//									crTabSql = dbmsDdlResolver.ddlText(sourceTable);
+									crTabSql = dbmsDdlResolver.ddlText(sourceTable, destTableObj.getSchemaNameOriginNull(), destTableObj.getObjectNameOriginNull());
 								}
 								catch(DataTypeNotResolvedException ex)
 								{
@@ -1149,6 +1154,17 @@ extends PipeCommandAbstract
 				addInfoMessage(msg);
 				_logger.info(msg);
 				
+				boolean startedTransaction = false;
+				if (_cmdParams._slowBcp && _cmdParams._slowBcpInTran)
+				{
+					if (_destConn.getAutoCommit() == true)
+					{
+						startedTransaction = true;
+						_destConn.setAutoCommit(false);
+						addInfoMessage("Started a transaction at destination[" + _destConnInfo + "]. setAutoCommit(false)");
+					}
+				}
+
 				// Create the Prepared Statement
 				PreparedStatement pstmt = _destConn.prepareStatement(insertSql);
 
@@ -1244,6 +1260,40 @@ extends PipeCommandAbstract
 							addErrorMessage(msg);
 							_logger.error(msg);
 
+							if (_cmdParams._slowBcp && _cmdParams._slowBcpInTran)
+							{
+								if (startedTransaction)
+								{
+									startedTransaction = false;
+									_destConn.rollback();
+									_destConn.setAutoCommit(true);
+									addInfoMessage("Rollback the transaction at destination[" + _destConnInfo + "]. setAutoCommit(true)");
+								}
+							}
+
+							// NOTE: Here we THROW (out of method), should we do something "better"
+							throw ex;
+						}
+						catch (RuntimeException ex)
+						{
+							String sourceColName = sourceRsmdC.getColumnLabel(sqlPos);
+							String destColName   = destRsmdC  .getColumnLabel(sqlPos);
+
+							msg = "ROW: "+totalCount+" - Problems setting column c="+sqlPos+", sourceName='" + sourceColName + "', destName='" + destColName + "'. Caught: " + ex;
+							addErrorMessage(msg);
+							_logger.error(msg);
+
+							if (_cmdParams._slowBcp && _cmdParams._slowBcpInTran)
+							{
+								if (startedTransaction)
+								{
+									startedTransaction = false;
+									_destConn.rollback();
+									_destConn.setAutoCommit(true);
+									addInfoMessage("Rollback the transaction at destination[" + _destConnInfo + "]. setAutoCommit(true)");
+								}
+							}
+
 							// NOTE: Here we THROW (out of method), should we do something "better"
 							throw ex;
 						}
@@ -1279,6 +1329,17 @@ extends PipeCommandAbstract
 
 				pstmt.executeBatch();
 				pstmt.close();
+
+				if (_cmdParams._slowBcp && _cmdParams._slowBcpInTran)
+				{
+					if (startedTransaction)
+					{
+						startedTransaction = false;
+						_destConn.commit();
+						_destConn.setAutoCommit(true);
+						addInfoMessage("Committing the transaction at destination[" + _destConnInfo + "]. setAutoCommit(true)");
+					}
+				}
 
 //				sourceRs.close();
 				

@@ -1574,7 +1574,7 @@ extends CounterModelHostMonitor
 		if ( ! AlarmHandler.hasInstance() )
 			return;
 
-		String hostname = cm.getCounterController().getHostMonConnection().getHost();
+		String hostname = cm.getCounterController().getHostMonConnection().getHostname();
 
 		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 		

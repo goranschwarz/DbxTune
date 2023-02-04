@@ -143,7 +143,7 @@ public class SshTunnelManager
 	 * @throws IOException
 	 */
 	public void setupTunnel(String hostPortStr, SshTunnelInfo sshTunnelInfo) 
-	throws IOException
+	throws Exception
 	{
 		if (StringUtil.isNullOrBlank(hostPortStr)) 
 			throw new IllegalArgumentException("hostPortStr can't be null");

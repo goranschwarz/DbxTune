@@ -29,6 +29,7 @@ import java.util.Set;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.swing.GTable.ITableTooltip;
+import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
@@ -167,8 +168,10 @@ public interface ICounterController
 	
 	
 	boolean isHostMonConnected();
-	SshConnection getHostMonConnection();
-	void setHostMonConnection(SshConnection sshConn);
+//	SshConnection getHostMonConnection();
+	HostMonitorConnection getHostMonConnection();
+//	void setHostMonConnection(SshConnection sshConn);
+	void setHostMonConnection(HostMonitorConnection hostMonConn);
 	void closeHostMonConnection();
 
 	boolean isRefreshing();

@@ -30,7 +30,6 @@ import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -38,12 +37,10 @@ import javax.swing.Timer;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.hostmon.HostMonitorConnection.ExecutionWrapper;
 import com.asetune.ssh.SshConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
-
-import ch.ethz.ssh2.ChannelCondition;
-import ch.ethz.ssh2.Session;
 
 /**
  * FIXME: describe me
@@ -74,7 +71,8 @@ implements Runnable
 	private boolean _paused = false;
 
 	/** a SSH Connection to the host */
-	private SshConnection _conn = null;
+//	private SshConnection _conn = null;
+	private HostMonitorConnection _hostMonConn = null;
 
 	/** meta data of what should be parsed and what should be delivered to the "client" */
 	private HostMonitorMetaData _metaData = null;
@@ -126,22 +124,41 @@ implements Runnable
 		_currentSample = new OsTable(getMetaData());
 	}
 
+//	/** Set the underlying SSH Connection */
+//	public void setConnection(SshConnection conn)
+//	{
+//		_conn = conn;
+//	}
+//	/** Get the underlying SSH Connection */
+//	public SshConnection getConnection()
+//	{
+//		return _conn;
+//	}
+//
+//	/** Get the hostname of the underlying SSH Connection, if not connected it returns null */
+//	public String getHostname()
+//	{
+//		if (_conn != null)
+//			return _conn.getHost();
+//	
+//		return null;
+//	}
 	/** Set the underlying SSH Connection */
-	public void setConnection(SshConnection conn)
+	public void setConnection(HostMonitorConnection conn)
 	{
-		_conn = conn;
+		_hostMonConn = conn;
 	}
 	/** Get the underlying SSH Connection */
-	public SshConnection getConnection()
+	public HostMonitorConnection getConnection()
 	{
-		return _conn;
+		return _hostMonConn;
 	}
 
 	/** Get the hostname of the underlying SSH Connection, if not connected it returns null */
 	public String getHostname()
 	{
-		if (_conn != null)
-			return _conn.getHost();
+		if (_hostMonConn != null)
+			return _hostMonConn.getHostname();
 	
 		return null;
 	}
@@ -895,6 +912,180 @@ implements Runnable
 		return _paused;
 	}	
 
+//	/**
+//	 * Just an internal wrapper so we can switch out SSH execution to ProcessBuilder (and execute any local commands)
+//	 */
+//	public static interface ExecutionWrapper
+//	{
+//		public void executeCommand(String cmd) throws IOException;
+//		
+//		public String getCharset(); // Should this be here???
+//		
+//		public InputStream getStdout();
+//		public InputStream getStderr();
+//
+//		public Integer getExitStatus();
+//
+//		public int waitForData() throws InterruptedException;
+////		public int waitFor() throws InterruptedException;
+//		
+//		public boolean isClosed(); // Check if the underlying Stream is closed or not
+//		public void close();
+//	}
+//	private ExecutionWrapper _execWrapper;
+//
+//	private static class ExecutionWrapperShh
+//	implements ExecutionWrapper
+//	{
+//		private SshConnection2 _sshConn;
+//		private HostMonitor2 _hostMon;
+//		
+//		private Session _sshSession;
+//
+//		public ExecutionWrapperShh(HostMonitor2 hostMon, SshConnection2 sshConn)
+//		{
+//			_sshConn = sshConn;
+//			_hostMon = hostMon;
+//		}
+//
+//		@Override
+//		public void executeCommand(String cmd) throws IOException
+//		{
+//			_sshSession = _sshConn.execCommand(_hostMon.getCommand());
+//		}
+//
+//		@Override
+//		public String getCharset()
+//		{
+//			return _sshConn.getOsCharset();
+//		}
+//
+//		@Override
+//		public int waitForData() throws InterruptedException
+//		{
+//			Thread.sleep(250);
+//			return 0;
+//		}
+//
+//		@Override
+//		public InputStream getStdout()
+//		{
+//			return _sshSession.getStdout();
+//		}
+//
+//		@Override
+//		public InputStream getStderr()
+//		{
+//			return _sshSession.getStderr();
+//		}
+//
+//		@Override
+//		public Integer getExitStatus()
+//		{
+//			return _sshSession.getExitStatus();
+//		}
+//
+//		@Override
+//		public boolean isClosed()
+//		{
+//			return _sshSession.getState() == 4; // STATE_CLOSED = 4;
+//		}
+//
+//		@Override
+//		public void close()
+//		{
+//			_sshSession.close();
+//		}
+//	}
+//
+//	private static class ExecutionWrapperLocalCmd
+//	implements ExecutionWrapper
+//	{
+//		private ProcessBuilder _pb;
+//		private Process        _proc;
+//		private InputStream    _stdout;
+//		private InputStream    _stderr;
+//		private int            _exitStatus = -1;
+//
+//		@Override
+//		public void executeCommand(String cmd) throws IOException
+//		{
+//			// Parse the command into a String array, if cmd has parameters it needs to be "split" into and array
+//			String[] params = StringUtil.translateCommandline(cmd, false);
+//
+//			// Create the ProcessBuilder
+//			_pb = new ProcessBuilder(params);
+//
+//			// Change environment, this could be usable if the 'dbxtune.sql.pretty.print.cmd' is a shell script or a bat file
+//			Map<String, String> env = _pb.environment();
+//			env.put("SOME_ENV_VAR", "xxxx");
+//			
+//			// Set current working directory to DBXTUNE_HOME
+//			//_pb.directory(new File(progDir));
+//			
+//			// Get the STDIN and STDOUT 
+//			_stdout = _proc.getInputStream();
+//			_stderr = _proc.getErrorStream();
+//			
+//			// Start the process
+//			_proc = _pb.start();
+//		}
+//
+//		@Override
+//		public String getCharset()
+//		{
+//			return null;
+//		}
+//
+//		@Override
+//		public int waitForData() throws InterruptedException
+//		{
+//			Thread.sleep(250);
+//			return 0;
+//		}
+//
+//		@Override
+//		public InputStream getStdout()
+//		{
+//			return _stdout;
+//		}
+//
+//		@Override
+//		public InputStream getStderr()
+//		{
+//			return _stderr;
+//		}
+//
+//		@Override
+//		public Integer getExitStatus()
+//		{
+//			_exitStatus = _proc.exitValue();
+//			return _exitStatus;
+//		}
+//
+//		@Override
+//		public boolean isClosed()
+//		{
+//			return ! _proc.isAlive();
+//		}
+//
+//		@Override
+//		public void close()
+//		{
+//			try
+//			{
+//				_stdout.close();
+//				_stderr.close();
+//			}
+//			catch (IOException ignore)
+//			{
+//			}
+//
+////			_proc.destroy();
+////			_pb.close();
+//		}
+//	}
+	
 	/**
 	 * A background thread that reads output from a OS Command that streams data (like vmstat, iostat etc)
 	 * <p>
@@ -911,7 +1102,8 @@ implements Runnable
 
 		_running = true;
 
-		Session sess = null;
+//		Session sess = null;
+		ExecutionWrapper execWrapper = null;
 		try
 		{
 //			boolean requestPty = false;
@@ -929,20 +1121,24 @@ implements Runnable
 //			sess = _conn.execCommand(getCommand(), requestPty);
 
 			_logger.info("Executing command '"+getCommand()+"', for the module '"+getModuleName()+"'.");
-			sess = _conn.execCommand(getCommand());
+//			sess = _conn.execCommand(getCommand());
+			execWrapper = _hostMonConn.executeCommand(getCommand());
 		}
-		catch (IOException e)
+//		catch (IOException e)
+		catch (Exception e)
 		{
 			addException(e);
 			_logger.error("Problems when executing OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
 			_running = false;
 			
 			// In some cases we might want to close the SSH Connection and start "all over"
-			if (e.getMessage().contains("SSH_OPEN_CONNECT_FAILED"))
-			{
-				try { _conn.reconnect(); }
-				catch(IOException ex) { _logger.error("Problems SSH reconnect. Caught: " + ex); }
-			}
+			_hostMonConn.handleException(e);
+//			// In some cases we might want to close the SSH Connection and start "all over"
+//			if (e.getMessage().contains("SSH_OPEN_CONNECT_FAILED"))
+//			{
+//				try { _conn.reconnect(); }
+//				catch(IOException ex) { _logger.error("Problems SSH reconnect. Caught: " + ex); }
+//			}
 			
 			return;
 		}
@@ -961,86 +1157,94 @@ implements Runnable
 			});
 		}
 		
-		/*
-		 * Advanced:
-		 * The following is a demo on how one can read from stdout and
-		 * stderr without having to use two parallel worker threads (i.e.,
-		 * we don't use the Streamgobblers here) and at the same time not
-		 * risking a deadlock (due to a filled SSH2 channel window, caused
-		 * by the stream which you are currently NOT reading from =).
-		 */
 
-		/* Don't wrap these streams and don't let other threads work on
-		 * these streams while you work with Session.waitForCondition()!!!
-		 */
+//		InputStream stdout = sess.getStdout();
+//		InputStream stderr = sess.getStderr();
+		InputStream stdout = execWrapper.getStdout();
+		InputStream stderr = execWrapper.getStderr();
 
-//		BufferedReader stdout  = new BufferedReader(new InputStreamReader(sess.getStdout()));
-//		BufferedReader stderr  = new BufferedReader(new InputStreamReader(sess.getStderr()));
-		InputStream stdout = sess.getStdout();
-		InputStream stderr = sess.getStderr();
-		
-		Charset osCharset = Charset.forName(_conn.getOsCharset());
+//		Charset osCharset = Charset.forName(_conn.getOsCharset());
+		Charset osCharset = Charset.forName(_hostMonConn.getOsCharset());
 
 		BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(stdout, osCharset));
 		BufferedReader stderrReader = new BufferedReader(new InputStreamReader(stderr, osCharset));
 
 		while(_running)
 		{
-			int timeoutVal = 60 * 1000;
+//			int timeoutVal = 60 * 1000;
 			
 			try
 			{
 				// Wait for input if both STDOUT & STDERR is empty
 				if ((stdout.available() == 0) && (stderr.available() == 0))
 				{
-					/* Even though currently there is no data available, it may be that new data arrives
-					 * and the session's underlying channel is closed before we call waitForCondition().
-					 * This means that EOF and STDOUT_DATA (or STDERR_DATA, or both) may
-					 * be set together.
-					 */
-
-					if (_logger.isDebugEnabled())
-						_logger.debug("----SSH-WAIT-FOR-INPUT[" + getModuleName() + "]");
-
-					int conditions = sess.waitForCondition(
-							  ChannelCondition.STDOUT_DATA 
-							| ChannelCondition.STDERR_DATA
-							| ChannelCondition.EOF, 
-							timeoutVal);
-
-					// Wait no longer than XX seconds
-					if ((conditions & ChannelCondition.TIMEOUT) == ChannelCondition.TIMEOUT)
+					// Wait for ### ms and then try again
+					// or implement some kind of wait/notifyAll paradigm for when the underlying Streams receives data (This is what I did when I used https://github.com/SoftwareAG/ganymed-ssh-2)
+					try
 					{
-						// A timeout occurred.
-						_logger.warn("Timeout while waiting for data from peer, continuing waiting on data. return ChannelCondition from waitForCondition(...), condition=" + conditions + ", asStr=" + toString_ChannelCondition(conditions) + ", timeoutInMs=" + timeoutVal);
-
-						continue;
-
-						// A timeout occurred.
-//						throw new IOException("Timeout while waiting for data from peer.");
-//						throw new IOException("Unexpected return ChannelCondition from waitForCondition(...), condition=" + conditions + ", asStr=" + toString_ChannelCondition(conditions) + ", timeoutInMs=" + timeoutVal);
+//						Thread.sleep(250);
+						execWrapper.waitForData();
 					}
-
-					// Here we do not need to check separately for CLOSED, since CLOSED implies EOF
-					if (   ((conditions & ChannelCondition.EOF)    == ChannelCondition.EOF) 
-					    || ((conditions & ChannelCondition.CLOSED) == ChannelCondition.CLOSED) 
-					   )
+					catch (InterruptedException e)
 					{
-						// The remote side won't send us further data...
-						if ((conditions & (ChannelCondition.STDOUT_DATA | ChannelCondition.STDERR_DATA)) == 0)
-						{
-							// ... and we have consumed all data in the local arrival window.
-							_logger.info(getModuleName()+" Received EOF from the command '"+getCommand()+"'.");
-							addException(new Exception("Received EOF from the command at time: "+new Timestamp(System.currentTimeMillis())+", \nThe module will be restarted, and the command '"+getCommand()+"' re-executed."));
-		/*<--*/				break;
-						}
+						// TODO: handle exception
 					}
-
-					// OK, either STDOUT_DATA or STDERR_DATA (or both) is set.
-
-					// You can be paranoid and check that the library is not going nuts:
-					// if ((conditions & (ChannelCondition.STDOUT_DATA | ChannelCondition.STDERR_DATA)) == 0)
-					//	throw new IllegalStateException("Unexpected condition result (" + conditions + ")");
+					
+					if ( execWrapper.isClosed() )
+					{
+						if (stdout.available() > 0 || stderr.available() > 0)
+							continue;
+						break;
+					}
+					
+//					/* Even though currently there is no data available, it may be that new data arrives
+//					 * and the session's underlying channel is closed before we call waitForCondition().
+//					 * This means that EOF and STDOUT_DATA (or STDERR_DATA, or both) may
+//					 * be set together.
+//					 */
+//
+//					if (_logger.isDebugEnabled())
+//						_logger.debug("----SSH-WAIT-FOR-INPUT[" + getModuleName() + "]");
+//
+//					int conditions = sess.waitForCondition(
+//							  ChannelCondition.STDOUT_DATA 
+//							| ChannelCondition.STDERR_DATA
+//							| ChannelCondition.EOF, 
+//							timeoutVal);
+//
+//					// Wait no longer than XX seconds
+//					if ((conditions & ChannelCondition.TIMEOUT) == ChannelCondition.TIMEOUT)
+//					{
+//						// A timeout occurred.
+//						_logger.warn("Timeout while waiting for data from peer, continuing waiting on data. return ChannelCondition from waitForCondition(...), condition=" + conditions + ", asStr=" + toString_ChannelCondition(conditions) + ", timeoutInMs=" + timeoutVal);
+//
+//						continue;
+//
+//						// A timeout occurred.
+////						throw new IOException("Timeout while waiting for data from peer.");
+////						throw new IOException("Unexpected return ChannelCondition from waitForCondition(...), condition=" + conditions + ", asStr=" + toString_ChannelCondition(conditions) + ", timeoutInMs=" + timeoutVal);
+//					}
+//
+//					// Here we do not need to check separately for CLOSED, since CLOSED implies EOF
+//					if (   ((conditions & ChannelCondition.EOF)    == ChannelCondition.EOF) 
+//					    || ((conditions & ChannelCondition.CLOSED) == ChannelCondition.CLOSED) 
+//					   )
+//					{
+//						// The remote side won't send us further data...
+//						if ((conditions & (ChannelCondition.STDOUT_DATA | ChannelCondition.STDERR_DATA)) == 0)
+//						{
+//							// ... and we have consumed all data in the local arrival window.
+//							_logger.info(getModuleName()+" Received EOF from the command '"+getCommand()+"'.");
+//							addException(new Exception("Received EOF from the command at time: "+new Timestamp(System.currentTimeMillis())+", \nThe module will be restarted, and the command '"+getCommand()+"' re-executed."));
+//		/*<--*/				break;
+//						}
+//					}
+//
+//					// OK, either STDOUT_DATA or STDERR_DATA (or both) is set.
+//
+//					// You can be paranoid and check that the library is not going nuts:
+//					// if ((conditions & (ChannelCondition.STDOUT_DATA | ChannelCondition.STDERR_DATA)) == 0)
+//					//	throw new IllegalStateException("Unexpected condition result (" + conditions + ")");
 				}
 
 				/* If you below replace "while" with "if", then the way the output appears on the local
@@ -1069,6 +1273,7 @@ implements Runnable
 					if (StringUtil.isNullOrBlank(row))
 						continue;
 
+System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|"+row+"|");
 //					System.out.println(row);
 					parseAndApply(getMetaData(), row, SshConnection.STDOUT_DATA);
 				}
@@ -1125,42 +1330,53 @@ implements Runnable
 			}
 		}
 
-		if (sess != null)
+//		if (sess != null)
+//		{
+//			// Sometimes I have seen exception here... so map that away
+//			try 
+//			{
+//				int osRetCode = sess.getExitStatus();
+//				if (osRetCode != 0)
+//					_logger.error("OS Return Code " + osRetCode + ". Expected return code is 0 for command: " + getCommand());
+//			}
+//			catch (Exception ignore) { /* ignore */ }
+//
+//			_logger.info("Closing Streaming SSH Session for '" + getModuleName() + "' with command '" + getCommand() + "'.");
+//			sess.close();
+//		}
+		// Sometimes I have seen exception here... so map that away
+		try 
 		{
-			// Sometimes I have seen exception here... so map that away
-			try 
-			{
-				int osRetCode = sess.getExitStatus();
-				if (osRetCode != 0)
-					_logger.error("OS Return Code " + osRetCode + ". Expected return code is 0 for command: " + getCommand());
-			}
-			catch (Exception ignore) { /* ignore */ }
-
-			_logger.info("Closing Streaming SSH Session for '" + getModuleName() + "' with command '" + getCommand() + "'.");
-			sess.close();
+			int osRetCode = execWrapper.getExitStatus();
+			if (osRetCode != 0)
+				_logger.error("OS Return Code " + osRetCode + ". Expected return code is 0 for command: " + getCommand());
 		}
+		catch (Exception ignore) { /* ignore */ }
+
+		_logger.info("Closing Streaming SSH Session for '" + getModuleName() + "' with command '" + getCommand() + "'.");
+		execWrapper.close();
 		
 		_running = false;
 		printStopMessage();
 	}
 
-	private static String toString_ChannelCondition(int conditions)
-	{
-		String str = "";
-		
-		if ((conditions & ChannelCondition.TIMEOUT    ) == ChannelCondition.TIMEOUT    ) str += ", TIMEOUT";       // 1  = TIMEOUT
-		if ((conditions & ChannelCondition.CLOSED     ) == ChannelCondition.CLOSED     ) str += ", CLOSED";        // 2  = CLOSED
-		if ((conditions & ChannelCondition.STDOUT_DATA) == ChannelCondition.STDOUT_DATA) str += ", STDOUT_DATA";   // 4  = STDOUT_DATA
-		if ((conditions & ChannelCondition.STDERR_DATA) == ChannelCondition.STDERR_DATA) str += ", STDERR_DATA";   // 8  = STDERR_DATA
-		if ((conditions & ChannelCondition.EOF        ) == ChannelCondition.EOF        ) str += ", EOF";           // 16 = EOF        
-		if ((conditions & ChannelCondition.EXIT_STATUS) == ChannelCondition.EXIT_STATUS) str += ", EXIT_STATUS";   // 32 = EXIT_STATUS
-		if ((conditions & ChannelCondition.EXIT_SIGNAL) == ChannelCondition.EXIT_SIGNAL) str += ", EXIT_SIGNAL";   // 64 = EXIT_SIGNAL
-
-		if ( ! str.isEmpty() )
-			str = str.substring(2);
-
-		return str;
-	}
+//	private static String toString_ChannelCondition(int conditions)
+//	{
+//		String str = "";
+//		
+//		if ((conditions & ChannelCondition.TIMEOUT    ) == ChannelCondition.TIMEOUT    ) str += ", TIMEOUT";       // 1  = TIMEOUT
+//		if ((conditions & ChannelCondition.CLOSED     ) == ChannelCondition.CLOSED     ) str += ", CLOSED";        // 2  = CLOSED
+//		if ((conditions & ChannelCondition.STDOUT_DATA) == ChannelCondition.STDOUT_DATA) str += ", STDOUT_DATA";   // 4  = STDOUT_DATA
+//		if ((conditions & ChannelCondition.STDERR_DATA) == ChannelCondition.STDERR_DATA) str += ", STDERR_DATA";   // 8  = STDERR_DATA
+//		if ((conditions & ChannelCondition.EOF        ) == ChannelCondition.EOF        ) str += ", EOF";           // 16 = EOF        
+//		if ((conditions & ChannelCondition.EXIT_STATUS) == ChannelCondition.EXIT_STATUS) str += ", EXIT_STATUS";   // 32 = EXIT_STATUS
+//		if ((conditions & ChannelCondition.EXIT_SIGNAL) == ChannelCondition.EXIT_SIGNAL) str += ", EXIT_SIGNAL";   // 64 = EXIT_SIGNAL
+//
+//		if ( ! str.isEmpty() )
+//			str = str.substring(2);
+//
+//		return str;
+//	}
 
 	/**
 	 * This method should be used for non streaming OS Commands<br>
@@ -1183,13 +1399,15 @@ implements Runnable
 			return null; 
 		}
 
-		Session sess = null;
+//		Session sess = null;
+		ExecutionWrapper execWrapper = null;
 		try
 		{
 			_logger.debug("Executing command '"+getCommand()+"' for the module '"+getModuleName()+"'.");
-			sess = _conn.execCommand(getCommand());
+//			sess = _conn.execCommand(getCommand());
+			execWrapper = _hostMonConn.executeCommand(getCommand());
 		}
-		catch (IOException e)
+		catch (Exception e)
 		{
 			addException(e);
 			_logger.error("Problems when executing OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
@@ -1202,10 +1420,13 @@ implements Runnable
 		_currentSample = new OsTable(getMetaData());
 
 		
-		InputStream stdout = sess.getStdout();
-		InputStream stderr = sess.getStderr();
+//		InputStream stdout = sess.getStdout();
+//		InputStream stderr = sess.getStderr();
+		InputStream stdout = execWrapper.getStdout();
+		InputStream stderr = execWrapper.getStderr();
 		
-		Charset osCharset = Charset.forName(_conn.getOsCharset());
+//		Charset osCharset = Charset.forName(_conn.getOsCharset());
+		Charset osCharset = Charset.forName(_hostMonConn.getOsCharset());
 
 		BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(stdout, osCharset));
 		BufferedReader stderrReader = new BufferedReader(new InputStreamReader(stderr, osCharset));
@@ -1216,34 +1437,51 @@ implements Runnable
 			{
 				if ((stdout.available() == 0) && (stderr.available() == 0))
 				{
-					/* Even though currently there is no data available, it may be that new data arrives
-					 * and the session's underlying channel is closed before we call waitForCondition().
-					 * This means that EOF and STDOUT_DATA (or STDERR_DATA, or both) may
-					 * be set together.
-					 */
+//					/* Even though currently there is no data available, it may be that new data arrives
+//					 * and the session's underlying channel is closed before we call waitForCondition().
+//					 * This means that EOF and STDOUT_DATA (or STDERR_DATA, or both) may
+//					 * be set together.
+//					 */
+//
+//					int conditions = sess.waitForCondition(
+//							  ChannelCondition.STDOUT_DATA 
+//							| ChannelCondition.STDERR_DATA
+//							| ChannelCondition.EOF, 
+//							30*1000);
+//
+//					// Wait no longer than 30 seconds
+//					if ((conditions & ChannelCondition.TIMEOUT) != 0)
+//					{
+//						// A timeout occurred.
+//						throw new IOException("Timeout while waiting for data from peer.");
+//					}
+//
+//					// Here we do not need to check separately for CLOSED, since CLOSED implies EOF
+//					if ((conditions & ChannelCondition.EOF) != 0)
+//					{
+//						// The remote side won't send us further data...
+//						if ((conditions & (ChannelCondition.STDOUT_DATA | ChannelCondition.STDERR_DATA)) == 0)
+//						{
+//							// NORMAL EXIT: ... and we have consumed all data in the local arrival window.
+//		/*<--*/				break;
+//						}
+//					}
 
-					int conditions = sess.waitForCondition(
-							  ChannelCondition.STDOUT_DATA 
-							| ChannelCondition.STDERR_DATA
-							| ChannelCondition.EOF, 
-							30*1000);
-
-					// Wait no longer than 30 seconds
-					if ((conditions & ChannelCondition.TIMEOUT) != 0)
+					try
 					{
-						// A timeout occurred.
-						throw new IOException("Timeout while waiting for data from peer.");
+//						Thread.sleep(250);
+						execWrapper.waitForData();
 					}
-
-					// Here we do not need to check separately for CLOSED, since CLOSED implies EOF
-					if ((conditions & ChannelCondition.EOF) != 0)
+					catch (InterruptedException e)
 					{
-						// The remote side won't send us further data...
-						if ((conditions & (ChannelCondition.STDOUT_DATA | ChannelCondition.STDERR_DATA)) == 0)
-						{
-							// NORMAL EXIT: ... and we have consumed all data in the local arrival window.
-		/*<--*/				break;
-						}
+						// TODO: handle exception
+					}
+					
+					if ( execWrapper.isClosed() )
+					{
+						if (stdout.available() > 0 || stderr.available() > 0)
+							continue;
+						break;
 					}
 				}
 
@@ -1380,19 +1618,29 @@ implements Runnable
 			}
 		}
 
-		if (sess != null)
+//		if (sess != null)
+//		{
+//			// Sometimes I have seen exception here... so map that away
+//			try 
+//			{
+//				int osRetCode = sess.getExitStatus();
+//				if (osRetCode != 0)
+//					_logger.error("OS Return Code " + osRetCode + ". Expected return code is 0 for command: " + getCommand());
+//			}
+//			catch (Exception ignore) { /* ignore */ }
+//
+//			sess.close();
+//		}
+		// Sometimes I have seen exception here... so map that away
+		try 
 		{
-			// Sometimes I have seen exception here... so map that away
-			try 
-			{
-				int osRetCode = sess.getExitStatus();
-				if (osRetCode != 0)
-					_logger.error("OS Return Code " + osRetCode + ". Expected return code is 0 for command: " + getCommand());
-			}
-			catch (Exception ignore) { /* ignore */ }
-
-			sess.close();
+			int osRetCode = execWrapper.getExitStatus();
+			if (osRetCode != 0)
+				_logger.error("OS Return Code " + osRetCode + ". Expected return code is 0 for command: " + getCommand());
 		}
+		catch (Exception ignore) { /* ignore */ }
+
+		execWrapper.close();
 
 		// Now return the object, which the OS Commands output was put into
 		return _currentSample;

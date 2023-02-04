@@ -142,6 +142,7 @@ import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.gui.wizard.WizardOffline;
 import com.asetune.gui.wizard.WizardUserDefinedCm;
+import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.pcs.InMemoryCounterHandler;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistReader;
@@ -3286,9 +3287,37 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			if (DbxTune.hasDevVersionExpired())
 				throw new RuntimeException(Version.getAppName()+" DEV Version has expired, can't connect to a DB Server. only 'PCS - Read mode' is available.");
 
+			HostMonitorConnection hostMonConn = connDialog.getHostMonConn();
+//			if (connDialog.isHostMonEnabled())
+//			{
+//				if (connDialog.getSshConn() == null)
+//				{
+//					if (StringUtil.hasValue(connDialog.getHostMonLocalOsCmdWrapper()))
+//					{
+//						Map<String, String> envMap = new HashMap<>();
+//						if (StringUtil.hasValue(connDialog.getSshHostname())) envMap.put("SSH_HOSTNAME", connDialog.getSshHostname());
+//						if (StringUtil.hasValue(connDialog.getSshPortStr ())) envMap.put("SSH_PORT"    , connDialog.getSshPortStr ());
+//						if (StringUtil.hasValue(connDialog.getSshUsername())) envMap.put("SSH_USERNAME", connDialog.getSshUsername());
+//						if (StringUtil.hasValue(connDialog.getSshPassword())) envMap.put("SSH_PASSWORD", connDialog.getSshPassword());
+//						if (StringUtil.hasValue(connDialog.getSshKeyFile ())) envMap.put("SSH_KEYFILE" , connDialog.getSshKeyFile ());
+//						
+//						hostMonConn = new HostMonitorConnectionLocalOs(connDialog.getHostMonLocalOsCmdWrapper(), envMap);
+//					}
+//					else
+//					{
+//						hostMonConn = new HostMonitorConnectionLocalOs();
+//					}
+//					
+//				}
+//				else
+//				{
+//					hostMonConn = new HostMonitorConnectionSsh(connDialog.getSshConn());
+//				}
+//			}
+			
 			CounterController.getInstance().setMonConnection(     connDialog.getAseConn() );
 			CounterController.getInstance().setMonDisConnectTime( connDialog.getDisConnectTime() );
-			CounterController.getInstance().setHostMonConnection( connDialog.getSshConn() );
+			CounterController.getInstance().setHostMonConnection( hostMonConn );
 
 			if (CounterController.getInstance().isMonConnected())
 			{
@@ -3338,9 +3367,12 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			if (DbxTune.hasDevVersionExpired())
 				throw new RuntimeException(Version.getAppName()+" DEV Version has expired, can't connect to a DB Server. only 'PCS - Read mode' is available.");
 
+//			HostMonitorConnection hostMonConn = new HostMonitorConnectionSsh(connDialog.getSshConn());
+			HostMonitorConnection hostMonConn = connDialog.getHostMonConn();
+
 			CounterController.getInstance().setMonConnection(     connDialog.getJdbcConn() );
 			CounterController.getInstance().setMonDisConnectTime( connDialog.getDisConnectTime() );
-			CounterController.getInstance().setHostMonConnection( connDialog.getSshConn() );
+			CounterController.getInstance().setHostMonConnection( hostMonConn );
 
 			if (CounterController.getInstance().isMonConnected())
 			{

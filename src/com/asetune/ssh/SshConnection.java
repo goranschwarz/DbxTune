@@ -237,7 +237,8 @@ public class SshConnection
 	 * @throws IOException if we failed to authenticate
 	 */
 	public boolean connect()
-	throws IOException
+//	throws IOException
+	throws Exception
 	{
 		// Check that user, password and hostname is set 
 		if (StringUtil.isNullOrBlank(_username)) throw new IllegalArgumentException("Trying to connect to a SSH host, but 'username' fields is net yet given.");
@@ -312,7 +313,8 @@ public class SshConnection
 	}
 	
 	private boolean authenticate()
-	throws IOException
+//	throws IOException
+	throws Exception
 	{
 		boolean enableKeyboardInteractive = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sshAuthenticateEnableKeyboardInteractive, DEFAULT_sshAuthenticateEnableKeyboardInteractive);;
 		boolean enableDSA                 = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sshAuthenticateEnableDSA,                 DEFAULT_sshAuthenticateEnableDSA);
@@ -870,7 +872,8 @@ public class SshConnection
 	 * @throws IOException
 	 */
 	public boolean reconnect()
-	throws IOException
+//	throws IOException
+	throws Exception
 	{
 		if (_isAuthenticated == false)
 			throw new IOException("Can't do reconnect yet, you need to have a valid connection first. This means that you need to connect with a successful authentication first.");
@@ -970,7 +973,8 @@ public class SshConnection
 	 * @throws IOException if return code from the command != 0
 	 */
 	synchronized public String execCommandOutputAsStr(String command) 
-	throws IOException
+//	throws IOException
+	throws Exception
 	{
 		if (isClosed())
 			throw new IOException("SSH is not connected. (host='"+_hostname+"', port="+_port+", user='"+_username+"', osName='"+_osName+"', osCharset='"+_osCharset+"'.)");
@@ -1020,7 +1024,8 @@ public class SshConnection
 	 * @see Session
 	 */
 	synchronized public Session execCommand(String command) 
-	throws IOException
+//	throws IOException
+	throws Exception
 	{
 		return execCommand(command, false);
 	}
@@ -1040,7 +1045,8 @@ public class SshConnection
 	 * @see Session
 	 */
 	synchronized public Session execCommand(String command, boolean requestPty) 
-	throws IOException
+//	throws IOException
+	throws Exception
 	{
 		if (_conn == null)
 		{

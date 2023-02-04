@@ -1803,7 +1803,7 @@ PropertyConfigurator.configure(log4jProps);
 //						}
 //					}
 				}
-				catch (IOException e) 
+				catch (Exception e) 
 				{
 					SwingUtils.showErrorMessage("SSH Connect failed", "SSH Connection to "+host+":"+portStr+" with user '"+user+"' Failed.", e);
 //					sshConn = null;

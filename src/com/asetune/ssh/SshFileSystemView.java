@@ -41,6 +41,8 @@ import ch.ethz.ssh2.SFTPv3DirectoryEntry;
 /**
  * THIS IS NOT READY FOR USE.... IT NEEDS *MORE* WORK... or it needs to be deleted and replaced by something else. 
  * @author Goran Schwarz
+ * 
+ * As a replacement look at: https://github.com/raodj/peace/blob/4af338d3093586a8dd19062b865a84d25b0a2d4f/gui/src/org/peace_tools/core/session/RemoteFileSystemView.java
  */
 public class SshFileSystemView extends FileSystemView
 {
@@ -349,7 +351,7 @@ private SshFile[] _homeAllFilesArray = null;
 			return sshFileList.toArray(new SshFile[0]);
 //			return sshFileArray;
 		}
-		catch(IOException ex)
+		catch(Exception ex)
 		{
 			ex.printStackTrace();
 			return new File[0];

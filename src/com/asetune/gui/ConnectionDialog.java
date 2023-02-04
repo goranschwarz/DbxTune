@@ -56,6 +56,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -136,11 +137,16 @@ import com.asetune.gui.focusabletip.FocusableTipExtention;
 import com.asetune.gui.swing.ClickListener;
 import com.asetune.gui.swing.GLabel;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.gui.swing.GTextField;
 import com.asetune.gui.swing.GTree;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.gui.swing.TreeTransferHandler;
 import com.asetune.gui.swing.VerticalScrollPane;
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.hostmon.HostMonitorConnection;
+import com.asetune.hostmon.HostMonitorConnectionLocalOsCmd;
+import com.asetune.hostmon.HostMonitorConnectionLocalOsCmdWrapper;
+import com.asetune.hostmon.HostMonitorConnectionSsh;
 import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistWriterJdbc;
@@ -229,7 +235,8 @@ public class ConnectionDialog
 
 //	private Map                      _inputMap        = null;
 	private DbxConnection            _aseConn         = null;
-	private SshConnection            _sshConn         = null;
+	private SshConnection            _sshConn         = null; // FIXME: Still used internally, but we should really be using _hostMonConn...
+	private HostMonitorConnection    _hostMonConn     = null;
 //	private Connection               _pcsConn         = null;
 	private DbxConnection            _offlineConn     = null;
 	private DbxConnection            _jdbcConn        = null;
@@ -369,6 +376,7 @@ public class ConnectionDialog
 	private JLabel               _aseDeferredDisConnectTime_lbl   = new JLabel();
 
 	//---- OS HOST panel
+	private JPanel               _hostmonUserPasswd_pan  = null;
 	private ImageIcon            _hostmonLoginImageIcon  = SwingUtils.readImageIcon(Version.class, "images/login_key.gif");
 	private JLabel               _hostmonLoginIcon       = new JLabel(_hostmonLoginImageIcon);
 	private MultiLineLabel       _hostmonLoginHelp       = new MultiLineLabel("Identify yourself to the host Operating System with user name and password. A SSH (Secure Shell) connection will be used, so password and traffic will be encrypted over the network.");
@@ -376,10 +384,12 @@ public class ConnectionDialog
 	private JTextField           _hostmonUsername_txt    = new JTextField();
 	private JLabel               _hostmonPassword_lbl    = new JLabel("Password");
 	private JTextField           _hostmonPassword_txt    = null; // set to JPasswordField or JTextField depending on debug level
+	private JCheckBox            _hostmonOptionSavePwd_chk = new JCheckBox("Save password", true);
 	private JLabel               _hostmonKeyFile_lbl     = new JLabel("Private Key File");
 	private JTextField           _hostmonKeyFile_txt     = new JTextField();
 	private JButton              _hostmonKeyFile_but     = new JButton("...");
 
+	private JPanel               _hostmonServer_pan      = null;
 	private ImageIcon            _hostmonServerImageIcon = SwingUtils.readImageIcon(Version.class, "images/server_32.png");
 	private JLabel               _hostmonServerIcon      = new JLabel(_hostmonServerImageIcon);
 //	private MultiLineLabel       _hostmonServerHelp      = new MultiLineLabel("Specify host name to the machine where you want to do Operating System Monitoring. The connection will be using SSH (Secure Shell), which normally is listening on port 22. ");
@@ -391,8 +401,14 @@ public class ConnectionDialog
 	private JLabel               _hostmonPort_lbl        = new JLabel("Port Number");
 	private JTextField           _hostmonPort_txt        = new JTextField("22");
 
-	private JCheckBox            _hostmonOptionSavePwd_chk = new JCheckBox("Save password", true);
-	
+	private JPanel               _hostmonLocalOsCmd_pan        = null;
+	private ImageIcon            _hostmonLocalOsCmdImageIcon   = SwingUtils.readImageIcon(Version.class, "images/hostmon_local_cmd.png");
+	private JLabel               _hostmonLocalOsCmdIcon        = new JLabel(_hostmonLocalOsCmdImageIcon);
+	private MultiLineLabel       _hostmonLocalOsCmdHelp        = new MultiLineLabel();
+	private JCheckBox            _hostMonLocalOsCmd_chk        = new JCheckBox("Execute the Host Monitoring Command on the Local Computer (no SSH)");
+	private GLabel               _hostmonLocalOsCmdWrapper_lbl = new GLabel("Wrapper Cmd");
+	private GTextField           _hostmonLocalOsCmdWrapper_txt = new GTextField();
+
 	//---- PCS panel
 	@SuppressWarnings("unused")
 	private JPanel               _pcsPanel                   = null;
@@ -1237,7 +1253,8 @@ public class ConnectionDialog
 
 	public int                      getConnectionType() { return _connectionType; }
 	public DbxConnection            getAseConn()        { return _aseConn; }
-	public SshConnection            getSshConn()        { return _sshConn; }
+//	public SshConnection            getSshConn()        { return _sshConn; }
+	public HostMonitorConnection    getHostMonConn()    { return _hostMonConn; }
 //	public Connection               getPcsConn()        { return _pcsConn; }
 //	public PersistentCounterHandler getPcsWriter()      { return _pcsWriter; }
 	public DbxConnection            getOfflineConn()    { return _offlineConn; }
@@ -1331,6 +1348,10 @@ public class ConnectionDialog
 	public String getSshPortStr()  { return _hostmonPort_txt    .getText(); }
 	public String getSshKeyFile()  { return _hostmonKeyFile_txt .getText(); }
 
+	public boolean  isHostMonEnabled()           { return _aseHostMonitor_chk          .isSelected(); }
+	public boolean  isHostMonLocalOsCmd()        { return _hostMonLocalOsCmd_chk       .isSelected(); }
+	public String  getHostMonLocalOsCmdWrapper() { return _hostmonLocalOsCmdWrapper_txt.getText(); }
+	
 	public String getOfflineJdbcDriver() { return _offlineJdbcDriver_cbx  .getEditor().getItem().toString(); }
 	public String getOfflineJdbcUrl()    { return _offlineJdbcUrl_cbx     .getEditor().getItem().toString(); }
 	public String getOfflineJdbcUser()   { return _offlineJdbcUsername_txt.getText(); }
@@ -2175,6 +2196,7 @@ public class ConnectionDialog
 		
 		panel.add(createHostmonUserPasswdPanel(), "growx, pushx");
 		panel.add(createHostmonServerPanel(),     "growx, pushx");
+		panel.add(createHostmonLocalOsPanel(),    "growx, pushx");
 		panel.add(createHostmonInfoPanel(),       "growx, pushx");
 		
 		return panel;
@@ -2563,10 +2585,94 @@ public class ConnectionDialog
 		return panel;
 	}
 
+	private JPanel createHostmonLocalOsPanel()
+	{
+		JPanel panel = SwingUtils.createPanel("Local OS Command", true);
+		panel.setLayout(new MigLayout("wrap 2", "", ""));   // insets Top Left Bottom Right
+		_hostmonLocalOsCmd_pan = panel;
+
+		_hostmonLocalOsCmdHelp.setText("" 
+				+ "Normally Host Monitoring is done via a SSH Connection. (info in above panels) \n"
+                + "But if the Monitored DBMS Host is <i>the same</i> as where " + Version.getAppName() + " is running we can use <b>local execution</b>.\n"
+                + "Or if we want to <i>wrap</i> the OS Command used to execute the monitoring commands, meaning <i>sudo</i> or simular...\n"
+                + "Or if the Java SSH Library simply isn't working for some reasons...\n"
+                + "Or <i>whatever</i> reasons you have, you can execute a Local Command that forwards the Host Monitoring Command to the DBMS host."
+                + "");
+		
+		_hostMonLocalOsCmd_chk       .setToolTipText("Execute the Host Monitoring Command on the Local Computer (no SSH)");
+		_hostmonLocalOsCmdWrapper_lbl.setToolTipText("<html>Execute this command as a wrapper for the <b>real</b> Host Monitor Commands.<br>"
+		                                                 + "So this can be: "
+		                                                 + "<ul>"
+		                                                 + "  <li>A Shell Script that does <i>sudo</i> or some other operation</li>"
+		                                                 + "  <li>Or a local 'ssh' binary responsible for the comunication (if the above Java Library SSH doesn't work for any reason) </li>"
+		                                                 + "</ul>"
+		                                                 + "There will be some environment variables set in the shell that can be used when executing."
+		                                                 + "<ul>"
+		                                                 + "  <li><b>HOSTMON_CMD </b>     -- The actual OS command that will be executed for that specififc Host Monitor Module.</li>"
+		                                                 + "  <li><b>HOSTMON_CMD_FILE</b> -- A temp file with same content as HOSTMON_CMD, If there is a problem with quoting, this can be used to read the commands from</li>"
+		                                                 + "  <li><b>SSH_HOSTNAME</b>     -- Hostname         specified in the above panel</li>"
+		                                                 + "  <li><b>SSH_PORT    </b>     -- Port number      specified in the above panel</li>"
+		                                                 + "  <li><b>SSH_USERNAME</b>     -- Username         specified in the above panel</li>"
+		                                                 + "  <li><b>SSH_PASSWORD</b>     -- Password         specified in the above panel</li>"
+		                                                 + "  <li><b>SSH_KEYFILE </b>     -- Private Key File specified in the above panel</li>"
+		                                                 + "</ul>"
+		                                                 + "You can also use ${hostMonCmd} in the command, which will be replaced with the command we want to send to the remote host.<br>"
+		                                                 + "<b>Example 1</b>: <code>ssh username@acme.com \"${hostMonCmd}\"</code><br>"
+		                                                 + "<b>Example 2</b>: <code>ssh -i /path/to/id_rsa.xxx -o StrictHostKeyChecking=no username@acme.com \"${hostMonCmd}\"</code><br>"
+		                                                 + "<br>"
+		                                                 + "The hostMonCmd is also sent to the command as STDIN, so you can do the following:<br>"
+		                                                 + "<b>Example 3</b>: <code>ssh username@acme.com \"bash -s\"</code><br>"
+		                                                 + "<br>"
+		                                                 + "<i><b>Note</b>: 'writeCommandToStdin' can be disabled by property: <code>HostMonitorConnectionLocalOsCmdWrapper.writeCommandToStdin=false</code> if it causes any problems.</i><br>"
+		                                                 + "<i><b>Note</b>: 'writeCommandToFile' can be disabled by property: <code>HostMonitorConnectionLocalOsCmdWrapper.writeCommandToFile=false</code> if it causes any problems.</i><br>"
+		                                                 + "</html");
+		_hostmonLocalOsCmdWrapper_txt.setToolTipText(_hostmonLocalOsCmdWrapper_lbl.getToolTipText());
+		_hostmonLocalOsCmdWrapper_lbl.setUseFocusableTips(true);
+		_hostmonLocalOsCmdWrapper_txt.setUseFocusableTips(true);
+
+		String note = "<br><br><b>Note</b>: all ${xxx} will be replaced with the above specified user/password/keyfile/hostname/port before the command is executed.<br>The environment variables (SSH_XXX described Above) will also be present, but as environment variables in the local OS Shell ('CMD.exe' on Windows or 'bash' on Linux/Unix)";
+		final JButton template1 = new JButton("ssh stdin");      template1.setToolTipText("<html>Execute 'ssh', which will execute <code>bash -s</code> at the rmote host.<br>-s switch to bash means that it will accept stdin for commands. ${NOTE}</html>".replace("${NOTE}", note));
+		final JButton template2 = new JButton("ssh parameter");  template2.setToolTipText("<html>Execute 'ssh', which will execute <code><i>hostMonCmd</i></code> at the rmote host.<br>This may have problems with quoutation (The hostMonCmd will/may contain singel or double quotes). ${NOTE}</html>".replace("${NOTE}", note));
+//		final JButton template3 = new JButton("Template 3");     template3.setToolTipText("<html>Execute 'xxx', ........... ${NOTE}</html>".replace("${NOTE}", note));
+		final JButton template4 = new JButton("call Script");    template4.setToolTipText("<html>Execute <code>yourSpecialScript.sh</code> on the locla machine, which will have to connect to the remote system in <i>some</i> way and execute the HOSTMON_CMD. ${NOTE}</html>".replace("${NOTE}", note));
+		
+		template1.addActionListener(button -> {_hostmonLocalOsCmdWrapper_txt.setText("ssh ${sshUsername}@${sshHostname} \"bash -s\""); validateContents();});
+		template2.addActionListener(button -> {_hostmonLocalOsCmdWrapper_txt.setText("ssh ${sshUsername}@${sshHostname} \"${hostMonCmd}\""); validateContents();});
+//		template3.addActionListener(button -> {_hostmonLocalOsCmdWrapper_txt.setText("ssh ${sshUsername}@${sshHostname} 'bash -s'"); validateContents();});
+		template4.addActionListener(button -> {_hostmonLocalOsCmdWrapper_txt.setText("yourSpecialScript.sh"); validateContents();});
+
+		panel.add(_hostmonLocalOsCmdIcon,  "");
+		panel.add(_hostmonLocalOsCmdHelp,  "wmin 100, push, grow");
+
+		panel.add(_hostMonLocalOsCmd_chk,  "skip");
+
+		panel.add(_hostmonLocalOsCmdWrapper_lbl, "");
+		panel.add(_hostmonLocalOsCmdWrapper_txt, "push, grow");
+
+		panel.add(new JLabel("Templates"), "");
+		panel.add(template1,               "split");
+		panel.add(template2,               "");
+//		panel.add(template3,               "");
+		panel.add(template4,               "");
+
+		// ADD ACTION LISTENERS
+		_hostMonLocalOsCmd_chk.addActionListener(this);
+		
+		_hostmonLocalOsCmdWrapper_txt.addActionListener(this);
+		_hostmonLocalOsCmdWrapper_txt.addKeyListener(this);
+		_hostmonLocalOsCmdWrapper_txt.addFocusListener(this);
+		
+		// ADD FOCUS LISTENERS
+		_hostmonLocalOsCmdWrapper_txt.addFocusListener(this);
+		
+		return panel;
+	}
+
 	private JPanel createHostmonUserPasswdPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("User information", true);
 		panel.setLayout(new MigLayout("wrap 2", "", ""));   // insets Top Left Bottom Right
+		_hostmonUserPasswd_pan = panel;
 
 		// Hide password or not...
 		if (_logger.isDebugEnabled())
@@ -2618,6 +2724,7 @@ public class ConnectionDialog
 	{
 		JPanel panel = SwingUtils.createPanel("Specify the server to connect to", true);
 		panel.setLayout(new MigLayout("wrap 2", "", ""));   // insets Top Left Bottom Right
+		_hostmonServer_pan = panel;
 
 		_hostmonHost_lbl   .setToolTipText("<html>Hostname or IP address of the OS Host you are connecting to</html>");
 		_hostmonHost_txt   .setToolTipText("<html>Hostname or IP address of the OS Host you are connecting to</html>");
@@ -4181,20 +4288,40 @@ public class ConnectionDialog
 					String portStr  = _hostmonPort_txt    .getText();
 					String keyFile  = _hostmonKeyFile_txt .getText();
 		
-					try { Integer.parseInt(portStr); } 
-					catch (NumberFormatException e) 
+					if (_hostMonLocalOsCmd_chk.isSelected() && StringUtil.isNullOrBlank(_hostmonLocalOsCmdWrapper_txt.getText()))
 					{
-						hostmonProblem = "SSH Port number must be an integer";
+						_hostmonLocalOsCmdWrapper_txt.setEnabled(true);
+
+						SwingUtils.setEnabled(_hostmonUserPasswd_pan, false);
+						SwingUtils.setEnabled(_hostmonServer_pan    , false);
 					}
-		
-					if (StringUtil.isNullOrBlank(username))
-						hostmonProblem = "SSH username must be specified";
-		
-					if (StringUtil.isNullOrBlank(password) && StringUtil.isNullOrBlank(keyFile) )
-						hostmonProblem = "SSH password OR keyFile must be specified";
-		
-					if (StringUtil.isNullOrBlank(hostname))
-						hostmonProblem = "SSH hostname must be specified";
+					else
+					{
+						_hostmonLocalOsCmdWrapper_txt.setEnabled(true);
+
+						SwingUtils.setEnabled(_hostmonUserPasswd_pan, true);
+						SwingUtils.setEnabled(_hostmonServer_pan    , true);
+
+						if (_hostMonLocalOsCmd_chk.isSelected() == false)
+						{
+							_hostmonLocalOsCmdWrapper_txt.setEnabled(false);
+
+							try { Integer.parseInt(portStr); } 
+							catch (NumberFormatException e) 
+							{
+								hostmonProblem = "SSH Port number must be an integer";
+							}
+				
+							if (StringUtil.isNullOrBlank(username))
+								hostmonProblem = "SSH username must be specified";
+				
+							if (StringUtil.isNullOrBlank(password) && StringUtil.isNullOrBlank(keyFile) )
+								hostmonProblem = "SSH password OR keyFile must be specified";
+				
+							if (StringUtil.isNullOrBlank(hostname))
+								hostmonProblem = "SSH hostname must be specified";
+						}
+					}
 				}
 			}
 
@@ -4685,7 +4812,45 @@ public class ConnectionDialog
 	 * @param connProfile 
 	 * @return
 	 */
-	private SshConnection hostmonCreateConnectionObject(ConnectionProfile connProfile)
+//	private SshConnection hostmonCreateConnectionObject(ConnectionProfile connProfile)
+//	{
+//		String username = _hostmonUsername_txt.getText();
+//		String password = _hostmonPassword_txt.getText();
+//		String hostname = _hostmonHost_txt    .getText();
+//		String portStr  = _hostmonPort_txt    .getText();
+//		int port = 22;
+//		String keyFile  = _hostmonKeyFile_txt.getText();
+//
+//		if (connProfile != null)
+//		{
+////			ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
+//			ConnectionProfile.DbxTuneParams entry = connProfile.getDbxTuneParams(); 
+//
+//			username = entry._osMonUsername;
+//			password = entry._osMonPassword;
+//			hostname = entry._osMonHost;
+//			portStr  = entry._osMonPort + "";
+//			keyFile  = entry._osMonKeyFile;
+//		}
+//
+//		try { port = Integer.parseInt(portStr); } 
+//		catch (NumberFormatException e) 
+//		{
+//			SwingUtils.showErrorMessage(this, "Problem with port number", 
+//				"The port number '"+portStr+"' is not a number.", e);
+//			return null;
+//		}
+//
+//
+//		_logger.info("Creating SSH Connection-Object to hostname='"+hostname+"'.  port='"+port+"', username='"+username+"', keyFile='"+keyFile+"'.");
+//		return new SshConnection(hostname, port, username, password, keyFile);
+//	}
+	/**
+	 * Make a HostMonitor connection object, but do NOT connect
+	 * @param connProfile 
+	 * @return
+	 */
+	private HostMonitorConnection hostmonCreateConnectionObject(ConnectionProfile connProfile)
 	{
 		String username = _hostmonUsername_txt.getText();
 		String password = _hostmonPassword_txt.getText();
@@ -4694,6 +4859,9 @@ public class ConnectionDialog
 		int port = 22;
 		String keyFile  = _hostmonKeyFile_txt.getText();
 
+		boolean localOsCmd        = _hostMonLocalOsCmd_chk.isSelected();
+		String  localOsCmdWrapper = _hostmonLocalOsCmdWrapper_txt.getText();
+		
 		if (connProfile != null)
 		{
 //			ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
@@ -4704,6 +4872,9 @@ public class ConnectionDialog
 			hostname = entry._osMonHost;
 			portStr  = entry._osMonPort + "";
 			keyFile  = entry._osMonKeyFile;
+
+			localOsCmd        = entry._osMonLocalOsCmd;
+			localOsCmdWrapper = entry._osMonLocalOsCmdWrapper;
 		}
 
 		try { port = Integer.parseInt(portStr); } 
@@ -4715,8 +4886,33 @@ public class ConnectionDialog
 		}
 
 
-		_logger.info("Creating SSH Connection-Object to hostname='"+hostname+"'.  port='"+port+"', username='"+username+"', keyFile='"+keyFile+"'.");
-		return new SshConnection(hostname, port, username, password, keyFile);
+		_logger.info("Creating HostMon Connection-Object to hostname='"+hostname+"'.  port='"+port+"', username='"+username+"', keyFile='"+keyFile+"', localOsCmd='"+localOsCmd+"', localOsCmdWrapper='"+localOsCmdWrapper+"'.");
+		
+		HostMonitorConnection hostMonConn;
+		if (localOsCmd)
+		{
+			if (StringUtil.isNullOrBlank(localOsCmdWrapper))
+			{
+				hostMonConn = new HostMonitorConnectionLocalOsCmd(true); // true means: Create it with "isConnected() == true"
+			}
+			else
+			{
+				Map<String, String> envMap = new HashMap<>();
+				if (StringUtil.hasValue(hostname)) envMap.put("SSH_HOSTNAME", hostname);
+				if (StringUtil.hasValue(portStr )) envMap.put("SSH_PORT"    , portStr);
+				if (StringUtil.hasValue(username)) envMap.put("SSH_USERNAME", username);
+				if (StringUtil.hasValue(password)) envMap.put("SSH_PASSWORD", password);
+				if (StringUtil.hasValue(keyFile )) envMap.put("SSH_KEYFILE" , keyFile);
+
+				hostMonConn = new HostMonitorConnectionLocalOsCmdWrapper(true, localOsCmdWrapper, envMap);
+			}
+		}
+		else
+		{
+			SshConnection sshConn = new SshConnection(hostname, port, username, password, keyFile);
+			hostMonConn = new HostMonitorConnectionSsh(sshConn);
+		}
+		return hostMonConn;
 	}
 	
 	/**
@@ -7394,7 +7590,12 @@ if ( ! jdbcSshTunnelUse )
 				{
 					// Simply set the Connection Object used to connect
 					// the ACTUAL SSH Connection will be done as a tak in aseConnect() + ConnectionProgressDialog... 
-					_sshConn = hostmonCreateConnectionObject(connProfile);
+//					_sshConn = hostmonCreateConnectionObject(connProfile);
+					_hostMonConn = hostmonCreateConnectionObject(connProfile);
+					if (_hostMonConn instanceof HostMonitorConnectionSsh)
+					{
+						_sshConn = ((HostMonitorConnectionSsh)_hostMonConn).getSshConnection();
+					}
 	
 				} // end: OS HOST CONNECT
 			} // end: _showAseTuneOptions || _showDbxTuneOptionsInJdbc
@@ -7407,10 +7608,15 @@ if ( ! jdbcSshTunnelUse )
     				boolean ok = aseConnect(connProfile);
     
     				// HOST MONITOR: post fix
-    				if (_sshConn != null && ! _sshConn.isConnected() )
+//    				if (_sshConn != null && ! _sshConn.isConnected() )
+//    				{
+//    					_sshConn.close();
+//    					_sshConn = null;
+//    				}
+    				if (_hostMonConn != null && ! _hostMonConn.isConnected() )
     				{
-    					_sshConn.close();
-    					_sshConn = null;
+    					_hostMonConn.closeConnection();
+    					_hostMonConn = null;
     				}
     				
     				// if it failed: stay in the dialog
@@ -7425,11 +7631,16 @@ if ( ! jdbcSshTunnelUse )
 				{
     				boolean ok = jdbcConnect(connProfile);
 
-    				// HOST MONITOR: post fix
-    				if (_sshConn != null && ! _sshConn.isConnected() )
+//    				// HOST MONITOR: post fix
+//    				if (_sshConn != null && ! _sshConn.isConnected() )
+//    				{
+//    					_sshConn.close();
+//    					_sshConn = null;
+//    				}
+    				if (_hostMonConn != null && ! _hostMonConn.isConnected() )
     				{
-    					_sshConn.close();
-    					_sshConn = null;
+    					_hostMonConn.closeConnection();
+    					_hostMonConn = null;
     				}
     				
     				// if it failed: stay in the dialog
@@ -7738,6 +7949,9 @@ if ( ! jdbcSshTunnelUse )
 			entry._osMonHost          = _hostmonHost_txt         .getText();
 			entry._osMonPort          = StringUtil.parseInt(_hostmonPort_txt.getText(), 22);
 			entry._osMonKeyFile       = _hostmonKeyFile_txt      .getText();
+			
+			entry._osMonLocalOsCmd        = _hostMonLocalOsCmd_chk       .isSelected();
+			entry._osMonLocalOsCmdWrapper = _hostmonLocalOsCmdWrapper_txt.getText();
 		}
 
 		if (entry._dbxtuneOptRecordSession)
@@ -7803,6 +8017,9 @@ if ( ! jdbcSshTunnelUse )
 			_hostmonHost_txt         .setText(    entry._osMonHost);
 			_hostmonPort_txt         .setText(    entry._osMonPort+"");
 			_hostmonKeyFile_txt      .setText(    entry._osMonKeyFile);
+
+			_hostMonLocalOsCmd_chk       .setSelected(entry._osMonLocalOsCmd       );
+			_hostmonLocalOsCmdWrapper_txt.setText    (entry._osMonLocalOsCmdWrapper);
 		}
 
 		if (entry._dbxtuneOptRecordSession)
@@ -8547,6 +8764,10 @@ if ( ! jdbcSshTunnelUse )
 				conf.remove("ssh.conn.password."+hostPort);
 
 			conf.setProperty("ssh.conn.savePassword", _hostmonOptionSavePwd_chk.isSelected() );
+
+			conf.setProperty("ssh.conn.hostmon.localOsCmd."+hostPort,        _hostMonLocalOsCmd_chk       .isSelected() );
+			conf.setProperty("ssh.conn.hostmon.localOsCmdWrapper."+hostPort, _hostmonLocalOsCmdWrapper_txt.getText() );
+			
 		}
 
 		//----------------------------------
@@ -9176,6 +9397,14 @@ if ( ! jdbcSshTunnelUse )
 		str = conf.getProperty("ssh.conn.port."+hostPortStr, "22");
 		_hostmonPort_txt.setText(str);
 
+		
+		// Hostmon Local OS
+		boolean bol = conf.getBooleanProperty("ssh.conn.hostmon.localOsCmd."+hostPortStr, false);
+		_hostMonLocalOsCmd_chk.setSelected(bol);
+
+		// Hostmon Local OS Wrapper
+		str = conf.getProperty("ssh.conn.hostmon.localOsCmdWrapper."+hostPortStr, "");
+		_hostmonLocalOsCmdWrapper_txt.setText(str);
 		
 		//----------------------------------------
 		// JDBC ??? should this be in here ???

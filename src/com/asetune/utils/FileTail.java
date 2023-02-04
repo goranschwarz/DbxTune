@@ -439,7 +439,7 @@ public class FileTail
 					_logger.info("Executing command '"+getCommand(true)+"'.");
 					sess = _sshConn.execCommand(getCommand(false));
 				}
-				catch (IOException e)
+				catch (Exception e)
 				{
 //					addException(e);
 					_logger.error("Problems when executing OS Command '"+getCommand(true)+"', Caught: "+e.getMessage(), e);

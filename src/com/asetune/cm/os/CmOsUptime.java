@@ -269,7 +269,7 @@ extends CounterModelHostMonitor
 		}
 
 		// Get nproc from the SSH Connection
-		int nproc = getCounterController().getHostMonConnection().getNproc();
+		int nproc = getCounterController().getHostMonConnection().getOsCoreCount();
 		
 		BigDecimal adjLoadAverage_1Min  = null;
 		BigDecimal adjLoadAverage_5Min  = null;
@@ -327,7 +327,7 @@ extends CounterModelHostMonitor
 		if ( ! AlarmHandler.hasInstance() )
 			return;
 
-		String hostname = cm.getCounterController().getHostMonConnection().getHost();
+		String hostname = cm.getCounterController().getHostMonConnection().getHostname();
 
 		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 		

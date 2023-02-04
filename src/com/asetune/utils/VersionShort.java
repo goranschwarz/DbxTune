@@ -39,6 +39,9 @@ public class VersionShort
 	{
 		int intVersion = -1;
 		
+		if (version == null)
+			return intVersion;
+		
 		String regexp = "(\\d+)\\.(\\d+)(?:\\.(\\d+))?"; // search for versions like 1.2[.3]
         Pattern versionPattern = Pattern.compile(regexp);
         Matcher m = versionPattern.matcher(version);

@@ -209,6 +209,14 @@ case "${toolset}" in
 		javaSplashScreen=""
 		;;
 
+	sshtest2)
+		shortAppName="sshtest2"
+		longAppName="SshTest2"
+		javaMainClass="com.asetune.ssh.test.JschTest2"
+		javaMainParams=""
+		javaSplashScreen=""
+		;;
+
 	mailtest)
 		shortAppName="mailtest"
 		longAppName="MailTest"
@@ -373,6 +381,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-cli-1.4.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-codec-1.10.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/proxy-vole_20131209.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/ganymed-ssh2-263.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jsch-0.2.6.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/rsyntaxtextarea.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/autocomplete.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/rstaui.jar

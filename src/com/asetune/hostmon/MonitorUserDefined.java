@@ -41,7 +41,8 @@ extends HostMonitor
 		return _metaData.getOsCommand();
 	}
 
-	public MonitorUserDefined(Configuration conf, String moduleName, SshConnection conn, boolean start)
+//	public MonitorUserDefined(Configuration conf, String moduleName, SshConnection conn, boolean start)
+	public MonitorUserDefined(Configuration conf, String moduleName, HostMonitorConnection conn, boolean start)
 	throws Exception
 	{
 		super(-1, null);
@@ -202,9 +203,11 @@ extends HostMonitor
 			SshConnection conn = new SshConnection("gorans.no-ip.org", "gorans", "1niss2e");
 //			SshConnection conn = new SshConnection("sweiq-linux", "ajackson", "sybase");
 		
-		//	HostMonitor mon = new MonitorUserDefined(confIostatLinux, "TestGorans", conn, false);
-			HostMonitor mon = new MonitorUserDefined(confMpstatLinux, "TestGorans", conn, false);
-		//	HostMonitor mon = new MonitorUserDefined(confLs,          "TestGorans", conn, false);
+			HostMonitorConnectionSsh hostMonConn = new HostMonitorConnectionSsh(conn);
+
+		//	HostMonitor mon = new MonitorUserDefined(confIostatLinux, "TestGorans", hostMonConn, false);
+			HostMonitor mon = new MonitorUserDefined(confMpstatLinux, "TestGorans", hostMonConn, false);
+		//	HostMonitor mon = new MonitorUserDefined(confLs,          "TestGorans", hostMonConn, false);
 
 			if (mon.isOsCommandStreaming())
 				mon.start();

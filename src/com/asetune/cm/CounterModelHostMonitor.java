@@ -33,6 +33,7 @@ import com.asetune.CounterController;
 import com.asetune.DbxTune;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.hostmon.HostMonitor;
+import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.hostmon.HostMonitorMetaData;
 import com.asetune.hostmon.MonitorDiskSpace;
 import com.asetune.hostmon.MonitorIo;
@@ -188,22 +189,24 @@ extends CountersModel
 	private void localInit()
 	throws Exception
 	{
+System.out.println("CounterModelHostMonitor.localInit(): _hostMonType="+_hostMonType+", CounterController.getInstance().isHostMonConnected()="+CounterController.getInstance().isHostMonConnected());
 		if (CounterController.getInstance().isHostMonConnected())
 		{
-			SshConnection sshConn = CounterController.getInstance().getHostMonConnection();
+//			SshConnection sshConn = CounterController.getInstance().getHostMonConnection();
+			HostMonitorConnection hostMonConn = CounterController.getInstance().getHostMonConnection();
 
 			//System.out.println(this+"::CounterModelHostMonitor.init(sqlConn): CREATING MONITOR: "+_hostMonType);
 
 			// FIXME: Hmm do this in a BETTER way, factoring needs to much maintenance,
 			// it would be better to use some kind of class loading, or similar...
-			if      (_hostMonType == HOSTMON_IOSTAT)    _hostMonitor = MonitorIo       .createMonitor(sshConn, false);
-			else if (_hostMonType == HOSTMON_VMSTAT)    _hostMonitor = MonitorVmstat   .createMonitor(sshConn, false);
-			else if (_hostMonType == HOSTMON_MPSTAT)    _hostMonitor = MonitorMpstat   .createMonitor(sshConn, false);
-			else if (_hostMonType == HOSTMON_UPTIME)    _hostMonitor = MonitorUpTime   .createMonitor(sshConn, false);
-			else if (_hostMonType == HOSTMON_MEMINFO)   _hostMonitor = MonitorMeminfo  .createMonitor(sshConn, false);
-			else if (_hostMonType == HOSTMON_NWINFO)    _hostMonitor = MonitorNwInfo   .createMonitor(sshConn, false);
-			else if (_hostMonType == HOSTMON_DISKSPACE) _hostMonitor = MonitorDiskSpace.createMonitor(sshConn, false);
-			else if (_hostMonType == HOSTMON_PS)        _hostMonitor = MonitorPs       .createMonitor(sshConn, false);
+			if      (_hostMonType == HOSTMON_IOSTAT)    _hostMonitor = MonitorIo       .createMonitor(hostMonConn, false);
+			else if (_hostMonType == HOSTMON_VMSTAT)    _hostMonitor = MonitorVmstat   .createMonitor(hostMonConn, false);
+			else if (_hostMonType == HOSTMON_MPSTAT)    _hostMonitor = MonitorMpstat   .createMonitor(hostMonConn, false);
+			else if (_hostMonType == HOSTMON_UPTIME)    _hostMonitor = MonitorUpTime   .createMonitor(hostMonConn, false);
+			else if (_hostMonType == HOSTMON_MEMINFO)   _hostMonitor = MonitorMeminfo  .createMonitor(hostMonConn, false);
+			else if (_hostMonType == HOSTMON_NWINFO)    _hostMonitor = MonitorNwInfo   .createMonitor(hostMonConn, false);
+			else if (_hostMonType == HOSTMON_DISKSPACE) _hostMonitor = MonitorDiskSpace.createMonitor(hostMonConn, false);
+			else if (_hostMonType == HOSTMON_PS)        _hostMonitor = MonitorPs       .createMonitor(hostMonConn, false);
 			else if (_hostMonType == HOSTMON_UD_CLASS)
 			{
 				Configuration conf = null;
@@ -216,7 +219,7 @@ extends CountersModel
 				if (conf == null)
 					throw new Exception("No Configuration can be found.");
 
-				_hostMonitor = new MonitorUserDefined(conf, _udModuleName, sshConn, false);
+				_hostMonitor = new MonitorUserDefined(conf, _udModuleName, hostMonConn, false);
 			}
 			else
 				throw new Exception("Unsupported HOSTMON_TYPE of '"+_hostMonType+"'.");
@@ -234,6 +237,7 @@ extends CountersModel
 			if (getTabPanel() != null)
 				getTabPanel().onCmInit();
 		}
+System.out.println("CounterModelHostMonitor.localInit() end: _hostMonitor="+_hostMonitor);
 	}
 
 	/*---------------------------------------------------

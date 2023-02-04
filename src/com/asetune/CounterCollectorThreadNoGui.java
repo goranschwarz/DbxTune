@@ -34,8 +34,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.script.ScriptEngine;
@@ -66,6 +68,10 @@ import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.ChartDataHistoryManager;
 import com.asetune.gui.MainFrame;
+import com.asetune.hostmon.HostMonitorConnection;
+import com.asetune.hostmon.HostMonitorConnectionLocalOsCmd;
+import com.asetune.hostmon.HostMonitorConnectionLocalOsCmdWrapper;
+import com.asetune.hostmon.HostMonitorConnectionSsh;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistWriterBase;
@@ -143,6 +149,8 @@ implements Memory.MemoryListener
 	private String     _sshHostname     = null;
 	private String     _sshPortStr      = null;
 	private int        _sshPort         = 22;
+	private boolean    _localHostMon    = false;
+	private String     _localHostMonWrapperCmd = null;
 	
 	private Configuration _storeProps   = null;
 	
@@ -283,6 +291,9 @@ implements Memory.MemoryListener
 		if (_sshPortStr != null && ! _sshPortStr.equals(""))
 			_sshPort = Integer.parseInt(_sshPortStr);
 
+		_localHostMon           = _storeProps.getProperty("conn.hostmon.local", "false").trim().equalsIgnoreCase("true");
+		_localHostMonWrapperCmd = _storeProps.getProperty("conn.hostmon.local.wrapper.cmd", null);
+		
 		// typically faulty initialized may be: "null:-1", then unset the value
 		if (_dbmsHostPortStr != null && _dbmsHostPortStr.equals("null:-1"))
 			_dbmsHostPortStr = null;
@@ -440,20 +451,22 @@ implements Memory.MemoryListener
 		getCounterController().setDefaultSleepTimeInSec(_sleepTime);
 
 		String configStr = 
-			"sleepTime='"+_sleepTime+"', " +
-			"scriptWaitForNextSample='"+(_scriptWaitForNextSample == null ? "using sleepTime" : "using JavaScript")+"', " +
-//			"shutdownAfterXHours='"+_shutdownAfterXHours+"', " +
-			"shutdownAfterXHours='"+_shutdownAtTimeStr+"', " +
-			"startRecordingAtTime='"+_deferedStartTime+"', " +
-			"sleepOnFailedConnectTime='"+_sleepOnFailedConnectTime+"', " +
-			"_dbmsUsername='"+_dbmsUsername+"', " +
-			"_dbmsPassword='*hidden*', " +
-			"_dbmsServer='"+_dbmsServer+"("+_dbmsHostPortStr+")', " +
-			"_sshUsername='"+_sshUsername+"', " +
-			"_sshPassword='*hidden*', " +
-			"_sshKeyFile='"+_sshKeyFile+"', " +
-			"_sshHostname='"+_sshHostname+"', " +
-			"_sshPort='"+_sshPort+"', " +
+			"sleepTime='"                + _sleepTime                + "', " +
+			"scriptWaitForNextSample='"  + (_scriptWaitForNextSample == null ? "using sleepTime" : "using JavaScript") + "', " +
+//			"shutdownAfterXHours='"      + _shutdownAfterXHours      + "', " +
+			"shutdownAfterXHours='"      + _shutdownAtTimeStr        + "', " +
+			"startRecordingAtTime='"     + _deferedStartTime         + "', " +
+			"sleepOnFailedConnectTime='" + _sleepOnFailedConnectTime + "', " +
+			"_dbmsUsername='"            + _dbmsUsername             + "', " +
+			"_dbmsPassword='"            + "*hidden*"                + "', " +
+			"_dbmsServer='"              + _dbmsServer + "("+_dbmsHostPortStr+")', " +
+			"_sshUsername='"             + _sshUsername              + "', " +
+			"_sshPassword='"             + "*hidden*"                + "', "  +
+			"_sshKeyFile='"              + _sshKeyFile               + "', " +
+			"_sshHostname='"             + _sshHostname              + "', " +
+			"_sshPort='"                 + _sshPort                  + "', " +
+			"_localHostMon='"            + _localHostMon             + "', " +
+			"_localHostMonWrapperCmd='"  + _localHostMonWrapperCmd   + "', " +
 			".";
 		_logger.info("Configuration for NO-GUI sampler: "+configStr);
 
@@ -1326,22 +1339,54 @@ implements Memory.MemoryListener
 			// HOST Monitoring connection
 			if ( ! getCounterController().isHostMonConnected() )
 			{
-				if (_sshHostname != null && _sshUsername != null && (_sshPassword != null || _sshKeyFile != null))
+				if (_localHostMon)
 				{
-					_logger.info( "Connecting to SSH server using. user='"+_sshUsername+"', passwd='"+ "*hidden*" +"', port='"+_sshPort+"'. hostname='"+_sshHostname+"', keyFile='"+_sshKeyFile+"'.");
-					if (System.getProperty("nogui.password.print", "false").equalsIgnoreCase("true"))
-						System.out.println("#### DEBUG ####: Connecting to SSH server using. user='"+_sshUsername+"', passwd='"+ _sshPassword +"', port='"+_sshPort+"', hostname='"+_sshHostname+"', keyFile='"+_sshKeyFile+"'.");
-	
-					// get a connection
-					try
+					_logger.info( "Host Monitoring: Using Local OS Commands. localHostMonWrapperCmd=|" + _localHostMonWrapperCmd + "|.");
+
+					HostMonitorConnection hostMonConn = null;
+
+					if (StringUtil.hasValue(_localHostMonWrapperCmd))
 					{
-						SshConnection sshConn = new SshConnection(_sshHostname, _sshPort, _sshUsername, _sshPassword, _sshKeyFile);
-						sshConn.connect();
-						getCounterController().setHostMonConnection(sshConn);
+						Map<String, String> envMap = new HashMap<>();
+						if (StringUtil.hasValue(_sshHostname)) envMap.put("SSH_HOSTNAME", _sshHostname);
+						if (_sshPort > 0                     ) envMap.put("SSH_PORT"    , _sshPort + "");
+						if (StringUtil.hasValue(_sshUsername)) envMap.put("SSH_USERNAME", _sshUsername);
+						if (StringUtil.hasValue(_sshPassword)) envMap.put("SSH_PASSWORD", _sshPassword);
+						if (StringUtil.hasValue(_sshKeyFile )) envMap.put("SSH_KEYFILE" , _sshKeyFile);
+
+						 hostMonConn = new HostMonitorConnectionLocalOsCmdWrapper(true, _localHostMonWrapperCmd, envMap);
 					}
-					catch (IOException e)
+					else
 					{
-						_logger.error("Host Monitoring: Failed to connect to SSH hostname='"+_sshHostname+"', user='"+_sshUsername+"'.", e);
+						hostMonConn = new HostMonitorConnectionLocalOsCmd(true); // Create it with status as: connected
+					}
+
+					//hostMonConn.connect(); // emulate that we did a connection
+
+					getCounterController().setHostMonConnection(hostMonConn);
+				}
+				else
+				{
+					if (_sshHostname != null && _sshUsername != null && (_sshPassword != null || _sshKeyFile != null))
+					{
+						_logger.info( "Connecting to SSH server using. user='"+_sshUsername+"', passwd='"+ "*hidden*" +"', port='"+_sshPort+"'. hostname='"+_sshHostname+"', keyFile='"+_sshKeyFile+"'.");
+						if (System.getProperty("nogui.password.print", "false").equalsIgnoreCase("true"))
+							System.out.println("#### DEBUG ####: Connecting to SSH server using. user='"+_sshUsername+"', passwd='"+ _sshPassword +"', port='"+_sshPort+"', hostname='"+_sshHostname+"', keyFile='"+_sshKeyFile+"'.");
+		
+						// get a connection
+						try
+						{
+							SshConnection sshConn = new SshConnection(_sshHostname, _sshPort, _sshUsername, _sshPassword, _sshKeyFile);
+							sshConn.connect();
+							
+							HostMonitorConnection hostMonConn = new HostMonitorConnectionSsh(sshConn);
+
+							getCounterController().setHostMonConnection(hostMonConn);
+						}
+						catch (Exception e)
+						{
+							_logger.error("Host Monitoring: Failed to connect to SSH hostname='"+_sshHostname+"', user='"+_sshUsername+"'.", e);
+						}
 					}
 				}
 			}

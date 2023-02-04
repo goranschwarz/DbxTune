@@ -58,10 +58,12 @@ public interface IDbmsDdlResolver
 
 	String ddlText(Schema schema);
 	String ddlText(Table table);
+	String ddlText(Table table, String inSchemaName, String inTableName);
 	String ddlText(Index index, boolean pkAsConstraint);
 	String ddlText(Index index, boolean pkAsConstraint, String inSchemaName, String inTableName);
 
 	String ddlTextAlterTable(ForeignKey fk);
+	String ddlTextAlterTable(ForeignKey fk, String inSchemaName, String inTableName);
 	
 	String ddlTextTable(ResultSetMetaDataCached rsmdc);
 	String ddlTextTable(ResultSetMetaDataCached rsmdc, String schemaName, String tableName);

@@ -132,6 +132,10 @@
 	<classpathentry kind="lib" path="lib/jsqlparser-4.5.jar"/>
 	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-11.2.1.jre8.jar"/>
 	<classpathentry kind="lib" path="lib/simplemagic-1.17.jar" sourcepath="3pp/simplemagic-1.17-sources.jar"/>
-	<classpathentry kind="lib" path="lib/jsch-0.2.6.jar" sourcepath="3pp/jsch-0.2.6-sources.jar"/>
+	<classpathentry kind="lib" path="lib/jsch-0.2.6.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1675446623305/source/jsch-0.2.6-sources-1675448143386.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="https://epaul.github.io/jsch-documentation/javadoc"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="classes"/>
 </classpath>
