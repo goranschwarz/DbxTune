@@ -37,7 +37,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.hostmon.HostMonitorConnection.ExecutionWrapper;
 import com.asetune.hostmon.HostMonitorConnectionSsh;
-import com.asetune.ssh.SshConnection2;
+import com.asetune.ssh.SshConnection;
 
 /**
  * Class that does "tail" on any file
@@ -66,7 +66,7 @@ public class FileTail
 
 	private enum TailType {LOCAL, SSH};
 	
-	private SshConnection2 _sshConn = null;
+	private SshConnection _sshConn = null;
 
 	private TailType _execMode = null;
 	private Thread _thread = null;
@@ -152,19 +152,19 @@ public class FileTail
 
 	/**
 	 * Do remote "tail"
-	 * @param sshConn A SshConnection2 already connected to the backend
+	 * @param sshConn A SshConnection already connected to the backend
 	 * @param filename Name of the file
 	 * @param startAtBeginning start from "top" of the file
 	 */
-	public FileTail(SshConnection2 sshConn, String filename, boolean startAtBeginning)
+	public FileTail(SshConnection sshConn, String filename, boolean startAtBeginning)
 	{
 		this(sshConn, filename, startAtBeginning, 0);
 	}
-	public FileTail(SshConnection2 sshConn, String filename, int linesFromEnd)
+	public FileTail(SshConnection sshConn, String filename, int linesFromEnd)
 	{
 		this(sshConn, filename, false, linesFromEnd);
 	}
-	private FileTail(SshConnection2 sshConn, String filename, boolean startAtBeginning, int linesFromEnd)
+	private FileTail(SshConnection sshConn, String filename, boolean startAtBeginning, int linesFromEnd)
 	{
 		_sshConn          = sshConn;
 		_filename         = filename;

@@ -24,7 +24,7 @@ import java.util.Properties;
 
 import org.apache.log4j.PropertyConfigurator;
 
-import com.asetune.ssh.SshConnection2;
+import com.asetune.ssh.SshConnection;
 
 public abstract class MonitorUpTime
 extends HostMonitor
@@ -43,7 +43,7 @@ extends HostMonitor
 //	public static HostMonitor createMonitor(String host, int port, String user, String passwd, String keyFile, boolean start)
 //	throws Exception
 //	{
-//		SshConnection2 conn = new SshConnection2(host, port, user, passwd, keyFile);
+//		SshConnection conn = new SshConnection(host, port, user, passwd, keyFile);
 //		return createMonitor(conn, start);
 //	}
 
@@ -55,7 +55,7 @@ extends HostMonitor
 	 * @throws Exception
 	 */
 	//@override
-//	public static HostMonitor createMonitor(SshConnection2 conn, boolean start)
+//	public static HostMonitor createMonitor(SshConnection conn, boolean start)
 	public static HostMonitor createMonitor(HostMonitorConnection conn, boolean start)
 	throws Exception
 	{
@@ -132,8 +132,8 @@ extends HostMonitor
 
 		try
 		{
-			SshConnection2 conn = new SshConnection2("sunspot", "gorans", "YHNmju76");
-//			SshConnection2 conn = new SshConnection2("bluesky2", "gorans", "xxxx");
+			SshConnection conn = new SshConnection("sunspot", "gorans", "YHNmju76");
+//			SshConnection conn = new SshConnection("bluesky2", "gorans", "xxxx");
 		
 			HostMonitorConnectionSsh hostMonConn = new HostMonitorConnectionSsh(conn);
 

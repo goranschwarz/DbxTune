@@ -35,7 +35,7 @@ import com.asetune.pcs.report.DailySummaryReportFactory;
 import com.asetune.pcs.report.IDailySummaryReport;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
-import com.asetune.ssh.SshConnection2;
+import com.asetune.ssh.SshConnection;
 import com.asetune.ssh.SshTunnelInfo;
 import com.asetune.ssh.SshTunnelManager2;
 import com.asetune.utils.Configuration;
@@ -128,7 +128,7 @@ public class DailySummaryReportTest
 				sshTi.setLocalPort  (conf.getIntProperty("SshTunnelInfo.local.port",    9092));
 				cp.setSshTunnelInfo(sshTi);
 
-				SshConnection2 sshConn = new SshConnection2(sshTi.getSshHost(), sshTi.getSshPort(), sshTi.getSshUsername(), sshTi.getSshPassword(), sshTi.getSshKeyFile());
+				SshConnection sshConn = new SshConnection(sshTi.getSshHost(), sshTi.getSshPort(), sshTi.getSshUsername(), sshTi.getSshPassword(), sshTi.getSshKeyFile());
 				sshConn.connect();
 				
 				SshTunnelManager2 tm = SshTunnelManager2.getInstance();

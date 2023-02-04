@@ -53,7 +53,7 @@ public class SshTunnelManager2
 	/** local class */
 	private static class LocalPortForwarderWrapper
 	{
-		public LocalPortForwarderWrapper(int localPort, int remotePort, String sshConnKey, SshConnection2 sshConnection)
+		public LocalPortForwarderWrapper(int localPort, int remotePort, String sshConnKey, SshConnection sshConnection)
 		{
 			_numberOfUsers = 0;
 			_localPort     = localPort;
@@ -73,7 +73,7 @@ public class SshTunnelManager2
 		public int                _localPort;
 		public int                _remotePort;
 		public String             _sshConnKey;
-		public SshConnection2      _sshConnection;
+		public SshConnection      _sshConnection;
 
 		/** Close port forwarding */
 		public void close()
@@ -87,7 +87,7 @@ public class SshTunnelManager2
 	}
 	private static class SshConnectionWrapper
 	{
-		public SshConnectionWrapper(SshConnection2 sshConnection)
+		public SshConnectionWrapper(SshConnection sshConnection)
 		{
 			_numberOfUsers = 0;
 			_sshConnection = sshConnection;
@@ -101,7 +101,7 @@ public class SshTunnelManager2
 			_numberOfUsers--;
 		}
 		public int           _numberOfUsers;
-		public SshConnection2 _sshConnection;
+		public SshConnection _sshConnection;
 	}
 
 	public static boolean hasInstance()
@@ -206,7 +206,7 @@ public class SshTunnelManager2
 
 		if (makeNewShhConnection)
 		{
-			SshConnection2 sshConn = new SshConnection2(
+			SshConnection sshConn = new SshConnection(
 				sshTunnelInfo.getSshHost(), 
 				sshTunnelInfo.getSshPort(), 
 				sshTunnelInfo.getSshUsername(), 

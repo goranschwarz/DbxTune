@@ -26,8 +26,8 @@ import java.io.InputStream;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.ssh.SshConnection2;
-import com.asetune.ssh.SshConnection2.LinuxUtilType;
+import com.asetune.ssh.SshConnection;
+import com.asetune.ssh.SshConnection.LinuxUtilType;
 import com.jcraft.jsch.ChannelExec;
 
 public class HostMonitorConnectionSsh 
@@ -35,9 +35,9 @@ extends HostMonitorConnection
 {
 	private static Logger _logger = Logger.getLogger(HostMonitorConnectionSsh.class);
 
-	private SshConnection2 _sshConn;
+	private SshConnection _sshConn;
 	
-	public HostMonitorConnectionSsh(SshConnection2 sshConn)
+	public HostMonitorConnectionSsh(SshConnection sshConn)
 	{
 		super(ConnectionType.SSH);
 //System.out.println(this.getClass().getSimpleName()+".CONSTRUCTOR(): sshConn="+sshConn);
@@ -45,7 +45,7 @@ extends HostMonitorConnection
 		_sshConn = sshConn;
 	}
 
-	public SshConnection2 getSshConnection()
+	public SshConnection getSshConnection()
 	{
 		return _sshConn;
 	}
@@ -240,7 +240,7 @@ extends HostMonitorConnection
 	private static class ExecutionWrapperShh
 	implements ExecutionWrapper
 	{
-		private SshConnection2 _sshConn;
+		private SshConnection _sshConn;
 		
 		private ChannelExec _sshChannel;
 
@@ -252,7 +252,7 @@ extends HostMonitorConnection
 		// Used in debug prints
 		private String _name;
 
-		public ExecutionWrapperShh(SshConnection2 sshConn)
+		public ExecutionWrapperShh(SshConnection sshConn)
 		{
 			_sshConn = sshConn;
 		}

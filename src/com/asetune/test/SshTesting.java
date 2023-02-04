@@ -25,14 +25,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-import com.asetune.ssh.SshConnection2;
+import com.asetune.ssh.SshConnection;
 
 public class SshTesting
 {
 
 	public static void main(String[] args)
 	{
-		SshConnection2 conn = new SshConnection2("192.168.0.112", "gorans", "1niss2e");
+		SshConnection conn = new SshConnection("192.168.0.112", "gorans", "1niss2e");
 		
 		try
 		{

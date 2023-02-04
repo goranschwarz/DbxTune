@@ -38,7 +38,7 @@ import javax.swing.Timer;
 import org.apache.log4j.Logger;
 
 import com.asetune.hostmon.HostMonitorConnection.ExecutionWrapper;
-import com.asetune.ssh.SshConnection2;
+import com.asetune.ssh.SshConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
@@ -623,7 +623,7 @@ implements Runnable
 //System.out.println(">>parseAndApply(): type=" + type + ", row=|" + row + "|.");
 
 		// do "dynamic" initialization (reading first row), for example if we parse a CSV and the "dynamic" column names is in header
-		if (type == SshConnection2.STDOUT_DATA && md.isInitializeUsingFirstRowEnabled() && !md.isFirstRowInitDone())
+		if (type == SshConnection.STDOUT_DATA && md.isInitializeUsingFirstRowEnabled() && !md.isFirstRowInitDone())
 		{
 			md.doInitializeUsingFirstRow(row);
 			return;
@@ -937,12 +937,12 @@ implements Runnable
 //	private static class ExecutionWrapperShh
 //	implements ExecutionWrapper
 //	{
-//		private SshConnection2 _sshConn;
+//		private SshConnection _sshConn;
 //		private HostMonitor2 _hostMon;
 //		
 //		private Session _sshSession;
 //
-//		public ExecutionWrapperShh(HostMonitor2 hostMon, SshConnection2 sshConn)
+//		public ExecutionWrapperShh(HostMonitor2 hostMon, SshConnection sshConn)
 //		{
 //			_sshConn = sshConn;
 //			_hostMon = hostMon;
@@ -1274,7 +1274,7 @@ implements Runnable
 
 System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|"+row+"|");
 //					System.out.println(row);
-					parseAndApply(getMetaData(), row, SshConnection2.STDOUT_DATA);
+					parseAndApply(getMetaData(), row, SshConnection.STDOUT_DATA);
 				}
 
 				// STDERR
@@ -1306,7 +1306,7 @@ System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|
 					}
 					
 //					System.err.println(row);
-					parseAndApply(getMetaData(), row, SshConnection2.STDERR_DATA);
+					parseAndApply(getMetaData(), row, SshConnection.STDERR_DATA);
 				}
 			}
 //			catch (IOException e)
@@ -1521,7 +1521,7 @@ System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|
 						if (_logger.isDebugEnabled())
 							_logger.debug("Received on STDOUT: "+row);
 
-						parseAndApply(getMetaData(), row, SshConnection2.STDOUT_DATA);
+						parseAndApply(getMetaData(), row, SshConnection.STDOUT_DATA);
 					}
 
 //					if (_logger.isDebugEnabled())
@@ -1580,7 +1580,7 @@ System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|
 						}
 						else
 						{
-							parseAndApply(getMetaData(), row, SshConnection2.STDERR_DATA);
+							parseAndApply(getMetaData(), row, SshConnection.STDERR_DATA);
 						}
 					}
 

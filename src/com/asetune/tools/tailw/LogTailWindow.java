@@ -94,7 +94,7 @@ import com.asetune.gui.swing.GTextField;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.ssh.RemoteFileSystemView;
-import com.asetune.ssh.SshConnection2;
+import com.asetune.ssh.SshConnection;
 import com.asetune.tools.NormalExitException;
 import com.asetune.tools.tailw.LogFileFilterAndColorManager.FilterEntry;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
@@ -167,7 +167,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 	private static final int ACCESS_TYPE_LOCAL         = 2;
 
 	private JPanel             _sshPanel               = null;
-	private SshConnection2      _sshConn                = null;
+	private SshConnection      _sshConn                = null;
 //	private JCheckBox          _sshConnect_chk         = new JCheckBox("SSH Connection", true);
 	private JLabel             _sshUsername_lbl        = new JLabel("Username");
 	private JTextField         _sshUsername_txt        = new JTextField("");
@@ -980,7 +980,7 @@ PropertyConfigurator.configure(log4jProps);
 			{
 //				SwingUtils.showInfoMessage(this, "Not yet supported", "Sorry: Pick a file from a Remote server is currently NOT possible.");
 				
-				SshConnection2 sshConn = sshConnect();
+				SshConnection sshConn = sshConnect();
 				if (sshConn != null)
 				{
 					try
@@ -1747,7 +1747,7 @@ PropertyConfigurator.configure(log4jProps);
 		}
 	}
 
-	public SshConnection2 sshConnect()
+	public SshConnection sshConnect()
 	{
 		final String user    = _sshUsername_txt.getText();
 		final String passwd  = _sshPassword_txt.getText();
@@ -1760,7 +1760,7 @@ PropertyConfigurator.configure(log4jProps);
 		try {port = Integer.parseInt(portStr);} 
 		catch(NumberFormatException ignore) {}
 
-		final SshConnection2 sshConn = new SshConnection2(host, port, user, passwd, keyFile);
+		final SshConnection sshConn = new SshConnection(host, port, user, passwd, keyFile);
 		WaitForExecDialog wait = new WaitForExecDialog(this, "SSH Connecting to "+host+", with user "+user);
 		sshConn.setWaitForDialog(wait);
 

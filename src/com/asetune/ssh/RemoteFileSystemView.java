@@ -70,7 +70,7 @@ import javax.swing.filechooser.FileSystemView;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.ssh.SshConnection2.ExecOutput;
+import com.asetune.ssh.SshConnection.ExecOutput;
 
 //import org.peace_tools.generic.Log.LogLevel;
 //import org.peace_tools.generic.ProgrammerLog;
@@ -253,7 +253,7 @@ public class RemoteFileSystemView extends FileSystemView {
 //	    	_logger.info("Unable to detect drives by running mount command. Will proceed with default.");
 //	    }
 //	}
-	public RemoteFileSystemView(SshConnection2 sshConn) 
+	public RemoteFileSystemView(SshConnection sshConn) 
 	throws Exception 
 	{
 		if (sshConn == null)

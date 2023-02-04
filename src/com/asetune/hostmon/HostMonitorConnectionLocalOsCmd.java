@@ -32,7 +32,7 @@ import java.util.Map;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 
-import com.asetune.ssh.SshConnection2.LinuxUtilType;
+import com.asetune.ssh.SshConnection.LinuxUtilType;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.VersionShort;
 

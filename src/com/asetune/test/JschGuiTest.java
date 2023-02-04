@@ -46,8 +46,8 @@ import org.apache.log4j.PropertyConfigurator;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.ssh.RemoteFileSystemView;
-import com.asetune.ssh.SshConnection2;
-import com.asetune.ssh.SshConnection2.ExecOutput;
+import com.asetune.ssh.SshConnection;
+import com.asetune.ssh.SshConnection.ExecOutput;
 import com.asetune.utils.SwingUtils;
 import com.jcraft.jsch.ChannelExec;
 
@@ -84,7 +84,7 @@ public class JschGuiTest
 //			String host = "gorans.org";
 //
 //
-//			SshConnection2 ssh2 = new SshConnection2(host, 22, user, "passwd", null);
+//			SshConnection ssh2 = new SshConnection(host, 22, user, "passwd", null);
 //			ssh2.connect();
 //			
 //			String cmd = "uname -a";
@@ -149,7 +149,7 @@ public class JschGuiTest
 		JButton _rFileView_but  = new JButton("Remote File View");
 		JButton _close_but      = new JButton("Close Window");
 
-		SshConnection2 _conn = null;
+		SshConnection _conn = null;
 
 		public void init()
 		{
@@ -252,7 +252,7 @@ public class JschGuiTest
 				System.out.println("---CONNECT---");
 				if (_conn == null)
 				{
-					_conn = new SshConnection2(_hostname_txt.getText(), 22, _username_txt.getText(), _password_txt.getText(), _keyFile_txt.getText());			
+					_conn = new SshConnection(_hostname_txt.getText(), 22, _username_txt.getText(), _password_txt.getText(), _keyFile_txt.getText());			
 					_conn.setGuiOwner(this);
 				}
 
@@ -492,7 +492,7 @@ public class JschGuiTest
 			}
 		}
 
-		private SshConnection2 sshConnect()
+		private SshConnection sshConnect()
 		{
 			final String user    = _username_txt.getText();
 			final String passwd  = _password_txt.getText();
@@ -506,7 +506,7 @@ public class JschGuiTest
 
 System.out.println("sshConnect(): host='"+host+"', port='"+port+"', user='"+user+"', passwd='"+passwd+"', keyFile='"+keyFile+"'");
 			
-			final SshConnection2 sshConn = new SshConnection2(host, port, user, passwd, keyFile);
+			final SshConnection sshConn = new SshConnection(host, port, user, passwd, keyFile);
 			WaitForExecDialog wait = new WaitForExecDialog(this, "SSH Connecting to "+host+", with user "+user);
 			sshConn.setWaitForDialog(wait);
 

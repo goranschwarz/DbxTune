@@ -45,7 +45,7 @@ import com.asetune.hostmon.HostMonitorMetaData;
 import com.asetune.hostmon.OsTable;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.IqConnection;
-import com.asetune.ssh.SshConnection2;
+import com.asetune.ssh.SshConnection;
 import com.asetune.utils.FileTail;
 
 
@@ -312,7 +312,7 @@ System.out.println("NOTE: iqMsgFile was changed from '"+_iqMsgFile+"' to '"+name
 		if (doShh)
 		{
 //			SshConnection sshConn = CounterController.getInstance().getHostMonConnection();
-			SshConnection2 sshConn = null;
+			SshConnection sshConn = null;
 			HostMonitorConnection hostMonConn = CounterController.getInstance().getHostMonConnection();
 			if (hostMonConn instanceof HostMonitorConnectionSsh)
 			{

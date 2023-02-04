@@ -148,7 +148,7 @@ public class SshConnectionTester
 			
 			
 //			SshConnection conn = new SshConnection(hostname, port, username, password, keyfile);
-			SshConnection2 conn = new SshConnection2(hostname, port, username, password, keyfile);
+			SshConnection conn = new SshConnection(hostname, port, username, password, keyfile);
 
 			try
 			{

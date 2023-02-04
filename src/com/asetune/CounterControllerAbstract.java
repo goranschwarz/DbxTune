@@ -2009,7 +2009,7 @@ implements ICounterController
 	}
 
 	/**
-	 * Set the <code>SshConnection2</code> to use for monitoring.
+	 * Set the <code>SshConnection</code> to use for monitoring.
 	 */
 //	@Override
 //	public void setHostMonConnection(SshConnection sshConn)

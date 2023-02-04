@@ -167,9 +167,9 @@ public interface ICounterController
 	
 	
 	boolean isHostMonConnected();
-//	SshConnection2 getHostMonConnection();
+//	SshConnection getHostMonConnection();
 	HostMonitorConnection getHostMonConnection();
-//	void setHostMonConnection(SshConnection2 sshConn);
+//	void setHostMonConnection(SshConnection sshConn);
 	void setHostMonConnection(HostMonitorConnection hostMonConn);
 	void closeHostMonConnection();
 

@@ -78,9 +78,9 @@ import com.jcraft.jsch.UserInfo;
 //import ch.ethz.ssh2.Session;
 //import ch.ethz.ssh2.StreamGobbler;
 
-public class SshConnection2
+public class SshConnection
 {
-	private static Logger _logger = Logger.getLogger(SshConnection2.class);
+	private static Logger _logger = Logger.getLogger(SshConnection.class);
 
 	private String _username = null;
 	private String _password = null;
@@ -148,7 +148,7 @@ public class SshConnection2
 	/**
 	 * Create an empty SshConnection, but you need to setUser,password,host
 	 */
-	public SshConnection2()
+	public SshConnection()
 	{
 	}
 
@@ -158,7 +158,7 @@ public class SshConnection2
 	 * @param username
 	 * @param password
 	 */
-	public SshConnection2(String hostname, String username, String password)
+	public SshConnection(String hostname, String username, String password)
 	{
 		this(hostname, 22, username, password, null);
 	}
@@ -184,7 +184,7 @@ public class SshConnection2
 	 * @param password
 	 * @param keyFile
 	 */
-	public SshConnection2(String hostname, int port, String username, String password, String keyFile)
+	public SshConnection(String hostname, int port, String username, String password, String keyFile)
 	{
 		setHost    (hostname);
 		setPort    (port);

@@ -308,13 +308,13 @@ implements ActionListener, KeyListener, FocusListener
 		                               + "If SSH Authentication model is 'publickey' and you have a password for the <i>private key file</i>, then type this password here.<br>"
 		                               + "If the <i>private key file</i> does <b>not</b> have a password, just type <i>anything here</i> so the button is enabled.<br>"
 		                               + "<br>"
-		                               + "Note 1: To use 'publickey' authentication the file '"+SshConnection2.getRsaKeyFilename()+"' is used.<br>"
+		                               + "Note 1: To use 'publickey' authentication the file '"+SshConnection.getRsaKeyFilename()+"' is used.<br>"
 		                               + "Note 2: The above file needs to contain a key in the OpenSSH format.<br>"
 		                               + "(If you have a PUTTY generated it needs to be converted using <i>puttygen</i>, load the file, then: Menu -&gt; Convertion -&gt; Export OpenSSH Key)<br>"
 		                               + "<br>"
 //		                               + "If 'publickey' authentication does <b>not</b> work, it can be disabled, by inserting:.<br>"
-//		                               + "<code>"+SshConnection2.PROPKEY_sshAuthenticateEnableRSA+" = false</code>.<br>"
-//		                               + "<code>"+SshConnection2.PROPKEY_sshAuthenticateEnableDSA+" = false</code>.<br>"
+//		                               + "<code>"+SshConnection.PROPKEY_sshAuthenticateEnableRSA+" = false</code>.<br>"
+//		                               + "<code>"+SshConnection.PROPKEY_sshAuthenticateEnableDSA+" = false</code>.<br>"
 //		                               + "In the file: <code>"+Configuration.getInstance(Configuration.USER_TEMP).getFilename()+"</code><br>"
 		                               + "</html>");
 		_sshPasswd_txt.setToolTipText(_sshPasswd_lbl.getToolTipText());

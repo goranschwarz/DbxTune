@@ -23,7 +23,7 @@ package com.asetune.hostmon;
 
 import java.io.InputStream;
 
-import com.asetune.ssh.SshConnection2.LinuxUtilType;
+import com.asetune.ssh.SshConnection.LinuxUtilType;
 
 /**
  * This should hold a Connection to the HostMonitoring system. (this could be: a "SSH connection" or a simple "local OS/host")
