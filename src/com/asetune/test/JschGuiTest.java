@@ -48,6 +48,8 @@ import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.ssh.RemoteFileSystemView;
 import com.asetune.ssh.SshConnection;
 import com.asetune.ssh.SshConnection.ExecOutput;
+import com.asetune.ssh.SshConnection.ExecutionFeedback;
+import com.asetune.ssh.SshConnection.IExecutionFeedback;
 import com.asetune.utils.SwingUtils;
 import com.jcraft.jsch.ChannelExec;
 
@@ -121,33 +123,37 @@ public class JschGuiTest
 			_command2_txt.setText(cmd2);
 		}
 
-		JLabel     _hostname_lbl  = new JLabel("Hostname");
-		JTextField _hostname_txt  = new JTextField();
+		JLabel     _hostname_lbl   = new JLabel("Hostname");
+		JTextField _hostname_txt   = new JTextField();
 
-		JLabel     _username_lbl  = new JLabel("Username");
-		JTextField _username_txt  = new JTextField();
+		JLabel     _username_lbl   = new JLabel("Username");
+		JTextField _username_txt   = new JTextField();
 
-		JLabel     _password_lbl  = new JLabel("Password");
-		JTextField _password_txt  = new JTextField();
+		JLabel     _password_lbl   = new JLabel("Password");
+		JTextField _password_txt   = new JTextField();
 
-		JLabel     _keyFile_lbl  = new JLabel("Key File");
-		JTextField _keyFile_txt  = new JTextField();
+		JLabel     _keyFile_lbl    = new JLabel("Key File");
+		JTextField _keyFile_txt    = new JTextField();
 
-		JLabel     _command1_lbl = new JLabel("Command");
-		JTextField _command1_txt = new JTextField();
-		JButton    _exec1_but    = new JButton("Execute Short Cmd");
+		JLabel     _command1_lbl   = new JLabel("Command");
+		JTextField _command1_txt   = new JTextField();
+		JButton    _exec1_but      = new JButton("Execute Short Cmd");
 
-		JLabel     _command2_lbl = new JLabel("Command");
-		JTextField _command2_txt = new JTextField();
-		JButton    _exec2_but    = new JButton("Execute Streaming");
+		JLabel     _command2_lbl   = new JLabel("Command");
+		JTextField _command2_txt   = new JTextField();
+		JButton    _exec2_but      = new JButton("Execute Streaming");
+		JButton    _exec2_stop_but = new JButton("Stop");
 
-		JTextArea  _output_txt    = new JTextArea();
+		JButton    _examples_but   = new JButton("Print some Commands");
+//		while true; do echo "########"; echo "std-out: $(date)"; echo "std-err: $(date)" 1>&2; sleep 1; done
+
+		JTextArea  _output_txt     = new JTextArea();
 		
-		JButton _connect_but    = new JButton("Connect");
-		JButton _reConnect_but  = new JButton("ReConnect");
-		JButton _disConnect_but = new JButton("Close Connection");
-		JButton _rFileView_but  = new JButton("Remote File View");
-		JButton _close_but      = new JButton("Close Window");
+		JButton _connect_but       = new JButton("Connect");
+		JButton _reConnect_but     = new JButton("ReConnect");
+		JButton _disConnect_but    = new JButton("Close Connection");
+		JButton _rFileView_but     = new JButton("Remote File View");
+		JButton _close_but         = new JButton("Close Window");
 
 		SshConnection _conn = null;
 
@@ -163,32 +169,38 @@ public class JschGuiTest
 			//---------------------------------------------------
 			JPanel upperPanel = new JPanel(new MigLayout());
 
-			upperPanel.add(_hostname_lbl , "");
-			upperPanel.add(_hostname_txt , "pushx, growx, wrap");
+			upperPanel.add(_hostname_lbl  , "");
+			upperPanel.add(_hostname_txt  , "pushx, growx, wrap");
 
-			upperPanel.add(_username_lbl , "");
-			upperPanel.add(_username_txt , "pushx, growx, wrap");
+			upperPanel.add(_username_lbl  , "");
+			upperPanel.add(_username_txt  , "pushx, growx, wrap");
 
-			upperPanel.add(_password_lbl , "");
-			upperPanel.add(_password_txt , "pushx, growx, wrap");
+			upperPanel.add(_password_lbl  , "");
+			upperPanel.add(_password_txt  , "pushx, growx, wrap");
 			
-			upperPanel.add(_keyFile_lbl , "");
-			upperPanel.add(_keyFile_txt , "pushx, growx, wrap 20");
+			upperPanel.add(_keyFile_lbl   , "");
+			upperPanel.add(_keyFile_txt   , "pushx, growx, wrap 20");
 			
-			upperPanel.add(_command1_lbl , "");
-			upperPanel.add(_command1_txt , "split, pushx, growx");
-			upperPanel.add(_exec1_but    , "wrap");
+			upperPanel.add(_command1_lbl  , "");
+			upperPanel.add(_command1_txt  , "split, pushx, growx");
+			upperPanel.add(_exec1_but     , "wrap");
 			
-			upperPanel.add(_command2_lbl , "");
-			upperPanel.add(_command2_txt , "split, pushx, growx");
-			upperPanel.add(_exec2_but    , "wrap");
+			upperPanel.add(_command2_lbl  , "");
+			upperPanel.add(_command2_txt  , "split, pushx, growx");
+			upperPanel.add(_exec2_but     , "");
+			upperPanel.add(_exec2_stop_but, "wrap");
+			
+			upperPanel.add(_examples_but  , "skip, wrap");
 
-			_command1_txt.addActionListener(this);
-			_exec1_but   .addActionListener(this);
+			_command1_txt  .addActionListener(this);
+			_exec1_but     .addActionListener(this);
 
-			_command2_txt.addActionListener(this);
-			_exec2_but   .addActionListener(this);
-			
+			_command2_txt  .addActionListener(this);
+			_exec2_but     .addActionListener(this);
+			_exec2_stop_but.addActionListener(this);
+
+			_examples_but  .addActionListener(this);
+
 			
 			//---------------------------------------------------
 			_output_txt.setVisible(true);
@@ -244,9 +256,31 @@ public class JschGuiTest
 			if (_exec2_but.equals(source) || _command2_txt.equals(source))
 			{
 				System.out.println("---EXEC-LONG---");
-				action_execute_stream(e);
+//				action_execute_stream(e);
+				action_execute_stream2(e);
+			}
+			if (_exec2_stop_but.equals(source))
+			{
+				System.out.println("---EXEC-STOP---");
+				action_stop_stream2(e);
 			}
 
+			if (_examples_but.equals(source))
+			{
+				String examplesCmd = ""
+						+ "## Echo on both STDOUT and STDERR every seconds \n"
+						+ "while true; do echo \"########\"; echo \"std-out: $(date)\"; echo \"std-err: $(date)\" 1>&2; sleep 1; done \n"
+						+ "\n"
+						+ "## IOSTAT every 5 seconds, forever \n"
+						+ "iostat -xdtck 5 \n"
+						+ "\n"
+						+ "## IOSTAT every 5 seconds, 3 times, then exit \n"
+						+ "iostat -xdtck 5 3 \n"
+						+ "";
+
+				_output_txt.setText(examplesCmd);
+			}
+			
 			if (_connect_but.equals(source))
 			{
 				System.out.println("---CONNECT---");
@@ -385,6 +419,63 @@ public class JschGuiTest
 			}
 		}
 
+		private void action_execute_stream2(ActionEvent e)
+		{
+			if (_conn == null)
+			{
+				_output_txt.setText("--- SORRY NOT YET CONNECTED...");
+				return;
+			}
+			String command = _command2_txt.getText();
+			_output_txt.setText("Executing Streaming command: |" + command + "|\n");
+
+			_streamContinueFlag = true;
+			
+			ExecutionFeedback execFeedback = new ExecutionFeedback()
+			{
+				@Override
+				public boolean doContinue()
+				{
+//					System.out.println("doContinue() <<< " + _streamContinueFlag);
+					return _streamContinueFlag;
+				}
+				
+				@Override
+				public void onData(int type, String row)
+				{
+					_output_txt.append( row );
+					_output_txt.append( "\n" );
+					_output_txt.setCaretPosition( _output_txt.getDocument().getLength() );
+				}
+			};
+			
+			Thread t = new Thread()
+			{
+				@Override
+				public void run()
+				{
+					try
+					{
+						int retCode = _conn.execCommand(command, execFeedback);
+						_output_txt.append("exit-status: " + retCode);
+
+					}
+					catch (Exception e1)
+					{
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+				}
+			};
+			t.start();
+		}
+		private void action_stop_stream2(ActionEvent e)
+		{
+			_output_txt.append("Stop Streaming command... was pressed\n");
+			_streamContinueFlag = false;
+		}
+		private boolean _streamContinueFlag = true; 
+
 		private void action_execute_stream(ActionEvent e)
 		{
 			if (_conn == null)
@@ -461,7 +552,7 @@ public class JschGuiTest
 									if (_logger.isDebugEnabled())
 										_logger.debug("waitForData(), sleep(" + sleepMs + "). command=|" + command + "|.");
 
-									System.out.println("waitForData(), sleep(" + sleepMs + "). command=|" + command + "|.");
+//									System.out.println("waitForData(), sleep(" + sleepMs + "). command=|" + command + "|.");
 									
 									Thread.sleep(sleepMs);
 								}

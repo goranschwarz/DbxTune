@@ -1106,25 +1106,9 @@ implements Runnable
 		ExecutionWrapper execWrapper = null;
 		try
 		{
-//			boolean requestPty = false;
-//			if (isConnectedToVendor(OsVendor.Windows))
-//				requestPty = true;
-//
-//			if (Configuration.getCombinedConfiguration().hasProperty(PROPKEY_forcePty))
-//			{
-//				requestPty = Configuration.getCombinedConfiguration().getBooleanProperty("HostMonitor.ssh.requestPty.force", requestPty);
-//				_logger.info("Using property '" + PROPKEY_forcePty + "' to set PTY Terminal, requestPty=" + requestPty);
-//			}
-//			
-//			_logger.info("Executing command '"+getCommand()+"', requestPty=" + requestPty + ", for the module '"+getModuleName()+"'.");
-//
-//			sess = _conn.execCommand(getCommand(), requestPty);
-
 			_logger.info("Executing command '"+getCommand()+"', for the module '"+getModuleName()+"'.");
-//			sess = _conn.execCommand(getCommand());
 			execWrapper = _hostMonConn.executeCommand(getCommand());
 		}
-//		catch (IOException e)
 		catch (Exception e)
 		{
 			addException(e);
@@ -1158,12 +1142,9 @@ implements Runnable
 		}
 		
 
-//		InputStream stdout = sess.getStdout();
-//		InputStream stderr = sess.getStderr();
 		InputStream stdout = execWrapper.getStdout();
 		InputStream stderr = execWrapper.getStderr();
 
-//		Charset osCharset = Charset.forName(_conn.getOsCharset());
 		Charset osCharset = Charset.forName(_hostMonConn.getOsCharset());
 
 		BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(stdout, osCharset));
@@ -1171,8 +1152,6 @@ implements Runnable
 
 		while(_running)
 		{
-//			int timeoutVal = 60 * 1000;
-			
 			try
 			{
 				// Wait for input if both STDOUT & STDERR is empty
@@ -1195,63 +1174,8 @@ implements Runnable
 							continue;
 						break;
 					}
-					
-//					/* Even though currently there is no data available, it may be that new data arrives
-//					 * and the session's underlying channel is closed before we call waitForCondition().
-//					 * This means that EOF and STDOUT_DATA (or STDERR_DATA, or both) may
-//					 * be set together.
-//					 */
-//
-//					if (_logger.isDebugEnabled())
-//						_logger.debug("----SSH-WAIT-FOR-INPUT[" + getModuleName() + "]");
-//
-//					int conditions = sess.waitForCondition(
-//							  ChannelCondition.STDOUT_DATA 
-//							| ChannelCondition.STDERR_DATA
-//							| ChannelCondition.EOF, 
-//							timeoutVal);
-//
-//					// Wait no longer than XX seconds
-//					if ((conditions & ChannelCondition.TIMEOUT) == ChannelCondition.TIMEOUT)
-//					{
-//						// A timeout occurred.
-//						_logger.warn("Timeout while waiting for data from peer, continuing waiting on data. return ChannelCondition from waitForCondition(...), condition=" + conditions + ", asStr=" + toString_ChannelCondition(conditions) + ", timeoutInMs=" + timeoutVal);
-//
-//						continue;
-//
-//						// A timeout occurred.
-////						throw new IOException("Timeout while waiting for data from peer.");
-////						throw new IOException("Unexpected return ChannelCondition from waitForCondition(...), condition=" + conditions + ", asStr=" + toString_ChannelCondition(conditions) + ", timeoutInMs=" + timeoutVal);
-//					}
-//
-//					// Here we do not need to check separately for CLOSED, since CLOSED implies EOF
-//					if (   ((conditions & ChannelCondition.EOF)    == ChannelCondition.EOF) 
-//					    || ((conditions & ChannelCondition.CLOSED) == ChannelCondition.CLOSED) 
-//					   )
-//					{
-//						// The remote side won't send us further data...
-//						if ((conditions & (ChannelCondition.STDOUT_DATA | ChannelCondition.STDERR_DATA)) == 0)
-//						{
-//							// ... and we have consumed all data in the local arrival window.
-//							_logger.info(getModuleName()+" Received EOF from the command '"+getCommand()+"'.");
-//							addException(new Exception("Received EOF from the command at time: "+new Timestamp(System.currentTimeMillis())+", \nThe module will be restarted, and the command '"+getCommand()+"' re-executed."));
-//		/*<--*/				break;
-//						}
-//					}
-//
-//					// OK, either STDOUT_DATA or STDERR_DATA (or both) is set.
-//
-//					// You can be paranoid and check that the library is not going nuts:
-//					// if ((conditions & (ChannelCondition.STDOUT_DATA | ChannelCondition.STDERR_DATA)) == 0)
-//					//	throw new IllegalStateException("Unexpected condition result (" + conditions + ")");
 				}
-
-				/* If you below replace "while" with "if", then the way the output appears on the local
-				 * stdout and stder streams is more "balanced". Additionally reducing the buffer size
-				 * will also improve the interleaving, but performance will slightly suffer.
-				 * OKOK, that all matters only if you get HUGE amounts of stdout and stderr data =)
-				 */
-				
+					
 				// STDOUT
 				while (stdout.available() > 0) // or possibly:	while (stdoutReader.ready())
 				{
@@ -1272,8 +1196,6 @@ implements Runnable
 					if (StringUtil.isNullOrBlank(row))
 						continue;
 
-System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|"+row+"|");
-//					System.out.println(row);
 					parseAndApply(getMetaData(), row, SshConnection.STDOUT_DATA);
 				}
 
@@ -1309,12 +1231,6 @@ System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|
 					parseAndApply(getMetaData(), row, SshConnection.STDERR_DATA);
 				}
 			}
-//			catch (IOException e)
-//			{
-//				addException(e);
-//				_logger.error("Problems when reading output from the OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
-//				_running = false;
-//			}
 			catch (InterruptedIOException ex)
 			{
 				if (_running)
@@ -1329,20 +1245,6 @@ System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|
 			}
 		}
 
-//		if (sess != null)
-//		{
-//			// Sometimes I have seen exception here... so map that away
-//			try 
-//			{
-//				int osRetCode = sess.getExitStatus();
-//				if (osRetCode != 0)
-//					_logger.error("OS Return Code " + osRetCode + ". Expected return code is 0 for command: " + getCommand());
-//			}
-//			catch (Exception ignore) { /* ignore */ }
-//
-//			_logger.info("Closing Streaming SSH Session for '" + getModuleName() + "' with command '" + getCommand() + "'.");
-//			sess.close();
-//		}
 		// Sometimes I have seen exception here... so map that away
 		try 
 		{
@@ -1398,12 +1300,10 @@ System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|
 			return null; 
 		}
 
-//		Session sess = null;
 		ExecutionWrapper execWrapper = null;
 		try
 		{
 			_logger.debug("Executing command '"+getCommand()+"' for the module '"+getModuleName()+"'.");
-//			sess = _conn.execCommand(getCommand());
 			execWrapper = _hostMonConn.executeCommand(getCommand());
 		}
 		catch (Exception e)
@@ -1419,60 +1319,28 @@ System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|
 		_currentSample = new OsTable(getMetaData());
 
 		
-//		InputStream stdout = sess.getStdout();
-//		InputStream stderr = sess.getStderr();
 		InputStream stdout = execWrapper.getStdout();
 		InputStream stderr = execWrapper.getStderr();
 		
-//		Charset osCharset = Charset.forName(_conn.getOsCharset());
 		Charset osCharset = Charset.forName(_hostMonConn.getOsCharset());
 
 		BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(stdout, osCharset));
 		BufferedReader stderrReader = new BufferedReader(new InputStreamReader(stderr, osCharset));
 
-		while(true)
+		boolean running = true;
+		while(running)
 		{
 			try
 			{
 				if ((stdout.available() == 0) && (stderr.available() == 0))
 				{
-//					/* Even though currently there is no data available, it may be that new data arrives
-//					 * and the session's underlying channel is closed before we call waitForCondition().
-//					 * This means that EOF and STDOUT_DATA (or STDERR_DATA, or both) may
-//					 * be set together.
-//					 */
-//
-//					int conditions = sess.waitForCondition(
-//							  ChannelCondition.STDOUT_DATA 
-//							| ChannelCondition.STDERR_DATA
-//							| ChannelCondition.EOF, 
-//							30*1000);
-//
-//					// Wait no longer than 30 seconds
-//					if ((conditions & ChannelCondition.TIMEOUT) != 0)
-//					{
-//						// A timeout occurred.
-//						throw new IOException("Timeout while waiting for data from peer.");
-//					}
-//
-//					// Here we do not need to check separately for CLOSED, since CLOSED implies EOF
-//					if ((conditions & ChannelCondition.EOF) != 0)
-//					{
-//						// The remote side won't send us further data...
-//						if ((conditions & (ChannelCondition.STDOUT_DATA | ChannelCondition.STDERR_DATA)) == 0)
-//						{
-//							// NORMAL EXIT: ... and we have consumed all data in the local arrival window.
-//		/*<--*/				break;
-//						}
-//					}
-
 					try
 					{
 						execWrapper.waitForData();
 					}
 					catch (InterruptedException e)
 					{
-						// TODO: handle exception
+						running = false;
 					}
 					
 					if ( execWrapper.isClosed() )
@@ -1490,30 +1358,17 @@ System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|
 				 */
 				while (stdout.available() > 0)
 				{
-//					int len = stdout.read(buffer);
-//					if (len > 0) // this check is somewhat paranoid
-//					{
-//						// NOTE if charset convertion is needed, use: new String(buffer, CHARSET)
-//						String row = null;
-//						BufferedReader sr = new BufferedReader(new StringReader(new String(buffer, 0, len, osCharset)));
-//						while ((row = sr.readLine()) != null)
-//						{
-////							System.out.println(row);
-//							parseAndApply(getMetaData(), row, SshConnection.STDOUT_DATA);
-//						}
-//					}
-//					long startTs = -1;
 					if (_logger.isDebugEnabled())
 					{
-//						startTs = System.currentTimeMillis();
 						_logger.debug("SSH-STDOUT[" + getModuleName() + "][available=" + stdout.available() + "]: -start-");
 					}
 					
 					// NOW READ input
-//					String row = stdoutReader.readLine();
-					String row = null;
-					while ((row = stdoutReader.readLine()) != null)
+					while (stdoutReader.ready())
 					{
+						// Read row
+						String row = stdoutReader.readLine();
+
 						// discard empty rows
 						if (StringUtil.isNullOrBlank(row))
 							continue;
@@ -1523,48 +1378,21 @@ System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|
 
 						parseAndApply(getMetaData(), row, SshConnection.STDOUT_DATA);
 					}
-
-//					if (_logger.isDebugEnabled())
-//						_logger.debug("SSH-STDOUT[" + getModuleName() + "][ms=" + (System.currentTimeMillis()-startTs) + ", available=" + stdout.available() + "]: row=|" + row + "|.");
-
-					// discard empty rows
-//					if (StringUtil.isNullOrBlank(row))
-//						continue;
-
-//					parseAndApply(getMetaData(), row, SshConnection.STDOUT_DATA);
 				}
 
 				while (stderr.available() > 0)
 				{
-//					int len = stderr.read(buffer);
-//					if (len > 0) // this check is somewhat paranoid
-//					{
-//						String row = null;
-//						BufferedReader sr = new BufferedReader(new StringReader(new String(buffer, 0, len, osCharset)));
-//						while ((row = sr.readLine()) != null)
-//						{
-//							if (row != null && row.toLowerCase().indexOf("command not found") >= 0 || row.toLowerCase().indexOf("access denied") >= 0)
-//							{
-//								_logger.error(getModuleName()+" was the command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row);
-//								addException(new Exception("Was the command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row));
-//							}
-////							System.err.println(row);
-//							parseAndApply(getMetaData(), row, SshConnection.STDERR_DATA);
-//							_logger.error("Received on STDERR: "+row);
-//						}
-//					}
-//					long startTs = -1;
 					if (_logger.isDebugEnabled())
 					{
-//						startTs = System.currentTimeMillis();
 						_logger.debug("SSH-STDERR[" + getModuleName() + "][available=" + stdout.available() + "]: -start-");
 					}
 					
 					// NOW READ input
-//					String row = stderrReader.readLine();
-					String row = null;
-					while ((row = stderrReader.readLine()) != null)
+					while (stderrReader.ready())
 					{
+						// Read row
+						String row = stderrReader.readLine();
+
 						// discard empty rows
 						if (StringUtil.isNullOrBlank(row))
 							continue;
@@ -1583,32 +1411,8 @@ System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|
 							parseAndApply(getMetaData(), row, SshConnection.STDERR_DATA);
 						}
 					}
-
-//					if (_logger.isDebugEnabled())
-//						_logger.debug("SSH-STDERR[" + getModuleName() + "][ms=" + (System.currentTimeMillis()-startTs) + ", available=" + stdout.available() + "]: row=|" + row + "|.");
-
-					// discard empty rows
-//					if (StringUtil.isNullOrBlank(row))
-//						continue;
-
-//					if (row != null && row.toLowerCase().indexOf("command not found") >= 0 || row.toLowerCase().indexOf("access denied") >= 0)
-//					{
-//						_logger.error(getModuleName()+". The command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row);
-//						addException(new Exception("The command '"+getCommand()+"'\n"
-//								+ "in current $PATH\n"
-//								+ "got following message on STDERR: "+row));
-//					}
-					
-//					System.err.println(row);
-//					parseAndApply(getMetaData(), row, SshConnection.STDERR_DATA);
-//					_logger.error("Received on STDERR: "+row);
 				}
 			}
-//			catch (IOException e)
-//			{
-//				addException(e);
-//				_logger.error("Problems when reading output from the OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
-//			}
 			catch (Exception e)
 			{
 				addException(e);
@@ -1616,19 +1420,6 @@ System.out.println(this.getClass().getSimpleName()+".run(): reading-STDIN: row=|
 			}
 		}
 
-//		if (sess != null)
-//		{
-//			// Sometimes I have seen exception here... so map that away
-//			try 
-//			{
-//				int osRetCode = sess.getExitStatus();
-//				if (osRetCode != 0)
-//					_logger.error("OS Return Code " + osRetCode + ". Expected return code is 0 for command: " + getCommand());
-//			}
-//			catch (Exception ignore) { /* ignore */ }
-//
-//			sess.close();
-//		}
 		// Sometimes I have seen exception here... so map that away
 		try 
 		{

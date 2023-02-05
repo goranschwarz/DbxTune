@@ -66,11 +66,6 @@
 	<classpathentry kind="lib" path="lib/commons-lang3-3.7.jar" sourcepath="3pp/commons-lang3-3.7-sources.jar"/>
 	<classpathentry kind="lib" path="lib/DDLGen.jar"/>
 	<classpathentry kind="lib" path="lib/commons-codec-1.10.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1604159846646/source/commons-codec-1.10-sources-1604249388994.jar"/>
-	<classpathentry kind="lib" path="lib/bcprov-jdk15on-157.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="https://www.bouncycastle.org/docs/docs1.5on"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="lib" path="lib/janino-3.0.7.jar" sourcepath="3pp/janino-3.0.7-sources.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:platform:/resource/AseTune/3pp/janino-3.0.7-javadoc.jar!/"/>
@@ -104,6 +99,7 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="lib/jide-oss-3.6.18.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1605637792987/source/jide-oss-3.6.18-sources-1605719684373.jar"/>
+	<classpathentry kind="lib" path="bin/dbxtune.bat"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="lib/jackson-core-2.9.2.jar" sourcepath="3pp/jackson-core-2.9.2-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jackson-databind-2.9.2.jar" sourcepath="3pp/jackson-databind-2.9.2-sources.jar"/>
@@ -131,10 +127,7 @@
 	<classpathentry kind="lib" path="lib/jsqlparser-4.5.jar"/>
 	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-11.2.1.jre8.jar"/>
 	<classpathentry kind="lib" path="lib/simplemagic-1.17.jar" sourcepath="3pp/simplemagic-1.17-sources.jar"/>
-	<classpathentry kind="lib" path="lib/jsch-0.2.6.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1675446623305/source/jsch-0.2.6-sources-1675448143386.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="https://epaul.github.io/jsch-documentation/javadoc"/>
-		</attributes>
-	</classpathentry>
+	<classpathentry kind="lib" path="lib/jsch-0.2.7.jar" sourcepath="3pp/jsch-0.2.7-sources.jar"/>
+	<classpathentry kind="lib" path="lib/bcprov-jdk18on-1.72.jar" sourcepath="3pp/bcprov-jdk18on-1.72-sources.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>

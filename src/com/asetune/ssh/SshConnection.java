@@ -32,7 +32,9 @@ import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -69,14 +71,6 @@ import com.jcraft.jsch.Session;
 import com.jcraft.jsch.UIKeyboardInteractive;
 import com.jcraft.jsch.UserInfo;
 
-
-//import ch.ethz.ssh2.Connection;
-//import ch.ethz.ssh2.InteractiveCallback;
-//import ch.ethz.ssh2.KnownHosts;
-//import ch.ethz.ssh2.LocalPortForwarder;
-//import ch.ethz.ssh2.ServerHostKeyVerifier;
-//import ch.ethz.ssh2.Session;
-//import ch.ethz.ssh2.StreamGobbler;
 
 public class SshConnection
 {
@@ -1033,6 +1027,219 @@ ex.printStackTrace();
 //		}
 	}
 
+	/**
+	 * Class used by {@link #execCommand(String command, ExecutionFeedback execFeedback)} to simplify streaming or long running command to handle output
+	 */
+	public static interface IExecutionFeedback
+	{
+		/** 
+		 * Called before waiting for data, so caller can choose to abort
+		 * @return true = Continue to receive data, false = Abort receiving data 
+		 */
+		default public boolean doContinue()
+		{
+			return true;
+		}
+
+		/**
+		 * Called when a row is received from the command executed
+		 * 
+		 * @param type    1=STDOUT, 2=STDERR
+		 * @param row     The row received
+		 */
+		void onData(int type, String row);
+
+		/**
+		 * Called at the end to let you know the return code of the command
+		 * @param exitCode
+		 */
+		void onExitCode(int exitCode);
+	}
+
+	/**
+	 * Class used by {@link #execCommand(String command, ExecutionFeedback execFeedback)} to simplify streaming or long running command to handle output
+	 */
+	public static abstract class ExecutionFeedback
+	implements IExecutionFeedback
+	{
+		private int _exitCode = -1;
+
+		@Override
+		public abstract void onData(int type, String row);
+
+		@Override
+		public void onExitCode(int exitCode)
+		{
+			_exitCode = exitCode;
+		}
+
+		/**
+		 * Get the exit code, set by any callers of {@link #onExitCode(int)}
+		 * @return exitCode
+		 */
+		public int getExitCode()
+		{
+			return _exitCode;
+		}
+	}
+
+	/**
+	 * Execute a Operating System Command on the remote host
+	 * <p>
+	 * If the connection has been closed, a new one will be attempted.
+	 * <p>
+	 * Note: This is synchronized because if several execute it simultaneously and we have 
+	 * lost the connection and make a reconnect attempt, it's likely to fail with 'is already in connected state!' or 'IllegalStateException: Cannot open session, you need to establish a connection first.'  or similar errors.
+	 * 
+	 * @param command         The OS Command to be executed
+	 * @param execFeedback    An ExecutionFeedback to handle received data
+	 * 
+	 * @return ExitCode of the passed command
+	 * @throws Exception    On problems
+	 */
+	synchronized public int execCommand(String command, IExecutionFeedback execFeedback) 
+	throws Exception
+	{
+		// Check if connection is OK.. if NOT yet connected an Exception will be thrown
+		checkConnectionAndPossiblyReconnect();
+
+
+		ChannelExec channel = (ChannelExec) _conn.openChannel("exec");
+		
+		// Setup the command for execution on remote machine.
+		channel.setCommand(command);
+
+		// Now run the command on the remote server
+		channel.connect();
+
+		// Get the CharSet of the OS
+		Charset osCharset = Charset.forName(getOsCharset());
+
+		// Get the input streams from the SSH channel
+		InputStream stdout = channel.getInputStream();
+		InputStream stderr = channel.getErrStream();
+		
+		// Read the streams row-by-row 
+		BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(stdout, osCharset));
+		BufferedReader stderrReader = new BufferedReader(new InputStreamReader(stderr, osCharset));
+
+		// Setup how to sleep
+		int sleepCount          = 0;
+		int sleepTimeMultiplier = 3; 
+		int sleepTimeMax        = 250;
+
+		boolean running = true;
+
+		// Receive data, until end-of-data or doContinue() is false
+		while(running)
+		{
+//System.out.println("--TOP: running=|"+running+"|");
+			try
+			{
+				// Check if we want to abort or continue to receive data
+				running = execFeedback.doContinue();
+				
+				// If we have NOT got any data... Sleep for a while
+				if ((stdout.available() == 0) && (stderr.available() == 0))
+				{
+					if (running)
+					{
+						try
+						{
+    						sleepCount++;
+    						int sleepMs = Math.min(sleepCount * sleepTimeMultiplier, sleepTimeMax);;
+    
+    						if (_logger.isDebugEnabled())
+    							_logger.debug("waitForData(), sleep(" + sleepMs + "). command=" + command);
+    
+    						Thread.sleep(sleepMs);
+						}
+						catch (InterruptedException e)
+						{
+							running = false;
+						}
+					}
+					
+					if ( channel.isClosed() || channel.isEOF())
+					{
+						if (stdout.available() > 0 || stderr.available() > 0)
+							continue;
+						break;
+					}
+				}
+
+				// Read STDOUT, on data do callback
+				while (stdout.available() > 0)
+				{
+					if (_logger.isDebugEnabled())
+					{
+//						startTs = System.currentTimeMillis();
+						_logger.debug("SSH-STDOUT[" + command + "][available=" + stdout.available() + "]: -start-");
+					}
+					
+					// NOW READ input
+					while (stdoutReader.ready())
+					{
+//System.out.println("--STD-OUT: before readLine();");
+						String row = stdoutReader.readLine();
+//System.out.println("--STD-OUT:  after readLine();row=|"+row+"|");
+
+						// discard empty rows
+						if (StringUtil.isNullOrBlank(row))
+							continue;
+
+						if (_logger.isDebugEnabled())
+							_logger.debug("Received on STDOUT: "+row);
+
+						// do callback
+						execFeedback.onData(STDOUT_DATA, row);
+					}
+				}
+
+				// Read STDERR, on data do callback
+				while (stderr.available() > 0)
+				{
+					if (_logger.isDebugEnabled())
+					{
+						_logger.debug("SSH-STDERR[" + command + "][available=" + stdout.available() + "]: -start-");
+					}
+					
+					// NOW READ input
+					while (stderrReader.ready())
+					{
+//System.out.println("--STD-ERR: before readLine();");
+						String row = stderrReader.readLine();
+//System.out.println("--STD-ERR:  after readLine();row=|"+row+"|");
+
+						// discard empty rows
+						if (StringUtil.isNullOrBlank(row))
+							continue;
+						
+						if (_logger.isDebugEnabled())
+							_logger.debug("Received on STDERR: "+row);
+
+						// do callback
+						execFeedback.onData(STDERR_DATA, row);
+					}
+				}
+			}
+			catch(Exception ex)
+			{
+				_logger.error("Problems when reading output from the OS Command '" + command + "', Caught: " + ex.getMessage(), ex);
+//				fixme;
+			}
+		}
+		
+		int exitCode = channel.getExitStatus();
+		execFeedback.onExitCode(exitCode);
+
+		// if we did return false on 'doContinue()', is the command terminated at the backend?
+		
+		channel.disconnect();
+		
+		return exitCode;
+	}
+	
 	/**
 	 * Get the Character Set this operating system is using.
 	 * <p>
