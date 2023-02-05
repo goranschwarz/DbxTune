@@ -99,7 +99,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="lib/jide-oss-3.6.18.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1605637792987/source/jide-oss-3.6.18-sources-1605719684373.jar"/>
-	<classpathentry kind="lib" path="bin/dbxtune.bat"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="lib/jackson-core-2.9.2.jar" sourcepath="3pp/jackson-core-2.9.2-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jackson-databind-2.9.2.jar" sourcepath="3pp/jackson-databind-2.9.2-sources.jar"/>
