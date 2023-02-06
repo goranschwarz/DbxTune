@@ -298,9 +298,16 @@ public class OpenSslAesUtil
 			String fallbackEncPasswd = null;
 			String srvMatchEncPasswd = null;
 
+			int    fallbackEncPasswdAtRow = 0;
+			int    srvMatchEncPasswdAtRow = 0;
+			
+			
+			int rowNumber = 0;
 			List<String> lines = Files.readAllLines(Paths.get(filename), Charset.forName("UTF-8"));
 			for (String line : lines)
 			{
+				rowNumber++;
+
 				String[] sa = line.split(":");
 				if (sa.length >= 2)
 				{
@@ -329,27 +336,38 @@ public class OpenSslAesUtil
 						if (srvEntry)
 						{
 							if (serverName != null && serverName.equals(fServer))
-								srvMatchEncPasswd = fEncPasswd;
+							{
+								srvMatchEncPasswd      = fEncPasswd;
+								srvMatchEncPasswdAtRow = rowNumber;
+							}
 						}
 						else
 						{
-							fallbackEncPasswd = fEncPasswd;
+							fallbackEncPasswd      = fEncPasswd;
+							fallbackEncPasswdAtRow = rowNumber;
 						}
 					}
 				}
 			}
 			
-			String rawEncryptedStr = null;
+			String rawEncryptedStr      = null;
+			int    rawEncryptedStrAtRow = 0;
 
 			// Generic password *without* server specification (use this as a FALLBACK)
 			// entry looking like |sa:encryptedPasswd|
 			if (fallbackEncPasswd != null)
-				rawEncryptedStr = fallbackEncPasswd;
+			{
+				rawEncryptedStr      = fallbackEncPasswd;
+				rawEncryptedStrAtRow = fallbackEncPasswdAtRow;
+			}
 
 			// password WITH server specification
 			// entry looking like |sa:PROD_A_ASE:encryptedPasswd|
 			if (srvMatchEncPasswd != null) 
-				rawEncryptedStr = srvMatchEncPasswd;
+			{
+				rawEncryptedStr      = srvMatchEncPasswd;
+				rawEncryptedStrAtRow = srvMatchEncPasswdAtRow;
+			}
 
 			// DECODE the rawEncryptedStr
 			if (rawEncryptedStr != null)
@@ -369,7 +387,8 @@ public class OpenSslAesUtil
 					}
 					catch(DecryptionException ex)
 					{
-						throw originEx;
+						throw new DecryptionException("When reading password file '" + f + "', at row " + rawEncryptedStrAtRow + ", we Caught: " + originEx.getMessage(), originEx);
+						//throw originEx;
 					}
 				}
 			}
@@ -379,7 +398,7 @@ public class OpenSslAesUtil
 		}
 		else
 		{
-			throw new FileNotFoundException("The password file '"+f+"' didn't exist.");
+			throw new FileNotFoundException("The password file '" + f + "' didn't exist.");
 		}
 	}
 
@@ -698,8 +717,8 @@ public class OpenSslAesUtil
 		}
 		catch(Exception ex) { ex.printStackTrace(); }
 		System.out.println();
-		
-		
+
+
 //		OpenSslAesUtil d = new OpenSslAesUtil(128);
 //		String r = new String(d.decipher("mypassword".getBytes(), Base64.decodeBase64("U2FsdGVkX187CGv6DbEpqh/L6XRKON7uBGluIU0nT3w=")));
 //		System.out.println(r);
@@ -710,11 +729,12 @@ public class OpenSslAesUtil
 		catch(Exception e) { e.printStackTrace(); }
 		
 
-		try { System.out.println("readFromFile=|" + readPasswdFromFile("sa", null, null, null) + "|"); }
+		System.out.println("readFromFile=|" + getPasswordFilename() + "|");
+		try { System.out.println("readFromFile=|" + readPasswdFromFile("sa", null, null, "mssql") + "|"); }
 		catch(Exception e) { e.printStackTrace(); }
 		
 		try { System.out.println("x1-ok="   + decode("sybase", "U2FsdGVkX1/foj2pv2V24rLfl7RLdcMGdd8jaTngzns=")); } catch(Exception e) { e.printStackTrace(); }
-		try { System.out.println("x2-fail=" + decode("sybase", "U2FsdGVkX1+4mSAv8/x8TRYx8wPrWUovDh8HBY16ZTY=")); } catch(Exception e) { e.printStackTrace(); }
+//		try { System.out.println("x2-fail=" + decode("sybase", "U2FsdGVkX1+4mSAv8/x8TRYx8wPrWUovDh8HBY16ZTY=")); } catch(Exception e) { e.printStackTrace(); }
 		try { System.out.println("x3-ok="   + decode("sysopr", "U2FsdGVkX1+4mSAv8/x8TRYx8wPrWUovDh8HBY16ZTY=")); } catch(Exception e) { e.printStackTrace(); }
 		
 	}
