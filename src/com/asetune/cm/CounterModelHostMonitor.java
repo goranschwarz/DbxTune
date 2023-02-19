@@ -188,7 +188,7 @@ extends CountersModel
 	private void localInit()
 	throws Exception
 	{
-System.out.println("CounterModelHostMonitor.localInit(): _hostMonType="+_hostMonType+", CounterController.getInstance().isHostMonConnected()="+CounterController.getInstance().isHostMonConnected());
+//System.out.println("CounterModelHostMonitor.localInit(): _hostMonType="+_hostMonType+", CounterController.getInstance().isHostMonConnected()="+CounterController.getInstance().isHostMonConnected());
 		if (CounterController.getInstance().isHostMonConnected())
 		{
 //			SshConnection sshConn = CounterController.getInstance().getHostMonConnection();
@@ -236,7 +236,7 @@ System.out.println("CounterModelHostMonitor.localInit(): _hostMonType="+_hostMon
 			if (getTabPanel() != null)
 				getTabPanel().onCmInit();
 		}
-System.out.println("CounterModelHostMonitor.localInit() end: _hostMonitor="+_hostMonitor);
+//System.out.println("CounterModelHostMonitor.localInit() end: _hostMonitor="+_hostMonitor);
 	}
 
 	/*---------------------------------------------------
@@ -644,23 +644,31 @@ System.out.println("CounterModelHostMonitor.localInit() end: _hostMonitor="+_hos
 		OsTable tmpDiffData = null;
 		OsTable tmpRateData = null;
 
+		// CLear any exception that we previously had
+		setSampleException(null);
+		_hostMonitor.clearExceptions();
+
 		// GET THE DATA FROM THE HOST MONITOR
 		if (_hostMonitor.isOsCommandStreaming())
 			tmpNewSample = _hostMonitor.getSummaryTable();
 		else
 			tmpNewSample = _hostMonitor.executeAndParse();
 
-		if (_logger.isDebugEnabled())
-			_logger.debug("OUTPUT Table from '"+_hostMonitor.getModuleName()+"':\n" + tmpNewSample.toTableString());
-
-		// set MetaData: otherwise the Persistent Counter Storage can't create tables
-		setResultSetMetaData(tmpNewSample.getMetaData());
-
 		// If the HostMonitor has problems, relay them to the GUI
 		Exception exception = _hostMonitor.getException();
 		if (exception != null)
 			setSampleException(exception);
 			//throw exception;
+
+		// We CAN NOT Continue if we had a null result (or should we throw some kind of Exception to make it more "obvious") 
+		if (tmpNewSample == null)
+			return 0;
+		
+		if (_logger.isDebugEnabled())
+			_logger.debug("OUTPUT Table from '"+_hostMonitor.getModuleName()+"':\n" + tmpNewSample.toTableString());
+
+		// set MetaData: otherwise the Persistent Counter Storage can't create tables
+		setResultSetMetaData(tmpNewSample.getMetaData());
 
 		int rowsFetched = tmpNewSample.getRowCount();
 

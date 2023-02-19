@@ -90,7 +90,7 @@ implements Runnable
 	private boolean _firstTimeSample = true;
 	
 	/** Set this when we have some kind off communication exception, so the "client" can check if we have problems */
-	private ArrayList<Exception> _exceptionList = new ArrayList<Exception>();
+	private ArrayList<Exception> _exceptionList = null;
 
 	/** What version is the OS utility of, that is if the OS has different versions of the utility that has different number of columns etc */
 	private int _utilVersion = -1;
@@ -255,21 +255,37 @@ implements Runnable
 	}
 
 	/**
+	 * Clear the Exceptions list.
+	 */
+	public void clearExceptions()
+	{
+		_exceptionList = null;
+	}
+
+	/**
 	 * Get last Exception that was added to this class by any implementors
 	 * @return null if no exceptions has been added
 	 */
 	public Exception getException()
 	{
+		if (_exceptionList == null)
+			return null;
+
 		if (_exceptionList.isEmpty())
 			return null;
+		
 		Exception ex = _exceptionList.get(0);
-		_exceptionList.clear();
+		_exceptionList = null;
+
 		return ex;
 	}
 
 	/** Called by any implementors to add a Exception that happend while executing OS Command */
 	public void addException(Exception ex)
 	{
+		if (_exceptionList == null)
+			_exceptionList = new ArrayList<Exception>();
+
 		_exceptionList.add(ex);
 	}
 
@@ -1112,17 +1128,20 @@ implements Runnable
 		catch (Exception e)
 		{
 			addException(e);
-			_logger.error("Problems when executing OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
-			_running = false;
-			
+
 			// In some cases we might want to close the SSH Connection and start "all over"
-			_hostMonConn.handleException(e);
+			boolean notHandled = _hostMonConn.handleException(e);
 //			// In some cases we might want to close the SSH Connection and start "all over"
 //			if (e.getMessage().contains("SSH_OPEN_CONNECT_FAILED"))
 //			{
 //				try { _conn.reconnect(); }
 //				catch(IOException ex) { _logger.error("Problems SSH reconnect. Caught: " + ex); }
 //			}
+
+			if (notHandled)
+				_logger.error("Problems when executing OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
+
+			_running = false;
 			
 			return;
 		}
@@ -1309,7 +1328,12 @@ implements Runnable
 		catch (Exception e)
 		{
 			addException(e);
-			_logger.error("Problems when executing OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
+
+			// Was the Exception handled by the subsystem or should we handle/log it here  
+			boolean notHandled = _hostMonConn.handleException(e);
+
+			if (notHandled)
+				_logger.error("Problems when executing OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
 
 			// FIXME: Should the deliver null or an empty OsTable on errors or Exception
 			return null; 

@@ -109,8 +109,9 @@ extends HostMonitorConnection
 	}
 
 	@Override
-	public void handleException(Exception ex)
+	public boolean handleException(Exception ex)
 	{
+		return true;
 	}
 
 

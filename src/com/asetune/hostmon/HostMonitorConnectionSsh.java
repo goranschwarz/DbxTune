@@ -89,10 +89,11 @@ extends HostMonitorConnection
 	}
 
 	@Override
-	public void handleException(Exception ex)
+	public boolean handleException(Exception ex)
 	{
 		// In some cases we might want to close the SSH Connection and start "all over"
-		if (ex.getMessage().contains("SSH_OPEN_CONNECT_FAILED"))
+		if (ex.getMessage().contains("session is down"))          // For JSCH               this is the message for failed connection
+//		if (ex.getMessage().contains("SSH_OPEN_CONNECT_FAILED"))  // For ganymed-ssh2-*.jar this was the message 
 		{
 			try 
 			{
@@ -100,9 +101,11 @@ extends HostMonitorConnection
 			}
 			catch(Exception reConnectEx)
 			{ 
-				_logger.error("Problems SSH reconnect. Caught: " + reConnectEx); 
+				_logger.error("Problems SSH reconnect. Caught: " + reConnectEx);
+				return false;
 			}
 		}
+		return true;
 	}
 
 	@Override

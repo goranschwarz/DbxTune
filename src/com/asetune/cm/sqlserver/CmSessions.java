@@ -21,6 +21,10 @@
  ******************************************************************************/
 package com.asetune.cm.sqlserver;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.SQLWarning;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -33,6 +37,7 @@ import javax.naming.NameNotFoundException;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.CounterController;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
@@ -53,12 +58,15 @@ import com.asetune.cm.sqlserver.gui.CmSessionsPanel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.NumberUtils;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
 
 public class CmSessions
@@ -989,7 +997,11 @@ extends CountersModel
 		String _wait_resource;
 
 		String _dbname;
+		String _schemaName;
 		String _objectName;
+		String _indexName;
+		String _pageTypeDesc;
+		String _extraInfo;
 		
 		public SpidWaitInfo(int session_id, String wait_type, int wait_time, String wait_resource)
 		{
@@ -1071,6 +1083,8 @@ extends CountersModel
 					int firstPos = tmp.indexOf('(');
 					if (firstPos > 0)
 					{
+						String lockres = tmp.substring(firstPos).trim(); // Copy the "lockresource" ... "(7b4f7e19e103)"
+
 						tmp = tmp.substring(0, firstPos).trim(); // Strip off the end " (7b4f7e19e103)"
 						firstPos = tmp.indexOf(':');
 						if (firstPos > 0)
@@ -1085,16 +1099,90 @@ extends CountersModel
 									
 									ObjectInfo oi = cache.getByHobtId(dbid, hobtid);
 									if (oi != null)
+									{
+										wi._schemaName = oi.getSchemaName();
 										wi._objectName = oi.getObjectName();
+									}
 								}
 								catch (TimeoutException ignore) {}
+
+								// Should we go and get EXTRA INFO (the data in the table that is locked???)
+								boolean getLockedTableData = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA, DEFAULT_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA);
+								if (getLockedTableData)
+								{
+									String fullTableName = "[" + wi._dbname + "].[" + wi._schemaName + "].[" + wi._objectName + "]";
+									String sql = "SELECT '" + lockres + "' AS [%%lockres%%], * FROM " + fullTableName + " (NOLOCK) WHERE %%lockres%% = '" + lockres + "'";
+
+									// Example: SELECT '(ce52f92a058c)' AS [%%lockres%%], * FROM [dbname].[schema].[table] (NOLOCK) WHERE %%lockres%% = '(ce52f92a058c)'
+
+									try
+									{
+										long startTime = System.currentTimeMillis();
+
+										DbxConnection conn = CounterController.getInstance().getMonConnection();
+										ResultSetTableModel rstm = ResultSetTableModel.executeQuery(conn, sql, 1, "LockedTableData");
+										if (rstm != null)
+										{
+											wi._extraInfo = rstm.toAsciiTableString() 
+													+  "NOTE: This can be disabled with property '" + PROPKEY_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA + "=false' if it takes to much time/resources or causes any errors.";
+										}
+										
+										// Log message if this takes to long time
+										long execTimeInMs = TimeUtils.msDiffNow(startTime);
+										if (execTimeInMs > 1_000)
+										{
+											_logger.warn("Request to get '" + PROPKEY_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA + "' took " + execTimeInMs + " ms. This was a bit slower than expected. (this message will be logged when requestst take more than 1000 ms).");
+										}
+									}
+									catch(SQLException ex)
+									{
+										wi._extraInfo = ex.getMessage()
+												+  "\nNOTE: This can be disabled with property '" + PROPKEY_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA + "=false' if it takes to much time/resources or causes any errors.";
+
+										_logger.warn("Problems getting Locked Resource using SQL=|" + sql + "|, skipping this and continuing... This can be disabled with property '" + PROPKEY_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA + "=false'. Caught: " + ex);
+									}
+								}
 							}
 						}
 					}
 				}
-			}
+			} // end: KEY
 			else if (wait_resource.startsWith("PAGE: "))   // example='PAGE: 6:1:70133' -- Database_Id : FileId : PageNumber
 			{
+				if (DbmsObjectIdCache.hasInstance())
+				{
+					DbmsObjectIdCache cache = DbmsObjectIdCache.getInstance();
+					
+					// 'PAGE: 6:1:70133' -- Database_Id : FileId : PageNumber
+					String tmp = wait_resource.substring("PAGE: ".length()); // Strip off "PAGE: "
+
+					String[] sa = tmp.split(":");
+					if (sa.length == 3)
+					{
+						if (sa[0].length() <= 6 && NumberUtils.isNumber(sa[0]))
+						{
+							int dbid = StringUtil.parseInt(sa[0], -1);
+							if (dbid > 0)
+							{
+								wi._dbname = cache.getDBName(dbid);
+								
+								if (NumberUtils.isNumber(sa[1]) && NumberUtils.isNumber(sa[2]))
+								{
+									int fileNum = StringUtil.parseInt(sa[1], -1);
+									int pageNum = StringUtil.parseInt(sa[2], -1);
+									if (fileNum >= 0 && pageNum >= 0)
+									{
+										DbxConnection conn = CounterController.getInstance().getMonConnection();
+
+										// Get Object information, typically from the page itself (dm_db_page_info or potentially DBCC page)
+										lookupPageNumber(conn, wi, dbid, fileNum, pageNum);
+									}
+								}
+							}
+						}
+					}
+				}
+				
 			
 // https://social.msdn.microsoft.com/Forums/sqlserver/en-US/b98a7841-69a4-47d3-8856-deb310b3ccc7/how-to-identify-if-tempdb-contention-on-page-is-pfsgam-or-sgam?forum=sqldatabaseengine
 // https://ramblingsofraju.com/sql-server/breaking-down-tempdb-contention-2/
@@ -1128,14 +1216,378 @@ extends CountersModel
 //					else if (pageid == 7 || (pageid - 7) % 511232 == 0) decodeKeyVal.put("pageType", "BCM");
 //				}
 				
-			}
+			} // end: PAGE
 			else if (wait_resource.startsWith("OBJECT: "))   // example='OBJECT: 7:1429580131:0' -- ???Database_Id??? : ???objectId??? : ???
 			{
+				// Here is an article I came across to better understand the resource lock partition id in the 
+				//    waitresource = "OBJECT: dbid:object_id:resource_lock_partition id"
+				//    https://www.microsoftpressstore.com/articles/article.aspx?p=2233327&seqNum=5
 				
-			}
+				if (DbmsObjectIdCache.hasInstance())
+				{
+					DbmsObjectIdCache cache = DbmsObjectIdCache.getInstance();
+					
+					String tmp = wait_resource.substring("OBJECT: ".length()); // Strip off "OBJECT: "
+					String[] sa = tmp.split(":");
+					if (sa.length == 3)
+					{
+						int dbid     = StringUtil.parseInt(sa[0], -1);
+						int objectId = StringUtil.parseInt(sa[1], -1);
+					//	int xxxxxxId = StringUtil.parseInt(sa[2], -1);
+						
+						if (dbid > 0)
+							wi._dbname = cache.getDBName(dbid);
 
+						if (dbid > 0 && objectId > 0)
+						{
+							try 
+							{
+								ObjectInfo oi = cache.getByObjectId(dbid, objectId);
+								if (oi != null)
+								{
+									wi._schemaName = oi.getSchemaName();
+									wi._objectName = oi.getObjectName();
+								}
+							}
+							catch (TimeoutException ignore) {}
+						}
+					}
+				}
+			}
+			else if (wait_resource.startsWith("RID: "))   // example='RID: 5:1:8400:2' -- dbid:fileid:pageid:??? (guessing ??? is rowOffset/rowId) 
+			{
+				if (DbmsObjectIdCache.hasInstance())
+				{
+					DbmsObjectIdCache cache = DbmsObjectIdCache.getInstance();
+					
+					// 'PAGE: 6:1:70133' -- Database_Id : FileId : PageNumber
+					String tmp = wait_resource.substring("RID: ".length()); // Strip off "PAGE: "
+
+					String[] sa = tmp.split(":");
+					if (sa.length >= 3)
+					{
+						if (sa[0].length() <= 6 && NumberUtils.isNumber(sa[0]))
+						{
+							int dbid = StringUtil.parseInt(sa[0], -1);
+							if (dbid > 0)
+							{
+								wi._dbname = cache.getDBName(dbid);
+								
+								if (NumberUtils.isNumber(sa[1]) && NumberUtils.isNumber(sa[2]))
+								{
+									int fileNum = StringUtil.parseInt(sa[1], -1);
+									int pageNum = StringUtil.parseInt(sa[2], -1);
+									if (fileNum >= 0 && pageNum >= 0)
+									{
+										DbxConnection conn = CounterController.getInstance().getMonConnection();
+
+										// Get Object information, typically from the page itself (dm_db_page_info or potentially DBCC page)
+										lookupPageNumber(conn, wi, dbid, fileNum, pageNum);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			else // OTHERS with no prefix
+			{
+				if (DbmsObjectIdCache.hasInstance())
+				{
+					DbmsObjectIdCache cache = DbmsObjectIdCache.getInstance();
+					
+					// Typically get '20:1:1294371' // which probably is "dbid:fileid:pageid"
+					String[] sa = wait_resource.split(":");
+					if (sa.length == 3)
+					{
+						if (sa[0].length() <= 6 && NumberUtils.isNumber(sa[0]))
+						{
+							int dbid = StringUtil.parseInt(sa[0], -1);
+							if (dbid > 0)
+							{
+								wi._dbname = cache.getDBName(dbid);
+								
+								if (NumberUtils.isNumber(sa[1]) && NumberUtils.isNumber(sa[2]))
+								{
+									int fileNum = StringUtil.parseInt(sa[1], -1);
+									int pageNum = StringUtil.parseInt(sa[2], -1);
+									if (fileNum >= 0 && pageNum >= 0)
+									{
+										DbxConnection conn = CounterController.getInstance().getMonConnection();
+
+										// Get Object information, typically from the page itself (dm_db_page_info or potentially DBCC page)
+										lookupPageNumber(conn, wi, dbid, fileNum, pageNum);
+									}
+								}
+							}
+						}
+					}
+				}
+			} // end: What type of wait_resource
+		} // end: method: add
+
+		/**
+		 * Get information from a specific PAGE in a database (using DBCC: PAGE or DMV: dm_db_page_info)
+		 * 
+		 * @param conn      Database Connection
+		 * @param wi        SpidWaitInfo structure (where we fill in object name etc)
+		 * @param dbid      dbid we want to lookup
+		 * @param fileNum   file number we want to lookup
+		 * @param pageNum   page number we want to lookup
+		 */
+		private void lookupPageNumber(DbxConnection conn, SpidWaitInfo wi, int dbid, int fileNum, int pageNum)
+		{
+			// Early exit
+			if (conn == null) return;
+			if (wi   == null) return;
+
+			// In here we could try to decode the 'page_type_desc' based on page number... PFS, GAM, SGAM... etc 
+			// The below algorithm is reused from 'sp_whoIsActive'
+			if      (pageNum == 1 ||       pageNum % 8088   == 0) wi._pageTypeDesc = "PFS";
+			else if (pageNum == 2 ||       pageNum % 511232 == 0) wi._pageTypeDesc = "GAM";
+			else if (pageNum == 3 || (pageNum - 1) % 511232 == 0) wi._pageTypeDesc = "SGAM";
+			else if (pageNum == 6 || (pageNum - 6) % 511232 == 0) wi._pageTypeDesc = "DCM";
+			else if (pageNum == 7 || (pageNum - 7) % 511232 == 0) wi._pageTypeDesc = "BCM";
+
+			// Check if this is enabled or not (in the configuration)
+			boolean isEnabled = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_ON_WAIT_RESOURCE__GET_PAGE_INFO, DEFAULT_ON_WAIT_RESOURCE__GET_PAGE_INFO);
+
+			// Check if this has been disabled on a connection level
+			if (conn.hasProperty(PROPKEY_ON_WAIT_RESOURCE__GET_PAGE_INFO))
+				isEnabled = false;
+
+			// No need to continue if it's not enabled
+			if ( ! isEnabled )
+				return;
+
+			// DMV 'dm_db_page_info' exists from SQL Server 2019
+			if (conn.getDbmsVersionInfo().getLongVersion() < Ver.ver(2019))
+			{
+				// if we REALLY WANT, we could do: 
+				// dbcc traceon(3604)
+				// dbcc page(dbid, fileNum, pageNum, 0)
+				// Loop the SQLWarnings
+				//   - look for row: |Metadata: PartitionId = 1125899909070848                                 Metadata: IndexId = 4|
+				//                                                                                             ^^^^^^^^^^^^^^^^^^^^^
+				//   - look for row: |Metadata: ObjectId = 34             m_prevPage = (0:0)                  m_nextPage = (0:0)|
+				//                    ^^^^^^^^^^^^^^^^^^^^^^^
+
+				// Turn on traceflag 3604, if we havn't already done that
+				if ( ! conn.hasProperty("traceon-3604") )
+				{
+					try 
+					{
+						conn.dbExec("dbcc traceon(3604)", false);
+						conn.setProperty("traceon-3604", "on");
+					} 
+					catch (SQLException ex)
+					{
+						_logger.warn("Problems settin traceflag 3604. SQL=|dbcc traceon(3604)|. Skipping this and continuing. Caught: " + ex);
+
+						// Msg=2571, Text=User 'xxxx' does not have permission to run DBCC TRACEON.							
+						if (ex.getErrorCode() == 2571)
+						{
+							_logger.warn("lookupPageNumber(): Disabling '" + PROPKEY_ON_WAIT_RESOURCE__GET_PAGE_INFO + "' on a Connection level due to Error=2571, MsgText='" + ex.getMessage() + "'.");
+							conn.setProperty(PROPKEY_ON_WAIT_RESOURCE__GET_PAGE_INFO, "false");
+							return;
+						}
+					}
+				}
+				
+				// Execute: DBCC PAGE
+				String sql = "dbcc page(" + dbid + ", " + fileNum + ", " + pageNum + ", 0)";
+				
+				// or we can do it with: DBCC PAGE(...) WITH TABLERESULTS
+				// column: 'Field' = 'Metadata: ObjectId'
+				// column: 'Field' = 'Metadata: IndexId'
+
+				try (Statement stmnt = conn.createStatement())
+				{
+					long startTime = System.currentTimeMillis();
+
+					stmnt.setQueryTimeout(1);
+					int rowsAffected = 0;
+					boolean hasRs = stmnt.execute(sql);
+					
+					do
+					{
+						if (hasRs)
+						{
+							ResultSet rs = stmnt.getResultSet();
+							while (rs.next())
+								; // This just reads the ResultSet and "throws" data
+							rs.close();
+						}
+						else
+						{
+							rowsAffected = stmnt.getUpdateCount();
+						}
+						hasRs = stmnt.getMoreResults();
+					}
+					while (hasRs || rowsAffected != -1);
+
+
+					int object_id = -1;
+					int index_id  = -1;
+
+					SQLWarning sqlWarn = stmnt.getWarnings();
+					while (sqlWarn != null)
+					{
+						String msg = StringUtil.trim(sqlWarn.getMessage());
+						
+						if (_logger.isDebugEnabled())
+							_logger.debug("DBCC PAGE(dbid=" + dbid + ", fileNum=" + fileNum + ", pageNum=" + pageNum + ") ROW=|" + msg + "|");
+
+						if (StringUtil.hasValue(msg))
+						{
+							if (msg.contains("Metadata: ObjectId = "))
+							{
+								String dataStr = StringUtil.substringBetweenTwoChars(msg, "Metadata: ObjectId = ", " ");
+								object_id = StringUtil.parseInt(dataStr, -1);
+							}
+
+							if (msg.contains("Metadata: IndexId = "))
+							{
+								String dataStr = StringUtil.substringBetweenTwoChars(msg, "Metadata: IndexId = ", " ");
+								index_id = StringUtil.parseInt(dataStr, -1);
+							}
+						}
+						
+						sqlWarn = sqlWarn.getNextWarning();
+					} //end: loop SQL Warnings
+
+					if (_logger.isDebugEnabled())
+						_logger.debug("DBCC PAGE(dbid=" + dbid + ", fileNum=" + fileNum + ", pageNum=" + pageNum + ") ----- AFTER-LOOP-ROWS ----- object_id=" + object_id + ", index_id=" + index_id);
+
+					if (object_id > 0)
+					{
+						try 
+						{
+							DbmsObjectIdCache cache = DbmsObjectIdCache.getInstance();
+
+							wi._dbname = cache.getDBName(dbid);
+							if (object_id == 99) 
+								wi._objectName = "ALLOCATION_PAGE[object_id=99]";
+
+							ObjectInfo oi = cache.getByObjectId(dbid, object_id);
+							if (oi != null)
+							{
+								wi._schemaName = oi.getSchemaName();
+								wi._objectName = oi.getObjectName();
+
+								if (index_id >= 0)
+									wi._indexName = oi.getIndexName(index_id);
+							}
+							
+							if (_logger.isDebugEnabled())
+								_logger.debug("DBCC PAGE(dbid=" + dbid + ", fileNum=" + fileNum + ", pageNum=" + pageNum + ") ----- AFTER-DbmsObjectIdCache-LOOKUP ----- dbname='" + wi._schemaName + "', objectName='" + wi._objectName + "', wi._indexName='" + wi._indexName + "'.");
+						}
+						catch (TimeoutException ignore) {}
+					}
+
+					// Log message if this takes to long time
+					long execTimeInMs = TimeUtils.msDiffNow(startTime);
+					if (execTimeInMs > 1_000)
+					{
+						_logger.warn("Request to get '" + PROPKEY_ON_WAIT_RESOURCE__GET_PAGE_INFO + "' (dbcc page) took " + execTimeInMs + " ms. This was a bit slower than expected. (this message will be logged when requestst take more than 1000 ms).");
+					}
+				}
+				catch (SQLException ex)
+				{
+					wi._extraInfo = ex.getMessage()
+							+  "\nNOTE: This can be disabled with property '" + PROPKEY_ON_WAIT_RESOURCE__GET_PAGE_INFO + "=false' if it takes to much time/resources or causes any errors.";
+
+					_logger.warn("Problems getting Object PAGE Information using SQL=|" + sql + "|. Skipping this and continuing. Caught: " + ex);
+
+					// Msg=2571, Text=User 'xxxx' does not have permission to run DBCC page.
+					if (ex.getErrorCode() == 2571)
+					{
+						_logger.warn("lookupPageNumber(): Disabling '" + PROPKEY_ON_WAIT_RESOURCE__GET_PAGE_INFO + "' on a Connection level due to Error=2571, MsgText='" + ex.getMessage() + "'.");
+						conn.setProperty(PROPKEY_ON_WAIT_RESOURCE__GET_PAGE_INFO, "false");
+						return;
+					}
+				}
+				return;
+			} // end: version less than SQL Server 2019
+			else
+			{
+				
+				String sql = ""
+						+ "SELECT object_id, index_id, partition_id, page_type_desc "
+						+ "FROM sys.dm_db_page_info(" + dbid + ", " + fileNum + ", " + pageNum + ", 'DETAILED')";   // 'LIMITED' (do not fill in descriptive fields) or 'DETAILED'
+
+				try (Statement stmnt = conn.createStatement())
+				{
+					long startTime = System.currentTimeMillis();
+
+					stmnt.setQueryTimeout(1);
+					try (ResultSet rs = stmnt.executeQuery(sql))
+					{
+						int    object_id      = -1;
+						int    index_id       = -1;
+					//	long   partition_id   = -1;
+						String page_type_desc = null;
+
+						while (rs.next())
+						{
+							object_id      = rs.getInt   (1);
+							index_id       = rs.getInt   (2);
+						//	partition_id   = rs.getLong  (3);
+							page_type_desc = rs.getString(4);
+						}
+
+						// Log message if this takes to long time
+						long execTimeInMs = TimeUtils.msDiffNow(startTime);
+						if (execTimeInMs > 1_000)
+						{
+							_logger.warn("Request to get '" + PROPKEY_ON_WAIT_RESOURCE__GET_PAGE_INFO + "' (sys.dm_db_page_info) took " + execTimeInMs + " ms. This was a bit slower than expected. (this message will be logged when requestst take more than 1000 ms).");
+						}
+
+						if (object_id > 0)
+						{
+							wi._pageTypeDesc = page_type_desc;
+
+							try 
+							{
+								DbmsObjectIdCache cache = DbmsObjectIdCache.getInstance();
+
+								wi._dbname = cache.getDBName(dbid);
+								if (object_id == 99) 
+									wi._objectName = "ALLOCATION_PAGE[object_id=99]";
+
+								ObjectInfo oi = cache.getByObjectId(dbid, object_id);
+								if (oi != null)
+								{
+									wi._schemaName = oi.getSchemaName();
+									wi._objectName = oi.getObjectName();
+
+									if (index_id >= 0)
+										wi._indexName = oi.getIndexName(index_id);
+								}
+							}
+							catch (TimeoutException ignore) {}
+						}
+					}
+				}
+				catch (SQLException ex)
+				{
+					wi._extraInfo = ex.getMessage()
+							+  "\nNOTE: This can be disabled with property '" + PROPKEY_ON_WAIT_RESOURCE__GET_PAGE_INFO + "=false' if it takes to much time/resources or causes any errors.";
+
+					_logger.warn("Problems getting Object PAGE Information using SQL=|" + sql + "|. Skipping this and continuing. Caught: " + ex);
+
+					// Msg=2571,  Text=User 'xxxx' does not have permission to run ...
+					// Msg=15562, Text=The module being executed is not trusted. Either the owner of the database of the module needs to be granted authenticate permission, or the module needs to be digitally signed.					
+					if (ex.getErrorCode() == 2571 || ex.getErrorCode() == 15562)
+					{
+						_logger.warn("lookupPageNumber(): Disabling '" + PROPKEY_ON_WAIT_RESOURCE__GET_PAGE_INFO + "' on a Connection level due to Error=" + ex.getErrorCode() + ", MsgText='" + ex.getMessage() + "'.");
+						conn.setProperty(PROPKEY_ON_WAIT_RESOURCE__GET_PAGE_INFO, "false");
+						return;
+					}
+				}
+			} // end: SQL Server 2019 or above
 		}
-		
+
 		public void checkAndSendAlarm()
 		{
 			if ( ! AlarmHandler.hasInstance() )
@@ -1181,16 +1633,43 @@ extends CountersModel
 			{
 				SpidWaitInfo wi = list.get(0);
 				String dbname     = wi._dbname;
+				String schemaName = wi._schemaName;
 				String objectName = wi._objectName;
+				String indexName  = wi._indexName;
+				String pageType   = wi._pageTypeDesc;
 				
 				if (StringUtil.isNullOrBlank(dbname) && StringUtil.isNullOrBlank(objectName))
 					return "-not-found-";
 				
-				return "dbname='" + dbname + "', ObjectName='" + objectName + "'";
+				return "dbname='" + dbname + "'" 
+					+ (StringUtil.isNullOrBlank(schemaName) ? "" : ", SchemaName='" + schemaName + "'")
+					+ (StringUtil.isNullOrBlank(objectName) ? "" : ", ObjectName='" + objectName + "'")
+					+ (StringUtil.isNullOrBlank(indexName)  ? "" : ", IndexName='"  + indexName  + "'")
+					+ (StringUtil.isNullOrBlank(pageType)   ? "" : ", PageType='"   + pageType   + "'")
+					;
 			}
 			return "";
 		}
 
+		public String getExtraInfoForWaitResource(String key)
+		{
+			List<SpidWaitInfo> list = _waitResourceMap.get(key);
+			if (list != null && list.size() > 0)
+			{
+				SpidWaitInfo wi = list.get(0);
+				String extraInfo = wi._extraInfo;
+				
+				if (StringUtil.isNullOrBlank(extraInfo))
+					return "-not-found-";
+				
+				if (extraInfo.startsWith("+---------"))
+					return "\n" + extraInfo;
+
+				return extraInfo;
+			}
+			return "";
+		}
+		
 		
 		public String getInfoString()
 		{
@@ -1220,9 +1699,26 @@ extends CountersModel
 			{
 				sb.append("CmSessions:   - waitTime=" + entry.getValue() + " ms -- WaitType='" + entry.getKey() + "'  ObjectInfo={" + getObjectInfoForWaitResource(entry.getKey()) + "} \n");
 			}
+			
+			// Extra Info
+			sb.append("CmSessions: \n");
+			sb.append("CmSessions: Extra Info: \n");
+			for (Entry<String, List<SpidWaitInfo>> entry : _waitResourceMap.entrySet())
+			{
+				String extraInfo = getExtraInfoForWaitResource(entry.getKey());
+				extraInfo = StringUtil.addPrefix("CmSessions:                ", extraInfo, false);
+
+				sb.append("CmSessions:   - count=" + entry.getValue().size() + " -- WaitResource='" + entry.getKey() + "'  ObjectInfo={" + getObjectInfoForWaitResource(entry.getKey()) + "}  --- ExtraInfo: " + extraInfo + " \n");
+			}
 			sb.append("CmSessions: ================================================= \n");
 
 			return sb.toString();
 		}
 	}
+	
+	public static final String  PROPKEY_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA = "CmSessions.onWaitResource.KEY.getLockedTableData";
+	public static final boolean DEFAULT_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA = true;
+
+	public static final String  PROPKEY_ON_WAIT_RESOURCE__GET_PAGE_INFO = "CmSessions.onWaitResource.getPageInfo";
+	public static final boolean DEFAULT_ON_WAIT_RESOURCE__GET_PAGE_INFO = true;
 }

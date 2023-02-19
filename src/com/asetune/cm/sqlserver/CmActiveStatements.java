@@ -339,10 +339,11 @@ extends CountersModel
 			"    ,ImBlockingOthersMaxTimeInSec = convert(int, 0) \n" +
 			"    ,des.status \n" +
 			"    ,der.command \n" +
-			"    ,tran_name=(select top 1 tat.name \n" +
-			"                from       sys.dm_tran_session_transactions tst \n" +
-	        "                inner join sys.dm_tran_active_transactions  tat on tst.transaction_id = tat.transaction_id \n" + 
-	        "                where tst.session_id = des.session_id) \n" +
+			"    ,tran_id  = der.transaction_id \n" +
+			"    ,tran_name=(SELECT TOP 1 tat.name \n" +
+			"                FROM       sys.dm_tran_session_transactions tst \n" +
+	        "                INNER JOIN sys.dm_tran_active_transactions  tat ON tst.transaction_id = tat.transaction_id \n" + 
+	        "                WHERE tst.session_id = des.session_id) \n" +
 			"    ,ProcName            = object_name(dest.objectid, dest.dbid) \n" +
 			"    ,StmntStart          = der.statement_start_offset \n" +
 			"    ,des.[HOST_NAME] \n" +
@@ -434,10 +435,13 @@ extends CountersModel
 			"    ,ImBlockingOthersMaxTimeInSec = convert(int, 0) " +
 			"    ,p1.status                                    --des.status \n" +
 			"    ,p1.cmd                                       --der.command \n" +
-			"    ,tran_name=(select top 1 tat.name \n" +
-			"                from       sys.dm_tran_session_transactions tst \n" +
-	        "                inner join sys.dm_tran_active_transactions  tat on tst.transaction_id = tat.transaction_id \n" + 
-	        "                where tst.session_id = p1.spid) \n" +
+			"    ,tran_id  = (SELECT TOP 1 tst.transaction_id \n" +
+			"                 FROM sys.dm_tran_session_transactions tst \n" +
+			"                 WHERE tst.session_id = p1.spid) \n" +
+			"    ,tran_name= (SELECT TOP 1 tat.name \n" +
+			"                 FROM       sys.dm_tran_session_transactions tst \n" +
+	        "                 INNER join sys.dm_tran_active_transactions  tat on tst.transaction_id = tat.transaction_id \n" + 
+	        "                 WHERE tst.session_id = p1.spid) \n" +
 			"    ,ProcName            = object_name(dest.objectid, dest.dbid) \n" +
 			"    ,StmntStart          = -1 \n" +
 			"    ,p1.hostname                                  --des.[HOST_NAME] \n" +
@@ -451,7 +455,7 @@ extends CountersModel
 			"    ,HasBlockedSpidsInfo = convert(bit,0) \n" +
 			"    ,SpidLockCount       = convert(int,-1) \n" +
 //			"    ,DB_NAME(p1.dbid) AS database_name  \n" +
-			"    ,(select db.name from sys.databases db where db.database_id = p1.dbid) AS database_name \n" +
+			"    ,(SELECT db.name FROM sys.databases db WHERE db.database_id = p1.dbid) AS database_name \n" +
 			"    ,p1.cpu                                       --der.cpu_time \n" +
 			"    ,0                                            --der.reads   \n" +
 			"    ,0                                            --der.logical_reads   \n" +
@@ -484,7 +488,7 @@ extends CountersModel
 //			"--               THEN DATALENGTH(dest.text)   \n" +
 //			"--               ELSE der.statement_end_offset   \n" +
 //			"--          END - der.statement_start_offset ) / 2 +2) AS [lastKnownSql] \n" +
-			"    ,is_user_process           = CASE WHEN sid != 0x01 THEN convert(bit, 1) ELSE convert(bit, 0) END \n" +
+			"    ,is_user_process           = CASE WHEN p1.sid != 0x01 THEN convert(bit, 1) ELSE convert(bit, 0) END \n" +
 			"    ,percent_complete          = -1\n" +
 			"    ,estimated_completion_time = -1\n" +
 			"    ,estimated_finish_time     = NULL \n" + 
@@ -495,20 +499,24 @@ extends CountersModel
 			LiveQueryPlanBlocked +
 			"";
 
-		String sql2_tabs = 
-			"FROM sys.sysprocesses p1 \n" +
-			"OUTER APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
-			"";
-
-		String sql2_where = 
-			"WHERE p1.spid in (SELECT p2.blocked FROM sys.sysprocesses p2 WHERE p2.blocked > 0) \n" + 
-			"  AND p1.ecid = 0 \n" + // Only Parent SPID's in parallel statements ... or we can add/introduce the ECID in the primary key... 
-			"";
+//		String sql2_tabs = 
+//			"FROM sys.sysprocesses p1 \n" +
+//			"OUTER APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
+//			"";
+//
+//		String sql2_where = 
+//			"WHERE p1.spid in (SELECT p2.blocked FROM sys.sysprocesses p2 WHERE p2.blocked > 0) \n" + // This sub-select did NOT materialize before executing, so it was slow... Rewrite to join was faster
+//			"  AND p1.ecid = 0 \n" + // Only Parent SPID's in parallel statements ... or we can add/introduce the ECID in the primary key... 
+//			"";
 
 		String sql2 = 
 			sql2_cols +
-			sql2_tabs + 
-			sql2_where; 
+			"FROM sys.sysprocesses p1 \n" +
+			"JOIN sys.sysprocesses p2 ON p1.spid = p2.spid AND p2.blocked > 0 \n" +
+			"OUTER APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
+			"WHERE 1 = 1 \n" + 
+			"  AND p1.ecid = 0 \n" + // Only Parent SPID's in parallel statements ... or we can add/introduce the ECID in the primary key... 
+			"";
 		
 
 		//-----------------------------------------------------------------------
@@ -521,7 +529,8 @@ extends CountersModel
 					"UNION ALL \n" +
 					"\n" +
 			sql2_cols.replace("'BLOCKER'", "'HOLDING-LOCKS'") +
-			sql2_tabs + 
+			"FROM sys.sysprocesses p1 \n" +
+			"OUTER APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
 			"WHERE p1.open_tran > 0 \n" + 
 			"  AND p1.status    = 'sleeping' \n" +  
 			"  AND p1.cmd       = 'AWAITING COMMAND' \n" +  

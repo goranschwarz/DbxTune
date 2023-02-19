@@ -39,10 +39,12 @@ import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.SqlObjectName;
 import com.asetune.sql.SqlParserUtils;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 public class ObjectLookupInspectorPostgres
 extends ObjectLookupInspectorAbstract
@@ -583,6 +585,8 @@ extends ObjectLookupInspectorAbstract
 		SqlObjectName sqlObjectName = new SqlObjectName(conn, objectName);
 		objectName = sqlObjectName.getObjectName();
 		
+		DbmsVersionInfo dbmsVerInfo = conn.getDbmsVersionInfo();
+		
 		//----------------------------------------------------------------
 		// RELATION -- get TYPE, OWNER CREATION_TIME and DBNAME where the record(s) was found 
 		//----------------------------------------------------------------
@@ -645,19 +649,27 @@ extends ObjectLookupInspectorAbstract
 //	    + "          ELSE                      'FN' \n"
 //	    + "     END AS object_type \n"
 
+			// Column "prokind" was added in Postgres 11, use that if possible otherwise fallback to 'FN'
+			String objectType = "    ,'FN'               AS object_type \n";
+			if (dbmsVerInfo.getLongVersion() >= Ver.ver(11))
+			{
+				objectType = ""
+					    + "    ,CASE WHEN c.prokind = 'f' THEN 'FN' \n"  // in SQL Server: FN = Scalar function, TF = Table function
+					    + "          WHEN c.prokind = 'p' THEN 'P' \n"   // in SQL Server: P  = Stored procedure
+						+ "          WHEN c.prokind = 'a' THEN 'AF' \n"  // in SQL Server: AF = Aggregate function (CLR)
+						+ "          WHEN c.prokind = 'w' THEN 'WF' \n"  // in SQL Server: >>> Window Function do not seems to exists <<<
+					    + "          ELSE                      'FN' \n"
+					    + "     END AS object_type \n"
+					    + "";
+			}
+			
 			sql = ""
 				    + "SELECT \n"
 				    + "     current_database() AS dbname \n"
 				    + "    ,n.nspname          AS schema_name \n"
 				    + "    ,c.proname          AS object_name \n"
 				    + "    ,c.oid              AS object_id \n"
-//				    + "    ,'FN'               AS object_type \n"  // we could have used 'prokind' but that was added in Version 11
-				    + "    ,CASE WHEN c.prokind = 'f' THEN 'FN' \n"  // in SQL Server: FN = Scalar function, TF = Table function
-				    + "          WHEN c.prokind = 'p' THEN 'P' \n"   // in SQL Server: P  = Stored procedure
-					+ "          WHEN c.prokind = 'a' THEN 'AF' \n"  // in SQL Server: AF = Aggregate function (CLR)
-					+ "          WHEN c.prokind = 'w' THEN 'WF' \n"  // in SQL Server: >>> Window Function do not seems to exists <<<
-				    + "          ELSE                      'FN' \n"
-				    + "     END AS object_type \n"
+				    + objectType
 				    + "FROM pg_proc c \n"
 				    + "LEFT JOIN pg_namespace n ON n.oid = c.pronamespace \n"
 				    + "WHERE proname IN('" + objectName.toLowerCase() + "', '" + objectName + "') \n" // as LowerCase or OriginText (Postgres stores non-quoted-identifiers as LowerCase and "quoted-identifiers" as whatever was given)

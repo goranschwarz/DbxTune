@@ -67,7 +67,7 @@ extends HostMonitor
 			throw new Exception("Failed to connect to the remote host. conn="+conn);
 
 		String osname = conn.getOsName();
-System.out.println("OS Name: '"+osname+"'.");
+		//System.out.println("OS Name: '"+osname+"'.");
 
 		boolean hasVeritas = conn.hasVeritas();
 		if (hasVeritas)

@@ -492,6 +492,9 @@ public class DbxTuneCentral
 		// Start scheduler
 		startScheduler();
 
+		// Start Local Host Monitor (if it's configured)
+		startLocalHostMonitor();
+
 		// 
 		// Create a file, that will be deleted when the process ends.
 		// This file will hold various configuration about the NO-GUI process
@@ -693,6 +696,7 @@ public class DbxTuneCentral
 			stopReceiverAlarmChecker();     // Do not send any "missing data from xxxTune collector"
 			stopAlarmHandler();             // No more Alarms will be sent
 			stopScheduler();                // No more "cron" jobs
+			stopLocalHostMonitor();
 			stopCentralPcs();               // if it's a H2 DB, it might take time to stop (if defrag/compress is requested)
 
 			sendCounterUsageInfo();
@@ -913,6 +917,9 @@ public class DbxTuneCentral
 		conf.save(true);
 	}
 
+	//-------------------------------------------------------------------------------
+	//-- Start PCS
+	//-------------------------------------------------------------------------------
 	private static void startCentralPcs() 
 	throws Exception
 	{
@@ -1161,6 +1168,9 @@ public class DbxTuneCentral
 
 	}
 
+	//-------------------------------------------------------------------------------
+	//-- Start Scheduler
+	//-------------------------------------------------------------------------------
 	private static void startScheduler()
 	throws Exception
 	{
@@ -1408,6 +1418,30 @@ public class DbxTuneCentral
 		_scheduler.stop();
 	}
 
+	
+	
+	//-------------------------------------------------------------------------------
+	//-- Host Monitoring
+	//-------------------------------------------------------------------------------
+	public static void startLocalHostMonitor() 
+	throws Exception
+	{
+//		_logger.info("Starting Local Host Monitoring thread.");
+//		_localHostMon.start();
+	}
+
+	public static void stopLocalHostMonitor() 
+	throws Exception
+	{
+//		_logger.info("Stopping Local Host Monitoring thread.");
+//		_localHostMon.stop();
+	}
+
+	
+	
+	//-------------------------------------------------------------------------------
+	//-- Start Web Server
+	//-------------------------------------------------------------------------------
 	private static void startWebServer()
 	throws Exception
 	{
@@ -1708,6 +1742,9 @@ public class DbxTuneCentral
 ////		tomcat.getServer().await();
 //	}
 	
+	//-------------------------------------------------------------------------------
+	//-- Start Alarm Handler
+	//-------------------------------------------------------------------------------
 	public static void startAlarmHandler()
 	throws Exception
 	{

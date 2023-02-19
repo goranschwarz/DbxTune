@@ -38,6 +38,7 @@ import java.sql.SQLTimeoutException;
 import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -5339,7 +5340,7 @@ implements Cloneable, ITableTooltip
 		{
 			// below may end up with data overflow (due to sum may overflow the data-type, and if we want to store the data in PCS we want to keep the origin data-type)
 			// hence the try/catch
-			calculateAggregateRow(DATA_ABS, tmpNewSample);
+			calculateAggregateRow(DATA_ABS, tmpNewSample, false);
 		}
 		catch (RuntimeException ex)
 		{
@@ -5394,8 +5395,8 @@ implements Cloneable, ITableTooltip
 				tmpDiffData = computeDiffCnt(_prevSample, tmpNewSample, deletedRows, newDeltaRows, _pkCols, _isDiffCol, _isCountersCleared);
 				
 				// Aggregated MIN/MAX values has to be calculated for DIFF counters
-				if (hasAggregatedRow())
-					calculateAggregateRow(DATA_DIFF, tmpDiffData);
+				if (hasAggregatedRowId())
+					calculateAggregateRow(DATA_DIFF, tmpDiffData, false);
 			}
 	
 			if (tmpDiffData == null)
@@ -5420,8 +5421,8 @@ implements Cloneable, ITableTooltip
 				tmpRateData = computeRatePerSec(tmpDiffData, _isDiffCol, _isPctCol);
 
 				// Aggregated MIN/MAX values has to be calculated for RATE counters
-				if (hasAggregatedRow())
-					calculateAggregateRow(DATA_RATE, tmpDiffData);
+				if (hasAggregatedRowId())
+					calculateAggregateRow(DATA_RATE, tmpDiffData, false);
 
 				// Compute local stuff for RatePerSec, here we can adjust some stuff if needed
 				localCalculationRatePerSec(tmpRateData, tmpDiffData);
@@ -7921,7 +7922,7 @@ implements Cloneable, ITableTooltip
 		if (rowIds != null)
 			count = rowIds.length;
 		
-		if (discardAggregatedRowFromSumAndAvg() && hasAggregatedRow())
+		if (discardAggregatedRowFromSumAndAvg() && hasAggregatedRowId())
 			count--;
 			
 		if (count == 0)
@@ -7952,7 +7953,7 @@ implements Cloneable, ITableTooltip
 		if (rowIds != null)
 			count = rowIds.length;
 		
-		if (discardAggregatedRowFromSumAndAvg() && hasAggregatedRow())
+		if (discardAggregatedRowFromSumAndAvg() && hasAggregatedRowId())
 			count--;
 			
 		if (count == 0)
@@ -8048,16 +8049,48 @@ implements Cloneable, ITableTooltip
 		return data.getRowNumberForPkValue(pkStr);
 	}
 
+	private NumberFormat _nf = NumberFormat.getInstance();
+	private NumberFormat getNumberFormat()
+	{
+		if (_nf == null)
+			return NumberFormat.getInstance();
+		
+		return _nf;
+	}
+	public void getNumberFormat(NumberFormat nf)
+	{
+		_nf = nf;
+	}
+	
+	public String toFormatedStr(Object o)
+	{
+		if (o == null)
+			return "";
+		
+		if (o instanceof Number)
+			return getNumberFormat().format(o);
+
+		return o.toString();
+	}
+
+
 	//--------------------------------------------------------------
 	// Wrapper functions to read ABSOLUTE values
 	//--------------------------------------------------------------
-	public String getAbsString        (int    rowId, int    colPos)                          { Object o = getValue     (DATA_ABS, rowId, colPos);        return (o==null) ?  "" : o.toString(); }
-	public String getAbsString        (int    rowId, String colname)                         { Object o = getValue     (DATA_ABS, rowId, colname, true); return (o==null) ?  "" : o.toString(); }
-	public String getAbsString        (int    rowId, String colname, boolean cs)             { Object o = getValue     (DATA_ABS, rowId, colname,   cs); return (o==null) ?  "" : o.toString(); }
-	public String getAbsString        (int    rowId, String colname, boolean cs, String def) { Object o = getValue     (DATA_ABS, rowId, colname,   cs); return (o==null) ? def : o.toString(); }
-	public String getAbsString        (String pkStr, String colname)                         { Object o = getValue     (DATA_ABS, pkStr, colname, true); return (o==null) ?  "" : o.toString(); }
-	public String getAbsString        (String pkStr, String colname, boolean cs)             { Object o = getValue     (DATA_ABS, pkStr, colname,   cs); return (o==null) ?  "" : o.toString(); }
-	public String getAbsString        (String pkStr, String colname, boolean cs, String def) { Object o = getValue     (DATA_ABS, pkStr, colname,   cs); return (o==null) ? def : o.toString(); }
+//	public String getAbsString        (int    rowId, int    colPos)                          { Object o = getValue     (DATA_ABS, rowId, colPos);        return (o==null) ?  "" : o.toString(); }
+//	public String getAbsString        (int    rowId, String colname)                         { Object o = getValue     (DATA_ABS, rowId, colname, true); return (o==null) ?  "" : o.toString(); }
+//	public String getAbsString        (int    rowId, String colname, boolean cs)             { Object o = getValue     (DATA_ABS, rowId, colname,   cs); return (o==null) ?  "" : o.toString(); }
+//	public String getAbsString        (int    rowId, String colname, boolean cs, String def) { Object o = getValue     (DATA_ABS, rowId, colname,   cs); return (o==null) ? def : o.toString(); }
+//	public String getAbsString        (String pkStr, String colname)                         { Object o = getValue     (DATA_ABS, pkStr, colname, true); return (o==null) ?  "" : o.toString(); }
+//	public String getAbsString        (String pkStr, String colname, boolean cs)             { Object o = getValue     (DATA_ABS, pkStr, colname,   cs); return (o==null) ?  "" : o.toString(); }
+//	public String getAbsString        (String pkStr, String colname, boolean cs, String def) { Object o = getValue     (DATA_ABS, pkStr, colname,   cs); return (o==null) ? def : o.toString(); }
+	public String getAbsString        (int    rowId, int    colPos)                          { Object o = getValue     (DATA_ABS, rowId, colPos);        return toFormatedStr(o); }
+	public String getAbsString        (int    rowId, String colname)                         { Object o = getValue     (DATA_ABS, rowId, colname, true); return toFormatedStr(o); }
+	public String getAbsString        (int    rowId, String colname, boolean cs)             { Object o = getValue     (DATA_ABS, rowId, colname,   cs); return toFormatedStr(o); }
+	public String getAbsString        (int    rowId, String colname, boolean cs, String def) { Object o = getValue     (DATA_ABS, rowId, colname,   cs); return toFormatedStr((o==null)?def:o); }
+	public String getAbsString        (String pkStr, String colname)                         { Object o = getValue     (DATA_ABS, pkStr, colname, true); return toFormatedStr(o); }
+	public String getAbsString        (String pkStr, String colname, boolean cs)             { Object o = getValue     (DATA_ABS, pkStr, colname,   cs); return toFormatedStr(o); }
+	public String getAbsString        (String pkStr, String colname, boolean cs, String def) { Object o = getValue     (DATA_ABS, pkStr, colname,   cs); return toFormatedStr((o==null)?def:o); }
 	
 	public Object getAbsValue         (int    rowId, int    colPos)                          { Object o = getValue     (DATA_ABS, rowId, colPos); return o; }
 	public Object getAbsValue         (int    rowId, String colname)                         { return getValue         (DATA_ABS, rowId, colname, true); }
@@ -8143,11 +8176,16 @@ implements Cloneable, ITableTooltip
 	//--------------------------------------------------------------
 	// Wrapper functions to read DIFF (new-old) values
 	//--------------------------------------------------------------
-	public String getDiffString        (int    rowId, int    colPos)                          { Object o = getValue     (DATA_DIFF, rowId, colPos);        return (o==null)?"":o.toString(); }
-	public String getDiffString        (int    rowId, String colname)                         { Object o = getValue     (DATA_DIFF, rowId, colname, true); return (o==null)?"":o.toString(); }
-	public String getDiffString        (int    rowId, String colname, boolean cs)             { Object o = getValue     (DATA_DIFF, rowId, colname,   cs); return (o==null)?"":o.toString(); }
-	public String getDiffString        (String pkStr, String colname)                         { Object o = getValue     (DATA_DIFF, pkStr, colname, true); return (o==null)?"":o.toString(); }
-	public String getDiffString        (String pkStr, String colname, boolean cs)             { Object o = getValue     (DATA_DIFF, pkStr, colname,   cs); return (o==null)?"":o.toString(); }
+//	public String getDiffString        (int    rowId, int    colPos)                          { Object o = getValue     (DATA_DIFF, rowId, colPos);        return (o==null)?"":o.toString(); }
+//	public String getDiffString        (int    rowId, String colname)                         { Object o = getValue     (DATA_DIFF, rowId, colname, true); return (o==null)?"":o.toString(); }
+//	public String getDiffString        (int    rowId, String colname, boolean cs)             { Object o = getValue     (DATA_DIFF, rowId, colname,   cs); return (o==null)?"":o.toString(); }
+//	public String getDiffString        (String pkStr, String colname)                         { Object o = getValue     (DATA_DIFF, pkStr, colname, true); return (o==null)?"":o.toString(); }
+//	public String getDiffString        (String pkStr, String colname, boolean cs)             { Object o = getValue     (DATA_DIFF, pkStr, colname,   cs); return (o==null)?"":o.toString(); }
+	public String getDiffString        (int    rowId, int    colPos)                          { Object o = getValue     (DATA_DIFF, rowId, colPos);        return toFormatedStr(o); }
+	public String getDiffString        (int    rowId, String colname)                         { Object o = getValue     (DATA_DIFF, rowId, colname, true); return toFormatedStr(o); }
+	public String getDiffString        (int    rowId, String colname, boolean cs)             { Object o = getValue     (DATA_DIFF, rowId, colname,   cs); return toFormatedStr(o); }
+	public String getDiffString        (String pkStr, String colname)                         { Object o = getValue     (DATA_DIFF, pkStr, colname, true); return toFormatedStr(o); }
+	public String getDiffString        (String pkStr, String colname, boolean cs)             { Object o = getValue     (DATA_DIFF, pkStr, colname,   cs); return toFormatedStr(o); }
 	
 	public Object getDiffValue         (int    rowId, int    colPos)                          { Object o = getValue     (DATA_DIFF, rowId, colPos);  return o; }
 	public Object getDiffValue         (int    rowId, String colname)                         { return getValue         (DATA_DIFF, rowId, colname, true); }
@@ -8233,11 +8271,16 @@ implements Cloneable, ITableTooltip
 	//--------------------------------------------------------------
 	// Wrapper functions to read RATE DIFF/time values
 	//--------------------------------------------------------------
-	public String getRateString        (int    rowId, int    colPos)                          { Object o = getValue     (DATA_RATE, rowId, colPos);  return (o==null)?"":o.toString(); }
-	public String getRateString        (int    rowId, String colname)                         { Object o = getValue     (DATA_RATE, rowId, colname, true); return (o==null)?"":o.toString(); }
-	public String getRateString        (int    rowId, String colname, boolean cs)             { Object o = getValue     (DATA_RATE, rowId, colname,   cs); return (o==null)?"":o.toString(); }
-	public String getRateString        (String pkStr, String colname)                         { Object o = getValue     (DATA_RATE, pkStr, colname, true); return (o==null)?"":o.toString(); }
-	public String getRateString        (String pkStr, String colname, boolean cs)             { Object o = getValue     (DATA_RATE, pkStr, colname,   cs); return (o==null)?"":o.toString(); }
+//	public String getRateString        (int    rowId, int    colPos)                          { Object o = getValue     (DATA_RATE, rowId, colPos);        return (o==null)?"":o.toString(); }
+//	public String getRateString        (int    rowId, String colname)                         { Object o = getValue     (DATA_RATE, rowId, colname, true); return (o==null)?"":o.toString(); }
+//	public String getRateString        (int    rowId, String colname, boolean cs)             { Object o = getValue     (DATA_RATE, rowId, colname,   cs); return (o==null)?"":o.toString(); }
+//	public String getRateString        (String pkStr, String colname)                         { Object o = getValue     (DATA_RATE, pkStr, colname, true); return (o==null)?"":o.toString(); }
+//	public String getRateString        (String pkStr, String colname, boolean cs)             { Object o = getValue     (DATA_RATE, pkStr, colname,   cs); return (o==null)?"":o.toString(); }
+	public String getRateString        (int    rowId, int    colPos)                          { Object o = getValue     (DATA_RATE, rowId, colPos);        return toFormatedStr(o); }
+	public String getRateString        (int    rowId, String colname)                         { Object o = getValue     (DATA_RATE, rowId, colname, true); return toFormatedStr(o); }
+	public String getRateString        (int    rowId, String colname, boolean cs)             { Object o = getValue     (DATA_RATE, rowId, colname,   cs); return toFormatedStr(o); }
+	public String getRateString        (String pkStr, String colname)                         { Object o = getValue     (DATA_RATE, pkStr, colname, true); return toFormatedStr(o); }
+	public String getRateString        (String pkStr, String colname, boolean cs)             { Object o = getValue     (DATA_RATE, pkStr, colname,   cs); return toFormatedStr(o); }
 	
 	public Object getRateValue         (int    rowId, int    colPos)                          { Object o = getValue     (DATA_RATE, rowId, colPos);  return o; }
 	public Object getRateValue         (int    rowId, String colname)                         { return getValue         (DATA_RATE, rowId, colname, true); }
@@ -9394,28 +9437,18 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 	/** MetatData for Aggregated Columns */
 	private Map<String, AggregationType> _aggregateColumns = null;
 
-	/** If we should APPEND the summary row to the CounterModel */
-//	private boolean _aggregatedRowAppend = true;
-
-	/** The actual Aggregated ROW Object */
-	private List<Object> _aggregatedRow = null;
-
 	/** The actual Aggregated ROW ID, or row number */
 	private int _aggregatedRowId = -1;
 
 	private void private_resetAggregates()
 	{
 		_aggregateColumns    = null;
-//		_aggregatedRowAppend = true;
-		_aggregatedRow       = null;
 		_aggregatedRowId     = -1;
 	}
 
 	private void private_copyAggregates(CountersModel copy)
 	{
 		copy._aggregateColumns    = this._aggregateColumns;
-//		copy._aggregatedRowAppend = this._aggregatedRowAppend;
-		copy._aggregatedRow       = this._aggregatedRow;
 		copy._aggregatedRowId     = this._aggregatedRowId;
 	}
 
@@ -9446,12 +9479,24 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 	}
 
 	/**
-	 * Does the actual aggregation
+	 * Does re-calculate aggregation
+	 *
 	 * @param counterType 
-	 * 
 	 * @param cs
 	 */
-	public void calculateAggregateRow(int counterType, CounterSample cs)
+	public void reCalculateAggregateRow(int counterType, CounterSample cs)
+	{
+		calculateAggregateRow(counterType, cs, true); // true == doRecalculate
+	}
+
+	/**
+	 * Does the actual aggregation
+	 *
+	 * @param counterType 
+	 * @param cs
+	 * @param doReCalc   If we want to re-calculate
+	 */
+	private void calculateAggregateRow(int counterType, CounterSample cs, boolean doReCalc)
 	{
 		Map<String, AggregationType> aggCols = getAggregateColumns();
 
@@ -9464,39 +9509,42 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 		int rowCount = cs.getRowCount();
 
 		// For DIFF and RATE values only do MIN/MAX
-		if (counterType == DATA_DIFF || counterType == DATA_RATE)
+		if ( ! doReCalc )
 		{
-			for (int c = 0; c < colCount; c++)
+			if (counterType == DATA_DIFF || counterType == DATA_RATE)
 			{
-				String colName  = cs.getColumnName(c);
-				int    jdbcType = cs.getColSqlType(c);
-
-				AggregationType aggType = aggCols.get(colName);
-				if (aggType != null)
+				for (int c = 0; c < colCount; c++)
 				{
-					AggregationType.Agg aggregationType = aggType.getAggregationType();
+					String colName  = cs.getColumnName(c);
+					int    jdbcType = cs.getColSqlType(c);
 
-					if (AggregationType.Agg.MIN.equals(aggregationType) || AggregationType.Agg.MAX.equals(aggregationType))
+					AggregationType aggType = aggCols.get(colName);
+					if (aggType != null)
 					{
-						Object dataValue = null;
+						AggregationType.Agg aggregationType = aggType.getAggregationType();
 
-						// Loop all rows and do SUM
-						for (int r = 0; r < rowCount; r++)
+						if (AggregationType.Agg.MIN.equals(aggregationType) || AggregationType.Agg.MAX.equals(aggregationType))
 						{
-							Object colVal = cs.getValueAsObject(r, c);
+							Object dataValue = null;
 
-							if (AggregationType.Agg.MIN.equals(aggregationType))
-								dataValue = privateAggregate_doMinForValue(dataValue, colVal, jdbcType);
+							// Loop all rows and do SUM
+							for (int r = 0; r < rowCount; r++)
+							{
+								Object colVal = cs.getValueAsObject(r, c);
 
-							if (AggregationType.Agg.MAX.equals(aggregationType))
-								dataValue = privateAggregate_doMaxForValue(dataValue, colVal, jdbcType);
+								if (AggregationType.Agg.MIN.equals(aggregationType))
+									dataValue = privateAggregate_doMinForValue(dataValue, colVal, jdbcType);
+
+								if (AggregationType.Agg.MAX.equals(aggregationType))
+									dataValue = privateAggregate_doMaxForValue(dataValue, colVal, jdbcType);
+							}
+
+							cs.setValueAt(dataValue, getAggregatedRowId(), c);
 						}
-
-						cs.setValueAt(dataValue, getAggregatedRowId(), c);
 					}
 				}
+				return;
 			}
-			return;
 		}
 
 //System.out.println("");
@@ -9542,6 +9590,10 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 					// Loop all rows and do SUM
 					for (int r = 0; r < rowCount; r++)
 					{
+						// (on re-calc) do NOT include values for the aggregated row (that would be strange) 
+						if (r == _aggregatedRowId)
+							continue;
+
 						Object colVal = cs.getValueAsObject(r, c);
 						sumValue = privateAggregate_doSummaryForValue(sumValue, colVal, jdbcType);
 						minValue = privateAggregate_doMinForValue    (minValue, colVal, jdbcType);
@@ -9639,16 +9691,18 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 			_logger.error(getName() + ": Problems in calculateSummaryRow(). Column Count differs in tableColCount=" + colCount + " and sumRow=" + aggRow.size());
 		}
 
-		// Finally ADD the SUMMARY Row
-		setAggregatedRow(aggRow);
-		
-		if (isAggregateRowAppendEnabled())
+		if (doReCalc)
+		{
+			if (_aggregatedRowId == -1)
+				throw new RuntimeException("calculateAggregateRow() RE-CALC do NOT have an _aggregatedRowId. Cont continue. counterType=" + getWhatDataTranslationStr(counterType) + ", cs.RowCnt=" + cs.getRowCount() + ", _aggregatedRowId=" + _aggregatedRowId + ", cm='" + getName() + "', csName='" + cs.getName() + "'. aggRow="+aggRow);
+			else
+				cs.setRow(this, _aggregatedRowId, aggRow);
+		}
+		else
+		{
 			_aggregatedRowId = cs.addRow(this, aggRow);
+		}
 
-//		FIXME; Possibly a parameter(pos) to addRow... so we can add row first, last or at a specific position
-//		       This means we need to rebuild the PK->RowId HashMap... (do we want to do that?)
-
-//System.out.println(getName() + ": <<< ADDING SUM row: AggRowID=" + _aggregatedRowId + ", " + aggRow);
 
 		// Do POST Processing
 		if (needsPostCalculation)
@@ -9690,43 +9744,11 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 		}
 	}
 
-	/** 
-	 * Checks if the aggregated row should be appended to the Counter Model, or just be available by the method: getAggregatedRow<br>
-	 * Default return: true
-	 * <p>
-	 * Override this in any CM to  
-	 */
-	public boolean isAggregateRowAppendEnabled()
-	{
-		return true;
-	}
-//	/** Checks if the aggregated row should be appended to the Counter Model, or just be available by the method: getAggregatedRow */
-//	public boolean isAggregateRowAppendEnabled()
-//	{
-//		return _aggregatedRowAppend;
-//	}
-//	/** Set if the aggregated row should be appended to the Counter Model, or just be available by the method: getAggregatedRow */
-//	public void setAggregateRowAppendEnabled(boolean enable)
-//	{
-//		_aggregatedRowAppend = enable;
-//	}
-	
-	/** Checks if we have a Aggregated ROW Object */
-	public boolean hasAggregatedRow()
-	{
-		return _aggregatedRow != null;
-	}
 
-	/** Get the Aggregated ROW Object */
-	public List<Object> getAggregatedRow()
+	/** Checks if we have a Aggregated ROW ID */
+	public boolean hasAggregatedRowId()
 	{
-		return _aggregatedRow;
-	}
-
-	/** Set the Aggregated ROW Object */
-	public void setAggregatedRow(List<Object> aggRow)
-	{
-		_aggregatedRow = aggRow;
+		return _aggregatedRowId != -1;
 	}
 
 	/** 
@@ -9747,8 +9769,6 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 	/** Check if the TableModel row is the Aggregated Row */
 	public boolean isAggregateRow(int mrow)
 	{
-//if (mrow == 0)
-//	System.out.println(getName() + " -- isAggregateRow(): << " + (getAggregatedRowId() == mrow) + "     (_aggregatedRowId=" + getAggregatedRowId() + ", mrow=" + mrow + ")");
 		return _aggregatedRowId == mrow;
 	}
 

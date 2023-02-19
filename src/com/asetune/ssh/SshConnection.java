@@ -131,8 +131,10 @@ public class SshConnection
 //	public static final String  PROPKEY_sshAuthenticateEnableRSA                 = "ssh.authenticate.enable.RSA";
 //	public static final boolean DEFAULT_sshAuthenticateEnableRSA                 = true;
 
-	public static final String PROMPT_FOR_PASSWORD = "<PROMPT_FOR_PASSWORD>";
+	public static final String  PROMPT_FOR_PASSWORD = "<PROMPT_FOR_PASSWORD>";
 
+	public static final String  PROPKEY_ENABLE_OLD_SSH_RSA_ALGORITHM = "SshConnection.enable.old.ssh-rsa.algorithm";
+	public static final boolean DEFAULT_ENABLE_OLD_SSH_RSA_ALGORITHM = true;
 
 	public static String getRsaKeyFilename()
 	{
@@ -205,7 +207,7 @@ public class SshConnection
 				try
 				{
 					_jsch.setKnownHosts(sskKnownHostsFile);
-					_logger.error("Setting SSH Known Hosts file '" + sskKnownHostsFile + "'.");
+					_logger.info("Setting SSH Known Hosts file '" + sskKnownHostsFile + "'.");
 					
 					_defaultOpenSshKkownHostsFileExists = true;
 				}
@@ -222,7 +224,7 @@ public class SshConnection
 				{
 					ConfigRepository configRepository = OpenSSHConfig.parseFile(sshConfigFile);
 					_jsch.setConfigRepository(configRepository);
-					_logger.error("Using Open SSH Config file '" + sshConfigFile + "'.");
+					_logger.info("Using Open SSH Config file '" + sshConfigFile + "'.");
 				}
 				catch (Exception ex) 
 				{
@@ -234,7 +236,29 @@ public class SshConnection
 			addKeyFile(_keyFile, _password, true);
 			addKeyFile(System.getProperty("user.home") + File.separator + ".ssh" + File.separator + "id_rsa", _password, false);
 			addKeyFile(System.getProperty("user.home") + File.separator + ".ssh" + File.separator + "id_dsa", _password, false);
-			
+
+
+			// Set JSCH Configuration (from any local property configuration, using prefix 'SshConnection.jsch.config.')
+			boolean addConfig = true;
+			if (addConfig)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+				String keyPrefix = "SshConnection.jsch.config.";
+
+				for (String longKey : conf.getUniqueSubKeys(keyPrefix, true))
+				{
+					String val      = conf.getProperty(longKey);
+					String shortKey = longKey.substring(keyPrefix.length());
+					
+					// Set JSCH Config
+					String oldVal = JSch.getConfig(shortKey);
+					if ( ! val.equals(oldVal) )
+					{
+						JSch.setConfig(shortKey, val);
+						_logger.info("Setting JSCH Configuration '" + shortKey + "' to value '" + val + "', previous old value was '" + oldVal + "'.");
+					}
+				}
+			} // end: addConfig
 
 		} // end: _jsch == null
 	}
@@ -331,15 +355,25 @@ public class SshConnection
 			_logger.info("Can't find GUI, setting SSH Option 'StrictHostKeyChecking=no'.");
 			_conn.setConfig("StrictHostKeyChecking", "no");
 		}
-		
-		
+
+		// Workaround to connect to "older" SSH Servers
+		// If we get: JSchAlgoNegoFailException: Algorithm negotiation fail: algorithmName="server_host_key" jschProposal="rsa-sha2-512,rsa-sha2-256,ssh-ed25519,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521" serverProposal="ssh-rsa,ssh-dss"
+		// Form https://github.com/mwiede/jsch:
+		//   - On a per-session basis by executing something similar to session.setConfig("server_host_key", session.getConfig("server_host_key") + ",ssh-rsa") + session.setConfig("PubkeyAcceptedAlgorithms", session.getConfig("PubkeyAcceptedAlgorithms") + ",ssh-rsa").
+		boolean enableOldSshRsaAlgorithm = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_ENABLE_OLD_SSH_RSA_ALGORITHM, DEFAULT_ENABLE_OLD_SSH_RSA_ALGORITHM);
+		if (enableOldSshRsaAlgorithm)
+		{
+			// Should we write a INFO/WARN message about this???
+			_conn.setConfig("server_host_key"         , _conn.getConfig("server_host_key")          + ",ssh-rsa,ssh-dss");
+			_conn.setConfig("PubkeyAcceptedAlgorithms", _conn.getConfig("PubkeyAcceptedAlgorithms") + ",ssh-rsa,ssh-dss");
+		}
 		
 		if (_waitforDialog != null)
 			_waitforDialog.setState("SSH Connectiong to host '" + _hostname + "' on port " + _port + " with username '" + _username + "' and keyFile '" + _keyFile + "'.");
 
 		try
 		{
-System.out.println(">>> SSH Connect");
+			_logger.debug(">>> SSH Connect");
 			_conn.connect();
 
 			_isAuthenticated = true;
@@ -357,7 +391,8 @@ System.out.println(">>> SSH Connect");
 		catch (JSchException ex)
 		{
 			_logger.error("Problems Connection to host '" + _hostname + "' on port " + _port + " with username '" + _username + "' and keyFile '" + _keyFile + "'. Caught: " + ex);
-			return false;
+			throw ex;
+			//return false;
 		}
 	}
 
@@ -683,7 +718,7 @@ System.out.println(">>> SSH Connect");
 			//return false;
 		}
 
-System.out.println(">>>>>>>>>>>>>>> _conn.isConnected() == " + _conn.isConnected());
+		_logger.debug(">>>>>>>>>>>>>>> _conn.isConnected() == " + _conn.isConnected());
 		if ( ! _conn.isConnected() )
 		{
 			if (_isAuthenticated)
@@ -695,9 +730,11 @@ System.out.println(">>>>>>>>>>>>>>> _conn.isConnected() == " + _conn.isConnected
 				}
 				catch(Exception ex)
 				{
-					_logger.warn("isConnected() has problems when trying to re-connect. Caught: " + ex);
-					// Not sure what to do here... leave the connection or close the connection
-					// reconnect() does a close... before it tries to do connect(). hopefully thats good enough...
+//					_logger.warn("checkConnectionAndPossiblyReconnect() has problems when trying to re-connect. Caught: " + ex);
+//					// Not sure what to do here... leave the connection or close the connection
+//					// reconnect() does a close... before it tries to do connect(). hopefully thats good enough...
+//					return false;
+					throw new IOException("checkConnectionAndPossiblyReconnect() has problems when trying to re-connect. Caught: " + ex);
 				}
 			}
 			else
@@ -890,7 +927,8 @@ System.out.println(">>>>>>>>>>>>>>> _conn.isConnected() == " + _conn.isConnected
 		
 		// EXECUTE
 		ExecOutput output = execCommandOutput(command);
-//System.out.println("execCommandOutputAsStr(): " + output);
+
+		_logger.debug("execCommandOutputAsStr(): " + output);
 
 		if (output.hasValueStdOut())
 			return output.getStdOut();
@@ -965,7 +1003,7 @@ System.out.println(">>>>>>>>>>>>>>> _conn.isConnected() == " + _conn.isConnected
 		}
 		catch (Exception ex)
 		{
-ex.printStackTrace();
+//ex.printStackTrace();
 			throw ex;
 		}
 		
@@ -1576,11 +1614,12 @@ ex.printStackTrace();
 			hasVeritasMsg = true;
 		
 		
+		if (output.getExitCode() != 0)
+			return false;
+//			throw new IOException("hasVeritas() return code not zero. Output: " + output);
+
 		if ( ! output.hasValueStdOut() )
 			throw new IOException("hasVeritas() produced output, which wasn't expected. Output: " + output);
-
-		if (output.getExitCode() != 0)
-			throw new IOException("hasVeritas() return code not zero. Output: " + output);
 
 		return hasVeritasMsg;
 	}
@@ -1659,7 +1698,7 @@ ex.printStackTrace();
 		
 		_logger.info("When issuing command '" + cmd + "' the version " + intVersion + " was parsed from the version string '" + StringUtil.removeLastNewLine(usedVersionString) + "'.");
 
-		if ( output.getExitCode() != 0 )
+		if ( intVersion == -1 && output.getExitCode() != 0 )
 			return -1;
 
 		_logger.debug("getLinuxUtilVersion(): returned " + intVersion );
@@ -1778,7 +1817,7 @@ ex.printStackTrace();
 		@Override
 		public boolean promptPassword(String message)
 		{
-			System.out.println("---------- DbxUserInfo: promptPassword() message='" + message + "'.");
+			_logger.debug("---------- DbxUserInfo: promptPassword() message='" + message + "'.");
 
 			// If we can't provide a GUI simply say NO
 			if (GraphicsEnvironment.isHeadless()) 
@@ -1803,7 +1842,7 @@ ex.printStackTrace();
 		@Override
 		public String getPassword()
 		{
-			System.out.println("---------- DbxUserInfo: getPassword()");
+			_logger.debug("---------- DbxUserInfo: getPassword()");
 			return _password;
 		}
 
@@ -1818,7 +1857,7 @@ ex.printStackTrace();
 		@Override
 		public boolean promptPassphrase(String message)
 		{
-			System.out.println("---------- DbxUserInfo: promptPassphrase() message='" + message + "'.");
+			_logger.debug("---------- DbxUserInfo: promptPassphrase() message='" + message + "'.");
 
 			// If we can't provide a GUI simply say NO
 			if (GraphicsEnvironment.isHeadless()) 
@@ -1843,7 +1882,7 @@ ex.printStackTrace();
 		@Override
 		public String getPassphrase()
 		{
-			System.out.println("---------- DbxUserInfo: getPassphrase()");
+			_logger.debug("---------- DbxUserInfo: getPassphrase()");
 			return _password;
 		}
 
@@ -1860,7 +1899,7 @@ ex.printStackTrace();
 		@Override
 		public boolean promptYesNo(String message)
 		{
-			System.out.println("---------- DbxUserInfo: promptYesNo() message='" + message + "'.");
+			_logger.debug("---------- DbxUserInfo: promptYesNo() message='" + message + "'.");
 
 			// If we can't provide a GUI simply say NO
 			if (GraphicsEnvironment.isHeadless()) 
@@ -1927,7 +1966,7 @@ ex.printStackTrace();
 		@Override
 		public void showMessage(String message)
 		{
-			System.out.println("---------- DbxUserInfo: showMessage() message='" + message + "'.");
+			_logger.debug("---------- DbxUserInfo: showMessage() message='" + message + "'.");
 
 			// Create a text area to display the message and place it inside a scroll pane
 			// to permit display of large messages using a decent sized GUI window.
@@ -1952,7 +1991,7 @@ ex.printStackTrace();
 		@Override
 		public String[] promptKeyboardInteractive(String destination, String name, String instruction, String[] prompt, boolean[] echo)
 		{
-System.out.println("DbxUserInfo: promptKeyboardInteractive() destination='" + destination + "', name='" + name + "', instruction='" + instruction + "', prompt=[" + StringUtil.toCommaStr(prompt) + "], echo=[" + StringUtil.toCommaStr(echo) + "].");
+			_logger.debug("DbxUserInfo: promptKeyboardInteractive() destination='" + destination + "', name='" + name + "', instruction='" + instruction + "', prompt=[" + StringUtil.toCommaStr(prompt) + "], echo=[" + StringUtil.toCommaStr(echo) + "].");
 
 			if ( prompt.length != echo.length )
 			{

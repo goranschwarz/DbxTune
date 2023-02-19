@@ -34,8 +34,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Alarms "Duration" does now reflect the "Full/Actual Duration" in a better way (for the Alarms with time thresholds... adding the threshold time to the duration makes the "Full/Actual Duration"<br>
             Note: templates that references '<code>${duration}</code>' will have a slightly new output '01:10 (MM:SS) -- Added/Adjusted ## Seconds to the Alarm Raise Time'. Also there are new variables '<code>${alarmDuration}</code>', '<code>${fullDuration}</code>', '<code>${fullDurationAdjustmentInSec}</code>' if you want more control.</LI>
 		<LI>From Mail Addresses: You can now add "display name" in the "From" sender. Example: <code>AlarmWriterToMail.from = some.name@acme.com &lt;The Display Name&gt;</code></LI>
-		<LI> AlarmWriterToMail: Some properties was miss spelled, which is now fixed. 'smpt' -> 'smtp' (But I will still read the old names for backward compatibility, if the new names are missing)</LI>
-		<LI></LI>
+		<LI>AlarmWriterToMail: Some properties was miss spelled, which is now fixed. 'smpt' -> 'smtp' (But I will still read the old names for backward compatibility, if the new names are missing)</LI>
+		<LI>SshConnection: Replacing ganymed-ssh2 lib with Jsch 0.2.7, which was a major rewrite in that subsystem</LI>
 		<LI></LI>
 		
 		<LI><b>Alarms Handling:</b>
@@ -61,6 +61,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<ul>
 	 			<li>To version 2.1.214        Component: H2 Database</li>
 	 			<li>To version x.x.x          Component: Xxx</li>
+
+	 			<li>To version 0.2.7          Component: Jsch (replacing ganymed-ssh2)</li>
 			</ul>
 		</LI>
 	</UL>
@@ -168,21 +170,22 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI>Added Alarm: <b>AlarmEventMemoryGrantWait   </b> -- Used by CM 'CmMemoryGrantsSum' to alarm if we have anyone waiting to grab a memory grant.</LI>
 
-		<LI>Added CM: <b>CmMemoryGrantsSum    </b> - A Memory Grant Summary (from: dm_exec_query_resource_semaphores)</LI>
 		<LI>Added CM: <b>CmExecQueryStatPerDb </b> - Activity Grouped by Database -- Information is fetched from dm_exec_query_stats</LI>
-		<LI>Added CM: <b>CmXxxx </b> - xxx</LI>
+
+		<LI>Added CM: <b>CmMemoryGrantsSum    </b> - A Memory Grant Summary (from: dm_exec_query_resource_semaphores)</LI>
 
 		<LI><b>DBMS Configuration </b> - Also get linked servers using 'exec sp_linkedservers'</LI>
 
-		<LI><b>CmActiveStPlanStats </b> - new column 'row_count_abs' not diff calculated version of 'row_count'</LI>
-		<LI><b>CmActiveStPlanStats </b> - new column 'completed_pct' which tries to calculte how long an operator has "reached"</LI>
+		<!-- ~~~ CM Changes ~~~ -->
+		<LI><b>CmActiveStatements   </b> - Added column 'tran_id' it relates with Extended Events 'transaction_id'. (easier to track SqlServerTune and XE)</LI>
+		<LI><b>CmActiveStatements   </b> - Rewrote a sub select into a join (for better performance)</LI>
 		
-		<LI><b>CmDatabases </b> - changed column 'DBOwner' from SQL  'suser_name(d.owner_sid)' to 'suser_sname(d.owner_sid)' to reflect the name in a better way</LI>
-		
-		<LI><b>CmName2 </b> - xxx</LI>
+		<LI><b>CmPerfCounters       </b> - Added Chart 'Stolen Server Memory, from Buffer Pool'</LI>
 
-		<LI><b>CmName3 </b> - xxx</LI>
+		<LI><b>CmSessions           </b> - The "hidden report" on WaitResources has been extended (can now lookup pages to get ObjectID's and translated to ObjectName's, also lookup 'locked data' when WaitResource is 'KEY')</LI>
 
+		<LI><b>CmSummary            </b> - added column 'databaseCacheMemoryMb', 'grantedWorkspaceMemoryMb', 'stolenServerMemoryMb' (grabbed from dm_os_performance_counters)</LI>
+		<LI><b>CmSummary            </b> - added Chart 'PerfMon: SQL Server Memory Usage'</LI>
 
 		<LI>xxx</LI>
 		

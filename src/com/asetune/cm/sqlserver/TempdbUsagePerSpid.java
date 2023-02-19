@@ -257,8 +257,8 @@ public class TempdbUsagePerSpid
 		
 		// DEBUG: to STDOUT
 		boolean debugOnRefreshPrintInfo = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_debugOnRefreshPrintInfo, DEFAULT_debugOnRefreshPrintInfo);
-		if ("goran".equals(System.getProperty("user.name"))) // Always print this if: "I'm running it..."
-			debugOnRefreshPrintInfo = true;
+//		if ("goran".equals(System.getProperty("user.name"))) // Always print this if: "I'm running it..."
+//			debugOnRefreshPrintInfo = true;
 
 		if (debugOnRefreshPrintInfo)
 		{

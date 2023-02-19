@@ -1215,6 +1215,10 @@ extends CountersModel
 		DbmsVersionInfoSqlServer ssVersionInfo = (DbmsVersionInfoSqlServer) versionInfo;
 		long srvVersion = ssVersionInfo.getLongVersion();
 		
+		
+		// TODO: Possibly check if: select SERVERPROPERTY('IsHadrEnabled') = 1
+		//       If it's NOT true... no need to continue... Possibly do show info that 'No Availability Groups found.'
+		
 //System.out.println("CmAlwaysOn: getSqlForVersion(): srvVersion="+srvVersion+", isAzure="+isAzure);
 //System.out.println("CmAlwaysOn: Ver.ver(2019)="+Ver.ver(2019));
 //CmAlwaysOn: getSqlForVersion(): srvVersion=2017000000000000, isAzure=false

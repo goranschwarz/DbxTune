@@ -90,7 +90,8 @@ extends CountersModel
 		"aaConnections", "distinctLogins", 
 		"pack_received", "pack_sent", "packet_errors", "total_errors",
 		"ms_ticks", "process_kernel_time_ms", "process_user_time_ms",
-		"tempdbUsageMbAll", "tempdbUsageMbUser", "tempdbUsageMbInternal"
+		"tempdbUsageMbAll", "tempdbUsageMbUser", "tempdbUsageMbInternal",
+		"databaseCacheMemoryMb", "grantedWorkspaceMemoryMb", "stolenServerMemoryMb"
 	};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
@@ -164,6 +165,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_TARGET_AND_TOTAL_MEM_MB  = "TargetAndTotalMemMb";
 	public static final String GRAPH_NAME_MEMORY_UTILAZATION_PCT   = "MemUtilizationPct";
 	public static final String GRAPH_NAME_OS_MEMORY_FREE_MB        = "OsMemoryFreeMb";
+	public static final String GRAPH_NAME_PERFMON_MEMORY           = "PerfMonMem";
 
 	// If we got Suspect Page Count > 0; then we will try to populate this, so we can attach it to the alarm.
 	private ResultSetTableModel _lastSuspectPage_rstm = null;
@@ -339,7 +341,20 @@ extends CountersModel
 			false,  // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
-	}
+
+		addTrendGraph(GRAPH_NAME_PERFMON_MEMORY,
+			"PerfMon: SQL Server Memory Usage", // Menu CheckBox text
+			"PerfMon: SQL Server Memory Usage ("+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			new String[] { "Buffer Pool Cache Memory MB", "Granted Workspace Memory MB", "Stolen Server Memory MB" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.MEMORY,
+			false,  // is Percent Graph
+			true,   // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		}
 
 	@Override
 	protected JPanel createGui()
@@ -509,10 +524,14 @@ extends CountersModel
 			    "declare @process_memory_utilization_pct      int      = 0 \n" +
 			    "declare @process_physical_memory_low         bit      = 0 \n" +
 			    "declare @process_virtual_memory_low          bit      = 0 \n" +
-				"\n" +
+			    " \n" +
+			    "declare @databaseCacheMemoryMb               numeric(12,1) \n" +
+			    "declare @grantedWorkspaceMemoryMb            numeric(12,1) \n" +
+			    "declare @stolenServerMemoryMb                numeric(12,1) \n" +
+			    "\n" +
 				listenerInfo +
 				"\n" +
-			    "/* dm_os_sys_info */ \n" +
+			    "/*------- dm_os_sys_info -------*/ \n" +
 			    "select \n" +
 			    "       @start_date                        = sqlserver_start_time \n" +
 			    "      ,@days_running                      = datediff(day, sqlserver_start_time, getdate()) \n" +
@@ -525,7 +544,7 @@ extends CountersModel
 			    "      ,@process_user_time_ms              = process_user_time_ms \n" +
 			    "from sys.dm_os_sys_info \n" +
 			    " \n" +
-			    "/* dm_os_sys_memory */ \n" +
+			    "/*------- dm_os_sys_memory -------*/ \n" +
 			    "select \n" +
 			    "       @total_os_memory_mb                = total_physical_memory_kb     / 1024 \n" +
 			    "      ,@available_os_memory_mb            = available_physical_memory_kb / 1024 \n" +
@@ -533,7 +552,7 @@ extends CountersModel
 			    "      ,@system_low_memory_signal_state    = system_low_memory_signal_state \n" +
 			    "from sys.dm_os_sys_memory \n" +
 			    " \n" +
-			    "/* dm_os_process_memory */ \n" +
+			    "/*------- dm_os_process_memory -------*/ \n" +
 			    "select \n" +
 			    "       @memory_used_by_sqlserver_MB       = physical_memory_in_use_kb  / 1024 \n" +
 			    "      ,@locked_pages_used_by_sqlserver_MB = locked_page_allocations_kb / 1024 \n" +
@@ -542,7 +561,15 @@ extends CountersModel
 			    "      ,@process_virtual_memory_low        = process_virtual_memory_low \n" +
 			    "from sys.dm_os_process_memory \n" +
 			    " \n" +
-				"/* Get info about Open Transactions */\n" +
+			    "/*------- dm_os_performance_counters -------*/ \n" +
+			    "select \n" + // Note: We could have done this with 1 select for every counter, but this only requires 1 scan on dm_os_performance_counters
+			    "       @databaseCacheMemoryMb    = CASE WHEN counter_name = 'Database Cache Memory (KB)'    THEN cast(cntr_value/1024.0 as numeric(12,1)) ELSE @databaseCacheMemoryMb    END \n" +
+			    "      ,@grantedWorkspaceMemoryMb = CASE WHEN counter_name = 'Granted Workspace Memory (KB)' THEN cast(cntr_value/1024.0 as numeric(12,1)) ELSE @grantedWorkspaceMemoryMb END \n" +
+			    "      ,@stolenServerMemoryMb     = CASE WHEN counter_name = 'Stolen Server Memory (KB)'     THEN cast(cntr_value/1024.0 as numeric(12,1)) ELSE @stolenServerMemoryMb     END \n" +
+			    "from sys.dm_os_performance_counters \n" +
+			    "where counter_name in ('Stolen Server Memory (KB)', 'Database Cache Memory (KB)', 'Granted Workspace Memory (KB)') \n" +
+			    " \n" +
+				"/*------- Get info about Open Transactions -------*/\n" +
 				"select @oldestOpenTranBeginTime = min(database_transaction_begin_time) \n" +
 				"                                  from sys." + dm_tran_database_transactions + " \n" +
 				"                                  where database_transaction_begin_time is not null \n" +
@@ -665,6 +692,10 @@ extends CountersModel
 				"    , process_memory_utilization_pct      = @process_memory_utilization_pct \n" +
 				"    , process_physical_memory_low         = @process_physical_memory_low \n" +
 				"    , process_virtual_memory_low          = @process_virtual_memory_low \n" +
+				
+				"    , databaseCacheMemoryMb               = @databaseCacheMemoryMb \n" +
+				"    , grantedWorkspaceMemoryMb            = @grantedWorkspaceMemoryMb \n" +
+				"    , stolenServerMemoryMb                = @stolenServerMemoryMb \n" +
 				"";
 
 		return sql;
@@ -1099,6 +1130,23 @@ extends CountersModel
 			arr[0] = this.getAbsValueAsDouble(0, "available_physical_memory_mb", true, -1d);
 
 			_logger.debug("updateGraphData("+tgdp.getName()+"): available_physical_memory_mb='"+arr[0]+"'.");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_PERFMON_MEMORY.equals(tgdp.getName()))
+		{	
+			Double[] arr = new Double[3];
+
+			arr[0] = this.getAbsValueAsDouble(0, "databaseCacheMemoryMb"   , true, 0d);
+			arr[1] = this.getAbsValueAsDouble(0, "grantedWorkspaceMemoryMb", true, 0d);
+			arr[2] = this.getAbsValueAsDouble(0, "stolenServerMemoryMb"    , true, 0d);
+
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): databaseCacheMemoryMb='" + arr[0] + "', databaseCacheMemoryMb='" + arr[1] + "', databaseCacheMemoryMb='" + arr[2] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

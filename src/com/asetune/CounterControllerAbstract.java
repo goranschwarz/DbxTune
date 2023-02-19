@@ -2033,7 +2033,6 @@ implements ICounterController
 	@Override
 	public HostMonitorConnection getHostMonConnection()
 	{
-System.out.println(this.getClass().getSimpleName()+".getHostMonConnection() <<<<--- " + _hostMonConn);
 		return _hostMonConn;
 	}
 

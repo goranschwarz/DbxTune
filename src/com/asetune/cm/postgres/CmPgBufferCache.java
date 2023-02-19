@@ -268,12 +268,6 @@ extends CountersModel
 	}
 
 	@Override
-	public boolean isAggregateRowAppendEnabled()
-	{
-		return true;
-	}
-
-	@Override
 	public Object calculateAggregateRow_getAggregatePkColumnDataProvider(CounterSample newSample, String colName, int c, int jdbcType, Object addValue)
 	{
 		if ("reldatabase"  .equalsIgnoreCase(colName)) return new Long(-1);

@@ -63,7 +63,7 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final long     NEED_SRV_VERSION = Ver.ver(2016, 2);
+	public static final long     NEED_SRV_VERSION = Ver.ver(2016,0,0, 2); // 2016 SP2
 	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"dm_tran_version_store_space_usage"};
@@ -139,7 +139,7 @@ extends CountersModel
 			TrendGraphDataPoint.Category.SPACE,
 			false,  // is Percent Graph
 			false,  // visible at start
-			Ver.ver(2016, 2),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			Ver.ver(2016,0,0, 2),     // 2016 SP2 -- graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 	}
 
@@ -242,12 +242,6 @@ extends CountersModel
 		tmp = new AggregationType("reserved_page_count_diff", AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 
 		return aggColumns;
-	}
-
-	@Override
-	public boolean isAggregateRowAppendEnabled()
-	{
-		return true;
 	}
 
 	@Override

@@ -137,9 +137,9 @@ public abstract class HostMonitorConnection
 	 * Called from The HostMonitor in case of Exceptions when executing the command
 	 * <p>
 	 * And here we can decide what to do with the underlying connection (reconnect or similar) 
-	 * @return 
+	 * @return true if we should log the Exception or if it's already handled.
 	 */
-	public abstract void handleException(Exception ex);
+	public abstract boolean handleException(Exception ex);
 
 
 	/**
