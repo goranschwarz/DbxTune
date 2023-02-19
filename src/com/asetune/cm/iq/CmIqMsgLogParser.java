@@ -39,6 +39,8 @@ import com.asetune.cm.CounterTableModel;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.hostmon.HostMonitorConnection;
+import com.asetune.hostmon.HostMonitorConnectionSsh;
 import com.asetune.hostmon.HostMonitorMetaData;
 import com.asetune.hostmon.OsTable;
 import com.asetune.sql.conn.DbxConnection;
@@ -220,7 +222,7 @@ System.out.println("NOTE: iqMsgFile was changed from '"+_iqMsgFile+"' to '"+name
 
 		if (CounterController.getInstance().isHostMonConnected())
 		{
-			SshConnection sshConn = CounterController.getInstance().getHostMonConnection();
+//			SshConnection sshConn = CounterController.getInstance().getHostMonConnection();
 			DbxConnection dbxConn = CounterController.getInstance().getMonConnection();
 			
 			if (dbxConn instanceof IqConnection)
@@ -306,10 +308,17 @@ System.out.println("NOTE: iqMsgFile was changed from '"+_iqMsgFile+"' to '"+name
 	public boolean startTail()
 	{
 		boolean doShh = false;
-		SshConnection sshConn = CounterController.getInstance().getHostMonConnection();
 
 		if (doShh)
 		{
+//			SshConnection sshConn = CounterController.getInstance().getHostMonConnection();
+			SshConnection sshConn = null;
+			HostMonitorConnection hostMonConn = CounterController.getInstance().getHostMonConnection();
+			if (hostMonConn instanceof HostMonitorConnectionSsh)
+			{
+				sshConn = ((HostMonitorConnectionSsh)hostMonConn).getSshConnection();
+			}
+
 			// Start the TAIL on the file...
 			if (_tailFromStart)
 				_fileTail = new FileTail(sshConn, getIqMsgFilename(), true);

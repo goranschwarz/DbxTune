@@ -37,7 +37,7 @@ import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.ssh.SshTunnelInfo;
-import com.asetune.ssh.SshTunnelManager;
+import com.asetune.ssh.SshTunnelManager2;
 import com.asetune.utils.Configuration;
 
 public class DailySummaryReportTest
@@ -131,7 +131,7 @@ public class DailySummaryReportTest
 				SshConnection sshConn = new SshConnection(sshTi.getSshHost(), sshTi.getSshPort(), sshTi.getSshUsername(), sshTi.getSshPassword(), sshTi.getSshKeyFile());
 				sshConn.connect();
 				
-				SshTunnelManager tm = SshTunnelManager.getInstance();
+				SshTunnelManager2 tm = SshTunnelManager2.getInstance();
 				tm.setupTunnel("someUniqueName", sshTi);
 
 				cp.setUrl(urlSshTunnel);

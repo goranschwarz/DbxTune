@@ -463,6 +463,11 @@ public class PostgresUtils
 			_lockWaitInSec = lockWaitInSec;
 			_lockCount     = lockCount    ;
 
+			// QUESTION: Should we treat LockType of 'advisory' the same as a "regular" lock (or should we skip it)
+			// https://www.postgresql.org/docs/12/explicit-locking.html#ADVISORY-LOCKS
+			//if ( !StringUtil.containsAny(_lockType, "virtualxid", "advisory") && StringUtil.containsAny(_lockMode, "Exclusive"))
+			//                                                    ^^^^^^^^^^^^
+			
 			if ( !StringUtil.containsAny(_lockType, "virtualxid") && StringUtil.containsAny(_lockMode, "Exclusive"))
 			{
 				_exLockCount++;

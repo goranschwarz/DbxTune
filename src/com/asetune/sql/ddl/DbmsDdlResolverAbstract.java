@@ -938,11 +938,31 @@ implements IDbmsDataTypeResolver, IDbmsDdlResolver
 	@Override
 	public String ddlText(Table table)
 	{
+		return ddlText(table, null, null);
+	}
+	/** 
+	 * <pre>
+	 * CREATE TABLE [IF NOT EXISTS] schemaName.tableName
+	 * (
+	 *      c1        dbmsDataType      [NOT] NULL    -- jdbcTypeName  {jdbcTypeNumber=#}    
+	 *    , c2        dbmsDataType      [NOT] NULL    -- jdbcTypeName  {jdbcTypeNumber=#}
+	 *    , c3        dbmsDataType      [NOT] NULL    -- jdbcTypeName  {jdbcTypeNumber=#}
+	 *    [, PRIMARY KEY(c1, c2...)]
+	 * )
+	 * </pre>
+	 * 
+	 * <p>
+	 * <b>Note:</b> all identifiers is surrounded with a starting '[' and ending ']' character, which will be translated into proper DBMS Quote Chars using <code>DbxConnection.quotifySqlString(sql)</code>
+	 * 
+	 */
+	@Override
+	public String ddlText(Table table, String inSchemaName, String inTableName)
+	{
 		StringBuilder sb = new StringBuilder();
 		
 		String ifNotExists = supportsIfNotExists() ? "IF NOT EXISTS " : "";
-		String schemaName  = table.getSchemaName();
-		String tableName   = table.getTableName();
+		String schemaName  = StringUtil.hasValue(inSchemaName) ? inSchemaName : table.getSchemaName();
+		String tableName   = StringUtil.hasValue(inTableName ) ? inTableName  : table.getTableName();
 		String leftQuote   = "[";
 		String rightQuote  = "]";
 		
@@ -1016,8 +1036,22 @@ implements IDbmsDataTypeResolver, IDbmsDdlResolver
 	@Override
 	public String ddlTextAlterTable(ForeignKey fk)
 	{
-		String schemaName  = fk.getSchemaName();
-		String tableName   = fk.getTableName();
+		return ddlTextAlterTable(fk, null, null);
+	}
+	/**
+	 * Build alter table for foreign keys
+	 * <pre>
+	 *    ALTER TABLE [schema.]tableName                      
+	 *    ADD CONSTRAINT fkName                               
+	 *    FOREIGN KEY (colName1, colName2...)                 
+	 *    REFERENCES [schema.]tableName(colName1, colName2...)
+	 * </pre>
+	 */
+	@Override
+	public String ddlTextAlterTable(ForeignKey fk, String inSchemaName, String inTableName)
+	{
+		String schemaName  = StringUtil.hasValue(inSchemaName) ? inSchemaName : fk.getSchemaName() ;
+		String tableName   = StringUtil.hasValue(inTableName ) ? inTableName  : fk.getTableName()  ;
 		String fkName      = fk.getForeignKeyName();
 
 		String fkSchemaName  = fk.getDestSchemaName();

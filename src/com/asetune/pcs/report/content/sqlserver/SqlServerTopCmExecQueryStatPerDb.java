@@ -62,6 +62,9 @@ extends SqlServerAbstract
 	private IReportChart _CmExecQueryStatPerDb_DbLWrite;
 	private IReportChart _CmExecQueryStatPerDb_DbPlanCnt;
 	private IReportChart _CmExecQueryStatPerDb_DbPlanDiff;
+	private IReportChart _CmExecQueryStatPerDb_DbRemovedPlans;
+	private IReportChart _CmExecQueryStatPerDb_DbNewPlans;
+	private IReportChart _CmExecQueryStatPerDb_DbReUsedPlans;
 	
 	private String _sqlOrderByCol = "-unknown-";
 	private String _sqlHaving     = "";
@@ -89,14 +92,20 @@ extends SqlServerAbstract
 				"CmExecQueryStatPerDb_DbElapsedTime",
 				"CmExecQueryStatPerDb_DbLWrite",
 				"CmExecQueryStatPerDb_DbPlanCnt",
-				"CmExecQueryStatPerDb_DbPlanDiff"
+				"CmExecQueryStatPerDb_DbPlanDiff",
+				"CmExecQueryStatPerDb_DbRemovedPlans",
+				"CmExecQueryStatPerDb_DbNewPlans",
+				"CmExecQueryStatPerDb_DbReUsedPlans"
 				));
 
-		_CmExecQueryStatPerDb_DbExecCnt    .writeHtmlContent(sb, null, null);
-		_CmExecQueryStatPerDb_DbElapsedTime.writeHtmlContent(sb, null, null);
-		_CmExecQueryStatPerDb_DbLWrite     .writeHtmlContent(sb, null, null);
-		_CmExecQueryStatPerDb_DbPlanCnt    .writeHtmlContent(sb, null, null);
-		_CmExecQueryStatPerDb_DbPlanDiff   .writeHtmlContent(sb, null, null);
+		_CmExecQueryStatPerDb_DbExecCnt     .writeHtmlContent(sb, null, null);
+		_CmExecQueryStatPerDb_DbElapsedTime .writeHtmlContent(sb, null, null);
+		_CmExecQueryStatPerDb_DbLWrite      .writeHtmlContent(sb, null, null);
+		_CmExecQueryStatPerDb_DbPlanCnt     .writeHtmlContent(sb, null, null);
+		_CmExecQueryStatPerDb_DbPlanDiff    .writeHtmlContent(sb, null, null);
+		_CmExecQueryStatPerDb_DbNewPlans    .writeHtmlContent(sb, null, null);
+		_CmExecQueryStatPerDb_DbRemovedPlans.writeHtmlContent(sb, null, null);
+		_CmExecQueryStatPerDb_DbReUsedPlans .writeHtmlContent(sb, null, null);
 
 		if (isFullMessageType())
 		{
@@ -724,11 +733,14 @@ extends SqlServerAbstract
 			} // end: Create a Sparkline table
 			
 			// Add Charts
-			_CmExecQueryStatPerDb_DbExecCnt     = createTsLineChart(conn, "CmExecQueryStatPerDb", "DbExecCnt"     , -1, true, null, "SQL Statements Per DB - Execution Count/sec");
-			_CmExecQueryStatPerDb_DbElapsedTime = createTsLineChart(conn, "CmExecQueryStatPerDb", "DbElapsedTime" , -1, true, null, "SQL Statements Per DB - Sum Elapsed Time in ms");
-			_CmExecQueryStatPerDb_DbLWrite      = createTsLineChart(conn, "CmExecQueryStatPerDb", "DbLWrite"      , -1, true, null, "SQL Statements Per DB - Sum Logical Reads/sec");
-			_CmExecQueryStatPerDb_DbPlanCnt     = createTsLineChart(conn, "CmExecQueryStatPerDb", "DbPlanCnt"     , -1, true, null, "SQL Statements Per DB - Plan Count");
-			_CmExecQueryStatPerDb_DbPlanDiff    = createTsLineChart(conn, "CmExecQueryStatPerDb", "DbPlanDiff"    , -1, true, null, "SQL Statements Per DB - Plan Count Diff");
+			_CmExecQueryStatPerDb_DbExecCnt      = createTsLineChart(conn, "CmExecQueryStatPerDb", "DbExecCnt"     , -1, true, null, "SQL Statements Per DB - Execution Count/sec");
+			_CmExecQueryStatPerDb_DbElapsedTime  = createTsLineChart(conn, "CmExecQueryStatPerDb", "DbElapsedTime" , -1, true, null, "SQL Statements Per DB - Sum Elapsed Time in ms");
+			_CmExecQueryStatPerDb_DbLWrite       = createTsLineChart(conn, "CmExecQueryStatPerDb", "DbLWrite"      , -1, true, null, "SQL Statements Per DB - Sum Logical Reads/sec");
+			_CmExecQueryStatPerDb_DbPlanCnt      = createTsLineChart(conn, "CmExecQueryStatPerDb", "DbPlanCnt"     , -1, true, null, "SQL Statements Per DB - Plan Count");
+			_CmExecQueryStatPerDb_DbPlanDiff     = createTsLineChart(conn, "CmExecQueryStatPerDb", "DbPlanDiff"    , -1, true, null, "SQL Statements Per DB - Plan Count Diff");
+			_CmExecQueryStatPerDb_DbRemovedPlans = createTsLineChart(conn, "CmExecQueryStatPerDb", "DbRemovedPlans", -1, true, null, "SQL Statements Per DB - Removed Plans Since Last Sample");
+			_CmExecQueryStatPerDb_DbNewPlans     = createTsLineChart(conn, "CmExecQueryStatPerDb", "DbNewPlans"    , -1, true, null, "SQL Statements Per DB - New Plans Since Last Sample");
+			_CmExecQueryStatPerDb_DbReUsedPlans  = createTsLineChart(conn, "CmExecQueryStatPerDb", "DbReUsedPlans" , -1, true, null, "SQL Statements Per DB - (Re)Used Plans Since Last Sample");
 
 		} // end: has rstm
 	} // end: method

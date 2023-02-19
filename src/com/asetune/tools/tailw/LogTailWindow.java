@@ -31,7 +31,6 @@ import java.awt.event.FocusListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -94,8 +93,8 @@ import com.asetune.gui.swing.GLabel;
 import com.asetune.gui.swing.GTextField;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
+import com.asetune.ssh.RemoteFileSystemView;
 import com.asetune.ssh.SshConnection;
-import com.asetune.ssh.SshFileSystemView;
 import com.asetune.tools.NormalExitException;
 import com.asetune.tools.tailw.LogFileFilterAndColorManager.FilterEntry;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
@@ -986,7 +985,8 @@ PropertyConfigurator.configure(log4jProps);
 				{
 					try
 					{
-						SshFileSystemView fsv = new SshFileSystemView(sshConn);
+//						SshFileSystemView fsv = new SshFileSystemView(sshConn);
+						RemoteFileSystemView fsv = new RemoteFileSystemView(sshConn);
 						
 						String hostPortLabel = _sshHostname_txt.getText() + ":" +_sshPort_txt.getText();
 
@@ -1803,7 +1803,7 @@ PropertyConfigurator.configure(log4jProps);
 //						}
 //					}
 				}
-				catch (IOException e) 
+				catch (Exception e) 
 				{
 					SwingUtils.showErrorMessage("SSH Connect failed", "SSH Connection to "+host+":"+portStr+" with user '"+user+"' Failed.", e);
 //					sshConn = null;

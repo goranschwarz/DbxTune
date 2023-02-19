@@ -210,6 +210,8 @@ extends CountersModel
 //	public static final String GRAPH_NAME_MEMORY_X2                 = "MemMgr"; xxx
 //	public static final String GRAPH_NAME_MEMORY_X3                 = "MemMgr"; xxx
 
+	public static final String GRAPH_NAME_MEMORY_STOLEN             = "MemStolen";
+	
 	public static final String GRAPH_NAME_QUERY_STORE_TOTAL         = "QsTotal";
 	public static final String GRAPH_NAME_QUERY_STORE_DB_CPU        = "QsDbCpu";
 	public static final String GRAPH_NAME_QUERY_STORE_DB_PHYS_READ  = "QsDbPhysRead";
@@ -753,7 +755,19 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
-				
+		//-----
+		addTrendGraph(GRAPH_NAME_MEMORY_STOLEN,
+			"Stolen Server Memory, from Buffer Pool", // Menu CheckBox text
+			"Stolen Server Memory, from Buffer Pool ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			new String[] { "Stolen Server Memory, in MB" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.MEMORY,
+			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
 		//-----
 		addTrendGraph(GRAPH_NAME_QUERY_STORE_TOTAL,
 			"Query Story Total", // Menu CheckBox text
@@ -2092,6 +2106,31 @@ extends CountersModel
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
 					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"'.");
+			}
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_MEMORY_STOLEN.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[1];
+			
+			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+			String pk1 = createPkStr(":Memory Manager", "Stolen Server Memory (KB)", "");
+			
+			Double val1 = this.getAbsValueAsDouble(pk1, "calculated_value");
+			
+			if (val1 != null)
+			{
+				arr[0] = val1 / 1024.0;  // Make KB into MB
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				TrendGraph tg = getTrendGraph(tgdp.getName());
+				if (tg != null)
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"'.");
 			}
 		}
 

@@ -1130,12 +1130,6 @@ extends CountersModel
 	}
 
 	@Override
-	public boolean isAggregateRowAppendEnabled()
-	{
-		return true;
-	}
-
-	@Override
 	public Object calculateAggregateRow_nonAggregatedColumnDataProvider(CounterSample newSample, String colName, int c, int jdbcType, Object addValue)
 	{
 		if ("statId".equalsIgnoreCase(colName))

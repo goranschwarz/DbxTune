@@ -26,11 +26,6 @@ import java.io.OutputStream;
 import java.io.PushbackInputStream;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.LinkedList;
-
-import ch.ethz.ssh2.Connection;
-import ch.ethz.ssh2.Session;
-import ch.ethz.ssh2.StreamGobbler;
 
 public class SshTesting2
 {
@@ -53,48 +48,48 @@ public class SshTesting2
 		return sb.toString();
 	}
 
-	public static void main(String[] args) throws IOException
-	{
-		Connection c = new Connection("192.168.0.112");
-		try
-		{
-			c.connect();
-			if ( !c.authenticateWithPassword("gorans", "1niss2e") )
-			{
-				throw new IOException("Authentification failed");
-			}
-			Session s = c.openSession();
-			s.requestDumbPTY();
-			s.startShell();
-			
-			InputStream is = s.getStdout(); 
-			OutputStream os = s.getStdin(); 
-			InputStream es = s.getStderr();
-			
-			final PushbackInputStream pbis = new PushbackInputStream(new StreamGobbler(is));
-			final Collection<String> lines = new LinkedList<String>();
-
-			writeCmd(os, pbis, "PS1=" + PROMPT);
-			readTillPrompt(pbis, null);
-System.out.println("Exit Status: " + s.getExitStatus() );
-
-			writeCmd(os, pbis, "ls -l --color=never");
-			readTillPrompt(pbis, lines);
-			System.out.println("Out: " + join(lines, Character.toString(LF)));
-			lines.clear();
-System.out.println("Exit Status: " + s.getExitStatus() );
-
-			writeCmd(os, pbis, "free -m");
-			readTillPrompt(pbis, lines);
-			System.out.println("Out: " + join(lines, Character.toString(LF)));
-			lines.clear();
-System.out.println("Exit Status: " + s.getExitStatus() );
-		}
-		finally
-		{
-			c.close();
-		}
-	}
+//	public static void main(String[] args) throws IOException
+//	{
+//		Connection c = new Connection("192.168.0.112");
+//		try
+//		{
+//			c.connect();
+//			if ( !c.authenticateWithPassword("gorans", "1niss2e") )
+//			{
+//				throw new IOException("Authentification failed");
+//			}
+//			Session s = c.openSession();
+//			s.requestDumbPTY();
+//			s.startShell();
+//			
+//			InputStream is = s.getStdout(); 
+//			OutputStream os = s.getStdin(); 
+//			InputStream es = s.getStderr();
+//			
+//			final PushbackInputStream pbis = new PushbackInputStream(new StreamGobbler(is));
+//			final Collection<String> lines = new LinkedList<String>();
+//
+//			writeCmd(os, pbis, "PS1=" + PROMPT);
+//			readTillPrompt(pbis, null);
+//System.out.println("Exit Status: " + s.getExitStatus() );
+//
+//			writeCmd(os, pbis, "ls -l --color=never");
+//			readTillPrompt(pbis, lines);
+//			System.out.println("Out: " + join(lines, Character.toString(LF)));
+//			lines.clear();
+//System.out.println("Exit Status: " + s.getExitStatus() );
+//
+//			writeCmd(os, pbis, "free -m");
+//			readTillPrompt(pbis, lines);
+//			System.out.println("Out: " + join(lines, Character.toString(LF)));
+//			lines.clear();
+//System.out.println("Exit Status: " + s.getExitStatus() );
+//		}
+//		finally
+//		{
+//			c.close();
+//		}
+//	}
 
 	public static void writeCmd(final OutputStream os, final PushbackInputStream is, final String cmd) throws IOException
 	{

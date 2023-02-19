@@ -1410,7 +1410,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 					{
 						_sshConn.connect();
 					}
-					catch (IOException e) 
+					catch (Exception e) 
 					{
 						SwingUtils.showErrorMessage("SSH Connect failed", "SSH Connection to "+host+":"+portStr+" with user '"+user+"' Failed.", e);
 						_sshConn = null;

@@ -35,18 +35,18 @@ extends HostMonitor
 		super(utilVersion, utilExtraInfo);
 	}
 
-	public static HostMonitor createMonitor(String host, String user, String passwd, boolean start)
-	throws Exception
-	{
-		return createMonitor(host, 22, user, passwd, null, start);
-	}
-
-	public static HostMonitor createMonitor(String host, int port, String user, String passwd, String keyFile, boolean start)
-	throws Exception
-	{
-		SshConnection conn = new SshConnection(host, port, user, passwd, keyFile);
-		return createMonitor(conn, start);
-	}
+//	public static HostMonitor createMonitor(String host, String user, String passwd, boolean start)
+//	throws Exception
+//	{
+//		return createMonitor(host, 22, user, passwd, null, start);
+//	}
+//
+//	public static HostMonitor createMonitor(String host, int port, String user, String passwd, String keyFile, boolean start)
+//	throws Exception
+//	{
+//		SshConnection conn = new SshConnection(host, port, user, passwd, keyFile);
+//		return createMonitor(conn, start);
+//	}
 
 	/**
 	 * Factory method to create a iostat or veritas monitoring of OS types
@@ -56,7 +56,8 @@ extends HostMonitor
 	 * @throws Exception
 	 */
 	//@override
-	public static HostMonitor createMonitor(SshConnection conn, boolean start)
+//	public static HostMonitor createMonitor(SshConnection conn, boolean start)
+	public static HostMonitor createMonitor(HostMonitorConnection conn, boolean start)
 	throws Exception
 	{
 		if ( ! conn.isConnected() )
@@ -144,7 +145,8 @@ extends HostMonitor
 		try
 		{
 			SshConnection conn = new SshConnection("sunspot", "gorans", "xxxxx");
-			HostMonitor mon = createMonitor(conn, false);
+			HostMonitorConnectionSsh hostMonConn = new HostMonitorConnectionSsh(conn);
+			HostMonitor mon = createMonitor(hostMonConn, false);
 //			mon.start();
 
 			while(true)

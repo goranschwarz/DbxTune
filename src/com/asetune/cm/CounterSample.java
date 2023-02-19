@@ -1611,6 +1611,31 @@ extends CounterTableModel
 	}
 
 	/**
+	 * This just <b>OVERWRITES a row</b> so be carefull (no PK etc are checked/changed maintained)
+	 * @param cm
+	 * @param rowNum
+	 * @param row
+	 * @return
+	 */
+	public int setRow(CountersModel cm, int rowNum, List<Object> row)
+	{
+		if (row == null)
+			return -1;
+
+		int	colCount = getColumnCount();
+
+		// Check input, throw if problems
+		if (row.size() != colCount)  throw new IndexOutOfBoundsException("The number of columns in current structure is " + colCount + ", while the row we attempt to set has " + row.size() + " columns, name='" + getName() + "'."); 
+		if (rowNum < 0)              throw new IndexOutOfBoundsException("rowNum=" + rowNum + " Can't be below 0, name='" + getName() + "'.");
+		if (rowNum >= getRowCount()) throw new IndexOutOfBoundsException("rowNum=" + rowNum + " is above/equal rowCount=" + getRowCount() + ", name='" + getName() + "'."); 
+
+		// Set the row
+		_rows.set(rowNum, row);
+
+		return rowNum;
+	}
+
+	/**
 	 * NOTE: if you change in this one, do not forger to 
 	 *       replicate the change into method: readResultset
 	 * 

@@ -4711,8 +4711,9 @@ public class ResultSetTableModel
 
 		try ( Statement stmnt = conn.createStatement() )
 		{
-			// Unlimited execution time
+			// Set query timeout (in seconds)
 			stmnt.setQueryTimeout(queryTimeout);
+
 			try ( ResultSet rs = stmnt.executeQuery(sql) )
 			{
 				ResultSetTableModel rstm = createResultSetTableModel(rs, name, sql, false);

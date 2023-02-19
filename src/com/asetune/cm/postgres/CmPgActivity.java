@@ -31,6 +31,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.CounterController;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
@@ -651,7 +652,7 @@ extends CountersModel
 						String DBName             = cm.getDiffValue(r, "datname")      + "";
 						String Login              = cm.getDiffValue(r, "usename")      + "";
 						String Command            = cm.getDiffValue(r, "query")        + "";
-						String backend_type       = cm.getDiffValue(r, "backend_type") + "";
+						String backend_type       = cm.hasColumn("backend_type") ? cm.getDiffValue(r, "backend_type") + "" : "";
 						
 						// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
 						boolean doAlarm = true;
@@ -663,6 +664,25 @@ extends CountersModel
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipCmdRegExp)         || ! Command     .matches(skipCmdRegExp        ))); // NO match in the SKIP Cmd      regexp
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipBackendTypeRegExp) || ! backend_type.matches(skipBackendTypeRegExp))); // NO match in the SKIP TranName regexp
 
+						// Check if "PgActiveStatements" is enabled... then THAT Alarm will hold more information (Like locks etc)... so we don't need to fire this one.
+						// NOTE: To override this behavior, specify 'CmPgActivity.alarm.StatementExecInSec.override=true' in the properties file.
+						CountersModel cmPgActiveStatements = CounterController.getInstance().getCmByName("CmActiveStatements");
+						if (cmPgActiveStatements != null)
+						{
+							if (cmPgActiveStatements.isActive() && cmPgActiveStatements.isSystemAlarmsForColumnEnabledAndInTimeRange("StatementExecInSec"))
+							{
+								// Only disable if it's a "Client Connection" (First Version of PG that has column 'backend_type' is Version 10)
+								if (cm.hasColumn("backend_type") && backend_type.equals("client backend"))
+								{
+									if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_alarm_StatementExecInSecOverride, DEFAULT_alarm_StatementExecInSecOverride))
+									{
+										_logger.info("The Alarm 'StatementExecInSec' could/should be fired here, but the similar alarm in CM='CmActiveStatements' is enabled and will give more information. So this alarm will be CANCELED here. If you still want/need this alarm you can set property '" + PROPKEY_alarm_StatementExecInSecOverride + "=true' to override this behaviour.");
+										doAlarm = false;
+									}
+								}
+							}
+						}
+						
 						// NO match in the SKIP regEx
 						if (doAlarm)
 						{
@@ -696,6 +716,9 @@ extends CountersModel
 	public static final String  PROPKEY_alarm_StatementExecInSecSkipBackendType = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.backendType";
 	public static final String  DEFAULT_alarm_StatementExecInSecSkipBackendType = "^(walsender)";
 	
+	public static final String  PROPKEY_alarm_StatementExecInSecOverride        = CM_NAME + ".alarm.system.if.StatementExecInSec.override";
+	public static final boolean DEFAULT_alarm_StatementExecInSecOverride        = false;
+
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -705,12 +728,13 @@ extends CountersModel
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("StatementExecInSec",           isAlarmSwitch, PROPKEY_alarm_StatementExecInSec               , Integer.class, conf.getIntProperty(PROPKEY_alarm_StatementExecInSec               , DEFAULT_alarm_StatementExecInSec               ), DEFAULT_alarm_StatementExecInSec               , "If any SPID's has been executed a single SQL Statement for more than ## seconds, then send alarm 'AlarmEventLongRunningStatement'." ));
-		list.add(new CmSettingsHelper("StatementExecInSec SkipDbs",                  PROPKEY_alarm_StatementExecInSecSkipDbname     , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipDbname     , DEFAULT_alarm_StatementExecInSecSkipDbname     ), DEFAULT_alarm_StatementExecInSecSkipDbname     , "If 'StatementExecInSec' is true; Discard 'datname' listed (regexp is used)."      , new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("StatementExecInSec SkipLogins",               PROPKEY_alarm_StatementExecInSecSkipLogin      , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipLogin      , DEFAULT_alarm_StatementExecInSecSkipLogin      ), DEFAULT_alarm_StatementExecInSecSkipLogin      , "If 'StatementExecInSec' is true; Discard 'usename' listed (regexp is used)."      , new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("StatementExecInSec SkipCommands",             PROPKEY_alarm_StatementExecInSecSkipCmd        , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipCmd        , DEFAULT_alarm_StatementExecInSecSkipCmd        ), DEFAULT_alarm_StatementExecInSecSkipCmd        , "If 'StatementExecInSec' is true; Discard 'query' listed (regexp is used)."        , new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("StatementExecInSec SkipBackendType",          PROPKEY_alarm_StatementExecInSecSkipBackendType, String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipBackendType, DEFAULT_alarm_StatementExecInSecSkipBackendType), DEFAULT_alarm_StatementExecInSecSkipBackendType, "If 'StatementExecInSec' is true; Discard 'backend_type' listed (regexp is used)." , new RegExpInputValidator()));
-		
+		list.add(new CmSettingsHelper("StatementExecInSec",           isAlarmSwitch, PROPKEY_alarm_StatementExecInSec               , Integer.class, conf.getIntProperty    (PROPKEY_alarm_StatementExecInSec               , DEFAULT_alarm_StatementExecInSec               ), DEFAULT_alarm_StatementExecInSec               , "If any SPID's has been executed a single SQL Statement for more than ## seconds, then send alarm 'AlarmEventLongRunningStatement'." ));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipDbs",                  PROPKEY_alarm_StatementExecInSecSkipDbname     , String .class, conf.getProperty       (PROPKEY_alarm_StatementExecInSecSkipDbname     , DEFAULT_alarm_StatementExecInSecSkipDbname     ), DEFAULT_alarm_StatementExecInSecSkipDbname     , "If 'StatementExecInSec' is true; Discard 'datname' listed (regexp is used)."      , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipLogins",               PROPKEY_alarm_StatementExecInSecSkipLogin      , String .class, conf.getProperty       (PROPKEY_alarm_StatementExecInSecSkipLogin      , DEFAULT_alarm_StatementExecInSecSkipLogin      ), DEFAULT_alarm_StatementExecInSecSkipLogin      , "If 'StatementExecInSec' is true; Discard 'usename' listed (regexp is used)."      , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipCommands",             PROPKEY_alarm_StatementExecInSecSkipCmd        , String .class, conf.getProperty       (PROPKEY_alarm_StatementExecInSecSkipCmd        , DEFAULT_alarm_StatementExecInSecSkipCmd        ), DEFAULT_alarm_StatementExecInSecSkipCmd        , "If 'StatementExecInSec' is true; Discard 'query' listed (regexp is used)."        , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipBackendType",          PROPKEY_alarm_StatementExecInSecSkipBackendType, String .class, conf.getProperty       (PROPKEY_alarm_StatementExecInSecSkipBackendType, DEFAULT_alarm_StatementExecInSecSkipBackendType), DEFAULT_alarm_StatementExecInSecSkipBackendType, "If 'StatementExecInSec' is true; Discard 'backend_type' listed (regexp is used)." , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec Override",                 PROPKEY_alarm_StatementExecInSecOverride       , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_StatementExecInSecOverride       , DEFAULT_alarm_StatementExecInSecOverride       ), DEFAULT_alarm_StatementExecInSecOverride       , "if 'PgActiveStatements' is enabled, then THAT Alarm will hold more information (Like locks etc)... so we don't need to fire this one... BUT if you still want it to be fired here, set this to TRUE."));
+
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "application_name") );
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "usename") );
 

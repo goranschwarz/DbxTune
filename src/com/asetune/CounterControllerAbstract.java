@@ -59,11 +59,11 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.hostmon.HostMonitor;
+import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
-import com.asetune.ssh.SshConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
@@ -1954,7 +1954,8 @@ implements ICounterController
 	//// SSH connection
 	////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////////////
-	private SshConnection      _sshConn                      = null;
+//	private SshConnection      _sshConn                      = null;
+	private HostMonitorConnection _hostMonConn               = null;
 	private long               _sshLastIsClosedCheck         = 0;
 	private long               _sshLastIsClosedRefreshTime   = 1200;
 
@@ -1973,7 +1974,8 @@ implements ICounterController
 	 */
 	public boolean isHostMonConnected(boolean forceConnectionCheck, boolean closeConnOnFailure)
 	{
-		if (_sshConn == null) 
+//		if (_sshConn == null) 
+		if (_hostMonConn == null) 
 			return false;
 
 		// Cache the last call for X ms (default 1200 ms)
@@ -1989,7 +1991,8 @@ implements ICounterController
 		// check the connection itself
 		try
 		{
-			if (_sshConn.isClosed())
+//			if (_sshConn.isClosed())
+			if (_hostMonConn.isConnectionClosed())
 			{
 				if (closeConnOnFailure)
 					closeHostMonConnection();
@@ -2008,34 +2011,46 @@ implements ICounterController
 	/**
 	 * Set the <code>SshConnection</code> to use for monitoring.
 	 */
+//	@Override
+//	public void setHostMonConnection(SshConnection sshConn)
+//	{
+//		_sshConn = sshConn;
+//	}
 	@Override
-	public void setHostMonConnection(SshConnection sshConn)
+	public void setHostMonConnection(HostMonitorConnection hostMonConn)
 	{
-		_sshConn = sshConn;
-//		MainFrame.setStatus(MainFrame.ST_CONNECT);
+		_hostMonConn = hostMonConn;
 	}
 
 	/**
 	 * Gets the <code>SshConnection</code> to the monitored server.
 	 */
+//	@Override
+//	public SshConnection getHostMonConnection()
+//	{
+//		return _sshConn;
+//	}
 	@Override
-	public SshConnection getHostMonConnection()
+	public HostMonitorConnection getHostMonConnection()
 	{
-		return _sshConn;
+		return _hostMonConn;
 	}
 
 	/** Gets the <code>SshConnection</code> to the monitored server. */
 	@Override
 	public void closeHostMonConnection()
 	{
-		if (_sshConn == null) 
+//		if (_sshConn == null) 
+		if (_hostMonConn == null) 
 			return;
 
 		try
 		{
-			if ( ! _sshConn.isClosed() )
+//			if ( ! _sshConn.isClosed() )
+			if ( ! _hostMonConn.isConnectionClosed() )
 			{
-				_sshConn.close();
+//				_sshConn.close();
+				_hostMonConn.closeConnection();
 				if (_logger.isDebugEnabled())
 				{
 					_logger.debug("SSH Connection closed");

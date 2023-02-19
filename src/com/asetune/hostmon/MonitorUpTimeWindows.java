@@ -126,7 +126,7 @@ extends MonitorUpTime
 			return;
 		}
 
-		int nproc = getConnection().getNproc();
+		int nproc = getConnection().getOsCoreCount();
 		
 //		double load_avg_1m      = NumberUtils.round(_s_load_avg_1m , 2);
 //		double load_avg_5m      = NumberUtils.round(_s_load_avg_5m , 2);

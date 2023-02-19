@@ -43,7 +43,7 @@ public class SshConnectionTester
 			System.out.println("");
 			System.out.println("Usage: conntest properties_file");
 			System.out.println("");
-			System.out.println("Example of a Properties file:");
+			System.out.println("Example of a Properties file: (NOTE: remove the comments)");
 			System.out.println("hostname = value            ## Mandatory");
 			System.out.println("port     = value            ## Default: 22");
 			System.out.println("username = value            ## Default: the-one-you-are-using");
@@ -101,7 +101,7 @@ public class SshConnectionTester
 
 			if (debugLvl > 0)
 			{
-				ch.ethz.ssh2.log.Logger.enabled = true;
+//				ch.ethz.ssh2.log.Logger.enabled = true;
 
 				// JUL needs full NameSpace, since we also use Log4J in here
 //				final java.util.logging.Logger rootLogger = java.util.logging.Logger.getLogger("");
@@ -147,6 +147,7 @@ public class SshConnectionTester
 			
 			
 			
+//			SshConnection conn = new SshConnection(hostname, port, username, password, keyfile);
 			SshConnection conn = new SshConnection(hostname, port, username, password, keyfile);
 
 			try

@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 import java.io.StringReader;
 import java.nio.charset.Charset;
@@ -33,12 +34,10 @@ import java.util.LinkedList;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
-import org.mozilla.universalchardet.UniversalDetector;
 
+import com.asetune.hostmon.HostMonitorConnection.ExecutionWrapper;
+import com.asetune.hostmon.HostMonitorConnectionSsh;
 import com.asetune.ssh.SshConnection;
-
-import ch.ethz.ssh2.ChannelCondition;
-import ch.ethz.ssh2.Session;
 
 /**
  * Class that does "tail" on any file
@@ -253,7 +252,7 @@ public class FileTail
 	 * @throws IOException
 	 */
 	public boolean createFile()
-	throws IOException
+	throws Exception
 	{
 		if (_execMode == TailType.LOCAL)
 		{
@@ -418,6 +417,282 @@ public class FileTail
 		}
 	}
 
+//	/**
+//	 * Create the code that does the tail over SSH
+//	 * @return
+//	 */
+//	private Runnable createSshTailCode()
+//	{
+//		return new Runnable()
+//		{
+//			@Override
+//			public void run()
+//			{
+//				printStartMessage();
+//
+//				_running = true;
+//
+//				Session sess = null;
+//				try
+//				{
+//					_logger.info("Executing command '"+getCommand(true)+"'.");
+//					sess = _sshConn.execCommand(getCommand(false));
+//				}
+//				catch (Exception e)
+//				{
+////					addException(e);
+//					_logger.error("Problems when executing OS Command '"+getCommand(true)+"', Caught: "+e.getMessage(), e);
+//					_running = false;
+//					return;
+//				}
+//
+//				_shutdownIsComplete = false;
+//
+//				/*
+//				 * Advanced:
+//				 * The following is a demo on how one can read from stdout and
+//				 * stderr without having to use two parallel worker threads (i.e.,
+//				 * we don't use the Streamgobblers here) and at the same time not
+//				 * risking a deadlock (due to a filled SSH2 channel window, caused
+//				 * by the stream which you are currently NOT reading from =).
+//				 */
+//
+//				/* Don't wrap these streams and don't let other threads work on
+//				 * these streams while you work with Session.waitForCondition()!!!
+//				 */
+//
+////				BufferedReader stdout  = new BufferedReader(new InputStreamReader(sess.getStdout()));
+////				BufferedReader stderr  = new BufferedReader(new InputStreamReader(sess.getStderr()));
+//				InputStream stdout = sess.getStdout();
+//				InputStream stderr = sess.getStderr();
+//				
+//				Charset osCharset = Charset.forName(_sshConn.getOsCharset());
+//				Charset fileCharset = osCharset;
+//				boolean firstChunk = true;
+//
+//				String strSpillOut = null;
+//				String strSpillErr = null;
+//
+//				byte[] buffer = new byte[16*1024]; // 16K
+//				while(_running)
+//				{
+//					try
+//					{
+//						if ((stdout.available() == 0) && (stderr.available() == 0))
+//						{
+//							/* Even though currently there is no data available, it may be that new data arrives
+//							 * and the session's underlying channel is closed before we call waitForCondition().
+//							 * This means that EOF and STDOUT_DATA (or STDERR_DATA, or both) may
+//							 * be set together.
+//							 */
+//
+//							int conditions = sess.waitForCondition(
+//									  ChannelCondition.STDOUT_DATA 
+//									| ChannelCondition.STDERR_DATA
+//									| ChannelCondition.EOF, 
+//									30*1000);
+//
+//							// Wait no longer than 30 seconds
+//							if ((conditions & ChannelCondition.TIMEOUT) != 0)
+//							{
+//								// A timeout occurred.
+//								_logger.debug(">>>> A timeout occurred... continue... <<<<");
+//								//throw new IOException("Timeout while waiting for data from peer.");
+//							}
+//
+//							// Here we do not need to check separately for CLOSED, since CLOSED implies EOF
+//							if ((conditions & ChannelCondition.EOF) != 0)
+//							{
+//								// The remote side won't send us further data...
+//								if ((conditions & (ChannelCondition.STDOUT_DATA | ChannelCondition.STDERR_DATA)) == 0)
+//								{
+//									// ... and we have consumed all data in the local arrival window.
+//									_logger.info("Received EOF from the command '"+getCommand(true)+"'.");
+////									addException(new Exception("Received EOF from the command at time: "+new Timestamp(System.currentTimeMillis())+", \nThe module will be restarted, and the command '"+getCommand()+"' re-executed."));
+//				/*<--*/				break;
+//								}
+//							}
+//
+//							// OK, either STDOUT_DATA or STDERR_DATA (or both) is set.
+//
+//							// You can be paranoid and check that the library is not going nuts:
+//							// if ((conditions & (ChannelCondition.STDOUT_DATA | ChannelCondition.STDERR_DATA)) == 0)
+//							//	throw new IllegalStateException("Unexpected condition result (" + conditions + ")");
+//						}
+//
+//						/* If you below replace "while" with "if", then the way the output appears on the local
+//						 * stdout and stder streams is more "balanced". Additionally reducing the buffer size
+//						 * will also improve the interleaving, but performance will slightly suffer.
+//						 * OKOK, that all matters only if you get HUGE amounts of stdout and stderr data =)
+//						 */
+//						while (stdout.available() > 0)
+//						{
+////							int len = stdout.read(buffer);
+////							if (len > 0) // this check is somewhat paranoid
+////							{
+////								// NOTE if charset convertion is needed, use: new String(buffer, CHARSET)
+////								String row = null;
+////								BufferedReader sr = new BufferedReader(new StringReader(new String(buffer, 0, len, osCharset)));
+////								while ((row = sr.readLine()) != null)
+////								{
+////									fireNewTraceRow(row);
+////								}
+////							}
+//
+//							int len = stdout.read(buffer);
+//							if (len > 0) // this check is somewhat paranoid
+//							{
+//								// If first read try to discover what charset the source file has
+//								if (firstChunk)
+//								{
+//									// Construct an instance of org.mozilla.universalchardet.UniversalDetector. 
+//									UniversalDetector detector = new UniversalDetector(null);
+//
+//									// Read from the file until the detector is "happy" 
+//									detector.handleData(buffer, 0, len);
+//
+//									// Notify the detector of the end of data by calling UniversalDetector.dataEnd(). 
+//									detector.dataEnd();
+//
+//									// Get the detected encoding name by calling UniversalDetector.getDetectedCharset(). 
+//									String encoding = detector.getDetectedCharset();
+//									if ( encoding != null )
+//									{
+//										fileCharset = Charset.forName(encoding);
+//										_logger.info("First read of the file, detected Java charset encoding '"+fileCharset+"'. The string delivered by universalchardet was '" + encoding + "'.");
+//									}
+//									else
+//									{
+//										fileCharset = osCharset;
+//										_logger.info("First read of the file, could NOT detect a any charset encoding. Using the OS default charset of '"+osCharset+"'.");
+//									}
+//
+//									// Don't forget to call UniversalDetector.reset() before you reuse the detector instance. 
+//									detector.reset();
+//									firstChunk = false;
+//								}
+//
+//								// NOTE if charset convertion is needed, use: new String(buffer, CHARSET)
+//								String strBuf = new String(buffer, 0, len, fileCharset);
+//
+//								// add "spill" that did NOT have a newline terminator
+//								if (strSpillOut != null)
+//								{
+//									strBuf = strSpillOut + strBuf;
+//									len += strSpillOut.length();
+//									strSpillOut = null;
+//								}
+//
+//								// Check for "spill" that is after last newline
+//								// if we have "spill" save that to next iteration
+//								int lastNlPos = strBuf.lastIndexOf('\n');
+//								if (lastNlPos == -1) // No newline was found, save the whole string to next read
+//								{
+//									strSpillOut = strBuf;
+//									strBuf = null;
+//								} 
+//								else if (len > lastNlPos)  // string after last newline = save to next read
+//								{
+//									strSpillOut = strBuf.substring(lastNlPos + 1);
+//									strBuf      = strBuf.substring(0, lastNlPos);
+//								}
+//
+//								// read the buffer line-by-line and "send" it to any listeners
+//								if (strBuf != null)
+//								{
+//									BufferedReader br = new BufferedReader(new StringReader(strBuf));
+//									String row = null;
+//									while ((row = br.readLine()) != null)
+//									{
+//										fireNewTraceRow(row);
+//									}
+//								}
+//							}
+//						}
+//
+//						while (stderr.available() > 0)
+//						{
+////							int len = stderr.read(buffer);
+////							if (len > 0) // this check is somewhat paranoid
+////							{
+////								String row = null;
+////								BufferedReader sr = new BufferedReader(new StringReader(new String(buffer, 0, len, osCharset)));
+////								while ((row = sr.readLine()) != null)
+////								{
+////									if (row != null && row.toLowerCase().indexOf("command not found") >= 0)
+////									{
+////										_logger.error("FileTail(SSH): was the command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row);
+////									}
+////									//System.out.println("STDERR: "+row);
+////									fireNewTraceRow(row);
+////									//_logger.error("Received on STDERR: "+row);
+////								}
+////							}
+//
+//							int len = stderr.read(buffer);
+//							if (len > 0) // this check is somewhat paranoid
+//							{
+//								// NOTE if charset convertion is needed, use: new String(buffer, CHARSET)
+//								String strBuf = new String(buffer, 0, len, fileCharset);
+//
+//								// add "spill" that did NOT have a newline terminator
+//								if (strSpillErr != null)
+//								{
+//									strBuf = strSpillErr + strBuf;
+//									len += strSpillErr.length();
+//									strSpillErr = null;
+//								}
+//
+//								// Check for "spill" that is after last newline
+//								// if we have "spill" save that to next iteration
+//								int lastNlPos = strBuf.lastIndexOf('\n');
+//								if (lastNlPos == -1) // No newline was found, save the whole string to next read
+//								{
+//									strSpillErr = strBuf;
+//									strBuf = null;
+//								} 
+//								else if (len > lastNlPos)  // string after last newline = save to next read
+//								{
+//									strSpillErr = strBuf.substring(lastNlPos + 1);
+//									strBuf      = strBuf.substring(0, lastNlPos);
+//								}
+//
+//								// read the buffer line-by-line and "send" it to any listeners
+//								if (strBuf != null)
+//								{
+//									BufferedReader br = new BufferedReader(new StringReader(strBuf));
+//									String row = null;
+//									while ((row = br.readLine()) != null)
+//									{
+//										if (row != null && row.toLowerCase().indexOf("command not found") >= 0)
+//										{
+//											_logger.error("FileTail(SSH): was the command '"+getCommand(true)+"' in current $PATH, got following message on STDERR: "+row);
+//										}
+//										//System.out.println("STDERR: "+row);
+//										fireNewTraceRow(row);
+//										//_logger.error("Received on STDERR: "+row);
+//									}
+//								}
+//							}
+//						}
+//					}
+//					catch (IOException e)
+//					{
+//						_logger.error("Problems when reading output from the OS Command '"+getCommand(true)+"', Caught: "+e.getMessage(), e);
+//						_running = false;
+//					}
+//				}
+//
+//				if (sess != null)
+//					sess.close();
+//
+//				_running = false;
+//				printStopMessage();
+//				_shutdownIsComplete = true;
+//
+//			} // end: run()
+//		};
+//	} // end: method
 	/**
 	 * Create the code that does the tail over SSH
 	 * @return
@@ -433,247 +708,104 @@ public class FileTail
 
 				_running = true;
 
-				Session sess = null;
+				ExecutionWrapper execWrapper = null;
+				HostMonitorConnectionSsh hostMonConn = new HostMonitorConnectionSsh(_sshConn);
 				try
 				{
-					_logger.info("Executing command '"+getCommand(true)+"'.");
-					sess = _sshConn.execCommand(getCommand(false));
+					_logger.info("Executing command '" + getCommand(true) + "'.");
+					execWrapper = hostMonConn.executeCommand(getCommand(true));
 				}
-				catch (IOException e)
+				catch (Exception e)
 				{
 //					addException(e);
-					_logger.error("Problems when executing OS Command '"+getCommand(true)+"', Caught: "+e.getMessage(), e);
+					_logger.error("Problems when executing OS Command '" + getCommand(true) + "', Caught: " + e.getMessage(), e);
 					_running = false;
 					return;
 				}
 
 				_shutdownIsComplete = false;
 
-				/*
-				 * Advanced:
-				 * The following is a demo on how one can read from stdout and
-				 * stderr without having to use two parallel worker threads (i.e.,
-				 * we don't use the Streamgobblers here) and at the same time not
-				 * risking a deadlock (due to a filled SSH2 channel window, caused
-				 * by the stream which you are currently NOT reading from =).
-				 */
-
-				/* Don't wrap these streams and don't let other threads work on
-				 * these streams while you work with Session.waitForCondition()!!!
-				 */
-
-//				BufferedReader stdout  = new BufferedReader(new InputStreamReader(sess.getStdout()));
-//				BufferedReader stderr  = new BufferedReader(new InputStreamReader(sess.getStderr()));
-				InputStream stdout = sess.getStdout();
-				InputStream stderr = sess.getStderr();
+				InputStream stdout = execWrapper.getStdout();
+				InputStream stderr = execWrapper.getStderr();
 				
 				Charset osCharset = Charset.forName(_sshConn.getOsCharset());
-				Charset fileCharset = osCharset;
-				boolean firstChunk = true;
 
-				String strSpillOut = null;
-				String strSpillErr = null;
+				BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(stdout, osCharset));
+				BufferedReader stderrReader = new BufferedReader(new InputStreamReader(stderr, osCharset));
 
-				byte[] buffer = new byte[16*1024]; // 16K
+//				byte[] buffer = new byte[16*1024]; // 16K
 				while(_running)
 				{
 					try
 					{
 						if ((stdout.available() == 0) && (stderr.available() == 0))
 						{
-							/* Even though currently there is no data available, it may be that new data arrives
-							 * and the session's underlying channel is closed before we call waitForCondition().
-							 * This means that EOF and STDOUT_DATA (or STDERR_DATA, or both) may
-							 * be set together.
-							 */
-
-							int conditions = sess.waitForCondition(
-									  ChannelCondition.STDOUT_DATA 
-									| ChannelCondition.STDERR_DATA
-									| ChannelCondition.EOF, 
-									30*1000);
-
-							// Wait no longer than 30 seconds
-							if ((conditions & ChannelCondition.TIMEOUT) != 0)
+							try
 							{
-								// A timeout occurred.
-								_logger.debug(">>>> A timeout occurred... continue... <<<<");
-								//throw new IOException("Timeout while waiting for data from peer.");
+								execWrapper.waitForData();
 							}
-
-							// Here we do not need to check separately for CLOSED, since CLOSED implies EOF
-							if ((conditions & ChannelCondition.EOF) != 0)
+							catch (InterruptedException e)
 							{
-								// The remote side won't send us further data...
-								if ((conditions & (ChannelCondition.STDOUT_DATA | ChannelCondition.STDERR_DATA)) == 0)
-								{
-									// ... and we have consumed all data in the local arrival window.
-									_logger.info("Received EOF from the command '"+getCommand(true)+"'.");
-//									addException(new Exception("Received EOF from the command at time: "+new Timestamp(System.currentTimeMillis())+", \nThe module will be restarted, and the command '"+getCommand()+"' re-executed."));
-				/*<--*/				break;
-								}
+								// TODO: handle exception
 							}
-
-							// OK, either STDOUT_DATA or STDERR_DATA (or both) is set.
-
-							// You can be paranoid and check that the library is not going nuts:
-							// if ((conditions & (ChannelCondition.STDOUT_DATA | ChannelCondition.STDERR_DATA)) == 0)
-							//	throw new IllegalStateException("Unexpected condition result (" + conditions + ")");
+							
+							if ( execWrapper.isClosed() )
+							{
+								if (stdout.available() > 0 || stderr.available() > 0)
+									continue;
+								break;
+							}
 						}
 
-						/* If you below replace "while" with "if", then the way the output appears on the local
-						 * stdout and stder streams is more "balanced". Additionally reducing the buffer size
-						 * will also improve the interleaving, but performance will slightly suffer.
-						 * OKOK, that all matters only if you get HUGE amounts of stdout and stderr data =)
-						 */
+						// STDOUT
 						while (stdout.available() > 0)
 						{
-//							int len = stdout.read(buffer);
-//							if (len > 0) // this check is somewhat paranoid
-//							{
-//								// NOTE if charset convertion is needed, use: new String(buffer, CHARSET)
-//								String row = null;
-//								BufferedReader sr = new BufferedReader(new StringReader(new String(buffer, 0, len, osCharset)));
-//								while ((row = sr.readLine()) != null)
-//								{
-//									fireNewTraceRow(row);
-//								}
-//							}
-
-							int len = stdout.read(buffer);
-							if (len > 0) // this check is somewhat paranoid
+							if (_logger.isDebugEnabled())
 							{
-								// If first read try to discover what charset the source file has
-								if (firstChunk)
-								{
-									// Construct an instance of org.mozilla.universalchardet.UniversalDetector. 
-									UniversalDetector detector = new UniversalDetector(null);
+								_logger.debug("SSH-STDOUT[FileTailSsh][available=" + stdout.available() + "]: -start-");
+							}
+							
+							// NOW READ input
+							while (stdoutReader.ready())
+							{
+								// Read row
+								String row = stdoutReader.readLine();
 
-									// Read from the file until the detector is "happy" 
-									detector.handleData(buffer, 0, len);
+								// discard empty rows
+								if (StringUtil.isNullOrBlank(row))
+									continue;
 
-									// Notify the detector of the end of data by calling UniversalDetector.dataEnd(). 
-									detector.dataEnd();
+								if (_logger.isDebugEnabled())
+									_logger.debug("Received on STDOUT: "+row);
 
-									// Get the detected encoding name by calling UniversalDetector.getDetectedCharset(). 
-									String encoding = detector.getDetectedCharset();
-									if ( encoding != null )
-									{
-										fileCharset = Charset.forName(encoding);
-										_logger.info("First read of the file, detected Java charset encoding '"+fileCharset+"'. The string delivered by universalchardet was '" + encoding + "'.");
-									}
-									else
-									{
-										fileCharset = osCharset;
-										_logger.info("First read of the file, could NOT detect a any charset encoding. Using the OS default charset of '"+osCharset+"'.");
-									}
-
-									// Don't forget to call UniversalDetector.reset() before you reuse the detector instance. 
-									detector.reset();
-									firstChunk = false;
-								}
-
-								// NOTE if charset convertion is needed, use: new String(buffer, CHARSET)
-								String strBuf = new String(buffer, 0, len, fileCharset);
-
-								// add "spill" that did NOT have a newline terminator
-								if (strSpillOut != null)
-								{
-									strBuf = strSpillOut + strBuf;
-									len += strSpillOut.length();
-									strSpillOut = null;
-								}
-
-								// Check for "spill" that is after last newline
-								// if we have "spill" save that to next iteration
-								int lastNlPos = strBuf.lastIndexOf('\n');
-								if (lastNlPos == -1) // No newline was found, save the whole string to next read
-								{
-									strSpillOut = strBuf;
-									strBuf = null;
-								} 
-								else if (len > lastNlPos)  // string after last newline = save to next read
-								{
-									strSpillOut = strBuf.substring(lastNlPos + 1);
-									strBuf      = strBuf.substring(0, lastNlPos);
-								}
-
-								// read the buffer line-by-line and "send" it to any listeners
-								if (strBuf != null)
-								{
-									BufferedReader br = new BufferedReader(new StringReader(strBuf));
-									String row = null;
-									while ((row = br.readLine()) != null)
-									{
-										fireNewTraceRow(row);
-									}
-								}
+								// do callback with the STDOUT Row
+								fireNewTraceRow(row);
 							}
 						}
 
 						while (stderr.available() > 0)
 						{
-//							int len = stderr.read(buffer);
-//							if (len > 0) // this check is somewhat paranoid
-//							{
-//								String row = null;
-//								BufferedReader sr = new BufferedReader(new StringReader(new String(buffer, 0, len, osCharset)));
-//								while ((row = sr.readLine()) != null)
-//								{
-//									if (row != null && row.toLowerCase().indexOf("command not found") >= 0)
-//									{
-//										_logger.error("FileTail(SSH): was the command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row);
-//									}
-//									//System.out.println("STDERR: "+row);
-//									fireNewTraceRow(row);
-//									//_logger.error("Received on STDERR: "+row);
-//								}
-//							}
-
-							int len = stderr.read(buffer);
-							if (len > 0) // this check is somewhat paranoid
+							if (_logger.isDebugEnabled())
 							{
-								// NOTE if charset convertion is needed, use: new String(buffer, CHARSET)
-								String strBuf = new String(buffer, 0, len, fileCharset);
-
-								// add "spill" that did NOT have a newline terminator
-								if (strSpillErr != null)
-								{
-									strBuf = strSpillErr + strBuf;
-									len += strSpillErr.length();
-									strSpillErr = null;
-								}
-
-								// Check for "spill" that is after last newline
-								// if we have "spill" save that to next iteration
-								int lastNlPos = strBuf.lastIndexOf('\n');
-								if (lastNlPos == -1) // No newline was found, save the whole string to next read
-								{
-									strSpillErr = strBuf;
-									strBuf = null;
-								} 
-								else if (len > lastNlPos)  // string after last newline = save to next read
-								{
-									strSpillErr = strBuf.substring(lastNlPos + 1);
-									strBuf      = strBuf.substring(0, lastNlPos);
-								}
-
-								// read the buffer line-by-line and "send" it to any listeners
-								if (strBuf != null)
-								{
-									BufferedReader br = new BufferedReader(new StringReader(strBuf));
-									String row = null;
-									while ((row = br.readLine()) != null)
-									{
-										if (row != null && row.toLowerCase().indexOf("command not found") >= 0)
-										{
-											_logger.error("FileTail(SSH): was the command '"+getCommand(true)+"' in current $PATH, got following message on STDERR: "+row);
-										}
-										//System.out.println("STDERR: "+row);
-										fireNewTraceRow(row);
-										//_logger.error("Received on STDERR: "+row);
-									}
-								}
+//								startTs = System.currentTimeMillis();
+								_logger.debug("SSH-STDERR[FileTailSsh][available=" + stdout.available() + "]: -start-");
+							}
+							
+							// NOW READ input
+							while (stderrReader.ready())
+							{
+								// Read row
+								String row = stderrReader.readLine();
+								
+								// discard empty rows
+								if (StringUtil.isNullOrBlank(row))
+									continue;
+								
+								if (_logger.isDebugEnabled())
+									_logger.debug("Received on STDERR: "+row);
+								
+								// do callback with the STDERR Row
+								fireNewTraceRow(row);
 							}
 						}
 					}
@@ -684,8 +816,8 @@ public class FileTail
 					}
 				}
 
-				if (sess != null)
-					sess.close();
+//				if (sess != null)
+//					sess.close();
 
 				_running = false;
 				printStopMessage();

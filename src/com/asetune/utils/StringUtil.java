@@ -24,7 +24,9 @@
  */
 package com.asetune.utils;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -3937,6 +3939,40 @@ public class StringUtil
 	}
 
 	/**
+	 * Get string between two chars...
+	 * 
+	 * @param input          input string
+	 * @param startChar      Start char we want to substring from
+	 * @param endChar        End char we want to substring to (Special if " " and we cant's find any space, then copy "to-the-end-of-string")
+	 * 
+	 * @return null if we can't find the start/end chars 
+	 */
+	public static String substringBetweenTwoChars(String input, String startChar, String endChar) 
+	{
+		if (isNullOrBlank(input))
+			return null;
+		
+		if (startChar == null || endChar == null)
+			return null;
+	
+		int start = input.indexOf(startChar);
+		if (start != -1)
+		{
+			int end = input.indexOf(endChar, start + startChar.length());
+			if (end != -1)
+			{
+				return input.substring(start + startChar.length(), end);
+			}
+			else if (" ".equals(endChar))
+			{
+				return input.substring(start + startChar.length());
+			}
+		}
+
+	    return null;
+	}
+
+	/**
 	 * Truncate a string after X characters (and put ... ellipse at end of string if it's truncated)
 	 * @param str           the string to truncate
 	 * @param maxLen        the max length
@@ -4077,6 +4113,45 @@ public class StringUtil
 
 		throw new RuntimeException("Known output types is 1 or 2, you specified: " + type);
 	}
+
+	/**
+	 * Add prefix for every row in the passed string.
+	 * 
+	 * @param prefix       The prefix we want to print
+	 * @param inputStr     The input string to prefix
+	 * @param always       Always print the prefix... if false, and no new-lines in inputStr, do NOT print the prefix
+	 * 
+	 * @return The input string with a prefix
+	 */
+	public static String addPrefix(String prefix, String inputStr, boolean always)
+	{
+		if (prefix == null || inputStr == null)
+			return null;
+
+		// If the inputStr do NOT have any line-breaks, do NOT print prefix
+		if ( !always && !inputStr.contains("\n"))
+			return inputStr;
+		
+		// If we should add a new line at the end or not
+		boolean endsWithNewLine = inputStr.endsWith("\n") || inputStr.endsWith("\r\n") ;
+
+		StringBuilder sb = new StringBuilder();
+		
+		try (BufferedReader bufReader = new BufferedReader(new StringReader(inputStr)))
+		{
+			String line = null;
+			while( (line = bufReader.readLine()) != null )
+			{
+				sb.append(prefix).append(line).append("\n");
+			}
+			
+			if ( ! endsWithNewLine && sb.length() > 1)
+				sb.deleteCharAt(sb.length()-1);
+		}
+		catch (IOException ignore) {}
+
+		return sb.toString();
+	}
 	
 	
 	/////////////////////////////////////////////////////////////////////////////
@@ -4087,6 +4162,20 @@ public class StringUtil
 
 	public static void main(String[] args)
 	{
+		System.out.println(StringUtil.addPrefix("xxx: ", null, false));
+		System.out.println(StringUtil.addPrefix("xxx: ", "", false));
+		System.out.println(StringUtil.addPrefix("xx1xx: ", "t1: test-no-newline", false));
+		System.out.println(StringUtil.addPrefix("xx2xx: ", "t2: (with-NL-at-end) test-row-1\n", false));
+		System.out.println(StringUtil.addPrefix("xx3xx: ", "t3: (no-NL-at-end) test-row-1\ntest-row-2\ntest-row-3", false));
+		System.out.println(StringUtil.addPrefix("xx4xx: ", "t4: (with-NL-at-end) test-row-1\ntest-row-2\ntest-row-3\n", false));
+		System.out.println("----end-test---");
+		System.exit(0);
+		
+		System.out.println(StringUtil.substringBetweenTwoChars("Metadata: PartitionId = 0           Metadata: IndexId = 0               Metadata: ObjectId = 99", "Metadata: ObjectId = ", " "));
+		System.out.println(StringUtil.substringBetweenTwoChars("Metadata: PartitionId = 0           Metadata: IndexId = 0               Metadata: ObjectId = 99", "Metadata: IndexId = ", " "));
+		System.exit(0);
+		
+		
 		System.out.println(StringUtil.parseMailFromAddress(null               , 1) == null           ? "OK-1" : "FAIL-1 - |" + StringUtil.parseMailFromAddress(null               , 1) + "|");
 		System.out.println(StringUtil.parseMailFromAddress(""                 , 1).equals("")        ? "OK-2" : "FAIL-2 - |" + StringUtil.parseMailFromAddress(""                 , 1) + "|");
 		System.out.println(StringUtil.parseMailFromAddress("a@x.com"          , 1).equals("a@x.com") ? "OK-3" : "FAIL-3 - |" + StringUtil.parseMailFromAddress("a@x.com"          , 1) + "|");

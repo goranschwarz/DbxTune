@@ -221,6 +221,18 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JCheckBox        _memProcessPhysicalMemoryLow_chk           = new JCheckBox();
 	private JCheckBox        _memProcessVirtualMemoryLow_chk            = new JCheckBox();
                                                                         
+	private JLabel           _memDatabaseCacheMemoryMb_lbl              = new JLabel();
+	private JTextField       _memDatabaseCacheMemoryMb_abs_txt          = new JTextField();
+	private JTextField       _memDatabaseCacheMemoryMb_diff_txt         = new JTextField();
+
+	private JLabel           _memGrantedWorkspaceMemoryMb_lbl           = new JLabel();
+	private JTextField       _memGrantedWorkspaceMemoryMb_abs_txt       = new JTextField();
+	private JTextField       _memGrantedWorkspaceMemoryMb_diff_txt      = new JTextField();
+
+	private JLabel           _memStolenServerMemoryMb_lbl               = new JLabel();
+	private JTextField       _memStolenServerMemoryMb_abs_txt           = new JTextField();
+	private JTextField       _memStolenServerMemoryMb_diff_txt          = new JTextField();
+
 	private JLabel           _cpuTime_lbl                               = new JLabel();
 	private JTextField       _cpuTime_txt                               = new JTextField();
 	private JLabel           _cpuUser_lbl                               = new JLabel();
@@ -697,6 +709,43 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_memProcessVirtualMemoryLow_chk .setBorder(new EmptyBorder(new Insets(1,1,1,1)));
 		
 		
+		tooltip = "<html><REPLACE>"
+				+ "MB used by the Buffer Pool (Data) Cache to hold data pages in memory. This is hopefully where most of the memory should be...<br>"
+				+ "<b>Origin</b>: SELECT cntr_value/1024.0 FROM sys.<b>dm_os_performance_counters</b> WHERE counter_name = '<b>Database Cache Memory (KB)</b>'<br>"
+				+ "</html>";
+		_memDatabaseCacheMemoryMb_lbl      .setText("Buffer Pool/Cache MB");
+		_memDatabaseCacheMemoryMb_lbl      .setToolTipText(tooltip.replace("<REPLACE>", ""));
+		_memDatabaseCacheMemoryMb_abs_txt  .setToolTipText(tooltip.replace("<REPLACE>", ""));
+		_memDatabaseCacheMemoryMb_abs_txt  .setEditable(false);
+		_memDatabaseCacheMemoryMb_diff_txt .setToolTipText(tooltip.replace("<REPLACE>", "DIFF caculate value for: "));
+		_memDatabaseCacheMemoryMb_diff_txt .setEditable(false);
+		_memDatabaseCacheMemoryMb_diff_txt .setForeground(Color.BLUE);
+
+		tooltip = "<html><REPLACE>"
+				+ "MB currently granted to executing processes, such as hash, sort, bulk copy, and index creation operations <i>(just another name for 'memory grants')</i><br>"
+				+ "<b>Origin</b>: SELECT cntr_value/1024.0 FROM sys.<b>dm_os_performance_counters</b> WHERE counter_name = '<b>Granted Workspace Memory (KB)</b>'<br>"
+				+ "</html>";
+		_memGrantedWorkspaceMemoryMb_lbl      .setText("Granted Workspace MB");
+		_memGrantedWorkspaceMemoryMb_lbl      .setToolTipText(tooltip.replace("<REPLACE>", ""));
+		_memGrantedWorkspaceMemoryMb_abs_txt  .setToolTipText(tooltip.replace("<REPLACE>", ""));
+		_memGrantedWorkspaceMemoryMb_abs_txt  .setEditable(false);
+		_memGrantedWorkspaceMemoryMb_diff_txt .setToolTipText(tooltip.replace("<REPLACE>", "DIFF caculate value for: "));
+		_memGrantedWorkspaceMemoryMb_diff_txt .setEditable(false);
+		_memGrantedWorkspaceMemoryMb_diff_txt .setForeground(Color.BLUE);
+
+		tooltip = "<html><REPLACE>"
+				+ "MB that are stolen/borrowed from the Buffer Pool/Data Cache to be used by something else... Typically 'Workspace Memory', which is another name for 'memory grants', which really is just 'work memory' for <i>sort</i>, <i>hash tables</i>, etc...)<br>"
+				+ "<b>Origin</b>: SELECT cntr_value/1024.0 FROM sys.<b>dm_os_performance_counters</b> WHERE counter_name = '<b>Stolen Server Memory (KB)</b>'<br>"
+				+ "</html>";
+		_memStolenServerMemoryMb_lbl      .setText("Stolen Server Memory MB");
+		_memStolenServerMemoryMb_lbl      .setToolTipText(tooltip.replace("<REPLACE>", ""));
+		_memStolenServerMemoryMb_abs_txt  .setToolTipText(tooltip.replace("<REPLACE>", ""));
+		_memStolenServerMemoryMb_abs_txt  .setEditable(false);
+		_memStolenServerMemoryMb_diff_txt .setToolTipText(tooltip.replace("<REPLACE>", "DIFF caculate value for: "));
+		_memStolenServerMemoryMb_diff_txt .setEditable(false);
+		_memStolenServerMemoryMb_diff_txt .setForeground(Color.BLUE);
+
+
 		tooltip = "CPU Time. Global variable @@cpu_busy + @@io_busy.";
 //		_cpuTime_lbl      .setText("CPU Usage");
 		_cpuTime_lbl      .setText("CPU Time/User/Sys");
@@ -919,7 +968,19 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		panel.add(_memProcessPhysicalMemoryLow_chk,           "gapright 2");
 		panel.add(_memProcessVirtualMemoryLow_chk,            "gapright 0, wrap");
 
-		
+		panel.add(_memDatabaseCacheMemoryMb_lbl,              "");
+		panel.add(_memDatabaseCacheMemoryMb_abs_txt,          "growx, gapright 2, split");
+		panel.add(_memDatabaseCacheMemoryMb_diff_txt,         "growx, gapright 2, wrap");
+
+		panel.add(_memGrantedWorkspaceMemoryMb_lbl,           "");
+		panel.add(_memGrantedWorkspaceMemoryMb_abs_txt,       "growx, gapright 2, split");
+		panel.add(_memGrantedWorkspaceMemoryMb_diff_txt,      "growx, gapright 2, wrap");
+
+		panel.add(_memStolenServerMemoryMb_lbl,               "");
+		panel.add(_memStolenServerMemoryMb_abs_txt,           "growx, gapright 2, split");
+		panel.add(_memStolenServerMemoryMb_diff_txt,          "growx, gapright 2, wrap 20");
+
+
 		panel.add(_cpuTime_lbl,                               "");
 		panel.add(_cpuTime_txt,                               "growx, gapright 2, split");
 		panel.add(_cpuUser_txt,                               "growx, gapright 2");
@@ -1108,7 +1169,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(System.getProperty("user.name")))
 {
 	System.out.println("");
-	System.out.println("####################################################: " + new Timestamp(System.currentTimeMillis()));
+	System.out.println("#################################################: " + new Timestamp(System.currentTimeMillis()));
 	System.out.println("CmSummary: _oldestOpenTranBeginTime             = '" + _oldestOpenTranBeginTime_txt            .getText() + "'.");
 	System.out.println("CmSummary: _oldestOpenTranId                    = '" + _oldestOpenTranId_txt                   .getText() + "'.");
 	System.out.println("CmSummary: _oldestOpenTranSpid                  = '" + _oldestOpenTranSpid_txt                 .getText() + "'.");
@@ -1139,6 +1200,15 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		_memProcessPhysicalMemoryLow_chk          .setSelected("true".equalsIgnoreCase(cm.getAbsString (0, "process_physical_memory_low")));
 		_memProcessVirtualMemoryLow_chk           .setSelected("true".equalsIgnoreCase(cm.getAbsString (0, "process_virtual_memory_low")));
 
+		_memDatabaseCacheMemoryMb_abs_txt         .setText(cm.getAbsString (0, "databaseCacheMemoryMb"));
+		_memDatabaseCacheMemoryMb_diff_txt        .setText(cm.getDiffString(0, "databaseCacheMemoryMb"));
+		
+		_memGrantedWorkspaceMemoryMb_abs_txt      .setText(cm.getAbsString (0, "grantedWorkspaceMemoryMb"));
+		_memGrantedWorkspaceMemoryMb_diff_txt     .setText(cm.getDiffString(0, "grantedWorkspaceMemoryMb"));
+		
+		_memStolenServerMemoryMb_abs_txt          .setText(cm.getAbsString (0, "stolenServerMemoryMb"));
+		_memStolenServerMemoryMb_diff_txt         .setText(cm.getDiffString(0, "stolenServerMemoryMb"));
+		
 
 		_ioTotalRead_txt      .setText(cm.getAbsString (0, "io_total_read"));
 		_ioTotalReadDiff_txt  .setText(cm.getRateString(0, "io_total_read"));
@@ -1417,7 +1487,14 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		_memUtilizationPct_txt                    .setText("");
 		_memProcessPhysicalMemoryLow_chk          .setSelected(false);
 		_memProcessVirtualMemoryLow_chk           .setSelected(false);
-                                                  
+
+		_memDatabaseCacheMemoryMb_abs_txt         .setText("");
+		_memDatabaseCacheMemoryMb_diff_txt        .setText("");
+		_memGrantedWorkspaceMemoryMb_abs_txt      .setText("");
+		_memGrantedWorkspaceMemoryMb_diff_txt     .setText("");
+		_memStolenServerMemoryMb_abs_txt          .setText("");
+		_memStolenServerMemoryMb_diff_txt         .setText("");
+		
 		_cpuTime_txt                              .setText("");
 		_cpuUser_txt                              .setText("");
 		_cpuSystem_txt                            .setText("");

@@ -66,11 +66,6 @@
 	<classpathentry kind="lib" path="lib/commons-lang3-3.7.jar" sourcepath="3pp/commons-lang3-3.7-sources.jar"/>
 	<classpathentry kind="lib" path="lib/DDLGen.jar"/>
 	<classpathentry kind="lib" path="lib/commons-codec-1.10.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1604159846646/source/commons-codec-1.10-sources-1604249388994.jar"/>
-	<classpathentry kind="lib" path="lib/bcprov-jdk15on-157.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="https://www.bouncycastle.org/docs/docs1.5on"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="lib" path="lib/janino-3.0.7.jar" sourcepath="3pp/janino-3.0.7-sources.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:platform:/resource/AseTune/3pp/janino-3.0.7-javadoc.jar!/"/>
@@ -126,12 +121,12 @@
 	<classpathentry kind="lib" path="lib/jetty/jetty-all-9.4.38.v20210224-uber.jar"/>
 	<classpathentry kind="lib" path="lib/jetty/javax.servlet-api-3.1.0.jar"/>
 	<classpathentry kind="lib" path="lib/jconn42.jar"/>
-	<classpathentry kind="lib" path="lib/ganymed-ssh2-263.jar" sourcepath="3pp/ganymed-ssh2-263-sources.jar"/>
 	<classpathentry kind="lib" path="lib/sql-formatter-2.0.3.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1645375698757/source/sql-formatter-2.0.3-sources.jar"/>
 	<classpathentry kind="lib" path="lib/h2-2.1.214.jar"/>
 	<classpathentry kind="lib" path="lib/jsqlparser-4.5.jar"/>
 	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-11.2.1.jre8.jar"/>
 	<classpathentry kind="lib" path="lib/simplemagic-1.17.jar" sourcepath="3pp/simplemagic-1.17-sources.jar"/>
-	<classpathentry kind="lib" path="lib/jsch-0.2.6.jar" sourcepath="3pp/jsch-0.2.6-sources.jar"/>
+	<classpathentry kind="lib" path="lib/jsch-0.2.7.jar" sourcepath="3pp/jsch-0.2.7-sources.jar"/>
+	<classpathentry kind="lib" path="lib/bcprov-jdk18on-1.72.jar" sourcepath="3pp/bcprov-jdk18on-1.72-sources.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>

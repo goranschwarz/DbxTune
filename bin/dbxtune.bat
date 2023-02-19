@@ -112,6 +112,11 @@ rem	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy2
 	set JAVA_START_PARAMS=-tcp -tcpAllowOthers -ifExists
 	set SPLASH=
 
+) ELSE IF "%APP_NAME%" == "sshtest2" (
+	set JAVA_START_CLASS=com.asetune.test.JschTest2
+	set JAVA_START_PARAMS=
+	set SPLASH=
+
 ) ELSE IF "%APP_NAME%" == "sshtest" (
 	set JAVA_START_CLASS=com.asetune.ssh.SshConnectionTester
 	set JAVA_START_PARAMS=
@@ -357,7 +362,7 @@ set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-csv-1.5.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-cli-1.4.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-codec-1.10.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\proxy-vole_20131209.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\ganymed-ssh2-263.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jsch-0.2.7.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\rsyntaxtextarea.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\autocomplete.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\rstaui.jar
@@ -370,7 +375,8 @@ set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\DDLGen.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\simplemagic-1.17.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jsqlparser-4.5.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\gsp.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\bcprov-jdk15on-157.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\bcprov-jdk15on-157.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\bcprov-jdk18on-1.72.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-compiler-3.0.7.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\janino-3.0.7.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\balloontip-1.2.4.1.jar

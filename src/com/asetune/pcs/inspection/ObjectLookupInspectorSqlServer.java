@@ -878,7 +878,7 @@ extends ObjectLookupInspectorAbstract
 			    + "INSERT INTO @obj_ids \n"
 			    + "    SELECT object_id \n"
 			    + "    FROM [" + dbname + "].sys.objects \n"
-			    + "    WHERE name = '" + objectName + "' \n"
+			    + "    WHERE name = '" + objectName.replace("'", "''") + "' \n"
 			    + "      AND is_ms_shipped = 0 \n"
 			    + " \n"
 			    + "SELECT o.object_id, \n"
