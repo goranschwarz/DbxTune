@@ -52,6 +52,7 @@ import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEvent.ServiceState;
 import com.asetune.alarm.events.AlarmEvent.Severity;
 import com.asetune.alarm.events.AlarmEventDummy;
+import com.asetune.central.pcs.DbxTuneSample.AlarmEntry;
 import com.asetune.ui.autocomplete.completions.ShorthandCompletionX;
 import com.asetune.utils.StringUtil;
 
@@ -81,6 +82,26 @@ public class WriterUtils
 //	}
 
 	/**
+	 * Take the AlarmEntry (from DbxTuneSample) and fill in the template values...
+	 * 
+	 * @param action                      RAISE or RE-RAISE or CANCEL
+	 * @param pcsAlarmEntry               The AlarmEntry object (NOTE: This is NOT the same as a AlarmEvent)
+	 * @param template                    the Velocity template
+	 * @param doTrim                      remove whitespaces newlines etc from start and end
+	 * @param trMap                       A Map of Strings that needs transalations: "&" -> "&amp";
+	 * @param dbxCentralUrl               Where can the DbxCentral be found;
+	 * @return                            The resolved template
+	 * @throws ParseErrorException        If we had parser exceptions
+	 * @throws MethodInvocationException  If any exceptions where thrown when calling a method on a methodName
+	 * @throws ResourceNotFoundException  Resource not found...
+	 */
+	public static String createMessageFromTemplate(String action, AlarmEntry pcsAlarmEntry, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl)
+	throws ParseErrorException, MethodInvocationException, ResourceNotFoundException
+	{
+		return createMessageFromTemplate(action, pcsAlarmEntry, null, template, doTrim, trMap, dbxCentralUrl);
+	}
+
+	/**
 	 * Take the AlarmEvent and fill in the template values...
 	 * 
 	 * @param action                      RAISE or RE-RAISE or CANCEL
@@ -108,7 +129,7 @@ public class WriterUtils
 	 * Take the AlarmEvent and fill in the template values...
 	 * 
 	 * @param action                      RAISE or RE-RAISE or CANCEL  (or the writer who calls this method) 
-	 * @param alarmEvent                  The AlarmEvent object
+	 * @param alarmObject                 The AlarmEvent or pcsAlarmEntry object
 	 * @param activeAlarmList             List of "active" alarms
 	 * @param template                    the Velocity template
 	 * @param doTrim                      remove whitespaces newlines etc from start and end
@@ -120,9 +141,27 @@ public class WriterUtils
 	 * @throws MethodInvocationException  If any exceptions where thrown when calling a method on a methodName
 	 * @throws ResourceNotFoundException  Resource not found...
 	 */
-	public static String createMessageFromTemplate(String action, AlarmEvent alarmEvent, List<AlarmEvent> activeAlarmList, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl)
+	public static String createMessageFromTemplate(String action, Object alarmObject, List<AlarmEvent> activeAlarmList, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl)
 	throws ParseErrorException, MethodInvocationException, ResourceNotFoundException
 	{
+		// Since parameter "alarmObject" is Object, we need to check valid classes
+		AlarmEvent alarmEvent    = null;
+		AlarmEntry pcsAlarmEntry = null;
+		
+		if (alarmObject instanceof AlarmEvent)
+		{
+			alarmEvent = (AlarmEvent) alarmObject;
+		}
+		else if (alarmObject instanceof AlarmEntry)
+		{
+			pcsAlarmEntry = (AlarmEntry) alarmObject;
+		}
+		else
+		{
+			throw new RuntimeException("Unhandled object '" + alarmObject.getClass().getName() + "'. You can only pass 'com.asetune.alarm.events.AlarmEvent' and 'com.asetune.central.pcs.DbxTuneSample.AlarmEntry' objects to this method.");
+		}
+		
+
 		Properties config = new Properties();
 //		config.setProperty("eventhandler.invalidreference.exception", "true");
 
@@ -153,7 +192,7 @@ public class WriterUtils
 
 		boolean isHtmlTemplate = StringUtils.startsWithIgnoreCase(template, "<html>");
 		
-		
+
 		VelocityContext context = new VelocityContext();
 
 		// Add access to: com.asetune.utils.StringUtil
@@ -177,10 +216,9 @@ public class WriterUtils
 
 		// serverDisplayName
 		String serverDisplayName = null;
-		if (CounterController.hasInstance())
-			serverDisplayName = CounterController.getInstance().getServerDisplayName();
-		if (StringUtil.isNullOrBlank(serverDisplayName) && alarmEvent != null)
-			serverDisplayName = alarmEvent.getServiceName();
+		if (StringUtil.isNullOrBlank(serverDisplayName) && alarmEvent    != null)           serverDisplayName = alarmEvent   .getServiceName();
+		if (StringUtil.isNullOrBlank(serverDisplayName) && pcsAlarmEntry != null)           serverDisplayName = pcsAlarmEntry.getServiceName();
+		if (StringUtil.isNullOrBlank(serverDisplayName) && CounterController.hasInstance()) serverDisplayName = CounterController.getInstance().getServerDisplayName();
 		context.put("serverDisplayName"        , serverDisplayName);
 //FIXME; change the template to be ${serverDisplayName}
 
@@ -240,6 +278,40 @@ public class WriterUtils
 			context.put("activeAlarmCount"           , StringUtil.toStr( alarmEvent.getActiveAlarmCount()           ,trMap ));
 		}
 		
+		if (pcsAlarmEntry != null)
+		{
+			// put (basic) AlarmEvent fields
+			context.put("alarmClass"                 , StringUtil.toStr( pcsAlarmEntry.getAlarmClass()                 ,trMap ));
+			context.put("serviceType"                , StringUtil.toStr( pcsAlarmEntry.getServiceType()                ,trMap ));
+			context.put("serviceName"                , StringUtil.toStr( pcsAlarmEntry.getServiceName()                ,trMap ));
+			context.put("serviceInfo"                , StringUtil.toStr( pcsAlarmEntry.getServiceInfo()                ,trMap ));
+			context.put("extraInfo"                  , StringUtil.toStr( pcsAlarmEntry.getExtraInfo()                  ,trMap ));
+			context.put("category"                   , StringUtil.toStr( pcsAlarmEntry.getCategory()                   ,trMap ));
+			context.put("severity"                   , StringUtil.toStr( pcsAlarmEntry.getSeverity()                   ,trMap ));
+			context.put("state"                      , StringUtil.toStr( pcsAlarmEntry.getState()                      ,trMap ));
+			context.put("data"                       , StringUtil.toStr( pcsAlarmEntry.getData()                       ,trMap ));
+			context.put("description"                , StringUtil.toStr( pcsAlarmEntry.getDescription()                ,trMap ));
+
+			// And some extra/extended AlarmEvent fields
+			context.put("duration"                   , StringUtil.toStr( pcsAlarmEntry.getFullDuration()               ,trMap ));
+			context.put("alarmDuration"              , StringUtil.toStr( pcsAlarmEntry.getAlarmDuration()              ,trMap ));
+			context.put("fullDuration"               , StringUtil.toStr( pcsAlarmEntry.getFullDuration()               ,trMap ));
+			context.put("fullDurationAdjustmentInSec", StringUtil.toStr( pcsAlarmEntry.getFullDurationAdjustmentInSec(),trMap ));
+			context.put("reRaiseCount"               , StringUtil.toStr( pcsAlarmEntry.getRepeatCnt()                  ,trMap ));
+			context.put("crTimeStr"                  , StringUtil.toStr( pcsAlarmEntry.getCreationTime()               ,trMap ));
+			context.put("reRaiseTimeStr"             , StringUtil.toStr( pcsAlarmEntry.getReRaiseTime()                ,trMap ));
+			context.put("timeToLive"                 , StringUtil.toStr( pcsAlarmEntry.getTimeToLive()                 ,trMap ));
+			context.put("alarmClassAbriviated"       , StringUtil.toStr( pcsAlarmEntry.getAlarmClassAbriviated()       ,trMap ));
+			context.put("extendedDescription"        , StringUtil.toStr( pcsAlarmEntry.getExtendedDescription()        ,trMap ));
+			context.put("reRaiseDescription"         , StringUtil.toStr( pcsAlarmEntry.getReRaiseDescription()         ,trMap ));
+			context.put("reRaiseExtendedDescription" , StringUtil.toStr( pcsAlarmEntry.getReRaiseExtendedDescription() ,trMap ));
+			context.put("reRaiseData"                , StringUtil.toStr( pcsAlarmEntry.getReRaiseData()                ,trMap ));
+			context.put("cancelTimeStr"              , StringUtil.toStr( pcsAlarmEntry.getCancelTime()                 ,trMap ));
+			context.put("crAgeInMs"                  , StringUtil.toStr( pcsAlarmEntry.getCreationAgeInMs()            ,trMap ));
+			context.put("isActive"                   , StringUtil.toStr( pcsAlarmEntry.isActive()                      ,trMap ));
+			context.put("activeAlarmCount"           , StringUtil.toStr( -1                                            ,trMap ));
+		}
+
 		if (activeAlarmList != null)
 		{
 			context.put("activeAlarmList" , activeAlarmList);

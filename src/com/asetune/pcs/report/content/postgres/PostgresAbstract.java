@@ -315,6 +315,16 @@ extends ReportEntryAbstract
 //				tableInfoMap.put("References" ,            entry.getFunctionReferences()+""); // instead show this in the: Index Info section
 				tableInfoMap.put("DDL"        ,            getFormattedSqlAsTooltipDiv(entry._objectText, "Procedure DDL", DbUtils.DB_PROD_NAME_POSTGRES));
 			}
+			else if (entry.isCursor())
+			{
+				tableInfoMap.put("Type"       ,            "<b>CURSOR</b>"          );
+				tableInfoMap.put("DBName"     ,            markIfDifferent(entry.getDbName(), firstEntryDbname));
+//				tableInfoMap.put("Schema"     ,            entry.getSchemaName()      );
+//				tableInfoMap.put("Function"   ,            entry.getTableName()       );
+				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
+//				tableInfoMap.put("References" ,            entry.getCursorReferences()+""); // instead show this in the: Index Info section
+				tableInfoMap.put("SQL Text"   ,            getFormattedSqlAsTooltipDiv(entry._objectText, "Cursor SQL Text", DbUtils.DB_PROD_NAME_POSTGRES));
+			}
 			else if (entry.isRemoteTable())
 			{
 				tableInfoMap.put("Type"       ,            "<b>REMOTE TABLE</b>"      );
@@ -391,6 +401,21 @@ extends ReportEntryAbstract
 					indexInfo += "Referenced Tables in this Procedure: \n";
 					indexInfo += "<ul> \n";
 					for (String ref : entry.getFunctionReferences()) // NOTE: same as for FUNCTION
+					{
+						indexInfo += "<li>" + ref + "</li> \n";
+					}
+					indexInfo += "</ul> \n";
+				}
+			}
+			else if (entry.isCursor()) 
+			{
+				// Build a bullet list of tables referenced by the CURSOR
+				indexInfo = "";
+				if (entry.getCursorReferences() != null) 
+				{
+					indexInfo += "Referenced Tables in this Cursor: \n";
+					indexInfo += "<ul> \n";
+					for (String ref : entry.getCursorReferences()) // NOTE: same as for FUNCTION
 					{
 						indexInfo += "<li>" + ref + "</li> \n";
 					}
@@ -916,7 +941,7 @@ extends ReportEntryAbstract
 			// For views/functions, go and get referenced tables (stored in table 'MonDdlStorage', column 'extraInfoText' (with prefix 'TableList: t1, t2, t3'
 			// Then read table information for those tables.
 			//--------------------------------------------------------------
-			if (ti.isView() || ti.isFunction() || ti.isProcedure())
+			if (ti.isView() || ti.isFunction() || ti.isProcedure() || ti.isCursor())
 			{
 //System.out.println("--------------- REPORT(type='"+ti._type+"'): ti._extraInfoText=" + ti._extraInfoText);
 				if (StringUtil.hasValue(ti._extraInfoText))
@@ -945,6 +970,10 @@ extends ReportEntryAbstract
 							else if (ti.isProcedure())
 							{
 								ti._functionReferences = references; // NOTE: same as for FUNCTION
+							}
+							else if (ti.isCursor())
+							{
+								ti._cursorReferences = references;
 							}
 //System.out.println("--------------- xxxxxxxxxx REPORT(type='"+ti._type+"'): references=" + references);
 
@@ -2266,7 +2295,8 @@ extends ReportEntryAbstract
 
 		public List<String> _viewReferences;     // if _type == "v",  this this will hold; table/views this view references
 		public List<String> _functionReferences; // if _type == "FN", this this will hold; table/views this function references
-
+		public List<String> _cursorReferences;   // if _type == "CU", this this will hold; table/views this cursor references
+		
 		private String    _remoteTableOptions;
 		private Map<String, String> _remoteTableOptionsMap;
 
@@ -2413,9 +2443,11 @@ extends ReportEntryAbstract
 		public boolean      isRemoteTable()         { return "f" .equals(_type); }
 		public boolean      isFunction()            { return "FN".equals(_type); }
 		public boolean      isProcedure()           { return "P" .equals(_type); }
+		public boolean      isCursor()              { return "CU".equals(_type); }
 
 		public List<String> getViewReferences()     { return _viewReferences; }
 		public List<String> getFunctionReferences() { return _functionReferences; }
+		public List<String> getCursorReferences()   { return _cursorReferences; }
 
 		public String    getRemoteServerName()      { return _remoteServerName; }
 		public String    getRemoteServerOptions()   { return _remoteServerOptions; }

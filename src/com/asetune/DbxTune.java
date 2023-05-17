@@ -1492,8 +1492,8 @@ public abstract class DbxTune
 					UserDefinedAlarmHandler.setInstance(udah);
 
 					// Initialize the alarm handler
-					AlarmHandler ah = new AlarmHandler();
-					AlarmHandler.setInstance(ah); // Set this before init() if it throws an exception and we are in GUI more, we still want to fix the error...
+					AlarmHandler ah = new AlarmHandler(AlarmHandler.DEFAULT_INSTANCE);
+					AlarmHandler.setInstance(AlarmHandler.DEFAULT_INSTANCE, ah); // Set this before init() if it throws an exception and we are in GUI more, we still want to fix the error...
 					ah.init(conf, _gui, true, true);
 					ah.start();
 					

@@ -106,6 +106,8 @@ public class PostgresUtils
 			    + "    ,relation \n"
 			    + "    ,granted \n"
 			    + "    ,max(transactionid::text) AS transactionid \n"
+			    + "    ,max(classid)       AS classid \n"
+			    + "    ,max(objid)         AS objid \n"
 			    + "    ,max(locktype)      AS locktype \n"
 			    + "    ,max(mode)          AS mode \n"
 			    + "    ,count(*)           AS lock_count \n"
@@ -141,23 +143,25 @@ public class PostgresUtils
 					long       objectid   = rs.getLong     (3);
 					boolean    granted    = rs.getBoolean  (4);
 					String     xactId     = rs.getString   (5);
-					String     lockType   = rs.getString   (6);
-					String     lockMode   = rs.getString   (7);
-					int        lockCount  = rs.getInt      (8);
-					Timestamp  waitstart  = StringUtil.hasValue(waitstart_col) ? rs.getTimestamp (9)  : null;
-					BigDecimal waitInSec  = StringUtil.hasValue(waitstart_col) ? rs.getBigDecimal(10) : null;
+					long       classId    = rs.getLong     (6);
+					long       objId      = rs.getLong     (7);
+					String     lockType   = rs.getString   (8);
+					String     lockMode   = rs.getString   (9);
+					int        lockCount  = rs.getInt      (10);
+					Timestamp  waitstart  = StringUtil.hasValue(waitstart_col) ? rs.getTimestamp (11) : null;
+					BigDecimal waitInSec  = StringUtil.hasValue(waitstart_col) ? rs.getBigDecimal(12) : null;
 
 					// If this SPID is same as we are checking for... Add it to 'lockList' otherwise add it to 'otherSpidsWaiting'
 					if (pid == PID)
 					{
-						lockList.add(          new PgLockRecord(PID, dbid, objectid, granted, xactId, lockType, lockMode, waitstart, waitInSec, lockCount) );
+						lockList.add(          new PgLockRecord(PID, dbid, objectid, granted, xactId, classId, objId, lockType, lockMode, waitstart, waitInSec, lockCount) );
 					}
 					else
 					{
 						if (otherSpidsWaiting == null)
 							otherSpidsWaiting = new ArrayList<>();
 
-						otherSpidsWaiting.add( new PgLockRecord(PID, dbid, objectid, granted, xactId, lockType, lockMode, waitstart, waitInSec, lockCount) );
+						otherSpidsWaiting.add( new PgLockRecord(PID, dbid, objectid, granted, xactId, classId, objId, lockType, lockMode, waitstart, waitInSec, lockCount) );
 					}
 				}
 			}
@@ -439,24 +443,29 @@ public class PostgresUtils
 //		public String     _lockStatusStr = "";
 		public boolean    _lockGranted   = true;
 		public String     _xactId        = null;
+		public long       _classId       = 0;
+		public long       _objId         = 0;
 		public String     _lockType      = null;
 		public String     _lockMode      = null;
 		public Timestamp  _lockWaitStart = null;
 		public BigDecimal _lockWaitInSec = null;
 		
-		public int     _lockCount     = 0;
-		public int     _exLockCount   = 0; // Exclusive Lock Count (for lockType "relation")
+		public int     _lockCount         = 0;
+		public int     _exLockCount       = 0; // Exclusive Lock Count (for lockType "relation")
+		public int     _advisoryLockCount = 0; // lockType = 'Advisory' Lock Count
 //		public boolean _isBlocking    = false; // If the record is BLOCKING Other SPID's (set at a second pass)
-		public List<Long> _blockingPids = null;
+		public List<Long> _blockingPids   = null;
 		public BigDecimal _blockedPidsMaxWaitInSec = null;
 
-		public PgLockRecord(long pid, long dbid, long objectid, boolean lockGranted, String xactId, String lockType, String lockMode, Timestamp lockWaitStart, BigDecimal lockWaitInSec, int lockCount)
+		public PgLockRecord(long pid, long dbid, long objectid, boolean lockGranted, String xactId, long classId, long objId, String lockType, String lockMode, Timestamp lockWaitStart, BigDecimal lockWaitInSec, int lockCount)
 		{
 			_pid           = pid          ;
 			_dbid          = dbid         ;
 			_objectid      = objectid     ;
 			_lockGranted   = lockGranted  ;
 			_xactId        = xactId       ;
+			_classId       = classId      ;
+			_objId         = objId        ;
 			_lockType      = lockType     ;
 			_lockMode      = lockMode     ;
 			_lockWaitStart = lockWaitStart;
@@ -468,11 +477,23 @@ public class PostgresUtils
 			//if ( !StringUtil.containsAny(_lockType, "virtualxid", "advisory") && StringUtil.containsAny(_lockMode, "Exclusive"))
 			//                                                    ^^^^^^^^^^^^
 			
-			if ( !StringUtil.containsAny(_lockType, "virtualxid") && StringUtil.containsAny(_lockMode, "Exclusive"))
+			if ( !StringUtil.containsAny(_lockType, "virtualxid", "advisory") && StringUtil.containsAny(_lockMode, "Exclusive"))
 			{
 				_exLockCount++;
 			}
-//System.out.println("--------- PgLockRecord(): pid="+pid+", dbid="+dbid+", objectid="+objectid+", lockGranted="+lockGranted+", xactId="+xactId+", lockType='"+lockType+"', lockMode='"+lockMode+"', lockWaitStart='"+lockWaitStart+"', lockWaitInSec="+lockWaitInSec+", lockCount="+lockCount+", _exLockCount="+_exLockCount);
+
+			// How many 'advisory' locks do we hold 
+			if (StringUtil.containsAny(_lockType, "advisory"))
+			{
+				_advisoryLockCount++;
+
+				// Fill in 'tableName' as a placeholder for 'classId' and 'objId', 
+				// which is first and second parameter to pg_*advisory_*lock(key1, key2) 
+				// if only one parameter is used, the "id" will be in 'objId'
+				_objectTypeStr = "ADVISORY_LOCK";
+				_tableName     = "AdvisoryLock: classId=" + _classId + ", objId=" + _objectid;
+			}
+//System.out.println("--------- PgLockRecord(): pid="+pid+", dbid="+dbid+", objectid="+objectid+", lockGranted="+lockGranted+", xactId="+xactId+", classId="+classId+", objId="+objId+", lockType='"+lockType+"', lockMode='"+lockMode+"', lockWaitStart='"+lockWaitStart+"', lockWaitInSec="+lockWaitInSec+", lockCount="+lockCount+", _exLockCount="+_exLockCount);
 		}
 	}
 }

@@ -21,6 +21,7 @@
  ******************************************************************************/
 package com.asetune.central.check;
 
+import java.io.File;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,6 +30,10 @@ import org.apache.log4j.Logger;
 
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEventDummy;
+import com.asetune.alarm.events.AlarmEvent.Category;
+import com.asetune.alarm.events.AlarmEvent.ServiceState;
+import com.asetune.alarm.events.AlarmEvent.Severity;
 import com.asetune.alarm.events.dbxc.AlarmEventDbxCollectorNoData;
 import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.central.pcs.DbxTuneSample;
@@ -47,6 +52,8 @@ implements Runnable
 //	public static final int    DEFAULT_ALARM_INTERVAL_MULTIPLIER = 40;  // multiplier -- 20 min (with 30 sec sample interval), 40 min  (with 60 sec sample interval)
 //	public static final int    DEFAULT_ALARM_INTERVAL_MULTIPLIER = 60;  // multiplier -- 30 min (with 30 sec sample interval), 1 hour  (with 60 sec sample interval)
 	public static final int    DEFAULT_ALARM_INTERVAL_MULTIPLIER = 120; // multiplier -- 1 hour (with 30 sec sample interval), 2 hours (with 60 sec sample interval)
+
+	public static final String ALARM_HANDLER_NAME = "ReceiverAlarmHandler";
 
 
 	//////////////////////////////////////////////
@@ -179,8 +186,13 @@ implements Runnable
 
 		if (_receiverInfo != null)
 		{
-			AlarmHandler alarmHandler = AlarmHandler.getInstance();
+			AlarmHandler alarmHandler = AlarmHandler.getInstance(ALARM_HANDLER_NAME);
 
+			String serviceInfo = "DbxCollector";
+			alarmHandler.addUndergoneAlarmDetection(serviceInfo); // Otherwise it wont ever be CANCELLED
+
+			sendDummyAlarmIfFileExists();
+			
 			// Loop all entries and check...
 			for (ReceiverEntry entry : _receiverInfo.values())
 			{
@@ -208,6 +220,41 @@ implements Runnable
 		}
 	}
 	
+	private void sendDummyAlarmIfFileExists()
+	{
+		File testFile = new File( System.getProperty("java.io.tmpdir") + "/ReceiverAlarmCheck.send.dummy.alarm");
+		
+		AlarmHandler alarmHandler = AlarmHandler.getInstance(ALARM_HANDLER_NAME);
+		if (alarmHandler == null)
+			return;
+
+		String serviceInfo = testFile.getName();
+		alarmHandler.addUndergoneAlarmDetection(serviceInfo); // Otherwise it wont ever be CANCELLED
+
+		if (testFile.exists())
+		{
+			String       serviceName    = "ReceiverAlarmCheck";
+		//	String       serviceInfo    = testFile.getName();
+			Object       extraInfo      = null;
+			Category     category       = Category.OTHER;
+			Severity     severity       = Severity.INFO;
+			ServiceState state          = ServiceState.UP;
+			int          timeToLive     = 0;
+			Object       data           = "";
+			String       description    = "Dummy/Test Alarm";
+			String       extendedDesc   = "";
+			int          thresholdInSec = 0;
+			
+			AlarmEventDummy ae = new AlarmEventDummy(serviceName, serviceInfo, extraInfo, category, severity, state, timeToLive, data, description, extendedDesc, thresholdInSec);
+		//	AlarmEvent ae = new AlarmEventDbxCollectorNoData(testFile.getName(), 99_999, 999);
+			
+			alarmHandler.addAlarm(ae);
+
+			_logger.info("SENDING DUMMY ALARM. File='" + testFile + "' existed, which now will be deleted.");
+			testFile.delete();
+		}
+	}
+
 	@Override
 	public void run()
 	{
@@ -225,9 +272,9 @@ implements Runnable
 			
 			// Send End Of Scan to AlarmHandler
 			// NOTE: we might want to move this IF: we send Alarms from more places, like internal checking of OS etc... (which we do not do for the moment)
-			if (AlarmHandler.hasInstance())
+			if (AlarmHandler.hasInstance(ALARM_HANDLER_NAME))
 			{
-				AlarmHandler.getInstance().endOfScan();
+				AlarmHandler.getInstance(ALARM_HANDLER_NAME).endOfScan();
 			}
 
 			try

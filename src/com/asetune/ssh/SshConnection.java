@@ -536,6 +536,9 @@ public class SshConnection
 	 * @return int
 	 * @throws IOException 
 	 */
+	// NOTE: if we want to have "multi hop forwarding" look at https://stackoverflow.com/questions/53564992/jsch-multiple-tunnels-jumphosts
+	//       meaning: make JSCH do what OpenSSH can do: ssh -L 3308:mysqlDB:3306 -J username@jumpbox username@server
+	//       or look at OpenSSH source how they implemented the -J flag
 	public int createLocalPortForwarder(SshTunnelInfo sshTunnelInfo)
 	throws Exception
 	{
@@ -545,7 +548,7 @@ public class SshConnection
 
 		if (localPort < 0 && sshTunnelInfo.isLocalPortGenerated() )
 		{
-			localPort = SshTunnelManager2.generateLocalPort();
+			localPort = SshTunnelManager.generateLocalPort();
 			
 			sshTunnelInfo.setLocalPort(localPort);
 		}

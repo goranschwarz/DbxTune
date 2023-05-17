@@ -125,34 +125,39 @@ extends SqlServerAbstract
 		String idlePct = "idlePct";
 
 		// If the SQL Server is hosted on Windows... remove chart-line: "% Idle Time" 
-		String dbmsVerStr = getReportingInstance().getDbmsVersionStr();
-		if (StringUtil.hasValue(dbmsVerStr))
+		if (isWindows())
 		{
-			if (dbmsVerStr.contains("Windows"))
-			{
-				idlePct = "% Idle Time";
-			}
+			idlePct = "% Idle Time";
 		}
+//		String dbmsVerStr = getReportingInstance().getDbmsVersionStr();
+//		if (StringUtil.hasValue(dbmsVerStr))
+//		{
+//			if (dbmsVerStr.contains("Windows"))
+//			{
+//				idlePct = "% Idle Time";
+//			}
+//		}
 		
+		String schema = getReportingInstance().getDbmsSchemaName();
 
 		int maxValue = 100;
-		_CmSummary_aaCpuGraph            = createTsLineChart(conn, "CmSummary",         "aaCpuGraph",       maxValue, false, null,    "CPU Summary for all Schedulers (using @@cpu_busy, @@cpu_io) (Summary)");
-		_CmOsMpstat_MpSum                = createTsLineChart(conn, "CmOsMpstat",        "MpSum",            maxValue, false, idlePct, "OS: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
-		_CmSummary_aaReadWriteGraph      = createTsLineChart(conn, "CmSummary",         "aaReadWriteGraph", -1,       false, null,    "Disk read/write per second, using @@total_read, @@total_write (Summary)");
-//		_CmPerfCounters_OsCpuEffective   = createTsLineChart(conn, "CmPerfCounters",    "OsCpuEffective",   maxValue, false, null,    "CPU Usage Effective in Percent (Perf Counters)");
-		_CmPerfCounters_CacheReads       = createTsLineChart(conn, "CmPerfCounters",    "CacheReads",       -1,       false, null,    "Buffer Cache Reads per Sec (Server->Perf Counters)");
-		_CmPerfCounters_CachePhyReads    = createTsLineChart(conn, "CmPerfCounters",    "CachePhyReads",    -1,       false, null,    "Buffer Cache Physical Reads per Sec (Server->Perf Counters)");
-		_CmPerfCounters_CacheWrites      = createTsLineChart(conn, "CmPerfCounters",    "CacheWrites",      -1,       false, null,    "Buffer Cache Writes Sec (Server->Perf Counters)");
-		_CmPerfCounters_CacheHitRate     = createTsLineChart(conn, "CmPerfCounters",    "CacheHitRate",     -1,       false, null,    "Buffer Cache Hit Rate, in Percent (Server->Perf Counters)");
-		_CmMemoryClerks_MemoryClerkBp    = createTsLineChart(conn, "CmMemoryClerks",    "MemoryClerkBp",    -1,       false, null,    "Buffer Pool Memory Clerk, in MB (Server->Memory)");
-		_CmMemoryClerks_MemoryClerksTop  = createTsLineChart(conn, "CmMemoryClerks",    "MemoryClerksTop",  -1,       true , null,    "Top ## Memory Clerks, in MB (Server->Memory)");
-		_CmMemoryClerks_TTMemVsAllClerks = createTsLineChart(conn, "CmMemoryClerks",    "TTMemVsAllClerks", -1,       false, null,    "All Memory Clerks vs Target & Total Memory, in MB (Server->Memory)");
-		_CmMemoryGrantsSum_GrantedMemSum = createTsLineChart(conn, "CmMemoryGrantsSum", "GrantedMemSum",    -1,       false, null,    "Memory Grant Summary in MB (Server->Memory Grants Sum)");
-		_CmSummary_OsMemoryFreeMb        = createTsLineChart(conn, "CmSummary",         "OsMemoryFreeMb",   -1,       false, null,    "OS Free/Available Memory in MB (Summary)");
-		_CmPerfCounters_SqlBatch         = createTsLineChart(conn, "CmPerfCounters",    "SqlBatch",         -1,       false, null,    "SQL Batches Received per Sec (Server->Perf Counters)");
-		_CmPerfCounters_TransWriteSec    = createTsLineChart(conn, "CmPerfCounters",    "TransWriteSec",    -1,       true , null,    "Write Transactions per Sec (Server->Perf Counters)");
-		_CmSchedulers_RunQLengthSum      = createTsLineChart(conn, "CmSchedulers",      "RunQLengthSum",    -1,       false, null,    "Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)");
-		_CmSchedulers_RunQLengthEng      = createTsLineChart(conn, "CmSchedulers",      "RunQLengthEng",    -1,       false, null,    "Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)");
+		_CmSummary_aaCpuGraph            = createTsLineChart(conn, schema, "CmSummary",         "aaCpuGraph",       maxValue, false, null,    "CPU Summary for all Schedulers (using @@cpu_busy, @@cpu_io) (Summary)");
+		_CmOsMpstat_MpSum                = createTsLineChart(conn, schema, "CmOsMpstat",        "MpSum",            maxValue, false, idlePct, "OS: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
+		_CmSummary_aaReadWriteGraph      = createTsLineChart(conn, schema, "CmSummary",         "aaReadWriteGraph", -1,       false, null,    "Disk read/write per second, using @@total_read, @@total_write (Summary)");
+//		_CmPerfCounters_OsCpuEffective   = createTsLineChart(conn, schema, "CmPerfCounters",    "OsCpuEffective",   maxValue, false, null,    "CPU Usage Effective in Percent (Perf Counters)");
+		_CmPerfCounters_CacheReads       = createTsLineChart(conn, schema, "CmPerfCounters",    "CacheReads",       -1,       false, null,    "Buffer Cache Reads per Sec (Server->Perf Counters)");
+		_CmPerfCounters_CachePhyReads    = createTsLineChart(conn, schema, "CmPerfCounters",    "CachePhyReads",    -1,       false, null,    "Buffer Cache Physical Reads per Sec (Server->Perf Counters)");
+		_CmPerfCounters_CacheWrites      = createTsLineChart(conn, schema, "CmPerfCounters",    "CacheWrites",      -1,       false, null,    "Buffer Cache Writes Sec (Server->Perf Counters)");
+		_CmPerfCounters_CacheHitRate     = createTsLineChart(conn, schema, "CmPerfCounters",    "CacheHitRate",     -1,       false, null,    "Buffer Cache Hit Rate, in Percent (Server->Perf Counters)");
+		_CmMemoryClerks_MemoryClerkBp    = createTsLineChart(conn, schema, "CmMemoryClerks",    "MemoryClerkBp",    -1,       false, null,    "Buffer Pool Memory Clerk, in MB (Server->Memory)");
+		_CmMemoryClerks_MemoryClerksTop  = createTsLineChart(conn, schema, "CmMemoryClerks",    "MemoryClerksTop",  -1,       true , null,    "Top ## Memory Clerks, in MB (Server->Memory)");
+		_CmMemoryClerks_TTMemVsAllClerks = createTsLineChart(conn, schema, "CmMemoryClerks",    "TTMemVsAllClerks", -1,       false, null,    "All Memory Clerks vs Target & Total Memory, in MB (Server->Memory)");
+		_CmMemoryGrantsSum_GrantedMemSum = createTsLineChart(conn, schema, "CmMemoryGrantsSum", "GrantedMemSum",    -1,       false, null,    "Memory Grant Summary in MB (Server->Memory Grants Sum)");
+		_CmSummary_OsMemoryFreeMb        = createTsLineChart(conn, schema, "CmSummary",         "OsMemoryFreeMb",   -1,       false, null,    "OS Free/Available Memory in MB (Summary)");
+		_CmPerfCounters_SqlBatch         = createTsLineChart(conn, schema, "CmPerfCounters",    "SqlBatch",         -1,       false, null,    "SQL Batches Received per Sec (Server->Perf Counters)");
+		_CmPerfCounters_TransWriteSec    = createTsLineChart(conn, schema, "CmPerfCounters",    "TransWriteSec",    -1,       true , null,    "Write Transactions per Sec (Server->Perf Counters)");
+		_CmSchedulers_RunQLengthSum      = createTsLineChart(conn, schema, "CmSchedulers",      "RunQLengthSum",    -1,       false, null,    "Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)");
+		_CmSchedulers_RunQLengthEng      = createTsLineChart(conn, schema, "CmSchedulers",      "RunQLengthEng",    -1,       false, null,    "Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)");
 	}
 
 	private IReportChart _CmSummary_aaCpuGraph;

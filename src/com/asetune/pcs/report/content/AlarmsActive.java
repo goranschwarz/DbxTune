@@ -80,9 +80,10 @@ extends ReportEntryAbstract
 			{
 				// Make output more readable, in a 2 column table
 				// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
-				Map<String, String> colNameValueTagMap = new HashMap<>();
-				colNameValueTagMap.put("extendedDescription",     "xmp");
-				colNameValueTagMap.put("lastExtendedDescription", "xmp");
+				Map<String, String> colNameValueTagMap = null;
+//				Map<String, String> colNameValueTagMap = new HashMap<>();
+//				colNameValueTagMap.put("extendedDescription",     "xmp");
+//				colNameValueTagMap.put("lastExtendedDescription", "xmp");
 
 				String  divId       = "alarmActiveDetails";
 				boolean showAtStart = false;
@@ -110,13 +111,18 @@ extends ReportEntryAbstract
 	@Override
 	public boolean hasIssueToReport()
 	{
+		if (_fullRstm == null)
+			return false;
+
 		return _fullRstm.getRowCount() > 0;
 	}
 
 	@Override
 	public String[] getMandatoryTables()
 	{
-		return new String[] { PersistWriterBase.getTableName(null, PersistWriterBase.ALARM_ACTIVE, null, false) };
+		String schemaName = getReportingInstance().getDbmsSchemaName();
+
+		return new String[] { PersistWriterBase.getTableName(null, schemaName, PersistWriterBase.ALARM_ACTIVE, null, false) };
 	}
 
 	@Override
@@ -153,12 +159,14 @@ extends ReportEntryAbstract
 
 	private void getAlarmsActiveShort(DbxConnection conn)
 	{
+		String schemaName   = getReportingInstance().getDbmsSchemaName();
+//		String schemaPrefix = getReportingInstance().getDbmsSchemaNameSqlPrefix();
 		String sql;
 
 		// Get Alarms
-		sql = "select [createTime], [alarmClass], [serviceInfo], [extraInfo], [severity], [state], [description] \n" +
-		      "from [" + PersistWriterBase.getTableName(conn, PersistWriterBase.ALARM_ACTIVE, null, false) + "] \n" +
-		      "order by [createTime]";
+		sql = "SELECT [createTime], [alarmClass], [serviceInfo], [extraInfo], [severity], [state], [description] \n" +
+		      "FROM " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.ALARM_ACTIVE, null, true) + " \n" +
+		      "ORDER BY [createTime]";
 
 		_shortRstm = executeQuery(conn, sql, true, "Active Alarms Short");
 
@@ -168,10 +176,12 @@ extends ReportEntryAbstract
 
 	private void getAlarmsActiveFull(DbxConnection conn)
 	{
+		String schemaName   = getReportingInstance().getDbmsSchemaName();
+//		String schemaPrefix = getReportingInstance().getDbmsSchemaNameSqlPrefix();
 		String sql;
 
 		// Get Alarms
-		sql = "select \n" +
+		sql = "SELECT \n" +
 		      "     [createTime],             \n" +
 		      "     [alarmClass],             \n" +
 		      "     [serviceType],            \n" +
@@ -191,11 +201,11 @@ extends ReportEntryAbstract
 		      "     [lastDescription],        \n" +
 		      "     [extendedDescription],    \n" +
 		      "     [lastExtendedDescription] \n" +
-		      "from [" + PersistWriterBase.getTableName(conn, PersistWriterBase.ALARM_ACTIVE, null, false) + "]\n" +
-		      "where 1 = 1 \n" +
+		      "FROM " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.ALARM_ACTIVE, null, true) + " \n" +
+		      "WHERE 1 = 1 \n" +
 		      getReportPeriodSqlWhere("createTime") +
-		      "order by [createTime]";
-		
+		      "ORDER BY [createTime]";
+
 		_fullRstm = executeQuery(conn, sql, true, "Active Alarms Full");
 
 		// Highlight sort column

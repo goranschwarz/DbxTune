@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
@@ -43,6 +44,7 @@ import org.netbeans.spi.wizard.WizardPage;
 import org.netbeans.spi.wizard.WizardPanelNavResult;
 
 import com.asetune.gui.swing.MultiLineLabel;
+import com.asetune.pcs.PersistWriterToDbxCentral;
 import com.asetune.pcs.PersistWriterToHttpJson;
 import com.asetune.pcs.PersistWriterToInfluxDb;
 import com.asetune.utils.StringUtil;
@@ -68,6 +70,10 @@ implements ActionListener
 	                                                         + "Then you can view Trend Graphs from any html Browser."
 	                                                         + "</html>");
 	private JCheckBox  _dbxCentral_chk      = new JCheckBox("<html>Send Counters to Dbx Central.</html>", false);
+	private JLabel     _dbxCentralType_lbl  = new JLabel("Writer Type");
+	private JComboBox<String> _dbxCentralType_cbx = new JComboBox<>( new String[] {PersistWriterToDbxCentral.WriterType.HTTP.toString(), PersistWriterToDbxCentral.WriterType.FILE.toString()} );
+	private JLabel     _dbxCentralDir_lbl   = new JLabel("To Directory");
+	private JTextField _dbxCentralDir_txt   = new JTextField(PersistWriterToDbxCentral.DEFAULT_writerTypeFileDir);
 	private JLabel     _dbxCentralHost_lbl  = new JLabel("Hostname");
 	private JTextField _dbxCentralHost_txt  = new JTextField("localhost");
 	private JLabel     _dbxCentralPort_lbl  = new JLabel("Port");
@@ -124,19 +130,58 @@ implements ActionListener
 		JPanel panel = SwingUtils.createPanel("Dbx Central", true, new MigLayout());
 
 		_dbxCentral_chk     .setToolTipText("Select if you want to send data to DbxCentral");
+//		_dbxCentralType_cbx .setToolTipText("You can send the counters using HTTP/REST or just write the it as a FILE (can be used if DbxCentral and the Collector is on *same* hostname)");
+		_dbxCentralType_cbx .setToolTipText("<html>"
+				+ "You can send/write the counters using the followinf methods"
+				+ "<ul>"
+				+ "  <li><b>HTTP</b> - Send via a HTTP call the JSON string to DbxCentral, This can be used if DbxCentral is NOT located on the same host. (This is the DEFAULT)</li>"
+				+ "  <li><b>FILE</b> - Write the JSON file to this directory, which will be read by DbxCentral. This can be used if the collector and DbxCentral is located on the SAME host (or a file share).<br>"
+				+ "                    &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <b>Note</b>: <code>${tmpDir}</code> will be replaced with the real tempdir for that OS/platform.</li>"
+				+ "</ul>"
+				+ "</html>");
+		_dbxCentralDir_txt  .setToolTipText("<html>If TYPE is 'FILE', then you need to say to what directory the files will be written.<br><b>Note</b>: <code>${tmpDir}</code> will be replaced with the real tempdir for that OS/platform.</html>");
 		_dbxCentralHost_txt .setToolTipText("Hostname where the DbxCentral server is running");
 		_dbxCentralPort_txt .setToolTipText("Port number where the DbxCentral server is running");
 		
 		panel.add(_dbxCentral_lbl,     "span, wrap 20");
 
 		panel.add(_dbxCentral_chk,     "skip 1, wrap");
+		
+		panel.add(_dbxCentralType_lbl, "");
+		panel.add(_dbxCentralType_cbx, "wrap");
 
+		panel.add(_dbxCentralDir_lbl,  "");
+		panel.add(_dbxCentralDir_txt,  "growx, pushx, wrap");
+		
 		panel.add(_dbxCentralHost_lbl, "");
 		panel.add(_dbxCentralHost_txt, "growx, pushx, wrap");
 
 		panel.add(_dbxCentralPort_lbl, "");
 		panel.add(_dbxCentralPort_txt, "growx, pushx, wrap");
 
+		_dbxCentralType_cbx.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Object selItem = _dbxCentralType_cbx.getSelectedItem();
+				if ("HTTP".equals(selItem))
+				{
+					_dbxCentralDir_txt .setEnabled(false);
+					_dbxCentralHost_txt.setEnabled(true);
+					_dbxCentralPort_txt.setEnabled(true);
+				}
+				else
+				{
+					_dbxCentralDir_txt .setEnabled(true);
+					_dbxCentralHost_txt.setEnabled(false);
+					_dbxCentralPort_txt.setEnabled(false);
+				}
+			}
+		});
+		// setting the "default" type will trigger the above ActionEvent so it enables/disables the correct fields.
+		_dbxCentralType_cbx.setSelectedItem(PersistWriterToDbxCentral.WriterType.HTTP.toString());
+		
 		return panel;
 	}
 
@@ -240,17 +285,39 @@ implements ActionListener
 			// DbxCentral
 			if (_dbxCentral_chk.isSelected())
 			{
+//				// Add writer class
+//				newList.add(PersistWriterToHttpJson.class.getName());
+//
+//				String urlKey = PersistWriterToHttpJson.replaceKey(PersistWriterToHttpJson.PROPKEY_url, "PersistWriterToHttpJson", ""); // className, key
+//				String urlVal = PersistWriterToHttpJson.DEFAULT_url;
+//
+//				urlVal = urlVal.replace("localhost",       _dbxCentralHost_txt.getText().trim());
+//				urlVal = urlVal.replace(":8080",     ":" + _dbxCentralPort_txt.getText().trim());
+//
+//				// PersistWriterToHttpJson.url = http://localhost:8080/api/pcs/receiver
+//				putWizardData(urlKey, urlVal);
+				
 				// Add writer class
-				newList.add(PersistWriterToHttpJson.class.getName());
+				newList.add(PersistWriterToDbxCentral.class.getName());
 
-				String urlKey = PersistWriterToHttpJson.replaceKey(PersistWriterToHttpJson.PROPKEY_url);
-				String urlVal = PersistWriterToHttpJson.DEFAULT_url;
+				Object selItem = _dbxCentralType_cbx.getSelectedItem();
+				if ("HTTP".equals(selItem))
+				{
+					String urlKey = PersistWriterToHttpJson.replaceKey(PersistWriterToHttpJson.PROPKEY_url, "PersistWriterToDbxCentral", ""); // className, key
+					String urlVal = PersistWriterToHttpJson.DEFAULT_url;
 
-				urlVal = urlVal.replace("localhost",       _dbxCentralHost_txt.getText().trim());
-				urlVal = urlVal.replace(":8080",     ":" + _dbxCentralPort_txt.getText().trim());
+					urlVal = urlVal.replace("localhost",       _dbxCentralHost_txt.getText().trim());
+					urlVal = urlVal.replace(":8080",     ":" + _dbxCentralPort_txt.getText().trim());
 
-				// PersistWriterToHttpJson.url = http://localhost:8080/api/pcs/receiver
-				putWizardData(urlKey, urlVal);
+					// PersistWriterToDbxCentral.url = http://localhost:8080/api/pcs/receiver
+					putWizardData(PersistWriterToDbxCentral.PROPKEY_writerType,        selItem.toString().toLowerCase());
+					putWizardData(urlKey, urlVal);
+				}
+				else
+				{
+					putWizardData(PersistWriterToDbxCentral.PROPKEY_writerType,        selItem.toString().toLowerCase());
+					putWizardData(PersistWriterToDbxCentral.PROPKEY_writerTypeFileDir, _dbxCentralDir_txt.getText().trim());
+				}
 			}
 
 			// InfluxDB

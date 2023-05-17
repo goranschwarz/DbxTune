@@ -277,7 +277,7 @@ extends CmToolTipSupplierDefault
 							Map<String, String> colNameValueTagMap = new HashMap<>();
 							colNameValueTagMap.put("LastKnownSqlText", "xmp");
 
-							return rstm.toHtmlTablesVerticalString(null, true, true, colNameValueTagMap);
+							return rstm.toHtmlTablesVerticalString(null, true, true, colNameValueTagMap, null);
 						}
 						else if (rstm.getRowCount() > 1)
 						{

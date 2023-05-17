@@ -49,6 +49,7 @@ import com.asetune.pcs.report.content.ase.AseTopSlowProcCalls;
 import com.asetune.pcs.report.content.ase.AseTopSlowSqlText;
 import com.asetune.pcs.report.content.ase.AseUnusedIndexes;
 import com.asetune.pcs.report.content.ase.AseWaitStats;
+import com.asetune.pcs.report.content.os.CmOsNwInfoOverview;
 import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
 import com.asetune.pcs.report.content.os.OsIoStatOverview;
 import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
@@ -103,6 +104,9 @@ extends DailySummaryReportDefault
 		addReportEntry( new OsIoStatSlowIo(this)            );
 		addReportEntry( new AseCmDeviceIo(this)             );
 		addReportEntry( new AseSlowCmDeviceIo(this)         );
+
+		// Network Activity
+		addReportEntry( new CmOsNwInfoOverview(this)        );
 
 		// Database Size
 		addReportEntry( new AseDbSize(this)                 );

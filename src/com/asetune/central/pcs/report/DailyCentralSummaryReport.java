@@ -21,11 +21,15 @@
  ******************************************************************************/
 package com.asetune.central.pcs.report;
 
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+
 import org.apache.log4j.Logger;
 
 import com.asetune.pcs.report.DailySummaryReportFactory;
 import com.asetune.pcs.report.IDailySummaryReport;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.Configuration;
 
 public class DailyCentralSummaryReport
 {
@@ -40,7 +44,7 @@ public class DailyCentralSummaryReport
 	//---------------------------------------------
 	// BEGIN: Daily Summary Report
 	//---------------------------------------------
-	private void createDailySummaryReport(DbxConnection conn, String serverName)
+	public static void createDailySummaryReport(DbxConnection conn, String serverName, String schemaName)
 	{
 		if ( ! DailySummaryReportFactory.isCreateReportEnabled() )
 		{
@@ -48,12 +52,17 @@ public class DailyCentralSummaryReport
 			return;
 		}
 
-		if ( ! DailySummaryReportFactory.isCreateReportEnabledForServer(serverName) )
-		{
-			_logger.info("Daily Summary Report is NOT Enabled, for serverName '"+serverName+"'. Check property '"+DailySummaryReportFactory.PROPKEY_filter_keep_servername+"' or '"+DailySummaryReportFactory.PROPKEY_filter_skip_servername+"'.");
-			return;
-		}
+//		if ( ! DailySummaryReportFactory.isCreateReportEnabledForServer(serverName) )
+//		{
+//			_logger.info("Daily Summary Report is NOT Enabled, for serverName '"+serverName+"'. Check property '"+DailySummaryReportFactory.PROPKEY_filter_keep_servername+"' or '"+DailySummaryReportFactory.PROPKEY_filter_skip_servername+"'.");
+//			return;
+//		}
 
+		// For now HardCode the classes we want to use.
+//		System.getProperties().setProperty(DailySummaryReportFactory.PROPKEY_reportClassname, "com.asetune.pcs.report.DailySummaryReport" + dbxCollector);
+		System.getProperties().setProperty(DailySummaryReportFactory.PROPKEY_reportClassname, "com.asetune.central.pcs.report.DailySummaryReportDbxCentral");
+		System.getProperties().setProperty(DailySummaryReportFactory.PROPKEY_senderClassname, "com.asetune.pcs.report.senders.ReportSenderToMail");
+		
 		IDailySummaryReport report = DailySummaryReportFactory.createDailySummaryReport();
 		if (report == null)
 		{
@@ -61,8 +70,28 @@ public class DailyCentralSummaryReport
 			return;
 		}
 
+		// Check connection
+		if (conn == null)
+		{
+			_logger.info("Daily Summary Report NO Connection was passed, conn=" + conn);
+			return;
+		}
+		if ( ! conn.isConnectionOk() )
+		{
+			_logger.info("Daily Summary Report NO VALID Connection was passed (not connected), conn=" + conn);
+			return;
+		}
+
+		// Set DBMS connection and schema name the "Local Metrics" tables are stored in
 		report.setConnection(conn);
+		report.setDbmsSchemaName(schemaName);
+
+		// Set NAME on the server we are reporting at
 		report.setServerName(serverName);
+		
+		// Set Reporting Period
+		setReportingPeriod(report);
+		
 		try
 		{
 			// Initialize the Report, which also initialized the ReportSender
@@ -86,4 +115,28 @@ public class DailyCentralSummaryReport
 	//---------------------------------------------
 	// END: Daily Summary Report
 	//---------------------------------------------
+
+	private static void setReportingPeriod(IDailySummaryReport report)
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		boolean setReportingPeriod = conf.getBooleanProperty("dsr.reporting.period.set", true);
+		if (setReportingPeriod)
+		{
+			// (Nearly 2 days) -->> 1 days 23 hours and 59 seconds
+			// (Nearly 1 days) -->> 0 days 23 hours and 59 seconds
+			int days            = conf.getIntProperty("dsr.reporting.period.days"        , 0); 
+			int beginTimeHour   = conf.getIntProperty("dsr.reporting.period.start.hour"  , 0);
+			int beginTimeMinute = conf.getIntProperty("dsr.reporting.period.start.minute", 0);
+			int endTimeHour     = conf.getIntProperty("dsr.reporting.period.end.hour"    , 23);
+			int endTimeMinute   = conf.getIntProperty("dsr.reporting.period.end.minute"  , 59);
+
+			LocalDateTime now = LocalDateTime.now();
+			
+			Timestamp beginTs = Timestamp.valueOf(now.withHour(beginTimeHour).withMinute(beginTimeMinute).withSecond(0).withNano(0).minusDays(days));
+			Timestamp endTs   = Timestamp.valueOf(now.withHour(endTimeHour).withMinute(endTimeMinute).withSecond(59).withNano(999_999_999));
+
+			report.setReportPeriodBeginTime(beginTs);
+			report.setReportPeriodEndTime(endTs);
+		}
+	}
 }

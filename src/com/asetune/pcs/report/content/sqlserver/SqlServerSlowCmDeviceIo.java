@@ -158,12 +158,14 @@ extends SqlServerAbstract
 			setSectionDescription(_shortRstm);
 
 			
+			String schema = getReportingInstance().getDbmsSchemaName();
+
 			int maxValue = 10;
-			_CmDeviceIo_IoRW              = createTsLineChart(conn, "CmDeviceIo", "IoRW",      -1,       true, null, "Number of Disk Operations (Read+Write), per Second and Device (Disk->Devices)");
-			_CmDeviceIo_SvcTimeRW_noLimit = createTsLineChart(conn, "CmDeviceIo", "SvcTimeRW", -1,       true, null, "Device IO Service Time (Read+Write) in Milliseconds, per Device (Disk->Devices) [with NO max value]");
-			_CmDeviceIo_SvcTimeRW         = createTsLineChart(conn, "CmDeviceIo", "SvcTimeRW", maxValue, true, null, "Device IO Service Time (Read+Write) in Milliseconds, per Device (Disk->Devices) [with max value=" + maxValue + "]");
-			_CmDeviceIo_SvcTimeR          = createTsLineChart(conn, "CmDeviceIo", "SvcTimeR",  maxValue, true, null, "Device IO Service Time (Read) in Milliseconds, per Device (Disk->Devices) [with max value=" + maxValue + "]");
-			_CmDeviceIo_SvcTimeW          = createTsLineChart(conn, "CmDeviceIo", "SvcTimeW",  maxValue, true, null, "Device IO Service Time (Write) in Milliseconds, per Device (Disk->Devices) [with max value=" + maxValue + "]");
+			_CmDeviceIo_IoRW              = createTsLineChart(conn, schema, "CmDeviceIo", "IoRW",      -1,       true, null, "Number of Disk Operations (Read+Write), per Second and Device (Disk->Devices)");
+			_CmDeviceIo_SvcTimeRW_noLimit = createTsLineChart(conn, schema, "CmDeviceIo", "SvcTimeRW", -1,       true, null, "Device IO Service Time (Read+Write) in Milliseconds, per Device (Disk->Devices) [with NO max value]");
+			_CmDeviceIo_SvcTimeRW         = createTsLineChart(conn, schema, "CmDeviceIo", "SvcTimeRW", maxValue, true, null, "Device IO Service Time (Read+Write) in Milliseconds, per Device (Disk->Devices) [with max value=" + maxValue + "]");
+			_CmDeviceIo_SvcTimeR          = createTsLineChart(conn, schema, "CmDeviceIo", "SvcTimeR",  maxValue, true, null, "Device IO Service Time (Read) in Milliseconds, per Device (Disk->Devices) [with max value=" + maxValue + "]");
+			_CmDeviceIo_SvcTimeW          = createTsLineChart(conn, schema, "CmDeviceIo", "SvcTimeW",  maxValue, true, null, "Device IO Service Time (Write) in Milliseconds, per Device (Disk->Devices) [with max value=" + maxValue + "]");
 		}
 	}
 	private IReportChart _CmDeviceIo_IoRW;

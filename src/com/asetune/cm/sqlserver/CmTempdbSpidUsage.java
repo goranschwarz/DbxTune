@@ -340,6 +340,17 @@ extends CountersModel
 			hasCol__user_objects_deferred_dealloc_page_count = true;
 //			user_objects_deferred_dealloc_page_count = "user_objects_deferred_dealloc_page_count";
 		}
+		
+
+		// Is 'context_info_str' enabled (if it causes any problem, it can be disabled)
+		String contextInfoStr = "/*    ,replace(cast(es.context_info as varchar(128)),char(0),'') AS [context_info_str] -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
+		if (SqlServerCmUtils.isContextInfoStrEnabled())
+		{
+			// Make the binary 'context_info' into a String
+			contextInfoStr = "    ,replace(cast(es.context_info as varchar(128)),char(0),'') AS [context_info_str] /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
+		}
+
+		
 //
 //		// TotalUsageMb, TotalUsageMb_abs
 //		String TotalUsageMb     = "    ,TotalUsageMb         = isnull(s_user_objects_MB,0) + isnull(t_user_objects_MB,0) \n";
@@ -441,6 +452,7 @@ extends CountersModel
 //			    + "order by 3 desc \n"
 //			    + "";
 
+		
 		// TODO: Possibly use the below SQL (core of this was found at: https://www.haio.ir/app/uploads/2021/12/SQL-Server-Advanced-Troubleshooting-and-Performance-Tuning-Seventh-Early-Release-by-Dmitri-Korotkevitch-z-lib.org_.pdf
 		String sql = ""
 			    + ";WITH SpaceUsagePages AS ( \n"
@@ -509,6 +521,7 @@ extends CountersModel
 			    + "    ,es.host_name \n"
 			    + "    ,es.host_process_id \n"
 			    + "    ,es.program_name \n"
+			    +      contextInfoStr
 				+ "    ,er.command                                              AS [request_command] \n"
 			    + "    ,er.status                                               AS [request_status] \n"
 			    + "    ,es.status                                               AS [session_status] \n"

@@ -25,20 +25,23 @@ import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import javax.servlet.ServletException;
+import java.util.Map.Entry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEvent.Category;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.NumberUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 import com.fasterxml.jackson.core.JsonFactory;
@@ -651,7 +654,7 @@ public class DbxTuneSample
 		public String    getReRaiseExtendedDescription()  { return _reRaiseExtendedDescription; }
 
 		public void setAlarmClass                 (String    alarmClass)                  { _alarmClass                  = alarmClass; }
-		public void setAlarmClassAbriviated       (String    alarmClassAbriviated)        { _alarmClassAbriviated        = alarmClassAbriviated; }
+		public void setAlarmClassAbriviated       (String    alarmClassAbriviated)        { _alarmClassAbriviated        = alarmClassAbriviated; if (alarmClassAbriviated != null && alarmClassAbriviated.startsWith("AlarmEvent")) _alarmClassAbriviated = alarmClassAbriviated.substring("AlarmEvent".length()); }
 		public void setServiceType                (String    serviceType)                 { _serviceType                 = serviceType; }
 		public void setServiceName                (String    serviceName)                 { _serviceName                 = serviceName; }
 		public void setServiceInfo                (String    serviceInfo)                 { _serviceInfo                 = serviceInfo; }
@@ -676,6 +679,11 @@ public class DbxTuneSample
 		public void setReRaiseData                (String    reRaiseData)                 { _reRaiseData                 = reRaiseData; }
 		public void setReRaiseDescription         (String    reRaiseDescription)          { _reRaiseDescription          = reRaiseDescription; }
 		public void setReRaiseExtendedDescription (String    reRaiseExtendedDescription)  { _reRaiseExtendedDescription  = reRaiseExtendedDescription; }
+
+		public boolean isActive()
+		{
+			return getCancelTime() == null;
+		}
 		
 		@Override
 		public String toString()
@@ -716,7 +724,6 @@ public class DbxTuneSample
 			
 			return sb.toString();
 		}
-		
 	}
 
 	public static class AlarmEntryWrapper
@@ -735,21 +742,35 @@ public class DbxTuneSample
 	}
 	
 	
-	
+	public static class MissingFieldException
+	extends Exception
+	{
+		private static final long serialVersionUID = 1L;
+
+		public MissingFieldException(String msg)
+		{
+			super(msg);
+		}
+
+		public MissingFieldException(String msg, Exception ex)
+		{
+			super(msg, ex);
+		}
+	}
 	
 	/**
 	 * Get Node from a node 
 	 * @param node               The node
 	 * @param fieldName          The fields name
 	 * @return                   A String
-	 * @throws ServletException  When the field name is not found
+	 * @throws MissingFieldException  When the field name is not found
 	 */
 	private static JsonNode getNode(JsonNode node, String fieldName)
-	throws ServletException
+	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
-			throw new ServletException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
+			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
 		return n;
 	}
 
@@ -765,6 +786,26 @@ public class DbxTuneSample
 		JsonNode n = node.get(fieldName);
 		if (n == null)
 			return defaultValue;
+//		if (n.isNull())
+//			return null;
+		if (n.isNull())
+			return defaultValue;
+		return n.asText();
+	}
+
+	/**
+	 * Get String from a node 
+	 * @param node               The node
+	 * @param fieldName          The fields name
+	 * @return                   A String
+	 * @throws MissingFieldException  When the field name is not found
+	 */
+	private static String getString(JsonNode node, String fieldName)
+	throws MissingFieldException
+	{
+		JsonNode n = node.get(fieldName);
+		if (n == null)
+			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
 		if (n.isNull())
 			return null;
 		return n.asText();
@@ -775,17 +816,45 @@ public class DbxTuneSample
 	 * @param node               The node
 	 * @param fieldName          The fields name
 	 * @return                   A String
-	 * @throws ServletException  When the field name is not found
+	 * @throws MissingFieldException  When the field name is not found
 	 */
-	private static String getString(JsonNode node, String fieldName)
-	throws ServletException
+	private static String getStringAny(JsonNode node, String... fieldNames)
+	throws MissingFieldException
 	{
-		JsonNode n = node.get(fieldName);
-		if (n == null)
-			throw new ServletException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
-		if (n.isNull())
-			return null;
-		return n.asText();
+		for (String entry : fieldNames)
+		{
+			if ( ! node.has(entry) )
+				continue;
+
+			JsonNode n = node.get(entry);
+			if (n.isNull())
+				return null;
+			return n.asText();
+		}
+		throw new MissingFieldException("Expecting any fields '" + StringUtil.toCommaStr(fieldNames) + "' but none of them was found, this can't be a valid DbxTune PCS Content.");
+	}
+
+	/**
+	 * Get String from a node 
+	 * @param node               The node
+	 * @param fieldName          The fields name
+	 * @return                   A String
+	 * @throws MissingFieldException  When the field name is not found
+	 */
+	private static String getStringAny(String defaultVal, JsonNode node, String... fieldNames)
+//	throws MissingFieldException
+	{
+		for (String entry : fieldNames)
+		{
+			if ( ! node.has(entry) )
+				continue;
+
+			JsonNode n = node.get(entry);
+			if (n.isNull())
+				return null;
+			return n.asText();
+		}
+		return defaultVal;
 	}
 
 	/**
@@ -793,15 +862,15 @@ public class DbxTuneSample
 	 * @param node               The node
 	 * @param fieldName          The fields name
 	 * @return                   A List of Strings
-	 * @throws ServletException  When the field name is not found
+	 * @throws MissingFieldException  When the field name is not found
 	 */
 	private static List<String> getStringList(JsonNode node, String fieldName)
-	throws ServletException
+	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
 			return null;
-//			throw new ServletException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
+//			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
 		if (n.isNull())
 			return null;
 		
@@ -824,7 +893,7 @@ public class DbxTuneSample
 	 * @return                   an int
 	 */
 	private static int getInt(JsonNode node, String fieldName, int defaultValue)
-	throws ServletException
+	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
@@ -837,14 +906,14 @@ public class DbxTuneSample
 	 * @param node               The node
 	 * @param fieldName          The fields name
 	 * @return                   an int
-	 * @throws ServletException  When the field name is not found
+	 * @throws MissingFieldException  When the field name is not found
 	 */
 	private static int getInt(JsonNode node, String fieldName)
-	throws ServletException
+	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
-			throw new ServletException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
+			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
 		return n.asInt();
 	}
 
@@ -856,7 +925,7 @@ public class DbxTuneSample
 	 * @return                   an boolean value
 	 */
 	private static boolean getBoolean(JsonNode node, String fieldName, boolean defaultValue)
-	throws ServletException
+	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
@@ -868,15 +937,15 @@ public class DbxTuneSample
 	 * Get boolean value from a node
 	 * @param node               The node
 	 * @param fieldName          The fields name
-	 * @throws ServletException  When the field name is not found
+	 * @throws MissingFieldException  When the field name is not found
 	 * @return                   an boolean value
 	 */
 	private static boolean getBoolean(JsonNode node, String fieldName)
-	throws ServletException
+	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
-			throw new ServletException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
+			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
 		return n.asBoolean();
 	}
 
@@ -888,7 +957,7 @@ public class DbxTuneSample
 	 * @return                   an double value
 	 */
 	private static double getDouble(JsonNode node, String fieldName, double defaultValue)
-	throws ServletException
+	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
@@ -900,15 +969,15 @@ public class DbxTuneSample
 	 * Get double value from a node
 	 * @param node               The node
 	 * @param fieldName          The fields name
-	 * @throws ServletException  When the field name is not found
+	 * @throws MissingFieldException  When the field name is not found
 	 * @return                   an double value
 	 */
 	private static double getDouble(JsonNode node, String fieldName)
-	throws ServletException
+	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
-			throw new ServletException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
+			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
 		return n.asDouble();
 	}
 
@@ -919,8 +988,39 @@ public class DbxTuneSample
 	 * @param defaultValue       Default value if field is not found
 	 * @return                   an Timestamp value
 	 */
+	private static Timestamp getTimestampAny(Timestamp defaultValue, JsonNode node, String... fieldNames)
+//	throws MissingFieldException
+	{
+		for (String entry : fieldNames)
+		{
+			if ( ! node.has(entry) )
+				continue;
+
+			JsonNode n = node.get(entry);
+			if (n.isNull())
+				return defaultValue;
+
+			try
+			{
+				return getTimestamp(node, entry);
+			}
+			catch (Exception e) 
+			{
+				return defaultValue;
+			}
+		}
+		return defaultValue;
+	}
+
+	/**
+	 * Get Timestamp value from a node
+	 * @param node               The node
+	 * @param fieldName          The fields name
+	 * @param defaultValue       Default value if field is not found
+	 * @return                   an Timestamp value
+	 */
 	private static Timestamp getTimestamp(JsonNode node, String fieldName, Timestamp defaultValue)
-	throws ServletException
+	throws MissingFieldException
 	{
 		try
 		{
@@ -936,15 +1036,15 @@ public class DbxTuneSample
 	 * Get Timestamp value from a node
 	 * @param node               The node
 	 * @param fieldName          The fields name
-	 * @throws ServletException  When the field name is not found
+	 * @throws MissingFieldException  When the field name is not found
 	 * @return                   an Timestamp value
 	 */
 	private static Timestamp getTimestamp(JsonNode node, String fieldName)
-	throws ServletException
+	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
-			throw new ServletException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
+			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
 		
 		if (n.isNull())
 			return null;
@@ -987,7 +1087,7 @@ public class DbxTuneSample
 		}
 		
 
-		throw new ServletException("Problems parsing the Timestamp for field '"+fieldName+"' using value '"+str+"'. Caught: "+ex, ex); 
+		throw new MissingFieldException("Problems parsing the Timestamp for field '"+fieldName+"' using value '"+str+"'. Caught: "+ex, ex); 
 	}
 
 	/**
@@ -1015,6 +1115,69 @@ public class DbxTuneSample
 	}
 	
 	/**
+	 * Parse a JSON AlarmEntry string into a AlarmEntry object
+	 * @param json
+	 * @return
+	 * @throws IOException 
+	 * @throws JsonProcessingException 
+	 */
+	public static AlarmEntry parseJsonAlarmEntry(String json) 
+	throws JsonProcessingException, IOException, MissingFieldException
+	{
+		ObjectMapper mapper = new ObjectMapper();
+		
+		JsonNode alarm = mapper.readTree(json);
+		
+//for (Iterator<Entry<String, JsonNode>> iterator = alarm.fields(); iterator.hasNext();)
+//{
+//	Entry<String, JsonNode> xxx = iterator.next();
+//	System.out.println("key='" + xxx.getKey() + "', val=|" + xxx.getValue() + "|");
+//}
+//
+////System.out.println("root="+root);
+//System.out.println("alarm="+alarm);
+
+		if (alarm == null)
+		{
+			_logger.error("Problems reading JSON, possibly a bad JSON string. JSON=" + json);
+			throw new IOException("Problems reading JSON, possibly a bad JSON string. JSON-first-part=" + json.substring(0, 150));
+		}
+
+		AlarmEntry ae = new AlarmEntry();
+
+		ae.setAlarmClass                 ( getString            (alarm, "alarmClass"));
+		ae.setAlarmClassAbriviated       ( getStringAny         (alarm, "alarmClassAbriviated", "alarmClass"));
+		ae.setServiceType                ( getString            (alarm, "serviceType"));
+		ae.setServiceName                ( getString            (alarm, "serviceName"));
+		ae.setServiceInfo                ( getString            (alarm, "serviceInfo"));
+		ae.setExtraInfo                  ( getString            (alarm, "extraInfo",                   null));
+		ae.setCategory                   ( getString            (alarm, "category"));
+		ae.setSeverity                   ( getString            (alarm, "severity"));
+		ae.setState                      ( getString            (alarm, "state"));
+		ae.setRepeatCnt                  ( getInt               (alarm, "repeatCnt",                   -1));              // Last Parameter is default value if not found
+		ae.setDuration                   ( getString            (alarm, "duration",                    "-unknown-"));
+		ae.setAlarmDuration              ( getString            (alarm, "alarmDuration",               "-unknown-"));
+		ae.setFullDuration               ( getString            (alarm, "fullDuration",                "-unknown-"));
+		ae.setFullDurationAdjustmentInSec( getInt               (alarm, "fullDurationAdjustmentInSec", -1));
+		ae.setCreationAgeInMs            ( getInt               (alarm, "creationAgeInMs",             -1));
+		ae.setCreationTime               ( getTimestampAny(null, alarm, "creationTime", "createTime")); 
+		ae.setReRaiseTime                ( getTimestamp         (alarm, "reRaiseTime",                 null)); 
+		ae.setCancelTime                 ( getTimestamp         (alarm, "cancelTime",                  null));
+		ae.setTimeToLive                 ( getInt               (alarm, "TimeToLive",                  -1));
+//		ae.setThreshold                  ( (Number) createObjectFromNodeType(alarm.get("threshold")));
+		ae.setThreshold                  ( NumberUtils.toNumber(getString(alarm, "threshold", "-1")));
+		ae.setData                       ( getString            (alarm, "data",                        null));
+		ae.setDescription                ( getString            (alarm, "description",                 null));
+		ae.setExtendedDescription        ( getString            (alarm, "extendedDescription",         null));
+		ae.setReRaiseData                ( getStringAny(null,    alarm, "reRaiseData",                "lastData"));                // First parameter is DEFAULT value if not found
+		ae.setReRaiseDescription         ( getStringAny(null,    alarm, "reRaiseDescription",         "lastDescription"));
+		ae.setReRaiseExtendedDescription ( getStringAny(null,    alarm, "reRaiseExtendedDescription", "lastExtendedDescription"));
+
+		return ae;
+	}
+	
+	
+	/**
 	 * Parse a JSON string into this object
 	 * @param json
 	 * @return
@@ -1022,7 +1185,7 @@ public class DbxTuneSample
 	 * @throws JsonProcessingException 
 	 */
 	public static DbxTuneSample parseJson(String json) 
-	throws JsonProcessingException, IOException, ServletException
+	throws JsonProcessingException, IOException, MissingFieldException
 	{
 		if (_logger.isDebugEnabled())
 		{
@@ -1512,8 +1675,8 @@ public class DbxTuneSample
 				gen.writeStringField("description"                , toString( ae.getDescription()                ));
 				gen.writeStringField("extendedDescription"        , toString( ae.getExtendedDescription()        ));
 				gen.writeStringField("reRaiseData"                , toString( ae.getReRaiseData()                ));
-				gen.writeStringField("reRaiseDescription"         , toString( ae.getReRaiseDescription()         ));
-				gen.writeStringField("reRaiseExtendedDescription" , toString( ae.getReRaiseExtendedDescription() ));
+				gen.writeStringField("reRaiseDescription"         , toString( ae.getReRaiseDescription()         )); /*HTML or Normal???*/
+				gen.writeStringField("reRaiseExtendedDescription" , toString( ae.getReRaiseExtendedDescription() )); /*HTML or Normal???*/
 				
 				gen.writeEndObject();
 			}

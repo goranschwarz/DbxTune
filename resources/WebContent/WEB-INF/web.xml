@@ -26,6 +26,11 @@
 	</servlet>
 
 	<servlet>
+		<servlet-name>AlarmFormatterController</servlet-name>
+		<servlet-class>com.asetune.central.controllers.AlarmFormatterController</servlet-class>
+	</servlet>
+
+	<servlet>
 		<servlet-name>AlarmHistoryController</servlet-name>
 		<servlet-class>com.asetune.central.controllers.AlarmHistoryController</servlet-class>
 	</servlet>
@@ -73,6 +78,11 @@
 	<servlet>
 		<servlet-name>DownloadServlet</servlet-name>
 		<servlet-class>com.asetune.central.controllers.DownloadServlet</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>DownloadRecordingServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.DownloadRecordingServlet</servlet-class>
 	</servlet>
 
 	<servlet>
@@ -227,6 +237,11 @@
 	</servlet-mapping>
 
 	<servlet-mapping>
+		<servlet-name>DownloadRecordingServlet</servlet-name>
+		<url-pattern>/download-recording</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
 		<servlet-name>DummyServlet</servlet-name>
 		<url-pattern>/dummy</url-pattern>
 	</servlet-mapping>
@@ -304,6 +319,11 @@
 	<servlet-mapping>
 		<servlet-name>AlarmActiveController</servlet-name>
 		<url-pattern>/api/alarm/active</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>AlarmFormatterController</servlet-name>
+		<url-pattern>/api/alarm/formatter</url-pattern>
 	</servlet-mapping>
 
 	<servlet-mapping>

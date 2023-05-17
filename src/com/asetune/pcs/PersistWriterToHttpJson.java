@@ -25,45 +25,30 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.StringWriter;
-import java.math.BigDecimal;
+import java.lang.invoke.MethodHandles;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
-import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.comparator.NameFileComparator;
 import org.apache.log4j.Logger;
 
-import com.asetune.CounterController;
-import com.asetune.DbxTune;
-import com.asetune.Version;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.dbxc.AlarmEventHttpDestinationDown;
-import com.asetune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.Type;
 import com.asetune.cm.CmSettingsHelper.UrlInputValidator;
-import com.asetune.cm.CountersModel;
-import com.asetune.cm.CountersModelAppend;
-import com.asetune.cm.JsonCmWriterOptions;
 import com.asetune.pcs.sqlcapture.SqlCaptureDetails;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.HttpUtils;
@@ -71,19 +56,12 @@ import com.asetune.utils.JsonUtils;
 import com.asetune.utils.Memory;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class PersistWriterToHttpJson 
 extends PersistWriterBase
 //implements IPersistWriter
 {
 	private static Logger _logger = Logger.getLogger(PersistWriterToHttpJson.class);
-
-	/** Every time the message structure is changed this should be increments so that any receiver knows what fields to expect */
-	public static final int MESSAGE_VERSION = 1;
 
 	/** Some statistics for this Writer */
 	private PersistWriterStatisticsRest _writerStatistics = new PersistWriterStatisticsRest();
@@ -142,7 +120,7 @@ extends PersistWriterBase
 		}
 		catch (ConnectException ex) 
 		{
-			_logger.error("Problems connecting/sending JSON-REST call to '"+_confSlot0._url+"'. The entry will be saved in the 'error-queue' and sent later. Caught: "+ex);
+			_logger.error("Problems connecting/sending JSON-REST call to '" + _confSlot0._url + "'. The entry will be saved in the 'error-queue' and sent later. Caught: " + ex);
 			_confSlot0.addToErrorQueue(cont, jsonStr);
 			
 			// if destination has been down for some time: Send Alarm ?
@@ -150,11 +128,11 @@ extends PersistWriterBase
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems creating JSON or sending REST call to '"+_confSlot0._url+"'. Caught: "+ex , ex);
+			_logger.error("Problems creating JSON or sending REST call to '" + _confSlot0._url + "'. Caught: " + ex , ex);
 		}
 
 		// Loop over the "extra" configurations and send to *each* destination
-		for (ConfigSlot slot : _confSlots)
+		for (HttpConfigSlot slot : _confSlots)
 		{
 			try
 			{
@@ -167,7 +145,7 @@ extends PersistWriterBase
 			}
 			catch (ConnectException ex) 
 			{
-				_logger.error("Problems connecting/sending JSON-REST call to '"+slot._url+"'. The entry will be saved in the 'error-queue' and sent later. Caught: "+ex);
+				_logger.error("Problems connecting/sending JSON-REST call to '" + slot._url + "'. The entry will be saved in the 'error-queue' and sent later. Caught: " + ex);
 				slot.addToErrorQueue(cont, jsonStr);
 
 				// if destination has been down for some time: Send Alarm ?
@@ -175,13 +153,13 @@ extends PersistWriterBase
 			}
 			catch (Exception ex)
 			{
-				_logger.error("Problems creating JSON or sending REST call to '"+slot._url+"'. Caught: "+ex , ex);
+				_logger.error("Problems creating JSON or sending REST call to '" + slot._url + "'. Caught: " + ex , ex);
 			}
 		}
 	}
 
 	/** Check if we should send alarm, and if so: send the alarm */
-	private void checkSendAlarm(ConfigSlot slot)
+	protected void checkSendAlarm(HttpConfigSlot slot)
 	{
 		AlarmHandler alarmHandler = AlarmHandler.getInstance();
 
@@ -194,7 +172,7 @@ extends PersistWriterBase
 		// Is it time to send Alarm
 		if (lastSendSuccessInSec > slot._errorSendAlarmThresholdInSec)
 		{
-			String sourceSrvName = Configuration.getCombinedConfiguration().getProperty("SERVERNAME", "srv-"+slot._cfgName);
+			String sourceSrvName = Configuration.getCombinedConfiguration().getProperty("SERVERNAME", "srv-" + slot._cfgName);
 
 			AlarmEvent alarmEvent = new AlarmEventHttpDestinationDown(sourceSrvName, slot._cfgName, slot._url, lastSendSuccessInSec, slot._errorSendAlarmThresholdInSec);
 
@@ -218,81 +196,6 @@ extends PersistWriterBase
 		}
 	}
 	
-//	private String toJsonGSON(PersistContainer cont, boolean writeCounters, boolean writeGraphs)
-//	throws IOException
-//	{
-//		StringWriter sw = new StringWriter();
-//		JsonWriter w = new JsonWriter(sw);
-//		w.setIndent("    ");
-//
-//		System.out.println();
-//		System.out.println("#### BEGIN JSON #######################################################################");
-//		System.out.println("getSessionStartTime = " + cont.getSessionStartTime());
-//		System.out.println("getMainSampleTime   = " + cont.getMainSampleTime());
-//		System.out.println("getServerName       = " + cont.getServerName());
-//		System.out.println("getOnHostname       = " + cont.getOnHostname());
-//
-//		w.beginObject();
-//		
-//		w.name("sessionStartTime") .value(cont.getSessionStartTime() +"");
-//		w.name("sessionSampleTime").value(cont.getMainSampleTime()   +"");
-//		w.name("serverName")       .value(cont.getServerName());
-//		w.name("onHostname")       .value(cont.getOnHostname());
-//
-//		w.name("appName")          .value(Version.getAppName());
-//		w.name("appVersion")       .value(Version.getVersionStr());
-//		w.name("appBuildString")   .value(Version.getBuildStr());
-//
-//		w.name("collectors");
-//		w.beginArray();
-//
-//		//--------------------------------------
-//		// COUNTERS
-//		//--------------------------------------
-//		for (CountersModel cm : cont._counterObjects)
-//		{
-//			cm.toJson(w, writeCounters, writeGraphs);
-//		}
-//
-//		w.endArray();
-//		w.endObject();
-//		w.close();
-//		
-////			System.out.println(sw.toString());
-//		File toFileName = new File("c:\\tmp\\PersistWriterToHttpJson.tmp.json");
-//		System.out.println("Writing JSON to file: "+toFileName.getAbsolutePath());
-//
-//		String jsonStr = sw.toString();
-//		FileUtils.writeStringToFile(toFileName, jsonStr);
-//		
-//		System.out.println("#### END JSON #######################################################################");
-//
-//		return jsonStr;
-//	}
-
-	/**
-	 * Null save save way to do obj.toString()
-	 *  
-	 * @param obj The object
-	 * @return obj.toString() or if (null if the inout is null
-	 */
-	private String toString(Object obj)
-	{
-		return obj == null ? null : obj.toString(); 
-	}
-
-	/**
-	 * Null save save way to do obj.toString()
-	 *  
-	 * @param obj The object
-	 * @return obj.toString() or if (null if the inout is null
-	 */
-	private BigDecimal toBigDec(Number num)
-	{
-		return num == null ? null : new BigDecimal(num.toString()); 
-	}
-
-
 	/**
 	 * Wrapper around toJsonWork...<br>
 	 * In here we catch OutOfMemory errors, tries to do cleanup, and try again...
@@ -303,14 +206,15 @@ extends PersistWriterBase
 	 * @return
 	 * @throws IOException
 	 */
-	private String toJson(PersistContainer cont, ConfigSlot cfgSlot)
+	protected String toJson(PersistContainer cont, HttpConfigSlot cfgSlot)
 	throws IOException
 	{
 		try
 		{
 			long startTime = System.currentTimeMillis();
 
-			String json = toJsonMessage(cont, cfgSlot);
+//			String json = toJsonMessage(cont, cfgSlot);
+			String json = cont.toJsonMessage(cfgSlot._sendCounters, cfgSlot._sendGraphs, cfgSlot._sendAlarmExtDescAsHtml);
 
 			long createTime = TimeUtils.msDiffNow(startTime);
 			getStatistics().setLastCreateJsonTimeInMs(createTime);
@@ -329,298 +233,11 @@ extends PersistWriterBase
 			Memory.evaluateAndWait(10*1000); // wait for max 10 sec
 			
 			// Try again
-			return toJsonMessage(cont, cfgSlot);
+//			return toJsonMessage(cont, cfgSlot);
+			return cont.toJsonMessage(cfgSlot._sendCounters, cfgSlot._sendGraphs, cfgSlot._sendAlarmExtDescAsHtml);
 		}
 	}
 	
-	/**
-	 * Write JSON for the container
-	 * 
-	 * @param cont           The container
-	 * @param writeCounters  if we should write COUNTER information
-	 * @param writeGraphs    if we should write GRAPH/CHART information
-	 * @return A JSON String
-	 * @throws IOException 
-	 */
-	private String toJsonMessage(PersistContainer cont, ConfigSlot cfgSlot)
-	throws IOException
-	{
-		boolean extAlarmDescAsHtml = cfgSlot._sendAlarmExtDescAsHtml;
-//		boolean writeCounters      = cfgSlot._sendCounters;
-//		boolean writeGraphs        = cfgSlot._sendGraphs;
-		SendConfig sendCounters    = cfgSlot._sendCounters;
-		SendConfig sendGraphs      = cfgSlot._sendGraphs;
-
-
-		StringWriter sw = new StringWriter();
-
-		JsonFactory jfactory = new JsonFactory();
-		JsonGenerator gen = jfactory.createGenerator(sw);
-		gen.setPrettyPrinter(new DefaultPrettyPrinter());
-		gen.setCodec(new ObjectMapper(jfactory));
-
-		
-		String collectorHostname = "-unknown-";
-		try
-		{
-			InetAddress addr = InetAddress.getLocalHost();
-			collectorHostname = addr.getCanonicalHostName();
-		}
-		catch (UnknownHostException ignore) {}
-
-		int collectorSampleInterval = -1;
-		if (CounterController.hasInstance())
-		{
-			collectorSampleInterval = CounterController.getInstance().getDefaultSleepTimeInSec();
-		}
-
-		// Get the current recording database from the INFO Configuration object ( which is written in PersistWriterJdbc.startServices() )
-		String collectorCurrentUrl = null;
-		String collectorInfoFile = null;
-		Configuration conf = Configuration.getInstance(DbxTune.DBXTUNE_NOGUI_INFO_CONFIG);
-		if (conf != null)
-		{
-			collectorCurrentUrl = conf.getProperty("pcs.h2.jdbc.url");
-			collectorInfoFile   = conf.getFilename();
-		}
-
-		// Get List of Cm's with enabled Graphs / Counters
-//		List<String> cmListEnabled         = new ArrayList<>();
-//		List<String> cmListEnabledCounters = new ArrayList<>();
-//		List<String> cmListEnabledGraphs   = new ArrayList<>();
-////		for (CountersModel cm : cont.getCounterObjects())
-//		for (CountersModel cm : CounterController.getInstance().getCmList())
-//		{
-//			// For the moment do not send Append Models
-//			if (cm instanceof CountersModelAppend) 
-//				continue;
-//
-////			if ( ! cm.hasValidSampleData() )
-////				continue;
-//			
-////			if ( ! cm.isPersistCountersEnabled() )
-////				continue;
-//			
-//			if ( ! cm.isActive() )
-//				continue;
-//
-//			String shortCmName = cm.getName();
-//
-//			cmListEnabled.add(shortCmName);
-//
-//			if (sendCounters.isEnabled(shortCmName)) 
-//				cmListEnabledCounters.add(shortCmName);
-//
-//			if (sendGraphs.isEnabled(shortCmName) && cm.hasTrendGraphData())
-//				cmListEnabledGraphs.add(shortCmName);
-//		}
-		
-//		System.out.println();
-//		System.out.println("#### BEGIN JSON #######################################################################");
-//		System.out.println("getSessionStartTime = " + cont.getSessionStartTime());
-//		System.out.println("getMainSampleTime   = " + cont.getMainSampleTime());
-//		System.out.println("getServerName       = " + cont.getServerName());
-//		System.out.println("getOnHostname       = " + cont.getOnHostname());
-
-		gen.writeStartObject();
-		
-		gen.writeFieldName("head");
-		gen.writeStartObject();
-			gen.writeNumberField("messageVersion"         , MESSAGE_VERSION);
-			gen.writeStringField("appName"                , Version.getAppName());
-			gen.writeStringField("appVersion"             , Version.getVersionStr());
-			gen.writeStringField("appBuildString"         , Version.getBuildStr());
-			gen.writeStringField("collectorHostname"      , collectorHostname);
-			gen.writeNumberField("collectorSampleInterval", collectorSampleInterval);
-			gen.writeStringField("collectorCurrentUrl"    , collectorCurrentUrl);
-			gen.writeStringField("collectorInfoFile"      , collectorInfoFile);
-
-			gen.writeStringField("sessionStartTime"       , TimeUtils.toStringIso8601(cont.getSessionStartTime()));
-			gen.writeStringField("sessionSampleTime"      , TimeUtils.toStringIso8601(cont.getMainSampleTime()));
-			gen.writeStringField("serverName"             , cont.getServerName());
-			gen.writeStringField("onHostname"             , cont.getOnHostname());
-			gen.writeStringField("serverNameAlias"        , cont.getServerNameAlias());
-			gen.writeStringField("serverDisplayName"      , cont.getServerDisplayName());
-
-// Make better names...: enabledCmList, enabledCmSendCountersList, enabledCmSendGraphsList
-//			gen.writeObjectField("cmListEnabled"          , cmListEnabled);
-//			gen.writeObjectField("cmListEnabledGraphs"    , cmListEnabledGraphs);
-//			gen.writeObjectField("cmListEnabledCounters"  , cmListEnabledCounters);
-		gen.writeEndObject();
-
-		// Write ACTIVE the alarms
-		List<AlarmEvent> alarmList = cont.getAlarmList();
-		if (alarmList != null && !alarmList.isEmpty())
-		{
-			gen.writeFieldName("activeAlarms");
-			gen.writeStartArray();
-			for (AlarmEvent ae : alarmList)
-			{
-				gen.writeStartObject();
-					gen.writeStringField("alarmClass"                 , toString( ae.getAlarmClass()                 ));
-					gen.writeStringField("alarmClassAbriviated"       , toString( ae.getAlarmClassAbriviated()       ));
-					gen.writeStringField("serviceType"                , toString( ae.getServiceType()                ));
-					gen.writeStringField("serviceName"                , toString( ae.getServiceName()                ));
-					gen.writeStringField("serviceInfo"                , toString( ae.getServiceInfo()                ));
-					gen.writeStringField("extraInfo"                  , toString( ae.getExtraInfo()                  ));
-					gen.writeStringField("category"                   , toString( ae.getCategory()                   ));
-					gen.writeStringField("severity"                   , toString( ae.getSeverity()                   ));
-					gen.writeStringField("state"                      , toString( ae.getState()                      ));
-					gen.writeNumberField("repeatCnt"                  ,           ae.getReRaiseCount()                );
-					gen.writeStringField("duration"                   , toString( ae.getFullDuration(true)           ));
-					gen.writeStringField("alarmDuration"              , toString( ae.getAlarmDuration()              ));
-					gen.writeStringField("fullDuration"               , toString( ae.getFullDuration()               ));
-					gen.writeNumberField("fullDurationAdjustmentInSec",           ae.getFullDurationAdjustmentInSec() );
-					gen.writeNumberField("creationAgeInMs"            ,           ae.getCrAgeInMs()                   );
-					gen.writeNumberField("creationTime"               ,           ae.getCrTime()                      );
-					gen.writeStringField("creationTimeIso8601"        , toString( ae.getCrTimeIso8601()              )); 
-					gen.writeNumberField("reRaiseTime"                ,           ae.getReRaiseTime()                 );
-					gen.writeStringField("reRaiseTimeIso8601"         , toString( ae.getReRaiseTimeIso8601()         ));
-					gen.writeNumberField("cancelTime"                 ,           ae.getCancelTime()                  );
-					gen.writeStringField("cancelTimeIso8601"          , toString( ae.getCancelTimeIso8601()          ));
-					gen.writeNumberField("TimeToLive"                 ,           ae.getTimeToLive()                  );
-					gen.writeNumberField("threshold"                  , toBigDec( ae.getCrossedThreshold()           ));
-					gen.writeStringField("data"                       , toString( ae.getData()                       ));
-					gen.writeStringField("description"                , toString( ae.getDescription()                ));
-					gen.writeStringField("extendedDescription"        , toString( extAlarmDescAsHtml ? ae.getExtendedDescriptionHtml() : ae.getExtendedDescription() ));
-					gen.writeStringField("reRaiseData"                , toString( ae.getReRaiseData()                ));
-					gen.writeStringField("reRaiseDescription"         , toString( ae.getReRaiseDescription()         ));
-					gen.writeStringField("reRaiseExtendedDescription" , toString( extAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() ));
-				gen.writeEndObject();
-			}
-			gen.writeEndArray();
-		}
-
-		// Write HISTORICAL the alarms (things that has happened during last sample: RAISE/RE-RAISE/CANCEL)
-		List<AlarmEventWrapper> alarmEvents = cont.getAlarmEvents();
-		if (alarmEvents != null && !alarmEvents.isEmpty())
-		{
-			gen.writeFieldName("alarmEvents");
-			gen.writeStartArray();
-			for (AlarmEventWrapper aew : alarmEvents)
-			{
-				gen.writeStartObject();
-					gen.writeStringField("eventTime"                  , TimeUtils.toStringIso8601(aew.getAddDate()   ));
-					gen.writeStringField("action"                     , toString( aew.getAction()                    ));
-					
-					AlarmEvent ae = aew.getAlarmEvent();
-					
-					gen.writeStringField("alarmClass"                 , toString( ae.getAlarmClass()                 ));
-					gen.writeStringField("alarmClassAbriviated"       , toString( ae.getAlarmClassAbriviated()       ));
-					gen.writeStringField("serviceType"                , toString( ae.getServiceType()                ));
-					gen.writeStringField("serviceName"                , toString( ae.getServiceName()                ));
-					gen.writeStringField("serviceInfo"                , toString( ae.getServiceInfo()                ));
-					gen.writeStringField("extraInfo"                  , toString( ae.getExtraInfo()                  ));
-					gen.writeStringField("category"                   , toString( ae.getCategory()                   ));
-					gen.writeStringField("severity"                   , toString( ae.getSeverity()                   ));
-					gen.writeStringField("state"                      , toString( ae.getState()                      ));
-					gen.writeNumberField("repeatCnt"                  ,           ae.getReRaiseCount()                );
-					gen.writeStringField("duration"                   , toString( ae.getFullDuration(true)           ));
-					gen.writeStringField("alarmDuration"              , toString( ae.getAlarmDuration()              ));
-					gen.writeStringField("fullDuration"               , toString( ae.getFullDuration()               ));
-					gen.writeNumberField("fullDurationAdjustmentInSec",           ae.getFullDurationAdjustmentInSec() );
-					gen.writeNumberField("creationAgeInMs"            ,           ae.getCrAgeInMs()                   );
-					gen.writeNumberField("creationTime"               ,           ae.getCrTime()                      );
-					gen.writeStringField("creationTimeIso8601"        , toString( ae.getCrTimeIso8601()              )); 
-					gen.writeNumberField("reRaiseTime"                ,           ae.getReRaiseTime()                 );
-					gen.writeStringField("reRaiseTimeIso8601"         , toString( ae.getReRaiseTimeIso8601()         ));
-					gen.writeNumberField("cancelTime"                 ,           ae.getCancelTime()                  );
-					gen.writeStringField("cancelTimeIso8601"          , toString( ae.getCancelTimeIso8601()          ));
-					gen.writeNumberField("TimeToLive"                 ,           ae.getTimeToLive()                  );
-					gen.writeNumberField("threshold"                  , toBigDec( ae.getCrossedThreshold()           ));
-					gen.writeStringField("data"                       , toString( ae.getData()                       ));
-					gen.writeStringField("description"                , toString( ae.getDescription()                ));
-					gen.writeStringField("extendedDescription"        , toString( extAlarmDescAsHtml ? ae.getExtendedDescriptionHtml() : ae.getExtendedDescription() ));
-					gen.writeStringField("reRaiseData"                , toString( ae.getReRaiseData()                ));
-					gen.writeStringField("reRaiseDescription"         , toString( ae.getReRaiseDescription()         ));
-					gen.writeStringField("reRaiseExtendedDescription" , toString( extAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() ));
-				gen.writeEndObject();
-			}
-			gen.writeEndArray();
-		}
-		
-		gen.writeFieldName("collectors");
-		gen.writeStartArray();
-
-		//--------------------------------------
-		// COUNTERS
-		//--------------------------------------
-		for (CountersModel cm : cont.getCounterObjects())
-		{
-			// For the moment do not send Append Models
-			if (cm instanceof CountersModelAppend) 
-				continue;
-
-//System.out.println("HttpJson.toJsonMessage[srvName='"+cont.getServerNameAlias()+"', CmName="+StringUtil.left(cm.getName(),30)+"]: hasValidSampleData()="+cm.hasValidSampleData()+", hasData()="+cm.hasData()+", hasTrendGraphData()="+cm.hasTrendGraphData()+", writeGraphs="+writeGraphs+", getTrendGraphCountWithData()="+cm.getTrendGraphCountWithData());
-			if ( ! cm.hasValidSampleData() )
-				continue;
-
-			if ( ! cm.hasData() && ! cm.hasTrendGraphData() )
-				continue;
-
-			String shortCmName = cm.getName();
-			
-			// Create Options object that specifies *what* JSON objects to write/produce 
-			JsonCmWriterOptions writeOptions = new JsonCmWriterOptions();
-			writeOptions.writeCounters      = sendCounters.isEnabled(shortCmName);
-			if (writeOptions.writeCounters)
-			{
-				writeOptions.writeCounters_abs  = sendCounters.isAbsEnabled(shortCmName);
-				writeOptions.writeCounters_diff = sendCounters.isDiffEnabled(shortCmName);
-				writeOptions.writeCounters_rate = sendCounters.isRateEnabled(shortCmName);
-			}
-
-			writeOptions.writeGraphs = sendGraphs.isEnabled(shortCmName);
-			
-			// if we ONLY write graph data, but there is no graphs with data
-			// or possibly move this check INTO the cm method: cm.toJson(w, writeOptions);
-			if ( writeOptions.writeCounters == false && (writeOptions.writeGraphs && cm.getTrendGraphCountWithData() == 0))
-				continue;
-
-			// Use the CM method to write JSON
-			cm.toJson(gen, writeOptions);
-		}
-
-		gen.writeEndArray();
-		gen.writeEndObject();
-		gen.close();
-
-		String jsonStr = sw.toString();
-		
-		// Debug write to a file, if property is set
-		if (Configuration.getCombinedConfiguration().hasProperty("PersistWriterToHttpJson.debug.writeToFile"))
-		{
-			//-------------------------------------------------------------------------------------------------------------------
-			// Property example: PersistWriterToHttpJson.debug.writeToFile = c:\tmp\PersistWriterToHttpJson.tmp.json
-			//-------------------------------------------------------------------------------------------------------------------
-			String debugToFileNameStr = Configuration.getCombinedConfiguration().getProperty("PersistWriterToHttpJson.debug.writeToFile", "");
-			if (StringUtil.hasValue(debugToFileNameStr))
-			{
-				if ("STDOUT".equalsIgnoreCase(debugToFileNameStr))
-				{
-					System.out.println("#### BEGIN JSON #####################################################################");
-					System.out.println(jsonStr);
-					System.out.println("#### END JSON #######################################################################");
-				}
-				else
-				{
-					File debugToFileName = new File(debugToFileNameStr);
-					
-					try
-					{
-						_logger.info("Writing JSON message to DEBUG file '" + debugToFileName.getAbsolutePath() + "'.");
-						FileUtils.writeStringToFile(debugToFileName, jsonStr, StandardCharsets.UTF_8);
-					}
-					catch(Exception ex)
-					{
-						_logger.error("PROBLEMS Writing JSON message to DEBUG file '" + debugToFileName.getAbsolutePath() + "', skipping and continuing.", ex);
-					}
-				}
-			}
-		}
-
-		return jsonStr;
-	}
 
 	/**
 	 * Here is where the send happens
@@ -629,7 +246,7 @@ extends PersistWriterBase
 	 * @return how many entries are there in the server side queue. -1 if it's unknown.
 	 * @throws Exception 
 	 */
-	private int sendMessage(String text, ConfigSlot slot) throws Exception
+	protected int sendMessage(String text, HttpConfigSlot slot) throws Exception
 	{
 		URL url = new URL(slot._url);
 
@@ -663,15 +280,15 @@ extends PersistWriterBase
 		int responceCode = conn.getResponseCode();
 		if ( responceCode >= 203) // see 'https://httpstatuses.com/' for http codes... or at the bottom of this source code
 		{
-			throw new Exception("Failed : HTTP error code : " + responceCode + " ("+HttpUtils.httpResponceCodeToText(responceCode)+"). From URL '"+slot._url+"'. Sent JSON content.length: "+text.length());
+			throw new Exception("Failed : HTTP error code : " + responceCode + " (" + HttpUtils.httpResponceCodeToText(responceCode) + "). From URL '" + slot._url + "'. Sent JSON content.length: " + text.length());
 		}
 		else
 		{
 			int threshold = 1000;
 			if (sendTime > threshold)
-				_logger.warn("HTTP REST Call took longer than expected. sendTimeInMs = "+sendTime+", which is above threshold="+threshold+", Responce code "+responceCode+" ("+HttpUtils.httpResponceCodeToText(responceCode)+"). From URL '"+slot._url+"'. Sent JSON content.length: "+text.length()+", "+(text.length()/1024)+" KB");
+				_logger.warn("HTTP REST Call took longer than expected. sendTimeInMs = " + sendTime + ", which is above threshold=" + threshold + ", Responce code " + responceCode + " (" + HttpUtils.httpResponceCodeToText(responceCode) + "). From URL '" + slot._url + "'. Sent JSON content.length: " + text.length() + ", " + (text.length()/1024) + " KB");
 
-			_logger.debug("Responce code "+responceCode+" ("+HttpUtils.httpResponceCodeToText(responceCode)+"). From URL '"+slot._url+"'. Sent JSON content.length: "+text.length()+", "+(text.length()/1024)+" KB");
+			_logger.debug("Responce code " + responceCode + " (" + HttpUtils.httpResponceCodeToText(responceCode) + "). From URL '" + slot._url + "'. Sent JSON content.length: " + text.length() + ", " + (text.length()/1024) + " KB");
 		}
 
 		// Mark last success time
@@ -728,7 +345,7 @@ extends PersistWriterBase
 
 		int firstColonPos = keyVal.indexOf(':');
 		if (firstColonPos == -1)
-			throw new Exception("Problem parsing the value '"+keyVal+"', can't find any ':' in it.");
+			throw new Exception("Problem parsing the value '" + keyVal + "', can't find any ':' in it.");
 		
 		String key = keyVal.substring(0, firstColonPos);
 		String val = keyVal.substring(firstColonPos+1).trim();
@@ -763,575 +380,312 @@ extends PersistWriterBase
 		return this.getClass().getSimpleName();
 	}
 
-	public void printConfig()
+	protected void printConfig(HttpConfigSlot slot)
 	{
 		int spaces = 55;
-		_logger.info("Configuration for Persist Writer Module: "+getName());
-		_logger.info("    " + StringUtil.left(key(PROPKEY_url                              ), spaces) + ": " + _confSlot0._url);
 
-		_logger.info("    " + StringUtil.left(key(PROPKEY_errorSendAlarm                   ), spaces) + ": " + _confSlot0._errorSendAlarm);
-		_logger.info("    " + StringUtil.left(key(PROPKEY_errorSendAlarmThresholdInSec     ), spaces) + ": " + _confSlot0._errorSendAlarmThresholdInSec);
+		String cfgName = slot._cfgName;
+		if (StringUtil.containsAny(cfgName, "DbxCentral", "slot0"))
+			cfgName = "";
 
-		_logger.info("    " + StringUtil.left(key(PROPKEY_errorSaveToDisk                  ), spaces) + ": " + _confSlot0._errorSaveToDisk);
-		_logger.info("    " + StringUtil.left(key(PROPKEY_errorSaveToDiskPath              ), spaces) + ": " + _confSlot0._errorSaveToDiskPath);
-		_logger.info("    " + StringUtil.left(key(PROPKEY_errorSaveToDiskDiscardAfterXDays ), spaces) + ": " + _confSlot0._errorSaveToDiskDiscardAfterXDays);
-		_logger.info("    " + StringUtil.left(key(PROPKEY_errorSaveToDiskSuccessSleepTimeMs), spaces) + ": " + _confSlot0._errorSaveToDiskSuccessSleepTimeMs);
+		if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_url                              , cfgName), spaces) + ": " + slot._url);
 
-		_logger.info("    " + StringUtil.left(key(PROPKEY_errorMemQueueSize                ), spaces) + ": " + _confSlot0._errorMemQueueSize);
+		if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorSendAlarm                   , cfgName), spaces) + ": " + slot._errorSendAlarm);
+		if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorSendAlarmThresholdInSec     , cfgName), spaces) + ": " + slot._errorSendAlarmThresholdInSec);
 
-		_logger.info("    " + StringUtil.left(key(PROPKEY_sendAlarmExtDescAsHtml           ), spaces) + ": " + _confSlot0._sendAlarmExtDescAsHtml);
-		_logger.info("    " + StringUtil.left(key(PROPKEY_sendCounters                     ), spaces) + ": " + _confSlot0._sendCounters);
-		_logger.info("    " + StringUtil.left(key(PROPKEY_sendGraphs                       ), spaces) + ": " + _confSlot0._sendGraphs);
+		if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorSaveToDisk                  , cfgName), spaces) + ": " + slot._errorSaveToDisk);
+		if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorSaveToDiskPath              , cfgName), spaces) + ": " + slot._errorSaveToDiskPath);
+		if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorSaveToDiskDiscardAfterXDays , cfgName), spaces) + ": " + slot._errorSaveToDiskDiscardAfterXDays);
+		if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorSaveToDiskSuccessSleepTimeMs, cfgName), spaces) + ": " + slot._errorSaveToDiskSuccessSleepTimeMs);
+
+		if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorMemQueueSize                , cfgName), spaces) + ": " + slot._errorMemQueueSize);
+
+		if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_sendAlarmExtDescAsHtml           , cfgName), spaces) + ": " + slot._sendAlarmExtDescAsHtml);
+		if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_sendCounters                     , cfgName), spaces) + ": " + slot._sendCounters);
+		if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_sendGraphs                       , cfgName), spaces) + ": " + slot._sendGraphs);
+
+		if (StringUtil.hasValue(slot._header_1)) _logger.info("    " + StringUtil.left(key(PROPKEY_header1                          , cfgName), spaces) + ": " + slot._header_1);
+		if (StringUtil.hasValue(slot._header_2)) _logger.info("    " + StringUtil.left(key(PROPKEY_header2                          , cfgName), spaces) + ": " + slot._header_2);
+		if (StringUtil.hasValue(slot._header_3)) _logger.info("    " + StringUtil.left(key(PROPKEY_header3                          , cfgName), spaces) + ": " + slot._header_3);
+		if (StringUtil.hasValue(slot._header_4)) _logger.info("    " + StringUtil.left(key(PROPKEY_header4                          , cfgName), spaces) + ": " + slot._header_4);
+		if (StringUtil.hasValue(slot._header_5)) _logger.info("    " + StringUtil.left(key(PROPKEY_header5                          , cfgName), spaces) + ": " + slot._header_5);
+		if (StringUtil.hasValue(slot._header_6)) _logger.info("    " + StringUtil.left(key(PROPKEY_header6                          , cfgName), spaces) + ": " + slot._header_6);
+		if (StringUtil.hasValue(slot._header_7)) _logger.info("    " + StringUtil.left(key(PROPKEY_header7                          , cfgName), spaces) + ": " + slot._header_7);
+		if (StringUtil.hasValue(slot._header_8)) _logger.info("    " + StringUtil.left(key(PROPKEY_header8                          , cfgName), spaces) + ": " + slot._header_8);
+		if (StringUtil.hasValue(slot._header_9)) _logger.info("    " + StringUtil.left(key(PROPKEY_header9                          , cfgName), spaces) + ": " + slot._header_9);
+	}
+	
+	public void printConfig()
+	{
+		_logger.info("Configuration for Persist Writer Module: " + getName());
 		
-		if (StringUtil.hasValue(_confSlot0._header_1)) _logger.info("    " + StringUtil.left(key(PROPKEY_header1     ), spaces) + ": " + _confSlot0._header_1);
-		if (StringUtil.hasValue(_confSlot0._header_2)) _logger.info("    " + StringUtil.left(key(PROPKEY_header2     ), spaces) + ": " + _confSlot0._header_2);
-		if (StringUtil.hasValue(_confSlot0._header_3)) _logger.info("    " + StringUtil.left(key(PROPKEY_header3     ), spaces) + ": " + _confSlot0._header_3);
-		if (StringUtil.hasValue(_confSlot0._header_4)) _logger.info("    " + StringUtil.left(key(PROPKEY_header4     ), spaces) + ": " + _confSlot0._header_4);
-		if (StringUtil.hasValue(_confSlot0._header_5)) _logger.info("    " + StringUtil.left(key(PROPKEY_header5     ), spaces) + ": " + _confSlot0._header_5);
-		if (StringUtil.hasValue(_confSlot0._header_6)) _logger.info("    " + StringUtil.left(key(PROPKEY_header6     ), spaces) + ": " + _confSlot0._header_6);
-		if (StringUtil.hasValue(_confSlot0._header_7)) _logger.info("    " + StringUtil.left(key(PROPKEY_header7     ), spaces) + ": " + _confSlot0._header_7);
-		if (StringUtil.hasValue(_confSlot0._header_8)) _logger.info("    " + StringUtil.left(key(PROPKEY_header8     ), spaces) + ": " + _confSlot0._header_8);
-		if (StringUtil.hasValue(_confSlot0._header_9)) _logger.info("    " + StringUtil.left(key(PROPKEY_header9     ), spaces) + ": " + _confSlot0._header_9);
+		printConfig(_confSlot0);
 		
-		for (ConfigSlot slot : _confSlots)
+		for (HttpConfigSlot slot : _confSlots)
 		{
-			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_url                              , slot._cfgName), spaces) + ": " + slot._url);
-
-			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorSendAlarm                   , slot._cfgName), spaces) + ": " + slot._errorSendAlarm);
-			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorSendAlarmThresholdInSec     , slot._cfgName), spaces) + ": " + slot._errorSendAlarmThresholdInSec);
-
-			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorSaveToDisk                  , slot._cfgName), spaces) + ": " + slot._errorSaveToDisk);
-			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorSaveToDiskPath              , slot._cfgName), spaces) + ": " + slot._errorSaveToDiskPath);
-			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorSaveToDiskDiscardAfterXDays , slot._cfgName), spaces) + ": " + slot._errorSaveToDiskDiscardAfterXDays);
-			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorSaveToDiskSuccessSleepTimeMs, slot._cfgName), spaces) + ": " + slot._errorSaveToDiskSuccessSleepTimeMs);
-
-			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorMemQueueSize                , slot._cfgName), spaces) + ": " + slot._errorMemQueueSize);
-
-			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_sendAlarmExtDescAsHtml           , slot._cfgName), spaces) + ": " + slot._sendAlarmExtDescAsHtml);
-			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_sendCounters                     , slot._cfgName), spaces) + ": " + slot._sendCounters);
-			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_sendGraphs                       , slot._cfgName), spaces) + ": " + slot._sendGraphs);
-                                                                                                                                                              
-			if (StringUtil.hasValue(slot._header_1)) _logger.info("    " + StringUtil.left(key(PROPKEY_header1                          , slot._cfgName), spaces) + ": " + slot._header_1);
-			if (StringUtil.hasValue(slot._header_2)) _logger.info("    " + StringUtil.left(key(PROPKEY_header2                          , slot._cfgName), spaces) + ": " + slot._header_2);
-			if (StringUtil.hasValue(slot._header_3)) _logger.info("    " + StringUtil.left(key(PROPKEY_header3                          , slot._cfgName), spaces) + ": " + slot._header_3);
-			if (StringUtil.hasValue(slot._header_4)) _logger.info("    " + StringUtil.left(key(PROPKEY_header4                          , slot._cfgName), spaces) + ": " + slot._header_4);
-			if (StringUtil.hasValue(slot._header_5)) _logger.info("    " + StringUtil.left(key(PROPKEY_header5                          , slot._cfgName), spaces) + ": " + slot._header_5);
-			if (StringUtil.hasValue(slot._header_6)) _logger.info("    " + StringUtil.left(key(PROPKEY_header6                          , slot._cfgName), spaces) + ": " + slot._header_6);
-			if (StringUtil.hasValue(slot._header_7)) _logger.info("    " + StringUtil.left(key(PROPKEY_header7                          , slot._cfgName), spaces) + ": " + slot._header_7);
-			if (StringUtil.hasValue(slot._header_8)) _logger.info("    " + StringUtil.left(key(PROPKEY_header8                          , slot._cfgName), spaces) + ": " + slot._header_8);
-			if (StringUtil.hasValue(slot._header_9)) _logger.info("    " + StringUtil.left(key(PROPKEY_header9                          , slot._cfgName), spaces) + ": " + slot._header_9);
+			printConfig(slot);
 		}
 	}
 
-	private void checkOrCreateRecoveryDir(ConfigSlot configSlot)
+	private void checkOrCreateRecoveryDir(HttpConfigSlot httpConfigSlot)
 	{
-		if (configSlot == null)
+		if (httpConfigSlot == null)
 			return;
 		
-		if ( ! configSlot._errorSaveToDisk )
+		if ( ! httpConfigSlot._errorSaveToDisk )
 			return;
 
 		// If dir do NOT exist, create the dir
-		File dir = new File(configSlot._errorSaveToDiskPath);
+		File dir = new File(httpConfigSlot._errorSaveToDiskPath);
 		if ( ! dir.exists() )
 		{
 			if ( dir.mkdirs() )
 			{
-				_logger.info("Created the recovery directory '"+configSlot._errorSaveToDiskPath+"' for configuration '"+configSlot._cfgName+"'.");
+				_logger.info("Created the recovery directory '" + httpConfigSlot._errorSaveToDiskPath + "' for configuration '" + httpConfigSlot._cfgName + "'.");
 			}
 		}
 	}
 
-	//------------------------------------------------------------------------------
-	// PRIVATE HELPER CLASS
-	//------------------------------------------------------------------------------
-	public static class SendConfig
+	protected HttpConfigSlot initConfigSlot(Configuration conf, String cfgKey, HttpConfigSlot preAllocatedSlot)
+	throws Exception
 	{
-		private boolean             _sendAll = false;
-		private Map<String, String> _includeMap;
-		private Set<String>         _excludeSet;
-
-		@Override
-		public String toString()
+		// Special for "DbxCentral" & "slot0"... Then there is NO "{KEY}" in the PROPERTY Names
+		if (StringUtil.containsAny(cfgKey, "DbxCentral", "slot0"))
+			cfgKey = "";
+		
+		String defaultUrl = null;
+		if (preAllocatedSlot != null)
+			defaultUrl = preAllocatedSlot._url;
+		
+		String url                                = conf.getProperty            (key(PROPKEY_url                              , cfgKey), defaultUrl);
+        
+		boolean errorSendAlarm                    = conf.getBooleanProperty     (key(PROPKEY_errorSendAlarm                   , cfgKey), DEFAULT_errorSendAlarm);
+		int     errorSendAlarmThresholdInSec      = conf.getIntProperty         (key(PROPKEY_errorSendAlarmThresholdInSec     , cfgKey), DEFAULT_errorSendAlarmThresholdInSec);
+                                                                                
+		boolean errorSaveToDisk                   = conf.getBooleanProperty     (key(PROPKEY_errorSaveToDisk                  , cfgKey), DEFAULT_errorSaveToDisk);
+//		String  errorSaveToDiskPath               = conf.getProperty            (key(PROPKEY_errorSaveToDiskPath              , cfgKey), DEFAULT_errorSaveToDiskPath);
+		String  errorSaveToDiskPath               = conf.getProperty            (key(PROPKEY_errorSaveToDiskPath              , cfgKey), get_DEFAULT_errorSaveToDiskPath());
+		int     errorSaveToDiskDiscardAfterXDays  = conf.getIntProperty         (key(PROPKEY_errorSaveToDiskDiscardAfterXDays , cfgKey), DEFAULT_errorSaveToDiskDiscardAfterXDays);
+		int     errorSaveToDiskSuccessSleepTimeMs = conf.getIntProperty         (key(PROPKEY_errorSaveToDiskSuccessSleepTimeMs, cfgKey), DEFAULT_errorSaveToDiskSuccessSleepTimeMs);
+                                                                                
+		int    errorMemQueueSize                  = conf.getIntProperty         (key(PROPKEY_errorMemQueueSize                , cfgKey), DEFAULT_errorMemQueueSize);
+                                                                                                                              
+		boolean sendAlarmExtDescAsHtml            = conf.getBooleanProperty     (key(PROPKEY_sendAlarmExtDescAsHtml           , cfgKey), DEFAULT_sendAlarmExtDescAsHtml);
+//		boolean sendCounters                      = conf.getBooleanProperty     (key(PROPKEY_sendCounters                     , cfgKey), DEFAULT_sendCounters);
+//		boolean sendGraphs                        = conf.getBooleanProperty     (key(PROPKEY_sendGraphs                       , cfgKey), DEFAULT_sendGraphs  );
+		SendCountersConfig sendCounters           = new SendCountersConfig(conf, key(PROPKEY_sendCounters                     , cfgKey), DEFAULT_sendCounters);
+		SendCountersConfig sendGraphs             = new SendCountersConfig(conf, key(PROPKEY_sendGraphs                       , cfgKey), DEFAULT_sendGraphs);
+		                                                                                                                 
+		String header_1                           = conf.getProperty            (key(PROPKEY_header1                          , cfgKey), null);
+		String header_2                           = conf.getProperty            (key(PROPKEY_header2                          , cfgKey), null);
+		String header_3                           = conf.getProperty            (key(PROPKEY_header3                          , cfgKey), null);
+		String header_4                           = conf.getProperty            (key(PROPKEY_header4                          , cfgKey), null);
+		String header_5                           = conf.getProperty            (key(PROPKEY_header5                          , cfgKey), null);
+		String header_6                           = conf.getProperty            (key(PROPKEY_header6                          , cfgKey), null);
+		String header_7                           = conf.getProperty            (key(PROPKEY_header7                          , cfgKey), null);
+		String header_8                           = conf.getProperty            (key(PROPKEY_header8                          , cfgKey), null);
+		String header_9                           = conf.getProperty            (key(PROPKEY_header9                          , cfgKey), null);
+		
+		if (StringUtil.isNullOrBlank(url))
 		{
-//			return super.toString() + ": sendAll=" + _sendAll + ", includeMap=" + _includeMap + ", excludeSet=" + _excludeSet;
-			return "sendAll=" + _sendAll + ", includeMap=" + _includeMap + ", excludeSet=" + _excludeSet;
+			_logger.warn("When getting configuration for config '" + cfgKey + "' using property '" + key(PROPKEY_url, cfgKey) + "' no value for URL was found. Skipping this section.");
+			return null;
+		}
+		else
+		{
+			// Add a SLOT to the list
+			HttpConfigSlot slot = preAllocatedSlot;
+			if (slot == null)
+				slot = new HttpConfigSlot();
+
+			// do NOT change NAME/URL if we have a preAllocatedSlot
+			// Only set NAME/URL for NEW slots, if a preAllocatedSlot was passed, trust NAME/URL
+			if (preAllocatedSlot != null)
+			{
+				slot._cfgName = cfgKey;
+				slot._url     = url;
+			}
+			
+			slot._errorSendAlarm                    = errorSendAlarm;
+			slot._errorSendAlarmThresholdInSec      = errorSendAlarmThresholdInSec;
+			
+			slot._errorSaveToDisk                   = errorSaveToDisk;
+			slot._errorSaveToDiskPath               = errorSaveToDiskPath;
+			slot._errorSaveToDiskDiscardAfterXDays  = errorSaveToDiskDiscardAfterXDays;
+			slot._errorSaveToDiskSuccessSleepTimeMs = errorSaveToDiskSuccessSleepTimeMs;
+
+			slot._errorMemQueueSize      = errorMemQueueSize;
+
+			slot._sendAlarmExtDescAsHtml = sendAlarmExtDescAsHtml;
+			slot._sendCounters           = sendCounters;
+			slot._sendGraphs             = sendGraphs;
+			
+			slot._header_1       = header_1;
+			slot._header_2       = header_2;
+			slot._header_3       = header_3;
+			slot._header_4       = header_4;
+			slot._header_5       = header_5;
+			slot._header_6       = header_6;
+			slot._header_7       = header_7;
+			slot._header_8       = header_8;
+			slot._header_9       = header_9;
+
+			checkOrCreateRecoveryDir(slot);
+
+			// Check if the URL seems to be OK...
+			try 
+			{ 
+				new URL(slot._url); 
+			}
+			catch(MalformedURLException ex) 
+			{ 
+				throw new Exception("The URL '" + slot._url + "' for config '" + slot._cfgName + "' seems to be malformed. Caught: " + ex, ex); 
+			}
+
+			//_confSlots.add(slot);
+			return slot;
 		}
 		
-		public enum FilterType 
-		{
-			ABS, DIFF, RATE
-		};
-
-		public SendConfig(boolean sendAll)
-		{
-			_sendAll = sendAll;
-		}
-
-		public SendConfig(Configuration conf, String propName, String defaultValue)
-		throws Exception
-		{
-conf = Configuration.getCombinedConfiguration();
-			String propVal = conf.getProperty(propName, defaultValue);
-
-			// parse the CSV Property into a temporary map
-			Map<String, String> tmpMap = StringUtil.parseCommaStrToMap(propVal);
-//System.out.println(">>>> SendConfig(propName=|"+propName+"|, propVal=|"+propVal+"|): tmpMap="+tmpMap);
-
-			if (tmpMap.isEmpty())
-			{
-				_sendAll = false;
-			}
-			else
-			{
-				// loop ALL entries, add them to _map
-				for (Entry<String, String> entry : tmpMap.entrySet())
-				{
-					String key = entry.getKey();
-					String val = entry.getValue();
-					
-					// Look for "", "none"
-					if ( "".equalsIgnoreCase(key) || "none".equalsIgnoreCase(key) )
-					{
-						_sendAll = false;
-					}
-					// Look for "*", "all"
-					else if ( "*".equalsIgnoreCase(key) || "all".equalsIgnoreCase(key) )
-					{
-						_sendAll = true;
-						// or possibly ADD ALL entries from: CounterController.getInstance().getCmList();
-					}
-					else
-					{
-						// Check for "negative" or "exclusion" entry
-						boolean exlusionEntry = false;
-						if (key.startsWith("!"))
-						{
-							exlusionEntry = true;
-							key = key.substring(1).trim(); // remove the "!"
-						}
-
-						if ("true".equalsIgnoreCase(val))
-							val = "adr";
-
-						if ("false".equalsIgnoreCase(val))
-							exlusionEntry = true;
-
-						String cmName = key;
-
-						// Check if the name exists (if any CM exists with that name)
-						CountersModel cm = CounterController.getInstance().getCmByName(cmName);
-						if (cm == null)
-						{
-							_logger.error("JSON-SendConfig: The CounterModel '" + cmName + "' does not exists. This entry will be discarded!");
-							continue;
-						}
-
-						if (exlusionEntry)
-						{
-							if (_excludeSet == null)
-								_excludeSet = new LinkedHashSet<>();
-
-							_excludeSet.add(cmName);
-						}
-						else
-						{
-							// Do only allow 'adr' chars... 
-							// * a=AbsCounters
-							// * d=DiffCounters
-							// * r=RateCounters 
-							String addType = "";
-							if (StringUtil.hasValue(val))
-							{
-								String unsupportedChar = "";
-								for (int i=0; i<val.length(); i++)
-								{
-									char ch = val.charAt(i);
-									if (ch == 'a' || ch == 'A' || ch == 'd' || ch == 'D' || ch == 'r' || ch == 'R')
-									{
-										addType += Character.toLowerCase(ch);
-									}
-									else
-									{
-										unsupportedChar += ch;
-										_logger.error("JSON-SendConfig: Inproper value for property '" + propName + "'. Found unsupported char(s) '" + unsupportedChar + "', accepted values are 'adr' where: 'a'=AbsoluteCounters, 'd'=DiffCounters, 'r'=RateCounters");
-									}
-								}
-							}
-
-							// Create the mpa if it doesnt exist
-							if (_includeMap == null)
-								_includeMap = new LinkedHashMap<>();
-
-							// finally ADD the entry to the _includeMap
-							_includeMap.put(cmName, addType);
-						}
-					} // end: CM Entry 
-				} // end: loop tmpMap
-			} // end: tmpMap has-values
-
-			// Should we have a second way to enable this via another property (that starts with the CM-NAME)
-			// Check for CM Properties, named: <CmName>.PersistWriterToHttpJson.send.{counters|graphs}
-			boolean checkEnableViaCmName = true;
-			if (checkEnableViaCmName)
-			{
-				for (CountersModel cm : CounterController.getInstance().getCmList())
-				{
-//					public static final String  PROPKEY_sendCounters      = "PersistWriterToHttpJson.{KEY}.send.counters";
-//					public static final String  PROPKEY_sendGraphs        = "PersistWriterToHttpJson.{KEY}.send.graphs";
-					
-					String cmName = cm.getName();
-					String key = null;
-					if (propName.endsWith(".send.counters")) key = cmName + ".PersistWriterToHttpJson.send.counters";
-					if (propName.endsWith(".send.graphs"  )) key = cmName + ".PersistWriterToHttpJson.send.graphs";
-
-//SOMEWHERE; CmActiveStatements should not be hardcoded...
-//SOMEWHERE; also add property to JSON "cmSendCountersList" or similar
-
-					String val = conf.getProperty(key);
-					if (val != null)
-					{
-						// do work
-						// - check if the CM is EXPLICITLY defined, then do NOT override!
-
-						boolean doApply = true;
-						if (_excludeSet != null && _excludeSet.contains(cmName))    doApply = false;
-						if (_includeMap != null && _includeMap.containsKey(cmName)) doApply = false;
-
-						if ( ! doApply )
-						{
-							_logger.info("JSON-SendConfig: NOT Applying setting from property '" + key + "', value '" + val + "'. This due to a higer priority setting '" + propName + "', value '" + propVal + "' has already been applied.");
-						}
-						else
-						{
-							boolean exlusionEntry = false;
-
-							if ("true".equalsIgnoreCase(val))
-								val = "adr";
-
-							if ("false".equalsIgnoreCase(val))
-								exlusionEntry = true;
-
-							if (exlusionEntry)
-							{
-								if (_excludeSet == null)
-									_excludeSet = new LinkedHashSet<>();
-
-								_excludeSet.add(cmName);
-							}
-							else
-							{
-								// Do only allow 'adr' chars... 
-								// * a=AbsCounters
-								// * d=DiffCounters
-								// * r=RateCounters 
-								String addType = "";
-								if (StringUtil.hasValue(val))
-								{
-									String unsupportedChar = "";
-									for (int i=0; i<val.length(); i++)
-									{
-										char ch = val.charAt(i);
-										if (ch == 'a' || ch == 'A' || ch == 'd' || ch == 'D' || ch == 'r' || ch == 'R')
-										{
-											addType += Character.toLowerCase(ch);
-										}
-										else
-										{
-											unsupportedChar += ch;
-											_logger.error("JSON-SendConfig: Inproper value for property '" + key + "'. Found unsupported char(s) '" + unsupportedChar + "', accepted values are 'adr' where: 'a'=AbsoluteCounters, 'd'=DiffCounters, 'r'=RateCounters");
-										}
-									}
-								}
-
-								// Create the Map if it doesn't exist
-								if (_includeMap == null)
-									_includeMap = new LinkedHashMap<>();
-
-								// finally ADD the entry to the _includeMap
-								_includeMap.put(cmName, addType);
-							}
-						} // end: doApply
-					} // end: hasValue
-				} // end: loop CmList	
-			} // end: checkEnableViaCmName
-
-		} // end: constructor
-
-		public boolean isSendAll() 
-		{ 
-			return _sendAll; 
-		}
-
-		public boolean isEnabled(String name)     { return isEnabled(name, null); }
-		public boolean isAbsEnabled (String name) { return isEnabled(name, FilterType.ABS); }
-		public boolean isDiffEnabled(String name) { return isEnabled(name, FilterType.DIFF); }
-		public boolean isRateEnabled(String name) { return isEnabled(name, FilterType.RATE); }
-
-		private boolean isEnabled(String name, FilterType type) 
-		{
-//			if (type == null)      throw new IllegalArgumentException("type can't be null.");
-//			if (type.length() > 1) throw new IllegalArgumentException("type can't be more than 1 character, you passed '" + type + "'.");
-//			if ( ! ("a".equalsIgnoreCase(type) || "d".equalsIgnoreCase(type) || "r".equalsIgnoreCase(type)) )
-//				throw new IllegalArgumentException("type Can only be 'a', 'd' or 'r'. you passed '" + type + "'.");
-
-			if (isSendAll())
-				return true;
-
-			if (_excludeSet != null && _excludeSet.contains(name))
-			{
-				return false;
-			}
-
-			if (_includeMap != null && _includeMap.containsKey(name))
-			{
-				String adr = _includeMap.get(name);
-				if (StringUtil.isNullOrBlank(adr))
-					return true;
-
-				if (type == null)
-					return true;
-					
-				String typeStr = "";
-				if (FilterType.ABS .equals(type)) typeStr = "a";
-				if (FilterType.DIFF.equals(type)) typeStr = "d";
-				if (FilterType.RATE.equals(type)) typeStr = "r";
-
-				return adr.contains(typeStr);
-			}
-			else
-			{
-				return false;
-			}
-		}
 	}
-	
+
 	@Override
 	public void init(Configuration conf) throws Exception
 	{
-		System.out.println(getName()+": INIT.....................................");
+//System.out.println(getName() + ": INIT.....................................");
 
 		_conf = conf;
 
-		_logger.info("Initializing the PersistWriter component named '"+getName()+"'.");
+		_logger.info("Initializing the PersistWriter component named '" + getName() + "'.");
 
-		_confSlot0._url            = conf.getProperty       (key(PROPKEY_url              ), DEFAULT_url);
+		//--------------------------------------------
+		// Read "slot0/DbxCentral" configurations
+		//--------------------------------------------
+		_confSlot0 = new HttpConfigSlot();
+		_confSlot0._url            = conf.getProperty(key(PROPKEY_url), DEFAULT_url);
 		_confSlot0._cfgName        = "slot0";
 		if (_confSlot0._url.endsWith("/api/pcs/receiver"))
 			_confSlot0._cfgName    = "DbxCentral";
 
-		_confSlot0._errorSendAlarm                   = conf.getBooleanProperty (key(PROPKEY_errorSendAlarm                   ), DEFAULT_errorSendAlarm);
-		_confSlot0._errorSendAlarmThresholdInSec     = conf.getIntProperty     (key(PROPKEY_errorSendAlarmThresholdInSec     ), DEFAULT_errorSendAlarmThresholdInSec);
-
-		_confSlot0._errorSaveToDisk                   = conf.getBooleanProperty(key(PROPKEY_errorSaveToDisk                  ), DEFAULT_errorSaveToDisk);
-		_confSlot0._errorSaveToDiskPath               = conf.getProperty       (key(PROPKEY_errorSaveToDiskPath              ), DEFAULT_errorSaveToDiskPath);
-		_confSlot0._errorSaveToDiskDiscardAfterXDays  = conf.getIntProperty    (key(PROPKEY_errorSaveToDiskDiscardAfterXDays ), DEFAULT_errorSaveToDiskDiscardAfterXDays);
-		_confSlot0._errorSaveToDiskSuccessSleepTimeMs = conf.getIntProperty    (key(PROPKEY_errorSaveToDiskSuccessSleepTimeMs), DEFAULT_errorSaveToDiskSuccessSleepTimeMs);
-
-		_confSlot0._errorMemQueueSize                 = conf.getIntProperty    (key(PROPKEY_errorMemQueueSize                ), DEFAULT_errorMemQueueSize);
-                                                                                                                             
-		_confSlot0._sendAlarmExtDescAsHtml            = conf.getBooleanProperty(key(PROPKEY_sendAlarmExtDescAsHtml           ), DEFAULT_sendAlarmExtDescAsHtml);
-//		_confSlot0._sendCounters                      = conf.getBooleanProperty(key(PROPKEY_sendCounters                     ), DEFAULT_sendCounters);
-//		_confSlot0._sendGraphs                        = conf.getBooleanProperty(key(PROPKEY_sendGraphs                       ), DEFAULT_sendGraphs);
-		_confSlot0._sendCounters                      = new SendConfig(conf,    key(PROPKEY_sendCounters                     ), DEFAULT_sendCounters);
-		_confSlot0._sendGraphs                        = new SendConfig(conf,    key(PROPKEY_sendGraphs                       ), DEFAULT_sendGraphs);
-                                                                                                                             
-		_confSlot0._header_1                          = conf.getProperty       (key(PROPKEY_header1                          ), DEFAULT_header1);
-		_confSlot0._header_2                          = conf.getProperty       (key(PROPKEY_header2                          ), DEFAULT_header2);
-		_confSlot0._header_3                          = conf.getProperty       (key(PROPKEY_header3                          ), DEFAULT_header3);
-		_confSlot0._header_4                          = conf.getProperty       (key(PROPKEY_header4                          ), DEFAULT_header4);
-		_confSlot0._header_5                          = conf.getProperty       (key(PROPKEY_header5                          ), DEFAULT_header5);
-		_confSlot0._header_6                          = conf.getProperty       (key(PROPKEY_header6                          ), DEFAULT_header6);
-		_confSlot0._header_7                          = conf.getProperty       (key(PROPKEY_header7                          ), DEFAULT_header7);
-		_confSlot0._header_8                          = conf.getProperty       (key(PROPKEY_header8                          ), DEFAULT_header8);
-		_confSlot0._header_9                          = conf.getProperty       (key(PROPKEY_header9                          ), DEFAULT_header9);
-
-		checkOrCreateRecoveryDir(_confSlot0);
+		_confSlot0 = initConfigSlot(conf, "", _confSlot0);
 		
-		// Read "extra" configurations
+
+		//--------------------------------------------
+		// Read "extra" configurations "slots"
+		//--------------------------------------------
 		String keyStr = conf.getProperty(PROPKEY_configKeys, DEFAULT_configKeys);
 		List<String> keyList = StringUtil.commaStrToList(keyStr);
 		
 		for (String cfgKey : keyList)
 		{
-			String url                                = conf.getProperty       (key(PROPKEY_url                              , cfgKey), null);
-                                   
-			boolean errorSendAlarm                    = conf.getBooleanProperty(key(PROPKEY_errorSendAlarm                   , cfgKey), DEFAULT_errorSendAlarm);
-			int     errorSendAlarmThresholdInSec      = conf.getIntProperty    (key(PROPKEY_errorSendAlarmThresholdInSec     , cfgKey), DEFAULT_errorSendAlarmThresholdInSec);
-
-			boolean errorSaveToDisk                   = conf.getBooleanProperty(key(PROPKEY_errorSaveToDisk                  , cfgKey), DEFAULT_errorSaveToDisk);
-			String  errorSaveToDiskPath               = conf.getProperty       (key(PROPKEY_errorSaveToDiskPath              , cfgKey), DEFAULT_errorSaveToDiskPath);
-			int     errorSaveToDiskDiscardAfterXDays  = conf.getIntProperty    (key(PROPKEY_errorSaveToDiskDiscardAfterXDays , cfgKey), DEFAULT_errorSaveToDiskDiscardAfterXDays);
-			int     errorSaveToDiskSuccessSleepTimeMs = conf.getIntProperty    (key(PROPKEY_errorSaveToDiskSuccessSleepTimeMs, cfgKey), DEFAULT_errorSaveToDiskSuccessSleepTimeMs);
-
-			int    errorMemQueueSize                  = conf.getIntProperty    (key(PROPKEY_errorMemQueueSize                , cfgKey), DEFAULT_errorMemQueueSize);
-                                                                                                                             
-			boolean sendAlarmExtDescAsHtml            = conf.getBooleanProperty(key(PROPKEY_sendAlarmExtDescAsHtml           , cfgKey), DEFAULT_sendAlarmExtDescAsHtml);
-//			boolean sendCounters                      = conf.getBooleanProperty(key(PROPKEY_sendCounters                     , cfgKey), DEFAULT_sendCounters);
-//			boolean sendGraphs                        = conf.getBooleanProperty(key(PROPKEY_sendGraphs                       , cfgKey), DEFAULT_sendGraphs  );
-			SendConfig sendCounters                   = new SendConfig(conf,    key(PROPKEY_sendCounters                     , cfgKey), DEFAULT_sendCounters);
-			SendConfig sendGraphs                     = new SendConfig(conf,    key(PROPKEY_sendGraphs                       , cfgKey), DEFAULT_sendGraphs);
-			                                                                                                                 
-			String header_1                           = conf.getProperty       (key(PROPKEY_header1                          , cfgKey), null);
-			String header_2                           = conf.getProperty       (key(PROPKEY_header2                          , cfgKey), null);
-			String header_3                           = conf.getProperty       (key(PROPKEY_header3                          , cfgKey), null);
-			String header_4                           = conf.getProperty       (key(PROPKEY_header4                          , cfgKey), null);
-			String header_5                           = conf.getProperty       (key(PROPKEY_header5                          , cfgKey), null);
-			String header_6                           = conf.getProperty       (key(PROPKEY_header6                          , cfgKey), null);
-			String header_7                           = conf.getProperty       (key(PROPKEY_header7                          , cfgKey), null);
-			String header_8                           = conf.getProperty       (key(PROPKEY_header8                          , cfgKey), null);
-			String header_9                           = conf.getProperty       (key(PROPKEY_header9                          , cfgKey), null);
-			
-			if (StringUtil.isNullOrBlank(url))
-			{
-				_logger.warn("When getting configuration for config '"+cfgKey+"' using property '"+key(PROPKEY_url, cfgKey)+"' no value for URL was found. Skipping this section.");
-			}
-			else
-			{
-				// Add a SLOT to the list
-				ConfigSlot slot = new ConfigSlot();
-
-				slot._cfgName        = cfgKey;
-				slot._url            = url;
-
-				slot._errorSendAlarm                    = errorSendAlarm;
-				slot._errorSendAlarmThresholdInSec      = errorSendAlarmThresholdInSec;
-				
-				slot._errorSaveToDisk                   = errorSaveToDisk;
-				slot._errorSaveToDiskPath               = errorSaveToDiskPath;
-				slot._errorSaveToDiskDiscardAfterXDays  = errorSaveToDiskDiscardAfterXDays;
-				slot._errorSaveToDiskSuccessSleepTimeMs = errorSaveToDiskSuccessSleepTimeMs;
-
-				slot._errorMemQueueSize      = errorMemQueueSize;
-
-				slot._sendAlarmExtDescAsHtml = sendAlarmExtDescAsHtml;
-				slot._sendCounters           = sendCounters;
-				slot._sendGraphs             = sendGraphs;
-				
-				slot._header_1       = header_1;
-				slot._header_2       = header_2;
-				slot._header_3       = header_3;
-				slot._header_4       = header_4;
-				slot._header_5       = header_5;
-				slot._header_6       = header_6;
-				slot._header_7       = header_7;
-				slot._header_8       = header_8;
-				slot._header_9       = header_9;
-
-				checkOrCreateRecoveryDir(slot);
-
-				_confSlots.add(slot);
-			}
+			HttpConfigSlot httpConfigSlot = initConfigSlot(conf, cfgKey, null);
+			if (httpConfigSlot != null)
+				_confSlots.add(httpConfigSlot);
 		}
 
-		
+
 		//------------------------------------------
 		// Check for mandatory parameters
 		//------------------------------------------
-		if ( StringUtil.isNullOrBlank(_confSlot0._url) )          throw new Exception("The property '" + PROPKEY_url          + "' is mandatory for the PersistWriter named '"+getName()+"'.");
+		if ( StringUtil.isNullOrBlank(_confSlot0._url) )          throw new Exception("The property '" + PROPKEY_url          + "' is mandatory for the PersistWriter named '" + getName() + "'.");
 
 
 		//------------------------------------------
 		// Check for valid configuration
 		//------------------------------------------
-		// Check if the URL seems to be OK...
-		String cfgName = "";
-		String testUrl = "";
-		try 
-		{ 
-			cfgName = "base";
-			testUrl = _confSlot0._url;
-			new URL(_confSlot0._url); 
-
-			for (ConfigSlot slot : _confSlots)
-			{
-				cfgName = slot._cfgName;
-				testUrl = slot._url;
-				new URL(slot._url); 
-			}
-		}
-		catch(MalformedURLException ex) 
-		{ 
-			throw new Exception("The URL '"+testUrl+"' for config '"+cfgName+"' seems to be malformed. Caught: "+ex, ex); 
-		}
+		// Check if the URL seems to be OK... This is already done in method 'initConfigSlot(...)'
 		
+		//------------------------------------------
+		// Print how we are configured
+		//------------------------------------------
 		printConfig();
 	}
 
-	public static final String  PROPKEY_configKeys        = "PersistWriterToHttpJson.config.keys";
+	public static final String  PROPKEY_configKeys        = "{CLASSNAME}.config.keys";
 	public static final String  DEFAULT_configKeys        = null;
-                                                          
-	public static final String  PROPKEY_url               = "PersistWriterToHttpJson.{KEY}.url";
+
+	public static final String  PROPKEY_url               = "{CLASSNAME}.{KEY}.url";
 //	public static final String  DEFAULT_url               = null;
 	public static final String  DEFAULT_url               = "http://localhost:8080/api/pcs/receiver";
 
-	
-	public static final String  PROPKEY_errorSendAlarm                    = "PersistWriterToHttpJson.{KEY}.error.sendAlarm";
+
+	public static final String  PROPKEY_errorSendAlarm                    = "{CLASSNAME}.{KEY}.error.sendAlarm";
 	public static final boolean DEFAULT_errorSendAlarm                    = true;
-                                                          
-	public static final String  PROPKEY_errorSendAlarmThresholdInSec      = "PersistWriterToHttpJson.{KEY}.error.sendAlarm.thresholdInSec";
+
+	public static final String  PROPKEY_errorSendAlarmThresholdInSec      = "{CLASSNAME}.{KEY}.error.sendAlarm.thresholdInSec";
 //	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 30; // 30 minutes
 //	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 60; // 1 Hour
 	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 90; // 1.5 Hour
 
 	
-	public static final String  PROPKEY_errorSaveToDisk                   = "PersistWriterToHttpJson.{KEY}.error.saveToDisk";
+	public static final String  PROPKEY_errorSaveToDisk                   = "{CLASSNAME}.{KEY}.error.saveToDisk";
 	public static final boolean DEFAULT_errorSaveToDisk                   = true;
-                                                          
-	public static final String  PROPKEY_errorSaveToDiskPath               = "PersistWriterToHttpJson.{KEY}.error.saveToDisk.path";
-	public static final String  DEFAULT_errorSaveToDiskPath               = System.getProperty("java.io.tmpdir") + File.separatorChar + "DbxTune" + File.separatorChar + "PersistWriterToHttpJson";
-                                                          
-	public static final String  PROPKEY_errorSaveToDiskDiscardAfterXDays  = "PersistWriterToHttpJson.{KEY}.error.saveToDisk.discard.after.days";
+
+	public static final String  PROPKEY_errorSaveToDiskPath               = "{CLASSNAME}.{KEY}.error.saveToDisk.path";
+//	public static final String  DEFAULT_errorSaveToDiskPath               = System.getProperty("java.io.tmpdir") + File.separatorChar + "DbxTune" + File.separatorChar + "PersistWriterToHttpJson";
+//	public static final String  DEFAULT_errorSaveToDiskPath               = System.getProperty("java.io.tmpdir") + File.separatorChar + "DbxTune" + File.separatorChar + MethodHandles.lookup().lookupClass().getSimpleName();
+	public String  get_DEFAULT_errorSaveToDiskPath()
+	{
+//		return System.getProperty("java.io.tmpdir") + File.separatorChar + "DbxTune" + File.separatorChar + "PersistWriterToHttpJson";
+		return System.getProperty("java.io.tmpdir") + File.separatorChar + "DbxTune" + File.separatorChar + this.getClass().getSimpleName();
+	}
+
+	public static final String  PROPKEY_errorSaveToDiskDiscardAfterXDays  = "{CLASSNAME}.{KEY}.error.saveToDisk.discard.after.days";
 	public static final int     DEFAULT_errorSaveToDiskDiscardAfterXDays  = 1;
-                                                          
-	public static final String  PROPKEY_errorSaveToDiskSuccessSleepTimeMs = "PersistWriterToHttpJson.{KEY}.error.saveToDisk.success.sleep.time.ms";
+
+	public static final String  PROPKEY_errorSaveToDiskSuccessSleepTimeMs = "{CLASSNAME}.{KEY}.error.saveToDisk.success.sleep.time.ms";
 	public static final int     DEFAULT_errorSaveToDiskSuccessSleepTimeMs = 2000;
 
 	
-	public static final String  PROPKEY_errorMemQueueSize                 = "PersistWriterToHttpJson.{KEY}.error.in-memory.queue.size";
+	public static final String  PROPKEY_errorMemQueueSize                 = "{CLASSNAME}.{KEY}.error.in-memory.queue.size";
 	public static final int     DEFAULT_errorMemQueueSize                 = 10;
-                                                          
 
-	public static final String  PROPKEY_sendAlarmExtDescAsHtml            = "PersistWriterToHttpJson.{KEY}.send.alarm.extendedDescAsHtml";
+
+	public static final String  PROPKEY_sendAlarmExtDescAsHtml            = "{CLASSNAME}.{KEY}.send.alarm.extendedDescAsHtml";
 	public static final boolean DEFAULT_sendAlarmExtDescAsHtml            = true;
-                                                          
-	public static final String  PROPKEY_sendCounters      = "PersistWriterToHttpJson.{KEY}.send.counters";
+
+	public static final String  PROPKEY_sendCounters      = "{CLASSNAME}.{KEY}.send.counters";
 //	public static final boolean DEFAULT_sendCounters      = false;
 //	public static final String  DEFAULT_sendCounters      = "none";
 	public static final String  DEFAULT_sendCounters      = "CmActiveStatements=adr";
 
-	public static final String  PROPKEY_sendGraphs        = "PersistWriterToHttpJson.{KEY}.send.graphs";
+	public static final String  PROPKEY_sendGraphs        = "{CLASSNAME}.{KEY}.send.graphs";
 //	public static final boolean DEFAULT_sendGraphs        = true;
 	public static final String  DEFAULT_sendGraphs        = "all";
 
-	public static final String  PROPKEY_header1           = "PersistWriterToHttpJson.{KEY}.header.1";
+	public static final String  PROPKEY_header1           = "{CLASSNAME}.{KEY}.header.1";
 //	public static final String  DEFAULT_header1           = null;
 //	public static final String  DEFAULT_header1           = "Content-Type: application/json";
 	public static final String  DEFAULT_header1           = "Content-Type: text/plain";
-                                                          
-	public static final String  PROPKEY_header2           = "PersistWriterToHttpJson.{KEY}.header.2";
+
+	public static final String  PROPKEY_header2           = "{CLASSNAME}.{KEY}.header.2";
 	public static final String  DEFAULT_header2           = null;
-                                                          
-	public static final String  PROPKEY_header3           = "PersistWriterToHttpJson.{KEY}.header.3";
+
+	public static final String  PROPKEY_header3           = "{CLASSNAME}.{KEY}.header.3";
 	public static final String  DEFAULT_header3           = null;
-                                                          
-	public static final String  PROPKEY_header4           = "PersistWriterToHttpJson.{KEY}.header.4";
+
+	public static final String  PROPKEY_header4           = "{CLASSNAME}.{KEY}.header.4";
 	public static final String  DEFAULT_header4           = null;
-                                                          
-	public static final String  PROPKEY_header5           = "PersistWriterToHttpJson.{KEY}.header.5";
+
+	public static final String  PROPKEY_header5           = "{CLASSNAME}.{KEY}.header.5";
 	public static final String  DEFAULT_header5           = null;
-                                                          
-	public static final String  PROPKEY_header6           = "PersistWriterToHttpJson.{KEY}.header.6";
+
+	public static final String  PROPKEY_header6           = "{CLASSNAME}.{KEY}.header.6";
 	public static final String  DEFAULT_header6           = null;
-                                                          
-	public static final String  PROPKEY_header7           = "PersistWriterToHttpJson.{KEY}.header.7";
+
+	public static final String  PROPKEY_header7           = "{CLASSNAME}.{KEY}.header.7";
 	public static final String  DEFAULT_header7           = null;
-                                                          
-	public static final String  PROPKEY_header8           = "PersistWriterToHttpJson.{KEY}.header.8";
+
+	public static final String  PROPKEY_header8           = "{CLASSNAME}.{KEY}.header.8";
 	public static final String  DEFAULT_header8           = null;
-                                                          
-	public static final String  PROPKEY_header9           = "PersistWriterToHttpJson.{KEY}.header.9";
+
+	public static final String  PROPKEY_header9           = "{CLASSNAME}.{KEY}.header.9";
 	public static final String  DEFAULT_header9           = null;
+
+	/** All files should START with this */
+//	public static final String RECOVERY_FILE_PREFIX = "DbxTune.PersistWriterToHttpJson.retry.";
+//	public static final String RECOVERY_FILE_SUFFIX = "json";
+	public String get_RECOVERY_FILE_PREFIX() { return "DbxTune." + this.getClass().getSimpleName() + ".retry."; }
+	public String get_RECOVERY_FILE_SUFFIX() { return "json"; }
 
 	//-------------------------------------------------------
 	// class members
@@ -1350,10 +704,10 @@ conf = Configuration.getCombinedConfiguration();
 //	private String  _header_8 = "";
 //	private String  _header_9 = "";
 
-	private      ConfigSlot  _confSlot0 = new ConfigSlot();
-	private List<ConfigSlot> _confSlots = new ArrayList<>();
+	private      HttpConfigSlot  _confSlot0 = new HttpConfigSlot();
+	private List<HttpConfigSlot> _confSlots = new ArrayList<>();
 
-	private class ConfigSlot
+	protected class HttpConfigSlot
 	{
 		String  _cfgName  = "";
 		String  _url      = "";
@@ -1363,7 +717,8 @@ conf = Configuration.getCombinedConfiguration();
 		long    _lastSendSuccess                   = System.currentTimeMillis(); // used to determine if we should send alarm
 
 		boolean _errorSaveToDisk                   = DEFAULT_errorSaveToDisk;
-		String  _errorSaveToDiskPath               = DEFAULT_errorSaveToDiskPath;
+//		String  _errorSaveToDiskPath               = DEFAULT_errorSaveToDiskPath;
+		String  _errorSaveToDiskPath               = get_DEFAULT_errorSaveToDiskPath();
 		int     _errorSaveToDiskDiscardAfterXDays  = DEFAULT_errorSaveToDiskDiscardAfterXDays;
 		int     _errorSaveToDiskSuccessSleepTimeMs = DEFAULT_errorSaveToDiskSuccessSleepTimeMs;
 		
@@ -1373,8 +728,8 @@ conf = Configuration.getCombinedConfiguration();
 		boolean _sendAlarmExtDescAsHtml   = DEFAULT_sendAlarmExtDescAsHtml;
 //		boolean _sendCounters             = DEFAULT_sendCounters;
 //		boolean _sendGraphs               = DEFAULT_sendGraphs;
-		SendConfig _sendCounters = new SendConfig(false);
-		SendConfig _sendGraphs   = new SendConfig(true);
+		SendCountersConfig _sendCounters = new SendCountersConfig(false);
+		SendCountersConfig _sendGraphs   = new SendCountersConfig(true);
 		
 		String  _header_1 = "";
 		String  _header_2 = "";
@@ -1386,11 +741,11 @@ conf = Configuration.getCombinedConfiguration();
 		String  _header_8 = "";
 		String  _header_9 = "";
 
-		/** All files should START with this */
-		public static final String RECOVERY_FILE_PREFIX = "DbxTune.PersistWriterToHttpJson.retry.";
-		public static final String RECOVERY_FILE_SUFFIX = "json";
+//		/** All files should START with this */
+//		public static final String RECOVERY_FILE_PREFIX = "DbxTune.PersistWriterToHttpJson.retry.";
+//		public static final String RECOVERY_FILE_SUFFIX = "json";
 		
-		public ConfigSlot()
+		public HttpConfigSlot()
 		{
 		}
 
@@ -1417,16 +772,16 @@ conf = Configuration.getCombinedConfiguration();
 					// init some helper variables
 					String ts  = new SimpleDateFormat("yyyy-MM-dd.HH_mm_ss_SSS").format( new Date(System.currentTimeMillis()) );
 					String srv = cont.getServerNameOrAlias(); 
-					File   f   = new File(_errorSaveToDiskPath + File.separatorChar + RECOVERY_FILE_PREFIX + srv + "." + _cfgName + "." + ts + "." + RECOVERY_FILE_SUFFIX);
+					File   f   = new File(_errorSaveToDiskPath + File.separatorChar + get_RECOVERY_FILE_PREFIX() + srv + "." + _cfgName + "." + ts + "." + get_RECOVERY_FILE_SUFFIX());
 
-					_logger.info("addToErrorQueue(SAVE-TO-DISK): cfgName='"+_cfgName+"'. Saving to file: "+f);
+					_logger.info("addToErrorQueue(SAVE-TO-DISK): cfgName='" + _cfgName + "'. Saving to file: " + f);
 					try
 					{
 						FileUtils.write(f, jsonStr, StandardCharsets.UTF_8);
 					}
 					catch (IOException ex)
 					{
-						_logger.error("addToErrorQueue(SAVE-TO-DISK): cfgName='"+_cfgName+"'. Error when saving to file '"+f+"'. Caught: "+ex, ex);
+						_logger.error("addToErrorQueue(SAVE-TO-DISK): cfgName='" + _cfgName + "'. Error when saving to file '" + f + "'. Caught: " + ex, ex);
 					}
 				}
 				// IN-MEMORY error queue
@@ -1437,13 +792,13 @@ conf = Configuration.getCombinedConfiguration();
 					while (_errorQueue.size() > _errorMemQueueSize)
 					{
 						_errorQueue.removeFirst();
-						_logger.info("addToErrorQueue(IN-MEMORY): Removing 'oldest' entry in the ErrorQueue for config name '"+_cfgName+"'. _errorQueue.size()="+_errorQueue.size()+", maxEntries="+_errorMemQueueSize);
+						_logger.info("addToErrorQueue(IN-MEMORY): Removing 'oldest' entry in the ErrorQueue for config name '" + _cfgName + "'. _errorQueue.size()=" + _errorQueue.size() + ", maxEntries=" + _errorMemQueueSize);
 					}
 				}
 			}
 			catch (RuntimeException ex)
 			{
-				_logger.error("Runtime Problems in: addToErrorQueue(), cfgName='"+_cfgName+"', continuing anyway... Caught: " + ex, ex);
+				_logger.error("Runtime Problems in: addToErrorQueue(), cfgName='" + _cfgName + "', continuing anyway... Caught: " + ex, ex);
 			}
 		}
 
@@ -1467,7 +822,7 @@ conf = Configuration.getCombinedConfiguration();
 
 					// grab error files, and send them
 					//Collection<File> filesColl = FileUtils.listFiles(new File(_errorSaveToDiskPath), new WildcardFileFilter(RECOVERY_FILE_PREFIX + srv + "." + _cfgName + ".*"), TrueFileFilter.TRUE); // maybe... but not tested.
-					Collection<File> filesColl = FileUtils.listFiles(new File(_errorSaveToDiskPath), new String[] {RECOVERY_FILE_SUFFIX}, false);
+					Collection<File> filesColl = FileUtils.listFiles(new File(_errorSaveToDiskPath), new String[] {get_RECOVERY_FILE_SUFFIX()}, false);
 					if ( ! filesColl.isEmpty() )
 					{
 						// Make an array, and sort it...
@@ -1478,9 +833,9 @@ conf = Configuration.getCombinedConfiguration();
 						for (File file : filesArr )
 						{
 							String filename = file.getName();
-							if (filename.startsWith(RECOVERY_FILE_PREFIX + srv + "." + _cfgName + "."))
+							if (filename.startsWith(get_RECOVERY_FILE_PREFIX() + srv + "." + _cfgName + "."))
 							{
-								_logger.info("sendErrorQueue(SAVE-TO-DISK): cfgName='"+_cfgName+"', srv='"+srv+"'. trying to recover and send file: "+file);
+								_logger.info("sendErrorQueue(SAVE-TO-DISK): cfgName='" + _cfgName + "', srv='" + srv + "'. trying to recover and send file: " + file);
 								try
 								{
 									String jsonStr = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
@@ -1488,7 +843,7 @@ conf = Configuration.getCombinedConfiguration();
 									// If the file is empty... delete the file and go to next
 									if (StringUtil.isNullOrBlank(jsonStr))
 									{
-										_logger.info("sendErrorQueue(SAVE-TO-DISK): cfgName='"+_cfgName+"', srv='"+srv+"'. Found empty file, just deleting it and continuing with next... deleted file: "+file);
+										_logger.info("sendErrorQueue(SAVE-TO-DISK): cfgName='" + _cfgName + "', srv='" + srv + "'. Found empty file, just deleting it and continuing with next... deleted file: " + file);
 										file.delete();
 										continue;
 									}
@@ -1507,25 +862,25 @@ conf = Configuration.getCombinedConfiguration();
 									int sleepThreshold = 5;
 									if (serverSideQueueSize > sleepThreshold)
 									{
-										_logger.info("sendErrorQueue(SAVE-TO-DISK): serverSideQueueSize="+serverSideQueueSize+", Sleeping "+_errorSaveToDiskSuccessSleepTimeMs+" ms for config name '"+_cfgName+"', srv='"+srv+"', sendCount="+sendCount+", after sending file '"+file+"'. This not to overload the Central Server.");
+										_logger.info("sendErrorQueue(SAVE-TO-DISK): serverSideQueueSize=" + serverSideQueueSize + ", Sleeping " + _errorSaveToDiskSuccessSleepTimeMs + " ms for config name '" + _cfgName + "', srv='" + srv + "', sendCount=" + sendCount + ", after sending file '" + file + "'. This not to overload the Central Server.");
 										Thread.sleep(_errorSaveToDiskSuccessSleepTimeMs);
 									}
 								}
 								catch (InterruptedException ex)
 								{
-									_logger.info("sendErrorQueue(SAVE-TO-DISK): Interupted when doing disk entry recovery at file '"+file+"' in the ErrorQueue for config name '"+_cfgName+"'. to '"+_url+"'.");
+									_logger.info("sendErrorQueue(SAVE-TO-DISK): Interupted when doing disk entry recovery at file '" + file + "' in the ErrorQueue for config name '" + _cfgName + "'. to '" + _url + "'.");
 									break;
 								}
 								catch (ConnectException ex) 
 								{
 									// log WITHOUT stacktrace
-									_logger.info("sendErrorQueue(SAVE-TO-DISK): Resending PROBLEMS for disk entry '"+file+"' in the ErrorQueue for config name '"+_cfgName+"'. to '"+_url+"'. It will be kept on disk... Caught: "+ex);
+									_logger.info("sendErrorQueue(SAVE-TO-DISK): Resending PROBLEMS for disk entry '" + file + "' in the ErrorQueue for config name '" + _cfgName + "'. to '" + _url + "'. It will be kept on disk... Caught: " + ex);
 									break;
 								}
 								catch (Exception ex) 
 								{
 									// log with STACKTRACE
-									_logger.info("sendErrorQueue(SAVE-TO-DISK): Resending PROBLEMS for disk entry '"+file+"' in the ErrorQueue for config name '"+_cfgName+"'. to '"+_url+"'. It will be kept on disk... Caught: "+ex, ex);
+									_logger.info("sendErrorQueue(SAVE-TO-DISK): Resending PROBLEMS for disk entry '" + file + "' in the ErrorQueue for config name '" + _cfgName + "'. to '" + _url + "'. It will be kept on disk... Caught: " + ex, ex);
 									break;
 								}
 							} // end: correct file
@@ -1549,7 +904,7 @@ conf = Configuration.getCombinedConfiguration();
 							// Get message
 							String jsonStr = _errorQueue.getFirst();
 
-							_logger.info("sendErrorQueue(IN-MEMORY): Resending 'oldest' entry in the ErrorQueue for config name '"+_cfgName+"'. _errorQueue.size()="+_errorQueue.size());
+							_logger.info("sendErrorQueue(IN-MEMORY): Resending 'oldest' entry in the ErrorQueue for config name '" + _cfgName + "'. _errorQueue.size()=" + _errorQueue.size());
 							
 							// send message (if we have problems an exception will be thrown)
 							sendMessage(jsonStr, this);
@@ -1561,13 +916,13 @@ conf = Configuration.getCombinedConfiguration();
 						catch (ConnectException ex) 
 						{
 							// log WITHOUT stacktrace
-							_logger.info("sendErrorQueue(IN-MEMORY): Resending PROBLEMS for 'oldest' entry in the ErrorQueue for config name '"+_cfgName+"'. _errorQueue.size()="+_errorQueue.size()+". to '"+_url+"'. It will be kept in the queue... Caught: "+ex);
+							_logger.info("sendErrorQueue(IN-MEMORY): Resending PROBLEMS for 'oldest' entry in the ErrorQueue for config name '" + _cfgName + "'. _errorQueue.size()=" + _errorQueue.size() + ". to '" + _url + "'. It will be kept in the queue... Caught: " + ex);
 							break;
 						}
 						catch (Exception ex) 
 						{
 							// log with STACKTRACE
-							_logger.info("sendErrorQueue(IN-MEMORY): Resending PROBLEMS for 'oldest' entry in the ErrorQueue for config name '"+_cfgName+"'. _errorQueue.size()="+_errorQueue.size()+". to '"+_url+"'. It will be kept in the queue... Caught: "+ex, ex);
+							_logger.info("sendErrorQueue(IN-MEMORY): Resending PROBLEMS for 'oldest' entry in the ErrorQueue for config name '" + _cfgName + "'. _errorQueue.size()=" + _errorQueue.size() + ". to '" + _url + "'. It will be kept in the queue... Caught: " + ex, ex);
 							break;
 						}
 					}
@@ -1576,7 +931,7 @@ conf = Configuration.getCombinedConfiguration();
 			}
 			catch (RuntimeException ex)
 			{
-				_logger.error("Runtime Problems in: sendErrorQueue(), cfgName='"+_cfgName+"', continuing anyway... Caught: " + ex, ex);
+				_logger.error("Runtime Problems in: sendErrorQueue(), cfgName='" + _cfgName + "', continuing anyway... Caught: " + ex, ex);
 				return 0;
 			}
 		}
@@ -1594,34 +949,40 @@ conf = Configuration.getCombinedConfiguration();
 				long timeMillis = System.currentTimeMillis() - (_errorSaveToDiskDiscardAfterXDays * 3600 * 24 * 1000); 
 				
 				// grab error files, and send them
-				for (File file : FileUtils.listFiles(new File(_errorSaveToDiskPath), new String[] {RECOVERY_FILE_SUFFIX}, false) )
+				for (File file : FileUtils.listFiles(new File(_errorSaveToDiskPath), new String[] {get_RECOVERY_FILE_SUFFIX()}, false) )
 				{
 					String filename = file.getName();
-					if (filename.startsWith(RECOVERY_FILE_PREFIX + srv + "." + _cfgName + "."))
+					if (filename.startsWith(get_RECOVERY_FILE_PREFIX() + srv + "." + _cfgName + "."))
 					{
 						if (FileUtils.isFileOlder(file, timeMillis))
 						{
 							if (file.delete())
-								_logger.info("removeOldErrorFiles(): cfgName='"+_cfgName+"', srv='"+srv+"'. SUCCESS: removing file: "+file);
+								_logger.info("removeOldErrorFiles(): cfgName='" + _cfgName + "', srv='" + srv + "'. SUCCESS: removing file: " + file);
 							else
-								_logger.info("removeOldErrorFiles(): cfgName='"+_cfgName+"', srv='"+srv+"'. FAILED: removing file: "+file);
+								_logger.info("removeOldErrorFiles(): cfgName='" + _cfgName + "', srv='" + srv + "'. FAILED: removing file: " + file);
 						}
 					}
 				}
 			}
 			catch (RuntimeException ex)
 			{
-				_logger.error("Runtime Problems in: removeOldErrorFiles(), cfgName='"+_cfgName+"', continuing anyway... Caught: " + ex, ex);
+				_logger.error("Runtime Problems in: removeOldErrorFiles(), cfgName='" + _cfgName + "', continuing anyway... Caught: " + ex, ex);
 			}
 		}
 	}
 
-	public static String replaceKey(String str)                 { return replaceKey(str, "");}
-	public static String replaceKey(String str, String replace) { return str.replace("{KEY}.", replace); }
+//	public static String replaceKey(String str)                 { return replaceKey(str, ""); }
+//	public static String replaceKey(String str, String replace) { return str.replace("{KEY}.", replace); }
+//
+//	private String key(String str)                              { return key(str, ""); }
+//	private String key(String str, String replace)              { return str.replace("{KEY}.", replace); }
 
-	private String key(String str)                              { return key(str, "");}
-	private String key(String str, String replace)              { return str.replace("{KEY}.", replace); }
+//	public static String replaceKey(String str)                 { return replaceKey(str, ""); }
+	public static String replaceKey(String str, String className, String key)  { return str.replace("{CLASSNAME}", className).replace("{KEY}.", key); }
 
+	protected String key(String str)                              { return key(str, ""); }
+	protected String key(String str, String replace)              { return str.replace("{CLASSNAME}", getName()).replace("{KEY}.", replace); } // Note: getName() does: return this.getClass().getSimpleName()
+	
 	public List<CmSettingsHelper> getAvailableSettings()
 	{
 		ArrayList<CmSettingsHelper> list = new ArrayList<>();
@@ -1634,7 +995,8 @@ conf = Configuration.getCombinedConfiguration();
 		list.add( new CmSettingsHelper("errorSendAlarmThresholdInSec",      key(PROPKEY_errorSendAlarmThresholdInSec     ), Integer.class, conf.getIntProperty    (key(PROPKEY_errorSendAlarmThresholdInSec     ), DEFAULT_errorSendAlarmThresholdInSec     ), DEFAULT_errorSendAlarmThresholdInSec     , "If send errors, Send Alarm, but only after X Seconds.)"));
 
 		list.add( new CmSettingsHelper("errorSaveToDisk",                   key(PROPKEY_errorSaveToDisk                  ), Boolean.class, conf.getBooleanProperty(key(PROPKEY_errorSaveToDisk                  ), DEFAULT_errorSaveToDisk                  ), DEFAULT_errorSaveToDisk                  , "If send errors, save the JSON message to DISK and retry later.)"));
-		list.add( new CmSettingsHelper("errorSaveToDiskPath",               key(PROPKEY_errorSaveToDiskPath              ), String .class, conf.getProperty       (key(PROPKEY_errorSaveToDiskPath              ), DEFAULT_errorSaveToDiskPath              ), DEFAULT_errorSaveToDiskPath              , "Path where to save JSON messages on send errors"));
+//		list.add( new CmSettingsHelper("errorSaveToDiskPath",               key(PROPKEY_errorSaveToDiskPath              ), String .class, conf.getProperty       (key(PROPKEY_errorSaveToDiskPath              ), DEFAULT_errorSaveToDiskPath              ), DEFAULT_errorSaveToDiskPath              , "Path where to save JSON messages on send errors"));
+		list.add( new CmSettingsHelper("errorSaveToDiskPath",               key(PROPKEY_errorSaveToDiskPath              ), String .class, conf.getProperty       (key(PROPKEY_errorSaveToDiskPath              ), get_DEFAULT_errorSaveToDiskPath()        ), get_DEFAULT_errorSaveToDiskPath()        , "Path where to save JSON messages on send errors"));
 		list.add( new CmSettingsHelper("errorSaveToDiskDiscardAfterXDays",  key(PROPKEY_errorSaveToDiskDiscardAfterXDays ), Integer.class, conf.getIntProperty    (key(PROPKEY_errorSaveToDiskDiscardAfterXDays ), DEFAULT_errorSaveToDiskDiscardAfterXDays ), DEFAULT_errorSaveToDiskDiscardAfterXDays , "How many days should we save the files."));
 		list.add( new CmSettingsHelper("errorSaveToDiskSuccessSleepTimeMs", key(PROPKEY_errorSaveToDiskSuccessSleepTimeMs), Integer.class, conf.getIntProperty    (key(PROPKEY_errorSaveToDiskSuccessSleepTimeMs), DEFAULT_errorSaveToDiskSuccessSleepTimeMs), DEFAULT_errorSaveToDiskSuccessSleepTimeMs, "After a recovered file has been sent, sleep for a while so we do not overflow the central server with messages."));
 

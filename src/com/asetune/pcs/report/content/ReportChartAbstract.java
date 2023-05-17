@@ -102,6 +102,7 @@ public abstract class ReportChartAbstract implements IReportChart
 	
 	private ReportEntryAbstract _reportEntry;
 	private DbxConnection _conn;
+	private String        _schemaName;
 	private ChartType     _chartType;
 	private String        _cmName;
 	private String        _graphName;
@@ -115,6 +116,7 @@ public abstract class ReportChartAbstract implements IReportChart
 	@Override public Dataset             getDataset()             { return _dataset;             }
 	@Override public ReportEntryAbstract getReportEntry()         { return _reportEntry;         }
 	          public DbxConnection       getConnection()          { return _conn;                }
+	          public String              getSchemaName()          { return _schemaName;          }
 	          public ChartType           getChartType()           { return _chartType;           }
 	          public String              getCmName()              { return _cmName;              }
 	          public String              getGraphName()           { return _graphName;           }
@@ -125,10 +127,22 @@ public abstract class ReportChartAbstract implements IReportChart
 	@Override public String              getPreComment()          { return _preComment;          }
 	@Override public String              getPostComment()         { return _postComment;         }
 
+	public String getSchemaNameSqlPrefix()
+	{
+		if (StringUtil.isNullOrBlank(_schemaName))
+			return "";
+
+		if (_conn == null)
+			return "[" + _schemaName + "]."; 
+		
+		return _conn.getLeftQuote() + _schemaName + _conn.getRightQuote() + "."; 
+	}
+	
 	public void setChart              (JFreeChart          chart      ) { _chart               = chart;       }
 	public void setDataset            (Dataset             dataset    ) { _dataset             = dataset;     }
 	public void setReportEntry        (ReportEntryAbstract reportEntry) { _reportEntry         = reportEntry; }
 	public void setConnection         (DbxConnection       conn       ) { _conn                = conn;        }
+	public void setSchemaName         (String              schemaName ) { _schemaName          = schemaName;  }
 	public void setChartType          (ChartType           chartType  ) { _chartType           = chartType;   }
 	public void setCmName             (String              cmName     ) { _cmName              = cmName;      }
 	public void setGraphName          (String              graphName  ) { _graphName           = graphName;   }
@@ -139,10 +153,11 @@ public abstract class ReportChartAbstract implements IReportChart
 	public void setPreComment         (String              preComment ) { _preComment          = preComment;  }
 	public void setPostComment        (String              postComment) { _postComment         = postComment; }
 
-	public ReportChartAbstract(ReportEntryAbstract reportEntry, DbxConnection conn, ChartType chartType, String cmName, String graphName, String graphTitle, int maxValue, boolean sorted)
+	public ReportChartAbstract(ReportEntryAbstract reportEntry, DbxConnection conn, String schemaName, ChartType chartType, String cmName, String graphName, String graphTitle, int maxValue, boolean sorted)
 	{
 		_reportEntry     = reportEntry;
 		_conn            = conn;
+		_schemaName      = schemaName;
 		_chartType       = chartType;
 		_cmName          = cmName;
 		_graphName       = graphName; 
@@ -864,6 +879,12 @@ public abstract class ReportChartAbstract implements IReportChart
 		{
 			TimeSeriesCollection tsDataset = (TimeSeriesCollection) dataset;
 
+			if (tsDataset.getSeriesCount() <= 0)
+			{
+				_logger.warn(">>>>>>>>>> writeAsChartJsLineChart(): dataset does NOT have any series. cmName='" + _cmName + "', graphName='" + _graphName + "', graphTitle='" + _graphTitle + "'.");
+				return;
+			}
+			
 			// Extract "data" from the "data set" into the below Map's
 			LinkedHashMap<String, List<Long>>   seriesDataTs  = new LinkedHashMap<>();
 			LinkedHashMap<String, List<Number>> seriesDataVal = new LinkedHashMap<>();
@@ -938,8 +959,8 @@ public abstract class ReportChartAbstract implements IReportChart
 			// Convert all Time-stamps <Long> into Strings with format "Iso8601" (example: 2022-11-02T20:59:47.040+01:00)
 			// For Chart.js it will be used as 'labels', see description at the "top" of this method
 			List<String> dataTsStr = new ArrayList<>();
-			for (Long ts : dataTsToUse)
-				dataTsStr.add( "'" + TimeUtils.toStringIso8601(ts) + "'");
+				for (Long ts : dataTsToUse)
+					dataTsStr.add( "'" + TimeUtils.toStringIso8601(ts) + "'");
 
 			// Write the HTML and JavaScript code
 			writeAsChartJsHtmlAndJsCode(writer, ChartType.LINE, dataTsStr, seriesDataVal);

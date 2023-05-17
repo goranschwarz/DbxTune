@@ -357,8 +357,8 @@ extends CounterModelHostMonitor
 
 				for (int i = 0; i < dArray.length; i++)
 				{
-					Double avgDiskSecRead  = this.getAbsValueAsDouble(i, "Avg. Disk sec/Read");
-					Double avgDiskSecWrite = this.getAbsValueAsDouble(i, "Avg. Disk sec/Write");
+					Double avgDiskSecRead  = this.getAbsValueAsDouble(i, "Avg. Disk sec/Read" , 0d); // 0 as default
+					Double avgDiskSecWrite = this.getAbsValueAsDouble(i, "Avg. Disk sec/Write", 0d); // 0 as default
 
 					lArray[i] = this.getAbsString       (i, "Instance");
 //					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk sec/Transfer") / 1000d; // make this into MILLISEC instead of SEC
@@ -377,8 +377,14 @@ extends CounterModelHostMonitor
 			}
 			else
 			{
-				int dataPoint_pos                    = this.findColumn("await"); // Linix
+				int dataPoint_pos                    = this.findColumn("await"); // Linux
 //				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("wait");  // Solaris
+
+				// In some Linux Versions we dont have 'await', just 'r_await' & 'w_await'
+				// Then use that to simulate 'await'
+				int dataPoint_r_await_pos            = this.findColumn("r_await"); // Linux
+				int dataPoint_w_await_pos            = this.findColumn("w_await"); // Linux
+
 
 				int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
 //				if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
@@ -386,15 +392,16 @@ extends CounterModelHostMonitor
 				
 				int deviceDesc_pos = this.findColumn("deviceDescription");
 
-				if (dataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+				if ((dataPoint_pos < 0 && dataPoint_r_await_pos < 0 && dataPoint_w_await_pos < 0) || device_pos < 0 || deviceDesc_pos < 0)
 				{
 					String msg = "";
-					if (dataPoint_pos  < 0) msg += "'await', ";
+					if (dataPoint_pos  < 0) msg += "'await||(r_await&&w_await)', ";
 					if (device_pos     < 0) msg += "'device', ";
 					if (deviceDesc_pos < 0) msg += "'deviceDescription', ";
-					
+
+//					_logger.warn("Graph '" + tgdp.getName() + "', Column(s) " + StringUtil.removeLastComma(msg) + " can't be found. This graph is only supported on Linux systems");
 					if (tg != null)
-						tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux systems");
+						tg.setWarningLabel("Column(s) " + StringUtil.removeLastComma(msg) + " can't be found. This graph is only supported on Linux systems");
 				}
 				else
 				{
@@ -412,7 +419,22 @@ extends CounterModelHostMonitor
 						if (StringUtil.hasValue(deviceDesc))
 							label += " ("+deviceDesc+")";
 
-						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+						Double dataPoint = null;
+						if (dataPoint_pos != -1)
+						{
+							dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos, 0d);
+						}
+						else if (dataPoint_r_await_pos != -1 && dataPoint_w_await_pos != -1)
+						{
+							Double dataPoint_r_await = this.getAbsValueAsDouble(i, dataPoint_r_await_pos, 0d);
+							Double dataPoint_w_await = this.getAbsValueAsDouble(i, dataPoint_w_await_pos, 0d);
+
+							dataPoint = dataPoint_r_await.doubleValue() + dataPoint_w_await.doubleValue();
+						}
+						else
+						{
+							dataPoint = -1d;
+						}
 
 						ldArray[i] = label;
 						lArray[i]  = deviceName;
@@ -439,7 +461,7 @@ extends CounterModelHostMonitor
 				for (int i = 0; i < dArray.length; i++)
 				{
 					lArray[i] = this.getAbsString       (i, "Instance");
-					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk sec/Read") * 1000d; // make this into MILLISEC instead of SEC
+					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk sec/Read", 0d) * 1000d; // make this into MILLISEC instead of SEC
 				}
 
 				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
@@ -454,7 +476,7 @@ extends CounterModelHostMonitor
 			}
 			else
 			{
-				int dataPoint_pos  = this.findColumn("r_await"); // Linix
+				int dataPoint_pos  = this.findColumn("r_await"); // Linux
 				int device_pos     = this.findColumn("device"); // Linux
 				int deviceDesc_pos = this.findColumn("deviceDescription");
 
@@ -484,7 +506,7 @@ extends CounterModelHostMonitor
 						if (StringUtil.hasValue(deviceDesc))
 							label += " ("+deviceDesc+")";
 
-						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos, 0d);
 
 						ldArray[i] = label;
 						lArray[i]  = deviceName;
@@ -511,7 +533,7 @@ extends CounterModelHostMonitor
 				for (int i = 0; i < dArray.length; i++)
 				{
 					lArray[i] = this.getAbsString       (i, "Instance");
-					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk sec/Write") * 1000d; // make this into MILLISEC instead of SEC
+					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk sec/Write", 0d) * 1000d; // make this into MILLISEC instead of SEC
 				}
 
 				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
@@ -526,7 +548,7 @@ extends CounterModelHostMonitor
 			}
 			else
 			{
-				int dataPoint_pos  = this.findColumn("w_await"); // Linix
+				int dataPoint_pos  = this.findColumn("w_await"); // Linux
 				int device_pos     = this.findColumn("device"); // Linux
 				int deviceDesc_pos = this.findColumn("deviceDescription");
 
@@ -556,7 +578,7 @@ extends CounterModelHostMonitor
 						if (StringUtil.hasValue(deviceDesc))
 							label += " ("+deviceDesc+")";
 
-						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos, 0d);
 
 						ldArray[i] = label;
 						lArray[i]  = deviceName;
@@ -583,7 +605,7 @@ extends CounterModelHostMonitor
 				for (int i = 0; i < dArray.length; i++)
 				{
 					lArray[i] = this.getAbsString       (i, "Instance");
-					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk sec/Transfer") * 1000d; // make this into MILLISEC instead of SEC
+					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk sec/Transfer", 0d) * 1000d; // make this into MILLISEC instead of SEC
 				}
 
 				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
@@ -598,7 +620,7 @@ extends CounterModelHostMonitor
 			}
 			else
 			{
-				int dataPoint_pos                    = this.findColumn("svctm"); // Linix
+				int dataPoint_pos                    = this.findColumn("svctm"); // Linux
 				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("svc_t");  // Solaris
 //				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("XXXXX");  // AIX
 				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("msps");  // HP
@@ -635,7 +657,7 @@ extends CounterModelHostMonitor
 						if (StringUtil.hasValue(deviceDesc))
 							label += " ("+deviceDesc+")";
 
-						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos, 0d);
 
 						ldArray[i] = label;
 						lArray[i]  = deviceName;
@@ -662,7 +684,7 @@ extends CounterModelHostMonitor
 				for (int i = 0; i < dArray.length; i++)
 				{
 					lArray[i] = this.getAbsString       (i, "Instance");
-					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk Queue Length");
+					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk Queue Length", 0d);
 				}
 
 				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
@@ -677,7 +699,7 @@ extends CounterModelHostMonitor
 			}
 			else
 			{
-				int dataPoint_pos                    = this.findColumn("avgqu-sz");  // Linix
+				int dataPoint_pos                    = this.findColumn("avgqu-sz");  // Linux
 				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("wait");      // Solaris
 				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("Q_avgwqsz"); // AIX
 //				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("???");       // HP
@@ -714,7 +736,7 @@ extends CounterModelHostMonitor
 						if (StringUtil.hasValue(deviceDesc))
 							label += " ("+deviceDesc+")";
 
-						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos, 0d);
 
 						ldArray[i] = label;
 						lArray[i]  = deviceName;
@@ -740,7 +762,7 @@ extends CounterModelHostMonitor
 
 				for (int i = 0; i < dArray.length; i++)
 				{
-					Double idleTimePct = this.getAbsValueAsDouble(i, "% Idle Time");
+					Double idleTimePct = this.getAbsValueAsDouble(i, "% Idle Time", 0d);
 					Double busyTimePct = 100d - idleTimePct;
 
 					lArray[i] = this.getAbsString       (i, "Instance");
@@ -760,7 +782,7 @@ extends CounterModelHostMonitor
 			}
 			else
 			{
-				int dataPoint_pos                    = this.findColumn("utilPct");  // Linix
+				int dataPoint_pos                    = this.findColumn("utilPct");  // Linux
 				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("busyPct");  // Solaris
 				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("X_tm_act"); // AIX
 //				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("???");       // HP
@@ -797,7 +819,7 @@ extends CounterModelHostMonitor
 						if (StringUtil.hasValue(deviceDesc))
 							label += " ("+deviceDesc+")";
 
-						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos, 0d);
 
 						ldArray[i] = label;
 						lArray[i]  = deviceName;
@@ -827,7 +849,7 @@ extends CounterModelHostMonitor
 				for (int i = 0; i < dArray.length; i++)
 				{
 					lArray[i] = this.getAbsString       (i, "Instance");
-					dArray[i] = this.getAbsValueAsDouble(i, "Disk Transfers/sec");
+					dArray[i] = this.getAbsValueAsDouble(i, "Disk Transfers/sec", 0d);
 				}
 
 				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
@@ -842,11 +864,11 @@ extends CounterModelHostMonitor
 			}
 			else
 			{
-				int readDataPoint_pos                        = this.findColumn("readsPerSec"); // Linix/Solaris
+				int readDataPoint_pos                        = this.findColumn("readsPerSec"); // Linux/Solaris
 				if (readDataPoint_pos < 0) readDataPoint_pos = this.findColumn("R_rps");  // AIX
 //				if (readDataPoint_pos < 0) readDataPoint_pos = this.findColumn("msps");  // HP
 
-				int writeDataPoint_pos                         = this.findColumn("writesPerSec"); // Linix/Solaris
+				int writeDataPoint_pos                         = this.findColumn("writesPerSec"); // Linux/Solaris
 				if (writeDataPoint_pos < 0) writeDataPoint_pos = this.findColumn("W_rps");  // AIX
 //				if (writeDataPoint_pos < 0) writeDataPoint_pos = this.findColumn("msps");  // HP
 
@@ -883,8 +905,8 @@ extends CounterModelHostMonitor
 						if (StringUtil.hasValue(deviceDesc))
 							label += " ("+deviceDesc+")";
 
-						Double readDataPoint  = this.getAbsValueAsDouble(i, readDataPoint_pos);
-						Double writedataPoint = this.getAbsValueAsDouble(i, writeDataPoint_pos);
+						Double readDataPoint  = this.getAbsValueAsDouble(i, readDataPoint_pos , 0d);
+						Double writedataPoint = this.getAbsValueAsDouble(i, writeDataPoint_pos, 0d);
 						Double rwDataPoint    = readDataPoint + writedataPoint;
 
 						ldArray[i] = label;
@@ -912,7 +934,7 @@ extends CounterModelHostMonitor
 				for (int i = 0; i < dArray.length; i++)
 				{
 					lArray[i] = this.getAbsString       (i, "Instance");
-					dArray[i] = this.getAbsValueAsDouble(i, "Disk Reads/sec");
+					dArray[i] = this.getAbsValueAsDouble(i, "Disk Reads/sec", 0d);
 				}
 
 				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
@@ -927,7 +949,7 @@ extends CounterModelHostMonitor
 			}
 			else
 			{
-				int dataPoint_pos                    = this.findColumn("readsPerSec"); // Linix/Solaris
+				int dataPoint_pos                    = this.findColumn("readsPerSec"); // Linux/Solaris
 				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("R_rps");  // AIX
 //				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("msps");  // HP
 
@@ -963,7 +985,7 @@ extends CounterModelHostMonitor
 						if (StringUtil.hasValue(deviceDesc))
 							label += " ("+deviceDesc+")";
 
-						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos, 0d);
 
 						ldArray[i] = label;
 						lArray[i]  = deviceName;
@@ -990,7 +1012,7 @@ extends CounterModelHostMonitor
 				for (int i = 0; i < dArray.length; i++)
 				{
 					lArray[i] = this.getAbsString       (i, "Instance");
-					dArray[i] = this.getAbsValueAsDouble(i, "Disk Writes/sec");
+					dArray[i] = this.getAbsValueAsDouble(i, "Disk Writes/sec", 0d);
 				}
 
 				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
@@ -1005,7 +1027,7 @@ extends CounterModelHostMonitor
 			}
 			else
 			{
-				int dataPoint_pos                    = this.findColumn("writesPerSec"); // Linix/Solaris
+				int dataPoint_pos                    = this.findColumn("writesPerSec"); // Linux/Solaris
 				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("W_rps");  // AIX
 //				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("msps");  // HP
 
@@ -1041,7 +1063,7 @@ extends CounterModelHostMonitor
 						if (StringUtil.hasValue(deviceDesc))
 							label += " ("+deviceDesc+")";
 
-						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos, 0d);
 
 						ldArray[i] = label;
 						lArray[i]  = deviceName;
@@ -1068,7 +1090,7 @@ extends CounterModelHostMonitor
 				for (int i = 0; i < dArray.length; i++)
 				{
 					lArray[i] = this.getAbsString       (i, "Instance");
-					dArray[i] = this.getAbsValueAsDouble(i, "Disk Read Bytes/sec") / 1024d; // transform from bytes to KB
+					dArray[i] = this.getAbsValueAsDouble(i, "Disk Read Bytes/sec", 0d) / 1024d; // transform from bytes to KB
 				}
 
 				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
@@ -1083,7 +1105,7 @@ extends CounterModelHostMonitor
 			}
 			else
 			{
-				int dataPoint_pos                    = this.findColumn("kbReadPerSec"); // Linix/Solaris
+				int dataPoint_pos                    = this.findColumn("kbReadPerSec"); // Linux/Solaris
 				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("X_bread");  // AIX
 //				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("xxx");  // HP
 
@@ -1119,7 +1141,7 @@ extends CounterModelHostMonitor
 						if (StringUtil.hasValue(deviceDesc))
 							label += " ("+deviceDesc+")";
 
-						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos, 0d);
 
 						ldArray[i] = label;
 						lArray[i]  = deviceName;
@@ -1146,7 +1168,7 @@ extends CounterModelHostMonitor
 				for (int i = 0; i < dArray.length; i++)
 				{
 					lArray[i] = this.getAbsString       (i, "Instance");
-					dArray[i] = this.getAbsValueAsDouble(i, "Disk Write Bytes/sec") / 1024d; // transform from bytes to KB
+					dArray[i] = this.getAbsValueAsDouble(i, "Disk Write Bytes/sec", 0d) / 1024d; // transform from bytes to KB
 				}
 
 				// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
@@ -1161,7 +1183,7 @@ extends CounterModelHostMonitor
 			}
 			else
 			{
-				int dataPoint_pos                    = this.findColumn("kbWritePerSec"); // Linix/Solaris
+				int dataPoint_pos                    = this.findColumn("kbWritePerSec"); // Linux/Solaris
 				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("X_bwrtn");  // AIX
 //				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("xxx");  // HP
 
@@ -1197,7 +1219,7 @@ extends CounterModelHostMonitor
 						if (StringUtil.hasValue(deviceDesc))
 							label += " ("+deviceDesc+")";
 
-						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos, 0d);
 
 						ldArray[i] = label;
 						lArray[i]  = deviceName;
@@ -1223,8 +1245,8 @@ extends CounterModelHostMonitor
 
 				for (int i = 0; i < dArray.length; i++)
 				{
-					Double diskReadsSec   = this.getAbsValueAsDouble(i, "Disk Reads/sec");
-					Double diskReadKbSec  = this.getAbsValueAsDouble(i, "Disk Read Bytes/sec") / 1024d; // transform from bytes to KB
+					Double diskReadsSec   = this.getAbsValueAsDouble(i, "Disk Reads/sec", 0d);
+					Double diskReadKbSec  = this.getAbsValueAsDouble(i, "Disk Read Bytes/sec", 0d) / 1024d; // transform from bytes to KB
 
 					lArray[i] = this.getAbsString       (i, "Instance");
 					dArray[i] = diskReadsSec <= 0d ? 0d : NumberUtils.round(diskReadKbSec / diskReadsSec, 1);
@@ -1242,7 +1264,7 @@ extends CounterModelHostMonitor
 			}
 			else
 			{
-				int dataPoint_pos                    = this.findColumn("avgReadKbPerIo"); // Linix/Solaris
+				int dataPoint_pos                    = this.findColumn("avgReadKbPerIo"); // Linux/Solaris
 //				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("X_bwrtn");  // AIX
 //				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("xxx");  // HP
 
@@ -1278,7 +1300,7 @@ extends CounterModelHostMonitor
 						if (StringUtil.hasValue(deviceDesc))
 							label += " ("+deviceDesc+")";
 
-						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos, 0d);
 
 						ldArray[i] = label;
 						lArray[i]  = deviceName;
@@ -1304,8 +1326,8 @@ extends CounterModelHostMonitor
 
 				for (int i = 0; i < dArray.length; i++)
 				{
-					Double diskWritesSec  = this.getAbsValueAsDouble(i, "Disk Writes/sec");
-					Double diskWriteKbSec = this.getAbsValueAsDouble(i, "Disk Write Bytes/sec") / 1024d; // transform from bytes to KB
+					Double diskWritesSec  = this.getAbsValueAsDouble(i, "Disk Writes/sec", 0d);
+					Double diskWriteKbSec = this.getAbsValueAsDouble(i, "Disk Write Bytes/sec", 0d) / 1024d; // transform from bytes to KB
 
 					lArray[i] = this.getAbsString       (i, "Instance");
 					dArray[i] = diskWritesSec <= 0d ? 0d : NumberUtils.round(diskWriteKbSec / diskWritesSec, 1);
@@ -1323,7 +1345,7 @@ extends CounterModelHostMonitor
 			}
 			else
 			{
-				int dataPoint_pos                    = this.findColumn("avgWriteKbPerIo"); // Linix/Solaris
+				int dataPoint_pos                    = this.findColumn("avgWriteKbPerIo"); // Linux/Solaris
 //				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("X_bwrtn");  // AIX
 //				if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("xxx");  // HP
 
@@ -1359,7 +1381,7 @@ extends CounterModelHostMonitor
 						if (StringUtil.hasValue(deviceDesc))
 							label += " ("+deviceDesc+")";
 
-						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos);
+						Double dataPoint = this.getAbsValueAsDouble(i, dataPoint_pos, 0d);
 
 						ldArray[i] = label;
 						lArray[i]  = deviceName;

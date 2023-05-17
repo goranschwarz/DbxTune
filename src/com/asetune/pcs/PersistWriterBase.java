@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -47,9 +48,11 @@ import com.asetune.config.dict.MonTablesDictionary.MonTableColumnsEntry;
 import com.asetune.config.dict.MonTablesDictionary.MonTableEntry;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.pcs.PersistWriterJdbc.GraphStorageType;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.ddl.DbmsDdlResolverAbstract;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
 
@@ -652,7 +655,7 @@ public abstract class PersistWriterBase
 	 * @param colName
 	 * @return
 	 */
-	public String getPcsColumnOption(DbxConnection conn, CountersModel cm, String colName)
+	public static String getPcsColumnOption(DbxConnection conn, CountersModel cm, String colName)
 	{
 		// NOT YET IMPLEMENTED
 		return "";
@@ -672,12 +675,12 @@ public abstract class PersistWriterBase
 
 
 	/** Helper method to get a table name */
-	public static String getDictTableNameNoQuote(int type)
+	public static String getDictTableNameNoQuote(String schemaName, int type)
 	{
-		return getTableName(null, type, null, false);
+		return getTableName(null, schemaName, type, null, false);
 	}
 	/** Helper method to get a table name */
-	public static String getTableName(DbxConnection conn, int type, CountersModel cm, boolean addQuotedIdentifierChar)
+	public static String getTableName(DbxConnection conn, String schemaName, int type, CountersModel cm, boolean addQuotedIdentifierChar)
 	{
 //		if (addQuotedIdentifierChar && conn == null)
 //			throw new NullPointerException("When addQuotedIdentifierChar is true, Then a DbxConnection must be passed, otherwise we wont be able to decide DBMS Specific Identity Quote Chars");
@@ -694,37 +697,40 @@ public abstract class PersistWriterBase
 				rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 			}
 		}
+
+		// Set a SQL Schema Name Prefix (if 'schemaName' was passed/assigned)
+		String schemaPrefix = StringUtil.isNullOrBlank(schemaName) ? "" : lq + schemaName + rq + ".";
 		
 		switch (type)
 		{
-		case VERSION_INFO:               return lq + "MonVersionInfo"              + rq;
-		case SESSIONS:                   return lq + "MonSessions"                 + rq;
-		case SESSION_PARAMS:             return lq + "MonSessionParams"            + rq;
-		case SESSION_SAMPLES:            return lq + "MonSessionSamples"           + rq;
-		case SESSION_SAMPLE_SUM:         return lq + "MonSessionSampleSum"         + rq;
-		case SESSION_SAMPLE_DETAILES:    return lq + "MonSessionSampleDetailes"    + rq;
-		case SESSION_MON_TAB_DICT:       return lq + "MonSessionMonTablesDict"     + rq;
-		case SESSION_MON_TAB_COL_DICT:   return lq + "MonSessionMonTabColumnsDict" + rq;
-		case SESSION_DBMS_CONFIG:        return lq + "MonSessionDbmsConfig"        + rq; // old name MonSessionAseConfig,     so AseTune needs to backward compatible
-		case SESSION_DBMS_CONFIG_TEXT:   return lq + "MonSessionDbmsConfigText"    + rq; // old name MonSessionAseConfigText, so AseTune needs to backward compatible
-		case SESSION_DBMS_CONFIG_ISSUES: return lq + "MonSessionDbmsConfigIssues"  + rq;
-//		case RECORDING_OPTIONS:          return lq + "MonRecordingOptions"         + rq;
-		case DDL_STORAGE:                return lq + "MonDdlStorage"               + rq;
-//		case SQL_CAPTURE_SQLTEXT:        return lq + "MonSqlCapSqlText"            + rq;
-		case SQL_CAPTURE_STATEMENTS:     return lq + "MonSqlCapStatements"         + rq;
-//		case SQL_CAPTURE_PLANS:          return lq + "MonSqlCapPlans"              + rq;
-		case ALARM_ACTIVE:               return lq + "MonAlarmActive"              + rq;
-		case ALARM_HISTORY:              return lq + "MonAlarmHistory"             + rq;
-		case ABS:                        return lq + cm.getName() + "_abs"         + rq;
-		case DIFF:                       return lq + cm.getName() + "_diff"        + rq;
-		case RATE:                       return lq + cm.getName() + "_rate"        + rq;
+		case VERSION_INFO:               return schemaPrefix + lq + "MonVersionInfo"              + rq;
+		case SESSIONS:                   return schemaPrefix + lq + "MonSessions"                 + rq;
+		case SESSION_PARAMS:             return schemaPrefix + lq + "MonSessionParams"            + rq;
+		case SESSION_SAMPLES:            return schemaPrefix + lq + "MonSessionSamples"           + rq;
+		case SESSION_SAMPLE_SUM:         return schemaPrefix + lq + "MonSessionSampleSum"         + rq;
+		case SESSION_SAMPLE_DETAILES:    return schemaPrefix + lq + "MonSessionSampleDetailes"    + rq;
+		case SESSION_MON_TAB_DICT:       return schemaPrefix + lq + "MonSessionMonTablesDict"     + rq;
+		case SESSION_MON_TAB_COL_DICT:   return schemaPrefix + lq + "MonSessionMonTabColumnsDict" + rq;
+		case SESSION_DBMS_CONFIG:        return schemaPrefix + lq + "MonSessionDbmsConfig"        + rq; // old name MonSessionAseConfig,     so AseTune needs to backward compatible
+		case SESSION_DBMS_CONFIG_TEXT:   return schemaPrefix + lq + "MonSessionDbmsConfigText"    + rq; // old name MonSessionAseConfigText, so AseTune needs to backward compatible
+		case SESSION_DBMS_CONFIG_ISSUES: return schemaPrefix + lq + "MonSessionDbmsConfigIssues"  + rq;
+//		case RECORDING_OPTIONS:          return schemaPrefix + lq + "MonRecordingOptions"         + rq;
+		case DDL_STORAGE:                return schemaPrefix + lq + "MonDdlStorage"               + rq;
+//		case SQL_CAPTURE_SQLTEXT:        return schemaPrefix + lq + "MonSqlCapSqlText"            + rq;
+		case SQL_CAPTURE_STATEMENTS:     return schemaPrefix + lq + "MonSqlCapStatements"         + rq;
+//		case SQL_CAPTURE_PLANS:          return schemaPrefix + lq + "MonSqlCapPlans"              + rq;
+		case ALARM_ACTIVE:               return schemaPrefix + lq + "MonAlarmActive"              + rq;
+		case ALARM_HISTORY:              return schemaPrefix + lq + "MonAlarmHistory"             + rq;
+		case ABS:                        return schemaPrefix + lq + cm.getName() + "_abs"         + rq;
+		case DIFF:                       return schemaPrefix + lq + cm.getName() + "_diff"        + rq;
+		case RATE:                       return schemaPrefix + lq + cm.getName() + "_rate"        + rq;
 		default:
 			throw new RuntimeException("Unknown type of '"+type+"' in getTableName()."); 
 		}
 	}
 
 	/** Helper method to get a table name for GRAPH tables */
-	public static String getTableName(DbxConnection conn, CountersModel cm, TrendGraphDataPoint tgdp, boolean addQuotedIdentifierChar)
+	public static String getTableName(DbxConnection conn, String schemaName, CountersModel cm, TrendGraphDataPoint tgdp, boolean addQuotedIdentifierChar)
 	{
 //		if (addQuotedIdentifierChar && conn == null)
 //		throw new NullPointerException("When addQuotedIdentifierChar is true, Then a DbxConnection must be passed, otherwise we wont be able to decide DBMS Specific Identity Quote Chars");
@@ -742,11 +748,14 @@ public abstract class PersistWriterBase
 			}
 		}
 
+		// Set a SQL Schema Name Prefix (if 'schemaName' was passed/assigned)
+		String schemaPrefix = StringUtil.isNullOrBlank(schemaName) ? "" : lq + schemaName + rq + ".";
+
 //		String q = "";
 //		if (addQuotedIdentifierChar)
 //			q = getQuotedIdentifierChar();
 
-		String tabName = lq + cm.getName() + "_" + tgdp.getName() + rq;
+		String tabName = schemaPrefix + lq + cm.getName() + "_" + tgdp.getName() + rq;
 		return tabName;
 	}
 
@@ -839,13 +848,13 @@ public abstract class PersistWriterBase
 //	}
 	
 	/** Helper method to generate a DDL string, to get the 'create table' */
-	public List<String> getTableDdlString(DbxConnection conn, int type, CountersModel cm)
+	public static List<String> getTableDdlString(DbxConnection conn, String schemaName, int type, CountersModel cm)
 	throws SQLException
 	{
 //		StringBuffer sbSql = new StringBuffer();
 		List<String> ddlList = new ArrayList<>(); 
 
-		String tabName = getTableName(conn, type, cm, true);
+		String tabName = getTableName(conn, schemaName, type, cm, true);
 		
 		String lq = getLeftQuoteReplace();
 		String rq = getLeftQuoteReplace();
@@ -1298,7 +1307,7 @@ public abstract class PersistWriterBase
 //	}
 
 	/** Helper method to generate 'alter table ... add missingColName datatype null|not null'*/
-	public List<String> getAlterTableDdlString(DbxConnection conn, String tabName, List<String> missingCols, int type, CountersModel cm)
+	public static List<String> getAlterTableDdlString(DbxConnection conn, String schemaName, String tabName, List<String> missingCols, int type, CountersModel cm)
 	throws SQLException
 	{
 		List<String> list = new ArrayList<String>();
@@ -1312,6 +1321,9 @@ public abstract class PersistWriterBase
 			throw new SQLException("ResultSetMetaData for CM '"+cm.getName()+"' was null.");
 		if ( rsmd.getColumnCount() == 0 )
 			throw new SQLException("NO Columns was found for CM '"+cm.getName()+"'.");
+
+		// Set a SQL Schema Name Prefix (if 'schemaName' was passed/assigned)
+		String schemaPrefix = StringUtil.isNullOrBlank(schemaName) ? "" : lq + schemaName + rq + ".";
 
 		int cols = rsmd.getColumnCount();
 		for (int c=1; c<=cols; c++) 
@@ -1352,7 +1364,7 @@ public abstract class PersistWriterBase
 			}
 
 
-			list.add("alter table " + lq+tabName+rq + " add  " + colName + " " + dtName + " " + nullable);
+			list.add("alter table " + schemaPrefix + lq+tabName+rq + " add  " + colName + " " + dtName + " " + nullable);
 		}
 
 		return list;
@@ -1367,10 +1379,10 @@ public abstract class PersistWriterBase
 	 * @param addPrepStatementQuestionMarks if true add "values(?,?,?...)" which can be used by a prepared statement
 	 * @return
 	 */
-	public String getTableInsertStr(DbxConnection conn, int type, CountersModel cm, boolean addPrepStatementQuestionMarks)
+	public static String getTableInsertStr(DbxConnection conn, String schemaName, int type, CountersModel cm, boolean addPrepStatementQuestionMarks)
 	throws SQLException
 	{
-		return getTableInsertStr(conn, type, cm, addPrepStatementQuestionMarks, null);
+		return getTableInsertStr(conn, schemaName, type, cm, addPrepStatementQuestionMarks, null);
 	}
 	/**
 	 * Helper method to generate a: "insert into TABNAME(c1,c2,c3) [values(?,?...)]"
@@ -1380,10 +1392,10 @@ public abstract class PersistWriterBase
 	 * @param addPrepStatementQuestionMarks if true add "values(?,?,?...)" which can be used by a prepared statement
 	 * @return
 	 */
-	public String getTableInsertStr(DbxConnection conn, int type, CountersModel cm, boolean addPrepStatementQuestionMarks, List<String> cmColumns)
+	public static String getTableInsertStr(DbxConnection conn, String schemaName, int type, CountersModel cm, boolean addPrepStatementQuestionMarks, List<String> cmColumns)
 	throws SQLException
 	{
-		String tabName = getTableName(conn, type, cm, true);
+		String tabName = getTableName(conn, schemaName, type, cm, true);
 		StringBuffer sbSql = new StringBuffer();
 
 		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
@@ -1749,63 +1761,8 @@ public abstract class PersistWriterBase
 	}
 	
 
-	/**
-	 * Helper method to generate a: "insert into TABNAME_GRAPH(c1,c2,c3) [values(?,?...)]"
-	 * @param cm Counter Model info
-	 * @param tgdp Trends Graph information
-	 * @param addPrepStatementQuestionMarks if true add "values(?,?,?...)" which can be used by a prepared statement
-	 * @return
-	 */
-	public String getTableInsertStr(DbxConnection conn, CountersModel cm, TrendGraphDataPoint tgdp, boolean addPrepStatementQuestionMarks)
-	{
-		String tabName = cm.getName() + "_" + tgdp.getName();
-
-		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
-		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
-
-		StringBuilder sb = new StringBuilder();
-
-		sb.append("insert into ").append(lq).append(tabName).append(rq).append(" (");
-		sb.append(lq).append("SessionStartTime") .append(rq).append(", ");
-		sb.append(lq).append("SessionSampleTime").append(rq).append(", ");
-		sb.append(lq).append("CmSampleTime")     .append(rq).append(", ");
-
-		// loop all data
-		Double[] dataArr  = tgdp.getData();
-		if (dataArr == null)
-			return null;
-		for (int d=0; d<dataArr.length; d++)
-		{
-			sb.append(lq).append("label_").append(d).append(rq).append(", ");
-			sb.append(lq).append("data_") .append(d).append(rq).append(", ");
-		}
-		// remove last ", "
-		sb.delete(sb.length()-2, sb.length());
-
-		// Add ending )
-		sb.append(") \n");
-
-		// add: values(?, ...)
-		if (addPrepStatementQuestionMarks)
-		{
-			sb.append("values(?, ?, ?, ");
-			for (int d=0; d<dataArr.length; d++)
-				sb.append("?, ?, ");
-
-			// remove last ", "
-			sb.delete(sb.length()-2, sb.length());
-
-			// Add ending )
-			sb.append(") \n");
-		}
-
-		String retStr = sb.toString(); 
-		return retStr;
-	}
-
-
 	/** Helper method to generate a DDL string, to get the 'create index' */
-	public String getIndexDdlString(DbxConnection conn, int type, CountersModel cm)
+	public static String getIndexDdlString(DbxConnection conn, String schemaName, int type, CountersModel cm)
 	{
 		String lq = getLeftQuoteReplace();
 		String rq = getLeftQuoteReplace();
@@ -1814,6 +1771,9 @@ public abstract class PersistWriterBase
 			lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
 			rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 		}
+
+		// Set a SQL Schema Name Prefix (if 'schemaName' was passed/assigned)
+		String schemaPrefix = StringUtil.isNullOrBlank(schemaName) ? "" : lq + schemaName + rq + ".";
 
 		if (type == VERSION_INFO)
 		{
@@ -1837,8 +1797,8 @@ public abstract class PersistWriterBase
 		}
 		else if (type == SESSION_SAMPLE_DETAILES)
 		{
-			String tabName = getTableName(conn, type, null, false);
-			return "create index " + lq+tabName+"_ix1"+rq + " on " + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
+			String tabName = getTableName(conn, null, type, null, false); 
+			return "create index " + lq+tabName+"_ix1"+rq + " on " + schemaPrefix + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
 
 //			if ( DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(getDatabaseProductName()) )
 //				return "create index " +     tabName+"_ix1"   + " on " + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
@@ -1891,23 +1851,13 @@ public abstract class PersistWriterBase
 		}
 		else if (type == ALARM_HISTORY)
 		{
-			String tabName = getTableName(conn, type, null, false);
-			return "create index " + lq+tabName+"_ix1"+rq + " on " + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
-			
-//			if ( DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(getDatabaseProductName()) )
-//				return "create index " +     tabName+"_ix1"   + " on " + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
-//			else
-//				return "create index " + lq+tabName+"_ix1"+rq + " on " + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
+			String tabName = getTableName(conn, null, type, null, false);
+			return "create index " + lq+tabName+"_ix1"+rq + " on " + schemaPrefix + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
 		}
 		else if (type == ABS || type == DIFF || type == RATE)
 		{
-			String tabName = getTableName(conn, type, cm, false);
-			return "create index " + lq+tabName+"_ix1"+rq + " on " + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
-
-//			if ( DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(getDatabaseProductName()) )
-//				return "create index " +     tabName+"_ix1"   + " on " + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
-//			else
-//				return "create index " + lq+tabName+"_ix1"+rq + " on " + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
+			String tabName = getTableName(conn, null, type, cm, false);
+			return "create index " + lq+tabName+"_ix1"+rq + " on " + schemaPrefix + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
 		}
 		else
 		{
@@ -1915,129 +1865,234 @@ public abstract class PersistWriterBase
 		}
 	}
 
-	public String getGraphTableDdlString(DbxConnection conn, String tabName, TrendGraphDataPoint tgdp)
+	/**
+	 * Helper method to generate a: "insert into TABNAME_GRAPH(c1,c2,c3) [values(?,?...)]"
+	 * @param graphStorageType 
+	 * @param cm Counter Model info
+	 * @param tgdp Trends Graph information
+	 * @param addPrepStatementQuestionMarks if true add "values(?,?,?...)" which can be used by a prepared statement
+	 * @return
+	 */
+	public static String getGraphTableInsertStr(DbxConnection conn, GraphStorageType graphStorageType, String schemaName, CountersModel cm, TrendGraphDataPoint tgdp, boolean addPrepStatementQuestionMarks)
 	{
 		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
 		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 
+		// Set a SQL Schema Name Prefix (if 'schemaName' was passed/assigned)
+		String schemaPrefix = StringUtil.isNullOrBlank(schemaName) ? "" : lq + schemaName + rq + ".";
+
+		String tabName = schemaPrefix + lq + cm.getName() + "_" + tgdp.getName() + rq;
+
 		StringBuilder sb = new StringBuilder();
 
-//		sb.append("create table " + lq+tabName+rq + "\n");
-//		sb.append("( \n");
-//		sb.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//		sb.append("   ,"+fill(lq+"SessionSampleTime"+rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//		sb.append("   ,"+fill(lq+"CmSampleTime"     +rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//		sb.append("\n");
-		sb.append("create table " + lq+tabName+rq + "\n");
+		sb.append("insert into ").append(tabName).append(" (");
+		sb.append(lq).append("SessionStartTime") .append(rq).append(", ");
+		sb.append(lq).append("SessionSampleTime").append(rq).append(", ");
+		sb.append(lq).append("CmSampleTime")     .append(rq).append(", ");
+
+		if (GraphStorageType.LABEL_IN_SEPARATE_COLUMN.equals(graphStorageType))
+		{
+			Double[] dataArr  = tgdp.getData();
+			if (dataArr == null)
+				throw new IllegalArgumentException("The graph '" + tgdp.getName() + "' has a null pointer for it's DATA array.");
+
+			// loop all data
+			for (int d=0; d<dataArr.length; d++)
+			{
+				sb.append(lq).append("label_").append(d).append(rq).append(", ");
+				sb.append(lq).append("data_") .append(d).append(rq).append(", ");
+			}
+			// remove last ", "
+			sb.delete(sb.length()-2, sb.length());
+
+			// Add ending )
+			sb.append(") \n");
+
+			// add: values(?, ...)
+			if (addPrepStatementQuestionMarks)
+			{
+				sb.append("values(?, ?, ?, ");
+				for (int d=0; d<dataArr.length; d++)
+					sb.append("?, ?, ");
+
+				// remove last ", "
+				sb.delete(sb.length()-2, sb.length());
+
+				// Add ending )
+				sb.append(") \n");
+			}
+		}
+		else if (GraphStorageType.COLUMN_NAME_IS_LABEL.equals(graphStorageType))
+		{
+			String[] labelArr  = tgdp.getLabel();
+			if (labelArr == null)
+				throw new IllegalArgumentException("The graph '" + tgdp.getName() + "' has a null pointer for it's LABEL array.");
+
+			// loop all labels
+			for (int l=0; l<labelArr.length; l++)
+			{
+				sb.append(lq).append(labelArr[l]).append(rq).append(", ");
+			}
+			// remove last ", "
+			sb.delete(sb.length()-2, sb.length());
+
+			// Add ending )
+			sb.append(") \n");
+
+			// add: values(?, ...)
+			if (addPrepStatementQuestionMarks)
+			{
+				sb.append("values(?, ?, ?, ");
+				for (int d=0; d<labelArr.length; d++)
+					sb.append("?, ");
+
+				// remove last ", "
+				sb.delete(sb.length()-2, sb.length());
+
+				// Add ending )
+				sb.append(") \n");
+			}
+		}
+		else
+		{
+			throw new RuntimeException("Unhandled GraphStorageType '" + graphStorageType + "', cant continue.");
+		}
+
+		String retStr = sb.toString(); 
+		return retStr;
+	}
+
+
+	public static String getGraphTableDdlString(DbxConnection conn, GraphStorageType graphStorageType, String schemaName, String tabName, TrendGraphDataPoint tgdp)
+	{
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
+		// Set a SQL Schema Name Prefix (if 'schemaName' was passed/assigned)
+		String schemaPrefix = StringUtil.isNullOrBlank(schemaName) ? "" : lq + schemaName + rq + ".";
+
+		StringBuilder sb = new StringBuilder();
+
+		sb.append("create table " + schemaPrefix + lq+tabName+rq + "\n");
 		sb.append("( \n");
 		sb.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
 		sb.append("   ,"+fill(lq+"SessionSampleTime"+rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
 		sb.append("   ,"+fill(lq+"CmSampleTime"     +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
 		sb.append("\n");
 
-		// loop all data
-		Double[] dataArr  = tgdp.getData();
-		for (int d=0; d<dataArr.length; d++)
+		if (GraphStorageType.LABEL_IN_SEPARATE_COLUMN.equals(graphStorageType))
 		{
-//			sb.append("   ,"+fill(lq+"label_"+d+rq,40)+" "+fill(getDatatype("varchar",100,-1,-1),20)+" "+getNullable(true)+"\n");
-//			sb.append("   ,"+fill(lq+"data_" +d+rq,40)+" "+fill(getDatatype("numeric", -1,16, 2),20)+" "+getNullable(true)+"\n");
-			sb.append("   ,"+fill(lq+"label_"+d+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,100   ),20)+" "+getNullable(true)+"\n");
-			sb.append("   ,"+fill(lq+"data_" +d+rq,40)+" "+fill(getDatatype(conn, Types.NUMERIC, 16, 2),20)+" "+getNullable(true)+"\n");
+			// loop all data
+			Double[] dataArr  = tgdp.getData();
+			if (dataArr == null)
+				throw new IllegalArgumentException("The graph '" + tgdp.getName() + "' has a null pointer for it's DATA array.");
+
+			for (int d=0; d<dataArr.length; d++)
+			{
+				sb.append("   ,"+fill(lq+"label_"+d+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,100   ),20)+" "+getNullable(true)+"\n");
+				sb.append("   ,"+fill(lq+"data_" +d+rq,40)+" "+fill(getDatatype(conn, Types.NUMERIC, 16, 2),20)+" "+getNullable(true)+"\n");
+			}
+			sb.append(") \n");
 		}
-		sb.append(") \n");
+		else if (GraphStorageType.COLUMN_NAME_IS_LABEL.equals(graphStorageType))
+		{
+			String[] labelArr  = tgdp.getLabel();
+			if (labelArr == null)
+				throw new IllegalArgumentException("The graph '" + tgdp.getName() + "' has a null pointer for it's LABEL array.");
+
+			// loop all labels
+			for (int l=0; l<labelArr.length; l++)
+			{
+				sb.append("   ,"+fill(lq+labelArr[l]+rq,40)+" "+fill(getDatatype(conn, Types.NUMERIC, 16, 2),20)+" "+getNullable(true)+"\n");
+			}
+			sb.append(") \n");
+		}
 
 		//System.out.println("getGraphTableDdlString: "+sb.toString());
 		return sb.toString();
 	}
 
-	public String getGraphIndexDdlString(DbxConnection conn, String tabName, TrendGraphDataPoint tgdp)
+	public static String getGraphIndexDdlString(DbxConnection conn, GraphStorageType graphStorageType, String schemaName, String tabName, TrendGraphDataPoint tgdp)
 	{
 		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
 		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 		
-		return "create index " + lq+tgdp.getName()+"_ix1"+rq + " on " + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
-		
-//		if ( DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(getDatabaseProductName()) )
-//			return "create index " +    tgdp.getName()+"_ix1"    + " on " + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
-//		else
-//			return "create index " + lq+tgdp.getName()+"_ix1"+rq + " on " + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
+		// Set a SQL Schema Name Prefix (if 'schemaName' was passed/assigned)
+		String schemaPrefix = StringUtil.isNullOrBlank(schemaName) ? "" : lq + schemaName + rq + ".";
+
+		return "create index " + lq+tgdp.getName()+"_ix1"+rq + " on " + schemaPrefix + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
 	}
 
-//	public String getGraphAlterTableDdlString(Connection conn, String tabName, TrendGraphDataPoint tgdp)
-//	throws SQLException
-//	{
-//		// Obtain a DatabaseMetaData object from our current connection
-//		DatabaseMetaData dbmd = conn.getMetaData();
-//
-//		int colCounter = 0;
-//		ResultSet rs = dbmd.getColumns(null, null, tabName, "%");
-//		while(rs.next())
-//		{
-//			colCounter++;
-//		}
-//		rs.close();
-//
-//		if (colCounter > 0)
-//		{
-//			colCounter -= 3; // take away: SessionStartTime, SessionSampleTime, SampleTime
-//			colCounter = colCounter / 2;
-//			
-//			Double[] dataArr  = tgdp.getData();
-//			if (colCounter < dataArr.length)
-//			{
-//				StringBuilder sb = new StringBuilder();
-//				sb.append("alter table " + qic+tabName+qic + "\n");
-//				
-//				for (int d=colCounter; d<dataArr.length; d++)
-//				{
-////					sb.append("alter table " + qic+tabName+qic + " add  "+fill(qic+"label_"+d+qic,40)+" "+fill(getDatatype("varchar",30,-1,-1),20)+" "+getNullable(true)+" \n");
-////					sb.append("alter table " + qic+tabName+qic + " add  "+fill(qic+"data_" +d+qic,40)+" "+fill(getDatatype("numeric",-1,10, 1),20)+" "+getNullable(true)+" \n");
-//					sb.append("   add  "+fill(qic+"label_"+d+qic,40)+" "+fill(getDatatype("varchar",30,-1,-1),20)+" "+getNullable(true)+",\n");
-//					sb.append("        "+fill(qic+"data_" +d+qic,40)+" "+fill(getDatatype("numeric",-1,10, 1),20)+" "+getNullable(true)+" \n");
-//				}
-//				//System.out.println("getGraphAlterTableDdlString: "+sb.toString());
-//				return sb.toString();
-//			}
-//		}
-//		return "";
-//	}
-
-	public List<String> getGraphAlterTableDdlString(DbxConnection conn, String tabName, TrendGraphDataPoint tgdp)
+	public static List<String> getGraphAlterTableDdlString(DbxConnection conn, GraphStorageType graphStorageType, String schemaName, String tabName, TrendGraphDataPoint tgdp)
 	throws SQLException
 	{
 		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
 		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 
+		// Set a SQL Schema Name Prefix (if 'schemaName' was passed/assigned)
+		String schemaPrefix = StringUtil.isNullOrBlank(schemaName) ? "" : lq + schemaName + rq + ".";
+
 		// Obtain a DatabaseMetaData object from our current connection
 		DatabaseMetaData dbmd = conn.getMetaData();
 
-		int colCounter = 0;
-		ResultSet rs = dbmd.getColumns(null, null, tabName, "%");
-		while(rs.next())
+		if (GraphStorageType.LABEL_IN_SEPARATE_COLUMN.equals(graphStorageType))
 		{
-			colCounter++;
-		}
-		rs.close();
-
-		List<String> list = new ArrayList<String>();
-		if (colCounter > 0)
-		{
-			colCounter -= 3; // take away: SessionStartTime, SessionSampleTime, SampleTime
-			colCounter = colCounter / 2;
-			
-			Double[] dataArr  = tgdp.getData();
-			if (colCounter < dataArr.length)
+			int colCounter = 0;
+			ResultSet rs = dbmd.getColumns(null, null, tabName, "%");
+			while(rs.next())
 			{
-				for (int d=colCounter; d<dataArr.length; d++)
+				colCounter++;
+			}
+			rs.close();
+
+			List<String> list = new ArrayList<String>();
+			if (colCounter > 0)
+			{
+				colCounter -= 3; // take away: SessionStartTime, SessionSampleTime, SampleTime
+				colCounter = colCounter / 2;
+				
+				Double[] dataArr  = tgdp.getData();
+				if (colCounter < dataArr.length)
 				{
-//					list.add("alter table " + lq+tabName+rq + " add  "+fill(lq+"label_"+d+rq,40)+" "+fill(getDatatype("varchar",100,-1,-1),20)+" "+getNullable(true)+" \n");
-//					list.add("alter table " + lq+tabName+rq + " add  "+fill(lq+"data_" +d+rq,40)+" "+fill(getDatatype("numeric", -1,16, 2),20)+" "+getNullable(true)+" \n");
-					list.add("alter table " + lq+tabName+rq + " add  "+fill(lq+"label_"+d+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,100   ),20)+" "+getNullable(true)+" \n");
-					list.add("alter table " + lq+tabName+rq + " add  "+fill(lq+"data_" +d+rq,40)+" "+fill(getDatatype(conn, Types.NUMERIC, 16, 2),20)+" "+getNullable(true)+" \n");
+					for (int d=colCounter; d<dataArr.length; d++)
+					{
+						list.add("alter table " + schemaPrefix + lq+tabName+rq + " add  "+fill(lq+"label_"+d+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,100   ),20)+" "+getNullable(true)+" \n");
+						list.add("alter table " + schemaPrefix + lq+tabName+rq + " add  "+fill(lq+"data_" +d+rq,40)+" "+fill(getDatatype(conn, Types.NUMERIC, 16, 2),20)+" "+getNullable(true)+" \n");
+					}
 				}
 			}
+			return list;
 		}
-		return list;
+		else if (GraphStorageType.COLUMN_NAME_IS_LABEL.equals(graphStorageType))
+		{
+			LinkedHashSet<String> tabCols = new LinkedHashSet<>();
+			ResultSet rs = dbmd.getColumns(null, schemaName, tabName, "%");
+			while(rs.next())
+				tabCols.add( rs.getString("COLUMN_NAME"));
+			rs.close();
+
+			LinkedHashSet<String> geCols = new LinkedHashSet<>();
+			for (String label : tgdp.getLabel()) // or should it be: tgdp.getLabelDisplay()
+				geCols.add(label);
+			
+//System.out.println("########################################## getGraphAlterTableDdlString(): table-cols="+tabCols);
+//System.out.println("########################################## getGraphAlterTableDdlString():    ge-cols="+geCols);
+
+			// Remove "existing table columns"
+			geCols.removeAll(tabCols);
+
+//System.out.println("########################################## getGraphAlterTableDdlString(): alterCols ="+geCols);
+			List<String> list = new ArrayList<String>();
+			for (String addCol : geCols)
+			{
+				list.add("alter table " + schemaPrefix + lq+tabName+rq + " add  " + fill(lq+addCol+rq,40) + " " + fill(getDatatype(conn, Types.NUMERIC,16, 2),20) + " " + getNullable(true) + " \n");
+			}
+			return list;
+		}
+		else
+		{
+			throw new RuntimeException("Unhandled GraphStorageType '" + graphStorageType + "', cant continue.");
+		}
 	}
 
 	/**

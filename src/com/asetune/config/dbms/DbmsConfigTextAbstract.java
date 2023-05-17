@@ -116,7 +116,8 @@ implements IDbmsConfigText
 	{
 		boolean oldNameExists = DbUtils.checkIfTableExistsNoThrow(conn, null, null, "MonSessionAseConfigText");
 
-		String tabName = oldNameExists ? "[MonSessionAseConfigText]" : PersistWriterJdbc.getTableName(conn, PersistWriterJdbc.SESSION_DBMS_CONFIG_TEXT, null, true);
+		String schemaName = null;
+		String tabName = oldNameExists ? "[MonSessionAseConfigText]" : PersistWriterJdbc.getTableName(conn, schemaName, PersistWriterJdbc.SESSION_DBMS_CONFIG_TEXT, null, true);
 
 		String sql = 
 			"select [configText] \n" +

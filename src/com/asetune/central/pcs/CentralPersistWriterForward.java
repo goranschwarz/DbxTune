@@ -24,6 +24,7 @@ import java.sql.Timestamp;
 
 import com.asetune.central.pcs.CentralPcsWriterHandler.NotificationType;
 import com.asetune.central.pcs.DbxTuneSample.CmEntry;
+import com.asetune.pcs.PersistContainer;
 import com.asetune.utils.Configuration;
 
 public class CentralPersistWriterForward
@@ -84,6 +85,12 @@ implements ICentralPersistWriter
 	{
 	}
 
+	@Override
+	public void saveLocalMetricsSample(PersistContainer pc)
+	{
+		// SEND THE CONTAINER: somewhere else
+	}
+	
 	@Override
 	public void saveSample(DbxTuneSample cont)
 	{

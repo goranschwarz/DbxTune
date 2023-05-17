@@ -2788,13 +2788,28 @@ public class ResultSetTableModel
 	 */
 	public String toHtmlTablesVerticalString(String className, Map<String, String> colNameValueTagMap)
 	{
-		return toHtmlTablesVerticalString(className, true, true, colNameValueTagMap);
+		return toHtmlTablesVerticalString(className, true, true, colNameValueTagMap, null);
 	}
-	public String toHtmlTablesVerticalString(String className, boolean tHeadNoWrap, boolean tBodyNoWrap, Map<String, String> colNameValueTagMap)
+//	/**
+//	 * Return a html string with one table for each row. The Table will only have 2 columns. 1=Column Name, 2=Column Value
+//	 * @return
+//	 */
+//	public String toHtmlTablesVerticalString(String className, TableStringRenderer tsRenderer)
+//	{
+//		return toHtmlTablesVerticalString(className, true, true, null, tsRenderer);
+//	}
+	
+	public String toHtmlTablesVerticalString(String className, boolean tHeadNoWrap, boolean tBodyNoWrap, Map<String, String> colNameValueTagMap, TableStringRenderer tsRenderer)
 	{
 		StringBuilder sb = new StringBuilder(1024);
 
-//		String tHeadNoWrapStr = tHeadNoWrap ? " nowrap" : "";
+// FIXME: Implement code for: TableStringRenderer tsRenderer
+//		// Use renderer to set <table ATTRIBUTES>
+//		String tableAttr = tsRenderer == null ? "" : tsRenderer.tagTableAttr(this);
+//		if (tableAttr == null)
+//			tableAttr = "";
+
+		//		String tHeadNoWrapStr = tHeadNoWrap ? " nowrap" : "";
 		String tBodyNoWrapStr = tBodyNoWrap ? " nowrap" : "";
 		
 		int cols = getColumnCount();
@@ -2814,7 +2829,13 @@ public class ResultSetTableModel
 				sb.append("<table border='1'>\n");
 //				sb.append("<table border=1 style='min-width: 1024px; width: 100%;' width='100%'>\n");
 			}
-			
+
+// FIXME
+//			// Use renderer to set <th ATTRIBUTES>
+//			String thAttr = tsRenderer == null ? "" : tsRenderer.tagThAttr(this, c, colName, tHeadNoWrap);
+//			if (thAttr == null)
+//				thAttr = "";
+
 			// build header names
 			sb.append("<thead>\n");
 			sb.append("  <tr> <th>Column</th> <th>Value</th> </tr>\n");
@@ -2849,10 +2870,10 @@ public class ResultSetTableModel
 //				if (StringUtil.isNullOrBlank(strVal))
 //					strVal = "&nbsp;";
 
-				// Translate NL to <br> it it's not already a HTML string.
-				// or maybe: wrap it with <pre>"strVal"</pre> instead
-				if ( ! StringUtil.containsHtml(strVal) )
-					strVal = strVal.replace("\n", "<br>");
+//				// Translate NL to <br> it it's not already a HTML string.
+//				// or maybe: wrap it with <pre>"strVal"</pre> instead
+//				if ( ! StringUtil.containsHtml(strVal) )
+//					strVal = strVal.replace("\n", "<br>");
 
 				//----------------------------------------------------------------
 				// BEGIN -- grabbed from CounterModel.toHtmlTableString(...)
@@ -2869,6 +2890,19 @@ public class ResultSetTableModel
 				{
 					int xml_StartPos         = strVal.indexOf("<?xml");
 					int ShowPlanXML_startPos = strVal.indexOf("<ShowPlanXML xmlns=");
+					boolean looksLikeHtml    = false;
+
+					if (StringUtil.startsWithIgnoreBlankIgnoreCase(strVal, "<") && xml_StartPos == -1 && ShowPlanXML_startPos == -1)
+					{
+						// Below regex comes from https://stackoverflow.com/questions/15458876/check-if-a-string-is-html-or-not
+						// But slightly changed...
+//						String regex = "<(br|basefont|hr|input|source|frame|param|area|meta|!--|col|link|option|base|img|wbr|!DOCTYPE).*?>|<(a|abbr|acronym|address|applet|article|aside|audio|b|bdi|bdo|big|blockquote|body|button|canvas|caption|center|cite|code|colgroup|command|datalist|dd|del|details|dfn|dialog|dir|div|dl|dt|em|embed|fieldset|figcaption|figure|font|footer|form|frameset|head|header|hgroup|h1|h2|h3|h4|h5|h6|html|i|iframe|ins|kbd|keygen|label|legend|li|map|mark|menu|meter|nav|noframes|noscript|object|ol|optgroup|output|p|pre|progress|q|rp|rt|ruby|s|samp|script|section|select|small|span|strike|strong|style|sub|summary|sup|table|tbody|td|textarea|tfoot|th|thead|time|title|tr|track|tt|u|ul|var|video).*?<\/\2>/i";
+//						String regex = "<(br|basefont|hr|input|source|frame|param|area|meta|!--|col|link|option|base|img|wbr|!DOCTYPE).*?>|<(a|abbr|acronym|address|applet|article|aside|audio|b|bdi|bdo|big|blockquote|body|button|canvas|caption|center|cite|code|colgroup|command|datalist|dd|del|details|dfn|dialog|dir|div|dl|dt|em|embed|fieldset|figcaption|figure|font|footer|form|frameset|head|header|hgroup|h1|h2|h3|h4|h5|h6|html|i|iframe|ins|kbd|keygen|label|legend|li|map|mark|menu|meter|nav|noframes|noscript|object|ol|optgroup|output|p|pre|progress|q|rp|rt|ruby|s|samp|script|section|select|small|span|strike|strong|style|sub|summary|sup|table|tbody|td|textarea|tfoot|th|thead|time|title|tr|track|tt|u|ul|var|video).*?>";
+//						String regex = "<(br|basefont|hr|input|source|frame|param|area|meta|!--|col|link|option|base|img|wbr|!DOCTYPE).*?>|<(a|abbr|acronym|address|applet|article|aside|audio|b|bdi|bdo|big|blockquote|body|button|canvas|caption|center|cite|code|colgroup|command|datalist|dd|del|details|dfn|dialog|dir|div|dl|dt|em|embed|fieldset|figcaption|figure|font|footer|form|frameset|head|header|hgroup|h1|h2|h3|h4|h5|h6|html|i|iframe|ins|kbd|keygen|label|legend|li|map|mark|menu|meter|nav|noframes|noscript|object|ol|optgroup|output|p|pre|progress|q|rp|rt|ruby|s|samp|script|section|select|small|span|strike|strong|style|sub|summary|sup|table|tbody|td|textarea|tfoot|th|thead|time|title|tr|track|tt|u|ul|var|video).*?"; // removed the '>' end tag and it works... strange...
+//						String regex = "<[a-z][\\s\\S]*>"; // much simpler than above
+//						looksLikeHtml = Pattern.compile(Pattern.quote(regex), Pattern.CASE_INSENSITIVE | Pattern.MULTILINE).matcher(strVal).find();
+						looksLikeHtml = StringUtil.containsHtml(strVal); // This uses regex: "<[^>]*>"
+					}
 
 					// check for XML content "somewhere" in the string
 //					if (xml_StartPos >= 0)
@@ -2899,6 +2933,10 @@ public class ResultSetTableModel
 							_logger.error(strVal, ex);
 							_logger.warn("DEBUG-AS-WARNING: For columnName='" + colName + "', ShowPlanXML_startPos=" + ShowPlanXML_startPos + ". XML Showplan Text caused the above error: |" + originXmlPlan + "|.");
 						}
+					}
+					else if (looksLikeHtml)
+					{
+						strVal = objVal.toString();
 					}
 					else
 					{

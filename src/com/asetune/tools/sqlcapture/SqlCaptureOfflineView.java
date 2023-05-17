@@ -953,6 +953,11 @@ implements ActionListener, ChangeListener//, MouseListener
 
 		throw new RuntimeException("The 'PersistReader' or 'PersistentCounterHandler.PersistWriterJdbc' has not been initialized, or a connection from those can't be used.");
 	}
+	
+	private String getSchemaName()
+	{
+		return null;
+	}
 
 	private void loadStuff()
 	{
@@ -968,6 +973,8 @@ implements ActionListener, ChangeListener//, MouseListener
 //		if (reader == null)
 //			throw new RuntimeException("The 'PersistReader' has not been initialized.");
 
+		String schemaName = getSchemaName();
+		
 		String sql = "";
 		try
 		{
@@ -984,8 +991,8 @@ implements ActionListener, ChangeListener//, MouseListener
 			//---------------------------------------------
 			// GET SQL TEXT
 			//---------------------------------------------
-//			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, false);
-			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
+//			tabName = PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, false);
+			tabName = PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
 
 			// Resolve column name/sql text for Dictionary Compressed Columns.
 			String col_SQLText = "[SQLText]";
@@ -1052,8 +1059,8 @@ implements ActionListener, ChangeListener//, MouseListener
 			}
 			
 			ta = _showplan_txt;
-//			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_PLANS, null, false);
-			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
+//			tabName = PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SQL_CAPTURE_PLANS, null, false);
+			tabName = PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
 			sql = conn.quotifySqlString("select " + col_SQLText + " from [" + tabName + "] " + where);
 
 			rs = stmnt.executeQuery(sql);
@@ -1101,7 +1108,7 @@ implements ActionListener, ChangeListener//, MouseListener
 			// GET STATEMENTS for this batch (put it in the SQL TExt for now, later on a separate JTable)
 			if (loadStatements)
 			{
-				tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
+				tabName = PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
 				sql = conn.quotifySqlString("select * from [" + tabName + "] " + where);
 				rs = stmnt.executeQuery(sql);
 				ResultSetTableModel rstm = new ResultSetTableModel(rs, "SQL_CAPTURE_STATEMENTS");
@@ -1432,10 +1439,12 @@ implements ActionListener, ChangeListener//, MouseListener
 		DbxConnection conn = null;
 		try {conn = getConnection();}
 		catch (RuntimeException ignore) {}
+		
+		String schemaName = getSchemaName();
 
-		String tabNameStmnt   = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
-//		String tabNameSqlText = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT,    null, false);
-		String tabNameSqlText = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
+		String tabNameStmnt   = PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
+//		String tabNameSqlText = PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SQL_CAPTURE_SQLTEXT,    null, false);
+		String tabNameSqlText = PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
 		
 		// Resolve column name/sql text for Dictionary Compressed Columns.
 		String col_SQLText1    = "t.[SQLText]";
@@ -1546,6 +1555,8 @@ implements ActionListener, ChangeListener//, MouseListener
 		try {conn = getConnection();}
 		catch (RuntimeException ignore) {}
 
+		String schemaName = getSchemaName();
+
 		// Build where clause
 		String fromDate = _searchFrom_dtp.getText();
 		String toDate   = _searchTo_dtp.getText();
@@ -1558,8 +1569,8 @@ implements ActionListener, ChangeListener//, MouseListener
 
 		
 		// GET Table Name
-//		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, true);
-		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, true);
+//		String tabName = PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, true);
+		String tabName = PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, true);
 
 		// Build list of column to get (Dictionary Compressed columns ending with $dcc$ will be replaced with a in-line sub-select)
 		String sqlColList = "*";
@@ -1591,6 +1602,8 @@ implements ActionListener, ChangeListener//, MouseListener
 		try {conn = getConnection();}
 		catch (RuntimeException ignore) {}
 
+		String schemaName = getSchemaName();
+
 		// different "top" syntax for different DBMS Vendors
 		String sqlTop    = "";
 		String sqlLimit  = "";
@@ -1608,7 +1621,7 @@ implements ActionListener, ChangeListener//, MouseListener
 				sqlLimit = "limit " + topRows + "\n";
 		}
 		
-		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, true);
+		String tabName = PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, true);
 		String sql = ""
 				+ "------------------------------------------------------------- \n"
 				+ "-- Get Statements... \n"
@@ -1707,6 +1720,8 @@ implements ActionListener, ChangeListener//, MouseListener
 		try {conn = getConnection();}
 		catch (RuntimeException ignore) {}
 
+		String schemaName = getSchemaName();
+
 		// different "top" syntax for different DBMS Vendors
 		String sqlTop    = "";
 		String sqlLimit  = "";
@@ -1724,8 +1739,8 @@ implements ActionListener, ChangeListener//, MouseListener
 				sqlLimit = "limit " + topRows + "\n";
 		}
 		
-//		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, false);
-		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
+//		String tabName = PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, false);
+		String tabName = PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false);
 
 		String sql_plain = ""
 				+ "------------------------------------------------------------- \n"

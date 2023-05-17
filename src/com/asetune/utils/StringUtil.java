@@ -1006,6 +1006,18 @@ public class StringUtil
 		}
 		return false;
 	}
+	public static boolean equalsAnyIgnoreCase(String strToCheck, String... equalsAny)
+	{
+		if (strToCheck == null)
+			return false;
+
+		for (String str : equalsAny)
+		{
+			if (strToCheck.equalsIgnoreCase(str))
+				return true;
+		}
+		return false;
+	}
 
 	/**
 	 * Check if "any" of the strings contains
@@ -1023,6 +1035,18 @@ public class StringUtil
 		for (String str : containsAny)
 		{
 			if (strToCheck.contains(str))
+				return true;
+		}
+		return false;
+	}
+	public static boolean containsAnyIgnoreCase(String strToCheck, String... containsAny)
+	{
+		if (strToCheck == null)
+			return false;
+
+		for (String str : containsAny)
+		{
+			if (strToCheck.toLowerCase().contains(str.toLowerCase()))
 				return true;
 		}
 		return false;
@@ -4153,6 +4177,63 @@ public class StringUtil
 		return sb.toString();
 	}
 	
+
+	/**
+	 * Remove string between start/end (if not found, return input)
+	 * 
+	 * @param inputStr
+	 * @param startStr
+	 * @param endStr
+	 * @param alsoRemoveStartEndStr    TRUE if you want to remove the start/end delimiters as well otherwise its just between start/end
+	 * @return
+	 */
+	public static String removeBetween(String inputStr, String startStr, String endStr, boolean alsoRemoveStartEndStr)
+	{
+		return private_removeBetween(inputStr, false, startStr, endStr, alsoRemoveStartEndStr);
+	}
+
+	/**
+	 * Remove string between start/end (if not found, return input)
+	 * 
+	 * @param inputStr
+	 * @param startStr
+	 * @param endStr
+	 * @return
+	 */
+	public static String removeBetweenIgnoreCase(String inputStr, String startStr, String endStr, boolean alsoRemoveStartEndStr)
+	{
+		return private_removeBetween(inputStr, true, startStr, endStr, alsoRemoveStartEndStr);
+	}
+
+	/**
+	 * INTERNAL 
+	 */
+	private static String private_removeBetween(String inputStr, boolean ignoreCase, String startStr, String endStr, boolean alsoRemoveStartEndStr)
+	{
+		int startPos = ignoreCase ? StringUtils.indexOfIgnoreCase(inputStr, startStr) : inputStr.indexOf(startStr);
+		int endPos   = ignoreCase ? StringUtils.indexOfIgnoreCase(inputStr, endStr)   : inputStr.indexOf(endStr);
+
+		String outStr = inputStr;
+		if (startPos != -1 && endPos != -1)
+		{
+			if (alsoRemoveStartEndStr)
+			{
+				// Also remove the start/end tag
+				String tmpStart = inputStr.substring(0, startPos);
+				String tmpEnd   = inputStr.substring(endPos + endStr.length());
+				outStr = tmpStart + tmpEnd;
+			}
+			else
+			{
+				// just between the start/end
+				String tmpStart = inputStr.substring(0, startPos + startStr.length() );
+				String tmpEnd   = inputStr.substring(endPos);
+				outStr = tmpStart + tmpEnd;
+			}
+		}
+		return outStr;
+	}
+	
 	
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
@@ -4162,6 +4243,15 @@ public class StringUtil
 
 	public static void main(String[] args)
 	{
+		System.out.println(StringUtil.removeBetween("prefix[<head>1234</head>]postfix", "<head>", "</head>", true));
+		System.out.println(StringUtil.removeBetween("prefix[<head>1234</head>]postfix", "<head>", "</head>", false));
+		System.out.println(StringUtil.removeBetween("prefix[<HEAD>1234</HEAD>]postfix", "<head>", "</head>", false));
+
+		System.out.println(StringUtil.removeBetweenIgnoreCase("prefix[<HEAD>1234</HEAD>]postfix", "<head>", "</head>", true));
+		System.out.println(StringUtil.removeBetweenIgnoreCase("prefix[<HEAD>1234</HEAD>]postfix", "<head>", "</head>", false));
+		System.out.println("----end-test---");
+		System.exit(0);
+
 		System.out.println(StringUtil.addPrefix("xxx: ", null, false));
 		System.out.println(StringUtil.addPrefix("xxx: ", "", false));
 		System.out.println(StringUtil.addPrefix("xx1xx: ", "t1: test-no-newline", false));

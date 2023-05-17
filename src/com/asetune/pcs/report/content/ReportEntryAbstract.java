@@ -116,15 +116,16 @@ implements IReportEntry
 
 	public boolean isWindows()
 	{
-		String dbmsVerStr = getReportingInstance().getDbmsVersionStr();
-		if (StringUtil.hasValue(dbmsVerStr))
-		{
-			if (dbmsVerStr.contains("Windows"))
-			{
-				return true;
-			}
-		}
-		return false;
+		return getReportingInstance().isWindows();
+//		String dbmsVerStr = getReportingInstance().getDbmsVersionStr();
+//		if (StringUtil.hasValue(dbmsVerStr))
+//		{
+//			if (dbmsVerStr.contains("Windows"))
+//			{
+//				return true;
+//			}
+//		}
+//		return false;
 	}
 
 	@Override
@@ -620,6 +621,9 @@ implements IReportEntry
 					schName = sa[1];
 					tabName = sa[2];
 				}
+				
+				if (schName == null)
+					schName = getReportingInstance().getDbmsSchemaName();
 
 				// This checks table if the table name in following order: MixedCase, then UPPER or lower (depending on the metadata)
 				if ( ! DbUtils.checkIfTableExistsNoThrow(conn, catName, schName, tabName) )
@@ -769,13 +773,45 @@ implements IReportEntry
 	}
 	
 
+//	/**
+//	 * Create a html DIV with
+//	 * <ul>
+//	 *     <li>A CheckBox, with a ID, that is provided in the method call</li>
+//	 *     <li>And a CheckBox label, also a parameter</li>
+//	 *     <li>and a embedded DIV with the content parameter</li>
+//	 * </ul>
+//	 * @param divId
+//	 * @param visibleAtStart
+//	 * @param label
+//	 * @param content
+//	 * @return
+//	 */
+//	public String createShowHideDiv(String divId, boolean visibleAtStart, String label, String content)
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		String visibility = visibleAtStart ? "checked" : "unchecked";
+//		
+//		// Build the below:
+//		// <div>
+//		//     <input type='checkbox' id='DIVID' checked/>
+//		//     <label for='DIVID'>LABEL GOES HERE</label>
+//		//     <div class='hide-show'>CONTENT GOES HERE</div>
+//		// </div>
+//
+//		sb.append("\n");
+//		sb.append("<div>\n");
+//		sb.append("    <input type='checkbox' id='").append(divId).append("' ").append(visibility).append("/> \n");
+//		sb.append("    <label for='").append(divId).append("'>").append(label).append("</label> \n");
+//		sb.append("    <div class='hide-show'>\n").append(content).append("\n    </div> \n");
+//		sb.append("</div>\n");
+//		sb.append("\n");
+//
+//		return sb.toString();
+//	}
 	/**
-	 * Create a html DIV with
-	 * <ul>
-	 *     <li>A CheckBox, with a ID, that is provided in the method call</li>
-	 *     <li>And a CheckBox label, also a parameter</li>
-	 *     <li>and a embedded DIV with the content parameter</li>
-	 * </ul>
+	 * Create a html "details" tag with
+	 * 
 	 * @param divId
 	 * @param visibleAtStart
 	 * @param label
@@ -786,21 +822,20 @@ implements IReportEntry
 	{
 		StringBuilder sb = new StringBuilder();
 
-		String visibility = visibleAtStart ? "checked" : "unchecked";
+		String visibility = visibleAtStart ? "open" : "";
 		
 		// Build the below:
-		// <div>
-		//     <input type='checkbox' id='DIVID' checked/>
-		//     <label for='DIVID'>LABEL GOES HERE</label>
-		//     <div class='hide-show'>CONTENT GOES HERE</div>
-		// </div>
+		// <details id='DIVID' [open]>
+		//     <summary>LABEL GOES HERE</summary>
+		//     CONTENT GOES HERE
+		// </details>
 
 		sb.append("\n");
-		sb.append("<div>\n");
-		sb.append("    <input type='checkbox' id='").append(divId).append("' ").append(visibility).append("/> \n");
-		sb.append("    <label for='").append(divId).append("'>").append(label).append("</label> \n");
-		sb.append("    <div class='hide-show'>\n").append(content).append("\n    </div> \n");
-		sb.append("</div>\n");
+		sb.append("<details id='").append(divId).append("' ").append(visibility).append(">\n");
+		sb.append("    <summary>").append(label).append("</summary>\n");
+		sb.append(content);
+		sb.append("\n");
+		sb.append("</details>\n");
 		sb.append("\n");
 
 		return sb.toString();
@@ -1027,7 +1062,8 @@ implements IReportEntry
 		}
 		sb.append("<p>\n");
 		sb.append(description).append(" <br>\n");
-		sb.append("<a href='").append(getDbxCentralLinkForGraphs(graphList)).append("'>Link to DbxCentral Graphs</a> which is a bit more dynamic than static images.\n");
+		if (getReportingInstance().getInstanceRecordingInfo() != null)
+			sb.append("<a href='").append(getDbxCentralLinkForGraphs(graphList)).append("'>Link to DbxCentral Graphs</a> which is a bit more dynamic than static images.\n");
 		sb.append("</p>\n");
 		
 		return sb.toString();
@@ -1036,7 +1072,7 @@ implements IReportEntry
 	{
 		String dbxcLink = getReportingInstance().getDbxCentralBaseUrl();
 		RecordingInfo recordingInfo = getReportingInstance().getInstanceRecordingInfo();
-
+		
 		String startTime = recordingInfo.getStartTime();
 		String endTime   = recordingInfo.getEndTime();
 		String srvName   = getReportingInstance().getServerName();
@@ -1062,6 +1098,7 @@ implements IReportEntry
 	 * Simple wrapper method to create a ReportChartObject
 	 * 
 	 * @param conn             DBMS Connection
+	 * @param schemaName       Name of the DBMS Schema (can be null)
 	 * @param cmName           CM Name
 	 * @param graphName        Graph Name
 	 * @param maxValue         -1 = No Max Value
@@ -1071,9 +1108,9 @@ implements IReportEntry
 	 * 
 	 * @return This will always returns a ReportChartObject object
 	 */
-	public IReportChart createTsLineChart(DbxConnection conn, String cmName, String graphName, int maxValue, boolean sort, String skipNames, String graphTitle)
+	public IReportChart createTsLineChart(DbxConnection conn, String schemaName, String cmName, String graphName, int maxValue, boolean sort, String skipNames, String graphTitle)
 	{
-		return new ReportChartTimeSeriesLine(this, conn, cmName, graphName, maxValue, sort, skipNames, graphTitle);
+		return new ReportChartTimeSeriesLine(this, conn, schemaName, cmName, graphName, maxValue, sort, skipNames, graphTitle);
 	}
 //	public IReportChart createTsLineChart(DbxConnection conn, String cmName, String graphName, int maxValue, String skipNames, String graphTitle)
 //	{
@@ -1084,6 +1121,7 @@ implements IReportEntry
 	 * Simple wrapper method to create a ReportChartObject
 	 * 
 	 * @param conn             DBMS Connection
+	 * @param schemaName       Name of the DBMS Schema (can be null)
 	 * @param cmName           CM Name
 	 * @param graphName        Graph Name
 	 * @param maxValue         -1 = No Max Value
@@ -1092,9 +1130,9 @@ implements IReportEntry
 	 * 
 	 * @return This will always returns a ReportChartObject object
 	 */
-	public IReportChart createTsStackedBarChart(DbxConnection conn, String cmName, String dataGroupColumn, int dataGroupMinutes, TopGroupCountReport topGroupCountReport, String dataValueColumn, Double dataDivideByValue, String keepGroups, String skipGroups, String graphTitle)
+	public IReportChart createTsStackedBarChart(DbxConnection conn, String schemaName, String cmName, String dataGroupColumn, int dataGroupMinutes, TopGroupCountReport topGroupCountReport, String dataValueColumn, Double dataDivideByValue, String keepGroups, String skipGroups, String graphTitle)
 	{
-		return new ReportChartTimeSeriesStackedBar(this, conn, cmName, dataGroupColumn, dataGroupMinutes, topGroupCountReport, dataValueColumn, dataDivideByValue, keepGroups, skipGroups, graphTitle);
+		return new ReportChartTimeSeriesStackedBar(this, conn, schemaName, cmName, dataGroupColumn, dataGroupMinutes, topGroupCountReport, dataValueColumn, dataDivideByValue, keepGroups, skipGroups, graphTitle);
 	}
 	
 	
@@ -1225,23 +1263,24 @@ implements IReportEntry
 		DailySummaryReportAbstract inst = getReportingInstance();
 		
 		// Most common: exit early
-		if (inst.getReportPeriodBeginTime() == null && inst.getReportPeriodEndTime() == null)
+//		if (inst.getReportPeriodBeginTime() == null && inst.getReportPeriodEndTime() == null)
+		if ( ! inst.hasReportPeriod() )
 			return "";
 
 		// we have both BEGIN and END time
 		if (inst.getReportPeriodBeginTime() != null && inst.getReportPeriodEndTime() != null)
 		{
-			return "  and [" + colname + "] between '" + inst.getReportPeriodBeginTime() + "' and '" + inst.getReportPeriodEndTime() + "' \n";
+			return "  AND [" + colname + "] BETWEEN '" + inst.getReportPeriodBeginTime() + "' AND '" + inst.getReportPeriodEndTime() + "' \n";
 		}
 		// we only have BEGIN time
 		else if (inst.getReportPeriodBeginTime() != null)
 		{
-			return "  and [" + colname + "] >= '" + inst.getReportPeriodBeginTime() + "' \n";
+			return "  AND [" + colname + "] >= '" + inst.getReportPeriodBeginTime() + "' \n";
 		}
 		// we only have END time
 		else if (inst.getReportPeriodEndTime() != null)
 		{
-			return "  and [" + colname + "] <= '" + inst.getReportPeriodEndTime() + "' \n";
+			return "  AND [" + colname + "] <= '" + inst.getReportPeriodEndTime() + "' \n";
 		}
 		else
 		{

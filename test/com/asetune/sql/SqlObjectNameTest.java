@@ -39,10 +39,11 @@ public class SqlObjectNameTest
 		String dbProductName                    = DbUtils.DB_PROD_NAME_SYBASE_ASE;
 		String dbIdentifierQuoteString          = "\"";
 		boolean dbStoresUpperCaseIdentifiers    = false;
+		boolean dbStoresLowerCaseIdentifiers    = false;
 		boolean dbSupportsSchema                = true;
 		boolean autoAddDboForSybaseAndSqlServer = true;
 		
-		SqlObjectName sqlObj = new SqlObjectName("t1", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
+		SqlObjectName sqlObj = new SqlObjectName("t1", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbStoresLowerCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
 		
 		// Catalog
 		assertEquals( "",   sqlObj.getCatalogName());
@@ -80,10 +81,11 @@ public class SqlObjectNameTest
 		String dbProductName                    = DbUtils.DB_PROD_NAME_SYBASE_ASE;
 		String dbIdentifierQuoteString          = "\"";
 		boolean dbStoresUpperCaseIdentifiers    = false;
+		boolean dbStoresLowerCaseIdentifiers    = false;
 		boolean dbSupportsSchema                = true;
 		boolean autoAddDboForSybaseAndSqlServer = false;
 		
-		SqlObjectName sqlObj = new SqlObjectName("t1", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
+		SqlObjectName sqlObj = new SqlObjectName("t1", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbStoresLowerCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
 		
 		// Catalog
 		assertEquals( "",   sqlObj.getCatalogName());
@@ -121,10 +123,11 @@ public class SqlObjectNameTest
 		String dbProductName                    = DbUtils.DB_PROD_NAME_SYBASE_ASE;
 		String dbIdentifierQuoteString          = "\"";
 		boolean dbStoresUpperCaseIdentifiers    = false;
+		boolean dbStoresLowerCaseIdentifiers    = false;
 		boolean dbSupportsSchema                = true;
 		boolean autoAddDboForSybaseAndSqlServer = true;
 		
-		SqlObjectName sqlObj = new SqlObjectName("dbo.with space", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
+		SqlObjectName sqlObj = new SqlObjectName("dbo.with space", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbStoresLowerCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
 
 		// Catalog
 		assertEquals( "",   sqlObj.getCatalogName());
@@ -162,10 +165,11 @@ public class SqlObjectNameTest
 		String dbProductName                    = DbUtils.DB_PROD_NAME_SYBASE_ASE;
 		String dbIdentifierQuoteString          = "\"";
 		boolean dbStoresUpperCaseIdentifiers    = false;
+		boolean dbStoresLowerCaseIdentifiers    = false;
 		boolean dbSupportsSchema                = true;
 		boolean autoAddDboForSybaseAndSqlServer = true;
 		
-		SqlObjectName sqlObj = new SqlObjectName("dbo.\"with space\"", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
+		SqlObjectName sqlObj = new SqlObjectName("dbo.\"with space\"", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbStoresLowerCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
 		
 		// Catalog
 		assertEquals( "",   sqlObj.getCatalogName());
@@ -203,10 +207,11 @@ public class SqlObjectNameTest
 		String dbProductName                    = DbUtils.DB_PROD_NAME_SYBASE_ASE;
 		String dbIdentifierQuoteString          = "\"";
 		boolean dbStoresUpperCaseIdentifiers    = false;
+		boolean dbStoresLowerCaseIdentifiers    = false;
 		boolean dbSupportsSchema                = true;
 		boolean autoAddDboForSybaseAndSqlServer = true;
 		
-		SqlObjectName sqlObj = new SqlObjectName("dbo.[with space]", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
+		SqlObjectName sqlObj = new SqlObjectName("dbo.[with space]", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbStoresLowerCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
 
 		// Catalog
 		assertEquals( "",   sqlObj.getCatalogName());
@@ -244,10 +249,11 @@ public class SqlObjectNameTest
 		String dbProductName                    = DbUtils.DB_PROD_NAME_SYBASE_ASE;
 		String dbIdentifierQuoteString          = "\"";
 		boolean dbStoresUpperCaseIdentifiers    = false;
+		boolean dbStoresLowerCaseIdentifiers    = false;
 		boolean dbSupportsSchema                = true;
 		boolean autoAddDboForSybaseAndSqlServer = true;
 		
-		SqlObjectName sqlObj = new SqlObjectName("dbo.with space", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
+		SqlObjectName sqlObj = new SqlObjectName("dbo.with space", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbStoresLowerCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
 		
 		// Catalog
 		assertEquals( "",   sqlObj.getCatalogNameQuoted());
@@ -272,10 +278,11 @@ public class SqlObjectNameTest
 		String dbProductName                    = DbUtils.DB_PROD_NAME_SYBASE_ASE;
 		String dbIdentifierQuoteString          = "\"";
 		boolean dbStoresUpperCaseIdentifiers    = false;
+		boolean dbStoresLowerCaseIdentifiers    = false;
 		boolean dbSupportsSchema                = true;
 		boolean autoAddDboForSybaseAndSqlServer = true;
 		
-		SqlObjectName sqlObj = new SqlObjectName("dbo.\"with space\"", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
+		SqlObjectName sqlObj = new SqlObjectName("dbo.\"with space\"", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbStoresLowerCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
 		
 		// Catalog
 		assertEquals( "",   sqlObj.getCatalogNameQuoted());
@@ -300,10 +307,11 @@ public class SqlObjectNameTest
 		String dbProductName                    = DbUtils.DB_PROD_NAME_SYBASE_ASE;
 		String dbIdentifierQuoteString          = "\"";
 		boolean dbStoresUpperCaseIdentifiers    = false;
+		boolean dbStoresLowerCaseIdentifiers    = false;
 		boolean dbSupportsSchema                = true;
 		boolean autoAddDboForSybaseAndSqlServer = true;
 		
-		SqlObjectName sqlObj = new SqlObjectName("dbo.[with space]", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
+		SqlObjectName sqlObj = new SqlObjectName("dbo.[with space]", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbStoresLowerCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
 		
 		// Catalog
 		assertEquals( "",   sqlObj.getCatalogNameQuoted());
@@ -329,10 +337,11 @@ public class SqlObjectNameTest
 		String dbProductName                    = DbUtils.DB_PROD_NAME_SYBASE_ASE;
 		String dbIdentifierQuoteString          = "\"";
 		boolean dbStoresUpperCaseIdentifiers    = false;
+		boolean dbStoresLowerCaseIdentifiers    = false;
 		boolean dbSupportsSchema                = true;
 		boolean autoAddDboForSybaseAndSqlServer = true;
 		
-		SqlObjectName sqlObj = new SqlObjectName("dbo.with space", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
+		SqlObjectName sqlObj = new SqlObjectName("dbo.with space", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbStoresLowerCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
 		
 		// Catalog
 		assertEquals( "",   sqlObj.getCatalogNameQuoted());
@@ -365,10 +374,11 @@ public class SqlObjectNameTest
 		String dbProductName                    = DbUtils.DB_PROD_NAME_SYBASE_ASE;
 		String dbIdentifierQuoteString          = "\"";
 		boolean dbStoresUpperCaseIdentifiers    = false;
+		boolean dbStoresLowerCaseIdentifiers    = false;
 		boolean dbSupportsSchema                = true;
 		boolean autoAddDboForSybaseAndSqlServer = true;
 		
-		SqlObjectName sqlObj = new SqlObjectName("db$name|x.dbo.with space", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
+		SqlObjectName sqlObj = new SqlObjectName("db$name|x.dbo.with space", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbStoresLowerCaseIdentifiers, dbSupportsSchema, autoAddDboForSybaseAndSqlServer);
 		
 		// Catalog
 		assertEquals( "[db$name|x]",   sqlObj.getCatalogNameQuoted());

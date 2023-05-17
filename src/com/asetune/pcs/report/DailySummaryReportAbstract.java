@@ -70,6 +70,7 @@ implements IDailySummaryReport
 	private DbxConnection _conn = null;
 	private IReportSender _sender = null;
 	private String        _serverName = null;
+	private String        _dbmsSchemaName = null;
 	
 	private DailySummaryReportContent _reportContent = null; 
 	private IProgressReporter _progressReporter = null;
@@ -89,6 +90,20 @@ implements IDailySummaryReport
 	@Override
 	public void   setServerName(String serverName) { _serverName = serverName; }
 	public String getServerName()                  { return _serverName; }
+
+	@Override
+	public void   setDbmsSchemaName(String schemaName) { _dbmsSchemaName = schemaName; }
+	public String getDbmsSchemaName()                  { return _dbmsSchemaName; }
+	public String getDbmsSchemaNameSqlPrefix()
+	{
+		if (StringUtil.isNullOrBlank(_dbmsSchemaName))
+			return "";
+
+		if (_conn == null)
+			return "[" + _dbmsSchemaName + "]."; 
+		
+		return _conn.getLeftQuote() + _dbmsSchemaName + _conn.getRightQuote() + "."; 
+	}
 
 	@Override public void                      setReportContent(DailySummaryReportContent content) { _reportContent = content; }
 	@Override public DailySummaryReportContent getReportContent()                                  { return _reportContent; }
@@ -424,6 +439,24 @@ implements IDailySummaryReport
 		return _recordingInfo.getRecDbxBuildStr();
 	}
 
+	public boolean isWindows()
+	{
+		String dbmsVerStr = getDbmsVersionStr();
+		if (StringUtil.hasValue(dbmsVerStr))
+		{
+			if (dbmsVerStr.contains("Windows"))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public MonRecordingInfo getRecordingInfo(DbxConnection conn)
+	{
+		return new MonRecordingInfo(conn, null);
+	}
+	
 	/** Initialize members  */
 	private void initialize()
 	{
@@ -432,7 +465,8 @@ implements IDailySummaryReport
 		
 		DbxConnection conn = getConnection();
 
-		_recordingInfo = new MonRecordingInfo(conn, null);
+//		_recordingInfo = new MonRecordingInfo(conn, null);
+		_recordingInfo = getRecordingInfo(conn);
 		
 		// set _recording* variables
 		refreshRecordingStartEndTime(conn);
@@ -918,6 +952,10 @@ implements IDailySummaryReport
 	private Timestamp _reportPeriodBeginTime = null;
 	private Timestamp _reportPeriodEndTime   = null;
 	private String    _reportPeriodDuration  = null;
+
+	@Override
+	public void setReportPeriodBeginTime(Timestamp beginTs) { _reportPeriodBeginTime = beginTs; }
+	
 	@Override
 	public void setReportPeriodBeginTime(int hour, int minute)
 	{
@@ -925,6 +963,9 @@ implements IDailySummaryReport
 		_reportPeriodBeginTimeMinute = minute;
 	}
 	
+	@Override
+	public void setReportPeriodEndTime  (Timestamp endTs)   { _reportPeriodEndTime   = endTs; }
+
 	@Override
 	public void setReportPeriodEndTime(int hour, int minute)
 	{
@@ -935,6 +976,9 @@ implements IDailySummaryReport
 	@Override
 	public boolean hasReportPeriod()
 	{
+		if (_reportPeriodBeginTime != null) return true;
+		if (_reportPeriodEndTime   != null) return true;
+
 		if (_reportPeriodBeginTimeHour >= 0 && _reportPeriodBeginTimeMinute >= 0) return true;
 		if (_reportPeriodEndTimeHour   >= 0 && _reportPeriodEndTimeMinute   >= 0) return true;
 
@@ -943,7 +987,17 @@ implements IDailySummaryReport
 	
 	public Timestamp getReportPeriodBeginTime() { return _reportPeriodBeginTime; }
 	public Timestamp getReportPeriodEndTime()   { return _reportPeriodEndTime; }
-	public String    getReportPeriodDuration()  { return _reportPeriodDuration; }
+//	public String    getReportPeriodDuration()  { return _reportPeriodDuration; }
+	public String    getReportPeriodDuration()  
+	{ 
+//		if (_reportPeriodDuration == null)
+//			_reportPeriodDuration = TimeUtils.msToTimeStr("%HH:%MM:%SS.%ms", getReportEndTime().getTime() - getReportBeginTime().getTime() ) + "   (HH:MM:SS.millisec)";
+		if (_reportPeriodDuration == null)
+			_reportPeriodDuration = TimeUtils.msToTimeStrDHMS(getReportEndTime().getTime() - getReportBeginTime().getTime() ) + "   ([#d] HH:MM:SS)";
+		
+		return _reportPeriodDuration; 
+	}
+
 
 	/**
 	 * @return First try getReportPeriodBeginTime(), if not available use getRecordingStartTime()
@@ -1017,11 +1071,12 @@ implements IDailySummaryReport
 	{
 		_recordingSampleTime = ReportEntryAbstract.getRecordingSampleTime(conn);
 
-		
+		String schemaName = null;
+
 		// Start/end time for the recording
 		String sql = ""
 			+ "select min([SessionSampleTime]), max([SessionSampleTime]) \n"
-			+ "from ["+PersistWriterBase.getTableName(conn, PersistWriterBase.SESSION_SAMPLES, null, false) + "] \n"
+			+ "from "+PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SESSION_SAMPLES, null, true) + " \n"
 			+ "";
 
 		sql = conn.quotifySqlString(sql);

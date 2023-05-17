@@ -159,16 +159,18 @@ public class AseDbSize extends AseAbstract
 			
 		// Describe the table
 		setSectionDescription(_shortRstm);
+
+		String schema = getReportingInstance().getDbmsSchemaName();
 		
-		_CmOpenDatabases_DbDataSizeUsedPctGraph = createTsLineChart(conn, "CmOpenDatabases", "DbDataSizeUsedPctGraph", 100, true, null, "DB Data Space Used in Percent (Server->Databases)");
-		_CmOpenDatabases_DbDataSizeLeftMbGraph  = createTsLineChart(conn, "CmOpenDatabases", "DbDataSizeLeftMbGraph" , -1,  true, null, "DB Data Space Available in MB (Server->Databases)");
-		_CmOpenDatabases_DbDataSizeUsedMbGraph  = createTsLineChart(conn, "CmOpenDatabases", "DbDataSizeUsedMbGraph" , -1,  true, null, "DB Data Space Used in MB (Server->Databases)");
+		_CmOpenDatabases_DbDataSizeUsedPctGraph = createTsLineChart(conn, schema, "CmOpenDatabases", "DbDataSizeUsedPctGraph", 100, true, null, "DB Data Space Used in Percent (Server->Databases)");
+		_CmOpenDatabases_DbDataSizeLeftMbGraph  = createTsLineChart(conn, schema, "CmOpenDatabases", "DbDataSizeLeftMbGraph" , -1,  true, null, "DB Data Space Available in MB (Server->Databases)");
+		_CmOpenDatabases_DbDataSizeUsedMbGraph  = createTsLineChart(conn, schema, "CmOpenDatabases", "DbDataSizeUsedMbGraph" , -1,  true, null, "DB Data Space Used in MB (Server->Databases)");
 
-		_CmOpenDatabases_DbLogSizeUsedPctGraph  = createTsLineChart(conn, "CmOpenDatabases", "DbLogSizeUsedPctGraph" , 100, true, null, "DB Transaction Log Space Used in Percent (Server->Databases)");
-		_CmOpenDatabases_DbLogSizeLeftMbGraph   = createTsLineChart(conn, "CmOpenDatabases", "DbLogSizeLeftMbGraph"  , -1,  true, null, "DB Transaction Log Space Available in MB (Server->Databases)");
-		_CmOpenDatabases_DbLogSizeUsedMbGraph   = createTsLineChart(conn, "CmOpenDatabases", "DbLogSizeUsedMbGraph"  , -1,  true, null, "DB Transaction Log Space Used in MB (Server->Databases)");
+		_CmOpenDatabases_DbLogSizeUsedPctGraph  = createTsLineChart(conn, schema, "CmOpenDatabases", "DbLogSizeUsedPctGraph" , 100, true, null, "DB Transaction Log Space Used in Percent (Server->Databases)");
+		_CmOpenDatabases_DbLogSizeLeftMbGraph   = createTsLineChart(conn, schema, "CmOpenDatabases", "DbLogSizeLeftMbGraph"  , -1,  true, null, "DB Transaction Log Space Available in MB (Server->Databases)");
+		_CmOpenDatabases_DbLogSizeUsedMbGraph   = createTsLineChart(conn, schema, "CmOpenDatabases", "DbLogSizeUsedMbGraph"  , -1,  true, null, "DB Transaction Log Space Used in MB (Server->Databases)");
 
-		_CmOpenDatabases_TempdbUsedMbGraph      = createTsLineChart(conn, "CmOpenDatabases", "TempdbUsedMbGraph"     , -1,  true, null, "TempDB Space Used in MB (Server->Databases)");
+		_CmOpenDatabases_TempdbUsedMbGraph      = createTsLineChart(conn, schema, "CmOpenDatabases", "TempdbUsedMbGraph"     , -1,  true, null, "TempDB Space Used in MB (Server->Databases)");
 	}
 
 	private IReportChart _CmOpenDatabases_DbLogSizeUsedPctGraph;

@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 import org.eclipse.jetty.websocket.api.Session;
+import org.eclipse.jetty.websocket.api.WriteCallback;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketConnect;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketMessage;
@@ -172,7 +173,7 @@ public class ChartBroadcastWebSocket
 			return;
 		}
 
-		List<String> subsSentList = new ArrayList<>();
+		//final List<String> subsSentList = new ArrayList<>();
 		
 		for (Session session : _subsMap.keySet())
 		{
@@ -184,13 +185,13 @@ public class ChartBroadcastWebSocket
 			List<String> countersNameList = Arrays.asList(new String[] {"CmActiveStatements"});
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("fireGraphData(session='"+session+"', remoteHost='"+cs._remoteHost+"', srvNameList='"+srvNameList+"', graphNameList='"+graphNameList+"'): name=|"+sample.getServerName()+"|.");
+				_logger.debug("fireGraphData(session='" + session + "', remoteHost='" + cs._remoteHost + "', srvNameList='" + srvNameList + "', graphNameList='" + graphNameList + "'): name=|" + sample.getServerName() + "|.");
 
 			// If we are NOT subscribing on this server... -get-out-of-here-
 			if ( ! srvNameList.contains(sample.getServerName()) )
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("<<<<<----fireGraphData -NOT-A-SUBSCRIBER----DO-RETURN---- sample.getServerName()='"+sample.getServerName()+"': (session='"+session+"', srvNameList='"+srvNameList+"', graphNameList='"+graphNameList+"'.");
+					_logger.debug("<<<<<----fireGraphData -NOT-A-SUBSCRIBER----DO-RETURN---- sample.getServerName()='" + sample.getServerName() + "': (session='" + session + "', srvNameList='" + srvNameList + "', graphNameList='" + graphNameList + "'.");
 				continue;
 			}
 			
@@ -214,21 +215,45 @@ public class ChartBroadcastWebSocket
 
 			try
 			{
-				session.getRemote().sendString(payload);
+				// This send it synchronous to the "client", which might cause: java.lang.IllegalStateException: Blocking message pending 10000 for BLOCKING
+				//session.getRemote().sendString(payload);
 
-				// sent for this remote connection
-				subsSentList.add(cs._remoteHost);
+				// The below is more "fire and forget" (asynchronous delivery)
+				// sometimes we get: 
+				//    java.lang.IllegalStateException: Blocking message pending 10000 for BLOCKING
+				// Here might be a workaround:
+				//    https://bugs.eclipse.org/bugs/show_bug.cgi?id=474488
+				session.getRemote().sendString(payload, new WriteCallback()
+				{
+					@Override
+					public void writeSuccess()
+					{
+						// sent for this remote connection
+						//subsSentList.add(cs._remoteHost);
+
+						if (_logger.isDebugEnabled())
+							_logger.debug("Sent subscription data for server '" + sample.getServerName() + "' to session'" + session + "'.");
+					}
+					
+					@Override
+					public void writeFailed(Throwable ex)
+					{
+						_logger.error("Problems sending data to subscriber '" + session + "'.", ex);
+						_subsMap.remove(session);
+					}
+				});
 			}
 //			catch (IOException e)
 			catch (Exception e) // This will also catch: IllegalStateException and other RuntimeException... otherwise caller might have: HTTP error code : 500 (Internal Server Error) 
 			{
-				_logger.error("Problems sending data to subscriber '"+session+"'.", e);
+				_logger.error("Problems sending data to subscriber '" + session + "'.", e);
 				_subsMap.remove(session);
 			}
 		}
 
-		if ( subsSentList.size() > 0 )
-			_logger.info("Sent subscription data for server '"+sample.getServerName()+"' to "+subsSentList.size()+" Web Subscribers "+subsSentList+". subsMap.size="+_subsMap.size());
+		// If we do (asynchronous delivery) "fire and forget"... This will produce the wrong result
+//		if ( subsSentList.size() > 0 )
+//			_logger.info("Sent subscription data for server '" + sample.getServerName() + "' to " + subsSentList.size() + " Web Subscribers " + subsSentList + ". subsMap.size=" + _subsMap.size());
 
 	}
 }

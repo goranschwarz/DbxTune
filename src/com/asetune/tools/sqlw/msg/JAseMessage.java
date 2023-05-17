@@ -165,9 +165,9 @@ extends JTextArea
 			ToolTipManager.sharedInstance().registerComponent(this);
 
 		if (_aseMsgFont == null)
-			_aseMsgFont = new Font("Courier", Font.PLAIN, SwingUtils.hiDpiScale(12));
+			_aseMsgFont = new Font("Monospaced", Font.PLAIN, SwingUtils.hiDpiScale(12));
+//			_aseMsgFont = new Font("Courier", Font.PLAIN, SwingUtils.hiDpiScale(12));
 		setFont(_aseMsgFont);
-
 		if (_msgSeverity > 10)
 			setForeground(ColorUtils.DARK_RED);
 

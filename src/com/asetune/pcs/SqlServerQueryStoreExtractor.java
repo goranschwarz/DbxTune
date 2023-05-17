@@ -520,9 +520,11 @@ public class SqlServerQueryStoreExtractor
 	{
 		Timestamp ts = null;
 
+		String schemaName = null;
+
 		// Start/end time for the recording
 		String sql = "select min([SessionSampleTime]) \n" + // or if we want both start/end: select min([SessionSampleTime]), max([SessionSampleTime])
-		      "from ["+PersistWriterBase.getTableName(_monConn, PersistWriterBase.SESSION_SAMPLES, null, false) + "] \n";
+		      "from "+PersistWriterBase.getTableName(_monConn, schemaName, PersistWriterBase.SESSION_SAMPLES, null, true) + " \n";
 
 		sql = _pcsConn.quotifySqlString(sql);
 		try (Statement stmnt = _pcsConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))

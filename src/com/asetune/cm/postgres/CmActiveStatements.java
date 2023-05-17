@@ -213,6 +213,7 @@ extends CountersModel
 			mtd.addColumn("CmActiveStatements", "has_pid_lock_info"                 ,  "<html>A table of locks that this PID is holding. <br><b>Note:</b> WaitTime in the table is only maintained from Version 14 and above.  </html>");
 			mtd.addColumn("CmActiveStatements", "pid_lock_count"                    ,  "<html>How many locks does this PID hold</html>");
 			mtd.addColumn("CmActiveStatements", "pid_exlock_count"                  ,  "<html>How many <b>Exclusive</b> locks does this PID hold</html>");
+			mtd.addColumn("CmActiveStatements", "pid_advlock_count"                 ,  "<html>How many <b>Advisory Exclusive</b> locks does this PID hold</html>");
 			mtd.addColumn("CmActiveStatements", "has_blocked_pids_info"             ,  "<html>Has values in column 'blocked_pids_info'  </html>");
 			mtd.addColumn("CmActiveStatements", "backend_start"                     ,  "<html>Time when this process was started. For client backends, this is the time the client connected to the server.  </html>");
 			mtd.addColumn("CmActiveStatements", "xact_start"                        ,  "<html>Time when this process' current transaction was started, or null if no transaction is active. If the current query is the first of its transaction, this column is equal to the query_start column.  </html>");
@@ -379,6 +380,7 @@ extends CountersModel
 				+ "    ,CAST(false as boolean)                 AS has_pid_lock_info \n"
 				+ "    ,CAST(-1    as integer)                 AS pid_lock_count \n"
 				+ "    ,CAST(-1    as integer)                 AS pid_exlock_count \n"
+				+ "    ,CAST(-1    as integer)                 AS pid_advlock_count \n"
 				+ "    ,CAST(false as boolean)                 AS has_blocked_pids_info \n"
 			    + " \n"
 			    + "    ,CAST( COALESCE( EXTRACT('epoch' FROM clock_timestamp()) - EXTRACT('epoch' FROM xact_start ), -1) as numeric(12,1))  AS xact_start_sec \n"
@@ -641,22 +643,24 @@ extends CountersModel
 		boolean getPidLocks = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_pidLocks, DEFAULT_sample_pidLocks);
 		if (getPidLocks)
 		{
-			String pidLocksStr    = "This was disabled";
-			int    pidLockCount   = -1;
-			int    pidExLockCount = -1; // Exclusive Lock Count
+			String pidLocksStr     = "This was disabled";
+			int    pidLockCount    = -1;
+			int    pidExLockCount  = -1; // Exclusive Lock Count
+			int    pidAdvLockCount = -1; // Advisory  Lock Count
 
 			int pos_pid                                = newSample.findColumn("pid");
 			int pos_has_pid_lock_info                  = newSample.findColumn("has_pid_lock_info");
 			int pos_pid_lock_info                      = newSample.findColumn("pid_lock_info");
 			int pos_pid_lock_count                     = newSample.findColumn("pid_lock_count");
 			int pos_pid_exlock_count                   = newSample.findColumn("pid_exlock_count");
+			int pos_pid_advlock_count                  = newSample.findColumn("pid_advlock_count");
 			int pos_im_blocked_max_wait_time_in_sec    = newSample.findColumn("im_blocked_max_wait_time_in_sec");
 			int pos_im_blocking_others_max_time_in_sec = newSample.findColumn("im_blocking_others_max_time_in_sec");
 			
 
-			if (pos_has_pid_lock_info == -1 || pos_pid_lock_info == -1 || pos_pid_lock_count == -1 || pos_pid_exlock_count == -1)
+			if (pos_has_pid_lock_info == -1 || pos_pid_lock_info == -1 || pos_pid_lock_count == -1 || pos_pid_exlock_count == -1 || pos_pid_advlock_count == -1)
 			{
-				_logger.warn("Skipping update of 'locking info', cant find desired columns. pos_has_pid_lock_info=" + pos_has_pid_lock_info + ", pos_pid_lock_info=" + pos_pid_lock_info + ", pos_pid_lock_count=" + pos_pid_lock_count + ", pos_pid_exlock_count=" + pos_pid_exlock_count);
+				_logger.warn("Skipping update of 'locking info', cant find desired columns. pos_has_pid_lock_info=" + pos_has_pid_lock_info + ", pos_pid_lock_info=" + pos_pid_lock_info + ", pos_pid_lock_count=" + pos_pid_lock_count + ", pos_pid_exlock_count=" + pos_pid_exlock_count + ", pos_pid_advlock_count=" + pos_pid_advlock_count);
 			}
 			else
 			{
@@ -679,14 +683,16 @@ extends CountersModel
 					
 					BigDecimal blocked_max_wait_time_in_sec    = null;
 					BigDecimal blocking_others_max_time_in_sec = null;
-					pidLockCount   = 0;
-					pidExLockCount = 0;
+					pidLockCount    = 0;
+					pidExLockCount  = 0;
+					pidAdvLockCount = 0;
 					if (lockList != null)
 					{
 						for (PgLockRecord lockRecord : lockList)
 						{
-							pidLockCount   += lockRecord._lockCount;
-							pidExLockCount += lockRecord._exLockCount;
+							pidLockCount    += lockRecord._lockCount;
+							pidExLockCount  += lockRecord._exLockCount;
+							pidAdvLockCount += lockRecord._advisoryLockCount;
 
 							// Get I'm Being Blocked Max Wait Time
 							blocked_max_wait_time_in_sec = MathUtils.max(blocked_max_wait_time_in_sec, lockRecord._lockWaitInSec);
@@ -700,10 +706,11 @@ extends CountersModel
 
 					// SPID Locks
 					b = !"This was disabled".equals(pidLocksStr) && !"No Locks found".equals(pidLocksStr) && !"Timeout - when getting lock information".equals(pidLocksStr);
-					newSample.setValueAt(new Boolean(b), rowId, pos_has_pid_lock_info);
-					newSample.setValueAt(pidLocksStr,    rowId, pos_pid_lock_info);
-					newSample.setValueAt(pidLockCount,   rowId, pos_pid_lock_count);
-					newSample.setValueAt(pidExLockCount, rowId, pos_pid_exlock_count);
+					newSample.setValueAt(new Boolean(b),  rowId, pos_has_pid_lock_info);
+					newSample.setValueAt(pidLocksStr,     rowId, pos_pid_lock_info);
+					newSample.setValueAt(pidLockCount,    rowId, pos_pid_lock_count);
+					newSample.setValueAt(pidExLockCount,  rowId, pos_pid_exlock_count);
+					newSample.setValueAt(pidAdvLockCount, rowId, pos_pid_advlock_count);
 
 					if (pos_im_blocked_max_wait_time_in_sec != -1 && blocked_max_wait_time_in_sec != null)
 					{
@@ -1033,9 +1040,9 @@ extends CountersModel
 			//-------------------------------------------------------
 			if (isSystemAlarmsForColumnEnabledAndInTimeRange("HoldingXLocksWhileWaitForClientInputInSec"))
 			{
-				String state            = cm.getRateValue         (r, "state") + "";
-				int    pid_exlock_count = cm.getRateValueAsInteger(r, "pid_exlock_count", -1);
-				int    stmnt_start_sec  = cm.getRateValueAsInteger(r, "stmnt_start_sec" , -1);
+				String state             = cm.getRateValue         (r, "state") + "";
+				int    pid_exlock_count  = cm.getRateValueAsInteger(r, "pid_exlock_count" , -1);
+				int    stmnt_start_sec   = cm.getRateValueAsInteger(r, "stmnt_start_sec"  , -1);
 
 				if (pid_exlock_count > 0 && stmnt_start_sec > 0 && state.startsWith("idle in transaction"))
 				{
@@ -1043,6 +1050,39 @@ extends CountersModel
 
 					if (debugPrint || _logger.isDebugEnabled())
 						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold=" + threshold + ", stmnt_start_sec=" + stmnt_start_sec + ", pid_exlock_count=" + pid_exlock_count + ", state='" + state + "'.");
+
+					if (stmnt_start_sec > threshold)
+					{
+						long   pid         = cm.getRateValueAsLong(r, "pid", -1L);
+						String query_start = cm.getRateValue      (r, "query_start") + "";
+
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+						AlarmEvent ae = new AlarmEventHoldingLocksWhileWaitForClientInput(cm, threshold, pid, stmnt_start_sec, query_start, true);
+						
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
+					}
+				}
+			}
+
+			//-------------------------------------------------------
+			// HoldingAdvisoryLocksWhileWaitForClientInputInSec 
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("HoldingAdvisoryLocksWhileWaitForClientInputInSec"))
+			{
+				String state             = cm.getRateValue         (r, "state") + "";
+				int    pid_advlock_count = cm.getRateValueAsInteger(r, "pid_advlock_count", -1);
+				int    stmnt_start_sec   = cm.getRateValueAsInteger(r, "stmnt_start_sec"  , -1);
+
+				if (pid_advlock_count > 0 && stmnt_start_sec > 0 && state.startsWith("idle in transaction"))
+				{
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_HoldingAdvisoryLocksWhileWaitForClientInputInSec, DEFAULT_alarm_HoldingAdvisoryLocksWhileWaitForClientInputInSec);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold=" + threshold + ", stmnt_start_sec=" + stmnt_start_sec + ", pid_advlock_count=" + pid_advlock_count + ", state='" + state + "'.");
 
 					if (stmnt_start_sec > threshold)
 					{
@@ -1216,7 +1256,10 @@ extends CountersModel
 
 
 	public static final String  PROPKEY_alarm_HoldingXLocksWhileWaitForClientInputInSec  = CM_NAME + ".alarm.system.if.HoldingXLocksWhileWaitForClientInputInSec.gt";
-	public static final int     DEFAULT_alarm_HoldingXLocksWhileWaitForClientInputInSec  = 300; // 5 minutes
+	public static final int     DEFAULT_alarm_HoldingXLocksWhileWaitForClientInputInSec  = 600; // 10 minutes
+
+	public static final String  PROPKEY_alarm_HoldingAdvisoryLocksWhileWaitForClientInputInSec  = CM_NAME + ".alarm.system.if.HoldingAdvisoryLocksWhileWaitForClientInputInSec.gt";
+	public static final int     DEFAULT_alarm_HoldingAdvisoryLocksWhileWaitForClientInputInSec  = 1200; // 20 minutes
 
 
 	public static final String  PROPKEY_alarm_StatementExecInSec                = CM_NAME + ".alarm.system.if.StatementExecInSec.gt";
@@ -1264,6 +1307,7 @@ extends CountersModel
 		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec",              isAlarmSwitch, PROPKEY_alarm_ImBlockingOthersMaxTimeInSec              , Integer.class, conf.getIntProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSec              , DEFAULT_alarm_ImBlockingOthersMaxTimeInSec              ), DEFAULT_alarm_ImBlockingOthersMaxTimeInSec              , "If 'ImBlockingOthersMaxTimeInSec' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
 
 		list.add(new CmSettingsHelper("HoldingXLocksWhileWaitForClientInputInSec", isAlarmSwitch, PROPKEY_alarm_HoldingXLocksWhileWaitForClientInputInSec , Integer.class, conf.getIntProperty(PROPKEY_alarm_HoldingXLocksWhileWaitForClientInputInSec , DEFAULT_alarm_HoldingXLocksWhileWaitForClientInputInSec ), DEFAULT_alarm_HoldingXLocksWhileWaitForClientInputInSec , "If Client 'idle in transaction' and is Holding Exclusive Locks at DBMS and 'stmnt_start_sec' is greater than ## seconds then send 'AlarmEventHoldingLocksWhileWaitForClientInput'." ));
+		list.add(new CmSettingsHelper("HoldingAdvisoryLocksWhileWaitForClientInputInSec", isAlarmSwitch, PROPKEY_alarm_HoldingAdvisoryLocksWhileWaitForClientInputInSec , Integer.class, conf.getIntProperty(PROPKEY_alarm_HoldingAdvisoryLocksWhileWaitForClientInputInSec , DEFAULT_alarm_HoldingAdvisoryLocksWhileWaitForClientInputInSec ), DEFAULT_alarm_HoldingAdvisoryLocksWhileWaitForClientInputInSec , "If Client 'idle in transaction' and is Holding Advisory Locks at DBMS and 'stmnt_start_sec' is greater than ## seconds then send 'AlarmEventHoldingLocksWhileWaitForClientInput'." ));
 
 		list.add(new CmSettingsHelper("StatementExecInSec",                        isAlarmSwitch, PROPKEY_alarm_StatementExecInSec                        , Integer.class, conf.getIntProperty(PROPKEY_alarm_StatementExecInSec                        , DEFAULT_alarm_StatementExecInSec                        ), DEFAULT_alarm_StatementExecInSec                        , "If any SPID's has been executed a single SQL Statement for more than ## seconds, then send alarm 'AlarmEventLongRunningStatement'." ));
 		list.add(new CmSettingsHelper("StatementExecInSec SkipDbs",                               PROPKEY_alarm_StatementExecInSecSkipDbname              , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipDbname              , DEFAULT_alarm_StatementExecInSecSkipDbname              ), DEFAULT_alarm_StatementExecInSecSkipDbname              , "If 'StatementExecInSec' is true; Discard 'datname' listed (regexp is used)."      , new RegExpInputValidator()));

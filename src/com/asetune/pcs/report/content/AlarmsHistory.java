@@ -83,13 +83,17 @@ extends ReportEntryAbstract
 			sb.append("Alarm Count in period: " + _fullRstm.getRowCount() + "<br>\n");
 			sb.append(toHtmlTable(_shortRstm));
 			
-			if (isFullMessageType() && _fullRstm != null)
+//			if (isFullMessageType() && _fullRstm != null)
+			if (_fullRstm != null)
 			{
 				// Make output more readable, in a 2 column table
 				// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
-				Map<String, String> colNameValueTagMap = new HashMap<>();
-				colNameValueTagMap.put("extendedDescription",     "xmp");
-				colNameValueTagMap.put("lastExtendedDescription", "xmp");
+				Map<String, String> colNameValueTagMap = null;
+//				Map<String, String> colNameValueTagMap = new HashMap<>();
+//				colNameValueTagMap.put("extendedDescription",     "xmp");
+//				colNameValueTagMap.put("lastExtendedDescription", "xmp");
+//TODO; // make formatter that are intelligent and can see if it's HTML or plain text that was stored (otherwise we wont see GRAPHS/CHARTS)
+//TODO; // Should we really leave this out for SHORT message ???
 
 				String  divId       = "alarmHistoryDetails";
 				boolean showAtStart = false;
@@ -117,6 +121,9 @@ extends ReportEntryAbstract
 	@Override
 	public boolean hasIssueToReport()
 	{
+		if (_fullRstm == null)
+			return false;
+
 		return _fullRstm.getRowCount() > 0;
 	}
 
@@ -124,7 +131,9 @@ extends ReportEntryAbstract
 	@Override
 	public String[] getMandatoryTables()
 	{
-		return new String[] { PersistWriterBase.getTableName(null, PersistWriterBase.ALARM_HISTORY, null, false) };
+		String schemaName = getReportingInstance().getDbmsSchemaName();
+
+		return new String[] { PersistWriterBase.getTableName(null, schemaName, PersistWriterBase.ALARM_HISTORY, null, false) };
 	}
 
 	@Override
@@ -163,11 +172,13 @@ extends ReportEntryAbstract
 	public void getAlarmsHistoryShort(DbxConnection conn)
 	{
 		String sql;
-
+		String schemaName = getReportingInstance().getDbmsSchemaName();
+		
 		// Get Alarms
 		sql = "select [action], [duration], [eventTime], [alarmClass], [serviceInfo], [extraInfo], [severity], [state], [description] \n" +
-		      "from ["+PersistWriterBase.getTableName(conn, PersistWriterBase.ALARM_HISTORY, null, false) + "]\n" +
+		      "from " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.ALARM_HISTORY, null, true) + " \n" +
 		      "where [action] not in('END-OF-SCAN', 'RE-RAISE') \n" +
+		      getReportPeriodSqlWhere("eventTime") +
 		      "order by [eventTime]";
 		
 		_shortRstm = executeQuery(conn, sql, true, "Alarm History Short");
@@ -179,7 +190,8 @@ extends ReportEntryAbstract
 	public void getAlarmsHistoryFull(DbxConnection conn)
 	{
 		String sql;
-
+		String schemaName = getReportingInstance().getDbmsSchemaName();
+		
 		// Get Alarms
 		sql = "select \n" +
 		      "     [action],                 \n" +
@@ -204,9 +216,9 @@ extends ReportEntryAbstract
 		      "     [lastDescription],        \n" +
 		      "     [extendedDescription],    \n" +
 		      "     [lastExtendedDescription] \n" +
-		      "from ["+PersistWriterBase.getTableName(conn, PersistWriterBase.ALARM_HISTORY, null, false) + "]\n" +
+		      "from " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.ALARM_HISTORY, null, true) + " \n" +
 		      "where [action] not in('END-OF-SCAN', 'RE-RAISE') \n" +
-		      getReportPeriodSqlWhere() +
+		      getReportPeriodSqlWhere("eventTime") +
 		      "order by [eventTime]";
 		
 		// Note: Truncate any cells above 128K

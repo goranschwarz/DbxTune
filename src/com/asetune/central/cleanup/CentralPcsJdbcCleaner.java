@@ -27,11 +27,14 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.log4j.Logger;
 
+import com.asetune.central.lmetrics.LocalMetricsPersistWriterJdbc;
 import com.asetune.central.pcs.CentralPcsWriterHandler;
 import com.asetune.central.pcs.CentralPersistWriterBase;
 import com.asetune.central.pcs.CentralPersistWriterBase.Table;
@@ -64,6 +67,9 @@ extends Task
 	public static final int    DEFAULT_keepDays = 365 + 62; // keep for 14 months (so we can see any "end-of-year" work
 //	public static final int    DEFAULT_keepDays = 60;
 
+	public static final String PROPKEY_localMetricsCm_keepDays = "CentralPcsJdbcCleaner.localMetrics.cm.keep.days";
+	public static final int    DEFAULT_localMetricsCm_keepDays = 30; // 30 days for CM Details, while graph is using PROPKEY_keepDays
+	
 //	public static final String  PROPKEY_printSpaceInfo = "CentralPcsJdbcCleaner.print.space.info";
 //	public static final boolean DEFAULT_printSpaceInfo = true;
 
@@ -166,6 +172,15 @@ extends Task
 			while (rs.next())
 				schemaList.add(rs.getString(1));
 		}
+
+		// Check if we have a DbxcLocalMetrics Schema...
+		Set<String> existingSchemaSet = DbUtils.getSchemaNames(conn);
+		if (existingSchemaSet.contains(LocalMetricsPersistWriterJdbc.LOCAL_METRICS_SCHEMA_NAME))
+		{
+			// Do cleanup here
+			doCleanupForLocalMetrics(conn, olderThan, olderThan);
+		}
+		
 		
 		// Iterate over SCHEMA:s
 		int sumCleanupCount = 0;
@@ -377,4 +392,88 @@ extends Task
 		return delCount;
 	}
 	
+
+	/**
+	 * Cleanup older records for Local Metrics data.
+	 * @param conn
+	 * @param olderThan   Timestamp to delete older records... for Graphs
+	 */
+	private void doCleanupForLocalMetrics(DbxConnection conn, Timestamp alarmTables_olderThan, Timestamp graphTables_olderThan)
+	{
+		int localMetricsCm_keepDays = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_localMetricsCm_keepDays, DEFAULT_localMetricsCm_keepDays);
+		Timestamp localMetricsCm_olderThan = new Timestamp( DateUtils.addDays(new Date(), -localMetricsCm_keepDays).getTime() );
+		_logger.info(_prefix + "Retention period for Local Metrics CM is " + localMetricsCm_keepDays + ", so data that is older than " + localMetricsCm_keepDays + " days (or older than '" + localMetricsCm_olderThan + "') will be deleted. This can be changed with property '" + PROPKEY_localMetricsCm_keepDays + "'.");
+
+
+		// Get tables (CM and Graph tables)
+		// Use getColumns(... "SessionSampleTime") to filter out tables which looks like CM/Graph tables
+		Set<String> alarmTables = new LinkedHashSet<>();
+		Set<String> cmTables    = new LinkedHashSet<>();
+		Set<String> graphTables = new LinkedHashSet<>();
+		try (ResultSet rs = conn.getMetaData().getColumns(null, LocalMetricsPersistWriterJdbc.LOCAL_METRICS_SCHEMA_NAME, "%", "SessionSampleTime")) // (eller "CmSampleTime"
+		{
+			String tabName = rs.getString(3); // "TABLE_NAME"
+
+			if (tabName.equals("MonAlarmHistory"))
+				alarmTables.add(tabName);
+			else if (tabName.endsWith("_abs") || tabName.endsWith("_diff") || tabName.endsWith("_rate"))
+				cmTables.add(tabName);
+			else
+				graphTables.add(tabName);
+		}
+		catch(SQLException ex)
+		{
+			_logger.error("Problems getting tables using: conn.getMetaData().getColumns(null, 'DbxcLocalMetrics', '%', 'SessionSampleTime') ");
+		}
+
+		String schema = LocalMetricsPersistWriterJdbc.LOCAL_METRICS_SCHEMA_NAME;
+		
+		// Cleanup Alarm tables (longer retention period)
+		for (String tabName : alarmTables)
+		{
+			doCleanupTable(conn, schema, tabName, alarmTables_olderThan);
+		}
+
+		// Cleanup CM Details (shorter retention period)
+		for (String tabName : cmTables)
+		{
+			doCleanupTable(conn, schema, tabName, localMetricsCm_olderThan);
+		}
+
+		// Cleanup Graph tables (longer retention period)
+		for (String tabName : graphTables)
+		{
+			doCleanupTable(conn, schema, tabName, graphTables_olderThan);
+		}
+	}
+	
+	private void doCleanupTable(DbxConnection conn, String schema, String tabName, Timestamp olderThan)
+	{
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+		
+		// TODO: delete TOP #### from ... in a loop so we do not use up to much transaction log for some databases
+		
+		String sql = "delete from " + lq+schema+rq + "." + lq+tabName+rq + " where "+lq+"SessionSampleTime"+rq+" < ?";
+
+		String dryRunComment = "";
+		if (_dryRun)
+		{
+			sql += " and 1=2 -- DRY-RUN";
+			dryRunComment = "... DRY-RUN: SQL=|"+sql+"|, olderThan='"+olderThan+"'.";
+		}
+
+		long startTime = System.currentTimeMillis();
+		try (PreparedStatement pstmnt = conn.prepareStatement(sql))
+		{
+			pstmnt.setTimestamp(1, olderThan);
+			int delCount = pstmnt.executeUpdate();
+			_logger.info(_prefix + ">>>> Deleted "+delCount+" records from schema '"+schema+"' in table '"+tabName+"'. ["+TimeUtils.msDiffNowToTimeStr(startTime)+"]" + dryRunComment);
+		}
+		catch(SQLException ex)
+		{
+			_logger.error(_prefix + "Problems deleting records from schema '"+schema+"' in table '"+tabName+"' using SQL=|"+sql+"|. Continuing anyway... Caught: "+ex);
+		}
+	}
+
 }

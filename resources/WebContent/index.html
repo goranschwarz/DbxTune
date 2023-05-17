@@ -33,6 +33,9 @@
     == CSS imports - STYLES SHEETS GOES HERE
     =======================================================================
   -->
+  <!-- CSS: jqueri-ui -->
+  <link rel="stylesheet" href="/scripts/jquery/ui/1.11.3/themes/smoothness/jquery-ui.css">
+
   <!-- CSS: DbxCentral -->
   <link rel="stylesheet" href="/scripts/css/dbxcentral.css">
 
@@ -110,6 +113,37 @@
 		height: 100% !important;
 	}
 
+	.image-unchecked {
+		width:16px;
+		height:16px;
+		background-repeat: no-repeat;
+		background-position: center;
+		background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYxIDY0LjE0MDk0OSwgMjAxMC8xMi8wNy0xMDo1NzowMSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNS4xIFdpbmRvd3MiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6RTRBMEQyNTU1OUFBMTFFMkIwMERBRDZGM0NFNENENzUiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6RTRBMEQyNTY1OUFBMTFFMkIwMERBRDZGM0NFNENENzUiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpFNEEwRDI1MzU5QUExMUUyQjAwREFENkYzQ0U0Q0Q3NSIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpFNEEwRDI1NDU5QUExMUUyQjAwREFENkYzQ0U0Q0Q3NSIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PotIZFcAAAEoSURBVHjanJNBTgMxDEVtJ3Q9PQMHYYnEEZA4QDcchgUXqLgCYssNukBij8QO1ErAok0c853pMLDphEbKZCZjv9g/Nt/ePayTale0kNH0YEwJQichbBaX5/PoztdXF/TfcbO873wVK0bHjMEv+kPNsEFUSpl0FBFiGb8rYJuUsN0GwMFFx6iji7JLGaJEAKbTQayUNFcx+wjwtsuKRZojcPuBEP0tZUTAgbQB4Hft9gMhskcADWahNAGMenvmXxo4MUMYbdEAN+b2fzUAUWelOQW3pzECrhsZpey3YAcK2m0NBVNT2BNqSeTc94Hx4RT8v+3tf+pAhEmx/fr2DnpDM+HgEAK5XwV8fX48rlbPZ+5sDQQGwSGq+WXozlPM7oh+2uLAp28BBgB476Ywykj6VwAAAABJRU5ErkJggg==);
+	}
+
+	.image-checked {
+		width:16px;
+		height:16px;
+		background-repeat: no-repeat;
+		background-position: center;
+		background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAhVJREFUeNqkUz1oFEEU/uZnf+7iJTGCgkJAgmBAgoUgSVCJjVhcI3hwFlECQVAEBVNZKJjYpEwXEkHFyKmVTbBKFdRYqKXFGYggiBEE4XKX3dnxzeztZrxCFN8yy77hfd/73s8yrTX+x6R5nb31dLW5rUZUkvwVSHCO0Bc/lmcquy2BAa/MVqFbDfxJDzMPY4AfYmzqSW+uQCmTWePz102kFbEOIB0uIZkPwTj2HgihkjQVh4UaS8ApyARyIZxDQBmi6Pdg7VsN51/2ObRtBXlDpERiJeg8SBBhKHbh1ZdHWPxwFSW2U45DYByBYlBCnMQkL4KZjlEUSgJvPMT820kUSO9WnKVzSrCNIbtYK2Kz8YmIuhEGXSgVerBSn8P86wkUKD5pAdeHF1O4dgnaclgETC8fxffGOrq7QiysXsDjtRsIKDYm8JXRBzg5MNHOr3dKyBxPpSQzL4Yw1F/Gm/ozBCaIC0yeuo/RQ+OIVItAPuAqyJzTgxUk2zTWVhPv6s8hidDXDHfPfcSJw+OIdURT0lZz1uZ0jDrdwMtnaqgcv4Noi+6aGh5dT1fr2N83QM1VVqvZQtd457aVR27jWnkJjLp979I69u05aIckBYPvSXieB3fVbA+k+J3n2GAVC3TcNLwjV4axBD7XG2M3l/pjWmmdT4W1m6vzJmcT8wgcePyn9c08aQ+O0Hfwj3+yIuz7XwIMANPJsyJzXkTpAAAAAElFTkSuQmCC);
+	}
+
+	.modal-content.ui-resizable {
+		/* overflow: scroll; */
+	}
+
+	.modal-body {
+		height: 600px;
+		/* height: 80%; */
+		/* width: 70%; */
+		/* width: 900px; */
+		overflow: hidden;
+	}
+	.modal-body:hover {
+		overflow-x: auto;
+		overflow-y: auto;
+	}
   </style>
 
 </head>
@@ -353,6 +387,60 @@
           </div>
       </div>
   </div>
+  
+  <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   - - Modal Dialog: Extended Description   dbx-view-extDescTable-dialog
+   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<!-- Modal: View LockTable dialog -->
+	<div class='modal fade' id='dbx-view-extDescTable-dialog' role='dialog' aria-labelledby='dbx-view-extDescTable-dialog' aria-hidden='true'>
+		<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>
+			<div class='modal-content'>
+				<div class='modal-header'>
+					<h5 class='modal-title' id='dbx-view-extDescTable-dialog-title'><b><span id='dbx-view-extDescTable-label'></span></b> <span id='dbx-view-extDescTable-objectName'></span></h5>	
+					<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
+						<span aria-hidden='true'>&times;</span>
+					</button>
+				</div>
+				<div class='modal-body' style='overflow-x: auto;'>
+					<div class='scroll-tree' style='width: 3000px;'>
+<!--						<pre><code id='dbx-view-extDescTable-content' class='language-sql line-numbers dbx-view-extDescTable-content' ></code></pre>-->
+						<div id='dbx-view-extDescTable-content' class='dbx-view-extDescTable-content'></div>
+					</div>
+				</div>
+				<div class='modal-footer'>
+					<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+  <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   - - Modal Dialog: Alarm Info   dbx-view-alarmView-dialog
+   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<!-- Modal: View LockTable dialog -->
+	<div class='modal fade' id='dbx-view-alarmView-dialog' role='dialog' aria-labelledby='dbx-view-alarmView-dialog' aria-hidden='true'>
+		<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>
+			<div class='modal-content'>
+				<div class='modal-header'>
+					<h5 class='modal-title' id='dbx-view-alarmView-dialog-title'><b><span id='dbx-view-alarmView-label'></span></b> <span id='dbx-view-alarmView-objectName'></span></h5>	
+					<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
+						<span aria-hidden='true'>&times;</span>
+					</button>
+				</div>
+				<div class='modal-body' style='overflow-x: auto;'>
+					<div class='scroll-tree' style='width: 3000px;'>
+<!--						<pre><code id='dbx-view-alarmView-content' class='language-sql line-numbers dbx-view-alarmView-content' ></code></pre>-->
+						<div id='dbx-view-alarmView-content' class='dbx-view-alarmView-content'></div>
+					</div>
+				</div>
+				<div class='modal-footer'>
+					<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+  
+  
 <!-- 
 <h1>DbxTune - Central</h1>
 
@@ -376,11 +464,11 @@ Active Alarms
 <div id="active-alarms" class="active-alarms-class" style="visibility: hidden;">
     <div id="active-alarms-ctl" class="active-alarms-ctl-class">
         There are <span id="active-alarms-count" style="color:red">##</span> Active Alarms...&nbsp;&nbsp;&nbsp; Alarm Window Max Size: 
+		<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-0"  onclick="activeAlarmsRadioClick(this);" value="hide"       > Minimize
 		<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-10" onclick="activeAlarmsRadioClick(this);" value="10%"        > 10%
 		<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-30" onclick="activeAlarmsRadioClick(this);" value="30%" checked> 30%
 		<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-60" onclick="activeAlarmsRadioClick(this);" value="60%"        > 60%
-		<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-95" onclick="activeAlarmsRadioClick(this);" value="95%"        > 95%
-		<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-0"  onclick="activeAlarmsRadioClick(this);" value="hide"       > Minimize &nbsp;&nbsp;&nbsp;
+		<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-95" onclick="activeAlarmsRadioClick(this);" value="95%"        > 95% &nbsp;&nbsp;&nbsp;
 		<input type="checkbox" name="active-alarms-solid-chk" id="active-alarms-solid-chk"   onclick="activeAlarmsChkClick(this);"   value="solid"> Solid Background &nbsp;&nbsp;&nbsp;
 		<input type="checkbox" name="active-alarms-compExtDesc-chk" id="active-alarms-compExtDesc-chk"   onclick="activeAlarmsCompExtDescClick(this);" title="Show Extended Descriptions Columns as HTML Formated or as 'Plain Text'"  value="compExtDesc" checked> Extended Descriptions as Plain Text
     </div>
@@ -497,6 +585,133 @@ Active Alarms
 		location.reload();
 	});
 
+	// Make Bootsrap Modal Dialogs, resizable & movable (on the head)
+	var isSafari = !!navigator.userAgent.match(/Version\/[\d\.]+.*Safari/);
+	var iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+	if ( ! (isSafari && iOS) )
+	{
+		// All modals dialogs
+		$('.modal-content').resizable({ alsoResize: ".modal-dialog" });
+		$('.modal-dialog').draggable({ handle: ".modal-header" });
+		
+		// Active Alarms
+		$('.active-alarms-class').resizable({ handles: 'n' });
+		$('.active-alarms-class').draggable({ handle: ".active-alarms-ctl-class" });
+	}
+
+	/**
+	 * Utility function: Create a HTML Table using a JSON input
+	 * grabbed from: http://www.encodedna.com/javascript/populate-json-data-to-html-table-using-javascript.htm
+	 */
+	function jsonToTable(json, stripHtmlInCells, trCallback, tdCallback, jsonMetaDataArr) 
+	{
+		// EXTRACT json VALUES FOR HTML HEADER. 
+		var col = [];
+		for (var i = 0; i < json.length; i++) {
+			for (var key in json[i]) {
+				if (col.indexOf(key) === -1) {
+					col.push(key);
+				}
+			}
+		}
+
+		// If it's NOT a array with MetaData Objects...
+		// Create a *simple* object 
+		if ( ! Array.isArray(jsonMetaDataArr) )
+		{
+			jsonMetaDataArr = [];
+			
+			for (var i = 0; i < col.length; i++) 
+			{
+				jsonMetaDataArr.push( {columnName:col[i]} );
+			}
+		}
+
+		// CREATE DYNAMIC TABLE.
+		var table = document.createElement("table");
+		var thead = table.createTHead();
+		var tbody = table.createTBody();
+
+		var borderStyle = "1px solid black";
+		table.style.border = borderStyle;
+		table.style.borderCollapse = "collapse";
+
+		// CREATE HTML TABLE HEADER ROW USING THE EXTRACTED HEADERS ABOVE.
+		var tr = thead.insertRow(-1);                   // TABLE ROW.
+
+		for (let i = 0; i < col.length; i++) {
+			var th = document.createElement("th");      // TABLE HEADER.
+			th.noWrap = true;
+			th.style.border = borderStyle;
+			th.innerHTML = col[i];
+			tr.appendChild(th);
+		}
+
+		// ADD JSON DATA TO THE TABLE AS ROWS.
+		for (let i = 0; i < json.length; i++) {
+
+			tr = tbody.insertRow(-1);
+
+			for (var j = 0; j < col.length; j++) {
+				var tabCell = tr.insertCell(-1);
+				tabCell.noWrap = true;
+				tabCell.style.border = borderStyle;
+				
+				var originTxt   = json[i][col[j]];
+				var strippedTxt = stripHtml( originTxt );
+
+				// If originTxt contains HTML Tags, then add both ORIGIN & STRIPPED and a button where we can "switch" between the two fields
+				if (isHTML(originTxt))
+				{
+					var newDiv = document.createElement('div');
+
+					var newlink = document.createElement('a');
+					newlink.appendChild(document.createTextNode('Toggle: Compact or Formatted Content'));
+					newlink.setAttribute('href', 'javascript:toggleActiveTableExtendedDesciption();');
+					
+					var originDiv   = document.createElement('div');
+					var strippedDiv = document.createElement('div');
+					originDiv  .setAttribute('class', 'active-table-extDesc-origin-class');
+					strippedDiv.setAttribute('class', 'active-table-extDesc-stripped-class');
+					
+					originDiv  .innerHTML = originTxt;
+					strippedDiv.innerHTML = strippedTxt;
+					
+					originDiv  .style.display = stripHtmlInCells ? 'none'  : 'block';
+					strippedDiv.style.display = stripHtmlInCells ? 'block' : 'none';
+					
+					newDiv.appendChild(newlink);
+					newDiv.appendChild(originDiv);
+					newDiv.appendChild(strippedDiv);
+
+					tabCell.appendChild(newDiv);
+				}
+				else
+				{
+					//var cellContent = stripHtmlInCells ? strippedTxt : originTxt;
+					tabCell.innerHTML = originTxt;
+				}
+				
+				// Use callback function to set TD properties
+				if (typeof tdCallback === 'function')
+				{
+					var cellMetaData = {};
+					if (Array.isArray(jsonMetaDataArr))
+						cellMetaData = jsonMetaDataArr[j];
+
+					tdCallback(tabCell, cellMetaData, originTxt, json[i]);
+				}
+
+			}
+			
+			// Use callback function to set TR properties
+			if (typeof trCallback === 'function')
+			{
+				trCallback(tr, json[i]);
+			}
+		}
+		return table;
+	}
 
 	//-----------------------------------------------------------
 	// ACTIVE ALARMS
@@ -1417,10 +1632,54 @@ Active Alarms
 				if (_debug > 1)
 					console.log("dbxTuneCheckActiveAlarms(): srvAlarmMap:",srvAlarmMap);
 
+				// Create a CALLBACK function to set TableRow Colors etc, used when calling: jsonToTable(...)
+				var trCallback = function(tr, row)
+				{
+//					// hasExtDesc
+//					if (row.hasOwnProperty('hasExtDesc'))
+//						tr.className = "active-alarm-checkbox";
+//					
+//					// hasLastExtDesc
+//					if (row.hasOwnProperty('hasLastExtDesc'))
+//						tr.className = "active-alarm-checkbox";
+				};
+				// Create a CALLBACK function to set TD/CELL Colors & formatted values
+				var tdCallback = function(td, metaData, cellContent, rowData)
+				{
+					if (isNaN(cellContent)) // Typically STRING
+					{
+					}
+					else if (typeof(cellContent) === typeof(true)) // BOOLEAN ... isNaN(true) is FALSE
+					{
+						if (false === cellContent) { td.innerHTML = ""; td.className = "image-unchecked"; }
+						if (true  === cellContent) { td.innerHTML = ""; td.className = "image-checked"; }
+					}
+					else // I guss this must be a NUMBER
+					{
+					}
+					
+					if (metaData.columnName === "alarmInfo" && rowData.hasOwnProperty('alarmInfo') && cellContent === true)
+					{
+						td.appendChild( createAlarmInfoToolTipDiv(JSON.stringify(rowData), "Alarm Info") );
+					}
+					if (metaData.columnName === "hasExtDesc" && rowData.hasOwnProperty('hasExtDesc') && cellContent === true)
+					{
+						td.appendChild( createExtDescTableToolTipDiv(rowData.extendedDescription, "Extended Description") );
+					}
+					if (metaData.columnName === "hasLastExtDesc" && rowData.hasOwnProperty('hasLastExtDesc') && cellContent === true)
+					{
+						td.appendChild( createExtDescTableToolTipDiv(rowData.lastExtendedDescription, "Last Extended Description") );
+					}
+				};
+
 				// Loop the alarm MAP
 				for (var key in srvAlarmMap) 
 				{
 					var entry = srvAlarmMap[key];
+					
+					// re-write the "alarmEntry"... add 'hasExtDesc' and 'hasLastExtDesc'
+					entry = reWriteAlarmEntry(entry);
+					
 					// var graphServerName = entry.srvName;
 					var graphServerName = key;
 
@@ -1462,7 +1721,8 @@ Active Alarms
 							activeAlarmsWinDiv.appendChild(srvDiv);
 						}
 						let stripHtmlInCells = document.getElementById("active-alarms-compExtDesc-chk").checked;
-						let tab = jsonToTable(entry, stripHtmlInCells);
+					//	let tab = jsonToTable(entry, stripHtmlInCells);
+						let tab = jsonToTable(entry, stripHtmlInCells, trCallback, tdCallback);
 						srvDiv.innerHTML = "Active Alarms for server: <b>"+graphServerName+"</b>";
 						srvDiv.appendChild(tab);
 						srvDiv.appendChild(document.createElement("br"));
@@ -1513,6 +1773,157 @@ Active Alarms
 			}
 		}); // end: ajax call
 	} // end: function
+
+	// Add "helper" entries 'hasExtDesc' and 'hasLastExtDesc' in the AlarmEntry...
+	function reWriteAlarmEntry(inAlarmRows)
+	{
+		//console.log("reWriteAlarmEntry-input", inAlarmRows);
+		let outAlarmRows = [];
+		
+		// Loop the input and add it to the output
+		inAlarmRows.forEach(function (row)
+		{
+			let outRow = {};
+			for (let key in row)
+			{
+				if (row.hasOwnProperty(key))
+				{
+					if (key === 'reRaiseExtendedDescription')
+					{
+						// rename 'reRaiseExtendedDescription' column to 'lastExtendedDescription'
+						outRow['lastExtendedDescription'] = row[key];
+					}
+					else
+					{
+						// Copy key=value into the output object
+						outRow[key] = row[key];
+					}
+				
+					// after key 'repeatCnt' add 'hasExtDesc' and 'hasLastExtDesc'
+					if (key === 'repeatCnt')
+					{
+						let hasExtDesc     = row.hasOwnProperty('extendedDescription')        && row['extendedDescription']        !== "";
+						let hasLastExtDesc = row.hasOwnProperty('lastExtendedDescription')    && row['lastExtendedDescription']    !== "";
+						let hasReRaiseExtD = row.hasOwnProperty('reRaiseExtendedDescription') && row['reRaiseExtendedDescription'] !== "";
+
+//console.log("reWriteAlarmEntry: srvName=" + row['srvName'] + ", [hasExtDesc]     -- row['extendedDescription']        = '" + row['extendedDescription']        + "'.");
+//console.log("reWriteAlarmEntry: srvName=" + row['srvName'] + ", [hasLastExtDesc] -- row['lastExtendedDescription']    = '" + row['lastExtendedDescription']    + "'.");
+//console.log("reWriteAlarmEntry: srvName=" + row['srvName'] + ", [hasReRaiseExtD] -- row['reRaiseExtendedDescription'] = '" + row['reRaiseExtendedDescription'] + "'.");
+
+						outRow['alarmInfo']      = true;
+						outRow['hasExtDesc']     = hasExtDesc;
+						outRow['hasLastExtDesc'] = hasLastExtDesc || hasReRaiseExtD;
+					}
+				}
+			}
+			outAlarmRows.push(outRow);
+		});
+		//console.log("reWriteAlarmEntry-output", outAlarmRows);
+		return outAlarmRows;
+	}
+	function createExtDescTableToolTipDiv(data, label)
+	{
+		const dataVal = data;
+
+		const div = document.createElement("div");
+		div.innerHTML = "&nbsp;";
+		div.setAttribute("title"           , "Click to Open Dialog... \n-------------------------------");// \n" + dataVal);
+		div.setAttribute("data-toggle"     , 'modal');
+		div.setAttribute("data-target"     , '#dbx-view-extDescTable-dialog');
+		div.setAttribute("data-objectname" , '');
+		div.setAttribute("data-tooltip"    , dataVal);
+		div.setAttribute("data-label"      , label);
+	
+		return div;
+	}
+	$('#dbx-view-extDescTable-dialog').on('show.bs.modal', function(e) {
+		var data = $(e.relatedTarget).data();
+
+		console.log('#dbx-view-extDescTable-dialog: data: '+data, data);
+
+		$('#dbx-view-extDescTable-objectName', this).text(data.objectname);
+		$('#dbx-view-extDescTable-content',    this).html(data.tooltip);
+		$('#dbx-view-extDescTable-label',      this).html(data.label);
+
+		// Scroll top top (do not seems to work)
+		$('#dbx-view-extDescTable-dialog').animate({ scrollTop: 0 }, 'slow');
+	});
+
+	function createAlarmInfoToolTipDiv(data, label)
+	{
+		const dataVal = data;
+
+		const div = document.createElement("div");
+		div.innerHTML = "&nbsp;";
+		div.setAttribute("title"           , "Click to Open Dialog... \n-------------------------------");// \n" + dataVal);
+		div.setAttribute("data-toggle"     , 'modal');
+		div.setAttribute("data-target"     , '#dbx-view-alarmView-dialog');
+		div.setAttribute("data-objectname" , '');
+		div.setAttribute("data-tooltip"    , dataVal);
+		div.setAttribute("data-label"      , label);
+	
+		return div;
+	}
+	$('#dbx-view-alarmView-dialog').on('show.bs.modal', function(e) {
+		var data = $(e.relatedTarget).data();
+
+		$('#dbx-view-alarmView-objectName', this).text(data.objectname);
+		$('#dbx-view-alarmView-content',    this).html("Formatting the Alarm Message...");
+		$('#dbx-view-alarmView-label',      this).html(data.label);
+
+//		console.log('#dbx-view-alarmView-dialog: data: '+data, data);
+//		console.log('#dbx-view-alarmView-dialog: data.tooltip: '+data, data.tooltip);
+//		console.log('#dbx-view-alarmView-dialog: JSON.stringify(data.tooltip): ' + JSON.stringify(data.tooltip));
+
+		// In here we do a REST:POST call to /api/alarm/formatter
+		// to format the Alarm info in the same way as we format alarm-emails
+//		fetch("/api/alarm/formatter", 
+//		{
+//			method: 'POST',
+//			headers: {
+//				'Accept': 'application/json',
+//				'Content-Type': 'application/json'
+//			},
+//			body: JSON.stringify(data.tooltip)
+//		})
+//		.then(responceData => 
+//		{
+//			const responceText = responceData.text();
+//			console.log("AlarmFormatter RESPONCE-TEXT: " + responceText, responceText);
+//			$('#dbx-view-alarmView-content', this).html(responceText);
+//		})
+//		.catch(error => 
+//		{
+//			$('#dbx-view-alarmView-content', this).html(error);
+//		});
+		$.ajax(
+		{
+			url: "/api/alarm/formatter",
+			type: 'post',
+			// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+			data: JSON.stringify(data.tooltip),
+			contentType: "application/json; charset=utf-8",
+//			dataType: "json",
+			
+			success: function(data, status) 
+			{
+//				console.log("Format Alarm Message - RECEIVED DATA: " + data);
+				$('#dbx-view-alarmView-content').html(data);
+			},
+			error: function(xhr, desc, err) 
+			{
+				console.log(xhr);
+				console.log("ERROR - Details: " + desc + "\nError: " + err);
+//				$('#dbx-view-alarmView-content').html("Details: " + desc + "<br>Error: " + err);
+				$('#dbx-view-alarmView-content').html(xhr.responseText);
+			}
+		}); // end: ajax call
+
+		// Scroll top top (do not seems to work)
+		$('#dbx-view-alarmView-dialog').animate({ scrollTop: 0 }, 'slow');
+	});
+
+
 
 	//-----------------------------------------------------------
 	// update "### seconds ago"

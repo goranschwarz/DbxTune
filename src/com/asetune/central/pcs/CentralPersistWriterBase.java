@@ -1180,33 +1180,6 @@ implements ICentralPersistWriter
 		}
 	}
 
-//	public String getGraphTableDdlString(String schemaName, String tabName, TrendGraphDataPoint tgdp)
-//	{
-//		String lq = getLeftQuoteReplace();
-//		String rq = getLeftQuoteReplace();
-//		StringBuilder sb = new StringBuilder();
-//
-//		String tabPrefix = lq + schemaName + rq + ".";
-//
-//		sb.append("create table " + tabPrefix+lq+tabName+rq + "\n");
-//		sb.append("( \n");
-//		sb.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//		sb.append("   ,"+fill(lq+"SessionSampleTime"+rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//		sb.append("   ,"+fill(lq+"CmSampleTime"     +rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//		sb.append("\n");
-//
-//		// loop all data
-//		Double[] dataArr  = tgdp.getData();
-//		for (int d=0; d<dataArr.length; d++)
-//		{
-//			sb.append("   ,"+fill(lq+"label_"+d+rq,40)+" "+fill(getDatatype("varchar",100,-1,-1),20)+" "+getNullable(true)+"\n");
-//			sb.append("   ,"+fill(lq+"data_" +d+rq,40)+" "+fill(getDatatype("numeric", -1,16, 1),20)+" "+getNullable(true)+"\n");
-//		}
-//		sb.append(") \n");
-//
-//		//System.out.println("getGraphTableDdlString: "+sb.toString());
-//		return sb.toString();
-//	}
 	public String getGraphTableDdlString(DbxConnection conn, String schemaName, String tabName, GraphEntry ge)
 	{
 		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
@@ -1215,18 +1188,6 @@ implements ICentralPersistWriter
 		StringBuilder sb = new StringBuilder();
 
 		String tabPrefix = lq + schemaName + rq + ".";
-
-//		sb.append("create table " + tabPrefix+lq+tabName+rq + "\n");
-//		sb.append("( \n");
-//		sb.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//		sb.append("   ,"+fill(lq+"SessionSampleTime"+rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//		sb.append("   ,"+fill(lq+"CmSampleTime"     +rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//		sb.append("\n");
-//
-//		// loop all labels
-//		for (String label : ge._labelValue.keySet())
-//			sb.append("   ,"+fill(lq+label+rq,40)+" "+fill(getDatatype("numeric", -1,16, 2),20)+" "+getNullable(true)+"\n");
-//		sb.append(") \n");
 
 		sb.append("create table " + tabPrefix+lq+tabName+rq + "\n");
 		sb.append("( \n");
@@ -1244,18 +1205,6 @@ implements ICentralPersistWriter
 		return sb.toString();
 	}
 
-//	public String getGraphIndexDdlString(String schemaName, String tabName, TrendGraphDataPoint tgdp)
-//	{
-//		String lq = getLeftQuoteReplace();
-//		String rq = getLeftQuoteReplace();
-//		String tabPrefix = lq + schemaName + rq + ".";
-//		
-////		String sql = "create index " + lq+tgdp.getName()+"_ix1"+rq + " on " + lq+tabName+rq + "("+lq+"SampleTime"+rq+", "+lq+"SessionSampleTime"+rq+")\n"; 
-//		if ( DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(getDatabaseProductName()) )
-//			return "create index " +                   tgdp.getName()+"_ix1"     + " on " + tabPrefix+lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
-//		else
-//			return "create index " + lq+tabPrefix+"_"+tgdp.getName()+"_ix1"+rq + " on " + tabPrefix+lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
-//	}
 	public String getGraphIndexDdlString(DbxConnection conn, String schemaName, String tabName, GraphEntry ge)
 	{
 		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
@@ -1264,86 +1213,8 @@ implements ICentralPersistWriter
 		String tabPrefix = lq + schemaName + rq + ".";
 		
 		return "create index " + lq+tabName+"_ix1"+rq    + " on " + tabPrefix+lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
-		
-//		if ( DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(getDatabaseProductName()) )
-//			return "create index " +    ge.getName()+"_ix1"  + " on " + tabPrefix+lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
-//		else
-//			return "create index " + lq+tabName+"_ix1"+rq    + " on " + tabPrefix+lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
 	}
 
-//	public String getGraphAlterTableDdlString(Connection conn, String schemaName, String tabName, TrendGraphDataPoint tgdp)
-//	throws SQLException
-//	{
-//		// Obtain a DatabaseMetaData object from our current connection
-//		DatabaseMetaData dbmd = conn.getMetaData();
-//
-//		int colCounter = 0;
-//		ResultSet rs = dbmd.getColumns(null, null, tabName, "%");
-//		while(rs.next())
-//		{
-//			colCounter++;
-//		}
-//		rs.close();
-//
-//		if (colCounter > 0)
-//		{
-//			colCounter -= 3; // take away: SessionStartTime, SessionSampleTime, SampleTime
-//			colCounter = colCounter / 2;
-//			
-//			Double[] dataArr  = tgdp.getData();
-//			if (colCounter < dataArr.length)
-//			{
-//				StringBuilder sb = new StringBuilder();
-//				sb.append("alter table " + qic+tabName+qic + "\n");
-//				
-//				for (int d=colCounter; d<dataArr.length; d++)
-//				{
-////					sb.append("alter table " + qic+tabName+qic + " add  "+fill(qic+"label_"+d+qic,40)+" "+fill(getDatatype("varchar",30,-1,-1),20)+" "+getNullable(true)+" \n");
-////					sb.append("alter table " + qic+tabName+qic + " add  "+fill(qic+"data_" +d+qic,40)+" "+fill(getDatatype("numeric",-1,10, 1),20)+" "+getNullable(true)+" \n");
-//					sb.append("   add  "+fill(qic+"label_"+d+qic,40)+" "+fill(getDatatype("varchar",30,-1,-1),20)+" "+getNullable(true)+",\n");
-//					sb.append("        "+fill(qic+"data_" +d+qic,40)+" "+fill(getDatatype("numeric",-1,10, 1),20)+" "+getNullable(true)+" \n");
-//				}
-//				//System.out.println("getGraphAlterTableDdlString: "+sb.toString());
-//				return sb.toString();
-//			}
-//		}
-//		return "";
-//	}
-
-//	public List<String> getGraphAlterTableDdlString(DbxConnection conn, String tabName, TrendGraphDataPoint tgdp)
-//	throws SQLException
-//	{
-//		String qic = getQuotedIdentifierChar();
-//
-//		// Obtain a DatabaseMetaData object from our current connection
-//		DatabaseMetaData dbmd = conn.getMetaData();
-//
-//		int colCounter = 0;
-//		ResultSet rs = dbmd.getColumns(null, null, tabName, "%");
-//		while(rs.next())
-//		{
-//			colCounter++;
-//		}
-//		rs.close();
-//
-//		List<String> list = new ArrayList<String>();
-//		if (colCounter > 0)
-//		{
-//			colCounter -= 3; // take away: SessionStartTime, SessionSampleTime, SampleTime
-//			colCounter = colCounter / 2;
-//			
-//			Double[] dataArr  = tgdp.getData();
-//			if (colCounter < dataArr.length)
-//			{
-//				for (int d=colCounter; d<dataArr.length; d++)
-//				{
-//					list.add("alter table " + qic+tabName+qic + " add  "+fill(qic+"label_"+d+qic,40)+" "+fill(getDatatype("varchar",60,-1,-1),20)+" "+getNullable(true)+" \n");
-//					list.add("alter table " + qic+tabName+qic + " add  "+fill(qic+"data_" +d+qic,40)+" "+fill(getDatatype("numeric",-1,10, 1),20)+" "+getNullable(true)+" \n");
-//				}
-//			}
-//		}
-//		return list;
-//	}
 	public List<String> getGraphAlterTableDdlString(DbxConnection conn, String schemaName, String tabName, GraphEntry ge)
 	throws SQLException
 	{

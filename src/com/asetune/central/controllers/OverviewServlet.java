@@ -70,6 +70,7 @@ import com.asetune.pcs.report.DailySummaryReportFactory;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.FileUtils;
+import com.asetune.utils.NumberUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
@@ -87,6 +88,10 @@ public class OverviewServlet extends HttpServlet
 
 	public static final String PROPKEY_LogfilesShortcuts = "logfiles.shortcuts";
 	public static final String DEFAULT_LogfilesShortcuts = "*.console";
+
+//	public static final String  PROPKEY_enableDownloadRecordings = "OverviewServlet.enable.download.recordings";
+	public static final String  PROPKEY_enableDownloadRecordings = "download.recordings.enabled";
+	public static final boolean DEFAULT_enableDownloadRecordings = true;
 	
 	private List<String> getInfoFilesDbxTune()
 	{
@@ -255,7 +260,7 @@ public class OverviewServlet extends HttpServlet
 		DBX_CENTRAL
 	};
 
-	private boolean isTodayH2DbTimestamp(String name)
+	private static boolean isTodayH2DbTimestamp(String name)
 	{
 		if (name.toUpperCase().matches(".*_[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].MV.DB"))
 		{
@@ -272,7 +277,8 @@ public class OverviewServlet extends HttpServlet
 		return false;
 	}
 
-	private List<String> getFilesH2Dbs(H2DbFileType type)
+//	private List<String> getFilesH2Dbs(H2DbFileType type)
+	public static List<String> getFilesH2Dbs(H2DbFileType type)
 	{
 		String directory = DATA_DIR;
 
@@ -1371,6 +1377,7 @@ public class OverviewServlet extends HttpServlet
 			out.println("<p>");
 			out.println("<b>Direct link to the latest report for server:</b>");
 			out.println("<ul>");
+			out.println("  <li> <a href='/report?op=viewLatest&name=DbxCentral'>DbxCentral</a> </li>");
 			for (DbxCentralSessions session : centralSessionList)
 			{
 				if (firstServerName == null)
@@ -1392,8 +1399,12 @@ public class OverviewServlet extends HttpServlet
 				+ "    <th>DayOfWeek</th>"
 				+ "    <th>NTR</th>"
 				+ "    <th>File</th>"
+				+ "    <th>Size MB</th>"
 				+ "    <th>Remove Report</th>"
 				+ "  </tr>";
+
+			if (firstServerName == null)
+				firstServerName = "-unknown-";
 
 			out.println("<table>");
 			out.println("<thead>");
@@ -1415,6 +1426,7 @@ public class OverviewServlet extends HttpServlet
 				//String reportTime = "";
 				String reportDow  = "";
 				boolean ntr = filename.indexOf(".-NTR-") >= 0;
+				String reportSizeMb = NumberUtils.toMb( f.length(), 1) + "";
 
 				int firstDot = filename.indexOf('.');
 				int lastDot  = filename.lastIndexOf('.');
@@ -1465,6 +1477,7 @@ public class OverviewServlet extends HttpServlet
 				out.println("    <td>" + reportDow  + "</td>");
 				out.println("    <td>" + (ntr ? "<font color='green'>NTR</font>" : "")  + "</td>");
 				out.println("    <td><a href='/report?op=view&name="   + filename + "'>"         + filename + "</a></td>");
+				out.println("    <td>" + reportSizeMb  + "</td>");
 				out.println("    <td><a href='/report?op=remove&name=" + filename + "'>Remove: " + filename + "</a></td>");
 				out.println("  </tr>");
 			}
@@ -1712,10 +1725,18 @@ public class OverviewServlet extends HttpServlet
 		String dsrCurrentJdbcUrl = "";
 		if (true)
 		{
-	        out.println("<div id='offline' class='card border-dark mb-3'>");
+			boolean isDownloadRecordingEnabled = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_enableDownloadRecordings, DEFAULT_enableDownloadRecordings);
+
+			out.println("<div id='offline' class='card border-dark mb-3'>");
 	        out.println("<h5 class='card-header'>Available offline databases</h5>");
 	        out.println("<div class='card-body'>");
 	        out.println("<p>Historical database recordings.</p>");
+
+	        if (isDownloadRecordingEnabled)
+	        	out.println("<p>To download a recording, simply click the 'File' column. To disable download set property: <code>" + PROPKEY_enableDownloadRecordings + " = false</code></p>");
+	        else
+	        	out.println("<p>Download Recordings is <b>not</b> enabled. This can be enabled with property: <code>" + PROPKEY_enableDownloadRecordings + " = true</code></p>");
+	        
 	        out.println("Column description");
 	        out.println("<ul>");
 	        out.println("<li><b>File             </b> - Name of the database file</li>");
@@ -1769,14 +1790,14 @@ public class OverviewServlet extends HttpServlet
 
 			String tableHead 
 					= "  <tr id='offline-srv-SRVNAME'>"
-					+ "    <th>File</th>"
+					+ "    <th>File" + (isDownloadRecordingEnabled ? " (click to dowload)" : "") + "</th>"
 					+ "    <th>DayOfWeek</th>"
 					+ "    <th>Saved Max GB</th>"
 					+ "    <th>File Size GB</th>"
 					+ "    <th>File Size MB</th>"
 					+ "    <th>Shrink Size GB</th>"
 					+ "    <th>DSR (Daily Summary Report)</th>"
-					+ "    <th>Url (green row is active recording)</th>"
+					+ "    <th>Url (green row is active recording), default H2 Port: 9092</th>"
 					+ "  </tr>";
 			
 			out.println("<table>");
@@ -1840,10 +1861,17 @@ public class OverviewServlet extends HttpServlet
 //				String dbxTuneUrl = dbxTuneGuiUrl + url;
 				String dbxTuneUrl  = dbxTuneGuiUrl.replace(":PORT/", ":"+DbxTune.getGuiWebPort(dbxTuneName)+"/") + url;
 
+//				String downloadH2File = "<a href='/download-recording?name=" + f.getName() + "' download='" + f.getName() + "'>" + dbName + "</a>";
+				String downloadH2File = "<a href='/download-recording?name=" + f.getName() + "'>" + dbName + "</a>";
+
+				// If we are now allowed to download files, then just show the database / date name
+				if ( ! isDownloadRecordingEnabled )
+					downloadH2File = dbName; // 
 				
 				String style = "";
 				if (isTodayH2DbTimestamp(f.getName()))
 				{
+					downloadH2File = dbName; // Just the name, since "current recording" can NOT be download.
 					style = "style='background-color:rgb(204, 255, 204);'"; // Very Light green
 					
 					// Point the URL to the ACTIVE recording (which is on non-default port)
@@ -1867,9 +1895,8 @@ public class OverviewServlet extends HttpServlet
 					dsrCurrentJdbcUrl = dsrJdbcUrl;
 				}
 
-				
 				out.println("  <tr>");
-				out.println("    <td "+style+">" + dbName         + "</td>");
+				out.println("    <td "+style+">" + downloadH2File + "</td>");
 				out.println("    <td "+style+">" + dayOfWeek      + "</td>");
 				out.println("    <td "+style+">" + savedSizeInGB  + "</td>");
 				out.println("    <td "+style+">" + sizeInGB       + "</td>");

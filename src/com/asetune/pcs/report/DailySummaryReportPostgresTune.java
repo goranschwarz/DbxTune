@@ -33,6 +33,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.pcs.report.content.DbmsConfigIssues;
+import com.asetune.pcs.report.content.os.CmOsNwInfoOverview;
 import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
 import com.asetune.pcs.report.content.os.OsIoStatOverview;
 import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
@@ -78,6 +79,9 @@ extends DailySummaryReportDefault
 		addReportEntry( new PostgresTopTableSize  (this) );
 		addReportEntry( new OsIoStatOverview      (this) );
 		addReportEntry( new OsIoStatSlowIo        (this) );
+
+		// Network Activity
+		addReportEntry( new CmOsNwInfoOverview    (this) );
 
 		// Configuration
 		addReportEntry( new PostgresConfiguration(this) );

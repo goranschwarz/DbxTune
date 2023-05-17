@@ -1041,10 +1041,10 @@ implements ActionListener
 
     	try
     	{
-			AlarmHandler ah = new AlarmHandler();
+			AlarmHandler ah = new AlarmHandler(AlarmHandler.DEFAULT_INSTANCE);
     		ah.init(Configuration.getCombinedConfiguration(), true, false, true);
     		ah.start();
-    		AlarmHandler.setInstance(ah);
+    		AlarmHandler.setInstance(AlarmHandler.DEFAULT_INSTANCE, ah);
 
     		JFrame frame = new JFrame();
     		AlarmViewer av = new AlarmViewer(frame);

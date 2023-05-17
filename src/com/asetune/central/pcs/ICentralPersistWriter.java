@@ -28,6 +28,8 @@ import java.sql.Timestamp;
 
 import com.asetune.central.pcs.CentralPcsWriterHandler.NotificationType;
 import com.asetune.central.pcs.DbxTuneSample.CmEntry;
+import com.asetune.cm.CountersModel;
+import com.asetune.pcs.PersistContainer;
 import com.asetune.utils.Configuration;
 
 
@@ -194,4 +196,12 @@ public interface ICentralPersistWriter
 	*/
 	public CentralPcsWriterStatistics getStatistics();
 	public void resetCounters();
+
+
+	
+	/*---------------------------------------------------
+	** Methods handling Local Metrics
+	**---------------------------------------------------
+	*/
+	public void saveLocalMetricsSample(PersistContainer pc);
 }

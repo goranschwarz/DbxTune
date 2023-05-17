@@ -172,7 +172,7 @@ implements ActionListener, KeyListener, FocusListener
 		// If Generate port number, get first free port
 		if (_sshLocalPortRand_chk.isSelected())
 		{
-			int freePort = SshTunnelManager2.getFirstFreeLocalPortNumber();
+			int freePort = SshTunnelManager.getFirstFreeLocalPortNumber();
 			if (freePort >= 0)
 			{
 				_sshLocalPort_txt.setText( Integer.toString(freePort) ); 
@@ -231,7 +231,7 @@ implements ActionListener, KeyListener, FocusListener
 			"<html>" +
 			   "Generate a new random number every time the listener is started.<br>" +
 			   "<br>" +
-			   "This is done by starting too check for free port number at '"+SshTunnelManager2.GENERATE_PORT_NUMBER_START+"' then looping until it finds a free port number." +
+			   "This is done by starting too check for free port number at '"+SshTunnelManager.GENERATE_PORT_NUMBER_START+"' then looping until it finds a free port number." +
 			"</html>");
 		_sshLocalPort_but.setToolTipText("Check if the current 'Local Port' is availiable for start a listener service on.");
 
@@ -515,7 +515,7 @@ implements ActionListener, KeyListener, FocusListener
 		{
 			if (_sshLocalPortRand_chk.isSelected())
 			{
-				int freePort = SshTunnelManager2.getFirstFreeLocalPortNumber();
+				int freePort = SshTunnelManager.getFirstFreeLocalPortNumber();
 				if (freePort >= 0)
 				{
 					_sshLocalPort_txt.setText( Integer.toString(freePort) ); 

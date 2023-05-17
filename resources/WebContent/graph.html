@@ -11,9 +11,20 @@
 	<meta http-equiv="Pragma" content="no-cache" />
 	<meta http-equiv="Expires" content="0" />
 
-	<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.22.0/themes/prism-okaidia.min.css'>
+	<!-- Prism: SQL Text Area needs this -->
+	<!-- Done up here since we OVERRIDE some of the stuff in below -->
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css">
+
+	<!-- SQL Server SHOWPLAN -->
+	<!-- Done up here since we OVERRIDE some of the stuff in below -->
+	<link href="https://cdn.jsdelivr.net/npm/html-query-plan@2.6.1/css/qp.min.css" rel="stylesheet">
 
 	<style>
+		/* html-query-plan ... tooltip show on modal */
+		.qp-tt {
+			z-index: 99999;
+		}
+
 		canvas {
 			user-select: none;
 			-moz-user-select: none;
@@ -92,6 +103,9 @@
 			position: sticky;
 			left: 0;
 			display: inline-block;
+		}
+		.active-statements-srv-tab-class {
+			overflow-x: scroll;
 		}
 */
 /*
@@ -275,6 +289,16 @@
 			/* overflow: scroll; */
 		}
 
+		/* 
+		** Hide lower "south-east" rezize "handler" image 
+		** However this disn't work as expected...
+		** https://stackoverflow.com/questions/10801676/removing-handle-image-from-jquery-ui-resizable-element
+		.ui-icon { background-image: url("") !important; }
+		.ui-dialog .ui-resizable-se {
+			background-image: url("");
+		}
+		*/
+		
 		.modal-body {
 			height: 600px;
 			/* height: 80%; */
@@ -383,9 +407,18 @@
 	<!-- JS: jquery - contextMenu -->
 	<script type="text/javascript" src="/scripts/jquery-contextmenu/2.7.0/jquery.contextMenu.min.js"></script>
 
-	<!-- SQL Text Area needs this -->
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.22.0/prism.min.js'></script> 
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.22.0/components/prism-sql.min.js'></script> 
+	<!-- Prism: SQL Text Area needs this -->
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js'></script> 
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js'></script> 
+
+	<!-- SQL Server Showplan: html-query-plan -->
+	<script src="https://cdn.jsdelivr.net/npm/html-query-plan@2.6.1/dist/qp.min.js"></script>
+	<!-- The CSS is done at the TOP, since we override some stuff -->
+	<!--<link href="https://cdn.jsdelivr.net/npm/html-query-plan@2.6.1/css/qp.min.css" rel="stylesheet">-->
+
+	<!-- SQL formatter -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/sql-formatter/12.1.3/sql-formatter.min.js" integrity="sha512-KYBOFOOIIdyOZnOWTuAIISlg049+bMVJfG5ZOi+ZIY+uqlFBErw0Nju4yIIEOiFkULPtn34VOi7u17Q6kBgtfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
 
 	<!-- 
 	  =======================================================================
@@ -420,6 +453,10 @@
 
 	<!-- JS: jquery - contextMenu -->
 	<link rel="stylesheet" href="/scripts/jquery-contextmenu/2.7.0/jquery.contextMenu.min.css">
+
+	<!-- Prism: SQL Text Area needs this -->
+	<!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css">-->
+	<!--The above at top since we override some of the stuff */
 
 </head>
 
@@ -553,11 +590,11 @@
 	<div id="active-alarms" class="active-alarms-class" style="visibility: hidden;">
 		<div id="active-alarms-ctl" class="active-alarms-ctl-class">
 			There are <span id="active-alarms-count" style="color:red">##</span> Active Alarms...&nbsp;&nbsp;&nbsp; Window Max Size: 
+			<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-0"  onclick="activeAlarmsRadioClick(this);" value="hide"       > Minimize
 			<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-10" onclick="activeAlarmsRadioClick(this);" value="10%"        > 10%
 			<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-30" onclick="activeAlarmsRadioClick(this);" value="30%" checked> 30%
 			<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-60" onclick="activeAlarmsRadioClick(this);" value="60%"        > 60%
-			<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-95" onclick="activeAlarmsRadioClick(this);" value="95%"        > 95%
-			<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-0"  onclick="activeAlarmsRadioClick(this);" value="hide"       > Minimize &nbsp;&nbsp;&nbsp;
+			<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-95" onclick="activeAlarmsRadioClick(this);" value="95%"        > 95% &nbsp;&nbsp;&nbsp;
 			<input type="checkbox" name="active-alarms-solid-chk" id="active-alarms-solid-chk"   onclick="activeAlarmsChkClick(this);"   value="solid"> Solid Background &nbsp;&nbsp;&nbsp;
 			<input type="checkbox" name="active-alarms-compExtDesc-chk" id="active-alarms-compExtDesc-chk"   onclick="activeAlarmsCompExtDescClick(this);" title="Show Extended Descriptions Columns as HTML Formated or as 'Plain Text'"  value="compExtDesc" checked> Extended Descriptions as Plain Text
 		</div>
@@ -592,7 +629,9 @@
 	</div>
 -->
 
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
 	<!-- Modal: Filter dialog -->
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
 	<div class="modal fade" id="dbx-filter-dialog" tabindex="-1" role="dialog" aria-labelledby="dbx-filter-dialog" aria-hidden="true">
 		<div class="modal-dialog modal-dialog-centered modal-lg" role="document">
 		<div class="modal-content">
@@ -649,19 +688,24 @@
 	</div>  
 <!-- -->
 
-	<!-- Modal: View SqlText dialog -->																											
-	<div class='modal fade' id='dbx-view-sqltext-dialog' tabindex='-1' role='dialog' aria-labelledby='dbx-view-sqltext-dialog' aria-hidden='true'>
+
+  <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   - - Modal Dialog: Extended Description   dbx-view-extDescTable-dialog
+   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<!-- Modal: View LockTable dialog -->
+	<div class='modal fade' id='dbx-view-extDescTable-dialog' role='dialog' aria-labelledby='dbx-view-extDescTable-dialog' aria-hidden='true'>
 		<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>
 			<div class='modal-content'>
 				<div class='modal-header'>
-					<h5 class='modal-title' id='dbx-view-sqltext-dialog-title'><b>Text:</b> <span id='dbx-view-sqltext-objectName'></span></h5>	
+					<h5 class='modal-title' id='dbx-view-extDescTable-dialog-title'><b><span id='dbx-view-extDescTable-label'></span></b> <span id='dbx-view-extDescTable-objectName'></span></h5>	
 					<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
 						<span aria-hidden='true'>&times;</span>
 					</button>
 				</div>
 				<div class='modal-body' style='overflow-x: auto;'>
 					<div class='scroll-tree' style='width: 3000px;'>
-						<pre><code id='dbx-view-sqltext-content' class='language-sql dbx-view-sqltext-content' ></code></pre>
+<!--						<pre><code id='dbx-view-extDescTable-content' class='language-sql line-numbers dbx-view-extDescTable-content' ></code></pre>-->
+						<div id='dbx-view-extDescTable-content' class='dbx-view-extDescTable-content'></div>
 					</div>
 				</div>
 				<div class='modal-footer'>
@@ -670,6 +714,495 @@
 			</div>
 		</div>
 	</div>
+	<script>
+	function createExtDescTableToolTipDiv(data, label)
+	{
+		const dataVal = data;
+
+		const div = document.createElement("div");
+		div.innerHTML = "&nbsp;";
+		div.setAttribute("title"           , "Click to Open Dialog... \n-------------------------------");// \n" + dataVal);
+		div.setAttribute("data-toggle"     , 'modal');
+		div.setAttribute("data-target"     , '#dbx-view-extDescTable-dialog');
+		div.setAttribute("data-objectname" , '');
+		div.setAttribute("data-tooltip"    , dataVal);
+		div.setAttribute("data-label"      , label);
+	
+		return div;
+	}
+	$('#dbx-view-extDescTable-dialog').on('show.bs.modal', function(e) {
+		var data = $(e.relatedTarget).data();
+
+		console.log('#dbx-view-extDescTable-dialog: data: '+data, data);
+
+		$('#dbx-view-extDescTable-objectName', this).text(data.objectname);
+		$('#dbx-view-extDescTable-content',    this).html(data.tooltip);
+		$('#dbx-view-extDescTable-label',      this).html(data.label);
+
+		// Scroll top top (do not seems to work)
+		$('#dbx-view-extDescTable-dialog').animate({ scrollTop: 0 }, 'slow');
+	});
+	</script>
+
+  <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   - - Modal Dialog: Alarm Info   dbx-view-alarmView-dialog
+   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<!-- Modal: View LockTable dialog -->
+	<div class='modal fade' id='dbx-view-alarmView-dialog' role='dialog' aria-labelledby='dbx-view-alarmView-dialog' aria-hidden='true'>
+		<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>
+			<div class='modal-content'>
+				<div class='modal-header'>
+					<h5 class='modal-title' id='dbx-view-alarmView-dialog-title'><b><span id='dbx-view-alarmView-label'></span></b> <span id='dbx-view-alarmView-objectName'></span></h5>	
+					<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
+						<span aria-hidden='true'>&times;</span>
+					</button>
+				</div>
+				<div class='modal-body' style='overflow-x: auto;'>
+					<div class='scroll-tree' style='width: 3000px;'>
+<!--						<pre><code id='dbx-view-alarmView-content' class='language-sql line-numbers dbx-view-alarmView-content' ></code></pre>-->
+						<div id='dbx-view-alarmView-content' class='dbx-view-alarmView-content'></div>
+					</div>
+				</div>
+				<div class='modal-footer'>
+					<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script>
+	function createAlarmInfoToolTipDiv(data, label)
+	{
+		const dataVal = data;
+
+		const div = document.createElement("div");
+		div.innerHTML = "&nbsp;";
+		div.setAttribute("title"           , "Click to Open Dialog... \n-------------------------------");// \n" + dataVal);
+		div.setAttribute("data-toggle"     , 'modal');
+		div.setAttribute("data-target"     , '#dbx-view-alarmView-dialog');
+		div.setAttribute("data-objectname" , '');
+		div.setAttribute("data-tooltip"    , dataVal);
+		div.setAttribute("data-label"      , label);
+	
+		return div;
+	}
+	$('#dbx-view-alarmView-dialog').on('show.bs.modal', function(e) {
+		var data = $(e.relatedTarget).data();
+
+		$('#dbx-view-alarmView-objectName', this).text(data.objectname);
+		$('#dbx-view-alarmView-content',    this).html("Formatting the Alarm Message...");
+		$('#dbx-view-alarmView-label',      this).html(data.label);
+
+//		console.log('#dbx-view-alarmView-dialog: data: '+data, data);
+//		console.log('#dbx-view-alarmView-dialog: data.tooltip: '+data, data.tooltip);
+//		console.log('#dbx-view-alarmView-dialog: JSON.stringify(data.tooltip): ' + JSON.stringify(data.tooltip));
+
+		// In here we do a REST:POST call to /api/alarm/formatter
+		// to format the Alarm info in the same way as we format alarm-emails
+//		fetch("/api/alarm/formatter", 
+//		{
+//			method: 'POST',
+//			headers: {
+//				'Accept': 'application/json',
+//				'Content-Type': 'application/json'
+//			},
+//			body: JSON.stringify(data.tooltip)
+//		})
+//		.then(responceData => 
+//		{
+//			const responceText = responceData.text();
+//			console.log("AlarmFormatter RESPONCE-TEXT: " + responceText, responceText);
+//			$('#dbx-view-alarmView-content', this).html(responceText);
+//		})
+//		.catch(error => 
+//		{
+//			$('#dbx-view-alarmView-content', this).html(error);
+//		});
+		$.ajax(
+		{
+			url: "/api/alarm/formatter",
+			type: 'post',
+			// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+			data: JSON.stringify(data.tooltip),
+			contentType: "application/json; charset=utf-8",
+//			dataType: "json",
+			
+			success: function(data, status) 
+			{
+//				console.log("Format Alarm Message - RECEIVED DATA: " + data);
+				$('#dbx-view-alarmView-content').html(data);
+			},
+			error: function(xhr, desc, err) 
+			{
+				console.log(xhr);
+				console.log("ERROR - Details: " + desc + "\nError: " + err);
+//				$('#dbx-view-alarmView-content').html("Details: " + desc + "<br>Error: " + err);
+				$('#dbx-view-alarmView-content').html(xhr.responseText);
+			}
+		}); // end: ajax call
+
+		// Scroll top top (do not seems to work)
+		$('#dbx-view-alarmView-dialog').animate({ scrollTop: 0 }, 'slow');
+	});
+	</script>
+
+
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<!-- Modal: View SqlText dialog -->																											
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<div class='modal fade' id='dbx-view-sqltext-dialog' role='dialog' aria-labelledby='dbx-view-sqltext-dialog' aria-hidden='true'>
+		<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>
+			<div class='modal-content'>
+				<div class='modal-header'>
+					<h5 class='modal-title' id='dbx-view-sqltext-dialog-title'><b>Text Type:</b> <span id='dbx-view-sqltext-objectName'></span> <span id='dbx-view-sqltext-sqlDialect'></span></h5>	
+					<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
+						<span aria-hidden='true'>&times;</span>
+					</button>
+				</div>
+				<div class='modal-body' style='overflow-x: auto;'>
+					<div class='scroll-tree' style='width: 3000px;'>
+						<pre><code id='dbx-view-sqltext-content' class='language-sql line-numbers dbx-view-sqltext-content' ></code></pre>
+					</div>
+				</div>
+				<div class='modal-footer'>
+					<button type='button' class='btn btn-outline-secondary' onclick="sqlTextDialogFormatSQL();">Format SQL Text</button>
+					<button type='button' class='btn btn-outline-secondary' onclick="sqlTextDialogCopySql();">Copy SQL Text</button>
+					&emsp;&emsp;&emsp;&emsp;&emsp;
+					<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script>
+		function sqlTextDialogCopySql()
+		{
+			let sqlText = $("#dbx-view-sqltext-content").text();
+
+			const textArea = document.createElement("textarea");
+			textArea.value = sqlText;
+			document.body.appendChild(textArea);
+			textArea.select();
+			try {
+				document.execCommand('copy');
+			} catch (err) {
+				alert('Unable to copy to clipboard\n\n' + err);
+			}
+			document.body.removeChild(textArea);
+		}
+		function sqlTextDialogFormatSQL()
+		{
+			let sqlDialect = $("#dbx-view-sqltext-sqlDialect").text();
+			if (sqlDialect === "")
+				sqlDialect = "tsql";
+
+			let formatOptions = { 
+				language: sqlDialect,
+				tabWidth: 4,
+				keywordCase: 'upper',
+				tabulateAlias: true
+			};
+
+			let sqlText = $("#dbx-view-sqltext-content").text();
+
+			// Remove first ')' if it start with that... It's a issue when getting the SQL Text in SqlServerTune which I should FIX
+			if (sqlText.startsWith(')')) 
+				sqlText = sqlText.substr(1);
+
+			// DYNAMIC_SQL dyn198: create proc dyn198 as SELECT f.xid AS foretagId...
+			if (sqlText.startsWith('DYNAMIC_SQL ')) // ASE has the folowing prefix sometimes
+			{
+				let startPos = sqlText.indexOf(':');
+				if (startPos >= 0)
+					sqlText = sqlText.substr(startPos + 1);
+			}
+
+			console.log("Format SQL with options: " + formatOptions, formatOptions);
+
+			// NOTE 'sqlFormatter' do not do a good job at T-SQL like variables etc...
+			// SO Possibly use https://www.npmjs.com/package/poor-mans-t-sql-formatter   ... but I couldn't find a CDN to load it from 
+		 	try {
+				let formattedSqlText = sqlFormatter.format( sqlText, formatOptions );
+				$("#dbx-view-sqltext-content").text(formattedSqlText);
+				Prism.highlightAll();
+			} catch (error) {
+				alert(error);
+			}
+		}
+	</script>
+
+
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<!-- Modal: View LockTable dialog -->
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<div class='modal fade' id='dbx-view-lockTable-dialog' role='dialog' aria-labelledby='dbx-view-lockTable-dialog' aria-hidden='true'>
+		<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>
+			<div class='modal-content'>
+				<div class='modal-header'>
+					<h5 class='modal-title' id='dbx-view-lockTable-dialog-title'><b>Lock Table:</b> <span id='dbx-view-lockTable-objectName'></span></h5>	
+					<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
+						<span aria-hidden='true'>&times;</span>
+					</button>
+				</div>
+				<div class='modal-body' style='overflow-x: auto;'>
+					<div class='scroll-tree' style='width: 3000px;'>
+<!--						<pre><code id='dbx-view-lockTable-content' class='language-sql line-numbers dbx-view-lockTable-content' ></code></pre>-->
+						<div id='dbx-view-lockTable-content' class='dbx-view-lockTable-content'></div>
+					</div>
+				</div>
+				<div class='modal-footer'>
+					<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<!-- Modal: View SQL Server Showplan dialog -->
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<div class='modal fade' id='dbx-view-ssShowplan-dialog' role='dialog' aria-labelledby='dbx-view-ssShowplan-dialog' aria-hidden='true'>
+		<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>
+			<div class='modal-content'>
+				<div class='modal-header'>
+					<h5 class='modal-title' id='dbx-view-ssShowplan-dialog-title'><b>SQL Server Showplan:</b> <span id='dbx-view-ssShowplan-objectName'></span></h5>	
+					<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
+						<span aria-hidden='true'>&times;</span>
+					</button>
+				</div>
+				<div class='modal-body' style='overflow-x: auto;'>
+					<div class='scroll-tree' style='width: 3000px;'>
+						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='$("#dbx-view-ssShowplan-content").toggle();'>Hide/Show Below Execution Plan</button>
+						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='QP.drawLines(document.getElementById("dbx-view-ssShowplan-content"));'>Redraw Lines</button>
+						<br><br>
+						<div id='dbx-view-ssShowplan-content' class='dbx-view-ssShowplan-content'></div>
+						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='$("#dbx-view-ssShowplan-sqlContent").toggle();'>Hide/Show Below SQL Text</button>
+						<button type='button' class='btn btn-outline-secondary btn-sm' onclick="ssShowplanFormatSql();">Format Below SQL Text</button>
+						<pre><code id='dbx-view-ssShowplan-sqlContent' class='language-sql line-numbers dbx-view-sqltext-content' ></code></pre>
+
+						<button type='button' id='dbx-view-ssShowplan-compileParameterValuesButton' class='btn btn-outline-secondary btn-sm' onclick="ssShowplanSetParametersInSql('compile');">Apply Compile Parameters to the Above SQL Text</button>
+						<pre><code id='dbx-view-ssShowplan-compileParameterValues' class='language-sql line-numbers dbx-view-sqltext-content' ></code></pre>
+
+						<button type='button' id='dbx-view-ssShowplan-runtimeParameterValuesButton' class='btn btn-outline-secondary btn-sm' onclick="ssShowplanSetParametersInSql('runtime');">Apply Runtime Parameters to the Above SQL Text</button>
+						<pre><code id='dbx-view-ssShowplan-runtimeParameterValues' class='language-sql line-numbers dbx-view-sqltext-content' ></code></pre>
+
+						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='$("#dbx-view-ssShowplan-xmlContent").toggle();'>Hide/Show Below XML Text</button>
+						<pre><code id='dbx-view-ssShowplan-xmlContent' class='language-xml line-numbers dbx-view-sqltext-content' ></code></pre>
+					</div>
+				</div>
+				<div class='modal-footer'>
+					<button type='button' class='btn btn-outline-secondary' onclick="ssShowplanCopySql();">Copy SQL Text</button>
+					<button type='button' class='btn btn-outline-secondary' onclick="ssShowplanCopyXml();">Copy XML Text</button>
+					&emsp;&emsp;&emsp;&emsp;&emsp;
+					<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script>
+		//------------------------------------------------------------------------------------------
+		function ssShowplanFormatSql()
+		{
+			let formatOptions = { 
+				language: 'tsql',
+				tabWidth: 4,
+				keywordCase: 'upper',
+				tabulateAlias: true
+			};
+
+			let sqlText = $("#dbx-view-ssShowplan-sqlContent").text();
+
+		 	try {
+				let formattedSqlText = sqlFormatter.format( sqlText, formatOptions );
+				$("#dbx-view-ssShowplan-sqlContent").text(formattedSqlText);
+				Prism.highlightAll();
+			} catch (error) {
+				alert(error);
+			}
+		}
+		//------------------------------------------------------------------------------------------
+		function ssShowplanCopyXml()
+		{
+			let ssShowplanXmlText = $("#dbx-view-ssShowplan-xmlContent").text();
+
+			const textArea = document.createElement("textarea");
+			textArea.value = ssShowplanXmlText;
+			document.body.appendChild(textArea);
+			textArea.select();
+			try {
+				document.execCommand('copy');
+			} catch (err) {
+				alert('Unable to copy to clipboard\n\n' + err);
+			}
+			document.body.removeChild(textArea);
+		}
+		//------------------------------------------------------------------------------------------
+		function ssShowplanGetSql()
+		{
+			let ssShowplanXmlText = $("#dbx-view-ssShowplan-xmlContent").text();
+
+			// In case of the below does NOT work, simply empty the SQL Text
+			$('#dbx-view-ssShowplan-sqlContent').text("-- No SQL StatementText was found in the XML Plan.");
+
+
+			let xmlDoc = $.parseXML(ssShowplanXmlText);
+//			let sqlText = $(xmlDoc).find("StmtSimple").attr("StatementText");
+
+			let sqlText = "";
+			let sqlTextArr = [];
+			$(xmlDoc).find("StmtSimple").each(function(i,e) {
+				sqlTextArr.push($(e).attr("StatementText"));
+			});
+
+//			if (sqlTextArr.length === 0)
+//				return "-- No SQL StatementText was found in the XML Plan.";
+
+			if (sqlTextArr.length === 1)
+				sqlText = sqlTextArr[0];
+			else
+			{
+				for (let i=0; i<sqlTextArr.length; i++)
+				{
+					sqlText += "--===================================================\n";
+					sqlText += "-- SQL Statement " + (i+1) + "   of " + sqlTextArr.length + "\n";
+					sqlText += "-----------------------------------------------------\n";
+					sqlText += sqlTextArr[i] + "\n";
+					sqlText += "-- end ----------------------------------------------\n";
+					sqlText += "\n";
+				}
+			}
+			return sqlText;
+		}
+		//------------------------------------------------------------------------------------------
+		function ssShowplanCopySql()
+		{
+//			let sqlText = ssShowplanGetSql();
+			let sqlText = $("#dbx-view-ssShowplan-sqlContent").text();
+			
+console.log("SQLTEXT=|"+sqlText+"|");
+
+			const textArea = document.createElement("textarea");
+			textArea.value = sqlText;
+			document.body.appendChild(textArea);
+			textArea.select();
+			try {
+				document.execCommand('copy');
+			} catch (err) {
+				alert('Unable to copy to clipboard\n\n' + err);
+			}
+			document.body.removeChild(textArea);
+		}
+		//------------------------------------------------------------------------------------------
+		function ssShowplanGetParameters()
+		{
+			let ssShowplanXmlText = $("#dbx-view-ssShowplan-xmlContent").text();
+
+			let xmlDoc = $.parseXML(ssShowplanXmlText);
+
+			// Below is how the XML Looks like
+			//-----------------------------------------------------
+			// <ParameterList>
+			//     <ColumnReference Column="@2" ParameterDataType="varchar(8000)" ParameterCompiledValue="'2023-04-01 00:00:00'"/>
+			//     <ColumnReference Column="@1" ParameterDataType="varchar(8000)" ParameterCompiledValue="'2023-03-01 00:00:00'"/>
+			// </ParameterList>
+			//-----------------------------------------------------
+			// <ParameterList>
+			//     <ColumnReference Column="@1" ParameterCompiledValue="'XXX'" ParameterDataType="varchar(8000)" ParameterRuntimeValue="'XXX'"/>
+			// </ParameterList>
+			//-----------------------------------------------------
+
+			let compileParamsArr = [];
+			let runtimeParamsArr = [];
+			$(xmlDoc).find("ParameterList").find("ColumnReference").each(function(i,e) 
+			{
+				if (e.hasAttribute("ParameterCompiledValue"))
+				{
+				//	let xxx = '<ColumnReference Column="' + e.getAttribute("Column") + '" ParameterCompiledValue="' + e.getAttribute("ParameterCompiledValue") + '" ParameterDataType="' + e.getAttribute("ParameterDataType") + '"/>';
+					let xxx = 'CompiledValue: Parameter="' + e.getAttribute("Column") + '" Value="' + e.getAttribute("ParameterCompiledValue") + '" DataType="' + e.getAttribute("ParameterDataType") + '"';
+					compileParamsArr.push(xxx);
+				}
+				if (e.hasAttribute("ParameterRuntimeValue"))
+				{
+				//	let xxx = '<ColumnReference Column="' + e.getAttribute("Column") + '" ParameterRuntimeValue="' + e.getAttribute("ParameterRuntimeValue") + '" ParameterDataType="' + e.getAttribute("ParameterDataType") + '"/>';
+					let xxx = 'RuntimeValue: Parameter="' + e.getAttribute("Column") + '" Value="' + e.getAttribute("ParameterRuntimeValue") + '" DataType="' + e.getAttribute("ParameterDataType") + '"';
+					runtimeParamsArr.push(xxx);
+				}
+			});
+
+			let compileParameterText = "";
+			let runtimeParameterText = "";
+
+			for (let i=0; i<compileParamsArr.length; i++)
+				compileParameterText += compileParamsArr[i] + "\n";
+
+			for (let i=0; i<runtimeParamsArr.length; i++)
+				runtimeParameterText += runtimeParamsArr[i] + "\n";
+
+			$('#dbx-view-ssShowplan-runtimeParameterValues').text(runtimeParameterText);
+			
+			if (compileParamsArr.length > 0) 
+			{ 
+				$('#dbx-view-ssShowplan-compileParameterValues').text(compileParameterText);
+				$('#dbx-view-ssShowplan-compileParameterValuesButton').show();
+			} 
+			else 
+			{
+				$('#dbx-view-ssShowplan-compileParameterValues').text("-- No Compile Parameters was found in the XML Plan.");
+				$('#dbx-view-ssShowplan-compileParameterValuesButton').hide();
+			}
+
+			if (runtimeParamsArr.lenth > 0) 
+			{ 
+				$('#dbx-view-ssShowplan-runtimeParameterValues').text(compileParameterText);
+				$('#dbx-view-ssShowplan-runtimeParameterValuesButton').show();
+			} 
+			else 
+			{
+				$('#dbx-view-ssShowplan-runtimeParameterValues').text("-- No Runtime Parameters was found in the XML Plan.");
+				$('#dbx-view-ssShowplan-runtimeParameterValuesButton').hide();
+			}
+		}
+		//------------------------------------------------------------------------------------------
+		function ssShowplanSetParametersInSql(paramType)
+		{
+//			alert("Sorry: Not yet implemented");
+
+			let ssShowplanXmlText = $("#dbx-view-ssShowplan-xmlContent").text();
+
+			let xmlDoc = $.parseXML(ssShowplanXmlText);
+
+			$(xmlDoc).find("ParameterList").find("ColumnReference").each(function(i,e) 
+			{
+				//console.log("DEBUG: ssShowplanSetParametersInSql('" + paramType + "'): e='" + e + "'.", e);
+
+				let paramName  = e.getAttribute("Column");
+				let paramValue = "-unknown-";
+
+				if (paramType === "compile" && e.hasAttribute("ParameterCompiledValue"))
+				{
+					paramValue = e.getAttribute("ParameterCompiledValue");
+				}
+				
+				if (paramType === "runtime" && e.hasAttribute("ParameterRuntimeValue"))
+				{
+					paramValue = e.getAttribute("ParameterRuntimeValue");
+				}
+
+				console.log("DEBUG: ssShowplanSetParametersInSql('" + paramType + "'): replace='" + paramName + "', with='" + paramValue + "'.");
+
+				// SQL Text: get, change/replace(@p#), and set
+				let sqlText = $("#dbx-view-ssShowplan-sqlContent").text();
+				let newSqlText = sqlText.replaceAll(paramName, paramValue);
+//				let newSqlText = sqlText.split(paramName).join(paramValue);
+				$("#dbx-view-ssShowplan-sqlContent").text(newSqlText);
+				Prism.highlightAll();
+			});
+		}
+		
+	</script>
+
+
+
+
+
 	<script> 																			
 	/**																				
 	* ---------------------------------------------------------------------------		
@@ -682,12 +1215,93 @@
 		console.log('#dbx-view-sqltext-dialog: data: '+data, data);
 
 		$('#dbx-view-sqltext-objectName', this).text(data.objectname);
+		$('#dbx-view-sqltext-sqlDialect', this).text(data.sqldialect); // note: small letters
 		$('#dbx-view-sqltext-content',    this).text(data.tooltip);
 
 		// highlight again, since the dialog DOM wasn't visible earlier
 		Prism.highlightAll();
+
+		// Scroll top top (do not seems to work)
+		$('#dbx-view-sqltext-dialog').animate({ scrollTop: 0 }, 'slow');
 	});
 																						
+	$('#dbx-view-lockTable-dialog').on('show.bs.modal', function(e) {
+		var data = $(e.relatedTarget).data();
+
+		console.log('#dbx-view-lockTable-dialog: data: '+data, data);
+
+		$('#dbx-view-lockTable-objectName', this).text(data.objectname);
+		$('#dbx-view-lockTable-content',    this).html(data.tooltip);
+
+		// highlight again, since the dialog DOM wasn't visible earlier
+		//Prism.highlightAll();
+
+		// Scroll top top (do not seems to work)
+		$('#dbx-view-lockTable-dialog').animate({ scrollTop: 0 }, 'slow');
+	});
+
+	$('#dbx-view-ssShowplan-dialog').on('show.bs.modal', function(e) {
+		var data = $(e.relatedTarget).data();
+
+		console.log('#dbx-view-ssShowplan-dialog: data: '+data, data);
+
+		$('#dbx-view-ssShowplan-objectName', this).text(data.objectname);
+		//$('#dbx-view-ssShowplan-content',  this).text(data.tooltip);
+		$('#dbx-view-ssShowplan-xmlContent', this).text(formatXml(data.tooltip));
+		$('#dbx-view-ssShowplan-sqlContent', this).text(ssShowplanGetSql());
+		ssShowplanGetParameters(); // sets both Compile and Runtime parameters in there fields
+
+		// Create and DRAW thw Showplan in a deferred mode, otherwise the "lines" between the nodes wont show up in the *correct location*
+		setTimeout(function() { 
+			QP.showPlan(document.getElementById("dbx-view-ssShowplan-content"), data.tooltip);
+		}, 500);
+
+		// highlight again, since the dialog DOM wasn't visible earlier
+		Prism.highlightAll();
+
+		// Scroll top top (do not seems to work)
+		$('#dbx-view-ssShowplan-dialog').animate({ scrollTop: 0 }, 'slow');
+	});
+	// If it takes a LONG time to load... the lines are NOT VISIBLE, so lets draw them again!
+	$('#dbx-view-ssShowplan-dialog').on('loaded.bs.modal', function(e) {
+		setTimeout(function() { 
+			QP.drawLines(document.getElementById("dbx-view-ssShowplan-content"));
+		}, 500);
+	});
+
+
+	
+	function formatXml(xml) {
+		var formatted = '';
+		var reg = /(>)(<)(\/*)/g;
+		xml = xml.replace(reg, '$1\r\n$2$3');
+		var pad = 0;
+		jQuery.each(xml.split('\r\n'), function(index, node) {
+			var indent = 0;
+			if (node.match( /.+<\/\w[^>]*>$/ )) {
+				indent = 0;
+			} else if (node.match( /^<\/\w/ )) {
+				if (pad != 0) {
+					pad -= 1;
+				}
+			} else if (node.match( /^<\w[^>]*[^\/]>.*$/ )) {
+				indent = 1;
+			} else {
+				indent = 0;
+			}
+
+			var padding = '';
+			for (var i = 0; i < pad; i++) {
+				padding += '  ';
+			}
+
+			formatted += padding + node + '\r\n';
+			pad += indent;
+		});
+
+		return formatted;
+	}
+
 	</script> 																			
 
 
@@ -946,17 +1560,23 @@
 				dbxOpenFilterDialog();
 			});
 
+			// Make Bootsrap Modal Dialogs, resizable & movable (on the head)
 			var isSafari = !!navigator.userAgent.match(/Version\/[\d\.]+.*Safari/);
 			var iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 			if ( ! (isSafari && iOS) )
 			{
-				$('.modal-content').resizable({
-					alsoResize: ".modal-dialog"
-					//alsoResize: ".modal-header, .modal-body, .modal-footer"
-					// ,minHeight: 300
-					// ,minWidth: 300
-				});
-				$('.modal-dialog').draggable();
+				// All modals dialogs
+				$('.modal-content').resizable({ alsoResize: ".modal-dialog" });
+				$('.modal-dialog').draggable({ handle: ".modal-header" });
+				
+				// Statements
+				$('.active-statements-class').resizable({ handles: 'n, w, nw, s, sw' });
+//				$('.active-statements-class').resizable({ handles: 'all' });
+				$('.active-statements-class').draggable({ handle: ".active-statements-ctl-class" });
+				
+				// Active Alarms
+				$('.active-alarms-class').resizable({ handles: 'n' });
+				$('.active-alarms-class').draggable({ handle: ".active-alarms-ctl-class" });
 			}
 
 			$('#dbx-filter-dialog').on('show.bs.modal', function () {
@@ -1058,6 +1678,17 @@
 			// Show the dialog
 			$("#dbx-filter-dialog").modal('show');
 		}
+
+		// 
+/*
+		$("#active-statements").on('scroll', function() {
+			let xxx = $("#active-statements");
+			let leftPos = $("#active-statements").scrollLeft();
+			console.log("leftPos: " + leftPos);
+			$(".active-statements-srv-info-class").css("left", leftPos + "px");
+			$(".active-statements-srv-info-class").css("background-color", "red"); // just to indicate that "something" is happening... to be removed
+		});
+*/
 
 	</script>
 

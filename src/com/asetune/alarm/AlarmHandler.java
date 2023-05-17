@@ -22,10 +22,12 @@ package com.asetune.alarm;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
@@ -68,6 +70,8 @@ implements Runnable
 {
 	private static Logger _logger          = Logger.getLogger(AlarmHandler.class);
 
+	public static final String  DEFAULT_INSTANCE              = "DEFAULT";
+
 	public static final String  PROPKEY_enable                = "AlarmHandler.enable";
 	public static final boolean DEFAULT_enable                = true;
 
@@ -97,7 +101,10 @@ implements Runnable
 	*/
 
 	// implements singleton pattern
-	private static AlarmHandler _instance = null;
+//	private static AlarmHandler _instance = null;
+	private static Map<String, AlarmHandler> _instanceMap = new HashMap<>();
+
+	private String   _instanceName;
 
 	private boolean  _initialized = false;
 	private Thread   _thread      = null;
@@ -127,23 +134,32 @@ implements Runnable
 
 	/** */
 	//private boolean _sendAlarms = true;
-	
+
+	public static boolean _reuseOnAddAlarmWriter = true;
+	public static boolean _reuseOnInit           = true;
+
+
 	/*---------------------------------------------------
 	** Constructors
 	**---------------------------------------------------
 	*/
-	public AlarmHandler()
+	public AlarmHandler(String instanceName)
 	throws Exception
 	{
 	}
 
-	public AlarmHandler(Configuration props, boolean createTableModelWriter, boolean createPcsWriter, boolean createToApplicationLog)
+	public AlarmHandler(String instanceName, Configuration props, boolean createTableModelWriter, boolean createPcsWriter, boolean createToApplicationLog)
 	throws Exception
 	{
 		init(props, createTableModelWriter, createPcsWriter, createToApplicationLog);
 	}
 
 
+	/** Get name of this Alarm Handler Instance */
+	public String getInstanceName()
+	{
+		return _instanceName;
+	}
 
 	/** a list of AlarmWriters that will be added */
 	public void addAlarmWriters(List<String> writerClassNameList)
@@ -172,32 +188,59 @@ implements Runnable
 		{
 			if (writer.getClass().getName().equals(writerClassName))
 			{
-				_logger.info("The AlarmWriter class '"+writerClassName+"' is already lodeded. Lets try to remove it, then add it...");
+				_logger.info("The AlarmWriter class '" + writerClassName + "' is already lodeded. Lets try to remove it, then add it...");
 				removeAlarmWriter(writerClassName);
 			}
 		}
 		
-		_logger.debug("Instantiating and Initializing AlarmWriterClass='"+writerClassName+"'.");
-		try
+		// Check if another AlarmHandler instance exists... then we may/can/will reuse it (if _reuseOnAddAlarmWriter is true)
+		IAlarmWriter existungAlarmClass = null;
+		if (_reuseOnAddAlarmWriter && ! _instanceMap.isEmpty() )
 		{
-			Class<?> c = Class.forName( writerClassName );
-			alarmWriterClass = (IAlarmWriter) c.newInstance();
-			_writerClasses.add( alarmWriterClass );
+			for (AlarmHandler ahEntry : _instanceMap.values())
+			{
+				if (ahEntry._writerClasses != null)
+				{
+					for (IAlarmWriter awEntry : ahEntry._writerClasses)
+					{
+						if (awEntry.getClass().getName().equals(writerClassName))
+						{
+							existungAlarmClass = awEntry;
+							break;
+						}
+					}
+				}
+			}
 		}
-		catch (ClassCastException e)
+		if (existungAlarmClass != null)
 		{
-			throw new ClassCastException("When trying to load alarmWriter class '"+writerClassName+"'. The alarmWriter do not seem to follow the interface '"+IAlarmWriter.class.getName()+"'");
+			_logger.info("Alarm Handler Instance '" + getInstanceName() + "': Reusing already installed AlarmWriter '" + writerClassName + "', named '" + existungAlarmClass.getName() + "'.");
+			_writerClasses.add( existungAlarmClass );
 		}
-		catch (ClassNotFoundException e)
+		else
 		{
-			throw new ClassNotFoundException("Tried to load alarmWriter class '"+writerClassName+"'.", e);
-		}
+			_logger.info("Alarm Handler Instance '" + getInstanceName() + "': Instantiating and Initializing AlarmWriterClass='" + writerClassName + "'.");
+			try
+			{
+				Class<?> c = Class.forName( writerClassName );
+				alarmWriterClass = (IAlarmWriter) c.newInstance();
+				_writerClasses.add( alarmWriterClass );
+			}
+			catch (ClassCastException e)
+			{
+				throw new ClassCastException("When trying to load alarmWriter class '" + writerClassName + "'. The alarmWriter do not seem to follow the interface '" + IAlarmWriter.class.getName() + "'");
+			}
+			catch (ClassNotFoundException e)
+			{
+				throw new ClassNotFoundException("Tried to load alarmWriter class '" + writerClassName + "'.", e);
+			}
 
-		// Now initialize the User Defined AlarmWriter
-		alarmWriterClass.init(_conf);
-		alarmWriterClass.printFilterConfig();
-		alarmWriterClass.printConfig();
-		alarmWriterClass.startService();
+			// Now initialize the User Defined AlarmWriter
+			alarmWriterClass.init(_conf);
+			alarmWriterClass.printFilterConfig();
+			alarmWriterClass.printConfig();
+			alarmWriterClass.startService();
+		}
 	}
 
 	/** an AlarmWriters that will be removed */
@@ -207,15 +250,18 @@ implements Runnable
 		{
 			if (writer.getClass().getName().equals(writerClassName))
 			{
-				_logger.info("Stopping/removing the AlarmWriter class '"+writerClassName+"'.");
+				_logger.info("Stopping/removing the AlarmWriter class '" + writerClassName + "'.");
 				writer.stopService();
 				_writerClasses.remove(writer);
 			}
 		}
 	}
-		
+
 	/** 
 	 * Initialize various member of the class
+	 * <p>
+	 * NOTE: If other AlarmHandler exists, we will try to reuse already installed AlarmWrites for: createTableModelWriter, createPcsWriter, createToApplicationLog<br>
+	 * This can be disabled by: AlarmHandler._reuseOnInit = false;
 	 * 
 	 * @param conf                    Configuration than can be used by the various writers
 	 * @param createTableModelWriter  Create A GUI model, which DbxTune can look at current/historical alarms
@@ -229,38 +275,87 @@ implements Runnable
 	{
 		_conf = conf; 
 		
-		_logger.info("Initializing the AlarmHandler functionality.");
+		_logger.info("Initializing the AlarmHandler functionality, for instance '" + getInstanceName() + "'.");
 
 		if (createTableModelWriter)
 		{
-			AlarmWriterToTableModel alarmClass = new AlarmWriterToTableModel();
-			alarmClass.init(_conf);
-			alarmClass.printFilterConfig();
-			alarmClass.printConfig();
+			// Check if another AlarmHandler instance exists... then we may/can/will reuse it
+			AlarmWriterToTableModel alarmClass = null;
 
-			AlarmWriterToTableModel.setInstance(alarmClass);
+			if (_reuseOnInit && AlarmWriterToTableModel.hasInstance())
+			{
+				alarmClass = AlarmWriterToTableModel.getInstance();
+				_logger.info("Alarm Handler Instance '" + getInstanceName() + "': Reusing already installed AlarmWriter 'AlarmWriterToTableModel', named '" + alarmClass.getName() + "'.");
+			}
+			else
+			{
+				alarmClass = new AlarmWriterToTableModel();
+				alarmClass.init(_conf);
+				alarmClass.printFilterConfig();
+				alarmClass.printConfig();
+
+				AlarmWriterToTableModel.setInstance(alarmClass);
+			}
 			_writerClasses.add( alarmClass );
 		}
 		
 		if (createPcsWriter)
 		{
-			AlarmWriterToPcsJdbc alarmClass = new AlarmWriterToPcsJdbc();
-			alarmClass.init(_conf);
-			alarmClass.printFilterConfig();
-			alarmClass.printConfig();
+			// Check if another AlarmHandler instance exists... then we may/can/will reuse it
+			AlarmWriterToPcsJdbc alarmClass = null;
 
-			AlarmWriterToPcsJdbc.setInstance(alarmClass);
+			if (_reuseOnInit && AlarmWriterToPcsJdbc.hasInstance())
+			{
+				alarmClass = AlarmWriterToPcsJdbc.getInstance();
+				_logger.info("Alarm Handler Instance '" + getInstanceName() + "': Reusing already installed AlarmWriter 'AlarmWriterToPcsJdbc', named '" + alarmClass.getName() + "'.");
+			}
+			else
+			{
+				alarmClass = new AlarmWriterToPcsJdbc();
+				alarmClass.init(_conf);
+				alarmClass.printFilterConfig();
+				alarmClass.printConfig();
+
+				AlarmWriterToPcsJdbc.setInstance(alarmClass);
+			}
 			_writerClasses.add( alarmClass );
 		}
 		
 		//boolean createToApplicationLog = true;
 		if (createToApplicationLog)
 		{
-			AlarmWriterToApplicationLog alarmClass = new AlarmWriterToApplicationLog();
-			alarmClass.init(_conf);
-			alarmClass.printFilterConfig();
-			alarmClass.printConfig();
+			// Check if another AlarmHandler instance exists... then we may/can/will reuse it
+			AlarmWriterToApplicationLog alarmClass = null;
 
+			if (_reuseOnInit && ! _instanceMap.isEmpty() )
+			{
+				for (AlarmHandler ahEntry : _instanceMap.values())
+				{
+					if (ahEntry._writerClasses != null)
+					{
+						for (IAlarmWriter awEntry : ahEntry._writerClasses)
+						{
+							if (awEntry instanceof AlarmWriterToApplicationLog)
+							{
+								alarmClass = (AlarmWriterToApplicationLog) awEntry;
+								break;
+							}
+						}
+					}
+				}
+			}
+			if (alarmClass != null)
+			{
+				_logger.info("Alarm Handler Instance '" + getInstanceName() + "': Reusing already installed AlarmWriter 'AlarmWriterToApplicationLog', named '" + alarmClass.getName() + "'.");
+			}
+			else
+			{
+				alarmClass = new AlarmWriterToApplicationLog();
+				alarmClass.init(_conf);
+				alarmClass.printFilterConfig();
+				alarmClass.printConfig();
+				
+			}
 			_writerClasses.add( alarmClass );
 		}
 		
@@ -273,9 +368,9 @@ implements Runnable
 			_serializedFileName = _conf.getProperty(PROPKEY_persistAlarmsFilename, DEFAULT_persistAlarmsFilename);
 			if (_serializedFileName == null)
 			{
-				throw new Exception("The property '"+PROPKEY_persistAlarmsFilename+"' is mandatory for the AlarmHandler module. It should specify a filename where generated AlarmEvents are stored between sessions.");
+				throw new Exception("The property '" + PROPKEY_persistAlarmsFilename + "' is mandatory for the AlarmHandler module. It should specify a filename where generated AlarmEvents are stored between sessions.");
 			}
-			_logger.info("The AlarmHandler module is using the file '"+_serializedFileName+"' for storing active alarms between application restart.");
+			_logger.info("The AlarmHandler module is using the file '" + _serializedFileName + "' for storing active alarms between application restart.");
 
 			// LOAD old alarms that was saved...
 			try
@@ -284,11 +379,11 @@ implements Runnable
 			}
 			catch (Exception e)
 			{
-				_logger.warn("Problems loading any saved alarms. The initialization continues anyway.  This means that cancel request cant be sent if the problem doesnt exist anymore, and alarms that has privioulsy been sent will be sent a second time if they still exists. Caught: "+e);			
+				_logger.warn("Problems loading any saved alarms. The initialization continues anyway.  This means that cancel request cant be sent if the problem doesnt exist anymore, and alarms that has privioulsy been sent will be sent a second time if they still exists. Caught: " + e);			
 			}
 		}
 		else
-			_logger.info("The AlarmHandler module does NOT save active alarms. Alarm cancelation between application restarts wont be possible. This can be enabled with the property '"+PROPKEY_persistAlarmsEnabled+"=true' and set the filename with '"+PROPKEY_persistAlarmsFilename+"=/xxx/filename.jso'.");
+			_logger.info("The AlarmHandler module does NOT save active alarms. Alarm cancelation between application restarts wont be possible. This can be enabled with the property '" + PROPKEY_persistAlarmsEnabled + "=true' and set the filename with '" + PROPKEY_persistAlarmsFilename + "=/xxx/filename.jso'.");
 		
 		if (_alarmContActive == null)
 		{
@@ -299,7 +394,7 @@ implements Runnable
 		String alarmClasses = _conf.getProperty(PROPKEY_WriterClass, DEFAULT_WriterClass);
 		if (alarmClasses == null && _writerClasses.size() == 0)
 		{
-			throw new Exception("The property '"+PROPKEY_WriterClass+"' is mandatory for the AlarmHandler module. It should contain one or several classes that implemets the IAlarmWriter interface. If you have more than one writer, specify them as a comma separated list.");
+			throw new Exception("The property '" + PROPKEY_WriterClass + "' is mandatory for the AlarmHandler module. It should contain one or several classes that implemets the IAlarmWriter interface. If you have more than one writer, specify them as a comma separated list.");
 		}
 		if (alarmClasses != null)
 		{
@@ -380,19 +475,59 @@ implements Runnable
 	//////////////////////////////////////////////
 	//// Instance
 	//////////////////////////////////////////////
+//	public static AlarmHandler getInstance()
+//	{
+//		return _instance;
+//	}
+//
+//	public static boolean hasInstance()
+//	{
+//		return (_instance != null);
+//	}
+//
+//	public static void setInstance(AlarmHandler inst)
+//	{
+//		_instance = inst;
+//	}
+
+	
+	/** Get the DEFAULT instance */
 	public static AlarmHandler getInstance()
 	{
-		return _instance;
+		return getInstance(DEFAULT_INSTANCE);
 	}
 
+	/** Check if we have the DEFAULT instance */
 	public static boolean hasInstance()
 	{
-		return (_instance != null);
+		return hasInstance(DEFAULT_INSTANCE);
 	}
 
-	public static void setInstance(AlarmHandler inst)
+//	/** set the DEFAULT instance */
+//	public static AlarmHandler setInstance(AlarmHandler inst)
+//	{
+//		return setInstance(DEFAULT_INSTANCE, inst);
+//	}
+
+	
+	
+	/** Get a specific/named AlarmHandler instance */
+	public static AlarmHandler getInstance(String name)
 	{
-		_instance = inst;
+		return _instanceMap.get(name);
+	}
+
+	/** Check if we have a specific/named AlarmHandler instance */
+	public static boolean hasInstance(String name)
+	{
+		return getInstance(name) != null;
+	}
+
+	/** set specific/named AlarmHandler instance */
+	public static AlarmHandler setInstance(String name, AlarmHandler inst)
+	{
+		inst._instanceName = name;
+		return _instanceMap.put(name, inst);
 	}
 
 	//////////////////////////////////////////////
@@ -501,7 +636,7 @@ implements Runnable
 			// if the alarms is already in active state, send it again (for potential re-raise)
 			if (_alarmContActive.contains(alarmEvent))
 			{
-//				System.out.println("raise(): DELAY-but-already-in-active-do-raise(for RE-RAISE-PURPOSE): ae='"+alarmEvent.getAlarmClassAbriviated()+"', xxx="+alarmEvent.getRaiseDelayInSec());
+//				System.out.println("raise(): DELAY-but-already-in-active-do-raise(for RE-RAISE-PURPOSE): ae='" + alarmEvent.getAlarmClassAbriviated() + "', xxx=" + alarmEvent.getRaiseDelayInSec());
 				raiseInternal(alarmEvent);
 			}
 			else
@@ -515,14 +650,14 @@ implements Runnable
 
 				if ( ! _delayedAlarmsActive.contains(alarmEvent) )
 				{
-//					System.out.println("raise(): DELAY: ae='"+alarmEvent.getAlarmClassAbriviated()+"', xxx="+alarmEvent.getRaiseDelayInSec());
+//					System.out.println("raise(): DELAY: ae='" + alarmEvent.getAlarmClassAbriviated() + "', xxx=" + alarmEvent.getRaiseDelayInSec());
 					_delayedAlarmsActive.add(alarmEvent);
 					
-					_logger.info("Received an AlarmEvent with deferred/delayed activation. RaiseDelayInSec="+alarmEvent.getRaiseDelayInSec()+" for: "+alarmEvent.getMessage());
+					_logger.info("Received an AlarmEvent with deferred/delayed activation. RaiseDelayInSec=" + alarmEvent.getRaiseDelayInSec() + " for: " + alarmEvent.getMessage());
 				}
 				else
 				{
-//					System.out.println("raise(): DELAY-ALREADY-ADDED: ae='"+alarmEvent.getAlarmClassAbriviated()+"', xxx="+alarmEvent.getRaiseDelayInSec());
+//					System.out.println("raise(): DELAY-ALREADY-ADDED: ae='" + alarmEvent.getAlarmClassAbriviated() + "', xxx=" + alarmEvent.getRaiseDelayInSec());
 				}
 			}
 		}
@@ -541,7 +676,7 @@ implements Runnable
 //		for (AlarmEvent alarmEvent : _delayedAlarmsActive.getAlarmList())
 //		{
 //			//long timeToExpireMs = (alarmEvent.getRaiseDelayInSec()*1000) - alarmEvent.getCrAgeInMs();
-//			//System.out.println("checkAndPostDelayedAlarms: hasRaiseDelayExpired="+alarmEvent.hasRaiseDelayExpired() + ", timeToExpireMs="+timeToExpireMs);
+//			//System.out.println("checkAndPostDelayedAlarms: hasRaiseDelayExpired=" + alarmEvent.hasRaiseDelayExpired() + ", timeToExpireMs=" + timeToExpireMs);
 //			
 //			if (alarmEvent.hasRaiseDelayExpired())
 //			{
@@ -583,7 +718,7 @@ implements Runnable
 		for (AlarmEvent alarmEvent : _delayedAlarmsActive.getAlarmList())
 		{
 			//long timeToExpireMs = (alarmEvent.getRaiseDelayInSec()*1000) - alarmEvent.getCrAgeInMs();
-			//System.out.println("checkAndPostDelayedAlarms: hasRaiseDelayExpired="+alarmEvent.hasRaiseDelayExpired() + ", timeToExpireMs="+timeToExpireMs);
+			//System.out.println("checkAndPostDelayedAlarms: hasRaiseDelayExpired=" + alarmEvent.hasRaiseDelayExpired() + ", timeToExpireMs=" + timeToExpireMs);
 			
 			if (alarmEvent.hasRaiseDelayExpired())
 			{
@@ -646,7 +781,7 @@ implements Runnable
 					}
 					catch (Throwable t)
 					{
-						_logger.error("The AlarmHandler got runtime error when calling the method raise() in AlarmWriter named '"+aw.getName()+"'. Continuing with next AlarmWriter...", t);
+						_logger.error("The AlarmHandler got runtime error when calling the method raise() in AlarmWriter named '" + aw.getName() + "'. Continuing with next AlarmWriter...", t);
 					}
 				}
 			}
@@ -678,7 +813,7 @@ implements Runnable
 			}
 			catch (Throwable t)
 			{
-				_logger.error("The AlarmHandler got runtime error when calling the method raise() in AlarmWriter named '"+aw.getName()+"'. Continuing with next AlarmWriter...", t);
+				_logger.error("The AlarmHandler '" + getInstanceName() + "' got runtime error when calling the method raise() in AlarmWriter named '" + aw.getName() + "'. Continuing with next AlarmWriter...", t);
 			}
 		}
 		
@@ -694,7 +829,7 @@ implements Runnable
 		// Call restoredAlarms() for all writers
 		for (IAlarmWriter aw : _writerClasses)
 		{
-			_logger.debug("Calling restoredAlarms() event in AlarmWriter named='"+aw.getName()+"'.");
+			_logger.debug("Calling restoredAlarms() event for AlarmHandlerName '" + getInstanceName() + "' with AlarmWriter named='" + aw.getName() + "'.");
 
 			// CALL THE installed AlarmWriter
 			// AND catch all runtime errors that might come
@@ -704,7 +839,7 @@ implements Runnable
 			}
 			catch (Throwable t)
 			{
-				_logger.error("The AlarmHandler got runtime error when calling the method restoredAlarms() in AlarmWriter named '"+aw.getName()+"'. Continuing with next AlarmWriter...", t);
+				_logger.error("The AlarmHandler '" + getInstanceName() + "' got runtime error when calling the method restoredAlarms() in AlarmWriter named '" + aw.getName() + "'. Continuing with next AlarmWriter...", t);
 			}
 		}
 	}
@@ -720,6 +855,7 @@ implements Runnable
 	public void addUndergoneAlarmDetection(String name)
 	{
 		_hasUndergoneAlarmDetection.add(name);
+//System.out.println("++++++++++++++++++++++++++++++++++: addUndergoneAlarmDetection(name='" + name + "') was called from. _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
 	}
 	private Set<String> _hasUndergoneAlarmDetection = new HashSet<>();
 
@@ -740,7 +876,7 @@ implements Runnable
 		// Call endOfScan() for all writers
 		for (IAlarmWriter aw : _writerClasses)
 		{
-			_logger.debug("Sending end-of-scan event to AlarmWriter named='"+aw.getName()+"'.");
+			_logger.debug("Sending end-of-scan event to AlarmWriter named='" + aw.getName() + "'.");
 
 			// CALL THE installed AlarmWriter
 			// AND catch all runtime errors that might come
@@ -750,13 +886,15 @@ implements Runnable
 			}
 			catch (Throwable t)
 			{
-				_logger.error("The AlarmHandler got runtime error when calling the method endOfScan() in AlarmWriter named '"+aw.getName()+"'. Continuing with next AlarmWriter...", t);
+				_logger.error("The AlarmHandler got runtime error when calling the method endOfScan() in AlarmWriter named '" + aw.getName() + "'. Continuing with next AlarmWriter...", t);
 			}
 		}
 
 		// Clear this for next "end-of-scan"
+//System.out.println("---------------------: _hasUndergoneAlarmDetection.clear() was called from. before clear:_hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
+//new Exception("clear was called from thread '" + Thread.currentThread().getName() + "' at:").printStackTrace();
 		_hasUndergoneAlarmDetection.clear();
-		
+
 		// Notify that we got changes
 		fireChangeListener();
 	}
@@ -821,7 +959,7 @@ implements Runnable
 			_logger.debug("AlarmHandler.checkForCancelations() is DISABLED. isSendAlarmsDisabled()=true.");
 			return;
 		}
-		_logger.debug("AlarmHandler is Checking for canceled events.");
+		_logger.debug("AlarmHandler '" + getInstanceName() + "' is Checking for canceled events.");
 
 		// get all alarms from the "saved/history" which is NOT part of ThisScan  
 		List<AlarmEvent> cancelList = _alarmContActive.getCancelList(_alarmContThisScan);
@@ -837,26 +975,26 @@ implements Runnable
 			//                                   But for now, just check the alarm class for AlarmEventSrvDown
 			if (cancelledAlarm instanceof AlarmEventSrvDown)
 			{
-				_logger.info("Keeping Alarm 'SRV-DOWN' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. cancelledAlarm: " + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
+				_logger.info("AlarmHandler '" + getInstanceName() + "' Keeping Alarm 'SRV-DOWN' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. cancelledAlarm: " + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
 				continue;
 			}
 			if (cancelledAlarm instanceof AlarmEventHttpDestinationDown)
 			{
-				_logger.info("Keeping Alarm 'HTTP-DESTINATION-DOWN' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. cancelledAlarm: " + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
+				_logger.info("AlarmHandler '" + getInstanceName() + "' Keeping Alarm 'HTTP-DESTINATION-DOWN' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. cancelledAlarm: " + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
 				continue;
 			}
 			if (cancelledAlarm instanceof AlarmEventOsLoadAverageAdjusted)
 			{
 				if ("H2WriterStat".equals(cancelledAlarm.getServiceInfo()))
 				{
-					_logger.info("Keeping Alarm 'OS-LOAD-AVERAGE-ADJUSTED' with serviceInfo='H2WriterStat' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. cancelledAlarm: " + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
+					_logger.info("AlarmHandler '" + getInstanceName() + "' Keeping Alarm 'OS-LOAD-AVERAGE-ADJUSTED' with serviceInfo='H2WriterStat' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. cancelledAlarm: " + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
 					continue;
 				}
 			}
 
 			if ( ! _hasUndergoneAlarmDetection.contains( cancelledAlarm.getServiceInfo() ) )
 			{
-				_logger.info("Removing Alarm '" + cancelledAlarm.getAlarmClassAbriviated() + "' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. Possibly a timeout or some other error when the CM sampled data. cancelledAlarm=" + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
+				_logger.info("AlarmHandler '" + getInstanceName() + "' Removing Alarm '" + cancelledAlarm.getAlarmClassAbriviated() + "' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. Possibly a timeout or some other error when the CM sampled data. cancelledAlarm.getServiceInfo()=" + cancelledAlarm.getServiceInfo() + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection + ", cancelledAlarm=" + cancelledAlarm);
 				li.remove();
 			}
 		}
@@ -875,7 +1013,7 @@ implements Runnable
 		{
 			for (AlarmEvent alarmEvent : cancelList)
 			{
-				_logger.debug("Sending cancel event to AlarmWriter named='"+aw.getName()+"', AlarmEvent='"+alarmEvent+"'.");
+				_logger.debug("AlarmHandler '" + getInstanceName() + "' Sending cancel event to AlarmWriter named='" + aw.getName() + "', AlarmEvent='" + alarmEvent + "'.");
 
 				// CALL THE installed AlarmWriter
 				// AND catch all runtime errors that might come
@@ -886,7 +1024,7 @@ implements Runnable
 				}
 				catch (Throwable t)
 				{
-					_logger.error("The AlarmHandler got runtime error when calling the method cancel() in AlarmWriter named '"+aw.getName()+"'. Continuing with next AlarmWriter...", t);
+					_logger.error("The AlarmHandler '" + getInstanceName() + "' got runtime error when calling the method cancel() in AlarmWriter named '" + aw.getName() + "'. Continuing with next AlarmWriter...", t);
 				}
 			}
 		}
@@ -925,7 +1063,7 @@ implements Runnable
 		}
 		catch (Exception e)
 		{
-			_logger.warn("Problems saving alarms. The alarm will still be propageted to all the Alarm Writers. This means that cancel request cant be sent if the problem doesnt exist anymore, and alarms that has privioulsy been sent will be sent a second time if they still exists. Caught: "+e);
+			_logger.warn("AlarmHandler '" + getInstanceName() + "' Problems saving alarms. The alarm will still be propageted to all the Alarm Writers. This means that cancel request cant be sent if the problem doesnt exist anymore, and alarms that has privioulsy been sent will be sent a second time if they still exists. Caught: " + e);
 		}
 	}
 	
@@ -970,7 +1108,7 @@ implements Runnable
 	{
 		if (_writerClasses.size() == 0)
 		{
-			_logger.warn("No Alarm Writers has been installed, The service thread will NOT be started and NO alarms will be propagated.");
+			_logger.warn("AlarmHandler '" + getInstanceName() + "' No Alarm Writers has been installed, The service thread will NOT be started and NO alarms will be propagated.");
 			return;
 		}
 
@@ -985,7 +1123,7 @@ implements Runnable
 	
 	public void shutdown()
 	{
-		_logger.info("Recieved 'stop' request in AlarmHandler.");
+		_logger.info("Recieved 'stop' request in AlarmHandler '" + getInstanceName() + "'.");
 		
 		_running = false;
 		_thread.interrupt();
@@ -1008,7 +1146,7 @@ implements Runnable
 
 		if ( ! isRunning() )
 		{
-			_logger.warn("The Alarm Handler is not running, discarding entry.");
+			_logger.warn("The Alarm Handler '" + getInstanceName() + "' is not running, discarding entry.");
 			return;
 		}
 
@@ -1020,7 +1158,7 @@ implements Runnable
 //			if (_currentConsumeStartTime > 0)
 //				currentConsumeTimeStr = "The current consumer has been active for " + TimeUtils.msToTimeStr(currentConsumeTimeMs);
 //
-//			_logger.warn("The persistent queue has "+qsize+" entries. The persistent writer might not keep in pace. "+currentConsumeTimeStr);
+//			_logger.warn("The persistent queue has " + qsize + " entries. The persistent writer might not keep in pace. " + currentConsumeTimeStr);
 //
 //			// call each writes to let them know about this.
 //			for (IPersistWriter pw : _writerClasses)
@@ -1053,7 +1191,7 @@ implements Runnable
 	public void run()
 	{
 		String threadName = _thread.getName();
-		_logger.info("Starting a thread for the module '"+threadName+"'.");
+		_logger.info("Alarm Handler '" + getInstanceName() + "' Starting a thread for the module '" + threadName + "'.");
 
 		isInitialized();
 
@@ -1062,12 +1200,12 @@ implements Runnable
 
 		while(isRunning())
 		{
-			//_logger.info("Thread '"+_thread.getName()+"', SLEEPS...");
+			//_logger.info("Thread '" + _thread.getName() + "', SLEEPS...");
 			//try { Thread.sleep(5 * 1000); }
 			//catch (InterruptedException ignore) {}
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("Thread '"+threadName+"', waiting on queue...");
+				_logger.debug("Thread '" + threadName + "', waiting on queue...");
 
 			try 
 			{
@@ -1092,7 +1230,7 @@ implements Runnable
 				long stopTime = System.currentTimeMillis();
 
 				prevConsumeTimeMs = stopTime-startTime;
-				_logger.debug("It took "+prevConsumeTimeMs+" ms to consume the above information (using all writers).");
+				_logger.debug("It took " + prevConsumeTimeMs + " ms to consume the above information (using all writers).");
 				
 			} 
 			catch (InterruptedException ex) 
@@ -1101,11 +1239,11 @@ implements Runnable
 			}
 		}
 
-		_logger.info("Emptying the queue for module '"+threadName+"', which had "+_alarmQueue.size()+" entries.");
+		_logger.info("Alarm Handler '" + getInstanceName() + "' Emptying the queue for module '" + threadName + "', which had " + _alarmQueue.size() + " entries.");
 		_alarmQueue.clear();
 		fireQueueSizeChange();
 
-		_logger.info("Thread '"+threadName+"' was stopped.");
+		_logger.info("Alarm Handler '" + getInstanceName() + "' Thread '" + threadName + "' was stopped.");
 	}
 
 	/**
@@ -1129,7 +1267,7 @@ implements Runnable
 		}
 		else
 		{
-			_logger.debug("AlarmHandler.queue.consume: calling: raise() alarmEvent="+alarmEvent);
+			_logger.debug("AlarmHandler.queue.consume: calling: raise() alarmEvent=" + alarmEvent);
 			raise(alarmEvent);
 		}
 	}
@@ -1165,14 +1303,14 @@ implements Runnable
 		File probeFile1 = new File(tmpFilename);
 		if (probeFile1.exists())
 		{
-			_logger.info("DUMMY-FORCE-DUMMY-ALARM: found-file('"+probeFile1+"'), Sending alarm 'AlarmEventDummy'...");
+			_logger.info("DUMMY-FORCE-DUMMY-ALARM: found-file('" + probeFile1 + "'), Sending alarm 'AlarmEventDummy'...");
 
 			AlarmEvent dummyAlarm = new com.asetune.alarm.events.AlarmEventDummy(srvName, "SomeCmName", "SomeExtraInfo", Category.OTHER, Severity.INFO, ServiceState.UP, -1, 999, "Dummy alarm, just to test if the alarm handler is working", "Extended Description goes here", 0);
 			AlarmHandler.getInstance().addAlarm( dummyAlarm );
 
-			_logger.info("DUMMY-FORCE-DUMMY-ALARM: removing file('"+probeFile1+"').");
+			_logger.info("DUMMY-FORCE-DUMMY-ALARM: removing file('" + probeFile1 + "').");
 			try { probeFile1.delete(); }
-			catch(Exception ex) { _logger.error("DUMMY-FORCE-DUMMY-ALARM: Problems removing file '"+probeFile1+"'. Caught: "+ex);}
+			catch(Exception ex) { _logger.error("DUMMY-FORCE-DUMMY-ALARM: Problems removing file '" + probeFile1 + "'. Caught: " + ex);}
 		}
 	}
 
@@ -1189,7 +1327,7 @@ implements Runnable
 		private static final long serialVersionUID = 1L;
 		public AlarmEventDummy(String info, int ttl)
 		{
-			super("dummy-dbmsVendor", "dummy-serviceName", "dummy-serviceInfo-"+info, "dummy-config", AlarmEvent.Category.OTHER, AlarmEvent.Severity.INFO, AlarmEvent.ServiceState.UP, "Dummy description", null); 
+			super("dummy-dbmsVendor", "dummy-serviceName", "dummy-serviceInfo-" + info, "dummy-config", AlarmEvent.Category.OTHER, AlarmEvent.Severity.INFO, AlarmEvent.ServiceState.UP, "Dummy description", null); 
 			setTimeToLive(ttl);
 		}
 	}
@@ -1219,14 +1357,14 @@ implements Runnable
 		{
 			_raiseCount++;
 			_activeEventCount++;
-			System.out.println(">>> "+getName()+": -----RAISE-----(a="+_activeEventCount+", r="+_raiseCount+", c="+_cancelCount+"): "+alarmEvent);
+			System.out.println(">>> " + getName() + ": -----RAISE-----(a=" + _activeEventCount + ", r=" + _raiseCount + ", c=" + _cancelCount + "): " + alarmEvent);
 		}
 
 		@Override
 		public void reRaise(AlarmEvent alarmEvent)
 		{
 			_reRaiseCount++;
-			System.out.println(">>> "+getName()+": -----RE-RAISE-----(a="+_activeEventCount+", r="+_raiseCount+", c="+_cancelCount+"): "+alarmEvent);
+			System.out.println(">>> " + getName() + ": -----RE-RAISE-----(a=" + _activeEventCount + ", r=" + _raiseCount + ", c=" + _cancelCount + "): " + alarmEvent);
 		}
 
 		@Override
@@ -1234,13 +1372,13 @@ implements Runnable
 		{
 			_cancelCount++;
 			_activeEventCount--;
-			System.out.println(">>> "+getName()+": -----CANCEL-----(a="+_activeEventCount+", r="+_raiseCount+", c="+_cancelCount+"): "+alarmEvent);
+			System.out.println(">>> " + getName() + ": -----CANCEL-----(a=" + _activeEventCount + ", r=" + _raiseCount + ", c=" + _cancelCount + "): " + alarmEvent);
 		}
 
 		@Override
 		public void endOfScan(List<AlarmEvent> activeAlarms)
 		{
-			System.out.println(">>> "+getName()+": -----END-OF-SCAN-----(a="+_activeEventCount+", r="+_raiseCount+", c="+_cancelCount+").");
+			System.out.println(">>> " + getName() + ": -----END-OF-SCAN-----(a=" + _activeEventCount + ", r=" + _raiseCount + ", c=" + _cancelCount + ").");
 		}
 
 		@Override
@@ -1254,7 +1392,7 @@ implements Runnable
 	{
 		try
 		{
-			System.out.println("Sleeping "+sleepTime+" ms");
+			System.out.println("Sleeping " + sleepTime + " ms");
 			Thread.sleep(sleepTime);
 		}
 		catch (InterruptedException ignore)
@@ -1327,13 +1465,13 @@ implements Runnable
 
 			boolean useQueueImpl = true;
 			System.out.println("#### Test program: Initializing the alarm handler.");
-			System.out.println("#### Test program: useQueueImpl="+useQueueImpl);
-			AlarmHandler alarmHandler = new AlarmHandler();
+			System.out.println("#### Test program: useQueueImpl=" + useQueueImpl);
+			AlarmHandler alarmHandler = new AlarmHandler(AlarmHandler.DEFAULT_INSTANCE);
 			alarmHandler.init(config, false, false, true);
 
 			if (useQueueImpl) 
 				alarmHandler.start();
-			AlarmHandler.setInstance(alarmHandler);
+			AlarmHandler.setInstance(AlarmHandler.DEFAULT_INSTANCE, alarmHandler);
 
 			TestAlarmWriter testWriter = null;
 			for (IAlarmWriter aw : alarmHandler.getAlarmWriters())
@@ -1354,7 +1492,7 @@ implements Runnable
 			if (testWriter._activeEventCount == 1)
 				System.out.println("OK: _activeEventCount is 1");
 			else
-				throw new RuntimeException("ERROR: _activeEventCount should be 1, it's now: "+testWriter._activeEventCount);
+				throw new RuntimeException("ERROR: _activeEventCount should be 1, it's now: " + testWriter._activeEventCount);
 
 			sleep(1000); // sleep between 2 samples
 
@@ -1363,7 +1501,7 @@ implements Runnable
 			if (testWriter._activeEventCount == 0)
 				System.out.println("OK: _activeEventCount is 0");
 			else
-				throw new RuntimeException("ERROR: _activeEventCount should be 0, it's now: "+testWriter._activeEventCount);
+				throw new RuntimeException("ERROR: _activeEventCount should be 0, it's now: " + testWriter._activeEventCount);
 
 			testWriter.reset();
 			System.out.println("###########################################################################");
@@ -1379,7 +1517,7 @@ implements Runnable
 			if (testWriter._activeEventCount == 1)
 				System.out.println("OK: _activeEventCount is 1");
 			else
-				throw new RuntimeException("ERROR: _activeEventCount should be 1, it's now: "+testWriter._activeEventCount);
+				throw new RuntimeException("ERROR: _activeEventCount should be 1, it's now: " + testWriter._activeEventCount);
 
 			sleep(1000); // sleep between 2 samples
 
@@ -1388,7 +1526,7 @@ implements Runnable
 			if (testWriter._activeEventCount == 1)
 				System.out.println("OK: _activeEventCount is 1");
 			else
-				throw new RuntimeException("ERROR: _activeEventCount should be 1, it's now: "+testWriter._activeEventCount);
+				throw new RuntimeException("ERROR: _activeEventCount should be 1, it's now: " + testWriter._activeEventCount);
 
 			sleep(1000); // sleep between 2 samples
 
@@ -1397,7 +1535,7 @@ implements Runnable
 			if (testWriter._activeEventCount == 0)
 				System.out.println("OK: _activeEventCount is 0");
 			else
-				throw new RuntimeException("ERROR: _activeEventCount should be 0, it's now: "+testWriter._activeEventCount);
+				throw new RuntimeException("ERROR: _activeEventCount should be 0, it's now: " + testWriter._activeEventCount);
 
 			if (useQueueImpl)
 				addTestAlarm(useQueueImpl, new AlarmEvent_Stop());
@@ -1414,14 +1552,14 @@ implements Runnable
 //	{
 //		//for (int i=0; i<args.length; i++)
 //		//{
-//		//	System.out.println("args["+i+"] == '"+args[i]+"'.");
+//		//	System.out.println("args[" + i + "] == '" + args[i] + "'.");
 //		//}
 //
 //		if (args.length == 0)
 //		{
 //			String appname = "alarm_tester"; 
 //			System.out.println("");
-//			System.out.println("Usage: "+appname+" ConfigFile");
+//			System.out.println("Usage: " + appname + " ConfigFile");
 //			System.out.println("");
 //			System.exit(1);
 //		}
@@ -1436,7 +1574,7 @@ implements Runnable
 //			System.out.println("");
 //			System.out.println("");
 //			System.out.println("");
-//			System.out.println("Setting up the configuration using config file '"+configFile+"'.");
+//			System.out.println("Setting up the configuration using config file '" + configFile + "'.");
 //			Configuration config = new Configuration(configFile);
 //			Configuration.setInstance(config);
 //
@@ -1502,7 +1640,7 @@ implements Runnable
 //					else
 //					{
 //						System.out.println("Looks like it's the wrong format, try again...");
-//						System.out.println("Found: AlarmEventXXX='"+eventName+"', serviceName='"+serviceName+"', serviceInfo='"+serviceInfo+"', extraInfo='"+extraInfo+"', desc='"+desc+"'.");
+//						System.out.println("Found: AlarmEventXXX='" + eventName + "', serviceName='" + serviceName + "', serviceInfo='" + serviceInfo + "', extraInfo='" + extraInfo + "', desc='" + desc + "'.");
 //						continue;
 //					}
 //					if (desc.endsWith(")"))
@@ -1542,7 +1680,7 @@ implements Runnable
 //					else if ( eventName.equals("AlarmEventWsSyncDbPostOperation")       ) AlarmHandler.getInstance().raise( new AlarmEventWsSyncDbPostOperation       (serviceName, serviceInfo, desc) );
 //					else
 //					{
-//						System.out.print("Unknown event '"+eventName+"'. try agin...");
+//						System.out.print("Unknown event '" + eventName + "'. try agin...");
 //						continue;
 //					}
 //				}

@@ -99,6 +99,7 @@ import com.asetune.gui.swing.ColumnHeaderPropsEntry;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTable;
 import com.asetune.gui.swing.GTable.ITableTooltip;
+import com.asetune.hostmon.HostMonitorMetaData;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PersistReader.PcsSavedException;
@@ -8500,8 +8501,18 @@ implements Cloneable, ITableTooltip
 			return null;
 
 		// Get DBMS Product which we are connected to
-		String productName = getCounterController().getMonConnection().getDatabaseProductName(); // This should be cached... if not then we hit severe performance bottleneck
+		String productName = null;
 
+		if (rsmd instanceof HostMonitorMetaData)
+		{
+			productName = "HostMonitor";
+		}
+		else
+		{
+			productName = getCounterController().getMonConnection().getDatabaseProductName(); // This should be cached... if not then we hit severe performance bottleneck
+		}
+		
+		
 		// Create the new object
 		ResultSetMetaDataCached originRsmd = new ResultSetMetaDataCached(rsmd, productName);
 

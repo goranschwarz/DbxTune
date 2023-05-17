@@ -83,7 +83,8 @@ extends PipeCommandAbstract
 		TRUNC  // Truncate UTF-8 String towards the destination, using the same/max length as the destination storage would accept. 
 	};
 	
-	
+	private static final int DEFAULT_batchSize = 10_000;
+
 	private static class CmdParams
 	{
 		//-----------------------
@@ -103,7 +104,7 @@ extends PipeCommandAbstract
 		String  _server             = null;
 		String  _url                = null;
 		String  _driver             = null; // not yet used
-		int     _batchSize          = 0;
+		int     _batchSize          = DEFAULT_batchSize;    // or should we use a default of 10_000 ... (I have seen when we just sits forever on last executeBatch() if batchSize is 0
 		boolean _slowBcp            = false;
 		boolean _slowBcpInTran      = true;
 		boolean _dropTab            = false;
@@ -441,7 +442,7 @@ extends PipeCommandAbstract
 			String error = "Error: " + pe.getMessage();
 			printHelp(options, error);
 			return null;
-		}	
+		}
 	}
 	private static void printHelp(Options options, String errorStr)
 	throws PipeCommandException
@@ -465,7 +466,7 @@ extends PipeCommandAbstract
 		sb.append("  -S,--server <server>        Destination Server to connect to (SERVERNAME|host:port). \n");
 		sb.append("  -D,--dbname <dbname>        Destination Database name in server. \n");
 		sb.append("  -u,--url <dest_db_url>      Destination DB URL, if it's not an ASE as destination.\n");
-		sb.append("  -b,--batchSize <num>        Batch size. \n");
+		sb.append("  -b,--batchSize <num>        Batch size (default=" + DEFAULT_batchSize + "). \n");
 		sb.append("  -s,--slowBcp                Sybase ASE: Do not set ENABLE_BULK_LOAD when connecting\n");
 		sb.append("                              SQL-Server: Do not set useBulkCopyForBatchInsert when connecting\n");
 		sb.append("  -d,--dropTable              Drop table before... if --crTable is also enabled, it will be re-created\n");
@@ -481,6 +482,7 @@ extends PipeCommandAbstract
 		sb.append("  \n");
 		sb.append("  Note 1: -D,--dbname and -s,--slowBcp is only used if you connects to ASE via the -S,--server switch\n");
 		sb.append("  Note 2: if you connect via -u,--url then ordinary JDBC Batch execution will be used.\n");
+		sb.append("  Note 3: if it takes to long time (or are *many* rows), try another --batchSize #####\n");
 		sb.append("  \n");
 		
 		throw new PipeCommandException(sb.toString());

@@ -93,6 +93,7 @@ import com.asetune.gui.swing.GLabel;
 import com.asetune.gui.swing.GTextField;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.RemoteFileSystemView;
 import com.asetune.ssh.SshConnection;
 import com.asetune.tools.NormalExitException;
@@ -128,7 +129,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 	private boolean            _startTailAfterSartup   = false;
                                
 	private FileType           _fileType               = FileType.UNKNOWN_LOG;
-	private Connection         _conn                   = null;
+	private DbxConnection      _conn                   = null;
 	private String             _servername             = null;
 	private String             _srvVersionStr          = null;
 //	private String             _tailFileName           = null;
@@ -214,7 +215,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 	 * @param filetype type of passed connection
 	 * @param conn 
 	 */
-	public LogTailWindow(Connection conn)
+	public LogTailWindow(DbxConnection conn)
 	{
 		super();
 		init(FileType.UNKNOWN_LOG, conn, null, null, null);
@@ -382,7 +383,7 @@ PropertyConfigurator.configure(log4jProps);
 //			hostPortStr = aseServer;
 
 		// Try make an initial connection...
-		Connection conn = null;
+    	DbxConnection conn = null;
 		if ( StringUtil.hasValue(tdsServer) )
 		{
 			// If -P was not passed: try to get any saved password 
@@ -400,7 +401,9 @@ PropertyConfigurator.configure(log4jProps);
 				if (hostPortStr.indexOf(":") < 0) // no host:port, go and get the hst:port from the interfaces file
 					hostPortStr = AseConnectionFactory.getIHostPortStr(hostPortStr);
 
-				conn = AseConnectionFactory.getConnection(hostPortStr, null, tdsUsername, tdsPassword, APP_NAME, Version.getVersionStr(), null, props, null);
+				
+				Connection jdbcConn = AseConnectionFactory.getConnection(hostPortStr, null, tdsUsername, tdsPassword, APP_NAME, Version.getVersionStr(), null, props, null);
+				conn = DbxConnection.createDbxConnection(jdbcConn);
 			}
 			catch (SQLException e)
 			{
@@ -454,7 +457,7 @@ PropertyConfigurator.configure(log4jProps);
 	//------------------------------------------------------------
 	//------------------------------------------------------------
 	//------------------------------------------------------------
-	private void init(FileType filetype, Connection conn, String servername, String srvVersionStr, String initialFile)
+	private void init(FileType filetype, DbxConnection conn, String servername, String srvVersionStr, String initialFile)
 	{
 		setTitle("Tail"); // Set window title
 		

@@ -77,7 +77,7 @@ import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.ssh.SshTunnelInfo;
-import com.asetune.ssh.SshTunnelManager2;
+import com.asetune.ssh.SshTunnelManager;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseUrlHelper;
@@ -372,14 +372,14 @@ implements ActionListener, ConnectionProgressCallback
 //System.out.println("ConnectionProgressDialog.init(): _sshTunnelInfo != null --- 111111");
 					tdsUrlHelper = AseUrlHelper.parseUrl(_urlStr);
 //System.out.println("ConnectionProgressDialog.init(): _sshTunnelInfo != null --- 222222");
-					SshTunnelManager2.getInstance().guessPort(tdsUrlHelper.getHostPortStr(), _sshTunnelInfo);
+					SshTunnelManager.getInstance().guessPort(tdsUrlHelper.getHostPortStr(), _sshTunnelInfo);
 //System.out.println("ConnectionProgressDialog.init(): _sshTunnelInfo != null --- 333333");
 					addTask(_sshTunnelInfo.getLocalHost()+":"+_sshTunnelInfo.getLocalPort());
 				}
 				else if (_rawJdbcUrl != null)
 				{
 					jdbcUrlParser = JdbcUrlParser.parse(_rawJdbcUrl);
-					SshTunnelManager2.getInstance().guessPort(jdbcUrlParser.getHostPortStr(), _sshTunnelInfo);
+					SshTunnelManager.getInstance().guessPort(jdbcUrlParser.getHostPortStr(), _sshTunnelInfo);
 					addTask(_sshTunnelInfo.getLocalHost()+":"+_sshTunnelInfo.getLocalPort());
 				}
 			}
@@ -1227,7 +1227,7 @@ finally
 //								_sshTunnelInfo.getSshPort(), 
 //								_sshTunnelInfo.getSshUsername(), 
 //								_sshTunnelInfo.getSshPassword());
-						SshTunnelManager2 tm = SshTunnelManager2.getInstance();
+						SshTunnelManager tm = SshTunnelManager.getInstance();
 
 						String hostPortStr = "dummy";
 						if (_urlStr != null)

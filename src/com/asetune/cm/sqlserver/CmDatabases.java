@@ -1763,6 +1763,15 @@ extends CountersModel
 			lastGoodCheckDbDays  = "    ,LastGoodCheckDbDays      = datediff(day, convert(datetime, DATABASEPROPERTYEX(d.Name, 'LastGoodCheckDbTime')), getdate()) \n";
 		}
 
+		// Is 'context_info_str' enabled (if it causes any problem, it can be disabled)
+		String contextInfoStr_1 = "/*        ,context_info_str = replace(cast(es.context_info as varchar(128)),char(0),'') -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
+		String contextInfoStr_2 = "/*    ,OldestTranContextInfoStr = oti.context_info_str -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
+		if (SqlServerCmUtils.isContextInfoStrEnabled())
+		{
+			// Make the binary 'context_info' into a String
+			contextInfoStr_1 = "        ,context_info_str = replace(cast(es.context_info as varchar(128)),char(0),'') /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
+			contextInfoStr_2 = "    ,OldestTranContextInfoStr = oti.context_info_str /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
+		}
 		
 		// ---- BACKUP INFORMATION
 		String backupInfo = ""
@@ -1992,6 +2001,7 @@ extends CountersModel
 			    + "\n"
 			    + "        ,es.last_request_start_time \n"
 			    + "        ,es.last_request_end_time \n"
+				+ contextInfoStr_1
 			    + "        ,er.statement_start_offset \n"
 			    + "        ,er.statement_end_offset \n"
 			    + "        ,er.wait_type \n"
@@ -2039,7 +2049,7 @@ extends CountersModel
 			    + availabilityGroupRole
 			    + availabilityGroupPrimaryServer
 			    + "    ,DataFileGroupCount       = data.fileGroupCount \n"
-			    + "    ,DBOwner                  = suser_sname(d.owner_sid) \n"
+			    + "    ,DBOwner                  = suser_sname(d.owner_sid) \n" // or possibly: original_login(), but that does not take a parameter
 			    + "    ,d.log_reuse_wait \n"
 			    + "    ,d.log_reuse_wait_desc \n"
 			    + " \n"
@@ -2091,6 +2101,7 @@ extends CountersModel
 //			    + "                                ) \n"
 //Possibly move above (OldestTranTempdbUsageMb) to section; "oti"
 			    + "    ,OldestTranProg           = oti.program_name \n"
+			    + contextInfoStr_2
 			    + "    ,OldestTranUser           = oti.login_name \n"
 			    + "    ,OldestTranHost           = oti.host_name \n"
 //			    + "--  ,OldestTranPage           = -1 \n"

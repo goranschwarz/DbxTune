@@ -193,7 +193,7 @@ extends PostgresAbstract
 				+ "</script> \n"
 				+ "\n"
 				+ "";
-		
+
 		String detailsForAboveStatementsMso = ""
 				+ ""
 				+ "Details for above Statements  <br>"
@@ -338,14 +338,16 @@ extends PostgresAbstract
 			setSectionDescription(_msoRstm);
 		}
 
-		// Create charts
-		_CmSummary_oldestComboInSec = createTsLineChart(conn, "CmSummary", "oldestComboInSec", -1, false, null, "Oldest Xact/Stmnt/State in Seconds");
-		_CmSummary_oldestXactInSec  = createTsLineChart(conn, "CmSummary", "oldestXactInSec" , -1, false, null, "Oldest Open Transaction in Seconds");
-		_CmSummary_oldestStmntInSec = createTsLineChart(conn, "CmSummary", "oldestStmntInSec", -1, false, null, "Oldest Statement in Seconds");
-		_CmSummary_oldestStateInSec = createTsLineChart(conn, "CmSummary", "oldestStateInSec", -1, false, null, "Oldest State in Seconds");
+		String schema = getReportingInstance().getDbmsSchemaName();
 
-		_CmSummary_blkLockCount     = createTsLineChart(conn, "CmSummary", "blkLockCount"    , -1, false, null, "Blocking Locks Count");
-		_CmSummary_blkMaxWaitTime   = createTsLineChart(conn, "CmSummary", "blkMaxWaitTime"  , -1, false, null, "Max Wait Time for Blocking Locks in Seconds");
+		// Create charts
+		_CmSummary_oldestComboInSec = createTsLineChart(conn, schema, "CmSummary", "oldestComboInSec", -1, false, null, "Oldest Xact/Stmnt/State in Seconds");
+		_CmSummary_oldestXactInSec  = createTsLineChart(conn, schema, "CmSummary", "oldestXactInSec" , -1, false, null, "Oldest Open Transaction in Seconds");
+		_CmSummary_oldestStmntInSec = createTsLineChart(conn, schema, "CmSummary", "oldestStmntInSec", -1, false, null, "Oldest Statement in Seconds");
+		_CmSummary_oldestStateInSec = createTsLineChart(conn, schema, "CmSummary", "oldestStateInSec", -1, false, null, "Oldest State in Seconds");
+
+		_CmSummary_blkLockCount     = createTsLineChart(conn, schema, "CmSummary", "blkLockCount"    , -1, false, null, "Blocking Locks Count");
+		_CmSummary_blkMaxWaitTime   = createTsLineChart(conn, schema, "CmSummary", "blkMaxWaitTime"  , -1, false, null, "Max Wait Time for Blocking Locks in Seconds");
 	}
 
 	private IReportChart _CmSummary_oldestComboInSec;

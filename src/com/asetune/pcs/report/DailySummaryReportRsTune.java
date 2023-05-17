@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import com.asetune.pcs.report.content.os.CmOsNwInfoOverview;
 import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
 import com.asetune.pcs.report.content.os.OsIoStatOverview;
 import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
@@ -45,5 +46,8 @@ extends DailySummaryReportDefault
 		// Disk IO Activity
 		addReportEntry( new OsIoStatOverview(this)     );
 		addReportEntry( new OsIoStatSlowIo(this)       );
+
+		// Network Activity
+		addReportEntry( new CmOsNwInfoOverview(this)   );
 	}
 }

@@ -89,10 +89,10 @@ extends DbmsObjectIdCache
 	 * SINGLE OBJECT LOAD/REQUEST for Postgres... 
 	 */
 	@Override
-	protected ObjectInfo get(DbxConnection conn, LookupType lookupType, long dbid, Number lookupId) 
+	protected ObjectInfo get(DbxConnection templateConn, LookupType lookupType, long dbid, Number lookupId) 
 	throws TimeoutException
 	{
-		if (conn == null)
+		if (templateConn == null)
 			return null;
 
 		// Get database name from ID, if nor found... go and get it
@@ -100,7 +100,7 @@ extends DbmsObjectIdCache
 		if (StringUtil.isNullOrBlank(dbname))
 		{
 			String sql = "SELECT datname FROM pg_database WHERE oid = " + dbid;
-			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			try (Statement stmnt = templateConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 			{
 				while(rs.next())
 				{
@@ -131,6 +131,11 @@ extends DbmsObjectIdCache
 		else throw new RuntimeException("Unknown Lookup Type '" + lookupType + "'.");
 
 
+		// Since we need a connection to each of the databases... setup a connection pool, which will hold connections!
+		// Note: This ConnectionPool will be reused by some CM's later on
+		if ( ! DbxConnectionPoolMap.hasInstance() )
+			DbxConnectionPoolMap.setInstance(new DbxConnectionPoolMap());
+
 		String sql = ""
 			    + "SELECT \n"
 			    + "     ns.oid       AS schema_id \n"    // 1
@@ -149,81 +154,97 @@ extends DbmsObjectIdCache
 			    + "  AND tc.oid = ? \n"
 			    + "ORDER BY tc.oid, i.indexrelid \n"
 			    + "";
-		
-		// return object
-		ObjectInfo objectInfo = null;
-		long execStartTime = System.currentTimeMillis();
 
-		try (PreparedStatement pstmnt = conn.prepareStatement(sql)) // Auto CLOSE
+		try
 		{
-			// Timeout after 2 second --- if we get blocked when doing: object_name()
-			pstmnt.setQueryTimeout(2);
-			
-			// set lookup ID
-			pstmnt.setLong(1, lookupId.longValue());
+			// CONNECT/GRAB a connection TO the database (use some Connection Pool for the dbname)
+			DbxConnection dbConn = CounterSampleCatalogIteratorPostgres.getConnection(null, templateConn, dbname);
 
-			// Execute and read results
-			try (ResultSet rs = pstmnt.executeQuery()) // Auto CLOSE
+			// return object
+			ObjectInfo objectInfo = null;
+			long execStartTime = System.currentTimeMillis();
+
+			try (PreparedStatement pstmnt = dbConn.prepareStatement(sql)) // Auto CLOSE
 			{
-				while(rs.next())
+				// Timeout after 2 second --- if we get blocked when doing: object_name()
+				pstmnt.setQueryTimeout(2);
+				
+				// set lookup ID
+				pstmnt.setLong(1, lookupId.longValue());
+
+				// Execute and read results
+				try (ResultSet rs = pstmnt.executeQuery()) // Auto CLOSE
 				{
-					long   schemaId    = rs.getLong  (1);
-					String schemaName  = rs.getString(2);
-					long   objectId    = rs.getLong  (3);
-					String objectName  = rs.getString(4);
-					long   indexId     = rs.getLong  (5);
-					String indexName   = rs.getString(6);
-					String relKind     = rs.getString(7);
-
-					// Transform to a normalized ObjectType
-					ObjectType objectType = getObjectType(schemaName, relKind);
-
-					// Create a new ObjectInfo
-					objectInfo = new ObjectInfo(dbid, dbname, schemaId, schemaName, objectId, objectName, objectType);
-
-					// In the super (which is/holds the cache)... add the info...
-					// and yes we can do that because the Index Id/Name has it's own Map
-					super.setObjectInfo(dbid, objectId, objectInfo);
-
-					// On consequent rows: Just add the indexes (if we got any)
-					if (StringUtil.hasValue(indexName)) 
+					while(rs.next())
 					{
-						super.addIndex(dbid, objectId, indexId, indexName);
+						long   schemaId    = rs.getLong  (1);
+						String schemaName  = rs.getString(2);
+						long   objectId    = rs.getLong  (3);
+						String objectName  = rs.getString(4);
+						long   indexId     = rs.getLong  (5);
+						String indexName   = rs.getString(6);
+						String relKind     = rs.getString(7);
+
+						// Transform to a normalized ObjectType
+						ObjectType objectType = getObjectType(schemaName, relKind);
+
+						// Create a new ObjectInfo
+						objectInfo = new ObjectInfo(dbid, dbname, schemaId, schemaName, objectId, objectName, objectType);
+
+						// In the super (which is/holds the cache)... add the info...
+						// and yes we can do that because the Index Id/Name has it's own Map
+						super.setObjectInfo(dbid, objectId, objectInfo);
+
+						// On consequent rows: Just add the indexes (if we got any)
+						if (StringUtil.hasValue(indexName)) 
+						{
+							super.addIndex(dbid, objectId, indexId, indexName);
+							
+							// In Postgres an index is it's OWN relation
+							// We need to add it as an Object as well
+							ObjectInfo indexObjectInfo = new ObjectInfo(dbid, dbname, schemaId, schemaName, indexId, indexName, ObjectType.INDEX);
+							super.setObjectInfo(dbid, indexId, indexObjectInfo);
+						}
 						
-						// In Postgres an index is it's OWN relation
-						// We need to add it as an Object as well
-						ObjectInfo indexObjectInfo = new ObjectInfo(dbid, dbname, schemaId, schemaName, indexId, indexName, ObjectType.INDEX);
-						super.setObjectInfo(dbid, indexId, indexObjectInfo);
-					}
-					
-				} // end: rs.next()
+					} // end: rs.next()
+				}
 			}
+			catch (SQLException ex)
+			{
+				long execTime = TimeUtils.msDiffNow(execStartTime);
+
+				// jdbc.setQueryTimeout() causes: MsgText=...query has timed out...
+				// (NOTE: This is for SQL Server... need to find/test similar for Postgres)
+				if ( ex.getErrorCode() == 1222 || (ex.getMessage() != null && ex.getMessage().contains("query has timed out")) )
+				{
+					_logger.warn("DbmsObjectIdCachePostgres.get(conn, lookupType=" + lookupType + ", dbid=" + dbid + " [dbname=" + dbname + "], lookupId=" + lookupId + "): Problems getting schema/table/index name. The query has timed out (after " + execTime + " ms). But the lock information will still be returned (but without the schema/table/index name.");
+					throw new TimeoutException();
+				}
+				else
+				{
+					_logger.warn("DbmsObjectIdCachePostgres.get(conn, lookupType=" + lookupType + ", dbid=" + dbid + " [dbname=" + dbname + "], lookupId=" + lookupId + ")): Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "', execTime=" + execTime + " ms.", ex);
+				}
+			}
+			finally 
+			{
+				// IMPORTANT: Give the connection back to the Connection Pool
+				CounterSampleCatalogIteratorPostgres.releaseConnection(null, dbConn, dbname);
+			}
+
+			if (_logger.isDebugEnabled())
+			{
+				_logger.debug(" << DbmsObjectIdCachePostgres.get(SINGEL-OBJ): Lookup for: dbid=" + dbid +", lookupId=" + lookupId + ". Returning: objectInfo=" + objectInfo);
+			}
+//System.out.println("        << DbmsObjectIdCachePostgres.get(SINGEL-OBJ): Lookup for: dbid=" + dbid +", lookupId=" + lookupId + ". Returning: objectInfo=" + objectInfo);
+
+			// Finally: return the object... although the 'super.setObjectInfo(...)' saves/set the mapping to the in-memory Cache
+			return objectInfo;
 		}
 		catch (SQLException ex)
 		{
-			long execTime = TimeUtils.msDiffNow(execStartTime);
-			
-			// SET LOCK_TIMEOUT ### causes:   ErrorCode=1222, MsgText=Lock request time out period exceeded.   (NOTE: This is for SQL Server... need to find similar for Postgres)
-			// jdbc.setQueryTimeout() causes:                 MsgText=...query has timed out...                (NOTE: This is for SQL Server... need to find similar for Postgres)
-			if ( ex.getErrorCode() == 1222 || (ex.getMessage() != null && ex.getMessage().contains("query has timed out")) )
-			{
-				_logger.warn("DbmsObjectIdCachePostgres.get(conn, lookupType=" + lookupType + ", dbid=" + dbid + " [dbname=" + dbname + "], lookupId=" + lookupId + "): Problems getting schema/table/index name. The query has timed out (after " + execTime + " ms). But the lock information will still be returned (but without the schema/table/index name.");
-				throw new TimeoutException();
-			}
-			else
-			{
-				_logger.warn("DbmsObjectIdCachePostgres.get(conn, lookupType=" + lookupType + ", dbid=" + dbid + " [dbname=" + dbname + "], lookupId=" + lookupId + ")): Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "', execTime=" + execTime + " ms.", ex);
-			}
+			_logger.error("Problems connecting to Postgres for database '" + dbname + "'. Skipping (SINGEL-OBJ) Lookup for: database='" + dbname + "', dbid=" + dbid +", lookupId=" + lookupId + "'.", ex);
+			return null;
 		}
-
-		if (_logger.isDebugEnabled())
-		{
-			_logger.debug(" << DbmsObjectIdCachePostgres.get(SINGEL-OBJ): Lookup for: dbid=" + dbid +", lookupId=" + lookupId + ". Returning: objectInfo=" + objectInfo);
-		}
-//System.out.println("        << DbmsObjectIdCachePostgres.get(SINGEL-OBJ): Lookup for: dbid=" + dbid +", lookupId=" + lookupId + ". Returning: objectInfo=" + objectInfo);
-
-		// Finally: return the object... although the 'super.setObjectInfo(...)' saves/set the mapping to the in-memory Cache
-		return objectInfo;
 	}
 
 //	FIXME; test multidatabase;

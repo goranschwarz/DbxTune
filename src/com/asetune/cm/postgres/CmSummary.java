@@ -618,7 +618,7 @@ extends CountersModel
 
 				
 				if (blocking_lock_count > threshold && tmpBlockingLockWaitInSec > waitThreshold)
-					AlarmHandler.getInstance().addAlarm( new AlarmEventBlockingLockAlarm(cm, threshold, blocking_lock_count, blocking_lock_wait_in_sec) );
+					AlarmHandler.getInstance().addAlarm( new AlarmEventBlockingLockAlarm(cm, waitThreshold, blocking_lock_count, blocking_lock_wait_in_sec) );
 			}
 		}
 
@@ -665,7 +665,7 @@ extends CountersModel
 	public static final int     DEFAULT_alarm_BlockingLockCount                = 0;
 
 	public static final String  PROPKEY_alarm_BlockingLockCount_minWaitTimeSec = CM_NAME + ".alarm.system.if.blocking_lock_count.minWaitTimeSec";
-	public static final double  DEFAULT_alarm_BlockingLockCount_minWaitTimeSec = 30.0;
+	public static final double  DEFAULT_alarm_BlockingLockCount_minWaitTimeSec = 60.0;
 
 	public static final String  PROPKEY_alarm_oldestOpenTranInSec              = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.gt";
 //	public static final int     DEFAULT_alarm_oldestOpenTranInSec              = 60 * 5; // 5 Minutes

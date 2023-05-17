@@ -377,7 +377,9 @@ extends PostgresAbstract
 					.validate()));
 		}
 		
-		_CmPgTables_DeadRows = createTsLineChart(conn, "CmPgTables", "DeadRows", -1, true, null, "Number of Dead Rows per Database(n_dead_tup) per Database");
+		String schema = getReportingInstance().getDbmsSchemaName();
+
+		_CmPgTables_DeadRows = createTsLineChart(conn, schema, "CmPgTables", "DeadRows", -1, true, null, "Number of Dead Rows per Database(n_dead_tup) per Database");
 
 	
 		// Get 'Autovacuum' server config values

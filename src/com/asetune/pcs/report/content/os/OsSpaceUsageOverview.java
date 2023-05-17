@@ -103,10 +103,12 @@ public class OsSpaceUsageOverview extends OsAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
+		String schema = getReportingInstance().getDbmsSchemaName();
+
 		int maxValue = 100;
-		_CmOsDiskSpace_FsUsedPct     = createTsLineChart(conn, "CmOsDiskSpace", "FsUsedPct",     maxValue, false, null, "df: Space Used in Percent, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
-		_CmOsDiskSpace_FsAvailableMb = createTsLineChart(conn, "CmOsDiskSpace", "FsAvailableMb", -1,       false, null, "df: Space Available in MB, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
-		_CmOsDiskSpace_FsUsedMb      = createTsLineChart(conn, "CmOsDiskSpace", "FsUsedMb",      -1,       false, null, "df: Space Used in MB, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
+		_CmOsDiskSpace_FsUsedPct     = createTsLineChart(conn, schema, "CmOsDiskSpace", "FsUsedPct",     maxValue, false, null, "df: Space Used in Percent, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
+		_CmOsDiskSpace_FsAvailableMb = createTsLineChart(conn, schema, "CmOsDiskSpace", "FsAvailableMb", -1,       false, null, "df: Space Available in MB, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
+		_CmOsDiskSpace_FsUsedMb      = createTsLineChart(conn, schema, "CmOsDiskSpace", "FsUsedMb",      -1,       false, null, "df: Space Used in MB, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
 	}
 
 	private IReportChart _CmOsDiskSpace_FsUsedPct;

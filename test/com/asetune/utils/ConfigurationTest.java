@@ -87,10 +87,10 @@ public class ConfigurationTest
 	{
 		System.out.println("---noTempConfig-------------------------------------------------------------");
 
-		Configuration.setInstance(Configuration.USER_TEMP, new Configuration());
-		Configuration.setInstance(Configuration.USER_CONF, new Configuration());
+		Configuration.setInstance(Configuration.USER_TEMP  , new Configuration());
+		Configuration.setInstance(Configuration.USER_CONF  , new Configuration());
 		Configuration.setInstance(Configuration.SYSTEM_CONF, new Configuration());
-		Configuration.setInstance(Configuration.PCS, new Configuration());
+		Configuration.setInstance(Configuration.PCS        , new Configuration());
 
 		Configuration.setSearchOrder(
 				Configuration.PCS,          // First
@@ -133,5 +133,216 @@ public class ConfigurationTest
 		System.out.println("cConf.getBooleanProperty('tmp.key.boolean.1')=="+bval);
 		assertEquals(false, bval);
 		
+	}
+
+
+	@Test
+	public void defaultValues_1()
+	throws Exception
+	{
+		System.out.println("---defaultValues_1-------------------------------------------------------------");
+
+		Configuration.setInstance(Configuration.USER_TEMP  , new Configuration());
+		Configuration.setInstance(Configuration.USER_CONF  , new Configuration());
+		Configuration.setInstance(Configuration.SYSTEM_CONF, new Configuration());
+		Configuration.setInstance(Configuration.PCS        , new Configuration());
+
+		Configuration.setSearchOrder(
+				Configuration.PCS,          // First
+				Configuration.USER_TEMP,    // Second
+				Configuration.USER_CONF,    // Third
+				Configuration.SYSTEM_CONF); // Forth
+
+		System.out.println("Combined Configuration Search Order '"                  + StringUtil.toCommaStr(Configuration.getSearchOrder()) + "'.");
+		System.out.println("Combined Configuration Search Order, With file names: " + StringUtil.toCommaStr(Configuration.getSearchOrder(true)));
+
+
+		//------------------------------------------------
+		Configuration.registerDefaultValue("dummy.string.withDefaultValue", "string-default");
+		Configuration.registerDefaultValue("dummy.boolean.withDefaultValue", false);
+		Configuration.registerDefaultValue("dummy.int.withDefaultValue",     -1);
+		Configuration.registerDefaultValue("dummy.long.withDefaultValue",    -2L);
+		Configuration.registerDefaultValue("dummy.double.withDefaultValue",  -3D);
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+		// The below should return the default REGISTERED value, since no property exists in "any" of the configurations 
+		assertEquals("string-default", conf.getProperty       ("dummy.string.withDefaultValue" , "xxx"));
+		assertEquals(false           , conf.getBooleanProperty("dummy.boolean.withDefaultValue", true));
+		assertEquals(-1              , conf.getIntProperty    ("dummy.int.withDefaultValue"    , -11));
+		assertEquals(-2L             , conf.getLongProperty   ("dummy.long.withDefaultValue"   , -22L));
+		assertEquals(-3D             , conf.getDoubleProperty ("dummy.double.withDefaultValue" , -33D), 0D);
+
+		// Remove ALL of the above registered defaults (for other tests to work)
+		Configuration.removeAllRegisterDefaultValues();
+		
+	}
+
+	@Test
+	public void defaultValues_2()
+	throws Exception
+	{
+		System.out.println("---defaultValues_2-------------------------------------------------------------");
+
+		Configuration.setInstance(Configuration.USER_TEMP  , new Configuration());
+		Configuration.setInstance(Configuration.USER_CONF  , new Configuration());
+		Configuration.setInstance(Configuration.SYSTEM_CONF, new Configuration());
+		Configuration.setInstance(Configuration.PCS        , new Configuration());
+
+		Configuration.setSearchOrder(
+				Configuration.PCS,          // First
+				Configuration.USER_TEMP,    // Second
+				Configuration.USER_CONF,    // Third
+				Configuration.SYSTEM_CONF); // Forth
+
+		System.out.println("Combined Configuration Search Order '"                  + StringUtil.toCommaStr(Configuration.getSearchOrder()) + "'.");
+		System.out.println("Combined Configuration Search Order, With file names: " + StringUtil.toCommaStr(Configuration.getSearchOrder(true)));
+
+
+		//------------------------------------------------
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+		Configuration tmp  = Configuration.getInstance(Configuration.USER_TEMP);
+
+		//-----------------------------------------
+		// TEST plain 'USE_DEFAULT'
+		//-----------------------------------------
+		tmp.setProperty("dummy.string.withDefaultValue" , "USE_DEFAULT");
+		tmp.setProperty("dummy.boolean.withDefaultValue", "USE_DEFAULT");
+		tmp.setProperty("dummy.int.withDefaultValue"    , "USE_DEFAULT");
+		tmp.setProperty("dummy.long.withDefaultValue"   , "USE_DEFAULT");
+		tmp.setProperty("dummy.double.withDefaultValue" , "USE_DEFAULT");
+
+		// The below should return the default (second parameter to getXxxProperty), since there is NO REGISTERED Value in this test
+		assertEquals("xxx", conf.getProperty       ("dummy.string.withDefaultValue" , "xxx"));
+		assertEquals(true , conf.getBooleanProperty("dummy.boolean.withDefaultValue", true));
+		assertEquals(-11  , conf.getIntProperty    ("dummy.int.withDefaultValue"    , -11));
+		assertEquals(-22L , conf.getLongProperty   ("dummy.long.withDefaultValue"   , -22L));
+		assertEquals(-33D , conf.getDoubleProperty ("dummy.double.withDefaultValue" , -33D), 0D);
+
+		
+		//-----------------------------------------
+		// TEST plain 'USE_DEFAULT: some value'
+		//-----------------------------------------
+		tmp.setProperty("dummy.string.withDefaultValue" , "USE_DEFAULT: 1");
+		tmp.setProperty("dummy.boolean.withDefaultValue", "USE_DEFAULT: 2");
+		tmp.setProperty("dummy.int.withDefaultValue"    , "USE_DEFAULT: 3");
+		tmp.setProperty("dummy.long.withDefaultValue"   , "USE_DEFAULT: 4");
+		tmp.setProperty("dummy.double.withDefaultValue" , "USE_DEFAULT: 5");
+
+		// The below should return the default (second parameter to getXxxProperty), since there is NO REGISTERED Value in this test
+		assertEquals("xxx", conf.getProperty       ("dummy.string.withDefaultValue" , "xxx"));
+		assertEquals(true , conf.getBooleanProperty("dummy.boolean.withDefaultValue", true));
+		assertEquals(-11  , conf.getIntProperty    ("dummy.int.withDefaultValue"    , -11));
+		assertEquals(-22L , conf.getLongProperty   ("dummy.long.withDefaultValue"   , -22L));
+		assertEquals(-33D , conf.getDoubleProperty ("dummy.double.withDefaultValue" , -33D), 0D);
+	}
+
+
+
+	@Test
+	public void defaultValuesRaw_1()
+	throws Exception
+	{
+		System.out.println("---defaultValuesRaw_1-------------------------------------------------------------");
+
+		Configuration.setInstance(Configuration.USER_TEMP  , new Configuration());
+		Configuration.setInstance(Configuration.USER_CONF  , new Configuration());
+		Configuration.setInstance(Configuration.SYSTEM_CONF, new Configuration());
+		Configuration.setInstance(Configuration.PCS        , new Configuration());
+
+		Configuration.setSearchOrder(
+				Configuration.PCS,          // First
+				Configuration.USER_TEMP,    // Second
+				Configuration.USER_CONF,    // Third
+				Configuration.SYSTEM_CONF); // Forth
+
+		System.out.println("Combined Configuration Search Order '"                  + StringUtil.toCommaStr(Configuration.getSearchOrder()) + "'.");
+		System.out.println("Combined Configuration Search Order, With file names: " + StringUtil.toCommaStr(Configuration.getSearchOrder(true)));
+
+
+		//------------------------------------------------
+		Configuration.registerDefaultValue("dummy.string.withDefaultValue", "string-default");
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+		Configuration tmp  = Configuration.getInstance(Configuration.USER_TEMP);
+
+		// The below should return the default REGISTERED value, since no property exists in "any" of the configurations 
+		assertEquals("string-default", tmp .getPropertyRaw("dummy.string.withDefaultValue" , "xxx"));
+		assertEquals("string-default", conf.getPropertyRaw("dummy.string.withDefaultValue" , "xxx"));
+
+		// Remove ALL of the above registered defaults (for other tests to work)
+		Configuration.removeAllRegisterDefaultValues();
+		
+	}
+
+	@Test
+	public void defaultValuesRaw_2()
+	throws Exception
+	{
+		System.out.println("---defaultValuesRaw_2-------------------------------------------------------------");
+
+		Configuration.setInstance(Configuration.USER_TEMP  , new Configuration());
+		Configuration.setInstance(Configuration.USER_CONF  , new Configuration());
+		Configuration.setInstance(Configuration.SYSTEM_CONF, new Configuration());
+		Configuration.setInstance(Configuration.PCS        , new Configuration());
+
+		Configuration.setSearchOrder(
+				Configuration.PCS,          // First
+				Configuration.USER_TEMP,    // Second
+				Configuration.USER_CONF,    // Third
+				Configuration.SYSTEM_CONF); // Forth
+
+		System.out.println("Combined Configuration Search Order '"                  + StringUtil.toCommaStr(Configuration.getSearchOrder()) + "'.");
+		System.out.println("Combined Configuration Search Order, With file names: " + StringUtil.toCommaStr(Configuration.getSearchOrder(true)));
+
+
+		//------------------------------------------------
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+		Configuration tmp  = Configuration.getInstance(Configuration.USER_TEMP);
+
+		//-----------------------------------------
+		// TEST plain (from: tmp & combinedConf)
+		//-----------------------------------------
+		tmp.setProperty("dummy.string.dummy" , " xxx ");
+
+		assertEquals("xxx"  , tmp.getPropertyRaw   ("dummy.string.dummy"));
+		assertEquals(" xxx ", tmp.getPropertyRawVal("dummy.string.dummy"));
+
+		assertEquals("xxx"  , tmp.getPropertyRaw   ("dummy.string.dummy" , "aaa"));
+		assertEquals(" xxx ", tmp.getPropertyRawVal("dummy.string.dummy" , "bbb"));
+
+		assertEquals("xxx"  , conf.getPropertyRaw   ("dummy.string.dummy"));
+		assertEquals(" xxx ", conf.getPropertyRawVal("dummy.string.dummy"));
+
+		assertEquals("xxx"  , conf.getPropertyRaw   ("dummy.string.dummy" , "aaa"));
+		assertEquals(" xxx ", conf.getPropertyRawVal("dummy.string.dummy" , "bbb"));
+
+		
+		//-----------------------------------------
+		// TEST plain 'USE_DEFAULT' (from: tmp & combinedConf)
+		//-----------------------------------------
+		tmp.setProperty("dummy.string.withDefaultValue" , "USE_DEFAULT");
+
+		// The below should return the default (second parameter to getXxxProperty), since there is NO REGISTERED Value in this test
+		assertEquals("xxx"  , tmp .getPropertyRaw   ("dummy.string.withDefaultValue" , "xxx"));
+		assertEquals(" xxx ", tmp .getPropertyRawVal("dummy.string.withDefaultValue" , " xxx "));
+
+		assertEquals("xxx"  , conf.getPropertyRaw   ("dummy.string.withDefaultValue" , "xxx"));
+		assertEquals(" xxx ", conf.getPropertyRawVal("dummy.string.withDefaultValue" , " xxx "));
+
+		
+		//-----------------------------------------
+		// TEST plain 'USE_DEFAULT: some value' (from: tmp & combinedConf)
+		//-----------------------------------------
+		tmp.setProperty("dummy.string.withDefaultValue" , "USE_DEFAULT: 1");
+
+		// The below should return the default (second parameter to getXxxProperty), since there is NO REGISTERED Value in this test
+		assertEquals("xxx"  , tmp .getPropertyRaw   ("dummy.string.withDefaultValue" , "xxx"));
+		assertEquals(" xxx ", tmp .getPropertyRawVal("dummy.string.withDefaultValue" , " xxx "));
+
+		assertEquals("xxx"  , conf.getPropertyRaw   ("dummy.string.withDefaultValue" , "xxx"));
+		assertEquals(" xxx ", conf.getPropertyRawVal("dummy.string.withDefaultValue" , " xxx "));
 	}
 }

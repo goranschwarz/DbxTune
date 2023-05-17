@@ -332,6 +332,15 @@ extends CountersModel
 			ssu__s_user_objects_deferred_dealloc_page_count = "    ,tmp_user_objects_deferred_dealloc_mb = convert(numeric(12,1), (ssu.user_objects_deferred_dealloc_page_count) / 128.0)  -- SP ?? in 2012 & 2014 \n";
 		}
 
+		// Is 'context_info_str' enabled (if it causes any problem, it can be disabled)
+		String contextInfoStr = "/*    ,context_info_str = replace(cast(es.context_info as varchar(128)),char(0),'') -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
+		if (SqlServerCmUtils.isContextInfoStrEnabled())
+		{
+			// Make the binary 'context_info' into a String
+			contextInfoStr = "    ,context_info_str = replace(cast(es.context_info as varchar(128)),char(0),'') /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
+		}
+
+		
 		//--------------------------------------------------------------------------
 		//---- NOTE ---- NOTE ---- NOTE ---- NOTE ---- NOTE ---- NOTE ---- NOTE ----
 		//--------------------------------------------------------------------------
@@ -381,6 +390,7 @@ extends CountersModel
 			    + "    ,es.host_name \n"
 			    + "    ,es.host_process_id \n"
 			    + "    ,es.program_name \n"
+			    +       contextInfoStr
 
 			    + es__database_id
 			    + es__DBName
@@ -1343,11 +1353,13 @@ extends CountersModel
 
 			// In here we could try to decode the 'page_type_desc' based on page number... PFS, GAM, SGAM... etc 
 			// The below algorithm is reused from 'sp_whoIsActive'
-			if      (pageNum == 1 ||       pageNum % 8088   == 0) wi._pageTypeDesc = "PFS";
-			else if (pageNum == 2 ||       pageNum % 511232 == 0) wi._pageTypeDesc = "GAM";
-			else if (pageNum == 3 || (pageNum - 1) % 511232 == 0) wi._pageTypeDesc = "SGAM";
-			else if (pageNum == 6 || (pageNum - 6) % 511232 == 0) wi._pageTypeDesc = "DCM";
-			else if (pageNum == 7 || (pageNum - 7) % 511232 == 0) wi._pageTypeDesc = "BCM";
+			// and description from: https://www.sqlskills.com/blogs/paul/inside-the-storage-engine-gam-sgam-pfs-and-other-allocation-maps/
+			// and https://learn.microsoft.com/en-us/sql/relational-databases/pages-and-extents-architecture-guide?view=sql-server-ver16#manage-extent-allocations
+			if      (pageNum == 1 ||       pageNum % 8088   == 0) wi._pageTypeDesc = "PFS";  // PFS stands for Page Free Space
+			else if (pageNum == 2 ||       pageNum % 511232 == 0) wi._pageTypeDesc = "GAM";  // Global Allocation Map
+			else if (pageNum == 3 || (pageNum - 1) % 511232 == 0) wi._pageTypeDesc = "SGAM"; // Shared Global Allocation Map
+			else if (pageNum == 6 || (pageNum - 6) % 511232 == 0) wi._pageTypeDesc = "DCM";  // DIFF map page -- DIFF stands for differential. These pages track which extents have been modified since the last full backup was taken
+			else if (pageNum == 7 || (pageNum - 7) % 511232 == 0) wi._pageTypeDesc = "BCM";  // ML map page   -- ML stands for Minimally Logged. These pages track which extents have been modified by minimally-logged operations since the last transaction log backup when using the BULK_LOGGED recovery model
 
 			// Check if this is enabled or not (in the configuration)
 			boolean isEnabled = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_ON_WAIT_RESOURCE__GET_PAGE_INFO, DEFAULT_ON_WAIT_RESOURCE__GET_PAGE_INFO);

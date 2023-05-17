@@ -51,6 +51,19 @@ function jsonToTable(json, stripHtmlInCells, trCallback, tdCallback, jsonMetaDat
 		}
 	}
 
+	// If it's NOT a array with MetaData Objects...
+	// Create a *simple* object 
+	if ( ! Array.isArray(jsonMetaDataArr) )
+	{
+		jsonMetaDataArr = [];
+		
+		for (var i = 0; i < col.length; i++) 
+		{
+			jsonMetaDataArr.push( {columnName:col[i]} );
+		}
+	}
+
+
 	// CREATE DYNAMIC TABLE.
 	var table = document.createElement("table");
 	var thead = table.createTHead();
@@ -119,7 +132,9 @@ function jsonToTable(json, stripHtmlInCells, trCallback, tdCallback, jsonMetaDat
 			// Use callback function to set TD properties
 			if (typeof tdCallback === 'function')
 			{
-				var cellMetaData = jsonMetaDataArr[j];
+				var cellMetaData = {};
+				if (Array.isArray(jsonMetaDataArr))
+					cellMetaData = jsonMetaDataArr[j];
 
 				tdCallback(tabCell, cellMetaData, originTxt, json[i]);
 			}
@@ -386,6 +401,9 @@ function activeStatementsPausedChkClick(checkbox)
 
 	if ( ! document.getElementById("active-statements-paused-chk").checked )
 	{
+		// Reset Last Active to ensure refresh
+		_lastActiveStatementData = "";
+
 		// When we UN-Pause we need to check for saved/current Active Statements
 		dbxTuneCheckActiveStatements(); 
 	}
@@ -522,9 +540,17 @@ setTimeout(function()
 /**
  * Get Active Statements saved in the Central PCS (last known/received values)
  */
+// Remember last active statements (if no changes, then we can skip the update)
+var _lastActiveStatementData = "";
 function dbxTuneCheckActiveStatements()
 {
 	console.log("dbxTuneCheckActiveStatements()");
+
+	if ( ! _subscribe )
+	{
+		$("#subscribe-feedback-msg").html("<s>subscribe</s>");
+		return;
+	}
 
 //	const srvName = _serverList[0]; // NOTE: This needs to be improved... check for many etc...
 	const srvName = _serverList.join(','); // to CSV
@@ -542,6 +568,19 @@ function dbxTuneCheckActiveStatements()
 			
 		success: function(data, status) 
 		{
+			console.log("DEBUG: dbxTuneCheckActiveStatements(): CALL SUCCESS...");
+		//	console.log("DEBUG: dbxTuneCheckActiveStatements(): CALL SUCCESS... data & _lastActiveStatementData", data, _lastActiveStatementData);
+			if (data === _lastActiveStatementData)
+			{
+				console.log("DEBUG: dbxTuneCheckActiveStatements(): NO DATA CHANGE for STATEMENTS...");
+
+				// This will just clear the Watermark if we are in PAUSED mode
+				setActiveStatement();
+
+				return;
+			}
+			_lastActiveStatementData = data;
+			
 			var jsonResp = JSON.parse(data);
 			console.log("RECEIVED DATA[dbxTuneCheckActiveStatements]: ", jsonResp);
 
@@ -638,9 +677,56 @@ setTimeout(function()
 }, 10);
 
 
+// Create a CALLBACK function to set TableRow Colors etc, used when calling: jsonToTable(...)
+var alarmTrCallback = function(tr, row)
+{
+//	// hasExtDesc
+//	if (row.hasOwnProperty('hasExtDesc'))
+//		tr.className = "active-alarm-checkbox";
+//	
+//	// hasLastExtDesc
+//	if (row.hasOwnProperty('hasLastExtDesc'))
+//		tr.className = "active-alarm-checkbox";
+};
+// Create a CALLBACK function to set TD/CELL Colors & formatted values
+var alarmTdCallback = function(td, metaData, cellContent, rowData)
+{
+	if (isNaN(cellContent)) // Typically STRING
+	{
+	}
+	else if (typeof(cellContent) === typeof(true)) // BOOLEAN ... isNaN(true) is FALSE
+	{
+		if (false === cellContent) { td.innerHTML = ""; td.className = "image-unchecked"; }
+		if (true  === cellContent) { td.innerHTML = ""; td.className = "image-checked"; }
+	}
+	else // I guss this must be a NUMBER
+	{
+	}
+	
+	if (metaData.columnName === "alarmInfo" && rowData.hasOwnProperty('alarmInfo') && cellContent === true)
+	{
+		td.appendChild( createAlarmInfoToolTipDiv(JSON.stringify(rowData), "Alarm Info") );
+	}
+	if (metaData.columnName === "hasExtDesc" && rowData.hasOwnProperty('hasExtDesc') && cellContent === true)
+	{
+		td.appendChild( createExtDescTableToolTipDiv(rowData.extendedDescription, "Extended Description") );
+	}
+	if (metaData.columnName === "hasLastExtDesc" && rowData.hasOwnProperty('hasLastExtDesc') && cellContent === true)
+	{
+		td.appendChild( createExtDescTableToolTipDiv(rowData.lastExtendedDescription, "Last Extended Description") );
+	}
+};
+
+
 function dbxTuneCheckActiveAlarms()
 {
 	console.log("dbxTuneCheckActiveAlarms()");
+
+	if ( ! _subscribe )
+	{
+		$("#subscribe-feedback-msg").html("<s>subscribe</s>");
+		return;
+	}
 
 	$.ajax(
 	{
@@ -676,8 +762,13 @@ function dbxTuneCheckActiveAlarms()
 				console.log("dbxTuneCheckActiveAlarms(): srvAlarmMap:",srvAlarmMap);
 
 			// Loop the alarm MAP
-			for (var key in srvAlarmMap) {
+			for (var key in srvAlarmMap) 
+			{
 				var entry = srvAlarmMap[key];
+				
+				// re-write the "alarmEntry"... add 'hasExtDesc' and 'hasLastExtDesc'
+				entry = reWriteAlarmEntry(entry);
+
 				// var graphServerName = entry.srvName;
 				var graphServerName = key;
 
@@ -704,7 +795,9 @@ function dbxTuneCheckActiveAlarms()
 						activeAlarmsWinDiv.appendChild(srvDiv);
 					}
 					let stripHtmlInCells = document.getElementById("active-alarms-compExtDesc-chk").checked;
-					let tab = jsonToTable(entry, stripHtmlInCells);
+//					let tab = jsonToTable(entry, stripHtmlInCells);
+console.log("XXXXXXXX AlarmTable just BEFORE jsonToTable()...", entry);
+					let tab = jsonToTable(entry, stripHtmlInCells, alarmTrCallback, alarmTdCallback);
 					srvDiv.innerHTML = "Active Alarms for server: <b>"+graphServerName+"</b>";
 					srvDiv.appendChild(tab);
 					srvDiv.appendChild(document.createElement("br"));
@@ -750,6 +843,51 @@ function dbxTuneCheckActiveAlarms()
 		}
 	}); // end: ajax call
 } // end: function
+
+// Add "helper" entries 'hasExtDesc' and 'hasLastExtDesc' in the AlarmEntry...
+function reWriteAlarmEntry(inAlarmRows)
+{
+	//console.log("reWriteAlarmEntry-input", inAlarmRows);
+	let outAlarmRows = [];
+	
+	// Loop the input and add it to the output
+	inAlarmRows.forEach(function (row)
+	{
+		let outRow = {};
+		for (let key in row)
+		{
+			if (row.hasOwnProperty(key))
+			{
+				if (key === 'reRaiseExtendedDescription')
+				{
+					// rename 'reRaiseExtendedDescription' column to 'lastExtendedDescription'
+					outRow['lastExtendedDescription'] = row[key];
+				}
+				else
+				{
+					// Copy key=value into the output object
+					outRow[key] = row[key];
+				}
+			
+				// after key 'repeatCnt' add 'hasExtDesc' and 'hasLastExtDesc'
+				if (key === 'repeatCnt')
+				{
+					let hasExtDesc     = row.hasOwnProperty('extendedDescription')        && row['extendedDescription']        !== "";
+					let hasLastExtDesc = row.hasOwnProperty('lastExtendedDescription')    && row['lastExtendedDescription']    !== "";
+					let hasReRaiseExtD = row.hasOwnProperty('reRaiseExtendedDescription') && row['reRaiseExtendedDescription'] !== "";
+
+					outRow['alarmInfo']      = true;
+					outRow['hasExtDesc']     = hasExtDesc;
+					outRow['hasLastExtDesc'] = hasLastExtDesc || hasReRaiseExtD;
+				}
+			}
+		}
+		outAlarmRows.push(outRow);
+	});
+	//console.log("reWriteAlarmEntry-output", outAlarmRows);
+	return outAlarmRows;
+}
+
 
 /** 
  * Subscribe to graph changes from the server side
@@ -803,6 +941,11 @@ function dbxTuneGraphSubscribe()
 		{
 			$("#subscribe-feedback-msg").css("display", "block");
 			$("#subscribe-feedback-time").css("color", "red");
+		}
+		if (ageInSec > 300)
+		{
+			// Reload page if we havn't got any data in 5 minutes
+			location.reload();
 		}
 
 		let msgText = $("#subscribe-feedback-msg").text();
@@ -966,6 +1109,13 @@ function dbxTuneGraphSubscribe()
 		// If any Active alarms create a new SRV-DIV and a table...
 		if (typeof graphJson.activeAlarms !== 'undefined')
 		{
+//			var entry = srvAlarmMap[key];
+			var entry = graphJson.activeAlarms
+			
+			// re-write the "alarmEntry"... add 'hasExtDesc' and 'hasLastExtDesc'
+			entry = reWriteAlarmEntry(entry);
+
+			
 			let srvDiv = document.getElementById("active-alarms-srv-"+graphServerName);
 			if (srvDiv === null)
 			{
@@ -975,7 +1125,8 @@ function dbxTuneGraphSubscribe()
 				activeAlarmsWinDiv.appendChild(srvDiv);
 			}
 			let stripHtmlInCells = document.getElementById("active-alarms-compExtDesc-chk").checked;
-			let tab = jsonToTable(graphJson.activeAlarms, stripHtmlInCells);
+//			let tab = jsonToTable(entry, stripHtmlInCells);
+			let tab = jsonToTable(entry, stripHtmlInCells, alarmTrCallback, alarmTdCallback);
 			srvDiv.innerHTML = "Active Alarms for server: <b>"+graphServerName+"</b>";
 			srvDiv.appendChild(tab);
 			srvDiv.appendChild(document.createElement("br"));
@@ -1042,8 +1193,11 @@ function dbxTuneGraphSubscribe()
 	/**
 	 * INTERNAL: createToolTipDiv()
 	 */
-	function createActiveStatementToolTipDiv(data)
+	function createActiveStatementToolTipDiv(data, sqlDialect)
 	{
+			if (_debug > 1)
+				console.log("createActiveStatementToolTipDiv():: sqlDialect=|" + sqlDialect + "|");
+
 		//const TT_PREFIX  = "<div title='Click for Detailes' data-toggle='modal' data-target='#dbx-view-sqltext-dialog' data-objectname='' data-tooltip='";
 		//const TT_POSTFIX = "'>&nbsp;</div>";
 		
@@ -1067,6 +1221,38 @@ function dbxTuneGraphSubscribe()
 		div.setAttribute("title"           , "Click to Open Text Dialog... \n-------------------------------\n" + dataVal);
 		div.setAttribute("data-toggle"     , 'modal');
 		div.setAttribute("data-target"     , '#dbx-view-sqltext-dialog');
+		div.setAttribute("data-objectname" , '');
+		div.setAttribute("data-tooltip"    , dataVal);
+		div.setAttribute("data-sqldialect" , sqlDialect);
+	
+		return div;
+	}
+	function createLockTableToolTipDiv(data)
+	{
+		const dataVal = data;
+
+		const div = document.createElement("div");
+		div.innerHTML = "&nbsp;";
+		div.setAttribute("title"           , "Click to Open Text Dialog... \n-------------------------------\n" + dataVal);
+		div.setAttribute("data-toggle"     , 'modal');
+		div.setAttribute("data-target"     , '#dbx-view-lockTable-dialog');
+		div.setAttribute("data-objectname" , '');
+		div.setAttribute("data-tooltip"    , dataVal);
+	
+		return div;
+	}
+	function createSqlServerQueryPlanToolTipDiv(data)
+	{
+		// FIXME: create a modal-div that can show a SQL Server Showplan (using https://github.com/JustinPealing/html-query-plan)
+		//return createActiveStatementToolTipDiv(data);
+
+		const dataVal = data;
+
+		const div = document.createElement("div");
+		div.innerHTML = "&nbsp;";
+		div.setAttribute("title"           , "Click to Open Text Dialog... \n-------------------------------\n" + dataVal);
+		div.setAttribute("data-toggle"     , 'modal');
+		div.setAttribute("data-target"     , '#dbx-view-ssShowplan-dialog');
 		div.setAttribute("data-objectname" , '');
 		div.setAttribute("data-tooltip"    , dataVal);
 	
@@ -1164,63 +1350,75 @@ function dbxTuneGraphSubscribe()
 			{
 				if (metaData.columnName === "HasMonSqlText" && rowData.hasOwnProperty('MonSqlText') && cellContent === true)
 				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.MonSqlText) );
+					td.appendChild( createActiveStatementToolTipDiv(rowData.MonSqlText, 'tsql') );
 				}
 				if (metaData.columnName === "HasDbccSqlText" && rowData.hasOwnProperty('DbccSqlText') && cellContent === true)
 				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.DbccSqlText) );
+					td.appendChild( createActiveStatementToolTipDiv(rowData.DbccSqlText, 'tsql') );
 				}
 				if (metaData.columnName === "HasProcCallStack" && rowData.hasOwnProperty('ProcCallStack') && cellContent === true)
 				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.ProcCallStack) );
+					td.appendChild( createActiveStatementToolTipDiv(rowData.ProcCallStack, 'text') );
 				}
 				if (metaData.columnName === "HasShowPlan" && rowData.hasOwnProperty('ShowPlanText') && cellContent === true)
 				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.ShowPlanText) );
+					td.appendChild( createActiveStatementToolTipDiv(rowData.ShowPlanText, 'text') );
 				}
 				if (metaData.columnName === "HasStackTrace" && rowData.hasOwnProperty('DbccStacktrace') && cellContent === true)
 				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.DbccStacktrace) );
+					td.appendChild( createActiveStatementToolTipDiv(rowData.DbccStacktrace, 'text') );
 				}
 				if (metaData.columnName === "HasCachedPlanInXml" && rowData.hasOwnProperty('CachedPlanInXml') && cellContent === true)
 				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.CachedPlanInXml) );
+					td.appendChild( createActiveStatementToolTipDiv(rowData.CachedPlanInXml, 'xml') );
 				}
 				if (metaData.columnName === "HasSpidLocks" && rowData.hasOwnProperty('SpidLocks') && cellContent === true)
 				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.SpidLocks) );
+					td.appendChild( createLockTableToolTipDiv(rowData.SpidLocks) );
 				}
 				if (metaData.columnName === "HasBlockedSpidsInfo" && rowData.hasOwnProperty('BlockedSpidsInfo') && cellContent === true)
 				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.BlockedSpidsInfo) );
+					td.appendChild( createLockTableToolTipDiv(rowData.BlockedSpidsInfo) );
 				}
 			}
 			else if ("SqlServerTune" === appName)
 			{
 				if (metaData.columnName === "HasSqlText" && rowData.hasOwnProperty('lastKnownSql') && cellContent === true)
 				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.lastKnownSql) );
+					td.appendChild( createActiveStatementToolTipDiv(rowData.lastKnownSql, 'tsql') );
 				}
 				if (metaData.columnName === "HasQueryplan" && rowData.hasOwnProperty('query_plan') && cellContent === true)
 				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.query_plan) );
+					td.appendChild( createSqlServerQueryPlanToolTipDiv(rowData.query_plan) );
 				}
 				if (metaData.columnName === "HasLiveQueryplan" && rowData.hasOwnProperty('LiveQueryPlan') && cellContent === true)
 				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.LiveQueryPlan) );
+					td.appendChild( createSqlServerQueryPlanToolTipDiv(rowData.LiveQueryPlan) );
 				}
 				if (metaData.columnName === "HasSpidLocks" && rowData.hasOwnProperty('SpidLocks') && cellContent === true)
 				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.SpidLocks) );
+					td.appendChild( createLockTableToolTipDiv(rowData.SpidLocks) );
 				}
 				if (metaData.columnName === "HasBlockedSpidsInfo" && rowData.hasOwnProperty('BlockedSpidsInfo') && cellContent === true)
 				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.BlockedSpidsInfo) );
+					td.appendChild( createLockTableToolTipDiv(rowData.BlockedSpidsInfo) );
 				}
 			}
-//			else if ("PostgresTune" === appName)
-//			{
-//			}
+			else if ("PostgresTune" === appName)
+			{
+				if (metaData.columnName === "has_sql_text" && rowData.hasOwnProperty('last_known_sql_statement') && cellContent === true)
+				{
+					td.appendChild( createActiveStatementToolTipDiv(rowData.last_known_sql_statement, 'postgresql') );
+				}
+				if (metaData.columnName === "has_pid_lock_info" && rowData.hasOwnProperty('pid_lock_info') && cellContent === true)
+				{
+					td.appendChild( createLockTableToolTipDiv(rowData.pid_lock_info) );
+				}
+				if (metaData.columnName === "has_blocked_pids_info" && cellContent === true)
+				{
+					td.appendChild( createLockTableToolTipDiv(rowData.pid_lock_info) );
+				}
+			}
 		};
 
 		// Create a CALLBACK function to set TableRow Colors
@@ -1353,12 +1551,32 @@ function dbxTuneGraphSubscribe()
 //			}
 //		}
 
+//		var stmntSrvTabClasses = document.getElementsByClassName('active-statements-srv-tab-class');
+//		for (var i=0; i< stmntSrvTabClasses.length; i++ ) {
+//			console.log("stmntSrvTabClasses["+i+"].id=" + stmntSrvTabClasses[i].id + ", scrollLeft=" + stmntSrvTabClasses[i].scrollLeft );
+//		}
+
+		// NOTE: Maybe we should move this to "outside" the call to createActiveStatementToolTipDiv() ... 
+		//       meaning in function: setActiveStatement()
+		//   OR: listen on 'scroll' events to save the value into the 'localStorage' see: https://developer.mozilla.org/en-US/docs/Web/API/Document/scroll_event
+		var srvTabScrollLeft = -1;
+		if (localStorage.getItem('active-statements-srv-tab-' + srvName + '-scrollLeft') != null)
+		{
+			srvTabScrollLeft = localStorage.getItem('active-statements-srv-tab-' + srvName + '-scrollLeft');
+			if (document.getElementById('active-statements-srv-tab-' + srvName))
+				srvTabScrollLeft = document.getElementById('active-statements-srv-tab-' + srvName).scrollLeft;
+		}
+
+		if (srvTabScrollLeft > 0)
+			localStorage.setItem('active-statements-srv-tab-' + srvName + '-scrollLeft', srvTabScrollLeft);
+//console.log("active-statements-srv-tab-" + srvName + "... srvTabScrollLeft=" + srvTabScrollLeft);
 
 		// create a new SrvDiv 
 		var newSrvDiv = document.createElement("div");
 		newSrvDiv.setAttribute("id",    "active-statements-srv-" + srvName);
 		newSrvDiv.setAttribute("class", "active-statements-srv-class");
 		newSrvDiv.setAttribute("title", tooltip);
+
 		
 		// "add" a property 'statementsRowCount' to a div the we read later.
 		newSrvDiv.statementsRowCount = filteredCounterData.length;
@@ -1372,11 +1590,41 @@ function dbxTuneGraphSubscribe()
 		let stripHtmlInCells = document.getElementById("active-statements-compExtDesc-chk").checked;
 		let tab = jsonToTable(filteredCounterData, stripHtmlInCells, trCallback, tdCallback, metaDataArr);
 
+		var newSrvTabDiv = document.createElement("div");
+		newSrvTabDiv.id               = "active-statements-srv-tab-" + srvName;
+		newSrvTabDiv.class            = "active-statements-srv-tab-class";
+		newSrvTabDiv.style.overflowX  = "scroll";
+//		newSrvTabDiv.scrollLeft       = srvTabScrollLeft;
+		newSrvTabDiv.appendChild(tab);
+
+		// On scroll -- save 'scrollLeft' in localStorage (so it can be restored when the popup is rebuilt)
+		newSrvTabDiv.addEventListener("scroll", function(e)
+		{
+			setTimeout(function(ev) 
+			{
+				//console.log("DEBUG: saving scrollLeft=" + newSrvTabDiv.scrollLeft + " into localStorage, for 'active-statements-srv-tab-" + srvName + "'.");
+				localStorage.setItem('active-statements-srv-tab-' + srvName + '-scrollLeft', newSrvTabDiv.scrollLeft);
+			}, 500);
+		});
+
+		// NOTE 1: Since data in the TAB is "unknown" or not yet rendered... We need to postpone this to "later"
+		//         This will probably make the screen to "flicker" a bit
+		// NOTE 2: We might want to save this setting in the browsers storage... otherwise we need to scroll to XXX everytime the row is "new" (or vanishes and re-apear)
+		//         localStorage.getItem("name"),  localStorage.setItem("name")
+		if (srvTabScrollLeft > 0)
+			setTimeout(function(){ newSrvTabDiv.scrollLeft = srvTabScrollLeft; }, 1);
+
+
 		// Add stuff to the 'newSrvDiv'
 		newSrvDiv.appendChild(document.createElement("br"));
 		newSrvDiv.appendChild(newSrvInfoDiv);
-		newSrvDiv.appendChild(tab);
+		newSrvDiv.appendChild(newSrvTabDiv);
+//		newSrvDiv.appendChild(tab);
 //		newSrvDiv.appendChild(document.createElement("br"));
+
+		// Set this LATE seems like we dont need to do above: setTimeout(...)
+		if (srvTabScrollLeft > 0)
+			newSrvTabDiv.scrollLeft = srvTabScrollLeft;
 
 		return newSrvDiv;
 	}
@@ -1386,6 +1634,7 @@ function dbxTuneGraphSubscribe()
 		if ( document.getElementById("active-statements-paused-chk").checked )
 		{
 			document.getElementById("active-statements-watermark").innerHTML = "PAUSED";
+			console.log("DEBUG: setActiveStatement() in PAUSED mode...");
 			return;
 		}
 		// Set the Watermark
@@ -1396,7 +1645,6 @@ function dbxTuneGraphSubscribe()
 			console.log("DEBUG: setActiveStatement() parameter 'allEntries' is not passed, exiting...");
 			return;
 		}
-
 
 		// push 'active statements' for each server on this array
 		var activeStatementsDivArr = [];
@@ -2269,6 +2517,27 @@ class DbxGraph
 		//---------------------------------------------------------------------------------------------------------
 		newCanvas.addEventListener("click", function(event) 
 		{
+			// For CTRL + Click --- Hide the current line
+			if (event.ctrlKey)
+			{
+				var clickedOnPoints = thisClass._chartObject.getElementsAtEventForMode(event, 'nearest', {intersect:true}, true);
+				if (clickedOnPoints[0])
+				{
+					const item = clickedOnPoints[0];
+					var ci = thisClass._chartObject;
+					
+					const dataSetIndex = item._datasetIndex;
+					const meta = ci.getDatasetMeta(dataSetIndex);
+					meta.hidden = meta.hidden === null ? !ci.data.datasets[dataSetIndex].hidden : null;
+					ci.update();
+				}
+				return;
+			}
+
+			// ------------------------------------------------------------
+			// Below is "normal" click --- Mark the time in ALL charts
+			// ------------------------------------------------------------
+			
 			// Reset all timeline-markers
 			for(var i=0; i<_graphMap.length; i++)
 			{

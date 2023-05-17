@@ -687,8 +687,9 @@ extends MonTablesDictionary
 		String monTableColumns = "master.dbo.monTableColumns";
 		if (offline)
 		{
-			monTables       = PersistWriterBase.getTableName(conn, PersistWriterBase.SESSION_MON_TAB_DICT,     null, true);
-			monTableColumns = PersistWriterBase.getTableName(conn, PersistWriterBase.SESSION_MON_TAB_COL_DICT, null, true);
+			String schemaName = null;
+			monTables       = PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SESSION_MON_TAB_DICT,     null, true);
+			monTableColumns = PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SESSION_MON_TAB_COL_DICT, null, true);
 		}
 		
 		String sql = null;
