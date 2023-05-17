@@ -213,6 +213,13 @@ extends CountersModel
 			dm_exec_query_plan            = "sys.dm_exec_query_plan";                        // Same name in Azure ???
 		}
 
+		// Is 'context_info_str' enabled (if it causes any problem, it can be disabled)
+		String contextInfoStr = "/*    ,replace(cast([s_es].context_info as varchar(128)),char(0),'') AS context_info_str -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
+		if (SqlServerCmUtils.isContextInfoStrEnabled())
+		{
+			// Make the binary 'context_info' into a String
+			contextInfoStr = "    ,replace(cast([s_es].context_info as varchar(128)),char(0),'') AS context_info_str /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
+		}
 		
 		String sql = ""
 				+ "-------------------------------------------------------------------------------------------------------\n"
@@ -228,6 +235,7 @@ extends CountersModel
 				+ "    ,[s_es].[host_name]                                AS [HostName] \n"
 				+ "    ,[s_es].[host_process_id]                          AS [HostPID] \n"
 				+ "    ,[s_es].[program_name]                             AS [ProgramName] \n"
+				+      contextInfoStr
 				+ "    ,convert(bit,0)                                    AS [HasSpidLocks]\n"
 				+ "    ,convert(int,-1)                                   AS [SpidLockCount] \n"
 				+ "    ,[s_es].[last_request_start_time]                  AS [LastRequestStartTime] \n"

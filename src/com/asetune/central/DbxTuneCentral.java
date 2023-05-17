@@ -52,6 +52,7 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.webapp.WebAppContext;
 
 import com.asetune.AppDir;
+import com.asetune.CounterController;
 import com.asetune.DbxTune;
 import com.asetune.NormalExitException;
 import com.asetune.Version;
@@ -62,6 +63,9 @@ import com.asetune.central.cleanup.CentralDailyReportSender;
 import com.asetune.central.cleanup.CentralH2Defrag;
 import com.asetune.central.cleanup.CentralPcsJdbcCleaner;
 import com.asetune.central.cleanup.DataDirectoryCleaner;
+import com.asetune.central.lmetrics.LocalMetricsCollectorThread;
+import com.asetune.central.lmetrics.LocalMetricsCounterController;
+import com.asetune.central.pcs.CentralPcsDirectoryReceiver;
 import com.asetune.central.pcs.CentralPcsWriterHandler;
 import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.central.pcs.CentralPersistWriterJdbc;
@@ -76,6 +80,7 @@ import com.asetune.pcs.report.senders.ReportSenderToMail;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.CronUtils;
 import com.asetune.utils.Debug;
+import com.asetune.utils.FileUtils;
 import com.asetune.utils.JavaUtils;
 import com.asetune.utils.Logging;
 import com.asetune.utils.Memory;
@@ -92,6 +97,9 @@ public class DbxTuneCentral
 
 	public static final String PROPKEY_WEB_PORT = "DbxTuneCentral.web.port";
 	public static final int    DEFAULT_WEB_PORT = 8080;
+
+	public static final String  PROPKEY_startLocalMetricsCollector = "DbxTuneCentral.start.localMetricsCollector";
+	public static final boolean DEFAULT_startLocalMetricsCollector = true;
 	
 //	public static String getAppName()           { return "DbxTuneCentral"; }
 	public static String getAppHomeEnvName()    { return "DBXTUNE_HOME"; }
@@ -477,7 +485,7 @@ public class DbxTuneCentral
 		// do not care about keys starting with: "conn."
 		Configuration.addCombinedConfigurationFileWatcher_SkipKeyPrefix("conn.");  
 
-        // Start the Persistent Counter Service
+		// Start the Persistent Counter Service
 		startCentralPcs();
 
 		// Start the Alarm Handler
@@ -493,8 +501,11 @@ public class DbxTuneCentral
 		startScheduler();
 
 		// Start Local Host Monitor (if it's configured)
-		startLocalHostMonitor();
+		startLocalMetricsMonitor();
 
+		// Possibly start the Local PCS Directory Receiver (if the directory exists, or "forceStart" is set)
+		startLocalPcsDirectoryReceiver();
+		
 		// 
 		// Create a file, that will be deleted when the process ends.
 		// This file will hold various configuration about the NO-GUI process
@@ -692,11 +703,12 @@ public class DbxTuneCentral
 	{
 		try
 		{
+			stopLocalPcsDirectoryReceiver(); 
 			stopWebServer();
 			stopReceiverAlarmChecker();     // Do not send any "missing data from xxxTune collector"
 			stopAlarmHandler();             // No more Alarms will be sent
 			stopScheduler();                // No more "cron" jobs
-			stopLocalHostMonitor();
+			stopLocalMetricsMonitor();
 			stopCentralPcs();               // if it's a H2 DB, it might take time to stop (if defrag/compress is requested)
 
 			sendCounterUsageInfo();
@@ -1419,25 +1431,65 @@ public class DbxTuneCentral
 	}
 
 	
-	
 	//-------------------------------------------------------------------------------
-	//-- Host Monitoring
+	//-- DbxCentral Local Metrics (Host Monitoring)
 	//-------------------------------------------------------------------------------
-	public static void startLocalHostMonitor() 
+	private static LocalMetricsCollectorThread _localMetrics;
+
+	public static void startLocalMetricsMonitor() 
 	throws Exception
 	{
-//		_logger.info("Starting Local Host Monitoring thread.");
-//		_localHostMon.start();
+		boolean startLocalMetricsCollector = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_startLocalMetricsCollector, DEFAULT_startLocalMetricsCollector);
+		if (startLocalMetricsCollector)
+		{
+			_logger.info("Starting Local Metrics Monitoring thread.");
+			
+			LocalMetricsCounterController cc = new LocalMetricsCounterController();
+			CounterController.setInstance(cc);
+			
+			_localMetrics = new LocalMetricsCollectorThread( cc );
+			_localMetrics.init(false);
+			_localMetrics.start();
+		}
 	}
 
-	public static void stopLocalHostMonitor() 
+	public static void stopLocalMetricsMonitor() 
 	throws Exception
 	{
-//		_logger.info("Stopping Local Host Monitoring thread.");
-//		_localHostMon.stop();
+		if (_localMetrics != null)
+		{
+			_logger.info("Stopping Local Metrics Monitoring thread.");
+			_localMetrics.shutdown();
+		}
+	}
+	
+	
+	//-------------------------------------------------------------------------------
+	//-- Local PCS File Reader (Directory Receiver)
+	//-- (if DbxCollectors do NOT use "http://localhost:8080/api/pcs/receiver" then they may send/place it as a FILE if on same host as DbxCentral)
+	//-------------------------------------------------------------------------------
+	public static void startLocalPcsDirectoryReceiver() 
+	throws Exception
+	{
+		boolean forceStart = Configuration.getCombinedConfiguration().getBooleanProperty(CentralPcsDirectoryReceiver.PROPKEY_forceStart, CentralPcsDirectoryReceiver.DEFAULT_forceStart);
+		String  receiveDir = CentralPcsDirectoryReceiver.getResolvedStorageDir();
+
+		if (forceStart || FileUtils.isDirectoryCreated(receiveDir))
+		{
+			CentralPcsDirectoryReceiver.startWatcher(receiveDir);
+		}
+		else
+		{
+			_logger.info("Note: The Local PCS Directory Receiver was NOT started. To start this: create the directory '" + receiveDir + "' or set property '" + CentralPcsDirectoryReceiver.PROPKEY_forceStart + " = true'.");
+		}
 	}
 
-	
+	public static void stopLocalPcsDirectoryReceiver() 
+	throws Exception
+	{
+		CentralPcsDirectoryReceiver.stopWatcher();
+	}
+
 	
 	//-------------------------------------------------------------------------------
 	//-- Start Web Server
@@ -1768,11 +1820,17 @@ public class DbxTuneCentral
 			{
 				Configuration conf = Configuration.getCombinedConfiguration();
 				
-				// Initialize the alarm handler
-				AlarmHandler ah = new AlarmHandler();
-				AlarmHandler.setInstance(ah); // Set this before init() if it throws an exception and we are in GUI more, we still want to fix the error...
+				// Initialize the DEFAULT alarm handler
+				AlarmHandler ah = new AlarmHandler(AlarmHandler.DEFAULT_INSTANCE);
+				AlarmHandler.setInstance(AlarmHandler.DEFAULT_INSTANCE, ah); // Set this before init() if it throws an exception and we are in GUI more, we still want to fix the error...
 				ah.init(conf, false, true, true); // createTableModelWriter=false, createPcsWriter=true, createToApplicationLog=true
 				ah.start();
+				
+				// Initialize the alarm handler for 'NOT Receiving Information from Collectors'
+				AlarmHandler receiverAlarmHandler = new AlarmHandler(ReceiverAlarmCheck.ALARM_HANDLER_NAME);
+				AlarmHandler.setInstance(ReceiverAlarmCheck.ALARM_HANDLER_NAME, receiverAlarmHandler); // Set this before init() if it throws an exception and we are in GUI more, we still want to fix the error...
+				receiverAlarmHandler.init(conf, false, true, true); // createTableModelWriter=false, createPcsWriter=true, createToApplicationLog=true
+				receiverAlarmHandler.start();
 				
 //				String alarmWriters = conf.getProperty(AlarmHandler.PROPKEY_WriterClass);
 //				if (StringUtil.hasValue(alarmWriters))

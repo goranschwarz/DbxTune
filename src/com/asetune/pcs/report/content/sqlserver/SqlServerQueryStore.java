@@ -601,11 +601,13 @@ extends SqlServerAbstract
 
 						if (rstm == _topCpuRstm)
 						{
-							return _planCollectionCpu.getLinkText(dbname, plan_id, null, "-no-plan-");
+							if (_planCollectionCpu != null)
+								return _planCollectionCpu.getLinkText(dbname, plan_id, null, "-no-plan-");
 						}
 						else if (rstm == _topWaitRstm)
 						{
-							return _planCollectionWait.getLinkText(dbname, plan_id, null, "-no-plan-");
+							if (_planCollectionWait != null)
+								return _planCollectionWait.getLinkText(dbname, plan_id, null, "-no-plan-");
 						}
 					}
 

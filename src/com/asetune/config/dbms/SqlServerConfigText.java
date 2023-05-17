@@ -986,7 +986,22 @@ public abstract class SqlServerConfigText
 		@Override public    String     getName()                              { return ConfigType.SqlServerServerRegistry.toString(); }
 		@Override public    String     getConfigType()                        { return getName(); }
 //		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "select * from sys.dm_server_registry"; }
-		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from sys.dm_server_registry"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) 
+		{ 
+			String sql = ""
+					+ "print 'INFO: select * from sys.dm_server_registry' \n"
+					+ "select * from sys.dm_server_registry \n"
+				    + " \n"
+					+ "if (@@version like '%Linux%') \n"
+					+ "begin \n"
+				    + "    print '' \n"
+					+ "    print 'INFO: This is a Linux system, so getting content of: /var/opt/mssql/mssql.conf' \n"
+					+ "    SELECT BulkColumn as linux_mssql_conf \n"
+					+ "    FROM OPENROWSET (BULK '/var/opt/mssql/mssql.conf', SINGLE_CLOB) as linux_mssql_conf \n"
+					+ "end \n"
+					+ "";
+			return sql; 
+		}
 		@Override
 		public String checkRequirements(DbxConnection conn)
 		{

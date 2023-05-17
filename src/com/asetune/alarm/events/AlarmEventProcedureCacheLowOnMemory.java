@@ -39,10 +39,10 @@ extends AlarmEvent
 				AlarmEvent.Category.SRV_CONFIG,
 				AlarmEvent.Severity.WARNING,
 				AlarmEvent.ServiceState.UP, 
-				"Stored Procedure Cache Memory is getting low in server '" + cm.getServerName() + "'. FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPcs="+usedSpaceInPct+". (thresholdInPct="+thresholdInPct+")",
+				"Stored Procedure Cache Memory is getting low in server '" + cm.getServerName() + "'. FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPct="+usedSpaceInPct+". (thresholdInPct="+thresholdInPct+")",
 				null);
 
-		setData("FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPcs="+usedSpaceInPct);
+		setData("FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPct="+usedSpaceInPct);
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);

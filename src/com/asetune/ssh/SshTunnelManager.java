@@ -34,13 +34,13 @@ import com.asetune.utils.StringUtil;
  * 
  * @author gorans
  */
-public class SshTunnelManager2
+public class SshTunnelManager
 {
     /** Log4j logging. */
-	private static Logger _logger = Logger.getLogger(SshTunnelManager2.class);
+	private static Logger _logger = Logger.getLogger(SshTunnelManager.class);
 
 	/** Instance variable */
-	private static SshTunnelManager2 _instance = null;
+	private static SshTunnelManager _instance = null;
 
 	/** SSH Connection Cache */
 	private HashMap<String, SshConnectionWrapper> _connectionCache = new HashMap<String, SshConnectionWrapper>();
@@ -109,10 +109,10 @@ public class SshTunnelManager2
 		return (_instance != null);
 	}
 
-	public static SshTunnelManager2 getInstance()
+	public static SshTunnelManager getInstance()
 	{
 		if (_instance == null)
-			_instance = new SshTunnelManager2();
+			_instance = new SshTunnelManager();
 		return _instance;
 	}
 

@@ -1234,23 +1234,63 @@ extends CountersModel
 			DRS_secondary_lag_seconds = "    ,drs.secondary_lag_seconds \n";
 		}
 
+		String preSql_dmDbLogStats          = "";
 		String log_truncation_holdup_reason = "";
-		String total_log_size_mb            = "";
 		String log_recovery_size_mb         = "";
 		String active_log_size_mb           = "";
+		String total_log_size_mb            = "";
 		String log_state                    = "";
-		String outer_apply__dm_db_log_stats = "";
+//		String outer_apply__dm_db_log_stats = "";
+		String join__dm_db_log_stats        = "";
+		String drop__dm_db_log_stats        = "";
 		if (srvVersion >= Ver.ver(2016,0,0, 2))
 		{
-			log_truncation_holdup_reason = "    ,log_truncation_holdup_reason          = CASE WHEN ars.is_local = 1 THEN ls.log_truncation_holdup_reason                 ELSE NULL END \n";
-			log_recovery_size_mb         = "    ,log_recovery_size_mb                  = CASE WHEN ars.is_local = 1 THEN convert(decimal(10,1), ls.log_recovery_size_mb) ELSE NULL END \n";
-			active_log_size_mb           = "    ,active_log_size_mb                    = CASE WHEN ars.is_local = 1 THEN convert(decimal(10,1), ls.active_log_size_mb  ) ELSE NULL END \n";
-			total_log_size_mb            = "    ,total_log_size_mb                     = CASE WHEN ars.is_local = 1 THEN convert(decimal(10,1), ls.total_log_size_mb   ) ELSE NULL END \n";
-			outer_apply__dm_db_log_stats = "outer apply sys.dm_db_log_stats(drs.database_id) ls \n";
+//			log_truncation_holdup_reason = "    ,log_truncation_holdup_reason          = CASE WHEN ars.is_local = 1 THEN ls.log_truncation_holdup_reason                 ELSE NULL END \n";
+//			log_recovery_size_mb         = "    ,log_recovery_size_mb                  = CASE WHEN ars.is_local = 1 THEN convert(decimal(10,1), ls.log_recovery_size_mb) ELSE NULL END \n";
+//			active_log_size_mb           = "    ,active_log_size_mb                    = CASE WHEN ars.is_local = 1 THEN convert(decimal(10,1), ls.active_log_size_mb  ) ELSE NULL END \n";
+//			total_log_size_mb            = "    ,total_log_size_mb                     = CASE WHEN ars.is_local = 1 THEN convert(decimal(10,1), ls.total_log_size_mb   ) ELSE NULL END \n";
+//			outer_apply__dm_db_log_stats = "outer apply sys.dm_db_log_stats(drs.database_id) ls \n";
+			log_truncation_holdup_reason = "    ,ls.log_truncation_holdup_reason \n";
+			log_recovery_size_mb         = "    ,ls.log_recovery_size_mb \n";
+			active_log_size_mb           = "    ,ls.active_log_size_mb \n";
+			total_log_size_mb            = "    ,ls.total_log_size_mb \n";
+//			outer_apply__dm_db_log_stats = "";
+			join__dm_db_log_stats        = "left outer join #dbx_dm_db_log_stats                      ls on drs.database_id = ls.database_id \n";
+			drop__dm_db_log_stats        = "IF OBJECT_ID(N'tempdb..#dbx_dm_db_log_stats'                    , N'U') IS NOT NULL   drop table #dbx_dm_db_log_stats \n";
 		}
 		if (srvVersion >= Ver.ver(2019))
 		{
-			log_state                    = "    ,log_state                             = CASE WHEN ars.is_local = 1 THEN ls.log_state                                    ELSE NULL END \n";
+//			log_state                    = "    ,log_state                             = CASE WHEN ars.is_local = 1 THEN ls.log_state                                    ELSE NULL END \n";
+			log_state                    = "    ,ls.log_state \n";
+		}
+
+		if (srvVersion >= Ver.ver(2016,0,0, 2))
+		{
+			preSql_dmDbLogStats = ""
+				    + "/*-- Populate temp table '#dbx_dm_db_log_stats' (used below). */ \n"
+				    + "BEGIN TRY \n"
+				    + "    select \n"
+				    + "         ls.database_id \n"
+				    + "        ,ls.log_truncation_holdup_reason \n"
+				    + "        ,log_recovery_size_mb = convert(decimal(10,1), ls.log_recovery_size_mb) \n"
+				    + "        ,active_log_size_mb   = convert(decimal(10,1), ls.active_log_size_mb  ) \n"
+				    + "        ,total_log_size_mb    = convert(decimal(10,1), ls.total_log_size_mb   ) \n"
+				    + "        ,ls.log_state \n"
+				    + "    into #dbx_dm_db_log_stats \n"
+				    + "    from #dbx_dm_hadr_database_replica_states drs \n" // sys.dm_hadr_database_replica_states drs
+				    + "    outer apply sys.dm_db_log_stats(drs.database_id) ls \n"
+				    + "    where drs.is_local = 1 \n"
+				    + "END TRY \n"
+				    + "BEGIN CATCH \n"
+				    + "    -- IGNORE: Error=976, Message=The target database, 'xxx', is participating in an availability group and is currently not accessible for queries. \n"
+				    + "    --                            Either data movement is suspended or the availability replica is not enabled for read access. \n"
+				    + "    --                            To allow read-only access to this and other databases in the availability group, \n"
+				    + "    --                            enable read access to one or more secondary availability replicas in the group. \n"
+				    + "    if (ERROR_NUMBER() != 976) \n" 
+				    + "        THROW \n"
+				    + "END CATCH \n"
+				    + "\n"
+				    + "";
 		}
 
 		// NOTE: when I switched to #temp tables, we get Warning: 8153 - Warning: Null value is eliminated by an aggregate or other SET operation.
@@ -1274,6 +1314,7 @@ extends CountersModel
 			    + "IF OBJECT_ID(N'tempdb..#dbx_dm_hadr_availability_replica_states', N'U') IS NOT NULL   drop table #dbx_dm_hadr_availability_replica_states \n"
 			    + "IF OBJECT_ID(N'tempdb..#dbx_dm_hadr_database_replica_states'    , N'U') IS NOT NULL   drop table #dbx_dm_hadr_database_replica_states \n"
 			    + "IF OBJECT_ID(N'tempdb..#dbx_master_files'                       , N'U') IS NOT NULL   drop table #dbx_master_files \n"
+			    + drop__dm_db_log_stats
 			    + " \n"
 				+ "/*-- Populate temp tables (used below). */ \n"
 			    + "select *                       into #dbx_availability_replicas                from sys.availability_replicas \n"
@@ -1284,7 +1325,7 @@ extends CountersModel
 			    + "select *                       into #dbx_dm_hadr_database_replica_states      from sys.dm_hadr_database_replica_states \n"
 			    + "select database_id, type, size into #dbx_master_files                         from sys.master_files \n"
 				+ " \n"
-//			    + "go \n"
+			    + preSql_dmDbLogStats
 				+ "";
 
 		String sqlPost = ""
@@ -1468,7 +1509,8 @@ extends CountersModel
 			+ "inner join      #dbx_dm_hadr_availability_group_states   ags on ar.group_id   = ags.group_id \n"
 			+ "left outer join #dbx_dm_hadr_availability_replica_states ars on ar.replica_id = ars.replica_id \n"
 			+ "left outer join #dbx_dm_hadr_database_replica_states     drs on ar.replica_id = drs.replica_id \n"
-			+ outer_apply__dm_db_log_stats
+			+ join__dm_db_log_stats
+//			+ outer_apply__dm_db_log_stats
 			+ "where 1 = 1 \n"
 //			+ "order by ar.replica_server_name, adc.database_name \n"
 			+ "order by 1, 4, 2  -- locality, database_name, server_name \n"

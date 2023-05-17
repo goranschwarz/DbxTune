@@ -84,8 +84,8 @@ public interface ISqlCaptureBroker
 	throws Exception;
 
 	public List<String> getTableNames();
-	public String getTableDdlString(DbxConnection conn, DatabaseMetaData dbmd, String tabName);
-	public List<String> getIndexDdlString(DbxConnection conn, DatabaseMetaData dbmd, String tabName);
+	public String getTableDdlString(DbxConnection conn, DatabaseMetaData dbmd, String schemaName, String tabName);
+	public List<String> getIndexDdlString(DbxConnection conn, DatabaseMetaData dbmd, String schemaName, String tabName);
 
 	/**
 	 * Check if table columns are ok, or if we need to alter table, returns a list of alter statements to execute
@@ -96,7 +96,7 @@ public interface ISqlCaptureBroker
 	 * 
 	 * @return a list of alter statements to execute
 	 */
-	public List<String> checkTableDdl(DbxConnection conn, DatabaseMetaData dbmd, String tabName);
+	public List<String> checkTableDdl(DbxConnection conn, DatabaseMetaData dbmd, String schemaName, String tabName);
 
 	/**
 	 * Check if table columns are ok, or if we need to DROP table, return true and the table will be dropped, then created again in next step.
@@ -109,11 +109,11 @@ public interface ISqlCaptureBroker
 	 * 
 	 * @return true = drop the table, false = do nothing.
 	 */
-	public boolean checkForDropTableDdl(DbxConnection conn, DatabaseMetaData dbmd, String tabName);
+	public boolean checkForDropTableDdl(DbxConnection conn, DatabaseMetaData dbmd, String schemaName, String tabName);
 
 	public int doSqlCapture(DbxConnection conn, PersistentCounterHandler persistentCounterHandler);
 
-	public String getInsertStatement(DbxConnection conn, String tabName);
+	public String getInsertStatement(DbxConnection conn, String schemaName, String tabName);
 
 	/**
 	 * Get what (if any) columns that are Dictionary Compressed.
@@ -128,7 +128,7 @@ public interface ISqlCaptureBroker
 	 * @return a Map(colPos, colName), null if no columns are Dictionary Compressed <br>
 	 *         The 'colPos' is a pointer to where in the value array/list we would find the column (position 0 is where the table name is stored)
 	 */
-	Map<Integer, String> getDictionaryCompressionColumnMap(String tabName);
+	Map<Integer, String> getDictionaryCompressionColumnMap(String schemaName, String tabName);
 
 	/**
 	 * Initialize the Broker with the same configuartion as the PersistenceCounterHandler

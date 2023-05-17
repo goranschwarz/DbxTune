@@ -81,7 +81,7 @@ extends HostMonitorMetaData
 				}
 				else if (WindowsTypePerfCsvReader.COLNAME_INSTANCE .equals(colName)) 
 				{
-					addStrColumn( colName, colSqlPos, colParsePos, false, 60, "Perfmon Counter Group INSTANCE the Counter belongs to");
+					addStrColumn( colName, colSqlPos, colParsePos, false, 90, "Perfmon Counter Group INSTANCE the Counter belongs to");
 				}
 				else 
 				{

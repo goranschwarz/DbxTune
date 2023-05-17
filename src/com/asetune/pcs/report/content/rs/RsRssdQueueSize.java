@@ -79,7 +79,9 @@ public class RsRssdQueueSize extends AseAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		_CmDbQueueSizeInRssd_RssdQueueSize = createTsLineChart(conn, "CmDbQueueSizeInRssd", "RssdQueueSize", -1, true, null, "Queue Size from the RSSD (col 'size', Absolute Value)");
+		String schema = getReportingInstance().getDbmsSchemaName();
+		
+		_CmDbQueueSizeInRssd_RssdQueueSize = createTsLineChart(conn, schema, "CmDbQueueSizeInRssd", "RssdQueueSize", -1, true, null, "Queue Size from the RSSD (col 'size', Absolute Value)");
 	}
 
 	private IReportChart _CmDbQueueSizeInRssd_RssdQueueSize;

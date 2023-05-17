@@ -158,6 +158,11 @@ public class PersistWriterJdbc
 	public static final String  PROPKEY_isSevereProblem_simulateDiskFull = "DbxTune.pcs.isSevereProblem.simulateDiskFull.enabled";
 	public static final boolean DEFAULT_isSevereProblem_simulateDiskFull = false;
 	
+	public static final String  PROPKEY_alarms_saveAsHtml                = "PersistWriterJdbc.alarms.saveAsHtml";
+	public static final boolean DEFAULT_alarms_saveAsHtml                = true;
+
+	public static final String  PROPKEY_alarms_saveHistory_endOfScan     = "PersistWriterJdbc.alarms.saveHistory.endOfScan";
+	public static final boolean DEFAULT_alarms_saveHistory_endOfScan     = false;
 	/*---------------------------------------------------
 	** class members
 	**---------------------------------------------------
@@ -216,6 +221,18 @@ public class PersistWriterJdbc
 //	/** Only valid in startSession() method, and used to check if this is a NEW Database that was created */
 //	private boolean _looksLikeNewDatabase = false;
 	
+	/**
+	 * How are the Charts/Graphs stored in the database
+	 */
+	public enum GraphStorageType
+	{
+		/** Each data set is stored using two columns: 'label_#' and 'data_#' */
+		LABEL_IN_SEPARATE_COLUMN,
+
+		/** Each column represents a data set */
+		COLUMN_NAME_IS_LABEL
+	};
+
 	/*---------------------------------------------------
 	** Constructors
 	**---------------------------------------------------
@@ -229,6 +246,21 @@ public class PersistWriterJdbc
 	** Methods
 	**---------------------------------------------------
 	*/
+	public GraphStorageType getGraphStorageType()
+	{
+		return GraphStorageType.LABEL_IN_SEPARATE_COLUMN;
+	}
+
+	public String getSchemaName()
+	{
+		return null;
+	}
+
+	protected boolean isShutdownWithNoWait()
+	{
+		return _shutdownWithNoWait;
+	}
+
 	/**
 	 * Checks SQL Exceptions for specific errors when storing counters
 	 * @return true if a severe problem
@@ -257,18 +289,18 @@ public class PersistWriterJdbc
 			String tmpFilename = tmpDir + "DbxTune.pcs.isSevereProblem.simulateDiskFull.deleteme";
 			File probeFile1 = new File(tmpFilename);
 
-			_logger.info("SIMULATE-DISK-FULL: checking for probe file '"+probeFile1+"'. exists: " + probeFile1.exists() );
+			_logger.info("SIMULATE-DISK-FULL: checking for probe file '" + probeFile1 + "'. exists: " + probeFile1.exists() );
 			if (probeFile1.exists())
 			{
-				_logger.info("SIMULATE-DISK-FULL: found-file('"+probeFile1+"')... setting: doShutdown=true, dbIsFull=true, retCode=true");
+				_logger.info("SIMULATE-DISK-FULL: found-file('" + probeFile1 + "')... setting: doShutdown=true, dbIsFull=true, retCode=true");
 
 				doShutdown = true;
 				dbIsFull   = true;
 				retCode    = true;
 
-				_logger.info("SIMULATE-DISK-FULL: removing file('"+probeFile1+"').");
+				_logger.info("SIMULATE-DISK-FULL: removing file('" + probeFile1 + "').");
 				try { probeFile1.delete(); }
-				catch(Exception ex) { _logger.error("SIMULATE-DISK-FULL: Problems removing file '"+probeFile1+"'. Caught: "+ex);}
+				catch(Exception ex) { _logger.error("SIMULATE-DISK-FULL: Problems removing file '" + probeFile1 + "'. Caught: " + ex);}
 			}
 		}
 
@@ -281,7 +313,7 @@ public class PersistWriterJdbc
 			String msgStr   = e.getMessage();
 			String sqlState = e.getSQLState();
 	
-			_logger.debug("isSevereProblem(): execptionLevel='"+exLevel+"', sqlState='"+sqlState+"', error='"+error+"', msgStr='"+msgStr+"'.");
+			_logger.debug("isSevereProblem(): execptionLevel='" + exLevel + "', sqlState='" + sqlState + "', error='" + error + "', msgStr='" + msgStr + "'.");
 
 			// H2 Messages
 			if ( DbUtils.DB_PROD_NAME_H2.equals(getDatabaseProductName()) )
@@ -314,8 +346,8 @@ public class PersistWriterJdbc
 				Throwable rootCauseEx = ExceptionUtils.getRootCause(e);
 				if (rootCauseEx != null && rootCauseEx.getClass().getSimpleName().equals("IllegalStateException"))
 				{
-					_logger.error("ATTENTION: ErrorCode="+e.getErrorCode()+", SQLState="+e.getSQLState()+", ex.toString="+e.toString()+", rootCauseEx="+rootCauseEx);
-					_logger.error("ATTENTION: The H2 database looks CORRUPT, the rootCauseEx is 'IllegalStateException', which might indicate a corrupt database. rootCauseEx="+rootCauseEx, rootCauseEx);
+					_logger.error("ATTENTION: ErrorCode=" + e.getErrorCode() + ", SQLState=" + e.getSQLState() + ", ex.toString=" + e.toString() + ", rootCauseEx=" + rootCauseEx);
+					_logger.error("ATTENTION: The H2 database looks CORRUPT, the rootCauseEx is 'IllegalStateException', which might indicate a corrupt database. rootCauseEx=" + rootCauseEx, rootCauseEx);
 				}
 				
 				// The database has been closed == 90098
@@ -327,12 +359,12 @@ public class PersistWriterJdbc
 					// Meaning closing the connection would result in a "reopen" on next save!
 					if (conn != null)
 					{
-						_logger.error("checking for connection errors in: 'isSevereProblem()'. Caught error="+error+", rootCauseMsg='"+rootCauseMsg+"'. which is mapped to 'close-connection'. A new connection will be opened on next save attempt.");
+						_logger.error("checking for connection errors in: 'isSevereProblem()'. Caught error=" + error + ", rootCauseMsg='" + rootCauseMsg + "'. which is mapped to 'close-connection'. A new connection will be opened on next save attempt.");
 						
 						try { conn.close(); }
 						catch (SQLException closeEx)
 						{
-							_logger.error("Error when closing the Counter Storage Database Connection (in isSevereProblem()) due to original error="+error+", '"+msgStr+"'.", closeEx);
+							_logger.error("Error when closing the Counter Storage Database Connection (in isSevereProblem()) due to original error=" + error + ", '" + msgStr + "'.", closeEx);
 						}
 					}
 				}
@@ -354,18 +386,18 @@ public class PersistWriterJdbc
 			e = e.getNextException();
 		}
 
-		_logger.debug("isSevereProblem(): doShutdown='"+doShutdown+"', dbIsFull='"+dbIsFull+"', retCode='"+retCode+"', _shutdownWithNoWait='"+_shutdownWithNoWait+"'.");
+		_logger.debug("isSevereProblem(): doShutdown='" + doShutdown + "', dbIsFull='" + dbIsFull + "', retCode='" + retCode + "', isShutdownWithNoWait()='" + isShutdownWithNoWait() + "'.");
 
 		// Actions
 		if (doShutdown)
 		{
-			if ( ! _shutdownWithNoWait)
+			if ( ! isShutdownWithNoWait())
 			{
 				String extraMessage = "";
 				if (dbIsFull)
 					extraMessage = " (Database seems to be out of space) ";
 
-				_logger.warn(getDatabaseProductName()+": Severe problems "+extraMessage+"when storing Performance Counters, Marking the writes for SHUTDOWN.");
+				_logger.warn(getDatabaseProductName() + ": Severe problems " + extraMessage + "when storing Performance Counters, Marking the writes for SHUTDOWN.");
 				_shutdownWithNoWait = true;
 
 				// Then STOP the service
@@ -384,7 +416,7 @@ public class PersistWriterJdbc
 						// if we are in NO-GUI mode... should we STOP DBXTUNE or should we continue...
 						if ( ! DbxTune.hasGui() )
 						{
-							_logger.info("Since this is a NO-GUI instance, and we have stopped the PCS hander... I see no reason to continue... So Issuing STOP on the Counter Controller also, which should stop the whole '"+Version.getAppName()+"' process.");
+							_logger.info("Since this is a NO-GUI instance, and we have stopped the PCS hander... I see no reason to continue... So Issuing STOP on the Counter Controller also, which should stop the whole '" + Version.getAppName() + "' process.");
 							ICounterController cc = CounterController.getInstance();
 							cc.shutdown();
 						}
@@ -397,7 +429,7 @@ public class PersistWriterJdbc
 
 				if (DbxTune.hasGui())
 				{
-					String msg = getDatabaseProductName()+": Severe problems "+extraMessage+"when storing Performance Counters, Disconnected from monitored server.";
+					String msg = getDatabaseProductName() + ": Severe problems " + extraMessage + "when storing Performance Counters, Disconnected from monitored server.";
 					_logger.info(msg);
 
 					MainFrame.getInstance().action_disconnect();
@@ -426,55 +458,6 @@ public class PersistWriterJdbc
 	{
 		close();
 	}
-
-//	@Override
-//	public void startServices()
-//	throws Exception
-//	{
-//		// Everything could NOT be done with the jdbcUrl... so here goes some special
-//		// start the H2 TCP Server
-//		if ( _jdbcDriver.equals("org.h2.Driver") && _startH2NetworkServer )
-//		{
-//			_logger.info("Starting a H2 TCP server.");
-//			_h2ServerTcp = org.h2.tools.Server.createTcpServer("-tcpAllowOthers");
-//			_h2ServerTcp.start();
-//
-////			_logger.info("H2 TCP server, listening on port='"+h2Server.getPort()+"', url='"+h2Server.getURL()+"', service='"+h2Server.getService()+"'.");
-//			_logger.info("H2 TCP server, url='"+_h2ServerTcp.getURL()+"', service='"+_h2ServerTcp.getService()+"'.");
-//
-//			if (true)
-//			{
-//				try
-//				{
-//					_logger.info("Starting a H2 WEB server.");
-//					_h2ServerWeb = org.h2.tools.Server.createWebServer();
-//					_h2ServerWeb.start();
-//
-//					_logger.info("H2 WEB server, url='"+_h2ServerWeb.getURL()+"', service='"+_h2ServerWeb.getService()+"'.");
-//				}
-//				catch (Exception e)
-//				{
-//					_logger.info("H2 WEB server, failed to start, but I will continue anyway... Caught: "+e);
-//				}
-//			}
-//
-//			if (true)
-//			{
-//				try
-//				{
-//					_logger.info("Starting a H2 Postgres server.");
-//					_h2ServerPg = org.h2.tools.Server.createPgServer("-pgAllowOthers");
-//					_h2ServerPg.start();
-//	
-//					_logger.info("H2 Postgres server, url='"+_h2ServerPg.getURL()+"', service='"+_h2ServerPg.getService()+"'.");
-//				}
-//				catch (Exception e)
-//				{
-//					_logger.info("H2 Postgres server, failed to start, but I will continue anyway... Caught: "+e);
-//				}
-//			}
-//		}
-//	}
 
 	@Override
 	public void startServices()
@@ -523,7 +506,7 @@ public class PersistWriterJdbc
 				tcpSwitches.add("-tcpDaemon");         // Start the service thread as a daemon
 				tcpSwitches.add("-tcpAllowOthers");    // Allow other that the localhost to connect
 				tcpSwitches.add("-tcpPort");           // Try this port as a base, if it's bussy, H2 will grab "next" available
-				tcpSwitches.add(""+tcpBasePortNumber); // Try this port as a base, if it's bussy, H2 will grab "next" available
+				tcpSwitches.add("" + tcpBasePortNumber); // Try this port as a base, if it's bussy, H2 will grab "next" available
 				tcpSwitches.add("-ifExists");          // If the database file DO NOT exists, DO NOT CREATE one
 				if (StringUtil.hasValue(baseDir))
 				{
@@ -538,7 +521,7 @@ public class PersistWriterJdbc
 				webSwitches.add("-webDaemon");         // Start the service thread as a daemon
 				webSwitches.add("-webAllowOthers");    // Allow other that the localhost to connect
 				webSwitches.add("-webPort");           // Try this port as a base, if it's bussy, H2 will grab "next" available
-				webSwitches.add(""+webBasePortNumber); // Try this port as a base, if it's bussy, H2 will grab "next" available
+				webSwitches.add("" + webBasePortNumber); // Try this port as a base, if it's bussy, H2 will grab "next" available
 				webSwitches.add("-ifExists");          // If the database file DO NOT exists, DO NOT CREATE one
 				if (StringUtil.hasValue(baseDir))
 				{
@@ -551,7 +534,7 @@ public class PersistWriterJdbc
 				pgSwitches.add("-pgDaemon");         // Start the service thread as a daemon
 				pgSwitches.add("-pgAllowOthers");    // Allow other that the localhost to connect
 				pgSwitches.add("-pgPort");           // Try this port as a base, if it's bussy, H2 will grab "next" available
-				pgSwitches.add(""+pgBasePortNumber); // Try this port as a base, if it's bussy, H2 will grab "next" available
+				pgSwitches.add("" + pgBasePortNumber); // Try this port as a base, if it's bussy, H2 will grab "next" available
 				pgSwitches.add("-ifExists");          // If the database file DO NOT exists, DO NOT CREATE one
 				if (StringUtil.hasValue(baseDir))
 				{
@@ -565,27 +548,27 @@ public class PersistWriterJdbc
 				
 				if (startTcpServer)
 				{
-					_logger.info("Starting a H2 TCP server. Switches: "+tcpSwitches);
+					_logger.info("Starting a H2 TCP server. Switches: " + tcpSwitches);
 					_h2TcpServer = Server.createTcpServer(tcpSwitches.toArray(new String[0]));
 					_h2TcpServer.start();
 		
-		//			_logger.info("H2 TCP server, listening on port='"+h2TcpServer.getPort()+"', url='"+h2TcpServer.getURL()+"', service='"+h2TcpServer.getService()+"'.");
-					_logger.info("H2 TCP server, url='"+_h2TcpServer.getURL()+"', Status='"+_h2TcpServer.getStatus()+"'.");
+		//			_logger.info("H2 TCP server, listening on port='" + h2TcpServer.getPort() + "', url='" + h2TcpServer.getURL() + "', service='" + h2TcpServer.getService() + "'.");
+					_logger.info("H2 TCP server, url='" + _h2TcpServer.getURL() + "', Status='" + _h2TcpServer.getStatus() + "'.");
 				}
 	
 				if (startWebServer)
 				{
 					try
 					{
-						_logger.info("Starting a H2 WEB server. Switches: "+webSwitches);
+						_logger.info("Starting a H2 WEB server. Switches: " + webSwitches);
 						_h2WebServer = Server.createWebServer(webSwitches.toArray(new String[0]));
 						_h2WebServer.start();
 
-						_logger.info("H2 WEB server, url='"+_h2WebServer.getURL()+"', Status='"+_h2WebServer.getStatus()+"'.");
+						_logger.info("H2 WEB server, url='" + _h2WebServer.getURL() + "', Status='" + _h2WebServer.getStatus() + "'.");
 					}
 					catch (Exception e)
 					{
-						_logger.info("H2 WEB server, failed to start, but I will continue anyway... Caught: "+e);
+						_logger.info("H2 WEB server, failed to start, but I will continue anyway... Caught: " + e);
 					}
 				}
 
@@ -593,15 +576,15 @@ public class PersistWriterJdbc
 				{
 					try
 					{
-						_logger.info("Starting a H2 Postgres server. Switches: "+pgSwitches);
+						_logger.info("Starting a H2 Postgres server. Switches: " + pgSwitches);
 						_h2PgServer = Server.createPgServer(pgSwitches.toArray(new String[0]));
 						_h2PgServer.start();
 		
-						_logger.info("H2 Postgres server, url='"+_h2PgServer.getURL()+"', Status='"+_h2PgServer.getStatus()+"'.");
+						_logger.info("H2 Postgres server, url='" + _h2PgServer.getURL() + "', Status='" + _h2PgServer.getStatus() + "'.");
 					}
 					catch (Exception e)
 					{
-						_logger.info("H2 Postgres server, failed to start, but I will continue anyway... Caught: "+e);
+						_logger.info("H2 Postgres server, failed to start, but I will continue anyway... Caught: " + e);
 					}
 				}
 				
@@ -665,7 +648,7 @@ public class PersistWriterJdbc
 //					}
 //					catch (Exception ex)
 //					{
-//						_logger.warn("Problems creating DbxTune H2 internal service file, continuing anyway. Caught: "+ex);
+//						_logger.warn("Problems creating DbxTune H2 internal service file, continuing anyway. Caught: " + ex);
 //					}
 				}
 			}
@@ -686,7 +669,7 @@ public class PersistWriterJdbc
 	{
 		if ( _servicesStoppedByThread != null )
 		{
-			_logger.info("Services has already been stopped by thread '"+_servicesStoppedByThread+"'... the stopServices() will do nothing.");
+			_logger.info("Services has already been stopped by thread '" + _servicesStoppedByThread + "'... the stopServices() will do nothing.");
 			return;
 		}
 		_servicesStoppedByThread = Thread.currentThread().getName();
@@ -701,20 +684,20 @@ public class PersistWriterJdbc
 //			int  maxWaitTimeInMs = 10 * 1000;
 			long startTime = System.currentTimeMillis();
 
-			_logger.info("Waiting for "+getName()+" to persist current container. Max wait time is "+maxWaitTimeInMs+" milliseconds.");
+			_logger.info("Waiting for " + getName() + " to persist current container. Max wait time is " + maxWaitTimeInMs + " milliseconds.");
 			
 			while (_inSaveSample)
 			{
 				long waitSoFar = System.currentTimeMillis() - startTime;
 				if (waitSoFar > maxWaitTimeInMs)
 				{
-					_logger.info("Aborting waiting for "+getName()+" to persist current container. Waited "+waitSoFar+", now stopping the service without waiting for last persist to finish.");
+					_logger.info("Aborting waiting for " + getName() + " to persist current container. Waited " + waitSoFar + ", now stopping the service without waiting for last persist to finish.");
 					_shutdownWithNoWait = true;
 					break;
 				}
 				if ( ! _inSaveSample)
 				{
-					_logger.info("Done waiting for "+getName()+" to persist current container. Waited "+waitSoFar+" until the last save was finished.");
+					_logger.info("Done waiting for " + getName() + " to persist current container. Waited " + waitSoFar + " until the last save was finished.");
 					break;
 				}
 				
@@ -722,7 +705,7 @@ public class PersistWriterJdbc
 				catch(InterruptedException e) { break; }
 			}
 			// Sleep just a little time if the wait time expired
-			if (_shutdownWithNoWait)
+			if (isShutdownWithNoWait())
 			{
 				try { Thread.sleep(100); }
 				catch(InterruptedException ignore) { }
@@ -749,7 +732,7 @@ public class PersistWriterJdbc
 				try { 
 					h2ShutdownType = H2ShutdownType.valueOf( H2ShutdownTypeConf ); 
 				} catch(RuntimeException ex) { 
-					_logger.info("Shutdown type '"+H2ShutdownTypeConf+"' is unknown value, supported values: "+StringUtil.toCommaStr(H2ShutdownType.values())+". ");
+					_logger.info("Shutdown type '" + H2ShutdownTypeConf + "' is unknown value, supported values: " + StringUtil.toCommaStr(H2ShutdownType.values()) + ". ");
 				}
 			}
 
@@ -814,7 +797,7 @@ public class PersistWriterJdbc
 
 				// 
 				int sleepTimeSec = 5;
-				_logger.info("Waiting for "+sleepTimeSec+" seconds, to let the H2 database shutdown THREAD to be started/initiated and do initial work before continuing.");
+				_logger.info("Waiting for " + sleepTimeSec + " seconds, to let the H2 database shutdown THREAD to be started/initiated and do initial work before continuing.");
 				try { Thread.sleep(sleepTimeSec * 1000); }
 				catch (InterruptedException ignore) {}
 			}
@@ -872,7 +855,7 @@ public class PersistWriterJdbc
 
 					// 
 					int sleepTimeSec = 5;
-					_logger.info("Waiting for "+sleepTimeSec+" seconds, to let the Daily Report THREAD to be started/initiated and do initial work before continuing.");
+					_logger.info("Waiting for " + sleepTimeSec + " seconds, to let the Daily Report THREAD to be started/initiated and do initial work before continuing.");
 					try { Thread.sleep(sleepTimeSec * 1000); }
 					catch (InterruptedException ignore) {}
 
@@ -898,21 +881,21 @@ public class PersistWriterJdbc
 		// Stop any other services
 		if (_h2TcpServer != null)
 		{
-			_logger.info("Stopping H2 TCP Service. at port="+_h2TcpServer.getPort()+", URL: "+_h2TcpServer.getURL());
+			_logger.info("Stopping H2 TCP Service. at port=" + _h2TcpServer.getPort() + ", URL: " + _h2TcpServer.getURL());
 			_h2TcpServer.stop();
 			_h2TcpServer = null;
 		}
 
 		if (_h2WebServer != null)
 		{
-			_logger.info("Stopping H2 WEB Service. at port="+_h2WebServer.getPort()+", URL: "+_h2WebServer.getURL());
+			_logger.info("Stopping H2 WEB Service. at port=" + _h2WebServer.getPort() + ", URL: " + _h2WebServer.getURL());
 			_h2WebServer.stop();
 			_h2WebServer = null;
 		}
 
 		if (_h2PgServer != null)
 		{
-			_logger.info("Stopping H2 Postgres Service. at port="+_h2PgServer.getPort()+", URL: "+_h2PgServer.getURL());
+			_logger.info("Stopping H2 Postgres Service. at port=" + _h2PgServer.getPort() + ", URL: " + _h2PgServer.getURL());
 			_h2PgServer.stop();
 			_h2PgServer = null;
 		}
@@ -959,7 +942,7 @@ public class PersistWriterJdbc
 		
 		String currentUrl = null;
 		try { currentUrl = h2Conn.getMetaData().getURL(); }
-		catch(SQLException ex) { _logger.warn("Problems getting current URL from the H2 Connection. Caught: "+ex); }
+		catch(SQLException ex) { _logger.warn("Problems getting current URL from the H2 Connection. Caught: " + ex); }
 		
 		// Try to get the FILES SIZE before we do 'shutdown compact'
 		// Then after 'shutdown compact', we can compare the difference / db file shrinkage
@@ -997,32 +980,32 @@ public class PersistWriterJdbc
 		try (Statement stmnt = h2Conn.createStatement();) {
 			stmnt.execute("select 1111");
 		} catch(SQLException ex) {
-			_logger.error("Problem when executing DUMMY SQL 'select 1111' before "+shutdownCmd+". SqlException: ErrorCode="+ex.getErrorCode()+", SQLState="+ex.getSQLState()+", toString="+ex.toString());
+			_logger.error("Problem when executing DUMMY SQL 'select 1111' before " + shutdownCmd + ". SqlException: ErrorCode=" + ex.getErrorCode() + ", SQLState=" + ex.getSQLState() + ", toString=" + ex.toString());
 		}
 
 		try (Statement stmnt = h2Conn.createStatement();) 
 		{
-			_logger.info("Sending Command '"+shutdownCmd+"' to H2 database.");
+			_logger.info("Sending Command '" + shutdownCmd + "' to H2 database.");
 			stmnt.execute(shutdownCmd);
-			_logger.info("Shutdown H2 database using Command '"+shutdownCmd+"', took "+TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
+			_logger.info("Shutdown H2 database using Command '" + shutdownCmd + "', took " + TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
 		} 
 		catch(SQLException ex) 
 		{
 			// during shutdown we would expect: ErrorCode=90121, SQLState=90121, toString=org.h2.jdbc.JdbcSQLException: Database is already closed (to disable automatic closing at VM shutdown, add ";DB_CLOSE_ON_EXIT=FALSE" to the db URL)
 			if ( ex.getErrorCode() == 90121 )
-				_logger.info("Shutdown H2 database using '"+shutdownCmd+"', took "+TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
+				_logger.info("Shutdown H2 database using '" + shutdownCmd + "', took " + TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
 			else
 			{
 				Throwable rootCauseEx  = ExceptionUtils.getRootCause(ex);
 				// String    rootCauseMsg = ExceptionUtils.getRootCauseMessage(ex);
 
-				_logger.error("Problem when shutting down H2 using command '"+shutdownCmd+"'. SqlException: ErrorCode="+ex.getErrorCode()+", SQLState="+ex.getSQLState()+", ex.toString="+ex.toString()+", rootCauseEx="+rootCauseEx);
+				_logger.error("Problem when shutting down H2 using command '" + shutdownCmd + "'. SqlException: ErrorCode=" + ex.getErrorCode() + ", SQLState=" + ex.getSQLState() + ", ex.toString=" + ex.toString() + ", rootCauseEx=" + rootCauseEx);
 				
 				// Check if the H2 database seems CORRUPT...
 				// Caused by: java.lang.IllegalStateException: Reading from nio:/opt/dbxtune_data/DBXTUNE_CENTRAL_DB.mv.db failed; file length -1 read length 768 at 2026700328 [1.4.197/1]
 				if (rootCauseEx != null && rootCauseEx.getClass().getSimpleName().equals("IllegalStateException"))
 				{
-					_logger.error("ATTENTION: The H2 database looks CORRUPT, the rootCauseEx is 'IllegalStateException', which might indicate a corrupt database. rootCauseEx="+rootCauseEx, rootCauseEx);
+					_logger.error("ATTENTION: The H2 database looks CORRUPT, the rootCauseEx is 'IllegalStateException', which might indicate a corrupt database. rootCauseEx=" + rootCauseEx, rootCauseEx);
 				}
 			}
 		}
@@ -1033,11 +1016,11 @@ public class PersistWriterJdbc
 			long dbFileSizeAfter = dbFile.length();
 			long sizeDiff = dbFileSizeAfter - dbFileSizeBefore;
 			
-			_logger.info("Shutdown H2 database file size info, after '"+shutdownCmd+"'. " 
+			_logger.info("Shutdown H2 database file size info, after '" + shutdownCmd + "'. " 
 					+ "DiffMb="     + String.format("%.1f", (sizeDiff        /1024.0/1024.0))
 					+ ", BeforeMb=" + String.format("%.1f", (dbFileSizeBefore/1024.0/1024.0))
 					+ ", AfterMb="  + String.format("%.1f", (dbFileSizeAfter /1024.0/1024.0))
-					+ ", Filename='"+dbFile.getAbsolutePath()
+					+ ", Filename='" + dbFile.getAbsolutePath()
 					+ "'.");
 			
 			// Check if we have a ".tempFile"
@@ -1045,7 +1028,7 @@ public class PersistWriterJdbc
 			File shutdownTempFile = new File(dbFile.getAbsolutePath() + ".tempFile");
 			if (shutdownTempFile.exists())
 			{
-				_logger.warn("After Shutdown H2 database using '"+shutdownCmd+"', the file '"+shutdownTempFile+"' exists. sizeMb("+(shutdownTempFile.length()/1024/1024)+"), sizeB("+shutdownTempFile.length()+"). This is probably due to a 'incomplete' shutdown (defrag). REMOVING THIS FILE.");
+				_logger.warn("After Shutdown H2 database using '" + shutdownCmd + "', the file '" + shutdownTempFile + "' exists. sizeMb(" + (shutdownTempFile.length()/1024/1024) + "), sizeB(" + shutdownTempFile.length() + "). This is probably due to a 'incomplete' shutdown (defrag). REMOVING THIS FILE.");
 				shutdownTempFile.delete();
 			}
 			
@@ -1071,6 +1054,9 @@ public class PersistWriterJdbc
 	@Override
 	public Configuration getConfig()
 	{
+		if (_config == null)
+			return Configuration.getCombinedConfiguration();
+
 		return _config;
 	}
 
@@ -1089,11 +1075,11 @@ public class PersistWriterJdbc
 		String propname = null;
 
 		// property: name
-		propname = propPrefix+"name";
+		propname = propPrefix + "name";
 		_name = props.getProperty(propname, _name);
 
 		// WRITE init message, jupp a little late, but I wanted to grab the _name
-		_logger.info("Initializing the PersistentCounterHandler.WriterClass component named '"+_name+"'.");
+		_logger.info("Initializing the PersistentCounterHandler.WriterClass component named '" + _name + "'.");
 		
 		_jdbcDriver = props.getPropertyRaw(PROPKEY_jdbcDriver,   "");
 		_jdbcUrl    = props.getPropertyRaw(PROPKEY_jdbcUrl,      "");
@@ -1120,18 +1106,18 @@ public class PersistWriterJdbc
 //		DictCompression dcc = new DictCompression();
 //		DictCompression.setInstance(dcc);
 
-//		_logger.info("Configuration for PersistentCounterHandler.WriterClass component named '"+_name+"': "+configStr);
-		_logger.info ("Configuration for PersistentCounterHandler.WriterClass component named '"+_name+"'.");
-		_logger.info ("                  "+propPrefix+"jdbcDriver           = " + _jdbcDriver);
-		_logger.info ("                  "+propPrefix+"jdbcUrl              = " + _jdbcUrl);
-		_logger.info ("                  "+propPrefix+"jdbcUser             = " + _jdbcUser);
-		_logger.info ("                  "+propPrefix+"jdbcPasswd           = " + "*hidden*" + ("".equals(_jdbcPasswd) ? " (no-passwd/blank)" : "") );
-		_logger.debug(" *not-encrypted*  "+propPrefix+"jdbcPasswd           = " + _jdbcPasswd);
-		_logger.info ("                  "+propPrefix+"jdbcKeepConnOpen     = " + _keepConnOpen);
-		_logger.info ("                  "+propPrefix+"h2NewDbOnDateChange  = " + _h2NewDbOnDateChange);
-		_logger.info ("                  "+propPrefix+"h2DateParseFormat    = " + _h2DbDateParseFormat);
-		_logger.info ("                  "+propPrefix+"startH2NetworkServer = " + _startH2NetworkServer);
-		_logger.info ("                  "+propPrefix+"cachePreparedStatements = " + _cachePreparedStatements);
+//		_logger.info("Configuration for PersistentCounterHandler.WriterClass component named '" + _name + "': " + configStr);
+		_logger.info ("Configuration for PersistentCounterHandler.WriterClass component named '" + _name + "'.");
+		_logger.info ("                  " + propPrefix + "jdbcDriver           = " + _jdbcDriver);
+		_logger.info ("                  " + propPrefix + "jdbcUrl              = " + _jdbcUrl);
+		_logger.info ("                  " + propPrefix + "jdbcUser             = " + _jdbcUser);
+		_logger.info ("                  " + propPrefix + "jdbcPasswd           = " + "*hidden*" + ("".equals(_jdbcPasswd) ? " (no-passwd/blank)" : "") );
+		_logger.debug(" *not-encrypted*  " + propPrefix + "jdbcPasswd           = " + _jdbcPasswd);
+		_logger.info ("                  " + propPrefix + "jdbcKeepConnOpen     = " + _keepConnOpen);
+		_logger.info ("                  " + propPrefix + "h2NewDbOnDateChange  = " + _h2NewDbOnDateChange);
+		_logger.info ("                  " + propPrefix + "h2DateParseFormat    = " + _h2DbDateParseFormat);
+		_logger.info ("                  " + propPrefix + "startH2NetworkServer = " + _startH2NetworkServer);
+		_logger.info ("                  " + propPrefix + "cachePreparedStatements = " + _cachePreparedStatements);
 
 //FIXME: write new configurations...
 
@@ -1236,19 +1222,19 @@ public class PersistWriterJdbc
 				long lastSpillOverCreationAgeThreshold = 60 * 60 * 1000; // 1 hour
 				long lastSpillOverCreationAge = System.currentTimeMillis() - _h2NewSpilloverDbCreateTime;
 
-//System.out.println("DEBUG: storageQueueSizeWarning() lastSpillOverCreationAge="+lastSpillOverCreationAge+", _h2NewSpilloverDbCreateTime="+_h2NewSpilloverDbCreateTime);
-//System.out.println("DEBUG: storageQueueSizeWarning() (lastSpillOverCreationAge < lastSpillOverCreationAgeThreshold) = "+(lastSpillOverCreationAge < lastSpillOverCreationAgeThreshold));
+//System.out.println("DEBUG: storageQueueSizeWarning() lastSpillOverCreationAge=" + lastSpillOverCreationAge + ", _h2NewSpilloverDbCreateTime=" + _h2NewSpilloverDbCreateTime);
+//System.out.println("DEBUG: storageQueueSizeWarning() (lastSpillOverCreationAge < lastSpillOverCreationAgeThreshold) = " + (lastSpillOverCreationAge < lastSpillOverCreationAgeThreshold));
 				if (_connStatus_inProgress)
 				{
-					_logger.warn("DISREGARD-REQUEST(SPILL-OVER-DB): Storage queue size is "+queueSize+", which is above the threshold 'configuration: '"+PROPKEY_h2_queueSizeWarning_createNewDbThreshold+"="+createNewDbThreshold+"'. BUT the connection status is already 'in progress' so a new database is created right now. Create new 'spill-over-database' request is DISREGARDED.");
+					_logger.warn("DISREGARD-REQUEST(SPILL-OVER-DB): Storage queue size is " + queueSize + ", which is above the threshold 'configuration: '" + PROPKEY_h2_queueSizeWarning_createNewDbThreshold + "=" + createNewDbThreshold + "'. BUT the connection status is already 'in progress' so a new database is created right now. Create new 'spill-over-database' request is DISREGARDED.");
 				}
 				else if (lastSpillOverCreationAge < lastSpillOverCreationAgeThreshold)
 				{
-					_logger.warn("DISREGARD-REQUEST(SPILL-OVER-DB): Storage queue size is "+queueSize+", which is above the threshold 'configuration: '"+PROPKEY_h2_queueSizeWarning_createNewDbThreshold+"="+createNewDbThreshold+"'. BUT the spillover database was created "+TimeUtils.msToTimeStr(lastSpillOverCreationAge)+" ago and the create-new-limit is "+TimeUtils.msToTimeStr(lastSpillOverCreationAgeThreshold)+". Create new 'spill-over-database' request is DISREGARDED.");
+					_logger.warn("DISREGARD-REQUEST(SPILL-OVER-DB): Storage queue size is " + queueSize + ", which is above the threshold 'configuration: '" + PROPKEY_h2_queueSizeWarning_createNewDbThreshold + "=" + createNewDbThreshold + "'. BUT the spillover database was created " + TimeUtils.msToTimeStr(lastSpillOverCreationAge) + " ago and the create-new-limit is " + TimeUtils.msToTimeStr(lastSpillOverCreationAgeThreshold) + ". Create new 'spill-over-database' request is DISREGARDED.");
 				}
 				else
 				{
-					_logger.warn("REQUEST(SPILL-OVER-DB): Storage queue size is "+queueSize+", which is above the threshold 'configuration: '"+PROPKEY_h2_queueSizeWarning_createNewDbThreshold+"="+createNewDbThreshold+"'. So lets resolve the situation by creating a new H2 database to store the recording. This will be done on next store iteration.");
+					_logger.warn("REQUEST(SPILL-OVER-DB): Storage queue size is " + queueSize + ", which is above the threshold 'configuration: '" + PROPKEY_h2_queueSizeWarning_createNewDbThreshold + "=" + createNewDbThreshold + "'. So lets resolve the situation by creating a new H2 database to store the recording. This will be done on next store iteration.");
 					_h2CreateNewSpilloverDbOnNextSave = true;
 				}
 			}
@@ -1267,8 +1253,8 @@ public class PersistWriterJdbc
 
 //		String val = "abc ${DATE:format=yyyyMMdd.HHmm; roll=true} xxx ${SERVERNAME}:${VAR_IS_UNKNOWN}";
 		String val = inputUrl; 
-		_logger.debug("urlSubstitution(): INPUT: inputUrl='"+val+"'.");
-//System.out.println("PCS: urlSubstitution: INPUT: inputUrl='"+val+"'.");
+		_logger.debug("urlSubstitution(): INPUT: inputUrl='" + val + "'.");
+//System.out.println("PCS: urlSubstitution: INPUT: inputUrl='" + val + "'.");
 
 //		Pattern compiledRegex = Pattern.compile("\\$\\{.*\\}");
 		Pattern compiledRegex = Pattern.compile("\\$\\{.+\\}");
@@ -1278,7 +1264,7 @@ public class PersistWriterJdbc
 			String varStr      = val.substring( val.indexOf("${")+2, val.indexOf("}") );
 			String varName     = varStr;
 			Configuration varConf = null;
-//System.out.println("PCS: urlSubstitution: LOOP: varName='"+varName+"', varStr='"+varStr+"'.");
+//System.out.println("PCS: urlSubstitution: LOOP: varName='" + varName + "', varStr='" + varStr + "'.");
 			if (varStr.indexOf(':') >= 0)
 			{
 				int firstColon = varStr.indexOf(':');
@@ -1288,12 +1274,12 @@ public class PersistWriterJdbc
 				try { varConf = Configuration.parse(varModifier, ";"); }
 				catch (ParseException pe) 
 				{
-					_logger.error("Problems parsing variables in the H2 URL '"+inputUrl+"' at the variable '"+varName+"' with the modifier '"+varModifier+"'. Caught: "+pe);
+					_logger.error("Problems parsing variables in the H2 URL '" + inputUrl + "' at the variable '" + varName + "' with the modifier '" + varModifier + "'. Caught: " + pe);
 				}
 			}
-//System.out.println("PCS: urlSubstitution: LOOP-2: varName='"+varName+"', varStr='"+varStr+"'.");
+//System.out.println("PCS: urlSubstitution: LOOP-2: varName='" + varName + "', varStr='" + varStr + "'.");
 
-			_logger.debug("urlSubstitution(): varName='"+varName+"', varModifyer='"+varConf+"'.");
+			_logger.debug("urlSubstitution(): varName='" + varName + "', varModifyer='" + varConf + "'.");
 			
 			if ( "DATE".equals(varName) )
 			{
@@ -1312,13 +1298,13 @@ public class PersistWriterJdbc
 				// if modifier changed the defaults... set the defaults to the new values
 				if ( ! _h2DbDateParseFormat.equals(dateFormat))
 				{
-					_logger.info("Changing Property: 'h2DateParseFormat' from '"+_h2DbDateParseFormat+"' to '"+dateFormat+"'. The URL Variable '${DATE}' modifier 'format' overrides the default value.");
+					_logger.info("Changing Property: 'h2DateParseFormat' from '" + _h2DbDateParseFormat + "' to '" + dateFormat + "'. The URL Variable '${DATE}' modifier 'format' overrides the default value.");
 					_h2DbDateParseFormat = dateFormat;
 				}
 
 				if ( _h2NewDbOnDateChange != roll )
 				{
-					_logger.info("Changing Property: 'h2NewDbOnDateChange' from '"+_h2NewDbOnDateChange+"' to '"+roll+"'. The URL Variable '${DATE}' modifier 'roll' overrides the default value.");
+					_logger.info("Changing Property: 'h2NewDbOnDateChange' from '" + _h2NewDbOnDateChange + "' to '" + roll + "'. The URL Variable '${DATE}' modifier 'roll' overrides the default value.");
 					_h2NewDbOnDateChange = roll;
 				}
 			}
@@ -1346,13 +1332,13 @@ public class PersistWriterJdbc
 //			{
 //				varName = DbxTune.getInstance().getAppSaveDirEnvName();
 //				varVal  = StringUtil.getEnvVariableValue(varName);
-//System.out.println("PCS: urlSubstitution: varName='"+varName+"', varVal='"+varVal+"'.");
+//System.out.println("PCS: urlSubstitution: varName='" + varName + "', varVal='" + varVal + "'.");
 //			}
 //			else if ( varName != null && varName.endsWith("TUNE_HOME")) 
 //			{
 //				varName = DbxTune.getInstance().getAppHomeEnvName();
 //				varVal  = StringUtil.getEnvVariableValue(varName);
-////System.out.println("PCS: urlSubstitution: varName='"+varName+"', varVal='"+varVal+"'.");
+////System.out.println("PCS: urlSubstitution: varName='" + varName + "', varVal='" + varVal + "'.");
 //			}
 			else if ( varName != null && "DBXTUNE_SAVE_DIR".equals(varName)) 
 			{
@@ -1364,21 +1350,21 @@ public class PersistWriterJdbc
 			}
 			else
 			{
-				_logger.warn("PCS: urlSubstitution(): WARNING: Unknown variable '"+varName+"', simply removing it from the output.");
+				_logger.warn("PCS: urlSubstitution(): WARNING: Unknown variable '" + varName + "', simply removing it from the output.");
 				varVal = "";
-				//varVal = "$"+varStr+"";
+				//varVal = "$" + varStr + "";
 			}
 
 			if (varVal == null)
 				varVal = "";
 
-//System.out.println("PCS: urlSubstitution(): Substituting varName '${"+varStr+"}' with value '"+varVal+"'.");
-			_logger.debug("urlSubstitution(): Substituting varName '${"+varStr+"}' with value '"+varVal+"'.");
+//System.out.println("PCS: urlSubstitution(): Substituting varName '${" + varStr + "}' with value '" + varVal + "'.");
+			_logger.debug("urlSubstitution(): Substituting varName '${" + varStr + "}' with value '" + varVal + "'.");
 
 			// NOW substitute the ENVVARIABLE with a real value...
-			val = val.replace("${"+varStr+"}", varVal);
+			val = val.replace("${" + varStr + "}", varVal);
 		}
-		_logger.debug("urlSubstitution(): AFTER: val='"+val+"'.");
+		_logger.debug("urlSubstitution(): AFTER: val='" + val + "'.");
 		
 		return val;
 	}
@@ -1414,8 +1400,8 @@ public class PersistWriterJdbc
 		
 		String localJdbcUrl = urlHelper.getNewUrl(currentFilename);
 //System.out.println("---");
-//System.out.println(">>> input >>>> |"+lastUsedUrl+"|.");
-//System.out.println("<<< output <<< |"+localJdbcUrl+"|.");
+//System.out.println(">>> input >>>> |" + lastUsedUrl + "|.");
+//System.out.println("<<< output <<< |" + localJdbcUrl + "|.");
 
 		return localJdbcUrl;
 	}
@@ -1465,7 +1451,7 @@ public class PersistWriterJdbc
 				{
 					dueToDatabaseRollover = true;
 					dailyReportServerName = cont.getServerNameOrAlias();
-					_logger.info("Closing the old database with ${DATE} marked as '"+_h2LastDateChange+"', a new database will be opened using ${DATE} marker '"+dateStr+"'.");
+					_logger.info("Closing the old database with ${DATE} marked as '" + _h2LastDateChange + "', a new database will be opened using ${DATE} marker '" + dateStr + "'.");
 				}
 
 				close(force, dueToDatabaseRollover, dailyReportServerName);
@@ -1532,9 +1518,9 @@ public class PersistWriterJdbc
 			if ( localJdbcUrl.indexOf("${") >= 0)
 			{
 				localJdbcUrl = urlSubstitution(cont, localJdbcUrl);
-				_logger.info("Found variables in the URL '"+_jdbcUrl+"', the new URL will be '"+localJdbcUrl+"'.");
+				_logger.info("Found variables in the URL '" + _jdbcUrl + "', the new URL will be '" + localJdbcUrl + "'.");
 				if (_h2NewDbOnDateChange)
-					_logger.info("When a new ${DATE} of the format '"+_h2DbDateParseFormat+"' has been reached, a new database will be opened using that timestamp.");
+					_logger.info("When a new ${DATE} of the format '" + _h2DbDateParseFormat + "' has been reached, a new database will be opened using that timestamp.");
 
 				// This will be used to determine if a new DB should be opened with a new TIMESTAMP.
 				String dateStr = new SimpleDateFormat(_h2DbDateParseFormat).format(newDate);
@@ -1605,7 +1591,7 @@ public class PersistWriterJdbc
 						if (h2ReuseSpace.equals("TRUE") || h2ReuseSpace.equals("FALSE"))
 						{
 							change = true;
-							_logger.info("H2 URL add option: REUSE_SPACE="+h2ReuseSpace);
+							_logger.info("H2 URL add option: REUSE_SPACE=" + h2ReuseSpace);
 							urlMap.put("REUSE_SPACE",  h2ReuseSpace);
 						}
 						else
@@ -1644,7 +1630,7 @@ public class PersistWriterJdbc
 					if (h2RetentionTime > -1) // set to -1 to disable this option
 					{
 						change = true;
-						_logger.info("H2 URL add option: RETENTION_TIME="+h2RetentionTime);
+						_logger.info("H2 URL add option: RETENTION_TIME=" + h2RetentionTime);
 						urlMap.put("RETENTION_TIME",  Integer.toString(h2RetentionTime));
 					}
 				}
@@ -1658,8 +1644,8 @@ public class PersistWriterJdbc
 					{
     					int h2CacheInKb = h2CacheInMb * 1024;
     					change = true;
-    					_logger.info("H2 URL add option: CACHE_SIZE="+h2CacheInKb);
-    					urlMap.put("CACHE_SIZE",  h2CacheInKb+"");
+    					_logger.info("H2 URL add option: CACHE_SIZE=" + h2CacheInKb);
+    					urlMap.put("CACHE_SIZE",  h2CacheInKb + "");
 					}
 				}
 
@@ -1698,8 +1684,8 @@ public class PersistWriterJdbc
 					if (h2WriteDelay > -1) // set to -1 to disable this option
 					{
 						change = true;
-						_logger.info("H2 URL add option: WRITE_DELAY="+h2WriteDelay);
-						urlMap.put("WRITE_DELAY",  h2WriteDelay+"");
+						_logger.info("H2 URL add option: WRITE_DELAY=" + h2WriteDelay);
+						urlMap.put("WRITE_DELAY",  h2WriteDelay + "");
 					}
 				}
 
@@ -1713,7 +1699,7 @@ public class PersistWriterJdbc
 						String key = entry.getKey();
 						String val = entry.getValue();
 						String oldVal = urlMap.get(key);
-						_logger.info("H2 URL add option: " + key + "=" + val + (oldVal == null ? "" : "  (overriding previous value: "+oldVal+")") );
+						_logger.info("H2 URL add option: " + key + "=" + val + (oldVal == null ? "" : "  (overriding previous value: " + oldVal + ")") );
 						urlMap.put(key, val);
 					}
 				}
@@ -1722,7 +1708,7 @@ public class PersistWriterJdbc
 //				if ( ! urlMap.containsKey("DATABASE_EVENT_LISTENER") )
 //				{
 //					change = true;
-//					_logger.info("H2 URL add option: DATABASE_EVENT_LISTENER="+H2DatabaseEventListener.class.getName());
+//					_logger.info("H2 URL add option: DATABASE_EVENT_LISTENER=" + H2DatabaseEventListener.class.getName());
 //					urlMap.put("DATABASE_EVENT_LISTENER",  "'" + H2DatabaseEventListener.class.getName() + "'");
 //				}
 
@@ -1733,7 +1719,7 @@ public class PersistWriterJdbc
 					if ( ! urlMap.containsKey("DB_CLOSE_ON_EXIT") )
 					{
 						change = true;
-						_logger.info("H2 URL add option: DB_CLOSE_ON_EXIT=false  (due to isShutdownHookInstalled="+isShutdownHookInstalled+")");
+						_logger.info("H2 URL add option: DB_CLOSE_ON_EXIT=false  (due to isShutdownHookInstalled=" + isShutdownHookInstalled + ")");
 						urlMap.put("DB_CLOSE_ON_EXIT", "FALSE");
 					}
 				}
@@ -1744,7 +1730,7 @@ public class PersistWriterJdbc
 					urlHelper.setUrlOptionsMap(urlMap);
 					localJdbcUrl = urlHelper.getUrl();
 					
-					_logger.info("Added some options to the H2 URL. New URL is '"+localJdbcUrl+"'.");
+					_logger.info("Added some options to the H2 URL. New URL is '" + localJdbcUrl + "'.");
 				}
 			}
 			
@@ -1767,7 +1753,7 @@ public class PersistWriterJdbc
 					// The new filename would be: -SPILL-OVER-DB-#
 					// and the '#' will be incremented if one already exists
 					localJdbcUrl = getNewH2SpillOverUrl(lastUsedUrl);
-					_logger.info("SPILL-OVER-DB: H2 'Spill-over-database' will be created using the URL='"+localJdbcUrl+"'.");
+					_logger.info("SPILL-OVER-DB: H2 'Spill-over-database' will be created using the URL='" + localJdbcUrl + "'.");
 
 					// Set this early, but also after the connection is made, if it takes a long time to connect...
 					_h2NewSpilloverDbCreateTime = System.currentTimeMillis();
@@ -1782,7 +1768,7 @@ public class PersistWriterJdbc
 			connProp.setUsername(_jdbcUser);
 			connProp.setPassword(_jdbcPasswd);
 			connProp.setUrl(localJdbcUrl);
-			connProp.setAppName(Version.getAppName()+"-pcsWriter");
+			connProp.setAppName(Version.getAppName() + "-pcsWriter");
 			connProp.setAppVersion(Version.getVersionStr());
 
 			// Now Connect
@@ -1800,28 +1786,28 @@ public class PersistWriterJdbc
 				_h2CreateNewSpilloverDbOnNextSave = false;
 			}
 			
-			_logger.info("A Database connection has been opened. connectTime='"+connectTimeStr+"', to URL '"+localJdbcUrl+"', using driver '"+_jdbcDriver+"'.");
-			_logger.debug("The connection has property auto-commit set to '"+_mainConn.getAutoCommit()+"'.");
+			_logger.info("A Database connection has been opened. connectTime='" + connectTimeStr + "', to URL '" + localJdbcUrl + "', using driver '" + _jdbcDriver + "'.");
+			_logger.debug("The connection has property auto-commit set to '" + _mainConn.getAutoCommit() + "'.");
 
 			// DDL Information Capture connection
 			if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_ddlInfoStorage_usePrivateConnection, DEFAULT_ddlInfoStorage_usePrivateConnection))
 			{
-				String appName = Version.getAppName()+"-pcsWriterDdlInfo";
+				String appName = Version.getAppName() + "-pcsWriterDdlInfo";
 				ConnectionProp cp = new ConnectionProp(connProp);
 				cp.setAppName(appName);
 
-				_logger.info("Open a dedicated connection to store 'DDL Information' at '"+cp.getUrl()+"' with application name '"+appName+"'.");
+				_logger.info("Open a dedicated connection to store 'DDL Information' at '" + cp.getUrl() + "' with application name '" + appName + "'.");
 				_ddlStorageConn = DbxConnection.connect(null, connProp);
 			}
 
 			// SQL Capture connection
 			if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sqlCaptureStorage_usePrivateConnection, DEFAULT_sqlCaptureStorage_usePrivateConnection))
 			{
-				String appName = Version.getAppName()+"-pcsWriterSqlCap";
+				String appName = Version.getAppName() + "-pcsWriterSqlCap";
 				ConnectionProp cp = new ConnectionProp(connProp);
 				cp.setAppName(appName);
 
-				_logger.info("Open a dedicated connection to store 'SQL Capture Information' at '"+cp.getUrl()+"' with application name '"+appName+"'.");
+				_logger.info("Open a dedicated connection to store 'SQL Capture Information' at '" + cp.getUrl() + "' with application name '" + appName + "'.");
 				_sqlCaptureStorageConn = DbxConnection.connect(null, connProp);
 			}
 
@@ -1871,18 +1857,18 @@ public class PersistWriterJdbc
 
 //					try	{ getIdentifierQuoteString  = dbmd.getIdentifierQuoteString();  } catch (Throwable ignore) {}
 
-					_logger.info("Connected using JDBC driver Name='"+getDriverName
-							+"', Version='"         +getDriverVersion
-							+"', MajorVersion='"    +getDriverMajorVersion
-							+"', MinorVersion='"    +getDriverMinorVersion
-							+"', JdbcMajorVersion='"+getJDBCMajorVersion
-							+"', JdbcMinorVersion='"+getJDBCMinorVersion
-							+"'.");
-					_logger.info("Connected to Database Product Name='"+getDatabaseProductName
-							+"', Version='"     +getDatabaseProductVersion
-							+"', MajorVersion='"+getDatabaseMajorVersion
-							+"', MinorVersion='"+getDatabaseMinorVersion
-							+"'.");
+					_logger.info("Connected using JDBC driver Name='" + getDriverName
+							+ "', Version='"          + getDriverVersion
+							+ "', MajorVersion='"     + getDriverMajorVersion
+							+ "', MinorVersion='"     + getDriverMinorVersion
+							+ "', JdbcMajorVersion='" + getJDBCMajorVersion
+							+ "', JdbcMinorVersion='" + getJDBCMinorVersion
+							+ "'.");
+					_logger.info("Connected to Database Product Name='" + getDatabaseProductName
+							+ "', Version='"      + getDatabaseProductVersion
+							+ "', MajorVersion='" + getDatabaseMajorVersion
+							+ "', MinorVersion='" + getDatabaseMinorVersion
+							+ "'.");
 
 					// Set what type of database we are connected to.
 					setDatabaseProductName(getDatabaseProductName == null ? "" : getDatabaseProductName);
@@ -1971,7 +1957,7 @@ public class PersistWriterJdbc
 				sb.append("Message="  ).append( ev.getMessage()   );
 				ev = ev.getNextException();
 			}
-			_logger.error("Problems when connecting to a datastore Server. "+sb.toString());
+			_logger.error("Problems when connecting to a datastore Server. " + sb.toString());
 			_mainConn = closeConn(_mainConn);
 			_ddlStorageConn = closeConn(_ddlStorageConn);;
 			_sqlCaptureStorageConn = closeConn(_sqlCaptureStorageConn);;
@@ -2138,7 +2124,7 @@ public class PersistWriterJdbc
 		}
 		catch(SQLException ex)
 		{
-			_logger.info("Problems getting H2 Settings/Config. Caught: "+ex);
+			_logger.info("Problems getting H2 Settings/Config. Caught: " + ex);
 		}
 		
 		return map;
@@ -2156,8 +2142,8 @@ public class PersistWriterJdbc
 		// for Better/other Performance: lets reconnect, using an alternate URL
 		// DYNAMIC_PREPARE=true  or  ENABLE_BULK_LOAD=true
 		Configuration conf = Configuration.getCombinedConfiguration();
-		boolean aseDynamicPrepare = conf.getBooleanProperty(PROPKEY_BASE+"ase.option.DYNAMIC_PREPARE",  true);
-		boolean aseEnableBulkLoad = conf.getBooleanProperty(PROPKEY_BASE+"ase.option.ENABLE_BULK_LOAD", false);
+		boolean aseDynamicPrepare = conf.getBooleanProperty(PROPKEY_BASE + "ase.option.DYNAMIC_PREPARE",  true);
+		boolean aseEnableBulkLoad = conf.getBooleanProperty(PROPKEY_BASE + "ase.option.ENABLE_BULK_LOAD", false);
 
 //		// use BULK_LOAD over DYNAMIC_PREPARE
 //		if (aseEnableBulkLoad)
@@ -2178,7 +2164,7 @@ public class PersistWriterJdbc
 			{
 				change = true;
 				_logger.info("ASE URL add option: DYNAMIC_PREPARE=true");
-				_logger.info("Setting '"+PROPKEY_cachePreparedStatements+"' to 'true' when DYNAMIC_PREPARE is enabled. This means most SQL PreparedStatements (and the server side lightweight stored procedure) in the Writer is reused. And the statements are not closed when pstmnt.close() is called.");
+				_logger.info("Setting '" + PROPKEY_cachePreparedStatements + "' to 'true' when DYNAMIC_PREPARE is enabled. This means most SQL PreparedStatements (and the server side lightweight stored procedure) in the Writer is reused. And the statements are not closed when pstmnt.close() is called.");
 				
 				_cachePreparedStatements = true;
 				urlMap.put("DYNAMIC_PREPARE", "true");
@@ -2200,12 +2186,12 @@ public class PersistWriterJdbc
 				_logger.info("Closing ASE connection, Now that I know It's ASE, I want to add specific URL options for load performance.");
 				try { conn.close(); } catch(SQLException ignore) {}
 
-				_logger.info("Added some options to the ASE URL. New URL is '"+localJdbcUrl+"'.");
+				_logger.info("Added some options to the ASE URL. New URL is '" + localJdbcUrl + "'.");
 				// Set the new URL for the connection to be made.
 				conn.getConnProp().setUrl(localJdbcUrl);
 
 				// do the connect again.
-				_logger.info("Re-connecting to ASE after fixing the URL options. New URL is '"+localJdbcUrl+"'.");
+				_logger.info("Re-connecting to ASE after fixing the URL options. New URL is '" + localJdbcUrl + "'.");
 //				_mainConn = DriverManager.getConnection(localJdbcUrl, _jdbcUser, _jdbcPasswd);
 				conn.reConnect(null);
 			}
@@ -2219,7 +2205,7 @@ public class PersistWriterJdbc
 		long srvVersion = conn.getDbmsVersionNumber();
 		if (srvVersion < Ver.ver(15,0))
 		{
-			String msg = "The PCS storage is ASE Version '"+Ver.versionNumToStr(srvVersion)+"', which is NOT a good idea. This since it can't handle table names longer than 30 characters and the PCS uses longer name. There for I only support ASE 15.0 or higher for the PCS storage. I recommend to use H2 database as the PCS instead (http://www.h2database.com), which is included in the "+Version.getAppName()+" package.";
+			String msg = "The PCS storage is ASE Version '" + Ver.versionNumToStr(srvVersion) + "', which is NOT a good idea. This since it can't handle table names longer than 30 characters and the PCS uses longer name. There for I only support ASE 15.0 or higher for the PCS storage. I recommend to use H2 database as the PCS instead (http://www.h2database.com), which is included in the " + Version.getAppName() + " package.";
 			_logger.error(msg);
 
 			boolean force = true; // Force close, will set various connections to NULL which is required by: MainFrame.getInstance().action_disconnect()
@@ -2240,7 +2226,7 @@ public class PersistWriterJdbc
 		String dbname = conn.getCatalog();
 		if ("master".equals(dbname))
 		{
-			String msg = "Current ASE Database is '"+dbname+"'. "+Version.getAppName()+" does NOT support storage off Performance Counters in the '"+dbname+"' database.";
+			String msg = "Current ASE Database is '" + dbname + "'. " + Version.getAppName() + " does NOT support storage off Performance Counters in the '" + dbname + "' database.";
 			_logger.error(msg);
 
 			boolean force = true; // Force close, will set various connections to NULL which is required by: MainFrame.getInstance().action_disconnect()
@@ -2267,7 +2253,7 @@ public class PersistWriterJdbc
 		int asePageSize = AseConnectionUtils.getAsePageSize(_mainConn);
 		if (asePageSize < 4096)
 		{
-			_logger.warn("The ASE Servers Page Size is '"+asePageSize+"', to the connected server version '"+Ver.versionNumToStr(srvVersion)+"', which is probably NOT a good idea. The PCS storage will use rows wider than that... which will be reported as errors. However I will let this continue. BUT you can just hope for the best.");
+			_logger.warn("The ASE Servers Page Size is '" + asePageSize + "', to the connected server version '" + Ver.versionNumToStr(srvVersion) + "', which is probably NOT a good idea. The PCS storage will use rows wider than that... which will be reported as errors. However I will let this continue. BUT you can just hope for the best.");
 		}
 	}
 
@@ -2286,7 +2272,7 @@ public class PersistWriterJdbc
 	throws SQLException
 	{
 		if (logInfo)
-			_logger.info(getDatabaseProductName()+": "+sql);
+			_logger.info(getDatabaseProductName() + ": " + sql);
 		return dbExec(conn, sql, true);
 	}
 
@@ -2325,7 +2311,7 @@ public class PersistWriterJdbc
 		catch(SQLException e)
 		{
 			if (printErrors)
-				_logger.warn("Problems when executing sql statement: "+sql+" SqlException: ErrorCode="+e.getErrorCode()+", SQLState="+e.getSQLState()+", toString="+e.toString());
+				_logger.warn("Problems when executing sql statement: " + sql + " SqlException: ErrorCode=" + e.getErrorCode() + ", SQLState=" + e.getSQLState() + ", toString=" + e.toString());
 			throw e;
 		}
 
@@ -2398,7 +2384,7 @@ public class PersistWriterJdbc
 		}
 		catch(SQLException e)
 		{
-			_logger.warn("Problems when executing DDL sql statement: "+sql);
+			_logger.warn("Problems when executing DDL sql statement: " + sql, e);
 			isSevereProblem(conn, e);
 			throw e;
 		}
@@ -2412,12 +2398,16 @@ public class PersistWriterJdbc
 	 * @return True if table was created
 	 * @throws SQLException
 	 */
-	private boolean checkAndCreateTable(DbxConnection conn, int tabId)
+	protected boolean checkAndCreateTable(DbxConnection conn, String schemaName, int tabId)
 	throws SQLException
 	{
-		String tabName = getTableName(conn, tabId, null, false);
+		String plainTabName          = getTableName(conn, null      , tabId, null, false);
+		String schemaPrefixedTabName = getTableName(conn, schemaName, tabId, null, false);
 
-		if ( ! isDdlCreated(tabName) )
+		// Set a SQL Schema Name Prefix (if 'schemaName' was passed/assigned)
+		String schemaPrefix = StringUtil.isNullOrBlank(schemaName) ? "" : "[" + schemaName + "].";
+
+		if ( ! isDdlCreated(plainTabName) )
 		{
 			// Obtain a DatabaseMetaData object from our current connection        
 //			DatabaseMetaData dbmd = conn.getMetaData();
@@ -2425,7 +2415,7 @@ public class PersistWriterJdbc
 //			ResultSet rs = dbmd.getColumns(null, null, tabName, "%");
 //			boolean tabExists = rs.next();
 //			rs.close();
-			Set<String> colNames = DbUtils.getColumnNames(conn, null, tabName);
+			Set<String> colNames = DbUtils.getColumnNames(conn, schemaName, plainTabName);
 			boolean tabExists = !colNames.isEmpty();
 
 			if( tabExists )
@@ -2439,7 +2429,7 @@ public class PersistWriterJdbc
 					//        if not, just throw a WARNING message to the log
 
 					// Test if Dictionary Compression should be enabled or not.
-					Set<String> compTabNames = DictCompression.getCompressedTableNames(conn, null, false);
+					Set<String> compTabNames = DictCompression.getCompressedTableNames(conn, schemaName, false);
 					if ( ! compTabNames.isEmpty() )
 					{
 						_logger.info("On Startup: Found table(s) with Dictionary Compression Enabled, so it will be ENABLED for this recording. Already Dictionary Compressed Tables: " + compTabNames);
@@ -2461,33 +2451,33 @@ public class PersistWriterJdbc
 //						Alter table modify column [duration] varchar(80) 
 
 					// duration: varchar(10) --> varchar(80)
-					Table alarmActive = Table.create(conn, null, null, tabName);
+					Table alarmActive = Table.create(conn, null, schemaName, plainTabName);
 					TableColumn col_duration = alarmActive.getColumn("duration");
 					if (col_duration != null)
 					{
 						if (col_duration.getColumnLength() < 80)
 						{
-							String sql = DbmsDdlUtils.getDdlForAlterTableColumn(conn, true, null, tabName, "duration", "varchar(80) null"); // NOTE: 'not null' is not supported at upgrades
-							dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: "+sql);
+							String sql = DbmsDdlUtils.getDdlForAlterTableColumn(conn, true, schemaName, plainTabName, "duration", "varchar(80) null"); // NOTE: 'not null' is not supported at upgrades
+							dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
 						}
 					}
 
 					if ( ! colNames.contains("alarmDuration"))
 					{
-						String sql = conn.quotifySqlString("alter table [" + tabName + "] add column [alarmDuration] varchar(20) null"); // NOTE: 'not null' is not supported at upgrades
-						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: "+sql);
+						String sql = conn.quotifySqlString("alter table " + schemaPrefix + "[" + plainTabName + "] add column [alarmDuration] varchar(20) null"); // NOTE: 'not null' is not supported at upgrades
+						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
 					}
 
 					if ( ! colNames.contains("fullDuration"))
 					{
-						String sql = conn.quotifySqlString("alter table [" + tabName + "] add column [fullDuration] varchar(20) null"); // NOTE: 'not null' is not supported at upgrades
-						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: "+sql);
+						String sql = conn.quotifySqlString("alter table " + schemaPrefix + "[" + plainTabName + "] add column [fullDuration] varchar(20) null"); // NOTE: 'not null' is not supported at upgrades
+						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
 					}
 
 					if ( ! colNames.contains("fullDurationAdjustmentInSec"))
 					{
-						String sql = conn.quotifySqlString("alter table [" + tabName + "] add column [fullDurationAdjustmentInSec] int null"); // NOTE: 'not null' is not supported at upgrades
-						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: "+sql);
+						String sql = conn.quotifySqlString("alter table " + schemaPrefix + "[" + plainTabName + "] add column [fullDurationAdjustmentInSec] int null"); // NOTE: 'not null' is not supported at upgrades
+						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
 					}
 				}
 				else if (tabId == ALARM_HISTORY)
@@ -2497,33 +2487,33 @@ public class PersistWriterJdbc
 //						Alter table modify column [duration] varchar(80) 
 
 					// duration: varchar(10) --> varchar(80)
-					Table alarmActive = Table.create(conn, null, null, tabName);
+					Table alarmActive = Table.create(conn, null, schemaName, plainTabName);
 					TableColumn col_duration = alarmActive.getColumn("duration");
 					if (col_duration != null)
 					{
 						if (col_duration.getColumnLength() < 80)
 						{
-							String sql = DbmsDdlUtils.getDdlForAlterTableColumn(conn, true, null, tabName, "duration", "varchar(80) null"); // NOTE: 'not null' is not supported at upgrades
-							dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: "+sql);
+							String sql = DbmsDdlUtils.getDdlForAlterTableColumn(conn, true, schemaName, plainTabName, "duration", "varchar(80) null"); // NOTE: 'not null' is not supported at upgrades
+							dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
 						}
 					}
 
 					if ( ! colNames.contains("alarmDuration"))
 					{
-						String sql = conn.quotifySqlString("alter table [" + tabName + "] add column [alarmDuration] varchar(20) null"); // NOTE: 'not null' is not supported at upgrades
-						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: "+sql);
+						String sql = conn.quotifySqlString("alter table " + schemaPrefix + "[" + plainTabName + "] add column [alarmDuration] varchar(20) null"); // NOTE: 'not null' is not supported at upgrades
+						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
 					}
 
 					if ( ! colNames.contains("fullDuration"))
 					{
-						String sql = conn.quotifySqlString("alter table [" + tabName + "] add column [fullDuration] varchar(20) null"); // NOTE: 'not null' is not supported at upgrades
-						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: "+sql);
+						String sql = conn.quotifySqlString("alter table " + schemaPrefix + "[" + plainTabName + "] add column [fullDuration] varchar(20) null"); // NOTE: 'not null' is not supported at upgrades
+						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
 					}
 
 					if ( ! colNames.contains("fullDurationAdjustmentInSec"))
 					{
-						String sql = conn.quotifySqlString("alter table [" + tabName + "] add column [fullDurationAdjustmentInSec] int null"); // NOTE: 'not null' is not supported at upgrades
-						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: "+sql);
+						String sql = conn.quotifySqlString("alter table " + schemaPrefix + "[" + plainTabName + "] add column [fullDurationAdjustmentInSec] int null"); // NOTE: 'not null' is not supported at upgrades
+						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
 					}
 				}
 //				else if (tabId == RECORDING_OPTIONS)
@@ -2549,18 +2539,18 @@ public class PersistWriterJdbc
 //					DictCompression.setEnabled(enableDictComp);
 //
 //					// Write the info to the database 
-//					setRecordingOption(conn, DictCompression.PROPKEY_enabled, enableDictComp+"");
+//					setRecordingOption(conn, DictCompression.PROPKEY_enabled, enableDictComp + "");
 //				}
 			}
 			else // Table do NOT exist (Possibly a NEW DATABASE)
 			{
-				_logger.info("Creating table '" + tabName + "'.");
+				_logger.info("Creating table '" + schemaPrefixedTabName + "'.");
 				getStatistics().incCreateTables();
 				
-				List<String> ddlList = getTableDdlString(conn, tabId, null);
+				List<String> ddlList = getTableDdlString(conn, schemaName, tabId, null);
 				dbDdlExec(conn, ddlList);
 
-				String sql = getIndexDdlString(conn, tabId, null);
+				String sql = getIndexDdlString(conn, schemaName, tabId, null);
 				if (sql != null)
 				{
 					dbDdlExec(conn, sql);
@@ -2600,11 +2590,11 @@ public class PersistWriterJdbc
 //					DictCompression.setEnabled(enableDictComp);
 //
 //					// Write the info to the database 
-//					setRecordingOption(conn, DictCompression.PROPKEY_enabled, enableDictComp+"");
+//					setRecordingOption(conn, DictCompression.PROPKEY_enabled, enableDictComp + "");
 //				}
 			}
 			
-			markDdlAsCreated(tabName);
+			markDdlAsCreated(schemaPrefixedTabName);
 
 			return true;
 		}
@@ -2617,19 +2607,23 @@ public class PersistWriterJdbc
 	 * @return True if table was created
 	 * @throws SQLException
 	 */
-	private boolean checkAndCreateTable(DbxConnection conn, String tabName, ISqlCaptureBroker sqlCapBroker)
+	private boolean checkAndCreateTable(DbxConnection conn, String schemaName, String tabName, ISqlCaptureBroker sqlCapBroker)
 	throws SQLException
 	{
 		// Obtain a DatabaseMetaData object from our current connection        
 		DatabaseMetaData dbmd = conn.getMetaData();
 
-		_logger.info("Checking table '" + tabName + "' for existence.");
-		boolean dropTable = sqlCapBroker.checkForDropTableDdl(conn, dbmd, tabName);
+		// Set a SQL Schema Name Prefix (if 'schemaName' was passed/assigned)
+		String schemaPrefix      = StringUtil.isNullOrBlank(schemaName) ? "" : "[" + schemaName + "].";
+		String schemaPrefixPlain = StringUtil.isNullOrBlank(schemaName) ? "" : "[" + schemaName + "].";
+
+		_logger.info("Checking table '" + schemaPrefixPlain + tabName + "' for existence.");
+		boolean dropTable = sqlCapBroker.checkForDropTableDdl(conn, dbmd, schemaName, tabName);
 		if (dropTable)
 		{
-			String sql = conn.quotifySqlString("drop table [" + tabName + "]");
+			String sql = conn.quotifySqlString("drop table " + schemaPrefix + "[" + tabName + "]");
 
-			_logger.info("Dropping table '" + tabName + "', using sql: " + sql);
+			_logger.info("Dropping table '" + schemaPrefixPlain + tabName + "', using sql: " + sql);
 			dbDdlExec(conn, sql);
 
 			// Remove this table from the created cache
@@ -2639,36 +2633,36 @@ public class PersistWriterJdbc
 
 		if ( ! isDdlCreated(tabName) )
 		{
-			ResultSet rs = dbmd.getColumns(null, null, tabName, "%");
+			ResultSet rs = dbmd.getColumns(null, schemaName, tabName, "%");
 			boolean tabExists = rs.next();
 			rs.close();
 	
 			if( tabExists )
 			{
-				_logger.info("Checking table '" + tabName + "' in SqlCapture for Column Names (missing columns will be created).");
+				_logger.info("Checking table '" + schemaPrefixPlain + tabName + "' in SqlCapture for Column Names (missing columns will be created).");
 				
-				List <String> alterList = sqlCapBroker.checkTableDdl(conn, dbmd, tabName);
+				List <String> alterList = sqlCapBroker.checkTableDdl(conn, dbmd, schemaName, tabName);
 				if (alterList != null && !alterList.isEmpty())
 				{
 					for (String sql : alterList)
 					{
-						_logger.info("Altering table '" + tabName + "', using sql: " + sql);
+						_logger.info("Altering table '" + schemaPrefixPlain + tabName + "', using sql: " + sql);
 						dbDdlExec(conn, sql);
 					}
 				}
 			}
 			else
 			{
-				_logger.info("Creating table '" + tabName + "'.");
+				_logger.info("Creating table '" + schemaPrefixPlain + tabName + "'.");
 				getStatistics().incCreateTables();
 				
-				String sql = sqlCapBroker.getTableDdlString(conn, dbmd, tabName);
+				String sql = sqlCapBroker.getTableDdlString(conn, dbmd, schemaName, tabName);
 				if (sql != null)
 				{
 					dbDdlExec(conn, sql);
 				}
 
-				List<String> list = sqlCapBroker.getIndexDdlString(conn, dbmd, tabName);
+				List<String> list = sqlCapBroker.getIndexDdlString(conn, dbmd, schemaName, tabName);
 				if (list != null && !list.isEmpty())
 				{
 					for (String indexDdl : list)
@@ -2676,11 +2670,6 @@ public class PersistWriterJdbc
 						dbDdlExec(conn, indexDdl);
 					}
 				}
-//				sql = sqlCapBroker.getIndexDdlString(dbmd, tabName);
-//				if (sql != null)
-//				{
-//					dbDdlExec(conn, sql);
-//				}				
 			}
 			
 			markDdlAsCreated(tabName);
@@ -2690,29 +2679,9 @@ public class PersistWriterJdbc
 		return false;
 	}
 
-	private void insertSessionParam(DbxConnection conn, Timestamp sessionsStartTime, String type, String key, String val)
+	private void insertSessionParam(DbxConnection conn, Timestamp sessionsStartTime, String schemaName, String type, String key, String val)
 	throws SQLException
 	{
-//		String tabName = getTableName(SESSION_PARAMS, null, true);
-//
-//		// make string a "safe" string, escape all ' (meaning with '')
-//		if (key != null) key = key.replaceAll("'", "''");
-//		if (val != null) val = val.replaceAll("'", "''");
-//
-//		// insert into MonSessionParams(SessionStartTime, Type, ParamName, ParamValue) values(...)
-//		StringBuffer sbSql = new StringBuffer();
-//		sbSql.append(" insert into ").append(tabName);
-//		sbSql.append(" values('")
-//			.append(sessionsStartTime).append("', '")
-//			.append(type)             .append("', '")
-//			.append(key)              .append("', '")
-//			.append(val)              .append("')");
-//
-//		dbExec(sbSql.toString());
-
-//		if (val != null && val.length() >= SESSION_PARAMS_VAL_MAXLEN)
-//			val = val.substring(0, SESSION_PARAMS_VAL_MAXLEN - 1);
-
 		if (type != null) type = type.trim();
 		if (key  != null) key  = key .trim();
 		if (val  != null) val  = val .trim();
@@ -2723,7 +2692,7 @@ public class PersistWriterJdbc
 		try
 		{
 			// Get the SQL statement
-			String sql = getTableInsertStr(conn, SESSION_PARAMS, null, true);
+			String sql = getTableInsertStr(conn, schemaName, SESSION_PARAMS, null, true);
 //			PreparedStatement pst = conn.prepareStatement( sql );
 			PreparedStatement pst = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(conn, sql) : conn.prepareStatement(sql);
 	
@@ -2740,7 +2709,7 @@ public class PersistWriterJdbc
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Error in insertSessionParam() writing to Persistent Counter Store. insertSessionParam(sessionsStartTime='"+sessionsStartTime+"', type='"+type+"', key='"+key+"', val='"+val+"')", e);
+			_logger.warn("Error in insertSessionParam() writing to Persistent Counter Store. insertSessionParam(sessionsStartTime='" + sessionsStartTime + "', type='" + type + "', key='" + key + "', val='" + val + "')", e);
 			if (isSevereProblem(conn, e))
 				throw e;
 		}
@@ -2851,31 +2820,33 @@ public class PersistWriterJdbc
 		
 		try
 		{
-			_logger.info("Starting a new Storage Session with the start date '"+cont._sessionStartTime+"'.");
+			_logger.info("Starting a new Storage Session with the start date '" + cont._sessionStartTime + "'.");
 
 			//
 			// FIRST CHECK IF THE TABLE EXISTS, IF NOT CREATE IT
 			//
 //			_looksLikeNewDatabase = false; // Only valid in startSession() method
 			
-			checkAndCreateTable(conn, VERSION_INFO);
-			checkAndCreateTable(conn, SESSIONS);
-			checkAndCreateTable(conn, SESSION_PARAMS);
-			checkAndCreateTable(conn, SESSION_SAMPLES);
-			checkAndCreateTable(conn, SESSION_SAMPLE_SUM);
-			checkAndCreateTable(conn, SESSION_SAMPLE_DETAILES);
-			checkAndCreateTable(conn, SESSION_MON_TAB_DICT);
-			checkAndCreateTable(conn, SESSION_MON_TAB_COL_DICT);
-			checkAndCreateTable(conn, SESSION_DBMS_CONFIG);
-			checkAndCreateTable(conn, SESSION_DBMS_CONFIG_TEXT);
-			checkAndCreateTable(conn, SESSION_DBMS_CONFIG_ISSUES);
-//			checkAndCreateTable(conn, RECORDING_OPTIONS);
-			checkAndCreateTable(conn, DDL_STORAGE);
-//			checkAndCreateTable(conn, SQL_CAPTURE_SQLTEXT);
-//			checkAndCreateTable(conn, SQL_CAPTURE_STATEMENTS);
-//			checkAndCreateTable(conn, SQL_CAPTURE_PLANS);
-			checkAndCreateTable(conn, ALARM_ACTIVE);
-			checkAndCreateTable(conn, ALARM_HISTORY);
+			String schemaName = getSchemaName();
+			
+			checkAndCreateTable(conn, schemaName, VERSION_INFO);
+			checkAndCreateTable(conn, schemaName, SESSIONS);
+			checkAndCreateTable(conn, schemaName, SESSION_PARAMS);
+			checkAndCreateTable(conn, schemaName, SESSION_SAMPLES);
+			checkAndCreateTable(conn, schemaName, SESSION_SAMPLE_SUM);
+			checkAndCreateTable(conn, schemaName, SESSION_SAMPLE_DETAILES);
+			checkAndCreateTable(conn, schemaName, SESSION_MON_TAB_DICT);
+			checkAndCreateTable(conn, schemaName, SESSION_MON_TAB_COL_DICT);
+			checkAndCreateTable(conn, schemaName, SESSION_DBMS_CONFIG);
+			checkAndCreateTable(conn, schemaName, SESSION_DBMS_CONFIG_TEXT);
+			checkAndCreateTable(conn, schemaName, SESSION_DBMS_CONFIG_ISSUES);
+//			checkAndCreateTable(conn, schemaName, RECORDING_OPTIONS);
+			checkAndCreateTable(conn, schemaName, DDL_STORAGE);
+//			checkAndCreateTable(conn, schemaName, SQL_CAPTURE_SQLTEXT);
+//			checkAndCreateTable(conn, schemaName, SQL_CAPTURE_STATEMENTS);
+//			checkAndCreateTable(conn, schemaName, SQL_CAPTURE_PLANS);
+			checkAndCreateTable(conn, schemaName, ALARM_ACTIVE);
+			checkAndCreateTable(conn, schemaName, ALARM_HISTORY);
 			// Create tables for SQL Capture... they can have more (or less) tables than SQL_CAPTURE_SQLTEXT, SQL_CAPTURE_STATEMENTS, SQL_CAPTURE_PLANS
 			if (PersistentCounterHandler.hasInstance())
 			{
@@ -2885,7 +2856,7 @@ public class PersistWriterJdbc
 					List<String> tableNames = sqlCapBroker.getTableNames();
 					for (String tabName : tableNames)
 					{
-						checkAndCreateTable(conn, tabName, sqlCapBroker);
+						checkAndCreateTable(conn, schemaName, tabName, sqlCapBroker);
 					}
 				}
 			}
@@ -2896,11 +2867,11 @@ public class PersistWriterJdbc
 
 //			String dbProductName = "unknown";
 //			try { dbProductName = CounterController.getInstance().getMonConnection().getDatabaseProductName(); }
-//			catch(Throwable t) { _logger.warn("Problems getting Database Product Name from the monitor connection. Caught: "+t); }
+//			catch(Throwable t) { _logger.warn("Problems getting Database Product Name from the monitor connection. Caught: " + t); }
 			
 			StringBuffer sbSql = new StringBuffer();
 //			sbSql.append(" insert into ").append(tabName);
-			sbSql.append(getTableInsertStr(conn, VERSION_INFO, null, false));
+			sbSql.append(getTableInsertStr(conn, schemaName, VERSION_INFO, null, false));
 			sbSql.append(" values(");
 			sbSql.append("  '").append(cont.getSessionStartTime() ).append("'");
 			sbSql.append(", '").append(Version.getAppName()       ).append("'");
@@ -2919,14 +2890,14 @@ public class PersistWriterJdbc
 
 			sbSql = new StringBuffer();
 //			sbSql.append(" insert into ").append(tabName);
-			sbSql.append(getTableInsertStr(conn, SESSIONS, null, false));
+			sbSql.append(getTableInsertStr(conn, schemaName, SESSIONS, null, false));
 			sbSql.append(" values('").append(cont.getSessionStartTime()).append("', '").append(cont.getServerName()).append("', 0, null)");
 
 			dbExec(conn, sbSql.toString());
 			getStatistics().incInserts();
 			
 
-			_logger.info("Storing CounterModel information in table "+getTableName(conn, SESSION_PARAMS, null, false));
+			_logger.info("Storing CounterModel information in table " + getTableName(conn, schemaName, SESSION_PARAMS, null, false));
 			//--------------------------------
 			// LOOP ALL THE CM's and store some information
 //			tabName = getTableName(SESSION_PARAMS, null, true);
@@ -2936,20 +2907,20 @@ public class PersistWriterJdbc
 			{
 				String prefix = cm.getName();
 
-				insertSessionParam(conn, ts, "cm", prefix+".name",     cm.getName());
-				insertSessionParam(conn, ts, "cm", prefix+".sqlInit",  cm.getSqlInit());
-				insertSessionParam(conn, ts, "cm", prefix+".sql",      cm.getSql());
-				insertSessionParam(conn, ts, "cm", prefix+".sqlClose", cm.getSqlClose());
+				insertSessionParam(conn, ts, schemaName, "cm", prefix + ".name",     cm.getName());
+				insertSessionParam(conn, ts, schemaName, "cm", prefix + ".sqlInit",  cm.getSqlInit());
+				insertSessionParam(conn, ts, schemaName, "cm", prefix + ".sql",      cm.getSql());
+				insertSessionParam(conn, ts, schemaName, "cm", prefix + ".sqlClose", cm.getSqlClose());
 
-				insertSessionParam(conn, ts, "cm", prefix+".pk",       cm.getPk()==null ? null : cm.getPk().toString());
-				insertSessionParam(conn, ts, "cm", prefix+".diff",     Arrays.deepToString(cm.getDiffColumns()));
-				insertSessionParam(conn, ts, "cm", prefix+".diffDiss", Arrays.deepToString(cm.getDiffDissColumns()));
-				insertSessionParam(conn, ts, "cm", prefix+".pct",      Arrays.deepToString(cm.getPctColumns()));
+				insertSessionParam(conn, ts, schemaName, "cm", prefix + ".pk",       cm.getPk()==null ? null : cm.getPk().toString());
+				insertSessionParam(conn, ts, schemaName, "cm", prefix + ".diff",     Arrays.deepToString(cm.getDiffColumns()));
+				insertSessionParam(conn, ts, schemaName, "cm", prefix + ".diffDiss", Arrays.deepToString(cm.getDiffDissColumns()));
+				insertSessionParam(conn, ts, schemaName, "cm", prefix + ".pct",      Arrays.deepToString(cm.getPctColumns()));
 
-				insertSessionParam(conn, ts, "cm", prefix+".graphNames",Arrays.deepToString(cm.getTrendGraphNames()));
+				insertSessionParam(conn, ts, schemaName, "cm", prefix + ".graphNames",Arrays.deepToString(cm.getTrendGraphNames()));
 			}
 			
-			_logger.info("Storing "+Version.getAppName()+" configuration information in table "+getTableName(conn, SESSION_PARAMS, null, false));
+			_logger.info("Storing " + Version.getAppName() + " configuration information in table " + getTableName(conn, schemaName, SESSION_PARAMS, null, false));
 			//--------------------------------
 			// STORE the configuration file
 			Configuration conf;
@@ -2962,7 +2933,7 @@ public class PersistWriterJdbc
 				{
 					String val = conf.getPropertyRaw(key);
 
-					insertSessionParam(conn, ts, "system.config", key, val);
+					insertSessionParam(conn, ts, schemaName, "system.config", key, val);
 				}
 			}
 
@@ -2974,7 +2945,7 @@ public class PersistWriterJdbc
 				{
 					String val = conf.getPropertyRaw(key);
 
-					insertSessionParam(conn, ts, "user.config", key, val);
+					insertSessionParam(conn, ts, schemaName, "user.config", key, val);
 				}
 			}
 
@@ -2990,7 +2961,7 @@ public class PersistWriterJdbc
 					if (key.indexOf(".gui.column.header.props") >= 0)
 						continue;
 
-					insertSessionParam(conn, ts, "temp.config", key, val);
+					insertSessionParam(conn, ts, schemaName, "temp.config", key, val);
 				}
 			}
 
@@ -3002,7 +2973,7 @@ public class PersistWriterJdbc
 				{
 					String val = conf.getPropertyRaw(key);
 
-					insertSessionParam(conn, ts, "pcs.config", key, val);
+					insertSessionParam(conn, ts, schemaName, "pcs.config", key, val);
 				}
 			}
 
@@ -3018,7 +2989,7 @@ public class PersistWriterJdbc
 					if (key.indexOf(".gui.column.header.props") >= 0)
 						continue;
 
-					insertSessionParam(conn, ts, "combined.config", key, val);
+					insertSessionParam(conn, ts, schemaName, "combined.config", key, val);
 				}
 			}
 
@@ -3028,24 +2999,24 @@ public class PersistWriterJdbc
 			{
 				String val = systemProps.getProperty(key.toString());
 
-				insertSessionParam(conn, ts, "system.properties", key.toString(), val);
+				insertSessionParam(conn, ts, schemaName, "system.properties", key.toString(), val);
 			}
 
 
 			// Storing the MonTablesDictionary(monTables & monTableColumns), 
 			// this so we can restore the proper Column ToolTip for this ASE version.
 			if (MonTablesDictionaryManager.hasInstance())
-				saveMonTablesDictionary(conn, MonTablesDictionaryManager.getInstance(), cont._sessionStartTime);
+				saveMonTablesDictionary(conn, MonTablesDictionaryManager.getInstance(), schemaName, cont._sessionStartTime);
 
 			// Storing the AseConfig and AseCacheConfig
    			if (DbmsConfigManager.hasInstance())
-   				saveDbmsConfig(conn, DbmsConfigManager.getInstance(), cont._sessionStartTime);
+   				saveDbmsConfig(conn, DbmsConfigManager.getInstance(), schemaName, cont._sessionStartTime); // Possibly add 'schemaName'
     
    			if (DbmsConfigTextManager.hasInstances())
-   				saveDbmsConfigText(conn, cont._sessionStartTime);
+   				saveDbmsConfigText(conn, schemaName, cont._sessionStartTime); // Possibly add 'schemaName'
 
    			if (DbmsConfigManager.hasInstance())
-   				saveDbmsConfigIssues(conn, cont._sessionStartTime);
+   				saveDbmsConfigIssues(conn, schemaName, cont._sessionStartTime);
 
 			// Mark that this session HAS been started.
 			_logger.info("Marking the session as STARTED.");
@@ -3065,9 +3036,9 @@ public class PersistWriterJdbc
 		close();
 	}
 
-	public void saveDbmsConfigIssues(DbxConnection conn, Timestamp sessionStartTime)
+	public void saveDbmsConfigIssues(DbxConnection conn, String schemaName, Timestamp sessionStartTime)
 	{
-		_logger.info("Storing Various DBMS Configuration Issues in table " + getTableName(conn, SESSION_DBMS_CONFIG_ISSUES, null, false));
+		_logger.info("Storing Various DBMS Configuration Issues in table " + getTableName(conn, schemaName, SESSION_DBMS_CONFIG_ISSUES, null, false));
 
 		if (conn == null)
 		{
@@ -3101,10 +3072,10 @@ public class PersistWriterJdbc
 			//
 			for (DbmsConfigIssue dbmsConfigIssue : DbmsConfigManager.getInstance().getConfigIssues())
 			{
-				_logger.info("Storing DBMS Configuration Issue with key '" + dbmsConfigIssue.getPropKey() + "' in table " + getTableName(conn, SESSION_DBMS_CONFIG_ISSUES, null, false));
+				_logger.info("Storing DBMS Configuration Issue with key '" + dbmsConfigIssue.getPropKey() + "' in table " + getTableName(conn, schemaName, SESSION_DBMS_CONFIG_ISSUES, null, false));
 
 				sbSql = new StringBuffer();
-				sbSql.append(getTableInsertStr(conn, SESSION_DBMS_CONFIG_ISSUES, null, false));
+				sbSql.append(getTableInsertStr(conn, schemaName, SESSION_DBMS_CONFIG_ISSUES, null, false));
 				sbSql.append(" values(").append(safeStr( sessionStartTime                     )).append(" \n"); // 1
 				sbSql.append("       ,").append(safeStr( dbmsConfigIssue.getSrvRestartTs()    )).append(" \n"); // 2
 				sbSql.append("       ,").append(safeStr( dbmsConfigIssue.isDiscarded() ? 1:0  )).append(" \n"); // 3
@@ -3131,7 +3102,7 @@ public class PersistWriterJdbc
 			}
 			catch (SQLException e2) {}
 
-			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()=" + e.getErrorCode() + ", SQL: " + sbSql.toString(), e);
 			isSevereProblem(conn, e);
 		}
 		finally
@@ -3141,9 +3112,9 @@ public class PersistWriterJdbc
 		}
 	}
 
-	public void saveDbmsConfigText(DbxConnection conn, Timestamp sessionStartTime)
+	public void saveDbmsConfigText(DbxConnection conn, String schemaName, Timestamp sessionStartTime)
 	{
-		_logger.info("Storing Various DBMS Text Configuration in table "+getTableName(conn, SESSION_DBMS_CONFIG_TEXT, null, false));
+		_logger.info("Storing Various DBMS Text Configuration in table " + getTableName(conn, schemaName, SESSION_DBMS_CONFIG_TEXT, null, false));
 
 		if (conn == null)
 		{
@@ -3166,36 +3137,17 @@ public class PersistWriterJdbc
 			if (conn.getAutoCommit() == true)
 				conn.setAutoCommit(false);
 
-//			//
-//			// Do it for all types
-//			//
-//			for (ConfigType t : AseConfigText.ConfigType.values())
-//			{
-//				AseConfigText aseConfigText = AseConfigText.getInstance(t);
-//
-//				_logger.info("Storing DB Server Configuration Text for '"+aseConfigText.getConfigType().toString()+"' in table "+getTableName(SESSION_DBMS_CONFIG_TEXT, null, false));
-//
-//				sbSql = new StringBuffer();
-//				sbSql.append(getTableInsertStr(SESSION_DBMS_CONFIG_TEXT, null, false));
-//				sbSql.append(" values('").append(sessionStartTime).append("' \n");
-//				sbSql.append("       ,'"+aseConfigText.getConfigType().toString()+"' \n");
-//				sbSql.append("       ,").append(safeStr(aseConfigText.getConfig()))  .append(" \n");
-//				sbSql.append("       )\n");
-//
-//				dbExec(sbSql.toString());
-//				incInserts();
-//			}
 			//
 			// Do it for all types
 			//
 			for (IDbmsConfigText dbmsConfigText : DbmsConfigTextManager.getInstanceList())
 			{
-				_logger.info("Storing DBMS Configuration Text for '"+dbmsConfigText.getName()+"' in table "+getTableName(conn, SESSION_DBMS_CONFIG_TEXT, null, false));
+				_logger.info("Storing DBMS Configuration Text for '" + dbmsConfigText.getName() + "' in table " + getTableName(conn, schemaName, SESSION_DBMS_CONFIG_TEXT, null, false));
 
 				sbSql = new StringBuffer();
-				sbSql.append(getTableInsertStr(conn, SESSION_DBMS_CONFIG_TEXT, null, false));
+				sbSql.append(getTableInsertStr(conn, schemaName, SESSION_DBMS_CONFIG_TEXT, null, false));
 				sbSql.append(" values('").append(sessionStartTime).append("' \n");
-				sbSql.append("       ,'"+dbmsConfigText.getName()+"' \n");
+				sbSql.append("       ,'" + dbmsConfigText.getName() + "' \n");
 				sbSql.append("       ,").append(safeStr(dbmsConfigText.getConfig()))  .append(" \n");
 				sbSql.append("       )\n");
 
@@ -3215,7 +3167,7 @@ public class PersistWriterJdbc
 			}
 			catch (SQLException e2) {}
 
-			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()=" + e.getErrorCode() + ", SQL: " + sbSql.toString(), e);
 			isSevereProblem(conn, e);
 		}
 		finally
@@ -3225,9 +3177,9 @@ public class PersistWriterJdbc
 		}
 	}
 
-	public void saveDbmsConfig(DbxConnection conn, IDbmsConfig dbmsCfg, Timestamp sessionStartTime)
+	public void saveDbmsConfig(DbxConnection conn, IDbmsConfig dbmsCfg, String schemaName, Timestamp sessionStartTime)
 	{
-		_logger.info("Storing DBMS Server Configuration in table "+getTableName(conn, SESSION_DBMS_CONFIG, null, false));
+		_logger.info("Storing DBMS Server Configuration in table " + getTableName(conn, schemaName, SESSION_DBMS_CONFIG, null, false));
 
 		if (conn == null)
 		{
@@ -3257,7 +3209,7 @@ public class PersistWriterJdbc
 			{
 				sbSql = new StringBuffer();
 //				sbSql.append(" insert into ").append(tabName).append(" \n");
-				sbSql.append(getTableInsertStr(conn, SESSION_DBMS_CONFIG, null, false));
+				sbSql.append(getTableInsertStr(conn, schemaName, SESSION_DBMS_CONFIG, null, false));
 				sbSql.append(" values('").append(sessionStartTime).append("' \n");
 
 				for (int c=0; c<dbmsCfg.getColumnCount(); c++)
@@ -3294,7 +3246,7 @@ public class PersistWriterJdbc
 			}
 			catch (SQLException e2) {}
 
-			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()=" + e.getErrorCode() + ", SQL: " + sbSql.toString(), e);
 			isSevereProblem(conn, e);
 		}
 		finally
@@ -3342,15 +3294,15 @@ public class PersistWriterJdbc
 		return StringUtil.truncate(str, maxLen, true, colName);
 	}
 
-	public void saveMonTablesDictionary(DbxConnection conn, MonTablesDictionary mtd, Timestamp sessionStartTime)
+	public void saveMonTablesDictionary(DbxConnection conn, MonTablesDictionary mtd, String schemaName, Timestamp sessionStartTime)
 	{
 		if ( ! mtd.isSaveMonTablesDictionaryInPcsEnabled())
 		{
-			_logger.info("Storing monTables & monTableColumns dictionary IS DISABLED by the MonTablesDictionary provider: "+mtd);
+			_logger.info("Storing monTables & monTableColumns dictionary IS DISABLED by the MonTablesDictionary provider: " + mtd);
 			return;
 		}
 
-		_logger.info("Storing monTables & monTableColumns dictionary in table "+getTableName(conn, SESSION_MON_TAB_DICT, null, false)+" and "+getTableName(conn, SESSION_MON_TAB_COL_DICT, null, false));
+		_logger.info("Storing monTables & monTableColumns dictionary in table " + getTableName(conn, schemaName, SESSION_MON_TAB_DICT, null, false) + " and " + getTableName(conn, schemaName, SESSION_MON_TAB_COL_DICT, null, false));
 		if (conn == null)
 		{
 			_logger.error("No database connection to Persistent Storage DB.'");
@@ -3381,7 +3333,7 @@ public class PersistWriterJdbc
 
 				sbSql = new StringBuffer();
 //				sbSql.append(" insert into ").append(monTabName).append(" \n");
-				sbSql.append(getTableInsertStr(conn, SESSION_MON_TAB_DICT, null, false));
+				sbSql.append(getTableInsertStr(conn, schemaName, SESSION_MON_TAB_DICT, null, false));
 				sbSql.append(" values('").append(sessionStartTime).append("', \n");
 				sbSql.append("         ").append(mte._tableID)    .append(", \n");
 				sbSql.append("         ").append(mte._columns)    .append(", \n");
@@ -3404,7 +3356,7 @@ public class PersistWriterJdbc
 					
 					sbSql = new StringBuffer();
 //					sbSql.append(" insert into ").append(monTabColName).append(" \n");
-					sbSql.append(getTableInsertStr(conn, SESSION_MON_TAB_COL_DICT, null, false));
+					sbSql.append(getTableInsertStr(conn, schemaName, SESSION_MON_TAB_COL_DICT, null, false));
 					sbSql.append(" values('").append(sessionStartTime) .append("', \n");
 					sbSql.append("         ").append(mtce._tableID)    .append(", \n");
 					sbSql.append("         ").append(mtce._columnID)   .append(", \n");
@@ -3437,7 +3389,7 @@ public class PersistWriterJdbc
 			}
 			catch (SQLException e2) {}
 
-			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()=" + e.getErrorCode() + ", SQL: " + sbSql.toString(), e);
 			isSevereProblem(conn, e);
 		}
 		finally
@@ -3447,6 +3399,14 @@ public class PersistWriterJdbc
 		}
 	}
 
+	/** 
+	 * Should we save "extendedDescription" and "lastExtendedDescription" using the HTML text or PLAIN text 
+	 */
+	protected boolean saveAlarms_saveExtendedDescriptionAsHtml()
+	{
+		return getConfig().getBooleanProperty(PROPKEY_alarms_saveAsHtml, DEFAULT_alarms_saveAsHtml);
+	}
+
 	/**
 	 * Save any alarms
 	 * 
@@ -3454,7 +3414,7 @@ public class PersistWriterJdbc
 	 * @param cont 
 	 * @throws SQLException 
 	 */
-	private void saveAlarms(DbxConnection conn, PersistContainer cont) 
+	protected void saveAlarms(DbxConnection conn, String schemaName, PersistContainer cont) 
 	throws SQLException
 	{
 		if (cont == null)
@@ -3470,7 +3430,7 @@ public class PersistWriterJdbc
 		Timestamp sessionSampleTime = cont.getMainSampleTime();
 		
 		// Delete all ACTIVE alarms
-		String sql = "delete from " + getTableName(conn, ALARM_ACTIVE, null, true);
+		String sql = "delete from " + getTableName(conn, schemaName, ALARM_ACTIVE, null, true);
 		try
 		{
 			int count = conn.dbExec(sql);
@@ -3478,10 +3438,13 @@ public class PersistWriterJdbc
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Error deleting Active Alarm(s) to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+			_logger.warn("Error deleting Active Alarm(s) to Persistent Counter Store. getErrorCode()=" + e.getErrorCode() + ", SQL: " + sql, e);
 			// throws Exception if it's a severe problem
 			isSevereProblem(conn, e);
 		}
+
+		// Should we save "extendedDescription" and "lastExtendedDescription" using the HTML text or PLAIN text 
+		boolean saveExtendedDescriptionAsHtml = saveAlarms_saveExtendedDescriptionAsHtml();
 
 		// Save ACTIVE Alarms
 		List<AlarmEvent> activeAlarms = cont.getAlarmList();
@@ -3494,7 +3457,7 @@ public class PersistWriterJdbc
 
 				try
 				{
-					sbSql.append(getTableInsertStr(conn, ALARM_ACTIVE, null, false));
+					sbSql.append(getTableInsertStr(conn, schemaName, ALARM_ACTIVE, null, false));
 					sbSql.append(" values(");
 					sbSql.append("  ").append(safeStr( ae.getAlarmClassAbriviated()                                         ,80  )); // "alarmClass"                  varchar(80)   null false   - 1
 					sbSql.append(", ").append(safeStr( ae.getServiceType()                                                  ,80  )); // "serviceType"                 varchar(80)   null false   - 2
@@ -3517,8 +3480,8 @@ public class PersistWriterJdbc
 					sbSql.append(", ").append(safeStr( ae.getReRaiseData()                                                  ,512 )); // "lastData"                    varchar(512)  null true    - 19
 					sbSql.append(", ").append(safeStr( ae.getDescription()                                                  ,512 )); // "description"                 varchar(512)  null false   - 20
 					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()                                           ,512 )); // "lastDescription"             varchar(512)  null false   - 21
-					sbSql.append(", ").append(safeStr( ae.getExtendedDescription()                                               )); // "extendedDescription"         text          null true    - 22
-					sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription()                                        )); // "lastExtendedDescription"     text          null true    - 23
+					sbSql.append(", ").append(safeStr( saveExtendedDescriptionAsHtml ? ae.getExtendedDescriptionHtml()        : ae.getExtendedDescription()        /*HTML or Normal???*/ )); // "extendedDescription"         text          null true    - 22
+					sbSql.append(", ").append(safeStr( saveExtendedDescriptionAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() /*HTML or Normal???*/ )); // "lastExtendedDescription"     text          null true    - 23
 					sbSql.append(")");
 
 					sql = sbSql.toString();
@@ -3527,7 +3490,7 @@ public class PersistWriterJdbc
 				}
 				catch (SQLException e)
 				{
-					_logger.warn("Error writing Active Alarm(s) to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+					_logger.warn("Error writing Active Alarm(s) to Persistent Counter Store. getErrorCode()=" + e.getErrorCode() + ", SQL: " + sql, e);
 					// throws Exception if it's a severe problem
 					isSevereProblem(conn, e);
 				}
@@ -3545,17 +3508,28 @@ public class PersistWriterJdbc
 		if (alarmList.isEmpty())
 			return;
 
+		// Do we want to save 'EndOfScan' events in the Alarm History log?
+		boolean saveEndOfScan = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_alarms_saveHistory_endOfScan, DEFAULT_alarms_saveHistory_endOfScan);
+
 		// Loop all the alarms and insert them into the database...
 		for (AlarmEventWrapper aew : alarmList)
 		{
 			AlarmEvent ae = aew.getAlarmEvent();
 
+			// Do we want to save 'EndOfScan' events in the Alarm History log?
+			if (saveEndOfScan == false && "END-OF-SCAN".equals(aew.getAction()))
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug("Discarding AlarmEvent [saveEndOfScan=" + saveEndOfScan + ", action=" + aew.getAction() + ", name=" + ae.getClass().getName() + "]: " + ae);
+				continue;
+			}
+
 			try
 			{
 				// Check if record already exists in the History
-				//    PRIMARY KEY ("+lq+"eventTime"+rq+", "+lq+"action"+rq+", "+lq+"alarmClass"+rq+", "+lq+"serviceType"+rq+", "+lq+"serviceName"+rq+", "+lq+"serviceInfo"+rq+", "+lq+"extraInfo"+rq+")\n");
+				//    PRIMARY KEY ( [eventTime], [action], [alarmClass], [serviceType], [serviceName], [serviceInfo], [extraInfo] )
 				sql = "select count(*) \n"
-						+ "from " + getTableName(conn, ALARM_HISTORY, null, true) + "\n"
+						+ "from " + getTableName(conn, schemaName, ALARM_HISTORY, null, true) + "\n"
 						+ "where [eventTime]   = " + DbUtils.safeStr(aew.getAddDate()            ) + " \n"
 						+ "  and [action]      = " + DbUtils.safeStr(aew.getAction()             ) + " \n"
 						+ "  and [alarmClass]  = " + DbUtils.safeStr(ae.getAlarmClassAbriviated()) + " \n"
@@ -3580,10 +3554,10 @@ public class PersistWriterJdbc
 				
 				
 				// Get the SQL statement
-				sql = getTableInsertStr(conn, ALARM_HISTORY, null, true);
+				sql = getTableInsertStr(conn, schemaName, ALARM_HISTORY, null, true);
 				PreparedStatement pst = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(conn, sql) : conn.prepareStatement(sql);
 		
-//System.out.println("saveAlarms(): SQL="+sql);
+//System.out.println("saveAlarms(): SQL=" + sql);
 				// Set values
 				int i=1;
 				pst.setTimestamp(i++,           sessionStartTime                                                                                ); // sessionStartTime            - datetime    , Nullable = false
@@ -3616,8 +3590,8 @@ public class PersistWriterJdbc
 				pst.setString   (i++, strMaxLen(ae.getReRaiseData() == null ? null : ae.getReRaiseData().toString()  ,512,"lastData"           )); // lastData                    - varchar(512), Nullable = true 
 				pst.setString   (i++, strMaxLen(ae.getDescription()                                                  ,512,"description"        )); // description                 - varchar(512), Nullable = false
 				pst.setString   (i++, strMaxLen(ae.getReRaiseDescription()                                           ,512,"lastDescription"    )); // lastDescription             - varchar(512), Nullable = false
-				pst.setString   (i++,           ae.getExtendedDescription()                                                                     ); // extendedDescription         - text        , Nullable = true 
-				pst.setString   (i++,           ae.getReRaiseExtendedDescription()                                                              ); // lastExtendedDescription     - text        , Nullable = true 
+				pst.setString   (i++, saveExtendedDescriptionAsHtml ? ae.getExtendedDescriptionHtml()        : ae.getExtendedDescription()       ); // extendedDescription         - text        , Nullable = true 
+				pst.setString   (i++, saveExtendedDescriptionAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription()); // lastExtendedDescription     - text        , Nullable = true 
 		
 				// EXECUTE
 				pst.executeUpdate();
@@ -3632,9 +3606,12 @@ public class PersistWriterJdbc
 			}
 			catch (RuntimeException rte)
 			{
-				_logger.warn("Error in saveAlarms() writing to Persistent Counter Store. which is disregarded... Caught a RuntimeException="+rte, rte);
+				_logger.warn("Error in saveAlarms() writing to Persistent Counter Store. which is disregarded... Caught a RuntimeException=" + rte, rte);
 			}
 		}
+		
+		// Can we clear the Alarm now (when we have stored them) ????
+		AlarmWriterToPcsJdbc.getInstance().clear();
 	}
 
 
@@ -3649,7 +3626,7 @@ public class PersistWriterJdbc
 			_logger.error("No database connection to Persistent Storage DB.'");
 			return;
 		}
-		if (_shutdownWithNoWait)
+		if (isShutdownWithNoWait())
 		{
 			_logger.info("Save Sample: Discard entry due to 'ShutdownWithNoWait'.");
 			return;
@@ -3668,6 +3645,7 @@ public class PersistWriterJdbc
 		Timestamp sessionStartTime  = cont.getSessionStartTime();
 		Timestamp sessionSampleTime = cont.getMainSampleTime();
 
+		String schemaName = getSchemaName();
 		
 		StringBuffer sbSql = null;
 
@@ -3682,7 +3660,7 @@ public class PersistWriterJdbc
 			_inSaveSample = true;
 
 			// Save any alarms
-			saveAlarms(conn, cont);
+			saveAlarms(conn, schemaName, cont);
 
 			// Save counters
 			if ( ! cont.getCounterObjects().isEmpty() )
@@ -3693,15 +3671,14 @@ public class PersistWriterJdbc
 //				String tabName = getTableName(SESSION_SAMPLES, null, true);
 
 				sbSql = new StringBuffer();
-//				sbSql.append(" insert into ").append(tabName);
-				sbSql.append(getTableInsertStr(conn, SESSION_SAMPLES, null, false));
+				sbSql.append(getTableInsertStr(conn, schemaName, SESSION_SAMPLES, null, false));
 				sbSql.append(" values('").append(sessionStartTime).append("', '").append(sessionSampleTime).append("')");
 
 				dbExec(conn, sbSql.toString());
 				getStatistics().incInserts();
 
 				// Increment the "counter" column and set LastSampleTime in the SESSIONS table
-				String tabName = getTableName(conn, SESSIONS, null, true);
+				String tabName = getTableName(conn, schemaName, SESSIONS, null, true);
 				sbSql = new StringBuffer();
 				sbSql.append(" update ").append(tabName);
 				sbSql.append("    set ").append(lq).append("NumOfSamples")    .append(rq).append(" = ").append(lq).append("NumOfSamples").append(rq).append(" + 1,");
@@ -3716,7 +3693,7 @@ public class PersistWriterJdbc
 				//--------------------------------------
 				for (CountersModel cm : cont.getCounterObjects())
 				{
-					saveCounterData(conn, cm, sessionStartTime, sessionSampleTime);
+					saveCounterData(conn, schemaName, cm, sessionStartTime, sessionSampleTime);
 				}
 			}
 				
@@ -3733,7 +3710,7 @@ public class PersistWriterJdbc
 			catch (SQLException e2) {}
 
 			isSevereProblem(conn, e);
-			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()=" + e.getErrorCode() + ", SQL: " + sbSql.toString(), e);
 		}
 		finally
 		{
@@ -3744,20 +3721,24 @@ public class PersistWriterJdbc
 		}
 	}
 
-	private void saveDdl(DbxConnection conn, int type, CountersModel cm)
+	protected void saveDdl(DbxConnection conn, String schemaName, int type, CountersModel cm)
 	throws SQLException
 	{
 		ResultSet rs = null;
-		String tabName;
+		String plainTabName;
 
 		// Obtain a DatabaseMetaData object from our current connection
 		DatabaseMetaData dbmd = conn.getMetaData();
 
 
-		tabName = getTableName(conn, type, cm, false);
+		// Set a SQL Schema Name Prefix (if 'schemaName' was passed/assigned)
+		String schemaPrefix      = StringUtil.isNullOrBlank(schemaName) ? "" : "[" + schemaName + "].";
+		String schemaPrefixPlain = StringUtil.isNullOrBlank(schemaName) ? "" :       schemaName + ".";
+
+		plainTabName = getTableName(conn, null, type, cm, false);
 
 		ArrayList<String> existingCols = new ArrayList<String>();
-		rs = dbmd.getColumns(null, null, tabName, "%");
+		rs = dbmd.getColumns(null, schemaName, plainTabName, "%");
 		while (rs.next())
 			existingCols.add(rs.getString("COLUMN_NAME"));
 		boolean tabExists = existingCols.size() > 0;
@@ -3773,9 +3754,9 @@ public class PersistWriterJdbc
 			ResultSetMetaData rsmd = cm.getResultSetMetaData();
 			
 			if ( rsmd == null )
-				throw new SQLException("ResultSetMetaData for CM '"+cm.getName()+"' was null.");
+				throw new SQLException("ResultSetMetaData for CM '" + cm.getName() + "' was null.");
 			if ( rsmd.getColumnCount() == 0 )
-				throw new SQLException("NO Columns was found for CM '"+cm.getName()+"'.");
+				throw new SQLException("NO Columns was found for CM '" + cm.getName() + "'.");
 
 			// Loop and add missing cols to missingCols array
 			int cols = rsmd.getColumnCount();
@@ -3790,7 +3771,7 @@ public class PersistWriterJdbc
 					// Populate the in-memory cache if the table exists (but only for ABS, since the DIFF & RATE will use the same table)
 					if (type == ABS)
 					{
-    					if (dcc.populateCacheForTable(conn, null, cm.getName(), colName) == -1)
+    					if (dcc.populateCacheForTable(conn, schemaName, cm.getName(), colName) == -1)
     					{
     						// The table did NOT exist... should we create it...
     						// Well... it should be created earlier...
@@ -3808,9 +3789,9 @@ public class PersistWriterJdbc
 			if (existingCols.contains("CmNewDiffRateRow"))
 			{
 				// NOTE: This alter probably only works for H2... but this is NOT a COMMON SCENARIO
-				String sqlAlterTable = conn.quotifySqlString("ALTER TABLE [" + tabName + "] ALTER COLUMN [CmNewDiffRateRow] RENAME TO [CmRowState]");
+				String sqlAlterTable = conn.quotifySqlString("ALTER TABLE " + schemaPrefix + "[" + plainTabName + "] ALTER COLUMN [CmNewDiffRateRow] RENAME TO [CmRowState]");
 
-				_logger.info("Persistent Counter DB: Altering table "+StringUtil.left("'"+tabName+"'", 37, true)+" for CounterModel '" + cm.getName() + "'. rename column 'CmNewDiffRateRow' to 'CmRowState'. using SQL: " + sqlAlterTable);
+				_logger.info("Persistent Counter DB: Altering table " + StringUtil.left("'" + schemaPrefixPlain + plainTabName + "'", 37, true) + " for CounterModel '" + cm.getName() + "'. rename column 'CmNewDiffRateRow' to 'CmRowState'. using SQL: " + sqlAlterTable);
 
 				dbDdlExec(conn, sqlAlterTable);
 
@@ -3821,12 +3802,12 @@ public class PersistWriterJdbc
 			// Lets alter the table and add them
 			if (missingCols.size() > 0)
 			{
-				_logger.info("Persistent Counter DB: Altering table "+StringUtil.left("'"+tabName+"'", 37, true)+" for CounterModel '" + cm.getName() + "' The following "+missingCols.size()+" column(s) where missing '"+missingCols+"', so lets add them.");
+				_logger.info("Persistent Counter DB: Altering table " + StringUtil.left("'" + schemaPrefixPlain + plainTabName + "'", 37, true) + " for CounterModel '" + cm.getName() + "' The following " + missingCols.size() + " column(s) where missing '" + missingCols + "', so lets add them.");
 
-				List<String> alterTableDdlList = getAlterTableDdlString(conn, tabName, missingCols, type, cm);
+				List<String> alterTableDdlList = getAlterTableDdlString(conn, schemaName, plainTabName, missingCols, type, cm);
 				for (String sqlAlterTable : alterTableDdlList)
 				{
-					_logger.info("Persistent Counter DB: Altering table "+StringUtil.left("'"+tabName+"'", 37, true)+" for CounterModel '" + cm.getName() + "'. Executing SQL: "+sqlAlterTable);
+					_logger.info("Persistent Counter DB: Altering table " + StringUtil.left("'" + schemaPrefixPlain + plainTabName + "'", 37, true) + " for CounterModel '" + cm.getName() + "'. Executing SQL: " + sqlAlterTable);
 
 					dbDdlExec(conn, sqlAlterTable);
 
@@ -3836,16 +3817,11 @@ public class PersistWriterJdbc
 		}
 		else
 		{
-			_logger.info("Persistent Counter DB: Creating table "+StringUtil.left("'"+tabName+"'", 37, true)+" for CounterModel '" + cm.getName() + "'.");
+//			_logger.info("Persistent Counter DB: Creating table " + StringUtil.left("'" + schemaPrefixPlain + plainTabName + "'", 37, true) + " for CounterModel '" + cm.getName() + "'.");
+			_logger.info("Persistent Counter DB: Creating table " + StringUtil.left("'" + plainTabName + "'", 37, true) + " for CounterModel " + StringUtil.left("'" + cm.getName() + "'", 26, true) + " in Schema '" + (StringUtil.isNullOrBlank(schemaName) ? "" : schemaName) + "'.");
 
-//			String sqlTable = getTableDdlString(conn, type, cm);
-//			String sqlIndex = getIndexDdlString(conn, type, cm);
-//
-//			dbDdlExec(conn, sqlTable);
-//			dbDdlExec(conn, sqlIndex);
-			
-			dbDdlExec(conn, getTableDdlString(conn, type, cm));
-			dbDdlExec(conn, getIndexDdlString(conn, type, cm));
+			dbDdlExec(conn, getTableDdlString(conn, schemaName, type, cm));
+			dbDdlExec(conn, getIndexDdlString(conn, schemaName, type, cm));
 
 			getStatistics().incCreateTables();
 		}
@@ -3857,6 +3833,13 @@ public class PersistWriterJdbc
   	{
 		DbxConnection conn = _mainConn;
 
+		String schemaName = getSchemaName();
+
+		return saveDdl(conn, schemaName, cm);
+  	}
+
+	public boolean saveDdl(DbxConnection conn, String schemaName, CountersModel cm)
+  	{
 		if (cm == null)
 		{
 			_logger.debug("saveDdl: cm == null.");
@@ -3877,22 +3860,33 @@ public class PersistWriterJdbc
 			return false;
 		}
 
+		// Do some checks...
+		try
+		{
+			if ( rsmd.getColumnCount() == 0 )
+			{
+				_logger.info("Deferring saveDdl('" + cm.getName() + "') to a later stage, reason: NO Columns was found.");
+				return false;
+			}
+		}
+		catch (SQLException ignore) { }
+		
 		
 		//------------------------------
 		// Write SQL table definition file
 		//------------------------------
 		try
 		{
-			saveDdl(conn, ABS, cm);
-			saveDdl(conn, DIFF, cm);
-			saveDdl(conn, RATE, cm);
+			saveDdl(conn, schemaName, ABS, cm);
+			saveDdl(conn, schemaName, DIFF, cm);
+			saveDdl(conn, schemaName, RATE, cm);
 		}
 		catch (SQLException e)
 		{
 			_logger.warn("SQLException, Error writing DDL to Persistent Counter DB.", e);
 			isSevereProblem(conn, e);
 
-			throw new RuntimeException("SQLException, Error writing DDL to Persistent Counter DB. Caught: "+e);
+			throw new RuntimeException("SQLException, Error writing DDL to Persistent Counter DB. Caught: " + e);
 			//return false;
 		}
 
@@ -3907,7 +3901,7 @@ public class PersistWriterJdbc
 	 * @param sessionStartTime
 	 * @param sessionSampleTime
 	 */
-	private void saveCounterData(DbxConnection conn, CountersModel cm, Timestamp sessionStartTime, Timestamp sessionSampleTime)
+	private void saveCounterData(DbxConnection conn, String schemaName, CountersModel cm, Timestamp sessionStartTime, Timestamp sessionSampleTime)
 	{
 		if (cm == null)
 		{
@@ -3920,17 +3914,17 @@ public class PersistWriterJdbc
 
 //		if ( ! cm.hasDiffData() && ( cm.isPersistCountersDiffEnabled() || cm.isPersistCountersRateEnabled() ) )
 //		{
-//			_logger.info("No diffData is available, skipping writing Counters for name='"+cm.getName()+"'.");
+//			_logger.info("No diffData is available, skipping writing Counters for name='" + cm.getName() + "'.");
 //			return;
 //		}
 
-		if (_shutdownWithNoWait)
+		if (isShutdownWithNoWait())
 		{
 			_logger.info("SaveCounterData: Discard entry due to 'ShutdownWithNoWait'.");
 			return;
 		}
 
-		_logger.debug("Persisting Counters for CounterModel='"+cm.getName()+"'.");
+		_logger.debug("Persisting Counters for CounterModel='" + cm.getName() + "'.");
 
 		int counterType = 0;
 		int absRows     = 0;
@@ -3938,15 +3932,12 @@ public class PersistWriterJdbc
 		int rateRows    = 0;
 		if (cm.hasValidSampleData())
 		{
-    		if (cm.hasAbsData()  && cm.isPersistCountersAbsEnabled())  {counterType += 1; absRows  = save(conn, cm, ABS,  sessionStartTime, sessionSampleTime);}
-    		if (cm.hasDiffData() && cm.isPersistCountersDiffEnabled()) {counterType += 2; diffRows = save(conn, cm, DIFF, sessionStartTime, sessionSampleTime);}
-    		if (cm.hasRateData() && cm.isPersistCountersRateEnabled()) {counterType += 4; rateRows = save(conn, cm, RATE, sessionStartTime, sessionSampleTime);}
-//    		if (cm.hasAbsData()  && cm.getAbsColumnCount()  > 0 && cm.getAbsRowCount()  > 0 && cm.isPersistCountersAbsEnabled())  {counterType += 1; absRows  = save(conn, cm, ABS,  sessionStartTime, sessionSampleTime);}
-//    		if (cm.hasDiffData() && cm.getDiffColumnCount() > 0 && cm.getDiffRowCount() > 0 && cm.isPersistCountersDiffEnabled()) {counterType += 2; diffRows = save(conn, cm, DIFF, sessionStartTime, sessionSampleTime);}
-//    		if (cm.hasRateData() && cm.getRateColumnCount() > 0 && cm.getRateRowCount() > 0 && cm.isPersistCountersRateEnabled()) {counterType += 4; rateRows = save(conn, cm, RATE, sessionStartTime, sessionSampleTime);}
+    		if (cm.hasAbsData()  && cm.isPersistCountersAbsEnabled())  {counterType += 1; absRows  = save(conn, schemaName, cm, ABS,  sessionStartTime, sessionSampleTime);}
+    		if (cm.hasDiffData() && cm.isPersistCountersDiffEnabled()) {counterType += 2; diffRows = save(conn, schemaName, cm, DIFF, sessionStartTime, sessionSampleTime);}
+    		if (cm.hasRateData() && cm.isPersistCountersRateEnabled()) {counterType += 4; rateRows = save(conn, schemaName, cm, RATE, sessionStartTime, sessionSampleTime);}
 		}
 		
-		if (_shutdownWithNoWait)
+		if (isShutdownWithNoWait())
 		{
 			_logger.info("SaveCounterData:1: Discard entry due to 'ShutdownWithNoWait'.");
 			return;
@@ -3964,13 +3955,13 @@ public class PersistWriterJdbc
 				//	String              key  = entry.getKey();
 					TrendGraphDataPoint tgdp = entry.getValue();
 
-					saveGraphData(conn, cm, tgdp, sessionStartTime, sessionSampleTime);
+					saveGraphData(conn, schemaName, cm, tgdp, sessionStartTime, sessionSampleTime);
 					graphCount++;
 				}
 			}
 		}
 
-		if (_shutdownWithNoWait)
+		if (isShutdownWithNoWait())
 		{
 			_logger.info("saveCounterData:2: Discard entry due to 'ShutdownWithNoWait'.");
 			return;
@@ -3986,7 +3977,7 @@ public class PersistWriterJdbc
 			StringBuilder sbSql = new StringBuilder();
 			
 //			sbSql.append(" insert into ").append(tabName);
-			sbSql.append(getTableInsertStr(conn, SESSION_SAMPLE_DETAILES, null, false));
+			sbSql.append(getTableInsertStr(conn, schemaName, SESSION_SAMPLE_DETAILES, null, false));
 			sbSql.append(" values('").append(sessionStartTime).append("'");
 			sbSql.append(", '").append(sessionSampleTime).append("'");
 			sbSql.append(", '").append(cm.getName()).append("'");
@@ -4014,19 +4005,19 @@ public class PersistWriterJdbc
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()=" + e.getErrorCode() + ", SQL: " + sql, e);
 			isSevereProblem(conn, e);
 		}
 
 
-		if (_shutdownWithNoWait)
+		if (isShutdownWithNoWait())
 		{
 			_logger.info("saveCounterData:3: Discard entry due to 'ShutdownWithNoWait'.");
 			return;
 		}
 
 		// SUMMARY INFO for the whole session
-		String tabName = getTableName(conn, SESSION_SAMPLE_SUM, null, true);
+		String tabName = getTableName(conn, schemaName, SESSION_SAMPLE_SUM, null, true);
 
 		StringBuilder sbSql = new StringBuilder();
 		sbSql.append(" update ").append(tabName);
@@ -4050,8 +4041,7 @@ public class PersistWriterJdbc
 			{
 				StringBuilder sbSql2 = new StringBuilder();
 
-//				sbSql2.append(" insert into ").append(tabName);
-				sbSql2.append(getTableInsertStr(conn, SESSION_SAMPLE_SUM, null, false));
+				sbSql2.append(getTableInsertStr(conn, schemaName, SESSION_SAMPLE_SUM, null, false));
 				sbSql2.append(" values('").append(sessionStartTime).append("'");
 				sbSql2.append(", '").append(cm.getName()).append("', 1, 1, 1)");
 
@@ -4070,14 +4060,14 @@ public class PersistWriterJdbc
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()=" + e.getErrorCode() + ", SQL: " + sql, e);
 			isSevereProblem(conn, e);
 		}
 	}
 
-	private int save(DbxConnection conn, CountersModel cm, int whatData, Timestamp sessionStartTime, Timestamp sessionSampleTime)
+	protected int save(DbxConnection conn, String schemaName, CountersModel cm, int whatData, Timestamp sessionStartTime, Timestamp sessionSampleTime)
 	{
-		if (_shutdownWithNoWait)
+		if (isShutdownWithNoWait())
 		{
 			_logger.info("saveCm: Discard entry due to 'ShutdownWithNoWait'.");
 			return -1;
@@ -4114,11 +4104,11 @@ public class PersistWriterJdbc
 		
 		if (rows == null || cols == null)
 		{
-			_logger.error("Rows or Columns can't be null. cmWhatDataStr="+cmWhatDataStr+", rows='"+rows+"', cols='"+cols+"'");
+			_logger.error("Rows or Columns can't be null. cmWhatDataStr=" + cmWhatDataStr + ", rows='" + rows + "', cols='" + cols + "'");
 			return -1;
 		}
 
-		String tabName = getTableName(conn, whatData, cm, false);
+		String tabName = getTableName(conn, schemaName, whatData, cm, false);
 //		String tabName = cm.getName();
 //		if      (whatData == CountersModel.DATA_ABS)  tabName += "_abs";
 //		else if (whatData == CountersModel.DATA_DIFF) tabName += "_diff";
@@ -4132,10 +4122,10 @@ public class PersistWriterJdbc
 		int rowsCount = rows.size();
 		int colsCount = cols.size();
 		
-//System.out.println("Counter '"+cmWhatDataStr+"' data for CM '"+cm.getName()+"'. (rowsCount="+rowsCount+", colsCount="+colsCount+") cols="+cols);
+//System.out.println("Counter '" + cmWhatDataStr + "' data for CM '" + cm.getName() + "'. (rowsCount=" + rowsCount + ", colsCount=" + colsCount + ") cols=" + cols);
 		if (rowsCount == 0 || colsCount == 0)
 		{
-			_logger.debug("Skipping Storing Counter '"+cmWhatDataStr+"' data for CM '"+cm.getName()+"'. Rowcount or column count is 0 (rowsCount="+rowsCount+", colsCount="+colsCount+")");
+			_logger.debug("Skipping Storing Counter '" + cmWhatDataStr + "' data for CM '" + cm.getName() + "'. Rowcount or column count is 0 (rowsCount=" + rowsCount + ", colsCount=" + colsCount + ")");
 			return 0;
 		}
 		
@@ -4155,7 +4145,7 @@ public class PersistWriterJdbc
 		// Write information...
 		if (_logger.isTraceEnabled())
 		{
-			_logger.trace("------------------------------ PCS-STORE [" + tabName + "]: rsmd="+rsmd);
+			_logger.trace("------------------------------ PCS-STORE [" + tabName + "]: rsmd=" + rsmd);
 			if (rsmd != null)
 			{
 				_logger.trace(rsmd.debugPrint());
@@ -4176,7 +4166,7 @@ public class PersistWriterJdbc
 
 		try
 		{
-			sql = getTableInsertStr(conn, whatData, cm, true, cols);
+			sql = getTableInsertStr(conn, schemaName, whatData, cm, true, cols);
 //			PreparedStatement pstmt = conn.prepareStatement(sql);
 //			PreparedStatement pstmt = PreparedStatementCache.getPreparedStatement(conn, sql);
 			PreparedStatement pstmt = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(conn, sql) : conn.prepareStatement(sql);
@@ -4186,7 +4176,7 @@ public class PersistWriterJdbc
 			{
 				onErrorDebugInfo = "";
 
-				if (_shutdownWithNoWait)
+				if (isShutdownWithNoWait())
 				{
 					_logger.info("saveCm:inRowLoop: Discard entry due to 'ShutdownWithNoWait'.");
 					return -1;
@@ -4224,7 +4214,7 @@ public class PersistWriterJdbc
 				pstmt.setInt(col++, cmRowState);
 
 				
-//if (r==0) System.out.println("PersistWriterJdbc: save(): tabName="+StringUtil.left(tabName, 30)+", getLastSampleInterval()="+cm.getLastSampleInterval()+", getSampleInterval()="+cm.getSampleInterval());
+//if (r==0) System.out.println("PersistWriterJdbc: save(): tabName=" + StringUtil.left(tabName, 30) + ", getLastSampleInterval()=" + cm.getLastSampleInterval() + ", getSampleInterval()=" + cm.getSampleInterval());
 				
 				// loop all columns
 				for (int c=0; c<colsCount; c++)
@@ -4261,7 +4251,7 @@ public class PersistWriterJdbc
 						if (year > 9999)
 						{
 							String colName = cm.getColumnName(c); // cm colname starts at 0
-							_logger.warn("Date problems for table '"+tabName+"', column '"+colName+"', Timestamp value '"+dateStr+"', Year seems to be out of whack, replacing this with NULL.");
+							_logger.warn("Date problems for table '" + tabName + "', column '" + colName + "', Timestamp value '" + dateStr + "', Year seems to be out of whack, replacing this with NULL.");
 							pstmt.setString(col++, null);
 						}
 						else
@@ -4331,7 +4321,7 @@ public class PersistWriterJdbc
 									else
 										truncStr = str.substring(0, allowedLength - 3) + "...";
 
-									_logger.info("save(): Truncating a Overflowing String value. table='"+tabName+"', column='"+colName+"', allowedLength="+allowedLength+", dataLength="+dataLength+", newStr["+truncStr.length()+"]='"+truncStr+"', originStr["+str.length()+"]='"+str+"'.");
+									_logger.info("save(): Truncating a Overflowing String value. table='" + tabName + "', column='" + colName + "', allowedLength=" + allowedLength + ", dataLength=" + dataLength + ", newStr[" + truncStr.length() + "]='" + truncStr + "', originStr[" + str.length() + "]='" + str + "'.");
 
 									str = truncStr;
 								}
@@ -4357,7 +4347,7 @@ public class PersistWriterJdbc
 				getStatistics().incInserts();
 			} // end: loop rows
 	
-			if (_shutdownWithNoWait)
+			if (isShutdownWithNoWait())
 			{
 				_logger.info("saveCm:exexuteBatch: Discard entry due to 'ShutdownWithNoWait'.");
 				return -1;
@@ -4376,7 +4366,7 @@ public class PersistWriterJdbc
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Error writing to Persistent Counter Store. to table name '"+tabName+"'. getErrorCode()="+e.getErrorCode()+" SQL="+sql, e);
+			_logger.warn("Error writing to Persistent Counter Store. to table name '" + tabName + "'. getErrorCode()=" + e.getErrorCode() + " SQL=" + sql, e);
 
 			if (StringUtil.hasValue(onErrorDebugInfo))
 				System.out.println(onErrorDebugInfo);
@@ -4386,27 +4376,32 @@ public class PersistWriterJdbc
 		}
 	}
 
-	private void saveGraphData(DbxConnection conn, CountersModel cm, TrendGraphDataPoint tgdp, Timestamp sessionStartTime, Timestamp sessionSampleTime)
+	protected void saveGraphData(DbxConnection conn, String schemaName, CountersModel cm, TrendGraphDataPoint tgdp, Timestamp sessionStartTime, Timestamp sessionSampleTime)
+	{
+		saveGraphData(conn, getGraphStorageType(), schemaName, cm, tgdp, sessionStartTime, sessionSampleTime);
+	}
+	
+	protected void saveGraphData(DbxConnection conn, GraphStorageType graphStorageType, String schemaName, CountersModel cm, TrendGraphDataPoint tgdp, Timestamp sessionStartTime, Timestamp sessionSampleTime)
 	{
 		if (cm   == null) throw new IllegalArgumentException("The passed CM can't be null");
 		if (tgdp == null) throw new IllegalArgumentException("The passed TGDP can't be null");
 
-		String tabName = getTableName(conn, cm, tgdp, false);
+		String plainTabName          = getTableName(conn, null      , cm, tgdp, false);
+		String schemaPrefixedTabName = getTableName(conn, schemaName, cm, tgdp, false);
 
 		if ( ! tgdp.hasData() )
 		{
-			_logger.debug("The graph '"+tgdp.getName()+"' has NO DATA for this sample time, so write will be skipped. TrendGraphDataPoint="+tgdp);
+			_logger.debug("The graph '" + tgdp.getName() + "' has NO DATA for this sample time, so write will be skipped. TrendGraphDataPoint=" + tgdp);
 			return;
 		}
-		if (_shutdownWithNoWait)
+		if (isShutdownWithNoWait())
 		{
 			_logger.info("saveGraphData: Discard entry due to 'ShutdownWithNoWait'.");
 			return;
 		}
 
 		StringBuilder sb = new StringBuilder();
-//		sb.append("insert into ").append(qic).append(tabName).append(qic);
-		String tabInsStr = getTableInsertStr(conn, cm, tgdp, false);
+		String tabInsStr = getGraphTableInsertStr(conn, graphStorageType, schemaName, cm, tgdp, false);
 		sb.append(tabInsStr);
 		sb.append(" values(");
 
@@ -4422,35 +4417,62 @@ public class PersistWriterJdbc
 		// loop all data
 		Double[] dataArr  = tgdp.getData();
 		String[] labelArr = tgdp.getLabel();
-		if (dataArr  == null) throw new IllegalArgumentException("The CM '"+cm.getName()+"', graph '"+tgdp.getName()+"' has a null pointer for it's DATA array.");
-		if (labelArr == null) throw new IllegalArgumentException("The CM '"+cm.getName()+"', graph '"+tgdp.getName()+"' has a null pointer for it's LABEL array.");
-		for (int d=0; d<dataArr.length; d++)
+		if (dataArr  == null) throw new IllegalArgumentException("The CM '" + cm.getName() + "', graph '" + tgdp.getName() + "' has a null pointer for it's DATA array.");
+		if (labelArr == null) throw new IllegalArgumentException("The CM '" + cm.getName() + "', graph '" + tgdp.getName() + "' has a null pointer for it's LABEL array.");
+
+		if (GraphStorageType.LABEL_IN_SEPARATE_COLUMN.equals(graphStorageType))
 		{
-			Double data  = dataArr[d];
-			String label = null;
-			if (d < labelArr.length)
-				label = labelArr[d];
-
-			if (label == null)
-				sb.append("NULL, ");
-			else
+			for (int d=0; d<dataArr.length; d++)
 			{
-				// Should we check the length of label and truncate it if above ### (100 for the moment)
-				// Should we do safeStr() to escape single quote as well
-				sb.append("'").append(label).append("', "); 
+				Double data  = dataArr[d];
+				String label = null;
+				if (d < labelArr.length)
+					label = labelArr[d];
+
+				if (label == null)
+					sb.append("NULL, ");
+				else
+				{
+					// Should we check the length of label and truncate it if above ### (100 for the moment)
+					// Should we do safeStr() to escape single quote as well
+					sb.append("'").append(label).append("', "); 
+				}
+
+				if (data == null)
+					sb.append("NULL");
+				else
+					sb.append(data);
+
+				// No colSep on last column
+				if ( (d+1) == dataArr.length )
+					sb.append(")");
+				else
+					sb.append(", ");
 			}
-
-			if (data == null)
-				sb.append("NULL");
-			else
-				sb.append(data);
-
-			// No colSep on last column
-			if ( (d+1) == dataArr.length )
-				sb.append(")");
-			else
-				sb.append(", ");
 		}
+		else if (GraphStorageType.COLUMN_NAME_IS_LABEL.equals(graphStorageType))
+		{
+			for (int d=0; d<dataArr.length; d++)
+			{
+				Double data  = dataArr[d];
+
+				if (data == null)
+					sb.append("NULL");
+				else
+					sb.append(data);
+
+				// No colSep on last column
+				if ( (d+1) == dataArr.length )
+					sb.append(")");
+				else
+					sb.append(", ");
+			}
+		}
+		else
+		{
+			throw new RuntimeException("Unhandled GraphStorageType '" + graphStorageType + "', cant continue.");
+		}
+		
 		//--------------------
 		// Send the SQL to the database.
 		//--------------------
@@ -4458,14 +4480,14 @@ public class PersistWriterJdbc
 		// CHECK/Create table
 		try
 		{
-			if ( ! isDdlCreated(tabName) )
-				saveGraphDataDdl(conn, tabName, tgdp);
-			markDdlAsCreated(tabName);
+			if ( ! isDdlCreated(schemaPrefixedTabName) )
+				saveGraphDataDdl(conn, graphStorageType, schemaName, plainTabName, tgdp);
+			markDdlAsCreated(schemaPrefixedTabName);
 		}
 		catch (SQLException e)
 		{
 			isSevereProblem(conn, e);
-			_logger.info("Problems writing Graph '"+tgdp.getName()+"' information to table '"+tabName+"', Problems when creating the table or checked if it existed. Caught: "+e);
+			_logger.info("Problems writing Graph '" + tgdp.getName() + "' information to table '" + schemaPrefixedTabName + "', Problems when creating the table or checked if it existed. Caught: " + e);
 		}
 
 		// Add rows...
@@ -4476,26 +4498,29 @@ public class PersistWriterJdbc
 		}
 		catch (SQLException e)
 		{
-			_logger.info("Problems writing Graph '"+tgdp.getName()+"' information to table '"+tabName+"', This probably happens if series has been added to the graph, I will checking/create/alter the table and try again.");
+			_logger.info("Problems writing Graph '" + tgdp.getName() + "' information to table '" + schemaPrefixedTabName + "', This probably happens if series has been added to the graph, I will checking/create/alter the table and try again.");
 			try
 			{
 				// we probably need to alter the table...
-				saveGraphDataDdl(conn, tabName, tgdp);
+				saveGraphDataDdl(conn, graphStorageType, schemaName, plainTabName, tgdp);
 				dbExec(conn, sb.toString());
 				getStatistics().incInserts();
 			}
 			catch (SQLException e2)
 			{
 				isSevereProblem(conn, e2);
-				_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e2.getErrorCode()+", getSQLState()="+e2.getSQLState()+", ex.toString='"+e2.toString()+"', SQL: "+sb.toString(), e2);
+				_logger.warn("Error writing to Persistent Counter Store. getErrorCode()=" + e2.getErrorCode() + ", getSQLState()=" + e2.getSQLState() + ", ex.toString='" + e2.toString() + "', SQL: " + sb.toString(), e2);
 			}
 		}
 	}
 
-	private void saveGraphDataDdl(DbxConnection conn, String tabName, TrendGraphDataPoint tgdp)
+	private void saveGraphDataDdl(DbxConnection conn, GraphStorageType graphStorageType, String schemaName, String tabName, TrendGraphDataPoint tgdp)
 	throws SQLException
 	{
 		ResultSet rs = null;
+
+		// Set a SQL Schema Name Prefix (if 'schemaName' was passed/assigned)
+		String schemaPrefixPlain = StringUtil.isNullOrBlank(schemaName) ? "" : schemaName + ".";
 
 		// Obtain a DatabaseMetaData object from our current connection
 		DatabaseMetaData dbmd = conn.getMetaData();
@@ -4517,16 +4542,17 @@ public class PersistWriterJdbc
 				conn.setAutoCommit(true);
 			}
 			
-			rs = dbmd.getColumns(null, null, tabName, "%");
+			rs = dbmd.getColumns(null, schemaName, tabName, "%");
 			boolean tabExists = rs.next();
 			rs.close();
 
 			if( ! tabExists )
 			{
-				_logger.info("Persistent Counter DB: Creating table "+StringUtil.left("'"+tabName+"'", 37, true)+" for CounterModel graph '" + tgdp.getName() + "'.");
+//				_logger.info("Persistent Counter DB: Creating table " + StringUtil.left("'" + schemaPrefixPlain + tabName + "'", 37, true) + " for CounterModel graph '" + tgdp.getName() + "'.");
+				_logger.info("Persistent Counter DB: Creating table " + StringUtil.left("'" + tabName + "'", 37, true) + " for CounterModel graph " + StringUtil.left("'" + tgdp.getName() + "'", 20, true) + " in Schema '" + (StringUtil.isNullOrBlank(schemaName) ? "" : schemaName) + "'.");
 
-				String sqlTable = getGraphTableDdlString(conn, tabName, tgdp);
-				String sqlIndex = getGraphIndexDdlString(conn, tabName, tgdp);
+				String sqlTable = getGraphTableDdlString(conn, graphStorageType, schemaName, tabName, tgdp);
+				String sqlIndex = getGraphIndexDdlString(conn, graphStorageType, schemaName, tabName, tgdp);
 
 				dbDdlExec(conn, sqlTable);
 				dbDdlExec(conn, sqlIndex);
@@ -4535,18 +4561,10 @@ public class PersistWriterJdbc
 			}
 			else // Check if we need to add any new columns
 			{
-//				String sqlAlterTable = getGraphAlterTableDdlString(conn, tabName, tgdp);
-//				if ( ! sqlAlterTable.trim().equals("") )
-//				{
-//					_logger.info("Persistent Counter DB: Altering table '"+tabName+"' for CounterModel graph '" + tgdp.getName() + "'.");
-//
-//					dbDdlExec(sqlAlterTable);
-//					incAlterTables();
-//				}
-				List<String> sqlAlterList = getGraphAlterTableDdlString(conn, tabName, tgdp);
+				List<String> sqlAlterList = getGraphAlterTableDdlString(conn, graphStorageType, schemaName, tabName, tgdp);
 				if ( ! sqlAlterList.isEmpty() )
 				{
-					_logger.info("Persistent Counter DB: Altering table '"+tabName+"' for CounterModel graph '" + tgdp.getName() + "'.");
+					_logger.info("Persistent Counter DB: Altering table '" + schemaPrefixPlain + tabName + "' for CounterModel graph '" + tgdp.getName() + "'.");
 //System.out.println("XXXXXXXXXXXXXX: " + sqlAlterList);
 
 					for (String sqlAlterTable : sqlAlterList)
@@ -4610,7 +4628,7 @@ public class PersistWriterJdbc
 		String key = key(dbname, objectName);
 		_ddlDetailsCache.add(key);
 
-//System.out.println("markDdlDetailsAsStored(): dbname='" + dbname+"', objectName=" + objectName + ", using key='" + key + "'.    TOTAL MARKED SIZE IS NOW: " + _ddlDetailsCache.size());
+//System.out.println("markDdlDetailsAsStored(): dbname='" + dbname + "', objectName=" + objectName + ", using key='" + key + "'.    TOTAL MARKED SIZE IS NOW: " + _ddlDetailsCache.size());
 
 //System.out.println("========== markDdlDetailsAsStored() ===============================");
 //System.out.println("dbname                        objectname");
@@ -4621,8 +4639,8 @@ public class PersistWriterJdbc
 //	System.out.println(StringUtil.left(sa[0], 30) + " " + sa[1]);
 //}
 //System.out.println("-------------------------------------------------------------------");
-//System.out.println("Last added record: "+dbname+"."+objectName);
-//System.out.println("TOTAL SIZE IS NOW: "+_ddlDetailsCache.size());
+//System.out.println("Last added record: " + dbname + "." + objectName);
+//System.out.println("TOTAL SIZE IS NOW: " + _ddlDetailsCache.size());
 //System.out.println("-------------------------------------------------------------------");
 	}
 
@@ -4659,11 +4677,14 @@ public class PersistWriterJdbc
 			return;
 		}
 
-		String tabName = getTableName(conn, DDL_STORAGE, null, false);
+		String schemaName = getSchemaName();
+
+		String tabNamePlain  = getTableName(conn, null      , DDL_STORAGE, null, false);
+		String tabNameQuoted = getTableName(conn, schemaName, DDL_STORAGE, null, true);
 
 		String sql = 
 			" select [dbname], [owner], [objectName] " +
-			" from " + tabName;
+			" from " + tabNameQuoted;
 
 		// replace all '[' and ']' into DBMS Vendor Specific Chars
 		sql = conn.quotifySqlString(sql);
@@ -4673,7 +4694,7 @@ public class PersistWriterJdbc
 		{
 			// First CHECK IF Table EXISTS
 			DatabaseMetaData dbmd = conn.getMetaData();
-			ResultSet rs = dbmd.getColumns(null, null, tabName, "%");
+			ResultSet rs = dbmd.getColumns(null, schemaName, tabNamePlain, "%");
 			boolean tabExists = rs.next();
 			rs.close();
 
@@ -4703,10 +4724,10 @@ public class PersistWriterJdbc
 			// The SQLState from H2 is "42S02", but I if it's the same from other vendors I dont know. 
 			// org.h2.jdbc.JdbcSQLException: Table "MonDdlStorage" not found; SQL statement:
 			if ( ! "42S02".equals(e.getSQLState()) )
-				_logger.error("Problems loading 'Stored DDL detailes'. SqlState='"+e.getSQLState()+"', sql="+sql, e);
+				_logger.error("Problems loading 'Stored DDL detailes'. SqlState='" + e.getSQLState() + "', sql=" + sql, e);
 		}
 		
-		String str = "Loaded "+rows+" 'Stored DDL detailes' from the PCS database.";
+		String str = "Loaded " + rows + " 'Stored DDL detailes' from the PCS database.";
 		_logger.debug(str);
 		
 	}
@@ -4789,7 +4810,7 @@ public class PersistWriterJdbc
 			return;
 		}
 
-		if (_shutdownWithNoWait)
+		if (isShutdownWithNoWait())
 		{
 			if (printMessage(_lastSaveDdlDetailMessageTime, _lastSaveDdlDetailMessageLimit))
 			{
@@ -4804,7 +4825,7 @@ public class PersistWriterJdbc
 		{
 			if (printMessage(_lastSaveDdlDetailMessageTime, _lastSaveDdlDetailMessageLimit))
 			{
-				_logger.warn("DDL Lookup Storage: Discard entry due to PCS '"+getName()+"' has not yet been fully started'. (Storage tables might not be there yet).");
+				_logger.warn("DDL Lookup Storage: Discard entry due to PCS '" + getName() + "' has not yet been fully started'. (Storage tables might not be there yet).");
 				_lastSaveDdlDetailMessageTime = System.currentTimeMillis();
 			}
 			return;
@@ -4815,22 +4836,24 @@ public class PersistWriterJdbc
 		if ( isDdlDetailsStored(ddlDetails.getDbname(), ddlDetails.getSchemaAndObjectName()) )
 		{
 			if (ddlDetails.isPrintInfo())
-				_logger.info("DEBUG: saveDdlDetails(): The DDL for dbname '"+ddlDetails.getDbname()+"', objectName '"+ddlDetails.getSchemaAndObjectName()+"' has already been stored by all the writers.");
+				_logger.info("DEBUG: saveDdlDetails(): The DDL for dbname '" + ddlDetails.getDbname() + "', objectName '" + ddlDetails.getSchemaAndObjectName() + "' has already been stored by all the writers.");
 			
-//System.out.println("saveDdlDetails(): The DDL for dbname '"+ddlDetails.getDbname()+"', objectName '"+ddlDetails.getSchemaAndObjectName()+"' has already been stored by all the writers.");
-			_logger.debug("saveDdlDetails(): The DDL for dbname '"+ddlDetails.getDbname()+"', objectName '"+ddlDetails.getSchemaAndObjectName()+"' has already been stored by all the writers.");
+//System.out.println("saveDdlDetails(): The DDL for dbname '" + ddlDetails.getDbname() + "', objectName '" + ddlDetails.getSchemaAndObjectName() + "' has already been stored by all the writers.");
+			_logger.debug("saveDdlDetails(): The DDL for dbname '" + ddlDetails.getDbname() + "', objectName '" + ddlDetails.getSchemaAndObjectName() + "' has already been stored by all the writers.");
 			return;
 		}
 //		if ( isDdlDetailsStored(ddlDetails.getSearchDbname(), ddlDetails.getObjectName()) )
 		if ( isDdlDetailsStored(ddlDetails.getSearchDbname(), ddlDetails.getSchemaAndObjectName()) )
 		{
 			if (ddlDetails.isPrintInfo())
-				_logger.info("DEBUG: saveDdlDetails(): The DDL for searchDbname '"+ddlDetails.getSearchDbname()+"', objectName '"+ddlDetails.getSchemaAndObjectName()+"' has already been stored by all the writers.");
+				_logger.info("DEBUG: saveDdlDetails(): The DDL for searchDbname '" + ddlDetails.getSearchDbname() + "', objectName '" + ddlDetails.getSchemaAndObjectName() + "' has already been stored by all the writers.");
 			
-//System.out.println("saveDdlDetails(): The DDL for searchDbname '"+ddlDetails.getSearchDbname()+"', objectName '"+ddlDetails.getSchemaAndObjectName()+"' has already been stored by all the writers.");
-			_logger.debug("saveDdlDetails(): The DDL for searchDbname '"+ddlDetails.getSearchDbname()+"', objectName '"+ddlDetails.getSchemaAndObjectName()+"' has already been stored by all the writers.");
+//System.out.println("saveDdlDetails(): The DDL for searchDbname '" + ddlDetails.getSearchDbname() + "', objectName '" + ddlDetails.getSchemaAndObjectName() + "' has already been stored by all the writers.");
+			_logger.debug("saveDdlDetails(): The DDL for searchDbname '" + ddlDetails.getSearchDbname() + "', objectName '" + ddlDetails.getSchemaAndObjectName() + "' has already been stored by all the writers.");
 			return;
 		}
+
+		String schemaName = getSchemaName();
 
 		try
 		{
@@ -4840,7 +4863,7 @@ public class PersistWriterJdbc
 			if (_logger.isDebugEnabled())
 				_logger.debug("DEBUG: saveDdlDetails() SAVING " + ddlDetails.getFullObjectName());
 
-			String sql = getTableInsertStr(conn, DDL_STORAGE, null, true);
+			String sql = getTableInsertStr(conn, schemaName, DDL_STORAGE, null, true);
 //			PreparedStatement pstmt = conn.prepareStatement(sql);
 //			PreparedStatement pstmt = PreparedStatementCache.getPreparedStatement(conn, sql);
 			PreparedStatement pstmt = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(conn, sql) : conn.prepareStatement(sql);
@@ -4890,7 +4913,7 @@ public class PersistWriterJdbc
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Error writing DDL Information to Persistent Counter Store. for table dbname='"+ddlDetails.getDbname()+"', objectName='"+ddlDetails.getObjectName()+"'.", e);
+			_logger.warn("Error writing DDL Information to Persistent Counter Store. for table dbname='" + ddlDetails.getDbname() + "', objectName='" + ddlDetails.getObjectName() + "'.", e);
 			isSevereProblem(conn, e);
 //			return -1;
 		}
@@ -4988,7 +5011,7 @@ public class PersistWriterJdbc
 			return;
 		}
 
-		if (_shutdownWithNoWait)
+		if (isShutdownWithNoWait())
 		{
 			if (printMessage(_lastSaveSqlCaptureDetailsMessageTime, _lastSaveSqlCaptureDetailsMessageLimit))
 			{
@@ -5003,7 +5026,7 @@ public class PersistWriterJdbc
 		{
 			if (printMessage(_lastSaveSqlCaptureDetailsMessageTime, _lastSaveSqlCaptureDetailsMessageLimit))
 			{
-				_logger.warn("SQL Capture Storage: Discard entry due to PCS '"+getName()+"' has not yet been fully started'. (Storage tables might not be there yet).");
+				_logger.warn("SQL Capture Storage: Discard entry due to PCS '" + getName() + "' has not yet been fully started'. (Storage tables might not be there yet).");
 				_lastSaveSqlCaptureDetailsMessageTime = System.currentTimeMillis();
 			}
 			return;
@@ -5014,6 +5037,8 @@ public class PersistWriterJdbc
 		{
 			dictComp = DictCompression.getInstance();
 		}
+
+		String schemaName = getSchemaName();
 
 		try
 		{
@@ -5031,17 +5056,17 @@ public class PersistWriterJdbc
 			{
 				// FIRST entry in each of the lists should be the table name where to store the information.
 				String tabName = (String) row.get(0);
-				String sql = sqlCaptureBroker.getInsertStatement(conn, tabName);
-//System.out.println("saveSqlCaptureDetails(): tabName=|"+tabName+"|.");
-//System.out.println("saveSqlCaptureDetails(): sql=|"+sql+"|.");
-//System.out.println("saveSqlCaptureDetails(): row="+row);
+				String sql = sqlCaptureBroker.getInsertStatement(conn, schemaName, tabName);
+//System.out.println("saveSqlCaptureDetails(): tabName=|" + tabName + "|.");
+//System.out.println("saveSqlCaptureDetails(): sql=|" + sql + "|.");
+//System.out.println("saveSqlCaptureDetails(): row=" + row);
 //if (true)
 //	continue;
-//System.out.println("saveSqlCaptureDetails(): tabName=|"+tabName+"|, SQL=|"+sql+"|");
+//System.out.println("saveSqlCaptureDetails(): tabName=|" + tabName + "|, SQL=|" + sql + "|");
 				
 				if (sql == null)
 				{
-					_logger.warn("SQL Capture Storage: Discard entry due to getInsertStatement(tabName='"+tabName+"') returned null, so we do not know how to store the information in the PCS database.");
+					_logger.warn("SQL Capture Storage: Discard entry due to getInsertStatement(tabName='" + tabName + "') returned null, so we do not know how to store the information in the PCS database.");
 					continue;
 				}
 
@@ -5054,17 +5079,17 @@ public class PersistWriterJdbc
 //				PreparedStatement pstmt = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(conn, sql) : conn.prepareStatement(sql);
 
 //if (tabName.equals("MonSqlCapSqlText") || tabName.equals("MonSqlCapPlans"))
-//	System.out.println("saveSqlCaptureDetails(): tabName=|"+tabName+"|, TEXT=|"+row.get(row.size()-1)+"|)");
-//System.out.println("\n++++++++++ tabName='"+tabName+"', SQL="+sql);
+//	System.out.println("saveSqlCaptureDetails(): tabName=|" + tabName + "|, TEXT=|" + row.get(row.size()-1) + "|)");
+//System.out.println("\n++++++++++ tabName='" + tabName + "', SQL=" + sql);
 				// Loop all columns, and SET it at the Prepared Statement
 				for (int c=1; c<row.size(); c++) // Skip entry 0, where the table name is stored
 				{
 					Object colObj = row.get(c);
-//System.out.println("saveSqlCaptureDetails(): tabName=|"+tabName+"|, setObject(parameterIndex="+c+", val='"+colObj+"')");
+//System.out.println("saveSqlCaptureDetails(): tabName=|" + tabName + "|, setObject(parameterIndex=" + c + ", val='" + colObj + "')");
 					
 					if (dictComp != null && colObj != null)
 					{
-						Map<Integer, String> dictColCompMap = sqlCaptureBroker.getDictionaryCompressionColumnMap(tabName);
+						Map<Integer, String> dictColCompMap = sqlCaptureBroker.getDictionaryCompressionColumnMap(schemaName, tabName);
 						if (dictColCompMap != null)
 						{
 							String colName = dictColCompMap.get(c);
@@ -5109,7 +5134,7 @@ public class PersistWriterJdbc
 			{
 				PreparedStatement pstmt = pstmntMap.get(key);
 				if (_logger.isDebugEnabled())
-					_logger.debug("saveSqlCaptureDetails(): executeBatch & close for table '"+key+"'.");
+					_logger.debug("saveSqlCaptureDetails(): executeBatch & close for table '" + key + "'.");
 
 				pstmt.executeBatch();
 				pstmt.close();
@@ -5134,7 +5159,7 @@ public class PersistWriterJdbc
 			}
 			catch (SQLException e2) {}
 
-			_logger.warn("Error writing SQL Capture Information to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", Caught: "+e, e);
+			_logger.warn("Error writing SQL Capture Information to Persistent Counter Store. getErrorCode()=" + e.getErrorCode() + ", Caught: " + e, e);
 			isSevereProblem(conn, e);
 		}
 		finally
@@ -5162,13 +5187,13 @@ public class PersistWriterJdbc
 
 		if ( ! DailySummaryReportFactory.isCreateReportEnabled() )
 		{
-			_logger.info("Daily Summary Report is NOT Enabled, this can be enabled using property '"+DailySummaryReportFactory.PROPKEY_create+"=true'.");
+			_logger.info("Daily Summary Report is NOT Enabled, this can be enabled using property '" + DailySummaryReportFactory.PROPKEY_create + "=true'.");
 			return;
 		}
 
 		if ( ! DailySummaryReportFactory.isCreateReportEnabledForServer(serverName) )
 		{
-			_logger.info("Daily Summary Report is NOT Enabled, for serverName '"+serverName+"'. Check property '"+DailySummaryReportFactory.PROPKEY_filter_keep_servername+"' or '"+DailySummaryReportFactory.PROPKEY_filter_skip_servername+"'.");
+			_logger.info("Daily Summary Report is NOT Enabled, for serverName '" + serverName + "'. Check property '" + DailySummaryReportFactory.PROPKEY_filter_keep_servername + "' or '" + DailySummaryReportFactory.PROPKEY_filter_skip_servername + "'.");
 			return;
 		}
 
@@ -5206,7 +5231,7 @@ public class PersistWriterJdbc
 		}
 		catch(Exception ex)
 		{
-			_logger.error("Problems Sending Daily Summary Report. Caught: "+ex, ex);
+			_logger.error("Problems Sending Daily Summary Report. Caught: " + ex, ex);
 		}
 	}
 	//---------------------------------------------

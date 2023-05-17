@@ -24,6 +24,8 @@
  */
 package com.asetune.utils;
 
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
 import java.awt.Window;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -1018,6 +1020,47 @@ extends Properties
 	}
 
 	/**
+	 * Get current screen resolution as a String<br>
+	 * And if you got more than one screen, the screen resolutions will be separated with a semicolon (;)
+	 * @return For example "1024x768" or "2560x1440;1024x768"
+	 */
+	private static String getScreenResulutionAsString()
+	{
+		// If we cant provide a GUI simply say YES
+		if (GraphicsEnvironment.isHeadless()) 
+		{
+			return "headless";
+		}
+
+		String retStr = "";
+
+		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		GraphicsDevice[] screens = ge.getScreenDevices();
+		int n = screens.length;
+		for (int i=0; i<n; i++) 
+		{
+			GraphicsDevice gd = screens[i];
+			if (gd == null) 
+				continue;
+			if (gd.getDisplayMode() == null) 
+				continue;
+
+			int width = gd.getDisplayMode().getWidth();
+			int height = gd.getDisplayMode().getHeight();
+
+			if (i > 0)
+				retStr += ";";
+				
+			retStr = retStr + width + "x" + height;
+		}
+
+		if (_logger.isDebugEnabled())
+			_logger.debug("getScreenResulutionAsString(): returns |"+retStr+"|.");
+
+		return retStr;
+	}
+
+	/**
 	 * Get a Integer property that has to do with layout things.<br>
 	 * This simply means that the key will also contain some screen information.<br>
 	 * The altered key might look something like: your.key.[2560x1440;1920x1200] if you are having 2 screens
@@ -1027,7 +1070,7 @@ extends Properties
 	 */
 	public int getLayoutProperty(String key, int defaultVal)
 	{
-		String monitorProp = SwingUtils.getScreenResulutionAsString();
+		String monitorProp = getScreenResulutionAsString();
 		String newKey = key + ".[" + monitorProp + "]";
 		
 		return getIntProperty(newKey, defaultVal);
@@ -1043,7 +1086,7 @@ extends Properties
 	 */
 	public int setLayoutProperty(String key, int val)
 	{
-		String monitorProp = SwingUtils.getScreenResulutionAsString();
+		String monitorProp = getScreenResulutionAsString();
 		String newKey = key + ".[" + monitorProp + "]";
 		
 		return setProperty(newKey, val);
@@ -1206,6 +1249,11 @@ extends Properties
 	@Override
 	public String getProperty(String propName)
 	{
+		return private_getProperty(propName, false, null);
+	}
+	/** FIXME: ... */
+	protected String private_getProperty(String propName, boolean hasPassedDefaultValue, String defaultValue)
+	{
 		String val = super.getProperty(propName);
 //if (propName.indexOf(".window.active")>0)
 //	new Exception("Dummy exception: getProperty(name='"+propName+"'... got value='"+val+"'").printStackTrace();
@@ -1215,13 +1263,31 @@ extends Properties
 			// If the propName wasn't found in the properties.
 			// Get the Registered Application Default 
 			val = getRegisteredDefaultValue(propName);
+			
+			if (val == null && hasPassedDefaultValue)
+				val = defaultValue;
 		}
 		else
 		{
 			val = val.trim();
 			
-			// get/extract USE_DEFAULT values
-			val = getUseDefaultValue(propName, val);
+//			// get/extract USE_DEFAULT values
+//			val = getUseDefaultValue(propName, val);
+
+//TODO; // Check if the below work
+//TODO; // Check if we need to change callers to getProperty(String propName, String defaultValue)
+//TODO; // Do we have old test case for this ??? ... then RUN THEM
+//TODO; // also change method: getPropertyRaw(String propName, String defaultValue) to use the same code as "this method"
+
+			if (hasPassedDefaultValue && (val.startsWith(USE_DEFAULT_PREFIX) || val.equals(USE_DEFAULT)))
+			{
+				val = defaultValue;
+			}
+			else
+			{
+				// get/extract USE_DEFAULT values
+				val = getUseDefaultValue(propName, val);
+			}
 		}
 		return parseProperty( propName, val );
 	}
@@ -1230,7 +1296,7 @@ extends Properties
 	@Override
 	public String getProperty(String propName, String defaultValue)
 	{
-		String val = getProperty(propName);
+		String val = private_getProperty(propName, StringUtil.hasValue(defaultValue), defaultValue);
 		return val != null ? val : defaultValue;
 
 		// FIXME: for default values, environment variables etc are NOT resolved for the moment
@@ -1260,13 +1326,47 @@ extends Properties
 	/** Get a String value for property */
 	public String getPropertyRaw(String propName)
 	{
+		return private_getPropertyRaw(propName, false, null, true);
+	}
+
+	/** Get a String value for property */
+	protected String private_getPropertyRaw(String propName, boolean hasPassedDefaultValue, String defaultValue, boolean doTrim)
+	{
+//		String val = super.getProperty(propName);
+//		if (val != null)
+//		{
+//			val = val.trim();
+//			
+//			// get/extract USE_DEFAULT values
+//			val = getUseDefaultValue(propName, val);
+//		}
+//		return val;
+		
 		String val = super.getProperty(propName);
-		if (val != null)
+
+		if (val == null)
 		{
-			val = val.trim();
+			// If the propName wasn't found in the properties.
+			// Get the Registered Application Default 
+			val = getRegisteredDefaultValue(propName);
 			
-			// get/extract USE_DEFAULT values
-			val = getUseDefaultValue(propName, val);
+			if (val == null && hasPassedDefaultValue)
+				val = defaultValue;
+		}
+		else
+		{
+			if (doTrim)
+				val = val.trim();
+			
+			if (hasPassedDefaultValue && (val.startsWith(USE_DEFAULT_PREFIX) || val.equals(USE_DEFAULT)))
+			{
+				val = defaultValue;
+			}
+			else
+			{
+				// get/extract USE_DEFAULT values
+				val = getUseDefaultValue(propName, val);
+			}
 		}
 		return val;
 	}
@@ -1274,8 +1374,10 @@ extends Properties
 	/** Get a String value for property */
 	public String getPropertyRaw(String propName, String defaultValue)
 	{
-		String val = getPropertyRaw(propName);
+		String val = private_getPropertyRaw(propName, StringUtil.hasValue(defaultValue), defaultValue, true);
 		return val != null ? val : defaultValue;
+//		String val = getPropertyRaw(propName);
+//		return val != null ? val : defaultValue;
 	}
 
 	/** just for testing: Used to get RAW property values */
@@ -1302,13 +1404,16 @@ extends Properties
 	/** Get a String value for property, just use the Properties.getProperty (no str.trim(), no nothing ) */
 	public String getPropertyRawVal(String propName)
 	{
-		return super.getProperty(propName);
+//		return super.getProperty(propName);
+		return private_getPropertyRaw(propName, false, null, false);
 	}
 
 	/** Get a String value for property, just use the Properties.getProperty (no str.trim(), no nothing ) */
 	public String getPropertyRawVal(String propName, String defaultValue)
 	{
-		String val = getPropertyRawVal(propName);
+//		String val = getPropertyRawVal(propName);
+//		return val != null ? val : defaultValue;
+		String val = private_getPropertyRaw(propName, StringUtil.hasValue(defaultValue), defaultValue, false);
 		return val != null ? val : defaultValue;
 	}
 
@@ -1407,14 +1512,14 @@ extends Properties
 		// We will still use the latest application default value...
 		//
 		// Saving the stored value 'USE_DEFAULT:*value*' is just a precaution, meaning:
-		// If the we delete aRregistered Application Default from the application
+		// If the we delete a registered Application Default from the application
 		// we could still use the stored *value* in the saved property file.
 		//
 		String regDefVal = getRegisteredDefaultValue(propName);
 		if (regDefVal != null)
 		{
 			if (regDefVal.equals(str))
-				str = USE_DEFAULT + str;
+				str = USE_DEFAULT_PREFIX + str;
 		}
 
 		if (str == null)
@@ -1437,13 +1542,17 @@ extends Properties
 			// If we should have change listeners, this is where we should call: firePropertyChanged(propName, newValue, oldValue);
 		}
 		
-		// If the previously stored value, is having 'USE_DEFAULT:' as a prefix
+		// If the previously stored value, is having 'USE_DEFAULT:' as a prefix or is simply 'USE_DEFAULT'
 		// simply remove it and return the *actual* value it previously had.
 		if (prev != null && prev instanceof String)
 		{
 			String prevStr = (String) prev;
-			if (prevStr.startsWith(USE_DEFAULT))
-				prev = prevStr.substring(USE_DEFAULT.length());
+
+			if (prevStr.startsWith(USE_DEFAULT_PREFIX))
+				prev = prevStr.substring(USE_DEFAULT_PREFIX.length()).trim();
+
+			if (prevStr.equals(USE_DEFAULT))
+				prev = ""; // Or should it be: null
 		}
 		return prev;
 	}
@@ -1483,7 +1592,7 @@ extends Properties
 //			public Object setProperty(String propName, String str, String appDefault)
 //			{
 //				if (str.equals(appDefault))
-//					str = USE_DEFAULT + str;
+//					str = USE_DEFAULT_PREFIX + str;
 //				return super.setProperty( propName, str );
 //			}
 //		
@@ -1491,11 +1600,11 @@ extends Properties
 //			{
 //				String str = Integer.toString(t);
 //				if (t == appDefault)
-//					str = USE_DEFAULT + t;
+//					str = USE_DEFAULT_PREFIX + t;
 //				Object prev = setProperty( propName, str );
 //				if (prev != null && prev instanceof String)
-//					if (((String) prev).startsWith(USE_DEFAULT))
-//						prev = ((String) prev).substring(USE_DEFAULT.length());
+//					if (((String) prev).startsWith(USE_DEFAULT_PREFIX))
+//						prev = ((String) prev).substring(USE_DEFAULT_PREFIX.length());
 //				return prev==null ? -1 : Integer.parseInt( (String)prev );
 //			}
 //		
@@ -1503,11 +1612,11 @@ extends Properties
 //			{
 //				String str = Long.toString(l);
 //				if (l == appDefault)
-//					str = USE_DEFAULT + l;
+//					str = USE_DEFAULT_PREFIX + l;
 //				Object prev = setProperty( propName, str );
 //				if (prev != null && prev instanceof String)
-//					if (((String) prev).startsWith(USE_DEFAULT))
-//						prev = ((String) prev).substring(USE_DEFAULT.length());
+//					if (((String) prev).startsWith(USE_DEFAULT_PREFIX))
+//						prev = ((String) prev).substring(USE_DEFAULT_PREFIX.length());
 //				return prev==null ? -1 : Long.parseLong( (String)prev );
 //			}
 //		
@@ -1515,19 +1624,26 @@ extends Properties
 //			{
 //				String str = Boolean.toString(b);
 //				if (b == appDefault)
-//					str = USE_DEFAULT + b;
+//					str = USE_DEFAULT_PREFIX + b;
 //				Object prev = setProperty( propName, str );
 //				if (prev != null && prev instanceof String)
-//					if (((String) prev).startsWith(USE_DEFAULT))
-//						prev = ((String) prev).substring(USE_DEFAULT.length());
+//					if (((String) prev).startsWith(USE_DEFAULT_PREFIX))
+//						prev = ((String) prev).substring(USE_DEFAULT_PREFIX.length());
 //				return prev==null ? false : Boolean.parseBoolean( (String)prev );
 //			}
 
 	/** prefix for DEFAULT vales */
-	private static final String USE_DEFAULT = "USE_DEFAULT:";
+	private static final String USE_DEFAULT_PREFIX = "USE_DEFAULT:";
+	private static final String USE_DEFAULT        = "USE_DEFAULT";
 	/** What are the default vales for: each registered property name */
 
 	private static HashMap<String, String> _registeredDefault = new HashMap<String, String>(); 
+
+	/** This should probably just be used for testing purposes */
+	public static void removeAllRegisterDefaultValues()
+	{
+		_registeredDefault = new HashMap<String, String>();
+	}
 
 	public static void registerDefaultValue(String propName, String defaultValue)
 	{
@@ -1580,9 +1696,10 @@ extends Properties
 		String regDefVal = getRegisteredDefaultValue(propName);
 		
 		// if the passed value string is not null and start with a USE_DEFAULT string
-		if (value != null && value.startsWith(USE_DEFAULT))
+//		if ( value != null && (value.startsWith(USE_DEFAULT_PREFIX) || value.equals(USE_DEFAULT)) )
+		if (value != null && value.startsWith(USE_DEFAULT_PREFIX))
 		{
-			// if a default value has been registered, use this valie
+			// if a default value has been registered, use this value
 			if (regDefVal != null)
 				return regDefVal;
 
@@ -1590,7 +1707,7 @@ extends Properties
 			// and the value string starts with USE_DEFAULT:
 			// extract the value after the keyword 'USE_DEFAULT:'
 			// This is used as a fallback strategy
-			value = value.substring(USE_DEFAULT.length()).trim();
+			value = value.substring(USE_DEFAULT_PREFIX.length()).trim();
 			
 //			// if value is empty: I think Properties.getProperty(...) returns "" if empty value
 //			if (value.length() == 0)
@@ -1916,7 +2033,24 @@ extends Properties
 
 	//--------------------------------------------------------------------------
 	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	// BEGIN: Combined search
+	// BEGIN: Combined search
+	// BEGIN: Combined search
+	// BEGIN: Combined search
+	// BEGIN: Combined search
+	// BEGIN: Combined search
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	//--------------------------------------------------------------------------
 	//--------------------------------------------------------------------------
 	private static class CombinedConfiguration
@@ -2298,6 +2432,12 @@ extends Properties
 		@Override
 		public String getProperty(String propName)
 		{
+			return private_getProperty(propName, false, null);
+		}
+		/** Get a String value for property, trim() has been called on it, if the property can't be found null will be returned */
+		@Override
+		protected String private_getProperty(String propName, boolean hasPassedDefaultValue, String defaultValue)
+		{
 			for (String instName : _searchOrder)
 			{
 				Configuration conf = Configuration.getInstance(instName);
@@ -2311,7 +2451,8 @@ extends Properties
 					if ( ! conf.containsKey(propName) )
 						continue;
 
-					String val = conf.getProperty(propName);
+//					String val = conf.getProperty(propName);
+					String val = conf.private_getProperty(propName, hasPassedDefaultValue, defaultValue);
 					if (val != null)
 						return val;
 				}
@@ -2330,7 +2471,7 @@ extends Properties
 		@Override
 		public String getProperty(String propName, String defaultValue)
 		{
-			String val = getProperty(propName);
+			String val = private_getProperty(propName, StringUtil.hasValue(defaultValue), defaultValue);
 			return val != null ? val : defaultValue;
 		}
 
@@ -2354,12 +2495,36 @@ extends Properties
 		@Override
 		public String getPropertyRaw(String propName)
 		{
+			return private_getPropertyRaw(propName, false, null, true);
+		}
+		/** Get a String value for property */
+		@Override
+		protected String private_getPropertyRaw(String propName, boolean hasPassedDefaultValue, String defaultValue, boolean doTrim)
+		{
+//			for (String instName : _searchOrder)
+//			{
+//				Configuration conf = Configuration.getInstance(instName);
+//				if (conf != null)
+//				{
+//					String val = conf.getPropertyRaw(propName);
+//					if (val != null)
+//						return val;
+//				}
+//			}
 			for (String instName : _searchOrder)
 			{
 				Configuration conf = Configuration.getInstance(instName);
 				if (conf != null)
 				{
-					String val = conf.getPropertyRaw(propName);
+					// In the combined props, we need to check if the prop *exists*
+					// Because the Configuration.getProperty(propName) will return the
+					// registered default value if prop was not found...
+					// so val will contain the default value, and we want to check other configs
+					// in the search order to get value...
+					if ( ! conf.containsKey(propName) )
+						continue;
+
+					String val = conf.private_getPropertyRaw(propName, hasPassedDefaultValue, defaultValue, doTrim);
 					if (val != null)
 						return val;
 				}
@@ -2370,14 +2535,17 @@ extends Properties
 				if (val != null)
 					return val;
 			}
-			return null;
+//			return null;
+			return getRegisteredDefaultValue(propName);
 		}
 
 		/** Get a String value for property */
 		@Override
 		public String getPropertyRaw(String propName, String defaultValue)
 		{
-			String val = getPropertyRaw(propName);
+//			String val = getPropertyRaw(propName);
+//			return val != null ? val : defaultValue;
+			String val = private_getPropertyRaw(propName, StringUtil.hasValue(defaultValue), defaultValue, true);
 			return val != null ? val : defaultValue;
 		}
 
@@ -2399,30 +2567,16 @@ extends Properties
 		@Override
 		public String getPropertyRawVal(String propName)
 		{
-			for (String instName : _searchOrder)
-			{
-				Configuration conf = Configuration.getInstance(instName);
-				if (conf != null)
-				{
-					String val = conf.getPropertyRawVal(propName);
-					if (val != null)
-						return val;
-				}
-			}
-			if (_fallbackOnSystemProperties)
-			{
-				String val = System.getProperty(propName);
-				if (val != null)
-					return val;
-			}
-			return null;
+			return private_getPropertyRaw(propName, false, null, false);
 		}
 
 		/** Get a String value for property */
 		@Override
 		public String getPropertyRawVal(String propName, String defaultValue)
 		{
-			String val = getPropertyRawVal(propName);
+//			String val = getPropertyRawVal(propName);
+//			return val != null ? val : defaultValue;
+			String val = private_getPropertyRaw(propName, StringUtil.hasValue(defaultValue), defaultValue, false);
 			return val != null ? val : defaultValue;
 		}
 	}
@@ -2536,6 +2690,8 @@ extends Properties
 	//--------------------------------------------------------------------------
 	//--------------------------------------------------------------------------
 	// main / test code.
+	//  * newer test code should be in: ConfigurationTest
+	//  * and this should be migrated over into that as well
 	//--------------------------------------------------------------------------
 	//--------------------------------------------------------------------------
 
@@ -2548,9 +2704,10 @@ extends Properties
 		Configuration uConf = new Configuration();
 		Configuration sConf = new Configuration();
 		
-		tConf.setFilename("c:\\tmpConfigFile.prop");
-		uConf.setFilename("c:\\userConfigFile.prop");
-		sConf.setFilename("c:\\systemConfigFile.prop");
+		String tempDir = System.getProperty("java.io.tmpdir");
+		tConf.setFilename(tempDir + "/test.tmpConfigFile.prop");
+		uConf.setFilename(tempDir + "/test.userConfigFile.prop");
+		sConf.setFilename(tempDir + "/test.systemConfigFile.prop");
 
 		Configuration.setInstance(Configuration.USER_TEMP,   tConf);
 		Configuration.setInstance(Configuration.USER_CONF,   uConf);
@@ -2687,13 +2844,13 @@ extends Properties
 		testShouldBeEqual(Boolean.TRUE,         tConf.getBooleanProperty("xxx.boolean.2", false)); // in RepAppDef, not in Props, use RepAppDef(true)
 		testShouldBeEqual(Boolean.FALSE,        tConf.getBooleanProperty("xxx.boolean.3", false)); // Not in RepAppDef, use default value
 
-		testShouldNotBeEqual("someSecretPassword",       tConf.getPropertyRaw_test("xxx.password"));
-		testShouldBeEqual(USE_DEFAULT+"str",             tConf.getPropertyRaw_test("xxx.str"));
-		testShouldBeEqual(USE_DEFAULT+Integer.MAX_VALUE, tConf.getPropertyRaw_test("xxx.int"));
-		testShouldBeEqual(USE_DEFAULT+Long.MAX_VALUE,    tConf.getPropertyRaw_test("xxx.long"));
-		testShouldBeEqual(USE_DEFAULT+Boolean.TRUE,      tConf.getPropertyRaw_test("xxx.boolean.1"));
-		testShouldBeNull(                                tConf.getPropertyRaw_test("xxx.boolean.2"));
-		testShouldBeNull(                                tConf.getPropertyRaw_test("xxx.boolean.3"));
+		testShouldNotBeEqual("someSecretPassword",                tConf.getPropertyRaw_test("xxx.password"));
+		testShouldBeEqual(USE_DEFAULT_PREFIX + "str",             tConf.getPropertyRaw_test("xxx.str"));
+		testShouldBeEqual(USE_DEFAULT_PREFIX + Integer.MAX_VALUE, tConf.getPropertyRaw_test("xxx.int"));
+		testShouldBeEqual(USE_DEFAULT_PREFIX + Long.MAX_VALUE,    tConf.getPropertyRaw_test("xxx.long"));
+		testShouldBeEqual(USE_DEFAULT_PREFIX + Boolean.TRUE,      tConf.getPropertyRaw_test("xxx.boolean.1"));
+		testShouldBeNull(                                         tConf.getPropertyRaw_test("xxx.boolean.2"));
+		testShouldBeNull(                                         tConf.getPropertyRaw_test("xxx.boolean.3"));
 
 		
 		System.out.println("--- SOME NON DEFAULT VALUES --------");

@@ -79,9 +79,9 @@ extends ReportChartAbstract
 	public String              getKeepGroups()            { return _keepGroups; }
 	public String              getSkipGroups()            { return _skipGroups; }
 	
-	public ReportChartTimeSeriesStackedBar(ReportEntryAbstract reportEntry, DbxConnection conn, String cmName, String dataGroupColumn, int dataGroupMinutes, TopGroupCountReport topGroupCountReport, String dataValueColumn, Double dataDivideByValue, String keepGroups, String skipGroups, String graphTitle)
+	public ReportChartTimeSeriesStackedBar(ReportEntryAbstract reportEntry, DbxConnection conn, String schemaName, String cmName, String dataGroupColumn, int dataGroupMinutes, TopGroupCountReport topGroupCountReport, String dataValueColumn, Double dataDivideByValue, String keepGroups, String skipGroups, String graphTitle)
 	{
-		super(reportEntry, conn, ChartType.STACKED_BAR, cmName, dataGroupColumn, graphTitle, -1, false); // sorted will change in super if sort succeeds
+		super(reportEntry, conn, schemaName, ChartType.STACKED_BAR, cmName, dataGroupColumn, graphTitle, -1, false); // sorted will change in super if sort succeeds
 		
 		_dataGroupColumn     = dataGroupColumn;
 		_dataGroupMinutes    = dataGroupMinutes;
@@ -170,7 +170,7 @@ extends ReportChartAbstract
 				"select DATEADD(MINUTE, DATEDIFF(MINUTE, '2000-01-01', [SessionSampleTime]) / " + samplePeriod + " * " + samplePeriod + ", '2000-01-01') as [SamplePeriod] \n" 
 				+"      ,[" + getGroupColumnName() + "] \n"
 				+"      ,sum([" + getValueColumnName() + "])" + divideByValue + " as [" + getValueColumnName() + "] \n"
-				+" from [" + getTableName() + "] \n"
+				+" from " + getSchemaNameSqlPrefix() + "[" + getTableName() + "] \n"
 				+" where 1 = 1 \n"
 				+ getReportEntry().getReportPeriodSqlWhere()
 //				+ keepGroupWhere
@@ -293,9 +293,9 @@ extends ReportChartAbstract
 		boolean tabExists = DbUtils.checkIfTableExistsNoThrow(conn, null, null, getTableName());
 		if ( ! tabExists )
 		{
-			setProblem("<br><font color='red'>ERROR: Creating ReportChartObject, the underlying table '" + getTableName() + "' did not exist, skipping this Chart.</font><br>\n");
+			setProblem("<br><font color='red'>ERROR: Creating ReportChartObject, the underlying table '" + getSchemaNameSqlPrefix() + getTableName() + "' did not exist, skipping this Chart.</font><br>\n");
 
-			_logger.info("createDataset(): The table '" + getTableName() + "' did not exist.");
+			_logger.info("createDataset(): The table '" + getSchemaNameSqlPrefix() + getTableName() + "' did not exist.");
 			return null;
 		}
 
@@ -515,7 +515,7 @@ extends ReportChartAbstract
 					+ "select top " + getTopCount() + " \n"
 					+ "    [" + getOwner().getGroupColumnName() + "] \n"
 					+ "   ,sum([" + getOwner().getValueColumnName() + "]) as [" + getOwner().getValueColumnName() + "] \n"
-					+ "from [" + getOwner().getTableName() + "] \n"
+					+ "from " + getOwner().getSchemaNameSqlPrefix() + "[" + getOwner().getTableName() + "] \n"
 					+ "where 1 = 1 \n"
 					+ getOwner().getReportEntry().getReportPeriodSqlWhere()
 					+ "  and [" + getOwner().getValueColumnName() + "] > 0 \n"

@@ -34,7 +34,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.alarm.writers.AlarmWriterToPcsJdbc;
 import com.asetune.central.pcs.DbxTuneSample.CmEntry;
+import com.asetune.pcs.PersistContainer;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.Memory;
 import com.asetune.utils.StringUtil;
@@ -128,6 +130,10 @@ implements Runnable
 	public static final String  PROPKEY_WriterClass                              = "CentralPcsWriterHandler.WriterClass";
 //	public static final String  DEFAULT_WriterClass                              = null; // no default
 
+	public static final String  PROPKEY_localMetrics_doCapture                   = "CentralPcsWriterHandler.localMetrics.doCapture";
+	public static final boolean DEFAULT_localMetrics_doCapture                   = true;
+
+	
 	static
 	{
 //		Configuration.registerDefaultValue(PROPKEY_ddl_doDdlLookupAndStore,                  DEFAULT_ddl_doDdlLookupAndStore);
@@ -172,7 +178,6 @@ implements Runnable
 
 	private Thread   _thread           = null;
 
-
 	/** Configuration we were initialized with */
 	private Configuration _conf;
 	
@@ -192,6 +197,21 @@ implements Runnable
 	/** How many milliseconds have we maximum spent in <i>consume</i> */
 	private long _maxConsumeTime = 0;
 
+
+	
+	/** The Local Host Monitor consumer "thread" code */ 
+	private Thread _localMetricsStorageThread = null;
+
+	private LocalMetricsStorageConsumer _localMetricsStorage = null;
+	
+	/** Should we capture Local DbxCentral Metrics, (OS Metrics and possibly the PCS database Metrics */
+	private boolean  _doLocalMetrcisCapture = DEFAULT_localMetrics_doCapture;
+	
+	/** Local DbxCentral Metrics Queue, waiting to be stored */
+	private BlockingQueue<PersistContainer> _localMetricsQueue = new LinkedBlockingQueue<PersistContainer>();
+	
+
+	
 	/*---------------------------------------------------
 	** Constructors
 	**---------------------------------------------------
@@ -251,6 +271,8 @@ implements Runnable
 
 		_warnQueueSizeThresh             = _conf.getIntProperty    (PROPKEY_warnQueueSizeThresh,                 _warnQueueSizeThresh);
 
+		_doLocalMetrcisCapture           = _conf.getBooleanProperty(PROPKEY_localMetrics_doCapture,              DEFAULT_localMetrics_doCapture);
+		
 		// DDL Lookup & Store Props
 //		_warnDdlInputQueueSizeThresh     = _conf.getIntProperty    (PROPKEY_ddl_warnDdlInputQueueSizeThresh,     _warnDdlInputQueueSizeThresh);
 //		_warnDdlStoreQueueSizeThresh     = _conf.getIntProperty    (PROPKEY_ddl_warnDdlStoreQueueSizeThresh,     _warnDdlStoreQueueSizeThresh);
@@ -712,8 +734,8 @@ implements Runnable
 //				Timestamp newTs = pw.getSessionStartTime();
 //				cont.setSessionStartTime(newTs);
 
-				// CREATE-DDL
-//				for (CountersModel cm : cont.getCollectors())
+//				// CREATE-DDL
+//				for (CountersModel cm : cont.getCounterObjects())
 //				{
 //					// only call saveDdl() the first time...
 //					if ( ! pw.isDdlCreated(cm) )
@@ -860,6 +882,10 @@ implements Runnable
 				prevConsumeTimeMs = stopTime-startTime;
 				_logger.debug("It took "+prevConsumeTimeMs+" ms to persist the above information (using all writers).");
 				
+// I think this is better to do AFTER they have been saved in saveAlarms() or that the clear() only removes alarms that are OLDER than X minutes
+//				// Clear some stuff after each container.
+//				if ( AlarmWriterToPcsJdbc.hasInstance() ) 
+//					AlarmWriterToPcsJdbc.getInstance().clear();
 			} 
 			catch (InterruptedException ex) 
 			{
@@ -900,6 +926,23 @@ implements Runnable
 		_thread.setName(THREAD_NAME);
 //		_thread.setDaemon(true);
 		_thread.start();
+
+		if (_doLocalMetrcisCapture)
+		{
+//			// Start the SQL Capture Thread
+//			_sqlCapture = new SqlCaptureHandler();
+//			_sqlCaptureThread = new Thread(_sqlCapture);
+//			_sqlCaptureThread.setName("SqlCaptureThread");
+//			_sqlCaptureThread.setDaemon(true);
+//			_sqlCaptureThread.start();
+
+			// Start the LocalMetrics Storage Thread
+			_localMetricsStorage = new LocalMetricsStorageConsumer();
+			_localMetricsStorageThread = new Thread(_localMetricsStorage);
+			_localMetricsStorageThread.setName("LocalMetricsStorageThread");
+			_localMetricsStorageThread.setDaemon(true);
+			_localMetricsStorageThread.start();
+		}
 	}
 
 	/**
@@ -934,6 +977,14 @@ implements Runnable
 
 			_thread = null;
 		}
+
+		// LocalMetrics Storage
+		if (_localMetricsStorageThread != null)
+		{
+			_localMetricsStorageThread.interrupt();
+			_localMetricsStorageThread = null;
+		}
+
 
 		// Close the connections to the data store.
 		for (ICentralPersistWriter pw : _writerClasses)
@@ -1072,6 +1123,428 @@ implements Runnable
 	// Below are just used for formating the above string (for readability)
 	private int _maxLenPersistWriterName = 0;
 	private int _maxLenServerName        = 0;
+
+
+	
+	
+	
+	
+
+
+
+
+
+
+
+	////////////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////////
+	//// SQL Capture Database Connection
+	////////////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////////
+//	/** Connection to the DDL Storage. */
+//	private DbxConnection _sqlCaptureConn                    = null;
+////	private int           _sqlCaptureDbmsVersion             = 0;
+//	private long          _lastSqlCaptureIsClosedCheck       = 0;
+//	private long          _lastSqlCaptureIsClosedRefreshTime = 1200;
+//
+//	/**
+//	 * Get a connection used to sample DDL information from a ASE Server.
+//	 * <p>
+//	 * If the "local cached" connection is NULL, or NOT Connected, then:
+//	 * <ul>
+//	 *  <li>Check if the Counter Collector thread is started.</li>
+//	 *  <li>Check if the Counter Collector is connected to the Lookup Server.</li>
+//	 * </ul>
+//	 * If all the above is true, then grab a new connection the the DDL lookup server.
+//	 * 
+//	 * @return
+//	 */
+//	private DbxConnection getSqlCaptureConnection()
+//	{
+//		// First check the "cached connection" if it's valid
+//		if (isSqlCaptureConnected(false, true))
+//			return getSqlCaptureConnectionXXX();
+//
+//		// If the Counter Collector isn't running, no need to continue
+//		if ( ! CounterController.hasInstance() )
+//			return null;
+//		ICounterController cc = CounterController.getInstance();
+//
+//		// If the Counter Collector isn't connected, no need to continue
+//		if ( ! cc.isMonConnected() )
+//			return null;
+//		
+//		// Lets grab a new connection then...
+//		try
+//		{
+////			DbxConnection conn = _connProvider.getNewConnection(Version.getAppName() + "-ObjInfoLookup");
+////			Connection    conn = AseConnectionFactory.getConnection(null, Version.getAppName() + "-DdlLookup", null);
+//
+//			if (_sqlCaptureBroker != null)
+//			{
+//				DbxConnection conn = _sqlCaptureBroker.createConnection();
+//				setSqlCaptureConnection(conn);
+//			}
+//			else
+//				_logger.error("There is no SQL Capture Inspector installed, so I can't grab a DB Connection to do the lookup.");
+//		}
+//		catch (Exception e)
+//		{
+//			_logger.error("Problems Getting SQL Capture Connection. Caught: " + e);
+//			setSqlCaptureConnection(null);
+//		}
+//		
+//		return getSqlCaptureConnectionXXX();
+//	}
+//
+//	/** Set the <code>Connection</code> to use for DDL Lookups. */
+//	public void setSqlCaptureConnection(DbxConnection conn)
+//	{
+//		_sqlCaptureConn = conn;
+//		if (conn != null)
+//		{
+//			if (_sqlCaptureBroker != null)
+//				_sqlCaptureBroker.onConnect(conn);
+//		}
+//	}
+//
+//	/** Gets the <code>Connection</code> to the monitored server. */
+//	public DbxConnection getSqlCaptureConnectionXXX()
+//	{
+//		return _sqlCaptureConn;
+//	}
+//
+//	/** Gets the <code>Connection</code> to the monitored server. */
+//	public void closeSqlCaptureConnection()
+//	{
+//		if (_sqlCaptureConn == null) 
+//			return;
+//
+//		try
+//		{
+//			if ( ! _sqlCaptureConn.isClosed() )
+//			{
+//				_sqlCaptureConn.close();
+//				if (_logger.isDebugEnabled())
+//				{
+//					_logger.debug("SQL Capture Connection closed");
+//				}
+//			}
+//		}
+//		catch (SQLException ev)
+//		{
+//			_logger.error("closeSqlCaptureConnection", ev);
+//		}
+//		_sqlCaptureConn = null;
+//	}
+//
+//	public boolean isSqlCaptureConnected(boolean forceConnectionCheck, boolean closeConnOnFailure)
+//	{
+//		if (_sqlCaptureConn == null) 
+//			return false;
+//
+//		// Cache the last call for X ms (default 1200 ms)
+//		if ( ! forceConnectionCheck )
+//		{
+//			long diff = System.currentTimeMillis() - _lastSqlCaptureIsClosedCheck;
+//			if ( diff < _lastSqlCaptureIsClosedRefreshTime)
+//			{
+//				_logger.debug("    <<--- isSqlCaptureConnected(): not time for refresh. diff='" + diff + "', _lastSqlCaptureIsClosedRefreshTime='" + _lastSqlCaptureIsClosedRefreshTime + "'.");
+//				return true;
+//			}
+//		}
+//
+//		// check the connection itself
+//		try
+//		{
+//			// jConnect issues/executing RPC: sp_mda 0, 7 on isClosed()
+//			if (_sqlCaptureConn.isClosed())
+//			{
+//				if (closeConnOnFailure)
+//					closeSqlCaptureConnection();
+//				return false;
+//			}
+//		}
+//		catch (SQLException e)
+//		{
+//			return false;
+//		}
+//
+//		_lastSqlCaptureIsClosedCheck = System.currentTimeMillis();
+//		return true;
+//	}
+//
+//	/**
+//	 * Read from the Input Queue, and Do lookups of DDL in the ASE database 
+//	 */
+//	private class SqlCaptureHandler
+//	implements Runnable
+//	{
+//		private void checkForConfigChanges()
+//		{
+//			// doSqlCaptureAndStore
+//			boolean doSqlCaptureAndStore = _props.getBooleanProperty(PROPKEY_sqlCap_doSqlCaptureAndStore, DEFAULT_sqlCap_doSqlCaptureAndStore);
+//			if (doSqlCaptureAndStore != _doSqlCaptureAndStore)
+//			{
+//				_logger.info("SqlCaptureHandler: Discovered a config change in _doSqlCaptureAndStore from '" + _doSqlCaptureAndStore + "', to '" + doSqlCaptureAndStore + "'.");
+//				_doSqlCaptureAndStore = doSqlCaptureAndStore;
+//			}
+//
+//			// Sleep time 
+//			int sqlCaptureSleepTimeInMs = _props.getIntProperty(PROPKEY_sqlCap_sleepTimeInMs, DEFAULT_sqlCap_sleepTimeInMs);
+//			if (sqlCaptureSleepTimeInMs != _sqlCaptureSleepTimeInMs)
+//			{
+//				_logger.info("SqlCaptureHandler: Discovered a config change in sleep time from '" + _sqlCaptureSleepTimeInMs + "', to '" + sqlCaptureSleepTimeInMs + "'.");
+//				_sqlCaptureSleepTimeInMs = sqlCaptureSleepTimeInMs;
+//			}
+//		}
+//
+//		@Override
+//		public void run()
+//		{
+//			String threadName = Thread.currentThread().getName();
+//			_logger.info("Starting a thread for the module '" + threadName + "'.");
+//	
+//			isInitialized();
+//	
+//			_running = true;
+//			long timeMs = 0;
+//	
+//			while(isRunning())
+//			{
+////System.out.println("SqlCaptureHandler... at TOP: isRunning()=" + isRunning());
+//				try 
+//				{
+//					checkForConfigChanges();
+//					
+//					// this should not happen, but just in case
+//					if ( ! _doSqlCaptureAndStore )
+//					{
+//						Thread.sleep(1000);
+//						continue;
+//					}
+//					
+//					// Should we check if the "main" collector is paused
+////					if ( CounterController.getInstance().isPauseSampling() ) // FIXME: isPauseSampling() was only in the GUI not in CounterController
+////					{
+////						_logger.debug("Counter Controller is paused... skipping: doSqlCapture()");
+////						Thread.sleep(1000);
+////						continue;
+////					}
+//
+//					// Go and store or consume the in-data/container
+//					long startTime = System.currentTimeMillis();
+//					doSqlCapture();
+//					long stopTime = System.currentTimeMillis();
+//	
+//					timeMs = stopTime-startTime;
+////System.out.println("It took " + timeMs + " ms to Capture SQL Text/Statements.");
+//					if (_logger.isDebugEnabled())
+//						_logger.debug("It took " + timeMs + " ms to Capture SQL Text/Statements.");
+//					
+//					// Only check every X minute
+//					long howLongAgo = System.currentTimeMillis() - _sqlCapture_checkConn_last;
+////System.out.println("SqlCaptureHandler... doSqlCapture()... timeMs=" + timeMs + ", _sqlCapture_checkConn_period=" + _sqlCapture_checkConn_period + ", howLongAgo=" + howLongAgo);
+//					if (howLongAgo > _sqlCapture_checkConn_period)
+//					{
+//						checkSqlCaptureConnection();
+//						_sqlCapture_checkConn_last = System.currentTimeMillis();
+//					}
+//
+//					// Sleep before next "poll" time
+//					Thread.sleep(_sqlCaptureSleepTimeInMs);
+//				} 
+//				catch (InterruptedException ex) 
+//				{
+//					_running = false;
+//				}
+//				catch (Throwable t) 
+//				{
+//					_logger.warn("Problems when calling doSqlCapture(), Skipping the problem and continuing... (however the data fetched in above batch might not have been passed on to the writer thread)", t);
+//					// Sleep before next "poll" time
+//					try { Thread.sleep(_sqlCaptureSleepTimeInMs); }
+//					catch(InterruptedException ex) 
+//					{
+//						_running = false;
+//					}
+//				}
+//			}
+//	
+//			_logger.info("Emptying the DDL Input queue for module '" + threadName + "', which had " + _sqlCaptureStoreQueue.size() + " entries.");
+//			_sqlCaptureStoreQueue.clear();
+//			fireQueueSizeChange();
+//
+//			// Close the Lookup Connection
+//			closeSqlCaptureConnection();
+//			
+//			_logger.info("Thread '" + threadName + "' was stopped.");
+//		}
+//	}
+
+	/**
+	 * Read from the Storage Queue, and send use all Writers to save LocalMetrics
+	 */
+	private class LocalMetricsStorageConsumer
+	implements Runnable
+	{
+		@Override
+		public void run()
+		{
+			String threadName = Thread.currentThread().getName();
+			_logger.info("Starting a thread for the module '" + threadName + "'.");
+	
+			isInitialized();
+	
+			_running = true;
+			long prevConsumeTimeMs = 0;
+	
+			while(isRunning())
+			{
+				//_logger.info("Thread '" + _thread.getName() + "', SLEEPS...");
+				//try { Thread.sleep(5 * 1000); }
+				//catch (InterruptedException ignore) {}
+				
+				if (_logger.isDebugEnabled())
+					_logger.debug("Thread '" + threadName + "', waiting on queue...");
+	
+				try 
+				{
+					PersistContainer pc = _localMetricsQueue.take();
+					fireQueueSizeChange();
+
+					// this should not happen, but just in case
+					if ( ! _doLocalMetrcisCapture )
+						continue;
+
+					// Make sure the container isn't empty.
+					if (pc == null)
+						continue;
+
+					if (pc.isEmpty())
+						continue;
+					
+					// if we are about to STOP the service
+					if ( ! isRunning() )
+					{
+						_logger.info("The service is about to stop, discarding a consume(LocalMetrics) queue entry.");
+						continue;
+					}
+
+
+					// Go and store or consume the in-data/container
+					long startTime = System.currentTimeMillis();
+					saveLocalMetrics( pc, prevConsumeTimeMs );
+					long stopTime = System.currentTimeMillis();
+
+					prevConsumeTimeMs = stopTime-startTime;
+					_logger.debug("It took " + prevConsumeTimeMs + " ms to persist the above LocalMetrics information (using all writers).");
+					
+				} 
+				catch (InterruptedException ex) 
+				{
+					_running = false;
+				}
+				catch (Throwable t) 
+				{
+					_logger.warn("Problems when calling saveLocalMetrics(), Skipping the problem and continuing... (however the data wont be stored for this batch)", t);
+				}
+			}
+	
+			_logger.info("Emptying the LocalMetrics Input queue for module '" + threadName + "', which had " + _localMetricsQueue.size() + " entries.");
+			_localMetricsQueue.clear();
+			fireQueueSizeChange();
+	
+			_logger.info("Thread '" + threadName + "' was stopped.");
+		}
+	}
+
+//	/**
+//	 * Get DDL information from the database and pass it on to the storage thread
+//	 * 
+//	 * @param qe
+//	 * @param prevLookupTimeMs
+//	 * @return true if it did a lookup, false the lookup was discarded
+//	 */
+//	private boolean doSqlCapture()
+//	{
+//		DbxConnection conn = getSqlCaptureConnection();
+//		if (conn == null)
+//			return false;
+//
+//		if (_sqlCaptureBroker == null)
+//		{
+//			_logger.warn("doObjectInfoLookup(): Sorry can't continue: There are no Object Lookup Inspector installed.");
+//			return false;
+//		}
+//		
+////System.out.println("doSqlCapture(): START");
+//		int entries = _sqlCaptureBroker.doSqlCapture(conn, this);
+////System.out.println("doSqlCapture(): END - entries=" + entries);
+//		
+//		if (_logger.isDebugEnabled())
+//			_logger.debug("SQL Capture Broker returned: " +  entries);
+//
+//		if (entries > 0)
+//		{
+////			int qsize = _sqlCaptureStoreQueue.size();
+////			if (qsize > _warnSqlCaptureStoreQueueSizeThresh)
+////			{
+////				_logger.warn("The SQL Capture Storage queue has " + qsize + " entries. The persistent writer might not keep in pace.");
+////			}
+//			fireQueueSizeChange();
+//			
+//			return true;
+//		}
+//		return false;
+//	}
+
+	/**
+	 * Use all installed writers to store the SQL Capture information
+	 * 
+	 * @param ddlDetails
+	 * @param prevConsumeTimeMs
+	 */
+	private void saveLocalMetrics(PersistContainer pc, long prevConsumeTimeMs)
+	{
+//System.out.println("saveLocalMetrics(). _writerClasses="+_writerClasses);
+		// loop all writer classes
+		for (ICentralPersistWriter pw : _writerClasses)
+		{
+			// CALL THE installed Writer
+			// AND catch all runtime errors that might come
+			try 
+			{
+				// SAVE-SAMPLE
+				// In here we can "do it all" 
+				// or use: beginOfSample(), saveSqlCaptureDetails(), saveCounters(), endOfSample()
+				pw.saveLocalMetricsSample(pc);
+			}
+			catch (Throwable t)
+			{
+				_logger.error("The Persistent Writer got runtime error in consumeDdl() in Persistent Writer named '" + pw.getName() + "'. Continuing with next Writer...", t);
+			}
+		}
+	}
+
+	/**
+	 * Add information that is about to be stored by the SQL Capture storage thread
+	 * @param sqlCaptureDetails
+	 */
+	public void addLocalMetrics(PersistContainer pc)
+	{
+		_localMetricsQueue.add(pc);
+	}
+	
+//	private int getLocalMetricsStorageEntries()
+//	{
+//		int entries = 0;
+//		for (PersistContainer pc : _localMetricsQueue)
+//			entries += pc.size();
+//		return entries;
+//	}
+
+
+
 
 	//////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////

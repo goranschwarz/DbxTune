@@ -54,6 +54,7 @@ import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.data.time.TimeSeriesDataItem;
 import org.jfree.data.xy.XYDataset;
 
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
@@ -72,9 +73,9 @@ extends ReportChartAbstract
 	private boolean       _isSorted;
 	private String        _skipNames;      // This is used two fold: skip "chart lines" OR skip some values that might be to "high/low" for the chart...
 
-	public ReportChartTimeSeriesLine(ReportEntryAbstract reportEntry, DbxConnection conn, String cmName, String graphName, int maxValue, boolean sorted, String skipNames, String graphTitle)
+	public ReportChartTimeSeriesLine(ReportEntryAbstract reportEntry, DbxConnection conn, String schemaName, String cmName, String graphName, int maxValue, boolean sorted, String skipNames, String graphTitle)
 	{
-		super(reportEntry, conn, ChartType.LINE, cmName, graphName, graphTitle, maxValue, sorted);
+		super(reportEntry, conn, schemaName, ChartType.LINE, cmName, graphName, graphTitle, maxValue, sorted);
 		
 		_graphName       = graphName;
 		_maxValue        = maxValue;
@@ -193,35 +194,39 @@ extends ReportChartAbstract
 		if (StringUtil.isNullOrBlank(cmName))     throw new IllegalArgumentException("cmName can't be null or blank");
 		if (StringUtil.isNullOrBlank(graphName))  throw new IllegalArgumentException("graphName can't be null or blank");
 
-		//----------------------------------------
-		// TYPICAL look of a graph table
-		//----------------------------------------
-		// CREATE TABLE "CMengineActivity_cpuSum"
-		//   "SessionStartTime"   DATETIME        NOT NULL,
-		//   "SessionSampleTime"  DATETIME        NOT NULL,
-		//   "SampleTime"         DATETIME        NOT NULL,
-		//   "label_0"            VARCHAR(30)         NULL,
-		//   "data_0"             NUMERIC(10, 1)      NULL,
-		//   "label_1"            VARCHAR(30)         NULL,
-		//   "data_1"             NUMERIC(10, 1)      NULL,
-		//   "label_2"            VARCHAR(30)         NULL,
-		//   "data_2"             NUMERIC(10, 1)      NULL
+		String tabName   = cmName + "_" + graphName;
+		
+		// Early exit if the table do not exist
+		boolean tabExists = DbUtils.checkIfTableExistsNoThrow(conn, null, getSchemaName(), tabName);
+		if ( ! tabExists )
+		{
+			setProblem("<br><font color='red'>ERROR: Creating ReportChartObject, the underlying table '" + getSchemaNameSqlPrefix() + tabName + "' did not exist, skipping this Chart.</font><br>\n");
 
+			_logger.info("createDataset(): The table '" + getSchemaNameSqlPrefix() + tabName + "' did not exist.");
+			return null;
+		}
+
+		String dummySql = "select * from " + getSchemaNameSqlPrefix() + "[" + tabName + "] where 1 = 2";
+		ResultSetTableModel dummyRstm = ResultSetTableModel.executeQuery(conn, dummySql, true, "metadata");
+
+		if (dummyRstm.hasColumn("label_0") && dummyRstm.hasColumn("data_0"))
+		{
+//System.out.println("---------------- ReportChartTimeSeriesLine[cmName='"+cmName+"', graphName='"+graphName+"'] >>>> do 1: label[cal-VALUE]-data");
+			return createDataset_labelNameAndDataInSeparateColumn(conn, cmName, graphName, skipNames);
+		}
+		else
+		{
+//System.out.println("---------------- ReportChartTimeSeriesLine[cmName='"+cmName+"', graphName='"+graphName+"'] >>>> do 2: label[col-NAME]-data");
+			return createDataset_colNameIsLabelName(conn, cmName, graphName, skipNames);
+		}
+		
+	}
+
+	/** helper method to parse 'skipNames' into two Maps: skipName{Above|below}Value*/
+	private void initSkipColumnsWithValue(String skipNames, Map<String, Double> skipNameAboveValue, Map<String, Double> skipNameBelowValue)
+	{
 		List<String> skipNameList = StringUtil.parseCommaStrToList(skipNames);
-		
-//		// If the skipNames starts with 'SQL-WHERE:' then use that as a where clause 
-//		String extraWhereCluase = "";
-//		if (StringUtil.hasValue(skipNames) && skipNames.startsWith(SQL_WHERE_PREFIX))
-//		{
-//			extraWhereCluase = skipNames.substring(SQL_WHERE_PREFIX.length()) + " \n";
-//		}
 
-		// if any of the skip entries starts with "SKIP_COLNAME_WITH_VALUE_ABOVE", then parse the entry and add it to the map
-		Map<String, Double> skipNameAboveValue = new HashMap<>();
-
-		// if any of the skip entries starts with "SKIP_COLNAME_WITH_VALUE_BELOW", then parse the entry and add it to the map
-		Map<String, Double> skipNameBelowValue = new HashMap<>();
-		
 		for (String skipNameVal : skipNameList)
 		{
 			if (skipNameVal.startsWith(SKIP_COLNAME_WITH_VALUE_ABOVE))
@@ -251,11 +256,41 @@ extends ReportChartAbstract
 				}
 			}
 		}
+	}
+
+	private Dataset createDataset_labelNameAndDataInSeparateColumn(DbxConnection conn, String cmName, String graphName, String skipNames)
+	{
+		if (StringUtil.isNullOrBlank(cmName))     throw new IllegalArgumentException("cmName can't be null or blank");
+		if (StringUtil.isNullOrBlank(graphName))  throw new IllegalArgumentException("graphName can't be null or blank");
+
+		//----------------------------------------
+		// TYPICAL look of a graph table
+		//----------------------------------------
+		// CREATE TABLE "CMengineActivity_cpuSum"
+		//   "SessionStartTime"   DATETIME        NOT NULL,
+		//   "SessionSampleTime"  DATETIME        NOT NULL,
+		//   "SampleTime"         DATETIME        NOT NULL,
+		//   "label_0"            VARCHAR(30)         NULL,
+		//   "data_0"             NUMERIC(10, 1)      NULL,
+		//   "label_1"            VARCHAR(30)         NULL,
+		//   "data_1"             NUMERIC(10, 1)      NULL,
+		//   "label_2"            VARCHAR(30)         NULL,
+		//   "data_2"             NUMERIC(10, 1)      NULL
+
+		List<String> skipNameList = StringUtil.parseCommaStrToList(skipNames);
 		
-		String tabName   = cmName + "_" + graphName;
+		// if any of the skip entries starts with "SKIP_COLNAME_WITH_VALUE_ABOVE", then parse the entry and add it to the map
+		Map<String, Double> skipNameAboveValue = new HashMap<>();
+
+		// if any of the skip entries starts with "SKIP_COLNAME_WITH_VALUE_BELOW", then parse the entry and add it to the map
+		Map<String, Double> skipNameBelowValue = new HashMap<>();
+		
+		initSkipColumnsWithValue(skipNames, skipNameAboveValue, skipNameBelowValue);
+		
+		String tabName = cmName + "_" + graphName;
 		String sql = 
 				  "select * \n"
-				+ "from [" + tabName + "] \n"
+				+ "from " + getSchemaNameSqlPrefix() + "[" + tabName + "] \n"
 				+ "where 1 = 1 \n"
 				+ getReportEntry().getReportPeriodSqlWhere()
 //				+ extraWhereCluase
@@ -264,15 +299,15 @@ extends ReportChartAbstract
 		
 		sql = conn.quotifySqlString(sql);
 
-		// Early exit if the table do not exist
-		boolean tabExists = DbUtils.checkIfTableExistsNoThrow(conn, null, null, tabName);
-		if ( ! tabExists )
-		{
-			setProblem("<br><font color='red'>ERROR: Creating ReportChartObject, the underlying table '" + tabName + "' did not exist, skipping this Chart.</font><br>\n");
-
-			_logger.info("createDataset(): The table '" + tabName + "' did not exist.");
-			return null;
-		}
+//		// Early exit if the table do not exist
+//		boolean tabExists = DbUtils.checkIfTableExistsNoThrow(conn, null, getSchemaName(), tabName);
+//		if ( ! tabExists )
+//		{
+//			setProblem("<br><font color='red'>ERROR: Creating ReportChartObject, the underlying table '" + getSchemaNameSqlPrefix() + tabName + "' did not exist, skipping this Chart.</font><br>\n");
+//
+//			_logger.info("createDataset(): The table '" + getSchemaNameSqlPrefix() + tabName + "' did not exist.");
+//			return null;
+//		}
 
 //		int readCount = 0;
 		
@@ -408,9 +443,9 @@ extends ReportChartAbstract
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("Problems in createDataset() when fetching DB data for cmName='" + cmName + "', graphName='" + graphName + "'.", ex);
+			_logger.error("Problems in createDataset() when fetching DB data for schema='" + getSchemaName() + "', cmName='" + cmName + "', graphName='" + graphName + "'.", ex);
 
-			setProblem("Problems in createDataset() when fetching DB data for cmName='" + cmName + "', graphName='" + graphName + "'.");
+			setProblem("Problems in createDataset() when fetching DB data for schema='" + getSchemaName() + "', cmName='" + cmName + "', graphName='" + graphName + "'.");
 			setException(ex);
 			
 			//_fullRstm = ResultSetTableModel.createEmpty(name);
@@ -419,6 +454,172 @@ extends ReportChartAbstract
 			return null;
 		}
 	}
+
+	public XYDataset createDataset_colNameIsLabelName(DbxConnection conn, String cmName, String graphName, String skipNames)
+	{
+		if (StringUtil.isNullOrBlank(cmName))     throw new IllegalArgumentException("cmName can't be null or blank");
+		if (StringUtil.isNullOrBlank(graphName))  throw new IllegalArgumentException("graphName can't be null or blank");
+
+
+		List<String> skipNameList = StringUtil.parseCommaStrToList(skipNames);
+
+		// if any of the skip entries starts with "SKIP_COLNAME_WITH_VALUE_ABOVE", then parse the entry and add it to the map
+		Map<String, Double> skipNameAboveValue = new HashMap<>();
+
+		// if any of the skip entries starts with "SKIP_COLNAME_WITH_VALUE_BELOW", then parse the entry and add it to the map
+		Map<String, Double> skipNameBelowValue = new HashMap<>();
+		
+		initSkipColumnsWithValue(skipNames, skipNameAboveValue, skipNameBelowValue);
+
+		
+		String tabName = cmName + "_" + graphName;
+		String sql = 
+				 "select * "
+				+"from " + getSchemaNameSqlPrefix() + "[" + tabName + "] \n"
+				+ "where 1 = 1 \n"
+				+ getReportEntry().getReportPeriodSqlWhere()
+				+" order by [SessionSampleTime] \n"
+				;
+		
+		sql = conn.quotifySqlString(sql);
+		
+//		// Early exit if the table do not exist
+//		boolean tabExists = DbUtils.checkIfTableExistsNoThrow(conn, null, getSchemaName(), tabName);
+//		if ( ! tabExists )
+//		{
+//			setProblem("<br><font color='red'>ERROR: Creating ReportChartObject, the underlying table '" + getSchemaNameSqlPrefix() + tabName + "' did not exist, skipping this Chart.</font><br>\n");
+//
+//			_logger.info("createDataset(): The table '" + getSchemaNameSqlPrefix() + tabName + "' did not exist.");
+//			return null;
+//		}
+
+//		int readCount = 0;
+
+		Map<String, TimeSeries> graphSeriesMap = new LinkedHashMap<>(); 
+
+		// autoclose: stmnt, rs
+		try (Statement stmnt = conn.createStatement())
+		{
+			// set TIMEOUT
+			stmnt.setQueryTimeout(getDefaultQueryTimeout());
+
+			// Execute and read result
+			try (ResultSet rs = stmnt.executeQuery(sql))
+			{
+				ResultSetMetaData md = rs.getMetaData();
+				int colCount = md.getColumnCount();
+				
+				int colDataStart = 4; // "SessionStartTime", "SessionSampleTime", "CmSampleTime", "System+User CPU (@@cpu_busy + @@cpu_io)"
+				
+				List<String> labelNames = new LinkedList<>();
+				for (int c=colDataStart; c<colCount+1; c++)
+					labelNames.add( md.getColumnLabel(c) );
+
+				while (rs.next())
+				{
+//					readCount++;
+
+				//	Timestamp sessionStartTime  = rs.getTimestamp(1);
+					Timestamp sessionSampleTime = rs.getTimestamp(2);
+				//	Timestamp cmSampleTime      = rs.getTimestamp(3);
+
+					Timestamp ts = sessionSampleTime;
+					
+					for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
+					{
+						String label = labelNames.get(l);
+//						double dataValue = rs.getDouble(c);
+						Double dataValue = rs.getDouble(c);
+
+						boolean addEntry = true;
+
+						// SKIP any labels that are in the SkipList
+						for (String skipName : skipNameList)
+						{
+							if (label.startsWith(skipName))
+								addEntry = false;
+						}
+						
+						for (Entry<String, Double> entry : skipNameAboveValue.entrySet())
+						{
+							if (label.equals(entry.getKey()))
+							{
+								// is GREATER than
+								if (dataValue > entry.getValue())
+								{
+									_logger.info("Skipping value in graphName='"+tabName+"', label='"+label+"' with dataValue="+dataValue+", is ABOVE threshold=" + entry.getValue());
+									addEntry = false;
+								}
+							}
+						}
+
+						for (Entry<String, Double> entry : skipNameBelowValue.entrySet())
+						{
+							if (label.equals(entry.getKey()))
+							{
+								// is LESS than
+								if (dataValue < entry.getValue())
+								{
+									_logger.info("Skipping value in graphName='"+tabName+"', label='"+label+"' with dataValue="+dataValue+", is BELOW threshold=" + entry.getValue());
+									addEntry = false;
+								}
+							}
+						}
+
+						// Should this Chart Line (label) be skipped
+						if (skipNameList.contains(label))
+						{
+							addEntry = false;
+						}
+							
+						if (addEntry)
+						{
+    						// Grab TimeSeries object
+    						TimeSeries graphTimeSerie = graphSeriesMap.get(label);
+    						if (graphTimeSerie == null)
+    						{
+    							graphTimeSerie = new TimeSeries(label);
+    							graphSeriesMap.put(label, graphTimeSerie);
+    						}
+
+    						// Add the dataPoint to the TimeSeries
+    						graphTimeSerie.add(new Millisecond(ts), dataValue);
+
+    						// Remember min/max value
+							setDatasetMinMaxValue(dataValue);
+						}
+						
+					}
+				}
+			}
+
+			TimeSeriesCollection dataset = new TimeSeriesCollection();
+			for (TimeSeries dbxGraphData : graphSeriesMap.values())
+			{
+				dataset.addSeries(dbxGraphData);
+			}
+
+			if (_isSorted)
+			{
+				dataset = sortTimeSeriesCollection(dataset);
+			}
+
+			return dataset;
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("Problems in createDataset() when fetching DB data for schema='" + getSchemaName() + "', cmName='" + cmName + "', graphName='" + graphName + "'.", ex);
+
+			setProblem("Problems in createDataset() when fetching DB data for schema='" + getSchemaName() + "', cmName='" + cmName + "', graphName='" + graphName + "'.");
+			setException(ex);
+			
+			//_fullRstm = ResultSetTableModel.createEmpty(name);
+//			_logger.warn("Problems getting '" + name + "': " + ex);
+			
+			return null;
+		}
+	}
+
 
 	/** Sort the data set */
 //	@SuppressWarnings({ "rawtypes", "unchecked" })
@@ -491,88 +692,4 @@ extends ReportChartAbstract
 		}
 	}
 
-	public XYDataset createDataset_NOT_USED_colNameIsLabelName(DbxConnection conn, String cmName, String graphName)
-	{
-		if (StringUtil.isNullOrBlank(cmName))     throw new IllegalArgumentException("cmName can't be null or blank");
-		if (StringUtil.isNullOrBlank(graphName))  throw new IllegalArgumentException("graphName can't be null or blank");
-
-		String tabName   = cmName + "_" + graphName;
-		String sql = 
-				 "select * "
-				+" from [" + tabName + "] \n"
-//				+" where [SessionSampleTime] >= " + whereSessionSampleTime
-				+" order by [SessionSampleTime] \n"
-				;
-		
-		sql = conn.quotifySqlString(sql);
-		
-//		int readCount = 0;
-
-		Map<String, TimeSeries> graphSeriesMap = new LinkedHashMap<>(); 
-
-		// autoclose: stmnt, rs
-		try (Statement stmnt = conn.createStatement())
-		{
-			// set TIMEOUT
-			stmnt.setQueryTimeout(getDefaultQueryTimeout());
-
-			// Execute and read result
-			try (ResultSet rs = stmnt.executeQuery(sql))
-			{
-				ResultSetMetaData md = rs.getMetaData();
-				int colCount = md.getColumnCount();
-				
-				int colDataStart = 4; // "SessionStartTime", "SessionSampleTime", "CmSampleTime", "System+User CPU (@@cpu_busy + @@cpu_io)"
-				
-				List<String> labelNames = new LinkedList<>();
-				for (int c=colDataStart; c<colCount+1; c++)
-					labelNames.add( md.getColumnLabel(c) );
-
-				while (rs.next())
-				{
-//					readCount++;
-
-				//	Timestamp sessionStartTime  = rs.getTimestamp(1);
-					Timestamp sessionSampleTime = rs.getTimestamp(2);
-				//	Timestamp cmSampleTime      = rs.getTimestamp(3);
-
-					Timestamp ts = sessionSampleTime;
-					
-					for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
-					{
-						String label = labelNames.get(l);
-//						double dataValue = rs.getDouble(c);
-						Double dataValue = rs.getDouble(c);
-
-						// Grab TimeSeries object
-						TimeSeries graphTimeSerie = graphSeriesMap.get(label);
-						if (graphTimeSerie == null)
-						{
-							graphTimeSerie = new TimeSeries(label);
-							graphSeriesMap.put(label, graphTimeSerie);
-						}
-						
-						// Add the dataPoint to the TimeSeries
-						graphTimeSerie.add(new Millisecond(ts), dataValue);
-					}
-				}
-			}
-		}
-		catch (SQLException ex)
-		{
-			setProblem("Problems in createDataset() when fetching DB data for cmName='" + cmName + "', graphName='" + graphName + "'.");
-			setException(ex);
-			
-			//_fullRstm = ResultSetTableModel.createEmpty(name);
-//			_logger.warn("Problems getting '" + name + "': " + ex);
-		}
-
-		TimeSeriesCollection dataset = new TimeSeriesCollection();
-		for (TimeSeries dbxGraphData : graphSeriesMap.values())
-		{
-			dataset.addSeries(dbxGraphData);
-		}
-
-		return dataset;
-	}
 }

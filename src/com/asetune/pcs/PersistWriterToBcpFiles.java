@@ -188,6 +188,11 @@ public class PersistWriterToBcpFiles
 	** Methods
 	**---------------------------------------------------
 	*/
+	private String getSchemaName()
+	{
+		return null;
+	}
+
 	public void beginOfSample()
 	{
 	}
@@ -259,16 +264,18 @@ public class PersistWriterToBcpFiles
 		Timestamp parentSampleTime = cont.getMainSampleTime();
 		String    aseServerName    = cont.getServerName();
 
+		String schemaName = getSchemaName();
+
 		try
 		{
 			//
 			// FIRST CHECK IF THE TABLE EXISTS, IF NOT CREATE IT
 			//
-			String tabName = getTableName(null, SESSIONS, null, false);
+			String tabName = getTableName(null, schemaName, SESSIONS, null, false);
 
 			if ( ! isDdlCreated(tabName) )
 			{
-				String sql = ddlListToGoStr(getTableDdlString(null, SESSIONS, null));
+				String sql = ddlListToGoStr(getTableDdlString(null, schemaName, SESSIONS, null));
 				
 				// Save the DDL String to a file
 				//TODO
@@ -364,6 +371,7 @@ public class PersistWriterToBcpFiles
 
 		String ddlFileName = _saveToDir + "/ddl_" + cm.getName() + ".sql";
 
+		String schemaName = getSchemaName();
 		
 
 		//------------------------------
@@ -379,8 +387,8 @@ public class PersistWriterToBcpFiles
 			//-------------
 			// ABS
 			//-------------
-			ddlTabWriter.write(ddlListToGoStr(getTableDdlString(null, ABS, cm)));
-			ddlTabWriter.write(getIndexDdlString(null, ABS, cm));
+			ddlTabWriter.write(ddlListToGoStr(getTableDdlString(null, schemaName, ABS, cm)));
+			ddlTabWriter.write(getIndexDdlString(null, schemaName, ABS, cm));
 			ddlTabWriter.write("go\n");
 			ddlTabWriter.write("\n");
 			ddlTabWriter.write("\n\n\n\n\n\n");
@@ -388,8 +396,8 @@ public class PersistWriterToBcpFiles
 			//-------------
 			// DIFF
 			//-------------
-			ddlTabWriter.write(ddlListToGoStr(getTableDdlString(null, DIFF, cm)));
-			ddlTabWriter.write(getIndexDdlString(null, DIFF, cm));
+			ddlTabWriter.write(ddlListToGoStr(getTableDdlString(null, schemaName, DIFF, cm)));
+			ddlTabWriter.write(getIndexDdlString(null, schemaName, DIFF, cm));
 			ddlTabWriter.write("go\n");
 			ddlTabWriter.write("\n");
 			ddlTabWriter.write("\n\n\n\n\n\n");
@@ -397,8 +405,8 @@ public class PersistWriterToBcpFiles
 			//-------------
 			// RATE
 			//-------------
-			ddlTabWriter.write(ddlListToGoStr(getTableDdlString(null, RATE, cm)));
-			ddlTabWriter.write(getIndexDdlString(null, RATE, cm));
+			ddlTabWriter.write(ddlListToGoStr(getTableDdlString(null, schemaName, RATE, cm)));
+			ddlTabWriter.write(getIndexDdlString(null, schemaName, RATE, cm));
 			ddlTabWriter.write("go\n");
 			ddlTabWriter.write("\n");
 			ddlTabWriter.write("\n\n\n\n\n\n");

@@ -50,9 +50,12 @@ public class MonRecordingInfo
 	private String    _dbmsServerName    = "";
 	private Timestamp _dbmsStartTime     = null;
 
-	public MonVersionInfo _monVersionInfo = null;
+	private MonVersionInfo _monVersionInfo = null;
 
 	
+	public MonRecordingInfo()
+	{
+	}
 	public MonRecordingInfo(DbxConnection conn, Timestamp sessionStartTime)
 	{
 		initialize(conn, sessionStartTime);

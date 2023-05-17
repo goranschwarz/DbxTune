@@ -99,7 +99,8 @@ implements IDbmsConfig
 	
 	public void getOfflineConfigIssues(DbxConnection conn)
 	{
-		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SESSION_DBMS_CONFIG_ISSUES, null, false);
+		String schemaName = null;
+		String tabName = PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SESSION_DBMS_CONFIG_ISSUES, null, false);
 		String sql = ""
 				+ "select \n"
 				+ "     [SessionStartTime] \n"

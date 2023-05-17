@@ -120,12 +120,12 @@ implements Runnable, ConnectionProvider
 	
 	private static String GET_ALL_SESSIONS = 
 		"select [SessionStartTime], [ServerName], [NumOfSamples], [LastSampleTime] " +
-		"from [" + PersistWriterBase.getTableName(null, PersistWriterBase.SESSIONS, null, false) + "] " +
+		"from [" + PersistWriterBase.getTableName(null, null, PersistWriterBase.SESSIONS, null, false) + "] " +
 		"order by [SessionStartTime]";
 
 	private static String GET_SESSION = 
 		"select [SessionStartTime], [SessionSampleTime] " +
-		"from [" + PersistWriterBase.getTableName(null, PersistWriterBase.SESSION_SAMPLES, null, false) + "] " +
+		"from [" + PersistWriterBase.getTableName(null, null, PersistWriterBase.SESSION_SAMPLES, null, false) + "] " +
 		"where [SessionStartTime] = ? " +
 		"order by [SessionSampleTime]";
 
@@ -309,7 +309,7 @@ implements Runnable, ConnectionProvider
 		// Go and check for Tables
 		try
 		{
-			String tabName = PersistWriterBase.getTableName(null, PersistWriterBase.SESSIONS, null, false);
+			String tabName = PersistWriterBase.getTableName(null, null, PersistWriterBase.SESSIONS, null, false);
 
 			// Obtain a DatabaseMetaData object from our current connection        
 			DatabaseMetaData dbmd = conn.getMetaData();
@@ -763,8 +763,8 @@ implements Runnable, ConnectionProvider
 		
 		HashMap<String,MonTableEntry> monTablesMap = new HashMap<String,MonTableEntry>();
 
-		String monTables       = PersistWriterBase.getTableName(_conn, PersistWriterBase.SESSION_MON_TAB_DICT,     null, true);
-		String monTableColumns = PersistWriterBase.getTableName(_conn, PersistWriterBase.SESSION_MON_TAB_COL_DICT, null, true);
+		String monTables       = PersistWriterBase.getTableName(_conn, null, PersistWriterBase.SESSION_MON_TAB_DICT,     null, true);
+		String monTableColumns = PersistWriterBase.getTableName(_conn, null, PersistWriterBase.SESSION_MON_TAB_COL_DICT, null, true);
 
 		final String SQL_TABLES                = "select [TableID], [Columns], [Parameters], [Indicators], [Size], [TableName], [Description] from "+monTables;
 		final String SQL_COLUMNS               = "select [TableID], [ColumnID], [TypeID], [Precision], [Scale], [Length], [Indicators], [TableName], [ColumnName], [TypeName], [Description] from "+monTableColumns;
@@ -1418,20 +1418,22 @@ implements Runnable, ConnectionProvider
 	{
 		return getNameTranslateCmToDb(name, false);
 	}
-	
+
+
+
 	private int loadSessionGraph(String cmName, String graphName, Timestamp sampleId, Timestamp startTime, Timestamp endTime, int expectedRows)
 	{
 //		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
 		CountersModel cm = CounterController.getInstance().getCmByName(cmName);
 		if (cm == null)
 		{
-			_logger.warn("Can't find any CM named '"+cmName+"'.");
+			_logger.warn("Can't find any CM named '" + cmName + "'.");
 			return 0;
 		}
 		TrendGraph tg = cm.getTrendGraph(graphName);
 		if (tg == null)
 		{
-			_logger.warn("Can't find any TrendGraph named '"+graphName+"', for the CM '"+cmName+"'.");
+			_logger.warn("Can't find any TrendGraph named '" + graphName + "', for the CM '" + cmName + "'.");
 			return 0;
 		}
 		tg.clearGraph();
@@ -1449,6 +1451,24 @@ implements Runnable, ConnectionProvider
 		cmName    = getNameTranslateCmToDb(cmName);
 		graphName = getNameTranslateCmToDb(graphName, true);
 
+		String dummySql = "select * from [" + cmName + "_" + graphName + "] where 1 = 2";
+		ResultSetTableModel dummyRstm = ResultSetTableModel.executeQuery(_conn, dummySql, true, "metadata");
+		if (dummyRstm.hasColumn("label_0") && dummyRstm.hasColumn("data_0"))
+		{
+//			System.out.println("---------------- PersistReader[cmName='" + cmName + "', graphName='" + graphName + "'] >>>> do 1: label[cal-VALUE]-data");
+			return loadSessionGraph_labelNameAndDataInSeparateColumn(tg, cmName, graphName, sampleId, startTime, endTime, expectedRows);
+		}
+		else
+		{
+//			System.out.println("---------------- PersistReader[cmName='" + cmName + "', graphName='" + graphName + "'] >>>> do 2: label[col-NAME]-data");
+			return loadSessionGraph_colNameIsLabelName(tg, cmName, graphName, sampleId, startTime, endTime, expectedRows);
+		}
+	}
+
+	private int loadSessionGraph_labelNameAndDataInSeparateColumn(TrendGraph tg, String cmName, String graphName, Timestamp sampleId, Timestamp startTime, Timestamp endTime, int expectedRows)
+	{
+		// NOTE: if you CHANGE this you need to change: loadSessionGraph_colNameIsLabelName(...) as well
+
 		//----------------------------------------
 		// TYPICAL look of a graph table
 		//----------------------------------------
@@ -1463,7 +1483,7 @@ implements Runnable, ConnectionProvider
 		//   "label_2"            VARCHAR(30)         NULL,
 		//   "data_2"             NUMERIC(10, 1)      NULL
 
-		String sql = "select * from ["+cmName+"_"+graphName+"] " +
+		String sql = "select * from [" + cmName + "_" + graphName + "] " +
 		             "where [SessionStartTime] = ? " +
 		             "  AND [SessionSampleTime] >= ? " +
 		             "  AND [SessionSampleTime] <= ? " +
@@ -1481,7 +1501,7 @@ implements Runnable, ConnectionProvider
 		try
 		{
 			long fetchStartTime = System.currentTimeMillis();
-			setStatusText("Loading graph '"+graphName+"' for '"+cmName+"'.");
+			setStatusText("Loading graph '" + graphName + "' for '" + cmName + "'.");
 
 			PreparedStatement pstmnt = _conn.prepareStatement(sql);
 //			pstmnt.setTimestamp(1, sampleId);
@@ -1491,7 +1511,7 @@ implements Runnable, ConnectionProvider
 			pstmnt.setString(2, startTime.toString());
 			pstmnt.setString(3, endTime.toString());
 
-			_logger.debug("loadSessionGraph(cmName='"+cmName+"', graphName='"+graphName+"') loadEveryXRow="+loadEveryXRow+": "+pstmnt);
+			_logger.debug("loadSessionGraph(cmName='" + cmName + "', graphName='" + graphName + "') loadEveryXRow=" + loadEveryXRow + ": " + pstmnt);
 
 			ResultSet rs = pstmnt.executeQuery();
 			ResultSetMetaData rsmd = rs.getMetaData();
@@ -1529,6 +1549,7 @@ implements Runnable, ConnectionProvider
 					Double[] firstDatapt = new Double[datapt.length];
 					for (int d=0; d<firstDatapt.length; d++)
 						firstDatapt[d] = new Double(0);
+
 					tg.addPoint(new Timestamp(sessionSampleTime.getTime()-10),  // - 10 millisec
 							firstDatapt, 
 							labels, null, startTime, endTime);
@@ -1578,6 +1599,144 @@ implements Runnable, ConnectionProvider
 		}
 		return 0;
 	}
+
+	private int loadSessionGraph_colNameIsLabelName(TrendGraph tg, String cmName, String graphName, Timestamp sampleId, Timestamp startTime, Timestamp endTime, int expectedRows)
+	{
+		// NOTE: I did this in a SIMPLE way... Just a copy of loadSessionGraph_labelNameAndDataInSeparateColumn(...) but changing the loop how to read
+
+		//----------------------------------------
+		// TYPICAL look of a graph table
+		//----------------------------------------
+		// CREATE TABLE "CMengineActivity_cpuSum"
+		//   "SessionStartTime"   DATETIME        NOT NULL,
+		//   "SessionSampleTime"  DATETIME        NOT NULL,
+		//   "SampleTime"         DATETIME        NOT NULL,
+		//   "some Label Name"    NUMERIC(16, 2)      NULL,
+		//   "Next Label Name"    NUMERIC(16, 2)      NULL,
+		//   "label 4"            NUMERIC(16, 2)      NULL,
+		//   "label [name]"       NUMERIC(16, 2)      NULL,
+
+		String sql = "select * from [" + cmName + "_" + graphName + "] " +
+		             "where [SessionStartTime] = ? " +
+		             "  AND [SessionSampleTime] >= ? " +
+		             "  AND [SessionSampleTime] <= ? " +
+		             "order by [SessionSampleTime]";
+
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql = _conn.quotifySqlString(sql);
+		
+		// If we expect a big graph, load only every X row
+		// if we add to many to the graph, the JVM takes 100% CPU, I'm guessing it 
+		// has to do too many repaints, we could do an "average" of X rows during the load
+		// but I took the easy way out... (or figure out why it's taking all the CPU)
+		int loadEveryXRow = expectedRows / 1000 + 1; // 1 = load every row
+
+		try
+		{
+			long fetchStartTime = System.currentTimeMillis();
+			setStatusText("Loading graph '" + graphName + "' for '" + cmName + "'.");
+
+			PreparedStatement pstmnt = _conn.prepareStatement(sql);
+//			pstmnt.setTimestamp(1, sampleId);
+//			pstmnt.setTimestamp(2, startTime);
+//			pstmnt.setTimestamp(3, endTime);
+			pstmnt.setString(1, sampleId.toString());
+			pstmnt.setString(2, startTime.toString());
+			pstmnt.setString(3, endTime.toString());
+
+			_logger.debug("loadSessionGraph(cmName='" + cmName + "', graphName='" + graphName + "') loadEveryXRow=" + loadEveryXRow + ": " + pstmnt);
+
+			ResultSet rs = pstmnt.executeQuery();
+			ResultSetMetaData rsmd = rs.getMetaData();
+
+			// TODO: Decide if we have 'label_#' and 'data_#' columns or of we have "column name is the label name"
+			// look at: Daily Summary Report ... reading charts, where we do this.
+			
+			int cols = rsmd.getColumnCount();
+			String[] labels = new String[cols-3];
+			Double[] datapt = new Double[cols-3];
+			boolean firstRow = true;
+			int row = 0;
+
+//			Timestamp sessionStartTime  = null;
+			Timestamp sessionSampleTime = null;
+//			Timestamp sampleTime        = null;
+			// do not render while we addPoints
+			//tg.setVisible(false);
+
+			while (rs.next())
+			{
+//				sessionStartTime  = rs.getTimestamp(1);
+				sessionSampleTime = rs.getTimestamp(2);
+//				sampleTime        = rs.getTimestamp(3);
+
+//System.out.println("loadSessionGraph(): READ(row="+row+"): graphName='"+graphName+"', sampleId="+sampleId+", sessionSampleTime="+sessionSampleTime);
+				// Start to read column 4
+				for (int c=4, ca=0; c<=cols; c++, ca++)
+				{
+					labels[ca] = rsmd.getColumnLabel(c);
+					datapt[ca] = new Double(rs.getDouble(c));
+				}
+				// Add a extra record at the BEGINING of the traces... using 0 data values
+				if (firstRow)
+				{
+					firstRow = false;
+					Double[] firstDatapt = new Double[datapt.length];
+					for (int d=0; d<firstDatapt.length; d++)
+						firstDatapt[d] = new Double(0);
+
+					tg.addPoint(new Timestamp(sessionSampleTime.getTime()-10),  // - 10 millisec
+							firstDatapt, 
+							labels, null, startTime, endTime);
+				}
+
+				// If we expect a big graph, load only every X row
+				// if we add to many to the graph, the JVM takes 100% CPU, I'm guessing it 
+				// has to do too many repaints, we could do an "average" of X rows during the load
+				// but I took the easy way out... (or figure out why it's taking all the CPU)
+				if ( row % loadEveryXRow == 0 )
+				{
+//System.out.println("loadSessionGraph(): ADD (row="+row+"): graphName='"+graphName+"', sampleId="+sampleId+", sessionSampleTime="+sessionSampleTime);
+					tg.addPoint(sessionSampleTime, datapt, labels, null, startTime, endTime);
+				}
+
+				row++;
+			}
+			rs.close();
+			pstmnt.close();
+
+			// Add a extra record at the end of the traces... using 0 data values
+			if (sessionSampleTime != null)
+			{
+				Double[] lastDatapt = new Double[datapt.length];
+				for (int d=0; d<lastDatapt.length; d++)
+					lastDatapt[d] = new Double(0);
+				tg.addPoint(new Timestamp(sessionSampleTime.getTime()+10), // + 10 millisec
+						lastDatapt, 
+						labels, null, startTime, endTime);
+			}
+//System.out.println("Loaded "+row+" rows into TrendGraph named '"+graphName+"', for the CM '"+cmName+"', which took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.");
+			_logger.debug("Loaded "+row+" rows into TrendGraph named '"+graphName+"', for the CM '"+cmName+"', which took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.");
+			setStatusText("");
+			
+			tg.setMinimumChartArea();
+			
+			return loadEveryXRow;
+		}
+		catch (SQLException e)
+		{
+			_logger.error("Problems loading graph for cm='"+cmName+"', graph='"+graphName+"'.", e);
+		}
+		finally 
+		{
+			// restore rendering
+			//tg.setVisible(true);
+		}
+		return 0;
+	}
+
+	
+	
 
 	private void setAllChartRendering(boolean toValue)
 	{
@@ -1677,7 +1836,7 @@ implements Runnable, ConnectionProvider
 		mf.resetOfflineSlider();
 		
 		String sql = "select [SessionSampleTime] " +
-		             "from " + PersistWriterBase.getTableName(_conn, PersistWriterBase.SESSION_SAMPLES, null, true) + " "+
+		             "from " + PersistWriterBase.getTableName(_conn, null, PersistWriterBase.SESSION_SAMPLES, null, true) + " "+
 		             "where [SessionStartTime] = ? " +
 		             "  AND [SessionSampleTime] >= ? " +
 		             "  AND [SessionSampleTime] <= ? " +
@@ -2113,7 +2272,7 @@ implements Runnable, ConnectionProvider
 		//   diffRows          int           null,
 		//   rateRows          int           null
 		//)
-		String sql = "select * from " + PersistWriterBase.getTableName(_conn, PersistWriterBase.SESSION_SAMPLE_DETAILES, null, true) + " " +
+		String sql = "select * from " + PersistWriterBase.getTableName(_conn, null, PersistWriterBase.SESSION_SAMPLE_DETAILES, null, true) + " " +
 		             "where [SessionSampleTime] = ? ";
 
 		// replace all '[' and ']' into DBMS Vendor Specific Chars
@@ -2410,7 +2569,7 @@ implements Runnable, ConnectionProvider
 
 		String sql = 
 			"select * " +
-			"from " + PersistWriterBase.getTableName(_conn, PersistWriterBase.SESSION_SAMPLE_SUM, null, true) + " " +
+			"from " + PersistWriterBase.getTableName(_conn, null, PersistWriterBase.SESSION_SAMPLE_SUM, null, true) + " " +
 			"where [SessionStartTime] = ? ";
 
 		// replace all '[' and ']' into DBMS Vendor Specific Chars
@@ -2473,7 +2632,7 @@ implements Runnable, ConnectionProvider
 
 		String sql = 
 			"select * " +
-			"from " + PersistWriterBase.getTableName(_conn, PersistWriterBase.SESSION_SAMPLE_DETAILES, null, true) + " " +
+			"from " + PersistWriterBase.getTableName(_conn, null, PersistWriterBase.SESSION_SAMPLE_DETAILES, null, true) + " " +
 			"where [SessionStartTime] = ? " +
 			"order by [SessionSampleTime] ";
 
@@ -2578,7 +2737,7 @@ implements Runnable, ConnectionProvider
 //		//    "DbProductName"    VARCHAR(30) NOT NULL
 		// )
 
-		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.VERSION_INFO, null, false);
+		String tabName = PersistWriterBase.getTableName(conn, null, PersistWriterBase.VERSION_INFO, null, false);
 		
 		if (sessionStartTime == null)
 		{
@@ -3114,7 +3273,7 @@ implements Runnable, ConnectionProvider
 
 		String sql = 
 			" select * " +
-			" from " + PersistWriterBase.getTableName(_conn, PersistWriterBase.DDL_STORAGE, null, true) + " " +
+			" from " + PersistWriterBase.getTableName(_conn, null, PersistWriterBase.DDL_STORAGE, null, true) + " " +
 			" where [dbname]     = ? " +
 			"   and [type]       = ? " +
 			"   and [objectName] = ? " +
@@ -3186,7 +3345,7 @@ implements Runnable, ConnectionProvider
 //			"select * " +
 			"select [dbname], [owner], [objectName], [type], [crdate], [sampleTime], [source], [dependParent], [dependLevel], [dependList] " + blobCols +
 //			"select [dbname], [owner], [objectName], [type], [crdate], [sampleTime], [source], [dependLevel], [dependList] " + blobCols +
-			"from " + PersistWriterBase.getTableName(_conn, PersistWriterBase.DDL_STORAGE, null, true) + " " +
+			"from " + PersistWriterBase.getTableName(_conn, null, PersistWriterBase.DDL_STORAGE, null, true) + " " +
 			"order by [dbname], [type], [objectName], [owner] ";
 
 		// replace all '[' and ']' into DBMS Vendor Specific Chars

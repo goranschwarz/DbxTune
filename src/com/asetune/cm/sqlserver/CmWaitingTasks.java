@@ -240,6 +240,13 @@ extends CountersModel
 			dm_exec_query_plan  = "dm_exec_query_plan"; // SAME NAME IN AZURE ????
 		}
 
+		// Is 'context_info_str' enabled (if it causes any problem, it can be disabled)
+		String contextInfoStr = "/*    ,replace(cast([es].context_info as varchar(128)),char(0),'') AS [context_info_str] -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
+		if (SqlServerCmUtils.isContextInfoStrEnabled())
+		{
+			// Make the binary 'context_info' into a String
+			contextInfoStr = "    ,replace(cast([es].context_info as varchar(128)),char(0),'') AS [context_info_str] /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
+		}
 		
 		String sql = ""
 				+ "/*============================================================================ \n"
@@ -283,6 +290,7 @@ extends CountersModel
 				+ "    ,CASE WHEN [owt].[exec_context_id] != 0 THEN '' ELSE (select object_name([objectid], [dbid]) from sys." + dm_exec_sql_text   + " ([er].[sql_handle])) END AS [ProcName] \n"
 				+ "    ,[er].statement_start_offset             AS [StmntStart] \n"
 				+ "    ,[es].[program_name] \n"
+			    +       contextInfoStr
 				+ "    ,[er].[database_id] \n"
 				+ "    ,db_name([er].[database_id]) AS [database_name] \n"
 				+ "    ,[owt].[resource_description] \n"

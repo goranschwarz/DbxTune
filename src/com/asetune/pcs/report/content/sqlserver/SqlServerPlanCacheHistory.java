@@ -57,7 +57,8 @@ public class SqlServerPlanCacheHistory extends AseAbstract
 	@Override
 	public boolean hasShortMessageText()
 	{
-		return true;
+//		return true;
+		return false;
 	}
 
 	@Override

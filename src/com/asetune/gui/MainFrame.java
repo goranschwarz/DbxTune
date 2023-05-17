@@ -3977,8 +3977,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 	private void action_viewLogTail(ActionEvent e)
 	{
-//		Connection conn = AseTune.getCounterCollector().getMonConnection();
-		Connection conn = CounterController.getInstance().getMonConnection();
+		DbxConnection conn = CounterController.getInstance().getMonConnection();
 		LogTailWindow logTailDialog = new LogTailWindow(conn);
 		logTailDialog.setVisible(true);
 		logTailDialog.startTail();

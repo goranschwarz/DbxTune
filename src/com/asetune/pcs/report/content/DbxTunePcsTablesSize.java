@@ -24,6 +24,7 @@ package com.asetune.pcs.report.content;
 import java.io.IOException;
 import java.io.Writer;
 
+import com.asetune.central.lmetrics.LocalMetricsPersistWriterJdbc;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
@@ -79,15 +80,24 @@ extends ReportEntryAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
+		String extraWhereClause = "";
+
+		// Should we reduce the content if it's for 'DbxCentral'
+		if ("DbxCentral".equals(srvName))
+		{
+			extraWhereClause = "  AND [TABLE_SCHEMA] IN ('PUBLIC', '" + LocalMetricsPersistWriterJdbc.LOCAL_METRICS_SCHEMA_NAME + "') \n";
+		}
+
 		String sql = ""
-			    + "select \n"
+			    + "SELECT \n"
 			    + "     [TABLE_SCHEMA] \n"
 			    + "    ,[TABLE_NAME] \n"
 			    + "    ,[ROW_COUNT_ESTIMATE] \n"
-			    + "    ,cast(DISK_SPACE_USED(QUOTE_IDENT([TABLE_NAME]))/1024.0/1024.0 as numeric(12,1)) as [DiskSpaceUsedMb] \n"
-			    + "from [INFORMATION_SCHEMA].[TABLES] \n"
-			    + "where [TABLE_NAME] like '%_abs' or [TABLE_NAME] like 'Mon%' \n"
-			    + "order by [DiskSpaceUsedMb] desc \n"
+			    + "    ,cast(DISK_SPACE_USED(QUOTE_IDENT([TABLE_SCHEMA])||'.'||QUOTE_IDENT([TABLE_NAME]))/1024.0/1024.0 as numeric(12,1)) as [DiskSpaceUsedMb] \n"
+			    + "FROM [INFORMATION_SCHEMA].[TABLES] \n"
+			    + "WHERE ([TABLE_NAME] LIKE '%_abs' OR [TABLE_NAME] like 'Mon%' OR [TABLE_NAME] like 'Dbx%') \n"
+			    + extraWhereClause
+			    + "ORDER BY [DiskSpaceUsedMb] desc \n"
 			    + "";
 
 		_rstm = executeQuery(conn, sql, true, "PCS Tables Size");

@@ -280,9 +280,11 @@ extends SqlServerAbstract
 			}
 		};
 		
-		_CmWaitStat_selected     = createTsStackedBarChart(conn, "CmWaitStats", "wait_type", samplePeriod, null, "wait_time_ms", 1000.0, selected, null, "Wait Types in Seconds (pre-selected), grouped by " + samplePeriod + " minutes intervall");
-		_CmWaitStat_cxpacket     = createTsStackedBarChart(conn, "CmWaitStats", "wait_type", samplePeriod, null, "wait_time_ms", 1000.0, cxpacket, null,  "Wait Type in Seconds (only " + cxpacket + "), grouped by " + samplePeriod + " minutes intervall");
-		_CmWaitStat_all          = createTsStackedBarChart(conn, "CmWaitStats", "wait_type", samplePeriod, tgcp, "wait_time_ms", 1000.0, null,     null, "Wait Types in Seconds (top-"+tgcp.getTopCount()+"-wait_types), grouped by " + samplePeriod + " minutes intervall");
+		String schema = getReportingInstance().getDbmsSchemaName();
+
+		_CmWaitStat_selected     = createTsStackedBarChart(conn, schema, "CmWaitStats", "wait_type", samplePeriod, null, "wait_time_ms", 1000.0, selected, null, "Wait Types in Seconds (pre-selected), grouped by " + samplePeriod + " minutes intervall");
+		_CmWaitStat_cxpacket     = createTsStackedBarChart(conn, schema, "CmWaitStats", "wait_type", samplePeriod, null, "wait_time_ms", 1000.0, cxpacket, null,  "Wait Type in Seconds (only " + cxpacket + "), grouped by " + samplePeriod + " minutes intervall");
+		_CmWaitStat_all          = createTsStackedBarChart(conn, schema, "CmWaitStats", "wait_type", samplePeriod, tgcp, "wait_time_ms", 1000.0, null,     null, "Wait Types in Seconds (top-"+tgcp.getTopCount()+"-wait_types), grouped by " + samplePeriod + " minutes intervall");
 	}
 
 	private IReportChart _CmWaitStat_selected;

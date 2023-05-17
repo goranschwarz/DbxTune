@@ -537,6 +537,13 @@ extends CountersModel
 
 			// PARSE
 			Set<String> tableList = SqlParserUtils.getTables(sqlText);
+			
+			// Foreign Data Wrapper (postgres_fdw) uses cursors to fetch remote data.
+			// which typically looks like 'FETCH 100 FROM c22' where 'c22' will be parsed as the tableName
+			//>>>>>>> NOTE: This does NOT seems to work (cursor info from FDW is not visible in pg_cursors <<<<<
+			//>>>>>>>       also the cursor name seems to be "reused"
+			//>>>>>>>       But lets keep it anyway (look for this text in 'ObjectLookupInspectorPostgres' and 'PostgresAbstract' (look for CURSOR) if you want to remove it totally)
+			boolean isCursorFetch = sqlText.startsWith("FETCH ");
 
 			// Post to DDL Storage, for lookup
 			for (String tableName : tableList)
@@ -546,6 +553,9 @@ extends CountersModel
 				if (tableName.startsWith("$"))                      continue;
 				if (tableName.equalsIgnoreCase("CLOCK_TIMESTAMP"))  continue;
 
+				if (isCursorFetch)
+					tableName = "CURSOR: " + tableName;
+				
 				pch.addDdl(dbname, tableName, CM_NAME + ".ddlStore.parse.send.tables");
 			}
 		}

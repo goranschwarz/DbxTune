@@ -114,7 +114,7 @@ extends CounterModelHostMonitor
 	public static final String GRAPH_NAME_TRANS_BANDWIDTH_KB   = "TransKb";
 	public static final String GRAPH_NAME_TRANS_BANDWIDTH_MBIT = "TransMbit";
 	public static final String GRAPH_NAME_TRANS_PACKETS        = "TransPck";
-	public static final String GRAPH_NAME_ALL_BANDWIDTH_MBIT    = "AllMbit";
+	public static final String GRAPH_NAME_ALL_BANDWIDTH_MBIT   = "AllMbit";
 
 	private void addTrendGraphs()
 	{

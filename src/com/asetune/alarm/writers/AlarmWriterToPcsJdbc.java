@@ -32,6 +32,8 @@ import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.utils.Configuration;
 
+//TODO; // This should really be named something else... like: Alarm...PersistContainerHolderQueue... or similar
+
 /**
  * Internal writer that will add records to the Persistent Counter Storage <br>
  * NOTE: Not yet implemented, just copied from AlarmWriterToTableModel
@@ -126,6 +128,8 @@ extends AlarmWriterAbstract
 	 */
 	public synchronized List<AlarmEventWrapper> getList()
 	{
+		//new Exception("DEBUG: AlarmWriterToPcsJdbc.getList(), _rows.size=" + _rows.size() + ", was CALLED FROM (se below), ThreadName='" + Thread.currentThread().getName() + "'.").printStackTrace();
+
 		// If empty... exit early
 		if (_rows.isEmpty())
 			return Collections.emptyList();
@@ -139,6 +143,8 @@ extends AlarmWriterAbstract
 	public void clear()
 	{
 		_rows = new ArrayList<>();
+
+		//new Exception("DEBUG: AlarmWriterToPcsJdbc.clear() was CALLED FROM (se below), ThreadName='" + Thread.currentThread().getName() + "'.").printStackTrace();
 	}
 	
 	/*---------------------------------------------------

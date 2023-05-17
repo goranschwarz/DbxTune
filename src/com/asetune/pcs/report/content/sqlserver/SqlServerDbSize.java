@@ -265,21 +265,23 @@ extends SqlServerAbstract
 		// Describe the table
 		setSectionDescription(_shortRstm);
 		
-		_CmDatabases_DbSizeMb               = createTsLineChart(conn, "CmDatabases", "DbSizeMb"              , -1,  true , null, "Database Size in MB (Server->Databases)");
+		String schema = getReportingInstance().getDbmsSchemaName();
 
-		_CmDatabases_DbDataSizeUsedPctGraph = createTsLineChart(conn, "CmDatabases", "DbDataSizeUsedPctGraph", 100, true , null, "DB Data Space Used in Percent (Server->Databases)");
-		_CmDatabases_DbDataSizeLeftMbGraph  = createTsLineChart(conn, "CmDatabases", "DbDataSizeLeftMbGraph" , -1,  true , null, "DB Data Space Available in MB (Server->Databases)");
-		_CmDatabases_DbDataSizeUsedMbGraph  = createTsLineChart(conn, "CmDatabases", "DbDataSizeUsedMbGraph" , -1,  true , null, "DB Data Space Used in MB (Server->Databases)");
+		_CmDatabases_DbSizeMb               = createTsLineChart(conn, schema, "CmDatabases", "DbSizeMb"              , -1,  true , null, "Database Size in MB (Server->Databases)");
 
-		_CmDatabases_DbLogSizeUsedPctGraph  = createTsLineChart(conn, "CmDatabases", "DbLogSizeUsedPctGraph" , 100, true , null, "DB Transaction Log Space Used in Percent (Server->Databases)");
-		_CmDatabases_DbLogSizeLeftMbGraph   = createTsLineChart(conn, "CmDatabases", "DbLogSizeLeftMbGraph"  , -1,  true , null, "DB Transaction Log Space Available in MB (Server->Databases)");
-		_CmDatabases_DbLogSizeUsedMbGraph   = createTsLineChart(conn, "CmDatabases", "DbLogSizeUsedMbGraph"  , -1,  true , null, "DB Transaction Log Space Used in MB (Server->Databases)");
+		_CmDatabases_DbDataSizeUsedPctGraph = createTsLineChart(conn, schema, "CmDatabases", "DbDataSizeUsedPctGraph", 100, true , null, "DB Data Space Used in Percent (Server->Databases)");
+		_CmDatabases_DbDataSizeLeftMbGraph  = createTsLineChart(conn, schema, "CmDatabases", "DbDataSizeLeftMbGraph" , -1,  true , null, "DB Data Space Available in MB (Server->Databases)");
+		_CmDatabases_DbDataSizeUsedMbGraph  = createTsLineChart(conn, schema, "CmDatabases", "DbDataSizeUsedMbGraph" , -1,  true , null, "DB Data Space Used in MB (Server->Databases)");
 
-		_CmDatabases_TempdbUsedMbGraph      = createTsLineChart(conn, "CmDatabases", "TempdbUsedMbGraph"     , -1,  false, null, "TempDB Space used in MB (Server->Databases)");
+		_CmDatabases_DbLogSizeUsedPctGraph  = createTsLineChart(conn, schema, "CmDatabases", "DbLogSizeUsedPctGraph" , 100, true , null, "DB Transaction Log Space Used in Percent (Server->Databases)");
+		_CmDatabases_DbLogSizeLeftMbGraph   = createTsLineChart(conn, schema, "CmDatabases", "DbLogSizeLeftMbGraph"  , -1,  true , null, "DB Transaction Log Space Available in MB (Server->Databases)");
+		_CmDatabases_DbLogSizeUsedMbGraph   = createTsLineChart(conn, schema, "CmDatabases", "DbLogSizeUsedMbGraph"  , -1,  true , null, "DB Transaction Log Space Used in MB (Server->Databases)");
 
-		_CmDatabases_OsDiskUsedPct          = createTsLineChart(conn, "CmDatabases", "OsDiskUsedPct"         , 100, false, null, "DB OS Disk Space Used in Percent (Server->Databases)");
-		_CmDatabases_OsDiskFreeMb           = createTsLineChart(conn, "CmDatabases", "OsDiskFreeMb"          , -1,  false, null, "DB OS Disk Space Available in MB (Server->Databases)");
-		_CmDatabases_OsDiskUsedMb           = createTsLineChart(conn, "CmDatabases", "OsDiskUsedMb"          , -1,  false, null, "DB OS Disk Space Used in MB (Server->Databases)");
+		_CmDatabases_TempdbUsedMbGraph      = createTsLineChart(conn, schema, "CmDatabases", "TempdbUsedMbGraph"     , -1,  false, null, "TempDB Space used in MB (Server->Databases)");
+
+		_CmDatabases_OsDiskUsedPct          = createTsLineChart(conn, schema, "CmDatabases", "OsDiskUsedPct"         , 100, false, null, "DB OS Disk Space Used in Percent (Server->Databases)");
+		_CmDatabases_OsDiskFreeMb           = createTsLineChart(conn, schema, "CmDatabases", "OsDiskFreeMb"          , -1,  false, null, "DB OS Disk Space Available in MB (Server->Databases)");
+		_CmDatabases_OsDiskUsedMb           = createTsLineChart(conn, schema, "CmDatabases", "OsDiskUsedMb"          , -1,  false, null, "DB OS Disk Space Used in MB (Server->Databases)");
 	}
 
 	private IReportChart _CmDatabases_DbSizeMb;

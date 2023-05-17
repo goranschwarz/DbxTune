@@ -28,19 +28,25 @@ import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -53,6 +59,7 @@ import com.asetune.central.DbxCentralStatistics;
 import com.asetune.central.DbxTuneCentral;
 import com.asetune.central.cleanup.CentralH2Defrag;
 import com.asetune.central.cleanup.DataDirectoryCleaner;
+import com.asetune.central.lmetrics.LocalMetricsPersistWriterJdbc;
 import com.asetune.central.pcs.CentralPcsWriterHandler.NotificationType;
 import com.asetune.central.pcs.DbxTuneSample.AlarmEntry;
 import com.asetune.central.pcs.DbxTuneSample.AlarmEntryWrapper;
@@ -61,8 +68,18 @@ import com.asetune.central.pcs.DbxTuneSample.GraphEntry;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesDbx.DbxConnectInfo;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.CountersModelAppend;
+import com.asetune.config.dbms.DbmsConfigManager;
+import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.config.dict.MonTablesDictionary.MonTableColumnsEntry;
+import com.asetune.config.dict.MonTablesDictionary.MonTableEntry;
+import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.pcs.DictCompression;
+import com.asetune.pcs.PersistContainer;
+import com.asetune.pcs.PersistWriterBase;
+import com.asetune.sql.PreparedStatementCache;
 import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
@@ -123,6 +140,9 @@ extends CentralPersistWriterBase
 	private   boolean _connStatus_inProgress = false;
 	protected boolean _jdbcDriverInfoHasBeenWritten = false;
 
+	// Used when Saving data to the PCS so multiple save threads do not use the connection at the same time
+	private Lock _persistLock = new ReentrantLock();
+	
 	private boolean _inSaveSample;
 	private boolean _saveCounterData = false;
 
@@ -190,6 +210,13 @@ extends CentralPersistWriterBase
 		
 		// Create common tables (which for example: is used by the reader)
 		checkAndCreateCommonTables();
+		
+		// Local Metrics Persist Writer
+		boolean createLocalMetricsPersistWriterJdbc = true;
+		if (createLocalMetricsPersistWriterJdbc)
+		{
+			_localMetricsPersistWriter = new LocalMetricsPersistWriterJdbc();
+		}
 	}
 	
 	public void close(boolean force)
@@ -1265,6 +1292,21 @@ extends CentralPersistWriterBase
 		return conn.dbExec(sql, true) >= 0;
 	}
 
+	private boolean dbDdlExec(DbxConnection conn, List<String> ddlList)
+	throws SQLException
+	{
+		if (ddlList == null)   return false;
+		if (ddlList.isEmpty()) return false;
+		
+		boolean ret = true;
+		for (String ddl : ddlList)
+		{
+			if ( ! dbDdlExec(conn, ddl) )
+				ret = false;
+		}
+		return ret;
+	}
+
 	private boolean dbDdlExec(DbxConnection conn, String sql)
 	throws SQLException
 	{
@@ -1308,7 +1350,7 @@ extends CentralPersistWriterBase
 		}
 		catch(SQLException e)
 		{
-			_logger.warn("Problems when executing DDL sql statement: "+sql);
+			_logger.warn("Problems when executing DDL sql statement: " + sql, e);
 			// throws Exception if it's a severe problem
 			isSevereProblem(conn, e);
 			throw e;
@@ -1316,6 +1358,37 @@ extends CentralPersistWriterBase
 
 		return true;
 	}
+
+	private boolean dbExec(DbxConnection conn, String sql)
+	throws SQLException
+	{
+		return dbExec(conn, sql, true);
+	}
+
+	private boolean dbExec(DbxConnection conn, String sql, boolean printErrors)
+	throws SQLException
+	{
+		if (_logger.isDebugEnabled())
+		{
+			_logger.debug("SEND SQL: " + sql);
+		}
+
+		try
+		{
+			Statement s = conn.createStatement();
+			s.execute(sql);
+			s.close();
+		}
+		catch(SQLException e)
+		{
+			if (printErrors)
+				_logger.warn("Problems when executing sql statement: "+sql+" SqlException: ErrorCode="+e.getErrorCode()+", SQLState="+e.getSQLState()+", toString="+e.toString());
+			throw e;
+		}
+
+		return true;
+	}
+	
 
 
 //	private void insertSessionParam(DbxConnection conn, Timestamp sessionsStartTime, String type, String key, String val)
@@ -2431,7 +2504,7 @@ extends CentralPersistWriterBase
 		DbxConnection conn = _mainConn;
 		
 		String lq = getLeftQuoteReplace();
-		String rq = getLeftQuoteReplace();
+		String rq = getRightQuoteReplace();
 		if (conn != null)
 		{
 			lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
@@ -2483,6 +2556,9 @@ extends CentralPersistWriterBase
 
 		try
 		{
+			// Lock the Connection so that "LocalMetrics" thread doesn't insert at the same time.
+			_persistLock.lock();
+			
 			// STATUS, that we are saving right now
 			_inSaveSample = true;
 
@@ -2531,8 +2607,16 @@ extends CentralPersistWriterBase
 				{
 					_logger.warn("Problems updating '" + tabName + "', rowcount is NOT 1, rowcount = " + rowCount + ", sessionStartTime='" + sessionStartTime + "'. Executed following SQL: " + sql);
 					
-					// get ALL rows in CENTRAL_SESSIONS for debugging, and print it to the log!
-					String debugSql = "select * from " + tabName;
+					// Only show 'SessionStartTime' in the last 24 hours
+					Timestamp sessionStartTime_last24Hours = Timestamp.valueOf( sessionStartTime.toLocalDateTime().minusHours(24).withHour(0).withMinute(0).withSecond(0).withNano(0) );
+
+					// get "ALL" rows (for latest 24 hours) in CENTRAL_SESSIONS for debugging, and print it to the log!
+					String debugSql = ""
+							+ "select * \n"
+							+ "from " + tabName + " \n"
+							+ "where [LastSampleTime] >= '" + sessionStartTime_last24Hours + "' \n"
+							+ "order by [ServerName], [SessionStartTime] ";
+					debugSql = conn.quotifySqlString(debugSql);
 					ResultSetTableModel debugRstm = ResultSetTableModel.executeQuery(conn, debugSql, true, "debugSql");
 
 					_logger.info("Below is a ResultSet of ALL rows in the above table '" + tabName + "'.\n" + debugRstm.toAsciiTableString());
@@ -2583,6 +2667,7 @@ extends CentralPersistWriterBase
 			catch (SQLException e2) { _logger.error("Problems when setting AutoCommit to true.", e2); }
 
 			_inSaveSample = false;
+			_persistLock.unlock();
 		}
 	}
 
@@ -2641,8 +2726,8 @@ extends CentralPersistWriterBase
 					sbSql.append(", ").append(safeStr( ae.getReRaiseData()          , 160 )); // "lastData"                    // 19
 					sbSql.append(", ").append(safeStr( ae.getDescription()          , 512 )); // "description"                 // 20
 					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()   , 512 )); // "lastDescription"             // 21
-					sbSql.append(", ").append(safeStr( ae.getExtendedDescription()        )); // "extendedDescription"         // 22
-					sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() )); // "lastExtendedDescription"     // 23
+					sbSql.append(", ").append(safeStr( ae.getExtendedDescription()        )); // "extendedDescription"         // 22 /*HTML or Normal???*/
+					sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() )); // "lastExtendedDescription"     // 23 /*HTML or Normal???*/
 					sbSql.append(")");
 
 					sql = sbSql.toString();
@@ -2761,8 +2846,8 @@ extends CentralPersistWriterBase
 						sbSql.append(", ").append(safeStr( ae.getReRaiseData()          , 160 ));  // "lastData"                    // 23 
 						sbSql.append(", ").append(safeStr( ae.getDescription()          , 512 ));  // "description"                 // 24 
 						sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()   , 512 ));  // "lastDescription"             // 25 
-						sbSql.append(", ").append(safeStr( ae.getExtendedDescription()        ));  // "extendedDescription"         // 26 
-						sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() ));  // "lastExtendedDescription"     // 27 
+						sbSql.append(", ").append(safeStr( ae.getExtendedDescription()        ));  // "extendedDescription"         // 26 /*HTML or Normal???*/
+						sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() ));  // "lastExtendedDescription"     // 27 /*HTML or Normal???*/
 						sbSql.append(")");
 
 						sql = sbSql.toString();
@@ -3706,7 +3791,7 @@ return -1;
 			if( ! tabExists )
 			{
 //System.out.println("########################################## saveGraphDataDdl(): ---NOT-EXISTS--- schemaName='"+schemaName+"', tabName='"+tabName+"', GraphEntry='"+ge+"'.");
-				_logger.info("Persistent Counter DB: Creating table "+StringUtil.left("'"+schemaName+"."+tabName+"'", schemaName.length()+50, true)+" for CounterModel graph '" + ge.getName() + "'.");
+				_logger.info("Persistent Counter DB: Creating table " + StringUtil.left("'" + schemaName + "." + tabName + "'", schemaName.length()+50, true) + " for CounterModel graph '" + ge.getName() + "'.");
 
 				String sqlTable = getGraphTableDdlString(conn, schemaName, tabName, ge);
 				String sqlIndex = getGraphIndexDdlString(conn, schemaName, tabName, ge);
@@ -4045,4 +4130,62 @@ return -1;
 		// TODO Auto-generated method stub
 		
 	}
+
+
+
+
+
+	//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
+	//-- Save Local Metrics methods
+	//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
+
+	private LocalMetricsPersistWriterJdbc _localMetricsPersistWriter;
+
+	@Override
+	public void saveLocalMetricsSample(PersistContainer cont)
+	{
+//System.out.println("saveLocalMetricsSample(): cont.getCounterObjects().size()="+cont.getCounterObjects().size());
+		DbxConnection conn = _mainConn;
+
+		if (conn == null)
+		{
+			_logger.error("No database connection to Persistent Storage DB.");
+			return;
+		}
+		if (_shutdownWithNoWait)
+		{
+			_logger.info("Save Sample: Discard entry due to 'ShutdownWithNoWait'.");
+			return;
+		}
+		if (_localMetricsPersistWriter == null)
+		{
+			_logger.error("No Local Metrics Persist Writer has been created. Skipping this.");
+			return;
+		}
+		
+		try
+		{
+			// Lock the Connection so that "Other" thread doesn't insert at the same time.
+			_persistLock.lock();
+
+			// STATUS, that we are saving right now
+			_inSaveSample = true;
+
+			// Let the LocalMetricsPersistWriterJdbc do the work
+			_localMetricsPersistWriter.saveLocalMetricsSample(conn, cont);
+		}
+//		catch (SQLException e)
+//		{
+//			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode(), e);
+//		}
+		finally
+		{
+			_inSaveSample = false;
+			_persistLock.unlock();
+		}
+	}
+
+
 }

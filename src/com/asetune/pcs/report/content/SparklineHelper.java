@@ -736,19 +736,50 @@ public class SparklineHelper
 		// If sumColName is an expression or if it's a USER_PROVIDED aggregation, then do not Quote it...
 		String colName = (sumColNameIsExpr || AggType.USER_PROVIDED.equals(aggType)) ? sumColName : "[" + sumColName + "]";
 
+		// The below build produces something like:
+		//-------------------------------------------------------------------------------------
+		// with [tt] ([bts], [ets]) as ( 
+		//     values
+		//     ('2023-04-11T00:00:00', '2023-04-11T00:10:00') 
+		//    ,('2023-04-11T00:10:00', '2023-04-11T00:20:00') 
+		//    ,('2023-04-11T00:20:00', '2023-04-11T00:30:00') 
+		//    ... a lot more rows here ...
+		//    ,('2023-04-17T23:30:00', '2023-04-17T23:40:00') 
+		//    ,('2023-04-17T23:40:00', '2023-04-17T23:50:00') 
+		//    ,('2023-04-17T23:50:00', '2023-04-18T00:00:00') 
+		// ) 
+		// select 
+		//      [bts] 
+		//     ,[ets] 
+		//     ,( select coalesce((AVG([someColumn])), 0) 
+		//        from [someTable_abs] s 
+		//        where s.[SessionSampleTime] between [tt].[bts] and [tt].[ets] 
+		//          and [someColumn] = 'someValue' 
+		//      ) as [someLabelName] 
+		// from [tt] 
+		//-------------------------------------------------------------------------------------
+		// Previously I used:
+		// with ....
+		//               select '2023-04-11T00:00:00' as [bts], '2023-04-11T00:10:00' as [ets]
+		//     union all select '2023-04-11T00:10:00' as [bts], '2023-04-11T00:20:00' as [ets]
+		// But that caused H2 to stack trace: java.lang.StackOverflowError ... so I switched to values... which also build a ResultSet [tt] used later on...
+
 		// BUILD SQL (based on what DataSource)
 		if (DataSource.CounterModel.equals(dataSource))
 		{
-			sqlSb.append("with [tt] as ( \n");
+			sqlSb.append("with [tt] ([bts], [ets]) as ( \n");
+			sqlSb.append("    values \n");
 //			sb.append("              select cast('" + tmpBegin.format(tsFormat) + "' as datetime) as [bts], cast('" + tmpEnd.format(tsFormat) + "' as datetime) as [ets] \n");
-			sqlSb.append("              select '" + tmpBegin.format(tsFormat) + "' as [bts], '" + tmpEnd.format(tsFormat) + "' as [ets] \n");
+//			sqlSb.append("              select '" + tmpBegin.format(tsFormat) + "' as [bts], '" + tmpEnd.format(tsFormat) + "' as [ets] \n");
+			sqlSb.append("    ('" + tmpBegin.format(tsFormat) + "', '" + tmpEnd.format(tsFormat) + "') \n");
 
 			while(tmpEnd.isBefore(endLdt) )
 			{
 				tmpBegin = tmpBegin.plusMinutes(durationInMinutes);
 				tmpEnd   = tmpEnd.plusMinutes(durationInMinutes);
 
-				sqlSb.append("    union all select '" + tmpBegin.format(tsFormat) + "' as [bts], '" + tmpEnd.format(tsFormat) + "' as [ets] \n");
+//				sqlSb.append("    union all select '" + tmpBegin.format(tsFormat) + "' as [bts], '" + tmpEnd.format(tsFormat) + "' as [ets] \n");
+				sqlSb.append("   ,('" + tmpBegin.format(tsFormat) + "', '" + tmpEnd.format(tsFormat) + "') \n");
 			}
 			
 			sqlSb.append(") \n");
@@ -847,9 +878,9 @@ public class SparklineHelper
 		}
 
 		String sql = sqlSb.toString();
-		
-//System.out.println("getSparclineData(): SQL=\n" + sql);
 
+//System.out.println("SparklineHelper.getSparclineData() SQL: \n" + sql);
+		
 		SimpleDateFormat sdf_HM  = new SimpleDateFormat("HH:mm");
 		SimpleDateFormat sdf_YMD = new SimpleDateFormat("yyyy-MM-dd");
 	

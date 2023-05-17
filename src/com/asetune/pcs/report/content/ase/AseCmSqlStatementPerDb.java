@@ -529,11 +529,12 @@ extends PostgresAbstract
 //		_miniChartRstm.addColumn("sumPhysicalReads"    + "__chart", _miniChartRstm.findColumn("sumPhysicalReads"   ), Types.VARCHAR, "varchar", "varchar(512)", 512, -1, "", String.class);
 //		_miniChartRstm.addColumn("sumRowsAffected"     + "__chart", _miniChartRstm.findColumn("sumRowsAffected"    ), Types.VARCHAR, "varchar", "varchar(512)", 512, -1, "", String.class);
 //
+		String schema = getReportingInstance().getDbmsSchemaName();
 		
 		// Add Charts
-		_CmSqlStatementPerDb_SsDbTotExecCnt  = createTsLineChart(conn, "CmSqlStatementPerDb", "SsDbTotExecCnt"  , -1, true, null, "SQL Statements Per DB - Total Statements Executed/sec");
-		_CmSqlStatementPerDb_SsDbSumExecTime = createTsLineChart(conn, "CmSqlStatementPerDb", "SsDbSumExecTime" , -1, true, null, "SQL Statements Per DB - Sum Execution Time in ms");
-		_CmSqlStatementPerDb_SsDbSumLRead    = createTsLineChart(conn, "CmSqlStatementPerDb", "SsDbSumLRead"    , -1, true, null, "SQL Statements Per DB - Sum Logical Reads");
+		_CmSqlStatementPerDb_SsDbTotExecCnt  = createTsLineChart(conn, schema, "CmSqlStatementPerDb", "SsDbTotExecCnt"  , -1, true, null, "SQL Statements Per DB - Total Statements Executed/sec");
+		_CmSqlStatementPerDb_SsDbSumExecTime = createTsLineChart(conn, schema, "CmSqlStatementPerDb", "SsDbSumExecTime" , -1, true, null, "SQL Statements Per DB - Sum Execution Time in ms");
+		_CmSqlStatementPerDb_SsDbSumLRead    = createTsLineChart(conn, schema, "CmSqlStatementPerDb", "SsDbSumLRead"    , -1, true, null, "SQL Statements Per DB - Sum Logical Reads");
 
 	}
 	

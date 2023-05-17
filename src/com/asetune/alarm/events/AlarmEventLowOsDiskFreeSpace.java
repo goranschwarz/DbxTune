@@ -47,7 +47,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Low Operating System Disk Free Space (MB) in Server '" + cm.getServerName() + "' at MountPoint '" + mountPoint + "', FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPcs="+usedSpaceInPct+". (thresholdInMb="+thresholdInMb+")",
+				"Low Operating System Disk Free Space (MB) in Server '" + cm.getServerName() + "' at MountPoint '" + mountPoint + "', FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPct="+usedSpaceInPct+". (thresholdInMb="+thresholdInMb+")",
 				thresholdInMb
 				);
 
@@ -77,7 +77,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Low Operating System Disk Free Space (PCT) in Server '" + cm.getServerName() + "' at MountPoint '" + mountPoint + "', FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPcs="+usedSpaceInPct+". (thresholdInPct="+thresholdInPct+")",
+				"Low Operating System Disk Free Space (PCT) in Server '" + cm.getServerName() + "' at MountPoint '" + mountPoint + "', FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPct="+usedSpaceInPct+". (thresholdInPct="+thresholdInPct+")",
 				thresholdInPct
 				);
 

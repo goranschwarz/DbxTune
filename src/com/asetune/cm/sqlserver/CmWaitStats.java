@@ -60,7 +60,8 @@ extends CountersModel
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmWaitStats.class.getSimpleName();
-	public static final String   SHORT_NAME       = "Wait Stats";
+//	public static final String   SHORT_NAME       = "Wait Stats";
+	public static final String   SHORT_NAME       = "Srv Wait";
 	public static final String   HTML_DESC        = 
 		"<html>" +
 		"<p>FIXME</p>" +

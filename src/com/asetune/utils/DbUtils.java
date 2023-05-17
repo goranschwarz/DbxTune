@@ -445,7 +445,7 @@ public class DbUtils
 	 * @param conn
 	 * @return
 	 */
-	public static String getServerLogFileName(String dbProduct, Connection conn)
+	public static String getServerLogFileName(String dbProduct, DbxConnection conn)
 	throws SQLException
 	{
 		String sql = "not-yet-specified";
@@ -508,6 +508,11 @@ public class DbUtils
 				    + "    ELSE (select setting from pg_catalog.pg_settings where name = 'log_destination') \n"
 				    + "END AS logName \n"
 				    + "";
+			
+			if (conn.getDbmsVersionInfo().getLongVersion() > Ver.ver(10))
+			{
+				sql = "SELECT pg_current_logfile()";
+			}
 		}
 //		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_APACHE_HIVE))
 //		{
@@ -2186,6 +2191,162 @@ public class DbUtils
 			return null;
 		}
 	}
+
+	
+	/**
+	 * Execute a LIST of DDL Statements
+	 * @param  conn
+	 * @param  ddlList
+	 * @return <b>true</b> == SUCCESS (on all commands), <b>false</b> == FAIL (on any of the commands)   
+	 * @throws SQLException On issues
+	 */
+	public static boolean ddlExec(DbxConnection conn, List<String> ddlList)
+	throws SQLException
+	{
+		if (ddlList == null)   return false;
+		if (ddlList.isEmpty()) return false;
+		
+		boolean ret = true;
+		for (String ddl : ddlList)
+		{
+			if ( ! ddlExec(conn, ddl) )
+				ret = false;
+		}
+		return ret;
+	}
+
+	/**
+	 * Executes a DDL Command.<br>
+	 * NOTE: If in a transaction (autoCommit==false) Then the transaction is committed before proceeding, and a new transaction is started after the DDL has been executed
+	 * 
+	 * @param conn
+	 * @param sql
+	 * @return <b>true</b> == SUCCESS, <b>false</b> == FAIL   
+	 * @throws SQLException On issues
+	 */
+	public static boolean ddlExec(DbxConnection conn, String sql)
+	throws SQLException
+	{
+		if (_logger.isDebugEnabled())
+		{
+			_logger.debug("SEND DDL SQL: " + sql);
+		}
+//System.out.println("dbDdlExec(): SEND DDL SQL: " + sql);
+
+		try
+		{
+			boolean autoCommitWasChanged = false;
+
+			if (conn.getAutoCommit() != true)
+			{
+				autoCommitWasChanged = true;
+				
+				// In ASE the above conn.getAutoCommit() does execute 'select @@tranchained' in the ASE
+				// Which causes the conn.setAutoCommit(true) -> set CHAINED off
+				// to fail with error: Msg 226, SET CHAINED command not allowed within multi-statement transaction
+				//
+				// In the JDBC documentation it says:
+				// NOTE: If this method is called during a transaction, the transaction is committed.
+				//
+				// So it should be safe to do a commit here, that is what jConnect should have done...
+				conn.commit();
+
+				conn.setAutoCommit(true);
+			}
+
+			Statement s = conn.createStatement();
+			s.setQueryTimeout(0); // Do not timeout on DDL 
+
+			s.execute(sql);
+			s.close();
+
+			if (autoCommitWasChanged)
+			{
+				conn.setAutoCommit(false);
+			}
+		}
+		catch(SQLException e)
+		{
+			_logger.warn("Problems when executing DDL sql statement: " + sql, e);
+			// throws Exception if it's a severe problem
+			//isSevereProblem(conn, e);
+			throw e;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Simply calls exec(conn, sql, true)
+	 * 
+	 * @param conn
+	 * @param sql
+	 * @return
+	 * @throws SQLException
+	 */
+	public static boolean exec(DbxConnection conn, String sql)
+	throws SQLException
+	{
+		return exec(conn, sql, true);
+	}
+
+	/**
+	 * Executes a SQL Statement (with no results)
+	 * 
+	 * @param conn
+	 * @param sql
+	 * @param printErrors
+	 * @return
+	 * @throws SQLException
+	 */
+	public static boolean exec(DbxConnection conn, String sql, boolean printErrors)
+	throws SQLException
+	{
+		if (_logger.isDebugEnabled())
+		{
+			_logger.debug("SEND SQL: " + sql);
+		}
+
+		try (Statement s = conn.createStatement())
+		{
+			s.execute(sql);
+		}
+		catch(SQLException e)
+		{
+			if (printErrors)
+				_logger.warn("Problems when executing sql statement: "+sql+" SqlException: ErrorCode="+e.getErrorCode()+", SQLState="+e.getSQLState()+", toString="+e.toString());
+			throw e;
+		}
+
+		return true;
+	}
+	
+
+	/**
+	 * Get all schemas in current database 
+	 * @param conn
+	 * @return A Set of schema names, on error a empty Set will be returned
+	 */
+	public static Set<String> getSchemaNames(DbxConnection conn)
+	{
+		Set<String> existingSchemaSet = new LinkedHashSet<>();
+		try (ResultSet rs = conn.getMetaData().getSchemas())
+		{
+			while (rs.next())
+				existingSchemaSet.add(rs.getString(1));
+		}
+		catch(SQLException ex)
+		{
+			_logger.error("Problems getting schemas using conn.getMetaData().getSchemas(). Caught: " + ex, ex);
+		}
+
+		return existingSchemaSet;
+	}
+	
+	
+	
+	
+	
 	
 
 	private static void test(int testCase, int expected, String str)
@@ -2226,4 +2387,5 @@ public class DbUtils
 		System.out.println("2: " + parseHanaMessageForProcName("SAP DBTech JDBC: [19999]: user-defined error:  [19999] \"SYSTEM\".\"SP_DBMTK_PROC_INSTALL_FINAL\": line 58 col 3 (at pos 1705): [19999] (range 3) user-defined error exception: user-defined error:  [19999] \"SYSTEM\".\"SP_DBMTK_ABORT_SESSION\": line 56 col 3 (at pos 1929): [19999] (range 3) user-defined error exception: *** Error while installing PROCEDURE SYSTEM.GS_P1  Object was not found."));
 		System.out.println("3: " + parseHanaMessageForProcName("[304]: division by zero undefined:  [304] \"SYSTEM\".\"GS_P1\": line 5 col 2 (at pos 54): [304] (range 3) division by zero undefined exception: division by zero undefined:  at function /()"));
 	}
+
 }

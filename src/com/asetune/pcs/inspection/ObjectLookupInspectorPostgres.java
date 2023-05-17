@@ -51,14 +51,17 @@ extends ObjectLookupInspectorAbstract
 {
 	private static Logger _logger = Logger.getLogger(ObjectLookupInspectorPostgres.class);
 
-	public static final String  PROPKEY_xmlPlan_parseAndSendTables = Version.getAppName() + "." + ObjectLookupInspectorPostgres.class.getSimpleName() + ".xmlPlan.parse.send.tables";
-	public static final boolean DEFAULT_xmlPlan_parseAndSendTables = true;
+	public static final String  PROPKEY_xmlPlan_parseAndSendTables  = Version.getAppName() + "." + ObjectLookupInspectorPostgres.class.getSimpleName() + ".xmlPlan.parse.send.tables";
+	public static final boolean DEFAULT_xmlPlan_parseAndSendTables  = true;
 
-	public static final String  PROPKEY_view_parseAndSendTables    = Version.getAppName() + "." + ObjectLookupInspectorPostgres.class.getSimpleName() + ".view.parse.send.tables";
-	public static final boolean DEFAULT_view_parseAndSendTables    = true;
+	public static final String  PROPKEY_cursor_parseAndSendTables   = Version.getAppName() + "." + ObjectLookupInspectorPostgres.class.getSimpleName() + ".cursor.parse.send.tables";
+	public static final boolean DEFAULT_cursor_parseAndSendTables   = true;
 
-	public static final String  PROPKEY_function_parseAndSendTables    = Version.getAppName() + "." + ObjectLookupInspectorPostgres.class.getSimpleName() + ".function.parse.send.tables";
-	public static final boolean DEFAULT_function_parseAndSendTables    = true;
+	public static final String  PROPKEY_view_parseAndSendTables     = Version.getAppName() + "." + ObjectLookupInspectorPostgres.class.getSimpleName() + ".view.parse.send.tables";
+	public static final boolean DEFAULT_view_parseAndSendTables     = true;
+
+	public static final String  PROPKEY_function_parseAndSendTables = Version.getAppName() + "." + ObjectLookupInspectorPostgres.class.getSimpleName() + ".function.parse.send.tables";
+	public static final boolean DEFAULT_function_parseAndSendTables = true;
 
 //	private long    _dbmsVersion = 0;
 
@@ -548,6 +551,112 @@ extends ObjectLookupInspectorAbstract
 					}
 				}
 			}
+			//-----------------------------------------------------------------------------------
+			//-- CURSORS (possibly used by FDW -- Foreign Data Wrappers)
+			//>>>>>>> NOTE: This does NOT seems to work (cursor info from FDW is not visible in pg_cursors <<<<<
+			//>>>>>>>       But lets keep it anyway
+			//-----------------------------------------------------------------------------------
+			else if ( "CU" .equals(type) ) // CURSOR (added by method: getDbmsObjectList) 
+			{
+				// This should be stored
+				returnList.add(storeEntry);
+
+				//--------------------------------------------
+				// GET CURSOR INFO/TEXT
+				//--------------------------------------------
+				if ("CU".equals(type))
+				{
+					// 1> select * from pg_catalog.pg_cursors
+					// RS> Col# Label         JDBC Type Name           Guessed DBMS type Source Table
+					// RS> ---- ------------- ------------------------ ----------------- ------------
+					// RS> 1    name          java.sql.Types.VARCHAR   text              pg_cursors   <<--- The name of the cursor
+					// RS> 2    statement     java.sql.Types.VARCHAR   text              pg_cursors   <<--- The verbatim query string submitted to declare this cursor
+					// RS> 3    is_holdable   java.sql.Types.BIT       bool              pg_cursors   <<--- true if the cursor is holdable (that is, it can be accessed after the transaction that declared the cursor has committed); false otherwise
+					// RS> 4    is_binary     java.sql.Types.BIT       bool              pg_cursors   <<--- true if the cursor was declared BINARY; false otherwise
+					// RS> 5    is_scrollable java.sql.Types.BIT       bool              pg_cursors   <<--- true if the cursor is scrollable (that is, it allows rows to be retrieved in a nonsequential manner); false otherwise
+					// RS> 6    creation_time java.sql.Types.TIMESTAMP timestamptz       pg_cursors   <<--- The time at which the cursor was declared
+					// +----+-----------------------------------+-----------+---------+-------------+--------------------------+
+					// |name|statement                          |is_holdable|is_binary|is_scrollable|creation_time             |
+					// +----+-----------------------------------+-----------+---------+-------------+--------------------------+
+					// |    |select * from pg_catalog.pg_cursors|false      |false    |false        |2023-04-11 17:37:00.599671|
+					// +----+-----------------------------------+-----------+---------+-------------+--------------------------+
+
+					String sqlText = "";
+					String sqlTextWithComments = "";
+					
+					String tmpCursorName = objectName;
+					if (tmpCursorName.startsWith("CURSOR: "))
+						tmpCursorName = objectName.substring("CURSOR: ".length());
+
+					String sql = ""
+						    + "SELECT \n"
+						    + "     statement \n"
+						    + "    ,is_holdable \n"
+						    + "    ,is_binary \n"
+						    + "    ,is_scrollable \n"
+						    + "    ,creation_time \n"
+						    + "FROM pg_cursors c \n"
+						    + "WHERE name IN('" + tmpCursorName.toLowerCase() + "', '" + tmpCursorName + "') \n" // Not 100% sure if this will stored "as is" or the "plain name" (pg normally stored it in lower, but I'm not sure for cursors)
+						    + "";
+
+					try (Statement statement = conn.createStatement(); ResultSet rs = statement.executeQuery(sql) )
+					{
+						boolean   is_holdable   = false; 
+						boolean   is_binary     = false; 
+						boolean   is_scrollable = false; 
+						Timestamp creation_time = null; 
+
+						while(rs.next())
+						{
+							sqlText      += rs.getString   (1);
+							is_holdable   = rs.getBoolean  (2);
+							is_binary     = rs.getBoolean  (3);
+							is_scrollable = rs.getBoolean  (4);
+							creation_time = rs.getTimestamp(5);
+						}
+
+						if (StringUtil.hasValue(sqlText))
+						{
+							sqlTextWithComments = sqlText
+									+ "\n\n"
+									+ "------------------------------------------------------ \n"
+									+ "-- Cursor properties from 'pg_cursors' \n"
+									+ "------------------------------------------------------ \n"
+									+ "-- is_holdable   = " + is_holdable   + "\n"
+									+ "-- is_binary     = " + is_binary     + "\n"
+									+ "-- is_scrollable = " + is_scrollable + "\n"
+									+ "-- creation_time = " + creation_time + "\n"
+									+ "";
+						}
+
+						storeEntry.setObjectText( sqlTextWithComments );
+					}
+					catch (SQLException e)
+					{
+						storeEntry.setObjectText( e.toString() );
+						_logger.warn("DDL Lookup. Problems Getting CURSOR information for: CursorName='" + storeEntry.getObjectName() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + e);
+					}
+
+					//--------------------------------------------
+					// if CURSOR: Possibly parse the SQL statement and extract Tables, send those tables to 'DDL Storage'...
+					if (StringUtil.hasValue(sqlText))
+					{
+						if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_cursor_parseAndSendTables, DEFAULT_cursor_parseAndSendTables))
+						{
+							Set<String> tableList = SqlParserUtils.getTables(sqlText);
+
+							// Post to DDL Storage, for lookup
+							for (String tableName : tableList)
+							{
+								pch.addDdl(dbname, tableName, this.getClass().getSimpleName() + ".resolve.cursor");
+							}
+
+							// Add table list to the saved entry
+							storeEntry.setExtraInfoText( "TableList: " + StringUtil.toCommaStr(tableList) ); 
+						}
+					}
+				}
+			}
 			else
 			{
 				// Unknown type
@@ -588,6 +697,77 @@ extends ObjectLookupInspectorAbstract
 		DbmsVersionInfo dbmsVerInfo = conn.getDbmsVersionInfo();
 		
 		//----------------------------------------------------------------
+		// FDW Cursor -- Foreign Data Wrapper  
+		//>>>>>>> NOTE: This does NOT seems to work (cursor info from FDW is not visible in pg_cursors <<<<<
+		//>>>>>>>       But lets keep it anyway
+		//----------------------------------------------------------------
+		if (objectName != null && objectName.startsWith("CURSOR: "))
+		{
+			// 1> select * from pg_catalog.pg_cursors
+			// RS> Col# Label         JDBC Type Name           Guessed DBMS type Source Table
+			// RS> ---- ------------- ------------------------ ----------------- ------------
+			// RS> 1    name          java.sql.Types.VARCHAR   text              pg_cursors   <<--- The name of the cursor
+			// RS> 2    statement     java.sql.Types.VARCHAR   text              pg_cursors   <<--- The verbatim query string submitted to declare this cursor
+			// RS> 3    is_holdable   java.sql.Types.BIT       bool              pg_cursors   <<--- true if the cursor is holdable (that is, it can be accessed after the transaction that declared the cursor has committed); false otherwise
+			// RS> 4    is_binary     java.sql.Types.BIT       bool              pg_cursors   <<--- true if the cursor was declared BINARY; false otherwise
+			// RS> 5    is_scrollable java.sql.Types.BIT       bool              pg_cursors   <<--- true if the cursor is scrollable (that is, it allows rows to be retrieved in a nonsequential manner); false otherwise
+			// RS> 6    creation_time java.sql.Types.TIMESTAMP timestamptz       pg_cursors   <<--- The time at which the cursor was declared
+			// +----+-----------------------------------+-----------+---------+-------------+--------------------------+
+			// |name|statement                          |is_holdable|is_binary|is_scrollable|creation_time             |
+			// +----+-----------------------------------+-----------+---------+-------------+--------------------------+
+			// |    |select * from pg_catalog.pg_cursors|false      |false    |false        |2023-04-11 17:37:00.599671|
+			// +----+-----------------------------------+-----------+---------+-------------+--------------------------+
+			
+			String tmpCursorName = objectName.substring("CURSOR: ".length());
+			String sql = ""
+				    + "SELECT \n"
+				    + "     current_database() AS dbname \n"
+				    + "    ,name \n"
+				    + "    ,creation_time \n"
+				    + "FROM pg_cursors c \n"
+				    + "WHERE name IN('" + tmpCursorName.toLowerCase() + "', '" + tmpCursorName + "') \n" // Not 100% sure if this will stored "as is" or the "plain name" (pg normally stored it in lower, but I'm not sure for cursors)
+				    + "";
+
+			try ( Statement statement = conn.createStatement(); ResultSet rs = statement.executeQuery(sql) )
+			{
+				while(rs.next())
+				{
+					DdlDetails addEntry = new DdlDetails();
+					
+					String    currentDbname = rs.getString   (1);
+					String    cursorName    = rs.getString   (2);
+					Timestamp cursorCrDate  = rs.getTimestamp(3);
+
+					addEntry.setType( "CU" );
+					
+					addEntry.setDbname          ( currentDbname );
+					addEntry.setSearchDbname    ( dbname );
+					addEntry.setObjectName      ( cursorName );
+					addEntry.setSearchObjectName( originObjectName ); // NOT Stored in DDL Store, used for: isDdlDetailsStored(), markDdlDetailsAsStored()
+					addEntry.setSource          ( source );
+					addEntry.setDependParent    ( dependParent );
+					addEntry.setDependLevel     ( dependLevel );
+					addEntry.setSampleTime      ( new Timestamp(System.currentTimeMillis()) );
+					addEntry.setCrdate          ( cursorCrDate );
+
+				//	addEntry.setOwner           ( lookupEntry.getOwner() );
+				//	addEntry.setObjectId        ( ??? );
+
+					objectList.add(addEntry);
+				}
+
+				// We should return here... since 
+				return objectList;
+/*<<---*/
+			}
+			catch (SQLException e)
+			{
+				_logger.error("Problems Getting basic information about DDL for dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Skipping DDL Storage of this object. Caught: " + e);
+				return Collections.emptyList();
+			}
+		}
+
+		//----------------------------------------------------------------
 		// RELATION -- get TYPE, OWNER CREATION_TIME and DBNAME where the record(s) was found 
 		//----------------------------------------------------------------
 		String sql = ""
@@ -609,7 +789,7 @@ extends ObjectLookupInspectorAbstract
 			{
 				DdlDetails entry = new DdlDetails();
 
-				entry.setSearchDbname    ( dbname );
+				entry.setSearchDbname    ( dbname ); // NOT Stored in DDL Store, used for: isDdlDetailsStored(), markDdlDetailsAsStored()
 				entry.setObjectName      ( objectName );
 				entry.setSearchObjectName( originObjectName ); // NOT Stored in DDL Store, used for: isDdlDetailsStored(), markDdlDetailsAsStored()
 				entry.setSource          ( source );

@@ -3192,6 +3192,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_SYBASE_RSDA )) return new DbmsDdlResolverRsDa     (null);
 		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_SYBASE_RSDRA)) return new DbmsDdlResolverRsDra    (null);
 		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_MSSQL       )) return new DbmsDdlResolverSqlServer(null);
+		if (DbUtils.isProductName(dbmsProductName, "HostMonitor"                    )) return new DbmsDdlResolverAnsiSql  (null);
 
 		// For unknown/unmapped Connections lets use the "ASNI"
 		_logger.warn("No DBMS DDL Resolver for DBMS Vendor '" + dbmsProductName + "' was found. Using 'ANSI SQL' instead.");

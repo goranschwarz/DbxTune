@@ -25,6 +25,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.Properties;
 
 import org.apache.log4j.Logger;
@@ -37,7 +39,7 @@ import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.ssh.SshTunnelInfo;
-import com.asetune.ssh.SshTunnelManager2;
+import com.asetune.ssh.SshTunnelManager;
 import com.asetune.utils.Configuration;
 
 public class DailySummaryReportTest
@@ -131,7 +133,7 @@ public class DailySummaryReportTest
 				SshConnection sshConn = new SshConnection(sshTi.getSshHost(), sshTi.getSshPort(), sshTi.getSshUsername(), sshTi.getSshPassword(), sshTi.getSshKeyFile());
 				sshConn.connect();
 				
-				SshTunnelManager2 tm = SshTunnelManager2.getInstance();
+				SshTunnelManager tm = SshTunnelManager.getInstance();
 				tm.setupTunnel("someUniqueName", sshTi);
 
 				cp.setUrl(urlSshTunnel);
@@ -148,6 +150,13 @@ public class DailySummaryReportTest
 
 		report.setConnection(conn);
 		report.setServerName(srvName);
+		
+		if (conf.hasProperty("dbms.schema.name"))
+			report.setDbmsSchemaName(conf.getProperty("dbms.schema.name"));
+
+		// Set Reporting Period
+		setReportingPeriod(report);
+		
 		try
 		{
 			// Initialize the Report, which also initialized the ReportSender
@@ -176,6 +185,28 @@ public class DailySummaryReportTest
 		}
 	}
 	
+	private static void setReportingPeriod(IDailySummaryReport report)
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		boolean setReportingPeriod = conf.getBooleanProperty("dsr.reporting.period.set", false);
+		if (setReportingPeriod)
+		{
+			int days            = conf.getIntProperty("dsr.reporting.period.days"        , 6);
+			int beginTimeHour   = conf.getIntProperty("dsr.reporting.period.start.hour"  , 0);
+			int beginTimeMinute = conf.getIntProperty("dsr.reporting.period.start.minute", 0);
+			int endTimeHour     = conf.getIntProperty("dsr.reporting.period.end.hour"    , 23);
+			int endTimeMinute   = conf.getIntProperty("dsr.reporting.period.end.minute"  , 59);
+
+			LocalDateTime now = LocalDateTime.now();
+			
+			Timestamp beginTs = Timestamp.valueOf(now.withHour(beginTimeHour).withMinute(beginTimeMinute).withSecond(0).withNano(0).minusDays(days));
+			Timestamp endTs   = Timestamp.valueOf(now.withHour(endTimeHour).withMinute(endTimeMinute).withSecond(59).withNano(999_999_999));
+
+			report.setReportPeriodBeginTime(beginTs);
+			report.setReportPeriodEndTime(endTs);
+		}
+	}
+
 	private static void openInBrowser(IDailySummaryReport report)
 	{
 		File reportFile = report.getReportFile();

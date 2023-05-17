@@ -171,6 +171,24 @@ public class NumberUtils
 	    return bd;
 	}
 
+	/** Calculates bytes to KB, with # decimals */ 
+	public static double toKb(long bytes, int roundingDecimals)
+	{
+		return round( bytes / 1024.0, roundingDecimals);
+	}
+
+	/** Calculates bytes to MB, with # decimals */ 
+	public static double toMb(long bytes, int roundingDecimals)
+	{
+		return round( bytes / 1024.0 / 1024.0, roundingDecimals);
+	}
+
+	/** Calculates bytes to GB, with # decimals */ 
+	public static double toGb(long bytes, int roundingDecimals)
+	{
+		return round( bytes / 1024.0 / 1024.0 / 1024.0, roundingDecimals);
+	}
+
 	/**
 	 * Returns a value 'asValue' using the same data type as the input 'numberObj'
 	 * 

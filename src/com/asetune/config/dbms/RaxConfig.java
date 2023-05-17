@@ -118,12 +118,12 @@ extends DbmsConfigAbstract
 
 	private static String GET_CONFIG_OFFLINE_SQL = 
 		"select * " +
-		"from [" + PersistWriterJdbc.getTableName(null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false) + "] \n" +
+		"from [" + PersistWriterJdbc.getTableName(null, null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false) + "] \n" +
 		"where [SessionStartTime] = SESSION_START_TIME \n";
 
 	private static String GET_CONFIG_OFFLINE_MAX_SESSION_SQL = 
 		" (select max([SessionStartTime]) " +
-		"  from ["+PersistWriterJdbc.getTableName(null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false) + "]" +
+		"  from ["+PersistWriterJdbc.getTableName(null, null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false) + "]" +
 		" ) ";
 
 

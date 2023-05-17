@@ -212,7 +212,7 @@ case "${toolset}" in
 	sshtest2)
 		shortAppName="sshtest2"
 		longAppName="SshTest2"
-		javaMainClass="com.asetune.ssh.test.JschTest2"
+		javaMainClass="com.asetune.test.JschTest2"
 		javaMainParams=""
 		javaSplashScreen=""
 		;;

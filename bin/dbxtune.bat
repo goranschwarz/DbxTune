@@ -463,6 +463,20 @@ rem -- @echo %JAVA_VERSION_MAJOR%
 IF %JAVA_VERSION_MAJOR% LSS 7 GOTO to_low_java_version
 
 
+rem ------------------------------------------------------------------------
+rem -- if java is 11 or above, we need to adjust the classpath a bit
+rem ------------------------------------------------------------------------
+IF %JAVA_VERSION_MAJOR% GEQ 11 (
+	echo .
+	echo ================================================================
+	echo Adjustments for java 11 and above.
+	echo Java version %JAVA_VERSION_MAJOR% is used. This version is missing some basic JARS, which will be added
+	echo ----------------------------------------------------------------
+	echo INFO: - Adding '%DBXTUNE_HOME%\lib\jaxb-ri\*' to CLASSPATH
+	echo ----------------------------------------------------------------
+	echo .
+	set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jaxb-ri/*
+)
 
 rem ------------------------------------------------------------------------
 rem --- CHECK current Java Version

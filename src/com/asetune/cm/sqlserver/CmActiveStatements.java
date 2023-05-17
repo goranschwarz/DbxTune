@@ -315,6 +315,16 @@ extends CountersModel
 			dop_locks  = "    ,-1 as dop \n";
 		}
 		
+		// Is 'context_info_str' enabled (if it causes any problem, it can be disabled)
+		String contextInfoStr1 = "/*    ,context_info_str    = replace(cast(des.context_info as varchar(128)),char(0),'') -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
+		String contextInfoStr2 = "/*    ,context_info_str    = replace(cast(p1.context_info as varchar(128)),char(0),'') -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
+		if (SqlServerCmUtils.isContextInfoStrEnabled())
+		{
+			// Make the binary 'context_info' into a String
+			contextInfoStr1 = "    ,context_info_str    = replace(cast(des.context_info as varchar(128)),char(0),'') /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
+			contextInfoStr2 = "    ,context_info_str    = replace(cast(p1.context_info as varchar(128)),char(0),'') /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
+		}
+
 //		String user_objects_deferred_dealloc_page_count = "0";
 //		if (srvVersion >= Ver.ver(2014))
 //		{
@@ -380,6 +390,7 @@ extends CountersModel
 			"    ,ExecTimeInMs        = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE  datediff(ms, der.start_time, getdate()) END \n" +               // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 			"    ,UsefullExecTime     = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE (datediff(ms, der.start_time, getdate()) - der.wait_time) END \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 			"    ,des.[program_name] \n" +
+			     contextInfoStr1 +
 			"    ,der.wait_type \n" +
 			"    ,der.wait_time \n" +
 			"    ,der.last_wait_type \n" +
@@ -468,6 +479,7 @@ extends CountersModel
 			"    ,ExecTimeInMs    = CASE WHEN datediff(day, p1.last_batch, getdate()) >= 24 THEN -1 ELSE  datediff(ms, p1.last_batch, getdate()) END  \n" +
 			"    ,UsefullExecTime = CASE WHEN datediff(day, p1.last_batch, getdate()) >= 24 THEN -1 ELSE (datediff(ms, p1.last_batch, getdate()) - p1.waittime) END  \n" +
 			"    ,p1.program_name                              --des.[program_name] \n" +
+			      contextInfoStr2 +
 			"    ,p1.waittype                                  --der.wait_type \n" +
 			"    ,p1.waittime                                  --der.wait_time \n" +
 			"    ,p1.waittype                                  --der.last_wait_type \n" +

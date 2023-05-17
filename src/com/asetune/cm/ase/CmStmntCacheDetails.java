@@ -237,6 +237,9 @@ extends CountersModel
 
 			mtd.addColumn("monCachedStatement",  "TotalEstWaitTime",     "<html>Total Estimated Wait Time <br><b>Algorithm</b>: TotalElapsedTime - TotalCpuTime </html>");
 			mtd.addColumn("monCachedStatement",  "TotalEstWaitTimeDiff", "<html>Total Estimated Wait Time <br><b>Algorithm</b>: TotalElapsedTime - TotalCpuTime </html>");
+
+			mtd.addColumn("monCachedStatement",  "AvgReadEfficiancy",  "<html>A Percent Calculation of AvgScanRows and AvgQualifyingReadRows.  (if -1 then: AvgScanRows=0) <br><b> AvgQualifyingReadRows  / AvgScanRows * 100 </html>");
+			mtd.addColumn("monCachedStatement",  "AvgWriteEfficiancy", "<html>A Percent Calculation of AvgScanRows and AvgQualifyingWriteRows. (if -1 then: AvgScanRows=0) <br><b> AvgQualifyingWriteRows / AvgScanRows * 100 </html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -351,6 +354,8 @@ extends CountersModel
 		String MaxQualifyingReadRows  = ""; // Maximum qualifying data rows for read DML per execution
 		String AvgQualifyingWriteRows = ""; // Average qualifying data rows for write DML per execution
 		String MaxQualifyingWriteRows = ""; // Maximum qualifying data rows for write DML per execution
+		String AvgReadEfficiancy      = "";
+		String AvgWriteEfficiancy     = "";
 		String LockWaits              = ""; // Total number of lock waits
 		String LockWaitsDiff          = ""; // Total number of lock waits
 		String LockWaitTime	          = ""; // Total lock-wait time (ms)
@@ -375,6 +380,8 @@ extends CountersModel
 			MaxQualifyingReadRows  = "MaxQualifyingReadRows, ";             // no Diff
 			AvgQualifyingWriteRows = "AvgQualifyingWriteRows, ";            // no Diff
 			MaxQualifyingWriteRows = "MaxQualifyingWriteRows, ";            // no Diff
+			AvgReadEfficiancy      = "AvgReadEfficiancy  = convert(numeric(9,1), isnull(AvgQualifyingReadRows*1.0  / nullif(1.0*AvgScanRows, 0) * 100.0, -1)), "; // no DIFF
+			AvgWriteEfficiancy     = "AvgWriteEfficiancy = convert(numeric(9,1), isnull(AvgQualifyingWriteRows*1.0 / nullif(1.0*AvgScanRows, 0) * 100.0, -1)), "; // no DIFF
 			LockWaits              = "LockWaits, ";                         // no Diff
 			LockWaitsDiff          = "LockWaitsDiff = LockWaits, ";         // DIFF COUNTER
 			LockWaitTime           = "LockWaitTime, ";                      // no Diff
@@ -459,8 +466,12 @@ extends CountersModel
 			" CurrentUsageCount, \n" +          // The number of concurrent uses of this statement.
 			" MaxUsageCount, \n" +              // The maximum number of times for which this statement was simultaneously used.
 			AvgScanRows + MaxScanRows + nl_15702 +
-			AvgQualifyingReadRows + MaxQualifyingReadRows + nl_15702 +
-			AvgQualifyingWriteRows + MaxQualifyingWriteRows + nl_15702 + 
+			AvgQualifyingReadRows     + nl_15702 +
+			AvgReadEfficiancy         + nl_15702 +
+			MaxQualifyingReadRows     + nl_15702 +
+			AvgQualifyingWriteRows    + nl_15702 +
+			AvgWriteEfficiancy        + nl_15702 +
+			MaxQualifyingWriteRows    + nl_15702 + 
 			" NumRecompilesSchemaChanges, \n" + // The number of times this statement was recompiled due to schema changes.
 			" NumRecompilesPlanFlushes, \n" +   // The number of times this statement was recompiled because no usable plan was found.
 			" HasAutoParams       = convert(bit,HasAutoParams), \n" + // Does this statement have any parameterized literals.

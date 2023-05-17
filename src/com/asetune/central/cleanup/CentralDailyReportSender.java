@@ -22,6 +22,15 @@ package com.asetune.central.cleanup;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.central.lmetrics.LocalMetricsPersistWriterJdbc;
+import com.asetune.central.pcs.CentralPcsWriterHandler;
+import com.asetune.central.pcs.CentralPersistWriterBase;
+import com.asetune.central.pcs.CentralPersistWriterJdbc;
+import com.asetune.central.pcs.ICentralPersistWriter;
+import com.asetune.central.pcs.report.DailyCentralSummaryReport;
+import com.asetune.sql.conn.ConnectionProp;
+import com.asetune.sql.conn.DbxConnection;
+
 import it.sauronsoftware.cron4j.Task;
 import it.sauronsoftware.cron4j.TaskExecutionContext;
 
@@ -34,7 +43,7 @@ extends Task
 	public static final boolean DEFAULT_start = true;
 
 	public static final String PROPKEY_cron = "CentralDailyReportSender.cron";
-	public static final String DEFAULT_cron = "59 23 * * *"; // at 23:59 every day
+	public static final String DEFAULT_cron = "58 23 * * *"; // at 23:58 every day
 
 	public static final String  PROPKEY_LOG_FILE_PATTERN = "CentralDailyReportSender.log.file.pattern";
 	public static final String  DEFAULT_LOG_FILE_PATTERN    = "%d - %-5p - %-30c{1} - %m%n";
@@ -48,11 +57,57 @@ extends Task
 		_logger.info("#############################################################################################");
 		_logger.info("Begin task: Daily Central Summary Report");
 
-		_logger.info(" ---- No Daily Summary Report has yet been implemented ---- ");
+//		_logger.info(" ---- No Daily Summary Report has yet been implemented ---- ");
 		
-		// Possibly use some of the DbxTune Daily Report functionality
-		// DailySummaryReportFactory.
+		ConnectionProp connProps = null;
+		CentralPcsWriterHandler centralPcsHandler = CentralPcsWriterHandler.getInstance();
+		for (ICentralPersistWriter w : centralPcsHandler.getWriters())
+		{
+			if (w instanceof CentralPersistWriterJdbc)
+			{
+				connProps = ((CentralPersistWriterJdbc) w).getStorageConnectionProps();
+				break;
+			}
+		}
+		if ( connProps == null )
+		{
+			_logger.info("Skipping Daily Central Summary Report, no CentralPersistWriterJdbc Connection Properties Object was found.");
+			return;
+		}
+		
+		DbxConnection conn = null;
+		try
+		{
+			_logger.info("Open DBMS connection to CentralPersistWriterJdbc. connProps=" + connProps);
+			conn = DbxConnection.connect(null, connProps);
+		}
+		catch (Exception e)
+		{
+			_logger.error("Skipping Daily Central Summary Report. Problems connecting to CentralPersistWriterJdbc.", e);
+			return;
+		}
 
+		
+		if (conn != null)
+		{
+			try
+			{
+				_logger.info("Executing Daily Central Summary Report.");
+				DailyCentralSummaryReport.createDailySummaryReport(conn, "DbxCentral", LocalMetricsPersistWriterJdbc.LOCAL_METRICS_SCHEMA_NAME);
+			}
+			catch (Exception e)
+			{
+				_logger.error("Problems when executing Daily Central Summary Report in CentralPersistWriterJdbc", e);
+			}
+		}
+
+		
+		if (conn != null)
+		{
+			_logger.info("Closing DBMS connection to CentralPersistWriterJdbc");
+			conn.closeNoThrow();
+		}
+		
 		_logger.info("End task: Daily Central Summary Report");
 	}
 }

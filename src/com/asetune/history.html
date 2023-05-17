@@ -39,7 +39,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added switches '--localHostMon' if the monitored DBMS is on same host and we don't need/want to open a SSH Connection</LI>
 		<LI>Added switches '--localHostMonWrapperCmd' if the monitored DBMS is remote but we can't use 'Jsch' library to communicate we can execute a local command that relays/forwards the OS Commands vi this command (this can for example be the ssh binary)</LI>
 		<LI>The above two switches also have corresponding fields in the Connection Dialog</LI>
+		<LI>For all collectors, Created a new Writer class PersistWriterToDbxCentral, as a complement to PersistWriterToHttpJson so we can controll it a bit better</LI>
+		<LI>Configuration (Properties), enhancement to USE_DEFAULT value (really an internal thing, but now you can use config value 'USE_DEFAULT' in more places.</LI>
 		<LI></LI>
+		<LI></LI>
+		<LI></LI>
+		<LI>DbxCentral - Local Metrics (os monitoring on DbxCentral host), property: <code>DbxTuneCentral.start.localMetricsCollector=*true*|false</code></LI>
+		<LI>DbxCentral - Possibly start the Local PCS Directory Receiver (to not send JSON from any collector to DbxCentral) property: <code>CentralPcsDirectoryReceiver.storage.dir=${tmpDir}/DbxTune/DbxCentral/file_receiver</code></LI>
 		
 		<LI><b>Alarms Handling:</b>
 			<UL>
@@ -56,6 +62,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<UL>
 				<LI>In the 'Recording info', Print the 'Display Name' if any...</LI>
 				<LI>many Line Chart is "sorted", so the series that holds the most values (sum of all data point) are presented/printed first (a text will indicate if it's sorted or not)</LI>
+				<LI>Added 'CmOsNwInfoOverview' for all collectors</LI>
+				<LI>Alarms, details are now also available in short report (Mail Receivers)</LI>
+				<LI>Some Graphs are now sorted (series with high overall values are first). If it's sorted a "info note" will say no.</LI>
+				<LI>OsIoStatOverview on some platforms it didn't work good (for column 'await' depending on what iostat version we were using)</LI>
 			</UL>
 		</LI>
 
@@ -81,6 +91,17 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<li><code>MIN_OVER_MINUTES</code> Only take the MIN value from a sample over X minutes, this can be used if there are to many samples</li>
 			</ul> 
 		</LI>
+		<LI>Alarm view (at the bottom): New checkbox to view/alarm in a formated way (like we see it in mail)</LI>
+		<LI>Active Statements popup: Most checkboxes, now have a modal view where details will be visible. Like:
+			<ul>
+				<li>SQL Text</li>
+				<li>Lock Table</li>
+				<li>Blocking Information</li>
+				<li>Sybase ASE -- Showplan as a Text Representation</li>
+				<li>SQL Server -- Showplan as a HTMP/GUI plan, with SQL Statement, Compile/Runtime Parameters, The XML plan itself</li>
+			</ul> 
+		</LI>
+		<LI>Menu: Server - Available offline databases -- Now a download link so we can download the OFFLINE database to your Client and view data with the native interface</LI>
  	</UL>
 
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -91,9 +112,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
-		<b>CmXxx - tab: Active Statements</b><br>
+		<b>CmStmntCacheDetails - tab: Statement Cache Details</b><br>
 		<ul>
-			<li>xxx</li>
+			<li>added column 'AvgReadEfficiancy'   -- A Percent Calculation of AvgScanRows and AvgQualifyingReadRows</li>
+			<li>added column 'AvgWriteEfficiancy'  -- A Percent Calculation of AvgScanRows and AvgQualifyingWriteRows</li>
 		</ul>
 		</LI>
 
@@ -177,21 +199,36 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI>Added CM: <b>CmMemoryGrantsSum    </b> - A Memory Grant Summary (from: dm_exec_query_resource_semaphores)</LI>
 
+		<LI>Added CM: <b>CmWaitStatsPerDb     </b> - What are we waiting on, at a database level (from: dm_exec_session_wait_stats/dm_exec_sessions)</LI>
+
 		<LI><b>DBMS Configuration </b> - Also get linked servers using 'exec sp_linkedservers'</LI>
+		<LI><b>DBMS Configuration </b> - if Linux also grab file content of '/var/opt/mssql/mssql.conf' in tab 'Server Registry'</LI>
 
 		<!-- ~~~ CM Changes ~~~ -->
 		<LI><b>CmActiveStatements   </b> - Added column 'tran_id' it relates with Extended Events 'transaction_id'. (easier to track SqlServerTune and XE)</LI>
 		<LI><b>CmActiveStatements   </b> - Rewrote a sub select into a join (for better performance)</LI>
+		<LI><b>CmActiveStatements   </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
 		
+		<LI><b>CmAlwaysOn           </b> - Performance enhancement</LI>
+
+		<LI><b>CmDatabases          </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
+
+		<LI><b>CmOpenTransactions   </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
+
 		<LI><b>CmPerfCounters       </b> - Added Chart 'Stolen Server Memory, from Buffer Pool'</LI>
 
 		<LI><b>CmSessions           </b> - The "hidden report" on WaitResources has been extended (can now lookup pages to get ObjectID's and translated to ObjectName's, also lookup 'locked data' when WaitResource is 'KEY')</LI>
+		<LI><b>CmSessions           </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
 
 		<LI><b>CmSummary            </b> - added column 'databaseCacheMemoryMb', 'grantedWorkspaceMemoryMb', 'stolenServerMemoryMb' (grabbed from dm_os_performance_counters)</LI>
 		<LI><b>CmSummary            </b> - added Chart 'PerfMon: SQL Server Memory Usage'</LI>
 
-		<LI>xxx</LI>
-		
+		<LI><b>CmTempdbSpidUsage    </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
+
+		<LI><b>CmWaitingTasks       </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
+
+		<LI><b>CmWho                </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
+
 		<LI>DDL Lookup: xxx</LI>
 		
 		<!-- ~~~~~ Daily Report ~~~~~ -->
@@ -205,7 +242,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>In the Recording info, Print the Edition: 'Standard Edition', 'Enterprise Edition', 'Web Edition', 'Developer Edition', 'Express Edition', or 'Azure'</li>
 			<li>In the Recording info, Print the 'Collation Name' and 'Collation Description'</li>
 			<li>In the "Overview" section, added some Graphs: 'CmPerfCounters_CachePhyReads', 'CmPerfCounters_CacheWrites', 'CmMemoryGrantsSum_GrantedMemSum' and 'CmSummary_OsMemoryFreeMb'</li>
-			<li></li>
+			<li>In the "Plan Cache History"" is no longer included in "short" report (Mail Reports)</li>
 
 		</ul>                                                              
 		</LI>
@@ -218,7 +255,6 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
 		<LI>Added a new Collector Group 'Progress' with the following collectors: CmPgProgCluster, CmPgProgVacuum, CmPgProgAnalyze, CmPgProgIndex, CmPgProgCopy, CmPgProgBaseBackup</LI>
-		<LI>xxx</LI>
 		
 		<br>
 
@@ -227,6 +263,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmActiveStatements   </b> - added AlarmEventHoldingLocksWhileWaitForClientInput, when a pid has been in state 'idle in transaction' but still has EXCLUSIVE locks in the database. Default Threshold is 300 Seconds (5 minutes)</LI>
 		<LI><b>CmActiveStatements   </b> - The alarms 'StatementExecInSec' and 'OpenXactInSec' will no longer alarm if the column 'backend_type' is 'walsender'</LI>
 		<LI><b>CmActiveStatements   </b> - The alarms 'OpenXactInSec' new threshold 1h (previously 30 minutes)</LI>
+		<LI><b>CmActiveStatements   </b> - added column 'pid_advlock_count' -- How many Advisory Exclusive locks does this PID hold</LI>
 
 		<LI><b>CmPgActivity         </b> - if property 'CmPgActivity.sample.sslInfo=true' is set (default is false), then show new columns: ssl, ssl_version, ssl_cipher, ssl_bits, ssl_client_dn, sss_client_serial, sss_issuer_dn</LI>
 		<LI><b>CmPgActivity         </b> - The alarms 'StatementExecInSec' will no longer alarm if the column 'backend_type' is 'walsender'</LI>
@@ -248,10 +285,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmXxxx      </b> - </LI>
 
 		<br>
-		<LI><b>Object Inspector     </b> -  Grabs more information on more object types: Foreign Data Wrappers (Remote Tables) and procedures, functions etc...</LI>
+		<LI><b>Alarm                </b> - new alarm: AlarmEventHoldingLocksWhileWaitForClientInput (threshold 1200 sec, 20 minutes)</LI>
+
+		<br>
+		<LI><b>Object Inspector     </b> - Grabs more information on more object types: Foreign Data Wrappers (Remote Tables) and procedures, functions etc...</LI>
 
 		<br>
 		<LI><b>DbmsObjectIdCache    </b> - now holds more information, to accomodate Foreign Data Wrappers (Remote Tables) and procedures, functions etc...</LI> 
+		<LI><b>DbmsObjectIdCache    </b> - Enhancement when getting data for missing entries</LI> 
 
 		<br>
 		<LI><b>DBMS Configuration   </b> - Added some Text config: 'DB Info', 'HBA Conf', 'Extentions', 'Servers'</LI> 

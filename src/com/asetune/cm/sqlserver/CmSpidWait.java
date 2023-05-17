@@ -251,7 +251,12 @@ extends CountersModel
 				sql_sample_extraWhereClause +
 				"order by session_id, wait_type \n" +
 				"";
-				
+
+		// TODO: Possibly add 'dbname' -- So we can get statistics on Wait's per Database
+//		   ,dbname = DB_NAME(es.database_id)
+//				   FROM sys.dm_exec_session_wait_stats ws 
+//				   LEFT OUTER JOIN sys.dm_exec_sessions es ON ws.session_id = es.session_id
+		
 
 		return sql;
 	}

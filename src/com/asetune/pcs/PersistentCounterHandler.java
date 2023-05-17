@@ -1561,9 +1561,10 @@ implements Runnable
 				prevConsumeTimeMs = stopTime-startTime;
 				_logger.debug("It took " + prevConsumeTimeMs + " ms to persist the above information (using all writers).");
 				
-				// Clear some stuff after each container.
-				if ( AlarmWriterToPcsJdbc.hasInstance() ) 
-					AlarmWriterToPcsJdbc.getInstance().clear();
+// I think this is better to do AFTER they have been saved in saveAlarms() or that the clear() only removes alarms that are OLDER than X minutes
+//				// Clear some stuff after each container.
+//				if ( AlarmWriterToPcsJdbc.hasInstance() ) 
+//					AlarmWriterToPcsJdbc.getInstance().clear();
 			} 
 			catch (InterruptedException ex) 
 			{

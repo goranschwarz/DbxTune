@@ -130,8 +130,11 @@ public class OsIoStatOverview extends OsAbstract
 	{
 		_skipDeviceNames  = localConf.getProperty   (PROPKEY_SKIP_DEVICE_NAMES,  DEFAULT_SKIP_DEVICE_NAMES);
 
+		String schema       = getReportingInstance().getDbmsSchemaName();
+		String schemaPrefix = getReportingInstance().getDbmsSchemaNameSqlPrefix();
+		
 		 // just to get Column names
-		String dummySql = "select * from [CmOsIostat_abs] where 1 = 2";
+		String dummySql = "select * from " + schemaPrefix + "[CmOsIostat_abs] where 1 = 2";
 		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, false, "metadata");
 		if (dummyRstm == null)
 		{
@@ -206,7 +209,7 @@ public class OsIoStatOverview extends OsAbstract
 				    + "    ,cast(avg(100.0-[% Idle Time])               as numeric(10,1)) as [utilPct__avg] \n"
 
 //				    + "    ,max([deviceDescription])                                      as [deviceDescription] \n"
-					+ "from [CmOsIostat_abs] \n"
+					+ "from " + schemaPrefix + "[CmOsIostat_abs] \n"
 					+ "where 1=1 \n"
 					+ getReportPeriodSqlWhere()
 					+ sql_skipDeviceNames
@@ -231,6 +234,7 @@ public class OsIoStatOverview extends OsAbstract
 						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("iosPerSec__chart")
 						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsSchemaName           (schema)
 						.setDbmsTableName            ("CmOsIostat_abs")
 						.setDbmsSampleTimeColumnName ("SessionSampleTime")
 						.setDbmsDataValueColumnName  ("Disk Transfers/sec").setGroupDataAggregationType(AggType.AVG)
@@ -242,6 +246,7 @@ public class OsIoStatOverview extends OsAbstract
 						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("readsPerSec__chart")
 						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsSchemaName           (schema)
 						.setDbmsTableName            ("CmOsIostat_abs")
 						.setDbmsSampleTimeColumnName ("SessionSampleTime")
 						.setDbmsDataValueColumnName  ("Disk Reads/sec").setGroupDataAggregationType(AggType.AVG)
@@ -253,6 +258,7 @@ public class OsIoStatOverview extends OsAbstract
 						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("writesPerSec__chart")
 						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsSchemaName           (schema)
 						.setDbmsTableName            ("CmOsIostat_abs")
 						.setDbmsSampleTimeColumnName ("SessionSampleTime")
 						.setDbmsDataValueColumnName  ("Disk Writes/sec").setGroupDataAggregationType(AggType.AVG)
@@ -264,6 +270,7 @@ public class OsIoStatOverview extends OsAbstract
 						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("diskQueueLength__avg__chart")
 						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsSchemaName           (schema)
 						.setDbmsTableName            ("CmOsIostat_abs")
 						.setDbmsSampleTimeColumnName ("SessionSampleTime")
 						.setDbmsDataValueColumnName  ("Avg. Disk Queue Length").setGroupDataAggregationType(AggType.MAX).setDecimalScale(1)
@@ -275,6 +282,7 @@ public class OsIoStatOverview extends OsAbstract
 						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("svctm__chart")
 						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsSchemaName           (schema)
 						.setDbmsTableName            ("CmOsIostat_abs")
 						.setDbmsSampleTimeColumnName ("SessionSampleTime")
 						.setDbmsDataValueColumnName  ("[Avg. Disk sec/Transfer] * 1000.0").setGroupDataAggregationType(AggType.MAX).setDbmsDataValueColumnNameIsExpression(true).setDecimalScale(1)
@@ -286,6 +294,7 @@ public class OsIoStatOverview extends OsAbstract
 						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("readSvctm__chart")
 						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsSchemaName           (schema)
 						.setDbmsTableName            ("CmOsIostat_abs")
 						.setDbmsSampleTimeColumnName ("SessionSampleTime")
 						.setDbmsDataValueColumnName  ("[Avg. Disk sec/Read] * 1000.0").setGroupDataAggregationType(AggType.MAX).setDbmsDataValueColumnNameIsExpression(true).setDecimalScale(1)
@@ -297,6 +306,7 @@ public class OsIoStatOverview extends OsAbstract
 						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("writeSvctm__chart")
 						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsSchemaName           (schema)
 						.setDbmsTableName            ("CmOsIostat_abs")
 						.setDbmsSampleTimeColumnName ("SessionSampleTime")
 						.setDbmsDataValueColumnName  ("[Avg. Disk sec/Write] * 1000.0").setGroupDataAggregationType(AggType.MAX).setDbmsDataValueColumnNameIsExpression(true).setDecimalScale(1)
@@ -308,6 +318,7 @@ public class OsIoStatOverview extends OsAbstract
 						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("utilPct__chart")
 						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsSchemaName           (schema)
 						.setDbmsTableName            ("CmOsIostat_abs")
 						.setDbmsSampleTimeColumnName ("SessionSampleTime")
 						.setDbmsDataValueColumnName  ("100.0 - [% Idle Time]").setGroupDataAggregationType(AggType.AVG).setDbmsDataValueColumnNameIsExpression(true).setDecimalScale(1)
@@ -335,13 +346,18 @@ public class OsIoStatOverview extends OsAbstract
 			}
 
 			// Create Column selects, but only if the column exists in the PCS Table
-			String r_await__avg = !dummyRstm.hasColumnNoCase("r_await") ? "" : "    ,cast(avg([r_await])         as numeric(10,1)) as [r_await__avg] \n";
-			String w_await__avg = !dummyRstm.hasColumnNoCase("w_await") ? "" : "    ,cast(avg([w_await])         as numeric(10,1)) as [w_await__avg] \n";
+			String await__avg      = !dummyRstm.hasColumnNoCase("await")    ? "" : "    ,cast(avg([await])           as numeric(10,1)) as [await__avg] \n";
+			String r_await__avg    = !dummyRstm.hasColumnNoCase("r_await")  ? "" : "    ,cast(avg([r_await])         as numeric(10,1)) as [r_await__avg] \n";
+			String w_await__avg    = !dummyRstm.hasColumnNoCase("w_await")  ? "" : "    ,cast(avg([w_await])         as numeric(10,1)) as [w_await__avg] \n";
 
-// FIXME: do the below
-//Error; Column 'avgrq-sz' not found... 
-//sync this with; com/asetune/hostmon/MonitorIoLinux.java
-//There can/will be different number of columns (depem´nding on what OS (version) we monitor)
+			String avgrq_sz__avg   = !dummyRstm.hasColumnNoCase("avgrq-sz") ? "" : "    ,cast(avg([avgrq-sz])        as numeric(10,1)) as [avgrq-sz__avg] \n";
+
+			String avgqu_sz__chart = !dummyRstm.hasColumnNoCase("avgqu-sz") ? "" : "    ,cast('' as varchar(512))                      as [avgqu-sz__chart] \n";
+			String avgqu_sz__avg   = !dummyRstm.hasColumnNoCase("avgqu-sz") ? "" : "    ,cast(avg([avgqu-sz])        as numeric(10,1)) as [avgqu-sz__avg] \n";
+
+			String svctm__chart    = !dummyRstm.hasColumnNoCase("svctm")    ? "" : "    ,cast('' as varchar(512))                      as [svctm__chart] \n";
+			String svctm__avg      = !dummyRstm.hasColumnNoCase("svctm")    ? "" : "    ,cast(avg([svctm])           as numeric(10,1)) as [svctm__avg] \n";
+			
 			String sql = ""
 				    + "select \n"
 				    + "     [device] \n"
@@ -355,18 +371,18 @@ public class OsIoStatOverview extends OsAbstract
 				    + "    ,cast(avg([kbWritePerSec])   as numeric(10,1)) as [kbWritePerSec__avg] \n"
 				    + "    ,cast(avg([avgReadKbPerIo])  as numeric(10,1)) as [avgReadKbPerIo__avg] \n"
 				    + "    ,cast(avg([avgWriteKbPerIo]) as numeric(10,1)) as [avgWriteKbPerIo__avg] \n"
-				    + "    ,cast(avg([avgrq-sz])        as numeric(10,1)) as [avgrq-sz__avg] \n"
-				    + "    ,cast('' as varchar(512))                      as [avgqu-sz__chart] \n"
-				    + "    ,cast(avg([avgqu-sz])        as numeric(10,1)) as [avgqu-sz__avg] \n"
-				    + "    ,cast(avg([await])           as numeric(10,1)) as [await__avg] \n"
+				    + avgrq_sz__avg
+				    + avgqu_sz__chart
+				    + avgqu_sz__avg
+				    + await__avg
 				    + r_await__avg
 				    + w_await__avg
-				    + "    ,cast('' as varchar(512))                      as [svctm__chart] \n"
-				    + "    ,cast(avg([svctm])           as numeric(10,1)) as [svctm__avg] \n"
+				    + svctm__chart
+				    + svctm__avg
 				    + "    ,cast('' as varchar(512))                      as [utilPct__chart] \n"
 				    + "    ,cast(avg([utilPct])         as numeric(10,1)) as [utilPct__avg] \n"
 				    + "    ,max([deviceDescription])                      as [deviceDescription] \n"
-					+ "from [CmOsIostat_abs] \n"
+					+ "from " + schemaPrefix + "[CmOsIostat_abs] \n"
 					+ "where 1=1 \n"
 					+ getReportPeriodSqlWhere()
 					+ sql_skipDeviceNames
@@ -385,11 +401,28 @@ public class OsIoStatOverview extends OsAbstract
 				setSectionDescription(_shortRstm);
 
 				// Mini Chart on
-				String whereKeyColumn = "device"; 
+				String whereKeyColumn = "device";
+
+//LOOK-AT; // we are potentially getting  java.lang.StackOverflowError  due to "to many time entries" in below CTE ... possibly add a "time factor table instead" or *lower* Reporting Period
+         // Possibly check CTE "entries" limitations in H2
+//java.lang.StackOverflowError
+//at org.h2.command.Parser.parseQueryExpressionBody(Parser.java:2612)
+//at org.h2.command.Parser.parseQueryExpressionBodyAndEndOfQuery(Parser.java:2605)
+//at org.h2.command.Parser.parseQueryPrimary(Parser.java:2756)
+//at org.h2.command.Parser.parseQueryTerm(Parser.java:2633)
+//at org.h2.command.Parser.parseQueryExpressionBody(Parser.java:2612)
+//at org.h2.command.Parser.parseQueryExpressionBodyAndEndOfQuery(Parser.java:2605)
+//at org.h2.command.Parser.parseQueryPrimary(Parser.java:2756)
+//at org.h2.command.Parser.parseQueryTerm(Parser.java:2633)
+//at org.h2.command.Parser.parseQueryExpressionBody(Parser.java:2612)
+//at org.h2.command.Parser.parseQueryExpressionBodyAndEndOfQuery(Parser.java:2605)
+//at org.h2.command.Parser.parseQueryPrimary(Parser.java:2756)
+
 				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
 						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("readsPerSec__chart")
 						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsSchemaName           (schema)
 						.setDbmsTableName            ("CmOsIostat_abs")
 						.setDbmsSampleTimeColumnName ("SessionSampleTime")
 						.setDbmsDataValueColumnName  ("readsPerSec").setGroupDataAggregationType(AggType.AVG)
@@ -401,6 +434,7 @@ public class OsIoStatOverview extends OsAbstract
 						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("writesPerSec__chart")
 						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsSchemaName           (schema)
 						.setDbmsTableName            ("CmOsIostat_abs")
 						.setDbmsSampleTimeColumnName ("SessionSampleTime")
 						.setDbmsDataValueColumnName  ("writesPerSec").setGroupDataAggregationType(AggType.AVG)
@@ -408,32 +442,41 @@ public class OsIoStatOverview extends OsAbstract
 						.setSparklineTooltipPostfix  ("AVG 'writesPerSec' in below period")
 						.validate()));
 
-				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+				if (StringUtil.hasValue(avgqu_sz__chart))
+				{
+					_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
 						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("avgqu-sz__chart")
 						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsSchemaName           (schema)
 						.setDbmsTableName            ("CmOsIostat_abs")
 						.setDbmsSampleTimeColumnName ("SessionSampleTime")
 						.setDbmsDataValueColumnName  ("avgqu-sz").setGroupDataAggregationType(AggType.MAX).setDecimalScale(1)
 						.setDbmsWhereKeyColumnName   (whereKeyColumn)
 						.setSparklineTooltipPostfix  ("MAX 'avgqu-sz' in below period")
 						.validate()));
+				}
 
-				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+				if (StringUtil.hasValue(svctm__chart))
+				{
+					_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
 						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("svctm__chart")
 						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsSchemaName           (schema)
 						.setDbmsTableName            ("CmOsIostat_abs")
 						.setDbmsSampleTimeColumnName ("SessionSampleTime")
 						.setDbmsDataValueColumnName  ("svctm").setGroupDataAggregationType(AggType.MAX).setDecimalScale(1)
 						.setDbmsWhereKeyColumnName   (whereKeyColumn)
 						.setSparklineTooltipPostfix  ("MAX 'svctm' in below period")
 						.validate()));
+				}
 
 				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
 						SparkLineParams.create       (DataSource.CounterModel)
 						.setHtmlChartColumnName      ("utilPct__chart")
 						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsSchemaName           (schema)
 						.setDbmsTableName            ("CmOsIostat_abs")
 						.setDbmsSampleTimeColumnName ("SessionSampleTime")
 						.setDbmsDataValueColumnName  ("utilPct").setGroupDataAggregationType(AggType.AVG).setDecimalScale(1)

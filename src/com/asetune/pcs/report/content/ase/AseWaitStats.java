@@ -138,10 +138,12 @@ extends AseAbstract
 //		_CmSysWaits_byClass     = createTsStackedBarChart(conn, "CmSysWaits", "WaitClassDesc", s, null, "WaitTime", null, null, "Wait Classes in seconds, grouped by 10 minutes intervall");
 //		_CmSysWaits_byEvent     = createTsStackedBarChart(conn, "CmSysWaits", "WaitEventDesc", s, null, "WaitTime", null, null, "Wait Events  in seconds, grouped by 10 minutes intervall");
 
+		String schema = getReportingInstance().getDbmsSchemaName();
+		
 		//----------------------------------------
 		// High level -- CLASS
 		//----------------------------------------
-		_CmSysWaits_byClass = new ReportChartTimeSeriesStackedBar(this, conn, "CmSysWaits", "WaitClassDesc", samplePeriod, null, "WaitTime", null, null, null, "Wait Classes in Seconds, grouped by " + samplePeriod + " minutes intervall")
+		_CmSysWaits_byClass = new ReportChartTimeSeriesStackedBar(this, conn, schema, "CmSysWaits", "WaitClassDesc", samplePeriod, null, "WaitTime", null, null, null, "Wait Classes in Seconds, grouped by " + samplePeriod + " minutes intervall")
 		{
 			@Override
 			protected String getSql()
@@ -354,7 +356,7 @@ extends AseAbstract
 		//----------------------------------------
 		// Lower level -- EVENT ID
 		//----------------------------------------
-		_CmSysWaits_byEvent = new ReportChartTimeSeriesStackedBar(this, conn, "CmSysWaits", "WaitEventDesc", samplePeriod, tgcp, "WaitTime", null, null, null, "Wait Events (top-"+tgcp.getTopCount()+"-WaitEvents) in Seconds, grouped by 10 minutes intervall")
+		_CmSysWaits_byEvent = new ReportChartTimeSeriesStackedBar(this, conn, schema, "CmSysWaits", "WaitEventDesc", samplePeriod, tgcp, "WaitTime", null, null, null, "Wait Events (top-"+tgcp.getTopCount()+"-WaitEvents) in Seconds, grouped by 10 minutes intervall")
 		{
 			@Override
 			protected String getSql()

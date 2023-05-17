@@ -47,7 +47,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Low DB LOG Free Space (MB) in Server '" + cm.getServerName() + "' and dbname '" + dbname + "', FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPcs="+usedSpaceInPct+". (thresholdInMb="+thresholdInMb+")",
+				"Low DB LOG Free Space (MB) in Server '" + cm.getServerName() + "' and dbname '" + dbname + "', FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPct="+usedSpaceInPct+". (thresholdInMb="+thresholdInMb+")",
 				thresholdInMb
 				);
 
@@ -77,7 +77,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Low DB LOG Free Space (PCT) in Server '" + cm.getServerName() + "' and dbname '" + dbname + "', FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPcs="+usedSpaceInPct+". (thresholdInPct="+thresholdInPct+")",
+				"Low DB LOG Free Space (PCT) in Server '" + cm.getServerName() + "' and dbname '" + dbname + "', FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPct="+usedSpaceInPct+". (thresholdInPct="+thresholdInPct+")",
 				thresholdInPct
 				);
 

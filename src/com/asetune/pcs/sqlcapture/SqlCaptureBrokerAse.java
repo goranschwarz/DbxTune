@@ -78,9 +78,7 @@ extends SqlCaptureBrokerAbstract
 
 	private boolean _isNonConfiguredMonitoringAllowed = PersistentCounterHandler.DEFAULT_sqlCap_isNonConfiguredMonitoringAllowed;
 	
-//	protected static final String MON_SQL_TEXT      = PersistWriterBase.getTableName(null, PersistWriterBase.SQL_CAPTURE_SQLTEXT,    null, false); // "MonSqlCapSqlText";
-	protected static final String MON_SQL_STATEMENT = PersistWriterBase.getTableName(null, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false); // "MonSqlCapStatements";
-//	protected static final String MON_SQL_PLAN      = PersistWriterBase.getTableName(null, PersistWriterBase.SQL_CAPTURE_PLANS,      null, false); // "MonSqlCapPlans";
+	protected static final String MON_SQL_STATEMENT = PersistWriterBase.getTableName(null, null, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false); // "MonSqlCapStatements";
 	protected static final String MON_CAP_SPID_INFO = "MonSqlCapSpidInfo";//PersistWriterBase.getTableName(null, PersistWriterBase.SQL_CAPTURE_SPID_INFO,  null, false); // "MonSqlCapSpidInfo";
 	protected static final String MON_CAP_WAIT_INFO = "MonSqlCapWaitInfo";//PersistWriterBase.getTableName(null, PersistWriterBase.SQL_CAPTURE_WAIT_INFO,  null, false); // "MonSqlCapWaitInfo";
 
@@ -296,13 +294,15 @@ extends SqlCaptureBrokerAbstract
 	private String getNullable(boolean nullable)                                        { return PersistWriterBase.getNullable(nullable); }
 
 	@Override
-	public boolean checkForDropTableDdl(DbxConnection conn, DatabaseMetaData dbmd, String tabName)
+	public boolean checkForDropTableDdl(DbxConnection conn, DatabaseMetaData dbmd, String schemaName, String tabName)
 	{
+		String schemaPrefixPlain = StringUtil.isNullOrBlank(schemaName) ? "" : schemaName + ".";
+
 		Set<String> colNames = null;;
 		try
 		{
 			// Get column names
-			colNames = DbUtils.getColumnNames(conn, null, tabName);
+			colNames = DbUtils.getColumnNames(conn, schemaName, tabName);
 
 			// If no columns, then table DO NOT Exists... So no need to drop
 			if (colNames.isEmpty())
@@ -310,12 +310,12 @@ extends SqlCaptureBrokerAbstract
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems getting Column Names from table '" + tabName + "'.", ex);
+			_logger.warn("Problems getting Column Names from table '" + schemaPrefixPlain + tabName + "'.", ex);
 		}
 		
 		if (colNames == null)
 		{
-			_logger.warn("Problems getting Column Names from table '" + tabName + "'. colNames == null");
+			_logger.warn("Problems getting Column Names from table '" + schemaPrefixPlain + tabName + "'. colNames == null");
 			return false;
 		}
 
@@ -334,18 +334,21 @@ extends SqlCaptureBrokerAbstract
 	}
 	
 	@Override
-	public List<String> checkTableDdl(DbxConnection conn, DatabaseMetaData dbmd, String tabName)
+	public List<String> checkTableDdl(DbxConnection conn, DatabaseMetaData dbmd, String schemaName, String tabName)
 	{
 		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
 		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 
+		String schemaPrefix      = StringUtil.isNullOrBlank(schemaName) ? "" : lq + schemaName + rq + ".";
+		String schemaPrefixPlain = StringUtil.isNullOrBlank(schemaName) ? "" :      schemaName +      ".";
+		
 		List<String> colNames = new ArrayList<>();
 		List<String> list = new ArrayList<>();
 		
 		// Get column names and store it in colNames
 		try
 		{
-			ResultSet rs = dbmd.getColumns(null, null, tabName, "%");
+			ResultSet rs = dbmd.getColumns(null, schemaName, tabName, "%");
 			while(rs.next())
 			{
 				colNames.add( rs.getString("COLUMN_NAME") );
@@ -354,7 +357,7 @@ extends SqlCaptureBrokerAbstract
 		}
 		catch(SQLException ex)
 		{
-			_logger.warn("Problems getting column definition for tabel '"+tabName+"', skipping alter check. caught: "+ex);
+			_logger.warn("Problems getting column definition for tabel '" + schemaPrefixPlain + tabName + "', skipping alter check. caught: "+ex);
 		}
 
 		//-------------------------------------------------------------
@@ -364,7 +367,7 @@ extends SqlCaptureBrokerAbstract
 			// -- If they do not exists they will be created
 			// -- If they already exists, the in-memory-cache will be populated!
 			// Yes I know this looks strange ... getTableDdlString actually create The DictionaryCompressed table(s)... but it might be rewritten "in a while"
-			getTableDdlString(conn, dbmd, tabName);  
+			getTableDdlString(conn, dbmd, schemaName, tabName);  
 
 			// Now check for missing columns and add them
 			//------------------------------------------------------
@@ -397,13 +400,13 @@ extends SqlCaptureBrokerAbstract
 			// END: Special for 'BlockedBySqlText'
 			
 			// Now check for missing columns and add them
-			if ( ! colNames.contains("WaitTimeDetails"     ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"WaitTimeDetails"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 4000),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("BlockedBySpid"       ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"BlockedBySpid"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("BlockedByKpid"       ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByKpid"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("BlockedByBatchId"    ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByBatchId"    +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("BlockedByCommand"    ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByCommand"    +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30  ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("BlockedByApplication") ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByApplication"+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30  ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("BlockedByTranId"     ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByTranId"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255 ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("WaitTimeDetails"     ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"WaitTimeDetails"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 4000),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockedBySpid"       ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"BlockedBySpid"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockedByKpid"       ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByKpid"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockedByBatchId"    ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByBatchId"    +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockedByCommand"    ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByCommand"    +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30  ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockedByApplication") ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByApplication"+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30  ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockedByTranId"     ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByTranId"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255 ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
 
 			return list;			
 		}
@@ -487,9 +490,9 @@ extends SqlCaptureBrokerAbstract
 		//-------------------------------------------------------------
 		if (MON_CAP_SPID_INFO.equals(tabName))
 		{
-			if ( ! colNames.contains("SecondsConnected") ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"SecondsConnected"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                   ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("SqlText"         ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"SqlText"         +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, SpidInfoBatchIdEntry.SQL_TEXT_LEN),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("BlockingSqlText" ) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"BlockingSqlText" +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, SpidInfoBatchIdEntry.SQL_TEXT_LEN),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("SecondsConnected") ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"SecondsConnected"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                   ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("SqlText"         ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"SqlText"         +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, SpidInfoBatchIdEntry.SQL_TEXT_LEN),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockingSqlText" ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"BlockingSqlText" +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, SpidInfoBatchIdEntry.SQL_TEXT_LEN),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
 		}
 
 		//-------------------------------------------------------------
@@ -501,7 +504,7 @@ extends SqlCaptureBrokerAbstract
 	}
 	
 	@Override
-	public Map<Integer, String> getDictionaryCompressionColumnMap(String tabName)
+	public Map<Integer, String> getDictionaryCompressionColumnMap(String schemaName, String tabName)
 	{
 		if (MON_SQL_STATEMENT.equals(tabName))
 		{
@@ -522,10 +525,13 @@ extends SqlCaptureBrokerAbstract
 	
 
 	@Override
-	public String getTableDdlString(DbxConnection conn, DatabaseMetaData dbmd, String tabName)
+	public String getTableDdlString(DbxConnection conn, DatabaseMetaData dbmd, String schemaName, String tabName)
 	{
 		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
 		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+		
+		String schemaPrefix      = StringUtil.isNullOrBlank(schemaName) ? "" : lq + schemaName + rq + ".";
+//		String schemaPrefixPlain = StringUtil.isNullOrBlank(schemaName) ? "" :      schemaName +      ".";
 		
 		if (MON_SQL_STATEMENT.equals(tabName))
 		{
@@ -554,10 +560,10 @@ extends SqlCaptureBrokerAbstract
 				
 				try
 				{
-					dcc.createTable(conn, null, MON_SQL_STATEMENT, col_SQLText_name         , col_SQLText_jdbcType         , col_SQLText_jdbcLen         , true);
-					dcc.createTable(conn, null, MON_SQL_STATEMENT, col_NormSQLText_name     , col_NormSQLText_jdbcType     , col_NormSQLText_jdbcLen     , true);
-					dcc.createTable(conn, null, MON_SQL_STATEMENT, col_PlanText_name        , col_PlanText_jdbcType        , col_PlanText_jdbcLen        , true);
-					dcc.createTable(conn, null, MON_SQL_STATEMENT, col_BlockedBySqlText_name, col_BlockedBySqlText_jdbcType, col_BlockedBySqlText_jdbcLen, true);
+					dcc.createTable(conn, schemaName, MON_SQL_STATEMENT, col_SQLText_name         , col_SQLText_jdbcType         , col_SQLText_jdbcLen         , true);
+					dcc.createTable(conn, schemaName, MON_SQL_STATEMENT, col_NormSQLText_name     , col_NormSQLText_jdbcType     , col_NormSQLText_jdbcLen     , true);
+					dcc.createTable(conn, schemaName, MON_SQL_STATEMENT, col_PlanText_name        , col_PlanText_jdbcType        , col_PlanText_jdbcLen        , true);
+					dcc.createTable(conn, schemaName, MON_SQL_STATEMENT, col_BlockedBySqlText_name, col_BlockedBySqlText_jdbcType, col_BlockedBySqlText_jdbcLen, true);
 					
 					col_SQLText_name              = dcc.getDigestSourceColumnName(col_SQLText_name);
 					col_SQLText_jdbcType          = dcc.getDigestJdbcType();
@@ -581,7 +587,7 @@ extends SqlCaptureBrokerAbstract
 				}
 			}
 			
-			sbSql.append("create table " + tabName + "\n");
+			sbSql.append("create table " + schemaPrefix + tabName + "\n");
 			sbSql.append("( \n");
 			sbSql.append("    "+fill(lq+"sampleTime"             +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
 			sbSql.append("   ,"+fill(lq+"InstanceID"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
@@ -777,7 +783,7 @@ extends SqlCaptureBrokerAbstract
 		{
 			StringBuilder sbSql = new StringBuilder();
 			
-			sbSql.append("create table " + tabName + "\n");
+			sbSql.append("create table " + schemaPrefix + tabName + "\n");
 			sbSql.append("( \n");
 			sbSql.append("    "+fill(lq+"sampleTime"         +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP     ),20)+" "+getNullable(false)+"\n");
 			sbSql.append("   ,"+fill(lq+"SPID"               +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
@@ -812,7 +818,7 @@ extends SqlCaptureBrokerAbstract
 		{
 			StringBuilder sbSql = new StringBuilder();
 			
-			sbSql.append("create table " + tabName + "\n");
+			sbSql.append("create table " + schemaPrefix + tabName + "\n");
 			sbSql.append("( \n");
 			sbSql.append("    "+fill(lq+"sampleTime"         +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP     ),20)+" "+getNullable(false)+"\n");
 			sbSql.append("   ,"+fill(lq+"SPID"               +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
@@ -1353,8 +1359,14 @@ extends SqlCaptureBrokerAbstract
 	}
 
 	@Override
-	public List<String> getIndexDdlString(DbxConnection conn, DatabaseMetaData dbmd, String tabName)
+	public List<String> getIndexDdlString(DbxConnection conn, DatabaseMetaData dbmd, String schemaName, String tabName)
 	{
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
+		String schemaPrefix      = StringUtil.isNullOrBlank(schemaName) ? "" : lq + schemaName + rq + ".";
+//		String schemaPrefixPlain = StringUtil.isNullOrBlank(schemaName) ? "" :      schemaName +      ".";
+
 		// Put indexes in this list that will be returned
 		List<String> list = new ArrayList<>();
 
@@ -1366,7 +1378,7 @@ extends SqlCaptureBrokerAbstract
 		if (MON_SQL_STATEMENT.equals(tabName))
 		{
 //			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + conn.quotify(tabName) + "(" + conn.quotify("BatchID", "SPID", "KPID") + ")\n");
-			list.add("create index " + conn.quotify(tabName+"_ix2") + " on " + conn.quotify(tabName) + "(" + conn.quotify("StartTime", "EndTime")    + ")\n");
+			list.add("create index " + conn.quotify(tabName+"_ix2") + " on " + schemaPrefix + conn.quotify(tabName) + "(" + conn.quotify("StartTime", "EndTime")    + ")\n");
 		}
 
 //		if (MON_SQL_PLAN.equals(tabName))
@@ -1376,23 +1388,26 @@ extends SqlCaptureBrokerAbstract
 
 		if (MON_CAP_SPID_INFO.equals(tabName))
 		{
-			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + conn.quotify(tabName) + "(" + conn.quotify("sampleTime", "SPID", "KPID") + ")\n");
+			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + schemaPrefix + conn.quotify(tabName) + "(" + conn.quotify("sampleTime", "SPID", "KPID") + ")\n");
 		}
 
 		if (MON_CAP_WAIT_INFO.equals(tabName))
 		{
-			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + conn.quotify(tabName) + "(" + conn.quotify("sampleTime", "SPID", "KPID", "WaitEventID") + ")\n");
+			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + schemaPrefix + conn.quotify(tabName) + "(" + conn.quotify("sampleTime", "SPID", "KPID", "WaitEventID") + ")\n");
 		}
 
 		return list;
 	}
 
 	@Override
-	public String getInsertStatement(DbxConnection conn, String tabName)
+	public String getInsertStatement(DbxConnection conn, String schemaName, String tabName)
 	{
 		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
 		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 		
+		String schemaPrefix      = StringUtil.isNullOrBlank(schemaName) ? "" : lq + schemaName + rq + ".";
+//		String schemaPrefixPlain = StringUtil.isNullOrBlank(schemaName) ? "" :      schemaName +      ".";
+
 //		if (MON_SQL_TEXT.equals(tabName))
 //		{
 //			StringBuilder sbSql = new StringBuilder();
@@ -1452,7 +1467,7 @@ extends SqlCaptureBrokerAbstract
 				col_BlockedBySqlText_name = dcc.getDigestSourceColumnName(col_BlockedBySqlText_name);
 			}
 			
-			sbSql.append("insert into ").append(tabName);
+			sbSql.append("insert into ").append(schemaPrefix + tabName);
 			sbSql.append("(");
 			sbSql.append(" ").append(lq).append("sampleTime"             ).append(rq);  //  1
 			sbSql.append(",").append(lq).append("InstanceID"             ).append(rq);  //  2
@@ -1546,7 +1561,7 @@ extends SqlCaptureBrokerAbstract
 		{
 			StringBuilder sbSql = new StringBuilder();
 
-			sbSql.append("insert into ").append(tabName);
+			sbSql.append("insert into ").append(schemaPrefix + tabName);
 			sbSql.append("(");
 			sbSql.append(" ").append(lq).append("sampleTime"         ).append(rq); // 1
 			sbSql.append(",").append(lq).append("SPID"               ).append(rq); // 2
@@ -1582,7 +1597,7 @@ extends SqlCaptureBrokerAbstract
 		{
 			StringBuilder sbSql = new StringBuilder();
 
-			sbSql.append("insert into ").append(tabName);
+			sbSql.append("insert into ").append(schemaPrefix + tabName);
 			sbSql.append("(");
 			sbSql.append(" ").append(lq).append("sampleTime"         ).append(rq); // 1
 			sbSql.append(",").append(lq).append("SPID"               ).append(rq); // 2
@@ -1606,11 +1621,11 @@ extends SqlCaptureBrokerAbstract
 
 	private void clearTable(DbxConnection conn, String tabName)
 	{
-		String sql = "select count(*) from master.dbo."+tabName;
+		String sql = "select count(*) from master.dbo." + tabName;
 		
 		try
 		{
-			_logger.info("BEGIN: Discarding everything in the transient '"+tabName+"' table in the first sample.");
+			_logger.info("BEGIN: Discarding everything in the transient '" + tabName + "' table in the first sample.");
 
 			long startTime = System.currentTimeMillis();
 
@@ -1624,11 +1639,11 @@ extends SqlCaptureBrokerAbstract
 			rs.close();
 			stmnt.close();
 
-			_logger.info("END:   Discarding everything in the transient '"+tabName+"' table in the first sample. discardCount="+discardCount+", this took "+TimeUtils.msToTimeStr(System.currentTimeMillis()-startTime)+".");
+			_logger.info("END:   Discarding everything in the transient '" + tabName + "' table in the first sample. discardCount=" + discardCount + ", this took " + TimeUtils.msToTimeStr(System.currentTimeMillis()-startTime) + ".");
 		}
 		catch(SQLException ex)
 		{
-			_logger.error("END:   Discarding everything in the transient '"+tabName+"' table in the first sample FAILED. Caught: "+AseConnectionUtils.sqlExceptionToString(ex));
+			_logger.error("END:   Discarding everything in the transient '" + tabName + "' table in the first sample FAILED. Caught: " + AseConnectionUtils.sqlExceptionToString(ex));
 		}
 	}
 

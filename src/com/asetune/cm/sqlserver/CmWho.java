@@ -233,6 +233,16 @@ extends CountersModel
 //		if ( ! sample_systemThreads )
 //			sql_sample_systemThreads = "  and isnull(es.is_user_process, 0) = 0 -- Property: "+PROPKEY_sample_systemThreads+" is "+sample_systemThreads+". \n";
 
+
+		// Is 'context_info_str' enabled (if it causes any problem, it can be disabled)
+		String contextInfoStr = "/*    context_info_str = replace(cast(sp.context_info as varchar(128)),char(0),''), -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
+		if (SqlServerCmUtils.isContextInfoStrEnabled())
+		{
+			// Make the binary 'context_info' into a String
+			contextInfoStr = "    context_info_str = replace(cast(sp.context_info as varchar(128)),char(0),''), /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
+		}
+
+
 		String sql = 
 			"select /* ${cmCollectorName} */ \n" +
 			"    is_user_process = isnull(es.is_user_process, 0), \n" +
@@ -264,6 +274,7 @@ extends CountersModel
 			"    last_batch_ss = CASE WHEN datediff(day, sp.last_batch, getdate()) >= 24 THEN -1 ELSE  datediff(ss, sp.last_batch, getdate()) END, \n" +
 			"    sp.hostname, \n" +
 			"    sp.program_name, \n" +
+			     contextInfoStr +
 			"    sp.hostprocess, \n" +
 			"    sp.nt_domain, \n" +
 			"    sp.nt_username, \n" +

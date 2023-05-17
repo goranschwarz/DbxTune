@@ -150,12 +150,14 @@ public class OsIoStatSlowIo extends OsAbstract
 		_aboveServiceTime = localConf.getIntProperty(PROPKEY_ABOVE_SERVICE_TIME, DEFAULT_ABOVE_SERVICE_TIME);
 		_skipDeviceNames  = localConf.getProperty   (PROPKEY_SKIP_DEVICE_NAMES,  DEFAULT_SKIP_DEVICE_NAMES);
 
+		String schemaPrefix = getReportingInstance().getDbmsSchemaNameSqlPrefix();
+		
 //		if ( ! DbUtils.checkIfTableExistsNoThrow(conn, cat, schema, tableName) )
 //		{
 //		}
 
 		 // just to get Column names
-		String dummySql = "select * from [CmOsIostat_abs] where 1 = 2";
+		String dummySql = "select * from " + schemaPrefix + "[CmOsIostat_abs] where 1 = 2";
 		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, false, "metadata");
 		if (dummyRstm == null)
 		{
@@ -201,7 +203,7 @@ public class OsIoStatSlowIo extends OsAbstract
 			}
 
 			sql = "select [Avg. Disk sec/Transfer] * 1000.0 AS [ServiceTimeInMs], * \n"
-					+ "from [CmOsIostat_abs] \n"
+					+ "from " + schemaPrefix + "[CmOsIostat_abs] \n"
 					+ "where [Avg. Disk sec/Transfer] * 1000.0 > " + _aboveServiceTime + " \n"
 					+ "  and ([Disk Reads/sec] > " + _aboveTotalIos + " or [Disk Writes/sec] > " + _aboveTotalIos + ") \n"
 					+ getReportPeriodSqlWhere()
@@ -225,13 +227,22 @@ public class OsIoStatSlowIo extends OsAbstract
 			}
 
 
-// FIXME: do the below
-//Error; Column 'avgrq-sz' not found... 
-//sync this with; com/asetune/hostmon/MonitorIoLinux.java
-//There can/will be different number of columns (depem´nding on what OS (version) we monitor)
+			// Build WHERE clause for: "await"  OR  "r_await" + "w_await"
+			String and_aboveServiceTime = "";
+			if (dummyRstm.hasColumnNoCase("await"))
+			{
+				and_aboveServiceTime = "  and [await] > " + _aboveServiceTime + " \n";
+			}
+			else
+			{
+				and_aboveServiceTime = "  and ([r_await] + [w_await]) > " + _aboveServiceTime + " \n";
+			}
+			
+
 			sql = "select * \n"
-					+ "from [CmOsIostat_abs] \n"
-					+ "where [await] > " + _aboveServiceTime + " \n"
+					+ "from " + schemaPrefix + "[CmOsIostat_abs] \n"
+					+ "where 1 = 1 \n"
+					+ and_aboveServiceTime
 					+ "  and ([readsPerSec] > " + _aboveTotalIos + " or [writesPerSec] > " + _aboveTotalIos + ") \n"
 					+ getReportPeriodSqlWhere()
 					+ sql_skipDeviceNames
@@ -297,17 +308,19 @@ public class OsIoStatSlowIo extends OsAbstract
 			// Describe the table
 			setSectionDescription(_shortRstm);
 
+			String schema = getReportingInstance().getDbmsSchemaName();
+
 			int maxValue = 10;
-			_CmOsIostat_IoWait_noLimit = createTsLineChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WaitTime,      -1,       false, _skipDeviceNames, "iostat: Wait Time(await) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with NO max value]");
-			_CmOsIostat_IoWait         = createTsLineChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WaitTime,      maxValue, false, _skipDeviceNames, "iostat: Wait Time(await) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
-			_CmOsIostat_IoReadWait     = createTsLineChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ReadWaitTime,  maxValue, false, _skipDeviceNames, "iostat: Read wait Time(r_await) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
-			_CmOsIostat_IoWriteWait    = createTsLineChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WriteWaitTime, maxValue, false, _skipDeviceNames, "iostat: Write wait Time(w_await) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
+			_CmOsIostat_IoWait_noLimit = createTsLineChart(conn, schema, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WaitTime,      -1,       false, _skipDeviceNames, "iostat: Wait Time(await) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with NO max value]");
+			_CmOsIostat_IoWait         = createTsLineChart(conn, schema, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WaitTime,      maxValue, false, _skipDeviceNames, "iostat: Wait Time(await) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
+			_CmOsIostat_IoReadWait     = createTsLineChart(conn, schema, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ReadWaitTime,  maxValue, false, _skipDeviceNames, "iostat: Read wait Time(r_await) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
+			_CmOsIostat_IoWriteWait    = createTsLineChart(conn, schema, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WriteWaitTime, maxValue, false, _skipDeviceNames, "iostat: Write wait Time(w_await) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
 
-			_CmOsIostat_IoReadOp       = createTsLineChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ReadOp,       -1,        false, _skipDeviceNames, "iostat: Read Operations(readsPerSec) per Device & sec (Host Monitor->OS Disk Stat(iostat))");
-			_CmOsIostat_IoWriteOp      = createTsLineChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WriteOp,      -1,        false, _skipDeviceNames, "iostat: Write Operations(writesPerSec) per Device & sec (Host Monitor->OS Disk Stat(iostat))");
+			_CmOsIostat_IoReadOp       = createTsLineChart(conn, schema, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ReadOp,       -1,        false, _skipDeviceNames, "iostat: Read Operations(readsPerSec) per Device & sec (Host Monitor->OS Disk Stat(iostat))");
+			_CmOsIostat_IoWriteOp      = createTsLineChart(conn, schema, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WriteOp,      -1,        false, _skipDeviceNames, "iostat: Write Operations(writesPerSec) per Device & sec (Host Monitor->OS Disk Stat(iostat))");
 
-			_CmOsIostat_IoServiceTime  = createTsLineChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ServiceTime,   -1,       false, _skipDeviceNames, "iostat: Service Time(svctm) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with NO max value]");
-			_CmOsIostat_IoServiceTime  = createTsLineChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ServiceTime,   maxValue, false, _skipDeviceNames, "iostat: Service Time(svctm) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
+			_CmOsIostat_IoServiceTime  = createTsLineChart(conn, schema, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ServiceTime,   -1,       false, _skipDeviceNames, "iostat: Service Time(svctm) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with NO max value]");
+			_CmOsIostat_IoServiceTime  = createTsLineChart(conn, schema, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ServiceTime,   maxValue, false, _skipDeviceNames, "iostat: Service Time(svctm) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
 		}
 	}
 

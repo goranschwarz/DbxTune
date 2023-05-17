@@ -29,6 +29,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.content.DbmsConfigIssues;
+import com.asetune.pcs.report.content.os.CmOsNwInfoOverview;
 import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
 import com.asetune.pcs.report.content.os.OsIoStatOverview;
 import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
@@ -99,6 +100,9 @@ extends DailySummaryReportDefault
 		addReportEntry( new OsSpaceUsageOverview(this)        );
 		addReportEntry( new OsIoStatOverview(this)            );
 		addReportEntry( new OsIoStatSlowIo(this)              );
+
+		// Network Activity
+		addReportEntry( new CmOsNwInfoOverview(this)          );
 
 		// SQL: Accessed Tables
 		addReportEntry( new SqlServerTopCmIndexOpStat(this, SqlServerTopCmIndexOpStat.ReportType.BY_LOCKS) );

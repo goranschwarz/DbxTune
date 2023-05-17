@@ -278,13 +278,16 @@ extends ReportEntryAbstract
 	@Override
 	public String[] getMandatoryTables()
 	{
-		return new String[] { PersistWriterBase.getTableName(null, PersistWriterBase.SESSION_SAMPLES, null, false) };
+		String schemaName = getReportingInstance().getDbmsSchemaName();
+
+		return new String[] { PersistWriterBase.getTableName(null, schemaName, PersistWriterBase.SESSION_SAMPLES, null, false) };
 	}
 
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		String sql;
+		String schemaName = getReportingInstance().getDbmsSchemaName();
 
 		if (hasReportingInstance())
 		{
@@ -320,7 +323,7 @@ extends ReportEntryAbstract
 		// Start/end time for the recording
 		//-----------------------------------------
 		sql = "select min([SessionSampleTime]), max([SessionSampleTime]) \n" +
-		      "from ["+PersistWriterBase.getTableName(conn, PersistWriterBase.SESSION_SAMPLES, null, false) + "] \n";
+		      "from " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SESSION_SAMPLES, null, false) + " \n";
 
 		sql = conn.quotifySqlString(sql);
 		try ( Statement stmnt = conn.createStatement() )
@@ -339,10 +342,10 @@ extends ReportEntryAbstract
 
 					if (startTime != null && endTime != null)
 					{
-						_startTime = startTime + "";
-						_endTime   = endTime   + "";
-						_duration  = TimeUtils.msToTimeStr("%HH:%MM:%SS", endTime.getTime() - startTime.getTime() );
-					//	_duration  = TimeUtils.msToTimeStr("%?DD[d ]%HH:%MM:%SS", endTime.getTime() - startTime.getTime() );
+						_startTime = TimeUtils.toStringYmdHms(startTime);
+						_endTime   = TimeUtils.toStringYmdHms(endTime);
+//						_duration  = TimeUtils.msToTimeStr("%HH:%MM:%SS", endTime.getTime() - startTime.getTime() );
+						_duration  = TimeUtils.msToTimeStrDHMS(endTime.getTime() - startTime.getTime() );
 						_startDay  = startTime.toLocalDateTime().getDayOfWeek().name();
 					}
 				}

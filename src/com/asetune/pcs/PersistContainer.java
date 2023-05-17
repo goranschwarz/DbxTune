@@ -24,18 +24,37 @@
  */
 package com.asetune.pcs;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.math.BigDecimal;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 
+import com.asetune.CounterController;
+import com.asetune.DbxTune;
+import com.asetune.Version;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.CountersModelAppend;
+import com.asetune.cm.JsonCmWriterOptions;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 
 public class PersistContainer
@@ -359,6 +378,344 @@ public class PersistContainer
 		return false;
 	}
 
+
+
+	//--------------------------------------------------------------------
+	//---- to JSON ----
+	//--------------------------------------------------------------------
+
+	/** Every time the message structure is changed this should be increments so that any receiver knows what fields to expect */
+	public static final int JSON_MESSAGE_VERSION = 1;
+
+	/**
+	 * Null save save way to do obj.toString()
+	 *  
+	 * @param obj The object
+	 * @return obj.toString() or if (null if the inout is null
+	 */
+	private static String toString(Object obj)
+	{
+		return obj == null ? null : obj.toString(); 
+	}
+
+	/**
+	 * Null save save way to do obj.toString()
+	 *  
+	 * @param obj The object
+	 * @return obj.toString() or if (null if the inout is null
+	 */
+	private static BigDecimal toBigDec(Number num)
+	{
+		return num == null ? null : new BigDecimal(num.toString()); 
+	}
+
+
+
+	/**
+	 * Write JSON for the container
+	 * 
+	 * @param sendCounters                   What COUNTER(s) should we send/write information about
+	 * @param sendGraphs                     What GRAPH/CHART(s) should we send/write information about
+	 * @param sendExtendedAlarmDescAsHtml    Should Extended Alarm text be in HTML = true, or should we produce PLAIN TEXT = false
+	 * 
+	 * @return A JSON String
+	 * @throws IOException 
+	 */
+	public String toJsonMessage(SendCountersConfig sendCounters, SendCountersConfig sendGraphs, boolean sendExtendedAlarmDescAsHtml)
+	throws IOException
+	{
+		return toJsonMessage(this, sendCounters, sendGraphs, sendExtendedAlarmDescAsHtml);
+	}
+
+	/**
+	 * Write JSON for the container
+	 * 
+	 * @param cont                           The PersistContainer we should produce JSON text for 
+	 * @param sendCounters                   What COUNTER(s) should we send/write information about
+	 * @param sendGraphs                     What GRAPH/CHART(s) should we send/write information about
+	 * @param sendExtendedAlarmDescAsHtml    Should Extended Alarm text be in HTML = true, or should we produce PLAIN TEXT = false
+	 * 
+	 * @return A JSON String
+	 * @throws IOException 
+	 */
+	public static String toJsonMessage(PersistContainer cont, SendCountersConfig sendCounters, SendCountersConfig sendGraphs, boolean sendExtendedAlarmDescAsHtml)
+	throws IOException
+	{
+		StringWriter sw = new StringWriter();
+
+		JsonFactory jfactory = new JsonFactory();
+		JsonGenerator gen = jfactory.createGenerator(sw);
+		gen.setPrettyPrinter(new DefaultPrettyPrinter());
+		gen.setCodec(new ObjectMapper(jfactory));
+
+		
+		String collectorHostname = "-unknown-";
+		try
+		{
+			InetAddress addr = InetAddress.getLocalHost();
+			collectorHostname = addr.getCanonicalHostName();
+		}
+		catch (UnknownHostException ignore) {}
+
+		int collectorSampleInterval = -1;
+		if (CounterController.hasInstance())
+		{
+			collectorSampleInterval = CounterController.getInstance().getDefaultSleepTimeInSec();
+		}
+
+		// Get the current recording database from the INFO Configuration object ( which is written in PersistWriterJdbc.startServices() )
+		String collectorCurrentUrl = null;
+		String collectorInfoFile = null;
+		Configuration conf = Configuration.getInstance(DbxTune.DBXTUNE_NOGUI_INFO_CONFIG);
+		if (conf != null)
+		{
+			collectorCurrentUrl = conf.getProperty("pcs.h2.jdbc.url");
+			collectorInfoFile   = conf.getFilename();
+		}
+
+		// Get List of Cm's with enabled Graphs / Counters
+//		List<String> cmListEnabled         = new ArrayList<>();
+//		List<String> cmListEnabledCounters = new ArrayList<>();
+//		List<String> cmListEnabledGraphs   = new ArrayList<>();
+////		for (CountersModel cm : cont.getCounterObjects())
+//		for (CountersModel cm : CounterController.getInstance().getCmList())
+//		{
+//			// For the moment do not send Append Models
+//			if (cm instanceof CountersModelAppend) 
+//				continue;
+//
+////			if ( ! cm.hasValidSampleData() )
+////				continue;
+//			
+////			if ( ! cm.isPersistCountersEnabled() )
+////				continue;
+//			
+//			if ( ! cm.isActive() )
+//				continue;
+//
+//			String shortCmName = cm.getName();
+//
+//			cmListEnabled.add(shortCmName);
+//
+//			if (sendCounters.isEnabled(shortCmName)) 
+//				cmListEnabledCounters.add(shortCmName);
+//
+//			if (sendGraphs.isEnabled(shortCmName) && cm.hasTrendGraphData())
+//				cmListEnabledGraphs.add(shortCmName);
+//		}
+		
+//		System.out.println();
+//		System.out.println("#### BEGIN JSON #######################################################################");
+//		System.out.println("getSessionStartTime = " + cont.getSessionStartTime());
+//		System.out.println("getMainSampleTime   = " + cont.getMainSampleTime());
+//		System.out.println("getServerName       = " + cont.getServerName());
+//		System.out.println("getOnHostname       = " + cont.getOnHostname());
+
+		gen.writeStartObject();
+		
+		gen.writeFieldName("head");
+		gen.writeStartObject();
+			gen.writeNumberField("messageVersion"         , JSON_MESSAGE_VERSION);
+			gen.writeStringField("appName"                , Version.getAppName());
+			gen.writeStringField("appVersion"             , Version.getVersionStr());
+			gen.writeStringField("appBuildString"         , Version.getBuildStr());
+			gen.writeStringField("collectorHostname"      , collectorHostname);
+			gen.writeNumberField("collectorSampleInterval", collectorSampleInterval);
+			gen.writeStringField("collectorCurrentUrl"    , collectorCurrentUrl);
+			gen.writeStringField("collectorInfoFile"      , collectorInfoFile);
+
+			gen.writeStringField("sessionStartTime"       , TimeUtils.toStringIso8601(cont.getSessionStartTime()));
+			gen.writeStringField("sessionSampleTime"      , TimeUtils.toStringIso8601(cont.getMainSampleTime()));
+			gen.writeStringField("serverName"             , cont.getServerName());
+			gen.writeStringField("onHostname"             , cont.getOnHostname());
+			gen.writeStringField("serverNameAlias"        , cont.getServerNameAlias());
+			gen.writeStringField("serverDisplayName"      , cont.getServerDisplayName());
+
+// Make better names...: enabledCmList, enabledCmSendCountersList, enabledCmSendGraphsList
+//			gen.writeObjectField("cmListEnabled"          , cmListEnabled);
+//			gen.writeObjectField("cmListEnabledGraphs"    , cmListEnabledGraphs);
+//			gen.writeObjectField("cmListEnabledCounters"  , cmListEnabledCounters);
+		gen.writeEndObject();
+
+		// Write ACTIVE the alarms
+		List<AlarmEvent> alarmList = cont.getAlarmList();
+		if (alarmList != null && !alarmList.isEmpty())
+		{
+			gen.writeFieldName("activeAlarms");
+			gen.writeStartArray();
+			for (AlarmEvent ae : alarmList)
+			{
+				gen.writeStartObject();
+					gen.writeStringField("alarmClass"                 , toString( ae.getAlarmClass()                 ));
+					gen.writeStringField("alarmClassAbriviated"       , toString( ae.getAlarmClassAbriviated()       ));
+					gen.writeStringField("serviceType"                , toString( ae.getServiceType()                ));
+					gen.writeStringField("serviceName"                , toString( ae.getServiceName()                ));
+					gen.writeStringField("serviceInfo"                , toString( ae.getServiceInfo()                ));
+					gen.writeStringField("extraInfo"                  , toString( ae.getExtraInfo()                  ));
+					gen.writeStringField("category"                   , toString( ae.getCategory()                   ));
+					gen.writeStringField("severity"                   , toString( ae.getSeverity()                   ));
+					gen.writeStringField("state"                      , toString( ae.getState()                      ));
+					gen.writeNumberField("repeatCnt"                  ,           ae.getReRaiseCount()                );
+//gen.writeBooleanField("hasExtendedDescription"        , StringUtil.hasValue( toString( sendExtendedAlarmDescAsHtml ? ae.getExtendedDescriptionHtml() : ae.getExtendedDescription() )) );
+//gen.writeBooleanField("hasReRaiseExtendedDescription" , StringUtil.hasValue( toString( sendExtendedAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() )) );
+					gen.writeStringField("duration"                   , toString( ae.getFullDuration(true)           ));
+					gen.writeStringField("alarmDuration"              , toString( ae.getAlarmDuration()              ));
+					gen.writeStringField("fullDuration"               , toString( ae.getFullDuration()               ));
+					gen.writeNumberField("fullDurationAdjustmentInSec",           ae.getFullDurationAdjustmentInSec() );
+					gen.writeNumberField("creationAgeInMs"            ,           ae.getCrAgeInMs()                   );
+					gen.writeNumberField("creationTime"               ,           ae.getCrTime()                      );
+					gen.writeStringField("creationTimeIso8601"        , toString( ae.getCrTimeIso8601()              )); 
+					gen.writeNumberField("reRaiseTime"                ,           ae.getReRaiseTime()                 );
+					gen.writeStringField("reRaiseTimeIso8601"         , toString( ae.getReRaiseTimeIso8601()         ));
+					gen.writeNumberField("cancelTime"                 ,           ae.getCancelTime()                  );
+					gen.writeStringField("cancelTimeIso8601"          , toString( ae.getCancelTimeIso8601()          ));
+					gen.writeNumberField("TimeToLive"                 ,           ae.getTimeToLive()                  );
+					gen.writeNumberField("threshold"                  , toBigDec( ae.getCrossedThreshold()           ));
+					gen.writeStringField("data"                       , toString( ae.getData()                       ));
+					gen.writeStringField("description"                , toString( ae.getDescription()                ));
+					gen.writeStringField("extendedDescription"        , toString( sendExtendedAlarmDescAsHtml ? ae.getExtendedDescriptionHtml() : ae.getExtendedDescription() ));
+					gen.writeStringField("reRaiseData"                , toString( ae.getReRaiseData()                ));
+					gen.writeStringField("reRaiseDescription"         , toString( ae.getReRaiseDescription()         ));
+					gen.writeStringField("reRaiseExtendedDescription" , toString( sendExtendedAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() ));
+				gen.writeEndObject();
+			}
+			gen.writeEndArray();
+		}
+
+		// Write HISTORICAL the alarms (things that has happened during last sample: RAISE/RE-RAISE/CANCEL)
+		List<AlarmEventWrapper> alarmEvents = cont.getAlarmEvents();
+		if (alarmEvents != null && !alarmEvents.isEmpty())
+		{
+			gen.writeFieldName("alarmEvents");
+			gen.writeStartArray();
+			for (AlarmEventWrapper aew : alarmEvents)
+			{
+				gen.writeStartObject();
+					gen.writeStringField("eventTime"                  , TimeUtils.toStringIso8601(aew.getAddDate()   ));
+					gen.writeStringField("action"                     , toString( aew.getAction()                    ));
+					
+					AlarmEvent ae = aew.getAlarmEvent();
+					
+					gen.writeStringField("alarmClass"                 , toString( ae.getAlarmClass()                 ));
+					gen.writeStringField("alarmClassAbriviated"       , toString( ae.getAlarmClassAbriviated()       ));
+					gen.writeStringField("serviceType"                , toString( ae.getServiceType()                ));
+					gen.writeStringField("serviceName"                , toString( ae.getServiceName()                ));
+					gen.writeStringField("serviceInfo"                , toString( ae.getServiceInfo()                ));
+					gen.writeStringField("extraInfo"                  , toString( ae.getExtraInfo()                  ));
+					gen.writeStringField("category"                   , toString( ae.getCategory()                   ));
+					gen.writeStringField("severity"                   , toString( ae.getSeverity()                   ));
+					gen.writeStringField("state"                      , toString( ae.getState()                      ));
+					gen.writeNumberField("repeatCnt"                  ,           ae.getReRaiseCount()                );
+//gen.writeBooleanField("hasExtendedDescription"        , StringUtil.hasValue( toString( sendExtendedAlarmDescAsHtml ? ae.getExtendedDescriptionHtml() : ae.getExtendedDescription() )) );
+//gen.writeBooleanField("hasReRaiseExtendedDescription" , StringUtil.hasValue( toString( sendExtendedAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() )) );
+					gen.writeStringField("duration"                   , toString( ae.getFullDuration(true)           ));
+					gen.writeStringField("alarmDuration"              , toString( ae.getAlarmDuration()              ));
+					gen.writeStringField("fullDuration"               , toString( ae.getFullDuration()               ));
+					gen.writeNumberField("fullDurationAdjustmentInSec",           ae.getFullDurationAdjustmentInSec() );
+					gen.writeNumberField("creationAgeInMs"            ,           ae.getCrAgeInMs()                   );
+					gen.writeNumberField("creationTime"               ,           ae.getCrTime()                      );
+					gen.writeStringField("creationTimeIso8601"        , toString( ae.getCrTimeIso8601()              )); 
+					gen.writeNumberField("reRaiseTime"                ,           ae.getReRaiseTime()                 );
+					gen.writeStringField("reRaiseTimeIso8601"         , toString( ae.getReRaiseTimeIso8601()         ));
+					gen.writeNumberField("cancelTime"                 ,           ae.getCancelTime()                  );
+					gen.writeStringField("cancelTimeIso8601"          , toString( ae.getCancelTimeIso8601()          ));
+					gen.writeNumberField("TimeToLive"                 ,           ae.getTimeToLive()                  );
+					gen.writeNumberField("threshold"                  , toBigDec( ae.getCrossedThreshold()           ));
+					gen.writeStringField("data"                       , toString( ae.getData()                       ));
+					gen.writeStringField("description"                , toString( ae.getDescription()                ));
+					gen.writeStringField("extendedDescription"        , toString( sendExtendedAlarmDescAsHtml ? ae.getExtendedDescriptionHtml() : ae.getExtendedDescription() ));
+					gen.writeStringField("reRaiseData"                , toString( ae.getReRaiseData()                ));
+					gen.writeStringField("reRaiseDescription"         , toString( ae.getReRaiseDescription()         ));
+					gen.writeStringField("reRaiseExtendedDescription" , toString( sendExtendedAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() ));
+				gen.writeEndObject();
+			}
+			gen.writeEndArray();
+		}
+		
+		gen.writeFieldName("collectors");
+		gen.writeStartArray();
+
+		//--------------------------------------
+		// COUNTERS
+		//--------------------------------------
+		for (CountersModel cm : cont.getCounterObjects())
+		{
+			// For the moment do not send Append Models
+			if (cm instanceof CountersModelAppend) 
+				continue;
+
+//System.out.println("HttpJson.toJsonMessage[srvName='"+cont.getServerNameAlias()+"', CmName="+StringUtil.left(cm.getName(),30)+"]: hasValidSampleData()="+cm.hasValidSampleData()+", hasData()="+cm.hasData()+", hasTrendGraphData()="+cm.hasTrendGraphData()+", writeGraphs="+writeGraphs+", getTrendGraphCountWithData()="+cm.getTrendGraphCountWithData());
+			if ( ! cm.hasValidSampleData() )
+				continue;
+
+			if ( ! cm.hasData() && ! cm.hasTrendGraphData() )
+				continue;
+
+			String shortCmName = cm.getName();
+			
+			// Create Options object that specifies *what* JSON objects to write/produce 
+			JsonCmWriterOptions writeOptions = new JsonCmWriterOptions();
+			writeOptions.writeCounters      = sendCounters.isEnabled(shortCmName);
+			if (writeOptions.writeCounters)
+			{
+				writeOptions.writeCounters_abs  = sendCounters.isAbsEnabled(shortCmName);
+				writeOptions.writeCounters_diff = sendCounters.isDiffEnabled(shortCmName);
+				writeOptions.writeCounters_rate = sendCounters.isRateEnabled(shortCmName);
+			}
+
+			writeOptions.writeGraphs = sendGraphs.isEnabled(shortCmName);
+			
+			// if we ONLY write graph data, but there is no graphs with data
+			// or possibly move this check INTO the cm method: cm.toJson(w, writeOptions);
+			if ( writeOptions.writeCounters == false && (writeOptions.writeGraphs && cm.getTrendGraphCountWithData() == 0))
+				continue;
+
+			// Use the CM method to write JSON
+			cm.toJson(gen, writeOptions);
+		}
+
+		gen.writeEndArray();
+		gen.writeEndObject();
+		gen.close();
+
+		String jsonStr = sw.toString();
+		
+		// Debug write to a file, if property is set
+		if (Configuration.getCombinedConfiguration().hasProperty("PersistContainer.debug.toJson.writeToFile"))
+		{
+			//-------------------------------------------------------------------------------------------------------------------
+			// Property example: PersistWriterToHttpJson.debug.writeToFile = c:\tmp\PersistWriterToHttpJson.tmp.json
+			//-------------------------------------------------------------------------------------------------------------------
+			String debugToFileNameStr = Configuration.getCombinedConfiguration().getProperty("PersistContainer.debug.toJson.writeToFile", "");
+			if (StringUtil.hasValue(debugToFileNameStr))
+			{
+				if ("STDOUT".equalsIgnoreCase(debugToFileNameStr))
+				{
+					System.out.println("#### BEGIN JSON #####################################################################");
+					System.out.println(jsonStr);
+					System.out.println("#### END JSON #######################################################################");
+				}
+				else
+				{
+					File debugToFileName = new File(debugToFileNameStr);
+					
+					try
+					{
+						_logger.info("Writing JSON message to DEBUG file '" + debugToFileName.getAbsolutePath() + "'.");
+						FileUtils.writeStringToFile(debugToFileName, jsonStr, StandardCharsets.UTF_8);
+					}
+					catch(Exception ex)
+					{
+						_logger.error("PROBLEMS Writing JSON message to DEBUG file '" + debugToFileName.getAbsolutePath() + "', skipping and continuing.", ex);
+					}
+				}
+			}
+		}
+
+		return jsonStr;
+	}
+
+	
 	
 	//////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////

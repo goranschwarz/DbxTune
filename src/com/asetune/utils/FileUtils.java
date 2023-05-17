@@ -696,6 +696,15 @@ public class FileUtils
 		return f.exists() || f.mkdir();
 	}
 
+	/** 
+	 * Check if a Directory exists 
+	 */
+	public static boolean isDirectoryCreated(String dir)
+	{
+		File f = new File(dir);
+		return f.exists() && f.isDirectory();
+	}
+	
 
 	/**
 	 * Read a file from the class path

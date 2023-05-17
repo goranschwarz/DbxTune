@@ -751,6 +751,31 @@ public class TimeUtils
 		}
 	}
 
+	/**
+	 * Format a Timestamp to a String<br>
+	 * format is: "yyyy-MM-dd HH:mm"<br>
+	 * Example output: "2018-01-08 09:56"
+	 * @param ts
+	 * @return String in above format
+	 */
+	public static String toStringYmdHm(Timestamp ts)
+	{
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+		return sdf.format( ts );
+	}
+
+	/**
+	 * Format a Timestamp to a String<br>
+	 * format is: "yyyy-MM-dd HH:mm:ss"<br>
+	 * Example output: "2018-01-08 09:56:53"
+	 * @param ts
+	 * @return String in above format
+	 */
+	public static String toStringYmdHms(Timestamp ts)
+	{
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		return sdf.format( ts );
+	}
 
 	//--------------------------------------------------------------------------------
 	/**

@@ -41,6 +41,12 @@ extends AutoCloseable
 	void setConnection(DbxConnection conn);
 
 	/**
+	 * In what Schema are the Reporting tables stored in
+	 * @param schemaName
+	 */
+	void setDbmsSchemaName(String schemaName);
+
+	/**
 	 * For what server is this report for.
 	 * @param serverName
 	 */
@@ -150,6 +156,9 @@ extends AutoCloseable
 	 */
 	void setReportPeriodBeginTime(int hour, int minute);
 
+	/** If we want to restrict the begin time of the report (applying a WHERE clause in the reports) */
+	void setReportPeriodBeginTime(Timestamp beginTs);
+
 	/**
 	 * If we want to restrict the begin time of the report (applying a WHERE clause in the reports)
 	 * 
@@ -158,6 +167,9 @@ extends AutoCloseable
 	 */
 	void setReportPeriodEndTime(int hour, int minute);
 
+	/** If we want to restrict the begin time of the report (applying a WHERE clause in the reports) */
+	void setReportPeriodEndTime  (Timestamp endTs);
+	
 	/**
 	 * Check if we have any begin/end time for the reporting period
 	 * @return true or false
