@@ -334,9 +334,9 @@ extends CounterModelHostMonitor
 		//-------------------------------------------------------
 		// Run Queue Length (adjLoadAverage_1Min), Avg Last Minute 
 		//-------------------------------------------------------
-		Double adjLoadAverage_1Min  = this.getAbsValueAsDouble(0, "adjLoadAverage_1Min");
-		Double adjLoadAverage_5Min  = this.getAbsValueAsDouble(0, "adjLoadAverage_5Min");
-		Double adjLoadAverage_15Min = this.getAbsValueAsDouble(0, "adjLoadAverage_15Min");
+		Double adjLoadAverage_1Min  = this.getAbsValueAsDouble(0, "adjLoadAverage_1Min" , 0d);
+		Double adjLoadAverage_5Min  = this.getAbsValueAsDouble(0, "adjLoadAverage_5Min" , 0d);
+		Double adjLoadAverage_15Min = this.getAbsValueAsDouble(0, "adjLoadAverage_15Min", 0d);
 
 		// Add counters to a in-memory-storage, so we can "graph" them on Alarms
 		MovingAverageCounterManager.getInstance(groupName, "1Min",  60).add(adjLoadAverage_1Min);
