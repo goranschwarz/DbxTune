@@ -55,7 +55,7 @@ public class SendCountersConfig
 	
 	public enum FilterType 
 	{
-		ABS, DIFF, RATE
+		ABS, DIFF, RATE, META_DATA
 	};
 
 	public SendCountersConfig(boolean sendAll)
@@ -205,7 +205,7 @@ conf = Configuration.getCombinedConfiguration();
 						boolean exlusionEntry = false;
 
 						if ("true".equalsIgnoreCase(val))
-							val = "adr";
+							val = "adr"; // By default do not send type 'm' jdbcMetaData
 
 						if ("false".equalsIgnoreCase(val))
 							exlusionEntry = true;
@@ -219,10 +219,11 @@ conf = Configuration.getCombinedConfiguration();
 						}
 						else
 						{
-							// Do only allow 'adr' chars... 
+							// Do only allow 'adrm' chars... 
 							// * a=AbsCounters
 							// * d=DiffCounters
 							// * r=RateCounters 
+							// * m=JdbcMetaData 
 							String addType = "";
 							if (StringUtil.hasValue(val))
 							{
@@ -230,14 +231,14 @@ conf = Configuration.getCombinedConfiguration();
 								for (int i=0; i<val.length(); i++)
 								{
 									char ch = val.charAt(i);
-									if (ch == 'a' || ch == 'A' || ch == 'd' || ch == 'D' || ch == 'r' || ch == 'R')
+									if (ch == 'a' || ch == 'A' || ch == 'd' || ch == 'D' || ch == 'r' || ch == 'R' || ch == 'm' || ch == 'M')
 									{
 										addType += Character.toLowerCase(ch);
 									}
 									else
 									{
 										unsupportedChar += ch;
-										_logger.error("JSON-SendCountersConfig: Inproper value for property '" + key + "'. Found unsupported char(s) '" + unsupportedChar + "', accepted values are 'adr' where: 'a'=AbsoluteCounters, 'd'=DiffCounters, 'r'=RateCounters");
+										_logger.error("JSON-SendCountersConfig: Inproper value for property '" + key + "'. Found unsupported char(s) '" + unsupportedChar + "', accepted values are 'adr' where: 'a'=AbsoluteCounters, 'd'=DiffCounters, 'r'=RateCounters, 'm'=jdbcMetaData");
 									}
 								}
 							}
@@ -261,10 +262,11 @@ conf = Configuration.getCombinedConfiguration();
 		return _sendAll; 
 	}
 
-	public boolean isEnabled(String name)     { return isEnabled(name, null); }
-	public boolean isAbsEnabled (String name) { return isEnabled(name, FilterType.ABS); }
-	public boolean isDiffEnabled(String name) { return isEnabled(name, FilterType.DIFF); }
-	public boolean isRateEnabled(String name) { return isEnabled(name, FilterType.RATE); }
+	public boolean isEnabled        (String name) { return isEnabled(name, null); }
+	public boolean isMetaDataEnabled(String name) { return isEnabled(name, FilterType.META_DATA); }
+	public boolean isAbsEnabled     (String name) { return isEnabled(name, FilterType.ABS); }
+	public boolean isDiffEnabled    (String name) { return isEnabled(name, FilterType.DIFF); }
+	public boolean isRateEnabled    (String name) { return isEnabled(name, FilterType.RATE); }
 
 	private boolean isEnabled(String name, FilterType type) 
 	{
@@ -291,9 +293,10 @@ conf = Configuration.getCombinedConfiguration();
 				return true;
 				
 			String typeStr = "";
-			if (FilterType.ABS .equals(type)) typeStr = "a";
-			if (FilterType.DIFF.equals(type)) typeStr = "d";
-			if (FilterType.RATE.equals(type)) typeStr = "r";
+			if (FilterType.ABS      .equals(type)) typeStr = "a";
+			if (FilterType.DIFF     .equals(type)) typeStr = "d";
+			if (FilterType.RATE     .equals(type)) typeStr = "r";
+			if (FilterType.META_DATA.equals(type)) typeStr = "m";
 
 			return adr.contains(typeStr);
 		}

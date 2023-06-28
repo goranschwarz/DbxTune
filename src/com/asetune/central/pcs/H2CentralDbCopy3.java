@@ -1662,7 +1662,7 @@ implements AutoCloseable
 					{
 						int pctDone = (int) ( ((dbt.targetWriteCount*1.0) / (dbt.sourceRowCountEstimate*1.0)) * 100.0 );
 						//    format("Transfer: schema=%s, name=%-40.40s, estRows=%8d, dmlBatchSize=%d, dmlUseMerge=%b",
-						_logger.info("          Done " + pctDone + "%, sourceRowCountEstimate=" + dbt.sourceRowCountEstimate + ", targetWriteCount=" + dbt.targetWriteCount);
+						_logger.info("          Done " + (pctDone < 0 ? "-unknown-" : pctDone) + "%, sourceRowCountEstimate=" + dbt.sourceRowCountEstimate + ", targetWriteCount=" + dbt.targetWriteCount);
 					}
 				}
 	//System.out.println("END OF TRANSFER: Executing batch: batchSize=" + batchSize + ", batchCount=" + batchCount + ", totalCount=" + totalCount);

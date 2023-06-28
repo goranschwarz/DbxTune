@@ -215,6 +215,7 @@ public class ConfigurationTest
 
 		// The below should return the default (second parameter to getXxxProperty), since there is NO REGISTERED Value in this test
 		assertEquals("xxx", conf.getProperty       ("dummy.string.withDefaultValue" , "xxx"));
+		assertEquals(null , conf.getProperty       ("dummy.string.withDefaultValue" , null));
 		assertEquals(true , conf.getBooleanProperty("dummy.boolean.withDefaultValue", true));
 		assertEquals(-11  , conf.getIntProperty    ("dummy.int.withDefaultValue"    , -11));
 		assertEquals(-22L , conf.getLongProperty   ("dummy.long.withDefaultValue"   , -22L));

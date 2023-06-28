@@ -67,6 +67,9 @@ extends Task
 	public static final int    DEFAULT_keepDays = 365 + 62; // keep for 14 months (so we can see any "end-of-year" work
 //	public static final int    DEFAULT_keepDays = 60;
 
+	public static final String PROPKEY_cmHistory_keepDays = "CentralPcsJdbcCleaner.history.cm.keep.days";
+	public static final int    DEFAULT_cmHistory_keepDays = 30; // 30 days for CM Details, while graph is using PROPKEY_keepDays
+
 	public static final String PROPKEY_localMetricsCm_keepDays = "CentralPcsJdbcCleaner.localMetrics.cm.keep.days";
 	public static final int    DEFAULT_localMetricsCm_keepDays = 30; // 30 days for CM Details, while graph is using PROPKEY_keepDays
 	
@@ -306,6 +309,7 @@ extends Task
 		doCleanupForDbxTableInSchema(conn, schema, Table.SESSION_SAMPLE_DETAILS, olderThan);
 		doCleanupForDbxTableInSchema(conn, schema, Table.SESSION_SAMPLE_SUM,     olderThan);
 		doCleanupForDbxTableInSchema(conn, schema, Table.SESSION_SAMPLES,        olderThan);
+		doCleanupForDbxTableInSchema(conn, schema, Table.CM_HISTORY_SAMPLE_JSON, olderThan);
 		
 		_logger.info(_prefix + "schema='"+schema+"': << Done cleanup. sessionsSampleCount="+sessionsSampleCount);
 
@@ -320,10 +324,21 @@ extends Task
 		String fullTabName  = CentralPersistWriterBase.getTableName(conn, schema, table, null, true);
 		String shortTabName = CentralPersistWriterBase.getTableName(conn, null,   table, null, false);
 
+		if (Table.CM_HISTORY_SAMPLE_JSON.equals(table))
+		{
+			int cmHistory_keepDays = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_cmHistory_keepDays, DEFAULT_localMetricsCm_keepDays);
+			Timestamp cmHistory_olderThan = new Timestamp( DateUtils.addDays(new Date(), -cmHistory_keepDays).getTime() );
+			_logger.info(_prefix + "Retention period for Specialized CM History (like CmActiveStatements) is " + cmHistory_keepDays + ", so data that is older than " + cmHistory_keepDays + " days (or older than '" + cmHistory_olderThan + "') will be deleted. This can be changed with property '" + PROPKEY_cmHistory_keepDays + "'.");
+
+			// Override the default value
+			olderThan = cmHistory_olderThan;
+		}
+		
 		String sql = null;
 //		String sql = "delete from "+fullTabName+" where "+q+"SessionSampleTime"+q+" < ?";
 		if      (Table.ALARM_ACTIVE          .equals(table)) return 0; // Do not delete from this
 		else if (Table.CM_LAST_SAMPLE_JSON   .equals(table)) return 0; // Do not delete from this
+		else if (Table.CM_HISTORY_SAMPLE_JSON.equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionSampleTime"+rq+" < ?";
 		else if (Table.ALARM_HISTORY         .equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionSampleTime"+rq+" < ?";
 		else if (Table.GRAPH_PROPERTIES      .equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionStartTime" +rq+" < ?";
 		else if (Table.SESSION_SAMPLE_DETAILS.equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionSampleTime"+rq+" < ?";

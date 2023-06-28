@@ -316,6 +316,8 @@ var _subscribe    = false;   // If we should subscribe to Graph data from the se
 //var _colorSchema  = "white"; // Color schema, can be: "white" or "dark"
 var _colorSchema  = "dark"; // Color schema, can be: "white" or "dark"
 var _showSrvTimer = null;
+var _lastHistoryMomentsArray = null;
+var _hasActiveHistoryStatementArr = null;
 
 //window.chartColors = {
 //	red:    'rgb(255, 99, 132)',
@@ -326,6 +328,12 @@ var _showSrvTimer = null;
 //	purple: 'rgb(153, 102, 255)',
 //	grey:   'rgb(201, 203, 207)'
 //};
+
+
+function isHistoryViewActive()
+{
+	return $("#dbx-history-container-div").is(":visible");
+}
 
 //-----------------------------------------------------------
 // ACTIVE STATEMENTS
@@ -592,6 +600,141 @@ function dbxTuneCheckActiveStatements()
 			console.log("Details: " + desc + "\nError: " + err);
 		}
 	}); // end: ajax call
+} // end: function
+
+//function dbxTuneGetHistoryStatements(sampleTime)
+function dbxTuneGetHistoryStatements(startTime, endTime)
+{
+	console.log("dbxTuneGetHistoryStatements(startTime=|" + startTime + "|, endTime=|" + endTime + "|.");
+
+//	if ( ! _subscribe )
+//	{
+//		$("#subscribe-feedback-msg").html("<s>subscribe</s>");
+//		return;
+//	}
+
+//	const srvName = _serverList[0]; // NOTE: This needs to be improved... check for many etc...
+	const srvName = _serverList.join(','); // to CSV
+	
+	if (_serverList.length > 1)
+	{
+		console.log("dbxTuneGetHistoryStatements(): Found " + _serverList.length + " entries in the serverlist. ONLY FIRST WILL BE CHECKED. _serverList=" + _serverList);
+	}
+
+	const urlStr = "/api/history-sample"
+	             + "?srv="        + srvName
+	             + "&cm="         + "CmActiveStatements"
+//	             + "&sampleTime=" + sampleTime
+	             + "&startTime="  + startTime
+	             + "&endTime="    + endTime
+	             + "";
+	console.log("dbxTuneGetHistoryStatements(): Calling url '" + urlStr + "'.");
+	
+	
+	$.ajax(
+	{
+		url: urlStr,
+		type: 'get',
+		//async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+			
+		success: function(data, status) 
+		{
+			console.log("DEBUG: dbxTuneGetHistoryStatements(): CALL SUCCESS...");
+//			console.log("DEBUG: dbxTuneGetHistoryStatements(): DATA: " + data, data);
+//			console.log("DEBUG: dbxTuneGetHistoryStatements(): DATA: ", data);
+		//	console.log("DEBUG: dbxTuneGetHistoryStatements(): CALL SUCCESS... data & _lastActiveStatementData", data, _lastActiveStatementData);
+//			if (data === _lastActiveStatementData)
+//			{
+//				console.log("DEBUG: dbxTuneGetHistoryStatements(): NO DATA CHANGE for STATEMENTS...");
+//
+//				// This will just clear the Watermark if we are in PAUSED mode
+//				//setActiveStatement();
+//
+//				return;
+//			}
+			_lastActiveStatementData = data;
+			
+			var jsonResp = JSON.parse(data);
+			console.log("RECEIVED DATA[dbxTuneGetHistoryStatements]: ", jsonResp);
+
+			setHistoryStatement(jsonResp); 
+		},
+		error: function(xhr, desc, err) 
+		{
+			console.log(xhr);
+			console.log("Details: " + desc + "\nError: " + err);
+		}
+	}); // end: ajax call
+} // end: function
+
+/**
+ * This should return active Statements (or CM's)
+ * This so we can draw a "marker" section below the history-timeline-slider to indicate where we have ACTIVITY
+ */
+function dbxTuneGetActiveHistoryStatements(startTime, endTime)
+{
+	console.log("dbxTuneGetActiveHistoryStatements(startTime=|" + startTime + "|, endTime=|" + endTime + "|.");
+
+//	if ( ! _subscribe )
+//	{
+//		$("#subscribe-feedback-msg").html("<s>subscribe</s>");
+//		return;
+//	}
+
+//	const srvName = _serverList[0]; // NOTE: This needs to be improved... check for many etc...
+	const srvName = _serverList.join(','); // to CSV
+	
+	if (_serverList.length > 1)
+	{
+		console.log("dbxTuneGetActiveHistoryStatements(): Found " + _serverList.length + " entries in the serverlist. ONLY FIRST WILL BE CHECKED. _serverList=" + _serverList);
+	}
+
+	const urlStr = "/api/history-active-samples"
+		+ "?srv="       + srvName 
+		+ "&cm="        + "CmActiveStatements" 
+		+ "&startTime=" + startTime
+		+ "&endTime="   + endTime;
+	console.log("dbxTuneGetActiveHistoryStatements(): Calling url '" + urlStr + "'.");
+	
+	var returnVal = null;
+	$.ajax(
+	{
+		url: urlStr,
+		type: 'get',
+		async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+			
+		success: function(data, status) 
+		{
+			console.log("DEBUG: dbxTuneGetActiveHistoryStatements(): CALL SUCCESS...");
+//			console.log("DEBUG: dbxTuneGetActiveHistoryStatements(): DATA: " + data, data);
+		//	console.log("DEBUG: dbxTuneGetActiveHistoryStatements(): CALL SUCCESS... data & _lastActiveStatementData", data, _lastActiveStatementData);
+//			if (data === _lastActiveStatementData)
+//			{
+//				console.log("DEBUG: dbxTuneGetActiveHistoryStatements(): NO DATA CHANGE for STATEMENTS...");
+//
+//				// This will just clear the Watermark if we are in PAUSED mode
+//				//setActiveStatement();
+//
+//				return;
+//			}
+//			_lastActiveStatementData = data;
+			
+			var jsonResp = JSON.parse(data);
+			console.log("RECEIVED DATA[dbxTuneGetActiveHistoryStatements]: ", jsonResp);
+
+			//setHistoryStatement(jsonResp);
+			
+			returnVal = jsonResp;
+			
+		},
+		error: function(xhr, desc, err) 
+		{
+			console.log(xhr);
+			console.log("Details: " + desc + "\nError: " + err);
+		}
+	}); // end: ajax call
+	
+	return returnVal;
 } // end: function
 
 
@@ -930,6 +1073,27 @@ function dbxTuneGraphSubscribe()
 
 	function updateSubscribeClock()
 	{
+		if (isHistoryViewActive())
+		{
+			if (webSocket !== undefined)
+			{
+				webSocket.close();
+			}
+
+			$("#subscribe-feedback-msg" ).html("");
+			$("#subscribe-feedback-srv" ).html("");
+
+			$("#subscribe-feedback-time").css("color", "");
+			$("#subscribe-feedback-time").html("History View");
+
+//			if ($("#subscribe-feedback-time").text() == "> History View <")
+//				$("#subscribe-feedback-time").html("History View &nbsp;&nbsp;");
+//			else
+//				$("#subscribe-feedback-time").text("> History View <");
+			
+			return;
+		}
+		
 		let ageInSec = Math.floor((moment() - dbxLastSubscribeTime) / 1000);
 
 		$("#subscribe-feedback-msg").css("display", "none");
@@ -962,6 +1126,9 @@ function dbxTuneGraphSubscribe()
 
 	function subscribeConnectWs() 
 	{
+		if (isHistoryViewActive())
+			return;
+
 		if ( ! _subscribe )
 			return;
 			
@@ -1044,6 +1211,12 @@ function dbxTuneGraphSubscribe()
 	 */
 	function addData(message) 
 	{
+		if (isHistoryViewActive())
+		{
+			console.log("addData(): SKIPPING this since we are in 'HISTORY' mode.");
+			return;
+		}
+		
 		let graphJson;
 		try {
 			graphJson = JSON.parse(message);
@@ -1726,7 +1899,34 @@ function dbxTuneGraphSubscribe()
 		}
 	}
 
+	function setHistoryStatement(allEntries)
+	{
+//		console.log("DEBUG: setHistoryStatement(): allEntries=" + allEntries, allEntries);
+		console.log("DEBUG: setHistoryStatement(): allEntries.size=" + allEntries.length);
+		// This should more or less be the same as: setActiveStatement()
+		// Most possibly reuse the same modal dialog
+		setActiveStatement(allEntries);
+	}
 
+
+	function dbxTuneSetTimeLineMarkerForAllGraphs(ts, momentArrayPos)
+	{
+		console.log("dbxTuneSetTimeLineMarkerForAllGraphs(ts=|" + ts + "|, momentArrayPos=" + momentArrayPos + ")");
+
+		for(var i=0; i<_graphMap.length; i++)
+		{
+			const dbxGraph = _graphMap[i];
+			dbxGraph.setTimelineMarker(ts);
+		}
+		
+//		if (isHistoryViewActive() && momentArrayPos !== undefined)
+//		{
+//			let dbxHistoryTimelineSlider = document.getElementById('dbx-history-timeline-slider');
+//			
+//			dbxHistoryTimelineSlider.value = momentArrayPos; 
+//			dbxHistoryTimelineSlider.dispatchEvent( new Event('change') );
+//		}
+	}
 
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
@@ -2537,64 +2737,69 @@ class DbxGraph
 			// ------------------------------------------------------------
 			// Below is "normal" click --- Mark the time in ALL charts
 			// ------------------------------------------------------------
-			
-			// Reset all timeline-markers
+
+			var activePoints = thisClass._chartObject.getElementsAtEvent(event); // getPointsAtEvent(event)
+			var firstPoint = activePoints[0];
+			var clickTs = undefined;
+			if(firstPoint !== undefined) 
+				clickTs = thisClass._chartObject.data.labels[firstPoint._index];
+
+			// Set-or-reset the timeline-markers in ALL graphs
 			for(var i=0; i<_graphMap.length; i++)
 			{
 				const dbxGraph = _graphMap[i];
-			//	setTimeout(function() { 
-					dbxGraph._chartObject.options.annotation.annotations = [];
-					dbxGraph._chartObject.update(0);
-			//	}, i+1); 
+				dbxGraph.setTimelineMarker(clickTs);
 			}
-
-			var activePoints = thisClass._chartObject.getElementsAtEvent(event); // getPointsAtEvent(event)
-			// console.log("activePoints: ", activePoints)
-			var firstPoint = activePoints[0];
-			if(firstPoint !== undefined) 
-			{
-				var clickTs = thisClass._chartObject.data.labels[firstPoint._index];
-
-				// Set label: 2018-01-23 19:33:00
-				var tsStr1 = moment(clickTs).format().substring(0, 10);
-				var tsStr2 = moment(clickTs).format().substring(11, 19);
-				var labelTsStr = tsStr1 + " " + tsStr2;
-				// if it's the same day: Set label: 19:33:00
-				if ( moment().format().substring(0,10) === tsStr1)
-					labelTsStr = tsStr2;
-
-				// SET timeline-markers in ALL Graphs
-				for(let i=0; i<_graphMap.length; i++)
-				{
-					const dbxGraph = _graphMap[i];
-					const annotation = {
-						id: 'vline',
-						type: 'line',
-						mode: 'vertical',
-						scaleID: 'x-axis-0',
-						value: clickTs,
-						borderColor: 'gray',
-						borderWidth: 2,
-						borderDash: [2, 2],
-						label: {
-							enabled: true,
-							content: labelTsStr,
-							fontSize: 10,
-							backgroundColor: 'gray',
-							position: 'top',
-						  }
-					};
-				//	setTimeout(function() { 
-						dbxGraph._chartObject.options.annotation.annotations[0] = annotation;
-						dbxGraph._chartObject.update(0);
-				//	}, i+1); // hide after 10s
-				}
-			}
-
-			// Simulate a windows resize to redraw the "whole thing"
-			//window.dispatchEvent(new Event('resize'));
+			
+			// Then switch to history mode
+			dbxHistoryAction(clickTs);
 		});
 	}
+
+	/**
+	 * Set a timeline marker on a specific "moment object" timestamp
+	 */
+	setTimelineMarker(ts)
+	{
+//		console.log("setTimelineMarker(ts=|" + ts + "|): srv='" + this._serverName + "', graphName='" + this._fullName + "'.");
+
+		// Reset timeline-marker
+		this._chartObject.options.annotation.annotations = [];
+		this._chartObject.update(0);
+		
+		// If no 'ts' input... get out of here (with just reseting the timeline-marker
+		if (ts === undefined)
+			return;
+
+		// Set label: 2018-01-23 19:33:00
+		var tsStr1 = moment(ts).format().substring(0, 10);
+		var tsStr2 = moment(ts).format().substring(11, 19);
+		var labelTsStr = tsStr1 + " " + tsStr2;
+		// if it's the same day: Set label: 19:33:00
+		if ( moment().format().substring(0,10) === tsStr1)
+			labelTsStr = tsStr2;
+
+		// SET timeline-markers in ALL Graphs
+		const annotation = {
+			id: 'vline',
+			type: 'line',
+			mode: 'vertical',
+			scaleID: 'x-axis-0',
+			value: ts,
+			borderColor: 'gray',
+			borderWidth: 2,
+			borderDash: [2, 2],
+			label: {
+				enabled: true,
+				content: labelTsStr,
+				fontSize: 10,
+				backgroundColor: 'gray',
+				position: 'top'
+			}
+		};
+		this._chartObject.options.annotation.annotations[0] = annotation;
+		this._chartObject.update(0);
+	} // end: method
 
 	setInitialized()     { this._initialized = true; }
 	isInitialized()      { return this._initialized; }
@@ -2729,6 +2934,16 @@ class DbxGraph
 		}
 
 		ci.update();
+	}
+
+	getTsArraySize()
+	{ 
+		return this._chartObject.data.labels.length; 
+	}
+
+	getTsArray()
+	{ 
+		return this._chartObject.data.labels; 
 	}
 
 	getOldestTs() 

@@ -46,6 +46,16 @@
 	</servlet>
 
 	<servlet>
+		<servlet-name>HistorySampleForCmController</servlet-name>
+		<servlet-class>com.asetune.central.controllers.HistorySampleForCmController</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>HistoryActiveSamplesForCmController</servlet-name>
+		<servlet-class>com.asetune.central.controllers.HistoryActiveSamplesForCmController</servlet-class>
+	</servlet>
+
+	<servlet>
 		<servlet-name>DbxTuneLogServlet</servlet-name>
 		<servlet-class>com.asetune.central.controllers.DbxTuneLogServlet</servlet-class>
 	</servlet>
@@ -339,6 +349,16 @@
 	<servlet-mapping>
 		<servlet-name>LastSampleForCmController</servlet-name>
 		<url-pattern>/api/last-sample</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>HistorySampleForCmController</servlet-name>
+		<url-pattern>/api/history-sample</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>HistoryActiveSamplesForCmController</servlet-name>
+		<url-pattern>/api/history-active-samples</url-pattern>
 	</servlet-mapping>
 
 	<servlet-mapping>
