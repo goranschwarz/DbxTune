@@ -126,6 +126,9 @@ extends CentralPersistWriterBase
 	public static final String  PROPKEY_SAVE_SESSION_SAMPLE_DETAILS = "CentralPersistWriterJdbc.save.SESSION_SAMPLE_DETAILS";
 	public static final boolean DEFAULT_SAVE_SESSION_SAMPLE_DETAILS = true;
 
+	private static final String  PROPKEY_storeHistoryForCmActiveStatements = "CentralPersistWriterJdbc.save.history.for.CmActiveStatements";
+	private static final boolean DEFAULT_storeHistoryForCmActiveStatements = true;
+
 	
 	private String        _jdbcDriver   = null;
 	private String        _jdbcUrl      = null;
@@ -2227,6 +2230,7 @@ extends CentralPersistWriterBase
 			checkAndCreateTable(conn, schemaName, Table.ALARM_ACTIVE);
 			checkAndCreateTable(conn, schemaName, Table.ALARM_HISTORY);
 			checkAndCreateTable(conn, schemaName, Table.CM_LAST_SAMPLE_JSON);
+			checkAndCreateTable(conn, schemaName, Table.CM_HISTORY_SAMPLE_JSON);
 
 			// Create tables for SQL Capture... they can have more (or less) tables than SQL_CAPTURE_SQLTEXT, SQL_CAPTURE_STATEMENTS, SQL_CAPTURE_PLANS
 //			if (CentralPcsWriterHandler.hasInstance())
@@ -2898,7 +2902,7 @@ extends CentralPersistWriterBase
 				{
 					// Store some info
 					sql = getTableInsertStr(conn, schemaName, Table.CM_LAST_SAMPLE_JSON, null, true);
-					
+
 					String json = cmEntry.getJsonCounterData();
 
 //System.out.println("saveCmJsonCounters(): schemaName='"+schemaName+"', sql=|"+sql+"|. json=|"+json+"|");
@@ -2915,7 +2919,7 @@ extends CentralPersistWriterBase
 					}
 					catch (SQLException e)
 					{
-						_logger.warn("Error writing LAST Active Counter(s) to Persistent Counter Store. CmName='" + cmName + "', getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+						_logger.warn("Error writing LAST Active Counter(s) to Persistent Counter Store. CmName='" + cmName + "', getErrorCode()=" + e.getErrorCode() + ", SQL: " + sql, e);
 						// throws Exception if it's a severe problem
 						isSevereProblem(conn, e);
 					}
@@ -2929,10 +2933,40 @@ extends CentralPersistWriterBase
 //						System.out.println("INPUT         json=|" + json         + "|");
 //						System.out.println("INPUT storedInDbms=|" + storedInDbms + "|");
 //					}
-				}
-			}
-		}
-	}
+					
+					
+					// Store HISTORY for 'CmActiveStatements'
+					boolean storeHistoryForCmActiveStatements = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_storeHistoryForCmActiveStatements, DEFAULT_storeHistoryForCmActiveStatements);
+					if (storeHistoryForCmActiveStatements)
+					{
+						// Store some info
+						sql = getTableInsertStr(conn, schemaName, Table.CM_HISTORY_SAMPLE_JSON, null, true);
+
+						try (PreparedStatement pstmnt = conn.prepareStatement(sql))
+						{
+							pstmnt.setTimestamp(1, sessionSampleTime);
+							pstmnt.setString   (2, cmName);
+							pstmnt.setString   (3, json);
+
+							int rowCount = pstmnt.executeUpdate();
+//System.out.println("saveCmJsonCounters(): schemaName='"+schemaName+"', INSERT ROW-COUNT="+rowCount);
+							getStatistics().incInserts();
+						}
+						catch (SQLException e)
+						{
+							_logger.warn("Error writing HISTORY Active Counter(s) to Persistent Counter Store. CmName='" + cmName + "', getErrorCode()=" + e.getErrorCode() + ", SQL: " + sql, e);
+							// throws Exception if it's a severe problem
+							isSevereProblem(conn, e);
+						}
+					} // end: storeHistoryForCmActiveStatements
+
+				} //end: CmActiveStatements
+
+			} // end: loop CM's
+
+		} // end: hasValues
+
+	} // end: method
 
 	/**
 	 * Return a SQL safe string

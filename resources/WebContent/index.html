@@ -5,14 +5,16 @@
 	<meta charset="utf-8">
 	<title>DbxTune - Central</title>
 
-  <!-- 
+  <!--
     =======================================================================
     == JS imports - JAVA SCRIPTS GOES HERE
     =======================================================================
   -->
   <!-- JS: JQuery -->
-  <script type="text/javascript" src="/scripts/jquery/jquery-3.2.1.min.js"></script>
-  <script type="text/javascript" src="/scripts/jquery/ui/1.11.3/jquery-ui.min.js"></script>
+<!--  <script type="text/javascript" src="/scripts/jquery/jquery-3.2.1.min.js"></script>-->
+  <script type="text/javascript" src="/scripts/jquery/jquery-3.7.0.min.js"></script>
+<!--  <script type="text/javascript" src="/scripts/jquery/ui/1.11.3/jquery-ui.min.js"></script>-->
+  <script type="text/javascript" src="/scripts/jquery/ui/1.13.2/jquery-ui.min.js"></script>
 
   <!-- JS: Moment; used by: ChartJs, DateRangePicker -->
   <script type="text/javascript" src="/scripts/moment/moment.js"></script>
@@ -24,17 +26,18 @@
 
   <!-- JS: Selectize -->
   <script type="text/javascript" src="/scripts/selectize/js/standalone/selectize.js"></script>
-  
+
   <!-- JS: DbxCentral -->
   <script type="text/javascript" src="/scripts/dbxcentral.utils.js"></script>
 
-  <!-- 
+  <!--
     =======================================================================
     == CSS imports - STYLES SHEETS GOES HERE
     =======================================================================
   -->
   <!-- CSS: jqueri-ui -->
-  <link rel="stylesheet" href="/scripts/jquery/ui/1.11.3/themes/smoothness/jquery-ui.css">
+<!--  <link rel="stylesheet" href="/scripts/jquery/ui/1.11.3/themes/smoothness/jquery-ui.css">-->
+  <link rel="stylesheet" href="/scripts/jquery/ui/1.13.2/themes/smoothness/jquery-ui.css">
 
   <!-- CSS: DbxCentral -->
   <link rel="stylesheet" href="/scripts/css/dbxcentral.css">
@@ -50,7 +53,7 @@
   <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.default.css"> -->
   <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.bootstrap3.css"> -->
   <link rel="stylesheet" href="/scripts/selectize/css/selectize.default.css">
- 
+
   <!-- Local CSS -->
   <style type='text/css'>
     /* table {border-collapse: collapse;}
@@ -72,8 +75,8 @@
 	  z-index: 9999;
 	  animation: blink 1.5s infinite;
 	}
-    @keyframes blink 
-    {  
+    @keyframes blink
+    {
       0% { opacity: 1.0; }
       50% { opacity: 0.0; }
       100% { opacity: 1.0; }
@@ -100,7 +103,7 @@
 		border-top: 1px solid black;
 		margin-bottom:6px;
 	}
-    
+
 	/* selectize selected items */
 	.ui-sortable-handle {
 		width: 100%;
@@ -190,7 +193,7 @@
       </ul> <!-- end right hand side -->
     </div>
   </nav>
-  
+
   <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    - - Basic info + "QUICK ACCESS" buttons to server graphs...
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
@@ -222,7 +225,7 @@
 		 Display Last <input type="text" name="dbx-hours-txt" id="dbx-hours-txt" style="height:20px;width:30px" size="3" value="2"> Hours when Opening Graphs. &nbsp;&nbsp;&nbsp;
 		 Using <input type="text" name="dbx-gcols-txt" id="dbx-gcols-txt" style="height:20px;width:30px" size="3" value="#" title='default "x" means: Depends on the screen size: small[15"]=1, medium[24"]=2 or large[27"]=3'> Graph Columns<br>
 	  </p>
-	  
+
 <!--      &#10148; Quick access list (show system selected graphs)-->
       &#10148; Choose Action on the Dropdown for each Server
       <div id="dbx-quick-access-server-list">
@@ -247,7 +250,7 @@
     </div>
   </main>
 
-  
+
   <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    - - Modal Dialog: Choose Graphs to Display
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
@@ -285,7 +288,7 @@
         </div>
       </div>
     </div>
-  </div>  
+  </div>
 
   <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    - - Modal Dialog: Save as new Profile (called from "Choose Graphs to Display")
@@ -331,7 +334,7 @@
         </form>
       </div>
     </div>
-  </div>  
+  </div>
 
 
   <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -362,7 +365,7 @@
                           <input type="password" class="form-control" name="j_password" id="dbx-login-passwd-txt" required="" autocomplete="new-password">
                           <div class="invalid-feedback">Enter your password too!<br>Default 'admin' password is IP Address of the DbxCentral hostname.</div>
                       </div>
-                      <!-- Adding a hidden submit field here, enables: submit on RETURN on any of the input fields, if fields have not been filled in, then the validation will show what's wrong -->  
+                      <!-- Adding a hidden submit field here, enables: submit on RETURN on any of the input fields, if fields have not been filled in, then the validation will show what's wrong -->
                       <input type="submit" hidden />
 
                       <!--
@@ -387,7 +390,7 @@
           </div>
       </div>
   </div>
-  
+
   <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    - - Modal Dialog: Extended Description   dbx-view-extDescTable-dialog
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
@@ -396,7 +399,7 @@
 		<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>
 			<div class='modal-content'>
 				<div class='modal-header'>
-					<h5 class='modal-title' id='dbx-view-extDescTable-dialog-title'><b><span id='dbx-view-extDescTable-label'></span></b> <span id='dbx-view-extDescTable-objectName'></span></h5>	
+					<h5 class='modal-title' id='dbx-view-extDescTable-dialog-title'><b><span id='dbx-view-extDescTable-label'></span></b> <span id='dbx-view-extDescTable-objectName'></span></h5>
 					<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
 						<span aria-hidden='true'>&times;</span>
 					</button>
@@ -422,7 +425,7 @@
 		<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>
 			<div class='modal-content'>
 				<div class='modal-header'>
-					<h5 class='modal-title' id='dbx-view-alarmView-dialog-title'><b><span id='dbx-view-alarmView-label'></span></b> <span id='dbx-view-alarmView-objectName'></span></h5>	
+					<h5 class='modal-title' id='dbx-view-alarmView-dialog-title'><b><span id='dbx-view-alarmView-label'></span></b> <span id='dbx-view-alarmView-objectName'></span></h5>
 					<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
 						<span aria-hidden='true'>&times;</span>
 					</button>
@@ -439,9 +442,9 @@
 			</div>
 		</div>
 	</div>
-  
-  
-<!-- 
+
+
+<!--
 <h1>DbxTune - Central</h1>
 
 List of stuff that can be done
@@ -463,7 +466,7 @@ Active Alarms
 
 <div id="active-alarms" class="active-alarms-class" style="visibility: hidden;">
     <div id="active-alarms-ctl" class="active-alarms-ctl-class">
-        There are <span id="active-alarms-count" style="color:red">##</span> Active Alarms...&nbsp;&nbsp;&nbsp; Alarm Window Max Size: 
+        There are <span id="active-alarms-count" style="color:red">##</span> Active Alarms...&nbsp;&nbsp;&nbsp; Alarm Window Max Size:
 		<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-0"  onclick="activeAlarmsRadioClick(this);" value="hide"       > Minimize
 		<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-10" onclick="activeAlarmsRadioClick(this);" value="10%"        > 10%
 		<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-30" onclick="activeAlarmsRadioClick(this);" value="30%" checked> 30%
@@ -488,7 +491,7 @@ Active Alarms
 	// Get version of MS: IE or Edge
 	// IE or EDGE are not supported
 	var ieVersion = detectIE();
-	if (ieVersion !== false) 
+	if (ieVersion !== false)
 	{
 		var browserVersion = ((ieVersion >= 12) ? 'Edge ' : 'IE ') + ieVersion;
 		document.getElementById('browser-not-supported').innerHTML = "<br><br>Current Browser: <b>" + browserVersion + "</b> isn't that well tested. If you have issues use: Chrome, Firefox or Safari";
@@ -580,7 +583,7 @@ Active Alarms
 		$("#dbx-image").css("display", "none");
 	}
 	// Action: when pressing checkbox
-	$("#dbx-showDbxImage-chk").click(function() 
+	$("#dbx-showDbxImage-chk").click(function()
 	{
 		location.reload();
 	});
@@ -593,7 +596,7 @@ Active Alarms
 		// All modals dialogs
 		$('.modal-content').resizable({ alsoResize: ".modal-dialog" });
 		$('.modal-dialog').draggable({ handle: ".modal-header" });
-		
+
 		// Active Alarms
 		$('.active-alarms-class').resizable({ handles: 'n' });
 		$('.active-alarms-class').draggable({ handle: ".active-alarms-ctl-class" });
@@ -603,9 +606,9 @@ Active Alarms
 	 * Utility function: Create a HTML Table using a JSON input
 	 * grabbed from: http://www.encodedna.com/javascript/populate-json-data-to-html-table-using-javascript.htm
 	 */
-	function jsonToTable(json, stripHtmlInCells, trCallback, tdCallback, jsonMetaDataArr) 
+	function jsonToTable(json, stripHtmlInCells, trCallback, tdCallback, jsonMetaDataArr)
 	{
-		// EXTRACT json VALUES FOR HTML HEADER. 
+		// EXTRACT json VALUES FOR HTML HEADER.
 		var col = [];
 		for (var i = 0; i < json.length; i++) {
 			for (var key in json[i]) {
@@ -616,12 +619,12 @@ Active Alarms
 		}
 
 		// If it's NOT a array with MetaData Objects...
-		// Create a *simple* object 
+		// Create a *simple* object
 		if ( ! Array.isArray(jsonMetaDataArr) )
 		{
 			jsonMetaDataArr = [];
-			
-			for (var i = 0; i < col.length; i++) 
+
+			for (var i = 0; i < col.length; i++)
 			{
 				jsonMetaDataArr.push( {columnName:col[i]} );
 			}
@@ -656,7 +659,7 @@ Active Alarms
 				var tabCell = tr.insertCell(-1);
 				tabCell.noWrap = true;
 				tabCell.style.border = borderStyle;
-				
+
 				var originTxt   = json[i][col[j]];
 				var strippedTxt = stripHtml( originTxt );
 
@@ -668,18 +671,18 @@ Active Alarms
 					var newlink = document.createElement('a');
 					newlink.appendChild(document.createTextNode('Toggle: Compact or Formatted Content'));
 					newlink.setAttribute('href', 'javascript:toggleActiveTableExtendedDesciption();');
-					
+
 					var originDiv   = document.createElement('div');
 					var strippedDiv = document.createElement('div');
 					originDiv  .setAttribute('class', 'active-table-extDesc-origin-class');
 					strippedDiv.setAttribute('class', 'active-table-extDesc-stripped-class');
-					
+
 					originDiv  .innerHTML = originTxt;
 					strippedDiv.innerHTML = strippedTxt;
-					
+
 					originDiv  .style.display = stripHtmlInCells ? 'none'  : 'block';
 					strippedDiv.style.display = stripHtmlInCells ? 'block' : 'none';
-					
+
 					newDiv.appendChild(newlink);
 					newDiv.appendChild(originDiv);
 					newDiv.appendChild(strippedDiv);
@@ -691,7 +694,7 @@ Active Alarms
 					//var cellContent = stripHtmlInCells ? strippedTxt : originTxt;
 					tabCell.innerHTML = originTxt;
 				}
-				
+
 				// Use callback function to set TD properties
 				if (typeof tdCallback === 'function')
 				{
@@ -703,7 +706,7 @@ Active Alarms
 				}
 
 			}
-			
+
 			// Use callback function to set TR properties
 			if (typeof trCallback === 'function')
 			{
@@ -713,20 +716,80 @@ Active Alarms
 		return table;
 	}
 
+	/**
+	 * ---------------------------------------------------------------------------
+	 * -- Selectize -- plugin -- https://github.com/selectize/selectize.js/issues/1342
+	 * ---------------------------------------------------------------------------
+	 */
+	/**
+	 * Plugin: "preserve_search" (selectize.js)
+	 * Based on: "preserve_on_blur" of Eric M. Klingensmith
+	 *
+	 * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+	 * file except in compliance with the License. You may obtain a copy of the License at:
+	 * http://www.apache.org/licenses/LICENSE-2.0
+	 *
+	 * Unless required by applicable law or agreed to in writing, software distributed under
+	 * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
+	 * ANY KIND, either express or implied. See the License for the specific language
+	 * governing permissions and limitations under the License.
+	 */
+	Selectize.define('preserve_search', function (options) {
+		var self = this;
+
+		options.text = options.text || function (option) {
+			return option[this.settings.labelField];
+		};
+
+		this.onBlur = (function (e) {
+			var original = self.onBlur;
+
+			return function (e) {
+				// Capture the current input value
+				var $input = this.$control_input;
+				var inputValue = $input.val();
+
+				// Do the default actions
+				original.apply(this, [e]);
+
+				// Set the value back                    
+				this.setTextboxValue(inputValue);
+			};
+		})();
+
+		this.onOptionSelect = (function (e) {
+			var original = self.onOptionSelect;
+
+			return function (e) {
+				// Capture the current input value
+				var $input = this.$control_input;
+				var inputValue = $input.val();
+
+				original.apply(this, [e]);
+				this.setTextboxValue(inputValue);
+				this.refreshOptions();
+				if (this.currentResults.items.length <= 0) {
+					this.setTextboxValue('');
+					this.refreshOptions();
+				}
+			};
+		})();
+	});
+
 	//-----------------------------------------------------------
 	// ACTIVE ALARMS
 	//-----------------------------------------------------------
-	function radionButtonGroupSetSelectedValue(name, selectdValue) 
+	function radionButtonGroupSetSelectedValue(name, selectdValue)
 	{
 		console.log("radionButtonGroupSetSelectedValue(): name="+name+", selectedValue="+selectdValue);
 		$('input[name="' + name+ '"][value="' + selectdValue + '"]').prop('checked', true);
 	}
 
-	function activeAlarmsRadioClick(radioBut) 
+	function activeAlarmsRadioClick(radioBut)
 	{
 		var rVal = typeof(radioBut) == "string" ? radioBut : radioBut.value;
 		console.log('activeAlarmsRadioClick(): Active Alarm Window Size[RadioBut]: ' + rVal);
-		
+
 		if (rVal === "hide")
 		{
 			// Hide all Alarms
@@ -744,7 +807,7 @@ Active Alarms
 		// Save last known value in "WebBrowser storage"
 		getStorage('dbxtune_checkboxes_').set("active-alarms-show-radio", rVal);
 	}
-	function activeAlarmsChkClick(checkbox) 
+	function activeAlarmsChkClick(checkbox)
 	{
 		console.log('activeAlarmsChkClick(): Checked: ' + checkbox.checked);
 		if (checkbox.checked)
@@ -759,7 +822,7 @@ Active Alarms
 		// Save last known value in "WebBrowser storage"
 		getStorage('dbxtune_checkboxes_').set("active-alarms-solid-chk", checkbox.checked ? 'checked' : 'not');
 	}
-	function activeAlarmsCompExtDescClick(checkbox) 
+	function activeAlarmsCompExtDescClick(checkbox)
 	{
 		console.log('activeAlarmsCompExtDescClick(): Checked: ' + checkbox.checked);
 
@@ -768,10 +831,10 @@ Active Alarms
 
 		// Reload the page
 		//location.reload();
-		
+
 		toggleActiveAlarmsExtendedDesciption();
 	}
-	
+
 	// do: deferred (since all DOM elements might not be created yet)
 	setTimeout(function()
 	{
@@ -796,7 +859,7 @@ Active Alarms
 
 
 	//-----------------------------------------------------------
-	// CHOOSE GRAPHS DIALOG 
+	// CHOOSE GRAPHS DIALOG
 	//-----------------------------------------------------------
 	$('#dbx-choose-graphs-dialog').on('click', '.btn-add', function(e) {
 		var selectize = $('#dbx-choose-graphs-input').selectize()[0].selectize;
@@ -831,7 +894,7 @@ Active Alarms
 		console.log("graph URL: "+urlStr);
 		var win = window.open(urlStr, '_blank');
 		win.focus();
-		
+
 		// Close the popup
 		modalDiv.modal('hide').removeClass('working');
 	});
@@ -841,20 +904,20 @@ Active Alarms
 
 		console.log("#dbx-choose-graphs-dialog: dbxProduct: "+dbxProduct);
 		var graphDesc1 = [];
-		
+
 		$.ajax(
 		{
 			url: "/api/graph/description",
 			type: 'get',
 			async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
 
-			success: function(data, status) 
+			success: function(data, status)
 			{
 				// console.log("RECEIVED DATA: "+data);
 				graphDesc1 = JSON.parse(data);
 				//console.log("ajax.success(): new values for graphDesc1.", graphDesc1);
 			},
-			error: function(xhr, desc, err) 
+			error: function(xhr, desc, err)
 			{
 				console.log(xhr);
 				console.log("Details: " + desc + "\nError: " + err);
@@ -897,11 +960,11 @@ Active Alarms
 		});
 
 		//console.log("AFTER: transform: graphDesc2.", graphDesc2);
-		
+
 
 		$('#dbx-choose-graphs-input').selectize()[0].selectize.destroy();
 		$('#dbx-choose-graphs-input').selectize({
-			plugins: ['drag_drop', 'remove_button'],
+			plugins: ['drag_drop', 'remove_button', 'preserve_search'],
 			create: false, // do not allow new entries
 			persist: false,
 			maxItems: null,
@@ -954,12 +1017,12 @@ Active Alarms
 	/**
 	 * set "#dbx-choose-graphs-dialog-select-cnt" and "#dbx-choose-graphs-dialog-available-cnt"
 	 */
-	function setGraphCountSelection() 
+	function setGraphCountSelection()
 	{
 		let selectedItems   = $('#dbx-choose-graphs-input').selectize()[0].selectize.items.length;
 		let availableItems  = $('#dbx-choose-graphs-input').selectize()[0].selectize.order;
 		let unSelectedItems = availableItems - selectedItems;
-	
+
 		$("#dbx-choose-graphs-dialog-select-cnt")   .text( selectedItems );
 		$("#dbx-choose-graphs-dialog-available-cnt").text( availableItems );
 //		$("#dbx-choose-graphs-dialog-unselected-cnt").text( unSelectedItems );
@@ -969,28 +1032,28 @@ Active Alarms
 	}
 
 	//-----------------------------------------------------------
-	// SAVE AS NEW PROFILE: DIALOG 
+	// SAVE AS NEW PROFILE: DIALOG
 	//-----------------------------------------------------------
 	(function()  // This was grabbed from https://mdbootstrap.com/docs/jquery/forms/validation/
 	{
 		'use strict';
-		window.addEventListener('load', function() 
+		window.addEventListener('load', function()
 		{
 			// Fetch all the forms we want to apply custom Bootstrap validation styles to
 			var forms = document.getElementsByClassName('needs-validation');
 			// Loop over them and prevent submission
-			var validation = Array.prototype.filter.call(forms, function(form) 
+			var validation = Array.prototype.filter.call(forms, function(form)
 			{
-				form.addEventListener('submit', function(event) 
+				form.addEventListener('submit', function(event)
 				{
 					console.log("EventListener[submit]: .needs-validation: form.checkValidity()");
-					if (form.checkValidity() === false) 
+					if (form.checkValidity() === false)
 					{
 						event.preventDefault();
 						event.stopPropagation();
 					}
 					form.classList.add('was-validated');
-					
+
 					saveAsNewProfileSubmit(event);
 
 				}, false);
@@ -1005,7 +1068,7 @@ Active Alarms
 
 		console.log("saveAsNewProfile(): OK was called");
 
-		if (form[0].checkValidity() === false) 
+		if (form[0].checkValidity() === false)
 		{
 			console.log("#dbx-saveAsNewProfile-dialog: checkValidity -> NOT-VALID");
 			event.preventDefault();
@@ -1029,7 +1092,7 @@ Active Alarms
 			});
 			console.log("#xxx: selectedItems: "+selectedItems, selectedItems);
 			//var urlStr = "graph.html?subscribe=true&startTime=2h&graphList=" + encodeURIComponent(JSON.stringify(selectedItems));
-			
+
 			var sendObject = {
 				productString:      "",
 				userName:           "",
@@ -1037,14 +1100,14 @@ Active Alarms
 				profileDescription: $("#dbx-fld-profileDesc").val(),
 				profileValue:       selectedItems,
 				profileUrlOptions:  $("#dbx-fld-urlOpt").val()
-				
+
 			};
 			console.log("#dbx-saveAsNewProfile-dialog: SEND_OBJ", sendObject);
 			//alert("DEBUG!   ---READ The Console: to see what JSON To send to backend---");
 
 			event.preventDefault();
 			event.stopPropagation();
-			
+
 			console.log("POST /api/graph/profiles");
 			$.ajax(
 			{
@@ -1054,10 +1117,10 @@ Active Alarms
 				data: JSON.stringify(sendObject),
 				contentType: "application/json; charset=UTF-8",
 
-				success: function(data, status) 
+				success: function(data, status)
 				{
 					console.log("SUCCESS: POST /api/graph/profiles: ", data, status);
-					
+
 					// console.log("RECEIVED DATA: "+data);
 					//var jsonResp = JSON.parse(data);
 
@@ -1067,7 +1130,7 @@ Active Alarms
 					// instead load the page from start... to reload the new Saved Profile(s)
 					location.reload();
 				},
-				error: function(xhr, desc, err) 
+				error: function(xhr, desc, err)
 				{
 					console.log(xhr);
 					console.log("Details: " + desc + "\nError: " + err);
@@ -1081,7 +1144,7 @@ Active Alarms
 //
 //		console.log("#dbx-saveAsNewProfile-dialog: OK was pressed", e, form);
 //
-//		if (form[0].checkValidity() === false) 
+//		if (form[0].checkValidity() === false)
 //		{
 //			console.log("#dbx-saveAsNewProfile-dialog: checkValidity -> NOT-VALID");
 //			e.preventDefault();
@@ -1108,7 +1171,7 @@ Active Alarms
 //			});
 //			console.log("#xxx: selectedItems: "+selectedItems, selectedItems);
 //			//var urlStr = "graph.html?subscribe=true&startTime=2h&graphList=" + encodeURIComponent(JSON.stringify(selectedItems));
-//			
+//
 //			var sendObject = {
 //				productString:      "",
 //				userName:           "",
@@ -1116,7 +1179,7 @@ Active Alarms
 //				profileDescription: $("#dbx-fld-profileDesc").val(),
 //				profileValue:       selectedItems,
 //				profileUrlOptions:  $("#dbx-fld-urlOpt").val()
-//				
+//
 //			};
 //			console.log("#dbx-saveAsNewProfile-dialog: SEND_OBJ", sendObject);
 //
@@ -1137,7 +1200,7 @@ Active Alarms
 
 
 	//-----------------------------------------------------------
-	// LOGIN - DIALOG 
+	// LOGIN - DIALOG
 	//-----------------------------------------------------------
 //	$("#dbx-login-btn").click(function(event) {
 	$("#dbx-login-form").submit(function(event) {
@@ -1163,16 +1226,16 @@ Active Alarms
 //		url: "/api/sessions",
 //		type: 'get',
 //		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
-//		
-//		success: function(data, status) 
+//
+//		success: function(data, status)
 //		{
 //			// console.log("RECEIVED DATA: "+data);
 //			var jsonResp = JSON.parse(data);
-//			
+//
 //			var htmlDropDown = "";
 ////			var html = "";
 ////			var htmlAll = "";
-//			for (var i=0; i<jsonResp.length; i++) 
+//			for (var i=0; i<jsonResp.length; i++)
 //			{
 //				var entry = jsonResp[i];
 //
@@ -1253,7 +1316,7 @@ Active Alarms
 //			// Get ACTIVE Alarms
 //			setTimeout(dbxTuneCheckActiveAlarms, 100);
 //		},
-//		error: function(xhr, desc, err) 
+//		error: function(xhr, desc, err)
 //		{
 //			console.log(xhr);
 //			console.log("Details: " + desc + "\nError: " + err);
@@ -1261,7 +1324,7 @@ Active Alarms
 //	}); // end: ajax call
 
 	var global_layoutNeedNewLine = 0;
-	function readServerLayoutEntry(entry) 
+	function readServerLayoutEntry(entry)
 	{
 //		console.log("---------- global_layoutNeedNewLine = '"+global_layoutNeedNewLine);
 //		console.log('readServerLayoutEntry(): entry: ' + entry);
@@ -1289,13 +1352,13 @@ Active Alarms
 				{
 					// read: entries
 					// read: entries
-					for (var i=0; i<entry.entries.length; i++) 
+					for (var i=0; i<entry.entries.length; i++)
 					{
 						var localEntry = entry.entries[i];
 						html += readServerLayoutEntry(localEntry);
 					}
 				}
-				
+
 				html += "  </div>";
 				html += "</div>";
 			}
@@ -1311,13 +1374,13 @@ Active Alarms
 //					prefix = "&#8213;&#10148; ";
 
 				html += prefix + "<b>" + entry.text + "</b><br>";
-				
+
 
 				// CONTENT GOES HERE
 				if (entry.hasOwnProperty('entries'))
 				{
 					// read: entries
-					for (var i=0; i<entry.entries.length; i++) 
+					for (var i=0; i<entry.entries.length; i++)
 					{
 						var localEntry = entry.entries[i];
 						html += readServerLayoutEntry(localEntry);
@@ -1346,7 +1409,7 @@ Active Alarms
 			if (entry.hasOwnProperty('srvSession'))
 			{
 				var srvSession = entry.srvSession;
-				
+
 				if ((parseInt(srvSession.status) & 1) === 1) // 1=DISABLED
 				{
 					console.log("Skipping server '"+srvSession.serverName+"', since it's in DISABLED Status (status=1)");
@@ -1358,7 +1421,7 @@ Active Alarms
 
 				var lastSampleTimeDuration = moment.duration(moment().diff(srvSession.lastSampleTime));
 				var lastSampleWarnThresh   = 5; // # minutes
-			
+
 				var tt =
 				  "<table class='table table-sm'>"+
 				  "  <tr> <th nowrap colspan='2'>"+srvSession.serverDescription+"</th> </tr>"+
@@ -1372,14 +1435,14 @@ Active Alarms
 				  // The above tooltip didn't render that well (the table was wider than the "popup", which made it unreadable)
 				  // overide: .tooltip-inner { max-width: 1000px; } in the CSS and it worked better
 				  // tt = srvSession.serverDescription;
-			
+
 				// set button class depending on how long ago since we got any sample for this server
 				var btnClass="btn-primary";
 				if (lastSampleTimeDuration.asMinutes() >= lastSampleWarnThresh)
 					btnClass="btn-warning";
-			
+
 				var dbxButtonImage="dbx-button-image dbx-button-"+srvSession.productString.toLowerCase();
-			
+
 				// Below is a LINK Button, so you can both do right click on the link to open, and click to open (using the properties: open-in-{here|tab}, time, subscribe)
 				const startTime = $('#dbx-hours-txt').val() + "h";
 
@@ -1387,13 +1450,13 @@ Active Alarms
 				// On the Server Side DbxCentral options may choose to use another label composed by the server side settings (that is if the server names are "cryptical")
 				var serverName        = srvSession.serverName;
 				var serverDisplayName = srvSession.serverName;
-				
+
 				if(srvSession.hasOwnProperty('serverDisplayName'))
 				{
 					serverDisplayName = srvSession.serverDisplayName;
 				}
-				
-				
+
+
 				html += ''
 						+ '<div class="btn-group">'
 						+ '  <button id="btn-qa-normal-'+serverName+'" type="button" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2 dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'
@@ -1429,14 +1492,14 @@ Active Alarms
 		url: "/api/server-layout",
 		type: 'get',
 		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
-		
-		success: function(data, status) 
+
+		success: function(data, status)
 		{
 			// console.log("RECEIVED DATA: "+data);
 			var jsonResp = JSON.parse(data);
-			
+
 			var html = "";
-			for (var i=0; i<jsonResp.length; i++) 
+			for (var i=0; i<jsonResp.length; i++)
 			{
 				var entry = jsonResp[i];
 
@@ -1451,7 +1514,7 @@ Active Alarms
 			{
 				html = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
 			}
-			
+
 			// Set HTML in DOM
 			$('#dbx-quick-access-server-list').html(html);
 
@@ -1461,7 +1524,7 @@ Active Alarms
 			// Get ACTIVE Alarms
 			setTimeout(dbxTuneCheckActiveAlarms, 100);
 		},
-		error: function(xhr, desc, err) 
+		error: function(xhr, desc, err)
 		{
 			console.log(xhr);
 			console.log("Details: " + desc + "\nError: " + err);
@@ -1473,7 +1536,7 @@ Active Alarms
 	{
 		if (urlOptions === null)
 			urlOptions = "";
-		if (urlOptions && !urlOptions.startsWith("&")) 
+		if (urlOptions && !urlOptions.startsWith("&"))
 			urlOptions = "&" + urlOptions;
 
 		console.log("openGraphPage(type='"+type+"', name='"+name+"', urlOptions='"+urlOptions+"')");
@@ -1483,11 +1546,11 @@ Active Alarms
 		const openInNewTab    = $('#dbx-openInNewTab-chk').is(":checked");
 		const colorSchemaDark = $('#dbx-graphCsDark-chk') .is(":checked");
 		const gColsTxt        = $('#dbx-gcols-txt')       .val();
-		
+
 		var colorSchema = "&cs=white";
 		if (colorSchemaDark)
 			colorSchema = "&cs=dark";
-			
+
 		// Number.isInteger(gColsTxt) --- did NOT work... so falling back to jQuery
 		var gcols = "";
 		if ( (gColsTxt != "") && $.isNumeric(gColsTxt) )
@@ -1522,7 +1585,7 @@ Active Alarms
 		}
 		return false;
 	}
-	
+
 	//-----------------------------------------------------------
 	// get PROFILES
 	//-----------------------------------------------------------
@@ -1532,16 +1595,16 @@ Active Alarms
 		url: "/api/graph/profiles",  // status=0 (ONLY ENABLED)
 		type: 'get',
 		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
-		
-		success: function(data, status) 
+
+		success: function(data, status)
 		{
 			console.log("RECEIVED DATA: "+data);
 			var jsonResp = JSON.parse(data);
 			console.log("profiles: jsonResp", jsonResp);
-			
+
 			var htmlCurrent = $('#dbx-quick-access-profile-list').html();
 			var html = "";
-			for (var i=0; i<jsonResp.length; i++) 
+			for (var i=0; i<jsonResp.length; i++)
 			{
 				var entry = jsonResp[i];
 
@@ -1553,7 +1616,7 @@ Active Alarms
 				var urlOptions = entry.profileUrlOptions;
 				if (urlOptions === null)
 					urlOptions = "";
-				if (urlOptions && !urlOptions.startsWith("&")) 
+				if (urlOptions && !urlOptions.startsWith("&"))
 					urlOptions = "&" + urlOptions;
 
 				const startTime = $('#dbx-hours-txt').val() + "h";
@@ -1566,7 +1629,7 @@ Active Alarms
 			}
 			$('#dbx-quick-access-profile-list').html(html + htmlCurrent);
 		},
-		error: function(xhr, desc, err) 
+		error: function(xhr, desc, err)
 		{
 			console.log(xhr);
 			console.log("Details: " + desc + "\nError: " + err);
@@ -1576,7 +1639,7 @@ Active Alarms
 	//-----------------------------------------------------------
 	// get ALARMS
 	//-----------------------------------------------------------
-	function dbxTuneCheckActiveAlarms() 
+	function dbxTuneCheckActiveAlarms()
 	{
 		console.log("get active-alarms: /api/alarm/active");
 		$.ajax(
@@ -1584,8 +1647,8 @@ Active Alarms
 			url: "api/alarm/active",
 			type: 'get',
 			//async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
-        
-			success: function(data, status) 
+
+			success: function(data, status)
 			{
 				// console.log("RECEIVED DATA: "+data);
 				var jsonResp = JSON.parse(data);
@@ -1600,7 +1663,7 @@ Active Alarms
 
 				// remove Alarm Count from all server buttons
 				let btnQaNormalAlarms = document.querySelectorAll('*[id^="btn-qa-normal-alarms-"]');
-				btnQaNormalAlarms.forEach( function(item) { item.textContent = ""; } ); 
+				btnQaNormalAlarms.forEach( function(item) { item.textContent = ""; } );
 
 				// remove 'btn-danger' from all server buttons
 				let btnQaNormal = document.querySelectorAll('*[id^="btn-qa-normal-"]');
@@ -1619,7 +1682,7 @@ Active Alarms
 
 				// reorder: stuff a outer "map", which is the server, and all it's alarms
 				var srvAlarmMap = {}; // new object (this will be the Map with <String>, Array<AlarmEntry>)
-				for (var i=0; i<jsonResp.length; i++) 
+				for (var i=0; i<jsonResp.length; i++)
 				{
 					var srvName = jsonResp[i].srvName;
 
@@ -1638,7 +1701,7 @@ Active Alarms
 //					// hasExtDesc
 //					if (row.hasOwnProperty('hasExtDesc'))
 //						tr.className = "active-alarm-checkbox";
-//					
+//
 //					// hasLastExtDesc
 //					if (row.hasOwnProperty('hasLastExtDesc'))
 //						tr.className = "active-alarm-checkbox";
@@ -1657,7 +1720,7 @@ Active Alarms
 					else // I guss this must be a NUMBER
 					{
 					}
-					
+
 					if (metaData.columnName === "alarmInfo" && rowData.hasOwnProperty('alarmInfo') && cellContent === true)
 					{
 						td.appendChild( createAlarmInfoToolTipDiv(JSON.stringify(rowData), "Alarm Info") );
@@ -1673,13 +1736,13 @@ Active Alarms
 				};
 
 				// Loop the alarm MAP
-				for (var key in srvAlarmMap) 
+				for (var key in srvAlarmMap)
 				{
 					var entry = srvAlarmMap[key];
-					
+
 					// re-write the "alarmEntry"... add 'hasExtDesc' and 'hasLastExtDesc'
 					entry = reWriteAlarmEntry(entry);
-					
+
 					// var graphServerName = entry.srvName;
 					var graphServerName = key;
 
@@ -1755,7 +1818,7 @@ Active Alarms
 					activeAlarmsDiv.style.visibility = 'hidden';
 					pageTitleNotification.off();
 				}
-        
+
 				// Set how many ACTIVE ALarms we have...
 				document.getElementById('dbx-alarm-cnt').innerHTML       = alarmSumCount;
 				document.getElementById('active-alarms-count').innerHTML = alarmSumCount;
@@ -1766,7 +1829,7 @@ Active Alarms
 				else
 					document.getElementById('dbx-alarm-srv-cnt').innerHTML = ", in " + alarmSrvCount + " Server(s).";
 			},
-			error: function(xhr, desc, err) 
+			error: function(xhr, desc, err)
 			{
 				console.log(xhr);
 				console.log("Details: " + desc + "\nError: " + err);
@@ -1779,7 +1842,7 @@ Active Alarms
 	{
 		//console.log("reWriteAlarmEntry-input", inAlarmRows);
 		let outAlarmRows = [];
-		
+
 		// Loop the input and add it to the output
 		inAlarmRows.forEach(function (row)
 		{
@@ -1798,7 +1861,7 @@ Active Alarms
 						// Copy key=value into the output object
 						outRow[key] = row[key];
 					}
-				
+
 					// after key 'repeatCnt' add 'hasExtDesc' and 'hasLastExtDesc'
 					if (key === 'repeatCnt')
 					{
@@ -1833,7 +1896,7 @@ Active Alarms
 		div.setAttribute("data-objectname" , '');
 		div.setAttribute("data-tooltip"    , dataVal);
 		div.setAttribute("data-label"      , label);
-	
+
 		return div;
 	}
 	$('#dbx-view-extDescTable-dialog').on('show.bs.modal', function(e) {
@@ -1861,7 +1924,7 @@ Active Alarms
 		div.setAttribute("data-objectname" , '');
 		div.setAttribute("data-tooltip"    , dataVal);
 		div.setAttribute("data-label"      , label);
-	
+
 		return div;
 	}
 	$('#dbx-view-alarmView-dialog').on('show.bs.modal', function(e) {
@@ -1877,7 +1940,7 @@ Active Alarms
 
 		// In here we do a REST:POST call to /api/alarm/formatter
 		// to format the Alarm info in the same way as we format alarm-emails
-//		fetch("/api/alarm/formatter", 
+//		fetch("/api/alarm/formatter",
 //		{
 //			method: 'POST',
 //			headers: {
@@ -1886,13 +1949,13 @@ Active Alarms
 //			},
 //			body: JSON.stringify(data.tooltip)
 //		})
-//		.then(responceData => 
+//		.then(responceData =>
 //		{
 //			const responceText = responceData.text();
 //			console.log("AlarmFormatter RESPONCE-TEXT: " + responceText, responceText);
 //			$('#dbx-view-alarmView-content', this).html(responceText);
 //		})
-//		.catch(error => 
+//		.catch(error =>
 //		{
 //			$('#dbx-view-alarmView-content', this).html(error);
 //		});
@@ -1904,13 +1967,13 @@ Active Alarms
 			data: JSON.stringify(data.tooltip),
 			contentType: "application/json; charset=utf-8",
 //			dataType: "json",
-			
-			success: function(data, status) 
+
+			success: function(data, status)
 			{
 //				console.log("Format Alarm Message - RECEIVED DATA: " + data);
 				$('#dbx-view-alarmView-content').html(data);
 			},
-			error: function(xhr, desc, err) 
+			error: function(xhr, desc, err)
 			{
 				console.log(xhr);
 				console.log("ERROR - Details: " + desc + "\nError: " + err);
@@ -1928,7 +1991,7 @@ Active Alarms
 	//-----------------------------------------------------------
 	// update "### seconds ago"
 	//-----------------------------------------------------------
-	function updateLastUpdatedClock() 
+	function updateLastUpdatedClock()
 	{
 		var ageInSec = Math.floor((new Date() - lastUpdateTime) / 1000);
 		document.getElementById('dbx-alarm-age').innerHTML = ageInSec;
@@ -1941,7 +2004,7 @@ Active Alarms
 			lastUpdateTime = new Date();
 		}
 
-		setTimeout(updateLastUpdatedClock, 1000); 
+		setTimeout(updateLastUpdatedClock, 1000);
 	}
 	var lastUpdateTime = new Date();
 	updateLastUpdatedClock();
@@ -1955,7 +2018,7 @@ Active Alarms
 //		console.log("DO_LOGIN: is true, open modal login dialog.");
 //		setTimeout(function() { $('#dbx-login-dialog').modal('show'); }, 10);
 //	}
-	isLoggedIn( function(isLoggedIn, asUserName) 
+	isLoggedIn( function(isLoggedIn, asUserName)
 	{
 		console.log("isLoggedIn-callback: isLoggedIn='"+isLoggedIn+"', asUserName='"+asUserName+"'.");
 		if (isParameter('login') && !isLoggedIn)

@@ -106,6 +106,7 @@ rem	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy2
 	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy3
 	set JAVA_START_PARAMS=
 	set SPLASH=
+	set DBXTUNE_JVM_MEMORY_PARAMS=-Xmx4096m -Xms64m
 
 ) ELSE IF "%APP_NAME%" == "h2srv" (
 	set JAVA_START_CLASS=org.h2.tools.Server

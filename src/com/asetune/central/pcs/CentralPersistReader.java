@@ -26,6 +26,7 @@ package com.asetune.central.pcs;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -45,11 +46,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeMap;
 
 import org.apache.log4j.Logger;
 
 import com.asetune.Version;
 import com.asetune.central.check.ReceiverAlarmCheck;
+import com.asetune.central.controllers.Helper;
 import com.asetune.central.pcs.CentralPersistWriterBase.Table;
 import com.asetune.central.pcs.objects.DbxAlarmActive;
 import com.asetune.central.pcs.objects.DbxAlarmHistory;
@@ -68,8 +71,15 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 
 
 public class CentralPersistReader
@@ -1157,14 +1167,460 @@ public class CentralPersistReader
 			releaseConnection(conn);
 		}
 	}
+
+
+
+
+	/**
+	 * Get a Map(srvName;cmName, jsonText) for a specific "sampleTime" sent/stored JSON text for some CounterModels (not all are saved)
+	 * @param servername   name of server (if null all schemas will be fetched)
+	 * @param cmName       name of CounterModel (if null XXXXX)
+	 * @param sampleTime   Sample time we are interested in
+	 * @return
+	 */
+//	public Map<String, Map<String, String>> getHistorySampleForCm(String servername, String cmName, Timestamp sampleTime)
+//	throws SQLException
+//	{
+//		// TODO: Same thing as getLastSampleForCm() but for a specific "sampleTime"
+//		//       This so we can show the info in the WEB UI
+//		//       IDEA: Here is how it will work in the future: 
+//		//         - when we click on a graph
+//		//         - a Time Range Slider will show at the top (when we select a time)
+//		//         - we will get information about a CM
+//		//         - then we can show details from that CM in the WEB UI (like we do with "CmActiveStatements")
+//		
+//		throw new RuntimeException("-NOT-YET-IMPLEMENTED-");
+//	}
+	public Map<String, Map<String, String>> getHistorySampleForCm(String servername, String cmName, Timestamp sampleTime, Timestamp startTime, Timestamp endTime, boolean addSampleTimeToJson, boolean sampleTimeShort)
+	throws SQLException
+	{
+		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
+		try // block with: finally at end to return the connection to the ConnectionPool
+		{
+			// Store results here
+			Map<String, Map<String, String>> map = new LinkedHashMap<>();
+
+			// Obtain a DatabaseMetaData object from our current connection
+			DatabaseMetaData dbmd = conn.getMetaData();
 	
+			// Get schemas
+			Set<String> schemaSet = new LinkedHashSet<>();
+			ResultSet schemaRs = dbmd.getSchemas();
+			while (schemaRs.next())
+			{
+				String schemaName = schemaRs.getString(1);
+				if ("PUBLIC".equalsIgnoreCase(schemaName) || "INFORMATION_SCHEMA".equalsIgnoreCase(schemaName))
+					continue;
+				schemaSet.add(schemaName);
+			}
+			schemaRs.close();
+
+
+			// What server names do we want to check
+			List<String> srvNameList = new ArrayList<>();
+
+			if (StringUtil.hasValue(servername))
+			{
+				// Check if schema exists
+				for (String srvName : StringUtil.parseCommaStrToList(servername))
+				{
+					if (schemaSet.contains(srvName))
+						srvNameList.add(srvName);
+					else
+						_logger.debug("getHistorySampleForCm(): Skipping checking srvName '" + srvName +  "', because it didnt exist. Existing schemas is: " + schemaSet);
+					//	_logger.warn("getHistorySampleForCm(): Skipping checking srvName '" + srvName +  "', because it didnt exist. Existing schemas is: " + schemaSet);
+				}
+			}
+			else // for ALL SCHEMAS
+			{
+				srvNameList.addAll(schemaSet);
+			}
+
+			String onlyTabName = CentralPersistWriterBase.getTableName(conn, null, Table.CM_HISTORY_SAMPLE_JSON, null, false);
+
+			// Now Get from the LIST
+			for (String srvName : srvNameList)
+			{
+				// Loop: if table exists, get data
+				ResultSet rs = dbmd.getColumns(null, srvName, onlyTabName, "%");
+				boolean tabExists = rs.next();
+				rs.close();
+		
+				if( tabExists )
+				{
+					getHistorySampleForCm(conn, map, srvName, cmName, sampleTime, startTime, endTime, addSampleTimeToJson, sampleTimeShort);
+				}
+				else
+				{
+					_logger.warn("getHistorySampleForCm(): Skipping checking srvName '" + srvName +  "', because table '" + onlyTabName + "' didnt exist.");
+				}
+			}
+			
+			return map;
+		}
+		finally
+		{
+			releaseConnection(conn);
+		}
+	}
 	
+	private void getHistorySampleForCm(DbxConnection conn, Map<String, Map<String, String>> map, String schema, String cmName, Timestamp sampleTime, Timestamp startTime, Timestamp endTime, boolean addSampleTimeToJson, boolean sampleTimeShort)
+	throws SQLException
+	{
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
+		String ymdNow = TimeUtils.toStringYmd( new Timestamp(System.currentTimeMillis()));
+		
+		Timestamp startTs = null;
+		Timestamp endTs   = null;
+
+		if (sampleTime != null)
+		{
+			startTs = new Timestamp(sampleTime.getTime() - 1000); // set start time 1 send previous "sampleTime" this to do a "like" search
+			endTs   = new Timestamp(sampleTime.getTime() + 1000); // set start time 1 send after    "sampleTime" this to do a "like" search
+		}
+		else
+		{
+			startTs = startTime;
+			endTs   = endTime;
+			
+			if (endTs == null)
+				endTs = new Timestamp(System.currentTimeMillis());
+		}
+		
+		String tabName = CentralPersistWriterBase.getTableName(conn, schema, Table.CM_HISTORY_SAMPLE_JSON, null, true);
+
+		String sql = "select "
+					+ "  '"+schema+"' as " + lq + "srvName" + rq
+					+ " ," + lq + "SessionSampleTime"       + rq
+					+ " ," + lq + "CmName"                  + rq
+					+ " ," + lq + "JsonText"                + rq
+				+" from " + tabName
+				+" where " + lq+"CmName"+rq + " = " + DbUtils.safeStr(cmName)
+				+"   and " + lq+"SessionSampleTime"+rq + " >= " + DbUtils.safeStr(startTs) // We could have used BETWEEN '' AND ''
+				+"   and " + lq+"SessionSampleTime"+rq + "  < " + DbUtils.safeStr(endTs)
+				;
+//System.out.println(">>>>>>>>>>>>>>>>>>>> getHistorySampleForCm(); SQL=|" + sql + "|");
+
+		// Change '[' and ']' into DBMS Vendor Specific Identity Quote Chars
+		sql = conn.quotifySqlString(sql);
+		
+		// autoclose: stmnt, rs
+		try (Statement stmnt = conn.createStatement())
+		{
+			// set TIMEOUT
+			stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+			// Execute and read result
+			try (ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+				{
+					String    srvName           = rs.getString   (1);  // "srvName"
+					Timestamp SessionSampleTime = rs.getTimestamp(2);  // "SessionSampleTime"
+					String    CmName            = rs.getString   (3);  // "CmName"
+					String    JsonText          = rs.getString   (4);  // "JsonText"
+
+//System.out.println(">>>>>>>>>>>>>>>>>>>> getHistorySampleForCm(); ROW... srvName=|" + srvName + "|, CmName=|" + CmName + "|, SessionSampleTime|" + SessionSampleTime + "|, JsonText=|" + JsonText + "|");
+
+					if (addSampleTimeToJson)
+					{
+						String sampleTimeStr = SessionSampleTime.toString();
+						if (sampleTimeShort && sampleTimeStr.startsWith(ymdNow))
+							sampleTimeStr = sampleTimeStr.substring("yyyy-MM-dd ".length(), "yyyy-MM-dd HH:mm:ss".length());
+						
+						JsonText = addSampleTimeToHistoryStatementJson(JsonText, sampleTimeStr, true);
+//System.out.println(">>>>>>>>>>>>>>>>>>>> getHistorySampleForCm(); ADDED 'sampleTime' ROW... srvName=|" + srvName + "|, CmName=|" + CmName + "|, SessionSampleTime|" + SessionSampleTime + "|, JsonText=|" + JsonText + "|");
+					}
+
+					// TODO: Possibly -- Inject 'SessionSampleTime' as 'sampleTime' (YYYY-MM-DD hh:mm:ss) into the: JsonText
+
+//					String key = srvName + ";" + CmName;
+
+					Map<String, String> cmValMap = map.get(srvName);
+					if (cmValMap == null)
+						cmValMap = new LinkedHashMap<>();
+
+					cmValMap.put(CmName, JsonText);
+					map.put(srvName, cmValMap);
+				}
+			}
+		}
+	}
+
+	private static String addSampleTimeToHistoryStatementJson(String jsonText, String sampleTimeStr, boolean prettyPrint)
+	{
+		try
+		{
+			// Create an JSON Object Mapper
+			ObjectMapper om = new ObjectMapper();
+
+			// 
+			StringWriter sw = new StringWriter();
+
+			JsonFactory jfactory = new JsonFactory();
+			JsonGenerator gen = jfactory.createGenerator(sw);
+			if (prettyPrint)
+				gen.setPrettyPrinter(new DefaultPrettyPrinter());
+			gen.setCodec(om); // key to get 'gen.writeTree(cmLastSampleJsonTree)' to work
+
+			JsonNode node = om.readTree(jsonText);
+//			private_addSampleTime(node, sampleTime.toString(), false); // false is internally used as a switch WHEN to start writing 'sampleTime'
+			
+			List<JsonNode> xxxCounters = new ArrayList<>();
+			xxxCounters.add( node.path("counters").path("absCounters") );
+			xxxCounters.add( node.path("counters").path("diffCounters") );
+			xxxCounters.add( node.path("counters").path("rateCounters") );
+			for (JsonNode locatedNode : xxxCounters)
+			{
+				if (locatedNode.isArray())
+				{
+					ArrayNode arrayNode = (ArrayNode) locatedNode;
+					for (int i = 0; i < arrayNode.size(); i++) 
+					{
+						JsonNode jsonNode = arrayNode.get(i);
+						if (jsonNode.isObject())
+						{
+							ObjectNode objectNode = (ObjectNode) jsonNode;
+							
+							// Take a copy of all objects, then remove everything
+							JsonNode deepCopy = objectNode.deepCopy();
+							objectNode.removeAll();
+
+							// Add the 'sampleTime'
+							objectNode.put("sampleTime", sampleTimeStr);
+
+							// Add all entries from the "deepCopy"
+							Iterator<Entry<String, JsonNode>> fields = deepCopy.fields();
+							while (fields.hasNext()) 
+							{
+								Entry<String, JsonNode> jsonField = fields.next();
+								objectNode.set(jsonField.getKey(), jsonField.getValue());
+							}
+						}
+					}
+				}
+			}
+			gen.writeTree(node);
+			
+			String newJsonStr = sw.toString();
+//System.out.println("XXXXXXXXXXXXXXX: newJsonStr=|" + newJsonStr + "|.");
+			return newJsonStr;
+//			return jsonText;
+		}
+		catch (IOException ex)
+		{
+			ex.printStackTrace();
+			_logger.error("Problems injecting 'sampleTime' into JSON str.", ex);
+			return jsonText;
+		}
+	}
+
+	public static void main(String[] args)
+	{
+		String jsonText = ""
+				+ "{ \n"
+				+ "  \"counters\": { \n"
+				+ "    \"absCounters\": [ \n"
+				+ "      { \n"
+				+ "        \"monSource\": \"ACTIVE\", \n"
+				+ "        \"SPID\": 111, \n"
+				+ "        \"KPID\": 111, \n"
+				+ "        \"AAA\": 1 \n"
+				+ "      } \n"
+				+ "    ], \n"
+				+ "    \"diffCounters\": [ \n"
+				+ "      { \n"
+				+ "        \"monSource\": \"ACTIVE\", \n"
+				+ "        \"SPID\": 222, \n"
+				+ "        \"KPID\": 222, \n"
+				+ "        \"BBB\": 2 \n"
+				+ "      } \n"
+				+ "    ], \n"
+				+ "    \"rateCounters\": [ \n"
+				+ "      { \n"
+				+ "        \"monSource\": \"ACTIVE\", \n"
+				+ "        \"SPID\": 333, \n"
+				+ "        \"KPID\": 333, \n"
+				+ "        \"CCC\": 3 \n"
+				+ "      } \n"
+				+ "    ] \n"
+				+ "  } \n"
+				+ "} \n"
+				+ "";		
+
+		String ymdNow = TimeUtils.toStringYmd( new Timestamp(System.currentTimeMillis()) );
+
+		String sampleTimeStr = new Timestamp(System.currentTimeMillis()).toString();
+		if (true && sampleTimeStr.startsWith(ymdNow))
+			sampleTimeStr = sampleTimeStr.substring("yyyy-MM-dd ".length(), "yyyy-MM-dd HH:mm:ss".length());
+		
+		System.out.println("sampleTimeStr=|" + sampleTimeStr + "|");
+
+		String xxx = addSampleTimeToHistoryStatementJson(jsonText, sampleTimeStr, true);
+		System.out.println(xxx);
+	}
+
+
+	/**
+	 * Get a Map(sampleTime;srvName, list:cmName) for start/end time get entries stored in "DbxCmHistorySampleJson" for each serverName/schema
+	 * 
+	 * @param servername
+	 * @param cmName
+	 * @param startTime
+	 * @param endTime
+	 * @return a TreeMap which is sorted on key:"sampleTime", with a Map of key:"ServerName", which holds a Set of "cmNames"
+	 * @throws SQLException
+	 */
+	public Map<Timestamp, Map<String, Set<String>>> getHistoryActiveSamplesForCm(String servername, String cmName, Timestamp startTime, Timestamp endTime)
+	throws SQLException
+	{
+		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
+		try // block with: finally at end to return the connection to the ConnectionPool
+		{
+			// Store results here
+//			Map<String, Map<String, String>> map = new LinkedHashMap<>();
+			Map<Timestamp, Map<String, Set<String>>> map = new TreeMap<>();
+
+			// Obtain a DatabaseMetaData object from our current connection
+			DatabaseMetaData dbmd = conn.getMetaData();
 	
+			// Get schemas
+			Set<String> schemaSet = new LinkedHashSet<>();
+			ResultSet schemaRs = dbmd.getSchemas();
+			while (schemaRs.next())
+			{
+				String schemaName = schemaRs.getString(1);
+				if ("PUBLIC".equalsIgnoreCase(schemaName) || "INFORMATION_SCHEMA".equalsIgnoreCase(schemaName))
+					continue;
+				schemaSet.add(schemaName);
+			}
+			schemaRs.close();
+
+
+			// What server names do we want to check
+			List<String> srvNameList = new ArrayList<>();
+
+			if (StringUtil.hasValue(servername))
+			{
+				// Check if schema exists
+				for (String srvName : StringUtil.parseCommaStrToList(servername))
+				{
+					if (schemaSet.contains(srvName))
+						srvNameList.add(srvName);
+					else
+						_logger.debug("getHistoryActiveSamplesForCm(): Skipping checking srvName '" + srvName +  "', because it didnt exist. Existing schemas is: " + schemaSet);
+					//	_logger.warn("getLastSampleForCm(): Skipping checking srvName '" + srvName +  "', because it didnt exist. Existing schemas is: " + schemaSet);
+				}
+			}
+			else // for ALL SCHEMAS
+			{
+				srvNameList.addAll(schemaSet);
+			}
+
+			String onlyTabName = CentralPersistWriterBase.getTableName(conn, null, Table.CM_HISTORY_SAMPLE_JSON, null, false);
+
+			// Now Get from the LIST
+			for (String srvName : srvNameList)
+			{
+				// Loop: if table exists, get data
+				ResultSet rs = dbmd.getColumns(null, srvName, onlyTabName, "%");
+				boolean tabExists = rs.next();
+				rs.close();
+		
+				if( tabExists )
+				{
+					getHistoryActiveSamplesForCm(conn, map, srvName, cmName, startTime, endTime);
+				}
+				else
+				{
+					_logger.warn("getHistoryActiveSamplesForCm(): Skipping checking srvName '" + srvName +  "', because table '" + onlyTabName + "' didnt exist.");
+				}
+			}
+			
+			return map;
+		}
+		finally
+		{
+			releaseConnection(conn);
+		}
+	}
+	private void getHistoryActiveSamplesForCm(DbxConnection conn, Map<Timestamp, Map<String, Set<String>>> map, String schema, String cmName, Timestamp startTime, Timestamp endTime)
+	throws SQLException
+	{
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
+		Timestamp startTs = new Timestamp(startTime.getTime() - 1000); // set start time 1 send previous "sampleTime" this to do a "like" search
+		Timestamp endTs   = new Timestamp(endTime.getTime() + 1000); // set start time 1 send after    "sampleTime" this to do a "like" search
+		
+		String tabName = CentralPersistWriterBase.getTableName(conn, schema, Table.CM_HISTORY_SAMPLE_JSON, null, true);
+
+		String whereCmName = "";
+		if (StringUtil.hasValue(cmName))
+			whereCmName = "   and " + lq+"CmName"+rq + " = " + DbUtils.safeStr(cmName);
+		
+		String sql = "select "
+					+ "  '"+schema+"' as " + lq + "srvName" + rq
+					+ " ," + lq + "SessionSampleTime"       + rq
+					+ " ," + lq + "CmName"                  + rq
+				+ " from " + tabName
+				+ " where 1 = 1 "
+				+ whereCmName
+				+ "   and " + lq+"SessionSampleTime"+rq + " >= " + DbUtils.safeStr(startTs) // We could have used BETWEEN '' AND ''
+				+ "   and " + lq+"SessionSampleTime"+rq + "  < " + DbUtils.safeStr(endTs)
+				;
+//System.out.println(">>>>>>>>>>>>>>>>>>>> getHistoryActiveSamplesForCm(); SQL=|" + sql + "|");
+
+		// Change '[' and ']' into DBMS Vendor Specific Identity Quote Chars
+		sql = conn.quotifySqlString(sql);
+		
+		// autoclose: stmnt, rs
+		try (Statement stmnt = conn.createStatement())
+		{
+			// set TIMEOUT
+			stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+			// Execute and read result
+			try (ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+				{
+					String    srvName           = rs.getString   (1);  // "srvName"
+					Timestamp SessionSampleTime = rs.getTimestamp(2);  // "SessionSampleTime"
+					String    CmName            = rs.getString   (3);  // "CmName"
+
+//System.out.println(">>>>>>>>>>>>>>>>>>>> getHistoryActiveSamplesForCm(); ROW... , SessionSampleTime|" + SessionSampleTime + "|, srvName=|" + srvName + "|, CmName=|" + CmName + "|");
+
+//					String key = srvName + ";" + CmName;
+
+//					Map<String, String> cmValMap = map.get(srvName);
+//					if (cmValMap == null)
+//						cmValMap = new LinkedHashMap<>();
+//
+//					cmValMap.put(CmName, JsonText);
+//					map.put(srvName, cmValMap);
+
+					Map<String, Set<String>> srvCmMap = map.get(SessionSampleTime);
+					if (srvCmMap == null)
+						srvCmMap = new LinkedHashMap<>();
+
+					Set<String> cmSet = srvCmMap.get(srvName);
+					if (cmSet == null)
+						cmSet = new LinkedHashSet<>();
+					
+					cmSet.add(CmName);
+					srvCmMap.put(srvName, cmSet);
+					map.put(SessionSampleTime, srvCmMap);
+				}
+			}
+		}
+	}
 	
-	
-	
-	
-	
+
+
+
 	/**
 	 * Get LAST Session
 	 * @param conn
@@ -3687,274 +4143,274 @@ public class CentralPersistReader
 		return toMap;
 	}
 
-	private static void testCalcAvgData()
-	{
-		List<Map<String, Double>> list = new ArrayList<>();
-		
-		Map<String, Double> map1 = new LinkedHashMap<>();
-		map1.put("k1", new Double(1.1) );
-		map1.put("k2", new Double(2.2) );
-		map1.put("k3", new Double(3.3) );
-		map1.put("k4", new Double(3.0) );
-		map1.put("k5", new Double(50) );
-		map1.put("k6", null );
-		map1.put("k7", null );
-		
-		Map<String, Double> map2 = new LinkedHashMap<>();
-		map2.put("k1", new Double(1.1) );
-		map2.put("k2", new Double(2.2) );
-		map2.put("k3", new Double(3.3) );
-		map2.put("k4", new Double(3.0) );
-		map2.put("k5", null );             // Note: null value (should not be included in divideByCount)
-		map2.put("k6", null );
-		map2.put("k7", null );
-		
-		Map<String, Double> map3 = new LinkedHashMap<>();
-		map3.put("k1", new Double(1.1) );
-		map3.put("k2", new Double(2.2) );
-		map3.put("k3", new Double(3.3) );
-		map3.put("k4", new Double(4.0) );
-		map3.put("k5", new Double(150) );
-		map3.put("k6", null );
-		map3.put("k7", new Double(99) );
-		
-		// Add entries to list
-		list.add(map1);
-		list.add(map2);
-		list.add(map3);
+//	private static void testCalcAvgData()
+//	{
+//		List<Map<String, Double>> list = new ArrayList<>();
+//		
+//		Map<String, Double> map1 = new LinkedHashMap<>();
+//		map1.put("k1", new Double(1.1) );
+//		map1.put("k2", new Double(2.2) );
+//		map1.put("k3", new Double(3.3) );
+//		map1.put("k4", new Double(3.0) );
+//		map1.put("k5", new Double(50) );
+//		map1.put("k6", null );
+//		map1.put("k7", null );
+//		
+//		Map<String, Double> map2 = new LinkedHashMap<>();
+//		map2.put("k1", new Double(1.1) );
+//		map2.put("k2", new Double(2.2) );
+//		map2.put("k3", new Double(3.3) );
+//		map2.put("k4", new Double(3.0) );
+//		map2.put("k5", null );             // Note: null value (should not be included in divideByCount)
+//		map2.put("k6", null );
+//		map2.put("k7", null );
+//		
+//		Map<String, Double> map3 = new LinkedHashMap<>();
+//		map3.put("k1", new Double(1.1) );
+//		map3.put("k2", new Double(2.2) );
+//		map3.put("k3", new Double(3.3) );
+//		map3.put("k4", new Double(4.0) );
+//		map3.put("k5", new Double(150) );
+//		map3.put("k6", null );
+//		map3.put("k7", new Double(99) );
+//		
+//		// Add entries to list
+//		list.add(map1);
+//		list.add(map2);
+//		list.add(map3);
+//
+//		
+//		// TEST: AVG
+//		Map<String, Double> avgMap = new CentralPersistReader().calcAvgData(list);
+//		Double avg1 = avgMap.get("k1");
+//		Double avg2 = avgMap.get("k2");
+//		Double avg3 = avgMap.get("k3");
+//		Double avg4 = avgMap.get("k4");
+//		Double avg5 = avgMap.get("k5");
+//		Double avg6 = avgMap.get("k6");
+//		Double avg7 = avgMap.get("k7");
+//
+//		System.out.println("--- TEST: AVG");
+//		System.out.println("testCalcAvgData(): avgMap.size()="+avgMap.size());
+//		System.out.println("testCalcAvgData(): k1="+avg1);
+//		System.out.println("testCalcAvgData(): k2="+avg2);
+//		System.out.println("testCalcAvgData(): k3="+avg3);
+//		System.out.println("testCalcAvgData(): k4="+avg4);
+//		System.out.println("testCalcAvgData(): k5="+avg5);
+//		System.out.println("testCalcAvgData(): k6="+avg6);
+//		System.out.println("testCalcAvgData(): k7="+avg7);
+//
+//		if ( avgMap.size() != 7) System.err.println("FAIL: avgMap.size() expected value '7', result value '"+avgMap.size()+"'");
+//		if ( avg1 != 1.1d ) System.err.println("FAIL: avg1 expected value '1.1', result value '" +avg1+"'");
+//		if ( avg2 != 2.2d ) System.err.println("FAIL: avg2 expected value '2.2', result value '" +avg2+"'");
+//		if ( avg3 != 3.3d ) System.err.println("FAIL: avg3 expected value '3.3', result value '" +avg3+"'");
+//		if ( avg4 != 3.3d ) System.err.println("FAIL: avg4 expected value '3.3', result value '" +avg4+"'");
+//		if ( avg5 != 100d ) System.err.println("FAIL: avg5 expected value '100', result value '" +avg5+"'");
+//		if ( avg6 != null ) System.err.println("FAIL: avg6 expected value 'null', result value '"+avg6+"'");
+//		if ( avg7 != 99d  ) System.err.println("FAIL: avg7 expected value '99.0', result value '"+avg7+"'");
+//
+//	
+//		// TEST: MAX
+//		Map<String, Double> maxMap = new CentralPersistReader().calcMaxData(list);
+//		Double max1 = maxMap.get("k1");
+//		Double max2 = maxMap.get("k2");
+//		Double max3 = maxMap.get("k3");
+//		Double max4 = maxMap.get("k4");
+//		Double max5 = maxMap.get("k5");
+//		Double max6 = maxMap.get("k6");
+//		Double max7 = maxMap.get("k7");
+//		
+//		System.out.println("--- TEST: MAX");
+//		System.out.println("testCalcMaxData(): maxMap.size()="+maxMap.size());
+//		System.out.println("testCalcMaxData(): k1="+max1);
+//		System.out.println("testCalcMaxData(): k2="+max2);
+//		System.out.println("testCalcMaxData(): k3="+max3);
+//		System.out.println("testCalcMaxData(): k4="+max4);
+//		System.out.println("testCalcMaxData(): k5="+max5);
+//		System.out.println("testCalcMaxData(): k6="+max6);
+//		System.out.println("testCalcMaxData(): k7="+max7);
+//
+//		if ( maxMap.size() != 7) System.err.println("FAIL: maxMap.size() expected value '7', result value '"+maxMap.size()+"'");
+//		if ( max1 != 1.1d ) System.err.println("FAIL: max1 expected value '1.1', result value '" +max1+"'");
+//		if ( max2 != 2.2d ) System.err.println("FAIL: max2 expected value '2.2', result value '" +max2+"'");
+//		if ( max3 != 3.3d ) System.err.println("FAIL: max3 expected value '3.3', result value '" +max3+"'");
+//		if ( max4 != 4d   ) System.err.println("FAIL: max4 expected value '4.0', result value '" +max4+"'");
+//		if ( max5 != 150d ) System.err.println("FAIL: max5 expected value '150', result value '" +max5+"'");
+//		if ( max6 != null ) System.err.println("FAIL: max6 expected value 'null', result value '"+max6+"'");
+//		if ( max7 != 99d  ) System.err.println("FAIL: msg7 expected value '99.0', result value '"+max7+"'");
+//	}
+//
+//	private static void testCalcMaxNegativeData()
+//	{
+//		List<Map<String, Double>> list = new ArrayList<>();
+//		
+//		Map<String, Double> map1 = new LinkedHashMap<>();
+//		map1.put("k1", new Double(-1.1) );
+//		map1.put("k2", new Double(-2.2) );
+//		map1.put("k3", new Double(-3.3) );
+//		map1.put("k4", new Double(-3.0) );
+//		map1.put("k5", new Double(-50) );
+//		map1.put("k6", null );
+//		map1.put("k7", null );
+//		
+//		Map<String, Double> map2 = new LinkedHashMap<>();
+//		map2.put("k1", new Double(-1.1) );
+//		map2.put("k2", new Double(-2.2) );
+//		map2.put("k3", new Double(-3.3) );
+//		map2.put("k4", new Double(-3.0) );
+//		map2.put("k5", null );             // Note: null value (should not be included in divideByCount)
+//		map2.put("k6", null );
+//		map2.put("k7", null );
+//		
+//		Map<String, Double> map3 = new LinkedHashMap<>();
+//		map3.put("k1", new Double(-1.1) );
+//		map3.put("k2", new Double(-2.2) );
+//		map3.put("k3", new Double(-3.3) );
+//		map3.put("k4", new Double(-4.0) );
+//		map3.put("k5", new Double(-150) );
+//		map3.put("k6", null );
+//		map3.put("k7", new Double(-99) );
+//		
+//		// Add entries to list
+//		list.add(map1);
+//		list.add(map2);
+//		list.add(map3);
+//
+//		
+//		// TEST: AVG
+//		Map<String, Double> avgMap = new CentralPersistReader().calcAvgData(list);
+//		Double avg1 = avgMap.get("k1");
+//		Double avg2 = avgMap.get("k2");
+//		Double avg3 = avgMap.get("k3");
+//		Double avg4 = avgMap.get("k4");
+//		Double avg5 = avgMap.get("k5");
+//		Double avg6 = avgMap.get("k6");
+//		Double avg7 = avgMap.get("k7");
+//
+//		System.out.println("--- TEST: NEGATIVE-AVG");
+//		System.out.println("testCalcAvgData(): avgMap.size()="+avgMap.size());
+//		System.out.println("testCalcAvgData(): k1="+avg1);
+//		System.out.println("testCalcAvgData(): k2="+avg2);
+//		System.out.println("testCalcAvgData(): k3="+avg3);
+//		System.out.println("testCalcAvgData(): k4="+avg4);
+//		System.out.println("testCalcAvgData(): k5="+avg5);
+//		System.out.println("testCalcAvgData(): k6="+avg6);
+//		System.out.println("testCalcAvgData(): k7="+avg7);
+//
+//		if ( avgMap.size() != 7) System.err.println("FAIL: avgMap.size() expected value '7', result value '"+avgMap.size()+"'");
+//		if ( avg1 != -1.1d ) System.err.println("FAIL: avg1 expected value '-1.1', result value '" +avg1+"'");
+//		if ( avg2 != -2.2d ) System.err.println("FAIL: avg2 expected value '-2.2', result value '" +avg2+"'");
+//		if ( avg3 != -3.3d ) System.err.println("FAIL: avg3 expected value '-3.3', result value '" +avg3+"'");
+//		if ( avg4 != -3.3d ) System.err.println("FAIL: avg4 expected value '-3.3', result value '" +avg4+"'");
+//		if ( avg5 != -100d ) System.err.println("FAIL: avg5 expected value '-100', result value '" +avg5+"'");
+//		if ( avg6 != null  ) System.err.println("FAIL: avg6 expected value 'null', result value '"+avg6+"'");
+//		if ( avg7 != -99d  ) System.err.println("FAIL: avg7 expected value '-99.0', result value '"+avg7+"'");
+//
+//	
+//		// TEST: MAX
+//		Map<String, Double> maxMap = new CentralPersistReader().calcMaxData(list);
+//		Double max1 = maxMap.get("k1");
+//		Double max2 = maxMap.get("k2");
+//		Double max3 = maxMap.get("k3");
+//		Double max4 = maxMap.get("k4");
+//		Double max5 = maxMap.get("k5");
+//		Double max6 = maxMap.get("k6");
+//		Double max7 = maxMap.get("k7");
+//		
+//		System.out.println("--- TEST: NEGATIVE-MAX");
+//		System.out.println("testCalcMaxData(): maxMap.size()="+maxMap.size());
+//		System.out.println("testCalcMaxData(): k1="+max1);
+//		System.out.println("testCalcMaxData(): k2="+max2);
+//		System.out.println("testCalcMaxData(): k3="+max3);
+//		System.out.println("testCalcMaxData(): k4="+max4);
+//		System.out.println("testCalcMaxData(): k5="+max5);
+//		System.out.println("testCalcMaxData(): k6="+max6);
+//		System.out.println("testCalcMaxData(): k7="+max7);
+//
+//		if ( maxMap.size() != 7) System.err.println("FAIL: maxMap.size() expected value '7', result value '"+maxMap.size()+"'");
+//		if ( max1 != -1.1d ) System.err.println("FAIL: max1 expected value '-1.1', result value '" +max1+"'");
+//		if ( max2 != -2.2d ) System.err.println("FAIL: max2 expected value '-2.2', result value '" +max2+"'");
+//		if ( max3 != -3.3d ) System.err.println("FAIL: max3 expected value '-3.3', result value '" +max3+"'");
+//		if ( max4 != -4d   ) System.err.println("FAIL: max4 expected value '-4.0', result value '" +max4+"'");
+//		if ( max5 != -150d ) System.err.println("FAIL: max5 expected value '-150', result value '" +max5+"'");
+//		if ( max6 != null  ) System.err.println("FAIL: max6 expected value 'null', result value '"+max6+"'");
+//		if ( max7 != -99d  ) System.err.println("FAIL: msg7 expected value '-99.0', result value '"+max7+"'");
+//	}
+//	
+//	private static void testCalcSumData()
+//	{
+//		List<Map<String, Double>> list = new ArrayList<>();
+//		
+//		Map<String, Double> map1 = new LinkedHashMap<>();
+//		map1.put("k1", new Double(1.1) );
+//		map1.put("k2", new Double(2.2) );
+//		map1.put("k3", new Double(3.3) );
+//		map1.put("k4", new Double(3.0) );
+//		map1.put("k5", new Double(50) );
+//		map1.put("k6", null );
+//		map1.put("k7", null );
+//		
+//		Map<String, Double> map2 = new LinkedHashMap<>();
+//		map2.put("k1", new Double(1.1) );
+//		map2.put("k2", new Double(2.2) );
+//		map2.put("k3", new Double(3.3) );
+//		map2.put("k4", new Double(3.0) );
+//		map2.put("k5", null );             // Note: null value (should not be included in divideByCount)
+//		map2.put("k6", null );
+//		map2.put("k7", null );
+//		
+//		Map<String, Double> map3 = new LinkedHashMap<>();
+//		map3.put("k1", new Double(1.1) );
+//		map3.put("k2", new Double(2.2) );
+//		map3.put("k3", new Double(3.3) );
+//		map3.put("k4", new Double(4.0) );
+//		map3.put("k5", new Double(150) );
+//		map3.put("k6", null );
+//		map3.put("k7", new Double(99) );
+//		
+//		// Add entries to list
+//		list.add(map1);
+//		list.add(map2);
+//		list.add(map3);
+//
+//		
+//		// TEST: SUM
+//		Map<String, Double> sumMap = new CentralPersistReader().calcSumData(list);
+//		Double sum1 = sumMap.get("k1");
+//		Double sum2 = sumMap.get("k2");
+//		Double sum3 = sumMap.get("k3");
+//		Double sum4 = sumMap.get("k4");
+//		Double sum5 = sumMap.get("k5");
+//		Double sum6 = sumMap.get("k6");
+//		Double sum7 = sumMap.get("k7");
+//
+//		System.out.println("--- TEST: SUM");
+//		System.out.println("testCalcSumData(): avgMap.size()="+sumMap.size());
+//		System.out.println("testCalcSumData(): k1="+sum1);
+//		System.out.println("testCalcSumData(): k2="+sum2);
+//		System.out.println("testCalcSumData(): k3="+sum3);
+//		System.out.println("testCalcSumData(): k4="+sum4);
+//		System.out.println("testCalcSumData(): k5="+sum5);
+//		System.out.println("testCalcSumData(): k6="+sum6);
+//		System.out.println("testCalcSumData(): k7="+sum7);
+//
+//		if ( sumMap.size() != 7) System.err.println("FAIL: sumMap.size() expected value '7', result value '"+sumMap.size()+"'");
+//		if ( sum1 != 3.3d ) System.err.println("FAIL: sum1 expected value '3.3', result value '" +sum1+"'");
+//		if ( sum2 != 6.6d ) System.err.println("FAIL: sum2 expected value '6.6', result value '" +sum2+"'");
+//		if ( sum3 != 9.9d ) System.err.println("FAIL: sum3 expected value '9.9', result value '" +sum3+"'");
+//		if ( sum4 != 10d  ) System.err.println("FAIL: sum4 expected value '10',  result value '" +sum4+"'");
+//		if ( sum5 != 200d ) System.err.println("FAIL: sum5 expected value '200', result value '" +sum5+"'");
+//		if ( sum6 != null ) System.err.println("FAIL: sum6 expected value 'null', result value '"+sum6+"'");
+//		if ( sum7 != 99d  ) System.err.println("FAIL: sum7 expected value '99.0', result value '"+sum7+"'");
+//
+//	}
 
-		
-		// TEST: AVG
-		Map<String, Double> avgMap = new CentralPersistReader().calcAvgData(list);
-		Double avg1 = avgMap.get("k1");
-		Double avg2 = avgMap.get("k2");
-		Double avg3 = avgMap.get("k3");
-		Double avg4 = avgMap.get("k4");
-		Double avg5 = avgMap.get("k5");
-		Double avg6 = avgMap.get("k6");
-		Double avg7 = avgMap.get("k7");
-
-		System.out.println("--- TEST: AVG");
-		System.out.println("testCalcAvgData(): avgMap.size()="+avgMap.size());
-		System.out.println("testCalcAvgData(): k1="+avg1);
-		System.out.println("testCalcAvgData(): k2="+avg2);
-		System.out.println("testCalcAvgData(): k3="+avg3);
-		System.out.println("testCalcAvgData(): k4="+avg4);
-		System.out.println("testCalcAvgData(): k5="+avg5);
-		System.out.println("testCalcAvgData(): k6="+avg6);
-		System.out.println("testCalcAvgData(): k7="+avg7);
-
-		if ( avgMap.size() != 7) System.err.println("FAIL: avgMap.size() expected value '7', result value '"+avgMap.size()+"'");
-		if ( avg1 != 1.1d ) System.err.println("FAIL: avg1 expected value '1.1', result value '" +avg1+"'");
-		if ( avg2 != 2.2d ) System.err.println("FAIL: avg2 expected value '2.2', result value '" +avg2+"'");
-		if ( avg3 != 3.3d ) System.err.println("FAIL: avg3 expected value '3.3', result value '" +avg3+"'");
-		if ( avg4 != 3.3d ) System.err.println("FAIL: avg4 expected value '3.3', result value '" +avg4+"'");
-		if ( avg5 != 100d ) System.err.println("FAIL: avg5 expected value '100', result value '" +avg5+"'");
-		if ( avg6 != null ) System.err.println("FAIL: avg6 expected value 'null', result value '"+avg6+"'");
-		if ( avg7 != 99d  ) System.err.println("FAIL: avg7 expected value '99.0', result value '"+avg7+"'");
-
-	
-		// TEST: MAX
-		Map<String, Double> maxMap = new CentralPersistReader().calcMaxData(list);
-		Double max1 = maxMap.get("k1");
-		Double max2 = maxMap.get("k2");
-		Double max3 = maxMap.get("k3");
-		Double max4 = maxMap.get("k4");
-		Double max5 = maxMap.get("k5");
-		Double max6 = maxMap.get("k6");
-		Double max7 = maxMap.get("k7");
-		
-		System.out.println("--- TEST: MAX");
-		System.out.println("testCalcMaxData(): maxMap.size()="+maxMap.size());
-		System.out.println("testCalcMaxData(): k1="+max1);
-		System.out.println("testCalcMaxData(): k2="+max2);
-		System.out.println("testCalcMaxData(): k3="+max3);
-		System.out.println("testCalcMaxData(): k4="+max4);
-		System.out.println("testCalcMaxData(): k5="+max5);
-		System.out.println("testCalcMaxData(): k6="+max6);
-		System.out.println("testCalcMaxData(): k7="+max7);
-
-		if ( maxMap.size() != 7) System.err.println("FAIL: maxMap.size() expected value '7', result value '"+maxMap.size()+"'");
-		if ( max1 != 1.1d ) System.err.println("FAIL: max1 expected value '1.1', result value '" +max1+"'");
-		if ( max2 != 2.2d ) System.err.println("FAIL: max2 expected value '2.2', result value '" +max2+"'");
-		if ( max3 != 3.3d ) System.err.println("FAIL: max3 expected value '3.3', result value '" +max3+"'");
-		if ( max4 != 4d   ) System.err.println("FAIL: max4 expected value '4.0', result value '" +max4+"'");
-		if ( max5 != 150d ) System.err.println("FAIL: max5 expected value '150', result value '" +max5+"'");
-		if ( max6 != null ) System.err.println("FAIL: max6 expected value 'null', result value '"+max6+"'");
-		if ( max7 != 99d  ) System.err.println("FAIL: msg7 expected value '99.0', result value '"+max7+"'");
-	}
-
-	private static void testCalcMaxNegativeData()
-	{
-		List<Map<String, Double>> list = new ArrayList<>();
-		
-		Map<String, Double> map1 = new LinkedHashMap<>();
-		map1.put("k1", new Double(-1.1) );
-		map1.put("k2", new Double(-2.2) );
-		map1.put("k3", new Double(-3.3) );
-		map1.put("k4", new Double(-3.0) );
-		map1.put("k5", new Double(-50) );
-		map1.put("k6", null );
-		map1.put("k7", null );
-		
-		Map<String, Double> map2 = new LinkedHashMap<>();
-		map2.put("k1", new Double(-1.1) );
-		map2.put("k2", new Double(-2.2) );
-		map2.put("k3", new Double(-3.3) );
-		map2.put("k4", new Double(-3.0) );
-		map2.put("k5", null );             // Note: null value (should not be included in divideByCount)
-		map2.put("k6", null );
-		map2.put("k7", null );
-		
-		Map<String, Double> map3 = new LinkedHashMap<>();
-		map3.put("k1", new Double(-1.1) );
-		map3.put("k2", new Double(-2.2) );
-		map3.put("k3", new Double(-3.3) );
-		map3.put("k4", new Double(-4.0) );
-		map3.put("k5", new Double(-150) );
-		map3.put("k6", null );
-		map3.put("k7", new Double(-99) );
-		
-		// Add entries to list
-		list.add(map1);
-		list.add(map2);
-		list.add(map3);
-
-		
-		// TEST: AVG
-		Map<String, Double> avgMap = new CentralPersistReader().calcAvgData(list);
-		Double avg1 = avgMap.get("k1");
-		Double avg2 = avgMap.get("k2");
-		Double avg3 = avgMap.get("k3");
-		Double avg4 = avgMap.get("k4");
-		Double avg5 = avgMap.get("k5");
-		Double avg6 = avgMap.get("k6");
-		Double avg7 = avgMap.get("k7");
-
-		System.out.println("--- TEST: NEGATIVE-AVG");
-		System.out.println("testCalcAvgData(): avgMap.size()="+avgMap.size());
-		System.out.println("testCalcAvgData(): k1="+avg1);
-		System.out.println("testCalcAvgData(): k2="+avg2);
-		System.out.println("testCalcAvgData(): k3="+avg3);
-		System.out.println("testCalcAvgData(): k4="+avg4);
-		System.out.println("testCalcAvgData(): k5="+avg5);
-		System.out.println("testCalcAvgData(): k6="+avg6);
-		System.out.println("testCalcAvgData(): k7="+avg7);
-
-		if ( avgMap.size() != 7) System.err.println("FAIL: avgMap.size() expected value '7', result value '"+avgMap.size()+"'");
-		if ( avg1 != -1.1d ) System.err.println("FAIL: avg1 expected value '-1.1', result value '" +avg1+"'");
-		if ( avg2 != -2.2d ) System.err.println("FAIL: avg2 expected value '-2.2', result value '" +avg2+"'");
-		if ( avg3 != -3.3d ) System.err.println("FAIL: avg3 expected value '-3.3', result value '" +avg3+"'");
-		if ( avg4 != -3.3d ) System.err.println("FAIL: avg4 expected value '-3.3', result value '" +avg4+"'");
-		if ( avg5 != -100d ) System.err.println("FAIL: avg5 expected value '-100', result value '" +avg5+"'");
-		if ( avg6 != null  ) System.err.println("FAIL: avg6 expected value 'null', result value '"+avg6+"'");
-		if ( avg7 != -99d  ) System.err.println("FAIL: avg7 expected value '-99.0', result value '"+avg7+"'");
-
-	
-		// TEST: MAX
-		Map<String, Double> maxMap = new CentralPersistReader().calcMaxData(list);
-		Double max1 = maxMap.get("k1");
-		Double max2 = maxMap.get("k2");
-		Double max3 = maxMap.get("k3");
-		Double max4 = maxMap.get("k4");
-		Double max5 = maxMap.get("k5");
-		Double max6 = maxMap.get("k6");
-		Double max7 = maxMap.get("k7");
-		
-		System.out.println("--- TEST: NEGATIVE-MAX");
-		System.out.println("testCalcMaxData(): maxMap.size()="+maxMap.size());
-		System.out.println("testCalcMaxData(): k1="+max1);
-		System.out.println("testCalcMaxData(): k2="+max2);
-		System.out.println("testCalcMaxData(): k3="+max3);
-		System.out.println("testCalcMaxData(): k4="+max4);
-		System.out.println("testCalcMaxData(): k5="+max5);
-		System.out.println("testCalcMaxData(): k6="+max6);
-		System.out.println("testCalcMaxData(): k7="+max7);
-
-		if ( maxMap.size() != 7) System.err.println("FAIL: maxMap.size() expected value '7', result value '"+maxMap.size()+"'");
-		if ( max1 != -1.1d ) System.err.println("FAIL: max1 expected value '-1.1', result value '" +max1+"'");
-		if ( max2 != -2.2d ) System.err.println("FAIL: max2 expected value '-2.2', result value '" +max2+"'");
-		if ( max3 != -3.3d ) System.err.println("FAIL: max3 expected value '-3.3', result value '" +max3+"'");
-		if ( max4 != -4d   ) System.err.println("FAIL: max4 expected value '-4.0', result value '" +max4+"'");
-		if ( max5 != -150d ) System.err.println("FAIL: max5 expected value '-150', result value '" +max5+"'");
-		if ( max6 != null  ) System.err.println("FAIL: max6 expected value 'null', result value '"+max6+"'");
-		if ( max7 != -99d  ) System.err.println("FAIL: msg7 expected value '-99.0', result value '"+max7+"'");
-	}
-	
-	private static void testCalcSumData()
-	{
-		List<Map<String, Double>> list = new ArrayList<>();
-		
-		Map<String, Double> map1 = new LinkedHashMap<>();
-		map1.put("k1", new Double(1.1) );
-		map1.put("k2", new Double(2.2) );
-		map1.put("k3", new Double(3.3) );
-		map1.put("k4", new Double(3.0) );
-		map1.put("k5", new Double(50) );
-		map1.put("k6", null );
-		map1.put("k7", null );
-		
-		Map<String, Double> map2 = new LinkedHashMap<>();
-		map2.put("k1", new Double(1.1) );
-		map2.put("k2", new Double(2.2) );
-		map2.put("k3", new Double(3.3) );
-		map2.put("k4", new Double(3.0) );
-		map2.put("k5", null );             // Note: null value (should not be included in divideByCount)
-		map2.put("k6", null );
-		map2.put("k7", null );
-		
-		Map<String, Double> map3 = new LinkedHashMap<>();
-		map3.put("k1", new Double(1.1) );
-		map3.put("k2", new Double(2.2) );
-		map3.put("k3", new Double(3.3) );
-		map3.put("k4", new Double(4.0) );
-		map3.put("k5", new Double(150) );
-		map3.put("k6", null );
-		map3.put("k7", new Double(99) );
-		
-		// Add entries to list
-		list.add(map1);
-		list.add(map2);
-		list.add(map3);
-
-		
-		// TEST: SUM
-		Map<String, Double> sumMap = new CentralPersistReader().calcSumData(list);
-		Double sum1 = sumMap.get("k1");
-		Double sum2 = sumMap.get("k2");
-		Double sum3 = sumMap.get("k3");
-		Double sum4 = sumMap.get("k4");
-		Double sum5 = sumMap.get("k5");
-		Double sum6 = sumMap.get("k6");
-		Double sum7 = sumMap.get("k7");
-
-		System.out.println("--- TEST: SUM");
-		System.out.println("testCalcSumData(): avgMap.size()="+sumMap.size());
-		System.out.println("testCalcSumData(): k1="+sum1);
-		System.out.println("testCalcSumData(): k2="+sum2);
-		System.out.println("testCalcSumData(): k3="+sum3);
-		System.out.println("testCalcSumData(): k4="+sum4);
-		System.out.println("testCalcSumData(): k5="+sum5);
-		System.out.println("testCalcSumData(): k6="+sum6);
-		System.out.println("testCalcSumData(): k7="+sum7);
-
-		if ( sumMap.size() != 7) System.err.println("FAIL: sumMap.size() expected value '7', result value '"+sumMap.size()+"'");
-		if ( sum1 != 3.3d ) System.err.println("FAIL: sum1 expected value '3.3', result value '" +sum1+"'");
-		if ( sum2 != 6.6d ) System.err.println("FAIL: sum2 expected value '6.6', result value '" +sum2+"'");
-		if ( sum3 != 9.9d ) System.err.println("FAIL: sum3 expected value '9.9', result value '" +sum3+"'");
-		if ( sum4 != 10d  ) System.err.println("FAIL: sum4 expected value '10',  result value '" +sum4+"'");
-		if ( sum5 != 200d ) System.err.println("FAIL: sum5 expected value '200', result value '" +sum5+"'");
-		if ( sum6 != null ) System.err.println("FAIL: sum6 expected value 'null', result value '"+sum6+"'");
-		if ( sum7 != 99d  ) System.err.println("FAIL: sum7 expected value '99.0', result value '"+sum7+"'");
-
-	}
-
-	public static void main(String[] args)
-	{
-		testCalcAvgData();
-		testCalcMaxNegativeData();
-		testCalcSumData();
-	}
+//	public static void main(String[] args)
+//	{
+//		testCalcAvgData();
+//		testCalcMaxNegativeData();
+//		testCalcSumData();
+//	}
 
 
 

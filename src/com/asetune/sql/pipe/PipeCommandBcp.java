@@ -458,6 +458,9 @@ extends PipeCommandAbstract
 
 		sb.append("usage: bcp -T [owner.]tablename [-D dbname] [-p profileName] [-U user] [-P passwd] [-S servername|host:port] [-u url] [-b batchSize] [-s] [-d] [-c] [-i initStr] [I] [-t] [-q] [-e] [-x]\n");
 		sb.append("   \n");
+		sb.append("   NOTE: 'dryrun' mode is the default (so it's easy to test), you need to add switch '--exec' to execute the bcp transfer. \n");
+		sb.append("    TIP: first time: limit the ResultSet to a few rows (using 'select top 10 * from sourceTable')... as a test before transfer the whole table... \n");
+		sb.append("   \n");
 		sb.append("options: \n");
 		sb.append("  -T,--table <tabname>        Destination Table name to BCP into, in the form [owner.]tablename. \n");
 		sb.append("  -p,--profile <name>         Destination Profile to get '-U -P -S|-u' from. \n");

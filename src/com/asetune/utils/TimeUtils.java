@@ -136,6 +136,12 @@ public class TimeUtils
 //	{
 //	}
 
+	/** simply does: (System.currentTimeMillis() - startTime) / 1000; */
+	public static long secondsDiffNow(long startTime)
+	{
+		return (System.currentTimeMillis() - startTime) / 1000;
+	}
+
 	/** simply does: System.currentTimeMillis() - startTime; */
 	public static long msDiffNow(long startTime)
 	{
@@ -749,6 +755,19 @@ public class TimeUtils
 		{
 			return UTC_DATE_FORMAT.format( new Date(ts));
 		}
+	}
+
+	/**
+	 * Format a Timestamp to a String<br>
+	 * format is: "yyyy-MM-dd"<br>
+	 * Example output: "2018-01-08 09:56"
+	 * @param ts
+	 * @return String in above format
+	 */
+	public static String toStringYmd(Timestamp ts)
+	{
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		return sdf.format( ts );
 	}
 
 	/**

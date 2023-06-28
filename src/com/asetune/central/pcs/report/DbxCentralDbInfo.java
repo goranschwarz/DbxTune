@@ -27,7 +27,11 @@ import java.io.PrintWriter;
 import java.io.Writer;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
+
+import javax.servlet.ServletException;
 
 import org.apache.log4j.Logger;
 
@@ -36,6 +40,8 @@ import com.asetune.central.cleanup.CentralH2Defrag;
 import com.asetune.central.cleanup.CentralH2Defrag.H2StorageInfo;
 import com.asetune.central.controllers.OverviewServlet;
 import com.asetune.central.controllers.OverviewServlet.H2DbFileType;
+import com.asetune.central.pcs.H2WriterStat;
+import com.asetune.central.pcs.H2WriterStat.StatEntry;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.ReportEntryAbstract;
@@ -58,7 +64,8 @@ extends ReportEntryAbstract
 	private double _dataDir_totalGb;
 	private double _dataDir_pctUsed;
 	
-	
+	List<StatEntry> _h2FileStats;
+
 	public DbxCentralDbInfo(DailySummaryReportAbstract reportingInstance)
 	{
 		super(reportingInstance);
@@ -90,6 +97,12 @@ extends ReportEntryAbstract
 		String endDate   = TimeUtils.toStringIso8601( new Timestamp( System.currentTimeMillis()                            ) ).substring(0, "2019-01-01T".length()) + "23:59"; // Copy first part "YYYY-MM-DDT" then add "23:59" end of day
 		out.println("<a href='/h2ws?filename=" + fn + "&startDate=" + startDate + "&endDate=" + endDate + "'>Show a Chart of H2 Read/Write Statistics for last " + numOfDays + " day</a><br>");
 		out.println("<br>");
+		
+		if (_h2FileStats != null)
+		{
+			createChart(w, "h2FileSizeMb", "H2 File Size in MB", _h2FileStats);
+		}
+
 
 		if (_h2FileInfo != null)
 		{
@@ -220,5 +233,47 @@ extends ReportEntryAbstract
 				_recordings = executeQuery(conn, sql, true, "Recordings");
 		}
 		
-	}
+		//--------------------------------------------------
+		// H2 Database file Size Graph
+		// The below is "borrowed" from: com.asetune.central.controllers.H2WriterStatServlet
+		if (true)
+		{
+			try
+			{
+				String filename = "DBX_CENTRAL_H2WriterStatCronTask.log";
+				int daysOfHistory = 7;
+				int minDuration   = -1;
+				
+				LocalDateTime now = LocalDateTime.now();
+				LocalDateTime then = now.minusDays(7);
+
+				Timestamp startDateTs = Timestamp.valueOf(now.minusDays(daysOfHistory));
+				Timestamp endDateTs   = Timestamp.valueOf(now);
+
+//				Timestamp startDateTs = StringUtil.isNullOrBlank(startDateStr) ? null : TimeUtils.parseToTimestamp(startDateStr, "yyyy-MM-dd'T'HH:mm");
+//				Timestamp endDateTs   = StringUtil.isNullOrBlank(endDateStr  ) ? null : TimeUtils.parseToTimestamp(endDateStr,   "yyyy-MM-dd'T'HH:mm");
+
+				// get Data
+				_h2FileStats = H2WriterStat.parseStatFromLogFile(filename, startDateTs, endDateTs, minDuration);
+
+	//System.out.println("statEntryListSize=" + list.size());
+				
+			}
+			catch (Exception e)
+			{
+				_logger.info("Problem Getting H2 File Size History, Caught: " + e, e);
+			}
+		}
+	} // end: method
+
+
+	private void createChart(Writer w, String string, String string2, List<StatEntry> h2FileStats) 
+	throws IOException
+	{
+		// TODO: Can we reuse the "createLineChart" that does both PNG and chart.js charts...
+
+		w.append("Chart for H2 Datafile size is not yet implemented.\n");
+	} // end: method
+
+
 }

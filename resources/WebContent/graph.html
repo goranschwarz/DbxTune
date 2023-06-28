@@ -1,10 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
-
+<!--
+at gorans:
+	chmod 666 /home/sybase/dbxtune/0/resources/WebContent/graph.html /home/sybase/dbxtune/0/resources/WebContent/scripts/dbxcentral.graph.js
+at pc:
+	cd /mnt/c/projects/DbxTune/resources/WebContent
+	scp graph.html gorans@gorans.org:/home/sybase/dbxtune/0/resources/WebContent/; scp scripts/dbxcentral.graph.js gorans@gorans.org:/home/sybase/dbxtune/0/resources/WebContent/scripts/
+-->
 <head>
 	<meta charset="UTF-8">
 	<title>Graph/Chart Subscribe 2</title>
-	
+
 	<!-- HARD Refresh every 24 hour, so that "long running" stuff like "Dashboards" etc gets new javascript code every now and then  -->
 	<meta http-equiv="refresh" content="86400">
 	<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -39,8 +45,8 @@
 			position: sticky;
 			top: 56px; /* navbar is 56px high */
 		}
-		
-		@keyframes blink {  
+
+		@keyframes blink {
 			0% { opacity: 1.0; }
 			50% { opacity: 0.0; }
 			100% { opacity: 1.0; }
@@ -90,8 +96,8 @@
 		}
 
 /* ------------------------------------------------------------------------------
-   ----- active-statements-srv-class & active-statements-srv-info-class 
-   ----- id we want srvName to be "sticky" but the table to be scrollable left-right. 
+   ----- active-statements-srv-class & active-statements-srv-info-class
+   ----- id we want srvName to be "sticky" but the table to be scrollable left-right.
    ----- But this doesnt seem to work... on refresh the scroll are always reset to the left (so it forgets where we are in the scroll)
    ------------------------------------------------------------------------------
 		.active-statements-srv-class {
@@ -110,7 +116,7 @@
 */
 /*
 		.active-statements-srv-info-class {
-//			position: fixed; 
+//			position: fixed;
 			position: sticky;
 			left: 10;
 //			scroll-snap-align: start;
@@ -160,7 +166,7 @@
 			right: 0px;
 			top: 85px;
 			transition: background 0.25s;
-			
+
 			/* for button */
 			outline: blue;
 			border: none;
@@ -171,7 +177,7 @@
 		}
 /*
 		#active-statements-top {
-			position: fixed; 
+			position: fixed;
 			color: rgba(255, 148, 20, 1.0);
 			top: 10px;
 			font-size: 24px;
@@ -182,7 +188,7 @@
 */
 
 		#active-statements-watermark {
-			position: fixed; 
+			position: fixed;
 				/* center the element */
 				right: 0;
 				left: 0;
@@ -195,7 +201,7 @@
 			opacity: 0.5;
 			color: gray;
 			text-align: center;
-			
+
 			user-select: none; /* Non-prefixed version for chorme, opera and*/
 			-ms-user-select: none; /* Internet Explorer, Edge */
 			-moz-user-select: none; /* Firefox */
@@ -289,8 +295,8 @@
 			/* overflow: scroll; */
 		}
 
-		/* 
-		** Hide lower "south-east" rezize "handler" image 
+		/*
+		** Hide lower "south-east" rezize "handler" image
 		** However this disn't work as expected...
 		** https://stackoverflow.com/questions/10801676/removing-handle-image-from-jquery-ui-resizable-element
 		.ui-icon { background-image: url("") !important; }
@@ -298,7 +304,7 @@
 			background-image: url("");
 		}
 		*/
-		
+
 		.modal-body {
 			height: 600px;
 			/* height: 80%; */
@@ -314,52 +320,154 @@
 
 
 
-        /* The below data-tooltip is used to show Actual exected SQL Text, as a tooltip where a normalized text is in a table cell */ 
-        [data-tooltip] {						
-            position: relative;				
-        }									
-        										
-        /* 'tooltip' CSS settings for SQL Text... */ 
-        [data-tooltip]:hover::before {		
+        /* The below data-tooltip is used to show Actual exected SQL Text, as a tooltip where a normalized text is in a table cell */
+        [data-tooltip] {
+            position: relative;
+        }
+
+        /* 'tooltip' CSS settings for SQL Text... */
+        [data-tooltip]:hover::before {
 /*            content: attr(data-tooltip);		*/
             content: 'Click to Open Text Dialog...';
-            position: absolute;				
-            z-index: 103; 					
-            top: 20px;						
-            left: 30px;						
+            position: absolute;
+            z-index: 103;
+            top: 20px;
+            left: 30px;
 /*            width: 1800px;					*/
-            width: 220px;					
-            padding: 10px;					
-            background: #454545;				
-            color: #fff;						
-            font-size: 11px;					
-            font-family: Courier;			
-            white-space: pre-wrap;			
-        }									
-        [data-title]:hover::after {			
-            content: '';						
-            position: absolute;				
-            bottom: -12px;					
-            left: 8px;						
-            border: 8px solid transparent;	
-            border-bottom: 8px solid #000;	
-        }									
+            width: 220px;
+            padding: 10px;
+            background: #454545;
+            color: #fff;
+            font-size: 11px;
+            font-family: Courier;
+            white-space: pre-wrap;
+        }
+        [data-title]:hover::after {
+            content: '';
+            position: absolute;
+            bottom: -12px;
+            left: 8px;
+            border: 8px solid transparent;
+            border-bottom: 8px solid #000;
+        }
 
-        /* SQL Text Content in modal view */ 
-        .dbx-view-sqltext-content { 			
-            font-size: 11px;					
-            white-space: pre-wrap;			
-        } 									
+        /* SQL Text Content in modal view */
+        .dbx-view-sqltext-content {
+            font-size: 11px;
+            white-space: pre-wrap;
+        }
 
-        /* Override some 'prism' formatting to be smaller & wrap long lines */ 
-        code[class*=language-], pre[class*=language-] { 			
-            font-size: 11px;										
-            white-space: pre-wrap;								
-        } 														
+        /* Override some 'prism' formatting to be smaller & wrap long lines */
+        code[class*=language-], pre[class*=language-] {
+            font-size: 11px;
+            white-space: pre-wrap;
+        }
+
+		.dbx-history-container-class {
+		}
+
+		.dbx-history-container-div {
+			margin: 0px;
+			width: 100%;
+		}
+		.dbx-history-slider-xxx-class {
+			-webkit-appearance: none;
+			width: 100%;
+			height: 10px;
+			border-radius: 5px;
+			background: #d3d3d3; /* light gray */
+			outline: none;
+//			opacity: 0.8;
+			-webkit-transition: .2s;
+			transition: opacity .2s;
+		}
+
+		.dbx-panel-below-navbar {
+			position: sticky;
+			top: 56px;
+//			z-index: 11;
+
+//			position: fixed;
+//			top: 30;
+//			width: 100%;
+
+//			position: fixed;
+//			background: #ffc;
+//			top: 30;
+//			right: 0;
+//			left: 0;
+//			padding: 10px 10px 0;
+//			height: 30px;
+//			z-index: 1;
+		}
+
+		#dbx-history-slider .ui-slider-handle {
+//			outline: 5;
+//			height: 1.2em;
+			width: 10px;
+			height: 10px;
+			background: DodgerBlue;
+			border-radius: 50%;
+			top: 0em;
+		}
+
+		#dbx-history-slider.ui-slider-horizontal {
+//			top: 1em;
+//			left: 10px;
+			height: .5em;
+//			width: 99%;
+			border: none;
+			background: #ccc;
+		}
+
+		.dbx-history-timeline-slider-class {
+			width: 100%;
+			margin: 1px auto;
+		/*	margin-top: 0px; */
+		/*	margin-bottom: 0px; */
+		/*	margin-right: 10px; */
+		/*	margin-left: 10px; */
+			position: relative;
+		/*	z-index: 1;*/
+
+			-webkit-appearance: none;
+			width: 100%;
+			height: 10px;
+			border-radius: 5px;
+/*			background: #d3d3d3;*/
+			outline: none;
+			opacity: 0.7;
+			-webkit-transition: .2s;
+			transition: opacity .2s;
+		}
+
+		.dbx-history-timeline-slider-marker {
+			position: absolute;
+			width: 2px;
+			height: 5px;
+/*			background-color: orange;*/
+/*			background-color: green;*/
+/*			border-radius: 50%;*/
+			top: 25px;
+			transform: translateY(-50%);
+		/*	z-index: 2;*/
+		}
+
+		#dbx-history-label-top {
+			position: fixed;
+			color: rgba(104, 141, 252, 1.0);
+			top: 10px;
+			font-size: 24px;
+			left: 40%;
+			z-index: 9999;
+			animation: blink 1.5s infinite;
+		}
+
+    }
 
 	</style>
 
-	<!-- 
+	<!--
 	  =======================================================================
 	  == JS imports - JAVA SCRIPTS GOES HERE
 	  =======================================================================
@@ -367,9 +475,11 @@
 	<!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> -->
 	<!-- Custom styles for this template -->
 	<!-- <link href="/scripts/bootstrap/css/navbar-top-fixed.css" rel="stylesheet"> -->
-	<script type="text/javascript" src="/scripts/jquery/jquery-3.2.1.min.js"></script>
-	<script type="text/javascript" src="/scripts/jquery/ui/1.11.3/jquery-ui.min.js"></script>
-	
+<!--	<script type="text/javascript" src="/scripts/jquery/jquery-3.2.1.min.js"></script>-->
+	<script type="text/javascript" src="/scripts/jquery/jquery-3.7.0.min.js"></script>
+<!--	<script type="text/javascript" src="/scripts/jquery/ui/1.11.3/jquery-ui.min.js"></script>-->
+	<script type="text/javascript" src="/scripts/jquery/ui/1.13.2/jquery-ui.min.js"></script>
+
 	<!--
 <script type="text/javascript" src="http://www.chartjs.org/dist/2.7.1/Chart.bundle.js"></script>
 <script type="text/javascript" src="http://www.chartjs.org/samples/latest/utils.js"></script>
@@ -395,7 +505,8 @@
 	<script type="text/javascript" src="/scripts/popper/1.12.9/popper.min.js"></script>
 
 	<!-- JS: DateRangePicker -->
-	<script type="text/javascript" src="/scripts/bootstrap-daterangepicker/2.1.27/daterangepicker.js"></script>
+<!--	<script type="text/javascript" src="/scripts/bootstrap-daterangepicker/2.1.27/daterangepicker.js"></script>-->
+	<script type="text/javascript" src="/scripts/bootstrap-daterangepicker/3.1/daterangepicker.js"></script>
 
 	<!-- JS: Bootstrap - TABLE -->
 	<script type="text/javascript" src="/scripts/bootstrap-table/1.12.1/bootstrap-table.js"></script>
@@ -405,11 +516,12 @@
 	<script type="text/javascript" src="/scripts/bootstrap-table/1.12.1/extensions/filter-control/bootstrap-table-filter-control.js"></script>
 
 	<!-- JS: jquery - contextMenu -->
-	<script type="text/javascript" src="/scripts/jquery-contextmenu/2.7.0/jquery.contextMenu.min.js"></script>
+<!--	<script type="text/javascript" src="/scripts/jquery-contextmenu/2.7.0/jquery.contextMenu.min.js"></script>-->
+	<script type="text/javascript" src="/scripts/jquery-contextmenu/2.9.2/jquery.contextMenu.min.js"></script>
 
 	<!-- Prism: SQL Text Area needs this -->
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js'></script> 
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js'></script> 
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js'></script>
 
 	<!-- SQL Server Showplan: html-query-plan -->
 	<script src="https://cdn.jsdelivr.net/npm/html-query-plan@2.6.1/dist/qp.min.js"></script>
@@ -419,14 +531,17 @@
 	<!-- SQL formatter -->
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/sql-formatter/12.1.3/sql-formatter.min.js" integrity="sha512-KYBOFOOIIdyOZnOWTuAIISlg049+bMVJfG5ZOi+ZIY+uqlFBErw0Nju4yIIEOiFkULPtn34VOi7u17Q6kBgtfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
+	<!-- JQuery Sparklines -->
+	<!--<script src='https://cdnjs.cloudflare.com/ajax/libs/jquery-sparklines/2.1.2/jquery.sparkline.min.js'></script> -->
 
-	<!-- 
+	<!--
 	  =======================================================================
 	  == CSS imports - STYLES SHEETS GOES HERE
 	  =======================================================================
 	-->
 	<!-- CSS: jqueri-ui -->
-	<link rel="stylesheet" href="/scripts/jquery/ui/1.11.3/themes/smoothness/jquery-ui.css">
+<!--	<link rel="stylesheet" href="/scripts/jquery/ui/1.11.3/themes/smoothness/jquery-ui.css">-->
+	<link rel="stylesheet" href="/scripts/jquery/ui/1.13.2/themes/smoothness/jquery-ui.css">
 
 	<!-- CSS: DbxCentral -->
 	<link rel="stylesheet" href="/scripts/css/dbxcentral.css">
@@ -438,7 +553,8 @@
 	<link rel="stylesheet" href="/scripts/bootstrap/css/bootstrap.min.css">
 
 	<!-- CSS: DateRangePicker -->
-	<link rel="stylesheet" href="/scripts/bootstrap-daterangepicker/2.1.27/daterangepicker.css">
+<!--	<link rel="stylesheet" href="/scripts/bootstrap-daterangepicker/2.1.27/daterangepicker.css">-->
+	<link rel="stylesheet" href="/scripts/bootstrap-daterangepicker/3.1/daterangepicker.css">
 
 	<!-- CSS: Font Awsome -->
 	<link rel="stylesheet" href="/scripts/font-awesome/4.4.0/css/font-awesome.min.css">
@@ -452,7 +568,8 @@
 	<!-- <link rel="stylesheet" href="https://rawgit.com/vitalets/x-editable/master/dist/bootstrap3-editable/css/bootstrap-editable.css"> -->
 
 	<!-- JS: jquery - contextMenu -->
-	<link rel="stylesheet" href="/scripts/jquery-contextmenu/2.7.0/jquery.contextMenu.min.css">
+<!--	<link rel="stylesheet" href="/scripts/jquery-contextmenu/2.7.0/jquery.contextMenu.min.css">-->
+	<link rel="stylesheet" href="/scripts/jquery-contextmenu/2.9.2/jquery.contextMenu.min.css">
 
 	<!-- Prism: SQL Text Area needs this -->
 	<!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css">-->
@@ -479,11 +596,11 @@
 					<a class="nav-link" href="/desktop_app.html">Desktop App</a>
 				</li>
 			</ul>
-		
+
 			<div    id="subscribe-feedback-msg"  class="dbx-nav-text"></div>
 			<div    id="subscribe-feedback-srv"  class="dbx-nav-text"></div>
 			<div    id="subscribe-feedback-time" class="dbx-nav-text mr-1"></div>
-			
+
 			<button id="dbx-refresh" class="fa fa-refresh btn btn-outline-light mx-2 my-0 my-sm-0" type="button" onclick="collectorRequestRefresh();" title="Send a 'Refresh Request' to the Collector(s)"></button>
 
 			<div id="dbx-report-range" class="dbx-nav-text btn btn-outline-light mr-2">
@@ -491,8 +608,8 @@
 				<span>Time Span</span> <b class="caret"></b>
 			</div>
 
-<!-- 
-			<div id="dbx-report-range" 
+<!--
+			<div id="dbx-report-range"
 				<input type="text" class="form-control dbx-nav-text mr-2">
 				<i class="glyphicon glyphicon-calendar fa fa-calendar"></i>
 				<span>Time Span</span> <b class="caret"></b>
@@ -506,42 +623,89 @@
 				<button id="dbx-next-time"           title="Next # Hours"                    alt="Next # Hours"                    class="dbx-nav-button p-0"      type="button"><i class="glyphicon fa fa-arrow-circle-right"></i></button> <!-- fa-step-forward fa-arrow-circle-right -->
 				<button id="dbx-next-day"            title="Next DAY, same time span"        alt="Next DAY, samt time span"        class="dbx-nav-button p-0 mr-1" type="button"><i class="glyphicon fa fa-forward"></i></button>            <!-- fa-forward fa-fast-forward            -->
 			</div>
-			<!-- <div    id="dbx-end-time"            class="dbx-nav-text">2018-??-?? ??:??</div> -->
-<!--		<button id="dbx-filter"              class="btn btn-outline-light mx-2 my-0 my-sm-0" type="button" data-toggle="modal" data-target="#dbx-filter-dialog">Filter</button>-->
-<!--		<button id="dbx-filter"              class="btn btn-outline-light mx-2 my-0 my-sm-0" type="button">Filter</button>-->
+			<button id="dbx-history-on"          class="fa fa-history    btn btn-outline-light mx-2 my-0 my-sm-0" type="button" title="Switch to 'History View' mode. (view older active SQL Statements)... This can also be done by clicking on any line at a Chart/Graph."> </button>
+			<button id="dbx-history-off"         class="fa fa-line-chart btn btn-outline-light mx-2 my-0 my-sm-0" type="button" title="Switch to 'Normal View' mode... (Get out of History View mode)" style="display: none;"></button>
+
+			<button id="dbx-filter"              class="fa fa-search btn btn-outline-light mx-0 my-0 my-sm-0" type="button" title="Open Search/Filter Dialog, to find any specififc Graph/Chart"></button>
+<!--
 			<button id="dbx-filter"              class="fa fa-search btn btn-outline-light mx-2 my-0 my-sm-0" type="button" title="Open Search/Filter Dialog, to find any specififc Graph/Chart"></button>
+-->
 		</div>
 	</nav>
 
-<!-- not used anymore, I think
-	<div>
-		<ul id="messages"></ul>
-	</div>
+	<div class="dbx-content-container">
+
+		<!-- Below navbar place a sticky div -->
+		<div class="dbx-panel-below-navbar">
+			<div id="progressDiv" class="progress">
+				<div id="progressBar" class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0"
+					aria-valuemax="100" style="width:0%; min-width:25px">
+					0%
+				</div>
+			</div>
+
+			<!--<div id="api-feedback"></div>-->
+			<div id="dbx-feedback">
+				<table style='border-spacing: 0; width: 100%'>
+					<tr>
+						<td nowrap id='api-feedback'></td>
+						<td nowrap style="width: 100%"></td>
+						<td nowrap id='subscribe-feedback-msgXXX'></td>
+						<td nowrap id='subscribe-feedback-timeXXX'></td>
+					</tr>
+				</table>
+			</div>
+
+			<div id="dbx-history-container-div" class="dbx-history-container-class" style="display: none;">
+<!--
+				<div style="width: 100%; display:flex; flex-flow:row wrap;">
+					<p style="width: 1%; text-align: left;">     <button id="dbx-history-prev-entry"  title="Previous Active Statement"    alt="Previous Active Statement"    class="dbx-nav-button p-0 ml-1" type="button"><i class="glyphicon fa fa-backward"></i></button> </p>
+					<p style="width: 98%; text-align: center;">   <input type="range" id="dbx-history-timeline-slider" min="0" max="100" step="1" value="50" class="dbx-history-timeline-slider-class"> </p>
+					<p style="width: 1%; text-align: right;">    <button id="dbx-history-next-entry"  title="Next Active Statement"        alt="Next Active Statement"        class="dbx-nav-button p-0 mr-1" type="button"><i class="glyphicon fa fa-forward"></i></button> </p>
+				</div>
 -->
+				<input type="range" id="dbx-history-timeline-slider" min="0" max="100" step="1" value="50" class="dbx-history-timeline-slider-class">
 
-	<div id="progressDiv" class="progress">
-		<div id="progressBar" class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0"
-			aria-valuemax="100" style="width:0%; min-width:25px">
-			0%
+				<div id="dbx-history-slider-text-div" style="width: 100%; display:flex; flex-flow:row wrap;">
+					<p id="dbx-history-slider-left-text"   style="font-size: 12px; color: #d3d3d3; width: 33%; text-align: left;"  >most-left-entry</p>
+					<p id="dbx-history-slider-center-text" style="font-size: 12px; color: #d3d3d3; width: 33%; text-align: center;"></p>
+					<p id="dbx-history-slider-right-text"  style="font-size: 12px; color: #d3d3d3; width: 33%; text-align: right;" >most-right-entry</p>
+				</div>
+<!--
+				<button id="dbx-history-prev-entry"  title="Previous Active Statement"    alt="Previous Active Statement"    class="dbx-nav-button p-0 ml-1" type="button" onclick="dbxHistoryPrevActiveStatement()">  <i class="glyphicon fa fa-backward"></i>  </button>
+				<button id="dbx-history-next-entry"  title="Next Active Statement"        alt="Next Active Statement"        class="dbx-nav-button p-0 mr-1" type="button" onclick="dbxHistoryNextActiveStatement()">  <i class="glyphicon fa fa-forward"></i>   </button>
+-->
+			</div>
+
 		</div>
+
+		<!-- Herer goes all charts/graphs -->
+		<!-- Set the style later on in javascript -->
+		<div id="graphs" class="grid" ></div>
+
+		<!-- end-of-page: just add some extra space so we can scroll up a bit (in case there are alarms at the bottom) -->
+		<div id="end-of-page">
+			<br>
+			<!--end-of-graphs-and-page<br>-->
+			<!-- Just add some blank lines for scrolling purposes -->
+			<br><br><br><br><br><br><br><br><br><br><br><br>
+			<br><br><br><br><br><br><br><br><br><br><br><br>
+			<br><br><br><br><br><br><br><br><br><br><br><br>
+			<br><br><br><br><br><br><br><br><br><br><br><br>
+		</div>
+	</div> <!-- end dbx-content-container -->
+
+
+	<div id="dbx-history-label-top" style="visibility: hidden;">
+	History View
 	</div>
 
-	<!--<div id="api-feedback"></div>-->
-	<div id="dbx-feedback">
-		<table style='border-spacing: 0; width: 100%'>
-			<tr>
-				<td nowrap id='api-feedback'></td>
-				<td nowrap style="width: 100%"></td>
-				<td nowrap id='subscribe-feedback-msgXXX'></td>
-				<td nowrap id='subscribe-feedback-timeXXX'></td>
-			</tr>
-		</table>
-	</div>
+
 
 	<!-- Show Active SQL Statements -->
 	<button id="active-statements-btn" class="active-statements-btn-class" onclick="openActiveStatementsWindow();">&lt;/&gt;</button>
 <!--	<button id="active-statements-btn" class="active-statements-btn-class" onclick="openActiveStatementsWindow()">&lt;<span id="active-statements-btn-cnt" class="badge badge-pill badge-warning">/</span>&gt;</button>-->
-	
+
 	<div id="active-statements-top" style="display: none;">
 	Active SQL Statements (not used for the moment)
 	</div>
@@ -551,7 +715,7 @@
 			<span id="active-statements-count" style="color:black; font-weight: bold;">##</span> Active Statements...
 
 			<span id="active-statements-win-size">
-				Window Max Size: 
+				Window Max Size:
 <!--				<input type="radio" name="active-statements-show-radio" id="active-statements-show-radio-10" onclick="activeStatementsRadioClick(this);" value="10%"        > 10%-->
 				<input type="radio" name="active-statements-show-radio" id="active-statements-show-radio-30" onclick="activeStatementsRadioClick(this);" value="30%" checked> 30%
 				<input type="radio" name="active-statements-show-radio" id="active-statements-show-radio-60" onclick="activeStatementsRadioClick(this);" value="60%"        > 60%
@@ -560,7 +724,7 @@
 			</span>
 
 			<span id="active-statements-counter-type">
-				Counter Type: 
+				Counter Type:
 				<input type="radio" name="active-statements-counter-type" id="active-statements-counter-type-abs"  onclick="activeStatementsCounterTypeClick(this);" value="abs"         > Abs
 				<input type="radio" name="active-statements-counter-type" id="active-statements-counter-type-diff" onclick="activeStatementsCounterTypeClick(this);" value="diff"        > <font color="blue">Diff</font>
 				<input type="radio" name="active-statements-counter-type" id="active-statements-counter-type-rate" onclick="activeStatementsCounterTypeClick(this);" value="rate" checked> <font color="blue">Rate</font>
@@ -568,7 +732,7 @@
 
 			<span id="active-statements-options">
 				Options: &nbsp;
-<!-- 				Min Exec Time 
+<!-- 				Min Exec Time
 				<input type="text"     name="active-statements-execTime-txt"    id="active-statements-execTime-txt"    onchange="activeStatementsExecTimeClick(this);"   title='Only show Statements that has been executing for more than #### milliseconds'  value="-1" style="height:20px;width:50px" size="6"> &nbsp;&nbsp;
 -->
 				<input type="checkbox" name="active-statements-paused-chk"      id="active-statements-paused-chk"      onclick="activeStatementsPausedChkClick(this);"   title="Pause refresh of Active Statement (so you can read without beeing interupted)" value="paused"> Pause &nbsp;&nbsp;
@@ -589,7 +753,7 @@
 
 	<div id="active-alarms" class="active-alarms-class" style="visibility: hidden;">
 		<div id="active-alarms-ctl" class="active-alarms-ctl-class">
-			There are <span id="active-alarms-count" style="color:red">##</span> Active Alarms...&nbsp;&nbsp;&nbsp; Window Max Size: 
+			There are <span id="active-alarms-count" style="color:red">##</span> Active Alarms...&nbsp;&nbsp;&nbsp; Window Max Size:
 			<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-0"  onclick="activeAlarmsRadioClick(this);" value="hide"       > Minimize
 			<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-10" onclick="activeAlarmsRadioClick(this);" value="10%"        > 10%
 			<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-30" onclick="activeAlarmsRadioClick(this);" value="30%" checked> 30%
@@ -603,31 +767,6 @@
 	</div>
 
 
-	<!-- <div id="graphs" class="grid" style="grid-gap: 0px; --cols-xl: auto-fit; --cols-size-xl: minmax(700px, 1fr);"></div> -->
-	<!-- grid thresholds: xs > 0px, sm > 640px, md > 860px, lg > 1080px, xl > 1300px -->
-	<!-- <div id="graphs" class="grid" style="grid-gap: 0px; --cols-xs: 1; --cols-sm: 1; --cols-md: 1; --cols-lg: 2; --cols-xl: auto-fit; --cols-size-xl: minmax(650px, 1fr);"></div> -->
-
-	<!-- Set the style later on in javascript -->
-	<div id="graphs" class="grid" ></div> 
-
-	<!-- end-of-page: just add some extra space so we can scroll up a bit (in case there are alarms at the bottom) -->
-	<div id="end-of-page">
-		<br>
-		<!--end-of-graphs-and-page<br>-->
-		<!-- Just add some blank lines for scrolling purposes -->
-		<br><br><br><br><br><br><br><br><br><br><br><br>
-		<br><br><br><br><br><br><br><br><br><br><br><br>
-		<br><br><br><br><br><br><br><br><br><br><br><br>
-		<br><br><br><br><br><br><br><br><br><br><br><br>
-	</div> 
-
-<!--     
-	<div id="graphs_xxxxxxxxxxxxxx">
-		<div id="chart_cpu">
-			<canvas id="canvas"></canvas>
-		</div>
-	</div>
--->
 
     <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
 	<!-- Modal: Filter dialog -->
@@ -646,12 +785,12 @@
 					<li>Click on the 'GoTo' icon <span class="glyphicon fa fa-arrow-circle-right"></span> to Locate or set Fucus on a Specific Graph</li>
 					<li>Set what Graph(s) you want to be visible, using the Checkbox and press the 'Set Visibility' button.</li>
 				</ul>
-				<table id="dbx-graph-filter-table" 
-					class="table-responsive" 
-					data-show-columns="false" 
-					data-paging="false" 
-					data-filtering="true" 
-					data-filter-control="true" 
+				<table id="dbx-graph-filter-table"
+					class="table-responsive"
+					data-show-columns="false"
+					data-paging="false"
+					data-filtering="true"
+					data-filter-control="true"
 					data-click-to-select="false"
 					data-sorting="true"
 					data-checkbox-header="true"
@@ -669,14 +808,14 @@
 						</tr>
 					</thead>
 					<tbody>
-						<tr> 
+						<tr>
 							<td class="bs-checkbox "><input data-index="0" name="btSelectItem" type="checkbox"></td>
-							<td>dummy-1</td> 
-							<td>dummy-2</td> 
-							<td>dummy-3</td> 
-							<td>dummy-4</td> 
+							<td>dummy-1</td>
+							<td>dummy-2</td>
+							<td>dummy-3</td>
+							<td>dummy-4</td>
 						</tr>
-					</tbody>                
+					</tbody>
 				</table>
 			</div>
 			<div class="modal-footer">
@@ -685,7 +824,7 @@
 			</div>
 		</div>
 		</div>
-	</div>  
+	</div>
 <!-- -->
 
 
@@ -697,7 +836,7 @@
 		<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>
 			<div class='modal-content'>
 				<div class='modal-header'>
-					<h5 class='modal-title' id='dbx-view-extDescTable-dialog-title'><b><span id='dbx-view-extDescTable-label'></span></b> <span id='dbx-view-extDescTable-objectName'></span></h5>	
+					<h5 class='modal-title' id='dbx-view-extDescTable-dialog-title'><b><span id='dbx-view-extDescTable-label'></span></b> <span id='dbx-view-extDescTable-objectName'></span></h5>
 					<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
 						<span aria-hidden='true'>&times;</span>
 					</button>
@@ -727,7 +866,7 @@
 		div.setAttribute("data-objectname" , '');
 		div.setAttribute("data-tooltip"    , dataVal);
 		div.setAttribute("data-label"      , label);
-	
+
 		return div;
 	}
 	$('#dbx-view-extDescTable-dialog').on('show.bs.modal', function(e) {
@@ -752,7 +891,7 @@
 		<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>
 			<div class='modal-content'>
 				<div class='modal-header'>
-					<h5 class='modal-title' id='dbx-view-alarmView-dialog-title'><b><span id='dbx-view-alarmView-label'></span></b> <span id='dbx-view-alarmView-objectName'></span></h5>	
+					<h5 class='modal-title' id='dbx-view-alarmView-dialog-title'><b><span id='dbx-view-alarmView-label'></span></b> <span id='dbx-view-alarmView-objectName'></span></h5>
 					<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
 						<span aria-hidden='true'>&times;</span>
 					</button>
@@ -782,7 +921,7 @@
 		div.setAttribute("data-objectname" , '');
 		div.setAttribute("data-tooltip"    , dataVal);
 		div.setAttribute("data-label"      , label);
-	
+
 		return div;
 	}
 	$('#dbx-view-alarmView-dialog').on('show.bs.modal', function(e) {
@@ -798,7 +937,7 @@
 
 		// In here we do a REST:POST call to /api/alarm/formatter
 		// to format the Alarm info in the same way as we format alarm-emails
-//		fetch("/api/alarm/formatter", 
+//		fetch("/api/alarm/formatter",
 //		{
 //			method: 'POST',
 //			headers: {
@@ -807,13 +946,13 @@
 //			},
 //			body: JSON.stringify(data.tooltip)
 //		})
-//		.then(responceData => 
+//		.then(responceData =>
 //		{
 //			const responceText = responceData.text();
 //			console.log("AlarmFormatter RESPONCE-TEXT: " + responceText, responceText);
 //			$('#dbx-view-alarmView-content', this).html(responceText);
 //		})
-//		.catch(error => 
+//		.catch(error =>
 //		{
 //			$('#dbx-view-alarmView-content', this).html(error);
 //		});
@@ -825,13 +964,13 @@
 			data: JSON.stringify(data.tooltip),
 			contentType: "application/json; charset=utf-8",
 //			dataType: "json",
-			
-			success: function(data, status) 
+
+			success: function(data, status)
 			{
 //				console.log("Format Alarm Message - RECEIVED DATA: " + data);
 				$('#dbx-view-alarmView-content').html(data);
 			},
-			error: function(xhr, desc, err) 
+			error: function(xhr, desc, err)
 			{
 				console.log(xhr);
 				console.log("ERROR - Details: " + desc + "\nError: " + err);
@@ -847,13 +986,13 @@
 
 
     <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-	<!-- Modal: View SqlText dialog -->																											
+	<!-- Modal: View SqlText dialog -->
     <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
 	<div class='modal fade' id='dbx-view-sqltext-dialog' role='dialog' aria-labelledby='dbx-view-sqltext-dialog' aria-hidden='true'>
 		<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>
 			<div class='modal-content'>
 				<div class='modal-header'>
-					<h5 class='modal-title' id='dbx-view-sqltext-dialog-title'><b>Text Type:</b> <span id='dbx-view-sqltext-objectName'></span> <span id='dbx-view-sqltext-sqlDialect'></span></h5>	
+					<h5 class='modal-title' id='dbx-view-sqltext-dialog-title'><b>Text Type:</b> <span id='dbx-view-sqltext-objectName'></span> <span id='dbx-view-sqltext-sqlDialect'></span></h5>
 					<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
 						<span aria-hidden='true'>&times;</span>
 					</button>
@@ -894,7 +1033,7 @@
 			if (sqlDialect === "")
 				sqlDialect = "tsql";
 
-			let formatOptions = { 
+			let formatOptions = {
 				language: sqlDialect,
 				tabWidth: 4,
 				keywordCase: 'upper',
@@ -904,7 +1043,7 @@
 			let sqlText = $("#dbx-view-sqltext-content").text();
 
 			// Remove first ')' if it start with that... It's a issue when getting the SQL Text in SqlServerTune which I should FIX
-			if (sqlText.startsWith(')')) 
+			if (sqlText.startsWith(')'))
 				sqlText = sqlText.substr(1);
 
 			// DYNAMIC_SQL dyn198: create proc dyn198 as SELECT f.xid AS foretagId...
@@ -918,7 +1057,7 @@
 			console.log("Format SQL with options: " + formatOptions, formatOptions);
 
 			// NOTE 'sqlFormatter' do not do a good job at T-SQL like variables etc...
-			// SO Possibly use https://www.npmjs.com/package/poor-mans-t-sql-formatter   ... but I couldn't find a CDN to load it from 
+			// SO Possibly use https://www.npmjs.com/package/poor-mans-t-sql-formatter   ... but I couldn't find a CDN to load it from
 		 	try {
 				let formattedSqlText = sqlFormatter.format( sqlText, formatOptions );
 				$("#dbx-view-sqltext-content").text(formattedSqlText);
@@ -937,7 +1076,7 @@
 		<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>
 			<div class='modal-content'>
 				<div class='modal-header'>
-					<h5 class='modal-title' id='dbx-view-lockTable-dialog-title'><b>Lock Table:</b> <span id='dbx-view-lockTable-objectName'></span></h5>	
+					<h5 class='modal-title' id='dbx-view-lockTable-dialog-title'><b>Lock Table:</b> <span id='dbx-view-lockTable-objectName'></span></h5>
 					<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
 						<span aria-hidden='true'>&times;</span>
 					</button>
@@ -963,7 +1102,7 @@
 		<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>
 			<div class='modal-content'>
 				<div class='modal-header'>
-					<h5 class='modal-title' id='dbx-view-ssShowplan-dialog-title'><b>SQL Server Showplan:</b> <span id='dbx-view-ssShowplan-objectName'></span></h5>	
+					<h5 class='modal-title' id='dbx-view-ssShowplan-dialog-title'><b>SQL Server Showplan:</b> <span id='dbx-view-ssShowplan-objectName'></span></h5>
 					<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
 						<span aria-hidden='true'>&times;</span>
 					</button>
@@ -1001,7 +1140,7 @@
 		//------------------------------------------------------------------------------------------
 		function ssShowplanFormatSql()
 		{
-			let formatOptions = { 
+			let formatOptions = {
 				language: 'tsql',
 				tabWidth: 4,
 				keywordCase: 'upper',
@@ -1076,7 +1215,7 @@
 		{
 //			let sqlText = ssShowplanGetSql();
 			let sqlText = $("#dbx-view-ssShowplan-sqlContent").text();
-			
+
 console.log("SQLTEXT=|"+sqlText+"|");
 
 			const textArea = document.createElement("textarea");
@@ -1111,7 +1250,7 @@ console.log("SQLTEXT=|"+sqlText+"|");
 
 			let compileParamsArr = [];
 			let runtimeParamsArr = [];
-			$(xmlDoc).find("ParameterList").find("ColumnReference").each(function(i,e) 
+			$(xmlDoc).find("ParameterList").find("ColumnReference").each(function(i,e)
 			{
 				if (e.hasAttribute("ParameterCompiledValue"))
 				{
@@ -1137,24 +1276,24 @@ console.log("SQLTEXT=|"+sqlText+"|");
 				runtimeParameterText += runtimeParamsArr[i] + "\n";
 
 			$('#dbx-view-ssShowplan-runtimeParameterValues').text(runtimeParameterText);
-			
-			if (compileParamsArr.length > 0) 
-			{ 
+
+			if (compileParamsArr.length > 0)
+			{
 				$('#dbx-view-ssShowplan-compileParameterValues').text(compileParameterText);
 				$('#dbx-view-ssShowplan-compileParameterValuesButton').show();
-			} 
-			else 
+			}
+			else
 			{
 				$('#dbx-view-ssShowplan-compileParameterValues').text("-- No Compile Parameters was found in the XML Plan.");
 				$('#dbx-view-ssShowplan-compileParameterValuesButton').hide();
 			}
 
-			if (runtimeParamsArr.lenth > 0) 
-			{ 
+			if (runtimeParamsArr.lenth > 0)
+			{
 				$('#dbx-view-ssShowplan-runtimeParameterValues').text(compileParameterText);
 				$('#dbx-view-ssShowplan-runtimeParameterValuesButton').show();
-			} 
-			else 
+			}
+			else
 			{
 				$('#dbx-view-ssShowplan-runtimeParameterValues').text("-- No Runtime Parameters was found in the XML Plan.");
 				$('#dbx-view-ssShowplan-runtimeParameterValuesButton').hide();
@@ -1169,7 +1308,7 @@ console.log("SQLTEXT=|"+sqlText+"|");
 
 			let xmlDoc = $.parseXML(ssShowplanXmlText);
 
-			$(xmlDoc).find("ParameterList").find("ColumnReference").each(function(i,e) 
+			$(xmlDoc).find("ParameterList").find("ColumnReference").each(function(i,e)
 			{
 				//console.log("DEBUG: ssShowplanSetParametersInSql('" + paramType + "'): e='" + e + "'.", e);
 
@@ -1180,7 +1319,7 @@ console.log("SQLTEXT=|"+sqlText+"|");
 				{
 					paramValue = e.getAttribute("ParameterCompiledValue");
 				}
-				
+
 				if (paramType === "runtime" && e.hasAttribute("ParameterRuntimeValue"))
 				{
 					paramValue = e.getAttribute("ParameterRuntimeValue");
@@ -1196,19 +1335,19 @@ console.log("SQLTEXT=|"+sqlText+"|");
 				Prism.highlightAll();
 			});
 		}
-		
+
 	</script>
 
 
 
 
 
-	<script> 																			
-	/**																				
-	* ---------------------------------------------------------------------------		
-	* -- View SQL Text																
-	* ---------------------------------------------------------------------------		
-	*/																				
+	<script>
+	/**
+	* ---------------------------------------------------------------------------
+	* -- View SQL Text
+	* ---------------------------------------------------------------------------
+	*/
 	$('#dbx-view-sqltext-dialog').on('show.bs.modal', function(e) {
 		var data = $(e.relatedTarget).data();
 
@@ -1224,7 +1363,7 @@ console.log("SQLTEXT=|"+sqlText+"|");
 		// Scroll top top (do not seems to work)
 		$('#dbx-view-sqltext-dialog').animate({ scrollTop: 0 }, 'slow');
 	});
-																						
+
 	$('#dbx-view-lockTable-dialog').on('show.bs.modal', function(e) {
 		var data = $(e.relatedTarget).data();
 
@@ -1252,7 +1391,7 @@ console.log("SQLTEXT=|"+sqlText+"|");
 		ssShowplanGetParameters(); // sets both Compile and Runtime parameters in there fields
 
 		// Create and DRAW thw Showplan in a deferred mode, otherwise the "lines" between the nodes wont show up in the *correct location*
-		setTimeout(function() { 
+		setTimeout(function() {
 			QP.showPlan(document.getElementById("dbx-view-ssShowplan-content"), data.tooltip);
 		}, 500);
 
@@ -1264,13 +1403,13 @@ console.log("SQLTEXT=|"+sqlText+"|");
 	});
 	// If it takes a LONG time to load... the lines are NOT VISIBLE, so lets draw them again!
 	$('#dbx-view-ssShowplan-dialog').on('loaded.bs.modal', function(e) {
-		setTimeout(function() { 
+		setTimeout(function() {
 			QP.drawLines(document.getElementById("dbx-view-ssShowplan-content"));
 		}, 500);
 	});
 
 
-	
+
 	function formatXml(xml) {
 		var formatted = '';
 		var reg = /(>)(<)(\/*)/g;
@@ -1302,7 +1441,7 @@ console.log("SQLTEXT=|"+sqlText+"|");
 		return formatted;
 	}
 
-	</script> 																			
+	</script>
 
 
 	<!-- JAVA SCRIPT - INIT PAGE -->
@@ -1311,13 +1450,13 @@ console.log("SQLTEXT=|"+sqlText+"|");
 		// used to hold Graph Filter "objects" for the Filter Dialog (initialized firt time the "filter" button is pressed)
 		var _filterDialogContentArr = [];
 
-		window.onload = function () 
+		window.onload = function ()
 		{
 			// Do we support the browser...
 			// Get version of MS: IE or Edge
 			// IE or EDGE are not supported
 			var ieVersion = detectIE();
-			if (ieVersion !== false) 
+			if (ieVersion !== false)
 			{
 				var browserVersion = ((ieVersion >= 12) ? 'Edge ' : 'IE ') + ieVersion;
 				document.getElementById('api-feedback').innerHTML = "Current Browser: <b>" + browserVersion + "</b> may not work as expected. Please use Chrome, Firefox or Safari";
@@ -1349,16 +1488,16 @@ console.log("SQLTEXT=|"+sqlText+"|");
 
 			// grid thresholds: xs > 0px, sm > 640px, md > 860px, lg > 1080px, xl > 1300px
 			// $('#graphs').css({
-			//     "grid-gap": "0px", 
-			//     "--cols-xs": "1", 
-			//     "--cols-sm": "1", 
-			//     "--cols-md": "1", 
-			//     "--cols-lg": "2", 
+			//     "grid-gap": "0px",
+			//     "--cols-xs": "1",
+			//     "--cols-sm": "1",
+			//     "--cols-md": "1",
+			//     "--cols-lg": "2",
 			//     "--cols-xl": "auto-fit", "--cols-size-xl": "minmax("+gwidth+"px, 1fr)"
 			// });
 			$('#graphs').css({
-				"grid-gap": "0px", 
-				"--cols-xs": "1", 
+				"grid-gap": "0px",
+				"--cols-xs": "1",
 				"--cols-sm": "auto-fit", "--cols-size-sm": "minmax("+gwidth+"px, 1fr)",
 				"--cols-md": "auto-fit", "--cols-size-md": "minmax("+gwidth+"px, 1fr)",
 				"--cols-lg": "auto-fit", "--cols-size-lg": "minmax("+gwidth+"px, 1fr)",
@@ -1372,8 +1511,8 @@ console.log("SQLTEXT=|"+sqlText+"|");
 			 */
 			// var start = moment().subtract(2, 'hours');
 			// var end = moment();
-		
-			function dateRangePickerCb(start, end, label) 
+
+			function dateRangePickerCb(start, end, label)
 			{
 				console.log("CALLBACK: start="+start+", end="+end+", label="+label);
 				// alert("CALLBACK: start="+start+", end="+end+", label="+label);
@@ -1417,7 +1556,7 @@ console.log("SQLTEXT=|"+sqlText+"|");
 				else
 					$('#dbx-report-range span').html(start.format('YYYY-MM-DD HH:mm') + ' - ' + end.format('YYYY-MM-DD HH:mm'));
 			}
-  
+
 			$('#dbx-report-range').daterangepicker({
 				// startDate: start,
 				// endDate: end,
@@ -1494,7 +1633,7 @@ console.log("SQLTEXT=|"+sqlText+"|");
 				console.log(msg);
 				return msg;
 			}
-			
+
 			function setNextPrevTime(type)
 			{
 				var currentHourSpan = parseInt( $("#dbx-sample-time").html().replace("h", "") );
@@ -1553,12 +1692,16 @@ console.log("SQLTEXT=|"+sqlText+"|");
 					dateRangePickerCb(startDate, endDate, type);
 				}
 			}
-			
+
 			// Install functions for button: dbx-filter
-			$("#dbx-filter").click( function() 
+			$("#dbx-filter").click( function()
 			{
 				dbxOpenFilterDialog();
 			});
+
+			// Install functions for button: dbx-history (on/off)
+			$("#dbx-history-on") .click( function() { dbxHistoryAction(); });
+			$("#dbx-history-off").click( function() { dbxHistoryAction(); });
 
 			// Make Bootsrap Modal Dialogs, resizable & movable (on the head)
 			var isSafari = !!navigator.userAgent.match(/Version\/[\d\.]+.*Safari/);
@@ -1568,12 +1711,12 @@ console.log("SQLTEXT=|"+sqlText+"|");
 				// All modals dialogs
 				$('.modal-content').resizable({ alsoResize: ".modal-dialog" });
 				$('.modal-dialog').draggable({ handle: ".modal-header" });
-				
+
 				// Statements
 				$('.active-statements-class').resizable({ handles: 'n, w, nw, s, sw' });
 //				$('.active-statements-class').resizable({ handles: 'all' });
 				$('.active-statements-class').draggable({ handle: ".active-statements-ctl-class" });
-				
+
 				// Active Alarms
 				$('.active-alarms-class').resizable({ handles: 'n' });
 				$('.active-alarms-class').draggable({ handle: ".active-alarms-ctl-class" });
@@ -1585,8 +1728,8 @@ console.log("SQLTEXT=|"+sqlText+"|");
 				});
 			});
 
-			// What should happen when we click OK in the dialog            
-			$("#dbx-filter-dialog-ok").click( function() 
+			// What should happen when we click OK in the dialog
+			$("#dbx-filter-dialog-ok").click( function()
 			{
 				$('#dbx-filter-dialog').modal('hide');
 
@@ -1601,7 +1744,7 @@ console.log("SQLTEXT=|"+sqlText+"|");
 					// console.log('HIDE: x='+x, x);
 				}
 				// show marked ones ALL graphs
-				for (let i = 0; i < selectedRecords.length; i++) 
+				for (let i = 0; i < selectedRecords.length; i++)
 				{
 					const record = selectedRecords[i];
 					var x = document.getElementById(record.fullName);
@@ -1609,7 +1752,6 @@ console.log("SQLTEXT=|"+sqlText+"|");
 					// console.log('SHOW: x='+x, x);
 				}
 			});
-
 
 			/**
 			 * LOAD DBXTUNE GRAPHS/CHARTS
@@ -1625,7 +1767,7 @@ console.log("SQLTEXT=|"+sqlText+"|");
 			/* Start to subscribe to data, sent by the backend-server */
 			dbxTuneGraphSubscribe();
 		}
-		function scrollToFormatter(value, row, index) 
+		function scrollToFormatter(value, row, index)
 		{
 			// console.log("scrollToFormatter: index="+index, row);
 			// return '<a href="javascript:void(0)" onclick="scrollToAction('+ row.fullName +')">GoTo</a>';
@@ -1671,7 +1813,7 @@ console.log("SQLTEXT=|"+sqlText+"|");
 					};
 					_filterDialogContentArr.push(row);
 				}
-				
+
 				$('#dbx-graph-filter-table').bootstrapTable({data: _filterDialogContentArr});
 			}
 
@@ -1679,7 +1821,342 @@ console.log("SQLTEXT=|"+sqlText+"|");
 			$("#dbx-filter-dialog").modal('show');
 		}
 
-		// 
+		/**
+		 * Get History Array position for a specififc time
+		 * returns -1 if not found
+		 */
+		function getHistoryArrayPosForTs(momentTs)
+		{
+			if (_lastHistoryMomentsArray === undefined) return -1;
+			if (_lastHistoryMomentsArray === null     ) return -1;
+
+			let momentsArray  = _lastHistoryMomentsArray;
+			let momentTsEpoch = momentTs.valueOf();
+
+			for (var m=0; m<momentsArray.length; m++)
+			{
+				let startTime = momentsArray[m].valueOf();
+				let endTime   = momentsArray[momentsArray.length-1].add(1, 'minute'); // set one minute past the "last" array time
+				if (m + 1 < momentsArray.length)
+					endTime = momentsArray[m + 1].valueOf();
+
+				if (momentTsEpoch >= startTime && momentTsEpoch < endTime)
+				{
+					console.log("######################## getHistoryArrayPosForTs(ts=|" + momentTs + "|) #### FOUND-POS ################ --m=" + m);
+					return m;
+				}
+			}
+			return -1;
+		}
+
+		function dbxHistoryAction(momentTs)
+		{
+			var isHistoryViewEnabled = $("#dbx-history-container-div").is(":visible");
+
+			console.log("dbxHistoryAction(momentTs=|" + momentTs + "|): isHistoryViewEnabled=" + isHistoryViewEnabled);
+
+			// Change to NORMAL MODE
+			if (isHistoryViewEnabled && momentTs === undefined)
+			{
+				console.log("HISTORY: is HIDDEN... reloading page");
+
+				// Reload current page to get in "normal" mode again
+				location.reload();
+				return;
+			}
+
+			// Update Slider pos to a specififc timestamp
+			// and *fire* the "change" event on the slider
+			if (isHistoryViewEnabled && momentTs !== undefined)
+			{
+				let toArrayPos = getHistoryArrayPosForTs(momentTs);
+				if (toArrayPos > 0)
+				{
+					let sliderPos = toArrayPos + 1;
+					console.log("DEBUG: set the slider to value. toArrayPos=" + toArrayPos + ", sliderPos=" + sliderPos);
+
+					var dbxHistoryTimelineSlider = document.getElementById('dbx-history-timeline-slider');
+
+					dbxHistoryTimelineSlider.value = sliderPos;
+					dbxHistoryTimelineSlider.dispatchEvent( new Event('change') );
+				}
+				return;
+			}
+
+			// Change to HISTORY MODE
+			if (true)
+			{
+				console.log("HISTORY: is VISIBLE");
+
+				// Show the dialog
+				$("#dbx-history-container-div").toggle();
+
+				// Toogle the buttons
+				$("#dbx-history-on") .toggle();
+				$("#dbx-history-off").toggle();
+
+				// HIDE alarms
+				$("#active-alarms-top").hide();
+				$("#active-alarms")    .hide();
+
+				// Show "History View Mode"
+//				$("#dbx-history-label-top").show();
+				var historyLabelTopDiv = document.getElementById("dbx-history-label-top");
+				historyLabelTopDiv.style.visibility = 'visible';
+
+
+				console.log("_graphMap.length=" + _graphMap.length);
+				if (_graphMap.length > 0)
+				{
+					let dbxGraph = _graphMap[0];
+//					console.log("dbxGraph=" + dbxGraph);
+//					console.log("dbxGraph=" + dbxGraph, dbxGraph);
+
+//					console.log("dbxGraph.getTsArraySize() = " + dbxGraph.getTsArraySize());
+//					console.log("dbxGraph.getTsArray()     = " + dbxGraph.getTsArray() , dbxGraph.getTsArray());
+//					console.log("dbxGraph.getOldestTs()    = " + dbxGraph.getOldestTs(), dbxGraph.getOldestTs());
+//					console.log("dbxGraph.getNewestTs()    = " + dbxGraph.getNewestTs(), dbxGraph.getNewestTs());
+
+//					console.log("dbxGraph.getOldestTs() fmt= " + dbxGraph.getOldestTs().format('YYYY-MM-DD HH:mm:ss'));
+//					console.log("dbxGraph.getNewestTs() fmt= " + dbxGraph.getNewestTs().format('YYYY-MM-DD HH:mm:ss'));
+
+					$("#dbx-history-slider-left-text") .html( dbxGraph.getOldestTs().format('YYYY-MM-DD HH:mm:ss') );
+					$("#dbx-history-slider-right-text").html( dbxGraph.getNewestTs().format('YYYY-MM-DD HH:mm:ss') );
+
+					// Clone the ChartJS ts data.labels (where the moment/ts objects are located)
+					// So we dont make a mistake and changes the underlying Moment/time objects
+					const momentsArray = [];
+					const tmpArray = dbxGraph.getTsArray();
+					for (let t=0; t<tmpArray.length; t++)
+					{
+//console.log("tmpArray["+t+"]: typeof |" + (typeof tmpArray[t]) + "|, ObjectName=|" + tmpArray[t].constructor.name + "|");
+						momentsArray.push( tmpArray[t].clone() );
+					}
+
+
+					// Save it as a GLOBAL var, so we can do lookups on it as well...
+					_lastHistoryMomentsArray = momentsArray;
+
+					let oldestTsStr = dbxGraph.getOldestTs().format('YYYY-MM-DD HH:mm:ss');
+					let newestTsStr = dbxGraph.getNewestTs().format('YYYY-MM-DD HH:mm:ss');
+					var activeHistoryStatementsArr = dbxTuneGetActiveHistoryStatements(oldestTsStr, newestTsStr);
+//console.log(">>>>> activeHistoryStatementsArr=" + activeHistoryStatementsArr, activeHistoryStatementsArr);
+//console.log(">>>>> activeHistoryStatementsArr.lenth=" + activeHistoryStatementsArr.length);
+//console.log(">>>>> momentsArray.lenth=" + momentsArray.length);
+
+					// Create an array with Booleans, that indicates if it HAS an Statement for the time in the 'momentsArray'
+					const hasActiveHistoryStatementArr = [];
+					for (var m=0; m<momentsArray.length; m++)
+					{
+//console.log("--m="+m+"---------------------------------");
+
+						let startTime = momentsArray[m].valueOf();
+						let endTime   = momentsArray[momentsArray.length-1].clone().add(1, 'minute').valueOf(); // set one minute past the "last" array time... clone() so that we don't change the original object
+						if (m + 1 < momentsArray.length)
+							endTime = momentsArray[m + 1].valueOf();
+
+						var hasActiveHistoryStatement = -1;
+						for (var h=0; h<activeHistoryStatementsArr.length; h++)
+						{
+							let tmpSampleTime = activeHistoryStatementsArr[h].sampleTime;
+							if (tmpSampleTime >= startTime && tmpSampleTime < endTime)
+							{
+//console.log("######################## TRUE ################ --m=" + m + " --h=" + h);
+								hasActiveHistoryStatement = h;
+								break;
+							}
+//console.log("moment["+m+"](" + momentsArray[m].format('YYYY-MM-DD HH:mm:ss') + ")===activeHistoryStatementsArr["+h+"](" + moment(activeHistoryStatementsArr[h].sampleTime).format('YYYY-MM-DD HH:mm:ss') + ") ===> " + hasActiveHistoryStatement);
+						}
+
+						hasActiveHistoryStatementArr.push(hasActiveHistoryStatement);
+					}
+//console.log(">>>>> hasActiveHistoryStatementArr.lenth=" + hasActiveHistoryStatementArr.length, hasActiveHistoryStatementArr);
+					// Save the array to a global value -- used to find NEXT/PREV active History Statement
+					_hasActiveHistoryStatementArr = hasActiveHistoryStatementArr;
+
+					// lets see what a Plain Slider gets us
+					var dbxHistoryTimelineSlider = document.getElementById('dbx-history-timeline-slider');
+
+					// Set tooltip
+					dbxHistoryTimelineSlider.title = ""
+						+ "Navigation: \n"
+						+ "The gray/green bar under the slider, indicates where there are Active Statements \n"
+						+ " - Use 'Ctrl+left' for Previous Active Statement \n"
+						+ " - Use 'Ctrl+right' for Next Active Statement \n"
+						+ " - or simply left/right arrows to move in the slider. \n"
+						+ " - or click on any 'line' on any Graph. \n"
+						+ "Note: Clicking a Graph, but not on a 'line', causes you to leave 'History View Mode' \n"
+						+ "";
+
+					// Clear existing data marks
+					var existingDots = document.getElementsByClassName('dbx-history-timeline-slider-marker');
+					while (existingDots[0])
+						existingDots[0].parentNode.removeChild(existingDots[0]);
+
+					// Create data marks
+					dbxHistoryTimelineSlider.max = momentsArray.length;
+					for (var m=0; m<momentsArray.length; m++)
+					{
+						// TODO: Possibly change witdh of "marker" depending on "momentsArray.length" ????  (but it needs to be tested on various sizes)
+
+						var color = hasActiveHistoryStatementArr[m] >= 0 ? "green" : "gray";
+						var markElement = document.createElement('div');
+						markElement.className = 'dbx-history-timeline-slider-marker';
+						markElement.style.backgroundColor = color;
+						var position = (m / dbxHistoryTimelineSlider.max) * 100;
+						markElement.style.left = position + '%';
+						dbxHistoryTimelineSlider.parentNode.appendChild(markElement);
+
+						if (hasActiveHistoryStatementArr[m] >= 0)
+						{
+							var obj = activeHistoryStatementsArr[ hasActiveHistoryStatementArr[m] ];
+							markElement.title = ""
+								+ "sampleTime: " + obj.sampleTimeIso8601 + "\n"
+								+ "SrvName: " + obj.srvNames[0].srvName  + "\n"
+								+ "AppName: " + obj.srvNames[0].appName  + "\n"
+								+ "CmNames: " + obj.srvNames[0].cmNames  + "\n"
+								+ "atPos:   " + m + "\n"
+								;
+							let sliderPos = m + 1;
+							markElement.onclick = function()
+							{
+								dbxHistoryTimelineSlider.value = sliderPos;
+								dbxHistoryTimelineSlider.dispatchEvent( new Event('change') );
+							};
+						}
+						else
+						{
+//							markElement.title = momentsArray[m].format('YYYY-MM-DD HH:mm:ss');
+							markElement.title = momentsArray[m].format('YYYY-MM-DD HH:mm:ss') + "  atPos: " + m;
+
+							let sliderPos = m + 1;
+							markElement.onclick = function()
+							{
+								dbxHistoryTimelineSlider.value = sliderPos;
+								dbxHistoryTimelineSlider.dispatchEvent( new Event('change') );
+							};
+						}
+					}
+
+					// ADD 'input' listener -- when we are moving the slider (without stopping)
+					dbxHistoryTimelineSlider.addEventListener('input', function(event)
+					{
+						let value = parseInt(event.target.value) - 1;
+//						console.log("Slide=" + value);
+						let selectedTs = momentsArray[value];
+						$( "#dbx-history-slider-center-text" ).html( selectedTs.format('YYYY-MM-DD HH:mm:ss') );
+					});
+
+					// ADD 'change' listener -- when we are finnished moving slider (do ACTION)
+					dbxHistoryTimelineSlider.addEventListener('change', function(event)
+					{
+						let value = parseInt(event.target.value) - 1;
+						console.log("Change=" + value);
+
+						let momentTs     = momentsArray[value];
+						let startTime    = momentsArray[value].format('YYYY-MM-DD HH:mm:ss');
+						let endTime      = momentsArray[momentsArray.length-1].clone().add(1, 'minute').format('YYYY-MM-DD HH:mm:ss'); // set one minute past the "last" array time, clone (to not change the value inside moment)
+						let endTimeShort = "";
+
+						if (value + 1 < momentsArray.length)
+						{
+							momentTs     = momentsArray[value + 1];
+							endTime      = momentsArray[value + 1].format('YYYY-MM-DD HH:mm:ss');
+							endTimeShort = momentsArray[value + 1].format('HH:mm:ss');
+						}
+
+						$( "#dbx-history-slider-center-text" ).html( startTime + " - " + endTimeShort);
+
+						dbxTuneGetHistoryStatements( startTime, endTime );
+						dbxTuneSetTimeLineMarkerForAllGraphs(momentTs, value);
+
+						// Set focus so we can do: Ctrl + left/right
+						dbxHistoryTimelineSlider.focus();
+					});
+
+					// Install slider keyboard: Ctrl+left, Ctrl+right
+					dbxHistoryTimelineSlider.addEventListener('keydown', function(event)
+					{
+						if (event.ctrlKey && event.key === "ArrowLeft")
+						{
+							console.log("XXXXXXXXXXX slider: ctrl+left");
+							event.preventDefault();
+							dbxHistoryPrevActiveStatement();
+						}
+
+						if (event.ctrlKey && event.key === "ArrowRight")
+						{
+							console.log("XXXXXXXXXXX slider: ctrl+right");
+							event.preventDefault();
+							dbxHistoryNextActiveStatement();
+						}
+					});
+				}
+
+				// Set slider to the END
+				dbxHistoryTimelineSlider.value = dbxHistoryTimelineSlider.max;
+				dbxHistoryTimelineSlider.dispatchEvent( new Event('change') );
+			}
+		}
+
+		function dbxHistoryPrevActiveStatement()
+		{
+			let dbxHistoryTimelineSlider = document.getElementById('dbx-history-timeline-slider');
+			let currentSliderPos = parseInt(dbxHistoryTimelineSlider.value); // NOTE: 'value' is typeof 'string'
+			let startArrPos = currentSliderPos - 2;
+
+			// loop backward to find previous
+			let arrayPos = -1; // not found
+			for (var h=startArrPos; h>0; h--)
+			{
+				if (_hasActiveHistoryStatementArr[h] !== -1)
+				{
+					arrayPos = h;
+					break;
+				}
+			}
+			if (arrayPos !== -1)
+			{
+				console.log("PREVIOUS Active Statement was found at ArrayPos=" + arrayPos);
+				dbxHistoryTimelineSlider.value = arrayPos + 1;
+				dbxHistoryTimelineSlider.dispatchEvent( new Event('change') );
+			}
+			else
+			{
+				console.log("PREVIOUS Active Statement was NOT found");
+			}
+		}
+
+		function dbxHistoryNextActiveStatement()
+		{
+			let dbxHistoryTimelineSlider = document.getElementById('dbx-history-timeline-slider');
+			let currentSliderPos = parseInt(dbxHistoryTimelineSlider.value); // NOTE: 'value' is typeof 'string'
+			let startArrPos = currentSliderPos;
+
+			// loop forward to find next
+			let arrayPos = -1; // not found
+			for (var h=startArrPos; h<_hasActiveHistoryStatementArr.length; h++)
+			{
+				if (_hasActiveHistoryStatementArr[h] !== -1)
+				{
+					arrayPos = h;
+					break;
+				}
+			}
+
+			if (arrayPos !== -1)
+			{
+				console.log("NEXT Active Statement was found at ArrayPos=" + arrayPos);
+				dbxHistoryTimelineSlider.value = arrayPos + 1;
+				dbxHistoryTimelineSlider.dispatchEvent( new Event('change') );
+			}
+			else
+			{
+				console.log("NEXT Active Statement was NOT found");
+			}
+		}
+
+		//
 /*
 		$("#active-statements").on('scroll', function() {
 			let xxx = $("#active-statements");

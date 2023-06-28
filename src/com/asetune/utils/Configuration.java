@@ -122,7 +122,7 @@ extends Properties
 	private static String encrypterBaseKey = "qazZSE44wsxXDR55"+serialVersionUID+"edcCFT66rfvVGY77";
 //	private static Encrypter baseEncrypter = new Encrypter(encrypterBaseKey);
 
-	private String _embeddedMessage = "This file will be overwritten and maintained by "+Version.getAppName();
+	private String _embeddedMessage = "This file will be overwritten and maintained by " + Version.getAppName();
 
 	public static final String HAS_GUI     = "application.gui";
 	public static boolean hasGui()
@@ -1296,7 +1296,8 @@ extends Properties
 	@Override
 	public String getProperty(String propName, String defaultValue)
 	{
-		String val = private_getProperty(propName, StringUtil.hasValue(defaultValue), defaultValue);
+//		String val = private_getProperty(propName, StringUtil.hasValue(defaultValue), defaultValue);
+		String val = private_getProperty(propName, true, defaultValue);
 		return val != null ? val : defaultValue;
 
 		// FIXME: for default values, environment variables etc are NOT resolved for the moment
@@ -1374,7 +1375,8 @@ extends Properties
 	/** Get a String value for property */
 	public String getPropertyRaw(String propName, String defaultValue)
 	{
-		String val = private_getPropertyRaw(propName, StringUtil.hasValue(defaultValue), defaultValue, true);
+//		String val = private_getPropertyRaw(propName, StringUtil.hasValue(defaultValue), defaultValue, true);
+		String val = private_getPropertyRaw(propName, true, defaultValue, true);
 		return val != null ? val : defaultValue;
 //		String val = getPropertyRaw(propName);
 //		return val != null ? val : defaultValue;
@@ -1413,7 +1415,8 @@ extends Properties
 	{
 //		String val = getPropertyRawVal(propName);
 //		return val != null ? val : defaultValue;
-		String val = private_getPropertyRaw(propName, StringUtil.hasValue(defaultValue), defaultValue, false);
+//		String val = private_getPropertyRaw(propName, StringUtil.hasValue(defaultValue), defaultValue, false);
+		String val = private_getPropertyRaw(propName, true, defaultValue, false);
 		return val != null ? val : defaultValue;
 	}
 
@@ -2471,7 +2474,8 @@ extends Properties
 		@Override
 		public String getProperty(String propName, String defaultValue)
 		{
-			String val = private_getProperty(propName, StringUtil.hasValue(defaultValue), defaultValue);
+//			String val = private_getProperty(propName, StringUtil.hasValue(defaultValue), defaultValue);
+			String val = private_getProperty(propName, true, defaultValue);
 			return val != null ? val : defaultValue;
 		}
 
@@ -2545,7 +2549,8 @@ extends Properties
 		{
 //			String val = getPropertyRaw(propName);
 //			return val != null ? val : defaultValue;
-			String val = private_getPropertyRaw(propName, StringUtil.hasValue(defaultValue), defaultValue, true);
+//			String val = private_getPropertyRaw(propName, StringUtil.hasValue(defaultValue), defaultValue, true);
+			String val = private_getPropertyRaw(propName, true, defaultValue, true);
 			return val != null ? val : defaultValue;
 		}
 
@@ -2576,7 +2581,8 @@ extends Properties
 		{
 //			String val = getPropertyRawVal(propName);
 //			return val != null ? val : defaultValue;
-			String val = private_getPropertyRaw(propName, StringUtil.hasValue(defaultValue), defaultValue, false);
+//			String val = private_getPropertyRaw(propName, StringUtil.hasValue(defaultValue), defaultValue, false);
+			String val = private_getPropertyRaw(propName, true, defaultValue, false);
 			return val != null ? val : defaultValue;
 		}
 	}

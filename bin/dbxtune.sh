@@ -190,6 +190,7 @@ case "${toolset}" in
 		javaMainClass="com.asetune.central.pcs.H2CentralDbCopy3"
 		javaMainParams=""
 		javaSplashScreen=""
+		DBXTUNE_JVM_MEMORY_PARAMS="-Xmx4096m -Xms64m"
 		;;
 
 	h2srv)

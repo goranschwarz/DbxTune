@@ -1275,7 +1275,7 @@ extends CountersModel
 				    + "        ,log_recovery_size_mb = convert(decimal(10,1), ls.log_recovery_size_mb) \n"
 				    + "        ,active_log_size_mb   = convert(decimal(10,1), ls.active_log_size_mb  ) \n"
 				    + "        ,total_log_size_mb    = convert(decimal(10,1), ls.total_log_size_mb   ) \n"
-				    + "        ,ls.log_state \n"
+				    +           log_state
 				    + "    into #dbx_dm_db_log_stats \n"
 				    + "    from #dbx_dm_hadr_database_replica_states drs \n" // sys.dm_hadr_database_replica_states drs
 				    + "    outer apply sys.dm_db_log_stats(drs.database_id) ls \n"

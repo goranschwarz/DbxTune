@@ -376,7 +376,7 @@ implements Runnable
 		_logger.info("Shutdown-hook: Waiting for the following thread names to terminate before JVM Shutdown: "+waitforThreadNames);
 
 		long sleepTime   = 1000;
-		long maxWaitTime = _maxWaitTime;
+		long maxWaitTime = getMaxWaitTime();
 		long startTime   = System.currentTimeMillis();
 
 		// Wait for threads to terminated

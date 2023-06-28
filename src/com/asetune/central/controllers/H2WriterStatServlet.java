@@ -1,21 +1,21 @@
 /*******************************************************************************
  * Copyright (C) 2010-2020 Goran Schwarz
- * 
+ *
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
- * Here are some of the tools: AseTune, IqTune, RsTune, RaxTune, HanaTune, 
+ * Here are some of the tools: AseTune, IqTune, RsTune, RaxTune, HanaTune,
  *          SqlServerTune, PostgresTune, MySqlTune, MariaDbTune, Db2Tune, ...
- * 
+ *
  * DbxTune is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * DbxTune is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with DbxTune.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
@@ -60,7 +60,7 @@ extends HttpServlet
 		out.println("<head>");
 
 		out.println("<title>Server Overview</title> ");
-		
+
 //		if (refresh > 0)
 //			out.println("<meta http-equiv='refresh' content='"+refresh+"' />");
 
@@ -75,8 +75,10 @@ extends HttpServlet
 		out.println("	<!-- <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css' integrity='sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm' crossorigin='anonymous'> --> ");
 		out.println("	<!-- Custom styles for this template --> ");
 		out.println("	<!-- <link href='/scripts/bootstrap/css/navbar-top-fixed.css' rel='stylesheet'> --> ");
-		out.println("	<script type='text/javascript' src='/scripts/jquery/jquery-3.2.1.min.js'></script> ");
-		out.println("	<script type='text/javascript' src='/scripts/jquery/ui/1.11.3/jquery-ui.min.js'></script> ");
+//		out.println("	<script type='text/javascript' src='/scripts/jquery/jquery-3.2.1.min.js'></script> ");
+		out.println("	<script type='text/javascript' src='/scripts/jquery/jquery-3.7.0.min.js'></script> ");
+//		out.println("	<script type='text/javascript' src='/scripts/jquery/ui/1.11.3/jquery-ui.min.js'></script> ");
+		out.println("	<script type='text/javascript' src='/scripts/jquery/ui/1.13.2/jquery-ui.min.js'></script> ");
 		out.println("	 ");
 		out.println("	<!-- ");
 		out.println("<script type='text/javascript' src='http://www.chartjs.org/dist/2.7.1/Chart.bundle.js'></script> ");
@@ -103,7 +105,8 @@ extends HttpServlet
 		out.println("	<script type='text/javascript' src='/scripts/popper/1.12.9/popper.min.js'></script> ");
 		out.println(" ");
 		out.println("	<!-- JS: DateRangePicker --> ");
-		out.println("	<script type='text/javascript' src='/scripts/bootstrap-daterangepicker/2.1.27/daterangepicker.js'></script> ");
+//		out.println("	<script type='text/javascript' src='/scripts/bootstrap-daterangepicker/2.1.27/daterangepicker.js'></script> ");
+		out.println("	<script type='text/javascript' src='/scripts/bootstrap-daterangepicker/3.1/daterangepicker.js'></script> ");
 		out.println(" ");
 		out.println("	<!-- JS: Bootstrap - TABLE --> ");
 		out.println("	<script type='text/javascript' src='/scripts/bootstrap-table/1.12.1/bootstrap-table.js'></script> ");
@@ -113,7 +116,8 @@ extends HttpServlet
 		out.println("	<script type='text/javascript' src='/scripts/bootstrap-table/1.12.1/extensions/filter-control/bootstrap-table-filter-control.js'></script> ");
 		out.println(" ");
 		out.println("	<!-- JS: jquery - contextMenu --> ");
-		out.println("	<script type='text/javascript' src='/scripts/jquery-contextmenu/2.7.0/jquery.contextMenu.min.js'></script> ");
+//		out.println("	<script type='text/javascript' src='/scripts/jquery-contextmenu/2.7.0/jquery.contextMenu.min.js'></script> ");
+		out.println("	<script type='text/javascript' src='/scripts/jquery-contextmenu/2.9.2/jquery.contextMenu.min.js'></script> ");
 		out.println(" ");
 		out.println("	<!--  ");
 		out.println("	  ======================================================================= ");
@@ -121,7 +125,8 @@ extends HttpServlet
 		out.println("	  ======================================================================= ");
 		out.println("	--> ");
 		out.println("	<!-- CSS: jqueri-ui --> ");
-		out.println("	<link rel='stylesheet' href='/scripts/jquery/ui/1.11.3/themes/smoothness/jquery-ui.css'> ");
+//		out.println("	<link rel='stylesheet' href='/scripts/jquery/ui/1.11.3/themes/smoothness/jquery-ui.css'> ");
+		out.println("	<link rel='stylesheet' href='/scripts/jquery/ui/1.13.2/themes/smoothness/jquery-ui.css'> ");
 		out.println(" ");
 		out.println("	<!-- CSS: DbxCentral --> ");
 		out.println("	<link rel='stylesheet' href='/scripts/css/dbxcentral.css'> ");
@@ -133,7 +138,8 @@ extends HttpServlet
 		out.println("	<link rel='stylesheet' href='/scripts/bootstrap/css/bootstrap.min.css'> ");
 		out.println(" ");
 		out.println("	<!-- CSS: DateRangePicker --> ");
-		out.println("	<link rel='stylesheet' href='/scripts/bootstrap-daterangepicker/2.1.27/daterangepicker.css'> ");
+//		out.println("	<link rel='stylesheet' href='/scripts/bootstrap-daterangepicker/2.1.27/daterangepicker.css'> ");
+		out.println("	<link rel='stylesheet' href='/scripts/bootstrap-daterangepicker/3.1/daterangepicker.css'> ");
 		out.println(" ");
 		out.println("	<!-- CSS: Font Awsome --> ");
 		out.println("	<link rel='stylesheet' href='/scripts/font-awesome/4.4.0/css/font-awesome.min.css'> ");
@@ -147,21 +153,22 @@ extends HttpServlet
 		out.println("	<!-- <link rel='stylesheet' href='https://rawgit.com/vitalets/x-editable/master/dist/bootstrap3-editable/css/bootstrap-editable.css'> --> ");
 		out.println(" ");
 		out.println("	<!-- JS: jquery - contextMenu --> ");
-		out.println("	<link rel='stylesheet' href='/scripts/jquery-contextmenu/2.7.0/jquery.contextMenu.min.css'> ");
+//		out.println("	<link rel='stylesheet' href='/scripts/jquery-contextmenu/2.7.0/jquery.contextMenu.min.css'> ");
+		out.println("	<link rel='stylesheet' href='/scripts/jquery-contextmenu/2.9.2/jquery.contextMenu.min.css'> ");
 		out.println(" ");
-		
+
 //		out.println("<style type='text/css'>");
 //		out.println("  table {border-collapse: collapse;}");
 //		out.println("  th {border: 1px solid black; text-align: left; padding: 2px; white-space: nowrap; background-color:gray; color:white;}");
 //		out.println("  td {border: 1px solid black; text-align: left; padding: 2px; white-space: nowrap; }");
 //		out.println("  tr:nth-child(even) {background-color: #f2f2f2;}");
-////		out.println("  .topright { position: absolute; top: 8px; right: 16px; font-size: 14px; }"); // topright did not work with bootstrap (and navigation bar) 
+////		out.println("  .topright { position: absolute; top: 8px; right: 16px; font-size: 14px; }"); // topright did not work with bootstrap (and navigation bar)
 //		out.println("</style>");
 
 		out.println("<link href='/scripts/prism/prism.css' rel='stylesheet' />");
 
 		out.println("</head>");
-		
+
 //		out.println("<body onload='updateLastUpdatedClock()'>");
 		out.println("<body>");
 		out.println("<script src='/scripts/prism/prism.js'></script> ");
@@ -171,7 +178,7 @@ extends HttpServlet
 		out.println("<div class='container-fluid'>");
 
 		String ver = "Version: " + Version.getVersionStr() + ", Build: " + Version.getBuildStr();
-		
+
 		out.println("<h1>DbxTune - Central - H2 Writer Statistics</h1>");
 
 		// Check for known input parameters
@@ -184,7 +191,7 @@ extends HttpServlet
 		String minDurationStr = Helper.getParameter(req, "minDuration", "-1");
 
 		int minDuration = StringUtil.parseInt(minDurationStr, -1);
-		
+
 		out.println("<p>");
 		out.println("</p>");
 
@@ -207,8 +214,8 @@ extends HttpServlet
 		out.println("    <input type='submit' value='Refresh with above values'> ");
 		out.println("</form> ");
 
-//		out.println("<div id='graphs' class='grid' >"); 
-		out.println("<div id='graphs'>"); 
+//		out.println("<div id='graphs' class='grid' >");
+		out.println("<div id='graphs'>");
 		out.println("    <div id='div-osLoadAvg1m'        > <canvas id='chart-osLoadAvg1m'        ></canvas> </div>");
 		out.println("    <div id='div-h2ReadsPerSec'      > <canvas id='chart-h2ReadsPerSec'      ></canvas> </div>");
 		out.println("    <div id='div-h2WritesPerSec'     > <canvas id='chart-h2WritesPerSec'     ></canvas> </div>");
@@ -217,7 +224,7 @@ extends HttpServlet
 		out.println("    <div id='div-h2FileSizeGrowMbSec'> <canvas id='chart-h2FileSizeGrowMbSec'></canvas> </div>");
 		out.println("    <div id='div-h2FileSizeKb'       > <canvas id='chart-h2FileSizeKb'       ></canvas> </div>");
 		out.println("    <div id='div-h2FileSizeMb'       > <canvas id='chart-h2FileSizeMb'       ></canvas> </div>");
-		out.println("</div>"); 
+		out.println("</div>");
 
 		out.println("</div>");
 
@@ -230,7 +237,7 @@ extends HttpServlet
 			List<StatEntry> list = H2WriterStat.parseStatFromLogFile(filename, startDateTs, endDateTs, minDuration);
 
 //System.out.println("statEntryListSize=" + list.size());
-			
+
 			createChart(out, "osLoadAvg1m",         "Adjusted OS Load Average 1 Minute (adjusted = load/cores)", list);
 			createChart(out, "h2ReadsPerSec",       "H2 Reads Per Second (info.FILE_READ)"      , list);
 			createChart(out, "h2WritesPerSec",      "H2 Writes Per Second (info.FILE_WRITE)"    , list);
@@ -245,22 +252,22 @@ extends HttpServlet
 			_logger.info("Problem accessing DBMS or writing JSON, Caught: "+e, e);
 			throw new ServletException("Problem accessing db or writing JSON, Caught: "+e, e);
 		}
-		
+
 
 		// Write some JavaScript code
 		out.println(HtmlStatic.getJavaScriptAtEnd(true));
-		
+
 		out.println("</body>");
 		out.println("</html>");
 		out.flush();
-		out.close();		
+		out.close();
 	}
-	
+
 	private void createChart(ServletOutputStream out, String name, String title, List<StatEntry> list)
 	throws IOException
 	{
 		out.println("<script>");
-		
+
 		// JavaScript variable: data_passedName
 		out.println("var data_" + name + " = [");
 		int count=0;
@@ -289,7 +296,7 @@ extends HttpServlet
 //		out.println("    return {x: new moment(item['ts']), y: item['val']};");
 //		out.println("});");
 
-		
+
 		// JavaScript variable: config_passedName
 		out.println("var config_" + name + " = {");
 		out.println("    type: 'line',                                                                                                                                                                ");
@@ -405,7 +412,7 @@ extends HttpServlet
 		out.println("var ctx_" + name + " = document.getElementById('chart-" + name + "').getContext('2d'); ");
 		out.println("ctx_" + name + ".canvas.width  = 1000; ");
 		out.println("ctx_" + name + ".canvas.height = 300; ");
-		out.println("window.chart_" + name + " = new Chart(ctx_" + name + ", config_" + name + "); "); 
+		out.println("window.chart_" + name + " = new Chart(ctx_" + name + ", config_" + name + "); ");
 
 		out.println("</script>");
 	}

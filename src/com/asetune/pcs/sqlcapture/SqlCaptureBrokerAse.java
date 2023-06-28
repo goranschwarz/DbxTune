@@ -2500,7 +2500,7 @@ extends SqlCaptureBrokerAbstract
 					rowCount++;
 //					statementReadCount++;
 
-					int physicalReads = -1;
+					int physicalReads = -1; //TODO; // change this to a 'long' at some stage it is 'bigint' in ASE... PhysicalReads, LogicalReads, PagesModified, QueryOptimizationTime is bigint in ASE in version: 16.0 SP2 PL5 and 15.7 SP138
 					
 					int SPID          = rs.getInt(pos_SPID);
 //					int KPID          = rs.getInt(pos_KPID);

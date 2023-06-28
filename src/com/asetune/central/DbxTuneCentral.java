@@ -73,6 +73,9 @@ import com.asetune.central.pcs.DbxCentralRealm;
 import com.asetune.central.pcs.H2WriterStatCronTask;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesDbxCentral;
+import com.asetune.cm.CountersModel;
+import com.asetune.cm.os.CmOsUptime;
+import com.asetune.cm.sqlserver.CmOsLatchStats;
 import com.asetune.gui.GuiLogAppender;
 import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.report.senders.MailHelper;
@@ -97,6 +100,9 @@ public class DbxTuneCentral
 
 	public static final String PROPKEY_WEB_PORT = "DbxTuneCentral.web.port";
 	public static final int    DEFAULT_WEB_PORT = 8080;
+
+	public static final String  PROPKEY_shutdown_maxWaitTime = "DbxTuneCentral.shutdown.maxWaitTime";
+	public static final int     DEFAULT_shutdown_maxWaitTime = 180*1000; // 180 sec (2.5 minutes) -- if it goes down "ugly" if **WILL** take several hours to come up "clean"
 
 	public static final String  PROPKEY_startLocalMetricsCollector = "DbxTuneCentral.start.localMetricsCollector";
 	public static final boolean DEFAULT_startLocalMetricsCollector = true;
@@ -816,6 +822,10 @@ public class DbxTuneCentral
 				return Arrays.asList( new String[]{"main"} );
 			}
 		});
+		
+		int maxWaitTime = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_shutdown_maxWaitTime, DEFAULT_shutdown_maxWaitTime);
+		ShutdownHandler.setMaxWaitTime(maxWaitTime);
+		_logger.info("Shutdown handler will wait Gracefully for " + ShutdownHandler.getMaxWaitTime() + " seconds before doing HARD Exit.");
 	}
 //		Thread shutdownHook = new Thread("ShudtownHook-"+Version.getAppName()) 
 //		{
@@ -1444,6 +1454,9 @@ public class DbxTuneCentral
 		{
 			_logger.info("Starting Local Metrics Monitoring thread.");
 			
+			// Set Specific Alarm Thresholds/Periods for some alarms (since the Daily Summary Reports are taking A LOT of resources)
+			setOverrideDefaultLocalMetricsAlarmHandling();
+			
 			LocalMetricsCounterController cc = new LocalMetricsCounterController();
 			CounterController.setInstance(cc);
 			
@@ -1460,6 +1473,82 @@ public class DbxTuneCentral
 		{
 			_logger.info("Stopping Local Metrics Monitoring thread.");
 			_localMetrics.shutdown();
+		}
+	}
+
+	/**
+	 * Override some Alarm settings for Local Metrics.<br>
+	 * Only change if it's the default value (not changed by any other configuration)<br>
+	 * <p>
+	 * The setting will be done using <code>System.setProperty(key, val)</code> which is the <b>last</b> level we check in <code>Configuration.getCombinedConfiguration()</code>
+	 */
+	private static void setOverrideDefaultLocalMetricsAlarmHandling()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		String tmpPropKey    = "";
+		String tmpPropVal    = "";
+		String tmpPropDefVal = CountersModel.DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange;
+		String newPropDefVal = "!* 0 * * *"; // not between 00:00 and 01:00
+		
+		String newPropDefDesc = CronUtils.getCronExpressionDescriptionForAlarms(newPropDefVal);
+
+//		public static final String  PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange = "<CMNAME>.alarm.system.enabled.<COLNAME>.timeRange.cron";
+//		public static final String  DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange = "* * * * *";
+
+		
+		//-----------------------
+		// Adjusted Load Average
+		//-----------------------
+
+		//-----------------------
+		tmpPropKey = CountersModel.replaceCmAndColName("CmOsUptime", CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, "adjLoadAverage_1Min");
+		tmpPropVal = conf.getProperty(tmpPropKey);
+		if ( tmpPropVal == null )
+		{
+			_logger.info("Local Metrics: No configuration for '" + tmpPropKey + "' was set. Overriding the default '" + tmpPropDefVal + "' with value '" + newPropDefVal + "'  #-- desc: " + newPropDefDesc);
+			System.setProperty(tmpPropKey, newPropDefVal);
+		}
+
+		//-----------------------
+		tmpPropKey = CountersModel.replaceCmAndColName("CmOsUptime", CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, "adjLoadAverage_5Min");
+		tmpPropVal = conf.getProperty(tmpPropKey);
+		if ( tmpPropVal == null )
+		{
+			_logger.info("Local Metrics: No configuration for '" + tmpPropKey + "' was set. Overriding the default '" + tmpPropDefVal + "' with value '" + newPropDefVal + "'  #-- desc: " + newPropDefDesc);
+			System.setProperty(tmpPropKey, newPropDefVal);
+		}
+
+		//-----------------------
+		tmpPropKey = CountersModel.replaceCmAndColName("CmOsUptime", CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, "adjLoadAverage_15Min");
+		tmpPropVal = conf.getProperty(tmpPropKey);
+		if ( tmpPropVal == null )
+		{
+			_logger.info("Local Metrics: No configuration for '" + tmpPropKey + "' was set. Overriding the default '" + tmpPropDefVal + "' with value '" + newPropDefVal + "'  #-- desc: " + newPropDefDesc);
+			System.setProperty(tmpPropKey, newPropDefVal);
+		}
+
+
+
+		//-----------------------
+		// Swapping
+		//-----------------------
+
+		//-----------------------
+		tmpPropKey = CountersModel.replaceCmAndColName("CmOsVmstat", CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, "swappInOut");
+		tmpPropVal = conf.getProperty(tmpPropKey);
+		if ( tmpPropVal == null )
+		{
+			_logger.info("Local Metrics: No configuration for '" + tmpPropKey + "' was set. Overriding the default '" + tmpPropDefVal + "' with value '" + newPropDefVal + "'  #-- desc: " + newPropDefDesc);
+			System.setProperty(tmpPropKey, newPropDefVal);
+		}
+
+		//---- (Windows) --------
+		tmpPropKey = CountersModel.replaceCmAndColName("CmOsMeminfo", CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, "swapping");
+		tmpPropVal = conf.getProperty(tmpPropKey);
+		if ( tmpPropVal == null )
+		{
+			_logger.info("Local Metrics: No configuration for '" + tmpPropKey + "' was set. Overriding the default '" + tmpPropDefVal + "' with value '" + newPropDefVal + "'  #-- desc: " + newPropDefDesc);
+			System.setProperty(tmpPropKey, newPropDefVal);
 		}
 	}
 	

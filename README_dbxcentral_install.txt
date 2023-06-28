@@ -325,11 +325,16 @@ for example: http://dbxtune.acme.com:8080/
 ## look at -- https://www.eclipse.org/jetty/documentation/9.2.22.v20170531/setting-port80-access.html
 ##
 ## or in short, redirect port 80 to 8080, as root do: 
-## /sbin/iptables -t nat -I PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+##     /sbin/iptables -t nat -I PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
 ##
 ## The above is NOT persisted, and is cleared on machine reboot.    
 ## Possibly look at: https://www.systutorials.com/how-to-make-iptables-ip6tables-configurations-permanent-across-reboot-on-centos-7-linux/       
 ## or similar pages...
+##
+## Possible with firewall as well
+##     firewall-cmd --add-forward-port=port=80:proto=tcp:toport=8080
+##     firewall-cmd --list-forward-ports
+##     firewall-cmd --runtime-to-permanent
 ##
 
 
@@ -351,9 +356,10 @@ for example: http://dbxtune.acme.com:8080/
 	
 	## as any SQL Server login with 'sysadmin' create the login 'dbxtune'
 	CREATE LOGIN [dbxtune] WITH PASSWORD=N'the_long_and_arbitrary_password', DEFAULT_DATABASE=[master], CHECK_POLICY=OFF, CHECK_EXPIRATION=OFF;
-	GRANT VIEW SERVER STATE    TO [dbxtune]; -- To view Server level statistics (like most DMV's)
-	GRANT VIEW ANY DEFINITION  TO [dbxtune]; -- To be able to view Availability Groups, etc
-	GRANT CONNECT ANY DATABASE TO [dbxtune]; -- To access DMV's in each DB, to get DB space used and index statistics
+	GRANT VIEW SERVER STATE          TO [dbxtune]; -- To view Server level statistics (like most DMV's)
+	GRANT VIEW ANY DEFINITION        TO [dbxtune]; -- To be able to view Availability Groups, etc
+	GRANT CONNECT ANY DATABASE       TO [dbxtune]; -- To access DMV's in each DB, to get DB space used and index statistics
+	GRANT ADMINISTER BULK OPERATIONS TO [dbxtune]; -- On Linux: if you want to read the file '/var/opt/mssql/mssql.conf' when saving DBMS Configuration
 	## To let the user read the errorlog (via SQL)
 	use master;
 	CREATE USER [dbxtune] FOR LOGIN [dbxtune];

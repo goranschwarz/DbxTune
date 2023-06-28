@@ -46,6 +46,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI></LI>
 		<LI>DbxCentral - Local Metrics (os monitoring on DbxCentral host), property: <code>DbxTuneCentral.start.localMetricsCollector=*true*|false</code></LI>
 		<LI>DbxCentral - Possibly start the Local PCS Directory Receiver (to not send JSON from any collector to DbxCentral) property: <code>CentralPcsDirectoryReceiver.storage.dir=${tmpDir}/DbxTune/DbxCentral/file_receiver</code></LI>
+		<LI>When sending information to HTTP/DbxCentral -- Turn off 'Meta Data' information by default</LI>
 		
 		<LI><b>Alarms Handling:</b>
 			<UL>
@@ -66,6 +67,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>Alarms, details are now also available in short report (Mail Receivers)</LI>
 				<LI>Some Graphs are now sorted (series with high overall values are first). If it's sorted a "info note" will say no.</LI>
 				<LI>OsIoStatOverview on some platforms it didn't work good (for column 'await' depending on what iostat version we were using)</LI>
+				<LI>In the Recording Information section Write what Java version we used.</LI>
 			</UL>
 		</LI>
 
@@ -73,9 +75,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<b>Upgraded some of the third party libraries/jars</b><br>
 			<ul>
 	 			<li>To version 2.1.214        Component: H2 Database</li>
-	 			<li>To version x.x.x          Component: Xxx</li>
+	 			<li>To version 9.4.51         Component: Jetty Webserver</li>
 
 	 			<li>To version 0.2.7          Component: Jsch (replacing ganymed-ssh2)</li>
+
+	 			<li>To version 3.7.0          Component: jquery</li>
+	 			<li>To version 1.13.2         Component: jquery UI</li>
+	 			<li>To version 2.9.2          Component: jquery-contextmenu</li>
+	 			<li>To version 3.1            Component: bootstrap-daterangepicker</li>
 			</ul>
 		</LI>
 	</UL>
@@ -101,7 +108,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<li>SQL Server -- Showplan as a HTMP/GUI plan, with SQL Statement, Compile/Runtime Parameters, The XML plan itself</li>
 			</ul> 
 		</LI>
+		<LI>Historical view of Active SQL Statements (you can view executed SQL Statements from a History View, by clicking on the "History" button or by clicking on a "line" on any graphs), historical SQL Statements are saved for 60 days (can be configured with <code>CentralPcsJdbcCleaner.history.cm.keep.days=##</code></LI>
 		<LI>Menu: Server - Available offline databases -- Now a download link so we can download the OFFLINE database to your Client and view data with the native interface</LI>
+		<LI>Selectize: Remember last entered text after choosing a entry. (no need to copy paste the selected text)</LI>
  	</UL>
 
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->

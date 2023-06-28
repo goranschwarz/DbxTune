@@ -81,6 +81,7 @@ implements ICentralPersistWriter
 		ALARM_ACTIVE, 
 		ALARM_HISTORY, 
 		CM_LAST_SAMPLE_JSON,
+		CM_HISTORY_SAMPLE_JSON,
 		ABS,
 		DIFF,
 		RATE
@@ -387,6 +388,7 @@ implements ICentralPersistWriter
 		case GRAPH_PROPERTIES:         return prefix + lq + "DbxGraphProperties"          + rq;
 //		case CHART_LABELS:             return prefix + lq + "DbxChartLabels"              + rq;
 		case CM_LAST_SAMPLE_JSON:      return prefix + lq + "DbxCmLastSampleJson"         + rq;
+		case CM_HISTORY_SAMPLE_JSON:   return prefix + lq + "DbxCmHistorySampleJson"      + rq;
 		case ABS:                      return prefix + lq + cm.getName() + "_abs"         + rq;
 		case DIFF:                     return prefix + lq + cm.getName() + "_diff"        + rq;
 		case RATE:                     return prefix + lq + cm.getName() + "_rate"        + rq;
@@ -661,6 +663,17 @@ implements ICentralPersistWriter
 				sbSql.append("   ,"+fill(lq+"JsonText"                   +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY ("+lq+"CmName"+rq+")\n");
+				sbSql.append(") \n");
+			}
+			else if (Table.CM_HISTORY_SAMPLE_JSON.equals(type))
+			{
+				sbSql.append("create table " + tabName + "\n");
+				sbSql.append("( \n");
+				sbSql.append("    "+fill(lq+"SessionSampleTime"          +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"CmName"                     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   30),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"JsonText"                   +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
+				sbSql.append("\n");
+				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionSampleTime"+rq+", "+lq+"CmName"+rq+")\n");
 				sbSql.append(") \n");
 			}
 			else if ( Table.ABS.equals(type) || Table.DIFF.equals(type) || Table.RATE.equals(type) )
@@ -1037,6 +1050,17 @@ implements ICentralPersistWriter
 //				sbSql.append("values(?, ?, ?, ?) \n");
 //		}
 		else if (type.equals(Table.CM_LAST_SAMPLE_JSON))
+		{
+			sbSql.append("insert into ").append(tabName).append(" (");
+			sbSql.append(lq).append("SessionSampleTime").append(rq).append(", "); // 1
+			sbSql.append(lq).append("CmName"           ).append(rq).append(", "); // 2
+			sbSql.append(lq).append("JsonText"         ).append(rq).append("");   // 3
+			sbSql.append(") ");
+			if (addPrepStatementQuestionMarks)
+				sbSql.append("values(?, ?, ?) \n");
+			                      // 1  2  3
+		}
+		else if (type.equals(Table.CM_HISTORY_SAMPLE_JSON))
 		{
 			sbSql.append("insert into ").append(tabName).append(" (");
 			sbSql.append(lq).append("SessionSampleTime").append(rq).append(", "); // 1

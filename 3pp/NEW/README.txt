@@ -1,4 +1,10 @@
 --------------------------------------------------------------------
+Jetty
+https://repo1.maven.org/maven2/org/eclipse/jetty/aggregate/jetty-all/9.4.51.v20230217/
+https://repo1.maven.org/maven2/org/eclipse/jetty/aggregate/jetty-all/9.4.51.v20230217/jetty-all-9.4.51.v20230217-uber.jar
+
+
+--------------------------------------------------------------------
 SWINGX: http://java.net/projects/swingx/downloads/directory/releases
 - swingx-core-x.x.x.jar
 

@@ -5,14 +5,16 @@
 	<meta charset="utf-8">
 	<title>DbxTune - Central</title>
 
-  <!-- 
+  <!--
     =======================================================================
     == JS imports - JAVA SCRIPTS GOES HERE
     =======================================================================
   -->
   <!-- JS: JQuery -->
-  <script type="text/javascript" src="/scripts/jquery/jquery-3.2.1.min.js"></script>
-  <script type="text/javascript" src="/scripts/jquery/ui/1.11.3/jquery-ui.min.js"></script>
+<!--  <script type="text/javascript" src="/scripts/jquery/jquery-3.2.1.min.js"></script>-->
+  <script type="text/javascript" src="/scripts/jquery/jquery-3.7.0.min.js"></script>
+<!--  <script type="text/javascript" src="/scripts/jquery/ui/1.11.3/jquery-ui.min.js"></script>-->
+  <script type="text/javascript" src="/scripts/jquery/ui/1.13.2/jquery-ui.min.js"></script>
 
   <!-- JS: Moment; used by: ChartJs, DateRangePicker -->
   <script type="text/javascript" src="/scripts/moment/moment.js"></script>
@@ -24,17 +26,18 @@
 
   <!-- JS: Selectize -->
   <script type="text/javascript" src="/scripts/selectize/js/standalone/selectize.js"></script>
-  
+
   <!-- JS: DbxCentral -->
   <script type="text/javascript" src="/scripts/dbxcentral.utils.js"></script>
 
-  <!-- 
+  <!--
     =======================================================================
     == CSS imports - STYLES SHEETS GOES HERE
     =======================================================================
   -->
   <!-- CSS: jqueri-ui -->
-  <link rel="stylesheet" href="/scripts/jquery/ui/1.11.3/themes/smoothness/jquery-ui.css">
+<!--  <link rel="stylesheet" href="/scripts/jquery/ui/1.11.3/themes/smoothness/jquery-ui.css">-->
+  <link rel="stylesheet" href="/scripts/jquery/ui/1.13.2/themes/smoothness/jquery-ui.css">
 
   <!-- CSS: DbxCentral -->
   <link rel="stylesheet" href="/scripts/css/dbxcentral.css">
@@ -50,7 +53,7 @@
   <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.default.css"> -->
   <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.bootstrap3.css"> -->
   <link rel="stylesheet" href="/scripts/selectize/css/selectize.default.css">
- 
+
   <!-- Local CSS -->
   <style type='text/css'>
     /* table {border-collapse: collapse;}
@@ -62,7 +65,7 @@
     .tooltip-inner { max-width: 1000px; }
 
     .jumbotron{ margin-top:-30px; }
-	
+
 	/* selectize selected items */
 	.ui-sortable-handle {
 		width: 100%;
@@ -128,7 +131,7 @@
       </ul> <!-- end right hand side -->
     </div>
   </nav>
-  
+
   <!-- Basic info + "QUICK ACCESS" buttons to server graphs... -->
   <main role="main" class="container">
     <div class="jumbotron">
@@ -153,17 +156,17 @@
           <div id="dbx-remove-server-list">
               <button type="button" class="btn btn-sm btn-primary">Loading server list <i class='fa fa-spinner fa-spin '></i></button>
           </div>
-    
+
           <b>Disable</b> Any off the below servers... (it will not show up in the server list)
           <div id="dbx-disable-server-list">
               <button type="button" class="btn btn-sm btn-primary">Loading server list <i class='fa fa-spinner fa-spin '></i></button>
           </div>
-    
+
           <b>Enable</b> Any off the below servers... (below list has been disabled)
           <div id="dbx-enable-server-list">
               <button type="button" class="btn btn-sm btn-primary">Loading server list <i class='fa fa-spinner fa-spin '></i></button>
           </div>
-    
+
           <div id="delete-result"></div>
 
         </div>  <!-- end: card-body -->
@@ -181,7 +184,7 @@
               <button type="button" class="btn btn-sm btn-primary">Loading DbxProduct list <i class='fa fa-spinner fa-spin '></i></button>
             </div>
             <!--<a class="btn btn-sm btn-primary mb-2" data-toggle="tooltip" data-placement="right" title="Open a dialog where you can add/change Chart profiles." href="/admin?op=addServer&name=DUMMY_ASE" role="button">Add/Change Profile...</a>-->
-    <!--		
+    <!--
     		<div class="sandbox">
     			<label for="input-draggable">XXXXXXXXXXXX:</label>
     			<input type="text" id="input-draggable" class="demo-default" placeholder="Type to Search...">
@@ -221,7 +224,7 @@
           <div id="dbx-alarm-clear-server-list">
               <button type="button" class="btn btn-sm btn-primary">Loading server list <i class='fa fa-spinner fa-spin '></i></button>
           </div>
-    
+
         </div>  <!-- end: card-body -->
       </div>  <!-- end: card -->
 
@@ -241,7 +244,7 @@
             <span id="dbx-server-restart-feedback"></span>
             <span id="dbx-server-restart-spinner"><img src="/images/ajax-loader.gif"></span>
           </div>
-    
+
           <br>
           <b>Logout</b> as 'admin'
           <div id="dbx-logout-div">
@@ -258,7 +261,7 @@
         <h5 class='card-header'>User Administration</h5>
         <div class='card-body'>
           <b>Add</b> User - Done in the main window
-    
+
           <br>
           <b>Change</b> User (Password or Roles) - Not yet implemented
 
@@ -267,7 +270,7 @@
 
         </div>  <!-- end: card-body -->
       </div>  <!-- end: card -->
-	  
+
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
       <!-- Daily Summary Report - SKIP Entries -->
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
@@ -277,7 +280,7 @@
 
 <!--        <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" onclick="addDsrSkipEntry()">Add Entry</button> -->
             <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#dbx-dsr-skip-dialog">Add Entry</button>
-            &emsp;&emsp;&emsp; <span id='dbx-dsr-skip-count'>0</span> Entries in the below table 
+            &emsp;&emsp;&emsp; <span id='dbx-dsr-skip-count'>0</span> Entries in the below table
             <br>
 
             <br>
@@ -286,7 +289,7 @@
 
         </div>  <!-- end: card-body -->
       </div>  <!-- end: card -->
-	  
+
     </div>
   </main>
 
@@ -326,7 +329,7 @@
         </div>
       </div>
     </div>
-  </div>  
+  </div>
 
 
   <!-- Modal Dialog: Change System Supplied Profiles for Graphs -->
@@ -357,7 +360,7 @@
         </div>
       </div>
     </div>
-  </div>  
+  </div>
 
 
   <!-- Modal Dialog: Change User Defined Profiles for Graphs -->
@@ -401,7 +404,7 @@
         </div>
       </div>
     </div>
-  </div>  
+  </div>
 
 
 	<!-- Modal: DSR Daily Summary Report - SKIP Set dialog -->
@@ -446,9 +449,9 @@
 						<textarea id='dbx-dsr-skip-sqlTextExample' name='sqlTextExample' rows='10' class='form-control' placeholder='Example of how the SQL Text might look like'></textarea>
 					</div>
 					<br>
-					
+
 					<div id='dbx-dsr-skip-error' style='display:none;' class='alert alert-danger' role='alert'></div>
-					
+
 					<div class='modal-footer'>
 						<button type='button' class='btn btn-default' data-dismiss='modal'>Close</button>
 <!--  					<button type='submit' class="btn btn-primary btn-ok">Save</button>-->
@@ -487,7 +490,67 @@
       $('.btn-ok', this).data('recordId', data.recordId);
   });
 
-  
+
+  /**
+   * ---------------------------------------------------------------------------
+   * -- Selectize -- plugin -- https://github.com/selectize/selectize.js/issues/1342
+   * ---------------------------------------------------------------------------
+   */
+	/**
+	 * Plugin: "preserve_search" (selectize.js)
+	 * Based on: "preserve_on_blur" of Eric M. Klingensmith
+	 *
+	 * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+	 * file except in compliance with the License. You may obtain a copy of the License at:
+	 * http://www.apache.org/licenses/LICENSE-2.0
+	 *
+	 * Unless required by applicable law or agreed to in writing, software distributed under
+	 * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
+	 * ANY KIND, either express or implied. See the License for the specific language
+	 * governing permissions and limitations under the License.
+	 */
+	Selectize.define('preserve_search', function (options) {
+		var self = this;
+
+		options.text = options.text || function (option) {
+			return option[this.settings.labelField];
+		};
+
+		this.onBlur = (function (e) {
+			var original = self.onBlur;
+
+			return function (e) {
+				// Capture the current input value
+				var $input = this.$control_input;
+				var inputValue = $input.val();
+
+				// Do the default actions
+				original.apply(this, [e]);
+
+				// Set the value back                    
+				this.setTextboxValue(inputValue);
+			};
+		})();
+
+		this.onOptionSelect = (function (e) {
+			var original = self.onOptionSelect;
+
+			return function (e) {
+				// Capture the current input value
+				var $input = this.$control_input;
+				var inputValue = $input.val();
+
+				original.apply(this, [e]);
+				this.setTextboxValue(inputValue);
+				this.refreshOptions();
+				if (this.currentResults.items.length <= 0) {
+					this.setTextboxValue('');
+					this.refreshOptions();
+				}
+			};
+		})();
+	});
+
   /**
    * ---------------------------------------------------------------------------
    * -- System Supplied Profile
@@ -515,7 +578,7 @@
 			return { graph: value };
 		});
 		console.log("#dbx-change-ssp-dialog: selectedJson: "+selectedJson, selectedJson);
-		
+
 		var sendData = {
 			productString:      dbxProduct,
 			userName:           '',
@@ -525,11 +588,11 @@
 			profileValue:       selectedJson,
 			profileUrlOptions:  ''
 		};
-		
+
 		// send the update request
 		$.ajax({
-//			url: '/api/graph/profiles/' + dbxProduct, 
-			url: '/api/graph/profiles?dbxProduct='+dbxProduct, 
+//			url: '/api/graph/profiles/' + dbxProduct,
+			url: '/api/graph/profiles?dbxProduct='+dbxProduct,
 			type: 'post',
 			dataType: 'json',
 			contentType: 'application/json',
@@ -537,13 +600,13 @@
 			success: function(data, status) {
 				console.log("success.status: " + status);
 				console.log("success.data: " + data);
-				
+
 				setTimeout(function() {
 					refreshGraphDescriptions();
 					modalDiv.modal('hide').removeClass('working');
 				}, 10);
 			},
-			error: function(xhr, desc, err) 
+			error: function(xhr, desc, err)
 			{
 				console.log(xhr);
 				console.log("Details: " + desc + "\nError: " + err);
@@ -557,7 +620,7 @@
 		console.log("#dbx-change-ssp-dialog: dbxProduct: "+dbxProduct);
 
 		var ssp = _graphDesc[dbxProduct];
-		
+
 		// Get all 'tableName' entries from SSP System Selected Profile
 		let sspEntries = ssp._SSP_.map(a => a.tableName);
 
@@ -571,7 +634,7 @@
 //		selectize.clearOptions();
 //		selectize.addOption(ssp._ALL_);
 ////		selectize.refreshOptions();
-//		
+//
 //		selectize.clear();
 ////		selectize.addItem(sspEntries);
 ////		selectize.refreshItems();
@@ -580,7 +643,7 @@
 
 		$('#dbx-change-ssp-input').selectize()[0].selectize.destroy();
 		$('#dbx-change-ssp-input').selectize({
-			plugins: ['drag_drop', 'remove_button'],
+			plugins: ['drag_drop', 'remove_button', 'preserve_search'],
 			create: false, // do not allow new entries
 			persist: false,
 			maxItems: null,
@@ -620,31 +683,31 @@
 		$('#dbx-change-ssp-input').selectize()[0].selectize.setValue(sspEntries);
 //		$('#dbx-change-ssp-input').selectize()[0].selectize.refreshOptions();
 //		$('#dbx-change-ssp-input').selectize()[0].selectize.refreshItems();
-	  
+
 		setGraphCountSelectionSsp();
 
 	  $('.title', this).text(dbxProduct);
       $('.btn-ok', this).data('recordId', dbxProduct);
   });
-  
+
   /**
    * set "#dbx-change-ssp-dialog-select-cnt" and "#dbx-change-ssp-dialog-available-cnt"
    */
-  function setGraphCountSelectionSsp() 
+  function setGraphCountSelectionSsp()
   {
 	let selectedItems   = $('#dbx-change-ssp-input').selectize()[0].selectize.items.length;
 	let availableItems  = $('#dbx-change-ssp-input').selectize()[0].selectize.order;
 	let unSelectedItems = availableItems - selectedItems;
-	
+
 	$("#dbx-change-ssp-dialog-select-cnt")   .text( selectedItems );
 	$("#dbx-change-ssp-dialog-available-cnt").text( availableItems );
 //	$("#dbx-change-ssp-dialog-unselected-cnt").text( unSelectedItems );
   }
-  
-  
-  
-  
-  
+
+
+
+
+
   /**
    * ---------------------------------------------------------------------------
    * -- User Defined Profile
@@ -660,7 +723,7 @@
 		var profileName = $(this).data('recordId');
 		console.log("#dbx-change-udp-dialog: profileName: "+profileName);
 		modalDiv.addClass('working');
-		
+
 		var profileDescription = document.getElementById("dbx-change-udp-desc"  ).value;
 		var profileUrlOptions  = document.getElementById("dbx-change-udp-urlOpt").value;
 
@@ -677,7 +740,7 @@
 			return { srv: srvGraphArr[0], graph: srvGraphArr[1] };
 		});
 		console.log("#dbx-change-udp-dialog: selectedJson: "+selectedJson, selectedJson);
-		
+
 		var sendData = {
 			productString:      '',
 			userName:           '',
@@ -689,7 +752,7 @@
 		};
 
 		console.log("SAVE Send JSON: ", sendData);
-		
+
 		// send the update request
 		$.ajax({
 			url: '/api/graph/profiles?dbxProduct='+profileName,   // Note: the dbxProduct is not really used...
@@ -700,13 +763,13 @@
 			success: function(data, status) {
 				console.log("success.status: " + status);
 				console.log("success.data: " + data);
-				
+
 				setTimeout(function() {
 					refreshGraphDescriptions();
 					modalDiv.modal('hide').removeClass('working');
 				}, 10);
 			},
-			error: function(xhr, desc, err) 
+			error: function(xhr, desc, err)
 			{
 				console.log(xhr);
 				console.log("Details: " + desc + "\nError: " + err);
@@ -723,20 +786,20 @@
 		var selectedGraphs = [];
 		var profileDescription = '';
 		var profileUrlOptions  = '';
-		
+
 		$.ajax(
 		{
 			url: "/api/graph/description",
 			type: 'get',
 			async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
 
-			success: function(data, status) 
+			success: function(data, status)
 			{
 				// console.log("RECEIVED DATA: "+data);
 				graphDesc1 = JSON.parse(data);
 				//console.log("ajax.success(): new values for graphDesc1.", graphDesc1);
 			},
-			error: function(xhr, desc, err) 
+			error: function(xhr, desc, err)
 			{
 				console.log(xhr);
 				console.log("Details: " + desc + "\nError: " + err);
@@ -751,12 +814,12 @@
 			type: 'get',
 			async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
 
-			success: function(data, status) 
+			success: function(data, status)
 			{
 				// console.log("RECEIVED DATA: "+data);
 //				selectedGraphs = JSON.parse(data);
 				var tmp = JSON.parse(data);
-				for (var i=0; i < tmp.length; i++) 
+				for (var i=0; i < tmp.length; i++)
 				{
 					if ( tmp[i].profileName === profileName && tmp[i].profileType === 'USER_SELECTED' && tmp[i].userName === '' )
 					{
@@ -768,7 +831,7 @@
 				}
 				//console.log("ajax.success(): new values for selectedGraphs.", selectedGraphs);
 			},
-			error: function(xhr, desc, err) 
+			error: function(xhr, desc, err)
 			{
 				console.log(xhr);
 				console.log("Details: " + desc + "\nError: " + err);
@@ -805,22 +868,22 @@
 		// Put "pre selected" values into selectedEntries.
 		// The PK: is field: srvGraphStr, which is "NameOfTheServer|NameOfTheFullGraphName"
 		var selectedEntries = [];
-		for (var i=0; i < selectedGraphs.length; i++) 
+		for (var i=0; i < selectedGraphs.length; i++)
 		{
-			for (var j=0; j < graphDesc2.length; j++) 
+			for (var j=0; j < graphDesc2.length; j++)
 			{
-				if (graphDesc2[j].srvName === selectedGraphs[i].srv && graphDesc2[j].tableName === selectedGraphs[i].graph) 
+				if (graphDesc2[j].srvName === selectedGraphs[i].srv && graphDesc2[j].tableName === selectedGraphs[i].graph)
 					selectedEntries.push( graphDesc2[j].srvGraphStr );
 			}
 		}
 		console.log("selectedEntries: ", selectedEntries);
-		
+
 
 		$('#dbx-change-udp-input').selectize()[0].selectize.clearOptions();
 		$('#dbx-change-udp-input').selectize()[0].selectize.clear(false);
 		$('#dbx-change-udp-input').selectize()[0].selectize.destroy();
 		$('#dbx-change-udp-input').selectize({
-			plugins: ['drag_drop', 'remove_button'],
+			plugins: ['drag_drop', 'remove_button', 'preserve_search'],
 			create: false, // do not allow new entries
 			persist: false,
 			maxItems: null,
@@ -872,26 +935,26 @@
 		$('.title', this).text(profileName);
 		$('.btn-ok', this).data('recordId', profileName);
 	});
-  
+
   /**
    * set "#dbx-change-udp-dialog-select-cnt" and "#dbx-change-udp-dialog-available-cnt"
    */
-  function setGraphCountSelectionUdp() 
+  function setGraphCountSelectionUdp()
   {
 	let selectedItems   = $('#dbx-change-udp-input').selectize()[0].selectize.items.length;
 	let availableItems  = $('#dbx-change-udp-input').selectize()[0].selectize.order;
 	let unSelectedItems = availableItems - selectedItems;
-	
+
 	$("#dbx-change-udp-dialog-select-cnt")   .text( selectedItems );
 	$("#dbx-change-udp-dialog-available-cnt").text( availableItems );
 //	$("#dbx-change-udp-dialog-unselected-cnt").text( unSelectedItems );
   }
-  
+
 
   /**
    * Restart server
    */
-  function waitforRestartServer() 
+  function waitforRestartServer()
   {
     $.ajax(
     {
@@ -899,15 +962,15 @@
       url: "/dummy", // a servlet is called dummy
       type: 'get',
       //async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
-      
-      success: function(data, status) 
+
+      success: function(data, status)
       {
         $('#dbx-server-restart-spinner').hide();
         $('#dbx-server-restart-feedback').text('Server restarted!').fadeOut(3000);
         console.log("Content.status: " + status);
         console.log("Content: " + data);
       },
-      error: function(xhr, desc, err) 
+      error: function(xhr, desc, err)
       {
         console.log(xhr);
         console.log("Details: " + desc + "\nError: " + err);
@@ -923,7 +986,7 @@
   /**
    * Restart server
    */
-  function restartServer(restartType) 
+  function restartServer(restartType)
   {
     var urlParams="&h2ShutdownType=DEFAULT";
     if (restartType === "compact")
@@ -940,14 +1003,14 @@
       url: "/admin/shutdown?password=secret&restart"+urlParams,
       type: 'get',
       //async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
-      
-      success: function(data, status) 
+
+      success: function(data, status)
       {
         $('#dbx-server-restart-spinner').show();
         $('#dbx-server-restart-feedback').text("Waiting for restart...").show();
         setTimeout(waitforRestartServer, 4000);
       },
-      error: function(xhr, desc, err) 
+      error: function(xhr, desc, err)
       {
         console.log(xhr);
         console.log("Details: " + desc + "\nError: " + err);
@@ -972,8 +1035,8 @@
       url: "/admin?op="+action+"Server&name="+serverName,
       type: 'get',
       async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
-      
-      success: function(data, status) 
+
+      success: function(data, status)
       {
         var jsonResp = JSON.parse(data);
         var actions = jsonResp.actions;
@@ -1002,7 +1065,7 @@
         var deleteResultDiv = document.getElementById("delete-result");
         deleteResultDiv.innerHTML = "<br><hr><p>Results when changing status for: <b>"+serverName+"</b></p>"+tab+"<br>"+refreshBut;
       },
-      error: function(xhr, desc, err) 
+      error: function(xhr, desc, err)
       {
         console.log(xhr);
         console.log("Details: " + desc + "\nError: " + err);
@@ -1024,8 +1087,8 @@
       url: "/admin?op=removeServer&name="+serverName,
       type: 'get',
       //async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
-      
-      success: function(data, status) 
+
+      success: function(data, status)
       {
         modalDiv.modal('hide').removeClass('working');
 
@@ -1058,7 +1121,7 @@
         var deleteResultDiv = document.getElementById("delete-result");
         deleteResultDiv.innerHTML = "<br><hr><p>Results when removing: <b>"+serverName+"</b></p>"+tab+"<br>"+refreshBut;
       },
-      error: function(xhr, desc, err) 
+      error: function(xhr, desc, err)
       {
         console.log(xhr);
         console.log("Details: " + desc + "\nError: " + err);
@@ -1077,8 +1140,8 @@
       url: "/admin?op=clearActiveAlarms&name="+serverName,
       type: 'get',
       //async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
-      
-      success: function(data, status) 
+
+      success: function(data, status)
       {
         var jsonResp = JSON.parse(data);
         var actions = jsonResp.actions;
@@ -1090,7 +1153,7 @@
 //            message: jsonResp.REMOVE-ACTIVE-ALARMS.message
 //        });
       },
-      error: function(xhr, desc, err) 
+      error: function(xhr, desc, err)
       {
         console.log(xhr);
         console.log("Details: " + desc + "\nError: " + err);
@@ -1140,7 +1203,7 @@
 		type: 'get',
 		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
 
-		success: function(data, status) 
+		success: function(data, status)
 		{
 			// console.log("RECEIVED DATA: "+data);
 			var jsonResp = JSON.parse(data);
@@ -1148,7 +1211,7 @@
 			_graphDesc = jsonResp;
 			console.log("refreshGraphDescriptions(): new values for _graphDesc.", _graphDesc);
 		},
-		error: function(xhr, desc, err) 
+		error: function(xhr, desc, err)
 		{
 			console.log(xhr);
 			console.log("Details: " + desc + "\nError: " + err);
@@ -1164,20 +1227,20 @@
     url: "/api/sessions",
 		type: 'get',
 		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
-		
-		success: function(data, status) 
+
+		success: function(data, status)
 		{
 			// console.log("RECEIVED DATA: "+data);
 			var jsonResp = JSON.parse(data);
 
 			const dbxProducts = [...new Set(jsonResp.map(item => item.productString))];
 			//console.log("DbxProducts:", dbxProducts);
-			
+
 			var htmlRemove  = "";
 			var htmlEnable  = "";
 			var htmlDisable = "";
 			var htmlClearAlarm = "";
-			for (var i=0; i<jsonResp.length; i++) 
+			for (var i=0; i<jsonResp.length; i++)
 			{
 				var entry = jsonResp[i];
 
@@ -1229,7 +1292,7 @@
 
 			// Add buttons for: 'change' System Supplied Profiles
 			var htmlSsp  = "";
-			for (var i=0; i<dbxProducts.length; i++) 
+			for (var i=0; i<dbxProducts.length; i++)
 			{
 				var entry = dbxProducts[i];
 				console.log("DbxProducts["+i+"]:", entry);
@@ -1239,17 +1302,17 @@
 //				htmlSsp += '<span><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'openChangeSspDialog("'+entry+'")\'>'+entry+'</button></span>';
 				htmlSsp += '<span><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" data-record-id="'+entry+'" data-record-title="'+entry+'" data-toggle="modal" data-backdrop="static" data-target="#dbx-change-ssp-dialog">'+entry+'</button></span>';
 			}
-			if (htmlSsp === "") 
+			if (htmlSsp === "")
 				htmlSsp = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No DbxProduct Found</button>';
 			$('#dbx-change-ssp-product-list').html(htmlSsp);
 		},
-		error: function(xhr, desc, err) 
+		error: function(xhr, desc, err)
 		{
 			console.log(xhr);
 			console.log("Details: " + desc + "\nError: " + err);
 		}
   }); // end: ajax call
-  
+
 	//-----------------------------------------------------------
 	// get PROFILES
 	//-----------------------------------------------------------
@@ -1259,7 +1322,7 @@
 		type: 'get',
 		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
 
-		success: function(data, status) 
+		success: function(data, status)
 		{
 			// console.log("RECEIVED DATA: "+data);
 			var jsonResp = JSON.parse(data);
@@ -1276,26 +1339,26 @@
 //				html_2 += '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2" onclick=\'changeUserDefinedProfile("'+entry.profileName+'")\'>'+entry.profileName+'</button>';
 				html_2 += '<span><button type="button" class="btn btn-sm btn-primary mb-2 mr-2" data-record-id="'+entry.profileName+'" data-record-title="'+entry.profileName+'" data-toggle="modal" data-backdrop="static" data-target="#dbx-change-udp-dialog">'+entry.profileName+'</button></span>';
 			}
-			if (html_1 === "") 
+			if (html_1 === "")
 				html_1 = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No User Defined Profiles was Found</button>';
-			if (html_2 === "") 
+			if (html_2 === "")
 				html_2 = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No User Defined Profiles was Found</button>';
 
 			$('#dbx-remove-udp-list').html(html_1);
 			$('#dbx-change-udp-list').html(html_2);
 		},
-		error: function(xhr, desc, err) 
+		error: function(xhr, desc, err)
 		{
 			console.log(xhr);
 			console.log("Details: " + desc + "\nError: " + err);
 		}
 	}); // end: ajax call
-  
+
 	//-----------------------------------------------------------
 	// get PROFILE DESCRIPTIONS
 	//-----------------------------------------------------------
 	refreshGraphDescriptions();
-   
+
 	/**
 	 * remove User Defined PROFILE
 	 */
@@ -1310,7 +1373,7 @@
 			profileUrlOptions:  ""
 		};
 		console.log("removeUserDefinedProfile(): SEND_OBJ", sendObject);
-		
+
 		console.log("Removing PROFILE='"+profileName+"'.");
 		$.ajax(
 		{
@@ -1320,28 +1383,28 @@
 			data: JSON.stringify(sendObject),
 			contentType: "application/json; charset=UTF-8",
 
-			success: function(data, status) 
+			success: function(data, status)
 			{
 				console.log("SUCCESS: POST[DELETE] /api/graph/profiles: ", data, status);
-				
+
 				// console.log("RECEIVED DATA: "+data);
 				//var jsonResp = JSON.parse(data);
 
 				// instead load the page from start... to reload the new Saved Profile(s)
 				location.reload();
 			},
-			error: function(xhr, desc, err) 
+			error: function(xhr, desc, err)
 			{
 				console.log(xhr);
 				console.log("Details: " + desc + "\nError: " + err);
 			}
 		}); // end: ajax call
 	}
-   
+
 
 	/**
 	 * ---------------------------------------------------------------------------
-	 * -- Daily Summary Report -- SKIP 
+	 * -- Daily Summary Report -- SKIP
 	 * ---------------------------------------------------------------------------
 	 */
 	$.ajax(
@@ -1350,7 +1413,7 @@
 		type: 'get',
 		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
 
-		success: function(data, status) 
+		success: function(data, status)
 		{
 			// console.log("RECEIVED DATA: "+data);
 			var jsonResp = JSON.parse(data);
@@ -1391,7 +1454,7 @@
 				html_tab += "      <td>" + actionLink           + "</td> ";
 				html_tab += "      <td>" + entry.description    + "</td> ";
 				html_tab += "      <td><div style='width:600px; max-height:150px; overflow:auto'><xmp>" + entry.sqlTextExample + "</xmp></div></td> ";
-				html_tab += "    </tr>";				
+				html_tab += "    </tr>";
 			}
 			html_tab += "  </tbody>";
 			html_tab += "</table>";
@@ -1399,20 +1462,20 @@
 			// set the table to div: dsr-skip-table
 			let dsrSkipTableDiv = document.getElementById("dsr-skip-table");
 			dsrSkipTableDiv.innerHTML = html_tab;
-			
+
 			// setting count
 			document.getElementById("dbx-dsr-skip-count").innerHTML = jsonResp.length;
 		},
-		error: function(xhr, desc, err) 
+		error: function(xhr, desc, err)
 		{
 			console.log(xhr);
 			console.log("Details: " + desc + "\nError: " + err);
 		}
 	}); // end: ajax call
-	
+
 	function removeDsrEntry(srvName, className, entryType, stringVal)
 	{
-		console.log("DELETE: srvName='" + srvName + "', className='" + className + "', entryType='" + entryType + "', stringVal='" + stringVal + "'.");		
+		console.log("DELETE: srvName='" + srvName + "', className='" + className + "', entryType='" + entryType + "', stringVal='" + stringVal + "'.");
 
 		$.ajax(
 		{
@@ -1420,31 +1483,31 @@
 			type: 'delete',
 			// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
 
-			success: function(data, status) 
+			success: function(data, status)
 			{
 				console.log("removeDsrEntry-RESPONSE:", data, status);
 				window.location = window.location.pathname;
 				//location.reload();
 				//window.location = window.location.pathname + window.location.hash;
 				//window.location.reload();
-				//location.href = window.location.pathname + '#dbxc-dsr-skip'; 
+				//location.href = window.location.pathname + '#dbxc-dsr-skip';
 				//location.reload(true);
 			},
-			error: function(xhr, desc, err) 
+			error: function(xhr, desc, err)
 			{
 				console.log(xhr);
 				console.log("Details: " + desc + "\nError: " + err);
 			}
 		}); // end: ajax call
 	}
-	
+
 	// -------------- SAVE ---------------------
 //	$('#dbx-dsr-skip-dialog').on('click', '.btn-ok', function(e)
 	$("#dbx-dsr-skip-form").submit(function(e)
 	{
 //		var modalDiv = $(e.delegateTarget);
 //		modalDiv.addClass('working');
-		
+
 		e.preventDefault(); // avoid to execute the actual submit of the form.
 
 		var srvName        = document.getElementById("dbx-dsr-skip-srvName"       ).value;
@@ -1476,19 +1539,19 @@
 			url: '/api/dsr/skip',
 			type: 'post',
 			data: JSON.stringify(sendData),
-			success: function(data, status) 
+			success: function(data, status)
 			{
 				console.log("success.status: " + status);
 				console.log("success.data: " + data);
-				
+
 				window.location = window.location.pathname;
 				//location.reload();
 				//window.location = window.location.pathname + window.location.hash;
 				//window.location.reload();
-				//location.href = window.location.pathname + '#dbxc-dsr-skip'; 
+				//location.href = window.location.pathname + '#dbxc-dsr-skip';
 				//location.reload(true);
 			},
-			error: function(xhr, desc, err) 
+			error: function(xhr, desc, err)
 			{
 				console.log("send error, xhr:", xhr);
 				console.log("Details: " + desc + "\nError: " + err);
@@ -1499,16 +1562,16 @@
 			}
 		});
 	});
-	
+
 	// -------------- enable/disable "save" button ---------------------
 	// https://stackoverflow.com/questions/58753515/bootstrap-4-validation-disable-submit-button-until-form-validated
-	window.addEventListener('load', function() 
+	window.addEventListener('load', function()
 	{
 		let formVar = document.getElementById('dbx-dsr-skip-form');
 		// Validate on input:
-		formVar.querySelectorAll('.form-control').forEach((input, index) => 
+		formVar.querySelectorAll('.form-control').forEach((input, index) =>
 		{
-			input.addEventListener(('input'), () => 
+			input.addEventListener(('input'), () =>
 			{
 				console.log("Field ID='" + input.id + "', isValid=" + input.checkValidity());
 
@@ -1524,15 +1587,15 @@
 				var isFormValid = (inValidFieldsCount === 0);
 
 				$("#dbx-dsr-skip-save").attr("disabled", !isFormValid);
-            
+
 				console.log("FORM: 'dbx-dsr-skip-save': isFormValid=" + isFormValid + "[inValidFieldsCount=" + inValidFieldsCount + "]");
 			});
 		});
 
 		// Validate on submit:
-		formVar.addEventListener('submit', function(event) 
+		formVar.addEventListener('submit', function(event)
 		{
-			if (formVar.checkValidity() === false) 
+			if (formVar.checkValidity() === false)
 			{
 				event.preventDefault();
 				event.stopPropagation();
@@ -1545,7 +1608,7 @@
 	$('#dbx-dsr-skip-dialog').on('show.bs.modal', function(e) {
 
 		console.log("#dbx-dsr-skip-dialog: OPEN ");
-		
+
 		setTimeout(function() {
 			console.log("Try to kick of field validation... by dispatchEvent: and a dummy input event");
 			document.getElementById('dbx-dsr-skip-srvName')       .dispatchEvent(new Event('input',{bubbles: true, cancelable: true}));
@@ -1577,7 +1640,7 @@
 		console.log("Input Parameters: 'param_stringVal'      = |" + param_stringVal      + "|")
 		console.log("Input Parameters: 'param_description'    = |" + param_description    + "|")
 		console.log("Input Parameters: 'param_sqlTextExample' = |" + param_sqlTextExample + "|")
-		
+
 		document.getElementById('dbx-dsr-skip-srvName')       .value = param_srvName;
 		document.getElementById('dbx-dsr-skip-className')     .value = param_className;
 		document.getElementById('dbx-dsr-skip-entryType')     .value = param_entryType;
@@ -1591,11 +1654,11 @@
 	//-----------------------------------------------------------
 	// Check for login and set props
 	//-----------------------------------------------------------
-	isLoggedIn( function(isLogedIn, asUserName) 
+	isLoggedIn( function(isLogedIn, asUserName)
 	{
 		console.log("isLoggedIn-callback: isLogedIn='"+isLogedIn+"', asUserName='"+asUserName+"'.");
 	});
-	
+
 </script>
 </body>
 </html>

@@ -965,26 +965,26 @@ public class StringUtil
 	}
 
 	/**
-	 * Counts the number of occurrences of the String <code>occurs</code> in the
-	 * String <code>s</code>.
+	 * Counts the number of occurrences of the String <code>searchFor</code> in the String <code>searchInString</code>.
 	 *
-	 * @param occurs The String to count
-	 * @param s The String to count in
+	 * @param searchFor          The String to find
+	 * @param searchInString     The String to search in
 	 */
-	public static int count(String occurs, String s)
+	public static int count(String searchFor, String searchInString)
 	{
 		int count = 0;
 		int current = -1;
 		int next = 0;
-		next = s.indexOf(occurs);
+		next = searchInString.indexOf(searchFor);
 		while ( next > -1)
 		{
 			count++;
 			current = next;
-			next = s.indexOf(occurs, current + 1);
+			next = searchInString.indexOf(searchFor, current + 1);
 		}
 		return count;
 	}
+
 
 	/**
 	 * Check if "any" of the strings is equal to
