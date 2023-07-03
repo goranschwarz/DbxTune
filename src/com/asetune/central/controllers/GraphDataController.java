@@ -95,6 +95,12 @@ extends HttpServlet
 		if (CentralPersistReader.hasInstance())
 		{
 			CentralPersistReader reader = CentralPersistReader.getInstance();
+
+//			boolean hasSession = true;
+//			if ( ! reader.hasServerSession(sessionName) ) hasSession = false;
+//			if ( ! LocalMetricsPersistWriterJdbc.LOCAL_METRICS_SCHEMA_NAME.equals(sessionName) ) hasSession = false; // LOCAL_METRICS_SCHEMA_NAME = "DbxcLocalMetrics";
+//
+//			if ( ! hasSession )
 			if ( ! reader.hasServerSession(sessionName) )
 			{
 				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Session/Server name '"+sessionName+"' do not exist in the DBX Central Database.");

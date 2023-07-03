@@ -53,6 +53,7 @@ import org.apache.log4j.Logger;
 import com.asetune.Version;
 import com.asetune.central.check.ReceiverAlarmCheck;
 import com.asetune.central.controllers.Helper;
+import com.asetune.central.lmetrics.LocalMetricsPersistWriterJdbc;
 import com.asetune.central.pcs.CentralPersistWriterBase.Table;
 import com.asetune.central.pcs.objects.DbxAlarmActive;
 import com.asetune.central.pcs.objects.DbxAlarmHistory;
@@ -4710,6 +4711,10 @@ public class CentralPersistReader
 					_sessionNames.add(s.getServerName());
 				}
 				
+				// If LocalMetrics is enabled in DbxCentral... just add the name
+				if (true)
+					_sessionNames.add(LocalMetricsPersistWriterJdbc.LOCAL_METRICS_SCHEMA_NAME);
+
 				// if we want to sort according to 'conf/SERVER_LIST'
 				boolean sort = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_SERVER_LIST_SORT, DEFAULT_SERVER_LIST_SORT);
 				if (sort)

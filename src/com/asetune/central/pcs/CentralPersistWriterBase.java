@@ -429,7 +429,7 @@ implements ICentralPersistWriter
 	
 	/** Helper method to generate a DDL string, to get the 'create table' 
 	 * @param schemaName */
-	public String getTableDdlString(DbxConnection conn, String schemaName, Table type, CountersModel cm)
+	public static String getTableDdlString(DbxConnection conn, String schemaName, Table type, CountersModel cm)
 	throws SQLException
 	{
 		String tabName = getTableName(conn, schemaName, type, cm, true);
@@ -791,7 +791,7 @@ implements ICentralPersistWriter
 	 * @param addPrepStatementQuestionMarks if true add "values(?,?,?...)" which can be used by a prepared statement
 	 * @return
 	 */
-	public String getTableInsertStr(DbxConnection conn, String schemaName, Table type, CountersModel cm, boolean addPrepStatementQuestionMarks)
+	public static String getTableInsertStr(DbxConnection conn, String schemaName, Table type, CountersModel cm, boolean addPrepStatementQuestionMarks)
 	throws SQLException
 	{
 		return getTableInsertStr(conn, schemaName, type, cm, addPrepStatementQuestionMarks, null);
@@ -804,7 +804,7 @@ implements ICentralPersistWriter
 	 * @param addPrepStatementQuestionMarks if true add "values(?,?,?...)" which can be used by a prepared statement
 	 * @return
 	 */
-	public String getTableInsertStr(DbxConnection conn, String schemaName, Table type, CountersModel cm, boolean addPrepStatementQuestionMarks, List<String> cmColumns)
+	public static String getTableInsertStr(DbxConnection conn, String schemaName, Table type, CountersModel cm, boolean addPrepStatementQuestionMarks, List<String> cmColumns)
 	throws SQLException
 	{
 		String lq = getLeftQuoteReplace();
@@ -1173,7 +1173,7 @@ implements ICentralPersistWriter
 
 	/** Helper method to generate a DDL string, to get the 'create index' 
 	 * @param schemaName */
-	public String getIndexDdlString(DbxConnection conn, String schemaName, Table type, CountersModel cm)
+	public static String getIndexDdlString(DbxConnection conn, String schemaName, Table type, CountersModel cm)
 	{
 		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
 		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection

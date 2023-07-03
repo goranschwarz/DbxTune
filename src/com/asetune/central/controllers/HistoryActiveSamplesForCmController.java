@@ -185,7 +185,7 @@ extends HttpServlet
 
 				// And output as a String
 				payload = sw.toString();
-System.out.println("HistoryActiveSamplesForCmController: PAYLOAD: input_srv=|" + input_srv + "|, input_cmName=|" + input_cmName + "|, input_startTs=|" + input_startTs + "|, input_endTs=|" + input_endTs + "|. returns: " + payload);
+//System.out.println("HistoryActiveSamplesForCmController: PAYLOAD: input_srv=|" + input_srv + "|, input_cmName=|" + input_cmName + "|, input_startTs=|" + input_startTs + "|, input_endTs=|" + input_endTs + "|. returns: " + payload);
 			}
 		}
 		catch (Exception e)
@@ -303,7 +303,7 @@ System.out.println("    srvName=|"+srvName+"|, cmSet=|"+cmSet+"|.");
 			
 			// And output as a String
 			String payload = sw.toString();
-			System.out.println("PAYLOAD: " + payload);
+System.out.println("PAYLOAD: " + payload);
 		}
 		catch (Exception ex)
 		{
