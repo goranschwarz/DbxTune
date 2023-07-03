@@ -3345,7 +3345,7 @@ function dbxTuneLoadCharts(destinationDivId)
 	const gwidth         = getParameter("gwidth",        650);
 	const sampleType     = getParameter("sampleType",    "");
 	const sampleValue    = getParameter("sampleValue",   "");
-	const colorSchema    = getParameter("cs",            "white");
+	const colorSchema    = getParameter("cs",            "dark");
 
 	_debug = debug;
 	_colorSchema = colorSchema;
