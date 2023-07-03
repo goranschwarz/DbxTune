@@ -48,6 +48,9 @@ import org.apache.log4j.PatternLayout;
 import org.apache.log4j.RollingFileAppender;
 import org.apache.log4j.spi.Filter;
 import org.apache.log4j.spi.LoggingEvent;
+import org.eclipse.jetty.server.CustomRequestLog;
+import org.eclipse.jetty.server.RequestLog.Writer;
+import org.eclipse.jetty.server.RequestLogWriter;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.webapp.WebAppContext;
 
@@ -74,8 +77,6 @@ import com.asetune.central.pcs.H2WriterStatCronTask;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesDbxCentral;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.os.CmOsUptime;
-import com.asetune.cm.sqlserver.CmOsLatchStats;
 import com.asetune.gui.GuiLogAppender;
 import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.report.senders.MailHelper;
@@ -106,6 +107,12 @@ public class DbxTuneCentral
 
 	public static final String  PROPKEY_startLocalMetricsCollector = "DbxTuneCentral.start.localMetricsCollector";
 	public static final boolean DEFAULT_startLocalMetricsCollector = true;
+	
+	public static final String  PROPKEY_web_createRequestLog = "DbxTuneCentral.web.createRequestLog";
+	public static final boolean DEFAULT_web_createRequestLog = true;
+
+	public static final String  PROPKEY_web_createRequestLog_retainDays = "DbxTuneCentral.web.createRequestLog.retainDays";
+	public static final int     DEFAULT_web_createRequestLog_retainDays = 7;
 	
 //	public static String getAppName()           { return "DbxTuneCentral"; }
 	public static String getAppHomeEnvName()    { return "DBXTUNE_HOME"; }
@@ -1677,7 +1684,8 @@ public class DbxTuneCentral
 //			webapp1.setContextPath("/");
 ////			webapp1.setDefaultsDescriptor("src/main/webdefault/webdefault.xml");
 //			handlers.addHandler(webapp1);
-
+			
+			
 			String webDir = getAppWebDir();
 			WebAppContext webapp1 = new WebAppContext();
 			webapp1.setDescriptor(webDir+"/WEB-INF/web.xml");
@@ -1731,6 +1739,31 @@ public class DbxTuneCentral
 			// Adding the handlers to the server
 //			_server.setHandler(handlers);
 			_server.setHandler(webapp1);
+
+
+			// Configuring Jetty Request Logs
+			// If we only want to log ERRORS look at: https://stackoverflow.com/questions/68737248/how-to-override-request-logging-mechanism-in-jetty-11-0-6
+			boolean createRequestLog = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_web_createRequestLog, DEFAULT_web_createRequestLog);
+			if (createRequestLog)
+			{
+				String requestLogFormat = "%{client}a - %u %{yyyy-MM-dd HH:mm:ss.SSS XXX}t '%r' %s %O '%{Referer}i' '%{User-Agent}i' '%C'";
+//				String requestLogFormat = CustomRequestLog.EXTENDED_NCSA_FORMAT;
+				CustomRequestLog customRequestLog = new CustomRequestLog(getAppLogDir() + File.separatorChar + "DbxCentral.web.request.yyyy_mm_dd.log", requestLogFormat);
+				_server.setRequestLog(customRequestLog);
+				
+				Writer tmpWriter = customRequestLog.getWriter();
+				if (tmpWriter instanceof RequestLogWriter)
+				{
+					RequestLogWriter writer = (RequestLogWriter) tmpWriter;
+					
+					int retainDays = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_web_createRequestLog_retainDays, DEFAULT_web_createRequestLog_retainDays);
+					writer.setRetainDays(retainDays);
+
+					_logger.info("Web Access/Request log file: name='"      + writer.getFileName() + "'.");
+					_logger.info("Web Access/Request log file: retainDays=" + writer.getRetainDays());
+					_logger.info("Web Access/Request log file: can be disabled using: " + PROPKEY_web_createRequestLog + " = false");
+				}
+			}
 
 
 			// Starting the Server

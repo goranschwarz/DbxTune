@@ -111,6 +111,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Historical view of Active SQL Statements (you can view executed SQL Statements from a History View, by clicking on the "History" button or by clicking on a "line" on any graphs), historical SQL Statements are saved for 60 days (can be configured with <code>CentralPcsJdbcCleaner.history.cm.keep.days=##</code></LI>
 		<LI>Menu: Server - Available offline databases -- Now a download link so we can download the OFFLINE database to your Client and view data with the native interface</LI>
 		<LI>Selectize: Remember last entered text after choosing a entry. (no need to copy paste the selected text)</LI>
+		<LI>Shutdown grace period was changed from 60 seconds to 180 seconds (2.5 minutes)</LI>
+		<LI>Alarms for Local Metrics is disabled first hour of the day (00:00 - 01:00)</LI>
+		<LI>Created a: Web Access/Request log (can be turned off with config: DbxTuneCentral.web.createRequestLog = false</LI>
+		<LI>'Show Local DbxCentral (OS) Metrics' has been added as a "Profile" so it can easily be accessed at the start page</LI>
+		<LI>In 'Overview', added links to 'Show Local DbxCentral (OS) Metrics'</LI>
  	</UL>
 
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -211,7 +216,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added CM: <b>CmWaitStatsPerDb     </b> - What are we waiting on, at a database level (from: dm_exec_session_wait_stats/dm_exec_sessions)</LI>
 
 		<LI><b>DBMS Configuration </b> - Also get linked servers using 'exec sp_linkedservers'</LI>
-		<LI><b>DBMS Configuration </b> - if Linux also grab file content of '/var/opt/mssql/mssql.conf' in tab 'Server Registry'</LI>
+		<LI><b>DBMS Configuration </b> - if Linux also grab file content of '/var/opt/mssql/mssql.conf' in tab 'Server Registry' note: this needs permission 'ADMINISTER DATABASE BULK OPERATIONS'</LI>
 
 		<!-- ~~~ CM Changes ~~~ -->
 		<LI><b>CmActiveStatements   </b> - Added column 'tran_id' it relates with Extended Events 'transaction_id'. (easier to track SqlServerTune and XE)</LI>

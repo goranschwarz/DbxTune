@@ -21,13 +21,23 @@
  ******************************************************************************/
 package com.asetune.central.lmetrics;
 
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.asetune.Version;
+import com.asetune.central.pcs.CentralPersistWriterBase;
+import com.asetune.central.pcs.CentralPersistWriterBase.Table;
 import com.asetune.cm.CountersModel;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.pcs.PersistContainer;
@@ -43,6 +53,9 @@ extends PersistWriterJdbc
 	private Timestamp _localMetricsSessionStartTime;
 	private boolean   _initialized = false;
 
+	/** used in checkSaveGraphProperties() to indicate if we already had inserted a record or not */
+	private Set<String> _isGraphPropertiesSaved = new HashSet<>();
+	
 	
 	@Override
 	protected boolean isShutdownWithNoWait()
@@ -73,6 +86,9 @@ extends PersistWriterJdbc
 		// Check/Create
 		checkAndCreateTable(conn, schemaName, PersistWriterJdbc.ALARM_ACTIVE);
 		checkAndCreateTable(conn, schemaName, PersistWriterJdbc.ALARM_HISTORY);
+
+		checkAndCreateTable(conn, schemaName, CentralPersistWriterBase.Table.GRAPH_PROPERTIES);
+		checkAndCreateTable(conn, null      , CentralPersistWriterBase.Table.CENTRAL_GRAPH_PROFILES); // Just used to check add profile 'DbxCentral'
 	}
 
 	public static final String LOCAL_METRICS_SCHEMA_NAME = "DbxcLocalMetrics";
@@ -272,6 +288,10 @@ extends PersistWriterJdbc
 
 //					saveLocalMetricsGraphData(conn, cm, tgdp, sessionStartTime, sessionSampleTime);
 					saveGraphData(conn, getGraphStorageType(), schemaName, cm, tgdp, sessionStartTime, sessionSampleTime);
+					
+					// Save Graph Properties(label etc), so DbxCentral can read the values
+					checkSaveGraphProperties(conn, cm, tgdp, schemaName, sessionStartTime, sessionSampleTime);
+
 					graphCount++;
 				}
 			}
@@ -279,5 +299,194 @@ extends PersistWriterJdbc
 		
 		if (_logger.isDebugEnabled())
 			_logger.debug("saveLocalMetricsCounterData(): counterType=" + counterType + ", absRows=" + absRows + ", diffRows=" + diffRows + ", rateRows=" + rateRows + ", graphCount=" + graphCount + ".");
+	}
+
+	private void checkSaveGraphProperties(DbxConnection conn, CountersModel cm, TrendGraphDataPoint tgdp, String schemaName, Timestamp sessionStartTime, Timestamp sessionSampleTime)
+//	throws SQLException
+	{
+		String cmName          = cm.getName();
+		String graphName       = tgdp.getName();
+		String graphLabel      = tgdp.getGraphLabel();
+		String graphProps      = tgdp.getGraphProps();
+		String graphCategory   = tgdp.getCategory().toString();
+		boolean percentGraph   = tgdp.isPercentGraph();
+		boolean visibleAtStart = tgdp.isVisibleAtStart();
+
+		if ( ! tgdp.hasData() )
+		{
+			_logger.debug("The graph '" + tgdp.getName() + "' has NO DATA for this sample time, so write will be skipped. TrendGraphDataPoint=" + tgdp);
+			return;
+		}
+
+		String sql = "";
+		String graphFullName = cmName + "_" + graphName;
+		
+		String isGraphPropertiesSavedKey = sessionStartTime + "|" + graphFullName;
+		if (_isGraphPropertiesSaved.contains(isGraphPropertiesSavedKey))
+		{
+			if (_logger.isDebugEnabled())
+				_logger.debug("Skipping inserting into 'DbxGraphProperties'... the key '" + isGraphPropertiesSavedKey + "' existed in '_isGraphPropertiesSaved'.");
+			return;
+		}
+
+		int initialOrder = _isGraphPropertiesSaved.size() + 1;
+		try
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.append(CentralPersistWriterBase.getTableInsertStr(conn, schemaName, Table.GRAPH_PROPERTIES, null, false));
+			sb.append(" values");
+			sb.append("( ").append(safeStr(sessionStartTime));
+			sb.append(", ").append(safeStr(cmName          ));
+			sb.append(", ").append(safeStr(graphName       ));
+			sb.append(", ").append(safeStr(graphFullName   )); // cmName_graphName
+			sb.append(", ").append(safeStr(graphLabel      ));
+			sb.append(", ").append(safeStr(graphProps      ));
+			sb.append(", ").append(safeStr(graphCategory   ));
+			sb.append(", ").append(percentGraph             );
+			sb.append(", ").append(visibleAtStart           );
+			sb.append(", ").append(initialOrder             );
+			sb.append(")");
+
+			sql = sb.toString();
+			
+			conn.dbExec(sql, false);
+			getStatistics().incInserts();
+			
+			// Mark this entry as "already inserted"
+			_isGraphPropertiesSaved.add(isGraphPropertiesSavedKey);
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Continuing despite: Problems when executing SQL Statement |" + sql + "|, SqlException: ErrorCode=" + ex.getErrorCode() + ", SQLState=" + ex.getSQLState() + ", toString=" + ex.toString());
+		}
+	}
+	
+	/** 
+	 * Check if table FROM DBX_CENTRAL... has been created, if not create it.
+	 * @param table 
+	 * @return True if table was created
+	 * @throws SQLException
+	 */
+	private boolean checkAndCreateTable(DbxConnection conn, String schemaName, Table table)
+	throws SQLException
+	{
+		String fullTabName = CentralPersistWriterBase.getTableName(conn, schemaName, table, null, false);
+		String onlyTabName = CentralPersistWriterBase.getTableName(conn, null,       table, null, false);
+
+		String sql = "";
+		
+		if ( ! isDdlCreated(fullTabName) )
+		{
+			// Obtain a DatabaseMetaData object from our current connection        
+			DatabaseMetaData dbmd = conn.getMetaData();
+	
+			// dbmd.getColumns() Doesn't work with '\' in the schema name... but if we change '\' to '\\' it seems to work (at least in H2)
+			String tmpSchemaName = schemaName;
+			if (tmpSchemaName != null && tmpSchemaName.indexOf("\\") != -1)
+				tmpSchemaName = tmpSchemaName.replace("\\", "\\\\");
+				
+			ResultSet rs = dbmd.getColumns(null, tmpSchemaName, onlyTabName, "%");
+			boolean tabExists = rs.next();
+			rs.close();
+	
+			if( tabExists )
+			{
+				// FIXME: Check if all desired columns exists
+//				xxx: check how I do this in the other PCS
+
+				// Insert some default values into the table
+				if (Table.CENTRAL_GRAPH_PROFILES.equals(table))
+				{
+					int profileCnt = -1;
+					sql = conn.quotifySqlString(""
+							+ "select count(*) "
+							+ "from [" + fullTabName + "] "
+							+ "where [ProfileName] = 'DbxCentral'");
+					try (Statement stmnt = conn.createStatement(); ResultSet tmpRs = stmnt.executeQuery(sql))
+					{
+						while(tmpRs.next())
+							profileCnt = tmpRs.getInt(1);
+					}
+					catch (SQLException ex)
+					{
+						_logger.warn("Problems checking for profile 'DbxCentral'. Continuing anyway. sql='" + sql + "', Caught: " + ex);
+					}
+					
+					if (profileCnt == 0)
+					{
+						List<String> list = new ArrayList<>();
+
+						// AseTune
+						StringBuffer sbSql = new StringBuffer();
+						sbSql.append(CentralPersistWriterBase.getTableInsertStr(conn, schemaName, Table.CENTRAL_GRAPH_PROFILES, null, false));
+						sbSql.append(" values(");
+						sbSql.append("  '").append("").append("'");                                 // ProductString      '' = default
+						sbSql.append(", '").append("").append("'");                                 // UserName           '' = default
+						sbSql.append(", '").append("DbxCentral").append("'");                       // ProfileName        '' = default
+						sbSql.append(", '").append("DbxCentral Local Host Monitoring").append("'"); // ProfileDescription '' = default
+						sbSql.append(", '").append("[");
+						sbSql.append(                  "{\"srv\":\"DbxcLocalMetrics\",\"graph\":\"CmOsMpstat_MpSum\"}"            );
+						sbSql.append(                 ",{\"srv\":\"DbxcLocalMetrics\",\"graph\":\"CmOsMpstat_MpCpu\"}"            );
+						sbSql.append(                 ",{\"srv\":\"DbxcLocalMetrics\",\"graph\":\"CmOsUptime_AdjLoadAverage\"}"   );
+						sbSql.append(                 ",{\"srv\":\"DbxcLocalMetrics\",\"graph\":\"CmOsUptime_LoadAverage\"}"      );
+						sbSql.append(                 ",{\"srv\":\"DbxcLocalMetrics\",\"graph\":\"CmOsVmstat_SwapInOut\"}"        );
+						sbSql.append(                 ",{\"srv\":\"DbxcLocalMetrics\",\"graph\":\"CmOsVmstat_MemUsage\"}"         );
+						sbSql.append(                 ",{\"srv\":\"DbxcLocalMetrics\",\"graph\":\"CmOsMeminfo_MemAvailable\"}"    );
+						sbSql.append(                 ",{\"srv\":\"DbxcLocalMetrics\",\"graph\":\"CmOsMeminfo_MemUsed\"}"         );
+						sbSql.append(                 ",{\"srv\":\"DbxcLocalMetrics\",\"graph\":\"CmOsDiskSpace_FsUsedPct\"}"     );
+						sbSql.append(                 ",{\"srv\":\"DbxcLocalMetrics\",\"graph\":\"CmOsDiskSpace_FsAvailableMb\"}" );
+						sbSql.append(                 ",{\"srv\":\"DbxcLocalMetrics\",\"graph\":\"CmOsDiskSpace_FsUsedMb\"}"      );
+						sbSql.append(                 ",{\"srv\":\"DbxcLocalMetrics\",\"graph\":\"CmOsIostat_IoRWOp\"}"           );
+						sbSql.append(                 ",{\"srv\":\"DbxcLocalMetrics\",\"graph\":\"CmOsIostat_IoReadOp\"}"         );
+						sbSql.append(                 ",{\"srv\":\"DbxcLocalMetrics\",\"graph\":\"CmOsIostat_IoWriteOp\"}"        );
+						sbSql.append(                 ",{\"srv\":\"DbxcLocalMetrics\",\"graph\":\"CmOsNwInfo_AllMbit\"}"          );
+						sbSql.append(                 ",{\"srv\":\"DbxcLocalMetrics\",\"graph\":\"CmOsNwInfo_RecvMbit\"}"         );
+						sbSql.append(                 ",{\"srv\":\"DbxcLocalMetrics\",\"graph\":\"CmOsNwInfo_TransMbit\"}"        );
+						sbSql.append(              "]").append("'");
+						sbSql.append(", '").append("gcols=2").append("'");                          // ProfileUrlOptions  '' = default
+						sbSql.append(" )");
+						sql = sbSql.toString();
+						list.add(sbSql.toString());
+
+						// Insert the records
+						for (String insertStmnt : list)
+						{
+							sql = insertStmnt;
+							try
+							{
+								_logger.info("Inserting base data into '" + CentralPersistWriterBase.getTableName(conn, schemaName, Table.CENTRAL_GRAPH_PROFILES, null, false) + "'. Using SQL: " + sql);
+								conn.dbExec(sql);
+								getStatistics().incInserts();
+							}
+							catch(SQLException ex)
+							{
+								_logger.warn("Problems inserting values to '" + CentralPersistWriterBase.getTableName(conn, schemaName, Table.CENTRAL_GRAPH_PROFILES, null, false) + "'. Continuing anyway. sql='" + sql + "', Caught: " + ex);
+							}
+						}
+					} // end: profileCnt == 0
+				} // end: CENTRAL_GRAPH_PROFILES
+			} // end: tabExists
+			else
+			{
+				_logger.info("Creating table '" + fullTabName + "'.");
+				getStatistics().incCreateTables();
+				
+				// Create the table
+				sql = CentralPersistWriterBase.getTableDdlString(conn, schemaName, table, null);
+				dbDdlExec(conn, sql);
+
+				// Create indexes
+				sql = CentralPersistWriterBase.getIndexDdlString(conn, schemaName, table, null);
+				if (sql != null)
+				{
+					dbDdlExec(conn, sql);
+				}
+			}
+			
+			markDdlAsCreated(fullTabName);
+
+			return true;
+		}
+		return false;
 	}
 }

@@ -2332,7 +2332,7 @@ public class PersistWriterJdbc
 		}
 		return ret;
 	}
-	private boolean dbDdlExec(DbxConnection conn, String sql)
+	protected boolean dbDdlExec(DbxConnection conn, String sql)
 	throws SQLException
 	{
 		return dbDdlExec(conn, sql, null);

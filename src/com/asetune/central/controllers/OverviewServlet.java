@@ -502,6 +502,11 @@ public class OverviewServlet extends HttpServlet
 		out.println("for 'auto-refresh' every 60 second click <a href='/overview?refresh=60'>here</a><br>" );
 		out.println("</p>");
 
+		out.println("<p>");
+		out.println("<a href='graph.html?subscribe=false&cs=dark&startTime=4h&sessionName=DbxCentral'                     target='_blank'>Show Local DbxCentral (OS) Metrics <b>pre selected</b>, for last 4 hours, in new tab.</a><br>");
+		out.println("<a href='graph.html?subscribe=false&cs=dark&startTime=4h&sessionName=DbxcLocalMetrics&graphList=all' target='_blank'>Show Local DbxCentral (OS) Metrics <b>all graphs</b>, for last 4 hours, in new tab.</a><br>");
+		out.println("</p>");
+
 		out.println("<p>Sections");
 		out.println("<ul>");
 		out.println("  <li><a href='#ud-content'        >User Defined Content                          </a> </li>");
@@ -1602,6 +1607,11 @@ public class OverviewServlet extends HttpServlet
 			out.println("<a href='/h2ws?filename=" + fn + "&startDate=" + startDate + "&endDate=" + endDate + "'>Show a Chart of H2 Read/Write Statistics for last " + numOfDays + " day</a><br>");
 //			out.println("<p><br></p>");
 
+			out.println("<br>");
+			out.println("<a href='graph.html?subscribe=false&cs=dark&startTime=4h&sessionName=DbxCentral'                     target='_blank'>Show Local DbxCentral (OS) Metrics <b>pre selected</b>, for last 4 hours, in new tab.</a><br>");
+			out.println("<a href='graph.html?subscribe=false&cs=dark&startTime=4h&sessionName=DbxcLocalMetrics&graphList=all' target='_blank'>Show Local DbxCentral (OS) Metrics <b>all graphs</b>, for last 4 hours, in new tab.</a><br>");
+			out.println("<br>");
+			
 			
 			// Print some content of the Central Database
 			if (CentralPersistReader.hasInstance())
