@@ -71,7 +71,10 @@ extends DailySummaryReportDefault
 		addReportEntry( new PostgresTopSql         (this) );
 		addReportEntry( new PostgresTopDeadRows    (this) );
 		addReportEntry( new PostgresTopTableAccess (this) );
+// TODO; // Implement 'UnusedIndexes' using: (CmPgIndexes)pg_stat_user_indexes.idx_scan == 0, and to get "score" we can use (CmPgTables)pg_stat_user_tables.n_tup_{ins|del|upd} to get an idea how often the table (but not the index) is maintained...
+//		addReportEntry( new PostgresTopUnusedIndexes(this) );
 
+		
 		// Disk IO Activity
 		addReportEntry( new OsSpaceUsageOverview  (this) );
 		addReportEntry( new PostgresConfig        (this) );

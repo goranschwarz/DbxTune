@@ -2735,24 +2735,35 @@ class DbxGraph
 			}
 
 			// ------------------------------------------------------------
-			// Below is "normal" click --- Mark the time in ALL charts
+			// If we clicked on a "label" (below the chart) -- Then do "nothing" -- Let chartJs do it's work
 			// ------------------------------------------------------------
-
-			var activePoints = thisClass._chartObject.getElementsAtEvent(event); // getPointsAtEvent(event)
-			var firstPoint = activePoints[0];
-			var clickTs = undefined;
-			if(firstPoint !== undefined) 
-				clickTs = thisClass._chartObject.data.labels[firstPoint._index];
-
-			// Set-or-reset the timeline-markers in ALL graphs
-			for(var i=0; i<_graphMap.length; i++)
+			var clickedOnPoints = thisClass._chartObject.getElementsAtEventForMode(event, 'nearest', {intersect:true}, true);
+			if (clickedOnPoints.length === 0)
 			{
-				const dbxGraph = _graphMap[i];
-				dbxGraph.setTimelineMarker(clickTs);
+				console.log("Skipping click on 'canvas/chart', since we did NOT click any 'line'... chartJs will do the work needed...");
+				return;
 			}
-			
-			// Then switch to history mode
-			dbxHistoryAction(clickTs);
+			else
+			{
+				// ------------------------------------------------------------
+				// Below is "normal" click --- Mark the time in ALL charts
+				// ------------------------------------------------------------
+				var activePoints = thisClass._chartObject.getElementsAtEvent(event); // getPointsAtEvent(event)
+				var firstPoint = activePoints[0];
+				var clickTs = undefined;
+				if(firstPoint !== undefined) 
+					clickTs = thisClass._chartObject.data.labels[firstPoint._index];
+
+				// Set-or-reset the timeline-markers in ALL graphs
+				for(var i=0; i<_graphMap.length; i++)
+				{
+					const dbxGraph = _graphMap[i];
+					dbxGraph.setTimelineMarker(clickTs);
+				}
+				
+				// Then switch to history mode
+				dbxHistoryAction(clickTs);
+			}
 		});
 	}
 

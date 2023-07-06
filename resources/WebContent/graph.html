@@ -1849,6 +1849,9 @@ console.log("SQLTEXT=|"+sqlText+"|");
 			return -1;
 		}
 
+		// Used to deferr calling of "loadHistory" on slider "change event"
+		var _historyLoadDeferredTimerId = -1;
+
 		function dbxHistoryAction(momentTs)
 		{
 			var isHistoryViewEnabled = $("#dbx-history-container-div").is(":visible");
@@ -2067,11 +2070,19 @@ console.log("SQLTEXT=|"+sqlText+"|");
 
 						$( "#dbx-history-slider-center-text" ).html( startTime + " - " + endTimeShort);
 
-						dbxTuneGetHistoryStatements( startTime, endTime );
-						dbxTuneSetTimeLineMarkerForAllGraphs(momentTs, value);
+						// Cancel the below timer-action (if we get *multiple* change events after each other)
+						if (_historyLoadDeferredTimerId !== -1)
+							clearTimeout(_historyLoadDeferredTimerId);
+						
+						// Call the "load action" AFTER 300ms, so a DEFERRED Execution, to not "overload" on slider movements (via left/right arrow movement)
+						_historyLoadDeferredTimerId = setTimeout(function() 
+						{
+							dbxTuneGetHistoryStatements( startTime, endTime );
+							dbxTuneSetTimeLineMarkerForAllGraphs(momentTs, value);
 
-						// Set focus so we can do: Ctrl + left/right
-						dbxHistoryTimelineSlider.focus();
+							// Set focus so we can do: Ctrl + left/right
+							dbxHistoryTimelineSlider.focus();
+						}, 300);
 					});
 
 					// Install slider keyboard: Ctrl+left, Ctrl+right
