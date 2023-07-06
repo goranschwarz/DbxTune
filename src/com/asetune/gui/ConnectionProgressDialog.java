@@ -168,7 +168,7 @@ implements ActionListener, ConnectionProgressCallback
 
 	private static final String EXTRA_TASK_CHECK_MONITOR_CONFIG   = "Check Monitor Configuration";
 	private static final String EXTRA_TASK_INIT_MONITOR_DICT      = "Init Monitor Dictionary";
-	private static final String EXTRA_TASK_INIT_ASE_CONFIG_DICT   = "Init ASE Configuration Dictionary";
+	private static final String EXTRA_TASK_INIT_DBMS_CONFIG_DICT  = "Init DBMS Configuration Dictionary";
 	private static final String EXTRA_TASK_INIT_COUNTER_COLLECTOR = "Init Counter Collector";
 //	private boolean      _doExtraTasks     = true;
 	private ConnectionProgressExtraActions      _extraTasks     = null;
@@ -334,7 +334,7 @@ implements ActionListener, ConnectionProgressCallback
 		String[] extraTasksInfo = {
 			EXTRA_TASK_CHECK_MONITOR_CONFIG, 
 			EXTRA_TASK_INIT_MONITOR_DICT, 
-			EXTRA_TASK_INIT_ASE_CONFIG_DICT, 
+			EXTRA_TASK_INIT_DBMS_CONFIG_DICT, 
 			EXTRA_TASK_INIT_COUNTER_COLLECTOR};
 //		if ( ! _doExtraTasks )
 		if ( _extraTasks == null )
@@ -1434,7 +1434,7 @@ finally
 							
 							setTaskStatus(EXTRA_TASK_CHECK_MONITOR_CONFIG,   ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
 							setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT,      ConnectionProgressCallback.TASK_STATUS_SKIPPED);
-							setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT,   ConnectionProgressCallback.TASK_STATUS_SKIPPED);
+							setTaskStatus(EXTRA_TASK_INIT_DBMS_CONFIG_DICT,  ConnectionProgressCallback.TASK_STATUS_SKIPPED);
 							setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SKIPPED);
 
 							throw ex;
@@ -1454,18 +1454,18 @@ finally
 							Exception ex = new Exception("Initializing the Monitor Dictionary Failed."); 
 
 							setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT,      ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
-							setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT,   ConnectionProgressCallback.TASK_STATUS_SKIPPED);
+							setTaskStatus(EXTRA_TASK_INIT_DBMS_CONFIG_DICT,  ConnectionProgressCallback.TASK_STATUS_SKIPPED);
 							setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SKIPPED);
 
 							throw ex;
 						}
 
 						//-------------------------
-						//---- DO 'Init ASE Configuration Dictionary' (EXTRA_TASK_INIT_ASE_CONFIG_DICT)
+						//---- DO 'Init ASE Configuration Dictionary' (EXTRA_TASK_INIT_DBMS_CONFIG_DICT)
 						//-------------------------
-						setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT, ConnectionProgressCallback.TASK_STATUS_CURRENT);
+						setTaskStatus(EXTRA_TASK_INIT_DBMS_CONFIG_DICT, ConnectionProgressCallback.TASK_STATUS_CURRENT);
 						if ( _extraTasks.initDbServerConfigDictionary(conn, ConnectionProgressDialog.this) )
-							setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
+							setTaskStatus(EXTRA_TASK_INIT_DBMS_CONFIG_DICT, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
 						else
 						{
 							try { conn.close(); } catch (SQLException ignore) {}
@@ -1473,7 +1473,7 @@ finally
 
 							Exception ex = new Exception("Initializing the DB Server Configurations Dictionary Failed."); 
 
-							setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT,   ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
+							setTaskStatus(EXTRA_TASK_INIT_DBMS_CONFIG_DICT,  ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
 							setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SKIPPED);
 
 							throw ex;
